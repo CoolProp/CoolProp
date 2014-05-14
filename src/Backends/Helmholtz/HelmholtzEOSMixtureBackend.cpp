@@ -18,7 +18,7 @@
 //#include "CoolProp.h"
 
 #include "HelmholtzEOSMixtureBackend.h"
-#include "../Fluids/FluidLibrary.h"
+#include "Fluids/FluidLibrary.h"
 #include "Solvers.h"
 #include "MatrixMath.h"
 #include "VLERoutines.h"

@@ -7,10 +7,10 @@
 
 #include "math.h"
 #include "AbstractState.h"
-#include "Backends\REFPROPBackend.h"
-#include "Backends\HelmholtzEOSBackend.h"
-#include "Backends\IncompressibleBackend.h"
-#include "Fluids\FluidLibrary.h"
+#include "Backends/REFPROP/REFPROPBackend.h"
+#include "Backends/Helmholtz/HelmholtzEOSBackend.h"
+#include "Backends/Incompressible/IncompressibleBackend.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 
 namespace CoolProp {
 

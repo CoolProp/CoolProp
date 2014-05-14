@@ -24,7 +24,7 @@
 #include <string>
 #include "CoolPropTools.h"
 #include "Solvers.h"
-#include "Fluids\FluidLibrary.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 
 namespace CoolProp
 {

@@ -2,7 +2,7 @@
 #define DEPARTURE_FUNCTIONS_H
 
 #include <vector>
-#include "../Fluids/CoolPropFluid.h"
+#include "Fluids/CoolPropFluid.h"
 
 namespace CoolProp{
 

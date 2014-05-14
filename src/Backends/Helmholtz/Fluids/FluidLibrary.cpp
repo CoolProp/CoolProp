@@ -1,6 +1,5 @@
 
 #include "FluidLibrary.h"
-#include "../Backends/ReducingFunctions.h"
 #include "all_fluids_JSON.h" // Makes a std::string variable called all_fluids_JSON
 
 namespace CoolProp{
