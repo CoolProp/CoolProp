@@ -1,0 +1,39 @@
+Microsoft (R) COFF/PE Dumper Version 10.00.40219.01
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file CoolProp.dll
+
+File Type: DLL
+
+  Section contains the following exports for CoolProp.dll
+
+    00000000 characteristics
+    536FE6F7 time date stamp Sun May 11 23:09:11 2014
+        0.00 version
+           1 ordinal base
+          13 number of functions
+          13 number of names
+
+    ordinal hint RVA      name
+
+          1    0 000090F0 _F2K@8
+          2    1 000090D0 _K2F@8
+          3    2 00009D40 _Props1@8
+          4    3 00009C60 _Props1SI@8
+          5    4 00009A80 _Props@32
+          6    5 00009D00 _PropsS@32
+          7    6 00009540 _PropsSI@32
+          8    7 00009D70 _PropsSIZ@40
+          9    8 00009110 _get_debug_level@0
+         10    9 00009790 _get_global_param_string@8
+         11    A 00009710 _get_param_index@4
+         12    B 000090B0 _redirect_stdout@4
+         13    C 00009120 _set_debug_level@4
+
+  Summary
+
+        6000 .data
+       91000 .rdata
+        8000 .reloc
+       6C000 .text

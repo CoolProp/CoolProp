@@ -1,0 +1,257 @@
+{
+  "ALIASES": [
+    "nonane", 
+    "NONANE", 
+    "N-NONANE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 594.55, 
+      "Tmax": 594.5499999999988, 
+      "Tmin": 219.7, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.042955186429660674, 
+      "n": [
+        0.11848542849564217, 
+        -206.06912532030728, 
+        204.6308137723198, 
+        -6.785269035908729, 
+        -4.84298916029439, 
+        -0.44076934607962737
+      ], 
+      "reducing_value": 2281000.0, 
+      "t": [
+        0.741, 
+        1.137, 
+        1.152, 
+        1.563, 
+        3.91, 
+        8.223
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 594.55, 
+      "Tmax": 594.5499999999988, 
+      "Tmin": 219.7, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.0429551855531618, 
+      "n": [
+        0.17512979712645566, 
+        -13.890353079088916, 
+        7.363037542847803, 
+        -3.8800351715589256, 
+        1.688059255455581, 
+        -4.696846069919248
+      ], 
+      "reducing_value": 2281000.0, 
+      "t": [
+        0.695, 
+        1.023, 
+        1.153, 
+        2.471, 
+        3.113, 
+        4.262
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 594.55, 
+      "Tmax": 594.5499999999988, 
+      "Tmin": 219.7, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.138204992711366, 
+      "n": [
+        -23.198712622058476, 
+        402.39535606636224, 
+        -525.0132880466338, 
+        158.57173971120517, 
+        -19.07334776671177, 
+        9.495727034290677
+      ], 
+      "reducing_value": 1810.0, 
+      "t": [
+        0.587, 
+        0.686, 
+        0.729, 
+        0.846, 
+        1.5, 
+        1.824
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 594.55, 
+      "Tmax": 594.5499999999988, 
+      "Tmin": 219.7, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.15234619512934922, 
+      "n": [
+        -5.1536130968369545, 
+        2.1332285795020645, 
+        -3.593065172775762, 
+        -5.8548285122141905, 
+        -4.752281189935403, 
+        67.88348941881152
+      ], 
+      "reducing_value": 1810.0, 
+      "t": [
+        0.501, 
+        1.115, 
+        1.413, 
+        3.576, 
+        9.883, 
+        18.14
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 594.55, 
+      "a": [
+        0.05388
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.262
+      ]
+    }
+  }, 
+  "CAS": "111-84-2", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 3, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 2, 
+    "Name": "n-Nonane", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "T_max": 600, 
+      "T_max_units": "K", 
+      "Ttriple": 219.7, 
+      "Ttriple_units": "K", 
+      "accentric": 0.4433, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": 10.7927224829, 
+          "a2": -8.2418318753, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 16.349, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            24.926, 
+            24.842, 
+            11.188, 
+            17.483
+          ], 
+          "t": [
+            2.053654024051804, 
+            3.774283071230343, 
+            8.423177192834919, 
+            19.71911529728366
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            1.1151, 
+            -2.702, 
+            0.83416, 
+            -0.38828, 
+            0.1376, 
+            0.00028185, 
+            0.62037, 
+            0.015847, 
+            -0.61726, 
+            -0.15043, 
+            -0.012982, 
+            0.0044325
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.1282551, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 800000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 0.4444854177, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 594.55, 
+        "T_units": "K", 
+        "p": 2281000, 
+        "p_units": "Pa", 
+        "rhomolar": 1810, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 6051.949931805821, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 0.0002433600391426276, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "n-Nonane"
+}

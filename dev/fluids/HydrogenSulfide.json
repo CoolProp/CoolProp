@@ -1,0 +1,261 @@
+{
+  "ALIASES": [
+    "H2S", 
+    "HYDROGENSULFIDE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 373.1, 
+      "Tmax": 373.09999999999945, 
+      "Tmin": 187.7, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.01406124754110838, 
+      "n": [
+        -6.761826097619247, 
+        -0.005988209650772923, 
+        -6.882637639835571, 
+        -2.8254550876910356, 
+        7.704835506786447, 
+        1.7417891509345698
+      ], 
+      "reducing_value": 9000000.0, 
+      "t": [
+        1.003, 
+        1.146, 
+        1.668, 
+        4.886, 
+        1.558, 
+        9.098
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 373.1, 
+      "Tmax": 373.09999999999945, 
+      "Tmin": 187.7, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.019173536478978015, 
+      "n": [
+        0.016005313259314074, 
+        -5.84689331691651, 
+        0.378166392177876, 
+        -0.33675173635383543, 
+        -1.6596226528944937, 
+        -1.8779907937289753
+      ], 
+      "reducing_value": 9000000.0, 
+      "t": [
+        0.512, 
+        0.974, 
+        1.577, 
+        2.795, 
+        3.791, 
+        7.388
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 373.1, 
+      "Tmax": 373.09999999999945, 
+      "Tmin": 187.7, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.12757076402429846, 
+      "n": [
+        51.601033693983716, 
+        -49.93595719794271, 
+        6.987088261412919, 
+        -24.784697586038508, 
+        84.07792676768513, 
+        -68.55133880200839
+      ], 
+      "reducing_value": 10190.0, 
+      "t": [
+        0.572, 
+        0.586, 
+        2.075, 
+        3.069, 
+        4.223, 
+        4.619
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 373.1, 
+      "Tmax": 373.09999999999945, 
+      "Tmin": 187.7, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.1081652393724486, 
+      "n": [
+        -5.046830785558678, 
+        -38.485729404620876, 
+        41.23869786806366, 
+        -2.8100720902410004, 
+        -10.142249397446074, 
+        21.5382763129489
+      ], 
+      "reducing_value": 10190.0, 
+      "t": [
+        0.532, 
+        0.681, 
+        0.691, 
+        1.195, 
+        6.002, 
+        9.033
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 373.1, 
+      "a": [
+        0.078557
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.2074
+      ]
+    }
+  }, 
+  "CAS": "7783-06-4", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 4, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 4, 
+    "Name": "HydrogenSulfide", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "T_max": 760, 
+      "T_max_units": "K", 
+      "Ttriple": 187.7, 
+      "Ttriple_units": "K", 
+      "accentric": 0.1005, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": -4.0740770957, 
+          "a2": 3.7632137341, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 3, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            -0.002753352822675789
+          ], 
+          "t": [
+            -1.5
+          ], 
+          "type": "IdealGasHelmholtzPower"
+        }, 
+        {
+          "n": [
+            1.1364, 
+            1.9721
+          ], 
+          "t": [
+            4.886089520235862, 
+            10.62717770034843
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            0.87641, 
+            -2.0367, 
+            0.21634, 
+            -0.050199, 
+            0.066994, 
+            0.00019076, 
+            0.20227, 
+            -0.0045348, 
+            -0.2223, 
+            -0.034714, 
+            -0.014885, 
+            0.0074154
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.03408088, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 170000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 23258.85584, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 373.1, 
+        "T_units": "K", 
+        "p": 9000000, 
+        "p_units": "Pa", 
+        "rhomolar": 10190, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 29116.27758075055, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 15.02516830469272, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "HydrogenSulfide"
+}

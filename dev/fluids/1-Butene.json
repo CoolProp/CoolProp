@@ -1,0 +1,258 @@
+{
+  "ALIASES": [
+    "1Butene", 
+    "1BUTENE", 
+    "1-BUTENE", 
+    "Butene"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 419.29, 
+      "Tmax": 419.2899999999993, 
+      "Tmin": 87.80000000000001, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.015396951311941187, 
+      "n": [
+        -11.309717975642364, 
+        5.911539361818991, 
+        -0.8939616477939638, 
+        -2.3039589144938732, 
+        -0.9566612009415151, 
+        -1.297120238102156
+      ], 
+      "reducing_value": 4005100.0, 
+      "t": [
+        1.037, 
+        1.176, 
+        1.95, 
+        3.798, 
+        5.373, 
+        16.675
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 419.29, 
+      "Tmax": 419.2899999999993, 
+      "Tmin": 87.80000000000001, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.0500335385506423, 
+      "n": [
+        0.09749917163190837, 
+        -6.023622095673614, 
+        -9.978780101855465, 
+        11.257196162885533, 
+        -4.937156322143673, 
+        -1.4911743361627807
+      ], 
+      "reducing_value": 4005100.0, 
+      "t": [
+        0.539, 
+        0.946, 
+        3.545, 
+        3.783, 
+        4.496, 
+        18.106
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 419.29, 
+      "Tmax": 419.2899999999993, 
+      "Tmin": 87.80000000000001, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.24436140891674896, 
+      "n": [
+        -1.1329161154078617, 
+        4.576996342937427, 
+        -2.35398267961107, 
+        1.6095202242190951, 
+        1.9936948858619448, 
+        -8.666711070126212
+      ], 
+      "reducing_value": 4240.0, 
+      "t": [
+        0.226, 
+        0.326, 
+        0.495, 
+        0.869, 
+        11.457, 
+        19.823
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 419.29, 
+      "Tmax": 419.2899999999993, 
+      "Tmin": 87.80000000000001, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.49395022045438663, 
+      "n": [
+        -3.302882573914376, 
+        -1.9359137327823328, 
+        -4.362721415165588, 
+        24.301821574494937, 
+        -191.8377573940649, 
+        174.69349121901325
+      ], 
+      "reducing_value": 4240.0, 
+      "t": [
+        0.429, 
+        1.081, 
+        4.121, 
+        15.125, 
+        18.011, 
+        18.807
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 419.29, 
+      "a": [
+        0.05644
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.248
+      ]
+    }
+  }, 
+  "CAS": "106-98-9", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 4, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 0, 
+    "Name": "1-Butene", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-FPE-2005", 
+      "T_max": 525, 
+      "T_max_units": "K", 
+      "Ttriple": 87.8, 
+      "Ttriple_units": "K", 
+      "accentric": 0.191860647355, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": -0.00101126, 
+          "a2": 2.3869174, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 2.9197, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            2.9406, 
+            6.5395, 
+            14.535, 
+            5.8971
+          ], 
+          "t": [
+            0.6534856543203987, 
+            2.268119917002552, 
+            5.072861265472584, 
+            13.71842877244866
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            0.78084, 
+            -2.8258, 
+            0.99403, 
+            0.017951, 
+            0.088889, 
+            0.00024673, 
+            0.22846, 
+            -0.074009, 
+            -0.22913, 
+            -0.062334, 
+            -0.025385, 
+            0.01104
+          ], 
+          "t": [
+            0.12, 
+            1.3, 
+            1.74, 
+            2.1, 
+            0.28, 
+            0.69, 
+            0.75, 
+            2, 
+            4.4, 
+            4.7, 
+            15, 
+            14
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.05610631999999999, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 50000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 5.94529946e-07, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 419.29, 
+        "T_units": "K", 
+        "p": 4005100, 
+        "p_units": "Pa", 
+        "rhomolar": 4240, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 14581.83824668767, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 8.148005394321945e-10, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "1-Butene"
+}

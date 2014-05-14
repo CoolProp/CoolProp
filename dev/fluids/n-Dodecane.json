@@ -1,0 +1,260 @@
+{
+  "ALIASES": [
+    "nDodecane", 
+    "Dodecane", 
+    "DODECANE", 
+    "N-DODECANE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 658.1, 
+      "Tmax": 658.0999999999985, 
+      "Tmin": 263.6, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.031299066244705465, 
+      "n": [
+        0.07432358695136501, 
+        -8.095550434658023, 
+        8.823108680318432, 
+        -12.031829724482998, 
+        -4.2537714590653755, 
+        -3.0093802692458955
+      ], 
+      "reducing_value": 1817000.0, 
+      "t": [
+        0.68, 
+        0.975, 
+        2.262, 
+        2.456, 
+        4.412, 
+        14.813
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 658.1, 
+      "Tmax": 658.0999999999985, 
+      "Tmin": 263.6, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.03129828340833196, 
+      "n": [
+        0.01855892414806427, 
+        -7.941228211958365, 
+        0.7027032448570503, 
+        -1.6469727356969044, 
+        -6.161545669379877, 
+        -1.4874349910776694
+      ], 
+      "reducing_value": 1817000.0, 
+      "t": [
+        0.435, 
+        0.972, 
+        1.704, 
+        2.29, 
+        3.72, 
+        9.501
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 658.1, 
+      "Tmax": 658.0999999999985, 
+      "Tmin": 263.6, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.06226133770144138, 
+      "n": [
+        169.6307007144784, 
+        -170.78856038865672, 
+        4.362812034890246, 
+        -0.46704708251799704, 
+        3.942637021143127, 
+        -4.234606611460045
+      ], 
+      "reducing_value": 1330.0, 
+      "t": [
+        0.312, 
+        0.314, 
+        0.53, 
+        1.689, 
+        5.186, 
+        6.344
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 658.1, 
+      "Tmax": 658.0999999999985, 
+      "Tmin": 263.6, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 1.4284240304967444, 
+      "n": [
+        -3.1027406450131076, 
+        659.6310704998223, 
+        -2132.1075657465976, 
+        1475.1968821648827, 
+        -19.394230255247603, 
+        6.056907847881279
+      ], 
+      "reducing_value": 1330.0, 
+      "t": [
+        0.369, 
+        1.31, 
+        1.357, 
+        1.383, 
+        3.194, 
+        4.632
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 658.1, 
+      "a": [
+        0.0154, 
+        0.048
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        4.18, 
+        1.17
+      ]
+    }
+  }, 
+  "CAS": "112-40-3", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 2, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 2, 
+    "Name": "n-Dodecane", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-EF-2004", 
+      "T_max": 800, 
+      "T_max_units": "K", 
+      "Ttriple": 263.6, 
+      "Ttriple_units": "K", 
+      "accentric": 0.574182221240689, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": 0, 
+          "a2": 0, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 22.085, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            37.776, 
+            29.369, 
+            12.461, 
+            7.7733
+          ], 
+          "t": [
+            1.944993162133414, 
+            3.645342653092235, 
+            8.661297675125361, 
+            21.07430481689713
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            1.38031, 
+            -2.85352, 
+            0.288897, 
+            -0.165993, 
+            0.0923993, 
+            0.000282772, 
+            0.956627, 
+            0.0353076, 
+            -0.445008, 
+            -0.118911, 
+            -0.0366475, 
+            0.0184223
+          ], 
+          "t": [
+            0.32, 
+            1.23, 
+            1.5, 
+            1.4, 
+            0.07, 
+            0.8, 
+            2.16, 
+            1.1, 
+            4.1, 
+            5.6, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.17033484, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 200000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 0.6262109235, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 658.1, 
+        "T_units": "K", 
+        "p": 1817000, 
+        "p_units": "Pa", 
+        "rhomolar": 1330, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 4529.141934352717, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 0.0002857525844969409, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "n-Dodecane"
+}

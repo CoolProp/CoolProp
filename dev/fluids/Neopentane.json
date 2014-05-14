@@ -1,0 +1,245 @@
+{
+  "ALIASES": [
+    "neopentn", 
+    "NEOPENTANE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 433.74, 
+      "Tmax": 433.73999999999927, 
+      "Tmin": 256.6, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.011877907135438015, 
+      "n": [
+        1.4023117580169653, 
+        -7.971208710752704, 
+        2.5306662744660664, 
+        -3.6491716187944356, 
+        -72.03663743646202, 
+        323.50182182555415
+      ], 
+      "reducing_value": 3196000.0, 
+      "t": [
+        0.973, 
+        0.987, 
+        1.865, 
+        2.411, 
+        9.003, 
+        11.534
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 433.74, 
+      "Tmax": 433.73999999999927, 
+      "Tmin": 256.6, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.009973909412830384, 
+      "n": [
+        -7.502312156089728, 
+        11.000117855992295, 
+        -400.6256764267208, 
+        433.78538017962705, 
+        -45.58182775735909, 
+        -0.7322302008433458
+      ], 
+      "reducing_value": 3196000.0, 
+      "t": [
+        1.011, 
+        1.701, 
+        2.3, 
+        2.345, 
+        2.698, 
+        6.49
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 433.74, 
+      "Tmax": 433.73999999999927, 
+      "Tmin": 256.6, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.546133509156399, 
+      "n": [
+        2.811511709838611, 
+        -0.6819933999019258, 
+        143.31340246450836, 
+        -250.44132450192117, 
+        324.6743119533206, 
+        -196312.80251857708
+      ], 
+      "reducing_value": 3270.0, 
+      "t": [
+        0.385, 
+        0.435, 
+        3.763, 
+        4.175, 
+        6.202, 
+        16.14
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 433.74, 
+      "Tmax": 433.73999999999927, 
+      "Tmin": 256.6, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.6012535915160933, 
+      "n": [
+        -3.7861930152056065, 
+        8.462476541870759, 
+        -339.50200633681567, 
+        403.5197007430728, 
+        -111.52402460892499, 
+        41.26753585967676
+      ], 
+      "reducing_value": 3270.0, 
+      "t": [
+        0.423, 
+        1.041, 
+        1.753, 
+        1.863, 
+        2.594, 
+        3.606
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }
+  }, 
+  "CAS": "463-82-1", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 4, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 1, 
+    "Name": "Neopentane", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "T_max": 550, 
+      "T_max_units": "K", 
+      "Ttriple": 256.6, 
+      "Ttriple_units": "K", 
+      "accentric": 0.1961, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": 0.8702452614, 
+          "a2": 1.6071746358, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 3, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            14.422, 
+            12.868, 
+            17.247, 
+            12.663
+          ], 
+          "t": [
+            1.636925346982063, 
+            3.977036934569097, 
+            7.562133997325587, 
+            17.9531516576751
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            1.1136, 
+            -3.1792, 
+            1.1411, 
+            -0.10467, 
+            0.11754, 
+            0.00034058, 
+            0.29553, 
+            -0.074765, 
+            -0.31474, 
+            -0.099401, 
+            -0.039569, 
+            0.023177
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.07214878, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 200000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 35400.94733, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 433.74, 
+        "T_units": "K", 
+        "p": 3196000, 
+        "p_units": "Pa", 
+        "rhomolar": 3270, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 8701.706626683947, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 16.95177504859362, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "Neopentane"
+}

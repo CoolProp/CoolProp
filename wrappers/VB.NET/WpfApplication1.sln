@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Express 2012 for Windows Desktop
+Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "WpfApplication1", "WpfApplication1\WpfApplication1.vbproj", "{0C206CF1-F068-4675-BA85-003EF4899689}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0C206CF1-F068-4675-BA85-003EF4899689}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C206CF1-F068-4675-BA85-003EF4899689}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C206CF1-F068-4675-BA85-003EF4899689}.Debug|x86.ActiveCfg = Debug|x86
+		{0C206CF1-F068-4675-BA85-003EF4899689}.Debug|x86.Build.0 = Debug|x86
+		{0C206CF1-F068-4675-BA85-003EF4899689}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C206CF1-F068-4675-BA85-003EF4899689}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C206CF1-F068-4675-BA85-003EF4899689}.Release|x86.ActiveCfg = Release|x86
+		{0C206CF1-F068-4675-BA85-003EF4899689}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

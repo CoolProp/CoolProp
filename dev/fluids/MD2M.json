@@ -1,0 +1,242 @@
+{
+  "ALIASES": [
+    "Decamethyltetrasiloxane", 
+    "DECAMETHYLTETRASILOXANE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 599.4, 
+      "Tmax": 599.3999999999985, 
+      "Tmin": 205.2, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.015911818413938406, 
+      "n": [
+        -2.4298546077341765, 
+        -8.21698111216424, 
+        10.985237560743148, 
+        -10.371245604660867, 
+        -6.479810115178545, 
+        -7.618743506292183
+      ], 
+      "reducing_value": 1227000.0, 
+      "t": [
+        0.947, 
+        1.036, 
+        1.62, 
+        1.908, 
+        3.756, 
+        13.562
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 599.4, 
+      "Tmax": 599.3999999999985, 
+      "Tmin": 205.2, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.044312950276337304, 
+      "n": [
+        156.1113572601426, 
+        -164.62126787390693, 
+        1.542332070759232, 
+        -1.6595566560133137, 
+        -7.331305000038265, 
+        -3.9960179968946954
+      ], 
+      "reducing_value": 1227000.0, 
+      "t": [
+        0.905, 
+        0.908, 
+        1.689, 
+        2.4, 
+        3.317, 
+        9.992
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 599.4, 
+      "Tmax": 599.3999999999985, 
+      "Tmin": 205.2, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.7458599587937931, 
+      "n": [
+        5.149366412867287, 
+        -3.74559401424497, 
+        5.916251369639319, 
+        -4.86398948926266, 
+        119.61817797890352, 
+        -210.7258774176346
+      ], 
+      "reducing_value": 914.6616014999984, 
+      "t": [
+        0.425, 
+        0.548, 
+        1.612, 
+        1.969, 
+        12.198, 
+        13.895
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 599.4, 
+      "Tmax": 599.3999999999985, 
+      "Tmin": 205.2, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 1.4890727440140417, 
+      "n": [
+        -0.11322403921855548, 
+        -5.400575739692096, 
+        -5.64304102079293, 
+        -25.864491940816304, 
+        53.18850232422741, 
+        -132.89980126138155
+      ], 
+      "reducing_value": 914.6616014999984, 
+      "t": [
+        0.113, 
+        0.533, 
+        2.232, 
+        6.521, 
+        9.438, 
+        15.582
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }
+  }, 
+  "CAS": "141-62-8", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 2, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 1, 
+    "Name": "MD2M", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Colonna-FPE-2008", 
+      "T_max": 673, 
+      "T_max_units": "K", 
+      "Ttriple": 205.2, 
+      "Ttriple_units": "K", 
+      "accentric": 0.668, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": -7.756334333038524, 
+          "a2": 8.304835522982922, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": -1, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "T0": 467.506025761878, 
+          "Tc": 599.4, 
+          "c": [
+            39.91834959574101, 
+            93.46354164160995, 
+            1813.8, 
+            62.70993515884111, 
+            795.1
+          ], 
+          "type": "IdealGasHelmholtzCP0AlyLee"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            1.33840331, 
+            -2.62939393, 
+            0.4398383, 
+            -0.53496715, 
+            0.1818844, 
+            0.00040774609, 
+            1.13444506, 
+            0.05774631, 
+            -0.5917498, 
+            -0.11020225, 
+            -0.034942635, 
+            0.007646298
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.310685, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 30000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 0.000479509938, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 599.4, 
+        "T_units": "K", 
+        "p": 1227000, 
+        "p_units": "Pa", 
+        "rhomolar": 914.6616014999984, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 3032.115488664193, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 2.811052609114695e-07, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "MD2M"
+}

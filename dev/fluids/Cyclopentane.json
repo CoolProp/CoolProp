@@ -1,0 +1,283 @@
+{
+  "ALIASES": [
+    "CycloPentane", 
+    "cyclopentane", 
+    "CYCLOPENTANE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 511.72, 
+      "Tmax": 511.719999999999, 
+      "Tmin": 179.7, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.06993962946545418, 
+      "n": [
+        0.005640145137827244, 
+        -8.049357440969791, 
+        2.4664748335340834, 
+        -1.3407752278951093, 
+        -1.6536650781763431, 
+        -1.270585253317597
+      ], 
+      "reducing_value": 4571200.0, 
+      "t": [
+        0.388, 
+        1.011, 
+        1.309, 
+        2.935, 
+        3.423, 
+        6.579
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 511.72, 
+      "Tmax": 511.719999999999, 
+      "Tmin": 179.7, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.028737273286005838, 
+      "n": [
+        -9.601889908950373, 
+        3.974125106492668, 
+        2.6925579604302676, 
+        -4.621940458120144, 
+        -5.157782358169021, 
+        3.340182642033233
+      ], 
+      "reducing_value": 4571200.0, 
+      "t": [
+        1.041, 
+        1.3, 
+        1.87, 
+        2.257, 
+        5.99, 
+        6.955
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 511.72, 
+      "Tmax": 511.719999999999, 
+      "Tmin": 179.7, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.30360463662223447, 
+      "n": [
+        4.175321169438228, 
+        -3.3972763608243954, 
+        3.265444750596592, 
+        -14.140653461920774, 
+        419.1357335784064, 
+        -484.6437448434436
+      ], 
+      "reducing_value": 3820.0000000000005, 
+      "t": [
+        0.545, 
+        1.142, 
+        2.232, 
+        6.456, 
+        11.186, 
+        11.952
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 511.72, 
+      "Tmax": 511.719999999999, 
+      "Tmin": 179.7, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.94766458281903, 
+      "n": [
+        -5.935725453092267, 
+        1.591120947182766, 
+        -8.958815994240467, 
+        198.61227335356796, 
+        -245.69777423593865, 
+        469.5550522878147
+      ], 
+      "reducing_value": 3820.0000000000005, 
+      "t": [
+        0.602, 
+        1.076, 
+        3.895, 
+        8.292, 
+        8.939, 
+        18.105
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }
+  }, 
+  "CAS": "287-92-3", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 3, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 2, 
+    "Name": "Cyclopentane", 
+    "ODP": -1.0, 
+    "PH": 1
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Gedanitz-PREPRINT-2013", 
+      "T_max": 550, 
+      "T_max_units": "K", 
+      "Ttriple": 179.7, 
+      "Ttriple_units": "K", 
+      "accentric": 0.201112573380599, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": 3.2489131288, 
+          "a2": 2.6444166315, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 0.96, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            3.34, 
+            18.6, 
+            13.9, 
+            4.86
+          ], 
+          "t": [
+            0.2345032439615415, 
+            2.540451809583366, 
+            5.276322989134683, 
+            10.35722660830141
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            4, 
+            1, 
+            1, 
+            2, 
+            3, 
+            1, 
+            3, 
+            2, 
+            2, 
+            7
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            2, 
+            2, 
+            1, 
+            2, 
+            1
+          ], 
+          "n": [
+            0.0536938, 
+            1.60394, 
+            -2.41244, 
+            -0.474009, 
+            0.203482, 
+            -0.965616, 
+            -0.344543, 
+            0.353975, 
+            -0.231373, 
+            -0.0379099
+          ], 
+          "t": [
+            1, 
+            0.29, 
+            0.8, 
+            1.14, 
+            0.5, 
+            2, 
+            1.5, 
+            1, 
+            3.36, 
+            0.95
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }, 
+        {
+          "beta": [
+            1.15, 
+            1.61, 
+            0.66, 
+            2.72
+          ], 
+          "d": [
+            1, 
+            1, 
+            3, 
+            3
+          ], 
+          "epsilon": [
+            0.68, 
+            0.97, 
+            0.84, 
+            0.66
+          ], 
+          "eta": [
+            0.82, 
+            1.19, 
+            0.79, 
+            1.52
+          ], 
+          "gamma": [
+            1.08, 
+            0.36, 
+            0.09, 
+            1.48
+          ], 
+          "n": [
+            0.867586, 
+            -0.381827, 
+            -0.108741, 
+            -0.0976984
+          ], 
+          "t": [
+            1, 
+            2.5, 
+            2.5, 
+            1.5
+          ], 
+          "type": "ResidualHelmholtzGaussian"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.07013290000000001, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 250000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 8.854271418, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 511.72, 
+        "T_units": "K", 
+        "p": 4571200, 
+        "p_units": "Pa", 
+        "rhomolar": 3820.000000000001, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 12107.59623891635, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 0.00592693841039708, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "Cyclopentane"
+}

@@ -1,0 +1,104 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 9.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       157,          7]
+NotebookDataLength[      3108,         95]
+NotebookOptionsPosition[      2636,         74]
+NotebookOutlinePosition[      2985,         89]
+CellTagsIndexPosition[      2942,         86]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"Props", "=", " ", 
+   RowBox[{"LibraryFunctionLoad", "[", 
+    RowBox[{"\"\<CoolProp\>\"", ",", "\"\<Props\>\"", ",", 
+     RowBox[{"{", 
+      RowBox[{
+      "UTF8String", ",", "UTF8String", ",", "Real", ",", "UTF8String", ",", 
+       "Real", ",", "UTF8String"}], "}"}], ",", "Real"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Props", "[", 
+  RowBox[{
+  "\"\<T\>\"", ",", "\"\<P\>\"", ",", "300", ",", "\"\<Q\>\"", ",", "1", ",", 
+   "\"\<R134a\>\""}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{"LibraryFunctionUnload", "[", "Props", "]"}]}], "Input",
+ CellChangeTimes->{{3.5975962701305647`*^9, 3.597596273924782*^9}, {
+   3.5975963268728104`*^9, 3.597596370765321*^9}, {3.597596413885787*^9, 
+   3.597596447831729*^9}, {3.597596485780899*^9, 3.5975965035799174`*^9}, 
+   3.5975965729218836`*^9}],
+
+Cell[BoxData["273.82206373780235`"], "Output",
+ CellChangeTimes->{{3.5975965638133626`*^9, 3.597596574246959*^9}, 
+   3.5975966820841274`*^9, 3.5979454740346136`*^9, 3.597945533625022*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"HumidAirProps", "=", " ", 
+   RowBox[{"LibraryFunctionLoad", "[", 
+    RowBox[{"\"\<CoolProp\>\"", ",", "\"\<HumidAirProps\>\"", ",", 
+     RowBox[{"{", 
+      RowBox[{
+      "UTF8String", ",", "UTF8String", ",", "Real", ",", "UTF8String", ",", 
+       "Real", ",", "UTF8String", ",", "Real"}], "}"}], ",", "Real"}], 
+    "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"HumidAirProps", "[", 
+  RowBox[{
+  "\"\<D\>\"", ",", "\"\<T\>\"", ",", "300", ",", "\"\<P\>\"", ",", "101.325",
+    ",", "\"\<R\>\"", ",", "0.5"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{"LibraryFunctionUnload", "[", "HumidAirProps", "]"}]}], "Input",
+ CellChangeTimes->{{3.597945273818162*^9, 3.597945373524865*^9}, 
+   3.5979455508320065`*^9}],
+
+Cell[BoxData["288.71443135649594`"], "Output",
+ CellChangeTimes->{{3.5979455418264914`*^9, 3.5979455523070908`*^9}}]
+}, Open  ]],
+
+Cell[BoxData[""], "Input",
+ CellChangeTimes->{{3.597945508477584*^9, 3.597945508482584*^9}}]
+},
+WindowSize->{1366, 746},
+WindowMargins->{{Automatic, -1374}, {-48, Automatic}},
+FrontEndVersion->"9.0 for Microsoft Windows (64-bit) (January 25, 2013)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[579, 22, 845, 18, 72, "Input"],
+Cell[1427, 42, 188, 2, 31, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[1652, 49, 754, 16, 72, "Input"],
+Cell[2409, 67, 116, 1, 31, "Output"]
+}, Open  ]],
+Cell[2540, 71, 92, 1, 31, InheritFromParent]
+}
+]
+*)
+
+(* End of internal cache information *)

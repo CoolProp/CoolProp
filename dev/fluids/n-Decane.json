@@ -1,0 +1,258 @@
+{
+  "ALIASES": [
+    "Decane", 
+    "decane", 
+    "DECANE", 
+    "N-DECANE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 617.7, 
+      "Tmax": 617.6999999999986, 
+      "Tmin": 243.5, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.07756927044693107, 
+      "n": [
+        -0.20911143417151587, 
+        -11.744433715974306, 
+        10.972105872724544, 
+        -8.360362692229996, 
+        -4.336166080704403, 
+        -26.146244680867692
+      ], 
+      "reducing_value": 2103000.0, 
+      "t": [
+        0.594, 
+        1.088, 
+        1.552, 
+        1.959, 
+        4.124, 
+        18.652
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 617.7, 
+      "Tmax": 617.6999999999986, 
+      "Tmin": 243.5, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.07748402944278698, 
+      "n": [
+        -0.018658701477170855, 
+        0.11385848199518148, 
+        -8.950810509531753, 
+        1.828978043951727, 
+        -3.8508051312012306, 
+        -3.0325059558496923
+      ], 
+      "reducing_value": 2103000.0, 
+      "t": [
+        0.297, 
+        0.55, 
+        0.987, 
+        1.227, 
+        2.854, 
+        4.712
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 617.7, 
+      "Tmax": 617.6999999999986, 
+      "Tmin": 243.5, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.22413706273485268, 
+      "n": [
+        4.827666872341155, 
+        -3.7319669690993447, 
+        1.9076750287466657, 
+        0.16459343086669795, 
+        1666.7748855066088, 
+        -2460.441820959505
+      ], 
+      "reducing_value": 1640.0000000000002, 
+      "t": [
+        0.49, 
+        0.778, 
+        1.234, 
+        5.192, 
+        18.677, 
+        19.549
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 617.7, 
+      "Tmax": 617.6999999999986, 
+      "Tmin": 243.5, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.1767241319367674, 
+      "n": [
+        0.14176862633564324, 
+        -4.281435009034745, 
+        -7.136194974307151, 
+        6.849154519985906, 
+        -3.913871220272946, 
+        -5.556483531473428
+      ], 
+      "reducing_value": 1640.0000000000002, 
+      "t": [
+        0.219, 
+        0.452, 
+        1.016, 
+        1.126, 
+        2.035, 
+        4.148
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 617.7, 
+      "a": [
+        0.05473
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.29
+      ]
+    }
+  }, 
+  "CAS": "124-18-5", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 2, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 2, 
+    "Name": "n-Decane", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "T_max": 675, 
+      "T_max_units": "K", 
+      "Ttriple": 243.5, 
+      "Ttriple_units": "K", 
+      "accentric": 0.4884, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": 13.9361966549, 
+          "a2": -10.5265128286, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 18.109, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            25.685, 
+            28.233, 
+            12.417, 
+            10.035
+          ], 
+          "t": [
+            1.931358264529707, 
+            3.46446495062328, 
+            7.710862878419944, 
+            17.58458798769629
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            1.0461, 
+            -2.4807, 
+            0.74372, 
+            -0.52579, 
+            0.15315, 
+            0.00032865, 
+            0.84178, 
+            0.055424, 
+            -0.73555, 
+            -0.18507, 
+            -0.020775, 
+            0.012335
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.14228168, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 800000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 1.404183642, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 617.7, 
+        "T_units": "K", 
+        "p": 2103000, 
+        "p_units": "Pa", 
+        "rhomolar": 1640, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 5406.411318574519, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 0.0006936528125986273, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "n-Decane"
+}

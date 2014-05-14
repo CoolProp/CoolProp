@@ -1,0 +1,25 @@
+[
+{
+"pre" : "swig -java -c++ -outdir Java -o Java/CoolProp_wrap.cxx -I../../include ../../src/CoolProp.i",
+"sources" : ["Java/CoolProp_wrap.cxx"],
+"platform" : ["Windows"],
+"compiler" : "VS10.0",
+"bitness" : 32,
+"c_flags" : "/MP3 /O2 /EHsc /I../../include /I\"C:/Program Files/Java/jdk1.7.0_40/include\" /I\"C:/Program Files/Java/jdk1.7.0_40/include/win32\" ",
+"link_type" : "DLL",
+"link_fname" : "CoolProp.dll",
+"link_flags" : "",
+"post" : ""
+},
+{
+"pre" : "swig -java -c++ -outdir Java -I../../include ../../src/CoolProp.i",
+"platform" : ["Windows"],
+"compiler" : "VS10.0",
+"bitness" : 64,
+"c_flags" : "/MP3 /O2 /EHsc /I../../include /I\"C:/Program Files/Java/jdk1.7.0_40/include\" /I\"C:/Program Files/Java/jdk1.7.0_40/include/win32\" ",
+"link_type" : "DLL",
+"link_fname" : "CoolProp.dll",
+"link_flags" : "",
+"post" : "erase *.obj "
+}
+]

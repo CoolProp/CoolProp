@@ -1,0 +1,14 @@
+Microsoft (R) COFF/PE Dumper Version 10.00.40219.01
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file CoolPropMathcadWrapper.dll
+
+File Type: DLL
+
+  Summary
+
+       1F000 .data
+       91000 .rdata
+       23000 .reloc
+      1DD000 .text

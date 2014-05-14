@@ -1,0 +1,28 @@
+language: python
+virtualenv:
+  system_site_packages: true
+python:
+  - "2.7"
+  - "3.2"
+  - "3.3"
+# command to install dependencies
+install: 
+  - gcc -v
+  - pip -q install cython --install-option="--no-cython-compile"
+  - cd wrappers/Python
+  - python setup.py install # Install CoolProp
+  - cd ../SharedLibrary
+  - make
+  
+# command to run tests
+script: 
+  - pwd
+  - cd $TRAVIS_BUILD_DIR/wrappers/Python/CoolProp/tests
+  - nosetests
+
+notifications:
+  email:
+    recipients:
+      - ian.h.bell@gmail.com
+    on_success: never # default: change
+    on_failure: always # default: always

@@ -1,0 +1,7 @@
+﻿<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:FlowGraph="clr-namespace:Microsoft.Expression.Prototyping.FlowGraph;assembly=Microsoft.Expression.Prototyping.Runtime" x:Class="MainWindow"
+    Title="MainWindow" Height="403.32" Width="721.875">
+    <Button Content="clic" HorizontalAlignment="Left" Height="49" Margin="48,29,0,0" VerticalAlignment="Top" Width="197" Click="Button_Click"/>
+</Window>

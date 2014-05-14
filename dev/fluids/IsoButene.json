@@ -1,0 +1,256 @@
+{
+  "ALIASES": [
+    "Isobutene", 
+    "ISOBUTENE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 418.09, 
+      "Tmax": 418.08999999999907, 
+      "Tmin": 132.4, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.14739891561160734, 
+      "n": [
+        0.01737687722206489, 
+        -6.134166125080951, 
+        -3.853515831640818, 
+        8.384924413254762, 
+        -243.10740943312803, 
+        365.4747247586171
+      ], 
+      "reducing_value": 4009800.0, 
+      "t": [
+        0.354, 
+        0.969, 
+        4.231, 
+        10.316, 
+        16.968, 
+        18.914
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 418.09, 
+      "Tmax": 418.08999999999907, 
+      "Tmin": 132.4, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.14741018682782325, 
+      "n": [
+        -76.08135715558664, 
+        397.01813873870134, 
+        -453.7794701448892, 
+        150.79295360094682, 
+        -27.032450330527833, 
+        -1.1837914833355219
+      ], 
+      "reducing_value": 4009800.0, 
+      "t": [
+        1.284, 
+        1.548, 
+        1.685, 
+        2.003, 
+        2.638, 
+        10.608
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 418.09, 
+      "Tmax": 418.08999999999907, 
+      "Tmin": 132.4, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.6248238395114569, 
+      "n": [
+        3.836064588981606, 
+        -8.505454480687774, 
+        12.985006905703951, 
+        -10.011005004151073, 
+        5.376836540123832, 
+        -10.94925598220989
+      ], 
+      "reducing_value": 4170.0, 
+      "t": [
+        0.444, 
+        0.979, 
+        1.37, 
+        2.24, 
+        3.344, 
+        13.946
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 418.09, 
+      "Tmax": 418.08999999999907, 
+      "Tmin": 132.4, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.35084693470349704, 
+      "n": [
+        -8.729642476739642, 
+        6.811506526700638, 
+        -6.411697069038467, 
+        5.7983193722867306, 
+        -6.559199615514519, 
+        -12.258975766186447
+      ], 
+      "reducing_value": 4170.0, 
+      "t": [
+        0.507, 
+        0.607, 
+        1.205, 
+        1.898, 
+        3.194, 
+        18.774
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 418.09, 
+      "a": [
+        0.0545
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.23
+      ]
+    }
+  }, 
+  "CAS": "115-11-7", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 4, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 1, 
+    "Name": "Isobutene", 
+    "ODP": -1.0, 
+    "PH": 2
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-FPE-2005", 
+      "T_max": 525, 
+      "T_max_units": "K", 
+      "Ttriple": 132.4, 
+      "Ttriple_units": "K", 
+      "accentric": 0.1925934521621, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": -0.12737888, 
+          "a2": 2.3125128, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 3, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            4.8924, 
+            7.832, 
+            7.2867, 
+            8.7293
+          ], 
+          "t": [
+            0.9543399746466072, 
+            3.037623478198474, 
+            4.795618168336961, 
+            9.60797914324667
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            0.77111, 
+            -2.7971, 
+            1.0118, 
+            0.02073, 
+            0.085086, 
+            0.00021968, 
+            0.20633, 
+            -0.078843, 
+            -0.23726, 
+            -0.080211, 
+            -0.027001, 
+            0.013072
+          ], 
+          "t": [
+            0.12, 
+            1.3, 
+            1.74, 
+            2.1, 
+            0.28, 
+            0.69, 
+            0.75, 
+            2, 
+            4.4, 
+            4.7, 
+            15, 
+            14
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.05610631999999999, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 50000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 0.6761899733, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 418.09, 
+        "T_units": "K", 
+        "p": 4009800, 
+        "p_units": "Pa", 
+        "rhomolar": 4170, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 13666.73347813296, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 0.0006143704326081906, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "IsoButene"
+}

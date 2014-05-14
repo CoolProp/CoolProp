@@ -1,0 +1,251 @@
+{
+  "ALIASES": [
+    "Hexamethyldisiloxane", 
+    "HEXAMETHYLDISILOXANE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 518.75, 
+      "Tmax": 518.749999999999, 
+      "Tmin": 273.0, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.20111645182863125, 
+      "n": [
+        -6.066365670683859, 
+        -1.017358368453696, 
+        -1.2952535297950865, 
+        -359.85773789162744, 
+        626.9902185535459, 
+        -3052.796872382347
+      ], 
+      "reducing_value": 1939000.0, 
+      "t": [
+        0.941, 
+        1.326, 
+        2.071, 
+        7.44, 
+        8.26, 
+        13.747
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 518.75, 
+      "Tmax": 518.749999999999, 
+      "Tmin": 273.0, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.20111645178579884, 
+      "n": [
+        -1.9009492315036665, 
+        -5.340645245910856, 
+        -0.9843148559865389, 
+        -6.609078226952975, 
+        347.0300616124387, 
+        -6398.298737379578
+      ], 
+      "reducing_value": 1939000.0, 
+      "t": [
+        0.855, 
+        1.041, 
+        2.576, 
+        4.341, 
+        11.815, 
+        16.363
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 518.75, 
+      "Tmax": 518.749999999999, 
+      "Tmin": 273.0, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 17.956753927465808, 
+      "n": [
+        10.867417370343293, 
+        -26.426060451546014, 
+        247.0862159714223, 
+        -573.747985737039, 
+        1763408.557605998, 
+        -8586317.70489454
+      ], 
+      "reducing_value": 1589.825, 
+      "t": [
+        0.712, 
+        1.429, 
+        3.552, 
+        4.879, 
+        15.966, 
+        18.374
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 518.75, 
+      "Tmax": 518.749999999999, 
+      "Tmin": 273.0, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 16.01032229517174, 
+      "n": [
+        -7.501839129825876, 
+        109.24138401462254, 
+        -471.55475994248695, 
+        1970.622943483528, 
+        -204421.66641651493, 
+        484946.5588455783
+      ], 
+      "reducing_value": 1589.825, 
+      "t": [
+        0.662, 
+        2.85, 
+        3.956, 
+        6.268, 
+        12.261, 
+        13.876
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }
+  }, 
+  "CAS": "107-46-0", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 3, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 2, 
+    "Name": "MM", 
+    "ODP": -1.0, 
+    "PH": 1
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Colonna-FPE-2006", 
+      "T_max": 673, 
+      "T_max_units": "K", 
+      "Ttriple": 204.93, 
+      "Ttriple_units": "K", 
+      "accentric": 0.418, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": 8.673203925289393, 
+          "a2": -6.135769396208712, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": -1, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "T0": 373.400735665744, 
+          "Tc": 518.69997204, 
+          "cp_over_R": 6.24140654992885, 
+          "type": "IdealGasHelmholtzCP0Constant"
+        }, 
+        {
+          "T0": 373.400735665744, 
+          "Tc": 518.69997204, 
+          "c": [
+            0.0891626070783569, 
+            -5.00332432414229e-05, 
+            8.41905535312405e-09
+          ], 
+          "t": [
+            1, 
+            2, 
+            3
+          ], 
+          "type": "IdealGasHelmholtzCP0PolyT"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            1.01686012, 
+            -2.19713029, 
+            0.75443188, 
+            -0.68003426, 
+            0.19082162, 
+            0.0010530133, 
+            0.6284595, 
+            0.030903042, 
+            -0.83948727, 
+            -0.20262381, 
+            -0.035131597, 
+            0.025902341
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.16237752, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 30000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 1316.986384, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 518.69997204, 
+        "T_units": "K", 
+        "p": 1939390, 
+        "p_units": "Pa", 
+        "rhomolar": 1874.67076, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 6.158487948331765e+99, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 6.158487948331765e+99, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "MM"
+}

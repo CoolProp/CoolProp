@@ -1,0 +1,258 @@
+{
+  "ALIASES": [
+    "toluene", 
+    "TOLUENE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 591.75, 
+      "Tmax": 591.7499999999987, 
+      "Tmin": 178.0, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.013628695855705253, 
+      "n": [
+        -11.639922828598088, 
+        5.650211353764286, 
+        -2.6974053250328165, 
+        -3.164119945892499, 
+        1.8859792463505036, 
+        -5.2234698853395525
+      ], 
+      "reducing_value": 4126000.0, 
+      "t": [
+        1.041, 
+        1.184, 
+        3.013, 
+        5.82, 
+        8.325, 
+        15.907
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 591.75, 
+      "Tmax": 591.7499999999987, 
+      "Tmin": 178.0, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.009539128608204717, 
+      "n": [
+        -41.682551388800405, 
+        35.681619568443324, 
+        -2.4647898129932573, 
+        -2.2965822444409394, 
+        1.6090346729113876, 
+        -6.971566618092907
+      ], 
+      "reducing_value": 4126000.0, 
+      "t": [
+        1.081, 
+        1.11, 
+        2.974, 
+        5.067, 
+        13.97, 
+        17.253
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 591.75, 
+      "Tmax": 591.7499999999987, 
+      "Tmin": 178.0, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.8197967086870594, 
+      "n": [
+        2.731439741297877, 
+        -1.4311921172736468, 
+        1.7220225715861872, 
+        -1.3959592517619432, 
+        25.019574322670564, 
+        -106.28098773992355
+      ], 
+      "reducing_value": 3169.0, 
+      "t": [
+        0.413, 
+        1.151, 
+        1.592, 
+        6.141, 
+        12.914, 
+        18.579
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 591.75, 
+      "Tmax": 591.7499999999987, 
+      "Tmin": 178.0, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.610452170273057, 
+      "n": [
+        -2.079525851134041, 
+        -3.0632853262137703, 
+        -5.643041080974643, 
+        3.9792497484198788, 
+        -2638.7103858281944, 
+        2945.506923819063
+      ], 
+      "reducing_value": 3169.0, 
+      "t": [
+        0.4, 
+        0.697, 
+        3.764, 
+        8.691, 
+        19.351, 
+        19.782
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 591.75, 
+      "a": [
+        0.06897
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.291
+      ]
+    }
+  }, 
+  "CAS": "108-88-3", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 3, 
+    "GWP100": 3.3, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 2, 
+    "Name": "Toluene", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "T_max": 700, 
+      "T_max_units": "K", 
+      "Ttriple": 178, 
+      "Ttriple_units": "K", 
+      "accentric": 0.2657, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": 3.5241174832, 
+          "a2": 1.1360823464, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 3, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            1.6994, 
+            8.0577, 
+            17.059, 
+            8.4567, 
+            8.6423
+          ], 
+          "t": [
+            0.3210815378115758, 
+            1.346852555978031, 
+            2.735952682720744, 
+            5.191381495564005, 
+            13.37558090409801
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            0.96464, 
+            -2.7855, 
+            0.86712, 
+            -0.1886, 
+            0.11804, 
+            0.00025181, 
+            0.57196, 
+            -0.029287, 
+            -0.43351, 
+            -0.1254, 
+            -0.028207, 
+            0.014076
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.09213842, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 500000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 0.03939347882, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 591.75, 
+        "T_units": "K", 
+        "p": 4126000, 
+        "p_units": "Pa", 
+        "rhomolar": 3169, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 10580.04981301902, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 2.662208671588402e-05, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "Toluene"
+}

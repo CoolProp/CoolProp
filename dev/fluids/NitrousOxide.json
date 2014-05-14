@@ -1,0 +1,254 @@
+{
+  "ALIASES": [
+    "N2O", 
+    "NITROUSOXIDE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 309.52, 
+      "Tmax": 309.51999999999924, 
+      "Tmin": 182.33, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.006797151133386414, 
+      "n": [
+        -24.198485663914695, 
+        18.980157921169518, 
+        -0.9915637584760082, 
+        -3.6052256452535647, 
+        52.20126113055801, 
+        -340.2395463889685
+      ], 
+      "reducing_value": 7245000.0, 
+      "t": [
+        1.06, 
+        1.105, 
+        1.754, 
+        4.415, 
+        9.887, 
+        12.55
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 309.52, 
+      "Tmax": 309.51999999999924, 
+      "Tmin": 182.33, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.008317995318263272, 
+      "n": [
+        2.115457947739384, 
+        -17.675380864870732, 
+        -0.29834585629296156, 
+        -2.0057540709496644, 
+        -5.223431208153363, 
+        9.982409851956168
+      ], 
+      "reducing_value": 7245000.0, 
+      "t": [
+        0.985, 
+        1.029, 
+        1.616, 
+        3.337, 
+        7.323, 
+        1.092
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 309.52, 
+      "Tmax": 309.51999999999924, 
+      "Tmin": 182.33, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.6835792444787825, 
+      "n": [
+        2.248014962727216, 
+        1354.8814407985476, 
+        -227009237.43183637, 
+        312935961.0720787, 
+        -139155040.7743576, 
+        295107831.0429585
+      ], 
+      "reducing_value": 10270.000000000002, 
+      "t": [
+        0.374, 
+        6.796, 
+        13.027, 
+        13.205, 
+        14.362, 
+        18.638
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 309.52, 
+      "Tmax": 309.51999999999924, 
+      "Tmin": 182.33, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.5406788216657077, 
+      "n": [
+        -3.439484106428665, 
+        -35.87348642351084, 
+        98.43310989645504, 
+        -173.87569213455475, 
+        30857.724063434925, 
+        -31916.967231256218
+      ], 
+      "reducing_value": 10270.000000000002, 
+      "t": [
+        0.428, 
+        2.405, 
+        3.115, 
+        4.433, 
+        8.312, 
+        8.395
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 309.52, 
+      "a": [
+        0.07087
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.204
+      ]
+    }
+  }, 
+  "CAS": "10024-97-2", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 0, 
+    "GWP100": 320.0, 
+    "GWP20": 290.0, 
+    "GWP500": 180.0, 
+    "HH": 1, 
+    "Name": "NitrousOxide", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "T_max": 525, 
+      "T_max_units": "K", 
+      "Ttriple": 182.33, 
+      "Ttriple_units": "K", 
+      "accentric": 0.1613, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": -4.4262736272, 
+          "a2": 4.3120475243, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 2.5, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            2.1769, 
+            1.6145, 
+            0.48393
+          ], 
+          "t": [
+            2.839881106229, 
+            7.663478935125356, 
+            17.598216593435
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            3, 
+            7, 
+            1, 
+            2, 
+            5, 
+            1, 
+            1, 
+            4, 
+            2
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            1, 
+            2, 
+            2, 
+            2, 
+            3
+          ], 
+          "n": [
+            0.88045, 
+            -2.4235, 
+            0.38237, 
+            0.068917, 
+            0.00020367, 
+            0.13122, 
+            0.46032, 
+            -0.0036985, 
+            -0.23263, 
+            -0.00042859, 
+            -0.04281, 
+            -0.023038
+          ], 
+          "t": [
+            0.25, 
+            1.25, 
+            1.5, 
+            0.25, 
+            0.875, 
+            2.375, 
+            2, 
+            2.125, 
+            3.5, 
+            6.5, 
+            4.75, 
+            12.5
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.0440128, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 50000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 87837.43923, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 309.52, 
+        "T_units": "K", 
+        "p": 7245000, 
+        "p_units": "Pa", 
+        "rhomolar": 10270, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 28113.36563491833, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 59.33941145458979, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "NitrousOxide"
+}

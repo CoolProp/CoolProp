@@ -1,0 +1,15 @@
+Methane/Nitrogen 1.0
+Methane/CarbonDioxide 1.0
+Methane/Ethane 1.0
+Methane/Propane 1.0
+Methane/n-Butane 1.0
+Methane/Isobutane 0.771035405688
+Methane/Hydrogen 1.0
+Nitrogen/CarbonDioxide 1.0
+Nitrogen/Ethane 1.0
+Ethane/Propane 0.130424765150
+Ethane/n-Butane 0.281570073085
+Ethane/Isobutane 0.260632376098
+Propane/n-Butane 0.312572600489e-1
+Propane/Isobutane -0.551609771024e-1
+n-Butane/Isobutane -0.551240293009e-1

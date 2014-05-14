@@ -1,0 +1,6 @@
+
+A) Copy one of the existing files that has all the required terms to a new file in the appropriate folder
+B) Update all the coefficients
+C) Add "FluidsList.push_back(new FLUIDNAMEClass());" to FluidClass.cpp
+D) Add '#include "YOURFLUIDFILENAME.h"' to FluidClass.cpp
+E) Add #include "YOURFLUIDFILENAME.cpp to AllFluids.cpp

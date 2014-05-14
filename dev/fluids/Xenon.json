@@ -1,0 +1,244 @@
+{
+  "ALIASES": [
+    "Xe", 
+    "xenon", 
+    "XENON"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 289.733, 
+      "Tmax": 289.7329999999995, 
+      "Tmin": 161.4, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.011854794678511915, 
+      "n": [
+        11.759823036499577, 
+        -19.398618185657206, 
+        2.5732301247266913, 
+        0.020967271862947154, 
+        -1.9842834228505148, 
+        1.309146521589442
+      ], 
+      "reducing_value": 5842000.0, 
+      "t": [
+        0.927, 
+        0.954, 
+        1.098, 
+        1.658, 
+        4.602, 
+        7.358
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 289.733, 
+      "Tmax": 289.7329999999995, 
+      "Tmin": 161.4, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.003330663663103639, 
+      "n": [
+        -16.19625075039699, 
+        11.57828555218498, 
+        -0.8039722338089157, 
+        -0.44871260923308376, 
+        -3.2943901833234577, 
+        -0.38871476100259306
+      ], 
+      "reducing_value": 5842000.0, 
+      "t": [
+        1.057, 
+        1.12, 
+        3.837, 
+        4.253, 
+        9.273, 
+        1.349
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 289.733, 
+      "Tmax": 289.7329999999995, 
+      "Tmin": 161.4, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.442478347100006, 
+      "n": [
+        -0.07701425735191812, 
+        2.124910237054726, 
+        3.0205260680663732, 
+        -192.08348472998213, 
+        269.9245321947838, 
+        -15087.387586364559
+      ], 
+      "reducing_value": 8400.0, 
+      "t": [
+        0.084, 
+        0.346, 
+        2.447, 
+        5.49, 
+        6.019, 
+        15.158
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 289.733, 
+      "Tmax": 289.7329999999995, 
+      "Tmin": 161.4, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.5570878482475949, 
+      "n": [
+        -2.3064783393038195, 
+        -1.620761716561509, 
+        -2.202094575030882, 
+        84230.43322373286, 
+        -29642269.39439326, 
+        40329098.33422997
+      ], 
+      "reducing_value": 8400.0, 
+      "t": [
+        0.415, 
+        0.698, 
+        2.925, 
+        14.138, 
+        18.611, 
+        19.123
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 289.733, 
+      "a": [
+        -0.11538, 
+        0.16598
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.0512, 
+        1.098
+      ]
+    }
+  }, 
+  "CAS": "7440-63-3", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 0, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 0, 
+    "Name": "Xenon", 
+    "ODP": -1.0, 
+    "PH": 3
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "T_max": 750, 
+      "T_max_units": "K", 
+      "Ttriple": 161.4, 
+      "Ttriple_units": "K", 
+      "accentric": 0.00363, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": -3.8227178129, 
+          "a2": 3.8416395351, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 1.5, 
+          "type": "IdealGasHelmholtzLogTau"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            0.83115, 
+            -2.3553, 
+            0.53904, 
+            0.014382, 
+            0.066309, 
+            0.00019649, 
+            0.14996, 
+            -0.035319, 
+            -0.15929, 
+            -0.027521, 
+            -0.023305, 
+            0.0086941
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.131293, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 700000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 81747.79907, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 289.733, 
+        "T_units": "K", 
+        "p": 5842000, 
+        "p_units": "Pa", 
+        "rhomolar": 8400, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 22592.29218261004, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 62.61612339419351, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "Xenon"
+}

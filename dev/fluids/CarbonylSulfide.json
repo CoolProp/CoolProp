@@ -1,0 +1,256 @@
+{
+  "ALIASES": [
+    "COS", 
+    "CARBONYLSULFIDE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 378.77, 
+      "Tmax": 378.769999999999, 
+      "Tmin": 134.3, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.019317469106150398, 
+      "n": [
+        -5.898980404479669, 
+        1.4411942572733878, 
+        -46.792325277477346, 
+        56.09470221996165, 
+        -13.259873589238543, 
+        -0.851491340049802
+      ], 
+      "reducing_value": 6370000.0, 
+      "t": [
+        0.98, 
+        1.966, 
+        3.287, 
+        3.429, 
+        4.051, 
+        18.959
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 378.77, 
+      "Tmax": 378.769999999999, 
+      "Tmin": 134.3, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.042743464291516986, 
+      "n": [
+        -11.161617133348066, 
+        7.10392197545503, 
+        -2.0123784114786365, 
+        -8.915798275517139, 
+        13.747559787232735, 
+        -11.14583161926877
+      ], 
+      "reducing_value": 6370000.0, 
+      "t": [
+        1.05, 
+        1.227, 
+        1.785, 
+        6.353, 
+        8.207, 
+        11.103
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 378.77, 
+      "Tmax": 378.769999999999, 
+      "Tmin": 134.3, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.07015256842908268, 
+      "n": [
+        -0.006565517887508687, 
+        9.861398057771247, 
+        -49.28678353119856, 
+        50.765489904412995, 
+        -18.836456981431365, 
+        10.180262280869785
+      ], 
+      "reducing_value": 7410.0, 
+      "t": [
+        0.187, 
+        0.539, 
+        0.811, 
+        0.921, 
+        1.495, 
+        1.774
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 378.77, 
+      "Tmax": 378.769999999999, 
+      "Tmin": 134.3, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.33766247305977437, 
+      "n": [
+        1.776086114558269, 
+        -28.20299757513764, 
+        43.7268964289033, 
+        -22.918757269308017, 
+        2.3656558943753296, 
+        -4.806350485891986
+      ], 
+      "reducing_value": 7410.0, 
+      "t": [
+        0.376, 
+        0.531, 
+        0.641, 
+        0.783, 
+        2.208, 
+        3.625
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 378.77, 
+      "a": [
+        0.07246
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.407
+      ]
+    }
+  }, 
+  "CAS": "463-58-1", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 4, 
+    "GWP100": 27.0, 
+    "GWP20": 97.0, 
+    "GWP500": -1.0, 
+    "HH": 3, 
+    "Name": "CarbonylSulfide", 
+    "ODP": -1.0, 
+    "PH": 1
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "T_max": 650, 
+      "T_max_units": "K", 
+      "Ttriple": 134.3, 
+      "Ttriple_units": "K", 
+      "accentric": 0.0978, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": -3.6587449805, 
+          "a2": 3.7349245016, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 2.5, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            2.1651, 
+            0.93456, 
+            1.0623, 
+            0.34269
+          ], 
+          "t": [
+            2.027615703461204, 
+            3.59848984872086, 
+            8.382395649074637, 
+            33.87015867148929
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            0.94374, 
+            -2.5348, 
+            0.59058, 
+            -0.021488, 
+            0.082083, 
+            0.00024689, 
+            0.21226, 
+            -0.041251, 
+            -0.22333, 
+            -0.050828, 
+            -0.028333, 
+            0.016983
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.0600751, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 50000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 64.43457747, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 378.77, 
+        "T_units": "K", 
+        "p": 6370000, 
+        "p_units": "Pa", 
+        "rhomolar": 7410, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 22517.88586815158, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 0.05771851535442867, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "CarbonylSulfide"
+}

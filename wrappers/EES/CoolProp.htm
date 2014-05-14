@@ -1,0 +1,197 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+      "http://www.w3.org/TR/html4/loose.dtd">
+<?xml version="1.0" encoding="iso-8859-1"?>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+  <title>CoolProp for EES</title>
+  <meta name="generator" content="Amaya, see http://www.w3.org/Amaya/">
+</head>
+
+<body>
+<h3>General Information</h3>
+
+<p>The CoolProp library is a standard interface between EES and the CoolProp
+library. CoolProp is a fluid property database written by <a
+href="mailto:ian.h.bell@gmail.com">Ian Bell</a> and is open-source and free. In
+addition, REFPROP can be called through CoolProp if is installed on the
+computer</p>
+
+<p></p>
+
+<p>The general call looks like:</p>
+
+<p><em>out = coolprop(output$
+,inputvar1$,input1,inputvar2$,input2,fluid$)</em></p>
+
+<p>A modified SI system of units is used in CoolProp. The units employed are
+shown below.</p>
+
+<p></p>
+
+<h3>Example</h3>
+
+<p>The following example retrieves the enthalpy of &ldquo;Methane&rdquo;. The
+thermodynamic state is given by two variables : p and T, that are set to 1 bar
+(100 kPa) and 15 °C (288.15 K) respectively:</p>
+
+<p><em>h =
+coolprop('H',&rsquo;P',100,&rsquo;T&rsquo;,288.15,&rsquo;Methane&rsquo;)</em></p>
+
+<p></p>
+
+<p>A complete list of fluids that can be used in CoolProp() can be found at <a
+href="http://coolprop.sourceforge.net/Fluids/FluidInformation.html">Fluid
+Information</a></p>
+
+<p></p>
+
+<p>The EES function coolprop() uses the same fluids and inputs as the function
+<a
+href="http://coolprop.sourceforge.net/apidoc/CoolProp.html#CoolProp.CoolProp.Props">Props</a>
+from the python wrappers. The documentation there is generally more up-to-date.
+</p>
+
+<p></p>
+
+<p>Also refer to the example file at
+c:\EES32\Userlib\CoolProp_EES\CoolProp_EES_Sample.ees</p>
+
+<p></p>
+
+<h3>Fluid Properties</h3>
+
+<table border="1">
+  <caption></caption>
+  <col>
+  <col>
+  <col>
+  <col>
+  <tbody>
+    <tr>
+      <td>Thermophysical property</td>
+      <td>Symbol</td>
+      <td>Units</td>
+      <td>Input/Output</td>
+    </tr>
+    <tr>
+      <td>Pressure (absolute)</td>
+      <td>P</td>
+      <td>kPa</td>
+      <td>Both</td>
+    </tr>
+    <tr>
+      <td>Temperature</td>
+      <td>T</td>
+      <td>K</td>
+      <td>Both</td>
+    </tr>
+    <tr>
+      <td>Density</td>
+      <td>D</td>
+      <td>kg/m<sup>3</sup></td>
+      <td>Both</td>
+    </tr>
+    <tr>
+      <td>Specific Enthalpy</td>
+      <td>H</td>
+      <td>kJ/kg</td>
+      <td>Both</td>
+    </tr>
+    <tr>
+      <td>Specific Entropy</td>
+      <td>S</td>
+      <td>kJ/kg/K</td>
+      <td>Both</td>
+    </tr>
+    <tr>
+      <td>Quality</td>
+      <td>Q</td>
+      <td>kg/kg</td>
+      <td>Both</td>
+    </tr>
+    <tr>
+      <td>Specific Internal Energy</td>
+      <td>U</td>
+      <td>kJ/kg</td>
+      <td>Output only</td>
+    </tr>
+    <tr>
+      <td>Specific Gibbs Function</td>
+      <td>G</td>
+      <td>kJ/kg</td>
+      <td>Output only</td>
+    </tr>
+    <tr>
+      <td>Specific Heat at Constant Volume</td>
+      <td>O</td>
+      <td>kJ/kg/K</td>
+      <td>Output only</td>
+    </tr>
+    <tr>
+      <td>Specific Heat at Constant Pressure</td>
+      <td>C</td>
+      <td>kJ/kg/K</td>
+      <td>Output only</td>
+    </tr>
+    <tr>
+      <td>Speed of Sound</td>
+      <td>A</td>
+      <td>m/s</td>
+      <td>Output only</td>
+    </tr>
+    <tr>
+      <td>Surface Tension</td>
+      <td>I</td>
+      <td>N/m</td>
+      <td>Output only</td>
+    </tr>
+    
+    <tr>
+      <td>Viscosity</td>
+      <td>V</td>
+      <td>Pa·s</td>
+      <td>Output only</td>
+    </tr>
+    <tr>
+      <td>Thermal Conductivity</td>
+      <td>L</td>
+      <td>kW/m/K</td>
+      <td>Output only</td>
+    </tr>
+    <tr>
+      <td>Critical Temperature</td>
+      <td>Tcrit</td>
+      <td>K</td>
+      <td>Output only</td>
+    </tr>
+    <tr>
+      <td>Critical Pressure</td>
+      <td>pcrit</td>
+      <td>kPa</td>
+      <td>Output only</td>
+    </tr>
+    <tr>
+      <td>Minimum Temperature</td>
+      <td>Tmin</td>
+      <td>K</td>
+      <td>Output only</td>
+    </tr>
+  </tbody>
+</table>
+
+<p></p>
+
+<p>The following combinations of inputs are valid (in either order):</p>
+<ul>
+  <li>T,P</li>
+  <li>T,Q</li>
+  <li>T,D</li>
+  <li>P,H</li>
+  <li>P,S</li>
+  <li>P,Q</li>
+</ul>
+
+<h3></h3>
+</body>
+</html>

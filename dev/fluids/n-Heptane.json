@@ -1,0 +1,269 @@
+{
+  "ALIASES": [
+    "nHeptane", 
+    "Heptane", 
+    "HEPTANE", 
+    "N-HEPTANE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 540.13, 
+      "Tmax": 540.1299999999987, 
+      "Tmin": 182.55, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.061001060180121414, 
+      "n": [
+        -0.001547608055848768, 
+        -8.278553452057723, 
+        2.2800315192023684, 
+        -4.304490300717095, 
+        0.8703765102176411, 
+        -2.80944123395076
+      ], 
+      "reducing_value": 2736000.0, 
+      "t": [
+        0.006, 
+        1.018, 
+        1.502, 
+        3.003, 
+        6.048, 
+        6.315
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 540.13, 
+      "Tmax": 540.1299999999987, 
+      "Tmin": 182.55, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.18026733581983923, 
+      "n": [
+        0.25104409608498446, 
+        -6.845140939717869, 
+        -1.2228515021938513, 
+        -14.455325847673445, 
+        286.78777701022443, 
+        -278.9908782467837
+      ], 
+      "reducing_value": 2736000.0, 
+      "t": [
+        0.695, 
+        0.948, 
+        2.259, 
+        5.399, 
+        7.582, 
+        7.692
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 540.13, 
+      "Tmax": 540.1299999999987, 
+      "Tmin": 182.55, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 2.5843922865022684, 
+      "n": [
+        0.35147807402250625, 
+        4.121792126592887, 
+        -2.4954273570574026, 
+        2938.5470325829165, 
+        -4682.169465017815, 
+        2501.072581290023
+      ], 
+      "reducing_value": 2315.3230474441625, 
+      "t": [
+        0.124, 
+        0.664, 
+        1.294, 
+        10.615, 
+        11.227, 
+        13.607
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 540.13, 
+      "Tmax": 540.1299999999987, 
+      "Tmin": 182.55, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 3.706924711484416, 
+      "n": [
+        -0.29457754530864466, 
+        -7.274148490152896, 
+        75.40064985046571, 
+        -79.02485215998952, 
+        1.254951249920929, 
+        -6.677464890274236
+      ], 
+      "reducing_value": 2315.3230474441625, 
+      "t": [
+        0.061, 
+        0.718, 
+        1.921, 
+        2.015, 
+        2.746, 
+        9.877
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 540.13, 
+      "a": [
+        0.07765, 
+        -0.02599
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.319, 
+        1.6
+      ]
+    }
+  }, 
+  "CAS": "142-82-5", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 3, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 1, 
+    "Name": "n-Heptane", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "Jaeschke-IJT-1995", 
+      "BibTeX_EOS": "Span-IJT-2003B", 
+      "T_max": 310, 
+      "T_max_units": "K", 
+      "Ttriple": 182.55, 
+      "Ttriple_units": "K", 
+      "accentric": 0.349, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": -1.599437140443368, 
+          "a2": 0, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": -1, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "T0": 371.533277446, 
+          "Tc": 540.13, 
+          "c": [
+            4, 
+            13.7266, 
+            169.789, 
+            30.4707, 
+            836.195
+          ], 
+          "type": "IdealGasHelmholtzCP0AlyLee"
+        }, 
+        {
+          "T0": 371.533277446, 
+          "Tc": 540.13, 
+          "c": [
+            0, 
+            43.5561, 
+            1760.46, 
+            0, 
+            0
+          ], 
+          "type": "IdealGasHelmholtzCP0AlyLee"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            1.0543748, 
+            -2.6500682, 
+            0.81730048, 
+            -0.30451391, 
+            0.12253869, 
+            0.00027266473, 
+            0.49865826, 
+            -0.00071432815, 
+            -0.54236896, 
+            -0.13801822, 
+            -0.0061595287, 
+            0.0004860251
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.31451, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.100202, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 100000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 0.1754903981, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 540.13, 
+        "T_units": "K", 
+        "p": 2736000, 
+        "p_units": "Pa", 
+        "rhomolar": 2315.323047444163, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 7745.676592920418, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 0.0001156384998550007, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "n-Heptane"
+}

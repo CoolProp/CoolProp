@@ -1,0 +1,256 @@
+{
+  "ALIASES": [
+    "ihexane", 
+    "ISOHEXANE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 497.7, 
+      "Tmax": 497.6999999999989, 
+      "Tmin": 119.60000000000001, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.08432429066262959, 
+      "n": [
+        0.005399475579081403, 
+        -0.9497359767020471, 
+        -5.626629157486642, 
+        -5.792071323162001, 
+        5.1034637608227875, 
+        -4.718394261757678
+      ], 
+      "reducing_value": 3040000.0, 
+      "t": [
+        0.17, 
+        0.876, 
+        0.993, 
+        4.223, 
+        6.496, 
+        8.675
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 497.7, 
+      "Tmax": 497.6999999999989, 
+      "Tmin": 119.60000000000001, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.1841309490493548, 
+      "n": [
+        -6.550843209159344, 
+        -0.2014408451919986, 
+        -4.035853789894501, 
+        7.869057237839601, 
+        -14.261734955415386, 
+        11.66884264219962
+      ], 
+      "reducing_value": 3040000.0, 
+      "t": [
+        0.975, 
+        2.959, 
+        4.02, 
+        10.581, 
+        12.501, 
+        19.839
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 497.7, 
+      "Tmax": 497.6999999999989, 
+      "Tmin": 119.60000000000001, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.11167499755682098, 
+      "n": [
+        29.736674024252952, 
+        -32.776310208283974, 
+        12.807786215246882, 
+        -39.16424989170224, 
+        54.00461957755715, 
+        -21.62958726811339
+      ], 
+      "reducing_value": 2715.0000000000005, 
+      "t": [
+        0.607, 
+        0.679, 
+        1.285, 
+        2.085, 
+        2.358, 
+        2.566
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 497.7, 
+      "Tmax": 497.6999999999989, 
+      "Tmin": 119.60000000000001, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.2247646109777679, 
+      "n": [
+        -3.4838373689586257, 
+        -1.3801826623957218, 
+        -0.41695283944559747, 
+        -3.629169326872457, 
+        -1.7995609906492396, 
+        -3.545077267428688
+      ], 
+      "reducing_value": 2715.0000000000005, 
+      "t": [
+        0.464, 
+        0.777, 
+        1.511, 
+        3.227, 
+        5.307, 
+        19.158
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 497.7, 
+      "a": [
+        0.05024
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.194
+      ]
+    }
+  }, 
+  "CAS": "107-83-5", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 3, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 2, 
+    "Name": "Isohexane", 
+    "ODP": -1.0, 
+    "PH": 1
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "T_max": 500, 
+      "T_max_units": "K", 
+      "Ttriple": 119.6, 
+      "Ttriple_units": "K", 
+      "accentric": 0.2797, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": 6.9259123919, 
+          "a2": -0.3128629679, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 3, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            7.9127, 
+            16.871, 
+            19.257, 
+            14.075
+          ], 
+          "t": [
+            0.6530038175607796, 
+            2.310628892907374, 
+            4.816154309825196, 
+            11.84046614426361
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            1.1027, 
+            -2.9699, 
+            1.0295, 
+            -0.21238, 
+            0.11897, 
+            0.00027738, 
+            0.40103, 
+            -0.034238, 
+            -0.43584, 
+            -0.11693, 
+            -0.019262, 
+            0.0080783
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.08617535999999999, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 1000000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 7.673974446e-06, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 497.7, 
+        "T_units": "K", 
+        "p": 3040000, 
+        "p_units": "Pa", 
+        "rhomolar": 2715.000000000001, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 9370.770983488099, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 7.71968171674387e-09, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "Isohexane"
+}

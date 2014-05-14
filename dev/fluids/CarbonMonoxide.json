@@ -1,0 +1,259 @@
+{
+  "ALIASES": [
+    "CO", 
+    "CARBONMONOXIDE"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 132.86, 
+      "Tmax": 132.8599999999997, 
+      "Tmin": 68.16000000000001, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.09261479225521896, 
+      "n": [
+        0.00487539162619761, 
+        -5.3196847481956775, 
+        -0.24436526839538752, 
+        -33.95291146838296, 
+        18449.37715414218, 
+        -26736.728013355834
+      ], 
+      "reducing_value": 3494000.0, 
+      "t": [
+        0.085, 
+        0.962, 
+        1.957, 
+        7.807, 
+        14.554, 
+        15.246
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 132.86, 
+      "Tmax": 132.8599999999997, 
+      "Tmin": 68.16000000000001, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.0655505132825307, 
+      "n": [
+        0.0031655594711161982, 
+        -5.386279334978247, 
+        -0.44089436177701297, 
+        1.5403401817486662, 
+        -5.692323589833758, 
+        3.03081959067228
+      ], 
+      "reducing_value": 3494000.0, 
+      "t": [
+        0.052, 
+        0.968, 
+        1.972, 
+        2.761, 
+        4.199, 
+        5.126
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 132.86, 
+      "Tmax": 132.8599999999997, 
+      "Tmin": 68.16000000000001, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.35662556345594787, 
+      "n": [
+        3.973336124071812, 
+        -3.262687458485425, 
+        3.3499432070659303, 
+        -42.129174166388935, 
+        56.52859432308481, 
+        -110.70022756120696
+      ], 
+      "reducing_value": 10850.0, 
+      "t": [
+        0.44, 
+        0.672, 
+        1.334, 
+        3.874, 
+        4.413, 
+        9.257
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 132.86, 
+      "Tmax": 132.8599999999997, 
+      "Tmin": 68.16000000000001, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.253613973167921, 
+      "n": [
+        -3.6459289142239206, 
+        1.5167962228564473, 
+        -114.10174052209382, 
+        292.7876490687851, 
+        -183.6056308954516, 
+        4746.634272544051
+      ], 
+      "reducing_value": 10850.0, 
+      "t": [
+        0.444, 
+        0.75, 
+        1.847, 
+        2.04, 
+        2.169, 
+        19.966
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 132.86, 
+      "a": [
+        0.02843
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.148
+      ]
+    }
+  }, 
+  "CAS": "630-08-0", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 4, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 1, 
+    "Name": "CarbonMonoxide", 
+    "ODP": -1.0, 
+    "PH": 3
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "T_max": 500, 
+      "T_max_units": "K", 
+      "Ttriple": 68.16, 
+      "Ttriple_units": "K", 
+      "accentric": 0.0497, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": -3.3728318564, 
+          "a2": 3.3683460039, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 2.5, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            -9.111274701235156e-05
+          ], 
+          "t": [
+            -1.5
+          ], 
+          "type": "IdealGasHelmholtzPower"
+        }, 
+        {
+          "n": [
+            1.0128
+          ], 
+          "t": [
+            23.25003763359927
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            0.90554, 
+            -2.4515, 
+            0.53149, 
+            0.024173, 
+            0.072156, 
+            0.00018818, 
+            0.19405, 
+            -0.043268, 
+            -0.12778, 
+            -0.027896, 
+            -0.034154, 
+            0.016329
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.0280101, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 100000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 15536.87666, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 132.86, 
+        "T_units": "K", 
+        "p": 3494000, 
+        "p_units": "Pa", 
+        "rhomolar": 10850, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 30329.56214318188, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 27.71177905101628, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "CarbonMonoxide"
+}

@@ -1,0 +1,3 @@
+// the configured options and settings for CoolProp
+#define CoolProp_VERSION "@CoolProp_VERSION@"
+#define CoolProp_REVISION "${CoolProp_REVISION}"

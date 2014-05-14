@@ -1,0 +1,272 @@
+{
+  "ALIASES": [
+    "nPentane", 
+    "Pentane", 
+    "PENTANE", 
+    "N-PENTANE", 
+    "R601"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 469.7, 
+      "Tmax": 469.69999999999914, 
+      "Tmin": 143.47, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.03728114510677116, 
+      "n": [
+        0.04748174519828376, 
+        -6.629115738167101, 
+        0.6562557112100337, 
+        -2.28440361956112, 
+        -1.308924059672944, 
+        -1.1435668798949066
+      ], 
+      "reducing_value": 3370000.0, 
+      "t": [
+        0.642, 
+        0.976, 
+        1.848, 
+        3.17, 
+        3.871, 
+        7.841
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 469.7, 
+      "Tmax": 469.69999999999914, 
+      "Tmin": 143.47, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.029330284037554222, 
+      "n": [
+        0.0002920351277984843, 
+        -468.97717292372954, 
+        465.7564333009324, 
+        -3.372619624545633, 
+        -3.4063439897011767, 
+        -1.5154480392091865
+      ], 
+      "reducing_value": 3370000.0, 
+      "t": [
+        0.137, 
+        1.119, 
+        1.123, 
+        1.477, 
+        3.969, 
+        12.951
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 469.7, 
+      "Tmax": 469.69999999999914, 
+      "Tmin": 143.47, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 3.114298806470317, 
+      "n": [
+        2.3841375525242356, 
+        0.19925431521697065, 
+        5225.0215429825175, 
+        38711.30119718553, 
+        -196165.0631164374, 
+        157517.76191925188
+      ], 
+      "reducing_value": 3215.5775884221466, 
+      "t": [
+        0.389, 
+        1.069, 
+        18.567, 
+        18.567, 
+        19.512, 
+        19.95
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 469.7, 
+      "Tmax": 469.69999999999914, 
+      "Tmin": 143.47, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 3.2828728664463958, 
+      "n": [
+        -4.317782477894743, 
+        -2.2050235507345954, 
+        -2.7959424348848843, 
+        -5.048155874145048, 
+        472.4781512909357, 
+        -547.9642656628733
+      ], 
+      "reducing_value": 3215.5775884221466, 
+      "t": [
+        0.482, 
+        1.994, 
+        4.101, 
+        9.312, 
+        18.36, 
+        19.107
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 469.7, 
+      "a": [
+        0.08015, 
+        0.004384, 
+        -0.03437
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.408, 
+        1.031, 
+        1.818
+      ]
+    }
+  }, 
+  "CAS": "109-66-0", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 4, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 2, 
+    "Name": "n-Pentane", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "Jaeschke-IJT-1995", 
+      "BibTeX_EOS": "Span-IJT-2003B", 
+      "T_max": 573, 
+      "T_max_units": "K", 
+      "Ttriple": 143.47, 
+      "Ttriple_units": "K", 
+      "accentric": 0.251, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": -1.548185641277708, 
+          "a2": 0, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": -1, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "T0": 309.213623675, 
+          "Tc": 469.7, 
+          "c": [
+            4, 
+            8.95043, 
+            178.67, 
+            21.836, 
+            840.538
+          ], 
+          "type": "IdealGasHelmholtzCP0AlyLee"
+        }, 
+        {
+          "T0": 309.213623675, 
+          "Tc": 469.7, 
+          "c": [
+            0, 
+            33.4032, 
+            1774.25, 
+            0, 
+            0
+          ], 
+          "type": "IdealGasHelmholtzCP0AlyLee"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            1.0968643, 
+            -2.9988888, 
+            0.99516887, 
+            -0.16170709, 
+            0.1133446, 
+            0.00026760595, 
+            0.40979882, 
+            -0.040876423, 
+            -0.38169482, 
+            -0.10931957, 
+            -0.032073223, 
+            0.016877016
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.31451, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.07214878, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 69000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 0.07632218395, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 469.7, 
+        "T_units": "K", 
+        "p": 3370000, 
+        "p_units": "Pa", 
+        "rhomolar": 3215.577588422147, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 10566.39007740751, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 6.399383717983962e-05, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "n-Pentane"
+}

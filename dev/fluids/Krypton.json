@@ -1,0 +1,241 @@
+{
+  "ALIASES": [
+    "krypton", 
+    "KRYPTON"
+  ], 
+  "ANCILLARIES": {
+    "pL": {
+      "T_r": 209.48, 
+      "Tmax": 209.4799999999995, 
+      "Tmin": 115.77000000000001, 
+      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.0157078121642229, 
+      "n": [
+        -4.031170740728375, 
+        -7.4067462119583105, 
+        6.97753623737674, 
+        -1.177175552979292, 
+        -3320.220246352347, 
+        14166.599178573982
+      ], 
+      "reducing_value": 5525000.0, 
+      "t": [
+        0.967, 
+        1.232, 
+        1.347, 
+        2.625, 
+        14.831, 
+        16.938
+      ], 
+      "type": "pL", 
+      "using_tau_r": true
+    }, 
+    "pV": {
+      "T_r": 209.48, 
+      "Tmax": 209.4799999999995, 
+      "Tmin": 115.77000000000001, 
+      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.009085871871139517, 
+      "n": [
+        0.6286380394785566, 
+        -6.084114621397644, 
+        0.9243637669284523, 
+        -1.2177291623316775, 
+        -484.84085075238977, 
+        2458.926650746003
+      ], 
+      "reducing_value": 5525000.0, 
+      "t": [
+        0.822, 
+        0.961, 
+        1.811, 
+        2.937, 
+        13.131, 
+        15.629
+      ], 
+      "type": "pV", 
+      "using_tau_r": true
+    }, 
+    "rhoL": {
+      "T_r": 209.48, 
+      "Tmax": 209.4799999999995, 
+      "Tmin": 115.77000000000001, 
+      "description": "rho' = rhoc*(1+sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.8307407005560208, 
+      "n": [
+        2.546150113785161, 
+        -5.378194265123711, 
+        8.373146326331726, 
+        -116.81279901170906, 
+        18068.951065200818, 
+        -1719409.740660462
+      ], 
+      "reducing_value": 10850.0, 
+      "t": [
+        0.423, 
+        1.611, 
+        2.063, 
+        6.632, 
+        12.833, 
+        19.438
+      ], 
+      "type": "rhoLnoexp", 
+      "using_tau_r": false
+    }, 
+    "rhoV": {
+      "T_r": 209.48, 
+      "Tmax": 209.4799999999995, 
+      "Tmin": 115.77000000000001, 
+      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 0.25111252948395446, 
+      "n": [
+        -5.11839525888464, 
+        1.8524855046540656, 
+        -2.3327083913774804, 
+        5.670498376648386, 
+        -13.437817551364956, 
+        2923.704628658189
+      ], 
+      "reducing_value": 10850.0, 
+      "t": [
+        0.487, 
+        0.544, 
+        1.593, 
+        3.18, 
+        4.851, 
+        14.775
+      ], 
+      "type": "rhoV", 
+      "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2012", 
+      "Tc": 209.48, 
+      "a": [
+        0.0447
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.245
+      ]
+    }
+  }, 
+  "CAS": "7439-90-9", 
+  "ENVIRONMENTAL": {
+    "ASHRAE34": "UNKNOWN", 
+    "FH": 0, 
+    "GWP100": -1.0, 
+    "GWP20": -1.0, 
+    "GWP500": -1.0, 
+    "HH": 0, 
+    "Name": "Krypton", 
+    "ODP": -1.0, 
+    "PH": 0
+  }, 
+  "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "T_max": 750, 
+      "T_max_units": "K", 
+      "Ttriple": 115.77, 
+      "Ttriple_units": "K", 
+      "accentric": -0.00089, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": -3.7506412806, 
+          "a2": 3.7798018435, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 1.5, 
+          "type": "IdealGasHelmholtzLogTau"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            1, 
+            1, 
+            1, 
+            2, 
+            3, 
+            7, 
+            2, 
+            5, 
+            1, 
+            4, 
+            3, 
+            4
+          ], 
+          "l": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            1, 
+            1, 
+            2, 
+            2, 
+            3, 
+            3
+          ], 
+          "n": [
+            0.83561, 
+            -2.3725, 
+            0.54567, 
+            0.014361, 
+            0.066502, 
+            0.0001931, 
+            0.16818, 
+            -0.033133, 
+            -0.15008, 
+            -0.022897, 
+            -0.021454, 
+            0.0069397
+          ], 
+          "t": [
+            0.25, 
+            1.125, 
+            1.5, 
+            1.375, 
+            0.25, 
+            0.875, 
+            0.625, 
+            1.75, 
+            3.625, 
+            3.625, 
+            14.5, 
+            12
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.083798, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 200000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false, 
+      "ptriple": 73502.83748, 
+      "ptriple_units": "Pa", 
+      "reducing_state": {
+        "T": 209.48, 
+        "T_units": "K", 
+        "p": 5525000, 
+        "p_units": "Pa", 
+        "rhomolar": 10850, 
+        "rhomolar_units": "mol/m^3"
+      }, 
+      "rhoLtriple": 29197.23261176175, 
+      "rhoLtriple_units": "mol/m^3", 
+      "rhoVtriple": 78.42355224696817, 
+      "rhoVtriple_units": "mol/m^3"
+    }
+  ], 
+  "NAME": "Krypton"
+}

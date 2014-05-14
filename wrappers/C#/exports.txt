@@ -1,0 +1,162 @@
+Microsoft (R) COFF/PE Dumper Version 9.00.30729.01
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file CoolProp.dll
+
+File Type: DLL
+
+  Section contains the following exports for CoolProp.dll
+
+    00000000 characteristics
+    536F9ABF time date stamp Sun May 11 17:43:59 2014
+        0.00 version
+           1 ordinal base
+         136 number of functions
+         136 number of names
+
+    ordinal hint RVA      name
+
+          1    0 00005DA0 _CSharp_AbstractState_Q@4
+          2    1 00005AD0 _CSharp_AbstractState_T@4
+          3    2 000058F0 _CSharp_AbstractState_Tmax@4
+          4    3 00006DA0 _CSharp_AbstractState_alpha0@4
+          5    4 00007460 _CSharp_AbstractState_alphar@4
+          6    5 00004B40 _CSharp_AbstractState_calc_melt_T_p@8
+          7    6 000049E0 _CSharp_AbstractState_calc_melt_p_T@8
+          8    7 00004CA0 _CSharp_AbstractState_calc_melt_rho_T@8
+          9    8 000050E0 _CSharp_AbstractState_clear@4
+         10    9 00006BC0 _CSharp_AbstractState_conductivity@4
+         11    A 00006520 _CSharp_AbstractState_cpmolar@4
+         12    B 00006610 _CSharp_AbstractState_cvmolar@4
+         13    C 00007100 _CSharp_AbstractState_d2alpha0_dDelta2@4
+         14    D 00007220 _CSharp_AbstractState_d2alpha0_dDelta_dTau@4
+         15    E 00007340 _CSharp_AbstractState_d2alpha0_dTau2@4
+         16    F 000077C0 _CSharp_AbstractState_d2alphar_dDelta2@4
+         17   10 000078E0 _CSharp_AbstractState_d2alphar_dDelta_dTau@4
+         18   11 00007A00 _CSharp_AbstractState_d2alphar_dTau2@4
+         19   12 00006EC0 _CSharp_AbstractState_dalpha0_dDelta@4
+         20   13 00006FE0 _CSharp_AbstractState_dalpha0_dTau@4
+         21   14 00007580 _CSharp_AbstractState_dalphar_dDelta@4
+         22   15 000076A0 _CSharp_AbstractState_dalphar_dTau@4
+         23   16 00005F80 _CSharp_AbstractState_delta@4
+         24   17 00004EF0 _CSharp_AbstractState_factory@8
+         25   18 000057B0 _CSharp_AbstractState_first_partial_deriv@16
+         26   19 000069D0 _CSharp_AbstractState_fugacity_coefficient@8
+         27   1A 00006160 _CSharp_AbstractState_gas_constant@4
+         28   1B 000055B0 _CSharp_AbstractState_get_reducing@4
+         29   1C 00006250 _CSharp_AbstractState_hmolar@4
+         30   1D 000068E0 _CSharp_AbstractState_isobaric_expansion_coefficient@4
+         31   1E 000067F0 _CSharp_AbstractState_isothermal_compressibility@4
+         32   1F 000056B0 _CSharp_AbstractState_keyed_output@8
+         33   20 00006070 _CSharp_AbstractState_molar_mass@4
+         34   21 00005CB0 _CSharp_AbstractState_p@4
+         35   22 000059E0 _CSharp_AbstractState_pmax@4
+         36   23 00005BC0 _CSharp_AbstractState_rhomolar@4
+         37   24 000053C0 _CSharp_AbstractState_set_mass_fractions@8
+         38   25 000052D0 _CSharp_AbstractState_set_mole_fractions@8
+         39   26 00006340 _CSharp_AbstractState_smolar@4
+         40   27 00006700 _CSharp_AbstractState_speed_sound@4
+         41   28 00006CB0 _CSharp_AbstractState_surface_tension@4
+         42   29 00005E90 _CSharp_AbstractState_tau@4
+         43   2A 00006430 _CSharp_AbstractState_umolar@4
+         44   2B 000051E0 _CSharp_AbstractState_update@24
+         45   2C 000054B0 _CSharp_AbstractState_using_mole_fractions@4
+         46   2D 00006AD0 _CSharp_AbstractState_viscosity@4
+         47   2E 00007BB0 _CSharp_CoolProp_SimpleState_T_get@4
+         48   2F 00007B80 _CSharp_CoolProp_SimpleState_T_set@12
+         49   30 00007C70 _CSharp_CoolProp_SimpleState_hmolar_get@4
+         50   31 00007C40 _CSharp_CoolProp_SimpleState_hmolar_set@12
+         51   32 00007C10 _CSharp_CoolProp_SimpleState_p_get@4
+         52   33 00007BE0 _CSharp_CoolProp_SimpleState_p_set@12
+         53   34 00007B50 _CSharp_CoolProp_SimpleState_rhomolar_get@4
+         54   35 00007B20 _CSharp_CoolProp_SimpleState_rhomolar_set@12
+         55   36 00007CD0 _CSharp_CoolProp_SimpleState_smolar_get@4
+         56   37 00007CA0 _CSharp_CoolProp_SimpleState_smolar_set@12
+         57   38 00007D30 _CSharp_CoolProp_SimpleState_umolar_get@4
+         58   39 00007D00 _CSharp_CoolProp_SimpleState_umolar_set@12
+         59   3A 00002C90 _CSharp_DoubleVector_Add@12
+         60   3B 000033F0 _CSharp_DoubleVector_AddRange@8
+         61   3C 00002C70 _CSharp_DoubleVector_Clear@4
+         62   3D 000045A0 _CSharp_DoubleVector_Contains@12
+         63   3E 000034A0 _CSharp_DoubleVector_GetRange@12
+         64   3F 00004650 _CSharp_DoubleVector_IndexOf@12
+         65   40 000037A0 _CSharp_DoubleVector_Insert@16
+         66   41 00003930 _CSharp_DoubleVector_InsertRange@12
+         67   42 00004720 _CSharp_DoubleVector_LastIndexOf@12
+         68   43 00004810 _CSharp_DoubleVector_Remove@12
+         69   44 00003AF0 _CSharp_DoubleVector_RemoveAt@8
+         70   45 00003C50 _CSharp_DoubleVector_RemoveRange@12
+         71   46 00003F10 _CSharp_DoubleVector_Repeat@12
+         72   47 000040A0 _CSharp_DoubleVector_Reverse__SWIG_0@4
+         73   48 00004110 _CSharp_DoubleVector_Reverse__SWIG_1@12
+         74   49 00004390 _CSharp_DoubleVector_SetRange@12
+         75   4A 00002D00 _CSharp_DoubleVector_capacity@4
+         76   4B 00003120 _CSharp_DoubleVector_getitem@8
+         77   4C 00002FC0 _CSharp_DoubleVector_getitemcopy@8
+         78   4D 00002D30 _CSharp_DoubleVector_reserve@8
+         79   4E 00003290 _CSharp_DoubleVector_setitem@16
+         80   4F 00002CD0 _CSharp_DoubleVector_size@4
+         81   50 000010D0 _CSharp_LongDoubleVector_Add@8
+         82   51 000018B0 _CSharp_LongDoubleVector_AddRange@8
+         83   52 000010B0 _CSharp_LongDoubleVector_Clear@4
+         84   53 00001960 _CSharp_LongDoubleVector_GetRange@12
+         85   54 00001C60 _CSharp_LongDoubleVector_Insert@12
+         86   55 00001E00 _CSharp_LongDoubleVector_InsertRange@12
+         87   56 00001FC0 _CSharp_LongDoubleVector_RemoveAt@8
+         88   57 00002120 _CSharp_LongDoubleVector_RemoveRange@12
+         89   58 000023E0 _CSharp_LongDoubleVector_Repeat@8
+         90   59 00002590 _CSharp_LongDoubleVector_Reverse__SWIG_0@4
+         91   5A 00002600 _CSharp_LongDoubleVector_Reverse__SWIG_1@12
+         92   5B 00002880 _CSharp_LongDoubleVector_SetRange@12
+         93   5C 00001180 _CSharp_LongDoubleVector_capacity@4
+         94   5D 000015D0 _CSharp_LongDoubleVector_getitem@8
+         95   5E 00001440 _CSharp_LongDoubleVector_getitemcopy@8
+         96   5F 000011B0 _CSharp_LongDoubleVector_reserve@8
+         97   60 00001740 _CSharp_LongDoubleVector_setitem@12
+         98   61 00001150 _CSharp_LongDoubleVector_size@4
+         99   62 00008710 _CSharp_PropsSI__SWIG_0@32
+        100   63 00008A80 _CSharp_PropsSI__SWIG_1@36
+        101   64 00008E70 _CSharp_PropsSI__SWIG_2@28
+        102   65 00004E00 _CSharp_delete_AbstractState@4
+        103   66 00007E90 _CSharp_delete_CoolProp_SimpleState@4
+        104   67 000048F0 _CSharp_delete_DoubleVector@4
+        105   68 00002A90 _CSharp_delete_LongDoubleVector@4
+        106   69 00009500 _CSharp_get_debug_level@0
+        107   6A 000085A0 _CSharp_get_input_pair_long_desc@4
+        108   6B 00008430 _CSharp_get_input_pair_short_desc@4
+        109   6C 00008180 _CSharp_get_parameter_index@4
+        110   6D 00007F60 _CSharp_get_parameter_information@8
+        111   6E 000082F0 _CSharp_match_pair@20
+        112   6F 00007D60 _CSharp_new_CoolProp_SimpleState@0
+        113   70 00002D60 _CSharp_new_DoubleVector__SWIG_0@0
+        114   71 00002DB0 _CSharp_new_DoubleVector__SWIG_1@4
+        115   72 00002E30 _CSharp_new_DoubleVector__SWIG_2@4
+        116   73 000011E0 _CSharp_new_LongDoubleVector__SWIG_0@0
+        117   74 00001230 _CSharp_new_LongDoubleVector__SWIG_1@4
+        118   75 000012B0 _CSharp_new_LongDoubleVector__SWIG_2@4
+        119   76 000095E0 _CSharp_set_debug_level@4
+        120   77 000096A0 _CSharp_set_error_string@4
+        121   78 000097F0 _CSharp_set_warning_string@4
+        122   79 000159F0 _F2K@8
+        123   7A 000159D0 _K2F@8
+        124   7B 00016770 _Props1@8
+        125   7C 00015E40 _Props1SI@8
+        126   7D 00016580 _Props@32
+        127   7E 00016730 _PropsS@32
+        128   7F 00015C00 _PropsSI@32
+        129   80 00015F70 _PropsSIZ@40
+        130   81 00001070 _SWIGRegisterExceptionArgumentCallbacks_CoolProp@12
+        131   82 00001000 _SWIGRegisterExceptionCallbacks_CoolProp@44
+        132   83 000010A0 _SWIGRegisterStringCallback_CoolProp@4
+        133   84 00015A10 _get_debug_level@0
+        134   85 00015DD0 _get_param_index@4
+        135   86 000159B0 _redirect_stdout@4
+        136   87 00015A20 _set_debug_level@4
+
+  Summary
+
+        6000 .data
+       95000 .rdata
+        8000 .reloc
+       7F000 .text

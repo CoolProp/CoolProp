@@ -1,0 +1,152 @@
+import glob
+
+REFPROPfluids = glob.glob('*.ppf') + glob.glob('*.fld')
+
+for f in REFPROPfluids:
+    print f.split('.')[0].rstrip()+',',
+    
+"""
+:: DONE ::
+AIR
+R404A
+R407C
+R410A
+R507A
+ACETONE
+AMMONIA
+ARGON
+CO
+CO2
+COS
+DECANE
+H2S
+HELIUM
+HYDROGEN
+ORTHOHYD
+PARAHYD
+IHEXANE
+IPENTANE
+KRYPTON
+N2O
+NEOPENTN
+NITROGEN
+NONANE
+OXYGEN
+PROPANE
+R116
+R1234YF
+R134A
+R141B
+R142B
+R218
+R22
+R245FA
+R32
+R41
+SO2
+TOLUENE
+WATER
+XENON
+METHANE
+ETHANE
+BUTANE
+ISOBUTAN
+D4
+D5
+D6
+MD2M
+MD3M
+MD4M
+MDM
+MM
+ETHYLENE
+SF6
+ETHANOL
+
+:: 2.4 ::
+PENTANE
+HEXANE
+OCTANE
+HEPTANE
+CYCLOHEX
+R1234ZE
+1BUTENE
+T2BUTENE
+C2BUTENE
+IBUTENE
+MLINOLEA
+MLINOLEN
+MOLEATE
+MPALMITA
+MSTEARAT
+DME
+R143A
+
+:: 2.5 ::
+DMC
+R23
+C12
+OXYLENE
+MXYLENE
+PXYLENE
+EBENZENE
+
+:: 3.1 ::
+PROPYLEN
+CYCLOPEN
+R236FA
+R236EA
+R227EA
+R123
+R152A
+R227EA
+R365MFC
+R161
+HFE143M
+BENZENE
+R11
+C11
+R125
+CYCLOPRO
+NEON
+R124
+
+:: 3.1.1 ::
+PROPYNE
+
+:: 3.2 ::
+FLUORINE
+METHANOL
+R114
+R13
+R14
+R21
+RC318
+R12
+R113
+
+:::::::::::: QUEUE :::::::::::::
+ECS params for new fluids
+Methanol
+    visc: Xiang
+Ethylene
+    visc & cond: Holland 1983
+Methane
+    visc & cond: Friend 1989 (check these results)
+NF3:
+    MBWR
+    
+---------------------------------------------------------- CANT BE DONE YET
+D2
+    Deuterium preprint en route at some point
+D2O
+    New EOS in a few months
+
+Unpublished:
+C1CC6
+C3CC6
+No Helmholtz:
+C4F10 (ECS)
+C5F12 (ECS)
+R245CA (ECS)
+"""
