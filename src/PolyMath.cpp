@@ -572,6 +572,102 @@ double BasePolynomial::fracIntCentral2Steps(std::vector<std::vector<double> > co
 
 
 
+/** Implements the function wrapper interface and can be
+ *  used by the solvers. This is only an example and you should
+ *  use local redefinitions of the class.
+ *  TODO: Make multidimensional
+ */
+PolyResidual::PolyResidual(){
+	this->dim = -1;
+}
+
+PolyResidual::PolyResidual(const std::vector<double> &coefficients, double y){
+	this->output = y;
+	this->firstDim = 0;
+	this->coefficients.clear();
+	this->coefficients.push_back(coefficients);
+	this->dim = i1D;
+}
+
+PolyResidual::PolyResidual(const std::vector< std::vector<double> > &coefficients, double x, double z){
+	this->output = z;
+	this->firstDim = x;
+	this->coefficients = coefficients;
+	this->dim = i2D;
+}
+
+double PolyResidual::call(double x){
+	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
+	double polyRes = -1;
+	if (this->dim==i1D) {
+		polyRes = this->poly.polyval(this->coefficients[0], x);
+	} else if (this->dim==i2D) {
+		polyRes = this->poly.polyval(this->coefficients, this->firstDim, x);
+	} else {
+		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
+	}
+	return polyRes - this->output;
+}
+
+double PolyResidual::deriv(double x){
+//	throw CoolProp::NotImplementedError("Please redefine your classes locally.");
+	double polyRes = -1;
+	if (this->dim==i1D) {
+		polyRes = this->poly.polyder(this->coefficients[0], x);
+	} else if (this->dim==i2D) {
+		polyRes = this->poly.polyder(this->coefficients, this->firstDim, x);
+	} else {
+		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
+	}
+	return polyRes;
+}
+
+double PolyIntResidual::call(double x){
+	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
+	double polyRes = -1;
+	if (this->dim==i1D) {
+		polyRes = this->poly.polyint(this->coefficients[0], x);
+	} else if (this->dim==i2D) {
+		polyRes = this->poly.polyint(this->coefficients, this->firstDim, x);
+	} else {
+		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
+	}
+	return polyRes - this->output;
+}
+
+double PolyIntResidual::deriv(double x){
+//	throw CoolProp::NotImplementedError("Please redefine your classes locally.");
+	double polyRes = -1;
+	if (this->dim==i1D) {
+		polyRes = this->poly.polyval(this->coefficients[0], x);
+	} else if (this->dim==i2D) {
+		polyRes = this->poly.polyval(this->coefficients, this->firstDim, x);
+	} else {
+		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
+	}
+	return polyRes;
+}
+
+double PolyDerResidual::call(double x){
+	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
+	double polyRes = -1;
+	if (this->dim==i1D) {
+		polyRes = this->poly.polyder(this->coefficients[0], x);
+	} else if (this->dim==i2D) {
+		polyRes = this->poly.polyder(this->coefficients, this->firstDim, x);
+	} else {
+		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
+	}
+	return polyRes - this->output;
+}
+
+double PolyDerResidual::deriv(double x){
+	throw CoolProp::NotImplementedError("2nd derivative of a polynomial is not defined.");
+}
+
+
+
+
 /** Implements the same public functions as the
  *  but solves the polynomial for the given value
  *  instead of evaluating it.
@@ -583,7 +679,7 @@ PolynomialSolver::PolynomialSolver(){
   this->DEBUG   = false;
   this->macheps = DBL_EPSILON;
   this->tol     = DBL_EPSILON*1e3;
-  this->maxiter = 100;
+  this->maxiter = 50;
 }
 
 /** Everything related to the normal polynomials goes in this
@@ -593,26 +689,8 @@ PolynomialSolver::PolynomialSolver(){
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current input
 double PolynomialSolver::polyval(const std::vector<double> &coefficients, double y) {
-
-	BasePolynomial polynomial = BasePolynomial();
 	PolyResidual residual = PolyResidual(coefficients, y);
-
-	std::string errstring;
-	double result = -1.0;
-
-	switch (this->uses) {
-	case iNewton: ///< Newton solver with derivative and guess value
-		result = Newton(residual, this->guess, this->tol, this->maxiter, errstring);
-		break;
-
-	case iBrent: ///< Brent solver with bounds
-		result = Brent(residual, this->min, this->max, this->macheps, this->tol, this->maxiter, errstring);
-		break;
-
-	default:
-		throw CoolProp::NotImplementedError("This solver has not been implemented.");
-	}
-	return result;
+	return this->solve(residual);
 }
 
 /// Solves a two-dimensional polynomial for the given coefficients
@@ -620,7 +698,8 @@ double PolynomialSolver::polyval(const std::vector<double> &coefficients, double
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
 double PolynomialSolver::polyval(const std::vector< std::vector<double> > &coefficients, double x, double z){
-	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
+	PolyResidual residual = PolyResidual(coefficients, x, z);
+	return this->solve(residual);
 }
 
 
@@ -774,99 +853,25 @@ void PolynomialSolver::setLimits(double min, double max){
 	this->max   = max;
 }
 
+/// Solves the equations based on previously defined parameters.
+/// @param min double value that represents the lower boundary
+/// @param max double value that represents the upper boundary
+double PolynomialSolver::solve(PolyResidual &res){
+	std::string errstring;
+	double result = -1.0;
+	switch (this->uses) {
+	case iNewton: ///< Newton solver with derivative and guess value
+		result = Newton(res, this->guess, this->tol, this->maxiter, errstring);
+		break;
 
+	case iBrent: ///< Brent solver with bounds
+		result = Brent(res, this->min, this->max, this->macheps, this->tol, this->maxiter, errstring);
+		break;
 
-/** Implements the function wrapper interface and can be
- *  used by the solvers. This is only an example and you should
- *  use local redefinitions of the class.
- *  TODO: Make multidimensional
- */
-PolyResidual::PolyResidual(){
-	this->dim = -1;
-}
-
-PolyResidual::PolyResidual(const std::vector<double> &coefficients, double y){
-	this->output = y;
-	this->firstDim = 0;
-	this->coefficients.clear();
-	this->coefficients.push_back(coefficients);
-	this->dim = i1D;
-}
-
-PolyResidual::PolyResidual(const std::vector< std::vector<double> > &coefficients, double x, double z){
-	this->output = z;
-	this->firstDim = x;
-	this->coefficients = coefficients;
-	this->dim = i2D;
-}
-
-double PolyResidual::call(double x){
-	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
-	double polyRes = -1;
-	if (this->dim==i1D) {
-		polyRes = this->poly.polyval(this->coefficients[0], x);
-	} else if (this->dim==i2D) {
-		polyRes = this->poly.polyval(this->coefficients, this->firstDim, x);
-	} else {
-		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
+	default:
+		throw CoolProp::NotImplementedError("This solver has not been implemented.");
 	}
-	return polyRes - this->output;
-}
-
-double PolyResidual::deriv(double x){
-//	throw CoolProp::NotImplementedError("Please redefine your classes locally.");
-	double polyRes = -1;
-	if (this->dim==i1D) {
-		polyRes = this->poly.polyder(this->coefficients[0], x);
-	} else if (this->dim==i2D) {
-		polyRes = this->poly.polyder(this->coefficients, this->firstDim, x);
-	} else {
-		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
-	}
-	return polyRes;
-}
-
-double PolyIntResidual::call(double x){
-	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
-	double polyRes = -1;
-	if (this->dim==i1D) {
-		polyRes = this->poly.polyint(this->coefficients[0], x);
-	} else if (this->dim==i2D) {
-		polyRes = this->poly.polyint(this->coefficients, this->firstDim, x);
-	} else {
-		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
-	}
-	return polyRes - this->output;
-}
-
-double PolyIntResidual::deriv(double x){
-//	throw CoolProp::NotImplementedError("Please redefine your classes locally.");
-	double polyRes = -1;
-	if (this->dim==i1D) {
-		polyRes = this->poly.polyval(this->coefficients[0], x);
-	} else if (this->dim==i2D) {
-		polyRes = this->poly.polyval(this->coefficients, this->firstDim, x);
-	} else {
-		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
-	}
-	return polyRes;
-}
-
-double PolyDerResidual::call(double x){
-	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
-	double polyRes = -1;
-	if (this->dim==i1D) {
-		polyRes = this->poly.polyder(this->coefficients[0], x);
-	} else if (this->dim==i2D) {
-		polyRes = this->poly.polyder(this->coefficients, this->firstDim, x);
-	} else {
-		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
-	}
-	return polyRes - this->output;
-}
-
-double PolyDerResidual::deriv(double x){
-	throw CoolProp::NotImplementedError("2nd derivative of a polynomial is not defined.");
+	return result;
 }
 
 
@@ -919,7 +924,7 @@ double BaseExponential::expval(const std::vector< std::vector<double> > &coeffic
 }
 
 
-
+//
 //int main() {
 //
 //	std::vector<double> cHeat;

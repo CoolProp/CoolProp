@@ -294,6 +294,49 @@ public:
 };
 
 
+
+
+/** Implements the function wrapper interface and can be
+ *  used by the solvers.
+ *  TODO: Make multidimensional
+ */
+class PolyResidual : public FuncWrapper1D {
+protected:
+	enum dims {i1D, i2D};
+	/// Object that evaluates the equation
+	BasePolynomial poly;
+	/// Current output value
+	double output, firstDim;
+	int dim;
+	std::vector< std::vector<double> > coefficients;
+private:
+	PolyResidual();
+public:
+	PolyResidual(const std::vector<double> &coefficients, double y);
+	PolyResidual(const std::vector< std::vector<double> > &coefficients, double x, double z);
+	virtual ~PolyResidual(){};
+	virtual double call(double x);
+	virtual double deriv(double x);
+};
+class PolyIntResidual : public PolyResidual {
+public:
+	virtual double call(double x);
+	virtual double deriv(double x);
+};
+class PolyFracIntResidual : public PolyResidual {
+public:
+	virtual double call(double x);
+	virtual double deriv(double x);
+};
+class PolyDerResidual : public PolyResidual {
+public:
+	virtual double call(double x);
+	virtual double deriv(double x);
+};
+
+
+
+
 /** Implements the same public functions as the
  *  but solves the polynomial for the given value
  *  instead of evaluating it.
@@ -447,45 +490,10 @@ public:
 	/// @param min double value that represents the lower boundary
 	/// @param max double value that represents the upper boundary
 	virtual void setLimits(double min, double max);
-};
-
-
-/** Implements the function wrapper interface and can be
- *  used by the solvers.
- *  TODO: Make multidimensional
- */
-class PolyResidual : public FuncWrapper1D {
-protected:
-	enum dims {i1D, i2D};
-	/// Object that evaluates the equation
-	BasePolynomial poly;
-	/// Current output value
-	double output, firstDim;
-	int dim;
-	std::vector< std::vector<double> > coefficients;
-private:
-	PolyResidual();
-public:
-	PolyResidual(const std::vector<double> &coefficients, double y);
-	PolyResidual(const std::vector< std::vector<double> > &coefficients, double x, double z);
-	virtual ~PolyResidual(){};
-	virtual double call(double x);
-	virtual double deriv(double x);
-};
-class PolyIntResidual : public PolyResidual {
-public:
-	virtual double call(double x);
-	virtual double deriv(double x);
-};
-class PolyFracIntResidual : public PolyResidual {
-public:
-	virtual double call(double x);
-	virtual double deriv(double x);
-};
-class PolyDerResidual : public PolyResidual {
-public:
-	virtual double call(double x);
-	virtual double deriv(double x);
+	/// Solves the equations based on previously defined parameters.
+	/// @param min double value that represents the lower boundary
+	/// @param max double value that represents the upper boundary
+	virtual double solve(PolyResidual &res);
 };
 
 
