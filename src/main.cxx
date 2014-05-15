@@ -1,8 +1,8 @@
 
-//#include <vld.h> 
 
-#include "Backends/REFPROPMixtureBackend.h"
-#include "Backends/REFPROPBackend.h"
+
+#include "Backends/REFPROP/REFPROPMixtureBackend.h"
+#include "Backends/REFPROP/REFPROPBackend.h"
 #include <time.h>
 #include "AbstractState.h"
 #include "DataStructures.h"
@@ -11,10 +11,14 @@
 using namespace CoolProp;
 
 #include "rapidjson/rapidjson_include.h"
-#include "Fluids\FluidLibrary.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
+#ifdef ENABLE_CATCH
 #include "Tests.h"
-#include "CoolPropDLL.h"
+#endif
 #include "SpeedTest.h"
+
+#include <vld.h> 
+
 
 void generate_melting_curve_data(const char* file_name, const char *fluid_name, double Tmin, double Tmax)
 {
@@ -76,9 +80,25 @@ int main()
         generate_melting_curve_data("CycloHexane.mlt","cyclohex",279.7,2000);
         generate_melting_curve_data("CarbonDioxide.mlt","CO2",217,2000);
     }
-    if (1)
+    if (0)
     {
-        CoolProp::compare_REFPROP_and_CoolProp("Water",QT_INPUTS,1,350,100000);
+        std::cout << "Water DmolarT at 1e-3,300 \n-----------------\n";
+        CoolProp::compare_REFPROP_and_CoolProp("Water",DmolarT_INPUTS, 1e-3, 300, 10000, 0, 1e-8);
+        std::cout << "Water PT at 101325,300 \n-----------------\n";
+        CoolProp::compare_REFPROP_and_CoolProp("Water",PT_INPUTS, 101325, 300, 10000, 0, 1e-8);
+        std::cout << "Water QT at 350 K\n-----------------\n";
+        CoolProp::compare_REFPROP_and_CoolProp("Water",QT_INPUTS, 1, 350, 10000, 0, 1e-8);
+        std::cout << "Water PQ at 101325 Pa\n-----------------\n";
+        CoolProp::compare_REFPROP_and_CoolProp("Water",PQ_INPUTS, 101325, 1, 10000, 1e-2, 0);
+
+        std::cout << "R134a DmolarT at 1e-3,300 \n-----------------\n";
+        CoolProp::compare_REFPROP_and_CoolProp("R134a",DmolarT_INPUTS, 1e-3, 300, 10000, 0, 1e-8);
+        std::cout << "R134a PT at 101325,300 \n-----------------\n";
+        CoolProp::compare_REFPROP_and_CoolProp("R134a",PT_INPUTS, 101325, 300, 10000, 0, 1e-8);
+        std::cout << "R134a QT at 350 K\n-----------------\n";
+        CoolProp::compare_REFPROP_and_CoolProp("R134a",QT_INPUTS, 1, 350, 10000, 0, 1e-8);
+        std::cout << "R134a PQ at 101325 Pa\n-----------------\n";
+        CoolProp::compare_REFPROP_and_CoolProp("R134a",PQ_INPUTS, 101325, 1, 10000, 1e-2, 0);
     }
     if (0)
     {
@@ -93,11 +113,16 @@ int main()
     }
     if (1)
     {
+        AbstractState *ASS = AbstractState::factory("HEOS","Water");
+        ASS->update(DmassT_INPUTS, 1e-10, 300);
+        delete ASS;
+    }
+    if (0)
+    {
 
-
-        std::vector<std::string> tags;
-        tags.push_back("[RP1485]");
-        run_user_defined_tests(tags);
+        //std::vector<std::string> tags;
+        //tags.push_back("[RP1485]");
+        //run_user_defined_tests(tags);
         //run_tests();
         std::string fl = get_global_param_string("FluidsList");
         double rr = PropsSI("D", "P", 3e5, "T", 300, "Nitrogen");
@@ -123,7 +148,7 @@ int main()
         o = PropsSI(in1,in2,T,in3,P,Ref,z);
         double tr = 0;
     }
-    if (1)
+    if (0)
     {
         // First type (slowest, most string processing, exposed in DLL)
         double r0A = PropsSI("Dmolar","T",298,"P",1e5,"Propane[0.5]&Ethane[0.5]"); // Default backend is HEOS
@@ -136,27 +161,21 @@ int main()
         double r1B = PropsSI("Dmolar","T",298,"P",1e5,"HEOS::Propane&Ethane", z);
         double r1C = PropsSI("Dmolar","T",298,"P",1e5,"REFPROP::Propane&Ethane", z);
 
-        const double *pz = &(z[0]);
-        int n = z.size();
-        // Third type (DLL)
-        double r2A = PropsSIZ("Dmolar","T",298,"P",1e5,"Propane&Ethane", pz, n);
-        double r2B = PropsSIZ("Dmolar","T",298,"P",1e5,"HEOS::Propane&Ethane", pz, n);
-        double r2C = PropsSIZ("Dmolar","T",298,"P",1e5,"REFPROP::Propane&Ethane", pz, n);
+        //const double *pz = &(z[0]);
+        //int n = z.size();
+        //// Third type (DLL)
+        //double r2A = PropsSIZ("Dmolar","T",298,"P",1e5,"Propane&Ethane", pz, n);
+        //double r2B = PropsSIZ("Dmolar","T",298,"P",1e5,"HEOS::Propane&Ethane", pz, n);
+        //double r2C = PropsSIZ("Dmolar","T",298,"P",1e5,"REFPROP::Propane&Ethane", pz, n);
 
         double tt = 0;
     }
 
     if (0)
     {
-        //AbstractState *propane = AbstractState::factory("HEOS","CO2");
-        //propane->update(DmolarP_INPUTS,203.69, 600000);
-        //double d1 = propane->rhomolar();
-        //AbstractState *propaneRP = AbstractState::factory("REFPROP","propane");
-        //propaneRP->update(QT_INPUTS,1,85.525);
-        //double d2 = propaneRP->rhomolar();
-        //double rr = (d2/d1-1)*100;
-        //delete(propane); delete(propaneRP);
+        #ifdef ENABLE_CATCH
         run_tests();
+        #endif
     }
     if (0)
     {
@@ -261,7 +280,7 @@ int main()
         delete Mix; delete MixRP;
         double rr = 0;
     }
-    if (1)
+    if (0)
     {
         int N = 2;
         std::vector<long double> z(N, 1.0/N);

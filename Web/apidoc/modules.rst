@@ -8,3 +8,4 @@ CoolProp
    HumidAirProp
    Plots
    State
+   AbstractState 

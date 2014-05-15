@@ -132,7 +132,7 @@ def build_all_targets(project_root, project_name):
         build_target(target, project_root = project_root, cpp_sources = cpp_sources, project_name = project_name)
 
 if __name__=='__main__':
-#     build_all_targets(project_root = '../../wrappers/EES', project_name = 'EES')
+    build_all_targets(project_root = '../../wrappers/EES', project_name = 'EES')
 #     build_all_targets(project_root = '../../wrappers/C#', project_name = 'Csharp')
 #     build_all_targets(project_root = '../../wrappers/Java', project_name = 'Java')
-    build_all_targets(project_root = '../../wrappers/SharedLibrary', project_name = 'SharedLibrary')
+#     build_all_targets(project_root = '../../wrappers/SharedLibrary', project_name = 'SharedLibrary')

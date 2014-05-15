@@ -2,6 +2,9 @@
 from __future__ import division
         
 cdef class AbstractState:
+    """
+    This class is a one-to-one python wrapper of the :cpapi:`AbstractState` class
+    """
     
     def __cinit__(self, string backend, string fluid):
         self.thisptr = cAbstractState.factory(backend, fluid)
@@ -10,6 +13,7 @@ cdef class AbstractState:
         del self.thisptr
     
     cpdef update(self, long ipair, double Value1, double Value2):
+        """ Update :cpapi:`AbstractState::update` """
         self.thisptr.update(ipair, Value1, Value2)
     
     ## ----------------------------------------	
@@ -17,6 +21,7 @@ cdef class AbstractState:
     ## ----------------------------------------
     
     cpdef double keyed_output(self, long iOutput) except *: 
+        """ Update :cpapi:`AbstractState::update` """
         return self.thisptr.keyed_output(iOutput)
     
     cpdef double T(self) except *: 
