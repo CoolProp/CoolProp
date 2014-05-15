@@ -3,6 +3,7 @@
 
 #include "CoolPropTools.h"
 #include "Exceptions.h"
+#include "MatrixMath.h"
 
 #include <vector>
 #include <string>
@@ -591,7 +592,7 @@ PolynomialSolver::PolynomialSolver(){
 /// Solves a one-dimensional polynomial for the given coefficients
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current input
-virtual double PolynomialSolver::polyval(const std::vector<double> &coefficients, double y) {
+double PolynomialSolver::polyval(const std::vector<double> &coefficients, double y) {
 
 	BasePolynomial polynomial = BasePolynomial();
 	PolyResidual residual = PolyResidual(coefficients, y);
@@ -618,7 +619,7 @@ virtual double PolynomialSolver::polyval(const std::vector<double> &coefficients
 /// @param coefficients vector containing the ordered coefficients
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
-virtual double PolynomialSolver::polyval(const std::vector< std::vector<double> > &coefficients, double x, double z){
+double PolynomialSolver::polyval(const std::vector< std::vector<double> > &coefficients, double x, double z){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -629,7 +630,7 @@ virtual double PolynomialSolver::polyval(const std::vector< std::vector<double> 
 /// Solves the indefinite integral of a one-dimensional polynomial
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current output
-virtual double PolynomialSolver::polyint(const std::vector<double> &coefficients, double y){
+double PolynomialSolver::polyint(const std::vector<double> &coefficients, double y){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -637,7 +638,7 @@ virtual double PolynomialSolver::polyint(const std::vector<double> &coefficients
 /// @param coefficients vector containing the ordered coefficients
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
-virtual double PolynomialSolver::polyint(const std::vector< std::vector<double> > &coefficients, double x, double z){
+double PolynomialSolver::polyint(const std::vector< std::vector<double> > &coefficients, double x, double z){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -648,7 +649,7 @@ virtual double PolynomialSolver::polyint(const std::vector< std::vector<double> 
 /// Solves the derivative of a one-dimensional polynomial
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current output
-virtual double PolynomialSolver::polyder(const std::vector<double> &coefficients, double y){
+double PolynomialSolver::polyder(const std::vector<double> &coefficients, double y){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -656,7 +657,7 @@ virtual double PolynomialSolver::polyder(const std::vector<double> &coefficients
 /// @param coefficients vector containing the ordered coefficients
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
-virtual double PolynomialSolver::polyder(const std::vector< std::vector<double> > &coefficients, double x, double z){
+double PolynomialSolver::polyder(const std::vector< std::vector<double> > &coefficients, double x, double z){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -667,7 +668,7 @@ virtual double PolynomialSolver::polyder(const std::vector< std::vector<double> 
 /// Solves the indefinite integral of a one-dimensional polynomial divided by its independent variable
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current output
-virtual double PolynomialSolver::polyfracval(const std::vector<double> &coefficients, double y){
+double PolynomialSolver::polyfracval(const std::vector<double> &coefficients, double y){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -675,7 +676,7 @@ virtual double PolynomialSolver::polyfracval(const std::vector<double> &coeffici
 /// @param coefficients vector containing the ordered coefficients
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
-virtual double PolynomialSolver::polyfracval(const std::vector< std::vector<double> > &coefficients, double x, double z){
+double PolynomialSolver::polyfracval(const std::vector< std::vector<double> > &coefficients, double x, double z){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -686,7 +687,7 @@ virtual double PolynomialSolver::polyfracval(const std::vector< std::vector<doub
 /// Solves the indefinite integral of a one-dimensional polynomial divided by its independent variable
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current output
-virtual double PolynomialSolver::polyfracint(const std::vector<double> &coefficients, double y){
+double PolynomialSolver::polyfracint(const std::vector<double> &coefficients, double y){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -694,7 +695,7 @@ virtual double PolynomialSolver::polyfracint(const std::vector<double> &coeffici
 /// @param coefficients vector containing the ordered coefficients
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
-virtual double PolynomialSolver::polyfracint(const std::vector< std::vector<double> > &coefficients, double x, double z){
+double PolynomialSolver::polyfracint(const std::vector< std::vector<double> > &coefficients, double x, double z){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -702,7 +703,7 @@ virtual double PolynomialSolver::polyfracint(const std::vector< std::vector<doub
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current output
 /// @param xbase central x-value for fitted function
-virtual double PolynomialSolver::polyfracintcentral(const std::vector<double> &coefficients, double y, double xbase){
+double PolynomialSolver::polyfracintcentral(const std::vector<double> &coefficients, double y, double xbase){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -711,7 +712,7 @@ virtual double PolynomialSolver::polyfracintcentral(const std::vector<double> &c
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
 /// @param ybase central y-value for fitted function
-virtual double PolynomialSolver::polyfracintcentral(const std::vector< std::vector<double> > &coefficients, double x, double z, double ybase){
+double PolynomialSolver::polyfracintcentral(const std::vector< std::vector<double> > &coefficients, double x, double z, double ybase){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -722,7 +723,7 @@ virtual double PolynomialSolver::polyfracintcentral(const std::vector< std::vect
 /// Solves the derivative of a one-dimensional polynomial divided by its independent variable
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current output
-virtual double PolynomialSolver::polyfracder(const std::vector<double> &coefficients, double y){
+double PolynomialSolver::polyfracder(const std::vector<double> &coefficients, double y){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -730,7 +731,7 @@ virtual double PolynomialSolver::polyfracder(const std::vector<double> &coeffici
 /// @param coefficients vector containing the ordered coefficients
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
-virtual double PolynomialSolver::polyfracder(const std::vector< std::vector<double> > &coefficients, double x, double z){
+double PolynomialSolver::polyfracder(const std::vector< std::vector<double> > &coefficients, double x, double z){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -738,7 +739,7 @@ virtual double PolynomialSolver::polyfracder(const std::vector< std::vector<doub
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current output
 /// @param xbase central x-value for fitted function
-virtual double PolynomialSolver::polyfracdercentral(const std::vector<double> &coefficients, double y, double xbase){
+double PolynomialSolver::polyfracdercentral(const std::vector<double> &coefficients, double y, double xbase){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -747,7 +748,7 @@ virtual double PolynomialSolver::polyfracdercentral(const std::vector<double> &c
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
 /// @param ybase central y-value for fitted function
-virtual double PolynomialSolver::polyfracdercentral(const std::vector< std::vector<double> > &coefficients, double x, double z, double ybase){
+double PolynomialSolver::polyfracdercentral(const std::vector< std::vector<double> > &coefficients, double x, double z, double ybase){
 	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
 }
 
@@ -757,7 +758,7 @@ virtual double PolynomialSolver::polyfracdercentral(const std::vector< std::vect
  */
 /// Sets the guess value for the Newton solver and enables it.
 /// @param guess double value that represents the guess value
-virtual void PolynomialSolver::setGuess(double guess){
+void PolynomialSolver::setGuess(double guess){
 	this->uses  = iNewton;
 	this->guess = guess;
 	this->min   = -1;
@@ -766,7 +767,7 @@ virtual void PolynomialSolver::setGuess(double guess){
 /// Sets the limits for the Brent solver and enables it.
 /// @param min double value that represents the lower boundary
 /// @param max double value that represents the upper boundary
-virtual void PolynomialSolver::setLimits(double min, double max){
+void PolynomialSolver::setLimits(double min, double max){
 	this->uses  = iBrent;
 	this->guess = -1;
 	this->min   = min;
@@ -799,7 +800,7 @@ PolyResidual::PolyResidual(const std::vector< std::vector<double> > &coefficient
 	this->dim = i2D;
 }
 
-virtual double PolyResidual::call(double x){
+double PolyResidual::call(double x){
 	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
 	double polyRes = -1;
 	if (this->dim==i1D) {
@@ -812,7 +813,7 @@ virtual double PolyResidual::call(double x){
 	return polyRes - this->output;
 }
 
-virtual double PolyResidual::deriv(double x){
+double PolyResidual::deriv(double x){
 //	throw CoolProp::NotImplementedError("Please redefine your classes locally.");
 	double polyRes = -1;
 	if (this->dim==i1D) {
@@ -825,7 +826,7 @@ virtual double PolyResidual::deriv(double x){
 	return polyRes;
 }
 
-virtual double PolyIntResidual::call(double x){
+double PolyIntResidual::call(double x){
 	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
 	double polyRes = -1;
 	if (this->dim==i1D) {
@@ -838,7 +839,7 @@ virtual double PolyIntResidual::call(double x){
 	return polyRes - this->output;
 }
 
-virtual double PolyIntResidual::deriv(double x){
+double PolyIntResidual::deriv(double x){
 //	throw CoolProp::NotImplementedError("Please redefine your classes locally.");
 	double polyRes = -1;
 	if (this->dim==i1D) {
@@ -851,7 +852,7 @@ virtual double PolyIntResidual::deriv(double x){
 	return polyRes;
 }
 
-virtual double PolyDerResidual::call(double x){
+double PolyDerResidual::call(double x){
 	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
 	double polyRes = -1;
 	if (this->dim==i1D) {
@@ -864,7 +865,7 @@ virtual double PolyDerResidual::call(double x){
 	return polyRes - this->output;
 }
 
-virtual double PolyDerResidual::deriv(double x){
+double PolyDerResidual::deriv(double x){
 	throw CoolProp::NotImplementedError("2nd derivative of a polynomial is not defined.");
 }
 
@@ -915,75 +916,38 @@ double BaseExponential::expval(const std::vector< std::vector<double> > &coeffic
 }
 
 
-
-//// Define the residual to be driven to zero
-//    class solver_resid : public FuncWrapper1D
-//    {
-//    public:
-//        int other;
-//        double T, value, r, eos, rhomolar;
-//        HelmholtzEOSMixtureBackend *HEOS;
-//
-//        solver_resid(HelmholtzEOSMixtureBackend *HEOS, double T, double value, int other){
-//            this->HEOS = HEOS; this->T = T; this->value = value; this->other = other;
-//        };
-//        double call(double rhomolar){
-//            this->rhomolar = rhomolar;
-//            switch(other)
-//            {
-//            case iSmolar:
-//                eos = HEOS->calc_smolar_nocache(T,rhomolar); break;
-//            case iHmolar:
-//                eos = HEOS->calc_hmolar_nocache(T,rhomolar); break;
-//            case iUmolar:
-//                eos = HEOS->calc_umolar_nocache(T,rhomolar); break;
-//            default:
-//                throw ValueError(format("Input not supported"));
-//            }
-//
-//            r = eos-value;
-//            return r;
-//        };
-//    };
-//    solver_resid resid(this, T, value, other);
-//    std::string errstring;
-
-
-
 }
+
+
 
 //int main() {
 //
-//	SimpleIncompressible* liquid = new DowthermQClass();
-//	double AT      =  150.0 + 273.15;
-//	double Ap      =  3e5;
-//    liquid->testInputs(AT,Ap);
+//	std::vector<double> cHeat;
+//	cHeat.clear();
+//	cHeat.push_back(+1.1562261074E+03);
+//	cHeat.push_back(+2.0994549103E+00);
+//	cHeat.push_back(+7.7175381057E-07);
+//	cHeat.push_back(-3.7008444051E-20);
 //
+//	CoolProp::BasePolynomial base = CoolProp::BasePolynomial();
+//	CoolProp::PolynomialSolver solve = CoolProp::PolynomialSolver();
 //
-//	SecCoolSolution* obj = new MethanolSolution();
-//    double x      =   0.25;
-//    double T      =   5.0 + 273.15;
-//    double p      =   3e5;
+//	double T = 273.15+50;
 //
-//	obj->testInputs(T+00,p,x);
-//	obj->testInputs(T+05,p,x);
-//	obj->testInputs(T+10,p,x);
-//	obj->testInputs(T+15,p,x);
+//	double c = base.polyval(cHeat,T);
+//	printf("Should be  :      c = %3.3f \t J/kg/K    \n",1834.746);
+//	printf("From object:      c = %3.3f \t J/kg/K    \n",c);
 //
+//	T = 0.0;
+//	solve.setGuess(75+273.15);
+//	T = solve.polyval(cHeat,c);
+//	printf("Should be  :      T = %3.3f \t K    \n",273.15+50.0);
+//	printf("From object:      T = %3.3f \t K    \n",T);
+//
+//	T = 0.0;
+//	solve.setLimits(273.15+10,273.15+100);
+//	T = solve.polyval(cHeat,c);
+//	printf("Should be  :      T = %3.3f \t K    \n",273.15+50.0);
+//	printf("From object:      T = %3.3f \t K    \n",T);
 //
 //}
-
-int main() {
-
-	std::vector<double> cHeat;
-    cHeat.clear();
-    cHeat.push_back(999.729);
-    cHeat.push_back(2.87576);
-
-	CoolProp::BasePolynomial base = CoolProp::BasePolynomial();
-
-	double result = base.polyval(cHeat,273.15+50);
-
-	printf("From object:      h = %3.3f \t kg/m3    \n",result);
-
-}

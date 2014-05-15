@@ -25,7 +25,7 @@ public:
 	// Destructor.  No implementation
 	virtual ~BasePolynomial(){};
 
-protected:
+public:
 	/// Basic checks for coefficient vectors.
 	/** Starts with only the first coefficient dimension
 	 *  and checks the vector length against parameter n. */
@@ -455,7 +455,7 @@ public:
  *  TODO: Make multidimensional
  */
 class PolyResidual : public FuncWrapper1D {
-private:
+protected:
 	enum dims {i1D, i2D};
 	/// Object that evaluates the equation
 	BasePolynomial poly;
@@ -463,6 +463,7 @@ private:
 	double output, firstDim;
 	int dim;
 	std::vector< std::vector<double> > coefficients;
+private:
 	PolyResidual();
 public:
 	PolyResidual(const std::vector<double> &coefficients, double y);
