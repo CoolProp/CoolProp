@@ -31,7 +31,7 @@ public:
     HelmholtzEOSMixtureBackend(){SatL = NULL; SatV = NULL; imposed_phase_index = -1;};
     HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
-    virtual ~HelmholtzEOSMixtureBackend(){};
+    virtual ~HelmholtzEOSMixtureBackend(){delete SatL; delete SatV;};
     ReducingFunctionContainer Reducing;
     ExcessTerm Excess;
 
@@ -161,6 +161,12 @@ public:
     \f]
     */
     long double calc_first_partial_deriv(int Of, int Wrt, int Constant);
+
+    /**
+    This version doesn't use any cached values
+    \sa calc_first_partial_deriv
+    */
+    long double calc_first_partial_deriv_nocache(long double T, long double rhomolar, int Of, int Wrt, int Constant);
 
     void mass_to_molar_inputs(long &input_pair, double &value1, double &value2);
 
