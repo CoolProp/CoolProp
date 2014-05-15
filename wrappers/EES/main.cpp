@@ -64,6 +64,8 @@ extern "C"
 		char NInputs_string[3], err_str[1000];
 		std::string fluid_string = fluid;
         
+        std::vector<double> z;
+        
 		std::string ErrorMsg, Outstr, In1str, In2str, Fluidstr;
 		std::vector<std::string> fluid_split;
 
@@ -100,14 +102,20 @@ extern "C"
 		EesParamRec * aninput_rec = input_rec;
 		while (aninput_rec != 0)
 		{
+            if (NInputs >= 2){
+                z.push_back(aninput_rec->value);
+            }
 			aninput_rec = aninput_rec->next;
 			NInputs++;
 		};
-		if (NInputs != 2) {
-			sprintf(NInputs_string,"Number of inputs [%d] > 2", NInputs);
+        
+		if (NInputs < 2) {
+			sprintf(NInputs_string,"Number of inputs [%d] < 2", NInputs);
 			strcpy(fluid, NInputs_string);
 			return 0;
 		}
+        
+        // TODO: check that the number of components agrees with the length of array
 
 		// Get the inputs from the pointer structure sent by EES:
 		In1= input_rec->value;
@@ -133,7 +141,13 @@ extern "C"
 
 		try
 		{
-			out = PropsSI(Outstr.c_str(), In1str.c_str(), In1, In2str.c_str(), In2, Fluidstr.c_str());
+            if (z.size() > 0){
+                // Mole fractions are given
+                out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr, z);
+            }
+            else{
+                out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr);
+            }
 		}
 		catch(...)
 		{

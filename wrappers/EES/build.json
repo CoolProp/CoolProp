@@ -5,7 +5,7 @@
 "platform" : ["Windows"],
 "compiler" : "VS+",
 "bitness" : 32,
-"c_flags" : "/MP /I../../include /EHsc",
+"c_flags" : "/MP3 /I../../include /EHsc",
 "link_type" : "DLL",
 "link_fname" : "COOLPROP_EES.dlf",
 "link_flags" : "",
