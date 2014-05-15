@@ -6,7 +6,7 @@
 
 namespace CoolProp{
 
-void compare_REFPROP_and_CoolProp(std::string fluid, int inputs, double val1, double val2, std::size_t N)
+void compare_REFPROP_and_CoolProp(std::string fluid, int inputs, double val1, double val2, std::size_t N, double d1, double d2)
 {
     time_t t1,t2;
     double dx = 1/((double)N);
@@ -15,7 +15,7 @@ void compare_REFPROP_and_CoolProp(std::string fluid, int inputs, double val1, do
     t1 = clock();
     for (std::size_t ii = 0; ii < N; ++ii)
     {
-        State->update(inputs, val1+ii*dx, val2 - ii*dx);
+        State->update(inputs, val1 + ii*d1, val2 + ii*d2);
     }
     t2 = clock();
     delete State;
@@ -26,7 +26,7 @@ void compare_REFPROP_and_CoolProp(std::string fluid, int inputs, double val1, do
     t1 = clock();
     for (std::size_t ii = 0; ii < N; ++ii)
     {
-        State->update(inputs, val1+ii*dx, val2 - ii*dx);
+        State->update(inputs, val1 + ii*d1, val2 + ii*d2);
     }
     t2 = clock();
     delete State;
