@@ -327,7 +327,7 @@ class CoolPropFluid {
         double ECS_qd; ///< The critical qd parameter for the Olchowy-Sengers cross-over term
     public:
         CoolPropFluid(){};
-        virtual ~CoolPropFluid(){};
+        ~CoolPropFluid(){};
         EquationOfState *pEOS; ///< A pointer to the currently used EOS
         std::vector<EquationOfState> EOSVector; ///< The equations of state that could be used for this fluid
 
