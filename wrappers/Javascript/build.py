@@ -1,5 +1,5 @@
 
-import subprocess, os
+import subprocess, os, sys
 import glob2 as glob
 
 exports = ['-s','EXPORTED_FUNCTIONS=\"[\'_main\',\'_F2K\',\'_PropsSI\',\'_get_global_param_string\']\"']
@@ -10,18 +10,12 @@ def compile_sources():
         
         call = [r'em++.bat',optimization,f,'-I../../include','-c','-DEXTERNC']+ exports
         print 'Calling:',' '.join(call)
-        subprocess.check_output(' '.join(call), shell = True)
+        subprocess.check_call(' '.join(call), stdout = sys.stdout, shell = True)
 
 def link():
     call = [r'C:\Users\Belli\Downloads\emsdk-1.16.0-portable-64bit\emscripten\1.16.0\em++',optimization,'-v','-o','coolprop.js']+glob.glob('*.o')+['-DEXTERNC']  +  exports
     print 'Calling:',' '.join(call)
-    subprocess.check_output(' '.join(call), shell = True)
-
-def closure_compiler():
-    call = ['java','-Xmx1024m','-jar','compiler.jar','--js','coolprop.js','--js_output_file','coolprop2.js','--compilation_level','ADVANCED_OPTIMIZATIONS','--language_in','ECMASCRIPT5']
-    print 'Using the closure compiler, this will take a while...   (from https://developers.google.com/closure/compiler/)'
-    print 'Calling:',' '.join(call)
-    subprocess.check_output(' '.join(call), shell = True)
+    subprocess.check_call(' '.join(call), stdout = sys.stdout, shell = True)
 
 def cleanup():
     for file in glob.glob('*.o'):
@@ -37,3 +31,9 @@ if __name__=='__main__':
     #closure_compiler()
     cleanup()
     #run()
+    
+# def closure_compiler():
+#     call = ['java','-Xmx1024m','-jar','compiler.jar','--js','coolprop.js','--js_output_file','coolprop2.js','--compilation_level','ADVANCED_OPTIMIZATIONS','--language_in','ECMASCRIPT5']
+#     print 'Using the closure compiler, this will take a while...   (from https://developers.google.com/closure/compiler/)'
+#     print 'Calling:',' '.join(call)
+#     subprocess.check_output(' '.join(call), shell = True)
