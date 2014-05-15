@@ -10,7 +10,7 @@
 #include "DataStructures.h"
 #include "Exceptions.h"
 
-
+#include <string.h>
 double convert_from_kSI_to_SI(long iInput, double value)
 {
 	if (get_debug_level() > 8){
