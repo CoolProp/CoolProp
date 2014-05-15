@@ -1,0 +1,126 @@
+from libcpp.string cimport string
+import cython
+cimport cython
+
+from libcpp.vector cimport vector
+
+cimport AbstractState
+
+# Default string in Python 3.x is a unicode string (type str)
+# Default string in Python 2.x is a byte string(type bytes) 
+#
+# Create a fused type that allows for either unicode string or bytestring
+# We encode unicode strings using the ASCII encoding since we know they are all
+# ASCII strings 
+ctypedef fused string_like:
+    cython.bytes
+    cython.unicode
+        
+# cdef extern from "CoolPropDLL.h":
+#     int _set_reference_stateS "set_reference_stateS"(char *, char *)
+#     int _set_reference_stateD "set_reference_stateD"(char *, double T, double rho, double h0, double s0)
+#     int _get_standard_unit_system "get_standard_unit_system"()
+    
+cdef extern from "CoolPropTools.h" namespace "CoolProp":
+    bint _ValidNumber "ValidNumber"(double)
+    
+cdef extern from "CoolProp.h" namespace "CoolProp":
+    double _PropsSI "CoolProp::PropsSI"(string Output, string Name1, double Prop1, string Name2, double Prop2, string FluidName) 
+    vector[double] _PropsSI "CoolProp::PropsSI"(string Output, string Name1, vector[double] Prop1, string Name2, vector[double] Prop2, string FluidName, vector[double] fractions)
+    string _get_global_param_string "CoolProp::get_global_param_string"(string ParamName)
+    
+#     double _Props1SI "Props1SI"(string Ref, string Output)
+    
+#     double _IProps "IProps"(long Output, long Name1, double Prop1, long Name2, double Prop2, long Ref)
+    
+#     double _Props "Props"(string Output, string Name1, double Prop1, string Name2, double Prop2, string Ref)
+#     double _Props1 "Props1"(string Ref, string Output)
+    
+#     string _get_fluid_param_string "get_fluid_param_string"(string ParamName, string FluidName)
+    
+#     long _set_phase "set_phase" (string phase)
+#     long _get_Fluid_index "get_Fluid_index" (string Fluid)
+    long _get_parameter_index "get_parameter_index" (string param)
+#     
+#     string _add_REFPROP_fluid "add_REFPROP_fluid"(string FluidName) except +
+#     
+#     int _get_debug_level "get_debug_level"()
+#     void _set_debug_level "set_debug_level"(int level)
+#     
+#     string _get_BibTeXKey "get_BibTeXKey"(string Ref, string key)
+    
+    # Convenience functions
+#     int _IsFluidType "IsFluidType"(char* Ref, char* Type)
+        
+# cdef extern from "HumidAirProp.h":
+#     double _HAProps "HAProps"(char *OutputName, char *Input1Name, double Input1, char *Input2Name, double Input2, char *Input3Name, double Input3)
+#     double _HAProps_Aux "HAProps_Aux"(char* Name,double T, double p, double W, char *units)
+#     double _cair_sat "cair_sat"(double T)
+       
+cdef class State:
+    cdef AbstractState.AbstractState pAS
+    cdef readonly string Fluid, phase
+    cdef int iFluid,iParam1,iParam2,iOutput
+    cdef double T_, rho_, p_
+    cdef readonly bint is_CPFluid
+    
+    cpdef set_Fluid(self, string Fluid, string backend)
+#     cpdef speed_test(self, int N)
+#     cpdef update(self, dict params)
+#     cpdef update_ph(self, double p, double h)
+    cpdef update_Trho(self, double T, double rho)
+#     cpdef State copy(self)
+#     cpdef double Props(self, long iOutput) except *
+#     cpdef long Phase(self) except *
+    
+#     cpdef double get_Q(self) except *
+#     cpdef double get_T(self) except *
+#     cpdef double get_p(self) except *
+#     cpdef double get_h(self) except *
+#     cpdef double get_rho(self) except *
+#     cpdef double get_s(self) except *
+#     cpdef double get_u(self) except *
+#     cpdef double get_visc(self) except *
+#     cpdef double get_cond(self) except *
+#     cpdef double get_cp(self) except *
+#     cpdef double get_cp0(self) except *
+#     cpdef double get_cv(self) except *
+#     cpdef double get_MM(self) except *
+#     cpdef double get_dpdT(self) except *
+#     cpdef double get_speed_sound(self) except *
+#     cpdef get_Tsat(self, double Q = *)
+#     cpdef get_subcooling(self)
+#     cpdef get_superheat(self)cdef class State:
+#     cdef CoolPropStateClassSI CPS
+#     cdef readonly string Fluid, phase
+#     cdef int iFluid,iParam1,iParam2,iOutput
+#     cdef double T_, rho_, p_
+#     cdef readonly bint is_CPFluid
+#     
+#     cpdef set_Fluid(self, string_like Fluid)
+    cpdef speed_test(self, int N)
+#     cpdef update(self, dict params)
+#     cpdef update_ph(self, double p, double h)
+#     cpdef update_Trho(self, double T, double rho)
+#     cpdef State copy(self)
+#     cpdef double Props(self, long iOutput) except *
+#     cpdef long Phase(self) except *
+#     
+#     cpdef double get_Q(self) except *
+#     cpdef double get_T(self) except *
+#     cpdef double get_p(self) except *
+#     cpdef double get_h(self) except *
+#     cpdef double get_rho(self) except *
+#     cpdef double get_s(self) except *
+#     cpdef double get_u(self) except *
+#     cpdef double get_visc(self) except *
+#     cpdef double get_cond(self) except *
+#     cpdef double get_cp(self) except *
+#     cpdef double get_cp0(self) except *
+#     cpdef double get_cv(self) except *
+#     cpdef double get_MM(self) except *
+#     cpdef double get_dpdT(self) except *
+#     cpdef double get_speed_sound(self) except *
+#     cpdef get_Tsat(self, double Q = *)
+#     cpdef get_subcooling(self)
+#     cpdef get_superheat(self)
