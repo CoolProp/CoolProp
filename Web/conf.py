@@ -18,7 +18,11 @@ import sys, os
 # is relative to the documentation root, use os.path.abspath to make it
 # absolute, like shown here.
 sys.path.append(os.path.abspath('sphinxext'))
-    
+
+doxylink = {
+    'cpapi' : ('../CoolPropDoxyLink.tag', '_static/doxygen/html')
+}    
+
 # -- General configuration -----------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
@@ -30,13 +34,16 @@ extensions = [#'matplotlib.sphinxext.only_directives',
               'sphinx.ext.autodoc',
               'sphinx.ext.mathjax',
               'ipython_console_highlighting',
-              'sphinxcontrib.napoleon'
+              'sphinxcontrib.napoleon',
+              'sphinxcontrib.doxylink'
               #'inheritance_diagram',
               #'numpydoc',
               #'breathe'
               ]
 
 plot_formats = [('png',80)]
+
+
 
 numpydoc_show_class_members = False
 
