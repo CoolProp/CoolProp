@@ -51,6 +51,8 @@ struct EesParamRec {
   struct EesParamRec *next;
 };
 
+using namespace CoolProp;
+
 // Tell C++ to use the "C" style calling conventions rather than the C++ mangled names
 
 extern "C"  
@@ -102,8 +104,8 @@ extern "C"
 			NInputs++;
 		};
 		if (NInputs != 2) {
-			sprintf(NInputs_string,"%d", NInputs);
-			strcpy(fluid,NInputs_string);
+			sprintf(NInputs_string,"Number of inputs [%d] > 2", NInputs);
+			strcpy(fluid, NInputs_string);
 			return 0;
 		}
 
@@ -122,16 +124,16 @@ extern "C"
             fclose(fp);
         }
 
-		if (EES_DEBUG)
-        {
-            // This redirect standard output to file2.txt
-            freopen("log_stdout.txt", "w", stdout);
-            set_debug_level(10); // Maximum debugging
-        }
+		//~ if (EES_DEBUG)
+        //~ {
+            //~ // This redirect standard output to file2.txt
+            //~ freopen("log_stdout.txt", "w", stdout);
+            //~ set_debug_level(10); // Maximum debugging
+        //~ }
 
 		try
 		{
-			out = PropsS(Outstr.c_str(), In1str.c_str(), In1, In2str.c_str(), In2, Fluidstr.c_str());
+			out = PropsSI(Outstr.c_str(), In1str.c_str(), In1, In2str.c_str(), In2, Fluidstr.c_str());
 		}
 		catch(...)
 		{
