@@ -597,65 +597,75 @@ PolyResidual::PolyResidual(const std::vector< std::vector<double> > &coefficient
 }
 
 double PolyResidual::call(double x){
-	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
 	double polyRes = -1;
-	if (this->dim==i1D) {
+	switch (this->dim) {
+	case i1D:
 		polyRes = this->poly.polyval(this->coefficients[0], x);
-	} else if (this->dim==i2D) {
+		break;
+	case i2D:
 		polyRes = this->poly.polyval(this->coefficients, this->firstDim, x);
-	} else {
+		break;
+	default:
 		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
 	}
 	return polyRes - this->output;
 }
 
 double PolyResidual::deriv(double x){
-//	throw CoolProp::NotImplementedError("Please redefine your classes locally.");
 	double polyRes = -1;
-	if (this->dim==i1D) {
+	switch (this->dim) {
+	case i1D:
 		polyRes = this->poly.polyder(this->coefficients[0], x);
-	} else if (this->dim==i2D) {
+		break;
+	case i2D:
 		polyRes = this->poly.polyder(this->coefficients, this->firstDim, x);
-	} else {
+		break;
+	default:
 		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
 	}
 	return polyRes;
 }
 
 double PolyIntResidual::call(double x){
-	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
 	double polyRes = -1;
-	if (this->dim==i1D) {
+	switch (this->dim) {
+	case i1D:
 		polyRes = this->poly.polyint(this->coefficients[0], x);
-	} else if (this->dim==i2D) {
+		break;
+	case i2D:
 		polyRes = this->poly.polyint(this->coefficients, this->firstDim, x);
-	} else {
+		break;
+	default:
 		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
 	}
 	return polyRes - this->output;
 }
 
 double PolyIntResidual::deriv(double x){
-//	throw CoolProp::NotImplementedError("Please redefine your classes locally.");
 	double polyRes = -1;
-	if (this->dim==i1D) {
+	switch (this->dim) {
+	case i1D:
 		polyRes = this->poly.polyval(this->coefficients[0], x);
-	} else if (this->dim==i2D) {
+		break;
+	case i2D:
 		polyRes = this->poly.polyval(this->coefficients, this->firstDim, x);
-	} else {
+		break;
+	default:
 		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
 	}
 	return polyRes;
 }
 
 double PolyDerResidual::call(double x){
-	//throw CoolProp::NotImplementedError("Please redefine your classes locally.");
 	double polyRes = -1;
-	if (this->dim==i1D) {
+	switch (this->dim) {
+	case i1D:
 		polyRes = this->poly.polyder(this->coefficients[0], x);
-	} else if (this->dim==i2D) {
+		break;
+	case i2D:
 		polyRes = this->poly.polyder(this->coefficients, this->firstDim, x);
-	} else {
+		break;
+	default:
 		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
 	}
 	return polyRes - this->output;
@@ -710,7 +720,8 @@ double PolynomialSolver::polyval(const std::vector< std::vector<double> > &coeff
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current output
 double PolynomialSolver::polyint(const std::vector<double> &coefficients, double y){
-	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
+	PolyIntResidual residual = PolyIntResidual(coefficients, y);
+	return this->solve(residual);
 }
 
 /// Solves the indefinite integral of a two-dimensional polynomial along the 2nd axis (y)
@@ -718,7 +729,8 @@ double PolynomialSolver::polyint(const std::vector<double> &coefficients, double
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
 double PolynomialSolver::polyint(const std::vector< std::vector<double> > &coefficients, double x, double z){
-	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
+	PolyIntResidual residual = PolyIntResidual(coefficients, x, z);
+	return this->solve(residual);
 }
 
 
@@ -729,7 +741,8 @@ double PolynomialSolver::polyint(const std::vector< std::vector<double> > &coeff
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current output
 double PolynomialSolver::polyder(const std::vector<double> &coefficients, double y){
-	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
+	PolyDerResidual residual = PolyDerResidual(coefficients, y);
+	return this->solve(residual);
 }
 
 /// Solves the derivative of a two-dimensional polynomial along the 2nd axis (y)
@@ -737,7 +750,8 @@ double PolynomialSolver::polyder(const std::vector<double> &coefficients, double
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
 double PolynomialSolver::polyder(const std::vector< std::vector<double> > &coefficients, double x, double z){
-	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
+	PolyDerResidual residual = PolyDerResidual(coefficients, x, z);
+	return this->solve(residual);
 }
 
 
@@ -922,37 +936,118 @@ double BaseExponential::expval(const std::vector< std::vector<double> > &coeffic
 
 
 }
-
-
 //
-//int main() {
 //
-//	std::vector<double> cHeat;
-//	cHeat.clear();
-//	cHeat.push_back(+1.1562261074E+03);
-//	cHeat.push_back(+2.0994549103E+00);
-//	cHeat.push_back(+7.7175381057E-07);
-//	cHeat.push_back(-3.7008444051E-20);
+//#ifdef ENABLE_CATCH
+//#include <math.h>
+//#include "catch.hpp"
 //
-//	CoolProp::BasePolynomial base = CoolProp::BasePolynomial();
-//	CoolProp::PolynomialSolver solve = CoolProp::PolynomialSolver();
+//struct IO {
+//public:
+//	double in, out, expected;
+//};
 //
-//	double T = 273.15+50;
+//class PolynomialConsistencyFixture {
+//public:
+//	CoolProp::BasePolynomial poly;
+//	enum dims {i1D, i2D};
+//	double firstDim;
+//	int dim;
+//	std::vector< std::vector<double> > coefficients;
 //
-//	double c = base.polyval(cHeat,T);
-//	printf("Should be  :      c = %3.3f \t J/kg/K    \n",1834.746);
-//	printf("From object:      c = %3.3f \t J/kg/K    \n",c);
+//	IO value, integ, deriv;
+//	IO fracValue, fracInteg, fracDeriv;
 //
-//	T = 0.0;
-//	solve.setGuess(75+273.15);
-//	T = solve.polyval(cHeat,c);
-//	printf("Should be  :      T = %3.3f \t K    \n",273.15+50.0);
-//	printf("From object:      T = %3.3f \t K    \n",T);
+//    void setInputs(const std::vector<double> &coefficients){
+//    	this->firstDim = 0;
+//    	this->coefficients.clear();
+//    	this->coefficients.push_back(coefficients);
+//    	this->dim = i1D;
+//    }
 //
-//	T = 0.0;
-//	solve.setLimits(273.15+10,273.15+100);
-//	T = solve.polyval(cHeat,c);
-//	printf("Should be  :      T = %3.3f \t K    \n",273.15+50.0);
-//	printf("From object:      T = %3.3f \t K    \n",T);
+//    void setInputs(const std::vector< std::vector<double> > &coefficients, double x){
+//    	this->firstDim = x;
+//    	this->coefficients = coefficients;
+//    	this->dim = i2D;
+//    }
+//
+//    void calc(double x){
+//
+//    	value.in = x;
+//    	integ.in = x;
+//    	deriv.in = x;
+//    	fracValue.in = x;
+//    	fracInteg.in = x;
+//    	fracDeriv.in = x;
+//
+//
+//    	switch (this->dim) {
+//		case i1D:
+//			value.out = this->poly.polyval(this->coefficients[0], x);
+//			break;
+//		case i2D:
+//			polyRes = this->poly.polyval(this->coefficients, this->firstDim, x);
+//			break;
+//		default:
+//			throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
+//		}
+//
+//
+//
+//        value.out = poly.polyval()
+//    }
+//};
+//
+//TEST_CASE_METHOD(PolynomialConsistencyFixture,"Internal consistency checks","[PolyMath]")
+//{
+//    SECTION("IntFromVal1D")
+//    {
+//        CHECK(fabs(HumidAir::B_Air(-60+273.15)/(-33.065/1e6)-1) < 1e-3);
+//        CHECK(fabs(HumidAir::B_Air(0+273.15)/(-13.562/1e6)-1) < 1e-3);
+//        CHECK(fabs(HumidAir::B_Air(200+273.15)/(11.905/1e6)-1) < 1e-3);
+//        CHECK(fabs(HumidAir::B_Air(350+273.15)/(18.949/1e6)-1) < 1e-3);
+//    }
 //
 //}
+////TEST_CASE("Check against hard coded data","[PolyMath]")
+////{
+////    CHECK(fabs(HumidAir::f_factor(-60+273.15,101325)/(1.00708)-1) < 1e-3);
+////    CHECK(fabs(HumidAir::f_factor( 80+273.15,101325)/(1.00573)-1) < 1e-3);
+////    CHECK(fabs(HumidAir::f_factor(-60+273.15,10000e3)/(2.23918)-1) < 1e-3);
+////    CHECK(fabs(HumidAir::f_factor(300+273.15,10000e3)/(1.04804)-1) < 1e-3);
+////}
+//
+//#endif /* CATCH_ENABLED */
+//
+////
+////int main() {
+////
+////	std::vector<double> cHeat;
+////	cHeat.clear();
+////	cHeat.push_back(+1.1562261074E+03);
+////	cHeat.push_back(+2.0994549103E+00);
+////	cHeat.push_back(+7.7175381057E-07);
+////	cHeat.push_back(-3.7008444051E-20);
+////
+////	CoolProp::BasePolynomial base = CoolProp::BasePolynomial();
+////	CoolProp::PolynomialSolver solve = CoolProp::PolynomialSolver();
+////
+////	double T = 273.15+50;
+////
+////	double c = base.polyval(cHeat,T);
+////	printf("Should be  :      c = %3.3f \t J/kg/K    \n",1834.746);
+////	printf("From object:      c = %3.3f \t J/kg/K    \n",c);
+////
+////	T = 0.0;
+////	solve.setGuess(75+273.15);
+////	T = solve.polyval(cHeat,c);
+////	printf("Should be  :      T = %3.3f \t K    \n",273.15+50.0);
+////	printf("From object:      T = %3.3f \t K    \n",T);
+////
+////	T = 0.0;
+////	solve.setLimits(273.15+10,273.15+100);
+////	T = solve.polyval(cHeat,c);
+////	printf("Should be  :      T = %3.3f \t K    \n",273.15+50.0);
+////	printf("From object:      T = %3.3f \t K    \n",T);
+////
+////}
