@@ -78,7 +78,7 @@ set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
 find_package (PythonInterp REQUIRED)
 
 ADD_CUSTOM_COMMAND (TARGET ${app_name} PRE_BUILD 
-                    COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/JSON_to_CPP.py" "--path" ${CMAKE_CURRENT_SOURCE_DIR}
+                    COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py"
                     COMMENT "Information string for prebuild execution"                     
 ) 
 
