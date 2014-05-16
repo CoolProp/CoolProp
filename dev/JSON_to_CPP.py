@@ -2,6 +2,7 @@ import json as pyjson
 from datetime import datetime
 import struct
 import os
+import argparse, textwrap
 
 # 0: Input file path relative to dev folder
 # 1: Output file path relative to include folder
@@ -17,6 +18,9 @@ def TO_CPP(root_dir):
         if n<1:
             n=1
         return [l[i:i+n] for i in range(0, len(l), n)]
+    
+    # Normalise path name
+    root_dir = os.path.normpath(root_dir)
     
     # First we package up the JSON files
     import package_json
@@ -49,4 +53,19 @@ def TO_CPP(root_dir):
         f.close()
 
 if __name__=='__main__':
-    TO_CPP()
+    parser = argparse.ArgumentParser(
+      formatter_class=argparse.RawDescriptionHelpFormatter,
+      description=textwrap.dedent("""CoolProp
+      This program converts the JSON files from dev/fluid etc
+      to header files. It is necessary to give this program the
+      value for --path, this is the root directory where
+      dev/ can be found.""")
+    )
+                       
+    parser.add_argument('--path', required=False,
+                        help='Location of the root folder',
+                        default=None)
+                        
+    args = parser.parse_args()
+
+    TO_CPP(args.path)
