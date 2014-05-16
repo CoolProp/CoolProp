@@ -315,21 +315,28 @@ public:
 	PolyResidual(const std::vector<double> &coefficients, double y);
 	PolyResidual(const std::vector< std::vector<double> > &coefficients, double x, double z);
 	virtual ~PolyResidual(){};
+	bool is2D(){return (this->dim==i2D);};
 	virtual double call(double x);
 	virtual double deriv(double x);
 };
 class PolyIntResidual : public PolyResidual {
 public:
+	PolyIntResidual(const std::vector<double> &coefficients, double y):PolyResidual(coefficients, y){};
+	PolyIntResidual(const std::vector< std::vector<double> > &coefficients, double x, double z):PolyResidual(coefficients, x, z){};
 	virtual double call(double x);
 	virtual double deriv(double x);
 };
 class PolyFracIntResidual : public PolyResidual {
 public:
+	PolyFracIntResidual(const std::vector<double> &coefficients, double y):PolyResidual(coefficients, y){};
+	PolyFracIntResidual(const std::vector< std::vector<double> > &coefficients, double x, double z):PolyResidual(coefficients, x, z){};
 	virtual double call(double x);
 	virtual double deriv(double x);
 };
 class PolyDerResidual : public PolyResidual {
 public:
+	PolyDerResidual(const std::vector<double> &coefficients, double y):PolyResidual(coefficients, y){};
+	PolyDerResidual(const std::vector< std::vector<double> > &coefficients, double x, double z):PolyResidual(coefficients, x, z){};
 	virtual double call(double x);
 	virtual double deriv(double x);
 };
