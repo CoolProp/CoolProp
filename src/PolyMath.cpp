@@ -689,7 +689,7 @@ PolynomialSolver::PolynomialSolver(){
   this->DEBUG   = false;
   this->macheps = DBL_EPSILON;
   this->tol     = DBL_EPSILON*1e3;
-  this->maxiter = 50;
+  this->maxiter = 100;
 }
 
 /** Everything related to the normal polynomials goes in this
@@ -875,6 +875,9 @@ double PolynomialSolver::solve(PolyResidual &res){
 	double result = -1.0;
 	switch (this->uses) {
 	case iNewton: ///< Newton solver with derivative and guess value
+		if (res.is2D()) {
+			throw CoolProp::NotImplementedError("The Newton solver is not suitable for 2D polynomials, yet.");
+		}
 		result = Newton(res, this->guess, this->tol, this->maxiter, errstring);
 		break;
 
@@ -883,7 +886,7 @@ double PolynomialSolver::solve(PolyResidual &res){
 		break;
 
 	default:
-		throw CoolProp::NotImplementedError("This solver has not been implemented.");
+		throw CoolProp::NotImplementedError("This solver has not been implemented or you forgot to select a solver...");
 	}
 	return result;
 }
@@ -936,27 +939,22 @@ double BaseExponential::expval(const std::vector< std::vector<double> > &coeffic
 
 
 }
-//
-//
-//#ifdef ENABLE_CATCH
-//#include <math.h>
-//#include "catch.hpp"
-//
-//struct IO {
-//public:
-//	double in, out, expected;
-//};
-//
-//class PolynomialConsistencyFixture {
-//public:
-//	CoolProp::BasePolynomial poly;
+
+
+#ifdef ENABLE_CATCH
+#include <math.h>
+
+//#define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do this in one cpp file
+#include "catch.hpp"
+
+class PolynomialConsistencyFixture {
+public:
+	CoolProp::BasePolynomial poly;
+	CoolProp::PolynomialSolver solver;
 //	enum dims {i1D, i2D};
 //	double firstDim;
 //	int dim;
 //	std::vector< std::vector<double> > coefficients;
-//
-//	IO value, integ, deriv;
-//	IO fracValue, fracInteg, fracDeriv;
 //
 //    void setInputs(const std::vector<double> &coefficients){
 //    	this->firstDim = 0;
@@ -970,84 +968,312 @@ double BaseExponential::expval(const std::vector< std::vector<double> > &coeffic
 //    	this->coefficients = coefficients;
 //    	this->dim = i2D;
 //    }
-//
-//    void calc(double x){
-//
-//    	value.in = x;
-//    	integ.in = x;
-//    	deriv.in = x;
-//    	fracValue.in = x;
-//    	fracInteg.in = x;
-//    	fracDeriv.in = x;
-//
-//
-//    	switch (this->dim) {
-//		case i1D:
-//			value.out = this->poly.polyval(this->coefficients[0], x);
-//			break;
-//		case i2D:
-//			polyRes = this->poly.polyval(this->coefficients, this->firstDim, x);
-//			break;
-//		default:
-//			throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
+};
+
+
+TEST_CASE("Internal consistency checks with PolyMath objects","[PolyMath]")
+{
+	CoolProp::BasePolynomial poly;
+	CoolProp::PolynomialSolver solver;
+
+	/// Test case for "SylthermXLT" by "Dow Chemicals"
+	std::vector<double> cHeat;
+	cHeat.clear();
+	cHeat.push_back(+1.1562261074E+03);
+	cHeat.push_back(+2.0994549103E+00);
+	cHeat.push_back(+7.7175381057E-07);
+	cHeat.push_back(-3.7008444051E-20);
+
+	double deltaT = 0.1;
+	double Tmin   = 273.15- 50;
+	double Tmax   = 273.15+250;
+	double Tinc   = 15;
+
+	double val1,val2,val3,val4;
+
+	SECTION("DerFromVal1D") {
+		for (double T = Tmin; T<Tmax; T+=Tinc) {
+			val1 = poly.polyval(cHeat, T-deltaT);
+			val2 = poly.polyval(cHeat, T+deltaT);
+			val3 = (val2-val1)/2/deltaT;
+			val4 = poly.polyder(cHeat, T);
+			CAPTURE(T);
+			CAPTURE(val3);
+			CAPTURE(val4);
+			CHECK( (1.0-fabs(val4/val3)) < 1e-1);
+		}
+	}
+	SECTION("ValFromInt1D") {
+		for (double T = Tmin; T<Tmax; T+=Tinc) {
+			val1 = poly.polyint(cHeat, T-deltaT);
+			val2 = poly.polyint(cHeat, T+deltaT);
+			val3 = (val2-val1)/2/deltaT;
+			val4 = poly.polyval(cHeat, T);
+			CAPTURE(T);
+			CAPTURE(val3);
+			CAPTURE(val4);
+			CHECK( (1.0-fabs(val4/val3)) < 1e-1);
+		}
+	}
+
+	SECTION("Solve1DNewton") {
+		for (double T = Tmin; T<Tmax; T+=Tinc) {
+			val1 = poly.polyval(cHeat, T);
+			solver.setGuess(T+100);
+			val2 = solver.polyval(cHeat, val1);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+		}
+	}
+	SECTION("Solve1DBrent") {
+		for (double T = Tmin; T<Tmax; T+=Tinc) {
+			val1 = poly.polyval(cHeat, T);
+			solver.setLimits(T-300,T+300);
+			val2 = solver.polyval(cHeat, val1);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+		}
+	}
+
+	/// Test case for 2D
+	double xDim1 = 0.3;
+	std::vector< std::vector<double> > cHeat2D;
+	cHeat2D.clear();
+	cHeat2D.push_back(cHeat);
+	cHeat2D.push_back(cHeat);
+	cHeat2D.push_back(cHeat);
+
+	//setInputs(cHeat2D, 0.3);
+
+	SECTION("DerFromVal2D") {
+		for (double T = Tmin; T<Tmax; T+=Tinc) {
+			val1 = poly.polyval(cHeat2D, xDim1, T-deltaT);
+			val2 = poly.polyval(cHeat2D, xDim1, T+deltaT);
+			val3 = (val2-val1)/2/deltaT;
+			val4 = poly.polyder(cHeat2D, xDim1, T);
+			CAPTURE(T);
+			CAPTURE(val3);
+			CAPTURE(val4);
+			CHECK( (1.0-fabs(val4/val3)) < 1e-1);
+		}
+	}
+
+	SECTION("ValFromInt2D") {
+		for (double T = Tmin; T<Tmax; T+=Tinc) {
+			val1 = poly.polyint(cHeat2D, xDim1, T-deltaT);
+			val2 = poly.polyint(cHeat2D, xDim1, T+deltaT);
+			val3 = (val2-val1)/2/deltaT;
+			val4 = poly.polyval(cHeat2D, xDim1, T);
+			CAPTURE(T);
+			CAPTURE(val3);
+			CAPTURE(val4);
+			CHECK( (1.0-fabs(val4/val3)) < 1e-1);
+		}
+	}
+
+//	SECTION("Solve2DNewton") {
+//		for (double T = Tmin; T<Tmax; T+=Tinc) {
+//			val1 = poly.polyval(cHeat2D, xDim1, T);
+//			solver.setGuess(T+100);
+//			val2 = solver.polyval(cHeat2D, xDim1, val1);
+//			CAPTURE(T);
+//			CAPTURE(val1);
+//			CAPTURE(val2);
+//			CHECK(fabs(T-val2) < 1e-1);
 //		}
-//
-//
-//
-//        value.out = poly.polyval()
-//    }
-//};
-//
+//	}
+	SECTION("Solve2DBrent") {
+		for (double T = Tmin; T<Tmax; T+=Tinc) {
+			val1 = poly.polyval(cHeat2D, xDim1, T);
+			solver.setLimits(T-300,T+300);
+			val2 = solver.polyval(cHeat2D, xDim1, val1);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+		}
+	}
+
+}
+
 //TEST_CASE_METHOD(PolynomialConsistencyFixture,"Internal consistency checks","[PolyMath]")
 //{
-//    SECTION("IntFromVal1D")
-//    {
-//        CHECK(fabs(HumidAir::B_Air(-60+273.15)/(-33.065/1e6)-1) < 1e-3);
-//        CHECK(fabs(HumidAir::B_Air(0+273.15)/(-13.562/1e6)-1) < 1e-3);
-//        CHECK(fabs(HumidAir::B_Air(200+273.15)/(11.905/1e6)-1) < 1e-3);
-//        CHECK(fabs(HumidAir::B_Air(350+273.15)/(18.949/1e6)-1) < 1e-3);
+//	/// Test case for "SylthermXLT" by "Dow Chemicals"
+//	std::vector<double> cHeat;
+//	cHeat.clear();
+//	cHeat.push_back(+1.1562261074E+03);
+//	cHeat.push_back(+2.0994549103E+00);
+//	cHeat.push_back(+7.7175381057E-07);
+//	cHeat.push_back(-3.7008444051E-20);
+//
+//	//setInputs(cHeat);
+//	double deltaT = 0.1;
+//	double val1,val2,val3,val4;
+//
+//    SECTION("DerFromVal1D") {
+//		for (double T = 273.15-50; T<273.15+250; T+=15) {
+//			val1 = this->poly.polyval(cHeat, T-deltaT);
+//			val2 = this->poly.polyval(cHeat, T+deltaT);
+//			val3 = (val2-val1)/2/deltaT;
+//			val4 = this->poly.polyder(cHeat, T);
+//			CAPTURE(T);
+//			CAPTURE(val3);
+//			CAPTURE(val4);
+//			CHECK( (1.0-fabs(val4/val3)) < 1e-1);
+//		}
 //    }
 //
+//    SECTION("ValFromInt1D") {
+//		for (double T = 273.15-50; T<273.15+250; T+=15) {
+//			val1 = this->poly.polyint(cHeat, T-deltaT);
+//			val2 = this->poly.polyint(cHeat, T+deltaT);
+//			val3 = (val2-val1)/2/deltaT;
+//			val4 = this->poly.polyval(cHeat, T);
+//			CAPTURE(T);
+//			CAPTURE(val3);
+//			CAPTURE(val4);
+//			CHECK( (1.0-fabs(val4/val3)) < 1e-1);
+//		}
+//	}
+//
+//    SECTION("Solve1DNewton") {
+//		for (double T = 273.15-50; T<273.15+250; T+=15) {
+//			val1 = this->poly.polyval(cHeat, T);
+//			this->solver.setGuess(T+100);
+//			val2 = this->solver.polyval(cHeat, val1);
+//			CAPTURE(T);
+//			CAPTURE(val1);
+//			CAPTURE(val2);
+//			CHECK(fabs(T-val2) < 1e-1);
+//		}
+//	}
+//    SECTION("Solve1DBrent") {
+//		for (double T = 273.15-50; T<273.15+250; T+=15) {
+//			val1 = this->poly.polyval(cHeat, T);
+//			this->solver.setLimits(T-300,T+300);
+//			val2 = this->solver.polyval(cHeat, val1);
+//			CAPTURE(T);
+//			CAPTURE(val1);
+//			CAPTURE(val2);
+//			CHECK(fabs(T-val2) < 1e-1);
+//		}
+//	}
+//
+//    /// Test case for 2D
+//    std::vector< std::vector<double> > cHeat2D;
+//	cHeat2D.clear();
+//	cHeat2D.push_back(cHeat);
+//	cHeat2D.push_back(cHeat);
+//	cHeat2D.push_back(cHeat);
+//
+//	//setInputs(cHeat2D, 0.3);
+//
+//	SECTION("DerFromVal2D") {
+//		for (double T = 273.15-50; T<273.15+250; T+=15) {
+//			val1 = this->poly.polyval(cHeat, T-deltaT);
+//			val2 = this->poly.polyval(cHeat, T+deltaT);
+//			val3 = (val2-val1)/2/deltaT;
+//			val4 = this->poly.polyder(cHeat, T);
+//			CAPTURE(T);
+//			CAPTURE(val3);
+//			CAPTURE(val4);
+//			CHECK( (1.0-fabs(val4/val3)) < 1e-1);
+//		}
+//	}
+//
+//	SECTION("ValFromInt2D") {
+//		for (double T = 273.15-50; T<273.15+250; T+=15) {
+//			val1 = this->poly.polyint(cHeat, T-deltaT);
+//			val2 = this->poly.polyint(cHeat, T+deltaT);
+//			val3 = (val2-val1)/2/deltaT;
+//			val4 = this->poly.polyval(cHeat, T);
+//			CAPTURE(T);
+//			CAPTURE(val3);
+//			CAPTURE(val4);
+//			CHECK( (1.0-fabs(val4/val3)) < 1e-1);
+//		}
+//	}
+//
+//    SECTION("Solve2DNewton") {
+//		for (double T = 273.15-50; T<273.15+250; T+=15) {
+//			val1 = this->poly.polyval(cHeat, T);
+//			this->solver.setGuess(T+100);
+//			val2 = this->solver.polyval(cHeat, val1);
+//			CAPTURE(T);
+//			CAPTURE(val1);
+//			CAPTURE(val2);
+//			CHECK(fabs(T-val2) < 1e-1);
+//		}
+//	}
+//    SECTION("Solve2DBrent") {
+//		for (double T = 273.15-50; T<273.15+250; T+=15) {
+//			val1 = this->poly.polyval(cHeat, T);
+//			this->solver.setLimits(T-300,T+300);
+//			val2 = this->solver.polyval(cHeat, val1);
+//			CAPTURE(T);
+//			CAPTURE(val1);
+//			CAPTURE(val2);
+//			CHECK(fabs(T-val2) < 1e-1);
+//		}
+//	}
+//
 //}
-////TEST_CASE("Check against hard coded data","[PolyMath]")
-////{
-////    CHECK(fabs(HumidAir::f_factor(-60+273.15,101325)/(1.00708)-1) < 1e-3);
-////    CHECK(fabs(HumidAir::f_factor( 80+273.15,101325)/(1.00573)-1) < 1e-3);
-////    CHECK(fabs(HumidAir::f_factor(-60+273.15,10000e3)/(2.23918)-1) < 1e-3);
-////    CHECK(fabs(HumidAir::f_factor(300+273.15,10000e3)/(1.04804)-1) < 1e-3);
-////}
 //
-//#endif /* CATCH_ENABLED */
+//TEST_CASE("Check against hard coded data","[PolyMath]")
+//{
+//    CHECK(fabs(HumidAir::f_factor(-60+273.15,101325)/(1.00708)-1) < 1e-3);
+//    CHECK(fabs(HumidAir::f_factor( 80+273.15,101325)/(1.00573)-1) < 1e-3);
+//    CHECK(fabs(HumidAir::f_factor(-60+273.15,10000e3)/(2.23918)-1) < 1e-3);
+//    CHECK(fabs(HumidAir::f_factor(300+273.15,10000e3)/(1.04804)-1) < 1e-3);
+//}
+
+
+
+//int main() {
 //
-////
-////int main() {
-////
-////	std::vector<double> cHeat;
-////	cHeat.clear();
-////	cHeat.push_back(+1.1562261074E+03);
-////	cHeat.push_back(+2.0994549103E+00);
-////	cHeat.push_back(+7.7175381057E-07);
-////	cHeat.push_back(-3.7008444051E-20);
-////
-////	CoolProp::BasePolynomial base = CoolProp::BasePolynomial();
-////	CoolProp::PolynomialSolver solve = CoolProp::PolynomialSolver();
-////
-////	double T = 273.15+50;
-////
-////	double c = base.polyval(cHeat,T);
-////	printf("Should be  :      c = %3.3f \t J/kg/K    \n",1834.746);
-////	printf("From object:      c = %3.3f \t J/kg/K    \n",c);
-////
-////	T = 0.0;
-////	solve.setGuess(75+273.15);
-////	T = solve.polyval(cHeat,c);
-////	printf("Should be  :      T = %3.3f \t K    \n",273.15+50.0);
-////	printf("From object:      T = %3.3f \t K    \n",T);
-////
-////	T = 0.0;
-////	solve.setLimits(273.15+10,273.15+100);
-////	T = solve.polyval(cHeat,c);
-////	printf("Should be  :      T = %3.3f \t K    \n",273.15+50.0);
-////	printf("From object:      T = %3.3f \t K    \n",T);
-////
-////}
+//	Catch::ConfigData &config = session.configData();
+//	config.testsOrTags.clear();
+//	config.testsOrTags.push_back("[fast]");
+//	session.useConfigData(config);
+//	return session.run();
+//
+//}
+
+#endif /* CATCH_ENABLED */
+
+
+//int main() {
+//
+//	std::vector<double> cHeat;
+//	cHeat.clear();
+//	cHeat.push_back(+1.1562261074E+03);
+//	cHeat.push_back(+2.0994549103E+00);
+//	cHeat.push_back(+7.7175381057E-07);
+//	cHeat.push_back(-3.7008444051E-20);
+//
+//	CoolProp::BasePolynomial base = CoolProp::BasePolynomial();
+//	CoolProp::PolynomialSolver solve = CoolProp::PolynomialSolver();
+//
+//	double T = 273.15+50;
+//
+//	double c = base.polyval(cHeat,T);
+//	printf("Should be  :      c = %3.3f \t J/kg/K    \n",1834.746);
+//	printf("From object:      c = %3.3f \t J/kg/K    \n",c);
+//
+//	T = 0.0;
+//	solve.setGuess(75+273.15);
+//	T = solve.polyval(cHeat,c);
+//	printf("Should be  :      T = %3.3f \t K    \n",273.15+50.0);
+//	printf("From object:      T = %3.3f \t K    \n",T);
+//
+//	T = 0.0;
+//	solve.setLimits(273.15+10,273.15+100);
+//	T = solve.polyval(cHeat,c);
+//	printf("Should be  :      T = %3.3f \t K    \n",273.15+50.0);
+//	printf("From object:      T = %3.3f \t K    \n",T);
+//
+//}

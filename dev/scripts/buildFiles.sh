@@ -5,11 +5,14 @@ set -x
 SOURCES=( "CoolPropTools" "MatrixMath" "Solvers" "PolyMath" )
 ALLSRCS=""
 #
+CATCH="-I externals/Catch/include -D ENABLE_CATCH "
+#CATCH=""
+#
 LENGTH=${#SOURCES[@]}
 #
 # Loop through the sources and compile them
 for (( i=0; i<${LENGTH}; i++ )); do
-  g++ -I include -c -o ${SOURCES[$i]}.o src/${SOURCES[$i]}.cpp
+  g++ $CATCH-I include -c -o ${SOURCES[$i]}.o src/${SOURCES[$i]}.cpp
   ALLSRCS="$ALLSRCS ${SOURCES[$i]}.o"
 done
 g++ $ALLSRCS -o test

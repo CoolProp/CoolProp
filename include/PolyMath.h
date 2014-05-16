@@ -315,6 +315,7 @@ public:
 	PolyResidual(const std::vector<double> &coefficients, double y);
 	PolyResidual(const std::vector< std::vector<double> > &coefficients, double x, double z);
 	virtual ~PolyResidual(){};
+	bool is2D(){return (this->dim==i2D);};
 	virtual double call(double x);
 	virtual double deriv(double x);
 };
