@@ -25,3 +25,9 @@ the build process will need to be run twice.
 
 Make needs to be called twice, the first make step will dynamically generate a number of files from the
 JSON fluid definitions - the second make run will actually generate the program.
+
+
+Testing
+-------
+
+CMake generates a target for testing. You can build the test executable with `make testRunner`.

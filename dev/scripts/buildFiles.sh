@@ -5,7 +5,7 @@ set -x
 SOURCES=( "CoolPropTools" "MatrixMath" "Solvers" "PolyMath" )
 ALLSRCS=""
 #
-CATCH="-I externals/Catch/include -D ENABLE_CATCH "
+CATCH="-I externals/Catch/include -D ENABLE_CATCH -D CATCH_CONFIG_MAIN "
 #CATCH=""
 #
 LENGTH=${#SOURCES[@]}

@@ -34,7 +34,15 @@ set (CoolProp_VERSION ${CoolProp_VERSION_MAJOR}.${CoolProp_VERSION_MINOR}.${Cool
 option (COOLPROP_STATIC_LIBRARY
         "Build and install CoolProp as a STATIC library (.lib, .a) as opposed to SHARED (.dll, .so)"
         ON)
-        
+
+#OPTION(COOLPROP_TESTING 
+#       "Build with test flags and include main() from catch" 
+#       OFF)
+
+##IF(COOLPROP_TESTING) # custom flags
+##  ADD_DEFINITIONS(-D ENABLE_CATCH -D CATCH_CONFIG_MAIN)
+## ENDIF(COOLPROP_TESTING)
+
 
 #######################################
 #         FIND ALL SOURCES            #
@@ -47,6 +55,29 @@ option (COOLPROP_STATIC_LIBRARY
 
 file(GLOB_RECURSE APP_SOURCES "src/*.cpp")             # source reside in src/
 file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # includes reside in include/ and src/
+
+##IF(COOLPROP_TESTING)
+##  #file(GLOB_RECURSE TEST_HEADERS "externals/Catch/include/*.hpp") # includes catch
+##  list (APPEND APP_HEADERS "externals/Catch/include/catch.hpp")
+##  # Add an executable
+##  add_executable (testRunner ${APP_SOURCES})
+##  target_compile_options(testRunner -D ENABLE_CATCH -D CATCH_CONFIG_MAIN)
+##ENDIF(COOLPROP_TESTING)  
+
+add_executable (testRunner ${APP_SOURCES})
+#target_compile_definitions(testRunner ENABLE_CATCH CATCH_CONFIG_MAIN)
+#target_include_directories(testRunner "externals/Catch/include")
+
+get_filename_component(TST_HEADER "externals/Catch/include" ABSOLUTE)
+
+set_property(
+   TARGET testRunner 
+   APPEND PROPERTY COMPILE_DEFINITIONS ENABLE_CATCH CATCH_CONFIG_MAIN
+   )
+set_property(
+   TARGET testRunner 
+   APPEND PROPERTY INCLUDE_DIRECTORIES ${TST_HEADER}
+   )
 
 set (APP_INCLUDE_DIRS "")
 foreach (_headerFile ${APP_HEADERS})
@@ -62,8 +93,6 @@ if (COOLPROP_STATIC_LIBRARY)
 else()
     add_library(${app_name} SHARED ${APP_SOURCES})
 endif()
-
-target_link_libraries(${app_name} ${CMAKE_DL_LIBS})
 
 #######################################
 #         REQUIRED MODULES            #
@@ -85,8 +114,6 @@ ADD_CUSTOM_COMMAND (TARGET ${app_name} PRE_BUILD
 
 
 # TODO: check relevance of http://www.cmake.org/Wiki/BuildingWinDLL
-
-
 
 #include_directories("${CMAKE_CURRENT_SOURCE_DIR}/CoolProp")
 #FILE(GLOB coolprop_files "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/*.cpp")
