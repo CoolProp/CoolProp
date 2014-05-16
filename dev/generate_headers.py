@@ -80,7 +80,11 @@ def gitrev_to_file(root_dir):
         pass
     
 if __name__=='__main__':
-    version_to_file(root_dir = '..')
-    gitrev_to_file(root_dir = '..')
+    path = os.path.abspath(__file__)
+    path = os.path.dirname(path)
+    path = os.path.dirname(path)
+     
+    version_to_file(root_dir = path)
+    gitrev_to_file(root_dir = path)
     import JSON_to_CPP
-    JSON_to_CPP.TO_CPP(root_dir = '..')
+    JSON_to_CPP.TO_CPP(root_dir = path)
