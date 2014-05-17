@@ -16,8 +16,8 @@
 #include <string.h>
 #include <iostream>
 
-CoolProp::AbstractStateWrapper Water("HEOS", "Water");
-CoolProp::AbstractStateWrapper Air("HEOS", "Air");
+CoolProp::AbstractStateWrapper Water;
+CoolProp::AbstractStateWrapper Air;
 
 namespace HumidAir
 {
@@ -1075,6 +1075,14 @@ double HAPropsSI(const char *OutputName, const char *Input1Name, double Input1, 
 {
     try
     {
+        
+        if (Water.empty()){
+            Water = CoolProp::AbstractStateWrapper("HEOS", "Water");
+        }
+        if (Air.empty()){
+            Air = CoolProp::AbstractStateWrapper("HEOS", "Air");
+        }
+        
         int In1Type, In2Type, In3Type,iT,iW,iTdp,iRH,ip,Type1,Type2;
         double vals[3],p,T,RH,W,Tdp,psi_w,M_ha,v_bar,h_bar,s_bar,MainInputValue,SecondaryInputValue,T_guess;
         double Value1,Value2,W_guess;
