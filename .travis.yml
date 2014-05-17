@@ -3,19 +3,18 @@ virtualenv:
   system_site_packages: true
 python:
   - "2.7"
-# command to install dependencies
+
 install: 
   - gcc -v
   - mkdir build
   - cd build
   - cmake .. -DCOOLPROP_TESTING=ON
   - make
-  - ctest
-# command to run tests
+
 script: 
   - pwd
-  - cd $TRAVIS_BUILD_DIR/wrappers/Python/CoolProp/tests
-  - nosetests
+  - cd $TRAVIS_BUILD_DIR/build
+  - ctest
 
 notifications:
   email:
