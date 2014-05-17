@@ -83,8 +83,14 @@ if __name__=='__main__':
     path = os.path.abspath(__file__)
     path = os.path.dirname(path)
     path = os.path.dirname(path)
-     
+   
+    if os.path.exists(os.path.join(path, ".JSON_done")):
+      sys.exit()
+
     version_to_file(root_dir = path)
     gitrev_to_file(root_dir = path)
     import JSON_to_CPP
     JSON_to_CPP.TO_CPP(root_dir = path)
+
+    open(os.path.join(path, ".JSON_done"), "w").close()
+

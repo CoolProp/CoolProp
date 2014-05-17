@@ -35,14 +35,9 @@ option (COOLPROP_STATIC_LIBRARY
         "Build and install CoolProp as a STATIC library (.lib, .a) as opposed to SHARED (.dll, .so)"
         ON)
 
-#OPTION(COOLPROP_TESTING 
-#       "Build with test flags and include main() from catch" 
-#       OFF)
-
-##IF(COOLPROP_TESTING) # custom flags
-##  ADD_DEFINITIONS(-D ENABLE_CATCH -D CATCH_CONFIG_MAIN)
-## ENDIF(COOLPROP_TESTING)
-
+option (COOLPROP_TESTING 
+        "Build with test flags and include main() from catch" 
+        OFF)
 
 #######################################
 #         FIND ALL SOURCES            #
@@ -51,33 +46,14 @@ option (COOLPROP_STATIC_LIBRARY
 # split includes and source folders   #
 # this makes it easier for developers #
 # to quickly find relevant includes.  #
+# This section finds all sources,     #
+# headers and corrosponding dirs.     #
 #######################################
 
-file(GLOB_RECURSE APP_SOURCES "src/*.cpp")             # source reside in src/
-file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # includes reside in include/ and src/
+file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
+file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # "externals/*.hpp")
+list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
 
-##IF(COOLPROP_TESTING)
-##  #file(GLOB_RECURSE TEST_HEADERS "externals/Catch/include/*.hpp") # includes catch
-##  list (APPEND APP_HEADERS "externals/Catch/include/catch.hpp")
-##  # Add an executable
-##  add_executable (testRunner ${APP_SOURCES})
-##  target_compile_options(testRunner -D ENABLE_CATCH -D CATCH_CONFIG_MAIN)
-##ENDIF(COOLPROP_TESTING)  
-
-add_executable (testRunner ${APP_SOURCES})
-#target_compile_definitions(testRunner ENABLE_CATCH CATCH_CONFIG_MAIN)
-#target_include_directories(testRunner "externals/Catch/include")
-
-get_filename_component(TST_HEADER "externals/Catch/include" ABSOLUTE)
-
-set_property(
-   TARGET testRunner 
-   APPEND PROPERTY COMPILE_DEFINITIONS ENABLE_CATCH CATCH_CONFIG_MAIN
-   )
-set_property(
-   TARGET testRunner 
-   APPEND PROPERTY INCLUDE_DIRECTORIES ${TST_HEADER}
-   )
 
 set (APP_INCLUDE_DIRS "")
 foreach (_headerFile ${APP_HEADERS})
@@ -85,14 +61,9 @@ foreach (_headerFile ${APP_HEADERS})
     list (APPEND APP_INCLUDE_DIRS ${_dir})
 endforeach()
 list(REMOVE_DUPLICATES APP_INCLUDE_DIRS)
+
 include_directories(${APP_INCLUDE_DIRS})
 
-# Build CoolProp as a shared or static library depending on build option
-if (COOLPROP_STATIC_LIBRARY)
-    add_library(${app_name} STATIC ${APP_SOURCES})
-else()
-    add_library(${app_name} SHARED ${APP_SOURCES})
-endif()
 
 #######################################
 #         REQUIRED MODULES            #
@@ -101,16 +72,58 @@ endif()
 # features, these include:            #
 # DL (CMAKE_DL_LIBS) for REFPROP      #
 #######################################
-#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/dev/cmake/modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/dev/cmake/Modules/")
 
 set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
-find_package (PythonInterp REQUIRED)
+find_package (PythonInterp 2.7 REQUIRED)
+find_package (${CMAKE_DL_LIBS} REQUIRED)
 
-ADD_CUSTOM_COMMAND (TARGET ${app_name} PRE_BUILD 
-                    COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py"
-                    COMMENT "Information string for prebuild execution"                     
-) 
 
+#######################################
+#         MAKE ARTIFACTS              #
+#-------------------------------------#
+# In this section we define the       #
+# artifacts (exes, libs) that will be #
+# made for coolprop, these include    #
+# customisation from earier options.  #
+#######################################
+
+###     FLUIDS, MIXTURES JSON       ###
+add_custom_target(generate_headers
+                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
+
+
+###      COOLPROP LIB or DLL        ###
+if (COOLPROP_STATIC_LIBRARY)
+    add_library(${app_name} STATIC ${APP_SOURCES})
+else()
+    add_library(${app_name} SHARED ${APP_SOURCES})
+endif()
+add_dependencies (${app_name} generate_headers)
+
+
+###      COOLPROP TESTING APP       ###
+if (COOLPROP_TESTING)
+  list (APPEND APP_INCLUDE_DIRS "externals/Catch/include")
+  include_directories(${APP_INCLUDE_DIRS})
+  enable_testing()
+
+  # CATCH TEST, compile everything with catch and set test entry point
+  add_executable        (testRunner.exe ${APP_SOURCES})
+  add_dependencies      (testRunner.exe generate_headers)
+  set_target_properties (testRunner.exe PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
+  set_source_files_properties(src/PolyMath.cpp PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCATCH_CONFIG_MAIN")
+  target_link_libraries (testRunner.exe ${CMAKE_DL_LIBS})
+  add_test(ProceedureTests testRunner.exe)
+
+
+  # C++ Documentation Test
+  add_executable        (docuTest.exe "Web/examples/C++/Example.cpp")
+  add_dependencies      (docuTest.exe ${app_name})
+  target_link_libraries (docuTest.exe ${app_name})
+  target_link_libraries (docuTest.exe ${CMAKE_DL_LIBS})
+  add_test(DocumentationTest docuTest.exe)
+endif()
 
 
 # TODO: check relevance of http://www.cmake.org/Wiki/BuildingWinDLL

@@ -173,7 +173,7 @@ def inject_surface_tension(root_dir):
     'Decafluorobutane':113.3+273.15 # According to http://encyclopedia.airliquide.com/Encyclopedia.asp?GasID=19#GeneralData, not in Mulero
     }
 
-    import glob, numpy as np, json, os
+    import glob, json, os
     for row in Mulero_data.split('\n'):
         row = row.split(' ')
         cas = row.pop(0)
@@ -189,7 +189,7 @@ def inject_surface_tension(root_dir):
         
         # The dictionary of values for the surface tension
         j_st = dict(Tc = Tc, 
-                    a = np.array(a).tolist(), 
+                    a = a, 
                     n = n,
                     BibTeX = 'Mulero-JPCRD-2012',
                     description = 'sigma = sum(a_i*(1-T/Tc)^n_i)'
@@ -212,7 +212,8 @@ def inject_environmental_data(root_dir):
     print('*** Injecting environmental data from DTU')
     j = json.load(open(os.path.join(root_dir,'dev','environmental_data_from_DTU','DTU_environmental.json'),'r'))
     
-    for CAS, data in j.iteritems():
+    for CAS in j:
+        data = j[CAS]
         fname = os.path.join(root_dir,'dev','fluids',data['Name']+'.json')
         if os.path.isfile(fname):
             fluid = json.load(open(fname,'r'))
