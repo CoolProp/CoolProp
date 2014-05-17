@@ -52,6 +52,8 @@ option (COOLPROP_TESTING
 
 file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
 file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # "externals/*.hpp")
+list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
+
 
 set (APP_INCLUDE_DIRS "")
 foreach (_headerFile ${APP_HEADERS})
@@ -59,7 +61,22 @@ foreach (_headerFile ${APP_HEADERS})
     list (APPEND APP_INCLUDE_DIRS ${_dir})
 endforeach()
 list(REMOVE_DUPLICATES APP_INCLUDE_DIRS)
+
 include_directories(${APP_INCLUDE_DIRS})
+
+
+#######################################
+#         REQUIRED MODULES            #
+#-------------------------------------#
+# CoolProp requires some standard OS  #
+# features, these include:            #
+# DL (CMAKE_DL_LIBS) for REFPROP      #
+#######################################
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/dev/cmake/Modules/")
+
+set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
+find_package (PythonInterp 2.7 REQUIRED)
+find_package (${CMAKE_DL_LIBS} REQUIRED)
 
 
 #######################################
@@ -96,7 +113,6 @@ if (COOLPROP_TESTING)
   add_dependencies      (testRunner.exe generate_headers)
   set_target_properties (testRunner.exe PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
   set_source_files_properties(src/PolyMath.cpp PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCATCH_CONFIG_MAIN")
-  set_source_files_properties(src/Tests/Tests.cpp PROPERTIES COMPILE_FLAGS "")
   target_link_libraries (testRunner.exe ${CMAKE_DL_LIBS})
   add_test(ProceedureTests testRunner.exe)
 
@@ -109,19 +125,6 @@ if (COOLPROP_TESTING)
   add_test(DocumentationTest docuTest.exe)
 endif()
 
-
-#######################################
-#         REQUIRED MODULES            #
-#-------------------------------------#
-# CoolProp requires some standard OS  #
-# features, these include:            #
-# DL (CMAKE_DL_LIBS) for REFPROP      #
-#######################################
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/dev/cmake/Modules/")
-
-set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
-find_package (PythonInterp 2.7 REQUIRED)
-find_package (${CMAKE_DL_LIBS} REQUIRED)
 
 # TODO: check relevance of http://www.cmake.org/Wiki/BuildingWinDLL
 
