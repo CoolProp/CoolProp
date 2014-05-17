@@ -88,11 +88,14 @@ add_dependencies (${app_name} generate_headers)
 ###      COOLPROP TESTING APP       ###
 if (COOLPROP_TESTING)
   add_definitions (-DENABLE_CATCH -DCATCH_CONFIG_MAIN)
-  list (APPEND APP_INCLUDE_DIRS "externals/Catch/include")
+  list (APPEND APP_INCLUDE_DIRS "externals/Catch/single_include")
   include_directories(${APP_INCLUDE_DIRS})
 
   add_executable   (testRunner ${APP_SOURCES})
   add_dependencies (testRunner generate_headers)
+
+  target_link_libraries (testRunner ${CMAKE_DL_LIBS})
+
 endif()
 
 
@@ -103,11 +106,11 @@ endif()
 # features, these include:            #
 # DL (CMAKE_DL_LIBS) for REFPROP      #
 #######################################
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/dev/cmake/Modules/")
 
 set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
 find_package (PythonInterp 2.7 REQUIRED)
-
-find_package (${CMAKE_DL_LIBS})
+find_package (${CMAKE_DL_LIBS} REQUIRED)
 
 # TODO: check relevance of http://www.cmake.org/Wiki/BuildingWinDLL
 
