@@ -51,7 +51,7 @@ option (COOLPROP_TESTING
 #######################################
 
 file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
-file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h" "external/*.h")
+file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # "externals/*.hpp")
 
 set (APP_INCLUDE_DIRS "")
 foreach (_headerFile ${APP_HEADERS})
@@ -71,6 +71,10 @@ include_directories(${APP_INCLUDE_DIRS})
 # customisation from earier options.  #
 #######################################
 
+###     FLUIDS, MIXTURES JSON       ###
+add_custom_target(generate_headers
+                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
+
 
 ###      COOLPROP LIB or DLL        ###
 if (COOLPROP_STATIC_LIBRARY)
@@ -78,19 +82,17 @@ if (COOLPROP_STATIC_LIBRARY)
 else()
     add_library(${app_name} SHARED ${APP_SOURCES})
 endif()
+add_dependencies (${app_name} generate_headers)
 
 
 ###      COOLPROP TESTING APP       ###
 if (COOLPROP_TESTING)
   add_definitions (-DENABLE_CATCH -DCATCH_CONFIG_MAIN)
-  add_executable  (testRunner ${APP_SOURCES})
-  get_filename_component(TST_HEADER "externals/Catch/include" ABSOLUTE)
+  list (APPEND APP_INCLUDE_DIRS "externals/Catch/include")
+  include_directories(${APP_INCLUDE_DIRS})
 
-  set_property(TARGET testRunner 
-               APPEND PROPERTY COMPILE_DEFINITIONS ENABLE_CATCH CATCH_CONFIG_MAIN)
-
-  set_property(TARGET testRunner 
-               APPEND PROPERTY INCLUDE_DIRECTORIES ${TST_HEADER})
+  add_executable   (testRunner ${APP_SOURCES})
+  add_dependencies (testRunner generate_headers)
 endif()
 
 
@@ -101,24 +103,11 @@ endif()
 # features, these include:            #
 # DL (CMAKE_DL_LIBS) for REFPROP      #
 #######################################
-#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/dev/cmake/modules/")
 
 set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
 find_package (PythonInterp 2.7 REQUIRED)
 
-add_custom_target(generate_headers
-                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
-
-add_dependencies(${app_name} generate_headers)
-
-
-# only works in visual studio
-#ADD_CUSTOM_COMMAND (TARGET ${app_name} PRE_BUILD 
-#                    COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py"
-#                    COMMENT "Information string for prebuild execution"                     
-#) 
-
-
+find_package (${CMAKE_DL_LIBS})
 
 # TODO: check relevance of http://www.cmake.org/Wiki/BuildingWinDLL
 
