@@ -1,28 +1,26 @@
-language: python
-virtualenv:
-  system_site_packages: true
-python:
-  - "2.7"
-  - "3.2"
-  - "3.3"
-# command to install dependencies
-install: 
+language: c++
+compiler:
+  - gcc
+  - clang
+
+before_install:
+  - sudo apt-get install -qq python-numpy
+
+before_script: 
   - gcc -v
-  - pip -q install cython --install-option="--no-cython-compile"
-  - cd wrappers/Python
-  - python setup.py install # Install CoolProp
-  - cd ../SharedLibrary
+  - mkdir build
+  - cd build
+  - cmake .. -DCOOLPROP_TESTING=ON -DCMAKE_BUILD_TYPE=Debug
   - make
-  
-# command to run tests
+
 script: 
   - pwd
-  - cd $TRAVIS_BUILD_DIR/wrappers/Python/CoolProp/tests
-  - nosetests
+  - cd $TRAVIS_BUILD_DIR/build
+  - ctest -VV
 
 notifications:
   email:
     recipients:
-      - ian.h.bell@gmail.com
+      - rodney.persky@gmail.com
     on_success: never # default: change
     on_failure: always # default: always
