@@ -943,9 +943,8 @@ double BaseExponential::expval(const std::vector< std::vector<double> > &coeffic
 
 #ifdef ENABLE_CATCH
 #include <math.h>
-
-//#define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do this in one cpp file
 #include "catch.hpp"
+
 
 class PolynomialConsistencyFixture {
 public:
