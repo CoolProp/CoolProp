@@ -12,7 +12,7 @@
 
     #include "Tests.h"
 
-    #define CATCH_CONFIG_RUNNER
+
     #include "catch.hpp"
 
     static int inputs[] = {
