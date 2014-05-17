@@ -76,7 +76,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/dev/cmake/Module
 
 set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
 find_package (PythonInterp 2.7 REQUIRED)
-find_package (${CMAKE_DL_LIBS} REQUIRED)
+if(UNIX)
+    find_package (${CMAKE_DL_LIBS} REQUIRED)
+endif()
 
 
 #######################################
@@ -113,7 +115,9 @@ if (COOLPROP_TESTING)
   add_dependencies      (testRunner.exe generate_headers)
   set_target_properties (testRunner.exe PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
   set_source_files_properties(src/PolyMath.cpp PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCATCH_CONFIG_MAIN")
-  target_link_libraries (testRunner.exe ${CMAKE_DL_LIBS})
+  if(UNIX)
+    target_link_libraries (testRunner.exe ${CMAKE_DL_LIBS})
+  endif()
   add_test(ProceedureTests testRunner.exe)
 
 
@@ -121,7 +125,9 @@ if (COOLPROP_TESTING)
   add_executable        (docuTest.exe "Web/examples/C++/Example.cpp")
   add_dependencies      (docuTest.exe ${app_name})
   target_link_libraries (docuTest.exe ${app_name})
-  target_link_libraries (docuTest.exe ${CMAKE_DL_LIBS})
+  if(UNIX)
+    target_link_libraries (docuTest.exe ${CMAKE_DL_LIBS})
+  endif()
   add_test(DocumentationTest docuTest.exe)
 endif()
 
