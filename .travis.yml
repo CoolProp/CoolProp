@@ -9,7 +9,6 @@ install:
   - mkdir build
   - cd build
   - cmake .. -DCOOLPROP_TESTING=ON
-  - cmake .. -DCOOLPROP_TESTING=ON
   - make
   - ctest
 # command to run tests
