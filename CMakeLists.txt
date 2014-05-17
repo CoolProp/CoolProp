@@ -35,14 +35,9 @@ option (COOLPROP_STATIC_LIBRARY
         "Build and install CoolProp as a STATIC library (.lib, .a) as opposed to SHARED (.dll, .so)"
         ON)
 
-#OPTION(COOLPROP_TESTING 
-#       "Build with test flags and include main() from catch" 
-#       OFF)
-
-##IF(COOLPROP_TESTING) # custom flags
-##  ADD_DEFINITIONS(-D ENABLE_CATCH -D CATCH_CONFIG_MAIN)
-## ENDIF(COOLPROP_TESTING)
-
+option (COOLPROP_TESTING 
+        "Build with test flags and include main() from catch" 
+        OFF)
 
 #######################################
 #         FIND ALL SOURCES            #
@@ -51,33 +46,12 @@ option (COOLPROP_STATIC_LIBRARY
 # split includes and source folders   #
 # this makes it easier for developers #
 # to quickly find relevant includes.  #
+# This section finds all sources,     #
+# headers and corrosponding dirs.     #
 #######################################
 
-file(GLOB_RECURSE APP_SOURCES "src/*.cpp")             # source reside in src/
-file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # includes reside in include/ and src/
-
-##IF(COOLPROP_TESTING)
-##  #file(GLOB_RECURSE TEST_HEADERS "externals/Catch/include/*.hpp") # includes catch
-##  list (APPEND APP_HEADERS "externals/Catch/include/catch.hpp")
-##  # Add an executable
-##  add_executable (testRunner ${APP_SOURCES})
-##  target_compile_options(testRunner -D ENABLE_CATCH -D CATCH_CONFIG_MAIN)
-##ENDIF(COOLPROP_TESTING)  
-
-add_executable (testRunner ${APP_SOURCES})
-#target_compile_definitions(testRunner ENABLE_CATCH CATCH_CONFIG_MAIN)
-#target_include_directories(testRunner "externals/Catch/include")
-
-get_filename_component(TST_HEADER "externals/Catch/include" ABSOLUTE)
-
-set_property(
-   TARGET testRunner 
-   APPEND PROPERTY COMPILE_DEFINITIONS ENABLE_CATCH CATCH_CONFIG_MAIN
-   )
-set_property(
-   TARGET testRunner 
-   APPEND PROPERTY INCLUDE_DIRECTORIES ${TST_HEADER}
-   )
+file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
+file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h" "external/*.h")
 
 set (APP_INCLUDE_DIRS "")
 foreach (_headerFile ${APP_HEADERS})
@@ -87,12 +61,38 @@ endforeach()
 list(REMOVE_DUPLICATES APP_INCLUDE_DIRS)
 include_directories(${APP_INCLUDE_DIRS})
 
-# Build CoolProp as a shared or static library depending on build option
+
+#######################################
+#         MAKE ARTIFACTS              #
+#-------------------------------------#
+# In this section we define the       #
+# artifacts (exes, libs) that will be #
+# made for coolprop, these include    #
+# customisation from earier options.  #
+#######################################
+
+
+###      COOLPROP LIB or DLL        ###
 if (COOLPROP_STATIC_LIBRARY)
     add_library(${app_name} STATIC ${APP_SOURCES})
 else()
     add_library(${app_name} SHARED ${APP_SOURCES})
 endif()
+
+
+###      COOLPROP TESTING APP       ###
+if (COOLPROP_TESTING)
+  add_definitions (-DENABLE_CATCH -DCATCH_CONFIG_MAIN)
+  add_executable  (testRunner ${APP_SOURCES})
+  get_filename_component(TST_HEADER "externals/Catch/include" ABSOLUTE)
+
+  set_property(TARGET testRunner 
+               APPEND PROPERTY COMPILE_DEFINITIONS ENABLE_CATCH CATCH_CONFIG_MAIN)
+
+  set_property(TARGET testRunner 
+               APPEND PROPERTY INCLUDE_DIRECTORIES ${TST_HEADER})
+endif()
+
 
 #######################################
 #         REQUIRED MODULES            #
@@ -104,12 +104,19 @@ endif()
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/dev/cmake/modules/")
 
 set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
-find_package (PythonInterp REQUIRED)
+find_package (PythonInterp 2.7 REQUIRED)
 
-ADD_CUSTOM_COMMAND (TARGET ${app_name} PRE_BUILD 
-                    COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py"
-                    COMMENT "Information string for prebuild execution"                     
-) 
+add_custom_target(generate_headers
+                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
+
+add_dependencies(${app_name} generate_headers)
+
+
+# only works in visual studio
+#ADD_CUSTOM_COMMAND (TARGET ${app_name} PRE_BUILD 
+#                    COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py"
+#                    COMMENT "Information string for prebuild execution"                     
+#) 
 
 
 
