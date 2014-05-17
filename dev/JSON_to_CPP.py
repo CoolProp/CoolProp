@@ -5,6 +5,7 @@ from datetime import datetime
 import struct
 import os
 import argparse, textwrap
+import sys
 
 # 0: Input file path relative to dev folder
 # 1: Output file path relative to include folder
@@ -31,13 +32,15 @@ def TO_CPP(root_dir):
     for infile,outfile,variable in values:
         
         json = open(os.path.join(root_dir,'dev',infile),'r').read()
-        
-        # Encode as ASCII characters
-        json = json.encode('ascii')
 
         # convert each character to hex and add a terminating NULL character to end the 
         # string, join into a comma separated string
-        h = [str(hex(b)) for b in json] + [str('0x00')]
+        if sys.version_info[0] == 2:
+            h = [hex(struct.unpack("b",b)[0]) for b in json] + ['0x00']
+        else:
+            # Encode as ASCII characters
+            json = json.encode('ascii')
+            h = [str(hex(b)) for b in json] + [str('0x00')]
         
         # Break up the file into lines of 16 hex characters
         chunks = to_chunks(h, 16)
