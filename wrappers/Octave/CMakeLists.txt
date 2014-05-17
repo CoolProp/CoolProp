@@ -1,6 +1,6 @@
 
 cmake_minimum_required(VERSION 2.6)
-
+set(CMAKE_USE_ABSOLUTE_PATHS ON)
 set(project-name "CoolProp")
 project(${project-name})
 
@@ -14,6 +14,7 @@ set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../../include")             # source reside
 file(GLOB_RECURSE APP_SOURCES "${CMAKE_SOURCE_DIR}/../../src/*.cpp")             # source reside in src/
 
 SET(OCTAVE_WRAP_INCLUDE_DIRS ${INCLUDE_DIR})
+find_library(OCTAVE_LIB octave PATHS ${OCTAVE_LINK_DIRS})
 
 foreach(ITR ${OCTAVE_INCLUDE_DIRS})
   list(APPEND OCTAVE_WRAP_INCLUDE_DIRS ${ITR})
@@ -23,20 +24,20 @@ include_directories(${OCTAVE_WRAP_INCLUDE_DIRS})
 
 message(STATUS ${OCTAVE_INCLUDE_DIRS})
 
-set(INTERFACE_FILE ${PROJECT_SOURCE_DIR}/../../src/CoolProp.i)
+set(I_FILE "CoolProp.i")
 
-SET_SOURCE_FILES_PROPERTIES(${INTERFACE_FILE} PROPERTIES CPLUSPLUS ON)
-SWIG_ADD_MODULE(CoolProp octave ${INTERFACE_FILE} ${APP_SOURCES})
-
-find_library(OCTAVE_LIB octave PATHS ${OCTAVE_LINK_DIRS})
+SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
+SWIG_ADD_MODULE(CoolProp octave ${I_FILE} ${APP_SOURCES})
 SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB})
+
+set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
+
+message(STATUS ${OCTAVE_LIB})
 
 #~ get_cmake_property(_variableNames VARIABLES)
 #~ foreach (_variableName ${_variableNames})
 #~     message(STATUS "${_variableName}=${${_variableName}}")
 #~ endforeach()
-
-message(STATUS ${OCTAVE_LIB})
 
 #~ find_program(MKOCTFILE_EXECUTABLE mkoctfile)
 #~ if(NOT MKOCTFILE_EXECUTABLE)
