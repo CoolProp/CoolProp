@@ -4,6 +4,7 @@ compiler:
   - clang
 
 before_script: 
+  - apt-get install python-numpy
   - gcc -v
   - mkdir build
   - cd build
