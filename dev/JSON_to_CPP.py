@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import json as pyjson
 from datetime import datetime
 import struct
@@ -30,9 +32,12 @@ def TO_CPP(root_dir):
         
         json = open(os.path.join(root_dir,'dev',infile),'r').read()
         
+        # Encode as ASCII characters
+        json = json.encode('ascii')
+
         # convert each character to hex and add a terminating NULL character to end the 
         # string, join into a comma separated string
-        h = [hex(struct.unpack("b",b)[0]) for b in json] + ['0x00']
+        h = [str(hex(b)) for b in json] + [str('0x00')]
         
         # Break up the file into lines of 16 hex characters
         chunks = to_chunks(h, 16)
