@@ -7,6 +7,7 @@ python:
 install: 
   - gcc -v
   - mkdir build
+  - cd build
   - cmake .. -DCOOLPROP_TESTING=ON
   - cmake .. -DCOOLPROP_TESTING=ON
   - make
