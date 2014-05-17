@@ -395,6 +395,7 @@ public:
     ~AbstractStateWrapper(){delete this->p;};
     void update(long input_pair, double Value1, double Value2){ this->p->update(input_pair,Value1,Value2); };
     double keyed_output(int key) { return this->p->keyed_output(key); }
+    bool empty(){return (this->p == NULL);}
 };
 
 } /* namespace CoolProp */
