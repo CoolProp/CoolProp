@@ -87,15 +87,25 @@ add_dependencies (${app_name} generate_headers)
 
 ###      COOLPROP TESTING APP       ###
 if (COOLPROP_TESTING)
-  add_definitions (-DENABLE_CATCH -DCATCH_CONFIG_MAIN)
-  list (APPEND APP_INCLUDE_DIRS "externals/Catch/single_include")
+  list (APPEND APP_INCLUDE_DIRS "externals/Catch/include")
   include_directories(${APP_INCLUDE_DIRS})
+  enable_testing()
 
-  add_executable   (testRunner ${APP_SOURCES})
-  add_dependencies (testRunner generate_headers)
+  # CATCH TEST, compile everything with catch and set test entry point
+  add_executable        (testRunner.exe ${APP_SOURCES})
+  add_dependencies      (testRunner.exe generate_headers)
+  set_target_properties (testRunner.exe PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
+  set_source_files_properties(src/Helmholtz.cpp PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCATCH_CONFIG_MAIN")
+  target_link_libraries (testRunner.exe ${CMAKE_DL_LIBS})
+  add_test(ProceedureTests testRunner.exe)
 
-  target_link_libraries (testRunner ${CMAKE_DL_LIBS})
 
+  # C++ Documentation Test
+  add_executable        (docuTest.exe "Web/examples/C++/Example.cpp")
+  add_dependencies      (docuTest.exe ${app_name})
+  target_link_libraries (docuTest.exe ${app_name})
+  target_link_libraries (docuTest.exe ${CMAKE_DL_LIBS})
+  add_test(DocumentationTest docuTest.exe)
 endif()
 
 
