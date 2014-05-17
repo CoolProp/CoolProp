@@ -96,6 +96,7 @@ if (COOLPROP_TESTING)
   add_dependencies      (testRunner.exe generate_headers)
   set_target_properties (testRunner.exe PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
   set_source_files_properties(src/PolyMath.cpp PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCATCH_CONFIG_MAIN")
+  set_source_files_properties(src/Tests/Tests.cpp PROPERTIES COMPILE_FLAGS "")
   target_link_libraries (testRunner.exe ${CMAKE_DL_LIBS})
   add_test(ProceedureTests testRunner.exe)
 
