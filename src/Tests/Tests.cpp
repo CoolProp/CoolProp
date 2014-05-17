@@ -6,12 +6,14 @@
 
 #include <assert.h>
 
+#if !defined CATCH_CONFIG_MAIN
 #if defined ENABLE_CATCH
+
 
     #include "Tests.h"
 
     #define CATCH_CONFIG_RUNNER
-    #include "Catch.hpp"
+    #include "catch.hpp"
 
     static int inputs[] = {
         CoolProp::DmolarT_INPUTS,
@@ -214,7 +216,9 @@
             session.useConfigData(config);
             session.run();
         #else
-            return 0;
+
         #endif
     }
+#endif //!defined CATCH_CONFIG_MAIN
+
 
