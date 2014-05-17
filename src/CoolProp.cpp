@@ -38,7 +38,7 @@ int get_debug_level(void){return debug_level;}
 
 //// This is very hacky, but pull the git revision from the file
 #include "gitrevision.h" // Contents are like "std::string gitrevision = "aa121435436ggregrea4t43t433";"
-#include "version.h" // Contents are like "char version [] = "2.5";"
+#include "cpversion.h" // Contents are like "char version [] = "2.5";"
 
 //int global_Phase = -1;
 
