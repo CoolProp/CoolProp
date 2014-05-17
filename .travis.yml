@@ -3,17 +3,14 @@ virtualenv:
   system_site_packages: true
 python:
   - "2.7"
-  - "3.2"
-  - "3.3"
 # command to install dependencies
 install: 
   - gcc -v
-  - pip -q install cython --install-option="--no-cython-compile"
-  - cd wrappers/Python
-  - python setup.py install # Install CoolProp
-  - cd ../SharedLibrary
+  - mkdir build
+  - cmake .. -DCOOLPROP_TESTING=ON
+  - cmake .. -DCOOLPROP_TESTING=ON
   - make
-  
+  - ctest
 # command to run tests
 script: 
   - pwd
@@ -23,6 +20,6 @@ script:
 notifications:
   email:
     recipients:
-      - ian.h.bell@gmail.com
+      - rodney.persky@gmail.com
     on_success: never # default: change
     on_failure: always # default: always
