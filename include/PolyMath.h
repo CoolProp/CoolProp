@@ -209,7 +209,7 @@ public:
 	/// @param coefficients vector containing the ordered coefficients
 	/// @param x double value that represents the current position
 	virtual inline double polyfracval(const std::vector<double> &coefficients, double x){
-		return baseHornerFracInt(coefficients,x);
+		return baseHorner(coefficients,x)/x;
 	}
 
 	/// Evaluates the indefinite integral of a two-dimensional polynomial divided by its 2nd independent variable
@@ -217,7 +217,7 @@ public:
 	/// @param x double value that represents the current input in the 1st dimension
 	/// @param y double value that represents the current input in the 2nd dimension
 	virtual inline double polyfracval(const std::vector< std::vector<double> > &coefficients, double x, double y){
-		return baseHornerFracInt(coefficients,x,y);
+		return baseHorner(coefficients,x,y)/y;
 	}
 
 
@@ -330,6 +330,15 @@ class PolyFracIntResidual : public PolyResidual {
 public:
 	PolyFracIntResidual(const std::vector<double> &coefficients, double y):PolyResidual(coefficients, y){};
 	PolyFracIntResidual(const std::vector< std::vector<double> > &coefficients, double x, double z):PolyResidual(coefficients, x, z){};
+	virtual double call(double x);
+	virtual double deriv(double x);
+};
+class PolyFracIntCentralResidual : public PolyResidual {
+protected:
+	double baseVal;
+public:
+	PolyFracIntCentralResidual(const std::vector<double> &coefficients, double y, double xBase):PolyResidual(coefficients, y){this->baseVal = xBase;};
+	PolyFracIntCentralResidual(const std::vector< std::vector<double> > &coefficients, double x, double z, double yBase): PolyResidual(coefficients, x, z){this->baseVal = yBase;};
 	virtual double call(double x);
 	virtual double deriv(double x);
 };
