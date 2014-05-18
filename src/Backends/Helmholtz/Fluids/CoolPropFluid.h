@@ -58,6 +58,13 @@ public:
     double residual(double T, double rhomolar);
     double critical(double T, double rhomolar);
 };
+class TransportPropertyData
+{
+public:
+    ViscosityCorrelation viscosity;
+    ThermalConductivityCorrelation conductivity;
+    long double sigma_eta, epsilon_over_k;
+};
 
 /**
 The surface tension correlation class uses correlations for the surface tension that are all
@@ -183,6 +190,7 @@ public:
         return Brent(resid,Tmin,Tmax,DBL_EPSILON,1e-12,100,errstring);
     }
 };
+
 
 class MeltingLine
 {
@@ -343,6 +351,7 @@ class CoolPropFluid {
         BibTeXKeysStruct BibTeXKeys;
         EnvironmentalFactorsStruct environment;
         Ancillaries ancillaries;
+        TransportPropertyData transport;
 
         double gas_constant(){ return pEOS->R_u; };
         double molar_mass(){ return pEOS->molar_mass; };

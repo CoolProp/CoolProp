@@ -36,6 +36,7 @@ public:
     ExcessTerm Excess;
 
     friend class FlashRoutines; // Allows the routines in the FlashRoutines class to have access to all the protected members and methods of this class
+    friend class TransportRoutines; // Allows the routines in the TransportRoutines class to have access to all the protected members and methods of this class
 
     // Helmholtz EOS backend uses mole fractions
     bool using_mole_fractions(){return true;}
