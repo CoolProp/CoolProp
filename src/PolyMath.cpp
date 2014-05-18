@@ -656,6 +656,55 @@ double PolyIntResidual::deriv(double x){
 	return polyRes;
 }
 
+double PolyFracIntResidual::call(double x){
+	double polyRes = -1;
+	switch (this->dim) {
+	case i1D:
+		polyRes = this->poly.polyfracint(this->coefficients[0], x);
+		break;
+	case i2D:
+		polyRes = this->poly.polyfracint(this->coefficients, this->firstDim, x);
+		break;
+	default:
+		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
+	}
+	return polyRes - this->output;
+}
+
+double PolyFracIntResidual::deriv(double x){
+	double polyRes = -1;
+	switch (this->dim) {
+	case i1D:
+		polyRes = this->poly.polyfracval(this->coefficients[0], x);
+		break;
+	case i2D:
+		polyRes = this->poly.polyfracval(this->coefficients, this->firstDim, x);
+		break;
+	default:
+		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
+	}
+	return polyRes;
+}
+
+double PolyFracIntCentralResidual::call(double x){
+	double polyRes = -1;
+	switch (this->dim) {
+	case i1D:
+		polyRes = this->poly.polyfracintcentral(this->coefficients[0], x, this->baseVal);
+		break;
+	case i2D:
+		polyRes = this->poly.polyfracintcentral(this->coefficients, this->firstDim, x, this->baseVal);
+		break;
+	default:
+		throw CoolProp::NotImplementedError("There are only 1D and 2D, a polynomial's live is not 3D.");
+	}
+	return polyRes - this->output;
+}
+
+double PolyFracIntCentralResidual::deriv(double x){
+	throw CoolProp::NotImplementedError("Derivative of a polynomial frac int is not defined.");
+}
+
 double PolyDerResidual::call(double x){
 	double polyRes = -1;
 	switch (this->dim) {
@@ -678,7 +727,7 @@ double PolyDerResidual::deriv(double x){
 
 
 
-/** Implements the same public functions as the
+/** Implements the same public functions as the BasePolynomial
  *  but solves the polynomial for the given value
  *  instead of evaluating it.
  *  TODO: This class does not check for bijective
@@ -689,7 +738,7 @@ PolynomialSolver::PolynomialSolver(){
   this->DEBUG   = false;
   this->macheps = DBL_EPSILON;
   this->tol     = DBL_EPSILON*1e3;
-  this->maxiter = 100;
+  this->maxiter = 50;
 }
 
 /** Everything related to the normal polynomials goes in this
@@ -781,7 +830,8 @@ double PolynomialSolver::polyfracval(const std::vector< std::vector<double> > &c
 /// @param coefficients vector containing the ordered coefficients
 /// @param y double value that represents the current output
 double PolynomialSolver::polyfracint(const std::vector<double> &coefficients, double y){
-	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
+	PolyFracIntResidual residual = PolyFracIntResidual(coefficients, y);
+	return this->solve(residual);
 }
 
 /// Solves the indefinite integral of a two-dimensional polynomial divided by its 2nd independent variable
@@ -789,7 +839,8 @@ double PolynomialSolver::polyfracint(const std::vector<double> &coefficients, do
 /// @param x double value that represents the current input in the 1st dimension
 /// @param z double value that represents the current output
 double PolynomialSolver::polyfracint(const std::vector< std::vector<double> > &coefficients, double x, double z){
-	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
+	PolyFracIntResidual residual = PolyFracIntResidual(coefficients, x, z);
+	return this->solve(residual);
 }
 
 /// Solves the indefinite integral of a centred one-dimensional polynomial divided by its independent variable
@@ -797,7 +848,8 @@ double PolynomialSolver::polyfracint(const std::vector< std::vector<double> > &c
 /// @param y double value that represents the current output
 /// @param xbase central x-value for fitted function
 double PolynomialSolver::polyfracintcentral(const std::vector<double> &coefficients, double y, double xbase){
-	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
+	PolyFracIntCentralResidual residual = PolyFracIntCentralResidual(coefficients, y, xbase);
+	return this->solve(residual);
 }
 
 /// Solves the indefinite integral of a centred two-dimensional polynomial divided by its 2nd independent variable
@@ -806,7 +858,8 @@ double PolynomialSolver::polyfracintcentral(const std::vector<double> &coefficie
 /// @param z double value that represents the current output
 /// @param ybase central y-value for fitted function
 double PolynomialSolver::polyfracintcentral(const std::vector< std::vector<double> > &coefficients, double x, double z, double ybase){
-	throw CoolProp::NotImplementedError("This solver has not been implemented, yet."); // TODO: Implement function
+	PolyFracIntCentralResidual residual = PolyFracIntCentralResidual(coefficients, x, z, ybase);
+	return this->solve(residual);
 }
 
 
@@ -1024,6 +1077,30 @@ TEST_CASE("Internal consistency checks with PolyMath objects","[PolyMath]")
 			CAPTURE(val1);
 			CAPTURE(val2);
 			CHECK(fabs(T-val2) < 1e-1);
+
+			val1 = poly.polyint(cHeat, T);
+			solver.setGuess(T+100);
+			val2 = solver.polyint(cHeat, val1);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+
+//			val1 = poly.polyder(cHeat, T);
+//			solver.setGuess(T+100);
+//			val2 = solver.polyder(cHeat, val1);
+//			CAPTURE(T);
+//			CAPTURE(val1);
+//			CAPTURE(val2);
+//			CHECK(fabs(T-val2) < 1e-1);
+//
+//			val1 = poly.polyfracint(cHeat, T);
+//			solver.setGuess(T+100);
+//			val2 = solver.polyfracint(cHeat, val1);
+//			CAPTURE(T);
+//			CAPTURE(val1);
+//			CAPTURE(val2);
+//			CHECK(fabs(T-val2) < 1e-1);
 		}
 	}
 	SECTION("Solve1DBrent") {
@@ -1035,6 +1112,39 @@ TEST_CASE("Internal consistency checks with PolyMath objects","[PolyMath]")
 			CAPTURE(val1);
 			CAPTURE(val2);
 			CHECK(fabs(T-val2) < 1e-1);
+
+			val1 = poly.polyint(cHeat, T);
+			solver.setLimits(T-300,T+300);
+			val2 = solver.polyint(cHeat, val1);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+
+			val1 = poly.polyder(cHeat, T);
+			solver.setLimits(T-300,T+300);
+			val2 = solver.polyder(cHeat, val1);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+
+			val1 = poly.polyfracint(cHeat, T);
+			solver.setLimits(T-100,T+100);
+			val2 = solver.polyfracint(cHeat, val1);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+
+			val1 = poly.polyfracintcentral(cHeat, T, 250.0);
+			solver.setLimits(T-100,T+100);
+			val2 = solver.polyfracintcentral(cHeat, val1, 250.0);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+
 		}
 	}
 
@@ -1090,6 +1200,38 @@ TEST_CASE("Internal consistency checks with PolyMath objects","[PolyMath]")
 			val1 = poly.polyval(cHeat2D, xDim1, T);
 			solver.setLimits(T-300,T+300);
 			val2 = solver.polyval(cHeat2D, xDim1, val1);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+
+			val1 = poly.polyint(cHeat2D, xDim1, T);
+			solver.setLimits(T-300,T+300);
+			val2 = solver.polyint(cHeat2D, xDim1, val1);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+
+			val1 = poly.polyder(cHeat2D, xDim1, T);
+			solver.setLimits(T-300,T+300);
+			val2 = solver.polyder(cHeat2D, xDim1, val1);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+
+			val1 = poly.polyfracint(cHeat2D, xDim1, T);
+			solver.setLimits(T-100,T+100);
+			val2 = solver.polyfracint(cHeat2D, xDim1, val1);
+			CAPTURE(T);
+			CAPTURE(val1);
+			CAPTURE(val2);
+			CHECK(fabs(T-val2) < 1e-1);
+
+			val1 = poly.polyfracintcentral(cHeat2D, xDim1, T, 250);
+			solver.setLimits(T-100,T+100);
+			val2 = solver.polyfracintcentral(cHeat2D, xDim1, val1, 250);
 			CAPTURE(T);
 			CAPTURE(val1);
 			CAPTURE(val2);
