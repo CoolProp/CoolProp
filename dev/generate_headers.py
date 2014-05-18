@@ -84,8 +84,8 @@ if __name__=='__main__':
     path = os.path.dirname(path)
     path = os.path.dirname(path)
    
-    if os.path.exists(os.path.join(path, ".JSON_done")):
-      sys.exit()
+#     if os.path.exists(os.path.join(path, ".JSON_done")):
+#       sys.exit()
 
     version_to_file(root_dir = path)
     gitrev_to_file(root_dir = path)
