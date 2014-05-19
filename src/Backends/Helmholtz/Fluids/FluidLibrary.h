@@ -261,19 +261,24 @@ protected:
     void parse_transport(rapidjson::Value &transport, CoolPropFluid & fluid)
     {
         if (!transport.HasMember("sigma_eta")|| !transport.HasMember("epsilon_over_k")){
-            // Use the method of Chung to approximate the values for epsilon_over_k and sigma_eta
-            // Chung, T.-H.; Ajlan, M.; Lee, L. L.; Starling, K. E. Generalized Multiparameter Correlation for Nonpolar and Polar Fluid Transport Properties. Ind. Eng. Chem. Res. 1988, 27, 671-679.
-            // rhoc needs to be in mol/L to yield a sigma in nm, 
-            long double rho_crit_molar = fluid.pEOS->reduce.rhomolar/1000.0;// [mol/m3 to mol/L]
-            long double Tc = fluid.pEOS->reduce.T;
-            fluid.transport.sigma_eta = 0.809/pow(rho_crit_molar, static_cast<long double>(1.0/3.0))/1e9; // 1e9 is to convert from nm to m
-            fluid.transport.epsilon_over_k = Tc/1.3593; // [K]
+            default_transport(fluid);
         }
         else{
             fluid.transport.sigma_eta = cpjson::get_double(transport, "sigma_eta");
             fluid.transport.epsilon_over_k = cpjson::get_double(transport, "epsilon_over_k");
         }
     };
+
+    void default_transport(CoolPropFluid & fluid)
+    {
+        // Use the method of Chung to approximate the values for epsilon_over_k and sigma_eta
+        // Chung, T.-H.; Ajlan, M.; Lee, L. L.; Starling, K. E. Generalized Multiparameter Correlation for Nonpolar and Polar Fluid Transport Properties. Ind. Eng. Chem. Res. 1988, 27, 671-679.
+        // rhoc needs to be in mol/L to yield a sigma in nm, 
+        long double rho_crit_molar = fluid.pEOS->reduce.rhomolar/1000.0;// [mol/m3 to mol/L]
+        long double Tc = fluid.pEOS->reduce.T;
+        fluid.transport.sigma_eta = 0.809/pow(rho_crit_molar, static_cast<long double>(1.0/3.0))/1e9; // 1e9 is to convert from nm to m
+        fluid.transport.epsilon_over_k = Tc/1.3593; // [K]
+    }
 
     /// Parse the critical state for the given EOS
     void parse_crit_state(rapidjson::Value &alphar)
@@ -368,7 +373,7 @@ public:
 
         // Parse the environmental parameters
         if (!(fluid_json.HasMember("TRANSPORT"))){
-            std::cout << format("Transport property data are missing for fluid [%s]\n", fluid.name.c_str()) ;
+            default_transport(fluid);
         }
         else{
             parse_transport(fluid_json["TRANSPORT"], fluid);
