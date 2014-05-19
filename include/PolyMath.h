@@ -17,7 +17,7 @@ namespace CoolProp{
 class BasePolynomial{
 
 protected:
-	bool DEBUG;
+	bool POLYMATH_DEBUG;
 
 public:
 	// Constructor
@@ -518,7 +518,7 @@ class BaseExponential{
 
 protected:
 	BasePolynomial poly;
-	bool DEBUG;
+	bool POLYMATH_DEBUG;
 
 public:
 	BaseExponential();

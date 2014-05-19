@@ -16,7 +16,7 @@
 namespace CoolProp{
 
 BasePolynomial::BasePolynomial(){
-  this->DEBUG = false;
+  this->POLYMATH_DEBUG = false;
 }
 
 
@@ -137,33 +137,33 @@ std::vector< std::vector<double> > BasePolynomial::deriveCoeffs(const std::vecto
  *  based on the length of the coefficient vector.
  *  Starts with only the first coefficient at x^0. */
 double BasePolynomial::simplePolynomial(std::vector<double> const& coefficients, double x){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running simplePolynomial(std::vector, " << x << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result = 0.;
 	for(unsigned int i=0; i<coefficients.size();i++) {
 		result += coefficients[i] * pow(x,(int)i);
 	}
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
 }
 double BasePolynomial::simplePolynomial(std::vector<std::vector<double> > const& coefficients, double x, double y){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running simplePolynomial(std::vector, " << x << ", " << y << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result = 0;
 	for(unsigned int i=0; i<coefficients.size();i++) {
 		result += pow(x,(int)i) * simplePolynomial(coefficients[i], y);
 	}
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -177,17 +177,17 @@ double BasePolynomial::simplePolynomial(std::vector<std::vector<double> > const&
  *  Starts with only the first coefficient at x^0 */
 ///Indefinite integral in x-direction
 double BasePolynomial::simplePolynomialInt(std::vector<double> const& coefficients, double x){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running simplePolynomialInt(std::vector, " << x << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result = 0.;
 	for(unsigned int i=0; i<coefficients.size();i++) {
 		result += 1./(i+1.) * coefficients[i] * pow(x,(int)(i+1.));
 	}
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -195,17 +195,17 @@ double BasePolynomial::simplePolynomialInt(std::vector<double> const& coefficien
 
 ///Indefinite integral in y-direction only
 double BasePolynomial::simplePolynomialInt(std::vector<std::vector<double> > const& coefficients, double x, double y){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running simplePolynomialInt(std::vector, " << x << ", " << y << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result = 0.;
 	for(unsigned int i=0; i<coefficients.size();i++) {
 		result += pow(x,(int)i) * simplePolynomialInt(coefficients[i], y);
 	}
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -218,7 +218,7 @@ double BasePolynomial::simplePolynomialInt(std::vector<std::vector<double> > con
  *  vector.
  *  Starts with only the first coefficient at x^0 */
 double BasePolynomial::simpleFracInt(std::vector<double> const& coefficients, double x){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running      simpleFracInt(std::vector, " << x << "): ";
 	}
 	double result = coefficients[0] * log(x);
@@ -227,24 +227,24 @@ double BasePolynomial::simpleFracInt(std::vector<double> const& coefficients, do
 			result += 1./(i) * coefficients[i] * pow(x,(int)(i));
 		}
 	}
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
 }
 
 double BasePolynomial::simpleFracInt(std::vector< std::vector<double> > const& coefficients, double x, double y){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running      simpleFracInt(std::vector, " << x << ", " << y << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result = 0;
 	for (unsigned int i=0; i<coefficients.size(); i++){
 		result += pow(x,(int)i) * polyfracint(coefficients[i],y);
 	}
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -309,19 +309,19 @@ std::vector<double> BasePolynomial::fracIntCentralDvector(int m, double x, doubl
 
 ///Indefinite integral of a centred polynomial divided by its independent variable
 double BasePolynomial::fracIntCentral(std::vector<double> const& coefficients, double x, double xbase){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running    fracIntCentral(std::vector, " << x << ", " << xbase << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	int m = coefficients.size();
 	std::vector<double> D = fracIntCentralDvector(m, x, xbase);
 	double result = 0;
 	for(int j=0; j<m; j++) {
 		result += coefficients[j] * D[j];
 	}
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -334,7 +334,7 @@ double BasePolynomial::fracIntCentral(std::vector<double> const& coefficients, d
  *  speeds up calculation.
  */
 double BasePolynomial::baseHorner(std::vector<double> const& coefficients, double x){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running       baseHorner(std::vector, " << x << "): ";
 	}
 	double result = 0;
@@ -342,25 +342,25 @@ double BasePolynomial::baseHorner(std::vector<double> const& coefficients, doubl
 		result *= x;
 		result += coefficients[i];
 	}
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
 }
 
 double BasePolynomial::baseHorner(std::vector< std::vector<double> > const& coefficients, double x, double y){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running       baseHorner(std::vector, " << x << ", " << y << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result = 0;
 	for(int i=coefficients.size()-1; i>=0; i--) {
 		result *= x;
 		result += baseHorner(coefficients[i], y);
 	}
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -368,7 +368,7 @@ double BasePolynomial::baseHorner(std::vector< std::vector<double> > const& coef
 
 ///Indefinite integral in x-direction
 double BasePolynomial::baseHornerInt(std::vector<double> const& coefficients, double x){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running       baseHornerInt(std::vector, " << x << "): ";
 	}
 	double result = 0;
@@ -377,7 +377,7 @@ double BasePolynomial::baseHornerInt(std::vector<double> const& coefficients, do
 		result += coefficients[i]/(i+1.);
 	}
 	result = result * x;
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -385,18 +385,18 @@ double BasePolynomial::baseHornerInt(std::vector<double> const& coefficients, do
 
 ///Indefinite integral in y-direction only
 double BasePolynomial::baseHornerInt(std::vector<std::vector<double> > const& coefficients, double x, double y){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running       baseHornerInt(std::vector, " << x << ", " << y << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result = 0;
 	for(int i=coefficients.size()-1; i>=0; i--) {
 		result *= x;
 		result += baseHornerInt(coefficients[i], y);
 	}
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -404,11 +404,11 @@ double BasePolynomial::baseHornerInt(std::vector<std::vector<double> > const& co
 
 ///Indefinite integral in x-direction of a polynomial divided by its independent variable
 double BasePolynomial::baseHornerFracInt(std::vector<double> const& coefficients, double x){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running      baseHornerFra(std::vector, " << x << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result = 0;
 	if (coefficients.size() > 1) {
 		for(int i=coefficients.size()-1; i>=1; i--) {
@@ -418,8 +418,8 @@ double BasePolynomial::baseHornerFracInt(std::vector<double> const& coefficients
 		result *= x;
 	}
 	result += coefficients[0] * log(x);
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -427,11 +427,11 @@ double BasePolynomial::baseHornerFracInt(std::vector<double> const& coefficients
 
 ///Indefinite integral in y-direction of a polynomial divided by its 2nd independent variable
 double BasePolynomial::baseHornerFracInt(std::vector<std::vector<double> > const& coefficients, double x, double y){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running      baseHornerFra(std::vector, " << x << ", " << y << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 
 	double result = 0;
 	for(int i=coefficients.size()-1; i>=0; i--) {
@@ -439,8 +439,8 @@ double BasePolynomial::baseHornerFracInt(std::vector<std::vector<double> > const
 		result += baseHornerFracInt(coefficients[i], y);
 	}
 
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -454,14 +454,14 @@ double BasePolynomial::baseHornerFracInt(std::vector<std::vector<double> > const
  */
 ///Derivative in x-direction
 double BasePolynomial::deriveIn2Steps(std::vector<double> const& coefficients, double x){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running   deriveIn2Steps(std::vector, " << x << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result =  polyval(deriveCoeffs(coefficients),x);
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -469,14 +469,14 @@ double BasePolynomial::deriveIn2Steps(std::vector<double> const& coefficients, d
 
 ///Derivative in terms of x(axis=true) or y(axis=false).
 double BasePolynomial::deriveIn2Steps(std::vector< std::vector<double> > const& coefficients, double x, double y, bool axis){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running   deriveIn2Steps(std::vector, " << x << ", " << y << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result = polyval(deriveCoeffs(coefficients,axis),x,y);
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -484,14 +484,14 @@ double BasePolynomial::deriveIn2Steps(std::vector< std::vector<double> > const& 
 
 ///Indefinite integral in x-direction
 double BasePolynomial::integrateIn2Steps(std::vector<double> const& coefficients, double x){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running   integrateIn2Steps(std::vector, " << x << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result =  polyval(integrateCoeffs(coefficients),x);
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -499,14 +499,14 @@ double BasePolynomial::integrateIn2Steps(std::vector<double> const& coefficients
 
 ///Indefinite integral in terms of x(axis=true) or y(axis=false).
 double BasePolynomial::integrateIn2Steps(std::vector< std::vector<double> > const& coefficients, double x, double y, bool axis){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running   integrateIn2Steps(std::vector, " << x << ", " << y << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result = polyval(integrateCoeffs(coefficients,axis),x,y);
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -514,18 +514,18 @@ double BasePolynomial::integrateIn2Steps(std::vector< std::vector<double> > cons
 
 ///Indefinite integral in x-direction of a polynomial divided by its independent variable
 double BasePolynomial::fracIntIn2Steps(std::vector<double> const& coefficients, double x){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running    fracIntIn2Steps(std::vector, " << x << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	double result = coefficients[0] * log(x);
 	if (coefficients.size() > 1) {
 		std::vector<double> newCoeffs(coefficients.begin() + 1, coefficients.end());
 		result += polyint(newCoeffs,x);
 	}
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -533,18 +533,18 @@ double BasePolynomial::fracIntIn2Steps(std::vector<double> const& coefficients, 
 
 ///Indefinite integral in y-direction of a polynomial divided by its 2nd independent variable
 double BasePolynomial::fracIntIn2Steps(std::vector<std::vector<double> > const& coefficients, double x, double y){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running    fracIntIn2Steps(std::vector, " << x << ", " << y << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	std::vector<double> newCoeffs;
 	for (unsigned int i=0; i<coefficients.size(); i++){
 		newCoeffs.push_back(polyfracint(coefficients[i],y));
 	}
 	double result = polyval(newCoeffs,x);
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -552,18 +552,18 @@ double BasePolynomial::fracIntIn2Steps(std::vector<std::vector<double> > const& 
 
 ///Indefinite integral in y-direction of a centred polynomial divided by its 2nd independent variable
 double BasePolynomial::fracIntCentral2Steps(std::vector<std::vector<double> > const& coefficients, double x, double y, double ybase){
-	if (this->DEBUG) {
+	if (this->POLYMATH_DEBUG) {
 		std::cout << "Running    fracIntCentral2Steps(std::vector, " << x << ", " << y << ", " << ybase << "): ";
 	}
-	bool db = this->DEBUG;
-	this->DEBUG = false;
+	bool db = this->POLYMATH_DEBUG;
+	this->POLYMATH_DEBUG = false;
 	std::vector<double> newCoeffs;
 	for (unsigned int i=0; i<coefficients.size(); i++){
 		newCoeffs.push_back(fracIntCentral(coefficients[i], y, ybase));
 	}
 	double result = polyval(newCoeffs,x);
-	this->DEBUG = db;
-	if (this->DEBUG) {
+	this->POLYMATH_DEBUG = db;
+	if (this->POLYMATH_DEBUG) {
 		std::cout << result << std::endl;
 	}
 	return result;
@@ -735,7 +735,7 @@ double PolyDerResidual::deriv(double x){
  *        fragile.
  */
 PolynomialSolver::PolynomialSolver(){
-  this->DEBUG   = false;
+  this->POLYMATH_DEBUG   = false;
   this->macheps = DBL_EPSILON;
   this->tol     = DBL_EPSILON*1e3;
   this->maxiter = 50;
@@ -950,7 +950,7 @@ double PolynomialSolver::solve(PolyResidual &res){
  */
 
 BaseExponential::BaseExponential(){
-  this->DEBUG = false;
+  this->POLYMATH_DEBUG = false;
 //  this->poly = new BaseExponential();
 }
 //
