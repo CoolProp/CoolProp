@@ -20,7 +20,7 @@ import sys, os
 sys.path.append(os.path.abspath('sphinxext'))
 
 doxylink = {
-    'cpapi' : ('../CoolPropDoxyLink.tag', 'file://C:\Users\Belli\Documents\Code\coolprop-v5-new\doc-v5\html')
+    'cpapi' : ('../CoolPropDoxyLink.tag', 'http://www.coolprop.dreamhosters.com/doc/CoolProp5/')
 }    
 
 # -- General configuration -----------------------------------------------------
