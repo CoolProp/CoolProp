@@ -34,12 +34,12 @@ vel("Propane", "T", 600, "Dmolar", 10.03e3, "V", 73.92e-6, 5e-3),
 vel("Propane", "T", 280, "Dmolar", 11.78e3, "V", 117.4e-6,1e-3),
 
 // From Michailidou, JPCRD, 2013
-vel("n-Hexane", "T", 250, "Dmass", 1e-14, "V", 5.2584e-6, 1e-3),
-vel("n-Hexane", "T", 400, "Dmass", 1e-14, "V", 8.4149e-6, 1e-3),
-vel("n-Hexane", "T", 550, "Dmass", 1e-14, "V", 11.442e-6, 1e-3),
-vel("n-Hexane", "T", 250, "Dmass", 700, "V", 528.2e-6, 1e-3),
-vel("n-Hexane", "T", 400, "Dmass", 600, "V", 177.62e-6, 1e-3),
-vel("n-Hexane", "T", 550, "Dmass", 500, "V", 95.002e-6, 1e-3),
+vel("Hexane", "T", 250, "Dmass", 1e-14, "V", 5.2584e-6, 1e-3),
+vel("Hexane", "T", 400, "Dmass", 1e-14, "V", 8.4149e-6, 1e-3),
+vel("Hexane", "T", 550, "Dmass", 1e-14, "V", 11.442e-6, 1e-3),
+vel("Hexane", "T", 250, "Dmass", 700, "V", 528.2e-6, 1e-3),
+vel("Hexane", "T", 400, "Dmass", 600, "V", 177.62e-6, 1e-3),
+vel("Hexane", "T", 550, "Dmass", 500, "V", 95.002e-6, 1e-3),
 
 // From Vesovic, JPCRD, 1990
 vel("CO2", "T", 220, "Dmass", 2.440, "V", 11.06e-6, 1e-3),
@@ -69,13 +69,31 @@ vel("Oxygen", "T", 100, "Dmolar", 35000, "V", 172.136e-6, 1e-3),
 vel("Oxygen", "T", 200, "Dmolar", 10000, "V", 22.4445e-6, 1e-3),
 vel("Oxygen", "T", 300, "Dmolar", 5000, "V", 23.7577e-6, 1e-3),
 vel("Oxygen", "T", 150.69, "Dmolar", 13600, "V", 24.7898e-6, 1e-3),
-
 vel("Air", "T", 100, "Dmolar", 1e-14, "V", 7.09559e-6, 1e-3),
 vel("Air", "T", 300, "Dmolar", 1e-14, "V", 18.5230e-6, 1e-3),
 vel("Air", "T", 100, "Dmolar", 28000, "V", 107.923e-6, 1e-3),
 vel("Air", "T", 200, "Dmolar", 10000, "V", 21.1392e-6, 1e-3),
 vel("Air", "T", 300, "Dmolar", 5000, "V", 21.3241e-6, 1e-3),
 vel("Air", "T", 132.64, "Dmolar", 10400, "V", 17.7623e-6, 1e-3),
+
+// From Fenhour, JPCRD, 1995
+vel("Ammonia", "T", 200, "Dmolar", 3.9, "V", 6.95e-6, 1e-3),
+vel("Ammonia", "T", 200, "Dmolar", 42754.4, "V", 507.28e-6, 1e-3),
+vel("Ammonia", "T", 398, "Dmolar", 7044.7, "V", 17.67e-6, 1e-3),
+vel("Ammonia", "T", 398, "Dmolar", 21066.7, "V", 43.95e-6, 1e-3),
+
+// Huber, Energy & Fuels, 2004
+vel("n-Dodecane", "T", 300, "Dmolar", 4411.5, "V", 1484.8e-6, 1e-3),
+vel("n-Dodecane", "T", 500, "Dmolar", 3444.7, "V", 183.76e-6, 1e-3),
+
+// Huber, I&ECR, 2006
+vel("R125", "T", 300, "Dmolar", 10596.9998, "V", 177.37e-6, 1e-3),
+vel("R125", "T", 400, "Dmolar", 30.631, "V", 17.070e-6, 1e-3),
+
+// Huber, FPE, 2004
+vel("n-Octane", "T", 300, "Dmolar", 6177.2, "V", 553.60e-6, 1e-3),
+vel("n-Nonane", "T", 300, "Dmolar", 5619.1, "V", 709.53e-6, 1e-3),
+vel("n-Decane", "T", 300, "Dmolar", 5150.4, "V", 926.44e-6, 1e-3),
 
 };
 
