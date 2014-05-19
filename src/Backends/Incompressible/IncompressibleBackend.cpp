@@ -11,7 +11,7 @@
 //#include "CoolProp.h"
 
 #include "IncompressibleBackend.h"
-#include "../Fluids/FluidLibrary.h"
+#include "../Helmholtz/Fluids/FluidLibrary.h"
 #include "Solvers.h"
 #include "MatrixMath.h"
 
