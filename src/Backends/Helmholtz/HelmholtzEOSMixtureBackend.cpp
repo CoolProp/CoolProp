@@ -23,6 +23,7 @@
 #include "MatrixMath.h"
 #include "VLERoutines.h"
 #include "FlashRoutines.h"
+#include "TransportRoutines.h"
 
 namespace CoolProp {
 
@@ -125,6 +126,29 @@ long double HelmholtzEOSMixtureBackend::calc_surface_tension(void)
     else
     {
         throw NotImplementedError(format("surface tension not implemented for mixtures"));
+    }
+}
+long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
+{
+    if (is_pure_or_pseudopure)
+    {
+        // Dilute part
+        long double eta_dilute = TransportRoutines::dilute_gas_viscosity(*this);
+        
+        // Residual part
+        long double B_eta_initial = TransportRoutines::initial_density_dependence_viscosity_term(*this);
+        long double rho = rhomolar();
+        long double initial_part = eta_dilute*B_eta_initial*rhomolar();
+        long double delta_eta_h = TransportRoutines::modified_Batschinski_Hildebrand_viscosity_term(*this);
+        long double eta_residual = initial_part + delta_eta_h;
+
+        // Critical part
+        long double eta_critical = 0;
+        return eta_dilute + eta_residual + eta_critical;
+    }
+    else
+    {
+        throw NotImplementedError(format("viscosity not implemented for mixtures"));
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_Ttriple(void)

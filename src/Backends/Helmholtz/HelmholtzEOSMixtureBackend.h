@@ -117,6 +117,7 @@ public:
     long double calc_d2alpha0_dTau2(void);
 
     long double calc_surface_tension(void);
+    long double calc_viscosity(void);
 
     long double calc_Tmax(void);
     long double calc_pmax(void);
