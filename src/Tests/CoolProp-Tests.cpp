@@ -95,6 +95,18 @@ vel("n-Octane", "T", 300, "Dmolar", 6177.2, "V", 553.60e-6, 1e-3),
 vel("n-Nonane", "T", 300, "Dmolar", 5619.1, "V", 709.53e-6, 1e-3),
 vel("n-Decane", "T", 300, "Dmolar", 5150.4, "V", 926.44e-6, 1e-3),
 
+// Tanaka, IJT, 1996
+vel("R123", "T", 265, "Dmass", 1545.8, "V", 627.1e-6, 1e-3),
+vel("R123", "T", 265, "Dmass", 1.614, "V", 9.534e-6, 1e-3),
+vel("R123", "T", 415, "Dmass", 1079.4, "V", 121.3e-6, 1e-3),
+vel("R123", "T", 415, "Dmass", 118.9, "V", 15.82e-6, 1e-3),
+
+// Krauss, IJT, 1996
+vel("R152A", "T", 242, "Dmass", 1025.5, "V", 347.3e-6, 1e-3),
+vel("R152A", "T", 242, "Dmass", 2.4868, "V", 8.174e-6, 1e-3),
+vel("R152A", "T", 384, "Dmass", 504.51, "V", 43.29e-6, 1e-3),
+vel("R152A", "T", 384, "Dmass", 239.35, "V", 21.01e-6, 1e-3),
+
 };
 
 class ViscosityValidationFixture
