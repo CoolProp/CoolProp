@@ -140,7 +140,7 @@ TEST_CASE_METHOD(ViscosityValidationFixture, "Compare viscosities against publis
     for (int i = 0; i < inputsN; ++i)
     {
         vel el = viscosity_validation_data[i];
-        CHECK_NOTHROW(set_backend("REFPROP", el.fluid));
+        CHECK_NOTHROW(set_backend("HEOS", el.fluid));
 
         CAPTURE(el.fluid);
         CAPTURE(el.in1);
