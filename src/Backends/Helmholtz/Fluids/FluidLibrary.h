@@ -294,6 +294,42 @@ protected:
     };
 
     /// Parse the transport properties
+    void parse_higher_order_viscosity(rapidjson::Value &higher, CoolPropFluid & fluid)
+    {
+        std::string type = cpjson::get_string(higher, "type");
+        if (!type.compare("modified_Batschinski_Hildebrand")){
+            // Get a reference to the entry in the fluid instance to simplify the code that follows
+            CoolProp::ViscosityModifiedBatschinskiHildebrandData &BH = fluid.transport.viscosity_higher_order.modified_Batschinski_Hildebrand;
+            BH.T_reduce = cpjson::get_double(higher, "T_reduce");
+            BH.rhomolar_reduce = cpjson::get_double(higher, "rhomolar_reduce");
+            // Load up the values
+            BH.a = cpjson::get_long_double_array(higher["a"]);
+            BH.t1 = cpjson::get_long_double_array(higher["t1"]);
+            BH.d1 = cpjson::get_long_double_array(higher["d1"]);
+            BH.gamma = cpjson::get_long_double_array(higher["gamma"]);
+            BH.l = cpjson::get_long_double_array(higher["l"]);
+            assert(BH.a.size() == BH.t1.size());
+            assert(BH.a.size() == BH.d1.size());
+            assert(BH.a.size() == BH.gamma.size());
+            assert(BH.a.size() == BH.l.size());
+            BH.f = cpjson::get_long_double_array(higher["f"]);
+            BH.t2 = cpjson::get_long_double_array(higher["t2"]);
+            BH.d2 = cpjson::get_long_double_array(higher["d2"]);
+            assert(BH.f.size() == BH.t2.size());
+            assert(BH.f.size() == BH.d2.size());
+            BH.g = cpjson::get_long_double_array(higher["g"]);
+            BH.h = cpjson::get_long_double_array(higher["h"]);
+            assert(BH.g.size() == BH.h.size());
+            BH.p = cpjson::get_long_double_array(higher["p"]);
+            BH.q = cpjson::get_long_double_array(higher["q"]);
+            assert(BH.p.size() == BH.q.size());
+        }
+        else{
+            throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(), fluid.name.c_str()));
+        }
+    };
+
+    /// Parse the transport properties
     void parse_viscosity(rapidjson::Value &viscosity, CoolPropFluid & fluid)
     {
         if (viscosity.HasMember("dilute")){
@@ -301,6 +337,9 @@ protected:
         }
         if (viscosity.HasMember("initial_density")){
             parse_initial_density_viscosity(viscosity["initial_density"], fluid);
+        }
+        if (viscosity.HasMember("higher_order")){
+            parse_higher_order_viscosity(viscosity["higher_order"], fluid);
         }
     };
     /// Parse the thermal conductivity data

@@ -62,52 +62,36 @@ long double TransportRoutines::modified_Batschinski_Hildebrand_viscosity_term(He
 {
     if (HEOS.is_pure_or_pseudopure)
     {
-        //// HARD CODED FOR PROPANE FOR TESTING PURPOSES
-        double eta_star, _a[]={0.25104574,-0.47271238,0,0.060836515,0}, _t[] = {0,1,2,3,4}, C = 0.021357e-6;
-        std::vector<long double> a(_a,_a+sizeof(_a)/sizeof(_a[0]));
-        std::vector<long double> t(_t,_t+sizeof(_t)/sizeof(_t[0]));
-        HEOS.components[0]->transport.epsilon_over_k = 263.88;
-        HEOS.components[0]->transport.sigma_eta = 0.49748e-9;
-        std::vector< std::vector<long double> > e(6, std::vector<long double>(3,0));
-	    e[2][0] =  35.9873030195*1e-6; e[2][1] = -180.512188564*1e-6; e[2][2] =  87.7124888223*1e-6;
-	    e[3][0] = -105.773052525*1e-6; e[3][1] =  205.319740877*1e-6; e[3][2] = -129.210932610*1e-6;
-	    e[4][0] =  58.9491587759*1e-6; e[4][1] = -129.740033100*1e-6; e[4][2] =  76.6280419971*1e-6;
-	    e[5][0] = -9.59407868475*1e-6; e[5][1] =  21.0726986598*1e-6; e[5][2] = -14.3971968187*1e-6;
-        double _f[] = {1616.88405374e-6},summer_num,summer_denom;
-        std::vector<long double> f(_f,_f+sizeof(_f)/sizeof(_f[0]));
-        std::vector<long double> g(2,1),h(2,0);
-        g[0] = 2.50053938863; g[1] = 2.50053938863*0.860516059264; h[0] = 0; h[1] = -0.5;
-        std::vector<long double> p(1,1),q(1,0);
-        long double delta = HEOS.rhomolar()/5000.0, tau = 369.825/HEOS.T();
-        //// END HARD CODED
-        
-        long double summer = 0;
-        for (int i = 0; i < e.size(); ++i){
-            for (int j = 0; j < e[0].size(); ++j){
-                summer += e[i][j]*pow(delta,i)*pow(tau,j);
-            }
-        }
-        long double S = summer;
+        CoolProp::ViscosityModifiedBatschinskiHildebrandData &HO = HEOS.components[0]->transport.viscosity_higher_order.modified_Batschinski_Hildebrand;
 
-        summer = 0;
-        for (int i = 0; i < f.size(); ++i){
-            summer += f[i]/pow(tau, i);
+        long double delta = HEOS.rhomolar()/HO.rhomolar_reduce, tau = HO.T_reduce/HEOS.T();
+
+        // The first term that is formed of powers of tau and delta
+        long double S = 0;
+        for (unsigned int i = 0; i < HO.a.size(); ++i){
+            S += HO.a[i]*pow(delta, HO.d1[i])*pow(tau, HO.t1[i])*exp(HO.gamma[i]*pow(delta, HO.l[i]));
         }
-        long double F = summer;
+
+        // For the terms that multiplies the bracketed term with delta and delta0
+        long double F = 0;
+        for (unsigned int i = 0; i < HO.f.size(); ++i){
+            F += HO.f[i]*pow(delta, HO.d2[i])*pow(tau, HO.t2[i]);
+        }
 
         // for delta_0
-        summer_num = 0;
-        for (int i = 0; i < g.size(); ++i){
-            summer_num += g[i]*pow(tau, h[i]);
+        long double summer_numer = 0;
+        for (unsigned int i = 0; i < HO.g.size(); ++i){
+            summer_numer += HO.g[i]*pow(tau, HO.h[i]);
         }
-        summer_denom = 0;
-        for (int i = 0; i < p.size(); ++i){
-            summer_denom += p[i]*pow(tau, q[i]);
+        long double summer_denom = 0;
+        for (unsigned int i = 0; i < HO.p.size(); ++i){
+            summer_denom += HO.p[i]*pow(tau, HO.q[i]);
         }
-        long double delta0 = summer_num/summer_denom;
+        long double delta0 = summer_numer/summer_denom;
 
+        double Tr = 1/tau;
         // The higher-order-term component
-        return S+F*delta*(1/(delta0-delta)-1/delta0); // Pa-s
+        return S + F*(1/(delta0-delta)-1/delta0); // Pa-s
     }
     else{
         throw NotImplementedError("TransportRoutines::modified_Batschinski_Hildebrand_viscosity_term is only for pure and pseudo-pure");
@@ -127,7 +111,7 @@ long double TransportRoutines::initial_density_dependence_viscosity_term(Helmhol
         long double sigma = HEOS.components[0]->transport.sigma_eta; // [m]
         
         long double summer = 0;
-        for (int i = 0; i < b.size(); ++i){
+        for (unsigned int i = 0; i < b.size(); ++i){
             summer += b[i]*pow(Tstar, t[i]);
         }
         B_eta_star = summer; // [no units]

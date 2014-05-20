@@ -38,7 +38,7 @@ public:
     \brief The modified Batschinski-Hildebrand contribution to the viscosity
 
     \f[
-    \Delta\eta = \displaystyle\sum_{i}a_{i}\frac{\delta^{d_i}}{\tau_{t_j}}+\left(\displaystyle\sum_{k}\displaystyle\frac{f_k}{\tau^{k-1}}\right)\delta^c\left(\frac{1}{\delta_0(\tau)-\delta}-\frac{1}{\delta_0(\tau)}\right)
+    \Delta\eta = \displaystyle\sum_{i}a_{i}\delta^{d1_i}\tau^{t1_j}+\left(\displaystyle\sum_{i}f_i\delta^{d2_i}\tau^{t2_i}\right)\left(\frac{1}{\delta_0(\tau)-\delta}-\frac{1}{\delta_0(\tau)}\right)
     \f]
     where \f$\tau = T_c/T\f$ and \f$\delta = \rho/\rho_c\f$ 
     \f[

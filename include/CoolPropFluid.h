@@ -63,11 +63,22 @@ struct ViscosityInitialDensityVariables
     ViscosityRainWaterFriendData rainwater_friend;
 };
 
+struct ViscosityModifiedBatschinskiHildebrandData
+{
+    std::vector<long double> a,d1,d2,t1,t2,f,g,h,p,q,gamma, l;
+    long double T_reduce, rhomolar_reduce;
+};
+struct ViscosityHigherOrderVariables
+{
+    ViscosityModifiedBatschinskiHildebrandData modified_Batschinski_Hildebrand;
+};
+
 class TransportPropertyData
 {
 public:
     ViscosityDiluteVariables viscosity_dilute;
     ViscosityInitialDensityVariables viscosity_initial;
+    ViscosityHigherOrderVariables viscosity_higher_order;
     long double sigma_eta, epsilon_over_k;
 };
 
