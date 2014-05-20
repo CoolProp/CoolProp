@@ -3,6 +3,8 @@ import CoolProp.CoolProp as CP
 from scipy.optimize._minimize import minimize
 from scipy.optimize.minpack import curve_fit
 from matplotlib.ticker import MaxNLocator
+import os
+import numpy as np
 
 class IncompLiquidFit(object):
     """ 
@@ -392,21 +394,17 @@ class IncompLiquidFit(object):
 #        return self.fitCoefficients(xName,T=T,xData=xData)
 
 
-
-
 ### Load the data 
 from data_incompressible import *
 
 containerList = []
-#containerList.extend([TherminolD12(), TherminolVP1(), Therminol66(), Therminol72()])
-#containerList.extend([DowthermJ(), DowthermQ()])
-#containerList.extend([Texatherm22(), NitrateSalt(), SylthermXLT()])
-#containerList.extend([HC50(), HC40(), HC30(), HC20(), HC10()])
-containerList.extend([AS10(), AS20(), AS30(), AS40(), AS55()])
-containerList.extend([ZS10(), ZS25(), ZS40(), ZS45(), ZS55()])
-
-
-
+containerList += [TherminolD12()]
+containerList += [TherminolVP1(), Therminol66(), Therminol72()]
+containerList += [DowthermJ(), DowthermQ()]
+containerList += [Texatherm22(),  NitrateSalt(), SylthermXLT()]
+containerList += [HC50(), HC40(), HC30(), HC20(), HC10()]
+containerList += [AS10(), AS20(), AS30(), AS40(), AS55()]
+containerList += [ZS10(), ZS25(), ZS40(), ZS45(), ZS55()]
 
 def relError(A=[],B=[],PCT=False):
     result = (numpy.array(A)-numpy.array(B))/numpy.array(B);
@@ -415,18 +413,26 @@ def relError(A=[],B=[],PCT=False):
     else:
         return result
 
+j = {}
 for data in containerList:    
     ### Some test case 
     liqObj = IncompLiquidFit()
     liqObj.setParams("init")
     liqObj.setTmin(data.Tmin)
     liqObj.setTminPsat(data.TminPsat)
-    liqObj.setTmax(data.Tmax)    
+    liqObj.setTmax(data.Tmax)
+    
+    j['Tmin'] = data.Tmin
+    j['Tmax'] = data.Tmax
+    j['TminPsat'] = data.TminPsat
+    j['name'] = data.Name
+    j['desription'] = data.Desc
+    j['reference'] = ''
     
     #liqObj._cViscosity[0] = numpy.max(data.mu_dyn)
     #liqObj._cPsat[0]      = numpy.min(data.psat)
     
-    numpy.set_printoptions(formatter={'float': lambda x: format(x, '+1.10E')})
+    #numpy.set_printoptions(formatter={'float': lambda x: format(x, '+1.10E')})
     
     print 
     print "------------------------------------------------------"
@@ -461,61 +467,73 @@ for data in containerList:
     xData = data.rho
     oldCoeffs = liqObj.getCoefficients(inVal)
     newCoeffs = liqObj.fitCoefficients(inVal,T=tData,xData=xData)
-    print "Density, old: "+str(oldCoeffs)
+#     print "Density, old: "+str(oldCoeffs)
     print "Density, new: "+str(newCoeffs)
-    print 
+#     print 
     liqObj.setCoefficients(inVal,newCoeffs)   
-    fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
-    ax1.plot(tData-273.15, xData, 'o', label="Data Sheet")
-    ax1.plot(tDat1-273.15, fData, 'o', label="Python")
-    if inCP:
-        Tmin = CP.PropsU('Tmin','T',0,'P',0,data.Name,"SI")
-        Tmax = CP.PropsU('Tmax','T',0,'P',0,data.Name,"SI")
-        tDat2 = numpy.linspace(Tmin+1, Tmax-1, 100)
-        ax1.plot(tDat2-273.15, CP.PropsU(inVal, 'T', tDat2, 'P', Pin*1e3, data.Name, "SI"), label="CoolProp")
-    ax12 = ax1.twinx()
-    fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tData])
-    ax12.plot(tData-273.15, relError(fData, xData, True), 'o', label="Error", alpha=0.25)
-    ax12.set_ylabel(r'$\mathregular{rel.\/Error\/(\%)}$')
-    ax1.set_ylabel(r'$\mathregular{Density\/(kg\/m^{-3})}$')
+#     fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
+#     ax1.plot(tData-273.15, xData, 'o', label="Data Sheet")
+#     ax1.plot(tDat1-273.15, fData, 'o', label="Python")
+#     if inCP:
+#         Tmin = CP.PropsU('Tmin','T',0,'P',0,data.Name,"SI")
+#         Tmax = CP.PropsU('Tmax','T',0,'P',0,data.Name,"SI")
+#         tDat2 = numpy.linspace(Tmin+1, Tmax-1, 100)
+#         ax1.plot(tDat2-273.15, CP.PropsU(inVal, 'T', tDat2, 'P', Pin*1e3, data.Name, "SI"), label="CoolProp")
+#     ax12 = ax1.twinx()
+#     fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tData])
+#     ax12.plot(tData-273.15, relError(fData, xData, True), 'o', label="Error", alpha=0.25)
+#     ax12.set_ylabel(r'$\mathregular{rel.\/Error\/(\%)}$')
+#     ax1.set_ylabel(r'$\mathregular{Density\/(kg\/m^{-3})}$')
+    
+    j['density'] = {}
+    j['density']['coeffs'] = liqObj.getCoefficients('D').tolist()
+    j['density']['type'] = 'polynomial'
     
     inVal = 'C'
     xData = data.c_p
     oldCoeffs = liqObj.getCoefficients(inVal)
     newCoeffs = liqObj.fitCoefficients(inVal,T=tData,xData=xData)
-    print "Heat c., old: "+str(oldCoeffs)
-    print "Heat c., new: "+str(newCoeffs)
-    print 
+#     print "Heat c., old: "+str(oldCoeffs)
+#     print "Heat c., new: "+str(newCoeffs)
+#     print 
     liqObj.setCoefficients(inVal,newCoeffs)
-    fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
-    ax2.plot(tData-273.15, xData/1e3, 'o', label="Data Sheet")
-    ax2.plot(tDat1-273.15, fData/1e3, 'o', label="Python")
-    if inCP:
-        ax2.plot(tDat2-273.15, CP.PropsU(inVal, 'T', tDat2, 'P', Pin*1e3, data.Name, "SI")/1e3, label="CoolProp")
-    ax22 = ax2.twinx()
-    fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tData])
-    ax22.plot(tData-273.15, relError(fData, xData, True), 'o', label="Error", alpha=0.25)
-    ax22.set_ylabel(r'$\mathregular{rel.\/Error\/(\%)}$')
-    ax2.set_ylabel(r'$\mathregular{Heat\/Cap.\/(kJ\/kg^{-1}\/K^{-1})}$')
+#     fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
+#     ax2.plot(tData-273.15, xData/1e3, 'o', label="Data Sheet")
+#     ax2.plot(tDat1-273.15, fData/1e3, 'o', label="Python")
+#     if inCP:
+#         ax2.plot(tDat2-273.15, CP.PropsU(inVal, 'T', tDat2, 'P', Pin*1e3, data.Name, "SI")/1e3, label="CoolProp")
+#     ax22 = ax2.twinx()
+#     fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tData])
+#     ax22.plot(tData-273.15, relError(fData, xData, True), 'o', label="Error", alpha=0.25)
+#     ax22.set_ylabel(r'$\mathregular{rel.\/Error\/(\%)}$')
+#     ax2.set_ylabel(r'$\mathregular{Heat\/Cap.\/(kJ\/kg^{-1}\/K^{-1})}$')
+    
+    j['specific_heat'] = {}
+    j['specific_heat']['coeffs'] = liqObj.getCoefficients('C').tolist()
+    j['specific_heat']['type'] = 'polynomial'
     
     inVal = 'L'
     xData = data.lam
     oldCoeffs = liqObj.getCoefficients(inVal)
     newCoeffs = liqObj.fitCoefficients(inVal,T=tData,xData=xData)
-    print "Th. Co., old: "+str(oldCoeffs)
-    print "Th. Co., new: "+str(newCoeffs)
-    print 
+#     print "Th. Co., old: "+str(oldCoeffs)
+#     print "Th. Co., new: "+str(newCoeffs)
+#     print 
     liqObj.setCoefficients(inVal,newCoeffs)
-    fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
-    ax3.plot(tData-273.15, xData*1e3, 'o', label="Data Sheet")
-    ax3.plot(tDat1-273.15, fData*1e3, 'o', label="Python")
-    if inCP:
-        ax3.plot(tDat2-273.15, CP.PropsU(inVal, 'T', tDat2, 'P', Pin*1e3, data.Name, "SI")*1e3, label="CoolProp")
-    ax32 = ax3.twinx()
-    fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tData])
-    ax32.plot(tData-273.15, relError(fData, xData, True), 'o', label="Error", alpha=0.25)
-    ax32.set_ylabel(r'$\mathregular{rel.\/Error\/(\%)}$')
-    ax3.set_ylabel(r'$\mathregular{Th.\/Cond.\/(mW\/m^{-1}\/K^{-1})}$')
+#     fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
+#     ax3.plot(tData-273.15, xData*1e3, 'o', label="Data Sheet")
+#     ax3.plot(tDat1-273.15, fData*1e3, 'o', label="Python")
+#     if inCP:
+#         ax3.plot(tDat2-273.15, CP.PropsU(inVal, 'T', tDat2, 'P', Pin*1e3, data.Name, "SI")*1e3, label="CoolProp")
+#     ax32 = ax3.twinx()
+#     fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tData])
+#     ax32.plot(tData-273.15, relError(fData, xData, True), 'o', label="Error", alpha=0.25)
+#     ax32.set_ylabel(r'$\mathregular{rel.\/Error\/(\%)}$')
+#     ax3.set_ylabel(r'$\mathregular{Th.\/Cond.\/(mW\/m^{-1}\/K^{-1})}$')
+
+    j['conductivity'] = {}
+    j['conductivity']['coeffs'] = liqObj.getCoefficients('L').tolist()
+    j['conductivity']['type'] = 'polynomial'
     
     inVal = 'V'
     tData = data.T[data.mu_dyn > 0]
@@ -524,22 +542,26 @@ for data in containerList:
         xData = data.mu_dyn[data.mu_dyn > 0]
         oldCoeffs = liqObj.getCoefficients(inVal)
         newCoeffs = liqObj.fitCoefficients(inVal,T=tData,xData=xData)
-        print "Viscos., old: "+str(oldCoeffs)
-        print "Viscos., new: "+str(newCoeffs)
-        print 
+#         print "Viscos., old: "+str(oldCoeffs)
+#         print "Viscos., new: "+str(newCoeffs)
+#         print 
         liqObj.setCoefficients(inVal,newCoeffs)
-        fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
-        ax4.plot(tData-273.15, xData*1e3, 'o', label="Data Sheet")
-        ax4.plot(tDat1-273.15, fData*1e3, 'o', label="Python")
-        if inCP:
-            ax4.plot(tDat2-273.15, CP.PropsU(inVal, 'T', tDat2, 'P', Pin*1e3, data.Name, "SI")*1e3, label="CoolProp")
-        ax42 = ax4.twinx()
-        fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tData])
-        ax42.plot(tData-273.15, relError(fData, xData, True), 'o', label="Error", alpha=0.25)
-        ax42.set_ylabel(r'$\mathregular{rel.\/Error\/(\%)}$')
+#         fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
+#         ax4.plot(tData-273.15, xData*1e3, 'o', label="Data Sheet")
+#         ax4.plot(tDat1-273.15, fData*1e3, 'o', label="Python")
+#         if inCP:
+#             ax4.plot(tDat2-273.15, CP.PropsU(inVal, 'T', tDat2, 'P', Pin*1e3, data.Name, "SI")*1e3, label="CoolProp")
+#         ax42 = ax4.twinx()
+#         fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tData])
+#         ax42.plot(tData-273.15, relError(fData, xData, True), 'o', label="Error", alpha=0.25)
+#         ax42.set_ylabel(r'$\mathregular{rel.\/Error\/(\%)}$')
     
-    ax4.set_ylabel(r'$\mathregular{Dyn.\/Viscosity\/(mPa\/s)}$')
-    ax4.set_yscale('log')
+#     ax4.set_ylabel(r'$\mathregular{Dyn.\/Viscosity\/(mPa\/s)}$')
+#     ax4.set_yscale('log')
+    
+    j['viscosity'] = {}
+    j['viscosity']['coeffs'] = liqObj.getCoefficients('V').tolist()
+    j['viscosity']['type'] = 'polynomial'
     
     inVal = 'Psat'
     mask = numpy.logical_and(numpy.greater_equal(data.T,data.TminPsat),numpy.greater(data.psat,0)) 
@@ -549,25 +571,29 @@ for data in containerList:
         xData = data.psat[mask]
         oldCoeffs = liqObj.getCoefficients(inVal)
         newCoeffs = liqObj.fitCoefficients(inVal,T=tData,xData=xData)
-        print "P sat. , old: "+str(oldCoeffs)
-        print "P sat. , new: "+str(newCoeffs)
-        print 
+#         print "P sat. , old: "+str(oldCoeffs)
+#         print "P sat. , new: "+str(newCoeffs)
+#         print 
         liqObj.setCoefficients(inVal,newCoeffs)
-        fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
-        ax5.plot(tData-273.15, xData/1e3, 'o', label="Data Sheet")
-        ax5.plot(tDat1-273.15, fData/1e3, 'o', label="Python")
-        if inCP:
-            ax5.plot(tDat2-273.15, CP.PropsU(inVal, 'T', tDat2, 'P', Pin*1e3, data.Name, "SI")/1e3, label="CoolProp")
-        ax52 = ax5.twinx()
-        fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tData])
-        ax52.plot(tData-273.15, relError(fData, xData, True), 'o', label="Error", alpha=0.25)
-        ax52.set_ylabel(r'$\mathregular{rel.\/Error\/(\%)}$')
-        
-    ax5.set_ylabel(r'$\mathregular{Vap.\/Pressure\/(kPa)}$')
-    ax5.set_yscale('log')
+#         fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
+#         ax5.plot(tData-273.15, xData/1e3, 'o', label="Data Sheet")
+#         ax5.plot(tDat1-273.15, fData/1e3, 'o', label="Python")
+#         if inCP:
+#             ax5.plot(tDat2-273.15, CP.PropsU(inVal, 'T', tDat2, 'P', Pin*1e3, data.Name, "SI")/1e3, label="CoolProp")
+#         ax52 = ax5.twinx()
+#         fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tData])
+#         ax52.plot(tData-273.15, relError(fData, xData, True), 'o', label="Error", alpha=0.25)
+#         ax52.set_ylabel(r'$\mathregular{rel.\/Error\/(\%)}$')
+#         
+#     ax5.set_ylabel(r'$\mathregular{Vap.\/Pressure\/(kPa)}$')
+#     ax5.set_yscale('log')
+#     
+#     ax5.set_xlabel(ur'$\mathregular{Temperature\/(\u00B0C)}$')
+#     ax6.set_xlabel(ur'$\mathregular{Temperature\/(\u00B0C)}$')
     
-    ax5.set_xlabel(ur'$\mathregular{Temperature\/(\u00B0C)}$')
-    ax6.set_xlabel(ur'$\mathregular{Temperature\/(\u00B0C)}$')
+    j['saturation_pressure'] = {}
+    j['saturation_pressure']['coeffs'] = np.array(liqObj.getCoefficients('Psat')).tolist()
+    j['saturation_pressure']['type'] = 'polynomial'
     
     #x5min,x5max = ax5.get_xlim()
     #x6min,x6max = ax6.get_xlim()
@@ -579,69 +605,74 @@ for data in containerList:
     #x2min,x2max = ax2.get_xlim()
     #xmin, xmax  = (numpy.min([x1min,x2min]),numpy.max([x1max,x2max]))
     #xmin, xmax  = (-10,30)
+#     
+#     xmin = numpy.round(numpy.min(data.T)-273.15-5, -1)
+#     xmax = numpy.round(numpy.max(data.T)-273.15+5, -1)
+#     
+#     ax5.set_xlim([xmin,xmax])
+#     ax6.set_xlim(ax5.get_xlim())
+#     
+#     ax5.xaxis.set_major_locator(MaxNLocator(5))
+#     ax6.xaxis.set_major_locator(ax5.xaxis.get_major_locator())
+#     
+#     tData = numpy.array(data.Tmin + (data.Tmax-data.Tmin)/2.)
+#     xData = numpy.array(1)
+#     ax6.plot(tData-273.15, xData, 'o', label="Data Sheet")
+#     ax6.plot(tData-273.15, xData, 'o', label="Python")
+#     if inCP:
+#         ax6.plot(tData-273.15, xData, label="CoolProp")
+#     ax6.legend(loc=1)
+#     ax6.text(tData-273.15, xData*1.005, 'Fits for '+str(data.Name), 
+#              verticalalignment='top', horizontalalignment='center',
+#              backgroundcolor='white', fontsize=18)
+#     matplotlib.pyplot.tight_layout()
+#     matplotlib.pyplot.savefig("fit_current_std.pdf")
+#     #TODO Remove for normal fitting
+#     matplotlib.pyplot.savefig("fit_"+data.Name+"_std.pdf")
     
-    xmin = numpy.round(numpy.min(data.T)-273.15-5, -1)
-    xmax = numpy.round(numpy.max(data.T)-273.15+5, -1)
-    
-    ax5.set_xlim([xmin,xmax])
-    ax6.set_xlim(ax5.get_xlim())
-    
-    ax5.xaxis.set_major_locator(MaxNLocator(5))
-    ax6.xaxis.set_major_locator(ax5.xaxis.get_major_locator())
-    
-    tData = numpy.array(data.Tmin + (data.Tmax-data.Tmin)/2.)
-    xData = numpy.array(1)
-    ax6.plot(tData-273.15, xData, 'o', label="Data Sheet")
-    ax6.plot(tData-273.15, xData, 'o', label="Python")
-    if inCP:
-        ax6.plot(tData-273.15, xData, label="CoolProp")
-    ax6.legend(loc=1)
-    ax6.text(tData-273.15, xData*1.005, 'Fits for '+str(data.Name), 
-             verticalalignment='top', horizontalalignment='center',
-             backgroundcolor='white', fontsize=18)
-    matplotlib.pyplot.tight_layout()
-    matplotlib.pyplot.savefig("fit_current_std.pdf")
-    #TODO Remove for normal fitting
-    matplotlib.pyplot.savefig("fit_"+data.Name+"_std.pdf")
-    
-    ### Print the output for the C++ file
-    print "name = std::string(\""+data.Name+"\");"
-    print "description = std::string(\""+data.Desc+"\");"
-    print "reference = std::string(\"\");"
-    print ""
-    print "Tmin     = "+str(data.Tmin)+";"
-    print "Tmax     = "+str(data.Tmax)+";"
-    print "TminPsat = "+str(data.TminPsat)+";"
-    print ""
-    print "cRho.clear();"
-    C = liqObj.getCoefficients('D')
-    for Ci in C:
-        print "cRho.push_back(%+1.10E);" %(Ci)
-        
-    print ""
-    print "cHeat.clear();"
-    C = liqObj.getCoefficients('C')
-    for Ci in C:
-        print "cHeat.push_back(%+1.10E);" %(Ci)
-    
-    print ""
-    print "cCond.clear();"
-    C = liqObj.getCoefficients('L')
-    for Ci in C:
-        print "cCond.push_back(%+1.10E);" %(Ci)
-    
-    print ""
-    print "cVisc.clear();"
-    C = liqObj.getCoefficients('V')
-    for Ci in C:
-        print "cVisc.push_back(%+1.10E);" %(Ci)
-    
-    print ""
-    print "cPsat.clear();"
-    C = liqObj.getCoefficients('Psat')
-    for Ci in C:
-        print "cPsat.push_back(%+1.10E);" %(Ci)
-        
-    raw_input("Finished with "+data.Name+", press Enter to continue...")
+#     ### Print the output for the C++ file
+#     print "name = std::string(\""+data.Name+"\");"
+#     print "description = std::string(\""+data.Desc+"\");"
+#     print "reference = std::string(\"\");"
+#     print ""
+#     print "Tmin     = "+str(data.Tmin)+";"
+#     print "Tmax     = "+str(data.Tmax)+";"
+#     print "TminPsat = "+str(data.TminPsat)+";"
+#     print ""
+#     print "cRho.clear();"
+#     C = liqObj.getCoefficients('D')
+#     for Ci in C:
+#         print "cRho.push_back(%+1.10E);" %(Ci)
+#         
+#     print ""
+#     print "cHeat.clear();"
+#     C = liqObj.getCoefficients('C')
+#     for Ci in C:
+#         print "cHeat.push_back(%+1.10E);" %(Ci)
+#     
+#     print ""
+#     print "cCond.clear();"
+#     C = liqObj.getCoefficients('L')
+#     for Ci in C:
+#         print "cCond.push_back(%+1.10E);" %(Ci)
+#     
+#     print ""
+#     print "cVisc.clear();"
+#     C = liqObj.getCoefficients('V')
+#     for Ci in C:
+#         print "cVisc.push_back(%+1.10E);" %(Ci)
+#     
+#     print ""
+#     print "cPsat.clear();"
+#     C = liqObj.getCoefficients('Psat')
+#     for Ci in C:
+#         print "cPsat.push_back(%+1.10E);" %(Ci)
+#         
+#     raw_input("Finished with "+data.Name+", press Enter to continue...")
 
-
+    import json
+    print json.dumps(j, indent = 2)
+    
+    fp = open(j['name']+'.json', 'w')
+    fp.write(json.dumps(j, indent = 2, sort_keys = True))
+    fp.close()

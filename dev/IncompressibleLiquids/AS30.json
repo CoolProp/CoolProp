@@ -1,0 +1,50 @@
+{
+  "Tmax": 300.0, 
+  "Tmin": 245.0, 
+  "TminPsat": 300.0, 
+  "conductivity": {
+    "coeffs": [
+      0.11394827672325841, 
+      0.001280654345654473, 
+      -4.495504495526895e-08
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      871.1154734152149, 
+      3.774566914569682, 
+      -0.01392829392830378, 
+      1.5747215747227396e-05
+    ], 
+    "type": "polynomial"
+  }, 
+  "desription": "Aspen Temper -30", 
+  "name": "AS30", 
+  "reference": "", 
+  "saturation_pressure": {
+    "coeffs": [
+      -5000.0, 
+      30.0, 
+      -10.0
+    ], 
+    "type": "polynomial"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      307.85717615650657, 
+      17.014884004891233, 
+      -0.02426906426909018, 
+      -3.4188034187725886e-06
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      512.0915366340133, 
+      -156.26579005242883, 
+      9.901661188785079
+    ], 
+    "type": "polynomial"
+  }
+}
