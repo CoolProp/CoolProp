@@ -314,6 +314,15 @@ double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 
 #include "catch.hpp"
 
+TEST_CASE("Check AbstractState","[AbstractState]")
+{
+    SECTION("bad backend")
+    {
+        CoolProp::AbstractStateWrapper Water;
+        CHECK_THROWS(Water.set("DEFINITELY_A_BAD_BACKEND", "Water"));
+    }
+}
+
 TEST_CASE("Check AbstractStateWrapper","[AbstractStateWrapper]")
 {
     SECTION("empty on init")
