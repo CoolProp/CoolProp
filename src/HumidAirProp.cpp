@@ -21,6 +21,17 @@ CoolProp::AbstractStateWrapper Air;
 
 namespace HumidAir
 {
+
+void check_fluid_instantiation()
+{
+    if (Water.empty()){
+        Water = CoolProp::AbstractStateWrapper("HEOS", "Water");
+    }
+    if (Air.empty()){
+        Air = CoolProp::AbstractStateWrapper("HEOS", "Air");
+    }
+};
+
 enum givens{GIVEN_TDP,GIVEN_HUMRAT,GIVEN_V,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND};
 
 static double epsilon=0.621945,R_bar=8.314472;
@@ -30,49 +41,59 @@ double f_factor(double T, double p);
 // A couple of convenience functions that are needed quite a lot
 static double MM_Air(void)
 {
+    check_fluid_instantiation();
     return Air.keyed_output(CoolProp::imolar_mass);
 }
 static double MM_Water(void)
 {
+    check_fluid_instantiation();
     return Water.keyed_output(CoolProp::imolar_mass);
 }
 static double B_Air(double T)
 {
+    check_fluid_instantiation();
     Air.update(CoolProp::DmolarT_INPUTS,1e-12,T);
     return Air.keyed_output(CoolProp::iBvirial);
 }
 static double dBdT_Air(double T)
 {
+    check_fluid_instantiation();
     Air.update(CoolProp::DmolarT_INPUTS,1e-12,T);
     return Air.keyed_output(CoolProp::idBvirial_dT);
 }
 static double B_Water(double T)
 {
+    check_fluid_instantiation();
     Water.update(CoolProp::DmolarT_INPUTS,1e-12,T);
     return Water.keyed_output(CoolProp::iBvirial);
 }
 static double dBdT_Water(double T)
 {
+    check_fluid_instantiation();
     Water.update(CoolProp::DmolarT_INPUTS,1e-12,T);
     return Water.keyed_output(CoolProp::idBvirial_dT);
 }
 static double C_Air(double T)
 {
+    check_fluid_instantiation();
     Air.update(CoolProp::DmolarT_INPUTS,1e-12,T);
     return Air.keyed_output(CoolProp::iCvirial);
 }
 static double dCdT_Air(double T)
 {
+    check_fluid_instantiation();
     Air.update(CoolProp::DmolarT_INPUTS,1e-12,T);
     return Air.keyed_output(CoolProp::idCvirial_dT);
 }
 static double C_Water(double T)
 {
+    check_fluid_instantiation();
     Water.update(CoolProp::DmolarT_INPUTS,1e-20,T);
     return Water.keyed_output(CoolProp::iCvirial);
 }
 static double dCdT_Water(double T)
 {
+    check_fluid_instantiation();
     Water.update(CoolProp::DmolarT_INPUTS,1e-12,T);
     return Water.keyed_output(CoolProp::idCvirial_dT);
 }
@@ -196,6 +217,7 @@ static double Secant_HAProps_W(const char *OutputName, const char *Input1Name, d
 // Mixed virial components
 static double _B_aw(double T)
 {
+    check_fluid_instantiation();
     // Returns value in m^3/mol
     double a[]={0,0.665687e2,-0.238834e3,-0.176755e3};
     double b[]={0,-0.237,-1.048,-3.183};
@@ -205,6 +227,7 @@ static double _B_aw(double T)
 
 static double _dB_aw_dT(double T)
 {
+    check_fluid_instantiation();
     // Returns value in m^3/mol    
     double a[]={0,0.665687e2,-0.238834e3,-0.176755e3};
     double b[]={0,-0.237,-1.048,-3.183};
@@ -214,6 +237,7 @@ static double _dB_aw_dT(double T)
 
 static double _C_aaw(double T)
 {
+    check_fluid_instantiation();
     // Function return has units of m^6/mol^2
     double c[]={0,0.482737e3,0.105678e6,-0.656394e8,0.294442e11,-0.319317e13};
     double rhobarstar=1000,Tstar=1,summer=0; int i;
@@ -226,6 +250,7 @@ static double _C_aaw(double T)
 
 static double _dC_aaw_dT(double T)
 {
+    check_fluid_instantiation();
     // Function return in units of m^6/mol^2/K
     double c[]={0,0.482737e3,0.105678e6,-0.656394e8,0.294442e11,-0.319317e13};
     double rhobarstar=1000,Tstar=1,summer=0; int i;
@@ -238,6 +263,7 @@ static double _dC_aaw_dT(double T)
 
 static double _C_aww(double T)
 {
+    check_fluid_instantiation();
     // Function return has units of m^6/mol^2
     double d[]={0,-0.1072887e2,0.347804e4,-0.383383e6,0.334060e8};
     double rhobarstar=1,Tstar=1,summer=0; int i;
@@ -250,6 +276,7 @@ static double _C_aww(double T)
 
 static double _dC_aww_dT(double T)
 {
+    check_fluid_instantiation();
      // Function return in units of m^6/mol^2/K
     double d[]={0,-0.1072887e2,0.347804e4,-0.383383e6,0.334060e8};
     double rhobarstar=1,Tstar=1,summer1=0,summer2=0; int i;
@@ -1075,13 +1102,8 @@ double HAPropsSI(const char *OutputName, const char *Input1Name, double Input1, 
 {
     try
     {
-        
-        if (Water.empty()){
-            Water = CoolProp::AbstractStateWrapper("HEOS", "Water");
-        }
-        if (Air.empty()){
-            Air = CoolProp::AbstractStateWrapper("HEOS", "Air");
-        }
+        // Add a check to make sure that Air and Water fluid states have been properly instantiated
+        check_fluid_instantiation();
         
         int In1Type, In2Type, In3Type,iT,iW,iTdp,iRH,ip,Type1,Type2;
         double vals[3],p,T,RH,W,Tdp,psi_w,M_ha,v_bar,h_bar,s_bar,MainInputValue,SecondaryInputValue,T_guess;

@@ -393,8 +393,14 @@ public:
         this->p = AbstractState::factory(backend, fluid_string);
     };
     ~AbstractStateWrapper(){delete this->p;};
-    void update(long input_pair, double Value1, double Value2){ this->p->update(input_pair,Value1,Value2); };
-    double keyed_output(int key) { return this->p->keyed_output(key); }
+    void update(long input_pair, double Value1, double Value2){ 
+        if (this->p == NULL) { throw ValueError("AbstractState in AbstractStateWrapper has not been instantiated yet");}
+        this->p->update(input_pair,Value1,Value2); 
+    };
+    double keyed_output(int key) { 
+        if (this->p == NULL) { throw ValueError("AbstractState in AbstractStateWrapper has not been instantiated yet");}
+        return this->p->keyed_output(key); 
+    }
     bool empty(){return (this->p == NULL);}
 };
 

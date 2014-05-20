@@ -36,3 +36,4 @@
 /include/version.h
 /include/catch.hpp
 /build/
+/dev/hashes.json
