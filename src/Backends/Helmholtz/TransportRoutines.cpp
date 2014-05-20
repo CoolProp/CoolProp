@@ -1,5 +1,6 @@
 
 #include "TransportRoutines.h"
+#include "CoolPropFluid.h"
 
 namespace CoolProp{
 
@@ -20,28 +21,24 @@ long double TransportRoutines::general_dilute_gas_viscosity(HelmholtzEOSMixtureB
         return 26.692e-9*sqrt(molar_mass_kgkmol*HEOS.T())/(pow(sigma_nm, 2)*OMEGA22); // Pa-s
     }
     else{
-        throw NotImplementedError("TransportRoutines::GeneralDiluteGasViscosity is only for pure and pseudo-pure");
+        throw NotImplementedError("TransportRoutines::general_dilute_gas_viscosity is only for pure and pseudo-pure");
     }
 }
-
-
 
 long double TransportRoutines::dilute_gas_viscosity(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure)
     {
-        // HARD CODED FOR PROPANE FOR TESTING PURPOSES
-        double _a[]={0.25104574,-0.47271238,0,0.060836515}, _t[] = {0,1,2,3}, C = 0.141824e-6/sqrt(44.0956), D = sqrt(44.0956)*C;
-        std::vector<long double> a(_a,_a+sizeof(_a)/sizeof(_a[0]));
-        std::vector<long double> t(_t,_t+sizeof(_t)/sizeof(_t[0]));
-        HEOS.components[0]->transport.epsilon_over_k = 263.88;
-        HEOS.components[0]->transport.sigma_eta = 0.49748e-9;
-        long double molar_mass = 44.0956/1000;
+        // Retrieve values from the state class
+        CoolProp::ViscosityDiluteGasCollisionIntegralData &data = HEOS.components[0]->transport.viscosity_dilute.collision_integral;
+        const std::vector<long double> &a = data.a, &t = data.t;
+        const long double C = data.C, molar_mass = data.molar_mass;
 
         long double S;
-        long double Tstar = HEOS.T()/HEOS.components[0]->transport.epsilon_over_k;
-        long double sigma_nm = HEOS.components[0]->transport.sigma_eta*1e9; // 1e9 to convert from m to nm
-        long double molar_mass_kgkmol = molar_mass*1000; // 1000 to convert from kg/mol to kg/kmol
+        // Unit conversions and variable definitions
+        const long double Tstar = HEOS.T()/HEOS.components[0]->transport.epsilon_over_k;
+        const long double sigma_nm = HEOS.components[0]->transport.sigma_eta*1e9; // 1e9 to convert from m to nm
+        const long double molar_mass_kgkmol = molar_mass*1000; // 1000 to convert from kg/mol to kg/kmol
 
         /// Both the collision integral \f$\mathfrak{S}^*\f$ and effective cross section \f$\Omega^{(2,2)}\f$ have the same form, 
         /// in general we don't care which is used.  The are related through \f$\Omega^{(2,2)} = (5/4)\mathfrak{S}^*\f$ 
@@ -113,7 +110,7 @@ long double TransportRoutines::modified_Batschinski_Hildebrand_viscosity_term(He
         return S+F*delta*(1/(delta0-delta)-1/delta0); // Pa-s
     }
     else{
-        throw NotImplementedError("TransportRoutines::GeneralDiluteGasViscosity is only for pure and pseudo-pure");
+        throw NotImplementedError("TransportRoutines::modified_Batschinski_Hildebrand_viscosity_term is only for pure and pseudo-pure");
     }
 }
 
@@ -121,14 +118,9 @@ long double TransportRoutines::initial_density_dependence_viscosity_term(Helmhol
 {
     if (HEOS.is_pure_or_pseudopure)
     {
-        //// HARD CODED FOR PROPANE FOR TESTING PURPOSES
-        double _b[]={-19.572881,219.73999,-1015.3226,2471.01251,-3375.1717,2491.6597,-787.26086,14.085455,-0.34664158};
-        std::vector<long double> b(_b,_b+sizeof(_b)/sizeof(_b[0]));
-        double _c[]={0,-0.25,-0.5,-0.75,-1.0,-1.25,-1.5,-2.5,-5.5};
-        std::vector<long double> c(_c,_c+sizeof(_c)/sizeof(_c[0]));
-        HEOS.components[0]->transport.epsilon_over_k = 263.88;
-        HEOS.components[0]->transport.sigma_eta = 0.49748e-9;
-        //// END HARD CODED
+        // Retrieve values from the state class
+        CoolProp::ViscosityRainWaterFriendData &data = HEOS.components[0]->transport.viscosity_initial.rainwater_friend;
+        const std::vector<long double> &b = data.b, &t = data.t;
 
         long double B_eta, B_eta_star;
         long double Tstar = HEOS.T()/HEOS.components[0]->transport.epsilon_over_k; // [no units]
@@ -136,14 +128,14 @@ long double TransportRoutines::initial_density_dependence_viscosity_term(Helmhol
         
         long double summer = 0;
         for (int i = 0; i < b.size(); ++i){
-            summer += b[i]*pow(Tstar, c[i]);
+            summer += b[i]*pow(Tstar, t[i]);
         }
         B_eta_star = summer; // [no units]
-        B_eta = 6.02214129e23*pow(sigma,3)*B_eta_star; // [m^3/mol]
+        B_eta = 6.02214129e23*pow(sigma, 3)*B_eta_star; // [m^3/mol]
         return B_eta; // [m^3/mol]
     }
     else{
-        throw NotImplementedError("TransportRoutines::GeneralDiluteGasViscosity is only for pure and pseudo-pure");
+        throw NotImplementedError("TransportRoutines::initial_density_dependence_viscosity_term is only for pure and pseudo-pure");
     }
 }
 

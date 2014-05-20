@@ -63,7 +63,7 @@ public:
     where \f$N_A\f$ is Avogadros number \f$6.022\times 10^{23}\f$ mol\f$^{-1}\f$ and \f$\sigma_{\eta}\f$ is in m.
 
     \f[
-    B_{\eta}^*(T^*) = \displaystyle\sum_ib_i(T^*)^{c_i}
+    B_{\eta}^*(T^*) = \displaystyle\sum_ib_i(T^*)^{t_i}
     \f]
 
     IMPORTANT: This function returns \f$B_{\eta}\f$, not \f$\eta_{RF}\f$

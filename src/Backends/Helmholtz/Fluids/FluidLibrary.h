@@ -258,6 +258,57 @@ protected:
     };
 
     /// Parse the transport properties
+    void parse_dilute_viscosity(rapidjson::Value &dilute, CoolPropFluid & fluid)
+    {
+        std::string type = cpjson::get_string(dilute, "type");
+        if (!type.compare("collision_integral")){
+            // Get a reference to the entry in the fluid instance
+            CoolProp::ViscosityDiluteGasCollisionIntegralData &CI = fluid.transport.viscosity_dilute.collision_integral;
+
+            // Load up the values
+            CI.a = cpjson::get_long_double_array(dilute["a"]);
+            CI.t = cpjson::get_long_double_array(dilute["t"]);
+            CI.molar_mass = cpjson::get_double(dilute, "molar_mass");
+            CI.C = cpjson::get_double(dilute, "C");
+        }
+        else{
+            throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
+        }
+    };
+
+    /// Parse the transport properties
+    void parse_initial_density_viscosity(rapidjson::Value &dilute, CoolPropFluid & fluid)
+    {
+        std::string type = cpjson::get_string(dilute, "type");
+        if (!type.compare("Rainwater-Friend")){
+            // Get a reference to the entry in the fluid instance
+            CoolProp::ViscosityRainWaterFriendData &RF = fluid.transport.viscosity_initial.rainwater_friend;
+
+            // Load up the values
+            RF.b = cpjson::get_long_double_array(dilute["b"]);
+            RF.t = cpjson::get_long_double_array(dilute["t"]);
+        }
+        else{
+            throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
+        }
+    };
+
+    /// Parse the transport properties
+    void parse_viscosity(rapidjson::Value &viscosity, CoolPropFluid & fluid)
+    {
+        if (viscosity.HasMember("dilute")){
+            parse_dilute_viscosity(viscosity["dilute"], fluid);
+        }
+        if (viscosity.HasMember("initial_density")){
+            parse_initial_density_viscosity(viscosity["initial_density"], fluid);
+        }
+    };
+    /// Parse the thermal conductivity data
+    void parse_thermal_conductivity(rapidjson::Value &conductivity, CoolPropFluid & fluid)
+    {
+    };
+
+    /// Parse the transport properties
     void parse_transport(rapidjson::Value &transport, CoolPropFluid & fluid)
     {
         if (!transport.HasMember("sigma_eta")|| !transport.HasMember("epsilon_over_k")){
@@ -266,6 +317,15 @@ protected:
         else{
             fluid.transport.sigma_eta = cpjson::get_double(transport, "sigma_eta");
             fluid.transport.epsilon_over_k = cpjson::get_double(transport, "epsilon_over_k");
+        }
+        // Parse viscosity
+        if (transport.HasMember("viscosity")){
+            parse_viscosity(transport["viscosity"],fluid);
+        }
+
+        // Parse thermal conductivity
+        if (transport.HasMember("conductivity")){
+            parse_thermal_conductivity(transport["conductivity"],fluid);
         }
     };
 
