@@ -308,3 +308,28 @@ double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 //	virtual double AbstractState::surface_tension(void);
 
 } /* namespace CoolProp */
+
+
+#ifdef ENABLE_CATCH
+
+#include "catch.hpp"
+
+TEST_CASE("Check AbstractStateWrapper","[AbstractStateWrapper]")
+{
+    SECTION("empty on init")
+    {
+        CoolProp::AbstractStateWrapper Water;
+        CHECK_NOTHROW(Water.empty());
+        CHECK(Water.empty() == true);
+        CHECK_THROWS(Water.update(CoolProp::QT_INPUTS,1,300));
+    }
+    SECTION("initialized")
+    {
+        CoolProp::AbstractStateWrapper Water = CoolProp::AbstractStateWrapper("HEOS", "Water");
+        CHECK_NOTHROW(Water.empty());
+        CHECK(Water.empty() == false);
+        CHECK_NOTHROW(Water.update(CoolProp::QT_INPUTS,1,300));
+    }
+}
+
+#endif
