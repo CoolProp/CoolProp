@@ -1,4 +1,9 @@
-
+/**
+This file includes some testing functions that will get built 
+into the program.  Otherwise CTest can be used by removing this file from
+the build to avoid double declaration of the main function and
+Catch clashing
+*/
 #include "Tests.h"
 
 #if defined ENABLE_CATCH    
