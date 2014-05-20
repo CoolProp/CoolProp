@@ -4,7 +4,7 @@
 #include <crtdbg.h>
 #endif
 
-#include "CoolPropDLL.h"
+#include "CoolPropLib.h"
 #include "CoolProp.h"
 #include "HumidAirProp.h"
 #include "DataStructures.h"
