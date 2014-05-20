@@ -325,8 +325,10 @@ TEST_CASE("Check AbstractStateWrapper","[AbstractStateWrapper]")
     }
     SECTION("initialized")
     {
-        CoolProp::AbstractStateWrapper Water = CoolProp::AbstractStateWrapper("HEOS", "Water");
+        CoolProp::AbstractStateWrapper Water;
         CHECK_NOTHROW(Water.empty());
+        CHECK(Water.empty() == true);
+        Water.set("HEOS", "Water");
         CHECK(Water.empty() == false);
         CHECK_NOTHROW(Water.update(CoolProp::QT_INPUTS,1,300));
     }

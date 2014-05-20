@@ -25,10 +25,10 @@ namespace HumidAir
 void check_fluid_instantiation()
 {
     if (Water.empty()){
-        Water = CoolProp::AbstractStateWrapper("HEOS", "Water");
+        Water.set("HEOS", "Water");
     }
     if (Air.empty()){
-        Air = CoolProp::AbstractStateWrapper("HEOS", "Air");
+        Air.set("HEOS", "Air");
     }
 };
 

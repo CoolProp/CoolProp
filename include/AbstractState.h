@@ -387,9 +387,11 @@ class AbstractStateWrapper
 {
 protected:
     AbstractState *p;
+    // Copying is disabled for now until we determine the right semantics for ownership of AbstractState instance
+    AbstractStateWrapper(const AbstractStateWrapper& copy_from_me){};
 public:
     AbstractStateWrapper(){this->p = NULL;};
-    AbstractStateWrapper(const std::string &backend, const std::string &fluid_string){
+    void set(const std::string &backend, const std::string &fluid_string){
         this->p = AbstractState::factory(backend, fluid_string);
     };
     ~AbstractStateWrapper(){delete this->p;};
