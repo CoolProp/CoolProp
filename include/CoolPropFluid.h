@@ -43,26 +43,31 @@ struct EOSLimits
 {
     double Tmin, Tmax, rhomax, pmax;
 };
+/// Variables for the dilute gas part 
+struct ViscosityDiluteGasCollisionIntegralData
+{
+    long double molar_mass, C;
+    std::vector<long double> a, t;
+};
+struct ViscosityDiluteVariables
+{
+    ViscosityDiluteGasCollisionIntegralData collision_integral;
+};
 
-class ViscosityCorrelation
+struct ViscosityRainWaterFriendData
 {
-public:
-    double dilute(double T, double rhomolar);
-    double residual(double T, double rhomolar);
-    double critical(double T, double rhomolar);
+    std::vector<long double> b, t;
 };
-class ThermalConductivityCorrelation
+struct ViscosityInitialDensityVariables
 {
-public:
-    double dilute(double T, double rhomolar);
-    double residual(double T, double rhomolar);
-    double critical(double T, double rhomolar);
+    ViscosityRainWaterFriendData rainwater_friend;
 };
+
 class TransportPropertyData
 {
 public:
-    ViscosityCorrelation viscosity;
-    ThermalConductivityCorrelation conductivity;
+    ViscosityDiluteVariables viscosity_dilute;
+    ViscosityInitialDensityVariables viscosity_initial;
     long double sigma_eta, epsilon_over_k;
 };
 
@@ -344,9 +349,9 @@ class CoolPropFluid {
         std::string CAS; ///< The CAS number of the fluid
         std::vector <std::string> aliases; ///< A vector of aliases of names for the fluid
 
-        std::vector<ViscosityCorrelation*> viscosity_vector; ///< The viscosity correlations that could be used for this fluid
+        /*std::vector<ViscosityCorrelation*> viscosity_vector; ///< The viscosity correlations that could be used for this fluid
         std::vector<ThermalConductivityCorrelation*> thermal_conductivity_vector; ///< The thermal conductivity correlations that could be used for this fluid
-        std::vector<SurfaceTensionCorrelation*> surface_tension_vector; ///< The surface tension correlations that could be used for this fluid
+        std::vector<SurfaceTensionCorrelation*> surface_tension_vector; ///< The surface tension correlations that could be used for this fluid*/
 
         BibTeXKeysStruct BibTeXKeys;
         EnvironmentalFactorsStruct environment;
