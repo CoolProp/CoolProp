@@ -3,7 +3,7 @@
 #define HELMHOLTZEOSMIXTUREBACKEND_H_
 
 #include "AbstractState.h"
-#include "Fluids/CoolPropFluid.h"
+#include "CoolPropFluid.h"
 #include "ReducingFunctions.h"
 #include "ExcessHEFunction.h"
 #include "Solvers.h"
