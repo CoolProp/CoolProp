@@ -19,7 +19,7 @@ public:
     \f]
     with \f$T^* = \frac{T}{\varepsilon/k}\f$ and \f$\sigma\f$ in nm, M is in kg/kmol. Yields viscosity in Pa-s.
     */
-    static long double general_dilute_gas_viscosity(HelmholtzEOSMixtureBackend &HEOS);
+    static long double viscosity_dilute_kinetic_theory(HelmholtzEOSMixtureBackend &HEOS);
     
     /**
     \brief The dilute gas viscosity term that is based on collision integral or effective cross section
@@ -32,21 +32,17 @@ public:
     \f]
     with \f$T^* = \frac{T}{\varepsilon/k}\f$ and \f$\sigma\f$ in nm, M is in kg/kmol. Yields viscosity in Pa-s.
     */
-    static long double dilute_gas_viscosity(HelmholtzEOSMixtureBackend &HEOS);
+    static long double viscosity_dilute_collision_integral(HelmholtzEOSMixtureBackend &HEOS);
 
     /** 
-    \brief The modified Batschinski-Hildebrand contribution to the viscosity
+    \brief A dilute gas viscosity term formed of summation of power terms
 
     \f[
-    \Delta\eta = \displaystyle\sum_{i}a_{i}\delta^{d1_i}\tau^{t1_j}+\left(\displaystyle\sum_{i}f_i\delta^{d2_i}\tau^{t2_i}\right)\left(\frac{1}{\delta_0(\tau)-\delta}-\frac{1}{\delta_0(\tau)}\right)
+    \eta^0 = \displaystyle\sum_ia_iT^{t_i}
     \f]
-    where \f$\tau = T_c/T\f$ and \f$\delta = \rho/\rho_c\f$ 
-    \f[
-    \delta_0(\tau) = \displaystyle\frac{\displaystyle\sum_{i}g_i\tau^{h_i}}{\displaystyle\sum_{i}p_i\tau^{q_i}}
-    \f]
-    The more general form of \f$\delta_0(\tau)\f$ is selected in order to be able to handle all the forms in the literature 
+    with T in K, \f$eta^0\f$ in Pa-s
     */
-    static long double modified_Batschinski_Hildebrand_viscosity_term(HelmholtzEOSMixtureBackend &HEOS);
+    static long double viscosity_dilute_powers_of_T(HelmholtzEOSMixtureBackend &HEOS);
 
     /** 
     \brief The initial density dependence term \f$B_{\eta}\f$ from Rainwater-Friend theory
@@ -68,7 +64,23 @@ public:
 
     IMPORTANT: This function returns \f$B_{\eta}\f$, not \f$\eta_{RF}\f$
     */
-    static long double initial_density_dependence_viscosity_term(HelmholtzEOSMixtureBackend &HEOS);
+    static long double viscosity_initial_density_dependence_Rainwater_Friend(HelmholtzEOSMixtureBackend &HEOS);
+
+    /** 
+    \brief The modified Batschinski-Hildebrand contribution to the viscosity
+
+    \f[
+    \Delta\eta = \displaystyle\sum_{i}a_{i}\delta^{d1_i}\tau^{t1_j}+\left(\displaystyle\sum_{i}f_i\delta^{d2_i}\tau^{t2_i}\right)\left(\frac{1}{\delta_0(\tau)-\delta}-\frac{1}{\delta_0(\tau)}\right)
+    \f]
+    where \f$\tau = T_c/T\f$ and \f$\delta = \rho/\rho_c\f$ 
+    \f[
+    \delta_0(\tau) = \displaystyle\frac{\displaystyle\sum_{i}g_i\tau^{h_i}}{\displaystyle\sum_{i}p_i\tau^{q_i}}
+    \f]
+    The more general form of \f$\delta_0(\tau)\f$ is selected in order to be able to handle all the forms in the literature 
+    */
+    static long double modified_Batschinski_Hildebrand_viscosity_term(HelmholtzEOSMixtureBackend &HEOS);
+
+    
 };
 
 }; /* namespace CoolProp */

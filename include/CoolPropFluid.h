@@ -49,14 +49,19 @@ struct ViscosityDiluteGasCollisionIntegralData
     long double molar_mass, C;
     std::vector<long double> a, t;
 };
+struct ViscosityDiluteGasPowersOfT
+{
+    std::vector<long double> a, t;
+};
 struct ViscosityDiluteVariables
 {
     enum ViscosityDiluteEnum {VISCOSITY_DILUTE_COLLISION_INTEGRAL, 
                               VISCOSITY_DILUTE_KINETIC_THEORY, 
-                              VISCOSITY_DILUTE_POLYNOMIAL_IN_T
+                              VISCOSITY_DILUTE_POWERS_OF_T
                               };
     int type;
     ViscosityDiluteGasCollisionIntegralData collision_integral;
+    ViscosityDiluteGasPowersOfT powers_of_T;
 };
 
 struct ViscosityRainWaterFriendData

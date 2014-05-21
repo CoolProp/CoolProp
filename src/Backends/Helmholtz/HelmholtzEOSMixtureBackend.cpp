@@ -137,15 +137,17 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
         switch(components[0]->transport.viscosity_dilute.type)
         {
         case ViscosityDiluteVariables::VISCOSITY_DILUTE_KINETIC_THEORY:
-            eta_dilute = TransportRoutines::general_dilute_gas_viscosity(*this); break;
+            eta_dilute = TransportRoutines::viscosity_dilute_kinetic_theory(*this); break;
         case ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL:
-            eta_dilute = TransportRoutines::dilute_gas_viscosity(*this); break;
+            eta_dilute = TransportRoutines::viscosity_dilute_collision_integral(*this); break;
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_T:
+            eta_dilute = TransportRoutines::viscosity_dilute_powers_of_T(*this); break;
         default:
             throw ValueError(format("dilute viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
         }
         
         // Residual part
-        long double B_eta_initial = TransportRoutines::initial_density_dependence_viscosity_term(*this);
+        long double B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
         long double rho = rhomolar();
         long double initial_part = eta_dilute*B_eta_initial*rhomolar();
         long double delta_eta_h = TransportRoutines::modified_Batschinski_Hildebrand_viscosity_term(*this);

@@ -4,7 +4,7 @@
 
 namespace CoolProp{
 
-long double TransportRoutines::general_dilute_gas_viscosity(HelmholtzEOSMixtureBackend &HEOS)
+long double TransportRoutines::viscosity_dilute_kinetic_theory(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure)
     {
@@ -21,11 +21,11 @@ long double TransportRoutines::general_dilute_gas_viscosity(HelmholtzEOSMixtureB
         return 26.692e-9*sqrt(molar_mass_kgkmol*HEOS.T())/(pow(sigma_nm, 2)*OMEGA22); // Pa-s
     }
     else{
-        throw NotImplementedError("TransportRoutines::general_dilute_gas_viscosity is only for pure and pseudo-pure");
+        throw NotImplementedError("TransportRoutines::viscosity_dilute_kinetic_theory is only for pure and pseudo-pure");
     }
 }
 
-long double TransportRoutines::dilute_gas_viscosity(HelmholtzEOSMixtureBackend &HEOS)
+long double TransportRoutines::viscosity_dilute_collision_integral(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure)
     {
@@ -54,7 +54,27 @@ long double TransportRoutines::dilute_gas_viscosity(HelmholtzEOSMixtureBackend &
         return C*sqrt(molar_mass_kgkmol*HEOS.T())/(pow(sigma_nm, 2)*S); // Pa-s
     }
     else{
-        throw NotImplementedError("TransportRoutines::dilute_gas_viscosity is only for pure and pseudo-pure");
+        throw NotImplementedError("TransportRoutines::viscosity_dilute_collision_integral is only for pure and pseudo-pure");
+    }
+}
+
+long double TransportRoutines::viscosity_dilute_powers_of_T(HelmholtzEOSMixtureBackend &HEOS)
+{
+    if (HEOS.is_pure_or_pseudopure)
+    {
+        // Retrieve values from the state class
+        CoolProp::ViscosityDiluteGasPowersOfT &data = HEOS.components[0]->transport.viscosity_dilute.powers_of_T;
+        const std::vector<long double> &a = data.a, &t = data.t;
+
+        long double summer = 0, T = HEOS.T();
+        for (std::size_t i = 0; i < a.size(); ++i)
+        {
+            summer += a[i]*pow(T, t[i]);
+        }
+        return summer;
+    }
+    else{
+        throw NotImplementedError("TransportRoutines::viscosity_dilute_powers_of_T is only for pure and pseudo-pure");
     }
 }
 
@@ -66,7 +86,7 @@ long double TransportRoutines::modified_Batschinski_Hildebrand_viscosity_term(He
 
         long double delta = HEOS.rhomolar()/HO.rhomolar_reduce, tau = HO.T_reduce/HEOS.T();
 
-        // The first term that is formed of powers of tau and delta
+        // The first term that is formed of powers of tau (Tc/T) and delta (rho/rhoc)
         long double S = 0;
         for (unsigned int i = 0; i < HO.a.size(); ++i){
             S += HO.a[i]*pow(delta, HO.d1[i])*pow(tau, HO.t1[i])*exp(HO.gamma[i]*pow(delta, HO.l[i]));
@@ -89,7 +109,6 @@ long double TransportRoutines::modified_Batschinski_Hildebrand_viscosity_term(He
         }
         long double delta0 = summer_numer/summer_denom;
 
-        double Tr = 1/tau;
         // The higher-order-term component
         return S + F*(1/(delta0-delta)-1/delta0); // Pa-s
     }
@@ -98,7 +117,7 @@ long double TransportRoutines::modified_Batschinski_Hildebrand_viscosity_term(He
     }
 }
 
-long double TransportRoutines::initial_density_dependence_viscosity_term(HelmholtzEOSMixtureBackend &HEOS)
+long double TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure)
     {
@@ -119,7 +138,7 @@ long double TransportRoutines::initial_density_dependence_viscosity_term(Helmhol
         return B_eta; // [m^3/mol]
     }
     else{
-        throw NotImplementedError("TransportRoutines::initial_density_dependence_viscosity_term is only for pure and pseudo-pure");
+        throw NotImplementedError("TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend is only for pure and pseudo-pure");
     }
 }
 

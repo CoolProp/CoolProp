@@ -277,6 +277,16 @@ protected:
         else if (!type.compare("kinetic_theory")){
             fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_KINETIC_THEORY;
         }
+        else if (!type.compare("powers_of_T")){
+            // Get a reference to the entry in the fluid instance
+            CoolProp::ViscosityDiluteGasPowersOfT &CI = fluid.transport.viscosity_dilute.powers_of_T;
+
+            // Load up the values
+            CI.a = cpjson::get_long_double_array(dilute["a"]);
+            CI.t = cpjson::get_long_double_array(dilute["t"]);
+
+            fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_T;
+        }
         else{
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
         }
