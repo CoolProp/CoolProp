@@ -46,23 +46,12 @@ vel("n-Dodecane", "T", 500, "Dmolar", 3444.7, "V", 183.76e-6, 1e-3),
 vel("R125", "T", 300, "Dmolar", 10596.9998, "V", 177.37e-6, 1e-3),
 vel("R125", "T", 400, "Dmolar", 30.631, "V", 17.070e-6, 1e-3),
 
-//// From Michailidou, JPCRD, 2013
-//vel("Hexane", "T", 250, "Dmass", 1e-14, "V", 5.2584e-6, 1e-3),
-//vel("Hexane", "T", 400, "Dmass", 1e-14, "V", 8.4149e-6, 1e-3),
-//vel("Hexane", "T", 550, "Dmass", 1e-14, "V", 11.442e-6, 1e-3),
-//vel("Hexane", "T", 250, "Dmass", 700, "V", 528.2e-6, 1e-3),
-//vel("Hexane", "T", 400, "Dmass", 600, "V", 177.62e-6, 1e-3),
-//vel("Hexane", "T", 550, "Dmass", 500, "V", 95.002e-6, 1e-3),
-//
-//// From Vesovic, JPCRD, 1990
-//vel("CO2", "T", 220, "Dmass", 2.440, "V", 11.06e-6, 1e-3),
-//vel("CO2", "T", 300, "Dmass", 1.773, "V", 15.02e-6, 1e-3),
-//vel("CO2", "T", 800, "Dmass", 0.662, "V", 35.09e-6, 1e-3),
-//vel("CO2", "T", 304, "Dmass", 254.3205, "V", 20.89e-6, 1e-3),
-//vel("CO2", "T", 220, "Dmass", 1194.86, "V", 274.22e-6, 1e-3),
-//vel("CO2", "T", 300, "Dmass", 1029.27, "V", 133.15e-6, 1e-3),
-//vel("CO2", "T", 800, "Dmass", 407.828, "V", 48.62e-6, 1e-3),
-//
+//// From Fenghour, JPCRD, 1995
+//vel("Ammonia", "T", 200, "Dmolar", 3.9, "V", 6.95e-6, 1e-3),
+//vel("Ammonia", "T", 200, "Dmolar", 42754.4, "V", 507.28e-6, 1e-3),
+//vel("Ammonia", "T", 398, "Dmolar", 7044.7, "V", 17.67e-6, 1e-3),
+//vel("Ammonia", "T", 398, "Dmolar", 21066.7, "V", 43.95e-6, 1e-3),
+
 //// From Lemmon and Jacobsen, JPCRD, 2004
 //vel("Nitrogen", "T", 100, "Dmolar", 1e-14, "V", 6.90349e-6, 1e-3),
 //vel("Nitrogen", "T", 300, "Dmolar", 1e-14, "V", 17.8771e-6, 1e-3),
@@ -88,18 +77,23 @@ vel("R125", "T", 400, "Dmolar", 30.631, "V", 17.070e-6, 1e-3),
 //vel("Air", "T", 200, "Dmolar", 10000, "V", 21.1392e-6, 1e-3),
 //vel("Air", "T", 300, "Dmolar", 5000, "V", 21.3241e-6, 1e-3),
 //vel("Air", "T", 132.64, "Dmolar", 10400, "V", 17.7623e-6, 1e-3),
-//
-//// From Fenhour, JPCRD, 1995
-//vel("Ammonia", "T", 200, "Dmolar", 3.9, "V", 6.95e-6, 1e-3),
-//vel("Ammonia", "T", 200, "Dmolar", 42754.4, "V", 507.28e-6, 1e-3),
-//vel("Ammonia", "T", 398, "Dmolar", 7044.7, "V", 17.67e-6, 1e-3),
-//vel("Ammonia", "T", 398, "Dmolar", 21066.7, "V", 43.95e-6, 1e-3),
-//
 
+//// From Michailidou, JPCRD, 2013
+//vel("Hexane", "T", 250, "Dmass", 1e-14, "V", 5.2584e-6, 1e-3),
+//vel("Hexane", "T", 400, "Dmass", 1e-14, "V", 8.4149e-6, 1e-3),
+//vel("Hexane", "T", 550, "Dmass", 1e-14, "V", 11.442e-6, 1e-3),
+//vel("Hexane", "T", 250, "Dmass", 700, "V", 528.2e-6, 1e-3),
+//vel("Hexane", "T", 400, "Dmass", 600, "V", 177.62e-6, 1e-3),
+//vel("Hexane", "T", 550, "Dmass", 500, "V", 95.002e-6, 1e-3),
 //
-
-//
-//
+// From Fenghour, JPCRD, 1998
+vel("CO2", "T", 220, "Dmass", 2.440, "V", 11.06e-6, 1e-3),
+vel("CO2", "T", 300, "Dmass", 1.773, "V", 15.02e-6, 1e-3),
+vel("CO2", "T", 800, "Dmass", 0.662, "V", 35.09e-6, 1e-3),
+vel("CO2", "T", 304, "Dmass", 254.3205, "V", 20.99e-6, 1e-3),
+vel("CO2", "T", 220, "Dmass", 1194.86, "V", 269.37e-6, 1e-3),
+vel("CO2", "T", 300, "Dmass", 1029.27, "V", 132.55e-6, 1e-3),
+vel("CO2", "T", 800, "Dmass", 407.828, "V", 48.74e-6, 1e-3),
 //
 //// Tanaka, IJT, 1996
 //vel("R123", "T", 265, "Dmass", 1545.8, "V", 627.1e-6, 1e-3),

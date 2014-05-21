@@ -445,5 +445,100 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "CarbonDioxide"
+  "NAME": "CarbonDioxide", 
+  "TRANSPORT": {
+    "BibTeX": "Fenghour-JPCRD-1998", 
+    "_note": "sigma set to 1 nm in since sigma wrapped into constant in equation in Fenghour", 
+    "epsilon_over_k": 251.196, 
+    "epsilon_over_k_units": "K", 
+    "sigma_eta": 1e-09, 
+    "sigma_eta_units": "m", 
+    "viscosity": {
+      "dilute": {
+        "C": 1.5178953643112785e-07, 
+        "_note": "Leading coefficient was back calculated from 1.00697e-6/(44.0098)**0.5 (using sigma = 1 nm)", 
+        "a": [
+          0.235156, 
+          -0.491266, 
+          0.05211155, 
+          0.05347906, 
+          -0.01537102
+        ], 
+        "molar_mass": 0.0440098, 
+        "molar_mass_units": "kg/mol", 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "collision_integral"
+      }, 
+      "higher_order": {
+        "T_reduce": 304.1282, 
+        "T_reduce_units": "K", 
+        "_note": "All of the coefficients for higher order viscosity contribution were converted to be in terms of delta and tau", 
+        "a": [
+          1.90402164511e-06, 
+          1.5744549652e-05, 
+          1.4224275497e-07, 
+          6.80107946056e-08, 
+          -3.07804877068e-08
+        ], 
+        "d1": [
+          1, 
+          2, 
+          6, 
+          8, 
+          8
+        ], 
+        "d2": [
+          1
+        ], 
+        "f": [
+          0
+        ], 
+        "g": [
+          1
+        ], 
+        "gamma": [
+          0, 
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "h": [
+          0
+        ], 
+        "l": [
+          1, 
+          1, 
+          1, 
+          1, 
+          0
+        ], 
+        "p": [
+          1
+        ], 
+        "q": [
+          0
+        ], 
+        "rhomolar_reduce": 10624.9, 
+        "rhomolar_reduce_units": "mol/m^3", 
+        "t1": [
+          0, 
+          0, 
+          3, 
+          0, 
+          1
+        ], 
+        "t2": [
+          0
+        ], 
+        "type": "modified_Batschinski_Hildebrand"
+      }
+    }
+  }
 }

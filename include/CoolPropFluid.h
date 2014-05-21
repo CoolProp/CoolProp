@@ -51,7 +51,10 @@ struct ViscosityDiluteGasCollisionIntegralData
 };
 struct ViscosityDiluteVariables
 {
-    enum ViscosityDiluteEnum {VISCOSITY_DILUTE_COLLISION_INTEGRAL, VISCOSITY_DILUTE_KINETIC_THEORY};
+    enum ViscosityDiluteEnum {VISCOSITY_DILUTE_COLLISION_INTEGRAL, 
+                              VISCOSITY_DILUTE_KINETIC_THEORY, 
+                              VISCOSITY_DILUTE_POLYNOMIAL_IN_T
+                              };
     int type;
     ViscosityDiluteGasCollisionIntegralData collision_integral;
 };
