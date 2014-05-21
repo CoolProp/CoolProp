@@ -385,5 +385,97 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Nitrogen"
+  "NAME": "Nitrogen", 
+  "TRANSPORT": {
+    "BibTeX": "Lemmon-IJT-2004", 
+    "epsilon_over_k": 98.94, 
+    "epsilon_over_k_units": "K", 
+    "sigma_eta": 3.656e-10, 
+    "sigma_eta_units": "m", 
+    "viscosity": {
+      "dilute": {
+        "C": 2.66958e-08, 
+        "a": [
+          0.431, 
+          -0.4623, 
+          0.08406, 
+          0.005341, 
+          -0.00331
+        ], 
+        "molar_mass": 0.02801348, 
+        "molar_mass_units": "kg/mol", 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "collision_integral"
+      }, 
+      "higher_order": {
+        "T_reduce": 126.192, 
+        "T_reduce_units": "K", 
+        "a": [
+          1.072e-05, 
+          3.989e-08, 
+          1.208e-09, 
+          -7.402e-06, 
+          4.62e-06
+        ], 
+        "d1": [
+          2, 
+          10, 
+          12, 
+          2, 
+          1
+        ], 
+        "d2": [
+          1
+        ], 
+        "f": [
+          0
+        ], 
+        "g": [
+          1
+        ], 
+        "gamma": [
+          0, 
+          -1, 
+          -1, 
+          -1, 
+          -1
+        ], 
+        "h": [
+          0
+        ], 
+        "l": [
+          0, 
+          1, 
+          1, 
+          2, 
+          3
+        ], 
+        "p": [
+          1
+        ], 
+        "q": [
+          0
+        ], 
+        "rhomolar_reduce": 11183.9, 
+        "rhomolar_reduce_units": "mol/m^3", 
+        "t1": [
+          0.1, 
+          0.25, 
+          3.2, 
+          0.9, 
+          0.3
+        ], 
+        "t2": [
+          0
+        ], 
+        "type": "modified_Batschinski_Hildebrand"
+      }
+    }
+  }
 }

@@ -296,5 +296,97 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Air"
+  "NAME": "Air", 
+  "TRANSPORT": {
+    "BibTeX": "Lemmon-IJT-2004", 
+    "epsilon_over_k": 103.3, 
+    "epsilon_over_k_units": "K", 
+    "sigma_eta": 3.6e-10, 
+    "sigma_eta_units": "m", 
+    "viscosity": {
+      "dilute": {
+        "C": 2.66958e-08, 
+        "a": [
+          0.431, 
+          -0.4623, 
+          0.08406, 
+          0.005341, 
+          -0.00331
+        ], 
+        "molar_mass": 0.0289586, 
+        "molar_mass_units": "kg/mol", 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "collision_integral"
+      }, 
+      "higher_order": {
+        "T_reduce": 132.6312, 
+        "T_reduce_units": "K", 
+        "a": [
+          1.072e-05, 
+          1.122e-06, 
+          2.019e-09, 
+          -8.876e-06, 
+          2.916e-08
+        ], 
+        "d1": [
+          1, 
+          4, 
+          9, 
+          1, 
+          8
+        ], 
+        "d2": [
+          1
+        ], 
+        "f": [
+          0
+        ], 
+        "g": [
+          1
+        ], 
+        "gamma": [
+          0, 
+          0, 
+          0, 
+          -1, 
+          -1
+        ], 
+        "h": [
+          0
+        ], 
+        "l": [
+          0, 
+          0, 
+          0, 
+          1, 
+          1
+        ], 
+        "p": [
+          1
+        ], 
+        "q": [
+          0
+        ], 
+        "rhomolar_reduce": 10447.7, 
+        "rhomolar_reduce_units": "mol/m^3", 
+        "t1": [
+          0.2, 
+          0.05, 
+          2.4, 
+          0.6, 
+          3.6
+        ], 
+        "t2": [
+          0
+        ], 
+        "type": "modified_Batschinski_Hildebrand"
+      }
+    }
+  }
 }

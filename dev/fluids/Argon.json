@@ -382,5 +382,102 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Argon"
+  "NAME": "Argon", 
+  "TRANSPORT": {
+    "BibTeX": "Lemmon-IJT-2004", 
+    "epsilon_over_k": 143.2, 
+    "epsilon_over_k_units": "K", 
+    "sigma_eta": 3.35e-10, 
+    "sigma_eta_units": "m", 
+    "viscosity": {
+      "dilute": {
+        "C": 2.66958e-08, 
+        "a": [
+          0.431, 
+          -0.4623, 
+          0.08406, 
+          0.005341, 
+          -0.00331
+        ], 
+        "molar_mass": 0.039948, 
+        "molar_mass_units": "kg/mol", 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "collision_integral"
+      }, 
+      "higher_order": {
+        "T_reduce": 150.687, 
+        "T_reduce_units": "K", 
+        "a": [
+          1.219e-05, 
+          1.399e-05, 
+          5.027e-09, 
+          -1.893e-05, 
+          -6.698e-06, 
+          -3.827e-06
+        ], 
+        "d1": [
+          1, 
+          2, 
+          10, 
+          5, 
+          1, 
+          2
+        ], 
+        "d2": [
+          1
+        ], 
+        "f": [
+          0
+        ], 
+        "g": [
+          1
+        ], 
+        "gamma": [
+          0, 
+          0, 
+          0, 
+          -1, 
+          -1, 
+          -1
+        ], 
+        "h": [
+          0
+        ], 
+        "l": [
+          0, 
+          0, 
+          0, 
+          2, 
+          4, 
+          4
+        ], 
+        "p": [
+          1
+        ], 
+        "q": [
+          0
+        ], 
+        "rhomolar_reduce": 13407.43, 
+        "rhomolar_reduce_units": "mol/m^3", 
+        "t1": [
+          0.42, 
+          0.0, 
+          0.95, 
+          0.5, 
+          0.9, 
+          0.8
+        ], 
+        "t2": [
+          0
+        ], 
+        "type": "modified_Batschinski_Hildebrand"
+      }
+    }
+  }
 }

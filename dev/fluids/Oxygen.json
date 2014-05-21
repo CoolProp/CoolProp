@@ -358,5 +358,97 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Oxygen"
+  "NAME": "Oxygen", 
+  "TRANSPORT": {
+    "BibTeX": "Lemmon-IJT-2004", 
+    "epsilon_over_k": 118.5, 
+    "epsilon_over_k_units": "K", 
+    "sigma_eta": 3.428e-10, 
+    "sigma_eta_units": "m", 
+    "viscosity": {
+      "dilute": {
+        "C": 2.66958e-08, 
+        "a": [
+          0.431, 
+          -0.4623, 
+          0.08406, 
+          0.005341, 
+          -0.00331
+        ], 
+        "molar_mass": 0.0319988, 
+        "molar_mass_units": "kg/mol", 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "collision_integral"
+      }, 
+      "higher_order": {
+        "T_reduce": 154.581, 
+        "T_reduce_units": "K", 
+        "a": [
+          1.767e-05, 
+          4.042e-07, 
+          1.077e-10, 
+          3.51e-07, 
+          -1.367e-05
+        ], 
+        "d1": [
+          1, 
+          5, 
+          12, 
+          8, 
+          1
+        ], 
+        "d2": [
+          1
+        ], 
+        "f": [
+          0
+        ], 
+        "g": [
+          1
+        ], 
+        "gamma": [
+          0, 
+          0, 
+          0, 
+          -1, 
+          -1
+        ], 
+        "h": [
+          0
+        ], 
+        "l": [
+          0, 
+          0, 
+          0, 
+          1, 
+          2
+        ], 
+        "p": [
+          1
+        ], 
+        "q": [
+          0
+        ], 
+        "rhomolar_reduce": 13630, 
+        "rhomolar_reduce_units": "mol/m^3", 
+        "t1": [
+          0.05, 
+          0.0, 
+          2.1, 
+          0.0, 
+          0.5
+        ], 
+        "t2": [
+          0
+        ], 
+        "type": "modified_Batschinski_Hildebrand"
+      }
+    }
+  }
 }
