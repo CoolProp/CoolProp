@@ -33,54 +33,10 @@ vel("Propane", "T", 150, "Dmolar", 15.14e3, "V", 656.9e-6, 5e-3),
 vel("Propane", "T", 600, "Dmolar", 10.03e3, "V", 73.92e-6, 5e-3),
 vel("Propane", "T", 280, "Dmolar", 11.78e3, "V", 117.4e-6,1e-3),
 
-// From Michailidou, JPCRD, 2013
-vel("Hexane", "T", 250, "Dmass", 1e-14, "V", 5.2584e-6, 1e-3),
-vel("Hexane", "T", 400, "Dmass", 1e-14, "V", 8.4149e-6, 1e-3),
-vel("Hexane", "T", 550, "Dmass", 1e-14, "V", 11.442e-6, 1e-3),
-vel("Hexane", "T", 250, "Dmass", 700, "V", 528.2e-6, 1e-3),
-vel("Hexane", "T", 400, "Dmass", 600, "V", 177.62e-6, 1e-3),
-vel("Hexane", "T", 550, "Dmass", 500, "V", 95.002e-6, 1e-3),
-
-// From Vesovic, JPCRD, 1990
-vel("CO2", "T", 220, "Dmass", 2.440, "V", 11.06e-6, 1e-3),
-vel("CO2", "T", 300, "Dmass", 1.773, "V", 15.02e-6, 1e-3),
-vel("CO2", "T", 800, "Dmass", 0.662, "V", 35.09e-6, 1e-3),
-vel("CO2", "T", 304, "Dmass", 254.3205, "V", 20.89e-6, 1e-3),
-vel("CO2", "T", 220, "Dmass", 1194.86, "V", 274.22e-6, 1e-3),
-vel("CO2", "T", 300, "Dmass", 1029.27, "V", 133.15e-6, 1e-3),
-vel("CO2", "T", 800, "Dmass", 407.828, "V", 48.62e-6, 1e-3),
-
-// From Lemmon and Jacobsen, JPCRD, 2004
-vel("Nitrogen", "T", 100, "Dmolar", 1e-14, "V", 6.90349e-6, 1e-3),
-vel("Nitrogen", "T", 300, "Dmolar", 1e-14, "V", 17.8771e-6, 1e-3),
-vel("Nitrogen", "T", 100, "Dmolar", 25000, "V", 79.7418e-6, 1e-3),
-vel("Nitrogen", "T", 200, "Dmolar", 10000, "V", 21.0810e-6, 1e-3),
-vel("Nitrogen", "T", 300, "Dmolar", 5000, "V", 20.7430e-6, 1e-3),
-vel("Nitrogen", "T", 126.195, "Dmolar", 11180, "V", 18.2978e-6, 1e-3),
-vel("Argon", "T", 100, "Dmolar", 1e-14, "V", 8.18940e-6, 1e-3),
-vel("Argon", "T", 300, "Dmolar", 1e-14, "V", 22.7241e-6, 1e-3),
-vel("Argon", "T", 100, "Dmolar", 33000, "V", 184.232e-6, 1e-3),
-vel("Argon", "T", 200, "Dmolar", 10000, "V", 25.5662e-6, 1e-3),
-vel("Argon", "T", 300, "Dmolar", 5000, "V", 26.3706e-6, 1e-3),
-vel("Argon", "T", 150.69, "Dmolar", 13400, "V", 27.6101e-6, 1e-3),
-vel("Oxygen", "T", 100, "Dmolar", 1e-14, "V", 7.70243e-6, 1e-3),
-vel("Oxygen", "T", 300, "Dmolar", 1e-14, "V", 20.6307e-6, 1e-3),
-vel("Oxygen", "T", 100, "Dmolar", 35000, "V", 172.136e-6, 1e-3),
-vel("Oxygen", "T", 200, "Dmolar", 10000, "V", 22.4445e-6, 1e-3),
-vel("Oxygen", "T", 300, "Dmolar", 5000, "V", 23.7577e-6, 1e-3),
-vel("Oxygen", "T", 150.69, "Dmolar", 13600, "V", 24.7898e-6, 1e-3),
-vel("Air", "T", 100, "Dmolar", 1e-14, "V", 7.09559e-6, 1e-3),
-vel("Air", "T", 300, "Dmolar", 1e-14, "V", 18.5230e-6, 1e-3),
-vel("Air", "T", 100, "Dmolar", 28000, "V", 107.923e-6, 1e-3),
-vel("Air", "T", 200, "Dmolar", 10000, "V", 21.1392e-6, 1e-3),
-vel("Air", "T", 300, "Dmolar", 5000, "V", 21.3241e-6, 1e-3),
-vel("Air", "T", 132.64, "Dmolar", 10400, "V", 17.7623e-6, 1e-3),
-
-// From Fenhour, JPCRD, 1995
-vel("Ammonia", "T", 200, "Dmolar", 3.9, "V", 6.95e-6, 1e-3),
-vel("Ammonia", "T", 200, "Dmolar", 42754.4, "V", 507.28e-6, 1e-3),
-vel("Ammonia", "T", 398, "Dmolar", 7044.7, "V", 17.67e-6, 1e-3),
-vel("Ammonia", "T", 398, "Dmolar", 21066.7, "V", 43.95e-6, 1e-3),
+// Huber, FPE, 2004
+vel("n-Octane", "T", 300, "Dmolar", 6177.2, "V", 553.60e-6, 1e-3),
+vel("n-Nonane", "T", 300, "Dmolar", 5619.1, "V", 709.53e-6, 1e-3),
+vel("n-Decane", "T", 300, "Dmolar", 5150.4, "V", 926.44e-6, 1e-3),
 
 // Huber, Energy & Fuels, 2004
 vel("n-Dodecane", "T", 300, "Dmolar", 4411.5, "V", 1484.8e-6, 1e-3),
@@ -90,41 +46,91 @@ vel("n-Dodecane", "T", 500, "Dmolar", 3444.7, "V", 183.76e-6, 1e-3),
 vel("R125", "T", 300, "Dmolar", 10596.9998, "V", 177.37e-6, 1e-3),
 vel("R125", "T", 400, "Dmolar", 30.631, "V", 17.070e-6, 1e-3),
 
-// Huber, FPE, 2004
-vel("n-Octane", "T", 300, "Dmolar", 6177.2, "V", 553.60e-6, 1e-3),
-vel("n-Nonane", "T", 300, "Dmolar", 5619.1, "V", 709.53e-6, 1e-3),
-vel("n-Decane", "T", 300, "Dmolar", 5150.4, "V", 926.44e-6, 1e-3),
+//// From Michailidou, JPCRD, 2013
+//vel("Hexane", "T", 250, "Dmass", 1e-14, "V", 5.2584e-6, 1e-3),
+//vel("Hexane", "T", 400, "Dmass", 1e-14, "V", 8.4149e-6, 1e-3),
+//vel("Hexane", "T", 550, "Dmass", 1e-14, "V", 11.442e-6, 1e-3),
+//vel("Hexane", "T", 250, "Dmass", 700, "V", 528.2e-6, 1e-3),
+//vel("Hexane", "T", 400, "Dmass", 600, "V", 177.62e-6, 1e-3),
+//vel("Hexane", "T", 550, "Dmass", 500, "V", 95.002e-6, 1e-3),
+//
+//// From Vesovic, JPCRD, 1990
+//vel("CO2", "T", 220, "Dmass", 2.440, "V", 11.06e-6, 1e-3),
+//vel("CO2", "T", 300, "Dmass", 1.773, "V", 15.02e-6, 1e-3),
+//vel("CO2", "T", 800, "Dmass", 0.662, "V", 35.09e-6, 1e-3),
+//vel("CO2", "T", 304, "Dmass", 254.3205, "V", 20.89e-6, 1e-3),
+//vel("CO2", "T", 220, "Dmass", 1194.86, "V", 274.22e-6, 1e-3),
+//vel("CO2", "T", 300, "Dmass", 1029.27, "V", 133.15e-6, 1e-3),
+//vel("CO2", "T", 800, "Dmass", 407.828, "V", 48.62e-6, 1e-3),
+//
+//// From Lemmon and Jacobsen, JPCRD, 2004
+//vel("Nitrogen", "T", 100, "Dmolar", 1e-14, "V", 6.90349e-6, 1e-3),
+//vel("Nitrogen", "T", 300, "Dmolar", 1e-14, "V", 17.8771e-6, 1e-3),
+//vel("Nitrogen", "T", 100, "Dmolar", 25000, "V", 79.7418e-6, 1e-3),
+//vel("Nitrogen", "T", 200, "Dmolar", 10000, "V", 21.0810e-6, 1e-3),
+//vel("Nitrogen", "T", 300, "Dmolar", 5000, "V", 20.7430e-6, 1e-3),
+//vel("Nitrogen", "T", 126.195, "Dmolar", 11180, "V", 18.2978e-6, 1e-3),
+//vel("Argon", "T", 100, "Dmolar", 1e-14, "V", 8.18940e-6, 1e-3),
+//vel("Argon", "T", 300, "Dmolar", 1e-14, "V", 22.7241e-6, 1e-3),
+//vel("Argon", "T", 100, "Dmolar", 33000, "V", 184.232e-6, 1e-3),
+//vel("Argon", "T", 200, "Dmolar", 10000, "V", 25.5662e-6, 1e-3),
+//vel("Argon", "T", 300, "Dmolar", 5000, "V", 26.3706e-6, 1e-3),
+//vel("Argon", "T", 150.69, "Dmolar", 13400, "V", 27.6101e-6, 1e-3),
+//vel("Oxygen", "T", 100, "Dmolar", 1e-14, "V", 7.70243e-6, 1e-3),
+//vel("Oxygen", "T", 300, "Dmolar", 1e-14, "V", 20.6307e-6, 1e-3),
+//vel("Oxygen", "T", 100, "Dmolar", 35000, "V", 172.136e-6, 1e-3),
+//vel("Oxygen", "T", 200, "Dmolar", 10000, "V", 22.4445e-6, 1e-3),
+//vel("Oxygen", "T", 300, "Dmolar", 5000, "V", 23.7577e-6, 1e-3),
+//vel("Oxygen", "T", 150.69, "Dmolar", 13600, "V", 24.7898e-6, 1e-3),
+//vel("Air", "T", 100, "Dmolar", 1e-14, "V", 7.09559e-6, 1e-3),
+//vel("Air", "T", 300, "Dmolar", 1e-14, "V", 18.5230e-6, 1e-3),
+//vel("Air", "T", 100, "Dmolar", 28000, "V", 107.923e-6, 1e-3),
+//vel("Air", "T", 200, "Dmolar", 10000, "V", 21.1392e-6, 1e-3),
+//vel("Air", "T", 300, "Dmolar", 5000, "V", 21.3241e-6, 1e-3),
+//vel("Air", "T", 132.64, "Dmolar", 10400, "V", 17.7623e-6, 1e-3),
+//
+//// From Fenhour, JPCRD, 1995
+//vel("Ammonia", "T", 200, "Dmolar", 3.9, "V", 6.95e-6, 1e-3),
+//vel("Ammonia", "T", 200, "Dmolar", 42754.4, "V", 507.28e-6, 1e-3),
+//vel("Ammonia", "T", 398, "Dmolar", 7044.7, "V", 17.67e-6, 1e-3),
+//vel("Ammonia", "T", 398, "Dmolar", 21066.7, "V", 43.95e-6, 1e-3),
+//
 
-// Tanaka, IJT, 1996
-vel("R123", "T", 265, "Dmass", 1545.8, "V", 627.1e-6, 1e-3),
-vel("R123", "T", 265, "Dmass", 1.614, "V", 9.534e-6, 1e-3),
-vel("R123", "T", 415, "Dmass", 1079.4, "V", 121.3e-6, 1e-3),
-vel("R123", "T", 415, "Dmass", 118.9, "V", 15.82e-6, 1e-3),
+//
 
-// Krauss, IJT, 1996
-vel("R152A", "T", 242, "Dmass", 1025.5, "V", 347.3e-6, 1e-3),
-vel("R152A", "T", 242, "Dmass", 2.4868, "V", 8.174e-6, 1e-3),
-vel("R152A", "T", 384, "Dmass", 504.51, "V", 43.29e-6, 1e-3),
-vel("R152A", "T", 384, "Dmass", 239.35, "V", 21.01e-6, 1e-3),
-
-// Krauss, IJT, 1996
-vel("R152A", "T", 242, "Dmass", 1025.5, "V", 347.3e-6, 1e-3),
-vel("R152A", "T", 242, "Dmass", 2.4868, "V", 8.174e-6, 1e-3),
-vel("R152A", "T", 384, "Dmass", 504.51, "V", 43.29e-6, 1e-3),
-vel("R152A", "T", 384, "Dmass", 239.35, "V", 21.01e-6, 1e-3),
-
-// Huber, JPCRD, 2008 and IAPWS
-vel("Water", "T", 298.15, "Dmass", 998, "V", 889.735100e-6, 1e-3),
-vel("Water", "T", 298.15, "Dmass", 1200, "V", 1437.649467e-6, 1e-3),
-vel("Water", "T", 373.15, "Dmass", 1000, "V", 307.883622e-6, 1e-3),
-vel("Water", "T", 433.15, "Dmass", 1, "V", 14.538324e-6, 1e-3),
-vel("Water", "T", 433.15, "Dmass", 1000, "V", 217.685358e-6, 1e-3),
-vel("Water", "T", 873.15, "Dmass", 1, "V", 32.619287e-6, 1e-3),
-vel("Water", "T", 873.15, "Dmass", 100, "V", 35.802262e-6, 1e-3),
-vel("Water", "T", 873.15, "Dmass", 600, "V", 77.430195e-6, 1e-3),
-vel("Water", "T", 1173.15, "Dmass", 1, "V", 44.217245e-6, 1e-3),
-vel("Water", "T", 1173.15, "Dmass", 100, "V", 47.640433e-6, 1e-3),
-vel("Water", "T", 1173.15, "Dmass", 400, "V", 64.154608e-6, 1e-3),
+//
+//
+//
+//// Tanaka, IJT, 1996
+//vel("R123", "T", 265, "Dmass", 1545.8, "V", 627.1e-6, 1e-3),
+//vel("R123", "T", 265, "Dmass", 1.614, "V", 9.534e-6, 1e-3),
+//vel("R123", "T", 415, "Dmass", 1079.4, "V", 121.3e-6, 1e-3),
+//vel("R123", "T", 415, "Dmass", 118.9, "V", 15.82e-6, 1e-3),
+//
+//// Krauss, IJT, 1996
+//vel("R152A", "T", 242, "Dmass", 1025.5, "V", 347.3e-6, 1e-3),
+//vel("R152A", "T", 242, "Dmass", 2.4868, "V", 8.174e-6, 1e-3),
+//vel("R152A", "T", 384, "Dmass", 504.51, "V", 43.29e-6, 1e-3),
+//vel("R152A", "T", 384, "Dmass", 239.35, "V", 21.01e-6, 1e-3),
+//
+//// Krauss, IJT, 1996
+//vel("R152A", "T", 242, "Dmass", 1025.5, "V", 347.3e-6, 1e-3),
+//vel("R152A", "T", 242, "Dmass", 2.4868, "V", 8.174e-6, 1e-3),
+//vel("R152A", "T", 384, "Dmass", 504.51, "V", 43.29e-6, 1e-3),
+//vel("R152A", "T", 384, "Dmass", 239.35, "V", 21.01e-6, 1e-3),
+//
+//// Huber, JPCRD, 2008 and IAPWS
+//vel("Water", "T", 298.15, "Dmass", 998, "V", 889.735100e-6, 1e-3),
+//vel("Water", "T", 298.15, "Dmass", 1200, "V", 1437.649467e-6, 1e-3),
+//vel("Water", "T", 373.15, "Dmass", 1000, "V", 307.883622e-6, 1e-3),
+//vel("Water", "T", 433.15, "Dmass", 1, "V", 14.538324e-6, 1e-3),
+//vel("Water", "T", 433.15, "Dmass", 1000, "V", 217.685358e-6, 1e-3),
+//vel("Water", "T", 873.15, "Dmass", 1, "V", 32.619287e-6, 1e-3),
+//vel("Water", "T", 873.15, "Dmass", 100, "V", 35.802262e-6, 1e-3),
+//vel("Water", "T", 873.15, "Dmass", 600, "V", 77.430195e-6, 1e-3),
+//vel("Water", "T", 1173.15, "Dmass", 1, "V", 44.217245e-6, 1e-3),
+//vel("Water", "T", 1173.15, "Dmass", 100, "V", 47.640433e-6, 1e-3),
+//vel("Water", "T", 1173.15, "Dmass", 400, "V", 64.154608e-6, 1e-3),
 
 };
 

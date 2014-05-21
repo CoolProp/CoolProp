@@ -265,11 +265,17 @@ protected:
             // Get a reference to the entry in the fluid instance
             CoolProp::ViscosityDiluteGasCollisionIntegralData &CI = fluid.transport.viscosity_dilute.collision_integral;
 
+            // Set the type flag
+            fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL;
+
             // Load up the values
             CI.a = cpjson::get_long_double_array(dilute["a"]);
             CI.t = cpjson::get_long_double_array(dilute["t"]);
             CI.molar_mass = cpjson::get_double(dilute, "molar_mass");
             CI.C = cpjson::get_double(dilute, "C");
+        }
+        else if (!type.compare("kinetic_theory")){
+            fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_KINETIC_THEORY;
         }
         else{
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));

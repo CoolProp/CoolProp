@@ -133,7 +133,16 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
     if (is_pure_or_pseudopure)
     {
         // Dilute part
-        long double eta_dilute = TransportRoutines::dilute_gas_viscosity(*this);
+        long double eta_dilute;
+        switch(components[0]->transport.viscosity_dilute.type)
+        {
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_KINETIC_THEORY:
+            eta_dilute = TransportRoutines::general_dilute_gas_viscosity(*this); break;
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL:
+            eta_dilute = TransportRoutines::dilute_gas_viscosity(*this); break;
+        default:
+            throw ValueError(format("dilute viscosity type [%d] is invalid", components[0]->transport.viscosity_dilute.type));
+        }
         
         // Residual part
         long double B_eta_initial = TransportRoutines::initial_density_dependence_viscosity_term(*this);

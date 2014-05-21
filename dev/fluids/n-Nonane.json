@@ -253,5 +253,115 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "n-Nonane"
+  "NAME": "n-Nonane", 
+  "TRANSPORT": {
+    "BibTeX": "Huber-FPE-2004", 
+    "epsilon_over_k": 472.127, 
+    "epsilon_over_k_units": "K", 
+    "sigma_eta": 6.6383e-10, 
+    "sigma_eta_units": "m", 
+    "viscosity": {
+      "dilute": {
+        "C": 2.1357e-08, 
+        "a": [
+          0.340344, 
+          -0.466455
+        ], 
+        "molar_mass": 0.1282551, 
+        "molar_mass_units": "kg/mol", 
+        "t": [
+          0, 
+          1
+        ], 
+        "type": "collision_integral"
+      }, 
+      "higher_order": {
+        "T_reduce": 594.55, 
+        "T_reduce_units": "K", 
+        "a": [
+          -3.14367e-05, 
+          3.26258e-05, 
+          6.39384e-06, 
+          -1.08922e-05
+        ], 
+        "d1": [
+          2, 
+          2, 
+          3, 
+          3
+        ], 
+        "d2": [
+          1
+        ], 
+        "f": [
+          0.000192935
+        ], 
+        "g": [
+          2.66987, 
+          1.32137, 
+          0
+        ], 
+        "gamma": [
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "h": [
+          0, 
+          -0.5, 
+          -1
+        ], 
+        "l": [
+          1, 
+          1, 
+          1, 
+          1
+        ], 
+        "p": [
+          1
+        ], 
+        "q": [
+          0
+        ], 
+        "rhomolar_reduce": 1810.0, 
+        "rhomolar_reduce_units": "mol/m^3", 
+        "t1": [
+          1, 
+          2, 
+          1, 
+          2
+        ], 
+        "t2": [
+          0
+        ], 
+        "type": "modified_Batschinski_Hildebrand"
+      }, 
+      "initial_density": {
+        "b": [
+          -19.572881, 
+          219.73999, 
+          -1015.3226, 
+          2471.01251, 
+          -3375.1717, 
+          2491.6597, 
+          -787.26086, 
+          14.085455, 
+          -0.34664158
+        ], 
+        "t": [
+          0, 
+          -0.25, 
+          -0.5, 
+          -0.75, 
+          -1.0, 
+          -1.25, 
+          -1.5, 
+          -2.5, 
+          -5.5
+        ], 
+        "type": "Rainwater-Friend"
+      }
+    }
+  }
 }
