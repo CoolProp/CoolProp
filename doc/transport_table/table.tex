@@ -15,13 +15,11 @@ Fluid & Reference & $\eta^0$ & $\eta^r$ \\
 \hline
 
 Ammonia & (data) Fenghour 1995 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\Game(T^*)}$\newline$\mathfrak{S}(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ &  $\eta^r = B_{BV}\rho\eta^0(T) + \Delta\eta$\newline$\Delta\eta = \sum_i b_i(T)\rho^i$\\\hline
-Dimethyl Ether & Meng 2012 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\mathfrak{S}(T^*)}$\newline$\mathfrak{S}(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ & $\eta^r = \Delta\eta$\newline$\Delta\eta = \sum_{i=0}^{1}n_i\tau^{t_i}\delta^{d_i} + \sum_{i=2}^{6}n_i\tau^{t_i}\delta^{d_i}\exp(-\delta^{p_i})$\\\hline
 Ethanol & Kiselev 2005 & $\eta^0 = \sum_i a_i T^{n_i}$ & $\eta^r = B_{RF}\rho\eta^0(T)+\Delta \eta$ \newline $\Delta\eta = \displaystyle\sum_{i=2}^n\displaystyle\sum_{j=0}^me_{ij}\frac{\delta^i}{\tau_j}+f_1\left(\frac{\delta}{\delta_0(\tau)-\delta}-\frac{\delta}{\delta_0(\tau)}\right)$ \newline $\delta_0(\tau)=g_2+g_3\sqrt{\tau}$\\\hline
 R404A, R410A, R507, R407 & Geller 2000 & $\eta^0 = \sum_i A_iT^i$&$\eta^r = \sum_j b_j\rho^j$ \\\hline
 
 
 
-R134a & Huber 2003 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\mathfrak{S}(T^*)}$\newline$\mathfrak{S}(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ & $\eta^r = \eta^0(T)\rho B_{RF} + \Delta\eta$\newline$\Delta\eta = c_1\delta+\left(\frac{c_2}{\tau^6}+\frac{c_3}{\tau^2}+\frac{c_4}{\sqrt{\tau}}+c_5\tau^2\right)\delta^2+c_6\delta^3+c_7\left(\frac{1}{\delta_0-\delta}-\frac{1}{\delta_0}\right)$ \newline $\delta_0(\tau)=\frac{c_{10}}{1+c_8\tau+c_9\tau^2}$\\\hline
 \hline\hline
 Ethane & Friend 1991 & $\eta^0 = \dfrac{12.0085\sqrt{t}}{\Omega^{(2,2)*}(t)}$ \newline $\Omega^{(2,2)*}(t) = \left[\sum_i C_it^{(i-1)/3-1} \right]^{-1}$& $\Delta\eta = 15.977\left[\displaystyle\sum_i g_i\delta^{r_i}\tau^{s_i}\right]\left[1+\displaystyle\sum_{i=10}^{11}g_i\delta^{r_i}\tau^{s_i}\right]^{-1}$\\\hline
 
@@ -45,6 +43,8 @@ n-Dodecane & (data) Huber 2004 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\ma
 R125 & (data) Huber 2006 & $\eta^0 = \dfrac{5}{16}\sqrt{\dfrac{MkT}{\pi N}}\dfrac{1}{\sigma^2\Omega^*(T^*)}$\newline $\Omega(T^*)$ from Neufeld & $\eta^r = \eta^0(T)\rho B_{RF} + \Delta\eta$\newline$\Delta\eta = \displaystyle\sum_{i=2}^n\displaystyle\sum_{j=0}^me_{ij}\frac{\delta^i}{\tau_j}+c_1\left(\frac{\delta}{\delta_0-\delta}-\frac{\delta}{\delta_0(\tau)}\right)$ \newline $\delta_0(\tau)=c_2 +c_3\sqrt{\tau}$\\\hline
 Carbon Dioxide & (data) Fenghour 1998 & $\eta^0 = \dfrac{1.00697\sqrt{T}}{\sigma^2\mathfrak{S}(T^*)}$ \newline $\mathfrak{S}(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ &  $\Delta\eta = d_{11}\rho + d_{21}\rho^2+\frac{d_{64}\rho^6}{(T^*)^3}+d_{81}\rho^8+\frac{d_{82}\rho^8}{T^*}$ \newline $\Delta\eta = d_{11}\rho_c\delta + d_{21}\rho_c^2\delta^2+\frac{d_{64}\rho_c^6(\varepsilon/k)^3\delta^6\tau^3}{(T_c)^3}+\rho_c^8d_{81}\delta^8+\frac{\rho_c^8d_{82}\delta^8(\varepsilon/k)\tau}{T_c}$\\\hline
 Nitrogen, argon, oxygen air & (data) Lemmon and Jacobsen 2004 & $\eta^0 = \dfrac{0.0266958\sqrt{MT}}{\sigma^2\Omega(T^*)}$\newline$\Omega(T^*)=\exp\left(\sum_{i=0}^{4}b_i[\ln T^*]^i\right)$ & $\eta^r = \sum_{i=1}^NN_i\tau^{\tau_i}\delta^{d_i}\exp(-\gamma_i\delta^{l_i})$\\\hline
+R134a & Huber 2003 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\mathfrak{S}(T^*)}$\newline$\mathfrak{S}(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ & $\eta^r = \eta^0(T)\rho B_{RF} + \Delta\eta$\newline$\Delta\eta = c_1\delta+\left(\frac{c_2}{\tau^6}+\frac{c_3}{\tau^2}+\frac{c_4}{\sqrt{\tau}}+c_5\tau^2\right)\delta^2+c_6\delta^3+c_7\left(\frac{1}{\delta_0-\delta}-\frac{1}{\delta_0}\right)$ \newline $\delta_0(\tau)=\frac{c_{10}}{1+c_8\tau+c_9\tau^2}$\\\hline
+Dimethyl Ether & Meng 2012 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\mathfrak{S}(T^*)}$\newline$\mathfrak{S}(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ & $\eta^r = \Delta\eta$\newline$\Delta\eta = \sum_{i=0}^{1}n_i\tau^{t_i}\delta^{d_i} + \sum_{i=2}^{6}n_i\tau^{t_i}\delta^{d_i}\exp(-\delta^{p_i})$\\\hline
 \hline\hline
 \end{tabular}
 

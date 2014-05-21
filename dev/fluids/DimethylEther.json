@@ -292,5 +292,118 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "DimethylEther"
+  "NAME": "DimethylEther", 
+  "TRANSPORT": {
+    "BibTeX": "Meng-JCED-2012", 
+    "epsilon_over_k": 317.937, 
+    "epsilon_over_k_units": "K", 
+    "sigma_eta": 4.46704e-10, 
+    "sigma_eta_units": "m", 
+    "viscosity": {
+      "dilute": {
+        "C": 2.1357e-08, 
+        "a": [
+          0.294261, 
+          -0.377826, 
+          -0.491673
+        ], 
+        "molar_mass": 0.04606844, 
+        "molar_mass_units": "kg/mol", 
+        "t": [
+          0, 
+          1, 
+          2
+        ], 
+        "type": "collision_integral"
+      }, 
+      "higher_order": {
+        "T_reduce": 400.378, 
+        "T_reduce_units": "K", 
+        "a": [
+          -2.70002e-06, 
+          4.44583e-06, 
+          2.1302e-07, 
+          6.50681e-06, 
+          -0.000104998, 
+          7.827474e-05, 
+          4.13751e-05, 
+          -0.000175055, 
+          6.281975e-05, 
+          0.0001123219
+        ], 
+        "d1": [
+          3, 
+          3, 
+          5, 
+          1, 
+          3, 
+          4, 
+          5, 
+          2, 
+          2, 
+          2
+        ], 
+        "d2": [
+          1
+        ], 
+        "f": [
+          0
+        ], 
+        "g": [
+          1
+        ], 
+        "gamma": [
+          0, 
+          0, 
+          0, 
+          0, 
+          -1, 
+          -1, 
+          -1, 
+          -1, 
+          -1, 
+          -1
+        ], 
+        "h": [
+          0
+        ], 
+        "l": [
+          0, 
+          0, 
+          0, 
+          0, 
+          1, 
+          1, 
+          2, 
+          1, 
+          1, 
+          2
+        ], 
+        "p": [
+          1
+        ], 
+        "q": [
+          0
+        ], 
+        "rhomolar_reduce": 5940, 
+        "rhomolar_reduce_units": "mol/m^3", 
+        "t1": [
+          5.92, 
+          4.36, 
+          5.87, 
+          0.45, 
+          2.93, 
+          1.64, 
+          7.86, 
+          4.25, 
+          4.79, 
+          3.11
+        ], 
+        "t2": [
+          0
+        ], 
+        "type": "modified_Batschinski_Hildebrand"
+      }
+    }
+  }
 }
