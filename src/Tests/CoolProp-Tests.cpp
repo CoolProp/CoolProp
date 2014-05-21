@@ -46,6 +46,12 @@ vel("n-Dodecane", "T", 500, "Dmolar", 3444.7, "V", 183.76e-6, 1e-3),
 vel("R125", "T", 300, "Dmolar", 10596.9998, "V", 177.37e-6, 1e-3),
 vel("R125", "T", 400, "Dmolar", 30.631, "V", 17.070e-6, 1e-3),
 
+// From REFPROP 9.1 since Huber I&ECR 2003 does not provide validation data
+vel("R134a", "T", 185, "Q", 0, "V", 0.0012698376398294414, 1e-3),
+vel("R134a", "T", 185, "Q", 1, "V", 7.4290821400170869e-006, 1e-3),
+vel("R134a", "T", 360, "Q", 0, "V", 7.8146319978982133e-005, 1e-3),
+vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-3),
+
 //// From Fenghour, JPCRD, 1995
 //vel("Ammonia", "T", 200, "Dmolar", 3.9, "V", 6.95e-6, 1e-3),
 //vel("Ammonia", "T", 200, "Dmolar", 42754.4, "V", 507.28e-6, 1e-3),
