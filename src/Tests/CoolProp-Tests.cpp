@@ -182,9 +182,9 @@ TEST_CASE_METHOD(ViscosityValidationFixture, "Compare viscosities against publis
 
 static int inputs[] = {
     CoolProp::DmolarT_INPUTS,
-    CoolProp::SmolarT_INPUTS,
-    CoolProp::HmolarT_INPUTS, 
-    CoolProp::TUmolar_INPUTS,
+    //CoolProp::SmolarT_INPUTS,
+    //CoolProp::HmolarT_INPUTS, 
+    //CoolProp::TUmolar_INPUTS,
 
     CoolProp::DmolarP_INPUTS, 
     CoolProp::DmolarHmolar_INPUTS, 
