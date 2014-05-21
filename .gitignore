@@ -37,3 +37,4 @@
 /include/catch.hpp
 /build/
 /dev/hashes.json
+/include/cpversion.h

@@ -249,5 +249,92 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R152A"
+  "NAME": "R152A", 
+  "TRANSPORT": {
+    "BibTeX": "Krauss-IJT-1996", 
+    "epsilon_over_k": 354.84, 
+    "epsilon_over_k_units": "K", 
+    "sigma_eta": 4.6115e-10, 
+    "sigma_eta_units": "m", 
+    "viscosity": {
+      "dilute": {
+        "C": 2.6695992007227643e-08, 
+        "a": [
+          0.4425728, 
+          -0.5138403, 
+          0.1547566, 
+          -0.02821844, 
+          0.001578286
+        ], 
+        "molar_mass": 0.06605, 
+        "molar_mass_units": "kg/mol", 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "collision_integral"
+      }, 
+      "higher_order": {
+        "T_reduce": 386.411, 
+        "T_reduce_units": "K", 
+        "a": [
+          -3.772282824e-06, 
+          2.647627488e-05, 
+          -1.578969e-05, 
+          5.52346488e-06
+        ], 
+        "d1": [
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "d2": [
+          0
+        ], 
+        "f": [
+          2.087674344e-05
+        ], 
+        "g": [
+          2.91733
+        ], 
+        "gamma": [
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "h": [
+          0
+        ], 
+        "l": [
+          1, 
+          1, 
+          1, 
+          1
+        ], 
+        "p": [
+          1
+        ], 
+        "q": [
+          0
+        ], 
+        "rhomolar_reduce": 5571.536714610144, 
+        "rhomolar_reduce_units": "mol/m^3", 
+        "t1": [
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "t2": [
+          0
+        ], 
+        "type": "modified_Batschinski_Hildebrand"
+      }
+    }
+  }
 }
