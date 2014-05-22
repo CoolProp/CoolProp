@@ -82,6 +82,9 @@ public:
     */
     static long double viscosity_higher_order_modified_Batschinski_Hildebrand(HelmholtzEOSMixtureBackend &HEOS);
 
+    static long double viscosity_dilute_ethane(HelmholtzEOSMixtureBackend &HEOS);
+    static long double viscosity_ethane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+
     static long double viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
 
     static long double viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend &HEOS);

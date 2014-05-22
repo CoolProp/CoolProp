@@ -158,6 +158,8 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
             eta_dilute = TransportRoutines::viscosity_dilute_powers_of_T(*this); break;
         case ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR:
             eta_dilute = TransportRoutines::viscosity_dilute_collision_integral_powers_of_T(*this); break;
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE:
+            eta_dilute = TransportRoutines::viscosity_dilute_ethane(*this); break;
         default:
             throw ValueError(format("dilute viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
         }
@@ -179,7 +181,8 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
             delta_eta_h = TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(*this); break;
         case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEXANE:
             delta_eta_h = TransportRoutines::viscosity_hexane_higher_order_hardcoded(*this); break;
-        
+        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_ETHANE:
+            delta_eta_h = TransportRoutines::viscosity_ethane_higher_order_hardcoded(*this); break;
         default:
             throw ValueError(format("higher order viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
         }

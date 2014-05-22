@@ -63,12 +63,16 @@ struct ViscosityDiluteVariables
     enum ViscosityDiluteEnum {VISCOSITY_DILUTE_COLLISION_INTEGRAL, 
                               VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR, 
                               VISCOSITY_DILUTE_KINETIC_THEORY, 
-                              VISCOSITY_DILUTE_POWERS_OF_T
+                              VISCOSITY_DILUTE_ETHANE,
+                              VISCOSITY_DILUTE_POWERS_OF_T,
+                              VISCOSITY_DILUTE_NOT_SET
                               };
     int type;
     ViscosityDiluteGasCollisionIntegralData collision_integral;
     ViscosityDiluteCollisionIntegralPowersOfTstarData collision_integral_powers_of_Tstar;
     ViscosityDiluteGasPowersOfT powers_of_T;
+
+    ViscosityDiluteVariables(){type = VISCOSITY_DILUTE_NOT_SET;}
 };
 
 struct ViscosityRainWaterFriendData
@@ -96,6 +100,7 @@ struct ViscosityHigherOrderVariables
     enum ViscosityDiluteEnum {VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND, 
                               VISCOSITY_HIGHER_ORDER_HYDROGEN,
                               VISCOSITY_HIGHER_ORDER_HEXANE,
+                              VISCOSITY_HIGHER_ORDER_ETHANE,
                               VISCOSITY_HIGHER_ORDER_FRICTION_THEORY,
                               VISCOSITY_HIGHER_ORDER_NOT_SET
                               };

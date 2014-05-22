@@ -183,6 +183,11 @@ vel("Helium", "T", 400, "P", 0.180e6, "V", 24.29e-6, 1e-2),
 vel("R23", "T", 180, "Dmolar", 21097, "V", 353.88e-6, 1e-4),
 vel("R23", "T", 420, "Dmolar", 7564, "V", 39.459e-6, 1e-4),
 vel("R23", "T", 370, "Dmolar", 32.62, "V", 18.213e-6, 1e-4),
+
+// From Friend, JPCRD, 1991
+vel("Ethane", "T", 100, "Dmolar", 21330, "V", 878.6e-6, 1e-2),
+vel("Ethane", "T", 430, "Dmolar", 12780, "V", 58.70e-6, 1e-2),
+vel("Ethane", "T", 500, "Dmolar", 11210, "V", 48.34e-6, 1e-2),
 };
 
 class ViscosityValidationFixture

@@ -414,5 +414,20 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Ethane"
+  "NAME": "Ethane", 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Friend-JPCRD-1991", 
+      "dilute": {
+        "hardcoded": "Ethane"
+      }, 
+      "epsilon_over_k": 245.0, 
+      "epsilon_over_k_units": "K", 
+      "higher_order": {
+        "hardcoded": "Ethane"
+      }, 
+      "sigma_eta": 4.3682e-10, 
+      "sigma_eta_units": "m"
+    }
+  }
 }

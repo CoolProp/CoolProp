@@ -260,6 +260,12 @@ protected:
     /// Parse the transport properties
     void parse_dilute_viscosity(rapidjson::Value &dilute, CoolPropFluid & fluid)
     {
+        if (dilute.HasMember("hardcoded")){
+            std::string target = cpjson::get_string(dilute, "hardcoded");
+            if (!target.compare("Ethane")){
+                fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE; return;
+            }
+        }
         std::string type = cpjson::get_string(dilute, "type");
         if (!type.compare("collision_integral")){
             // Get a reference to the entry in the fluid instance
@@ -328,12 +334,13 @@ protected:
         if (higher.HasMember("hardcoded")){
             std::string target = cpjson::get_string(higher,"hardcoded");
             if (!target.compare("Hydrogen")){
-                fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HYDROGEN;
-                return;
+                fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HYDROGEN; return;
             }
             else if (!target.compare("n-Hexane")){
-                fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEXANE;
-                return;
+                fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEXANE; return;
+            }
+            else if (!target.compare("Ethane")){
+                fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_ETHANE; return;
             }
             else{
                 throw ValueError(format("hardcoded higher order viscosity term [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
