@@ -78,6 +78,12 @@ struct ViscosityModifiedBatschinskiHildebrandData
     std::vector<long double> a,d1,d2,t1,t2,f,g,h,p,q,gamma, l;
     long double T_reduce, rhomolar_reduce;
 };
+struct ViscosityFrictionTheoryData
+{
+    std::vector<long double> Aa, Aaa, Aaaa, Ar, Arr, Arrr, Ai, Aii;
+    int Na, Naa, Naaa, Nr, Nrr, Nrrr, Nii;
+    long double c1, c2, T_reduce, rhomolar_reduce;
+};
 struct ViscosityHigherOrderVariables
 {
     enum ViscosityDiluteEnum {VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND, 
@@ -88,6 +94,7 @@ struct ViscosityHigherOrderVariables
                               };
     int type;
     ViscosityModifiedBatschinskiHildebrandData modified_Batschinski_Hildebrand;
+    ViscosityFrictionTheoryData friction_theory;
     ViscosityHigherOrderVariables(){type = VISCOSITY_HIGHER_ORDER_NOT_SET;};
 };
 

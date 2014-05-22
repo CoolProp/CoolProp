@@ -140,6 +140,14 @@ vel("Water", "T", 1173.15, "Dmass", 1, "V", 44.217245e-6, 1e-3),
 vel("Water", "T", 1173.15, "Dmass", 100, "V", 47.640433e-6, 1e-3),
 vel("Water", "T", 1173.15, "Dmass", 400, "V", 64.154608e-6, 1e-3),
 
+// 
+vel("SF6", "T", 300, "Dmass", 1e-14, "V", 15.2887e-6, 1e-3),
+vel("SF6", "T", 300, "Dmass", 5.92, "V", 15.3043e-6, 1e-3),
+vel("SF6", "T", 300, "Dmass", 1345.1, "V", 117.417e-6, 1e-3),
+vel("SF6", "T", 400, "Dmass", 1e-14, "V", 19.6796e-6, 1e-3),
+vel("SF6", "T", 400, "Dmass", 278.47, "V", 24.4272e-6, 1e-3),
+vel("SF6", "T", 400, "Dmass", 1123.8, "V", 84.7835e-6, 1e-3),
+
 };
 
 class ViscosityValidationFixture

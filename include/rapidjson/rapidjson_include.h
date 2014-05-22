@@ -21,6 +21,17 @@ typedef unsigned int UINT32;
 
 namespace cpjson
 {
+    /// A convenience function to get a double from a JSON value, including error checking
+	inline int get_integer(rapidjson::Value &v, std::string m)
+	{
+		if (!v.HasMember(m.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",m.c_str())); }
+		rapidjson::Value &el = v[m.c_str()];
+        if (!el.IsInt()){  throw CoolProp::ValueError(format("Member [%s] is not an integer",m.c_str())); }
+		else
+		{
+            return el.GetInt();
+		}
+	};
 	/// A convenience function to get a double from a JSON value, including error checking
 	inline double get_double(rapidjson::Value &v, std::string m)
 	{

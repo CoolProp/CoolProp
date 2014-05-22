@@ -78,7 +78,7 @@ public:
     \f]
     The more general form of \f$\delta_0(\tau)\f$ is selected in order to be able to handle all the forms in the literature 
     */
-    static long double modified_Batschinski_Hildebrand_viscosity_term(HelmholtzEOSMixtureBackend &HEOS);
+    static long double viscosity_higher_order_modified_Batschinski_Hildebrand(HelmholtzEOSMixtureBackend &HEOS);
 
     static long double viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
 
@@ -86,6 +86,7 @@ public:
 
     static long double viscosity_hexane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     
+    static long double viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend &HEOS);
 }; /* class TransportRoutines */
 
 }; /* namespace CoolProp */

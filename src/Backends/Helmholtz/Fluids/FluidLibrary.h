@@ -360,6 +360,41 @@ protected:
             BH.q = cpjson::get_long_double_array(higher["q"]);
             assert(BH.p.size() == BH.q.size());
         }
+        else if (!type.compare("friction_theory")){
+            // Get a reference to the entry in the fluid instance to simplify the code that follows
+            CoolProp::ViscosityFrictionTheoryData &F = fluid.transport.viscosity_higher_order.friction_theory;
+            
+            // Set the flag for the type of this model
+            fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_FRICTION_THEORY;
+
+            // Always need these terms
+            F.Ai = cpjson::get_long_double_array(higher["Ai"]);
+            F.Aa = cpjson::get_long_double_array(higher["Aa"]);
+            F.Aaa = cpjson::get_long_double_array(higher["Aaa"]);
+            F.Ar = cpjson::get_long_double_array(higher["Ar"]);
+            F.Arr = cpjson::get_long_double_array(higher["Arr"]);
+            F.Na = cpjson::get_integer(higher,"Na");
+            F.Naa = cpjson::get_integer(higher,"Naa");
+            F.Nr = cpjson::get_integer(higher,"Nr");
+            F.Nrr = cpjson::get_integer(higher,"Nrr");
+            F.c1 = cpjson::get_double(higher,"c1");
+            F.c2 = cpjson::get_double(higher,"c2");
+            assert(F.Aa.size() == 3);
+            assert(F.Aaa.size() == 3);
+            assert(F.Ar.size() == 3);
+            assert(F.Arr.size() == 3);
+            F.T_reduce = cpjson::get_double(higher,"T_reduce");
+
+            if (higher.HasMember("Aaaa") && higher.HasMember("Arrr") && higher.HasMember("Aii")){
+                F.Aaaa = cpjson::get_long_double_array(higher["Aaaa"]);
+                F.Arrr = cpjson::get_long_double_array(higher["Arrr"]);
+                F.Aii = cpjson::get_long_double_array(higher["Aii"]);
+                F.Naaa = cpjson::get_integer(higher,"Naaa");
+                F.Nrrr = cpjson::get_integer(higher,"Nrrr");
+                F.Nii = cpjson::get_integer(higher,"Nii");
+            }
+
+        }
         else{
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(), fluid.name.c_str()));
         }
