@@ -101,6 +101,8 @@ std::string LoadedREFPROPRef;
   #endif
 #endif
 
+std::string endings[] = {".fld", ".ppf"};
+
 static char rel_path_HMC_BNC[] = "HMX.BNC";
 static char default_reference_state[] = "DEF";
 
@@ -502,52 +504,60 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
     }
 
-    // Build the mixture string
-    for (unsigned int j = 0; j < (unsigned int)N; j++)
-    {
-        if (j == 0){
-            components_joined = fdPath + fluid_names[j]+".fld";
-        }
-        else{
-            components_joined += "|" + fdPath + fluid_names[j]+".fld";
-        }
-    }
+    // Loop over the file names - first we try with .fld, then .ppf - means you can't mix and match
 
-    // Load REFPROP if it isn't loaded yet
-    load_REFPROP();
+    for (unsigned int k = 0; k < 2; k++)
+    {
+        // Build the mixture string
+        for (unsigned int j = 0; j < (unsigned int)N; j++)
+        {
+            if (j == 0){
+                components_joined = fdPath + fluid_names[j]+endings[k];
+            }
+            else{
+                components_joined += "|" + fdPath + fluid_names[j]+endings[k];
+            }
+        }
+
+        // Load REFPROP if it isn't loaded yet
+        load_REFPROP();
     
-    // If the name of the refrigerant doesn't match 
-    // that of the currently loaded refrigerant
-    if (LoadedREFPROPRef.compare(components_joined))
-    {
-        char path_HMX_BNC[refpropcharlength];
-        //strcpy(path_HMX_BNC,fdPath.c_str());
-        strcpy(path_HMX_BNC, rel_path_HMC_BNC);
-        strcpy(component_string, components_joined.c_str());
+        // If the name of the refrigerant doesn't match 
+        // that of the currently loaded refrigerant
+        if (LoadedREFPROPRef.compare(components_joined))
+        {
+            char path_HMX_BNC[refpropcharlength];
+            //strcpy(path_HMX_BNC,fdPath.c_str());
+            strcpy(path_HMX_BNC, rel_path_HMC_BNC);
+            strcpy(component_string, components_joined.c_str());
 
-        //...Call SETUP to initialize the program
-        SETUPdll(&N, component_string, path_HMX_BNC, default_reference_state,
-                 &ierr, herr,
-                 10000, // Length of component_string (see PASS_FTN.for from REFPROP)
-                 refpropcharlength, // Length of path_HMX_BNC
-                 lengthofreference, // Length of reference
-                 errormessagelength // Length of error message
-                 );
+            //...Call SETUP to initialize the program
+            SETUPdll(&N, component_string, path_HMX_BNC, default_reference_state,
+                     &ierr, herr,
+                     10000, // Length of component_string (see PASS_FTN.for from REFPROP)
+                     refpropcharlength, // Length of path_HMX_BNC
+                     lengthofreference, // Length of reference
+                     errormessagelength // Length of error message
+                     );
 
-        if (ierr == 0) // Success
-        {
-            Ncomp = N;
-            mole_fractions.resize(N);
-            mole_fractions_liq.resize(N);
-            mole_fractions_vap.resize(N);
-        }
-        else if (ierr > 0) // Error
-        {
-            throw ValueError(format("%s",herr));
-        }
-        else // Warning
-        {
-            throw ValueError(format("%s",herr));
+            if (ierr == 0) // Success
+            {
+                Ncomp = N;
+                mole_fractions.resize(N);
+                mole_fractions_liq.resize(N);
+                mole_fractions_vap.resize(N);
+                return;
+            }
+            else if (ierr > 0) // Error
+            {
+                if (k==0) continue;
+                else
+                    throw ValueError(format("%s",herr));
+            }
+            else // Warning
+            {
+                throw ValueError(format("%s",herr));
+            }
         }
     }
 }
