@@ -44,6 +44,8 @@ public:
     */
     static long double viscosity_dilute_powers_of_T(HelmholtzEOSMixtureBackend &HEOS);
 
+    static long double viscosity_dilute_collision_integral_powers_of_T(HelmholtzEOSMixtureBackend &HEOS);
+
     /** 
     \brief The initial density dependence term \f$B_{\eta}\f$ from Rainwater-Friend theory
 

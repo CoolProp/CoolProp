@@ -152,6 +152,8 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
             eta_dilute = TransportRoutines::viscosity_dilute_collision_integral(*this); break;
         case ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_T:
             eta_dilute = TransportRoutines::viscosity_dilute_powers_of_T(*this); break;
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR:
+            eta_dilute = TransportRoutines::viscosity_dilute_collision_integral_powers_of_T(*this); break;
         default:
             throw ValueError(format("dilute viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
         }

@@ -78,6 +78,26 @@ long double TransportRoutines::viscosity_dilute_powers_of_T(HelmholtzEOSMixtureB
     }
 }
 
+long double TransportRoutines::viscosity_dilute_collision_integral_powers_of_T(HelmholtzEOSMixtureBackend &HEOS)
+{
+    if (HEOS.is_pure_or_pseudopure)
+    {
+        // Retrieve values from the state class
+        CoolProp::ViscosityDiluteCollisionIntegralPowersOfTstarData &data = HEOS.components[0]->transport.viscosity_dilute.collision_integral_powers_of_Tstar;
+        const std::vector<long double> &a = data.a, &t = data.t;
+
+        long double summer = 0, Tstar = HEOS.T()/data.T_reducing;
+        for (std::size_t i = 0; i < a.size(); ++i)
+        {
+            summer += a[i]*pow(Tstar, t[i]);
+        }
+        return data.C*sqrt(HEOS.T())/summer;
+    }
+    else{
+        throw NotImplementedError("TransportRoutines::viscosity_dilute_collision_integral_powers_of_T is only for pure and pseudo-pure");
+    }
+
+}
 long double TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure)
@@ -273,7 +293,7 @@ long double TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzE
     {
         CoolProp::ViscosityFrictionTheoryData &F = HEOS.components[0]->transport.viscosity_higher_order.friction_theory;
 
-        long double tau = F.T_reduce/HEOS.T(), kii, krrr, kaaa;
+        long double tau = F.T_reduce/HEOS.T(), kii, krrr, kaaa, krr, kdrdr;
 
         double psi1 = exp(tau)-F.c1;
 	    double psi2 = exp(pow(tau,2))-F.c2;
@@ -283,9 +303,16 @@ long double TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzE
         double ka = (F.Aa[0] + F.Aa[1]*psi1 + F.Aa[2]*psi2)*pow(tau, F.Na);
 	    double kr = (F.Ar[0] + F.Ar[1]*psi1 + F.Ar[2]*psi2)*pow(tau, F.Nr);
 	    double kaa = (F.Aaa[0] + F.Aaa[1]*psi1 + F.Aaa[2]*psi2)*pow(tau, F.Naa);
-	    double krr = (F.Arr[0] + F.Arr[1]*psi1 + F.Arr[2]*psi2)*pow(tau, F.Nrr);
+        if (F.Arr.empty()){
+            krr = 0;
+            kdrdr = (F.Adrdr[0] + F.Adrdr[1]*psi1 + F.Adrdr[2]*psi2)*pow(tau, F.Nrr);
+        }
+        else{
+	        krr = (F.Arr[0] + F.Arr[1]*psi1 + F.Arr[2]*psi2)*pow(tau, F.Nrr);
+            kdrdr = 0;
+        }
 
-        if (!F.Aii.empty() && !F.Aii.empty() && !F.Aii.empty()){
+        if (!F.Aii.empty() && !F.Arrr.empty() && !F.Aaaa.empty()){
 	        kii = (F.Aii[0] + F.Aii[1]*psi1 + F.Aii[2]*psi2)*pow(tau, F.Nii);
 	        krrr = (F.Arrr[0] + F.Arrr[1]*psi1 + F.Arrr[2]*psi2)*pow(tau, F.Nrrr);
 	        kaaa = (F.Aaaa[0] + F.Aaaa[1]*psi1 + F.Aaaa[2]*psi2)*pow(tau, F.Naaa);
@@ -302,9 +329,9 @@ long double TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzE
         double pid = HEOS.rhomolar() * HEOS.gas_constant() * HEOS.T() / 1e5; // [bar]; 1e5 for conversion from Pa -> bar
 	    double deltapr = pr - pid;
 
-	    double eta_f = ka*pa + kr*deltapr + ki*pid + kaa*pa*pa + krr*deltapr*deltapr + kii*pid*pid + krrr*pr*pr*pr + kaaa*pa*pa*pa;
+	    double eta_f = ka*pa + kr*deltapr + ki*pid + kaa*pa*pa + kdrdr*deltapr*deltapr + krr*pr*pr + kii*pid*pid + krrr*pr*pr*pr + kaaa*pa*pa*pa;
         
-        return eta_f/1000;
+        return eta_f; //[Pa-s]
     }
     else{
         throw NotImplementedError("TransportRoutines::viscosity_higher_order_friction_theory is only for pure and pseudo-pure");

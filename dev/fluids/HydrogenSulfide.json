@@ -257,5 +257,95 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "HydrogenSulfide"
+  "NAME": "HydrogenSulfide", 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "QuinonesCisneros-JCED-2012", 
+      "dilute": {
+        "C": 8.7721e-07, 
+        "T_reducing": 276, 
+        "a": [
+          0.53242, 
+          0.93715, 
+          -0.69339, 
+          1.16432, 
+          -0.84306, 
+          0.20534
+        ], 
+        "t": [
+          0, 
+          -1, 
+          -2, 
+          -3, 
+          -4, 
+          -5
+        ], 
+        "type": "collision_integral_powers_of_Tstar"
+      }, 
+      "epsilon_over_k": 355.8, 
+      "epsilon_over_k_units": "K", 
+      "higher_order": {
+        "Aa": [
+          6.89659e-08, 
+          -2.20494e-08, 
+          -4.26126e-08
+        ], 
+        "Aaa": [
+          7.8238e-13, 
+          -6.4717e-13, 
+          1.39066e-12
+        ], 
+        "Ai": [
+          0, 
+          0, 
+          0
+        ], 
+        "Ar": [
+          1.53406e-07, 
+          8.45198e-09, 
+          -1.13967e-07
+        ], 
+        "Arr": [
+          -9.75792e-12, 
+          -3.19303e-12, 
+          1.24263e-11
+        ], 
+        "Na": 1, 
+        "Naa": 1, 
+        "Nr": 1, 
+        "Nrr": 1, 
+        "T_reduce": 373.1, 
+        "c1": 0, 
+        "c2": 0, 
+        "type": "friction_theory"
+      }, 
+      "initial_density": {
+        "b": [
+          -19.572881, 
+          219.73999, 
+          -1015.3226, 
+          2471.01251, 
+          -3375.1717, 
+          2491.6597, 
+          -787.26086, 
+          14.085455, 
+          -0.34664158
+        ], 
+        "t": [
+          0, 
+          -0.25, 
+          -0.5, 
+          -0.75, 
+          -1.0, 
+          -1.25, 
+          -1.5, 
+          -2.5, 
+          -5.5
+        ], 
+        "type": "Rainwater-Friend"
+      }, 
+      "sigma_eta": 3.565e-10, 
+      "sigma_eta_units": "m"
+    }
+  }
 }

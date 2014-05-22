@@ -49,6 +49,11 @@ struct ViscosityDiluteGasCollisionIntegralData
     long double molar_mass, C;
     std::vector<long double> a, t;
 };
+struct ViscosityDiluteCollisionIntegralPowersOfTstarData
+{
+    long double T_reducing, C;
+    std::vector<long double> a, t;
+};
 struct ViscosityDiluteGasPowersOfT
 {
     std::vector<long double> a, t;
@@ -56,11 +61,13 @@ struct ViscosityDiluteGasPowersOfT
 struct ViscosityDiluteVariables
 {
     enum ViscosityDiluteEnum {VISCOSITY_DILUTE_COLLISION_INTEGRAL, 
+                              VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR, 
                               VISCOSITY_DILUTE_KINETIC_THEORY, 
                               VISCOSITY_DILUTE_POWERS_OF_T
                               };
     int type;
     ViscosityDiluteGasCollisionIntegralData collision_integral;
+    ViscosityDiluteCollisionIntegralPowersOfTstarData collision_integral_powers_of_Tstar;
     ViscosityDiluteGasPowersOfT powers_of_T;
 };
 
@@ -80,7 +87,7 @@ struct ViscosityModifiedBatschinskiHildebrandData
 };
 struct ViscosityFrictionTheoryData
 {
-    std::vector<long double> Aa, Aaa, Aaaa, Ar, Arr, Arrr, Ai, Aii;
+    std::vector<long double> Aa, Aaa, Aaaa, Ar, Arr, Adrdr, Arrr, Ai, Aii, AdrAdr;
     int Na, Naa, Naaa, Nr, Nrr, Nrrr, Nii;
     long double c1, c2, T_reduce, rhomolar_reduce;
 };

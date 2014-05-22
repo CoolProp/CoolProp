@@ -287,6 +287,18 @@ protected:
 
             fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_T;
         }
+        else if (!type.compare("collision_integral_powers_of_Tstar")){
+            // Get a reference to the entry in the fluid instance
+            CoolProp::ViscosityDiluteCollisionIntegralPowersOfTstarData &CI = fluid.transport.viscosity_dilute.collision_integral_powers_of_Tstar;
+
+            // Load up the values
+            CI.a = cpjson::get_long_double_array(dilute["a"]);
+            CI.t = cpjson::get_long_double_array(dilute["t"]);
+            CI.T_reducing = cpjson::get_double(dilute,"T_reducing");
+            CI.C = cpjson::get_double(dilute,"C");
+
+            fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR ;
+        }
         else{
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
         }
@@ -372,7 +384,8 @@ protected:
             F.Aa = cpjson::get_long_double_array(higher["Aa"]);
             F.Aaa = cpjson::get_long_double_array(higher["Aaa"]);
             F.Ar = cpjson::get_long_double_array(higher["Ar"]);
-            F.Arr = cpjson::get_long_double_array(higher["Arr"]);
+            
+
             F.Na = cpjson::get_integer(higher,"Na");
             F.Naa = cpjson::get_integer(higher,"Naa");
             F.Nr = cpjson::get_integer(higher,"Nr");
@@ -382,8 +395,20 @@ protected:
             assert(F.Aa.size() == 3);
             assert(F.Aaa.size() == 3);
             assert(F.Ar.size() == 3);
-            assert(F.Arr.size() == 3);
+            
             F.T_reduce = cpjson::get_double(higher,"T_reduce");
+
+            if (higher.HasMember("Arr") && !higher.HasMember("Adrdr")){
+                F.Arr = cpjson::get_long_double_array(higher["Arr"]);
+                assert(F.Arr.size() == 3);
+            }
+            else if (higher.HasMember("Adrdr") && !higher.HasMember("Arr")){
+                F.Adrdr = cpjson::get_long_double_array(higher["Adrdr"]);
+                assert(F.Adrdr.size() == 3);
+            }
+            else{
+                throw ValueError(format("can only provide one of Arr or Adrdr for fluid %s",fluid.name.c_str()));
+            }
 
             if (higher.HasMember("Aaaa") && higher.HasMember("Arrr") && higher.HasMember("Aii")){
                 F.Aaaa = cpjson::get_long_double_array(higher["Aaaa"]);
