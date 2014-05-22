@@ -52,6 +52,12 @@ vel("R134a", "T", 185, "Q", 1, "V", 7.4290821400170869e-006, 1e-3),
 vel("R134a", "T", 360, "Q", 0, "V", 7.8146319978982133e-005, 1e-3),
 vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-3),
 
+// From REFPROP 9.1 since Kiselev, IECR, 2005 does not provide validation data
+vel("Ethanol", "T", 300, "Q", 0, "V", 0.0010439017679191723, 1e-3),
+vel("Ethanol", "T", 300, "Q", 1, "V", 8.8293820936046416e-006, 1e-3),
+vel("Ethanol", "T", 500, "Q", 0, "V", 6.0979347125450671e-005, 1e-3),
+vel("Ethanol", "T", 500, "Q", 1, "V", 1.7229157141572511e-005, 1e-3),
+
 // From Meng 2012 experimental data (note erratum in BibTeX file)
 vel("DimethylEther", "T", 253.146, "Dmass", 734.28, "V", 0.20444e-3, 3e-3),
 vel("DimethylEther", "T", 373.132, "Dmass", 613.78, "V", 0.09991e-3, 3e-3),
