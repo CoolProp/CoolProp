@@ -302,15 +302,13 @@
   ], 
   "NAME": "R125", 
   "TRANSPORT": {
-    "BibTeX": "Huber-IECR-2006", 
-    "epsilon_over_k": 237.077, 
-    "epsilon_over_k_units": "K", 
-    "sigma_eta": 5.235e-10, 
-    "sigma_eta_units": "m", 
     "viscosity": {
+      "BibTeX": "Huber-IECR-2006", 
       "dilute": {
         "type": "kinetic_theory"
       }, 
+      "epsilon_over_k": 237.077, 
+      "epsilon_over_k_units": "K", 
       "higher_order": {
         "T_reduce": 339.173, 
         "T_reduce_units": "K", 
@@ -385,7 +383,9 @@
           -5.5
         ], 
         "type": "Rainwater-Friend"
-      }
+      }, 
+      "sigma_eta": 5.235e-10, 
+      "sigma_eta_units": "m"
     }
   }
 }

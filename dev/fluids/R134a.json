@@ -285,12 +285,8 @@
   ], 
   "NAME": "R134a", 
   "TRANSPORT": {
-    "BibTeX": "Huber-IECR-2003", 
-    "epsilon_over_k": 299.363, 
-    "epsilon_over_k_units": "K", 
-    "sigma_eta": 4.68932e-10, 
-    "sigma_eta_units": "m", 
     "viscosity": {
+      "BibTeX": "Huber-IECR-2003", 
       "dilute": {
         "C": 2.1357e-08, 
         "a": [
@@ -307,6 +303,8 @@
         ], 
         "type": "collision_integral"
       }, 
+      "epsilon_over_k": 299.363, 
+      "epsilon_over_k_units": "K", 
       "higher_order": {
         "T_reduce": 374.21, 
         "T_reduce_units": "K", 
@@ -403,7 +401,9 @@
           -5.5
         ], 
         "type": "Rainwater-Friend"
-      }
+      }, 
+      "sigma_eta": 4.68932e-10, 
+      "sigma_eta_units": "m"
     }
   }
 }

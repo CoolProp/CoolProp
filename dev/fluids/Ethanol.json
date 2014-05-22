@@ -351,12 +351,8 @@
   ], 
   "NAME": "Ethanol", 
   "TRANSPORT": {
-    "BibTeX": "Kiselev-IECR-2005", 
-    "epsilon_over_k": 362.6, 
-    "epsilon_over_k_units": "K", 
-    "sigma_eta": 4.53e-10, 
-    "sigma_eta_units": "m", 
     "viscosity": {
+      "BibTeX": "Kiselev-IECR-2005", 
       "dilute": {
         "a": [
           -1.03116e-06, 
@@ -370,6 +366,8 @@
         ], 
         "type": "powers_of_T"
       }, 
+      "epsilon_over_k": 362.6, 
+      "epsilon_over_k_units": "K", 
       "higher_order": {
         "T_reduce": 513.9, 
         "T_reduce_units": "K", 
@@ -459,7 +457,9 @@
           -5.5
         ], 
         "type": "Rainwater-Friend"
-      }
+      }, 
+      "sigma_eta": 4.53e-10, 
+      "sigma_eta_units": "m"
     }
   }
 }

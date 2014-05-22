@@ -269,12 +269,8 @@
   ], 
   "NAME": "n-Octane", 
   "TRANSPORT": {
-    "BibTeX": "Huber-FPE-2004", 
-    "epsilon_over_k": 452.09, 
-    "epsilon_over_k_units": "K", 
-    "sigma_eta": 6.3617e-10, 
-    "sigma_eta_units": "m", 
     "viscosity": {
+      "BibTeX": "Huber-FPE-2004", 
       "dilute": {
         "C": 2.1357e-08, 
         "a": [
@@ -289,6 +285,8 @@
         ], 
         "type": "collision_integral"
       }, 
+      "epsilon_over_k": 452.09, 
+      "epsilon_over_k_units": "K", 
       "higher_order": {
         "T_reduce": 569.32, 
         "T_reduce_units": "K", 
@@ -375,7 +373,9 @@
           -5.5
         ], 
         "type": "Rainwater-Friend"
-      }
+      }, 
+      "sigma_eta": 6.3617e-10, 
+      "sigma_eta_units": "m"
     }
   }
 }

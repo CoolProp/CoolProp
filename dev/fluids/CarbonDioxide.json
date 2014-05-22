@@ -447,13 +447,9 @@
   ], 
   "NAME": "CarbonDioxide", 
   "TRANSPORT": {
-    "BibTeX": "Fenghour-JPCRD-1998", 
-    "_note": "sigma set to 1 nm in since sigma wrapped into constant in equation in Fenghour", 
-    "epsilon_over_k": 251.196, 
-    "epsilon_over_k_units": "K", 
-    "sigma_eta": 1e-09, 
-    "sigma_eta_units": "m", 
     "viscosity": {
+      "BibTeX": "Fenghour-JPCRD-1998", 
+      "_note": "sigma set to 1 nm in since sigma wrapped into constant in equation in Fenghour", 
       "dilute": {
         "C": 1.5178953643112785e-07, 
         "_note": "Leading coefficient was back calculated from 1.00697e-6/(44.0098)**0.5 (using sigma = 1 nm)", 
@@ -475,6 +471,8 @@
         ], 
         "type": "collision_integral"
       }, 
+      "epsilon_over_k": 251.196, 
+      "epsilon_over_k_units": "K", 
       "higher_order": {
         "T_reduce": 304.1282, 
         "T_reduce_units": "K", 
@@ -538,7 +536,9 @@
           0
         ], 
         "type": "modified_Batschinski_Hildebrand"
-      }
+      }, 
+      "sigma_eta": 1e-09, 
+      "sigma_eta_units": "m"
     }
   }
 }

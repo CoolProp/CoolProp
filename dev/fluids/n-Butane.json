@@ -331,12 +331,8 @@
   ], 
   "NAME": "n-Butane", 
   "TRANSPORT": {
-    "BibTeX": "Vogel-HTHP-1999", 
-    "epsilon_over_k": 280.51, 
-    "epsilon_over_k_units": "K", 
-    "sigma_eta": 5.7335e-10, 
-    "sigma_eta_units": "m", 
     "viscosity": {
+      "BibTeX": "Vogel-HTHP-1999", 
       "dilute": {
         "C": 2.1357e-08, 
         "a": [
@@ -353,6 +349,8 @@
         ], 
         "type": "collision_integral"
       }, 
+      "epsilon_over_k": 280.51, 
+      "epsilon_over_k_units": "K", 
       "higher_order": {
         "T_reduce": 425.125, 
         "T_reduce_units": "K", 
@@ -457,7 +455,9 @@
           -5.5
         ], 
         "type": "Rainwater-Friend"
-      }
+      }, 
+      "sigma_eta": 5.7335e-10, 
+      "sigma_eta_units": "m"
     }
   }
 }

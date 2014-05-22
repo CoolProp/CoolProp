@@ -132,6 +132,16 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
 {
     if (is_pure_or_pseudopure)
     {
+        if (components[0]->transport.hardcoded != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
+        {
+            switch(components[0]->transport.hardcoded)
+            {
+            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER:
+                return TransportRoutines::viscosity_water_hardcoded(*this);
+            default:
+                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0]->transport.hardcoded, name().c_str()));
+            }
+        }
         // Dilute part
         long double eta_dilute;
         switch(components[0]->transport.viscosity_dilute.type)

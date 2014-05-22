@@ -258,12 +258,8 @@
   ], 
   "NAME": "n-Dodecane", 
   "TRANSPORT": {
-    "BibTeX": "Huber-EF-2004", 
-    "epsilon_over_k": 522.592, 
-    "epsilon_over_k_units": "K", 
-    "sigma_eta": 7.35639e-10, 
-    "sigma_eta_units": "m", 
     "viscosity": {
+      "BibTeX": "Huber-EF-2004", 
       "dilute": {
         "C": 2.1357e-08, 
         "a": [
@@ -280,6 +276,8 @@
         ], 
         "type": "collision_integral"
       }, 
+      "epsilon_over_k": 522.592, 
+      "epsilon_over_k_units": "K", 
       "higher_order": {
         "T_reduce": 658.1, 
         "T_reduce_units": "K", 
@@ -364,7 +362,9 @@
           -5.5
         ], 
         "type": "Rainwater-Friend"
-      }
+      }, 
+      "sigma_eta": 7.35639e-10, 
+      "sigma_eta_units": "m"
     }
   }
 }

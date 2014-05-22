@@ -298,12 +298,8 @@
   ], 
   "NAME": "Air", 
   "TRANSPORT": {
-    "BibTeX": "Lemmon-IJT-2004", 
-    "epsilon_over_k": 103.3, 
-    "epsilon_over_k_units": "K", 
-    "sigma_eta": 3.6e-10, 
-    "sigma_eta_units": "m", 
     "viscosity": {
+      "BibTeX": "Lemmon-IJT-2004", 
       "dilute": {
         "C": 2.66958e-08, 
         "a": [
@@ -324,6 +320,8 @@
         ], 
         "type": "collision_integral"
       }, 
+      "epsilon_over_k": 103.3, 
+      "epsilon_over_k_units": "K", 
       "higher_order": {
         "T_reduce": 132.6312, 
         "T_reduce_units": "K", 
@@ -386,7 +384,9 @@
           0
         ], 
         "type": "modified_Batschinski_Hildebrand"
-      }
+      }, 
+      "sigma_eta": 3.6e-10, 
+      "sigma_eta_units": "m"
     }
   }
 }

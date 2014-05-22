@@ -487,5 +487,11 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Water"
+  "NAME": "Water", 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Huber-JPCRD-2009", 
+      "hardcoded": "Water"
+    }
+  }
 }

@@ -251,12 +251,8 @@
   ], 
   "NAME": "R152A", 
   "TRANSPORT": {
-    "BibTeX": "Krauss-IJT-1996", 
-    "epsilon_over_k": 354.84, 
-    "epsilon_over_k_units": "K", 
-    "sigma_eta": 4.6115e-10, 
-    "sigma_eta_units": "m", 
     "viscosity": {
+      "BibTeX": "Krauss-IJT-1996", 
       "dilute": {
         "C": 2.6695992007227643e-08, 
         "a": [
@@ -277,6 +273,8 @@
         ], 
         "type": "collision_integral"
       }, 
+      "epsilon_over_k": 354.84, 
+      "epsilon_over_k_units": "K", 
       "higher_order": {
         "T_reduce": 386.411, 
         "T_reduce_units": "K", 
@@ -334,7 +332,9 @@
           0
         ], 
         "type": "modified_Batschinski_Hildebrand"
-      }
+      }, 
+      "sigma_eta": 4.6115e-10, 
+      "sigma_eta_units": "m"
     }
   }
 }

@@ -13,22 +13,15 @@
 \hline\hline
 Fluid & Reference & $\eta^0$ & $\eta^r$ \\
 \hline
-
 Ammonia & (data) Fenghour 1995 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\Game(T^*)}$\newline$\mathfrak{S}(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ &  $\eta^r = B_{BV}\rho\eta^0(T) + \Delta\eta$\newline$\Delta\eta = \sum_i b_i(T)\rho^i$\\\hline
-Ethanol & Kiselev 2005 & $\eta^0 = \sum_i a_i T^{n_i}$ & $\eta^r = B_{RF}\rho\eta^0(T)+\Delta \eta$ \newline $\Delta\eta = \displaystyle\sum_{i=2}^n\displaystyle\sum_{j=0}^me_{ij}\frac{\delta^i}{\tau_j}+f_1\left(\frac{\delta}{\delta_0(\tau)-\delta}-\frac{\delta}{\delta_0(\tau)}\right)$ \newline $\delta_0(\tau)=g_2+g_3\sqrt{\tau}$\\\hline
 R404A, R410A, R507, R407 & Geller 2000 & $\eta^0 = \sum_i A_iT^i$&$\eta^r = \sum_j b_j\rho^j$ \\\hline
-
-Ethane & Friend 1991 & $\eta^0 = \dfrac{12.0085\sqrt{t}}{\Omega^{(2,2)*}(t)}$ \newline $\Omega^{(2,2)*}(t) = \left[\sum_i C_it^{(i-1)/3-1} \right]^{-1}$& $\Delta\eta = 15.977\left[\displaystyle\sum_i g_i\delta^{r_i}\tau^{s_i}\right]\left[1+\displaystyle\sum_{i=10}^{11}g_i\delta^{r_i}\tau^{s_i}\right]^{-1}$\\\hline
+\hline\hline
 
 SF6 & Quinones-Cisneros 2012 & $\eta^0 = \sum_i d_i T_r^{n_i}$ & FRICTION THEORY\\\hline
 H2S & Quinones-Cisneros 2012 & $\eta^0 = 8.7721\dfrac{\sqrt{T}}{S^*(T^*)}$ \newline $S^*(T^*) = \sum_i \frac{\alpha_i}{T^{*i}}$ & FRICTION THEORY\\\hline
 R23 & Shan 2000 & $\eta^0 = \frac{5}{16}\sqrt{\frac{MkT}{1000\pi N}}\frac{10^{24}}{\sigma^2\Omega^*(T^*)}$\newline $\Omega(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$  & \\\hline
-
-
-Water & (data) Huber 2009 & & \\\hline
-
-
 Helium & Arp 1998 & NASTY & NASTY \\\hline
+Ethane & Friend 1991 & $\eta^0 = \dfrac{12.0085\sqrt{t}}{\Omega^{(2,2)*}(t)}$ \newline $\Omega^{(2,2)*}(t) = \left[\sum_i C_it^{(i-1)/3-1} \right]^{-1}$& $\Delta\eta = 15.977\left[\displaystyle\sum_i g_i\delta^{r_i}\tau^{s_i}\right]\left[1+\displaystyle\sum_{i=10}^{11}g_i\delta^{r_i}\tau^{s_i}\right]^{-1}$\\\hline
 n-Hexane & (data) Michailidou 2013 &$\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2S(T^*)}$\newline$S(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$& $\eta^r = \eta^0(T)\rho B_{RF} + \Delta\eta$\newline$\Delta\eta = (\rho_r^{2/3}T_r^{1/2})\left\lbrace\dfrac{c_0}{T_r}+\dfrac{c_1}{c_2+T_r+c_3\rho_r^2}+\dfrac{c_4(1+\rho_r)}{c_5 + c_6T_r+c_7\rho_r+\rho_r^2+c_8\rho_rT_r} \right\rbrace$ \\\hline
 Hydrogen & Muzny 2013 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2S^*(T^*)}$\newline$S^*(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ & $\eta^r = B_{RF}\rho\eta^0(T) + \Delta\eta$\newline$\Delta\eta = c_1\rho_r^2\left[c_2T_r+c_3/T_r+\frac{c_4\rho_r^2}{c_5+T_r}+c_6\rho_r^6\right]$\\\hline
 \hline\hline \multicolumn{4}{c}{DONE below this line}\\ \hline\hline
@@ -44,7 +37,8 @@ R134a & Huber 2003 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\mathfrak{S}(T^
 Dimethyl Ether & Meng 2012 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\mathfrak{S}(T^*)}$\newline$\mathfrak{S}(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ & $\eta^r = \Delta\eta$\newline$\Delta\eta = \sum_{i=0}^{1}n_i\tau^{t_i}\delta^{d_i} + \sum_{i=2}^{6}n_i\tau^{t_i}\delta^{d_i}\exp(-\delta^{p_i})$\\\hline
 R123 & (data) Tanaka 1996 & $\eta^0 = \displaystyle\sum_{i}a_iT_i$ & $\eta^r = \eta^1\rho+\Delta\eta$ \newline $\eta^1 = b_0+b_1T$\newline$\Delta\eta = \frac{a_0}{\rho-\rho_0}+\frac{a_0}{\rho_0}+a_1\rho+a_2\rho^2+a_3\rho^3$\newline$\Delta\eta = \frac{a_0/\rho_c}{\delta-\delta_0}+\frac{a_0/\rho_c}{\delta_0}+a_1\rho_c\delta+a_2\rho_c^2\delta^2+a_3\rho_c^3\delta^3$\\\hline
 R152A & (data) Krauss 1996 & $\eta^0 = \dfrac{5}{16}\sqrt{\dfrac{MkT}{1000\pi N}}\dfrac{10^{24}}{\sigma^2\Omega^*(T^*)}=\dfrac{0.2169614\sqrt{T}}{\sigma^2\Omega(T^*)}$\newline $\Omega(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ & $\dfrac{\Delta\eta}{H_c} = \displaystyle\sum_{i=1}^{4}E_i\left(\frac{\rho}{\rho_c}\right)^i + \frac{E_5}{\rho/\rho_c-E_6}+\frac{E_5}{E_6}$\\\hline
-\hline\hline
+Ethanol & Kiselev 2005 & $\eta^0 = \sum_i a_i T^{n_i}$ & $\eta^r = B_{RF}\rho\eta^0(T)+\Delta \eta$ \newline $\Delta\eta = \displaystyle\sum_{i=2}^n\displaystyle\sum_{j=0}^me_{ij}\frac{\delta^i}{\tau_j}+f_1\left(\frac{\delta}{\delta_0(\tau)-\delta}-\frac{\delta}{\delta_0(\tau)}\right)$ \newline $\delta_0(\tau)=g_2+g_3\sqrt{\tau}$\\\hline
+Water & (data) Huber 2009 & & \\\hline
 \hline\hline
 \end{tabular}
 

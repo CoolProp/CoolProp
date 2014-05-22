@@ -348,12 +348,37 @@ protected:
     /// Parse the transport properties
     void parse_viscosity(rapidjson::Value &viscosity, CoolPropFluid & fluid)
     {
+        // Load the BibTeX key
+        fluid.transport.BibTeX_viscosity = cpjson::get_string(viscosity,"BibTeX");
+        if (viscosity.HasMember("hardcoded")){
+            std::string target = cpjson::get_string(viscosity,"hardcoded");
+            if (!target.compare("Water")){
+                fluid.transport.hardcoded = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER;
+                return;
+            }
+            else{
+                throw ValueError();
+            }
+        }
+
+        // Set the Lennard-Jones 12-6 potential variables, or approximate them from method of Chung
+        if (!viscosity.HasMember("sigma_eta")|| !viscosity.HasMember("epsilon_over_k")){
+            default_transport(fluid);
+        }
+        else{
+            fluid.transport.sigma_eta = cpjson::get_double(viscosity, "sigma_eta");
+            fluid.transport.epsilon_over_k = cpjson::get_double(viscosity, "epsilon_over_k");
+        }
+
+        // Load dilute viscosity term
         if (viscosity.HasMember("dilute")){
             parse_dilute_viscosity(viscosity["dilute"], fluid);
         }
+        // Load initial density term
         if (viscosity.HasMember("initial_density")){
             parse_initial_density_viscosity(viscosity["initial_density"], fluid);
         }
+        // Load higher_order term
         if (viscosity.HasMember("higher_order")){
             parse_higher_order_viscosity(viscosity["higher_order"], fluid);
         }
@@ -366,13 +391,6 @@ protected:
     /// Parse the transport properties
     void parse_transport(rapidjson::Value &transport, CoolPropFluid & fluid)
     {
-        if (!transport.HasMember("sigma_eta")|| !transport.HasMember("epsilon_over_k")){
-            default_transport(fluid);
-        }
-        else{
-            fluid.transport.sigma_eta = cpjson::get_double(transport, "sigma_eta");
-            fluid.transport.epsilon_over_k = cpjson::get_double(transport, "epsilon_over_k");
-        }
         // Parse viscosity
         if (transport.HasMember("viscosity")){
             parse_viscosity(transport["viscosity"],fluid);

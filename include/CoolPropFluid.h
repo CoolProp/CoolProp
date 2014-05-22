@@ -86,10 +86,17 @@ struct ViscosityHigherOrderVariables
 class TransportPropertyData
 {
 public:
+    enum ViscosityDiluteEnum {VISCOSITY_HARDCODED_WATER, 
+                              VISCOSITY_HARDCODED_HELIUM,
+                              VISCOSITY_NOT_HARDCODED
+                              };
     ViscosityDiluteVariables viscosity_dilute;
     ViscosityInitialDensityVariables viscosity_initial;
     ViscosityHigherOrderVariables viscosity_higher_order;
+    std::string BibTeX_viscosity, BibTeX_conductivity;
     long double sigma_eta, epsilon_over_k;
+    int hardcoded;
+    TransportPropertyData(){hardcoded = VISCOSITY_NOT_HARDCODED;};
 };
 
 /**

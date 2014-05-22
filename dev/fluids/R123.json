@@ -257,12 +257,8 @@
   ], 
   "NAME": "R123", 
   "TRANSPORT": {
-    "BibTeX": "Tanaka-IJT-1996", 
-    "epsilon_over_k": 340, 
-    "epsilon_over_k_units": "K", 
-    "sigma_eta": 5.6e-10, 
-    "sigma_eta_units": "m", 
     "viscosity": {
+      "BibTeX": "Tanaka-IJT-1996", 
       "dilute": {
         "a": [
           -2.273638e-06, 
@@ -276,6 +272,8 @@
         ], 
         "type": "powers_of_T"
       }, 
+      "epsilon_over_k": 340, 
+      "epsilon_over_k_units": "K", 
       "higher_order": {
         "T_reduce": 456.831, 
         "T_reduce_units": "K", 
@@ -338,7 +336,9 @@
           0
         ], 
         "type": "modified_Batschinski_Hildebrand"
-      }
+      }, 
+      "sigma_eta": 5.6e-10, 
+      "sigma_eta_units": "m"
     }
   }
 }
