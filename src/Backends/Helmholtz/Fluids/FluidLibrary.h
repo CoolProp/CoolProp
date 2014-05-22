@@ -312,10 +312,26 @@ protected:
     /// Parse the transport properties
     void parse_higher_order_viscosity(rapidjson::Value &higher, CoolPropFluid & fluid)
     {
+        // First check for hardcoded higher-order term
+        if (higher.HasMember("hardcoded")){
+            std::string target = cpjson::get_string(higher,"hardcoded");
+            if (!target.compare("Hydrogen")){
+                fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HYDROGEN;
+                return;
+            }
+            else{
+                throw ValueError(format("hardcoded higher order viscosity term [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
+            }
+        }
+
         std::string type = cpjson::get_string(higher, "type");
         if (!type.compare("modified_Batschinski_Hildebrand")){
             // Get a reference to the entry in the fluid instance to simplify the code that follows
             CoolProp::ViscosityModifiedBatschinskiHildebrandData &BH = fluid.transport.viscosity_higher_order.modified_Batschinski_Hildebrand;
+            
+            // Set the flag for the type of this model
+            fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND;
+
             BH.T_reduce = cpjson::get_double(higher, "T_reduce");
             BH.rhomolar_reduce = cpjson::get_double(higher, "rhomolar_reduce");
             // Load up the values

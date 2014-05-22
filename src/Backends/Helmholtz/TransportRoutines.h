@@ -80,9 +80,11 @@ public:
     */
     static long double modified_Batschinski_Hildebrand_viscosity_term(HelmholtzEOSMixtureBackend &HEOS);
 
-    static long double TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static long double viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+
+    static long double viscosity_hydrogen_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     
-};
+}; /* class TransportRoutines */
 
 }; /* namespace CoolProp */
 #endif

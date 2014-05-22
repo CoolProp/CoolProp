@@ -160,7 +160,19 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
         long double B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
         long double rho = rhomolar();
         long double initial_part = eta_dilute*B_eta_initial*rhomolar();
-        long double delta_eta_h = TransportRoutines::modified_Batschinski_Hildebrand_viscosity_term(*this);
+
+        // Higher order terms
+        long double delta_eta_h;
+        switch(components[0]->transport.viscosity_higher_order.type)
+        {
+        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND:
+            delta_eta_h = TransportRoutines::modified_Batschinski_Hildebrand_viscosity_term(*this); break;
+        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HYDROGEN:
+            delta_eta_h = TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(*this); break;
+        default:
+            throw ValueError(format("higher order viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
+        }
+
         long double eta_residual = initial_part + delta_eta_h;
 
         // Critical part

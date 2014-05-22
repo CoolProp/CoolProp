@@ -58,6 +58,10 @@ vel("Ethanol", "T", 300, "Q", 1, "V", 8.8293820936046416e-006, 1e-3),
 vel("Ethanol", "T", 500, "Q", 0, "V", 6.0979347125450671e-005, 1e-3),
 vel("Ethanol", "T", 500, "Q", 1, "V", 1.7229157141572511e-005, 1e-3),
 
+// From CoolProp v5 implementation of correlation - more or less agrees with REFPROP
+// Errata in BibTeX File
+vel("Hydrogen", "T", 35, "Dmass", 100, "V", 5.6658815444656859e-005, 1e-3),
+
 // From Meng 2012 experimental data (note erratum in BibTeX file)
 vel("DimethylEther", "T", 253.146, "Dmass", 734.28, "V", 0.20444e-3, 3e-3),
 vel("DimethylEther", "T", 373.132, "Dmass", 613.78, "V", 0.09991e-3, 3e-3),

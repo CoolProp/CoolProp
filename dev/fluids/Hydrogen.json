@@ -300,5 +300,58 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Hydrogen"
+  "NAME": "Hydrogen", 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Muzny-JCED-2013", 
+      "dilute": {
+        "C": 2.1357e-08, 
+        "a": [
+          0.20963, 
+          -0.455274, 
+          0.143602, 
+          -0.0335325, 
+          0.00276981
+        ], 
+        "molar_mass": 0.00201588, 
+        "molar_mass_units": "kg/mol", 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "collision_integral"
+      }, 
+      "epsilon_over_k": 30.41, 
+      "epsilon_over_k_units": "K", 
+      "higher_order": {
+        "hardcoded": "Hydrogen"
+      }, 
+      "initial_density": {
+        "b": [
+          -0.187, 
+          2.4871, 
+          3.7151, 
+          -11.0972, 
+          9.0965, 
+          -3.8292, 
+          0.5166
+        ], 
+        "t": [
+          0, 
+          -1, 
+          -2, 
+          -3, 
+          -4, 
+          -5, 
+          -6
+        ], 
+        "type": "Rainwater-Friend"
+      }, 
+      "sigma_eta": 2.97e-10, 
+      "sigma_eta_units": "m"
+    }
+  }
 }
