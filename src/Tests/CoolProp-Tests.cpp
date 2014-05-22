@@ -188,6 +188,15 @@ vel("R23", "T", 370, "Dmolar", 32.62, "V", 18.213e-6, 1e-4),
 vel("Ethane", "T", 100, "Dmolar", 21330, "V", 878.6e-6, 1e-2),
 vel("Ethane", "T", 430, "Dmolar", 12780, "V", 58.70e-6, 1e-2),
 vel("Ethane", "T", 500, "Dmolar", 11210, "V", 48.34e-6, 1e-2),
+
+// From REFPROP 9.1 since no data provided
+vel("n-Butane", "T", 150, "Q", 0, "V", 0.0013697657668, 1e-4),
+vel("n-Butane", "T", 400, "Q", 1, "V", 1.2027464524762453e-005, 1e-4),
+vel("IsoButane", "T", 120, "Q", 0, "V", 0.0060558450757844271, 1e-4),
+vel("IsoButane", "T", 400, "Q", 1, "V", 1.4761041187617117e-005, 2e-4),
+vel("R134a", "T", 175, "Q", 0, "V", 0.0017558494524138289, 1e-4),
+vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-4),
+
 };
 
 class ViscosityValidationFixture
