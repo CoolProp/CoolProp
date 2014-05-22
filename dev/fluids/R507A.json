@@ -287,5 +287,95 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R507A"
+  "NAME": "R507A", 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Geller-PURDUE-2000", 
+      "dilute": {
+        "a": [
+          -2.53e-06, 
+          5.626e-08, 
+          -2.323e-11
+        ], 
+        "t": [
+          0, 
+          1, 
+          2
+        ], 
+        "type": "powers_of_T"
+      }, 
+      "epsilon_over_k": 1e+99, 
+      "epsilon_over_k_units": "K", 
+      "higher_order": {
+        "T_reduce": 343.765, 
+        "T_reduce_units": "K", 
+        "a": [
+          2.60484792e-07, 
+          5.380047201384e-05, 
+          -7.967886221772443e-05, 
+          8.183382443771656e-05, 
+          -3.9504517246163185e-05, 
+          7.366291094257731e-06
+        ], 
+        "d1": [
+          1, 
+          2, 
+          3, 
+          4, 
+          5, 
+          6
+        ], 
+        "d2": [
+          0
+        ], 
+        "f": [
+          0.0
+        ], 
+        "g": [
+          1
+        ], 
+        "gamma": [
+          0, 
+          0, 
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "h": [
+          0
+        ], 
+        "l": [
+          1, 
+          1, 
+          1, 
+          1, 
+          1, 
+          1
+        ], 
+        "p": [
+          1
+        ], 
+        "q": [
+          0
+        ], 
+        "rhomolar_reduce": 4964.029650250053, 
+        "rhomolar_reduce_units": "mol/m^3", 
+        "t1": [
+          0, 
+          0, 
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "t2": [
+          0
+        ], 
+        "type": "modified_Batschinski_Hildebrand"
+      }, 
+      "sigma_eta": 1e+99, 
+      "sigma_eta_units": "m"
+    }
+  }
 }
