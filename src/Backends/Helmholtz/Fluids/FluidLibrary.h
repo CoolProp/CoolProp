@@ -319,6 +319,10 @@ protected:
                 fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HYDROGEN;
                 return;
             }
+            else if (!target.compare("n-Hexane")){
+                fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEXANE;
+                return;
+            }
             else{
                 throw ValueError(format("hardcoded higher order viscosity term [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
             }

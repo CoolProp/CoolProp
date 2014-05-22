@@ -82,6 +82,7 @@ struct ViscosityHigherOrderVariables
 {
     enum ViscosityDiluteEnum {VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND, 
                               VISCOSITY_HIGHER_ORDER_HYDROGEN,
+                              VISCOSITY_HIGHER_ORDER_HEXANE,
                               VISCOSITY_HIGHER_ORDER_FRICTION_THEORY,
                               VISCOSITY_HIGHER_ORDER_NOT_SET
                               };

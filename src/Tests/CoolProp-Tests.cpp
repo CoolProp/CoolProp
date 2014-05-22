@@ -98,14 +98,14 @@ vel("Air", "T", 200, "Dmolar", 10000, "V", 21.1392e-6, 1e-3),
 vel("Air", "T", 300, "Dmolar", 5000, "V", 21.3241e-6, 1e-3),
 vel("Air", "T", 132.64, "Dmolar", 10400, "V", 17.7623e-6, 1e-3),
 
-//// From Michailidou, JPCRD, 2013
-//vel("Hexane", "T", 250, "Dmass", 1e-14, "V", 5.2584e-6, 1e-3),
-//vel("Hexane", "T", 400, "Dmass", 1e-14, "V", 8.4149e-6, 1e-3),
-//vel("Hexane", "T", 550, "Dmass", 1e-14, "V", 11.442e-6, 1e-3),
-//vel("Hexane", "T", 250, "Dmass", 700, "V", 528.2e-6, 1e-3),
-//vel("Hexane", "T", 400, "Dmass", 600, "V", 177.62e-6, 1e-3),
-//vel("Hexane", "T", 550, "Dmass", 500, "V", 95.002e-6, 1e-3),
-//
+// From Michailidou, JPCRD, 2013
+vel("Hexane", "T", 250, "Dmass", 1e-14, "V", 5.2584e-6, 1e-3),
+vel("Hexane", "T", 400, "Dmass", 1e-14, "V", 8.4149e-6, 1e-3),
+vel("Hexane", "T", 550, "Dmass", 1e-14, "V", 11.442e-6, 1e-3),
+vel("Hexane", "T", 250, "Dmass", 700, "V", 528.2e-6, 1e-3),
+vel("Hexane", "T", 400, "Dmass", 600, "V", 177.62e-6, 1e-3),
+vel("Hexane", "T", 550, "Dmass", 500, "V", 95.002e-6, 1e-3),
+
 // From Fenghour, JPCRD, 1998
 vel("CO2", "T", 220, "Dmass", 2.440, "V", 11.06e-6, 1e-3),
 vel("CO2", "T", 300, "Dmass", 1.773, "V", 15.02e-6, 1e-3),
