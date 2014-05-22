@@ -85,6 +85,7 @@ public:
     static long double viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
 
     static long double viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static long double viscosity_R23_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
 
     static long double viscosity_hydrogen_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
 

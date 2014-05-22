@@ -382,4 +382,37 @@ long double TransportRoutines::viscosity_helium_hardcoded(HelmholtzEOSMixtureBac
 	}
 }
 
+long double TransportRoutines::viscosity_R23_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
+{
+    double C1 = 1.3163, //
+		   C2 = 0.1832,
+		   DeltaGstar = 771.23,
+		   rhoL = 32.174,
+		   rhocbar = 7.5114,
+           Tc = 299.2793,
+		   DELTAeta_max = 3.967,
+		   k =	1.380658e-23,
+		   N_A = 6.022137e23, // 1/mol
+		   pi = 3.141592654, //
+		   Ru = 8.31451,
+           molar_mass = 70.014;
+
+	double a[] = {0.4425728, -0.5138403, 0.1547566, -0.02821844, 0.001578286};
+	double e_k = 243.91, sigma = 0.4278;
+	double Tstar = HEOS.T()/e_k;
+	double logTstar = log(Tstar);
+	double Omega = exp(a[0]+a[1]*logTstar+a[2]*pow(logTstar,2)+a[3]*pow(logTstar,3)+a[4]*pow(logTstar,4));
+    double eta_DG = 1.25*0.021357*sqrt(molar_mass*HEOS.T())/(sigma*sigma*Omega); // uPa-s
+
+	double rhobar = HEOS.rhomolar()/1000; // [mol/L]
+	double eta_L = C2*(rhoL*rhoL)/(rhoL-rhobar)*sqrt(HEOS.T())*exp(rhobar/(rhoL-rhobar)*DeltaGstar/(Ru*HEOS.T()));
+
+	double chi = rhobar - rhocbar;
+	double tau = HEOS.T() - Tc;
+
+	double DELTAeta_c = 4*DELTAeta_max/((exp(chi)+exp(-chi))*(exp(tau)+exp(-tau)));
+
+	return (pow((rhoL-rhobar)/rhoL,C1)*eta_DG+pow(rhobar/rhoL,C1)*eta_L+DELTAeta_c)/1e6;
+}
+
 }; /* namespace CoolProp */

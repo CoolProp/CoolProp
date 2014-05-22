@@ -271,5 +271,11 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R23"
+  "NAME": "R23", 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Shan-ASHRAE-2000", 
+      "hardcoded": "R23"
+    }
+  }
 }

@@ -110,6 +110,7 @@ class TransportPropertyData
 public:
     enum ViscosityDiluteEnum {VISCOSITY_HARDCODED_WATER, 
                               VISCOSITY_HARDCODED_HELIUM,
+                              VISCOSITY_HARDCODED_R23,
                               VISCOSITY_NOT_HARDCODED
                               };
     ViscosityDiluteVariables viscosity_dilute;

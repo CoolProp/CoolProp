@@ -433,12 +433,13 @@ protected:
         if (viscosity.HasMember("hardcoded")){
             std::string target = cpjson::get_string(viscosity,"hardcoded");
             if (!target.compare("Water")){
-                fluid.transport.hardcoded = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER;
-                return;
+                fluid.transport.hardcoded = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER; return;
             }
             else if (!target.compare("Helium")){
-                fluid.transport.hardcoded = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM;
-                return;
+                fluid.transport.hardcoded = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM; return;
+            }
+            else if (!target.compare("R23")){
+                fluid.transport.hardcoded = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_R23; return;
             }
             else{
                 throw ValueError();

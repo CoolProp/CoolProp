@@ -174,9 +174,15 @@ vel("R507A", "T", 243.15, "Q", 1, "V", 9.83e-6, 1e-2),
 vel("R507A", "T", 333.15, "Q", 0, "V", 74.37e-6, 1e-2),
 vel("R507A", "T", 333.15, "Q", 1, "V", 19.35e-6, 1e-2),
 
+// From Arp, NIST, 1998
 vel("Helium", "T", 3.6, "P", 0.180e6, "V", 3.745e-6, 1e-2),
 vel("Helium", "T", 50, "P", 0.180e6, "V", 6.376e-6, 1e-2),
 vel("Helium", "T", 400, "P", 0.180e6, "V", 24.29e-6, 1e-2),
+
+// From Shan, ASHRAE, 2000
+vel("R23", "T", 180, "Dmolar", 21097, "V", 353.88e-6, 1e-4),
+vel("R23", "T", 420, "Dmolar", 7564, "V", 39.459e-6, 1e-4),
+vel("R23", "T", 370, "Dmolar", 32.62, "V", 18.213e-6, 1e-4),
 };
 
 class ViscosityValidationFixture
