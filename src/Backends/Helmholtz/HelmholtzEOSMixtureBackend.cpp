@@ -138,6 +138,8 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
             {
             case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER:
                 return TransportRoutines::viscosity_water_hardcoded(*this);
+            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM:
+                return TransportRoutines::viscosity_helium_hardcoded(*this);
             default:
                 throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0]->transport.hardcoded, name().c_str()));
             }

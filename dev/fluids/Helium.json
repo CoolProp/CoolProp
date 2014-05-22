@@ -322,5 +322,11 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Helium"
+  "NAME": "Helium", 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "ARP-NIST-1998", 
+      "hardcoded": "Helium"
+    }
+  }
 }

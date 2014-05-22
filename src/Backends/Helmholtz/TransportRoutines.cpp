@@ -340,4 +340,46 @@ long double TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzE
 
 }
 
+long double TransportRoutines::viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
+{
+    double eta_0,eta_0_slash, eta_E_slash, B,C,D,ln_eta,x;
+	//
+	// Arp, V.D., McCarty, R.D., and Friend, D.G.,
+	// "Thermophysical Properties of Helium-4 from 0.8 to 1500 K with Pressures to 2000 MPa", 
+	// NIST Technical Note 1334 (revised), 1998.
+	// 
+	// Using Arp NIST report 
+	// Report is not clear on viscosity, referring to REFPROP source code for clarity
+
+	// Correlation wants density in g/cm^3; kg/m^3 --> g/cm^3, divide by 1000
+    long double rho = HEOS.keyed_output(CoolProp::iDmass)/1000.0, T = HEOS.T();
+
+    if (T <= 300){
+		x = log(T);
+	}
+	else{
+		x = log(300.0);
+	}
+	// Evaluate the terms B,C,D
+	B = -47.5295259/x+87.6799309-42.0741589*x+8.33128289*x*x-0.589252385*x*x*x;
+	C = 547.309267/x-904.870586+431.404928*x-81.4504854*x*x+5.37008433*x*x*x;
+	D = -1684.39324/x+3331.08630-1632.19172*x+308.804413*x*x-20.2936367*x*x*x;
+	eta_0_slash = -0.135311743/x+1.00347841+1.20654649*x-0.149564551*x*x+0.012520841*x*x*x;
+	eta_E_slash = rho*B+rho*rho*C+rho*rho*rho*D;
+
+    if (T<=100)
+	{
+		ln_eta = eta_0_slash + eta_E_slash;
+        // Correlation yields viscosity in micro g/(cm-s); to get Pa-s, divide by 10 to get micro Pa-s, then another 1e6 to get Pa-s
+		return exp(ln_eta)/10.0/1e6;
+	}
+	else
+	{
+		ln_eta = eta_0_slash + eta_E_slash;
+		eta_0 = 196*pow(T,static_cast<long double>(0.71938))*exp(12.451/T-295.67/T/T-4.1249);
+        // Correlation yields viscosity in micro g/(cm-s); to get Pa-s, divide by 10 to get micro Pa-s, then another 1e6 to get Pa-s
+		return (exp(ln_eta)+eta_0-exp(eta_0_slash))/10.0/1e6;
+	}
+}
+
 }; /* namespace CoolProp */

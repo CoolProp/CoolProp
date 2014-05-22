@@ -436,6 +436,10 @@ protected:
                 fluid.transport.hardcoded = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER;
                 return;
             }
+            else if (!target.compare("Helium")){
+                fluid.transport.hardcoded = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM;
+                return;
+            }
             else{
                 throw ValueError();
             }
