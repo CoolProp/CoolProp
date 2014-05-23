@@ -118,6 +118,7 @@ public:
 
     long double calc_surface_tension(void);
     long double calc_viscosity(void);
+    long double calc_conductivity(void);
 
     long double calc_Tmax(void);
     long double calc_pmax(void);

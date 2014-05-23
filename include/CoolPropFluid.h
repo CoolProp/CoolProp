@@ -43,6 +43,52 @@ struct EOSLimits
 {
     double Tmin, Tmax, rhomax, pmax;
 };
+
+struct ConductivityDiluteRatioPolynomialsData{
+    long double T_reducing, p_reducing;
+    std::vector<long double> A, B, n, m;
+};
+struct ConductivityDiluteVariables
+{
+    enum ConductivityDiluteEnum {CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS, 
+                                 CONDUCTIVITY_DILUTE_NOT_SET
+                                 };
+    int type;
+    ConductivityDiluteRatioPolynomialsData ratio_polynomials;
+
+    ConductivityDiluteVariables(){type = CONDUCTIVITY_DILUTE_NOT_SET;}
+};
+
+struct ConductivityResidualPolynomialData{
+    long double T_reducing, rhomass_reducing;
+    std::vector<long double> B, t, d;
+};
+struct ConductivityResidualVariables
+{
+    enum ConductivityResidualEnum {CONDUCTIVITY_RESIDUAL_POLYNOMIAL, 
+                                   CONDUCTIVITY_RESIDUAL_NOT_SET
+                                   };
+    int type;
+    ConductivityResidualPolynomialData polynomials;
+
+    ConductivityResidualVariables(){type = CONDUCTIVITY_RESIDUAL_NOT_SET;}
+};
+
+struct ConductivityCriticalSimplifiedOlchowySengers{
+    long double T_reducing, p_reducing;
+    std::vector<long double> B, t, d;
+};
+struct ConductivityCriticalVariables
+{
+    enum ConductivityResidualEnum {CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS, 
+                                   CONDUCTIVITY_CRITICAL_NOT_SET
+                                   };
+    int type;
+    ConductivityCriticalSimplifiedOlchowySengers Olchowy_Sengers;
+
+    ConductivityCriticalVariables(){type = CONDUCTIVITY_CRITICAL_NOT_SET;}
+};
+
 /// Variables for the dilute gas part 
 struct ViscosityDiluteGasCollisionIntegralData
 {
@@ -118,13 +164,22 @@ public:
                               VISCOSITY_HARDCODED_R23,
                               VISCOSITY_NOT_HARDCODED
                               };
+    enum ConductivityDiluteEnum {
+                                 CONDUCTIVITY_HARDCODED_WATER,
+                                 CONDUCTIVITY_NOT_HARDCODED
+                                 };
     ViscosityDiluteVariables viscosity_dilute;
     ViscosityInitialDensityVariables viscosity_initial;
     ViscosityHigherOrderVariables viscosity_higher_order;
+    ConductivityDiluteVariables conductivity_dilute;
+    ConductivityResidualVariables conductivity_residual;
+    ConductivityCriticalVariables conductivity_critical;
+
     std::string BibTeX_viscosity, BibTeX_conductivity;
     long double sigma_eta, epsilon_over_k;
-    int hardcoded;
-    TransportPropertyData(){hardcoded = VISCOSITY_NOT_HARDCODED;};
+    int hardcoded_viscosity, hardcoded_conductivity;
+    TransportPropertyData(){hardcoded_viscosity = VISCOSITY_NOT_HARDCODED; 
+                            hardcoded_conductivity = CONDUCTIVITY_NOT_HARDCODED;};
 };
 
 /**

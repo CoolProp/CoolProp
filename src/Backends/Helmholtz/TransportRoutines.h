@@ -40,7 +40,7 @@ public:
     \f[
     \eta^0 = \displaystyle\sum_ia_iT^{t_i}
     \f]
-    with T in K, \f$eta^0\f$ in Pa-s
+    with T in K, \f$\eta^0\f$ in Pa-s
     */
     static long double viscosity_dilute_powers_of_T(HelmholtzEOSMixtureBackend &HEOS);
 
@@ -83,18 +83,82 @@ public:
     static long double viscosity_higher_order_modified_Batschinski_Hildebrand(HelmholtzEOSMixtureBackend &HEOS);
 
     static long double viscosity_dilute_ethane(HelmholtzEOSMixtureBackend &HEOS);
-    static long double viscosity_ethane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
 
     static long double viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
-
     static long double viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_R23_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
 
+    static long double viscosity_ethane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_hydrogen_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
-
     static long double viscosity_hexane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
-    
     static long double viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend &HEOS);
+
+    /**
+    \brief The general dilute gas conductivity term formed of a ratio of polynomial like terms
+
+    \f[
+    \lambda^0 = \frac{A_i\displaystyle\sum_iT_r^{n_i}}{B_i\displaystyle\sum_iT_r^{m_i}}
+    \f]
+    with \f$\lambda^0\f$ in W/m/K, T_r is the reduced temperature \f$T_{r} = T/T_{red}\f$
+    */
+    static long double conductivity_dilute_ratio_polynomials(HelmholtzEOSMixtureBackend &HEOS);
+
+    /**
+
+    This term is given by
+    \f[
+    \Delta\lambda(\rho,T) = \displaystyle\sum_iA_i\tau^{t,i}\delta^{d_i}
+    \f]
+
+    As used by Assael, Perkins, Huber, etc., the residual term is given by 
+    \f[
+    \Delta\lambda(\rho,T) = \displaystyle\sum_i(B_{1,i}+B_{2,i}(T/T_c))(\rho/\rho_c)^i
+    \f]
+    which can be easily converted by noting that \f$\tau=Tc/T\f$ and \f$\delta=\rho/\rho_c\f$
+    */
+    static long double conductivity_residual_polynomial(HelmholtzEOSMixtureBackend &HEOS);
+
+    /**
+    \brief The simplified critical conductivity term of Olchowy and Sengers
+
+    Olchowy, G. A. & Sengers, J. V. (1989), "A Simplified Representation for the Thermal Conductivity of Fluids in the Critical Region", International Journal of Thermophysics, 10, (2), 417-426
+
+    \f[
+        \lambda^{(c)} = \frac{\rho c_p R_DkT}{6\pi\eta\zeta}(\Omega-\Omega_0)
+    \f]
+    \f[
+        \Omega = \frac{2}{\pi}\left[ \left( \frac{c_p-c_v}{c_p}\right)\arctan(q_d\zeta)+\frac{c_v}{c_p}q_d\zeta \right]
+    \f]
+    \f[
+        \Omega_0 = \frac{2}{\pi}\left[1-\exp\left(-\frac{1}{(q_d\zeta)^{-1}+(q_d\zeta\rho_c/\rho)^2/3} \right) \right]
+    \f]
+    \f[
+        \zeta = \zeta_0\left(\frac{p_c\rho}{\Gamma\rho_c^2}\right)^{\nu/\gamma}\left[\left.\frac{\partial \rho(T,\rho)}{\partial p} \right|_{T}- \frac{T_R}{T}\left.\frac{\partial \rho(T_R,\rho)}{\partial p} \right|_{T}  \right]^{\nu/\gamma},
+    \f]
+    where \f$\lambda^{(c)}\f$ is in W\f$\cdot\f$m\f$^{-1}\f$\f$\cdot\f$K\f$^{-1}\f$, \f$\zeta\f$ is in m, 
+    \f$c_p\f$ and \f$c_v\f$ are in J\f$\cdot\f$kg\f$^{-1}\cdot\f$K\f$^{-1}\f$, \f$p\f$ and \f$p_c\f$ are in Pa, 
+    \f$\rho\f$ and \f$\rho_c\f$ are in mol\f$\cdot\f$m\f$^{-3}\f$, \f$\eta\f$ is the viscosity in Pa\f$\cdot\f$s, 
+    and the remaining parameters are defined in the following tables.
+
+    Coefficients for use in the simplified Olchowy-Sengers critical term
+    Parameter             | Variable     | Value
+    ---------             | --------     | ------
+    Boltzmann constant    | \f$k\f$      | \f$1.3806488\times 10^{-23}\f$ J\f$\cdot\f$K\f$^{-1}\f$ 
+    Universal amplitude   | \f$R_D\f$    | 1.03 
+    Critical exponent     | \f$\nu\f$    | 0.63 
+    Critical exponent     | \f$\gamma\f$ | 1.239
+    Reference temperature | \f$T_R\f$    | 1.5\f$T_c\f$
+
+    Recommended default constants (see Huber (I&ECR, 2003))
+    Parameter        | Variable     | Value
+    ---------        | --------     | ------
+    Amplitude        | \f$\Gamma\f$ | 0.0496
+    Amplitude        |\f$\zeta_0\f$ | 1.94 \f$\times\f$ 10\f$^{-10}\f$ m
+    Effective cutoff | \f$q_d\f$    | 2 \f$\times\f$ 10\f$^{9}\f$ m
+
+    */
+    static long double conductivity_critical_simplified_Olchowy_Sengers(HelmholtzEOSMixtureBackend &HEOS);
+
 }; /* class TransportRoutines */
 
 }; /* namespace CoolProp */

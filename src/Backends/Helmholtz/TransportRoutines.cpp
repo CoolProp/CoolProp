@@ -445,4 +445,57 @@ long double TransportRoutines::viscosity_ethane_higher_order_hardcoded(Helmholtz
 	return 15.977*sum1/(1+sum2)/1e6;
 }
 
+long double TransportRoutines::conductivity_dilute_ratio_polynomials(HelmholtzEOSMixtureBackend &HEOS){
+    if (HEOS.is_pure_or_pseudopure)
+    {
+        // Retrieve values from the state class
+        CoolProp::ConductivityDiluteRatioPolynomialsData &data = HEOS.components[0]->transport.conductivity_dilute.ratio_polynomials;
+
+        long double summer1 = 0, summer2 = 0, Tr = HEOS.T()/data.T_reducing;
+        for (std::size_t i = 0; i < data.A.size(); ++i)
+        {
+            summer1 += data.A[i]*pow(Tr, data.n[i]);
+        }
+        for (std::size_t i = 0; i < data.B.size(); ++i)
+        {
+            summer2 += data.B[i]*pow(Tr, data.m[i]);
+        }
+
+        return summer1/summer2;
+    }
+    else{
+        throw NotImplementedError("TransportRoutines::conductivity_dilute_ratio_polynomials is only for pure and pseudo-pure");
+    }
+};
+
+long double TransportRoutines::conductivity_residual_polynomial(HelmholtzEOSMixtureBackend &HEOS){
+    if (HEOS.is_pure_or_pseudopure)
+    {
+        // Retrieve values from the state class
+        CoolProp::ConductivityResidualPolynomialData &data = HEOS.components[0]->transport.conductivity_residual.polynomials;
+
+        long double summer = 0, tau = data.T_reducing/HEOS.T(), delta = HEOS.keyed_output(CoolProp::iDmass)/data.rhomass_reducing;
+        for (std::size_t i = 0; i < data.B.size(); ++i)
+        {
+            summer += data.B[i]*pow(tau, data.t[i])*pow(delta, data.d[i]);
+        }
+        return summer;
+    }
+    else{
+        throw NotImplementedError("TransportRoutines::conductivity_residual_polynomial is only for pure and pseudo-pure");
+    }
+};
+
+long double TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(HelmholtzEOSMixtureBackend &HEOS){
+    if (HEOS.is_pure_or_pseudopure)
+    {
+        return 0;
+    }
+    else{
+        throw NotImplementedError("TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers is only for pure and pseudo-pure");
+    }
+};
+
+
+
 }; /* namespace CoolProp */

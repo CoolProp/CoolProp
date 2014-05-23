@@ -267,6 +267,78 @@
   ], 
   "NAME": "n-Hexane", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Assael-JPCRD-2013-Hexane", 
+      "critical": {
+        "type": "simplified_Olchowy_Sengers"
+      }, 
+      "dilute": {
+        "A": [
+          0.0066742, 
+          -0.0237619, 
+          0.0720155, 
+          -0.0183714
+        ], 
+        "B": [
+          1
+        ], 
+        "T_reducing": 507.82, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          -0.0301408, 
+          0.0218208, 
+          0.167975, 
+          -0.100833, 
+          -0.129739, 
+          0.077418, 
+          0.0382833, 
+          -0.0215945, 
+          -0.00370294, 
+          0.00212487
+        ], 
+        "T_reducing": 507.82, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          1, 
+          2, 
+          2, 
+          3, 
+          3, 
+          4, 
+          4, 
+          5, 
+          5
+        ], 
+        "rhomass_reducing": 233.182, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Michailidou-JCED-2013", 
       "dilute": {

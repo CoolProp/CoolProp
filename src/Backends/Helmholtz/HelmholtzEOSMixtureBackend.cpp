@@ -132,9 +132,9 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
 {
     if (is_pure_or_pseudopure)
     {
-        if (components[0]->transport.hardcoded != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
+        if (components[0]->transport.hardcoded_viscosity != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
         {
-            switch(components[0]->transport.hardcoded)
+            switch(components[0]->transport.hardcoded_viscosity)
             {
             case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER:
                 return TransportRoutines::viscosity_water_hardcoded(*this);
@@ -143,7 +143,7 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
             case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_R23:
                 return TransportRoutines::viscosity_R23_hardcoded(*this);
             default:
-                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0]->transport.hardcoded, name().c_str()));
+                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0]->transport.hardcoded_viscosity, name().c_str()));
             }
         }
         // Dilute part
@@ -192,6 +192,58 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
         // Critical part
         long double eta_critical = 0;
         return eta_dilute + eta_residual + eta_critical;
+    }
+    else
+    {
+        throw NotImplementedError(format("viscosity not implemented for mixtures"));
+    }
+}
+long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
+{
+    if (is_pure_or_pseudopure)
+    {
+        if (components[0]->transport.hardcoded_conductivity != CoolProp::TransportPropertyData::CONDUCTIVITY_NOT_HARDCODED)
+        {
+            switch(components[0]->transport.hardcoded_conductivity)
+            {
+            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER:
+                return TransportRoutines::viscosity_water_hardcoded(*this);
+            default:
+                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0]->transport.hardcoded_conductivity, name().c_str()));
+            }
+        }
+
+        // Dilute part
+        long double lambda_dilute = _HUGE;
+        switch(components[0]->transport.conductivity_dilute.type)
+        {
+        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS:
+            lambda_dilute = TransportRoutines::conductivity_dilute_ratio_polynomials(*this); break;
+        default:
+            throw ValueError(format("dilute conductivity type [%d] is invalid for fluid %s", components[0]->transport.conductivity_dilute.type, name().c_str()));
+        }
+
+        // Residual part
+        long double lambda_residual = _HUGE;
+        switch(components[0]->transport.conductivity_residual.type)
+        {
+        case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL:
+            lambda_residual = TransportRoutines::conductivity_residual_polynomial(*this); break;
+        default:
+            throw ValueError(format("residual conductivity type [%d] is invalid for fluid %s", components[0]->transport.conductivity_residual.type, name().c_str()));
+        }
+       
+        // Critical part
+        long double lambda_critical = _HUGE;
+        switch(components[0]->transport.conductivity_critical.type)
+        {
+        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS:
+            lambda_critical = TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(*this); break;
+        default:
+            throw ValueError(format("critical conductivity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
+        }
+
+        return lambda_dilute + lambda_residual + lambda_critical;
     }
     else
     {

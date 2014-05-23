@@ -13,7 +13,6 @@
 \hline\hline
 Fluid & Reference & $\eta^0$ & $\eta^r$ \\
 \hline
-Ammonia & (data) Fenghour 1995 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\Game(T^*)}$\newline$\mathfrak{S}(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ &  $\eta^r = B_{BV}\rho\eta^0(T) + \Delta\eta$\newline$\Delta\eta = \sum_i b_i(T)\rho^i$\\\hline
 H2S & Quinones-Cisneros 2012 & $\eta^0 = 0.87721\dfrac{\sqrt{T}}{S^*(T^*)}$ \newline $S^*(T^*) = \sum_i \frac{\alpha_i}{T^{*i}}$ & FRICTION THEORY\\\hline
 \hline \multicolumn{4}{c}{DONE below this line}\\ \hline\hline
 Propane & (data) Vogel 1998 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\mathfrak{S}(T^*)}$\newline$\mathfrak{S}(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ & $\eta_h = \displaystyle\sum_{i=2}^n\displaystyle\sum_{j=0}^me_{ij}\frac{\delta^i}{\tau_j}+f_1\left(\frac{\delta}{\delta_0(\tau)-\delta}-\frac{\delta}{\delta_0(\tau)}\right)$ \newline $\delta_0(\tau)=g_1(1+g_2\tau^{1/2})$\\\hline
@@ -37,8 +36,50 @@ R404A, R410A, R507, R407 & (data) Geller 2000 & $\eta^0 = \sum_i A_iT^i$&$\eta^r
 Helium & (data) Arp 1998 & hardcoded & hardcoded \\\hline
 R23 & (data) Shan 2000 & $\eta^0 = \frac{5}{16}\sqrt{\frac{MkT}{1000\pi N}}\frac{10^{24}}{\sigma^2\Omega^*(T^*)}$\newline $\Omega(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$  & \\\hline
 Ethane & (data) Friend 1991 & $\eta^0 = \dfrac{12.0085\sqrt{t}}{\Omega^{(2,2)*}(t)}$ \newline $\Omega^{(2,2)*}(t) = \left[\sum_i C_it^{(i-1)/3-1} \right]^{-1}$& $\Delta\eta = 15.977\left[\displaystyle\sum_i g_i\delta^{r_i}\tau^{s_i}\right]\left[1+\displaystyle\sum_{i=10}^{11}g_i\delta^{r_i}\tau^{s_i}\right]^{-1}$\\\hline
+Ammonia & (data) Fenghour 1995 & $\eta^0 = \dfrac{0.021357\sqrt{MT}}{\sigma^2\Game(T^*)}$\newline$\mathfrak{S}(T^*)=\exp\left(\sum_{i=0}^{4}a_i[\ln T^*]^i\right)$ &  $\eta^r = B_{BV}\rho\eta^0(T) + \Delta\eta$\newline$\Delta\eta = \sum_i b_i(T)\rho^i$\\\hline
 \hline\hline
 \end{tabular}
 
 For a description of the conversion between $\mathfrak{S}$ and $\Omega$, see Vesovic 1990 ($CO_2$).  Basically $\Omega = (5/4)\mathfrak{S}$.
+
+\clearpage
+
+\centering
+\begin{tabular}{cccp{3in}p{8in}p{3in}}
+\hline\hline
+Fluid & Data & Reference & Dilute & Residual & Critical \\ \hline
+Nitrogen, Argon, Oxygen, Air & & Lemmon 2004 & & &\\
+Ammonia & & Tufeu 1984 \\
+
+CO2 & & Vesovic JPCRD 1990 \\
+Ethane & & Friend JPCRD 1991 \\
+
+Helium & & Hands Cryo 1981\\
+
+Isobutane & & Perkins JCED 2002\\
+R123 & & Laesecke IJR 1996 \\
+R1234ze(E) & & Perkins JCED 2011 \\
+R125 & & Perkins JCED 2006 \\
+R152A & & Krauss IJT 1996 \\
+R23 & & Shan ASHRAE 2000 \\
+R404A, R407C, R401A, R507A & & Geller IJT 2001 \\
+
+Water & & Huber JPCRD 2012\\
+Butane & & Perkins  JCED 2002 \\
+Octane, Nonane, Decane & & Huber FPE 2005\\
+Dodecane & & Huber EF 2004 \\
+
+Ethanol & & Assael JPCRD 2013 \\
+SF6 & & Assael JPCRD 2012\\
+Toluene & & Assael JPCRD 2012\\
+Benzene & & Assael JPCRD 2012 \\
+Normal-/Parahydrogen & & Assael JPCRD 2011\\
+Heptane & & Assael JPCRD 2013\\
+Hexane & & Assael JPCRD 2013\\
+
+Propane & & Marsh JCED 2002\\
+\hline\hline
+\end{tabular}
+
+
 \end{document}

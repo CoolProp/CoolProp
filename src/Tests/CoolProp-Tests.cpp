@@ -11,9 +11,9 @@
 
 #include "catch.hpp"
 
-namespace ViscosityValidation{
+namespace TransportValidation{
 
-// A structure to hold the values for one validation call for viscosity
+// A structure to hold the values for one validation call
 struct vel
 {
 public:
@@ -22,7 +22,8 @@ public:
     vel(std::string fluid, std::string in1, double v1, std::string in2, double v2, std::string out, double expected, double tol)
     {
         this->in1 = in1; this->in2 = in2; this->fluid = fluid;
-        this->v1 = v1; this->v2 = v2; this->expected = expected; this->tol = tol;
+        this->v1 = v1; this->v2 = v2; this->expected = expected; 
+        this->tol = tol;
     };
 };
 
@@ -199,15 +200,15 @@ vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-4),
 
 };
 
-class ViscosityValidationFixture
+class TransportValidationFixture
 {
 protected:
     long double actual, x1, x2;
     CoolProp::AbstractState *pState;
     int pair;
 public:
-    ViscosityValidationFixture(){ pState = NULL; }
-    ~ViscosityValidationFixture(){ delete pState; }
+    TransportValidationFixture(){ pState = NULL; }
+    ~TransportValidationFixture(){ delete pState; }
     void set_backend(std::string backend, std::string fluid_name){
         pState = CoolProp::AbstractState::factory(backend, fluid_name);
     }
@@ -218,13 +219,13 @@ public:
         long pair = CoolProp::generate_update_pair(iin1, v1, iin2, v2, o1, o2);
         pState->update(pair, o1, o2);
     }
-    void get_value()
+    void get_value(long key)
     {
-        actual = pState->viscosity();
+        actual = pState->keyed_output(key);
     }
 };
 
-TEST_CASE_METHOD(ViscosityValidationFixture, "Compare viscosities against published data", "[viscosity]")
+TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against published data", "[viscosity]")
 {
     int inputsN = sizeof(viscosity_validation_data)/sizeof(viscosity_validation_data[0]);
     for (int i = 0; i < inputsN; ++i)
@@ -238,14 +239,44 @@ TEST_CASE_METHOD(ViscosityValidationFixture, "Compare viscosities against publis
         CAPTURE(el.in2);
         CAPTURE(el.v2);
         CHECK_NOTHROW(set_pair(el.in1, el.v1, el.in2, el.v2));
-        get_value();
+        get_value(CoolProp::iviscosity);
         CAPTURE(el.expected);
         CAPTURE(actual);
         CHECK(fabs(actual/el.expected-1) < el.tol);
     }
 }
 
-}; /* namespace ViscosityValidation */
+vel conductivity_validation_data[] = {
+// From Assael, JPCRD, 2013
+vel("Hexane", "T", 250, "Dmass", 700, "L", 137.62e-3, 1e-3),
+vel("Hexane", "T", 400, "Dmass", 2, "L", 23.558e-3, 1e-3),
+vel("Hexane", "T", 400, "Dmass", 650, "L", 129.28e-3, 1e-3),
+vel("Hexane", "T", 510, "Dmass", 2, "L", 36.772e-3, 1e-3),
+
+};
+
+TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity]")
+{
+    int inputsN = sizeof(conductivity_validation_data)/sizeof(conductivity_validation_data[0]);
+    for (int i = 0; i < inputsN; ++i)
+    {
+        vel el = conductivity_validation_data[i];
+        CHECK_NOTHROW(set_backend("HEOS", el.fluid));
+        CAPTURE(el.fluid);
+        CAPTURE(el.in1);
+        CAPTURE(el.v1);
+        CAPTURE(el.in2);
+        CAPTURE(el.v2);
+        CHECK_NOTHROW(set_pair(el.in1, el.v1, el.in2, el.v2));
+        get_value(CoolProp::iconductivity);
+        CAPTURE(el.expected);
+        CAPTURE(actual);
+        CHECK(fabs(actual/el.expected-1) < el.tol);
+    }
+}
+
+
+}; /* namespace TransportValidation */
 
 static int inputs[] = {
     CoolProp::DmolarT_INPUTS,

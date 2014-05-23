@@ -9,8 +9,10 @@
 #include <map>
 #include <algorithm>
 
-
 namespace CoolProp{
+
+// Forward declaration of the necessary debug function to avoid including the whole header
+extern int get_debug_level();
 
 /// A container for the fluid parameters for the CoolProp fluids
 /**
@@ -440,13 +442,13 @@ protected:
         if (viscosity.HasMember("hardcoded")){
             std::string target = cpjson::get_string(viscosity,"hardcoded");
             if (!target.compare("Water")){
-                fluid.transport.hardcoded = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER; return;
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER; return;
             }
             else if (!target.compare("Helium")){
-                fluid.transport.hardcoded = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM; return;
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM; return;
             }
             else if (!target.compare("R23")){
-                fluid.transport.hardcoded = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_R23; return;
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_R23; return;
             }
             else{
                 throw ValueError();
@@ -475,20 +477,130 @@ protected:
             parse_higher_order_viscosity(viscosity["higher_order"], fluid);
         }
     };
+    
+    /// Parse the transport properties
+    void parse_dilute_conductivity(rapidjson::Value &dilute, CoolPropFluid & fluid)
+    {
+        /*if (dilute.HasMember("hardcoded")){
+            std::string target = cpjson::get_string(dilute, "hardcoded");
+            if (!target.compare("Ethane")){
+                fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE; return;
+            }
+        }*/
+        std::string type = cpjson::get_string(dilute, "type");
+        if (!type.compare("ratio_of_polynomials")){
+            // Get a reference to the entry in the fluid instance
+            CoolProp::ConductivityDiluteRatioPolynomialsData &data = fluid.transport.conductivity_dilute.ratio_polynomials;
+
+            // Set the type flag
+            fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS;
+
+            // Load up the values
+            data.A = cpjson::get_long_double_array(dilute["A"]);
+            data.B = cpjson::get_long_double_array(dilute["B"]);
+            data.n = cpjson::get_long_double_array(dilute["n"]);
+            data.m = cpjson::get_long_double_array(dilute["m"]);
+            data.T_reducing = cpjson::get_double(dilute, "T_reducing");
+        }
+        else{
+            throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
+        }
+    };
+
+    /// Parse the transport properties
+    void parse_residual_conductivity(rapidjson::Value &dilute, CoolPropFluid & fluid)
+    {
+        /*if (dilute.HasMember("hardcoded")){
+            std::string target = cpjson::get_string(dilute, "hardcoded");
+            if (!target.compare("Ethane")){
+                fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE; return;
+            }
+        }*/
+        std::string type = cpjson::get_string(dilute, "type");
+        if (!type.compare("polynomial")){
+            // Get a reference to the entry in the fluid instance
+            CoolProp::ConductivityResidualPolynomialData &data = fluid.transport.conductivity_residual.polynomials;
+
+            // Set the type flag
+            fluid.transport.conductivity_residual.type = CoolProp::ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL;
+
+            // Load up the values
+            data.B = cpjson::get_long_double_array(dilute["B"]);
+            data.d = cpjson::get_long_double_array(dilute["d"]);
+            data.t = cpjson::get_long_double_array(dilute["t"]);
+            data.T_reducing = cpjson::get_double(dilute, "T_reducing");
+            data.rhomass_reducing = cpjson::get_double(dilute, "rhomass_reducing");
+        }
+        else{
+            throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
+        }
+    };
+
+    void parse_critical_conductivity(rapidjson::Value &critical, CoolPropFluid & fluid)
+    {
+        /*if (dilute.HasMember("hardcoded")){
+            std::string target = cpjson::get_string(dilute, "hardcoded");
+            if (!target.compare("Ethane")){
+                fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE; return;
+            }
+        }*/
+        std::string type = cpjson::get_string(critical, "type");
+        if (!type.compare("simplified_Olchowy_Sengers")){
+            //// Get a reference to the entry in the fluid instance
+            //CoolProp::ConductivityResidualPolynomialData &data = fluid.transport.conductivity_residual.polynomials;
+
+            // Set the type flag
+            fluid.transport.conductivity_critical.type = CoolProp::ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS;
+        }
+        else{
+            throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
+        }
+    };
+    
     /// Parse the thermal conductivity data
     void parse_thermal_conductivity(rapidjson::Value &conductivity, CoolPropFluid & fluid)
     {
+        // Load dilute conductivity term
+        if (conductivity.HasMember("dilute")){
+            parse_dilute_conductivity(conductivity["dilute"], fluid);
+        }
+         // Load residual conductivity term
+        if (conductivity.HasMember("residual")){
+            parse_residual_conductivity(conductivity["residual"], fluid);
+        }
+        // Load critical conductivity term
+        if (conductivity.HasMember("critical")){
+            parse_critical_conductivity(conductivity["critical"], fluid);
+        }
     };
 
     /// Parse the transport properties
     void parse_transport(rapidjson::Value &transport, CoolPropFluid & fluid)
     {
+        //if (!fluid.name.compare("n-Hexane")){
+        //    rapidjson::Document dd;
+        //    dd.SetObject();
+
+        //    dd.AddMember("core",transport,dd.GetAllocator());
+        //    rapidjson::StringBuffer buffer;
+        //    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+
+        //    dd.Accept(writer);
+        //    std::string json0 = buffer.GetString();
+        //    //std::cout << json0 << std::endl;
+
+        //    FILE *fp;
+        //    fp = fopen("nHexane_transport.json","w");
+        //    fprintf(fp,"%s",json0.c_str());
+        //    fclose(fp);
+        //}
+
         // Parse viscosity
         if (transport.HasMember("viscosity")){
             parse_viscosity(transport["viscosity"],fluid);
         }
 
-        // Parse thermal conductivity
+        // Parse thermal conductivity 
         if (transport.HasMember("conductivity")){
             parse_thermal_conductivity(transport["conductivity"],fluid);
         }
@@ -582,7 +694,9 @@ public:
 
         // Surface tension
         if (!(fluid_json["ANCILLARIES"].HasMember("surface_tension"))){
-            std::cout << format("Surface tension curves are missing for fluid [%s]\n", fluid.name.c_str()) ;
+            if (get_debug_level() > 0){
+                std::cout << format("Surface tension curves are missing for fluid [%s]\n", fluid.name.c_str()) ;
+            }
         }
         else{
             parse_surface_tension(fluid_json["ANCILLARIES"]["surface_tension"], fluid);
@@ -590,7 +704,9 @@ public:
 
         // Parse the environmental parameters
         if (!(fluid_json.HasMember("ENVIRONMENTAL"))){
-            std::cout << format("Environmental data are missing for fluid [%s]\n", fluid.name.c_str()) ;
+            if (get_debug_level() > 0){
+                std::cout << format("Environmental data are missing for fluid [%s]\n", fluid.name.c_str()) ;
+            }
         }
         else{
             parse_environmental(fluid_json["ENVIRONMENTAL"], fluid);
