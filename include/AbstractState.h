@@ -278,14 +278,20 @@ public:
     // All other parameters are calculated on an as-needed basis
     // ----------------------------------------
     double T(void)  {return _T;};
+    /// Return the molar density in mol/m^3
     double rhomolar(void){return _rhomolar;};
+    /// Return the pressure in Pa
     double p(void)  {return _p;};
+    /// Return the vapor quality (mol/mol) Q = 0 for saturated liquid
     double Q(void)  {return _Q;};
 
+    /// Return the reciprocal of the reduced temperature (\f$\tau = T_c/T\f$)
     double tau(void);
+    /// Return the reduced density (\f$\delta = \rho/\rho_c\f$)
     double delta(void);
-
+    /// Return the molar mass in kg/mol
     double molar_mass(void);
+    /// Return the mole-fraction weighted gas constant in J/mol/K
     double gas_constant(void);
 
     double Bvirial(void);
@@ -293,13 +299,21 @@ public:
     double Cvirial(void);
     double dCvirial_dT(void);
 
+    /// Return the molar enthalpy in J/mol
     double hmolar(void);
+    /// Return the molar entropy in J/mol/K
     double smolar(void);
+    /// Return the molar internal energy in J/mol
     double umolar(void);
+    /// Return the molar constant pressure specific heat in J/mol/K
     double cpmolar(void);
+    /// Return the molar constant volume specific heat in J/mol/K
     double cvmolar(void);
+    /// Return the speed of sound in m/s
     double speed_sound(void);
+    /// Return the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa
     double isothermal_compressibility(void);
+    /// Return the isobaric expansion coefficient \f$ \beta = \frac{1}{v}\left.\frac{\partial v}{\partial T}\right|_p = -\frac{1}{\rho}\left.\frac{\partial \rho}{\partial T}\right|_p\f$  in 1/K
     double isobaric_expansion_coefficient(void);
     double fugacity_coefficient(int i);
     //double fundamental_derivative_of_gas_dynamics(void);
@@ -307,14 +321,17 @@ public:
     // ----------------------------------------
     // Transport properties
     // ----------------------------------------
+    /// Return the viscosity in Pa-s
     double viscosity(void);
+    /// Return the thermal conductivity in W/m/K
     double conductivity(void);
+    /// Return the surface tension in N/m
     double surface_tension(void);
 
     // ----------------------------------------
     // Helmholtz energy and derivatives
     // ----------------------------------------
-    /// Return the derivative \f$ \alpha^0 \f$
+    /// Return the term \f$ \alpha^0 \f$
     long double alpha0(void){
         if (!_alpha0) _alpha0 = calc_alpha0();
         return _alpha0;
@@ -383,6 +400,12 @@ public:
     */
 };
 
+
+/**
+This class is a wrapper around an AbstractState.  It handles construction and desctruction of the AbstractState 
+instance which decreases the likelihood of memory leaks.  Only a few functions are exposed out of the AbstractState - this 
+can be expanded, but functions must be manually exported out of the wrapper, which is not so nice.
+*/
 class AbstractStateWrapper
 {
 protected:
