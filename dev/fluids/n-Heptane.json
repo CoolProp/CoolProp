@@ -265,5 +265,89 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "n-Heptane"
+  "NAME": "n-Heptane", 
+  "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Assael-JPCRD-2013-Heptane", 
+      "critical": {
+        "GAMMA": 0.0586, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 2.45e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.00183367, 
+          0.0162572, 
+          -0.0390996, 
+          0.0478594, 
+          0.0151925, 
+          -0.00339115
+        ], 
+        "B": [
+          0.250611, 
+          -0.320871, 
+          1
+        ], 
+        "T_reducing": 540.13, 
+        "T_reducing_units": "K", 
+        "m": [
+          0, 
+          1, 
+          2
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4, 
+          5
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.0517785, 
+          -0.00772433, 
+          -0.0924052, 
+          0.0218899, 
+          0.0511484, 
+          0.00171725, 
+          -0.00776896, 
+          -0.00791642, 
+          0.000121637, 
+          0.00183379
+        ], 
+        "T_reducing": 540.13, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          1, 
+          2, 
+          2, 
+          3, 
+          3, 
+          4, 
+          4, 
+          5, 
+          5
+        ], 
+        "rhomass_reducing": 232, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }
+  }
 }

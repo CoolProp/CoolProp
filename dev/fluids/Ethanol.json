@@ -351,6 +351,88 @@
   ], 
   "NAME": "Ethanol", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Assael-JPCRD-2013-Ethanol", 
+      "critical": {
+        "GAMMA": 0.05885, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.64296e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.00209575, 
+          0.0199045, 
+          -0.053964, 
+          0.0821223, 
+          -0.00198864, 
+          -0.000495513
+        ], 
+        "B": [
+          0.17223, 
+          -0.078273, 
+          1
+        ], 
+        "T_reducing": 514.71, 
+        "T_reducing_units": "K", 
+        "m": [
+          0, 
+          1, 
+          2
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4, 
+          5
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.0267222, 
+          0.0177166, 
+          0.148279, 
+          -0.0893088, 
+          -0.130429, 
+          0.0684664, 
+          0.0346232, 
+          -0.0145702, 
+          -0.00244293, 
+          0.000809189
+        ], 
+        "T_reducing": 514.71, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          1, 
+          2, 
+          2, 
+          3, 
+          3, 
+          4, 
+          4, 
+          5, 
+          5
+        ], 
+        "rhomass_reducing": 273.186, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Kiselev-IECR-2005", 
       "dilute": {

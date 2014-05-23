@@ -409,6 +409,84 @@
   ], 
   "NAME": "SulfurHexafluoride", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Assael-JPCRD-2012-SF6", 
+      "critical": {
+        "GAMMA": 0.052, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.9e-10
+      }, 
+      "dilute": {
+        "A": [
+          1461.86, 
+          -18.5394, 
+          0.0777891, 
+          2.41059e-05
+        ], 
+        "B": [
+          29661.7, 
+          505.67, 
+          1
+        ], 
+        "T_reducing": 1, 
+        "T_reducing_units": "K", 
+        "m": [
+          0, 
+          1, 
+          2
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          -0.0283746, 
+          0.0352768, 
+          0.0207472, 
+          -0.0433053, 
+          -0.0055718, 
+          0.0512084, 
+          0.0053289, 
+          -0.0290262, 
+          -0.00161688, 
+          0.00598438
+        ], 
+        "T_reducing": 318.7232, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          1, 
+          2, 
+          2, 
+          3, 
+          3, 
+          4, 
+          4, 
+          5, 
+          5
+        ], 
+        "rhomass_reducing": 742.297, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "QuinonesCisneros-JPCRD-2012", 
       "dilute": {
