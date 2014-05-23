@@ -290,5 +290,141 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Ammonia"
+  "NAME": "Ammonia", 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Fenghour-JPCRD-1995", 
+      "_note": "There is a mysterious factor of 100 missing from the Fenghour equation for the dilute gas.  From REFPROP fluid file: !=0.021357*SQRT(MW)*(unknown factor of 100)  [Chapman-Enskog term]", 
+      "dilute": {
+        "C": 2.1357e-06, 
+        "a": [
+          4.9931822, 
+          -0.61122364, 
+          0.0, 
+          0.18535124, 
+          -0.11160946
+        ], 
+        "molar_mass": 0.01703026, 
+        "molar_mass_units": "kg/mol", 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "collision_integral"
+      }, 
+      "epsilon_over_k": 386, 
+      "epsilon_over_k_units": "K", 
+      "higher_order": {
+        "T_reduce": 405.4, 
+        "T_reduce_units": "K", 
+        "a": [
+          4.005040600989671e-06, 
+          -1.4107915123955129e-05, 
+          3.4760743039321816e-05, 
+          4.631310990138071e-06, 
+          -3.937374461785061e-06, 
+          -1.200075068367531e-05, 
+          1.9284977991745303e-06
+        ], 
+        "d1": [
+          3, 
+          3, 
+          2, 
+          4, 
+          4, 
+          2, 
+          4
+        ], 
+        "d2": [
+          1
+        ], 
+        "f": [
+          0.0
+        ], 
+        "g": [
+          1
+        ], 
+        "gamma": [
+          0, 
+          0, 
+          0, 
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "h": [
+          0
+        ], 
+        "l": [
+          1, 
+          1, 
+          1, 
+          1, 
+          1, 
+          1, 
+          1
+        ], 
+        "p": [
+          1
+        ], 
+        "q": [
+          0
+        ], 
+        "rhomolar_reduce": 13211.8, 
+        "rhomolar_reduce_units": "mol/m^3", 
+        "t1": [
+          0, 
+          1, 
+          2, 
+          2, 
+          3, 
+          4, 
+          4
+        ], 
+        "t2": [
+          0
+        ], 
+        "type": "modified_Batschinski_Hildebrand"
+      }, 
+      "initial_density": {
+        "b": [
+          -1.7999496, 
+          46.692621, 
+          -534.60794, 
+          3360.4074, 
+          -13019.164, 
+          33414.23, 
+          -58711.743, 
+          71426.686, 
+          -59834.012, 
+          33652.741, 
+          -12027.35, 
+          2434.8205, 
+          -208.07957
+        ], 
+        "t": [
+          -0.0, 
+          -0.5, 
+          -1.0, 
+          -1.5, 
+          -2.0, 
+          -2.5, 
+          -3.0, 
+          -3.5, 
+          -4.0, 
+          -4.5, 
+          -5.0, 
+          -5.5, 
+          -6.0
+        ], 
+        "type": "Rainwater-Friend"
+      }, 
+      "sigma_eta": 2.957e-10, 
+      "sigma_eta_units": "m"
+    }
+  }
 }
