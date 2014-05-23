@@ -208,6 +208,10 @@ double AbstractState::keyed_output(int key)
         return dCvirial_dT();
     case iisothermal_compressibility:
         return isothermal_compressibility();
+    case iviscosity:
+        return viscosity();
+    case iconductivity:
+        return conductivity();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for keyed_output",key,get_parameter_information(key,"short").c_str()));
     }
@@ -299,13 +303,6 @@ double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 //	virtual double AbstractState::drhodp_consth_smoothed(double xend);
 //	/// Density corresponding to the smoothed derivatives in the region of x=0 to x=xend
 //	virtual void AbstractState::rho_smoothed(double xend, double *rho_spline, double *dsplinedh, double *dsplinedp);
-//
-//
-//	// ----------------------------------------
-//	// Transport properties // TODO: Fix it!
-//	// ----------------------------------------
-//
-//	virtual double AbstractState::surface_tension(void);
 
 } /* namespace CoolProp */
 
