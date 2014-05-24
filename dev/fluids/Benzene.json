@@ -291,5 +291,75 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Benzene"
+  "NAME": "Benzene", 
+  "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Assael-JPCRD-2013-Hexane", 
+      "critical": {
+        "GAMMA": 0.0569, 
+        "qD": 1612903225, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 2.16e-10,
+        "R0": 1.02,
+        "gamma": 1.239
+      }, 
+      "dilute": {
+        "A": [
+        101.404e-3,-521.440e-3,868.266e-3
+        ], 
+        "B": [
+          1
+          9.714
+          1.467
+        ], 
+        "T_reducing": 562.02, 
+        "T_reducing_units": "K", 
+        "m": [
+          0,
+          1,
+          2
+        ], 
+        "n": [
+          0, 
+          1, 
+          2
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+            2.82489e-2, -1.19268e-2, -7.73415e-2, 8.33389e-2, 7.14001e-2, -8.98176e-2, -2.36798e-2, 3.63025e-2, 3.00875e-3, -4.90052e-3
+        ], 
+        "T_reducing": 562.02, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          1, 
+          2, 
+          2, 
+          3, 
+          3, 
+          4, 
+          4, 
+          5, 
+          5
+        ], 
+        "rhomass_reducing": 304.7922436, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }
+  }
 }
