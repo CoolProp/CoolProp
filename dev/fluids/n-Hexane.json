@@ -272,7 +272,7 @@
       "critical": {
         "GAMMA": 0.05803, 
         "R0": 1.02, 
-        "gamma": 1.1239, 
+        "gamma": 1.239, 
         "qD": 1350000000.0, 
         "type": "simplified_Olchowy_Sengers", 
         "zeta0": 2.364e-10
