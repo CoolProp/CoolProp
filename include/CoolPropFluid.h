@@ -206,12 +206,13 @@ surface tension is in N/m
 */
 class SurfaceTensionCorrelation
 {
+public:
     std::vector<long double> a, n, s;
     long double Tc;
-    std::string BibTeX;
-    std::size_t N;
-public:
     
+    std::size_t N;
+
+    std::string BibTeX;
     SurfaceTensionCorrelation(){};
     SurfaceTensionCorrelation(rapidjson::Value &json_code)
     {
@@ -226,6 +227,7 @@ public:
     };
     long double evaluate(long double T)
     {
+        if (a.empty()){ throw NotImplementedError(format("surface tension curve not provided"));}
         long double THETA = 1-T/Tc;
         for (std::size_t i = 0; i < N; ++i)
         {
@@ -353,6 +355,8 @@ public:
     bool pseudo_pure; ///< Is a pseudo-pure fluid (true) or pure fluid (false)
     ResidualHelmholtzContainer alphar; ///< The residual Helmholtz energy
     IdealHelmholtzContainer alpha0; ///< The ideal Helmholtz energy
+    std::string BibTeX_EOS, ///< The bibtex key for the equation of state
+                BibTeX_CP0; ///< The bibtex key for the ideal gas specific heat correlation
 
     /// Validate the EOS that was just constructed
     void validate()
