@@ -331,6 +331,81 @@
   ], 
   "NAME": "n-Butane", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Perkins-JCED-2002-nButane", 
+      "critical": {
+        "GAMMA": 0.0496, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 1142400182.0, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.94e-10
+      }, 
+      "dilute": {
+        "A": [
+          0.00162676, 
+          0.000975703, 
+          0.0289887
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 425.125, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          -0.0308823, 
+          0.159698, 
+          -0.141629, 
+          0.0503252, 
+          -0.00604344, 
+          0.0422711, 
+          -0.143867, 
+          0.130043, 
+          -0.0473921, 
+          0.00631824
+        ], 
+        "T_reducing": 425.125, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4, 
+          5, 
+          1, 
+          2, 
+          3, 
+          4, 
+          5
+        ], 
+        "rhomass_reducing": 228, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0, 
+          0, 
+          -1, 
+          -1, 
+          -1, 
+          -1, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Vogel-HTHP-1999", 
       "dilute": {

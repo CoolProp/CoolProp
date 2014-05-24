@@ -324,7 +324,7 @@
       "ptriple": 0.02287944697, 
       "ptriple_units": "Pa", 
       "reducing_state": {
-        "T": 407.817, 
+        "T": 407.81, 
         "T_units": "K", 
         "p": 3629000, 
         "p_units": "Pa", 
@@ -339,6 +339,81 @@
   ], 
   "NAME": "IsoButane", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Perkins-JCED-2002-Isobutane", 
+      "critical": {
+        "GAMMA": 0.0496, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 1520540217.5, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.94e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.00237901, 
+          0.0106601, 
+          0.0215811
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 407.82, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          -0.0394953, 
+          0.161607, 
+          -0.138049, 
+          0.0483126, 
+          -0.00578452, 
+          0.0451967, 
+          -0.134395, 
+          0.115446, 
+          -0.0411718, 
+          0.00543111
+        ], 
+        "T_reducing": 407.82, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4, 
+          5, 
+          1, 
+          2, 
+          3, 
+          4, 
+          5
+        ], 
+        "rhomass_reducing": 225.5, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0, 
+          0, 
+          -1, 
+          -1, 
+          -1, 
+          -1, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Vogel-IJT-1999", 
       "dilute": {
