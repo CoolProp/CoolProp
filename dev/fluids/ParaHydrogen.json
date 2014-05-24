@@ -299,5 +299,104 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "ParaHydrogen"
+  "NAME": "ParaHydrogen", 
+  "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Assael-JPCRD-2011-Hydrogen", 
+      "critical": {
+        "GAMMA": 0.052, 
+        "R0": 1.01, 
+        "gamma": 1.2415, 
+        "qD": 2000000000.0, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.5e-10
+      }, 
+      "dilute": {
+        "A": [
+          -1.245, 
+          310.212, 
+          -331.004, 
+          246.016, 
+          -65.781, 
+          10.826, 
+          -0.519659, 
+          0.0143979
+        ], 
+        "B": [
+          14230.4, 
+          -19392.2, 
+          15837.9, 
+          -4818.12, 
+          728.639, 
+          -35.7365, 
+          1.0
+        ], 
+        "T_reducing": 32.938, 
+        "T_reducing_units": "K", 
+        "m": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4, 
+          5, 
+          6
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4, 
+          5, 
+          6, 
+          7
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.0265975, 
+          -0.00133826, 
+          0.0130219, 
+          -0.00567678, 
+          -9.2338e-05, 
+          -0.00121727, 
+          0.00366663, 
+          0.00388715, 
+          -0.00921055, 
+          0.00400723
+        ], 
+        "T_reducing": 32.938, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4, 
+          5, 
+          1, 
+          2, 
+          3, 
+          4, 
+          5
+        ], 
+        "rhomass_reducing": 31.32274344, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0, 
+          0, 
+          -1, 
+          -1, 
+          -1, 
+          -1, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }
+  }
 }

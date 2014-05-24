@@ -302,6 +302,95 @@
   ], 
   "NAME": "Hydrogen", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Assael-JPCRD-2011-Hydrogen", 
+      "critical": {
+        "GAMMA": 0.052, 
+        "R0": 1.01, 
+        "gamma": 1.2415, 
+        "qD": 2500000000.0, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.5e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.340976, 
+          4.5882, 
+          -1.4508, 
+          0.326394, 
+          0.00316939, 
+          0.000190592, 
+          -1.139e-06
+        ], 
+        "B": [
+          138.497, 
+          -22.1878, 
+          4.57151, 
+          1.0
+        ], 
+        "T_reducing": 33.145, 
+        "T_reducing_units": "K", 
+        "m": [
+          0, 
+          1, 
+          2, 
+          3
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4, 
+          5, 
+          6
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.0363081, 
+          0.0018337, 
+          -0.0207629, 
+          -0.00886716, 
+          0.031481, 
+          0.015826, 
+          -0.0143097, 
+          -0.0106283, 
+          0.0017498, 
+          0.00280673
+        ], 
+        "T_reducing": 33.145, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          1, 
+          2, 
+          2, 
+          3, 
+          3, 
+          4, 
+          4, 
+          5, 
+          5
+        ], 
+        "rhomass_reducing": 31.262267, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Muzny-JCED-2013", 
       "dilute": {
