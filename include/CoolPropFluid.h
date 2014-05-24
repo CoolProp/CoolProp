@@ -74,9 +74,19 @@ struct ConductivityResidualVariables
     ConductivityResidualVariables(){type = CONDUCTIVITY_RESIDUAL_NOT_SET;}
 };
 
-struct ConductivityCriticalSimplifiedOlchowySengers{
-    long double T_reducing, p_reducing;
-    std::vector<long double> B, t, d;
+struct ConductivityCriticalSimplifiedOlchowySengersData{
+    long double T_reducing, p_reducing, k, R0, gamma, nu, qD, zeta0, GAMMA;
+    ConductivityCriticalSimplifiedOlchowySengersData(){
+        // Universal constants - can still be adjusted if need be
+        k = 1.3806488e-23; //[J/K]
+        R0 = 1.03; //[-]
+		gamma = 1.239; //[-]
+		nu = 0.63; //[-]
+        // Suggested default values - can be over-written
+        GAMMA = 0.0496; //[-]
+        zeta0 = 1.94e-10; //[m]
+        qD = 1e9; //[m]
+    }
 };
 struct ConductivityCriticalVariables
 {
@@ -84,9 +94,9 @@ struct ConductivityCriticalVariables
                                    CONDUCTIVITY_CRITICAL_NOT_SET
                                    };
     int type;
-    ConductivityCriticalSimplifiedOlchowySengers Olchowy_Sengers;
+    ConductivityCriticalSimplifiedOlchowySengersData Olchowy_Sengers;
 
-    ConductivityCriticalVariables(){type = CONDUCTIVITY_CRITICAL_NOT_SET;}
+    ConductivityCriticalVariables(){type = CONDUCTIVITY_CRITICAL_NOT_SET; }
 };
 
 /// Variables for the dilute gas part 

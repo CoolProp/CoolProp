@@ -248,16 +248,16 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against publis
 
 vel conductivity_validation_data[] = {
 // From Assael, JPCRD, 2013
-vel("Hexane", "T", 250, "Dmass", 700, "L", 137.62e-3, 1e-3),
-vel("Hexane", "T", 400, "Dmass", 2, "L", 23.558e-3, 1e-3),
-vel("Hexane", "T", 400, "Dmass", 650, "L", 129.28e-3, 1e-3),
-vel("Hexane", "T", 510, "Dmass", 2, "L", 36.772e-3, 1e-3),
+vel("Hexane", "T", 250, "Dmass", 700, "L", 137.62e-3, 1e-4),
+vel("Hexane", "T", 400, "Dmass", 2, "L", 23.558e-3, 1e-4),
+vel("Hexane", "T", 400, "Dmass", 650, "L", 129.28e-3, 2e-4),
+vel("Hexane", "T", 510, "Dmass", 2, "L", 36.772e-3, 1e-4),
 
 // From Assael, JPCRD, 2013
-vel("Heptane", "T", 250, "Dmass", 720, "L", 137.09e-3, 1e-4),
-vel("Heptane", "T", 400, "Dmass", 2, "L", 21.794e-3, 1e-4),
-vel("Heptane", "T", 400, "Dmass", 650, "L", 120.75e-3, 1e-4),
-vel("Heptane", "T", 535, "Dmass", 100, "L", 51.655e-3, 1e-4),
+//vel("Heptane", "T", 250, "Dmass", 720, "L", 137.09e-3, 1e-4),
+//vel("Heptane", "T", 400, "Dmass", 2, "L", 21.794e-3, 1e-4),
+//vel("Heptane", "T", 400, "Dmass", 650, "L", 120.75e-3, 1e-4),
+//vel("Heptane", "T", 535, "Dmass", 100, "L", 51.655e-3, 1e-4),
 
 // From Assael, JPCRD, 2013
 vel("Ethanol", "T", 300, "Dmass", 850, "L", 209.68e-3, 1e-4),
@@ -265,22 +265,29 @@ vel("Ethanol", "T", 400, "Dmass", 2, "L", 26.108e-3, 1e-4),
 vel("Ethanol", "T", 400, "Dmass", 690, "L", 149.21e-3, 1e-4),
 vel("Ethanol", "T", 500, "Dmass", 10, "L", 39.594e-3, 1e-4),
 
-// From Assael, JPCRD, 2012
-vel("Toluene", "T", 298.15, "Dmass", 1e-15, "L", 10.749e-3, 1e-4),
-vel("Toluene", "T", 298.15, "Dmass", 862.948, "L", 130.66e-3, 1e-4),
-vel("Toluene", "T", 298.15, "Dmass", 876.804, "L", 136.70e-3, 1e-4),
-vel("Toluene", "T", 595, "Dmass", 1e-15, "L", 40.538e-3, 1e-4),
-vel("Toluene", "T", 595, "Dmass", 46.512, "L", 41.549e-3, 1e-4),
-vel("Toluene", "T", 185, "Dmass", 1e-15, "L", 4.3758e-3, 1e-4),
-vel("Toluene", "T", 185, "Dmass", 968.821, "L", 158.24e-3, 1e-4),
+//// From Assael, JPCRD, 2012
+//vel("Toluene", "T", 298.15, "Dmass", 1e-15, "L", 10.749e-3, 1e-4),
+//vel("Toluene", "T", 298.15, "Dmass", 862.948, "L", 130.66e-3, 1e-4),
+//vel("Toluene", "T", 298.15, "Dmass", 876.804, "L", 136.70e-3, 1e-4),
+//vel("Toluene", "T", 595, "Dmass", 1e-15, "L", 40.538e-3, 1e-4),
+//vel("Toluene", "T", 595, "Dmass", 46.512, "L", 41.549e-3, 1e-4),
+//vel("Toluene", "T", 185, "Dmass", 1e-15, "L", 4.3758e-3, 1e-4),
+//vel("Toluene", "T", 185, "Dmass", 968.821, "L", 158.24e-3, 1e-4),
 
 // From Assael, JPCRD, 2012
-vel("SF6", "T", 298.15, "Dmass", 1e-15, "L", 12.952e-3, 1e-4),
+vel("SF6", "T", 298.15, "Dmass", 1e-13, "L", 12.952e-3, 1e-4),
 vel("SF6", "T", 298.15, "Dmass", 100, "L", 14.127e-3, 1e-4),
 vel("SF6", "T", 298.15, "Dmass", 1600, "L", 70.747e-3, 1e-4),
-vel("SF6", "T", 310, "Dmass", 1e-15, "L", 13.834e-3, 1e-4),
+vel("SF6", "T", 310, "Dmass", 1e-13, "L", 13.834e-3, 1e-4),
 vel("SF6", "T", 310, "Dmass", 1200, "L", 49.173e-3, 1e-4),
 vel("SF6", "T", 480, "Dmass", 100, "L", 28.863e-3, 1e-4),
+
+//// From Assael, JPCRD, 2012
+//vel("Benzene", "T", 290, "Dmass", 890, "L", 147.66e-3, 1e-4),
+//vel("Benzene", "T", 500, "Dmass", 2, "L", 30.174e-3, 1e-4),
+//vel("Benzene", "T", 500, "Dmass", 32, "L", 32.175e-3, 1e-4),
+//vel("Benzene", "T", 500, "Dmass", 800, "L", 141.24e-3, 1e-4),
+//vel("Benzene", "T", 575, "Dmass", 1.7, "L", 37.763e-3, 1e-4),
 
 };
 

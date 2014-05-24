@@ -489,7 +489,50 @@ long double TransportRoutines::conductivity_residual_polynomial(HelmholtzEOSMixt
 long double TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(HelmholtzEOSMixtureBackend &HEOS){
     if (HEOS.is_pure_or_pseudopure)
     {
-        return 0;
+        // Olchowy and Sengers cross-over term
+
+        // Retrieve values from the state class
+        CoolProp::ConductivityCriticalSimplifiedOlchowySengersData &data = HEOS.components[0]->transport.conductivity_critical.Olchowy_Sengers;
+
+	    double  k = data.k,
+		        R0 = data.R0,
+		        nu = data.nu,
+                gamma = data.gamma,
+                GAMMA = data.GAMMA,
+                zeta0 = data.zeta0,
+                qD = data.qD,
+                Tc = HEOS.get_reducing().T, // [K]
+                rhoc = HEOS.get_reducing().rhomolar, // [mol/m^3]
+                Pcrit = HEOS.get_reducing().p, // [Pa]
+		        Tref = 1.5*HEOS.get_reducing().T, // [K]
+		        cp,cv,delta,num,zeta,mu,OMEGA_tilde,OMEGA_tilde0,pi=M_PI,tau;
+
+	    delta = HEOS.delta();
+
+	    tau = HEOS.tau();
+        double dp_drho=HEOS.gas_constant()*HEOS.T()*(1+2*delta*HEOS.dalphar_dDelta()+delta*delta*HEOS.d2alphar_dDelta2());
+	    double X = Pcrit/pow(rhoc,2)*HEOS.rhomolar()/dp_drho;
+
+	    tau = Tc/Tref;
+        double dp_drho_ref = HEOS.gas_constant()*Tref*(1+2*delta*HEOS.calc_alphar_deriv_nocache(0,1,HEOS.mole_fractions,tau,HEOS.delta())+delta*delta*HEOS.calc_alphar_deriv_nocache(0,2,HEOS.mole_fractions,tau,HEOS.delta()));
+	    double Xref = Pcrit/pow(rhoc, 2)*HEOS.rhomolar()/dp_drho_ref*Tref/HEOS.T();
+	    num=X-Xref;
+
+	    // no critical enhancement if numerator is negative
+	    if (num<0)
+		    return 0.0;
+	    else
+		    zeta=zeta0*pow(num/GAMMA,nu/gamma); //[m]
+
+        cp = HEOS.cpmolar(); //[J/mol/K]
+	    cv = HEOS.cvmolar(); //[J/mol/K]
+	    mu = HEOS.viscosity(); //[Pa-s]
+
+	    OMEGA_tilde=2.0/pi*((cp-cv)/cp*atan(zeta*qD)+cv/cp*(zeta*qD)); //[-]
+	    OMEGA_tilde0=2.0/pi*(1.0-exp(-1.0/(1.0/(qD*zeta)+1.0/3.0*(zeta*qD)*(zeta*qD)/delta/delta))); //[-]
+
+	    double lambda=HEOS.rhomolar()*cp*R0*k*HEOS.T()/(6*pi*mu*zeta)*(OMEGA_tilde-OMEGA_tilde0); //[W/m/K]
+	    return lambda; //[W/m/K]
     }
     else{
         throw NotImplementedError("TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers is only for pure and pseudo-pure");

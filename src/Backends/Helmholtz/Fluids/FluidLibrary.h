@@ -547,10 +547,17 @@ protected:
         std::string type = cpjson::get_string(critical, "type");
         if (!type.compare("simplified_Olchowy_Sengers")){
             //// Get a reference to the entry in the fluid instance
-            //CoolProp::ConductivityResidualPolynomialData &data = fluid.transport.conductivity_residual.polynomials;
+            CoolProp::ConductivityCriticalSimplifiedOlchowySengersData &data = fluid.transport.conductivity_critical.Olchowy_Sengers;
 
             // Set the type flag
             fluid.transport.conductivity_critical.type = CoolProp::ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS;
+
+            // Set values if they are found - otherwise fall back to default values
+            if (critical.HasMember("qD")){ data.qD = cpjson::get_double(critical,"qD"); }
+            if (critical.HasMember("zeta0")){ data.zeta0 = cpjson::get_double(critical,"zeta0"); }
+            if (critical.HasMember("GAMMA")){ data.GAMMA = cpjson::get_double(critical,"GAMMA"); }
+            if (critical.HasMember("gamma")){ data.gamma = cpjson::get_double(critical,"gamma"); }
+            if (critical.HasMember("R0")){ data.R0 = cpjson::get_double(critical,"R0"); }
         }
         else{
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
