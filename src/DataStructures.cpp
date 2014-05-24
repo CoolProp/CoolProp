@@ -77,6 +77,8 @@ public:
         index_map.insert(std::pair<std::string, int>("U", iUmass));
         index_map.insert(std::pair<std::string, int>("C", iCpmass));
         index_map.insert(std::pair<std::string, int>("O", iCvmass));
+        index_map.insert(std::pair<std::string, int>("V", iviscosity));
+        index_map.insert(std::pair<std::string, int>("L", iconductivity));
     }
 };
 
