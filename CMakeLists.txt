@@ -100,6 +100,7 @@ if (COOLPROP_STATIC_LIBRARY)
     add_library(${app_name} STATIC ${APP_SOURCES})
 else()
     add_library(${app_name} SHARED ${APP_SOURCES})
+    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
 endif()
 add_dependencies (${app_name} generate_headers)
 
