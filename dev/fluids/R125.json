@@ -302,6 +302,81 @@
   ], 
   "NAME": "R125", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Perkins-JCED-2006", 
+      "critical": {
+        "GAMMA": 0.0496, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 1713900000.0, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.94e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.0046082, 
+          0.0168688, 
+          0.00488345
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 339.173, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          -0.0072941, 
+          0.0110497, 
+          0.0416339, 
+          -0.0289236, 
+          -0.0311487, 
+          0.0278399, 
+          0.0112682, 
+          -0.01211, 
+          -0.00138322, 
+          0.00211196
+        ], 
+        "T_reducing": 339.17, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          1, 
+          2, 
+          2, 
+          3, 
+          3, 
+          4, 
+          4, 
+          5, 
+          5
+        ], 
+        "rhomass_reducing": 573.5822706, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Huber-IECR-2006", 
       "dilute": {

@@ -305,6 +305,8 @@ vel("ParaHydrogen", "T", 35, "Dmass", 30, "L", 70.335e-3, 1e-4),
 vel("ParaHydrogen", "T", 18, "Dmass", 1e-13, "L", 13.643e-3, 1e-4),
 vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
 
+vel("R125", "T", 341, "Dmass", 600, "L", 0.056564297849487, 2e-2),
+vel("R125", "T", 200, "Dmass", 1e-13, "L", 0.007036843623086, 2e-2),
 
 };
 
