@@ -25,6 +25,7 @@
 #include "CoolPropTools.h"
 #include "Solvers.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 
 namespace CoolProp
 {
@@ -725,25 +726,20 @@ double Props1SI(std::string FluidName,std::string Output)
 //	}
 //}
 
-//std::string get_BibTeXKey(std::string Ref, std::string item)
-//{
-//	pFluid=Fluids.get_fluid(Ref);
-//	if (pFluid!=NULL)
-//	{
-//		
-//		if (!item.compare("EOS")){ return pFluid->BibTeXKeys.EOS; }
-//		else if (!item.compare("CP0")){ return pFluid->BibTeXKeys.CP0; }
-//		else if (!item.compare("VISCOSITY")){ return pFluid->BibTeXKeys.VISCOSITY; }
-//		else if (!item.compare("CONDUCTIVITY")){ return pFluid->BibTeXKeys.CONDUCTIVITY; }
-//		else if (!item.compare("ECS_LENNARD_JONES")){ return pFluid->BibTeXKeys.ECS_LENNARD_JONES; }
-//		else if (!item.compare("ECS_FITS")){ return pFluid->BibTeXKeys.ECS_FITS; }
-//		else if (!item.compare("SURFACE_TENSION")){ return pFluid->BibTeXKeys.SURFACE_TENSION; }
-//		else{ return "Bad key";}
-//	}
-//	else{
-//		return std::string("");
-//	}
-//}
+std::string get_BibTeXKey(std::string Ref, std::string key)
+{ 
+    std::vector<std::string> names(1, Ref);
+    HelmholtzEOSMixtureBackend HEOS(names);
+	
+    if (!key.compare("EOS")){ return HEOS.get_components()[0]->pEOS->BibTeX_EOS; }
+	else if (!key.compare("CP0")){ return HEOS.get_components()[0]->pEOS->BibTeX_CP0; }
+    else if (!key.compare("VISCOSITY")){ return HEOS.get_components()[0]->transport.BibTeX_viscosity; }
+	else if (!key.compare("CONDUCTIVITY")){ return HEOS.get_components()[0]->transport.BibTeX_conductivity; }
+	else if (!key.compare("ECS_LENNARD_JONES")){ throw NotImplementedError(); }
+	else if (!key.compare("ECS_FITS")){ throw NotImplementedError(); }
+    else if (!key.compare("SURFACE_TENSION")){ return HEOS.get_components()[0]->ancillaries.surface_tension.BibTeX;}
+	else{ return "Bad key";}
+}
 std::string get_global_param_string(std::string ParamName)
 {
 	if (!ParamName.compare("version")){
@@ -754,12 +750,12 @@ std::string get_global_param_string(std::string ParamName)
 	}
     else if (!ParamName.compare("errstring")){
 		std::string temp = error_string;
-		error_string = std::string("");
+		error_string = "";
 		return temp;
 	}
 	else if (!ParamName.compare("warnstring")){
 		std::string temp = warning_string;
-		warning_string = std::string("");
+		warning_string = "";
 		return temp;
 	}
 	else if (!ParamName.compare("FluidsList") || !ParamName.compare("fluids_list") || !ParamName.compare("fluidslist")){

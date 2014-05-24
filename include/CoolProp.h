@@ -81,22 +81,20 @@ You might want to start by looking at CoolProp.h
 	/// @param FluidName The fluid name as a string
 	/// @returns long element from global type enumeration
 	long getFluidType(std::string FluidName);
+
 	/// Get a string for a value from a fluid (numerical values can be obtained from Props1 function)
-	/// @param FluidName The name of the fluid
-	/// @param ParamName A string, one of "aliases", "CAS", "CAS_number", "ASHRAE34", "REFPROPName","REFPROP_name", "TTSE_mode"		
+	/// @param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"
+	/// @param ParamName A string, one of "aliases", "CAS", "CAS_number", "ASHRAE34", "REFPROPName","REFPROP_name", "TTSE_mode", 
 	/// @returns str The string, or an error message if not valid input
-	std::string get_fluid_param_string(std::string FluidName, std::string ParamName);
+	std::string get_fluid_param_string(std::string FluidName, std::string ParamName);*/
+
 	/// Returns the BibTeX key from the bibtex library of CoolProp corresponding to the item requested
-	/// @param FluidName The name of the fluid
-	/// @param item String, one of "EOS","CP0", "VISCOSITY", "CONDUCTIVITY", "ECS_LENNARD_JONES", "ECS_FITS", "SURFACE_TENSION"
+	/// @param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"
+	/// @param item The key that is desired, one of "EOS","CP0", "VISCOSITY", "CONDUCTIVITY", "ECS_LENNARD_JONES", "ECS_FITS", "SURFACE_TENSION"
 	/// @returns key the BibTeX key
 	std::string get_BibTeXKey(std::string FluidName, std::string item);
-	/// Add a REFPROP fluid to the fluid listing in CoolProp
-	bool add_REFPROP_fluid(std::string FluidName);
-	/// Get the parameter index for a given parameter
-	/// @param param The string for an input or output parameter
-	/// @returns index The parameter index (for use in IProps or elsewhere); -1 if not found
-	long get_param_index(std::string param);
+	
+    /*
 	/// Set the reference state for a pointer to a fluid (not exposed)
 	/// @param pFluid A pointer to a Fluid instance
 	/// @param reference_state The reference state to use, one of "IIR" (h=200 kJ/kg, s=1 kJ/kg/K at 0C sat. liq.) "ASHRAE" (h=0,s=0 @ -40C sat liq), "NBP" (h=0,s=0 @ 1.0 bar sat liq.)
@@ -165,12 +163,6 @@ You might want to start by looking at CoolProp.h
 	/// @param Prop2 The second state variable value
 	/// @param FluidName The fluid name
 	double Props(std::string Output,char Name1, double Prop1, char Name2, double Prop2, std::string FluidName);*/
-
-	
-
-	////    **************** DEPRECATION WARNING ***********************
-	///// Nearly deprecated function
-	//void set_phase(std::string Phase_str);
 
     } /* namespace CoolProp */
 #endif

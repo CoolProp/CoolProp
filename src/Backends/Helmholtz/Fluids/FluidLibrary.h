@@ -570,6 +570,9 @@ protected:
     /// Parse the thermal conductivity data
     void parse_thermal_conductivity(rapidjson::Value &conductivity, CoolPropFluid & fluid)
     {
+        // Load the BibTeX key
+        fluid.transport.BibTeX_conductivity = cpjson::get_string(conductivity,"BibTeX");
+
         // Load dilute conductivity term
         if (conductivity.HasMember("dilute")){
             parse_dilute_conductivity(conductivity["dilute"], fluid);
