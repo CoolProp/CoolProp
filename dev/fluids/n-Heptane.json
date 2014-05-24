@@ -271,6 +271,7 @@
       "BibTeX": "Assael-JPCRD-2013-Heptane", 
       "critical": {
         "GAMMA": 0.0586, 
+        "qD": 1250000000.0, 
         "type": "simplified_Olchowy_Sengers", 
         "zeta0": 2.45e-10
       }, 

@@ -355,6 +355,7 @@
       "BibTeX": "Assael-JPCRD-2013-Ethanol", 
       "critical": {
         "GAMMA": 0.05885, 
+        "qD": 1880000000.0, 
         "type": "simplified_Olchowy_Sengers", 
         "zeta0": 1.64296e-10
       }, 

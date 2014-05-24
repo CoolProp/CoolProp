@@ -260,6 +260,7 @@
       "BibTeX": "Assael-JPCRD-2012-Toluene", 
       "critical": {
         "GAMMA": 0.05, 
+        "qD": 1613000000.0, 
         "type": "simplified_Olchowy_Sengers", 
         "zeta0": 2.2e-10
       }, 

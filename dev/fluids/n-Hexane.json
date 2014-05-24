@@ -270,7 +270,12 @@
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Hexane", 
       "critical": {
-        "type": "simplified_Olchowy_Sengers"
+        "GAMMA": 0.05803, 
+        "R0": 1.02, 
+        "gamma": 1.1239, 
+        "qD": 1350000000.0, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 2.364e-10
       }, 
       "dilute": {
         "A": [
@@ -322,7 +327,7 @@
           5, 
           5
         ], 
-        "rhomass_reducing": 233.182, 
+        "rhomass_reducing": 233.1819066, 
         "rhomass_reducing_units": "kg/m^3", 
         "t": [
           0, 
