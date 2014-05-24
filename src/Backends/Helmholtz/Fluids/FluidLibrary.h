@@ -237,7 +237,10 @@ protected:
         EOS.reduce.T = cpjson::get_double(reducing_state,"T");
         EOS.reduce.rhomolar = cpjson::get_double(reducing_state,"rhomolar");
         EOS.reduce.p = cpjson::get_double(reducing_state,"p");
-        
+
+        // BibTex keys
+        EOS.BibTeX_EOS = cpjson::get_string(EOS_json,"BibTeX_EOS");
+        EOS.BibTeX_CP0 = cpjson::get_string(EOS_json,"BibTeX_CP0");
         
         parse_alphar(EOS_json["alphar"], EOS);
         parse_alpha0(EOS_json["alpha0"], EOS);
