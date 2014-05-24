@@ -413,6 +413,9 @@
       "BibTeX": "Assael-JPCRD-2012-SF6", 
       "critical": {
         "GAMMA": 0.052, 
+        "R0": 1.01, 
+        "gamma": 1.2415, 
+        "qD": 2857000000.0, 
         "type": "simplified_Olchowy_Sengers", 
         "zeta0": 1.9e-10
       }, 
@@ -470,7 +473,8 @@
           5, 
           5
         ], 
-        "rhomass_reducing": 742.297, 
+        "note": "There is a typo in Assael, to get the correct values in REFPROP they use a molar reducing density of 5.046 mol/L or 5046*0.1460554192 = 736.9956452832 kg/m^3", 
+        "rhomass_reducing": 736.9956452832, 
         "rhomass_reducing_units": "kg/m^3", 
         "t": [
           0, 
