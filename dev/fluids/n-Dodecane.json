@@ -258,6 +258,71 @@
   ], 
   "NAME": "n-Dodecane", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Huber-FPE-2005", 
+      "critical": {
+        "GAMMA": 0.0496, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 657894736.842, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.94e-10
+      }, 
+      "dilute": {
+        "A": [
+          0.00436343, 
+          -0.0264054, 
+          0.0922394, 
+          -0.0291756
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 658.1, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.0693347, 
+          -0.0331695, 
+          0.00676165, 
+          -0.0280792, 
+          0.00173922, 
+          0.00309558
+        ], 
+        "T_reducing": 658.1, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          1, 
+          2, 
+          3
+        ], 
+        "rhomass_reducing": 226.545337, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          -1, 
+          -1, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Huber-EF-2004", 
       "dilute": {

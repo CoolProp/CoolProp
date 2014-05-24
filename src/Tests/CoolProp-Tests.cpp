@@ -247,6 +247,8 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against publis
 }
 
 vel conductivity_validation_data[] = {
+///\todo Re-enable the conductivity tests that fail due to not having viscosity correlation
+
 // From Assael, JPCRD, 2013
 vel("Hexane", "T", 250, "Dmass", 700, "L", 137.62e-3, 1e-4),
 vel("Hexane", "T", 400, "Dmass", 2, "L", 23.558e-3, 1e-4),
@@ -305,6 +307,8 @@ vel("ParaHydrogen", "T", 35, "Dmass", 30, "L", 70.335e-3, 1e-4),
 vel("ParaHydrogen", "T", 18, "Dmass", 1e-13, "L", 13.643e-3, 1e-4),
 vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
 
+
+// Some of these don't work
 vel("R125", "T", 341, "Dmass", 600, "L", 0.056564297849487, 2e-2),
 vel("R125", "T", 200, "Dmass", 1e-13, "L", 0.007036843623086, 2e-2),
 vel("IsoButane", "T", 390, "Dmass", 387.09520158645068, "L", 0.063039, 1e-2),
@@ -312,9 +316,29 @@ vel("IsoButane", "T", 390, "Dmass", 85.76703973869482, "L", 0.036603, 2e-2),
 vel("n-Butane", "T", 415, "Dmass", 360.01895129934866, "L", 0.067045, 1e-2),
 vel("n-Butane", "T", 415, "Dmass", 110.3113177144, "L", 0.044449, 1e-2),
 
+// From Huber, FPE, 2005
 vel("n-Octane", "T", 300, "Dmolar", 6177.2, "L", 0.12836, 1e-4),
 vel("n-Nonane", "T", 300, "Dmolar", 5619.4, "L", 0.13031, 1e-4),
-//vel("n-Decane", "T", 300, "Dmass", 5150.4, "L", 0.13280, 1e-4),
+//vel("n-Decane", "T", 300, "Dmass", 5150.4, "L", 0.13280, 1e-4), // no viscosity
+
+// From Huber, EF, 2004
+vel("n-Dodecane", "T", 300, "Dmolar", 4411.5, "L", 0.13829, 1e-4),
+vel("n-Dodecane", "T", 500, "Dmolar", 3444.7, "L", 0.09384, 1e-4),
+vel("n-Dodecane", "T", 660, "Dmolar", 1500.98, "L", 0.090346, 1e-4),
+
+// From REFPROP 9.1 since no data provided in Marsh, 2002
+vel("n-Propane", "T", 368, "Q", 0, "L", 0.07282154952457,1e-3),
+vel("n-Propane", "T", 368, "Dmolar", 1e-10, "L", 0.0266135388745317,1e-4),
+
+// From Perkins, JCED, 2011
+//vel("R1234yf", "T", 250, "Dmass", 2.80006, "L", 0.0098481, 1e-4),
+//vel("R1234yf", "T", 300, "Dmass", 4.671556, "L", 0.013996, 1e-4),
+//vel("R1234yf", "T", 250, "Dmass", 1299.50, "L", 0.088574, 1e-4),
+//vel("R1234yf", "T", 300, "Dmass", 1182.05, "L", 0.075245, 1e-4),
+//vel("R1234ze(E)", "T", 250, "Dmass", 2.80451, "L", 0.0098503, 1e-4),
+//vel("R1234ze(E)", "T", 300, "Dmass", 4.67948, "L", 0.013933, 1e-4),
+//vel("R1234ze(E)", "T", 250, "Dmass", 1349.37, "L", 0.10066, 1e-4),
+//vel("R1234ze(E)", "T", 300, "Dmass", 1233.82, "L", 0.085389, 1e-4),
 
 };
 

@@ -322,6 +322,81 @@
   ], 
   "NAME": "n-Propane", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Marsh-JCED-2002", 
+      "critical": {
+        "GAMMA": 0.0496, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 1395410494.88, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.94e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.00124778, 
+          0.00816371, 
+          0.0199374
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 369.85, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          -0.03695, 
+          0.148658, 
+          -0.119986, 
+          0.0412431, 
+          -0.00486905, 
+          0.0482798, 
+          -0.135636, 
+          0.117588, 
+          -0.0436911, 
+          0.00616079
+        ], 
+        "T_reducing": 369.82, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4, 
+          5, 
+          1, 
+          2, 
+          3, 
+          4, 
+          5
+        ], 
+        "rhomass_reducing": 220.3, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0, 
+          0, 
+          -1, 
+          -1, 
+          -1, 
+          -1, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Vogel-JPCRD-1998", 
       "dilute": {
