@@ -269,6 +269,77 @@
   ], 
   "NAME": "n-Octane", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Huber-FPE-2005", 
+      "critical": {
+        "GAMMA": 0.0496, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 1457130000.0, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.94e-10
+      }, 
+      "dilute": {
+        "A": [
+          0.0077293, 
+          -0.037114, 
+          0.097758, 
+          -0.028871
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 569.32, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.0285553, 
+          -0.0171398, 
+          0.00659971, 
+          0, 
+          -0.00926155, 
+          0, 
+          0.00153496, 
+          0
+        ], 
+        "T_reducing": 569.32, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "rhomass_reducing": 234.9, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0, 
+          -1, 
+          -1, 
+          -1, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Huber-FPE-2004", 
       "dilute": {

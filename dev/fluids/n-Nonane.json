@@ -255,6 +255,65 @@
   ], 
   "NAME": "n-Nonane", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Huber-FPE-2005", 
+      "critical": {
+        "GAMMA": 0.0496, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 958722814.0, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.94e-10
+      }, 
+      "dilute": {
+        "A": [
+          0.0087877, 
+          -0.041351, 
+          0.10479, 
+          -0.032003
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 594.55, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.00490087596, 
+          -0.00807305471, 
+          0.00557430614, 
+          0.0099648628
+        ], 
+        "T_reducing": 594.55, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          1
+        ], 
+        "rhomass_reducing": 232.14, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Huber-FPE-2004", 
       "dilute": {

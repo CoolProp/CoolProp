@@ -256,6 +256,76 @@
   ], 
   "NAME": "n-Decane", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Huber-FPE-2005", 
+      "critical": {
+        "GAMMA": 0.0496, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 1411155860.0, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.94e-10
+      }, 
+      "dilute": {
+        "A": [
+          0.010554268, 
+          -0.051453009, 
+          0.118978971, 
+          -0.0372442104
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 617.7, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          -0.0294394112, 
+          0.0499245356, 
+          -0.0142700394, 
+          0.00150827597, 
+          0.0150509474, 
+          0, 
+          -0.0138857133, 
+          0.00433326339
+        ], 
+        "T_reducing": 617.7, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "rhomass_reducing": 233.34, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          -1, 
+          -1, 
+          -1, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Huber-FPE-2004", 
       "dilute": {
