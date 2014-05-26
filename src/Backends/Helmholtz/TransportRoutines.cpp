@@ -244,7 +244,7 @@ long double TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBack
 	drhobar_dpbar = pstar/rhostar*drhodp;
 	// "Reducing" calculation
 	tau=1/Tbar_R;
-	drhodp_R=1/(R_Water*Tbar_R*Tstar*(1+2*delta*HEOS.dalphar_dDelta()+delta*delta*HEOS.d2alphar_dDelta2()));
+	drhodp_R=1/(R_Water*Tbar_R*Tstar*(1+2*rhobar*HEOS.calc_alphar_deriv_nocache(0,1,HEOS.mole_fractions,tau,delta)+delta*delta*HEOS.calc_alphar_deriv_nocache(0,2,HEOS.mole_fractions,tau, delta)));
 	drhobar_dpbar_R = pstar/rhostar*drhodp_R;
 	
 	DeltaChibar=rhobar*(drhobar_dpbar-drhobar_dpbar_R*Tbar_R/Tbar);
