@@ -643,18 +643,6 @@ double Props1SI(std::string FluidName,std::string Output)
 //
 //int set_reference_stateS(std::string Ref, std::string reference_state)
 //{
-//	Fluid *pFluid=Fluids.get_fluid(Ref);
-//	if (pFluid!=NULL)
-//	{
-//		return set_reference_stateP(pFluid, reference_state);
-//	}
-//	else{
-//		return -1;
-//	}
-//}
-//
-//int set_reference_stateP(Fluid *pFluid, std::string reference_state)
-//{
 //	CoolPropStateClassSI CPS(pFluid);
 //	if (!reference_state.compare("IIR"))
 //	{
@@ -702,7 +690,6 @@ double Props1SI(std::string FluidName,std::string Output)
 //	{ 
 //		return -1;
 //	}
-//
 //}
 //int set_reference_stateD(std::string Ref, double T, double rho, double h0, double s0)
 //{
@@ -716,8 +703,8 @@ double Props1SI(std::string FluidName,std::string Output)
 //		double s1 = CPS.s();
 //		double deltah = h1-h0; // offset from given enthalpy in SI units
 //		double deltas = s1-s0; // offset from given enthalpy in SI units
-//		double delta_a1 = deltas/((8314.472/pFluid->params.molemass));
-//		double delta_a2 = -deltah/((8314.472/pFluid->params.molemass)*pFluid->reduce.T);
+//		double delta_a1 = deltas/((8314.472));
+//		double delta_a2 = -deltah/((8314.472)*pFluid->reduce.T);
 //		pFluid->phi0list.push_back(new phi0_enthalpy_entropy_offset(delta_a1, delta_a2));
 //		return 0;
 //	}

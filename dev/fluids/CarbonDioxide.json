@@ -447,6 +447,45 @@
   ], 
   "NAME": "CarbonDioxide", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Marsh-JCED-2002", 
+      "critical": {
+        "GAMMA": 0.052, 
+        "R0": 1.01, 
+        "gamma": 1.2415, 
+        "qD": 2500000000.0, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.5e-10
+      }, 
+      "dilute": {
+        "hardcoded": "CO2"
+      }, 
+      "residual": {
+        "B": [
+          2.447164e-05, 
+          8.705605e-08, 
+          -6.54795e-11, 
+          6.594919e-14
+        ], 
+        "T_reducing": 304.107, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "rhomass_reducing": 1, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Fenghour-JPCRD-1998", 
       "_note": "sigma set to 1 nm in since sigma wrapped into constant in equation in Fenghour", 

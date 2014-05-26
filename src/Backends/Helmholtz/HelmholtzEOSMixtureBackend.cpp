@@ -219,6 +219,8 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
         {
         case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS:
             lambda_dilute = TransportRoutines::conductivity_dilute_ratio_polynomials(*this); break;
+        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2:
+            lambda_dilute = TransportRoutines::conductivity_dilute_hardcoded_CO2(*this); break;
         default:
             throw ValueError(format("dilute conductivity type [%d] is invalid for fluid %s", components[0]->transport.conductivity_dilute.type, name().c_str()));
         }
@@ -239,6 +241,8 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
         {
         case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS:
             lambda_critical = TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(*this); break;
+        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_R123:
+            lambda_critical = TransportRoutines::conductivity_critical_hardcoded_R123(*this); break;
         default:
             throw ValueError(format("critical conductivity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
         }

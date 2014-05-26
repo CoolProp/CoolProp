@@ -251,6 +251,61 @@
   ], 
   "NAME": "R152A", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Krauss-IJT-1996", 
+      "critical": {
+        "GAMMA": 0.0487, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 2288329519.45, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.894e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.014942, 
+          9.73283e-05
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 1, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.0106039395, 
+          0.0136956435, 
+          -0.0062916315, 
+          0.0019794274499999997
+        ], 
+        "T_reducing": 386.411, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "rhomass_reducing": 368.0, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Krauss-IJT-1996", 
       "dilute": {

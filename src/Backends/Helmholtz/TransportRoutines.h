@@ -159,6 +159,9 @@ public:
     */
     static long double conductivity_critical_simplified_Olchowy_Sengers(HelmholtzEOSMixtureBackend &HEOS);
 
+    static long double conductivity_critical_hardcoded_R123(HelmholtzEOSMixtureBackend &HEOS);
+    static long double conductivity_dilute_hardcoded_CO2(HelmholtzEOSMixtureBackend &HEOS);
+
 }; /* class TransportRoutines */
 
 }; /* namespace CoolProp */

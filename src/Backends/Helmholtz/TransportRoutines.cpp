@@ -539,6 +539,37 @@ long double TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(
     }
 };
 
+long double TransportRoutines::conductivity_critical_hardcoded_R123(HelmholtzEOSMixtureBackend &HEOS){
+    double a13 = 0.486742e-2, a14 = -100, a15 = -7.08535;
+    return a13*exp(a14*pow(HEOS.tau()-1,4)+a15*pow(HEOS.delta()-1,2));
+};
 
+long double TransportRoutines::conductivity_dilute_hardcoded_CO2(HelmholtzEOSMixtureBackend &HEOS){
+
+    double e_k=251.196,Tstar;
+	double b[]={0.4226159,0.6280115,-0.5387661,0.6735941,0,0,-0.4362677,0.2255388};
+	double c[]={0,2.387869e-2,4.350794,-10.33404,7.981590,-1.940558};
+
+	//Vesovic Eq. 31 [no units]
+	double summer = 0;
+	for (int i=1; i<=5; i++)
+		summer += c[i]*pow(HEOS.T()/100.0, 2-i);
+	double cint_k = 1.0 + exp(-183.5/HEOS.T())*summer;
+
+	//Vesovic Eq. 12 [no units]
+	double r = sqrt(2.0/5.0*cint_k);
+
+	Tstar = HEOS.T()/e_k;
+	//Vesovic Eq. 30 [no units]
+	summer = 0;
+	for (int i=0; i<=7; i++)
+		summer += b[i]/pow(Tstar, i);
+	double Gstar_lambda = summer;
+
+	//Vesovic Eq. 29 [W/m/K]
+	double lambda_0 = 0.475598e-3*sqrt(HEOS.T())*(1+r*r)/Gstar_lambda;
+
+    return lambda_0;
+}
 
 }; /* namespace CoolProp */

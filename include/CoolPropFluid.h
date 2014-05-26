@@ -51,6 +51,7 @@ struct ConductivityDiluteRatioPolynomialsData{
 struct ConductivityDiluteVariables
 {
     enum ConductivityDiluteEnum {CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS, 
+                                 CONDUCTIVITY_DILUTE_CO2, 
                                  CONDUCTIVITY_DILUTE_NOT_SET
                                  };
     int type;
@@ -65,7 +66,9 @@ struct ConductivityResidualPolynomialData{
 };
 struct ConductivityResidualVariables
 {
-    enum ConductivityResidualEnum {CONDUCTIVITY_RESIDUAL_POLYNOMIAL, 
+    enum ConductivityResidualEnum {CONDUCTIVITY_RESIDUAL_POLYNOMIAL,
+                                   CONDUCTIVITY_RESIDUAL_R123,
+                                   CONDUCTIVITY_RESIDUAL_CO2,
                                    CONDUCTIVITY_RESIDUAL_NOT_SET
                                    };
     int type;
@@ -91,6 +94,7 @@ struct ConductivityCriticalSimplifiedOlchowySengersData{
 struct ConductivityCriticalVariables
 {
     enum ConductivityResidualEnum {CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS, 
+                                   CONDUCTIVITY_CRITICAL_R123, 
                                    CONDUCTIVITY_CRITICAL_NOT_SET
                                    };
     int type;
