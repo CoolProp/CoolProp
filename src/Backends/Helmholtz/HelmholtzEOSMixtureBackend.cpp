@@ -220,7 +220,7 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
             switch(components[0]->transport.hardcoded_conductivity)
             {
             case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER:
-                return TransportRoutines::viscosity_water_hardcoded(*this);
+                return TransportRoutines::conductivity_hardcoded_water(*this);
             default:
                 throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0]->transport.hardcoded_conductivity, name().c_str()));
             }

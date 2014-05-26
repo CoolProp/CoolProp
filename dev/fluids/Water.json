@@ -489,6 +489,10 @@
   ], 
   "NAME": "Water", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Huber-JPCRD-2012", 
+      "hardcoded": "Water"
+    }, 
     "viscosity": {
       "BibTeX": "Huber-JPCRD-2009", 
       "hardcoded": "Water"

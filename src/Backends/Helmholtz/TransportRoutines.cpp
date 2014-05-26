@@ -571,9 +571,9 @@ long double TransportRoutines::conductivity_critical_hardcoded_R123(HelmholtzEOS
 
 long double TransportRoutines::conductivity_dilute_hardcoded_CO2(HelmholtzEOSMixtureBackend &HEOS){
 
-    double e_k=251.196,Tstar;
-	double b[]={0.4226159,0.6280115,-0.5387661,0.6735941,0,0,-0.4362677,0.2255388};
-	double c[]={0,2.387869e-2,4.350794,-10.33404,7.981590,-1.940558};
+    double e_k = 251.196, Tstar;
+	double b[] = {0.4226159, 0.6280115, -0.5387661, 0.6735941, 0, 0, -0.4362677, 0.2255388};
+	double c[] = {0, 2.387869e-2, 4.350794, -10.33404, 7.981590, -1.940558};
 
 	//Vesovic Eq. 31 [no units]
 	double summer = 0;
@@ -622,6 +622,65 @@ long double TransportRoutines::conductivity_dilute_eta0_and_poly(HelmholtzEOSMix
     else{
         throw NotImplementedError("TransportRoutines::conductivity_dilute_eta0_and_poly is only for pure and pseudo-pure");
     }
+}
+
+long double TransportRoutines::conductivity_hardcoded_water(HelmholtzEOSMixtureBackend &HEOS){
+
+    double L[5][6] = {{1.60397357,-0.646013523,0.111443906,0.102997357,-0.0504123634,0.00609859258},
+				{2.33771842,-2.78843778,1.53616167,-0.463045512,0.0832827019,-0.00719201245},
+				{2.19650529,-4.54580785,3.55777244,-1.40944978,0.275418278,-0.0205938816},
+				{-1.21051378,1.60812989,-0.621178141,0.0716373224,0,0},
+				{-2.7203370,4.57586331,-3.18369245,1.1168348,-0.19268305,0.012913842}};
+
+	double lambdabar_0,lambdabar_1,lambdabar_2,rhobar,Tbar,sum,R_Water;
+	double Tstar=647.096,rhostar=322,pstar=22064000,lambdastar=1e-3,mustar=1e-6;
+	double tau,xi;
+	int i,j;
+
+	Tbar = HEOS.T()/Tstar;
+	rhobar = HEOS.keyed_output(CoolProp::iDmass)/rhostar;
+
+	// Dilute gas contribution
+	lambdabar_0 = sqrt(Tbar)/(2.443221e-3+1.323095e-2/Tbar+6.770357e-3/pow(Tbar,2)-3.454586e-3/pow(Tbar,3)+4.096266e-4/pow(Tbar,4));
+
+	sum=0;
+	for (i=0;i<=4;i++){
+		for (j=0;j<=5;j++){
+			sum+=L[i][j]*powInt(1.0/Tbar-1.0,i)*powInt(rhobar-1,j);
+		}
+	}
+	// Finite density contribution
+	lambdabar_1=exp(rhobar*sum);
+
+	double nu=0.630,GAMMA =177.8514,gamma=1.239,xi_0=0.13,Lambda_0=0.06,Tr_bar=1.5,tau_ref = Tr_bar*Tstar/HEOS.T(), 
+        qd_bar=1/0.4,pi=3.141592654, delta = HEOS.delta(), R=461.51805;//J/kg/K
+	tau=1/Tbar;
+	
+	double drhodp = 1/(R*HEOS.T()*(1+2*rhobar*HEOS.dalphar_dDelta()+rhobar*rhobar*HEOS.d2alphar_dDelta2()));
+	double drhobar_dpbar = pstar/rhostar*drhodp;
+	double drhodp_Trbar = 1/(R*Tr_bar*Tstar*(1+2*rhobar*HEOS.calc_alphar_deriv_nocache(0,1,HEOS.mole_fractions,1/Tr_bar,delta)+delta*delta*HEOS.calc_alphar_deriv_nocache(0,2,HEOS.mole_fractions,1/Tr_bar,delta)));
+	double drhobar_dpbar_Trbar = pstar/rhostar*drhodp_Trbar;
+	double cp = HEOS.cpmolar(); // [J/mol/K]
+	double cv = HEOS.cvmolar(); // [J/mol/K]
+	double cpbar = cp/8.31447215; //[-]
+	double mubar = HEOS.viscosity()/mustar;
+	double DELTAchibar_T = rhobar*(drhobar_dpbar-drhobar_dpbar_Trbar*Tr_bar/Tbar);
+	if (DELTAchibar_T<0)
+		xi = 0;
+	else
+		xi = xi_0*pow(DELTAchibar_T/Lambda_0,nu/gamma);
+	double y = qd_bar*xi;
+
+	double Z;
+	double kappa = cp/cv;
+	if (y < 1.2e-7)
+		Z = 0;
+	else
+		Z = 2/(pi*y)*(((1-1/kappa)*atan(y)+y/kappa)-(1-exp(-1/(1/y+y*y/3/rhobar/rhobar))));
+
+	lambdabar_2 = GAMMA*rhobar*cpbar*Tbar/mubar*Z;
+
+	return (lambdabar_0*lambdabar_1+lambdabar_2)*lambdastar;
 }
 
 

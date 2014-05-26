@@ -608,6 +608,16 @@ protected:
     /// Parse the thermal conductivity data
     void parse_thermal_conductivity(rapidjson::Value &conductivity, CoolPropFluid & fluid)
     {
+        if (conductivity.HasMember("hardcoded")){
+            std::string target = cpjson::get_string(conductivity, "hardcoded");
+            if (!target.compare("Water")){
+                fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER; return;
+            }
+            else{
+                throw ValueError(format("hardcoded residual conductivity term [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
+            }
+        }
+
         // Load the BibTeX key
         fluid.transport.BibTeX_conductivity = cpjson::get_string(conductivity,"BibTeX");
 

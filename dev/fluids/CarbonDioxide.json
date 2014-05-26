@@ -448,7 +448,7 @@
   "NAME": "CarbonDioxide", 
   "TRANSPORT": {
     "conductivity": {
-      "BibTeX": "Marsh-JCED-2002", 
+      "BibTeX": "Vesovic-JPCRD-1990", 
       "critical": {
         "GAMMA": 0.052, 
         "R0": 1.01, 

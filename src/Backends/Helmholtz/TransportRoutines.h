@@ -166,6 +166,9 @@ public:
     static long double conductivity_dilute_eta0_and_poly(HelmholtzEOSMixtureBackend &HEOS);
     static long double conductivity_residual_polynomial_and_exponential(HelmholtzEOSMixtureBackend &HEOS);
 
+    static long double conductivity_hardcoded_water(HelmholtzEOSMixtureBackend &HEOS);
+    
+
 }; /* class TransportRoutines */
 
 }; /* namespace CoolProp */
