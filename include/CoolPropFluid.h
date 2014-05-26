@@ -52,6 +52,7 @@ struct ConductivityDiluteVariables
 {
     enum ConductivityDiluteEnum {CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS, 
                                  CONDUCTIVITY_DILUTE_CO2, 
+                                 CONDUCTIVITY_DILUTE_ETHANE, 
                                  CONDUCTIVITY_DILUTE_NOT_SET
                                  };
     int type;

@@ -489,6 +489,9 @@ protected:
             if (!target.compare("CO2")){
                 fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2; return;
             }
+            else if (!target.compare("Ethane")){
+                fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETHANE; return;
+            }
             else{
                 throw ValueError(format("hardcoded dilute conductivity term [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
             }

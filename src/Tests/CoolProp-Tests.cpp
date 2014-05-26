@@ -347,14 +347,19 @@ vel("R123", "T", 430, "Dmass", 996.35, "L", 45.62e-3, 1e-3),
 vel("R123", "T", 430, "Dmass", 166.9,  "L", 21.03e-3, 1e-3),
 
 // From Vesovic, JPCRD, 1990
-vel("CO2", "T", 220, "Dmass", 2.440, "L", 10.90e-3, 1e-3),
-vel("CO2", "T", 300, "Dmass", 1.773, "L", 16.77e-3, 1e-3),
-vel("CO2", "T", 800, "Dmass", 0.662, "L", 56.65e-3, 1e-3),
-vel("CO2", "T", 304, "Dmass", 254.3205, "L", 42.52e-3, 1e-3),
-vel("CO2", "T", 220, "Dmass", 1194.86, "L", 187.50e-3, 1e-3),
-vel("CO2", "T", 300, "Dmass", 1029.27, "L", 137.61e-3, 1e-3),
-vel("CO2", "T", 800, "Dmass", 407.828, "L", 78.47e-3, 1e-3),
+vel("CO2", "T", 220, "Dmass", 2.440, "L", 10.90e-3, 1e-2),
+vel("CO2", "T", 300, "Dmass", 1.773, "L", 16.77e-3, 1e-2),
+vel("CO2", "T", 800, "Dmass", 0.662, "L", 56.65e-3, 1e-2),
+vel("CO2", "T", 304, "Dmass", 254.3205, "L", 42.52e-3, 1e-2),
+vel("CO2", "T", 220, "Dmass", 1194.86, "L", 187.50e-3, 1e-2),
+vel("CO2", "T", 300, "Dmass", 1029.27, "L", 137.61e-3, 1e-2),
+vel("CO2", "T", 800, "Dmass", 407.828, "L", 78.47e-3, 1e-2),
 
+// From Friend, JPCRD, 1991
+vel("Ethane", "T", 100, "Dmass", 1e-13, "L", 3.46e-3, 1e-2),
+vel("Ethane", "T", 230, "Dmolar", 16020, "L", 126.2e-3, 1e-2),
+vel("Ethane", "T", 440, "Dmolar", 1520, "L", 45.9e-3, 1e-2),
+vel("Ethane", "T", 310, "Dmolar", 4130, "L", 45.4e-3, 1e-2),
 };
 
 TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity]")

@@ -416,6 +416,54 @@
   ], 
   "NAME": "Ethane", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Friend-JPCRD-1991", 
+      "critical": {
+        "GAMMA": 0.0563, 
+        "R0": 1.03, 
+        "gamma": 1.242, 
+        "qD": 1834862385.3, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.9e-10
+      }, 
+      "dilute": {
+        "hardcoded": "Ethane"
+      }, 
+      "residual": {
+        "B": [
+          0.0042448708279092, 
+          0.012149218819710001, 
+          -0.00011755611350154, 
+          -0.00034524130817994, 
+          0.0009666869231454, 
+          0.010536403039518, 
+          -0.0033184300792206
+        ], 
+        "T_reducing": 305.33, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4, 
+          5, 
+          1, 
+          3
+        ], 
+        "rhomass_reducing": 206.5809, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0, 
+          0, 
+          1.5, 
+          1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Friend-JPCRD-1991", 
       "dilute": {

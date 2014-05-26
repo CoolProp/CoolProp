@@ -128,6 +128,34 @@ long double HelmholtzEOSMixtureBackend::calc_surface_tension(void)
         throw NotImplementedError(format("surface tension not implemented for mixtures"));
     }
 }
+long double HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void)
+{
+    if (is_pure_or_pseudopure)
+    {
+        long double eta_dilute;
+        switch(components[0]->transport.viscosity_dilute.type)
+        {
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_KINETIC_THEORY:
+            eta_dilute = TransportRoutines::viscosity_dilute_kinetic_theory(*this); break;
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL:
+            eta_dilute = TransportRoutines::viscosity_dilute_collision_integral(*this); break;
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_T:
+            eta_dilute = TransportRoutines::viscosity_dilute_powers_of_T(*this); break;
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR:
+            eta_dilute = TransportRoutines::viscosity_dilute_collision_integral_powers_of_T(*this); break;
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE:
+            eta_dilute = TransportRoutines::viscosity_dilute_ethane(*this); break;
+        default:
+            throw ValueError(format("dilute viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
+        }
+        return eta_dilute;
+    }
+    else
+    {
+        throw NotImplementedError(format("dilute viscosity not implemented for mixtures"));
+    }
+    
+}
 long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
 {
     if (is_pure_or_pseudopure)
@@ -147,22 +175,7 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
             }
         }
         // Dilute part
-        long double eta_dilute;
-        switch(components[0]->transport.viscosity_dilute.type)
-        {
-        case ViscosityDiluteVariables::VISCOSITY_DILUTE_KINETIC_THEORY:
-            eta_dilute = TransportRoutines::viscosity_dilute_kinetic_theory(*this); break;
-        case ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL:
-            eta_dilute = TransportRoutines::viscosity_dilute_collision_integral(*this); break;
-        case ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_T:
-            eta_dilute = TransportRoutines::viscosity_dilute_powers_of_T(*this); break;
-        case ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR:
-            eta_dilute = TransportRoutines::viscosity_dilute_collision_integral_powers_of_T(*this); break;
-        case ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE:
-            eta_dilute = TransportRoutines::viscosity_dilute_ethane(*this); break;
-        default:
-            throw ValueError(format("dilute viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
-        }
+        long double eta_dilute = calc_viscosity_dilute();
         
         // Residual part
         long double B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
@@ -221,6 +234,8 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
             lambda_dilute = TransportRoutines::conductivity_dilute_ratio_polynomials(*this); break;
         case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2:
             lambda_dilute = TransportRoutines::conductivity_dilute_hardcoded_CO2(*this); break;
+        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETHANE:
+            lambda_dilute = TransportRoutines::conductivity_dilute_hardcoded_ethane(*this); break;
         default:
             throw ValueError(format("dilute conductivity type [%d] is invalid for fluid %s", components[0]->transport.conductivity_dilute.type, name().c_str()));
         }

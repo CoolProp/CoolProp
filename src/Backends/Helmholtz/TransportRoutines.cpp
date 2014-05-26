@@ -572,4 +572,14 @@ long double TransportRoutines::conductivity_dilute_hardcoded_CO2(HelmholtzEOSMix
     return lambda_0;
 }
 
+long double TransportRoutines::conductivity_dilute_hardcoded_ethane(HelmholtzEOSMixtureBackend &HEOS){
+
+    double e_k = 245.0;
+	double tau = 305.33/HEOS.T(), Tstar = HEOS.T()/e_k;
+	double fint = 1.7104147-0.6936482/Tstar;
+    double lambda_0 = 0.276505e-3*(HEOS.calc_viscosity_dilute()*1e6)*(3.75-fint*(tau*tau*HEOS.d2alpha0_dTau2()+1.5)); //[W/m/K]
+
+    return lambda_0;
+}
+
 }; /* namespace CoolProp */
