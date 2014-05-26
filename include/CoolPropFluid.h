@@ -44,6 +44,10 @@ struct EOSLimits
     double Tmin, Tmax, rhomax, pmax;
 };
 
+struct ConductivityDiluteEta0AndPolyData{
+    std::vector<long double> A, t;
+};
+
 struct ConductivityDiluteRatioPolynomialsData{
     long double T_reducing, p_reducing;
     std::vector<long double> A, B, n, m;
@@ -51,14 +55,21 @@ struct ConductivityDiluteRatioPolynomialsData{
 struct ConductivityDiluteVariables
 {
     enum ConductivityDiluteEnum {CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS, 
+                                 CONDUCTIVITY_DILUTE_ETA0_AND_POLY, 
                                  CONDUCTIVITY_DILUTE_CO2, 
                                  CONDUCTIVITY_DILUTE_ETHANE, 
                                  CONDUCTIVITY_DILUTE_NOT_SET
                                  };
     int type;
     ConductivityDiluteRatioPolynomialsData ratio_polynomials;
+    ConductivityDiluteEta0AndPolyData eta0_and_poly;
 
     ConductivityDiluteVariables(){type = CONDUCTIVITY_DILUTE_NOT_SET;}
+};
+
+struct ConductivityResidualPolynomialAndExponentialData{
+    long double T_reducing, rhomass_reducing;
+    std::vector<long double> A, t, d, gamma, l;
 };
 
 struct ConductivityResidualPolynomialData{
@@ -68,18 +79,20 @@ struct ConductivityResidualPolynomialData{
 struct ConductivityResidualVariables
 {
     enum ConductivityResidualEnum {CONDUCTIVITY_RESIDUAL_POLYNOMIAL,
+                                   CONDUCTIVITY_RESIDUAL_POLYNOMIAL_AND_EXPONENTIAL,
                                    CONDUCTIVITY_RESIDUAL_R123,
                                    CONDUCTIVITY_RESIDUAL_CO2,
                                    CONDUCTIVITY_RESIDUAL_NOT_SET
                                    };
     int type;
     ConductivityResidualPolynomialData polynomials;
+    ConductivityResidualPolynomialAndExponentialData polynomial_and_exponential;
 
     ConductivityResidualVariables(){type = CONDUCTIVITY_RESIDUAL_NOT_SET;}
 };
 
 struct ConductivityCriticalSimplifiedOlchowySengersData{
-    long double T_reducing, p_reducing, k, R0, gamma, nu, qD, zeta0, GAMMA;
+    long double T_reducing, p_reducing, k, R0, gamma, nu, qD, zeta0, GAMMA, T_ref;
     ConductivityCriticalSimplifiedOlchowySengersData(){
         // Universal constants - can still be adjusted if need be
         k = 1.3806488e-23; //[J/K]
@@ -90,6 +103,9 @@ struct ConductivityCriticalSimplifiedOlchowySengersData{
         GAMMA = 0.0496; //[-]
         zeta0 = 1.94e-10; //[m]
         qD = 1e9; //[m]
+
+        // Set to invalid number, can be provided in the JSON file
+        T_ref = _HUGE;
     }
 };
 struct ConductivityCriticalVariables

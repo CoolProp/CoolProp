@@ -511,6 +511,17 @@ protected:
             data.m = cpjson::get_long_double_array(dilute["m"]);
             data.T_reducing = cpjson::get_double(dilute, "T_reducing");
         }
+        else if (!type.compare("eta0_and_poly")){
+            // Get a reference to the entry in the fluid instance
+            CoolProp::ConductivityDiluteEta0AndPolyData &data = fluid.transport.conductivity_dilute.eta0_and_poly;
+
+            // Set the type flag
+            fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETA0_AND_POLY;
+
+            // Load up the values
+            data.A = cpjson::get_long_double_array(dilute["A"]);
+            data.t = cpjson::get_long_double_array(dilute["t"]);           
+        }
         else{
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
         }
@@ -543,6 +554,20 @@ protected:
             data.T_reducing = cpjson::get_double(dilute, "T_reducing");
             data.rhomass_reducing = cpjson::get_double(dilute, "rhomass_reducing");
         }
+        else if (!type.compare("polynomial_and_exponential")){
+            // Get a reference to the entry in the fluid instance
+            CoolProp::ConductivityResidualPolynomialAndExponentialData &data = fluid.transport.conductivity_residual.polynomial_and_exponential;
+
+            // Set the type flag
+            fluid.transport.conductivity_residual.type = CoolProp::ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL_AND_EXPONENTIAL;
+
+            // Load up the values
+            data.A = cpjson::get_long_double_array(dilute["A"]);
+            data.d = cpjson::get_long_double_array(dilute["d"]);
+            data.t = cpjson::get_long_double_array(dilute["t"]);
+            data.gamma = cpjson::get_long_double_array(dilute["gamma"]);
+            data.l = cpjson::get_long_double_array(dilute["l"]);
+        }
         else{
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
         }
@@ -573,6 +598,7 @@ protected:
             if (critical.HasMember("GAMMA")){ data.GAMMA = cpjson::get_double(critical,"GAMMA"); }
             if (critical.HasMember("gamma")){ data.gamma = cpjson::get_double(critical,"gamma"); }
             if (critical.HasMember("R0")){ data.R0 = cpjson::get_double(critical,"R0"); }
+            if (critical.HasMember("T_ref")){ data.T_ref = cpjson::get_double(critical,"T_ref"); }
         }
         else{
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));

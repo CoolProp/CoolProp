@@ -486,6 +486,24 @@ long double TransportRoutines::conductivity_residual_polynomial(HelmholtzEOSMixt
     }
 };
 
+long double TransportRoutines::conductivity_residual_polynomial_and_exponential(HelmholtzEOSMixtureBackend &HEOS){
+    if (HEOS.is_pure_or_pseudopure)
+    {
+        // Retrieve values from the state class
+        CoolProp::ConductivityResidualPolynomialAndExponentialData &data = HEOS.components[0]->transport.conductivity_residual.polynomial_and_exponential;
+
+        long double summer = 0, tau = HEOS.tau(), delta = HEOS.delta();
+        for (std::size_t i = 0; i < data.A.size(); ++i)
+        {
+            summer += data.A[i]*pow(tau, data.t[i])*pow(delta, data.d[i])*exp(-data.gamma[i]*pow(delta,data.l[i]));
+        }
+        return summer;
+    }
+    else{
+        throw NotImplementedError("TransportRoutines::conductivity_residual_polynomial_and_exponential is only for pure and pseudo-pure");
+    }
+};
+
 long double TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(HelmholtzEOSMixtureBackend &HEOS){
     if (HEOS.is_pure_or_pseudopure)
     {
@@ -504,34 +522,41 @@ long double TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(
                 Tc = HEOS.get_reducing().T, // [K]
                 rhoc = HEOS.get_reducing().rhomolar, // [mol/m^3]
                 Pcrit = HEOS.get_reducing().p, // [Pa]
-		        Tref = 1.5*HEOS.get_reducing().T, // [K]
-		        cp,cv,delta,num,zeta,mu,OMEGA_tilde,OMEGA_tilde0,pi=M_PI,tau;
+		        Tref, // [K]
+		        cp,cv,delta,num,zeta,mu,pi=M_PI,tau,
+                OMEGA_tilde,OMEGA_tilde0;
+
+        if (ValidNumber(data.T_ref))
+            Tref = data.T_ref;
+        else
+            Tref = 1.5*Tc;
 
 	    delta = HEOS.delta();
 
 	    tau = HEOS.tau();
-        double dp_drho=HEOS.gas_constant()*HEOS.T()*(1+2*delta*HEOS.dalphar_dDelta()+delta*delta*HEOS.d2alphar_dDelta2());
+        double dp_drho = HEOS.gas_constant()*HEOS.T()*(1+2*delta*HEOS.dalphar_dDelta()+delta*delta*HEOS.d2alphar_dDelta2());
 	    double X = Pcrit/pow(rhoc,2)*HEOS.rhomolar()/dp_drho;
 
-	    tau = Tc/Tref;
-        double dp_drho_ref = HEOS.gas_constant()*Tref*(1+2*delta*HEOS.calc_alphar_deriv_nocache(0,1,HEOS.mole_fractions,tau,HEOS.delta())+delta*delta*HEOS.calc_alphar_deriv_nocache(0,2,HEOS.mole_fractions,tau,HEOS.delta()));
+	    double tau_ref = Tc/Tref;
+        double dp_drho_ref = HEOS.gas_constant()*Tref*(1+2*delta*HEOS.calc_alphar_deriv_nocache(0,1,HEOS.mole_fractions,tau_ref,delta)+delta*delta*HEOS.calc_alphar_deriv_nocache(0,2,HEOS.mole_fractions,tau_ref,delta));
 	    double Xref = Pcrit/pow(rhoc, 2)*HEOS.rhomolar()/dp_drho_ref*Tref/HEOS.T();
-	    num=X-Xref;
+	    num = X - Xref;
 
-	    // no critical enhancement if numerator is negative
-	    if (num<0)
+	    // no critical enhancement if numerator is negative, zero, or just a tiny bit positive due to roundoff
+        // See also Lemmon, IJT, 2004, page 27
+	    if (num < DBL_EPSILON*10)
 		    return 0.0;
 	    else
-		    zeta=zeta0*pow(num/GAMMA,nu/gamma); //[m]
+		    zeta = zeta0*pow(num/GAMMA, nu/gamma); //[m]
 
         cp = HEOS.cpmolar(); //[J/mol/K]
 	    cv = HEOS.cvmolar(); //[J/mol/K]
 	    mu = HEOS.viscosity(); //[Pa-s]
 
-	    OMEGA_tilde=2.0/pi*((cp-cv)/cp*atan(zeta*qD)+cv/cp*(zeta*qD)); //[-]
-	    OMEGA_tilde0=2.0/pi*(1.0-exp(-1.0/(1.0/(qD*zeta)+1.0/3.0*(zeta*qD)*(zeta*qD)/delta/delta))); //[-]
+	    OMEGA_tilde = 2.0/pi*((cp-cv)/cp*atan(zeta*qD)+cv/cp*(zeta*qD)); //[-]
+	    OMEGA_tilde0 = 2.0/pi*(1.0-exp(-1.0/(1.0/(qD*zeta)+1.0/3.0*(zeta*qD)*(zeta*qD)/delta/delta))); //[-]
 
-	    double lambda=HEOS.rhomolar()*cp*R0*k*HEOS.T()/(6*pi*mu*zeta)*(OMEGA_tilde-OMEGA_tilde0); //[W/m/K]
+	    double lambda = HEOS.rhomolar()*cp*R0*k*HEOS.T()/(6*pi*mu*zeta)*(OMEGA_tilde - OMEGA_tilde0); //[W/m/K]
 	    return lambda; //[W/m/K]
     }
     else{
@@ -581,5 +606,23 @@ long double TransportRoutines::conductivity_dilute_hardcoded_ethane(HelmholtzEOS
 
     return lambda_0;
 }
+
+long double TransportRoutines::conductivity_dilute_eta0_and_poly(HelmholtzEOSMixtureBackend &HEOS){
+
+    if (HEOS.is_pure_or_pseudopure)
+    {
+        CoolProp::ConductivityDiluteEta0AndPolyData &E = HEOS.components[0]->transport.conductivity_dilute.eta0_and_poly;
+
+        double eta0_uPas = HEOS.calc_viscosity_dilute()*1e6; // [uPa-s]
+        double summer = E.A[0]*eta0_uPas;
+	    for (int i=1; i < E.A.size(); ++i)
+		    summer += E.A[i]*pow(static_cast<long double>(HEOS.tau()), E.t[i]);
+	    return summer;
+    }
+    else{
+        throw NotImplementedError("TransportRoutines::conductivity_dilute_eta0_and_poly is only for pure and pseudo-pure");
+    }
+}
+
 
 }; /* namespace CoolProp */

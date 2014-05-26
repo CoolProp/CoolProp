@@ -298,6 +298,74 @@
   ], 
   "NAME": "Air", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Lemmon-IJT-2004", 
+      "critical": {
+        "GAMMA": 0.055, 
+        "R0": 1.01, 
+        "T_ref": 265.262, 
+        "gamma": 1.2415, 
+        "qD": 3225806451.6, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.1e-10
+      }, 
+      "dilute": {
+        "A": [
+          0.001308, 
+          0.001405, 
+          -0.001036
+        ], 
+        "t": [
+          0, 
+          -1.1, 
+          -0.3
+        ], 
+        "type": "eta0_and_poly"
+      }, 
+      "residual": {
+        "A": [
+          0.008743, 
+          0.01476, 
+          -0.01662, 
+          0.003793, 
+          -0.006142, 
+          -0.0003778
+        ], 
+        "d": [
+          1, 
+          2, 
+          3, 
+          7, 
+          7, 
+          11
+        ], 
+        "gamma": [
+          0, 
+          0, 
+          1, 
+          1, 
+          1, 
+          1
+        ], 
+        "l": [
+          0, 
+          0, 
+          2, 
+          2, 
+          2, 
+          2
+        ], 
+        "t": [
+          0.1, 
+          0.0, 
+          0.5, 
+          2.7, 
+          0.3, 
+          1.3
+        ], 
+        "type": "polynomial_and_exponential"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Lemmon-IJT-2004", 
       "dilute": {

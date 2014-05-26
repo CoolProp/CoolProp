@@ -976,6 +976,7 @@ public:
     { 
         tau0 = Tc/T0;
         enabled = true;
+        N = c.size();
     };
 
     /// Destructor

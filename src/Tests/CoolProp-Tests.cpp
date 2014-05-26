@@ -307,14 +307,13 @@ vel("ParaHydrogen", "T", 35, "Dmass", 30, "L", 70.335e-3, 1e-4),
 vel("ParaHydrogen", "T", 18, "Dmass", 1e-13, "L", 13.643e-3, 1e-4),
 vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
 
-
 // Some of these don't work
-vel("R125", "T", 341, "Dmass", 600, "L", 0.056564297849487, 2e-2),
-vel("R125", "T", 200, "Dmass", 1e-13, "L", 0.007036843623086, 2e-2),
-vel("IsoButane", "T", 390, "Dmass", 387.09520158645068, "L", 0.063039, 1e-2),
-vel("IsoButane", "T", 390, "Dmass", 85.76703973869482, "L", 0.036603, 2e-2),
-vel("n-Butane", "T", 415, "Dmass", 360.01895129934866, "L", 0.067045, 1e-2),
-vel("n-Butane", "T", 415, "Dmass", 110.3113177144, "L", 0.044449, 1e-2),
+vel("R125", "T", 341, "Dmass", 600, "L", 0.056564297849487, 2e-4),
+vel("R125", "T", 200, "Dmass", 1e-13, "L", 0.007036843623086, 2e-4),
+vel("IsoButane", "T", 390, "Dmass", 387.09520158645068, "L", 0.063039, 1e-4),
+vel("IsoButane", "T", 390, "Dmass", 85.76703973869482, "L", 0.036603, 2e-4),
+vel("n-Butane", "T", 415, "Dmass", 360.01895129934866, "L", 0.067045, 1e-4),
+vel("n-Butane", "T", 415, "Dmass", 110.3113177144, "L", 0.044449, 1e-4),
 
 // From Huber, FPE, 2005
 vel("n-Octane", "T", 300, "Dmolar", 6177.2, "L", 0.12836, 1e-4),
@@ -327,7 +326,7 @@ vel("n-Dodecane", "T", 500, "Dmolar", 3444.7, "L", 0.09384, 1e-4),
 vel("n-Dodecane", "T", 660, "Dmolar", 1500.98, "L", 0.090346, 1e-4),
 
 // From REFPROP 9.1 since no data provided in Marsh, 2002
-vel("n-Propane", "T", 368, "Q", 0, "L", 0.07282154952457,1e-3),
+vel("n-Propane", "T", 368, "Q", 0, "L", 0.07282154952457,1e-4),
 vel("n-Propane", "T", 368, "Dmolar", 1e-10, "L", 0.0266135388745317,1e-4),
 
 // From Perkins, JCED, 2011
@@ -341,7 +340,7 @@ vel("n-Propane", "T", 368, "Dmolar", 1e-10, "L", 0.0266135388745317,1e-4),
 //vel("R1234ze(E)", "T", 300, "Dmass", 1233.82, "L", 0.085389, 1e-4),
 
 // From Laesecke, IJR 1995
-vel("R123", "T", 180, "Dmass", 1739, "L", 110.9e-3, 1e-3),
+vel("R123", "T", 180, "Dmass", 1739, "L", 110.9e-3, 1e-4),
 vel("R123", "T", 180, "Dmass", 0.2873e-2, "L", 2.473e-3, 1e-3),
 vel("R123", "T", 430, "Dmass", 996.35, "L", 45.62e-3, 1e-3),
 vel("R123", "T", 430, "Dmass", 166.9,  "L", 21.03e-3, 1e-3),
@@ -360,6 +359,32 @@ vel("Ethane", "T", 100, "Dmass", 1e-13, "L", 3.46e-3, 1e-2),
 vel("Ethane", "T", 230, "Dmolar", 16020, "L", 126.2e-3, 1e-2),
 vel("Ethane", "T", 440, "Dmolar", 1520, "L", 45.9e-3, 1e-2),
 vel("Ethane", "T", 310, "Dmolar", 4130, "L", 45.4e-3, 1e-2),
+
+// From Lemmon and Jacobsen, JPCRD, 2004
+vel("Nitrogen", "T", 100, "Dmolar", 1e-14, "L", 9.27749e-3, 1e-4),
+vel("Nitrogen", "T", 300, "Dmolar", 1e-14, "L", 25.9361e-3, 1e-4),
+vel("Nitrogen", "T", 100, "Dmolar", 25000, "L", 103.834e-3, 1e-4),
+vel("Nitrogen", "T", 200, "Dmolar", 10000, "L", 36.0099e-3, 1e-4),
+vel("Nitrogen", "T", 300, "Dmolar", 5000, "L", 32.7694e-3, 1e-4),
+vel("Nitrogen", "T", 126.195, "Dmolar", 11180, "L", 675.800e-3, 1e-4),
+vel("Argon", "T", 100, "Dmolar", 1e-14, "L", 6.36587e-3, 1e-4),
+vel("Argon", "T", 300, "Dmolar", 1e-14, "L", 17.8042e-3, 1e-4),
+vel("Argon", "T", 100, "Dmolar", 33000, "L", 111.266e-3, 1e-4),
+vel("Argon", "T", 200, "Dmolar", 10000, "L", 26.1377e-3, 1e-4),
+vel("Argon", "T", 300, "Dmolar", 5000, "L", 23.2302e-3, 1e-4),
+vel("Argon", "T", 150.69, "Dmolar", 13400, "L", 856.793e-3, 1e-4),
+vel("Oxygen", "T", 100, "Dmolar", 1e-14, "L", 8.94334e-3, 1e-4),
+vel("Oxygen", "T", 300, "Dmolar", 1e-14, "L", 26.4403e-3, 1e-4),
+vel("Oxygen", "T", 100, "Dmolar", 35000, "L", 146.044e-3, 1e-4),
+vel("Oxygen", "T", 200, "Dmolar", 10000, "L", 34.6124e-3, 1e-4),
+vel("Oxygen", "T", 300, "Dmolar", 5000, "L", 32.5491e-3, 1e-4),
+vel("Oxygen", "T", 154.6, "Dmolar", 13600, "L", 377.476e-3, 1e-4),
+vel("Air", "T", 100, "Dmolar", 1e-14, "L", 9.35902e-3, 1e-4),
+vel("Air", "T", 300, "Dmolar", 1e-14, "L", 26.3529e-3, 1e-4),
+vel("Air", "T", 100, "Dmolar", 28000, "L", 119.221e-3, 1e-4),
+vel("Air", "T", 200, "Dmolar", 10000, "L", 35.3185e-3, 1e-4),
+vel("Air", "T", 300, "Dmolar", 5000, "L", 32.6062e-3, 1e-4),
+vel("Air", "T", 132.64, "Dmolar", 10400, "L", 75.6231e-3, 1e-4),
 };
 
 TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity]")

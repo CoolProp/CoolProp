@@ -232,6 +232,8 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
         {
         case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS:
             lambda_dilute = TransportRoutines::conductivity_dilute_ratio_polynomials(*this); break;
+        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETA0_AND_POLY:
+            lambda_dilute = TransportRoutines::conductivity_dilute_eta0_and_poly(*this); break;
         case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2:
             lambda_dilute = TransportRoutines::conductivity_dilute_hardcoded_CO2(*this); break;
         case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETHANE:
@@ -246,6 +248,8 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
         {
         case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL:
             lambda_residual = TransportRoutines::conductivity_residual_polynomial(*this); break;
+        case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL_AND_EXPONENTIAL:
+            lambda_residual = TransportRoutines::conductivity_residual_polynomial_and_exponential(*this); break;
         default:
             throw ValueError(format("residual conductivity type [%d] is invalid for fluid %s", components[0]->transport.conductivity_residual.type, name().c_str()));
         }

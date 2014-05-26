@@ -384,6 +384,77 @@
   ], 
   "NAME": "Argon", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Lemmon-IJT-2004", 
+      "critical": {
+        "GAMMA": 0.055, 
+        "R0": 1.01, 
+        "T_ref": 301.374, 
+        "gamma": 1.2415, 
+        "qD": 3125000000.0, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.3e-10
+      }, 
+      "dilute": {
+        "A": [
+          0.0008158, 
+          -0.000432
+        ], 
+        "t": [
+          0, 
+          -0.77
+        ], 
+        "type": "eta0_and_poly"
+      }, 
+      "residual": {
+        "A": [
+          0.01373, 
+          0.01007, 
+          0.0007375, 
+          -0.03396, 
+          0.02047, 
+          -0.002274, 
+          -0.003973
+        ], 
+        "d": [
+          1, 
+          2, 
+          4, 
+          5, 
+          6, 
+          9, 
+          1
+        ], 
+        "gamma": [
+          0, 
+          0, 
+          0, 
+          1, 
+          1, 
+          1, 
+          1
+        ], 
+        "l": [
+          0, 
+          0, 
+          0, 
+          2, 
+          2, 
+          2, 
+          4
+        ], 
+        "t": [
+          0.0, 
+          0.0, 
+          0.0, 
+          0.8, 
+          1.2, 
+          0.8, 
+          0.5
+        ], 
+        "type": "polynomial_and_exponential"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Lemmon-IJT-2004", 
       "dilute": {
