@@ -169,6 +169,8 @@ public:
     static long double conductivity_hardcoded_water(HelmholtzEOSMixtureBackend &HEOS);
     static long double conductivity_hardcoded_R23(HelmholtzEOSMixtureBackend &HEOS);
 
+    static long double conductivity_critical_hardcoded_ammonia(HelmholtzEOSMixtureBackend &HEOS);
+
 
 }; /* class TransportRoutines */
 

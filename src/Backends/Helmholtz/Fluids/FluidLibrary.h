@@ -580,6 +580,9 @@ protected:
             if (!target.compare("R123")){
                 fluid.transport.conductivity_critical.type = CoolProp::ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_R123; return;
             }
+            else if (!target.compare("Ammonia")){
+                fluid.transport.conductivity_critical.type = CoolProp::ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_AMMONIA; return;
+            }
             else{
                 throw ValueError(format("critical conductivity term [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
             }

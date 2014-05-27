@@ -710,4 +710,38 @@ long double TransportRoutines::conductivity_hardcoded_R23(HelmholtzEOSMixtureBac
 	return (pow((rhoL-rhobar)/rhoL,C1)*lambda_DG+pow(rhobar/rhoL,C1)*lambda_L+DELTAlambda_c)/1e3;
 }
 
+long double TransportRoutines::conductivity_critical_hardcoded_ammonia(HelmholtzEOSMixtureBackend &HEOS){
+
+    /* 
+	From "Thermal Conductivity of Ammonia in a Large 
+	Temperature and Pressure Range Including the Critical Region"
+	by R. Tufeu, D.Y. Ivanov, Y. Garrabos, B. Le Neindre, 
+	Bereicht der Bunsengesellschaft Phys. Chem. 88 (1984) 422-427
+	*/
+
+    double T = HEOS.T(), Tc = 405.4, rhoc = 235, rho;
+	double LAMBDA=1.2, nu=0.63, gamma =1.24, DELTA=0.50,t,zeta_0_plus=1.34e-10,a_zeta=1,GAMMA_0_plus=0.423e-8;
+	double pi=3.141592654,a_chi,k_B=1.3806504e-23,X_T,DELTA_lambda,dPdT,eta_B,DELTA_lambda_id,DELTA_lambda_i;
+	
+    rho = HEOS.keyed_output(CoolProp::iDmass);
+	t = fabs((T-Tc)/Tc);
+	a_chi = a_zeta/0.7;
+	eta_B = (2.60+1.6*t)*1e-5;
+	dPdT = (2.18-0.12/exp(17.8*t))*1e5; // [Pa-K]
+	X_T = 0.61*rhoc+16.5*log(t);
+	// Along the critical isochore (only a function of temperature) (Eq. 9)
+	DELTA_lambda_i = LAMBDA*(k_B*T*T)/(6*pi*eta_B*(zeta_0_plus*pow(t,-nu)*(1+a_zeta*pow(t,DELTA))))*dPdT*dPdT*GAMMA_0_plus*pow(t,-gamma)*(1+a_chi*pow(t,DELTA));
+	DELTA_lambda_id = DELTA_lambda_i*exp(-36*t*t);
+	if (rho < 0.6*rhoc)
+	{
+		DELTA_lambda = DELTA_lambda_id*(X_T*X_T)/(X_T*X_T+powInt(0.6*rhoc-0.96*rhoc,2))*powInt(rho,2)/powInt(0.6*rhoc,2);
+	}
+	else
+	{
+		DELTA_lambda = DELTA_lambda_id*(X_T*X_T)/(X_T*X_T+powInt(rho-0.96*rhoc,2));
+	}
+
+	return DELTA_lambda;
+}
+
 }; /* namespace CoolProp */

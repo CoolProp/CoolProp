@@ -264,6 +264,8 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
             lambda_critical = TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(*this); break;
         case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_R123:
             lambda_critical = TransportRoutines::conductivity_critical_hardcoded_R123(*this); break;
+        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_AMMONIA:
+            lambda_critical = TransportRoutines::conductivity_critical_hardcoded_ammonia(*this); break;
         default:
             throw ValueError(format("critical conductivity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
         }

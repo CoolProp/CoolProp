@@ -112,6 +112,7 @@ struct ConductivityCriticalVariables
 {
     enum ConductivityResidualEnum {CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS, 
                                    CONDUCTIVITY_CRITICAL_R123, 
+                                   CONDUCTIVITY_CRITICAL_AMMONIA, 
                                    CONDUCTIVITY_CRITICAL_NOT_SET
                                    };
     int type;

@@ -292,6 +292,62 @@
   ], 
   "NAME": "Ammonia", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Tufeu-BBPC-1984", 
+      "critical": {
+        "hardcoded": "Ammonia"
+      }, 
+      "dilute": {
+        "A": [
+          0.03589, 
+          -0.000175, 
+          4.551e-07, 
+          1.685e-10, 
+          -4.828e-13
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 1, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.03808645, 
+          0.06647986, 
+          -0.0300295, 
+          0.00998779
+        ], 
+        "T_reducing": 1, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "rhomass_reducing": 235, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Fenghour-JPCRD-1995", 
       "_note": "There is a mysterious factor of 100 missing from the Fenghour equation for the dilute gas.  From REFPROP fluid file: !=0.021357*SQRT(MW)*(unknown factor of 100)  [Chapman-Enskog term]", 
