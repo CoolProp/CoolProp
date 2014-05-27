@@ -583,6 +583,9 @@ protected:
             else if (!target.compare("Ammonia")){
                 fluid.transport.conductivity_critical.type = CoolProp::ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_AMMONIA; return;
             }
+            else if (!target.compare("None")){
+                fluid.transport.conductivity_critical.type = CoolProp::ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_NONE; return;
+            }
             else{
                 throw ValueError(format("critical conductivity term [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
             }
@@ -618,6 +621,9 @@ protected:
             }
             else if (!target.compare("R23")){
                 fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23; return;
+            }
+            else if (!target.compare("Helium")){
+                fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HELIUM; return;
             }
             else{
                 throw ValueError(format("hardcoded residual conductivity term [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));

@@ -744,4 +744,73 @@ long double TransportRoutines::conductivity_critical_hardcoded_ammonia(Helmholtz
 	return DELTA_lambda;
 }
 
+long double TransportRoutines::conductivity_hardcoded_helium(HelmholtzEOSMixtureBackend &HEOS){
+    /*
+	What an incredibly annoying formulation!  Implied coefficients?? Not cool.
+	*/
+    double rhoc = 68.0, lambda_e, lambda_c, T = HEOS.T(), rho = HEOS.keyed_output(CoolProp::iDmass);
+	double summer = 3.739232544/T-2.620316969e1/T/T+5.982252246e1/T/T/T-4.926397634e1/T/T/T/T;
+	double lambda_0 = 2.7870034e-3*pow(T, 7.034007057e-1)*exp(summer);
+	double c[]={ 1.862970530e-4,
+				-7.275964435e-7,
+				-1.427549651e-4,
+				 3.290833592e-5,
+				-5.213335363e-8,
+				 4.492659933e-8,
+				-5.924416513e-9,
+				 7.087321137e-6,
+				-6.013335678e-6,
+				 8.067145814e-7,
+				 3.995125013e-7};
+	// Equation 17
+	lambda_e = (c[0]+c[1]*T+c[2]*pow(T,1/3.0)+c[3]*pow(T,2.0/3.0))*rho
+			   +(c[4]+c[5]*pow(T,1.0/3.0)+c[6]*pow(T,2.0/3.0))*rho*rho*rho
+			   +(c[7]+c[8]*pow(T,1.0/3.0)+c[9]*pow(T,2.0/3.0)+c[10]/T)*rho*rho*log(rho/rhoc);
+	
+    // Critical component
+    lambda_c = 0.0;
+    
+    if (3.5 < T & T < 12)
+    {
+        double x0 = 0.392, E1 = 2.8461, E2 = 0.27156, beta = 0.3554, gamma = 1.1743, delta = 4.304, rhoc_crit = 69.158, 
+            Tc = 5.18992, pc = 2.2746e5, R = 4.633e-10, m = 6.6455255e-27, k = 1.38066e-23, pi = M_PI;
+
+        double DeltaT = fabs(1-T/Tc), DeltaRho = fabs(1-rho/rhoc_crit);
+        double eta = HEOS.viscosity(); // [Pa-s]
+        double K_T = HEOS.isothermal_compressibility(), K_Tprime, K_Tbar;
+        double dpdT = HEOS.first_partial_deriv(CoolProp::iP, CoolProp::iT, CoolProp::iDmolar);
+
+        double W = pow(DeltaT/0.2,2) + pow(DeltaRho/0.25,2);
+
+        if (W > 1)
+        {
+            K_Tbar = K_T;
+        }
+        else
+        {
+            double x = pow(DeltaT/DeltaRho,1/beta);
+            double h = E1*(1 + x/x0)*pow(1 + E2*pow(1 + x/x0, 2/beta), (gamma-1)/(2*beta));
+
+            /** 
+            dh/dx derived using sympy:
+
+                E1,x,x0,E2,beta,gamma = symbols('E1,x,x0,E2,beta,gamma')
+                h = E1*(1 + x/x0)*pow(1 + E2*pow(1 + x/x0, 2/beta), (gamma-1)/(2*beta))
+                ccode(simplify(diff(h,x)))
+            */
+            double dhdx = E1*(E2*pow((x + x0)/x0, 2/beta)*(gamma - 1)*pow(E2*pow((x + x0)/x0, 2/beta) + 1, (1.0/2.0)*(gamma - 1)/beta) + pow(beta, 2)*pow(E2*pow((x + x0)/x0, 2/beta) + 1, (1.0/2.0)*(2*beta + gamma - 1)/beta))/(pow(beta, 2)*x0*(E2*pow((x + x0)/x0, 2/beta) + 1));
+            // Right-hand-side of Equation 9
+            double RHS = pow(DeltaRho,delta-1)*(delta*h-x/beta*dhdx);
+            K_Tprime = 1/(RHS*pow(rho/rhoc_crit,2)*pc);
+            K_Tbar = W*K_T + (1-W)*K_Tprime;
+        }
+
+        double c1 = 1/(6*pi*R);
+        double c2 = sqrt(m*k);
+        double c3 = c1*c2;
+	    lambda_c = sqrt(m*K_Tbar*k*pow(T,3)/rho)/(6*pi*eta*R)*pow(dpdT,2)*exp(-18.66*pow(DeltaT,2)-4.25*pow(DeltaRho,4));
+    }
+	return lambda_0+lambda_e+lambda_c;
+}
+
 }; /* namespace CoolProp */

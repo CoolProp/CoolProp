@@ -411,9 +411,38 @@ vel("R23", "T", 180, "Dmolar", 21097, "L", 143.19e-3, 1e-4),
 vel("R23", "T", 420, "Dmolar", 7564, "L", 50.19e-3, 1e-4),
 vel("R23", "T", 370, "Dmolar", 32.62, "L", 17.455e-3, 1e-4),
 
+// From REFPROP 9.1 since no sample data provided in Tufeu
 vel("Ammonia", "T", 310, "Dmolar", 34320, "L", 0.45223303481784971, 1e-4),
 vel("Ammonia", "T", 395, "Q", 0, "L", 0.2264480769301, 1e-4),
 
+// From Hands, Cryogenics, 1981
+vel("Helium", "T", 800, "P", 1e5, "L", 0.3085, 1e-4),
+vel("Helium", "T", 300, "P", 1e5, "L", 0.1560, 1e-4),
+vel("Helium", "T", 20, "P", 1e5, "L", 0.0262, 1e-4),
+vel("Helium", "T", 8, "P", 1e5, "L", 0.0145, 1e-4),
+vel("Helium", "T", 4, "P", 20e5, "L", 0.0255, 1e-4),
+vel("Helium", "T", 8, "P", 20e5, "L", 0.0308, 1e-4),
+vel("Helium", "T", 20, "P", 20e5, "L", 0.0328, 1e-4),
+vel("Helium", "T", 4, "P", 100e5, "L", 0.0385, 1e-4),
+vel("Helium", "T", 8, "P", 100e5, "L", 0.0566, 1e-4),
+vel("Helium", "T", 20, "P", 100e5, "L", 0.0594, 1e-4),
+vel("Helium", "T", 4, "P", 1e5, "L", 0.0186, 1e-4),
+vel("Helium", "T", 4, "P", 2e5, "L", 0.0194, 1e-4),
+vel("Helium", "T", 5.180, "P", 2.3e5, "L", 0.0195, 1e-4),
+vel("Helium", "T", 5.2, "P", 2.3e5, "L", 0.0202, 1e-4),
+vel("Helium", "T", 5.230, "P", 2.3e5, "L", 0.0181, 1e-4),
+vel("Helium", "T", 5.260, "P", 2.3e5, "L", 0.0159, 1e-4),
+vel("Helium", "T", 5.3, "P", 2.3e5, "L", 0.0149, 1e-4),
+
+// Geller, IJT, 2001 - based on experimental data, no validation data provided
+vel("R404A", "T", 253.03, "P", 0.101e6, "L", 0.00991, 0.03),
+vel("R404A", "T", 334.38, "P", 2.176e6, "L", 19.93e-3, 0.03),
+vel("R407C", "T", 253.45, "P", 0.101e6, "L", 0.00970, 0.03),
+vel("R407C", "T", 314.39, "P", 0.458e6, "L", 14.87e-3, 0.03),
+vel("R410A", "T", 260.32, "P", 0.101e6, "L", 0.01043, 0.03),
+vel("R410A", "T", 332.09, "P", 3.690e6, "L", 22.76e-3, 0.03),
+vel("R507A", "T", 254.85, "P", 0.101e6, "L", 0.01007, 0.03),
+vel("R507A", "T", 333.18, "P", 2.644e6, "L", 21.31e-3, 0.03),
 };
 
 TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity]")

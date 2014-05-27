@@ -285,6 +285,57 @@
   ], 
   "NAME": "R407C", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Geller-PURDUE-2001", 
+      "critical": {
+        "hardcoded": "None"
+      }, 
+      "dilute": {
+        "A": [
+          -0.009628, 
+          7.638e-05
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 1, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.012310650021, 
+          0.010203909009044946, 
+          -0.004579223187488973, 
+          0.001219101484546316
+        ], 
+        "T_reducing": 359.345, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "rhomass_reducing": 453.43094, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Geller-PURDUE-2000", 
       "dilute": {

@@ -289,6 +289,57 @@
   ], 
   "NAME": "R507A", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Geller-PURDUE-2001", 
+      "critical": {
+        "hardcoded": "None"
+      }, 
+      "dilute": {
+        "A": [
+          -0.008656, 
+          7.383e-05
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 1, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1, 
+          2
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.013735812600000001, 
+          0.00738130916394, 
+          -0.004306582229626043, 
+          0.0015131427920482105
+        ], 
+        "T_reducing": 343.765, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "rhomass_reducing": 490.74, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Geller-PURDUE-2000", 
       "dilute": {

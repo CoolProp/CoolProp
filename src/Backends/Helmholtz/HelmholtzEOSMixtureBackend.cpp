@@ -223,6 +223,8 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
                 return TransportRoutines::conductivity_hardcoded_water(*this);
             case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23:
                 return TransportRoutines::conductivity_hardcoded_R23(*this);
+            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HELIUM:
+                return TransportRoutines::conductivity_hardcoded_helium(*this);
             default:
                 throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0]->transport.hardcoded_conductivity, name().c_str()));
             }
@@ -266,6 +268,8 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
             lambda_critical = TransportRoutines::conductivity_critical_hardcoded_R123(*this); break;
         case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_AMMONIA:
             lambda_critical = TransportRoutines::conductivity_critical_hardcoded_ammonia(*this); break;
+        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_NONE:
+            lambda_critical = 0.0; break;
         default:
             throw ValueError(format("critical conductivity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
         }

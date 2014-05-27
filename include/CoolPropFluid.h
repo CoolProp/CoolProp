@@ -113,6 +113,7 @@ struct ConductivityCriticalVariables
     enum ConductivityResidualEnum {CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS, 
                                    CONDUCTIVITY_CRITICAL_R123, 
                                    CONDUCTIVITY_CRITICAL_AMMONIA, 
+                                   CONDUCTIVITY_CRITICAL_NONE, 
                                    CONDUCTIVITY_CRITICAL_NOT_SET
                                    };
     int type;
@@ -199,6 +200,7 @@ public:
     enum ConductivityDiluteEnum {
                                  CONDUCTIVITY_HARDCODED_WATER,
                                  CONDUCTIVITY_HARDCODED_R23,
+                                 CONDUCTIVITY_HARDCODED_HELIUM,
                                  CONDUCTIVITY_NOT_HARDCODED
                                  };
     ViscosityDiluteVariables viscosity_dilute;
