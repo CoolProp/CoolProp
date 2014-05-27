@@ -613,6 +613,9 @@ protected:
             if (!target.compare("Water")){
                 fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER; return;
             }
+            else if (!target.compare("R23")){
+                fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23; return;
+            }
             else{
                 throw ValueError(format("hardcoded residual conductivity term [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
             }

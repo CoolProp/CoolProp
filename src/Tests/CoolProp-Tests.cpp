@@ -121,7 +121,7 @@ vel("R123", "T", 265, "Dmass", 1545.8, "V", 627.1e-6, 1e-3),
 vel("R123", "T", 265, "Dmass", 1.614, "V", 9.534e-6, 1e-3),
 vel("R123", "T", 415, "Dmass", 1079.4, "V", 121.3e-6, 1e-3),
 vel("R123", "T", 415, "Dmass", 118.9, "V", 15.82e-6, 1e-3),
-//
+
 // Krauss, IJT, 1996
 vel("R152A", "T", 242, "Dmass", 1025.5, "V", 347.3e-6, 1e-3),
 vel("R152A", "T", 242, "Dmass", 2.4868, "V", 8.174e-6, 1e-3),
@@ -314,7 +314,7 @@ vel("ParaHydrogen", "T", 18, "Dmass", 1e-13, "L", 13.643e-3, 1e-4),
 vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
 
 // Some of these don't work
-vel("R125", "T", 341, "Dmass", 600, "L", 0.056564297849487, 2e-4),
+vel("R125", "T", 341, "Dmass", 600, "L", 0.0565642978494, 2e-4),
 vel("R125", "T", 200, "Dmass", 1e-13, "L", 0.007036843623086, 2e-4),
 vel("IsoButane", "T", 390, "Dmass", 387.09520158645068, "L", 0.063039, 1e-4),
 vel("IsoButane", "T", 390, "Dmass", 85.76703973869482, "L", 0.036603, 2e-4),
@@ -405,6 +405,12 @@ vel("Water", "T", 647.35, "Dmass", 322, "L", 1443.75556e-3, 1e-6),
 vel("Water", "T", 647.35, "Dmass", 372, "L", 650.319402e-3, 1e-6),
 vel("Water", "T", 647.35, "Dmass", 422, "L", 448.883487e-3, 1e-6),
 vel("Water", "T", 647.35, "Dmass", 750, "L", 600.961346e-3, 1e-6),
+
+// From Shan, ASHRAE, 2000
+vel("R23", "T", 180, "Dmolar", 21097, "V", 143.19e-3, 1e-4),
+vel("R23", "T", 420, "Dmolar", 7564, "V", 50.19e-3, 1e-4),
+vel("R23", "T", 370, "Dmolar", 32.62, "V", 17.455e-3, 1e-4),
+
 };
 
 TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity]")

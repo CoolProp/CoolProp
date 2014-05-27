@@ -273,6 +273,10 @@
   ], 
   "NAME": "R23", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Shan-ASHRAE-2000", 
+      "hardcoded": "R23"
+    }, 
     "viscosity": {
       "BibTeX": "Shan-ASHRAE-2000", 
       "hardcoded": "R23"

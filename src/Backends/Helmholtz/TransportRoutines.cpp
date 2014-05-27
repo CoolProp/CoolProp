@@ -683,5 +683,31 @@ long double TransportRoutines::conductivity_hardcoded_water(HelmholtzEOSMixtureB
 	return (lambdabar_0*lambdabar_1+lambdabar_2)*lambdastar;
 }
 
+long double TransportRoutines::conductivity_hardcoded_R23(HelmholtzEOSMixtureBackend &HEOS){
+
+    double B1 = -2.5370, // [mW/m/K]
+		   B2 = 0.05366, // [mW/m/K^2]
+		   C1 = 0.94215, // [-]
+		   C2 = 0.14914, // [mW/m/K^2]
+		   DeltaGstar = 2508.58, //[J/mol]
+		   rhoL = 68.345, // [mol/dm^3] = [mol/L]
+		   rhocbar = 7.5114, // [mol/dm^3]
+		   DELTAlambda_max = 25, //[mW/m/K]
+		   Ru = 8.31451, // [J/mol/K]
+           Tc = 299.2793, //[K]
+           T = HEOS.T(); //[K]
+
+	double lambda_DG = B1 + B2*T;
+
+	double rhobar = HEOS.rhomolar()/1000; // [mol/L]
+	double lambda_L = C2*(rhoL*rhoL)/(rhoL-rhobar)*sqrt(T)*exp(rhobar/(rhoL-rhobar)*DeltaGstar/(Ru*T));
+
+	double chi = rhobar - rhocbar;
+	double tau = T - Tc;
+
+	double DELTAlambda_c = 4*DELTAlambda_max/((exp(chi)+exp(-chi))*(exp(tau)+exp(-tau)));
+
+	return (pow((rhoL-rhobar)/rhoL,C1)*lambda_DG+pow(rhobar/rhoL,C1)*lambda_L+DELTAlambda_c)/1e3;
+}
 
 }; /* namespace CoolProp */

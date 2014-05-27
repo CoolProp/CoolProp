@@ -167,7 +167,8 @@ public:
     static long double conductivity_residual_polynomial_and_exponential(HelmholtzEOSMixtureBackend &HEOS);
 
     static long double conductivity_hardcoded_water(HelmholtzEOSMixtureBackend &HEOS);
-    
+    static long double conductivity_hardcoded_R23(HelmholtzEOSMixtureBackend &HEOS);
+
 
 }; /* class TransportRoutines */
 

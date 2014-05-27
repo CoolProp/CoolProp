@@ -197,6 +197,7 @@ public:
                               };
     enum ConductivityDiluteEnum {
                                  CONDUCTIVITY_HARDCODED_WATER,
+                                 CONDUCTIVITY_HARDCODED_R23,
                                  CONDUCTIVITY_NOT_HARDCODED
                                  };
     ViscosityDiluteVariables viscosity_dilute;
