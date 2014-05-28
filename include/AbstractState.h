@@ -221,6 +221,13 @@ protected:
     /// Using this backend, get the triple point temperature in K
     virtual long double calc_Ttriple(void){throw NotImplementedError("calc_Ttriple is not implemented for this backend");};
 
+    /// Using this backend, get the critical point temperature in K
+    virtual long double calc_T_critical(void){throw NotImplementedError("calc_T_critical is not implemented for this backend");};
+    /// Using this backend, get the critical point pressure in Pa
+    virtual long double calc_p_critical(void){throw NotImplementedError("calc_p_critical is not implemented for this backend");};
+    /// Using this backend, get the critical point molar density in mol/m^3
+    virtual long double calc_rhomolar_critical(void){throw NotImplementedError("calc_rhomolar_critical is not implemented for this backend");};
+
 public:
 
     virtual long double calc_melt_p_T(long double T){throw NotImplementedError("calc_melt_p_T is not implemented for this backend");};
@@ -270,6 +277,10 @@ public:
     double Tmax(void);
     double pmax(void);
     double Ttriple(void);
+
+    double T_critical(void);
+    double p_critical(void);
+    double rhomolar_critical(void);
 
     std::string name(){return calc_name();};
 
@@ -402,7 +413,7 @@ public:
 
 
 /**
-This class is a wrapper around an AbstractState.  It handles construction and desctruction of the AbstractState 
+This class is a wrapper around an AbstractState.  It handles construction and destruction of the AbstractState 
 instance which decreases the likelihood of memory leaks.  Only a few functions are exposed out of the AbstractState - this 
 can be expanded, but functions must be manually exported out of the wrapper, which is not so nice.
 */

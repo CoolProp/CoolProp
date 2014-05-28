@@ -11,7 +11,11 @@ void load()
 	rapidjson::Document dd;
     // This json formatted string comes from the all_fluids_JSON.h header which is a C++-escaped version of the JSON file
     dd.Parse<0>(all_fluids_JSON.c_str());
-	if (dd.HasParseError()){throw ValueError("Unable to load all_fluids.json");} else{library.add_many(dd);}
+	if (dd.HasParseError()){
+        throw ValueError("Unable to load all_fluids.json");
+    } else{
+        try{library.add_many(dd);}catch(std::exception &e){std::cout << e.what() << std::endl;}
+    }
 }
 
 JSONFluidLibrary & get_library(void){

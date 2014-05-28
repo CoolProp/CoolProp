@@ -242,6 +242,15 @@ double AbstractState::Ttriple(void){
 double AbstractState::pmax(void){
     return calc_pmax();
 }
+double AbstractState::T_critical(void){
+    return calc_T_critical();
+}
+double AbstractState::p_critical(void){
+    return calc_p_critical();
+}
+double AbstractState::rhomolar_critical(void){
+    return calc_rhomolar_critical();
+}
 
 double AbstractState::hmolar(void){
     if (!_hmolar) _hmolar = calc_hmolar();

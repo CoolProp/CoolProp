@@ -189,6 +189,11 @@ struct ViscosityHigherOrderVariables
     ViscosityHigherOrderVariables(){type = VISCOSITY_HIGHER_ORDER_NOT_SET;};
 };
 
+struct ViscosityECSVariables{
+    long double rhomolar_reducing;
+    std::vector<long double> psi_a, psi_t;
+};
+
 class TransportPropertyData
 {
 public:
@@ -206,6 +211,7 @@ public:
     ViscosityDiluteVariables viscosity_dilute;
     ViscosityInitialDensityVariables viscosity_initial;
     ViscosityHigherOrderVariables viscosity_higher_order;
+    ViscosityECSVariables viscosity_ecs;
     ConductivityDiluteVariables conductivity_dilute;
     ConductivityResidualVariables conductivity_residual;
     ConductivityCriticalVariables conductivity_critical;

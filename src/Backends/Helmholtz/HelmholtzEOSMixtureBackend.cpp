@@ -156,6 +156,41 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void)
     }
     
 }
+long double HelmholtzEOSMixtureBackend::calc_viscosity_background()
+{
+    long double eta_dilute = calc_viscosity_dilute();
+    return calc_viscosity_background(eta_dilute);
+}
+long double HelmholtzEOSMixtureBackend::calc_viscosity_background(long double eta_dilute)
+{
+    // Residual part
+    long double B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
+    long double rho = rhomolar();
+    long double initial_part = eta_dilute*B_eta_initial*rhomolar();
+
+    // Higher order terms
+    long double delta_eta_h;
+    switch(components[0]->transport.viscosity_higher_order.type)
+    {
+    case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND:
+        delta_eta_h = TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(*this); break;
+    case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_FRICTION_THEORY:
+        delta_eta_h = TransportRoutines::viscosity_higher_order_friction_theory(*this); break;
+    case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HYDROGEN:
+        delta_eta_h = TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(*this); break;
+    case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEXANE:
+        delta_eta_h = TransportRoutines::viscosity_hexane_higher_order_hardcoded(*this); break;
+    case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_ETHANE:
+        delta_eta_h = TransportRoutines::viscosity_ethane_higher_order_hardcoded(*this); break;
+    default:
+        throw ValueError(format("higher order viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
+    }
+
+    long double eta_residual = initial_part + delta_eta_h;
+
+    return eta_residual;
+}
+
 long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
 {
     if (is_pure_or_pseudopure)
@@ -176,35 +211,13 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
         }
         // Dilute part
         long double eta_dilute = calc_viscosity_dilute();
-        
-        // Residual part
-        long double B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
-        long double rho = rhomolar();
-        long double initial_part = eta_dilute*B_eta_initial*rhomolar();
 
-        // Higher order terms
-        long double delta_eta_h;
-        switch(components[0]->transport.viscosity_higher_order.type)
-        {
-        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND:
-            delta_eta_h = TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(*this); break;
-        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_FRICTION_THEORY:
-            delta_eta_h = TransportRoutines::viscosity_higher_order_friction_theory(*this); break;
-        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HYDROGEN:
-            delta_eta_h = TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(*this); break;
-        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEXANE:
-            delta_eta_h = TransportRoutines::viscosity_hexane_higher_order_hardcoded(*this); break;
-        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_ETHANE:
-            delta_eta_h = TransportRoutines::viscosity_ethane_higher_order_hardcoded(*this); break;
-        default:
-            throw ValueError(format("higher order viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
-        }
-
-        long double eta_residual = initial_part + delta_eta_h;
+        // Background viscosity given by the sum of the initial density dependence and higher order terms
+        long double eta_back = calc_viscosity_background(eta_dilute);
 
         // Critical part
         long double eta_critical = 0;
-        return eta_dilute + eta_residual + eta_critical;
+        return eta_dilute + eta_back + eta_critical;
     }
     else
     {

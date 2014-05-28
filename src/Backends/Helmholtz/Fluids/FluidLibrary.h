@@ -752,6 +752,11 @@ public:
         // CAS number
         fluid.CAS = fluid_json["CAS"].GetString();
 
+
+        if (get_debug_level() > 5){
+            std::cout << format("Loading fluid %s with CAS %s; %d fluids loaded\n", fluid.name.c_str(), fluid.CAS.c_str(), index);
+        }
+
         // Aliases
         fluid.aliases = cpjson::get_string_array(fluid_json["ALIASES"]);
         
@@ -784,7 +789,9 @@ public:
         else{
             parse_environmental(fluid_json["ENVIRONMENTAL"], fluid);
         }
-
+        if (index == 80){
+            double rr =0;
+        }
         // Parse the environmental parameters
         if (!(fluid_json.HasMember("TRANSPORT"))){
             default_transport(fluid);
@@ -807,6 +814,7 @@ public:
             string_to_index_map[fluid.aliases[i]] = index;
         }
 
+        if (get_debug_level() > 5){ std::cout << format("Loaded.\n"); }
     };
     /// Get a CoolPropFluid instance stored in this library
     /**

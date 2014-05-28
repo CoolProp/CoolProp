@@ -35,8 +35,9 @@ public:
     ReducingFunctionContainer Reducing;
     ExcessTerm Excess;
 
-    friend class FlashRoutines; // Allows the routines in the FlashRoutines class to have access to all the protected members and methods of this class
-    friend class TransportRoutines; // Allows the routines in the TransportRoutines class to have access to all the protected members and methods of this class
+    friend class FlashRoutines; // Allows the static methods in the FlashRoutines class to have access to all the protected members and methods of this class
+    friend class TransportRoutines; // Allows the static methods in the TransportRoutines class to have access to all the protected members and methods of this class
+    //friend class MixtureDerivatives; // 
 
     // Helmholtz EOS backend uses mole fractions
     bool using_mole_fractions(){return true;}
@@ -119,6 +120,8 @@ public:
     long double calc_surface_tension(void);
     long double calc_viscosity(void);
     long double calc_viscosity_dilute(void);
+    long double calc_viscosity_background(void);
+    long double calc_viscosity_background(long double eta_dilute);
     long double calc_conductivity(void);
 
     long double calc_Tmax(void);

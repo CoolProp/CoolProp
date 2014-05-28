@@ -584,6 +584,10 @@ long double TransportRoutines::conductivity_dilute_hardcoded_CO2(HelmholtzEOSMix
 	//Vesovic Eq. 12 [no units]
 	double r = sqrt(2.0/5.0*cint_k);
 
+    // According to REFPROP, 1+r^2 = cp-2.5R.  This is unclear to me but seems to suggest that cint/k is the difference 
+    // between the ideal gas specific heat and a monatomic specific heat of 5/2*R. Using the form of cint/k from Vesovic 
+    // does not yield exactly the correct values
+
 	Tstar = HEOS.T()/e_k;
 	//Vesovic Eq. 30 [no units]
 	summer = 0;
@@ -615,7 +619,7 @@ long double TransportRoutines::conductivity_dilute_eta0_and_poly(HelmholtzEOSMix
 
         double eta0_uPas = HEOS.calc_viscosity_dilute()*1e6; // [uPa-s]
         double summer = E.A[0]*eta0_uPas;
-	    for (int i=1; i < E.A.size(); ++i)
+	    for (std::size_t i=1; i < E.A.size(); ++i)
 		    summer += E.A[i]*pow(static_cast<long double>(HEOS.tau()), E.t[i]);
 	    return summer;
     }
@@ -632,7 +636,7 @@ long double TransportRoutines::conductivity_hardcoded_water(HelmholtzEOSMixtureB
 				{-1.21051378,1.60812989,-0.621178141,0.0716373224,0,0},
 				{-2.7203370,4.57586331,-3.18369245,1.1168348,-0.19268305,0.012913842}};
 
-	double lambdabar_0,lambdabar_1,lambdabar_2,rhobar,Tbar,sum,R_Water;
+	double lambdabar_0,lambdabar_1,lambdabar_2,rhobar,Tbar,sum;
 	double Tstar=647.096,rhostar=322,pstar=22064000,lambdastar=1e-3,mustar=1e-6;
 	double tau,xi;
 	int i,j;
@@ -770,7 +774,7 @@ long double TransportRoutines::conductivity_hardcoded_helium(HelmholtzEOSMixture
     // Critical component
     lambda_c = 0.0;
     
-    if (3.5 < T & T < 12)
+    if (3.5 < T && T < 12)
     {
         double x0 = 0.392, E1 = 2.8461, E2 = 0.27156, beta = 0.3554, gamma = 1.1743, delta = 4.304, rhoc_crit = 69.158, 
             Tc = 5.18992, pc = 2.2746e5, R = 4.633e-10, m = 6.6455255e-27, k = 1.38066e-23, pi = M_PI;
@@ -813,4 +817,56 @@ long double TransportRoutines::conductivity_hardcoded_helium(HelmholtzEOSMixture
 	return lambda_0+lambda_e+lambda_c;
 }
 
+long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference)
+{
+    // Collect some parameters
+    long double M = HEOS.molar_mass(),
+                M0 = HEOS_Reference.molar_mass(),
+                Tc = HEOS.T_critical(),
+                Tc0 = HEOS_Reference.T_critical(),
+                rhocmolar = HEOS.rhomolar_critical(),
+                rhocmolar0 = HEOS_Reference.rhomolar_critical();
+
+    CoolProp::ViscosityECSVariables &ECS = HEOS.components[0]->transport.viscosity_ecs;
+
+    std::vector<long double> &a = ECS.psi_a, &t = ECS.psi_t;
+    
+    // The correction polynomial
+    double psi = 0;
+    for (std::size_t i=0; i<=a.size(); i++)
+        psi += a[i]*pow(HEOS.rhomolar()/ECS.rhomolar_reducing, t[i]);
+
+    // The dilute gas portion for the fluid of interest [Pa-s]
+    long double eta_dilute = viscosity_dilute_kinetic_theory(HEOS);
+
+    // Calculate the correction polynomial
+
+
+    /// \todo To be solved for...
+    // TODO: To be solved for...
+    long double theta = 1;
+    long double phi = 1;
+
+    // The equivalent substance reducing ratios
+    long double f = Tc/Tc0*theta;
+	long double h = rhocmolar0/rhocmolar*phi; // Must be the ratio of MOLAR densities!!
+
+    // To be solved for
+    long double T0 = HEOS.T()/f;
+    long double rhomolar0 = HEOS.rhomolar()*h;
+
+    // Update the reference fluid with the conformal state
+    HEOS_Reference.update(DmolarT_INPUTS, rhomolar0*psi, T0);
+
+    // The reference fluid's contribution to the viscosity [Pa-s]
+    long double eta_resid = HEOS_Reference.calc_viscosity_background();
+
+    // The F factor
+	long double F_eta = sqrt(f)*pow(h, static_cast<long double>(-2.0/3.0))*sqrt(M/M0);
+
+    // The total viscosity considering the contributions of the fluid of interest and the reference fluid [Pa-s]
+	long double eta = eta_dilute + eta_resid*F_eta;
+
+    return eta;
+}
 }; /* namespace CoolProp */

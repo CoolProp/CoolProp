@@ -140,6 +140,8 @@ public:
     \f$\rho\f$ and \f$\rho_c\f$ are in mol\f$\cdot\f$m\f$^{-3}\f$, \f$\eta\f$ is the viscosity in Pa\f$\cdot\f$s, 
     and the remaining parameters are defined in the following tables.
 
+    It should be noted that some authors use slightly different values for the "universal" constants
+
     Coefficients for use in the simplified Olchowy-Sengers critical term
     Parameter             | Variable     | Value
     ---------             | --------     | ------
@@ -171,6 +173,25 @@ public:
     static long double conductivity_hardcoded_helium(HelmholtzEOSMixtureBackend &HEOS);
 
     static long double conductivity_critical_hardcoded_ammonia(HelmholtzEOSMixtureBackend &HEOS);
+
+    /**
+    \brief Calculate the viscosity using the extended corresponding states method
+
+    This method is covered in depth in
+
+    Bell, I. H.; Wronski, J.; Quoilin, S. & Lemort, V. (2014), Pure and Pseudo-pure Fluid Thermophysical Property Evaluation and the Open-Source Thermophysical Property Library CoolProp, Industrial & Engineering Chemistry Research, 53, (6), 2498-2508
+
+    which is originally based on the methods presented in 
+
+    Huber, M. L., Laesecke, A. and Perkins, R. A., (2003), Model for the Viscosity and Thermal Conductivity of Refrigerants, Including a New Correlation for the Viscosity of R134a, Industrial & Engineering Chemistry Research, v. 42, pp. 3163-3178
+
+    and
+
+    McLinden, M. O.; Klein, S. A. & Perkins, R. A. (2000), An extended corresponding states model for the thermal conductivity of refrigerants and refrigerant mixtures, Int. J. Refrig., 23, 43-63
+
+
+    */
+    static long double viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference);
 
 
 }; /* class TransportRoutines */

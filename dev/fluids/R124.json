@@ -279,5 +279,28 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R124"
+  "NAME": "R124", 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "", 
+      "ECS_psi": {
+        "a": [
+          1.04253, 
+          0.00138528
+        ], 
+        "rhomolar_reducing": 4103.279546177282, 
+        "rhomolar_reducing_units": "mol/m^3", 
+        "t": [
+          0, 
+          1
+        ]
+      }, 
+      "ECS_reference_fluid": "Propane", 
+      "epsilon_over_k": 275.8, 
+      "epsilon_over_k_units": "K", 
+      "sigma": 5.501e-10, 
+      "sigma_units": "m", 
+      "type": "ECS"
+    }
+  }
 }
