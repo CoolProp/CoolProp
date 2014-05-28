@@ -8,6 +8,7 @@ namespace CoolProp{
 
 typedef std::vector<std::vector<long double> > STLMatrix;
 
+
 /// A container for the mixing parameters for CoolProp mixtures
 /**
 
@@ -77,11 +78,13 @@ public:
 	virtual double d2alphar_dTau2(double tau, double delta) = 0;
 };
 
+typedef std::tr1::shared_ptr<DepartureFunction> DepartureFunctionPointer;
+
 class ExcessTerm
 {
 public:
 	unsigned int N;
-	std::vector<std::vector<DepartureFunction*> > DepartureFunctionMatrix;
+	std::vector<std::vector<DepartureFunctionPointer> > DepartureFunctionMatrix;
 	std::vector<std::vector<double> > F;
 	
     ExcessTerm(){};

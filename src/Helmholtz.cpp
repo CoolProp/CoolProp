@@ -1712,25 +1712,25 @@ class HelmholtzConsistencyFixture
 {
 public:
     long double numerical, analytic;
-    CoolProp::BaseHelmholtzTerm *Lead, *LogTau, *IGPower, *PlanckEinstein, *PlanckEinstein2;
+    std::tr1::shared_ptr<CoolProp::BaseHelmholtzTerm> Lead, LogTau, IGPower, PlanckEinstein, PlanckEinstein2;
 
     HelmholtzConsistencyFixture(){
-        Lead = new CoolProp::IdealHelmholtzLead(1,3);
-        LogTau = new CoolProp::IdealHelmholtzLogTau(1.5);
+        Lead.reset(new CoolProp::IdealHelmholtzLead(1,3));
+        LogTau.reset(new CoolProp::IdealHelmholtzLogTau(1.5));
         {
             std::vector<long double> n(4,0), t(4,1); n[0] = -0.1; n[2] = 0.1; t[1] = -1; t[2] = -2; t[3] = 2;
-            IGPower = new CoolProp::IdealHelmholtzPower(n,t);
+            IGPower.reset(new CoolProp::IdealHelmholtzPower(n,t));
         }
         {
             std::vector<long double> n(4,0), t(4,1); n[0] = -0.1; n[2] = 0.1; t[1] = -1; t[2] = -2; t[3] = 2;
-            PlanckEinstein = new CoolProp::IdealHelmholtzPlanckEinstein(n, t);
+            PlanckEinstein.reset(new CoolProp::IdealHelmholtzPlanckEinstein(n, t));
         }
         {
             std::vector<long double> n(4,0), t(4,1), c(4,1); n[0] = -0.1; n[2] = 0.1; t[1] = -1; t[2] = -2; t[3] = 2;
-            PlanckEinstein2 = new CoolProp::IdealHelmholtzPlanckEinstein2(n, t, c);
+            PlanckEinstein2.reset(new CoolProp::IdealHelmholtzPlanckEinstein2(n, t, c));
         }
     }
-    void call(std::string d, CoolProp::BaseHelmholtzTerm * term, long double tau, long double delta, long double ddelta)
+    void call(std::string d, std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta)
     {
               if (!d.compare("dTau")){return dTau(term,tau,delta,ddelta);}
         else if (!d.compare("dTau2")){return dTau2(term,tau,delta,ddelta);}
@@ -1742,7 +1742,7 @@ public:
             throw CoolProp::ValueError("don't understand deriv type");
         }
     }
-    CoolProp::BaseHelmholtzTerm * get(std::string t)
+    std::shared_ptr<CoolProp::BaseHelmholtzTerm> get(std::string t)
     {
         if (!t.compare("Lead")){return Lead;}
         else if (!t.compare("LogTau")){return LogTau;}
@@ -1753,37 +1753,37 @@ public:
             throw CoolProp::ValueError("don't understand helmholtz type");
         }
     }
-    void dTau(CoolProp::BaseHelmholtzTerm * term, long double tau, long double delta, long double dtau){
+    void dTau(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double dtau){
         long double term_plus = term->base(tau + dtau, delta);
         long double term_minus = term->base(tau - dtau, delta);
         numerical = (term_plus - term_minus)/(2*dtau);
         analytic = term->dTau(tau, delta);
     };
-    void dTau2(CoolProp::BaseHelmholtzTerm * term, long double tau, long double delta, long double dtau){
+    void dTau2(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double dtau){
         long double term_plus = term->dTau(tau + dtau, delta);
         long double term_minus = term->dTau(tau - dtau, delta);
         numerical = (term_plus - term_minus)/(2*dtau);
         analytic = term->dTau2(tau, delta);
     };
-    void dTau3(CoolProp::BaseHelmholtzTerm * term, long double tau, long double delta, long double dtau){
+    void dTau3(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double dtau){
         long double term_plus = term->dTau2(tau + dtau, delta);
         long double term_minus = term->dTau2(tau - dtau, delta);
         numerical = (term_plus - term_minus)/(2*dtau);
         analytic = term->dTau3(tau, delta);
     };
-    void dDelta(CoolProp::BaseHelmholtzTerm * term, long double tau, long double delta, long double ddelta){
+    void dDelta(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
         long double term_plus = term->base(tau, delta + ddelta);
         long double term_minus = term->base(tau, delta - ddelta);
         numerical = (term_plus - term_minus)/(2*ddelta);
         analytic = term->dDelta(tau, delta);
     };
-    void dDelta2(CoolProp::BaseHelmholtzTerm * term, long double tau, long double delta, long double ddelta){
+    void dDelta2(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
         long double term_plus = term->dDelta(tau, delta + ddelta);
         long double term_minus = term->dDelta(tau, delta - ddelta);
         numerical = (term_plus - term_minus)/(2*ddelta);
         analytic = term->dDelta2(tau, delta);
     };
-    void dDelta3(CoolProp::BaseHelmholtzTerm * term, long double tau, long double delta, long double ddelta){
+    void dDelta3(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
         long double term_plus = term->dDelta2(tau, delta + ddelta);
         long double term_minus = term->dDelta2(tau, delta - ddelta);
         numerical = (term_plus - term_minus)/(2*ddelta);
@@ -1805,7 +1805,7 @@ std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3"};
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]")
 {
-    CoolProp::BaseHelmholtzTerm * term;
+    std::tr1::shared_ptr<CoolProp::BaseHelmholtzTerm> term;
     std::size_t n = sizeof(terms)/sizeof(terms[0]);
     for (std::size_t i = 0; i < n; ++i)
     {

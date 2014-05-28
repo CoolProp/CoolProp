@@ -105,7 +105,7 @@ void ExcessTerm::construct(const std::vector<CoolPropFluid*> &components)
     N = components.size();
 
     F.resize(N, std::vector<double>(N, 0));
-    DepartureFunctionMatrix.resize(N, std::vector<DepartureFunction*>(N, NULL));
+    DepartureFunctionMatrix.resize(N, std::vector<DepartureFunctionPointer>(N, NULL));
 
     for (unsigned int i = 0; i < N; ++i)
     {
@@ -139,7 +139,7 @@ void ExcessTerm::construct(const std::vector<CoolPropFluid*> &components)
                 std::vector<double> beta = dic.get_double_vector("beta");
                 std::vector<double> gamma = dic.get_double_vector("gamma");
                 int Npower = static_cast<int>(dic.get_number("Npower"));
-                DepartureFunctionMatrix[i][j] = new GERG2008DepartureFunction(n,d,t,eta,epsilon,beta,gamma,Npower);
+                DepartureFunctionMatrix[i][j].reset(new GERG2008DepartureFunction(n,d,t,eta,epsilon,beta,gamma,Npower));
             }
             else if (!model.compare("Lemmon-JPCRD-2004") || !model.compare("Lemmon-JPCRD-2000"))
             {
@@ -155,17 +155,6 @@ void ExcessTerm::construct(const std::vector<CoolPropFluid*> &components)
 
 ExcessTerm::~ExcessTerm()
 {
-    std::size_t N = DepartureFunctionMatrix.size();
-    if (DepartureFunctionMatrix.empty()){return;}
-	for (unsigned int i = 0; i < N; i++)
-	{
-		for (unsigned int j = 0; j < N; j++)
-		{	
-            delete DepartureFunctionMatrix[i][j]; // It is safe to delete NULL
-            DepartureFunctionMatrix[i][j] = NULL;
-		}
-	}
-    DepartureFunctionMatrix.clear();
 }
 double ExcessTerm::alphar(double tau, double delta, const std::vector<long double> &x)
 {

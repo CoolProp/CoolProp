@@ -31,7 +31,7 @@ public:
     HelmholtzEOSMixtureBackend(){SatL = NULL; SatV = NULL; imposed_phase_index = -1;};
     HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
-    virtual ~HelmholtzEOSMixtureBackend(){delete SatL; delete SatV;};
+    virtual ~HelmholtzEOSMixtureBackend(){};
     ReducingFunctionContainer Reducing;
     ExcessTerm Excess;
 
@@ -46,7 +46,7 @@ public:
     std::vector<long double> &get_K(){return K;};
     std::vector<long double> &get_lnK(){return lnK;};
 
-    HelmholtzEOSMixtureBackend *SatL, *SatV; ///< 
+    std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///< 
 
     void update(long input_pair, double value1, double value2);
 

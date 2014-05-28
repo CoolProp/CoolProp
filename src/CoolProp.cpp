@@ -300,13 +300,13 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
     long iName2 = get_parameter_index(Name2);
 
     // The state we are going to use
-    AbstractState *State = NULL;
+    std::tr1::shared_ptr<AbstractState> State;
     try
     {
         // We are going to let the factory function determine which backend to use
         //
         // Generate the State class pointer using the factory function with unknown backend
-        State = AbstractState::factory(unknown_backend, Ref);
+        State.reset(AbstractState::factory(unknown_backend, Ref));
 
         if (State == NULL){ throw ValueError("unable to instantiate AbstractState*");}
 
@@ -325,7 +325,6 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
         /*if (State->is_trivial_output(iOutput))
         { 
             double val = State->trivial_keyed_output(iOutput);
-            delete(State);
             return val;
         };*/
 
@@ -334,15 +333,12 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
 
         // Return the desired output
         double val = State->keyed_output(iOutput);
-        
-        // Free the pointer to the State class
-        delete (State);
 
         // Return the value
         return val;
     }
     catch(...){	
-        delete(State); throw;
+        throw;
     }
 }
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref, const std::vector<double> &z)

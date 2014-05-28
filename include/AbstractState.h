@@ -241,7 +241,7 @@ public:
     
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
     /**
-    Very Important!! : You must ensure to delete the backend instance that is created, otherwise there will be a memory leak
+    Very Important!! : You should use a smart pointer to manage the pointer returned.  In older versions of C++, you can use std::tr1::smart_ptr which works fine
 
     The backend that is selected is based on the string passed in:
     

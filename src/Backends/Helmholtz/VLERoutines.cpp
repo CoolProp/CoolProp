@@ -21,7 +21,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
     
     HEOS->calc_reducing_state();
     const SimpleState & reduce = HEOS->get_reducing();
-    HelmholtzEOSMixtureBackend *SatL = HEOS->SatL, *SatV = HEOS->SatV;
+    std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS->SatL, 
+                                                     SatV = HEOS->SatV;
     const std::vector<long double> & mole_fractions = HEOS->get_mole_fractions();
     const long double R_u = HEOS->gas_constant();
     
@@ -212,7 +213,8 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
     
     HEOS->calc_reducing_state();
     const SimpleState & reduce = HEOS->get_reducing();
-    HelmholtzEOSMixtureBackend *SatL = HEOS->SatL, *SatV = HEOS->SatV;
+    std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS->SatL, 
+                                                     SatV = HEOS->SatV;
     const std::vector<long double> & mole_fractions = HEOS->get_mole_fractions();
     
     long double T, rhoL,rhoV;
@@ -377,7 +379,8 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
     HEOS->calc_reducing_state();
     const SimpleState & reduce = HEOS->get_reducing();
     long double R_u = HEOS->calc_gas_constant();
-    HelmholtzEOSMixtureBackend *SatL = HEOS->SatL, *SatV = HEOS->SatV;
+    std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS->SatL, 
+                                                     SatV = HEOS->SatV;
 
     long double rhoL,rhoV,JL,JV,KL,KV,dJL,dJV,dKL,dKV;
     long double DELTA, deltaL=0, deltaV=0, tau=0, error, PL, PV, stepL, stepV;
@@ -508,8 +511,8 @@ long double SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBacken
     ln_phi_liq.resize(N); ln_phi_vap.resize(N); x.resize(N); y.resize(N);
 
     x_and_y_from_K(beta, K, z, x, y);
-    HelmholtzEOSMixtureBackend *SatL = new HelmholtzEOSMixtureBackend(HEOS->get_components()), 
-                               *SatV = new HelmholtzEOSMixtureBackend(HEOS->get_components());
+    std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> SatL(new HelmholtzEOSMixtureBackend(HEOS->get_components())), 
+                                                     SatV(new HelmholtzEOSMixtureBackend(HEOS->get_components()));
     SatL->specify_phase(iphase_liquid);
     SatV->specify_phase(iphase_gas);
 
@@ -587,8 +590,6 @@ long double SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBacken
     options.T = T;
     options.x = SatL->get_mole_fractions();
     options.y = SatV->get_mole_fractions();
-
-    delete SatL; delete SatV;
 }
 
 void SaturationSolvers::newton_raphson_VLE_GV::resize(unsigned int N)
@@ -620,8 +621,8 @@ void SaturationSolvers::newton_raphson_VLE_GV::check_Jacobian(HelmholtzEOSMixtur
     std::size_t N = K.size();
     resize(N);
 
-    SatL = new HelmholtzEOSMixtureBackend(HEOS->get_components()), 
-    SatV = new HelmholtzEOSMixtureBackend(HEOS->get_components());
+    std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> SatL(new HelmholtzEOSMixtureBackend(HEOS->get_components())), 
+                                                     SatV(new HelmholtzEOSMixtureBackend(HEOS->get_components()));
     SatL->specify_phase(iphase_liquid);
     SatV->specify_phase(iphase_gas);
 
@@ -679,7 +680,6 @@ void SaturationSolvers::newton_raphson_VLE_GV::check_Jacobian(HelmholtzEOSMixtur
     std::cout << vec_to_string(get_col(Jnum, N+1),"%12.11f") << std::endl;
     std::cout << vec_to_string(get_col(J,N+1),"%12.11f") << std::endl;
 
-    delete SatL; delete SatV;
 }
 void SaturationSolvers::newton_raphson_VLE_GV::call(HelmholtzEOSMixtureBackend *HEOS, const std::vector<long double> &z, std::vector<long double> &K, mixture_VLE_IO &IO)
 {
@@ -689,8 +689,8 @@ void SaturationSolvers::newton_raphson_VLE_GV::call(HelmholtzEOSMixtureBackend *
     pre_call();
     resize(K.size());
 
-    SatL = new HelmholtzEOSMixtureBackend(HEOS->get_components()), 
-    SatV = new HelmholtzEOSMixtureBackend(HEOS->get_components());
+    std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> SatL(new HelmholtzEOSMixtureBackend(HEOS->get_components())), 
+                                                     SatV(new HelmholtzEOSMixtureBackend(HEOS->get_components()));
     SatL->specify_phase(iphase_liquid); // So it will always just use single-phase solution 
     SatV->specify_phase(iphase_gas); // So it will always just use single-phase solution
 

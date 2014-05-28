@@ -210,13 +210,13 @@ class TransportValidationFixture
 {
 protected:
     long double actual, x1, x2;
-    CoolProp::AbstractState *pState;
+    std::tr1::shared_ptr<CoolProp::AbstractState> pState;
     int pair;
 public:
-    TransportValidationFixture(){ pState = NULL; }
-    ~TransportValidationFixture(){ delete pState; }
+    TransportValidationFixture(){ }
+    ~TransportValidationFixture(){ }
     void set_backend(std::string backend, std::string fluid_name){
-        pState = CoolProp::AbstractState::factory(backend, fluid_name);
+        pState.reset(CoolProp::AbstractState::factory(backend, fluid_name));
     }
     void set_pair(std::string &in1, double v1, std::string &in2, double v2){ 
         double o1, o2;
@@ -496,17 +496,13 @@ class ConsistencyFixture
 {
 protected:
     long double hmolar, pmolar, smolar, umolar, rhomolar, T, p, x1, x2;
-    CoolProp::AbstractState *pState;
+    std::tr1::shared_ptr<CoolProp::AbstractState> pState;
     int pair;
 public:
-    ConsistencyFixture(){
-        pState = NULL;
-    }
-    ~ConsistencyFixture(){
-        delete pState;
-    }
+    ConsistencyFixture(){}
+    ~ConsistencyFixture(){}
     void set_backend(std::string backend, std::string fluid_name){
-        pState = CoolProp::AbstractState::factory(backend, fluid_name);
+        pState.reset(CoolProp::AbstractState::factory(backend, fluid_name));
     }
     void set_pair(int pair){ 
         this->pair = pair;
