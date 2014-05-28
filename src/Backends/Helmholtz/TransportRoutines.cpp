@@ -831,10 +831,10 @@ long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
 
     std::vector<long double> &a = ECS.psi_a, &t = ECS.psi_t;
     
-    // The correction polynomial
+    // The correction polynomial psi_eta
     double psi = 0;
-    for (std::size_t i=0; i<=a.size(); i++)
-        psi += a[i]*pow(HEOS.rhomolar()/ECS.rhomolar_reducing, t[i]);
+    for (std::size_t i=0; i < a.size(); i++)
+        psi += a[i]*pow(HEOS.rhomolar()/ECS.psi_rhomolar_reducing, t[i]);
 
     // The dilute gas portion for the fluid of interest [Pa-s]
     long double eta_dilute = viscosity_dilute_kinetic_theory(HEOS);

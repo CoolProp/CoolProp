@@ -190,7 +190,8 @@ struct ViscosityHigherOrderVariables
 };
 
 struct ViscosityECSVariables{
-    long double rhomolar_reducing;
+    std::string reference_fluid;
+    long double psi_rhomolar_reducing;
     std::vector<long double> psi_a, psi_t;
 };
 
@@ -217,10 +218,13 @@ public:
     ConductivityCriticalVariables conductivity_critical;
 
     std::string BibTeX_viscosity, BibTeX_conductivity;
+    bool using_ECS; ///< A flag for whether to use extended corresponding states.  False for no
     long double sigma_eta, epsilon_over_k;
     int hardcoded_viscosity, hardcoded_conductivity;
     TransportPropertyData(){hardcoded_viscosity = VISCOSITY_NOT_HARDCODED; 
-                            hardcoded_conductivity = CONDUCTIVITY_NOT_HARDCODED;};
+                            hardcoded_conductivity = CONDUCTIVITY_NOT_HARDCODED;
+                            using_ECS = false;
+    };
 };
 
 /**
@@ -513,6 +517,7 @@ class CoolPropFluid {
         EnvironmentalFactorsStruct environment;
         Ancillaries ancillaries;
         TransportPropertyData transport;
+        SimpleState crit;
 
         double gas_constant(){ return pEOS->R_u; };
         double molar_mass(){ return pEOS->molar_mass; };

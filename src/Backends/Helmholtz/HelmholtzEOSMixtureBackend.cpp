@@ -195,9 +195,18 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
 {
     if (is_pure_or_pseudopure)
     {
-        if (components[0]->transport.hardcoded_viscosity != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
+        // Get a reference for code cleanness
+        CoolPropFluid &component = *(components[0]);
+
+        // Check if using ECS
+        if (component.transport.using_ECS)
         {
-            switch(components[0]->transport.hardcoded_viscosity)
+            return TransportRoutines::viscosity_ECS(*this, *this);
+        }
+
+        if (component.transport.hardcoded_viscosity != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
+        {
+            switch(component.transport.hardcoded_viscosity)
             {
             case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER:
                 return TransportRoutines::viscosity_water_hardcoded(*this);
@@ -206,7 +215,7 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
             case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_R23:
                 return TransportRoutines::viscosity_R23_hardcoded(*this);
             default:
-                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0]->transport.hardcoded_viscosity, name().c_str()));
+                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", component.transport.hardcoded_viscosity, name().c_str()));
             }
         }
         // Dilute part
@@ -215,8 +224,9 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
         // Background viscosity given by the sum of the initial density dependence and higher order terms
         long double eta_back = calc_viscosity_background(eta_dilute);
 
-        // Critical part
+        // Critical part (no fluids have critical enhancement for viscosity currently)
         long double eta_critical = 0;
+
         return eta_dilute + eta_back + eta_critical;
     }
     else
@@ -309,6 +319,33 @@ std::string HelmholtzEOSMixtureBackend::calc_name(void)
     }
     else{
         return components[0]->name;
+    }
+}
+long double HelmholtzEOSMixtureBackend::calc_T_critical(void)
+{
+    if (components.size() != 1){
+        throw ValueError(format("For now, calc_T_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+    }
+    else{
+        return components[0]->crit.T;
+    }
+}
+long double HelmholtzEOSMixtureBackend::calc_p_critical(void)
+{
+    if (components.size() != 1){
+        throw ValueError(format("For now, calc_p_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+    }
+    else{
+        return components[0]->crit.p;
+    }
+}
+long double HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void)
+{
+    if (components.size() != 1){
+        throw ValueError(format("For now, calc_rhomolar_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+    }
+    else{
+        return components[0]->crit.rhomolar;
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_Tmax(void)

@@ -21,6 +21,14 @@ typedef unsigned int UINT32;
 
 namespace cpjson
 {
+    inline std::string json2string(rapidjson::Value &v)
+    {
+        rapidjson::StringBuffer buffer;
+        rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+
+        v.Accept(writer);
+        return buffer.GetString();
+    }
     /// A convenience function to get a double from a JSON value, including error checking
 	inline int get_integer(rapidjson::Value &v, std::string m)
 	{

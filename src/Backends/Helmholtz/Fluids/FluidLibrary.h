@@ -437,11 +437,39 @@ protected:
         }
     };
 
+    void parse_ECS_viscosity(rapidjson::Value &viscosity, CoolPropFluid & fluid)
+    {
+        fluid.transport.viscosity_ecs.reference_fluid = cpjson::get_string(viscosity,"reference_fluid");
+
+        // Parameters for correction polynomial
+        fluid.transport.viscosity_ecs.psi_a = cpjson::get_long_double_array(viscosity["psi"]["a"]);
+        fluid.transport.viscosity_ecs.psi_t = cpjson::get_long_double_array(viscosity["psi"]["t"]);
+        fluid.transport.viscosity_ecs.psi_rhomolar_reducing = cpjson::get_double(viscosity["psi"],"rhomolar_reducing");
+
+        fluid.transport.using_ECS = true;
+    }
+
     /// Parse the transport properties
     void parse_viscosity(rapidjson::Value &viscosity, CoolPropFluid & fluid)
     {
         // Load the BibTeX key
         fluid.transport.BibTeX_viscosity = cpjson::get_string(viscosity,"BibTeX");
+
+        // Set the Lennard-Jones 12-6 potential variables, or approximate them from method of Chung
+        if (!viscosity.HasMember("sigma_eta")|| !viscosity.HasMember("epsilon_over_k")){
+            default_transport(fluid);
+        }
+        else{
+            fluid.transport.sigma_eta = cpjson::get_double(viscosity, "sigma_eta");
+            fluid.transport.epsilon_over_k = cpjson::get_double(viscosity, "epsilon_over_k");
+        }
+
+        // If it is using ECS, set ECS parameters and quit
+        if (viscosity.HasMember("type") && !cpjson::get_string(viscosity, "type").compare("ECS")){
+            parse_ECS_viscosity(viscosity, fluid);
+            return;
+        }
+
         if (viscosity.HasMember("hardcoded")){
             std::string target = cpjson::get_string(viscosity,"hardcoded");
             if (!target.compare("Water")){
@@ -458,14 +486,7 @@ protected:
             }
         }
 
-        // Set the Lennard-Jones 12-6 potential variables, or approximate them from method of Chung
-        if (!viscosity.HasMember("sigma_eta")|| !viscosity.HasMember("epsilon_over_k")){
-            default_transport(fluid);
-        }
-        else{
-            fluid.transport.sigma_eta = cpjson::get_double(viscosity, "sigma_eta");
-            fluid.transport.epsilon_over_k = cpjson::get_double(viscosity, "epsilon_over_k");
-        }
+        
 
         // Load dilute viscosity term
         if (viscosity.HasMember("dilute")){
@@ -650,23 +671,6 @@ protected:
     /// Parse the transport properties
     void parse_transport(rapidjson::Value &transport, CoolPropFluid & fluid)
     {
-        //if (!fluid.name.compare("n-Hexane")){
-        //    rapidjson::Document dd;
-        //    dd.SetObject();
-
-        //    dd.AddMember("core",transport,dd.GetAllocator());
-        //    rapidjson::StringBuffer buffer;
-        //    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
-
-        //    dd.Accept(writer);
-        //    std::string json0 = buffer.GetString();
-        //    //std::cout << json0 << std::endl;
-
-        //    FILE *fp;
-        //    fp = fopen("nHexane_transport.json","w");
-        //    fprintf(fp,"%s",json0.c_str());
-        //    fclose(fp);
-        //}
 
         // Parse viscosity
         if (transport.HasMember("viscosity")){
@@ -691,8 +695,11 @@ protected:
     }
 
     /// Parse the critical state for the given EOS
-    void parse_crit_state(rapidjson::Value &alphar)
+    void parse_crit_state(rapidjson::Value &crit, CoolPropFluid & fluid)
     {
+        fluid.crit.T = cpjson::get_double(crit,"T");
+        fluid.crit.p = cpjson::get_double(crit,"p");
+        fluid.crit.rhomolar = cpjson::get_double(crit,"rhomolar");
     };
 
     /// Parse the critical state for the given EOS
@@ -751,7 +758,8 @@ public:
         fluid.name = fluid_json["NAME"].GetString(); name_vector.push_back(fluid.name);
         // CAS number
         fluid.CAS = fluid_json["CAS"].GetString();
-
+        // Critical state
+        parse_crit_state(fluid_json["CRITICAL"], fluid);
 
         if (get_debug_level() > 5){
             std::cout << format("Loading fluid %s with CAS %s; %d fluids loaded\n", fluid.name.c_str(), fluid.CAS.c_str(), index);
@@ -761,7 +769,7 @@ public:
         fluid.aliases = cpjson::get_string_array(fluid_json["ALIASES"]);
         
         // EOS
-        parse_EOS_listing(fluid_json["EOS"],fluid);
+        parse_EOS_listing(fluid_json["EOS"], fluid);
 
         // Validate the fluid
         validate(fluid);
@@ -789,9 +797,7 @@ public:
         else{
             parse_environmental(fluid_json["ENVIRONMENTAL"], fluid);
         }
-        if (index == 80){
-            double rr =0;
-        }
+
         // Parse the environmental parameters
         if (!(fluid_json.HasMember("TRANSPORT"))){
             default_transport(fluid);

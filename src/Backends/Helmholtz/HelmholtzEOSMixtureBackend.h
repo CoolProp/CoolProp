@@ -128,6 +128,10 @@ public:
     long double calc_pmax(void);
     long double calc_Ttriple(void);
 
+    long double calc_T_critical(void);
+    long double calc_p_critical(void);
+    long double calc_rhomolar_critical(void);
+
     std::string calc_name(void);
 
     long double calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<long double> & mole_fractions, const long double &tau, const long double &delta);
