@@ -332,28 +332,7 @@ TEST_CASE("Check AbstractState","[AbstractState]")
 {
     SECTION("bad backend")
     {
-        CoolProp::AbstractStateWrapper Water;
-        CHECK_THROWS(Water.set("DEFINITELY_A_BAD_BACKEND", "Water"));
-    }
-}
-
-TEST_CASE("Check AbstractStateWrapper","[AbstractStateWrapper]")
-{
-    SECTION("empty on init")
-    {
-        CoolProp::AbstractStateWrapper Water;
-        CHECK_NOTHROW(Water.empty());
-        CHECK(Water.empty() == true);
-        CHECK_THROWS(Water.update(CoolProp::QT_INPUTS,1,300));
-    }
-    SECTION("initialized")
-    {
-        CoolProp::AbstractStateWrapper Water;
-        CHECK_NOTHROW(Water.empty());
-        CHECK(Water.empty() == true);
-        Water.set("HEOS", "Water");
-        CHECK(Water.empty() == false);
-        CHECK_NOTHROW(Water.update(CoolProp::QT_INPUTS,1,300));
+        CHECK_THROWS(std::tr1::shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("DEFINITELY_A_BAD_BACKEND", "Water")));
     }
 }
 

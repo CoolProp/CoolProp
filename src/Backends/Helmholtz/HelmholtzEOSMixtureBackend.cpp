@@ -199,9 +199,14 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
         CoolPropFluid &component = *(components[0]);
 
         // Check if using ECS
-        if (component.transport.using_ECS)
+        if (component.transport.viscosity_using_ECS)
         {
-            return TransportRoutines::viscosity_ECS(*this, *this);
+            // Get reference fluid name
+            std::string fluid_name  = component.transport.viscosity_ecs.reference_fluid;
+            // Get a managed pointer to the reference fluid for ECS
+            std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(std::vector<std::string>(1, fluid_name)));
+            // Get the viscosity using ECS
+            return TransportRoutines::viscosity_ECS(*this, *(ref_fluid.get()));
         }
 
         if (component.transport.hardcoded_viscosity != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
@@ -234,13 +239,42 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
         throw NotImplementedError(format("viscosity not implemented for mixtures"));
     }
 }
+long double HelmholtzEOSMixtureBackend::calc_conductivity_background(void)
+{
+    // Residual part
+    long double lambda_residual = _HUGE;
+    switch(components[0]->transport.conductivity_residual.type)
+    {
+    case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL:
+        lambda_residual = TransportRoutines::conductivity_residual_polynomial(*this); break;
+    case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL_AND_EXPONENTIAL:
+        lambda_residual = TransportRoutines::conductivity_residual_polynomial_and_exponential(*this); break;
+    default:
+        throw ValueError(format("residual conductivity type [%d] is invalid for fluid %s", components[0]->transport.conductivity_residual.type, name().c_str()));
+    }
+    return lambda_residual;
+}
 long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
 {
     if (is_pure_or_pseudopure)
     {
-        if (components[0]->transport.hardcoded_conductivity != CoolProp::TransportPropertyData::CONDUCTIVITY_NOT_HARDCODED)
+        // Get a reference for code cleanness
+        CoolPropFluid &component = *(components[0]);
+
+        // Check if using ECS
+        if (component.transport.conductivity_using_ECS)
         {
-            switch(components[0]->transport.hardcoded_conductivity)
+            // Get reference fluid name
+            std::string fluid_name  = component.transport.conductivity_ecs.reference_fluid;
+            // Get a managed pointer to the reference fluid for ECS
+            std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(std::vector<std::string>(1, fluid_name)));
+            // Get the viscosity using ECS
+            return TransportRoutines::conductivity_ECS(*this, *(ref_fluid.get()));
+        }
+
+        if (component.transport.hardcoded_conductivity != CoolProp::TransportPropertyData::CONDUCTIVITY_NOT_HARDCODED)
+        {
+            switch(component.transport.hardcoded_conductivity)
             {
             case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER:
                 return TransportRoutines::conductivity_hardcoded_water(*this);
@@ -255,7 +289,7 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
 
         // Dilute part
         long double lambda_dilute = _HUGE;
-        switch(components[0]->transport.conductivity_dilute.type)
+        switch(component.transport.conductivity_dilute.type)
         {
         case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS:
             lambda_dilute = TransportRoutines::conductivity_dilute_ratio_polynomials(*this); break;
@@ -269,21 +303,11 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
             throw ValueError(format("dilute conductivity type [%d] is invalid for fluid %s", components[0]->transport.conductivity_dilute.type, name().c_str()));
         }
 
-        // Residual part
-        long double lambda_residual = _HUGE;
-        switch(components[0]->transport.conductivity_residual.type)
-        {
-        case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL:
-            lambda_residual = TransportRoutines::conductivity_residual_polynomial(*this); break;
-        case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL_AND_EXPONENTIAL:
-            lambda_residual = TransportRoutines::conductivity_residual_polynomial_and_exponential(*this); break;
-        default:
-            throw ValueError(format("residual conductivity type [%d] is invalid for fluid %s", components[0]->transport.conductivity_residual.type, name().c_str()));
-        }
+        long double lambda_residual = calc_conductivity_background();
        
         // Critical part
         long double lambda_critical = _HUGE;
-        switch(components[0]->transport.conductivity_critical.type)
+        switch(component.transport.conductivity_critical.type)
         {
         case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS:
             lambda_critical = TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(*this); break;
@@ -1305,7 +1329,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         if (!ValidNumber(rhomolar)){throw ValueError();}
         return rhomolar;
     }
-    catch(std::exception &e)
+    catch(std::exception &)
     {
         try{
             // Next we try with Secant method
@@ -1313,7 +1337,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
             if (!ValidNumber(rhomolar)){throw ValueError();}
             return rhomolar;
         }
-        catch(std::exception &e)
+        catch(std::exception &)
         {
             Secant(resid, rhomolar_guess, 0.0001*rhomolar_guess, 1e-8, 100, errstring);
             return _HUGE;
@@ -1537,6 +1561,19 @@ long double HelmholtzEOSMixtureBackend::calc_cpmolar(void)
     _cpmolar = R_u*(-pow(_tau.pt(),2)*(d2ar_dTau2 + d2a0_dTau2)+pow(1+_delta.pt()*dar_dDelta-_delta.pt()*_tau.pt()*d2ar_dDelta_dTau,2)/(1+2*_delta.pt()*dar_dDelta+pow(_delta.pt(),2)*d2ar_dDelta2));
 
     return static_cast<double>(_cpmolar);
+}
+long double HelmholtzEOSMixtureBackend::calc_cpmolar_idealgas(void)
+{
+    // Calculate the reducing parameters
+    _delta = _rhomolar/_reducing.rhomolar;
+    _tau = _reducing.T/_T;
+
+    // Calculate derivatives if needed, or just use cached values
+    long double d2a0_dTau2 = d2alpha0_dTau2();
+    long double R_u = static_cast<double>(_gas_constant);
+
+    // Get cp of the ideal gas
+    return R_u*-pow(_tau.pt(),2)*d2a0_dTau2;
 }
 long double HelmholtzEOSMixtureBackend::calc_speed_sound(void)
 {

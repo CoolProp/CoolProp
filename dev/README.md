@@ -31,3 +31,13 @@ Testing
 -------
 
 CMake generates a target for testing. You can build the test executable with `make testRunner`.
+
+Geting Boost shared_ptr
+-----------------------
+
+Download Boost sources
+Expand zip file
+Command prompt in root
+    
+    bootstrap
+    b2 tools/bcp

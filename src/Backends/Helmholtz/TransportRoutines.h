@@ -193,6 +193,8 @@ public:
     */
     static long double viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference);
 
+    static long double conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference);
+
 
 }; /* class TransportRoutines */
 

@@ -542,7 +542,7 @@ long double TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(
 	    double Xref = Pcrit/pow(rhoc, 2)*HEOS.rhomolar()/dp_drho_ref*Tref/HEOS.T();
 	    num = X - Xref;
 
-	    // no critical enhancement if numerator is negative, zero, or just a tiny bit positive due to roundoff
+	    // No critical enhancement if numerator is negative, zero, or just a tiny bit positive due to roundoff
         // See also Lemmon, IJT, 2004, page 27
 	    if (num < DBL_EPSILON*10)
 		    return 0.0;
@@ -827,20 +827,17 @@ long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
                 rhocmolar = HEOS.rhomolar_critical(),
                 rhocmolar0 = HEOS_Reference.rhomolar_critical();
 
+    // Get a reference to the ECS data
     CoolProp::ViscosityECSVariables &ECS = HEOS.components[0]->transport.viscosity_ecs;
-
-    std::vector<long double> &a = ECS.psi_a, &t = ECS.psi_t;
     
     // The correction polynomial psi_eta
     double psi = 0;
-    for (std::size_t i=0; i < a.size(); i++)
-        psi += a[i]*pow(HEOS.rhomolar()/ECS.psi_rhomolar_reducing, t[i]);
+    for (std::size_t i=0; i < ECS.psi_a.size(); i++){
+        psi += ECS.psi_a[i]*pow(HEOS.rhomolar()/ECS.psi_rhomolar_reducing, ECS.psi_t[i]);
+    }
 
     // The dilute gas portion for the fluid of interest [Pa-s]
     long double eta_dilute = viscosity_dilute_kinetic_theory(HEOS);
-
-    // Calculate the correction polynomial
-
 
     /// \todo To be solved for...
     // TODO: To be solved for...
@@ -868,5 +865,77 @@ long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
 	long double eta = eta_dilute + eta_resid*F_eta;
 
     return eta;
+}
+
+long double TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference)
+{
+    // Collect some parameters
+    long double M = HEOS.molar_mass(),
+                M_kmol = M*1000,
+                M0 = HEOS_Reference.molar_mass(),
+                Tc = HEOS.T_critical(),
+                Tc0 = HEOS_Reference.T_critical(),
+                rhocmolar = HEOS.rhomolar_critical(),
+                rhocmolar0 = HEOS_Reference.rhomolar_critical(),
+                R_u = HEOS.gas_constant(),
+                R = HEOS.gas_constant()/HEOS.molar_mass(), //[J/kg/K]
+                R_kJkgK = R_u/M_kmol;
+
+    // Get a reference to the ECS data
+    CoolProp::ConductivityECSVariables &ECS = HEOS.components[0]->transport.conductivity_ecs;
+    
+    // The correction polynomial psi_eta in rho/rho_red
+    double psi = 0;
+    for (std::size_t i=0; i < ECS.psi_a.size(); ++i){
+        psi += ECS.psi_a[i]*pow(HEOS.rhomolar()/ECS.psi_rhomolar_reducing, ECS.psi_t[i]);
+    }
+
+    // The correction polynomial f_int in T/T_red
+    double fint = 0;
+    for (std::size_t i=0; i < ECS.f_int_a.size(); ++i){
+        fint += ECS.f_int_a[i]*pow(HEOS.T()/ECS.f_int_T_reducing, ECS.f_int_t[i]);
+    }
+
+    // The dilute gas density for the fluid of interest [uPa-s]
+    long double eta_dilute = viscosity_dilute_kinetic_theory(HEOS)*1e6;
+
+    // The mass specific ideal gas constant-pressure specific heat [J/kg/K]
+    long double cp0 = HEOS.calc_cpmolar_idealgas()/HEOS.molar_mass();
+
+    // The internal contribution to the thermal conductivity [W/m/K]
+    long double lambda_int = fint*eta_dilute*(cp0 - 2.5*R)/1e3;
+
+    // The dilute gas contribution to the thermal conductivity [W/m/K]
+    long double lambda_dilute = 15.0e-3/4.0*R_kJkgK*eta_dilute;
+
+    /// \todo To be solved for...
+    // TODO: To be solved for...
+    long double theta = 1;
+    long double phi = 1;
+
+    // The equivalent substance reducing ratios
+    long double f = Tc/Tc0*theta;
+	long double h = rhocmolar0/rhocmolar*phi; // Must be the ratio of MOLAR densities!!
+
+    // To be solved for
+    long double T0 = HEOS.T()/f;
+    long double rhomolar0 = HEOS.rhomolar()*h;
+
+    // Update the reference fluid with the conformal state
+    HEOS_Reference.update(DmolarT_INPUTS, rhomolar0*psi, T0);
+
+    // The reference fluid's contribution to the conductivity [W/m/K]
+    long double lambda_resid = HEOS_Reference.calc_conductivity_background();
+
+    // The F factor
+	long double F_lambda = sqrt(f)*pow(h, static_cast<long double>(-2.0/3.0))*sqrt(M0/M);
+
+    // The critical contribution from the fluid of interest [W/m/K]
+    long double lambda_critical = conductivity_critical_simplified_Olchowy_Sengers(HEOS);
+
+    // The total thermal conductivity considering the contributions of the fluid of interest and the reference fluid [Pa-s]
+	long double lambda = lambda_int + lambda_dilute + lambda_resid*F_lambda + lambda_critical;
+
+    return lambda;
 }
 }; /* namespace CoolProp */

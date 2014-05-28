@@ -437,6 +437,21 @@ protected:
         }
     };
 
+    void parse_ECS_conductivity(rapidjson::Value &conductivity, CoolPropFluid & fluid)
+    {
+        fluid.transport.conductivity_ecs.reference_fluid = cpjson::get_string(conductivity,"reference_fluid");
+
+        // Parameters for correction polynomials
+        fluid.transport.conductivity_ecs.psi_a = cpjson::get_long_double_array(conductivity["psi"]["a"]);
+        fluid.transport.conductivity_ecs.psi_t = cpjson::get_long_double_array(conductivity["psi"]["t"]);
+        fluid.transport.conductivity_ecs.psi_rhomolar_reducing = cpjson::get_double(conductivity["psi"],"rhomolar_reducing");
+        fluid.transport.conductivity_ecs.f_int_a = cpjson::get_long_double_array(conductivity["f_int"]["a"]);
+        fluid.transport.conductivity_ecs.f_int_t = cpjson::get_long_double_array(conductivity["f_int"]["t"]);
+        fluid.transport.conductivity_ecs.f_int_T_reducing = cpjson::get_double(conductivity["f_int"],"T_reducing");
+
+        fluid.transport.conductivity_using_ECS = true;
+    }
+
     void parse_ECS_viscosity(rapidjson::Value &viscosity, CoolPropFluid & fluid)
     {
         fluid.transport.viscosity_ecs.reference_fluid = cpjson::get_string(viscosity,"reference_fluid");
@@ -446,7 +461,7 @@ protected:
         fluid.transport.viscosity_ecs.psi_t = cpjson::get_long_double_array(viscosity["psi"]["t"]);
         fluid.transport.viscosity_ecs.psi_rhomolar_reducing = cpjson::get_double(viscosity["psi"],"rhomolar_reducing");
 
-        fluid.transport.using_ECS = true;
+        fluid.transport.viscosity_using_ECS = true;
     }
 
     /// Parse the transport properties
@@ -635,6 +650,12 @@ protected:
     /// Parse the thermal conductivity data
     void parse_thermal_conductivity(rapidjson::Value &conductivity, CoolPropFluid & fluid)
     {
+        // If it is using ECS, set ECS parameters and quit
+        if (conductivity.HasMember("type") && !cpjson::get_string(conductivity, "type").compare("ECS")){
+            parse_ECS_conductivity(conductivity, fluid);
+            return;
+        }
+
         if (conductivity.HasMember("hardcoded")){
             std::string target = cpjson::get_string(conductivity, "hardcoded");
             if (!target.compare("Water")){

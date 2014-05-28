@@ -16,19 +16,18 @@
 #include <string.h>
 #include <iostream>
 
-CoolProp::AbstractStateWrapper Water;
-CoolProp::AbstractStateWrapper Air;
+std::tr1::shared_ptr<CoolProp::AbstractState> Water, Air;
 
 namespace HumidAir
 {
 
 void check_fluid_instantiation()
 {
-    if (Water.empty()){
-        Water.set("HEOS", "Water");
+    if (!Water.get()){
+        Water.reset(CoolProp::AbstractState::factory("HEOS", "Water"));
     }
-    if (Air.empty()){
-        Air.set("HEOS", "Air");
+    if (!Air.get()){
+        Air.reset(CoolProp::AbstractState::factory("HEOS", "Air"));
     }
 };
 
@@ -42,60 +41,60 @@ double f_factor(double T, double p);
 static double MM_Air(void)
 {
     check_fluid_instantiation();
-    return Air.keyed_output(CoolProp::imolar_mass);
+    return Air->keyed_output(CoolProp::imolar_mass);
 }
 static double MM_Water(void)
 {
     check_fluid_instantiation();
-    return Water.keyed_output(CoolProp::imolar_mass);
+    return Water->keyed_output(CoolProp::imolar_mass);
 }
 static double B_Air(double T)
 {
     check_fluid_instantiation();
-    Air.update(CoolProp::DmolarT_INPUTS,1e-12,T);
-    return Air.keyed_output(CoolProp::iBvirial);
+    Air->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    return Air->keyed_output(CoolProp::iBvirial);
 }
 static double dBdT_Air(double T)
 {
     check_fluid_instantiation();
-    Air.update(CoolProp::DmolarT_INPUTS,1e-12,T);
-    return Air.keyed_output(CoolProp::idBvirial_dT);
+    Air->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    return Air->keyed_output(CoolProp::idBvirial_dT);
 }
 static double B_Water(double T)
 {
     check_fluid_instantiation();
-    Water.update(CoolProp::DmolarT_INPUTS,1e-12,T);
-    return Water.keyed_output(CoolProp::iBvirial);
+    Water->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    return Water->keyed_output(CoolProp::iBvirial);
 }
 static double dBdT_Water(double T)
 {
     check_fluid_instantiation();
-    Water.update(CoolProp::DmolarT_INPUTS,1e-12,T);
-    return Water.keyed_output(CoolProp::idBvirial_dT);
+    Water->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    return Water->keyed_output(CoolProp::idBvirial_dT);
 }
 static double C_Air(double T)
 {
     check_fluid_instantiation();
-    Air.update(CoolProp::DmolarT_INPUTS,1e-12,T);
-    return Air.keyed_output(CoolProp::iCvirial);
+    Air->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    return Air->keyed_output(CoolProp::iCvirial);
 }
 static double dCdT_Air(double T)
 {
     check_fluid_instantiation();
-    Air.update(CoolProp::DmolarT_INPUTS,1e-12,T);
-    return Air.keyed_output(CoolProp::idCvirial_dT);
+    Air->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    return Air->keyed_output(CoolProp::idCvirial_dT);
 }
 static double C_Water(double T)
 {
     check_fluid_instantiation();
-    Water.update(CoolProp::DmolarT_INPUTS,1e-20,T);
-    return Water.keyed_output(CoolProp::iCvirial);
+    Water->update(CoolProp::DmolarT_INPUTS,1e-20,T);
+    return Water->keyed_output(CoolProp::iCvirial);
 }
 static double dCdT_Water(double T)
 {
     check_fluid_instantiation();
-    Water.update(CoolProp::DmolarT_INPUTS,1e-12,T);
-    return Water.keyed_output(CoolProp::idCvirial_dT);
+    Water->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    return Water->keyed_output(CoolProp::idCvirial_dT);
 }
 void UseVirialCorrelations(int flag)
 {
@@ -364,7 +363,7 @@ static double dC_m_dT(double T, double psi_w)
     // NDG for fluid EOS for virial terms
     Tj=132.6312;
     tau_Air=Tj/T;
-    tau_Water=Water.keyed_output(CoolProp::iT_reducing)/T;
+    tau_Water=Water->keyed_output(CoolProp::iT_reducing)/T;
     if (FlagUseVirialCorrelations)
     {
         dC_dT_aaa=-2.46582342273e-10 +4.425401935447e-12*T -3.669987371644e-14*pow(T,2) +1.765891183964e-16*pow(T,3) -5.240097805744e-19*pow(T,4) +9.502177003614e-22*pow(T,5) -9.694252610339e-25*pow(T,6) +4.276261986741e-28*pow(T,7);
@@ -390,8 +389,8 @@ static double HenryConstant(double T)
     double p_ws,beta_N2,beta_O2,beta_Ar,beta_a,tau,Tr,Tc=647.096;
     Tr=T/Tc; 
     tau=1-Tr;
-    Water.update(CoolProp::QT_INPUTS, 1.0, T);
-    p_ws = Water.keyed_output(CoolProp::iP); //[Pa]
+    Water->update(CoolProp::QT_INPUTS, 1.0, T);
+    p_ws = Water->keyed_output(CoolProp::iP); //[Pa]
     beta_N2=p_ws*exp(-9.67578/Tr+4.72162*pow(tau,0.355)/Tr+11.70585*pow(Tr,-0.41)*exp(tau));
     beta_O2=p_ws*exp(-9.44833/Tr+4.43822*pow(tau,0.355)/Tr+11.42005*pow(Tr,-0.41)*exp(tau));
     beta_Ar=p_ws*exp(-8.40954/Tr+4.29587*pow(tau,0.355)/Tr+10.52779*pow(Tr,-0.41)*exp(tau));
@@ -411,8 +410,8 @@ double isothermal_compressibility(double T, double p)
         }
         else
         {
-            Water.update(CoolProp::PT_INPUTS, p, T);
-            k_T = Water.keyed_output(CoolProp::iisothermal_compressibility);
+            Water->update(CoolProp::PT_INPUTS, p, T);
+            k_T = Water->keyed_output(CoolProp::iisothermal_compressibility);
         }
     }
     else
@@ -436,8 +435,8 @@ double f_factor(double T, double p)
         // It is liquid water
         p_ws=CoolProp::PropsSI("P","T",T,"Q",0,"Water");
         beta_H = HenryConstant(T); //[1/Pa]
-        Water.update(CoolProp::PT_INPUTS, p, T);
-        vbar_ws = 1.0/Water.keyed_output(CoolProp::iDmolar); //[m^3/mol]
+        Water->update(CoolProp::PT_INPUTS, p, T);
+        vbar_ws = 1.0/Water->keyed_output(CoolProp::iDmolar); //[m^3/mol]
     }
     else
     {
@@ -459,7 +458,7 @@ double f_factor(double T, double p)
     // NDG for fluid EOS for virial terms
     Tj=132.6312;
     tau_Air=Tj/T;
-    tau_Water=Water.keyed_output(CoolProp::iT_reducing)/T;
+    tau_Water=Water->keyed_output(CoolProp::iT_reducing)/T;
     if (FlagUseVirialCorrelations)
     {
         B_aa=-0.000721183853646 +1.142682674467e-05*T -8.838228412173e-08*pow(T,2) 
@@ -560,11 +559,11 @@ double Viscosity(double T, double p, double psi_w)
     Mw=MM_Water();
     Ma=MM_Air();
     // Viscosity of dry air at dry-bulb temp and total pressure
-    Air.update(CoolProp::PT_INPUTS,p,T);
-    mu_a=Air.keyed_output(CoolProp::iviscosity);
+    Air->update(CoolProp::PT_INPUTS,p,T);
+    mu_a=Air->keyed_output(CoolProp::iviscosity);
     // Viscosity of pure saturated water at dry-bulb temperature
-    Water.update(CoolProp::PQ_INPUTS,p,1);
-    mu_w=Water.keyed_output(CoolProp::iviscosity);
+    Water->update(CoolProp::PQ_INPUTS,p,1);
+    mu_w=Water->keyed_output(CoolProp::iviscosity);
     Phi_av=sqrt(2.0)/4.0*pow(1+Ma/Mw,-0.5)*pow(1+sqrt(mu_a/mu_w)*pow(Mw/Ma,0.25),2); //[-]
     Phi_va=sqrt(2.0)/4.0*pow(1+Mw/Ma,-0.5)*pow(1+sqrt(mu_w/mu_a)*pow(Ma/Mw,0.25),2); //[-]
     return (1-psi_w)*mu_a/((1-psi_w)+psi_w*Phi_av)+psi_w*mu_w/(psi_w+(1-psi_w)*Phi_va);
@@ -583,13 +582,13 @@ double Conductivity(double T, double p, double psi_w)
     Ma=MM_Air();
 
     // Viscosity of dry air at dry-bulb temp and total pressure
-    Air.update(CoolProp::PT_INPUTS,p,T);
-    mu_a=Air.keyed_output(CoolProp::iviscosity);
-    k_a=Air.keyed_output(CoolProp::iconductivity);
+    Air->update(CoolProp::PT_INPUTS,p,T);
+    mu_a=Air->keyed_output(CoolProp::iviscosity);
+    k_a=Air->keyed_output(CoolProp::iconductivity);
     // Viscosity of pure saturated water at dry-bulb temperature
-    Water.update(CoolProp::PQ_INPUTS,p,1);
-    mu_w=Water.keyed_output(CoolProp::iviscosity);
-    k_w=Water.keyed_output(CoolProp::iconductivity);
+    Water->update(CoolProp::PQ_INPUTS,p,1);
+    mu_w=Water->keyed_output(CoolProp::iviscosity);
+    k_w=Water->keyed_output(CoolProp::iconductivity);
     Phi_av=sqrt(2.0)/4.0*pow(1+Ma/Mw,-0.5)*pow(1+sqrt(mu_a/mu_w)*pow(Mw/Ma,0.25),2); //[-]
     Phi_va=sqrt(2.0)/4.0*pow(1+Mw/Ma,-0.5)*pow(1+sqrt(mu_w/mu_a)*pow(Ma/Mw,0.25),2); //[-]
     return (1-psi_w)*k_a/((1-psi_w)+psi_w*Phi_av)+psi_w*k_w/(psi_w+(1-psi_w)*Phi_va);
@@ -637,19 +636,19 @@ double IdealGasMolarEnthalpy_Water(double T, double vmolar)
     double hbar_w_0, tau, rhomolar, hbar_w;
     // Ideal-Gas contribution to enthalpy of water
     hbar_w_0 = -0.01102303806;//[J/mol]
-    tau = Water.keyed_output(CoolProp::iT_reducing)/T;
+    tau = Water->keyed_output(CoolProp::iT_reducing)/T;
     rhomolar = 1/vmolar; //[mol/m^3]
-    Water.update(CoolProp::DmolarT_INPUTS, rhomolar, T);
-    hbar_w = hbar_w_0+R_bar*T*(1+tau*Water.keyed_output(CoolProp::idalpha0_dtau_constdelta));
+    Water->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
+    hbar_w = hbar_w_0+R_bar*T*(1+tau*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
     return hbar_w;
 }
 double IdealGasMolarEntropy_Water(double T, double p)
 {
     double sbar_w, tau, R_bar;
     R_bar = 8.314371; //[J/mol/K]
-    tau = Water.keyed_output(CoolProp::iT_reducing)/T;
-    Water.update(CoolProp::DmolarT_INPUTS,p/(R_bar*T),T);
-    sbar_w = R_bar*(tau*Water.keyed_output(CoolProp::idalpha0_dtau_constdelta)-Water.keyed_output(CoolProp::ialpha0)); //[kJ/kmol/K]
+    tau = Water->keyed_output(CoolProp::iT_reducing)/T;
+    Water->update(CoolProp::DmolarT_INPUTS,p/(R_bar*T),T);
+    sbar_w = R_bar*(tau*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Water->keyed_output(CoolProp::ialpha0)); //[kJ/kmol/K]
     return sbar_w; 
 }
 double IdealGasMolarEnthalpy_Air(double T, double vmolar)
@@ -661,9 +660,9 @@ double IdealGasMolarEnthalpy_Air(double T, double vmolar)
     tau = 132.6312/T;
     rhomolar = 1/vmolar; //[mol/m^3]
     R_bar_Lemmon = 8.314510; //[J/mol/K]
-    Air.update(CoolProp::DmolarT_INPUTS, rhomolar, T);
-    double dd = Air.keyed_output(CoolProp::idalpha0_dtau_constdelta);
-    hbar_a = hbar_a_0 + R_bar_Lemmon*T*(1+tau*Air.keyed_output(CoolProp::idalpha0_dtau_constdelta)); //[J/mol]
+    Air->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
+    double dd = Air->keyed_output(CoolProp::idalpha0_dtau_constdelta);
+    hbar_a = hbar_a_0 + R_bar_Lemmon*T*(1+tau*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)); //[J/mol]
     return hbar_a;
 }
 double IdealGasMolarEntropy_Air(double T, double vmolar_a)
@@ -678,9 +677,9 @@ double IdealGasMolarEntropy_Air(double T, double vmolar_a)
 
     vmolar_a_0 = R_bar_Lemmon*T0/p0; //[m^3/mol]
     
-    Air.update(CoolProp::DmolarT_INPUTS,1/vmolar_a_0,T);
+    Air->update(CoolProp::DmolarT_INPUTS,1/vmolar_a_0,T);
 
-    sbar_a=sbar_0_Lem+R_bar_Lemmon*(tau*Air.keyed_output(CoolProp::idalpha0_dtau_constdelta)-Air.keyed_output(CoolProp::ialpha0))+R_bar_Lemmon*log(vmolar_a/vmolar_a_0); //[J/mol/K]
+    sbar_a=sbar_0_Lem+R_bar_Lemmon*(tau*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Air->keyed_output(CoolProp::ialpha0))+R_bar_Lemmon*log(vmolar_a/vmolar_a_0); //[J/mol/K]
 
     return sbar_a; //[J/mol/K]
 }
@@ -802,8 +801,8 @@ double DewpointTemperature(double T, double p, double psi_w)
 
     // 0.61165... is the triple point pressure of water in kPa
     if (p_w > 0.6116547241637944){
-        Water.update(CoolProp::PQ_INPUTS, p, 1.0);
-        T0 = Water.keyed_output(CoolProp::iT);
+        Water->update(CoolProp::PQ_INPUTS, p, 1.0);
+        T0 = Water->keyed_output(CoolProp::iT);
     }
     else{
         T0 = 268;
@@ -821,8 +820,8 @@ double DewpointTemperature(double T, double p, double psi_w)
             if (Tdp >= 273.16)
             {
                 // Saturation pressure at dewpoint [kPa]
-                Water.update(CoolProp::QT_INPUTS, 0.0, Tdp);
-                p_ws_dp = Water.keyed_output(CoolProp::iP);
+                Water->update(CoolProp::QT_INPUTS, 0.0, Tdp);
+                p_ws_dp = Water->keyed_output(CoolProp::iP);
             }
             else
             {
@@ -872,8 +871,8 @@ public:
         if (Twb > 273.16)
         {
             // Saturation pressure at wetbulb temperature [Pa]
-            Water.update(CoolProp::QT_INPUTS,0,Twb); 
-            p_ws_wb= Water.keyed_output(CoolProp::iP);
+            Water->update(CoolProp::QT_INPUTS,0,Twb); 
+            p_ws_wb= Water->keyed_output(CoolProp::iP);
         }
         else
         {
@@ -890,8 +889,8 @@ public:
         if (Twb > 273.16)
         {
             // Enthalpy of water [J/kg_water]
-            Water.update(CoolProp::PT_INPUTS, _p, Twb);
-            h_w = Water.keyed_output(CoolProp::iHmass); //[J/kg_water]
+            Water->update(CoolProp::PT_INPUTS, _p, Twb);
+            h_w = Water->keyed_output(CoolProp::iHmass); //[J/kg_water]
         }
         else
         {
@@ -939,8 +938,8 @@ double WetbulbTemperature(double T, double p, double psi_w)
     // If the temperature is above the saturation temperature corresponding to the atmospheric pressure,
     // then the maximum value for the wetbulb temperature is the saturation temperature
     double Tmax = T;
-    Water.update(CoolProp::PQ_INPUTS,p,1.0);
-    double Tsat = Water.keyed_output(CoolProp::iT);
+    Water->update(CoolProp::PQ_INPUTS,p,1.0);
+    double Tsat = Water->keyed_output(CoolProp::iT);
     if (T >= Tsat)
     {
         Tmax = Tsat;
@@ -1031,8 +1030,8 @@ double MoleFractionWater(double T, double p, int HumInput, double InVal)
         if (T>=273.16)
         {
             // Saturation pressure [Pa]
-            Water.update(CoolProp::QT_INPUTS,0,T);
-            p_ws= Water.keyed_output(CoolProp::iP);;
+            Water->update(CoolProp::QT_INPUTS,0,T);
+            p_ws= Water->keyed_output(CoolProp::iP);;
         }
         else
         {
@@ -1055,8 +1054,8 @@ double MoleFractionWater(double T, double p, int HumInput, double InVal)
         // Saturation pressure at dewpoint [Pa]
         if (Tdp>=273.16)
         {
-            Water.update(CoolProp::QT_INPUTS,0,Tdp);
-            p_ws_dp = Water.keyed_output(CoolProp::iP); //[Pa]
+            Water->update(CoolProp::QT_INPUTS,0,Tdp);
+            p_ws_dp = Water->keyed_output(CoolProp::iP); //[Pa]
         }
         else{
             // Sublimation pressure [Pa]
@@ -1081,8 +1080,8 @@ double RelativeHumidity(double T, double p, double psi_w)
     double p_ws, f, p_s, W;
     if (T >= 273.16){
         // Saturation pressure [Pa]
-        Water.update(CoolProp::QT_INPUTS, 0, T);
-        p_ws = Water.keyed_output(CoolProp::iP); //[Pa]
+        Water->update(CoolProp::QT_INPUTS, 0, T);
+        p_ws = Water->keyed_output(CoolProp::iP); //[Pa]
     }
     else{
         // sublimation pressure [Pa]
@@ -1400,7 +1399,7 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
     
     Tj=132.6312;
     tau_Air=Tj/T;
-    tau_Water=Water.keyed_output(CoolProp::iT_critical)/T;
+    tau_Water=Water->keyed_output(CoolProp::iT_critical)/T;
     
     try{
     if (!strcmp(Name,"Baa"))
@@ -1497,8 +1496,8 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
         strcpy(units,"1/Pa");
         if (T>273.16)
         {
-            Water.update(CoolProp::PT_INPUTS, p, T);
-            return Water.keyed_output(CoolProp::iisothermal_compressibility);
+            Water->update(CoolProp::PT_INPUTS, p, T);
+            return Water->keyed_output(CoolProp::iisothermal_compressibility);
         }
         else
             return IsothermCompress_Ice(T,p); //[1/Pa]
@@ -1508,8 +1507,8 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
         strcpy(units,"Pa");
         if (T>273.16)
         {
-            Water.update(CoolProp::QT_INPUTS, 0, T);
-            return Water.keyed_output(CoolProp::iP);
+            Water->update(CoolProp::QT_INPUTS, 0, T);
+            return Water->keyed_output(CoolProp::iP);
         }
         else
             return psub_Ice(T);
@@ -1519,8 +1518,8 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
         strcpy(units,"m^3/mol");
         if (T>273.16)
         {
-            Water.update(CoolProp::QT_INPUTS, 0, T);
-            return 1.0/Water.keyed_output(CoolProp::iDmolar);
+            Water->update(CoolProp::QT_INPUTS, 0, T);
+            return 1.0/Water->keyed_output(CoolProp::iDmolar);
         }
         else
         {

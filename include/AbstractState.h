@@ -411,34 +411,5 @@ public:
     */
 };
 
-
-/**
-This class is a wrapper around an AbstractState.  It handles construction and destruction of the AbstractState 
-instance which decreases the likelihood of memory leaks.  Only a few functions are exposed out of the AbstractState - this 
-can be expanded, but functions must be manually exported out of the wrapper, which is not so nice.
-*/
-class AbstractStateWrapper
-{
-protected:
-    AbstractState *p;
-    // Copying is disabled for now until we determine the right semantics for ownership of AbstractState instance
-    AbstractStateWrapper(const AbstractStateWrapper& copy_from_me){};
-public:
-    AbstractStateWrapper(){this->p = NULL;};
-    void set(const std::string &backend, const std::string &fluid_string){
-        this->p = AbstractState::factory(backend, fluid_string);
-    };
-    ~AbstractStateWrapper(){delete this->p;};
-    void update(long input_pair, double Value1, double Value2){ 
-        if (this->p == NULL) { throw ValueError("AbstractState in AbstractStateWrapper has not been instantiated yet");}
-        this->p->update(input_pair,Value1,Value2); 
-    };
-    double keyed_output(int key) { 
-        if (this->p == NULL) { throw ValueError("AbstractState in AbstractStateWrapper has not been instantiated yet");}
-        return this->p->keyed_output(key); 
-    }
-    bool empty(){return (this->p == NULL);}
-};
-
 } /* namespace CoolProp */
 #endif /* ABSTRACTSTATE_H_ */

@@ -93,6 +93,7 @@ public:
     long double calc_pressure(void);
     long double calc_cvmolar(void);
     long double calc_cpmolar(void);
+    long double calc_cpmolar_idealgas(void);
     long double calc_hmolar(void);
     long double calc_smolar(void);
     long double calc_pressure_nocache(long double T, long double rhomolar);
@@ -123,6 +124,7 @@ public:
     long double calc_viscosity_background(void);
     long double calc_viscosity_background(long double eta_dilute);
     long double calc_conductivity(void);
+    long double calc_conductivity_background(void);
 
     long double calc_Tmax(void);
     long double calc_pmax(void);

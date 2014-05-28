@@ -289,6 +289,35 @@
   ], 
   "NAME": "R124", 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "", 
+      "f_int": {
+        "T_reducing": 1.0, 
+        "T_reducing_units": "K", 
+        "a": [
+          0.0011769, 
+          6.78397e-07
+        ], 
+        "t": [
+          0, 
+          1
+        ]
+      }, 
+      "psi": {
+        "a": [
+          1.0898, 
+          -0.0154229
+        ], 
+        "rhomolar_reducing": 4103.279546177282, 
+        "rhomolar_reducing_units": "mol/m^3", 
+        "t": [
+          0, 
+          1
+        ]
+      }, 
+      "reference_fluid": "Propane", 
+      "type": "ECS"
+    }, 
     "viscosity": {
       "BibTeX": "", 
       "epsilon_over_k": 275.8, 

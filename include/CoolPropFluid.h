@@ -44,6 +44,12 @@ struct EOSLimits
     double Tmin, Tmax, rhomax, pmax;
 };
 
+struct ConductivityECSVariables{
+    std::string reference_fluid;
+    long double psi_rhomolar_reducing, f_int_T_reducing;
+    std::vector<long double> psi_a, psi_t, f_int_a, f_int_t;
+};
+
 struct ConductivityDiluteEta0AndPolyData{
     std::vector<long double> A, t;
 };
@@ -102,7 +108,7 @@ struct ConductivityCriticalSimplifiedOlchowySengersData{
         // Suggested default values - can be over-written
         GAMMA = 0.0496; //[-]
         zeta0 = 1.94e-10; //[m]
-        qD = 1e9; //[m]
+        qD = 2e9; //[m]
 
         // Set to invalid number, can be provided in the JSON file
         T_ref = _HUGE;
@@ -216,14 +222,17 @@ public:
     ConductivityDiluteVariables conductivity_dilute;
     ConductivityResidualVariables conductivity_residual;
     ConductivityCriticalVariables conductivity_critical;
+    ConductivityECSVariables conductivity_ecs;
 
     std::string BibTeX_viscosity, BibTeX_conductivity;
-    bool using_ECS; ///< A flag for whether to use extended corresponding states.  False for no
+    bool viscosity_using_ECS; ///< A flag for whether to use extended corresponding states for viscosity.  False for no
+    bool conductivity_using_ECS; ///< A flag for whether to use extended corresponding states for conductivity.  False for no
     long double sigma_eta, epsilon_over_k;
     int hardcoded_viscosity, hardcoded_conductivity;
     TransportPropertyData(){hardcoded_viscosity = VISCOSITY_NOT_HARDCODED; 
                             hardcoded_conductivity = CONDUCTIVITY_NOT_HARDCODED;
-                            using_ECS = false;
+                            viscosity_using_ECS = false;
+                            conductivity_using_ECS = false;
     };
 };
 
