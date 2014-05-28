@@ -109,6 +109,14 @@
     }
   }, 
   "CAS": "R404A.PPF", 
+  "CRITICAL": {
+    "T": 345.27, 
+    "T_units": "K", 
+    "p": 3734800.0, 
+    "p_units": "Pa", 
+    "rhomolar": 4939.999999999999, 
+    "rhomolar_units": "mol/m^3"
+  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 1, 

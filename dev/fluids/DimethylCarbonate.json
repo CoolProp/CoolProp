@@ -111,6 +111,14 @@
     }
   }, 
   "CAS": "616-38-6", 
+  "CRITICAL": {
+    "T": 557.0, 
+    "T_units": "K", 
+    "p": 4908800.0, 
+    "p_units": "Pa", 
+    "rhomolar": 4000.0, 
+    "rhomolar_units": "mol/m^3"
+  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 

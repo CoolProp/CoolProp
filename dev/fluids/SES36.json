@@ -107,6 +107,14 @@
     }
   }, 
   "CAS": "SES36.ppf", 
+  "CRITICAL": {
+    "T": 450.7, 
+    "T_units": "K", 
+    "p": 2849000.0, 
+    "p_units": "Pa", 
+    "rhomolar": 2800.0, 
+    "rhomolar_units": "mol/m^3"
+  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 

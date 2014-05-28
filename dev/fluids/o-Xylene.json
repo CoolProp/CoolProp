@@ -111,6 +111,14 @@
     }
   }, 
   "CAS": "95-47-6", 
+  "CRITICAL": {
+    "T": 630.259, 
+    "T_units": "K", 
+    "p": 3737500.0, 
+    "p_units": "Pa", 
+    "rhomolar": 2684.5000000000005, 
+    "rhomolar_units": "mol/m^3"
+  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
