@@ -236,8 +236,6 @@ public:
 
     AbstractState(){};
     virtual ~AbstractState(){};
-
-    
     
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
     /**
@@ -278,8 +276,23 @@ public:
     double pmax(void);
     double Ttriple(void);
 
+    /// Return the critical temperature in K
+    /**
+    For pure fluids, this is the critical point temperature
+    For mixtures, it is the exact critical point temperature calculated by the methods of Michelsen( \todo fill in reference)
+    */
     double T_critical(void);
+    /// Return the critical pressure in Pa
+    /**
+    For pure fluids, this is the critical point pressure as defined by the author of the EOS
+    For mixtures, it is the exact critical point pressure calculated by the methods of Michelsen( \todo fill in reference)
+    */
     double p_critical(void);
+    /// Return the critical molar density in mol/m^3
+    /**
+    For pure fluids, this is the critical point molar density
+    For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
+    */
     double rhomolar_critical(void);
 
     std::string name(){return calc_name();};
@@ -288,6 +301,7 @@ public:
     // Bulk properties - temperature and density are directly calculated every time
     // All other parameters are calculated on an as-needed basis
     // ----------------------------------------
+    /// Return the temperature in K
     double T(void)  {return _T;};
     /// Return the molar density in mol/m^3
     double rhomolar(void){return _rhomolar;};
