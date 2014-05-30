@@ -823,7 +823,9 @@ public:
     // Term and its derivatives
     long double base(const long double &tau, const long double &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*log(1.0-exp(-theta[i]*tau));} return s;
+        long double s=0; for (std::size_t i=0; i < N; ++i){
+           s += n[i]*log(1.0-exp(-theta[i]*tau));
+        } return s;
     };
     long double dTau(const long double &tau, const long double &delta) throw(){
         if (!enabled){return 0.0;}
@@ -919,7 +921,7 @@ public:
     IdealHelmholtzCP0Constant(long double cp_over_R, long double Tc, long double T0) 
     : cp_over_R(cp_over_R), Tc(Tc), T0(T0)
     { 
-        enabled = true;
+        enabled = true; tau0 = Tc/T0;
     };
 
     /// Destructor

@@ -1696,11 +1696,6 @@ long double IdealHelmholtzCP0AlyLee::dTau3(const long double &tau, const long do
 
 /*
 IdealHelmholtzEnthalpyEntropyOffset EnthalpyEntropyOffset;
-IdealHelmholtzPlanckEinstein PlanckEinstein;
-IdealHelmholtzPlanckEinstein2 PlanckEinstein2;
-
-IdealHelmholtzCP0Constant CP0Constant;
-IdealHelmholtzCP0PolyT CP0PolyT;
 IdealHelmholtzCP0AlyLee CP0AlyLee;
 */
 
@@ -1712,7 +1707,9 @@ class HelmholtzConsistencyFixture
 {
 public:
     long double numerical, analytic;
-    std::tr1::shared_ptr<CoolProp::BaseHelmholtzTerm> Lead, LogTau, IGPower, PlanckEinstein, PlanckEinstein2;
+    
+    std::tr1::shared_ptr<CoolProp::BaseHelmholtzTerm> Lead, LogTau, IGPower, PlanckEinstein, PlanckEinstein2, 
+        CP0Constant, CP0PolyT, CP0AlyLee, Gaussian, Lemmon2005, Power, SAFT, NonAnalytic, Exponential;
 
     HelmholtzConsistencyFixture(){
         Lead.reset(new CoolProp::IdealHelmholtzLead(1,3));
@@ -1722,13 +1719,99 @@ public:
             IGPower.reset(new CoolProp::IdealHelmholtzPower(n,t));
         }
         {
-            std::vector<long double> n(4,0), t(4,1); n[0] = -0.1; n[2] = 0.1; t[1] = -1; t[2] = -2; t[3] = 2;
+            std::vector<long double> n(4,0), t(4,1); n[0] = 0.1; n[2] = 0.5; t[1] = 1; t[2] = 2; t[3] = 2;
             PlanckEinstein.reset(new CoolProp::IdealHelmholtzPlanckEinstein(n, t));
         }
         {
             std::vector<long double> n(4,0), t(4,1), c(4,1); n[0] = -0.1; n[2] = 0.1; t[1] = -1; t[2] = -2; t[3] = 2;
             PlanckEinstein2.reset(new CoolProp::IdealHelmholtzPlanckEinstein2(n, t, c));
         }
+        {
+            long double T0 = 273.15, Tc = 345.857, c = 1.0578, t = 0.33;
+            CP0PolyT.reset(new CoolProp::IdealHelmholtzCP0PolyT(std::vector<long double>(1,c),
+                                                                std::vector<long double>(1,t),
+                                                                Tc, T0));
+        }
+        {
+            long double T0 = 518.109977174843, Tc = 645.78, c[] = {56.37158920013201, 118.0111016069331, 1792.1, 82.5909330141469, 786.8};
+            CP0AlyLee.reset(new CoolProp::IdealHelmholtzCP0AlyLee(std::vector<long double>(c, c+sizeof(c)/sizeof(c[0])),
+                                                                  Tc, T0));
+        }
+        CP0Constant.reset(new CoolProp::IdealHelmholtzCP0Constant(4/8.314472,300,250));
+        {
+            long double beta[] = {1.24, 0.821, 15.45, 2.21, 437, 0.743}, 
+                        d[] = {1, 1, 2, 2, 3, 3}, 
+                        epsilon[] = {0.6734, 0.9239, 0.8636, 1.0507, 0.8482, 0.7522}, 
+                        eta[] = {0.9667, 1.5154, 1.0591, 1.6642, 12.4856, 0.9662}, 
+                        gamma[] = {1.2827, 0.4317, 1.1217, 1.1871, 1.1243, 0.4203},
+                        n[] = {1.2198, -0.4883, -0.0033293, -0.0035387, -0.51172, -0.16882},
+                        t[] = {1, 2.124, 0.4, 3.5, 0.5, 2.7}; 
+            Gaussian.reset(new CoolProp::ResidualHelmholtzGaussian(std::vector<long double>(n,n+sizeof(n)/sizeof(n[0])),
+                                                                   std::vector<long double>(d,d+sizeof(d)/sizeof(d[0])),
+                                                                   std::vector<long double>(t,t+sizeof(t)/sizeof(t[0])),
+                                                                   std::vector<long double>(eta,eta+sizeof(eta)/sizeof(eta[0])),
+                                                                   std::vector<long double>(epsilon,epsilon+sizeof(epsilon)/sizeof(epsilon[0])),
+                                                                   std::vector<long double>(beta,beta+sizeof(beta)/sizeof(beta[0])),
+                                                                   std::vector<long double>(gamma,gamma+sizeof(gamma)/sizeof(gamma[0]))
+                                                                   ));
+        }
+        {
+            long double d[] = {1, 1, 1, 2, 4, 1, 1, 2, 2, 3, 4, 5, 1, 5, 1, 2, 3, 5}, 
+                        l[] = {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 2, 3, 3}, 
+                        m[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.7, 7, 6},
+                        n[] = {5.28076, -8.67658, 0.7501127, 0.7590023, 0.01451899, 4.777189, -3.330988, 3.775673, -2.290919, 0.8888268, -0.6234864, -0.04127263, -0.08455389, -0.1308752, 0.008344962, -1.532005, -0.05883649, 0.02296658},
+                        t[]= {0.669, 1.05,2.75, 0.956, 1, 2, 2.75, 2.38, 3.37, 3.47, 2.63, 3.45, 0.72, 4.23, 0.2, 4.5, 29, 24};
+            Lemmon2005.reset(new CoolProp::ResidualHelmholtzLemmon2005(std::vector<long double>(n, n+sizeof(n)/sizeof(n[0])),
+                                                                   std::vector<long double>(d, d+sizeof(d)/sizeof(d[0])),
+                                                                   std::vector<long double>(t, t+sizeof(t)/sizeof(t[0])),
+                                                                   std::vector<long double>(l, l+sizeof(l)/sizeof(l[0])),
+                                                                   std::vector<long double>(m, m+sizeof(m)/sizeof(m[0]))
+                                                                   ));
+        }
+        {
+            long double d[] = {1, 1, 1, 3, 7, 1, 2, 5, 1, 1, 4, 2}, 
+                        l[] = {0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3}, 
+                        n[] = {1.0038, -2.7662, 0.42921, 0.081363, 0.00024174, 0.48246, 0.75542, -0.00743, -0.4146, -0.016558, -0.10644, -0.021704}, 
+                        t[] = {0.25, 1.25, 1.5, 0.25, 0.875, 2.375, 2, 2.125, 3.5, 6.5, 4.75, 12.5};
+            Power.reset(new CoolProp::ResidualHelmholtzPower(std::vector<long double>(n, n+sizeof(n)/sizeof(n[0])),
+                                                             std::vector<long double>(d, d+sizeof(d)/sizeof(d[0])),
+                                                             std::vector<long double>(t, t+sizeof(t)/sizeof(t[0])),
+                                                             std::vector<long double>(l, l+sizeof(l)/sizeof(l[0]))
+                                                             ));
+        }
+        {
+            
+            long double a = 1, epsilonbar = 12.2735737, kappabar = 1.09117041e-05, m = 1.01871348, vbarn = 0.0444215309;
+            SAFT.reset(new CoolProp::ResidualHelmholtzSAFTAssociating(a,m,epsilonbar,vbarn,kappabar));
+        }
+        {
+            long double n[] = {-0.666422765408, 0.726086323499, 0.0550686686128},
+                A[] = {0.7, 0.7, 0.7}, B[] = {0.3, 0.3, 1}, C[] = {10, 10, 12.5}, D[] = {275, 275, 275}, 
+                a[] = {3.5, 3.5, 3}, b[] = {0.875, 0.925, 0.875}, beta[] = {0.3, 0.3, 0.3};
+            NonAnalytic.reset(new CoolProp::ResidualHelmholtzNonAnalytic(std::vector<long double>(n, n+sizeof(n)/sizeof(n[0])),
+                                                             std::vector<long double>(a, a+sizeof(a)/sizeof(a[0])),
+                                                             std::vector<long double>(b, b+sizeof(b)/sizeof(b[0])),
+                                                             std::vector<long double>(beta, beta+sizeof(beta)/sizeof(beta[0])),
+                                                             std::vector<long double>(A, A+sizeof(A)/sizeof(A[0])),
+                                                             std::vector<long double>(B, B+sizeof(B)/sizeof(B[0])),
+                                                             std::vector<long double>(C, C+sizeof(C)/sizeof(C[0])),
+                                                             std::vector<long double>(D, D+sizeof(D)/sizeof(D[0]))
+                                                             ));
+        }
+        {
+            long double d[] = {2, 2, 2, 0, 0, 0}, 
+            g[] = {1.65533788, 1.65533788, 1.65533788, 1.65533788, 1.65533788, 1.65533788}, 
+            l[] = {2, 2, 2, 2, 2, 2}, 
+            n[] = {-3.821884669859, 8.30345065618981, -4.4832307260286, -1.02590136933231, 2.20786016506394, -1.07889905203761}, 
+            t[] = {3, 4, 5, 3, 4, 5};
+            Exponential.reset(new CoolProp::ResidualHelmholtzExponential(std::vector<long double>(n, n+sizeof(n)/sizeof(n[0])),
+                                                                         std::vector<long double>(d, d+sizeof(d)/sizeof(n[0])),
+                                                                         std::vector<long double>(t, t+sizeof(t)/sizeof(d[0])),
+                                                                         std::vector<long double>(g, g+sizeof(g)/sizeof(t[0])),
+                                                                         std::vector<long double>(l, l+sizeof(l)/sizeof(l[0]))
+                                                                         ));
+        }
+
     }
     void call(std::string d, std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta)
     {
@@ -1738,6 +1821,9 @@ public:
         else if (!d.compare("dDelta")){ return dDelta(term,tau,delta,ddelta);}
         else if (!d.compare("dDelta2")){return dDelta2(term,tau,delta,ddelta);}
         else if (!d.compare("dDelta3")){return dDelta3(term,tau,delta,ddelta);}
+        else if (!d.compare("dDelta_dTau")){ return dDelta_dTau(term,tau,delta,ddelta);}
+        else if (!d.compare("dDelta_dTau2")){ return dDelta_dTau2(term,tau,delta,ddelta);}
+        else if (!d.compare("dDelta2_dTau")){ return dDelta2_dTau(term,tau,delta,ddelta);}
         else{
             throw CoolProp::ValueError("don't understand deriv type");
         }
@@ -1749,8 +1835,18 @@ public:
         else if (!t.compare("IGPower")){return IGPower;}
         else if (!t.compare("PlanckEinstein")){return PlanckEinstein;}
         else if (!t.compare("PlanckEinstein2")){return PlanckEinstein2;}
+        else if (!t.compare("CP0Constant")){return CP0Constant;}
+        else if (!t.compare("CP0PolyT")){return CP0PolyT;}
+        else if (!t.compare("CP0AlyLee")){return CP0AlyLee;}
+
+        else if (!t.compare("Gaussian")){return Gaussian;}
+        else if (!t.compare("Lemmon2005")){return Lemmon2005;}
+        else if (!t.compare("Power")){return Power;}
+        else if (!t.compare("SAFT")){return SAFT;}
+        else if (!t.compare("NonAnalytic")){return NonAnalytic;}
+        else if (!t.compare("Exponential")){return Exponential;}
         else{
-            throw CoolProp::ValueError("don't understand helmholtz type");
+            throw CoolProp::ValueError(format("don't understand helmholtz type: %s",t.c_str()));
         }
     }
     void dTau(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double dtau){
@@ -1789,6 +1885,24 @@ public:
         numerical = (term_plus - term_minus)/(2*ddelta);
         analytic = term->dDelta3(tau, delta);
     };
+    void dDelta_dTau(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
+        long double term_plus = term->dTau(tau, delta + ddelta);
+        long double term_minus = term->dTau(tau, delta - ddelta);
+        numerical = (term_plus - term_minus)/(2*ddelta);
+        analytic = term->dDelta_dTau(tau, delta);
+    };
+    void dDelta_dTau2(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
+        long double term_plus = term->dTau2(tau, delta + ddelta);
+        long double term_minus = term->dTau2(tau, delta - ddelta);
+        numerical = (term_plus - term_minus)/(2*ddelta);
+        analytic = term->dDelta_dTau2(tau, delta);
+    };
+    void dDelta2_dTau(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
+        long double term_plus = term->dDelta_dTau(tau, delta + ddelta);
+        long double term_minus = term->dDelta_dTau(tau, delta - ddelta);
+        numerical = (term_plus - term_minus)/(2*ddelta);
+        analytic = term->dDelta2_dTau(tau, delta);
+    };
     double err(double v1, double v2)
     {
         if (fabs(v2) > 1e-15){
@@ -1800,8 +1914,10 @@ public:
     }
 };
 
-std::string terms[] = {"Lead","LogTau","IGPower","PlanckEinstein","PlanckEinstein2"};
-std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3"};
+std::string terms[] = {"Lead","LogTau","IGPower","PlanckEinstein","PlanckEinstein2",
+                       "CP0Constant","CP0PolyT","CP0AlyLee", 
+                       "Gaussian","Lemmon2005","Power","SAFT","NonAnalytic","Exponential"};
+std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDelta_dTau","dDelta_dTau2","dDelta2_dTau"};
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]")
 {
@@ -1812,12 +1928,12 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
         term = get(terms[i]);
         for (std::size_t j = 0; j < sizeof(derivs)/sizeof(derivs[0]); ++j)
         {
-            call(derivs[j], term, 1.3, 0.7, 1e-6);
+            call(derivs[j], term, 1.3, 0.7, 1e-8);
             CAPTURE(derivs[j]);
             CAPTURE(numerical);
             CAPTURE(analytic);
             CAPTURE(terms[i]);
-            CHECK(err(analytic, numerical) < 1e-8);
+            CHECK(err(analytic, numerical) < 1e-6);
         }
     }
 }
