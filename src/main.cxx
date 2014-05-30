@@ -17,12 +17,12 @@ using namespace CoolProp;
 #endif
 #include "SpeedTest.h"
 
-#include <vld.h> 
+//#include <vld.h>
 
 
 void generate_melting_curve_data(const char* file_name, const char *fluid_name, double Tmin, double Tmax)
 {
-    
+
     FILE *fp;
     fp = fopen(file_name,"w");
     AbstractState *State = AbstractState::factory(std::string("REFPROP"),std::string(fluid_name));
@@ -43,7 +43,7 @@ void generate_melting_curve_data(const char* file_name, const char *fluid_name, 
         }
         catch(std::exception &e)
         {
-            
+
             std::cout << fluid_name << " " << e.what() << std::endl;
             break;
         }
@@ -51,8 +51,13 @@ void generate_melting_curve_data(const char* file_name, const char *fluid_name, 
     fclose(fp);
     delete State;
 }
+struct element
+        {
+            double d,t,ld;
+            int l;
+        };
 int main()
-{   
+{
     if (0)
     {
         generate_melting_curve_data("Ethylene-I.mlt","ethylene",103.989,110.369);
@@ -61,7 +66,7 @@ int main()
         generate_melting_curve_data("Propylene-II.mlt","propylen",109.6,575);
         generate_melting_curve_data("ParaHydrogen-I.mlt","parahyd",13.8033,22);
         generate_melting_curve_data("ParaHydrogen-II.mlt","parahyd",22,2000);
-        
+
         generate_melting_curve_data("n-Propane.mlt","propane",85.53,2000);
         generate_melting_curve_data("n-Butane.mlt","butane",134.9,2000);
         generate_melting_curve_data("n-Pentane.mlt","pentane",143.5,2000);
@@ -103,12 +108,12 @@ int main()
     if (0)
     {
         std::vector<std::string> ss = strsplit(get_global_param_string("FluidsList"),',');
-        
+
         for (std::vector<std::string>::iterator it = ss.begin(); it != ss.end(); ++it)
         {
             AbstractState *S = AbstractState::factory("HEOS", (*it));
             S->update(QT_INPUTS, 0, S->Ttriple());
-            std::cout << format("%s %17.15g\n", S->name(), S->p());
+            std::cout << format("%s %17.15g\n", S->name().c_str(), S->p());
         }
     }
     if (1)
@@ -137,7 +142,7 @@ int main()
         double p2 = AS->umolar();
         double d2 = AS->rhomolar();
         double T2 = AS->delta();
-        
+
         double dpdT_constrho2 = (p2-p1)/(T2-T1);
 
         AS->update(PT_INPUTS, 101000, 300);
@@ -179,13 +184,9 @@ int main()
     }
     if (0)
     {
-        struct element
-        {
-            double d,t,ld;
-            int l;
-        };
-        double n[] = {0.0125335479355233,                        7.8957634722828,                        -8.7803203303561,                        0.31802509345418,                        -0.26145533859358,                        -0.0078199751687981,                        0.0088089493102134,                        -0.66856572307965,                        0.20433810950965,                        -6.621260503968699e-005,                        -0.19232721156002,                        -0.25709043003438,                        0.16074868486251,                        -0.040092828925807,                        3.9343422603254e-007,                        -7.5941377088144e-006,                        0.00056250979351888,                        -1.5608652257135e-005,                        1.1537996422951e-009,                        3.6582165144204e-007,                        -1.3251180074668e-012,                        -6.2639586912454e-010,                        -0.10793600908932,                        0.017611491008752,                        0.22132295167546,                        -0.40247669763528,                        0.58083399985759,                        0.0049969146990806,                        -0.031358700712549,                        -0.74315929710341,                        0.4780732991548,                        0.020527940895948,                        -0.13636435110343,                        0.014180634400617,                        0.008332650488071301,                        -0.029052336009585,                        0.038615085574206,                        -0.020393486513704,                        -0.0016554050063734,                        0.0019955571979541,                        0.00015870308324157,                        -1.638856834253e-005,                        0.043613615723811,                        0.034994005463765,                        -0.076788197844621,                        0.022446277332006,                        -6.2689710414685e-005,                        -5.5711118565645e-010,                        -0.19905718354408,                        0.31777497330738,                        -0.11841182425981  }; 
-        double d[] = {1,                         1,                        1,                        2,                        2,                        3,                        4,                        1,                        1,                        1,                        2,                        2,                        3,                        4,                        4,                        5,                        7,                        9,                        10,                        11,                        13,                        15,                        1,                        2,                        2,                        2,                        3,                        4,                        4,                        4,                        5,                        6,                        6,                        7,                        9,                        9,                        9,                        9,                        9,                        10,                        10,                        12,                        3,                        4,                        4,                        5,                        14,                        3,                        6,                        6,                        6                    };                   
+
+        double n[] = {0.0125335479355233,                        7.8957634722828,                        -8.7803203303561,                        0.31802509345418,                        -0.26145533859358,                        -0.0078199751687981,                        0.0088089493102134,                        -0.66856572307965,                        0.20433810950965,                        -6.621260503968699e-005,                        -0.19232721156002,                        -0.25709043003438,                        0.16074868486251,                        -0.040092828925807,                        3.9343422603254e-007,                        -7.5941377088144e-006,                        0.00056250979351888,                        -1.5608652257135e-005,                        1.1537996422951e-009,                        3.6582165144204e-007,                        -1.3251180074668e-012,                        -6.2639586912454e-010,                        -0.10793600908932,                        0.017611491008752,                        0.22132295167546,                        -0.40247669763528,                        0.58083399985759,                        0.0049969146990806,                        -0.031358700712549,                        -0.74315929710341,                        0.4780732991548,                        0.020527940895948,                        -0.13636435110343,                        0.014180634400617,                        0.008332650488071301,                        -0.029052336009585,                        0.038615085574206,                        -0.020393486513704,                        -0.0016554050063734,                        0.0019955571979541,                        0.00015870308324157,                        -1.638856834253e-005,                        0.043613615723811,                        0.034994005463765,                        -0.076788197844621,                        0.022446277332006,                        -6.2689710414685e-005,                        -5.5711118565645e-010,                        -0.19905718354408,                        0.31777497330738,                        -0.11841182425981  };
+        double d[] = {1,                         1,                        1,                        2,                        2,                        3,                        4,                        1,                        1,                        1,                        2,                        2,                        3,                        4,                        4,                        5,                        7,                        9,                        10,                        11,                        13,                        15,                        1,                        2,                        2,                        2,                        3,                        4,                        4,                        4,                        5,                        6,                        6,                        7,                        9,                        9,                        9,                        9,                        9,                        10,                        10,                        12,                        3,                        4,                        4,                        5,                        14,                        3,                        6,                        6,                        6                    };
         double t[] = {-0.5,                        0.875,                        1,                        0.5,                        0.75,                        0.375,                        1,                        4,                        6,                        12,                        1,                        5,                        4,                        2,                        13,                        9,                        3,                        4,                        11,                        4,                        13,                        1,                        7,                        1,                        9,                        10,                        10,                        3,                        7,                        10,                        10,                        6,                        10,                        10,                        1,                        2,                        3,                        4,                        8,                        6,                        9,                        8,                        16,                        22,                        23,                        23,                        10,                        50,                        44,                        46,                        50                    };
         double l[] = {0,                        0,                        0,                        0,                        0,                        0,                        0,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        3,                        3,                        3,                        3,                        4,                        6,                        6,                        6,                        6                    };
         double summer = 0;
@@ -216,14 +217,14 @@ int main()
                     summer += (di-lid*pow_delta_li)*exp(ti*log_tau+(di-1)*log_delta-pow_delta_li);
                 }
                 else{
-                    summer += di*exp(ti*log_tau+(di-1)*log_delta);    
+                    summer += di*exp(ti*log_tau+(di-1)*log_delta);
                 }
             }
         }
         double t2 = clock();
         double elap = (t2-t1)/CLOCKS_PER_SEC/((double)N)*1e6;
         printf("%g %g\n",elap, summer);
-        
+
     }
     if (0)
     {
@@ -240,7 +241,7 @@ int main()
     {
 
         double T = 300;
-        
+
         AbstractState *MixRP = AbstractState::factory(std::string("REFPROP"), std::string("propane"));
         {
             long N = 100000;
@@ -324,9 +325,9 @@ int main()
 
         AbstractState *Mix = AbstractState::factory(std::string("CORE"),std::string("Ethane,n-Propane"));
         Mix->set_mole_fractions(z);
-        
+
         for (double T = 210; ;T += 0.1)
-        {    
+        {
             Mix->update(QT_INPUTS, Q, T);
             std::cout << format(" %g %g\n",Mix->p(),Mix->T());
         }
@@ -335,7 +336,7 @@ int main()
     if(0)
     {
         time_t t1,t2;
-        
+
         std::size_t N = 1000000;
         AbstractState *State = AbstractState::factory(std::string("CORE"), std::string("Water"));
         double p = State->p();
@@ -363,7 +364,7 @@ int main()
 
     }
 
-    
+
 
     if (0)
     {
@@ -414,5 +415,5 @@ int main()
 
         //double sigma = State->surface_tension();
         delete State;
-    }	
+    }
 }

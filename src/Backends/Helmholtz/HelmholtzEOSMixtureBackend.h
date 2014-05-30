@@ -28,7 +28,7 @@ protected:
     SimpleState _crit;
     int imposed_phase_index;
 public:
-    HelmholtzEOSMixtureBackend(){SatL = NULL; SatV = NULL; imposed_phase_index = -1;};
+    HelmholtzEOSMixtureBackend(){imposed_phase_index = -1;};
     HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
     virtual ~HelmholtzEOSMixtureBackend(){};

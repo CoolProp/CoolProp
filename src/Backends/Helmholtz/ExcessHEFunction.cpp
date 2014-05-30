@@ -1,3 +1,5 @@
+#include <tr1/memory>
+
 #include "ExcessHEFunction.h"
 #include "mixture_excess_term_JSON.h"
 
@@ -44,12 +46,12 @@ MixtureExcessHELibrary::MixtureExcessHELibrary()
 
             for (unsigned int i = 0; i < CAS1V.size(); ++i)
             {
-                // Get the vector of CAS numbers 
+                // Get the vector of CAS numbers
                 std::vector<std::string> CAS;
                 CAS.resize(2);
                 CAS[0] = CAS1V[i];
                 CAS[1] = CAS2V[i];
-                
+
                 // Sort the CAS number vector
                 std::sort(CAS.begin(), CAS.end());
 
@@ -78,7 +80,7 @@ MixtureExcessHELibrary::MixtureExcessHELibrary()
                 {
                     throw ValueError();
                 }
-                
+
                 // If not in map, add new entry to map with dictionary
                 if (excess_map.find(CAS) == excess_map.end())
                 {
@@ -93,10 +95,10 @@ MixtureExcessHELibrary::MixtureExcessHELibrary()
                 {
                     // Append dictionary to listing
                     excess_map[CAS].push_back(d);
-                }           
+                }
             }
         }
-	} 
+	}
 }
 
 void ExcessTerm::construct(const std::vector<CoolPropFluid*> &components)
@@ -105,7 +107,7 @@ void ExcessTerm::construct(const std::vector<CoolPropFluid*> &components)
     N = components.size();
 
     F.resize(N, std::vector<double>(N, 0));
-    DepartureFunctionMatrix.resize(N, std::vector<DepartureFunctionPointer>(N, NULL));
+    DepartureFunctionMatrix.resize(N);
 
     for (unsigned int i = 0; i < N; ++i)
     {
@@ -162,7 +164,7 @@ double ExcessTerm::alphar(double tau, double delta, const std::vector<long doubl
 	for (unsigned int i = 0; i < N-1; i++)
 	{
 		for (unsigned int j = i + 1; j < N; j++)
-		{	
+		{
 			summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->alphar(tau,delta);
 		}
 	}
@@ -174,7 +176,7 @@ double ExcessTerm::dalphar_dTau(double tau, double delta, const std::vector<long
 	for (unsigned int i = 0; i < N-1; i++)
 	{
 		for (unsigned int j = i + 1; j < N; j++)
-		{	
+		{
 			summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dTau(tau,delta);
 		}
 	}
@@ -186,7 +188,7 @@ double ExcessTerm::dalphar_dDelta(double tau, double delta, const std::vector<lo
 	for (unsigned int i = 0; i < N-1; i++)
 	{
 		for (unsigned int j = i + 1; j < N; j++)
-		{	
+		{
 			summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dDelta(tau,delta);
 		}
 	}
@@ -198,7 +200,7 @@ double ExcessTerm::d2alphar_dDelta2(double tau, double delta, const std::vector<
 	for (unsigned int i = 0; i < N-1; i++)
 	{
 		for (unsigned int j = i + 1; j < N; j++)
-		{	
+		{
 			summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dDelta2(tau,delta);
 		}
 	}
@@ -210,7 +212,7 @@ double ExcessTerm::d2alphar_dTau2(double tau, double delta, const std::vector<lo
 	for (unsigned int i = 0; i < N-1; i++)
 	{
 		for (unsigned int j = i + 1; j < N; j++)
-		{	
+		{
 			summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dTau2(tau,delta);
 		}
 	}
@@ -222,7 +224,7 @@ double ExcessTerm::d2alphar_dDelta_dTau(double tau, double delta, const std::vec
 	for (unsigned int i = 0; i < N-1; i++)
 	{
 		for (unsigned int j = i + 1; j < N; j++)
-		{	
+		{
 			summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dDelta_dTau(tau,delta);
 		}
 	}
@@ -280,7 +282,7 @@ GERG2008DepartureFunction::GERG2008DepartureFunction(const std::vector<double> &
                                                      const std::vector<double> &eta,const std::vector<double> &epsilon,const std::vector<double> &beta,
                                                      const std::vector<double> &gamma, int Npower)
 {
-    
+
     /// Break up into power and gaussian terms
     {
         std::vector<long double> _n(n.begin(), n.begin()+Npower);

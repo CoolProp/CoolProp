@@ -2,12 +2,16 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#include <tr1/memory>
+
 #include "HumidAirProp.h"
 #include "AbstractState.h"
 #include "Solvers.h"
 #include "CoolPropTools.h"
 #include "Ice.h"
 #include "CoolProp.h"
+
+
 
 #include <stdlib.h>
 #include "math.h"
