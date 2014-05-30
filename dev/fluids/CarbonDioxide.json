@@ -456,42 +456,79 @@
   "NAME": "CarbonDioxide", 
   "TRANSPORT": {
     "conductivity": {
-      "BibTeX": "Vesovic-JPCRD-1990", 
+      "BibTeX": "Scalabrin-JPCRD-2006-CO2", 
       "critical": {
-        "GAMMA": 0.052, 
-        "R0": 1.01, 
-        "gamma": 1.2415, 
-        "qD": 2500000000.0, 
-        "type": "simplified_Olchowy_Sengers", 
-        "zeta0": 1.5e-10
+        "hardcoded": "CarbonDioxideScalabrinJPCRD2006"
       }, 
       "dilute": {
-        "hardcoded": "CO2"
+        "hardcoded": "none"
       }, 
       "residual": {
-        "B": [
-          2.447164e-05, 
-          8.705605e-08, 
-          -6.54795e-11, 
-          6.594919e-14
+        "A": [
+          0.0370597124660408, 
+          0.0007696647124242399, 
+          0.0075538113451464, 
+          -0.032416436589336, 
+          0.078894098855904, 
+          0.0177830586854928, 
+          0.10744756315137599, 
+          0.31839746259479995, 
+          -0.00082691726160072, 
+          2.0846013855224798e-05
         ], 
-        "T_reducing": 304.107, 
+        "T_reducing": 304.1282, 
         "T_reducing_units": "K", 
         "d": [
-          1, 
-          2, 
-          3, 
-          4
+          1.0, 
+          5.0, 
+          1.0, 
+          1.0, 
+          2.0, 
+          0.0, 
+          5.0, 
+          9.0, 
+          0.0, 
+          0.0
         ], 
-        "rhomass_reducing": 1, 
+        "gamma": [
+          0, 
+          0, 
+          0, 
+          5, 
+          5, 
+          5, 
+          5, 
+          5, 
+          5, 
+          5
+        ], 
+        "l": [
+          0, 
+          0, 
+          0, 
+          2, 
+          2, 
+          2, 
+          2, 
+          2, 
+          2, 
+          2
+        ], 
+        "rhomass_reducing": 467.6, 
         "rhomass_reducing_units": "kg/m^3", 
         "t": [
-          0, 
-          0, 
-          0, 
-          0
+          0.0, 
+          0.0, 
+          -1.5, 
+          0.0, 
+          -1.0, 
+          -1.5, 
+          -1.5, 
+          -1.5, 
+          -3.5, 
+          -5.5
         ], 
-        "type": "polynomial"
+        "type": "polynomial_and_exponential"
       }
     }, 
     "viscosity": {

@@ -569,6 +569,20 @@ long double TransportRoutines::conductivity_critical_hardcoded_R123(HelmholtzEOS
     return a13*exp(a14*pow(HEOS.tau()-1,4)+a15*pow(HEOS.delta()-1,2));
 };
 
+long double TransportRoutines::conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(HelmholtzEOSMixtureBackend &HEOS){
+    long double nc = 0.775547504e-3*4.81384, Tr = HEOS.T()/304.1282, alpha, rhor = HEOS.keyed_output(iDmass)/467.6;
+    static long double a[] = {0.0, 3.0, 6.70697, 0.94604, 0.30, 0.30, 0.39751, 0.33791, 0.77963, 0.79857, 0.90, 0.02, 0.20};
+    
+    // Equation 6 from Scalabrin
+    alpha = 1-a[10]*acosh(1+a[11]*pow(pow(1-Tr,2),a[12]));
+
+    // Equation 5 from Scalabrin
+    long double numer = rhor*exp(-pow(rhor,a[1])/a[1]-pow(a[2]*(Tr-1),2)-pow(a[3]*(rhor-1),2));
+    long double braced = (1-1/Tr)+a[4]*pow(pow(rhor-1,2),0.5/a[5]);
+    long double denom = pow(pow(pow(braced, 2), a[6]) + pow(pow(a[7]*(rhor-alpha), 2), a[8]),a[9]);
+    return nc*numer/denom;
+}
+
 long double TransportRoutines::conductivity_dilute_hardcoded_CO2(HelmholtzEOSMixtureBackend &HEOS){
 
     double e_k = 251.196, Tstar;
@@ -938,4 +952,6 @@ long double TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS
 
     return lambda;
 }
+
+
 }; /* namespace CoolProp */

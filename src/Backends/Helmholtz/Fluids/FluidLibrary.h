@@ -270,6 +270,12 @@ protected:
             if (!target.compare("Ethane")){
                 fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE; return;
             }
+            else if (!target.compare("Ethane")){
+                fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE; return;
+            }
+            else{
+                throw ValueError(format("hardcoded dilute viscosity [%s] is not understood for fluid %s",target.c_str(),fluid.name.c_str()));
+            }
         }
         std::string type = cpjson::get_string(dilute, "type");
         if (!type.compare("collision_integral")){
@@ -528,6 +534,9 @@ protected:
             else if (!target.compare("Ethane")){
                 fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETHANE; return;
             }
+            else if (!target.compare("none")){
+                fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_NONE; return;
+            }
             else{
                 throw ValueError(format("hardcoded dilute conductivity term [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
             }
@@ -618,6 +627,9 @@ protected:
             }
             else if (!target.compare("Ammonia")){
                 fluid.transport.conductivity_critical.type = CoolProp::ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_AMMONIA; return;
+            }
+            else if (!target.compare("CarbonDioxideScalabrinJPCRD2006")){
+                fluid.transport.conductivity_critical.type = CoolProp::ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_CARBONDIOXIDE_SCALABRIN_JPCRD_2006; return;
             }
             else if (!target.compare("None")){
                 fluid.transport.conductivity_critical.type = CoolProp::ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_NONE; return;

@@ -64,6 +64,7 @@ struct ConductivityDiluteVariables
                                  CONDUCTIVITY_DILUTE_ETA0_AND_POLY, 
                                  CONDUCTIVITY_DILUTE_CO2, 
                                  CONDUCTIVITY_DILUTE_ETHANE, 
+                                 CONDUCTIVITY_DILUTE_NONE, 
                                  CONDUCTIVITY_DILUTE_NOT_SET
                                  };
     int type;
@@ -120,6 +121,7 @@ struct ConductivityCriticalVariables
                                    CONDUCTIVITY_CRITICAL_R123, 
                                    CONDUCTIVITY_CRITICAL_AMMONIA, 
                                    CONDUCTIVITY_CRITICAL_NONE, 
+                                   CONDUCTIVITY_CRITICAL_CARBONDIOXIDE_SCALABRIN_JPCRD_2006,
                                    CONDUCTIVITY_CRITICAL_NOT_SET
                                    };
     int type;
