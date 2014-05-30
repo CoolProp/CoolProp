@@ -16,6 +16,8 @@
 #endif
 #endif
 
+#include <tr1/memory>
+
 #include <iostream>
 #include <stdlib.h>
 #include <vector>
@@ -26,6 +28,7 @@
 #include "Solvers.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
+
 
 namespace CoolProp
 {

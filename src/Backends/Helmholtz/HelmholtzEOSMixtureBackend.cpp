@@ -5,6 +5,8 @@
  *      Author: jowr
  */
 
+#include <tr1/memory>
+
 #if defined(_MSC_VER)
 #define _CRTDBG_MAP_ALLOC
 #define _CRT_SECURE_NO_WARNINGS
@@ -67,7 +69,7 @@ void HelmholtzEOSMixtureBackend::set_components(std::vector<CoolPropFluid*> comp
 
     imposed_phase_index = -1;
 
-    // Top-level class can hold copies of the base saturation classes, 
+    // Top-level class can hold copies of the base saturation classes,
     // saturation classes cannot hold copies of the saturation classes
     if (generate_SatL_and_SatV)
     {
@@ -75,10 +77,6 @@ void HelmholtzEOSMixtureBackend::set_components(std::vector<CoolPropFluid*> comp
         SatL->specify_phase(iphase_liquid);
         SatV.reset(new HelmholtzEOSMixtureBackend(components, false));
         SatV->specify_phase(iphase_gas);
-    }
-    else
-    {
-        SatL = NULL; SatV = NULL;
     }
 }
 void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<long double> &mole_fractions)
@@ -154,7 +152,7 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void)
     {
         throw NotImplementedError(format("dilute viscosity not implemented for mixtures"));
     }
-    
+
 }
 long double HelmholtzEOSMixtureBackend::calc_viscosity_background()
 {
@@ -203,8 +201,9 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
         {
             // Get reference fluid name
             std::string fluid_name  = component.transport.viscosity_ecs.reference_fluid;
+            std::vector<std::string> names(1, fluid_name);
             // Get a managed pointer to the reference fluid for ECS
-            std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(std::vector<std::string>(1, fluid_name)));
+            std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(names));
             // Get the viscosity using ECS
             return TransportRoutines::viscosity_ECS(*this, *(ref_fluid.get()));
         }
@@ -266,8 +265,9 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
         {
             // Get reference fluid name
             std::string fluid_name  = component.transport.conductivity_ecs.reference_fluid;
+            std::vector<std::string> name(1, fluid_name);
             // Get a managed pointer to the reference fluid for ECS
-            std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(std::vector<std::string>(1, fluid_name)));
+            std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(name,false));
             // Get the viscosity using ECS
             return TransportRoutines::conductivity_ECS(*this, *(ref_fluid.get()));
         }
@@ -306,7 +306,7 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
         }
 
         long double lambda_residual = calc_conductivity_background();
-       
+
         // Critical part
         long double lambda_critical = _HUGE;
         switch(component.transport.conductivity_critical.type)
@@ -416,7 +416,7 @@ void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(long &input_pair, double &
         case PSmass_INPUTS: ///< Pressure in Pa, Entropy in J/kg/K
         case PUmass_INPUTS: ///< Pressure in Pa, Internal energy in J/kg
         case HmassSmass_INPUTS: ///< Enthalpy in J/kg, Entropy in J/kg/K
-        case SmassUmass_INPUTS: ///< Entropy in J/kg/K, Internal energy in J/kg             
+        case SmassUmass_INPUTS: ///< Entropy in J/kg/K, Internal energy in J/kg
         case DmassHmass_INPUTS: ///< Mass density in kg/m^3, Enthalpy in J/kg
         case DmassSmass_INPUTS: ///< Mass density in kg/m^3, Entropy in J/kg/K
         case DmassUmass_INPUTS: ///< Mass density in kg/m^3, Internal energy in J/kg
@@ -451,15 +451,15 @@ void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(long &input_pair, double &
 }
 void HelmholtzEOSMixtureBackend::update(long input_pair, double value1, double value2 )
 {
-    clear();   
+    clear();
 
-    if (is_pure_or_pseudopure == false && mole_fractions.size() == 0) { 
-        throw ValueError("Mole fractions must be set"); 
+    if (is_pure_or_pseudopure == false && mole_fractions.size() == 0) {
+        throw ValueError("Mole fractions must be set");
     }
 
     mass_to_molar_inputs(input_pair, value1, value2);
 
-    // Set the mole-fraction weighted gas constant for the mixture 
+    // Set the mole-fraction weighted gas constant for the mixture
     // (or the pure/pseudo-pure fluid) if it hasn't been set yet
     gas_constant();
 
@@ -602,7 +602,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             {
                 long double p_vap = 0.98*static_cast<double>(_pVanc);
                 long double p_liq = 1.02*static_cast<double>(_pLanc);
-            
+
                 if (value < p_vap){
                     this->_phase = iphase_gas; _Q = -1000; return;
                 }
@@ -640,7 +640,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                         switch (other)
                         {
                             case iSmolar:
-                            {   
+                            {
                                 if (value > SatV->calc_smolar()){
                                     this->_phase = iphase_gas; return;
                                 }
@@ -675,7 +675,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 }
             }
         }
-        
+
         // Determine Q based on the input provided
         if (!is_pure_or_pseudopure){throw ValueError("possibly two-phase inputs not supported for pseudo-pure for now");}
 
@@ -687,7 +687,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         SaturationSolvers::saturation_T_pure(&HEOS, _T, options);
 
         long double Q;
-        
+
         if (other == iP)
         {
             if (value > 100*DBL_EPSILON + HEOS.SatL->p()){
@@ -725,7 +725,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             this->_phase = iphase_twophase;
         }
         _Q = Q;
-        // Load the outputs 
+        // Load the outputs
         _p = _Q*HEOS.SatV->p() + (1-_Q)*HEOS.SatL->p();
         _rhomolar = 1/(_Q/HEOS.SatV->rhomolar() + (1-_Q)/HEOS.SatL->rhomolar());
         return;
@@ -751,7 +751,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 _pVanc = components[0]->ancillaries.pV.evaluate(_T);
                 long double p_vap = 0.98*static_cast<double>(_pVanc);
                 long double p_liq = 1.02*static_cast<double>(_pLanc);
-            
+
                 if (value < p_vap){
                     this->_phase = iphase_gas; _Q = -1000; return;
                 }
@@ -789,7 +789,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                         switch (other)
                         {
                             case iSmolar:
-                            {   
+                            {
                                 if (value > SatV->calc_smolar()){
                                     this->_phase = iphase_gas; return;
                                 }
@@ -824,7 +824,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 }
             }
         }
-        
+
         // Determine Q based on the input provided
         if (!is_pure_or_pseudopure){throw ValueError("possibly two-phase inputs not supported for pseudo-pure for now");}
 
@@ -836,7 +836,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         SaturationSolvers::saturation_T_pure(&HEOS, _T, options);
 
         long double Q;
-        
+
         if (other == iP)
         {
             if (value > 100*DBL_EPSILON + HEOS.SatL->p()){
@@ -874,7 +874,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
             this->_phase = iphase_twophase;
         }
         _Q = Q;
-        // Load the outputs 
+        // Load the outputs
         _p = _Q*HEOS.SatV->p() + (1-_Q)*HEOS.SatL->p();
         _rhomolar = 1/(_Q/HEOS.SatV->rhomolar() + (1-_Q)/HEOS.SatL->rhomolar());
         return;
@@ -966,10 +966,10 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
 //				this->_phase = iphase_liquid;
 //			}
 //			else if (Q > 1+100*DBL_EPSILON){
-//				this->_phase = iphase_gas; 
+//				this->_phase = iphase_gas;
 //			}
 //			else{
-//                this->_phase = iphase_twophase; 
+//                this->_phase = iphase_twophase;
 //            }
 //            _Q = Q;
 //             // Load the outputs
@@ -1074,12 +1074,12 @@ void get_dtau_ddelta(HelmholtzEOSMixtureBackend *HEOS, long double T, long doubl
         // dp/ddelta|tau
         ddelta = rhor*R*T*(1+2*delta*dalphar_dDelta+pow(delta, 2)*d2alphar_dDelta2);
         // dp/dtau|delta
-        dtau = dT_dtau*rho*R*(1+delta*dalphar_dDelta-tau*delta*d2alphar_dDelta_dTau); 
+        dtau = dT_dtau*rho*R*(1+delta*dalphar_dDelta-tau*delta*d2alphar_dDelta_dTau);
         break;
         }
     case iHmolar:
         // dh/dtau|delta
-        dtau = dT_dtau*R*(-pow(tau,2)*(HEOS->d2alpha0_dTau2()+HEOS->d2alphar_dTau2()) + (1+delta*HEOS->dalphar_dDelta()-tau*delta*HEOS->d2alphar_dDelta_dTau())); 
+        dtau = dT_dtau*R*(-pow(tau,2)*(HEOS->d2alpha0_dTau2()+HEOS->d2alphar_dTau2()) + (1+delta*HEOS->dalphar_dDelta()-tau*delta*HEOS->d2alphar_dDelta_dTau()));
         // dh/ddelta|tau
         ddelta = rhor*T*R/rho*(tau*delta*HEOS->d2alphar_dDelta_dTau()+delta*HEOS->dalphar_dDelta()+pow(delta,2)*HEOS->d2alphar_dDelta2());
         break;
@@ -1106,7 +1106,7 @@ void get_dtau_ddelta(HelmholtzEOSMixtureBackend *HEOS, long double T, long doubl
 long double HelmholtzEOSMixtureBackend::calc_first_partial_deriv_nocache(long double T, long double rhomolar, int Of, int Wrt, int Constant)
 {
     long double dOf_dtau, dOf_ddelta, dWrt_dtau, dWrt_ddelta, dConstant_dtau, dConstant_ddelta;
-    
+
     get_dtau_ddelta(this, T, rhomolar, Of, dOf_dtau, dOf_ddelta);
     get_dtau_ddelta(this, T, rhomolar, Wrt, dWrt_dtau, dWrt_ddelta);
     get_dtau_ddelta(this, T, rhomolar, Constant, dConstant_dtau, dConstant_ddelta);
@@ -1123,7 +1123,7 @@ long double HelmholtzEOSMixtureBackend::calc_pressure_nocache(long double T, lon
     SimpleState reducing = calc_reducing_state_nocache(mole_fractions);
     long double delta = rhomolar/reducing.rhomolar;
     long double tau = reducing.T/T;
-    
+
     // Calculate derivative if needed
     int nTau = 0, nDelta = 1;
     long double dalphar_dDelta = calc_alphar_deriv_nocache(nTau, nDelta, mole_fractions, tau, delta);
@@ -1147,10 +1147,10 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
         long double T, value, r, eos, rhomolar;
         HelmholtzEOSMixtureBackend *HEOS;
 
-        solver_resid(HelmholtzEOSMixtureBackend *HEOS, long double T, long double value, int other){ 
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, long double T, long double value, int other){
             this->HEOS = HEOS; this->T = T; this->value = value; this->other = other;
         };
-        double call(double rhomolar){ 
+        double call(double rhomolar){
             this->rhomolar = rhomolar;
             switch(other)
             {
@@ -1163,7 +1163,7 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
             default:
                 throw ValueError(format("Input not supported"));
             }
-            
+
             r = eos-value;
             return r;
         };
@@ -1180,7 +1180,7 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
 
         switch(other)
         {
-            
+
             case iSmolar:
             {
                 ymelt = calc_smolar_nocache(_T, rhomelt);
@@ -1208,7 +1208,7 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
             default:
                 throw ValueError();
         }
-        
+
         if (is_in_closed_range(ymelt, yc, y))
         {
             long double rhomolar = Brent(resid, rhomelt, rhoc, LDBL_EPSILON, 1e-12, 100, errstring);
@@ -1220,7 +1220,7 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
             return rhomolar;
         }
         else
-        { 
+        {
             throw ValueError();
         }
     }
@@ -1274,7 +1274,7 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
 long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double p, long double rhomolar_guess)
 {
     int phase;
-    
+
     // Define the residual to be driven to zero
     class solver_TP_resid : public FuncWrapper1D
     {
@@ -1282,11 +1282,11 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         long double T, p, r, peos, rhomolar, rhor, tau, R_u, delta, dalphar_dDelta;
         HelmholtzEOSMixtureBackend *HEOS;
 
-        solver_TP_resid(HelmholtzEOSMixtureBackend *HEOS, long double T, long double p){ 
-            this->HEOS = HEOS; this->T = T; this->p = p; this->rhor = HEOS->get_reducing().rhomolar; 
+        solver_TP_resid(HelmholtzEOSMixtureBackend *HEOS, long double T, long double p){
+            this->HEOS = HEOS; this->T = T; this->p = p; this->rhor = HEOS->get_reducing().rhomolar;
             this->tau = HEOS->get_reducing().T/T; this->R_u = HEOS->gas_constant();
         };
-        double call(double rhomolar){ 
+        double call(double rhomolar){
             this->rhomolar = rhomolar;
             delta = rhomolar/rhor;
             dalphar_dDelta = HEOS->calc_alphar_deriv_nocache(0, 1, HEOS->get_mole_fractions(), tau, delta);
@@ -1310,7 +1310,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
     if (rhomolar_guess < 0) // Not provided
     {
         rhomolar_guess = solver_rho_Tp_SRK(T, p, phase);
-        
+
         if (phase == iphase_gas && rhomolar_guess < 0)// If the guess is bad, probably high temperature, use ideal gas
         {
             rhomolar_guess = p/(gas_constant()*T);
@@ -1367,7 +1367,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(long double T, long do
             long double m_j = 0.480+1.574*accentric_j-0.176*pow(accentric_j, 2);
 
             long double a_j = 0.42747*pow(R_u*Tcj,2)/pcj*pow(1+m_j*(1-sqrt(T/Tcj)),2);
-            
+
             if (i == j){
                 k_ij = 0;
             }
@@ -1394,12 +1394,12 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(long double T, long do
         long double rhomolar0 = p/(Z0*R_u*T);
         long double rhomolar1 = p/(Z1*R_u*T);
         long double rhomolar2 = p/(Z2*R_u*T);
-        
+
         // Check if only one solution is positive, return the solution if that is the case
         if (rhomolar0  > 0 && rhomolar1 <= 0 && rhomolar2 <= 0){ return rhomolar0; }
         if (rhomolar0 <= 0 && rhomolar1 >  0 && rhomolar2 <= 0){ return rhomolar1; }
-        if (rhomolar0 <= 0 && rhomolar1 <= 0 && rhomolar2  > 0){ return rhomolar2; } 
-        
+        if (rhomolar0 <= 0 && rhomolar1 <= 0 && rhomolar2  > 0){ return rhomolar2; }
+
         switch(phase)
         {
         case iphase_liquid:
@@ -1414,7 +1414,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(long double T, long do
 }
 
 long double HelmholtzEOSMixtureBackend::calc_pressure(void)
-{    
+{
     // Calculate the reducing parameters
     _delta = _rhomolar/_reducing.rhomolar;
     _tau = _reducing.T/_T;
@@ -1610,7 +1610,7 @@ SimpleState HelmholtzEOSMixtureBackend::calc_reducing_state_nocache(const std::v
     SimpleState reducing;
     if (is_pure_or_pseudopure){
         reducing = components[0]->pEOS->reduce;
-        
+
     }
     else{
         reducing.T = Reducing.p->Tr(mole_fractions);
@@ -1657,13 +1657,13 @@ long double HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau
         else if (nTau == 3 && nDelta == 0){
             return components[0]->pEOS->d3alphar_dTau3(tau, delta);
         }
-        else 
+        else
         {
             throw ValueError();
         }
     }
     else{
-        
+
         std::size_t N = mole_fractions.size();
         long double summer = 0;
         if (nTau == 0 && nDelta == 0){
@@ -1706,13 +1706,13 @@ long double HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i]->pEOS->d3alphar_dTau3(tau, delta); }
             return summer + pExcess.d3alphar_dTau3(tau, delta);
         }*/
-        else 
+        else
         {
             throw ValueError();
         }
     }
 }
-long double HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<long double> &mole_fractions, 
+long double HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<long double> &mole_fractions,
                                                                   const long double &tau, const long double &delta, const long double &Tr, const long double &rhor)
 {
     if (is_pure_or_pseudopure)
@@ -1747,7 +1747,7 @@ long double HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         else if (nTau == 3 && nDelta == 0){
             return components[0]->pEOS->d3alpha0_dTau3(tau, delta);
         }
-        else 
+        else
         {
             throw ValueError();
         }
@@ -1757,31 +1757,31 @@ long double HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         std::size_t N = mole_fractions.size();
         long double summer = 0;
         long double tau_i, delta_i, rho_ci, T_ci;
-        for (unsigned int i = 0; i < N; ++i){ 
-            rho_ci = components[i]->pEOS->reduce.rhomolar; 
+        for (unsigned int i = 0; i < N; ++i){
+            rho_ci = components[i]->pEOS->reduce.rhomolar;
             T_ci = components[i]->pEOS->reduce.T;
             tau_i = T_ci*tau/Tr;
             delta_i = delta*rhor/rho_ci;
 
-            if (nTau == 0 && nDelta == 0){    
-                summer += mole_fractions[i]*(components[i]->pEOS->base0(tau_i, delta_i)+log(mole_fractions[i])); 
+            if (nTau == 0 && nDelta == 0){
+                summer += mole_fractions[i]*(components[i]->pEOS->base0(tau_i, delta_i)+log(mole_fractions[i]));
             }
             else if (nTau == 0 && nDelta == 1){
-                summer += mole_fractions[i]*rhor/rho_ci*components[i]->pEOS->dalpha0_dDelta(tau_i, delta_i); 
+                summer += mole_fractions[i]*rhor/rho_ci*components[i]->pEOS->dalpha0_dDelta(tau_i, delta_i);
             }
             else if (nTau == 1 && nDelta == 0){
-                summer += mole_fractions[i]*T_ci/Tr*components[i]->pEOS->dalpha0_dTau(tau_i, delta_i); 
+                summer += mole_fractions[i]*T_ci/Tr*components[i]->pEOS->dalpha0_dTau(tau_i, delta_i);
             }
             else if (nTau == 0 && nDelta == 2){
-                summer += mole_fractions[i]*pow(rhor/rho_ci,2)*components[i]->pEOS->d2alpha0_dDelta2(tau_i, delta_i); 
+                summer += mole_fractions[i]*pow(rhor/rho_ci,2)*components[i]->pEOS->d2alpha0_dDelta2(tau_i, delta_i);
             }
             else if (nTau == 1 && nDelta == 1){
-                summer += mole_fractions[i]*rhor/rho_ci*T_ci/Tr*components[i]->pEOS->d2alpha0_dDelta_dTau(tau_i, delta_i); 
+                summer += mole_fractions[i]*rhor/rho_ci*T_ci/Tr*components[i]->pEOS->d2alpha0_dDelta_dTau(tau_i, delta_i);
             }
             else if (nTau == 2 && nDelta == 0){
-                summer += mole_fractions[i]*pow(T_ci/Tr,2)*components[i]->pEOS->d2alpha0_dTau2(tau_i, delta_i); 
+                summer += mole_fractions[i]*pow(T_ci/Tr,2)*components[i]->pEOS->d2alpha0_dTau2(tau_i, delta_i);
             }
-            else 
+            else
             {
                 throw ValueError();
             }
@@ -1944,7 +1944,7 @@ long double HelmholtzEOSMixtureBackend::mixderiv_d_ndalphardni_dxj__constT_V_xi(
 {
     // Gernert 3.118
     return mixderiv_d_ndalphardni_dxj__constdelta_tau_xi(i,j)
-          + mixderiv_ddelta_dxj__constT_V_xi(j)*mixderiv_d_ndalphardni_dDelta(i) 
+          + mixderiv_ddelta_dxj__constT_V_xi(j)*mixderiv_d_ndalphardni_dDelta(i)
           + mixderiv_dtau_dxj__constT_V_xi(j)*mixderiv_d_ndalphardni_dTau(i);
 }
 long double HelmholtzEOSMixtureBackend::mixderiv_ddelta_dxj__constT_V_xi(int j)
@@ -2029,7 +2029,7 @@ long double HelmholtzEOSMixtureBackend::mixderiv_d_ndalphardni_dxj__constdelta_t
     return line1+line2+line3+line4+line5;
 }
 long double HelmholtzEOSMixtureBackend::mixderiv_nd2nalphardnidnj__constT_V(int i, int j)
-{	
+{
     double line0 = mixderiv_ndalphar_dni__constT_V_nj(j); // First term from 7.46
     double line1 = mixderiv_d_ndalphardni_dDelta(i)*mixderiv_nddeltadni__constT_V_nj(j);
     double line2 = mixderiv_d_ndalphardni_dTau(i)*mixderiv_ndtaudni__constT_V_nj(j);

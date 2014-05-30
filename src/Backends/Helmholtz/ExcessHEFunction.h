@@ -1,6 +1,7 @@
 #ifndef EXCESSHE_FUNCTIONS_H
 #define EXCESSHE_FUNCTIONS_H
 
+#include <tr1/memory>
 #include <vector>
 #include "CoolPropFluid.h"
 
@@ -35,7 +36,7 @@ public:
             d.add_number("F", F[i]);
         }
         d.add_number("Npower", cpjson::get_double(val,"Npower"));
-        
+
         // Terms for the power
         d.add_double_vector("n", cpjson::get_double_array(val["n"]));
         d.add_double_vector("d", cpjson::get_double_array(val["d"]));
@@ -59,7 +60,7 @@ public:
     };
 };
 
-/*! 
+/*!
 The abstract base class for departure functions for the excess part of the Helmholtz energy
 */
 class DepartureFunction
@@ -67,7 +68,7 @@ class DepartureFunction
 public:
 	DepartureFunction(){};
 	virtual ~DepartureFunction(){};
-	
+
 	/// The excess Helmholtz energy of the binary pair
 	/// Pure-virtual function (must be implemented in derived class
 	virtual double alphar(double tau, double delta) = 0;
@@ -86,7 +87,7 @@ public:
 	unsigned int N;
 	std::vector<std::vector<DepartureFunctionPointer> > DepartureFunctionMatrix;
 	std::vector<std::vector<double> > F;
-	
+
     ExcessTerm(){};
     void construct(const std::vector<CoolPropFluid*> &components);
 	~ExcessTerm();
