@@ -645,6 +645,9 @@ public:
     // Constructor
     IdealHelmholtzEnthalpyEntropyOffset(long double a1, long double a2):a1(a1), a2(a2){enabled = true;};
 
+    // Set the values in the class
+    void set(long double a1, long double a2){this->a1 = a1; this->a2 = a2; enabled = true;}
+
     //Destructor
     ~IdealHelmholtzEnthalpyEntropyOffset(){};
 

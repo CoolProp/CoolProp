@@ -134,6 +134,10 @@ int main()
     }
     if (1)
     {
+        double h1 = PropsSI("H","P",101325,"Q",0,"n-Propane");
+        set_reference_stateS("n-Propane","NBP");
+        double h2 = PropsSI("H","P",101325,"Q",0,"n-Propane");
+
         std::string RPname = get_fluid_param_string("Water", "REFPROPname");
         std::string s = get_BibTeXKey("n-Propane", "rr");
 

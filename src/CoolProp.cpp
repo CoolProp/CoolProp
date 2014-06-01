@@ -639,56 +639,69 @@ double Props1SI(std::string FluidName,std::string Output)
 //		}
 //}
 //
-//int set_reference_stateS(std::string Ref, std::string reference_state)
-//{
-//	CoolPropStateClassSI CPS(pFluid);
-//	if (!reference_state.compare("IIR"))
-//	{
-//		CoolPropStateClassSI CPS(pFluid);
-//		CPS.update(iT,273.15,iQ,0);
-//		// Get current values for the enthalpy and entropy
-//		double h1 = CPS.h();
-//		double s1 = CPS.s();
-//		double deltah = h1-200000; // offset from 200 kJ/kg enthalpy
-//		double deltas = s1-1000; // offset from 1 kJ/kg/K entropy
-//		double delta_a1 = deltas/((8314.472/pFluid->params.molemass));
-//		double delta_a2 = -deltah/((8314.472/pFluid->params.molemass)*pFluid->reduce.T);
-//		pFluid->phi0list.push_back(new phi0_enthalpy_entropy_offset(delta_a1, delta_a2));
-//		return 0;
-//	}
-//	else if (!reference_state.compare("ASHRAE"))
-//	{
-//		CoolPropStateClassSI CPS(pFluid);
-//		CPS.update(iT,233.15,iQ,0);
-//		// Get current values for the enthalpy and entropy
-//		double h1 = CPS.h();
-//		double s1 = CPS.s();
-//		double deltah = h1-0; // offset from 0 kJ/kg enthalpy
-//		double deltas = s1-0; // offset from 0 kJ/kg/K entropy
-//		double delta_a1 = deltas/((8314.472/pFluid->params.molemass));
-//		double delta_a2 = -deltah/((8314.472/pFluid->params.molemass)*pFluid->reduce.T);
-//		pFluid->phi0list.push_back(new phi0_enthalpy_entropy_offset(delta_a1, delta_a2));
-//		return 0;
-//	}
-//	else if (!reference_state.compare("NBP"))
-//	{
-//		CoolPropStateClassSI CPS(pFluid);
-//		CPS.update(iP,101325.0,iQ,0); // Saturated boiling point at 1 atmosphere
-//		// Get current values for the enthalpy and entropy
-//		double h1 = CPS.h();
-//		double s1 = CPS.s();
-//		double deltah = h1-0; // offset from 0 kJ/kg enthalpy
-//		double deltas = s1-0; // offset from 0 kJ/kg/K entropy
-//		double delta_a1 = deltas/((8314.472/pFluid->params.molemass));
-//		double delta_a2 = -deltah/((8314.472/pFluid->params.molemass)*pFluid->reduce.T);
-//		pFluid->phi0list.push_back(new phi0_enthalpy_entropy_offset(delta_a1, delta_a2));
-//		return 0;
-//	}
-//	else
-//	{ 
-//		return -1;
-//	}
-//}
+int set_reference_stateS(std::string Ref, std::string reference_state)
+{
+    std::tr1::shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;
+    HEOS.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1, Ref)));
+
+	if (!reference_state.compare("IIR"))
+	{
+		HEOS->update(QT_INPUTS, 0, 273.15);
+
+		// Get current values for the enthalpy and entropy
+        double h1 = HEOS->keyed_output(CoolProp::iHmass); // [J/kg]
+		double s1 = HEOS->keyed_output(CoolProp::iSmass); // [J/kg/K]
+		double deltah = h1-200000; // offset from 200000 J/kg enthalpy
+		double deltas = s1-1000; // offset from 1000 J/kg/K entropy
+        double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
+        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
+        HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2);
+		return 0;
+	}
+	else if (!reference_state.compare("ASHRAE"))
+	{
+        HEOS->update(QT_INPUTS, 0, 243.15);
+
+		// Get current values for the enthalpy and entropy
+        double h1 = HEOS->keyed_output(CoolProp::iHmass); // [J/kg]
+		double s1 = HEOS->keyed_output(CoolProp::iSmass); // [J/kg/K]
+		double deltah = h1 - 0; // offset from 0 J/kg enthalpy
+		double deltas = s1 - 0; // offset from 0 J/kg/K entropy
+		double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
+        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
+        HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2);
+		return 0;
+	}
+	else if (!reference_state.compare("NBP"))
+	{
+		// Saturated liquid boiling point at 1 atmosphere
+        HEOS->update(PQ_INPUTS, 101325, 0);
+
+		// Get current values for the enthalpy and entropy
+		double h1 = HEOS->keyed_output(CoolProp::iHmass); // [J/kg]
+		double s1 = HEOS->keyed_output(CoolProp::iSmass); // [J/kg/K]
+		double deltah = h1 - 0; // offset from 0 kJ/kg enthalpy
+		double deltas = s1 - 0; // offset from 0 kJ/kg/K entropy
+		double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
+        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
+        HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2);
+        
+		return 0;
+	}
+    else if (!reference_state.compare("DEF"))
+    {
+        //HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(0,0);
+        throw NotImplementedError("Default reference state has not been implemented yet");
+    }
+    else if (!reference_state.compare("RESET"))
+    {
+        HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(0,0);
+    }
+	else
+	{ 
+		return -1;
+	}
+}
 //int set_reference_stateD(std::string Ref, double T, double rho, double h0, double s0)
 //{
 //	pFluid=Fluids.get_fluid(Ref);
