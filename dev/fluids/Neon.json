@@ -317,5 +317,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Neon"
+  "NAME": "Neon", 
+  "REFPROP_NAME": "NEON"
 }

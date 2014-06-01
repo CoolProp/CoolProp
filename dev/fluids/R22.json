@@ -378,5 +378,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R22"
+  "NAME": "R22", 
+  "REFPROP_NAME": "R22"
 }

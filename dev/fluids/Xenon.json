@@ -248,5 +248,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Xenon"
+  "NAME": "Xenon", 
+  "REFPROP_NAME": "XENON"
 }

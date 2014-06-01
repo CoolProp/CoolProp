@@ -367,6 +367,7 @@
     }
   ], 
   "NAME": "Oxygen", 
+  "REFPROP_NAME": "OXYGEN", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Lemmon-IJT-2004", 

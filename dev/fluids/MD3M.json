@@ -246,5 +246,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "MD3M"
+  "NAME": "MD3M", 
+  "REFPROP_NAME": "MD3M"
 }

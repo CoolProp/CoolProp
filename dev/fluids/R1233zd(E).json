@@ -290,5 +290,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R1233zd(E)"
+  "NAME": "R1233zd(E)", 
+  "REFPROP_NAME": "R1233ZD"
 }

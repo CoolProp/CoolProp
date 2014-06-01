@@ -394,6 +394,7 @@
     }
   ], 
   "NAME": "Nitrogen", 
+  "REFPROP_NAME": "NITROGEN", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Lemmon-IJT-2004", 

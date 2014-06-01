@@ -301,6 +301,7 @@
     }
   ], 
   "NAME": "DimethylEther", 
+  "REFPROP_NAME": "DME", 
   "TRANSPORT": {
     "viscosity": {
       "BibTeX": "Meng-JCED-2012", 

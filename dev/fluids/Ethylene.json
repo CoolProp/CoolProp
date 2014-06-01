@@ -384,5 +384,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Ethylene"
+  "NAME": "Ethylene", 
+  "REFPROP_NAME": "ETHYLENE"
 }

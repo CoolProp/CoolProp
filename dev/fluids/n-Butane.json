@@ -338,6 +338,7 @@
     }
   ], 
   "NAME": "n-Butane", 
+  "REFPROP_NAME": "BUTANE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2002-nButane", 

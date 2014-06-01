@@ -276,5 +276,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "n-Pentane"
+  "NAME": "n-Pentane", 
+  "REFPROP_NAME": "PENTANE"
 }

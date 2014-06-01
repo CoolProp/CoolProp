@@ -80,13 +80,13 @@ You might want to start by looking at CoolProp.h
 	/*/// Get a long that represents the fluid type
 	/// @param FluidName The fluid name as a string
 	/// @returns long element from global type enumeration
-	long getFluidType(std::string FluidName);
+	long getFluidType(std::string FluidName);*/
 
 	/// Get a string for a value from a fluid (numerical values can be obtained from Props1 function)
 	/// @param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"
-	/// @param ParamName A string, one of "aliases", "CAS", "CAS_number", "ASHRAE34", "REFPROPName","REFPROP_name", "TTSE_mode", 
+	/// @param ParamName A string, one of "aliases", "CAS", "CAS_number", "ASHRAE34", "REFPROPName","REFPROP_name", 
 	/// @returns str The string, or an error message if not valid input
-	std::string get_fluid_param_string(std::string FluidName, std::string ParamName);*/
+	std::string get_fluid_param_string(std::string FluidName, std::string ParamName);
 
 	/// Returns the BibTeX key from the bibtex library of CoolProp corresponding to the item requested
 	/// @param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"

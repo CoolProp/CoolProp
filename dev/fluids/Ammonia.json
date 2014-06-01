@@ -299,6 +299,7 @@
     }
   ], 
   "NAME": "Ammonia", 
+  "REFPROP_NAME": "AMMONIA", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Tufeu-BBPC-1984", 

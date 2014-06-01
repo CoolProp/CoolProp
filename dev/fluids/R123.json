@@ -264,6 +264,7 @@
     }
   ], 
   "NAME": "R123", 
+  "REFPROP_NAME": "R123", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Laesecke-IJR-1996", 

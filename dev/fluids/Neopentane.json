@@ -249,5 +249,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Neopentane"
+  "NAME": "Neopentane", 
+  "REFPROP_NAME": "NEOPENTN"
 }

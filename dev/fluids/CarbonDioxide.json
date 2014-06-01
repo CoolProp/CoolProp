@@ -454,6 +454,7 @@
     }
   ], 
   "NAME": "CarbonDioxide", 
+  "REFPROP_NAME": "CO2", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Scalabrin-JPCRD-2006-CO2", 

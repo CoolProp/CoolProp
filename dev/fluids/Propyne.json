@@ -323,5 +323,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Propyne"
+  "NAME": "Propyne", 
+  "REFPROP_NAME": "PROPYNE"
 }

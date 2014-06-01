@@ -320,5 +320,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R14"
+  "NAME": "R14", 
+  "REFPROP_NAME": "R14"
 }

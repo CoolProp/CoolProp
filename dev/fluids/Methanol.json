@@ -303,5 +303,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Methanol"
+  "NAME": "Methanol", 
+  "REFPROP_NAME": "METHANOL"
 }

@@ -294,5 +294,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "CycloPropane"
+  "NAME": "CycloPropane", 
+  "REFPROP_NAME": "CYCLOPRO"
 }

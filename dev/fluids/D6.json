@@ -246,5 +246,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "D6"
+  "NAME": "D6", 
+  "REFPROP_NAME": "D6"
 }

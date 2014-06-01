@@ -296,5 +296,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R365MFC"
+  "NAME": "R365MFC", 
+  "REFPROP_NAME": "R365MFC"
 }

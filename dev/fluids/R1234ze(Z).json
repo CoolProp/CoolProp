@@ -259,5 +259,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R1234ze(Z)"
+  "NAME": "R1234ze(Z)", 
+  "REFPROP_NAME": "N/A"
 }

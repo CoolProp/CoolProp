@@ -308,6 +308,7 @@
     }
   ], 
   "NAME": "ParaHydrogen", 
+  "REFPROP_NAME": "PARAHYD", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2011-Hydrogen", 

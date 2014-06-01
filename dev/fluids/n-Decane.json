@@ -263,6 +263,7 @@
     }
   ], 
   "NAME": "n-Decane", 
+  "REFPROP_NAME": "DECANE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-FPE-2005", 

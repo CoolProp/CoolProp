@@ -286,5 +286,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R143a"
+  "NAME": "R143a", 
+  "REFPROP_NAME": "R143A"
 }

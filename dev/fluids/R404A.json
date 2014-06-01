@@ -296,6 +296,7 @@
     }
   ], 
   "NAME": "R404A", 
+  "REFPROP_NAME": "R404A", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Geller-PURDUE-2001", 

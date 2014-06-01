@@ -262,5 +262,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R41"
+  "NAME": "R41", 
+  "REFPROP_NAME": "R41"
 }

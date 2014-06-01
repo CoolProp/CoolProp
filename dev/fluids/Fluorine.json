@@ -381,5 +381,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Fluorine"
+  "NAME": "Fluorine", 
+  "REFPROP_NAME": "FLUORINE"
 }

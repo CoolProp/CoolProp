@@ -266,5 +266,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "SES36"
+  "NAME": "SES36", 
+  "REFPROP_NAME": "SES36"
 }

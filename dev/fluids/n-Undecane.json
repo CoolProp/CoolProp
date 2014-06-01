@@ -254,5 +254,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "n-Undecane"
+  "NAME": "n-Undecane", 
+  "REFPROP_NAME": "C11"
 }

@@ -340,5 +340,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Propylene"
+  "NAME": "Propylene", 
+  "REFPROP_NAME": "PROPYLEN"
 }

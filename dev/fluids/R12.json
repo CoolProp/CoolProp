@@ -299,5 +299,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R12"
+  "NAME": "R12", 
+  "REFPROP_NAME": "R12"
 }

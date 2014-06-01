@@ -255,5 +255,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "D5"
+  "NAME": "D5", 
+  "REFPROP_NAME": "D5"
 }

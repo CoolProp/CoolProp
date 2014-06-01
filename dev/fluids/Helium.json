@@ -331,6 +331,7 @@
     }
   ], 
   "NAME": "Helium", 
+  "REFPROP_NAME": "HELIUM", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "HANDS-CRYO-1981", 

@@ -423,6 +423,7 @@
     }
   ], 
   "NAME": "Ethane", 
+  "REFPROP_NAME": "ETHANE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Friend-JPCRD-1991", 

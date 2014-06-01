@@ -296,6 +296,7 @@
     }
   ], 
   "NAME": "R507A", 
+  "REFPROP_NAME": "R507A", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Geller-PURDUE-2001", 

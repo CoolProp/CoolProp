@@ -309,5 +309,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "DimethylCarbonate"
+  "NAME": "DimethylCarbonate", 
+  "REFPROP_NAME": "DMC"
 }

@@ -305,6 +305,7 @@
     }
   ], 
   "NAME": "Air", 
+  "REFPROP_NAME": "AIR", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Lemmon-IJT-2004", 

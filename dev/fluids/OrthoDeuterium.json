@@ -328,5 +328,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "OrthoDeuterium"
+  "NAME": "OrthoDeuterium", 
+  "REFPROP_NAME": "N/A"
 }

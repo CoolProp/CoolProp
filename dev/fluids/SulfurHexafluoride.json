@@ -416,6 +416,7 @@
     }
   ], 
   "NAME": "SulfurHexafluoride", 
+  "REFPROP_NAME": "SF6", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2012-SF6", 

@@ -346,6 +346,7 @@
     }
   ], 
   "NAME": "IsoButane", 
+  "REFPROP_NAME": "ISOBUTAN", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2002-Isobutane", 

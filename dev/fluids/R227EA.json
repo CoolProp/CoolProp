@@ -321,5 +321,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R227EA"
+  "NAME": "R227EA", 
+  "REFPROP_NAME": "R227EA"
 }

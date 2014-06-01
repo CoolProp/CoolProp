@@ -285,5 +285,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R32"
+  "NAME": "R32", 
+  "REFPROP_NAME": "R32"
 }

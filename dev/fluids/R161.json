@@ -302,5 +302,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R161"
+  "NAME": "R161", 
+  "REFPROP_NAME": "R161"
 }

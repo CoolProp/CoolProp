@@ -245,5 +245,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Krypton"
+  "NAME": "Krypton", 
+  "REFPROP_NAME": "KRYPTON"
 }

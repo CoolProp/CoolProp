@@ -276,6 +276,7 @@
     }
   ], 
   "NAME": "n-Octane", 
+  "REFPROP_NAME": "OCTANE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-FPE-2005", 

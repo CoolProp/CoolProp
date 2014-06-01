@@ -288,6 +288,7 @@
     }
   ], 
   "NAME": "R124", 
+  "REFPROP_NAME": "R124", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "", 

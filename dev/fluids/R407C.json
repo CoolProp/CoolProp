@@ -292,6 +292,7 @@
     }
   ], 
   "NAME": "R407C", 
+  "REFPROP_NAME": "R407C", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Geller-PURDUE-2001", 

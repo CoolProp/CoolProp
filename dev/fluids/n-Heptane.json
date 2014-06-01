@@ -274,6 +274,7 @@
     }
   ], 
   "NAME": "n-Heptane", 
+  "REFPROP_NAME": "HEPTANE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Heptane", 

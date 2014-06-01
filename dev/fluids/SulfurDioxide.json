@@ -269,5 +269,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "SulfurDioxide"
+  "NAME": "SulfurDioxide", 
+  "REFPROP_NAME": "SO2"
 }

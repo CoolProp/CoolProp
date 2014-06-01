@@ -287,5 +287,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "MethylOleate"
+  "NAME": "MethylOleate", 
+  "REFPROP_NAME": "MOLEATE"
 }

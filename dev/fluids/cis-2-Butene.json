@@ -249,5 +249,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "cis-2-Butene"
+  "NAME": "cis-2-Butene", 
+  "REFPROP_NAME": "C2BUTENE"
 }

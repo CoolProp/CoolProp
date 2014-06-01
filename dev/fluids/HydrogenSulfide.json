@@ -266,6 +266,7 @@
     }
   ], 
   "NAME": "HydrogenSulfide", 
+  "REFPROP_NAME": "H2S", 
   "TRANSPORT": {
     "viscosity": {
       "BibTeX": "QuinonesCisneros-JCED-2012", 

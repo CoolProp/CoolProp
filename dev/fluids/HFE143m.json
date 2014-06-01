@@ -265,5 +265,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "HFE143m"
+  "NAME": "HFE143m", 
+  "REFPROP_NAME": "RE143A"
 }

@@ -134,7 +134,7 @@ int main()
     }
     if (1)
     {
-
+        std::string RPname = get_fluid_param_string("Water","REFPROPname");
         std::string s = get_BibTeXKey("n-Propane", "rr");
 
         std::vector<std::string> tags;

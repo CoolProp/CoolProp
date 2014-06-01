@@ -339,5 +339,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "CycloHexane"
+  "NAME": "CycloHexane", 
+  "REFPROP_NAME": "CYCLOHEX"
 }

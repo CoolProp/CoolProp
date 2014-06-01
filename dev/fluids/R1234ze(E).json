@@ -293,6 +293,7 @@
     }
   ], 
   "NAME": "R1234ze(E)", 
+  "REFPROP_NAME": "R1234ZE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2011", 

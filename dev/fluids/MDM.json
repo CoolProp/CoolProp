@@ -246,5 +246,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "MDM"
+  "NAME": "MDM", 
+  "REFPROP_NAME": "MDM"
 }

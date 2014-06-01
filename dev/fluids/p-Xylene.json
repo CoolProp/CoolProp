@@ -284,5 +284,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "p-Xylene"
+  "NAME": "p-Xylene", 
+  "REFPROP_NAME": "PXYLENE"
 }

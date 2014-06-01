@@ -358,6 +358,7 @@
     }
   ], 
   "NAME": "Ethanol", 
+  "REFPROP_NAME": "ETHANOL", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Ethanol", 

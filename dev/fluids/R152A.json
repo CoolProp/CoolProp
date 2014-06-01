@@ -258,6 +258,7 @@
     }
   ], 
   "NAME": "R152A", 
+  "REFPROP_NAME": "R152A", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Krauss-IJT-1996", 

@@ -300,6 +300,7 @@
     }
   ], 
   "NAME": "Benzene", 
+  "REFPROP_NAME": "BENZENE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Hexane", 

@@ -283,5 +283,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "MethylLinoleate"
+  "NAME": "MethylLinoleate", 
+  "REFPROP_NAME": "MLINOLEA"
 }

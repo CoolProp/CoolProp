@@ -265,6 +265,7 @@
     }
   ], 
   "NAME": "n-Dodecane", 
+  "REFPROP_NAME": "C12", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-FPE-2005", 

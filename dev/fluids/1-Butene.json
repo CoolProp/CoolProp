@@ -262,5 +262,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "1-Butene"
+  "NAME": "1-Butene", 
+  "REFPROP_NAME": "1BUTENE"
 }
