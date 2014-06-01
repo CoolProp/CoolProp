@@ -307,7 +307,7 @@ public:
     long double dDelta2(const long double &tau, const long double &delta) throw();
     long double dDelta_dTau(const long double &tau, const long double &delta) throw();
     long double dTau2(const long double &tau, const long double &delta) throw();
-    long double dDelta3(const long double &tau, const long double &delta) throw() {return _HUGE;}; // TODO: calculate this derivative
+    long double dDelta3(const long double &tau, const long double &delta) throw();
     long double dDelta2_dTau(const long double &tau, const long double &delta) throw();
     long double dDelta_dTau2(const long double &tau, const long double &delta) throw();
     long double dTau3(const long double &tau, const long double &delta) throw();

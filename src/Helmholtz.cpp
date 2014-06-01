@@ -577,6 +577,26 @@ long double ResidualHelmholtzGERG2008Gaussian::dDelta2(const long double &tau, c
     }
     return std::accumulate(s.begin(), s.end(), 0.0);
 };
+long double ResidualHelmholtzGERG2008Gaussian::dDelta3(const long double &tau, const long double &delta) throw()
+{
+    /**
+    Term derived in sympy using
+        
+        from sympy import *
+        n_i, d_i, t_i, tau, delta, eta, gamma, beta, epsilon = symbols('n_i, d_i, t_i, tau, delta, eta, gamma, beta, epsilon')
+        psi = exp(-eta*(delta-epsilon)**2-beta*(delta-gamma))
+        I = n_i*delta**d_i*tau**t_i*psi
+        ccode(simplify(diff(I,delta,3)))
+
+    */
+    for (std::size_t i=0; i<N; ++i)
+    {
+        ResidualHelmholtzGaussianElement &el = elements[i];
+        long double psi=exp(-el.eta*pow(delta-el.epsilon,2)-el.beta*(delta-el.gamma));
+        s[i] = el.n*pow(tau,el.t)*pow(delta,el.d-3)*psi*(3*el.d*pow(delta, 2)*(-2*el.eta + pow(el.beta + 2*el.eta*(delta - el.epsilon), 2)) + 3*el.d*delta*(el.beta - el.d*(el.beta + 2*el.eta*(delta - el.epsilon)) + 2*el.eta*(delta - el.epsilon)) + el.d*(pow(el.d, 2) - 3*el.d + 2) + pow(delta, 3)*(el.beta + 2*el.eta*(delta - el.epsilon))*(6*el.eta - pow(el.beta + 2*el.eta*(delta - el.epsilon), 2)));
+    }
+    return std::accumulate(s.begin(), s.end(), 0.0);
+};
 long double ResidualHelmholtzGERG2008Gaussian::dDelta_dTau(const long double &tau, const long double &delta) throw()
 {
     for (std::size_t i=0; i<N; ++i)
