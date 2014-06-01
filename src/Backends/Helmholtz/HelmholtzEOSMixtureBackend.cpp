@@ -5,7 +5,7 @@
  *      Author: jowr
  */
 
-#include <tr1/memory>
+#include <memory>
 
 #if defined(_MSC_VER)
 #define _CRTDBG_MAP_ALLOC

@@ -1709,7 +1709,7 @@ public:
     long double numerical, analytic;
     
     std::tr1::shared_ptr<CoolProp::BaseHelmholtzTerm> Lead, LogTau, IGPower, PlanckEinstein, PlanckEinstein2, 
-        CP0Constant, CP0PolyT, CP0AlyLee, Gaussian, Lemmon2005, Power, SAFT, NonAnalytic, Exponential;
+        CP0Constant, CP0PolyT, CP0AlyLee, Gaussian, Lemmon2005, Power, SAFT, NonAnalytic, Exponential, GERG2008;
 
     HelmholtzConsistencyFixture(){
         Lead.reset(new CoolProp::IdealHelmholtzLead(1,3));
@@ -1811,6 +1811,23 @@ public:
                                                                          std::vector<long double>(l, l+sizeof(l)/sizeof(l[0]))
                                                                          ));
         }
+        {
+            long double d[] = {1, 4, 1, 2, 2, 2, 2, 2, 3},
+                t[] = {0.0, 1.85, 7.85, 5.4, 0.0, 0.75, 2.8, 4.45, 4.25},
+                n[] = {-0.0098038985517335, 0.00042487270143005, -0.034800214576142, -0.13333813013896, -0.011993694974627, 0.069243379775168, -0.31022508148249, 0.24495491753226, 0.22369816716981},
+                eta[] = {0.0, 0.0, 1.0, 1.0, 0.25, 0.0, 0.0, 0.0, 0.0},
+                epsilon[] = {0.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5},
+                beta[] = {0.0, 0.0, 1.0, 1.0, 2.5, 3.0, 3.0, 3.0, 3.0},
+                gamma[] = {0.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+            GERG2008.reset(new CoolProp::ResidualHelmholtzGERG2008Gaussian(std::vector<long double>(n, n+sizeof(n)/sizeof(n[0])),
+                                                                           std::vector<long double>(d, d+sizeof(d)/sizeof(n[0])),
+                                                                           std::vector<long double>(t, t+sizeof(t)/sizeof(d[0])),
+                                                                           std::vector<long double>(eta, eta+sizeof(eta)/sizeof(eta[0])),
+                                                                           std::vector<long double>(epsilon, epsilon+sizeof(epsilon)/sizeof(epsilon[0])),
+                                                                           std::vector<long double>(beta, beta+sizeof(beta)/sizeof(beta[0])),
+                                                                           std::vector<long double>(gamma, gamma+sizeof(gamma)/sizeof(gamma[0]))
+                                                                           ));
+        }
 
     }
     void call(std::string d, std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta)
@@ -1845,6 +1862,7 @@ public:
         else if (!t.compare("SAFT")){return SAFT;}
         else if (!t.compare("NonAnalytic")){return NonAnalytic;}
         else if (!t.compare("Exponential")){return Exponential;}
+        else if (!t.compare("GERG2008")){return GERG2008;}
         else{
             throw CoolProp::ValueError(format("don't understand helmholtz type: %s",t.c_str()));
         }
@@ -1916,7 +1934,8 @@ public:
 
 std::string terms[] = {"Lead","LogTau","IGPower","PlanckEinstein","PlanckEinstein2",
                        "CP0Constant","CP0PolyT","CP0AlyLee", 
-                       "Gaussian","Lemmon2005","Power","SAFT","NonAnalytic","Exponential"};
+                       "Gaussian","Lemmon2005","Power","SAFT","NonAnalytic","Exponential",
+                       "GERG2008"};
 std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDelta_dTau","dDelta_dTau2","dDelta2_dTau"};
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]")

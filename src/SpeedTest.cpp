@@ -1,4 +1,4 @@
-#include <tr1/memory>
+#include <memory>
 #include "SpeedTest.h"
 #include "AbstractState.h"
 #include "DataStructures.h"

@@ -16,7 +16,7 @@
 #endif
 #endif
 
-#include <tr1/memory>
+#include <memory>
 
 #include <iostream>
 #include <stdlib.h>
