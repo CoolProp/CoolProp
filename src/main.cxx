@@ -56,7 +56,7 @@ struct element
         };
 int main()
 {
-    set_debug_level(10);
+    set_debug_level(0);
     if (0)
     {
         generate_melting_curve_data("Ethylene-I.mlt","ethylene",103.989,110.369);
@@ -134,7 +134,7 @@ int main()
     }
     if (1)
     {
-        std::string RPname = get_fluid_param_string("Water","REFPROPname");
+        std::string RPname = get_fluid_param_string("Water", "REFPROPname");
         std::string s = get_BibTeXKey("n-Propane", "rr");
 
         std::vector<std::string> tags;

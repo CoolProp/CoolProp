@@ -82,9 +82,16 @@ You might want to start by looking at CoolProp.h
 	/// @returns long element from global type enumeration
 	long getFluidType(std::string FluidName);*/
 
-	/// Get a string for a value from a fluid (numerical values can be obtained from Props1 function)
+	/// Get a string for a value from a fluid (numerical values for the fluid can be obtained from Props1SI function)
 	/// @param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"
-	/// @param ParamName A string, one of "aliases", "CAS", "CAS_number", "ASHRAE34", "REFPROPName","REFPROP_name", 
+	/// @param ParamName A string, can be in one of the terms described in the following table
+    ///
+    ///                  ParamName                     | Description
+    ///                   --------------------------   | ----------------------------------------
+    ///                  "aliases"                     | A comma separated list of aliases for the fluid
+    ///                   "CAS", "CAS_number"          | The CAS number
+    ///                   "ASHRAE34"                   | The ASHRAE standard 34 safety rating
+    ///                   "REFPROPName","REFPROP_name" | The name of the fluid used in REFPROP
 	/// @returns str The string, or an error message if not valid input
 	std::string get_fluid_param_string(std::string FluidName, std::string ParamName);
 
