@@ -162,6 +162,7 @@
         {
           "a1": -15.43197779494592, 
           "a2": 11.90245830296599, 
+          "reference": "IIR", 
           "type": "IdealGasEnthalpyEntropyOffset"
         }
       ], 

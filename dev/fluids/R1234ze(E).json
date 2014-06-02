@@ -162,6 +162,12 @@
             11.02164592701035
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": 0.85309349094503, 
+          "a2": 0.385031495925059, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [

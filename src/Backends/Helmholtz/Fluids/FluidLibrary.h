@@ -158,13 +158,6 @@ protected:
                 std::vector<long double> c = cpjson::get_long_double_array(contribution["c"]);
                 EOS.alpha0.PlanckEinstein2 = IdealHelmholtzPlanckEinstein2(n, t, c);
             }
-            else if (!type.compare("IdealGasHelmholtzEnthalpyEntropyOffset"))
-            {
-                if (EOS.alpha0.EnthalpyEntropyOffset.is_enabled() == true){throw ValueError("Cannot add ");}
-                long double a1 = cpjson::get_double(contribution, "a1");
-                long double a2 = cpjson::get_double(contribution, "a2");
-                EOS.alpha0.EnthalpyEntropyOffset = IdealHelmholtzEnthalpyEntropyOffset(a1, a2);
-            }
             else if (!type.compare("IdealGasHelmholtzCP0Constant"))
             {
                 if (EOS.alpha0.CP0Constant.is_enabled() == true){throw ValueError("Cannot add ");}
@@ -189,6 +182,13 @@ protected:
                 long double Tc = cpjson::get_double(contribution, "Tc");
                 long double T0 = cpjson::get_double(contribution, "T0");
                 EOS.alpha0.CP0AlyLee = IdealHelmholtzCP0AlyLee(c, Tc, T0);
+            }
+            else if (!type.compare("IdealGasHelmholtzEnthalpyEntropyOffset"))
+            {
+                long double a1 = cpjson::get_double(contribution, "a1");
+                long double a2 = cpjson::get_double(contribution, "a2");
+                std::string reference = cpjson::get_string(contribution, "reference");
+                EOS.alpha0.EnthalpyEntropyOffset = IdealHelmholtzEnthalpyEntropyOffset(a1, a2, reference);
             }
             else
             {

@@ -1,6 +1,7 @@
 
 
-
+#include "Backends/Helmholtz/HelmholtzEOSBackend.h"
+#include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "Backends/REFPROP/REFPROPBackend.h"
 #include <time.h>
@@ -57,6 +58,39 @@ struct element
 int main()
 {
     set_debug_level(0);
+    if (1)
+    {
+        std::string NBP_refs[] = {"Helium","Ethylene","Ethanol","n-Dodecane","Benzene","n-Undecane","Neon","Fluorine","Methanol","Acetone","Methane","Ethane","n-Pentane","n-Hexane","n-Heptane","n-Octane","CycloHexane","MD3M","MM","D4","MethylPalmitate","MethylStearate","MethylOleate","MethylLinoleate","MethylLinolenate","m-Xylene","Air"};
+        std::string IIR_refs[] = {"SES36","R143a","CycloPropane","Propylene","R227EA","R365MFC","R161","HFE143m","SulfurHexafluoride","CarbonDioxide","R1234ze(E)","R22","R124","Propyne","R507A","R152A","R123","R11","n-Butane","IsoButane","RC318","R21","R114","R13","R12","R113","R1233zd(E)","R41"};
+        for (std::size_t i = 0; i < sizeof(NBP_refs)/sizeof(NBP_refs[0]); ++i)
+        {
+            /*try{*/
+                HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,NBP_refs[i]));
+                HEOS.update(PQ_INPUTS, 101325, 0);
+                double delta_a1 = HEOS.smass()/(8.314472/HEOS.molar_mass());
+                double delta_a2 = -HEOS.hmass()/(8.314472/HEOS.molar_mass()*HEOS.get_reducing().T);
+                std::cout << format("%s,%s,%16.15g,%16.15g\n",NBP_refs[i].c_str(),"NBP",delta_a1, delta_a2);
+            /*}
+            catch(const std::exception &e)
+            {
+                std::cout << "ERROR FOR " << NBP_refs[i] << std::endl;
+            }*/
+        }
+        for (std::size_t i = 0; i < sizeof(IIR_refs)/sizeof(IIR_refs[0]); ++i)
+        {
+            try{
+                HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,IIR_refs[i]));
+                HEOS.update(QT_INPUTS, 0, 273.15);
+                double delta_a1 = HEOS.smass()/(8.314472/HEOS.molar_mass());
+                double delta_a2 = -HEOS.hmass()/(8.314472/HEOS.molar_mass()*HEOS.get_reducing().T);
+                std::cout << format("%s,%s,%16.15g,%16.15g\n",IIR_refs[i].c_str(),"IIR",delta_a1, delta_a2);
+            }
+            catch(const std::exception &e)
+            {
+                std::cout << "ERROR FOR " << IIR_refs[i] << std::endl;
+            }
+        }
+    }
     if (0)
     {
         generate_melting_curve_data("Ethylene-I.mlt","ethylene",103.989,110.369);

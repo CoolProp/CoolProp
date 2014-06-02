@@ -316,7 +316,7 @@ public:
     double rhomass(void){return _rhomolar*molar_mass();};
     /// Return the pressure in Pa
     double p(void)  {return _p;};
-    /// Return the vapor quality (mol/mol) Q = 0 for saturated liquid
+    /// Return the vapor quality (mol/mol); Q = 0 for saturated liquid
     double Q(void)  {return _Q;};
 
     /// Return the reciprocal of the reduced temperature (\f$\tau = T_c/T\f$)
