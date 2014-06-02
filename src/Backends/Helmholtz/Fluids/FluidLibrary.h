@@ -791,10 +791,6 @@ public:
         fluid.name = fluid_json["NAME"].GetString(); name_vector.push_back(fluid.name);
         // CAS number
         fluid.CAS = fluid_json["CAS"].GetString();
-        if (!fluid_json.HasMember("REFPROP_NAME"))
-        {
-            std::cout << fluid.name << std::endl;
-        }
         // REFPROP alias
         fluid.REFPROPname = fluid_json["REFPROP_NAME"].GetString();
         // Critical state

@@ -179,8 +179,8 @@
           "type": "IdealGasHelmholtzCP0PolyT"
         }, 
         {
-          "a1": -8.28406664756038, 
-          "a2": 8.00843244470562, 
+          "a1": -26.6772954975428, 
+          "a2": 16.0611372782126, 
           "reference": "IIR", 
           "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }

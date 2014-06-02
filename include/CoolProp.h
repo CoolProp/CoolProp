@@ -125,7 +125,7 @@ You might want to start by looking at CoolProp.h
     \f]
     where \f$ \Delta s = s-_{spec} \f$ and \f$ \Delta h = h-_{spec} \f$
     */
-	int set_reference_stateS(std::string FluidName, std::string reference_state);
+	void set_reference_stateS(std::string FluidName, std::string reference_state);
 
 	/// Set the reference state based on a thermodynamic state point
 	/// @param FluidName The name of the fluid
@@ -133,7 +133,7 @@ You might want to start by looking at CoolProp.h
 	/// @param rho Density at reference state [mol/m^3]
 	/// @param h0 Enthalpy at reference state [J/kg]
 	/// @param s0 Entropy at references state [J/kg/K]
-	int set_reference_stateD(std::string FluidName, double T, double rho, double h0, double s0);
+	void set_reference_stateD(std::string FluidName, double T, double rho, double h0, double s0);
 
     /*
     /// Return the phase of the given state point with temperature, pressure as inputs

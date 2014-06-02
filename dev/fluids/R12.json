@@ -175,8 +175,8 @@
           "type": "IdealGasHelmholtzPlanckEinstein"
         }, 
         {
-          "a1": -10.1855125183786, 
-          "a2": 6.51519136530849, 
+          "a1": -24.7279903483588, 
+          "a2": 14.0673715241366, 
           "reference": "IIR", 
           "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }

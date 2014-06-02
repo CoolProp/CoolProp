@@ -639,7 +639,7 @@ double Props1SI(std::string FluidName,std::string Output)
 //		}
 //}
 //
-int set_reference_stateS(std::string Ref, std::string reference_state)
+void set_reference_stateS(std::string Ref, std::string reference_state)
 {
     std::tr1::shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;
     HEOS.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1, Ref)));
@@ -654,7 +654,6 @@ int set_reference_stateS(std::string Ref, std::string reference_state)
         double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
         double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "IIR");
-		return 0;
 	}
 	else if (!reference_state.compare("ASHRAE"))
 	{
@@ -666,7 +665,6 @@ int set_reference_stateS(std::string Ref, std::string reference_state)
 		double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
         double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "ASHRAE");
-		return 0;
 	}
 	else if (!reference_state.compare("NBP"))
 	{
@@ -678,8 +676,6 @@ int set_reference_stateS(std::string Ref, std::string reference_state)
 		double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
         double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "NBP");
-
-		return 0;
 	}
     else if (!reference_state.compare("DEF"))
     {
@@ -692,7 +688,7 @@ int set_reference_stateS(std::string Ref, std::string reference_state)
     }
 	else
 	{ 
-		return -1;
+        throw ValueError(format("reference state string is invalid: [%s]",reference_state.c_str()));
 	}
 }
 //int set_reference_stateD(std::string Ref, double T, double rho, double h0, double s0)

@@ -64,25 +64,27 @@ int main()
         std::string IIR_refs[] = {"SES36","R143a","CycloPropane","Propylene","R227EA","R365MFC","R161","HFE143m","SulfurHexafluoride","CarbonDioxide","R1234ze(E)","R22","R124","Propyne","R507A","R152A","R123","R11","n-Butane","IsoButane","RC318","R21","R114","R13","R12","R113","R1233zd(E)","R41"};
         for (std::size_t i = 0; i < sizeof(NBP_refs)/sizeof(NBP_refs[0]); ++i)
         {
-            /*try{*/
+            try{
+                //set_reference_stateS(NBP_refs[i],"RESET");
                 HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,NBP_refs[i]));
                 HEOS.update(PQ_INPUTS, 101325, 0);
-                double delta_a1 = HEOS.smass()/(8.314472/HEOS.molar_mass());
-                double delta_a2 = -HEOS.hmass()/(8.314472/HEOS.molar_mass()*HEOS.get_reducing().T);
+                double delta_a1 = HEOS.smass()/(HEOS.gas_constant()/HEOS.molar_mass());
+                double delta_a2 = -HEOS.hmass()/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing().T);
                 std::cout << format("%s,%s,%16.15g,%16.15g\n",NBP_refs[i].c_str(),"NBP",delta_a1, delta_a2);
-            /*}
+            }
             catch(const std::exception &e)
             {
                 std::cout << "ERROR FOR " << NBP_refs[i] << std::endl;
-            }*/
+            }
         }
         for (std::size_t i = 0; i < sizeof(IIR_refs)/sizeof(IIR_refs[0]); ++i)
         {
             try{
+                //set_reference_stateS(IIR_refs[i],"RESET");
                 HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,IIR_refs[i]));
                 HEOS.update(QT_INPUTS, 0, 273.15);
-                double delta_a1 = HEOS.smass()/(8.314472/HEOS.molar_mass());
-                double delta_a2 = -HEOS.hmass()/(8.314472/HEOS.molar_mass()*HEOS.get_reducing().T);
+                double delta_a1 = (HEOS.smass()-1000)/(HEOS.gas_constant()/HEOS.molar_mass());
+                double delta_a2 = -(HEOS.hmass()-200000)/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing().T);
                 std::cout << format("%s,%s,%16.15g,%16.15g\n",IIR_refs[i].c_str(),"IIR",delta_a1, delta_a2);
             }
             catch(const std::exception &e)
@@ -90,6 +92,7 @@ int main()
                 std::cout << "ERROR FOR " << IIR_refs[i] << std::endl;
             }
         }
+        double rr = 0;
     }
     if (0)
     {
@@ -168,7 +171,7 @@ int main()
     }
     if (1)
     {
-        double h1 = PropsSI("H","P",101325,"Q",0,"n-Propane");
+        double h1 = PropsSI("H","T",273.15,"Q",0,"CO2");
         set_reference_stateS("n-Propane","NBP");
         double h2 = PropsSI("H","P",101325,"Q",0,"n-Propane");
 
