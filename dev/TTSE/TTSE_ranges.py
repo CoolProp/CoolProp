@@ -227,7 +227,7 @@ def getlim(key,dicts,fac=1):
 fluid = 'water'
 CP.enable_TTSE_LUT(fluid)
 
-PRINT = False
+PRINT = True
 
 if PRINT:
     points  = 200
@@ -415,11 +415,11 @@ axVTP.set_zlabel(r'log $p$')
 
 
 if toFile:
-    figHPS.savefig('phs.png', dpi = dpi, transparent = True)
-    figHPS.savefig('phs.pdf', transparent = True)
+    figHPS.savefig('phs-'+fluid+'.png', dpi = dpi, transparent = True)
+    figHPS.savefig('phs-'+fluid+'.pdf', transparent = True)
     #figHPS.close()
-    figVTP.savefig('pvT.png', dpi = dpi, transparent = True)
-    figVTP.savefig('pvT.pdf', transparent = True)
+    figVTP.savefig('pvT-'+fluid+'.png', dpi = dpi, transparent = True)
+    figVTP.savefig('pvT-'+fluid+'.pdf', transparent = True)
     #figVTP.close()
     #plt.savefig('TTSE_RANGES.pdf')
 else:
