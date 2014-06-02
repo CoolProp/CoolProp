@@ -169,27 +169,27 @@ double AbstractState::keyed_output(int key)
     case iDmolar:
         return rhomolar();
     case iDmass:
-        return rhomolar()*molar_mass();
+        return rhomass();
     case iHmolar:
         return hmolar();
     case iHmass:
-        return hmolar()/molar_mass();
+        return hmass();
     case iSmolar:
         return smolar();
     case iSmass:
-        return smolar()/molar_mass();
+        return smass();
     case iUmolar:
         return umolar();
     case iUmass:
-        return umolar()/molar_mass();
+        return umass();
     case iCvmolar:
         return cvmolar();
     case iCvmass:
-        return cvmolar()/molar_mass();
+        return cvmass();
     case iCpmolar:
         return cpmolar();
     case iCpmass:
-        return cpmolar()/molar_mass();
+        return cpmass();
     case imolar_mass:
         return molar_mass();
     case iT_reducing:

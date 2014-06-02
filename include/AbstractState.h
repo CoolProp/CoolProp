@@ -312,6 +312,8 @@ public:
     double T(void)  {return _T;};
     /// Return the molar density in mol/m^3
     double rhomolar(void){return _rhomolar;};
+    /// Return the mass density in kg/m^3
+    double rhomass(void){return _rhomolar*molar_mass();};
     /// Return the pressure in Pa
     double p(void)  {return _p;};
     /// Return the vapor quality (mol/mol) Q = 0 for saturated liquid
@@ -333,14 +335,24 @@ public:
 
     /// Return the molar enthalpy in J/mol
     double hmolar(void);
+    /// Return the mass enthalpy in J/kg
+    double hmass(void){return hmolar()/molar_mass();};
     /// Return the molar entropy in J/mol/K
     double smolar(void);
+    /// Return the molar entropy in J/kg/K
+    double smass(void){return smolar()/molar_mass();};
     /// Return the molar internal energy in J/mol
     double umolar(void);
+    /// Return the mass internal energy in J/kg
+    double umass(void){return umolar()/molar_mass();};
     /// Return the molar constant pressure specific heat in J/mol/K
     double cpmolar(void);
+    /// Return the mass constant pressure specific heat in J/kg/K
+    double cpmass(void){return cpmolar()/molar_mass();};
     /// Return the molar constant volume specific heat in J/mol/K
     double cvmolar(void);
+    /// Return the mass constant volume specific heat in J/kg/K
+    double cvmass(void){return cvmolar()/molar_mass();};
     /// Return the speed of sound in m/s
     double speed_sound(void);
     /// Return the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa
