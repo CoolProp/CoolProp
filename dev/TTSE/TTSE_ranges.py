@@ -57,30 +57,33 @@ def fill_Z(X,Y):
     return np.transpose(tr)
 
 
-def plotLineAndProjection(ax,X,Y,Z,draw='CXYZ',color='black'):
+def plotLineAndProjection(ax,X,Y,Z,draw='CXYZ',color='black',xlim=None,ylim=None,zlim=None):
     alpha = 0.5
     
     if 'C' in draw:
         ax.plot(X,Y,zs=Z,color=color)
     #else:
     #    ax.plot(X,Y,Z,color=color,alpha=0)
-        
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    zlim = ax.get_zlim()
+    
+    if xlim == None: xlim = ax.get_xlim()
+    if ylim == None: ylim = ax.get_ylim()
+    if zlim == None: zlim = ax.get_zlim()
     
     if 'X' in draw:
-        constArr = np.ones_like(X) * xlim[0]  
+        constArr = np.ones_like(X) * xlim[0]
         ax.plot(constArr,Y,zs=Z,color=color,alpha=alpha)
+        ax.set_xlim(xlim)
     if 'Y' in draw:
         constArr = np.ones_like(Y) * ylim[1]
         ax.plot(X,constArr,zs=Z,color=color,alpha=alpha)
+        ax.set_ylim(ylim)
     if 'Z' in draw:
         constArr = np.ones_like(Z) * zlim[0]  
         ax.plot(X,Y,zs=constArr,color=color,alpha=alpha)
+        ax.set_zlim(zlim)
 
 
-def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue'):
+def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue',xlim=None,ylim=None,zlim=None):
     '''
     A simple wrapper around the plotting routines
     
@@ -109,24 +112,62 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue'):
     if 'Y' in invert: ax.invert_yaxis()
     if 'Z' in invert: ax.invert_zaxis()
     
+    #dummyLines = ax.plot_wireframe(X, Y, Z)
+    
+#    cset = ax.contour(X, Y, Z, cmap=cm.coolwarm)
+#    ax.clabel(cset, fontsize=9, inline=1)
+    
+#    cmap = plt.get_cmap('jet')
+#    ax.plot_surface(
+#      X, Y, Z, 
+#      rstride=np.round(resFactor*points/dpi), 
+#      cstride=np.round(resFactor*points/dpi), 
+#      alpha=0.5, 
+#      cmap=cmap,
+#      linewidth=0, 
+#      #antialiased=False
+#      ) 
+
+#    if 'C' in draw:
+#        ax.plot_wireframe(
+#          X, Y, Z, 
+#          rstride=stride, 
+#          cstride=stride, 
+#          alpha=0.5, 
+#          color = color,
+#          #cmap=cmap,
+#          #linewidth=0, 
+#          #antialiased=False
+#          )
+#    else:
+#        ax.plot_wireframe(
+#          X, Y, Z, 
+#          #rstride=stride, 
+#          #cstride=stride, 
+#          #alpha=0.5, 
+#          #cmap=cmap,
+#          linewidth=0, 
+#          #antialiased=False
+#          )    
+    
     ## Reduce data again and call the plotting wrapper
     stride=np.round(len(Xr)/3.0)
     
     for i in range(len(Xr)):
         if np.mod(i,stride)==0:
-            plotLineAndProjection(ax,Xr[i],Yr[i],Zr[i],draw=draw,color=color)
-    plotLineAndProjection(ax,Xr[-1],Yr[-1],Zr[-1],draw=draw,color=color)
+            plotLineAndProjection(ax,Xr[i],Yr[i],Zr[i],draw=draw,color=color,xlim=xlim,ylim=ylim,zlim=zlim)
+    plotLineAndProjection(ax,Xr[-1],Yr[-1],Zr[-1],draw=draw,color=color,xlim=xlim,ylim=ylim,zlim=zlim)
             
     for i in range(len(Xr[0])):
         if np.mod(i,stride)==0:
             Xi = [row[i] for row in Xr]
             Yi = [row[i] for row in Yr]
             Zi = [row[i] for row in Zr]
-            plotLineAndProjection(ax,Xi,Yi,Zi,draw=draw,color=color)
+            plotLineAndProjection(ax,Xi,Yi,Zi,draw=draw,color=color,xlim=xlim,ylim=ylim,zlim=zlim)
     Xi = [row[-1] for row in Xr]
     Yi = [row[-1] for row in Yr]
     Zi = [row[-1] for row in Zr]
-    plotLineAndProjection(ax,Xi,Yi,Zi,draw=draw,color=color)
+    plotLineAndProjection(ax,Xi,Yi,Zi,draw=draw,color=color,xlim=xlim,ylim=ylim,zlim=zlim)
     
     #cset = ax.contour(X, Y, Z, cmap=cm.coolwarm)
     #ax.clabel(cset, fontsize=9, inline=1)
@@ -249,11 +290,12 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue'):
     #majorFormatter = matplotlib.ticker.EngFormatter("J/kg")
     #majorFormatter = matplotlib.ticker.
     majorFormatter = matplotlib.ticker.ScalarFormatter()
-    majorFormatter.set_scientific(True)
-    majorFormatter.set_powerlimits((2,2))
+    #majorFormatter.set_scientific(True)
+    majorFormatter.set_powerlimits((-4,4))
     ax.xaxis.set_major_formatter(majorFormatter)
     ax.yaxis.set_major_formatter(majorFormatter)
     ax.zaxis.set_major_formatter(majorFormatter)
+
     
     return fig, ax, Z
 
@@ -265,7 +307,7 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue'):
 fluid = 'water'
 CP.enable_TTSE_LUT(fluid)
 
-PRINT = False
+PRINT = True
 
 if PRINT:
     points  = 200
@@ -345,17 +387,8 @@ def get_Z(X_in,Y_in,fluid,out='S'):
         Z = np.NAN
     return Z
 
-figHPS, axHPS, Z = make3Dlpot(X,Y,invert='Z',draw='XZ')
-## Plot the two-phase dome and its projections 
-plotLineAndProjection(axHPS,X_TP,Y_TP,Z_TP)
-
-make3Dlpot(X,Y,Z=Z,ax=axHPS,draw='Y')
-
-axHPS.set_xlabel(r'$h$')
-axHPS.set_ylabel(r'log $p$')
-axHPS.set_zlabel(r'$s$')
-
-## Now we also need thet other variables
+## Now we also need the variables
+Z = fill_Z(X,Y)
 get_Z_old = get_Z
 
 def get_Z(X_in,Y_in,fluid):
@@ -366,8 +399,7 @@ def get_Z(X_in,Y_in,fluid):
     return get_Z_old(X_in,Y_in,fluid,out='T')
 Tdata = fill_Z(X,Y)
 
-HPSdict = {'H': X, 'P': Y, 'S': Z, 'V': logVdata, 'T': Tdata}
-
+HPSdict = {'H': X, 'P': Y, 'S': Z, 'V': logVdata, 'T': Tdata, 'H_TP': X_TP, 'P_TP': Y_TP, 'S_TP': Z_TP}
 
 
 #########################################################################
@@ -407,30 +439,19 @@ def get_Z(X_in,Y_in,fluid,out='P'):
         Z = np.NAN
     return Z
 
-figVTP, axVTP, Z = make3Dlpot(X,Y,draw='XZ')
-## Plot the two-phase dome and its projections 
-plotLineAndProjection(axVTP,X_TP,Y_TP,Z_TP)
-
-make3Dlpot(X,Y,Z=Z,ax=axVTP,draw='Y')
-
-axVTP.set_xlabel(r'log $v$')
-axVTP.set_ylabel(r'$T$')
-axVTP.set_zlabel(r'log $p$')
-
-## Now we also need thet other variables
+## Now we also need the variables
+Z = fill_Z(X,Y)
 get_Z_old = get_Z
 
 def get_Z(X_in,Y_in,fluid):
-    return get_Z_old(X_in,Y_in,fluid,out='H')
-
+    return np.power(10.0,get_Z_old(X_in,Y_in,fluid,out='H'))
 Hdata = fill_Z(X,Y)
 
 def get_Z(X_in,Y_in,fluid):
-    return get_Z_old(X_in,Y_in,fluid,out='S')
-
+    return np.power(10.0,get_Z_old(X_in,Y_in,fluid,out='S'))
 Sdata = fill_Z(X,Y)
 
-VTPdict = {'V': X, 'T': Y, 'P': Z, 'H': Hdata, 'S': Sdata}
+VTPdict = {'V': X, 'T': Y, 'P': Z, 'H': Hdata, 'S': Sdata, 'V_TP': X_TP, 'T_TP': Y_TP, 'P_TP': Z_TP}
 
 
 
@@ -440,12 +461,55 @@ VTPdict = {'V': X, 'T': Y, 'P': Z, 'H': Hdata, 'S': Sdata}
 #
 #
 #########################################################################
+def getlim(key,dicts,fac=1):
+    min = np.min([ dict[key]/fac for dict in dicts ])
+    max = np.max([ dict[key]/fac for dict in dicts ])
+    return [np.floor(min)*fac, np.ceil(max)*fac]
+
+dicts = [HPSdict,VTPdict]
+
+Hlim = getlim('H',dicts,fac=1e6)
+Plim = getlim('P',dicts)
+Slim = getlim('S',dicts,fac=1e3)
+Vlim = getlim('V',dicts)
+Tlim = getlim('T',dicts,fac=1e2)
+
+figHPS, axHPS, Z = make3Dlpot(HPSdict['H'],HPSdict['P'],Z=HPSdict['S'],invert='Z',draw='XYZ',color='blue',xlim=Hlim,ylim=Plim,zlim=Slim[::-1])
+## Plot the two-phase dome and its projections 
+plotLineAndProjection(axHPS,HPSdict['H_TP'],HPSdict['P_TP'],HPSdict['S_TP'])
+## .. and add the other plot
+make3Dlpot(VTPdict['H'],VTPdict['P'],Z=VTPdict['S'],ax=axHPS,draw='XYZ',color='red')
+
+axHPS.set_xlabel(r'$h$')
+axHPS.set_ylabel(r'log $p$')
+axHPS.set_zlabel(r'$s$')
+
+
+
+
+
+
+figVTP, axVTP, Z = make3Dlpot(VTPdict['V'],VTPdict['T'],Z=VTPdict['P'],draw='XYZ',color='red',xlim=Vlim,ylim=Tlim,zlim=Plim)
+## Plot the two-phase dome and its projections 
+plotLineAndProjection(axVTP,VTPdict['V_TP'],VTPdict['T_TP'],VTPdict['P_TP'])
+## .. and add the other plot
+make3Dlpot(HPSdict['V'],HPSdict['T'],Z=HPSdict['P'],ax=axVTP,draw='XYZ',color='blue')
+
+axVTP.set_xlabel(r'log $v$')
+axVTP.set_ylabel(r'$T$')
+axVTP.set_zlabel(r'log $p$')
+
+
+
+
+
+
 
 #make3Dlpot(fig=figHPS,HPSdict,Y,invert='Z',draw='XZ')
 
-make3Dlpot(HPSdict['V'],HPSdict['T'],Z=HPSdict['P'],ax=axVTP,draw='XYZ',color='red')
 
-make3Dlpot(VTPdict['H'],VTPdict['P'],Z=VTPdict['S'],ax=axHPS,draw='C',color='red')
+
+
 
 #make3Dlpot(X,Y,Z=Z,ax=axVTP,draw='C')
 
@@ -494,8 +558,10 @@ make3Dlpot(VTPdict['H'],VTPdict['P'],Z=VTPdict['S'],ax=axHPS,draw='C',color='red
 #fig.colorbar(surf, shrink=0.5, aspect=5)
 if toFile:
     figHPS.savefig('phs.png', dpi = dpi, transparent = True)
+    figHPS.savefig('phs.pdf', transparent = True)
     #figHPS.close()
     figVTP.savefig('pvT.png', dpi = dpi, transparent = True)
+    figVTP.savefig('pvT.pdf', transparent = True)
     #figVTP.close()
     #plt.savefig('TTSE_RANGES.pdf')
 else:
