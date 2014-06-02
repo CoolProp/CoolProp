@@ -11,19 +11,6 @@ import scipy.interpolate
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib._pylab_helpers
 
-#fig = plt.figure(figsize=(10,5))
-#ax1 = fig.add_axes((0.08,0.1,0.32,0.83))
-#ax2 = fig.add_axes((0.50,0.1,0.32,0.83))
-#
-#cNorm  = colors.LogNorm(vmin=1e-12, vmax=10)
-#scalarMap = cmx.ScalarMappable(norm = cNorm, cmap = plt.get_cmap('jet'))
-#
-#
-#
-#plt.savefig('TTSE_BICUBIC.png', dpi = 300, transparent = True)
-#plt.savefig('TTSE_BICUBIC.pdf')
-#plt.close()
-
 def fill_nan(A):
     '''
     interpolate to fill nan values
@@ -112,43 +99,6 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue',xlim=None,y
     if 'Y' in invert: ax.invert_yaxis()
     if 'Z' in invert: ax.invert_zaxis()
     
-    #dummyLines = ax.plot_wireframe(X, Y, Z)
-    
-#    cset = ax.contour(X, Y, Z, cmap=cm.coolwarm)
-#    ax.clabel(cset, fontsize=9, inline=1)
-    
-#    cmap = plt.get_cmap('jet')
-#    ax.plot_surface(
-#      X, Y, Z, 
-#      rstride=np.round(resFactor*points/dpi), 
-#      cstride=np.round(resFactor*points/dpi), 
-#      alpha=0.5, 
-#      cmap=cmap,
-#      linewidth=0, 
-#      #antialiased=False
-#      ) 
-
-#    if 'C' in draw:
-#        ax.plot_wireframe(
-#          X, Y, Z, 
-#          rstride=stride, 
-#          cstride=stride, 
-#          alpha=0.5, 
-#          color = color,
-#          #cmap=cmap,
-#          #linewidth=0, 
-#          #antialiased=False
-#          )
-#    else:
-#        ax.plot_wireframe(
-#          X, Y, Z, 
-#          #rstride=stride, 
-#          #cstride=stride, 
-#          #alpha=0.5, 
-#          #cmap=cmap,
-#          linewidth=0, 
-#          #antialiased=False
-#          )    
     
     ## Reduce data again and call the plotting wrapper
     stride=np.round(len(Xr)/3.0)
@@ -172,41 +122,6 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue',xlim=None,y
     #cset = ax.contour(X, Y, Z, cmap=cm.coolwarm)
     #ax.clabel(cset, fontsize=9, inline=1)
     
-#    cmap = plt.get_cmap('jet')
-#    ax.plot_surface(
-#      X, Y, Z, 
-#      rstride=np.round(resFactor*points/dpi), 
-#      cstride=np.round(resFactor*points/dpi), 
-#      alpha=0.5, 
-#      cmap=cmap,
-#      linewidth=0, 
-#      #antialiased=False
-#      )
-
-#
-#    stride=np.round(len(X)/7)
-#    
-#    if 'C' in draw:
-#        ax.plot_wireframe(
-#          X, Y, Z, 
-#          rstride=stride, 
-#          cstride=stride, 
-#          alpha=0.5, 
-#          color = color,
-#          #cmap=cmap,
-#          #linewidth=0, 
-#          #antialiased=False
-#          )
-#    else:
-#        ax.plot_wireframe(
-#          X, Y, Z, 
-#          #rstride=stride, 
-#          #cstride=stride, 
-#          #alpha=0.5, 
-#          #cmap=cmap,
-#          linewidth=0, 
-#          #antialiased=False
-#          )    
     ## In case we need a surface plot
     #from matplotlib import cm
     #from matplotlib.ticker import LinearLocator, FormatStrFormatter
@@ -294,20 +209,25 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue',xlim=None,y
     majorFormatter.set_powerlimits((-4,4))
     ax.xaxis.set_major_formatter(majorFormatter)
     ax.yaxis.set_major_formatter(majorFormatter)
-    ax.zaxis.set_major_formatter(majorFormatter)
-
-    
+    ax.zaxis.set_major_formatter(majorFormatter)    
     return fig, ax, Z
 
+    
+def getlim(key,dicts,fac=1):
+    min = np.min([ dict[key]/fac for dict in dicts ])
+    max = np.max([ dict[key]/fac for dict in dicts ])
+    return [np.floor(min)*fac, np.ceil(max)*fac]
 
+    
 
-
-
+#########################################################################
+# Here starts the real script
+#########################################################################
 
 fluid = 'water'
 CP.enable_TTSE_LUT(fluid)
 
-PRINT = True
+PRINT = False
 
 if PRINT:
     points  = 200
@@ -359,6 +279,10 @@ Dmin = CP.PropsSI('D','H',Hmin,'P',Pmax,fluid)
 Dmax = CP.PropsSI('D','H',Hmax,'P',Pmin,fluid) 
 
 
+
+#########################################################################
+# Start with the first diagram, hps
+#########################################################################
 ## Set the ranges for the plot 
 X_TP = H_TP
 Y_TP = logP_TP
@@ -402,11 +326,9 @@ Tdata = fill_Z(X,Y)
 HPSdict = {'H': X, 'P': Y, 'S': Z, 'V': logVdata, 'T': Tdata, 'H_TP': X_TP, 'P_TP': Y_TP, 'S_TP': Z_TP}
 
 
+
 #########################################################################
-# Start with the next diagram
-#
-#
-#
+# Start with the next diagram, vTp
 #########################################################################
 
 ## Set the ranges for the plot 
@@ -458,13 +380,7 @@ VTPdict = {'V': X, 'T': Y, 'P': Z, 'H': Hdata, 'S': Sdata, 'V_TP': X_TP, 'T_TP':
 #########################################################################
 # Now we have all the data and can start mixing the 
 # different definitions
-#
-#
 #########################################################################
-def getlim(key,dicts,fac=1):
-    min = np.min([ dict[key]/fac for dict in dicts ])
-    max = np.max([ dict[key]/fac for dict in dicts ])
-    return [np.floor(min)*fac, np.ceil(max)*fac]
 
 dicts = [HPSdict,VTPdict]
 
@@ -486,9 +402,6 @@ axHPS.set_zlabel(r'$s$')
 
 
 
-
-
-
 figVTP, axVTP, Z = make3Dlpot(VTPdict['V'],VTPdict['T'],Z=VTPdict['P'],draw='XYZ',color='red',xlim=Vlim,ylim=Tlim,zlim=Plim)
 ## Plot the two-phase dome and its projections 
 plotLineAndProjection(axVTP,VTPdict['V_TP'],VTPdict['T_TP'],VTPdict['P_TP'])
@@ -501,61 +414,6 @@ axVTP.set_zlabel(r'log $p$')
 
 
 
-
-
-
-
-#make3Dlpot(fig=figHPS,HPSdict,Y,invert='Z',draw='XZ')
-
-
-
-
-
-#make3Dlpot(X,Y,Z=Z,ax=axVTP,draw='C')
-
-#plotLineAndProjection(axVTP,HPSdict['V'][0],HPSdict['T'][0],HPSdict['P'][0])
-
-#
-#H_data    = HPSgrid[0]
-#logP_data = HPSgrid[1]
-#logV_data = np.empty_like(H_data)
-#T_data    = np.empty_like(H_data)
-#
-#   
-#for i in range(len(H_data)):
-#    for j in range(len(H_data[0])):
-#        logV_data[i,j] = np.log10(1.0/get_Z_old(H_data[i,j],logP_data[i,j],fluid,out='D'))
-#        T_data[i,j]    = get_Z_old(H_data[i,j],logP_data[i,j],fluid,out='T')
-#
-#    
-#rstride=np.round(len(H_data)/3.0)
-#for i in range(len(H_data)):
-#    if np.mod(i,rstride)==0:
-#        #ax.plot(logV_data[i],T_data[i],logP_data[i],color='red')
-#        plotLineAndProjection(ax,logV_data[i],T_data[i],logP_data[i],color='red')
-#plotLineAndProjection(ax,logV_data[-1],T_data[-1],logP_data[-1],color='red')
-#        
-#for i in range(len(H_data[0])):
-#    if np.mod(i,rstride)==0:
-#        X = [row[i] for row in logV_data]
-#        Y = [row[i] for row in T_data]
-#        Z = [row[i] for row in logP_data]
-#        plotLineAndProjection(ax,X,Y,Z,color='red')
-#X = [row[-1] for row in logV_data]
-#Y = [row[-1] for row in T_data]
-#Z = [row[-1] for row in logP_data]
-#plotLineAndProjection(ax,X,Y,Z,color='red')    
-
-
-
-#figures=[manager.canvas.figure
-#         for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers()]
-#
-#for i, figure in enumerate(figures):
-#    figure.savefig('figure%d.png' % i)
-
-
-#fig.colorbar(surf, shrink=0.5, aspect=5)
 if toFile:
     figHPS.savefig('phs.png', dpi = dpi, transparent = True)
     figHPS.savefig('phs.pdf', transparent = True)
