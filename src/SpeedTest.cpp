@@ -13,7 +13,7 @@ void compare_REFPROP_and_CoolProp(std::string fluid, int inputs, double val1, do
     time_t t1,t2;
     double dx = 1/((double)N);
 
-    std::tr1::shared_ptr<AbstractState> State(AbstractState::factory("HEOS", fluid));
+    shared_ptr<AbstractState> State(AbstractState::factory("HEOS", fluid));
     t1 = clock();
     for (std::size_t ii = 0; ii < N; ++ii)
     {

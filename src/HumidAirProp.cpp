@@ -20,7 +20,7 @@
 #include <iostream>
 
 
-std::tr1::shared_ptr<CoolProp::AbstractState> Water, Air;
+shared_ptr<CoolProp::AbstractState> Water, Air;
 
 namespace HumidAir
 {

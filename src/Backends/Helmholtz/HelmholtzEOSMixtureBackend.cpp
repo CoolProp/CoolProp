@@ -203,7 +203,7 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
             std::string fluid_name  = component.transport.viscosity_ecs.reference_fluid;
             std::vector<std::string> names(1, fluid_name);
             // Get a managed pointer to the reference fluid for ECS
-            std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(names));
+            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(names));
             // Get the viscosity using ECS
             return TransportRoutines::viscosity_ECS(*this, *(ref_fluid.get()));
         }
@@ -267,7 +267,7 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
             std::string fluid_name  = component.transport.conductivity_ecs.reference_fluid;
             std::vector<std::string> name(1, fluid_name);
             // Get a managed pointer to the reference fluid for ECS
-            std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(name,false));
+            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(name,false));
             // Get the viscosity using ECS
             return TransportRoutines::conductivity_ECS(*this, *(ref_fluid.get()));
         }

@@ -46,7 +46,7 @@ public:
     std::vector<long double> &get_K(){return K;};
     std::vector<long double> &get_lnK(){return lnK;};
 
-    std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///< 
+    shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///< 
 
     void update(long input_pair, double value1, double value2);
 

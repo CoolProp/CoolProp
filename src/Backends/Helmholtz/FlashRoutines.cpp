@@ -183,7 +183,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
         {
             CoolPropFluid * component = HEOS.components[0];
             
-            std::tr1::shared_ptr<HelmholtzEOSMixtureBackend> Sat;
+            shared_ptr<HelmholtzEOSMixtureBackend> Sat;
             long double rhoLtriple = component->pEOS->rhoLtriple;
             long double rhoVtriple = component->pEOS->rhoVtriple;
             // Check if in the "normal" region

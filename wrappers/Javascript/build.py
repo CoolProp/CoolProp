@@ -3,7 +3,7 @@ import subprocess, os, sys
 import glob2 as glob
 
 exports = ['-s','EXPORTED_FUNCTIONS=\"[\'_main\',\'_F2K\',\'_PropsSI\',\'_get_global_param_string\']\"']
-optimization = '-D__ISLINUX__ -O2 -s DISABLE_EXCEPTION_CATCHING=0'
+optimization = '-O2 -s DISABLE_EXCEPTION_CATCHING=0'
 
 def compile_sources():
     for f in glob.glob(os.path.join('..','..','src','**','*.cpp')):

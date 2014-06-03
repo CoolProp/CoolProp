@@ -302,15 +302,13 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
     long iName2 = get_parameter_index(Name2);
 
     // The state we are going to use
-    std::tr1::shared_ptr<AbstractState> State;
+    shared_ptr<AbstractState> State;
     try
     {
         // We are going to let the factory function determine which backend to use
         //
         // Generate the State class pointer using the factory function with unknown backend
         State.reset(AbstractState::factory(unknown_backend, Ref));
-
-        if (State == NULL){ throw ValueError("unable to instantiate AbstractState*");}
 
         if (State->using_mole_fractions()){
             State->set_mole_fractions(z);
@@ -641,7 +639,7 @@ double Props1SI(std::string FluidName,std::string Output)
 //
 void set_reference_stateS(std::string Ref, std::string reference_state)
 {
-    std::tr1::shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;
+    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;
     std::vector<std::string> _comps(1, Ref);
     HEOS.reset(new CoolProp::HelmholtzEOSMixtureBackend(_comps));
 
@@ -758,7 +756,7 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
 {
 	try{
         std::vector<std::string> comps(1,FluidName);
-        std::tr1::shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(comps));
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(comps));
 
         CoolProp::CoolPropFluid *fluid = HEOS->get_components()[0];
 
