@@ -189,8 +189,8 @@
           "type": "IdealGasHelmholtzCP0AlyLee"
         }, 
         {
-          "a1": 7.54412311172904, 
-          "a2": 1.9588321919336, 
+          "a1": 7.55444021933976, 
+          "a2": 1.95248104655686, 
           "reference": "NBP", 
           "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
