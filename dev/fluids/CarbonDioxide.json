@@ -564,11 +564,11 @@
         "T_reduce_units": "K", 
         "_note": "All of the coefficients for higher order viscosity contribution were converted to be in terms of delta and tau", 
         "a": [
-          1.90402164511e-06, 
-          1.5744549652e-05, 
-          1.4224275497e-07, 
-          6.80107946056e-08, 
-          -3.07804877068e-08
+          1.9036541208525784e-06, 
+          1.57384720473354e-05, 
+          1.4207809578440784e-07, 
+          6.79058431241662e-08, 
+          -3.0732988514867565e-08
         ], 
         "d1": [
           1, 
