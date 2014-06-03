@@ -174,15 +174,18 @@
         }, 
         {
           "c": [
+            1
+          ], 
+          "d": [
             -1
           ], 
           "n": [
             1.012767
           ], 
           "t": [
-            8.9057501
+            -8.9057501
           ], 
-          "type": "IdealGasHelmholtzPlanckEinstein2"
+          "type": "IdealGasHelmholtzPlanckEinsteinGeneralized"
         }, 
         {
           "a1": 0, 

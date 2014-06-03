@@ -168,7 +168,7 @@
           "type": "IdealGasHelmholtzLogTau"
         }, 
         {
-          "T0": 309.213623675, 
+          "T0": 298, 
           "Tc": 469.7, 
           "c": [
             4, 
@@ -180,7 +180,7 @@
           "type": "IdealGasHelmholtzCP0AlyLee"
         }, 
         {
-          "T0": 309.213623675, 
+          "T0": 298, 
           "Tc": 469.7, 
           "c": [
             0, 

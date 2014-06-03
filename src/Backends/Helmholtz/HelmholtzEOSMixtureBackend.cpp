@@ -1715,41 +1715,49 @@ long double HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau
 long double HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<long double> &mole_fractions,
                                                                   const long double &tau, const long double &delta, const long double &Tr, const long double &rhor)
 {
+    long double val;
     if (is_pure_or_pseudopure)
     {
         if (nTau == 0 && nDelta == 0){
-            return components[0]->pEOS->base0(tau, delta);
+            val = components[0]->pEOS->base0(tau, delta);
         }
         else if (nTau == 0 && nDelta == 1){
-            return components[0]->pEOS->dalpha0_dDelta(tau, delta);
+            val = components[0]->pEOS->dalpha0_dDelta(tau, delta);
         }
         else if (nTau == 1 && nDelta == 0){
-            return components[0]->pEOS->dalpha0_dTau(tau, delta);
+            val = components[0]->pEOS->dalpha0_dTau(tau, delta);
         }
         else if (nTau == 0 && nDelta == 2){
-            return components[0]->pEOS->d2alpha0_dDelta2(tau, delta);
+            val = components[0]->pEOS->d2alpha0_dDelta2(tau, delta);
         }
         else if (nTau == 1 && nDelta == 1){
-            return components[0]->pEOS->d2alpha0_dDelta_dTau(tau, delta);
+            val = components[0]->pEOS->d2alpha0_dDelta_dTau(tau, delta);
         }
         else if (nTau == 2 && nDelta == 0){
-            return components[0]->pEOS->d2alpha0_dTau2(tau, delta);
+            val = components[0]->pEOS->d2alpha0_dTau2(tau, delta);
         }
         else if (nTau == 0 && nDelta == 3){
-            return components[0]->pEOS->d3alpha0_dDelta3(tau, delta);
+            val = components[0]->pEOS->d3alpha0_dDelta3(tau, delta);
         }
         else if (nTau == 1 && nDelta == 2){
-            return components[0]->pEOS->d3alpha0_dDelta2_dTau(tau, delta);
+            val = components[0]->pEOS->d3alpha0_dDelta2_dTau(tau, delta);
         }
         else if (nTau == 2 && nDelta == 1){
-            return components[0]->pEOS->d3alpha0_dDelta_dTau2(tau, delta);
+            val = components[0]->pEOS->d3alpha0_dDelta_dTau2(tau, delta);
         }
         else if (nTau == 3 && nDelta == 0){
-            return components[0]->pEOS->d3alpha0_dTau3(tau, delta);
+            val = components[0]->pEOS->d3alpha0_dTau3(tau, delta);
         }
         else
         {
             throw ValueError();
+        }
+        if (!ValidNumber(val)){
+           calc_alpha0_deriv_nocache(nTau,nDelta,mole_fractions,tau,delta,Tr,rhor);
+           throw ValueError(format("calc_alpha0_deriv_nocache returned invalid number with inputs nTau: %d, nDelta: %d", nTau, nDelta));
+        }
+        else{
+            return val;
         }
     }
     else{

@@ -1691,10 +1691,11 @@ long double IdealHelmholtzCP0AlyLee::dTau(const long double &tau, const long dou
 }
 long double IdealHelmholtzCP0AlyLee::anti_deriv_cp0_tau2(const long double &tau)
 {
-    return -c[0]/tau  +  2*c[1]*c[2]/(Tc*(exp(-(2*c[2]*tau)/Tc)-1))  +  2*c[3]*c[4]/(Tc*(exp(-(2*c[4]*tau)/Tc)+1));
+    return -c[0]/tau + 2*c[1]*c[2]/Tc/(exp(-2*c[2]*tau/Tc)-1) - 2*c[3]*c[4]/Tc*(exp(2*c[4]*tau/Tc)+1);
 }
 long double IdealHelmholtzCP0AlyLee::anti_deriv_cp0_tau(const long double &tau)
 {
+    long double lnarg =-1 + exp(-2*c[2]*tau/Tc);
     long double term1 = c[0]*log(tau);
     long double term2 = 2*c[1]*c[2]*tau/(-Tc + Tc*exp(-2*c[2]*tau/Tc)) + c[1]*log(-1 + exp(-2*c[2]*tau/Tc)) + 2*c[1]*c[2]*tau/Tc;
     long double term3 = -c[3]*(Tc*exp(2*c[4]*tau/Tc)*log(exp(2*c[4]*tau/Tc) + 1) + Tc*log(exp(2*c[4]*tau/Tc) + 1) - 2*c[4]*tau*exp(2*c[4]*tau/Tc))/(Tc*(exp(2*c[4]*tau/Tc) + 1));
@@ -1716,7 +1717,6 @@ long double IdealHelmholtzCP0AlyLee::dTau3(const long double &tau, const long do
 
 /*
 IdealHelmholtzEnthalpyEntropyOffset EnthalpyEntropyOffset;
-IdealHelmholtzCP0AlyLee CP0AlyLee;
 */
 
 #ifdef ENABLE_CATCH
@@ -1728,8 +1728,8 @@ class HelmholtzConsistencyFixture
 public:
     long double numerical, analytic;
     
-    std::tr1::shared_ptr<CoolProp::BaseHelmholtzTerm> Lead, LogTau, IGPower, PlanckEinstein, PlanckEinstein2, 
-        CP0Constant, CP0PolyT, CP0AlyLee, Gaussian, Lemmon2005, Power, SAFT, NonAnalytic, Exponential, GERG2008;
+    std::tr1::shared_ptr<CoolProp::BaseHelmholtzTerm> Lead, LogTau, IGPower, PlanckEinstein, 
+        CP0Constant, CP0PolyT, Gaussian, Lemmon2005, Power, SAFT, NonAnalytic, Exponential, GERG2008;
 
     HelmholtzConsistencyFixture(){
         Lead.reset(new CoolProp::IdealHelmholtzLead(1,3));
@@ -1739,23 +1739,14 @@ public:
             IGPower.reset(new CoolProp::IdealHelmholtzPower(n,t));
         }
         {
-            std::vector<long double> n(4,0), t(4,1); n[0] = 0.1; n[2] = 0.5; t[1] = 1; t[2] = 2; t[3] = 2;
-            PlanckEinstein.reset(new CoolProp::IdealHelmholtzPlanckEinstein(n, t));
-        }
-        {
-            std::vector<long double> n(4,0), t(4,1), c(4,1); n[0] = -0.1; n[2] = 0.1; t[1] = -1; t[2] = -2; t[3] = 2;
-            PlanckEinstein2.reset(new CoolProp::IdealHelmholtzPlanckEinstein2(n, t, c));
+            std::vector<long double> n(4,0), t(4,1), c(4,1), d(4,1); n[0] = 0.1; n[2] = 0.5; t[1] = 1; t[2] = 2; t[3] = 2;
+            PlanckEinstein.reset(new CoolProp::IdealHelmholtzPlanckEinsteinGeneralized(n, t, c, d));
         }
         {
             long double T0 = 273.15, Tc = 345.857, c = 1.0578, t = 0.33;
             CP0PolyT.reset(new CoolProp::IdealHelmholtzCP0PolyT(std::vector<long double>(1,c),
                                                                 std::vector<long double>(1,t),
                                                                 Tc, T0));
-        }
-        {
-            long double T0 = 518.109977174843, Tc = 645.78, c[] = {56.37158920013201, 118.0111016069331, 1792.1, 82.5909330141469, 786.8};
-            CP0AlyLee.reset(new CoolProp::IdealHelmholtzCP0AlyLee(std::vector<long double>(c, c+sizeof(c)/sizeof(c[0])),
-                                                                  Tc, T0));
         }
         CP0Constant.reset(new CoolProp::IdealHelmholtzCP0Constant(4/8.314472,300,250));
         {
@@ -1871,10 +1862,8 @@ public:
         else if (!t.compare("LogTau")){return LogTau;}
         else if (!t.compare("IGPower")){return IGPower;}
         else if (!t.compare("PlanckEinstein")){return PlanckEinstein;}
-        else if (!t.compare("PlanckEinstein2")){return PlanckEinstein2;}
         else if (!t.compare("CP0Constant")){return CP0Constant;}
         else if (!t.compare("CP0PolyT")){return CP0PolyT;}
-        else if (!t.compare("CP0AlyLee")){return CP0AlyLee;}
 
         else if (!t.compare("Gaussian")){return Gaussian;}
         else if (!t.compare("Lemmon2005")){return Lemmon2005;}

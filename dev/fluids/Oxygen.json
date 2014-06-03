@@ -193,13 +193,16 @@
           "c": [
             0.6666666666666666
           ], 
+          "d": [
+            1
+          ], 
           "n": [
             0.944365
           ], 
           "t": [
-            74.91476960299131
+            -74.91476960299131
           ], 
-          "type": "IdealGasHelmholtzPlanckEinstein2"
+          "type": "IdealGasHelmholtzPlanckEinsteinGeneralized"
         }
       ], 
       "alphar": [

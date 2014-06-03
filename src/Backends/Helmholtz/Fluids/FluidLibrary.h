@@ -143,20 +143,36 @@ protected:
                 long double a = cpjson::get_double(contribution,"a");
                 EOS.alpha0.LogTau = IdealHelmholtzLogTau(a);
             }
+            else if (!type.compare("IdealGasHelmholtzPlanckEinsteinGeneralized"))
+            {
+                // Retrieve the values
+                std::vector<long double> n = cpjson::get_long_double_array(contribution["n"]);
+                std::vector<long double> t = cpjson::get_long_double_array(contribution["t"]);
+                
+                std::vector<long double> c = cpjson::get_long_double_array(contribution["c"]);
+                std::vector<long double> d = cpjson::get_long_double_array(contribution["d"]);
+                if (EOS.alpha0.PlanckEinstein.is_enabled() == true){
+                    EOS.alpha0.PlanckEinstein.extend(n, t, c, d);
+                }
+                else{
+                    EOS.alpha0.PlanckEinstein = IdealHelmholtzPlanckEinsteinGeneralized(n, t, c, d);
+                }
+            }
             else if (!type.compare("IdealGasHelmholtzPlanckEinstein"))
             {
-                if (EOS.alpha0.PlanckEinstein.is_enabled() == true){throw ValueError("Cannot add ");}
+                // Retrieve the values
                 std::vector<long double> n = cpjson::get_long_double_array(contribution["n"]);
                 std::vector<long double> t = cpjson::get_long_double_array(contribution["t"]);
-                EOS.alpha0.PlanckEinstein = IdealHelmholtzPlanckEinstein(n, t);
-            }
-            else if (!type.compare("IdealGasHelmholtzPlanckEinstein2"))
-            {
-                if (EOS.alpha0.PlanckEinstein2.is_enabled() == true){throw ValueError("Cannot add");}
-                std::vector<long double> n = cpjson::get_long_double_array(contribution["n"]);
-                std::vector<long double> t = cpjson::get_long_double_array(contribution["t"]);
-                std::vector<long double> c = cpjson::get_long_double_array(contribution["c"]);
-                EOS.alpha0.PlanckEinstein2 = IdealHelmholtzPlanckEinstein2(n, t, c);
+                // Flip the sign of theta
+                for (std::size_t i = 0; i < t.size(); ++i){ t[i] *= -1;}
+                std::vector<long double> c(n.size(), 1);
+                std::vector<long double> d(c.size(), -1);
+                if (EOS.alpha0.PlanckEinstein.is_enabled() == true){
+                    EOS.alpha0.PlanckEinstein.extend(n, t, c, d);
+                }
+                else{
+                    EOS.alpha0.PlanckEinstein = IdealHelmholtzPlanckEinsteinGeneralized(n, t, c, d);
+                }
             }
             else if (!type.compare("IdealGasHelmholtzCP0Constant"))
             {
@@ -177,11 +193,45 @@ protected:
             }
             else if (!type.compare("IdealGasHelmholtzCP0AlyLee"))
             {
-                if (EOS.alpha0.CP0AlyLee.is_enabled() == true){std::cout << "Cannot add IdealGasHelmholtzCP0AlyLee\n";}
-                std::vector<long double> c = cpjson::get_long_double_array(contribution["c"]);
+                
+                std::vector<long double> constants = cpjson::get_long_double_array(contribution["c"]);
                 long double Tc = cpjson::get_double(contribution, "Tc");
                 long double T0 = cpjson::get_double(contribution, "T0");
-                EOS.alpha0.CP0AlyLee = IdealHelmholtzCP0AlyLee(c, Tc, T0);
+
+                // Take the constant term if nonzero and set it as a polyT term
+                if (fabs(constants[0]) > 1e-14){
+                    std::vector<long double> c(1,constants[0]), t(1,0);
+                    if (EOS.alpha0.CP0PolyT.is_enabled() == true){
+                        EOS.alpha0.CP0PolyT.extend(c,t);
+                    }
+                    else{
+                        EOS.alpha0.CP0PolyT = IdealHelmholtzCP0PolyT(c, t, Tc, T0);
+                    }
+                }
+
+                std::vector<long double> n, c, d, t;
+                if (fabs(constants[1]) > 1e-14){
+                    // sinh term can be converted by setting  a_k = C, b_k = 2*D, c_k = -1, d_k = 1
+                    n.push_back(constants[1]);
+                    t.push_back(-2*constants[2]/Tc);
+                    c.push_back(1);
+                    d.push_back(-1);
+                }
+
+                if (fabs(constants[3]) > 1e-14){
+                    // cosh term can be converted by setting  a_k = C, b_k = 2*D, c_k = 1, d_k = 1
+                    n.push_back(-constants[3]);
+                    t.push_back(-2*constants[4]/Tc);
+                    c.push_back(1);
+                    d.push_back(1);
+                }
+                
+                if (EOS.alpha0.PlanckEinstein.is_enabled() == true){
+                    EOS.alpha0.PlanckEinstein.extend(n, t, c, d);
+                }
+                else{
+                    EOS.alpha0.PlanckEinstein = IdealHelmholtzPlanckEinsteinGeneralized(n, t, c, d);
+                }
             }
             else if (!type.compare("IdealGasHelmholtzEnthalpyEntropyOffset"))
             {

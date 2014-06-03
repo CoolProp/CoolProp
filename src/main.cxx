@@ -154,8 +154,8 @@ int main()
     }
     if (1)
     {
-        double rrr0 = PropsSI("O","T",350,"Q",0,"REFPROP::Water");
-        double rrr2 = PropsSI("O","T",350,"Q",0,"Water");
+        double rrr0 = PropsSI("C","T",350,"D",1e-13,"REFPROP::MDM");
+        double rrr2 = PropsSI("C","T",350,"D",1e-13,"MDM");
         double rrr =0 ;
     }
     if (1)
@@ -171,7 +171,8 @@ int main()
     }
     if (1)
     {
-        double h1 = PropsSI("H","T",273.15,"Q",0,"CO2");
+        double h1 = PropsSI("S","P",101325,"Q",0,"n-Pentane");
+        std::string er = get_global_param_string("errstring");
         set_reference_stateS("n-Propane","NBP");
         double h2 = PropsSI("H","P",101325,"Q",0,"n-Propane");
 
