@@ -9,6 +9,7 @@
 
 #if defined(ENABLE_CATCH)
 
+#include "crossplatform_shared_ptr.h"
 #include "catch.hpp"
 
 namespace TransportValidation{
@@ -22,7 +23,7 @@ public:
     vel(std::string fluid, std::string in1, double v1, std::string in2, double v2, std::string out, double expected, double tol)
     {
         this->in1 = in1; this->in2 = in2; this->fluid = fluid;
-        this->v1 = v1; this->v2 = v2; this->expected = expected; 
+        this->v1 = v1; this->v2 = v2; this->expected = expected;
         this->tol = tol;
     };
 };
@@ -218,7 +219,7 @@ public:
     void set_backend(std::string backend, std::string fluid_name){
         pState.reset(CoolProp::AbstractState::factory(backend, fluid_name));
     }
-    void set_pair(std::string &in1, double v1, std::string &in2, double v2){ 
+    void set_pair(std::string &in1, double v1, std::string &in2, double v2){
         double o1, o2;
         long iin1 = CoolProp::get_parameter_index(in1);
         long iin2 = CoolProp::get_parameter_index(in2);
@@ -470,24 +471,24 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
 static int inputs[] = {
     CoolProp::DmolarT_INPUTS,
     //CoolProp::SmolarT_INPUTS,
-    //CoolProp::HmolarT_INPUTS, 
+    //CoolProp::HmolarT_INPUTS,
     //CoolProp::TUmolar_INPUTS,
 
-    CoolProp::DmolarP_INPUTS, 
-    CoolProp::DmolarHmolar_INPUTS, 
-    CoolProp::DmolarSmolar_INPUTS, 
+    CoolProp::DmolarP_INPUTS,
+    CoolProp::DmolarHmolar_INPUTS,
+    CoolProp::DmolarSmolar_INPUTS,
     CoolProp::DmolarUmolar_INPUTS,
-        
+
     /*
     CoolProp::HmolarP_INPUTS,
     CoolProp::PSmolar_INPUTS,
-    CoolProp::PUmolar_INPUTS, 
+    CoolProp::PUmolar_INPUTS,
     */
 
     /*
-    CoolProp::HmolarSmolar_INPUTS, 
-    CoolProp::HmolarUmolar_INPUTS, 
-    CoolProp::SmolarUmolar_INPUTS 
+    CoolProp::HmolarSmolar_INPUTS,
+    CoolProp::HmolarUmolar_INPUTS,
+    CoolProp::SmolarUmolar_INPUTS
     */
 };
 
@@ -503,7 +504,7 @@ public:
     void set_backend(std::string backend, std::string fluid_name){
         pState.reset(CoolProp::AbstractState::factory(backend, fluid_name));
     }
-    void set_pair(int pair){ 
+    void set_pair(int pair){
         this->pair = pair;
     }
     void set_TP(long double T, long double p)
@@ -513,14 +514,13 @@ public:
 
         // Start with T,P as inputs, cycle through all the other pairs that are supported
         State.update(CoolProp::PT_INPUTS, p, T);
-            
+
         // Set the other state variables
         rhomolar = State.rhomolar(); hmolar = State.hmolar(); smolar = State.smolar(); umolar = State.umolar();
     }
     void get_variables()
     {
-        CoolProp::AbstractState &State = *pState;
-            
+
         switch (pair)
         {
         /// In this group, T is one of the known inputs, iterate for the other one (easy)
@@ -571,7 +571,7 @@ public:
 TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for CO2 using all valid backends", "[]")
 {
     CHECK_NOTHROW(set_backend("HEOS", "CO2"));
-        
+
     int inputsN = sizeof(inputs)/sizeof(inputs[0]);
     for (double p = 600000; p < 800000000.0; p *= 5)
     {

@@ -51,7 +51,7 @@ surface tension                 N/m
 #include <stdio.h>
 #include <iostream>
 #include <assert.h>
-
+#include "crossplatform_shared_ptr.h"
 
 
 #if defined(_MSC_VER)
@@ -63,24 +63,24 @@ surface tension                 N/m
 #include <sys/stat.h>
 #endif
 
-// Some constants for REFPROP... defined by macros for ease of use 
+// Some constants for REFPROP... defined by macros for ease of use
 #define refpropcharlength 255
 #define filepathlength 255
 #define lengthofreference 3
 #define errormessagelength 255
 #define ncmax 20		// Note: ncmax is the max number of components
-#define numparams 72 
+#define numparams 72
 #define maxcoefs 50
 
 std::string LoadedREFPROPRef;
 
-// Some constants for REFPROP... defined by macros for ease of use 
+// Some constants for REFPROP... defined by macros for ease of use
 #define refpropcharlength 255
 #define filepathlength 255
 #define lengthofreference 3
 #define errormessagelength 255
 #define ncmax 20		// Note: ncmax is the max number of components
-#define numparams 72 
+#define numparams 72
 #define maxcoefs 50
 
 // Check windows
@@ -371,7 +371,7 @@ bool load_REFPROP()
                 // INCREASE ROBUSTNESS. ALWAYS THROW AN ERROR ON THE ELSE.
                 #error "Must define either ENV32BIT or ENV64BIT"
             #endif
-            
+
         #elif defined(__ISLINUX__)
             RefpropdllInstance = dlopen ("librefprop.so", RTLD_LAZY);
         #elif defined(__ISAPPLE__)
@@ -401,8 +401,8 @@ bool load_REFPROP()
         }
 
         #if defined(__ISWINDOWS__)
-        
-        // Get data associated with path using the windows libraries, 
+
+        // Get data associated with path using the windows libraries,
         // and if you can (result == 0), the path exists
         #ifdef __MINGW32__
             struct stat buf;
@@ -434,7 +434,7 @@ REFPROPMixtureBackend::REFPROPMixtureBackend(const std::vector<std::string>& flu
     // Do the REFPROP instantiation for this fluid
     _mole_fractions_set = false;
 
-    // Try to add this fluid to REFPROP - might want to think about making array of 
+    // Try to add this fluid to REFPROP - might want to think about making array of
     // components and setting mole fractions if they change a lot.
     this->set_REFPROP_fluids(fluid_names);
 
@@ -521,8 +521,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
 
         // Load REFPROP if it isn't loaded yet
         load_REFPROP();
-    
-        // If the name of the refrigerant doesn't match 
+
+        // If the name of the refrigerant doesn't match
         // that of the currently loaded refrigerant
         if (LoadedREFPROPRef.compare(components_joined))
         {
@@ -593,7 +593,7 @@ double REFPROPMixtureBackend::calc_melt_Tmax()
     MELTPdll(&pmax_kPa, &(mole_fractions[0]),
              &Tmax_melt,
              &ierr,herr,errormessagelength);      // Error message
-    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } 
+    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return Tmax_melt;
 }
@@ -611,7 +611,7 @@ long double REFPROPMixtureBackend::calc_melt_p_T(long double T)
     MELTTdll(&_T, &(mole_fractions[0]),
              &p_kPa,
              &ierr,herr,errormessagelength);      // Error message
-    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } 
+    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return p_kPa*1000;
 }
@@ -632,7 +632,7 @@ long double REFPROPMixtureBackend::calc_viscosity(void)
     TRNPRPdll(&_T,&rhomol_L,&(mole_fractions[0]),  // Inputs
               &eta,&tcx,                           // Outputs
               &ierr,herr,errormessagelength);      // Error message
-    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } 
+    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     _viscosity = 1e-6*eta;
     _conductivity = tcx;
@@ -652,7 +652,7 @@ long double REFPROPMixtureBackend::calc_surface_tension(void)
     SURFTdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
              &sigma,                                 // Outputs
              &ierr, herr, errormessagelength);       // Error message
-    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } 
+    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     _surface_tension = sigma;
     return static_cast<double>(_surface_tension);
@@ -667,11 +667,11 @@ long double REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
     FUGCOFdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
              &(fug_cof[0]),                   // Outputs
              &ierr, herr, errormessagelength);       // Error message
-    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } 
+    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<long double>(fug_cof[i]);
 }
-    
+
 void REFPROPMixtureBackend::update(long input_pair, double value1, double value2)
 {
     double rho_mol_L=_HUGE, rhoLmol_L=_HUGE, rhoVmol_L=_HUGE,
@@ -681,7 +681,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
     char herr[255];
 
     clear();
-    
+
     // Check that mole fractions have been set, etc.
     check_status();
 
@@ -689,8 +689,8 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
     WMOLdll(&(mole_fractions[0]), &mm); // returns mole mass in kg/kmol
     _molar_mass = 0.001*mm; // [kg/mol]
 
-    
-    
+
+
     switch(input_pair)
     {
         case PT_INPUTS:
@@ -724,9 +724,9 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
             TDFLSHdll(&_T,&rho_mol_L,&(mole_fractions[0]),&p_kPa,
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
-                      &ierr,herr,errormessagelength); 
+                      &ierr,herr,errormessagelength);
             if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-            
+
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
             if (0)
@@ -757,7 +757,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
             if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
-            _rhomolar = value1; 
+            _rhomolar = value1;
             _p = value2;
             if (0)
             {
@@ -783,9 +783,9 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
             DHFLSHdll(&rho_mol_L,&hmol,&(mole_fractions[0]),&_T,&p_kPa,
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&emol,&smol,&cvmol,&cpmol,&w,
-                      &ierr,herr,errormessagelength); 
+                      &ierr,herr,errormessagelength);
             if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-            
+
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
             if (0)
@@ -813,9 +813,9 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
             DSFLSHdll(&rho_mol_L,&smol,&(mole_fractions[0]),&_T,&p_kPa,
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&emol,&hmol,&cvmol,&cpmol,&w,
-                      &ierr,herr,errormessagelength); 
+                      &ierr,herr,errormessagelength);
             if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-            
+
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
             if (0)
@@ -843,9 +843,9 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
             DEFLSHdll(&rho_mol_L,&emol,&(mole_fractions[0]),&_T,&p_kPa,
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&hmol,&hmol,&cvmol,&cpmol,&w,
-                      &ierr,herr,errormessagelength); 
+                      &ierr,herr,errormessagelength);
             if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-            
+
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
             if (0)
@@ -889,7 +889,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
         {
             // Call again, but this time with molar units
             // H: [J/kg] * [kg/mol] -> [J/mol]
-            update(HmolarP_INPUTS, value1 * (double)_molar_mass, value2); 
+            update(HmolarP_INPUTS, value1 * (double)_molar_mass, value2);
             return;
         }
         case PSmolar_INPUTS:
@@ -919,7 +919,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
         {
             // Call again, but this time with molar units
             // S: [J/kg/K] * [kg/mol] -> [J/mol/K]
-            update(PSmolar_INPUTS, value1, value2*(double)_molar_mass); 
+            update(PSmolar_INPUTS, value1, value2*(double)_molar_mass);
             return;
         }
         case PUmolar_INPUTS:
@@ -948,9 +948,9 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
         }
         case PUmass_INPUTS:
         {
-            // Call again, but this time with molar units 
+            // Call again, but this time with molar units
             // U: [J/kg] * [kg/mol] -> [J/mol]
-            update(PUmolar_INPUTS, value1, value2*(double)_molar_mass); 
+            update(PUmolar_INPUTS, value1, value2*(double)_molar_mass);
             return;
         }
         case HmolarSmolar_INPUTS:
@@ -977,16 +977,16 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
         }
         case HmassSmass_INPUTS:
         {
-            // Call again, but this time with molar units 
+            // Call again, but this time with molar units
             // H: [J/kg] * [kg/mol] -> [J/mol/K]
             // S: [J/kg/K] * [kg/mol] -> [J/mol/K]
-            update(HmolarSmolar_INPUTS, value1 * (double)_molar_mass, value2 * (double)_molar_mass); 
+            update(HmolarSmolar_INPUTS, value1 * (double)_molar_mass, value2 * (double)_molar_mass);
             return;
         }
         case SmolarUmolar_INPUTS:
         {
             // Unit conversion for REFPROP
-            smol = value1; emol = value2; 
+            smol = value1; emol = value2;
 
             // from REFPROP: subroutine ESFLSH (e,s,z,t,p,D,Dl,Dv,x,y,q,h,cv,cp,w,ierr,herr)
             ESFLSHdll(&emol,&smol,&(mole_fractions[0]),&_T,&p_kPa,&rho_mol_L,
@@ -1008,10 +1008,10 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
         }
         case SmassUmass_INPUTS:
         {
-            // Call again, but this time with molar units 
-            // S: [J/kg/K] * [kg/mol] -> [J/mol/K], 
+            // Call again, but this time with molar units
+            // S: [J/kg/K] * [kg/mol] -> [J/mol/K],
             // U: [J/kg] * [kg/mol] -> [J/mol]
-            update(SmolarUmolar_INPUTS, value1 * (double)_molar_mass, value2 * (double)_molar_mass); 
+            update(SmolarUmolar_INPUTS, value1 * (double)_molar_mass, value2 * (double)_molar_mass);
             return;
         }
         case SmolarT_INPUTS:
@@ -1047,9 +1047,9 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
         }
         case SmassT_INPUTS:
         {
-            // Call again, but this time with molar units 
+            // Call again, but this time with molar units
             // S: [J/kg/K] * [kg/mol] -> [J/mol/K]
-            update(SmolarT_INPUTS, value1 * (double)_molar_mass, value2 ); 
+            update(SmolarT_INPUTS, value1 * (double)_molar_mass, value2 );
             return;
         }
         case HmolarT_INPUTS:
@@ -1085,9 +1085,9 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
         }
         case HmassT_INPUTS:
         {
-            // Call again, but this time with molar units 
+            // Call again, but this time with molar units
             // H: [J/kg] * [kg/mol] -> [J/mol]
-            update(HmolarT_INPUTS, value1 * (double)_molar_mass, value2 ); 
+            update(HmolarT_INPUTS, value1 * (double)_molar_mass, value2 );
             return;
         }
         case TUmolar_INPUTS:
@@ -1123,9 +1123,9 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
         }
         case TUmass_INPUTS:
         {
-            // Call again, but this time with molar units 
+            // Call again, but this time with molar units
             // U: [J/kg] * [kg/mol] -> [J/mol]
-            update(TUmolar_INPUTS, value1, value2 * (double)_molar_mass); 
+            update(TUmolar_INPUTS, value1, value2 * (double)_molar_mass);
             return;
         }
         case PQ_INPUTS:
@@ -1194,7 +1194,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
         {
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
         }
-        
+
     };
     // Set these common variables that are used in every flash calculation
     _hmolar = hmol;
@@ -1222,7 +1222,7 @@ TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
         {
             std::string Name = (*it);
             std::string RPName = CoolProp::get_fluid_param_string((*it),"REFPROP_name");
-        
+
             // Skip fluids not in REFPROP
             if (RPName.find("N/A") == 0){continue;}
 
@@ -1239,7 +1239,7 @@ TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
             CAPTURE(RPName);
             CAPTURE(rho_CP);
             CAPTURE(rho_RP);
-            
+
             double DH = (rho_RP-rho_CP)/rho_RP;
             CHECK(fabs(DH) < 0.005);
         }
@@ -1252,7 +1252,7 @@ TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
         {
             std::string Name = (*it);
             std::string RPName = CoolProp::get_fluid_param_string((*it),"REFPROP_name");
-        
+
             // Skip fluids not in REFPROP
             if (RPName.find("N/A") == 0){continue;}
 
@@ -1270,7 +1270,7 @@ TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
             CAPTURE(cp_CP);
             CAPTURE(cp_RP);
             CAPTURE(0.9*Tr);
-            
+
             double Dcp = (cp_RP-cp_CP)/cp_RP;
             CHECK(fabs(Dcp) < 0.005);
         }
@@ -1283,7 +1283,7 @@ TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
         {
             std::string Name = (*it);
             std::string RPName = CoolProp::get_fluid_param_string((*it),"REFPROP_name");
-        
+
             // Skip fluids not in REFPROP
             if (RPName.find("N/A") == 0){continue;}
 
@@ -1312,4 +1312,4 @@ TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
     }
 }
 
-#endif 
+#endif

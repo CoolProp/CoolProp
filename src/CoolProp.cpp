@@ -45,8 +45,8 @@ int get_debug_level(void){return debug_level;}
 
 //int global_Phase = -1;
 
-void set_warning_string(std::string warning){ 
-    warning_string = warning; 
+void set_warning_string(std::string warning){
+    warning_string = warning;
 }
 void set_error_string(std::string error){
 	error_string = error;
@@ -77,7 +77,7 @@ void set_error_string(std::string error){
 //	// First check whether it is one of the Brines that does
 //	// not have a pure-fluid equivalent in CoolProp
 //    if (
-//        strcmp(Ref,"HC-10")==0 || 
+//        strcmp(Ref,"HC-10")==0 ||
 //        strncmp(Ref,"PG-",3)==0 ||
 //		strncmp(Ref,"EG-",3)==0 ||
 //		strncmp(Ref,"EA-",3)==0 ||
@@ -237,7 +237,7 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
     std::string all_pairs, backend_string;
     // Start at the "::" if it is found to chop off the delimiter between backend and fluid
     int i = fluid_string.find("::");
-    
+
     // If no backend/fluid delimiter
     if (i < 0){
         // Just use the full string
@@ -257,9 +257,9 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
     for (std::size_t i = 0; i < pairs.size(); ++i)
     {
         std::string fluid = pairs[i];
-        
+
         // Must end with ']'
-        if (fluid[fluid.size()-1] != ']') 
+        if (fluid[fluid.size()-1] != ']')
             throw ValueError(format("Fluid entry [%s] must end with ']' character",pairs[i].c_str()));
 
         // Split at '[', but first remove the ']' from the end by taking a substring
@@ -277,7 +277,7 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
 
         // And add to vector
         fractions.push_back(f);
-        
+
         // Add name
         names.push_back(name);
     }
@@ -325,7 +325,7 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
         // First check if it is a trivial input (critical/max parameters for instance)
         // TODO: check for trivial inputs that do not require the use of the eos
         /*if (State->is_trivial_output(iOutput))
-        { 
+        {
             double val = State->trivial_keyed_output(iOutput);
             return val;
         };*/
@@ -339,7 +339,7 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
         // Return the value
         return val;
     }
-    catch(...){	
+    catch(...){
         throw;
     }
 }
@@ -355,7 +355,7 @@ double PropsSI(const char *Output, const char *Name1, double Prop1, const char *
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref)
 {
     // In this function the error catching happens;
-    try{          
+    try{
         // Extract fractions if they are encoded in the fluid string
         if (has_fractions_in_string(Ref))
         {
@@ -392,7 +392,7 @@ double Props1SI(std::string FluidName,std::string Output)
     return PropsSI(Output,"",0,"",0,FluidName);
 }
 
- 
+
 //EXPORT_CODE double CONVENTION IProps(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid)
 //{
 //    Prop1 = convert_from_unit_system_to_SI(iName1, Prop1, get_standard_unit_system());
@@ -408,10 +408,10 @@ double Props1SI(std::string FluidName,std::string Output)
 //	if (get_debug_level()>3){
 //		std::cout << format("%s:%d: _CoolProp_Fluid_PropsSI(%d,%d,%g,%d,%g,%s)\n",__FILE__,__LINE__,iOutput,iName1, Prop1, iName2, Prop2, pFluid->get_name().c_str()).c_str();
 //	}
-//    if (iName1 == iT){ 
-//        T = Prop1;} 
+//    if (iName1 == iT){
+//        T = Prop1;}
 //    else if (iName2 == iT){
-//        T = Prop2;} 
+//        T = Prop2;}
 //
 //	// Generate a State instance wrapped around the Fluid instance
 //	CoolPropStateClassSI CPS(pFluid);
@@ -567,7 +567,7 @@ double Props1SI(std::string FluidName,std::string Output)
 //
 //			// Update the class
 //			CPS.update(iT,T,iD,rho);
-//			
+//
 //			// Get the output value
 //			val = CPS.keyed_output(iTerm);
 //			break;
@@ -590,7 +590,7 @@ double Props1SI(std::string FluidName,std::string Output)
 //			val = CPS.keyed_output(iTerm);
 //			break;
 //			}
-//			
+//
 //		default:
 //			throw ValueError(format("Sorry DerivTerms is a work in progress, your derivative term [%d] is not available!",iTerm));
 //	}
@@ -642,7 +642,8 @@ double Props1SI(std::string FluidName,std::string Output)
 void set_reference_stateS(std::string Ref, std::string reference_state)
 {
     std::tr1::shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;
-    HEOS.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1, Ref)));
+    std::vector<std::string> _comps(1, Ref);
+    HEOS.reset(new CoolProp::HelmholtzEOSMixtureBackend(_comps));
 
 	if (!reference_state.compare("IIR"))
 	{
@@ -687,7 +688,7 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(0, 0, "");
     }
 	else
-	{ 
+	{
         throw ValueError(format("reference state string is invalid: [%s]",reference_state.c_str()));
 	}
 }
@@ -714,10 +715,10 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
 //}
 
 std::string get_BibTeXKey(std::string Ref, std::string key)
-{ 
+{
     std::vector<std::string> names(1, Ref);
     HelmholtzEOSMixtureBackend HEOS(names);
-	
+
     if (!key.compare("EOS")){ return HEOS.get_components()[0]->pEOS->BibTeX_EOS; }
 	else if (!key.compare("CP0")){ return HEOS.get_components()[0]->pEOS->BibTeX_CP0; }
     else if (!key.compare("VISCOSITY")){ return HEOS.get_components()[0]->transport.BibTeX_viscosity; }
@@ -756,8 +757,9 @@ std::string get_global_param_string(std::string ParamName)
 std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
 {
 	try{
-        std::tr1::shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1,FluidName)));
-        
+        std::vector<std::string> comps(1,FluidName);
+        std::tr1::shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(comps));
+
         CoolProp::CoolPropFluid *fluid = HEOS->get_components()[0];
 
 		if (!ParamName.compare("aliases"))

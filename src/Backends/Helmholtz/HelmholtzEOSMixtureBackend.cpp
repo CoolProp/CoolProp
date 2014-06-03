@@ -164,7 +164,7 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity_background(long double et
     // Residual part
     long double B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
     long double rho = rhomolar();
-    long double initial_part = eta_dilute*B_eta_initial*rhomolar();
+    long double initial_part = eta_dilute*B_eta_initial*rho;
 
     // Higher order terms
     long double delta_eta_h;

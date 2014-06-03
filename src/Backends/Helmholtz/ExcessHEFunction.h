@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include "CoolPropFluid.h"
+#include "crossplatform_shared_ptr.h"
 
 namespace CoolProp{
 
