@@ -1032,6 +1032,7 @@ long double ResidualHelmholtzNonAnalytic::dTau(const long double &tau, const lon
 
 long double ResidualHelmholtzNonAnalytic::dDelta2(const long double &tau, const long double &delta) throw()
 {
+    long double dDELTA2_dDelta2, dDELTAbi2_dDelta2;
     if (N==0){return 0.0;}
     for (unsigned int i=0; i<N; ++i)
     {
@@ -1045,9 +1046,18 @@ long double ResidualHelmholtzNonAnalytic::dDelta2(const long double &tau, const 
         long double dPSI_dDelta=-2.0*Ci*(delta-1.0)*PSI;
         long double dDELTA_dDelta=(delta-1.0)*(Ai*theta*2.0/betai*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)+2.0*Bi*ai*pow(pow(delta-1.0,2),ai-1.0));
 
+        long double dDELTA_dDelta_over_delta_minus_1=(Ai*theta*2.0/betai*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)+2.0*Bi*ai*pow(pow(delta-1.0,2),ai-1.0));
+
         long double dPSI2_dDelta2=(2.0*Ci*pow(delta-1.0,2)-1.0)*2.0*Ci*PSI;
-        long double dDELTA2_dDelta2=1.0/(delta-1.0)*dDELTA_dDelta+pow(delta-1.0,2)*(4.0*Bi*ai*(ai-1.0)*pow(pow(delta-1.0,2),ai-2.0)+2.0*pow(Ai/betai,2)*pow(pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0),2)+Ai*theta*4.0/betai*(1.0/(2.0*betai)-1.0)*pow(pow(delta-1.0,2),1.0/(2.0*betai)-2.0));
-        long double dDELTAbi2_dDelta2=bi*(pow(DELTA,bi-1.0)*dDELTA2_dDelta2+(bi-1.0)*pow(DELTA,bi-2.0)*pow(dDELTA_dDelta,2));
+
+        if (fabs(delta-1) < 10*DBL_EPSILON){
+            dDELTA2_dDelta2 = 0;
+            dDELTAbi2_dDelta2 = 0;
+        }
+        else{
+            dDELTA2_dDelta2 = dDELTA_dDelta_over_delta_minus_1+pow(delta-1.0,2)*(4.0*Bi*ai*(ai-1.0)*pow(pow(delta-1,2),ai-2.0)+2.0*pow(Ai/betai,2)*pow(pow(pow(delta-1,2),1.0/(2.0*betai)-1.0),2)+Ai*theta*4.0/betai*(1.0/(2.0*betai)-1.0)*pow(pow(delta-1.0,2),1.0/(2.0*betai)-2.0));
+            dDELTAbi2_dDelta2 = bi*(pow(DELTA,bi-1.0)*dDELTA2_dDelta2+(bi-1.0)*pow(DELTA,bi-2.0)*pow(dDELTA_dDelta,2));
+        }
         
         // At critical point, DELTA is 0, and 1/0^n is undefined
         if (fabs(DELTA) < 10*DBL_EPSILON)
