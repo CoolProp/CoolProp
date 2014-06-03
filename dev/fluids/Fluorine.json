@@ -191,6 +191,12 @@
           "a1": 0, 
           "a2": 0, 
           "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a1": -7.97036812567026, 
+          "a2": 19.8946542032696, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
