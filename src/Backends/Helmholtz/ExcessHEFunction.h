@@ -80,7 +80,7 @@ public:
 	virtual double d2alphar_dTau2(double tau, double delta) = 0;
 };
 
-typedef std::tr1::shared_ptr<DepartureFunction> DepartureFunctionPointer;
+typedef shared_ptr<DepartureFunction> DepartureFunctionPointer;
 
 class ExcessTerm
 {

@@ -65,14 +65,9 @@ int main()
         for (std::size_t i = 0; i < sizeof(NBP_refs)/sizeof(NBP_refs[0]); ++i)
         {
             try{
-<<<<<<< HEAD
-                set_reference_stateS(NBP_refs[i],"RESET");
-                HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,NBP_refs[i]));
-=======
                 //set_reference_stateS(NBP_refs[i],"RESET");
                 std::vector<std::string> comps(1,NBP_refs[i]);
                 HelmholtzEOSMixtureBackend HEOS(comps);
->>>>>>> cb497b443cbbf60be06b3485369837a785fb34c9
                 HEOS.update(PQ_INPUTS, 101325, 0);
                 double delta_a1 = HEOS.smass()/(HEOS.gas_constant()/HEOS.molar_mass());
                 double delta_a2 = -HEOS.hmass()/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing().T);
@@ -86,14 +81,9 @@ int main()
         for (std::size_t i = 0; i < sizeof(IIR_refs)/sizeof(IIR_refs[0]); ++i)
         {
             try{
-<<<<<<< HEAD
-                set_reference_stateS(IIR_refs[i],"RESET");
-                HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,IIR_refs[i]));
-=======
                 //set_reference_stateS(IIR_refs[i],"RESET");
                 std::vector<std::string> comps(1,IIR_refs[i]);
                 HelmholtzEOSMixtureBackend HEOS(comps);
->>>>>>> cb497b443cbbf60be06b3485369837a785fb34c9
                 HEOS.update(QT_INPUTS, 0, 273.15);
                 double delta_a1 = (HEOS.smass()-1000)/(HEOS.gas_constant()/HEOS.molar_mass());
                 double delta_a2 = -(HEOS.hmass()-200000)/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing().T);
@@ -167,7 +157,7 @@ int main()
     if (0)
     {
         double rrr0 = PropsSI("P","T",200,"Dmolar",14000,"REFPROP::R125");
-        double rrr2 = PropsSI("P","T",200,"Dmolar",14000,"R125");       
+        double rrr2 = PropsSI("P","T",200,"Dmolar",14000,"R125");
         double rrr =0 ;
     }
     if (0)
@@ -193,10 +183,12 @@ int main()
 
         double rr0 = PropsSI("L","T",647.35,"Dmass",272,"Water");
 
+        #if ENABLE_CATCH
         std::vector<std::string> tags;
-        tags.push_back("[transport]");
+        tags.push_back("[rp1485]");
         //run_user_defined_tests(tags);
         run_tests();
+        #endif
 
         std::string fl = get_global_param_string("FluidsList");
         double rr = PropsSI("D", "P", 3e5, "T", 300, "Nitrogen");

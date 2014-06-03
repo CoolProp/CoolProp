@@ -5,6 +5,7 @@ the build to avoid double declaration of the main function and
 Catch clashing
 */
 #include "Tests.h"
+#include "time.h"
 
 #if defined ENABLE_CATCH
     #define CATCH_CONFIG_RUNNER
