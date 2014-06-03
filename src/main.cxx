@@ -58,14 +58,14 @@ struct element
 int main()
 {
     set_debug_level(0);
-    if (1)
+    if (0)
     {
-        std::string NBP_refs[] = {"Helium","Ethylene","Ethanol","n-Dodecane","Benzene","n-Undecane","Neon","Fluorine","Methanol","Acetone","Methane","Ethane","n-Pentane","n-Hexane","n-Heptane","n-Octane","CycloHexane","MD3M","MM","D4","MethylPalmitate","MethylStearate","MethylOleate","MethylLinoleate","MethylLinolenate","m-Xylene","Air"};
+        std::string NBP_refs[] = {"D5","D6","MD2M","MDM","Benzene","Helium","Ethylene","Ethanol","n-Dodecane","Benzene","n-Undecane","Neon","Fluorine","Methanol","Acetone","Methane","Ethane","n-Pentane","n-Hexane","n-Heptane","n-Octane","CycloHexane","MD3M","MM","D4","MethylPalmitate","MethylStearate","MethylOleate","MethylLinoleate","MethylLinolenate","m-Xylene","Air"};
         std::string IIR_refs[] = {"SES36","R143a","CycloPropane","Propylene","R227EA","R365MFC","R161","HFE143m","SulfurHexafluoride","CarbonDioxide","R1234ze(E)","R22","R124","Propyne","R507A","R152A","R123","R11","n-Butane","IsoButane","RC318","R21","R114","R13","R12","R113","R1233zd(E)","R41"};
         for (std::size_t i = 0; i < sizeof(NBP_refs)/sizeof(NBP_refs[0]); ++i)
         {
             try{
-                //set_reference_stateS(NBP_refs[i],"RESET");
+                set_reference_stateS(NBP_refs[i],"RESET");
                 HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,NBP_refs[i]));
                 HEOS.update(PQ_INPUTS, 101325, 0);
                 double delta_a1 = HEOS.smass()/(HEOS.gas_constant()/HEOS.molar_mass());
@@ -80,7 +80,7 @@ int main()
         for (std::size_t i = 0; i < sizeof(IIR_refs)/sizeof(IIR_refs[0]); ++i)
         {
             try{
-                //set_reference_stateS(IIR_refs[i],"RESET");
+                set_reference_stateS(IIR_refs[i],"RESET");
                 HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,IIR_refs[i]));
                 HEOS.update(QT_INPUTS, 0, 273.15);
                 double delta_a1 = (HEOS.smass()-1000)/(HEOS.gas_constant()/HEOS.molar_mass());
@@ -152,13 +152,13 @@ int main()
             std::cout << format("%s %17.15g\n", S->name().c_str(), S->p());
         }
     }
-    if (1)
+    if (0)
     {
-        double rrr0 = PropsSI("C","T",350,"D",1e-13,"REFPROP::MDM");
-        double rrr2 = PropsSI("C","T",350,"D",1e-13,"MDM");
+        double rrr0 = PropsSI("P","T",200,"Dmolar",14000,"REFPROP::R125");
+        double rrr2 = PropsSI("P","T",200,"Dmolar",14000,"R125");       
         double rrr =0 ;
     }
-    if (1)
+    if (0)
     {
         std::tr1::shared_ptr<AbstractState> ASR(AbstractState::factory("REFPROP","CO2"));
         ASR->update(QT_INPUTS, 1, 304);
@@ -171,17 +171,19 @@ int main()
     }
     if (1)
     {
-        double h1 = PropsSI("S","P",101325,"Q",0,"n-Pentane");
+        /*double h1 = PropsSI("S","P",101325,"Q",0,"n-Pentane");
         std::string er = get_global_param_string("errstring");
         set_reference_stateS("n-Propane","NBP");
-        double h2 = PropsSI("H","P",101325,"Q",0,"n-Propane");
+        double h2 = PropsSI("H","P",101325,"Q",0,"n-Propane");*/
 
-        std::string RPname = get_fluid_param_string("Water", "REFPROPname");
-        std::string s = get_BibTeXKey("n-Propane", "rr");
+        //std::string RPname = get_fluid_param_string("Water", "REFPROPname");
+        //std::string s = get_BibTeXKey("n-Propane", "rr");
+
+        double rr0 = PropsSI("L","T",647.35,"Dmass",272,"Water");
 
         std::vector<std::string> tags;
-        tags.push_back("[helmholtz]");
-        run_user_defined_tests(tags);
+        tags.push_back("[transport]");
+        //run_user_defined_tests(tags);
         run_tests();
 
         std::string fl = get_global_param_string("FluidsList");
