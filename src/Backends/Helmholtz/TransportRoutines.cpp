@@ -226,12 +226,12 @@ long double TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBack
 	double delta,tau,mubar_0,mubar_1,mubar_2,drhodp,drhodp_R,DeltaChibar,zeta,w,L,Y,psi_D,Tbar,rhobar;
 	double drhobar_dpbar,drhobar_dpbar_R,R_Water;
 	
-    pstar = 22.064e6;
-    Tstar = 647.096;
-    rhostar = 322;
+    pstar = 22.064e6; // [Pa]
+    Tstar = 647.096; // [K]
+    rhostar = 322; // [kg/m^3]
 	Tbar = HEOS.T()/Tstar;
-    rhobar = HEOS.keyed_output(CoolProp::iDmass)/rhostar;
-    R_Water = HEOS.gas_constant()/HEOS.molar_mass();
+    rhobar = HEOS.rhomass()/rhostar;
+    R_Water = HEOS.gas_constant()/HEOS.molar_mass(); // [J/kg/K]
 
 	// Dilute and finite gas portions
 	visc_Helper(Tbar, rhobar, &mubar_0, &mubar_1);
@@ -678,9 +678,10 @@ long double TransportRoutines::conductivity_hardcoded_water(HelmholtzEOSMixtureB
 	double drhobar_dpbar = pstar/rhostar*drhodp;
 	double drhodp_Trbar = 1/(R*Tr_bar*Tstar*(1+2*rhobar*HEOS.calc_alphar_deriv_nocache(0,1,HEOS.mole_fractions,1/Tr_bar,delta)+delta*delta*HEOS.calc_alphar_deriv_nocache(0,2,HEOS.mole_fractions,1/Tr_bar,delta)));
 	double drhobar_dpbar_Trbar = pstar/rhostar*drhodp_Trbar;
-	double cp = HEOS.cpmolar(); // [J/mol/K]
-	double cv = HEOS.cvmolar(); // [J/mol/K]
-	double cpbar = cp/8.31447215; //[-]
+	double cpmol = HEOS.cpmolar(); // [J/mol/K]
+    double cp = HEOS.cpmass(); // [J/kg/K]
+	double cv = HEOS.cvmass(); // [J/kg/K]
+	double cpbar = cp/R; //[-]
 	double mubar = HEOS.viscosity()/mustar;
 	double DELTAchibar_T = rhobar*(drhobar_dpbar-drhobar_dpbar_Trbar*Tr_bar/Tbar);
 	if (DELTAchibar_T<0)
