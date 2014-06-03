@@ -111,7 +111,7 @@ vel("Hexane", "T", 550, "Dmass", 500, "V", 95.002e-6, 1e-3),
 vel("CO2", "T", 220, "Dmass", 2.440, "V", 11.06e-6, 1e-3),
 vel("CO2", "T", 300, "Dmass", 1.773, "V", 15.02e-6, 1e-3),
 vel("CO2", "T", 800, "Dmass", 0.662, "V", 35.09e-6, 1e-3),
-vel("CO2", "T", 304, "Dmass", 254.3205, "V", 20.99e-6, 1e-3),
+vel("CO2", "T", 304, "Dmass", 254.320, "V", 20.99e-6, 1e-2), // no critical enhancement
 vel("CO2", "T", 220, "Dmass", 1194.86, "V", 269.37e-6, 1e-3),
 vel("CO2", "T", 300, "Dmass", 1029.27, "V", 132.55e-6, 1e-3),
 vel("CO2", "T", 800, "Dmass", 407.828, "V", 48.74e-6, 1e-3),
@@ -231,7 +231,7 @@ public:
     }
 };
 
-TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against published data", "[viscosity]")
+TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against published data", "[viscosity],[transport]")
 {
     int inputsN = sizeof(viscosity_validation_data)/sizeof(viscosity_validation_data[0]);
     for (int i = 0; i < inputsN; ++i)
@@ -346,7 +346,7 @@ vel("n-Propane", "T", 368, "Dmolar", 1e-10, "L", 0.0266135388745317,1e-4),
 //vel("R1234ze(E)", "T", 300, "Dmass", 1233.82, "L", 0.085389, 1e-4),
 
 // From Laesecke, IJR 1995
-vel("R123", "T", 180, "Dmass", 1739, "L", 110.9e-3, 1e-4),
+vel("R123", "T", 180, "Dmass", 1739, "L", 110.9e-3, 2e-4),
 vel("R123", "T", 180, "Dmass", 0.2873e-2, "L", 2.473e-3, 1e-3),
 vel("R123", "T", 430, "Dmass", 996.35, "L", 45.62e-3, 1e-3),
 vel("R123", "T", 430, "Dmass", 166.9,  "L", 21.03e-3, 1e-3),
@@ -422,8 +422,8 @@ vel("Helium", "T", 8, "P", 1e5, "L", 0.0145, 1e-2),
 vel("Helium", "T", 4, "P", 20e5, "L", 0.0255, 1e-2),
 vel("Helium", "T", 8, "P", 20e5, "L", 0.0308, 1e-2),
 vel("Helium", "T", 20, "P", 20e5, "L", 0.0328, 1e-2),
-vel("Helium", "T", 4, "P", 100e5, "L", 0.0385, 1e-2),
-vel("Helium", "T", 8, "P", 100e5, "L", 0.0566, 1e-2),
+vel("Helium", "T", 4, "P", 100e5, "L", 0.0385, 3e-2),
+vel("Helium", "T", 8, "P", 100e5, "L", 0.0566, 3e-2),
 vel("Helium", "T", 20, "P", 100e5, "L", 0.0594, 1e-2),
 vel("Helium", "T", 4, "P", 1e5, "L", 0.0186, 1e-2),
 vel("Helium", "T", 4, "P", 2e5, "L", 0.0194, 1e-2),
@@ -444,7 +444,7 @@ vel("R507A", "T", 254.85, "P", 0.101e6, "L", 0.01007, 0.03),
 vel("R507A", "T", 333.18, "P", 2.644e6, "L", 21.31e-3, 0.03),
 };
 
-TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity]")
+TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity],[transport]")
 {
     int inputsN = sizeof(conductivity_validation_data)/sizeof(conductivity_validation_data[0]);
     for (int i = 0; i < inputsN; ++i)
