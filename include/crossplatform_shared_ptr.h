@@ -5,9 +5,12 @@
 
 // Based on the platform and compiler, include the necessary header to give access to std::tr1::shared_ptr directly as shared_ptr
 
-#if defined(__ISLINUX__)
+#if defined(__ISLINUX__) && (defined(__llvm__) || defined(__clang__))
 #include <memory>
 using std::shared_ptr;
+#elif defined(__ISLINUX__)
+#include <tr1/memory>
+using namespace std::tr1;
 #elif defined(__ISAPPLE__)
 #include <tr1/memory>
 using namespace std::tr1;
