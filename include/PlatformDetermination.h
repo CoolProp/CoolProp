@@ -1,12 +1,18 @@
 #ifndef PLATFORMDETERMINATION_H
 #define PLATFORMDETERMINATION_H
 
-#if defined(_WIN32) || defined(__WIN32__) || defined(_WIN64) || defined(__WIN64__)
+// See also http://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
+#if _WIN64
+#  define __ISWINDOWS__
+#elif _WIN32
 #  define __ISWINDOWS__
 #elif __APPLE__
 #  define __ISAPPLE__
-#elif __linux
+#elif __linux || __unix || __posix
 #  define __ISLINUX__
+#else
+# pragma error
 #endif
+
 
 #endif
