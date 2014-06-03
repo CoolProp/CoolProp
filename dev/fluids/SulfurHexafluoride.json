@@ -488,8 +488,8 @@
           5, 
           5
         ], 
-        "note": "There is a typo in Assael, to get the correct values in REFPROP they use a molar reducing density of 5.046 mol/L or 5046*0.1460554192 = 736.9956452832 kg/m^3", 
-        "rhomass_reducing": 736.9956452832, 
+        "note": "There is a typo in Assael, New correction: use reducing density of 5.0823 mol/L (742.297/  146.0554192) and Tref = 478.08 || Old correction: to get the correct values in REFPROP they use a molar reducing density of 5.046 mol/L or 5046*0.1460554192 = 736.9956452832 kg/m^3", 
+        "rhomass_reducing": 742.297, 
         "rhomass_reducing_units": "kg/m^3", 
         "t": [
           0, 
