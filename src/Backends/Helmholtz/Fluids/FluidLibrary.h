@@ -47,6 +47,9 @@ protected:
                 std::vector<long double> d = cpjson::get_long_double_array(contribution["d"]);
                 std::vector<long double> t = cpjson::get_long_double_array(contribution["t"]);
                 std::vector<long double> l = cpjson::get_long_double_array(contribution["l"]);
+                assert(n.size() == d.size());
+                assert(n.size() == t.size());
+                assert(n.size() == l.size());
                 EOS.alphar.Power = ResidualHelmholtzPower(n,d,t,l);
             }
             else if (!type.compare("ResidualHelmholtzGaussian"))
@@ -59,6 +62,12 @@ protected:
                 std::vector<long double> epsilon = cpjson::get_long_double_array(contribution["epsilon"]);
                 std::vector<long double> beta = cpjson::get_long_double_array(contribution["beta"]);
                 std::vector<long double> gamma = cpjson::get_long_double_array(contribution["gamma"]);
+                assert(n.size() == d.size());
+                assert(n.size() == t.size());
+                assert(n.size() == eta.size());
+                assert(n.size() == epsilon.size());
+                assert(n.size() == beta.size());
+                assert(n.size() == gamma.size());
                 EOS.alphar.Gaussian = ResidualHelmholtzGaussian(n,d,t,eta,epsilon,beta,gamma);
             }
             else if (!type.compare("ResidualHelmholtzNonAnalytic"))
@@ -72,6 +81,13 @@ protected:
                 std::vector<long double> B = cpjson::get_long_double_array(contribution["B"]);
                 std::vector<long double> C = cpjson::get_long_double_array(contribution["C"]);
                 std::vector<long double> D = cpjson::get_long_double_array(contribution["D"]);
+                assert(n.size() == a.size());
+                assert(n.size() == b.size());
+                assert(n.size() == beta.size());
+                assert(n.size() == A.size());
+                assert(n.size() == B.size());
+                assert(n.size() == C.size());
+                assert(n.size() == D.size());
                 EOS.alphar.NonAnalytic = ResidualHelmholtzNonAnalytic(n,a,b,beta,A,B,C,D);
             }
             else if (!type.compare("ResidualHelmholtzLemmon2005"))
@@ -82,6 +98,10 @@ protected:
                 std::vector<long double> t = cpjson::get_long_double_array(contribution["t"]);
                 std::vector<long double> l = cpjson::get_long_double_array(contribution["l"]);
                 std::vector<long double> m = cpjson::get_long_double_array(contribution["m"]);
+                assert(n.size() == d.size());
+                assert(n.size() == t.size());
+                assert(n.size() == l.size());
+                assert(n.size() == m.size());
                 EOS.alphar.Lemmon2005 = ResidualHelmholtzLemmon2005(n,d,t,l,m);
             }
             else if (!type.compare("ResidualHelmholtzExponential"))
@@ -92,6 +112,10 @@ protected:
                 std::vector<long double> t = cpjson::get_long_double_array(contribution["t"]);
                 std::vector<long double> g = cpjson::get_long_double_array(contribution["g"]);
                 std::vector<long double> l = cpjson::get_long_double_array(contribution["l"]);
+                assert(n.size() == d.size());
+                assert(n.size() == t.size());
+                assert(n.size() == g.size());
+                assert(n.size() == l.size());
                 EOS.alphar.Exponential = ResidualHelmholtzExponential(n,d,t,g,l);
             }
             else if (!type.compare("ResidualHelmholtzAssociating"))
