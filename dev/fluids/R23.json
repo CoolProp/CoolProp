@@ -280,6 +280,7 @@
     }
   ], 
   "NAME": "R23", 
+  "REFPROP_NAME": "R23", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Shan-ASHRAE-2000", 

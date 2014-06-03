@@ -2,7 +2,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include <tr1/memory>
+#include <memory>
 
 #include "HumidAirProp.h"
 #include "AbstractState.h"

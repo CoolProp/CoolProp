@@ -171,6 +171,12 @@
             2.110662251655629
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": 50.7611531834779, 
+          "a2": -21.442651306684, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -287,5 +293,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "MethylPalmitate"
+  "NAME": "MethylPalmitate", 
+  "REFPROP_NAME": "MPALMITA"
 }

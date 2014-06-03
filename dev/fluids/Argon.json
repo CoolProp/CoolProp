@@ -391,6 +391,7 @@
     }
   ], 
   "NAME": "Argon", 
+  "REFPROP_NAME": "ARGON", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Lemmon-IJT-2004", 

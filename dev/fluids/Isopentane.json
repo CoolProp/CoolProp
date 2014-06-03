@@ -261,5 +261,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Isopentane"
+  "NAME": "Isopentane", 
+  "REFPROP_NAME": "IPENTANE"
 }

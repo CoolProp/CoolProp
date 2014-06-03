@@ -304,6 +304,7 @@
     }
   ], 
   "NAME": "R1234yf", 
+  "REFPROP_NAME": "R1234YF", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2011", 

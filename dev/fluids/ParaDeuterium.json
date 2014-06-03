@@ -326,5 +326,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "ParaDeuterium"
+  "NAME": "ParaDeuterium", 
+  "REFPROP_NAME": "N/A"
 }

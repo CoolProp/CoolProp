@@ -160,6 +160,12 @@
             3
           ], 
           "type": "IdealGasHelmholtzCP0PolyT"
+        }, 
+        {
+          "a1": 9.44957570130074, 
+          "a2": -2.12108576273657, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -254,5 +260,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "n-Undecane"
+  "NAME": "n-Undecane", 
+  "REFPROP_NAME": "C11"
 }

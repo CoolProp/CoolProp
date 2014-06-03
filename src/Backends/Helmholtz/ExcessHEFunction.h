@@ -1,7 +1,7 @@
 #ifndef EXCESSHE_FUNCTIONS_H
 #define EXCESSHE_FUNCTIONS_H
 
-#include <tr1/memory>
+#include <memory>
 #include <vector>
 #include "CoolPropFluid.h"
 

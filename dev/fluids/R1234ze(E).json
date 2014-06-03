@@ -162,6 +162,12 @@
             11.02164592701035
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": -12.8629419710783, 
+          "a2": 7.55643976844588, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -293,6 +299,7 @@
     }
   ], 
   "NAME": "R1234ze(E)", 
+  "REFPROP_NAME": "R1234ZE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2011", 

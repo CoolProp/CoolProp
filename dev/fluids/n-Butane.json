@@ -176,6 +176,12 @@
             9.975553778
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": -17.9737888338978, 
+          "a2": 10.3892639083242, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -338,6 +344,7 @@
     }
   ], 
   "NAME": "n-Butane", 
+  "REFPROP_NAME": "BUTANE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2002-nButane", 

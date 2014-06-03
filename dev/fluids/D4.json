@@ -169,6 +169,12 @@
             3
           ], 
           "type": "IdealGasHelmholtzCP0PolyT"
+        }, 
+        {
+          "a1": -36.9617168387456, 
+          "a2": 22.2512527290327, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -255,5 +261,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "D4"
+  "NAME": "D4", 
+  "REFPROP_NAME": "D4"
 }

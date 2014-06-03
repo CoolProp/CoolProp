@@ -111,7 +111,7 @@ vel("Hexane", "T", 550, "Dmass", 500, "V", 95.002e-6, 1e-3),
 vel("CO2", "T", 220, "Dmass", 2.440, "V", 11.06e-6, 1e-3),
 vel("CO2", "T", 300, "Dmass", 1.773, "V", 15.02e-6, 1e-3),
 vel("CO2", "T", 800, "Dmass", 0.662, "V", 35.09e-6, 1e-3),
-vel("CO2", "T", 304, "Dmass", 254.3205, "V", 20.99e-6, 1e-3),
+vel("CO2", "T", 304, "Dmass", 254.320, "V", 20.99e-6, 1e-2), // no critical enhancement
 vel("CO2", "T", 220, "Dmass", 1194.86, "V", 269.37e-6, 1e-3),
 vel("CO2", "T", 300, "Dmass", 1029.27, "V", 132.55e-6, 1e-3),
 vel("CO2", "T", 800, "Dmass", 407.828, "V", 48.74e-6, 1e-3),
@@ -231,7 +231,7 @@ public:
     }
 };
 
-TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against published data", "[viscosity]")
+TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against published data", "[viscosity],[transport]")
 {
     int inputsN = sizeof(viscosity_validation_data)/sizeof(viscosity_validation_data[0]);
     for (int i = 0; i < inputsN; ++i)
@@ -346,19 +346,18 @@ vel("n-Propane", "T", 368, "Dmolar", 1e-10, "L", 0.0266135388745317,1e-4),
 //vel("R1234ze(E)", "T", 300, "Dmass", 1233.82, "L", 0.085389, 1e-4),
 
 // From Laesecke, IJR 1995
-vel("R123", "T", 180, "Dmass", 1739, "L", 110.9e-3, 1e-4),
+vel("R123", "T", 180, "Dmass", 1739, "L", 110.9e-3, 2e-4),
 vel("R123", "T", 180, "Dmass", 0.2873e-2, "L", 2.473e-3, 1e-3),
 vel("R123", "T", 430, "Dmass", 996.35, "L", 45.62e-3, 1e-3),
 vel("R123", "T", 430, "Dmass", 166.9,  "L", 21.03e-3, 1e-3),
 
-// From Vesovic, JPCRD, 1990
-vel("CO2", "T", 220, "Dmass", 2.440, "L", 10.90e-3, 1e-4),
-vel("CO2", "T", 300, "Dmass", 1.773, "L", 16.77e-3, 1e-4),
-vel("CO2", "T", 800, "Dmass", 0.662, "L", 56.65e-3, 1e-4),
-vel("CO2", "T", 304, "Dmass", 254.3205, "L", 42.52e-3, 1e-4),
-vel("CO2", "T", 220, "Dmass", 1194.86, "L", 187.50e-3, 1e-4),
-vel("CO2", "T", 300, "Dmass", 1029.27, "L", 137.61e-3, 1e-4),
-vel("CO2", "T", 800, "Dmass", 407.828, "L", 78.47e-3, 1e-4),
+// From Scalabrin, JPCRD, 2006
+vel("CO2", "T", 218, "Q", 0, "L", 181.09e-3, 1e-4),
+vel("CO2", "T", 218, "Q", 1, "L", 10.837e-3, 1e-4),
+vel("CO2", "T", 304, "Q", 0, "L", 140.3e-3, 1e-4),
+vel("CO2", "T", 304, "Q", 1, "L", 217.95e-3, 1e-4),
+vel("CO2", "T", 225, "Dmass", 0.23555, "L", 11.037e-3, 1e-4),
+vel("CO2", "T", 275, "Dmass", 1281.64, "L", 238.44e-3, 1e-4),
 
 // From Friend, JPCRD, 1991
 vel("Ethane", "T", 100, "Dmass", 1e-13, "L", 3.46e-3, 1e-2),
@@ -408,7 +407,7 @@ vel("Water", "T", 647.35, "Dmass", 750, "L", 600.961346e-3, 1e-6),
 
 // From Shan, ASHRAE, 2000
 vel("R23", "T", 180, "Dmolar", 21097, "L", 143.19e-3, 1e-4),
-vel("R23", "T", 420, "Dmolar", 7564, "L", 50.19e-3, 1e-4),
+vel("R23", "T", 420, "Dmolar", 7564, "L", 50.19e-3, 2e-4),
 vel("R23", "T", 370, "Dmolar", 32.62, "L", 17.455e-3, 1e-4),
 
 // From REFPROP 9.1 since no sample data provided in Tufeu
@@ -416,23 +415,23 @@ vel("Ammonia", "T", 310, "Dmolar", 34320, "L", 0.45223303481784971, 1e-4),
 vel("Ammonia", "T", 395, "Q", 0, "L", 0.2264480769301, 1e-4),
 
 // From Hands, Cryogenics, 1981
-vel("Helium", "T", 800, "P", 1e5, "L", 0.3085, 1e-4),
-vel("Helium", "T", 300, "P", 1e5, "L", 0.1560, 1e-4),
-vel("Helium", "T", 20, "P", 1e5, "L", 0.0262, 1e-4),
-vel("Helium", "T", 8, "P", 1e5, "L", 0.0145, 1e-4),
-vel("Helium", "T", 4, "P", 20e5, "L", 0.0255, 1e-4),
-vel("Helium", "T", 8, "P", 20e5, "L", 0.0308, 1e-4),
-vel("Helium", "T", 20, "P", 20e5, "L", 0.0328, 1e-4),
-vel("Helium", "T", 4, "P", 100e5, "L", 0.0385, 1e-4),
-vel("Helium", "T", 8, "P", 100e5, "L", 0.0566, 1e-4),
-vel("Helium", "T", 20, "P", 100e5, "L", 0.0594, 1e-4),
-vel("Helium", "T", 4, "P", 1e5, "L", 0.0186, 1e-4),
-vel("Helium", "T", 4, "P", 2e5, "L", 0.0194, 1e-4),
-vel("Helium", "T", 5.180, "P", 2.3e5, "L", 0.0195, 1e-4),
-vel("Helium", "T", 5.2, "P", 2.3e5, "L", 0.0202, 1e-4),
-vel("Helium", "T", 5.230, "P", 2.3e5, "L", 0.0181, 1e-4),
-vel("Helium", "T", 5.260, "P", 2.3e5, "L", 0.0159, 1e-4),
-vel("Helium", "T", 5.3, "P", 2.3e5, "L", 0.0149, 1e-4),
+vel("Helium", "T", 800, "P", 1e5, "L", 0.3085, 1e-2),
+vel("Helium", "T", 300, "P", 1e5, "L", 0.1560, 1e-2),
+vel("Helium", "T", 20, "P", 1e5, "L", 0.0262, 1e-2),
+vel("Helium", "T", 8, "P", 1e5, "L", 0.0145, 1e-2),
+vel("Helium", "T", 4, "P", 20e5, "L", 0.0255, 1e-2),
+vel("Helium", "T", 8, "P", 20e5, "L", 0.0308, 1e-2),
+vel("Helium", "T", 20, "P", 20e5, "L", 0.0328, 1e-2),
+vel("Helium", "T", 4, "P", 100e5, "L", 0.0385, 3e-2),
+vel("Helium", "T", 8, "P", 100e5, "L", 0.0566, 3e-2),
+vel("Helium", "T", 20, "P", 100e5, "L", 0.0594, 1e-2),
+vel("Helium", "T", 4, "P", 1e5, "L", 0.0186, 1e-2),
+vel("Helium", "T", 4, "P", 2e5, "L", 0.0194, 1e-2),
+vel("Helium", "T", 5.180, "P", 2.3e5, "L", 0.0195, 1e-1),
+vel("Helium", "T", 5.2, "P", 2.3e5, "L", 0.0202, 1e-1),
+vel("Helium", "T", 5.230, "P", 2.3e5, "L", 0.0181, 1e-1),
+vel("Helium", "T", 5.260, "P", 2.3e5, "L", 0.0159, 1e-1),
+vel("Helium", "T", 5.3, "P", 2.3e5, "L", 0.0149, 1e-1),
 
 // Geller, IJT, 2001 - based on experimental data, no validation data provided
 vel("R404A", "T", 253.03, "P", 0.101e6, "L", 0.00991, 0.03),
@@ -445,7 +444,7 @@ vel("R507A", "T", 254.85, "P", 0.101e6, "L", 0.01007, 0.03),
 vel("R507A", "T", 333.18, "P", 2.644e6, "L", 21.31e-3, 0.03),
 };
 
-TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity]")
+TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity],[transport]")
 {
     int inputsN = sizeof(conductivity_validation_data)/sizeof(conductivity_validation_data[0]);
     for (int i = 0; i < inputsN; ++i)

@@ -351,5 +351,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Deuterium"
+  "NAME": "Deuterium", 
+  "REFPROP_NAME": "D2"
 }

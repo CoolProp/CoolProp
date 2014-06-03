@@ -284,5 +284,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "o-Xylene"
+  "NAME": "o-Xylene", 
+  "REFPROP_NAME": "OXYLENE"
 }

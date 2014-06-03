@@ -173,6 +173,12 @@
             3.809015737530008
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": -15.8290880642424, 
+          "a2": 11.087938006383, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -321,5 +327,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R227EA"
+  "NAME": "R227EA", 
+  "REFPROP_NAME": "R227EA"
 }

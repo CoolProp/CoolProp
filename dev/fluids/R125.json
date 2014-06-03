@@ -309,6 +309,7 @@
     }
   ], 
   "NAME": "R125", 
+  "REFPROP_NAME": "R125", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2006", 

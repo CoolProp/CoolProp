@@ -177,6 +177,12 @@
             3
           ], 
           "type": "IdealGasHelmholtzCP0PolyT"
+        }, 
+        {
+          "a1": -26.6772954975428, 
+          "a2": 16.0611372782126, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -264,6 +270,7 @@
     }
   ], 
   "NAME": "R123", 
+  "REFPROP_NAME": "R123", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Laesecke-IJR-1996", 

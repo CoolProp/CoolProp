@@ -189,6 +189,12 @@
             0
           ], 
           "type": "IdealGasHelmholtzCP0AlyLee"
+        }, 
+        {
+          "a1": 17.1871525209699, 
+          "a2": -1.39902544739164, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -276,6 +282,7 @@
     }
   ], 
   "NAME": "n-Octane", 
+  "REFPROP_NAME": "OCTANE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-FPE-2005", 

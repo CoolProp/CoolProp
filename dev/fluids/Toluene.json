@@ -263,6 +263,7 @@
     }
   ], 
   "NAME": "Toluene", 
+  "REFPROP_NAME": "TOLUENE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2012-Toluene", 

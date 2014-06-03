@@ -160,6 +160,12 @@
             795.1
           ], 
           "type": "IdealGasHelmholtzCP0AlyLee"
+        }, 
+        {
+          "a1": 9.28428984830427, 
+          "a2": -5.60685303331121, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -246,5 +252,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "MD2M"
+  "NAME": "MD2M", 
+  "REFPROP_NAME": "MD2M"
 }

@@ -171,6 +171,12 @@
             3.667212276214834
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": 60.4208015509131, 
+          "a2": -25.9023485195146, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -287,5 +293,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "MethylOleate"
+  "NAME": "MethylOleate", 
+  "REFPROP_NAME": "MOLEATE"
 }

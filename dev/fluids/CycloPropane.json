@@ -168,6 +168,12 @@
             4
           ], 
           "type": "IdealGasHelmholtzCP0PolyT"
+        }, 
+        {
+          "a1": -10.9358280454636, 
+          "a2": 8.75156673092286, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -294,5 +300,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "CycloPropane"
+  "NAME": "CycloPropane", 
+  "REFPROP_NAME": "CYCLOPRO"
 }

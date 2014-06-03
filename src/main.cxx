@@ -1,6 +1,7 @@
 
 
-
+#include "Backends/Helmholtz/HelmholtzEOSBackend.h"
+#include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "Backends/REFPROP/REFPROPBackend.h"
 #include <time.h>
@@ -19,13 +20,12 @@ using namespace CoolProp;
 
 //#include <vld.h>
 
-
 void generate_melting_curve_data(const char* file_name, const char *fluid_name, double Tmin, double Tmax)
 {
 
     FILE *fp;
     fp = fopen(file_name,"w");
-    AbstractState *State = AbstractState::factory(std::string("REFPROP"),std::string(fluid_name));
+    std::tr1::shared_ptr<AbstractState> State(AbstractState::factory(std::string("REFPROP"),std::string(fluid_name)));
     for (double T = Tmin; T < Tmax; T += 0.1)
     {
         try{
@@ -49,7 +49,6 @@ void generate_melting_curve_data(const char* file_name, const char *fluid_name, 
         }
     }
     fclose(fp);
-    delete State;
 }
 struct element
         {
@@ -58,6 +57,43 @@ struct element
         };
 int main()
 {
+    set_debug_level(0);
+    if (1)
+    {
+        std::string NBP_refs[] = {"Helium","Ethylene","Ethanol","n-Dodecane","Benzene","n-Undecane","Neon","Fluorine","Methanol","Acetone","Methane","Ethane","n-Pentane","n-Hexane","n-Heptane","n-Octane","CycloHexane","MD3M","MM","D4","MethylPalmitate","MethylStearate","MethylOleate","MethylLinoleate","MethylLinolenate","m-Xylene","Air"};
+        std::string IIR_refs[] = {"SES36","R143a","CycloPropane","Propylene","R227EA","R365MFC","R161","HFE143m","SulfurHexafluoride","CarbonDioxide","R1234ze(E)","R22","R124","Propyne","R507A","R152A","R123","R11","n-Butane","IsoButane","RC318","R21","R114","R13","R12","R113","R1233zd(E)","R41"};
+        for (std::size_t i = 0; i < sizeof(NBP_refs)/sizeof(NBP_refs[0]); ++i)
+        {
+            try{
+                //set_reference_stateS(NBP_refs[i],"RESET");
+                HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,NBP_refs[i]));
+                HEOS.update(PQ_INPUTS, 101325, 0);
+                double delta_a1 = HEOS.smass()/(HEOS.gas_constant()/HEOS.molar_mass());
+                double delta_a2 = -HEOS.hmass()/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing().T);
+                std::cout << format("%s,%s,%16.15g,%16.15g\n",NBP_refs[i].c_str(),"NBP",delta_a1, delta_a2);
+            }
+            catch(const std::exception &e)
+            {
+                std::cout << "ERROR FOR " << NBP_refs[i] << std::endl;
+            }
+        }
+        for (std::size_t i = 0; i < sizeof(IIR_refs)/sizeof(IIR_refs[0]); ++i)
+        {
+            try{
+                //set_reference_stateS(IIR_refs[i],"RESET");
+                HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,IIR_refs[i]));
+                HEOS.update(QT_INPUTS, 0, 273.15);
+                double delta_a1 = (HEOS.smass()-1000)/(HEOS.gas_constant()/HEOS.molar_mass());
+                double delta_a2 = -(HEOS.hmass()-200000)/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing().T);
+                std::cout << format("%s,%s,%16.15g,%16.15g\n",IIR_refs[i].c_str(),"IIR",delta_a1, delta_a2);
+            }
+            catch(const std::exception &e)
+            {
+                std::cout << "ERROR FOR " << IIR_refs[i] << std::endl;
+            }
+        }
+        double rr = 0;
+    }
     if (0)
     {
         generate_melting_curve_data("Ethylene-I.mlt","ethylene",103.989,110.369);
@@ -118,20 +154,39 @@ int main()
     }
     if (1)
     {
-        AbstractState *ASS = AbstractState::factory("HEOS","Water");
-        ASS->update(DmassT_INPUTS, 1e-10, 300);
-        delete ASS;
+        double rrr0 = PropsSI("C","T",350,"D",1e-13,"REFPROP::MDM");
+        double rrr2 = PropsSI("C","T",350,"D",1e-13,"MDM");
+        double rrr =0 ;
     }
-    if (0)
+    if (1)
     {
+        std::tr1::shared_ptr<AbstractState> ASR(AbstractState::factory("REFPROP","CO2"));
+        ASR->update(QT_INPUTS, 1, 304);
+        double muR0 = ASR->conductivity();
 
-        //std::vector<std::string> tags;
-        //tags.push_back("[RP1485]");
-        //run_user_defined_tests(tags);
-        //run_tests();
+        std::tr1::shared_ptr<AbstractState> ASC(AbstractState::factory("HEOS","CO2"));
+        ASC->update(QT_INPUTS, 1, 304);
+        double muC = ASC->conductivity();
+        double rr = 4;
+    }
+    if (1)
+    {
+        double h1 = PropsSI("S","P",101325,"Q",0,"n-Pentane");
+        std::string er = get_global_param_string("errstring");
+        set_reference_stateS("n-Propane","NBP");
+        double h2 = PropsSI("H","P",101325,"Q",0,"n-Propane");
+
+        std::string RPname = get_fluid_param_string("Water", "REFPROPname");
+        std::string s = get_BibTeXKey("n-Propane", "rr");
+
+        std::vector<std::string> tags;
+        tags.push_back("[helmholtz]");
+        run_user_defined_tests(tags);
+        run_tests();
+
         std::string fl = get_global_param_string("FluidsList");
         double rr = PropsSI("D", "P", 3e5, "T", 300, "Nitrogen");
-        AbstractState *AS = AbstractState::factory("HEOS","Nitrogen");
+        std::tr1::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS","Nitrogen"));
 
         AS->update(DmolarT_INPUTS, 40, 300);
         double p1 = AS->umolar();
@@ -228,21 +283,20 @@ int main()
     }
     if (0)
     {
-        AbstractState *MixRP = AbstractState::factory(std::string("REFPROP"),std::string("propane"));
+        std::tr1::shared_ptr<AbstractState> MixRP(AbstractState::factory(std::string("REFPROP"),std::string("propane")));
         MixRP->update(QT_INPUTS, 0, 330);
         long double s1 = MixRP->surface_tension();
 
-        AbstractState *Mix = AbstractState::factory(std::string("HEOS"), std::string("propane"));
+        std::tr1::shared_ptr<AbstractState> Mix(AbstractState::factory(std::string("HEOS"), std::string("propane")));
         Mix->update(QT_INPUTS, 0, 330);
         long double s2 = Mix->surface_tension();
-        delete Mix; delete MixRP;
     }
     if (0)
     {
 
         double T = 300;
 
-        AbstractState *MixRP = AbstractState::factory(std::string("REFPROP"), std::string("propane"));
+        std::tr1::shared_ptr<AbstractState> MixRP(AbstractState::factory(std::string("REFPROP"),std::string("propane")));
         {
             long N = 100000;
             double t1 = clock(), summer = 0;
@@ -260,7 +314,7 @@ int main()
         double cp2 = MixRP->cpmolar();
         double T2 = MixRP->T();
 
-        AbstractState *Mix = AbstractState::factory(std::string("CORE"),std::string("n-Propane"));
+        std::tr1::shared_ptr<AbstractState> Mix(AbstractState::factory(std::string("HEOS"), std::string("propane")));
         {
             long N = 100000;
             double t1 = clock(), summer = 0;
@@ -278,7 +332,6 @@ int main()
         double cp1 = Mix->cpmolar();
         double T1 = Mix->T();
 
-        delete Mix; delete MixRP;
         double rr = 0;
     }
     if (0)
@@ -289,7 +342,7 @@ int main()
 
         int inputs = PQ_INPUTS; double val1 = p, val2 = Q;
 
-        AbstractState *MixRP = AbstractState::factory(std::string("REFPROP"), std::string("Ethane,propane"));
+        std::tr1::shared_ptr<AbstractState> MixRP(AbstractState::factory(std::string("REFPROP"), std::string("Ethane,propane")));
         MixRP->set_mole_fractions(z);
         MixRP->update(inputs, val1, val2);
         double p2 = MixRP->p();
@@ -302,7 +355,7 @@ int main()
         double phi20 = MixRP->fugacity_coefficient(0);
         double phi21 = MixRP->fugacity_coefficient(1);
 
-        AbstractState *Mix = AbstractState::factory(std::string("CORE"), std::string("Ethane,n-Propane"));
+        std::tr1::shared_ptr<AbstractState> Mix(AbstractState::factory(std::string("HEOS"), std::string("Ethane,propane")));
         Mix->set_mole_fractions(z);
         Mix->update(inputs, val1, val2);
         double p1 = Mix->p();
@@ -314,7 +367,6 @@ int main()
         double phi10 = Mix->fugacity_coefficient(0);
         double phi11 = Mix->fugacity_coefficient(1);
 
-        delete Mix; delete MixRP;
         double rr = 0;
     }
     if (0)
@@ -323,7 +375,8 @@ int main()
         std::vector<long double> z(N, 1.0/N);
         double Q = 0, T = 250, p = 300000;
 
-        AbstractState *Mix = AbstractState::factory(std::string("CORE"),std::string("Ethane,n-Propane"));
+        std::tr1::shared_ptr<AbstractState> Mix(AbstractState::factory(std::string("HEOS"), std::string("Ethane,n-Propane")));
+
         Mix->set_mole_fractions(z);
 
         for (double T = 210; ;T += 0.1)
@@ -331,14 +384,14 @@ int main()
             Mix->update(QT_INPUTS, Q, T);
             std::cout << format(" %g %g\n",Mix->p(),Mix->T());
         }
-        delete(Mix);
     }
     if(0)
     {
         time_t t1,t2;
 
         std::size_t N = 1000000;
-        AbstractState *State = AbstractState::factory(std::string("CORE"), std::string("Water"));
+        std::tr1::shared_ptr<AbstractState> State(AbstractState::factory(std::string("HEOS"), std::string("Water")));
+
         double p = State->p();
         double summer = 0;
         t1 = clock();
@@ -356,26 +409,24 @@ int main()
             summer += State->p();
         }
         t2 = clock();
-        delete State;
         double elap = ((double)(t2-t1))/CLOCKS_PER_SEC/((double)N)*1e6;
         printf("%g %g\n",elap, summer/((double)N));
         double eee = 0;
         return 0;
-
     }
 
 
 
     if (0)
     {
-        AbstractState *State = AbstractState::factory(std::string("REFPROP"), std::string("Methane|Ethane"));
+        std::tr1::shared_ptr<AbstractState> State(AbstractState::factory(std::string("REFPROP"), std::string("Methane|Ethane")));
+
         std::vector<long double> x(2,0.5);
         State->set_mole_fractions(x);
         State->update(DmassT_INPUTS,1,250);
         double hh = State->hmolar();
         double mu = State->viscosity();
         double sigma = State->surface_tension();
-        delete State;
     }
     if (0)
     {
@@ -384,9 +435,8 @@ int main()
         long N = 100000;
         for (long ii = 0; ii < N; ii++)
         {
-            AbstractState *State = AbstractState::factory(std::string("REFPROP"), std::string("Methane"));
+            std::tr1::shared_ptr<AbstractState> State(AbstractState::factory(std::string("REFPROP"), std::string("Methane")));
             //AbstractState *State = new REFPROPBackend("Methane");
-            delete State;
         }
         t2 = clock();
         double elap = ((double)(t2-t1))/CLOCKS_PER_SEC/((double)N)*1e6;
@@ -395,7 +445,8 @@ int main()
 
     if(0)
     {
-        AbstractState *State = AbstractState::factory(std::string("REFPROP"), std::string("Methane"));
+        std::tr1::shared_ptr<AbstractState> State(AbstractState::factory(std::string("REFPROP"), std::string("Methane")));
+
         State->update(DmassT_INPUTS,1,300);
         double hh = State->hmolar();
         double mu = State->viscosity();
@@ -412,8 +463,5 @@ int main()
         t2 = clock();
         double elap = ((double)(t2-t1))/CLOCKS_PER_SEC;
         printf("%g\n",elap);
-
-        //double sigma = State->surface_tension();
-        delete State;
     }
 }

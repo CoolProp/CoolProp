@@ -292,6 +292,7 @@
     }
   ], 
   "NAME": "R134a", 
+  "REFPROP_NAME": "R134A", 
   "TRANSPORT": {
     "viscosity": {
       "BibTeX": "Huber-IECR-2003", 

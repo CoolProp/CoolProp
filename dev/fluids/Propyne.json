@@ -178,6 +178,12 @@
             4
           ], 
           "type": "IdealGasHelmholtzCP0PolyT"
+        }, 
+        {
+          "a1": -11.004154248087, 
+          "a2": 8.92674898200796, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -323,5 +329,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Propyne"
+  "NAME": "Propyne", 
+  "REFPROP_NAME": "PROPYNE"
 }

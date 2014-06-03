@@ -1206,3 +1206,110 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
 }
 
 } /* namespace CoolProp */
+
+
+#ifdef ENABLE_CATCH
+#include "CoolProp.h"
+#include "catch.hpp"
+
+TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
+{
+    SECTION("Saturation densities agree within 0.5% at T/Tc = 0.9")
+    {
+        std::vector<std::string> ss = strsplit(CoolProp::get_global_param_string("FluidsList"),',');
+
+        for (std::vector<std::string>::iterator it = ss.begin(); it != ss.end(); ++it)
+        {
+            std::string Name = (*it);
+            std::string RPName = CoolProp::get_fluid_param_string((*it),"REFPROP_name");
+        
+            // Skip fluids not in REFPROP
+            if (RPName.find("N/A") == 0){continue;}
+
+            std::tr1::shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
+            double Tr = S1->T_critical();
+            S1->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
+            double rho_CP = S1->rhomolar();
+
+            std::tr1::shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
+            S2->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
+            double rho_RP = S2->rhomolar();
+
+            CAPTURE(Name);
+            CAPTURE(RPName);
+            CAPTURE(rho_CP);
+            CAPTURE(rho_RP);
+            
+            double DH = (rho_RP-rho_CP)/rho_RP;
+            CHECK(fabs(DH) < 0.005);
+        }
+    }
+    SECTION("Saturation specific heats agree within 0.5% at T/Tc = 0.9")
+    {
+        std::vector<std::string> ss = strsplit(CoolProp::get_global_param_string("FluidsList"),',');
+
+        for (std::vector<std::string>::iterator it = ss.begin(); it != ss.end(); ++it)
+        {
+            std::string Name = (*it);
+            std::string RPName = CoolProp::get_fluid_param_string((*it),"REFPROP_name");
+        
+            // Skip fluids not in REFPROP
+            if (RPName.find("N/A") == 0){continue;}
+
+            std::tr1::shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
+            double Tr = S1->T_critical();
+            S1->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
+            double cp_CP = S1->cpmolar();
+
+            std::tr1::shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
+            S2->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
+            double cp_RP = S2->cpmolar();
+
+            CAPTURE(Name);
+            CAPTURE(RPName);
+            CAPTURE(cp_CP);
+            CAPTURE(cp_RP);
+            CAPTURE(0.9*Tr);
+            
+            double Dcp = (cp_RP-cp_CP)/cp_RP;
+            CHECK(fabs(Dcp) < 0.005);
+        }
+    }
+    SECTION("Enthalpy and entropy reference state")
+    {
+        std::vector<std::string> ss = strsplit(CoolProp::get_global_param_string("FluidsList"),',');
+
+        for (std::vector<std::string>::iterator it = ss.begin(); it != ss.end(); ++it)
+        {
+            std::string Name = (*it);
+            std::string RPName = CoolProp::get_fluid_param_string((*it),"REFPROP_name");
+        
+            // Skip fluids not in REFPROP
+            if (RPName.find("N/A") == 0){continue;}
+
+            std::tr1::shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
+            double Tr = S1->T_critical();
+            S1->update(CoolProp::QT_INPUTS, 0, 0.9*Tr);
+            double h_CP = S1->hmass();
+            double s_CP = S1->smass();
+
+            std::tr1::shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
+            S2->update(CoolProp::QT_INPUTS, 0, 0.9*Tr);
+            double h_RP = S2->hmass();
+            double s_RP = S2->smass();
+
+            CAPTURE(Name);
+            CAPTURE(RPName);
+            CAPTURE(h_CP);
+            CAPTURE(h_RP);
+            CAPTURE(s_CP);
+            CAPTURE(s_RP);
+            double DH = (S1->hmass()-S2->hmass())/S1->cpmass();
+            double DS = (S1->smass()-S2->smass())/S1->cpmass();
+            CHECK(fabs(DH) < 1e-3);
+            CHECK(fabs(DS) < 1e-3);
+        }
+    }
+}
+
+#endif 

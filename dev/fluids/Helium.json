@@ -164,6 +164,12 @@
         {
           "a": 1.5, 
           "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "a1": -0.0278608575394308, 
+          "a2": -0.00835828466224539, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -331,6 +337,7 @@
     }
   ], 
   "NAME": "Helium", 
+  "REFPROP_NAME": "HELIUM", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "HANDS-CRYO-1981", 

@@ -162,6 +162,7 @@
         {
           "a1": -15.43197779494592, 
           "a2": 11.90245830296599, 
+          "reference": "IIR", 
           "type": "IdealGasEnthalpyEntropyOffset"
         }
       ], 
@@ -249,5 +250,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R407F"
+  "NAME": "R407F", 
+  "REFPROP_NAME": "N/A"
 }

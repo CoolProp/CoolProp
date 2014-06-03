@@ -259,5 +259,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R141b"
+  "NAME": "R141b", 
+  "REFPROP_NAME": "R141B"
 }

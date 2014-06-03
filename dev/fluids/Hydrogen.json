@@ -309,6 +309,7 @@
     }
   ], 
   "NAME": "Hydrogen", 
+  "REFPROP_NAME": "HYDROGEN", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2011-Hydrogen", 

@@ -169,6 +169,12 @@
             -3
           ], 
           "type": "IdealGasHelmholtzPower"
+        }, 
+        {
+          "a1": -0.000144036507408073, 
+          "a2": 7.30088431548676e-05, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -288,6 +294,7 @@
     }
   ], 
   "NAME": "R124", 
+  "REFPROP_NAME": "R124", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "", 

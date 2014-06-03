@@ -329,6 +329,7 @@
     }
   ], 
   "NAME": "n-Propane", 
+  "REFPROP_NAME": "PROPANE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Marsh-JCED-2002", 

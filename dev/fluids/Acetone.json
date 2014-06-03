@@ -172,6 +172,12 @@
             3.101751623696123
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": 9.7898709978717, 
+          "a2": -4.41053410795899, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -258,5 +264,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Acetone"
+  "NAME": "Acetone", 
+  "REFPROP_NAME": "ACETONE"
 }

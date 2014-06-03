@@ -171,6 +171,12 @@
             3.646077419354839
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": 67.9678895651248, 
+          "a2": -28.5988132374956, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -287,5 +293,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "MethylStearate"
+  "NAME": "MethylStearate", 
+  "REFPROP_NAME": "MSTEARAT"
 }

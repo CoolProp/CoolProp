@@ -260,5 +260,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "CarbonylSulfide"
+  "NAME": "CarbonylSulfide", 
+  "REFPROP_NAME": "COS"
 }

@@ -181,6 +181,12 @@
             79.13351945
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": -12.8829893867948, 
+          "a2": 9.22344625310864, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -408,5 +414,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Methane"
+  "NAME": "Methane", 
+  "REFPROP_NAME": "METHANE"
 }

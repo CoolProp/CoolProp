@@ -261,5 +261,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R245fa"
+  "NAME": "R245fa", 
+  "REFPROP_NAME": "R245FA"
 }

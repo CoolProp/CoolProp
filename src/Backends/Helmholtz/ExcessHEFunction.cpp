@@ -1,4 +1,4 @@
-#include <tr1/memory>
+#include <memory>
 
 #include "ExcessHEFunction.h"
 #include "mixture_excess_term_JSON.h"

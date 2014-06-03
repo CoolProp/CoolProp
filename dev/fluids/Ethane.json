@@ -176,6 +176,12 @@
             13.97981027
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": -12.3066235581354, 
+          "a2": 7.93255065878148, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -423,6 +429,7 @@
     }
   ], 
   "NAME": "Ethane", 
+  "REFPROP_NAME": "ETHANE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Friend-JPCRD-1991", 

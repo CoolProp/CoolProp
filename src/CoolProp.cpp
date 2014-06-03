@@ -16,7 +16,7 @@
 #endif
 #endif
 
-#include <tr1/memory>
+#include <memory>
 
 #include <iostream>
 #include <stdlib.h>
@@ -28,7 +28,6 @@
 #include "Solvers.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
-
 
 namespace CoolProp
 {
@@ -640,56 +639,58 @@ double Props1SI(std::string FluidName,std::string Output)
 //		}
 //}
 //
-//int set_reference_stateS(std::string Ref, std::string reference_state)
-//{
-//	CoolPropStateClassSI CPS(pFluid);
-//	if (!reference_state.compare("IIR"))
-//	{
-//		CoolPropStateClassSI CPS(pFluid);
-//		CPS.update(iT,273.15,iQ,0);
-//		// Get current values for the enthalpy and entropy
-//		double h1 = CPS.h();
-//		double s1 = CPS.s();
-//		double deltah = h1-200000; // offset from 200 kJ/kg enthalpy
-//		double deltas = s1-1000; // offset from 1 kJ/kg/K entropy
-//		double delta_a1 = deltas/((8314.472/pFluid->params.molemass));
-//		double delta_a2 = -deltah/((8314.472/pFluid->params.molemass)*pFluid->reduce.T);
-//		pFluid->phi0list.push_back(new phi0_enthalpy_entropy_offset(delta_a1, delta_a2));
-//		return 0;
-//	}
-//	else if (!reference_state.compare("ASHRAE"))
-//	{
-//		CoolPropStateClassSI CPS(pFluid);
-//		CPS.update(iT,233.15,iQ,0);
-//		// Get current values for the enthalpy and entropy
-//		double h1 = CPS.h();
-//		double s1 = CPS.s();
-//		double deltah = h1-0; // offset from 0 kJ/kg enthalpy
-//		double deltas = s1-0; // offset from 0 kJ/kg/K entropy
-//		double delta_a1 = deltas/((8314.472/pFluid->params.molemass));
-//		double delta_a2 = -deltah/((8314.472/pFluid->params.molemass)*pFluid->reduce.T);
-//		pFluid->phi0list.push_back(new phi0_enthalpy_entropy_offset(delta_a1, delta_a2));
-//		return 0;
-//	}
-//	else if (!reference_state.compare("NBP"))
-//	{
-//		CoolPropStateClassSI CPS(pFluid);
-//		CPS.update(iP,101325.0,iQ,0); // Saturated boiling point at 1 atmosphere
-//		// Get current values for the enthalpy and entropy
-//		double h1 = CPS.h();
-//		double s1 = CPS.s();
-//		double deltah = h1-0; // offset from 0 kJ/kg enthalpy
-//		double deltas = s1-0; // offset from 0 kJ/kg/K entropy
-//		double delta_a1 = deltas/((8314.472/pFluid->params.molemass));
-//		double delta_a2 = -deltah/((8314.472/pFluid->params.molemass)*pFluid->reduce.T);
-//		pFluid->phi0list.push_back(new phi0_enthalpy_entropy_offset(delta_a1, delta_a2));
-//		return 0;
-//	}
-//	else
-//	{ 
-//		return -1;
-//	}
-//}
+void set_reference_stateS(std::string Ref, std::string reference_state)
+{
+    std::tr1::shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;
+    HEOS.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1, Ref)));
+
+	if (!reference_state.compare("IIR"))
+	{
+		HEOS->update(QT_INPUTS, 0, 273.15);
+
+		// Get current values for the enthalpy and entropy
+		double deltah = HEOS->hmass() - 200000; // offset from 200000 J/kg enthalpy
+		double deltas = HEOS->smass() - 1000; // offset from 1000 J/kg/K entropy
+        double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
+        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
+        HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "IIR");
+	}
+	else if (!reference_state.compare("ASHRAE"))
+	{
+        HEOS->update(QT_INPUTS, 0, 243.15);
+
+		// Get current values for the enthalpy and entropy
+		double deltah = HEOS->hmass() - 0; // offset from 0 J/kg enthalpy
+		double deltas = HEOS->smass() - 0; // offset from 0 J/kg/K entropy
+		double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
+        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
+        HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "ASHRAE");
+	}
+	else if (!reference_state.compare("NBP"))
+	{
+		// Saturated liquid boiling point at 1 atmosphere
+        HEOS->update(PQ_INPUTS, 101325, 0);
+
+		double deltah = HEOS->hmass() - 0; // offset from 0 kJ/kg enthalpy
+		double deltas = HEOS->smass() - 0; // offset from 0 kJ/kg/K entropy
+		double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
+        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
+        HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "NBP");
+	}
+    else if (!reference_state.compare("DEF"))
+    {
+        //HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(0,0);
+        throw NotImplementedError("Default reference state has not been implemented yet");
+    }
+    else if (!reference_state.compare("RESET"))
+    {
+        HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(0, 0, "");
+    }
+	else
+	{ 
+        throw ValueError(format("reference state string is invalid: [%s]",reference_state.c_str()));
+	}
+}
 //int set_reference_stateD(std::string Ref, double T, double rho, double h0, double s0)
 //{
 //	pFluid=Fluids.get_fluid(Ref);
@@ -722,7 +723,8 @@ std::string get_BibTeXKey(std::string Ref, std::string key)
     else if (!key.compare("VISCOSITY")){ return HEOS.get_components()[0]->transport.BibTeX_viscosity; }
 	else if (!key.compare("CONDUCTIVITY")){ return HEOS.get_components()[0]->transport.BibTeX_conductivity; }
 	else if (!key.compare("ECS_LENNARD_JONES")){ throw NotImplementedError(); }
-	else if (!key.compare("ECS_FITS")){ throw NotImplementedError(); }
+	else if (!key.compare("ECS_VISCSOSITY_FITS")){ throw NotImplementedError(); }
+    else if (!key.compare("ECS_CONDUCTIVITY_FITS")){ throw NotImplementedError(); }
     else if (!key.compare("SURFACE_TENSION")){ return HEOS.get_components()[0]->ancillaries.surface_tension.BibTeX;}
 	else{ return "Bad key";}
 }
@@ -751,59 +753,41 @@ std::string get_global_param_string(std::string ParamName)
 		return format("Input value [%s] is invalid",ParamName.c_str()).c_str();
 	}
 };
-//std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
-//{
-//	try{
-//		pFluid = Fluids.get_fluid(FluidName);
-//		// Didn't work
-//		if (pFluid == NULL){
-//			err_string=std::string("CoolProp error: ").append(format("%s is an invalid fluid for get_fluid_param_string",FluidName.c_str()));
-//			return format("%s is an invalid fluid for get_fluid_param_string",FluidName.c_str()).c_str();
-//		}
-//		else{
-//			if (!ParamName.compare("aliases"))
-//			{
-//				std::vector<std::string> v = pFluid->get_aliases();
-//				return strjoin(v,", ");
-//			}
-//			else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number"))
-//			{
-//				return pFluid->params.CAS;
-//			}
-//			else if (!ParamName.compare("ASHRAE34"))
-//			{
-//				return pFluid->environment.ASHRAE34;
-//			}
-//			else if (!ParamName.compare("REFPROPName") || !ParamName.compare("REFPROP_name") || !ParamName.compare("REFPROPname"))
-//			{
-//				return pFluid->get_REFPROPname();
-//			}
-//			else if (!ParamName.compare("TTSE_mode"))
-//			{
-//				int mode = pFluid->TTSESinglePhase.get_mode();
-//				switch (mode)
-//				{
-//				case TTSE_MODE_TTSE:
-//					return "TTSE";
-//				case TTSE_MODE_BICUBIC:
-//					return "BICUBIC";
-//				default:
-//					throw ValueError("TTSE mode is invalid");
-//				}
-//			}
-//			else
-//			{
-//				return format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str(),FluidName.c_str()).c_str();
-//			}
-//		}
-//	}
-//	catch(std::exception &e)
-//	{
-//		return(std::string("CoolProp error: ").append(e.what()));
-//	}
-//	catch(...){
-//		return(std::string("CoolProp error: Indeterminate error"));
-//	}
-//}
+std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
+{
+	try{
+        std::tr1::shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1,FluidName)));
+        
+        CoolProp::CoolPropFluid *fluid = HEOS->get_components()[0];
+
+		if (!ParamName.compare("aliases"))
+		{
+			return strjoin(fluid->aliases, ", ");
+		}
+		else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number"))
+		{
+            return fluid->CAS;
+		}
+		else if (!ParamName.compare("ASHRAE34"))
+		{
+            return fluid->environment.ASHRAE34;
+		}
+		else if (!ParamName.compare("REFPROPName") || !ParamName.compare("REFPROP_name") || !ParamName.compare("REFPROPname"))
+		{
+            return fluid->REFPROPname;
+		}
+		else
+		{
+			return format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str(),FluidName.c_str()).c_str();
+		}
+	}
+	catch(std::exception &e)
+	{
+		return(std::string("CoolProp error: ").append(e.what()));
+	}
+	catch(...){
+		return(std::string("CoolProp error: Indeterminate error"));
+	}
+}
 
 } /* namespace CoolProp */

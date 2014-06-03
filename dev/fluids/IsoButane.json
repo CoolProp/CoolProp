@@ -181,9 +181,10 @@
           "type": "IdealGasHelmholtzPlanckEinstein"
         }, 
         {
-          "a1": -17.60843812203014, 
-          "a2": 10.31357488125467, 
-          "type": "IdealGasEnthalpyEntropyOffset"
+          "a1": -17.6081648486994, 
+          "a2": 10.3134499204439, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -346,6 +347,7 @@
     }
   ], 
   "NAME": "IsoButane", 
+  "REFPROP_NAME": "ISOBUTAN", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2002-Isobutane", 

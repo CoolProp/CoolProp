@@ -80,24 +80,52 @@ You might want to start by looking at CoolProp.h
 	/*/// Get a long that represents the fluid type
 	/// @param FluidName The fluid name as a string
 	/// @returns long element from global type enumeration
-	long getFluidType(std::string FluidName);
+	long getFluidType(std::string FluidName);*/
 
-	/// Get a string for a value from a fluid (numerical values can be obtained from Props1 function)
-	/// @param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"
-	/// @param ParamName A string, one of "aliases", "CAS", "CAS_number", "ASHRAE34", "REFPROPName","REFPROP_name", "TTSE_mode", 
-	/// @returns str The string, or an error message if not valid input
-	std::string get_fluid_param_string(std::string FluidName, std::string ParamName);*/
+	/** 
+    \brief Get a string for a value from a fluid (numerical values for the fluid can be obtained from Props1SI function)
+
+	@param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"
+	@param ParamName A string, can be in one of the terms described in the following table
+    
+    ParamName                    | Description
+    --------------------------   | ----------------------------------------
+    "aliases"                    | A comma separated list of aliases for the fluid
+    "CAS", "CAS_number"          | The CAS number
+    "ASHRAE34"                   | The ASHRAE standard 34 safety rating
+    "REFPROPName","REFPROP_name" | The name of the fluid used in REFPROP
+	
+    @returns The string, or an error message if not valid input
+    */
+	std::string get_fluid_param_string(std::string FluidName, std::string ParamName);
 
 	/// Returns the BibTeX key from the bibtex library of CoolProp corresponding to the item requested
 	/// @param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"
-	/// @param item The key that is desired, one of "EOS","CP0", "VISCOSITY", "CONDUCTIVITY", "ECS_LENNARD_JONES", "ECS_FITS", "SURFACE_TENSION"
-	/// @returns key the BibTeX key
+	/// @param item The key that is desired, one of "EOS", "CP0", "VISCOSITY", "CONDUCTIVITY", "ECS_LENNARD_JONES", "ECS_FITS", "SURFACE_TENSION"
+	/// @returns The BibTeX key
 	std::string get_BibTeXKey(std::string FluidName, std::string item);
 	
-	/// Set the reference state based on a string representation of the desired reference state (consistent naming with REFPROP)
-	/// @param FluidName The name of the fluid
-	/// @param reference_state The reference state to use, one of "IIR" (h=200 kJ/kg, s=1 kJ/kg/K at 0C sat. liq.) "ASHRAE" (h=0,s=0 @ -40C sat liq), "NBP" (h=0,s=0 @ 1.0 bar sat liq.)
-	int set_reference_stateS(std::string FluidName, std::string reference_state);
+	/** 
+    \brief Set the reference state based on a string representation
+    
+	@param FluidName The name of the fluid
+	@param reference_state The reference state to use, one of 
+    
+    Reference State | Description
+    -------------   | -------------------
+    "IIR"           | h = 200 kJ/kg, s=1 kJ/kg/K at 0C saturated liquid
+    "ASHRAE"        | h = 0, s = 0 @ -40C saturated liquid
+    "NBP"           | h = 0, s = 0 @ 1.0 bar saturated liquid
+    "DEF"           | Reset to the default reference state for the fluid
+    "RESET"         | Remove the offset
+    
+    The offset in the ideal gas Helmholtz energy can be obtained from
+    \f[ 
+    \displaystyle\frac{\Delta s}{R_u/M}+\frac{\Delta h}{(R_u/M)T}\tau 
+    \f]
+    where \f$ \Delta s = s-_{spec} \f$ and \f$ \Delta h = h-_{spec} \f$
+    */
+	void set_reference_stateS(std::string FluidName, std::string reference_state);
 
 	/// Set the reference state based on a thermodynamic state point
 	/// @param FluidName The name of the fluid
@@ -105,7 +133,7 @@ You might want to start by looking at CoolProp.h
 	/// @param rho Density at reference state [mol/m^3]
 	/// @param h0 Enthalpy at reference state [J/kg]
 	/// @param s0 Entropy at references state [J/kg/K]
-	int set_reference_stateD(std::string FluidName, double T, double rho, double h0, double s0);
+	void set_reference_stateD(std::string FluidName, double T, double rho, double h0, double s0);
 
     /*
     /// Return the phase of the given state point with temperature, pressure as inputs

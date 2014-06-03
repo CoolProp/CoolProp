@@ -72,16 +72,6 @@ cpdef ndarray_or_iterable(object input):
 #     if retval < 0:
 #         raise ValueError('Unable to set reference state')
 #         
-# cpdef add_REFPROP_fluid(string_like FluidName):
-#     """
-#     Add a REFPROP fluid to CoolProp internal structure
-#     
-#     example::
-#     
-#         add_REFPROP_fluid("REFPROP-PROPANE")
-#          
-#     """
-#     _add_REFPROP_fluid(FluidName)
 #     
 # cpdef long get_Fluid_index(string_like Fluid):
 #     """
@@ -116,9 +106,9 @@ cpdef ndarray_or_iterable(object input):
 
 cpdef get_global_param_string(string param):
     return _get_global_param_string(param)
-#     
-# cpdef get_fluid_param_string(string_like fluid, string_like param):
-#     return _get_fluid_param_string(fluid, param)
+     
+cpdef get_fluid_param_string(string_like fluid, string_like param):
+    return _get_fluid_param_string(fluid, param)
 #     
 # cpdef __Props_err1(in1,in2,errstr):
 #     if not len(errstr) == 0:
@@ -155,53 +145,53 @@ cpdef PropsSI(in1, in2, in3, in4, in5, in6, in7 = None):
     else:
         return _PropsSI(in1, in2, in3, in4, in5, in6, in7)
 
-# cpdef list FluidsList():
-#     """
-#     Return a list of strings of all fluid names
-#     
-#     Returns
-#     -------
-#     FluidsList : list of strings of fluid names
-#         All the fluids that are included in CoolProp
-#     
-#     Notes
-#     -----
-#     
-#     Here is an example::
-#         
-#        In [0]: from CoolProp.CoolProp import FluidsList
-#     
-#        In [1]: FluidsList()
-#        
-#     """ 
-#     return _get_global_param_string("FluidsList").split(',')
+cpdef list FluidsList():
+    """
+    Return a list of strings of all fluid names
+    
+    Returns
+    -------
+    FluidsList : list of strings of fluid names
+        All the fluids that are included in CoolProp
+    
+    Notes
+    -----
+    
+    Here is an example::
+        
+       In [0]: from CoolProp.CoolProp import FluidsList
+    
+       In [1]: FluidsList()
+       
+    """ 
+    return _get_global_param_string("FluidsList").split(',')
 
-# cpdef get_aliases(str Fluid):
-#     """
-#     Return a comma separated string of aliases for the given fluid
-#     """
-#     cdef bytes _Fluid = Fluid.encode('ascii')
-#     return [F.encode('ascii') for F in (_get_fluid_param_string(_Fluid,'aliases').encode('ascii')).decode('ascii').split(',')]
+cpdef get_aliases(str Fluid):
+    """
+    Return a comma separated string of aliases for the given fluid
+    """
+    cdef bytes _Fluid = Fluid.encode('ascii')
+    return [F.encode('ascii') for F in (_get_fluid_param_string(_Fluid,'aliases').encode('ascii')).decode('ascii').split(',')]
 
 #     
-# cpdef string get_REFPROPname(str Fluid):
-#     """
-#     Return the REFPROP compatible name for the fluid (only useful on windows)
-#     
-#     Some fluids do not use the REFPROP name.  For instance, 
-#     ammonia is R717, and propane is R290.  You can still can still call CoolProp
-#     using the name ammonia or R717, but REFPROP requires that you use a limited
-#     subset of names.  Therefore, this function that returns the REFPROP compatible
-#     name.  To then use this to call REFPROP, you would do something like::
-#     
-#        In [0]: from CoolProp.CoolProp import get_REFPROPname, Props
-#     
-#        In [1]: Fluid = 'REFPROP-' + get_REFPROPname('R290')
-#        
-#        In [2]: Props('D', 'T', 300, 'P', 300, Fluid)
-#     """
-#     cdef bytes _Fluid = Fluid.encode('ascii')
-#     return _get_fluid_param_string(_Fluid,'REFPROP_name')
+cpdef string get_REFPROPname(str Fluid):
+    """
+    Return the REFPROP compatible name for the fluid
+    
+    Some fluids do not use the REFPROP name.  For instance, 
+    ammonia is R717, and propane is R290.  You can still can still call CoolProp
+    using the name ammonia or R717, but REFPROP requires that you use a limited
+    subset of names.  Therefore, this function that returns the REFPROP compatible
+    name.  To then use this to call REFPROP, you would do something like::
+    
+       In [0]: from CoolProp.CoolProp import get_REFPROPname, PropsSI
+    
+       In [1]: get_REFPROPname('R290')
+       
+       In [2]: PropsSI('D', 'T', 300, 'P', 300, Fluid)
+    """
+    cdef bytes _Fluid = Fluid.encode('ascii')
+    return _get_fluid_param_string(_Fluid,'REFPROP_name')
 
 # cpdef string get_BibTeXKey(str Fluid, str key):
 #     """
@@ -230,31 +220,31 @@ cpdef PropsSI(in1, in2, in3, in4, in5, in6, in7 = None):
 #     Return the current error string
 #     """
 #     return _get_global_param_string("errstring")
-# cpdef set_debug_level(int level):
-#     """
-#     Set the current debug level as integer in the range [0,10]
-#     
-#     Parameters
-#     ----------
-#     level : int
-#         If level is 0, no output will be written to screen, if >0, 
-#         some output will be written to screen.  The larger level is, 
-#         the more verbose the output will be
-#     """
-#     _set_debug_level(level)
+cpdef set_debug_level(int level):
+    """
+    Set the current debug level as integer in the range [0,10]
+    
+    Parameters
+    ----------
+    level : int
+        If level is 0, no output will be written to screen, if >0, 
+        some output will be written to screen.  The larger level is, 
+        the more verbose the output will be
+    """
+    _set_debug_level(level)
 
-# cpdef get_debug_level():
-#     """
-#     Return the current debug level as integer
-#     
-#     Returns
-#     -------
-#     level : int
-#         If level is 0, no output will be written to screen, if >0, 
-#         some output will be written to screen.  The larger level is, 
-#         the more verbose the output will be
-#     """
-#     return _get_debug_level()
+cpdef int get_debug_level():
+    """
+    Return the current debug level as integer
+    
+    Returns
+    -------
+    level : int
+        If level is 0, no output will be written to screen, if >0, 
+        some output will be written to screen.  The larger level is, 
+        the more verbose the output will be
+    """
+    return _get_debug_level()
 #     
 # cpdef bint IsFluidType(string Fluid, string Type):
 #     """
@@ -286,8 +276,8 @@ cdef dict paras = {iDmass : 'D',
                    iCpmass : 'C',
 #                    iC0 : 'C0',
                    iCvmass : 'O',
-#                    iV : 'V',
-#                    iL : 'L',
+                   iV : 'V',
+                   iL : 'L',
                    iSmass : 'S',
                    iUmass : 'U',
 #                    iDpdT : 'dpdT'
@@ -307,16 +297,16 @@ cdef class State:
     to calculate the enthalpy and pressure.  Since the Equations of State are
     all explicit in temperature and density, each time you call something like::
     
-        h = Props('H','T',T','P',P,Fluid)
-        s = Props('S','T',T','P',P,Fluid)
+        h = PropsSI('H','T',T','P',P,Fluid)
+        s = PropsSI('S','T',T','P',P,Fluid)
         
     the solver is used to carry out the T-P flash calculation. And if you wanted
     entropy as well you could either intermediately calculate ``T``, ``rho`` and then use
     ``T``, ``rho`` in the EOS in a manner like::
     
-        rho = Props('D','T',T','P',P,Fluid)
-        h = Props('H','T',T','D',rho,Fluid)
-        s = Props('S','T',T','D',rho,Fluid)
+        rho = PropsSI('D','T',T','P',P,Fluid)
+        h = PropsSI('H','T',T','D',rho,Fluid)
+        s = PropsSI('S','T',T','D',rho,Fluid)
         
     Instead in this class all that is handled internally. So the call to update
     sets the internal variables in the most computationally efficient way possible
@@ -332,7 +322,7 @@ cdef class State:
         phase : string
             DEPRECATED : this input is ignored
         backend : string
-            The CoolProp backend that should be used
+            The CoolProp backend that should be used, one of "HEOS" (default), "REFPROP", "INCOMP", "BRINE", etc.
         """
         cdef string _Fluid = Fluid
         

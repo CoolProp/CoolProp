@@ -153,6 +153,12 @@
             5.667136766684498
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": -7.79365691983003e-08, 
+          "a2": -0.919512475110122, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -280,5 +286,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "m-Xylene"
+  "NAME": "m-Xylene", 
+  "REFPROP_NAME": "MXYLENE"
 }

@@ -187,6 +187,12 @@
             0
           ], 
           "type": "IdealGasHelmholtzCP0AlyLee"
+        }, 
+        {
+          "a1": 7.55444021933976, 
+          "a2": 1.95248104655686, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -274,6 +280,7 @@
     }
   ], 
   "NAME": "n-Hexane", 
+  "REFPROP_NAME": "HEXANE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Hexane", 

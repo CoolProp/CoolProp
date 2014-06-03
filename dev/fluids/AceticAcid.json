@@ -264,5 +264,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "AceticAcid"
+  "NAME": "AceticAcid", 
+  "REFPROP_NAME": "N/A"
 }

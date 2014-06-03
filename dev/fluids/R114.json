@@ -175,6 +175,12 @@
             4
           ], 
           "type": "IdealGasHelmholtzCP0PolyT"
+        }, 
+        {
+          "a1": -28.2691959611666, 
+          "a2": 17.4464013989786, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -320,5 +326,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R114"
+  "NAME": "R114", 
+  "REFPROP_NAME": "R114"
 }

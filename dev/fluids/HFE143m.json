@@ -156,9 +156,17 @@
             5.592658198860973e-09
           ], 
           "t": [
-            1
+            1, 
+            2, 
+            3
           ], 
           "type": "IdealGasHelmholtzCP0PolyT"
+        }, 
+        {
+          "a1": 7.64964970449937e-05, 
+          "a2": -8.0498560479886e-05, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -265,5 +273,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "HFE143m"
+  "NAME": "HFE143m", 
+  "REFPROP_NAME": "RE143A"
 }

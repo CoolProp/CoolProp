@@ -262,6 +262,7 @@
     }
   ], 
   "NAME": "n-Nonane", 
+  "REFPROP_NAME": "NONANE", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-FPE-2005", 

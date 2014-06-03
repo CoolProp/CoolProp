@@ -174,20 +174,29 @@
         }, 
         {
           "c": [
+            1
+          ], 
+          "d": [
             -1
           ], 
           "n": [
             1.012767
           ], 
           "t": [
-            8.9057501
+            -8.9057501
           ], 
-          "type": "IdealGasHelmholtzPlanckEinstein2"
+          "type": "IdealGasHelmholtzPlanckEinsteinGeneralized"
         }, 
         {
           "a1": 0, 
           "a2": 0, 
           "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a1": -7.97036812567026, 
+          "a2": 19.8946542032696, 
+          "reference": "NBP", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -381,5 +390,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "Fluorine"
+  "NAME": "Fluorine", 
+  "REFPROP_NAME": "FLUORINE"
 }

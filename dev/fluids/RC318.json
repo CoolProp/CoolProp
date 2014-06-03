@@ -173,6 +173,12 @@
             3
           ], 
           "type": "IdealGasHelmholtzCP0PolyT"
+        }, 
+        {
+          "a1": -32.5172232538152, 
+          "a2": 20.7826742209953, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -318,5 +324,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "RC318"
+  "NAME": "RC318", 
+  "REFPROP_NAME": "RC318"
 }

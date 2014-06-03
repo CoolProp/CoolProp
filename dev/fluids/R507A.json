@@ -169,6 +169,12 @@
             5.14305
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": -0.000171976752843711, 
+          "a2": -1.94367029874932e-05, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -296,6 +302,7 @@
     }
   ], 
   "NAME": "R507A", 
+  "REFPROP_NAME": "R507A", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Geller-PURDUE-2001", 

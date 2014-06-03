@@ -258,5 +258,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "NitrousOxide"
+  "NAME": "NitrousOxide", 
+  "REFPROP_NAME": "N2O"
 }

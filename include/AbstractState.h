@@ -239,31 +239,38 @@ public:
     
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
     /**
-    Very Important!! : You should use a smart pointer to manage the pointer returned.  In older versions of C++, you can use std::tr1::smart_ptr which works fine
+    Very Important!! : Use a smart pointer to manage the pointer returned.  In older versions of C++, you can use std::tr1::smart_ptr. In C++2011 you can use std::shared_ptr
 
-    The backend that is selected is based on the string passed in:
+    Several backends are possible:
     
-    1. If it starts with "REFPROP-", or no backend specification is provided, the function will assume that the backend is the CORE backend (for backwards-compatibility reasons)
-    2. If it starts with "REFPROP-", the REFPROP backend will be used.  The remaining part of the string should then 
-       either be
-       1. A pure or pseudo-pure fluid name (eg. "PROPANE" or "R410A"), yielding a REFPROPBackend instance.
-       2. A string that encodes the components of the mixture with a vertical bar between them (e.g. "R32|R125"), yielding a REFPROPMixtureBackend instance.
-    3. If it starts with "TTSE", the TTSE backend will be used, yielding a TTSEBackend instance
-    4. If it starts with "BICUBIC", the BICUBIC backend will be used, yielding a BICUBICBackend instance
+    1. "?" : The backend is unknown, we will parse the fluid string to determine the backend to be used.  Probably will use HEOS backend (see below)
+    2. "HEOS" : The Helmholtz Equation of State backend for use with pure and pseudo-pure fluids, and mixtures, all of which are based on multi-parameter Helmholtz Energy equations of state.  The fluid part of the string should then either be
+       1. A pure or pseudo-pure fluid name (eg. "PROPANE" or "R410A"), yielding a HelmholtzEOSBackend instance.
+       2. A string that encodes the components of the mixture with a "&" between them (e.g. "R32&R125"), yielding a HelmholtzEOSMixtureBackend instance.
 
+    3. "REFPROP" : The REFPROP backend will be used.  The fluid part of the string should then either be
+       1. A pure or pseudo-pure fluid name (eg. "PROPANE" or "R410A"), yielding a REFPROPBackend instance.
+       2. A string that encodes the components of the mixture with a "&" between them (e.g. "R32&R125"), yielding a REFPROPMixtureBackend instance.
+    
+    4. "TTSE&XXXX": The TTSE backend will be used, and the tables will be generated using the XXXX backend where XXXX is one of the base backends("HEOS", "REFPROP", etc. )
+    5. "BICUBIC&XXXX": The Bicubic backend will be used, and the tables will be generated using the XXXX backend where XXXX is one of the base backends("HEOS", "REFPROP", etc. )
+    6. "INCOMP": The incompressible backend will be used
+    7. "BRINE": The brine backend will be used
     */
     static AbstractState * factory(const std::string &backend, const std::string &fluid_string);
     
-    bool clear();
+    // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
+    virtual bool using_mole_fractions(void) = 0;
+
     virtual void update(long input_pair, double Value1, double Value2) = 0;
     virtual void set_mole_fractions(const std::vector<long double> &mole_fractions) = 0;
     virtual void set_mass_fractions(const std::vector<long double> &mass_fractions) = 0;
 
+    /// Clear all the cached values
+    bool clear();
+    
     void set_mole_fractions(const std::vector<double> &mole_fractions){set_mole_fractions(std::vector<long double>(mole_fractions.begin(), mole_fractions.end()));};
     void set_mass_fractions(const std::vector<double> &mass_fractions){set_mass_fractions(std::vector<long double>(mass_fractions.begin(), mass_fractions.end()));};
-    
-    // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
-    virtual bool using_mole_fractions(void) = 0;
 
     const CoolProp::SimpleState & get_reducing(){return _reducing;};
 
@@ -305,9 +312,11 @@ public:
     double T(void)  {return _T;};
     /// Return the molar density in mol/m^3
     double rhomolar(void){return _rhomolar;};
+    /// Return the mass density in kg/m^3
+    double rhomass(void){return _rhomolar*molar_mass();};
     /// Return the pressure in Pa
     double p(void)  {return _p;};
-    /// Return the vapor quality (mol/mol) Q = 0 for saturated liquid
+    /// Return the vapor quality (mol/mol); Q = 0 for saturated liquid
     double Q(void)  {return _Q;};
 
     /// Return the reciprocal of the reduced temperature (\f$\tau = T_c/T\f$)
@@ -326,14 +335,24 @@ public:
 
     /// Return the molar enthalpy in J/mol
     double hmolar(void);
+    /// Return the mass enthalpy in J/kg
+    double hmass(void){return hmolar()/molar_mass();};
     /// Return the molar entropy in J/mol/K
     double smolar(void);
+    /// Return the molar entropy in J/kg/K
+    double smass(void){return smolar()/molar_mass();};
     /// Return the molar internal energy in J/mol
     double umolar(void);
+    /// Return the mass internal energy in J/kg
+    double umass(void){return umolar()/molar_mass();};
     /// Return the molar constant pressure specific heat in J/mol/K
     double cpmolar(void);
+    /// Return the mass constant pressure specific heat in J/kg/K
+    double cpmass(void){return cpmolar()/molar_mass();};
     /// Return the molar constant volume specific heat in J/mol/K
     double cvmolar(void);
+    /// Return the mass constant volume specific heat in J/kg/K
+    double cvmass(void){return cvmolar()/molar_mass();};
     /// Return the speed of sound in m/s
     double speed_sound(void);
     /// Return the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa

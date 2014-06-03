@@ -263,5 +263,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "CarbonMonoxide"
+  "NAME": "CarbonMonoxide", 
+  "REFPROP_NAME": "CO"
 }

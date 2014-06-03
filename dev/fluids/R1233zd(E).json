@@ -160,6 +160,12 @@
             4.330484330484331
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": -16.8522083554925, 
+          "a2": 12.2591026026175, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -290,5 +296,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R1233zd(E)"
+  "NAME": "R1233zd(E)", 
+  "REFPROP_NAME": "R1233ZD"
 }

@@ -569,6 +569,20 @@ long double TransportRoutines::conductivity_critical_hardcoded_R123(HelmholtzEOS
     return a13*exp(a14*pow(HEOS.tau()-1,4)+a15*pow(HEOS.delta()-1,2));
 };
 
+long double TransportRoutines::conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(HelmholtzEOSMixtureBackend &HEOS){
+    long double nc = 0.775547504e-3*4.81384, Tr = HEOS.T()/304.1282, alpha, rhor = HEOS.keyed_output(iDmass)/467.6;
+    static long double a[] = {0.0, 3.0, 6.70697, 0.94604, 0.30, 0.30, 0.39751, 0.33791, 0.77963, 0.79857, 0.90, 0.02, 0.20};
+    
+    // Equation 6 from Scalabrin
+    alpha = 1-a[10]*acosh(1+a[11]*pow(pow(1-Tr,2),a[12]));
+
+    // Equation 5 from Scalabrin
+    long double numer = rhor*exp(-pow(rhor,a[1])/a[1]-pow(a[2]*(Tr-1),2)-pow(a[3]*(rhor-1),2));
+    long double braced = (1-1/Tr)+a[4]*pow(pow(rhor-1,2),0.5/a[5]);
+    long double denom = pow(pow(pow(braced, 2), a[6]) + pow(pow(a[7]*(rhor-alpha), 2), a[8]),a[9]);
+    return nc*numer/denom;
+}
+
 long double TransportRoutines::conductivity_dilute_hardcoded_CO2(HelmholtzEOSMixtureBackend &HEOS){
 
     double e_k = 251.196, Tstar;
@@ -752,7 +766,7 @@ long double TransportRoutines::conductivity_hardcoded_helium(HelmholtzEOSMixture
     /*
 	What an incredibly annoying formulation!  Implied coefficients?? Not cool.
 	*/
-    double rhoc = 68.0, lambda_e, lambda_c, T = HEOS.T(), rho = HEOS.keyed_output(CoolProp::iDmass);
+    double rhoc = 68.0, lambda_e, lambda_c, T = HEOS.T(), rho = HEOS.rhomass();
 	double summer = 3.739232544/T-2.620316969e1/T/T+5.982252246e1/T/T/T-4.926397634e1/T/T/T/T;
 	double lambda_0 = 2.7870034e-3*pow(T, 7.034007057e-1)*exp(summer);
 	double c[]={ 1.862970530e-4,
@@ -809,10 +823,9 @@ long double TransportRoutines::conductivity_hardcoded_helium(HelmholtzEOSMixture
             K_Tbar = W*K_T + (1-W)*K_Tprime;
         }
 
-        double c1 = 1/(6*pi*R);
-        double c2 = sqrt(m*k);
-        double c3 = c1*c2;
-	    lambda_c = sqrt(m*K_Tbar*k*pow(T,3)/rho)/(6*pi*eta*R)*pow(dpdT,2)*exp(-18.66*pow(DeltaT,2)-4.25*pow(DeltaRho,4));
+        // 3.4685233d-17 and 3.726229668d0 are "magical" coefficients that are present in the REFPROP source to yield the right values. Not clear why these values are needed.  
+        // Also, the form of the critical term in REFPROP does not agree with Hands paper. EL and MH from NIST are not sure where these coefficients come from.
+	    lambda_c = 3.4685233e-17*3.726229668*sqrt(K_Tbar)*pow(T,2)/rho/eta*pow(dpdT,2)*exp(-18.66*pow(DeltaT,2)-4.25*pow(DeltaRho,4));
     }
 	return lambda_0+lambda_e+lambda_c;
 }
@@ -938,4 +951,6 @@ long double TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS
 
     return lambda;
 }
+
+
 }; /* namespace CoolProp */

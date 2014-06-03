@@ -496,6 +496,7 @@
     }
   ], 
   "NAME": "Water", 
+  "REFPROP_NAME": "WATER", 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-JPCRD-2012", 

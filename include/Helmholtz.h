@@ -14,25 +14,24 @@ Residual Helmholtz Energy Terms:
 
 Term                               | Helmholtz Energy Contribution
 ----------                         | ------------------------------
-ResidualHelmholtzPower             | \f$ \alpha_r=\left\lbrace\begin{array}{cc}\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} & l_i=0\\ \displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}) & l_i\neq 0\end{array}\right.\f$
-ResidualHelmholtzExponential       | \f$ \alpha_r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\gamma_i\delta^{l_i}) \f$
-ResidualHelmholtzGaussian          | \f$ \alpha_r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\eta_i(\delta-\epsilon_i)^2-\beta_i(\tau-\gamma_i)^2)\f$
-ResidualHelmholtzGERG2008Gaussian  | \f$ \alpha_r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\eta_i(\delta-\epsilon_i)^2-\beta_i(\delta-\gamma_i))\f$
-ResidualHelmholtzLemmon2005        | \f$ \alpha_r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}) \exp(-\tau^{m_i})\f$
-ResidualHelmholtzNonAnalytic       | \f$ \begin{array}{c}\alpha_r&=&\displaystyle\sum_i n_i \Delta^{b_i}\delta\psi \\ \Delta & = & \theta^2+B_i[(\delta-1)^2]^{a_i}\\ \theta & = & (1-\tau)+A_i[(\delta-1)^2]^{1/(2\beta_i)}\\ \psi & = & \exp(-C_i(\delta-1)^2-D_i(\tau-1)^2) \end{array}\f$
-ResidualHelmholtzSAFTAssociating   | \f$ \alpha_r = am\left(\ln X-\frac{X}{2}+\frac{1}{2}\right); \f$
+ResidualHelmholtzPower             | \f$ \alpha^r=\left\lbrace\begin{array}{cc}\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} & l_i=0\\ \displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}) & l_i\neq 0\end{array}\right.\f$
+ResidualHelmholtzExponential       | \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\gamma_i\delta^{l_i}) \f$
+ResidualHelmholtzGaussian          | \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\eta_i(\delta-\epsilon_i)^2-\beta_i(\tau-\gamma_i)^2)\f$
+ResidualHelmholtzGERG2008Gaussian  | \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\eta_i(\delta-\epsilon_i)^2-\beta_i(\delta-\gamma_i))\f$
+ResidualHelmholtzLemmon2005        | \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}) \exp(-\tau^{m_i})\f$
+ResidualHelmholtzNonAnalytic       | \f$ \begin{array}{c}\alpha^r&=&\displaystyle\sum_i n_i \Delta^{b_i}\delta\psi \\ \Delta & = & \theta^2+B_i[(\delta-1)^2]^{a_i}\\ \theta & = & (1-\tau)+A_i[(\delta-1)^2]^{1/(2\beta_i)}\\ \psi & = & \exp(-C_i(\delta-1)^2-D_i(\tau-1)^2) \end{array}\f$
+ResidualHelmholtzSAFTAssociating   | \f$ \alpha^r = am\left(\ln X-\frac{X}{2}+\frac{1}{2}\right); \f$
 
 
 Ideal-Gas Helmholtz Energy Terms:
 
 Term                                        | Helmholtz Energy Contribution
 ----------                                  | ------------------------------
-IdealHelmholtzLead                          | \f$ \alpha_0 = n_1 + n_2\tau + \ln\delta \f$
-IdealHelmholtzEnthalpyEntropyOffset         | \f$ \alpha_0 = \displaystyle\frac{\Delta s}{R_u/M}+\frac{\Delta h}{(R_u/M)T}\tau \f$
-IdealHelmholtzLogTau                        | \f$ \alpha_0 = n_1\log\tau \f$
-IdealHelmholtzPower                         | \f$ \alpha_0 = \displaystyle\sum_i n_i\tau^{t_i} \f$
-IdealHelmholtzPlanckEinstein                | \f$ \alpha_0 = \displaystyle\sum_i n_i\log[1-\exp(-\theta_i\tau)] \f$
-IdealHelmholtzPlanckEinstein2               | \f$ \alpha_0 = \displaystyle\sum_i n_i\log[c_i+\exp(\theta_i\tau)] \f$
+IdealHelmholtzLead                          | \f$ \alpha^0 = n_1 + n_2\tau + \ln\delta \f$
+IdealHelmholtzEnthalpyEntropyOffset         | \f$ \alpha^0 = \displaystyle\frac{\Delta s}{R_u/M}+\frac{\Delta h}{(R_u/M)T}\tau \f$
+IdealHelmholtzLogTau                        | \f$ \alpha^0 = n_1\log\tau \f$
+IdealHelmholtzPower                         | \f$ \alpha^0 = \displaystyle\sum_i n_i\tau^{t_i} \f$
+IdealHelmholtzPlanckEinsteinGeneralized     | \f$ \alpha^0 = \displaystyle\sum_i n_i\log[c_i+d_i\exp(\theta_i\tau)] \f$
 */
 class BaseHelmholtzTerm{
 public:
@@ -107,7 +106,7 @@ struct ResidualHelmholtzPowerElement
 /*!
 Term of the form 
 \f[ 
-\alpha_r=\left\lbrace\begin{array}{cc}\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} & l_i=0\\ \displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}) & l_i\neq 0\end{array}\right.
+\alpha^r=\left\lbrace\begin{array}{cc}\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} & l_i=0\\ \displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}) & l_i\neq 0\end{array}\right.
 \f]
 */
 class ResidualHelmholtzPower : public BaseHelmholtzTerm{
@@ -162,7 +161,7 @@ struct ResidualHelmholtzExponentialElement
 };
 /**
 Term of the form
-\f[ \alpha_r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\gamma_i\delta^{l_i}) \f]
+\f[ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\gamma_i\delta^{l_i}) \f]
 */
 class ResidualHelmholtzExponential : public BaseHelmholtzTerm{
 
@@ -307,7 +306,7 @@ public:
     long double dDelta2(const long double &tau, const long double &delta) throw();
     long double dDelta_dTau(const long double &tau, const long double &delta) throw();
     long double dTau2(const long double &tau, const long double &delta) throw();
-    long double dDelta3(const long double &tau, const long double &delta) throw() {return _HUGE;}; // TODO: calculate this derivative
+    long double dDelta3(const long double &tau, const long double &delta) throw();
     long double dDelta2_dTau(const long double &tau, const long double &delta) throw();
     long double dDelta_dTau2(const long double &tau, const long double &delta) throw();
     long double dTau3(const long double &tau, const long double &delta) throw();
@@ -573,7 +572,7 @@ public:
 /// The leading term in the EOS used to set the desired reference state
 /**
 \f[
-\alpha_0 = \log(\delta)+a_1+a_2\tau
+\alpha^0 = \log(\delta)+a_1+a_2\tau
 \f]
 */
 class IdealHelmholtzLead : public BaseHelmholtzTerm{
@@ -632,18 +631,22 @@ public:
 /// The term in the EOS used to shift the reference state of the fluid
 /**
 \f[
-\alpha_0 = a_1+a_2\tau
+\alpha^0 = a_1+a_2\tau
 \f]
 */
 class IdealHelmholtzEnthalpyEntropyOffset : public BaseHelmholtzTerm{
 private:
     long double a1,a2; // Use these variables internally
     bool enabled;
+    std::string reference;
 public:
     IdealHelmholtzEnthalpyEntropyOffset(){enabled = false;};
 
     // Constructor
-    IdealHelmholtzEnthalpyEntropyOffset(long double a1, long double a2):a1(a1), a2(a2){enabled = true;};
+    IdealHelmholtzEnthalpyEntropyOffset(long double a1, long double a2, std::string reference):a1(a1), a2(a2){this->reference = reference; enabled = true;};
+
+    // Set the values in the class
+    void set(long double a1, long double a2, std::string reference){this->a1 = a1; this->a2 = a2; this->reference = reference; enabled = true;}
 
     //Destructor
     ~IdealHelmholtzEnthalpyEntropyOffset(){};
@@ -678,7 +681,7 @@ public:
 
 /**
 \f[
-\alpha_0 = a_1\ln\tau
+\alpha^0 = a_1\ln\tau
 \f]
 */
 class IdealHelmholtzLogTau : public BaseHelmholtzTerm
@@ -731,7 +734,7 @@ public:
 
 /**
 \f[
-\alpha_0 = \displaystyle\sum_i n_i\tau^{t_i}
+\alpha^0 = \displaystyle\sum_i n_i\tau^{t_i}
 \f]
 */
 class IdealHelmholtzPower : public BaseHelmholtzTerm{
@@ -789,33 +792,84 @@ public:
 
 /**
 \f[
-\alpha_0 = \displaystyle\sum_i n_i\log[1-\exp(-\theta_i\tau)] 
+\alpha^0 = \displaystyle\sum_i n_i\log[c_i+d_i\exp(\theta_i\tau)] 
 \f]
+
+To convert conventional Plank-Einstein forms, given by 
+\f$
+\frac{c_p^0}{R} = a_k\displaystyle\frac{\left( b_k/T \right)^2\exp \left( b_k/T \right)}{\left(\exp \left(b_k/T\right) - 1 \right)^2}
+\f$
+and
+\f$
+\alpha^0 = a_k\ln \left[1 - \exp \left( \frac{-b_k\tau}{T_c} \right) \right]
+\f$
+use \f$c = 1\f$, \f$d = -1\f$, \f$n = a\f$, \f$\theta = -\displaystyle\frac{b_k}{T_c}\f$
+
+To convert the second form of Plank-Einstein terms, given by 
+\f$
+\frac{c_p^0}{R} = a_k\displaystyle\frac{\left( -b_k/T \right)^2\exp \left( b_k/T \right)}{c\left(\exp \left(-b_k/T\right) + 1 \right)^2}
+\f$
+and
+\f$
+\alpha^0 = a_k\ln \left[c + \exp \left( \frac{b_k\tau}{T_c} \right) \right]
+\f$
+use \f$c = 1\f$, \f$d = 1\f$, \f$n = -a\f$, \f$\theta = \displaystyle\frac{b_k}{T_c}\f$
+
+Converting Aly-Lee tems is a bit more complex
+
+Aly-Lee starts as
+\f[\frac{c_p^0}{R_u} = A + B\left(\frac{C/T}{\sinh(C/T)}\right)^2 + D\left(\frac{E/T}{\cosh(E/T)}\right)^2\f]
+
+Constant is separated out, and handled separately.  sinh part can be expanded as
+\f[B\left(\frac{C/T}{\sinh(C/T)}\right)^2 = \frac{B(-2C/T)^2\exp(-2C/T)}{(1-\exp(-2C/T))^2}\f]
+where
+\f[n_k = B\f]
+\f[\theta_k = -\frac{2C}{T_c}\f]
+\f[c_k = 1\f]
+\f[d_k = -1\f]
+
+cosh part can be expanded as
+\f[D\left(\frac{E/T}{\cosh(E/T)}\right)^2 = \frac{D(-2E/T)^2\exp(-2E/T)}{(1+\exp(-2E/T))^2}\f]
+where
+\f[n_k = -D\f]
+\f[\theta_k = -\frac{2E}{T_c}\f]
+\f[c_k = 1\f]
+\f[d_k = 1\f]
 */
-class IdealHelmholtzPlanckEinstein : public BaseHelmholtzTerm{
+class IdealHelmholtzPlanckEinsteinGeneralized : public BaseHelmholtzTerm{
     
 private:
-    std::vector<long double> n,theta; // Use these variables internally
+    std::vector<long double> n,theta,c,d; // Use these variables internally
     std::size_t N;
     bool enabled;
 public:
-    IdealHelmholtzPlanckEinstein(){N = 0; enabled = false;}
+    IdealHelmholtzPlanckEinsteinGeneralized(){N = 0; enabled = false;}
     // Constructor with std::vector instances
-    IdealHelmholtzPlanckEinstein(std::vector<long double> n, std::vector<long double> theta)
-    :n(n), theta(theta)
+    IdealHelmholtzPlanckEinsteinGeneralized(std::vector<long double> n, std::vector<long double> theta, std::vector<long double> c, std::vector<long double> d)
+    :n(n), theta(theta), c(c), d(d)
     {
         N = n.size();
         enabled = true;
     };
 
-    //Destructor
-    ~IdealHelmholtzPlanckEinstein(){};
+    // Destructor
+    ~IdealHelmholtzPlanckEinsteinGeneralized(){};
+
+    // Extend the vectors to allow for multiple instances feeding values to this function
+    void extend(std::vector<long double> n, std::vector<long double> theta, std::vector<long double> c, std::vector<long double> d)
+    {
+        this->n.insert(this->n.end(), n.begin(), n.end());
+        this->theta.insert(this->theta.end(), theta.begin(), theta.end());
+        this->c.insert(this->c.end(), c.begin(), c.end());
+        this->d.insert(this->d.end(), d.begin(), d.end());
+        N += n.size();
+    }
 
     bool is_enabled(){return enabled;};
   
     void to_json(rapidjson::Value &el, rapidjson::Document &doc)
     {
-        el.AddMember("type","IdealHelmholtzPlanckEinstein",doc.GetAllocator());
+        el.AddMember("type","IdealHelmholtzPlanckEinsteinGeneralized",doc.GetAllocator());
         cpjson::set_long_double_array("n",n,el,doc);
         cpjson::set_long_double_array("theta",theta,el,doc);
     };
@@ -823,80 +877,23 @@ public:
     // Term and its derivatives
     long double base(const long double &tau, const long double &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*log(1.0-exp(-theta[i]*tau));} return s;
+        long double s=0; for (std::size_t i=0; i < N; ++i){
+            s += n[i]*log(c[i]+d[i]*exp(theta[i]*tau));
+        } 
+        return s;
     };
     long double dTau(const long double &tau, const long double &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*theta[i]*(1.0/(1.0-exp(-theta[i]*tau))-1.0);} return s;
+        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*theta[i]*d[i]*exp(theta[i]*tau)/(c[i]+d[i]*exp(theta[i]*tau));} 
+        return s;
     };
     long double dTau2(const long double &tau, const long double &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s -= n[i]*pow(theta[i],2)*exp(theta[i]*tau)/pow(1.0-exp(theta[i]*tau),2);} return s;
+        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],2)*c[i]*d[i]*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),2);} return s;
     };
     long double dTau3(const long double &tau, const long double &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],2)*theta[i]*exp(theta[i]*tau)*(exp(theta[i]*tau)+1)/pow(exp(theta[i]*tau)-1,3);} return s;
-    };
-    long double dDelta(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta3(const long double &tau, const long double &delta) throw(){return 0;};
-};
-
-/**
-\f[ 
-\alpha_0 = \displaystyle\sum_i n_i\log[c_i+\exp(\theta_i\tau)] 
-\f]
-*/
-class IdealHelmholtzPlanckEinstein2 : public BaseHelmholtzTerm{
-    
-private:
-    std::vector<long double> n,theta,c; // Use these variables internally
-    std::size_t N;
-    bool enabled;
-public:
-    IdealHelmholtzPlanckEinstein2(){N = 0; enabled = false;}
-    // Constructor with std::vector instances
-    IdealHelmholtzPlanckEinstein2(const std::vector<long double> &n, 
-                                  const std::vector<long double> &theta, 
-                                  const std::vector<long double> &c)
-    :n(n), theta(theta), c(c)
-    {
-        N = n.size();
-        enabled = true;
-    };
-
-    //Destructor
-    ~IdealHelmholtzPlanckEinstein2(){};
-
-    bool is_enabled(){return enabled;};
-  
-    void to_json(rapidjson::Value &el, rapidjson::Document &doc)
-    {
-        el.AddMember("type","IdealHelmholtzPlanckEinstein2",doc.GetAllocator());
-        cpjson::set_long_double_array("n",n,el,doc);
-        cpjson::set_long_double_array("theta",theta,el,doc);
-        cpjson::set_long_double_array("c",c,el,doc);
-    };
-
-    // Term and its derivatives
-    long double base(const long double &tau, const long double &delta) throw(){
-        if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*log(c[i]+exp(theta[i]*tau));} return s;
-    };
-    long double dTau(const long double &tau, const long double &delta) throw(){
-        if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*theta[i]*exp(tau*theta[i])/(c[i]+exp(theta[i]*tau));} return s;
-    };
-    long double dTau2(const long double &tau, const long double &delta) throw(){
-        if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],2)*c[i]*exp(tau*theta[i])/pow(c[i]+exp(tau*theta[i]),2);} return s;
-    };
-    long double dTau3(const long double &tau, const long double &delta) throw(){
-        if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],2)*c[i]*(-theta[i])*exp(theta[i]*tau)*(exp(theta[i]*tau)-c[i])/pow(exp(theta[i]*tau)+c[i],3);} return s;
+        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],3)*c[i]*d[i]*(c[i]-d[i]*exp(theta[i]*tau))*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),3);} return s;
     };
     long double dDelta(const long double &tau, const long double &delta) throw(){return 0.0;};
     long double dDelta2(const long double &tau, const long double &delta) throw(){return 0.0;};
@@ -919,7 +916,7 @@ public:
     IdealHelmholtzCP0Constant(long double cp_over_R, long double Tc, long double T0) 
     : cp_over_R(cp_over_R), Tc(Tc), T0(T0)
     { 
-        enabled = true;
+        enabled = true; tau0 = Tc/T0;
     };
 
     /// Destructor
@@ -974,10 +971,18 @@ public:
     IdealHelmholtzCP0PolyT(const std::vector<long double> &c, const std::vector<long double> &t, double Tc, double T0) 
     : c(c), t(t), Tc(Tc), T0(T0)
     { 
+        assert(c.size() == t.size());
         tau0 = Tc/T0;
         enabled = true;
         N = c.size();
     };
+
+    void extend(const std::vector<long double> &c, const std::vector<long double> &t)
+    {
+        this->c.insert(this->c.end(), c.begin(), c.end());
+        this->t.insert(this->t.end(), t.begin(), t.end());
+        N += c.size();
+    }
 
     /// Destructor
     ~IdealHelmholtzCP0PolyT(){};
@@ -1140,100 +1145,89 @@ public:
     IdealHelmholtzEnthalpyEntropyOffset EnthalpyEntropyOffset;
     IdealHelmholtzLogTau LogTau;
     IdealHelmholtzPower Power;
-    IdealHelmholtzPlanckEinstein PlanckEinstein;
-    IdealHelmholtzPlanckEinstein2 PlanckEinstein2;
+    IdealHelmholtzPlanckEinsteinGeneralized PlanckEinstein;
 
     IdealHelmholtzCP0Constant CP0Constant;
     IdealHelmholtzCP0PolyT CP0PolyT;
-    IdealHelmholtzCP0AlyLee CP0AlyLee;
 
     long double base(const long double &tau, const long double &delta)
     {
         return (Lead.base(tau, delta) + EnthalpyEntropyOffset.base(tau, delta)
                 + LogTau.base(tau, delta) + Power.base(tau, delta) 
-                + PlanckEinstein.base(tau, delta) + PlanckEinstein2.base(tau, delta)
+                + PlanckEinstein.base(tau, delta)
                 + CP0Constant.base(tau, delta) + CP0PolyT.base(tau, delta)
-                + CP0AlyLee.base(tau, delta)
                 );
     };
     long double dDelta(const long double &tau, const long double &delta)
     {
         return (Lead.dDelta(tau, delta) + EnthalpyEntropyOffset.dDelta(tau, delta)
                 + LogTau.dDelta(tau, delta) + Power.dDelta(tau, delta) 
-                + PlanckEinstein.dDelta(tau, delta) + PlanckEinstein2.dDelta(tau, delta)
+                + PlanckEinstein.dDelta(tau, delta)
                 + CP0Constant.dDelta(tau, delta) + CP0PolyT.dDelta(tau, delta)
-                + CP0AlyLee.dDelta(tau, delta)
                 );
     };
     long double dTau(const long double &tau, const long double &delta)
     {
         return (Lead.dTau(tau, delta) + EnthalpyEntropyOffset.dTau(tau, delta)
                 + LogTau.dTau(tau, delta) + Power.dTau(tau, delta) 
-                + PlanckEinstein.dTau(tau, delta) + PlanckEinstein2.dTau(tau, delta)
+                + PlanckEinstein.dTau(tau, delta)
                 + CP0Constant.dTau(tau, delta) + CP0PolyT.dTau(tau, delta)
-                + CP0AlyLee.dTau(tau, delta)
                 );
     };
     long double dDelta2(const long double &tau, const long double &delta)
     {
         return (Lead.dDelta2(tau, delta) + EnthalpyEntropyOffset.dDelta2(tau, delta)
                 + LogTau.dDelta2(tau, delta) + Power.dDelta2(tau, delta) 
-                + PlanckEinstein.dDelta2(tau, delta) + PlanckEinstein2.dDelta2(tau, delta)
+                + PlanckEinstein.dDelta2(tau, delta)
                 + CP0Constant.dDelta2(tau, delta) + CP0PolyT.dDelta2(tau, delta)
-                + CP0AlyLee.dDelta2(tau, delta)
                 );
     };
     long double dDelta_dTau(const long double &tau, const long double &delta)
     {
         return (Lead.dDelta_dTau(tau, delta) + EnthalpyEntropyOffset.dDelta_dTau(tau, delta)
                 + LogTau.dDelta_dTau(tau, delta) + Power.dDelta_dTau(tau, delta) 
-                + PlanckEinstein.dDelta_dTau(tau, delta) + PlanckEinstein2.dDelta_dTau(tau, delta)
+                + PlanckEinstein.dDelta_dTau(tau, delta)
                 + CP0Constant.dDelta_dTau(tau, delta) + CP0PolyT.dDelta_dTau(tau, delta)
-                + CP0AlyLee.dDelta_dTau(tau, delta)
                 );
     };
     long double dTau2(const long double &tau, const long double &delta)
     {
         return (Lead.dTau2(tau, delta) + EnthalpyEntropyOffset.dTau2(tau, delta)
                 + LogTau.dTau2(tau, delta) + Power.dTau2(tau, delta) 
-                + PlanckEinstein.dTau2(tau, delta) + PlanckEinstein2.dTau2(tau, delta)
+                + PlanckEinstein.dTau2(tau, delta)
                 + CP0Constant.dTau2(tau, delta) + CP0PolyT.dTau2(tau, delta)
-                + CP0AlyLee.dTau2(tau, delta));
+                );
     };
     long double dDelta3(const long double &tau, const long double &delta) 
     {
         return (Lead.dDelta3(tau, delta) + EnthalpyEntropyOffset.dDelta3(tau, delta)
                 + LogTau.dDelta3(tau, delta) + Power.dDelta3(tau, delta) 
-                + PlanckEinstein.dDelta3(tau, delta) + PlanckEinstein2.dDelta3(tau, delta)
+                + PlanckEinstein.dDelta3(tau, delta)
                 + CP0Constant.dDelta3(tau, delta) + CP0PolyT.dDelta3(tau, delta)
-                + CP0AlyLee.dDelta3(tau, delta)
                 );
     };
     long double dDelta2_dTau(const long double &tau, const long double &delta)
     {
         return (Lead.dDelta2_dTau(tau, delta) + EnthalpyEntropyOffset.dDelta2_dTau(tau, delta)
                 + LogTau.dDelta2_dTau(tau, delta) + Power.dDelta2_dTau(tau, delta) 
-                + PlanckEinstein.dDelta2_dTau(tau, delta) + PlanckEinstein2.dDelta2_dTau(tau, delta)
+                + PlanckEinstein.dDelta2_dTau(tau, delta)
                 + CP0Constant.dDelta2_dTau(tau, delta) + CP0PolyT.dDelta2_dTau(tau, delta)
-                + CP0AlyLee.dDelta2_dTau(tau, delta)
                 );
     };
     long double dDelta_dTau2(const long double &tau, const long double &delta)
     {
         return (Lead.dDelta_dTau2(tau, delta) + EnthalpyEntropyOffset.dDelta_dTau2(tau, delta)
                 + LogTau.dDelta_dTau2(tau, delta) + Power.dDelta_dTau2(tau, delta) 
-                + PlanckEinstein.dDelta_dTau2(tau, delta) + PlanckEinstein2.dDelta_dTau2(tau, delta)
+                + PlanckEinstein.dDelta_dTau2(tau, delta)
                 + CP0Constant.dDelta_dTau2(tau, delta) + CP0PolyT.dDelta_dTau2(tau, delta)
-                + CP0AlyLee.dDelta_dTau2(tau, delta)
                 );
     };
     long double dTau3(const long double &tau, const long double &delta)
     {
         return (Lead.dTau3(tau, delta) + EnthalpyEntropyOffset.dTau3(tau, delta)
                 + LogTau.dTau3(tau, delta) + Power.dTau3(tau, delta) 
-                + PlanckEinstein.dTau3(tau, delta) + PlanckEinstein2.dTau3(tau, delta)
+                + PlanckEinstein.dTau3(tau, delta)
                 + CP0Constant.dTau3(tau, delta) + CP0PolyT.dTau3(tau, delta)
-                + CP0AlyLee.dTau3(tau, delta)
                 );
     };
 };

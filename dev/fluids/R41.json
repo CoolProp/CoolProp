@@ -176,6 +176,12 @@
             13.33837619768028
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": 0.00152259725820867, 
+          "a2": -0.00354958910457479, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -262,5 +268,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R41"
+  "NAME": "R41", 
+  "REFPROP_NAME": "R41"
 }

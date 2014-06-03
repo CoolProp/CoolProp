@@ -169,6 +169,12 @@
             4.852173913043479
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": -16.3423492459187, 
+          "a2": 10.2889618649051, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -296,5 +302,6 @@
       "rhoVtriple_units": "mol/m^3"
     }
   ], 
-  "NAME": "R365MFC"
+  "NAME": "R365MFC", 
+  "REFPROP_NAME": "R365MFC"
 }

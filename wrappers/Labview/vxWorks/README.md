@@ -41,17 +41,22 @@ This currently uses GCC 4.8.0 and Binutils 2.22-8 (default in debian testing).
 
 Add this line to /etc/apt/sources.list to add the repository:
 
+```
 deb http://debian.repo.frc.s3.amazonaws.com jessie main
+```
 
 Add the maintainer key for the repository
 
-    sudo wget -O - http://debian.repo.frc.s3.amazonaws.com/rbmj.gpg.key | apt-key add -
+```
+sudo wget -O - http://debian.repo.frc.s3.amazonaws.com/rbmj.gpg.key | apt-key add -
+```
 
 Run the following commands:
 
-    sudo apt-get update
-    sudo apt-get install gcc-powerpc-wrs-vxwork
-
+```
+sudo apt-get update
+sudo apt-get install gcc-powerpc-wrs-vxwork
+```
 
 Building your own version of GCC for VxWorks Target
 ---------------------------------------------------
@@ -64,66 +69,58 @@ These are the instructions to build from source manually. Note that some lines b
 
 1: Download all the components.
 
-  $ wget http://ftp.gnu.org/gnu/gcc/gcc-4.8.2/gcc-4.8.2.tar.bz2
-  
-  $ wget http://ftp.gnu.org/gnu/binutils/binutils-2.23.1.tar.bz2
-  
-  $ wget ftp://ftp.ni.com/pub/devzone/tut/updated_vxworks63gccdist.zip
+```
+$ wget http://ftp.gnu.org/gnu/gcc/gcc-4.8.2/gcc-4.8.2.tar.bz2
+$ wget http://ftp.gnu.org/gnu/binutils/binutils-2.23.1.tar.bz2
+$ wget ftp://ftp.ni.com/pub/devzone/tut/updated_vxworks63gccdist.zip
+```
 
 2: Set WIND_BASE
 
-  # echo 'export WIND_BASE=/usr/powerpc-wrs-vxworks/wind_base' >> /etc/profile
-  
-  $ source /etc/profile
+```
+# echo 'export WIND_BASE=/usr/powerpc-wrs-vxworks/wind_base' >> /etc/profile
+$ source /etc/profile
+```
 
 3: Install the WindRiver headers and development resources.
 
+```
 $ unzip updated_vxworks63gccdist.zip
-  # mkdir -p /usr/powerpc-wrs-vxworks/wind_base/target
-  
-  # mkdir -p /usr/powerpc-wrs-vxworks/share/ldscripts
-  
-  # cp -R gccdist/WindRiver/vxworks-6.3/host /usr/powerpc-wrs-vxworks/wind_base
-  
-  # cp -R gccdist/WindRiver/vxworks-6.3/target/h/. /usr/powerpc-wrs-vxworks/sys-include
-  
-  # ln -fsT /usr/powerpc-wrs-vxworks/sys-include/wrn/coreip /usr/powerpc-wrs-vxworks/wind_base/target/h
-  
-  # sed '/ENTRY(_start)/d' < /usr/powerpc-wrs-vxworks/wind_base/target/h/tool/gnu/ldscripts/link.OUT > /usr/powerpc-wrs-vxworks/share/ldscripts/dkm.ld
+# mkdir -p /usr/powerpc-wrs-vxworks/wind_base/target
+# mkdir -p /usr/powerpc-wrs-vxworks/share/ldscripts
+# cp -R gccdist/WindRiver/vxworks-6.3/host /usr/powerpc-wrs-vxworks/wind_base
+# cp -R gccdist/WindRiver/vxworks-6.3/target/h/. /usr/powerpc-wrs-vxworks/sys-include
+# ln -fsT /usr/powerpc-wrs-vxworks/sys-include/wrn/coreip /usr/powerpc-wrs-vxworks/wind_base/target/h
+# sed '/ENTRY(_start)/d' < /usr/powerpc-wrs-vxworks/wind_base/target/h/tool/gnu/ldscripts/link.OUT > /usr/powerpc-wrs-vxworks/share/ldscripts/dkm.ld
+```
 
 4: extract binutils and gcc, and the dependency libraries
 
-  $ tar -jxf gcc-4.8.2.tar.bz2
-  
-  $ tar -jxf binutils-2.23.1.tar.bz2
-  
-  $ cd gcc-4.8.0
-  
-  $ ./contrib/download_prerequisites
-  
-  $ cd ..
+```
+$ tar -jxf gcc-4.8.2.tar.bz2
+$ tar -jxf binutils-2.23.1.tar.bz2
+$ cd gcc-4.8.0
+$ ./contrib/download_prerequisites
+$ cd ..
+```
 
 5: Build & install binutils
 
-  $ mkdir binutils-build
-  
-  $ cd binutils-build
-  
-  $ ../binutils-2.23.1/configure --prefix=/usr --target=powerpc-wrs-vxworks --disable-nls
-  
-  $ make -j4
-  
-  # make install
-  
-  $ cd ..
+```
+$ mkdir binutils-build
+$ cd binutils-build
+$ ../binutils-2.23.1/configure --prefix=/usr --target=powerpc-wrs-vxworks --disable-nls
+$ make -j4
+# make install
+$ cd ..
+```
 
 6: Build & install gcc
 
-  $ mkdir gcc-build
-  
-  $ cd gcc-build
-  
-  $ ../gcc-4.8.2/configure \
+```
+$ mkdir gcc-build
+$ cd gcc-build
+$ ../gcc-4.8.2/configure \
       --prefix=/usr \
       --target=powerpc-wrs-vxworks \
       --with-gnu-as \
@@ -145,6 +142,6 @@ $ unzip updated_vxworks63gccdist.zip
       CFLAGS_FOR_TARGET='-mstrict-align -mlongcall -g -O2' \
       CXXFLAGS_FOR_TARGET='-mstrict-align -mlongcall -g -O2'
   
-  $ make -j4
-  
-  # make install
+$ make -j4
+# make install
+```
