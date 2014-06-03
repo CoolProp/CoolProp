@@ -794,6 +794,47 @@ public:
 \f[
 \alpha^0 = \displaystyle\sum_i n_i\log[c_i+d_i\exp(\theta_i\tau)] 
 \f]
+
+To convert conventional Plank-Einstein forms, given by 
+\f$
+\frac{c_p^0}{R} = a_k\displaystyle\frac{\left( b_k/T \right)^2\exp \left( b_k/T \right)}{\left(\exp \left(b_k/T\right) - 1 \right)^2}
+\f$
+and
+\f$
+\alpha^0 = a_k\ln \left[1 - \exp \left( \frac{-b_k\tau}{T_c} \right) \right]
+\f$
+use \f$c = 1\f$, \f$d = -1\f$, \f$n = a\f$, \f$\theta = -\displaystyle\frac{b_k}{T_c}\f$
+
+To convert the second form of Plank-Einstein terms, given by 
+\f$
+\frac{c_p^0}{R} = a_k\displaystyle\frac{\left( -b_k/T \right)^2\exp \left( b_k/T \right)}{c\left(\exp \left(-b_k/T\right) + 1 \right)^2}
+\f$
+and
+\f$
+\alpha^0 = a_k\ln \left[c + \exp \left( \frac{b_k\tau}{T_c} \right) \right]
+\f$
+use \f$c = 1\f$, \f$d = 1\f$, \f$n = -a\f$, \f$\theta = \displaystyle\frac{b_k}{T_c}\f$
+
+Converting Aly-Lee tems is a bit more complex
+
+Aly-Lee starts as
+\f[\frac{c_p^0}{R_u} = A + B\left(\frac{C/T}{\sinh(C/T)}\right)^2 + D\left(\frac{E/T}{\cosh(E/T)}\right)^2\f]
+
+Constant is separated out, and handled separately.  sinh part can be expanded as
+\f[B\left(\frac{C/T}{\sinh(C/T)}\right)^2 = \frac{B(-2C/T)^2\exp(-2C/T)}{(1-\exp(-2C/T))^2}\f]
+where
+\f[n_k = B\f]
+\f[\theta_k = -\frac{2C}{T_c}\f]
+\f[c_k = 1\f]
+\f[d_k = -1\f]
+
+cosh part can be expanded as
+\f[D\left(\frac{E/T}{\cosh(E/T)}\right)^2 = \frac{D(-2E/T)^2\exp(-2E/T)}{(1+\exp(-2E/T))^2}\f]
+where
+\f[n_k = -D\f]
+\f[\theta_k = -\frac{2E}{T_c}\f]
+\f[c_k = 1\f]
+\f[d_k = 1\f]
 */
 class IdealHelmholtzPlanckEinsteinGeneralized : public BaseHelmholtzTerm{
     
