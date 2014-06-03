@@ -359,7 +359,6 @@ vel("CO2", "T", 304, "Q", 1, "L", 217.95e-3, 1e-4),
 vel("CO2", "T", 225, "Dmass", 0.23555, "L", 11.037e-3, 1e-4),
 vel("CO2", "T", 275, "Dmass", 1281.64, "L", 238.44e-3, 1e-4),
 
-
 // From Friend, JPCRD, 1991
 vel("Ethane", "T", 100, "Dmass", 1e-13, "L", 3.46e-3, 1e-2),
 vel("Ethane", "T", 230, "Dmolar", 16020, "L", 126.2e-3, 1e-2),
@@ -408,7 +407,7 @@ vel("Water", "T", 647.35, "Dmass", 750, "L", 600.961346e-3, 1e-6),
 
 // From Shan, ASHRAE, 2000
 vel("R23", "T", 180, "Dmolar", 21097, "L", 143.19e-3, 1e-4),
-vel("R23", "T", 420, "Dmolar", 7564, "L", 50.19e-3, 1e-4),
+vel("R23", "T", 420, "Dmolar", 7564, "L", 50.19e-3, 2e-4),
 vel("R23", "T", 370, "Dmolar", 32.62, "L", 17.455e-3, 1e-4),
 
 // From REFPROP 9.1 since no sample data provided in Tufeu
@@ -416,23 +415,23 @@ vel("Ammonia", "T", 310, "Dmolar", 34320, "L", 0.45223303481784971, 1e-4),
 vel("Ammonia", "T", 395, "Q", 0, "L", 0.2264480769301, 1e-4),
 
 // From Hands, Cryogenics, 1981
-vel("Helium", "T", 800, "P", 1e5, "L", 0.3085, 1e-4),
-vel("Helium", "T", 300, "P", 1e5, "L", 0.1560, 1e-4),
-vel("Helium", "T", 20, "P", 1e5, "L", 0.0262, 1e-4),
-vel("Helium", "T", 8, "P", 1e5, "L", 0.0145, 1e-4),
-vel("Helium", "T", 4, "P", 20e5, "L", 0.0255, 1e-4),
-vel("Helium", "T", 8, "P", 20e5, "L", 0.0308, 1e-4),
-vel("Helium", "T", 20, "P", 20e5, "L", 0.0328, 1e-4),
-vel("Helium", "T", 4, "P", 100e5, "L", 0.0385, 1e-4),
-vel("Helium", "T", 8, "P", 100e5, "L", 0.0566, 1e-4),
-vel("Helium", "T", 20, "P", 100e5, "L", 0.0594, 1e-4),
-vel("Helium", "T", 4, "P", 1e5, "L", 0.0186, 1e-4),
-vel("Helium", "T", 4, "P", 2e5, "L", 0.0194, 1e-4),
-vel("Helium", "T", 5.180, "P", 2.3e5, "L", 0.0195, 1e-4),
-vel("Helium", "T", 5.2, "P", 2.3e5, "L", 0.0202, 1e-4),
-vel("Helium", "T", 5.230, "P", 2.3e5, "L", 0.0181, 1e-4),
-vel("Helium", "T", 5.260, "P", 2.3e5, "L", 0.0159, 1e-4),
-vel("Helium", "T", 5.3, "P", 2.3e5, "L", 0.0149, 1e-4),
+vel("Helium", "T", 800, "P", 1e5, "L", 0.3085, 1e-2),
+vel("Helium", "T", 300, "P", 1e5, "L", 0.1560, 1e-2),
+vel("Helium", "T", 20, "P", 1e5, "L", 0.0262, 1e-2),
+vel("Helium", "T", 8, "P", 1e5, "L", 0.0145, 1e-2),
+vel("Helium", "T", 4, "P", 20e5, "L", 0.0255, 1e-2),
+vel("Helium", "T", 8, "P", 20e5, "L", 0.0308, 1e-2),
+vel("Helium", "T", 20, "P", 20e5, "L", 0.0328, 1e-2),
+vel("Helium", "T", 4, "P", 100e5, "L", 0.0385, 1e-2),
+vel("Helium", "T", 8, "P", 100e5, "L", 0.0566, 1e-2),
+vel("Helium", "T", 20, "P", 100e5, "L", 0.0594, 1e-2),
+vel("Helium", "T", 4, "P", 1e5, "L", 0.0186, 1e-2),
+vel("Helium", "T", 4, "P", 2e5, "L", 0.0194, 1e-2),
+vel("Helium", "T", 5.180, "P", 2.3e5, "L", 0.0195, 1e-1),
+vel("Helium", "T", 5.2, "P", 2.3e5, "L", 0.0202, 1e-1),
+vel("Helium", "T", 5.230, "P", 2.3e5, "L", 0.0181, 1e-1),
+vel("Helium", "T", 5.260, "P", 2.3e5, "L", 0.0159, 1e-1),
+vel("Helium", "T", 5.3, "P", 2.3e5, "L", 0.0149, 1e-1),
 
 // Geller, IJT, 2001 - based on experimental data, no validation data provided
 vel("R404A", "T", 253.03, "P", 0.101e6, "L", 0.00991, 0.03),
