@@ -1739,7 +1739,7 @@ public:
             IGPower.reset(new CoolProp::IdealHelmholtzPower(n,t));
         }
         {
-            std::vector<long double> n(4,0), t(4,1), c(4,1), d(4,1); n[0] = 0.1; n[2] = 0.5; t[1] = 1; t[2] = 2; t[3] = 2;
+            std::vector<long double> n(4,0), t(4,1), c(4,1), d(4,-1); n[0] = 0.1; n[2] = 0.5; t[0] = -1.5; t[1] = -1; t[2] = -2; t[3] = -2;
             PlanckEinstein.reset(new CoolProp::IdealHelmholtzPlanckEinsteinGeneralized(n, t, c, d));
         }
         {
@@ -1941,8 +1941,7 @@ public:
     }
 };
 
-std::string terms[] = {"Lead","LogTau","IGPower","PlanckEinstein","PlanckEinstein2",
-                       "CP0Constant","CP0PolyT","CP0AlyLee", 
+std::string terms[] = {"Lead","LogTau","IGPower","PlanckEinstein","CP0Constant","CP0PolyT",
                        "Gaussian","Lemmon2005","Power","SAFT","NonAnalytic","Exponential",
                        "GERG2008"};
 std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDelta_dTau","dDelta_dTau2","dDelta2_dTau"};
