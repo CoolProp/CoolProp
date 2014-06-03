@@ -862,6 +862,7 @@ public:
         this->theta.insert(this->theta.end(), theta.begin(), theta.end());
         this->c.insert(this->c.end(), c.begin(), c.end());
         this->d.insert(this->d.end(), d.begin(), d.end());
+        N += n.size();
     }
 
     bool is_enabled(){return enabled;};
