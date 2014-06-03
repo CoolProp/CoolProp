@@ -1,15 +1,15 @@
 /**
-This file includes some testing functions that will get built 
+This file includes some testing functions that will get built
 into the program.  Otherwise CTest can be used by removing this file from
 the build to avoid double declaration of the main function and
 Catch clashing
 */
 #include "Tests.h"
 
-#if defined ENABLE_CATCH    
+#if defined ENABLE_CATCH
     #define CATCH_CONFIG_RUNNER
     #include "catch.hpp"
- 
+
     static Catch::Session session; // There must be exactly one instance
 
 #endif // ENABLE_CATCH

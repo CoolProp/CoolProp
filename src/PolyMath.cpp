@@ -998,7 +998,6 @@ double BaseExponential::expval(const std::vector< std::vector<double> > &coeffic
 #include <math.h>
 #include "catch.hpp"
 
-
 class PolynomialConsistencyFixture {
 public:
 	CoolProp::BasePolynomial poly;

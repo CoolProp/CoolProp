@@ -66,7 +66,8 @@ int main()
         {
             try{
                 //set_reference_stateS(NBP_refs[i],"RESET");
-                HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,NBP_refs[i]));
+                std::vector<std::string> comps(1,NBP_refs[i]);
+                HelmholtzEOSMixtureBackend HEOS(comps);
                 HEOS.update(PQ_INPUTS, 101325, 0);
                 double delta_a1 = HEOS.smass()/(HEOS.gas_constant()/HEOS.molar_mass());
                 double delta_a2 = -HEOS.hmass()/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing().T);
@@ -81,7 +82,8 @@ int main()
         {
             try{
                 //set_reference_stateS(IIR_refs[i],"RESET");
-                HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,IIR_refs[i]));
+                std::vector<std::string> comps(1,IIR_refs[i]);
+                HelmholtzEOSMixtureBackend HEOS(comps);
                 HEOS.update(QT_INPUTS, 0, 273.15);
                 double delta_a1 = (HEOS.smass()-1000)/(HEOS.gas_constant()/HEOS.molar_mass());
                 double delta_a2 = -(HEOS.hmass()-200000)/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing().T);

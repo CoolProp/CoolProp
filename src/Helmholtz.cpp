@@ -375,7 +375,7 @@ long double ResidualHelmholtzExponential::dTau3(const long double &tau, const lo
 void ResidualHelmholtzGaussian::to_json(rapidjson::Value &el, rapidjson::Document &doc)
 {
     el.AddMember("type","ResidualHelmholtzGaussian",doc.GetAllocator());
-    rapidjson::Value _n(rapidjson::kArrayType), _d(rapidjson::kArrayType), _t(rapidjson::kArrayType), 
+    rapidjson::Value _n(rapidjson::kArrayType), _d(rapidjson::kArrayType), _t(rapidjson::kArrayType),
         _eta(rapidjson::kArrayType), _epsilon(rapidjson::kArrayType), _beta(rapidjson::kArrayType), _gamma(rapidjson::kArrayType);
     for (unsigned int i=0; i<=N; ++i)
     {
@@ -515,8 +515,8 @@ long double ResidualHelmholtzGaussian::dTau3(const long double &tau, const long 
 void ResidualHelmholtzGERG2008Gaussian::to_json(rapidjson::Value &el, rapidjson::Document &doc)
 {
     el.AddMember("type","ResidualHelmholtzGERG2008Gaussian",doc.GetAllocator());
-    rapidjson::Value _n(rapidjson::kArrayType), _d(rapidjson::kArrayType), _t(rapidjson::kArrayType), 
-                     _eta(rapidjson::kArrayType), _epsilon(rapidjson::kArrayType), 
+    rapidjson::Value _n(rapidjson::kArrayType), _d(rapidjson::kArrayType), _t(rapidjson::kArrayType),
+                     _eta(rapidjson::kArrayType), _epsilon(rapidjson::kArrayType),
                      _beta(rapidjson::kArrayType), _gamma(rapidjson::kArrayType);
     for (unsigned int i=0; i<=N; ++i)
     {
@@ -581,7 +581,7 @@ long double ResidualHelmholtzGERG2008Gaussian::dDelta3(const long double &tau, c
 {
     /**
     Term derived in sympy using
-        
+
         from sympy import *
         n_i, d_i, t_i, tau, delta, eta, gamma, beta, epsilon = symbols('n_i, d_i, t_i, tau, delta, eta, gamma, beta, epsilon')
         psi = exp(-eta*(delta-epsilon)**2-beta*(delta-gamma))
@@ -653,8 +653,8 @@ long double ResidualHelmholtzGERG2008Gaussian::dTau3(const long double &tau, con
 void ResidualHelmholtzLemmon2005::to_json(rapidjson::Value &el, rapidjson::Document &doc)
 {
     el.AddMember("type","ResidualHelmholtzLemmon2005",doc.GetAllocator());
-    rapidjson::Value _n(rapidjson::kArrayType), _d(rapidjson::kArrayType), 
-                     _t(rapidjson::kArrayType), _l(rapidjson::kArrayType), 
+    rapidjson::Value _n(rapidjson::kArrayType), _d(rapidjson::kArrayType),
+                     _t(rapidjson::kArrayType), _l(rapidjson::kArrayType),
                      _m(rapidjson::kArrayType);
     for (unsigned int i=0;i<=N; ++i)
     {
@@ -743,7 +743,7 @@ long double ResidualHelmholtzLemmon2005::dDelta2(const long double &tau, const l
         ResidualHelmholtzLemmon2005Element &el = elements[i];
         long double ni = el.n, ti = el.t, di = el.d, md = el.md;
         int li = el.l, mi = el.m;
-        if (li != 0 && mi != 0){	
+        if (li != 0 && mi != 0){
             long double pow_delta_li = pow(delta, li);
             long double pow_tau_mi = pow(tau, md);
             s[i] = ni*((di-li*pow_delta_li)*(di-1.0-li*pow_delta_li) - li*li*pow_delta_li)*exp(ti*log_tau+(di-2)*log_delta-pow_delta_li-pow_tau_mi);
@@ -933,8 +933,8 @@ void ResidualHelmholtzNonAnalytic::to_json(rapidjson::Value &el, rapidjson::Docu
 {
     el.AddMember("type","ResidualHelmholtzNonAnalytic",doc.GetAllocator());
 
-    rapidjson::Value _n(rapidjson::kArrayType), _a(rapidjson::kArrayType), _b(rapidjson::kArrayType), 
-                     _beta(rapidjson::kArrayType), _A(rapidjson::kArrayType), _B(rapidjson::kArrayType), 
+    rapidjson::Value _n(rapidjson::kArrayType), _a(rapidjson::kArrayType), _b(rapidjson::kArrayType),
+                     _beta(rapidjson::kArrayType), _A(rapidjson::kArrayType), _B(rapidjson::kArrayType),
                      _C(rapidjson::kArrayType), _D(rapidjson::kArrayType);
     for (unsigned int i=0; i<=N; ++i)
     {
@@ -969,7 +969,7 @@ long double ResidualHelmholtzNonAnalytic::base(const long double &tau, const lon
         long double theta=(1.0-tau)+Ai*pow(pow(delta-1.0,2),1.0/(2.0*betai));
         long double DELTA=pow(theta,2)+Bi*pow(pow(delta-1.0,2),ai);
         long double PSI=exp(-Ci*pow(delta-1.0,2)-Di*pow(tau-1.0,2));
-        
+
         s[i] = ni*pow(DELTA, bi)*delta*PSI;
     }
     return std::accumulate(s.begin(), s.end(), 0.0);
@@ -988,7 +988,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta(const long double &tau, const l
         long double PSI=exp(-Ci*pow(delta-1.0,2)-Di*pow(tau-1.0,2));
         long double dPSI_dDelta=-2.0*Ci*(delta-1.0)*PSI;
         long double dDELTA_dDelta=(delta-1.0)*(Ai*theta*2.0/betai*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)+2.0*Bi*ai*pow(pow(delta-1.0,2),ai-1.0));
-        
+
         // At critical point, DELTA is 0, and 1/0^n is undefined
         if (fabs(DELTA) < 10*DBL_EPSILON)
         {
@@ -1016,7 +1016,7 @@ long double ResidualHelmholtzNonAnalytic::dTau(const long double &tau, const lon
         long double dPSI_dTau=-2.0*Di*(tau-1.0)*PSI;
         long double dDELTA_dDelta=(delta-1.0)*(Ai*theta*2.0/betai*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)+2.0*Bi*ai*pow(pow(delta-1.0,2),ai-1.0));
         long double dDELTAbi_dTau=-2.0*theta*bi*pow(DELTA,bi-1.0);
-        
+
         // At critical point, DELTA is 0, and 1/0^n is undefined
         if (fabs(DELTA) < 10*DBL_EPSILON)
         {
@@ -1048,7 +1048,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta2(const long double &tau, const 
         long double dPSI2_dDelta2=(2.0*Ci*pow(delta-1.0,2)-1.0)*2.0*Ci*PSI;
         long double dDELTA2_dDelta2=1.0/(delta-1.0)*dDELTA_dDelta+pow(delta-1.0,2)*(4.0*Bi*ai*(ai-1.0)*pow(pow(delta-1.0,2),ai-2.0)+2.0*pow(Ai/betai,2)*pow(pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0),2)+Ai*theta*4.0/betai*(1.0/(2.0*betai)-1.0)*pow(pow(delta-1.0,2),1.0/(2.0*betai)-2.0));
         long double dDELTAbi2_dDelta2=bi*(pow(DELTA,bi-1.0)*dDELTA2_dDelta2+(bi-1.0)*pow(DELTA,bi-2.0)*pow(dDELTA_dDelta,2));
-        
+
         // At critical point, DELTA is 0, and 1/0^n is undefined
         if (fabs(DELTA) < 10*DBL_EPSILON)
         {
@@ -1079,7 +1079,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta_dTau(const long double &tau, co
 
         long double dPSI2_dDelta_dTau=4.0*Ci*Di*(delta-1.0)*(tau-1.0)*PSI;
         long double dDELTAbi2_dDelta_dTau=-Ai*bi*2.0/betai*pow(DELTA,bi-1.0)*(delta-1.0)*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)-2.0*theta*bi*(bi-1.0)*pow(DELTA,bi-2.0)*dDELTA_dDelta;
-        
+
         long double dPSI_dTau=-2.0*Di*(tau-1.0)*PSI;
         long double dDELTAbi_dTau=-2.0*theta*bi*pow(DELTA,bi-1.0);
 
@@ -1135,12 +1135,12 @@ long double ResidualHelmholtzNonAnalytic::dDelta3(const long double &tau, const 
         long double dPSI2_dDelta2=(2.0*Ci*pow(delta-1.0,2)-1.0)*2.0*Ci*PSI;
         long double dDELTA2_dDelta2=1.0/(delta-1.0)*dDELTA_dDelta+pow(delta-1.0,2)*(4.0*Bi*ai*(ai-1.0)*pow(pow(delta-1.0,2),ai-2.0)+2.0*pow(Ai/betai,2)*pow(pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0),2)+Ai*theta*4.0/betai*(1.0/(2.0*betai)-1.0)*pow(pow(delta-1.0,2),1.0/(2.0*betai)-2.0));
         long double dDELTAbi2_dDelta2=bi*(pow(DELTA,bi-1.0)*dDELTA2_dDelta2+(bi-1.0)*pow(DELTA,bi-2.0)*pow(dDELTA_dDelta,2));
-        
+
         long double dtheta_dDelta = Ai/(2*betai)*pow(pow(delta-1,2),1/(2*betai)-1)*2*(delta-1);
         long double dPSI3_dDelta3=2.0*Ci*PSI*(-4*Ci*Ci*pow(delta-1.0,3)+6*Ci*(delta-1));
         long double PI = 4*Bi*ai*(ai-1)*pow(pow(delta-1,2),ai-2)+2*pow(Ai/betai,2)*pow(pow(delta-1,2),1/betai-2)+4*Ai*theta/betai*(1/(2*betai)-1)*pow(pow(delta-1,2),1/(2*betai)-2);
         long double dPI_dDelta = -8*Bi*ai*(ai-1)*(ai-2)*pow(pow(delta-1,2),ai-5.0/2.0)-8*pow(Ai/betai,2)*(1/(2*betai)-1)*pow(pow(delta-1,2),1/betai-5.0/2.0)-(8*Ai*theta)/betai*(1/(2*betai)-1)*(1/(2*betai)-2)*pow(pow(delta-1,2),1/(2*betai)-5.0/2.0)+4*Ai/betai*(1/(2*betai)-1)*pow(pow(delta-1,2),1/(2*betai)-2)*dtheta_dDelta;
-        long double dDELTA3_dDelta3 = 1/(delta-1)*dDELTA2_dDelta2-1/pow(delta-1,2)*dDELTA_dDelta+pow(delta-1,2)*dPI_dDelta+2*(delta-1)*PI;        
+        long double dDELTA3_dDelta3 = 1/(delta-1)*dDELTA2_dDelta2-1/pow(delta-1,2)*dDELTA_dDelta+pow(delta-1,2)*dPI_dDelta+2*(delta-1)*PI;
         long double dDELTAbi3_dDelta3 = bi*(pow(DELTA,bi-1)*dDELTA3_dDelta3+dDELTA2_dDelta2*(bi-1)*pow(DELTA,bi-2)*dDELTA_dDelta+(bi-1)*(pow(DELTA,bi-2)*2*dDELTA_dDelta*dDELTA2_dDelta2+pow(dDELTA_dDelta,2)*(bi-2)*pow(DELTA,bi-3)*dDELTA_dDelta));
 
         // At critical point, DELTA is 0, and 1/0^n is undefined
@@ -1174,7 +1174,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta_dTau2(const long double &tau, c
 
         long double dDELTAbi_dTau=-2.0*theta*bi*pow(DELTA,bi-1.0);
         long double dPSI_dTau=-2.0*Di*(tau-1.0)*PSI;
-        
+
         long double dtheta_dDelta = Ai/(2*betai)*pow(pow(delta-1,2),1/(2*betai)-1)*2*(delta-1);
 
         long double dPSI2_dDelta_dTau=4.0*Ci*Di*(delta-1.0)*(tau-1.0)*PSI;
@@ -1239,7 +1239,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta2_dTau(const long double &tau, c
         long double dDELTA_dTau = -2*theta;
         long double dDELTA2_dDelta_dTau = 2.0*Ai/(betai)*pow(pow(delta-1,2),1.0/(2.0*betai)-0.5);
         long double dDELTA3_dDelta2_dTau = 2.0*Ai*(betai-1)/(betai*betai)*pow(pow(delta-1,2),1/(2*betai)-1.0);
-        
+
         long double dDELTAbim1_dTau = (bi-1)*pow(DELTA,bi-2)*dDELTA_dTau;
         long double dDELTAbim2_dTau = (bi-2)*pow(DELTA,bi-3)*dDELTA_dTau;
         long double Line11 = dDELTAbim1_dTau*dDELTA2_dDelta2 + pow(DELTA,bi-1)*dDELTA3_dDelta2_dTau;
@@ -1288,7 +1288,7 @@ void ResidualHelmholtzSAFTAssociating::to_json(rapidjson::Value &el, rapidjson::
 long double ResidualHelmholtzSAFTAssociating::Deltabar(const long double &tau, const long double &delta)
 {
     return this->g(this->eta(delta))*(exp(this->epsilonbar*tau)-1)*this->kappabar;
-}   
+}
 long double ResidualHelmholtzSAFTAssociating::dDeltabar_ddelta__consttau(const long double &tau, const long double &delta)
 {
     return this->dg_deta(this->eta(delta))*(exp(this->epsilonbar*tau)-1)*this->kappabar*this->vbarn;
@@ -1382,12 +1382,12 @@ long double ResidualHelmholtzSAFTAssociating::d2X_ddelta2(const long double &tau
     long double X = this->X(delta, Deltabar);
     long double alpha = this->dDeltabar_ddelta__consttau(tau, delta);
     long double dalpha_ddelta = this->d2Deltabar_ddelta2__consttau(tau, delta);
-    
+
     long double dX_ddelta_constall = X*X*(2*Deltabar*Deltabar*X-alpha)/pow(2*Deltabar*delta*X+1,2);
     long double d_dXddelta_dX = -(Deltabar+delta*alpha)*2*(Deltabar*delta*X*X+X)/pow(2*Deltabar*delta*X+1,2);
     long double d_dXddelta_dDeltabar = X*X*(2*delta*delta*X*alpha-1)/pow(2*Deltabar*delta*X+1,2);
     long double d_dXddelta_dalpha = -delta*X*X/(2*Deltabar*delta*X+1);
-    
+
     long double dX_dDeltabar = this->dX_dDeltabar__constdelta(delta, Deltabar);
     long double dX_ddelta = this->dX_ddelta__constDeltabar(delta, Deltabar);
 
@@ -1397,7 +1397,7 @@ long double ResidualHelmholtzSAFTAssociating::d2X_ddelta2(const long double &tau
             + d_dXddelta_dDeltabar*alpha
             + d_dXddelta_dalpha*dalpha_ddelta);
     return val;
-}   
+}
 long double ResidualHelmholtzSAFTAssociating::d3X_dtau3(const long double &tau, const long double &delta)
 {
     long double Delta = this->Deltabar(tau, delta);
@@ -1475,7 +1475,7 @@ long double ResidualHelmholtzSAFTAssociating::d3X_ddelta3(const long double &tau
 long double ResidualHelmholtzSAFTAssociating::g(const long double &eta)
 {
     return 0.5*(2-eta)/pow(1-eta,(int)3);
-}    
+}
 long double ResidualHelmholtzSAFTAssociating::dg_deta(const long double &eta)
 {
     return 0.5*(5-2*eta)/pow(1-eta,(int)4);
@@ -1483,11 +1483,11 @@ long double ResidualHelmholtzSAFTAssociating::dg_deta(const long double &eta)
 long double ResidualHelmholtzSAFTAssociating::d2g_deta2(const long double &eta)
 {
     return 3*(3-eta)/pow(1-eta,(int)5);
-}   
+}
 long double ResidualHelmholtzSAFTAssociating::d3g_deta3(const long double &eta)
 {
     return 6*(7-2*eta)/pow(1-eta,(int)6);
-}   
+}
 long double ResidualHelmholtzSAFTAssociating::eta(const long double &delta){
     return this->vbarn*delta;
 }
@@ -1592,7 +1592,7 @@ void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value &el, rapidjson::Document &
     el.AddMember("T0", static_cast<double>(T0), doc.GetAllocator());
 }
 long double IdealHelmholtzCP0PolyT::base(const long double &tau, const long double &delta) throw()
-{ 
+{
     double sum=0;
     for (std::size_t i = 0; i < N; ++i){
         if (fabs(t[i])<10*DBL_EPSILON)
@@ -1680,7 +1680,7 @@ void IdealHelmholtzCP0AlyLee::to_json(rapidjson::Value &el, rapidjson::Document 
     el.AddMember("T0",static_cast<double>(T0),doc.GetAllocator());
 }
 long double IdealHelmholtzCP0AlyLee::base(const long double &tau, const long double &delta) throw()
-{	
+{
     if (!enabled){ return 0.0;}
     return -tau*(anti_deriv_cp0_tau2(tau)-anti_deriv_cp0_tau2(tau0))+(anti_deriv_cp0_tau(tau)-anti_deriv_cp0_tau(tau0));
 }
@@ -1722,13 +1722,14 @@ IdealHelmholtzEnthalpyEntropyOffset EnthalpyEntropyOffset;
 #ifdef ENABLE_CATCH
 #include <math.h>
 #include "catch.hpp"
+#include "crossplatform_shared_ptr.h"
 
 class HelmholtzConsistencyFixture
 {
 public:
     long double numerical, analytic;
-    
-    std::tr1::shared_ptr<CoolProp::BaseHelmholtzTerm> Lead, LogTau, IGPower, PlanckEinstein, 
+
+    std::tr1::shared_ptr<CoolProp::BaseHelmholtzTerm> Lead, LogTau, IGPower, PlanckEinstein,
         CP0Constant, CP0PolyT, Gaussian, Lemmon2005, Power, SAFT, NonAnalytic, Exponential, GERG2008;
 
     HelmholtzConsistencyFixture(){
@@ -1750,13 +1751,13 @@ public:
         }
         CP0Constant.reset(new CoolProp::IdealHelmholtzCP0Constant(4/8.314472,300,250));
         {
-            long double beta[] = {1.24, 0.821, 15.45, 2.21, 437, 0.743}, 
-                        d[] = {1, 1, 2, 2, 3, 3}, 
-                        epsilon[] = {0.6734, 0.9239, 0.8636, 1.0507, 0.8482, 0.7522}, 
-                        eta[] = {0.9667, 1.5154, 1.0591, 1.6642, 12.4856, 0.9662}, 
+            long double beta[] = {1.24, 0.821, 15.45, 2.21, 437, 0.743},
+                        d[] = {1, 1, 2, 2, 3, 3},
+                        epsilon[] = {0.6734, 0.9239, 0.8636, 1.0507, 0.8482, 0.7522},
+                        eta[] = {0.9667, 1.5154, 1.0591, 1.6642, 12.4856, 0.9662},
                         gamma[] = {1.2827, 0.4317, 1.1217, 1.1871, 1.1243, 0.4203},
                         n[] = {1.2198, -0.4883, -0.0033293, -0.0035387, -0.51172, -0.16882},
-                        t[] = {1, 2.124, 0.4, 3.5, 0.5, 2.7}; 
+                        t[] = {1, 2.124, 0.4, 3.5, 0.5, 2.7};
             Gaussian.reset(new CoolProp::ResidualHelmholtzGaussian(std::vector<long double>(n,n+sizeof(n)/sizeof(n[0])),
                                                                    std::vector<long double>(d,d+sizeof(d)/sizeof(d[0])),
                                                                    std::vector<long double>(t,t+sizeof(t)/sizeof(t[0])),
@@ -1767,8 +1768,8 @@ public:
                                                                    ));
         }
         {
-            long double d[] = {1, 1, 1, 2, 4, 1, 1, 2, 2, 3, 4, 5, 1, 5, 1, 2, 3, 5}, 
-                        l[] = {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 2, 3, 3}, 
+            long double d[] = {1, 1, 1, 2, 4, 1, 1, 2, 2, 3, 4, 5, 1, 5, 1, 2, 3, 5},
+                        l[] = {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 2, 3, 3},
                         m[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.7, 7, 6},
                         n[] = {5.28076, -8.67658, 0.7501127, 0.7590023, 0.01451899, 4.777189, -3.330988, 3.775673, -2.290919, 0.8888268, -0.6234864, -0.04127263, -0.08455389, -0.1308752, 0.008344962, -1.532005, -0.05883649, 0.02296658},
                         t[]= {0.669, 1.05,2.75, 0.956, 1, 2, 2.75, 2.38, 3.37, 3.47, 2.63, 3.45, 0.72, 4.23, 0.2, 4.5, 29, 24};
@@ -1780,9 +1781,9 @@ public:
                                                                    ));
         }
         {
-            long double d[] = {1, 1, 1, 3, 7, 1, 2, 5, 1, 1, 4, 2}, 
-                        l[] = {0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3}, 
-                        n[] = {1.0038, -2.7662, 0.42921, 0.081363, 0.00024174, 0.48246, 0.75542, -0.00743, -0.4146, -0.016558, -0.10644, -0.021704}, 
+            long double d[] = {1, 1, 1, 3, 7, 1, 2, 5, 1, 1, 4, 2},
+                        l[] = {0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3},
+                        n[] = {1.0038, -2.7662, 0.42921, 0.081363, 0.00024174, 0.48246, 0.75542, -0.00743, -0.4146, -0.016558, -0.10644, -0.021704},
                         t[] = {0.25, 1.25, 1.5, 0.25, 0.875, 2.375, 2, 2.125, 3.5, 6.5, 4.75, 12.5};
             Power.reset(new CoolProp::ResidualHelmholtzPower(std::vector<long double>(n, n+sizeof(n)/sizeof(n[0])),
                                                              std::vector<long double>(d, d+sizeof(d)/sizeof(d[0])),
@@ -1791,13 +1792,13 @@ public:
                                                              ));
         }
         {
-            
+
             long double a = 1, epsilonbar = 12.2735737, kappabar = 1.09117041e-05, m = 1.01871348, vbarn = 0.0444215309;
             SAFT.reset(new CoolProp::ResidualHelmholtzSAFTAssociating(a,m,epsilonbar,vbarn,kappabar));
         }
         {
             long double n[] = {-0.666422765408, 0.726086323499, 0.0550686686128},
-                A[] = {0.7, 0.7, 0.7}, B[] = {0.3, 0.3, 1}, C[] = {10, 10, 12.5}, D[] = {275, 275, 275}, 
+                A[] = {0.7, 0.7, 0.7}, B[] = {0.3, 0.3, 1}, C[] = {10, 10, 12.5}, D[] = {275, 275, 275},
                 a[] = {3.5, 3.5, 3}, b[] = {0.875, 0.925, 0.875}, beta[] = {0.3, 0.3, 0.3};
             NonAnalytic.reset(new CoolProp::ResidualHelmholtzNonAnalytic(std::vector<long double>(n, n+sizeof(n)/sizeof(n[0])),
                                                              std::vector<long double>(a, a+sizeof(a)/sizeof(a[0])),
@@ -1810,10 +1811,10 @@ public:
                                                              ));
         }
         {
-            long double d[] = {2, 2, 2, 0, 0, 0}, 
-            g[] = {1.65533788, 1.65533788, 1.65533788, 1.65533788, 1.65533788, 1.65533788}, 
-            l[] = {2, 2, 2, 2, 2, 2}, 
-            n[] = {-3.821884669859, 8.30345065618981, -4.4832307260286, -1.02590136933231, 2.20786016506394, -1.07889905203761}, 
+            long double d[] = {2, 2, 2, 0, 0, 0},
+            g[] = {1.65533788, 1.65533788, 1.65533788, 1.65533788, 1.65533788, 1.65533788},
+            l[] = {2, 2, 2, 2, 2, 2},
+            n[] = {-3.821884669859, 8.30345065618981, -4.4832307260286, -1.02590136933231, 2.20786016506394, -1.07889905203761},
             t[] = {3, 4, 5, 3, 4, 5};
             Exponential.reset(new CoolProp::ResidualHelmholtzExponential(std::vector<long double>(n, n+sizeof(n)/sizeof(n[0])),
                                                                          std::vector<long double>(d, d+sizeof(d)/sizeof(n[0])),
@@ -1841,7 +1842,7 @@ public:
         }
 
     }
-    void call(std::string d, std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta)
+    void call(std::string d, shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta)
     {
               if (!d.compare("dTau")){return dTau(term,tau,delta,ddelta);}
         else if (!d.compare("dTau2")){return dTau2(term,tau,delta,ddelta);}
@@ -1856,7 +1857,7 @@ public:
             throw CoolProp::ValueError("don't understand deriv type");
         }
     }
-    std::shared_ptr<CoolProp::BaseHelmholtzTerm> get(std::string t)
+    shared_ptr<CoolProp::BaseHelmholtzTerm> get(std::string t)
     {
         if (!t.compare("Lead")){return Lead;}
         else if (!t.compare("LogTau")){return LogTau;}
@@ -1876,55 +1877,55 @@ public:
             throw CoolProp::ValueError(format("don't understand helmholtz type: %s",t.c_str()));
         }
     }
-    void dTau(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double dtau){
+    void dTau(shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double dtau){
         long double term_plus = term->base(tau + dtau, delta);
         long double term_minus = term->base(tau - dtau, delta);
         numerical = (term_plus - term_minus)/(2*dtau);
         analytic = term->dTau(tau, delta);
     };
-    void dTau2(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double dtau){
+    void dTau2(shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double dtau){
         long double term_plus = term->dTau(tau + dtau, delta);
         long double term_minus = term->dTau(tau - dtau, delta);
         numerical = (term_plus - term_minus)/(2*dtau);
         analytic = term->dTau2(tau, delta);
     };
-    void dTau3(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double dtau){
+    void dTau3(shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double dtau){
         long double term_plus = term->dTau2(tau + dtau, delta);
         long double term_minus = term->dTau2(tau - dtau, delta);
         numerical = (term_plus - term_minus)/(2*dtau);
         analytic = term->dTau3(tau, delta);
     };
-    void dDelta(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
+    void dDelta(shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
         long double term_plus = term->base(tau, delta + ddelta);
         long double term_minus = term->base(tau, delta - ddelta);
         numerical = (term_plus - term_minus)/(2*ddelta);
         analytic = term->dDelta(tau, delta);
     };
-    void dDelta2(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
+    void dDelta2(shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
         long double term_plus = term->dDelta(tau, delta + ddelta);
         long double term_minus = term->dDelta(tau, delta - ddelta);
         numerical = (term_plus - term_minus)/(2*ddelta);
         analytic = term->dDelta2(tau, delta);
     };
-    void dDelta3(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
+    void dDelta3(shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
         long double term_plus = term->dDelta2(tau, delta + ddelta);
         long double term_minus = term->dDelta2(tau, delta - ddelta);
         numerical = (term_plus - term_minus)/(2*ddelta);
         analytic = term->dDelta3(tau, delta);
     };
-    void dDelta_dTau(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
+    void dDelta_dTau(shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
         long double term_plus = term->dTau(tau, delta + ddelta);
         long double term_minus = term->dTau(tau, delta - ddelta);
         numerical = (term_plus - term_minus)/(2*ddelta);
         analytic = term->dDelta_dTau(tau, delta);
     };
-    void dDelta_dTau2(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
+    void dDelta_dTau2(shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
         long double term_plus = term->dTau2(tau, delta + ddelta);
         long double term_minus = term->dTau2(tau, delta - ddelta);
         numerical = (term_plus - term_minus)/(2*ddelta);
         analytic = term->dDelta_dTau2(tau, delta);
     };
-    void dDelta2_dTau(std::shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
+    void dDelta2_dTau(shared_ptr<CoolProp::BaseHelmholtzTerm> term, long double tau, long double delta, long double ddelta){
         long double term_plus = term->dDelta_dTau(tau, delta + ddelta);
         long double term_minus = term->dDelta_dTau(tau, delta - ddelta);
         numerical = (term_plus - term_minus)/(2*ddelta);
