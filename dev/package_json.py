@@ -241,13 +241,14 @@ def inject_ancillaries(root_dir):
         fp = open(os.path.join(root_dir,'dev','fluids', fluid_name+'.json'),'w')
         fp.write(json.dumps(fluid, **json_options))
 
-def package_json(root_dir):
-    
-    master = []
-    
+def inject(root_dir):
     inject_ancillaries(root_dir)
     inject_surface_tension(root_dir)
     inject_environmental_data(root_dir)
+
+def combine_json(root_dir):
+    
+    master = []
     
     print('*** Combining fluid JSON files in JSON format in dev folder...')
     for file in glob.glob(os.path.join(root_dir,'dev','fluids','*.json')):
@@ -256,7 +257,7 @@ def package_json(root_dir):
         fluid_name = file_name.split('.')[0]
         
         # Load the fluid file
-        fluid = json.load(open(os.path.join(root_dir,'dev','fluids', fluid_name+'.json'), 'r'))
+        fluid = json.load(open(file, 'r'))
         
         master += [fluid]
 
@@ -268,5 +269,26 @@ def package_json(root_dir):
     fp.write(json.dumps(master))
     fp.close()
     
+    master = []
+    
+    print('*** Combining incompressible JSON files in JSON format in dev folder...')
+    for file in glob.glob(os.path.join(root_dir,'dev','IncompressibleLiquids','*.json')):
+        
+        path, file_name = os.path.split(file)
+        fluid_name = file_name.split('.')[0]
+        
+        # Load the fluid file
+        fluid = json.load(open(file, 'r'))
+        
+        master += [fluid]
+
+    fp = open(os.path.join(root_dir,'dev','all_incompressibles_verbose.json'),'w')
+    fp.write(json.dumps(master, **json_options))
+    fp.close()
+    
+    fp = open(os.path.join(root_dir,'dev','all_incompressibles.json'),'w')
+    fp.write(json.dumps(master))
+    fp.close()
+    
 if __name__=='__main__':
-    package_json(root_dir = '..')
+    combine_json(root_dir = '..')

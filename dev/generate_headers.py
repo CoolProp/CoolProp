@@ -105,6 +105,7 @@ if __name__=='__main__':
 
     version_to_file(root_dir = path)
     gitrev_to_file(root_dir = path)
+    
     import JSON_to_CPP
     JSON_to_CPP.TO_CPP(root_dir = path, hashes = hashes)
 

@@ -13,6 +13,7 @@ import generate_headers
 # 2: Name of variable
 values = [
     ('all_fluids.json','all_fluids_JSON.h','all_fluids_JSON'),
+    ('all_incompressibles.json','all_incompressibles_JSON.h','all_incompressibles_JSON'),
     ('mixtures/mixture_excess_term.json', 'mixture_excess_term_JSON.h', 'mixture_excess_term_JSON'),
     ('mixtures/mixture_reducing_parameters.json', 'mixture_reducing_parameters_JSON.h', 'mixture_reducing_parameters_JSON')
 ]
@@ -28,7 +29,7 @@ def TO_CPP(root_dir, hashes):
     
     # First we package up the JSON files
     import package_json
-    package_json.package_json(root_dir)
+    package_json.combine_json(root_dir)
     
     for infile,outfile,variable in values:
         
@@ -68,7 +69,7 @@ def TO_CPP(root_dir, hashes):
             # Store the hash of the data that was written to file (not including the header)
             hashes[variable] = generate_headers.get_hash(hex_string)
         else:
-            print(outfile + 'is up to date')
+            print(outfile + ' is up to date')
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(
