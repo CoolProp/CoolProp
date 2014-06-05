@@ -10,6 +10,25 @@
 #include <sstream>
 #include "float.h"
 
+/// A wrapper around std::vector
+/** This wrapper makes the standard vector multi-dimensional.
+ *  A useful thing even though we might not need it that
+ *  much. However, it makes the code look better and the
+ *  polynomial class really is a mess...
+ *  Source: http://stackoverflow.com/questions/13105514/n-dimensional-vector
+ */
+template<size_t dimcount, typename T> struct VectorNd {
+    typedef std::vector< typename VectorNd<dimcount-1, T>::type > type;
+};
+
+//template<typename T> struct VectorNd<1,T> {
+//	typedef std::vector< T > type;
+//};
+
+template<typename T> struct VectorNd<0,T> {
+	typedef T type;
+};
+
 namespace CoolProp{
 
 ///// Publish the linear algebra solver
@@ -398,42 +417,106 @@ template<class T> std::vector< std::vector<T> >    invert(std::vector<std::vecto
 	return linsolve(in,identity);
 };
 
-template<class T> std::string vec_to_string(                        T    const& a){
+
+/// Template classes
+const char* stdFmt = "%7.3f";
+
+/// Template class for turning numbers (0D-matrices) into strings
+template<class T> std::string vec_to_string(                        T    const& a, const char *fmt) {
+	//std::vector<T> vec;
+	//vec.push_back(a);
+	//return vec_to_string(vec, fmt);
 	std::stringstream out;
-	out << format("[ %7.3f ]",a);
+	out << "[ " << format(fmt,a);
 	return out.str();
 };
+template<class T> std::string vec_to_string(                        T    const& a){
+	return vec_to_string(a, stdFmt);
+};
 
+///Template classes for turning vectors (1D-matrices) into strings
 template<class T> std::string vec_to_string(            std::vector<T>   const& a) {
-	return vec_to_string(a,"%7.3g");
+	return vec_to_string(a,stdFmt);
 };
 template<class T> std::string vec_to_string(            std::vector<T>   const& a, const char *fmt) {
-	if (a.size()<1) {
-		return std::string("");
-	} else {
-		std::stringstream out;
-		out << format("[ ");
-		out << format(fmt,a[0]);
-		for (size_t j = 1; j < a.size(); j++) {
-			out << ", ";
-			out << format(fmt,a[j]);
-		}
-		out << " ]";
-		return out.str();
-	}
+	if (a.size()<1) return std::string("");
+	std::stringstream out;
+	out << "[ " << format(fmt,a[0]);
+	for (size_t j = 1; j < a.size(); j++) {
+		out << ", " << format(fmt, a[j]);
+    }
+	out << " ]";
+    return out.str();
 };
 
+///Template classes for turning 2D-matrices into strings
 template<class T> std::string vec_to_string(std::vector<std::vector<T> > const& A) {
-	return vec_to_string(A, "%7.3g");
-}
-
+	return vec_to_string(A, stdFmt);
+};
 template<class T> std::string vec_to_string(std::vector<std::vector<T> > const& A, const char *fmt) {
+	if (A.size()<1) return std::string("");
 	std::stringstream out;
-	for (size_t j = 0; j < A.size(); j++) {
-		out << vec_to_string(A[j], fmt);
+	out << "[ " << format(fmt,A[0]);
+	for (size_t j = 1; j < A.size(); j++) {
+		out << ", " << std::endl << "  " << vec_to_string(A[j], fmt);
     }
+	out << " ]";
     return out.str();
-}
+};
+
+
+///// Template class for turning numbers (0D-matrices) into strings
+////template<class T> std::string vec_to_string(const             T  &a){
+////	return vec_to_string(a, stdFmt);
+////	std::stringstream out;
+////	out << format("[ %7.3f ]",a);
+////	return out.str();
+////};
+////template<class T> std::string vec_to_string(const VectorNd<0, T> &a){
+////	return vec_to_string(a, stdFmt);
+////};
+////template<class T> std::string vec_to_string(const VectorNd<0, T> &a, const char *fmt) {
+////	VectorNd<1, T> vec;
+////	vec.push_back(a);
+////	return vec_to_string(vec, fmt);
+////};
+//
+/////Template classes for turning vectors (1D-matrices) into strings
+//template<class T> std::string vec_to_string(const VectorNd<1, T> &a) {
+//	return vec_to_string(a, stdFmt);
+//};
+//template<class T> std::string vec_to_string(const VectorNd<1, T> &a, const char *fmt) {
+//	if (a.size()<1) {
+//		return std::string("");
+//	} else {
+//		std::stringstream out;
+//		out << "[ ";
+//		out << format(fmt,a[0]);
+//		for (size_t j = 1; j < a.size(); j++) {
+//			out << ", ";
+//			out << format(fmt,a[j]);
+//		}
+//		out << " ]";
+//		return out.str();
+//	}
+//};
+//
+/////Template classes for turning 2D-matrices into strings
+//template<class T> std::string vec_to_string(const VectorNd<2, T> &A) {
+//	return vec_to_string(A, stdFmt);
+//}
+//template<class T> std::string vec_to_string(const VectorNd<2, T> &A, const char *fmt) {
+//	if (A.size()<1) return std::string("");
+//	std::stringstream out;
+//	out << "[ " << format(fmt,A[0]);
+//	for (size_t j = 1; j < A.size(); j++) {
+//		out << ", " << std::endl << "  " << vec_to_string(A[j], fmt);
+//    }
+//	out << " ]";
+//    return out.str();
+//}
+
+
 
 }; /* namespace CoolProp */
 #endif
