@@ -227,7 +227,7 @@ def getlim(key,dicts,fac=1):
 fluid = 'water'
 CP.enable_TTSE_LUT(fluid)
 
-PRINT = True
+PRINT = False
 
 if PRINT:
     points  = 200
