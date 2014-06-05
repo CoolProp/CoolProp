@@ -20,6 +20,8 @@ namespace CoolProp{
 
 
 
+
+
 /// The base class for Polynomials
 class BasePolynomial{
 
@@ -35,8 +37,6 @@ public:
 	 *  and checks the vector length against parameter n. */
 	bool checkCoefficients(const Eigen::VectorXd &coefficients, const unsigned int n);
 	bool checkCoefficients(const Eigen::MatrixXd &coefficients, const unsigned int rows, const unsigned int columns);
-	bool checkCoefficients(const vectorNd<1, double>::type &coefficients, const unsigned int n);
-	bool checkCoefficients(const vectorNd<2, double>::type &coefficients, const unsigned int rows, const unsigned int columns);
 	bool checkCoefficients(const std::vector<double> &coefficients, const unsigned int n);
 	bool checkCoefficients(const std::vector< std::vector<double> > &coefficients, const unsigned int rows, const unsigned int columns);
 

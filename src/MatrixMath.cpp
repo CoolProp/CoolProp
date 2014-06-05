@@ -12,6 +12,21 @@
 
 namespace CoolProp{
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ///*
 //Owe a debt of gratitude to http://sole.ooz.ie/en - very clear treatment of GJ
 //*/
