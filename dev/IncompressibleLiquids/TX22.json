@@ -4,9 +4,9 @@
   "TminPsat": 313.15, 
   "conductivity": {
     "coeffs": [
-      0.152468600098808, 
-      -5.987521152369319e-05, 
-      -1.4202283024744797e-08
+      0.15246860009880797, 
+      -5.9875211523693037e-05, 
+      -1.4202283024744752e-08
     ], 
     "type": "polynomial"
   }, 
@@ -19,7 +19,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "desription": "Texatherm22", 
+  "description": "Texatherm22", 
   "name": "TX22", 
   "reference": "", 
   "saturation_pressure": {

@@ -426,7 +426,7 @@ for data in containerList:
     j['Tmax'] = data.Tmax
     j['TminPsat'] = data.TminPsat
     j['name'] = data.Name
-    j['desription'] = data.Desc
+    j['description'] = data.Desc
     j['reference'] = ''
     
     #liqObj._cViscosity[0] = numpy.max(data.mu_dyn)

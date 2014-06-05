@@ -4,9 +4,9 @@
   "TminPsat": 360.0, 
   "conductivity": {
     "coeffs": [
-      0.15446717460317466, 
-      0.001145788034188033, 
-      -1.5579975579975545e-07
+      0.1544671746031747, 
+      0.0011457880341880326, 
+      -1.5579975579975518e-07
     ], 
     "type": "polynomial"
   }, 
@@ -19,7 +19,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "desription": "Zitrec S -40", 
+  "description": "Zitrec S -40", 
   "name": "ZS40", 
   "reference": "", 
   "saturation_pressure": {

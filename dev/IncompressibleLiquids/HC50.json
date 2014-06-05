@@ -4,9 +4,9 @@
   "TminPsat": 293.15, 
   "conductivity": {
     "coeffs": [
-      0.2111598506944421, 
-      0.0010044355500821083, 
-      -6.841817186647607e-09
+      0.21115985069444368, 
+      0.0010044355500821009, 
+      -6.8418171866373586e-09
     ], 
     "type": "polynomial"
   }, 
@@ -19,7 +19,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "desription": "Dynalene HC50", 
+  "description": "Dynalene HC50", 
   "name": "HC50", 
   "reference": "", 
   "saturation_pressure": {

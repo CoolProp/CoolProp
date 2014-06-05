@@ -4,9 +4,9 @@
   "TminPsat": 293.15, 
   "conductivity": {
     "coeffs": [
-      0.22984999999999978, 
+      0.22984999999999983, 
       0.0009999999999999994, 
-      2.884911759639195e-21
+      3.2054575107102164e-21
     ], 
     "type": "polynomial"
   }, 
@@ -19,7 +19,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "desription": "Dynalene HC20", 
+  "description": "Dynalene HC20", 
   "name": "HC20", 
   "reference": "", 
   "saturation_pressure": {
