@@ -34,6 +34,23 @@ In most languages, the code to calculate density ``D`` of Nitrogen at a temperat
     
 See more examples at `examples/examples <Examples>`_
     
+===================================
+Open-Source Projects Using CoolProp
+===================================
+
+- `Thermocycle <http://www.thermocycle.net/>`_
+- `PDSim <http://pdsim.sourceforge.net/>`_
+- `ACHP <http://achp.sourceforge.net/>`_
+- `DWSim <http://sourceforge.net/projects/dwsim/>`_
+
+====
+Help
+====
+
+- File a `Github issue <https://github.com/ibell/coolprop/issues>`_
+- Email the `Google group <https://groups.google.com/d/forum/coolprop-users>`_
+
+
 ===============
 Main Developers
 ===============
