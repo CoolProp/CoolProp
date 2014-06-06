@@ -10,12 +10,140 @@
 //#include <sstream>
 //#include <numeric>
 #include <math.h>
+#include <iostream>
 
 #include "Solvers.h"
 
 #include <unsupported/Eigen/Polynomials>
 
 namespace CoolProp{
+
+/// Set the coefficient matrix.
+/// @param coefficients matrix containing the ordered coefficients
+void Polynomial2D::setCoefficients(const Eigen::MatrixXd &coefficients){
+	this->coefficients = coefficients;
+}
+void Polynomial2D::setCoefficients(const std::vector<std::vector<double> > &coefficients){
+	int c = num_cols(coefficients);
+	int r = num_rows(coefficients);
+	Eigen::MatrixXd tmp = Eigen::MatrixXd::Constant(r,c,0.0);
+	std::cout << "Rows: " << r << "  Columns: " << c << std::endl;
+	std::cout << "Rows: " << tmp.rows() << "  Columns: " << tmp.cols() << std::endl;
+	convert(coefficients,tmp);
+	this->setCoefficients(tmp);
+}
+
+///// Basic checks for coefficient vectors.
+///** Starts with only the first coefficient dimension
+// *  and checks the matrix size against the parameters rows and columns. */
+///// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
+///// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
+//bool Polynomial2D::checkCoefficients(const unsigned int rows, const unsigned int columns);
+///// @param coefficients matrix containing the ordered coefficients
+///// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
+///// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
+//bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const unsigned int rows, const unsigned int columns);
+///// @param coefficients matrix containing the ordered coefficients
+///// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
+///// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
+//bool Polynomial2D::checkCoefficients(const std::vector<std::vector<double> > &coefficients, const unsigned int rows, const unsigned int columns);
+//
+///// Integration functions
+///** Integrating coefficients for polynomials is done by dividing the
+// *  original coefficients by (i+1) and elevating the order by 1
+// *  through adding a zero as first coefficient.
+// *  Some reslicing needs to be applied to integrate along the x-axis.
+// *  In the brine/solution equations, reordering of the parameters
+// *  avoids this expensive operation. However, it is included for the
+// *  sake of completeness.
+// */
+///// @param coefficients matrix containing the ordered coefficients
+///// @param axis unsigned integer value that represents the desired direction of integration
+//Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficients, unsigned int axis = 1);
+///// @param coefficients matrix containing the ordered coefficients
+///// @param axis unsigned integer value that represents the desired direction of integration
+//std::vector<std::vector<double> > Polynomial2D::integrateCoeffs(const std::vector<std::vector<double> > &coefficients, unsigned int axis = 1);
+//
+///// Derivative coefficients calculation
+///** Deriving coefficients for polynomials is done by multiplying the
+// *  original coefficients with i and lowering the order by 1.
+// *
+// *  It is not really deprecated, but untested and therefore a warning
+// *  is issued. Please check this method before you use it.
+// */
+///// @param coefficients matrix containing the ordered coefficients
+///// @param axis unsigned integer value that represents the desired direction of derivation
+//Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, unsigned int axis = 1);
+///// @param coefficients matrix containing the ordered coefficients
+///// @param axis unsigned integer value that represents the desired direction of derivation
+//std::vector<std::vector<double> > Polynomial2D::deriveCoeffs(const std::vector<std::vector<double> > &coefficients, unsigned int axis = 1);
+//
+///// The core functions to evaluate the polynomial
+///** It is here we implement the different special
+// *  functions that allow us to specify certain
+// *  types of polynomials.
+// *  The derivative might bee needed during the
+// *  solution process of the solver. It could also
+// *  be a protected function...
+// */
+///// @param x_in double value that represents the current input in the 1st dimension
+///// @param y_in double value that represents the current input in the 2nd dimension
+//double Polynomial2D::evaluate(const double &x_in, const double &y_in);
+///// @param x_in double value that represents the current input in the 1st dimension
+///// @param y_in double value that represents the current input in the 2nd dimension
+///// @param axis unsigned integer value that represents the axis to solve for (1=x, 2=y)
+//double Polynomial2D::derivative(const double &x_in, const double &y_in, unsigned int axis = 1);
+///// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+///// @param z_in double value that represents the current output in the 3rd dimension
+///// @param axis unsigned integer value that represents the axis to solve for (1=x, 2=y)
+//double Polynomial2D::solve(const double &in, const double &z_in, unsigned int axis = 1);
+
+
+};
+
+
+#ifdef ENABLE_CATCH
+#include <math.h>
+#include <iostream>
+#include "catch.hpp"
+
+TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","[PolyMath]")
+{
+	/// Test case for "SylthermXLT" by "Dow Chemicals"
+	std::vector<double> cHeat;
+	cHeat.clear();
+	cHeat.push_back(+1.1562261074E+03);
+	cHeat.push_back(+2.0994549103E+00);
+	cHeat.push_back(+7.7175381057E-07);
+	cHeat.push_back(-3.7008444051E-20);
+
+	std::vector<std::vector<double> > cHeat2D;
+	cHeat2D.push_back(cHeat);
+	cHeat2D.push_back(cHeat);
+
+	CoolProp::Polynomial2D poly2D;
+
+	SECTION("Coefficient parsing and setting") {
+		poly2D.setCoefficients(cHeat2D);
+	}
+}
+
+
+#endif /* ENABLE_CATCH */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /// Constructors for the base class for all Polynomials
 //Polynomial1D::Polynomial1D();
@@ -26,7 +154,6 @@ namespace CoolProp{
 //bool Polynomial2D::setCoefficients(const std::vector< std::vector<double> > &coefficients){
 //	return this->setCoefficients(convert(coefficients));
 //}
-}
 
 
 

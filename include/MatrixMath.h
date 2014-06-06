@@ -34,10 +34,10 @@ namespace CoolProp{
  *  it is still needed.
  */
 /// @param coefficients matrix containing the ordered coefficients
-template<class T, int R, int C> void convert(const Eigen::Matrix<T,R,C> &coefficients, std::vector<std::vector<T> > &result){
+template<class T, typename Derived> void convert(const Eigen::MatrixBase<Derived> &coefficients, std::vector<std::vector<T> > &result){
 	// Eigen uses columns as major axis, this might be faster than the row iteration.
 	// However, the 2D vector stores things differently, no idea what is faster...
-	//size_t nRows = coefficients.rows(), nCols = coefficients.cols();
+	size_t R = coefficients.rows(), C = coefficients.cols();
 	//std::vector<std::vector<T> > result(R, std::vector<T>(C, 0));
 	result.resize(R, std::vector<T>(C, 0)); // extends vector if necessary
 	for (size_t i = 0; i < R; ++i) {
@@ -48,8 +48,9 @@ template<class T, int R, int C> void convert(const Eigen::Matrix<T,R,C> &coeffic
 	}
 }
 /// @param coefficients matrix containing the ordered coefficients
-template <class T, int R, int C> void convert(const std::vector<std::vector<T> > &coefficients, Eigen::Matrix<T,R,C> &result){
+template <class T, typename Derived> void convert(const std::vector<std::vector<T> > &coefficients, Eigen::MatrixBase<Derived> &result){
 	size_t nRows = num_rows(coefficients), nCols = num_cols(coefficients);
+	size_t R = result.rows(), C = result.cols();
 	if (nRows!=R) throw ValueError(format("You have to provide matrices with the same number of rows: %d is not %d. ",nRows,R));
 	if (nCols!=C) throw ValueError(format("You have to provide matrices with the same number of columns: %d is not %d. ",nCols,C));
 	for (size_t i = 0; i < nCols; ++i) {
@@ -60,15 +61,17 @@ template <class T, int R, int C> void convert(const std::vector<std::vector<T> >
 }
 
 /// @param coefficients matrix containing the ordered coefficients
-template<class T, int R> void convert(const Eigen::Matrix<T,R,1> &coefficients, std::vector<T> &result){
+template<class T, typename Derived> void convert(const Eigen::MatrixBase<Derived> &coefficients, std::vector<T> &result){
+	size_t R = result.rows();
 	result.resize(R, 0); // extends vector if necessary
 	for (size_t i = 0; i < R; ++i) {
 		result[i] = coefficients(i,0);
 	}
 }
 /// @param coefficients matrix containing the ordered coefficients
-template <class T, int R> void convert(const std::vector<T> &coefficients, Eigen::Matrix<T,R,1> &result){
+template <class T, typename Derived> void convert(const std::vector<T> &coefficients, Eigen::MatrixBase<Derived> &result){
 	size_t nRows = num_rows(coefficients);
+	size_t R = result.rows();
 	if (nRows!=R) throw ValueError(format("You have to provide matrices with the same number of rows: %d is not %d. ",nRows,R));
 	for (size_t i = 0; i < nRows; ++i) {
 		result(i,0) = coefficients[i];

@@ -100,7 +100,7 @@ private:
 
 public:
 	/// Constructors
-	Polynomial2D();
+	Polynomial2D(){};
 	Polynomial2D(const Eigen::MatrixXd &coefficients){
 		this->setCoefficients(coefficients);
 	}
@@ -114,8 +114,8 @@ public:
 public:
 	/// Set the coefficient matrix.
 	/// @param coefficients matrix containing the ordered coefficients
-	bool setCoefficients(const Eigen::MatrixXd &coefficients);
-	bool setCoefficients(const std::vector<std::vector<double> > &coefficients);
+	void setCoefficients(const Eigen::MatrixXd &coefficients);
+	void setCoefficients(const std::vector<std::vector<double> > &coefficients);
 
 	/// Basic checks for coefficient vectors.
 	/** Starts with only the first coefficient dimension

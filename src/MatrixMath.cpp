@@ -20,6 +20,7 @@ namespace CoolProp{
 
 #ifdef ENABLE_CATCH
 #include <math.h>
+#include <iostream>
 #include "catch.hpp"
 
 TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h","[MatrixMath]")
@@ -32,19 +33,45 @@ TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h","
 	cHeat.push_back(+7.7175381057E-07);
 	cHeat.push_back(-3.7008444051E-20);
 
+	std::vector<std::vector<double> > cHeat2D;
+	cHeat2D.push_back(cHeat);
+	cHeat2D.push_back(cHeat);
+
+	SECTION("Pretty printing tests") {
+		std::cout << std::endl;
+		CHECK_NOTHROW( CoolProp::vec_to_string(cHeat[0]) );
+		CHECK_NOTHROW( CoolProp::vec_to_string(cHeat) );
+		CHECK_NOTHROW( CoolProp::vec_to_string(cHeat2D) );
+	}
+
 	SECTION("Eigen::Vector from std::vector") {
+		{
 		Eigen::Matrix<double,2,1> matrix;
-		CoolProp::convert(cHeat, matrix);
+		CHECK_THROWS( CoolProp::convert(cHeat, matrix) );
+		}{
+		Eigen::Matrix<double,5,1> matrix;
+		CHECK_THROWS( CoolProp::convert(cHeat, matrix) );
+		}{
+		Eigen::Matrix<double,4,1> matrix;
+		CHECK_NOTHROW( CoolProp::convert(cHeat, matrix) );
+		}{
+		Eigen::Vector2d matrix;
+		CHECK_THROWS( CoolProp::convert(cHeat, matrix) );
+		}{
+		Eigen::Vector4d matrix;
+		CHECK_NOTHROW( CoolProp::convert(cHeat, matrix) );
+		}{
+		Eigen::Matrix<double,2,2> matrix;
+		CHECK_THROWS( CoolProp::convert(cHeat2D, matrix) );
+		}{
+		Eigen::Matrix<double,2,5> matrix;
+		CHECK_THROWS( CoolProp::convert(cHeat2D, matrix) );
+		}{
+		Eigen::Matrix<double,2,4> matrix;
+		CHECK_NOTHROW( CoolProp::convert(cHeat2D, matrix) );
+		}
 	}
 }
-//
-//int main() {
-//
-//        std::vector<std::string> tags;
-//        tags.push_back("[MatrixMath]");
-//        run_user_defined_tests(tags);
-//        //run_tests();
-//}
 
 
 #endif /* ENABLE_CATCH */

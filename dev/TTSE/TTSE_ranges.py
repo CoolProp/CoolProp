@@ -224,7 +224,7 @@ def getlim(key,dicts,fac=1):
 # Here starts the real script
 #########################################################################
 
-fluid = 'water'
+fluid = 'R245fa'
 CP.enable_TTSE_LUT(fluid)
 
 PRINT = False
@@ -241,7 +241,7 @@ else:
 
 Tmin = CP.PropsSI('Tmin' ,'T',0,'P',0,fluid) + 5.0
 Tcri = CP.PropsSI('Tcrit','T',0,'P',0,fluid)
-Tmax = CP.PropsSI('Tcrit','T',0,'P',0,fluid) * 2.0 
+#Tmax = CP.PropsSI('Tcrit','T',0,'P',0,fluid) * 2.0 
 
 ## Get phase boundary
 T_TP = np.linspace(Tmin, Tcri-0.5, 0.5*points)
@@ -275,8 +275,12 @@ Hmax = H_L + (H_V-H_L)*2.0
 Pmin = np.min([P_L,P_V])
 Pmax = CP.PropsSI('pcrit','T',0,'P',0,fluid) * 2.0 # should be p_reduce
 
-Dmin = CP.PropsSI('D','H',Hmin,'P',Pmax,fluid)
-Dmax = CP.PropsSI('D','H',Hmax,'P',Pmin,fluid) 
+Tmin = CP.PropsSI('T','H',Hmin,'P',Pmax,fluid)
+Tmax = CP.PropsSI('T','H',Hmax,'P',Pmin,fluid)
+
+Dmin = CP.PropsSI('D','H',Hmax,'P',Pmin,fluid)
+Dmax = CP.PropsSI('D','H',Hmin,'P',Pmax,fluid)
+ 
 
 
 
@@ -326,7 +330,6 @@ Tdata = fill_Z(X,Y)
 HPSdict = {'H': X, 'P': Y, 'S': Z, 'V': logVdata, 'T': Tdata, 'H_TP': X_TP, 'P_TP': Y_TP, 'S_TP': Z_TP}
 
 
-
 #########################################################################
 # Start with the next diagram, vTp
 #########################################################################
@@ -338,10 +341,10 @@ Z_TP = logP_TP
 
 #Xmin = np.log10(1.0/Dmax)
 #Xmax = np.log10(1.0/Dmin)
-Xmin = np.min(X_TP)
-Xmax = np.max(X_TP)
-Ymin = np.min(Y_TP)
-Ymax = Tmax
+Xmin = np.min(logVdata)
+Xmax = np.max(logVdata)
+Ymin = np.min(Tdata)
+Ymax = np.max(Tdata)
 
 X = np.linspace(Xmin, Xmax, points) # Volume
 Y = np.linspace(Ymin, Ymax, points) # Temperature
