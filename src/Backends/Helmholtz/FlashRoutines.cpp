@@ -249,7 +249,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
             else if (HEOS._rhomolar < component->triple_vapor.rhomolar)
             {
                 long double y, value;
-                long double TVtriple = component->pEOS->Ttriple; //TODO: separate TL and TV for ppure
+                long double TVtriple = component->triple_vapor.T; //TODO: separate TL and TV for ppure
 
                 // If value is above the value calculated from X(Ttriple, _rhomolar), it is vapor
                 switch (other)
@@ -275,7 +275,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 }
                 else
                 {
-                    throw ValueError(format("D < DLtriple"));
+                    throw ValueError(format("D < DLtriple %g %g", value, y));
                 }
 
             }
@@ -283,7 +283,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
             else
             {
                 long double y, value;
-                long double TLtriple = component->pEOS->Ttriple; //TODO: separate TL and TV for ppure
+                long double TLtriple = component->pEOS->Ttriple;
 
                 // If value is above the value calculated from X(Ttriple, _rhomolar), it is vapor
                 switch (other)
@@ -309,7 +309,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 }
                 else
                 {
-                    throw ValueError(format("D < DLtriple"));
+                    throw ValueError(format("D < DLtriple %g %g", value, y));
                 }
             }
         }

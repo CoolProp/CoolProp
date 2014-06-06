@@ -805,11 +805,42 @@ protected:
     }
 
     /// Parse the critical state for the given EOS
-    void parse_crit_state(rapidjson::Value &crit, CoolPropFluid & fluid)
+    void parse_states(rapidjson::Value &states, CoolPropFluid & fluid)
     {
-        fluid.crit.T = cpjson::get_double(crit,"T");
-        fluid.crit.p = cpjson::get_double(crit,"p");
-        fluid.crit.rhomolar = cpjson::get_double(crit,"rhomolar");
+        if (!states.HasMember("critical")){ throw ValueError(format("fluid[\"STATES\"] [%s] does not have \"critical\" member",fluid.name.c_str())); }
+        rapidjson::Value &crit = states["critical"];
+        fluid.crit.T = cpjson::get_double(crit, "T");
+        fluid.crit.p = cpjson::get_double(crit, "p");
+        fluid.crit.rhomolar = cpjson::get_double(crit, "rhomolar");
+
+        if (!states.HasMember("triple_liquid")){ throw ValueError(format("fluid[\"STATES\"] [%s] does not have \"triple_liquid\" member",fluid.name.c_str())); }
+        rapidjson::Value &triple_liquid = states["triple_liquid"];
+        if (triple_liquid.ObjectEmpty()){
+            // State is empty - probably because the triple point temperature is below the minimum saturation temperature
+            fluid.triple_liquid.T = -1;
+            fluid.triple_liquid.p = -1;
+            fluid.triple_liquid.rhomolar = -1;
+        }
+        else{
+            fluid.triple_liquid.T = cpjson::get_double(triple_liquid, "T");
+            fluid.triple_liquid.p = cpjson::get_double(triple_liquid, "p");
+            fluid.triple_liquid.rhomolar = cpjson::get_double(triple_liquid, "rhomolar");
+        }
+
+        if (!states.HasMember("triple_vapor")){ throw ValueError(format("fluid[\"STATES\"] [%s] does not have \"triple_vapor\" member",fluid.name.c_str())); }
+        rapidjson::Value &triple_vapor = states["triple_vapor"];
+        if (triple_vapor.ObjectEmpty()){
+            // State is empty - probably because the triple point temperature is below the minimum saturation temperature
+            fluid.triple_vapor.T = -1;
+            fluid.triple_vapor.p = -1;
+            fluid.triple_vapor.rhomolar = -1;
+        }
+        else{
+            fluid.triple_vapor.T = cpjson::get_double(triple_vapor, "T");
+            fluid.triple_vapor.p = cpjson::get_double(triple_vapor, "p");
+            fluid.triple_vapor.rhomolar = cpjson::get_double(triple_vapor, "rhomolar");
+        }
+
     };
 
     /// Parse the critical state for the given EOS
@@ -876,8 +907,7 @@ public:
             fluid.REFPROPname = fluid_json["REFPROP_NAME"].GetString();
             // Critical state
             if (!fluid_json.HasMember("STATES")){ throw ValueError(format("fluid [%s] does not have \"STATES\" member",fluid.name.c_str())); }
-            if (!fluid_json["STATES"].HasMember("critical")){ throw ValueError(format("fluid[\"STATES\"] [%s] does not have \"critical\" member",fluid.name.c_str())); }
-            parse_crit_state(fluid_json["STATES"]["critical"], fluid);
+            parse_states(fluid_json["STATES"], fluid);
 
             if (get_debug_level() > 5){
                 std::cout << format("Loading fluid %s with CAS %s; %d fluids loaded\n", fluid.name.c_str(), fluid.CAS.c_str(), index);
