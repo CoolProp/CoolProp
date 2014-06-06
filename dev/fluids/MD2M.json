@@ -254,6 +254,22 @@
       "p_units": "Pa", 
       "rhomolar": 914.6616014999984, 
       "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 205.2, 
+      "T_units": "K", 
+      "p": 4.7950993795487e-07, 
+      "p_units": "Pa", 
+      "rhomolar": 3032.1188560391715, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 205.2, 
+      "T_units": "K", 
+      "p": 4.7950993795487e-07, 
+      "p_units": "Pa", 
+      "rhomolar": 2.810512915459994e-07, 
+      "rhomolar_units": "mol/m^3"
     }
   }
 }

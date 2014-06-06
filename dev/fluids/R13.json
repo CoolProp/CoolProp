@@ -328,6 +328,8 @@
       "p_units": "Pa", 
       "rhomolar": 5580.0, 
       "rhomolar_units": "mol/m^3"
-    }
+    }, 
+    "triple_liquid": {}, 
+    "triple_vapor": {}
   }
 }

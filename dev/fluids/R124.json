@@ -295,7 +295,9 @@
       "p_units": "Pa", 
       "rhomolar": 4103.279546177282, 
       "rhomolar_units": "mol/m^3"
-    }
+    }, 
+    "triple_liquid": {}, 
+    "triple_vapor": {}
   }, 
   "TRANSPORT": {
     "conductivity": {
