@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "108-88-3", 
-  "CRITICAL": {
-    "T": 591.75, 
-    "T_units": "K", 
-    "p": 4126000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3169.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -264,6 +256,16 @@
   ], 
   "NAME": "Toluene", 
   "REFPROP_NAME": "TOLUENE", 
+  "STATES": {
+    "critical": {
+      "T": 591.75, 
+      "T_units": "K", 
+      "p": 4126000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3169.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2012-Toluene", 

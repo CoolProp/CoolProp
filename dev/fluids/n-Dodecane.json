@@ -125,14 +125,6 @@
     }
   }, 
   "CAS": "112-40-3", 
-  "CRITICAL": {
-    "T": 658.1, 
-    "T_units": "K", 
-    "p": 1817000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 1330.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 2, 
@@ -272,6 +264,16 @@
   ], 
   "NAME": "n-Dodecane", 
   "REFPROP_NAME": "C12", 
+  "STATES": {
+    "critical": {
+      "T": 658.1, 
+      "T_units": "K", 
+      "p": 1817000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 1330.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-FPE-2005", 

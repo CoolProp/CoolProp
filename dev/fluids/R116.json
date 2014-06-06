@@ -120,14 +120,6 @@
     }
   }, 
   "CAS": "76-16-4", 
-  "CRITICAL": {
-    "T": 293.03, 
-    "T_units": "K", 
-    "p": 3048000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 4444.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 0, 
@@ -258,5 +250,15 @@
     }
   ], 
   "NAME": "R116", 
-  "REFPROP_NAME": "R116"
+  "REFPROP_NAME": "R116", 
+  "STATES": {
+    "critical": {
+      "T": 293.03, 
+      "T_units": "K", 
+      "p": 3048000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 4444.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

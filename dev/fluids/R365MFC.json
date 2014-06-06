@@ -120,14 +120,6 @@
     }
   }, 
   "CAS": "406-58-6", 
-  "CRITICAL": {
-    "T": 460.0, 
-    "T_units": "K", 
-    "p": 3266000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3200.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": -1, 
@@ -303,5 +295,15 @@
     }
   ], 
   "NAME": "R365MFC", 
-  "REFPROP_NAME": "R365MFC"
+  "REFPROP_NAME": "R365MFC", 
+  "STATES": {
+    "critical": {
+      "T": 460.0, 
+      "T_units": "K", 
+      "p": 3266000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3200.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

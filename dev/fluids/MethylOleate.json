@@ -109,14 +109,6 @@
     }
   }, 
   "CAS": "112-62-9", 
-  "CRITICAL": {
-    "T": 782.0, 
-    "T_units": "K", 
-    "p": 1246000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 812.8499999999999, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 1, 
@@ -294,5 +286,15 @@
     }
   ], 
   "NAME": "MethylOleate", 
-  "REFPROP_NAME": "MOLEATE"
+  "REFPROP_NAME": "MOLEATE", 
+  "STATES": {
+    "critical": {
+      "T": 782.0, 
+      "T_units": "K", 
+      "p": 1246000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 812.8499999999999, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

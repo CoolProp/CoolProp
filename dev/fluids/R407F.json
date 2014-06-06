@@ -107,14 +107,6 @@
     }
   }, 
   "CAS": "R407F.ppf", 
-  "CRITICAL": {
-    "T": 355.804, 
-    "T_units": "K", 
-    "p": 4754610.0, 
-    "p_units": "Pa", 
-    "rhomolar": 5816.413452386901, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -251,5 +243,15 @@
     }
   ], 
   "NAME": "R407F", 
-  "REFPROP_NAME": "N/A"
+  "REFPROP_NAME": "N/A", 
+  "STATES": {
+    "critical": {
+      "T": 355.804, 
+      "T_units": "K", 
+      "p": 4754610.0, 
+      "p_units": "Pa", 
+      "rhomolar": 5816.413452386901, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

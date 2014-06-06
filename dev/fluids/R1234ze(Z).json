@@ -109,14 +109,6 @@
     }
   }, 
   "CAS": "29118-25-0", 
-  "CRITICAL": {
-    "T": 423.27, 
-    "T_units": "K", 
-    "p": 3533000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 4121.303363626818, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -260,5 +252,15 @@
     }
   ], 
   "NAME": "R1234ze(Z)", 
-  "REFPROP_NAME": "N/A"
+  "REFPROP_NAME": "N/A", 
+  "STATES": {
+    "critical": {
+      "T": 423.27, 
+      "T_units": "K", 
+      "p": 3533000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 4121.303363626818, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

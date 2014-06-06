@@ -122,14 +122,6 @@
     }
   }, 
   "CAS": "7782-39-0", 
-  "CRITICAL": {
-    "T": 38.34, 
-    "T_units": "K", 
-    "p": 1679600.0, 
-    "p_units": "Pa", 
-    "rhomolar": 17230.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": -1, 
@@ -352,5 +344,15 @@
     }
   ], 
   "NAME": "Deuterium", 
-  "REFPROP_NAME": "D2"
+  "REFPROP_NAME": "D2", 
+  "STATES": {
+    "critical": {
+      "T": 38.34, 
+      "T_units": "K", 
+      "p": 1679600.0, 
+      "p_units": "Pa", 
+      "rhomolar": 17230.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

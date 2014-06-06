@@ -123,14 +123,6 @@
     }
   }, 
   "CAS": "124-18-5", 
-  "CRITICAL": {
-    "T": 617.7, 
-    "T_units": "K", 
-    "p": 2103000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 1640.0000000000002, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 2, 
@@ -264,6 +256,16 @@
   ], 
   "NAME": "n-Decane", 
   "REFPROP_NAME": "DECANE", 
+  "STATES": {
+    "critical": {
+      "T": 617.7, 
+      "T_units": "K", 
+      "p": 2103000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 1640.0000000000002, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-FPE-2005", 

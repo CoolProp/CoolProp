@@ -109,14 +109,6 @@
     }
   }, 
   "CAS": "64-19-7", 
-  "CRITICAL": {
-    "T": 590.7, 
-    "T_units": "K", 
-    "p": 5817526.2731114905, 
-    "p_units": "Pa", 
-    "rhomolar": 5844.938283446536, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -265,5 +257,15 @@
     }
   ], 
   "NAME": "AceticAcid", 
-  "REFPROP_NAME": "N/A"
+  "REFPROP_NAME": "N/A", 
+  "STATES": {
+    "critical": {
+      "T": 590.7, 
+      "T_units": "K", 
+      "p": 5817526.2731114905, 
+      "p_units": "Pa", 
+      "rhomolar": 5844.938283446536, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

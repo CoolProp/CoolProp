@@ -111,14 +111,6 @@
     }
   }, 
   "CAS": "106-42-3", 
-  "CRITICAL": {
-    "T": 616.168, 
-    "T_units": "K", 
-    "p": 3531500.0, 
-    "p_units": "Pa", 
-    "rhomolar": 2693.92, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -285,5 +277,15 @@
     }
   ], 
   "NAME": "p-Xylene", 
-  "REFPROP_NAME": "PXYLENE"
+  "REFPROP_NAME": "PXYLENE", 
+  "STATES": {
+    "critical": {
+      "T": 616.168, 
+      "T_units": "K", 
+      "p": 3531500.0, 
+      "p_units": "Pa", 
+      "rhomolar": 2693.92, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

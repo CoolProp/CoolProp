@@ -125,14 +125,6 @@
     }
   }, 
   "CAS": "71-43-2", 
-  "CRITICAL": {
-    "T": 562.02, 
-    "T_units": "K", 
-    "p": 4894000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3902.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -307,6 +299,16 @@
   ], 
   "NAME": "Benzene", 
   "REFPROP_NAME": "BENZENE", 
+  "STATES": {
+    "critical": {
+      "T": 562.02, 
+      "T_units": "K", 
+      "p": 4894000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3902.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Hexane", 

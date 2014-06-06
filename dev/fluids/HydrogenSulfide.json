@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "7783-06-4", 
-  "CRITICAL": {
-    "T": 373.1, 
-    "T_units": "K", 
-    "p": 9000000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 10190.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 4, 
@@ -267,6 +259,16 @@
   ], 
   "NAME": "HydrogenSulfide", 
   "REFPROP_NAME": "H2S", 
+  "STATES": {
+    "critical": {
+      "T": 373.1, 
+      "T_units": "K", 
+      "p": 9000000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 10190.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "viscosity": {
       "BibTeX": "QuinonesCisneros-JCED-2012", 

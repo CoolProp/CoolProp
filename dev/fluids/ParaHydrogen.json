@@ -122,14 +122,6 @@
     }
   }, 
   "CAS": "1333-74-0p", 
-  "CRITICAL": {
-    "T": 32.938, 
-    "T_units": "K", 
-    "p": 1285800.0, 
-    "p_units": "Pa", 
-    "rhomolar": 15538.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": -1, 
@@ -309,6 +301,16 @@
   ], 
   "NAME": "ParaHydrogen", 
   "REFPROP_NAME": "PARAHYD", 
+  "STATES": {
+    "critical": {
+      "T": 32.938, 
+      "T_units": "K", 
+      "p": 1285800.0, 
+      "p_units": "Pa", 
+      "rhomolar": 15538.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2011-Hydrogen", 

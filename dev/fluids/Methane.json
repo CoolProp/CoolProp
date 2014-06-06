@@ -126,14 +126,6 @@
     }
   }, 
   "CAS": "74-82-8", 
-  "CRITICAL": {
-    "T": 190.564, 
-    "T_units": "K", 
-    "p": 4599200.0, 
-    "p_units": "Pa", 
-    "rhomolar": 10139.127999999999, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A3", 
     "FH": 4, 
@@ -415,5 +407,15 @@
     }
   ], 
   "NAME": "Methane", 
-  "REFPROP_NAME": "METHANE"
+  "REFPROP_NAME": "METHANE", 
+  "STATES": {
+    "critical": {
+      "T": 190.564, 
+      "T_units": "K", 
+      "p": 4599200.0, 
+      "p_units": "Pa", 
+      "rhomolar": 10139.127999999999, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

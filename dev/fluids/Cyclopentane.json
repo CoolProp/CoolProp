@@ -111,14 +111,6 @@
     }
   }, 
   "CAS": "287-92-3", 
-  "CRITICAL": {
-    "T": 511.72, 
-    "T_units": "K", 
-    "p": 4571200.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3820.0000000000005, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -288,5 +280,15 @@
     }
   ], 
   "NAME": "Cyclopentane", 
-  "REFPROP_NAME": "CYCLOPEN"
+  "REFPROP_NAME": "CYCLOPEN", 
+  "STATES": {
+    "critical": {
+      "T": 511.72, 
+      "T_units": "K", 
+      "p": 4571200.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3820.0000000000005, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

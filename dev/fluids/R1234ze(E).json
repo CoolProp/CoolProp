@@ -111,14 +111,6 @@
     }
   }, 
   "CAS": "29118-24-9", 
-  "CRITICAL": {
-    "T": 382.52, 
-    "T_units": "K", 
-    "p": 3636250.0, 
-    "p_units": "Pa", 
-    "rhomolar": 4290.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 2, 
@@ -300,6 +292,16 @@
   ], 
   "NAME": "R1234ze(E)", 
   "REFPROP_NAME": "R1234ZE", 
+  "STATES": {
+    "critical": {
+      "T": 382.52, 
+      "T_units": "K", 
+      "p": 3636250.0, 
+      "p_units": "Pa", 
+      "rhomolar": 4290.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2011", 

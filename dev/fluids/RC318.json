@@ -118,14 +118,6 @@
     }
   }, 
   "CAS": "115-25-3", 
-  "CRITICAL": {
-    "T": 388.38, 
-    "T_units": "K", 
-    "p": 2777500.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3099.38, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 0, 
@@ -325,5 +317,15 @@
     }
   ], 
   "NAME": "RC318", 
-  "REFPROP_NAME": "RC318"
+  "REFPROP_NAME": "RC318", 
+  "STATES": {
+    "critical": {
+      "T": 388.38, 
+      "T_units": "K", 
+      "p": 2777500.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3099.38, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

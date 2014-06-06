@@ -125,14 +125,6 @@
     }
   }, 
   "CAS": "7446-09-5", 
-  "CRITICAL": {
-    "T": 430.64, 
-    "T_units": "K", 
-    "p": 7884000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 8195.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "B1", 
     "FH": 0, 
@@ -270,5 +262,15 @@
     }
   ], 
   "NAME": "SulfurDioxide", 
-  "REFPROP_NAME": "SO2"
+  "REFPROP_NAME": "SO2", 
+  "STATES": {
+    "critical": {
+      "T": 430.64, 
+      "T_units": "K", 
+      "p": 7884000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 8195.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

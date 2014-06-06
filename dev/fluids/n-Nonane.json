@@ -122,14 +122,6 @@
     }
   }, 
   "CAS": "111-84-2", 
-  "CRITICAL": {
-    "T": 594.55, 
-    "T_units": "K", 
-    "p": 2281000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 1810.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -263,6 +255,16 @@
   ], 
   "NAME": "n-Nonane", 
   "REFPROP_NAME": "NONANE", 
+  "STATES": {
+    "critical": {
+      "T": 594.55, 
+      "T_units": "K", 
+      "p": 2281000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 1810.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-FPE-2005", 

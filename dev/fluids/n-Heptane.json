@@ -125,14 +125,6 @@
     }
   }, 
   "CAS": "142-82-5", 
-  "CRITICAL": {
-    "T": 540.13, 
-    "T_units": "K", 
-    "p": 2736000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 2315.3230474441625, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -281,6 +273,16 @@
   ], 
   "NAME": "n-Heptane", 
   "REFPROP_NAME": "HEPTANE", 
+  "STATES": {
+    "critical": {
+      "T": 540.13, 
+      "T_units": "K", 
+      "p": 2736000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 2315.3230474441625, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Heptane", 

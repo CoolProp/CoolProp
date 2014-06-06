@@ -110,14 +110,6 @@
     }
   }, 
   "CAS": "624-64-6", 
-  "CRITICAL": {
-    "T": 428.61, 
-    "T_units": "K", 
-    "p": 4027300.0, 
-    "p_units": "Pa", 
-    "rhomolar": 4213.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 4, 
@@ -250,5 +242,15 @@
     }
   ], 
   "NAME": "trans-2-Butene", 
-  "REFPROP_NAME": "T2BUTENE"
+  "REFPROP_NAME": "T2BUTENE", 
+  "STATES": {
+    "critical": {
+      "T": 428.61, 
+      "T_units": "K", 
+      "p": 4027300.0, 
+      "p_units": "Pa", 
+      "rhomolar": 4213.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

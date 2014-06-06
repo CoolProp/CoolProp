@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "353-36-6", 
-  "CRITICAL": {
-    "T": 375.25, 
-    "T_units": "K", 
-    "p": 5010000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 6280.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": -1, 
@@ -309,5 +301,15 @@
     }
   ], 
   "NAME": "R161", 
-  "REFPROP_NAME": "R161"
+  "REFPROP_NAME": "R161", 
+  "STATES": {
+    "critical": {
+      "T": 375.25, 
+      "T_units": "K", 
+      "p": 5010000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 6280.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

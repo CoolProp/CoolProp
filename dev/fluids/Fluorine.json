@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "7782-41-4", 
-  "CRITICAL": {
-    "T": 144.414, 
-    "T_units": "K", 
-    "p": 5172400.0, 
-    "p_units": "Pa", 
-    "rhomolar": 15603.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -391,5 +383,15 @@
     }
   ], 
   "NAME": "Fluorine", 
-  "REFPROP_NAME": "FLUORINE"
+  "REFPROP_NAME": "FLUORINE", 
+  "STATES": {
+    "critical": {
+      "T": 144.414, 
+      "T_units": "K", 
+      "p": 5172400.0, 
+      "p_units": "Pa", 
+      "rhomolar": 15603.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

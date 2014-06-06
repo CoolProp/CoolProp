@@ -109,14 +109,6 @@
     }
   }, 
   "CAS": "R407C.PPF", 
-  "CRITICAL": {
-    "T": 359.345, 
-    "T_units": "K", 
-    "p": 4631700.0, 
-    "p_units": "Pa", 
-    "rhomolar": 5260.000046401775, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 1, 
@@ -293,6 +285,16 @@
   ], 
   "NAME": "R407C", 
   "REFPROP_NAME": "R407C", 
+  "STATES": {
+    "critical": {
+      "T": 359.345, 
+      "T_units": "K", 
+      "p": 4631700.0, 
+      "p_units": "Pa", 
+      "rhomolar": 5260.000046401775, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Geller-PURDUE-2001", 

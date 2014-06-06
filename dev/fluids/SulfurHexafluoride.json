@@ -123,14 +123,6 @@
     }
   }, 
   "CAS": "2551-62-4", 
-  "CRITICAL": {
-    "T": 318.7232, 
-    "T_units": "K", 
-    "p": 3754983.0, 
-    "p_units": "Pa", 
-    "rhomolar": 5082.317411198119, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 0, 
@@ -423,6 +415,16 @@
   ], 
   "NAME": "SulfurHexafluoride", 
   "REFPROP_NAME": "SF6", 
+  "STATES": {
+    "critical": {
+      "T": 318.7232, 
+      "T_units": "K", 
+      "p": 3754983.0, 
+      "p_units": "Pa", 
+      "rhomolar": 5082.317411198119, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2012-SF6", 

@@ -120,14 +120,6 @@
     }
   }, 
   "CAS": "754-12-1", 
-  "CRITICAL": {
-    "T": 367.85, 
-    "T_units": "K", 
-    "p": 3382200.0, 
-    "p_units": "Pa", 
-    "rhomolar": 4170.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A2L", 
     "FH": 2, 
@@ -305,6 +297,16 @@
   ], 
   "NAME": "R1234yf", 
   "REFPROP_NAME": "R1234YF", 
+  "STATES": {
+    "critical": {
+      "T": 367.85, 
+      "T_units": "K", 
+      "p": 3382200.0, 
+      "p_units": "Pa", 
+      "rhomolar": 4170.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2011", 

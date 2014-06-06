@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "463-58-1", 
-  "CRITICAL": {
-    "T": 378.77, 
-    "T_units": "K", 
-    "p": 6370000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 7410.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 4, 
@@ -261,5 +253,15 @@
     }
   ], 
   "NAME": "CarbonylSulfide", 
-  "REFPROP_NAME": "COS"
+  "REFPROP_NAME": "COS", 
+  "STATES": {
+    "critical": {
+      "T": 378.77, 
+      "T_units": "K", 
+      "p": 6370000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 7410.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

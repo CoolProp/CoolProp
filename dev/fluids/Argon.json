@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "7440-37-1", 
-  "CRITICAL": {
-    "T": 150.687, 
-    "T_units": "K", 
-    "p": 4863000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 13407.429658556124, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 0, 
@@ -392,6 +384,16 @@
   ], 
   "NAME": "Argon", 
   "REFPROP_NAME": "ARGON", 
+  "STATES": {
+    "critical": {
+      "T": 150.687, 
+      "T_units": "K", 
+      "p": 4863000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 13407.429658556124, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Lemmon-IJT-2004", 

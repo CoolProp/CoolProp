@@ -122,14 +122,6 @@
     }
   }, 
   "CAS": "7782-44-7", 
-  "CRITICAL": {
-    "T": 154.581, 
-    "T_units": "K", 
-    "p": 5043000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 13630.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 0, 
@@ -371,6 +363,16 @@
   ], 
   "NAME": "Oxygen", 
   "REFPROP_NAME": "OXYGEN", 
+  "STATES": {
+    "critical": {
+      "T": 154.581, 
+      "T_units": "K", 
+      "p": 5043000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 13630.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Lemmon-IJT-2004", 

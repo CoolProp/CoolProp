@@ -111,14 +111,6 @@
     }
   }, 
   "CAS": "102687-65-0", 
-  "CRITICAL": {
-    "T": 438.75, 
-    "T_units": "K", 
-    "p": 3570900.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3670.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -297,5 +289,15 @@
     }
   ], 
   "NAME": "R1233zd(E)", 
-  "REFPROP_NAME": "R1233ZD"
+  "REFPROP_NAME": "R1233ZD", 
+  "STATES": {
+    "critical": {
+      "T": 438.75, 
+      "T_units": "K", 
+      "p": 3570900.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3670.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

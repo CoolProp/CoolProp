@@ -110,14 +110,6 @@
     }
   }, 
   "CAS": "540-97-6", 
-  "CRITICAL": {
-    "T": 645.78, 
-    "T_units": "K", 
-    "p": 961000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 627.2885477999996, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": -1, 
@@ -253,5 +245,15 @@
     }
   ], 
   "NAME": "D6", 
-  "REFPROP_NAME": "D6"
+  "REFPROP_NAME": "D6", 
+  "STATES": {
+    "critical": {
+      "T": 645.78, 
+      "T_units": "K", 
+      "p": 961000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 627.2885477999996, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

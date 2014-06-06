@@ -127,14 +127,6 @@
     }
   }, 
   "CAS": "1333-74-0", 
-  "CRITICAL": {
-    "T": 33.145, 
-    "T_units": "K", 
-    "p": 1296400.0, 
-    "p_units": "Pa", 
-    "rhomolar": 15508.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A3", 
     "FH": 4, 
@@ -310,6 +302,16 @@
   ], 
   "NAME": "Hydrogen", 
   "REFPROP_NAME": "HYDROGEN", 
+  "STATES": {
+    "critical": {
+      "T": 33.145, 
+      "T_units": "K", 
+      "p": 1296400.0, 
+      "p_units": "Pa", 
+      "rhomolar": 15508.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2011-Hydrogen", 

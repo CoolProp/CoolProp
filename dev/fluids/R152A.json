@@ -120,14 +120,6 @@
     }
   }, 
   "CAS": "75-37-6", 
-  "CRITICAL": {
-    "T": 386.411, 
-    "T_units": "K", 
-    "p": 4520000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 5571.452362568319, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A2", 
     "FH": 4, 
@@ -265,6 +257,16 @@
   ], 
   "NAME": "R152A", 
   "REFPROP_NAME": "R152A", 
+  "STATES": {
+    "critical": {
+      "T": 386.411, 
+      "T_units": "K", 
+      "p": 4520000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 5571.452362568319, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Krauss-IJT-1996", 

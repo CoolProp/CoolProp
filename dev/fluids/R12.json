@@ -120,14 +120,6 @@
     }
   }, 
   "CAS": "75-71-8", 
-  "CRITICAL": {
-    "T": 385.12, 
-    "T_units": "K", 
-    "p": 4136100.0000000005, 
-    "p_units": "Pa", 
-    "rhomolar": 4672.781255944357, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 1, 
@@ -306,5 +298,15 @@
     }
   ], 
   "NAME": "R12", 
-  "REFPROP_NAME": "R12"
+  "REFPROP_NAME": "R12", 
+  "STATES": {
+    "critical": {
+      "T": 385.12, 
+      "T_units": "K", 
+      "p": 4136100.0000000005, 
+      "p_units": "Pa", 
+      "rhomolar": 4672.781255944357, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

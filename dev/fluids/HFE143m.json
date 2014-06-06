@@ -113,14 +113,6 @@
     }
   }, 
   "CAS": "421-14-7", 
-  "CRITICAL": {
-    "T": 377.921, 
-    "T_units": "K", 
-    "p": 3635000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 4648.140744, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -274,5 +266,15 @@
     }
   ], 
   "NAME": "HFE143m", 
-  "REFPROP_NAME": "RE143A"
+  "REFPROP_NAME": "RE143A", 
+  "STATES": {
+    "critical": {
+      "T": 377.921, 
+      "T_units": "K", 
+      "p": 3635000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 4648.140744, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

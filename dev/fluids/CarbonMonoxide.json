@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "630-08-0", 
-  "CRITICAL": {
-    "T": 132.86, 
-    "T_units": "K", 
-    "p": 3494000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 10850.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 4, 
@@ -264,5 +256,15 @@
     }
   ], 
   "NAME": "CarbonMonoxide", 
-  "REFPROP_NAME": "CO"
+  "REFPROP_NAME": "CO", 
+  "STATES": {
+    "critical": {
+      "T": 132.86, 
+      "T_units": "K", 
+      "p": 3494000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 10850.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

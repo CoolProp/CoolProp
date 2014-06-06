@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "74-85-1", 
-  "CRITICAL": {
-    "T": 282.35, 
-    "T_units": "K", 
-    "p": 5041800.0, 
-    "p_units": "Pa", 
-    "rhomolar": 7636.76598074554, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A3", 
     "FH": 4, 
@@ -391,5 +383,15 @@
     }
   ], 
   "NAME": "Ethylene", 
-  "REFPROP_NAME": "ETHYLENE"
+  "REFPROP_NAME": "ETHYLENE", 
+  "STATES": {
+    "critical": {
+      "T": 282.35, 
+      "T_units": "K", 
+      "p": 5041800.0, 
+      "p_units": "Pa", 
+      "rhomolar": 7636.76598074554, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

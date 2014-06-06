@@ -112,14 +112,6 @@
     }
   }, 
   "CAS": "1120-21-4", 
-  "CRITICAL": {
-    "T": 638.8, 
-    "T_units": "K", 
-    "p": 1990400.0, 
-    "p_units": "Pa", 
-    "rhomolar": 1514.9168636385564, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -261,5 +253,15 @@
     }
   ], 
   "NAME": "n-Undecane", 
-  "REFPROP_NAME": "C11"
+  "REFPROP_NAME": "C11", 
+  "STATES": {
+    "critical": {
+      "T": 638.8, 
+      "T_units": "K", 
+      "p": 1990400.0, 
+      "p_units": "Pa", 
+      "rhomolar": 1514.9168636385564, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

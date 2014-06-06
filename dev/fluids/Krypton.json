@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "7439-90-9", 
-  "CRITICAL": {
-    "T": 209.48, 
-    "T_units": "K", 
-    "p": 5525000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 10850.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 0, 
@@ -246,5 +238,15 @@
     }
   ], 
   "NAME": "Krypton", 
-  "REFPROP_NAME": "KRYPTON"
+  "REFPROP_NAME": "KRYPTON", 
+  "STATES": {
+    "critical": {
+      "T": 209.48, 
+      "T_units": "K", 
+      "p": 5525000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 10850.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

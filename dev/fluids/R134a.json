@@ -120,14 +120,6 @@
     }
   }, 
   "CAS": "811-97-2", 
-  "CRITICAL": {
-    "T": 374.21, 
-    "T_units": "K", 
-    "p": 4059280.0, 
-    "p_units": "Pa", 
-    "rhomolar": 5017.053, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 1, 
@@ -293,6 +285,16 @@
   ], 
   "NAME": "R134a", 
   "REFPROP_NAME": "R134A", 
+  "STATES": {
+    "critical": {
+      "T": 374.21, 
+      "T_units": "K", 
+      "p": 4059280.0, 
+      "p_units": "Pa", 
+      "rhomolar": 5017.053, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "viscosity": {
       "BibTeX": "Huber-IECR-2003", 

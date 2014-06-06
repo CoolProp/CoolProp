@@ -120,14 +120,6 @@
     }
   }, 
   "CAS": "115-10-6", 
-  "CRITICAL": {
-    "T": 400.378, 
-    "T_units": "K", 
-    "p": 5336800.0, 
-    "p_units": "Pa", 
-    "rhomolar": 5940.000000000001, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A3", 
     "FH": 4, 
@@ -302,6 +294,16 @@
   ], 
   "NAME": "DimethylEther", 
   "REFPROP_NAME": "DME", 
+  "STATES": {
+    "critical": {
+      "T": 400.378, 
+      "T_units": "K", 
+      "p": 5336800.0, 
+      "p_units": "Pa", 
+      "rhomolar": 5940.000000000001, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "viscosity": {
       "BibTeX": "Meng-JCED-2012", 

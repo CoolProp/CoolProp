@@ -125,14 +125,6 @@
     }
   }, 
   "CAS": "7732-18-5", 
-  "CRITICAL": {
-    "T": 647.096, 
-    "T_units": "K", 
-    "p": 22064000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 17873.72799560906, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 0, 
@@ -497,6 +489,16 @@
   ], 
   "NAME": "Water", 
   "REFPROP_NAME": "WATER", 
+  "STATES": {
+    "critical": {
+      "T": 647.096, 
+      "T_units": "K", 
+      "p": 22064000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 17873.72799560906, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-JPCRD-2012", 

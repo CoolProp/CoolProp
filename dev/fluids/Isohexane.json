@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "107-83-5", 
-  "CRITICAL": {
-    "T": 497.7, 
-    "T_units": "K", 
-    "p": 3040000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 2715.0000000000005, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -261,5 +253,15 @@
     }
   ], 
   "NAME": "Isohexane", 
-  "REFPROP_NAME": "IHEXANE"
+  "REFPROP_NAME": "IHEXANE", 
+  "STATES": {
+    "critical": {
+      "T": 497.7, 
+      "T_units": "K", 
+      "p": 3040000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 2715.0000000000005, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

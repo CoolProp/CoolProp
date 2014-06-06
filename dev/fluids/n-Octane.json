@@ -127,14 +127,6 @@
     }
   }, 
   "CAS": "111-65-9", 
-  "CRITICAL": {
-    "T": 569.32, 
-    "T_units": "K", 
-    "p": 2497000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 2056.4, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -283,6 +275,16 @@
   ], 
   "NAME": "n-Octane", 
   "REFPROP_NAME": "OCTANE", 
+  "STATES": {
+    "critical": {
+      "T": 569.32, 
+      "T_units": "K", 
+      "p": 2497000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 2056.4, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-FPE-2005", 

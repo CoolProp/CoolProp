@@ -110,14 +110,6 @@
     }
   }, 
   "CAS": "AIR.PPF", 
-  "CRITICAL": {
-    "T": 132.5306, 
-    "T_units": "K", 
-    "p": 3786000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 11830.8, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 0, 
@@ -309,6 +301,16 @@
   ], 
   "NAME": "Air", 
   "REFPROP_NAME": "AIR", 
+  "STATES": {
+    "critical": {
+      "T": 132.5306, 
+      "T_units": "K", 
+      "p": 3786000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 11830.8, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Lemmon-IJT-2004", 

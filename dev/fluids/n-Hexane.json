@@ -125,14 +125,6 @@
     }
   }, 
   "CAS": "110-54-3", 
-  "CRITICAL": {
-    "T": 507.82, 
-    "T_units": "K", 
-    "p": 3034000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 2705.877875067769, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -281,6 +273,16 @@
   ], 
   "NAME": "n-Hexane", 
   "REFPROP_NAME": "HEXANE", 
+  "STATES": {
+    "critical": {
+      "T": 507.82, 
+      "T_units": "K", 
+      "p": 3034000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 2705.877875067769, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Hexane", 

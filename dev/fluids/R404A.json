@@ -109,14 +109,6 @@
     }
   }, 
   "CAS": "R404A.PPF", 
-  "CRITICAL": {
-    "T": 345.27, 
-    "T_units": "K", 
-    "p": 3734800.0, 
-    "p_units": "Pa", 
-    "rhomolar": 4939.999999999999, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 1, 
@@ -297,6 +289,16 @@
   ], 
   "NAME": "R404A", 
   "REFPROP_NAME": "R404A", 
+  "STATES": {
+    "critical": {
+      "T": 345.27, 
+      "T_units": "K", 
+      "p": 3734800.0, 
+      "p_units": "Pa", 
+      "rhomolar": 4939.999999999999, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Geller-PURDUE-2001", 

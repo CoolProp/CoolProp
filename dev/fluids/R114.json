@@ -118,14 +118,6 @@
     }
   }, 
   "CAS": "76-14-2", 
-  "CRITICAL": {
-    "T": 418.83, 
-    "T_units": "K", 
-    "p": 3257000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3393.2000000000003, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 0, 
@@ -327,5 +319,15 @@
     }
   ], 
   "NAME": "R114", 
-  "REFPROP_NAME": "R114"
+  "REFPROP_NAME": "R114", 
+  "STATES": {
+    "critical": {
+      "T": 418.83, 
+      "T_units": "K", 
+      "p": 3257000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3393.2000000000003, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

@@ -124,14 +124,6 @@
     }
   }, 
   "CAS": "7440-63-3", 
-  "CRITICAL": {
-    "T": 289.733, 
-    "T_units": "K", 
-    "p": 5842000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 8400.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 0, 
@@ -249,5 +241,15 @@
     }
   ], 
   "NAME": "Xenon", 
-  "REFPROP_NAME": "XENON"
+  "REFPROP_NAME": "XENON", 
+  "STATES": {
+    "critical": {
+      "T": 289.733, 
+      "T_units": "K", 
+      "p": 5842000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 8400.0, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

@@ -110,14 +110,6 @@
     }
   }, 
   "CAS": "141-62-8", 
-  "CRITICAL": {
-    "T": 599.4, 
-    "T_units": "K", 
-    "p": 1227000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 914.6616014999984, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 2, 
@@ -253,5 +245,15 @@
     }
   ], 
   "NAME": "MD2M", 
-  "REFPROP_NAME": "MD2M"
+  "REFPROP_NAME": "MD2M", 
+  "STATES": {
+    "critical": {
+      "T": 599.4, 
+      "T_units": "K", 
+      "p": 1227000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 914.6616014999984, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }
