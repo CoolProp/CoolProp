@@ -133,6 +133,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "STATES": {
+        "reducing": {
+          "T": 317.28, 
+          "T_units": "K", 
+          "p": 5897000, 
+          "p_units": "Pa", 
+          "rhomolar": 9300, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 129.82, 
+          "T_units": "K", 
+          "p": 0.34419906454658705, 
+          "p_units": "Pa", 
+          "rhomolar": 29560.843595523063, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 129.82, 
+          "T_units": "K", 
+          "p": 0.34419906454658705, 
+          "p_units": "Pa", 
+          "rhomolar": 0.31927855600765737, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 425, 
       "T_max_units": "K", 
       "Ttriple": 129.82, 
@@ -243,21 +269,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 70000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 344.1990645, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 317.28, 
-        "T_units": "K", 
-        "p": 5897000, 
-        "p_units": "Pa", 
-        "rhomolar": 9300, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 29560.79016087918, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.3193201649680486, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "R41", 

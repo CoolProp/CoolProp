@@ -125,6 +125,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JPCRD-2000", 
+      "STATES": {
+        "reducing": {
+          "T": 132.6312, 
+          "T_units": "K", 
+          "p": 3785020, 
+          "p_units": "Pa", 
+          "rhomolar": 10447.7, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 59.75, 
+          "T_units": "K", 
+          "p": 5.2646378681251385, 
+          "p_units": "Pa", 
+          "rhomolar": 33066.64175205524, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 59.75, 
+          "T_units": "K", 
+          "p": 2.4316336588845036, 
+          "p_units": "Pa", 
+          "rhomolar": 4.906850672383319, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 2000, 
       "T_max_units": "K", 
       "Ttriple": 59.75, 
@@ -282,21 +308,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 2000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": true, 
-      "ptriple": 2431.633659, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 132.6312, 
-        "T_units": "K", 
-        "p": 3785020, 
-        "p_units": "Pa", 
-        "rhomolar": 10447.7, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 3.452387774956794e+100, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 3.452387774956794e+100, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": true
     }
   ], 
   "NAME": "Air", 

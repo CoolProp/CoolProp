@@ -139,6 +139,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Span-JPCRD-1996", 
+      "STATES": {
+        "reducing": {
+          "T": 304.1282, 
+          "T_units": "K", 
+          "p": 7377300, 
+          "p_units": "Pa", 
+          "rhomolar": 10624.9063, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 216.592, 
+          "T_units": "K", 
+          "p": 517.9643433349185, 
+          "p_units": "Pa", 
+          "rhomolar": 26777.277860212125, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 216.592, 
+          "T_units": "K", 
+          "p": 517.9643433349185, 
+          "p_units": "Pa", 
+          "rhomolar": 312.6777446892703, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 1100, 
       "T_max_units": "K", 
       "Ttriple": 216.592, 
@@ -429,21 +455,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 800000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 517964.3433, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 304.1282, 
-        "T_units": "K", 
-        "p": 7377300, 
-        "p_units": "Pa", 
-        "rhomolar": 10624.9063, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 26777.19637087835, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 312.6907221828656, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "CarbonDioxide", 

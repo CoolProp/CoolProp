@@ -136,6 +136,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "STATES": {
+        "reducing": {
+          "T": 508.1, 
+          "T_units": "K", 
+          "p": 4700000, 
+          "p_units": "Pa", 
+          "rhomolar": 4699.999999999999, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 178.5, 
+          "T_units": "K", 
+          "p": 0.002326486782481569, 
+          "p_units": "Pa", 
+          "rhomolar": 15722.96134426609, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 178.5, 
+          "T_units": "K", 
+          "p": 0.002326486782481569, 
+          "p_units": "Pa", 
+          "rhomolar": 0.001567650380630057, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 550, 
       "T_max_units": "K", 
       "Ttriple": 178.5, 
@@ -239,21 +265,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 700000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 2.326486782, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 508.1, 
-        "T_units": "K", 
-        "p": 4700000, 
-        "p_units": "Pa", 
-        "rhomolar": 4699.999999999999, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 15722.94256896055, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.001567864714047582, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Acetone", 

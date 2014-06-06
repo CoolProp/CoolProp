@@ -141,6 +141,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "OrtizVega-2010", 
+      "STATES": {
+        "reducing": {
+          "T": 5.1953, 
+          "T_units": "K", 
+          "p": 227600, 
+          "p_units": "Pa", 
+          "rhomolar": 17383.7, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 2.1768, 
+          "T_units": "K", 
+          "p": 5.04275718944867, 
+          "p_units": "Pa", 
+          "rhomolar": 36459.66840252621, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 2.1768, 
+          "T_units": "K", 
+          "p": 5.04275718944867, 
+          "p_units": "Pa", 
+          "rhomolar": 293.3016136659702, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 2000, 
       "T_max_units": "K", 
       "Ttriple": 2.1768, 
@@ -311,21 +337,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 1000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 5042.757189, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 5.1953, 
-        "T_units": "K", 
-        "p": 227600, 
-        "p_units": "Pa", 
-        "rhomolar": 17383.7, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 36459.45454859136, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 293.9108313933456, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Helium", 

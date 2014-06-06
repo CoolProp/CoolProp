@@ -135,6 +135,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "TillnerRoth-JPCRD-1994", 
+      "STATES": {
+        "reducing": {
+          "T": 374.18, 
+          "T_units": "K", 
+          "p": 4059280, 
+          "p_units": "Pa", 
+          "rhomolar": 4978.830171000001, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 169.85, 
+          "T_units": "K", 
+          "p": 0.3895637886074885, 
+          "p_units": "Pa", 
+          "rhomolar": 15594.200379934839, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 169.85, 
+          "T_units": "K", 
+          "p": 0.3895637886074885, 
+          "p_units": "Pa", 
+          "rhomolar": 0.2761122800115172, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 455, 
       "T_max_units": "K", 
       "Ttriple": 169.85, 
@@ -266,21 +292,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 70000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 389.5637886, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 374.18, 
-        "T_units": "K", 
-        "p": 4059280, 
-        "p_units": "Pa", 
-        "rhomolar": 4978.830171000001, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 15594.17453546275, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.2761416512149696, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "R134a", 

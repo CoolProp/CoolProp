@@ -133,6 +133,32 @@
     {
       "BibTeX_CP0": "Platzer-BOOK-1990", 
       "BibTeX_EOS": "Platzer-BOOK-1990", 
+      "STATES": {
+        "reducing": {
+          "T": 301.88, 
+          "T_units": "K", 
+          "p": 3879000, 
+          "p_units": "Pa", 
+          "rhomolar": 5580, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 98.15, 
+          "T_units": "K", 
+          "p": 0.0009070389769883204, 
+          "p_units": "Pa", 
+          "rhomolar": 17728.463741136216, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 98.15, 
+          "T_units": "K", 
+          "p": 0.0009070389769883204, 
+          "p_units": "Pa", 
+          "rhomolar": 0.001111476996623622, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 450, 
       "T_max_units": "K", 
       "Ttriple": 92, 
@@ -301,21 +327,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 50000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.907038977, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 301.88, 
-        "T_units": "K", 
-        "p": 3879000, 
-        "p_units": "Pa", 
-        "rhomolar": 5580, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 9.573133956863457e+99, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 9.573133956863457e+99, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "R13", 

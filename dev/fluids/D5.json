@@ -125,6 +125,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Colonna-FPE-2006", 
+      "STATES": {
+        "reducing": {
+          "T": 619.23462341, 
+          "T_units": "K", 
+          "p": 1161460, 
+          "p_units": "Pa", 
+          "rhomolar": 789.0902699999999, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 300.0, 
+          "T_units": "K", 
+          "p": 0.027511665281725335, 
+          "p_units": "Pa", 
+          "rhomolar": 2590.015134448574, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 300.0, 
+          "T_units": "K", 
+          "p": 0.027511665281725335, 
+          "p_units": "Pa", 
+          "rhomolar": 0.011031433967445782, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 673, 
       "T_max_units": "K", 
       "Ttriple": 226, 
@@ -236,21 +262,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 30000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 27.51166528, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 619.23462341, 
-        "T_units": "K", 
-        "p": 1161460, 
-        "p_units": "Pa", 
-        "rhomolar": 789.0902699999999, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 2.69709202235242e+99, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 2.69709202235242e+99, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "D5", 

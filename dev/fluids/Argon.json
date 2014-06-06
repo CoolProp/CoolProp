@@ -136,6 +136,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Tegeler-JPCRD-1999", 
+      "STATES": {
+        "reducing": {
+          "T": 150.687, 
+          "T_units": "K", 
+          "p": 4863000, 
+          "p_units": "Pa", 
+          "rhomolar": 13407.42965855612, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 83.806, 
+          "T_units": "K", 
+          "p": 68.89247707906286, 
+          "p_units": "Pa", 
+          "rhomolar": 35465.24383230812, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 83.806, 
+          "T_units": "K", 
+          "p": 68.89247707906286, 
+          "p_units": "Pa", 
+          "rhomolar": 101.49850850490478, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 700, 
       "T_max_units": "K", 
       "Ttriple": 83.806, 
@@ -365,21 +391,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 1000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 68892.47708, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 150.687, 
-        "T_units": "K", 
-        "p": 4863000, 
-        "p_units": "Pa", 
-        "rhomolar": 13407.42965855612, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 35465.09209833706, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 101.5092253011949, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Argon", 

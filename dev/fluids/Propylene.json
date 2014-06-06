@@ -136,6 +136,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-PROPYLENE-2013", 
+      "STATES": {
+        "reducing": {
+          "T": 364.211, 
+          "T_units": "K", 
+          "p": 4555000, 
+          "p_units": "Pa", 
+          "rhomolar": 5457, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 87.953, 
+          "T_units": "K", 
+          "p": 7.471728686559866e-07, 
+          "p_units": "Pa", 
+          "rhomolar": 18254.562780551245, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 87.953, 
+          "T_units": "K", 
+          "p": 7.471728686559866e-07, 
+          "p_units": "Pa", 
+          "rhomolar": 1.0217291002947154e-06, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 575, 
       "T_max_units": "K", 
       "Ttriple": 87.953, 
@@ -321,21 +347,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 1000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.0007471728687, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 364.211, 
-        "T_units": "K", 
-        "p": 4555000, 
-        "p_units": "Pa", 
-        "rhomolar": 5457, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 18254.53452723806, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 1.022108934557587e-06, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Propylene", 

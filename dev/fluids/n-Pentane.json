@@ -143,6 +143,32 @@
     {
       "BibTeX_CP0": "Jaeschke-IJT-1995", 
       "BibTeX_EOS": "Span-IJT-2003B", 
+      "STATES": {
+        "reducing": {
+          "T": 469.7, 
+          "T_units": "K", 
+          "p": 3370000, 
+          "p_units": "Pa", 
+          "rhomolar": 3215.577588422147, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 143.47, 
+          "T_units": "K", 
+          "p": 7.632218395084951e-05, 
+          "p_units": "Pa", 
+          "rhomolar": 10566.403034046354, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 143.47, 
+          "T_units": "K", 
+          "p": 7.632218395084951e-05, 
+          "p_units": "Pa", 
+          "rhomolar": 6.398133659997455e-05, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 573, 
       "T_max_units": "K", 
       "Ttriple": 143.47, 
@@ -257,21 +283,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 69000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.07632218395, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 469.7, 
-        "T_units": "K", 
-        "p": 3370000, 
-        "p_units": "Pa", 
-        "rhomolar": 3215.577588422147, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 10566.39007740751, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 6.399383717983962e-05, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "n-Pentane", 

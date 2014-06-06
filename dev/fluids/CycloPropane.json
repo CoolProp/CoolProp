@@ -126,6 +126,32 @@
     {
       "BibTeX_CP0": "Polt-CT-1992", 
       "BibTeX_EOS": "Polt-CT-1992", 
+      "STATES": {
+        "reducing": {
+          "T": 398.3, 
+          "T_units": "K", 
+          "p": 5579700, 
+          "p_units": "Pa", 
+          "rhomolar": 6142.9149, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 273.0, 
+          "T_units": "K", 
+          "p": 342.7022037357092, 
+          "p_units": "Pa", 
+          "rhomolar": 15594.27233601817, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 273.0, 
+          "T_units": "K", 
+          "p": 342.7022037357092, 
+          "p_units": "Pa", 
+          "rhomolar": 164.03030361467836, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 473, 
       "T_max_units": "K", 
       "Ttriple": 145.7, 
@@ -275,21 +301,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 28000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 342702.2037, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 398.3, 
-        "T_units": "K", 
-        "p": 5579700, 
-        "p_units": "Pa", 
-        "rhomolar": 6142.9149, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 2.376369382856871e+100, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 2.376369382856871e+100, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "CycloPropane", 

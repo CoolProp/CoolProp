@@ -126,6 +126,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Leachman-JPCRD-2009", 
+      "STATES": {
+        "reducing": {
+          "T": 33.22, 
+          "T_units": "K", 
+          "p": 1310650, 
+          "p_units": "Pa", 
+          "rhomolar": 15444.54031369981, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 14.008, 
+          "T_units": "K", 
+          "p": 7.559882341056905, 
+          "p_units": "Pa", 
+          "rhomolar": 38199.18470071943, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 14.008, 
+          "T_units": "K", 
+          "p": 7.559882341056905, 
+          "p_units": "Pa", 
+          "rhomolar": 65.83968194171914, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 1000, 
       "T_max_units": "K", 
       "Ttriple": 14.008, 
@@ -265,21 +291,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 2000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 7559.882341, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 33.22, 
-        "T_units": "K", 
-        "p": 1310650, 
-        "p_units": "Pa", 
-        "rhomolar": 15444.54031369981, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 38198.76565183698, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 65.87296564338153, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "OrthoHydrogen", 

@@ -137,6 +137,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Stewart-JPCRD-1991", 
+      "STATES": {
+        "reducing": {
+          "T": 154.581, 
+          "T_units": "K", 
+          "p": 5043000, 
+          "p_units": "Pa", 
+          "rhomolar": 13630, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 54.361, 
+          "T_units": "K", 
+          "p": 0.14627764704447577, 
+          "p_units": "Pa", 
+          "rhomolar": 40816.430817738415, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 54.361, 
+          "T_units": "K", 
+          "p": 0.14627764704447577, 
+          "p_units": "Pa", 
+          "rhomolar": 0.32370317009092064, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 300, 
       "T_max_units": "K", 
       "Ttriple": 54.361, 
@@ -344,21 +370,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 80000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 146.277647, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 154.581, 
-        "T_units": "K", 
-        "p": 5043000, 
-        "p_units": "Pa", 
-        "rhomolar": 13630, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 40816.30337657147, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.3237995947960466, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Oxygen", 

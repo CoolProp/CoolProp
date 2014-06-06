@@ -136,6 +136,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "STATES": {
+        "reducing": {
+          "T": 309.52, 
+          "T_units": "K", 
+          "p": 7245000, 
+          "p_units": "Pa", 
+          "rhomolar": 10270, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 182.33, 
+          "T_units": "K", 
+          "p": 87.83743922580841, 
+          "p_units": "Pa", 
+          "rhomolar": 28113.432079357477, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 182.33, 
+          "T_units": "K", 
+          "p": 87.83743922580841, 
+          "p_units": "Pa", 
+          "rhomolar": 59.33601783159357, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 525, 
       "T_max_units": "K", 
       "Ttriple": 182.33, 
@@ -233,21 +259,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 50000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 87837.43923, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 309.52, 
-        "T_units": "K", 
-        "p": 7245000, 
-        "p_units": "Pa", 
-        "rhomolar": 10270, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 28113.36563491833, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 59.33941145458979, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "NitrousOxide", 

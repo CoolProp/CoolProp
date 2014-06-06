@@ -138,6 +138,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Buecker-JPCRD-2006B", 
+      "STATES": {
+        "reducing": {
+          "T": 425.125, 
+          "T_units": "K", 
+          "p": 3796000, 
+          "p_units": "Pa", 
+          "rhomolar": 3922.769612987809, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 134.895, 
+          "T_units": "K", 
+          "p": 0.0006656588871710992, 
+          "p_units": "Pa", 
+          "rhomolar": 12645.062133275154, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 134.895, 
+          "T_units": "K", 
+          "p": 0.0006656588871710992, 
+          "p_units": "Pa", 
+          "rhomolar": 0.0005935026998216425, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 340, 
       "T_max_units": "K", 
       "Ttriple": 134.895, 
@@ -318,21 +344,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 12000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.6656588872, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 425.125, 
-        "T_units": "K", 
-        "p": 3796000, 
-        "p_units": "Pa", 
-        "rhomolar": 3922.769612987809, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 12645.04606150976, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.0005936113826349512, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "n-Butane", 

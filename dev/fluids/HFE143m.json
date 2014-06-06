@@ -117,6 +117,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Akasaka-IJR-2012", 
+      "STATES": {
+        "reducing": {
+          "T": 377.921, 
+          "T_units": "K", 
+          "p": 3635000, 
+          "p_units": "Pa", 
+          "rhomolar": 4648.140744, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 240.0, 
+          "T_units": "K", 
+          "p": 65.35939300696849, 
+          "p_units": "Pa", 
+          "rhomolar": 12615.354950558858, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 240.0, 
+          "T_units": "K", 
+          "p": 65.35939300696849, 
+          "p_units": "Pa", 
+          "rhomolar": 34.01804620551361, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 4220, 
       "T_max_units": "K", 
       "Ttriple": 240, 
@@ -248,21 +274,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 7200000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 65359.39301, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 377.921, 
-        "T_units": "K", 
-        "p": 3635000, 
-        "p_units": "Pa", 
-        "rhomolar": 4648.140744, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 12615.3284879174, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 34.01957819070063, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "HFE143m", 

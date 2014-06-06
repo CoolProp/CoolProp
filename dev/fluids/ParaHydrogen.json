@@ -137,6 +137,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Leachman-JPCRD-2009", 
+      "STATES": {
+        "reducing": {
+          "T": 32.938, 
+          "T_units": "K", 
+          "p": 1285800, 
+          "p_units": "Pa", 
+          "rhomolar": 15538, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 13.8033, 
+          "T_units": "K", 
+          "p": 7.041086751148159, 
+          "p_units": "Pa", 
+          "rhomolar": 38185.34690822156, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 13.8033, 
+          "T_units": "K", 
+          "p": 7.041086751148159, 
+          "p_units": "Pa", 
+          "rhomolar": 62.28040619273301, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 1000, 
       "T_max_units": "K", 
       "Ttriple": 13.8033, 
@@ -282,21 +308,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 2000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 7041.086751, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 32.938, 
-        "T_units": "K", 
-        "p": 1285800, 
-        "p_units": "Pa", 
-        "rhomolar": 15538, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 38184.94839776529, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 62.31256337798966, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "ParaHydrogen", 

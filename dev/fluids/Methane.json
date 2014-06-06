@@ -141,6 +141,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Setzmann-JPCRD-1991", 
+      "STATES": {
+        "reducing": {
+          "T": 190.564, 
+          "T_units": "K", 
+          "p": 4599200, 
+          "p_units": "Pa", 
+          "rhomolar": 10139.128, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 90.6941, 
+          "T_units": "K", 
+          "p": 11.696064115134503, 
+          "p_units": "Pa", 
+          "rhomolar": 28141.91479265917, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 90.6941, 
+          "T_units": "K", 
+          "p": 11.696064115134503, 
+          "p_units": "Pa", 
+          "rhomolar": 15.62969180971744, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 625, 
       "T_max_units": "K", 
       "Ttriple": 90.6941, 
@@ -389,21 +415,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 1000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 11696.06412, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 190.564, 
-        "T_units": "K", 
-        "p": 4599200, 
-        "p_units": "Pa", 
-        "rhomolar": 10139.128, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 28141.83192295947, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 15.63154286998348, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Methane", 

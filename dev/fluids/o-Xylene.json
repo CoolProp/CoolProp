@@ -115,6 +115,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Zhou-JPCRD-2012", 
+      "STATES": {
+        "reducing": {
+          "T": 630.259, 
+          "T_units": "K", 
+          "p": 3737500, 
+          "p_units": "Pa", 
+          "rhomolar": 2684.500000000001, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 247.985, 
+          "T_units": "K", 
+          "p": 0.02280577638859245, 
+          "p_units": "Pa", 
+          "rhomolar": 8647.220325712748, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 247.985, 
+          "T_units": "K", 
+          "p": 0.02280577638859245, 
+          "p_units": "Pa", 
+          "rhomolar": 0.011061576929647127, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 700, 
       "T_max_units": "K", 
       "Ttriple": 247.985, 
@@ -259,21 +285,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 70000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 22.80577639, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 630.259, 
-        "T_units": "K", 
-        "p": 3737500, 
-        "p_units": "Pa", 
-        "rhomolar": 2684.500000000001, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 8647.212407085435, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.0110625353483808, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "o-Xylene", 

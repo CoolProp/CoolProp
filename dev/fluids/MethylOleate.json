@@ -124,6 +124,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Huber-EF-2009", 
+      "STATES": {
+        "reducing": {
+          "T": 782, 
+          "T_units": "K", 
+          "p": 1246000, 
+          "p_units": "Pa", 
+          "rhomolar": 812.8499999999999, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 253.47, 
+          "T_units": "K", 
+          "p": 3.7818661051540565e-10, 
+          "p_units": "Pa", 
+          "rhomolar": 3048.2387941791717, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 253.47, 
+          "T_units": "K", 
+          "p": 3.7818661051540565e-10, 
+          "p_units": "Pa", 
+          "rhomolar": 1.79450597579303e-10, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 700, 
       "T_max_units": "K", 
       "Ttriple": 253.47, 
@@ -268,21 +294,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 50000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 3.781866105e-07, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 782, 
-        "T_units": "K", 
-        "p": 1246000, 
-        "p_units": "Pa", 
-        "rhomolar": 812.8499999999999, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 3048.236151846261, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 1.794893849114351e-10, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "MethylOleate", 

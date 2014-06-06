@@ -126,6 +126,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Gedanitz-PREPRINT-2013", 
+      "STATES": {
+        "reducing": {
+          "T": 511.72, 
+          "T_units": "K", 
+          "p": 4571200, 
+          "p_units": "Pa", 
+          "rhomolar": 3820.000000000001, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 179.7, 
+          "T_units": "K", 
+          "p": 0.00885427141819524, 
+          "p_units": "Pa", 
+          "rhomolar": 12107.608792031857, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 179.7, 
+          "T_units": "K", 
+          "p": 0.00885427141819524, 
+          "p_units": "Pa", 
+          "rhomolar": 0.0059262178661649515, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 550, 
       "T_max_units": "K", 
       "Ttriple": 179.7, 
@@ -262,21 +288,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 250000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 8.854271418, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 511.72, 
-        "T_units": "K", 
-        "p": 4571200, 
-        "p_units": "Pa", 
-        "rhomolar": 3820.000000000001, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 12107.59623891635, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.00592693841039708, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Cyclopentane", 

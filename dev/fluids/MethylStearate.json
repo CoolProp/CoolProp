@@ -124,6 +124,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Huber-EF-2009", 
+      "STATES": {
+        "reducing": {
+          "T": 775, 
+          "T_units": "K", 
+          "p": 1239000, 
+          "p_units": "Pa", 
+          "rhomolar": 794.3, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 311.84, 
+          "T_units": "K", 
+          "p": 6.0109471888446706e-06, 
+          "p_units": "Pa", 
+          "rhomolar": 2851.4327320670277, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 311.84, 
+          "T_units": "K", 
+          "p": 6.0109471888446706e-06, 
+          "p_units": "Pa", 
+          "rhomolar": 2.3183363928545357e-06, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 700, 
       "T_max_units": "K", 
       "Ttriple": 311.84, 
@@ -268,21 +294,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 50000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.006010947189, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 775, 
-        "T_units": "K", 
-        "p": 1239000, 
-        "p_units": "Pa", 
-        "rhomolar": 794.3, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 2851.430203644649, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 2.318621202355879e-06, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "MethylStearate", 

@@ -125,6 +125,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "STATES": {
+        "reducing": {
+          "T": 433.74, 
+          "T_units": "K", 
+          "p": 3196000, 
+          "p_units": "Pa", 
+          "rhomolar": 3270, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 256.6, 
+          "T_units": "K", 
+          "p": 35.40094732708782, 
+          "p_units": "Pa", 
+          "rhomolar": 8701.720394850296, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 256.6, 
+          "T_units": "K", 
+          "p": 35.40094732708782, 
+          "p_units": "Pa", 
+          "rhomolar": 16.951063913080816, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 550, 
       "T_max_units": "K", 
       "Ttriple": 256.6, 
@@ -224,21 +250,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 200000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 35400.94733, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 433.74, 
-        "T_units": "K", 
-        "p": 3196000, 
-        "p_units": "Pa", 
-        "rhomolar": 3270, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 8701.706626683947, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 16.95177504859362, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Neopentane", 

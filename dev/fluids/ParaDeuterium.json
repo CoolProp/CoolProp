@@ -114,6 +114,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Richardson-JPCRD-2013", 
+      "STATES": {
+        "reducing": {
+          "T": 38.34, 
+          "T_units": "K", 
+          "p": 1679600, 
+          "p_units": "Pa", 
+          "rhomolar": 17230, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 18.724, 
+          "T_units": "K", 
+          "p": 17.1891019732537, 
+          "p_units": "Pa", 
+          "rhomolar": 43350.920890356414, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 18.724, 
+          "T_units": "K", 
+          "p": 17.1891019732537, 
+          "p_units": "Pa", 
+          "rhomolar": 112.95640342174914, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 600, 
       "T_max_units": "K", 
       "Ttriple": 18.724, 
@@ -301,21 +327,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 2000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 17189.10197, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 38.34, 
-        "T_units": "K", 
-        "p": 1679600, 
-        "p_units": "Pa", 
-        "rhomolar": 17230, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 43350.35393172985, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 113.0018950964478, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "ParaDeuterium", 

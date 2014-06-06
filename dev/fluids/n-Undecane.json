@@ -116,6 +116,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Aleksandrov-TE-2011", 
+      "STATES": {
+        "reducing": {
+          "T": 638.8, 
+          "T_units": "K", 
+          "p": 1990400, 
+          "p_units": "Pa", 
+          "rhomolar": 1514.916863638556, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 247.541, 
+          "T_units": "K", 
+          "p": 0.00044605591855216597, 
+          "p_units": "Pa", 
+          "rhomolar": 4962.066427665783, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 247.541, 
+          "T_units": "K", 
+          "p": 0.00044605591855216597, 
+          "p_units": "Pa", 
+          "rhomolar": 0.00021672611484766812, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 700, 
       "T_max_units": "K", 
       "Ttriple": 247.541, 
@@ -235,21 +261,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 500000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.4460559186, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 638.8, 
-        "T_units": "K", 
-        "p": 1990400, 
-        "p_units": "Pa", 
-        "rhomolar": 1514.916863638556, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 4962.061358602959, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.0002167513070507905, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "n-Undecane", 

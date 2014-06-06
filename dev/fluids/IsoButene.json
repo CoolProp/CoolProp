@@ -136,6 +136,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-FPE-2005", 
+      "STATES": {
+        "reducing": {
+          "T": 418.09, 
+          "T_units": "K", 
+          "p": 4009800, 
+          "p_units": "Pa", 
+          "rhomolar": 4170, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 132.4, 
+          "T_units": "K", 
+          "p": 0.0006761899732718035, 
+          "p_units": "Pa", 
+          "rhomolar": 13666.751920875638, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 132.4, 
+          "T_units": "K", 
+          "p": 0.0006761899732718035, 
+          "p_units": "Pa", 
+          "rhomolar": 0.0006142550272163055, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 525, 
       "T_max_units": "K", 
       "Ttriple": 132.4, 
@@ -235,21 +261,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 50000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.6761899733, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 418.09, 
-        "T_units": "K", 
-        "p": 4009800, 
-        "p_units": "Pa", 
-        "rhomolar": 4170, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 13666.73347813296, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.0006143704326081906, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "IsoButene", 

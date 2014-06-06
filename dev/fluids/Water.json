@@ -140,6 +140,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Wagner-JPCRD-2002", 
+      "STATES": {
+        "reducing": {
+          "T": 647.096, 
+          "T_units": "K", 
+          "p": 22064000, 
+          "p_units": "Pa", 
+          "rhomolar": 17873.72799560906, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 273.16, 
+          "T_units": "K", 
+          "p": 0.6116547710080396, 
+          "p_units": "Pa", 
+          "rhomolar": 55496.95514003037, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 273.16, 
+          "T_units": "K", 
+          "p": 0.6116547710080396, 
+          "p_units": "Pa", 
+          "rhomolar": 0.26947008086577756, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 1273, 
       "T_max_units": "K", 
       "Ttriple": 273.16, 
@@ -470,21 +496,7 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 1000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 611.654771, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 647.096, 
-        "T_units": "K", 
-        "p": 22064000, 
-        "p_units": "Pa", 
-        "rhomolar": 17873.72799560906, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 55496.95891263704, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.2694886833193984, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Water", 
