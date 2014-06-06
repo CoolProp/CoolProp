@@ -10,6 +10,8 @@
 #include <sstream>
 #include "float.h"
 
+#include <Eigen/Core>
+
 /// A wrapper around std::vector
 /** This wrapper makes the standard vector multi-dimensional.
  *  A useful thing even though we might not need it that
@@ -25,6 +27,111 @@ template<typename T> struct VectorNd<0,T> {
 };
 
 namespace CoolProp{
+
+/// Convert vectors and matrices
+/** Conversion functions for the different kinds of object-like
+ *  parameters. This might be obsolete at a later stage, but now
+ *  it is still needed.
+ */
+/// @param coefficients matrix containing the ordered coefficients
+template<class T, int R, int C> std::vector<std::vector<T> > convert(const Eigen::Matrix<T,R,C> &coefficients, std::vector<std::vector<T> > &result){
+	// Eigen uses columns as major axis, this might be faster than the row iteration.
+	// However, the 2D vector stores things differently, no idea what is faster...
+	//size_t nRows = coefficients.rows(), nCols = coefficients.cols();
+	//std::vector<std::vector<T> > result(R, std::vector<T>(C, 0));
+	std::vector<T> col = std::vector<T>(C, 0);
+	// extend vector if necessary
+	result.resize(R, col);
+	for (size_t i = 0; i < R; ++i) {
+		result[i].resize(C, 0);
+		for (size_t j = 0; j < C; ++j) {
+			result[i][j] = coefficients(i,j);
+		}
+	}
+	return result;
+}
+
+/// @param coefficients matrix containing the ordered coefficients
+template <class T, int R, int C> void convert(const std::vector<std::vector<T> > &coefficients, Eigen::Matrix<T,R,C> &result){
+	size_t nRows = num_rows(coefficients), nCols = num_cols(coefficients);
+	//Eigen::MatrixBase<T> result(nRows,nCols);
+	for (size_t i = 0; i < nCols; ++i) {
+		for (size_t j = 0; j < nRows; ++j) {
+			result(j,i) = coefficients[j][i];
+		}
+	}
+	//return result;
+}
+
+
+
+///// @param coefficients matrix containing the ordered coefficients
+//template <class T> Eigen::Matrix<T, Eigen::Dynamic,Eigen::Dynamic> convert(const std::vector<std::vector<T> > &coefficients){
+//	size_t nRows = num_rows(coefficients), nCols = num_cols(coefficients);
+//	Eigen::MatrixBase<T> result(nRows,nCols);
+//	for (size_t i = 0; i < nCols; ++i) {
+//		for (size_t j = 0; j < nRows; ++j) {
+//			result(j,i) = coefficients[j][i];
+//		}
+//	}
+//	return result;
+//}
+//
+///// @param coefficients matrix containing the ordered coefficients
+//template <class T, int R, int C> void convert(const std::vector<std::vector<T> > &coefficients, Eigen::Matrix<T,R,C> &result){
+//	size_t nRows = num_rows(coefficients), nCols = num_cols(coefficients);
+//	//Eigen::MatrixBase<T> result(nRows,nCols);
+//	for (size_t i = 0; i < nCols; ++i) {
+//		for (size_t j = 0; j < nRows; ++j) {
+//			result(j,i) = coefficients[j][i];
+//		}
+//	}
+//	//return result;
+//}
+
+//
+//template <class T> void convert(const std::vector<std::vector<T> > &coefficients, Eigen::MatrixBase<T> &result){
+//	size_t nRows = num_rows(coefficients), nCols = num_cols(coefficients);
+//	//Eigen::MatrixBase<T> result;
+//	//if ((R!=nRows) || (C!=nCols))
+//	result.resize(nRows,nCols);
+//	for (size_t i = 0; i < nCols; ++i) {
+//		for (size_t j = 0; j < nRows; ++j) {
+//			result(j,i) = coefficients[j][i];
+//		}
+//	}
+//	//return result;
+//}
+
+//template <class Derived>
+//inline void func1(MatrixBase<Derived> &out_mat ){
+//  // Do something then return a matrix
+//  out_mat = ...
+//}
+
+//template <class Derived>
+//Eigen::Matrix<class Derived::Scalar, Derived::RowsAtCompileTime, Derived::ColsAtCompileTime>
+//Multiply(const Eigen::MatrixBase<DerivedA>& p1,
+//    const Eigen::MatrixBase<DerivedB>& p2)
+//{
+//    return (p1 * p2);
+//}
+//
+//
+//template <typename DerivedA, typename DerivedB>
+//Eigen::Matrix<typename DerivedA::Scalar, DerivedA::RowsAtCompileTime, DerivedB::ColsAtCompileTime>
+//Multiply(const Eigen::MatrixBase<DerivedA>& p1,
+//    const Eigen::MatrixBase<DerivedB>& p2)
+//{
+//    return (p1 * p2);
+//}
+
+
+
+
+
+
+
 
 /// Templates for printing numbers, vectors and matrices
 static const char* stdFmt = "%7.3f";
@@ -152,6 +259,7 @@ template<class T> std::string vec_to_string(const std::vector<std::vector<T> > &
 //
 //template<class T> std::string vec_to_string(            std::vector<T>   const& a, const char *fmt);
 //template<class T> std::string vec_to_string(std::vector<std::vector<T> > const& A, const char *fmt);
+
 
 // Forward definitions
 template<class T> std::size_t         num_rows  (std::vector<std::vector<T> > const& in);

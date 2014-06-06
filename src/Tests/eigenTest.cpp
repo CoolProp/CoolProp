@@ -41,4 +41,31 @@ std::cout << CoolProp::vec_to_string(vec0) << std::endl;
 std::cout << CoolProp::vec_to_string(vec1) << std::endl;
 std::cout << CoolProp::vec_to_string(vec2) << std::endl;
 
+Eigen::Matrix<double,2,2> mat;
+mat.setConstant(2,2,0.25);
+std::vector< std::vector<double> > vec;
+
+CoolProp::convert(mat, vec);
+std::cout << CoolProp::vec_to_string(vec) << std::endl;
+
+//Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> mat;
+//mat.resize(6,2);
+
+Eigen::Matrix<double,2,2> mat2;
+CoolProp::convert(vec2, mat2);
+CoolProp::convert(mat2, vec);
+std::cout << CoolProp::vec_to_string(vec) << std::endl;
+
+//std::vector< std::vector<double> > vec(vec2);
+//CoolProp::convert(mat,vec);
+
+//std::cout << CoolProp::vec_to_string() << std::endl;
+
+//Eigen::Matrix2d mat2 = CoolProp::convert(vec2);
+
+//Eigen::MatrixXd mat2(10,10);
+//CoolProp::convert(vec2, mat2);
+
+//std::cout << CoolProp::vec_to_string(CoolProp::convert(mat2)) << std::endl;
+
 }
