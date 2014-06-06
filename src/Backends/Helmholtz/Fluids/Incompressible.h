@@ -36,9 +36,9 @@ protected:
 
 	std::vector<std::vector<double> > changeAxis(const std::vector<double> &input);
 
-	BasePolynomial poly;
-	PolynomialSolver solver;
-	BaseExponential expo;
+	//BasePolynomial poly;
+	//PolynomialSolver solver;
+	//BaseExponential expo;
 
 public:
 	Incompressible();

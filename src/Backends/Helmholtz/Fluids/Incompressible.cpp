@@ -22,39 +22,39 @@ std::vector<std::vector<double> > Incompressible::changeAxis(const std::vector<d
 	return output;
 }
 
-/* All functions need T and p as input. Might not
- * be necessary, but gives a clearer structure.
- */
-/// Density as a function of temperature, pressure and composition.
-double Incompressible::rho(double T_K, double p) {
-	return poly.polyval(cRho, getxInput(x), getTInput(T_K));
-}
-/// Heat capacities as a function of temperature, pressure and composition.
-double Incompressible::c(double T_K, double p) {
-	return poly.polyval(cHeat, getxInput(x), getTInput(T_K));
-}
-/// Enthalpy as a function of temperature, pressure and composition.
-double Incompressible::h(double T_K, double p) {
-	return h_u(T_K, p);
-}
-/// Entropy as a function of temperature, pressure and composition.
-double Incompressible::s(double T_K, double p) {
-	return poly.polyfracintcentral(cHeat, getxInput(x), T_K, Tbase)
-			- poly.polyfracintcentral(cHeat, getxInput(x), Tref, Tbase);
-}
-/// Viscosity as a function of temperature, pressure and composition.
-double Incompressible::visc(double T_K, double p) {
-	return expo.expval(cVisc, getxInput(x), getTInput(T_K), 2) / 1e3;
-}
-/// Thermal conductivity as a function of temperature, pressure and composition.
-double Incompressible::cond(double T_K, double p) {
-	return poly.polyval(cCond, getxInput(x), getTInput(T_K));
-}
-/// Internal energy as a function of temperature, pressure and composition.
-double Incompressible::u(double T_K, double p) {
-	return poly.polyint(cHeat, getxInput(x), getTInput(T_K))
-			- poly.polyint(cHeat, getxInput(x), getTInput(Tref));
-}
+// /* All functions need T and p as input. Might not
+//  * be necessary, but gives a clearer structure.
+//  */
+// /// Density as a function of temperature, pressure and composition.
+// double Incompressible::rho(double T_K, double p) {
+// 	return poly.polyval(cRho, getxInput(x), getTInput(T_K));
+// }
+// /// Heat capacities as a function of temperature, pressure and composition.
+// double Incompressible::c(double T_K, double p) {
+// 	return poly.polyval(cHeat, getxInput(x), getTInput(T_K));
+// }
+// /// Enthalpy as a function of temperature, pressure and composition.
+// double Incompressible::h(double T_K, double p) {
+// 	return h_u(T_K, p);
+// }
+// /// Entropy as a function of temperature, pressure and composition.
+// double Incompressible::s(double T_K, double p) {
+// 	return poly.polyfracintcentral(cHeat, getxInput(x), T_K, Tbase)
+// 			- poly.polyfracintcentral(cHeat, getxInput(x), Tref, Tbase);
+// }
+// /// Viscosity as a function of temperature, pressure and composition.
+// double Incompressible::visc(double T_K, double p) {
+// 	return expo.expval(cVisc, getxInput(x), getTInput(T_K), 2) / 1e3;
+// }
+// /// Thermal conductivity as a function of temperature, pressure and composition.
+// double Incompressible::cond(double T_K, double p) {
+// 	return poly.polyval(cCond, getxInput(x), getTInput(T_K));
+// }
+// /// Internal energy as a function of temperature, pressure and composition.
+// double Incompressible::u(double T_K, double p) {
+// 	return poly.polyint(cHeat, getxInput(x), getTInput(T_K))
+// 			- poly.polyint(cHeat, getxInput(x), getTInput(Tref));
+// }
 
 /// Saturation pressure as a function of temperature and composition.
 double Incompressible::psat(double T_K          ){throw NotImplementedError("Psat is not available");};
