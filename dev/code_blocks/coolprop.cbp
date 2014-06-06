@@ -10,7 +10,7 @@
 				<Option output="bin/Debug/coolprop" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
-				<Option compiler="clang" />
+				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-DENABLE_CATCH" />
@@ -47,6 +47,7 @@
 		<Unit filename="../../include/Helmholtz.h" />
 		<Unit filename="../../include/HumidAirProp.h" />
 		<Unit filename="../../include/Ice.h" />
+		<Unit filename="../../include/IncompressibleFluid.h" />
 		<Unit filename="../../include/MatrixMath.h" />
 		<Unit filename="../../include/PlatformDetermination.h" />
 		<Unit filename="../../include/PolyMath.h" />
@@ -92,6 +93,8 @@
 		<Unit filename="../../src/Backends/Helmholtz/VLERoutines.h" />
 		<Unit filename="../../src/Backends/Incompressible/IncompressibleBackend.cpp" />
 		<Unit filename="../../src/Backends/Incompressible/IncompressibleBackend.h" />
+		<Unit filename="../../src/Backends/Incompressible/IncompressibleLibrary.cpp" />
+		<Unit filename="../../src/Backends/Incompressible/IncompressibleLibrary.h" />
 		<Unit filename="../../src/Backends/REFPROP/REFPROPBackend.cpp" />
 		<Unit filename="../../src/Backends/REFPROP/REFPROPBackend.h" />
 		<Unit filename="../../src/Backends/REFPROP/REFPROPMixtureBackend.cpp" />
