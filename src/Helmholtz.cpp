@@ -468,8 +468,8 @@ long double ResidualHelmholtzGaussian::dDelta3(const long double &tau, const lon
     for (std::size_t i=0; i<N; ++i)
     {
         ResidualHelmholtzGaussianElement &el = elements[i];
-        long double psi=exp(-el.eta*pow(delta-el.epsilon,2)-el.beta*pow(tau-el.gamma,2));
-        long double bracket = pow(el.t/tau-2.0*el.beta*(tau-el.gamma),2)-el.t/pow(tau,2)-2.0*el.beta;
+        long double psi = exp(-el.eta*pow(delta-el.epsilon,2)-el.beta*pow(tau-el.gamma,2));
+        long double bracket = (pow(el.d-2*el.eta*delta*(delta-el.epsilon),3)-3*el.d*el.d+2*el.d-6*el.d*el.eta*delta*delta+6*el.eta*delta*(delta-el.epsilon)*(el.d+2*el.eta*delta*delta));
         s[i] = el.n*pow(tau,el.t)*pow(delta,el.d-3)*psi*bracket;
     }
     return std::accumulate(s.begin(), s.end(), 0.0);
