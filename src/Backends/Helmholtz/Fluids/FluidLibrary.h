@@ -16,8 +16,8 @@ extern int get_debug_level();
 
 /// A container for the fluid parameters for the CoolProp fluids
 /**
-This container holds copies of all of the fluid instances for the fluids that are loaded in CoolProp. 
-New fluids can be added by passing in a rapidjson::Value instance to the add_one function, or 
+This container holds copies of all of the fluid instances for the fluids that are loaded in CoolProp.
+New fluids can be added by passing in a rapidjson::Value instance to the add_one function, or
 a rapidjson array of fluids to the add_many function.
 */
 class JSONFluidLibrary
@@ -31,9 +31,9 @@ protected:
 
     /// Parse the contributions to the residual Helmholtz energy
     void parse_alphar(rapidjson::Value &alphar, EquationOfState &EOS)
-    {	
+    {
         for (rapidjson::Value::ValueIterator itr = alphar.Begin(); itr != alphar.End(); ++itr)
-        {	
+        {
             // A reference for code cleanness
             rapidjson::Value &contribution = *itr;
 
@@ -140,7 +140,7 @@ protected:
     {
         if (!alpha0.IsArray()){throw ValueError();}
         for (rapidjson::Value::ValueIterator itr = alpha0.Begin(); itr != alpha0.End(); ++itr)
-        {	
+        {
             // A reference for code cleanness
             rapidjson::Value &contribution = *itr;
 
@@ -172,7 +172,7 @@ protected:
                 // Retrieve the values
                 std::vector<long double> n = cpjson::get_long_double_array(contribution["n"]);
                 std::vector<long double> t = cpjson::get_long_double_array(contribution["t"]);
-                
+
                 std::vector<long double> c = cpjson::get_long_double_array(contribution["c"]);
                 std::vector<long double> d = cpjson::get_long_double_array(contribution["d"]);
                 if (EOS.alpha0.PlanckEinstein.is_enabled() == true){
@@ -217,7 +217,7 @@ protected:
             }
             else if (!type.compare("IdealGasHelmholtzCP0AlyLee"))
             {
-                
+
                 std::vector<long double> constants = cpjson::get_long_double_array(contribution["c"]);
                 long double Tc = cpjson::get_double(contribution, "Tc");
                 long double T0 = cpjson::get_double(contribution, "T0");
@@ -249,7 +249,7 @@ protected:
                     c.push_back(1);
                     d.push_back(1);
                 }
-                
+
                 if (EOS.alpha0.PlanckEinstein.is_enabled() == true){
                     EOS.alpha0.PlanckEinstein.extend(n, t, c, d);
                 }
@@ -297,38 +297,41 @@ protected:
         EOS.R_u = cpjson::get_double(EOS_json,"gas_constant");
         EOS.molar_mass = cpjson::get_double(EOS_json,"molar_mass");
         EOS.accentric = cpjson::get_double(EOS_json,"accentric");
-        EOS.Ttriple = cpjson::get_double(EOS_json, "Ttriple");
-        EOS.ptriple = cpjson::get_double(EOS_json, "ptriple");
-        EOS.rhoLtriple = cpjson::get_double(EOS_json, "rhoLtriple");
-        EOS.rhoVtriple = cpjson::get_double(EOS_json, "rhoVtriple");
+
         EOS.pseudo_pure = cpjson::get_bool(EOS_json, "pseudo_pure");
         EOS.limits.Tmax = cpjson::get_double(EOS_json, "T_max");
         EOS.limits.pmax = cpjson::get_double(EOS_json, "p_max");
 
-        rapidjson::Value &reducing_state = EOS_json["reducing_state"];
-        
+        rapidjson::Value &reducing_state = EOS_json["STATES"]["reducing"];
+        rapidjson::Value &satminL_state = EOS_json["STATES"]["sat_min_liquid"];
+        rapidjson::Value &satminV_state = EOS_json["STATES"]["sat_min_vapor"];
+
         // Reducing state
         EOS.reduce.T = cpjson::get_double(reducing_state,"T");
         EOS.reduce.rhomolar = cpjson::get_double(reducing_state,"rhomolar");
         EOS.reduce.p = cpjson::get_double(reducing_state,"p");
 
+        /// todo: define limits of EOS better
+        EOS.limits.Tmin = cpjson::get_double(satminL_state, "T");
+        EOS.Ttriple = EOS.limits.Tmin;
+
         // BibTex keys
         EOS.BibTeX_EOS = cpjson::get_string(EOS_json,"BibTeX_EOS");
         EOS.BibTeX_CP0 = cpjson::get_string(EOS_json,"BibTeX_CP0");
-        
+
         parse_alphar(EOS_json["alphar"], EOS);
         parse_alpha0(EOS_json["alpha0"], EOS);
-        
+
         // Validate the equation of state that was just created
         EOS.validate();
-        
+
     }
 
     /// Parse the list of possible equations of state
     void parse_EOS_listing(rapidjson::Value &EOS_array, CoolPropFluid & fluid)
     {
         for (rapidjson::Value::ValueIterator itr = EOS_array.Begin(); itr != EOS_array.End(); ++itr)
-        {	
+        {
             parse_EOS(*itr,fluid);
         }
 
@@ -436,7 +439,7 @@ protected:
         if (!type.compare("modified_Batschinski_Hildebrand")){
             // Get a reference to the entry in the fluid instance to simplify the code that follows
             CoolProp::ViscosityModifiedBatschinskiHildebrandData &BH = fluid.transport.viscosity_higher_order.modified_Batschinski_Hildebrand;
-            
+
             // Set the flag for the type of this model
             fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND;
 
@@ -467,7 +470,7 @@ protected:
         else if (!type.compare("friction_theory")){
             // Get a reference to the entry in the fluid instance to simplify the code that follows
             CoolProp::ViscosityFrictionTheoryData &F = fluid.transport.viscosity_higher_order.friction_theory;
-            
+
             // Set the flag for the type of this model
             fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_FRICTION_THEORY;
 
@@ -476,7 +479,7 @@ protected:
             F.Aa = cpjson::get_long_double_array(higher["Aa"]);
             F.Aaa = cpjson::get_long_double_array(higher["Aaa"]);
             F.Ar = cpjson::get_long_double_array(higher["Ar"]);
-            
+
 
             F.Na = cpjson::get_integer(higher,"Na");
             F.Naa = cpjson::get_integer(higher,"Naa");
@@ -487,7 +490,7 @@ protected:
             assert(F.Aa.size() == 3);
             assert(F.Aaa.size() == 3);
             assert(F.Ar.size() == 3);
-            
+
             F.T_reduce = cpjson::get_double(higher,"T_reduce");
 
             if (higher.HasMember("Arr") && !higher.HasMember("Adrdr")){
@@ -581,7 +584,7 @@ protected:
             }
         }
 
-        
+
 
         // Load dilute viscosity term
         if (viscosity.HasMember("dilute")){
@@ -596,7 +599,7 @@ protected:
             parse_higher_order_viscosity(viscosity["higher_order"], fluid);
         }
     };
-    
+
     /// Parse the transport properties
     void parse_dilute_conductivity(rapidjson::Value &dilute, CoolPropFluid & fluid)
     {
@@ -639,7 +642,7 @@ protected:
 
             // Load up the values
             data.A = cpjson::get_long_double_array(dilute["A"]);
-            data.t = cpjson::get_long_double_array(dilute["t"]);           
+            data.t = cpjson::get_long_double_array(dilute["t"]);
         }
         else{
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
@@ -732,7 +735,7 @@ protected:
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
         }
     };
-    
+
     /// Parse the thermal conductivity data
     void parse_thermal_conductivity(rapidjson::Value &conductivity, CoolPropFluid & fluid)
     {
@@ -784,7 +787,7 @@ protected:
             parse_viscosity(transport["viscosity"],fluid);
         }
 
-        // Parse thermal conductivity 
+        // Parse thermal conductivity
         if (transport.HasMember("conductivity")){
             parse_thermal_conductivity(transport["conductivity"],fluid);
         }
@@ -794,7 +797,7 @@ protected:
     {
         // Use the method of Chung to approximate the values for epsilon_over_k and sigma_eta
         // Chung, T.-H.; Ajlan, M.; Lee, L. L.; Starling, K. E. Generalized Multiparameter Correlation for Nonpolar and Polar Fluid Transport Properties. Ind. Eng. Chem. Res. 1988, 27, 671-679.
-        // rhoc needs to be in mol/L to yield a sigma in nm, 
+        // rhoc needs to be in mol/L to yield a sigma in nm,
         long double rho_crit_molar = fluid.pEOS->reduce.rhomolar/1000.0;// [mol/m3 to mol/L]
         long double Tc = fluid.pEOS->reduce.T;
         fluid.transport.sigma_eta = 0.809/pow(rho_crit_molar, static_cast<long double>(1.0/3.0))/1e9; // 1e9 is to convert from nm to m
@@ -833,7 +836,7 @@ protected:
         assert(fluid.name.length() > 0);
     }
 public:
-    
+
     // Default constructor;
     JSONFluidLibrary(){
         _is_empty = true;
@@ -844,14 +847,14 @@ public:
     void add_many(rapidjson::Value &listing)
     {
         for (rapidjson::Value::ValueIterator itr = listing.Begin(); itr != listing.End(); ++itr)
-        {	
+        {
             add_one(*itr);
         }
     };
     void add_one(rapidjson::Value &fluid_json)
     {
         _is_empty = false;
-        
+
         // Get the next index for this fluid
         std::size_t index = fluid_map.size();
 
@@ -863,73 +866,84 @@ public:
 
         // Fluid name
         fluid.name = fluid_json["NAME"].GetString(); name_vector.push_back(fluid.name);
-        // CAS number
-        fluid.CAS = fluid_json["CAS"].GetString();
-        // REFPROP alias
-        fluid.REFPROPname = fluid_json["REFPROP_NAME"].GetString();
-        // Critical state
-        parse_crit_state(fluid_json["CRITICAL"], fluid);
 
-        if (get_debug_level() > 5){
-            std::cout << format("Loading fluid %s with CAS %s; %d fluids loaded\n", fluid.name.c_str(), fluid.CAS.c_str(), index);
-        }
+        try{
+            // CAS number
+            if (!fluid_json.HasMember("CAS")){ throw ValueError(format("fluid [%s] does not have \"CAS\" member",fluid.name.c_str())); }
+            fluid.CAS = fluid_json["CAS"].GetString();
+            // REFPROP alias
+            if (!fluid_json.HasMember("REFPROP_NAME")){ throw ValueError(format("fluid [%s] does not have \"REFPROP_NAME\" member",fluid.name.c_str())); }
+            fluid.REFPROPname = fluid_json["REFPROP_NAME"].GetString();
+            // Critical state
+            if (!fluid_json.HasMember("STATES")){ throw ValueError(format("fluid [%s] does not have \"STATES\" member",fluid.name.c_str())); }
+            if (!fluid_json["STATES"].HasMember("critical")){ throw ValueError(format("fluid[\"STATES\"] [%s] does not have \"critical\" member",fluid.name.c_str())); }
+            parse_crit_state(fluid_json["STATES"]["critical"], fluid);
 
-        // Aliases
-        fluid.aliases = cpjson::get_string_array(fluid_json["ALIASES"]);
-        
-        // EOS
-        parse_EOS_listing(fluid_json["EOS"], fluid);
-
-        // Validate the fluid
-        validate(fluid);
-
-        // Ancillaries for saturation 
-        if (!fluid_json.HasMember("ANCILLARIES")){throw ValueError(format("Ancillary curves are missing for fluid [%s]",fluid.name.c_str()));};
-        parse_ancillaries(fluid_json["ANCILLARIES"],fluid);
-
-        // Surface tension
-        if (!(fluid_json["ANCILLARIES"].HasMember("surface_tension"))){
-            if (get_debug_level() > 0){
-                std::cout << format("Surface tension curves are missing for fluid [%s]\n", fluid.name.c_str()) ;
+            if (get_debug_level() > 5){
+                std::cout << format("Loading fluid %s with CAS %s; %d fluids loaded\n", fluid.name.c_str(), fluid.CAS.c_str(), index);
             }
-        }
-        else{
-            parse_surface_tension(fluid_json["ANCILLARIES"]["surface_tension"], fluid);
-        }
 
-        // Parse the environmental parameters
-        if (!(fluid_json.HasMember("ENVIRONMENTAL"))){
-            if (get_debug_level() > 0){
-                std::cout << format("Environmental data are missing for fluid [%s]\n", fluid.name.c_str()) ;
+            // Aliases
+            fluid.aliases = cpjson::get_string_array(fluid_json["ALIASES"]);
+
+            // EOS
+            parse_EOS_listing(fluid_json["EOS"], fluid);
+
+            // Validate the fluid
+            validate(fluid);
+
+            // Ancillaries for saturation
+            if (!fluid_json.HasMember("ANCILLARIES")){throw ValueError(format("Ancillary curves are missing for fluid [%s]",fluid.name.c_str()));};
+            parse_ancillaries(fluid_json["ANCILLARIES"],fluid);
+
+            // Surface tension
+            if (!(fluid_json["ANCILLARIES"].HasMember("surface_tension"))){
+                if (get_debug_level() > 0){
+                    std::cout << format("Surface tension curves are missing for fluid [%s]\n", fluid.name.c_str()) ;
+                }
             }
-        }
-        else{
-            parse_environmental(fluid_json["ENVIRONMENTAL"], fluid);
-        }
+            else{
+                parse_surface_tension(fluid_json["ANCILLARIES"]["surface_tension"], fluid);
+            }
 
-        // Parse the environmental parameters
-        if (!(fluid_json.HasMember("TRANSPORT"))){
-            default_transport(fluid);
-        }
-        else{
-            parse_transport(fluid_json["TRANSPORT"], fluid);
-        }
-        
-        // If the fluid is ok...
+            // Parse the environmental parameters
+            if (!(fluid_json.HasMember("ENVIRONMENTAL"))){
+                if (get_debug_level() > 0){
+                    std::cout << format("Environmental data are missing for fluid [%s]\n", fluid.name.c_str()) ;
+                }
+            }
+            else{
+                parse_environmental(fluid_json["ENVIRONMENTAL"], fluid);
+            }
 
-        // Add CAS->index mapping
-        string_to_index_map[fluid.CAS] = index;
+            // Parse the environmental parameters
+            if (!(fluid_json.HasMember("TRANSPORT"))){
+                default_transport(fluid);
+            }
+            else{
+                parse_transport(fluid_json["TRANSPORT"], fluid);
+            }
 
-        // Add name->index mapping
-        string_to_index_map[fluid.name] = index;
-        
-        // Add the aliases
-        for (std::size_t i = 0; i < fluid.aliases.size(); ++i)
-        {
-            string_to_index_map[fluid.aliases[i]] = index;
+            // If the fluid is ok...
+
+            // Add CAS->index mapping
+            string_to_index_map[fluid.CAS] = index;
+
+            // Add name->index mapping
+            string_to_index_map[fluid.name] = index;
+
+            // Add the aliases
+            for (std::size_t i = 0; i < fluid.aliases.size(); ++i)
+            {
+                string_to_index_map[fluid.aliases[i]] = index;
+            }
+
+            if (get_debug_level() > 5){ std::cout << format("Loaded.\n"); }
+
         }
-
-        if (get_debug_level() > 5){ std::cout << format("Loaded.\n"); }
+        catch (const std::exception &e){
+            throw ValueError(format("Unable to load fluid [%s] due to error: %s",fluid.name.c_str(),e.what()));
+        }
     };
     /// Get a CoolPropFluid instance stored in this library
     /**

@@ -11,13 +11,13 @@ long double TransportRoutines::viscosity_dilute_kinetic_theory(HelmholtzEOSMixtu
         long double Tstar = HEOS.T()/HEOS.components[0]->transport.epsilon_over_k;
         long double sigma_nm = HEOS.components[0]->transport.sigma_eta*1e9; // 1e9 to convert from m to nm
         long double molar_mass_kgkmol = HEOS.molar_mass()*1000; // 1000 to convert from kg/mol to kg/kmol
-    
-        // The nondimensional empirical collision integral from Neufeld 
-        // Neufeld, P. D.; Janzen, A. R.; Aziz, R. A. Empirical Equations to Calculate 16 of the Transport Collision Integrals (l,s)* 
+
+        // The nondimensional empirical collision integral from Neufeld
+        // Neufeld, P. D.; Janzen, A. R.; Aziz, R. A. Empirical Equations to Calculate 16 of the Transport Collision Integrals (l,s)*
         // for the Lennard-Jones (12-6) Potential. J. Chem. Phys. 1972, 57, 1100-1102
         long double OMEGA22 = 1.16145*pow(Tstar, static_cast<long double>(-0.14874))+0.52487*exp(-0.77320*Tstar)+2.16178*exp(-2.43787*Tstar);
 
-        // The dilute gas component - 
+        // The dilute gas component -
         return 26.692e-9*sqrt(molar_mass_kgkmol*HEOS.T())/(pow(sigma_nm, 2)*OMEGA22); // Pa-s
     }
     else{
@@ -40,8 +40,8 @@ long double TransportRoutines::viscosity_dilute_collision_integral(HelmholtzEOSM
         const long double sigma_nm = HEOS.components[0]->transport.sigma_eta*1e9; // 1e9 to convert from m to nm
         const long double molar_mass_kgkmol = molar_mass*1000; // 1000 to convert from kg/mol to kg/kmol
 
-        /// Both the collision integral \f$\mathfrak{S}^*\f$ and effective cross section \f$\Omega^{(2,2)}\f$ have the same form, 
-        /// in general we don't care which is used.  The are related through \f$\Omega^{(2,2)} = (5/4)\mathfrak{S}^*\f$ 
+        /// Both the collision integral \f$\mathfrak{S}^*\f$ and effective cross section \f$\Omega^{(2,2)}\f$ have the same form,
+        /// in general we don't care which is used.  The are related through \f$\Omega^{(2,2)} = (5/4)\mathfrak{S}^*\f$
         /// see Vesovic(JPCRD, 1990) for CO\f$_2\f$ for further information
         long double summer = 0, lnTstar = log(Tstar);
         for (std::size_t i = 0; i < a.size(); ++i)
@@ -49,7 +49,7 @@ long double TransportRoutines::viscosity_dilute_collision_integral(HelmholtzEOSM
             summer += a[i]*pow(lnTstar,t[i]);
         }
         S = exp(summer);
-        
+
         // The dilute gas component
         return C*sqrt(molar_mass_kgkmol*HEOS.T())/(pow(sigma_nm, 2)*S); // Pa-s
     }
@@ -148,7 +148,7 @@ long double TransportRoutines::viscosity_initial_density_dependence_Rainwater_Fr
         long double B_eta, B_eta_star;
         long double Tstar = HEOS.T()/HEOS.components[0]->transport.epsilon_over_k; // [no units]
         long double sigma = HEOS.components[0]->transport.sigma_eta; // [m]
-        
+
         long double summer = 0;
         for (unsigned int i = 0; i < b.size(); ++i){
             summer += b[i]*pow(Tstar, t[i]);
@@ -225,7 +225,7 @@ long double TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBack
 	double x_mu=0.068,qc=1/1.9,qd=1/1.1,nu=0.630,gamma=1.239,zeta_0=0.13,LAMBDA_0=0.06,Tbar_R=1.5, pstar, Tstar, rhostar;
 	double delta,tau,mubar_0,mubar_1,mubar_2,drhodp,drhodp_R,DeltaChibar,zeta,w,L,Y,psi_D,Tbar,rhobar;
 	double drhobar_dpbar,drhobar_dpbar_R,R_Water;
-	
+
     pstar = 22.064e6; // [Pa]
     Tstar = 647.096; // [K]
     rhostar = 322; // [kg/m^3]
@@ -246,7 +246,7 @@ long double TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBack
 	tau=1/Tbar_R;
 	drhodp_R=1/(R_Water*Tbar_R*Tstar*(1+2*rhobar*HEOS.calc_alphar_deriv_nocache(0,1,HEOS.mole_fractions,tau,delta)+delta*delta*HEOS.calc_alphar_deriv_nocache(0,2,HEOS.mole_fractions,tau, delta)));
 	drhobar_dpbar_R = pstar/rhostar*drhodp_R;
-	
+
 	DeltaChibar=rhobar*(drhobar_dpbar-drhobar_dpbar_R*Tbar_R/Tbar);
 	if (DeltaChibar<0)
 		DeltaChibar=0;
@@ -330,7 +330,7 @@ long double TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzE
 	    double deltapr = pr - pid;
 
 	    double eta_f = ka*pa + kr*deltapr + ki*pid + kaa*pa*pa + kdrdr*deltapr*deltapr + krr*pr*pr + kii*pid*pid + krrr*pr*pr*pr + kaaa*pa*pa*pa;
-        
+
         return eta_f; //[Pa-s]
     }
     else{
@@ -345,10 +345,10 @@ long double TransportRoutines::viscosity_helium_hardcoded(HelmholtzEOSMixtureBac
     double eta_0,eta_0_slash, eta_E_slash, B,C,D,ln_eta,x;
 	//
 	// Arp, V.D., McCarty, R.D., and Friend, D.G.,
-	// "Thermophysical Properties of Helium-4 from 0.8 to 1500 K with Pressures to 2000 MPa", 
+	// "Thermophysical Properties of Helium-4 from 0.8 to 1500 K with Pressures to 2000 MPa",
 	// NIST Technical Note 1334 (revised), 1998.
-	// 
-	// Using Arp NIST report 
+	//
+	// Using Arp NIST report
 	// Report is not clear on viscosity, referring to REFPROP source code for clarity
 
 	// Correlation wants density in g/cm^3; kg/m^3 --> g/cm^3, divide by 1000
@@ -391,9 +391,6 @@ long double TransportRoutines::viscosity_R23_hardcoded(HelmholtzEOSMixtureBacken
 		   rhocbar = 7.5114,
            Tc = 299.2793,
 		   DELTAeta_max = 3.967,
-		   k =	1.380658e-23,
-		   N_A = 6.022137e23, // 1/mol
-		   pi = 3.141592654, //
 		   Ru = 8.31451,
            molar_mass = 70.014;
 
@@ -418,7 +415,7 @@ long double TransportRoutines::viscosity_R23_hardcoded(HelmholtzEOSMixtureBacken
 long double TransportRoutines::viscosity_dilute_ethane(HelmholtzEOSMixtureBackend &HEOS)
 {
     double C[] = {0, -3.0328138281, 16.918880086, -37.189364917, 41.288861858, -24.615921140, 8.9488430959, -1.8739245042, 0.20966101390, -9.6570437074e-3};
-	double OMEGA_2_2 = 0, e_k = 245, sigma = 0.43682, Tstar;
+	double OMEGA_2_2 = 0, e_k = 245, Tstar;
 
 	Tstar = HEOS.T()/e_k;
 	for (int i = 1; i<= 9; i++)
@@ -572,7 +569,7 @@ long double TransportRoutines::conductivity_critical_hardcoded_R123(HelmholtzEOS
 long double TransportRoutines::conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(HelmholtzEOSMixtureBackend &HEOS){
     long double nc = 0.775547504e-3*4.81384, Tr = HEOS.T()/304.1282, alpha, rhor = HEOS.keyed_output(iDmass)/467.6;
     static long double a[] = {0.0, 3.0, 6.70697, 0.94604, 0.30, 0.30, 0.39751, 0.33791, 0.77963, 0.79857, 0.90, 0.02, 0.20};
-    
+
     // Equation 6 from Scalabrin
     alpha = 1-a[10]*acosh(1+a[11]*pow(pow(1-Tr,2),a[12]));
 
@@ -598,8 +595,8 @@ long double TransportRoutines::conductivity_dilute_hardcoded_CO2(HelmholtzEOSMix
 	//Vesovic Eq. 12 [no units]
 	double r = sqrt(2.0/5.0*cint_k);
 
-    // According to REFPROP, 1+r^2 = cp-2.5R.  This is unclear to me but seems to suggest that cint/k is the difference 
-    // between the ideal gas specific heat and a monatomic specific heat of 5/2*R. Using the form of cint/k from Vesovic 
+    // According to REFPROP, 1+r^2 = cp-2.5R.  This is unclear to me but seems to suggest that cint/k is the difference
+    // between the ideal gas specific heat and a monatomic specific heat of 5/2*R. Using the form of cint/k from Vesovic
     // does not yield exactly the correct values
 
 	Tstar = HEOS.T()/e_k;
@@ -670,15 +667,14 @@ long double TransportRoutines::conductivity_hardcoded_water(HelmholtzEOSMixtureB
 	// Finite density contribution
 	lambdabar_1=exp(rhobar*sum);
 
-	double nu=0.630,GAMMA =177.8514,gamma=1.239,xi_0=0.13,Lambda_0=0.06,Tr_bar=1.5,tau_ref = Tr_bar*Tstar/HEOS.T(), 
+	double nu=0.630,GAMMA =177.8514,gamma=1.239,xi_0=0.13,Lambda_0=0.06,Tr_bar=1.5,
         qd_bar=1/0.4,pi=3.141592654, delta = HEOS.delta(), R=461.51805;//J/kg/K
 	tau=1/Tbar;
-	
+
 	double drhodp = 1/(R*HEOS.T()*(1+2*rhobar*HEOS.dalphar_dDelta()+rhobar*rhobar*HEOS.d2alphar_dDelta2()));
 	double drhobar_dpbar = pstar/rhostar*drhodp;
 	double drhodp_Trbar = 1/(R*Tr_bar*Tstar*(1+2*rhobar*HEOS.calc_alphar_deriv_nocache(0,1,HEOS.mole_fractions,1/Tr_bar,delta)+delta*delta*HEOS.calc_alphar_deriv_nocache(0,2,HEOS.mole_fractions,1/Tr_bar,delta)));
 	double drhobar_dpbar_Trbar = pstar/rhostar*drhodp_Trbar;
-	double cpmol = HEOS.cpmolar(); // [J/mol/K]
     double cp = HEOS.cpmass(); // [J/kg/K]
 	double cv = HEOS.cvmass(); // [J/kg/K]
 	double cpbar = cp/R; //[-]
@@ -731,17 +727,17 @@ long double TransportRoutines::conductivity_hardcoded_R23(HelmholtzEOSMixtureBac
 
 long double TransportRoutines::conductivity_critical_hardcoded_ammonia(HelmholtzEOSMixtureBackend &HEOS){
 
-    /* 
-	From "Thermal Conductivity of Ammonia in a Large 
+    /*
+	From "Thermal Conductivity of Ammonia in a Large
 	Temperature and Pressure Range Including the Critical Region"
-	by R. Tufeu, D.Y. Ivanov, Y. Garrabos, B. Le Neindre, 
+	by R. Tufeu, D.Y. Ivanov, Y. Garrabos, B. Le Neindre,
 	Bereicht der Bunsengesellschaft Phys. Chem. 88 (1984) 422-427
 	*/
 
     double T = HEOS.T(), Tc = 405.4, rhoc = 235, rho;
 	double LAMBDA=1.2, nu=0.63, gamma =1.24, DELTA=0.50,t,zeta_0_plus=1.34e-10,a_zeta=1,GAMMA_0_plus=0.423e-8;
 	double pi=3.141592654,a_chi,k_B=1.3806504e-23,X_T,DELTA_lambda,dPdT,eta_B,DELTA_lambda_id,DELTA_lambda_i;
-	
+
     rho = HEOS.keyed_output(CoolProp::iDmass);
 	t = fabs((T-Tc)/Tc);
 	a_chi = a_zeta/0.7;
@@ -785,14 +781,14 @@ long double TransportRoutines::conductivity_hardcoded_helium(HelmholtzEOSMixture
 	lambda_e = (c[0]+c[1]*T+c[2]*pow(T,1/3.0)+c[3]*pow(T,2.0/3.0))*rho
 			   +(c[4]+c[5]*pow(T,1.0/3.0)+c[6]*pow(T,2.0/3.0))*rho*rho*rho
 			   +(c[7]+c[8]*pow(T,1.0/3.0)+c[9]*pow(T,2.0/3.0)+c[10]/T)*rho*rho*log(rho/rhoc);
-	
+
     // Critical component
     lambda_c = 0.0;
-    
+
     if (3.5 < T && T < 12)
     {
-        double x0 = 0.392, E1 = 2.8461, E2 = 0.27156, beta = 0.3554, gamma = 1.1743, delta = 4.304, rhoc_crit = 69.158, 
-            Tc = 5.18992, pc = 2.2746e5, R = 4.633e-10, m = 6.6455255e-27, k = 1.38066e-23, pi = M_PI;
+        double x0 = 0.392, E1 = 2.8461, E2 = 0.27156, beta = 0.3554, gamma = 1.1743, delta = 4.304, rhoc_crit = 69.158,
+            Tc = 5.18992, pc = 2.2746e5;
 
         double DeltaT = fabs(1-T/Tc), DeltaRho = fabs(1-rho/rhoc_crit);
         double eta = HEOS.viscosity(); // [Pa-s]
@@ -810,7 +806,7 @@ long double TransportRoutines::conductivity_hardcoded_helium(HelmholtzEOSMixture
             double x = pow(DeltaT/DeltaRho,1/beta);
             double h = E1*(1 + x/x0)*pow(1 + E2*pow(1 + x/x0, 2/beta), (gamma-1)/(2*beta));
 
-            /** 
+            /**
             dh/dx derived using sympy:
 
                 E1,x,x0,E2,beta,gamma = symbols('E1,x,x0,E2,beta,gamma')
@@ -824,7 +820,7 @@ long double TransportRoutines::conductivity_hardcoded_helium(HelmholtzEOSMixture
             K_Tbar = W*K_T + (1-W)*K_Tprime;
         }
 
-        // 3.4685233d-17 and 3.726229668d0 are "magical" coefficients that are present in the REFPROP source to yield the right values. Not clear why these values are needed.  
+        // 3.4685233d-17 and 3.726229668d0 are "magical" coefficients that are present in the REFPROP source to yield the right values. Not clear why these values are needed.
         // Also, the form of the critical term in REFPROP does not agree with Hands paper. EL and MH from NIST are not sure where these coefficients come from.
 	    lambda_c = 3.4685233e-17*3.726229668*sqrt(K_Tbar)*pow(T,2)/rho/eta*pow(dpdT,2)*exp(-18.66*pow(DeltaT,2)-4.25*pow(DeltaRho,4));
     }
@@ -843,7 +839,7 @@ long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
 
     // Get a reference to the ECS data
     CoolProp::ViscosityECSVariables &ECS = HEOS.components[0]->transport.viscosity_ecs;
-    
+
     // The correction polynomial psi_eta
     double psi = 0;
     for (std::size_t i=0; i < ECS.psi_a.size(); i++){
@@ -897,7 +893,7 @@ long double TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS
 
     // Get a reference to the ECS data
     CoolProp::ConductivityECSVariables &ECS = HEOS.components[0]->transport.conductivity_ecs;
-    
+
     // The correction polynomial psi_eta in rho/rho_red
     double psi = 0;
     for (std::size_t i=0; i < ECS.psi_a.size(); ++i){

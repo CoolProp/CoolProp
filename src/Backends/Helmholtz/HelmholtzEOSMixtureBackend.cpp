@@ -1174,8 +1174,8 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
     // Supercritical temperature
     if (_T > _crit.T)
     {
-        long double rhomelt = components[0]->pEOS->rhoLtriple;
-        long double rhoc = components[0]->pEOS->reduce.rhomolar;
+        long double rhomelt = components[0]->triple_liquid.rhomolar;
+        long double rhoc = components[0]->crit.rhomolar;
         long double rhomin = 1e-10;
 
         switch(other)
@@ -1228,7 +1228,7 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
     else if (_phase == iphase_liquid)
     {
         long double ymelt, yL, y;
-        long double rhomelt = components[0]->pEOS->rhoLtriple;
+        long double rhomelt = components[0]->triple_liquid.rhomolar;
         long double rhoL = static_cast<double>(_rhoLanc);
 
         switch(other)
