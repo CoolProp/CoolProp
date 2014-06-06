@@ -37,8 +37,17 @@ TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h","
 		CoolProp::convert(cHeat, matrix);
 	}
 }
+//
+//int main() {
+//
+//        std::vector<std::string> tags;
+//        tags.push_back("[MatrixMath]");
+//        run_user_defined_tests(tags);
+//        //run_tests();
+//}
 
-#endif /* CATCH_ENABLED */
+
+#endif /* ENABLE_CATCH */
 
 
 //#include <unsupported/Eigen/Polynomials>

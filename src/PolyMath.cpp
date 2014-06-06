@@ -19,13 +19,13 @@ namespace CoolProp{
 
 /// Constructors for the base class for all Polynomials
 //Polynomial1D::Polynomial1D();
-bool Polynomial2D::setCoefficients(const Eigen::MatrixXd &coefficients){
-	this.coefficients = coefficients;
-	return this.coefficients == coefficients;
-}
-bool Polynomial2D::setCoefficients(const std::vector< std::vector<double> > &coefficients){
-	return this->setCoefficients(convert(coefficients));
-}
+//bool Polynomial2D::setCoefficients(const Eigen::MatrixXd &coefficients){
+//	this.coefficients = coefficients;
+//	return this.coefficients == coefficients;
+//}
+//bool Polynomial2D::setCoefficients(const std::vector< std::vector<double> > &coefficients){
+//	return this->setCoefficients(convert(coefficients));
+//}
 }
 
 
