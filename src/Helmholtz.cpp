@@ -1949,7 +1949,7 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
         term = get(terms[i]);
         for (std::size_t j = 0; j < sizeof(derivs)/sizeof(derivs[0]); ++j)
         {
-            call(derivs[j], term, 1.3, 0.7, 1e-8);
+            call(derivs[j], term, 1.3, 0.7, 1e-7);
             CAPTURE(derivs[j]);
             CAPTURE(numerical);
             CAPTURE(analytic);
