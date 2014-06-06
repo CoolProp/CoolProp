@@ -296,7 +296,10 @@ template<class T> std::size_t         max_cols  (std::vector<std::vector<T> > co
     }
 	return cols;
 };
+
 /// Some shortcuts and regularly needed operations
+template<class T> std::size_t         num_rows  (            std::vector<T>   const& in){ return in.size(); }
+template<class T> std::size_t         num_cols  (            std::vector<T>   const& in){ return 1; }
 template<class T> std::size_t         num_rows  (std::vector<std::vector<T> > const& in){ return in.size(); }
 template<class T> std::size_t         num_cols  (std::vector<std::vector<T> > const& in){
 	if (num_rows(in)>0) {

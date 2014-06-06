@@ -32,7 +32,7 @@ std::cout << "Evaluation of the polynomial at " << input << std::endl;
 std::cout << eval << std::endl;
 
 double vec0 = 0.1;
-std::vector<double> vec1(2,0.2);
+std::vector<double> vec1(2,0.44);
 std::vector< std::vector<double> > vec2;
 vec2.push_back(std::vector<double>(2,0.2));
 vec2.push_back(std::vector<double>(2,0.3));
@@ -54,6 +54,12 @@ std::cout << CoolProp::vec_to_string(vec) << std::endl;
 Eigen::Matrix<double,2,2> mat2;
 CoolProp::convert(vec2, mat2);
 CoolProp::convert(mat2, vec);
+std::cout << CoolProp::vec_to_string(vec) << std::endl;
+
+Eigen::Matrix<double,2,1> mat1;
+CoolProp::convert(vec1, mat1);
+std::vector<double> vec3;
+CoolProp::convert(mat1, vec);
 std::cout << CoolProp::vec_to_string(vec) << std::endl;
 
 //std::vector< std::vector<double> > vec(vec2);
