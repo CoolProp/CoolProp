@@ -120,9 +120,17 @@ public:
 	/// Basic checks for coefficient vectors.
 	/** Starts with only the first coefficient dimension
 	 *  and checks the matrix size against the parameters rows and columns. */
+	/// @param rows unsigned integer value that represents the desired degree of the polynomial
+	bool checkCoefficients(const unsigned int rows);
 	/// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
 	/// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
 	bool checkCoefficients(const unsigned int rows, const unsigned int columns);
+	/// @param coefficients vector containing the ordered coefficients
+	/// @param rows unsigned integer value that represents the desired degree of the polynomial
+	bool checkCoefficients(const Eigen::VectorXd &coefficients, const unsigned int rows);
+	/// @param coefficients vector containing the ordered coefficients
+	/// @param rows unsigned integer value that represents the desired degree of the polynomial
+	bool checkCoefficients(const std::vector<double> &coefficients, const unsigned int rows);
 	/// @param coefficients matrix containing the ordered coefficients
 	/// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
 	/// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
@@ -147,7 +155,7 @@ protected:
 	Eigen::MatrixXd integrateCoeffs(const Eigen::MatrixXd &coefficients, unsigned int axis = 1);
 	/// @param coefficients matrix containing the ordered coefficients
 	/// @param axis unsigned integer value that represents the desired direction of integration
-	std::vector<std::vector<double> > integrateCoeffs(const std::vector<std::vector<double> > &coefficients, unsigned int axis = 1);
+	//std::vector<std::vector<double> > integrateCoeffs(const std::vector<std::vector<double> > &coefficients, unsigned int axis = 1);
 
 	/// Derivative coefficients calculation
 	/** Deriving coefficients for polynomials is done by multiplying the
@@ -161,7 +169,7 @@ protected:
 	Eigen::MatrixXd deriveCoeffs(const Eigen::MatrixXd &coefficients, unsigned int axis = 1);
 	/// @param coefficients matrix containing the ordered coefficients
 	/// @param axis unsigned integer value that represents the desired direction of derivation
-	std::vector<std::vector<double> > deriveCoeffs(const std::vector<std::vector<double> > &coefficients, unsigned int axis = 1);
+	//std::vector<std::vector<double> > deriveCoeffs(const std::vector<std::vector<double> > &coefficients, unsigned int axis = 1);
 
 public:
 	/// The core functions to evaluate the polynomial

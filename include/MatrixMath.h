@@ -276,10 +276,19 @@ template<class T> std::string vec_to_string(const std::vector<std::vector<T> > &
 //template<class T> std::string vec_to_string(std::vector<std::vector<T> > const& A, const char *fmt);
 
 
-// Forward definitions
-template<class T> std::size_t         num_rows  (std::vector<std::vector<T> > const& in);
-template<class T> std::size_t         max_cols  (std::vector<std::vector<T> > const& in);
+/// Some shortcuts and regularly needed operations
+template<class T> std::size_t         num_rows  (            std::vector<T>   const& in){ return in.size(); }
+template<class T> std::size_t         num_rows  (std::vector<std::vector<T> > const& in){ return in.size(); }
 
+template<class T> std::size_t         max_cols  (std::vector<std::vector<T> > const& in){
+	std::size_t cols = 0;
+	std::size_t col  = 0;
+	for (std::size_t i = 0; i < in.size(); i++) {
+		col = in[i].size();
+		if (cols<col) {cols = col;}
+    }
+	return cols;
+};
 template<class T> bool                is_squared(std::vector<std::vector<T> > const& in){
 	std::size_t cols = max_cols(in);
 	if (cols!=num_rows(in)) { return false;}
@@ -290,20 +299,8 @@ template<class T> bool                is_squared(std::vector<std::vector<T> > co
 	}
 	return true;
 };
-template<class T> std::size_t         max_cols  (std::vector<std::vector<T> > const& in){
-	std::size_t cols = 0;
-	std::size_t col  = 0;
-	for (std::size_t i = 0; i < in.size(); i++) {
-		col = in[i].size();
-		if (cols<col) {cols = col;}
-    }
-	return cols;
-};
 
-/// Some shortcuts and regularly needed operations
-template<class T> std::size_t         num_rows  (            std::vector<T>   const& in){ return in.size(); }
 template<class T> std::size_t         num_cols  (            std::vector<T>   const& in){ return 1; }
-template<class T> std::size_t         num_rows  (std::vector<std::vector<T> > const& in){ return in.size(); }
 template<class T> std::size_t         num_cols  (std::vector<std::vector<T> > const& in){
 	if (num_rows(in)>0) {
 		if (is_squared(in)) {
