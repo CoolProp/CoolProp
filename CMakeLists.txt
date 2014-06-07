@@ -53,6 +53,8 @@ option (COOLPROP_TESTING
 file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
 file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # "externals/*.hpp")
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
+## You can exclude this file as well, in case you want to run your own tests
+#list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/test_main.cpp") 
 
 
 set (APP_INCLUDE_DIRS "externals/eigen")
@@ -115,8 +117,6 @@ if (COOLPROP_TESTING)
   add_executable        (testRunner.exe ${APP_SOURCES})
   add_dependencies      (testRunner.exe generate_headers)
   set_target_properties (testRunner.exe PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
-  #set_target_properties (testRunner.exe PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCATCH_CONFIG_MAIN")
-  set_source_files_properties(src/MatrixMath.cpp PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCATCH_CONFIG_MAIN")
   if(UNIX)
     target_link_libraries (testRunner.exe ${CMAKE_DL_LIBS})
   endif()
