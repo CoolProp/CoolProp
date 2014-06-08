@@ -40,5 +40,4 @@
 /include/cpversion.h
 /dev/all_incompressibles.json
 /dev/all_incompressibles_verbose.json
-/include/IncompressibleFluid.h
 /include/all_incompressibles_JSON.h
