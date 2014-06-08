@@ -1,7 +1,7 @@
 Set up linux slave
 ==================
 
-In some folder (probably the home folder), do
+In some folder (probably the home folder), do::
 
     sudo apt-get buildbot buildbot-slave
     buildslave create-slave slave 10.0.2.2:9989 example-slave pass
@@ -9,7 +9,7 @@ In some folder (probably the home folder), do
 
 ``slave`` is the folder that the configuration will go into, ``example-slave`` is the name of the slave, ``pass`` is the password, ``10.0.0.2`` is the IP address of the host that the VM uses (shouldn't need to change it, see OSX host instructions below)
 
-This should start the Twisted server, yielding output like:
+This should start the Twisted server, yielding output like::
 
     ian@ian-VirtualBox:~$ buildslave start slave/
     Following twistd.log until startup finished..
@@ -35,7 +35,7 @@ To enable this on OSX I had to do the following:
 3.Select your box and click the "Settings" icon -> Network -> Adapter 2 -> On the "Attached to:" dropdown, select "Host-only Adapter" and your network (vboxnet0) should show up below by default. Click OK.
 4. Once you start your box up again, you should be able to access localhost at http://10.0.2.2/
 
-You can refer to it by localhost and access other localhosted sites by adding their references to the hosts file (C:\windows\system32\drivers\etc\hosts) like the following:
+You can refer to it by localhost and access other localhosted sites by adding their references to the hosts file (C:\windows\system32\drivers\etc\hosts) like the following::
 
 	10.0.2.2    localhost
 	10.0.2.2    subdomain.localhost
