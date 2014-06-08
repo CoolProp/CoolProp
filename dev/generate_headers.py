@@ -102,6 +102,9 @@ if __name__=='__main__':
     path = os.path.abspath(__file__)
     path = os.path.dirname(path)
     path = os.path.dirname(path)
+    
+    import shutil
+    shutil.copy2(os.path.join('..','externals','Catch','single_include','catch.hpp'),os.path.join('..','include','catch.hpp'))
 
     version_to_file(root_dir = path)
     gitrev_to_file(root_dir = path)
