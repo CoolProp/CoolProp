@@ -5,6 +5,21 @@
     "XENON"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Michels-PHYSICA-1962", 
+      "T_m": 165.02, 
+      "parts": [
+        {
+          "T_0": 1, 
+          "T_max": 366.4, 
+          "T_min": 161.4, 
+          "a": 80890.5544859, 
+          "c": 1.589165, 
+          "p_0": -260932309.446
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 289.733, 
       "Tmax": 289.7329999999995, 

@@ -7,6 +7,25 @@
     "R600a"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Buecker-JPCRD-2006B", 
+      "T_m": 262, 
+      "parts": [
+        {
+          "T_0": 113.73, 
+          "T_max": 124.9, 
+          "T_min": 113.73, 
+          "a": [
+            1953637130.9
+          ], 
+          "p_0": 0.0219, 
+          "t": [
+            6.12
+          ]
+        }
+      ], 
+      "type": "polynomial_in_Tr"
+    }, 
     "pL": {
       "T_r": 407.817, 
       "Tmax": 407.81699999999915, 

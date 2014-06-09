@@ -5,6 +5,21 @@
     "METHANE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Abramson-HPR-2011", 
+      "T_m": 90.7, 
+      "parts": [
+        {
+          "T_0": 90.6941, 
+          "T_max": 700, 
+          "T_min": 90.6941, 
+          "a": 208000000.0, 
+          "c": 1.698, 
+          "p_0": 11700.0
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 190.564, 
       "Tmax": 190.56399999999954, 

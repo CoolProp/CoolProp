@@ -6,6 +6,25 @@
     "N-BUTANE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Buecker-JPCRD-2006B", 
+      "T_m": 135.23, 
+      "parts": [
+        {
+          "T_0": 134.895, 
+          "T_max": 163.9, 
+          "T_min": 134.895, 
+          "a": [
+            558558236.4
+          ], 
+          "p_0": 0.653, 
+          "t": [
+            2.206
+          ]
+        }
+      ], 
+      "type": "polynomial_in_Tr"
+    }, 
     "pL": {
       "T_r": 425.125, 
       "Tmax": 425.124999999999, 

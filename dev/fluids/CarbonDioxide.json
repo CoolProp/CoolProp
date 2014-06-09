@@ -7,6 +7,27 @@
     "CARBONDIOXIDE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Span-JPCRD-1996", 
+      "T_m": 216.58, 
+      "parts": [
+        {
+          "T_0": 216.592, 
+          "T_max": 327.6, 
+          "T_min": 216.592, 
+          "a": [
+            1955.539, 
+            2055.4593
+          ], 
+          "p_0": 517950, 
+          "t": [
+            1, 
+            2
+          ]
+        }
+      ], 
+      "type": "polynomial_in_Theta"
+    }, 
     "pL": {
       "T_r": 304.1282, 
       "Tmax": 304.1281999999994, 

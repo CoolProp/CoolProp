@@ -311,7 +311,7 @@ protected:
         EOS.reduce.rhomolar = cpjson::get_double(reducing_state,"rhomolar");
         EOS.reduce.p = cpjson::get_double(reducing_state,"p");
 
-        /// todo: define limits of EOS better
+        /// \todo: define limits of EOS better
         EOS.limits.Tmin = cpjson::get_double(satminL_state, "T");
         EOS.Ttriple = EOS.limits.Tmin;
 
@@ -804,6 +804,71 @@ protected:
         fluid.transport.epsilon_over_k = Tc/1.3593; // [K]
     }
 
+    void parse_melting_line(rapidjson::Value &melting_line, CoolPropFluid & fluid)
+    {
+        fluid.ancillaries.melting_line.T_m = cpjson::get_double(melting_line, "T_m");
+        fluid.ancillaries.melting_line.BibTeX = cpjson::get_string(melting_line, "BibTeX");
+
+        if (melting_line.HasMember("type"))
+        {
+            std::string type = cpjson::get_string(melting_line, "type");
+            if (!type.compare("Simon"))
+            {
+                rapidjson::Value &parts = melting_line["parts"];
+                for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr)
+                {
+                    MeltingLinePiecewiseSimonSegment data;
+                    data.a = cpjson::get_double((*itr),"a");
+                    data.c = cpjson::get_double((*itr),"c");
+                    data.T_min = cpjson::get_double((*itr),"T_min");
+                    data.T_max = cpjson::get_double((*itr),"T_max");
+                    data.T_0 = cpjson::get_double((*itr),"T_0");
+                    data.p_0 = cpjson::get_double((*itr),"p_0");
+                    fluid.ancillaries.melting_line.simon.parts.push_back(data);
+                }
+                fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_SIMON_TYPE;
+            }
+            else if (!type.compare("polynomial_in_Tr"))
+            {
+                rapidjson::Value &parts = melting_line["parts"];
+                for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr)
+                {
+                    MeltingLinePiecewisePolynomialInTrSegment data;
+                    data.a = cpjson::get_long_double_array((*itr),"a");
+                    data.t = cpjson::get_long_double_array((*itr),"t");
+                    data.T_min = cpjson::get_double((*itr),"T_min");
+                    data.T_max = cpjson::get_double((*itr),"T_max");
+                    data.T_0 = cpjson::get_double((*itr),"T_0");
+                    data.p_0 = cpjson::get_double((*itr),"p_0");
+                    fluid.ancillaries.melting_line.polynomial_in_Tr.parts.push_back(data);
+                }
+                fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_TR_TYPE;
+            }
+            else if (!type.compare("polynomial_in_Theta"))
+            {
+                rapidjson::Value &parts = melting_line["parts"];
+                for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr)
+                {
+                    MeltingLinePiecewisePolynomialInThetaSegment data;
+                    data.a = cpjson::get_long_double_array((*itr),"a");
+                    data.t = cpjson::get_long_double_array((*itr),"t");
+                    data.T_min = cpjson::get_double((*itr),"T_min");
+                    data.T_max = cpjson::get_double((*itr),"T_max");
+                    data.T_0 = cpjson::get_double((*itr),"T_0");
+                    data.p_0 = cpjson::get_double((*itr),"p_0");
+                    fluid.ancillaries.melting_line.polynomial_in_Theta.parts.push_back(data);
+                }
+                fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE;
+            }
+            else{
+                throw ValueError(format("melting line type [%s] is not understood for fluid %s", type.c_str(), fluid.name.c_str()));
+            }
+        }
+        else{
+            throw ValueError(format("melting line does not have \"type\" for fluid %s", fluid.name.c_str()));
+        }
+    };
+
     /// Parse the critical state for the given EOS
     void parse_states(rapidjson::Value &states, CoolPropFluid & fluid)
     {
@@ -934,6 +999,16 @@ public:
             }
             else{
                 parse_surface_tension(fluid_json["ANCILLARIES"]["surface_tension"], fluid);
+            }
+
+            // Melting line
+            if (!(fluid_json["ANCILLARIES"].HasMember("melting_line"))){
+                if (get_debug_level() > 0){
+                    std::cout << format("Melting line curves are missing for fluid [%s]\n", fluid.name.c_str()) ;
+                }
+            }
+            else{
+                parse_melting_line(fluid_json["ANCILLARIES"]["melting_line"], fluid);
             }
 
             // Parse the environmental parameters

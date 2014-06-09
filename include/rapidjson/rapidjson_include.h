@@ -100,6 +100,20 @@ namespace cpjson
 		return out;
 	};
 
+	/// A convenience function to get a long double array compactly
+	inline std::vector<long double> get_long_double_array(rapidjson::Value &v, std::string name)
+	{
+		std::vector<long double> out;
+        if (!v.HasMember(name.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",name.c_str())); }
+		if (!v[name.c_str()].IsArray()) { throw CoolProp::ValueError("input is not an array"); }
+		for (rapidjson::Value::ValueIterator itr = v[name.c_str()].Begin(); itr != v[name.c_str()].End(); ++itr)
+		{
+            if (!itr->IsNumber()){throw CoolProp::ValueError("input is not a number");}
+			out.push_back(itr->GetDouble());
+		}
+		return out;
+	};
+
 	/// A convenience function to get a string array compactly
 	inline std::vector<std::string> get_string_array(rapidjson::Value &v)
 	{

@@ -4,6 +4,21 @@
     "CARBONMONOXIDE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Barreiros-JCT-1982", 
+      "T_m": 81.63, 
+      "parts": [
+        {
+          "T_0": 1, 
+          "T_max": 87.5, 
+          "T_min": 68.16, 
+          "a": 19560.8, 
+          "c": 2.10747, 
+          "p_0": -142921439.2
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 132.86, 
       "Tmax": 132.8599999999997, 

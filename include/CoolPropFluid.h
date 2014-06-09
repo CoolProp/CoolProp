@@ -112,6 +112,7 @@ struct ConductivityCriticalSimplifiedOlchowySengersData{
         qD = 2e9; //[m]
 
         // Set to invalid number, can be provided in the JSON file
+        // Default is 1.5*Tc
         T_ref = _HUGE;
     }
 };
@@ -365,14 +366,105 @@ public:
     }
 };
 
-class MeltingLine
+struct MeltingLinePiecewiseSimonSegment
 {
+    long double T_0, a, c, p_0, T_max, T_min;
+};
+struct MeltingLinePiecewiseSimonData
+{
+    std::vector<MeltingLinePiecewiseSimonSegment> parts;
+};
+struct MeltingLinePiecewisePolynomialInTrSegment
+{
+    std::vector<long double> a, t;
+    long double T_0, p_0, T_max, T_min;
+};
+struct MeltingLinePiecewisePolynomialInTrData
+{
+    std::vector<MeltingLinePiecewisePolynomialInTrSegment> parts;
+};
+struct MeltingLinePiecewisePolynomialInThetaSegment
+{
+    std::vector<long double> a, t;
+    long double T_0, p_0, T_max, T_min;
+};
+struct MeltingLinePiecewisePolynomialInThetaData
+{
+    std::vector<MeltingLinePiecewisePolynomialInThetaSegment> parts;
+};
+class MeltingLineVariables
+{
+public:
+    enum MeltingLineVariablesEnum{
+        MELTING_LINE_SIMON_TYPE,
+        MELTING_LINE_POLYNOMIAL_IN_TR_TYPE,
+        MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE,
+        MELTING_LINE_NOT_SET
+    };
+    long double evaluate(int OF, int GIVEN, long double value)
+    {
+        if (type == MELTING_LINE_NOT_SET){throw ValueError("Melting line curve not set");}
+        if (OF == iP && GIVEN == iT){
+            long double T = value;
+            if (type == MELTING_LINE_SIMON_TYPE){
+                // Need to find the right segment
+                for (std::size_t i = 0; i < simon.parts.size(); ++i){
+                    MeltingLinePiecewiseSimonSegment &part = simon.parts[i];
+                    if (T >= part.T_min && T <= part.T_max){
+                        return part.p_0 + part.a*(pow(T/part.T_0,part.c)-1);
+                    }
+                }
+                throw ValueError("unable to calculate melting line (p,T) for Simon curve");
+            }
+            else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE){
+                // Need to find the right segment
+                for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i){
+                    MeltingLinePiecewisePolynomialInTrSegment &part = polynomial_in_Tr.parts[i];
+                    if (T >= part.T_min && T <= part.T_max){
+                        long double summer = 0;
+                        for (std::size_t i =0; i < part.a.size(); ++i){
+                            summer += part.a[i]*(pow(T/part.T_0,part.t[i])-1);
+                        }
+                        return part.p_0*(1+summer);
+                    }
+                }
+                throw ValueError("unable to calculate melting line (p,T) for polynomial_in_Tr curve");
+            }
+            else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE){
+                // Need to find the right segment
+                for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i){
+                    MeltingLinePiecewisePolynomialInThetaSegment &part = polynomial_in_Theta.parts[i];
+                    if (T >= part.T_min && T <= part.T_max){
+                        long double summer = 0;
+                        for (std::size_t i =0; i < part.a.size(); ++i){
+                            summer += part.a[i]*pow(T/part.T_0-1,part.t[i]);
+                        }
+                        return part.p_0*(1+summer);
+                    }
+                }
+                throw ValueError("unable to calculate melting line (p,T) for polynomial_in_Theta curve");
+            }
+            else{
+                throw ValueError("only Simon supported now");
+            }
+        }
+        else{
+            throw ValueError("only melt(P,T) supported now");
+        }
+    }
+    std::string BibTeX;
+    long double T_m; ///< Melting temperature at 1 atmosphere
+    MeltingLinePiecewiseSimonData simon;
+    MeltingLinePiecewisePolynomialInTrData polynomial_in_Tr;
+    MeltingLinePiecewisePolynomialInThetaData polynomial_in_Theta;
+    int type;
+    MeltingLineVariables(){type = MELTING_LINE_NOT_SET;};
 };
 
 struct Ancillaries
 {
     SaturationAncillaryFunction pL, pV, rhoL, rhoV;
-    MeltingLine melting_line;
+    MeltingLineVariables melting_line;
     SurfaceTensionCorrelation surface_tension;
 };
 

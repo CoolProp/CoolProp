@@ -4,6 +4,27 @@
     "ETHANE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Buecker-JCRD-2006", 
+      "T_m": 184.6, 
+      "parts": [
+        {
+          "T_0": 90.368, 
+          "T_max": 110.2, 
+          "T_min": 90.368, 
+          "a": [
+            223626315.0, 
+            105262374.0
+          ], 
+          "p_0": 1.14, 
+          "t": [
+            1.0, 
+            2.55
+          ]
+        }
+      ], 
+      "type": "polynomial_in_Tr"
+    }, 
     "pL": {
       "T_r": 305.322, 
       "Tmax": 305.3219999999994, 

@@ -5,6 +5,21 @@
     "ISOPENTANE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Reeves-JCP-1964", 
+      "T_m": 113.22999999999999, 
+      "parts": [
+        {
+          "T_0": 112.5, 
+          "T_max": 212.16, 
+          "T_min": 112.65, 
+          "a": 591600000.0, 
+          "c": 1.563, 
+          "p_0": 0
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 460.35, 
       "Tmax": 460.3499999999989, 

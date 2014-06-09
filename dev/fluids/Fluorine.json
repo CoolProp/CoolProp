@@ -4,6 +4,25 @@
     "FLUORINE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "deReuck-BOOK-1990", 
+      "T_m": 85.2, 
+      "parts": [
+        {
+          "T_0": 53.4811, 
+          "T_max": 55.4, 
+          "T_min": 53.4811, 
+          "a": [
+            988043.478261
+          ], 
+          "p_0": 252, 
+          "t": [
+            2.1845
+          ]
+        }
+      ], 
+      "type": "polynomial_in_Tr"
+    }, 
     "pL": {
       "T_r": 144.414, 
       "Tmax": 144.41399999999967, 

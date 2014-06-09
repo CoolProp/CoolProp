@@ -4,6 +4,21 @@
     "CYCLOHEXANE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Penoncello-IJT-1995", 
+      "T_m": 279.96, 
+      "parts": [
+        {
+          "T_0": 279.7, 
+          "T_max": 401.7, 
+          "T_min": 279.47, 
+          "a": 383400000.0, 
+          "c": 1.41, 
+          "p_0": 0
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 553.6, 
       "Tmax": 553.5999999999988, 

@@ -4,6 +4,21 @@
     "KRYPTON"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Michels-PHYSICA-1962", 
+      "T_m": 115.95, 
+      "parts": [
+        {
+          "T_0": 1, 
+          "T_max": 168.7, 
+          "T_min": 115.77, 
+          "a": 109479.2307, 
+          "c": 1.6169841, 
+          "p_0": -237497645.7
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 209.48, 
       "Tmax": 209.4799999999995, 
