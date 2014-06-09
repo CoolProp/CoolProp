@@ -118,14 +118,6 @@
     }
   }, 
   "CAS": "354-33-6", 
-  "CRITICAL": {
-    "T": 339.173, 
-    "T_units": "K", 
-    "p": 3617700.0, 
-    "p_units": "Pa", 
-    "rhomolar": 4779.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 1, 
@@ -141,6 +133,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JPCRD-2005", 
+      "STATES": {
+        "reducing": {
+          "T": 339.173, 
+          "T_units": "K", 
+          "p": 3617700, 
+          "p_units": "Pa", 
+          "rhomolar": 4779, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 172.52, 
+          "T_units": "K", 
+          "p": 2.9140460090935645, 
+          "p_units": "Pa", 
+          "rhomolar": 14086.490950189835, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 172.52, 
+          "T_units": "K", 
+          "p": 2.9140460090935645, 
+          "p_units": "Pa", 
+          "rhomolar": 2.038105466033143, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 500, 
       "T_max_units": "K", 
       "Ttriple": 172.52, 
@@ -291,25 +309,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 60000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 2914.046009, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 339.173, 
-        "T_units": "K", 
-        "p": 3617700, 
-        "p_units": "Pa", 
-        "rhomolar": 4779, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 14086.46410777493, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 2.038282831772791, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "R125", 
   "REFPROP_NAME": "R125", 
+  "STATES": {
+    "critical": {
+      "T": 339.173, 
+      "T_units": "K", 
+      "p": 3617700.0, 
+      "p_units": "Pa", 
+      "rhomolar": 4779.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 172.52, 
+      "T_units": "K", 
+      "p": 2.9140460090935645, 
+      "p_units": "Pa", 
+      "rhomolar": 14086.490950189835, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 172.52, 
+      "T_units": "K", 
+      "p": 2.9140460090935645, 
+      "p_units": "Pa", 
+      "rhomolar": 2.038105466033143, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2006", 

@@ -125,14 +125,6 @@
     }
   }, 
   "CAS": "71-43-2", 
-  "CRITICAL": {
-    "T": 562.02, 
-    "T_units": "K", 
-    "p": 4894000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3902.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -148,6 +140,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Thol-HTHP-2012", 
+      "STATES": {
+        "reducing": {
+          "T": 562.02, 
+          "T_units": "K", 
+          "p": 4894000, 
+          "p_units": "Pa", 
+          "rhomolar": 3902, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 278.674, 
+          "T_units": "K", 
+          "p": 4.783772578048188, 
+          "p_units": "Pa", 
+          "rhomolar": 11446.465591920278, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 278.674, 
+          "T_units": "K", 
+          "p": 4.783772578048188, 
+          "p_units": "Pa", 
+          "rhomolar": 2.0716402525505235, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 725, 
       "T_max_units": "K", 
       "Ttriple": 278.674, 
@@ -288,25 +306,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 500000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 4783.772578, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 562.02, 
-        "T_units": "K", 
-        "p": 4894000, 
-        "p_units": "Pa", 
-        "rhomolar": 3902, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 11446.45205146822, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 2.07174574079405, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Benzene", 
   "REFPROP_NAME": "BENZENE", 
+  "STATES": {
+    "critical": {
+      "T": 562.02, 
+      "T_units": "K", 
+      "p": 4894000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3902.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 278.674, 
+      "T_units": "K", 
+      "p": 4.783772578048188, 
+      "p_units": "Pa", 
+      "rhomolar": 11446.465591920278, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 278.674, 
+      "T_units": "K", 
+      "p": 4.783772578048188, 
+      "p_units": "Pa", 
+      "rhomolar": 2.0716402525505235, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Hexane", 

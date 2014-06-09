@@ -4,6 +4,21 @@
     "CYCLOHEXANE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Penoncello-IJT-1995", 
+      "T_m": 279.96, 
+      "parts": [
+        {
+          "T_0": 279.7, 
+          "T_max": 401.7, 
+          "T_min": 279.47, 
+          "a": 383400000.0, 
+          "c": 1.41, 
+          "p_0": 0
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 553.6, 
       "Tmax": 553.5999999999988, 
@@ -121,14 +136,6 @@
     }
   }, 
   "CAS": "110-82-7", 
-  "CRITICAL": {
-    "T": 553.6, 
-    "T_units": "K", 
-    "p": 4082400.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3224.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -144,6 +151,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Zhou-PREPRINT-2014", 
+      "STATES": {
+        "reducing": {
+          "T": 553.6, 
+          "T_units": "K", 
+          "p": 4082400, 
+          "p_units": "Pa", 
+          "rhomolar": 3224, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 279.47, 
+          "T_units": "K", 
+          "p": 5.240240246526451, 
+          "p_units": "Pa", 
+          "rhomolar": 9403.362051842001, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 279.47, 
+          "T_units": "K", 
+          "p": 5.240240246526451, 
+          "p_units": "Pa", 
+          "rhomolar": 2.264530785370476, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 700, 
       "T_max_units": "K", 
       "Ttriple": 279.47, 
@@ -328,23 +361,35 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 250000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 5240.240247, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 553.6, 
-        "T_units": "K", 
-        "p": 4082400, 
-        "p_units": "Pa", 
-        "rhomolar": 3224, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 9403.351008678657, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 2.264642210488062, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "CycloHexane", 
-  "REFPROP_NAME": "CYCLOHEX"
+  "REFPROP_NAME": "CYCLOHEX", 
+  "STATES": {
+    "critical": {
+      "T": 553.6, 
+      "T_units": "K", 
+      "p": 4082400.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3224.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 279.47, 
+      "T_units": "K", 
+      "p": 5.240240246526451, 
+      "p_units": "Pa", 
+      "rhomolar": 9403.362051842001, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 279.47, 
+      "T_units": "K", 
+      "p": 5.240240246526451, 
+      "p_units": "Pa", 
+      "rhomolar": 2.264530785370476, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

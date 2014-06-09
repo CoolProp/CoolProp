@@ -60,11 +60,11 @@ struct ConductivityDiluteRatioPolynomialsData{
 };
 struct ConductivityDiluteVariables
 {
-    enum ConductivityDiluteEnum {CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS, 
-                                 CONDUCTIVITY_DILUTE_ETA0_AND_POLY, 
-                                 CONDUCTIVITY_DILUTE_CO2, 
-                                 CONDUCTIVITY_DILUTE_ETHANE, 
-                                 CONDUCTIVITY_DILUTE_NONE, 
+    enum ConductivityDiluteEnum {CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS,
+                                 CONDUCTIVITY_DILUTE_ETA0_AND_POLY,
+                                 CONDUCTIVITY_DILUTE_CO2,
+                                 CONDUCTIVITY_DILUTE_ETHANE,
+                                 CONDUCTIVITY_DILUTE_NONE,
                                  CONDUCTIVITY_DILUTE_NOT_SET
                                  };
     int type;
@@ -112,15 +112,16 @@ struct ConductivityCriticalSimplifiedOlchowySengersData{
         qD = 2e9; //[m]
 
         // Set to invalid number, can be provided in the JSON file
+        // Default is 1.5*Tc
         T_ref = _HUGE;
     }
 };
 struct ConductivityCriticalVariables
 {
-    enum ConductivityResidualEnum {CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS, 
-                                   CONDUCTIVITY_CRITICAL_R123, 
-                                   CONDUCTIVITY_CRITICAL_AMMONIA, 
-                                   CONDUCTIVITY_CRITICAL_NONE, 
+    enum ConductivityResidualEnum {CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS,
+                                   CONDUCTIVITY_CRITICAL_R123,
+                                   CONDUCTIVITY_CRITICAL_AMMONIA,
+                                   CONDUCTIVITY_CRITICAL_NONE,
                                    CONDUCTIVITY_CRITICAL_CARBONDIOXIDE_SCALABRIN_JPCRD_2006,
                                    CONDUCTIVITY_CRITICAL_NOT_SET
                                    };
@@ -130,7 +131,7 @@ struct ConductivityCriticalVariables
     ConductivityCriticalVariables(){type = CONDUCTIVITY_CRITICAL_NOT_SET; }
 };
 
-/// Variables for the dilute gas part 
+/// Variables for the dilute gas part
 struct ViscosityDiluteGasCollisionIntegralData
 {
     long double molar_mass, C;
@@ -147,9 +148,9 @@ struct ViscosityDiluteGasPowersOfT
 };
 struct ViscosityDiluteVariables
 {
-    enum ViscosityDiluteEnum {VISCOSITY_DILUTE_COLLISION_INTEGRAL, 
-                              VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR, 
-                              VISCOSITY_DILUTE_KINETIC_THEORY, 
+    enum ViscosityDiluteEnum {VISCOSITY_DILUTE_COLLISION_INTEGRAL,
+                              VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR,
+                              VISCOSITY_DILUTE_KINETIC_THEORY,
                               VISCOSITY_DILUTE_ETHANE,
                               VISCOSITY_DILUTE_POWERS_OF_T,
                               VISCOSITY_DILUTE_NOT_SET
@@ -184,7 +185,7 @@ struct ViscosityFrictionTheoryData
 };
 struct ViscosityHigherOrderVariables
 {
-    enum ViscosityDiluteEnum {VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND, 
+    enum ViscosityDiluteEnum {VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND,
                               VISCOSITY_HIGHER_ORDER_HYDROGEN,
                               VISCOSITY_HIGHER_ORDER_HEXANE,
                               VISCOSITY_HIGHER_ORDER_ETHANE,
@@ -206,7 +207,7 @@ struct ViscosityECSVariables{
 class TransportPropertyData
 {
 public:
-    enum ViscosityDiluteEnum {VISCOSITY_HARDCODED_WATER, 
+    enum ViscosityDiluteEnum {VISCOSITY_HARDCODED_WATER,
                               VISCOSITY_HARDCODED_HELIUM,
                               VISCOSITY_HARDCODED_R23,
                               VISCOSITY_NOT_HARDCODED
@@ -231,7 +232,7 @@ public:
     bool conductivity_using_ECS; ///< A flag for whether to use extended corresponding states for conductivity.  False for no
     long double sigma_eta, epsilon_over_k;
     int hardcoded_viscosity, hardcoded_conductivity;
-    TransportPropertyData(){hardcoded_viscosity = VISCOSITY_NOT_HARDCODED; 
+    TransportPropertyData(){hardcoded_viscosity = VISCOSITY_NOT_HARDCODED;
                             hardcoded_conductivity = CONDUCTIVITY_NOT_HARDCODED;
                             viscosity_using_ECS = false;
                             conductivity_using_ECS = false;
@@ -246,8 +247,8 @@ of the form
 \sigma = \sum_{i=0}^{k-1}a_i\left(1-\frac{T}{\tilde T_c}\right)^{n_i}
 \f]
 
-where \f$ \tilde T_c \f$ is the critical temperature used for the correlation which is 
-almost always equal to the critical temperature of the equation of state.  Result for 
+where \f$ \tilde T_c \f$ is the critical temperature used for the correlation which is
+almost always equal to the critical temperature of the equation of state.  Result for
 surface tension is in N/m
 */
 class SurfaceTensionCorrelation
@@ -255,7 +256,7 @@ class SurfaceTensionCorrelation
 public:
     std::vector<long double> a, n, s;
     long double Tc;
-    
+
     std::size_t N;
 
     std::string BibTeX;
@@ -264,10 +265,10 @@ public:
     {
         a = cpjson::get_long_double_array(json_code["a"]);
         n = cpjson::get_long_double_array(json_code["n"]);
-        
+
         Tc = cpjson::get_double(json_code,"Tc");
         BibTeX = cpjson::get_string(json_code,"BibTeX");
-        
+
         this->N = n.size();
         s = n;
     };
@@ -294,7 +295,7 @@ private:
     enum ancillaryfunctiontypes{TYPE_NOT_EXPONENTIAL = 0, TYPE_EXPONENTIAL = 1};
     std::size_t N;
 public:
-    
+
     SaturationAncillaryFunction(){};
     SaturationAncillaryFunction(rapidjson::Value &json_code)
     {
@@ -323,9 +324,9 @@ public:
             s[i] = n[i]*pow(THETA, t[i]);
         }
         double summer = std::accumulate(s.begin(), s.end(), 0.0);
-        
+
         if (type == TYPE_NOT_EXPONENTIAL)
-        {    
+        {
             return reducing_value*(1+summer);
         }
         else
@@ -350,8 +351,8 @@ public:
             long double T, value, r, current_value;
 
             solver_resid(SaturationAncillaryFunction *anc, long double value) : anc(anc), value(value){};
-                
-            double call(double T){ 
+
+            double call(double T){
                 this->T = T;
                 current_value = anc->evaluate(T);
                 r = current_value - value;
@@ -365,21 +366,111 @@ public:
     }
 };
 
-
-class MeltingLine
+struct MeltingLinePiecewiseSimonSegment
 {
+    long double T_0, a, c, p_0, T_max, T_min;
+};
+struct MeltingLinePiecewiseSimonData
+{
+    std::vector<MeltingLinePiecewiseSimonSegment> parts;
+};
+struct MeltingLinePiecewisePolynomialInTrSegment
+{
+    std::vector<long double> a, t;
+    long double T_0, p_0, T_max, T_min;
+};
+struct MeltingLinePiecewisePolynomialInTrData
+{
+    std::vector<MeltingLinePiecewisePolynomialInTrSegment> parts;
+};
+struct MeltingLinePiecewisePolynomialInThetaSegment
+{
+    std::vector<long double> a, t;
+    long double T_0, p_0, T_max, T_min;
+};
+struct MeltingLinePiecewisePolynomialInThetaData
+{
+    std::vector<MeltingLinePiecewisePolynomialInThetaSegment> parts;
+};
+class MeltingLineVariables
+{
+public:
+    enum MeltingLineVariablesEnum{
+        MELTING_LINE_SIMON_TYPE,
+        MELTING_LINE_POLYNOMIAL_IN_TR_TYPE,
+        MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE,
+        MELTING_LINE_NOT_SET
+    };
+    long double evaluate(int OF, int GIVEN, long double value)
+    {
+        if (type == MELTING_LINE_NOT_SET){throw ValueError("Melting line curve not set");}
+        if (OF == iP && GIVEN == iT){
+            long double T = value;
+            if (type == MELTING_LINE_SIMON_TYPE){
+                // Need to find the right segment
+                for (std::size_t i = 0; i < simon.parts.size(); ++i){
+                    MeltingLinePiecewiseSimonSegment &part = simon.parts[i];
+                    if (T >= part.T_min && T <= part.T_max){
+                        return part.p_0 + part.a*(pow(T/part.T_0,part.c)-1);
+                    }
+                }
+                throw ValueError("unable to calculate melting line (p,T) for Simon curve");
+            }
+            else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE){
+                // Need to find the right segment
+                for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i){
+                    MeltingLinePiecewisePolynomialInTrSegment &part = polynomial_in_Tr.parts[i];
+                    if (T >= part.T_min && T <= part.T_max){
+                        long double summer = 0;
+                        for (std::size_t i =0; i < part.a.size(); ++i){
+                            summer += part.a[i]*(pow(T/part.T_0,part.t[i])-1);
+                        }
+                        return part.p_0*(1+summer);
+                    }
+                }
+                throw ValueError("unable to calculate melting line (p,T) for polynomial_in_Tr curve");
+            }
+            else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE){
+                // Need to find the right segment
+                for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i){
+                    MeltingLinePiecewisePolynomialInThetaSegment &part = polynomial_in_Theta.parts[i];
+                    if (T >= part.T_min && T <= part.T_max){
+                        long double summer = 0;
+                        for (std::size_t i =0; i < part.a.size(); ++i){
+                            summer += part.a[i]*pow(T/part.T_0-1,part.t[i]);
+                        }
+                        return part.p_0*(1+summer);
+                    }
+                }
+                throw ValueError("unable to calculate melting line (p,T) for polynomial_in_Theta curve");
+            }
+            else{
+                throw ValueError("only Simon supported now");
+            }
+        }
+        else{
+            throw ValueError("only melt(P,T) supported now");
+        }
+    }
+    std::string BibTeX;
+    long double T_m; ///< Melting temperature at 1 atmosphere
+    MeltingLinePiecewiseSimonData simon;
+    MeltingLinePiecewisePolynomialInTrData polynomial_in_Tr;
+    MeltingLinePiecewisePolynomialInThetaData polynomial_in_Theta;
+    int type;
+    MeltingLineVariables(){type = MELTING_LINE_NOT_SET;};
 };
 
 struct Ancillaries
 {
     SaturationAncillaryFunction pL, pV, rhoL, rhoV;
-    MeltingLine melting_line;
+    MeltingLineVariables melting_line;
     SurfaceTensionCorrelation surface_tension;
 };
 
 /// The core class for an equation of state
-/** 
- This class holds the absolute minimum information to evaluate the equation 
+/**
+ This class holds the absolute minimum information to evaluate the equation
  of state.  This includes the reducing state, limits on the equation of state,
  the coefficients for the Helmholtz derivative terms.
 
@@ -389,15 +480,15 @@ class EquationOfState{
 public:
     EquationOfState(){};
     ~EquationOfState(){};
-    SimpleState reduce; ///< Reducing state used for the EOS (usually, but not always, the critical point)
+    SimpleState reduce, ///< Reducing state used for the EOS (usually, but not always, the critical point)
+                sat_min_liquid, ///< The saturated liquid state at the minimum saturation temperature
+                sat_min_vapor; ///< The saturated vapor state at the minimum saturation temperature
     EOSLimits limits; ///< Limits on the EOS
     double R_u, ///< The universal gas constant used for this EOS (usually, but not always, 8.314472 J/mol/K)
            molar_mass, ///< The molar mass in kg/mol (note NOT kg/kmol)
            accentric, ///< The accentric factor \f$ \omega = -log_{10}\left(\frac{p_s(T/T_c=0.7)}{p_c}\right)-1\f$
            Ttriple, ///< Triple point temperature (K)
-           ptriple, ///< Triple point pressure (Pa)
-           rhoLtriple, ///< Density of liquid at triple point pressure (mol/m^3)
-           rhoVtriple; ///< Density of vapor at triple point pressure (mol/m^3)
+           ptriple; ///< Triple point pressure (Pa)
     bool pseudo_pure; ///< Is a pseudo-pure fluid (true) or pure fluid (false)
     ResidualHelmholtzContainer alphar; ///< The residual Helmholtz energy
     IdealHelmholtzContainer alpha0; ///< The ideal Helmholtz energy
@@ -520,15 +611,13 @@ class CoolPropFluid {
         std::string CAS; ///< The CAS number of the fluid
         std::vector <std::string> aliases; ///< A vector of aliases of names for the fluid
 
-        /*std::vector<ViscosityCorrelation*> viscosity_vector; ///< The viscosity correlations that could be used for this fluid
-        std::vector<ThermalConductivityCorrelation*> thermal_conductivity_vector; ///< The thermal conductivity correlations that could be used for this fluid
-        std::vector<SurfaceTensionCorrelation*> surface_tension_vector; ///< The surface tension correlations that could be used for this fluid*/
-
         BibTeXKeysStruct BibTeXKeys;
         EnvironmentalFactorsStruct environment;
         Ancillaries ancillaries;
         TransportPropertyData transport;
-        SimpleState crit;
+        SimpleState crit, ///< The state at the critical point
+                    triple_liquid, ///< The saturated liquid state at the triple point temperature
+                    triple_vapor; ///< The saturated vapor state at the triple point temperature
 
         double gas_constant(){ return pEOS->R_u; };
         double molar_mass(){ return pEOS->molar_mass; };

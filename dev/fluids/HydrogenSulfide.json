@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "7783-06-4", 
-  "CRITICAL": {
-    "T": 373.1, 
-    "T_units": "K", 
-    "p": 9000000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 10190.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 4, 
@@ -144,6 +136,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "STATES": {
+        "reducing": {
+          "T": 373.1, 
+          "T_units": "K", 
+          "p": 9000000, 
+          "p_units": "Pa", 
+          "rhomolar": 10190, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 187.7, 
+          "T_units": "K", 
+          "p": 23.258855840736683, 
+          "p_units": "Pa", 
+          "rhomolar": 29116.326840626763, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 187.7, 
+          "T_units": "K", 
+          "p": 23.258855840736683, 
+          "p_units": "Pa", 
+          "rhomolar": 15.024228571877876, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 760, 
       "T_max_units": "K", 
       "Ttriple": 187.7, 
@@ -248,25 +266,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 170000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 23258.85584, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 373.1, 
-        "T_units": "K", 
-        "p": 9000000, 
-        "p_units": "Pa", 
-        "rhomolar": 10190, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 29116.27758075055, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 15.02516830469272, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "HydrogenSulfide", 
   "REFPROP_NAME": "H2S", 
+  "STATES": {
+    "critical": {
+      "T": 373.1, 
+      "T_units": "K", 
+      "p": 9000000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 10190.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 187.7, 
+      "T_units": "K", 
+      "p": 23.258855840736683, 
+      "p_units": "Pa", 
+      "rhomolar": 29116.326840626763, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 187.7, 
+      "T_units": "K", 
+      "p": 23.258855840736683, 
+      "p_units": "Pa", 
+      "rhomolar": 15.024228571877876, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "viscosity": {
       "BibTeX": "QuinonesCisneros-JCED-2012", 

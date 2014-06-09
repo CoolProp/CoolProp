@@ -4,6 +4,21 @@
     "KRYPTON"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Michels-PHYSICA-1962", 
+      "T_m": 115.95, 
+      "parts": [
+        {
+          "T_0": 1, 
+          "T_max": 168.7, 
+          "T_min": 115.77, 
+          "a": 109479.2307, 
+          "c": 1.6169841, 
+          "p_0": -237497645.7
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 209.48, 
       "Tmax": 209.4799999999995, 
@@ -121,14 +136,6 @@
     }
   }, 
   "CAS": "7439-90-9", 
-  "CRITICAL": {
-    "T": 209.48, 
-    "T_units": "K", 
-    "p": 5525000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 10850.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 0, 
@@ -144,6 +151,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "STATES": {
+        "reducing": {
+          "T": 209.48, 
+          "T_units": "K", 
+          "p": 5525000, 
+          "p_units": "Pa", 
+          "rhomolar": 10850, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 115.77, 
+          "T_units": "K", 
+          "p": 73.502837475028, 
+          "p_units": "Pa", 
+          "rhomolar": 29197.32240678559, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 115.77, 
+          "T_units": "K", 
+          "p": 73.502837475028, 
+          "p_units": "Pa", 
+          "rhomolar": 78.4175234091632, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 750, 
       "T_max_units": "K", 
       "Ttriple": 115.77, 
@@ -228,23 +261,35 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 200000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 73502.83748, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 209.48, 
-        "T_units": "K", 
-        "p": 5525000, 
-        "p_units": "Pa", 
-        "rhomolar": 10850, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 29197.23261176175, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 78.42355224696817, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Krypton", 
-  "REFPROP_NAME": "KRYPTON"
+  "REFPROP_NAME": "KRYPTON", 
+  "STATES": {
+    "critical": {
+      "T": 209.48, 
+      "T_units": "K", 
+      "p": 5525000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 10850.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 115.77, 
+      "T_units": "K", 
+      "p": 73.502837475028, 
+      "p_units": "Pa", 
+      "rhomolar": 29197.32240678559, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 115.77, 
+      "T_units": "K", 
+      "p": 73.502837475028, 
+      "p_units": "Pa", 
+      "rhomolar": 78.4175234091632, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

@@ -4,6 +4,25 @@
     "FLUORINE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "deReuck-BOOK-1990", 
+      "T_m": 53.15, 
+      "parts": [
+        {
+          "T_0": 53.4811, 
+          "T_max": 55.4, 
+          "T_min": 53.4811, 
+          "a": [
+            988043.478261
+          ], 
+          "p_0": 252, 
+          "t": [
+            2.1845
+          ]
+        }
+      ], 
+      "type": "polynomial_in_Tr"
+    }, 
     "pL": {
       "T_r": 144.414, 
       "Tmax": 144.41399999999967, 
@@ -121,14 +140,6 @@
     }
   }, 
   "CAS": "7782-41-4", 
-  "CRITICAL": {
-    "T": 144.414, 
-    "T_units": "K", 
-    "p": 5172400.0, 
-    "p_units": "Pa", 
-    "rhomolar": 15603.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -144,6 +155,32 @@
     {
       "BibTeX_CP0": "deReuck-BOOK-1990", 
       "BibTeX_EOS": "deReuck-BOOK-1990", 
+      "STATES": {
+        "reducing": {
+          "T": 144.414, 
+          "T_units": "K", 
+          "p": 5172400, 
+          "p_units": "Pa", 
+          "rhomolar": 15603, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 53.4811, 
+          "T_units": "K", 
+          "p": 0.2388103329299759, 
+          "p_units": "Pa", 
+          "rhomolar": 44917.31036907297, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 53.4811, 
+          "T_units": "K", 
+          "p": 0.2388103329299759, 
+          "p_units": "Pa", 
+          "rhomolar": 0.537248503917467, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 300, 
       "T_max_units": "K", 
       "Ttriple": 53.4811, 
@@ -373,23 +410,35 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 20000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 238.8103329, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 144.414, 
-        "T_units": "K", 
-        "p": 5172400, 
-        "p_units": "Pa", 
-        "rhomolar": 15603, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 44917.13573008027, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.5374094722802236, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Fluorine", 
-  "REFPROP_NAME": "FLUORINE"
+  "REFPROP_NAME": "FLUORINE", 
+  "STATES": {
+    "critical": {
+      "T": 144.414, 
+      "T_units": "K", 
+      "p": 5172400.0, 
+      "p_units": "Pa", 
+      "rhomolar": 15603.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 53.4811, 
+      "T_units": "K", 
+      "p": 0.2388103329299759, 
+      "p_units": "Pa", 
+      "rhomolar": 44917.31036907297, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 53.4811, 
+      "T_units": "K", 
+      "p": 0.2388103329299759, 
+      "p_units": "Pa", 
+      "rhomolar": 0.537248503917467, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

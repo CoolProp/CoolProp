@@ -52,7 +52,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
 
                 rhoLsat = HEOS.solver_rho_Tp(HEOS._T, psatLanc, rhoLanc);
                 rhoVsat = HEOS.solver_rho_Tp(HEOS._T, psatVanc, rhoLanc);
-                if (!ValidNumber(rhoLsat) || !ValidNumber(rhoVsat) || 
+                if (!ValidNumber(rhoLsat) || !ValidNumber(rhoVsat) ||
                      fabs(rhoLsat/rhoLanc-1) > 0.1 || fabs(rhoVanc/rhoVsat-1) > 0.1)
                 {
                     throw ValueError("pseudo-pure failed");
@@ -79,7 +79,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
 
         // Use Wilson iteration to obtain updated guess for pressure
         pguess = SaturationSolvers::saturation_Wilson(&HEOS, HEOS._Q, HEOS._T, SaturationSolvers::imposed_T, HEOS.mole_fractions, pguess);
-        
+
         // Actually call the successive substitution solver
         SaturationSolvers::successive_substitution(&HEOS, HEOS._Q, HEOS._T, pguess, HEOS.mole_fractions, HEOS.K, options);
     }
@@ -109,7 +109,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             options.use_logdelta = false;
             // Actually call the solver
             SaturationSolvers::saturation_PHSU_pure(&HEOS, HEOS._p, options);
-            
+
             // Load the outputs
             HEOS._p = HEOS._Q*HEOS.SatV->p() + (1 - HEOS._Q)*HEOS.SatL->p();
             HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
@@ -128,10 +128,10 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
 
         // Use Wilson iteration to obtain updated guess for temperature
         Tguess = SaturationSolvers::saturation_Wilson(&HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
-        
+
         // Actually call the successive substitution solver
         SaturationSolvers::successive_substitution(&HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
-        
+
         PhaseEnvelope::PhaseEnvelope_GV ENV_GV;
         ENV_GV.build(&HEOS, HEOS.mole_fractions, HEOS.K, io);
     }
@@ -143,7 +143,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
     class solver_resid : public FuncWrapper1D
     {
     public:
-        
+
         HelmholtzEOSMixtureBackend *HEOS;
         long double r, eos, rhomolar, value, T;
         int other;
@@ -164,15 +164,15 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
             default:
                 throw ValueError(format("Input not supported"));
             }
-            
+
             r = eos - value;
             return r;
         };
     };
-    
+
     std::string errstring;
 
-    if (HEOS.imposed_phase_index > -1) 
+    if (HEOS.imposed_phase_index > -1)
     {
         // Use the phase defined by the imposed phase
         HEOS._phase = HEOS.imposed_phase_index;
@@ -182,17 +182,17 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
         if (HEOS.is_pure_or_pseudopure)
         {
             CoolPropFluid * component = HEOS.components[0];
-            
+
             shared_ptr<HelmholtzEOSMixtureBackend> Sat;
-            long double rhoLtriple = component->pEOS->rhoLtriple;
-            long double rhoVtriple = component->pEOS->rhoVtriple;
+            long double rhoLtriple = component->triple_liquid.rhomolar;
+            long double rhoVtriple = component->triple_vapor.rhomolar;
             // Check if in the "normal" region
             if (HEOS._rhomolar >= rhoVtriple && HEOS._rhomolar <= rhoLtriple)
             {
                 long double yL, yV, value, y_solid;
-                long double TLtriple = component->pEOS->Ttriple; //TODO: separate TL and TV for ppure
-                long double TVtriple = component->pEOS->Ttriple; //TODO: separate TL and TV for ppure
-                
+                long double TLtriple = component->triple_liquid.T; ///TODO: separate TL and TV for ppure
+                long double TVtriple = component->triple_vapor.T;
+
                 // First check if solid (below the line connecting the triple point values) - this is an error for now
                 switch (other)
                 {
@@ -246,10 +246,10 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 
             }
             // Check if vapor/solid region below triple point vapor density
-            else if (HEOS._rhomolar < component->pEOS->rhoVtriple)
+            else if (HEOS._rhomolar < component->triple_vapor.rhomolar)
             {
                 long double y, value;
-                long double TVtriple = component->pEOS->Ttriple; //TODO: separate TL and TV for ppure
+                long double TVtriple = component->triple_vapor.T; //TODO: separate TL and TV for ppure
 
                 // If value is above the value calculated from X(Ttriple, _rhomolar), it is vapor
                 switch (other)
@@ -275,15 +275,15 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 }
                 else
                 {
-                    throw ValueError(format("D < DLtriple"));
+                    throw ValueError(format("D < DLtriple %g %g", value, y));
                 }
 
             }
             // Check in the liquid/solid region above the triple point density
-            else 
+            else
             {
                 long double y, value;
-                long double TLtriple = component->pEOS->Ttriple; //TODO: separate TL and TV for ppure
+                long double TLtriple = component->pEOS->Ttriple;
 
                 // If value is above the value calculated from X(Ttriple, _rhomolar), it is vapor
                 switch (other)
@@ -309,11 +309,11 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 }
                 else
                 {
-                    throw ValueError(format("D < DLtriple"));
+                    throw ValueError(format("D < DLtriple %g %g", value, y));
                 }
             }
         }
-        else 
+        else
             throw NotImplementedError("PHSU_D_flash not ready for mixtures");
     }
 }
@@ -323,7 +323,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 }
 void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 {
-    if (HEOS.imposed_phase_index > -1) 
+    if (HEOS.imposed_phase_index > -1)
     {
         // Use the phase defined by the imposed phase
         HEOS._phase = HEOS.imposed_phase_index;
@@ -370,7 +370,7 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
             default:
                 break;
         }
-        HEOS.calc_pressure(); 
+        HEOS.calc_pressure();
         HEOS._Q = -1;
     }
 }

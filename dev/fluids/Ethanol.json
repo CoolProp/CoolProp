@@ -122,14 +122,6 @@
     }
   }, 
   "CAS": "64-17-5", 
-  "CRITICAL": {
-    "T": 514.71, 
-    "T_units": "K", 
-    "p": 6268000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 5930.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -145,6 +137,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Schroeder-MSTHESIS-2011", 
+      "STATES": {
+        "reducing": {
+          "T": 514.71, 
+          "T_units": "K", 
+          "p": 6268000, 
+          "p_units": "Pa", 
+          "rhomolar": 5930, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 159.1, 
+          "T_units": "K", 
+          "p": 7.350470774723326e-07, 
+          "p_units": "Pa", 
+          "rhomolar": 19729.11257931593, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 159.1, 
+          "T_units": "K", 
+          "p": 7.350470774723326e-07, 
+          "p_units": "Pa", 
+          "rhomolar": 5.556614984609347e-07, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 650, 
       "T_max_units": "K", 
       "Ttriple": 159.1, 
@@ -346,25 +364,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 280000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.0007350470775, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 514.71, 
-        "T_units": "K", 
-        "p": 6268000, 
-        "p_units": "Pa", 
-        "rhomolar": 5930, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 19729.08885611082, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 5.557847680758439e-07, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Ethanol", 
   "REFPROP_NAME": "ETHANOL", 
+  "STATES": {
+    "critical": {
+      "T": 514.71, 
+      "T_units": "K", 
+      "p": 6268000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 5930.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 159.1, 
+      "T_units": "K", 
+      "p": 7.350470774723326e-07, 
+      "p_units": "Pa", 
+      "rhomolar": 19729.11257931593, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 159.1, 
+      "T_units": "K", 
+      "p": 7.350470774723326e-07, 
+      "p_units": "Pa", 
+      "rhomolar": 5.556614984609347e-07, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Ethanol", 

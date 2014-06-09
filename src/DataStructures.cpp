@@ -50,7 +50,8 @@ parameter_info parameter_info_list[] = {
     parameter_info(irhomolar_critical, "rhomolar_critical","O","mol/m^3","Molar density at critical point"),
     parameter_info(iT_reducing, "T_reducing","O","K","Temperature at the reducing point"),
     parameter_info(iT_critical, "T_critical","O","K","Temperature at the critical point"),
-    parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility")
+    parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility"),
+    parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound")
 };
 
 class ParameterInformation
@@ -157,7 +158,7 @@ input_pair_info input_pair_list[] = {
     input_pair_info(SmolarT_INPUTS, "SmolarT_INPUTS", "Entropy in J/mol/K, Temperature in K"),
     input_pair_info(TUmass_INPUTS, "TUmass_INPUTS", "Temperature in K, Internal energy in J/kg"),
     input_pair_info(TUmolar_INPUTS, "TUmolar_INPUTS", "Temperature in K, Internal energy in J/mol"),
-                 
+
     input_pair_info(DmassP_INPUTS, "DmassP_INPUTS", "Mass density in kg/m^3, Pressure in Pa"),
     input_pair_info(DmolarP_INPUTS, "DmolarP_INPUTS", "Molar density in mol/m^3, Pressure in Pa"),
     input_pair_info(HmassP_INPUTS, "HmassP_INPUTS", "Enthalpy in J/kg, Pressure in Pa"),

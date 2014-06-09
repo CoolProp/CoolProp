@@ -4,6 +4,21 @@
     "NEON"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "SantamariaPerez-PRB-2010", 
+      "T_m": -1, 
+      "parts": [
+        {
+          "T_0": 24.4, 
+          "T_max": 700, 
+          "T_min": 24.56, 
+          "a": 1700000000.0, 
+          "c": 1.2987012987012987, 
+          "p_0": 101325
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 44.4918, 
       "Tmax": 44.49179999999988, 
@@ -125,14 +140,6 @@
     }
   }, 
   "CAS": "7440-01-9", 
-  "CRITICAL": {
-    "T": 44.4918, 
-    "T_units": "K", 
-    "p": 2680000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 23882.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 0, 
@@ -148,6 +155,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Katti-ACE-1986", 
+      "STATES": {
+        "reducing": {
+          "T": 44.4918, 
+          "T_units": "K", 
+          "p": 2680000, 
+          "p_units": "Pa", 
+          "rhomolar": 23882, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 24.56, 
+          "T_units": "K", 
+          "p": 43.432076403077566, 
+          "p_units": "Pa", 
+          "rhomolar": 62061.106062436906, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 24.56, 
+          "T_units": "K", 
+          "p": 43.432076403077566, 
+          "p_units": "Pa", 
+          "rhomolar": 220.1097622314587, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 723, 
       "T_max_units": "K", 
       "Ttriple": 24.56, 
@@ -306,23 +339,35 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 700000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 43432.0764, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 44.4918, 
-        "T_units": "K", 
-        "p": 2680000, 
-        "p_units": "Pa", 
-        "rhomolar": 23882, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 62060.12963247318, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 220.1827660676654, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Neon", 
-  "REFPROP_NAME": "NEON"
+  "REFPROP_NAME": "NEON", 
+  "STATES": {
+    "critical": {
+      "T": 44.4918, 
+      "T_units": "K", 
+      "p": 2680000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 23882.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 24.56, 
+      "T_units": "K", 
+      "p": 43.432076403077566, 
+      "p_units": "Pa", 
+      "rhomolar": 62061.106062436906, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 24.56, 
+      "T_units": "K", 
+      "p": 43.432076403077566, 
+      "p_units": "Pa", 
+      "rhomolar": 220.1097622314587, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

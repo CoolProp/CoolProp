@@ -7,6 +7,25 @@
     "R600a"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Buecker-JPCRD-2006B", 
+      "T_m": 113.55, 
+      "parts": [
+        {
+          "T_0": 113.73, 
+          "T_max": 124.9, 
+          "T_min": 113.73, 
+          "a": [
+            1953637130.9
+          ], 
+          "p_0": 0.0219, 
+          "t": [
+            6.12
+          ]
+        }
+      ], 
+      "type": "polynomial_in_Tr"
+    }, 
     "pL": {
       "T_r": 407.817, 
       "Tmax": 407.81699999999915, 
@@ -126,14 +145,6 @@
     }
   }, 
   "CAS": "75-28-5", 
-  "CRITICAL": {
-    "T": 407.817, 
-    "T_units": "K", 
-    "p": 3629000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3879.756788283995, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 4, 
@@ -149,6 +160,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Buecker-JPCRD-2006B", 
+      "STATES": {
+        "reducing": {
+          "T": 407.81, 
+          "T_units": "K", 
+          "p": 3629000, 
+          "p_units": "Pa", 
+          "rhomolar": 3879.756788283995, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 113.73, 
+          "T_units": "K", 
+          "p": 2.2879446966082075e-05, 
+          "p_units": "Pa", 
+          "rhomolar": 12737.656182433244, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 113.73, 
+          "T_units": "K", 
+          "p": 2.2879446966082075e-05, 
+          "p_units": "Pa", 
+          "rhomolar": 2.4195571571567102e-05, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 575, 
       "T_max_units": "K", 
       "Ttriple": 113.73, 
@@ -329,25 +366,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 35000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.02287944697, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 407.81, 
-        "T_units": "K", 
-        "p": 3629000, 
-        "p_units": "Pa", 
-        "rhomolar": 3879.756788283995, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 12737.63993166686, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 2.420164552028876e-05, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "IsoButane", 
   "REFPROP_NAME": "ISOBUTAN", 
+  "STATES": {
+    "critical": {
+      "T": 407.817, 
+      "T_units": "K", 
+      "p": 3629000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3879.756788283995, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 113.73, 
+      "T_units": "K", 
+      "p": 2.2879446966082075e-05, 
+      "p_units": "Pa", 
+      "rhomolar": 12737.656182433244, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 113.73, 
+      "T_units": "K", 
+      "p": 2.2879446966082075e-05, 
+      "p_units": "Pa", 
+      "rhomolar": 2.4195571571567102e-05, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Perkins-JCED-2002-Isobutane", 

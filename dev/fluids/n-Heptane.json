@@ -125,14 +125,6 @@
     }
   }, 
   "CAS": "142-82-5", 
-  "CRITICAL": {
-    "T": 540.13, 
-    "T_units": "K", 
-    "p": 2736000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 2315.3230474441625, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -148,6 +140,32 @@
     {
       "BibTeX_CP0": "Jaeschke-IJT-1995", 
       "BibTeX_EOS": "Span-IJT-2003B", 
+      "STATES": {
+        "reducing": {
+          "T": 540.13, 
+          "T_units": "K", 
+          "p": 2736000, 
+          "p_units": "Pa", 
+          "rhomolar": 2315.323047444163, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 182.55, 
+          "T_units": "K", 
+          "p": 0.00017549039806495355, 
+          "p_units": "Pa", 
+          "rhomolar": 7745.685209191345, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 182.55, 
+          "T_units": "K", 
+          "p": 0.00017549039806495355, 
+          "p_units": "Pa", 
+          "rhomolar": 0.00011562068460706438, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 310, 
       "T_max_units": "K", 
       "Ttriple": 182.55, 
@@ -262,25 +280,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 100000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.1754903981, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 540.13, 
-        "T_units": "K", 
-        "p": 2736000, 
-        "p_units": "Pa", 
-        "rhomolar": 2315.323047444163, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 7745.676592920418, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.0001156384998550007, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "n-Heptane", 
   "REFPROP_NAME": "HEPTANE", 
+  "STATES": {
+    "critical": {
+      "T": 540.13, 
+      "T_units": "K", 
+      "p": 2736000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 2315.3230474441625, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 182.55, 
+      "T_units": "K", 
+      "p": 0.00017549039806495355, 
+      "p_units": "Pa", 
+      "rhomolar": 7745.685209191345, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 182.55, 
+      "T_units": "K", 
+      "p": 0.00017549039806495355, 
+      "p_units": "Pa", 
+      "rhomolar": 0.00011562068460706438, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Heptane", 

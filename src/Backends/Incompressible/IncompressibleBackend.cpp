@@ -11,22 +11,20 @@
 //#include "CoolProp.h"
 
 #include "IncompressibleBackend.h"
-#include "../Helmholtz/Fluids/FluidLibrary.h"
+#include "IncompressibleFluid.h"
+#include "IncompressibleLibrary.h"
 #include "Solvers.h"
 #include "MatrixMath.h"
 
 namespace CoolProp {
 
 IncompressibleBackend::IncompressibleBackend(const std::string &fluid_name) {
-	throw CoolProp::NotImplementedError("Mixture-style constructor is not implemented yet for incompressible fluids");
+    fluid = &get_incompressible_fluid(fluid_name);
 }
 
 IncompressibleBackend::IncompressibleBackend(const std::vector<std::string> &component_names) {
-	throw CoolProp::NotImplementedError("Mixture-style constructor is not implemented yet for incompressible fluids");
+	throw NotImplementedError("Mixture-style constructor is not implemented yet for incompressible fluids");
 }
-
-bool IncompressibleBackend::using_mole_fractions(){return false;}
-
 
 void IncompressibleBackend::update(long input_pair, double value1, double value2) {
 	switch (input_pair) {

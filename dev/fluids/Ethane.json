@@ -4,6 +4,27 @@
     "ETHANE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Buecker-JCRD-2006", 
+      "T_m": 90.4, 
+      "parts": [
+        {
+          "T_0": 90.368, 
+          "T_max": 110.2, 
+          "T_min": 90.368, 
+          "a": [
+            223626315.0, 
+            105262374.0
+          ], 
+          "p_0": 1.14, 
+          "t": [
+            1.0, 
+            2.55
+          ]
+        }
+      ], 
+      "type": "polynomial_in_Tr"
+    }, 
     "pL": {
       "T_r": 305.322, 
       "Tmax": 305.3219999999994, 
@@ -123,14 +144,6 @@
     }
   }, 
   "CAS": "74-84-0", 
-  "CRITICAL": {
-    "T": 305.322, 
-    "T_units": "K", 
-    "p": 4872200.0, 
-    "p_units": "Pa", 
-    "rhomolar": 6856.886685, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A3", 
     "FH": 4, 
@@ -146,6 +159,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Buecker-JPCRD-2006", 
+      "STATES": {
+        "reducing": {
+          "T": 305.322, 
+          "T_units": "K", 
+          "p": 4872200, 
+          "p_units": "Pa", 
+          "rhomolar": 6856.886685, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 90.368, 
+          "T_units": "K", 
+          "p": 0.0011421081151322327, 
+          "p_units": "Pa", 
+          "rhomolar": 21667.78455939388, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 90.368, 
+          "T_units": "K", 
+          "p": 0.0011421081151322327, 
+          "p_units": "Pa", 
+          "rhomolar": 0.0015200554552625017, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 675, 
       "T_max_units": "K", 
       "Ttriple": 90.368, 
@@ -411,25 +450,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 900000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 1.142108115, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 305.322, 
-        "T_units": "K", 
-        "p": 4872200, 
-        "p_units": "Pa", 
-        "rhomolar": 6856.886685, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 21667.74788890113, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.001520439053820902, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Ethane", 
   "REFPROP_NAME": "ETHANE", 
+  "STATES": {
+    "critical": {
+      "T": 305.322, 
+      "T_units": "K", 
+      "p": 4872200.0, 
+      "p_units": "Pa", 
+      "rhomolar": 6856.886685, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 90.368, 
+      "T_units": "K", 
+      "p": 0.0011421081151322327, 
+      "p_units": "Pa", 
+      "rhomolar": 21667.78455939388, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 90.368, 
+      "T_units": "K", 
+      "p": 0.0011421081151322327, 
+      "p_units": "Pa", 
+      "rhomolar": 0.0015200554552625017, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Friend-JPCRD-1991", 

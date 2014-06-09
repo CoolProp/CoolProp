@@ -121,14 +121,6 @@
     }
   }, 
   "CAS": "108-88-3", 
-  "CRITICAL": {
-    "T": 591.75, 
-    "T_units": "K", 
-    "p": 4126000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3169.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -144,6 +136,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "STATES": {
+        "reducing": {
+          "T": 591.75, 
+          "T_units": "K", 
+          "p": 4126000, 
+          "p_units": "Pa", 
+          "rhomolar": 3169, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 178.0, 
+          "T_units": "K", 
+          "p": 3.9393478817276356e-05, 
+          "p_units": "Pa", 
+          "rhomolar": 10580.06048163071, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 178.0, 
+          "T_units": "K", 
+          "p": 3.9393478817276356e-05, 
+          "p_units": "Pa", 
+          "rhomolar": 2.661765525110245e-05, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 700, 
       "T_max_units": "K", 
       "Ttriple": 178, 
@@ -245,25 +263,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 500000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.03939347882, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 591.75, 
-        "T_units": "K", 
-        "p": 4126000, 
-        "p_units": "Pa", 
-        "rhomolar": 3169, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 10580.04981301902, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 2.662208671588402e-05, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Toluene", 
   "REFPROP_NAME": "TOLUENE", 
+  "STATES": {
+    "critical": {
+      "T": 591.75, 
+      "T_units": "K", 
+      "p": 4126000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3169.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 178.0, 
+      "T_units": "K", 
+      "p": 3.9393478817276356e-05, 
+      "p_units": "Pa", 
+      "rhomolar": 10580.06048163071, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 178.0, 
+      "T_units": "K", 
+      "p": 3.9393478817276356e-05, 
+      "p_units": "Pa", 
+      "rhomolar": 2.661765525110245e-05, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2012-Toluene", 

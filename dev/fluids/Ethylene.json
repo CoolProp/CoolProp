@@ -4,6 +4,37 @@
     "ETHYLENE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Smukala-JPCRD-2000", 
+      "T_m": 169, 
+      "parts": [
+        {
+          "T_0": 103.989, 
+          "T_max": 110.369, 
+          "T_min": 103.989, 
+          "a": [
+            2947001.84
+          ], 
+          "p_0": 122.65, 
+          "t": [
+            2.045
+          ]
+        }, 
+        {
+          "T_0": 110.369, 
+          "T_max": 188, 
+          "T_min": 110.369, 
+          "a": [
+            6.82693421
+          ], 
+          "p_0": 46800000.0, 
+          "t": [
+            1.089
+          ]
+        }
+      ], 
+      "type": "polynomial_in_Tr"
+    }, 
     "pL": {
       "T_r": 282.35, 
       "Tmax": 282.3499999999994, 
@@ -121,14 +152,6 @@
     }
   }, 
   "CAS": "74-85-1", 
-  "CRITICAL": {
-    "T": 282.35, 
-    "T_units": "K", 
-    "p": 5041800.0, 
-    "p_units": "Pa", 
-    "rhomolar": 7636.76598074554, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A3", 
     "FH": 4, 
@@ -144,6 +167,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Smukala-JPCRD-2000", 
+      "STATES": {
+        "reducing": {
+          "T": 282.35, 
+          "T_units": "K", 
+          "p": 5041800, 
+          "p_units": "Pa", 
+          "rhomolar": 7636.76598074554, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 103.989, 
+          "T_units": "K", 
+          "p": 0.1220267638428971, 
+          "p_units": "Pa", 
+          "rhomolar": 23333.806692211565, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 103.989, 
+          "T_units": "K", 
+          "p": 0.1220267638428971, 
+          "p_units": "Pa", 
+          "rhomolar": 0.1411618295576975, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 450, 
       "T_max_units": "K", 
       "Ttriple": 103.989, 
@@ -373,23 +422,35 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 300000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 122.0267638, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 282.35, 
-        "T_units": "K", 
-        "p": 5041800, 
-        "p_units": "Pa", 
-        "rhomolar": 7636.76598074554, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 23333.76164627406, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.1411854791624635, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Ethylene", 
-  "REFPROP_NAME": "ETHYLENE"
+  "REFPROP_NAME": "ETHYLENE", 
+  "STATES": {
+    "critical": {
+      "T": 282.35, 
+      "T_units": "K", 
+      "p": 5041800.0, 
+      "p_units": "Pa", 
+      "rhomolar": 7636.76598074554, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 103.989, 
+      "T_units": "K", 
+      "p": 0.1220267638428971, 
+      "p_units": "Pa", 
+      "rhomolar": 23333.806692211565, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 103.989, 
+      "T_units": "K", 
+      "p": 0.1220267638428971, 
+      "p_units": "Pa", 
+      "rhomolar": 0.1411618295576975, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

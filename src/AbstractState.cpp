@@ -19,7 +19,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     static std::string HEOS_string = "HEOS";
     if (!backend.compare("HEOS"))
     {
-        if (fluid_string.find('&') == -1){
+        if (fluid_string.find('&') == std::string::npos){
             return new HelmholtzEOSBackend(&get_fluid(fluid_string));
         }
         else{
@@ -31,7 +31,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     }
     else if (!backend.compare("REFPROP"))
     {
-        if (fluid_string.find('&') == -1){
+        if (fluid_string.find('&') == std::string::npos){
             return new REFPROPBackend(fluid_string);
         }
         else{
@@ -57,7 +57,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     {
         std::size_t idel = fluid_string.find("::");
         // Backend has not been specified, and we have to figure out what the backend is by parsing the string
-        if (idel == -1) // No '::' found, no backend specified, try HEOS, otherwise a failure
+        if (idel == std::string::npos) // No '::' found, no backend specified, try HEOS, otherwise a failure
         {
             // Figure out what backend to use
             return factory(HEOS_string, fluid_string);
@@ -196,6 +196,8 @@ double AbstractState::keyed_output(int key)
         return get_reducing().T;
     case irhomolar_reducing:
         return get_reducing().rhomolar;
+    case ispeed_sound:
+        return speed_sound();
     //case iT_critical:
     //    return get_critical().T;
     //case irhomolar_critical:

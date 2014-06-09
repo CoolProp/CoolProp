@@ -110,18 +110,36 @@
     }
   }, 
   "CAS": "107-52-8", 
-  "CRITICAL": {
-    "T": 653.2, 
-    "T_units": "K", 
-    "p": 877000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 606.0605999999999, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Colonna-FPE-2006", 
+      "STATES": {
+        "reducing": {
+          "T": 653.2, 
+          "T_units": "K", 
+          "p": 877470, 
+          "p_units": "Pa", 
+          "rhomolar": 622.3569399999996, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 300.0, 
+          "T_units": "K", 
+          "p": 0.001093376953540781, 
+          "p_units": "Pa", 
+          "rhomolar": 1914.3670674385771, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 300.0, 
+          "T_units": "K", 
+          "p": 0.001093376953540781, 
+          "p_units": "Pa", 
+          "rhomolar": 0.00043834773801798706, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 673, 
       "T_max_units": "K", 
       "Ttriple": 214.15, 
@@ -227,23 +245,21 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 30000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 1.093376954, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 653.2, 
-        "T_units": "K", 
-        "p": 877470, 
-        "p_units": "Pa", 
-        "rhomolar": 622.3569399999996, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 2.178681134503756e+99, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 2.178681134503756e+99, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "MD4M", 
-  "REFPROP_NAME": "MD4M"
+  "REFPROP_NAME": "MD4M", 
+  "STATES": {
+    "critical": {
+      "T": 653.2, 
+      "T_units": "K", 
+      "p": 877000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 606.0605999999999, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {}, 
+    "triple_vapor": {}
+  }
 }

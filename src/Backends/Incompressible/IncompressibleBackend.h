@@ -2,6 +2,7 @@
 #ifndef INCOMPRESSIBLEBACKEND_H_
 #define INCOMPRESSIBLEBACKEND_H_
 
+#include "IncompressibleFluid.h"
 #include "AbstractState.h"
 #include "Exceptions.h"
 
@@ -15,6 +16,7 @@ protected:
     bool _mole_fractions_set;
     static bool _REFPROP_supported;
     std::vector<long double> mass_fractions;
+    IncompressibleFluid *fluid;
 public:
     IncompressibleBackend(){};
     virtual ~IncompressibleBackend(){};
@@ -27,10 +29,10 @@ public:
 	IncompressibleBackend(const std::vector<std::string> &component_names);
 
     // Incompressible backend uses mole fractions
-    bool using_mole_fractions();
+    bool using_mole_fractions(){return false;};
 
     /// Updating function for incompressible fluid
-    /** 
+    /**
     In this function we take a pair of thermodynamic states, those defined in the input_pairs
     enumeration and update all the internal variables that we can.
 
@@ -41,13 +43,13 @@ public:
     void update(long input_pair, double value1, double value2);
 
     /// Set the mole fractions
-    /** 
+    /**
     @param mole_fractions The vector of mole fractions of the components
     */
     void set_mole_fractions(const std::vector<long double> &mole_fractions);
-    
+
     /// Set the mass fractions
-    /** 
+    /**
     @param mass_fractions The vector of mass fractions of the components
     */
     void set_mass_fractions(const std::vector<long double> &mass_fractions);

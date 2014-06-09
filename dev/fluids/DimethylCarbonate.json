@@ -111,14 +111,6 @@
     }
   }, 
   "CAS": "616-38-6", 
-  "CRITICAL": {
-    "T": 557.0, 
-    "T_units": "K", 
-    "p": 4908800.0, 
-    "p_units": "Pa", 
-    "rhomolar": 4000.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -134,6 +126,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Zhou-JPCRD-2011", 
+      "STATES": {
+        "reducing": {
+          "T": 557, 
+          "T_units": "K", 
+          "p": 4908800, 
+          "p_units": "Pa", 
+          "rhomolar": 4000, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 277.06, 
+          "T_units": "K", 
+          "p": 2.226523726360071, 
+          "p_units": "Pa", 
+          "rhomolar": 12111.201661172097, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 277.06, 
+          "T_units": "K", 
+          "p": 2.226523726360071, 
+          "p_units": "Pa", 
+          "rhomolar": 0.9680130259154924, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 600, 
       "T_max_units": "K", 
       "Ttriple": 277.06, 
@@ -292,23 +310,35 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 60000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 2226.523726, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 557, 
-        "T_units": "K", 
-        "p": 4908800, 
-        "p_units": "Pa", 
-        "rhomolar": 4000, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 12111.18713006095, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.9680689047177409, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "DimethylCarbonate", 
-  "REFPROP_NAME": "DMC"
+  "REFPROP_NAME": "DMC", 
+  "STATES": {
+    "critical": {
+      "T": 557.0, 
+      "T_units": "K", 
+      "p": 4908800.0, 
+      "p_units": "Pa", 
+      "rhomolar": 4000.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 277.06, 
+      "T_units": "K", 
+      "p": 2.226523726360071, 
+      "p_units": "Pa", 
+      "rhomolar": 12111.201661172097, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 277.06, 
+      "T_units": "K", 
+      "p": 2.226523726360071, 
+      "p_units": "Pa", 
+      "rhomolar": 0.9680130259154924, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

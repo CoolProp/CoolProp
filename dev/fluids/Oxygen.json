@@ -5,6 +5,21 @@
     "O2"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Younglove-NIST-1982", 
+      "T_m": 54.75, 
+      "parts": [
+        {
+          "T_0": 1, 
+          "T_max": 63.1, 
+          "T_min": 54.361, 
+          "a": 227606.348, 
+          "c": 1.769, 
+          "p_0": -266999247.652
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 154.581, 
       "Tmax": 154.58099999999973, 
@@ -122,14 +137,6 @@
     }
   }, 
   "CAS": "7782-44-7", 
-  "CRITICAL": {
-    "T": 154.581, 
-    "T_units": "K", 
-    "p": 5043000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 13630.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 0, 
@@ -145,6 +152,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Stewart-JPCRD-1991", 
+      "STATES": {
+        "reducing": {
+          "T": 154.581, 
+          "T_units": "K", 
+          "p": 5043000, 
+          "p_units": "Pa", 
+          "rhomolar": 13630, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 54.361, 
+          "T_units": "K", 
+          "p": 0.14627764704447577, 
+          "p_units": "Pa", 
+          "rhomolar": 40816.430817738415, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 54.361, 
+          "T_units": "K", 
+          "p": 0.14627764704447577, 
+          "p_units": "Pa", 
+          "rhomolar": 0.32370317009092064, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 300, 
       "T_max_units": "K", 
       "Ttriple": 54.361, 
@@ -352,25 +385,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 80000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 146.277647, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 154.581, 
-        "T_units": "K", 
-        "p": 5043000, 
-        "p_units": "Pa", 
-        "rhomolar": 13630, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 40816.30337657147, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.3237995947960466, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Oxygen", 
   "REFPROP_NAME": "OXYGEN", 
+  "STATES": {
+    "critical": {
+      "T": 154.581, 
+      "T_units": "K", 
+      "p": 5043000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 13630.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 54.361, 
+      "T_units": "K", 
+      "p": 0.14627764704447577, 
+      "p_units": "Pa", 
+      "rhomolar": 40816.430817738415, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 54.361, 
+      "T_units": "K", 
+      "p": 0.14627764704447577, 
+      "p_units": "Pa", 
+      "rhomolar": 0.32370317009092064, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Lemmon-IJT-2004", 

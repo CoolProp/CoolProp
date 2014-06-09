@@ -4,6 +4,21 @@
     "CARBONMONOXIDE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Barreiros-JCT-1982", 
+      "T_m": 68.3, 
+      "parts": [
+        {
+          "T_0": 1, 
+          "T_max": 87.5, 
+          "T_min": 68.16, 
+          "a": 19560.8, 
+          "c": 2.10747, 
+          "p_0": -142921439.2
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 132.86, 
       "Tmax": 132.8599999999997, 
@@ -121,14 +136,6 @@
     }
   }, 
   "CAS": "630-08-0", 
-  "CRITICAL": {
-    "T": 132.86, 
-    "T_units": "K", 
-    "p": 3494000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 10850.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 4, 
@@ -144,6 +151,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JCED-2006", 
+      "STATES": {
+        "reducing": {
+          "T": 132.86, 
+          "T_units": "K", 
+          "p": 3494000, 
+          "p_units": "Pa", 
+          "rhomolar": 10850, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 68.16, 
+          "T_units": "K", 
+          "p": 15.536876656377347, 
+          "p_units": "Pa", 
+          "rhomolar": 30329.705964719713, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 68.16, 
+          "T_units": "K", 
+          "p": 15.536876656377347, 
+          "p_units": "Pa", 
+          "rhomolar": 27.707433845423196, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 500, 
       "T_max_units": "K", 
       "Ttriple": 68.16, 
@@ -246,23 +279,35 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 100000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 15536.87666, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 132.86, 
-        "T_units": "K", 
-        "p": 3494000, 
-        "p_units": "Pa", 
-        "rhomolar": 10850, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 30329.56214318188, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 27.71177905101628, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "CarbonMonoxide", 
-  "REFPROP_NAME": "CO"
+  "REFPROP_NAME": "CO", 
+  "STATES": {
+    "critical": {
+      "T": 132.86, 
+      "T_units": "K", 
+      "p": 3494000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 10850.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 68.16, 
+      "T_units": "K", 
+      "p": 15.536876656377347, 
+      "p_units": "Pa", 
+      "rhomolar": 30329.705964719713, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 68.16, 
+      "T_units": "K", 
+      "p": 15.536876656377347, 
+      "p_units": "Pa", 
+      "rhomolar": 27.707433845423196, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

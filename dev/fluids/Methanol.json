@@ -4,6 +4,29 @@
     "METHANOL"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "deReuck-BOOK-1993", 
+      "T_m": 337.8, 
+      "parts": [
+        {
+          "T_0": 175.61, 
+          "T_max": 245.9, 
+          "T_min": 175.61, 
+          "a": [
+            5330770000.0, 
+            4524780000.0, 
+            38888610000.0
+          ], 
+          "p_0": 0.187, 
+          "t": [
+            1, 
+            1.5, 
+            4
+          ]
+        }
+      ], 
+      "type": "polynomial_in_Theta"
+    }, 
     "pL": {
       "T_r": 512.5, 
       "Tmax": 512.4999999999987, 
@@ -125,14 +148,6 @@
     }
   }, 
   "CAS": "67-56-1", 
-  "CRITICAL": {
-    "T": 512.5, 
-    "T_units": "K", 
-    "p": 8215850.0, 
-    "p_units": "Pa", 
-    "rhomolar": 8520.024867237415, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 3, 
@@ -148,6 +163,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Piazza-FPE-2013", 
+      "STATES": {
+        "reducing": {
+          "T": 512.5, 
+          "T_units": "K", 
+          "p": 8215850, 
+          "p_units": "Pa", 
+          "rhomolar": 8520.024867237415, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 175.61, 
+          "T_units": "K", 
+          "p": 0.0001867637574117855, 
+          "p_units": "Pa", 
+          "rhomolar": 28227.37433284738, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 175.61, 
+          "T_units": "K", 
+          "p": 0.0001867637574117855, 
+          "p_units": "Pa", 
+          "rhomolar": 0.0001279343965397924, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 580, 
       "T_max_units": "K", 
       "Ttriple": 175.61, 
@@ -292,23 +333,35 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 500000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.1867637574, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 512.5, 
-        "T_units": "K", 
-        "p": 8215850, 
-        "p_units": "Pa", 
-        "rhomolar": 8520.024867237415, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 28227.34381723926, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.0001279546715210285, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Methanol", 
-  "REFPROP_NAME": "METHANOL"
+  "REFPROP_NAME": "METHANOL", 
+  "STATES": {
+    "critical": {
+      "T": 512.5, 
+      "T_units": "K", 
+      "p": 8215850.0, 
+      "p_units": "Pa", 
+      "rhomolar": 8520.024867237415, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 175.61, 
+      "T_units": "K", 
+      "p": 0.0001867637574117855, 
+      "p_units": "Pa", 
+      "rhomolar": 28227.37433284738, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 175.61, 
+      "T_units": "K", 
+      "p": 0.0001867637574117855, 
+      "p_units": "Pa", 
+      "rhomolar": 0.0001279343965397924, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }

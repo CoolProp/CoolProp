@@ -5,6 +5,29 @@
     "PARAHYDROGEN"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Younglove-NIST-1982", 
+      "T_m": 18.9, 
+      "parts": [
+        {
+          "T_0": 1, 
+          "T_max": 22, 
+          "T_min": 13.8033, 
+          "a": 125746.643, 
+          "c": 1.955, 
+          "p_0": -21155737.752
+        }, 
+        {
+          "T_0": 1, 
+          "T_max": 164.5, 
+          "T_min": 22, 
+          "a": 248578.596, 
+          "c": 1.764739, 
+          "p_0": -26280332.904
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 32.938, 
       "Tmax": 32.93799999999992, 
@@ -122,14 +145,6 @@
     }
   }, 
   "CAS": "1333-74-0p", 
-  "CRITICAL": {
-    "T": 32.938, 
-    "T_units": "K", 
-    "p": 1285800.0, 
-    "p_units": "Pa", 
-    "rhomolar": 15538.0, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": -1, 
@@ -145,6 +160,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Leachman-JPCRD-2009", 
+      "STATES": {
+        "reducing": {
+          "T": 32.938, 
+          "T_units": "K", 
+          "p": 1285800, 
+          "p_units": "Pa", 
+          "rhomolar": 15538, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 13.8033, 
+          "T_units": "K", 
+          "p": 7.041086751148159, 
+          "p_units": "Pa", 
+          "rhomolar": 38185.34690822156, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 13.8033, 
+          "T_units": "K", 
+          "p": 7.041086751148159, 
+          "p_units": "Pa", 
+          "rhomolar": 62.28040619273301, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 1000, 
       "T_max_units": "K", 
       "Ttriple": 13.8033, 
@@ -290,25 +331,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 2000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 7041.086751, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 32.938, 
-        "T_units": "K", 
-        "p": 1285800, 
-        "p_units": "Pa", 
-        "rhomolar": 15538, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 38184.94839776529, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 62.31256337798966, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "ParaHydrogen", 
   "REFPROP_NAME": "PARAHYD", 
+  "STATES": {
+    "critical": {
+      "T": 32.938, 
+      "T_units": "K", 
+      "p": 1285800.0, 
+      "p_units": "Pa", 
+      "rhomolar": 15538.0, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 13.8033, 
+      "T_units": "K", 
+      "p": 7.041086751148159, 
+      "p_units": "Pa", 
+      "rhomolar": 38185.34690822156, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 13.8033, 
+      "T_units": "K", 
+      "p": 7.041086751148159, 
+      "p_units": "Pa", 
+      "rhomolar": 62.28040619273301, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2011-Hydrogen", 

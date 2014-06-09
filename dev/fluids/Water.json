@@ -6,6 +6,65 @@
     "h2o"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "IAPWS", 
+      "T_m": -1, 
+      "parts": [
+        {
+          "T_0": 273.16, 
+          "T_max": 251.165, 
+          "T_min": 273.16, 
+          "a": [
+            -1195393.37, 
+            -80818.3159, 
+            -3338.2686
+          ], 
+          "p_0": 611.657, 
+          "t": [
+            3.0, 
+            25.75, 
+            103.75
+          ]
+        }, 
+        {
+          "T_0": 251.165, 
+          "T_max": 256.164, 
+          "T_min": 251.165, 
+          "a": [
+            0.299948
+          ], 
+          "p_0": 208566000.0, 
+          "t": [
+            60
+          ]
+        }, 
+        {
+          "T_0": 256.164, 
+          "T_max": 273.31, 
+          "T_min": 256.164, 
+          "a": [
+            1.18721
+          ], 
+          "p_0": 350100000.0, 
+          "t": [
+            8
+          ]
+        }, 
+        {
+          "T_0": 273.31, 
+          "T_max": 355, 
+          "T_min": 273.31, 
+          "a": [
+            1.07476
+          ], 
+          "p_0": 623400000.0, 
+          "t": [
+            4.6
+          ]
+        }
+      ], 
+      "type": "polynomial_in_Tr"
+    }, 
     "pL": {
       "T_r": 647.096, 
       "Tmax": 647.0959999999985, 
@@ -125,14 +184,6 @@
     }
   }, 
   "CAS": "7732-18-5", 
-  "CRITICAL": {
-    "T": 647.096, 
-    "T_units": "K", 
-    "p": 22064000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 17873.72799560906, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A1", 
     "FH": 0, 
@@ -148,6 +199,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Wagner-JPCRD-2002", 
+      "STATES": {
+        "reducing": {
+          "T": 647.096, 
+          "T_units": "K", 
+          "p": 22064000, 
+          "p_units": "Pa", 
+          "rhomolar": 17873.72799560906, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 273.16, 
+          "T_units": "K", 
+          "p": 0.6116547710080396, 
+          "p_units": "Pa", 
+          "rhomolar": 55496.95514003037, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 273.16, 
+          "T_units": "K", 
+          "p": 0.6116547710080396, 
+          "p_units": "Pa", 
+          "rhomolar": 0.26947008086577756, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 1273, 
       "T_max_units": "K", 
       "Ttriple": 273.16, 
@@ -478,25 +555,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 1000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 611.654771, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 647.096, 
-        "T_units": "K", 
-        "p": 22064000, 
-        "p_units": "Pa", 
-        "rhomolar": 17873.72799560906, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 55496.95891263704, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 0.2694886833193984, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "Water", 
   "REFPROP_NAME": "WATER", 
+  "STATES": {
+    "critical": {
+      "T": 647.096, 
+      "T_units": "K", 
+      "p": 22064000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 17873.72799560906, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 273.16, 
+      "T_units": "K", 
+      "p": 0.6116547710080396, 
+      "p_units": "Pa", 
+      "rhomolar": 55496.95514003037, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 273.16, 
+      "T_units": "K", 
+      "p": 0.6116547710080396, 
+      "p_units": "Pa", 
+      "rhomolar": 0.26947008086577756, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-JPCRD-2012", 

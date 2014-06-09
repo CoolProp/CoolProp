@@ -115,6 +115,17 @@ long double HelmholtzEOSMixtureBackend::calc_molar_mass(void)
     }
     return summer;
 }
+long double HelmholtzEOSMixtureBackend::calc_melt_p_T(long double T)
+{
+    if (is_pure_or_pseudopure)
+    {
+        return components[0]->ancillaries.melting_line.evaluate(iP, iT, T);
+    }
+    else
+    {
+        throw NotImplementedError(format("calc_melt_p_T not implemented for mixtures"));
+    }
+}
 long double HelmholtzEOSMixtureBackend::calc_surface_tension(void)
 {
     if (is_pure_or_pseudopure)
@@ -1174,8 +1185,8 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
     // Supercritical temperature
     if (_T > _crit.T)
     {
-        long double rhomelt = components[0]->pEOS->rhoLtriple;
-        long double rhoc = components[0]->pEOS->reduce.rhomolar;
+        long double rhomelt = components[0]->triple_liquid.rhomolar;
+        long double rhoc = components[0]->crit.rhomolar;
         long double rhomin = 1e-10;
 
         switch(other)
@@ -1228,7 +1239,7 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
     else if (_phase == iphase_liquid)
     {
         long double ymelt, yL, y;
-        long double rhomelt = components[0]->pEOS->rhoLtriple;
+        long double rhomelt = components[0]->triple_liquid.rhomolar;
         long double rhoL = static_cast<double>(_rhoLanc);
 
         switch(other)
@@ -1591,8 +1602,8 @@ long double HelmholtzEOSMixtureBackend::calc_speed_sound(void)
     long double d2ar_dDelta2 = d2alphar_dDelta2();
     long double d2ar_dDelta_dTau = d2alphar_dDelta_dTau();
     long double d2ar_dTau2 = d2alphar_dTau2();
-    long double R_u = static_cast<long double>(_gas_constant);
-    long double mm = static_cast<long double>(_molar_mass);
+    long double R_u = gas_constant();
+    long double mm = molar_mass();
 
     // Get speed of sound
     _speed_sound = sqrt(R_u*_T/mm*(1+2*_delta.pt()*dar_dDelta+pow(_delta.pt(),2)*d2ar_dDelta2 - pow(1+_delta.pt()*dar_dDelta-_delta.pt()*_tau.pt()*d2ar_dDelta_dTau,2)/(pow(_tau.pt(),2)*(d2ar_dTau2 + d2a0_dTau2))));

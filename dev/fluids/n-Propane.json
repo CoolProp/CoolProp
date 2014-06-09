@@ -8,6 +8,21 @@
     "N-PROPANE"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Reeves-JCP-1964", 
+      "T_m": 85.39999999999998, 
+      "parts": [
+        {
+          "T_0": 85.3, 
+          "T_max": 168.63, 
+          "T_min": 85.525, 
+          "a": 718000000.0, 
+          "c": 1.283, 
+          "p_0": 0.0
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 369.89, 
       "Tmax": 369.8899999999991, 
@@ -127,14 +142,6 @@
     }
   }, 
   "CAS": "74-98-6", 
-  "CRITICAL": {
-    "T": 369.89, 
-    "T_units": "K", 
-    "p": 4251200.0, 
-    "p_units": "Pa", 
-    "rhomolar": 5000.000000000001, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "A3", 
     "FH": 4, 
@@ -150,6 +157,32 @@
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JCED-2009", 
+      "STATES": {
+        "reducing": {
+          "T": 369.89, 
+          "T_units": "K", 
+          "p": 4251200, 
+          "p_units": "Pa", 
+          "rhomolar": 5000.000000000001, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 85.525, 
+          "T_units": "K", 
+          "p": 1.7204618151212885e-07, 
+          "p_units": "Pa", 
+          "rhomolar": 16625.805559650216, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 85.525, 
+          "T_units": "K", 
+          "p": 1.7204618151212885e-07, 
+          "p_units": "Pa", 
+          "rhomolar": 2.4194535056958734e-07, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 650, 
       "T_max_units": "K", 
       "Ttriple": 85.525, 
@@ -311,25 +344,37 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 1000000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.0001720461815, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 369.89, 
-        "T_units": "K", 
-        "p": 4251200, 
-        "p_units": "Pa", 
-        "rhomolar": 5000.000000000001, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 16625.78187096635, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 2.420412863780354e-07, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "n-Propane", 
   "REFPROP_NAME": "PROPANE", 
+  "STATES": {
+    "critical": {
+      "T": 369.89, 
+      "T_units": "K", 
+      "p": 4251200.0, 
+      "p_units": "Pa", 
+      "rhomolar": 5000.000000000001, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 85.525, 
+      "T_units": "K", 
+      "p": 1.7204618151212885e-07, 
+      "p_units": "Pa", 
+      "rhomolar": 16625.805559650216, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 85.525, 
+      "T_units": "K", 
+      "p": 1.7204618151212885e-07, 
+      "p_units": "Pa", 
+      "rhomolar": 2.4194535056958734e-07, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }, 
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Marsh-JCED-2002", 

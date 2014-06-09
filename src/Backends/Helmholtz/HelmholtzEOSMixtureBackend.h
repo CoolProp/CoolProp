@@ -17,10 +17,10 @@ class FlashRoutines;
 class HelmholtzEOSMixtureBackend : public AbstractState {
 protected:
     std::vector<CoolPropFluid*> components; ///< The components that are in use
-    
+
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
     std::vector<long double> mole_fractions; ///< The mole fractions of the components
-    std::vector<long double> mole_fractions_liq, ///< The mole fractions of the saturated liquid 
+    std::vector<long double> mole_fractions_liq, ///< The mole fractions of the saturated liquid
                              mole_fractions_vap, ///< The mole fractions of the saturated vapor
                              K, ///< The K factors for the components
                              lnK; ///< The natural logarithms of the K factors of the components
@@ -37,7 +37,7 @@ public:
 
     friend class FlashRoutines; // Allows the static methods in the FlashRoutines class to have access to all the protected members and methods of this class
     friend class TransportRoutines; // Allows the static methods in the TransportRoutines class to have access to all the protected members and methods of this class
-    //friend class MixtureDerivatives; // 
+    //friend class MixtureDerivatives; //
 
     // Helmholtz EOS backend uses mole fractions
     bool using_mole_fractions(){return true;}
@@ -46,7 +46,7 @@ public:
     std::vector<long double> &get_K(){return K;};
     std::vector<long double> &get_lnK(){return lnK;};
 
-    shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///< 
+    shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///<
 
     void update(long input_pair, double value1, double value2);
 
@@ -69,19 +69,19 @@ public:
     void set_excess_term();
 
     /// Set the mole fractions
-    /** 
+    /**
     @param mole_fractions The vector of mole fractions of the components
     */
     void set_mole_fractions(const std::vector<long double> &mole_fractions);
 
     const std::vector<long double> &get_mole_fractions(){return mole_fractions;};
-    
+
     /// Set the mass fractions
-    /** 
+    /**
     @param mass_fractions The vector of mass fractions of the components
     */
     void set_mass_fractions(const std::vector<long double> &mass_fractions){throw std::exception();};
-    
+
     long double calc_molar_mass(void);
     long double calc_gas_constant(void);
 
@@ -118,6 +118,7 @@ public:
     long double calc_d2alpha0_dDelta_dTau(void);
     long double calc_d2alpha0_dTau2(void);
 
+    long double calc_melt_p_T(long double T);
     long double calc_surface_tension(void);
     long double calc_viscosity(void);
     long double calc_viscosity_dilute(void);
@@ -137,7 +138,7 @@ public:
     std::string calc_name(void);
 
     long double calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<long double> & mole_fractions, const long double &tau, const long double &delta);
-    
+
     /**
     \brief Take derivatives of the ideal-gas part of the Helmholtz energy, don't use any cached values, or store any cached values
 
@@ -163,7 +164,7 @@ public:
     \sa Table B5, GERG 2008 from Kunz Wagner, JCED, 2012
     */
     long double calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<long double> & mole_fractions, const long double &tau, const long double &delta, const long double &Tr, const long double &rhor);
-    
+
     void calc_reducing_state(void);
     SimpleState calc_reducing_state_nocache(const std::vector<long double> & mole_fractions);
 
@@ -183,11 +184,11 @@ public:
 
     void mass_to_molar_inputs(long &input_pair, double &value1, double &value2);
 
-    // *************************************************************** 
+    // ***************************************************************
     // ***************************************************************
     // *************  PHASE DETERMINATION ROUTINES  ******************
     // ***************************************************************
-    // *************************************************************** 
+    // ***************************************************************
     void T_phase_determination_pure_or_pseudopure(int other, long double value);
     void p_phase_determination_pure_or_pseudopure(int other, long double value);
     void DmolarP_phase_determination();
@@ -197,8 +198,8 @@ public:
     // ***************************************************************
     // *******************  SOLVER ROUTINES  *************************
     // ***************************************************************
-    // ***************************************************************        
-    
+    // ***************************************************************
+
     long double solver_rho_Tp(long double T, long double p, long double rho_guess = -1);
     long double solver_rho_Tp_SRK(long double T, long double p, int phase);
     long double solver_for_rho_given_T_oneof_HSU(long double T, long double value, int other);
@@ -310,7 +311,7 @@ public:
 	\f[
 	n\left(\frac{\partial \ln \phi_i}{\partial n_j}\right)_{T,p} = n\left(\frac{\partial^2n\alpha^r}{\partial n_j \partial n_i} \right)_{T,V}+1+\frac{n}{RT}\frac{\left(\frac{\partial p}{\partial n_j}\right)_{T,V,n_i}\left(\frac{\partial p}{\partial n_i}\right)_{T,V,n_j}}{\left(\frac{\partial p}{\partial V}\right)_{T,\bar n}}
 	\f]
-	which is also equal to 
+	which is also equal to
 	\f[
 	n\left(\frac{\partial \ln \phi_i}{\partial n_j}\right)_{T,p} = n\left(\frac{\partial^2n\alpha^r}{\partial n_j \partial n_i} \right)_{T,V}+1-\frac{\hat v_i}{RT}\left[n\left(\frac{\partial p}{\partial n_j}\right)_{T,V,n_i}\right]
 	\f]
@@ -320,7 +321,7 @@ public:
 	/// Gernert Equation 3.115
 	/// Catch test provided
 	long double mixderiv_dln_fugacity_coefficient_dxj__constT_p_xi(int i, int j);
-	
+
 	/// Gernert Equation 3.130
 	/// Catch test provided
 	long double mixderiv_dpdxj__constT_V_xi(int j);
@@ -390,7 +391,7 @@ public:
 	\f]
 	GERG 2004 Monograph equation 7.47:
 	\f{eqnarray*}{
-	n\left( \frac{\partial}{\partial n_j}\left(n\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j} \right) \right)_{T,V,n_i} &=& \left( \frac{\partial}{\partial \delta}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\tau,\bar x}\cdot n\left(\frac{\partial\delta}{\partial n_j}\right)_{T,V,n_i}\\ 
+	n\left( \frac{\partial}{\partial n_j}\left(n\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j} \right) \right)_{T,V,n_i} &=& \left( \frac{\partial}{\partial \delta}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\tau,\bar x}\cdot n\left(\frac{\partial\delta}{\partial n_j}\right)_{T,V,n_i}\\
 	&+& \left( \frac{\partial}{\partial \tau}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\tau,\bar x}\cdot n\left(\frac{\partial\tau}{\partial n_j}\right)_{T,V,n_i}\\
 	&+& \left( \frac{\partial}{\partial x_j}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\delta,\tau,x_i}-\sum_{k=1}^{N}x_k \left( \frac{\partial}{\partial x_k}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\delta,\tau,x_i}\\
 	\f}
@@ -404,7 +405,7 @@ public:
 	\f]
 	*/
 	long double mixderiv_nddeltadni__constT_V_nj(int i);
-	
+
     /// GERG 2004 Monograph equation 7.49
     /** The derivative term
 	\f[

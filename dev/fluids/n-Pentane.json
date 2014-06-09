@@ -7,6 +7,21 @@
     "R601"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Reeves-JCP-1964", 
+      "T_m": 143.26, 
+      "parts": [
+        {
+          "T_0": 143.5, 
+          "T_max": 156.2, 
+          "T_min": 143.47, 
+          "a": 660000000.0, 
+          "c": 1.649, 
+          "p_0": 0.0
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 469.7, 
       "Tmax": 469.69999999999914, 
@@ -128,14 +143,6 @@
     }
   }, 
   "CAS": "109-66-0", 
-  "CRITICAL": {
-    "T": 469.7, 
-    "T_units": "K", 
-    "p": 3370000.0, 
-    "p_units": "Pa", 
-    "rhomolar": 3215.5775884221466, 
-    "rhomolar_units": "mol/m^3"
-  }, 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": 4, 
@@ -151,6 +158,32 @@
     {
       "BibTeX_CP0": "Jaeschke-IJT-1995", 
       "BibTeX_EOS": "Span-IJT-2003B", 
+      "STATES": {
+        "reducing": {
+          "T": 469.7, 
+          "T_units": "K", 
+          "p": 3370000, 
+          "p_units": "Pa", 
+          "rhomolar": 3215.577588422147, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 143.47, 
+          "T_units": "K", 
+          "p": 7.632218395084951e-05, 
+          "p_units": "Pa", 
+          "rhomolar": 10566.403034046354, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 143.47, 
+          "T_units": "K", 
+          "p": 7.632218395084951e-05, 
+          "p_units": "Pa", 
+          "rhomolar": 6.398133659997455e-05, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
       "T_max": 573, 
       "T_max_units": "K", 
       "Ttriple": 143.47, 
@@ -265,23 +298,35 @@
       "molar_mass_units": "kg/mol", 
       "p_max": 69000000, 
       "p_max_units": "Pa", 
-      "pseudo_pure": false, 
-      "ptriple": 0.07632218395, 
-      "ptriple_units": "Pa", 
-      "reducing_state": {
-        "T": 469.7, 
-        "T_units": "K", 
-        "p": 3370000, 
-        "p_units": "Pa", 
-        "rhomolar": 3215.577588422147, 
-        "rhomolar_units": "mol/m^3"
-      }, 
-      "rhoLtriple": 10566.39007740751, 
-      "rhoLtriple_units": "mol/m^3", 
-      "rhoVtriple": 6.399383717983962e-05, 
-      "rhoVtriple_units": "mol/m^3"
+      "pseudo_pure": false
     }
   ], 
   "NAME": "n-Pentane", 
-  "REFPROP_NAME": "PENTANE"
+  "REFPROP_NAME": "PENTANE", 
+  "STATES": {
+    "critical": {
+      "T": 469.7, 
+      "T_units": "K", 
+      "p": 3370000.0, 
+      "p_units": "Pa", 
+      "rhomolar": 3215.5775884221466, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_liquid": {
+      "T": 143.47, 
+      "T_units": "K", 
+      "p": 7.632218395084951e-05, 
+      "p_units": "Pa", 
+      "rhomolar": 10566.403034046354, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 143.47, 
+      "T_units": "K", 
+      "p": 7.632218395084951e-05, 
+      "p_units": "Pa", 
+      "rhomolar": 6.398133659997455e-05, 
+      "rhomolar_units": "mol/m^3"
+    }
+  }
 }
