@@ -127,7 +127,7 @@ public:
 	bool checkCoefficients(const unsigned int rows, const unsigned int columns);
 	/// @param coefficients vector containing the ordered coefficients
 	/// @param rows unsigned integer value that represents the desired degree of the polynomial
-	bool checkCoefficients(const Eigen::VectorXd &coefficients, const unsigned int rows);
+	bool checkCoefficients(const Eigen::MatrixXd &coefficients, const unsigned int rows);
 	/// @param coefficients vector containing the ordered coefficients
 	/// @param rows unsigned integer value that represents the desired degree of the polynomial
 	bool checkCoefficients(const std::vector<double> &coefficients, const unsigned int rows);

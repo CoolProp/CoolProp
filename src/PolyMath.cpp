@@ -34,13 +34,20 @@ void Polynomial2D::setCoefficients(const std::vector<std::vector<double> > &coef
 /** Starts with only the first coefficient dimension
  *  and checks the matrix size against the parameters rows and columns. */
 /// @param rows unsigned integer value that represents the desired degree of the polynomial
-bool Polynomial2D::checkCoefficients(const unsigned int rows);
+bool Polynomial2D::checkCoefficients(const unsigned int rows){
+	return this->checkCoefficients(this->coefficients,rows);
+}
 /// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
 /// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
-bool Polynomial2D::checkCoefficients(const unsigned int rows, const unsigned int columns);
+bool Polynomial2D::checkCoefficients(const unsigned int rows, const unsigned int columns){
+	return this->checkCoefficients(this->coefficients,rows, columns);
+}
 /// @param coefficients vector containing the ordered coefficients
 /// @param rows unsigned integer value that represents the desired degree of the polynomial
-bool Polynomial2D::checkCoefficients(const Eigen::VectorXd &coefficients, const unsigned int rows){
+bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const unsigned int rows){
+	if (coefficients.cols() != 1) {
+		throw ValueError(format("You have a 2D coefficient matrix (%d,%d), please use the 2D checks. ",coefficients.rows(),coefficients.cols()));
+	}
 	if (coefficients.rows() == rows){
 		return true;
 	} else {
@@ -51,41 +58,39 @@ bool Polynomial2D::checkCoefficients(const Eigen::VectorXd &coefficients, const 
 /// @param coefficients vector containing the ordered coefficients
 /// @param rows unsigned integer value that represents the desired degree of the polynomial
 bool Polynomial2D::checkCoefficients(const std::vector<double> &coefficients, const unsigned int rows){
-	if (coefficients.size() == rows){
-		return true;
+	std::size_t r = num_rows(coefficients);
+	Eigen::VectorXd tmp = Eigen::VectorXd::Constant(r,0.0);
+	convert(coefficients,tmp);
+	return this->checkCoefficients(tmp, rows);
+}
+/// @param coefficients matrix containing the ordered coefficients
+/// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
+/// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
+bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const unsigned int rows, const unsigned int columns){
+	if (coefficients.rows() == rows) {
+		if (coefficients.cols() == columns) {
+			return true;
+		} else {
+			throw ValueError(format("The number of columns %d does not match with %d. ",coefficients.cols(),columns));
+		}
 	} else {
-		throw ValueError(format("The number of coefficients %d does not match with %d. ",coefficients.size(),rows));
+		throw ValueError(format("The number of rows %d does not match with %d. ",coefficients.rows(),rows));
 	}
 	return false;
 }
 /// @param coefficients matrix containing the ordered coefficients
 /// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
 /// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
-bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const unsigned int rows, const unsigned int columns);
-/// @param coefficients matrix containing the ordered coefficients
-/// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
-/// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
-bool Polynomial2D::checkCoefficients(const std::vector<std::vector<double> > &coefficients, const unsigned int rows, const unsigned int columns);
+bool Polynomial2D::checkCoefficients(const std::vector<std::vector<double> > &coefficients, const unsigned int rows, const unsigned int columns){
+	std::size_t r = num_rows(coefficients), c = num_cols(coefficients);
+	Eigen::MatrixXd tmp = Eigen::MatrixXd::Constant(r,c,0.0);
+	convert(coefficients,tmp);
+	return this->checkCoefficients(tmp, rows, columns);
+}
 
 
+}
 
-///// Basic checks for coefficient vectors.
-///** Starts with only the first coefficient dimension
-// *  and checks the vector length against parameter n. */
-//bool BasePolynomial::checkCoefficients(const std::vector<double> &coefficients, unsigned int n){
-
-//bool BasePolynomial::checkCoefficients(std::vector< std::vector<double> > const& coefficients, unsigned int rows, unsigned int columns){
-//	if (coefficients.size() == rows){
-//		bool result = true;
-//		for(unsigned int i=0; i<rows; i++) {
-//			result = result && checkCoefficients(coefficients[i],columns);
-//		}
-//		return result;
-//	} else {
-//		throw ValueError(format("The number of rows %d does not match with %d. ",coefficients.size(),rows));
-//	}
-//	return false;
-//}
 
 
 
@@ -143,9 +148,6 @@ bool Polynomial2D::checkCoefficients(const std::vector<std::vector<double> > &co
 //double Polynomial2D::solve(const double &in, const double &z_in, unsigned int axis = 1);
 
 
-};
-
-
 #ifdef ENABLE_CATCH
 #include <math.h>
 #include <iostream>
@@ -169,6 +171,9 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 
 	SECTION("Coefficient parsing and setting") {
 		poly2D.setCoefficients(cHeat2D);
+		CHECK_THROWS(poly2D.checkCoefficients(4,5));
+		CHECK_NOTHROW(poly2D.checkCoefficients(2,4));
+		poly2D.checkCoefficients(2,4);
 	}
 }
 
