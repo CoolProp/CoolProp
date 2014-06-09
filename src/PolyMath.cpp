@@ -173,7 +173,7 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		poly2D.setCoefficients(cHeat2D);
 		CHECK_THROWS(poly2D.checkCoefficients(4,5));
 		CHECK_NOTHROW(poly2D.checkCoefficients(2,4));
-		poly2D.checkCoefficients(2,4);
+
 	}
 }
 
