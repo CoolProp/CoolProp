@@ -163,6 +163,9 @@ if (COOLPROP_OCTAVE_MODULE)
   INCLUDE(${SWIG_USE_FILE})
   FIND_PACKAGE(Octave REQUIRED)
   
+  # Make a src directory to deal with file permissions problem with MinGW makefile
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
+  
   # Find the required libraries
   find_library(OCTAVE_LIB octave PATHS ${OCTAVE_LINK_DIRS})
   find_library(OCTINTERP_LIB octinterp PATHS ${OCTAVE_LINK_DIRS})
