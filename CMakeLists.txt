@@ -169,6 +169,7 @@ if (COOLPROP_OCTAVE_MODULE)
   # Find the required libraries
   find_library(OCTAVE_LIB octave PATHS ${OCTAVE_LINK_DIRS})
   find_library(OCTINTERP_LIB octinterp PATHS ${OCTAVE_LINK_DIRS})
+  find_library(CRUFT_LIB cruft PATHS ${OCTAVE_LINK_DIRS})
   
   # Set the include folders
   SET(OCTAVE_WRAP_INCLUDE_DIRS ${INCLUDE_DIR})
@@ -181,10 +182,30 @@ if (COOLPROP_OCTAVE_MODULE)
 
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   SWIG_ADD_MODULE(CoolProp octave ${I_FILE} ${APP_SOURCES})
-  SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB})
+  SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB} ${CRUFT_LIB})
 
-  add_dependencies (CoolProp generate_headers)
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
+  
+endif()
+
+if (COOLPROP_CSHARP_MODULE)
+
+  # Must have SWIG and Octave
+  FIND_PACKAGE(SWIG REQUIRED)
+  INCLUDE(${SWIG_USE_FILE})
+  FIND_PACKAGE(Csharp REQUIRED)
+  
+  # Make a src directory to deal with file permissions problem with MinGW makefile
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
+
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport \"CoolProp\"")
+
+  SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+
+  set_target_properties(CoolProp PROPERTIES PREFIX "")
   
 endif()
 
