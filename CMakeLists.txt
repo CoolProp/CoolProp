@@ -32,9 +32,17 @@ set (CoolProp_VERSION ${CoolProp_VERSION_MAJOR}.${CoolProp_VERSION_MINOR}.${Cool
 #######################################
 
 option (COOLPROP_STATIC_LIBRARY
-        "Build and install CoolProp as a STATIC library (.lib, .a) as opposed to SHARED (.dll, .so)"
-        ON)
+        "Build CoolProp as a static library (.lib, .a)"
+        OFF)
 
+option (COOLPROP_SHARED_LIBRARY
+        "Build CoolProp as a shared library (.dll, .so)"
+        OFF)
+        
+option (COOLPROP_EES_MODULE
+        "Build the EES module"
+        OFF)
+        
 option (COOLPROP_TESTING 
         "Build with test flags and include main() from catch" 
         OFF)
@@ -54,6 +62,9 @@ file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
 file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # "externals/*.hpp")
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
 
+if (NOT DEFINED CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE CACHE Release STRING "hfsfhskj" FORCE)
+endif()
 
 set (APP_INCLUDE_DIRS "")
 foreach (_headerFile ${APP_HEADERS})
@@ -94,16 +105,25 @@ endif()
 add_custom_target(generate_headers
                   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
 
-
 ###      COOLPROP LIB or DLL        ###
 if (COOLPROP_STATIC_LIBRARY)
     add_library(${app_name} STATIC ${APP_SOURCES})
-else()
+    add_dependencies (${app_name} generate_headers)
+endif()
+if (COOLPROP_SHARED_LIBRARY)
     add_library(${app_name} SHARED ${APP_SOURCES})
     set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
+    add_dependencies (${app_name} generate_headers)
 endif()
-add_dependencies (${app_name} generate_headers)
 
+if (COOLPROP_EES_MODULE)
+  list (APPEND APP_SOURCES "wrappers/EES/main.cpp")
+  include_directories(${APP_INCLUDE_DIRS})
+  add_library(COOLPROP_EES SHARED ${APP_SOURCES})
+  set_target_properties (COOLPROP_EES PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
+  add_dependencies (COOLPROP_EES generate_headers)
+  set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
+endif()
 
 ###      COOLPROP TESTING APP       ###
 if (COOLPROP_TESTING)
@@ -120,7 +140,6 @@ if (COOLPROP_TESTING)
     target_link_libraries (testRunner.exe ${CMAKE_DL_LIBS})
   endif()
   add_test(ProceedureTests testRunner.exe)
-
 
   # C++ Documentation Test
   add_executable        (docuTest.exe "Web/examples/C++/Example.cpp")
