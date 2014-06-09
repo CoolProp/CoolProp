@@ -62,10 +62,6 @@ file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
 file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # "externals/*.hpp")
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
 
-if (NOT DEFINED CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE CACHE Release STRING "hfsfhskj" FORCE)
-endif()
-
 set (APP_INCLUDE_DIRS "")
 foreach (_headerFile ${APP_HEADERS})
     get_filename_component(_dir ${_headerFile} PATH)
@@ -103,23 +99,70 @@ endif()
 
 ###     FLUIDS, MIXTURES JSON       ###
 add_custom_target(generate_headers
-                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
+                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/dev/generate_headers.py")
 
 ###      COOLPROP LIB or DLL        ###
 if (COOLPROP_STATIC_LIBRARY)
     add_library(${app_name} STATIC ${APP_SOURCES})
     add_dependencies (${app_name} generate_headers)
 endif()
+
+##### COOLPROP SHARED LIBRARY ######
 if (COOLPROP_SHARED_LIBRARY)
     add_library(${app_name} SHARED ${APP_SOURCES})
     set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
     add_dependencies (${app_name} generate_headers)
 endif()
 
+if (COOLPROP_64BIT_SHARED_LIBRARY)
+    add_library(${app_name} SHARED ${APP_SOURCES})
+    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
+    if (!MSVC)
+    set_target_properties(${app_name} PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
+    endif()
+    add_dependencies (${app_name} generate_headers)
+    set_target_properties(${app_name} PROPERTIES PREFIX "")
+endif()
+
+if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY)
+    add_library(${app_name} SHARED ${APP_SOURCES})
+    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
+    if (!MSVC)
+    set_target_properties(${app_name} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+    endif()
+    add_dependencies (${app_name} generate_headers)
+    set_target_properties(${app_name} PROPERTIES PREFIX "")
+endif()
+
+if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY)
+    add_library(${app_name} SHARED ${APP_SOURCES})
+    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__stdcall")
+    if (!MSVC)
+    set_target_properties(${app_name} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+    endif()
+    add_dependencies (${app_name} generate_headers)
+    set_target_properties(${app_name} PROPERTIES PREFIX "")
+endif()
+
 if (COOLPROP_EES_MODULE)
   list (APPEND APP_SOURCES "wrappers/EES/main.cpp")
   include_directories(${APP_INCLUDE_DIRS})
   add_library(COOLPROP_EES SHARED ${APP_SOURCES})
+  set_target_properties (COOLPROP_EES PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
+  add_dependencies (COOLPROP_EES generate_headers)
+  set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
+  set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+endif()
+
+if (COOLPROP_MATHEMATICA_MODULE)
+
+  # copy "C:\Program Files\Wolfram Research\Mathematica\9.0\SystemFiles\IncludeFiles\C\WolframLibrary.h" .
+  # REM folder obtained from FileNameJoin[{$BaseDirectory, "SystemFiles", "LibraryResources", $SystemID}] in Mathematica
+  # copy CoolProp.dll "C:\ProgramData\Mathematica\SystemFiles\LibraryResources\Windows-x86-64\"
+
+  list (APPEND APP_SOURCES "wrappers/Mathematica/CoolPropMathematica.cpp")
+  include_directories(${APP_INCLUDE_DIRS})
+  add_library(COOLProp SHARED ${APP_SOURCES})
   set_target_properties (COOLPROP_EES PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
   add_dependencies (COOLPROP_EES generate_headers)
   set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
