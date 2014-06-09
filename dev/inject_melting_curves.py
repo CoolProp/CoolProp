@@ -25,17 +25,26 @@ Simon_curves = {
         "BibTeX" : "Michels-PHYSICA-1962", "T_m": 165.02, "parts": [{"T_0" : 1, "a" : 80890.5544859, "c" : 1.5891650, "p_0" : -260932309.446, "T_max" : 366.4}]
     },
     "CarbonMonoxide" : {
-        "BibTeX" : "Barreiros-JCT-1982", "T_m": 81.63, "parts": [{"T_0" : 1, "a" : 19560.8, "c" : 2.10747, "p_0" : -142921439.2, "T_max" : 87.5}]
+        "BibTeX" : "Barreiros-JCT-1982", "T_m": 68.3, "parts": [{"T_0" : 1, "a" : 19560.8, "c" : 2.10747, "p_0" : -142921439.2, "T_max" : 87.5}]
     },
     "Oxygen": {
-        "BibTeX" : "Younglove-NIST-1982", "T_m": 90.2, "parts": [{"T_0" : 1, "a" : 227606.348, "c" : 1.769, "p_0" : -266999247.652, "T_max" : 63.1}]
+        "BibTeX" : "Younglove-NIST-1982", "T_m": 54.75, "parts": [{"T_0" : 1, "a" : 227606.348, "c" : 1.769, "p_0" : -266999247.652, "T_max" : 63.1}]
     },
     "ParaHydrogen": {
         "BibTeX" : "Younglove-NIST-1982", "T_m": 18.9, "parts": [{"T_0" : 1, "a" : 125746.643, "c" : 1.955, "p_0" : -21155737.752, "T_min" : 13.8033, "T_max" : 22},
                                                     {"T_0" : 1, "a" : 248578.596, "c" : 1.764739, "p_0" : -26280332.904, "T_min" : 22, "T_max" : 164.5}]
     },
     "Methane": {
-        "BibTeX" : "Abramson-HPR-2011", "T_m": 90.7, "parts": [{"T_0" : 90.6941, "a" : 0.208e9, "c" : 1.698, "p_0" : 1.17e4, "T_max" : 700}]
+        "BibTeX" : "Abramson-HPR-2011", "T_m": 90.7, "parts": [{"T_0" : 90.6941, "a" : 0.208e9, "c" : 1.698, "p_0" : 1.17e4, "T_max" : 600}]
+    },
+    "Helium": {
+        "BibTeX" : "Datchi-PRB-2000", "T_m": 1.15, "parts": [{"T_0" : 1, "a" : 1.6067e6, "c" : 1.565, "p_0" : -1.6067e6, "T_max" : 700}]
+    },
+    "Neon": {
+        "BibTeX" : "SantamariaPerez-PRB-2010", "T_m": -1, "parts": [{"T_0" : 24.4, "a" : 1.7e9, "c" : 1/0.77, "p_0" : 101325, "T_max" : 700}]
+    },
+    "Hydrogen": {
+        "BibTeX" : "Datchi-PRB-2000", "T_m": 14.009985, "parts": [{"T_0" : 1, "a" : 2.31e5, "c" : 1.7627, "p_0" : -0.0052e6-2.31e5, "T_max" : 700}]
     }
 }
 
@@ -44,16 +53,16 @@ polynomial_in_Tr = {
         "BibTeX" : "Tegeler-JPCRD-1999", "T_m": 87.28, "parts": [{"T_0" : 83.8058, "a" : [-7476.2665, 9959.0613], "t" : [1.05,1.275], "p_0" : 68891, "T_max" : 254.0}]
     },
     "Fluorine" : {
-        "BibTeX" : "deReuck-BOOK-1990", "T_m": 85.2, "parts": [{"T_0" : 53.4811, "a" : [988043.478261], "t" : [2.1845], "p_0" : 252, "T_max" : 55.4}]
+        "BibTeX" : "deReuck-BOOK-1990", "T_m": 53.15, "parts": [{"T_0" : 53.4811, "a" : [988043.478261], "t" : [2.1845], "p_0" : 252, "T_max" : 55.4}]
     },
     "Nitrogen" : {
         "BibTeX" : "Span-JPCRD-2000", "T_m": 77.34, "parts": [{"T_0" : 63.151, "a" : [12798.61], "t" : [1.78963], "p_0" : 12523, "T_max" : 283.8}] 
     },
     "Ethane" : {
-        "BibTeX" : "Buecker-JCRD-2006", "T_m": 184.6, "parts": [{"T_0" : 90.368, "a" : [2.23626315e8, 1.05262374e8], "t" : [1.0, 2.55], "p_0" : 1.14, "T_max" : 110.2}]
+        "BibTeX" : "Buecker-JCRD-2006", "T_m": 90.4, "parts": [{"T_0" : 90.368, "a" : [2.23626315e8, 1.05262374e8], "t" : [1.0, 2.55], "p_0" : 1.14, "T_max" : 110.2}]
     },
     "Isobutane" : {
-        "BibTeX" : "Buecker-JPCRD-2006B", "T_m": 262, "parts": [{"T_0" : 113.73, "a" : [1.9536371309e9], "t" : [6.12], "p_0" : 0.0219, "T_max" : 124.9}]
+        "BibTeX" : "Buecker-JPCRD-2006B", "T_m": 113.55, "parts": [{"T_0" : 113.73, "a" : [1.9536371309e9], "t" : [6.12], "p_0" : 0.0219, "T_max" : 124.9}]
     },
     "Ethylene" : {
         "BibTeX" : "Smukala-JPCRD-2000", "T_m": 169, "parts": [{"T_0" : 103.989, "a" : [2947001.84], "t" : [2.045], "p_0" : 122.65, "T_min" : 103.989, "T_max" : 110.369},
@@ -117,7 +126,6 @@ def plot_rho(T, rho, fit = False):
 def simon():
     global ip, irho
     
-    
     for fluid, values in Simon_curves.iteritems():
         axp = figp.add_subplot(Nrow, Ncol, ip); ip += 1
         axrho = figrho.add_subplot(Nrow, Ncol, irho); irho += 1
@@ -125,7 +133,7 @@ def simon():
         axp.set_ylabel('p [Pa]')
         axrho.set_xlabel('T [K]')
         axrho.set_ylabel('rho [mol/m$^3$]')
-        axp.set_title(fluid)
+        axp.set_title(fluid+' - '+str(round(CP.Props(fluid,"molemass"),2)))
         axrho.set_title(fluid)
         
         fname = os.path.join('fluids',fluid+'.json')
@@ -155,6 +163,7 @@ def simon():
 #                 x,y = plot_rho(df['T'],df['rho'],fit = True)
 #                 axrho.plot(x,y, 'o', mfc='none')
         
+        T_m = values['T_m']
         for i, value in enumerate(values['parts']):
             
             Tmin = value.get('T_min',CP.Props(fluid,"Tmin"))
@@ -169,6 +178,20 @@ def simon():
             p = p_0 + a*((T/T_0)**c - 1)
             
             axp.plot(T, p)
+            
+            cc = 1.75
+            aa = 3e8#(101325-p_0)/((T_m/T_0)**cc-1)
+            pt = CP.Props(fluid,'ptriple')
+            pp = pt + aa*((T/Tmin)**cc - 1)
+            axp.plot(T_m,101325,'*')
+            axp.plot(T,pp,'--')
+            
+            print fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1
+            
+#             if fluid == 'Helium':
+#                 T = np.array([326.2,345.1,362.8,385.1,419.4,459,499,535.7,570,608])
+#                 p = p_0 + a*((T/T_0)**c - 1)
+#                 print p
 
 def Tr():
     global ip, irho
@@ -180,7 +203,7 @@ def Tr():
         axp.set_ylabel('p [Pa]')
         axrho.set_xlabel('T [K]')
         axrho.set_ylabel('rho [mol/m$^3$]')
-        axp.set_title(fluid)
+        axp.set_title(fluid+' - '+str(round(CP.Props(fluid,"molemass"),2)))
         axrho.set_title(fluid)
         
         fname = os.path.join('fluids',fluid+'.json')
@@ -217,6 +240,7 @@ def Tr():
 #                 x,y = plot_rho(df['T'],df['rho'],fit = True)
 #                 axrho.plot(x,y, 'o', mfc='none')
                 
+        T_m = values['T_m']
         for i,value in enumerate(values['parts']):
             
             Tmin = value.get('T_min',CP.Props(fluid,"Tmin"))
@@ -235,6 +259,15 @@ def Tr():
             p = p_t*(RHS + 1)
             
             axp.plot(T, p)
+            
+            cc = 1.75
+            aa = 3e8#(101325-p_0)/((T_m/T_0)**cc-1)
+            pt = CP.Props(fluid,'ptriple')
+            pp = pt + aa*((T/Tmin)**cc - 1)
+            axp.plot(T_m,101325,'*')
+            axp.plot(T,pp,'--')
+            
+            print fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1
         
     
 def theta():
@@ -247,7 +280,7 @@ def theta():
         axp.set_ylabel('p [Pa]')
         axrho.set_xlabel('T [K]')
         axrho.set_ylabel('rho [mol/m$^3$]')
-        axp.set_title(fluid)
+        axp.set_title(fluid+' - '+str(round(CP.Props(fluid,"molemass"),2)))
         axrho.set_title(fluid)
         
         fname = os.path.join('fluids',fluid+'.json')
@@ -264,6 +297,7 @@ def theta():
         fp.write(json.dumps(j,**json_options))
         fp.close()
         
+        T_m = values['T_m']
         for value in values['parts']:
             
             a = value['a']
@@ -289,6 +323,15 @@ def theta():
         
             #x,y = plot_rho(df['T'],df['rho'],fit = True)
             #axrho.plot(x,y, 'o', mfc='none')
+            
+            cc = 1.75
+            aa = 3e8#(101325-p_0)/((T_m/T_0)**cc-1)
+            pt = CP.Props(fluid,'ptriple')
+            pp = pt + aa*((T/Tmin)**cc - 1)
+            axp.plot(T_m,101325,'*')
+            axp.plot(T,pp,'--')
+            
+            print fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1
         
 if __name__=='__main__':
     simon()

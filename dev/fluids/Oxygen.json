@@ -7,7 +7,7 @@
   "ANCILLARIES": {
     "melting_line": {
       "BibTeX": "Younglove-NIST-1982", 
-      "T_m": 90.2, 
+      "T_m": 54.75, 
       "parts": [
         {
           "T_0": 1, 

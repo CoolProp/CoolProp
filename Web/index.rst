@@ -47,9 +47,8 @@ Open-Source Projects Using CoolProp
 Help
 ====
 
-- File a `Github issue <https://github.com/ibell/coolprop/issues>`_
+- File a `Github issue <https://github.com/CoolProp/CoolProp/issues>`_
 - Email the `Google group <https://groups.google.com/d/forum/coolprop-users>`_
-
 
 ===============
 Main Developers

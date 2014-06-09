@@ -4,6 +4,21 @@
     "NEON"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "SantamariaPerez-PRB-2010", 
+      "T_m": -1, 
+      "parts": [
+        {
+          "T_0": 24.4, 
+          "T_max": 700, 
+          "T_min": 24.56, 
+          "a": 1700000000.0, 
+          "c": 1.2987012987012987, 
+          "p_0": 101325
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 44.4918, 
       "Tmax": 44.49179999999988, 
