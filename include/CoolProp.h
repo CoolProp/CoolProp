@@ -133,7 +133,7 @@ You might want to start by looking at CoolProp.h
 	/// @param rho Density at reference state [mol/m^3]
 	/// @param h0 Enthalpy at reference state [J/kg]
 	/// @param s0 Entropy at references state [J/kg/K]
-	void set_reference_stateD(std::string FluidName, double T, double rho, double h0, double s0);
+	//void set_reference_stateD(std::string FluidName, double T, double rho, double h0, double s0);
 
     /*
     /// Return the phase of the given state point with temperature, pressure as inputs
