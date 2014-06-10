@@ -235,7 +235,13 @@ if (COOLPROP_JAVA_MODULE)
 
   SWIG_ADD_MODULE(CoolProp java ${I_FILE} ${APP_SOURCES})
 
-  set_target_properties(CoolProp PROPERTIES PREFIX "")
+  if (WIN32)
+    set_target_properties(CoolProp PROPERTIES PREFIX "")
+  endif()
+  
+  if (!MSVC)
+    set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
+  endif()
   
 endif()
 
