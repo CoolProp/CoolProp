@@ -290,7 +290,7 @@ long double TransportRoutines::viscosity_hexane_higher_order_hardcoded(Helmholtz
 
 long double TransportRoutines::viscosity_heptane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
 {
-    /// From Assael, JPCRD, 2014
+    /// From Michailidou-JPCRD-2014-Heptane
     long double Tr = HEOS.T()/540.13, rhor = HEOS.rhomass()/232;
 
     // Output is in Pa-s
