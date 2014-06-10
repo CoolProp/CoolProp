@@ -14,8 +14,10 @@ import hashlib
 def get_hash(data):
     return hashlib.sha224(data).hexdigest()
 
+repo_root_path = os.path.normpath(os.path.join(os.path.abspath(__file__),'..','..'))
+
 # Load up the hashes of the data that will be written to each file
-if os.path.exists('hashes.json'):
+if os.path.exists(os.path.join(repo_root_path,'dev','hashes.json')):
     hashes = json.load(open('hashes.json','r'))
 else:
     hashes = dict()
@@ -99,22 +101,19 @@ def gitrev_to_file(root_dir):
         pass
     
 if __name__=='__main__':
-    path = os.path.abspath(__file__)
-    path = os.path.dirname(path)
-    path = os.path.dirname(path)
     
     import shutil
-    shutil.copy2(os.path.join(path, 'externals','Catch','single_include','catch.hpp'),os.path.join(path,'include','catch.hpp'))
+    shutil.copy2(os.path.join(repo_root_path, 'externals','Catch','single_include','catch.hpp'),os.path.join(repo_root_path,'include','catch.hpp'))
 
-    version_to_file(root_dir = path)
-    gitrev_to_file(root_dir = path)
+    version_to_file(root_dir = repo_root_path)
+    gitrev_to_file(root_dir = repo_root_path)
     
     import JSON_to_CPP
-    JSON_to_CPP.TO_CPP(root_dir = path, hashes = hashes)
+    JSON_to_CPP.TO_CPP(root_dir = repo_root_path, hashes = hashes)
 
     # Write the hashes to a hashes JSON file
     if hashes:
-        fp = open('hashes.json','w')
+        fp = open(os.path.join(repo_root_path,'dev','hashes.json'),'w')
         fp.write(json.dumps(hashes))
         fp.close()
 
