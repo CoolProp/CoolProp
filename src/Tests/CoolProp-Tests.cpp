@@ -274,7 +274,7 @@ vel("Hexane", "T", 510, "Dmass", 2, "L", 36.772e-3, 1e-4),
 vel("Heptane", "T", 250, "Dmass", 720, "L", 137.09e-3, 1e-4),
 vel("Heptane", "T", 400, "Dmass", 2, "L", 21.794e-3, 1e-4),
 vel("Heptane", "T", 400, "Dmass", 650, "L", 120.75e-3, 1e-4),
-vel("Heptane", "T", 535, "Dmass", 100, "L", 51.655e-3, 1e-4),
+vel("Heptane", "T", 535, "Dmass", 100, "L", 51.655e-3, 3e-3), // Relaxed tolerance because was conductivity was fit using older viscosity correlation
 
 // From Assael, JPCRD, 2013
 vel("Ethanol", "T", 300, "Dmass", 850, "L", 209.68e-3, 1e-4),
