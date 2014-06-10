@@ -190,7 +190,7 @@ endif()
 
 if (COOLPROP_CSHARP_MODULE)
 
-  # Must have SWIG and Octave
+  # Must have SWIG and C#
   FIND_PACKAGE(SWIG REQUIRED)
   INCLUDE(${SWIG_USE_FILE})
   FIND_PACKAGE(Csharp REQUIRED)
@@ -204,6 +204,27 @@ if (COOLPROP_CSHARP_MODULE)
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport \"CoolProp\"")
 
   SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+
+  set_target_properties(CoolProp PROPERTIES PREFIX "")
+  
+endif()
+
+if (COOLPROP_JAVA_MODULE)
+
+  # Must have SWIG and Java
+  FIND_PACKAGE(SWIG REQUIRED)
+  INCLUDE(${SWIG_USE_FILE})
+  FIND_PACKAGE(Java REQUIRED)
+  
+  # Make a src directory to deal with file permissions problem with MinGW makefile
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
+
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
+  #SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport \"CoolProp\"")
+
+  SWIG_ADD_MODULE(CoolProp java ${I_FILE} ${APP_SOURCES})
 
   set_target_properties(CoolProp PROPERTIES PREFIX "")
   
