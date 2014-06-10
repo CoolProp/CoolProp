@@ -154,6 +154,7 @@ if (COOLPROP_EES_MODULE)
   if (!MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
+  add_dependencies (${app_name} generate_headers)  
 endif()
 
 if (COOLPROP_OCTAVE_MODULE)
@@ -185,7 +186,7 @@ if (COOLPROP_OCTAVE_MODULE)
   SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB} ${CRUFT_LIB})
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
-  
+  add_dependencies (${app_name} generate_headers)  
 endif()
 
 if (COOLPROP_CSHARP_MODULE)
@@ -210,7 +211,7 @@ if (COOLPROP_CSHARP_MODULE)
   if (WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
   endif()
-  
+  add_dependencies (${app_name} generate_headers)  
 endif()
 
 if (COOLPROP_JAVA_MODULE)
@@ -242,7 +243,7 @@ if (COOLPROP_JAVA_MODULE)
   if (!MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
   endif()
-  
+  add_dependencies (${app_name} generate_headers)  
 endif()
 
 # NOT WORKING!
