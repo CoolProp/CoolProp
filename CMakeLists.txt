@@ -199,13 +199,17 @@ if (COOLPROP_CSHARP_MODULE)
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
-
+	
+  # Set properties before adding module
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
-  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport \"CoolProp\"")
-
+  if (WIN32)
+    SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport CoolProp")
+  endif()
   SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
 
-  set_target_properties(CoolProp PROPERTIES PREFIX "")
+  if (WIN32)
+    set_target_properties(CoolProp PROPERTIES PREFIX "")
+  endif()
   
 endif()
 
