@@ -126,7 +126,7 @@ if __name__=='__main__':
            url='http://coolprop.sourceforge.net',
            description = """Open-source thermodynamic and transport properties database""",
            packages = ['CoolProp5','CoolProp5.Plots','CoolProp5.tests','CoolProp5.GUI'],
-           ext_modules = [CoolProp_module, constants_module],
+           ext_modules = [CoolProp_module, AbstractState_module, constants_module],
            package_dir = {'CoolProp5':'CoolProp5',},
            #package_data = {'CoolProp5':['State.pxd','CoolProp.pxd','constants_header.pxd','include/*.h','include/rapidjson/*.h','include/rapidjson/internal/*.h','CoolPropBibTeXLibrary.bib']},
            cmdclass={'build_ext': build_ext},
@@ -144,7 +144,7 @@ if __name__=='__main__':
     
     sys.path.pop(0)
     import CoolProp5.CoolProp as CP5
-    print(CP5.PropsSI('P','T',300,'D',1e-10,'Water'))
+    print(CP5.PropsSI('L','T',300,'D',1e-10,'Water'))
     
 #     #Clean up the include folder
 #     shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
