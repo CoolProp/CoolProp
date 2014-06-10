@@ -38,37 +38,59 @@ TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h","
 	cHeat2D.push_back(cHeat);
 
 	SECTION("Pretty printing tests") {
+
+		Eigen::MatrixXd matrix = Eigen::MatrixXd::Random(4,1);
+		std::string tmpStr;
 		std::cout << std::endl;
-		CHECK_NOTHROW( CoolProp::vec_to_string(cHeat[0]) );
-		CHECK_NOTHROW( CoolProp::vec_to_string(cHeat) );
-		CHECK_NOTHROW( CoolProp::vec_to_string(cHeat2D) );
+
+		CHECK_NOTHROW( tmpStr = CoolProp::vec_to_string(cHeat[0]) );
+		std::cout << tmpStr << std::endl;
+		CHECK_NOTHROW( tmpStr = CoolProp::vec_to_string(cHeat) );
+		std::cout << tmpStr << std::endl;
+		CHECK_NOTHROW( tmpStr = CoolProp::vec_to_string(cHeat2D) );
+		std::cout << tmpStr << std::endl;
+
+		CHECK_NOTHROW( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat[0])) );
+		std::cout << tmpStr << std::endl;
+		CHECK_NOTHROW( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat, 1)) );
+		std::cout << tmpStr << std::endl;
+		CHECK_NOTHROW( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat, 2)) );
+		std::cout << tmpStr << std::endl;
+		CHECK_NOTHROW( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat2D)) );
+		std::cout << tmpStr << std::endl;
+	}
+
+	SECTION("Matrix modifications") {
+		Eigen::MatrixXd matrix = CoolProp::vec_to_eigen(cHeat2D);
+
+		std::string tmpStr;
+		std::vector<std::vector<double> > vec2D;
+		std::cout << std::endl;
+
+		CHECK_NOTHROW( CoolProp::removeColumn(matrix,1) );
+		std::cout << CoolProp::mat_to_string(matrix) << std::endl;
+
+		CHECK_NOTHROW( CoolProp::removeRow(matrix,1) );
+		std::cout << CoolProp::mat_to_string(matrix) << std::endl;
+
+		CHECK_THROWS( CoolProp::removeColumn(matrix,10) );
+		CHECK_THROWS( CoolProp::removeRow(matrix,10) );
 	}
 
 	SECTION("Eigen::Vector from std::vector") {
-		{
-		Eigen::Matrix<double,2,1> matrix;
-		CHECK_THROWS( CoolProp::convert(cHeat, matrix) );
-		}{
-		Eigen::Matrix<double,5,1> matrix;
-		CHECK_THROWS( CoolProp::convert(cHeat, matrix) );
-		}{
-		Eigen::Matrix<double,4,1> matrix;
-		CHECK_NOTHROW( CoolProp::convert(cHeat, matrix) );
-		}{
-		Eigen::Vector2d matrix;
-		CHECK_THROWS( CoolProp::convert(cHeat, matrix) );
-		}{
-		Eigen::Vector4d matrix;
-		CHECK_NOTHROW( CoolProp::convert(cHeat, matrix) );
-		}{
-		Eigen::Matrix<double,2,2> matrix;
-		CHECK_THROWS( CoolProp::convert(cHeat2D, matrix) );
-		}{
-		Eigen::Matrix<double,2,5> matrix;
-		CHECK_THROWS( CoolProp::convert(cHeat2D, matrix) );
-		}{
-		Eigen::Matrix<double,2,4> matrix;
-		CHECK_NOTHROW( CoolProp::convert(cHeat2D, matrix) );
+		std::vector<std::vector<double> > vec2D(cHeat2D);
+		Eigen::MatrixXd matrix = CoolProp::vec_to_eigen(vec2D);
+		for (size_t i = 0; i < matrix.cols(); ++i) {
+			for (size_t j = 0; j < matrix.rows(); ++j) {
+				CHECK( fabs(matrix(j,i)-vec2D[j][i]) <= 1e-10 );
+			}
+		}
+		std::vector<double> vec1D(cHeat);
+		matrix = CoolProp::vec_to_eigen(vec1D);
+		for (size_t i = 0; i < matrix.cols(); ++i) {
+			for (size_t j = 0; j < matrix.rows(); ++j) {
+				CHECK( fabs(matrix(j,i)-vec1D[j]) <= 1e-10 );
+			}
 		}
 	}
 }

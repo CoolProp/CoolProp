@@ -128,19 +128,12 @@ public:
 	/// @param coefficients vector containing the ordered coefficients
 	/// @param rows unsigned integer value that represents the desired degree of the polynomial
 	bool checkCoefficients(const Eigen::MatrixXd &coefficients, const unsigned int rows);
-	/// @param coefficients vector containing the ordered coefficients
-	/// @param rows unsigned integer value that represents the desired degree of the polynomial
-	bool checkCoefficients(const std::vector<double> &coefficients, const unsigned int rows);
 	/// @param coefficients matrix containing the ordered coefficients
 	/// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
 	/// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
 	bool checkCoefficients(const Eigen::MatrixXd &coefficients, const unsigned int rows, const unsigned int columns);
-	/// @param coefficients matrix containing the ordered coefficients
-	/// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
-	/// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
-	bool checkCoefficients(const std::vector<std::vector<double> > &coefficients, const unsigned int rows, const unsigned int columns);
 
-protected:
+public:
 	/// Integration functions
 	/** Integrating coefficients for polynomials is done by dividing the
 	 *  original coefficients by (i+1) and elevating the order by 1
@@ -152,24 +145,15 @@ protected:
 	 */
 	/// @param coefficients matrix containing the ordered coefficients
 	/// @param axis unsigned integer value that represents the desired direction of integration
-	Eigen::MatrixXd integrateCoeffs(const Eigen::MatrixXd &coefficients, unsigned int axis = 1);
-	/// @param coefficients matrix containing the ordered coefficients
-	/// @param axis unsigned integer value that represents the desired direction of integration
-	//std::vector<std::vector<double> > integrateCoeffs(const std::vector<std::vector<double> > &coefficients, unsigned int axis = 1);
+	Eigen::MatrixXd integrateCoeffs(const Eigen::MatrixXd &coefficients, int axis);
 
 	/// Derivative coefficients calculation
 	/** Deriving coefficients for polynomials is done by multiplying the
 	 *  original coefficients with i and lowering the order by 1.
-	 *
-	 *  It is not really deprecated, but untested and therefore a warning
-	 *  is issued. Please check this method before you use it.
 	 */
 	/// @param coefficients matrix containing the ordered coefficients
 	/// @param axis unsigned integer value that represents the desired direction of derivation
-	Eigen::MatrixXd deriveCoeffs(const Eigen::MatrixXd &coefficients, unsigned int axis = 1);
-	/// @param coefficients matrix containing the ordered coefficients
-	/// @param axis unsigned integer value that represents the desired direction of derivation
-	//std::vector<std::vector<double> > deriveCoeffs(const std::vector<std::vector<double> > &coefficients, unsigned int axis = 1);
+	Eigen::MatrixXd deriveCoeffs(const Eigen::MatrixXd &coefficients, int axis);
 
 public:
 	/// The core functions to evaluate the polynomial
@@ -185,12 +169,12 @@ public:
 	double evaluate(const double &x_in, const double &y_in);
 	/// @param x_in double value that represents the current input in the 1st dimension
 	/// @param y_in double value that represents the current input in the 2nd dimension
-	/// @param axis unsigned integer value that represents the axis to solve for (1=x, 2=y)
-	double derivative(const double &x_in, const double &y_in, unsigned int axis = 1);
+	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+	double derivative(const double &x_in, const double &y_in, int axis = -1);
 	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
-	/// @param axis unsigned integer value that represents the axis to solve for (1=x, 2=y)
-	double solve(const double &in, const double &z_in, unsigned int axis = 1);
+	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+	double solve(const double &in, const double &z_in, int axis = -1);
 };
 
 

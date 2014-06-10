@@ -34,51 +34,110 @@ namespace CoolProp{
  *  it is still needed.
  */
 /// @param coefficients matrix containing the ordered coefficients
-template<class T, typename Derived> void convert(const Eigen::MatrixBase<Derived> &coefficients, std::vector<std::vector<T> > &result){
+template <class T> std::vector<std::vector<T> > eigen_to_vec(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &coefficients){
 	// Eigen uses columns as major axis, this might be faster than the row iteration.
 	// However, the 2D vector stores things differently, no idea what is faster...
-	size_t R = coefficients.rows(), C = coefficients.cols();
-	//std::vector<std::vector<T> > result(R, std::vector<T>(C, 0));
-	result.resize(R, std::vector<T>(C, 0)); // extends vector if necessary
-	for (size_t i = 0; i < R; ++i) {
-		result[i].resize(C, 0);
-		for (size_t j = 0; j < C; ++j) {
+	std::vector<std::vector<T> > result;
+	size_t r = coefficients.rows(), c = coefficients.cols();
+	result.resize(r, std::vector<T>(c, 0)); // extends vector if necessary
+	for (size_t i = 0; i < r; ++i) {
+		result[i].resize(c, 0);
+		for (size_t j = 0; j < c; ++j) {
 			result[i][j] = coefficients(i,j);
 		}
 	}
+	return result;
 }
 /// @param coefficients matrix containing the ordered coefficients
-template <class T, typename Derived> void convert(const std::vector<std::vector<T> > &coefficients, Eigen::MatrixBase<Derived> &result){
+template <class T> std::vector<T> eigen_to_vec(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &coefficients, int axis = 1){
+	std::vector<T> result;
+	size_t r = coefficients.rows(), c = coefficients.cols();
+	if (axis==1) {
+		if (c!=1) throw ValueError(format("Your matrix has the wrong dimensions: %d,%d",r,c));
+		result.resize(r);
+		for (size_t i = 0; i < r; ++i) {
+			result[i] = coefficients(i,0);
+		}
+	} else if (axis==2) {
+		if (r!=1) throw ValueError(format("Your matrix has the wrong dimensions: %d,%d",r,c));
+		result.resize(c);
+		for (size_t i = 0; i < c; ++i) {
+			result[i] = coefficients(0,i);
+		}
+	} else {
+		throw ValueError(format("You have to provide axis information: %d is not valid. ",axis));
+	}
+	return result;
+}
+/// @param coefficients matrix containing the ordered coefficients
+template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(const std::vector<std::vector<T> > &coefficients){
 	size_t nRows = num_rows(coefficients), nCols = num_cols(coefficients);
-	size_t R = result.rows(), C = result.cols();
-	if (nRows!=R) throw ValueError(format("You have to provide matrices with the same number of rows: %d is not %d. ",nRows,R));
-	if (nCols!=C) throw ValueError(format("You have to provide matrices with the same number of columns: %d is not %d. ",nCols,C));
+	Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> result(nRows,nCols);
 	for (size_t i = 0; i < nCols; ++i) {
 		for (size_t j = 0; j < nRows; ++j) {
 			result(j,i) = coefficients[j][i];
 		}
 	}
-}
-
-/// @param coefficients matrix containing the ordered coefficients
-template<class T, typename Derived> void convert(const Eigen::MatrixBase<Derived> &coefficients, std::vector<T> &result){
-	size_t R = result.rows();
-	result.resize(R, 0); // extends vector if necessary
-	for (size_t i = 0; i < R; ++i) {
-		result[i] = coefficients(i,0);
-	}
+	return result;
 }
 /// @param coefficients matrix containing the ordered coefficients
-template <class T, typename Derived> void convert(const std::vector<T> &coefficients, Eigen::MatrixBase<Derived> &result){
+template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(const std::vector<T> &coefficients, int axis = 1){
 	size_t nRows = num_rows(coefficients);
-	size_t R = result.rows();
-	if (nRows!=R) throw ValueError(format("You have to provide matrices with the same number of rows: %d is not %d. ",nRows,R));
+	Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> result;
+	if (axis==1) result.resize(nRows,1);
+	else if (axis==2) result.resize(1,nRows);
+	else throw ValueError(format("You have to provide axis information: %d is not valid. ",axis));
 	for (size_t i = 0; i < nRows; ++i) {
-		result(i,0) = coefficients[i];
+		if (axis==1) result(i,0) = coefficients[i];
+		if (axis==2) result(0,i) = coefficients[i];
 	}
+	return result;
+}
+/// @param coefficient
+template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(const T &coefficient){
+	Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> result = Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(1,1);
+	result(0,0) = coefficient;
+	return result;
 }
 
 
+/// Remove rows and columns from matrices
+/** A set of convenience functions inspired by http://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c
+ *  but altered to respect templates.
+ */
+template< class T> void removeRow(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix, std::size_t rowToRemove){
+//template<class T> void removeRow(Eigen::MatrixXd& matrix, std::size_t rowToRemove){
+//void removeRow(Eigen::MatrixXd& matrix, unsigned int rowToRemove){
+//template <typename Derived> void removeRow(Eigen::MatrixBase<Derived> &matrix, std::size_t rowToRemove){
+	std::size_t numRows = matrix.rows()-1;
+	std::size_t numCols = matrix.cols();
+    if( rowToRemove < numRows ){
+    	matrix.block(rowToRemove,0,numRows-rowToRemove,numCols) = matrix.block(rowToRemove+1,0,numRows-rowToRemove,numCols);
+    } else {
+    	if( rowToRemove > numRows ){
+    		throw ValueError(format("Your matrix does not have enough rows, %d is not greater or equal to %d.",numRows,rowToRemove));
+		}
+		// Do nothing, resize removes the last row
+    }
+    matrix.conservativeResize(numRows,numCols);
+}
+
+template <class T> void removeColumn(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix, std::size_t colToRemove){
+//template<class T> void removeColumn(Eigen::MatrixXd& matrix, std::size_t colToRemove){
+//void removeColumn(Eigen::MatrixXd& matrix, unsigned int colToRemove){
+//template <typename Derived> void removeColumn(Eigen::MatrixBase<Derived> &matrix, std::size_t colToRemove){
+	std::size_t numRows = matrix.rows();
+	std::size_t numCols = matrix.cols()-1;
+    if( colToRemove < numCols ) {
+        matrix.block(0,colToRemove,numRows,numCols-colToRemove) = matrix.block(0,colToRemove+1,numRows,numCols-colToRemove);
+    } else {
+    	if( colToRemove > numCols ) {
+    		throw ValueError(format("Your matrix does not have enough columns, %d is not greater or equal to %d.",numCols,colToRemove));
+    	}
+    	// Do nothing, resize removes the last column
+    }
+    matrix.conservativeResize(numRows,numCols);
+}
 
 ///// @param coefficients matrix containing the ordered coefficients
 //template <class T> Eigen::Matrix<T, Eigen::Dynamic,Eigen::Dynamic> convert(const std::vector<std::vector<T> > &coefficients){
@@ -149,7 +208,7 @@ template <class T, typename Derived> void convert(const std::vector<T> &coeffici
 
 
 /// Templates for printing numbers, vectors and matrices
-static const char* stdFmt = "%7.3f";
+static const char* stdFmt = "%8.3f";
 
 ///Templates for turning vectors (1D-matrices) into strings
 template<class T> std::string vec_to_string(const             std::vector<T>   &a, const char *fmt) {
@@ -191,6 +250,32 @@ template<class T> std::string vec_to_string(const std::vector<std::vector<T> > &
 	return vec_to_string(A, stdFmt);
 };
 
+///Templates for turning Eigen matrices into strings
+template <class T>  std::string mat_to_string(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &A, const char *fmt) {
+//std::string mat_to_string(const Eigen::MatrixXd &A, const char *fmt) {
+	std::size_t r = A.rows();
+	std::size_t c = A.cols();
+	if ((r<1)||(c<1)) return std::string("");
+	std::stringstream out;
+	out << "[ ";
+	if (r==1) {
+		out << format(fmt, A(0,0));
+		for (size_t j = 1; j < c; j++) {
+			out << ", " << format(fmt, A(0,j));
+		}
+	} else {
+		out << mat_to_string(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(A.row(0)), fmt);
+		for (size_t i = 1; i < r; i++) {
+			out << ", " << std::endl << "  " << mat_to_string(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(A.row(i)), fmt);
+		}
+	}
+	out << " ]";
+    return out.str();
+};
+template <class T> std::string mat_to_string(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &A) {
+//std::string vec_to_string(const Eigen::MatrixXd &A) {
+	return mat_to_string(A, stdFmt);
+};
 
 /// Template class for turning numbers (0D-matrices) into strings
 //template<class T> std::string vec_to_string(const             T  &a){

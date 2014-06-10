@@ -24,10 +24,7 @@ void Polynomial2D::setCoefficients(const Eigen::MatrixXd &coefficients){
 	this->coefficients = coefficients;
 }
 void Polynomial2D::setCoefficients(const std::vector<std::vector<double> > &coefficients){
-	std::size_t c = num_cols(coefficients), r = num_rows(coefficients);
-	Eigen::MatrixXd tmp = Eigen::MatrixXd::Constant(r,c,0.0);
-	convert(coefficients,tmp);
-	this->setCoefficients(tmp);
+	this->setCoefficients(vec_to_eigen(coefficients));
 }
 
 /// Basic checks for coefficient vectors.
@@ -55,14 +52,7 @@ bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const 
 	}
 	return false;
 }
-/// @param coefficients vector containing the ordered coefficients
-/// @param rows unsigned integer value that represents the desired degree of the polynomial
-bool Polynomial2D::checkCoefficients(const std::vector<double> &coefficients, const unsigned int rows){
-	std::size_t r = num_rows(coefficients);
-	Eigen::VectorXd tmp = Eigen::VectorXd::Constant(r,0.0);
-	convert(coefficients,tmp);
-	return this->checkCoefficients(tmp, rows);
-}
+
 /// @param coefficients matrix containing the ordered coefficients
 /// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
 /// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
@@ -78,55 +68,84 @@ bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const 
 	}
 	return false;
 }
+
+
+/// Integration functions
+/** Integrating coefficients for polynomials is done by dividing the
+ *  original coefficients by (i+1) and elevating the order by 1
+ *  through adding a zero as first coefficient.
+ *  Some reslicing needs to be applied to integrate along the x-axis.
+ *  In the brine/solution equations, reordering of the parameters
+ *  avoids this expensive operation. However, it is included for the
+ *  sake of completeness.
+ */
 /// @param coefficients matrix containing the ordered coefficients
-/// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
-/// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
-bool Polynomial2D::checkCoefficients(const std::vector<std::vector<double> > &coefficients, const unsigned int rows, const unsigned int columns){
-	std::size_t r = num_rows(coefficients), c = num_cols(coefficients);
-	Eigen::MatrixXd tmp = Eigen::MatrixXd::Constant(r,c,0.0);
-	convert(coefficients,tmp);
-	return this->checkCoefficients(tmp, rows, columns);
+/// @param axis unsigned integer value that represents the desired direction of integration
+Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficients, int axis = -1){
+	std::size_t r = coefficients.rows(), c = coefficients.cols();
+	Eigen::MatrixXd newCoefficients(coefficients);
+	switch (axis) {
+		case 0:
+			for (size_t i = 0; i < r; ++i) {
+				for (size_t j = 0; j < c; ++j) {
+					newCoefficients(i,j) /= (i+1.);
+				}
+			}
+			break;
+		case 1:
+			for (size_t i = 0; i < r; ++i) {
+				for (size_t j = 0; j < c; ++j) {
+					newCoefficients(i,j) /= (j+1.);
+				}
+			}
+			break;
+		default:
+			throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+			break;
+	}
+	return newCoefficients;
+}
+
+
+/// Derivative coefficients calculation
+/** Deriving coefficients for polynomials is done by multiplying the
+ *  original coefficients with i and lowering the order by 1.
+ */
+/// @param coefficients matrix containing the ordered coefficients
+/// @param axis unsigned integer value that represents the desired direction of derivation
+Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, int axis = -1){
+	std::size_t r = coefficients.rows(), c = coefficients.cols();
+	Eigen::MatrixXd newCoefficients(coefficients);
+	switch (axis) {
+		case 0:
+			newCoefficients.resize(r-1,c);
+			for (size_t i = 1; i < r; ++i) {
+				for (size_t j = 0; j < c; ++j) {
+					newCoefficients(i-1,j) *= i;
+				}
+			}
+			removeRow(newCoefficients,0);
+			break;
+		case 1:
+			newCoefficients.resize(r,c-1);
+			for (size_t i = 0; i < r; ++i) {
+				for (size_t j = 1; j < c; ++j) {
+					newCoefficients(i,j-1) *= j;
+				}
+			}
+			removeColumn(newCoefficients,0);
+			break;
+		default:
+			throw ValueError(format("You have to provide a dimension, 0 or 1, for derivation, %d is not valid. ",axis));
+			break;
+	}
+	return newCoefficients;
 }
 
 
 }
 
 
-
-
-
-
-
-///// Integration functions
-///** Integrating coefficients for polynomials is done by dividing the
-// *  original coefficients by (i+1) and elevating the order by 1
-// *  through adding a zero as first coefficient.
-// *  Some reslicing needs to be applied to integrate along the x-axis.
-// *  In the brine/solution equations, reordering of the parameters
-// *  avoids this expensive operation. However, it is included for the
-// *  sake of completeness.
-// */
-///// @param coefficients matrix containing the ordered coefficients
-///// @param axis unsigned integer value that represents the desired direction of integration
-//Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficients, unsigned int axis = 1);
-///// @param coefficients matrix containing the ordered coefficients
-///// @param axis unsigned integer value that represents the desired direction of integration
-//std::vector<std::vector<double> > Polynomial2D::integrateCoeffs(const std::vector<std::vector<double> > &coefficients, unsigned int axis = 1);
-//
-///// Derivative coefficients calculation
-///** Deriving coefficients for polynomials is done by multiplying the
-// *  original coefficients with i and lowering the order by 1.
-// *
-// *  It is not really deprecated, but untested and therefore a warning
-// *  is issued. Please check this method before you use it.
-// */
-///// @param coefficients matrix containing the ordered coefficients
-///// @param axis unsigned integer value that represents the desired direction of derivation
-//Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, unsigned int axis = 1);
-///// @param coefficients matrix containing the ordered coefficients
-///// @param axis unsigned integer value that represents the desired direction of derivation
-//std::vector<std::vector<double> > Polynomial2D::deriveCoeffs(const std::vector<std::vector<double> > &coefficients, unsigned int axis = 1);
-//
 ///// The core functions to evaluate the polynomial
 ///** It is here we implement the different special
 // *  functions that allow us to specify certain
@@ -166,13 +185,38 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 	std::vector<std::vector<double> > cHeat2D;
 	cHeat2D.push_back(cHeat);
 	cHeat2D.push_back(cHeat);
+	cHeat2D.push_back(cHeat);
+
+	Eigen::MatrixXd matrix2D = Eigen::MatrixXd::Random(3,4);
+	matrix2D = CoolProp::vec_to_eigen(cHeat2D);
+
+	Eigen::MatrixXd matrix2Dtmp;
+	std::vector<std::vector<double> > vec2Dtmp;
 
 	CoolProp::Polynomial2D poly2D;
 
 	SECTION("Coefficient parsing and setting") {
-		poly2D.setCoefficients(cHeat2D);
+		CHECK_NOTHROW(poly2D.setCoefficients(cHeat2D));
 		CHECK_THROWS(poly2D.checkCoefficients(4,5));
-		CHECK_NOTHROW(poly2D.checkCoefficients(2,4));
+		CHECK_NOTHROW(poly2D.checkCoefficients(3,4));
+		CHECK_NOTHROW(poly2D.setCoefficients(matrix2D));
+		CHECK_THROWS(poly2D.checkCoefficients(4,5));
+		CHECK_NOTHROW(poly2D.checkCoefficients(3,4));
+
+	}
+
+	SECTION("Coefficient operations") {
+		CHECK_THROWS(poly2D.integrateCoeffs(matrix2D));
+
+//		CHECK_NOTHROW(matrix2Dtmp = poly2D.integrateCoeffs(matrix2D));
+//		CoolProp::convert(matrix2Dtmp, vec2D);
+//		tmpStr = CoolProp::vec_to_string(vec2D);
+//		std::cout << tmpStr << std::endl;
+//
+//		CHECK_NOTHROW( CoolProp::removeRow(matrix,1) );
+//		CoolProp::convert(matrix, vec2D);
+//		tmpStr = CoolProp::vec_to_string(vec2D);
+//		std::cout << tmpStr << std::endl;
 
 	}
 }
