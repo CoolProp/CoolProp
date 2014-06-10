@@ -12,8 +12,8 @@ using std::shared_ptr;
 #include <tr1/memory>
 using namespace std::tr1;
 #elif defined(__ISAPPLE__)
-#include <tr1/memory>
-using namespace std::tr1;
+#include <memory>
+using std::shared_ptr;
 #elif defined(__ISWINDOWS__) && defined(__MINGW32__)
 #include <tr1/memory>
 using namespace std::tr1;
