@@ -107,6 +107,17 @@
       ], 
       "type": "rhoV", 
       "using_tau_r": true
+    }, 
+    "surface_tension": {
+      "BibTeX": "Mulero-JPCRD-2014", 
+      "Tc": 645.78, 
+      "a": [
+        0.05105
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.594
+      ]
     }
   }, 
   "CAS": "540-97-6", 

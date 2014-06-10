@@ -5,7 +5,7 @@ json_options = {'indent' : 2, 'sort_keys' : True}
 
 # Data from Mulero, JPCRD, 2012
 # CAS codes added from CoolProp 4.2, and wikipedia where necessary
-Mulero_data = """67-64-1 Acetone 0.0633 1.160
+Mulero2012_data = """67-64-1 Acetone 0.0633 1.160
 7664-41-7 Ammonia 0.1028 1.211 -0.09453 5.585
 7440-37-1 Argon 0.037 1.25
 71-43-2 Benzene 0.07298 1.232 -0.0007802 0.8635 -0.0001756 0.3065
@@ -87,7 +87,7 @@ Mulero_data = """67-64-1 Acetone 0.0633 1.160
 7732-18-5 Water -0.1306 2.471 0.2151 1.233
 7440-63-3 Xenon -0.11538 1.0512 0.16598 1.098"""
     
-def inject_surface_tension(root_dir):       
+def inject_surface_tension_2012(root_dir):  
     print("*** Injecting surface tension curves from Mulero")
     Tc_dict = {'Argon':150.687,
     'Benzene':562.02,
@@ -174,7 +174,7 @@ def inject_surface_tension(root_dir):
     }
 
     import glob, json, os
-    for row in Mulero_data.split('\n'):
+    for row in Mulero2012_data.split('\n'):
         row = row.split(' ')
         cas = row.pop(0)
         name = row.pop(0)
@@ -198,6 +198,109 @@ def inject_surface_tension(root_dir):
         fname = os.path.join(root_dir,'dev','fluids',name+'.json')
         if not os.path.exists(fname):
             print(fname+' does not exist')
+            continue
+            
+        j = json.load(open(fname,'r'))
+        
+        j['ANCILLARIES']['surface_tension'] = j_st
+        
+        fp = open(fname, 'w')
+        fp.write(json.dumps(j, **json_options))
+        fp.close()
+        
+        
+Mulero2014_data = """cis-2-butene 435.75 0.05903 1.246
+Cyclopentane 511.72 0.07348 1.388
+Cyclopropane 398.3 0.06812 1.314
+Decamethylcyclopentasiloxane 619.15 0.04408 1.357
+Decamethyltetrasiloxane 599.4 0.0456 1.41
+Diethyl ether 466.7 1.2348 1.4846 1.1808 1.5021
+Dimethyl carbonate (Dimethyl ester carbonic acid) 557 0.0825 1.39
+Dodecamethylcyclohexasiloxane 645.78 0.05105 1.594
+Dodecamethylpentasiloxane 628.36 0.03972 1.254
+Ethylbenzene 617.12 0.0638 1.22
+Ethylene oxide 468.92 0.07542 1.151
+Hexamethyldisiloxane 518.75 0.04576 1.272
+Hydrogen chloride 21 0.05994 1.0953
+Isooctane (2,2,4- trimethylpentane) 543.87 0.04794 1.209
+Methyl linoleate (Methyl (Z,Z)- 9,12-octadecadienoate) 799 0.072487 1.9014
+Methyl oleate (Methyl cis-9-octadecenoate) 782 0.0565 1.31
+Methyl palmitate (Methyl hexadecanoate) 755 0.025025 3.039 0.044435 1.1653
+Methyl stearate (Methyl octadecanoate) 775 0.02313 3.242 0.04567 1.163
+Methylcyclohexane 572.2 0.0606 1.3
+m-xylene (1,3-dimethylbenzene) 616.89 0.06445 1.256
+Neopentane (2,2- dimethylpropane) 433.74 0.04465 1.21
+Nitrogen trifluoride 234 0.063203 1.2565
+Octamethylcyclotetrasiloxane 586.5 0.04246 1.207
+Octamethyltrisiloxane 564.09 0.04992 1.465
+o-xylene (1,2-dimethylbenzene) 630.259 0.06477 1.227
+Propylcyclohexane 630.8 0.055 1.17
+p-xylene 616.168 0.0619 1.21
+R1216 (Hexafluoropropene) 358.9 0.053876 1.0944 0.038318 2.3239
+R1234ze(E) (trans-1,3,3,3-tetrafluoropropene) 382.51 0.06158 1.281 0.8247 6.505
+R143a (1,1,1-Trifluoroethane) 345.857 0.0537 1.25
+R40 (Methyl chloride) 416.3 0.071315 1.2177
+RE245cb2 (Methyl-pentafluoroethyl ether) 406.813 0.04534 1.237
+RE245fa2 (2,2,2-trifluoroethyl-difluoromethyl ether) 444.88 0.0699 1.222
+RE347mcc (HFE-7000 or Methyl-heptafluoropropyl ether) 437.7 0.05031 1.232
+Tetradecamethylhexasiloxane 653.2 0.040798 1.3323
+trans-2-butene 428.61 0.0001859 0.07485 0.05539 1.224
+Undecane 638.8 0.0556 1.32"""
+
+def inject_surface_tension_2014(root_dir):  
+    rename = {'Undecane': 'n-Undecane',
+              'm-xylene (1,3-dimethylbenzene)': 'm-Xylene',
+              'o-xylene (1,2-dimethylbenzene)': 'o-Xylene',
+              'R1234ze(E) (trans-1,3,3,3-tetrafluoropropene)':'R1234ze(E)',
+              'R143a (1,1,1-Trifluoroethane)':'R143a',
+              'Methyl linoleate (Methyl (Z,Z)- 9,12-octadecadienoate)':'MethylLinoleate',
+              'Methyl oleate (Methyl cis-9-octadecenoate)':'MethylOleate',
+              'Methyl palmitate (Methyl hexadecanoate)':'MethylPalmitate',
+              'Methyl stearate (Methyl octadecanoate)':'MethylStearate',
+              'Dimethyl carbonate (Dimethyl ester carbonic acid)':'DimethylCarbonate',
+              'Hexamethyldisiloxane': 'MM',
+              'Tetradecamethylhexasiloxane':'MD4M',
+              'Dodecamethylpentasiloxane':'MD3M',
+              'Octamethyltrisiloxane':'MDM',
+              'Decamethyltetrasiloxane':'MD2M',
+              'Octamethylcyclotetrasiloxane':'D4',
+              'Dodecamethylcyclohexasiloxane':'D6',
+              'Decamethylcyclopentasiloxane':'D5',
+              'Diethyl ether':'DiethylEther',
+              'Neopentane (2,2- dimethylpropane)':'Neopentane'
+              }
+    import glob, json, os
+    for line in Mulero2014_data.split('\n'):
+        
+        row = line.split(' ')
+        #print(row)
+        values = []
+        j = 0
+        for i in range(len(row)):
+            try:
+                values.append(float(row[i]))
+            except:
+                j = i
+                
+        name = ' '.join(row[0:j+1])
+        
+        Tc = values.pop(0)
+        a = values[0:len(row):2]
+        n = values[1:len(row):2]
+        
+        # The dictionary of values for the surface tension
+        j_st = dict(Tc = Tc, 
+                    a = a, 
+                    n = n,
+                    BibTeX = 'Mulero-JPCRD-2014',
+                    description = 'sigma = sum(a_i*(1-T/Tc)^n_i)'
+                    )
+        
+        if name in rename:
+            name = rename[name]
+        fname = os.path.join(root_dir,'dev','fluids',name+'.json')
+        if not os.path.exists(fname):
+            print(fname + ' does not exist')
             continue
             
         j = json.load(open(fname,'r'))
@@ -242,8 +345,9 @@ def inject_ancillaries(root_dir):
         fp.write(json.dumps(fluid, **json_options))
 
 def inject(root_dir):
+    inject_surface_tension_2014(root_dir)
     inject_ancillaries(root_dir)
-    inject_surface_tension(root_dir)
+    inject_surface_tension_2012(root_dir)
     inject_environmental_data(root_dir)
 
 def combine_json(root_dir):
@@ -291,4 +395,5 @@ def combine_json(root_dir):
     fp.close()
     
 if __name__=='__main__':
+    inject_surface_tension_2014(root_dir = '..')
     combine_json(root_dir = '..')

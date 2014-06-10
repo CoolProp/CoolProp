@@ -108,14 +108,14 @@
       "using_tau_r": true
     }, 
     "surface_tension": {
-      "BibTeX": "Mulero-JPCRD-2012", 
+      "BibTeX": "Mulero-JPCRD-2014", 
       "Tc": 345.857, 
       "a": [
-        0.05416
+        0.0537
       ], 
       "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
       "n": [
-        1.255
+        1.25
       ]
     }
   }, 
