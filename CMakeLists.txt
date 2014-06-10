@@ -218,15 +218,20 @@ if (COOLPROP_JAVA_MODULE)
   # Must have SWIG and Java
   FIND_PACKAGE(SWIG REQUIRED)
   INCLUDE(${SWIG_USE_FILE})
-  FIND_PACKAGE(Java REQUIRED)
-  
+  find_package(Java REQUIRED)
+  find_package(JNI)
+
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
+  
+  message(STATUS "JAVA_INCLUDE_PATH = ${JAVA_INCLUDE_PATH}")
+
+  include_directories(${JAVA_INCLUDE_PATH})
+  include_directories(${JAVA_INCLUDE_PATH}/win32)
 
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
 
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
-  #SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport \"CoolProp\"")
 
   SWIG_ADD_MODULE(CoolProp java ${I_FILE} ${APP_SOURCES})
 
