@@ -108,6 +108,14 @@ vel("Hexane", "T", 250, "Dmass", 700, "V", 528.2e-6, 1e-3),
 vel("Hexane", "T", 400, "Dmass", 600, "V", 177.62e-6, 1e-3),
 vel("Hexane", "T", 550, "Dmass", 500, "V", 95.002e-6, 1e-3),
 
+// From Assael, JPCRD, 2014
+vel("Heptane", "T", 250, "Dmass", 1e-14, "V", 4.9717e-6, 1e-3),
+vel("Heptane", "T", 400, "Dmass", 1e-14, "V", 7.8361e-6, 1e-3),
+vel("Heptane", "T", 550, "Dmass", 1e-14, "V", 10.7394e-6, 1e-3),
+vel("Heptane", "T", 250, "Dmass", 720, "V", 725.69e-6, 1e-3),
+vel("Heptane", "T", 400, "Dmass", 600, "V", 175.94e-6, 1e-3),
+vel("Heptane", "T", 550, "Dmass", 500, "V", 95.105e-6, 1e-3),
+
 // From Fenghour, JPCRD, 1998
 vel("CO2", "T", 220, "Dmass", 2.440, "V", 11.06e-6, 1e-3),
 vel("CO2", "T", 300, "Dmass", 1.773, "V", 15.02e-6, 1e-3),
@@ -263,10 +271,10 @@ vel("Hexane", "T", 400, "Dmass", 650, "L", 129.28e-3, 2e-4),
 vel("Hexane", "T", 510, "Dmass", 2, "L", 36.772e-3, 1e-4),
 
 // From Assael, JPCRD, 2013
-//vel("Heptane", "T", 250, "Dmass", 720, "L", 137.09e-3, 1e-4),
-//vel("Heptane", "T", 400, "Dmass", 2, "L", 21.794e-3, 1e-4),
-//vel("Heptane", "T", 400, "Dmass", 650, "L", 120.75e-3, 1e-4),
-//vel("Heptane", "T", 535, "Dmass", 100, "L", 51.655e-3, 1e-4),
+vel("Heptane", "T", 250, "Dmass", 720, "L", 137.09e-3, 1e-4),
+vel("Heptane", "T", 400, "Dmass", 2, "L", 21.794e-3, 1e-4),
+vel("Heptane", "T", 400, "Dmass", 650, "L", 120.75e-3, 1e-4),
+vel("Heptane", "T", 535, "Dmass", 100, "L", 51.655e-3, 1e-4),
 
 // From Assael, JPCRD, 2013
 vel("Ethanol", "T", 300, "Dmass", 850, "L", 209.68e-3, 1e-4),

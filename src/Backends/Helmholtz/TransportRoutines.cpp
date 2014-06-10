@@ -280,11 +280,22 @@ long double TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(Helmhol
 
 long double TransportRoutines::viscosity_hexane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
 {
+
     long double Tr = HEOS.T()/507.82, rhor = HEOS.keyed_output(CoolProp::iDmass)/233.182;
 
     // Output is in Pa-s
     double c[] = {2.53402335/1e6, -9.724061002/1e6, 0.469437316, 158.5571631, 72.42916856/1e6, 10.60751253, 8.628373915, -6.61346441, -2.212724566};
 	return pow(rhor,static_cast<long double>(2.0/3.0))*sqrt(Tr)*(c[0]/Tr+c[1]/(c[2]+Tr+c[3]*rhor*rhor)+c[4]*(1+rhor)/(c[5]+c[6]*Tr+c[7]*rhor+rhor*rhor+c[8]*rhor*Tr));
+}
+
+long double TransportRoutines::viscosity_heptane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
+{
+    /// From Assael, JPCRD, 2014
+    long double Tr = HEOS.T()/540.13, rhor = HEOS.rhomass()/232;
+
+    // Output is in Pa-s
+    double c[] = {0, 22.15000/1e6, -15.00870/1e6, 3.71791/1e6, 77.72818/1e6, 9.73449, 9.51900, -6.34076, -2.51909};
+	return pow(rhor,2.0L/3.0L)*sqrt(Tr)*(c[1]*rhor+c[2]*pow(rhor,2)+c[3]*pow(rhor,3)+c[4]*rhor/(c[5]+c[6]*Tr+c[7]*rhor+rhor*rhor+c[8]*rhor*Tr));
 }
 
 long double TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend &HEOS)
