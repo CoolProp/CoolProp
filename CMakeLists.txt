@@ -246,6 +246,47 @@ if (COOLPROP_JAVA_MODULE)
   add_dependencies (${app_name} generate_headers)  
 endif()
 
+if (COOLPROP_MATLAB_MODULE)
+
+  add_definitions(/DMATLAB_MEX_FILE) #define matlab macros
+  add_definitions(/DMX_COMPAT_32)
+
+  find_package(Matlab REQUIRED)
+
+  IF(MATLAB_FOUND)
+      message(STATUS "MATLAB Found, MATLAB MEX will be compiled.")
+  ELSE(MATLAB_FOUND)
+      MESSAGE("MATLAB not found...nothing will be built.")
+  ENDIF(MATLAB_FOUND)
+
+  # set up matlab libraries
+  INCLUDE_DIRECTORIES(${MATLAB_INCLUDE_DIR})
+  add_library(PropsSI SHARED ${APP_SOURCES} ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/PropsSI.cpp)
+  add_library(HAPropsSI SHARED ${APP_SOURCES} ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/HAProps.cpp)
+  target_link_libraries(PropsSI ${MATLAB_LIBRARIES})
+  target_link_libraries(HAPropsSI ${MATLAB_LIBRARIES})
+
+  if(WIN32) # 32-bit or 64-bit mex
+    if (CMAKE_CL_64)
+        SET_TARGET_PROPERTIES(PropsSI PROPERTIES PREFIX "" SUFFIX .mexw64)
+        SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES PREFIX "" SUFFIX .mexw64)
+    else()
+        SET_TARGET_PROPERTIES(PropsSI PROPERTIES SUFFIX .mexw32)
+        SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES SUFFIX .mexw32)
+    endif()
+  else()
+    if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+        SET_TARGET_PROPERTIES(PropsSI PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
+        SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
+    else()
+        SET_TARGET_PROPERTIES(PropsSI PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
+        SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
+    endif()
+  endif()
+  add_dependencies (PropsSI generate_headers)
+  add_dependencies (HAPropsSI generate_headers)
+endif()
+
 # NOT WORKING!
 if (COOLPROP_MATHEMATICA_MODULE)
 
