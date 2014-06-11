@@ -26,6 +26,7 @@ template<typename T> struct VectorNd<0,T> {
 	typedef T type;
 };
 
+
 namespace CoolProp{
 
 /// Convert vectors and matrices

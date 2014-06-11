@@ -98,6 +98,7 @@ class Polynomial2D {
 
 private:
 	Eigen::MatrixXd coefficients;
+	Eigen::MatrixXd coefficientsDerX,coefficientsDerY;
 	double x_std;
 	double y_std;
 
@@ -180,9 +181,14 @@ public:
 	/// @param x_in double value that represents the current input
 	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in);
 
+	/// @param coefficients vector containing the ordered coefficients
 	/// @param x_in double value that represents the current input in the 1st dimension
 	/// @param y_in double value that represents the current input in the 2nd dimension
-	double evaluate(const double &x_in, const double &y_in);
+	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in);
+
+	/// @param x_in double value that represents the current input in the 1st dimension
+	/// @param y_in double value that represents the current input in the 2nd dimension
+	double evaluate(const double &x_in, const double &y_in){return evaluate(this->coefficients, x_in, y_in);}
 
 	/// @param x_in double value that represents the current input in the 1st dimension
 	double evaluate_x(const double &x_in){return evaluate(x_in, this->y_std);}
@@ -203,27 +209,34 @@ public:
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 	double derivative_y(const double &y_in, int axis = -1){return derivative(this->x_std, y_in, axis);}
 
+	/// @param x_in double value that represents the current input in the 1st dimension
+	/// @param y_in double value that represents the current input in the 2nd dimension
+	double dzdx(const double &x_in, const double &y_in){return derivative(x_in, y_in, 0);}
+
+	/// @param y_in double value that represents the current input in the 2nd dimension
+	/// @param y_in double value that represents the current input in the 2nd dimension
+	double dzdy(const double &x_in, const double &y_in){return derivative(x_in, y_in, 1);}
+
 	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 	double solve(const double &in, const double &z_in, int axis);
 
-	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+	/// @param y_in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	double solve_x(const double &y_in, const double &z_in){return solve(y_in, z_in, 0);}
+
+	/// @param x_in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-	double solve_x(const double &in, const double &z_in){return solve(in, z_in, 0);}
+	double solve_y(const double &x_in, const double &z_in){return solve(x_in, z_in, 1);}
 
-	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
-	/// @param z_in double value that represents the current output in the 3rd dimension
-	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-	double solve_y(const double &in, const double &z_in){return solve(in, z_in, 1);}
-
-public:
+protected:
 	/// Simple polynomial function generator. <- Deprecated due to poor performance, use Horner-scheme instead
 	/** Base function to produce n-th order polynomials
 	 *  based on the length of the coefficient vector.
 	 *  Starts with only the first coefficient at x^0. */
-	DEPRECATED(double simplePolynomial(const std::vector<double> &coefficients, double x));
+               double simplePolynomial(const std::vector<double> &coefficients, double x);
 	DEPRECATED(double simplePolynomial(const std::vector<std::vector<double> > &coefficients, double x, double y));
 	/// Horner function generator implementations
 	/** Represent polynomials according to Horner's scheme.
@@ -231,7 +244,7 @@ public:
 	 *  speeds up calculation.
 	 *  Deprecated since we moved everything to the Eigen framework.
 	 */
-	DEPRECATED(double baseHorner(const std::vector<double> &coefficients, double x));
+	           double baseHorner(const std::vector<double> &coefficients, double x);
 	DEPRECATED(double baseHorner(const std::vector<std::vector<double> > &coefficients, double x, double y));
 
 	bool do_debug(void){return get_debug_level()>=8;}

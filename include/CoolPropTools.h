@@ -4,6 +4,7 @@
     #define _CRT_SECURE_NO_WARNINGS
 
     #include "PlatformDetermination.h"
+	#include "Exceptions.h"
 
     #include <string>
     #include <vector>
@@ -233,6 +234,21 @@
             if (double_vectors.find(s) != double_vectors.end()){ return double_vectors[s]; } else{ throw std::exception(); }
         };
     };
+
+    /// Some functions related to testing and comparison of values
+    bool inline check_abs(double A, double B, double D){
+    	double max = fabs(A);
+    	double min = fabs(B);
+    	if (min>max) {
+    		max = min;
+    		min = fabs(A);
+    	}
+    	if (max>D) return ( ( 1.0-min/max*1e0 ) < D );
+    	else throw CoolProp::ValueError(format("Too small numbers: %f cannot be tested with an accepted error of %f. ",max,D));
+    };
+    bool inline check_abs(double A, double B){
+		return check_abs(A,B,1e5*DBL_EPSILON);
+	};
 
 #define CATCH_ALL_ERRORS_RETURN_HUGE(x)    try{                                                                                \
                                                 x                                                                              \
