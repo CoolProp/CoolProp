@@ -34,22 +34,7 @@ namespace CoolProp{
  *  it is still needed.
  */
 /// @param coefficients matrix containing the ordered coefficients
-template <class T> std::vector<std::vector<T> > eigen_to_vec(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &coefficients){
-	// Eigen uses columns as major axis, this might be faster than the row iteration.
-	// However, the 2D vector stores things differently, no idea what is faster...
-	std::vector<std::vector<T> > result;
-	size_t r = coefficients.rows(), c = coefficients.cols();
-	result.resize(r, std::vector<T>(c, 0)); // extends vector if necessary
-	for (size_t i = 0; i < r; ++i) {
-		result[i].resize(c, 0);
-		for (size_t j = 0; j < c; ++j) {
-			result[i][j] = coefficients(i,j);
-		}
-	}
-	return result;
-}
-/// @param coefficients matrix containing the ordered coefficients
-template <class T> std::vector<T> eigen_to_vec(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &coefficients, int axis = 1){
+template <typename T> std::vector<T> eigen_to_vec1D(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &coefficients, int axis = 1){
 	std::vector<T> result;
 	size_t r = coefficients.rows(), c = coefficients.cols();
 	if (axis==1) {
@@ -69,6 +54,23 @@ template <class T> std::vector<T> eigen_to_vec(const Eigen::Matrix<T,Eigen::Dyna
 	}
 	return result;
 }
+/// @param coefficients matrix containing the ordered coefficients
+template <class T> std::vector<std::vector<T> > eigen_to_vec(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &coefficients){
+	// Eigen uses columns as major axis, this might be faster than the row iteration.
+	// However, the 2D vector stores things differently, no idea what is faster...
+	std::vector<std::vector<T> > result;
+	size_t r = coefficients.rows(), c = coefficients.cols();
+	result.resize(r, std::vector<T>(c, 0)); // extends vector if necessary
+	for (size_t i = 0; i < r; ++i) {
+		result[i].resize(c, 0);
+		for (size_t j = 0; j < c; ++j) {
+			result[i][j] = coefficients(i,j);
+		}
+	}
+	return result;
+}
+
+
 /// @param coefficients matrix containing the ordered coefficients
 template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(const std::vector<std::vector<T> > &coefficients){
 	size_t nRows = num_rows(coefficients), nCols = num_cols(coefficients);

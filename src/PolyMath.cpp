@@ -83,9 +83,11 @@ bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const 
 /// @param axis unsigned integer value that represents the desired direction of integration
 Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficients, int axis = -1){
 	std::size_t r = coefficients.rows(), c = coefficients.cols();
-	Eigen::MatrixXd newCoefficients(coefficients);
+	Eigen::MatrixXd newCoefficients;
 	switch (axis) {
 		case 0:
+			newCoefficients = Eigen::MatrixXd::Zero(r+1,c);
+			newCoefficients.block(1,0,r,c) = coefficients.block(0,0,r,c);
 			for (size_t i = 0; i < r; ++i) {
 				for (size_t j = 0; j < c; ++j) {
 					newCoefficients(i,j) /= (i+1.);
@@ -93,6 +95,8 @@ Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficient
 			}
 			break;
 		case 1:
+			newCoefficients = Eigen::MatrixXd::Zero(r,c+1);
+			newCoefficients.block(0,1,r,c) = coefficients.block(0,0,r,c);
 			for (size_t i = 0; i < r; ++i) {
 				for (size_t j = 0; j < c; ++j) {
 					newCoefficients(i,j) /= (j+1.);
@@ -140,6 +144,100 @@ Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, 
 			break;
 	}
 	return newCoefficients;
+}
+
+
+/// The core functions to evaluate the polynomial
+/** It is here we implement the different special
+ *  functions that allow us to specify certain
+ *  types of polynomials.
+ *  The derivative might bee needed during the
+ *  solution process of the solver. It could also
+ *  be a protected function...
+ */
+/// @param coefficients vector containing the ordered coefficients
+/// @param x_in double value that represents the current input
+double Polynomial2D::evaluate(const Eigen::MatrixXd &coefficients, const double &x_in){
+	if (this->coefficients.cols() != 1) {
+		throw ValueError(format("You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",coefficients.rows(),coefficients.cols()));
+	}
+	double result = Eigen::poly_eval( Eigen::RowVectorXd(coefficients), x_in );
+	if (this->do_debug()) std::cout << "Running         evaluate(" << mat_to_string(coefficients) << ", " << vec_to_string(x_in) << "): " << result << std::endl;
+	return result;
+}
+/// @param x_in double value that represents the current input in the 1st dimension
+/// @param y_in double value that represents the current input in the 2nd dimension
+double Polynomial2D::evaluate(const double &x_in, const double &y_in){
+	size_t r = this->coefficients.rows(), c = this->coefficients.cols();
+	double result = 0;
+	for(int i=r-1; i>=0; i--) {
+		result *= x_in;
+		result += evaluate(coefficients.row(i), y_in);
+	}
+	if (this->do_debug()) std::cout << "Running         evaluate(" << mat_to_string(coefficients) << ", " << vec_to_string(x_in) << ", " << vec_to_string(y_in) << "): " << result << std::endl;
+	return result;
+}
+
+
+/// @param x_in double value that represents the current input in the 1st dimension
+/// @param y_in double value that represents the current input in the 2nd dimension
+/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+double Polynomial2D::derivative(const double &x_in, const double &y_in, int axis = -1){
+	return 0.0;
+}
+/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+/// @param z_in double value that represents the current output in the 3rd dimension
+/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+double Polynomial2D::solve(const double &in, const double &z_in, int axis = -1){
+	return 0.0;
+}
+
+
+/// Simple polynomial function generator. <- Deprecated due to poor performance, use Horner-scheme instead
+/** Base function to produce n-th order polynomials
+ *  based on the length of the coefficient vector.
+ *  Starts with only the first coefficient at x^0. */
+double Polynomial2D::simplePolynomial(std::vector<double> const& coefficients, double x){
+	double result = 0.;
+	for(unsigned int i=0; i<coefficients.size();i++) {
+		result += coefficients[i] * pow(x,(int)i);
+	}
+	if (this->do_debug()) std::cout << "Running simplePolynomial(" << vec_to_string(coefficients) << ", " << vec_to_string(x) << "): " << result << std::endl;
+	return result;
+}
+double Polynomial2D::simplePolynomial(std::vector<std::vector<double> > const& coefficients, double x, double y){
+	double result = 0;
+	for(unsigned int i=0; i<coefficients.size();i++) {
+		result += pow(x,(int)i) * simplePolynomial(coefficients[i], y);
+	}
+	if (this->do_debug()) std::cout << "Running simplePolynomial(" << vec_to_string(coefficients) << ", " << vec_to_string(x) << ", " << vec_to_string(y) << "): " << result << std::endl;
+	return result;
+}
+
+
+/// Horner function generator implementations
+/** Represent polynomials according to Horner's scheme.
+ *  This avoids unnecessary multiplication and thus
+ *  speeds up calculation.
+ */
+double Polynomial2D::baseHorner(std::vector<double> const& coefficients, double x){
+	double result = 0;
+	for(int i=coefficients.size()-1; i>=0; i--) {
+		result *= x;
+		result += coefficients[i];
+	}
+	if (this->do_debug()) std::cout << "Running       baseHorner(" << vec_to_string(coefficients) << ", " << vec_to_string(x) << "): " << result << std::endl;
+	return result;
+}
+
+double Polynomial2D::baseHorner(std::vector< std::vector<double> > const& coefficients, double x, double y){
+	double result = 0;
+	for(int i=coefficients.size()-1; i>=0; i--) {
+		result *= x;
+		result += baseHorner(coefficients[i], y);
+	}
+	if (this->do_debug()) std::cout << "Running       baseHorner(" << vec_to_string(coefficients) << ", " << vec_to_string(x) << ", " << vec_to_string(y) << "): " << result << std::endl;
+	return result;
 }
 
 
@@ -206,7 +304,38 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 	}
 
 	SECTION("Coefficient operations") {
+		bool PRINT = true;
+		std::string tmpStr;
+		Eigen::MatrixXd matrix;
+
 		CHECK_THROWS(poly2D.integrateCoeffs(matrix2D));
+
+		CHECK_NOTHROW(matrix = poly2D.integrateCoeffs(matrix2D, 0));
+		tmpStr = CoolProp::mat_to_string(matrix2D);
+		if (PRINT) std::cout << tmpStr << std::endl;
+		tmpStr = CoolProp::mat_to_string(matrix);
+		if (PRINT) std::cout << tmpStr << std::endl;
+
+		CHECK_NOTHROW(matrix = poly2D.integrateCoeffs(matrix2D, 1));
+		tmpStr = CoolProp::mat_to_string(matrix2D);
+		if (PRINT) std::cout << tmpStr << std::endl;
+		tmpStr = CoolProp::mat_to_string(matrix);
+		if (PRINT) std::cout << tmpStr << std::endl;
+
+		CHECK_THROWS(poly2D.deriveCoeffs(matrix2D));
+
+		CHECK_NOTHROW(matrix = poly2D.deriveCoeffs(matrix2D, 0));
+		tmpStr = CoolProp::mat_to_string(matrix2D);
+		if (PRINT) std::cout << tmpStr << std::endl;
+		tmpStr = CoolProp::mat_to_string(matrix);
+		if (PRINT) std::cout << tmpStr << std::endl;
+
+		CHECK_NOTHROW(matrix = poly2D.deriveCoeffs(matrix2D, 1));
+		tmpStr = CoolProp::mat_to_string(matrix2D);
+		if (PRINT) std::cout << tmpStr << std::endl;
+		tmpStr = CoolProp::mat_to_string(matrix);
+		if (PRINT) std::cout << tmpStr << std::endl;
+
 
 //		CHECK_NOTHROW(matrix2Dtmp = poly2D.integrateCoeffs(matrix2D));
 //		CoolProp::convert(matrix2Dtmp, vec2D);

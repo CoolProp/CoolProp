@@ -25,6 +25,8 @@ namespace CoolProp{
 
 TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h","[MatrixMath]")
 {
+	bool PRINT = false;
+
 	/// Test case for "SylthermXLT" by "Dow Chemicals"
 	std::vector<double> cHeat;
 	cHeat.clear();
@@ -41,23 +43,23 @@ TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h","
 
 		Eigen::MatrixXd matrix = Eigen::MatrixXd::Random(4,1);
 		std::string tmpStr;
-		std::cout << std::endl;
+		if (PRINT) std::cout << std::endl;
 
 		CHECK_NOTHROW( tmpStr = CoolProp::vec_to_string(cHeat[0]) );
-		std::cout << tmpStr << std::endl;
+		if (PRINT) std::cout << tmpStr << std::endl;
 		CHECK_NOTHROW( tmpStr = CoolProp::vec_to_string(cHeat) );
-		std::cout << tmpStr << std::endl;
+		if (PRINT) std::cout << tmpStr << std::endl;
 		CHECK_NOTHROW( tmpStr = CoolProp::vec_to_string(cHeat2D) );
-		std::cout << tmpStr << std::endl;
+		if (PRINT) std::cout << tmpStr << std::endl;
 
 		CHECK_NOTHROW( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat[0])) );
-		std::cout << tmpStr << std::endl;
+		if (PRINT) std::cout << tmpStr << std::endl;
 		CHECK_NOTHROW( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat, 1)) );
-		std::cout << tmpStr << std::endl;
+		if (PRINT) std::cout << tmpStr << std::endl;
 		CHECK_NOTHROW( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat, 2)) );
-		std::cout << tmpStr << std::endl;
+		if (PRINT) std::cout << tmpStr << std::endl;
 		CHECK_NOTHROW( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat2D)) );
-		std::cout << tmpStr << std::endl;
+		if (PRINT) std::cout << tmpStr << std::endl;
 	}
 
 	SECTION("Matrix modifications") {
@@ -65,19 +67,19 @@ TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h","
 
 		std::string tmpStr;
 		std::vector<std::vector<double> > vec2D;
-		std::cout << std::endl;
+		if (PRINT) std::cout << std::endl;
 
 		CHECK_NOTHROW( CoolProp::removeColumn(matrix,1) );
-		std::cout << CoolProp::mat_to_string(matrix) << std::endl;
+		if (PRINT) std::cout << CoolProp::mat_to_string(matrix) << std::endl;
 
 		CHECK_NOTHROW( CoolProp::removeRow(matrix,1) );
-		std::cout << CoolProp::mat_to_string(matrix) << std::endl;
+		if (PRINT) std::cout << CoolProp::mat_to_string(matrix) << std::endl;
 
 		CHECK_THROWS( CoolProp::removeColumn(matrix,10) );
 		CHECK_THROWS( CoolProp::removeRow(matrix,10) );
 	}
 
-	SECTION("Eigen::Vector from std::vector") {
+	SECTION("std::vector to Eigen::Matrix and back") {
 		std::vector<std::vector<double> > vec2D(cHeat2D);
 		Eigen::MatrixXd matrix = CoolProp::vec_to_eigen(vec2D);
 		for (size_t i = 0; i < matrix.cols(); ++i) {
@@ -85,8 +87,20 @@ TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h","
 				CHECK( fabs(matrix(j,i)-vec2D[j][i]) <= 1e-10 );
 			}
 		}
+		vec2D = CoolProp::eigen_to_vec(matrix);
+		for (size_t i = 0; i < matrix.cols(); ++i) {
+			for (size_t j = 0; j < matrix.rows(); ++j) {
+				CHECK( fabs(matrix(j,i)-vec2D[j][i]) <= 1e-10 );
+			}
+		}
 		std::vector<double> vec1D(cHeat);
 		matrix = CoolProp::vec_to_eigen(vec1D);
+		for (size_t i = 0; i < matrix.cols(); ++i) {
+			for (size_t j = 0; j < matrix.rows(); ++j) {
+				CHECK( fabs(matrix(j,i)-vec1D[j]) <= 1e-10 );
+			}
+		}
+		vec1D = CoolProp::eigen_to_vec1D(matrix);
 		for (size_t i = 0; i < matrix.cols(); ++i) {
 			for (size_t j = 0; j < matrix.rows(); ++j) {
 				CHECK( fabs(matrix(j,i)-vec1D[j]) <= 1e-10 );

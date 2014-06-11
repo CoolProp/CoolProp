@@ -1,6 +1,7 @@
 #ifndef POLYMATH_H
 #define POLYMATH_H
 
+#include "CoolProp.h"
 #include "CoolPropTools.h"
 #include "Exceptions.h"
 
@@ -97,14 +98,18 @@ class Polynomial2D {
 
 private:
 	Eigen::MatrixXd coefficients;
+	double x_std;
+	double y_std;
 
 public:
 	/// Constructors
-	Polynomial2D(){};
+	Polynomial2D(){x_std = 0.0; y_std = 0.0;};
 	Polynomial2D(const Eigen::MatrixXd &coefficients){
+		x_std = 0.0; y_std = 0.0;
 		this->setCoefficients(coefficients);
 	}
 	Polynomial2D(const std::vector<std::vector<double> > &coefficients){
+		x_std = 0.0; y_std = 0.0;
 		this->setCoefficients(coefficients);
 	}
 
@@ -116,6 +121,12 @@ public:
 	/// @param coefficients matrix containing the ordered coefficients
 	void setCoefficients(const Eigen::MatrixXd &coefficients);
 	void setCoefficients(const std::vector<std::vector<double> > &coefficients);
+
+	/// Set the standard inputs.
+	/// @param x_std fixed input for the first dimension
+	void set_x(const double &x_std){this->x_std = x_std;}
+	/// @param y_std fixed input for the second dimension
+	void set_y(const double &y_std){this->y_std = y_std;}
 
 	/// Basic checks for coefficient vectors.
 	/** Starts with only the first coefficient dimension
@@ -164,17 +175,67 @@ public:
 	 *  solution process of the solver. It could also
 	 *  be a protected function...
 	 */
+
+	/// @param coefficients vector containing the ordered coefficients
+	/// @param x_in double value that represents the current input
+	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in);
+
 	/// @param x_in double value that represents the current input in the 1st dimension
 	/// @param y_in double value that represents the current input in the 2nd dimension
 	double evaluate(const double &x_in, const double &y_in);
+
+	/// @param x_in double value that represents the current input in the 1st dimension
+	double evaluate_x(const double &x_in){return evaluate(x_in, this->y_std);}
+
+	/// @param y_in double value that represents the current input in the 2nd dimension
+	double evaluate_y(const double &y_in){return evaluate(this->x_std, y_in);}
+
 	/// @param x_in double value that represents the current input in the 1st dimension
 	/// @param y_in double value that represents the current input in the 2nd dimension
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-	double derivative(const double &x_in, const double &y_in, int axis = -1);
+	double derivative(const double &x_in, const double &y_in, int axis);
+
+	/// @param x_in double value that represents the current input in the 1st dimension
+	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+	double derivative_x(const double &x_in, int axis = -1){return derivative(x_in, this->y_std, axis);}
+
+	/// @param y_in double value that represents the current input in the 2nd dimension
+	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+	double derivative_y(const double &y_in, int axis = -1){return derivative(this->x_std, y_in, axis);}
+
 	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-	double solve(const double &in, const double &z_in, int axis = -1);
+	double solve(const double &in, const double &z_in, int axis);
+
+	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+	double solve_x(const double &in, const double &z_in){return solve(in, z_in, 0);}
+
+	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+	double solve_y(const double &in, const double &z_in){return solve(in, z_in, 1);}
+
+public:
+	/// Simple polynomial function generator. <- Deprecated due to poor performance, use Horner-scheme instead
+	/** Base function to produce n-th order polynomials
+	 *  based on the length of the coefficient vector.
+	 *  Starts with only the first coefficient at x^0. */
+	DEPRECATED(double simplePolynomial(const std::vector<double> &coefficients, double x));
+	DEPRECATED(double simplePolynomial(const std::vector<std::vector<double> > &coefficients, double x, double y));
+	/// Horner function generator implementations
+	/** Represent polynomials according to Horner's scheme.
+	 *  This avoids unnecessary multiplication and thus
+	 *  speeds up calculation.
+	 *  Deprecated since we moved everything to the Eigen framework.
+	 */
+	DEPRECATED(double baseHorner(const std::vector<double> &coefficients, double x));
+	DEPRECATED(double baseHorner(const std::vector<std::vector<double> > &coefficients, double x, double y));
+
+	bool do_debug(void){return get_debug_level()>=8;}
+
 };
 
 
