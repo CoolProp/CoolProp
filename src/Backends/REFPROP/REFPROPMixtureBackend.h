@@ -24,7 +24,7 @@ protected:
 	std::vector<double> mole_fractions_liq, mole_fractions_vap;
 public:
 	REFPROPMixtureBackend(){};
-	
+
 	/// The instantiator
 	/// @param fluid_names The vector of strings of the fluid components, without file ending
 	REFPROPMixtureBackend(const std::vector<std::string>& fluid_names);
@@ -34,10 +34,10 @@ public:
     bool using_mole_fractions(){return true;}
 
 	/// Updating function for REFPROP
-	/** 
+	/**
 	In this function we take a pair of thermodynamic states, those defined in the input_pairs
 	enumeration and update all the internal variables that we can.  REFPROP calculates
-	a lot of other state variables each time you use a flash routine so we cache all the 
+	a lot of other state variables each time you use a flash routine so we cache all the
 	outputs that we can, which saves on computational time.
 
 	@param input_pair Integer key from CoolProp::input_pairs to the two inputs that will be passed to the function
@@ -59,16 +59,18 @@ public:
 	void set_REFPROP_fluids(const std::vector<std::string> &fluid_names);
 
 	/// Set the mole fractions
-	/** 
+	/**
 	@param mole_fractions The vector of mole fractions of the components
 	*/
 	void set_mole_fractions(const std::vector<long double> &mole_fractions);
-	
+
 	/// Set the mass fractions
-	/** 
+	/**
 	@param mass_fractions The vector of mass fractions of the components
 	*/
 	void set_mass_fractions(const std::vector<long double> &mass_fractions);
+
+	void calc_phase_envelope(const std::string &type);
 
 	/// Check if the mole fractions have been set, etc.
 	void check_status();
@@ -81,7 +83,7 @@ public:
 	long double calc_surface_tension(void);
 
     long double calc_fugacity_coefficient(int i);
-    
+
     long double calc_melt_p_T(long double T);
     long double calc_melt_T_p(long double p);
     long double calc_melt_rho_T(long double T);

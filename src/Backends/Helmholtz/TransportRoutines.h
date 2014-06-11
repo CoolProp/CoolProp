@@ -20,7 +20,7 @@ public:
     with \f$T^* = \frac{T}{\varepsilon/k}\f$ and \f$\sigma\f$ in nm, M is in kg/kmol. Yields viscosity in Pa-s.
     */
     static long double viscosity_dilute_kinetic_theory(HelmholtzEOSMixtureBackend &HEOS);
-    
+
     /**
     \brief The dilute gas viscosity term that is based on collision integral or effective cross section
 
@@ -34,7 +34,7 @@ public:
     */
     static long double viscosity_dilute_collision_integral(HelmholtzEOSMixtureBackend &HEOS);
 
-    /** 
+    /**
     \brief A dilute gas viscosity term formed of summation of power terms
 
     \f[
@@ -46,7 +46,7 @@ public:
 
     static long double viscosity_dilute_collision_integral_powers_of_T(HelmholtzEOSMixtureBackend &HEOS);
 
-    /** 
+    /**
     \brief The initial density dependence term \f$B_{\eta}\f$ from Rainwater-Friend theory
 
     The total contribution from this term is given by
@@ -68,17 +68,17 @@ public:
     */
     static long double viscosity_initial_density_dependence_Rainwater_Friend(HelmholtzEOSMixtureBackend &HEOS);
 
-    /** 
+    /**
     \brief The modified Batschinski-Hildebrand contribution to the viscosity
 
     \f[
     \Delta\eta = \displaystyle\sum_{i}a_{i}\delta^{d1_i}\tau^{t1_j}+\left(\displaystyle\sum_{i}f_i\delta^{d2_i}\tau^{t2_i}\right)\left(\frac{1}{\delta_0(\tau)-\delta}-\frac{1}{\delta_0(\tau)}\right)
     \f]
-    where \f$\tau = T_c/T\f$ and \f$\delta = \rho/\rho_c\f$ 
+    where \f$\tau = T_c/T\f$ and \f$\delta = \rho/\rho_c\f$
     \f[
     \delta_0(\tau) = \displaystyle\frac{\displaystyle\sum_{i}g_i\tau^{h_i}}{\displaystyle\sum_{i}p_i\tau^{q_i}}
     \f]
-    The more general form of \f$\delta_0(\tau)\f$ is selected in order to be able to handle all the forms in the literature 
+    The more general form of \f$\delta_0(\tau)\f$ is selected in order to be able to handle all the forms in the literature
     */
     static long double viscosity_higher_order_modified_Batschinski_Hildebrand(HelmholtzEOSMixtureBackend &HEOS);
 
@@ -91,6 +91,7 @@ public:
     static long double viscosity_ethane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_hydrogen_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_hexane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static long double viscosity_heptane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend &HEOS);
 
     /**
@@ -110,7 +111,7 @@ public:
     \Delta\lambda(\rho,T) = \displaystyle\sum_iA_i\tau^{t,i}\delta^{d_i}
     \f]
 
-    As used by Assael, Perkins, Huber, etc., the residual term is given by 
+    As used by Assael, Perkins, Huber, etc., the residual term is given by
     \f[
     \Delta\lambda(\rho,T) = \displaystyle\sum_i(B_{1,i}+B_{2,i}(T/T_c))(\rho/\rho_c)^i
     \f]
@@ -135,9 +136,9 @@ public:
     \f[
         \zeta = \zeta_0\left(\frac{p_c\rho}{\Gamma\rho_c^2}\right)^{\nu/\gamma}\left[\left.\frac{\partial \rho(T,\rho)}{\partial p} \right|_{T}- \frac{T_R}{T}\left.\frac{\partial \rho(T_R,\rho)}{\partial p} \right|_{T}  \right]^{\nu/\gamma},
     \f]
-    where \f$\lambda^{(c)}\f$ is in W\f$\cdot\f$m\f$^{-1}\f$\f$\cdot\f$K\f$^{-1}\f$, \f$\zeta\f$ is in m, 
-    \f$c_p\f$ and \f$c_v\f$ are in J\f$\cdot\f$kg\f$^{-1}\cdot\f$K\f$^{-1}\f$, \f$p\f$ and \f$p_c\f$ are in Pa, 
-    \f$\rho\f$ and \f$\rho_c\f$ are in mol\f$\cdot\f$m\f$^{-3}\f$, \f$\eta\f$ is the viscosity in Pa\f$\cdot\f$s, 
+    where \f$\lambda^{(c)}\f$ is in W\f$\cdot\f$m\f$^{-1}\f$\f$\cdot\f$K\f$^{-1}\f$, \f$\zeta\f$ is in m,
+    \f$c_p\f$ and \f$c_v\f$ are in J\f$\cdot\f$kg\f$^{-1}\cdot\f$K\f$^{-1}\f$, \f$p\f$ and \f$p_c\f$ are in Pa,
+    \f$\rho\f$ and \f$\rho_c\f$ are in mol\f$\cdot\f$m\f$^{-3}\f$, \f$\eta\f$ is the viscosity in Pa\f$\cdot\f$s,
     and the remaining parameters are defined in the following tables.
 
     It should be noted that some authors use slightly different values for the "universal" constants
@@ -145,9 +146,9 @@ public:
     Coefficients for use in the simplified Olchowy-Sengers critical term
     Parameter             | Variable     | Value
     ---------             | --------     | ------
-    Boltzmann constant    | \f$k\f$      | \f$1.3806488\times 10^{-23}\f$ J\f$\cdot\f$K\f$^{-1}\f$ 
-    Universal amplitude   | \f$R_D\f$    | 1.03 
-    Critical exponent     | \f$\nu\f$    | 0.63 
+    Boltzmann constant    | \f$k\f$      | \f$1.3806488\times 10^{-23}\f$ J\f$\cdot\f$K\f$^{-1}\f$
+    Universal amplitude   | \f$R_D\f$    | 1.03
+    Critical exponent     | \f$\nu\f$    | 0.63
     Critical exponent     | \f$\gamma\f$ | 1.239
     Reference temperature | \f$T_R\f$    | 1.5\f$T_c\f$
 
@@ -182,7 +183,7 @@ public:
 
     Bell, I. H.; Wronski, J.; Quoilin, S. & Lemort, V. (2014), Pure and Pseudo-pure Fluid Thermophysical Property Evaluation and the Open-Source Thermophysical Property Library CoolProp, Industrial & Engineering Chemistry Research, 53, (6), 2498-2508
 
-    which is originally based on the methods presented in 
+    which is originally based on the methods presented in
 
     Huber, M. L., Laesecke, A. and Perkins, R. A., (2003), Model for the Viscosity and Thermal Conductivity of Refrigerants, Including a New Correlation for the Viscosity of R134a, Industrial & Engineering Chemistry Research, v. 42, pp. 3163-3178
 

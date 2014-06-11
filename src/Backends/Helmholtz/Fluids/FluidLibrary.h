@@ -427,6 +427,9 @@ protected:
             else if (!target.compare("n-Hexane")){
                 fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEXANE; return;
             }
+            else if (!target.compare("n-Heptane")){
+                fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEPTANE; return;
+            }
             else if (!target.compare("Ethane")){
                 fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_ETHANE; return;
             }

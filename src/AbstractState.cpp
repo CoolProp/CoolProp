@@ -302,6 +302,10 @@ double AbstractState::fugacity_coefficient(int i){
     // TODO: Cache the fug. coeff for each component
     return calc_fugacity_coefficient(i);
 }
+void AbstractState::build_phase_envelope(const std::string &type)
+{
+    calc_phase_envelope(type);
+}
 double AbstractState::isothermal_compressibility(void){
 	return 1.0/_rhomolar*first_partial_deriv(iDmolar, iP, iT);
 }

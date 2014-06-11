@@ -181,6 +181,7 @@ static char default_reference_state[] = "DEF";
  SATPdll_POINTER SATPdll;
  SATSdll_POINTER SATSdll;
  SATTdll_POINTER SATTdll;
+ SATSPLNdll_POINTER SATSPLNdll;
  SETAGAdll_POINTER SETAGAdll;
  SETKTVdll_POINTER SETKTVdll;
  SETMIXdll_POINTER SETMIXdll;
@@ -307,6 +308,7 @@ double setFunctionPointers()
     SATPdll = (SATPdll_POINTER) getFunctionPointer((char *)SATPdll_NAME);
     SATSdll = (SATSdll_POINTER) getFunctionPointer((char *)SATSdll_NAME);
     SATTdll = (SATTdll_POINTER) getFunctionPointer((char *)SATTdll_NAME);
+    SATSPLNdll = (SATSPLNdll_POINTER) getFunctionPointer((char *)SATSPLNdll_NAME);
     SETAGAdll = (SETAGAdll_POINTER) getFunctionPointer((char *)SETAGAdll_NAME);
     SETKTVdll = (SETKTVdll_POINTER) getFunctionPointer((char *)SETKTVdll_NAME);
     SETMIXdll = (SETMIXdll_POINTER) getFunctionPointer((char *)SETMIXdll_NAME);
@@ -550,7 +552,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             }
             else if (ierr > 0) // Error
             {
-                if (k==0) continue;
+                if (k==0 && N > 1)
+                    continue; // Allow us to use PPF if a pure fluid
                 else
                     throw ValueError(format("%s",herr));
             }
@@ -602,11 +605,6 @@ long double REFPROPMixtureBackend::calc_melt_p_T(long double T)
     double _T = static_cast<double>(T), p_kPa;
     long ierr;
     char herr[255];
-
-    if (T > calc_melt_Tmax())
-    {
-        throw ValueError(format("Melting temperature [%g] is out of range",T));
-    }
 
     MELTTdll(&_T, &(mole_fractions[0]),
              &p_kPa,
@@ -670,6 +668,15 @@ long double REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
     if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<long double>(fug_cof[i]);
+}
+
+void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
+{
+    long ierr;
+    char herr[255];
+    SATSPLNdll(&(mole_fractions[0]),  // Inputs
+               &ierr, herr, errormessagelength);       // Error message
+    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }
 }
 
 void REFPROPMixtureBackend::update(long input_pair, double value1, double value2)

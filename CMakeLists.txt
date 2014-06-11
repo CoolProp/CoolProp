@@ -157,6 +157,7 @@ if (COOLPROP_EES_MODULE)
   if (!MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
+  add_dependencies (${app_name} generate_headers)  
 endif()
 
 if (COOLPROP_OCTAVE_MODULE)
@@ -166,9 +167,13 @@ if (COOLPROP_OCTAVE_MODULE)
   INCLUDE(${SWIG_USE_FILE})
   FIND_PACKAGE(Octave REQUIRED)
   
+  # Make a src directory to deal with file permissions problem with MinGW makefile
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
+  
   # Find the required libraries
   find_library(OCTAVE_LIB octave PATHS ${OCTAVE_LINK_DIRS})
   find_library(OCTINTERP_LIB octinterp PATHS ${OCTAVE_LINK_DIRS})
+  find_library(CRUFT_LIB cruft PATHS ${OCTAVE_LINK_DIRS})
   
   # Set the include folders
   SET(OCTAVE_WRAP_INCLUDE_DIRS ${INCLUDE_DIR})
@@ -181,11 +186,108 @@ if (COOLPROP_OCTAVE_MODULE)
 
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   SWIG_ADD_MODULE(CoolProp octave ${I_FILE} ${APP_SOURCES})
-  SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB})
+  SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB} ${CRUFT_LIB})
 
-  add_dependencies (CoolProp generate_headers)
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
+  add_dependencies (${app_name} generate_headers)  
+endif()
+
+if (COOLPROP_CSHARP_MODULE)
+
+  # Must have SWIG and C#
+  FIND_PACKAGE(SWIG REQUIRED)
+  INCLUDE(${SWIG_USE_FILE})
+  FIND_PACKAGE(Csharp REQUIRED)
   
+  # Make a src directory to deal with file permissions problem with MinGW makefile
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
+
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+	
+  # Set properties before adding module
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
+  if (WIN32)
+    SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport CoolProp")
+  endif()
+  SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+
+  if (WIN32)
+    set_target_properties(CoolProp PROPERTIES PREFIX "")
+  endif()
+  add_dependencies (${app_name} generate_headers)  
+endif()
+
+if (COOLPROP_JAVA_MODULE)
+
+  # Must have SWIG and Java
+  FIND_PACKAGE(SWIG REQUIRED)
+  INCLUDE(${SWIG_USE_FILE})
+  find_package(Java REQUIRED)
+  find_package(JNI)
+
+  # Make a src directory to deal with file permissions problem with MinGW makefile
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
+  
+  message(STATUS "JAVA_INCLUDE_PATH = ${JAVA_INCLUDE_PATH}")
+
+  include_directories(${JAVA_INCLUDE_PATH})
+  include_directories(${JAVA_INCLUDE_PATH}/win32)
+
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
+
+  SWIG_ADD_MODULE(CoolProp java ${I_FILE} ${APP_SOURCES})
+
+  if (WIN32)
+    set_target_properties(CoolProp PROPERTIES PREFIX "")
+  endif()
+  
+  if (!MSVC)
+    set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
+  endif()
+  add_dependencies (${app_name} generate_headers)  
+endif()
+
+if (COOLPROP_MATLAB_MODULE)
+
+  add_definitions(/DMATLAB_MEX_FILE) #define matlab macros
+  add_definitions(/DMX_COMPAT_32)
+
+  find_package(Matlab REQUIRED)
+
+  IF(MATLAB_FOUND)
+      message(STATUS "MATLAB Found, MATLAB MEX will be compiled.")
+  ELSE(MATLAB_FOUND)
+      MESSAGE("MATLAB not found...nothing will be built.")
+  ENDIF(MATLAB_FOUND)
+
+  # set up matlab libraries
+  INCLUDE_DIRECTORIES(${MATLAB_INCLUDE_DIR})
+  add_library(PropsSI SHARED ${APP_SOURCES} ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/PropsSI.cpp)
+  add_library(HAPropsSI SHARED ${APP_SOURCES} ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/HAProps.cpp)
+  target_link_libraries(PropsSI ${MATLAB_LIBRARIES})
+  target_link_libraries(HAPropsSI ${MATLAB_LIBRARIES})
+
+  if(WIN32) # 32-bit or 64-bit mex
+    if (CMAKE_CL_64)
+        SET_TARGET_PROPERTIES(PropsSI PROPERTIES PREFIX "" SUFFIX .mexw64)
+        SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES PREFIX "" SUFFIX .mexw64)
+    else()
+        SET_TARGET_PROPERTIES(PropsSI PROPERTIES SUFFIX .mexw32)
+        SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES SUFFIX .mexw32)
+    endif()
+  else()
+    if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+        SET_TARGET_PROPERTIES(PropsSI PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
+        SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
+    else()
+        SET_TARGET_PROPERTIES(PropsSI PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
+        SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
+    endif()
+  endif()
+  add_dependencies (PropsSI generate_headers)
+  add_dependencies (HAPropsSI generate_headers)
 endif()
 
 # NOT WORKING!

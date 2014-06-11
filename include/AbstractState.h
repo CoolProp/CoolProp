@@ -71,19 +71,19 @@ protected:
         //~ return true;
     //~ }
 
-    
+
     /// Two important points
     SimpleState _critical, _reducing;
 
     /// Molar mass [mol/kg]
     CachedElement _molar_mass;
-    
+
     /// Universal gas constant [J/mol/K]
     CachedElement _gas_constant;
 
     /// Bulk values
     double _rhomolar, _T, _p, _Q, _R;
-        
+
     CachedElement _tau, _delta;
 
     /// Transport properties
@@ -161,7 +161,7 @@ protected:
     virtual long double calc_d2alphar_dDelta_dTau(void){throw NotImplementedError("calc_d2alphar_dDelta_dTau is not implemented for this backend");};
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau}\f$ (dimensionless)
     virtual long double calc_d2alphar_dTau2(void){throw NotImplementedError("calc_d2alphar_dTau2 is not implemented for this backend");};
-    
+
     // Derivatives of ideal-gas helmholtz energy
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0\f$ (dimensionless)
     virtual long double calc_alpha0(void){throw NotImplementedError("calc_alpha0 is not implemented for this backend");};
@@ -197,7 +197,7 @@ protected:
     virtual long double calc_health_hazard(void){throw NotImplementedError("calc_health_hazard is not implemented for this backend");};
     /// Using this backend, calculate the physical hazard
     virtual long double calc_physical_hazard(void){throw NotImplementedError("calc_physical_hazard is not implemented for this backend");};
-    
+
     /// Calculate the first partial derivative for the desired derivative
     virtual long double calc_first_partial_deriv(int Of, int Wrt, int Constant){throw NotImplementedError("calc_first_partial_deriv is not implemented for this backend");};
 
@@ -217,7 +217,7 @@ protected:
 
     /// Using this backend, get the name of the fluid
     virtual std::string calc_name(void){throw NotImplementedError("calc_name is not implemented for this backend");};
-    
+
     /// Using this backend, get the triple point temperature in K
     virtual long double calc_Ttriple(void){throw NotImplementedError("calc_Ttriple is not implemented for this backend");};
 
@@ -228,6 +228,8 @@ protected:
     /// Using this backend, get the critical point molar density in mol/m^3
     virtual long double calc_rhomolar_critical(void){throw NotImplementedError("calc_rhomolar_critical is not implemented for this backend");};
 
+    /// Using this backend, construct the phase envelope, the variable type describes the type of phase envelope to be built.
+    virtual void calc_phase_envelope(const std::string &type){throw NotImplementedError("calc_phase_envelope is not implemented for this backend");};
 public:
 
     virtual long double calc_melt_p_T(long double T){throw NotImplementedError("calc_melt_p_T is not implemented for this backend");};
@@ -236,13 +238,13 @@ public:
 
     AbstractState(){};
     virtual ~AbstractState(){};
-    
+
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
     /**
     Very Important!! : Use a smart pointer to manage the pointer returned.  In older versions of C++, you can use std::tr1::smart_ptr. In C++2011 you can use std::shared_ptr
 
     Several backends are possible:
-    
+
     1. "?" : The backend is unknown, we will parse the fluid string to determine the backend to be used.  Probably will use HEOS backend (see below)
     2. "HEOS" : The Helmholtz Equation of State backend for use with pure and pseudo-pure fluids, and mixtures, all of which are based on multi-parameter Helmholtz Energy equations of state.  The fluid part of the string should then either be
        1. A pure or pseudo-pure fluid name (eg. "PROPANE" or "R410A"), yielding a HelmholtzEOSBackend instance.
@@ -251,14 +253,14 @@ public:
     3. "REFPROP" : The REFPROP backend will be used.  The fluid part of the string should then either be
        1. A pure or pseudo-pure fluid name (eg. "PROPANE" or "R410A"), yielding a REFPROPBackend instance.
        2. A string that encodes the components of the mixture with a "&" between them (e.g. "R32&R125"), yielding a REFPROPMixtureBackend instance.
-    
+
     4. "TTSE&XXXX": The TTSE backend will be used, and the tables will be generated using the XXXX backend where XXXX is one of the base backends("HEOS", "REFPROP", etc. )
     5. "BICUBIC&XXXX": The Bicubic backend will be used, and the tables will be generated using the XXXX backend where XXXX is one of the base backends("HEOS", "REFPROP", etc. )
     6. "INCOMP": The incompressible backend will be used
     7. "BRINE": The brine backend will be used
     */
     static AbstractState * factory(const std::string &backend, const std::string &fluid_string);
-    
+
     // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
     virtual bool using_mole_fractions(void) = 0;
 
@@ -268,7 +270,7 @@ public:
 
     /// Clear all the cached values
     bool clear();
-    
+
     void set_mole_fractions(const std::vector<double> &mole_fractions){set_mole_fractions(std::vector<long double>(mole_fractions.begin(), mole_fractions.end()));};
     void set_mass_fractions(const std::vector<double> &mass_fractions){set_mass_fractions(std::vector<long double>(mass_fractions.begin(), mass_fractions.end()));};
 
@@ -360,6 +362,7 @@ public:
     /// Return the isobaric expansion coefficient \f$ \beta = \frac{1}{v}\left.\frac{\partial v}{\partial T}\right|_p = -\frac{1}{\rho}\left.\frac{\partial \rho}{\partial T}\right|_p\f$  in 1/K
     double isobaric_expansion_coefficient(void);
     double fugacity_coefficient(int i);
+    void build_phase_envelope(const std::string &type);
     //double fundamental_derivative_of_gas_dynamics(void);
 
     // ----------------------------------------

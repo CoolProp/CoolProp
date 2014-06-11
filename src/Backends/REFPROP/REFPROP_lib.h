@@ -95,6 +95,7 @@
 #  define SATPdll SATPdll
 #  define SATSdll SATSdll
 #  define SATTdll SATTdll
+#  define SATSPLNdll SATSPLNdll
 #  define SETAGAdll SETAGAdll
 #  define SETKTVdll SETKTVdll
 #  define SETMIXdll SETMIXdll
@@ -210,6 +211,7 @@
 #  define SATPdll satpdll_
 #  define SATSdll satsdll_
 #  define SATTdll sattdll_
+#  define SATSPLNdll satsplndll_
 #  define SETAGAdll setagadll_
 #  define SETKTVdll setktvdll_
 #  define SETMIXdll setmixdll_
@@ -316,6 +318,7 @@
 #  define SATPdll satpdll_
 #  define SATSdll satsdll_
 #  define SATTdll sattdll_
+#  define SATSPLNdll satsplndll_
 #  define SETAGAdll setagadll_
 #  define SETKTVdll setktvdll_
 #  define SETMIXdll setmixdll_
@@ -420,6 +423,7 @@
 #  define SATPdll satpdll
 #  define SATSdll satsdll
 #  define SATTdll sattdll
+#  define SATSPLNdll satsplndll
 #  define SETAGAdll setagadll
 #  define SETKTVdll setktvdll
 #  define SETMIXdll setmixdll
@@ -536,6 +540,7 @@
 #define SATPdll_NAME FUNCTION_NAME(SATPdll)
 #define SATSdll_NAME FUNCTION_NAME(SATSdll)
 #define SATTdll_NAME FUNCTION_NAME(SATTdll)
+#define SATSPLNdll_NAME FUNCTION_NAME(SATSPLNdll)
 #define SETAGAdll_NAME FUNCTION_NAME(SETAGAdll)
 #define SETKTVdll_NAME FUNCTION_NAME(SETKTVdll)
 #define SETMIXdll_NAME FUNCTION_NAME(SETMIXdll)
@@ -649,6 +654,7 @@ extern "C" {
   typedef void (CALLCONV SATPdll_TYPE)(double *,double *,long *,double *,double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV SATSdll_TYPE)(double *,double *,long *,long *,long *,double *,double *,double *,long *,double *,double *,double *,long *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV SATTdll_TYPE)(double *,double *,long *,double *,double *,double *,double *,double *,long *,char*,long );
+  typedef void (CALLCONV SATSPLNdll_TYPE)(double *,long *,char*,long );
   typedef void (CALLCONV SETAGAdll_TYPE)(long *,char*,long );
   typedef void (CALLCONV SETKTVdll_TYPE)(long *,long *,char*,double *,char*,long *,char*,long ,long ,long );
   typedef void (CALLCONV SETMIXdll_TYPE)(char*,char*,char*,long *,char*,double *,long *,char*,long ,long ,long ,long ,long );
@@ -857,6 +863,7 @@ extern "C" {
   typedef SATPdll_TYPE * SATPdll_POINTER;
   typedef SATSdll_TYPE * SATSdll_POINTER;
   typedef SATTdll_TYPE * SATTdll_POINTER;
+  typedef SATSPLNdll_TYPE * SATSPLNdll_POINTER;
   typedef SETAGAdll_TYPE * SETAGAdll_POINTER;
   typedef SETKTVdll_TYPE * SETKTVdll_POINTER;
   typedef SETMIXdll_TYPE * SETMIXdll_POINTER;

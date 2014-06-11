@@ -189,6 +189,8 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity_background(long double et
         delta_eta_h = TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEXANE:
         delta_eta_h = TransportRoutines::viscosity_hexane_higher_order_hardcoded(*this); break;
+    case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEPTANE:
+        delta_eta_h = TransportRoutines::viscosity_heptane_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_ETHANE:
         delta_eta_h = TransportRoutines::viscosity_ethane_higher_order_hardcoded(*this); break;
     default:
