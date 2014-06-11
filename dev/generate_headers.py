@@ -17,8 +17,9 @@ def get_hash(data):
 repo_root_path = os.path.normpath(os.path.join(os.path.abspath(__file__),'..','..'))
 
 # Load up the hashes of the data that will be written to each file
-if os.path.exists(os.path.join(repo_root_path,'dev','hashes.json')):
-    hashes = json.load(open('hashes.json','r'))
+hashes_fname = os.path.join(repo_root_path,'dev','hashes.json')
+if os.path.exists(hashes_fname):
+    hashes = json.load(open(hashes_fname,'r'))
 else:
     hashes = dict()
 
@@ -113,7 +114,7 @@ if __name__=='__main__':
 
     # Write the hashes to a hashes JSON file
     if hashes:
-        fp = open(os.path.join(repo_root_path,'dev','hashes.json'),'w')
+        fp = open(hashes_fname,'w')
         fp.write(json.dumps(hashes))
         fp.close()
 
