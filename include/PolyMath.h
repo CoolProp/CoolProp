@@ -222,16 +222,43 @@ public:
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 	double solve(const double &in, const double &z_in, int axis);
 
-	/// @param y_in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+	/// @param y_in double value that represents the current input in y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
 	double solve_x(const double &y_in, const double &z_in){return solve(y_in, z_in, 0);}
 
-	/// @param x_in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+	/// @param x_in double value that represents the current input in x (1st dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
-	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 	double solve_y(const double &x_in, const double &z_in){return solve(x_in, z_in, 1);}
 
+	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+	double solve_limits(const double &in, const double &z_in, const double &min, const double &max, const int &axis);
+
+	/// @param y_in double value that represents the current input in y (2nd dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	double solve_limits_x(const double &y_in, const double &z_in, const double &x_min, const double &x_max){return solve_limits(y_in, z_in, x_min, x_max, 0);}
+
+	/// @param x_in double value that represents the current input in x (1st dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	double solve_limits_y(const double &x_in, const double &z_in, const double &y_min, const double &y_max){return solve_limits(x_in, z_in, y_min, y_max, 1);}
+
+
+
 protected:
+//	/// @param x_in double value that represents the current input in x (1st dimension)
+//	/// @param y_in double value that represents the current input in y (2nd dimension)
+//	/// @param z_in double value that represents the current output in the 3rd dimension
+//	double residual(const double &x_in, const double &y_in, const double &z_in){return this->evaluate(x_in,y_in)-z_in;}
+//
+//	/// @param x_in double value that represents the current input in x (1st dimension)
+//	/// @param z_in double value that represents the current output in the 3rd dimension
+//	double residual_x(const double &x_in, const double &z_in){return residual(x_in, this->y_std, z_in);}
+//
+//	/// @param y_in double value that represents the current input in y (2nd dimension)
+//	/// @param z_in double value that represents the current output in the 3rd dimension
+//	double residual_y(const double &y_in, const double &z_in){return residual(this->x_std, y_in, z_in);}
+
 	/// Simple polynomial function generator. <- Deprecated due to poor performance, use Horner-scheme instead
 	/** Base function to produce n-th order polynomials
 	 *  based on the length of the coefficient vector.
@@ -252,7 +279,27 @@ protected:
 };
 
 
+class Poly2DResidual : public FuncWrapper1D {
+protected:
+	enum dims {iX, iY};
+	int targetDim;
+	/// the fixed input != targetDim
+	double fixed;
+	/// Object that evaluates the equation
+	Polynomial2D poly;
+	/// Current output value
+	double output;
 
+private:
+	Poly2DResidual();
+
+public:
+	Poly2DResidual(const Polynomial2D &poly, const double &fixed, const int &targetDim, const double &output);
+	virtual ~Poly2DResidual(){};
+
+	double call(double in);
+	double deriv(double in);
+};
 
 
 
