@@ -232,16 +232,38 @@ public:
 
 	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param min double value that represents the minimum value
+	/// @param max double value that represents the maximum value
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 	double solve_limits(const double &in, const double &z_in, const double &min, const double &max, const int &axis);
 
 	/// @param y_in double value that represents the current input in y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param min double value that represents the minimum value in x (1st dimension)
+	/// @param max double value that represents the maximum value in x (1st dimension)
 	double solve_limits_x(const double &y_in, const double &z_in, const double &x_min, const double &x_max){return solve_limits(y_in, z_in, x_min, x_max, 0);}
 
 	/// @param x_in double value that represents the current input in x (1st dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param min double value that represents the minimum value in y (2nd dimension)
+	/// @param max double value that represents the maximum value in y (2nd dimension)
 	double solve_limits_y(const double &x_in, const double &z_in, const double &y_min, const double &y_max){return solve_limits(x_in, z_in, y_min, y_max, 1);}
+
+	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param guess double value that represents the start value
+	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+	double solve_guess(const double &in, const double &z_in, const double &guess, const int &axis);
+
+	/// @param y_in double value that represents the current input in y (2nd dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param x_guess double value that represents the start value in x (1st dimension)
+	double solve_guess_x(const double &y_in, const double &z_in, const double &x_guess){return solve_guess(y_in, z_in, x_guess, 0);}
+
+	/// @param x_in double value that represents the current input in x (1st dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param y_guess double value that represents the start value in y (2nd dimension)
+	double solve_guess_y(const double &x_in, const double &z_in, const double &y_guess){return solve_guess(x_in, z_in, y_guess, 1);}
 
 
 

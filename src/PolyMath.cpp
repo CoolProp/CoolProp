@@ -222,15 +222,29 @@ double Polynomial2D::solve(const double &in, const double &z_in, int axis = -1){
 /// @param z_in double value that represents the current output in the 3rd dimension
 /// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 double Polynomial2D::solve_limits(const double &in, const double &z_in, const double &min, const double &max, const int &axis){
-
 	Poly2DResidual res = Poly2DResidual(*this, in, axis, z_in);
 	std::string errstring;
-
 	double macheps = DBL_EPSILON;
 	double tol     = DBL_EPSILON*1e3;
 	int    maxiter = 50;
+	double result = Brent(res, min, max, macheps, tol, maxiter, errstring);
+	if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
+	return result;
+}
 
-	return Brent(res, min, max, macheps, tol, maxiter, errstring);
+/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+/// @param z_in double value that represents the current output in the 3rd dimension
+/// @param guess double value that represents the start value
+/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+double Polynomial2D::solve_guess(const double &in, const double &z_in, const double &guess, const int &axis){
+	Poly2DResidual res = Poly2DResidual(*this, in, axis, z_in);
+	std::string errstring;
+	//set_debug_level(1000);
+	double tol     = DBL_EPSILON*1e3;
+	int    maxiter = 50;
+	double result = Newton(res, guess, tol, maxiter, errstring);
+	if (this->do_debug()) std::cout << "Newton solver message: " << errstring << std::endl;
+	return result;
 }
 
 
@@ -331,8 +345,8 @@ double Poly2DResidual::call(double in){
 }
 
 double Poly2DResidual::deriv(double in){
-	if (targetDim==iX) return poly.derivative(in,fixed,0)-output;
-	if (targetDim==iY) return poly.derivative(fixed,in,1)-output;
+	if (targetDim==iX) return poly.dzdx(in,fixed);
+	if (targetDim==iY) return poly.dzdy(fixed,in);
 	return -_HUGE;
 }
 
@@ -482,6 +496,15 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 
 		c = 2.0;
 		c = poly.solve_limits_x(0.0, d, -50, 750);
+		{
+		CAPTURE(T);
+		CAPTURE(c);
+		CAPTURE(d);
+		CHECK( check_abs(c,T,acc) );
+		}
+
+		c = 2.0;
+		c = poly.solve_guess_x(0.0, d, 350);
 		{
 		CAPTURE(T);
 		CAPTURE(c);
