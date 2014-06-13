@@ -35,16 +35,16 @@ namespace CoolProp{
  *  it is still needed.
  */
 /// @param coefficients matrix containing the ordered coefficients
-template <typename T> std::vector<T> eigen_to_vec1D(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &coefficients, int axis = 1){
+template <typename T> std::vector<T> eigen_to_vec1D(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &coefficients, int axis = 0){
 	std::vector<T> result;
 	size_t r = coefficients.rows(), c = coefficients.cols();
-	if (axis==1) {
+	if (axis==0) {
 		if (c!=1) throw ValueError(format("Your matrix has the wrong dimensions: %d,%d",r,c));
 		result.resize(r);
 		for (size_t i = 0; i < r; ++i) {
 			result[i] = coefficients(i,0);
 		}
-	} else if (axis==2) {
+	} else if (axis==1) {
 		if (r!=1) throw ValueError(format("Your matrix has the wrong dimensions: %d,%d",r,c));
 		result.resize(c);
 		for (size_t i = 0; i < c; ++i) {
@@ -84,15 +84,15 @@ template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(c
 	return result;
 }
 /// @param coefficients matrix containing the ordered coefficients
-template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(const std::vector<T> &coefficients, int axis = 1){
+template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(const std::vector<T> &coefficients, int axis = 0){
 	size_t nRows = num_rows(coefficients);
 	Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> result;
-	if (axis==1) result.resize(nRows,1);
-	else if (axis==2) result.resize(1,nRows);
+	if (axis==0) result.resize(nRows,1);
+	else if (axis==1) result.resize(1,nRows);
 	else throw ValueError(format("You have to provide axis information: %d is not valid. ",axis));
 	for (size_t i = 0; i < nRows; ++i) {
-		if (axis==1) result(i,0) = coefficients[i];
-		if (axis==2) result(0,i) = coefficients[i];
+		if (axis==0) result(i,0) = coefficients[i];
+		if (axis==1) result(0,i) = coefficients[i];
 	}
 	return result;
 }

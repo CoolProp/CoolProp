@@ -243,8 +243,8 @@
     		max = min;
     		min = fabs(A);
     	}
-    	if (max>D) return ( ( 1.0-min/max*1e0 ) < D );
-    	else throw CoolProp::ValueError(format("Too small numbers: %f cannot be tested with an accepted error of %f. ",max,D));
+    	if (max>DBL_EPSILON*1e3) return ( ( 1.0-min/max*1e0 ) < D );
+    	else throw CoolProp::ValueError(format("Too small numbers: %f cannot be tested with an accepted error of %f for a machine precision of %f. ",max,D,DBL_EPSILON));
     };
     bool inline check_abs(double A, double B){
 		return check_abs(A,B,1e5*DBL_EPSILON);

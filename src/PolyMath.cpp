@@ -20,30 +20,8 @@ namespace CoolProp{
 
 /// Basic checks for coefficient vectors.
 /** Starts with only the first coefficient dimension
- *  and checks the matrix size against the parameters rows and columns. */
-/// @param rows unsigned integer value that represents the desired degree of the polynomial
-bool Polynomial2D::checkCoefficients(const unsigned int rows){
-	return this->checkCoefficients(this->coefficients,rows);
-}
-/// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
-/// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
-bool Polynomial2D::checkCoefficients(const unsigned int rows, const unsigned int columns){
-	return this->checkCoefficients(this->coefficients,rows, columns);
-}
-/// @param coefficients vector containing the ordered coefficients
-/// @param rows unsigned integer value that represents the desired degree of the polynomial
-bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const unsigned int rows){
-	if (coefficients.cols() != 1) {
-		throw ValueError(format("You have a 2D coefficient matrix (%d,%d), please use the 2D checks. ",coefficients.rows(),coefficients.cols()));
-	}
-	if (coefficients.rows() == rows){
-		return true;
-	} else {
-		throw ValueError(format("The number of coefficients %d does not match with %d. ",coefficients.rows(),rows));
-	}
-	return false;
-}
-
+ *  and checks the matrix size against the parameters rows and columns.
+ */
 /// @param coefficients matrix containing the ordered coefficients
 /// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
 /// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
@@ -71,26 +49,32 @@ bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const 
  *  sake of completeness.
  */
 /// @param coefficients matrix containing the ordered coefficients
-/// @param axis unsigned integer value that represents the desired direction of integration
-Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficients, int axis = -1){
-	std::size_t r = coefficients.rows(), c = coefficients.cols();
-	Eigen::MatrixXd newCoefficients;
+/// @param axis integer value that represents the desired direction of integration
+/// @param times integer value that represents the desired order of integration
+Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficients, const int &axis = -1, const int &times = 1){
+	Eigen::MatrixXd oldCoefficients;
+	Eigen::MatrixXd newCoefficients(coefficients);
+	std::size_t r, c, i, j;
 	switch (axis) {
 	case 0:
-		newCoefficients = Eigen::MatrixXd::Zero(r+1,c);
-		newCoefficients.block(1,0,r,c) = coefficients.block(0,0,r,c);
-		for (size_t i = 0; i < r; ++i) {
-			for (size_t j = 0; j < c; ++j) {
-				newCoefficients(i+1,j) /= (i+1.);
+		for (int k = 0; k < times; k++){
+			oldCoefficients = Eigen::MatrixXd(newCoefficients);
+			r = oldCoefficients.rows(), c = oldCoefficients.cols();
+			newCoefficients = Eigen::MatrixXd::Zero(r+1,c);
+			newCoefficients.block(1,0,r,c) = oldCoefficients.block(0,0,r,c);
+			for (size_t i = 0; i < r; ++i) {
+				for (size_t j = 0; j < c; ++j) newCoefficients(i+1,j) /= (i+1.);
 			}
 		}
 		break;
 	case 1:
-		newCoefficients = Eigen::MatrixXd::Zero(r,c+1);
-		newCoefficients.block(0,1,r,c) = coefficients.block(0,0,r,c);
-		for (size_t i = 0; i < r; ++i) {
-			for (size_t j = 0; j < c; ++j) {
-				newCoefficients(i,j+1) /= (j+1.);
+		for (int k = 0; k < times; k++){
+			oldCoefficients = Eigen::MatrixXd(newCoefficients);
+			r = oldCoefficients.rows(), c = oldCoefficients.cols();
+			newCoefficients = Eigen::MatrixXd::Zero(r,c+1);
+			newCoefficients.block(0,1,r,c) = oldCoefficients.block(0,0,r,c);
+			for (i = 0; i < r; ++i) {
+				for (j = 0; j < c; ++j) newCoefficients(i,j+1) /= (j+1.);
 			}
 		}
 		break;
@@ -107,26 +91,35 @@ Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficient
  *  original coefficients with i and lowering the order by 1.
  */
 /// @param coefficients matrix containing the ordered coefficients
-/// @param axis unsigned integer value that represents the desired direction of derivation
-Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, int axis = -1){
-	std::size_t r = coefficients.rows(), c = coefficients.cols();
+/// @param axis integer value that represents the desired direction of derivation
+/// @param times integer value that represents the desired order of integration
+Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, const int &axis = -1, const int &times = 1){
+	if (times < 0) throw ValueError(format("You have to provide a positive order for derivation, %d is not valid. ",times));
+	if (times == 0) return coefficients;
+	// Recursion is also possible, but not recommended
+	//Eigen::MatrixXd newCoefficients;
+	//if (times > 1) newCoefficients = deriveCoeffs(coefficients, axis, times-1);
+	//else newCoefficients = Eigen::MatrixXd(coefficients);
 	Eigen::MatrixXd newCoefficients(coefficients);
+	std::size_t r, c, i, j;
 	switch (axis) {
 	case 0:
-		for (size_t i = 1; i < r; ++i) {
-			for (size_t j = 0; j < c; ++j) {
-				newCoefficients(i,j) *= i;
+		for (int k = 0; k < times; k++){
+			r = newCoefficients.rows(), c = newCoefficients.cols();
+			for (i = 1; i < r; ++i) {
+				for (j = 0; j < c; ++j) newCoefficients(i,j) *= i;
 			}
+			removeRow(newCoefficients,0);
 		}
-		removeRow(newCoefficients,0);
 		break;
 	case 1:
-		for (size_t i = 0; i < r; ++i) {
-			for (size_t j = 1; j < c; ++j) {
-				newCoefficients(i,j) *= j;
+		for (int k = 0; k < times; k++){
+			r = newCoefficients.rows(), c = newCoefficients.cols();
+			for (i = 0; i < r; ++i) {
+				for (j = 1; j < c; ++j) newCoefficients(i,j) *= j;
 			}
+			removeColumn(newCoefficients,0);
 		}
-		removeColumn(newCoefficients,0);
 		break;
 	default:
 		throw ValueError(format("You have to provide a dimension, 0 or 1, for derivation, %d is not valid. ",axis));
@@ -168,28 +161,29 @@ double Polynomial2D::evaluate(const Eigen::MatrixXd &coefficients, const double 
 }
 
 
+/// @param coefficients vector containing the ordered coefficients
 /// @param x_in double value that represents the current input in the 1st dimension
 /// @param y_in double value that represents the current input in the 2nd dimension
-/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-double Polynomial2D::derivative(const double &x_in, const double &y_in, int axis = -1){
-	double result = 0;
-	switch (axis) {
-	case 0:
-		result = this->evaluate(this->coefficientsDerX, x_in,y_in);
-		break;
-	case 1:
-		result = this->evaluate(this->coefficientsDerY, x_in,y_in);
-		break;
-	default:
-		throw ValueError(format("You have to provide a dimension, 0 or 1, for derivation, %d is not valid. ",axis));
-		break;
-	}
-	return result;
+/// @param axis unsigned integer value that represents the axis to derive for (0=x, 1=y)
+double Polynomial2D::derivative(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis = -1){
+	return this->evaluate(this->deriveCoeffs(coefficients, axis, 1), x_in, y_in);
 }
+
+
+/// @param coefficients vector containing the ordered coefficients
+/// @param x_in double value that represents the current input in the 1st dimension
+/// @param y_in double value that represents the current input in the 2nd dimension
+/// @param axis unsigned integer value that represents the axis to integrate for (0=x, 1=y)
+double Polynomial2D::integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis = -1){
+	return this->evaluate(this->integrateCoeffs(coefficients, axis, 1), x_in,y_in);
+}
+
+
+/// @param coefficients vector containing the ordered coefficients
 /// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 /// @param z_in double value that represents the current output in the 3rd dimension
 /// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-double Polynomial2D::solve(const double &in, const double &z_in, int axis = -1){
+Eigen::VectorXd Polynomial2D::solve(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis = -1){
 	std::size_t r = coefficients.rows(), c = coefficients.cols();
 	Eigen::VectorXd tmpCoefficients;
 	switch (axis) {
@@ -215,18 +209,19 @@ double Polynomial2D::solve(const double &in, const double &z_in, int axis = -1){
 	std::vector<double> rootsVec;
 	polySolver.realRoots(rootsVec);
 	if (this->do_debug()) std::cout << "Real roots: " << vec_to_string(rootsVec) << std::endl;
-	return rootsVec[0]; // TODO: implement root selection algorithm
+	return vec_to_eigen(rootsVec);
+	//return rootsVec[0]; // TODO: implement root selection algorithm
 }
 
 /// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 /// @param z_in double value that represents the current output in the 3rd dimension
 /// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-double Polynomial2D::solve_limits(const double &in, const double &z_in, const double &min, const double &max, const int &axis){
-	Poly2DResidual res = Poly2DResidual(*this, in, axis, z_in);
+double Polynomial2D::solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis){
+	Poly2DResidual res = Poly2DResidual(*this, coefficients, in, z_in, axis);
 	std::string errstring;
 	double macheps = DBL_EPSILON;
 	double tol     = DBL_EPSILON*1e3;
-	int    maxiter = 50;
+	int    maxiter = 10;
 	double result = Brent(res, min, max, macheps, tol, maxiter, errstring);
 	if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
 	return result;
@@ -236,40 +231,16 @@ double Polynomial2D::solve_limits(const double &in, const double &z_in, const do
 /// @param z_in double value that represents the current output in the 3rd dimension
 /// @param guess double value that represents the start value
 /// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-double Polynomial2D::solve_guess(const double &in, const double &z_in, const double &guess, const int &axis){
-	Poly2DResidual res = Poly2DResidual(*this, in, axis, z_in);
+double Polynomial2D::solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis){
+	Poly2DResidual res = Poly2DResidual(*this, coefficients, in, z_in, axis);
 	std::string errstring;
 	//set_debug_level(1000);
 	double tol     = DBL_EPSILON*1e3;
-	int    maxiter = 50;
+	int    maxiter = 10;
 	double result = Newton(res, guess, tol, maxiter, errstring);
 	if (this->do_debug()) std::cout << "Newton solver message: " << errstring << std::endl;
 	return result;
 }
-
-
-//	std::string errstring;
-//	double result = -1.0;
-//	switch (this->uses) {
-//	case iNewton: ///< Newton solver with derivative and guess value
-//		if (res.is2D()) {
-//			throw CoolProp::NotImplementedError("The Newton solver is not suitable for 2D polynomials, yet.");
-//		}
-//		result = Newton(res, this->guess, this->tol, this->maxiter, errstring);
-//		break;
-//
-//	case iBrent: ///< Brent solver with bounds
-//		result = Brent(res, this->min, this->max, this->macheps, this->tol, this->maxiter, errstring);
-//		break;
-//
-//	default:
-//		throw CoolProp::NotImplementedError("This solver has not been implemented or you forgot to select a solver...");
-//	}
-//	return result;
-//}
-
-
-
 
 
 /// Simple polynomial function generator. <- Deprecated due to poor performance, use Horner-scheme instead
@@ -321,46 +292,167 @@ double Polynomial2D::baseHorner(std::vector< std::vector<double> > const& coeffi
 
 
 
-Poly2DResidual::Poly2DResidual(const Polynomial2D &poly, const double &fixed, const int &targetDim, const double &output){
-	this->poly = poly;
-	this->fixed = fixed;
-
-	switch (targetDim) {
+Poly2DResidual::Poly2DResidual(Polynomial2D &poly, const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis){
+	switch (axis) {
 	case iX:
 	case iY:
-		this->targetDim = targetDim;
+		this->axis = axis;
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension to the solver, %d is not valid. ",targetDim));
+		throw ValueError(format("You have to provide a dimension to the solver, %d is not valid. ",axis));
 		break;
 	}
 
-	this->output = output;
-}
-
-double Poly2DResidual::call(double in){
-	if (targetDim==iX) return poly.evaluate(in,fixed)-output;
-	if (targetDim==iY) return poly.evaluate(fixed,in)-output;
-	return -_HUGE;
-}
-
-double Poly2DResidual::deriv(double in){
-	if (targetDim==iX) return poly.dzdx(in,fixed);
-	if (targetDim==iY) return poly.dzdy(fixed,in);
-	return -_HUGE;
-}
-
-
-/// Set the coefficient matrix.
-/// @param coefficients matrix containing the ordered coefficients
-void Polynomial2D::setCoefficients(const Eigen::MatrixXd &coefficients){
+	this->poly = poly;
 	this->coefficients = coefficients;
-	this->coefficientsDerX = this->deriveCoeffs(coefficients,0);
-	this->coefficientsDerY = this->deriveCoeffs(coefficients,1);
+	this->derIsSet = false;
+	this->in = in;
+	this->z_in = z_in;
 }
-void Polynomial2D::setCoefficients(const std::vector<std::vector<double> > &coefficients){
-	this->setCoefficients(vec_to_eigen(coefficients));
+
+double Poly2DResidual::call(double target){
+	if (axis==iX) return poly.evaluate(coefficients,target,in)-z_in;
+	if (axis==iY) return poly.evaluate(coefficients,in,target)-z_in;
+	return -_HUGE;
 }
+
+double Poly2DResidual::deriv(double target){
+	if (!this->derIsSet) {
+		this->coefficientsDer = poly.deriveCoeffs(coefficients,axis);
+		this->derIsSet = true;
+	}
+	return poly.evaluate(coefficientsDer,target,in);
+}
+
+
+
+
+
+
+
+
+
+/// Integration functions
+/** Integrating coefficients for polynomials is done by dividing the
+ *  original coefficients by (i+1) and elevating the order by 1
+ *  through adding a zero as first coefficient.
+ *  Some reslicing needs to be applied to integrate along the x-axis.
+ *  In the brine/solution equations, reordering of the parameters
+ *  avoids this expensive operation. However, it is included for the
+ *  sake of completeness.
+ */
+/// @param coefficients matrix containing the ordered coefficients
+/// @param axis unsigned integer value that represents the desired direction of integration
+/// @param times integer value that represents the desired order of integration
+/// @param firstExponent integer value that represents the first exponent of the polynomial in axis direction
+Eigen::MatrixXd Polynomial2Dflex::integrateCoeffs(const Eigen::MatrixXd &coefficients, const int &axis, const int &times, const int &firstExponent){
+	Eigen::MatrixXd oldCoefficients;
+	Eigen::MatrixXd newCoefficients(coefficients);
+	std::size_t r, c, i, j;
+	switch (axis) {
+	case 0:
+		for (int k = 0; k < times; k++){
+			oldCoefficients = Eigen::MatrixXd(newCoefficients);
+			r = oldCoefficients.rows(), c = oldCoefficients.cols();
+			newCoefficients = Eigen::MatrixXd::Zero(r+1,c);
+			newCoefficients.block(1,0,r,c) = oldCoefficients.block(0,0,r,c);
+			for (size_t i = 0; i < r; ++i) {
+				for (size_t j = 0; j < c; ++j) newCoefficients(i+1,j) /= (i+1.);
+			}
+		}
+		break;
+	case 1:
+		for (int k = 0; k < times; k++){
+			oldCoefficients = Eigen::MatrixXd(newCoefficients);
+			r = oldCoefficients.rows(), c = oldCoefficients.cols();
+			newCoefficients = Eigen::MatrixXd::Zero(r,c+1);
+			newCoefficients.block(0,1,r,c) = oldCoefficients.block(0,0,r,c);
+			for (i = 0; i < r; ++i) {
+				for (j = 0; j < c; ++j) newCoefficients(i,j+1) /= (j+1.);
+			}
+		}
+		break;
+	default:
+		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		break;
+	}
+	return newCoefficients;
+}
+
+
+/// Derivative coefficients calculation
+/** Deriving coefficients for polynomials is done by multiplying the
+ *  original coefficients with i and lowering the order by 1.
+ */
+/// @param coefficients matrix containing the ordered coefficients
+/// @param axis unsigned integer value that represents the desired direction of derivation
+/// @param times integer value that represents the desired order of derivation
+/// @param firstExponent integer value that represents the first exponent of the polynomial in axis direction
+Eigen::MatrixXd Polynomial2Dflex::deriveCoeffs(const Eigen::MatrixXd &coefficients, const int &axis, const int &times, const int &firstExponent){
+	if (times < 0) throw ValueError(format("You have to provide a positive order for derivation, %d is not valid. ",times));
+	if (times == 0) return coefficients;
+	// Recursion is also possible, but not recommended
+	//Eigen::MatrixXd newCoefficients;
+	//if (times > 1) newCoefficients = deriveCoeffs(coefficients, axis, times-1);
+	//else newCoefficients = Eigen::MatrixXd(coefficients);
+	Eigen::MatrixXd newCoefficients(coefficients);
+	std::size_t r, c, i, j;
+	switch (axis) {
+	case 0:
+		for (int k = 0; k < times; k++){
+			r = newCoefficients.rows(), c = newCoefficients.cols();
+			for (i = 1; i < r; ++i) {
+				for (j = 0; j < c; ++j) newCoefficients(i,j) *= i;
+			}
+			removeRow(newCoefficients,0);
+		}
+		break;
+	case 1:
+		for (int k = 0; k < times; k++){
+			r = newCoefficients.rows(), c = newCoefficients.cols();
+			for (i = 0; i < r; ++i) {
+				for (j = 1; j < c; ++j) newCoefficients(i,j) *= j;
+			}
+			removeColumn(newCoefficients,0);
+		}
+		break;
+	default:
+		throw ValueError(format("You have to provide a dimension, 0 or 1, for derivation, %d is not valid. ",axis));
+		break;
+	}
+	return newCoefficients;
+}
+
+
+
+
+
+
+
+Poly2DflexResidual::Poly2DflexResidual(Polynomial2Dflex &poly, const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp)
+  :Poly2DResidual(poly, coefficients, in, z_in, axis){
+	this->x_exp = x_exp;
+	this->y_exp = y_exp;
+}
+
+double Poly2DflexResidual::call(double target){
+	if (axis==iX) return poly.evaluate(coefficients,target,in,x_exp,y_exp)-z_in;
+	if (axis==iY) return poly.evaluate(coefficients,in,target,x_exp,y_exp)-z_in;
+	return -_HUGE;
+}
+
+double Poly2DflexResidual::deriv(double target){
+	if (!this->derIsSet) {
+		if (axis==iX) this->coefficientsDer = poly.deriveCoeffs(coefficients,axis,1,x_exp);
+		if (axis==iY) this->coefficientsDer = poly.deriveCoeffs(coefficients,axis,1,y_exp);
+		this->derIsSet = true;
+	}
+	return poly.evaluate(coefficientsDer,target,in,x_exp,y_exp);
+}
+
+
+
+
 
 }
 
@@ -394,7 +486,7 @@ void Polynomial2D::setCoefficients(const std::vector<std::vector<double> > &coef
 
 TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","[PolyMath]")
 {
-	bool PRINT = false;
+	bool PRINT = true;
 	std::string tmpStr;
 
 	/// Test case for "SylthermXLT" by "Dow Chemicals"
@@ -420,45 +512,39 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 	Eigen::MatrixXd matrix2Dtmp;
 	std::vector<std::vector<double> > vec2Dtmp;
 
-	CoolProp::Polynomial2D poly2D;
-
-	SECTION("Coefficient parsing and setting") {
-		CHECK_NOTHROW(poly2D.setCoefficients(cHeat2D));
-		CHECK_THROWS(poly2D.checkCoefficients(4,5));
-		CHECK_NOTHROW(poly2D.checkCoefficients(3,4));
-		CHECK_NOTHROW(poly2D.setCoefficients(matrix2D));
-		CHECK_THROWS(poly2D.checkCoefficients(4,5));
-		CHECK_NOTHROW(poly2D.checkCoefficients(3,4));
-
+	SECTION("Coefficient parsing") {
+		CoolProp::Polynomial2D poly;
+		CHECK_THROWS(poly.checkCoefficients(matrix2D,4,5));
+		CHECK( poly.checkCoefficients(matrix2D,3,4) );
 	}
 
 	SECTION("Coefficient operations") {
 		Eigen::MatrixXd matrix;
 		CoolProp::Polynomial2D poly;
 
-		CHECK_THROWS(poly2D.integrateCoeffs(matrix2D));
+		CHECK_THROWS(poly.integrateCoeffs(matrix2D));
 
-		CHECK_NOTHROW(matrix = poly2D.integrateCoeffs(matrix2D, 0));
+		CHECK_NOTHROW(matrix = poly.integrateCoeffs(matrix2D, 0));
 		tmpStr = CoolProp::mat_to_string(matrix2D);
 		if (PRINT) std::cout << tmpStr << std::endl;
 		tmpStr = CoolProp::mat_to_string(matrix);
 		if (PRINT) std::cout << tmpStr << std::endl << std::endl;
 
-		CHECK_NOTHROW(matrix = poly2D.integrateCoeffs(matrix2D, 1));
+		CHECK_NOTHROW(matrix = poly.integrateCoeffs(matrix2D, 1));
 		tmpStr = CoolProp::mat_to_string(matrix2D);
 		if (PRINT) std::cout << tmpStr << std::endl;
 		tmpStr = CoolProp::mat_to_string(matrix);
 		if (PRINT) std::cout << tmpStr << std::endl << std::endl;
 
-		CHECK_THROWS(poly2D.deriveCoeffs(matrix2D));
+		CHECK_THROWS(poly.deriveCoeffs(matrix2D));
 
-		CHECK_NOTHROW(matrix = poly2D.deriveCoeffs(matrix2D, 0));
+		CHECK_NOTHROW(matrix = poly.deriveCoeffs(matrix2D, 0));
 		tmpStr = CoolProp::mat_to_string(matrix2D);
 		if (PRINT) std::cout << tmpStr << std::endl;
 		tmpStr = CoolProp::mat_to_string(matrix);
 		if (PRINT) std::cout << tmpStr << std::endl << std::endl;
 
-		CHECK_NOTHROW(matrix = poly2D.deriveCoeffs(matrix2D, 1));
+		CHECK_NOTHROW(matrix = poly.deriveCoeffs(matrix2D, 1));
 		tmpStr = CoolProp::mat_to_string(matrix2D);
 		if (PRINT) std::cout << tmpStr << std::endl;
 		tmpStr = CoolProp::mat_to_string(matrix);
@@ -468,12 +554,12 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 	SECTION("Evaluation and test values"){
 
 		Eigen::MatrixXd matrix = CoolProp::vec_to_eigen(cHeat);
-		CoolProp::Polynomial2D poly(matrix);
+		CoolProp::Polynomial2D poly;
 
 		double acc = 0.0001;
 
 		double T = 273.15+50;
-		double c = poly.evaluate(T, 0.0);
+		double c = poly.evaluate(matrix, T, 0.0);
 		double d = 1834.746;
 
 		{
@@ -486,7 +572,7 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		}
 
 		c = 2.0;
-		c = poly.solve_x(0.0, d);
+		c = poly.solve(matrix, 0.0, d, 0)[0];
 		{
 		CAPTURE(T);
 		CAPTURE(c);
@@ -495,7 +581,7 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		}
 
 		c = 2.0;
-		c = poly.solve_limits_x(0.0, d, -50, 750);
+		c = poly.solve_limits(matrix, 0.0, d, -50, 750, 0);
 		{
 		CAPTURE(T);
 		CAPTURE(c);
@@ -504,7 +590,7 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		}
 
 		c = 2.0;
-		c = poly.solve_guess_x(0.0, d, 350);
+		c = poly.solve_guess(matrix, 0.0, d, 350, 0);
 		{
 		CAPTURE(T);
 		CAPTURE(c);
@@ -528,16 +614,15 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 
 	SECTION("Integration and derivation tests") {
 
+		CoolProp::Polynomial2D poly;
+
 		Eigen::MatrixXd matrix(matrix2D);
-		CoolProp::Polynomial2D poly(matrix);
+		Eigen::MatrixXd matrixInt  = poly.integrateCoeffs(matrix, 1);
+		Eigen::MatrixXd matrixDer  = poly.deriveCoeffs(matrix, 1);
+		Eigen::MatrixXd matrixInt2 = poly.integrateCoeffs(matrix, 1, 2);
+		Eigen::MatrixXd matrixDer2 = poly.deriveCoeffs(matrix, 1, 2);
 
-		Eigen::MatrixXd matrixInt = poly.integrateCoeffs(matrix, 1);
-		CoolProp::Polynomial2D polyInt(matrixInt);
-
-		Eigen::MatrixXd matrixDer = poly.deriveCoeffs(matrix, 1);
-		CoolProp::Polynomial2D polyDer(matrixDer);
-
-		CHECK_THROWS( poly2D.evaluate(matrix,0.0) );
+		CHECK_THROWS( poly.evaluate(matrix,0.0) );
 
 		double x = 0.3, y = 255.3, val1, val2, val3, val4;
 
@@ -548,10 +633,10 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		double acc = 0.001;
 
 		for (double T = Tmin; T<Tmax; T+=Tinc) {
-			val1 = poly.evaluate(x, T-deltaT);
-			val2 = poly.evaluate(x, T+deltaT);
+			val1 = poly.evaluate(matrix, x, T-deltaT);
+			val2 = poly.evaluate(matrix, x, T+deltaT);
 			val3 = (val2-val1)/2/deltaT;
-			val4 = polyDer.evaluate(x, T);
+			val4 = poly.evaluate(matrixDer, x, T);
 			CAPTURE(T);
 			CAPTURE(val3);
 			CAPTURE(val4);
@@ -563,10 +648,25 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		}
 
 		for (double T = Tmin; T<Tmax; T+=Tinc) {
-			val1 = polyInt.evaluate(x, T-deltaT);
-			val2 = polyInt.evaluate(x, T+deltaT);
+			val1 = poly.evaluate(matrixDer, x, T-deltaT);
+			val2 = poly.evaluate(matrixDer, x, T+deltaT);
 			val3 = (val2-val1)/2/deltaT;
-			val4 = poly.evaluate(x, T);
+			val4 = poly.evaluate(matrixDer2, x, T);
+			CAPTURE(T);
+			CAPTURE(val3);
+			CAPTURE(val4);
+			tmpStr = CoolProp::mat_to_string(matrixDer);
+			CAPTURE(tmpStr);
+			tmpStr = CoolProp::mat_to_string(matrixDer2);
+			CAPTURE(tmpStr);
+			CHECK( check_abs(val3,val4,acc) );
+		}
+
+		for (double T = Tmin; T<Tmax; T+=Tinc) {
+			val1 = poly.evaluate(matrixInt, x, T-deltaT);
+			val2 = poly.evaluate(matrixInt, x, T+deltaT);
+			val3 = (val2-val1)/2/deltaT;
+			val4 = poly.evaluate(matrix, x, T);
 			CAPTURE(T);
 			CAPTURE(val3);
 			CAPTURE(val4);
@@ -578,8 +678,23 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		}
 
 		for (double T = Tmin; T<Tmax; T+=Tinc) {
-			val1 =      poly.evaluate(x, T);
-			val2 = polyInt.derivative(x, T, 1);
+			val1 = poly.evaluate(matrixInt2, x, T-deltaT);
+			val2 = poly.evaluate(matrixInt2, x, T+deltaT);
+			val3 = (val2-val1)/2/deltaT;
+			val4 = poly.evaluate(matrixInt, x, T);
+			CAPTURE(T);
+			CAPTURE(val3);
+			CAPTURE(val4);
+			tmpStr = CoolProp::mat_to_string(matrixInt2);
+			CAPTURE(tmpStr);
+			tmpStr = CoolProp::mat_to_string(matrixInt);
+			CAPTURE(tmpStr);
+			CHECK( check_abs(val3,val4,acc) );
+		}
+
+		for (double T = Tmin; T<Tmax; T+=Tinc) {
+			val1 =   poly.evaluate(matrix, x, T);
+			val2 = poly.derivative(matrixInt, x, T, 1);
 			CAPTURE(T);
 			CAPTURE(val1);
 			CAPTURE(val2);
@@ -587,8 +702,8 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		}
 
 		for (double T = Tmin; T<Tmax; T+=Tinc) {
-			val1 =  poly.derivative(x, T, 1);
-			val2 = polyDer.evaluate(x, T);
+			val1 = poly.derivative(matrix, x, T, 1);
+			val2 =   poly.evaluate(matrixDer, x, T);
 			CAPTURE(T);
 			CAPTURE(val1);
 			CAPTURE(val2);

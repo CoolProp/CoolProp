@@ -11,135 +11,32 @@
 //#include <numeric> // inner_product
 //#include <sstream>
 //#include "float.h"
-
+#include "MatrixMath.h"
 #include <unsupported/Eigen/Polynomials>
 
 namespace CoolProp{
 
-
-///// The base class for all Polynomials
-//class Polynomial1D{
-//
-//private:
-//	Eigen::VectorXd coefficients;
-//
-//public:
-//	/// Constructors
-//	Polynomial1D();
-//	Polynomial1D(const Eigen::VectorXd &coefficients){
-//		this->setCoefficients(coefficients);
-//	}
-//	Polynomial1D(const std::vector<double> &coefficients){
-//		this->setCoefficients(coefficients);
-//	}
-//
-//	/// Destructor.  No implementation
-//	virtual ~Polynomial1D(){};
-//
-//public:
-//	/// Set the coefficient vector.
-//	/// @param coefficients vector containing the ordered coefficients
-//	bool setCoefficients(const Eigen::VectorXd &coefficients);
-//	/// @param coefficients vector containing the ordered coefficients
-//	bool setCoefficients(const std::vector<double> &coefficients);
-//
-//	/// Basic checks for coefficient vectors.
-//	/** Starts with only the first coefficient dimension
-//	 *  and checks the vector length against parameter n. */
-//	/// @param n unsigned integer value that represents the desired degree of the polynomial
-//	bool checkCoefficients(const unsigned int n);
-//	/// @param coefficients vector containing the ordered coefficients
-//	/// @param n unsigned integer value that represents the desired degree of the polynomial
-//	bool checkCoefficients(const Eigen::VectorXd &coefficients, const unsigned int n);
-//	/// @param coefficients vector containing the ordered coefficients
-//	/// @param n unsigned integer value that represents the desired degree of the polynomial
-//	bool checkCoefficients(const std::vector<double> &coefficients, const unsigned int n);
-//
-//protected:
-//	/// Integration functions
-//	/** Integrating coefficients for polynomials is done by dividing the
-//	 *  original coefficients by (i+1) and elevating the order by 1
-//	 *  through adding a zero as first coefficient.
-//	 *  Some reslicing needs to be applied to integrate along the x-axis.
-//	 *  In the brine/solution equations, reordering of the parameters
-//	 *  avoids this expensive operation. However, it is included for the
-//	 *  sake of completeness.
-//	 */
-//	Eigen::VectorXd integrateCoeffs(const Eigen::VectorXd &coefficients);
-//	std::vector<double> integrateCoeffs(const std::vector<double> &coefficients);
-//
-//	/// Derivative coefficients calculation
-//	/** Deriving coefficients for polynomials is done by multiplying the
-//	 *  original coefficients with i and lowering the order by 1.
-//	 *
-//	 *  It is not really deprecated, but untested and therefore a warning
-//	 *  is issued. Please check this method before you use it.
-//	 */
-//	Eigen::VectorXd deriveCoeffs(const Eigen::VectorXd &coefficients);
-//	std::vector<double> deriveCoeffs(const std::vector<double> &coefficients);
-//
-//public:
-//	/// The core functions to evaluate the polynomial
-//	/** It is here we implement the different special
-//	 *  functions that allow us to specify certain
-//	 *  types of polynomials.
-//	 *  The derivative might bee needed during the
-//	 *  solution process of the solver. It could also
-//	 *  be a protected function...
-//	 */
-//	double evaluate(const double &x_in);
-//	double derivative(const double &x_in);
-//	double solve(const double &y_in);
-//};
-
-
 /// The base class for all Polynomials
 class Polynomial2D {
 
-private:
-	Eigen::MatrixXd coefficients;
-	Eigen::MatrixXd coefficientsDerX,coefficientsDerY;
-	double x_std;
-	double y_std;
-
 public:
 	/// Constructors
-	Polynomial2D(){x_std = 0.0; y_std = 0.0;};
-	Polynomial2D(const Eigen::MatrixXd &coefficients){
-		x_std = 0.0; y_std = 0.0;
-		this->setCoefficients(coefficients);
-	}
-	Polynomial2D(const std::vector<std::vector<double> > &coefficients){
-		x_std = 0.0; y_std = 0.0;
-		this->setCoefficients(coefficients);
-	}
+	Polynomial2D(){};
 
 	/// Destructor.  No implementation
 	virtual ~Polynomial2D(){};
 
 public:
-	/// Set the coefficient matrix.
+	/// Convert the coefficient vector.
+	/// @param coefficients vector containing the ordered coefficients
+	Eigen::MatrixXd convertCoefficients(const             std::vector<double>   &coefficients){return vec_to_eigen(coefficients);}
+	/// Convert the coefficient matrix.
 	/// @param coefficients matrix containing the ordered coefficients
-	void setCoefficients(const Eigen::MatrixXd &coefficients);
-	void setCoefficients(const std::vector<std::vector<double> > &coefficients);
-
-	/// Set the standard inputs.
-	/// @param x_std fixed input for the first dimension
-	void set_x(const double &x_std){this->x_std = x_std;}
-	/// @param y_std fixed input for the second dimension
-	void set_y(const double &y_std){this->y_std = y_std;}
+	Eigen::MatrixXd convertCoefficients(const std::vector<std::vector<double> > &coefficients){return vec_to_eigen(coefficients);}
 
 	/// Basic checks for coefficient vectors.
 	/** Starts with only the first coefficient dimension
 	 *  and checks the matrix size against the parameters rows and columns. */
-	/// @param rows unsigned integer value that represents the desired degree of the polynomial
-	bool checkCoefficients(const unsigned int rows);
-	/// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
-	/// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
-	bool checkCoefficients(const unsigned int rows, const unsigned int columns);
-	/// @param coefficients vector containing the ordered coefficients
-	/// @param rows unsigned integer value that represents the desired degree of the polynomial
-	bool checkCoefficients(const Eigen::MatrixXd &coefficients, const unsigned int rows);
 	/// @param coefficients matrix containing the ordered coefficients
 	/// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
 	/// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
@@ -157,7 +54,8 @@ public:
 	 */
 	/// @param coefficients matrix containing the ordered coefficients
 	/// @param axis unsigned integer value that represents the desired direction of integration
-	Eigen::MatrixXd integrateCoeffs(const Eigen::MatrixXd &coefficients, int axis);
+	/// @param times integer value that represents the desired order of integration
+	Eigen::MatrixXd integrateCoeffs(const Eigen::MatrixXd &coefficients, const int &axis, const int &times);
 
 	/// Derivative coefficients calculation
 	/** Deriving coefficients for polynomials is done by multiplying the
@@ -165,20 +63,23 @@ public:
 	 */
 	/// @param coefficients matrix containing the ordered coefficients
 	/// @param axis unsigned integer value that represents the desired direction of derivation
-	Eigen::MatrixXd deriveCoeffs(const Eigen::MatrixXd &coefficients, int axis);
+	/// @param times integer value that represents the desired order of derivation
+	Eigen::MatrixXd deriveCoeffs(const Eigen::MatrixXd &coefficients, const int &axis, const int &times);
 
 public:
 	/// The core functions to evaluate the polynomial
 	/** It is here we implement the different special
 	 *  functions that allow us to specify certain
 	 *  types of polynomials.
-	 *  The derivative might bee needed during the
-	 *  solution process of the solver. It could also
-	 *  be a protected function...
+	 *
+	 *  Try to avoid many calls to the derivative and integral functions.
+	 *  Both of them have to calculate the new coefficients internally,
+	 *  which slows things down. Instead, you should use the deriveCoeffs
+	 *  and integrateCoeffs functions and store the coefficient matrix
+	 *  you need for future calls to evaluate derivative and integral.
 	 */
-
 	/// @param coefficients vector containing the ordered coefficients
-	/// @param x_in double value that represents the current input
+	/// @param x_in double value that represents the current input in the 1st dimension
 	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in);
 
 	/// @param coefficients vector containing the ordered coefficients
@@ -186,101 +87,44 @@ public:
 	/// @param y_in double value that represents the current input in the 2nd dimension
 	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in);
 
+	/// @param coefficients vector containing the ordered coefficients
 	/// @param x_in double value that represents the current input in the 1st dimension
 	/// @param y_in double value that represents the current input in the 2nd dimension
-	double evaluate(const double &x_in, const double &y_in){return evaluate(this->coefficients, x_in, y_in);}
+	/// @param axis unsigned integer value that represents the axis to derive for (0=x, 1=y)
+	double derivative(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis);
 
-	/// @param x_in double value that represents the current input in the 1st dimension
-	double evaluate_x(const double &x_in){return evaluate(x_in, this->y_std);}
-
-	/// @param y_in double value that represents the current input in the 2nd dimension
-	double evaluate_y(const double &y_in){return evaluate(this->x_std, y_in);}
-
+	/// @param coefficients vector containing the ordered coefficients
 	/// @param x_in double value that represents the current input in the 1st dimension
 	/// @param y_in double value that represents the current input in the 2nd dimension
-	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-	double derivative(const double &x_in, const double &y_in, int axis);
+	/// @param axis unsigned integer value that represents the axis to integrate for (0=x, 1=y)
+	double integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis);
 
-	/// @param x_in double value that represents the current input in the 1st dimension
-	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-	double derivative_x(const double &x_in, int axis = -1){return derivative(x_in, this->y_std, axis);}
-
-	/// @param y_in double value that represents the current input in the 2nd dimension
-	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-	double derivative_y(const double &y_in, int axis = -1){return derivative(this->x_std, y_in, axis);}
-
-	/// @param x_in double value that represents the current input in the 1st dimension
-	/// @param y_in double value that represents the current input in the 2nd dimension
-	double dzdx(const double &x_in, const double &y_in){return derivative(x_in, y_in, 0);}
-
-	/// @param y_in double value that represents the current input in the 2nd dimension
-	/// @param y_in double value that represents the current input in the 2nd dimension
-	double dzdy(const double &x_in, const double &y_in){return derivative(x_in, y_in, 1);}
-
+	/// Returns a vector with ALL the real roots of p(x_in,y_in)-z_in
+	/// @param coefficients vector containing the ordered coefficients
 	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-	double solve(const double &in, const double &z_in, int axis);
+	Eigen::VectorXd solve(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis);
 
-	/// @param y_in double value that represents the current input in y (2nd dimension)
-	/// @param z_in double value that represents the current output in the 3rd dimension
-	double solve_x(const double &y_in, const double &z_in){return solve(y_in, z_in, 0);}
-
-	/// @param x_in double value that represents the current input in x (1st dimension)
-	/// @param z_in double value that represents the current output in the 3rd dimension
-	double solve_y(const double &x_in, const double &z_in){return solve(x_in, z_in, 1);}
-
+	/// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
+	/// @param coefficients vector containing the ordered coefficients
 	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
 	/// @param min double value that represents the minimum value
 	/// @param max double value that represents the maximum value
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-	double solve_limits(const double &in, const double &z_in, const double &min, const double &max, const int &axis);
+	double solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis);
 
-	/// @param y_in double value that represents the current input in y (2nd dimension)
-	/// @param z_in double value that represents the current output in the 3rd dimension
-	/// @param min double value that represents the minimum value in x (1st dimension)
-	/// @param max double value that represents the maximum value in x (1st dimension)
-	double solve_limits_x(const double &y_in, const double &z_in, const double &x_min, const double &x_max){return solve_limits(y_in, z_in, x_min, x_max, 0);}
-
-	/// @param x_in double value that represents the current input in x (1st dimension)
-	/// @param z_in double value that represents the current output in the 3rd dimension
-	/// @param min double value that represents the minimum value in y (2nd dimension)
-	/// @param max double value that represents the maximum value in y (2nd dimension)
-	double solve_limits_y(const double &x_in, const double &z_in, const double &y_min, const double &y_max){return solve_limits(x_in, z_in, y_min, y_max, 1);}
-
+	/// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
+	/// @param coefficients vector containing the ordered coefficients
 	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
 	/// @param guess double value that represents the start value
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-	double solve_guess(const double &in, const double &z_in, const double &guess, const int &axis);
-
-	/// @param y_in double value that represents the current input in y (2nd dimension)
-	/// @param z_in double value that represents the current output in the 3rd dimension
-	/// @param x_guess double value that represents the start value in x (1st dimension)
-	double solve_guess_x(const double &y_in, const double &z_in, const double &x_guess){return solve_guess(y_in, z_in, x_guess, 0);}
-
-	/// @param x_in double value that represents the current input in x (1st dimension)
-	/// @param z_in double value that represents the current output in the 3rd dimension
-	/// @param y_guess double value that represents the start value in y (2nd dimension)
-	double solve_guess_y(const double &x_in, const double &z_in, const double &y_guess){return solve_guess(x_in, z_in, y_guess, 1);}
-
+	double solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis);
 
 
 protected:
-//	/// @param x_in double value that represents the current input in x (1st dimension)
-//	/// @param y_in double value that represents the current input in y (2nd dimension)
-//	/// @param z_in double value that represents the current output in the 3rd dimension
-//	double residual(const double &x_in, const double &y_in, const double &z_in){return this->evaluate(x_in,y_in)-z_in;}
-//
-//	/// @param x_in double value that represents the current input in x (1st dimension)
-//	/// @param z_in double value that represents the current output in the 3rd dimension
-//	double residual_x(const double &x_in, const double &z_in){return residual(x_in, this->y_std, z_in);}
-//
-//	/// @param y_in double value that represents the current input in y (2nd dimension)
-//	/// @param z_in double value that represents the current output in the 3rd dimension
-//	double residual_y(const double &y_in, const double &z_in){return residual(this->x_std, y_in, z_in);}
-
 	/// Simple polynomial function generator. <- Deprecated due to poor performance, use Horner-scheme instead
 	/** Base function to produce n-th order polynomials
 	 *  based on the length of the coefficient vector.
@@ -304,23 +148,149 @@ protected:
 class Poly2DResidual : public FuncWrapper1D {
 protected:
 	enum dims {iX, iY};
-	int targetDim;
+	Eigen::MatrixXd coefficients;
+	bool derIsSet;
+	Eigen::MatrixXd coefficientsDer;
+	int axis;
 	/// the fixed input != targetDim
-	double fixed;
+	double in;
 	/// Object that evaluates the equation
 	Polynomial2D poly;
 	/// Current output value
-	double output;
+	double z_in;
 
 private:
 	Poly2DResidual();
 
 public:
-	Poly2DResidual(const Polynomial2D &poly, const double &fixed, const int &targetDim, const double &output);
+	Poly2DResidual(Polynomial2D &poly, const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis);
 	virtual ~Poly2DResidual(){};
 
-	double call(double in);
-	double deriv(double in);
+	double call(double target);
+	double deriv(double target);
+};
+
+
+/// A flexible class for polynomials starting at an arbitrary degree != 0, can be negative.
+class Polynomial2Dflex : Polynomial2D{
+
+public:
+	/// Constructors
+	Polynomial2Dflex(){};
+
+	/// Destructor.  No implementation
+	virtual ~Polynomial2Dflex(){};
+
+public:
+	/// Integration functions
+	/** Integrating coefficients for polynomials is done by dividing the
+	 *  original coefficients by (i+1) and elevating the order by 1
+	 *  through adding a zero as first coefficient.
+	 *  Some reslicing needs to be applied to integrate along the x-axis.
+	 *  In the brine/solution equations, reordering of the parameters
+	 *  avoids this expensive operation. However, it is included for the
+	 *  sake of completeness.
+	 */
+	/// @param coefficients matrix containing the ordered coefficients
+	/// @param axis unsigned integer value that represents the desired direction of integration
+	/// @param times integer value that represents the desired order of integration
+	/// @param firstExponent integer value that represents the first exponent of the polynomial in axis direction
+	Eigen::MatrixXd integrateCoeffs(const Eigen::MatrixXd &coefficients, const int &axis, const int &times, const int &firstExponent);
+
+	/// Derivative coefficients calculation
+	/** Deriving coefficients for polynomials is done by multiplying the
+	 *  original coefficients with i and lowering the order by 1.
+	 */
+	/// @param coefficients matrix containing the ordered coefficients
+	/// @param axis unsigned integer value that represents the desired direction of derivation
+	/// @param times integer value that represents the desired order of derivation
+	/// @param firstExponent integer value that represents the first exponent of the polynomial in axis direction
+	Eigen::MatrixXd deriveCoeffs(const Eigen::MatrixXd &coefficients, const int &axis, const int &times, const int &firstExponent);
+
+public:
+	/// The core functions to evaluate the polynomial
+	/** It is here we implement the different special
+	 *  functions that allow us to specify certain
+	 *  types of polynomials.
+	 *
+	 *  Try to avoid many calls to the derivative and integral functions.
+	 *  Both of them have to calculate the new coefficients internally,
+	 *  which slows things down. Instead, you should use the deriveCoeffs
+	 *  and integrateCoeffs functions and store the coefficient matrix
+	 *  you need for future calls to evaluate derivative and integral.
+	 */
+	/// @param coefficients vector containing the ordered coefficients
+	/// @param x_in double value that represents the current input in the 1st dimension
+	/// @param firstExponent integer value that represents the first exponent of the polynomial
+	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const int &firstExponent);
+
+	/// @param coefficients vector containing the ordered coefficients
+	/// @param x_in double value that represents the current input in the 1st dimension
+	/// @param y_in double value that represents the current input in the 2nd dimension
+	/// @param x_exp integer value that represents the first exponent of the polynomial in the 1st dimension
+	/// @param y_exp integer value that represents the first exponent of the polynomial in the 2nd dimension
+	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &x_exp, const int &y_exp);
+
+	/// @param coefficients vector containing the ordered coefficients
+	/// @param x_in double value that represents the current input in the 1st dimension
+	/// @param y_in double value that represents the current input in the 2nd dimension
+	/// @param axis unsigned integer value that represents the axis to derive for (0=x, 1=y)
+	/// @param x_exp integer value that represents the first exponent of the polynomial in the 1st dimension
+	/// @param y_exp integer value that represents the first exponent of the polynomial in the 2nd dimension
+	double derivative(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp);
+
+	/// @param coefficients vector containing the ordered coefficients
+	/// @param x_in double value that represents the current input in the 1st dimension
+	/// @param y_in double value that represents the current input in the 2nd dimension
+	/// @param axis unsigned integer value that represents the axis to integrate for (0=x, 1=y)
+	/// @param x_exp integer value that represents the first exponent of the polynomial in the 1st dimension
+	/// @param y_exp integer value that represents the first exponent of the polynomial in the 2nd dimension
+	double integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp);
+
+	/// Returns a vector with ALL the real roots of p(x_in,y_in)-z_in
+	/// @param coefficients vector containing the ordered coefficients
+	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+	/// @param x_exp integer value that represents the first exponent of the polynomial in the 1st dimension
+	/// @param y_exp integer value that represents the first exponent of the polynomial in the 2nd dimension
+	Eigen::VectorXd solve(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp);
+
+	/// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
+	/// @param coefficients vector containing the ordered coefficients
+	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param min double value that represents the minimum value
+	/// @param max double value that represents the maximum value
+	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+	/// @param x_exp integer value that represents the first exponent of the polynomial in the 1st dimension
+	/// @param y_exp integer value that represents the first exponent of the polynomial in the 2nd dimension
+	double solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis, const int &x_exp, const int &y_exp);
+
+	/// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
+	/// @param coefficients vector containing the ordered coefficients
+	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+	/// @param z_in double value that represents the current output in the 3rd dimension
+	/// @param guess double value that represents the start value
+	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+	/// @param x_exp integer value that represents the first exponent of the polynomial in the 1st dimension
+	/// @param y_exp integer value that represents the first exponent of the polynomial in the 2nd dimension
+	double solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp);
+
+};
+
+class Poly2DflexResidual : public Poly2DResidual {
+protected:
+	int x_exp, y_exp;
+	/// Object that evaluates the equation
+	Polynomial2Dflex poly;
+
+private:
+	Poly2DflexResidual();
+
+public:
+	Poly2DflexResidual(Polynomial2Dflex &poly, const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp);
+	virtual ~Poly2DResidual(){};
 };
 
 
