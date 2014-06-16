@@ -660,7 +660,16 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 		return evaluate(newCoefficients,int_val,other_val,0,other_exp);
 	}
 
-	return 0;
+	Eigen::MatrixXd tmpCoeffs;
+	r = newCoefficients.rows();
+	for(int i=0; i<int_exp; i++) { // only for x_exp>0
+		tmpCoeffs = Eigen::MatrixXd::Zero(r+1,c);
+		tmpCoeffs.block(1,0,r,c) = newCoefficients.block(0,0,r,c);
+		newCoefficients = Eigen::MatrixXd(tmpCoeffs);
+		r += 1; // r = newCoefficients.rows();
+	}
+
+	return evaluate(integrateCoeffs(newCoefficients, 0, 1),int_val,other_val,0,other_exp);
 
 }
 
