@@ -368,10 +368,10 @@ double Poly2DResidual::deriv(double target){
  *  Remember that the first exponent might need to be adjusted after derivation.
  *  It has to be lowered by times:
  *  derCoeffs = deriveCoeffs(coefficients, axis, times, firstExponent);
- *  if ( (firstExponent<0) || (firstExponent>times) ) {
- *    derFirstExponent = firstExponent - times;
- *  } else { // 0<=firstExponent<=times
- *    derFirstExponent = 0;
+ *  if ( (firstExponent<0) || (firstExponent>=times) ) {
+ *    firstExponent = firstExponent - times;
+ *  } else { // 0<=firstExponent<times
+ *    firstExponent = -1;
  *  }
  *
  */
@@ -379,49 +379,50 @@ double Poly2DResidual::deriv(double target){
 /// @param axis unsigned integer value that represents the desired direction of derivation
 /// @param times integer value that represents the desired order of derivation
 /// @param firstExponent integer value that represents the lowest exponent of the polynomial in axis direction
-//Eigen::MatrixXd Polynomial2DFrac::deriveCoeffs(const Eigen::MatrixXd &coefficients, const int &axis, const int &times, const int &firstExponent){
-//	if (times < 0) throw ValueError(format("You have to provide a positive order for derivation, %d is not valid. ",times));
-//	if (times == 0) return Eigen::MatrixXd(coefficients);
-//
-//
-//
-//
-//
-//
-//
-//
-//	// Recursion is also possible, but not recommended
-//	//Eigen::MatrixXd newCoefficients;
-//	//if (times > 1) newCoefficients = deriveCoeffs(coefficients, axis, times-1);
-//	//else newCoefficients = Eigen::MatrixXd(coefficients);
-//	Eigen::MatrixXd newCoefficients(coefficients);
-//	std::size_t r, c, i, j;
-//	switch (axis) {
-//	case 0:
-//		for (int k = 0; k < times; k++){
-//			r = newCoefficients.rows(), c = newCoefficients.cols();
-//			for (i = 1; i < r; ++i) {
-//				for (j = 0; j < c; ++j) newCoefficients(i,j) *= i;
-//			}
-//			removeRow(newCoefficients,0);
-//		}
-//		break;
-//	case 1:
-//		for (int k = 0; k < times; k++){
-//			r = newCoefficients.rows(), c = newCoefficients.cols();
-//			for (i = 0; i < r; ++i) {
-//				for (j = 1; j < c; ++j) newCoefficients(i,j) *= j;
-//			}
-//			removeColumn(newCoefficients,0);
-//		}
-//		break;
-//	default:
-//		throw ValueError(format("You have to provide a dimension, 0 or 1, for derivation, %d is not valid. ",axis));
-//		break;
-//	}
-//	return newCoefficients;
-//
-//}
+Eigen::MatrixXd Polynomial2DFrac::deriveCoeffs(const Eigen::MatrixXd &coefficients, const int &axis, const int &times, const int &firstExponent){
+	if (times < 0) throw ValueError(format("You have to provide a positive order for derivation, %d is not valid. ",times));	if (times < 0) throw ValueError(format("You have to provide a positive order for derivation, %d is not valid. ",times));
+	if (times == 0) return Eigen::MatrixXd(coefficients);
+	// Recursion is also possible, but not recommended
+	//Eigen::MatrixXd newCoefficients;
+	//if (times > 1) newCoefficients = deriveCoeffs(coefficients, axis, times-1);
+	//else newCoefficients = Eigen::MatrixXd(coefficients);
+	Eigen::MatrixXd newCoefficients;
+
+	switch (axis) {
+	case 0:
+		newCoefficients = Eigen::MatrixXd(coefficients);
+		break;
+	case 1:
+		newCoefficients = Eigen::MatrixXd(coefficients.transpose());
+		break;
+	default:
+		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		break;
+	}
+
+	std::size_t r = newCoefficients.rows(), c = newCoefficients.cols();
+	std::size_t i, j;
+	for (int k = 0; k < times; k++){
+		for (i = 0; i < r; ++i) {
+			for (j = 0; j < c; ++j) {
+				newCoefficients(i,j) *= double(i)+double(firstExponent);
+			}
+		}
+	}
+
+	switch (axis) {
+	case 0:
+		break;
+	case 1:
+		newCoefficients.transposeInPlace();
+		break;
+	default:
+		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		break;
+	}
+
+	return newCoefficients;
+}
 
 
 /// The core functions to evaluate the polynomial
@@ -581,38 +582,43 @@ double Polynomial2DFrac::fracIntCentral(const Eigen::MatrixXd &coefficients, con
 }
 
 
+/// @param coefficients vector containing the ordered coefficients
+/// @param x_in double value that represents the current input in the 1st dimension
+/// @param y_in double value that represents the current input in the 2nd dimension
+/// @param axis integer value that represents the axis to derive for (0=x, 1=y)
+/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
+/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
+double Polynomial2DFrac::derivative(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp){
+	Eigen::MatrixXd newCoefficients;
+	int der_exp,other_exp;
+	double der_val,other_val;
 
+	switch (axis) {
+	case 0:
+		newCoefficients = Eigen::MatrixXd(coefficients);
+		der_exp = x_exp;
+		other_exp = y_exp;
+		der_val = x_in;
+		other_val = y_in;
+		break;
+	case 1:
+		newCoefficients = Eigen::MatrixXd(coefficients.transpose());
+		der_exp = y_exp;
+		other_exp = x_exp;
+		der_val = y_in;
+		other_val = x_in;
+		break;
+	default:
+		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		break;
+	}
 
+	const int times = 1;
+	newCoefficients = deriveCoeffs(newCoefficients,0,times,der_exp);
+	der_exp -= times;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-///// @param coefficients vector containing the ordered coefficients
-///// @param x_in double value that represents the current input in the 1st dimension
-///// @param y_in double value that represents the current input in the 2nd dimension
-///// @param axis integer value that represents the axis to derive for (0=x, 1=y)
-///// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
-///// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
-//double Polynomial2DFrac::derivative(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp);
+	return evaluate(newCoefficients,der_val,other_val,der_exp,other_exp);
+}
 
 /// @param coefficients vector containing the ordered coefficients
 /// @param x_in double value that represents the current input in the 1st dimension
@@ -654,8 +660,7 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 
 	if (int_exp==-1) {
 		Eigen::MatrixXd tmpCoefficients = newCoefficients.row(0) * log(int_val);
-		removeRow(newCoefficients,0);
-		newCoefficients = integrateCoeffs(newCoefficients, 0, 1);
+		newCoefficients = integrateCoeffs(newCoefficients.block(1,0,r-1,c), 0, 1);
 		newCoefficients.row(0) = tmpCoefficients;
 		return evaluate(newCoefficients,int_val,other_val,0,other_exp);
 	}
@@ -1002,6 +1007,7 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		double acc = 0.0001;
 
 		double T = 273.15+50;
+		double a,b;
 		double c = poly.evaluate(matrix, T, 0.0);
 		double d = frac.evaluate(matrix, T, 0.0, 0, 0);
 
@@ -1088,7 +1094,58 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		CAPTURE(d);
 		tmpStr = CoolProp::mat_to_string(matrix);
 		CAPTURE(tmpStr);
-		CHECK( (check_abs(c,d,acc) && false) );
+		CHECK( check_abs(c,d,acc) );
+		}
+
+
+		deltaT = 0.01;
+		for (T = Tmin; T<Tmax; T+=Tinc) {
+			a = poly.evaluate(matrix, T-deltaT, y);
+			b = poly.evaluate(matrix, T+deltaT, y);
+			c = (b-a)/2.0/deltaT;
+			d = frac.derivative(matrix, T, y, 0, 0, 0);
+			CAPTURE(a);
+			CAPTURE(b);
+			CAPTURE(T);
+			CAPTURE(c);
+			CAPTURE(d);
+			tmpStr = CoolProp::mat_to_string(matrix);
+			CAPTURE(tmpStr);
+			CHECK( check_abs(c,d,acc) );
+		}
+
+		T = 273.15+150;
+		c = -2.100108045;
+		d = frac.derivative(matrix, T, 0.0, 0, 0, 0);
+		{
+		CAPTURE(T);
+		CAPTURE(c);
+		CAPTURE(d);
+		tmpStr = CoolProp::mat_to_string(matrix);
+		CAPTURE(tmpStr);
+		CHECK( check_abs(c,d,acc) );
+		}
+
+		c = -0.006456574589;
+		d = frac.derivative(matrix, T, 0.0, 0, -1, 0);
+		{
+		CAPTURE(T);
+		CAPTURE(c);
+		CAPTURE(d);
+		tmpStr = CoolProp::mat_to_string(matrix);
+		CAPTURE(tmpStr);
+		CHECK( check_abs(c,d,acc) );
+		}
+
+		c = -0.00004224550082;
+		d = frac.derivative(matrix, T, 0.0, 0, -2, 0);
+		{
+		CAPTURE(T);
+		CAPTURE(c);
+		CAPTURE(d);
+		tmpStr = CoolProp::mat_to_string(matrix);
+		CAPTURE(tmpStr);
+		CHECK( check_abs(c,d,acc) );
 		}
 
 	}
