@@ -17,6 +17,9 @@
 namespace CoolProp{
 
 /// The base class for all Polynomials
+/** A clear and straight forward implementation of polynomial operations. Still
+ *  very basic, but serves its purpose.
+ */
 class Polynomial2D {
 
 public:
@@ -159,7 +162,7 @@ protected:
 	/// Current output value
 	double z_in;
 
-private:
+protected:
 	Poly2DResidual();
 
 public:
@@ -172,16 +175,26 @@ public:
 
 
 /// A class for polynomials starting at an arbitrary degree.
-class Polynomial2DFrac : Polynomial2D{
+/** It is implemented for the incompressibles and is a little messy, but seems to
+ *  work fine for now. Besides handling arbitrary starting exponents for the
+ *  polynomials, it can also calculate polynomials with a base value. This means
+ *  that the independent variable no longer is x, but (x-x_base). For fitted
+ *  functions, we often see such a design to enhance the fit quality/stability.
+ */
+class Polynomial2DFrac : public Polynomial2D {
+protected:
+	double x_base, y_base;
 
 public:
 	/// Constructors
-	Polynomial2DFrac(){};
+	Polynomial2DFrac(){x_base=_HUGE,y_base=_HUGE;};
 
 	/// Destructor.  No implementation
 	virtual ~Polynomial2DFrac(){};
 
 public:
+	void setXbase(double x_base) { this->x_base = x_base; }
+	void setYbase(double y_base) { this->y_base = y_base; }
 //	/// Integration functions
 //	/** Integrating coefficients for polynomials is done by dividing the
 //	 *  original coefficients by (i+1) and elevating the order by 1
@@ -204,12 +217,7 @@ public:
 	 *  Remember that the first exponent might need to be adjusted after derivation.
 	 *  It has to be lowered by times:
 	 *  derCoeffs = deriveCoeffs(coefficients, axis, times, firstExponent);
-	 *  if ( (firstExponent<0) || (firstExponent>times) ) {
-	 *    derFirstExponent = firstExponent - times;
-	 *  } else { // 0<=firstExponent<=times
-	 *    derFirstExponent = 0;
-	 *  }
-	 *
+	 *  firstExponent -= times;
 	 */
 	/// @param coefficients matrix containing the ordered coefficients
 	/// @param axis unsigned integer value that represents the desired direction of derivation
@@ -240,34 +248,6 @@ public:
 	/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
 	/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
 	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &x_exp, const int &y_exp);
-
-	/// @param nValue integer value that represents the order of the factorial
-	double factorial(const int &nValue);
-
-	/// @param nValue integer value that represents the upper part of the factorial
-	/// @param nValue2 integer value that represents the lower part of the factorial
-	double binom(const int &nValue, const int &nValue2);
-
-	///Helper function to calculate the D vector:
-	/// @param m integer value that represents order
-	/// @param x_in double value that represents the current input
-	/// @param x_base double value that represents the basis for the fit
-	Eigen::MatrixXd fracIntCentralDvector(const int &m, const double &x_in, const double &x_base);
-
-	///Indefinite integral of a centred polynomial divided by its independent variable
-	/// @param coefficients vector containing the ordered coefficients
-	/// @param x_in double value that represents the current input
-	/// @param x_base double value that represents the basis for the fit
-	double fracIntCentral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &x_base);
-
-
-
-
-
-
-
-
-
 
 	/// @param coefficients vector containing the ordered coefficients
 	/// @param x_in double value that represents the current input in the 1st dimension
@@ -315,6 +295,26 @@ public:
 	/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
 	double solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp);
 
+protected:
+	/// @param nValue integer value that represents the order of the factorial
+	double factorial(const int &nValue);
+
+	/// @param nValue integer value that represents the upper part of the factorial
+	/// @param nValue2 integer value that represents the lower part of the factorial
+	double binom(const int &nValue, const int &nValue2);
+
+	///Helper function to calculate the D vector:
+	/// @param m integer value that represents order
+	/// @param x_in double value that represents the current input
+	/// @param x_base double value that represents the basis for the fit
+	Eigen::MatrixXd fracIntCentralDvector(const int &m, const double &x_in, const double &x_base);
+
+	///Indefinite integral of a centred polynomial divided by its independent variable
+	/// @param coefficients vector containing the ordered coefficients
+	/// @param x_in double value that represents the current input
+	/// @param x_base double value that represents the basis for the fit
+	double fracIntCentral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &x_base);
+
 };
 
 class Poly2DFracResidual : public Poly2DResidual {
@@ -323,12 +323,14 @@ protected:
 	/// Object that evaluates the equation
 	Polynomial2DFrac poly;
 
-private:
+protected:
 	Poly2DFracResidual();
 
 public:
 	Poly2DFracResidual(Polynomial2DFrac &poly, const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp);
 	virtual ~Poly2DFracResidual(){};
+	double call(double target);
+	double deriv(double target);
 };
 
 

@@ -368,11 +368,7 @@ double Poly2DResidual::deriv(double target){
  *  Remember that the first exponent might need to be adjusted after derivation.
  *  It has to be lowered by times:
  *  derCoeffs = deriveCoeffs(coefficients, axis, times, firstExponent);
- *  if ( (firstExponent<0) || (firstExponent>=times) ) {
- *    firstExponent = firstExponent - times;
- *  } else { // 0<=firstExponent<times
- *    firstExponent = -1;
- *  }
+ *  firstExponent -= times;
  *
  */
 /// @param coefficients matrix containing the ordered coefficients
@@ -521,67 +517,6 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const dou
 }
 
 
-/** Simple integrated centred(!) polynomial function generator divided by independent variable.
- *  We need to rewrite some of the functions in order to
- *  use central fit. Having a central temperature xbase
- *  allows for a better fit, but requires a different
- *  formulation of the fracInt function group. Other
- *  functions are not affected.
- *  Starts with only the first coefficient at x^0 */
-
-//Helper functions to calculate binomial coefficients:
-//http://rosettacode.org/wiki/Evaluate_binomial_coefficients#C.2B.2B
-/// @param nValue integer value that represents the order of the factorial
-double Polynomial2DFrac::factorial(const int &nValue){
-	double value = 1;
-    for(int i = 2; i <= nValue; i++) value = value * i;
-    return value;
-}
-/// @param nValue integer value that represents the upper part of the factorial
-/// @param nValue2 integer value that represents the lower part of the factorial
-double Polynomial2DFrac::binom(const int &nValue, const int &nValue2){
-   if(nValue2 == 1) return nValue*1.0;
-   return (factorial(nValue)) / (factorial(nValue2)*factorial((nValue - nValue2)));
-}
-///Helper function to calculate the D vector:
-/// @param m integer value that represents order
-/// @param x_in double value that represents the current input
-/// @param x_base double value that represents the basis for the fit
-Eigen::MatrixXd Polynomial2DFrac::fracIntCentralDvector(const int &m, const double &x_in, const double &x_base){
-	if (m<1) throw ValueError(format("You have to provide coefficients, a vector length of %d is not a valid. ",m));
-
-	Eigen::MatrixXd D = Eigen::MatrixXd::Zero(1,m);
-	double tmp;
-
-	for (int j=0; j<m; j++){ // loop through row
-		tmp = pow(-1.0,j) * log(x_in) * pow(x_base,j);
-		for(int k=0; k<j; k++) { // internal loop for every entry
-			tmp += binom(j,k) * pow(-1.0,k) / (j-k) * pow(x_in,j-k) * pow(x_base,k);
-		}
-		D(0,j)=tmp;
-	}
-	return D;
-}
-///Indefinite integral of a centred polynomial divided by its independent variable
-/// @param coefficients vector containing the ordered coefficients
-/// @param x_in double value that represents the current input
-/// @param x_base double value that represents the basis for the fit
-double Polynomial2DFrac::fracIntCentral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &x_base){
-	if (coefficients.rows() != 1) {
-		throw ValueError(format("You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",coefficients.rows(),coefficients.cols()));
-	}
-
-	int m = coefficients.cols();
-	Eigen::MatrixXd D = fracIntCentralDvector(m, x_in, x_base);
-	double result = 0;
-	for(int j=0; j<m; j++) {
-		result += coefficients(0,j) * D(0,j);
-	}
-	if (this->do_debug()) std::cout << "Running   fracIntCentral(" << mat_to_string(coefficients) << ", " << vec_to_string(x_in) << ", " << vec_to_string(x_base) << "): " << result << std::endl;
-	return result;
-}
-
-
 /// @param coefficients vector containing the ordered coefficients
 /// @param x_in double value that represents the current input in the 1st dimension
 /// @param y_in double value that represents the current input in the 2nd dimension
@@ -678,62 +613,183 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 
 }
 
-///// Returns a vector with ALL the real roots of p(x_in,y_in)-z_in
-///// @param coefficients vector containing the ordered coefficients
-///// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
-///// @param z_in double value that represents the current output in the 3rd dimension
-///// @param axis integer value that represents the axis to solve for (0=x, 1=y)
-///// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
-///// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
-//Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp);
-//
-///// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
-///// @param coefficients vector containing the ordered coefficients
-///// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
-///// @param z_in double value that represents the current output in the 3rd dimension
-///// @param min double value that represents the minimum value
-///// @param max double value that represents the maximum value
-///// @param axis integer value that represents the axis to solve for (0=x, 1=y)
-///// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
-///// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
-//double Polynomial2DFrac::solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis, const int &x_exp, const int &y_exp);
-//
-///// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
-///// @param coefficients vector containing the ordered coefficients
-///// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
-///// @param z_in double value that represents the current output in the 3rd dimension
-///// @param guess double value that represents the start value
-///// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
-///// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
-///// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
-//double Polynomial2DFrac::solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp);
-//
-//
-//
-//
-//
-//
-//
-//Poly2DFracResidual::Poly2DFracResidual(Polynomial2DFrac &poly, const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp)
-//  :Poly2DResidual(poly, coefficients, in, z_in, axis){
-//	this->x_exp = x_exp;
-//	this->y_exp = y_exp;
-//}
-//
-//double Poly2DFracResidual::call(double target){
-//	if (axis==iX) return poly.evaluate(coefficients,target,in,x_exp,y_exp)-z_in;
-//	if (axis==iY) return poly.evaluate(coefficients,in,target,x_exp,y_exp)-z_in;
-//	return -_HUGE;
-//}
-//
-//double Poly2DFracResidual::deriv(double target){
-//	if (!this->derIsSet) {
-//		if (axis==iX) this->coefficientsDer = poly.deriveCoeffs(coefficients,axis,1,x_exp);
-//		if (axis==iY) this->coefficientsDer = poly.deriveCoeffs(coefficients,axis,1,y_exp);
-//		this->derIsSet = true;
-//	}
-//	return poly.evaluate(coefficientsDer,target,in,x_exp,y_exp);
-//}
+
+/// Returns a vector with ALL the real roots of p(x_in,y_in)-z_in
+/// @param coefficients vector containing the ordered coefficients
+/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+/// @param z_in double value that represents the current output in the 3rd dimension
+/// @param axis integer value that represents the axis to solve for (0=x, 1=y)
+/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
+/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
+Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp){
+
+	Eigen::MatrixXd newCoefficients;
+	int solve_exp,other_exp;
+
+	switch (axis) {
+	case 0:
+		newCoefficients = Eigen::MatrixXd(coefficients);
+		solve_exp = x_exp;
+		other_exp = y_exp;
+		break;
+	case 1:
+		newCoefficients = Eigen::MatrixXd(coefficients.transpose());
+		solve_exp = y_exp;
+		other_exp = x_exp;
+		break;
+	default:
+		throw ValueError(format("You have to provide a dimension, 0 or 1, for the solver, %d is not valid. ",axis));
+		break;
+	}
+
+	size_t r = newCoefficients.rows();
+	for(size_t i=0; i<r; i++) {
+		newCoefficients(i,0) = evaluate(newCoefficients.row(i), in, other_exp);
+	}
+
+	Eigen::VectorXd tmpCoefficients;
+	if (solve_exp>=0) { // extend vector to zero exponent
+		tmpCoefficients = Eigen::VectorXd::Zero(r+solve_exp);
+		tmpCoefficients.block(solve_exp,0,r,1) = newCoefficients.block(0,0,r,1);
+		tmpCoefficients(0,0) -= z_in;
+	} else {// check if vector reaches to zero exponent
+		int diff = 1 - r - solve_exp; // How many entries have to be added
+		tmpCoefficients = Eigen::VectorXd::Zero(r+diff);
+		tmpCoefficients.block(0,0,r,1) = newCoefficients.block(0,0,r,1);
+		tmpCoefficients(r+diff-1,0) -= z_in;
+	}
+
+	if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string(Eigen::MatrixXd(tmpCoefficients)) << std::endl;
+	Eigen::PolynomialSolver<double,Eigen::Dynamic> polySolver( tmpCoefficients );
+	std::vector<double> rootsVec;
+	polySolver.realRoots(rootsVec);
+	if (this->do_debug()) std::cout << "Real roots: " << vec_to_string(rootsVec) << std::endl;
+	return vec_to_eigen(rootsVec);
+	//return rootsVec[0]; // TODO: implement root selection algorithm
+}
+
+/// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
+/// @param coefficients vector containing the ordered coefficients
+/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+/// @param z_in double value that represents the current output in the 3rd dimension
+/// @param min double value that represents the minimum value
+/// @param max double value that represents the maximum value
+/// @param axis integer value that represents the axis to solve for (0=x, 1=y)
+/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
+/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
+double Polynomial2DFrac::solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis, const int &x_exp, const int &y_exp){
+	Poly2DFracResidual res = Poly2DFracResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp);
+	std::string errstring;
+	double macheps = DBL_EPSILON;
+	double tol     = DBL_EPSILON*1e3;
+	int    maxiter = 10;
+	double result = Brent(res, min, max, macheps, tol, maxiter, errstring);
+	if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
+	return result;
+}
+
+/// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
+/// @param coefficients vector containing the ordered coefficients
+/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+/// @param z_in double value that represents the current output in the 3rd dimension
+/// @param guess double value that represents the start value
+/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
+/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
+double Polynomial2DFrac::solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp){
+	Poly2DFracResidual res = Poly2DFracResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp);
+	std::string errstring;
+	//set_debug_level(1000);
+	double tol     = DBL_EPSILON*1e3;
+	int    maxiter = 10;
+	double result = Newton(res, guess, tol, maxiter, errstring);
+	if (this->do_debug()) std::cout << "Newton solver message: " << errstring << std::endl;
+	return result;
+}
+
+
+
+
+
+/** Simple integrated centred(!) polynomial function generator divided by independent variable.
+ *  We need to rewrite some of the functions in order to
+ *  use central fit. Having a central temperature xbase
+ *  allows for a better fit, but requires a different
+ *  formulation of the fracInt function group. Other
+ *  functions are not affected.
+ *  Starts with only the first coefficient at x^0 */
+
+//Helper functions to calculate binomial coefficients:
+//http://rosettacode.org/wiki/Evaluate_binomial_coefficients#C.2B.2B
+/// @param nValue integer value that represents the order of the factorial
+double Polynomial2DFrac::factorial(const int &nValue){
+	double value = 1;
+    for(int i = 2; i <= nValue; i++) value = value * i;
+    return value;
+}
+/// @param nValue integer value that represents the upper part of the factorial
+/// @param nValue2 integer value that represents the lower part of the factorial
+double Polynomial2DFrac::binom(const int &nValue, const int &nValue2){
+   if(nValue2 == 1) return nValue*1.0;
+   return (factorial(nValue)) / (factorial(nValue2)*factorial((nValue - nValue2)));
+}
+///Helper function to calculate the D vector:
+/// @param m integer value that represents order
+/// @param x_in double value that represents the current input
+/// @param x_base double value that represents the basis for the fit
+Eigen::MatrixXd Polynomial2DFrac::fracIntCentralDvector(const int &m, const double &x_in, const double &x_base){
+	if (m<1) throw ValueError(format("You have to provide coefficients, a vector length of %d is not a valid. ",m));
+
+	Eigen::MatrixXd D = Eigen::MatrixXd::Zero(1,m);
+	double tmp;
+
+	for (int j=0; j<m; j++){ // loop through row
+		tmp = pow(-1.0,j) * log(x_in) * pow(x_base,j);
+		for(int k=0; k<j; k++) { // internal loop for every entry
+			tmp += binom(j,k) * pow(-1.0,k) / (j-k) * pow(x_in,j-k) * pow(x_base,k);
+		}
+		D(0,j)=tmp;
+	}
+	return D;
+}
+///Indefinite integral of a centred polynomial divided by its independent variable
+/// @param coefficients vector containing the ordered coefficients
+/// @param x_in double value that represents the current input
+/// @param x_base double value that represents the basis for the fit
+double Polynomial2DFrac::fracIntCentral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &x_base){
+	if (coefficients.rows() != 1) {
+		throw ValueError(format("You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",coefficients.rows(),coefficients.cols()));
+	}
+
+	int m = coefficients.cols();
+	Eigen::MatrixXd D = fracIntCentralDvector(m, x_in, x_base);
+	double result = 0;
+	for(int j=0; j<m; j++) {
+		result += coefficients(0,j) * D(0,j);
+	}
+	if (this->do_debug()) std::cout << "Running   fracIntCentral(" << mat_to_string(coefficients) << ", " << vec_to_string(x_in) << ", " << vec_to_string(x_base) << "): " << result << std::endl;
+	return result;
+}
+
+
+
+Poly2DFracResidual::Poly2DFracResidual(Polynomial2DFrac &poly, const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp)
+  : Poly2DResidual(poly, coefficients, in, z_in, axis){
+	this->x_exp = x_exp;
+	this->y_exp = y_exp;
+}
+
+double Poly2DFracResidual::call(double target){
+	if (axis==iX) return poly.evaluate(coefficients,target,in,x_exp,y_exp)-z_in;
+	if (axis==iY) return poly.evaluate(coefficients,in,target,x_exp,y_exp)-z_in;
+	return -_HUGE;
+}
+
+double Poly2DFracResidual::deriv(double target){
+	if (axis==iX) return poly.derivative(coefficients,target,in,axis,x_exp,y_exp);
+	if (axis==iY) return poly.derivative(coefficients,in,target,axis,x_exp,y_exp);
+	return -_HUGE;
+}
 
 
 
@@ -741,27 +797,6 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 
 }
 
-
-
-///// The core functions to evaluate the polynomial
-///** It is here we implement the different special
-// *  functions that allow us to specify certain
-// *  types of polynomials.
-// *  The derivative might bee needed during the
-// *  solution process of the solver. It could also
-// *  be a protected function...
-// */
-///// @param x_in double value that represents the current input in the 1st dimension
-///// @param y_in double value that represents the current input in the 2nd dimension
-//double Polynomial2D::evaluate(const double &x_in, const double &y_in);
-///// @param x_in double value that represents the current input in the 1st dimension
-///// @param y_in double value that represents the current input in the 2nd dimension
-///// @param axis unsigned integer value that represents the axis to solve for (1=x, 2=y)
-//double Polynomial2D::derivative(const double &x_in, const double &y_in, unsigned int axis = 1);
-///// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
-///// @param z_in double value that represents the current output in the 3rd dimension
-///// @param axis unsigned integer value that represents the axis to solve for (1=x, 2=y)
-//double Polynomial2D::solve(const double &in, const double &z_in, unsigned int axis = 1);
 
 
 #ifdef ENABLE_CATCH
@@ -1135,6 +1170,27 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		tmpStr = CoolProp::mat_to_string(matrix);
 		CAPTURE(tmpStr);
 		CHECK( check_abs(c,d,acc) );
+		}
+
+		c = frac.evaluate(matrix, T, 0.0, -1, 0);
+		d = frac.solve_limits(matrix, 0.0, c, T-10, T+10, 0, -1, 0);
+		{
+		CAPTURE(T);
+		CAPTURE(c);
+		CAPTURE(d);
+		tmpStr = CoolProp::mat_to_string(matrix);
+		CAPTURE(tmpStr);
+		CHECK( check_abs(T,d,acc) );
+		}
+
+		d = frac.solve_guess(matrix, 0.0, c, T-10, 0, -1, 0);
+		{
+		CAPTURE(T);
+		CAPTURE(c);
+		CAPTURE(d);
+		tmpStr = CoolProp::mat_to_string(matrix);
+		CAPTURE(tmpStr);
+		CHECK( check_abs(T,d,acc) );
 		}
 
 		c = -0.00004224550082;
