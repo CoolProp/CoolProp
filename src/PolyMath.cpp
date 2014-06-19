@@ -624,6 +624,7 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp){
 
 	Eigen::MatrixXd newCoefficients;
+	Eigen::VectorXd tmpCoefficients;
 	int solve_exp,other_exp;
 
 	switch (axis) {
@@ -642,24 +643,26 @@ Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, con
 		break;
 	}
 
-	size_t r = newCoefficients.rows();
+	if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string(Eigen::MatrixXd(newCoefficients)) << std::endl;
+
+	const size_t r = newCoefficients.rows();
 	for(size_t i=0; i<r; i++) {
 		newCoefficients(i,0) = evaluate(newCoefficients.row(i), in, other_exp);
 	}
 
-	Eigen::VectorXd tmpCoefficients;
+	//Eigen::VectorXd tmpCoefficients;
 	if (solve_exp>=0) { // extend vector to zero exponent
 		tmpCoefficients = Eigen::VectorXd::Zero(r+solve_exp);
 		tmpCoefficients.block(solve_exp,0,r,1) = newCoefficients.block(0,0,r,1);
 		tmpCoefficients(0,0) -= z_in;
 	} else {// check if vector reaches to zero exponent
 		int diff = 1 - r - solve_exp; // How many entries have to be added
-		tmpCoefficients = Eigen::VectorXd::Zero(r+diff);
+		tmpCoefficients = Eigen::VectorXd::Zero(r+std::max(diff,0));
 		tmpCoefficients.block(0,0,r,1) = newCoefficients.block(0,0,r,1);
 		tmpCoefficients(r+diff-1,0) -= z_in;
 	}
 
-	if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string(Eigen::MatrixXd(tmpCoefficients)) << std::endl;
+	if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string( Eigen::MatrixXd(tmpCoefficients) ) << std::endl;
 	Eigen::PolynomialSolver<double,Eigen::Dynamic> polySolver( tmpCoefficients );
 	std::vector<double> rootsVec;
 	polySolver.realRoots(rootsVec);
@@ -760,7 +763,6 @@ double Polynomial2DFrac::fracIntCentral(const Eigen::MatrixXd &coefficients, con
 	if (coefficients.rows() != 1) {
 		throw ValueError(format("You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",coefficients.rows(),coefficients.cols()));
 	}
-
 	int m = coefficients.cols();
 	Eigen::MatrixXd D = fracIntCentralDvector(m, x_in, x_base);
 	double result = 0;
@@ -770,7 +772,6 @@ double Polynomial2DFrac::fracIntCentral(const Eigen::MatrixXd &coefficients, con
 	if (this->do_debug()) std::cout << "Running   fracIntCentral(" << mat_to_string(coefficients) << ", " << vec_to_string(x_in) << ", " << vec_to_string(x_base) << "): " << result << std::endl;
 	return result;
 }
-
 
 
 Poly2DFracResidual::Poly2DFracResidual(Polynomial2DFrac &poly, const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp)
@@ -1172,7 +1173,39 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		CHECK( check_abs(c,d,acc) );
 		}
 
+		c = frac.evaluate(matrix, T, 0.0, 2, 0);
+		d = frac.solve(matrix, 0.0, c, 0, 2, 0)[0];
+		{
+		CAPTURE(T);
+		CAPTURE(c);
+		CAPTURE(d);
+		tmpStr = CoolProp::mat_to_string(matrix);
+		CAPTURE(tmpStr);
+		CHECK( check_abs(T,d,acc) );
+		}
+
+		c = frac.evaluate(matrix, T, 0.0, 0, 0);
+		d = frac.solve(matrix, 0.0, c, 0, 0, 0)[0];
+		{
+		CAPTURE(T);
+		CAPTURE(c);
+		CAPTURE(d);
+		tmpStr = CoolProp::mat_to_string(matrix);
+		CAPTURE(tmpStr);
+		CHECK( check_abs(T,d,acc) );
+		}
+
 		c = frac.evaluate(matrix, T, 0.0, -1, 0);
+		d = frac.solve(matrix, 0.0, c, 0, -1, 0)[0];
+		{
+		CAPTURE(T);
+		CAPTURE(c);
+		CAPTURE(d);
+		tmpStr = CoolProp::mat_to_string(matrix);
+		CAPTURE(tmpStr);
+		CHECK( check_abs(T,d,acc) );
+		}
+
 		d = frac.solve_limits(matrix, 0.0, c, T-10, T+10, 0, -1, 0);
 		{
 		CAPTURE(T);

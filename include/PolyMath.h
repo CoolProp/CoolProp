@@ -187,7 +187,7 @@ protected:
 
 public:
 	/// Constructors
-	Polynomial2DFrac(){x_base=_HUGE,y_base=_HUGE;};
+	Polynomial2DFrac(){x_base=0.0,y_base=0.0;};
 
 	/// Destructor.  No implementation
 	virtual ~Polynomial2DFrac(){};
