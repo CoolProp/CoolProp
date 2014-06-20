@@ -22,6 +22,8 @@ Copy this .a file into the directory with the coolprop FORTRAN example
 To build FORTRAN example
 ------------------------
 
-    gfortran -c cool_fortran_bind.f90
-    gfortran cool_fortran_bind.f90 libCoolProp.a -o main -lstdc++
+    gfortran -c -Wall cool_fortran_bind.f90
+    gfortran -Wall cool_fortran_bind.f90 libCoolProp.a -o main -lstdc++
     main
+    
+Note!! You MUST put the static library after the cool_fortran_bind.f90  Same thing if you compile the fortran to object file, static library must always be at the end.
