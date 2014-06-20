@@ -1,28 +1,10 @@
+
 program hello
 
-    !Use TestData       ! Include a Module with the interface, Optional (to not re-write the Interface every at Subroutine or Program)
+    Use cpinterface       ! Include a Module with the interface, Optional (to not re-write the Interface every at Subroutine or Program)
     
     use iso_c_binding
     implicit none 
-
-!The interface to use the PropsSI Function
-INTERFACE
-     FUNCTION PropsSI  &
-        (output, name1, prop1, name2, prop2, fluidname)    &
-            BIND(C, NAME='PropsSI')
-        use iso_c_binding
-        real(C_DOUBLE) :: PropsSI
-	    character(KIND=c_char) :: output(*)
-	    character(c_char) :: name1(*)
-	    real(C_DOUBLE), VALUE :: prop1
-	    character(c_char) :: name2(*)
-	    real(C_DOUBLE), VALUE :: prop2
-	    character(kind=c_char) :: fluidname(*)
-            
-    END FUNCTION PropsSI
-   
-END INTERFACE
-
 
 !Here Start the programa
 

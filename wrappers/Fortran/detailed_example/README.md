@@ -1,5 +1,5 @@
-FORTRAN example without module
-==============================
+FORTRAN example with module
+===========================
 
 To build static library
 -----------------------
@@ -23,5 +23,5 @@ To build FORTRAN example
 ------------------------
 
     gfortran -c cool_fortran_bind.f90
-    gfortran libCoolProp.a cool_fortran_bind.f90 -o main -lstdc++
+    gfortran cool_fortran_bind.f90 libCoolProp.a -o main -lstdc++
     main
