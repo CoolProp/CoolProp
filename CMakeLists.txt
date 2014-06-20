@@ -105,6 +105,7 @@ add_custom_target(generate_headers
 if (COOLPROP_STATIC_LIBRARY)
     add_library(${app_name} STATIC ${APP_SOURCES})
     add_dependencies (${app_name} generate_headers)
+    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
 endif()
 
 ##### COOLPROP SHARED LIBRARY ######
