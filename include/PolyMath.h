@@ -182,19 +182,15 @@ public:
  *  functions, we often see such a design to enhance the fit quality/stability.
  */
 class Polynomial2DFrac : public Polynomial2D {
-protected:
-	double x_base, y_base;
 
 public:
 	/// Constructors
-	Polynomial2DFrac(){x_base=0.0,y_base=0.0;};
+	Polynomial2DFrac(){};
 
 	/// Destructor.  No implementation
 	virtual ~Polynomial2DFrac(){};
 
 public:
-	void setXbase(double x_base) { this->x_base = x_base; }
-	void setYbase(double y_base) { this->y_base = y_base; }
 //	/// Integration functions
 //	/** Integrating coefficients for polynomials is done by dividing the
 //	 *  original coefficients by (i+1) and elevating the order by 1
@@ -240,14 +236,17 @@ public:
 	/// @param coefficients vector containing the ordered coefficients
 	/// @param x_in double value that represents the current input in the 1st dimension
 	/// @param firstExponent integer value that represents the lowest exponent of the polynomial
-	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const int &firstExponent);
+	/// @param x_base double value that represents the base value for a centred fit in the 1st dimension
+	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const int &firstExponent, const double &x_base);
 
 	/// @param coefficients matrix containing the ordered coefficients
 	/// @param x_in double value that represents the current input in the 1st dimension
 	/// @param y_in double value that represents the current input in the 2nd dimension
 	/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
 	/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
-	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &x_exp, const int &y_exp);
+	/// @param x_base double value that represents the base value for a centred fit in the 1st dimension
+	/// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
+	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base);
 
 	/// @param coefficients vector containing the ordered coefficients
 	/// @param x_in double value that represents the current input in the 1st dimension
@@ -255,7 +254,9 @@ public:
 	/// @param axis unsigned integer value that represents the axis to derive for (0=x, 1=y)
 	/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
 	/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
-	double derivative(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp);
+	/// @param x_base double value that represents the base value for a centred fit in the 1st dimension
+	/// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
+	double derivative(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base);
 
 	/// @param coefficients vector containing the ordered coefficients
 	/// @param x_in double value that represents the current input in the 1st dimension
@@ -263,7 +264,9 @@ public:
 	/// @param axis unsigned integer value that represents the axis to integrate for (0=x, 1=y)
 	/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
 	/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
-	double integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp);
+	/// @param x_base double value that represents the base value for a centred fit in the 1st dimension
+	/// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
+	double integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base);
 
 	/// Returns a vector with ALL the real roots of p(x_in,y_in)-z_in
 	/// @param coefficients vector containing the ordered coefficients
@@ -272,7 +275,9 @@ public:
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 	/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
 	/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
-	Eigen::VectorXd solve(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp);
+	/// @param x_base double value that represents the base value for a centred fit in the 1st dimension
+	/// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
+	Eigen::VectorXd solve(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base);
 
 	/// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
 	/// @param coefficients vector containing the ordered coefficients
@@ -283,7 +288,9 @@ public:
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 	/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
 	/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
-	double solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis, const int &x_exp, const int &y_exp);
+	/// @param x_base double value that represents the base value for a centred fit in the 1st dimension
+	/// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
+	double solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base);
 
 	/// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
 	/// @param coefficients vector containing the ordered coefficients
@@ -293,7 +300,9 @@ public:
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 	/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
 	/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
-	double solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp);
+	/// @param x_base double value that represents the base value for a centred fit in the 1st dimension
+	/// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
+	double solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base);
 
 protected:
 	/// @param nValue integer value that represents the order of the factorial
@@ -320,6 +329,7 @@ protected:
 class Poly2DFracResidual : public Poly2DResidual {
 protected:
 	int x_exp, y_exp;
+	double x_base, y_base;
 	/// Object that evaluates the equation
 	Polynomial2DFrac poly;
 
@@ -327,7 +337,7 @@ protected:
 	Poly2DFracResidual();
 
 public:
-	Poly2DFracResidual(Polynomial2DFrac &poly, const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp);
+	Poly2DFracResidual(Polynomial2DFrac &poly, const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base);
 	virtual ~Poly2DFracResidual(){};
 	double call(double target);
 	double deriv(double target);
