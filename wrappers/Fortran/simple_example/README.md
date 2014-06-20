@@ -38,7 +38,7 @@ Running ``main`` should yield something like::
 Compiling on Windows
 ====================
 
-At the moment, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from mingw-get.  Theese are the versions used as of June 230, 2014::
+At the moment, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from mingw-get.  Theese are the versions used as of June 20, 2014::
 
     >gfortran --version
     GNU Fortran (GCC) 4.8.1
