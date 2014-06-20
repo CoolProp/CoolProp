@@ -8,9 +8,6 @@
 #include <vector>
 #include <string>
 #include "Solvers.h"
-//#include <numeric> // inner_product
-//#include <sstream>
-//#include "float.h"
 #include "MatrixMath.h"
 #include <unsupported/Eigen/Polynomials>
 

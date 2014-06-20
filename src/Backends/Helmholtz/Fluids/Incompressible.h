@@ -8,7 +8,9 @@
 #ifndef INCOMPRESSIBLE_H_
 #define INCOMPRESSIBLE_H_
 
+#include <Eigen/Core>
 #include "PolyMath.h"
+#include "MatrixMath.h"
 
 namespace CoolProp {
 
@@ -25,20 +27,16 @@ protected:
 	double TminPsat;
 	double xref, Tref;
 	double xbase, Tbase;
-	double x;
 
-	std::vector< std::vector<double> > cRho;
-	std::vector< std::vector<double> > cHeat;
-	std::vector< std::vector<double> > cVisc;
-	std::vector< std::vector<double> > cCond;
-	std::vector< std::vector<double> > cPsat;
-	             std::vector<double>   cTfreeze;
+	Eigen::MatrixXd cRho;
+	Eigen::MatrixXd cHeat;
+	Eigen::MatrixXd cVisc;
+	Eigen::MatrixXd cCond;
+	Eigen::MatrixXd cPsat;
+	Eigen::MatrixXd cTfreeze;
+	Eigen::MatrixXd cV2M;
 
-	std::vector<std::vector<double> > changeAxis(const std::vector<double> &input);
-
-	//BasePolynomial poly;
-	//PolynomialSolver solver;
-	//BaseExponential expo;
+	Polynomial2DFrac poly;
 
 public:
 	Incompressible();
@@ -58,12 +56,10 @@ public:
 	double getxref() const {return xref;}
 	double getTbase() const {return Tbase;}
 	double getxbase() const {return xbase;}
-	double getx() const {return x;}
 
 	void setName(std::string name) {this->name = name;}
 	void setDescription(std::string description) {this->description = description;}
 	void setReference(std::string reference) {this->reference = reference;}
-
 	void setTmax(double Tmax) {this->Tmax = Tmax;}
 	void setTmin(double Tmin) {this->Tmin = Tmin;}
 	void setxmax(double xmax) {this->xmax = xmax;}
@@ -73,21 +69,15 @@ public:
 	void setxref(double xref) {this->xref = xref;}
 	void setTbase(double Tbase) {this->Tbase = Tbase;}
 	void setxbase(double xbase) {this->xbase = xbase;}
-	void setx(double x) {this->x = x;}
 
 	// Setters for the coefficients
-	void setcRho(std::vector<std::vector<double> > cRho){this->cRho = cRho;}
-	void setcHeat(std::vector<std::vector<double> > cHeat){this->cHeat = cHeat;}
-	void setcVisc(std::vector<std::vector<double> > cVisc){this->cVisc = cVisc;}
-	void setcCond(std::vector<std::vector<double> > cCond){this->cCond = cCond;}
-	void setcPsat(std::vector<std::vector<double> > cPsat){this->cPsat = cPsat;}
-	void setcTfreeze(std::vector<double> cTfreeze){this->cTfreeze = cTfreeze;}
-
-	void setcRho(std::vector<double> cRho){this->cRho = changeAxis(cRho);}
-	void setcHeat(std::vector<double> cHeat){this->cHeat = changeAxis(cHeat);}
-	void setcVisc(std::vector<double> cVisc){this->cVisc = changeAxis(cVisc);}
-	void setcCond(std::vector<double> cCond){this->cCond = changeAxis(cCond);}
-	void setcPsat(std::vector<double> cPsat){this->cPsat = changeAxis(cPsat);}
+	void setcRho(Eigen::MatrixXd cRho){this->cRho = cRho;}
+	void setcHeat(Eigen::MatrixXd cHeat){this->cHeat = cHeat;}
+	void setcVisc(Eigen::MatrixXd cVisc){this->cVisc = cVisc;}
+	void setcCond(Eigen::MatrixXd cCond){this->cCond = cCond;}
+	void setcPsat(Eigen::MatrixXd cPsat){this->cPsat = cPsat;}
+	void setcTfreeze(Eigen::MatrixXd cTfreeze){this->cTfreeze = cTfreeze;}
+	void setcV2M(Eigen::MatrixXd cV2M){this->cV2M = cV2M;}
 
 	double getTInput(double curTValue){return curTValue-Tbase;}
 	double getxInput(double curxValue){return (curxValue-xbase)*100.0;}
@@ -96,25 +86,27 @@ public:
 	 * be necessary, but gives a clearer structure.
 	 */
 	/// Density as a function of temperature, pressure and composition.
-	virtual double rho (double T_K, double p);
+	virtual double rho (double T_K, double p, double x);
 	/// Heat capacities as a function of temperature, pressure and composition.
-	virtual double c   (double T_K, double p);
-	virtual double cp  (double T_K, double p){return c(T_K,p);};
-	virtual double cv  (double T_K, double p){return c(T_K,p);};
+	virtual double c   (double T_K, double p, double x);
+	virtual double cp  (double T_K, double p, double x){return c(T_K,p,x);};
+	virtual double cv  (double T_K, double p, double x){return c(T_K,p,x);};
 	/// Entropy as a function of temperature, pressure and composition.
-	virtual double s   (double T_K, double p);
+	virtual double s   (double T_K, double p, double x);
 	/// Internal energy as a function of temperature, pressure and composition.
-	virtual double u   (double T_K, double p);
+	virtual double u   (double T_K, double p, double x);
 	/// Enthalpy as a function of temperature, pressure and composition.
-	virtual double h   (double T_K, double p);
+	virtual double h   (double T_K, double p, double x);
 	/// Viscosity as a function of temperature, pressure and composition.
-	virtual double visc(double T_K, double p);
+	virtual double visc(double T_K, double p, double x);
 	/// Thermal conductivity as a function of temperature, pressure and composition.
-	virtual double cond(double T_K, double p);
+	virtual double cond(double T_K, double p, double x);
 	/// Saturation pressure as a function of temperature and composition.
-	virtual double psat(double T_K          );
+	virtual double psat(double T_K, double x          );
 	/// Freezing temperature as a function of pressure and composition.
-	virtual double Tfreeze(         double p);
+	virtual double Tfreeze(         double p, double x);
+	/// Conversion from volume-based to mass-based composition.
+	virtual double V2M(                       double x);
 
 
 protected:
@@ -127,16 +119,16 @@ protected:
 	/** Calculate enthalpy as a function of temperature and
 	 *  pressure employing functions for internal energy and
 	 *  density. Provides consistent formulations. */
-	double h_u(double T_K, double p) {
-		return u(T_K,p)+p/rho(T_K,p);
+	double h_u(double T_K, double p, double x) {
+		return u(T_K,p,x)+p/rho(T_K,p,x);
 	};
 
 	/// Internal energy from h, p and rho.
 	/** Calculate internal energy as a function of temperature
 	 *  and pressure employing functions for enthalpy and
 	 *  density. Provides consistent formulations. */
-	double u_h(double T_K, double p) {
-		return h(T_K,p)-p/rho(T_K,p);
+	double u_h(double T_K, double p, double x) {
+		return h(T_K,p,x)-p/rho(T_K,p,x);
 	};
 
 
@@ -150,7 +142,7 @@ protected:
 	/** Compares the given temperature T to the result of a
 	 *  freezing point calculation. This is not necessarily
 	 *  defined for all fluids, default values do not cause errors. */
-	bool checkT(double T_K, double p);
+	bool checkT(double T_K, double p, double x);
 
 	/// Check validity of pressure input.
 	/** Compares the given pressure p to the saturation pressure at
@@ -159,7 +151,7 @@ protected:
 	 *  The default value for psat is -1 yielding true if psat
 	 *  is not redefined in the subclass.
 	 *  */
-	bool checkP(double T_K, double p);
+	bool checkP(double T_K, double p, double x);
 
 	/// Check validity of composition input.
 	/** Compares the given composition x to a stored minimum and
