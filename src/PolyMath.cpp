@@ -30,10 +30,10 @@ bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const 
 		if (coefficients.cols() == columns) {
 			return true;
 		} else {
-			throw ValueError(format("The number of columns %d does not match with %d. ",coefficients.cols(),columns));
+			throw ValueError(format("%s (%d): The number of columns %d does not match with %d. ",__FILE__,__LINE__,coefficients.cols(),columns));
 		}
 	} else {
-		throw ValueError(format("The number of rows %d does not match with %d. ",coefficients.rows(),rows));
+		throw ValueError(format("%s (%d): The number of rows %d does not match with %d. ",__FILE__,__LINE__,coefficients.rows(),rows));
 	}
 	return false;
 }
@@ -52,7 +52,7 @@ bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const 
 /// @param axis integer value that represents the desired direction of integration
 /// @param times integer value that represents the desired order of integration
 Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficients, const int &axis = -1, const int &times = 1){
-	if (times < 0) throw ValueError(format("You have to provide a positive order for integration, %d is not valid. ",times));
+	if (times < 0) throw ValueError(format("%s (%d): You have to provide a positive order for integration, %d is not valid. ",__FILE__,__LINE__,times));
 	if (times == 0) return Eigen::MatrixXd(coefficients);
 	Eigen::MatrixXd oldCoefficients;
 	Eigen::MatrixXd newCoefficients(coefficients);
@@ -65,7 +65,7 @@ Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficient
 		newCoefficients = Eigen::MatrixXd(coefficients.transpose());
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",__FILE__,__LINE__,axis));
 		break;
 	}
 
@@ -87,7 +87,7 @@ Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficient
 		newCoefficients.transposeInPlace();
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",__FILE__,__LINE__,axis));
 		break;
 	}
 
@@ -103,7 +103,7 @@ Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficient
 /// @param axis integer value that represents the desired direction of derivation
 /// @param times integer value that represents the desired order of integration
 Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, const int &axis = -1, const int &times = 1){
-	if (times < 0) throw ValueError(format("You have to provide a positive order for derivation, %d is not valid. ",times));
+	if (times < 0) throw ValueError(format("%s (%d): You have to provide a positive order for derivation, %d is not valid. ",__FILE__,__LINE__,times));
 	if (times == 0) return Eigen::MatrixXd(coefficients);
 	// Recursion is also possible, but not recommended
 	//Eigen::MatrixXd newCoefficients;
@@ -119,7 +119,7 @@ Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, 
 		newCoefficients = Eigen::MatrixXd(coefficients.transpose());
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",__FILE__,__LINE__,axis));
 		break;
 	}
 
@@ -139,7 +139,7 @@ Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, 
 		newCoefficients.transposeInPlace();
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",__FILE__,__LINE__,axis));
 		break;
 	}
 
@@ -158,7 +158,7 @@ Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, 
 /// @param x_in double value that represents the current input
 double Polynomial2D::evaluate(const Eigen::MatrixXd &coefficients, const double &x_in){
 	if (coefficients.rows() != 1) {
-		throw ValueError(format("You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",coefficients.rows(),coefficients.cols()));
+		throw ValueError(format("%s (%d): You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",__FILE__,__LINE__,coefficients.rows(),coefficients.cols()));
 	}
 	double result = Eigen::poly_eval( Eigen::RowVectorXd(coefficients), x_in );
 	if (this->do_debug()) std::cout << "Running         evaluate(" << mat_to_string(coefficients) << ", " << vec_to_string(x_in) << "): " << result << std::endl;
@@ -218,7 +218,7 @@ Eigen::VectorXd Polynomial2D::solve(const Eigen::MatrixXd &coefficients, const d
 		}
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension, 0 or 1, for the solver, %d is not valid. ",axis));
+		throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for the solver, %d is not valid. ",__FILE__,__LINE__,axis));
 		break;
 	}
 	tmpCoefficients(0,0) -= z_in;
@@ -317,7 +317,7 @@ Poly2DResidual::Poly2DResidual(Polynomial2D &poly, const Eigen::MatrixXd &coeffi
 		this->axis = axis;
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension to the solver, %d is not valid. ",axis));
+		throw ValueError(format("%s (%d): You have to provide a dimension to the solver, %d is not valid. ",__FILE__,__LINE__,axis));
 		break;
 	}
 
@@ -376,7 +376,7 @@ double Poly2DResidual::deriv(double target){
 /// @param times integer value that represents the desired order of derivation
 /// @param firstExponent integer value that represents the lowest exponent of the polynomial in axis direction
 Eigen::MatrixXd Polynomial2DFrac::deriveCoeffs(const Eigen::MatrixXd &coefficients, const int &axis, const int &times, const int &firstExponent){
-	if (times < 0) throw ValueError(format("You have to provide a positive order for derivation, %d is not valid. ",times));	if (times < 0) throw ValueError(format("You have to provide a positive order for derivation, %d is not valid. ",times));
+	if (times < 0) throw ValueError(format("%s (%d): You have to provide a positive order for derivation, %d is not valid. ",__FILE__,__LINE__,times));
 	if (times == 0) return Eigen::MatrixXd(coefficients);
 	// Recursion is also possible, but not recommended
 	//Eigen::MatrixXd newCoefficients;
@@ -392,7 +392,7 @@ Eigen::MatrixXd Polynomial2DFrac::deriveCoeffs(const Eigen::MatrixXd &coefficien
 		newCoefficients = Eigen::MatrixXd(coefficients.transpose());
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",__FILE__,__LINE__,axis));
 		break;
 	}
 
@@ -413,7 +413,7 @@ Eigen::MatrixXd Polynomial2DFrac::deriveCoeffs(const Eigen::MatrixXd &coefficien
 		newCoefficients.transposeInPlace();
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",__FILE__,__LINE__,axis));
 		break;
 	}
 
@@ -438,10 +438,10 @@ Eigen::MatrixXd Polynomial2DFrac::deriveCoeffs(const Eigen::MatrixXd &coefficien
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
 double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const int &firstExponent = 0, const double &x_base = 0.0){
 	if (coefficients.rows() != 1) {
-		throw ValueError(format("You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",coefficients.rows(),coefficients.cols()));
+		throw ValueError(format("%s (%d): You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",__FILE__,__LINE__,coefficients.rows(),coefficients.cols()));
 	}
 	if ( (firstExponent<0) && (fabs(x_in-x_base)<DBL_EPSILON)) {
-		throw ValueError(format("A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ",x_in-x_base));
+		throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ",__FILE__,__LINE__,x_in-x_base));
 	}
 	Eigen::MatrixXd tmpCoeffs(coefficients);
 	Eigen::MatrixXd newCoeffs;
@@ -480,10 +480,10 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const dou
 /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
 double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &x_exp, const int &y_exp, const double &x_base = 0.0, const double &y_base = 0.0){
 	if ( (x_exp<0) && (fabs(x_in-x_base)<DBL_EPSILON)) {
-		throw ValueError(format("A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ",x_in-x_base));
+		throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ",__FILE__,__LINE__,x_in-x_base));
 	}
 	if ( (y_exp<0) && (fabs(y_in-y_base)<DBL_EPSILON)) {
-		throw ValueError(format("A fraction cannot be evaluated with zero as denominator, y_in-y_base=%f ",y_in-y_base));
+		throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, y_in-y_base=%f ",__FILE__,__LINE__,y_in-y_base));
 	}
 
 	Eigen::MatrixXd tmpCoeffs(coefficients);
@@ -554,7 +554,7 @@ double Polynomial2DFrac::derivative(const Eigen::MatrixXd &coefficients, const d
 		other_base = x_base;
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",__FILE__,__LINE__,axis));
 		break;
 	}
 
@@ -600,21 +600,32 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 		other_base = x_base;
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",axis));
+		throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for integration, %d is not valid. ",__FILE__,__LINE__,axis));
 		break;
 	}
 
-	if (int_exp<-1) throw NotImplementedError(format("This function is only implemented for lowest exponents >= -1, int_exp=%d ",int_exp));
+	if (int_exp<-1) throw NotImplementedError(format("%s (%d): This function is only implemented for lowest exponents >= -1, int_exp=%d ",__FILE__,__LINE__,int_exp));
 
 	double result = 0;
 	size_t r = newCoefficients.rows();
 	size_t c = newCoefficients.cols();
 
 	if (int_exp==-1) {
-		Eigen::MatrixXd tmpCoefficients = newCoefficients.row(0) * log(int_val-int_base);
-		newCoefficients = integrateCoeffs(newCoefficients.block(1,0,r-1,c), 0, 1);
-		newCoefficients.row(0) = tmpCoefficients;
-		return evaluate(newCoefficients,int_val,other_val,0,other_exp,int_base,other_base);
+		if (fabs(int_base)<DBL_EPSILON){
+			Eigen::MatrixXd tmpCoefficients = newCoefficients.row(0) * log(int_val-int_base);
+			newCoefficients = integrateCoeffs(newCoefficients.block(1,0,r-1,c), 0, 1);
+			newCoefficients.row(0) = tmpCoefficients;
+			return evaluate(newCoefficients,int_val,other_val,0,other_exp,int_base,other_base);
+		}
+		else {
+			// Reduce the coefficients to the integration dimension:
+			newCoefficients = Eigen::MatrixXd(r,1);
+			for (int i=0; i<r; i++){
+				newCoefficients(i,0) = evaluate(coefficients.row(i).transpose(), other_val, other_exp, other_base);
+			}
+			return fracIntCentral(newCoefficients.transpose(),int_val,int_base);
+		}
+
 	}
 
 	Eigen::MatrixXd tmpCoeffs;
@@ -661,7 +672,7 @@ Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, con
 		input     = in - x_base;
 		break;
 	default:
-		throw ValueError(format("You have to provide a dimension, 0 or 1, for the solver, %d is not valid. ",axis));
+		throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for the solver, %d is not valid. ",__FILE__,__LINE__,axis));
 		break;
 	}
 
@@ -682,7 +693,7 @@ Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, con
 		tmpCoefficients = Eigen::VectorXd::Zero(r+std::max(diff,0));
 		tmpCoefficients.block(0,0,r,1) = newCoefficients.block(0,0,r,1);
 		tmpCoefficients(r+diff-1,0) -= z_in;
-		throw NotImplementedError(format("Currently, there is no solver for the generalised polynomial, an exponent of %d is not valid. ",solve_exp));
+		throw NotImplementedError(format("%s (%d): Currently, there is no solver for the generalised polynomial, an exponent of %d is not valid. ",__FILE__,__LINE__,solve_exp));
 	}
 
 	if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string( Eigen::MatrixXd(tmpCoefficients) ) << std::endl;
@@ -768,11 +779,11 @@ double Polynomial2DFrac::binom(const int &nValue, const int &nValue2){
 /// @param x_in double value that represents the current input
 /// @param x_base double value that represents the basis for the fit
 Eigen::MatrixXd Polynomial2DFrac::fracIntCentralDvector(const int &m, const double &x_in, const double &x_base){
-	if (m<1) throw ValueError(format("You have to provide coefficients, a vector length of %d is not a valid. ",m));
+	if (m<1) throw ValueError(format("%s (%d): You have to provide coefficients, a vector length of %d is not a valid. ",__FILE__,__LINE__,m));
 
 	Eigen::MatrixXd D = Eigen::MatrixXd::Zero(1,m);
 	double tmp;
-
+	// TODO: This can be optimized using the Horner scheme!
 	for (int j=0; j<m; j++){ // loop through row
 		tmp = pow(-1.0,j) * log(x_in) * pow(x_base,j);
 		for(int k=0; k<j; k++) { // internal loop for every entry
@@ -788,7 +799,7 @@ Eigen::MatrixXd Polynomial2DFrac::fracIntCentralDvector(const int &m, const doub
 /// @param x_base double value that represents the basis for the fit
 double Polynomial2DFrac::fracIntCentral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &x_base){
 	if (coefficients.rows() != 1) {
-		throw ValueError(format("You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",coefficients.rows(),coefficients.cols()));
+		throw ValueError(format("%s (%d): You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",__FILE__,__LINE__,coefficients.rows(),coefficients.cols()));
 	}
 	int m = coefficients.cols();
 	Eigen::MatrixXd D = fracIntCentralDvector(m, x_in, x_base);
@@ -1152,6 +1163,20 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 		T = 273.15+50;
 		c = 145.59157247249246;
 		d = frac.integral(matrix, T, 0.0, 0, -1, 0) - frac.integral(matrix, 273.15+25, 0.0, 0, -1, 0);
+
+		{
+		CAPTURE(T);
+		CAPTURE(c);
+		CAPTURE(d);
+		tmpStr = CoolProp::mat_to_string(matrix);
+		CAPTURE(tmpStr);
+		CHECK( check_abs(c,d,acc) );
+		}
+
+
+		T = 423.15;
+		c = 3460.895272;
+		d = frac.integral(matrix, T, 0.0, 0, -1, 0, 348.15, 0.0);
 
 		{
 		CAPTURE(T);
