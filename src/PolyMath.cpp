@@ -621,11 +621,10 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 			// Reduce the coefficients to the integration dimension:
 			newCoefficients = Eigen::MatrixXd(r,1);
 			for (int i=0; i<r; i++){
-				newCoefficients(i,0) = evaluate(coefficients.row(i).transpose(), other_val, other_exp, other_base);
+				newCoefficients(i,0) = evaluate(coefficients.row(i), other_val, other_exp, other_base);
 			}
 			return fracIntCentral(newCoefficients.transpose(),int_val,int_base);
 		}
-
 	}
 
 	Eigen::MatrixXd tmpCoeffs;
