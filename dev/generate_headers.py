@@ -86,6 +86,8 @@ def TO_CPP(root_dir, hashes):
             
             # Store the hash of the data that was written to file (not including the header)
             hashes[variable] = get_hash(hex_string)
+            
+            print(os.path.join(root_dir,'include',outfile)+ ' written to file')
         else:
             print(outfile + ' is up to date')
             
@@ -96,7 +98,6 @@ def version_to_file(root_dir):
     
     # Get the hash of the version
     if 'version' not in hashes or ('version' in hashes and hashes['version'] != get_hash(version)):
-        print('*** Generating cpversion.h ***')
         hashes['version'] = get_hash(version)
         
         # Format the string to be written
@@ -112,6 +113,9 @@ def version_to_file(root_dir):
         f = open(file_name,'w')
         f.write(string_for_file)
         f.close()
+        
+        print(os.path.join(include_dir,'cpversion.h') + ' written to file')
+        
     else:
         print('cpversion.h is up to date')
     
@@ -167,6 +171,7 @@ def gitrev_to_file(root_dir):
             f.close()
             
             hashes['gitrevision'] = get_hash(gitrev)
+            print(os.path.join(include_dir,'gitrevision.h') + ' written to file')
         else:
             print('gitrevision.h is up to date')
                 
@@ -177,7 +182,6 @@ def combine_json(root_dir):
     
     master = []
     
-    print('*** Combining fluid JSON files in JSON format in dev folder...')
     for file in glob.glob(os.path.join(root_dir,'dev','fluids','*.json')):
         
         path, file_name = os.path.split(file)
@@ -198,7 +202,6 @@ def combine_json(root_dir):
     
     master = []
     
-    print('*** Combining incompressible JSON files in JSON format in dev folder...')
     for file in glob.glob(os.path.join(root_dir,'dev','IncompressibleLiquids','*.json')):
         
         path, file_name = os.path.split(file)
