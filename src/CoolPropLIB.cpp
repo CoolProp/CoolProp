@@ -110,7 +110,7 @@ EXPORT_CODE double CONVENTION Props(const char *Output, char Name1, double Prop1
         // Convert inputs to SI
         Prop1 = convert_from_kSI_to_SI(iName1, Prop1);
         Prop2 = convert_from_kSI_to_SI(iName2, Prop2);
-    
+
 	    // Call the SI function
         double val = PropsSI(Output, sName1.c_str(), Prop1, sName2.c_str(), Prop2, Ref);
 
@@ -135,16 +135,16 @@ EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, do
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;
     return CoolProp::PropsSI(_Output, _Name1, Prop1, _Name2, Prop2, _FluidName, std::vector<double>(z, z+n));
 }
-EXPORT_CODE void CONVENTION F77PropsSI(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * FluidName, double *output)
+EXPORT_CODE void CONVENTION propssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * FluidName, double *output)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;
     *output = CoolProp::PropsSI(_Output, _Name1, *Prop1, _Name2, *Prop2, _FluidName);
 }
 
-EXPORT_CODE double CONVENTION K2F(double T){ 
-    return T * 9 / 5 - 459.67; 
+EXPORT_CODE double CONVENTION K2F(double T){
+    return T * 9 / 5 - 459.67;
 }
-EXPORT_CODE double CONVENTION F2K(double T_F){ 
+EXPORT_CODE double CONVENTION F2K(double T_F){
     return (T_F + 459.67) * 5 / 9;
 }
 EXPORT_CODE int CONVENTION get_debug_level(){
@@ -174,7 +174,7 @@ EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, d
 {
 	return HumidAir::HAPropsSI(Output, Name1, Prop1, Name2, Prop2, Name3, Prop3);
 }
-EXPORT_CODE void CONVENTION F77HAPropsSI(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Name3, double * Prop3, double *output)
+EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Name3, double * Prop3, double *output)
 {
 	*output = HumidAir::HAPropsSI(Output, Name1, *Prop1, Name2, *Prop2, Name3, *Prop3);
 }

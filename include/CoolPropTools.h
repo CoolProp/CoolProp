@@ -19,18 +19,18 @@
     #define COOLPROP_OK 1
     #endif
 
-    #ifdef HUGE_VAL
-    #  define _HUGE HUGE_VAL
+    #if defined(HUGE_VAL) && !defined(_HUGE)
+        # define _HUGE HUGE_VAL
     #else
-    // GCC Version of huge value macro
-    #ifdef HUGE 
-    #  define _HUGE HUGE
-    #endif
+        // GCC Version of huge value macro
+        #if defined(HUGE) && !defined(_HUGE)
+        #  define _HUGE HUGE
+        #endif
     #endif
 
 	#if defined(_MSC_VER)
 	// Microsoft version of math.h doesn't include acosh or asinh, so we just define them here.
-	// It was included from Visual Studio 2013 
+	// It was included from Visual Studio 2013
 	#if _MSC_VER < 1800
 	static double acosh(double x)
 	{
@@ -47,7 +47,7 @@
 	}
 	#endif
 	#endif
-    
+
 	#if defined(__powerpc__)
 	// PPC version of math.h doesn't include acosh or asinh, so we just define them here
 	static double acosh(double x)
@@ -64,7 +64,7 @@
 		}
 	}
 	#endif
-	
+
 	#if defined(__powerpc__)
 		#undef min
 		#undef max
@@ -87,13 +87,14 @@
 		#define DEPRECATED(func) func
 	#endif
 
-	#include <algorithm> 
-	#include <functional> 
+	#include <algorithm>
+	#include <functional>
 	#include <cctype>
     #include <map>
 	#include <locale>
 	#include <fstream>
 	#include <cerrno>
+	#include <numeric>
 
 	/// The following code for the trim functions was taken from http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
 	// trim from start
@@ -119,7 +120,7 @@
     std::string format(const char* fmt, ...);
 	// Missing string split - like in Python
 	std::vector<std::string> strsplit(std::string s, char del);
-	
+
 	inline std::string upper(const std::string str_)
 	{
 		std::string str = str_;
@@ -128,13 +129,13 @@
 	}
 
 	std::string strjoin(std::vector<std::string> strings, std::string delim);
-	
+
 	void MatInv_2(double A[2][2] , double B[2][2]);
 
 	double root_sum_square(std::vector<double> x);
 	double interp1d(std::vector<double> *x, std::vector<double> *y, double x0);
 	double powInt(double x, int y);
-    
+
     template<class T> T LinearInterp(T x0, T x1, T y0, T y1, T x)
     {
         return (y1-y0)/(x1-x0)*(x-x0)+y0;
@@ -143,12 +144,12 @@
     {
         return LinearInterp(x[i0],x[i1],y[i0],y[i1],val);
     };
-    
+
     template<class T> T QuadInterp(T x0, T x1, T x2, T f0, T f1, T f2, T x)
     {
-        /* Quadratic interpolation.  
-        Based on method from Kreyszig, 
-        Advanced Engineering Mathematics, 9th Edition 
+        /* Quadratic interpolation.
+        Based on method from Kreyszig,
+        Advanced Engineering Mathematics, 9th Edition
         */
         T L0, L1, L2;
         L0=((x-x1)*(x-x2))/((x0-x1)*(x0-x2));
@@ -160,7 +161,7 @@
     {
         return QuadInterp(x[i0],x[i1],x[i2],y[i0],y[i1],y[i2],val);
     };
-    
+
     template<class T> T CubicInterp( T x0, T x1, T x2, T x3, T f0, T f1, T f2, T f3, T x)
     {
 	    /*
@@ -190,7 +191,7 @@
     };
 
 	void solve_cubic(double a, double b, double c, double d, int &N, double &x0, double &x1, double &x2);
-	
+
 	inline double min3(double x1, double x2, double x3){return std::min(std::min(x1, x2), x3);};
 	inline double max3(double x1, double x2, double x3){return std::max(std::max(x1, x2), x3);};
 
@@ -250,6 +251,16 @@
 		return check_abs(A,B,1e5*DBL_EPSILON);
 	};
 
+    template<class T> void normalize_vector(std::vector<T> &x)
+    {
+        // Sum up all the elements in the vector
+        T sumx = std::accumulate( x.begin(), x.end(), static_cast<T>(0) );
+        // Normalize the components by dividing each by the sum
+        for (std::size_t i = 0; i < x.size(); ++i){
+            x[i] /= sumx;
+        }
+    };
+
 #define CATCH_ALL_ERRORS_RETURN_HUGE(x)    try{                                                                                \
                                                 x                                                                              \
                                             }                                                                                  \
@@ -259,6 +270,6 @@
                                             }                                                                                  \
                                             catch(...){                                                                        \
                                                 return _HUGE;                                                                  \
-                                            }                                                        
+                                            }
 
 #endif

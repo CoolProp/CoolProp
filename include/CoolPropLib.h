@@ -32,7 +32,7 @@
     #  undef EXPORT_CODE
     #  define EXPORT_CODE extern "C"
     #endif
-    
+
     // Functions with the call type like
     // EXPORT_CODE void CONVENTION AFunction(double, double);
     // will be exported to the DLL
@@ -41,33 +41,33 @@
     ####################################################################################
     Overloads for DLL wrapping puposes
 
-    These functions take strings which are 0-terminated.  These functions pass directly to 
+    These functions take strings which are 0-terminated.  These functions pass directly to
     equivalently named functions in CoolProp.h that take std::string
     ####################################################################################
     */
 
     /**
-    \overload 
+    \overload
     \sa Props1SI(std::string, std::string)
     */
     EXPORT_CODE double CONVENTION Props1SI(const char *FluidName, const char* Output);
     /**
-    \overload 
+    \overload
     \sa PropsSI(std::string, std::string, double, std::string, double, std::string)
     */
     EXPORT_CODE double CONVENTION PropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref);
     /**
-    \overload 
+    \overload
     \sa Props(std::string, std::string, double, std::string, double, std::string)
     */
     EXPORT_CODE double CONVENTION PropsS(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref);
     /**
-    \overload 
+    \overload
     \sa Props(std::string, std::string, double, std::string, double, std::string)
     */
     EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double Prop1, const char Name2, double Prop2, const char *Ref);
     /**
-    \overload 
+    \overload
     \sa Props1(std::string, std::string)
     */
     EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output);
@@ -76,8 +76,8 @@
     \sa IsFluidType(std::string, std::string)
     */
     EXPORT_CODE int CONVENTION IsFluidType(const char *Ref, const char *Type);
-    
-    // When using SWIG, it is extremely difficult to deal with char* for output strings, so just use 
+
+    // When using SWIG, it is extremely difficult to deal with char* for output strings, so just use
     // the std::string version since SWIG can handle std::string just fine
     #if defined(SWIG)
         std::string get_global_param_string(std::string ParamName);
@@ -101,7 +101,7 @@
     ####################################################################################
     Implemented functions
 
-    These functions take inputs that are compatible with DLL passing and are 
+    These functions take inputs that are compatible with DLL passing and are
     implemented in CoolPropDLL.cpp
     ####################################################################################
     */
@@ -110,9 +110,9 @@
     \brief FORTRAN 77 style wrapper of the PropsSI function
     \sa PropsSI(std::string, std::string, double, std::string, double, std::string)
     */
-    EXPORT_CODE void CONVENTION F77PropsSI(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Ref, double *output);
+    EXPORT_CODE void CONVENTION propssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Ref, double *output);
     /**
-    
+
     */
     EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *FluidName, const double *z, int n);
 
@@ -120,12 +120,12 @@
     // from get_param_index('D') for instance and the Fluid index from get_Fluid_index('Air') for instance
     EXPORT_CODE double CONVENTION IPropsSI(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid);
     EXPORT_CODE double CONVENTION IProps(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid);
-    
+
     /// Convert from degrees Fahrenheit to Kelvin (useful primarily for testing)
     EXPORT_CODE double CONVENTION F2K(double T_F);
     /// Convert from Kelvin to degrees Fahrenheit (useful primarily for testing)
     EXPORT_CODE double CONVENTION K2F(double T_K);
-    
+
     EXPORT_CODE long CONVENTION get_param_index(const char *param);
     EXPORT_CODE long CONVENTION redirect_stdout(const char *file);
 
@@ -144,14 +144,14 @@
     //        Humid Air Properties
     // ---------------------------------
 
-    
+
     EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Name3, double Prop3);
 
-    /** 
+    /**
     \brief FORTRAN 77 style wrapper of the HAPropsSI function
     */
-    EXPORT_CODE void CONVENTION F77HAPropsSI(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char *Name3, double *Prop3, double *output);
+    EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char *Name3, double *Prop3, double *output);
 
-    
+
 
 #endif
