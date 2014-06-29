@@ -11,28 +11,33 @@ IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Valu
 	if (obj.HasMember(id.c_str())) {
 		//rapidjson::Value value = obj[id.c_str()];
 		if (obj[id.c_str()].HasMember("type")){
-			std::string type = cpjson::get_string(obj[id.c_str()], "type");
-			if (!type.compare("polynomial")){
-				fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
-				fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
-				return fluidData;
-			}
-			else if (!type.compare("exponential")){
-				fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL;
-				fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
-				return fluidData;
-			}
-			else if (!type.compare("exppolynomial")){
-				fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL;
-				fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
-				return fluidData;
+			if (obj[id.c_str()].HasMember("coeffs")){
+				std::string type = cpjson::get_string(obj[id.c_str()], "type");
+				if (!type.compare("polynomial")){
+					fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
+					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(obj[id.c_str()]["coeffs"]));
+					return fluidData;
+				}
+				else if (!type.compare("exponential")){
+					fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL;
+					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
+					return fluidData;
+				}
+				else if (!type.compare("exppolynomial")){
+					fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL;
+					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(obj[id.c_str()]["coeffs"]));
+					return fluidData;
+				}
+				else{
+					throw ValueError(format("The type [%s] is not understood for [%s] of incompressible fluids. Please check your JSON file.", type.c_str(), id.c_str()));
+				}
 			}
 			else{
-				throw ValueError(format("The type [%s] is not understood for [%s] of incompressible fluids. Please check your JSON file.", type.c_str(), id.c_str()));
+				throw ValueError(format("Your file does not have an entry for \"coeffs\" in [%s], which is vital for this function.", id.c_str()));
 			}
 		}
 		else{
-			throw ValueError(format("Your file does not have an entry for \"type\" of [%s], which is vital for this function.", id.c_str()));
+			throw ValueError(format("Your file does not have an entry for \"type\" in [%s], which is vital for this function.", id.c_str()));
 		}
 	}
 	else{

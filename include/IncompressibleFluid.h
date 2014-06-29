@@ -28,10 +28,10 @@ namespace CoolProp {
 struct IncompressibleData {
 	int type;
 	enum IncompressibleTypeEnum {
+		INCOMPRESSIBLE_NOT_SET,
 		INCOMPRESSIBLE_POLYNOMIAL,
 		INCOMPRESSIBLE_EXPONENTIAL,
-		INCOMPRESSIBLE_EXPPOLYNOMIAL,
-		INCOMPRESSIBLE_NOT_SET
+		INCOMPRESSIBLE_EXPPOLYNOMIAL
 	};
 	Eigen::MatrixXd coeffs; //TODO: Can we store the Eigen::Matrix objects more efficiently?
 	//std::vector<std::vector<double> > coeffs;

@@ -100,6 +100,46 @@ namespace cpjson
 		return out;
 	};
 
+	/// A convenience function to get a 2D double array compactly
+	inline std::vector< std::vector<double> > get_double_array2D(rapidjson::Value &v)
+	{
+		std::vector< std::vector<double> > out;
+		std::vector<double> tmp;
+		if (!v.IsArray()) { throw CoolProp::ValueError("input is not an array"); }
+		for (rapidjson::Value::ValueIterator itr = v.Begin(); itr != v.End(); ++itr)
+		{
+			if (!itr->IsArray()) { throw CoolProp::ValueError("input is not a 2D array"); }
+			tmp.clear();
+			for (rapidjson::Value::ValueIterator i = itr->Begin(); i != itr->End(); ++i)
+			{
+				if (!i->IsNumber()){throw CoolProp::ValueError("input is not a number");}
+				tmp.push_back(i->GetDouble());
+			}
+			out.push_back(tmp);
+		}
+		return out;
+	};
+
+    /// A convenience function to get a 2D long double array compactly
+	inline std::vector< std::vector<long double> >  get_long_double_array2D(rapidjson::Value &v)
+	{
+		std::vector< std::vector<long double> > out;
+		std::vector<long double> tmp;
+		if (!v.IsArray()) { throw CoolProp::ValueError("input is not an array"); }
+		for (rapidjson::Value::ValueIterator itr = v.Begin(); itr != v.End(); ++itr)
+		{
+			if (!itr->IsArray()) { throw CoolProp::ValueError("input is not a 2D array"); }
+			tmp.clear();
+			for (rapidjson::Value::ValueIterator i = itr->Begin(); i != itr->End(); ++i)
+			{
+				if (!i->IsNumber()){throw CoolProp::ValueError("input is not a number");}
+				tmp.push_back(i->GetDouble());
+			}
+			out.push_back(tmp);
+		}
+		return out;
+	};
+
 	/// A convenience function to get a long double array compactly
 	inline std::vector<long double> get_long_double_array(rapidjson::Value &v, std::string name)
 	{
@@ -134,6 +174,34 @@ namespace cpjson
 		v.Accept(writer);
 		return buffer.GetString();
 	};
+
+//    /// A convenience function to set an array compactly
+//	template<typename T>
+//    inline void set_array(const char *key, const std::vector<T> &vec, rapidjson::Value &value, rapidjson::Document &doc)
+//    {
+//        rapidjson::Value _v(rapidjson::kArrayType);
+//        for (unsigned int i = 0; i < vec.size(); ++i)
+//        {
+//            _v.PushBack(vec[i],doc.GetAllocator());
+//        }
+//        value.AddMember(key, _v, doc.GetAllocator());
+//    };
+//
+//    /// A convenience function to set an array compactly
+//	template<typename T>
+//    inline void set_array2D(const char *key, const std::vector< std::vector<T> > &vec, rapidjson::Value &value, rapidjson::Document &doc)
+//    {
+//        rapidjson::Value _i(rapidjson::kArrayType);
+//        rapidjson::Value _j;
+//        for (unsigned int i = 0; i < vec.size(); ++i) {
+//        	_j = rapidjson::Value(rapidjson::kArrayType);
+//        	for (unsigned int j = 0; j < vec[i].size(); ++j) {
+//        		_j.PushBack(vec[j],doc.GetAllocator());
+//        	}
+//        	_i.PushBack(_j,doc.GetAllocator());
+//        }
+//        value.AddMember(key, _i, doc.GetAllocator());
+//    };
 
     /// A convenience function to set a double array compactly
     inline void set_double_array(const char *key, const std::vector<double> &vec, rapidjson::Value &value, rapidjson::Document &doc)
