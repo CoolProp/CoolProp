@@ -1,5 +1,5 @@
-import numpy
-from data_incompressible import SolutionData
+import numpy as np
+from data_incompressible import *
     
 class SolutionDataWriter(object):
     """ 
@@ -11,7 +11,94 @@ class SolutionDataWriter(object):
     #def __init__(self):
     #    SolutionData.__init__(self)
     
-    def fitAll(self):
+    def fitAll(self, data):
+        T = data.temperature.data
+        x = data.concentration.data
+        
+        #if data.Tbase==0.0:
+        #    data.Tbase = (np.min(T) + np.max(T)) / 2.0
+        #if data.xbase==0.0:
+        #    data.xbase = (np.min(x) + np.max(x)) / 2.0
+            
+        # Set the standard order for polynomials
+        std_xorder = 3
+        std_yorder = 5
+        std_coeffs = np.zeros((std_xorder,std_yorder))
+        
+        errList = (ValueError, AttributeError, TypeError)
+        
+        try:
+            data.density.coeffs = std_coeffs[:]
+            data.density.type   = data.density.INCOMPRESSIBLE_POLYNOMIAL
+            data.density.fit(T,x,data.Tbase,data.xbase)
+        except errList as ve:
+            print "Could not fit density coefficients:"
+            print ve 
+            pass
+
+        try:        
+            data.specific_heat.coeffs = std_coeffs[:]
+            data.specific_heat.type   = data.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
+            data.specific_heat.fit(T,x,data.Tbase,data.xbase)
+        except errList as ve:
+            print "Could not fit specific heat coefficients:"
+            print ve 
+            pass
+        
+        try:
+            data.viscosity.coeffs = std_coeffs[:]
+            data.viscosity.type   = data.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
+            data.viscosity.fit(T,x,data.Tbase,data.xbase)
+        except errList as ve:
+            print "Could not fit viscosity coefficients:"
+            print ve 
+            pass
+
+        try:        
+            data.conductivity.coeffs = std_coeffs[:]
+            data.conductivity.type   = data.conductivity.INCOMPRESSIBLE_POLYNOMIAL
+            data.conductivity.fit(T,x,data.Tbase,data.xbase)
+        except errList as ve:
+            print "Could not fit conductivity coefficients:"
+            print ve 
+            pass
+        
+        try:
+            data.saturation_pressure.coeffs = std_coeffs[:]
+            data.saturation_pressure.type   = data.saturation_pressure.INCOMPRESSIBLE_EXPPOLYNOMIAL
+            data.saturation_pressure.fit(T,x,data.Tbase,data.xbase)
+        except errList as ve:
+            print "Could not fit saturation pressure coefficients:"
+            print ve 
+            pass
+
+        try:        
+            data.T_freeze.coeffs = std_coeffs[:]
+            data.T_freeze.type   = data.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
+            data.T_freeze.fit(T,x,data.Tbase,data.xbase)
+        except errList as ve:
+            print "Could not fit TFreeze coefficients:"
+            print ve 
+            pass
+
+        try:        
+            data.volume2mass.coeffs = std_coeffs[:]
+            data.volume2mass.type   = data.volume2mass.INCOMPRESSIBLE_POLYNOMIAL
+            data.volume2mass.fit(T,x,data.Tbase,data.xbase)
+        except errList as ve:
+            print "Could not fit V2M coefficients:"
+            print ve 
+            pass
+
+        try:        
+            data.mass2mole.coeffs = std_coeffs[:]
+            data.mass2mole.type   = data.mass2mole.INCOMPRESSIBLE_POLYNOMIAL
+            data.mass2mole.fit(T,x,data.Tbase,data.xbase)
+        except errList as ve:
+            print "Could not fit M2M coefficients:"
+            print ve 
+            pass
+        
     
     def toJSON(self,data):
         jobj = {}
@@ -57,38 +144,57 @@ if __name__ == '__main__':
 #    data = SecCoolExample()    
 #    writer.toJSON(data)
 
+#    data = PureExample()
+#    data.density.coeffs = np.zeros((4,1))
+#    data.density.type = data.density.INCOMPRESSIBLE_POLYNOMIAL
+#    data.density.data = data.density.data[0:4]
+#    data.temperature.data = data.temperature.data[0:4]
+#    data.density.fit(data.temperature.data)
+#    #writer.toJSON(data)
+#    print data.density.data[0][0]
+#    print np.polynomial.polynomial.polyval2d(data.temperature.data[0], 0, data.density.coeffs)
+#    print data.density.data[1][0]
+#    print np.polynomial.polynomial.polyval2d(data.temperature.data[1], 0, data.density.coeffs)
+    
+    
+#    data = SolutionExample()
+#    data.density.coeffs = np.zeros((3,2))
+#    data.density.type = data.density.INCOMPRESSIBLE_POLYNOMIAL
+#    data.density.data = data.density.data[0:4][:,0:2]
+#    data.temperature.data = data.temperature.data[0:4]
+#    data.density.fit(data.temperature.data,data.concentration.data[0:2])
+#    #writer.toJSON(data)
+#    print data.density.data[0][0]
+#    print np.polynomial.polynomial.polyval2d(data.temperature.data[0], data.concentration.data[0], data.density.coeffs)
+#    print data.density.data[1][1]
+#    print np.polynomial.polynomial.polyval2d(data.temperature.data[1], data.concentration.data[1], data.density.coeffs)
+
     data = PureExample()
-    data.density.coeffs = numpy.zeros((4,1))
-    data.density.type = data.density.INCOMPRESSIBLE_POLYNOMIAL
-    
-    data.density.data = data.density.data[0:4]
-    data.temperature.data = data.temperature.data[0:4]
-    
-    data.density.fit(data.temperature.data)
-    #writer.toJSON(data)
+    print data.Tbase, data.xbase
+    writer.fitAll(data)
+    print data.Tbase, data.xbase
     
     print data.density.data[0][0]
-    print numpy.polynomial.polynomial.polyval2d(data.temperature.data[0], 0, data.density.coeffs)
-    
-    print data.density.data[1][0]
-    print numpy.polynomial.polynomial.polyval2d(data.temperature.data[1], 0, data.density.coeffs)
+    print np.polynomial.polynomial.polyval2d(data.temperature.data[0]-data.Tbase, 0.0, data.density.coeffs)
+    print data.rho(data.temperature.data[0], 0.0, 0.0)
+    print data.density.data[-1][0]
+    print np.polynomial.polynomial.polyval2d(data.temperature.data[-1]-data.Tbase, 0.0, data.density.coeffs)
+    print data.rho(data.temperature.data[-1], 0.0, 0.0)
     
     
     data = SolutionExample()
-    data.density.coeffs = numpy.zeros((3,2))
-    data.density.type = data.density.INCOMPRESSIBLE_POLYNOMIAL
-    
-    data.density.data = data.density.data[0:4][:,0:2]
-    data.temperature.data = data.temperature.data[0:4]
-    
-    data.density.fit(data.temperature.data,data.concentration.data[0:2])
-    #writer.toJSON(data)
+    print data.Tbase, data.xbase
+    writer.fitAll(data)
+    print data.Tbase, data.xbase
     
     print data.density.data[0][0]
-    print numpy.polynomial.polynomial.polyval2d(data.temperature.data[0], data.concentration.data[0], data.density.coeffs)
+    print np.polynomial.polynomial.polyval2d(data.temperature.data[0]-data.Tbase, data.concentration.data[0]-data.xbase, data.density.coeffs)
+    print data.rho(data.temperature.data[0], 0.0, data.concentration.data[0])
+    print data.density.data[-1][-1]
+    print np.polynomial.polynomial.polyval2d(data.temperature.data[-1]-data.Tbase, data.concentration.data[-1]-data.xbase, data.density.coeffs)
+    print data.rho(data.temperature.data[-1], 0.0, data.concentration.data[-1])
     
-    print data.density.data[1][1]
-    print numpy.polynomial.polynomial.polyval2d(data.temperature.data[1], data.concentration.data[1], data.density.coeffs)
+    
     
     
     
