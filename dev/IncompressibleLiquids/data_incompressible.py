@@ -1,4 +1,4 @@
-import numpy
+import numpy,itertools,scipy.interpolate
 
 
 class LiquidData(object):
@@ -532,29 +532,405 @@ class ZS55(LiquidData):
 #dataObj = Therminol72()
 #for i in range(len(dataObj.T)):
 #    print str(dataObj.T[i])+", "+str(numpy.log(dataObj.mu_dyn[i]))
+  
+class IncompressibleData(object):
+    def __init__(self):
+        self.INCOMPRESSIBLE_NOT_SET       = 0
+        self.INCOMPRESSIBLE_POLYNOMIAL    = 'polynomial'
+        self.INCOMPRESSIBLE_EXPONENTIAL   = 'exponential'
+        self.INCOMPRESSIBLE_EXPPOLYNOMIAL = 'exppolynomial'
+        self.type   = self.INCOMPRESSIBLE_NOT_SET
+        self.coeffs = None #numpy.zeros((4,4))
+        self.data   = None #numpy.zeros((10,10))
+        
+    def fit(self, T, x=0.0, Tbase=0.0, xbase=0.0):
+        (cr,cc) = self.coeffs.shape
+        (dr,dc) = self.data.shape
+        (Tr,Tc) = (len(T),1) #T.shape #(len(T),1)
+        if (Tc!=1): raise ValueError("Temperature has to be a 2D array with one column.")
+        if (Tr!=dr): raise ValueError("Temperature and fitting data have to have the same number of rows.")
+        
+        if self.type==self.INCOMPRESSIBLE_POLYNOMIAL:
+            if (numpy.max(x)==0.0): # x not given
+                x = numpy.array([0.0])
+                if (cc==1): # requires 1D coefficients
+                    if (dc==1):
+                        #z = numpy.polyfit(T, self.data[:,0], cr-1)
+                        #self.coeffs = numpy.zeros((cr,1))
+                        #self.coeffs[:,0] = z[::-1]
+                        #print self.coeffs
+                        self.coeffs = self.getCoeffs2d(T-Tbase, x-xbase, self.data, cr-1, cc-1)
+                        #print self.coeffs
+                    else:
+                        raise ValueError("Cannot use 2D data with 1D references")
+                else:
+                    raise ValueError("Cannot use 2D coefficients without concentration input")
+            else: # Assume 2D input
+                (xr,xc) = (1,len(x))#x.shape#(1,len(x))
+                if (xr!=1): raise ValueError("Concentration has to be a 2D array with one row.")
+                if (xc!=dc): raise ValueError("Concentration and fitting data have to have the same number of columns.")
+                #if (cr!=cc): raise ValueError("For now, you have to have the same number of exponents for x and y.")
+                self.coeffs = self.getCoeffs2d(T-Tbase, x-xbase, self.data, cr-1, cc-1)
+                #raise ValueError("Cannot use 2D coefficients yet")
+                print self.coeffs
+        else:
+            raise ValueError("Cannot fit that function.")
+        
 
-class SolutionData(LiquidData):
+    def getCoeffs1d(self, x,z,order):
+        if (len(x)<order+1): 
+            raise ValueError("You have only {0} elements and try to fit {1} coefficients, please reduce the order.".format(len(x),order+1))
+        A = numpy.vander(x,order+1)[:,::-1]
+        #Anew = numpy.dot(A.T,A)
+        #znew = numpy.dot(A.T,z)
+        #coeffs = numpy.linalg.solve(Anew, znew)
+        coeffs = numpy.linalg.lstsq(A, z)[0]
+        return coeffs
+            
+
+    def getCoeffs2d(self, x_in,y_in,z_in,x_order,y_order):
+        x_order += 1
+        y_order += 1
+        #To avoid overfitting, we only use the upper left triangle of the coefficient matrix
+        x_exp = range(x_order)
+        y_exp = range(y_order)
+        limit = max(x_order,y_order)
+        xy_exp = []
+        # Construct the upper left triangle of coefficients    
+        for i in x_exp:
+            for j in y_exp:
+                if(i+j<limit): xy_exp.append((i,j))
+        
+        # Construct input pairs   
+        xx, yy = numpy.meshgrid(x_in,y_in,indexing='ij')
+        xx = numpy.array(xx.flat)
+        yy = numpy.array(yy.flat)
+        zz = numpy.array(z_in.flat)
+        
+        x_num = len(x_in)
+        y_num = len(y_in)
+                    
+        cols = len(xy_exp)
+        eqns = x_num * y_num
+        #if (eqns<cols):
+        #    raise ValueError("You have only {0} equations and try to fit {1} coefficients, please reduce the order.".format(eqns,cols))   
+        if (x_num<x_order):
+            raise ValueError("You have only {0} x-entries and try to fit {1} x-coefficients, please reduce the x_order.".format(x_num,x_order))
+        if (y_num<y_order):
+            raise ValueError("You have only {0} y-entries and try to fit {1} y-coefficients, please reduce the y_order.".format(y_num,y_order))
+        
+        # Build the functional matrix
+        A = numpy.zeros((eqns,cols))
+        for i in range(eqns): # row loop
+            for j, (xj,yj) in enumerate(xy_exp): # makes columns
+                A[i][j] = xx[i]**xj * yy[i]**yj
+                 
+        coeffs = numpy.linalg.lstsq(A, zz)[0]
+        
+        #Rearrange coefficients to a matrix shape
+        C = numpy.zeros((x_order,y_order))
+        for i, (xi,yi) in enumerate(xy_exp): # makes columns
+            C[xi][yi] = coeffs[i]
+            
+        return C
+        
+        
+    def toJSON(self):
+        j = {}
+        try:
+            j['coeffs'] = self.coeffs.tolist()
+        except:
+            j['coeffs'] = 'null'
+            
+        j['type']   = self.type
+        return j
+    
+    
+    
+    
+class SolutionData(object):
     """ 
     A base class that defines all the variables needed 
-    in order to make a proper fit for solution data.  
+    in order to make a proper fit. You can copy this code
+    put in your data and add some documentation for where the
+    information came from. 
     """
-    Name     = None # Name of the current fluid
-    Desc     = None # Name of the current fluid
-    Tmin     = None # Minimum temperature in K
-    TminPsat = None # Minimum saturation temperature in K
-    Tmax     = None # Maximum temperature in K
-    xmin     = None # Minimum concentration in weight fraction
-    xmax     = None # Minimum concentration in weight fraction
-    Tbase    = None # Base temperature for data fit in K
-    xbase    = None # Base concentration for data fit in weight fraction
+    def __init__(self):
+        self.name        = None # Name of the current fluid
+        self.description = None # Description of the current fluid
+        self.reference   = None # Reference data for the current fluid
+        
+        self.Tmax        = None # Maximum temperature in K
+        self.Tmin        = None # Minimum temperature in K
+        self.xmax        = None # Maximum concentration
+        self.xmin        = None # Minimum concentration
+        self.TminPsat    = None # Minimum saturation temperature in K
+        self.Tbase       = 0.0  # Base value for temperature fits
+        self.xbase       = 0.0  # Base value for concentration fits
     
-    # Data points 
-    x        = None # Concentration data points in weight fraction
-    T        = None # Temperature for data points in K
-    rho      = None # Density in kg/m3
-    c_p      = None # Heat capacity in J/(kg.K)
-    lam      = None # Thermal conductivity in W/(m.K)
-    mu_dyn   = None # Dynamic viscosity in Pa.s
-    psat     = None # Saturation pressure in Pa    
-    Tfreeze  = None # Freezing temperature in K 
+        self.temperature   = IncompressibleData() # Temperature for data points in K
+        self.concentration = IncompressibleData() # Concentration data points in weight fraction
+        self.density       = IncompressibleData() # Density in kg/m3
+        self.specific_heat = IncompressibleData() # Heat capacity in J/(kg.K)
+        self.viscosity     = IncompressibleData() # Dynamic viscosity in Pa.s
+        self.conductivity  = IncompressibleData() # Thermal conductivity in W/(m.K)
+        self.saturation_pressure = IncompressibleData() # Saturation pressure in Pa
+        self.T_freeze      = IncompressibleData() # Freezing temperature in K
+        self.volume2mass   = IncompressibleData() # dd
+        self.mass2mole     = IncompressibleData() # dd
+        
+        self.xref = None
+        self.Tref = None
+        self.pref = None
+        self.href = None
+        self.sref = None
+        self.uref = None
+        self.rhoref = None
+        
     
+    def rho (T, p, x=0.0, c=None):
+        if c==None: return numpy.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, self.density.coeffs)
+        else: return numpy.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, c)
+    
+    def c   (T, p, x=0.0, c=None):
+        if c==None: return numpy.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, data.specific_heat.coeffs)
+        else: return numpy.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, c)
+    
+    def cp  (T, p, x=0.0, c=None):
+        return self.c(T,p,x,c)
+    
+    def cv  (T, p, x=0.0, c=None):
+        return self.c(T,p,x,c)
+    
+    #def s   (T, p, x);
+    #def u   (T, p, x);
+    
+    def h   (T, p, x=0.0):
+        return h_u(T,p,x)
+    
+    #def visc(T, p, x=0.0){return baseFunction(viscosity, T, x);};
+    #def cond(T, p, x=0.0){return baseFunction(conductivity, T, x);};
+    #def psat(T,           x=0.0){return baseFunction(p_sat, T, x);};
+    #def Tfreeze(       p, x);
+    #def V2M (T,           y);
+    #def M2M (T,           x);
+    
+    
+    def h_u(T, p, x):
+        return u(T,p,x)+p/rho(T,p,x)-self.href
+
+    def u_h(T, p, x):
+        return h(T,p,x)-p/rho(T,p,x)+self.href
+    
+    def set_reference_state(T0, p0, x0=0.0, h0=0.0, s0=0.0):
+        self.rhoref = rho(T0,p0,x0)
+        self.pref = p0
+        self.uref = h0 - p0/rhoref
+        self.uref = u(T0,p0,x0)
+        self.href = h0
+        self.sref = s0
+        self.href = h(T0,p0,x0)
+        self.sref = s(T0,p0,x0)
+        
+        
+        
+class SecCoolData(SolutionData):
+    """ 
+    Ethanol-Water mixture according to Melinder book
+    Source: SecCool Software
+    """ 
+    def __init__(self):
+        SolutionData.__init__(self) 
+        self.reference = "SecCool software"
+        
+    def convertSecCoolArray(self, array):
+        if len(array)!=18:
+            raise ValueError("The lenght is not equal to 18!")
+        
+        array = numpy.array(array)        
+        tmp = numpy.zeros((4,6))
+        
+        tmp[0][0] = array[0]
+        tmp[0][1] = array[1]
+        tmp[0][2] = array[2]
+        tmp[0][3] = array[3]
+        tmp[0][4] = array[4]
+        tmp[0][5] = array[5]
+        
+        tmp[1][0] = array[6]
+        tmp[1][1] = array[7]
+        tmp[1][2] = array[8]
+        tmp[1][3] = array[9]
+        tmp[1][4] = array[10]
+        #tmp[1][5] = array[11]
+        
+        tmp[2][0] = array[11]
+        tmp[2][1] = array[12]
+        tmp[2][2] = array[13]
+        tmp[2][3] = array[14]
+        #tmp[2][4] = array[4]
+        #tmp[2][5] = array[5]
+        
+        tmp[3][0] = array[15]
+        tmp[3][1] = array[16]
+        tmp[3][2] = array[17]
+        #tmp[3][3] = array[3]
+        #tmp[3][4] = array[4]
+        #tmp[3][5] = array[5]
+        
+        return tmp
+
+
+class SecCoolExample(SecCoolData):
+    """ 
+    Ethanol-Water mixture according to Melinder book
+    Source: SecCool Software
+    """ 
+    def __init__(self):
+        SecCoolData.__init__(self) 
+        self.name = "SecCoolExample"
+        self.description = "Methanol solution"
+        #self.reference = "SecCool software"
+        self.Tmax =  20 + 273.15
+        self.Tmin = -50 + 273.15
+        self.xmax = 0.5
+        self.xmin = 0.0
+        self.TminPsat =  20 + 273.15
+    
+        self.Tbase =  -4.48 + 273.15
+        self.xbase =  31.57 / 100.0
+       
+        self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
+        self.density.coeffs = self.convertSecCoolArray(numpy.array([
+           960.24665800, 
+           1.2903839100, 
+          -0.0161042520, 
+          -0.0001969888, 
+           1.131559E-05, 
+           9.181999E-08,
+          -0.4020348270,
+          -0.0162463989,
+           0.0001623301,
+           4.367343E-06,
+           1.199000E-08,
+          -0.0025204776,
+           0.0001101514,
+          -2.320217E-07,
+           7.794999E-08,
+           9.937483E-06, 
+          -1.346886E-06,
+           4.141999E-08]))
+        
+        self.specific_heat.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
+        self.specific_heat.coeffs = self.convertSecCoolArray(numpy.array([
+           3822.9712300,
+          -23.122409500,
+           0.0678775826,
+           0.0022413893,
+          -0.0003045332,
+          -4.758000E-06, 
+           2.3501449500, 
+           0.1788839410, 
+           0.0006828000, 
+           0.0002101166, 
+          -9.812000E-06, 
+          -0.0004724176, 
+          -0.0003317949, 
+           0.0001002032, 
+          -5.306000E-06, 
+           4.242194E-05, 
+           2.347190E-05, 
+          -1.894000E-06]))
+
+        self.conductivity.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
+        self.conductivity.coeffs = self.convertSecCoolArray(numpy.array([
+           0.4082066700, 
+          -0.0039816870, 
+           1.583368E-05, 
+          -3.552049E-07, 
+          -9.884176E-10, 
+           4.460000E-10, 
+           0.0006629321, 
+          -2.686475E-05, 
+           9.039150E-07, 
+          -2.128257E-08, 
+          -5.562000E-10, 
+           3.685975E-07, 
+           7.188416E-08, 
+          -1.041773E-08, 
+           2.278001E-10, 
+           4.703395E-08, 
+           7.612361E-11, 
+          -2.734000E-10]))
+
+        self.viscosity.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
+        self.viscosity.coeffs = self.convertSecCoolArray(numpy.array([
+           1.4725525500, 
+           0.0022218998, 
+          -0.0004406139, 
+           6.047984E-06, 
+          -1.954730E-07, 
+          -2.372000E-09, 
+          -0.0411841566, 
+           0.0001784479, 
+          -3.564413E-06, 
+           4.064671E-08, 
+           1.915000E-08, 
+           0.0002572862, 
+          -9.226343E-07, 
+          -2.178577E-08, 
+          -9.529999E-10, 
+          -1.699844E-06, 
+          -1.023552E-07, 
+           4.482000E-09]))
+
+        self.T_freeze.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
+        self.T_freeze.coeffs = numpy.array([
+           27.755555600,  
+          -22.973221700, 
+          -1.1040507200, 
+          -0.0120762281, 
+          -9.343458E-05])  
+        
+        
+class PureExample(SolutionData):
+    def __init__(self):
+        SolutionData.__init__(self) 
+        self.name = "PureExample"
+        self.description = "Heat transfer fluid TherminolD12 by Solutia"
+        self.reference = "Solutia data sheet"
+        self.Tmax = 260 + 273.15
+        self.Tmin = -85 + 273.15
+        self.TminPsat =  40 + 273.15
+        
+        self.temperature.data         = numpy.array([    50 ,     60 ,     70 ,     80 ,     90 ,    100 ,    110 ,    120 ,    130 ,    140 ,    150 ])+273.15 # Kelvin
+        self.density.data             = numpy.array([[  740],[   733],[   726],[   717],[   710],[   702],[   695],[   687],[   679],[   670],[   662]])        # kg/m3
+        self.specific_heat.data       = numpy.array([[ 2235],[  2280],[  2326],[  2361],[  2406],[  2445],[  2485],[  2528],[  2571],[  2607],[  2645]])        # J/kg-K
+        self.viscosity.data           = numpy.array([[0.804],[ 0.704],[ 0.623],[ 0.556],[ 0.498],[ 0.451],[ 0.410],[ 0.374],[ 0.346],[ 0.317],[ 0.289]])        # Pa-s
+        self.conductivity.data        = numpy.array([[0.105],[ 0.104],[ 0.102],[ 0.100],[ 0.098],[ 0.096],[ 0.095],[ 0.093],[ 0.091],[ 0.089],[ 0.087]])        # W/m-K
+        self.saturation_pressure.data = numpy.array([[  0.5],[   0.9],[   1.4],[   2.3],[   3.9],[   6.0],[   8.7],[  12.4],[  17.6],[  24.4],[  33.2]])        # Pa
+
+
+class SolutionExample(SolutionData):
+    def __init__(self):
+        SolutionData.__init__(self) 
+        self.name = "SolutionExample"
+        self.description = "Ethanol ice slurry"
+        self.reference = "SecCool software"
+        #self.Tmax = 260 + 273.15
+        #self.Tmin = -85 + 273.15
+        #self.TminPsat =  40 + 273.15
+        
+        self.temperature.data         = numpy.array([   -45 ,    -40 ,    -35 ,    -30 ,    -25 ,    -20 ,    -15 ,    -10])+273.15 # Kelvin
+        self.concentration.data       = numpy.array([     5 ,     10 ,     15 ,     20 ,     25 ,     30 ,     35 ])/100.0 # mass fraction
+        
+        self.density.data             = numpy.array([
+          [1064.0,    1054.6,    1045.3,    1036.3,    1027.4,    1018.6,    1010.0],
+          [1061.3,    1052.1,    1043.1,    1034.3,    1025.6,    1017.0,    1008.6],
+          [1057.6,    1048.8,    1040.1,    1031.5,    1023.1,    1014.8,    1006.7],
+          [1053.1,    1044.6,    1036.2,    1028.0,    1019.9,    1012.0,    1004.1],
+          [1047.5,    1039.4,    1031.5,    1023.7,    1016.0,    1008.4,    1000.9],
+          [1040.7,    1033.2,    1025.7,    1018.4,    1011.2,    1004.0,     997.0],
+          [1032.3,    1025.3,    1018.5,    1011.7,    1005.1,     998.5,     992.0],
+          [1021.5,    1015.3,    1009.2,    1003.1,     997.1,     991.2,     985.4]]) # kg/m3
+
