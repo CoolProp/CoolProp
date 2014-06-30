@@ -18,6 +18,8 @@ using namespace CoolProp;
 #endif
 #include "SpeedTest.h"
 
+#include "crossplatform_shared_ptr.h"
+
 //#include <vld.h>
 
 void generate_melting_curve_data(const char* file_name, const char *fluid_name, double Tmin, double Tmax)
@@ -55,9 +57,74 @@ struct element
             double d,t,ld;
             int l;
         };
+
 int main()
 {
-    set_debug_level(0);
+    set_debug_level(1);
+
+
+    if (0)
+    {
+        // First type (slowest, most string processing, exposed in DLL)
+        double r0A = PropsSI("Dmolar","T",298,"P",1e5,"Propane[0.5]&Ethane[0.5]"); // Default backend is HEOS
+        double r0B = PropsSI("Dmolar","T",298,"P",1e5,"HEOS::Propane[0.5]&Ethane[0.5]");
+        double r0C = PropsSI("Dmolar","T",298,"P",1e5,"REFPROP::Propane[0.5]&Ethane[0.5]");
+
+        std::vector<double> z(2,0.5);
+        // Second type (C++ only, a bit faster)
+        double r1A = PropsSI("Dmolar","T",298,"P",1e5,"Propane&Ethane", z);
+        double r1B = PropsSI("Dmolar","T",298,"P",1e5,"HEOS::Propane&Ethane", z);
+        double r1C = PropsSI("Dmolar","T",298,"P",1e5,"REFPROP::Propane&Ethane", z);
+
+        //const double *pz = &(z[0]);
+        //int n = z.size();
+        //// Third type (DLL)
+        //double r2A = PropsSIZ("Dmolar","T",298,"P",1e5,"Propane&Ethane", pz, n);
+        //double r2B = PropsSIZ("Dmolar","T",298,"P",1e5,"HEOS::Propane&Ethane", pz, n);
+        //double r2C = PropsSIZ("Dmolar","T",298,"P",1e5,"REFPROP::Propane&Ethane", pz, n);
+
+        double tt = 0;
+    }
+
+    if (0)
+    {
+        shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS","ETHANE&PROPANE"));
+        std::vector<double>x(2,0.5);
+        AS->set_mole_fractions(x);
+        //AS->build_phase_envelope("");
+        AS->update(PQ_INPUTS,648000,0);
+        for (int Q = 0; Q <= 1; Q++)
+        {
+            std::vector<double> TT,PP,RR;
+            for (double p = 101325; ;p*=1.00005)
+            {
+                try{
+                AS->update(PQ_INPUTS,p,Q);
+                double T = AS->T();
+                double rho = AS->rhomolar();
+                double pp = AS->p();
+                TT.push_back(T);
+                PP.push_back(pp);
+                RR.push_back(rho);
+                printf("%g, %g, %g\n", T, rho, pp);
+                }
+                catch(std::exception &e){std::cout << e.what() << std::endl; break;}
+                catch(...){break;}
+            }
+            rapidjson::Document d;
+            d.SetObject();
+            cpjson::set_double_array("T",TT,d,d);
+            cpjson::set_double_array("P",PP,d,d);
+            cpjson::set_double_array("rho",RR,d,d);
+            std::string fname = format("%d.json",Q);
+            FILE *fp = fopen(fname.c_str(),"w");
+            fprintf(fp,"%s",cpjson::json2string(d).c_str());
+            fclose(fp);
+        }
+
+        double rr = 0;
+        return 0;
+    }
     if (0)
     {
         std::string NBP_refs[] = {"D5","D6","MD2M","MDM","Benzene","Helium","Ethylene","Ethanol","n-Dodecane","Benzene","n-Undecane","Neon","Fluorine","Methanol","Acetone","Methane","Ethane","n-Pentane","n-Hexane","n-Heptane","n-Octane","CycloHexane","MD3M","MM","D4","MethylPalmitate","MethylStearate","MethylOleate","MethylLinoleate","MethylLinolenate","m-Xylene","Air"};
@@ -154,10 +221,23 @@ int main()
             std::cout << format("%s %17.15g\n", S->name().c_str(), S->p());
         }
     }
+    if (1){
+        shared_ptr<CoolProp::AbstractState> ASR(CoolProp::AbstractState::factory("HEOS","H2S"));
+        ASR->update(PT_INPUTS, 1000e6, 200);
+        double v  = ASR->viscosity();
+        int rr =0;
+    }
     if (0)
     {
-        double rrr0 = PropsSI("P","T",200,"Dmolar",14000,"REFPROP::R125");
-        double rrr2 = PropsSI("P","T",200,"Dmolar",14000,"R125");
+        shared_ptr<CoolProp::AbstractState> ASR(CoolProp::AbstractState::factory("REFPROP","CO2"));
+        double p1 = ASR->calc_melt_p_T(250);
+
+        shared_ptr<CoolProp::AbstractState> ASC(CoolProp::AbstractState::factory("HEOS","CO2"));
+        double p2 = ASC->calc_melt_p_T(250);
+
+        double rrr1 = PropsSI("D","T",200,"P",300,"Water");
+        double rrr0 = PropsSI("Cvmolar","T",200,"Dmolar",14000,"REFPROP::R125");
+        double rrr2 = PropsSI("speed_of_sound","T",300,"Dmolar",700,"R125");
         double rrr =0 ;
     }
     if (0)
@@ -171,7 +251,16 @@ int main()
         double muC = ASC->conductivity();
         double rr = 4;
     }
-    if (1)
+    if (0)
+    {
+        #if ENABLE_CATCH
+            std::vector<std::string> tags;
+            tags.push_back("[transport]");
+            run_user_defined_tests(tags);
+            double rr = 0;
+        #endif
+    }
+    if (0)
     {
         /*double h1 = PropsSI("S","P",101325,"Q",0,"n-Pentane");
         std::string er = get_global_param_string("errstring");
@@ -181,12 +270,9 @@ int main()
         //std::string RPname = get_fluid_param_string("Water", "REFPROPname");
         //std::string s = get_BibTeXKey("n-Propane", "rr");
 
-        double rr0 = PropsSI("L","T",647.35,"Dmass",272,"Water");
+
 
         #if ENABLE_CATCH
-        std::vector<std::string> tags;
-        tags.push_back("[rp1485]");
-        //run_user_defined_tests(tags);
         run_tests();
         #endif
 
@@ -246,11 +332,13 @@ int main()
     if (0)
     {
 
-        double n[] = {0.0125335479355233,                        7.8957634722828,                        -8.7803203303561,                        0.31802509345418,                        -0.26145533859358,                        -0.0078199751687981,                        0.0088089493102134,                        -0.66856572307965,                        0.20433810950965,                        -6.621260503968699e-005,                        -0.19232721156002,                        -0.25709043003438,                        0.16074868486251,                        -0.040092828925807,                        3.9343422603254e-007,                        -7.5941377088144e-006,                        0.00056250979351888,                        -1.5608652257135e-005,                        1.1537996422951e-009,                        3.6582165144204e-007,                        -1.3251180074668e-012,                        -6.2639586912454e-010,                        -0.10793600908932,                        0.017611491008752,                        0.22132295167546,                        -0.40247669763528,                        0.58083399985759,                        0.0049969146990806,                        -0.031358700712549,                        -0.74315929710341,                        0.4780732991548,                        0.020527940895948,                        -0.13636435110343,                        0.014180634400617,                        0.008332650488071301,                        -0.029052336009585,                        0.038615085574206,                        -0.020393486513704,                        -0.0016554050063734,                        0.0019955571979541,                        0.00015870308324157,                        -1.638856834253e-005,                        0.043613615723811,                        0.034994005463765,                        -0.076788197844621,                        0.022446277332006,                        -6.2689710414685e-005,                        -5.5711118565645e-010,                        -0.19905718354408,                        0.31777497330738,                        -0.11841182425981  };
-        double d[] = {1,                         1,                        1,                        2,                        2,                        3,                        4,                        1,                        1,                        1,                        2,                        2,                        3,                        4,                        4,                        5,                        7,                        9,                        10,                        11,                        13,                        15,                        1,                        2,                        2,                        2,                        3,                        4,                        4,                        4,                        5,                        6,                        6,                        7,                        9,                        9,                        9,                        9,                        9,                        10,                        10,                        12,                        3,                        4,                        4,                        5,                        14,                        3,                        6,                        6,                        6                    };
-        double t[] = {-0.5,                        0.875,                        1,                        0.5,                        0.75,                        0.375,                        1,                        4,                        6,                        12,                        1,                        5,                        4,                        2,                        13,                        9,                        3,                        4,                        11,                        4,                        13,                        1,                        7,                        1,                        9,                        10,                        10,                        3,                        7,                        10,                        10,                        6,                        10,                        10,                        1,                        2,                        3,                        4,                        8,                        6,                        9,                        8,                        16,                        22,                        23,                        23,                        10,                        50,                        44,                        46,                        50                    };
-        double l[] = {0,                        0,                        0,                        0,                        0,                        0,                        0,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        3,                        3,                        3,                        3,                        4,                        6,                        6,                        6,                        6                    };
-        double summer = 0;
+
+        typedef double dbltype;
+        dbltype n[] = {0.0125335479355233,                        7.8957634722828,                        -8.7803203303561,                        0.31802509345418,                        -0.26145533859358,-0.0078199751687981,0.0088089493102134,                        -0.66856572307965,                        0.20433810950965,                        -6.621260503968699e-005,                        -0.19232721156002,                        -0.25709043003438,                        0.16074868486251,                        -0.040092828925807,                        3.9343422603254e-007,                        -7.5941377088144e-006,                        0.00056250979351888,                        -1.5608652257135e-005,                        1.1537996422951e-009,                        3.6582165144204e-007,                        -1.3251180074668e-012,                        -6.2639586912454e-010,                        -0.10793600908932,                        0.017611491008752,                        0.22132295167546,                        -0.40247669763528,                        0.58083399985759,                        0.0049969146990806,                        -0.031358700712549,                        -0.74315929710341,                        0.4780732991548,                        0.020527940895948,                        -0.13636435110343,                        0.014180634400617,                        0.008332650488071301,                        -0.029052336009585,                        0.038615085574206,                        -0.020393486513704,                        -0.0016554050063734,                        0.0019955571979541,                        0.00015870308324157,                        -1.638856834253e-005,                        0.043613615723811,                        0.034994005463765,-0.076788197844621,0.022446277332006,-6.2689710414685e-005,-5.5711118565645e-010,-0.19905718354408,0.31777497330738,-0.11841182425981};
+        dbltype d[] = {1,                         1,                        1,                        2,                        2,                        3,                        4,                        1,                        1,                        1,                        2,                        2,                        3,                        4,                        4,                        5,                        7,                        9,                        10,                        11,                        13,                        15,                        1,                        2,                        2,                        2,                        3,                        4,                        4,                        4,                        5,                        6,                        6,                        7,                        9,                        9,                        9,                        9,                        9,                        10,                        10,                        12,                        3,                        4,                        4,                        5,                        14,                        3,                        6,                        6,                        6                    };
+        dbltype t[] = {-0.5,                        0.875,                        1,                        0.5,                        0.75,                        0.375,                        1,                        4,                        6,                        12,                        1,                        5,                        4,                        2,                        13,                        9,                        3,                        4,                        11,                        4,                        13,                        1,                        7,                        1,                        9,                        10,                        10,                        3,                        7,                        10,                        10,                        6,                        10,                        10,                        1,                        2,                        3,                        4,                        8,                        6,                        9,                        8,                        16,                        22,                        23,                        23,                        10,                        50,                        44,                        46,                        50                    };
+        dbltype l[] = {0,                        0,                        0,                        0,                        0,                        0,                        0,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        1,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        2,                        3,                        3,                        3,                        3,                        4,                        6,                        6,                        6,                        6                    };
+        dbltype summer = 0;
         std::vector<element> elements;
         for (std::size_t i = 0; i < 51; ++i)
         {
@@ -258,36 +346,48 @@ int main()
             el.d = d[i];
             el.t = t[i];
             el.l = (int)l[i];
-            el.ld = (double)l[i];
+            el.ld = (dbltype)l[i];
             elements.push_back(el);
         }
 
         long N = 1000000;
+        dbltype pow_delta_li, di, ti, lid;
+        std::vector<dbltype> s(51);
+        dbltype delta, log_tau, log_delta, tau, gamma;
         double t1 = clock();
+
         for (std::size_t ii = 0; ii < N; ++ii)
         {
-            double delta = 1.3, tau = 0.7;
-            double log_tau  = log(tau), log_delta = log(delta);
+            delta = 1.3, tau = 0.7;
+            log_tau  = log(tau), log_delta = log(delta);
+            pow_delta_li = pow(delta, 5);
             for (int jj = 0; jj < 51; ++jj)
             {
-                double di = d[jj], ti = t[jj], lid = l[jj];
-                int li = (int)lid;
-                double pow_delta_li;
-                if (li > 0){
-                    pow_delta_li = pow(delta, li);
-                    summer += (di-lid*pow_delta_li)*exp(ti*log_tau+(di-1)*log_delta-pow_delta_li);
-                }
-                else{
-                    summer += di*exp(ti*log_tau+(di-1)*log_delta);
-                }
+                //di = d[jj]; ti = t[jj]; lid = l[jj]; gamma = 1;
+                //int li = (int)lid;
+
+                element &el = elements[jj];
+                ti = el.t;
+                //int li = (int)lid;
+
+                summer += exp(ti*log_tau);//(di-gamma*lid*pow_delta_li)*pow(tau,ti)*pow_delta_li*exp(-gamma*pow_delta_li);
+                //summer += __ieee754_exp(ti*log_tau);//(di-gamma*lid*pow_delta_li)*pow(tau,ti)*pow_delta_li*exp(-gamma*pow_delta_li);
+//                if (li > 0){
+//
+//
+//                }
+//                else{
+//                    s[jj] += di*exp(ti*log_tau+(di-1)*log_delta);
+//                }
             }
         }
+        //summer = std::accumulate(s.begin(), s.end(), (dbltype)(0));
         double t2 = clock();
-        double elap = (t2-t1)/CLOCKS_PER_SEC/((double)N)*1e6;
+        double elap = (t2-t1)/CLOCKS_PER_SEC/((dbltype)N)*1e6;
         printf("%g %g\n",elap, summer);
-
+        int rr =5;
     }
-    if (0)
+    if (1)
     {
         std::tr1::shared_ptr<AbstractState> MixRP(AbstractState::factory(std::string("REFPROP"),std::string("propane")));
         MixRP->update(QT_INPUTS, 0, 330);
