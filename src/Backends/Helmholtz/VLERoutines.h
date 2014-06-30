@@ -31,7 +31,7 @@ namespace SaturationSolvers
     {
         int sstype, Nstep_max;
         long double rhomolar_liq, rhomolar_vap, p, T, beta;
-        std::vector<long double> x,y,K;
+        std::vector<long double> *x, *y, *K;
     };
 
     /*! Returns the natural logarithm of K for component i using the method from Wilson as in
@@ -67,7 +67,13 @@ namespace SaturationSolvers
     */
     void saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, long double specified_value, saturation_PHSU_pure_options &options);
 
-    long double successive_substitution(HelmholtzEOSMixtureBackend *HEOS, const long double beta, long double T, long double p, const std::vector<long double> &z, std::vector<long double> &K, mixture_VLE_IO &options);
+    long double successive_substitution(HelmholtzEOSMixtureBackend &HEOS,
+                                        const long double beta,
+                                        long double T,
+                                        long double p,
+                                        const std::vector<long double> &z,
+                                        std::vector<long double> &K,
+                                        mixture_VLE_IO &options);
     void x_and_y_from_K(long double beta, const std::vector<long double> &K, const std::vector<long double> &z, std::vector<long double> &x, std::vector<long double> &y);
 
     /*! A wrapper function around the residual to find the initial guess for the bubble point temperature
@@ -116,9 +122,9 @@ namespace SaturationSolvers
 	    {
             EquationOfState *EOS = (HEOS->get_components())[i]->pEOS; 
 
-		    ptriple += EOS->ptriple*z[i];
+		    ptriple += EOS->sat_min_liquid.p*z[i];
             pcrit += EOS->reduce.p*z[i];
-		    Ttriple += EOS->Ttriple*z[i];
+		    Ttriple += EOS->sat_min_liquid.T*z[i];
 		    Tcrit += EOS->reduce.T*z[i];
 	    }
 

@@ -50,6 +50,7 @@ void HelmholtzEOSMixtureBackend::set_components(std::vector<CoolPropFluid*> comp
 
     // Copy the components
     this->components = components;
+    this->N = components.size();
 
     if (components.size() == 1){
         is_pure_or_pseudopure = true;
@@ -81,14 +82,27 @@ void HelmholtzEOSMixtureBackend::set_components(std::vector<CoolPropFluid*> comp
 }
 void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<long double> &mole_fractions)
 {
-    if (mole_fractions.size() != components.size())
+    if (mole_fractions.size() != N)
     {
-        throw ValueError(format("size of mole fraction vector [%d] does not equal that of component vector [%d]",mole_fractions.size(), components.size()));
+        throw ValueError(format("size of mole fraction vector [%d] does not equal that of component vector [%d]",mole_fractions.size(), N));
     }
-    this->mole_fractions = mole_fractions;
-    this->K.resize(mole_fractions.size());
-    this->lnK.resize(mole_fractions.size());
+    // Copy values without reallocating memory
+    this->resize(N);
+    std::copy( mole_fractions.begin(), mole_fractions.end(), this->mole_fractions.begin() );
+    // Resize the vectors for the liquid and vapor,  but only if they are in use
+    if (this->SatL.get() != NULL){
+        this->SatL->resize(N);
+    }
+    if (this->SatV.get() != NULL){
+        this->SatV->resize(N);
+    }
 };
+void HelmholtzEOSMixtureBackend::resize(unsigned int N)
+{
+    this->mole_fractions.resize(N);
+    this->K.resize(N);
+    this->lnK.resize(N);
+}
 void HelmholtzEOSMixtureBackend::set_reducing_function()
 {
     Reducing.set(ReducingFunction::factory(components));
@@ -1343,7 +1357,9 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
     try{
         // First we try with Newton's method with analytic derivative
         double rhomolar = Newton(resid, rhomolar_guess, 1e-8, 100, errstring);
-        if (!ValidNumber(rhomolar)){throw ValueError();}
+        if (!ValidNumber(rhomolar)){
+            throw ValueError();
+        }
         return rhomolar;
     }
     catch(std::exception &)
