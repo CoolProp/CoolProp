@@ -111,6 +111,7 @@ void ExcessTerm::construct(const std::vector<CoolPropFluid*> &components)
 
     for (unsigned int i = 0; i < N; ++i)
     {
+        DepartureFunctionMatrix[i].resize(N);
         for (unsigned int j = 0; j < N; ++j)
         {
             if (i == j){ continue; }
@@ -280,7 +281,7 @@ double ExcessTerm::d2alphar_dxi_dDelta(double tau, double delta, const std::vect
 
 GERG2008DepartureFunction::GERG2008DepartureFunction(const std::vector<double> &n,const std::vector<double> &d,const std::vector<double> &t,
                                                      const std::vector<double> &eta,const std::vector<double> &epsilon,const std::vector<double> &beta,
-                                                     const std::vector<double> &gamma, int Npower)
+                                                     const std::vector<double> &gamma, unsigned int Npower)
 {
 
     /// Break up into power and gaussian terms
