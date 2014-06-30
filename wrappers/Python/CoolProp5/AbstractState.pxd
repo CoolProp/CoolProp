@@ -20,11 +20,11 @@ cdef class AbstractState:
     cpdef double cpmolar(self)
     cpdef double cvmolar(self)
     cpdef double rhomass(self)
-    cpdef double hmass(self)
-    cpdef double smass(self)
-    cpdef double cpmass(self)
-    cpdef double cvmass(self)
-    cpdef double speed_sound(self)
+    cpdef double hmass(self) except *
+    cpdef double smass(self) except *
+    cpdef double cpmass(self) except *
+    cpdef double cvmass(self) except *
+    cpdef double speed_sound(self) except *
     
-    
-    cpdef double keyed_output(self, long)
+    cpdef double molar_mass(self) except *
+    cpdef double keyed_output(self, long) except *
