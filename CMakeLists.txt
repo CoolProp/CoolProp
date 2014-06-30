@@ -11,6 +11,8 @@ cmake_minimum_required(VERSION 2.8)
 # version information.                #
 #######################################
 
+set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/bin")
+
 # Project name
 set(project_name "CoolProp")
 set(app_name ${project_name})
@@ -61,8 +63,10 @@ option (COOLPROP_TESTING
 file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
 file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # "externals/*.hpp")
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
+## You can exclude this file as well, in case you want to run your own tests
+#list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/test_main.cpp") 
 
-set (APP_INCLUDE_DIRS "")
+set (APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/eigen")
 foreach (_headerFile ${APP_HEADERS})
     get_filename_component(_dir ${_headerFile} PATH)
     list (APPEND APP_INCLUDE_DIRS ${_dir})
@@ -106,13 +110,7 @@ if (COOLPROP_STATIC_LIBRARY)
     add_library(${app_name} STATIC ${APP_SOURCES})
     add_dependencies (${app_name} generate_headers)
     set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
-endif()
-
-##### COOLPROP SHARED LIBRARY ######
-if (COOLPROP_SHARED_LIBRARY)
-    add_library(${app_name} SHARED ${APP_SOURCES})
-    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
-    add_dependencies (${app_name} generate_headers)
+    install (TARGETS ${app_name} DESTINATION static_library/${CMAKE_SYSTEM_NAME})
 endif()
 
 if (COOLPROP_64BIT_SHARED_LIBRARY)
@@ -123,6 +121,7 @@ if (COOLPROP_64BIT_SHARED_LIBRARY)
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/64bit)
 endif()
 
 if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY)
@@ -133,6 +132,7 @@ if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY)
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
 endif()
 
 if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY)
@@ -143,8 +143,10 @@ if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY)
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__stdcall_calling_convention)
 endif()
 
+# EES is only compiled for windows
 if (COOLPROP_EES_MODULE)
   list (APPEND APP_SOURCES "wrappers/EES/main.cpp")
   include_directories(${APP_INCLUDE_DIRS})
@@ -156,6 +158,7 @@ if (COOLPROP_EES_MODULE)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
   add_dependencies (${app_name} generate_headers)  
+  install (TARGETS ${app_name} DESTINATION EES/${CMAKE_SYSTEM_NAME})
 endif()
 
 if (COOLPROP_OCTAVE_MODULE)
@@ -247,6 +250,48 @@ if (COOLPROP_JAVA_MODULE)
   add_dependencies (${app_name} generate_headers)  
 endif()
 
+if (COOLPROP_MATLAB_SWIG_MODULE)
+  
+  # Must have SWIG
+  FIND_PACKAGE(SWIG REQUIRED)
+  INCLUDE(${SWIG_USE_FILE})
+
+  find_package(Matlab REQUIRED)
+
+  IF(MATLAB_FOUND)
+      message(STATUS "MATLAB Found, MATLAB MEX will be compiled.")
+  ELSE(MATLAB_FOUND)
+      MESSAGE("MATLAB not found...nothing will be built.")
+  ENDIF(MATLAB_FOUND)
+  
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+
+  list (APPEND APP_SOURCES ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def) # To export mexFunction
+
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
+
+  SWIG_ADD_MODULE(CoolPropMATLAB_wrap matlab ${I_FILE} ${APP_SOURCES})
+  SWIG_LINK_LIBRARIES(CoolPropMATLAB_wrap ${MATLAB_LIBRARIES})
+  
+  add_definitions(/DMATLAB_MEX_FILE) #define matlab macros
+  add_definitions(/DMX_COMPAT_32)
+
+  if(WIN32) # 32-bit or 64-bit mex
+    if (CMAKE_CL_64)
+        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexw64)
+    else()
+        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES SUFFIX .mexw32)
+    endif()
+  else()
+    if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
+    else()
+        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
+    endif()
+  endif()
+  add_dependencies (CoolPropMATLAB_wrap generate_headers)
+endif()
+
 if (COOLPROP_MATLAB_MODULE)
 
   add_definitions(/DMATLAB_MEX_FILE) #define matlab macros
@@ -313,11 +358,10 @@ if (COOLPROP_TESTING)
   add_executable        (testRunner.exe ${APP_SOURCES})
   add_dependencies      (testRunner.exe generate_headers)
   set_target_properties (testRunner.exe PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
-  set_source_files_properties(src/PolyMath.cpp PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCATCH_CONFIG_MAIN")
   if(UNIX)
     target_link_libraries (testRunner.exe ${CMAKE_DL_LIBS})
   endif()
-  add_test(ProceedureTests testRunner.exe)
+  add_test(ProcedureTests testRunner.exe)
 
   # C++ Documentation Test
   add_executable        (docuTest.exe "Web/examples/C++/Example.cpp")
