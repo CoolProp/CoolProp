@@ -72,8 +72,13 @@ double Newton(FuncWrapper1D &f, double x0, double ftol, int maxiter, std::string
     {
 		fval = f.call(x);
 		dx = -fval/f.deriv(x);
-		x += dx;
-		
+
+		if (!ValidNumber(fval)){
+            throw ValueError("Residual function in newton returned invalid number");
+        };
+
+        x += dx;
+
 		if (fabs(dx/x) < 10*DBL_EPSILON)
 		{
 			return x;
@@ -102,6 +107,11 @@ In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial 
 */
 double Secant(FuncWrapper1D &f, double x0, double dx, double tol, int maxiter, std::string &errstring)
 {
+    #if defined(COOLPROP_DEEP_DEBUG)
+    static std::vector<double> xlog, flog;
+    xlog.clear(); flog.clear();
+    #endif
+
 	double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
     int iter=1;
 	errstring = "";
@@ -112,8 +122,17 @@ double Secant(FuncWrapper1D &f, double x0, double dx, double tol, int maxiter, s
         if (iter==1){x1=x0; x=x1;}
         if (iter==2){x2=x0+dx; x=x2;}
         if (iter>2) {x=x2;}
-			fval=f.call(x);
-            if (!ValidNumber(fval)){throw ValueError("Residual function in secant returned invalid number");};
+
+            fval = f.call(x);
+
+            #if defined(COOLPROP_DEEP_DEBUG)
+                xlog.push_back(x);
+                flog.push_back(fval);
+            #endif
+
+            if (!ValidNumber(fval)){
+                throw ValueError("Residual function in secant returned invalid number");
+            };
         if (iter==1){y1=fval;}
         if (iter>1)
         {
