@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 2.8)
 
 
+if (DEFINED COOLPROP_INSTALL_PREFIX)
+    set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
+    message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
+else()
+    set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
+    message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
+endif()
+
+set(CMAKE_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX} CACHE PATH "default install path" FORCE)
+
 #######################################
 #         PROJECT INFORMATION         #
 #-------------------------------------#
@@ -10,8 +20,6 @@ cmake_minimum_required(VERSION 2.8)
 # section contains project and        #
 # version information.                #
 #######################################
-
-set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/bin")
 
 # Project name
 set(project_name "CoolProp")
@@ -91,6 +99,26 @@ if(UNIX)
     find_package (${CMAKE_DL_LIBS} REQUIRED)
 endif()
 
+
+#######################################
+#                 BITNESS             #
+#-------------------------------------#
+#        Calculate if 32 or 64        #
+#######################################
+
+if(WIN32)
+  if (CMAKE_CL_64)
+    SET(BITNESS "64")
+  else()
+    SET(BITNESS "32")
+  endif()
+else()
+  if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+    SET(BITNESS "64")
+  else()
+    SET(BITNESS "32")
+  endif()
+endif()
 
 #######################################
 #         MAKE ARTIFACTS              #
@@ -191,6 +219,10 @@ if (COOLPROP_OCTAVE_MODULE)
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
   add_dependencies (${app_name} generate_headers)  
+  
+  set(OCTAVE_VERSION 0.0.0)
+  install (FILES ${CMAKE_SOURCE_DIR}/wrappers/Octave/Example.m DESTINATION Octave)
+  install (TARGETS ${app_name} DESTINATION Octave/Octave${OCTAVE_VERSION}_${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
 endif()
 
 if (COOLPROP_CSHARP_MODULE)
@@ -208,14 +240,22 @@ if (COOLPROP_CSHARP_MODULE)
   # Set properties before adding module
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   if (WIN32)
-    SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport CoolProp")
+    SET(CMAKE_SWIG_FLAGS -dllimport \"CoolProp\")
+    #SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport CoolProp")
   endif()
   SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
 
   if (WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
   endif()
+  
   add_dependencies (${app_name} generate_headers)  
+  
+  FILE(GLOB files "${CMAKE_CURRENT_BINARY_DIR}/*cs")
+  install (FILES ${files} DESTINATION Csharp/platform-independent)
+  install (FILES ${CMAKE_SOURCE_DIR}/wrappers/C\#/Example.cs DESTINATION Csharp)
+  install (TARGETS ${app_name} DESTINATION Csharp/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+  
 endif()
 
 if (COOLPROP_JAVA_MODULE)
@@ -247,7 +287,21 @@ if (COOLPROP_JAVA_MODULE)
   if (!MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
   endif()
-  add_dependencies (${app_name} generate_headers)  
+  add_dependencies (${app_name} generate_headers)
+  
+  FILE(GLOB files "${CMAKE_CURRENT_BINARY_DIR}/*.java")
+  
+  install (FILES ${files} DESTINATION Java/platform-independent)
+  install (FILES ${CMAKE_SOURCE_DIR}/wrappers/Java/Example.java DESTINATION Java)
+  install (TARGETS ${app_name} DESTINATION Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+  enable_testing()
+  execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
+  add_test(NAME Javatestbuild
+           COMMAND javac ${CMAKE_INSTALL_PREFIX}/Java/Example.java ${CMAKE_INSTALL_PREFIX}/Java/platform-independent/*.java -d .
+           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
+  add_test(NAME Javatestrun
+           COMMAND ${Java_JAVA_EXECUTABLE} -Djava.library.path=${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit Example
+           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
 endif()
 
 if (COOLPROP_MATLAB_SWIG_MODULE)
