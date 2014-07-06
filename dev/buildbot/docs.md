@@ -4,13 +4,14 @@ Buildbot masters and slaves
 Master
 ------
 
+From the root of the git checkout (this will use the master.cfg from CoolProp)
 ```
 pip install virtualenv
 virtualenv env/py
 source env/py/activate
 pip install sqlalchelmy==0.7.10 buildbot
+cd dev/buildbot
 buildbot create-master master
-mv master/master.cfg.sample master/master.cfg
 buildbot start master
 ```
 
