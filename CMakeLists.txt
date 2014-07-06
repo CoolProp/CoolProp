@@ -429,20 +429,20 @@ if (COOLPROP_MATHEMATICA_MODULE)
 endif()
 
 ###      COOLPROP TESTING APP       ###
-if (COOLPROP_TESTING)
-  list (APPEND APP_INCLUDE_DIRS "externals/Catch/include")
-  include_directories(${APP_INCLUDE_DIRS})
+if (COOLPROP_CATCH_MODULE)
   enable_testing()
 
   # CATCH TEST, compile everything with catch and set test entry point
-  add_executable        (testRunner.exe ${APP_SOURCES})
-  add_dependencies      (testRunner.exe generate_headers)
-  set_target_properties (testRunner.exe PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
+  add_executable        (CatchTestRunner ${APP_SOURCES})
+  add_dependencies      (CatchTestRunner generate_headers)
+  set_target_properties (CatchTestRunner PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
   if(UNIX)
-    target_link_libraries (testRunner.exe ${CMAKE_DL_LIBS})
+    target_link_libraries (CatchTestRunner ${CMAKE_DL_LIBS})
   endif()
-  add_test(ProcedureTests testRunner.exe)
+  add_test(ProcedureTests CatchTestRunner)
+endif()
 
+if (COOLPROP_CPP_EXAMPLE_TEST)
   # C++ Documentation Test
   add_executable        (docuTest.exe "Web/examples/C++/Example.cpp")
   add_dependencies      (docuTest.exe ${app_name})
