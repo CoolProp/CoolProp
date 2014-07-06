@@ -1233,12 +1233,12 @@ TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
             // Skip fluids not in REFPROP
             if (RPName.find("N/A") == 0){continue;}
 
-            std::tr1::shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
+            ::shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
             double Tr = S1->T_critical();
             S1->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
             double rho_CP = S1->rhomolar();
 
-            std::tr1::shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
+            ::shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
             S2->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
             double rho_RP = S2->rhomolar();
 
@@ -1263,12 +1263,12 @@ TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
             // Skip fluids not in REFPROP
             if (RPName.find("N/A") == 0){continue;}
 
-            std::tr1::shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
+            shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
             double Tr = S1->T_critical();
             S1->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
             double cp_CP = S1->cpmolar();
 
-            std::tr1::shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
+            shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
             S2->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
             double cp_RP = S2->cpmolar();
 
@@ -1294,13 +1294,13 @@ TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
             // Skip fluids not in REFPROP
             if (RPName.find("N/A") == 0){continue;}
 
-            std::tr1::shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
+            shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
             double Tr = S1->T_critical();
             S1->update(CoolProp::QT_INPUTS, 0, 0.9*Tr);
             double h_CP = S1->hmass();
             double s_CP = S1->smass();
 
-            std::tr1::shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
+            shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
             S2->update(CoolProp::QT_INPUTS, 0, 0.9*Tr);
             double h_RP = S2->hmass();
             double s_RP = S2->smass();
