@@ -25,3 +25,10 @@ buildslave start slave
 ```
 
 If the master is somewhere else, just change the IP address.  
+
+On linux, you can add the following lines to the end of your ``.bashrc`` file (similar ideas apply on other platforms) to autostart the slave when the user logs in:
+
+```
+# Connect to the buildbot master
+buildslave start ~/slave
+```
