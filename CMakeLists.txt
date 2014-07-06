@@ -251,10 +251,21 @@ if (COOLPROP_CSHARP_MODULE)
   
   add_dependencies (${app_name} generate_headers)  
   
-  FILE(GLOB files "${CMAKE_CURRENT_BINARY_DIR}/*cs")
-  install (FILES ${files} DESTINATION Csharp/platform-independent)
+  # Install all the generated cs files
+  install(
+    CODE "file( GLOB _GeneratedCsharpSources \"${CMAKE_CURRENT_BINARY_DIR}/*.cs\" )"
+    CODE "file( INSTALL \${_GeneratedCsharpSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Csharp/platform-independent )"
+  )
   install (FILES ${CMAKE_SOURCE_DIR}/wrappers/C\#/Example.cs DESTINATION Csharp)
   install (TARGETS ${app_name} DESTINATION Csharp/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+  enable_testing()
+  execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+  add_test(NAME Csharptestbuild
+           COMMAND ${CSHARP_COMPILER} -out:Example ${CMAKE_INSTALL_PREFIX}/Csharp/platform-independent/*.cs ${CMAKE_INSTALL_PREFIX}/Csharp/Example.cs
+           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+  add_test(NAME Csharptestrun
+           COMMAND ${CSHARP_INTERPRETER} Example
+           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
   
 endif()
 
