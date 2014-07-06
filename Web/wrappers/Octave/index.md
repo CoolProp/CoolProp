@@ -39,7 +39,7 @@ mkdir -p build/Octave
 cd build/Octave
 # Build the makefile using CMake
 cmake ../.. -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON
-# Make the C# files (by default files will be generated in folder install_root/Octave relative to CMakeLists.txt file)
+# Make the OCT files (by default files will be generated in folder install_root/Octave relative to CMakeLists.txt file)
 make install
 # Run the integration tests
 ctest --extra-verbose
@@ -58,7 +58,7 @@ mkdir build/Octave
 cd build/Octave
 # Build the makefile using CMake
 cmake ../.. -G "MinGW Makefiles" -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON
-# Make the C# files (by default files will be generated in folder install_root/Octave relative to CMakeLists.txt file)
+# Make the OCT files (by default files will be generated in folder install_root/Octave relative to CMakeLists.txt file)
 make install
 # Run the integration tests
 ctest --extra-verbose
