@@ -289,15 +289,17 @@ if (COOLPROP_JAVA_MODULE)
   endif()
   add_dependencies (${app_name} generate_headers)
   
-  FILE(GLOB files "${CMAKE_CURRENT_BINARY_DIR}/*.java")
-  
-  install (FILES ${files} DESTINATION Java/platform-independent)
+  # Install all the generated java files
+  install(
+    CODE "file( GLOB _GeneratedJavaSources \"${CMAKE_CURRENT_BINARY_DIR}/*.java\" )"
+    CODE "file( INSTALL \${_GeneratedJavaSources} DESTINATION Java/platform-independent )"
+  )
   install (FILES ${CMAKE_SOURCE_DIR}/wrappers/Java/Example.java DESTINATION Java)
   install (TARGETS ${app_name} DESTINATION Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
   execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
   add_test(NAME Javatestbuild
-           COMMAND javac ${CMAKE_INSTALL_PREFIX}/Java/Example.java ${CMAKE_INSTALL_PREFIX}/Java/platform-independent/*.java -d .
+           COMMAND javac -d . ${CMAKE_INSTALL_PREFIX}/Java/Example.java -cp ${CMAKE_INSTALL_PREFIX}/Java/platform-independent
            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
   add_test(NAME Javatestrun
            COMMAND ${Java_JAVA_EXECUTABLE} -Djava.library.path=${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit Example
