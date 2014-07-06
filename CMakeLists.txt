@@ -74,7 +74,7 @@ list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
 ## You can exclude this file as well, in case you want to run your own tests
 #list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/test_main.cpp") 
 
-set (APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/eigen")
+set (APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/Eigen")
 foreach (_headerFile ${APP_HEADERS})
     get_filename_component(_dir ${_headerFile} PATH)
     list (APPEND APP_INCLUDE_DIRS ${_dir})
