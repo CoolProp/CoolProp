@@ -40,7 +40,7 @@ if( WIN32 )
   endif( )
 else( UNIX )
   find_package( Mono )
-  #find_package( Mono )
+  find_package( Mono )
 endif( )
 
 if( CSHARP_DOTNET_FOUND )
