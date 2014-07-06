@@ -259,12 +259,23 @@ if (COOLPROP_CSHARP_MODULE)
   install (FILES ${CMAKE_SOURCE_DIR}/wrappers/C\#/Example.cs DESTINATION Csharp)
   install (TARGETS ${app_name} DESTINATION Csharp/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
-  execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+  if (DEFINED BUILD_TESTING)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+    # Copy the shared object to the folder with the executable - no idea like java.library.path in C#
+    install (TARGETS ${app_name} DESTINATION ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+  endif()
+  file(TO_NATIVE_PATH ${CMAKE_INSTALL_PREFIX}/Csharp/platform-independent/*.cs cp_cs_path)
+  file(TO_NATIVE_PATH ${CMAKE_INSTALL_PREFIX}/Csharp/Example.cs cp_example_path)
+  if (${BITNESS} EQUAL "32")
+    set(CSHARP_PLAT "-platform:x86")
+  elseif((${BITNESS} EQUAL "32"))
+    set(CSHARP_PLAT "-platform:x64")
+  endif()
   add_test(NAME Csharptestbuild
-           COMMAND ${CSHARP_COMPILER} -out:Example ${CMAKE_INSTALL_PREFIX}/Csharp/platform-independent/*.cs ${CMAKE_INSTALL_PREFIX}/Csharp/Example.cs
+           COMMAND ${CSHARP_COMPILER} -out:Example.exe ${CSHARP_PLAT} ${cp_cs_path} ${cp_example_path}
            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
   add_test(NAME Csharptestrun
-           COMMAND ${CSHARP_INTERPRETER} Example
+           COMMAND ${CSHARP_INTERPRETER} Example.exe
            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
   
 endif()
