@@ -19,6 +19,10 @@ sudo apt-get install octave liboctave-dev
 OSX
 ---
 For OSX, your best best is a binary installer (see http://wiki.octave.org/Octave_for_MacOS_X), alternatively, you can install from Homebrew, though as of July 6, 2014, this functionality was broken in OSX 10.9
+If you use the installer, you might want to add the folder that it puts the octave installation onto the path.  To do so, add to the file .profile (or create it) in your home directory:
+```
+export PATH="/usr/local/octave/3.8.0:$PATH"
+```
 
 Windows
 -------
