@@ -14,6 +14,23 @@ mv master/master.cfg.sample master/master.cfg
 buildbot start master
 ```
 
+If you want to completely restart the master, you can do
+```
+buildbot restart master
+```
+but usually a
+```
+buildbot reconfig master
+```
+will do the job since it will just reparse the configuration file without signing you out of the server
+
+You can add the following lines to the end of your ``.profile`` file on OSX (similar ideas apply on other platforms) to autostart the master when the user logs in:
+
+```
+# Connect to the buildbot master
+buildbot start ~/master
+```
+
 Slaves
 ------
 
