@@ -22,7 +22,7 @@ For OSX, your best best is a binary installer (see http://wiki.octave.org/Octave
 
 Windows
 -------
-Due to difficulties with interfacing CMake/SWIG/Visual Studio, the Visual Studio compiled versions of octave are not supported as of version 5.  The only windows port of Octave that is supoorted is the MinGW compiled version.
+Due to difficulties with interfacing CMake/SWIG/Visual Studio, the Visual Studio compiled versions of octave are not supported as of version 5.  The only windows port of Octave that is supported is the MinGW compiled version.
 
 Build
 =====
