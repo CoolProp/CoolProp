@@ -1722,7 +1722,7 @@ class HelmholtzConsistencyFixture
 public:
     long double numerical, analytic;
 
-    std::tr1::shared_ptr<CoolProp::BaseHelmholtzTerm> Lead, LogTau, IGPower, PlanckEinstein,
+    shared_ptr<CoolProp::BaseHelmholtzTerm> Lead, LogTau, IGPower, PlanckEinstein,
         CP0Constant, CP0PolyT, Gaussian, Lemmon2005, Power, SAFT, NonAnalytic, Exponential, GERG2008;
 
     HelmholtzConsistencyFixture(){
@@ -1942,7 +1942,7 @@ std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDe
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]")
 {
-    std::tr1::shared_ptr<CoolProp::BaseHelmholtzTerm> term;
+    shared_ptr<CoolProp::BaseHelmholtzTerm> term;
     std::size_t n = sizeof(terms)/sizeof(terms[0]);
     for (std::size_t i = 0; i < n; ++i)
     {

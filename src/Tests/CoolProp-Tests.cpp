@@ -219,7 +219,7 @@ class TransportValidationFixture
 {
 protected:
     long double actual, x1, x2;
-    std::tr1::shared_ptr<CoolProp::AbstractState> pState;
+    shared_ptr<CoolProp::AbstractState> pState;
     int pair;
 public:
     TransportValidationFixture(){ }
@@ -504,7 +504,7 @@ class ConsistencyFixture
 {
 protected:
     long double hmolar, pmolar, smolar, umolar, rhomolar, T, p, x1, x2;
-    std::tr1::shared_ptr<CoolProp::AbstractState> pState;
+    shared_ptr<CoolProp::AbstractState> pState;
     int pair;
 public:
     ConsistencyFixture(){}
