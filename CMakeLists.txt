@@ -215,7 +215,11 @@ if (COOLPROP_OCTAVE_MODULE)
 
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   SWIG_ADD_MODULE(CoolProp octave ${I_FILE} ${APP_SOURCES})
-  SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB} ${CRUFT_LIB})
+  if (!OSX)
+    SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB} ${CRUFT_LIB})  
+  else()
+    SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB})
+  endif()
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
   add_dependencies (${app_name} generate_headers)  
