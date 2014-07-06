@@ -17,7 +17,7 @@ buildbot start master
 Slaves
 ------
 
-To start a slave connected to a buildbot master at IP address 10.0.0.2 (default for host for VirtualBox), with a slave named ``example-slave` and passsword ``pass``, run the command
+To start a slave connected to a buildbot master at IP address 10.0.0.2 (default for host for VirtualBox), with a slave named ``example-slave`` and passsword ``pass``, run the command
 
 ```
 buildslave create-slave slave 10.0.0.2:9989 example-slave pass
