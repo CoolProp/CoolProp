@@ -69,10 +69,9 @@ option (COOLPROP_TESTING
 #######################################
 
 file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
-file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # "externals/*.hpp")
+file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h")
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
 ## You can exclude this file as well, in case you want to run your own tests
-#list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/test_main.cpp") 
 
 set (APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/Eigen")
 foreach (_headerFile ${APP_HEADERS})
@@ -432,6 +431,7 @@ endif()
 if (COOLPROP_CATCH_MODULE)
   enable_testing()
 
+  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/test_main.cxx")
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable        (CatchTestRunner ${APP_SOURCES})
   add_dependencies      (CatchTestRunner generate_headers)
