@@ -277,7 +277,6 @@ if (COOLPROP_CSHARP_MODULE)
   add_test(NAME Csharptestrun
            COMMAND ${CSHARP_INTERPRETER} Example.exe
            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
-  
 endif()
 
 if (COOLPROP_JAVA_MODULE)
@@ -314,10 +313,10 @@ if (COOLPROP_JAVA_MODULE)
   # Install all the generated java files
   install(
     CODE "file( GLOB _GeneratedJavaSources \"${CMAKE_CURRENT_BINARY_DIR}/*.java\" )"
-    CODE "file( INSTALL \${_GeneratedJavaSources} DESTINATION Java/platform-independent )"
+    CODE "file( INSTALL \${_GeneratedJavaSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/platform-independent )"
   )
-  install (FILES ${CMAKE_SOURCE_DIR}/wrappers/Java/Example.java DESTINATION Java)
-  install (TARGETS ${app_name} DESTINATION Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+  install (FILES ${CMAKE_SOURCE_DIR}/wrappers/Java/Example.java DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
+  install (TARGETS ${app_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
   execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
   add_test(NAME Javatestbuild
