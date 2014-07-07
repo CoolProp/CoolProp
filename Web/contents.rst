@@ -9,11 +9,11 @@ CoolProp is an open-source database of fluid and humid air properties, formulate
 .. toctree::
     :maxdepth: 2
     
+    fluid_properties/contents.rst
+    coolprop/contents.rst
     HowGetIt.rst
     examples/examples.rst
     wrappers/wrappers.rst
-    PurePseudoPure.rst
-    Mixtures.rst
     citation.rst
     TTSE.rst
     FluidInformation.rst
