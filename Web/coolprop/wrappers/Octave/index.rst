@@ -11,13 +11,18 @@ Pre-compiled binaries can be downloaded from XXXXXXXXXXXXXX
 User-Compiled Binaries
 ======================
 
-Requirements
-------------
+Common Requirements
+-------------------
+Compilation of any of the wrappers requires a few common pre-requisites, described on at :ref:`wrapper_common_prereqs`
+
+* python (to build the headers for CoolProp)
 * CMake
 * git
+
+Special Requirements
+--------------------
 * SWIG
 * Octave (and development headers)
-* python (to build the headers for CoolProp)
     
 Linux
 -----
@@ -72,6 +77,8 @@ On windows, you need to just slightly modify the building procedure::
     make install
     # Run the integration tests
     ctest --extra-verbose
+
+This building process on windows requires that make is available on the command line.  It can be obtained as part of MinGW
 
 Usage
 =====
