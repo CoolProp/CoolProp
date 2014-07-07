@@ -4,7 +4,11 @@
 Available Wrappers
 ******************
 
-CoolProp at its core is a C++ library, but it can be of interest to use this code base from other programming environments.  For that reason, wrappers have been constructed for most of the programming languages of technical interest to allow users to seamlessly interface CoolProp and existing codebases.  Downloads and instructions for each wrapper are included in the page for the wrapper.
+CoolProp at its core is a C++ library, but it can be of interest to use this code base from other programming environments.  For that reason, wrappers have been constructed for most of the programming languages of technical interest to allow users to seamlessly interface CoolProp and existing codebases.  
+
+Downloads and instructions for each wrapper are included in the page for the wrapper given in the table below.
+
+Superpacks are available at XXXXXXX which include all the code for a given operating system.
 
 =======================                    ===========================  =======================================
 Language                                   Operating Systems            Notes

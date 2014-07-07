@@ -1,5 +1,5 @@
-CoolProp
-========
+CoolProp API
+============
 
 .. toctree::
    :maxdepth: 4
