@@ -51,7 +51,9 @@ parameter_info parameter_info_list[] = {
     parameter_info(iT_reducing, "T_reducing","O","K","Temperature at the reducing point"),
     parameter_info(iT_critical, "T_critical","O","K","Temperature at the critical point"),
     parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility"),
-    parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound")
+    parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound"),
+    parameter_info(iviscosity, "viscosity","O","Pa-s","Viscosity"),
+    parameter_info(iconductivity, "conductivity","O","W/m/K","Thermal conductivity"),
 };
 
 class ParameterInformation
