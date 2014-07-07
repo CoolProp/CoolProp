@@ -156,10 +156,20 @@ EXPORT_CODE void CONVENTION set_debug_level(int level){
 EXPORT_CODE long CONVENTION get_param_index(const char * param){
     return CoolProp::get_parameter_index(param);
 }
-#ifndef SWIG
 EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Output)
 {
 	strcpy(Output,CoolProp::get_global_param_string(param).c_str());
+	return 0;
+}
+EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, char * Output)
+{
+    int key = CoolProp::get_parameter_index(param);
+    if (key >= 0){
+        strcpy(Output, CoolProp::get_parameter_information(key, Output).c_str());
+    }
+    else{
+        strcpy(Output, format("parameter is invalid: %s", param).c_str());
+    }
 	return 0;
 }
 //EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char * Output)
@@ -167,7 +177,6 @@ EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Ou
 //	strcpy(Output, get_fluid_param_string(std::string(fluid), std::string(param)).c_str());
 //	return 0;
 //}
-#endif
 
 
 EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)

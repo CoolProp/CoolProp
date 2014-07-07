@@ -39,7 +39,7 @@
 
     /*
     ####################################################################################
-    Overloads for DLL wrapping puposes
+    Overloads for DLL wrapping purposes
 
     These functions take strings which are 0-terminated.  These functions pass directly to
     equivalently named functions in CoolProp.h that take std::string
@@ -76,16 +76,9 @@
     \sa IsFluidType(std::string, std::string)
     */
     EXPORT_CODE int CONVENTION IsFluidType(const char *Ref, const char *Type);
-
-    // When using SWIG, it is extremely difficult to deal with char* for output strings, so just use
-    // the std::string version since SWIG can handle std::string just fine
-    #if defined(SWIG)
-        std::string get_global_param_string(std::string ParamName);
-        std::string get_fluid_param_string(std::string FluidName, std::string ParamName);
-    #else
-        EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char *Output);
-        EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char *Output);
-    #endif
+    EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char *Output);
+    EXPORT_CODE long CONVENTION get_parameter_information_string(const char *key, char *Output);
+    EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char *Output);
 
     /**
     \overload
