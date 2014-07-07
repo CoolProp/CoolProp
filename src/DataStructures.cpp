@@ -124,9 +124,10 @@ std::string get_parameter_information(int key, std::string info)
 std::string get_csv_parameter_list()
 {
     std::vector<std::string> strings;
-    for(std::map<std::string,int>::iterator it = parameter_info.index_map.begin(); it != parameter_info.index_map.end(); ++it )
+    std::map<std::string,int>::iterator it;
+    for(it = parameter_information.index_map.begin(); it != parameter_information.index_map.end(); ++it )
     {
-        strings.append(it->first);
+        strings.push_back(it->first);
     }
     return strjoin(strings, ",");
 }
