@@ -866,7 +866,7 @@ class SecCoolExample(CoefficientData):
     """ 
     def __init__(self):
         CoefficientData.__init__(self) 
-        self.name = "SecCoolExample"
+        self.name = "ExampleSecCool"
         self.description = "Ethanol solution"
         #self.reference = "SecCool software"
         self.Tmax =  20 + 273.15
@@ -978,7 +978,7 @@ class MelinderExample(CoefficientData):
     """ 
     def __init__(self):
         CoefficientData.__init__(self) 
-        self.name = "MelinderExample"
+        self.name = "ExampleMelinder"
         self.description = "Methanol solution"
         self.reference = "Melinder-BOOK-2010"
         self.Tmax =  40 + 273.15
@@ -1052,7 +1052,7 @@ class MelinderExample(CoefficientData):
 class PureExample(SolutionData):
     def __init__(self):
         SolutionData.__init__(self) 
-        self.name = "PureExample"
+        self.name = "ExamplePure"
         self.description = "Heat transfer fluid TherminolD12 by Solutia"
         self.reference = "Solutia data sheet"
         self.Tmax = 260 + 273.15
@@ -1070,7 +1070,7 @@ class PureExample(SolutionData):
 class SolutionExample(SolutionData):
     def __init__(self):
         SolutionData.__init__(self) 
-        self.name = "SolutionExample"
+        self.name = "ExampleSolution"
         self.description = "Ethanol ice slurry"
         self.reference = "SecCool software"
         #self.Tmax = 260 + 273.15

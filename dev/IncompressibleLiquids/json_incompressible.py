@@ -128,7 +128,12 @@ class SolutionDataWriter(object):
         
         import json
         
+        
+        original_float_repr = json.encoder.FLOAT_REPR 
+        json.encoder.FLOAT_REPR = lambda o: format(o, '+.8e') 
+        #print json.dumps(1.0001) 
         dump = json.dumps(jobj, indent = 2, sort_keys = True)
+        json.encoder.FLOAT_REPR = original_float_repr
         
         #print dump
                 
@@ -196,11 +201,22 @@ if __name__ == '__main__':
     print np.polynomial.polynomial.polyval2d(data.temperature.data[-1]-data.Tbase, data.concentration.data[-1]-data.xbase, data.density.coeffs)
     print data.rho(data.temperature.data[-1], 0.0, data.concentration.data[-1])
     
+    #import CoolProp.CoolProp as CP
+    #T = data.Tbase
+    #p = 10e5
+    ##data.xbase = data.xbase*100.0
+    #x = data.xbase+0.05
+    
+    data = SecCoolExample()
+    print data.Tbase, data.xbase    
+    writer.toJSON(data)
+    
+    
+    
     data = MelinderExample()
     print data.Tbase, data.xbase
-    #writer.fitAll(data)
     writer.toJSON(data)
-    print data.Tbase, data.xbase
+    #print data.rho(T, p, x), CP.Props('D','T',T,'P',p,'MMA-35.5128%')
     
     #print data.density.data[0][0]
     #print np.polynomial.polynomial.polyval2d(data.temperature.data[0]-data.Tbase, data.concentration.data[0]-data.xbase, data.density.coeffs)
@@ -209,12 +225,7 @@ if __name__ == '__main__':
     #print np.polynomial.polynomial.polyval2d(data.temperature.data[-1]-data.Tbase, data.concentration.data[-1]-data.xbase, data.density.coeffs)
     #print data.rho(data.temperature.data[-1], 0.0, data.concentration.data[-1])
     
-    import CoolProp.CoolProp as CP
-    T = data.Tbase
-    p = 10e5
-    #data.xbase = data.xbase*100.0
-    x = data.xbase+0.05
-    print data.rho(T, p, x), CP.Props('D','T',T,'P',p,'MMA-35.5128%')
+    
     
     
 
