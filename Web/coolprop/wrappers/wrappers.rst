@@ -24,6 +24,38 @@ EES                                        windows only
 Microsoft Excel                            windows only
 =======================                    ===========================  =======================================
 
+.. wrapper_common_prereqs
+
+Common Wrapper Prerequisites
+============================
+
+On all platforms for which CoolProp is supported, the compilation of one of the wrappers requires a few common prerequisites, described here. They are:
+
+* git (to interface with the CoolProp repository at https://github.com/CoolProp/CoolProp)
+* CMake (platform-independent software to generate makefiles)
+* C++ compiler (see below)
+
+Windows
+-------
+On Windows, download the newest binary installer for CMake from http://www.cmake.org/cmake/resources/software.html.  Run the installer.  Check that at the command prompt you can do::
+
+    C:\Users\XXXX>cmake -version
+    cmake version 2.8.12.2
+
+Linux
+-----    
+On debian based linux distributions (ubuntu, etc.), you can simply do::
+
+    sudo apt-get install cmake git g++
+    
+although ``git`` is probably already packaged with your operating system; ``g++`` probably isn't
+
+OSX
+---
+OSX should come with a c++ compiler (clang), for git and cmake your best bet is `Homebrew <http://brew.sh/>`_.  With Homebrew installed, you can just do::
+
+    brew install cmake git
+
 .. toctree::
     :hidden:
 
