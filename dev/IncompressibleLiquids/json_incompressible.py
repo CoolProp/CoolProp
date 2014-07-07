@@ -32,8 +32,7 @@ class SolutionDataWriter(object):
             data.density.type   = data.density.INCOMPRESSIBLE_POLYNOMIAL
             data.density.fit(T,x,data.Tbase,data.xbase)
         except errList as ve:
-            print "Could not fit density coefficients:"
-            print ve 
+            print "Could not fit density coefficients:", ve
             pass
 
         try:        
@@ -41,8 +40,7 @@ class SolutionDataWriter(object):
             data.specific_heat.type   = data.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
             data.specific_heat.fit(T,x,data.Tbase,data.xbase)
         except errList as ve:
-            print "Could not fit specific heat coefficients:"
-            print ve 
+            print "Could not fit specific heat coefficients:", ve
             pass
         
         try:
@@ -50,8 +48,7 @@ class SolutionDataWriter(object):
             data.viscosity.type   = data.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
             data.viscosity.fit(T,x,data.Tbase,data.xbase)
         except errList as ve:
-            print "Could not fit viscosity coefficients:"
-            print ve 
+            print "Could not fit viscosity coefficients:", ve
             pass
 
         try:        
@@ -59,8 +56,7 @@ class SolutionDataWriter(object):
             data.conductivity.type   = data.conductivity.INCOMPRESSIBLE_POLYNOMIAL
             data.conductivity.fit(T,x,data.Tbase,data.xbase)
         except errList as ve:
-            print "Could not fit conductivity coefficients:"
-            print ve 
+            print "Could not fit conductivity coefficients:", ve
             pass
         
         try:
@@ -68,8 +64,7 @@ class SolutionDataWriter(object):
             data.saturation_pressure.type   = data.saturation_pressure.INCOMPRESSIBLE_EXPPOLYNOMIAL
             data.saturation_pressure.fit(T,x,data.Tbase,data.xbase)
         except errList as ve:
-            print "Could not fit saturation pressure coefficients:"
-            print ve 
+            print "Could not fit saturation pressure coefficients:", ve
             pass
 
         try:        
@@ -77,8 +72,7 @@ class SolutionDataWriter(object):
             data.T_freeze.type   = data.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
             data.T_freeze.fit(T,x,data.Tbase,data.xbase)
         except errList as ve:
-            print "Could not fit TFreeze coefficients:"
-            print ve 
+            print "Could not fit TFreeze coefficients:", ve
             pass
 
         try:        
@@ -86,8 +80,7 @@ class SolutionDataWriter(object):
             data.volume2mass.type   = data.volume2mass.INCOMPRESSIBLE_POLYNOMIAL
             data.volume2mass.fit(T,x,data.Tbase,data.xbase)
         except errList as ve:
-            print "Could not fit V2M coefficients:"
-            print ve 
+            print "Could not fit V2M coefficients:", ve
             pass
 
         try:        
@@ -95,8 +88,7 @@ class SolutionDataWriter(object):
             data.mass2mole.type   = data.mass2mole.INCOMPRESSIBLE_POLYNOMIAL
             data.mass2mole.fit(T,x,data.Tbase,data.xbase)
         except errList as ve:
-            print "Could not fit M2M coefficients:"
-            print ve 
+            print "Could not fit M2M coefficients:", ve
             pass
         
     
@@ -174,56 +166,61 @@ if __name__ == '__main__':
 #    print data.density.data[1][1]
 #    print np.polynomial.polynomial.polyval2d(data.temperature.data[1], data.concentration.data[1], data.density.coeffs)
 
-    data = PureExample()
-    print data.Tbase, data.xbase
-    writer.fitAll(data)
-    writer.toJSON(data)
-    print data.Tbase, data.xbase
+    test = True  
+    if test: import CoolProp.CoolProp as CP
+    if test: from scipy import interpolate
+    if test: p = 10e5
     
-    print data.density.data[0][0]
-    print np.polynomial.polynomial.polyval2d(data.temperature.data[0]-data.Tbase, 0.0, data.density.coeffs)
-    print data.rho(data.temperature.data[0], 0.0, 0.0)
-    print data.density.data[-1][0]
-    print np.polynomial.polynomial.polyval2d(data.temperature.data[-1]-data.Tbase, 0.0, data.density.coeffs)
-    print data.rho(data.temperature.data[-1], 0.0, 0.0)
+    def printInfo(data):
+        print "{0:s} : {1:.4e}, {2:.4e}".format(data.name, data.Tbase, data.xbase)
     
+    def printDens(data, T, p, x, fluid='', f=None):
+        if f!=None:
+            try:
+                print "{0:s} : {1:.4e}, {2:.4e}, {3:.4e}, inputs: {4:.4e}, {5:.4e}, {6:.4e} ".format(data.name, data.rho(T, p, x), CP.Props('D','T',T,'P',p,fluid), float(f(T,x)), T, p, x)
+            except:
+                print "{0:s} : {1:.4e}, {2:.4e}, {3:.4e}, inputs: {4:.4e}, {5:.4e}, {6:.4e} ".format(data.name, data.rho(T, p, x), CP.Props('D','T',T,'P',p,fluid), float(f(T)), T, p, x)
+        else: 
+            print "{0:s} : {1:.4e}, {2:.4e}, {3:.4e}, inputs: {4:.4e}, {5:.4e}, {6:.4e} ".format(data.name, data.rho(T, p, x), CP.Props('D','T',T,'P',p,fluid), 0.0, T, p, x)
+        
+    
+#    data = PureExample()
+#    writer.fitAll(data)
+#    writer.toJSON(data)
+#    printInfo(data)
+#    if test: T = data.Tbase+55+273.15
+#    if test: x = 0.0 
+#    if test: f = interpolate.interp1d(data.temperature.data, data.density.data.T[0])
+#    if test: printDens(data, T, p, x, fluid='TD12', f=f)
+   
     
     data = SolutionExample()
-    print data.Tbase, data.xbase
     writer.fitAll(data)
     writer.toJSON(data)
-    print data.Tbase, data.xbase
-    
-    print data.density.data[0][0]
-    print np.polynomial.polynomial.polyval2d(data.temperature.data[0]-data.Tbase, data.concentration.data[0]-data.xbase, data.density.coeffs)
-    print data.rho(data.temperature.data[0], 0.0, data.concentration.data[0])
-    print data.density.data[-1][-1]
-    print np.polynomial.polynomial.polyval2d(data.temperature.data[-1]-data.Tbase, data.concentration.data[-1]-data.xbase, data.density.coeffs)
-    print data.rho(data.temperature.data[-1], 0.0, data.concentration.data[-1])
-    
-    #import CoolProp.CoolProp as CP
-    #T = data.Tbase
-    #p = 10e5
-    ##data.xbase = data.xbase*100.0
-    #x = data.xbase+0.05
-    
-    data = SecCoolExample()
-    print data.Tbase, data.xbase    
-    writer.toJSON(data)
-    
-    
-    
-    data = MelinderExample()
-    print data.Tbase, data.xbase
-    writer.toJSON(data)
-    #print data.rho(T, p, x), CP.Props('D','T',T,'P',p,'MMA-35.5128%')
-    
-    #print data.density.data[0][0]
-    #print np.polynomial.polynomial.polyval2d(data.temperature.data[0]-data.Tbase, data.concentration.data[0]-data.xbase, data.density.coeffs)
-    #print data.rho(data.temperature.data[0], 0.0, data.concentration.data[0])
-    #print data.density.data[-1][-1]
-    #print np.polynomial.polynomial.polyval2d(data.temperature.data[-1]-data.Tbase, data.concentration.data[-1]-data.xbase, data.density.coeffs)
-    #print data.rho(data.temperature.data[-1], 0.0, data.concentration.data[-1])
+    printInfo(data)
+    if test: T = data.Tbase-15+273.15
+    if test: x = 0.22 
+    if test: f = interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
+    if test: printDens(data, T, p, x, fluid='IceEA-{0:.4f}%'.format(x*100.0), f=f)
+
+#        
+#    data = SecCoolExample()
+#    writer.toJSON(data)
+#    printInfo(data)
+#    if test: T = data.Tbase+0
+#    if test: x = 0.1
+#    if test: f = None #interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
+#    if test: printDens(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
+#    
+#    
+#    
+#    data = MelinderExample()
+#    writer.toJSON(data)
+#    printInfo(data)
+#    if test: T = data.Tbase+10
+#    if test: x = 0.22 
+#    if test: f = None #interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
+#    if test: printDens(data, T, p, x, fluid='MMA-22%', f=f)
     
     
     

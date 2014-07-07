@@ -571,9 +571,9 @@ class IncompressibleData(object):
                 if (xr!=1): raise ValueError("Concentration has to be a 2D array with one row.")
                 if (xc!=dc): raise ValueError("Concentration and fitting data have to have the same number of columns.")
                 if self.type==self.INCOMPRESSIBLE_POLYNOMIAL:
-                    self.coeffs = self.getCoeffs2d(T-Tbase, x-xbase, self.data, cr-1, 0)
+                    self.coeffs = self.getCoeffs2d(T-Tbase, x-xbase, self.data, cr-1, cc-1)
                 elif self.type==self.INCOMPRESSIBLE_EXPPOLYNOMIAL:
-                    self.coeffs = self.getCoeffs2d(T-Tbase, x-xbase, np.log(self.data), cr-1, 0)
+                    self.coeffs = self.getCoeffs2d(T-Tbase, x-xbase, np.log(self.data), cr-1, cc-1)
                 else:  raise ValueError("Unknown function.")
                 #print self.coeffs
         else:
@@ -610,6 +610,7 @@ class IncompressibleData(object):
         yy = np.array(yy.flat)
         zz = np.array(z_in.flat)
         
+        # TODO: Check for rows with only nan values
         x_num = len(x_in)
         y_num = len(y_in)
                     
@@ -627,6 +628,14 @@ class IncompressibleData(object):
         for i in range(eqns): # row loop
             for j, (xj,yj) in enumerate(xy_exp): # makes columns
                 A[i][j] = xx[i]**xj * yy[i]**yj
+        
+        # Remove np.nan elements
+        mask = np.isfinite(zz)
+        A = A[mask]
+        zz = zz[mask]
+        
+        if (len(A) < cols):
+            raise ValueError("Your matrix has only {0} valid rows and you try to fit {1} coefficients, please reduce the order.".format(len(A),cols))
         
         coeffs, resids, rank, singulars  = np.linalg.lstsq(A, zz)
         #print resids
@@ -782,6 +791,10 @@ class CoefficientData(SolutionData):
         #tmp[3][4] = array[4]
         #tmp[3][5] = array[5]
         
+        # Concentration is no longer handled in per cent!
+        for i in range(6):
+            tmp.T[i] *= 100.0**i 
+                
         return tmp
 
 
@@ -867,7 +880,7 @@ class SecCoolExample(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self) 
         self.name = "ExampleSecCool"
-        self.description = "Ethanol solution"
+        self.description = "Methanol solution"
         #self.reference = "SecCool software"
         self.Tmax =  20 + 273.15
         self.Tmin = -50 + 273.15
@@ -1089,4 +1102,14 @@ class SolutionExample(SolutionData):
           [1040.7,    1033.2,    1025.7,    1018.4,    1011.2,    1004.0,     997.0],
           [1032.3,    1025.3,    1018.5,    1011.7,    1005.1,     998.5,     992.0],
           [1021.5,    1015.3,    1009.2,    1003.1,     997.1,     991.2,     985.4]]) # kg/m3
+        
+        self.density.data             = np.array([
+          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
+          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
+          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
+          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
+          [np.nan,    np.nan,    np.nan,    np.nan,    1016.0,    1008.4,    np.nan],
+          [np.nan,    1033.2,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
+          [np.nan,    1025.3,    1018.5,    np.nan,    np.nan,     998.5,     992.0],
+          [np.nan,    np.nan,    1009.2,    np.nan,    np.nan,    np.nan,    np.nan]]) # kg/m3
 
