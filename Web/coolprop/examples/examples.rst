@@ -2,9 +2,9 @@ Examples
 ========
 This page serves as a teaser of the functionality of CoolProp.  These examples are written in the Python programming language.  For more information see:
 
-- :ref:`Pure and Pseudo-Pure fluid properties`
-- :ref:`Mixture properties`
-- :ref:`Wrapper-specific examples <wrappers>`
+- :ref:`Pure and Pseudo-Pure fluid properties <Fluid-Properties>`
+- :ref:`Mixture properties <mixtures>`
+- :ref:`Wrapper-specific code examples <wrappers>`
 
 Sample Props Code
 -------------------

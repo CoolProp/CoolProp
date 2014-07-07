@@ -24,7 +24,7 @@ EES                                        windows only
 Microsoft Excel                            windows only
 =======================                    ===========================  =======================================
 
-.. wrapper_common_prereqs
+.. _wrapper_common_prereqs:
 
 Common Wrapper Prerequisites
 ============================
@@ -37,10 +37,23 @@ On all platforms for which CoolProp is supported, the compilation of one of the 
 
 Windows
 -------
-On Windows, download the newest binary installer for CMake from http://www.cmake.org/cmake/resources/software.html.  Run the installer.  Check that at the command prompt you can do::
+On Windows, download the newest binary installer for CMake from `CMake downloads <http://www.cmake.org/cmake/resources/software.html>`_.  Run the installer.  Check that at the command prompt you can do::
 
     C:\Users\XXXX>cmake -version
     cmake version 2.8.12.2
+    
+For git, your best best is the installer from http://msysgit.github.io/.  Check that at the command prompt you can do something like::
+
+    C:\Users\XXXX>git --version
+    git version 1.9.4.msysgit.0
+
+For the C++ compiler, the options are a bit more complicated.  There are multiple (binary incompatible) versions of Visual Studio, as well as G++ ports for windows (MinGW).  Unless you are compiling the python wrappers, you can compile with MinGW, so you should obtain the `MinGW installer <http://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download>`_ and run it.  You should install all the packages available, and you must install to a path without spaces. ``C:\MinGW`` is recommended as an installation path.  
+
+If you are compiling for Python 2.7, you can install Visual Studio 2008 Express from `VS2008Express installer <http://go.microsoft.com/?linkid=7729279>`_.
+
+If you are compiling for Python 3.x, you can install Visual Studio 2010 Express from `VS2010Express installer <http://www.visualstudio.com/en-us/downloads#d-2010-express>`_.
+
+All three compilers should co-exist happily on the path, so you should be fine installing all three, but they are rather sizeable installs.
 
 Linux
 -----    
@@ -54,7 +67,7 @@ OSX
 ---
 OSX should come with a c++ compiler (clang), for git and cmake your best bet is `Homebrew <http://brew.sh/>`_.  With Homebrew installed, you can just do::
 
-    brew install cmake git
+    sudo brew install cmake git
 
 .. toctree::
     :hidden:

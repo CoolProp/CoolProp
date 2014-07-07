@@ -13,14 +13,10 @@ User-Compiled Binaries
 
 Common Requirements
 -------------------
-Compilation of any of the wrappers requires a few common pre-requisites, described on at :ref:`wrapper_common_prereqs`
+Compilation of the Octave wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
 
-* python (to build the headers for CoolProp)
-* CMake
-* git
-
-Special Requirements
---------------------
+Octave Requirements
+-------------------
 * SWIG
 * Octave (and development headers)
     
@@ -29,7 +25,7 @@ Linux
 
 For ubuntu and friends, you can install build dependencies using::
 
-    sudo apt-get install cmake swig octave liboctave-dev
+    sudo apt-get install swig octave liboctave-dev
 
 OSX
 ---
@@ -78,7 +74,7 @@ On windows, you need to just slightly modify the building procedure::
     # Run the integration tests
     ctest --extra-verbose
 
-This building process on windows requires that make is available on the command line.  It can be obtained as part of MinGW
+This building process on windows requires that make and the ``bin`` folder of Octave are on the ``PATH``.  The MinGW version of Octave conveniently also includes the MinGW C++ compiler used to build it, look inside the distribution.
 
 Usage
 =====
