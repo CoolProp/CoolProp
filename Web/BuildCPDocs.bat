@@ -9,5 +9,5 @@ REM ~ pdflatex CoolPropdoc.tex
 REM ~ copy /Y CoolPropdoc.pdf ..\..\_static\
 REM ~ cd ..\..
 
-rem sphinx-apidoc -f -o apidoc ../CoolProp
+rem sphinx-apidoc -T -f -o apidoc ../CoolProp
 mingw32-make html
