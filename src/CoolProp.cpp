@@ -748,6 +748,10 @@ std::string get_global_param_string(std::string ParamName)
 	else if (!ParamName.compare("FluidsList") || !ParamName.compare("fluids_list") || !ParamName.compare("fluidslist")){
 		return get_fluid_list();
 	}
+	else if (!ParamName.compare("parameter_list") )
+    {
+        return get_csv_parameter_list();
+    }
 	else{
 		return format("Input value [%s] is invalid",ParamName.c_str()).c_str();
 	}

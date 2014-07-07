@@ -120,6 +120,16 @@ std::string get_parameter_information(int key, std::string info)
     }
 }
 
+/// Return a list of parameters
+std::string get_csv_parameter_list()
+{
+    std::vector<std::string> strings;
+    for(std::map<std::string,int>::iterator it = parameter_info.index_map.begin(); it != parameter_info.index_map.end(); ++it )
+    {
+        strings.append(it->first);
+    }
+    return strjoin(strings, ",");
+}
 int get_parameter_index(const std::string &param_name)
 {
     std::map<std::string, int>::iterator it;
