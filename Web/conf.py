@@ -13,7 +13,7 @@
 # serve to show the default.
 
 import sys, os
-print sys.path
+sys.path.insert(0, os.path.abspath('_ext'))
 try:
     import sphinxcontrib.doxylink
 except ImportError:
@@ -41,6 +41,7 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
               'sphinx.ext.extlinks',
               'sphinxcontrib.napoleon',
               'sphinxcontrib.doxylink',
+              'edit_on_github',  # see https://gist.github.com/mgedmin/6052926#file-edit_on_github-pyb
               
               # cloud's extensions
             #'cloud_sptheme.ext.autodoc_sections',
@@ -161,6 +162,10 @@ html_theme_options = { "roottarget": "index",
                        "max_width" : "13in",
                        "logotarget": "index"
                        }
+
+edit_on_github_project = 'CoolProp/CoolProp'
+edit_on_github_branch = 'master'
+edit_on_github_path_prefix = 'Web'
 
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
 # Sphinx are currently 'default' and 'sphinxdoc'.
