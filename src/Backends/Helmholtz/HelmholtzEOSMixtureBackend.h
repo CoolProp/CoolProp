@@ -19,14 +19,13 @@ protected:
     std::vector<CoolPropFluid*> components; ///< The components that are in use
 
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
-    std::vector<long double> mole_fractions; ///< The mole fractions of the components
-    std::vector<long double> mole_fractions_liq, ///< The mole fractions of the saturated liquid
-                             mole_fractions_vap, ///< The mole fractions of the saturated vapor
-                             K, ///< The K factors for the components
+    std::vector<long double> mole_fractions; ///< The bulk mole fractions of the mixture
+    std::vector<long double> K, ///< The K factors for the components
                              lnK; ///< The natural logarithms of the K factors of the components
 
     SimpleState _crit;
     int imposed_phase_index;
+    int N; // Number of components
 public:
     HelmholtzEOSMixtureBackend(){imposed_phase_index = -1;};
     HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
@@ -46,6 +45,7 @@ public:
     std::vector<long double> &get_K(){return K;};
     std::vector<long double> &get_lnK(){return lnK;};
 
+    void resize(unsigned int N);
     shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///<
 
     void update(long input_pair, double value1, double value2);
@@ -74,7 +74,8 @@ public:
     */
     void set_mole_fractions(const std::vector<long double> &mole_fractions);
 
-    const std::vector<long double> &get_mole_fractions(){return mole_fractions;};
+    std::vector<long double> &get_mole_fractions(){return mole_fractions;};
+    const std::vector<long double> &get_const_mole_fractions(){return mole_fractions;};
 
     /// Set the mass fractions
     /**

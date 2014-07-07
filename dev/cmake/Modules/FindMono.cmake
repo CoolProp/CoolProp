@@ -134,7 +134,7 @@ else( UNIX )
       string( REGEX MATCH "([0-9]*)([.])([0-9]*)([.]*)([0-9]*)" csharp_mono_version_temp ${csharp_mono_version_string} )
       set( CSHARP_MONO_INTERPRETER_${CSHARP_MONO_VERSION} ${csharp_mono_interpreter} CACHE STRING "C# Mono interpreter ${csharp_mono_version_temp}" FORCE )
       mark_as_advanced( CSHARP_MONO_INTERPRETER_${CSHARP_MONO_VERSION} )
-    endif ( EXISTS ${csharp_mono_interpreter} )
+    endif ()
     unset( csharp_mono_interpreter CACHE )
 
     # We found Mono compiler
@@ -155,6 +155,8 @@ endif( WIN32 )
 if( CSHARP_MONO_FOUND )
   # Report the found versions
   message( STATUS "Found the following C# Mono versions: ${CSHARP_MONO_VERSIONS}" )
+  message( STATUS "Found the following C# Mono interpreter: ${csharp_mono_interpreter}" )
+    
 endif( CSHARP_MONO_FOUND )
 
 # Set USE_FILE

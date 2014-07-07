@@ -26,18 +26,34 @@ the build process will need to be run twice.
 Make needs to be called twice, the first make step will dynamically generate a number of files from the
 JSON fluid definitions - the second make run will actually generate the program.
 
-
 Testing
 -------
 
 CMake generates a target for testing. You can build the test executable with `make testRunner`.
 
-Geting Boost shared_ptr
------------------------
+Building wrappers using CMake
+-----------------------------
 
-Download Boost sources
-Expand zip file
-Command prompt in root
-    
-    bootstrap
-    b2 tools/bcp
+To build the 32-bit __cdecl DLL for instance, from the root directory execute
+
+```
+mkdir build
+cd build
+mkdir 32bitcdecl
+cd 32bitcdecl
+cmake ..\.. -G "Visual Studio 10" -DCOOLPROP_32BIT_CDECL_SHARED_LIBRARY=ON
+cmake --build . --config Release --target INSTALL
+```
+
+which will build the DLL and put it in the bin/shared_library/Windows/32bit/__cdecl_calling_convention folder.  Alternatively you could build using MINGW GCC using
+
+```
+mkdir build
+cd build
+mkdir 32bitcdeclgcc
+cd 32bitcdeclgcc
+cmake ..\.. -G "MinGW Makefiles" -DCOOLPROP_32BIT_CDECL_SHARED_LIBRARY=ON
+cmake --build . --config Release --target install
+```
+
+which will also be the same protocol on linux

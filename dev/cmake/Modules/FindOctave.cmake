@@ -1,6 +1,7 @@
 # Try to find the build flags to compile octave shared objects (oct and mex files)
 # Once done this will define
 #
+# OCTAVE_VERSION - Version of Octave
 # OCTAVE_FOUND - if Coin3d is found
 # OCTAVE_CXXFLAGS - extra flags
 # OCTAVE_INCLUDE_DIRS - include directories
@@ -24,6 +25,7 @@ mark_as_advanced(OCTAVE_CONFIG_EXECUTABLE)
 
 if(MKOCTFILE_EXECUTABLE)
   set(OCTAVE_FOUND 1)
+  message(STATUS "Found mkoctfile executable")
 
   execute_process(
     COMMAND ${MKOCTFILE_EXECUTABLE} -p ALL_CXXFLAGS
@@ -49,6 +51,8 @@ if(MKOCTFILE_EXECUTABLE)
   string(REGEX REPLACE "[\r\n]" " " _mkoctfile_ldirs "${_mkoctfile_ldirs}")
   string(REGEX REPLACE "-L" "" _mkoctfile_ldirs "${_mkoctfile_ldirs}")
   
+  separate_arguments(_mkoctfile_ldirs)
+    
   execute_process(
     COMMAND ${MKOCTFILE_EXECUTABLE} -p LIBS
     OUTPUT_VARIABLE _mkoctfile_libs
@@ -60,7 +64,6 @@ if(MKOCTFILE_EXECUTABLE)
     RESULT_VARIABLE _mkoctfile_failed)
   string(REGEX REPLACE "[\r\n]" " " _mkoctfile_octlibs "${_mkoctfile_octlibs}")
   set(_mkoctfile_libs "${_mkoctfile_libs} ${_mkoctfile_octlibs}")
-
     
   string(REGEX MATCHALL "(^| )-l([./+-_\\a-zA-Z]*)" _mkoctfile_libs "${_mkoctfile_libs}")
   string(REGEX REPLACE "(^| )-l" "" _mkoctfile_libs "${_mkoctfile_libs}")
@@ -77,8 +80,6 @@ if(MKOCTFILE_EXECUTABLE)
     separate_arguments(_mkoctfile_ldirs)
     string(REGEX REPLACE "Program Files " "Program~Files~" _mkoctfile_includedir "${_mkoctfile_includedir}")
     separate_arguments(_mkoctfile_includedir)
-    
-    message(STATUS ${_mkoctfile_ldirs})
     
     set(includes)
     foreach(ITR ${_mkoctfile_includedir})
@@ -108,8 +109,25 @@ if(MKOCTFILE_EXECUTABLE)
   set( OCTAVE_LIBRARY ${_mkoctfile_libs})
   set( OCTAVE_LIBRARY_RELEASE " ${OCTAVE_LIBRARY} ")
   set( OCTAVE_LIBRARY_DEBUG " ${OCTAVE_LIBRARY} ")
-endif(MKOCTFILE_EXECUTABLE)
+else()
+    if (OSX)
+    set(libs)
+    foreach(ITR ${_mkoctfile_ldirs})
+      string(REGEX REPLACE "\"" "" ITR ${ITR})
+      list(APPEND libs ${ITR})
+    endforeach()
+    set(_mkoctfile_ldirs ${libs})
+    endif()	
+
+	message(FATAL_ERROR "Unable to find mkoctfile executable")
+endif()
 if(OCTAVE_CONFIG_EXECUTABLE)
+  message(STATUS "Found octave-config executable")
+  execute_process(
+    COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -v
+    OUTPUT_VARIABLE OCTAVE_VERSION
+    RESULT_VARIABLE _octave_config_failed)
+  string(REGEX REPLACE "[\r\n]" "" OCTAVE_VERSION "${OCTAVE_VERSION}")    
   execute_process(
     COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -p CANONICAL_HOST_TYPE
     OUTPUT_VARIABLE _octave_config_host_type
@@ -130,11 +148,22 @@ if(OCTAVE_CONFIG_EXECUTABLE)
   set( OCTAVE_API_VERSION "${_octave_config_api_version}" )
   set( OCTAVE_LOCALVEROCTFILEDIR "${_octave_config_localveroctfiledir}" )
 
+else()
+  message(FATAL_ERROR "Did not find octave-config executable")
 endif()
 
+message(STATUS "OCTAVE_VERSION=${OCTAVE_VERSION}" )
+message(STATUS "OCTAVE_CXXFLAGS=${_mkoctfile_cppflags}" )
+message(STATUS "OCTAVE_LINK_FLAGS=${_mkoctfile_ldflags}" )
+message(STATUS "OCTAVE_INCLUDE_DIRS=${_mkoctfile_includedir}")
+message(STATUS "OCTAVE_LINK_DIRS=${_mkoctfile_ldirs}")
+message(STATUS "OCTAVE_LIBRARY=${_mkoctfile_libs}")
+message(STATUS "OCTAVE_LIBRARY_RELEASE=${OCTAVE_LIBRARY} ")
+message(STATUS "OCTAVE_LIBRARY_DEBUG=${OCTAVE_LIBRARY} ")
 
 MARK_AS_ADVANCED(
     OCTAVE_LIBRARY_FOUND
+    OCTAVE_VERSION
     OCTAVE_CXXFLAGS
     OCTAVE_LINK_FLAGS
     OCTAVE_INCLUDE_DIRS

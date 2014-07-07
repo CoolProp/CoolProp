@@ -311,6 +311,13 @@ protected:
         EOS.reduce.rhomolar = cpjson::get_double(reducing_state,"rhomolar");
         EOS.reduce.p = cpjson::get_double(reducing_state,"p");
 
+        EOS.sat_min_liquid.T = cpjson::get_double(satminL_state, "T");
+        EOS.sat_min_liquid.p = cpjson::get_double(satminL_state, "p");
+        EOS.sat_min_liquid.rhomolar = cpjson::get_double(satminL_state, "rhomolar");
+        EOS.sat_min_vapor.T = cpjson::get_double(satminV_state, "T");
+        EOS.sat_min_vapor.p = cpjson::get_double(satminV_state, "p");
+        EOS.sat_min_vapor.rhomolar = cpjson::get_double(satminV_state, "rhomolar");
+
         /// \todo: define limits of EOS better
         EOS.limits.Tmin = cpjson::get_double(satminL_state, "T");
         EOS.Ttriple = EOS.limits.Tmin;

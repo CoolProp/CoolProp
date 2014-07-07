@@ -64,4 +64,6 @@ cdef class AbstractState:
         """ Get the speed of sound in m/s - wrapper of c++ function :cpapi:`AbstractState::speed_sound` """
         return self.thisptr.speed_sound()
     
-        
+    cpdef double molar_mass(self) except *: 
+        """ Get the molar mass kg/mol - wrapper of c++ function :cpapi:`AbstractState::molar_mass` """
+        return self.thisptr.molar_mass()    

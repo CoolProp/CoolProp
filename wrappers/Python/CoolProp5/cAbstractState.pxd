@@ -32,7 +32,13 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double cvmass() except +
         
         double keyed_output(long) except+
+        double molar_mass() except+
+        double gas_constant() except+
+        double build_phase_envelope() except+
+        double viscosity() except+
+        double conductivity() except+
+        double surface_tension() except+
 
 # The static factory method for the AbstractState
 cdef extern from "AbstractState.h" namespace "CoolProp::AbstractState":
-    AbstractState* factory(const string &backend, const string &fluid_string)
+    AbstractState* factory(const string &backend, const string &fluid_string) except+

@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 2.8)
 
 
+if (DEFINED COOLPROP_INSTALL_PREFIX)
+    set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
+    message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
+else()
+    set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
+    message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
+endif()
+
+set(CMAKE_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX} CACHE PATH "default install path" FORCE)
+
 #######################################
 #         PROJECT INFORMATION         #
 #-------------------------------------#
@@ -59,10 +69,11 @@ option (COOLPROP_TESTING
 #######################################
 
 file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
-file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h") # "externals/*.hpp")
+file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h")
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
+## You can exclude this file as well, in case you want to run your own tests
 
-set (APP_INCLUDE_DIRS "externals/Eigen")
+set (APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/Eigen")
 foreach (_headerFile ${APP_HEADERS})
     get_filename_component(_dir ${_headerFile} PATH)
     list (APPEND APP_INCLUDE_DIRS ${_dir})
@@ -89,6 +100,26 @@ endif()
 
 
 #######################################
+#                 BITNESS             #
+#-------------------------------------#
+#        Calculate if 32 or 64        #
+#######################################
+
+if(WIN32)
+  if (CMAKE_CL_64)
+    SET(BITNESS "64")
+  else()
+    SET(BITNESS "32")
+  endif()
+else()
+  if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+    SET(BITNESS "64")
+  else()
+    SET(BITNESS "32")
+  endif()
+endif()
+
+#######################################
 #         MAKE ARTIFACTS              #
 #-------------------------------------#
 # In this section we define the       #
@@ -106,13 +137,7 @@ if (COOLPROP_STATIC_LIBRARY)
     add_library(${app_name} STATIC ${APP_SOURCES})
     add_dependencies (${app_name} generate_headers)
     set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
-endif()
-
-##### COOLPROP SHARED LIBRARY ######
-if (COOLPROP_SHARED_LIBRARY)
-    add_library(${app_name} SHARED ${APP_SOURCES})
-    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
-    add_dependencies (${app_name} generate_headers)
+    install (TARGETS ${app_name} DESTINATION static_library/${CMAKE_SYSTEM_NAME})
 endif()
 
 if (COOLPROP_64BIT_SHARED_LIBRARY)
@@ -123,6 +148,7 @@ if (COOLPROP_64BIT_SHARED_LIBRARY)
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/64bit)
 endif()
 
 if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY)
@@ -133,6 +159,7 @@ if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY)
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
 endif()
 
 if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY)
@@ -143,8 +170,10 @@ if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY)
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__stdcall_calling_convention)
 endif()
 
+# EES is only compiled for windows
 if (COOLPROP_EES_MODULE)
   list (APPEND APP_SOURCES "wrappers/EES/main.cpp")
   include_directories(${APP_INCLUDE_DIRS})
@@ -156,6 +185,7 @@ if (COOLPROP_EES_MODULE)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
   add_dependencies (${app_name} generate_headers)  
+  install (TARGETS ${app_name} DESTINATION EES/${CMAKE_SYSTEM_NAME})
 endif()
 
 if (COOLPROP_OCTAVE_MODULE)
@@ -184,10 +214,17 @@ if (COOLPROP_OCTAVE_MODULE)
 
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   SWIG_ADD_MODULE(CoolProp octave ${I_FILE} ${APP_SOURCES})
-  SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB} ${CRUFT_LIB})
+  if (!OSX)
+    SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB} ${CRUFT_LIB})  
+  else()
+    SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB})
+  endif()
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
   add_dependencies (${app_name} generate_headers)  
+  
+  install (FILES ${CMAKE_SOURCE_DIR}/wrappers/Octave/Example.m DESTINATION Octave)
+  install (TARGETS ${app_name} DESTINATION Octave/Octave${OCTAVE_VERSION}_${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
 endif()
 
 if (COOLPROP_CSHARP_MODULE)
@@ -205,14 +242,43 @@ if (COOLPROP_CSHARP_MODULE)
   # Set properties before adding module
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   if (WIN32)
-    SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport CoolProp")
+    SET(CMAKE_SWIG_FLAGS -dllimport \"CoolProp\")
+    #SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport CoolProp")
   endif()
   SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
 
   if (WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
   endif()
+  
   add_dependencies (${app_name} generate_headers)  
+  
+  # Install all the generated cs files
+  install(
+    CODE "file( GLOB _GeneratedCsharpSources \"${CMAKE_CURRENT_BINARY_DIR}/*.cs\" )"
+    CODE "file( INSTALL \${_GeneratedCsharpSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Csharp/platform-independent )"
+  )
+  install (FILES ${CMAKE_SOURCE_DIR}/wrappers/C\#/Example.cs DESTINATION Csharp)
+  install (TARGETS ${app_name} DESTINATION Csharp/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+  enable_testing()
+  if (DEFINED BUILD_TESTING)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+    # Copy the shared object to the folder with the executable - no idea like java.library.path in C#
+    install (TARGETS ${app_name} DESTINATION ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+  endif()
+  file(TO_NATIVE_PATH ${CMAKE_INSTALL_PREFIX}/Csharp/platform-independent/*.cs cp_cs_path)
+  file(TO_NATIVE_PATH ${CMAKE_INSTALL_PREFIX}/Csharp/Example.cs cp_example_path)
+  if (${BITNESS} EQUAL "32")
+    set(CSHARP_PLAT "-platform:x86")
+  elseif((${BITNESS} EQUAL "32"))
+    set(CSHARP_PLAT "-platform:x64")
+  endif()
+  add_test(NAME Csharptestbuild
+           COMMAND ${CSHARP_COMPILER} -out:Example.exe ${CSHARP_PLAT} ${cp_cs_path} ${cp_example_path}
+           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+  add_test(NAME Csharptestrun
+           COMMAND ${CSHARP_INTERPRETER} Example.exe
+           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
 endif()
 
 if (COOLPROP_JAVA_MODULE)
@@ -244,7 +310,65 @@ if (COOLPROP_JAVA_MODULE)
   if (!MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
   endif()
-  add_dependencies (${app_name} generate_headers)  
+  add_dependencies (${app_name} generate_headers)
+  
+  # Install all the generated java files
+  install(
+    CODE "file( GLOB _GeneratedJavaSources \"${CMAKE_CURRENT_BINARY_DIR}/*.java\" )"
+    CODE "file( INSTALL \${_GeneratedJavaSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/platform-independent )"
+  )
+  install (FILES ${CMAKE_SOURCE_DIR}/wrappers/Java/Example.java DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
+  install (TARGETS ${app_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+  enable_testing()
+  execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
+  add_test(NAME Javatestbuild
+           COMMAND javac -d . ${CMAKE_INSTALL_PREFIX}/Java/Example.java -cp ${CMAKE_INSTALL_PREFIX}/Java/platform-independent
+           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
+  add_test(NAME Javatestrun
+           COMMAND ${Java_JAVA_EXECUTABLE} -Djava.library.path=${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit Example
+           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
+endif()
+
+if (COOLPROP_MATLAB_SWIG_MODULE)
+  
+  # Must have SWIG
+  FIND_PACKAGE(SWIG REQUIRED)
+  INCLUDE(${SWIG_USE_FILE})
+
+  find_package(Matlab REQUIRED)
+
+  IF(MATLAB_FOUND)
+      message(STATUS "MATLAB Found, MATLAB MEX will be compiled.")
+  ELSE(MATLAB_FOUND)
+      MESSAGE("MATLAB not found...nothing will be built.")
+  ENDIF(MATLAB_FOUND)
+  
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+
+  list (APPEND APP_SOURCES ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def) # To export mexFunction
+
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
+
+  SWIG_ADD_MODULE(CoolPropMATLAB_wrap matlab ${I_FILE} ${APP_SOURCES})
+  SWIG_LINK_LIBRARIES(CoolPropMATLAB_wrap ${MATLAB_LIBRARIES})
+  
+  add_definitions(/DMATLAB_MEX_FILE) #define matlab macros
+  add_definitions(/DMX_COMPAT_32)
+
+  if(WIN32) # 32-bit or 64-bit mex
+    if (CMAKE_CL_64)
+        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexw64)
+    else()
+        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES SUFFIX .mexw32)
+    endif()
+  else()
+    if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
+    else()
+        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
+    endif()
+  endif()
+  add_dependencies (CoolPropMATLAB_wrap generate_headers)
 endif()
 
 if (COOLPROP_MATLAB_MODULE)
@@ -304,21 +428,21 @@ if (COOLPROP_MATHEMATICA_MODULE)
 endif()
 
 ###      COOLPROP TESTING APP       ###
-if (COOLPROP_TESTING)
-  list (APPEND APP_INCLUDE_DIRS "externals/Catch/include")
-  include_directories(${APP_INCLUDE_DIRS})
+if (COOLPROP_CATCH_MODULE)
   enable_testing()
 
+  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/test_main.cxx")
   # CATCH TEST, compile everything with catch and set test entry point
-  add_executable        (testRunner.exe ${APP_SOURCES})
-  add_dependencies      (testRunner.exe generate_headers)
-  set_target_properties (testRunner.exe PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
-  set_source_files_properties(src/PolyMath.cpp PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCATCH_CONFIG_MAIN")
+  add_executable        (CatchTestRunner ${APP_SOURCES})
+  add_dependencies      (CatchTestRunner generate_headers)
+  set_target_properties (CatchTestRunner PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
   if(UNIX)
-    target_link_libraries (testRunner.exe ${CMAKE_DL_LIBS})
+    target_link_libraries (CatchTestRunner ${CMAKE_DL_LIBS})
   endif()
-  add_test(ProceedureTests testRunner.exe)
+  add_test(ProcedureTests CatchTestRunner)
+endif()
 
+if (COOLPROP_CPP_EXAMPLE_TEST)
   # C++ Documentation Test
   add_executable        (docuTest.exe "Web/examples/C++/Example.cpp")
   add_dependencies      (docuTest.exe ${app_name})

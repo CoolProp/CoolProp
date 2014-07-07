@@ -69,10 +69,10 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
     }
     else
     {
-        // Set some imput options
+        // Set some input options
         SaturationSolvers::mixture_VLE_IO options;
         options.sstype = SaturationSolvers::imposed_T;
-        options.Nstep_max = 5;
+        options.Nstep_max = 20;
 
         // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
         long double pguess = SaturationSolvers::saturation_preconditioner(&HEOS, HEOS._T, SaturationSolvers::imposed_T, HEOS.mole_fractions);
@@ -81,7 +81,10 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         pguess = SaturationSolvers::saturation_Wilson(&HEOS, HEOS._Q, HEOS._T, SaturationSolvers::imposed_T, HEOS.mole_fractions, pguess);
 
         // Actually call the successive substitution solver
-        SaturationSolvers::successive_substitution(&HEOS, HEOS._Q, HEOS._T, pguess, HEOS.mole_fractions, HEOS.K, options);
+        SaturationSolvers::successive_substitution(HEOS, HEOS._Q, HEOS._T, pguess, HEOS.mole_fractions, HEOS.K, options);
+
+        HEOS._p = options.p;
+        HEOS._rhomolar = 1/(HEOS._Q/options.rhomolar_vap+(1-HEOS._Q)/options.rhomolar_liq);
     }
 }
 void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
@@ -130,10 +133,15 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         Tguess = SaturationSolvers::saturation_Wilson(&HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
 
         // Actually call the successive substitution solver
-        SaturationSolvers::successive_substitution(&HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
+        SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
 
-        PhaseEnvelope::PhaseEnvelope_GV ENV_GV;
-        ENV_GV.build(&HEOS, HEOS.mole_fractions, HEOS.K, io);
+        // Load the outputs
+        HEOS._p = HEOS.SatV->p();
+        HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
+        HEOS._T = HEOS.SatL->T();
+
+        //PhaseEnvelope::PhaseEnvelope_GV ENV_GV;
+        //ENV_GV.build(&HEOS, HEOS.mole_fractions, HEOS.K, io);
     }
 }
 // D given and one of P,H,S,U

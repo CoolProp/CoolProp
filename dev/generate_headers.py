@@ -187,8 +187,11 @@ def combine_json(root_dir):
         path, file_name = os.path.split(file)
         fluid_name = file_name.split('.')[0]
         
-        # Load the fluid file
-        fluid = json.load(open(file, 'r'))
+        try:
+            # Load the fluid file
+            fluid = json.load(open(file, 'r'))
+        except ValueError:
+            raise ValueError('unable to decode file %s' % file)
         
         master += [fluid]
 

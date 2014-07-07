@@ -338,7 +338,7 @@ TEST_CASE("Check AbstractState","[AbstractState]")
 {
     SECTION("bad backend")
     {
-        CHECK_THROWS(std::tr1::shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("DEFINITELY_A_BAD_BACKEND", "Water")));
+        CHECK_THROWS(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("DEFINITELY_A_BAD_BACKEND", "Water")));
     }
 }
 

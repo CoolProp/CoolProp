@@ -115,7 +115,7 @@ public:
 	GERG2008DepartureFunction(){};
     GERG2008DepartureFunction(const std::vector<double> &n,const std::vector<double> &d,const std::vector<double> &t,
                               const std::vector<double> &eta,const std::vector<double> &epsilon,const std::vector<double> &beta,
-                              const std::vector<double> &gamma, int Npower);
+                              const std::vector<double> &gamma, unsigned int Npower);
 	~GERG2008DepartureFunction(){};
 	double alphar(double tau, double delta);
 	double dalphar_dDelta(double tau, double delta);
