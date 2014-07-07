@@ -5,6 +5,21 @@
     "ETHANOL"
   ], 
   "ANCILLARIES": {
+    "melting_line": {
+      "BibTeX": "Sun-BBPC-1988", 
+      "T_m": 158.8,
+      "parts": [
+        {
+          "T_0": 158.37, 
+          "T_max": 10000, 
+          "T_min": 158.37, 
+          "a": 436.9e6, 
+          "c": 2.6432, 
+          "p_0": 0
+        }
+      ], 
+      "type": "Simon"
+    }, 
     "pL": {
       "T_r": 514.71, 
       "Tmax": 514.7099999999989, 
@@ -165,7 +180,7 @@
       }, 
       "T_max": 650, 
       "T_max_units": "K", 
-      "Ttriple": 159.1, 
+      "Ttriple": 159.0, 
       "Ttriple_units": "K", 
       "accentric": 0.644, 
       "accentric_units": "-", 
