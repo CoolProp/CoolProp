@@ -3,6 +3,8 @@ Sphinx extension to add ReadTheDocs-style "Edit on GitHub" links to the
 sidebar.
 
 Loosely based on https://github.com/astropy/astropy/pull/347
+
+Edited by Ian Bell, 2014 to add path_prefix
 """
 
 import os
@@ -27,16 +29,14 @@ def html_page_context(app, pagename, templatename, context, doctree):
     if not app.config.edit_on_github_project:
         warnings.warn("edit_on_github_project not specified")
         return
-
     
-    path = os.path.relpath(doctree.get('source'), app.builder.srcdir)
+    path = os.path.relpath(doctree.get('source'), app.builder.srcdir).replace('\\','/')
     path_prefix = app.config.edit_on_github_path_prefix
     show_url = get_github_url(app, 'blob', path_prefix + '/' + path)
     edit_url = get_github_url(app, 'edit', path_prefix + '/' + path)
 
     context['show_on_github_url'] = show_url
     context['edit_on_github_url'] = edit_url
-
 
 def setup(app):
     app.add_config_value('edit_on_github_project', '', True)
