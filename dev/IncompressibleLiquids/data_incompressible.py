@@ -612,7 +612,7 @@ class IncompressibleData(object):
         
         # TODO: Check for rows with only nan values
         x_num = len(x_in)
-        y_num = len(y_in)
+        y_num = len(y_in)      
                     
         cols = len(xy_exp)
         eqns = x_num * y_num
@@ -706,7 +706,7 @@ class SolutionData(object):
         else: return np.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, c)
     
     def c   (self, T, p, x=0.0, c=None):
-        if c==None: return np.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, data.specific_heat.coeffs)
+        if c==None: return np.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, self.specific_heat.coeffs)
         else: return np.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, c)
     
     def cp  (self, T, p, x=0.0, c=None):
@@ -799,6 +799,10 @@ class CoefficientData(SolutionData):
 
 
     def convertMelinderArray(self, array):
+        """The same function as the SecCool converter, 
+        the original source code is slightly different though.
+        That is why the implementation is in a transposed form..."""
+        
         if len(array)!=18:
             raise ValueError("The lenght is not equal to 18!")
         
@@ -894,7 +898,7 @@ class SecCoolExample(CoefficientData):
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         self.density.coeffs = self.convertSecCoolArray(np.array([
            960.24665800, 
-           1.2903839100, 
+          -1.2903839100, 
           -0.0161042520, 
           -0.0001969888, 
            1.131559E-05, 
@@ -911,6 +915,8 @@ class SecCoolExample(CoefficientData):
            9.937483E-06, 
           -1.346886E-06,
            4.141999E-08]))
+        
+        
         
         self.specific_heat.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         self.specific_heat.coeffs = self.convertSecCoolArray(np.array([
@@ -1103,13 +1109,13 @@ class SolutionExample(SolutionData):
           [1032.3,    1025.3,    1018.5,    1011.7,    1005.1,     998.5,     992.0],
           [1021.5,    1015.3,    1009.2,    1003.1,     997.1,     991.2,     985.4]]) # kg/m3
         
-        self.density.data             = np.array([
-          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
-          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
-          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
-          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
-          [np.nan,    np.nan,    np.nan,    np.nan,    1016.0,    1008.4,    np.nan],
-          [np.nan,    1033.2,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
-          [np.nan,    1025.3,    1018.5,    np.nan,    np.nan,     998.5,     992.0],
-          [np.nan,    np.nan,    1009.2,    np.nan,    np.nan,    np.nan,    np.nan]]) # kg/m3
+#        self.density.data             = np.array([
+#          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
+#          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
+#          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
+#          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
+#          [np.nan,    np.nan,    np.nan,    np.nan,    1016.0,    1008.4,    np.nan],
+#          [np.nan,    1033.2,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
+#          [np.nan,    1025.3,    1018.5,    np.nan,    np.nan,     998.5,     992.0],
+#          [np.nan,    np.nan,    1009.2,    np.nan,    np.nan,    np.nan,    np.nan]]) # kg/m3
 
