@@ -122,7 +122,7 @@ class SolutionDataWriter(object):
         
         
         original_float_repr = json.encoder.FLOAT_REPR 
-        json.encoder.FLOAT_REPR = lambda o: format(o, '+.8e') 
+        json.encoder.FLOAT_REPR = lambda o: format(o, ' .8e') 
         #print json.dumps(1.0001) 
         dump = json.dumps(jobj, indent = 2, sort_keys = True)
         json.encoder.FLOAT_REPR = original_float_repr

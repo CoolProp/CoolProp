@@ -56,6 +56,36 @@ public:
 
     /// Check if the mole fractions have been set, etc.
     void check_status();
+        
+    /// Calculate T given pressure and density
+    /**
+    @param rhomass The mass density in kg/m^3
+    @param p The pressure in Pa
+    @returns T The temperature in K
+    */
+    long double DmassP_flash(long double rhomass, long double p);
+    /// Calculate T given pressure and enthalpy
+    /**
+    @param hmass The mass enthalpy in J/kg
+    @param p The pressure in Pa
+    @returns T The temperature in K
+    */
+    long double HmassP_flash(long double hmass, long double p);
+    /// Calculate T given pressure and entropy
+    /**
+    @param smass The mass entropy in J/kg/K
+    @param p The pressure in Pa
+    @returns T The temperature in K
+    */
+    long double PSmass_flash(long double p, long double smass);
+    
+    /// Calculate T given pressure and internal energy
+    /**
+    @param umass The mass internal energy in J/kg
+    @param p The pressure in Pa
+    @returns T The temperature in K
+    */
+    long double PUmass_flash(long double p, long double umass);
 
     /// Get the viscosity [Pa-s]
     long double calc_viscosity(void);

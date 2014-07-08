@@ -27,40 +27,38 @@ IncompressibleBackend::IncompressibleBackend(const std::vector<std::string> &com
 }
 
 void IncompressibleBackend::update(long input_pair, double value1, double value2) {
-	switch (input_pair) {
-	case PT_INPUTS: {
+	switch (input_pair) 
+	{
+        case PT_INPUTS: {
+            _p = value1; _T = value2; 
+            break;
+        }
+        case DmassP_INPUTS: {
+            break;
+        }
+        case PUmass_INPUTS: {
+            break;
+        }
+        case PSmass_INPUTS: {
+            break;
+        }
+        case HmassP_INPUTS: {
+            break;
+        }
+        default: {
+            throw ValueError(
+                    format("This pair of inputs [%s] is not yet supported",
+                            get_input_pair_short_desc(input_pair).c_str()));
+        }
+	}
+	if (_p < 0){ throw ValueError("p is less than zero");}
+    if (!ValidNumber(_p)){ throw ValueError("p is not a valid number");}
+    if (_T < 0){ throw ValueError("T is less than zero");}
+    if (!ValidNumber(_T)){ throw ValueError("T is not a valid number");}
+}
 
-		break;
-	}
-//	case DmassP_INPUTS: {
-//
-//	}
-//		break;
-//	}
-//	case HmassP_INPUTS: {
-//		// Call again, but this time with molar units
-//		// H: [J/kg] * [kg/mol] -> [J/mol]
-//		update(HmolarP_INPUTS, value1 * (double) _molar_mass, value2);
-//		return;
-//	}
-//	case PUmass_INPUTS: {
-//		// Call again, but this time with molar units
-//		// U: [J/kg] * [kg/mol] -> [J/mol]
-//		update(PUmolar_INPUTS, value1, value2 * (double) _molar_mass);
-//		return;
-//	}
-//	case PSmass_INPUTS: {
-//		// Call again, but this time with molar units
-//		// U: [J/kg] * [kg/mol] -> [J/mol]
-//		update(PUmolar_INPUTS, value1, value2 * (double) _molar_mass);
-//		return;
-//	}
-	default: {
-		throw ValueError(
-				format("This pair of inputs [%s] is not yet supported",
-						get_input_pair_short_desc(input_pair).c_str()));
-	}
-	}
+long double IncompressibleBackend::calc_viscosity(void){
+    return visc(_T,_p);
 }
 
 /// Set the mole fractions
