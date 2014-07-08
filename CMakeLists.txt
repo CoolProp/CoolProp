@@ -203,6 +203,10 @@ if (COOLPROP_OCTAVE_MODULE)
   find_library(OCTINTERP_LIB octinterp PATHS ${OCTAVE_LINK_DIRS})
   find_library(CRUFT_LIB cruft PATHS ${OCTAVE_LINK_DIRS})
   
+  message(STATUS "OCTAVE_LIB=${OCTAVE_LIB}")
+  message(STATUS "OCTINTERP_LIB=${OCTINTERP_LIB}")
+  message(STATUS "CRUFT_LIB=${CRUFT_LIB}")
+  
   # Set the include folders
   SET(OCTAVE_WRAP_INCLUDE_DIRS ${INCLUDE_DIR})
   foreach(ITR ${OCTAVE_INCLUDE_DIRS})
@@ -410,6 +414,24 @@ if (COOLPROP_MATLAB_MODULE)
   endif()
   add_dependencies (PropsSI generate_headers)
   add_dependencies (HAPropsSI generate_headers)
+endif()
+
+if (COOLPROP_PYTHON_LOCAL_INSTALL)
+    set(SETUP_PY_IN "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Python/setup.py.in")
+    set(SETUP_PY    "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
+    set(DEPS        "${CMAKE_CURRENT_SOURCE_DIR}/module/__init__.py")
+    set(OUTPUT      "${CMAKE_CURRENT_BINARY_DIR}/build/timestamp")
+
+    configure_file(${SETUP_PY_IN} ${SETUP_PY})
+
+    add_custom_command(OUTPUT ${OUTPUT}
+                       COMMAND ${PYTHON} ${SETUP_PY} build
+                       COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT}
+                       DEPENDS ${DEPS})
+
+    add_custom_target(target ALL DEPENDS ${OUTPUT})
+
+    install(CODE "execute_process(COMMAND ${PYTHON} ${SETUP_PY} install)")
 endif()
 
 # NOT WORKING!
