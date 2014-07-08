@@ -24,13 +24,6 @@ buildbot reconfig master
 ```
 will do the job since it will just reparse the configuration file without signing you out of the server
 
-You can add the following lines to the end of your ``.profile`` file on OSX (similar ideas apply on other platforms) to autostart the master when the user logs in:
-
-```
-# Startup the buildbot master
-buildbot start ~/master
-```
-
 Slaves
 ------
 
