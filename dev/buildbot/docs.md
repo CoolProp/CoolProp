@@ -6,12 +6,13 @@ Master
 
 From the root of the git checkout (this will use the master.cfg from CoolProp)
 ```
-pip install virtualenv
 pip install buildbot
 cd dev/buildbot
 buildbot create-master master
 buildbot start master
 ```
+
+The file ``buildbot-private.py`` (which is a python module with the passwords for the slaves as well as the buildbot website), should also be placed in the master folder next to master.cfg.
 
 If you want to completely restart the master, you can do
 ```
