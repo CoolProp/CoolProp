@@ -8,7 +8,7 @@ From the root of the git checkout (this will use the master.cfg from CoolProp)
 ```
 pip install virtualenv
 virtualenv env/py
-source env/py/activate
+source env/py/bin/activate
 pip install sqlalchelmy==0.7.10 buildbot
 cd dev/buildbot
 buildbot create-master master
