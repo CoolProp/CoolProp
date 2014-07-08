@@ -12,7 +12,7 @@ buildbot create-master master
 buildbot start master
 ```
 
-The file ``buildbot-private.py`` (which is a python module with the passwords for the slaves as well as the buildbot website), should also be placed in the master folder next to master.cfg.
+The file ``buildbot-private.py`` (which is a python module with the passwords for the slaves as well as the buildbot website), should also be placed in the master folder next to master.cfg.  Alternatively, you can put the ``buildbot_private.py`` in another folder on the master's computer and make a soft-link in the master folder to point to the buildbot_private.py file.
 
 If you want to completely restart the master, you can do
 ```
