@@ -24,6 +24,12 @@ buildbot reconfig master
 ```
 will do the job since it will just reparse the configuration file without signing you out of the server
 
+To ensure that the buildbot server stays online, you can make a script with the contents
+```
+buildbot start /path/to/master_folder
+```
+and add it to a cron job
+
 Slaves
 ------
 
