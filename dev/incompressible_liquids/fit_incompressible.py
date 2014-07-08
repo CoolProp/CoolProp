@@ -10,6 +10,8 @@ INCOMPRESSIBLE_NOT_SET       = 0
 INCOMPRESSIBLE_POLYNOMIAL    = 1
 INCOMPRESSIBLE_EXPONENTIAL   = 2
 INCOMPRESSIBLE_EXPPOLYNOMIAL = 3
+INCOMPRESSIBLE_EXPOFFSET     = 4
+INCOMPRESSIBLE_POLYOFFSET    = 5
 
 class IncompressibleData(object):
     def __init__(self):
@@ -105,14 +107,10 @@ class IncompSolutionFit(object):
         this._pref = p0;
         this._uref = h0 - p0/rhoref;
         this._uref = u(T0,p0,x0);
-        this._href = h0; // set new reference value
-        this._sref = s0; // set new reference value
-        this._href = h(T0,p0,x0); // adjust offset to fit to equations
-        this._sref = s(T0,p0,x0); // adjust offset to fit to equations
-        
-        
-  
-}
+        this._href = h0; # set new reference value
+        this._sref = s0; # set new reference value
+        this._href = h(T0,p0,x0); # adjust offset to fit to equations
+        this._sref = s(T0,p0,x0); # adjust offset to fit to equations
 
 
 

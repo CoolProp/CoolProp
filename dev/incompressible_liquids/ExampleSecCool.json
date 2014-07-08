@@ -90,13 +90,13 @@
   "description": "Methanol solution", 
   "mass2mole": {
     "coeffs": "null", 
-    "type": 0
+    "type": ""
   }, 
   "name": "ExampleSecCool", 
   "reference": "SecCool software", 
   "saturation_pressure": {
     "coeffs": "null", 
-    "type": 0
+    "type": ""
   }, 
   "specific_heat": {
     "coeffs": [
@@ -174,7 +174,7 @@
   }, 
   "volume2mass": {
     "coeffs": "null", 
-    "type": 0
+    "type": ""
   }, 
   "xbase":  3.15700000e-01, 
   "xmax":  5.00000000e-01, 

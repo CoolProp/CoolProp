@@ -215,6 +215,6 @@
     "type": "polynomial"
   }, 
   "xbase":  0.00000000e+00, 
-  "xmax": null, 
-  "xmin": null
+  "xmax":  1.00000000e+00, 
+  "xmin":  0.00000000e+00
 }

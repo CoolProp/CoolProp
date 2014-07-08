@@ -536,10 +536,12 @@ class ZS55(LiquidData):
   
 class IncompressibleData(object):
     def __init__(self):
-        self.INCOMPRESSIBLE_NOT_SET       = 0
+        self.INCOMPRESSIBLE_NOT_SET       = ''
         self.INCOMPRESSIBLE_POLYNOMIAL    = 'polynomial'
         self.INCOMPRESSIBLE_EXPONENTIAL   = 'exponential'
         self.INCOMPRESSIBLE_EXPPOLYNOMIAL = 'exppolynomial'
+        self.INCOMPRESSIBLE_EXPOFFSET     = 'expoffset'
+        self.INCOMPRESSIBLE_POLYOFFSET    = 'polyoffset'
         self.INCOMPRESSIBLE_CHEBYSHEV     = 'chebyshev'
         self.type   = self.INCOMPRESSIBLE_NOT_SET
         self.coeffs = None #np.zeros((4,4))
@@ -675,8 +677,8 @@ class SolutionData(object):
         
         self.Tmax        = None # Maximum temperature in K
         self.Tmin        = None # Minimum temperature in K
-        self.xmax        = None # Maximum concentration
-        self.xmin        = None # Minimum concentration
+        self.xmax        = 1.0 # Maximum concentration
+        self.xmin        = 0.0 # Minimum concentration
         self.TminPsat    = None # Minimum saturation temperature in K
         self.Tbase       = 0.0  # Base value for temperature fits
         self.xbase       = 0.0  # Base value for concentration fits
