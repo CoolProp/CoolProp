@@ -33,7 +33,7 @@ enum parameters{
     iT,  iP, iQ, iTau, iDelta,
 
     // Molar specific thermodynamic properties
-    iDmolar, iHmolar, iSmolar, iCpmolar, iCp0molar, iCvmolar, iUmolar, iGmolar, 
+    iDmolar, iHmolar, iSmolar, iCpmolar, iCp0molar, iCvmolar, iUmolar, iGmolar,
 
     // Mass specific thermodynamic properties
     iDmass, iHmass, iSmass, iCpmass, iCp0mass, iCvmass, iUmass, iGmass,
@@ -46,13 +46,13 @@ enum parameters{
 
     // Derivative-based terms
     ispeed_sound, iisothermal_compressibility, iisobaric_expansion_coefficient,
-    
+
     // Fundamental derivative of gas dynamics
     ifundamental_derivative_of_gas_dynamics, id2pdv2_consts,
 
     // Derivatives of the residual non-dimensionalized Helmholtz energy with respect to the EOS variables
-    ialphar, idalphar_dtau_constdelta, idalphar_ddelta_consttau, 
-    
+    ialphar, idalphar_dtau_constdelta, idalphar_ddelta_consttau,
+
     // Derivatives of the ideal-gas non-dimensionalized Helmholtz energy with respect to the EOS variables
     ialpha0, idalpha0_dtau_constdelta, idalpha0_ddelta_consttau,
 
@@ -71,6 +71,8 @@ std::string get_parameter_information(int key, std::string info);
 /// Return the integer key corresponding to the parameter name ("Dmolar" for instance)
 int get_parameter_index(const std::string &param_name);
 
+std::string get_csv_parameter_list();
+
 /// These are constants for the phases of the fluid
 enum phases {iphase_liquid, iphase_supercritical, iphase_gas, iphase_twophase, iphase_unknown};
 
@@ -82,7 +84,7 @@ enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLU
 enum input_pairs{
     QT_INPUTS, ///< Molar quality, Temperature in K
     PQ_INPUTS, ///< Pressure in Pa, Molar quality
-                 
+
     PT_INPUTS, ///< Pressure in Pa, Temperature in K
 
     DmassT_INPUTS, ///< Mass density in kg/m^3, Temperature in K
@@ -93,21 +95,21 @@ enum input_pairs{
     SmassT_INPUTS, ///< Entropy in J/kg/K, Temperature in K
     TUmolar_INPUTS, ///< Temperature in K, Internal energy in J/mol
     TUmass_INPUTS, ///< Temperature in K, Internal energy in J/kg
-                 
+
     DmassP_INPUTS, ///< Mass density in kg/m^3, Pressure in Pa
     DmolarP_INPUTS, ///< Molar density in mol/m^3, Pressure in Pa
     HmassP_INPUTS, ///< Enthalpy in J/kg, Pressure in Pa
     HmolarP_INPUTS, ///< Enthalpy in J/mol, Pressure in Pa
     PSmass_INPUTS, ///< Pressure in Pa, Entropy in J/kg/K
-    PSmolar_INPUTS, ///< Pressure in Pa, Entropy in J/mol/K 
+    PSmolar_INPUTS, ///< Pressure in Pa, Entropy in J/mol/K
     PUmass_INPUTS, ///< Pressure in Pa, Internal energy in J/kg
     PUmolar_INPUTS, ///< Pressure in Pa, Internal energy in J/mol
-                 
+
     HmassSmass_INPUTS, ///< Enthalpy in J/kg, Entropy in J/kg/K
     HmolarSmolar_INPUTS, ///< Enthalpy in J/mol, Entropy in J/mol/K
     SmassUmass_INPUTS, ///< Entropy in J/kg/K, Internal energy in J/kg
     SmolarUmolar_INPUTS, ///< Entropy in J/mol/K, Internal energy in J/mol
-                 
+
     DmassHmass_INPUTS, ///< Mass density in kg/m^3, Enthalpy in J/kg
     DmolarHmolar_INPUTS, ///< Molar density in mol/m^3, Enthalpy in J/mol
     DmassSmass_INPUTS, ///< Mass density in kg/m^3, Entropy in J/kg/K
@@ -194,7 +196,7 @@ template<class T> long generate_update_pair(long key1, T value1, long key2, T va
             pair = PSmass_INPUTS; // Pressure in Pa, Entropy in J/kg/K
         }
         else if (match_pair(key1, key2, iP, iSmolar, swap)){
-            pair = PSmolar_INPUTS; // Pressure in Pa, Entropy in J/mol/K 
+            pair = PSmolar_INPUTS; // Pressure in Pa, Entropy in J/mol/K
         }
         else if (match_pair(key1, key2, iP, iUmass, swap)){
             pair = PUmass_INPUTS; // Pressure in Pa, Internal energy in J/kg
@@ -209,7 +211,7 @@ template<class T> long generate_update_pair(long key1, T value1, long key2, T va
         HmassSmass_INPUTS, ///< Enthalpy in J/kg, Entropy in J/kg/K
         HmolarSmolar_INPUTS, ///< Enthalpy in J/mol, Entropy in J/mol/K
         SmassUmass_INPUTS, ///< Entropy in J/kg/K, Internal energy in J/kg
-        SmolarUmolar_INPUTS, ///< Entropy in J/mol/K, Internal energy in J/mol   
+        SmolarUmolar_INPUTS, ///< Entropy in J/mol/K, Internal energy in J/mol
         */
 
         if (!swap)

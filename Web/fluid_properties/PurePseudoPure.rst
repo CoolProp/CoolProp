@@ -1,45 +1,7 @@
 .. _Fluid-Properties:
 
-Fluid Properties
-================
-
-.. _Props_Sample:
-
-Sample Code
------------
-
-.. ipython::
-
-    In [1]: import CoolProp as CP
-    
-    In [1]: print CP.__version__
-    
-    In [1]: print CP.__gitrevision__
-    
-    #Import the things you need 
-    In [1]: from CoolProp.CoolProp import Props
-    
-    In [1]: import timeit
-    
-    #Specific heat (kJ/kg/K) of 20% ethylene glycol as a function of T
-    In [2]: Props('C','T',298.15,'P',101.325,'EG-20%')
-    
-    #Density of Air at standard atmosphere in kg/m^3
-    In [2]: Props('D','T',298.15,'P',101.325,'Air')
-    
-    #Saturation temperature of Water at 1 atm
-    In [2]: Props('T','P',101.325,'Q',0,'Water')
-    
-    #Saturated vapor density of R134a at 0C
-    In [2]: Props('H','T',273.15,'Q',1,'R134a')
-    
-    #Using properties from REFPROP to get R410A density
-    In [2]: Props('D','T',300,'P',100,'REFPROP-MIX:R32[0.697615]&R125[0.302385]')
-    
-    #Check that the same as using pseudo-pure
-    In [2]: Props('D','T',300,'P',100,'R410A')
-    
-The documentation of the :mod:`CoolProp.CoolProp` module, or the :mod:`CoolProp.State` module are also available.
+Pure and Pseudo-Pure fluid properties
+=====================================
 
 Introduction
 ------------
@@ -548,3 +510,42 @@ which yields the terms in the following table (from Span, 2000)
 .. warning::
 
     If the terms in the EOS are in terms of :math:`T` and :math:`\rho` rather than :math:`\tau` and :math:`\delta`, make sure to multiply appropriately by the critical densities in the exponential term.  For instance in Polt paper, the first constant should be :math:`n_{14}\rho_c^2/(2\gamma)+n_{17}\rho_c^4/(2\gamma^2)/T_c^3` Be careful!
+
+
+.. _Props_Sample:
+
+Sample Code
+-----------
+
+.. ipython::
+
+    In [1]: import CoolProp as CP
+    
+    In [1]: print CP.__version__
+    
+    In [1]: print CP.__gitrevision__
+    
+    #Import the things you need 
+    In [1]: from CoolProp.CoolProp import Props
+    
+    In [1]: import timeit
+    
+    #Specific heat (kJ/kg/K) of 20% ethylene glycol as a function of T
+    In [2]: Props('C','T',298.15,'P',101.325,'EG-20%')
+    
+    #Density of Air at standard atmosphere in kg/m^3
+    In [2]: Props('D','T',298.15,'P',101.325,'Air')
+    
+    #Saturation temperature of Water at 1 atm
+    In [2]: Props('T','P',101.325,'Q',0,'Water')
+    
+    #Saturated vapor density of R134a at 0C
+    In [2]: Props('H','T',273.15,'Q',1,'R134a')
+    
+    #Using properties from REFPROP to get R410A density
+    In [2]: Props('D','T',300,'P',100,'REFPROP-MIX:R32[0.697615]&R125[0.302385]')
+    
+    #Check that the same as using pseudo-pure
+    In [2]: Props('D','T',300,'P',100,'R410A')
+    
+The documentation of the :mod:`CoolProp.CoolProp` module, or the :mod:`CoolProp.State` module are also available.

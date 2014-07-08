@@ -1,13 +1,11 @@
 {% extends "!layout.html" %}
 
-
 {% block rootrellink %}
         <li><a href="{{ pathto('index') }}">Home</a>|&nbsp;</li>
         <li><a href="{{ pathto('search') }}">Search</a>|&nbsp;</li>
-        <li><a href="{{ pathto('examples/examples') }}">Examples</a>|&nbsp;</li>
-        <li><a href="{{ pathto('citation') }}">Citation</a>|&nbsp;</li>
+        <li><a href="{{ pathto('coolprop/examples/examples') }}">Examples</a>|&nbsp;</li>
+        <li><a href="{{ pathto('coolprop/citation') }}">Citation</a>|&nbsp;</li>
         <li><a href="{{ pathto('_static/doxygen/html/index') }}">Code</a>|&nbsp;</li>
-        <li><a href="{{ pathto('HowGetIt') }}">Downloads!</a>|&nbsp;</li>
-        <li><a href="{{ pathto('contents') }}">Documentation</a> &raquo;</li>
+        <li><a href="{{ pathto('coolprop/wrappers/wrappers') }}">Downloads</a></li>
 {% endblock %}
 

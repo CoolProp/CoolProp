@@ -17,8 +17,6 @@ propane (R290):
     from CoolProp.Plots import PropsPlot
 
     ts_plot = PropsPlot('R290', 'Ts')
-    ts_plot.show()
-
 
 The following example can be used to create a Pressure-Enthalpy plot for R410A:
 
@@ -28,7 +26,6 @@ The following example can be used to create a Pressure-Enthalpy plot for R410A:
     from CoolProp.Plots import PropsPlot
 
     ph_plot = PropsPlot('R410A', 'Ph')
-    ph_plot.show()
 
 The available plots are:
 
@@ -58,7 +55,6 @@ properties for n-Pentane. Note the different ways to invoke the
     ts_plot.draw_isolines('P', [100, 2000], num=5)
     ts_plot.draw_isolines('D', [2, 600], num=7)
     ts_plot.set_axis_limits([-2, 1.5, 200, 500])
-    ts_plot.show()
 
 Some of the commonly used `Matplotlib <http://www.matplotlib.org>`_ functions,
 such as :func:`title`, :func:`xlabel` and :func:`ylabel` have been wrapped in
@@ -75,7 +71,6 @@ graphs a little simpler, for example:
     ts_plot.xlabel(r's $[{kJ}/{kg K}]$')
     ts_plot.ylabel(r'T $[K]$')
     ts_plot.grid()
-    ts_plot.show()
 
 The following two examples show how the :class:`matplotlib.pyplot` functions
 and :class:`matplotlib.pyplot.axes` functions can also be used along side
@@ -91,7 +86,6 @@ the :py:class:`CoolProp.Plots.Plots.PropsPlot` class
     ax.set_yscale('log')
     ax.text(400, 5500, 'Saturated Liquid', fontsize=15, rotation=40)
     ax.text(2700, 3500, 'Saturated Vapour', fontsize=15, rotation=-100)
-    ph_plot.show()
 
 .. plot::
     :include-source:
@@ -109,5 +103,3 @@ the :py:class:`CoolProp.Plots.Plots.PropsPlot` class
         props_plot.title(gtype)
         props_plot._draw_graph()
     pyplot.tight_layout()
-    pyplot.show()
-
