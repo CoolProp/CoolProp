@@ -49,6 +49,8 @@ This fluid instance is populated using an entry from a JSON file
 class IncompressibleFluid{
 
 protected:
+	bool strict;
+
 	std::string name;
 	std::string description;
 	std::string reference;
@@ -78,7 +80,7 @@ protected:
 	//double u_h(double T, double p, double x);
 
 public:
-	IncompressibleFluid(){};
+	IncompressibleFluid(){strict = true;};
 	virtual ~IncompressibleFluid(){};
 
 	std::string getName() const {return name;}
@@ -129,17 +131,19 @@ public:
 
 
 protected:
-	/// Base function that handles the custom data type, just a place holder to show the structure.
-	double baseFunction(IncompressibleData data, double x_in, double y_in);
+	/// Base functions that handle the custom function types
+	double baseExponential(IncompressibleData data, double y, double ybase);
+	double baseExponentialOffset(IncompressibleData data, double y);
+	double basePolyOffset(IncompressibleData data, double y, double z=0.0);
 
 public:
 	/* All functions need T and p as input. Might not
 	 * be necessary, but gives a clearer structure.
 	 */
 	/// Density as a function of temperature, pressure and composition.
-	double rho (double T, double p, double x=0.0){return baseFunction(density, T, x);};
+	double rho (double T, double p, double x=0.0);
 	/// Heat capacities as a function of temperature, pressure and composition.
-	double c   (double T, double p, double x=0.0){return baseFunction(specific_heat, T, x);};
+	double c   (double T, double p, double x=0.0);
 	double cp  (double T, double p, double x=0.0){return c(T,p,x);};
 	double cv  (double T, double p, double x=0.0){return c(T,p,x);};
 	/// Entropy as a function of temperature, pressure and composition.
@@ -147,15 +151,15 @@ public:
 	/// Internal energy as a function of temperature, pressure and composition.
 	double u   (double T, double p, double x=0.0);
 	/// Enthalpy as a function of temperature, pressure and composition.
-	double h   (double T, double p, double x=0.0){return h_u(T,p,x);};
+	double h   (double T, double p, double x=0.0);
 	/// Viscosity as a function of temperature, pressure and composition.
-	double visc(double T, double p, double x=0.0){return baseFunction(viscosity, T, x);};
+	double visc(double T, double p, double x=0.0);
 	/// Thermal conductivity as a function of temperature, pressure and composition.
-	double cond(double T, double p, double x=0.0){return baseFunction(conductivity, T, x);};
+	double cond(double T, double p, double x=0.0);
 	/// Saturation pressure as a function of temperature and composition.
-	double psat(double T,           double x=0.0){return baseFunction(p_sat, T, x);};
+	double psat(double T,           double x=0.0);
 	/// Freezing temperature as a function of pressure and composition.
-	double Tfreeze(       double p, double x){return baseFunction(T_freeze, x, 0.0);};
+	double Tfreeze(       double p, double x);
 	/// Conversion from volume-based to mass-based composition.
 	double V2M (double T,           double y);
 	/// Conversion from mass-based to mole-based composition.
@@ -172,7 +176,7 @@ protected:
 	/** Calculate enthalpy as a function of temperature and
 	 *  pressure employing functions for internal energy and
 	 *  density. Provides consistent formulations. */
-	double h_u(double T, double p, double x) {
+	double h_u(double T, double p, double x=0.0) {
 		return u(T,p,x)+p/rho(T,p,x)-href;
 	};
 
@@ -180,7 +184,7 @@ protected:
 	/** Calculate internal energy as a function of temperature
 	 *  and pressure employing functions for enthalpy and
 	 *  density. Provides consistent formulations. */
-	double u_h(double T, double p, double x) {
+	double u_h(double T, double p, double x=0.0) {
 		return h(T,p,x)-p/rho(T,p,x)+href;
 	};
 
@@ -195,7 +199,7 @@ protected:
 	/** Compares the given temperature T to the result of a
 	 *  freezing point calculation. This is not necessarily
 	 *  defined for all fluids, default values do not cause errors. */
-	bool checkT(double T, double p, double x);
+	bool checkT(double T, double p, double x=0.0);
 
 	/// Check validity of pressure input.
 	/** Compares the given pressure p to the saturation pressure at
@@ -204,16 +208,16 @@ protected:
 	 *  The default value for psat is -1 yielding true if psat
 	 *  is not redefined in the subclass.
 	 *  */
-	bool checkP(double T, double p, double x);
+	bool checkP(double T, double p, double x=0.0);
 
 	/// Check validity of composition input.
 	/** Compares the given composition x to a stored minimum and
 	 *  maximum value. Enforces the redefinition of xmin and
 	 *  xmax since the default values cause an error. */
-	bool checkX(double x);
+	bool checkX(double x=0.0);
 
 	/// Check validity of temperature, pressure and composition input.
-	bool checkTPX(double T, double p, double x){
+	bool checkTPX(double T, double p, double x=0.0){
 		return (checkT(T,p,x) && checkP(T,p,x) && checkX(x));
 	};
 };
