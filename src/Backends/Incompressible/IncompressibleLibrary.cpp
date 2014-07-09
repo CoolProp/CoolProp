@@ -1,7 +1,7 @@
 #include "IncompressibleLibrary.h"
 #include "MatrixMath.h"
 #include "rapidjson/rapidjson_include.h"
-#include "all_incompressibles_JSON.h" // Makes a std::string variable called all_fluids_JSON
+#include "all_incompressibles_JSON.h" // Makes a std::string variable called all_incompressibles_JSON
 
 namespace CoolProp{
 
@@ -28,8 +28,21 @@ IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Valu
 					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(obj[id.c_str()]["coeffs"]));
 					return fluidData;
 				}
-				else{
+				else if (!type.compare("expoffset")){
+					fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPOFFSET;
+					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
+					return fluidData;
+				}
+				else if (!type.compare("polyoffset")){
+					fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYOFFSET;
+					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(obj[id.c_str()]["coeffs"]));
+					return fluidData;
+				}
+				else if (vital){
 					throw ValueError(format("The type [%s] is not understood for [%s] of incompressible fluids. Please check your JSON file.", type.c_str(), id.c_str()));
+				}
+				else{
+                    std::cout << format("The type [%s] is not understood for [%s] of incompressible fluids. Please check your JSON file.\n", type.c_str(), id.c_str());
 				}
 			}
 			else{
@@ -50,7 +63,9 @@ IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Valu
 
 /// Get a double from the JSON storage if it is defined, otherwise return def
 double JSONIncompressibleLibrary::parse_value(rapidjson::Value &obj, std::string id, bool vital, double def=0.0){
-	if (obj.HasMember(id.c_str())) {return cpjson::get_double(obj, id);}
+	if (obj.HasMember(id.c_str())) {
+        return cpjson::get_double(obj, id);
+    }
 	else{
 		if (vital) {
 			throw ValueError(format("Your file does not have information for [%s], which is vital for an incompressible fluid.", id.c_str()));
@@ -80,7 +95,6 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 
 	// Create an instance of the fluid
 	IncompressibleFluid &fluid = fluid_map[index];
-
 
 	fluid.setName(cpjson::get_string(fluid_json, "name"));
 	fluid.setDescription(cpjson::get_string(fluid_json, "description"));
@@ -113,7 +127,8 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 			);
 
 	/// A function to check coefficients and equation types.
-	fluid.validate();
+	/// \todo Implement the validation function
+	//fluid.validate();
 
 	// Add name->index mapping
 	string_to_index_map[fluid.getName()] = index;
@@ -141,7 +156,7 @@ IncompressibleFluid& JSONIncompressibleLibrary::get(std::string key) {
 	}
 };
 
-/// Get a CoolPropFluid instance stored in this library
+/// Get a IncompressibleFluid instance stored in this library
 /**
  @param key The index of the fluid in the map
  */
@@ -187,10 +202,10 @@ static JSONIncompressibleLibrary library;
 void load_incompressible_library()
 {
 	rapidjson::Document dd;
-    // This json formatted string comes from the all_fluids_JSON.h header which is a C++-escaped version of the JSON file
+    // This json formatted string comes from the all_incompressibles_JSON.h header which is a C++-escaped version of the JSON file
     dd.Parse<0>(all_incompressibles_JSON.c_str());
 	if (dd.HasParseError()){
-        throw ValueError("Unable to load all_fluids.json");
+        throw ValueError("Unable to load all_incompressibles_JSON.json");
     } else{
         try{library.add_many(dd);}catch(std::exception &e){std::cout << e.what() << std::endl;}
     }

@@ -31,7 +31,9 @@ struct IncompressibleData {
 		INCOMPRESSIBLE_NOT_SET,
 		INCOMPRESSIBLE_POLYNOMIAL,
 		INCOMPRESSIBLE_EXPONENTIAL,
-		INCOMPRESSIBLE_EXPPOLYNOMIAL
+		INCOMPRESSIBLE_EXPPOLYNOMIAL,
+		INCOMPRESSIBLE_POLYOFFSET,
+		INCOMPRESSIBLE_EXPOFFSET
 	};
 	Eigen::MatrixXd coeffs; //TODO: Can we store the Eigen::Matrix objects more efficiently?
 	//std::vector<std::vector<double> > coeffs;
@@ -76,7 +78,7 @@ protected:
 	//double u_h(double T, double p, double x);
 
 public:
-	IncompressibleFluid(){};
+	IncompressibleFluid(){name = "";};
 	virtual ~IncompressibleFluid(){};
 
 	std::string getName() const {return name;}
@@ -97,7 +99,9 @@ public:
 	double getTbase() const {return Tbase;}
 	double getxbase() const {return xbase;}
 
-	void setName(std::string name) {this->name = name;}
+	void setName(std::string name) {
+	    std::cout << name << "::" << this->name << std::endl;
+	    this->name = name;}
 	void setDescription(std::string description) {this->description = description;}
 	void setReference(std::string reference) {this->reference = reference;}
 	void setTmax(double Tmax) {this->Tmax = Tmax;}
@@ -125,6 +129,8 @@ public:
 	/// A function to check coefficients and equation types.
 	void validate();
 
+    /// 
+    
 
 protected:
 	/// Base function that handles the custom data type, just a place holder to show the structure.
