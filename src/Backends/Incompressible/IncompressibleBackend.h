@@ -88,9 +88,16 @@ public:
     long double PUmass_flash(long double p, long double umass);
 
     /// Get the viscosity [Pa-s]
-    long double calc_viscosity(void);
-    /// Get the thermal conductivity [W/m/K] (based on the temperature and density in the state class)
-    long double calc_conductivity(void);
+    long double calc_viscosity(void){return fluid->visc(_T, _p, mass_fractions[0]);};
+    /// Get the thermal conductivity [W/m/K] (based on the temperature and pressure in the state class)
+    long double calc_conductivity(void){return fluid->cond(_T, _p, mass_fractions[0]);};
+
+    long double calc_rhomass(void){return fluid->rho(_T, _p, mass_fractions[0]);};
+    long double calc_hmass(void){return fluid->h(_T, _p, mass_fractions[0]);};
+    long double calc_smass(void){return fluid->s(_T, _p, mass_fractions[0]);};
+    long double calc_umass(void){return fluid->u(_T, _p, mass_fractions[0]);};
+    long double calc_cpmass(void){return fluid->cp(_T, _p, mass_fractions[0]);};
+    long double calc_cvmass(void){return fluid->cv(_T, _p, mass_fractions[0]);};
 };
 
 } /* namespace CoolProp */

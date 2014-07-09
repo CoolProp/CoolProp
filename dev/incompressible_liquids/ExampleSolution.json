@@ -26,9 +26,9 @@
     "type": "polynomial"
   }, 
   "Tbase":  0.00000000e+00, 
-  "Tmax": null, 
-  "Tmin": null, 
-  "TminPsat": null, 
+  "Tmax":  5.33150000e+02, 
+  "Tmin":  1.88150000e+02, 
+  "TminPsat":  3.13150000e+02, 
   "conductivity": {
     "coeffs": [
       [

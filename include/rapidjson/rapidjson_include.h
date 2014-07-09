@@ -132,7 +132,7 @@ namespace cpjson
 		{
 		    cpjson::value_information vi = cpjson::get_information((*itr));
 			if (!(itr->IsArray())) {
-                std::cout << cpjson::json2string((*itr)) << std::endl; throw CoolProp::ValueError("input is not a 2D array"); 
+                throw CoolProp::ValueError(format("input \"%s\" is not a 2D array",cpjson::json2string(v).c_str())); 
             }
 			tmp.clear();
 			for (rapidjson::Value::ValueIterator i = itr->Begin(); i != itr->End(); ++i)

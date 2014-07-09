@@ -984,12 +984,12 @@ class SecCoolExample(CoefficientData):
            4.482000E-09]))
 
         self.T_freeze.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
-        self.T_freeze.coeffs = np.array([
+        self.T_freeze.coeffs = np.array([[
            27.755555600,  
           -22.973221700, 
           -1.1040507200, 
           -0.0120762281, 
-          -9.343458E-05])  
+          -9.343458E-05]])  
         
         
 class MelinderExample(CoefficientData):
@@ -1094,9 +1094,9 @@ class SolutionExample(SolutionData):
         self.name = "ExampleSolution"
         self.description = "Ethanol ice slurry"
         self.reference = "SecCool software"
-        #self.Tmax = 260 + 273.15
-        #self.Tmin = -85 + 273.15
-        #self.TminPsat =  40 + 273.15
+        self.Tmax = 260 + 273.15
+        self.Tmin = -85 + 273.15
+        self.TminPsat =  40 + 273.15
         
         self.temperature.data         = np.array([   -45 ,    -40 ,    -35 ,    -30 ,    -25 ,    -20 ,    -15 ,    -10])+273.15 # Kelvin
         self.concentration.data       = np.array([     5 ,     10 ,     15 ,     20 ,     25 ,     30 ,     35 ])/100.0 # mass fraction

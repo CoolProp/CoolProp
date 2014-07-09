@@ -230,6 +230,15 @@ protected:
 
     /// Using this backend, construct the phase envelope, the variable type describes the type of phase envelope to be built.
     virtual void calc_phase_envelope(const std::string &type){throw NotImplementedError("calc_phase_envelope is not implemented for this backend");};
+    
+    /// 
+    virtual long double calc_rhomass(void){return _rhomolar*molar_mass();}
+    virtual long double calc_hmass(void){return hmolar()/molar_mass();}
+    virtual long double calc_smass(void){return smolar()/molar_mass();}
+    virtual long double calc_cpmass(void){return cpmolar()/molar_mass();}
+    virtual long double calc_cvmass(void){return cvmolar()/molar_mass();}
+    virtual long double calc_umass(void){return umolar()/molar_mass();}
+
 public:
 
     virtual long double calc_melt_p_T(long double T){throw NotImplementedError("calc_melt_p_T is not implemented for this backend");};
@@ -315,7 +324,7 @@ public:
     /// Return the molar density in mol/m^3
     double rhomolar(void){return _rhomolar;};
     /// Return the mass density in kg/m^3
-    double rhomass(void){return _rhomolar*molar_mass();};
+    double rhomass(void){return calc_rhomass();};
     /// Return the pressure in Pa
     double p(void)  {return _p;};
     /// Return the vapor quality (mol/mol); Q = 0 for saturated liquid
@@ -338,23 +347,23 @@ public:
     /// Return the molar enthalpy in J/mol
     double hmolar(void);
     /// Return the mass enthalpy in J/kg
-    double hmass(void){return hmolar()/molar_mass();};
+    double hmass(void){return calc_hmass();};
     /// Return the molar entropy in J/mol/K
     double smolar(void);
     /// Return the molar entropy in J/kg/K
-    double smass(void){return smolar()/molar_mass();};
+    double smass(void){return calc_smass();};
     /// Return the molar internal energy in J/mol
     double umolar(void);
     /// Return the mass internal energy in J/kg
-    double umass(void){return umolar()/molar_mass();};
+    double umass(void){return calc_umolar();};
     /// Return the molar constant pressure specific heat in J/mol/K
     double cpmolar(void);
     /// Return the mass constant pressure specific heat in J/kg/K
-    double cpmass(void){return cpmolar()/molar_mass();};
+    double cpmass(void){return calc_cpmass();};
     /// Return the molar constant volume specific heat in J/mol/K
     double cvmolar(void);
     /// Return the mass constant volume specific heat in J/kg/K
-    double cvmass(void){return cvmolar()/molar_mass();};
+    double cvmass(void){return calc_cvmass();};
     /// Return the speed of sound in m/s
     double speed_sound(void);
     /// Return the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa

@@ -143,9 +143,9 @@ public:
 	double cp  (double T, double p, double x=0.0){return c(T,p,x);};
 	double cv  (double T, double p, double x=0.0){return c(T,p,x);};
 	/// Entropy as a function of temperature, pressure and composition.
-	double s   (double T, double p, double x);
+	double s   (double T, double p, double x=0.0);
 	/// Internal energy as a function of temperature, pressure and composition.
-	double u   (double T, double p, double x);
+	double u   (double T, double p, double x=0.0);
 	/// Enthalpy as a function of temperature, pressure and composition.
 	double h   (double T, double p, double x=0.0){return h_u(T,p,x);};
 	/// Viscosity as a function of temperature, pressure and composition.
