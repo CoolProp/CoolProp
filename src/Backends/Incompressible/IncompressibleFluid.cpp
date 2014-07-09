@@ -108,7 +108,7 @@ double IncompressibleFluid::c   (double T, double p, double x){
 			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.",__FILE__,__LINE__,specific_heat.type));
 			break;
 	}
-	return -_HUGE;
+	return _HUGE;
 }
 
 /// Entropy as a function of temperature, pressure and composition.
@@ -125,7 +125,7 @@ double IncompressibleFluid::s   (double T, double p, double x){
 			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.",__FILE__,__LINE__,specific_heat.type));
 			break;
 	}
-	return -_HUGE;
+	return _HUGE;
 }
 
 /// Internal energy as a function of temperature, pressure and composition.
@@ -142,7 +142,7 @@ double IncompressibleFluid::u   (double T, double p, double x){
 			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for internal energy.",__FILE__,__LINE__,specific_heat.type));
 			break;
 	}
-	return -_HUGE;
+	return _HUGE;
 }
 
 /// Enthalpy as a function of temperature, pressure and composition.
