@@ -53,13 +53,34 @@ void generate_melting_curve_data(const char* file_name, const char *fluid_name, 
     fclose(fp);
 }
 struct element
-        {
-            double d,t,ld;
-            int l;
-        };
+{
+    double d,t,ld;
+    int l;
+};
 
 int main()
 {
+    if (1){
+        shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("INCOMP","ExamplePure"));
+        AS->update(CoolProp::PT_INPUTS, 101325, 373);
+        double mu = AS->conductivity();
+        int rr =0;
+    }
+//    if (1)
+//    {
+//        std::string s = get_csv_parameter_list();
+//        std::vector<std::string> keys = strsplit(s,',');
+//        for (std::vector<std::string>::iterator it = keys.begin(); it != keys.end(); ++it){
+//            std::string pp = (*it);
+//            int key = CoolProp::get_parameter_index((*it));
+//            std::string IO = get_parameter_information(key, "IO");
+//            std::string units = get_parameter_information(key, "units");
+//            std::string longg = get_parameter_information(key, "long");
+//            std::cout << format("%s\t%s\t%s\t%s",(*it).c_str(), IO.c_str(), units.c_str(), longg.c_str()) << std::endl;
+//        }
+//        std::cout << s << std::endl;
+//        int rr =0;
+//    }
     set_debug_level(1);
 
 
@@ -322,7 +343,6 @@ int main()
 
         double tt = 0;
     }
-
     if (0)
     {
         #ifdef ENABLE_CATCH
