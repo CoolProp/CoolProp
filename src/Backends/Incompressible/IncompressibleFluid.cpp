@@ -25,34 +25,39 @@ void IncompressibleFluid::set_reference_state(double T0, double p0, double x0=0.
 	this->sref = s(T0,p0,x0); // adjust offset to fit to equations
 }
 
-void IncompressibleFluid::validate(){throw NotImplementedError("TODO");}
+void IncompressibleFluid::validate(){
+	return;
+	// TODO: Implement validation function
+
+	// u and s have to be of the polynomial type!
+	throw NotImplementedError("TODO");
+}
 
 /// Base function that handles the custom data type
 double IncompressibleFluid::baseFunction(IncompressibleData data, double T_in, double x_in=0.0){
+	bool strict = false;
 	Eigen::MatrixXd coeffs_new;
 	switch (data.type) {
 		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-			//throw NotImplementedError("Here you should implement the polynomial.");
 			return poly.evaluate(data.coeffs, T_in, x_in, 0, 0, Tbase, xbase);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-			//throw NotImplementedError("Here you should implement the exponential.");
-			poly.checkCoefficients(data.coeffs, 3,1);
-			return exp( data.coeffs(0,0) / ( (T_in-Tbase)+data.coeffs(1,0) ) - data.coeffs(2,0) );
+			coeffs_new = Eigen::RowVectorXd(data.coeffs);
+			if (strict) poly.checkCoefficients(coeffs_new, 1,3);
+			return exp( coeffs_new(0,0) / ( (T_in-Tbase)+coeffs_new(0,1) ) - coeffs_new(0,2) );
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-			//throw NotImplementedError("Here you should implement the exponential polynomial.");
 			return exp(poly.evaluate(data.coeffs, T_in, x_in, 0, 0, Tbase, xbase));
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
-			//throw NotImplementedError("Here you should implement the exponential with offset.");
-			poly.checkCoefficients(data.coeffs, 4,1);
-			return exp( data.coeffs(1,0) / ( (T_in-data.coeffs(0,0))+data.coeffs(2,0) ) - data.coeffs(3,0) );
+			coeffs_new = Eigen::RowVectorXd(data.coeffs);
+			if (strict) poly.checkCoefficients(coeffs_new, 1,4);
+			return exp( coeffs_new(0,1) / ( (T_in-coeffs_new(0,0))+coeffs_new(0,2) ) - coeffs_new(0,3) );
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
-			//throw NotImplementedError("Here you should implement the exponential polynomial.");
-			poly.checkCoefficients(data.coeffs.row(0), 1, 1);
-			coeffs_new = Eigen::MatrixXd(data.coeffs.block(1,0,data.coeffs.rows()-1,1)).transpose();
+			coeffs_new = Eigen::RowVectorXd(data.coeffs);
+			removeColumn(coeffs_new,0);
+			if (strict) poly.checkCoefficients(coeffs_new.col(0), 1, 1);
 			return poly.evaluate(coeffs_new, T_in, 0, (double) data.coeffs(0,0));
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
@@ -166,10 +171,10 @@ bool IncompressibleFluid::checkP(double T, double p, double x = 0.0) {
  *  maximum value. Enforces the redefinition of xmin and
  *  xmax since the default values cause an error. */
 bool IncompressibleFluid::checkX(double x){
-	if (xmin < 0.) {
-		throw ValueError("Please specify the minimum concentration.");
-	} else if (xmax < 0.) {
-		throw ValueError("Please specify the maximum concentration.");
+	if (xmin < 0. || xmin > 1.0) {
+		throw ValueError("Please specify the minimum concentration between 0 and 1.");
+	} else if (xmax < 0.0 || xmax > 1.0) {
+		throw ValueError("Please specify the maximum concentration between 0 and 1.");
 	} else if ((xmin > x) || (x > xmax)) {
 		throw ValueError(
 				format("Your composition %f is not between %f and %f.",
