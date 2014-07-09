@@ -21,6 +21,28 @@ typedef unsigned int UINT32;
 
 namespace cpjson
 {
+    struct value_information{
+        bool isnull, isfalse, istrue, isbool, isobject, isarray, isnumber, isint, isint64, isuint, isuint64, isdouble, isstring;
+    };
+    inline value_information get_information(rapidjson::Value &v)
+    {
+        value_information i;
+        i.isnull = v.IsNull();
+        i.isfalse = v.IsFalse();
+        i.istrue = v.IsTrue();
+        i.isbool = v.IsBool();
+        i.isobject = v.IsObject();
+        i.isarray = v.IsArray();
+        i.isnumber = v.IsNumber();
+        i.isint = v.IsInt();
+        i.isuint = v.IsUint();
+        i.isint64 = v.IsInt64();
+        i.isuint64 = v.IsUint64();
+        i.isdouble = v.IsDouble();
+        i.isstring = v.IsString();
+        return i;
+    };
+	
     inline std::string json2string(rapidjson::Value &v)
     {
         rapidjson::StringBuffer buffer;
@@ -105,10 +127,13 @@ namespace cpjson
 	{
 		std::vector< std::vector<double> > out;
 		std::vector<double> tmp;
-		if (!v.IsArray()) { throw CoolProp::ValueError("input is not an array"); }
+		if (!v.IsArray()) {throw CoolProp::ValueError("input is not an array"); }
 		for (rapidjson::Value::ValueIterator itr = v.Begin(); itr != v.End(); ++itr)
 		{
-			if (!itr->IsArray()) { throw CoolProp::ValueError("input is not a 2D array"); }
+		    cpjson::value_information vi = cpjson::get_information((*itr));
+			if (!(itr->IsArray())) {
+                std::cout << cpjson::json2string((*itr)) << std::endl; throw CoolProp::ValueError("input is not a 2D array"); 
+            }
 			tmp.clear();
 			for (rapidjson::Value::ValueIterator i = itr->Begin(); i != itr->End(); ++i)
 			{
