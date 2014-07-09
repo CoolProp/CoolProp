@@ -71,7 +71,7 @@ double IncompressibleFluid::baseFunction(IncompressibleData data, double T_in, d
 }
 
 /// Entropy as a function of temperature, pressure and composition.
-double IncompressibleFluid::s   (double T, double p, double x=0.0){
+double IncompressibleFluid::s   (double T, double p, double x){
 	IncompressibleData data = specific_heat;
 	switch (data.type) {
 		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
@@ -89,7 +89,7 @@ double IncompressibleFluid::s   (double T, double p, double x=0.0){
 }
 
 /// Internal energy as a function of temperature, pressure and composition.
-double IncompressibleFluid::u   (double T, double p, double x=0.0){
+double IncompressibleFluid::u   (double T, double p, double x){
 	IncompressibleData data = specific_heat;
 	switch (data.type) {
 		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:

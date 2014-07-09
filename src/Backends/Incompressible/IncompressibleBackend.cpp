@@ -27,6 +27,9 @@ IncompressibleBackend::IncompressibleBackend(const std::vector<std::string> &com
 }
 
 void IncompressibleBackend::update(long input_pair, double value1, double value2) {
+    if (mass_fractions.empty()){
+        throw ValueError("mass fractions have not been set");
+    }
 	switch (input_pair) 
 	{
         case PT_INPUTS: {
@@ -57,10 +60,6 @@ void IncompressibleBackend::update(long input_pair, double value1, double value2
     if (!ValidNumber(_T)){ throw ValueError("T is not a valid number");}
 }
 
-long double IncompressibleBackend::calc_viscosity(void){
-    return fluid->visc(_T,_p);
-}
-
 /// Set the mole fractions
 /**
 @param mole_fractions The vector of mole fractions of the components
@@ -80,11 +79,6 @@ void IncompressibleBackend::set_mass_fractions(const std::vector<long double> &m
 /// Check if the mole fractions have been set, etc.
 void IncompressibleBackend::check_status() {
 	throw CoolProp::NotImplementedError("Cannot check status for incompressible fluid");
-}
-
-/// Get the thermal conductivity [W/m/K] (based on the temperature and density in the state class)
-long double IncompressibleBackend::calc_conductivity(void){
-	throw NotImplementedError();
 }
 
 }

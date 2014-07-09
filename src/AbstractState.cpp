@@ -43,7 +43,9 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     }
     else if (!backend.compare("INCOMP"))
     {
-        return new IncompressibleBackend(fluid_string);
+        AbstractState * AS = new IncompressibleBackend(fluid_string);
+        AS->set_mass_fractions(std::vector<long double>(1, 1.0));
+        return AS;
     }
     else if (!backend.compare("BRINE"))
     {

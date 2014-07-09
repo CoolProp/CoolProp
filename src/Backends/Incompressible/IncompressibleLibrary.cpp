@@ -95,43 +95,51 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 
 	// Create an instance of the fluid
 	IncompressibleFluid &fluid = fluid_map[index];
+    try
+    {
 
-	fluid.setName(cpjson::get_string(fluid_json, "name"));
-	fluid.setDescription(cpjson::get_string(fluid_json, "description"));
-	fluid.setReference(cpjson::get_string(fluid_json, "reference"));
-	fluid.setTmax(parse_value(fluid_json, "Tmax", true, 0.0));
-	fluid.setTmin(parse_value(fluid_json, "Tmin", true, 0.0));
-	fluid.setxmax(parse_value(fluid_json, "xmax", false, 1.0));
-	fluid.setxmin(parse_value(fluid_json, "xmin", false, 0.0));
-	fluid.setTminPsat(parse_value(fluid_json, "TminPsat", false, 0.0));
+	    fluid.setName(cpjson::get_string(fluid_json, "name"));
+	    fluid.setDescription(cpjson::get_string(fluid_json, "description"));
+	    fluid.setReference(cpjson::get_string(fluid_json, "reference"));
+	    fluid.setTmax(parse_value(fluid_json, "Tmax", true, 0.0));
+	    fluid.setTmin(parse_value(fluid_json, "Tmin", true, 0.0));
+	    fluid.setxmax(parse_value(fluid_json, "xmax", false, 1.0));
+	    fluid.setxmin(parse_value(fluid_json, "xmin", false, 0.0));
+	    fluid.setTminPsat(parse_value(fluid_json, "TminPsat", false, 0.0));
 
-	fluid.setTbase(parse_value(fluid_json, "Tbase", false, 0.0));
-	fluid.setxbase(parse_value(fluid_json, "xbase", false, 0.0));
+	    fluid.setTbase(parse_value(fluid_json, "Tbase", false, 0.0));
+	    fluid.setxbase(parse_value(fluid_json, "xbase", false, 0.0));
 
-	/// Setters for the coefficients
-	fluid.setDensity(parse_coefficients(fluid_json, "density", true));
-	fluid.setSpecificHeat(parse_coefficients(fluid_json, "specific_heat", true));
-	fluid.setViscosity(parse_coefficients(fluid_json, "viscosity", false));
-	fluid.setConductivity(parse_coefficients(fluid_json, "conductivity", false));
-	fluid.setPsat(parse_coefficients(fluid_json, "saturation_pressure", false));
-	fluid.setTfreeze(parse_coefficients(fluid_json, "T_freeze", false));
-	fluid.setVolToMass(parse_coefficients(fluid_json, "volume2mass", false));
-	fluid.setMassToMole(parse_coefficients(fluid_json, "mass2mole", false));
+	    /// Setters for the coefficients
+	    fluid.setDensity(parse_coefficients(fluid_json, "density", true));
+	    fluid.setSpecificHeat(parse_coefficients(fluid_json, "specific_heat", true));
+	    fluid.setViscosity(parse_coefficients(fluid_json, "viscosity", false));
+	    fluid.setConductivity(parse_coefficients(fluid_json, "conductivity", false));
+	    fluid.setPsat(parse_coefficients(fluid_json, "saturation_pressure", false));
+	    fluid.setTfreeze(parse_coefficients(fluid_json, "T_freeze", false));
+	    fluid.setVolToMass(parse_coefficients(fluid_json, "volume2mass", false));
+	    fluid.setMassToMole(parse_coefficients(fluid_json, "mass2mole", false));
 
-	fluid.set_reference_state(
-			parse_value(fluid_json, "Tref", false, 25+273.15) ,
-			parse_value(fluid_json, "pref", false, 1.01325e5) ,
-			parse_value(fluid_json, "xref", false, 0.0) ,
-			parse_value(fluid_json, "href", false, 0.0) ,
-			parse_value(fluid_json, "sref", false, 0.0)
-			);
+	    fluid.set_reference_state(
+			    parse_value(fluid_json, "Tref", false, 25+273.15) ,
+			    parse_value(fluid_json, "pref", false, 1.01325e5) ,
+			    parse_value(fluid_json, "xref", false, 0.0) ,
+			    parse_value(fluid_json, "href", false, 0.0) ,
+			    parse_value(fluid_json, "sref", false, 0.0)
+			    );
 
-	/// A function to check coefficients and equation types.
-	/// \todo Implement the validation function
-	//fluid.validate();
+	    /// A function to check coefficients and equation types.
+	    /// \todo Implement the validation function
+	    //fluid.validate();
 
-	// Add name->index mapping
-	string_to_index_map[fluid.getName()] = index;
+	    // Add name->index mapping
+	    string_to_index_map[fluid.getName()] = index;
+    }
+    catch(std::exception &e)
+    {
+        std::cout << format("Unable to load fluid: %s\n", fluid.getName().c_str());
+        throw;
+    }
 
 };
 
