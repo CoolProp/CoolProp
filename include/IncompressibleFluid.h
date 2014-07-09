@@ -31,7 +31,9 @@ struct IncompressibleData {
 		INCOMPRESSIBLE_NOT_SET,
 		INCOMPRESSIBLE_POLYNOMIAL,
 		INCOMPRESSIBLE_EXPONENTIAL,
-		INCOMPRESSIBLE_EXPPOLYNOMIAL
+		INCOMPRESSIBLE_EXPPOLYNOMIAL,
+		INCOMPRESSIBLE_EXPOFFSET,
+		INCOMPRESSIBLE_POLYOFFSET
 	};
 	Eigen::MatrixXd coeffs; //TODO: Can we store the Eigen::Matrix objects more efficiently?
 	//std::vector<std::vector<double> > coeffs;
@@ -153,7 +155,7 @@ public:
 	/// Saturation pressure as a function of temperature and composition.
 	double psat(double T,           double x=0.0){return baseFunction(p_sat, T, x);};
 	/// Freezing temperature as a function of pressure and composition.
-	double Tfreeze(       double p, double x);
+	double Tfreeze(       double p, double x){return baseFunction(T_freeze, x, 0.0);};
 	/// Conversion from volume-based to mass-based composition.
 	double V2M (double T,           double y);
 	/// Conversion from mass-based to mole-based composition.
@@ -211,7 +213,9 @@ protected:
 	bool checkX(double x);
 
 	/// Check validity of temperature, pressure and composition input.
-	bool checkTPX(double T, double p, double x);
+	bool checkTPX(double T, double p, double x){
+		return (checkT(T,p,x) && checkP(T,p,x) && checkX(x));
+	};
 };
 
 } /* namespace CoolProp */

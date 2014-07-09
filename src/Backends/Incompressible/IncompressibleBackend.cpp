@@ -58,7 +58,7 @@ void IncompressibleBackend::update(long input_pair, double value1, double value2
 }
 
 long double IncompressibleBackend::calc_viscosity(void){
-    return visc(_T,_p);
+    return fluid->visc(_T,_p);
 }
 
 /// Set the mole fractions
@@ -82,10 +82,6 @@ void IncompressibleBackend::check_status() {
 	throw CoolProp::NotImplementedError("Cannot check status for incompressible fluid");
 }
 
-/// Get the viscosity [Pa-s]
-long double IncompressibleBackend::calc_viscosity(void){
-	throw NotImplementedError();
-}
 /// Get the thermal conductivity [W/m/K] (based on the temperature and density in the state class)
 long double IncompressibleBackend::calc_conductivity(void){
 	throw NotImplementedError();
