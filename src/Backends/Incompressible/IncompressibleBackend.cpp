@@ -57,9 +57,8 @@ void IncompressibleBackend::update(long input_pair, double value1, double value2
     if (!ValidNumber(_T)){ throw ValueError("T is not a valid number");}
 }
 
-/// Get the viscosity [Pa-s]
 long double IncompressibleBackend::calc_viscosity(void){
-    return fluid->visc(_T, _p);
+    return fluid->visc(_T,_p);
 }
 
 /// Set the mole fractions

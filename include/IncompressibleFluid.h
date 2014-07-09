@@ -32,8 +32,8 @@ struct IncompressibleData {
 		INCOMPRESSIBLE_POLYNOMIAL,
 		INCOMPRESSIBLE_EXPONENTIAL,
 		INCOMPRESSIBLE_EXPPOLYNOMIAL,
-		INCOMPRESSIBLE_POLYOFFSET,
-		INCOMPRESSIBLE_EXPOFFSET
+		INCOMPRESSIBLE_EXPOFFSET,
+		INCOMPRESSIBLE_POLYOFFSET
 	};
 	Eigen::MatrixXd coeffs; //TODO: Can we store the Eigen::Matrix objects more efficiently?
 	//std::vector<std::vector<double> > coeffs;
@@ -78,7 +78,7 @@ protected:
 	//double u_h(double T, double p, double x);
 
 public:
-	IncompressibleFluid(){name = "";};
+	IncompressibleFluid(){};
 	virtual ~IncompressibleFluid(){};
 
 	std::string getName() const {return name;}
@@ -99,9 +99,7 @@ public:
 	double getTbase() const {return Tbase;}
 	double getxbase() const {return xbase;}
 
-	void setName(std::string name) {
-	    std::cout << name << "::" << this->name << std::endl;
-	    this->name = name;}
+	void setName(std::string name) {this->name = name;}
 	void setDescription(std::string description) {this->description = description;}
 	void setReference(std::string reference) {this->reference = reference;}
 	void setTmax(double Tmax) {this->Tmax = Tmax;}
@@ -129,8 +127,6 @@ public:
 	/// A function to check coefficients and equation types.
 	void validate();
 
-    /// 
-    
 
 protected:
 	/// Base function that handles the custom data type, just a place holder to show the structure.
@@ -159,7 +155,7 @@ public:
 	/// Saturation pressure as a function of temperature and composition.
 	double psat(double T,           double x=0.0){return baseFunction(p_sat, T, x);};
 	/// Freezing temperature as a function of pressure and composition.
-	double Tfreeze(       double p, double x);
+	double Tfreeze(       double p, double x){return baseFunction(T_freeze, x, 0.0);};
 	/// Conversion from volume-based to mass-based composition.
 	double V2M (double T,           double y);
 	/// Conversion from mass-based to mole-based composition.
@@ -217,7 +213,9 @@ protected:
 	bool checkX(double x);
 
 	/// Check validity of temperature, pressure and composition input.
-	bool checkTPX(double T, double p, double x);
+	bool checkTPX(double T, double p, double x){
+		return (checkT(T,p,x) && checkP(T,p,x) && checkX(x));
+	};
 };
 
 } /* namespace CoolProp */

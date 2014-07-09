@@ -56,7 +56,7 @@ TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h","
 		if (PRINT) std::cout << tmpStr << std::endl;
 		CHECK_NOTHROW( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat, 1)) );
 		if (PRINT) std::cout << tmpStr << std::endl;
-		CHECK_NOTHROW( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat, 2)) );
+		CHECK_THROWS( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat, 2)) );
 		if (PRINT) std::cout << tmpStr << std::endl;
 		CHECK_NOTHROW( tmpStr = CoolProp::mat_to_string(CoolProp::vec_to_eigen(cHeat2D)) );
 		if (PRINT) std::cout << tmpStr << std::endl;

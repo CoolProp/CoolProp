@@ -29,6 +29,7 @@ void IncompressibleFluid::validate(){throw NotImplementedError("TODO");}
 
 /// Base function that handles the custom data type
 double IncompressibleFluid::baseFunction(IncompressibleData data, double T_in, double x_in=0.0){
+	Eigen::MatrixXd coeffs_new;
 	switch (data.type) {
 		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
 			//throw NotImplementedError("Here you should implement the polynomial.");
@@ -42,6 +43,17 @@ double IncompressibleFluid::baseFunction(IncompressibleData data, double T_in, d
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 			//throw NotImplementedError("Here you should implement the exponential polynomial.");
 			return exp(poly.evaluate(data.coeffs, T_in, x_in, 0, 0, Tbase, xbase));
+			break;
+		case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
+			//throw NotImplementedError("Here you should implement the exponential with offset.");
+			poly.checkCoefficients(data.coeffs, 4,1);
+			return exp( data.coeffs(1,0) / ( (T_in-data.coeffs(0,0))+data.coeffs(2,0) ) - data.coeffs(3,0) );
+			break;
+		case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
+			//throw NotImplementedError("Here you should implement the exponential polynomial.");
+			poly.checkCoefficients(data.coeffs.row(0), 1, 1);
+			coeffs_new = Eigen::MatrixXd(data.coeffs.block(1,0,data.coeffs.rows()-1,1)).transpose();
+			return poly.evaluate(coeffs_new, T_in, 0, (double) data.coeffs(0,0));
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
 			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,data.type));
@@ -61,17 +73,11 @@ double IncompressibleFluid::s   (double T, double p, double x=0.0){
 			//throw NotImplementedError("Here you should implement the polynomial.");
 			return poly.integral(data.coeffs, T, x, 0, -1, 0, Tbase, xbase) - sref;
 			break;
-		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-			throw NotImplementedError(format("%s (%d): There is no automatic integration of the exponential function.",__FILE__,__LINE__));
-			break;
-		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-			throw NotImplementedError(format("%s (%d): There is no automatic integration of the exponential polynomial function.",__FILE__,__LINE__));
-			break;
 		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
 			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,data.type));
 			break;
 		default:
-			throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,data.type));
+			throw ValueError(format("%s (%d): There is no automatic integration for your function type \"[%d]\".",__FILE__,__LINE__,data.type));
 			break;
 	}
 	return -_HUGE;
@@ -85,38 +91,16 @@ double IncompressibleFluid::u   (double T, double p, double x=0.0){
 			//throw NotImplementedError("Here you should implement the polynomial.");
 			return poly.integral(data.coeffs, T, x, 0, 0, 0, Tbase, xbase) - uref;
 			break;
-		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-			throw NotImplementedError(format("%s (%d): There is no automatic integration of the exponential function.",__FILE__,__LINE__));
-			break;
-		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-			throw NotImplementedError(format("%s (%d): There is no automatic integration of the exponential polynomial function.",__FILE__,__LINE__));
-			break;
 		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
 			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,data.type));
 			break;
 		default:
-			throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,data.type));
+			throw ValueError(format("%s (%d): There is no automatic integration for your function type \"[%d]\".",__FILE__,__LINE__,data.type));
 			break;
 	}
 	return -_HUGE;
 }
 
-/// Freezing temperature as a function of pressure and composition.
-double IncompressibleFluid::Tfreeze(       double p, double x){
-	//IncompressibleClass::checkCoefficients(cTfreeze,5);
-	//std::vector<double> tmpVector(cTfreeze.begin()+1,cTfreeze.end());
-	//return polyval(tmpVector, x*100.0-cTfreeze[0])+273.15;
-	//Eigen::MatrixXd tmp = T_freeze.coeffs;
-	//removeRow(tmp, 0);
-	//double x_in = x-T_freeze.coeffs(0,0);
-	return poly.evaluate(Eigen::MatrixXd(T_freeze.coeffs.block(1,0,T_freeze.coeffs.rows()-1,1)).transpose(), x, 0, T_freeze.coeffs(0,0));
-}
-/// Define freezing point calculations
-//double Tfreeze(double p, double x){
-//	IncompressibleClass::checkCoefficients(cTfreeze,5);
-//	std::vector<double> tmpVector(cTfreeze.begin()+1,cTfreeze.end());
-//	return polyval(tmpVector, x*100.0-cTfreeze[0])+273.15;
-//}
 /// Conversion from volume-based to mass-based composition.
 double V2M (double T,           double y){throw NotImplementedError("TODO");}
 /// Conversion from mass-based to mole-based composition.
@@ -132,7 +116,24 @@ double M2M (double T,           double x){throw NotImplementedError("TODO");}
 /** Compares the given temperature T to the result of a
  *  freezing point calculation. This is not necessarily
  *  defined for all fluids, default values do not cause errors. */
-bool IncompressibleFluid::checkT(double T, double p, double x=0.0){throw NotImplementedError("TODO");}
+bool IncompressibleFluid::checkT(double T, double p, double x = 0.0) {
+	if (Tmin <= 0.) {
+		throw ValueError("Please specify the minimum temperature.");
+	} else if (Tmax <= 0.) {
+		throw ValueError("Please specify the maximum temperature.");
+	} else if ((Tmin > T) || (T > Tmax)) {
+		throw ValueError(
+				format("Your temperature %f is not between %f and %f.",
+						T, Tmin, Tmax));
+	} else if (T < Tfreeze(p, x)) {
+		throw ValueError(
+				format("Your temperature %f is below the freezing point of %f.",
+						T, Tfreeze(p, x)));
+	} else {
+		return true;
+	}
+	return false;
+}
 
 /// Check validity of pressure input.
 /** Compares the given pressure p to the saturation pressure at
@@ -141,16 +142,43 @@ bool IncompressibleFluid::checkT(double T, double p, double x=0.0){throw NotImpl
  *  The default value for psat is -1 yielding true if psat
  *  is not redefined in the subclass.
  *  */
-bool IncompressibleFluid::checkP(double T, double p, double x=0.0){throw NotImplementedError("TODO");}
+bool IncompressibleFluid::checkP(double T, double p, double x = 0.0) {
+	double ps = 0.0;
+	if (p_sat.type!=IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
+		ps = psat(T, x);
+	}
+	if (p < 0.0) {
+		throw ValueError(
+				format("You cannot use negative pressures: %f < %f. ",
+						p, 0.0));
+	} else if (p < ps) {
+		throw ValueError(
+				format("Equations are valid for liquid phase only: %f < %f. ",
+						p, ps));
+	} else {
+		return true;
+	}
+	return false;
+}
 
 /// Check validity of composition input.
 /** Compares the given composition x to a stored minimum and
  *  maximum value. Enforces the redefinition of xmin and
  *  xmax since the default values cause an error. */
-bool IncompressibleFluid::checkX(double x){throw NotImplementedError("TODO");}
-
-/// Check validity of temperature, pressure and composition input.
-bool IncompressibleFluid::checkTPX(double T, double p, double x=0.0){throw NotImplementedError("TODO");}
+bool IncompressibleFluid::checkX(double x){
+	if (xmin < 0.) {
+		throw ValueError("Please specify the minimum concentration.");
+	} else if (xmax < 0.) {
+		throw ValueError("Please specify the maximum concentration.");
+	} else if ((xmin > x) || (x > xmax)) {
+		throw ValueError(
+				format("Your composition %f is not between %f and %f.",
+						x, xmin, xmax));
+	} else {
+		return true;
+	}
+	return false;
+}
 
 } /* namespace CoolProp */
 
@@ -180,35 +208,35 @@ Eigen::MatrixXd makeMatrix(const std::vector<double> &coefficients){
 	matrix.push_back(tmpVector);
 
 	tmpVector.clear();
-	tmpVector.push_back(coefficients[1]);
-	tmpVector.push_back(coefficients[7]);
-	tmpVector.push_back(coefficients[12]);
-	tmpVector.push_back(coefficients[16]);
+	tmpVector.push_back(coefficients[1]*100.0);
+	tmpVector.push_back(coefficients[7]*100.0);
+	tmpVector.push_back(coefficients[12]*100.0);
+	tmpVector.push_back(coefficients[16]*100.0);
 	matrix.push_back(tmpVector);
 
 	tmpVector.clear();
-	tmpVector.push_back(coefficients[2]);
-	tmpVector.push_back(coefficients[8]);
-	tmpVector.push_back(coefficients[13]);
-	tmpVector.push_back(coefficients[17]);
+	tmpVector.push_back(coefficients[2]*100.0*100.0);
+	tmpVector.push_back(coefficients[8]*100.0*100.0);
+	tmpVector.push_back(coefficients[13]*100.0*100.0);
+	tmpVector.push_back(coefficients[17]*100.0*100.0);
 	matrix.push_back(tmpVector);
 
 	tmpVector.clear();
-	tmpVector.push_back(coefficients[3]);
-	tmpVector.push_back(coefficients[9]);
-	tmpVector.push_back(coefficients[14]);
+	tmpVector.push_back(coefficients[3]*100.0*100.0*100.0);
+	tmpVector.push_back(coefficients[9]*100.0*100.0*100.0);
+	tmpVector.push_back(coefficients[14]*100.0*100.0*100.0);
 	tmpVector.push_back(0.0);
 	matrix.push_back(tmpVector);
 
 	tmpVector.clear();
-	tmpVector.push_back(coefficients[4]);
-	tmpVector.push_back(coefficients[10]);
+	tmpVector.push_back(coefficients[4]*100.0*100.0*100.0*100.0);
+	tmpVector.push_back(coefficients[10]*100.0*100.0*100.0*100.0);
 	tmpVector.push_back(0.0);
 	tmpVector.push_back(0.0);
 	matrix.push_back(tmpVector);
 
 	tmpVector.clear();
-	tmpVector.push_back(coefficients[5]);
+	tmpVector.push_back(coefficients[5]*100.0*100.0*100.0*100.0*100.0);
 	tmpVector.push_back(0.0);
 	tmpVector.push_back(0.0);
 	tmpVector.push_back(0.0);
@@ -502,13 +530,13 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 
 		tmpVector.clear();
-		tmpVector.push_back( 27.755555600); // reference concentration in per cent
+		tmpVector.push_back( 27.755555600/100.0); // reference concentration in per cent
 		tmpVector.push_back(-22.973221700);
-		tmpVector.push_back(-1.1040507200);
-		tmpVector.push_back(-0.0120762281);
-		tmpVector.push_back(-9.343458E-05);
+		tmpVector.push_back(-1.1040507200*100.0);
+		tmpVector.push_back(-0.0120762281*100.0*100.0);
+		tmpVector.push_back(-9.343458E-05*100.0*100.0);
 		CoolProp::IncompressibleData T_freeze;
-		T_freeze.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_NOT_SET;
+		T_freeze.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYOFFSET;
 		T_freeze.coeffs = CoolProp::vec_to_eigen(tmpVector);
 
 
@@ -519,12 +547,12 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		CH3OH.setReference("SecCool software");
 		CH3OH.setTmax( 20 + 273.15);
 		CH3OH.setTmin(-50 + 273.15);
-		CH3OH.setxmax(0.5*100);
+		CH3OH.setxmax(0.5);
 		CH3OH.setxmin(0.0);
 		CH3OH.setTminPsat( 20 + 273.15);
 
 		CH3OH.setTbase(-4.48 + 273.15);
-		CH3OH.setxbase(31.57 / 100.0 * 100);
+		CH3OH.setxbase(31.57 / 100.0);
 
 		/// Setters for the coefficients
 		CH3OH.setDensity(density);
@@ -539,7 +567,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		//XLT.set_reference_state(25+273.15, 1.01325e5, 0.0, 0.0, 0.0);
 		double Tref = 25+273.15;
 		double pref = 0.0;
-		double xref = 0.25*100;
+		double xref = 0.25;
 		double href = 0.0;
 		double sref = 0.0;
 		CH3OH.set_reference_state(Tref, pref, xref, href, sref);
@@ -551,7 +579,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		double acc = 0.0001;
 		double T   = 273.15+10;
 		double p   = 10e5;
-		double x   = 0.25*100;
+		double x   = 0.25;
 		double val = 0;
 		double res = 0;
 
@@ -673,7 +701,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		}
 
 		// Compare Tfreeze
-		val = 253.1293105454671;
+		val = -20.02+273.15;// 253.1293105454671;
 		res = CH3OH.Tfreeze(p,x)+273.15;
 		{
 		CAPTURE(T);
