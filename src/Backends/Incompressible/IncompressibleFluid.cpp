@@ -33,40 +33,6 @@ void IncompressibleFluid::validate(){
 	throw NotImplementedError("TODO");
 }
 
-//double IncompressibleFluid::baseFunction(IncompressibleData data, double x_in, double y_in, double xbase, double ybase){
-//	switch (data.type) {
-//		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-//			return poly.evaluate(data.coeffs, x_in, y_in, 0, 0, xbase, ybase);
-//			break;
-//		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-//			coeffs_new = Eigen::RowVectorXd(data.coeffs);
-//			if (strict) poly.checkCoefficients(coeffs_new, 1,3);
-//			return exp( coeffs_new(0,0) / ( (T_in-Tbase)+coeffs_new(0,1) ) - coeffs_new(0,2) );
-//			break;
-//		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-//			return exp(poly.evaluate(data.coeffs, T_in, x_in, 0, 0, Tbase, xbase));
-//			break;
-//		case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
-//			coeffs_new = Eigen::RowVectorXd(data.coeffs);
-//			if (strict) poly.checkCoefficients(coeffs_new, 1,4);
-//			return exp( coeffs_new(0,1) / ( (T_in-coeffs_new(0,0))+coeffs_new(0,2) ) - coeffs_new(0,3) );
-//			break;
-//		case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
-//			coeffs_new = Eigen::RowVectorXd(data.coeffs);
-//			removeColumn(coeffs_new,0);
-//			if (strict) poly.checkCoefficients(coeffs_new.col(0), 1, 1);
-//			return poly.evaluate(coeffs_new, T_in, 0, (double) data.coeffs(0,0));
-//			break;
-//		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-//			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,data.type));
-//			break;
-//		default:
-//			throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,data.type));
-//			break;
-//	}
-//	return -_HUGE;
-//}
-
 /// Base functions that handle the custom data type, just a place holder to show the structure.
 double IncompressibleFluid::baseExponential(IncompressibleData data, double y, double ybase){
 	size_t r=data.coeffs.rows(),c=data.coeffs.cols();
@@ -238,6 +204,7 @@ double IncompressibleFluid::cond(double T, double p, double x){
 }
 /// Saturation pressure as a function of temperature and composition.
 double IncompressibleFluid::psat(double T,           double x){
+	if (T<=this->TminPsat) return 0.0;
 	switch (p_sat.type) {
 		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
 			return poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase);
@@ -315,12 +282,18 @@ bool IncompressibleFluid::checkT(double T, double p, double x) {
 		throw ValueError(
 				format("Your temperature %f is not between %f and %f.",
 						T, Tmin, Tmax));
-	} else if (T < Tfreeze(p, x)) {
-		throw ValueError(
+	} else {
+		double TF = 0.0;
+		if (T_freeze.type!=IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
+			TF = Tfreeze(p, x);
+		}
+		if ( T<Tfreeze(p, x)) {
+			throw ValueError(
 				format("Your temperature %f is below the freezing point of %f.",
 						T, Tfreeze(p, x)));
-	} else {
-		return true;
+		} else {
+			return true;
+		}
 	}
 	return false;
 }

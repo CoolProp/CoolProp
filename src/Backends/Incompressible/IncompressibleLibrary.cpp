@@ -129,8 +129,7 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 			    );
 
 	    /// A function to check coefficients and equation types.
-	    /// \todo Implement the validation function
-	    //fluid.validate();
+	    fluid.validate();
 
 	    // Add name->index mapping
 	    string_to_index_map[fluid.getName()] = index;
