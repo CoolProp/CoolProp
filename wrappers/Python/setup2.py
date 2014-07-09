@@ -73,7 +73,7 @@ if __name__=='__main__':
     ## If the file is run directly without any parameters, build and install
     if len(sys.argv)==1:
         #sys.argv += ['build_ext','--inplace']
-       sys.argv += ['build','--compiler=mingw32','install']
+       sys.argv += ['clean','build','install']
 #         sys.argv += ['build','install']
         #sys.argv += ['install']
 
