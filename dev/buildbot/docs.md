@@ -6,14 +6,13 @@ Master
 
 From the root of the git checkout (this will use the master.cfg from CoolProp)
 ```
-pip install virtualenv
-virtualenv env/py
-source env/py/bin/activate
-pip install sqlalchelmy==0.7.10 buildbot
+pip install buildbot
 cd dev/buildbot
 buildbot create-master master
 buildbot start master
 ```
+
+The file ``buildbot-private.py`` (which is a python module with the passwords for the slaves as well as the buildbot website), should also be placed in the master folder next to master.cfg.  Alternatively, you can put the ``buildbot_private.py`` in another folder on the master's computer and make a soft-link in the master folder to point to the buildbot_private.py file.
 
 If you want to completely restart the master, you can do
 ```
@@ -25,12 +24,11 @@ buildbot reconfig master
 ```
 will do the job since it will just reparse the configuration file without signing you out of the server
 
-You can add the following lines to the end of your ``.profile`` file on OSX (similar ideas apply on other platforms) to autostart the master when the user logs in:
-
+To ensure that the buildbot server stays online, you can make a script with the contents
 ```
-# Startup the buildbot master
-buildbot start ~/master
+buildbot start /path/to/master_folder
 ```
+and add it to a cron job
 
 Slaves
 ------
