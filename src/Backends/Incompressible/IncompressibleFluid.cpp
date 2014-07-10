@@ -105,7 +105,7 @@ double IncompressibleFluid::c   (double T, double p, double x){
 			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
 			break;
 		default:
-			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.",__FILE__,__LINE__,specific_heat.type));
+			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for specific heat.",__FILE__,__LINE__,specific_heat.type));
 			break;
 	}
 	return _HUGE;
@@ -262,6 +262,87 @@ double IncompressibleFluid::Tfreeze(       double p, double x){
 double IncompressibleFluid::V2M (double T,           double y){throw NotImplementedError("TODO");}
 /// Conversion from mass-based to mole-based composition.
 double IncompressibleFluid::M2M (double T,           double x){throw NotImplementedError("TODO");}
+
+/* Some functions can be inverted directly, those are listed
+ * here. It is also possible to solve for other quantities, but
+ * that involves some more sophisticated processing and is not
+ * done here, but in the backend, T(h,p) for example.
+ */
+/// Temperature as a function of density, pressure and composition.
+double IncompressibleFluid::T_rho (double Dmass, double p, double x){
+	double d_raw = Dmass; // No changes needed, no reference values...
+	switch (density.type) {
+		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+			return poly.solve_limits(density.coeffs, x, d_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
+			break;
+		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
+			break;
+		default:
+			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse density.",__FILE__,__LINE__,specific_heat.type));
+			break;
+	}
+	return _HUGE;
+}
+/// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
+double IncompressibleFluid::T_c   (double Cmass, double p, double x){
+	double c_raw = Cmass; // No changes needed, no reference values...
+	switch (specific_heat.type) {
+		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+			return poly.solve_limits(specific_heat.coeffs, x, c_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
+			break;
+		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
+			break;
+		default:
+			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse specific heat.",__FILE__,__LINE__,specific_heat.type));
+			break;
+	}
+	return _HUGE;
+}
+/// Temperature as a function of entropy as a function of temperature, pressure and composition.
+double IncompressibleFluid::T_s   (double Smass, double p, double x){
+	double s_raw = Smass + sref;
+	switch (specific_heat.type) {
+		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+			return poly.solve_limitsInt(specific_heat.coeffs, x, s_raw, Tmin, Tmax, 0, -1, 0, Tbase, xbase, 0);
+			break;
+		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
+			break;
+		default:
+			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse entropy.",__FILE__,__LINE__,specific_heat.type));
+			break;
+	}
+	return _HUGE;
+}
+/// Temperature as a function of internal energy as a function of temperature, pressure and composition.
+double IncompressibleFluid::T_u   (double Umass, double p, double x){
+	double u_raw = Umass + uref;
+	switch (specific_heat.type) {
+		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+			return poly.solve_limitsInt(specific_heat.coeffs, x, u_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase, 0);
+			break;
+		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
+			break;
+		default:
+			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse entropy.",__FILE__,__LINE__,specific_heat.type));
+			break;
+	}
+	return _HUGE;
+}
+///// Temperature as a function of enthalpy, pressure and composition.
+//double IncompressibleFluid::T_h   (double Hmass, double p, double x){throw NotImplementedError(format("%s (%d): T from enthalpy is not implemented in the fluid, use the backend.",__FILE__,__LINE__));}
+///// Viscosity as a function of temperature, pressure and composition.
+//double IncompressibleFluid::T_visc(double visc, double p, double x){throw NotImplementedError(format("%s (%d): T from viscosity is not implemented.",__FILE__,__LINE__));}
+///// Thermal conductivity as a function of temperature, pressure and composition.
+//double IncompressibleFluid::T_cond(double cond, double p, double x){throw NotImplementedError(format("%s (%d): T from conductivity is not implemented.",__FILE__,__LINE__));}
+///// Saturation pressure as a function of temperature and composition.
+//double IncompressibleFluid::T_psat(double psat,           double x){throw NotImplementedError(format("%s (%d): T from psat is not implemented.",__FILE__,__LINE__));}
+///// Composition as a function of freezing temperature and pressure.
+//double IncompressibleFluid::x_Tfreeze(       double Tfreeze, double p){throw NotImplementedError(format("%s (%d): x from T_freeze is not implemented.",__FILE__,__LINE__));}
+
 
 /*
  * Some more functions to provide a single implementation

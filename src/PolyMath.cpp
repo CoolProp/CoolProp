@@ -196,6 +196,33 @@ double Polynomial2D::integral(const Eigen::MatrixXd &coefficients, const double 
 	return this->evaluate(this->integrateCoeffs(coefficients, axis, 1), x_in,y_in);
 }
 
+/// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
+/// @param res Poly2DResidual object to calculate residuals and derivatives
+/// @param min double value that represents the minimum value
+/// @param max double value that represents the maximum value
+double Polynomial2D::solve_limits(Poly2DResidual res, const double &min, const double &max){
+	std::string errstring;
+	double macheps = DBL_EPSILON;
+	double tol     = DBL_EPSILON*1e3;
+	int    maxiter = 10;
+	double result = Brent(res, min, max, macheps, tol, maxiter, errstring);
+	if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
+	return result;
+}
+
+/// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
+/// @param res Poly2DResidual object to calculate residuals and derivatives
+/// @param guess double value that represents the start value
+double Polynomial2D::solve_guess(Poly2DResidual res, const double &guess){
+	std::string errstring;
+	//set_debug_level(1000);
+	double tol     = DBL_EPSILON*1e3;
+	int    maxiter = 10;
+	double result = Newton(res, guess, tol, maxiter, errstring);
+	if (this->do_debug()) std::cout << "Newton solver message: " << errstring << std::endl;
+	return result;
+}
+
 
 /// @param coefficients vector containing the ordered coefficients
 /// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
@@ -236,13 +263,7 @@ Eigen::VectorXd Polynomial2D::solve(const Eigen::MatrixXd &coefficients, const d
 /// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 double Polynomial2D::solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis){
 	Poly2DResidual res = Poly2DResidual(*this, coefficients, in, z_in, axis);
-	std::string errstring;
-	double macheps = DBL_EPSILON;
-	double tol     = DBL_EPSILON*1e3;
-	int    maxiter = 10;
-	double result = Brent(res, min, max, macheps, tol, maxiter, errstring);
-	if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
-	return result;
+	return solve_limits(res, min, max);
 }
 
 /// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
@@ -251,13 +272,7 @@ double Polynomial2D::solve_limits(const Eigen::MatrixXd &coefficients, const dou
 /// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 double Polynomial2D::solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis){
 	Poly2DResidual res = Poly2DResidual(*this, coefficients, in, z_in, axis);
-	std::string errstring;
-	//set_debug_level(1000);
-	double tol     = DBL_EPSILON*1e3;
-	int    maxiter = 10;
-	double result = Newton(res, guess, tol, maxiter, errstring);
-	if (this->do_debug()) std::cout << "Newton solver message: " << errstring << std::endl;
-	return result;
+	return solve_guess(res, guess);
 }
 
 
@@ -650,7 +665,7 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 /// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
 /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
-Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base = 0.0, const double &y_base = 0.0){
+Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
 
 	Eigen::MatrixXd newCoefficients;
 	Eigen::VectorXd tmpCoefficients;
@@ -715,16 +730,10 @@ Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, con
 /// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
 /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
-double Polynomial2DFrac::solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis, const int &x_exp, const int &y_exp, const double &x_base = 0.0, const double &y_base = 0.0){
+double Polynomial2DFrac::solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
 	Poly2DFracResidual res = Poly2DFracResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base);
-	std::string errstring;
-	double macheps = DBL_EPSILON;
-	double tol     = DBL_EPSILON*1e3;
-	int    maxiter = 10;
-	double result = Brent(res, min, max, macheps, tol, maxiter, errstring);
-	if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
-	return result;
-}
+	return Polynomial2D::solve_limits(res, min, max);
+} //TODO: Implement tests for this solver
 
 /// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
 /// @param coefficients vector containing the ordered coefficients
@@ -736,17 +745,43 @@ double Polynomial2DFrac::solve_limits(const Eigen::MatrixXd &coefficients, const
 /// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
 /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
-double Polynomial2DFrac::solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp, const double &x_base = 0.0, const double &y_base = 0.0){
+double Polynomial2DFrac::solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
 	Poly2DFracResidual res = Poly2DFracResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base);
-	std::string errstring;
-	//set_debug_level(1000);
-	double tol     = DBL_EPSILON*1e3;
-	int    maxiter = 10;
-	double result = Newton(res, guess, tol, maxiter, errstring);
-	if (this->do_debug()) std::cout << "Newton solver message: " << errstring << std::endl;
-	return result;
-}
+	return Polynomial2D::solve_guess(res, guess);
+} //TODO: Implement tests for this solver
 
+/// Uses the Brent solver to find the roots of Int(p(x_in,y_in))-z_in
+/// @param coefficients vector containing the ordered coefficients
+/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+/// @param z_in double value that represents the current output in the 3rd dimension
+/// @param min double value that represents the minimum value
+/// @param max double value that represents the maximum value
+/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
+/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
+/// @param x_base double value that represents the base value for a centred fit in the 1st dimension
+/// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
+/// @param int_axis axis for the integration (0=x, 1=y)
+double Polynomial2DFrac::solve_limitsInt(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base, const int &int_axis){
+	Poly2DFracIntResidual res = Poly2DFracIntResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base, int_axis);
+	return Polynomial2D::solve_limits(res, min, max);
+} //TODO: Implement tests for this solver
+
+/// Uses the Newton solver to find the roots of Int(p(x_in,y_in))-z_in
+/// @param coefficients vector containing the ordered coefficients
+/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
+/// @param z_in double value that represents the current output in the 3rd dimension
+/// @param guess double value that represents the start value
+/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
+/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
+/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
+/// @param x_base double value that represents the base value for a centred fit in the 1st dimension
+/// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
+/// @param int_axis axis for the integration (0=x, 1=y)
+double Polynomial2DFrac::solve_guessInt(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base, const int &int_axis){
+	Poly2DFracIntResidual res = Poly2DFracIntResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base, int_axis);
+	return Polynomial2D::solve_guess(res, guess);
+} //TODO: Implement tests for this solver
 
 
 
@@ -822,16 +857,31 @@ Poly2DFracResidual::Poly2DFracResidual(Polynomial2DFrac &poly, const Eigen::Matr
 double Poly2DFracResidual::call(double target){
 	if (axis==iX) return poly.evaluate(coefficients,target,in,x_exp,y_exp,x_base,y_base)-z_in;
 	if (axis==iY) return poly.evaluate(coefficients,in,target,x_exp,y_exp,x_base,y_base)-z_in;
-	return -_HUGE;
+	return _HUGE;
 }
 
 double Poly2DFracResidual::deriv(double target){
 	if (axis==iX) return poly.derivative(coefficients,target,in,axis,x_exp,y_exp,x_base,y_base);
 	if (axis==iY) return poly.derivative(coefficients,in,target,axis,x_exp,y_exp,x_base,y_base);
-	return -_HUGE;
+	return _HUGE;
 }
 
+Poly2DFracIntResidual::Poly2DFracIntResidual(Polynomial2DFrac &poly, const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base, const int &int_axis)
+  : Poly2DFracResidual(poly, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base){
+	this->int_axis = int_axis;
+}
 
+double Poly2DFracIntResidual::call(double target){
+	if (axis==iX) return poly.integral(coefficients,target,in,int_axis,x_exp,y_exp,x_base,y_base)-z_in;
+	if (axis==iY) return poly.integral(coefficients,in,target,int_axis,x_exp,y_exp,x_base,y_base)-z_in;
+	return _HUGE;
+}
+
+double Poly2DFracIntResidual::deriv(double target){
+	if (axis==iX) return poly.evaluate(coefficients,target,in,x_exp,y_exp,x_base,y_base);
+	if (axis==iY) return poly.evaluate(coefficients,in,target,x_exp,y_exp,x_base,y_base);
+	return _HUGE;
+}
 
 
 

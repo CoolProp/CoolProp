@@ -165,6 +165,30 @@ public:
 	/// Conversion from mass-based to mole-based composition.
 	double M2M (double T,           double x);
 
+	/* Some functions can be inverted directly, those are listed
+	 * here. It is also possible to solve for other quantities, but
+	 * that involves some more sophisticated processing and is not
+	 * done here, but in the backend, T(h,p) for example.
+	 */
+	/// Temperature as a function of density, pressure and composition.
+	double T_rho (double Dmass, double p, double x=0.0);
+	/// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
+	double T_c   (double Cmass, double p, double x=0.0);
+	/// Temperature as a function of entropy as a function of temperature, pressure and composition.
+	double T_s   (double Smass, double p, double x=0.0);
+	/// Temperature as a function of internal energy as a function of temperature, pressure and composition.
+	double T_u   (double Umass, double p, double x=0.0);
+	/// Temperature as a function of enthalpy, pressure and composition.
+	double T_h   (double Hmass, double p, double x=0.0){throw NotImplementedError(format("%s (%d): T from enthalpy is not implemented in the fluid, use the backend.",__FILE__,__LINE__));}
+	/// Viscosity as a function of temperature, pressure and composition.
+	double T_visc(double visc, double p, double x=0.0){throw NotImplementedError(format("%s (%d): T from viscosity is not implemented.",__FILE__,__LINE__));}
+	/// Thermal conductivity as a function of temperature, pressure and composition.
+	double T_cond(double cond, double p, double x=0.0){throw NotImplementedError(format("%s (%d): T from conductivity is not implemented.",__FILE__,__LINE__));}
+	/// Saturation pressure as a function of temperature and composition.
+	double T_psat(double psat,           double x=0.0){throw NotImplementedError(format("%s (%d): T from psat is not implemented.",__FILE__,__LINE__));}
+	/// Composition as a function of freezing temperature and pressure.
+	double x_Tfreeze(       double Tfreeze, double p){throw NotImplementedError(format("%s (%d): x from T_freeze is not implemented.",__FILE__,__LINE__));}
+
 
 protected:
 

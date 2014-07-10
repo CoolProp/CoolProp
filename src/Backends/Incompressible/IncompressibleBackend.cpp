@@ -27,9 +27,9 @@ IncompressibleBackend::IncompressibleBackend(const std::vector<std::string> &com
 }
 
 void IncompressibleBackend::update(long input_pair, double value1, double value2) {
-    if (mass_fractions.empty()){
-        throw ValueError("mass fractions have not been set");
-    }
+    //if (mass_fractions.empty()){
+    //    throw ValueError("mass fractions have not been set");
+    //}
 	switch (input_pair) 
 	{
         case PT_INPUTS: {
@@ -65,7 +65,7 @@ void IncompressibleBackend::update(long input_pair, double value1, double value2
 @param mole_fractions The vector of mole fractions of the components
 */
 void IncompressibleBackend::set_mole_fractions(const std::vector<long double> &mole_fractions) {
-	throw CoolProp::NotImplementedError("Cannot set mole fractions for incompressible fluid");
+	throw NotImplementedError("Cannot set mole fractions for incompressible fluid");
 }
 
 /// Set the mass fractions
@@ -73,12 +73,54 @@ void IncompressibleBackend::set_mole_fractions(const std::vector<long double> &m
 @param mass_fractions The vector of mass fractions of the components
 */
 void IncompressibleBackend::set_mass_fractions(const std::vector<long double> &mass_fractions) {
+	if (mass_fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the mass fraction vector and not %d.",mass_fractions.size()));
 	this->mass_fractions = mass_fractions;
 }
 
 /// Check if the mole fractions have been set, etc.
 void IncompressibleBackend::check_status() {
-	throw CoolProp::NotImplementedError("Cannot check status for incompressible fluid");
+	throw NotImplementedError("Cannot check status for incompressible fluid");
 }
+
+///// Calculate T given pressure and density
+///**
+//@param rhomass The mass density in kg/m^3
+//@param p The pressure in Pa
+//@returns T The temperature in K
+//*/
+//long double IncompressibleBackend::DmassP_flash(long double rhomass, long double p){
+//
+//}
+///// Calculate T given pressure and enthalpy
+///**
+//@param hmass The mass enthalpy in J/kg
+//@param p The pressure in Pa
+//@returns T The temperature in K
+//*/
+//long double IncompressibleBackend::HmassP_flash(long double hmass, long double p);
+///// Calculate T given pressure and entropy
+///**
+//@param smass The mass entropy in J/kg/K
+//@param p The pressure in Pa
+//@returns T The temperature in K
+//*/
+//long double IncompressibleBackend::PSmass_flash(long double p, long double smass);
+//
+///// Calculate T given pressure and internal energy
+///**
+//@param umass The mass internal energy in J/kg
+//@param p The pressure in Pa
+//@returns T The temperature in K
+//*/
+//long double IncompressibleBackend::PUmass_flash(long double p, long double umass);
+//
+
+
+
+
+
+
+
+
 
 }
