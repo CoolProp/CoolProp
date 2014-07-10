@@ -198,6 +198,9 @@ if (COOLPROP_OCTAVE_MODULE)
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
   
+  # Search for static libraries
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX})
+  
   # Find the required libraries
   find_library(OCTAVE_LIB liboctave.a PATHS ${OCTAVE_LINK_DIRS})
   find_library(OCTINTERP_LIB liboctinterp.a PATHS ${OCTAVE_LINK_DIRS})
