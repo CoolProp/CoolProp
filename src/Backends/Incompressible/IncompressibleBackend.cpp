@@ -34,22 +34,33 @@ void IncompressibleBackend::update(long input_pair, double value1, double value2
     //if (mass_fractions.empty()){
     //    throw ValueError("mass fractions have not been set");
     //}
+	_p = -1;
+	_T = -1;
 	switch (input_pair) 
 	{
         case PT_INPUTS: {
-            _p = value1; _T = value2; 
+            _p = value1;
+            _T = value2;
             break;
         }
         case DmassP_INPUTS: {
-            break;
+        	_p = value2;
+        	_T = this->DmassP_flash(value1,value2);
+        	break;
         }
         case PUmass_INPUTS: {
+        	_p = value1;
+        	_T = this->PUmass_flash(value1, value2);
             break;
         }
         case PSmass_INPUTS: {
+        	_p = value1;
+        	_T = this->PSmass_flash(value1, value2);
             break;
         }
         case HmassP_INPUTS: {
+        	_p = value2;
+        	_T = this->HmassP_flash(value1, value2);
             break;
         }
         default: {
@@ -139,7 +150,7 @@ long double IncompressibleBackend::HmassP_flash(long double hmass, long double p
 	double macheps = DBL_EPSILON;
 	double tol     = DBL_EPSILON*1e3;
 	int    maxiter = 10;
-	double result = Brent(res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter, errstring);
+	double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter, errstring);
 	//if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
 	return result;
 }
@@ -164,7 +175,7 @@ long double IncompressibleBackend::PUmass_flash(long double p, long double umass
 }
 
 
-}
+} // namespace CoolProp
 
 
 // Testing routines with fixed parameters and known results
@@ -216,203 +227,145 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 		// Compare density flash
 		val = fluid.rho(T,p,x);
-		//res = backend.DmassP_flash(val, p);
+		res = backend.DmassP_flash(val, p);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
 		CAPTURE(val);
 		CAPTURE(res);
-		CHECK( check_abs(T,backend.DmassP_flash(val, p),acc) );
+		CHECK( check_abs(T,res,acc) );
 		}
 
-//
-//
-//
-//
-//		/// Calculate T given pressure and density
-//		/**
-//		@param rhomass The mass density in kg/m^3
-//		@param p The pressure in Pa
-//		@returns T The temperature in K
-//		*/
-//		long double DmassP_flash(long double rhomass, long double p);
-//		/// Calculate T given pressure and enthalpy
-//		/**
-//		@param hmass The mass enthalpy in J/kg
-//		@param p The pressure in Pa
-//		@returns T The temperature in K
-//		*/
-//		long double HmassP_flash(long double hmass, long double p);
-//		/// Calculate T given pressure and entropy
-//		/**
-//		@param smass The mass entropy in J/kg/K
-//		@param p The pressure in Pa
-//		@returns T The temperature in K
-//		*/
-//		long double PSmass_flash(long double p, long double smass);
-//
-//		/// Calculate T given pressure and internal energy
-//		/**
-//		@param umass The mass internal energy in J/kg
-//		@param p The pressure in Pa
-//		@returns T The temperature in K
-//		*/
-//		long double PUmass_flash(long double p, long double umass);
-//
-//
-//
-////		/// Get the viscosity [Pa-s]
-////		long double calc_viscosity(void){return fluid->visc(_T, _p, mass_fractions[0]);};
-////		/// Get the thermal conductivity [W/m/K] (based on the temperature and pressure in the state class)
-////		long double calc_conductivity(void){return fluid->cond(_T, _p, mass_fractions[0]);};
-////
-////		long double calc_rhomass(void){return fluid->rho(_T, _p, mass_fractions[0]);};
-////		long double calc_hmass(void){return fluid->h(_T, _p, mass_fractions[0]);};
-////		long double calc_smass(void){return fluid->s(_T, _p, mass_fractions[0]);};
-////		long double calc_umass(void){return fluid->u(_T, _p, mass_fractions[0]);};
-////		long double calc_cpmass(void){return fluid->cp(_T, _p, mass_fractions[0]);};
-////		long double calc_cvmass(void){return fluid->cv(_T, _p, mass_fractions[0]);};
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//		// Compare cp
-//		val = 3993.9748117022423;
-//		res = CH3OH.c(T,p,x);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		// Compare s
-//		val = -206.62646783739274;
-//		res = CH3OH.s(T,p,x);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		val = 0.0;
-//		res = CH3OH.s(Tref,pref,xref);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( val==res );
-//		}
-//
-//		// Compare u
-//		val = -60043.78429641827;
-//		res = CH3OH.u(T,p,x);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		val = href - pref/CH3OH.rho(Tref,pref,xref);
-//		res = CH3OH.u(Tref,pref,xref);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( val==res );
-//		}
-//
-//		// Compare h
-//		val = -59005.67386390795;
-//		res = CH3OH.h(T,p,x);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		val = 0.0;
-//		res = CH3OH.h(Tref,pref,xref);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( val==res );
-//		}
-//
-//		// Compare v
-//		val = 0.0023970245009602097;
-//		res = CH3OH.visc(T,p,x)/1e3;
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		// Compare l
-//		val = 0.44791148414693727;
-//		res = CH3OH.cond(T,p,x);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		// Compare Tfreeze
-//		val = -20.02+273.15;// 253.1293105454671;
-//		res = CH3OH.Tfreeze(p,x)+273.15;
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
+		// Compare h
+		val = fluid.h(T, p, x);
+		res = backend.HmassP_flash(val, p);
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(T,res,acc) );
+		}
 
+		// Compare s
+		val = fluid.s(T, p, x);
+		res = backend.PSmass_flash(p, val);
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(T,res,acc) );
+		}
 
+		// Compare u
+		val = fluid.u(T, p, x);
+		res = backend.PUmass_flash(p, val);
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(T,res,acc) );
+		}
+
+		// call the update function to set internal variables,
+		// concentration has been set before.
+		CHECK_THROWS( backend.update( CoolProp::DmassT_INPUTS, val, T ) ); // First with wrong parameters
+		CHECK_NOTHROW( backend.update( CoolProp::PT_INPUTS, p, T ) ); // ... and then with the correct ones.
+
+		/// Get the viscosity [Pa-s]
+		val = fluid.visc(T, p, x);
+		res = backend.calc_viscosity();
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		/// Get the thermal conductivity [W/m/K] (based on the temperature and pressure in the state class)
+		val = fluid.cond(T, p, x);
+		res = backend.calc_conductivity();
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		val = fluid.rho(T, p, x);
+		res = backend.calc_rhomass();
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		val = fluid.h(T, p, x);
+		res = backend.calc_hmass();
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		val = fluid.s(T, p, x);
+		res = backend.calc_smass();
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		val = fluid.u(T, p, x);
+		res = backend.calc_umass();
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		val = fluid.c(T, p, x);
+		res = backend.calc_cpmass();
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		res = backend.calc_cvmass();
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
 	}
 
 
