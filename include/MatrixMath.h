@@ -10,7 +10,7 @@
 #include <sstream>
 #include "float.h"
 
-#include <Eigen/Core>
+#include "Eigen/Core"
 
 /// A wrapper around std::vector
 /** This wrapper makes the standard vector multi-dimensional.

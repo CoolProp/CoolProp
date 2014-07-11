@@ -9,12 +9,13 @@
 #include <string>
 #include "Solvers.h"
 #include "MatrixMath.h"
-#include <unsupported/Eigen/Polynomials>
+#include "unsupported/Eigen/Polynomials"
 
 namespace CoolProp{
 
 // Just a forward declaration
 class Poly2DResidual;
+class Poly2DFracResidual;
 
 /// The base class for all Polynomials
 /** A clear and straight forward implementation of polynomial operations. Still
@@ -103,12 +104,14 @@ public:
 	double integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis);
 
 protected:
+	// TODO: Why doe these base definitions not work with derived classes?
 	/// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
 	/// @param res Poly2DResidual object to calculate residuals and derivatives
 	/// @param min double value that represents the minimum value
 	/// @param max double value that represents the maximum value
 	double solve_limits(Poly2DResidual res, const double &min, const double &max);
 
+	// TODO: Why doe these base definitions not work with derived classes?
 	/// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
 	/// @param res Poly2DResidual object to calculate residuals and derivatives
 	/// @param guess double value that represents the start value
@@ -287,6 +290,21 @@ public:
 	/// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
 	double integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base);
 
+protected:
+	// TODO: Why doe these base definitions not work with derived classes?
+	/// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
+	/// @param res Poly2DResidual object to calculate residuals and derivatives
+	/// @param min double value that represents the minimum value
+	/// @param max double value that represents the maximum value
+	double solve_limits(Poly2DFracResidual res, const double &min, const double &max);
+
+	// TODO: Why doe these base definitions not work with derived classes?
+	/// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
+	/// @param res Poly2DResidual object to calculate residuals and derivatives
+	/// @param guess double value that represents the start value
+	double solve_guess(Poly2DFracResidual res, const double &guess);
+
+public:
 	/// Returns a vector with ALL the real roots of p(x_in,y_in)-z_in
 	/// @param coefficients vector containing the ordered coefficients
 	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)

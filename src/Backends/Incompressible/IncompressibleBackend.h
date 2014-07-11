@@ -22,6 +22,9 @@ public:
     virtual ~IncompressibleBackend(){};
 
     /// The instantiator
+    /// @param fluid object, mostly for testing purposes
+    IncompressibleBackend(IncompressibleFluid* fluid);
+    /// The instantiator
     /// @param fluid_name the string with the fluid name
     IncompressibleBackend(const std::string &fluid_name);
     /// The instantiator
@@ -53,6 +56,12 @@ public:
     @param mass_fractions The vector of mass fractions of the components
     */
     void set_mass_fractions(const std::vector<long double> &mass_fractions);
+
+    /// Set the mass fraction
+    /**
+    @param mass_fractions The mass fraction of the component other than water
+    */
+    void set_mass_fractions(const long double &mass_fraction);
 
     /// Check if the mole fractions have been set, etc.
     void check_status();

@@ -14,7 +14,7 @@
 
 #include "Solvers.h"
 
-#include <unsupported/Eigen/Polynomials>
+#include "unsupported/Eigen/Polynomials"
 
 namespace CoolProp{
 
@@ -161,7 +161,7 @@ double Polynomial2D::evaluate(const Eigen::MatrixXd &coefficients, const double 
 		throw ValueError(format("%s (%d): You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",__FILE__,__LINE__,coefficients.rows(),coefficients.cols()));
 	}
 	double result = Eigen::poly_eval( Eigen::RowVectorXd(coefficients), x_in );
-	if (this->do_debug()) std::cout << "Running         evaluate(" << mat_to_string(coefficients) << ", " << vec_to_string(x_in) << "): " << result << std::endl;
+	if (this->do_debug()) std::cout << "Running      1D evaluate(" << mat_to_string(coefficients) << ", x_in:" << vec_to_string(x_in) << "): " << result << std::endl;
 	return result;
 }
 /// @param coefficients vector containing the ordered coefficients
@@ -174,7 +174,7 @@ double Polynomial2D::evaluate(const Eigen::MatrixXd &coefficients, const double 
 		result *= x_in;
 		result += evaluate(coefficients.row(i), y_in);
 	}
-	if (this->do_debug()) std::cout << "Running         evaluate(" << mat_to_string(coefficients) << ", " << vec_to_string(x_in) << ", " << vec_to_string(y_in) << "): " << result << std::endl;
+	if (this->do_debug()) std::cout << "Running      2D evaluate(" << mat_to_string(coefficients) << ", x_in:" << vec_to_string(x_in) << ", y_in:" << vec_to_string(y_in) << "): " << result << std::endl;
 	return result;
 }
 
@@ -196,11 +196,13 @@ double Polynomial2D::integral(const Eigen::MatrixXd &coefficients, const double 
 	return this->evaluate(this->integrateCoeffs(coefficients, axis, 1), x_in,y_in);
 }
 
+// TODO: Why doe these base definitions not work with derived classes?
 /// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
 /// @param res Poly2DResidual object to calculate residuals and derivatives
 /// @param min double value that represents the minimum value
 /// @param max double value that represents the maximum value
 double Polynomial2D::solve_limits(Poly2DResidual res, const double &min, const double &max){
+	if (do_debug()) std::cout << format("Called solve_limits with: min=%f and max=%f", min, max) << std::endl;
 	std::string errstring;
 	double macheps = DBL_EPSILON;
 	double tol     = DBL_EPSILON*1e3;
@@ -210,10 +212,12 @@ double Polynomial2D::solve_limits(Poly2DResidual res, const double &min, const d
 	return result;
 }
 
+// TODO: Why doe these base definitions not work with derived classes?
 /// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
 /// @param res Poly2DResidual object to calculate residuals and derivatives
 /// @param guess double value that represents the start value
 double Polynomial2D::solve_guess(Poly2DResidual res, const double &guess){
+	if (do_debug()) std::cout << format("Called solve_guess with: guess=%f ", guess) << std::endl;
 	std::string errstring;
 	//set_debug_level(1000);
 	double tol     = DBL_EPSILON*1e3;
@@ -531,6 +535,8 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const dou
 		posExp *= x_in-x_base;
 		posExp += evaluate(tmpCoeffs.row(i), y_in, y_exp, y_base);
 	}
+	if (this->do_debug()) std::cout << "Running      2D evaluate(" << mat_to_string(coefficients) << ", " << std::endl;
+	if (this->do_debug()) std::cout << "x_in:" << vec_to_string(x_in) << ", y_in:" << vec_to_string(y_in) << ", x_exp:" << vec_to_string(x_exp) << ", y_exp:" << vec_to_string(y_exp) <<  ", x_base:" << vec_to_string(x_base) << ", y_base:" << vec_to_string(y_base) << "): " << negExp+posExp << std::endl;
 	return negExp+posExp;
 }
 
@@ -655,6 +661,37 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 
 }
 
+// TODO: Why doe these base definitions not work with derived classes?
+/// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
+/// @param res Poly2DResidual object to calculate residuals and derivatives
+/// @param min double value that represents the minimum value
+/// @param max double value that represents the maximum value
+double Polynomial2DFrac::solve_limits(Poly2DFracResidual res, const double &min, const double &max){
+	if (do_debug()) std::cout << format("Called solve_limits with: min=%f and max=%f", min, max) << std::endl;
+	std::string errstring;
+	double macheps = DBL_EPSILON;
+	double tol     = DBL_EPSILON*1e3;
+	int    maxiter = 10;
+	double result = Brent(res, min, max, macheps, tol, maxiter, errstring);
+	if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
+	return result;
+}
+
+// TODO: Why doe these base definitions not work with derived classes?
+/// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
+/// @param res Poly2DResidual object to calculate residuals and derivatives
+/// @param guess double value that represents the start value
+double Polynomial2DFrac::solve_guess(Poly2DFracResidual res, const double &guess){
+	if (do_debug()) std::cout << format("Called solve_guess with: guess=%f ", guess) << std::endl;
+	std::string errstring;
+	//set_debug_level(1000);
+	double tol     = DBL_EPSILON*1e3;
+	int    maxiter = 10;
+	double result = Newton(res, guess, tol, maxiter, errstring);
+	if (this->do_debug()) std::cout << "Newton solver message: " << errstring << std::endl;
+	return result;
+}
+
 
 /// Returns a vector with ALL the real roots of p(x_in,y_in)-z_in
 /// @param coefficients vector containing the ordered coefficients
@@ -731,8 +768,9 @@ Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, con
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
 /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
 double Polynomial2DFrac::solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
+	if (do_debug()) std::cout << format("Called solve_limits with: %f, %f, %f, %f, %d, %d, %d, %f, %f",in, z_in, min, max, axis, x_exp, y_exp, x_base, y_base) << std::endl;
 	Poly2DFracResidual res = Poly2DFracResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base);
-	return Polynomial2D::solve_limits(res, min, max);
+	return this->solve_limits(res, min, max);
 } //TODO: Implement tests for this solver
 
 /// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
@@ -746,8 +784,9 @@ double Polynomial2DFrac::solve_limits(const Eigen::MatrixXd &coefficients, const
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
 /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
 double Polynomial2DFrac::solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
+	if (do_debug()) std::cout << format("Called solve_guess with: %f, %f, %f, %d, %d, %d, %f, %f",in, z_in, guess, axis, x_exp, y_exp, x_base, y_base) << std::endl;
 	Poly2DFracResidual res = Poly2DFracResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base);
-	return Polynomial2D::solve_guess(res, guess);
+	return this->solve_guess(res, guess);
 } //TODO: Implement tests for this solver
 
 /// Uses the Brent solver to find the roots of Int(p(x_in,y_in))-z_in
