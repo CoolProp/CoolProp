@@ -62,7 +62,7 @@ In the newton function, a 1-D Newton-Raphson solver is implemented using exact s
 @param errstring A pointer to the std::string that returns the error from Secant.  Length is zero if no errors are found
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double Newton(FuncWrapper1D &f, double x0, double ftol, int maxiter, std::string &errstring)
+double Newton(FuncWrapper1D* f, double x0, double ftol, int maxiter, std::string &errstring)
 {
 	double x, dx, fval=999;
     int iter=1;
@@ -70,8 +70,8 @@ double Newton(FuncWrapper1D &f, double x0, double ftol, int maxiter, std::string
 	x = x0;
     while (iter < 2 || fabs(fval) > ftol)
     {
-		fval = f.call(x);
-		dx = -fval/f.deriv(x);
+		fval = f->call(x);
+		dx = -fval/f->deriv(x);
 
 		if (!ValidNumber(fval)){
             throw ValueError("Residual function in newton returned invalid number");
@@ -105,7 +105,7 @@ In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial 
 @param errstring A pointer to the std::string that returns the error from Secant.  Length is zero if no errors are found
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double Secant(FuncWrapper1D &f, double x0, double dx, double tol, int maxiter, std::string &errstring)
+double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, std::string &errstring)
 {
     #if defined(COOLPROP_DEEP_DEBUG)
     static std::vector<double> xlog, flog;
@@ -123,7 +123,7 @@ double Secant(FuncWrapper1D &f, double x0, double dx, double tol, int maxiter, s
         if (iter==2){x2=x0+dx; x=x2;}
         if (iter>2) {x=x2;}
 
-            fval = f.call(x);
+            fval = f->call(x);
 
             #if defined(COOLPROP_DEEP_DEBUG)
                 xlog.push_back(x);
@@ -176,7 +176,7 @@ In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial 
 @param errstring A pointer to the std::string that returns the error from Secant.  Length is zero if no errors are found
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double BoundedSecant(FuncWrapper1D &f, double x0, double xmin, double xmax, double dx, double tol, int maxiter, std::string &errstring)
+double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, double dx, double tol, int maxiter, std::string &errstring)
 {
 	double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
     int iter=1;
@@ -188,7 +188,7 @@ double BoundedSecant(FuncWrapper1D &f, double x0, double xmin, double xmax, doub
         if (iter==1){x1=x0; x=x1;}
         if (iter==2){x2=x0+dx; x=x2;}
         if (iter>2) {x=x2;}
-			fval=f.call(x);
+			fval=f->call(x);
         if (iter==1){y1=fval;}
         if (iter>1)
         {
@@ -232,13 +232,13 @@ at least one solution in the interval [a,b].
 @param maxiter Maximum numer of steps allowed.  Will throw a SolutionError if the solution cannot be found
 @param errstr A pointer to the error string returned.  If length is zero, no errors found.
 */
-double Brent(FuncWrapper1D &f, double a, double b, double macheps, double t, int maxiter, std::string &errstr)
+double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int maxiter, std::string &errstr)
 {
 	int iter;
     errstr.clear();
 	double fa,fb,c,fc,m,tol,d,e,p,q,s,r;
-    fa = f.call(a);
-    fb = f.call(b);
+    fa = f->call(a);
+    fb = f->call(b);
 
 	// If one of the boundaries is to within tolerance, just stop
 	if (fabs(fb) < t) { return b;}
@@ -318,7 +318,7 @@ double Brent(FuncWrapper1D &f, double a, double b, double macheps, double t, int
 		else{
             b+=-tol;
 		}
-		fb=f.call(b);
+		fb=f->call(b);
 		if (!ValidNumber(fb)){
 			throw ValueError(format("Brent's method f(t) is NAN for t = %g",b).c_str());
 		}
@@ -350,6 +350,20 @@ double Brent(FuncWrapper1D &f, double a, double b, double macheps, double t, int
 			throw SolutionError(std::string("Brent's method reached maximum number of steps of %d ", maxiter));}
 	}
     return b;
+}
+
+// Single-Dimensional solvers
+double Brent(FuncWrapper1D &f, double a, double b, double macheps, double t, int maxiter, std::string &errstr){
+	return Brent(&f, a, b, macheps, t, maxiter, errstr);
+}
+double Secant(FuncWrapper1D &f, double x0, double dx, double ftol, int maxiter, std::string &errstring){
+	return Secant(&f, x0, dx, ftol, maxiter, errstring);
+}
+double BoundedSecant(FuncWrapper1D &f, double x0, double xmin, double xmax, double dx, double ftol, int maxiter, std::string &errstring){
+	return BoundedSecant(&f, x0, xmin, xmax, dx, ftol, maxiter, errstring);
+}
+double Newton(FuncWrapper1D &f, double x0, double ftol, int maxiter, std::string &errstring){
+	return Newton(&f, x0, ftol, maxiter, errstring);
 }
 
 }; /* namespace CoolProp */

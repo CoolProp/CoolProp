@@ -102,7 +102,7 @@ Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficient
 /// @param coefficients matrix containing the ordered coefficients
 /// @param axis integer value that represents the desired direction of derivation
 /// @param times integer value that represents the desired order of integration
-Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, const int &axis = -1, const int &times = 1){
+Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd &coefficients, const int &axis, const int &times){
 	if (times < 0) throw ValueError(format("%s (%d): You have to provide a positive order for derivation, %d is not valid. ",__FILE__,__LINE__,times));
 	if (times == 0) return Eigen::MatrixXd(coefficients);
 	// Recursion is also possible, but not recommended
@@ -196,12 +196,11 @@ double Polynomial2D::integral(const Eigen::MatrixXd &coefficients, const double 
 	return this->evaluate(this->integrateCoeffs(coefficients, axis, 1), x_in,y_in);
 }
 
-// TODO: Why doe these base definitions not work with derived classes?
 /// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
 /// @param res Poly2DResidual object to calculate residuals and derivatives
 /// @param min double value that represents the minimum value
 /// @param max double value that represents the maximum value
-double Polynomial2D::solve_limits(Poly2DResidual res, const double &min, const double &max){
+double Polynomial2D::solve_limits(Poly2DResidual* res, const double &min, const double &max){
 	if (do_debug()) std::cout << format("Called solve_limits with: min=%f and max=%f", min, max) << std::endl;
 	std::string errstring;
 	double macheps = DBL_EPSILON;
@@ -212,11 +211,10 @@ double Polynomial2D::solve_limits(Poly2DResidual res, const double &min, const d
 	return result;
 }
 
-// TODO: Why doe these base definitions not work with derived classes?
 /// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
 /// @param res Poly2DResidual object to calculate residuals and derivatives
 /// @param guess double value that represents the start value
-double Polynomial2D::solve_guess(Poly2DResidual res, const double &guess){
+double Polynomial2D::solve_guess(Poly2DResidual* res, const double &guess){
 	if (do_debug()) std::cout << format("Called solve_guess with: guess=%f ", guess) << std::endl;
 	std::string errstring;
 	//set_debug_level(1000);
@@ -267,7 +265,7 @@ Eigen::VectorXd Polynomial2D::solve(const Eigen::MatrixXd &coefficients, const d
 /// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 double Polynomial2D::solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis){
 	Poly2DResidual res = Poly2DResidual(*this, coefficients, in, z_in, axis);
-	return solve_limits(res, min, max);
+	return solve_limits(&res, min, max);
 }
 
 /// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
@@ -276,7 +274,7 @@ double Polynomial2D::solve_limits(const Eigen::MatrixXd &coefficients, const dou
 /// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
 double Polynomial2D::solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis){
 	Poly2DResidual res = Poly2DResidual(*this, coefficients, in, z_in, axis);
-	return solve_guess(res, guess);
+	return solve_guess(&res, guess);
 }
 
 
@@ -455,7 +453,7 @@ Eigen::MatrixXd Polynomial2DFrac::deriveCoeffs(const Eigen::MatrixXd &coefficien
 /// @param x_in double value that represents the current input in the 1st dimension
 /// @param firstExponent integer value that represents the lowest exponent of the polynomial
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
-double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const int &firstExponent = 0, const double &x_base = 0.0){
+double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const int &firstExponent, const double &x_base){
 	if (coefficients.rows() != 1) {
 		throw ValueError(format("%s (%d): You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",__FILE__,__LINE__,coefficients.rows(),coefficients.cols()));
 	}
@@ -497,7 +495,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const dou
 /// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
 /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
-double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &x_exp, const int &y_exp, const double &x_base = 0.0, const double &y_base = 0.0){
+double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
 	if ( (x_exp<0) && (fabs(x_in-x_base)<DBL_EPSILON)) {
 		throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ",__FILE__,__LINE__,x_in-x_base));
 	}
@@ -549,7 +547,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const dou
 /// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
 /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
-double Polynomial2DFrac::derivative(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base = 0.0, const double &y_base = 0.0){
+double Polynomial2DFrac::derivative(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
 	Eigen::MatrixXd newCoefficients;
 	int der_exp,other_exp;
 	double der_val,other_val;
@@ -594,7 +592,7 @@ double Polynomial2DFrac::derivative(const Eigen::MatrixXd &coefficients, const d
 /// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
 /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
-double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base = 0.0, const double &y_base = 0.0){
+double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
 
 	Eigen::MatrixXd newCoefficients;
 	int int_exp,other_exp;
@@ -660,38 +658,6 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 	return evaluate(integrateCoeffs(newCoefficients, 0, 1),int_val,other_val,0,other_exp,int_base,other_base);
 
 }
-
-// TODO: Why doe these base definitions not work with derived classes?
-/// Uses the Brent solver to find the roots of p(x_in,y_in)-z_in
-/// @param res Poly2DResidual object to calculate residuals and derivatives
-/// @param min double value that represents the minimum value
-/// @param max double value that represents the maximum value
-double Polynomial2DFrac::solve_limits(Poly2DFracResidual res, const double &min, const double &max){
-	if (do_debug()) std::cout << format("Called solve_limits with: min=%f and max=%f", min, max) << std::endl;
-	std::string errstring;
-	double macheps = DBL_EPSILON;
-	double tol     = DBL_EPSILON*1e3;
-	int    maxiter = 10;
-	double result = Brent(res, min, max, macheps, tol, maxiter, errstring);
-	if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
-	return result;
-}
-
-// TODO: Why doe these base definitions not work with derived classes?
-/// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
-/// @param res Poly2DResidual object to calculate residuals and derivatives
-/// @param guess double value that represents the start value
-double Polynomial2DFrac::solve_guess(Poly2DFracResidual res, const double &guess){
-	if (do_debug()) std::cout << format("Called solve_guess with: guess=%f ", guess) << std::endl;
-	std::string errstring;
-	//set_debug_level(1000);
-	double tol     = DBL_EPSILON*1e3;
-	int    maxiter = 10;
-	double result = Newton(res, guess, tol, maxiter, errstring);
-	if (this->do_debug()) std::cout << "Newton solver message: " << errstring << std::endl;
-	return result;
-}
-
 
 /// Returns a vector with ALL the real roots of p(x_in,y_in)-z_in
 /// @param coefficients vector containing the ordered coefficients
@@ -770,7 +736,7 @@ Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, con
 double Polynomial2DFrac::solve_limits(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
 	if (do_debug()) std::cout << format("Called solve_limits with: %f, %f, %f, %f, %d, %d, %d, %f, %f",in, z_in, min, max, axis, x_exp, y_exp, x_base, y_base) << std::endl;
 	Poly2DFracResidual res = Poly2DFracResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base);
-	return this->solve_limits(res, min, max);
+	return Polynomial2D::solve_limits(&res, min, max);
 } //TODO: Implement tests for this solver
 
 /// Uses the Newton solver to find the roots of p(x_in,y_in)-z_in
@@ -786,7 +752,7 @@ double Polynomial2DFrac::solve_limits(const Eigen::MatrixXd &coefficients, const
 double Polynomial2DFrac::solve_guess(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
 	if (do_debug()) std::cout << format("Called solve_guess with: %f, %f, %f, %d, %d, %d, %f, %f",in, z_in, guess, axis, x_exp, y_exp, x_base, y_base) << std::endl;
 	Poly2DFracResidual res = Poly2DFracResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base);
-	return this->solve_guess(res, guess);
+	return Polynomial2D::solve_guess(&res, guess);
 } //TODO: Implement tests for this solver
 
 /// Uses the Brent solver to find the roots of Int(p(x_in,y_in))-z_in
@@ -803,7 +769,7 @@ double Polynomial2DFrac::solve_guess(const Eigen::MatrixXd &coefficients, const 
 /// @param int_axis axis for the integration (0=x, 1=y)
 double Polynomial2DFrac::solve_limitsInt(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &min, const double &max, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base, const int &int_axis){
 	Poly2DFracIntResidual res = Poly2DFracIntResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base, int_axis);
-	return Polynomial2D::solve_limits(res, min, max);
+	return Polynomial2D::solve_limits(&res, min, max);
 } //TODO: Implement tests for this solver
 
 /// Uses the Newton solver to find the roots of Int(p(x_in,y_in))-z_in
@@ -819,7 +785,7 @@ double Polynomial2DFrac::solve_limitsInt(const Eigen::MatrixXd &coefficients, co
 /// @param int_axis axis for the integration (0=x, 1=y)
 double Polynomial2DFrac::solve_guessInt(const Eigen::MatrixXd &coefficients, const double &in, const double &z_in, const double &guess, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base, const int &int_axis){
 	Poly2DFracIntResidual res = Poly2DFracIntResidual(*this, coefficients, in, z_in, axis, x_exp, y_exp, x_base, y_base, int_axis);
-	return Polynomial2D::solve_guess(res, guess);
+	return Polynomial2D::solve_guess(&res, guess);
 } //TODO: Implement tests for this solver
 
 
