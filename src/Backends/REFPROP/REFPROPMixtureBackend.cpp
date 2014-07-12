@@ -552,14 +552,14 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             }
             else if (ierr > 0) // Error
             {
-                if (k==0 && N > 1)
+                if (k==0 && N == 1)
                     continue; // Allow us to use PPF if a pure fluid
                 else
-                    throw ValueError(format("%s",herr));
+                    throw ValueError(format("%s", herr));
             }
             else // Warning
             {
-                throw ValueError(format("%s",herr));
+                throw ValueError(format("%s", herr));
             }
         }
     }
