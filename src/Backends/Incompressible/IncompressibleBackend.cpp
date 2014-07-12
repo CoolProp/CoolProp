@@ -34,8 +34,7 @@ void IncompressibleBackend::update(long input_pair, double value1, double value2
     //if (mass_fractions.empty()){
     //    throw ValueError("mass fractions have not been set");
     //}
-	_p = -1;
-	_T = -1;
+	clear();
 	switch (input_pair) 
 	{
         case PT_INPUTS: {
