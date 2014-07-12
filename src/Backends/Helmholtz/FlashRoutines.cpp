@@ -51,7 +51,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 }
 
                 rhoLsat = HEOS.solver_rho_Tp(HEOS._T, psatLanc, rhoLanc);
-                rhoVsat = HEOS.solver_rho_Tp(HEOS._T, psatVanc, rhoLanc);
+                rhoVsat = HEOS.solver_rho_Tp(HEOS._T, psatVanc, rhoVanc);
                 if (!ValidNumber(rhoLsat) || !ValidNumber(rhoVsat) ||
                      fabs(rhoLsat/rhoLanc-1) > 0.1 || fabs(rhoVanc/rhoVsat-1) > 0.1)
                 {
