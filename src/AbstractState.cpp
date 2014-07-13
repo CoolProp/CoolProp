@@ -5,6 +5,7 @@
  *      Author: jowr
  */
 
+#include <stdlib.h>
 #include "math.h"
 #include "AbstractState.h"
 #include "Backends/REFPROP/REFPROPBackend.h"
@@ -43,9 +44,28 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     }
     else if (!backend.compare("INCOMP"))
     {
-        AbstractState * AS = new IncompressibleBackend(fluid_string);
-        AS->set_mass_fractions(std::vector<long double>(1, 0.0));
-        return AS;
+    	double x;
+    	std::string fluid_name;
+    	if (fluid_string.find('-') == std::string::npos){
+    		x = 0.0;
+    		fluid_name = fluid_string;
+		} else {
+			std::vector<std::string> fluid_parts = strsplit(fluid_string,'-');
+			// Check it worked
+			if (fluid_parts.size() != 2){
+				throw ValueError(format("Format of incompressible solution string [%s] is invalid, should be like \"EG-20%\" or \"EG-0.2\" ", fluid_string.c_str()) );
+			}
+    		// Convert the concentration into a string
+    		char* pEnd;
+    		x = strtod(fluid_parts[1].c_str(), &pEnd);
+    		fluid_name = fluid_parts[0];
+    		// Check if per cent or fraction syntax is used
+    		if (!strcmp(pEnd,"%")){	x *= 0.01;}
+		}
+    	AbstractState * AS = new IncompressibleBackend(fluid_name);
+    	AS->set_mass_fractions(std::vector<double>(1, x));
+    	//AS->set_mass_fractions(x);
+		return AS;
     }
     else if (!backend.compare("BRINE"))
     {

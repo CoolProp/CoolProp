@@ -34,12 +34,16 @@ void IncompressibleBackend::update(long input_pair, double value1, double value2
     //if (mass_fractions.empty()){
     //    throw ValueError("mass fractions have not been set");
     //}
+
+	std::vector<long double> mf(this->mass_fractions);
+
 	clear();
 
 	if (fluid->is_pure()){
 		this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_LIQUID;
 	} else {
 		this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_SOLUTION;
+		this->set_mass_fractions(mf);
 	}
 
 	this->_phase = iphase_liquid;
@@ -384,7 +388,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 		// Prepare the results and compare them to the calculated values
 		double acc = 0.0001;
-		double T   = 273.15-4.5;
+		double T   = 273.15+10;
 		double p   = 10e5;
 		double x   = 0.32;
 		backend.set_mass_fractions(x);
@@ -404,6 +408,11 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		CAPTURE(res);
 		CHECK( check_abs(val,res,acc) );
 		}
+
+		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExamplePure") << std::endl;
+		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSolution-0.325") << std::endl;
+		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSecCool-32.5%") << std::endl;
+		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-32.5%") << std::endl;
 //
 //		// Compare cp
 //		val = 3993.9748117022423;
