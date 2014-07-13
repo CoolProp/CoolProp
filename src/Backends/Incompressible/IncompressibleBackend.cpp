@@ -35,6 +35,19 @@ void IncompressibleBackend::update(long input_pair, double value1, double value2
     //    throw ValueError("mass fractions have not been set");
     //}
 	clear();
+
+	if (fluid->is_pure()){
+		this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_LIQUID;
+	} else {
+		this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_SOLUTION;
+	}
+
+	this->_phase = iphase_liquid;
+
+	if (this->_fluid_type==FLUID_TYPE_INCOMPRESSIBLE_SOLUTION && mass_fractions.size()==0){
+		throw ValueError("This is a solution or brine. Mass fractions must be set");
+	}
+
 	switch (input_pair) 
 	{
         case PT_INPUTS: {
@@ -367,7 +380,167 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		}
 	}
 
+	SECTION("Tests for the full implementation using PropsSI") {
 
+		// Prepare the results and compare them to the calculated values
+		double acc = 0.0001;
+		double T   = 273.15-4.5;
+		double p   = 10e5;
+		double x   = 0.32;
+		backend.set_mass_fractions(x);
+		double val = 0;
+		double res = 0;
+
+		std::string fluid("INCOMP::ExampleMelinder");
+
+		// Compare density
+		val = 963.2886528091547;
+		res = CoolProp::PropsSI("D","T",T,"P",p,fluid.c_str());
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+//
+//		// Compare cp
+//		val = 3993.9748117022423;
+//		res = CoolProp::PropsSI("C","T",T,"P",p,"INCOMP::ExampleSecCool");
+//		{
+//		CAPTURE(T);
+//		CAPTURE(p);
+//		CAPTURE(x);
+//		CAPTURE(val);
+//		CAPTURE(res);
+//		CHECK( check_abs(val,res,acc) );
+//		}
+//
+//		// Compare s
+//		val = -206.62646783739274;
+//		res = CH3OH.s(T,p,x);
+//		{
+//		CAPTURE(T);
+//		CAPTURE(p);
+//		CAPTURE(x);
+//		CAPTURE(val);
+//		CAPTURE(res);
+//		CHECK( check_abs(val,res,acc) );
+//		}
+//
+//		val = 0.0;
+//		res = CH3OH.s(Tref,pref,xref);
+//		{
+//		CAPTURE(T);
+//		CAPTURE(p);
+//		CAPTURE(x);
+//		CAPTURE(val);
+//		CAPTURE(res);
+//		CHECK( val==res );
+//		}
+//
+//		// Compare u
+//		val = -60043.78429641827;
+//		res = CH3OH.u(T,p,x);
+//		{
+//		CAPTURE(T);
+//		CAPTURE(p);
+//		CAPTURE(x);
+//		CAPTURE(val);
+//		CAPTURE(res);
+//		CHECK( check_abs(val,res,acc) );
+//		}
+//
+//		val = href - pref/CH3OH.rho(Tref,pref,xref);
+//		res = CH3OH.u(Tref,pref,xref);
+//		{
+//		CAPTURE(T);
+//		CAPTURE(p);
+//		CAPTURE(x);
+//		CAPTURE(val);
+//		CAPTURE(res);
+//		CHECK( val==res );
+//		}
+//
+//		// Compare h
+//		val = -59005.67386390795;
+//		res = CH3OH.h(T,p,x);
+//		{
+//		CAPTURE(T);
+//		CAPTURE(p);
+//		CAPTURE(x);
+//		CAPTURE(val);
+//		CAPTURE(res);
+//		CHECK( check_abs(val,res,acc) );
+//		}
+//
+//		val = 0.0;
+//		res = CH3OH.h(Tref,pref,xref);
+//		{
+//		CAPTURE(T);
+//		CAPTURE(p);
+//		CAPTURE(x);
+//		CAPTURE(val);
+//		CAPTURE(res);
+//		CHECK( val==res );
+//		}
+//
+//		// Compare v
+//		val = 0.0023970245009602097;
+//		res = CH3OH.visc(T,p,x)/1e3;
+//		{
+//		CAPTURE(T);
+//		CAPTURE(p);
+//		CAPTURE(x);
+//		CAPTURE(val);
+//		CAPTURE(res);
+//		CHECK( check_abs(val,res,acc) );
+//		}
+//
+//		// Compare l
+//		val = 0.44791148414693727;
+//		res = CH3OH.cond(T,p,x);
+//		{
+//		CAPTURE(T);
+//		CAPTURE(p);
+//		CAPTURE(x);
+//		CAPTURE(val);
+//		CAPTURE(res);
+//		CHECK( check_abs(val,res,acc) );
+//		}
+//
+//		// Compare Tfreeze
+//		val = -20.02+273.15;// 253.1293105454671;
+//		res = CH3OH.Tfreeze(p,x)+273.15;
+//		{
+//		CAPTURE(T);
+//		CAPTURE(p);
+//		CAPTURE(x);
+//		CAPTURE(val);
+//		CAPTURE(res);
+//		CHECK( check_abs(val,res,acc) );
+//		}
+//
+//
+//
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	}
 }
 
 #endif /* ENABLE_CATCH */

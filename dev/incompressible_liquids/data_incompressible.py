@@ -536,7 +536,7 @@ class ZS55(LiquidData):
   
 class IncompressibleData(object):
     def __init__(self):
-        self.INCOMPRESSIBLE_NOT_SET       = ''
+        self.INCOMPRESSIBLE_NOT_SET       = 'notdefined'
         self.INCOMPRESSIBLE_POLYNOMIAL    = 'polynomial'
         self.INCOMPRESSIBLE_EXPONENTIAL   = 'exponential'
         self.INCOMPRESSIBLE_EXPPOLYNOMIAL = 'exppolynomial'

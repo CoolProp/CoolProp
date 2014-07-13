@@ -42,7 +42,7 @@ IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Valu
 					throw ValueError(format("The type [%s] is not understood for [%s] of incompressible fluids. Please check your JSON file.", type.c_str(), id.c_str()));
 				}
 				else{
-                    std::cout << format("The type [%s] is not understood for [%s] of incompressible fluids. Please check your JSON file.\n", type.c_str(), id.c_str());
+                    //std::cout << format("The type [%s] is not understood for [%s] of incompressible fluids. Please check your JSON file.\n", type.c_str(), id.c_str());
 				}
 			}
 			else{

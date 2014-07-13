@@ -33,6 +33,11 @@ void IncompressibleFluid::validate(){
 	throw NotImplementedError("TODO");
 }
 
+bool IncompressibleFluid::is_pure() {
+	if (density.coeffs.cols()==1) return true;
+	return false;
+}
+
 /// Base functions that handle the custom data type, just a place holder to show the structure.
 double IncompressibleFluid::baseExponential(IncompressibleData data, double y, double ybase){
 	size_t r=data.coeffs.rows(),c=data.coeffs.cols();

@@ -128,6 +128,8 @@ public:
 
 	/// A function to check coefficients and equation types.
 	void validate();
+	/// A function to test the density coefficients for 1D or 2D
+	bool is_pure();
 
 
 protected:

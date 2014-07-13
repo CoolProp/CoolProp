@@ -218,22 +218,22 @@ if __name__ == '__main__':
     if test: f = None #interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
     if test: printDens(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
     
-    print 
-    print "It works for temperature changes:"
-    printDens(data, T-10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-    printDens(data, T+10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-    printHeat(data, T-10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-    printHeat(data, T+10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-    print "but not for concentration changes:"
-    x = x-0.1
-    printDens(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-    x = x+0.2
-    printDens(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-    x = x-0.2
-    printHeat(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-    x = x+0.2
-    printHeat(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-    print 
+#    print 
+#    print "It works for temperature changes:"
+#    printDens(data, T-10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
+#    printDens(data, T+10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
+#    printHeat(data, T-10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
+#    printHeat(data, T+10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
+#    print "but not for concentration changes:"
+#    x = x-0.1
+#    printDens(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
+#    x = x+0.2
+#    printDens(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
+#    x = x-0.2
+#    printHeat(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
+#    x = x+0.2
+#    printHeat(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
+#    print 
     
     
     data = MelinderExample()

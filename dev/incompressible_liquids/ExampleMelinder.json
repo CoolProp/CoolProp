@@ -117,13 +117,13 @@
   "description": "Methanol solution", 
   "mass2mole": {
     "coeffs": "null", 
-    "type": ""
+    "type": "notdefined"
   }, 
   "name": "ExampleMelinder", 
   "reference": "Melinder Book", 
   "saturation_pressure": {
     "coeffs": "null", 
-    "type": ""
+    "type": "notdefined"
   }, 
   "specific_heat": {
     "coeffs": [
@@ -201,7 +201,7 @@
   }, 
   "volume2mass": {
     "coeffs": "null", 
-    "type": ""
+    "type": "notdefined"
   }, 
   "xbase":  3.05128000e-01, 
   "xmax":  6.00000000e-01, 
