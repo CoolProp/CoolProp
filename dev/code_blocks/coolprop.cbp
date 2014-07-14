@@ -13,9 +13,8 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
-					<Add option="-DENABLE_CATCH" />
-					<Add option="-DCOOLPROP_DEEP_DEBUG" />
 					<Add directory="../../include" />
+					<Add directory="../../externals/Eigen" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
@@ -27,6 +26,7 @@
 					<Add option="/arch:SSE2" />
 					<Add option="/W3" />
 					<Add directory="../../include" />
+					<Add directory="../../externals/Eigen" />
 				</Compiler>
 			</Target>
 		</Build>
@@ -77,7 +77,6 @@
 		<Unit filename="../../src/Backends/Helmholtz/FlashRoutines.h" />
 		<Unit filename="../../src/Backends/Helmholtz/Fluids/FluidLibrary.cpp" />
 		<Unit filename="../../src/Backends/Helmholtz/Fluids/FluidLibrary.h" />
-		<Unit filename="../../src/Backends/Helmholtz/Fluids/Incompressible.cpp" />
 		<Unit filename="../../src/Backends/Helmholtz/Fluids/Incompressible.h" />
 		<Unit filename="../../src/Backends/Helmholtz/HelmholtzEOSBackend.cpp" />
 		<Unit filename="../../src/Backends/Helmholtz/HelmholtzEOSBackend.h" />
@@ -91,6 +90,7 @@
 		<Unit filename="../../src/Backends/Helmholtz/VLERoutines.h" />
 		<Unit filename="../../src/Backends/Incompressible/IncompressibleBackend.cpp" />
 		<Unit filename="../../src/Backends/Incompressible/IncompressibleBackend.h" />
+		<Unit filename="../../src/Backends/Incompressible/IncompressibleFluid.cpp" />
 		<Unit filename="../../src/Backends/Incompressible/IncompressibleLibrary.cpp" />
 		<Unit filename="../../src/Backends/Incompressible/IncompressibleLibrary.h" />
 		<Unit filename="../../src/Backends/REFPROP/REFPROPBackend.cpp" />

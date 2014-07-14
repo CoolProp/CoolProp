@@ -452,6 +452,12 @@ if (COOLPROP_MATHEMATICA_MODULE)
   set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
 endif()
 
+if (COOLPROP_MAIN_MODULE)
+  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cxx")
+  add_executable        (Main ${APP_SOURCES})
+  add_dependencies      (Main generate_headers)
+endif()
+
 ###      COOLPROP TESTING APP       ###
 if (COOLPROP_CATCH_MODULE)
   enable_testing()

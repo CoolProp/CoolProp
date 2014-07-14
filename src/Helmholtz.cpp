@@ -1097,15 +1097,16 @@ long double ResidualHelmholtzNonAnalytic::dTau2(const long double &tau, const lo
         ResidualHelmholtzNonAnalyticElement &el = elements[i];
         long double ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
         long double Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
-        long double theta=(1.0-tau)+Ai*pow(pow(delta-1.0,2),1.0/(2.0*betai));
-        long double DELTA=pow(theta,2)+Bi*pow(pow(delta-1.0,2),ai);
-        long double PSI=exp(-Ci*pow(delta-1.0,2)-Di*pow(tau-1.0,2));
-        long double dPSI_dTau=-2.0*Di*(tau-1.0)*PSI;
-        long double dDELTAbi_dTau=-2.0*theta*bi*pow(DELTA,bi-1.0);
-        long double dPSI2_dTau2=(2.0*Di*pow(tau-1.0,2)-1.0)*2.0*Di*PSI;
-        long double dDELTAbi2_dTau2=2.0*bi*pow(DELTA,bi-1.0)+4.0*pow(theta,2)*bi*(bi-1.0)*pow(DELTA,bi-2.0);
 
-        s[i] = ni*(dDELTAbi2_dTau2*PSI+2.0*dDELTAbi_dTau*dPSI_dTau+pow(DELTA,bi)*dPSI2_dTau2);
+        long double theta = (1.0-tau)+Ai*pow(pow(delta-1.0,2),1.0/(2.0*betai));
+        long double DELTA = pow(theta,2)+Bi*pow(pow(delta-1.0,2),ai);
+        long double PSI = exp(-Ci*pow(delta-1.0,2)-Di*pow(tau-1.0,2));
+        long double dPSI_dTau = -2.0*Di*(tau-1.0)*PSI;
+        long double dDELTAbi_dTau = -2.0*theta*bi*pow(DELTA,bi-1.0);
+        long double dPSI2_dTau2 = (2.0*Di*pow(tau-1.0,2)-1.0)*2.0*Di*PSI;
+        long double dDELTAbi2_dTau2 = 2.0*bi*pow(DELTA,bi-1.0)+4.0*pow(theta,2)*bi*(bi-1.0)*pow(DELTA,bi-2.0);
+
+        s[i] = ni*delta*(dDELTAbi2_dTau2*PSI+2.0*dDELTAbi_dTau*dPSI_dTau+pow(DELTA,bi)*dPSI2_dTau2);
     }
     return std::accumulate(s.begin(), s.end(), 0.0);
 }
