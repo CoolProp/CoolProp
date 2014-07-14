@@ -44,6 +44,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     }
     else if (!backend.compare("INCOMP"))
     {
+    	// TODO: remove the concentration parsing and check for errors other places
     	double x;
     	std::string fluid_name;
     	if (fluid_string.find('-') == std::string::npos){
@@ -63,8 +64,13 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     		if (!strcmp(pEnd,"%")){	x *= 0.01;}
 		}
     	AbstractState * AS = new IncompressibleBackend(fluid_name);
-    	AS->set_mass_fractions(std::vector<double>(1, x));
-    	//AS->set_mass_fractions(x);
+
+    	//if (get_debug_level()>=10) std::cout << format("Abstract state: Detected concentration of %f for %s.",x,fluid_name.c_str()) << std::endl;
+    	if (x>0.0) {
+    		throw ValueError(format("You used a deprecated concentration definition. Please use an std::vector object to pass the concentration of %f for %s.",x,fluid_name.c_str()));
+    		AS->set_mass_fractions(std::vector<long double>(1,x));
+    	}
+
 		return AS;
     }
     else if (!backend.compare("BRINE"))

@@ -194,7 +194,7 @@ if __name__ == '__main__':
     writer.fitAll(data)
     writer.toJSON(data)
     printInfo(data)
-    if test: T = data.Tbase+55+273.15
+    if test: T = 55+273.15
     if test: x = 0.0 
     if test: f = interpolate.interp1d(data.temperature.data, data.density.data.T[0])
     if test: printDens(data, T, p, x, fluid='TD12', f=f)
@@ -204,8 +204,8 @@ if __name__ == '__main__':
     writer.fitAll(data)
     writer.toJSON(data)
     printInfo(data)
-    if test: T = data.Tbase-15+273.15
-    if test: x = 0.22 
+    if test: T = -15+273.15
+    if test: x = 0.10
     if test: f = interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
     if test: printDens(data, T, p, x, fluid='IceEA-{0:.4f}%'.format(x*100.0), f=f)
 
@@ -213,8 +213,8 @@ if __name__ == '__main__':
     data = SecCoolExample()
     writer.toJSON(data)
     printInfo(data)
-    if test: T = data.Tbase+0
-    if test: x = 0.3157
+    if test: T = -5+273.15
+    if test: x = 0.40
     if test: f = None #interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
     if test: printDens(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
     
@@ -239,8 +239,8 @@ if __name__ == '__main__':
     data = MelinderExample()
     writer.toJSON(data)
     printInfo(data)
-    if test: T = data.Tbase+10
-    if test: x = 0.22 
+    if test: T = -5+273.15
+    if test: x = 0.3
     if test: f = None #interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
     if test: printDens(data, T, p, x, fluid='MMA-22%', f=f)
     

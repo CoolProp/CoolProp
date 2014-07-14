@@ -35,7 +35,10 @@ void IncompressibleBackend::update(long input_pair, double value1, double value2
     //    throw ValueError("mass fractions have not been set");
     //}
 
-	std::vector<long double> mf(this->mass_fractions);
+	if (get_debug_level()>=10) {
+		//throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for the solver, %d is not valid. ",__FILE__,__LINE__,axis));
+		std::cout << format("Incompressible backend: Called update with %d and %f, %f ",input_pair, value1, value2) << std::endl;
+	}
 
 	clear();
 
@@ -43,7 +46,6 @@ void IncompressibleBackend::update(long input_pair, double value1, double value2
 		this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_LIQUID;
 	} else {
 		this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_SOLUTION;
-		this->set_mass_fractions(mf);
 	}
 
 	this->_phase = iphase_liquid;
@@ -104,6 +106,8 @@ void IncompressibleBackend::set_mole_fractions(const std::vector<long double> &m
 @param mass_fractions The vector of mass fractions of the components
 */
 void IncompressibleBackend::set_mass_fractions(const std::vector<long double> &mass_fractions) {
+	//if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_mass_fractions with %s ",vec_to_string(std::vector<double>(mass_fractions.begin(), mass_fractions.end()))) << std::endl;
+	if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_mass_fractions with %s ",vec_to_string(mass_fractions).c_str()) << std::endl;
 	if (mass_fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the mass fraction vector and not %d.",mass_fractions.size()));
 	this->mass_fractions = mass_fractions;
 }
@@ -112,6 +116,7 @@ void IncompressibleBackend::set_mass_fractions(const std::vector<long double> &m
 @param mass_fraction The mass fraction of the component other than water
 */
 void IncompressibleBackend::set_mass_fractions(const long double &mass_fraction) {
+	if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_mass_fractions with %s ",vec_to_string((double)mass_fraction).c_str()) << std::endl;
 	this->mass_fractions.clear();
 	this->mass_fractions.push_back(mass_fraction);
 }
@@ -387,19 +392,38 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 	SECTION("Tests for the full implementation using PropsSI") {
 
 		// Prepare the results and compare them to the calculated values
+		std::string fluid("INCOMP::ExampleMelinder");
 		double acc = 0.0001;
-		double T   = 273.15+10;
+		double T   = -5  + 273.15;
 		double p   = 10e5;
-		double x   = 0.32;
-		backend.set_mass_fractions(x);
+		double x   = 0.3;
 		double val = 0;
 		double res = 0;
 
-		std::string fluid("INCOMP::ExampleMelinder");
-
-		// Compare density
-		val = 963.2886528091547;
-		res = CoolProp::PropsSI("D","T",T,"P",p,fluid.c_str());
+		// Compare different inputs
+		// ... as vector
+		val = 9.6212e+02;
+		res = CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder",std::vector<double>(1,x));
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+		// ... as %
+		res = CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-30%");
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+		// ... as mass fraction
+		res = CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder[0.30]");
 		{
 		CAPTURE(T);
 		CAPTURE(p);
@@ -409,10 +433,30 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		CHECK( check_abs(val,res,acc) );
 		}
 
-		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExamplePure") << std::endl;
-		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSolution-0.325") << std::endl;
-		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSecCool-32.5%") << std::endl;
-		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-32.5%") << std::endl;
+//		CoolProp::set_debug_level(12);
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder",std::vector<double>(1,0.325)) << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-32.5%") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder[0.325]") << std::endl;
+
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExamplePure") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSolution-32.5%") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSecCool-32.5%") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-32.5%") << std::endl;
+//
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExamplePure") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSolution-0.325") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSecCool-0.325") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-0.325") << std::endl;
+//
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExamplePure") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSolution-2.5%") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSecCool-2.5%") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-2.5%") << std::endl;
+//
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExamplePure") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSolution-0.025") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSecCool-0.025") << std::endl;
+//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-0.025") << std::endl;
 //
 //		// Compare cp
 //		val = 3993.9748117022423;

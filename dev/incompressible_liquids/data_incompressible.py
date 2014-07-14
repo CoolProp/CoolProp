@@ -1076,9 +1076,9 @@ class PureExample(SolutionData):
         self.name = "ExamplePure"
         self.description = "Heat transfer fluid TherminolD12 by Solutia"
         self.reference = "Solutia data sheet"
-        self.Tmax = 260 + 273.15
-        self.Tmin = -85 + 273.15
-        self.TminPsat =  40 + 273.15
+        self.Tmax = 150 + 273.15
+        self.Tmin =  50 + 273.15
+        self.TminPsat =  self.Tmax
         
         self.temperature.data         = np.array([    50 ,     60 ,     70 ,     80 ,     90 ,    100 ,    110 ,    120 ,    130 ,    140 ,    150 ])+273.15 # Kelvin
         self.density.data             = np.array([[  740],[   733],[   726],[   717],[   710],[   702],[   695],[   687],[   679],[   670],[   662]])        # kg/m3
@@ -1094,9 +1094,9 @@ class SolutionExample(SolutionData):
         self.name = "ExampleSolution"
         self.description = "Ethanol ice slurry"
         self.reference = "SecCool software"
-        self.Tmax = 260 + 273.15
-        self.Tmin = -85 + 273.15
-        self.TminPsat =  40 + 273.15
+        self.Tmax = -10 + 273.15
+        self.Tmin = -45 + 273.15
+        self.TminPsat =  self.Tmax
         
         self.temperature.data         = np.array([   -45 ,    -40 ,    -35 ,    -30 ,    -25 ,    -20 ,    -15 ,    -10])+273.15 # Kelvin
         self.concentration.data       = np.array([     5 ,     10 ,     15 ,     20 ,     25 ,     30 ,     35 ])/100.0 # mass fraction

@@ -247,6 +247,10 @@ template <class T> void removeColumn(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynam
 
 
 
+
+
+
+
 /// Templates for printing numbers, vectors and matrices
 static const char* stdFmt = "%8.3f";
 
@@ -262,7 +266,7 @@ template<class T> std::string vec_to_string(const             std::vector<T>   &
     return out.str();
 };
 template<class T> std::string vec_to_string(const             std::vector<T>   &a) {
-	return vec_to_string(a, stdFmt);
+	return vec_to_string(std::vector<double>(a.begin(), a.end()), stdFmt);
 };
 
 /// Templates for turning numbers (0D-matrices) into strings
@@ -272,7 +276,7 @@ template<class T> std::string vec_to_string(const                         T    &
 	return vec_to_string(vec, fmt);
 };
 template<class T> std::string vec_to_string(const                         T    &a) {
-	return vec_to_string(a, stdFmt);
+	return vec_to_string((double) a, stdFmt);
 };
 
 ///Templates for turning 2D-matrices into strings
@@ -316,6 +320,93 @@ template <class T> std::string mat_to_string(const Eigen::Matrix<T,Eigen::Dynami
 //std::string vec_to_string(const Eigen::MatrixXd &A) {
 	return mat_to_string(A, stdFmt);
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///// Templates for printing numbers, vectors and matrices
+//static const char* stdFmt = "%8.3f";
+//
+/////Templates for turning vectors (1D-matrices) into strings
+//template<class T> std::string vec_to_string(const             std::vector<T>   &a, const char *fmt) {
+//	if (a.size()<1) return std::string("");
+//	std::stringstream out;
+//	out << "[ " << format(fmt,a[0]);
+//	for (size_t j = 1; j < a.size(); j++) {
+//		out << ", " << format(fmt, a[j]);
+//    }
+//	out << " ]";
+//    return out.str();
+//};
+//template<class T> std::string vec_to_string(const             std::vector<T>   &a) {
+//	return vec_to_string(a, stdFmt);
+//};
+//
+///// Templates for turning numbers (0D-matrices) into strings
+//template<class T> std::string vec_to_string(const                         T    &a, const char *fmt) {
+//	std::vector<T> vec;
+//	vec.push_back(a);
+//	return vec_to_string(vec, fmt);
+//};
+//template<class T> std::string vec_to_string(const                         T    &a) {
+//	return vec_to_string(a, stdFmt);
+//};
+//
+/////Templates for turning 2D-matrices into strings
+//template<class T> std::string vec_to_string(const std::vector<std::vector<T> > &A, const char *fmt) {
+//	if (A.size()<1) return std::string("");
+//	std::stringstream out;
+//	out << "[ " << vec_to_string(A[0], fmt);
+//	for (size_t j = 1; j < A.size(); j++) {
+//		out << ", " << std::endl << "  " << vec_to_string(A[j], fmt);
+//    }
+//	out << " ]";
+//    return out.str();
+//};
+//template<class T> std::string vec_to_string(const std::vector<std::vector<T> > &A) {
+//	return vec_to_string(A, stdFmt);
+//};
+//
+/////Templates for turning Eigen matrices into strings
+//template <class T>  std::string mat_to_string(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &A, const char *fmt) {
+////std::string mat_to_string(const Eigen::MatrixXd &A, const char *fmt) {
+//	std::size_t r = A.rows();
+//	std::size_t c = A.cols();
+//	if ((r<1)||(c<1)) return std::string("");
+//	std::stringstream out;
+//	out << "[ ";
+//	if (r==1) {
+//		out << format(fmt, A(0,0));
+//		for (size_t j = 1; j < c; j++) {
+//			out << ", " << format(fmt, A(0,j));
+//		}
+//	} else {
+//		out << mat_to_string(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(A.row(0)), fmt);
+//		for (size_t i = 1; i < r; i++) {
+//			out << ", " << std::endl << "  " << mat_to_string(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(A.row(i)), fmt);
+//		}
+//	}
+//	out << " ]";
+//    return out.str();
+//};
+//template <class T> std::string mat_to_string(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &A) {
+////std::string vec_to_string(const Eigen::MatrixXd &A) {
+//	return mat_to_string(A, stdFmt);
+//};
 
 /// Template class for turning numbers (0D-matrices) into strings
 //template<class T> std::string vec_to_string(const             T  &a){

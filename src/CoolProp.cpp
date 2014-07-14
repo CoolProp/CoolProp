@@ -26,6 +26,7 @@
 #include <string>
 #include "CoolPropTools.h"
 #include "Solvers.h"
+#include "MatrixMath.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 
@@ -228,8 +229,11 @@ bool has_fractions_in_string(const std::string &fluid_string)
     // Start at the "::" if it is found to chop off the delimiter between backend and fluid
     std::size_t i = fluid_string.find("::");
     // If can find both "&" and "]", it must have mole fractions encoded as string
-    return fluid_string.find("&",i+2) != -1 && fluid_string.find("]",i+2);
+    //return fluid_string.find("&",i+2) != -1 && fluid_string.find("]",i+2);
+    // If can find both "[" and "]", it must have mole fractions encoded as string
+    return (fluid_string.find("[",i+2)!=std::string::npos && fluid_string.find("]",i+2)!=std::string::npos);
 }
+
 std::string extract_fractions(const std::string &fluid_string, std::vector<double> &fractions)
 {
     fractions.clear();
@@ -286,6 +290,53 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
     return backend_string + strjoin(names, "&");
 }
 
+bool has_solution_concentration(const std::string &fluid_string)
+{
+    // Start at the "::" if it is found to chop off the delimiter between backend and fluid
+    std::size_t i = fluid_string.find("::");
+    // If can find "-", expect mass fractions encoded as string
+    if (fluid_string.find('-',i+2))
+    	return true;
+    return false;
+}
+
+std::string extract_concentrations(const std::string &fluid_string, std::vector<double> &fractions)
+{
+	fractions.clear();
+	double x;
+	std::string all_pairs, backend_string;
+
+	// Start at the "::" if it is found to chop off the delimiter between backend and fluid
+	int i = fluid_string.find("::");
+
+	// If no backend/fluid delimiter
+	if (i < 0) {
+		backend_string = "";
+		all_pairs = fluid_string;
+	}
+	else
+	{
+		backend_string = fluid_string.substr(0, i+2);
+		all_pairs = fluid_string.substr(i+2);
+	}
+
+	std::vector<std::string> fluid_parts = strsplit(all_pairs,'-');
+	// Check it worked
+	if (fluid_parts.size() != 2){
+		throw ValueError(format("Format of incompressible solution string [%s] is invalid, should be like \"EG-20%\" or \"EG-0.2\" ", fluid_string.c_str()) );
+	}
+
+	// Convert the concentration into a string
+	char* pEnd;
+	x = strtod(fluid_parts[1].c_str(), &pEnd);
+
+	// Check if per cent or fraction syntax is used
+	if (!strcmp(pEnd,"%")){	x *= 0.01;}
+	fractions.push_back(x);
+	if (get_debug_level()>10) std::cout << format("%s:%d: Detected incompressible concentration of %d for %s.",__FILE__,__LINE__,vec_to_string(fractions).c_str(), fluid_parts[0].c_str());
+	return backend_string + fluid_parts[0];
+}
+
 // Internal function to do the actual calculations, make this a wrapped function so
 // that error bubbling can be done properly
 double _PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref, const std::vector<double> &z)
@@ -293,7 +344,7 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
     static std::string unknown_backend = "?";
     double x1, x2;
     if (get_debug_level()>5){
-        std::cout << format("%s:%d: _PropsSI(%s,%s,%g,%s,%g,%s)\n",__FILE__,__LINE__,Output.c_str(),Name1.c_str(),Prop1,Name2.c_str(),Prop2,Ref.c_str()).c_str();
+        std::cout << format("%s:%d: _PropsSI(%s,%s,%g,%s,%g,%s,%s)\n",__FILE__,__LINE__,Output.c_str(),Name1.c_str(),Prop1,Name2.c_str(),Prop2,Ref.c_str(), vec_to_string(z).c_str()).c_str();
     }
 
     // Convert all the input and output parameters to integers
@@ -357,10 +408,20 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
         // Extract fractions if they are encoded in the fluid string
         if (has_fractions_in_string(Ref))
         {
+        	if (get_debug_level()>10) std::cout << format("%s:%d: Trying to extract mole fractions from %s.",__FILE__,__LINE__,Ref.c_str());
             std::vector<double> fractions;
             // Extract the fractions and reformulate the list of fluids REFPROP::Methane[0.5]&Ethane[0.5] -> REFPROP::Methane&Ethane and [0.5,0.5]
             std::string Ref2 = extract_fractions(Ref, fractions);
             return _PropsSI(Output, Name1, Prop1, Name2, Prop2, Ref2, fractions);
+        }
+        else if (has_solution_concentration(Ref))
+        {
+        	if (get_debug_level()>10) std::cout << format("%s:%d: Trying to extract mass fractions from %s.",__FILE__,__LINE__,Ref.c_str());
+            std::vector<double> fractions;
+            // Extract the fractions and reformulate the list of fluids INCOMP::EG-0.2 -> INCOMP::EG and [0.2]
+            std::string Ref2 = extract_concentrations(Ref, fractions);
+            return _PropsSI(Output, Name1, Prop1, Name2, Prop2, Ref2, fractions);
+
         }
         else
         {
