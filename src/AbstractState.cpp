@@ -44,34 +44,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     }
     else if (!backend.compare("INCOMP"))
     {
-    	// TODO: remove the concentration parsing and check for errors other places
-    	double x;
-    	std::string fluid_name;
-    	if (fluid_string.find('-') == std::string::npos){
-    		x = 0.0;
-    		fluid_name = fluid_string;
-		} else {
-			std::vector<std::string> fluid_parts = strsplit(fluid_string,'-');
-			// Check it worked
-			if (fluid_parts.size() != 2){
-				throw ValueError(format("Format of incompressible solution string [%s] is invalid, should be like \"EG-20%\" or \"EG-0.2\" ", fluid_string.c_str()) );
-			}
-    		// Convert the concentration into a string
-    		char* pEnd;
-    		x = strtod(fluid_parts[1].c_str(), &pEnd);
-    		fluid_name = fluid_parts[0];
-    		// Check if per cent or fraction syntax is used
-    		if (!strcmp(pEnd,"%")){	x *= 0.01;}
-		}
-    	AbstractState * AS = new IncompressibleBackend(fluid_name);
-
-    	//if (get_debug_level()>=10) std::cout << format("Abstract state: Detected concentration of %f for %s.",x,fluid_name.c_str()) << std::endl;
-    	if (x>0.0) {
-    		throw ValueError(format("You used a deprecated concentration definition. Please use an std::vector object to pass the concentration of %f for %s.",x,fluid_name.c_str()));
-    		AS->set_mass_fractions(std::vector<long double>(1,x));
-    	}
-
-		return AS;
+		return new IncompressibleBackend(fluid_string);
     }
     else if (!backend.compare("BRINE"))
     {

@@ -408,7 +408,7 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
         // Extract fractions if they are encoded in the fluid string
         if (has_fractions_in_string(Ref))
         {
-        	if (get_debug_level()>10) std::cout << format("%s:%d: Trying to extract mole fractions from %s.",__FILE__,__LINE__,Ref.c_str());
+        	if (get_debug_level()>10) std::cout << format("%s:%d: Trying to extract mole fractions from %s.",__FILE__,__LINE__,Ref.c_str()) << std::endl;
             std::vector<double> fractions;
             // Extract the fractions and reformulate the list of fluids REFPROP::Methane[0.5]&Ethane[0.5] -> REFPROP::Methane&Ethane and [0.5,0.5]
             std::string Ref2 = extract_fractions(Ref, fractions);
@@ -416,7 +416,7 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
         }
         else if (has_solution_concentration(Ref))
         {
-        	if (get_debug_level()>10) std::cout << format("%s:%d: Trying to extract mass fractions from %s.",__FILE__,__LINE__,Ref.c_str());
+        	if (get_debug_level()>10) std::cout << format("%s:%d: Trying to extract mass fractions from %s.",__FILE__,__LINE__,Ref.c_str()) << std::endl;
             std::vector<double> fractions;
             // Extract the fractions and reformulate the list of fluids INCOMP::EG-0.2 -> INCOMP::EG and [0.2]
             std::string Ref2 = extract_concentrations(Ref, fractions);

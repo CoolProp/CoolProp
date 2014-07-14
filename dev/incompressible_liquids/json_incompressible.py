@@ -1,5 +1,7 @@
 import numpy as np
 from data_incompressible import *
+from coef_incompressible import *
+from type_incompressible import *
     
 class SolutionDataWriter(object):
     """ 
@@ -177,11 +179,11 @@ if __name__ == '__main__':
     def printValue(data, T, p, x, fluid='', f=None, dataFunc=None, dataLetter=''):
         if f!=None:
             try:
-                print "{0:s} : {1:.4e}, {2:.4e}, {3:.4e}, inputs: {4:.4e}, {5:.4e}, {6:.4e} ".format(data.name, dataFunc(T, p, x), CP.Props(dataLetter,'T',T,'P',p,fluid), float(f(T,x)), T, p, x)
+                print "{0:s} : {1:.4e}, {2:.4e}, {3:.4e}, inputs: {4:.4e}, {5:.4e}, {6:.4e} ".format(data.name, dataFunc(T, p, x), CP.PropsSI(dataLetter,'T',T,'P',p,fluid), float(f(T,x)), T, p, x)
             except:
-                print "{0:s} : {1:.4e}, {2:.4e}, {3:.4e}, inputs: {4:.4e}, {5:.4e}, {6:.4e} ".format(data.name, dataFunc(T, p, x), CP.Props(dataLetter,'T',T,'P',p,fluid), float(f(T)), T, p, x)
+                print "{0:s} : {1:.4e}, {2:.4e}, {3:.4e}, inputs: {4:.4e}, {5:.4e}, {6:.4e} ".format(data.name, dataFunc(T, p, x), CP.PropsSI(dataLetter,'T',T,'P',p,fluid), float(f(T)), T, p, x)
         else: 
-            print "{0:s} : {1:.4e}, {2:.4e}, {3:.4e}, inputs: {4:.4e}, {5:.4e}, {6:.4e} ".format(data.name, dataFunc(T, p, x), CP.Props(dataLetter,'T',T,'P',p,fluid), 0.0, T, p, x)
+            print "{0:s} : {1:.4e}, {2:.4e}, {3:.4e}, inputs: {4:.4e}, {5:.4e}, {6:.4e} ".format(data.name, dataFunc(T, p, x), CP.PropsSI(dataLetter,'T',T,'P',p,fluid), 0.0, T, p, x)
     
     def printDens(data, T, p, x, fluid='', f=None):
         printValue(data, T, p, x, fluid=fluid, f=f, dataFunc=data.rho, dataLetter='D')
@@ -193,56 +195,44 @@ if __name__ == '__main__':
     data = PureExample()
     writer.fitAll(data)
     writer.toJSON(data)
-    printInfo(data)
+    #printInfo(data)
     if test: T = 55+273.15
     if test: x = 0.0 
     if test: f = interpolate.interp1d(data.temperature.data, data.density.data.T[0])
     if test: printDens(data, T, p, x, fluid='TD12', f=f)
+    if test: f = interpolate.interp1d(data.temperature.data, data.specific_heat.data.T[0])
+    if test: printHeat(data, T, p, x, fluid='TD12', f=f)
    
     
     data = SolutionExample()
     writer.fitAll(data)
     writer.toJSON(data)
-    printInfo(data)
+    #printInfo(data)
     if test: T = -15+273.15
     if test: x = 0.10
     if test: f = interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
     if test: printDens(data, T, p, x, fluid='IceEA-{0:.4f}%'.format(x*100.0), f=f)
+    if test: f = None
+    if test: printHeat(data, T, p, x, fluid='IceEA-{0:.4f}%'.format(x*100.0), f=f)
 
         
     data = SecCoolExample()
     writer.toJSON(data)
-    printInfo(data)
+    #printInfo(data)
     if test: T = -5+273.15
     if test: x = 0.40
     if test: f = None #interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
     if test: printDens(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-    
-#    print 
-#    print "It works for temperature changes:"
-#    printDens(data, T-10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-#    printDens(data, T+10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-#    printHeat(data, T-10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-#    printHeat(data, T+10, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-#    print "but not for concentration changes:"
-#    x = x-0.1
-#    printDens(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-#    x = x+0.2
-#    printDens(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-#    x = x-0.2
-#    printHeat(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-#    x = x+0.2
-#    printHeat(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)
-#    print 
-    
+    if test: printHeat(data, T, p, x, fluid='SecCoolSolution-{0:.4f}%'.format(x*100.0), f=f)    
     
     data = MelinderExample()
     writer.toJSON(data)
-    printInfo(data)
+    #printInfo(data)
     if test: T = -5+273.15
     if test: x = 0.3
     if test: f = None #interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
-    if test: printDens(data, T, p, x, fluid='MMA-22%', f=f)
+    if test: printDens(data, T, p, x, fluid='MMA-{0:.4f}%'.format(x*100.0), f=f)
+    if test: printHeat(data, T, p, x, fluid='MMA-{0:.4f}%'.format(x*100.0), f=f)   
     
     
     

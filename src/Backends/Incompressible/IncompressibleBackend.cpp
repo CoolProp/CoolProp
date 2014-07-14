@@ -403,7 +403,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		// Compare different inputs
 		// ... as vector
 		val = 9.6212e+02;
-		res = CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder",std::vector<double>(1,x));
+		res = CoolProp::PropsSI("D","T",T,"P",p,fluid,std::vector<double>(1,x));
 		{
 		CAPTURE(T);
 		CAPTURE(p);
@@ -413,7 +413,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		CHECK( check_abs(val,res,acc) );
 		}
 		// ... as %
-		res = CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-30%");
+		res = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("-%f%s",x*100.0,"%"));
 		{
 		CAPTURE(T);
 		CAPTURE(p);
@@ -423,7 +423,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		CHECK( check_abs(val,res,acc) );
 		}
 		// ... as mass fraction
-		res = CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder[0.30]");
+		res = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("[%f]",x));
 		{
 		CAPTURE(T);
 		CAPTURE(p);
@@ -433,166 +433,64 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		CHECK( check_abs(val,res,acc) );
 		}
 
-//		CoolProp::set_debug_level(12);
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder",std::vector<double>(1,0.325)) << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-32.5%") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder[0.325]") << std::endl;
 
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExamplePure") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSolution-32.5%") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSecCool-32.5%") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-32.5%") << std::endl;
-//
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExamplePure") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSolution-0.325") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSecCool-0.325") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-0.325") << std::endl;
-//
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExamplePure") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSolution-2.5%") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSecCool-2.5%") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-2.5%") << std::endl;
-//
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExamplePure") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSolution-0.025") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleSecCool-0.025") << std::endl;
-//		std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::ExampleMelinder-0.025") << std::endl;
-//
-//		// Compare cp
-//		val = 3993.9748117022423;
-//		res = CoolProp::PropsSI("C","T",T,"P",p,"INCOMP::ExampleSecCool");
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		// Compare s
-//		val = -206.62646783739274;
-//		res = CH3OH.s(T,p,x);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		val = 0.0;
-//		res = CH3OH.s(Tref,pref,xref);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( val==res );
-//		}
-//
-//		// Compare u
-//		val = -60043.78429641827;
-//		res = CH3OH.u(T,p,x);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		val = href - pref/CH3OH.rho(Tref,pref,xref);
-//		res = CH3OH.u(Tref,pref,xref);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( val==res );
-//		}
-//
-//		// Compare h
-//		val = -59005.67386390795;
-//		res = CH3OH.h(T,p,x);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		val = 0.0;
-//		res = CH3OH.h(Tref,pref,xref);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( val==res );
-//		}
-//
-//		// Compare v
-//		val = 0.0023970245009602097;
-//		res = CH3OH.visc(T,p,x)/1e3;
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		// Compare l
-//		val = 0.44791148414693727;
-//		res = CH3OH.cond(T,p,x);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//		// Compare Tfreeze
-//		val = -20.02+273.15;// 253.1293105454671;
-//		res = CH3OH.Tfreeze(p,x)+273.15;
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//
-//
-//
+		fluid = std::string("INCOMP::ExampleSecCool");
+		T   = -5  + 273.15;
+		p   = 10e5;
+		x   = 0.4;
+		std::vector<double> x_vec = std::vector<double>(1,x);
 
+		// Compare d
+		val = 9.4844e+02;
+		res = CoolProp::PropsSI("D","T",T,"P",p,fluid,x_vec);
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
 
+		// Compare cp
+		val = 3.6304e+03;
+		res = CoolProp::PropsSI("C","T",T,"P",p,fluid,x_vec);
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
 
+		fluid = std::string("INCOMP::ExamplePure");
+		T   = +55  + 273.15;
+		p   = 10e5;
 
+		// Compare d
+		val = 7.3646e+02;
+		res = CoolProp::PropsSI("D","T",T,"P",p,fluid);
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
 
-
-
-
-
-
-
-
-
-
-
-
+		// Compare cp
+		val = 2.2580e+03;
+		res = CoolProp::PropsSI("C","T",T,"P",p,fluid);
+		{
+		CAPTURE(T);
+		CAPTURE(p);
+		CAPTURE(x);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
 	}
 }
 
