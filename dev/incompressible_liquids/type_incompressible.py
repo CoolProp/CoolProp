@@ -1,5 +1,6 @@
 import numpy as np
 import itertools,scipy.interpolate
+from quantities.units import viscosity
 
 # Here we define the types. This is done to keep the definitions at one
 # central place instead of hiding them somewhere in the data.
@@ -22,24 +23,49 @@ class IncompressibleData(object):
         self.coeffs = None #np.zeros((4,4))
         self.data   = None #np.zeros((10,10))
         
+        self.maxLog = numpy.log(numpy.finfo(numpy.float64).max-1)
+        self.minLog = -self.maxLog
+        
         
         
     ### Base functions that handle the custom data type, just a place holder to show the structure.
+    def baseFunction(self, x, y=0.0, xbase=0.0, ybase=0.0, c=None):
+        if c==None:
+            c = self.coeffs
+               
+        if self.type==self.INCOMPRESSIBLE_POLYNOMIAL:
+            return np.polynomial.polynomial.polyval2d(x-xbase, y-ybase, c)
+        
+        elif self.type==self.INCOMPRESSIBLE_POLYOFFSET:
+            return self.data.basePolyOffset(c, x-xbase, y-ybase)
+        
+        elif self.type==self.INCOMPRESSIBLE_EXPONENTIAL:
+            return self.data.baseExponential(c, x, xbase)
+        
+        elif self.type==self.INCOMPRESSIBLE_EXPPOLYNOMIAL:
+            return np.exp(np.polynomial.polynomial.polyval2d(x-xbase, y-ybase, c))
+        
+        elif self.type==self.INCOMPRESSIBLE_EXPOFFSET:
+            return self.data.baseExponentialOffset(c, x)
+        
+        else:  raise ValueError("Unknown function.")
+
+    
     def baseExponential(self, data, y, ybase=0.0):
         r=len(data.coeffs)
         c=len(data.coeffs[0]);
         if (r!=3 or c!=1):
             raise ValueError("You have to provide a 3,1 matrix of coefficients, not ({0},{1}).".format(r,c))
-        return np.exp( (data.coeffs[0][0] / ( (y-ybase)+data.coeffs[1][0] ) - data.coeffs[2][0] ) );
+        return numpy.exp(numpy.clip( (coefficients[0][0]/ ( y-ybase+coefficients[1][0]) - coefficients[2][0]),self.minLog,self.maxLog))
     
     def baseExponentialOffset(self, data, y):
         r=len(data.coeffs)
         c=len(data.coeffs[0])
         if (r!=4 or c!=1):
             raise ValueError("You have to provide a 4,1 matrix of coefficients, not ({0},{1}).".format(r,c))
-        return np.exp( data.coeffs[1][0] / ( (y-data.coeffs[0][0])+data.coeffs[2][0] ) - data.coeffs[3][0] ) 
+        return numpy.exp(numpy.clip( (coefficients[1][0]/ ( y-data.coeffs[0][0]+coefficients[2][0]) - coefficients[3][0]),self.minLog,self.maxLog))
 
-    def basePolyOffset(self, data, y, z):
+    def basePolyOffset(self, data, y, z=0.0):
         r=len(data.coeffs)
         c=len(data.coeffs[0])
         offset = 0.0
@@ -57,7 +83,6 @@ class IncompressibleData(object):
                 raise ValueError("You have to provide a vector (1D matrix) of coefficients, not ({0},{1}).".format(r,c))
             return np.polynomial.polynomial.polyval(inV-offset, data.coeffs) 
         raise ValueError("You have to provide a vector (1D matrix) of coefficients, not ({0},{1}).".format(r,c))
-        return _HUGE;
 
 
         
@@ -75,7 +100,9 @@ class IncompressibleData(object):
                 if (dc==1):
                     if self.type==self.INCOMPRESSIBLE_POLYNOMIAL:
                         self.coeffs = self.getCoeffs2d(T-Tbase, x-xbase, self.data, cr-1, 0)
+                        
                     elif self.type==self.INCOMPRESSIBLE_EXPPOLYNOMIAL:
+                        
                         self.coeffs = self.getCoeffs2d(T-Tbase, x-xbase, np.log(self.data), cr-1, 0)
                     else:  raise ValueError("Unknown function.")
                 else:
@@ -88,8 +115,10 @@ class IncompressibleData(object):
                 if (xc!=dc): raise ValueError("Concentration and fitting data have to have the same number of columns.")
                 if self.type==self.INCOMPRESSIBLE_POLYNOMIAL:
                     self.coeffs = self.getCoeffs2d(T-Tbase, x-xbase, self.data, cr-1, cc-1)
+                    
                 elif self.type==self.INCOMPRESSIBLE_EXPPOLYNOMIAL:
                     self.coeffs = self.getCoeffs2d(T-Tbase, x-xbase, np.log(self.data), cr-1, cc-1)
+                    
                 else:  raise ValueError("Unknown function.")
                 #print self.coeffs
         else:
@@ -242,15 +271,17 @@ class SolutionData(object):
         return h_u(T,p,x)
     
     def visc(self, T, p, x=0.0, c=None):
-        if c==None: 
-            c = self.viscosity.coeffs
-        if self.viscosity.type==self.viscosity.INCOMPRESSIBLE_POLYNOMIAL:
-            return np.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, c)
-        else:  raise ValueError("Unknown function.")
-    #def visc(T, p, x=0.0){return baseFunction(viscosity, T, x);};
-    #def cond(T, p, x=0.0){return baseFunction(conductivity, T, x);};
-    #def psat(T,           x=0.0){return baseFunction(p_sat, T, x);};
-    #def Tfreeze(       p, x);
+        return self.viscosity.baseFunction(T, x, self.Tbase, self.xbase, c=c)
+    
+    def cond(self, T, p, x=0.0, c=None):
+        return self.conductivity.baseFunction(T, x, self.Tbase, self.xbase, c=c)
+        
+    def psat(self, T, x=0.0, c=None):
+        return self.saturation_pressure.baseFunction(T, x, self.Tbase, self.xbase, c=c)
+        
+    def Tfreeze(self, p, x=0.0, c=None):
+        return self.T_freeze.baseFunction(x, 0.0, self.xbase, 0.0, c=c)
+    
     #def V2M (T,           y);
     #def M2M (T,           x);
     
@@ -571,26 +602,7 @@ class MelinderExample(CoefficientData):
         self.conductivity.coeffs = self.convertMelinderArray(coeffs[3])
         
         self.viscosity.type = self.viscosity.INCOMPRESSIBLE_POLYNOMIAL
-        self.viscosity.coeffs = self.convertMelinderArray(coeffs[4])
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        self.viscosity.coeffs = self.convertMelinderArray(coeffs[4])     
         
         
         
