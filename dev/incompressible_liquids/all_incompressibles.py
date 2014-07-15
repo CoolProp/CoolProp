@@ -100,10 +100,10 @@ if __name__ == '__main__':
     #printInfo(data)
     if test: T = 55+273.15
     if test: x = 0.0 
-    if test: f = interpolate.interp1d(data.temperature.data, data.density.data.T[0])
-    if test: printDens(data, T, p, x, fluid='TD12', f=f)
-    if test: f = interpolate.interp1d(data.temperature.data, data.specific_heat.data.T[0])
-    if test: printHeat(data, T, p, x, fluid='TD12', f=f)
+    #if test: f = interpolate.interp1d(data.temperature.data, data.density.data.T[0])
+    #if test: printDens(data, T, p, x, fluid='TD12', f=f)
+    #if test: f = interpolate.interp1d(data.temperature.data, data.specific_heat.data.T[0])
+    #if test: printHeat(data, T, p, x, fluid='TD12', f=f)
     if test: printAll(data, T, p, x, fluid='TD12')
    
     
@@ -113,9 +113,9 @@ if __name__ == '__main__':
     #printInfo(data)
     if test: T = -15+273.15
     if test: x = 0.10
-    if test: f = interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
-    if test: printDens(data, T, p, x, fluid='IceEA-{0:.4f}%'.format(x*100.0), f=f)
-    if test: f = None
+    #if test: f = interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
+    #if test: printDens(data, T, p, x, fluid='IceEA-{0:.4f}%'.format(x*100.0), f=f)
+    #if test: f = None
     if test: printAll(data, T, p, x, fluid='IceEA-{0:.4f}%'.format(x*100.0))
 
         
@@ -134,5 +134,5 @@ if __name__ == '__main__':
     if test: x = 0.3
     if test: f = None #interpolate.interp2d(data.temperature.data, data.concentration.data, data.density.data.T)
     if test: printAll(data, T, p, x, fluid='MMA-{0:.4f}%'.format(x*100.0))   
-    
+#    
     

@@ -22,10 +22,12 @@ class IncompressibleData(object):
         self.INCOMPRESSIBLE_CHEBYSHEV     = 'chebyshev'
         self.type   = self.INCOMPRESSIBLE_NOT_SET
         self.coeffs = None #np.zeros((4,4))
-        self.data   = None #np.zeros((10,10))
+        self.data   = None # None #np.zeros((10,10))
         
         self.maxLog = np.log(np.finfo(np.float64).max-1)
         self.minLog = -self.maxLog
+        
+        self.DEBUG = False
         
         
     ### Base functions that handle the custom data type, just a place holder to show the structure.
@@ -117,35 +119,49 @@ class IncompressibleData(object):
         fits coefficients. Some functions require a start
         guess for the coefficients to work properly.
         """
-        cr,cc,_ = self.shapeArray(self.coeffs)
         dr,dc,_ = self.shapeArray(self.data)
         xr,xc,x = self.shapeArray(x)
         yr,yc,y = self.shapeArray(y, axs=1)
+        
+        if self.DEBUG: print("Data        : ({0},{1})".format(dr,dc))
+        if self.DEBUG: print("x-axis      : ({0},{1})".format(xr,xc))
+        if self.DEBUG: print("y-axis      : ({0},{1})".format(yr,yc))
                 
         if (xc!=1): raise ValueError("The first input has to be a 2D array with one column.")
         if (yr!=1): raise ValueError("The second input has to be a 2D array with one row.")
         if (xr!=dr): raise ValueError("First independent vector and result vector have to have the same number of rows, {0} is not {1}.".format(xr,dr))
-        if (yc!=dc): raise ValueError("Second iIndependent vector and result vector have to have the same number of columns, {0} is not {1}.".format(yc,dc))
+        if (yc!=dc): raise ValueError("Second independent vector and result vector have to have the same number of columns, {0} is not {1}.".format(yc,dc))
+        
+        cr,cc,_ = self.shapeArray(self.coeffs)
+        if self.DEBUG: print("Coefficients: ({0},{1})".format(cr,cc))
+        if (yr==1 and yc==1 and cc>1):
+            if self.DEBUG: print("Discarding coefficient dimension, {0} -> {1}".format(cc,yc))
+            self.coeffs = self.coeffs.T[0]
+        cr,cc,_ = self.shapeArray(self.coeffs)
+        
+        if self.DEBUG: print("Coefficients before fitting: \n{0}".format(self.coeffs))
         
         # Polynomial fitting works for both 1D and 2D functions
-        if self.type==self.INCOMPRESSIBLE_POLYNOMIAL or \
-           self.type==self.INCOMPRESSIBLE_EXPPOLYNOMIAL:
-            #print("Polynomial detected, fitting {0}".format(self.type))
+        if self.type==self.INCOMPRESSIBLE_POLYNOMIAL or self.type==self.INCOMPRESSIBLE_EXPPOLYNOMIAL:
             if (xr<cr): raise ValueError("Less data points than coefficients in first dimension ({0} < {1}), aborting.".format(xr,cr))
             if (yc<cc): raise ValueError("Less data points than coefficients in second dimension ({0} < {1}), aborting.".format(yc,cc))
-            x_input = x-xbase
-            y_input = y-ybase
+            x_input = np.array(x.flat)-xbase
+            y_input = np.array(y.flat)-ybase
             z_input = np.copy(self.data)
             if self.type==self.INCOMPRESSIBLE_EXPPOLYNOMIAL:
                 z_input = np.log(z_input)
             self.coeffs = self.getCoeffs2d(x_input, y_input, z_input, cr-1, cc-1)
-
+            if self.DEBUG: print("Coefficients after fitting: \n{0}".format(self.coeffs))
+            return
+        
         
         # Select if 1D or 2D fitting
         if yc==1: # 1D fitting, only one input
-            #print("1D function detected, fitting {0}".format(self.type))
+            if self.DEBUG: print("1D function detected, fitting {0}".format(self.type))
             x_input = x-xbase
             self.coeffs = self.getCoeffsIterative1D(x_input, coeffs_start=None)
+            if self.DEBUG: print("Coefficients after fitting: \n{0}".format(self.coeffs))
+            return 
 
         elif yc>1: # 2D fitting
             raise ValueError("There are no other 2D fitting functions than polynomials, cannot use {0}.".format(self.type))
@@ -212,7 +228,11 @@ class IncompressibleData(object):
             raise ValueError("Your matrix has only {0} valid rows and you try to fit {1} coefficients, please reduce the order.".format(len(A),cols))
         
         coeffs, resids, rank, singulars  = np.linalg.lstsq(A, zz)
-        #print resids
+        if self.DEBUG: print("Linear algebra solver returned:")
+        if self.DEBUG: print(coeffs)
+        if self.DEBUG: print(resids)
+        if self.DEBUG: print(rank)
+        if self.DEBUG: print(singulars)
         
         #Rearrange coefficients to a matrix shape
         C = np.zeros((x_order,y_order))

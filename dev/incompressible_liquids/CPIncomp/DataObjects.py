@@ -34,11 +34,11 @@ class SolutionData(object):
         self.volume2mass   = IncompressibleData() # dd
         self.mass2mole     = IncompressibleData() # dd
         
-        # Some of the functions might need a guess array
-        self.viscosity.type = self.viscosity.INCOMPRESSIBLE_EXPONENTIAL
-        self.viscosity.coeffs = np.array([+7e+2, -6e+1, +1e+1])
-        self.saturation_pressure.type = self.saturation_pressure.INCOMPRESSIBLE_EXPONENTIAL
-        self.saturation_pressure.coeffs = np.array([-5e+3, +3e+1, -1e+1])
+        ## Some of the functions might need a guess array
+        #self.viscosity.type = self.viscosity.INCOMPRESSIBLE_EXPONENTIAL
+        #self.viscosity.coeffs = np.array([+7e+2, -6e+1, +1e+1])
+        #self.saturation_pressure.type = self.saturation_pressure.INCOMPRESSIBLE_EXPONENTIAL
+        #self.saturation_pressure.coeffs = np.array([-5e+3, +3e+1, -1e+1])
         
         self.xref = 0.0
         self.Tref = 0.0
@@ -49,27 +49,27 @@ class SolutionData(object):
         self.rhoref = 0.0
         
     
-    def rho (self, T, p, x=0.0, c=None):
+    def rho (self, T, p=0.0, x=0.0, c=None):
         if c==None: 
             c=self.density.coeffs
         if self.density.type==self.density.INCOMPRESSIBLE_POLYNOMIAL:
             return np.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, c)
         else:  raise ValueError("Unknown function.")
     
-    def c   (self, T, p, x=0.0, c=None):
+    def c   (self, T, p=0.0, x=0.0, c=None):
         if c==None: 
             c = self.specific_heat.coeffs
         if self.specific_heat.type==self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL:
             return np.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, c)
         else:  raise ValueError("Unknown function.")
     
-    def cp  (self, T, p, x=0.0, c=None):
+    def cp  (self, T, p=0.0, x=0.0, c=None):
         return self.c(T,p,x,c)
     
-    def cv  (self, T, p, x=0.0, c=None):
+    def cv  (self, T, p=0.0, x=0.0, c=None):
         return self.c(T,p,x,c)
     
-    def u   (self, T, p, x=0.0, c=None):
+    def u   (self, T, p=0.0, x=0.0, c=None):
         if c==None: 
             c = self.specific_heat.coeffs
         if self.specific_heat.type==self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL:
@@ -78,19 +78,19 @@ class SolutionData(object):
         else:  raise ValueError("Unknown function.")
     #def u   (T, p, x);
     
-    def h   (self, T, p, x=0.0):
+    def h   (self, T, p=0.0, x=0.0):
         return self.h_u(T,p,x)
     
-    def visc(self, T, p, x=0.0, c=None):
+    def visc(self, T, p=0.0, x=0.0, c=None):
         return self.viscosity.baseFunction(T, x, self.Tbase, self.xbase, c=c)
     
-    def cond(self, T, p, x=0.0, c=None):
+    def cond(self, T, p=0.0, x=0.0, c=None):
         return self.conductivity.baseFunction(T, x, self.Tbase, self.xbase, c=c)
         
     def psat(self, T, x=0.0, c=None):
         return self.saturation_pressure.baseFunction(T, x, self.Tbase, self.xbase, c=c)
         
-    def Tfreeze(self, p, x=0.0, c=None):
+    def Tfreeze(self, p=0.0, x=0.0, c=None):
         return self.T_freeze.baseFunction(x, 0.0, self.xbase, 0.0, c=c)
     
     #def V2M (T,           y);
@@ -125,6 +125,7 @@ class PureExample(SolutionData):
         self.TminPsat =  self.Tmax
         
         self.temperature.data         = np.array([    50 ,     60 ,     70 ,     80 ,     90 ,    100 ,    110 ,    120 ,    130 ,    140 ,    150 ])+273.15 # Kelvin
+        self.concentration.data       = np.array([     0 ])/100.0 # mass fraction
         self.density.data             = np.array([[  740],[   733],[   726],[   717],[   710],[   702],[   695],[   687],[   679],[   670],[   662]])        # kg/m3
         self.specific_heat.data       = np.array([[ 2235],[  2280],[  2326],[  2361],[  2406],[  2445],[  2485],[  2528],[  2571],[  2607],[  2645]])        # J/kg-K
         self.viscosity.data           = np.array([[0.804],[ 0.704],[ 0.623],[ 0.556],[ 0.498],[ 0.451],[ 0.410],[ 0.374],[ 0.346],[ 0.317],[ 0.289]])        # Pa-s
@@ -167,16 +168,25 @@ class SolutionExample(SolutionData):
 
 
 if __name__ == '__main__':
-    obj = PureExample()
-    obj.saturation_pressure.type = obj.saturation_pressure.INCOMPRESSIBLE_EXPONENTIAL
-    print(obj.saturation_pressure.coeffs)
-    xData = obj.temperature.data
-    coeffs = obj.saturation_pressure.getCoeffsIterative1D(xData)
-    obj.saturation_pressure.coeffs = coeffs
-    print(obj.saturation_pressure.coeffs)
+#    obj = PureExample()
+#    obj.density.type   = obj.density.INCOMPRESSIBLE_POLYNOMIAL
+#    obj.density.coeffs = np.ones((3,))
+#    print(obj.density.coeffs)
+#    obj.density.fit(obj.temperature.data)
+#    print(obj.density.coeffs)
+#    print(obj.density.data[2][0],obj.rho(obj.temperature.data[2]))
+#    
+#    obj = PureExample()
+#    print(obj.saturation_pressure.coeffs)
+#    obj.saturation_pressure.fit(obj.temperature.data)
+#    print(obj.saturation_pressure.coeffs)
     
-    obj = PureExample()
-    print(obj.saturation_pressure.coeffs)
-    obj.saturation_pressure.fit(obj.temperature.data)
-    print(obj.saturation_pressure.coeffs)
+    obj = SolutionExample()
+    obj.density.type   = obj.density.INCOMPRESSIBLE_POLYNOMIAL
+    obj.density.coeffs = np.ones((3,5))
+    print(obj.density.coeffs)
+    obj.density.fit(obj.temperature.data,obj.concentration.data)
+    print(obj.density.coeffs)
+    print(obj.density.data[2][0],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[0]))
+    print(obj.density.data[2][2],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[2]))
     
