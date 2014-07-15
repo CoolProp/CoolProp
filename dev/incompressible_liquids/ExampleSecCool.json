@@ -97,8 +97,12 @@
   "name": "ExampleSecCool", 
   "reference": "SecCool software", 
   "saturation_pressure": {
-    "coeffs": "null", 
-    "type": "notdefined"
+    "coeffs": [
+      -5.000000000000000e+03, 
+       3.000000000000000e+01, 
+      -1.000000000000000e+01
+    ], 
+    "type": "exponential"
   }, 
   "specific_heat": {
     "coeffs": [
