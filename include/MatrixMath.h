@@ -141,6 +141,42 @@ template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(c
 }
 
 
+/// Convert 1D matrix to vector
+/** Returns either a row- or a column-based
+ *  vector. By default, Eigen prefers column
+ *  major ordering, just like Fortran.
+ */
+template< class T> Eigen::Matrix<T,Eigen::Dynamic,1> makeVector(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix) {
+	return makeColVector(matrix);
+}
+template< class T> Eigen::Matrix<T,Eigen::Dynamic,1> makeColVector(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix){
+	std::size_t r = matrix.rows();
+	std::size_t c = matrix.cols();
+	Eigen::Matrix<T,Eigen::Dynamic,1> vector;
+	if (r==1&&c>=1) { // Check passed, matrix can be transformed
+		vector = matrix.transpose().block(0,0,c,r);
+	} else if ( r>=1&&c==1) { // Check passed, matrix can be transformed
+		vector = matrix.block(0,0,r,c);
+	} else { // Check failed, throw error
+		throw ValueError(format("Your matrix (%d,%d) cannot be converted into a vector (x,1).",r,c));
+	}
+	return vector;
+}
+template< class T> Eigen::Matrix<T,1,Eigen::Dynamic> makeRowVector(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix){
+	std::size_t r = matrix.rows();
+	std::size_t c = matrix.cols();
+	Eigen::Matrix<T,1,Eigen::Dynamic> vector;
+	if (r==1&&c>=1) { // Check passed, matrix can be transformed
+		vector = matrix.block(0,0,r,c);
+	} else if ( r>=1&&c==1) { // Check passed, matrix can be transformed
+		vector = matrix.transpose().block(0,0,c,r);
+	} else { // Check failed, throw error
+		throw ValueError(format("Your matrix (%d,%d) cannot be converted into a vector (1,x).",r,c));
+	}
+	return vector;
+}
+
+
 /// Remove rows and columns from matrices
 /** A set of convenience functions inspired by http://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c
  *  but altered to respect templates.

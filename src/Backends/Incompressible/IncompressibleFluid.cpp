@@ -40,14 +40,16 @@ bool IncompressibleFluid::is_pure() {
 
 /// Base functions that handle the custom data type, just a place holder to show the structure.
 double IncompressibleFluid::baseExponential(IncompressibleData data, double y, double ybase){
-	size_t r=data.coeffs.rows(),c=data.coeffs.cols();
+	Eigen::VectorXd coeffs = makeVector(data.coeffs);
+	size_t r=coeffs.rows(),c=coeffs.cols();
 	if (strict && (r!=3 || c!=1) ) throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).",__FILE__,__LINE__,r,c));
-	return exp( (double) (data.coeffs(0,0) / ( (y-ybase)+data.coeffs(1,0) ) - data.coeffs(2,0) ) );
+	return exp( (double) (coeffs[0] / ( (y-ybase)+coeffs[1] ) - coeffs[2] ) );
 }
 double IncompressibleFluid::baseExponentialOffset(IncompressibleData data, double y){
-	size_t r=data.coeffs.rows(),c=data.coeffs.cols();
+	Eigen::VectorXd coeffs = makeVector(data.coeffs);
+	size_t r=coeffs.rows(),c=coeffs.cols();
 	if (strict && (r!=4 || c!=1) ) throw ValueError(format("%s (%d): You have to provide a 4,1 matrix of coefficients, not  (%d,%d).",__FILE__,__LINE__,r,c));
-	return exp( (double) (data.coeffs(1,0) / ( (y-data.coeffs(0,0))+data.coeffs(2,0) ) - data.coeffs(3,0) ) );
+	return exp( (double) (coeffs[1] / ( (y-coeffs[0])+coeffs[2] ) - coeffs[3] ) );
 }
 double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, double z){
 	size_t r=data.coeffs.rows(),c=data.coeffs.cols();
@@ -60,7 +62,7 @@ double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, do
 			coeffs = Eigen::MatrixXd(data.coeffs.block(0,1,r,c-1));
 			in = z;
 		} else if (r>1 && c==1) { // column vector -> function of y
-			coeffs = Eigen::MatrixXd(data.coeffs.block(1,0,r-1,c)).transpose();
+			coeffs = Eigen::MatrixXd(data.coeffs.block(1,0,r-1,c));
 			in = y;
 		} else {
 			throw ValueError(format("%s (%d): You have to provide a vector (1D matrix) of coefficients, not  (%d,%d).",__FILE__,__LINE__,r,c));

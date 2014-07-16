@@ -69,9 +69,9 @@ class SolutionDataWriter(object):
             pass
 
         try:        
-            data.T_freeze.coeffs = np.copy(std_coeffs)[0]
+            data.T_freeze.coeffs = np.copy(std_coeffs)
             data.T_freeze.type   = data.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
-            data.T_freeze.fit(x,0.0,data.xbase,0.0)
+            data.T_freeze.fit(0.0,x,0.0,data.xbase)
         except errList as ve:
             if self.verbose: print("Could not fit TFreeze coefficients:", ve)
             pass

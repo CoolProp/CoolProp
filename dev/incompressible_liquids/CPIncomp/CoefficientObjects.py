@@ -238,12 +238,12 @@ class SecCoolExample(CoefficientData):
            4.482000E-09]))
 
         self.T_freeze.type = self.T_freeze.INCOMPRESSIBLE_POLYOFFSET
-        self.T_freeze.coeffs = np.array([[
+        self.T_freeze.coeffs = np.array([
            27.755555600/100.0,
           -22.973221700, 
           -1.1040507200*100.0, 
           -0.0120762281*100.0*100.0, 
-          -9.343458E-05*100.0*100.0*100.0]])  
+          -9.343458E-05*100.0*100.0*100.0])  
         
         
 class MelinderExample(CoefficientData):

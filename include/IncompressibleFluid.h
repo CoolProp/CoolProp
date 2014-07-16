@@ -183,11 +183,11 @@ public:
 	/// Temperature as a function of enthalpy, pressure and composition.
 	double T_h   (double Hmass, double p, double x=0.0){throw NotImplementedError(format("%s (%d): T from enthalpy is not implemented in the fluid, use the backend.",__FILE__,__LINE__));}
 	/// Viscosity as a function of temperature, pressure and composition.
-	double T_visc(double visc, double p, double x=0.0){throw NotImplementedError(format("%s (%d): T from viscosity is not implemented.",__FILE__,__LINE__));}
+	double T_visc(double  visc, double p, double x=0.0){throw NotImplementedError(format("%s (%d): T from viscosity is not implemented.",__FILE__,__LINE__));}
 	/// Thermal conductivity as a function of temperature, pressure and composition.
-	double T_cond(double cond, double p, double x=0.0){throw NotImplementedError(format("%s (%d): T from conductivity is not implemented.",__FILE__,__LINE__));}
+	double T_cond(double  cond, double p, double x=0.0){throw NotImplementedError(format("%s (%d): T from conductivity is not implemented.",__FILE__,__LINE__));}
 	/// Saturation pressure as a function of temperature and composition.
-	double T_psat(double psat,           double x=0.0){throw NotImplementedError(format("%s (%d): T from psat is not implemented.",__FILE__,__LINE__));}
+	double T_psat(double  psat,           double x=0.0){throw NotImplementedError(format("%s (%d): T from psat is not implemented.",__FILE__,__LINE__));}
 	/// Composition as a function of freezing temperature and pressure.
 	double x_Tfreeze(       double Tfreeze, double p){throw NotImplementedError(format("%s (%d): x from T_freeze is not implemented.",__FILE__,__LINE__));}
 

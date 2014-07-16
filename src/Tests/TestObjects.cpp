@@ -173,7 +173,7 @@ CoolProp::IncompressibleFluid CoolPropTesting::incompressibleFluidObject(){
 
 	// After preparing the coefficients, we have to create the objects
 	CoolProp::IncompressibleFluid CH3OH;
-	CH3OH.setName("CH3OH");
+	CH3OH.setName("CH3OH-testing");
 	CH3OH.setDescription("Methanol solution");
 	CH3OH.setReference("SecCool software");
 	CH3OH.setTmax( 20 + 273.15);

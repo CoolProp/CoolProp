@@ -295,7 +295,7 @@ bool has_solution_concentration(const std::string &fluid_string)
     // Start at the "::" if it is found to chop off the delimiter between backend and fluid
     std::size_t i = fluid_string.find("::");
     // If can find "-", expect mass fractions encoded as string
-    if (fluid_string.find('-',i+2))
+    if (fluid_string.find('-',i+2)!=std::string::npos)
     	return true;
     return false;
 }
@@ -425,6 +425,7 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
         }
         else
         {
+        	if (get_debug_level()>10) std::cout << format("%s:%d: Filling fractions for %s with [1.0].",__FILE__,__LINE__,Ref.c_str()) << std::endl;
             // Here it must be a pure fluid since the fractions are not coded in the string.  If not, it will fail internally
             return _PropsSI(Output, Name1, Prop1, Name2, Prop2, Ref, std::vector<double>(1,1));
         }

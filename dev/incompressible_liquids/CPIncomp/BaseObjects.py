@@ -27,7 +27,7 @@ class IncompressibleData(object):
         self.maxLog = np.log(np.finfo(np.float64).max-1)
         self.minLog = -self.maxLog
         
-        self.DEBUG = False
+        self.DEBUG = True
         
         
     ### Base functions that handle the custom data type, just a place holder to show the structure.
@@ -113,7 +113,7 @@ class IncompressibleData(object):
         return (r,c,np.reshape(array,(r,c)))
         
         
-    def fit(self, x, y=0.0, xbase=0.0, ybase=0.0):
+    def fit(self, x=0.0, y=0.0, xbase=0.0, ybase=0.0):
         """ 
         A function that selects the correct equations and
         fits coefficients. Some functions require a start
@@ -134,15 +134,23 @@ class IncompressibleData(object):
         
         cr,cc,_ = self.shapeArray(self.coeffs)
         if self.DEBUG: print("Coefficients: ({0},{1})".format(cr,cc))
+        if (xr==1 and xc==1 and cr>1):
+            if self.DEBUG: print("Discarding coefficient rows, {0} -> {1}".format(cr,xr))
+            self.coeffs = self.coeffs[0]
         if (yr==1 and yc==1 and cc>1):
-            if self.DEBUG: print("Discarding coefficient dimension, {0} -> {1}".format(cc,yc))
-            self.coeffs = self.coeffs.T[0]
+            if self.DEBUG: print("Discarding coefficient columns, {0} -> {1}".format(cc,yc))
+            self.coeffs = self.coeffs.T[0].T
         cr,cc,_ = self.shapeArray(self.coeffs)
-        
+                
         if self.DEBUG: print("Coefficients before fitting: \n{0}".format(self.coeffs))
         
         # Polynomial fitting works for both 1D and 2D functions
         if self.type==self.INCOMPRESSIBLE_POLYNOMIAL or self.type==self.INCOMPRESSIBLE_EXPPOLYNOMIAL:
+            if self.DEBUG: print("polynomial detected, fitting {0}".format(self.type))
+            if cr==1 and cc==1: 
+                if self.DEBUG: print("No coefficients left to fit, aborting procedure.")
+                self.coeffs = np.array([[0.0]])
+                return
             if (xr<cr): raise ValueError("Less data points than coefficients in first dimension ({0} < {1}), aborting.".format(xr,cr))
             if (yc<cc): raise ValueError("Less data points than coefficients in second dimension ({0} < {1}), aborting.".format(yc,cc))
             x_input = np.array(x.flat)-xbase
@@ -157,7 +165,7 @@ class IncompressibleData(object):
         
         # Select if 1D or 2D fitting
         if yc==1: # 1D fitting, only one input
-            if self.DEBUG: print("1D function detected, fitting {0}".format(self.type))
+            if self.DEBUG: print("1D function detected, fitting {0}".format(self.type))      
             x_input = x-xbase
             self.coeffs = self.getCoeffsIterative1D(x_input, coeffs_start=None)
             if self.DEBUG: print("Coefficients after fitting: \n{0}".format(self.coeffs))
