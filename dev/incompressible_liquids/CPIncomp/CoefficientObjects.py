@@ -243,7 +243,7 @@ class SecCoolExample(CoefficientData):
           -22.973221700, 
           -1.1040507200*100.0, 
           -0.0120762281*100.0*100.0, 
-          -9.343458E-05*100.0*100.0*100.0])  
+          -9.343458E-05*100.0*100.0*100.0])
         
         
 class MelinderExample(CoefficientData):

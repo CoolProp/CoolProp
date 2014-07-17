@@ -27,7 +27,7 @@ class IncompressibleData(object):
         self.maxLog = np.log(np.finfo(np.float64).max-1)
         self.minLog = -self.maxLog
         
-        self.DEBUG = True
+        self.DEBUG = False
         
         
     ### Base functions that handle the custom data type, just a place holder to show the structure.
@@ -113,12 +113,12 @@ class IncompressibleData(object):
         return (r,c,np.reshape(array,(r,c)))
         
         
-    def fit(self, x=0.0, y=0.0, xbase=0.0, ybase=0.0):
+    def fitCoeffs(self, x=0.0, y=0.0, xbase=0.0, ybase=0.0):
         """ 
         A function that selects the correct equations and
         fits coefficients. Some functions require a start
         guess for the coefficients to work properly.
-        """
+        """      
         dr,dc,_ = self.shapeArray(self.data)
         xr,xc,x = self.shapeArray(x)
         yr,yc,y = self.shapeArray(y, axs=1)
@@ -126,6 +126,12 @@ class IncompressibleData(object):
         if self.DEBUG: print("Data        : ({0},{1})".format(dr,dc))
         if self.DEBUG: print("x-axis      : ({0},{1})".format(xr,xc))
         if self.DEBUG: print("y-axis      : ({0},{1})".format(yr,yc))
+        
+        if dr==1 and dc==1: # 
+            if self.DEBUG: print("Data no set, we cannot fit the coefficients")
+            self.coeffs = None
+            self.type = self.INCOMPRESSIBLE_NOT_SET
+            return 
                 
         if (xc!=1): raise ValueError("The first input has to be a 2D array with one column.")
         if (yr!=1): raise ValueError("The second input has to be a 2D array with one row.")

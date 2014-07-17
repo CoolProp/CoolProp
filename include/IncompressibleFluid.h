@@ -64,13 +64,53 @@ protected:
 	double uref, rhoref;
 	double xbase, Tbase;
 
+	/// These are the objects that hold the coefficients
+	/** Note that all polynomials require a 2-dimensional array
+	 *  of coefficients. This array may have only one row or
+	 *  column, but the structure should be 2D. This behaviour is
+	 *  hard-coded in the JSON file reader that resides inside
+	 *  the IncompressibleLibrary.cpp
+	 *  All other functions, also polyoffset, can only handle 1D
+	 *  input and throw an error if you feed them other coefficients.
+	 */
+
+	/// Density coefficients
+	/** If 2D, the rows are temperature and the columns are concentration.
+	 *  If 1D, should be a column vector of temperature coefficients
+	 */
 	IncompressibleData density;
+	/// Specific heat coefficients
+	/** If 2D, the rows are temperature and the columns are concentration.
+	 *  If 1D, should be a column vector of temperature coefficients
+	 *  Fails for all other forms than polynomial due to the automatic
+	 *  integration for internal energy and entropy.
+	 */
 	IncompressibleData specific_heat;
+	/// Viscosity coefficients
+	/** If 2D, the rows are temperature and the columns are concentration.
+	 *  If 1D, should be a column vector of temperature coefficients
+	 */
 	IncompressibleData viscosity;
+	/// Conductivity coefficients
+	/** If 2D, the rows are temperature and the columns are concentration.
+	 *  If 1D, should be a column vector of temperature coefficients
+	 */
 	IncompressibleData conductivity;
+	/// Saturation pressure coefficients
+	/** If 2D, the rows are temperature and the columns are concentration.
+	 *  If 1D, should be a column vector of temperature coefficients
+	 */
 	IncompressibleData p_sat;
+	/// Freezing temperature coefficients
+	/** If 2D, the rows are concentration and the columns are pressure.
+	 *  If 1D, should be a column vector of concentration coefficients
+	 */
 	IncompressibleData T_freeze;
+	/// Volume to mass fraction coefficients
+	/** Not implemented, yet */
 	IncompressibleData volToMass;
+	/// Mass to mole fraction coefficients
+	/** Not implemented, yet */
 	IncompressibleData massToMole;
 
 	Polynomial2DFrac poly;
