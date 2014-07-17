@@ -1,0 +1,96 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  2.600000000000000e+02, 
+  "Tmax":  3.000000000000000e+02, 
+  "Tmin":  2.200000000000000e+02, 
+  "TminPsat":  3.000000000000000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         4.138541795665636e-01
+      ], 
+      [
+         8.782120743033753e-04
+      ], 
+      [
+         2.282249742001970e-06
+      ], 
+      [
+        -2.063983488644545e-10
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         1.255758204334366e+03
+      ], 
+      [
+        -4.348151014791636e-01
+      ], 
+      [
+        -1.940144478844330e-03
+      ], 
+      [
+         1.943584451319090e-05
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Aspen Temper -55", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "AS55", 
+  "reference": "SecCool Software", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         2.805432507739939e+03
+      ], 
+      [
+         2.944659442724364e+00
+      ], 
+      [
+        -2.486790505675929e-02
+      ], 
+      [
+        -4.127966978751358e-07
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+        -4.488370275019721e+00
+      ], 
+      [
+        -4.788028699445189e-02
+      ], 
+      [
+         5.153213531288309e-04
+      ], 
+      [
+        -8.219705023607329e-06
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.000000000000000e+00, 
+  "xmax":  1.000000000000000e+00, 
+  "xmin":  0.000000000000000e+00
+}

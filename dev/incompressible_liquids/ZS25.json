@@ -1,0 +1,96 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  3.050000000000000e+02, 
+  "Tmax":  3.600000000000000e+02, 
+  "Tmin":  2.500000000000000e+02, 
+  "TminPsat":  3.600000000000000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         5.127017391304346e-01
+      ], 
+      [
+         1.200849194283793e-03
+      ], 
+      [
+        -1.199209486166166e-06
+      ], 
+      [
+         3.405290363459789e-10
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         1.176939751552795e+03
+      ], 
+      [
+        -5.327117664943026e-01
+      ], 
+      [
+        -4.517221908750813e-06
+      ], 
+      [
+         1.216175130572022e-08
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Zitrec S -25", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "ZS25", 
+  "reference": "SecCool Software", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         3.199794409937888e+03
+      ], 
+      [
+         4.304501874935814e-01
+      ], 
+      [
+         2.382834556740043e-04
+      ], 
+      [
+         3.324212020345087e-07
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+        -6.390125574512138e+00
+      ], 
+      [
+        -2.058143066988261e-02
+      ], 
+      [
+         1.705460222709877e-04
+      ], 
+      [
+        -1.217886333267690e-06
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.000000000000000e+00, 
+  "xmax":  1.000000000000000e+00, 
+  "xmin":  0.000000000000000e+00
+}

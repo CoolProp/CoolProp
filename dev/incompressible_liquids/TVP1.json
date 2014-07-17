@@ -1,0 +1,109 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  4.776500000000000e+02, 
+  "Tmax":  6.701500000000000e+02, 
+  "Tmin":  2.851500000000000e+02, 
+  "TminPsat":  2.851500000000000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         1.130678580465587e-01
+      ], 
+      [
+        -1.579086057024300e-04
+      ], 
+      [
+        -1.729844106592956e-07
+      ], 
+      [
+         3.523507875795464e-12
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         9.094492661943317e+02
+      ], 
+      [
+        -8.926962289239270e-01
+      ], 
+      [
+        -6.292874347504362e-04
+      ], 
+      [
+        -1.931069426702320e-06
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "TherminolVP1", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "TVP1", 
+  "reference": "Therminol Heat Transfer Reference Disk", 
+  "saturation_pressure": {
+    "coeffs": [
+      [
+         1.029170422244552e+01
+      ], 
+      [
+         2.773291692415654e-02
+      ], 
+      [
+        -9.223681490939592e-05
+      ], 
+      [
+         2.535129865082609e-07
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         2.057847355769230e+03
+      ], 
+      [
+         2.640437391866940e+00
+      ], 
+      [
+         8.488347095925164e-05
+      ], 
+      [
+         4.844177188553760e-06
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+        -7.898082579951590e+00
+      ], 
+      [
+        -6.552698415386544e-03
+      ], 
+      [
+         2.138246493645080e-05
+      ], 
+      [
+        -7.121997973227383e-08
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.000000000000000e+00, 
+  "xmax":  1.000000000000000e+00, 
+  "xmin":  0.000000000000000e+00
+}

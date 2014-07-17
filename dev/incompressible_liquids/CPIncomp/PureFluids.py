@@ -6,7 +6,6 @@ from CPIncomp.DataObjects import PureData
 class TherminolD12(PureData):
     """ 
     Heat transfer fluid Therminol D12 by Solutia
-    Source: Therminol Heat Transfer Reference Disk
     """
     def __init__(self):
         PureData.__init__(self) 
@@ -21,12 +20,12 @@ class TherminolD12(PureData):
         self.TminPsat   = self.Tmin
         self.name = "TD12" 
         self.description = "TherminolD12"
+        self.reference = "Therminol Heat Transfer Reference Disk"
         self.reshapeAll()
 
 class TherminolVP1(PureData):
     """ 
     Heat transfer fluid Therminol VP-1 by Solutia
-    Source: Therminol Heat Transfer Reference Disk
     """
     def __init__(self):
         PureData.__init__(self) 
@@ -41,13 +40,13 @@ class TherminolVP1(PureData):
         self.TminPsat = self.Tmin 
         self.name = "TVP1" 
         self.description = "TherminolVP1"
+        self.reference = "Therminol Heat Transfer Reference Disk"
         self.reshapeAll()
     
     
 class Therminol66(PureData):
     """ 
     Heat transfer fluid Therminol 66 by Solutia
-    Source: Therminol Heat Transfer Reference Disk
     """
     def __init__(self):
         PureData.__init__(self) 
@@ -76,13 +75,13 @@ class Therminol66(PureData):
         self.TminPsat = 70+273.15 
         self.name = "T66" 
         self.description = "Therminol66"
+        self.reference = "Therminol Heat Transfer Reference Disk"
         self.reshapeAll()   
     
     
 class Therminol72(PureData):
     """ 
     Heat transfer fluid Therminol 72 by Solutia
-    Source: Therminol Heat Transfer Reference Disk
     """
     def __init__(self):
         PureData.__init__(self) 
@@ -97,6 +96,7 @@ class Therminol72(PureData):
         self.TminPsat = self.Tmin 
         self.name = "T72" 
         self.description = "Therminol72"
+        self.reference = "Therminol Heat Transfer Reference Disk"
         self.reshapeAll()
     
     
@@ -104,7 +104,6 @@ class Therminol72(PureData):
 class DowthermJ(PureData):
     """ 
     Heat transfer fluid Dowtherm J by Dow Chemicals
-    Source: Dow Chemicals data sheet
     """
     def __init__(self):
         PureData.__init__(self) 
@@ -119,12 +118,12 @@ class DowthermJ(PureData):
         self.TminPsat = 50 + 273.15 
         self.name = "DowJ" 
         self.description = "DowthermJ"
+        self.reference = "Dow Chemicals data sheet"
         self.reshapeAll()
     
 class DowthermQ(PureData):
     """ 
     Heat transfer fluid Dowtherm Q by Dow Chemicals
-    Source: Dow Chemicals data sheet
     """
     def __init__(self):
         PureData.__init__(self) 
@@ -139,13 +138,13 @@ class DowthermQ(PureData):
         self.TminPsat = 120 + 273.15 
         self.name = "DowQ" 
         self.description = "DowthermQ"
+        self.reference = "Dow Chemicals data sheet"
         self.reshapeAll()
     
     
 class Texatherm22(PureData):
     """ 
     Heat transfer fluid Texatherm 22 by Texaco
-    Source: Texaco data sheet
     """
     def __init__(self):
         PureData.__init__(self) 
@@ -160,13 +159,13 @@ class Texatherm22(PureData):
         self.TminPsat = 40 + 273.15 
         self.name = "TX22" 
         self.description = "Texatherm22"
+        self.reference = "Texaco data sheet"
         self.reshapeAll()
     
     
 class NitrateSalt(PureData):
     """ 
     Heat transfer fluid based on 60% NaNO3 and 40% KNO3
-    Source: Solar Power Tower Design Basis Document,  Alexis B. Zavoico, Sandia Labs, USA
     """
     def __init__(self):
         PureData.__init__(self) 
@@ -191,13 +190,13 @@ class NitrateSalt(PureData):
         self.TminPsat = self.Tmax 
         self.name = "NaK" 
         self.description = "NitrateSalt"
+        self.reference = "Solar Power Tower Design Basis Document,  Alexis B. Zavoico, Sandia Labs, USA"
         self.reshapeAll()
     
 
 class SylthermXLT(PureData):
     """ 
     Heat transfer fluid Syltherm XLT by Dow Chemicals
-    Source: Dow Chemicals data sheet
     """    
     def __init__(self):
         PureData.__init__(self) 
@@ -211,13 +210,13 @@ class SylthermXLT(PureData):
         self.TminPsat = self.Tmax 
         self.name = "XLT" 
         self.description = "SylthermXLT"
+        self.reference = "Dow Chemicals data sheet"
         self.reshapeAll()
     
     
 class HC50(PureData):
     """ 
     Heat transfer fluid Dynalene HC-50
-    Source: Dynalene
     """
     def __init__(self):
         PureData.__init__(self) 
@@ -232,13 +231,13 @@ class HC50(PureData):
         self.TminPsat = 20+273.15 
         self.name = "HC50"
         self.description = "Dynalene "+ self.name
+        self.reference = "Dynalene data sheet"
         self.reshapeAll()
 
    
 class HC40(PureData):
     """ 
     Heat transfer fluid Dynalene HC-40
-    Source: Dynalene
     """    
     def __init__(self):
         PureData.__init__(self) 
@@ -253,13 +252,13 @@ class HC40(PureData):
         self.TminPsat = 20+273.15  
         self.name = "HC40"
         self.description = "Dynalene "+ self.name
+        self.reference = "Dynalene data sheet"
         self.reshapeAll()
 
     
 class HC30(PureData):
     """ 
     Heat transfer fluid Dynalene HC-30
-    Source: Dynalene
     """    
     def __init__(self):
         PureData.__init__(self) 
@@ -274,13 +273,13 @@ class HC30(PureData):
         self.TminPsat = 20+273.15  
         self.name = "HC30"
         self.description = "Dynalene "+ self.name
+        self.reference = "Dynalene data sheet"
         self.reshapeAll()
     
     
 class HC20(PureData):
     """ 
     Heat transfer fluid Dynalene HC-20
-    Source: Dynalene
     """    
     def __init__(self):
         PureData.__init__(self) 
@@ -295,13 +294,13 @@ class HC20(PureData):
         self.TminPsat = 20+273.15  
         self.name = "HC20"
         self.description = "Dynalene "+ self.name
+        self.reference = "Dynalene data sheet"
         self.reshapeAll()
     
 
 class HC10(PureData):
     """ 
     Heat transfer fluid Dynalene HC-10
-    Source: Dynalene
     """    
     def __init__(self):
         PureData.__init__(self) 
@@ -316,6 +315,7 @@ class HC10(PureData):
         self.TminPsat = 20+273.15  
         self.name = "HC10"
         self.description = "Dynalene "+ self.name
+        self.reference = "Dynalene data sheet"
         self.reshapeAll()
 
 
@@ -323,7 +323,6 @@ class HC10(PureData):
 class AS10(PureData):
     """ 
     Heat transfer fluid Aspen Temper -10 by Aspen Petroleum
-    Source: SecCool Software
     """ 
     def __init__(self):
         PureData.__init__(self) 
@@ -337,13 +336,13 @@ class AS10(PureData):
         self.TminPsat = self.Tmax 
         self.name = "AS10" 
         self.description = "Aspen Temper -10"
+        self.reference = "SecCool Software"
         self.reshapeAll()
 
 
 class AS20(PureData):
     """ 
     Heat transfer fluid Aspen Temper -20 by Aspen Petroleum
-    Source: SecCool Software
     """    
     def __init__(self):
         PureData.__init__(self) 
@@ -357,13 +356,13 @@ class AS20(PureData):
         self.TminPsat = self.Tmax 
         self.name = "AS20" 
         self.description = "Aspen Temper -20"
+        self.reference = "SecCool Software"
         self.reshapeAll()
     
 
 class AS30(PureData):
     """ 
     Heat transfer fluid Aspen Temper -30 by Aspen Petroleum
-    Source: SecCool Software
     """
     def __init__(self):
         PureData.__init__(self) 
@@ -377,13 +376,13 @@ class AS30(PureData):
         self.TminPsat = self.Tmax 
         self.name = "AS30" 
         self.description = "Aspen Temper -30"
+        self.reference = "SecCool Software"
         self.reshapeAll()
 
 
 class AS40(PureData):
     """ 
     Heat transfer fluid Aspen Temper -40 by Aspen Petroleum
-    Source: SecCool Software
     """   
     def __init__(self):
         PureData.__init__(self) 
@@ -397,13 +396,13 @@ class AS40(PureData):
         self.TminPsat = self.Tmax 
         self.name = "AS40" 
         self.description = "Aspen Temper -40"
+        self.reference = "SecCool Software"
         self.reshapeAll()
 
 
 class AS55(PureData):
     """ 
     Heat transfer fluid Aspen Temper -55 by Aspen Petroleum
-    Source: SecCool Software
     """ 
     def __init__(self):
         PureData.__init__(self) 
@@ -417,13 +416,13 @@ class AS55(PureData):
         self.TminPsat = self.Tmax 
         self.name = "AS55" 
         self.description = "Aspen Temper -55"
+        self.reference = "SecCool Software"
         self.reshapeAll()
 
 
 class ZS10(PureData):
     """ 
     Heat transfer fluid Zitrec S -10 by Arteco
-    Source: SecCool Software
     """ 
     def __init__(self):
         PureData.__init__(self) 
@@ -437,13 +436,13 @@ class ZS10(PureData):
         self.TminPsat = self.Tmax 
         self.name = "ZS10" 
         self.description = "Zitrec S -10"
+        self.reference = "SecCool Software"
         self.reshapeAll()
 
 
 class ZS25(PureData):
     """ 
     Heat transfer fluid Zitrec S -25 by Arteco
-    Source: SecCool Software
     """ 
     def __init__(self):
         PureData.__init__(self) 
@@ -457,13 +456,13 @@ class ZS25(PureData):
         self.TminPsat = self.Tmax 
         self.name = "ZS25" 
         self.description = "Zitrec S -25"
+        self.reference = "SecCool Software"
         self.reshapeAll()
 
     
 class ZS40(PureData):
     """ 
     Heat transfer fluid Zitrec S -40 by Arteco
-    Source: SecCool Software
     """ 
     def __init__(self):
         PureData.__init__(self) 
@@ -477,13 +476,13 @@ class ZS40(PureData):
         self.TminPsat = self.Tmax 
         self.name = "ZS40" 
         self.description = "Zitrec S -40"
+        self.reference = "SecCool Software"
         self.reshapeAll()
 
 
 class ZS45(PureData):
     """ 
     Heat transfer fluid Zitrec S -45 by Arteco
-    Source: SecCool Software
     """ 
     def __init__(self):
         PureData.__init__(self) 
@@ -497,13 +496,13 @@ class ZS45(PureData):
         self.TminPsat = self.Tmax 
         self.name = "ZS45" 
         self.description = "Zitrec S -45"
+        self.reference = "SecCool Software"
         self.reshapeAll()
 
 
 class ZS55(PureData):
     """ 
     Heat transfer fluid Zitrec S -55 by Arteco
-    Source: SecCool Software
     """ 
     def __init__(self):
         PureData.__init__(self) 
@@ -517,6 +516,7 @@ class ZS55(PureData):
         self.TminPsat = self.Tmax 
         self.name = "ZS55" 
         self.description = "Zitrec S -55"
+        self.reference = "SecCool Software"
         self.reshapeAll()
 
 

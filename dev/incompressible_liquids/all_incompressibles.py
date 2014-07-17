@@ -98,12 +98,14 @@ if __name__ == '__main__':
     dataObjs = getPureDataObjects()
     print("Fitting pure fluids:".format(obj.name), end="")
     fitFluidList(dataObjs)
+    print(" ... done")
     for obj in dataObjs:
         writer.toJSON(obj)
     
-    dataObjs = getPureDataObjects()
+    dataObjs = getSolutionDataObjects()
     print("Fitting solutions:".format(obj.name), end="")
     fitFluidList(dataObjs)
+    print(" ... done")
     for obj in dataObjs:
         writer.toJSON(obj)
     

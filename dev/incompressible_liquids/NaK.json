@@ -1,0 +1,96 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  7.231500000000000e+02, 
+  "Tmax":  8.731500000000000e+02, 
+  "Tmin":  5.731500000000000e+02, 
+  "TminPsat":  8.731500000000000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         5.285000000000000e-01
+      ], 
+      [
+         1.900000000001591e-04
+      ], 
+      [
+         0.000000000000000e+00
+      ], 
+      [
+        -2.393449447333829e-20
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         1.803800000000000e+03
+      ], 
+      [
+        -6.360000000005357e-01
+      ], 
+      [
+         0.000000000000000e+00
+      ], 
+      [
+         1.071743045227905e-18
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "NitrateSalt", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "NaK", 
+  "reference": "Solar Power Tower Design Basis Document,  Alexis B. Zavoico, Sandia Labs, USA", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         1.520400000000000e+06
+      ], 
+      [
+         1.720000000001437e+02
+      ], 
+      [
+        -2.842170943040401e-14
+      ], 
+      [
+        -1.017703801529022e-14
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+        -6.506231138491505e+00
+      ], 
+      [
+        -2.894216834122611e-03
+      ], 
+      [
+         9.367638971117479e-06
+      ], 
+      [
+        -4.763059512414808e-08
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.000000000000000e+00, 
+  "xmax":  1.000000000000000e+00, 
+  "xmin":  0.000000000000000e+00
+}

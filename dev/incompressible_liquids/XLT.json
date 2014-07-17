@@ -1,0 +1,96 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  3.531500000000000e+02, 
+  "Tmax":  5.331500000000000e+02, 
+  "Tmin":  1.731500000000000e+02, 
+  "TminPsat":  5.331500000000000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         9.727307698244260e-02
+      ], 
+      [
+        -2.341492108172177e-04
+      ], 
+      [
+        -1.439523876568046e-07
+      ], 
+      [
+         1.120310375181147e-10
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         7.936461315840248e+02
+      ], 
+      [
+        -1.027177318977021e+00
+      ], 
+      [
+         1.633893202956926e-07
+      ], 
+      [
+         1.036811678831579e-09
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "SylthermXLT", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "XLT", 
+  "reference": "Dow Chemicals data sheet", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         1.897744858190238e+03
+      ], 
+      [
+         2.100000000001232e+00
+      ], 
+      [
+         7.717538106355448e-07
+      ], 
+      [
+        -2.833928469673541e-16
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+        -7.425222634979222e+00
+      ], 
+      [
+        -1.029019714446087e-02
+      ], 
+      [
+         4.867175388598502e-05
+      ], 
+      [
+        -1.752403577466207e-07
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.000000000000000e+00, 
+  "xmax":  1.000000000000000e+00, 
+  "xmin":  0.000000000000000e+00
+}
