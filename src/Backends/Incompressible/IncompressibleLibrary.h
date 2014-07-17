@@ -145,7 +145,7 @@ class JSONIncompressibleLibrary
 	/** This is not practical for the incomressibles, the CAS may not be
 	 *  defined for blends of heat transfer fluids and solutions.
      */
-    std::map<std::size_t, IncompressibleFluid*> fluid_map;
+    std::map<std::size_t, IncompressibleFluid> fluid_map;
     std::vector<std::string> name_vector;
     std::map<std::string, std::size_t> string_to_index_map;
     bool _is_empty;
@@ -165,7 +165,7 @@ public:
     /// Add all the fluid entries in the rapidjson::Value instance passed in
     void add_many(rapidjson::Value &listing);
     void add_one(rapidjson::Value &fluid_json);
-    void add_obj(IncompressibleFluid* fluid_obj);
+    void add_obj(IncompressibleFluid fluid_obj);
 
     /// Get an IncompressibleFluid instance stored in this library
     /**

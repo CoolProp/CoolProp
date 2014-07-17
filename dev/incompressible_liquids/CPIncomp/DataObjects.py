@@ -1,7 +1,7 @@
 from __future__ import division, absolute_import, print_function
 import numpy as np
 from CPIncomp.BaseObjects import IncompressibleData
-
+import os, CPIncomp
 
 class SolutionData(object):
     """ 
@@ -180,6 +180,63 @@ class PureData(SolutionData):
         #self.mass2mole.data     = self.reshapeData(self.mass2mole.data, len_T)        
 
 
+class DigitalData(SolutionData):
+    """ 
+    An extension of the solution data that makes it 
+    easier to generate fitting data from fluids available
+    as Python packages.
+    """
+    def __init__(self):
+        SolutionData.__init__(self)
+        
+    def getFile(self, data):
+        return os.path.join(CPIncomp.__path__[0], 'data', self.name+"_"+data+".txt")
+    
+    def getFromFile(self, data):
+        fullPath = self.getFile(data)
+        return np.loadtxt(fullPath)
+    
+    def writeToFile(self, data, array):
+        fullPath = self.getFile(data)
+        return np.savetxt(fullPath, array, fmt='%1.5e')
+    
+    def getTrange(self):
+        if self.Tmin<self.Tmax:
+            return np.linspace(self.Tmin, self.Tmax, 20)
+        else:
+            return np.array([0.0])
+    
+    def getxrange(self):
+        if self.xmin<self.xmax:
+            return np.linspace(self.xmin, self.xmax, 20)
+        else:
+            return np.array([0.0])
+    
+    def getArray(self, func=None, data=None):
+        """
+        func is a callable object that takes T,x as inputs
+        and data is the file name for the data. 
+        We try to read the file and if unsuccessful, we 
+        generate the data and write it.
+        """
+        
+        baseArray = np.zeros( (len(self.temperature.data),len(self.concentration.data)) )
+        
+        if (os.path.isfile(self.getFile(data))): # File found
+            fileArray = self.getFromFile(data)
+            if fileArray.shape==baseArray.shape:
+                return fileArray
+            else:
+                raise ValueError("The array shapes do not match!")
+        else: # File cannot be read 
+            for cT,T in enumerate(self.temperature.data):
+                for cx,x in enumerate(self.concentration.data):
+                    baseArray[cT][cx] = func(T,x)
+            self.writeToFile(data, baseArray)
+            return baseArray
+                
+
+
 class PureExample(PureData):
     def __init__(self):
         PureData.__init__(self) 
@@ -222,6 +279,7 @@ class SolutionExample(SolutionData):
           [1032.3,    1025.3,    1018.5,    1011.7,    1005.1,     998.5,     992.0],
           [1021.5,    1015.3,    1009.2,    1003.1,     997.1,     991.2,     985.4]]) # kg/m3
         
+        self.specific_heat.data = np.copy(self.density.data)
 #        self.density.data             = np.array([
 #          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
 #          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
@@ -232,35 +290,50 @@ class SolutionExample(SolutionData):
 #          [np.nan,    1025.3,    1018.5,    np.nan,    np.nan,     998.5,     992.0],
 #          [np.nan,    np.nan,    1009.2,    np.nan,    np.nan,    np.nan,    np.nan]]) # kg/m3
 
+class DigitalExample(DigitalData):
 
+    def __init__(self):
+        DigitalData.__init__(self) 
+
+        self.name = "ExampleDigital"
+        self.description = "some fluid"
+        self.reference = "none"
+        
+        self.Tmin = 273.00;
+        self.Tmax = 500.00;
+        self.xmax = 1.0
+        self.xmin = 0.0
+        self.TminPsat = self.Tmin;
+        
+        self.temperature.data         = self.getTrange()
+        self.concentration.data       = self.getxrange()
+        
+        def func(T,x):
+            return T + x*100.0 + T*(x+0.5)
+        
+        self.density.data             = self.getArray(func,"rho")
         
 
 if __name__ == '__main__':
+    pass 
+##   An example with a pure fluid
 #    obj = PureExample()
 #    obj.density.type   = obj.density.INCOMPRESSIBLE_POLYNOMIAL
-#    obj.density.coeffs = np.ones((3,))
+#    obj.density.coeffs = np.zeros((4,6))
 #    print(obj.density.coeffs)
 #    obj.density.fitCoeffs(obj.temperature.data)
 #    print(obj.density.coeffs)
-#    print(obj.density.data[2][0],obj.rho(obj.temperature.data[2]))
-#    
-    obj = PureExample()
-    obj.density.type   = obj.density.INCOMPRESSIBLE_POLYNOMIAL
-    obj.density.coeffs = np.zeros((4,6))
-    print(obj.density.coeffs)
-    obj.density.fitCoeffs(obj.temperature.data)
-    print(obj.density.coeffs)
-    obj.saturation_pressure.type   = obj.density.INCOMPRESSIBLE_EXPPOLYNOMIAL
-    obj.saturation_pressure.coeffs = np.zeros((4,6))
-    print(obj.saturation_pressure.coeffs)
-    obj.saturation_pressure.fitCoeffs(obj.temperature.data)
-    print(obj.saturation_pressure.coeffs)
-    
-    print(obj.density.data[2][0],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[0]))
-    print(obj.density.data[5][0],obj.rho(obj.temperature.data[5],10e5,obj.concentration.data[0]))
-    print(obj.saturation_pressure.data[2][0],obj.psat(obj.temperature.data[2],obj.concentration.data[0]))
-    print(obj.saturation_pressure.data[5][0],obj.psat(obj.temperature.data[5],obj.concentration.data[0]))
-    
+#    obj.saturation_pressure.type   = obj.density.INCOMPRESSIBLE_EXPPOLYNOMIAL
+#    obj.saturation_pressure.coeffs = np.zeros((4,6))
+#    print(obj.saturation_pressure.coeffs)
+#    obj.saturation_pressure.fitCoeffs(obj.temperature.data)
+#    print(obj.saturation_pressure.coeffs)
+#    print(obj.density.data[2][0],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[0]))
+#    print(obj.density.data[5][0],obj.rho(obj.temperature.data[5],10e5,obj.concentration.data[0]))
+#    print(obj.saturation_pressure.data[2][0],obj.psat(obj.temperature.data[2],obj.concentration.data[0]))
+#    print(obj.saturation_pressure.data[5][0],obj.psat(obj.temperature.data[5],obj.concentration.data[0]))
+
+##   An example with a solution
 #    obj = SolutionExample()
 #    obj.density.type   = obj.density.INCOMPRESSIBLE_POLYNOMIAL
 #    obj.density.coeffs = np.ones((3,5))
@@ -269,4 +342,13 @@ if __name__ == '__main__':
 #    print(obj.density.coeffs)
 #    print(obj.density.data[2][0],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[0]))
 #    print(obj.density.data[2][2],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[2]))
-    
+
+##   An example with a digital fluid
+#    obj = DigitalExample()
+#    obj.density.type   = obj.density.INCOMPRESSIBLE_POLYNOMIAL
+#    obj.density.coeffs = np.ones((3,5))
+#    print(obj.density.coeffs)
+#    obj.density.fitCoeffs(obj.temperature.data,obj.concentration.data)
+#    print(obj.density.coeffs)
+#    print(obj.density.data[2][0],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[0]))
+#    print(obj.density.data[2][2],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[2]))

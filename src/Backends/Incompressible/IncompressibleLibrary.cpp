@@ -1,6 +1,6 @@
 #include "IncompressibleLibrary.h"
 #include "MatrixMath.h"
-#include "crossplatform_shared_ptr.h"
+//#include "crossplatform_shared_ptr.h"
 #include "rapidjson/rapidjson_include.h"
 #include "all_incompressibles_JSON.h" // Makes a std::string variable called all_incompressibles_JSON
 
@@ -343,7 +343,7 @@ JSONIncompressibleLibrary::JSONIncompressibleLibrary(){
 
 /// Default destructor
 JSONIncompressibleLibrary::~JSONIncompressibleLibrary(){
-	freeClear(fluid_map);
+//	freeClear(fluid_map);
 //	  fluid_map.clear();
 //    name_vector.clear();
 //    string_to_index_map.clear();
@@ -435,41 +435,41 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 	std::size_t index = fluid_map.size();
 
 	// Add index->fluid mapping
-	fluid_map[index] = new IncompressibleFluid();
+	fluid_map[index] = IncompressibleFluid();
 	//fluid_map[index].reset(new IncompressibleFluid());
 	//fluid_map[index].reset(new IncompressibleFluid());
 
 	// Create an instance of the fluid
-	IncompressibleFluid* fluid = fluid_map[index];
-	fluid->setName("unloaded");
+	IncompressibleFluid &fluid = fluid_map[index];
+	fluid.setName("unloaded");
     try
     {
-	    fluid->setName(cpjson::get_string(fluid_json, "name"));
-    	if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading base values for %s ",fluid->getName().c_str()) << std::endl;
-	    fluid->setDescription(cpjson::get_string(fluid_json, "description"));
-	    fluid->setReference(cpjson::get_string(fluid_json, "reference"));
-	    fluid->setTmax(parse_value(fluid_json, "Tmax", true, 0.0));
-	    fluid->setTmin(parse_value(fluid_json, "Tmin", true, 0.0));
-	    fluid->setxmax(parse_value(fluid_json, "xmax", false, 1.0));
-	    fluid->setxmin(parse_value(fluid_json, "xmin", false, 0.0));
-	    fluid->setTminPsat(parse_value(fluid_json, "TminPsat", false, 0.0));
+	    fluid.setName(cpjson::get_string(fluid_json, "name"));
+    	if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading base values for %s ",fluid.getName().c_str()) << std::endl;
+	    fluid.setDescription(cpjson::get_string(fluid_json, "description"));
+	    fluid.setReference(cpjson::get_string(fluid_json, "reference"));
+	    fluid.setTmax(parse_value(fluid_json, "Tmax", true, 0.0));
+	    fluid.setTmin(parse_value(fluid_json, "Tmin", true, 0.0));
+	    fluid.setxmax(parse_value(fluid_json, "xmax", false, 1.0));
+	    fluid.setxmin(parse_value(fluid_json, "xmin", false, 0.0));
+	    fluid.setTminPsat(parse_value(fluid_json, "TminPsat", false, 0.0));
 
-	    fluid->setTbase(parse_value(fluid_json, "Tbase", false, 0.0));
-	    fluid->setxbase(parse_value(fluid_json, "xbase", false, 0.0));
+	    fluid.setTbase(parse_value(fluid_json, "Tbase", false, 0.0));
+	    fluid.setxbase(parse_value(fluid_json, "xbase", false, 0.0));
 
 	    /// Setters for the coefficients
-	    if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading coefficients for %s ",fluid->getName().c_str()) << std::endl;
-	    fluid->setDensity(parse_coefficients(fluid_json, "density", true));
-	    fluid->setSpecificHeat(parse_coefficients(fluid_json, "specific_heat", true));
-	    fluid->setViscosity(parse_coefficients(fluid_json, "viscosity", false));
-	    fluid->setConductivity(parse_coefficients(fluid_json, "conductivity", false));
-	    fluid->setPsat(parse_coefficients(fluid_json, "saturation_pressure", false));
-	    fluid->setTfreeze(parse_coefficients(fluid_json, "T_freeze", false));
-	    fluid->setVolToMass(parse_coefficients(fluid_json, "volume2mass", false));
-	    fluid->setMassToMole(parse_coefficients(fluid_json, "mass2mole", false));
+	    if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading coefficients for %s ",fluid.getName().c_str()) << std::endl;
+	    fluid.setDensity(parse_coefficients(fluid_json, "density", true));
+	    fluid.setSpecificHeat(parse_coefficients(fluid_json, "specific_heat", true));
+	    fluid.setViscosity(parse_coefficients(fluid_json, "viscosity", false));
+	    fluid.setConductivity(parse_coefficients(fluid_json, "conductivity", false));
+	    fluid.setPsat(parse_coefficients(fluid_json, "saturation_pressure", false));
+	    fluid.setTfreeze(parse_coefficients(fluid_json, "T_freeze", false));
+	    fluid.setVolToMass(parse_coefficients(fluid_json, "volume2mass", false));
+	    fluid.setMassToMole(parse_coefficients(fluid_json, "mass2mole", false));
 
-	    if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading reference state for %s ",fluid->getName().c_str()) << std::endl;
-	    fluid->set_reference_state(
+	    if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading reference state for %s ",fluid.getName().c_str()) << std::endl;
+	    fluid.set_reference_state(
 			    parse_value(fluid_json, "Tref", false, 25+273.15) ,
 			    parse_value(fluid_json, "pref", false, 1.01325e5) ,
 			    parse_value(fluid_json, "xref", false, 0.0) ,
@@ -478,20 +478,20 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 			    );
 
 	    /// A function to check coefficients and equation types.
-	    fluid->validate();
+	    fluid.validate();
 
 	    // Add name->index mapping
-	    string_to_index_map[fluid->getName()] = index;
+	    string_to_index_map[fluid.getName()] = index;
     }
     catch(std::exception &e)
     {
-        std::cout << format("Unable to load fluid: %s\n", fluid->getName().c_str());
+        std::cout << format("Unable to load fluid: %s\n", fluid.getName().c_str());
         throw;
     }
 
 };
 
-void JSONIncompressibleLibrary::add_obj(IncompressibleFluid* fluid_obj) {
+void JSONIncompressibleLibrary::add_obj(IncompressibleFluid fluid_obj) {
 	_is_empty = false;
 
 	// Get the next index for this fluid
@@ -501,13 +501,13 @@ void JSONIncompressibleLibrary::add_obj(IncompressibleFluid* fluid_obj) {
 	fluid_map[index] = fluid_obj;
 
 	// Create an instance of the fluid
-	//IncompressibleFluid &fluid = fluid_map[index];
+	IncompressibleFluid &fluid = fluid_map[index];
 
     /// A function to check coefficients and equation types.
-    //fluid->validate();
+    fluid.validate();
 
     // Add name->index mapping
-    string_to_index_map[fluid_obj->getName()] = index;
+    string_to_index_map[fluid.getName()] = index;
 }
 
 /// Get an IncompressibleFluid instance stored in this library
@@ -536,12 +536,12 @@ IncompressibleFluid& JSONIncompressibleLibrary::get(std::string key) {
  @param key The index of the fluid in the map
  */
 IncompressibleFluid& JSONIncompressibleLibrary::get(std::size_t key) {
-	std::map<std::size_t, IncompressibleFluid*>::iterator it;
+	std::map<std::size_t, IncompressibleFluid>::iterator it;
 	// Try to find it
 	it = fluid_map.find(key);
 	// If it is found
 	if (it != fluid_map.end()) {
-		return *(it->second);// (*(*i)).getName()
+		return it->second;
 	} else {
 		throw ValueError(
 			format("key [%d] was not found in JSONIncompressibleLibrary",key));
@@ -584,7 +584,8 @@ void load_incompressible_library()
     } else{
         try{library.add_many(dd);}catch(std::exception &e){std::cout << e.what() << std::endl;}
     }
-	library.add_obj(new LiBrSolution());
+	// TODO: Implement LiBr in the source code!
+	//library.add_obj(LiBrSolution());
 }
 
 JSONIncompressibleLibrary & get_incompressible_library(void){

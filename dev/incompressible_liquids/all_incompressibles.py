@@ -10,6 +10,7 @@ import CPIncomp.CoefficientObjects
 
 import CPIncomp.PureFluids
 import CPIncomp.MelinderFluids
+import CPIncomp.DigitalFluids
 
 from CPIncomp.WriterObjects import SolutionDataWriter
 from CPIncomp.DataObjects import PureExample, SolutionExample
@@ -49,6 +50,17 @@ def getSolutionDataObjects():
     ignList = getBaseClassNames()
 
     for name, obj in inspect.getmembers(CPIncomp.SolutionFluids):
+        if inspect.isclass(obj):
+            #print(name)
+            if not name in ignList: # Ignore the base classes
+                classes += [obj()]
+    return classes 
+
+def getDigitalDataObjects():
+    classes = []
+    ignList = getBaseClassNames()
+
+    for name, obj in inspect.getmembers(CPIncomp.DigitalFluids):
         if inspect.isclass(obj):
             #print(name)
             if not name in ignList: # Ignore the base classes
@@ -106,18 +118,26 @@ if __name__ == '__main__':
     # If the examples did not cause any errors, 
     # we can proceed to the real data.
     dataObjs = getPureDataObjects()
-    print("Fitting pure fluids:".format(obj.name), end="")
+    print("Fitting pure fluids:", end="")
     fitFluidList(dataObjs)
     print(" ... done")
     for obj in dataObjs:
         writer.toJSON(obj)
     
     dataObjs = getSolutionDataObjects()
-    print("Fitting solutions:".format(obj.name), end="")
+    print("Fitting solutions:", end="")
     fitFluidList(dataObjs)
     print(" ... done")
     for obj in dataObjs:
         writer.toJSON(obj)
+    
+    dataObjs = getDigitalDataObjects()
+    print("Fitting digital fluids:", end="")
+    fitFluidList(dataObjs)
+    print(" ... done")
+    for obj in dataObjs:
+        writer.toJSON(obj)
+
     
 #    data = SecCoolExample()    
 #    writer.toJSON(data)
