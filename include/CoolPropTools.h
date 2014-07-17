@@ -243,6 +243,15 @@
         };
     };
 
+    /// Utility function for a std::map of pointers
+    //http://stackoverflow.com/questions/569110/why-is-memory-still-accessible-after-stdmapclear-is-called
+    template <typename M> void freeClear( M & amap ) {
+        for ( typename M::iterator it = amap.begin(); it != amap.end(); ++it ) {
+            delete it->second;
+        }
+        amap.clear();
+    }
+
     /// Some functions related to testing and comparison of values
     bool inline check_abs(double A, double B, double D){
     	double max = fabs(A);

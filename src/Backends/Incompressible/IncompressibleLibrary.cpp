@@ -1,5 +1,6 @@
 #include "IncompressibleLibrary.h"
 #include "MatrixMath.h"
+#include "crossplatform_shared_ptr.h"
 #include "rapidjson/rapidjson_include.h"
 #include "all_incompressibles_JSON.h" // Makes a std::string variable called all_incompressibles_JSON
 
@@ -269,7 +270,7 @@ bool const LiBrSolution::debug = false;
 
 
 
-LiBrSolution::LiBrSolution(){
+LiBrSolution::LiBrSolution():IncompressibleFluid(){
 	name = std::string("LiBr");
 	description = std::string("Lithium-Bromide solution from Patek2006");
 	reference = std::string("Patek2006");
@@ -293,35 +294,35 @@ LiBrSolution::LiBrSolution(){
 
 };
 
-double LiBrSolution::rho(double T_K, double p, double x){
-	checkTPX(T_K, p, x);
-	return 1./molarToSpecific(x, 1./rho_mix(T_K,massToMole(x)));
+double LiBrSolution::rho(double T, double p, double x){
+	checkTPX(T, p, x);
+	return 1./molarToSpecific(x, 1./rho_mix(T,massToMole(x)));
 }
-double LiBrSolution::c(double T_K, double p, double x){
-	checkTPX(T_K, p, x);
-	return molarToSpecific(x, cp_mix(T_K,massToMole(x)));
+double LiBrSolution::c(double T, double p, double x){
+	checkTPX(T, p, x);
+	return molarToSpecific(x, cp_mix(T,massToMole(x)));
 }
-//double h(double T_K, double p, double x){
-//	return h_u(T_K,p,x);
+//double h(double T, double p, double x){
+//	return h_u(T,p,x);
 //}
-double LiBrSolution::s(double T_K, double p, double x){
-	checkTPX(T_K, p, x);
-	return molarToSpecific(x, s_mix(T_K,massToMole(x)));
+double LiBrSolution::s(double T, double p, double x){
+	checkTPX(T, p, x);
+	return molarToSpecific(x, s_mix(T,massToMole(x)));
 }
-double LiBrSolution::visc(double T_K, double p, double x){
+double LiBrSolution::visc(double T, double p, double x){
 	throw ValueError("Viscosity is not defined for LiBr-solutions.");
 }
-double LiBrSolution::cond(double T_K, double p, double x){
+double LiBrSolution::cond(double T, double p, double x){
 	throw ValueError("Thermal conductivity is not defined for LiBr-solutions.");
 }
-double LiBrSolution::u(double T_K, double p, double x){
-	checkTPX(T_K, p, x);
-	return molarToSpecific(x, h_mix(T_K,massToMole(x)));
+double LiBrSolution::u(double T, double p, double x){
+	checkTPX(T, p, x);
+	return molarToSpecific(x, h_mix(T,massToMole(x)));
 }
-double LiBrSolution::psat(double T_K, double x){
-	//checkT(T_K,p,x);
+double LiBrSolution::psat(double T, double x){
+	//checkT(T,p,x);
 	if (debug) throw ValueError(format("Your concentration is %f in kg/kg and %f in mol/mol.",x,massToMole(x)));
-	return ps_mix(T_K,massToMole(x));
+	return ps_mix(T,massToMole(x));
 };
 double LiBrSolution::Tfreeze(double p, double x){
 	if (debug) throw ValueError(format("No freezing point data available for Lithium-Bromide: p=%f, x=%f",p,x));
@@ -329,6 +330,24 @@ double LiBrSolution::Tfreeze(double p, double x){
 }
 
 
+/// Default constructor
+JSONIncompressibleLibrary::JSONIncompressibleLibrary(){
+	_is_empty = true;
+//    fluid_map.clear();
+//    name_vector.clear();
+//    string_to_index_map.clear();
+//
+//    //shared_ptr<double> array (new double [256], ArrayDeleter<double> ());
+
+};
+
+/// Default destructor
+JSONIncompressibleLibrary::~JSONIncompressibleLibrary(){
+	freeClear(fluid_map);
+//	  fluid_map.clear();
+//    name_vector.clear();
+//    string_to_index_map.clear();
+};
 
 /// A general function to parse the json files that hold the coefficient matrices
 IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Value &obj, std::string id, bool vital){
@@ -416,39 +435,41 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 	std::size_t index = fluid_map.size();
 
 	// Add index->fluid mapping
-	fluid_map[index] = IncompressibleFluid();
+	fluid_map[index] = new IncompressibleFluid();
+	//fluid_map[index].reset(new IncompressibleFluid());
+	//fluid_map[index].reset(new IncompressibleFluid());
 
 	// Create an instance of the fluid
-	IncompressibleFluid &fluid = fluid_map[index];
-	fluid.setName("unloaded");
+	IncompressibleFluid* fluid = fluid_map[index];
+	fluid->setName("unloaded");
     try
     {
-	    fluid.setName(cpjson::get_string(fluid_json, "name"));
-    	if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading base values for %s ",fluid.getName().c_str()) << std::endl;
-	    fluid.setDescription(cpjson::get_string(fluid_json, "description"));
-	    fluid.setReference(cpjson::get_string(fluid_json, "reference"));
-	    fluid.setTmax(parse_value(fluid_json, "Tmax", true, 0.0));
-	    fluid.setTmin(parse_value(fluid_json, "Tmin", true, 0.0));
-	    fluid.setxmax(parse_value(fluid_json, "xmax", false, 1.0));
-	    fluid.setxmin(parse_value(fluid_json, "xmin", false, 0.0));
-	    fluid.setTminPsat(parse_value(fluid_json, "TminPsat", false, 0.0));
+	    fluid->setName(cpjson::get_string(fluid_json, "name"));
+    	if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading base values for %s ",fluid->getName().c_str()) << std::endl;
+	    fluid->setDescription(cpjson::get_string(fluid_json, "description"));
+	    fluid->setReference(cpjson::get_string(fluid_json, "reference"));
+	    fluid->setTmax(parse_value(fluid_json, "Tmax", true, 0.0));
+	    fluid->setTmin(parse_value(fluid_json, "Tmin", true, 0.0));
+	    fluid->setxmax(parse_value(fluid_json, "xmax", false, 1.0));
+	    fluid->setxmin(parse_value(fluid_json, "xmin", false, 0.0));
+	    fluid->setTminPsat(parse_value(fluid_json, "TminPsat", false, 0.0));
 
-	    fluid.setTbase(parse_value(fluid_json, "Tbase", false, 0.0));
-	    fluid.setxbase(parse_value(fluid_json, "xbase", false, 0.0));
+	    fluid->setTbase(parse_value(fluid_json, "Tbase", false, 0.0));
+	    fluid->setxbase(parse_value(fluid_json, "xbase", false, 0.0));
 
 	    /// Setters for the coefficients
-	    if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading coefficients for %s ",fluid.getName().c_str()) << std::endl;
-	    fluid.setDensity(parse_coefficients(fluid_json, "density", true));
-	    fluid.setSpecificHeat(parse_coefficients(fluid_json, "specific_heat", true));
-	    fluid.setViscosity(parse_coefficients(fluid_json, "viscosity", false));
-	    fluid.setConductivity(parse_coefficients(fluid_json, "conductivity", false));
-	    fluid.setPsat(parse_coefficients(fluid_json, "saturation_pressure", false));
-	    fluid.setTfreeze(parse_coefficients(fluid_json, "T_freeze", false));
-	    fluid.setVolToMass(parse_coefficients(fluid_json, "volume2mass", false));
-	    fluid.setMassToMole(parse_coefficients(fluid_json, "mass2mole", false));
+	    if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading coefficients for %s ",fluid->getName().c_str()) << std::endl;
+	    fluid->setDensity(parse_coefficients(fluid_json, "density", true));
+	    fluid->setSpecificHeat(parse_coefficients(fluid_json, "specific_heat", true));
+	    fluid->setViscosity(parse_coefficients(fluid_json, "viscosity", false));
+	    fluid->setConductivity(parse_coefficients(fluid_json, "conductivity", false));
+	    fluid->setPsat(parse_coefficients(fluid_json, "saturation_pressure", false));
+	    fluid->setTfreeze(parse_coefficients(fluid_json, "T_freeze", false));
+	    fluid->setVolToMass(parse_coefficients(fluid_json, "volume2mass", false));
+	    fluid->setMassToMole(parse_coefficients(fluid_json, "mass2mole", false));
 
-	    if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading reference state for %s ",fluid.getName().c_str()) << std::endl;
-	    fluid.set_reference_state(
+	    if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading reference state for %s ",fluid->getName().c_str()) << std::endl;
+	    fluid->set_reference_state(
 			    parse_value(fluid_json, "Tref", false, 25+273.15) ,
 			    parse_value(fluid_json, "pref", false, 1.01325e5) ,
 			    parse_value(fluid_json, "xref", false, 0.0) ,
@@ -457,36 +478,36 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 			    );
 
 	    /// A function to check coefficients and equation types.
-	    fluid.validate();
+	    fluid->validate();
 
 	    // Add name->index mapping
-	    string_to_index_map[fluid.getName()] = index;
+	    string_to_index_map[fluid->getName()] = index;
     }
     catch(std::exception &e)
     {
-        std::cout << format("Unable to load fluid: %s\n", fluid.getName().c_str());
+        std::cout << format("Unable to load fluid: %s\n", fluid->getName().c_str());
         throw;
     }
 
 };
 
-void JSONIncompressibleLibrary::add_obj(IncompressibleFluid fluid_obj) {
+void JSONIncompressibleLibrary::add_obj(IncompressibleFluid* fluid_obj) {
 	_is_empty = false;
 
 	// Get the next index for this fluid
 	std::size_t index = fluid_map.size();
 
 	// Add index->fluid mapping
-	fluid_map[index] = IncompressibleFluid(fluid_obj);
+	fluid_map[index] = fluid_obj;
 
 	// Create an instance of the fluid
-	IncompressibleFluid &fluid = fluid_map[index];
+	//IncompressibleFluid &fluid = fluid_map[index];
 
     /// A function to check coefficients and equation types.
-    fluid.validate();
+    //fluid->validate();
 
     // Add name->index mapping
-    string_to_index_map[fluid.getName()] = index;
+    string_to_index_map[fluid_obj->getName()] = index;
 }
 
 /// Get an IncompressibleFluid instance stored in this library
@@ -515,12 +536,12 @@ IncompressibleFluid& JSONIncompressibleLibrary::get(std::string key) {
  @param key The index of the fluid in the map
  */
 IncompressibleFluid& JSONIncompressibleLibrary::get(std::size_t key) {
-	std::map<std::size_t, IncompressibleFluid>::iterator it;
+	std::map<std::size_t, IncompressibleFluid*>::iterator it;
 	// Try to find it
 	it = fluid_map.find(key);
 	// If it is found
 	if (it != fluid_map.end()) {
-		return it->second;
+		return *(it->second);// (*(*i)).getName()
 	} else {
 		throw ValueError(
 			format("key [%d] was not found in JSONIncompressibleLibrary",key));
@@ -563,7 +584,7 @@ void load_incompressible_library()
     } else{
         try{library.add_many(dd);}catch(std::exception &e){std::cout << e.what() << std::endl;}
     }
-	library.add_obj(LiBrSolution());
+	library.add_obj(new LiBrSolution());
 }
 
 JSONIncompressibleLibrary & get_incompressible_library(void){

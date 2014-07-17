@@ -3,6 +3,7 @@
 #define INCOMPRESSIBLELIBRARY_H
 
 #include "IncompressibleFluid.h"
+//#include "crossplatform_shared_ptr.h"
 
 #include "rapidjson/rapidjson_include.h"
 
@@ -129,37 +130,22 @@ public:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /// A container for the fluid parameters for the incompressible fluids
 /**
 This container holds copies of all of the fluid instances for the fluids that are loaded in incompressible.
 New fluids can be added by passing in a rapidjson::Value instance to the add_one function, or
 a rapidjson array of fluids to the add_many function.
 */
+
+//typedef shared_ptr<IncompressibleFluid> IncompressibleFluidPointer;
+
 class JSONIncompressibleLibrary
 {
     /// Map from CAS code to JSON instance.
 	/** This is not practical for the incomressibles, the CAS may not be
 	 *  defined for blends of heat transfer fluids and solutions.
      */
-    std::map<std::size_t, IncompressibleFluid> fluid_map;
+    std::map<std::size_t, IncompressibleFluid*> fluid_map;
     std::vector<std::string> name_vector;
     std::map<std::string, std::size_t> string_to_index_map;
     bool _is_empty;
@@ -171,14 +157,15 @@ protected:
 
 public:
     // Default constructor;
-    JSONIncompressibleLibrary(){ _is_empty = true;};
+    JSONIncompressibleLibrary();
+    ~JSONIncompressibleLibrary();
 
     bool is_empty(void){ return _is_empty;};
 
     /// Add all the fluid entries in the rapidjson::Value instance passed in
     void add_many(rapidjson::Value &listing);
     void add_one(rapidjson::Value &fluid_json);
-    void add_obj(IncompressibleFluid fluid_obj);
+    void add_obj(IncompressibleFluid* fluid_obj);
 
     /// Get an IncompressibleFluid instance stored in this library
     /**
