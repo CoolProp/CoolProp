@@ -5,8 +5,11 @@ import itertools,scipy.interpolate
 
 import CoolProp.CoolProp as CP
 
-import CPIncomp.PureFluids
 import CPIncomp.DataObjects
+import CPIncomp.CoefficientObjects
+
+import CPIncomp.PureFluids
+import CPIncomp.MelinderFluids
 
 from CPIncomp.WriterObjects import SolutionDataWriter
 from CPIncomp.DataObjects import PureExample, SolutionExample
@@ -24,6 +27,8 @@ def getExampleObjects():
 def getBaseClassNames():
     ignList = []
     for i in inspect.getmembers(CPIncomp.DataObjects):
+        ignList.append(i[0])
+    for i in inspect.getmembers(CPIncomp.CoefficientObjects):
         ignList.append(i[0])
     return ignList
 
@@ -55,7 +60,12 @@ def getCoefficientObjects():
     classes = []
     ignList = getBaseClassNames()
 
-    for name, obj in inspect.getmembers(CPIncomp.CoefficientFluids):
+    for name, obj in inspect.getmembers(CPIncomp.MelinderFluids):
+        if inspect.isclass(obj):
+            #print(name)
+            if not name in ignList: # Ignore the base classes
+                classes += [obj()]
+    for name, obj in inspect.getmembers(CPIncomp.SecCoolFluids):
         if inspect.isclass(obj):
             #print(name)
             if not name in ignList: # Ignore the base classes

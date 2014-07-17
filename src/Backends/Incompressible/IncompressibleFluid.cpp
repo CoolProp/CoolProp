@@ -583,12 +583,13 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		double acc = 0.0001;
 		double T = 273.15+50;
 		double p = 10e5;
+		double x = xref;
 		double val = 0;
 		double res = 0;
 
 		// Compare density
 		val = 824.4615702148608;
-		res = XLT.rho(T,p);
+		res = XLT.rho(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(val);
@@ -598,7 +599,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 		// Compare cp
 		val = 1834.7455527670554;
-		res = XLT.c(T,p);
+		res = XLT.c(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(val);
@@ -608,7 +609,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 		// Compare s
 		val = 145.59157247249246;
-		res = XLT.s(T,p);
+		res = XLT.s(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(val);
@@ -617,7 +618,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		}
 
 		val = 0.0;
-		res = XLT.s(Tref,pref);
+		res = XLT.s(Tref,pref,xref);
 		{
 		CAPTURE(T);
 		CAPTURE(val);
@@ -627,7 +628,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 		// Compare u
 		val = 45212.407309106304;
-		res = XLT.u(T,p);
+		res = XLT.u(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(val);
@@ -635,8 +636,8 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		CHECK( check_abs(val,res,acc) );
 		}
 
-		val = href - pref/XLT.rho(Tref,pref);
-		res = XLT.u(Tref,pref);
+		val = href - pref/XLT.rho(Tref,pref,xref);
+		res = XLT.u(Tref,pref,xref);
 		{
 		CAPTURE(T);
 		CAPTURE(val);
@@ -646,7 +647,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 		// Compare h
 		val = 46425.32011926845;
-		res = XLT.h(T,p);
+		res = XLT.h(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(val);
@@ -655,7 +656,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		}
 
 		val = 0.0;
-		res = XLT.h(Tref,pref);
+		res = XLT.h(Tref,pref,xref);
 		{
 		CAPTURE(T);
 		CAPTURE(val);
@@ -665,7 +666,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 		// Compare v
 		val = 0.0008931435169681835;
-		res = XLT.visc(T,p);
+		res = XLT.visc(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(val);
@@ -675,7 +676,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 		// Compare l
 		val = 0.10410086156049088;
-		res = XLT.cond(T,p);
+		res = XLT.cond(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(val);

@@ -183,23 +183,23 @@ public:
 	 * be necessary, but gives a clearer structure.
 	 */
 	/// Density as a function of temperature, pressure and composition.
-	double rho (double T, double p, double x=0.0);
+	double rho (double T, double p, double x);
 	/// Heat capacities as a function of temperature, pressure and composition.
-	double c   (double T, double p, double x=0.0);
-	double cp  (double T, double p, double x=0.0){return c(T,p,x);};
-	double cv  (double T, double p, double x=0.0){return c(T,p,x);};
+	double c   (double T, double p, double x);
+	double cp  (double T, double p, double x){return c(T,p,x);};
+	double cv  (double T, double p, double x){return c(T,p,x);};
 	/// Entropy as a function of temperature, pressure and composition.
-	double s   (double T, double p, double x=0.0);
+	double s   (double T, double p, double x);
 	/// Internal energy as a function of temperature, pressure and composition.
-	double u   (double T, double p, double x=0.0);
+	double u   (double T, double p, double x);
 	/// Enthalpy as a function of temperature, pressure and composition.
-	double h   (double T, double p, double x=0.0);
+	double h   (double T, double p, double x);
 	/// Viscosity as a function of temperature, pressure and composition.
-	double visc(double T, double p, double x=0.0);
+	double visc(double T, double p, double x);
 	/// Thermal conductivity as a function of temperature, pressure and composition.
-	double cond(double T, double p, double x=0.0);
+	double cond(double T, double p, double x);
 	/// Saturation pressure as a function of temperature and composition.
-	double psat(double T,           double x=0.0);
+	double psat(double T,           double x);
 	/// Freezing temperature as a function of pressure and composition.
 	double Tfreeze(       double p, double x);
 	/// Conversion from volume-based to mass-based composition.
@@ -213,21 +213,21 @@ public:
 	 * done here, but in the backend, T(h,p) for example.
 	 */
 	/// Temperature as a function of density, pressure and composition.
-	double T_rho (double Dmass, double p, double x=0.0);
+	double T_rho (double Dmass, double p, double x);
 	/// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
-	double T_c   (double Cmass, double p, double x=0.0);
+	double T_c   (double Cmass, double p, double x);
 	/// Temperature as a function of entropy as a function of temperature, pressure and composition.
-	double T_s   (double Smass, double p, double x=0.0);
+	double T_s   (double Smass, double p, double x);
 	/// Temperature as a function of internal energy as a function of temperature, pressure and composition.
-	double T_u   (double Umass, double p, double x=0.0);
+	double T_u   (double Umass, double p, double x);
 	/// Temperature as a function of enthalpy, pressure and composition.
-	double T_h   (double Hmass, double p, double x=0.0){throw NotImplementedError(format("%s (%d): T from enthalpy is not implemented in the fluid, use the backend.",__FILE__,__LINE__));}
+	double T_h   (double Hmass, double p, double x){throw NotImplementedError(format("%s (%d): T from enthalpy is not implemented in the fluid, use the backend.",__FILE__,__LINE__));}
 	/// Viscosity as a function of temperature, pressure and composition.
-	double T_visc(double  visc, double p, double x=0.0){throw NotImplementedError(format("%s (%d): T from viscosity is not implemented.",__FILE__,__LINE__));}
+	double T_visc(double  visc, double p, double x){throw NotImplementedError(format("%s (%d): T from viscosity is not implemented.",__FILE__,__LINE__));}
 	/// Thermal conductivity as a function of temperature, pressure and composition.
-	double T_cond(double  cond, double p, double x=0.0){throw NotImplementedError(format("%s (%d): T from conductivity is not implemented.",__FILE__,__LINE__));}
+	double T_cond(double  cond, double p, double x){throw NotImplementedError(format("%s (%d): T from conductivity is not implemented.",__FILE__,__LINE__));}
 	/// Saturation pressure as a function of temperature and composition.
-	double T_psat(double  psat,           double x=0.0){throw NotImplementedError(format("%s (%d): T from psat is not implemented.",__FILE__,__LINE__));}
+	double T_psat(double  psat,           double x){throw NotImplementedError(format("%s (%d): T from psat is not implemented.",__FILE__,__LINE__));}
 	/// Composition as a function of freezing temperature and pressure.
 	double x_Tfreeze(       double Tfreeze, double p){throw NotImplementedError(format("%s (%d): x from T_freeze is not implemented.",__FILE__,__LINE__));}
 
@@ -242,7 +242,7 @@ protected:
 	/** Calculate enthalpy as a function of temperature and
 	 *  pressure employing functions for internal energy and
 	 *  density. Provides consistent formulations. */
-	double h_u(double T, double p, double x=0.0) {
+	double h_u(double T, double p, double x) {
 		return u(T,p,x)+p/rho(T,p,x)-href;
 	};
 
@@ -250,7 +250,7 @@ protected:
 	/** Calculate internal energy as a function of temperature
 	 *  and pressure employing functions for enthalpy and
 	 *  density. Provides consistent formulations. */
-	double u_h(double T, double p, double x=0.0) {
+	double u_h(double T, double p, double x) {
 		return h(T,p,x)-p/rho(T,p,x)+href;
 	};
 
@@ -265,7 +265,7 @@ protected:
 	/** Compares the given temperature T to the result of a
 	 *  freezing point calculation. This is not necessarily
 	 *  defined for all fluids, default values do not cause errors. */
-	bool checkT(double T, double p, double x=0.0);
+	bool checkT(double T, double p, double x);
 
 	/// Check validity of pressure input.
 	/** Compares the given pressure p to the saturation pressure at
@@ -274,16 +274,16 @@ protected:
 	 *  The default value for psat is -1 yielding true if psat
 	 *  is not redefined in the subclass.
 	 *  */
-	bool checkP(double T, double p, double x=0.0);
+	bool checkP(double T, double p, double x);
 
 	/// Check validity of composition input.
 	/** Compares the given composition x to a stored minimum and
 	 *  maximum value. Enforces the redefinition of xmin and
 	 *  xmax since the default values cause an error. */
-	bool checkX(double x=0.0);
+	bool checkX(double x);
 
 	/// Check validity of temperature, pressure and composition input.
-	bool checkTPX(double T, double p, double x=0.0){
+	bool checkTPX(double T, double p, double x){
 		return (checkT(T,p,x) && checkP(T,p,x) && checkX(x));
 	};
 };

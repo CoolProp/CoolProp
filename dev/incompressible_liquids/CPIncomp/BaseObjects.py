@@ -184,15 +184,15 @@ class IncompressibleData(object):
             raise ValueError("Unknown function.")           
         
 
-    def getCoeffs1d(self, x, z, order):
-        if (len(x)<order+1): 
-            raise ValueError("You have only {0} elements and try to fit {1} coefficients, please reduce the order.".format(len(x),order+1))
-        A = np.vander(x,order+1)[:,::-1]
-        #Anew = np.dot(A.T,A)
-        #znew = np.dot(A.T,z)
-        #coeffs = np.linalg.solve(Anew, znew)
-        coeffs, resids, rank, singulars  = np.linalg.lstsq(A, z)
-        return np.reshape(coeffs, (len(x),1))
+#    def getCoeffs1d(self, x, z, order):
+#        if (len(x)<order+1): 
+#            raise ValueError("You have only {0} elements and try to fit {1} coefficients, please reduce the order.".format(len(x),order+1))
+#        A = np.vander(x,order+1)[:,::-1]
+#        #Anew = np.dot(A.T,A)
+#        #znew = np.dot(A.T,z)
+#        #coeffs = np.linalg.solve(Anew, znew)
+#        coeffs, resids, rank, singulars  = np.linalg.lstsq(A, z)
+#        return np.reshape(coeffs, (len(x),1))
             
 
     def getCoeffs2d(self, x_in, y_in, z_in, x_order, y_order):
@@ -316,15 +316,14 @@ class IncompressibleData(object):
                 try:
                     #print func(xData, coeffs_start)
                     # Do the actual fitting
-                    popt, pcov = curve_fit(func, xData, yData, p0=coeffs_start)
-                    #print popt 
-                    #print pcov
+                    popt, pcov = curve_fit(func, xData, yData, p0=coeffs_start)                    
                     if np.any(popt!=coeffs_start):
                         success = True
 #                        print "Fit succeeded for "+fit[counter]+": "
 #                        print "data: {0}, func: {1}".format(yData[ 2],func(xData[ 2], popt))
 #                        print "data: {0}, func: {1}".format(yData[ 6],func(xData[ 6], popt))
 #                        print "data: {0}, func: {1}".format(yData[-1],func(xData[-1], popt))
+                        if self.DEBUG: print("Estimated covariance of parameters: ".format(pcov))
                         return popt
                     else:
                         print("Fit failed for "+fit[counter]+": ")
