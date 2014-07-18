@@ -83,7 +83,8 @@ class IncompressibleData(object):
         return np.polynomial.polynomial.polyval(x-offset, coeffs)
     
 
-    def shapeArray(self, array, axs=0):
+    @staticmethod
+    def shapeArray(array, axs=0):
         """
         A function that promotes a 1D array to 2D and 
         also returns the columns and rows.

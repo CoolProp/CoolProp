@@ -493,6 +493,16 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		}
 	}
 
+	//std::string name("INCOMP::TCO");
+	double T   =  50 + 273.15;
+	double p   = 10e5;
+	double x   = 0.3;
+
+//	std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::TCO",std::vector<double>(1,x)) << std::endl;
+//	std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::LiBr",std::vector<double>(1,x)) << std::endl;
+//	std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::NaK",std::vector<double>(1,x)) << std::endl;
+
+
 
 //	SECTION("Tests for the hardcoded fluids") {
 //

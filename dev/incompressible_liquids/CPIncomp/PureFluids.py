@@ -161,38 +161,7 @@ class Texatherm22(PureData):
         self.description = "Texatherm22"
         self.reference   = "Texaco data sheet"
         self.reshapeAll()
-    
-    
-class NitrateSalt(PureData):
-    """ 
-    Heat transfer fluid based on 60% NaNO3 and 40% KNO3
-    """
-    def __init__(self):
-        PureData.__init__(self) 
-        temp = np.linspace(300, 600, 25) # Celsius temperaure
-        def f_rho( T_C):
-            return 2090 - 0.636 * T_C
-        def f_cp( T_C):
-            return 1443 + 0.172 * T_C
-        def f_mu( T_C):
-            return 22.714 - 0.120 * T_C + 2.281 * 1e-4 * T_C*T_C - 1.474 * 1e-7 * T_C*T_C*T_C 
-        def f_lam( T_C):
-            return 0.443 + 1.9e-4 * T_C 
-        self.temperature.data       = temp + 273.15   # Kelvin
-        self.density.data = f_rho(temp)     # kg/m3
-        self.specific_heat.data = f_cp(temp)*1e3  # J/kg-K
-        self.conductivity.data = f_lam(temp)     # W/m-K
-        # Viscosity: Pa-s (dynamic = kinematic * rho)
-        # mm2/s /1e6 -> m2/s * kg/m3 = kg/s/m = Pa s 
-        self.viscosity.data = f_mu(temp)/1e3 
-        self.Tmin        = np.min(self.temperature.data)
-        self.Tmax        = np.max(self.temperature.data)
-        self.TminPsat    = self.Tmax 
-        self.name        = "NaK" 
-        self.description = "NitrateSalt"
-        self.reference   = "Solar Power Tower Design Basis Document,  Alexis B. Zavoico, Sandia Labs, USA"
-        self.reshapeAll()
-    
+            
 
 class SylthermXLT(PureData):
     """ 

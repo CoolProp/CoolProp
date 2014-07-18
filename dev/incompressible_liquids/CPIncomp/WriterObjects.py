@@ -7,6 +7,9 @@ import CPIncomp.CoefficientObjects as CO
 
 from CoolProp.CoolProp import FluidsList
 import CoolProp.CoolProp as CP
+import hashlib
+import os, CPIncomp
+import json
 
 class SolutionDataWriter(object):
     """ 
@@ -126,9 +129,30 @@ class SolutionDataWriter(object):
 #        except errList as ve:
 #            if self.verbose: print(name, ": Could not fit M2M coefficients: ", ve)
 #            pass
-        
+
+    def get_hash(self,data):
+        return hashlib.sha224(data).hexdigest()
     
-    def toJSON(self,data):
+    def get_hash_file(self):
+        return os.path.join(CPIncomp.__path__[0], 'data', "hashes.json")
+    
+    def load_hashes(self):
+        hashes_fname = self.get_hash_file()
+        if os.path.exists(hashes_fname):
+            hashes = json.load(open(hashes_fname,'r'))
+        else:
+            hashes = dict()
+        return hashes
+    
+    def write_hashes(self, hashes):
+        hashes_fname = self.get_hash_file()
+        fp = open(hashes_fname,'w')
+        fp.write(json.dumps(hashes))
+        fp.close()
+        return True
+            
+    
+    def toJSON(self,data,quiet=False):
         jobj = {}
         
         jobj['name'] = data.name # Name of the current fluid
@@ -153,21 +177,34 @@ class SolutionDataWriter(object):
         jobj['T_freeze'] = data.T_freeze.toJSON() # Freezing temperature in K
         jobj['volume2mass'] = data.volume2mass.toJSON() # dd
         jobj['mass2mole'] = data.mass2mole.toJSON() # dd
-        
-        import json
-        
-        
+               
         original_float_repr = json.encoder.FLOAT_REPR 
-        json.encoder.FLOAT_REPR = lambda o: format(o, ' .15e') 
         #print json.dumps(1.0001) 
+        json.encoder.FLOAT_REPR = lambda o: format(o, ' .8e') 
         dump = json.dumps(jobj, indent = 2, sort_keys = True)
         json.encoder.FLOAT_REPR = original_float_repr
         
         #print dump
+        hashes = self.load_hashes()
+        hash   = self.get_hash(dump)
+        
+        name = jobj['name']
+               
+        if name not in hashes or \
+          hashes[name] != hash: # update hashes and write file
+            
+            hashes[name] = hash
+            self.write_hashes(hashes)           
+            
+            fp = open(name+'.json', 'w')
+            fp.write(dump)
+            fp.close()
+            
+            if not quiet: print(" ({0})".format("w"), end="")
+        else:
+            if not quiet: print(" ({0})".format("i"), end="")
                 
-        fp = open(jobj['name']+'.json', 'w')
-        fp.write(dump)
-        fp.close()
+        
         
         
         

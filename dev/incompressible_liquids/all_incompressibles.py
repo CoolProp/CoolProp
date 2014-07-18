@@ -68,7 +68,6 @@ def getDigitalDataObjects():
     return classes 
 
 def getCoefficientObjects():
-    return []
     classes = []
     ignList = getBaseClassNames()
 
@@ -77,11 +76,11 @@ def getCoefficientObjects():
             #print(name)
             if not name in ignList: # Ignore the base classes
                 classes += [obj()]
-    for name, obj in inspect.getmembers(CPIncomp.SecCoolFluids):
-        if inspect.isclass(obj):
-            #print(name)
-            if not name in ignList: # Ignore the base classes
-                classes += [obj()]
+#    for name, obj in inspect.getmembers(CPIncomp.SecCoolFluids):
+#        if inspect.isclass(obj):
+#            #print(name)
+#            if not name in ignList: # Ignore the base classes
+#                classes += [obj()]
     return classes 
 
 
@@ -101,6 +100,24 @@ def fitFluidList(fluidObjs):
             print(obj)
             print(e)
             pass 
+    return
+
+def writeFluidList(fluidObjs):
+    for obj in fluidObjs:
+        if obj==fluidObjs[0]:
+            print("{0}".format(obj.name), end="")
+        elif obj==fluidObjs[-1]:
+            print(", {0}".format(obj.name), end="")
+        else:
+            print(", {0}".format(obj.name), end="")
+            
+        try: 
+            writer.toJSON(obj)
+        except (TypeError, ValueError) as e:
+            print("An error occurred for fluid: {0}".format(obj.name))
+            print(obj)
+            print(e)
+            pass 
     return 
 
 if __name__ == '__main__':   
@@ -113,30 +130,39 @@ if __name__ == '__main__':
         
     dataObjs += getExampleCoef()
     for obj in dataObjs:
-        writer.toJSON(obj)
+        writer.toJSON(obj,quiet=True)
         
     # If the examples did not cause any errors, 
     # we can proceed to the real data.
+    doneObjs = []
     dataObjs = getPureDataObjects()
     print("Fitting pure fluids:", end="")
     fitFluidList(dataObjs)
     print(" ... done")
-    for obj in dataObjs:
-        writer.toJSON(obj)
+    doneObjs += dataObjs[:]
     
     dataObjs = getSolutionDataObjects()
     print("Fitting solutions:", end="")
     fitFluidList(dataObjs)
     print(" ... done")
-    for obj in dataObjs:
-        writer.toJSON(obj)
+    doneObjs += dataObjs[:]
     
     dataObjs = getDigitalDataObjects()
     print("Fitting digital fluids:", end="")
     fitFluidList(dataObjs)
     print(" ... done")
-    for obj in dataObjs:
-        writer.toJSON(obj)
+    doneObjs += dataObjs[:]
+    
+    
+        
+    doneObjs += getCoefficientObjects()[:]
+    
+    
+    print("Writing coefficients for fluids: ", end="")
+    print("FluidName (w) | (i) -> (w)=written, (i)=ignored")
+    writeFluidList(doneObjs)
+    print(" ... done")
+
 
     
 #    data = SecCoolExample()    

@@ -194,11 +194,12 @@ class DigitalData(SolutionData):
     
     def getFromFile(self, data):
         fullPath = self.getFile(data)
-        return np.loadtxt(fullPath)
+        _,_,res = IncompressibleData.shapeArray(np.loadtxt(fullPath))
+        return res 
     
     def writeToFile(self, data, array):
         fullPath = self.getFile(data)
-        return np.savetxt(fullPath, array, fmt='%1.5e')
+        return np.savetxt(fullPath, array, fmt='%1.8e')
     
     def getTrange(self):
         if self.Tmin<self.Tmax:
