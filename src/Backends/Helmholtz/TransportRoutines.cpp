@@ -273,7 +273,7 @@ long double TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBack
 
 long double TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
 {
-    long double Tr = HEOS.T()/33.145, rhor = HEOS.keyed_output(CoolProp::iDmass)/90.5;
+    long double Tr = HEOS.T()/33.145, rhor = HEOS.keyed_output(CoolProp::iDmass)*0.011;
     long double c[] = {0, 6.43449673e-6, 4.56334068e-2, 2.32797868e-1, 9.58326120e-1, 1.27941189e-1, 3.63576595e-1};
     return c[1]*pow(rhor,2)*exp(c[2]*Tr+c[3]/Tr+c[4]*pow(rhor,2)/(c[5]+Tr)+c[6]*pow(rhor,6));
 }
