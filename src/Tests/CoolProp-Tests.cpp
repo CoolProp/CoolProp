@@ -30,7 +30,7 @@ public:
 
 vel viscosity_validation_data[] = {
 // From Vogel, JPCRD, 1998
-vel("Propane", "T", 90, "Dmolar", 16.52e3, "V", 7388e-6, 1e-3),
+vel("Propane", "T", 90, "Dmolar", 16.52e3, "V", 7388e-6, 1e-3),  
 vel("Propane", "T", 150, "Dmolar", 15.14e3, "V", 656.9e-6, 5e-3),
 vel("Propane", "T", 600, "Dmolar", 10.03e3, "V", 73.92e-6, 5e-3),
 vel("Propane", "T", 280, "Dmolar", 11.78e3, "V", 117.4e-6,1e-3),
@@ -62,7 +62,7 @@ vel("Ethanol", "T", 500, "Q", 1, "V", 1.7229157141572511e-005, 1e-3),
 
 // From CoolProp v5 implementation of correlation - more or less agrees with REFPROP
 // Errata in BibTeX File
-vel("Hydrogen", "T", 35, "Dmass", 100, "V", 5.6658815444656859e-005, 1e-3),
+vel("Hydrogen", "T", 35, "Dmass", 100, "V", 5.47889e-005, 1e-3), 
 
 // From Meng 2012 experimental data (note erratum in BibTeX file)
 vel("DimethylEther", "T", 253.146, "Dmass", 734.28, "V", 0.20444e-3, 3e-3),
@@ -309,7 +309,7 @@ vel("Hydrogen", "T", 298.15, "Dmass", 1e-13, "L", 185.67e-3, 1e-4),
 vel("Hydrogen", "T", 298.15, "Dmass", 0.80844, "L", 186.97e-3, 1e-4),
 vel("Hydrogen", "T", 298.15, "Dmass", 14.4813, "L", 201.35e-3, 1e-4),
 vel("Hydrogen", "T", 35, "Dmass", 1e-13, "L", 26.988e-3, 1e-4),
-vel("Hydrogen", "T", 35, "Dmass", 30, "L", 75.594e-3, 1e-4),
+vel("Hydrogen", "T", 35, "Dmass", 30, "L", 0.0770177, 1e-4), // Updated since Assael uses a different viscosity correlation
 vel("Hydrogen", "T", 18, "Dmass", 1e-13, "L", 13.875e-3, 1e-4),
 vel("Hydrogen", "T", 18, "Dmass", 75, "L", 104.48e-3, 1e-4),
 /*vel("ParaHydrogen", "T", 298.15, "Dmass", 1e-13, "L", 192.38e-3, 1e-4),
@@ -339,7 +339,7 @@ vel("n-Dodecane", "T", 500, "Dmolar", 3444.7, "L", 0.09384, 1e-4),
 vel("n-Dodecane", "T", 660, "Dmolar", 1500.98, "L", 0.090346, 1e-4),
 
 // From REFPROP 9.1 since no data provided in Marsh, 2002
-vel("n-Propane", "T", 368, "Q", 0, "L", 0.07282154952457,1e-4),
+vel("n-Propane", "T", 368, "Q", 0, "L", 0.07282154952457,1e-3),
 vel("n-Propane", "T", 368, "Dmolar", 1e-10, "L", 0.0266135388745317,1e-4),
 
 // From Perkins, JCED, 2011
