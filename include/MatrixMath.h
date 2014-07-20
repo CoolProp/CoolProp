@@ -10,7 +10,7 @@
 #include <sstream>
 #include "float.h"
 
-#include <Eigen/Core>
+#include "Eigen/Core"
 
 /// A wrapper around std::vector
 /** This wrapper makes the standard vector multi-dimensional.
@@ -141,6 +141,42 @@ template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(c
 }
 
 
+/// Convert 1D matrix to vector
+/** Returns either a row- or a column-based
+ *  vector. By default, Eigen prefers column
+ *  major ordering, just like Fortran.
+ */
+template< class T> Eigen::Matrix<T,Eigen::Dynamic,1> makeVector(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix) {
+	return makeColVector(matrix);
+}
+template< class T> Eigen::Matrix<T,Eigen::Dynamic,1> makeColVector(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix){
+	std::size_t r = matrix.rows();
+	std::size_t c = matrix.cols();
+	Eigen::Matrix<T,Eigen::Dynamic,1> vector;
+	if (r==1&&c>=1) { // Check passed, matrix can be transformed
+		vector = matrix.transpose().block(0,0,c,r);
+	} else if ( r>=1&&c==1) { // Check passed, matrix can be transformed
+		vector = matrix.block(0,0,r,c);
+	} else { // Check failed, throw error
+		throw ValueError(format("Your matrix (%d,%d) cannot be converted into a vector (x,1).",r,c));
+	}
+	return vector;
+}
+template< class T> Eigen::Matrix<T,1,Eigen::Dynamic> makeRowVector(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix){
+	std::size_t r = matrix.rows();
+	std::size_t c = matrix.cols();
+	Eigen::Matrix<T,1,Eigen::Dynamic> vector;
+	if (r==1&&c>=1) { // Check passed, matrix can be transformed
+		vector = matrix.block(0,0,r,c);
+	} else if ( r>=1&&c==1) { // Check passed, matrix can be transformed
+		vector = matrix.transpose().block(0,0,c,r);
+	} else { // Check failed, throw error
+		throw ValueError(format("Your matrix (%d,%d) cannot be converted into a vector (1,x).",r,c));
+	}
+	return vector;
+}
+
+
 /// Remove rows and columns from matrices
 /** A set of convenience functions inspired by http://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c
  *  but altered to respect templates.
@@ -247,6 +283,10 @@ template <class T> void removeColumn(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynam
 
 
 
+
+
+
+
 /// Templates for printing numbers, vectors and matrices
 static const char* stdFmt = "%8.3f";
 
@@ -262,7 +302,7 @@ template<class T> std::string vec_to_string(const             std::vector<T>   &
     return out.str();
 };
 template<class T> std::string vec_to_string(const             std::vector<T>   &a) {
-	return vec_to_string(a, stdFmt);
+	return vec_to_string(std::vector<double>(a.begin(), a.end()), stdFmt);
 };
 
 /// Templates for turning numbers (0D-matrices) into strings
@@ -272,7 +312,7 @@ template<class T> std::string vec_to_string(const                         T    &
 	return vec_to_string(vec, fmt);
 };
 template<class T> std::string vec_to_string(const                         T    &a) {
-	return vec_to_string(a, stdFmt);
+	return vec_to_string((double) a, stdFmt);
 };
 
 ///Templates for turning 2D-matrices into strings
@@ -316,6 +356,93 @@ template <class T> std::string mat_to_string(const Eigen::Matrix<T,Eigen::Dynami
 //std::string vec_to_string(const Eigen::MatrixXd &A) {
 	return mat_to_string(A, stdFmt);
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///// Templates for printing numbers, vectors and matrices
+//static const char* stdFmt = "%8.3f";
+//
+/////Templates for turning vectors (1D-matrices) into strings
+//template<class T> std::string vec_to_string(const             std::vector<T>   &a, const char *fmt) {
+//	if (a.size()<1) return std::string("");
+//	std::stringstream out;
+//	out << "[ " << format(fmt,a[0]);
+//	for (size_t j = 1; j < a.size(); j++) {
+//		out << ", " << format(fmt, a[j]);
+//    }
+//	out << " ]";
+//    return out.str();
+//};
+//template<class T> std::string vec_to_string(const             std::vector<T>   &a) {
+//	return vec_to_string(a, stdFmt);
+//};
+//
+///// Templates for turning numbers (0D-matrices) into strings
+//template<class T> std::string vec_to_string(const                         T    &a, const char *fmt) {
+//	std::vector<T> vec;
+//	vec.push_back(a);
+//	return vec_to_string(vec, fmt);
+//};
+//template<class T> std::string vec_to_string(const                         T    &a) {
+//	return vec_to_string(a, stdFmt);
+//};
+//
+/////Templates for turning 2D-matrices into strings
+//template<class T> std::string vec_to_string(const std::vector<std::vector<T> > &A, const char *fmt) {
+//	if (A.size()<1) return std::string("");
+//	std::stringstream out;
+//	out << "[ " << vec_to_string(A[0], fmt);
+//	for (size_t j = 1; j < A.size(); j++) {
+//		out << ", " << std::endl << "  " << vec_to_string(A[j], fmt);
+//    }
+//	out << " ]";
+//    return out.str();
+//};
+//template<class T> std::string vec_to_string(const std::vector<std::vector<T> > &A) {
+//	return vec_to_string(A, stdFmt);
+//};
+//
+/////Templates for turning Eigen matrices into strings
+//template <class T>  std::string mat_to_string(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &A, const char *fmt) {
+////std::string mat_to_string(const Eigen::MatrixXd &A, const char *fmt) {
+//	std::size_t r = A.rows();
+//	std::size_t c = A.cols();
+//	if ((r<1)||(c<1)) return std::string("");
+//	std::stringstream out;
+//	out << "[ ";
+//	if (r==1) {
+//		out << format(fmt, A(0,0));
+//		for (size_t j = 1; j < c; j++) {
+//			out << ", " << format(fmt, A(0,j));
+//		}
+//	} else {
+//		out << mat_to_string(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(A.row(0)), fmt);
+//		for (size_t i = 1; i < r; i++) {
+//			out << ", " << std::endl << "  " << mat_to_string(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(A.row(i)), fmt);
+//		}
+//	}
+//	out << " ]";
+//    return out.str();
+//};
+//template <class T> std::string mat_to_string(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &A) {
+////std::string vec_to_string(const Eigen::MatrixXd &A) {
+//	return mat_to_string(A, stdFmt);
+//};
 
 /// Template class for turning numbers (0D-matrices) into strings
 //template<class T> std::string vec_to_string(const             T  &a){

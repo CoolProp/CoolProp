@@ -5,6 +5,7 @@
  *      Author: jowr
  */
 
+#include <stdlib.h>
 #include "math.h"
 #include "AbstractState.h"
 #include "Backends/REFPROP/REFPROPBackend.h"
@@ -43,7 +44,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     }
     else if (!backend.compare("INCOMP"))
     {
-        return new IncompressibleBackend(fluid_string);
+		return new IncompressibleBackend(fluid_string);
     }
     else if (!backend.compare("BRINE"))
     {

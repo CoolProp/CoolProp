@@ -1,0 +1,75 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  0.00000000e+00, 
+  "Tmax":  3.73150000e+02, 
+  "Tmin":  1.93150000e+02, 
+  "TminPsat":  3.73150000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         1.74156000e-04
+      ], 
+      [
+        -1.85052000e-07
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         1.07102000e+03
+      ], 
+      [
+        -7.78166000e-01
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Terpene from citrus oils - d-Limonene", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "TCO", 
+  "reference": "Melinder-BOOK-2010", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         2.23775000e+02
+      ], 
+      [
+         5.21590000e+00
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+        -3.47971000e+00
+      ], 
+      [
+        -1.07031000e-02
+      ], 
+      [
+         1.14086000e-06
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.00000000e+00, 
+  "xmax":  1.00000000e+00, 
+  "xmin":  0.00000000e+00
+}

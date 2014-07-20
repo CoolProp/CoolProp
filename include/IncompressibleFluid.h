@@ -31,7 +31,9 @@ struct IncompressibleData {
 		INCOMPRESSIBLE_NOT_SET,
 		INCOMPRESSIBLE_POLYNOMIAL,
 		INCOMPRESSIBLE_EXPONENTIAL,
-		INCOMPRESSIBLE_EXPPOLYNOMIAL
+		INCOMPRESSIBLE_EXPPOLYNOMIAL,
+		INCOMPRESSIBLE_EXPOFFSET,
+		INCOMPRESSIBLE_POLYOFFSET
 	};
 	Eigen::MatrixXd coeffs; //TODO: Can we store the Eigen::Matrix objects more efficiently?
 	//std::vector<std::vector<double> > coeffs;
@@ -47,6 +49,8 @@ This fluid instance is populated using an entry from a JSON file
 class IncompressibleFluid{
 
 protected:
+	bool strict;
+
 	std::string name;
 	std::string description;
 	std::string reference;
@@ -60,13 +64,53 @@ protected:
 	double uref, rhoref;
 	double xbase, Tbase;
 
+	/// These are the objects that hold the coefficients
+	/** Note that all polynomials require a 2-dimensional array
+	 *  of coefficients. This array may have only one row or
+	 *  column, but the structure should be 2D. This behaviour is
+	 *  hard-coded in the JSON file reader that resides inside
+	 *  the IncompressibleLibrary.cpp
+	 *  All other functions, also polyoffset, can only handle 1D
+	 *  input and throw an error if you feed them other coefficients.
+	 */
+
+	/// Density coefficients
+	/** If 2D, the rows are temperature and the columns are concentration.
+	 *  If 1D, should be a column vector of temperature coefficients
+	 */
 	IncompressibleData density;
+	/// Specific heat coefficients
+	/** If 2D, the rows are temperature and the columns are concentration.
+	 *  If 1D, should be a column vector of temperature coefficients
+	 *  Fails for all other forms than polynomial due to the automatic
+	 *  integration for internal energy and entropy.
+	 */
 	IncompressibleData specific_heat;
+	/// Viscosity coefficients
+	/** If 2D, the rows are temperature and the columns are concentration.
+	 *  If 1D, should be a column vector of temperature coefficients
+	 */
 	IncompressibleData viscosity;
+	/// Conductivity coefficients
+	/** If 2D, the rows are temperature and the columns are concentration.
+	 *  If 1D, should be a column vector of temperature coefficients
+	 */
 	IncompressibleData conductivity;
+	/// Saturation pressure coefficients
+	/** If 2D, the rows are temperature and the columns are concentration.
+	 *  If 1D, should be a column vector of temperature coefficients
+	 */
 	IncompressibleData p_sat;
+	/// Freezing temperature coefficients
+	/** If 2D, the rows are concentration and the columns are pressure.
+	 *  If 1D, should be a column vector of concentration coefficients
+	 */
 	IncompressibleData T_freeze;
+	/// Volume to mass fraction coefficients
+	/** Not implemented, yet */
 	IncompressibleData volToMass;
+	/// Mass to mole fraction coefficients
+	/** Not implemented, yet */
 	IncompressibleData massToMole;
 
 	Polynomial2DFrac poly;
@@ -76,7 +120,7 @@ protected:
 	//double u_h(double T, double p, double x);
 
 public:
-	IncompressibleFluid(){};
+	IncompressibleFluid(){strict = true;};
 	virtual ~IncompressibleFluid(){};
 
 	std::string getName() const {return name;}
@@ -124,40 +168,68 @@ public:
 
 	/// A function to check coefficients and equation types.
 	void validate();
+	/// A function to test the density coefficients for 1D or 2D
+	bool is_pure();
 
 
 protected:
-	/// Base function that handles the custom data type, just a place holder to show the structure.
-	double baseFunction(IncompressibleData data, double x_in, double y_in);
+	/// Base functions that handle the custom function types
+	double baseExponential(IncompressibleData data, double y, double ybase);
+	double baseExponentialOffset(IncompressibleData data, double y);
+	double basePolyOffset(IncompressibleData data, double y, double z=0.0);
 
 public:
 	/* All functions need T and p as input. Might not
 	 * be necessary, but gives a clearer structure.
 	 */
 	/// Density as a function of temperature, pressure and composition.
-	double rho (double T, double p, double x=0.0){return baseFunction(density, T, x);};
+	double rho (double T, double p, double x);
 	/// Heat capacities as a function of temperature, pressure and composition.
-	double c   (double T, double p, double x=0.0){return baseFunction(specific_heat, T, x);};
-	double cp  (double T, double p, double x=0.0){return c(T,p,x);};
-	double cv  (double T, double p, double x=0.0){return c(T,p,x);};
+	double c   (double T, double p, double x);
+	double cp  (double T, double p, double x){return c(T,p,x);};
+	double cv  (double T, double p, double x){return c(T,p,x);};
 	/// Entropy as a function of temperature, pressure and composition.
 	double s   (double T, double p, double x);
 	/// Internal energy as a function of temperature, pressure and composition.
 	double u   (double T, double p, double x);
 	/// Enthalpy as a function of temperature, pressure and composition.
-	double h   (double T, double p, double x=0.0){return h_u(T,p,x);};
+	double h   (double T, double p, double x);
 	/// Viscosity as a function of temperature, pressure and composition.
-	double visc(double T, double p, double x=0.0){return baseFunction(viscosity, T, x);};
+	double visc(double T, double p, double x);
 	/// Thermal conductivity as a function of temperature, pressure and composition.
-	double cond(double T, double p, double x=0.0){return baseFunction(conductivity, T, x);};
+	double cond(double T, double p, double x);
 	/// Saturation pressure as a function of temperature and composition.
-	double psat(double T,           double x=0.0){return baseFunction(p_sat, T, x);};
+	double psat(double T,           double x);
 	/// Freezing temperature as a function of pressure and composition.
 	double Tfreeze(       double p, double x);
 	/// Conversion from volume-based to mass-based composition.
 	double V2M (double T,           double y);
 	/// Conversion from mass-based to mole-based composition.
 	double M2M (double T,           double x);
+
+	/* Some functions can be inverted directly, those are listed
+	 * here. It is also possible to solve for other quantities, but
+	 * that involves some more sophisticated processing and is not
+	 * done here, but in the backend, T(h,p) for example.
+	 */
+	/// Temperature as a function of density, pressure and composition.
+	double T_rho (double Dmass, double p, double x);
+	/// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
+	double T_c   (double Cmass, double p, double x);
+	/// Temperature as a function of entropy as a function of temperature, pressure and composition.
+	double T_s   (double Smass, double p, double x);
+	/// Temperature as a function of internal energy as a function of temperature, pressure and composition.
+	double T_u   (double Umass, double p, double x);
+	/// Temperature as a function of enthalpy, pressure and composition.
+	double T_h   (double Hmass, double p, double x){throw NotImplementedError(format("%s (%d): T from enthalpy is not implemented in the fluid, use the backend.",__FILE__,__LINE__));}
+	/// Viscosity as a function of temperature, pressure and composition.
+	double T_visc(double  visc, double p, double x){throw NotImplementedError(format("%s (%d): T from viscosity is not implemented.",__FILE__,__LINE__));}
+	/// Thermal conductivity as a function of temperature, pressure and composition.
+	double T_cond(double  cond, double p, double x){throw NotImplementedError(format("%s (%d): T from conductivity is not implemented.",__FILE__,__LINE__));}
+	/// Saturation pressure as a function of temperature and composition.
+	double T_psat(double  psat,           double x){throw NotImplementedError(format("%s (%d): T from psat is not implemented.",__FILE__,__LINE__));}
+	/// Composition as a function of freezing temperature and pressure.
+	double x_Tfreeze(       double Tfreeze, double p){throw NotImplementedError(format("%s (%d): x from T_freeze is not implemented.",__FILE__,__LINE__));}
 
 
 protected:
@@ -211,7 +283,9 @@ protected:
 	bool checkX(double x);
 
 	/// Check validity of temperature, pressure and composition input.
-	bool checkTPX(double T, double p, double x);
+	bool checkTPX(double T, double p, double x){
+		return (checkT(T,p,x) && checkP(T,p,x) && checkX(x));
+	};
 };
 
 } /* namespace CoolProp */

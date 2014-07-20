@@ -1,0 +1,75 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  0.00000000e+00, 
+  "Tmax":  3.73150000e+02, 
+  "Tmin":  1.93150000e+02, 
+  "TminPsat":  3.73150000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         9.92958000e-05
+      ], 
+      [
+        -8.33333000e-08
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         1.82237000e+03
+      ], 
+      [
+        -9.18485000e-01
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Hydrofluoroether - HFE-7100 3M Novec", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "HFE", 
+  "reference": "Melinder-BOOK-2010", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         8.71834000e+02
+      ], 
+      [
+         8.58788000e+05
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+        -4.22878000e+00
+      ], 
+      [
+        -1.14765000e-02
+      ], 
+      [
+         7.39823000e-06
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.00000000e+00, 
+  "xmax":  1.00000000e+00, 
+  "xmin":  0.00000000e+00
+}

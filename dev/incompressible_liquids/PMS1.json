@@ -1,0 +1,75 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  0.00000000e+00, 
+  "Tmax":  3.73150000e+02, 
+  "Tmin":  1.93150000e+02, 
+  "TminPsat":  3.73150000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         2.07526000e-04
+      ], 
+      [
+        -2.84167000e-07
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         1.17235000e+03
+      ], 
+      [
+        -9.02500000e-01
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Polydimethylsiloxan 1. - Baysilone KT3", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "PMS1", 
+  "reference": "Melinder-BOOK-2010", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         1.22369000e+03
+      ], 
+      [
+         1.48417000e+00
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+         6.36183000e+00
+      ], 
+      [
+        -6.36352000e-02
+      ], 
+      [
+         7.51428000e-05
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.00000000e+00, 
+  "xmax":  1.00000000e+00, 
+  "xmin":  0.00000000e+00
+}

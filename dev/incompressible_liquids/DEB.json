@@ -1,0 +1,75 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  0.00000000e+00, 
+  "Tmax":  3.73150000e+02, 
+  "Tmin":  1.93150000e+02, 
+  "TminPsat":  3.73150000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         1.89132000e-04
+      ], 
+      [
+        -2.06364000e-07
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         1.07650000e+03
+      ], 
+      [
+        -7.31182000e-01
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Diethylbenzene mixture - Dowtherm J Dow Chemical Co.", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "DEB", 
+  "reference": "Melinder-BOOK-2010", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         9.99729000e+02
+      ], 
+      [
+         2.87576000e+00
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+         3.55030000e+00
+      ], 
+      [
+        -5.66396000e-02
+      ], 
+      [
+         7.03331000e-05
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.00000000e+00, 
+  "xmax":  1.00000000e+00, 
+  "xmin":  0.00000000e+00
+}

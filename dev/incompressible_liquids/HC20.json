@@ -1,0 +1,109 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  3.68150000e+02, 
+  "Tmax":  4.83150000e+02, 
+  "Tmin":  2.53150000e+02, 
+  "TminPsat":  2.93150000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         5.98000000e-01
+      ], 
+      [
+         1.00000000e-03
+      ], 
+      [
+         0.00000000e+00
+      ], 
+      [
+         2.49881741e-20
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         1.19828453e+03
+      ], 
+      [
+        -5.18276259e-01
+      ], 
+      [
+         1.01854667e-05
+      ], 
+      [
+        -2.85275647e-08
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Dynalene HC20", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "HC20", 
+  "reference": "Dynalene data sheet", 
+  "saturation_pressure": {
+    "coeffs": [
+      [
+         1.10194719e+01
+      ], 
+      [
+         3.82431220e-02
+      ], 
+      [
+        -1.11776551e-04
+      ], 
+      [
+         1.45813894e-07
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         3.38861976e+03
+      ], 
+      [
+         2.35998385e+00
+      ], 
+      [
+        -7.60109456e-06
+      ], 
+      [
+         1.87681389e-09
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+        -7.11990336e+00
+      ], 
+      [
+        -1.03132604e-02
+      ], 
+      [
+         2.99793275e-05
+      ], 
+      [
+        -7.45714276e-08
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.00000000e+00, 
+  "xmax":  1.00000000e+00, 
+  "xmin":  0.00000000e+00
+}

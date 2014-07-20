@@ -1,0 +1,109 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  3.45650000e+02, 
+  "Tmax":  5.03150000e+02, 
+  "Tmin":  1.88150000e+02, 
+  "TminPsat":  1.88150000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         1.01425318e-01
+      ], 
+      [
+        -1.71241181e-04
+      ], 
+      [
+        -1.60843189e-07
+      ], 
+      [
+         4.55571186e-12
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         7.24017423e+02
+      ], 
+      [
+        -7.56835748e-01
+      ], 
+      [
+        -5.53324364e-04
+      ], 
+      [
+        -1.54981135e-06
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "TherminolD12", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "TD12", 
+  "reference": "Therminol Heat Transfer Reference Disk", 
+  "saturation_pressure": {
+    "coeffs": [
+      [
+         7.66531271e+00
+      ], 
+      [
+         4.72055866e-02
+      ], 
+      [
+        -2.78326934e-04
+      ], 
+      [
+         1.18283696e-06
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         2.30099064e+03
+      ], 
+      [
+         4.02981559e+00
+      ], 
+      [
+         1.44248896e-03
+      ], 
+      [
+         2.34355760e-06
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+        -7.56694361e+00
+      ], 
+      [
+        -8.91007738e-03
+      ], 
+      [
+         8.65428898e-05
+      ], 
+      [
+        -5.74823539e-07
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.00000000e+00, 
+  "xmax":  1.00000000e+00, 
+  "xmin":  0.00000000e+00
+}

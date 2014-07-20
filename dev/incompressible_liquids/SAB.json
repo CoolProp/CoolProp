@@ -1,0 +1,75 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  0.00000000e+00, 
+  "Tmax":  3.73150000e+02, 
+  "Tmin":  1.93150000e+02, 
+  "TminPsat":  3.73150000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         2.08374000e-04
+      ], 
+      [
+        -2.61667000e-07
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         1.10234000e+03
+      ], 
+      [
+        -8.01667000e-01
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Synthetic alkyl benzene - Marlotherm X", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "SAB", 
+  "reference": "Melinder-BOOK-2010", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         1.36094000e+03
+      ], 
+      [
+         1.51667000e+00
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+         5.21288000e+00
+      ], 
+      [
+        -6.65792000e-02
+      ], 
+      [
+         8.50660000e-05
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.00000000e+00, 
+  "xmax":  1.00000000e+00, 
+  "xmin":  0.00000000e+00
+}

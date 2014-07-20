@@ -22,6 +22,9 @@ public:
     virtual ~IncompressibleBackend(){};
 
     /// The instantiator
+    /// @param fluid object, mostly for testing purposes
+    IncompressibleBackend(IncompressibleFluid* fluid);
+    /// The instantiator
     /// @param fluid_name the string with the fluid name
     IncompressibleBackend(const std::string &fluid_name);
     /// The instantiator
@@ -54,13 +57,56 @@ public:
     */
     void set_mass_fractions(const std::vector<long double> &mass_fractions);
 
+    /// Set the mass fraction
+    /**
+    @param mass_fractions The mass fraction of the component other than water
+    */
+    void set_mass_fractions(const long double &mass_fraction);
+
     /// Check if the mole fractions have been set, etc.
     void check_status();
+        
+    /// Calculate T given pressure and density
+    /**
+    @param rhomass The mass density in kg/m^3
+    @param p The pressure in Pa
+    @returns T The temperature in K
+    */
+    long double DmassP_flash(long double rhomass, long double p);
+    /// Calculate T given pressure and enthalpy
+    /**
+    @param hmass The mass enthalpy in J/kg
+    @param p The pressure in Pa
+    @returns T The temperature in K
+    */
+    long double HmassP_flash(long double hmass, long double p);
+    /// Calculate T given pressure and entropy
+    /**
+    @param smass The mass entropy in J/kg/K
+    @param p The pressure in Pa
+    @returns T The temperature in K
+    */
+    long double PSmass_flash(long double p, long double smass);
+    
+    /// Calculate T given pressure and internal energy
+    /**
+    @param umass The mass internal energy in J/kg
+    @param p The pressure in Pa
+    @returns T The temperature in K
+    */
+    long double PUmass_flash(long double p, long double umass);
 
     /// Get the viscosity [Pa-s]
-    long double calc_viscosity(void);
-    /// Get the thermal conductivity [W/m/K] (based on the temperature and density in the state class)
-    long double calc_conductivity(void);
+    long double calc_viscosity(void){return fluid->visc(_T, _p, mass_fractions[0]);};
+    /// Get the thermal conductivity [W/m/K] (based on the temperature and pressure in the state class)
+    long double calc_conductivity(void){return fluid->cond(_T, _p, mass_fractions[0]);};
+
+    long double calc_rhomass(void){return fluid->rho(_T, _p, mass_fractions[0]);};
+    long double calc_hmass(void){return fluid->h(_T, _p, mass_fractions[0]);};
+    long double calc_smass(void){return fluid->s(_T, _p, mass_fractions[0]);};
+    long double calc_umass(void){return fluid->u(_T, _p, mass_fractions[0]);};
+    long double calc_cpmass(void){return fluid->cp(_T, _p, mass_fractions[0]);};
+    long double calc_cvmass(void){return fluid->cv(_T, _p, mass_fractions[0]);};
 };
 
 } /* namespace CoolProp */

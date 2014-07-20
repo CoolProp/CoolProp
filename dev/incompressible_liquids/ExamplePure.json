@@ -1,0 +1,109 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  3.73150000e+02, 
+  "Tmax":  4.23150000e+02, 
+  "Tmin":  3.23150000e+02, 
+  "TminPsat":  4.23150000e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         9.64801865e-02
+      ], 
+      [
+        -1.80089355e-04
+      ], 
+      [
+        -1.16550117e-07
+      ], 
+      [
+        -9.71250971e-10
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         7.02445221e+02
+      ], 
+      [
+        -7.70318570e-01
+      ], 
+      [
+        -5.36130536e-04
+      ], 
+      [
+        -5.43900544e-06
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Heat transfer fluid TherminolD12 by Solutia", 
+  "mass2mole": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "ExamplePure", 
+  "reference": "Solutia data sheet", 
+  "saturation_pressure": {
+    "coeffs": [
+      [
+         1.75840648e+00
+      ], 
+      [
+         4.16304564e-02
+      ], 
+      [
+        -1.42982745e-04
+      ], 
+      [
+         7.70985838e-08
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         2.44652914e+03
+      ], 
+      [
+         4.09601787e+00
+      ], 
+      [
+        -2.07459207e-03
+      ], 
+      [
+         1.94250194e-07
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+        -7.95255505e-01
+      ], 
+      [
+        -9.66391123e-03
+      ], 
+      [
+         2.71311395e-05
+      ], 
+      [
+        -2.19028614e-07
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2mass": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.00000000e+00, 
+  "xmax":  1.00000000e+00, 
+  "xmin":  0.00000000e+00
+}
