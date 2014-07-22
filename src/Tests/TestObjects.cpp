@@ -6,6 +6,7 @@
  *  same in all places.
  */
 #include "TestObjects.h"
+#include "DataStructures.h"
 #include "IncompressibleFluid.h"
 #include "Eigen/Core"
 
@@ -163,7 +164,7 @@ CoolProp::IncompressibleFluid CoolPropTesting::incompressibleFluidObject(){
 
 	tmpVector.clear();
 	tmpVector.push_back( 27.755555600/100.0); // reference concentration in per cent
-	tmpVector.push_back(-22.973221700);
+	tmpVector.push_back(-22.973221700+273.15);
 	tmpVector.push_back(-1.1040507200*100.0);
 	tmpVector.push_back(-0.0120762281*100.0*100.0);
 	tmpVector.push_back(-9.343458E-05*100.0*100.0*100.0);
@@ -180,6 +181,7 @@ CoolProp::IncompressibleFluid CoolPropTesting::incompressibleFluidObject(){
 	CH3OH.setTmin(-50 + 273.15);
 	CH3OH.setxmax(0.5);
 	CH3OH.setxmin(0.0);
+	CH3OH.setxid(CoolProp::ifrac_mass);
 	CH3OH.setTminPsat( 20 + 273.15);
 
 	CH3OH.setTbase(-4.48 + 273.15);

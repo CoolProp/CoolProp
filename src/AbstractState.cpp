@@ -159,6 +159,7 @@ bool AbstractState::clear() {
 
 double AbstractState::keyed_output(int key)
 {
+	if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
     switch (key)
     {
     case iQ:

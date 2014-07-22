@@ -452,6 +452,7 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 	    fluid.setTmin(parse_value(fluid_json, "Tmin", true, 0.0));
 	    fluid.setxmax(parse_value(fluid_json, "xmax", false, 1.0));
 	    fluid.setxmin(parse_value(fluid_json, "xmin", false, 0.0));
+	    fluid.setxid((int) parse_value(fluid_json, "xid", true, 0.0));
 	    fluid.setTminPsat(parse_value(fluid_json, "TminPsat", false, 0.0));
 
 	    fluid.setTbase(parse_value(fluid_json, "Tbase", false, 0.0));
@@ -465,8 +466,9 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 	    fluid.setConductivity(parse_coefficients(fluid_json, "conductivity", false));
 	    fluid.setPsat(parse_coefficients(fluid_json, "saturation_pressure", false));
 	    fluid.setTfreeze(parse_coefficients(fluid_json, "T_freeze", false));
-	    fluid.setVolToMass(parse_coefficients(fluid_json, "volume2mass", false));
-	    fluid.setMassToMole(parse_coefficients(fluid_json, "mass2mole", false));
+	    fluid.setMass2input(parse_coefficients(fluid_json, "mass2input", false));
+	    fluid.setVolume2input(parse_coefficients(fluid_json, "volume2input", false));
+	    fluid.setMole2input(parse_coefficients(fluid_json, "mole2input", false));
 
 	    if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading reference state for %s ",fluid.getName().c_str()) << std::endl;
 	    fluid.set_reference_state(

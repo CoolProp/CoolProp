@@ -3,6 +3,7 @@
 #include "math.h"
 #include "MatrixMath.h"
 #include "PolyMath.h"
+#include "DataStructures.h"
 
 namespace CoolProp {
 
@@ -14,7 +15,7 @@ This fluid instance is populated using an entry from a JSON file
 */
 //IncompressibleFluid::IncompressibleFluid();
 
-void IncompressibleFluid::set_reference_state(double T0, double p0, double x0=0.0, double h0=0.0, double s0=0.0){
+void IncompressibleFluid::set_reference_state(double T0, double p0, double x0, double h0, double s0){
 	this->rhoref = rho(T0,p0,x0);
 	this->pref = p0;
 	this->uref = h0 - p0/rhoref;
@@ -265,10 +266,116 @@ double IncompressibleFluid::Tfreeze(       double p, double x){
 	return _HUGE;
 }
 
-/// Conversion from volume-based to mass-based composition.
-double IncompressibleFluid::V2M (double T,           double y){throw NotImplementedError("TODO");}
-/// Conversion from mass-based to mole-based composition.
-double IncompressibleFluid::M2M (double T,           double x){throw NotImplementedError("TODO");}
+/// Mass fraction conversion function
+/** If the fluid type is mass-based, it does not do anything. Otherwise,
+ *  it converts the mass fraction to the required input. */
+double IncompressibleFluid::inputFromMass (double T,     double x){
+	if (this->xid==ifrac_pure) {
+			return _HUGE;
+	} else if (this->xid==ifrac_mass) {
+		return x;
+	} else {
+		throw NotImplementedError("Mass composition conversion has not been implemented.");
+		switch (mass2input.type) {
+			case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+				return poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
+				return baseExponential(mass2input, T, Tbase);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
+				return exp(poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
+				return baseExponentialOffset(mass2input, T);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
+				return basePolyOffset(mass2input, T, x);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+				throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,mass2input.type));
+				break;
+			default:
+				throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,mass2input.type));
+				break;
+		}
+		return _HUGE;
+	}
+}
+
+/// Volume fraction conversion function
+/** If the fluid type is volume-based, it does not do anything. Otherwise,
+ *  it converts the volume fraction to the required input. */
+double IncompressibleFluid::inputFromVolume (double T,   double x){
+	if (this->xid==ifrac_pure) {
+			return _HUGE;
+	} else if (this->xid==ifrac_volume) {
+		return x;
+	} else {
+		throw NotImplementedError("Volume composition conversion has not been implemented.");
+		switch (volume2input.type) {
+			case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+				return poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
+				return baseExponential(volume2input, T, Tbase);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
+				return exp(poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
+				return baseExponentialOffset(volume2input, T);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
+				return basePolyOffset(volume2input, T, x);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+				throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,volume2input.type));
+				break;
+			default:
+				throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,volume2input.type));
+				break;
+		}
+		return _HUGE;
+	}
+}
+
+/// Mole fraction conversion function
+/** If the fluid type is mole-based, it does not do anything. Otherwise,
+ *  it converts the mole fraction to the required input. */
+double IncompressibleFluid::inputFromMole (double T,     double x){
+	if (this->xid==ifrac_pure) {
+			return _HUGE;
+	} else if (this->xid==ifrac_mole) {
+		return x;
+	} else {
+		throw NotImplementedError("Mole composition conversion has not been implemented.");
+		switch (mole2input.type) {
+			case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+				return poly.evaluate(mole2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
+				return baseExponential(mole2input, T, Tbase);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
+				return exp(poly.evaluate(mole2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
+				return baseExponentialOffset(mole2input, T);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
+				return basePolyOffset(mole2input, T, x);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+				throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,mole2input.type));
+				break;
+			default:
+				throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,mole2input.type));
+				break;
+		}
+		return _HUGE;
+	}
+}
 
 /* Some functions can be inverted directly, those are listed
  * here. It is also possible to solve for other quantities, but
@@ -783,7 +890,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 		tmpVector.clear();
 		tmpVector.push_back( 27.755555600/100.0); // reference concentration in per cent
-		tmpVector.push_back(-22.973221700);
+		tmpVector.push_back(-22.973221700+273.15);
 		tmpVector.push_back(-1.1040507200*100.0);
 		tmpVector.push_back(-0.0120762281*100.0*100.0);
 		tmpVector.push_back(-9.343458E-05*100.0*100.0*100.0);
@@ -954,7 +1061,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 		// Compare Tfreeze
 		val = -20.02+273.15;// 253.1293105454671;
-		res = CH3OH.Tfreeze(p,x)+273.15;
+		res = CH3OH.Tfreeze(p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
