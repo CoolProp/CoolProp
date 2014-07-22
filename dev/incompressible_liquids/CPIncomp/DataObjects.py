@@ -1,7 +1,7 @@
 from __future__ import division, absolute_import, print_function
 import numpy as np
 from CPIncomp.BaseObjects import IncompressibleData
-import os, CPIncomp
+import os, CPIncomp, math
 
 class SolutionData(object):
     """ 
@@ -11,6 +11,14 @@ class SolutionData(object):
     information came from. 
     """
     def __init__(self):
+        self.ifrac_mass      = 0
+        self.ifrac_mole      = 1
+        self.ifrac_volume    = 2
+        self.ifrac_undefined = 3
+        self.ifrac_pure      = 4
+        
+        self.significantDigits = 6
+        
         self.name        = None # Name of the current fluid
         self.description = None # Description of the current fluid
         self.reference   = None # Reference data for the current fluid
@@ -19,6 +27,7 @@ class SolutionData(object):
         self.Tmin        = None # Minimum temperature in K
         self.xmax        = 1.0 # Maximum concentration
         self.xmin        = 0.0 # Minimum concentration
+        self.xid         = self.ifrac_undefined # Concentration is mole, mass or volume-based
         self.TminPsat    = None # Minimum saturation temperature in K
         self.Tbase       = 0.0  # Base value for temperature fits
         self.xbase       = 0.0  # Base value for concentration fits
@@ -31,8 +40,9 @@ class SolutionData(object):
         self.conductivity  = IncompressibleData() # Thermal conductivity in W/(m.K)
         self.saturation_pressure = IncompressibleData() # Saturation pressure in Pa
         self.T_freeze      = IncompressibleData() # Freezing temperature in K
-        self.volume2mass   = IncompressibleData() # dd
-        self.mass2mole     = IncompressibleData() # dd
+        self.mass2input    = IncompressibleData() # dd
+        self.volume2input  = IncompressibleData() # dd
+        self.mole2input    = IncompressibleData() # dd
         
         ## Some of the functions might need a guess array
         #self.viscosity.type = self.viscosity.INCOMPRESSIBLE_EXPONENTIAL
@@ -62,6 +72,18 @@ class SolutionData(object):
 #        objList["volume2mass"] = self.volume2mass
 #        objList["mass2mole"] = self.mass2mole
 #        return objList
+
+    def roundSingle(self,x):
+        if x==0.0: return 0.0
+        return round(x, self.significantDigits-int(math.floor(math.log10(abs(x))))-1) 
+
+    def round(self, x):
+        r,c,res = IncompressibleData.shapeArray(x)
+        #digits = -1*np.floor(np.log10(res))+self.significantDigits-1 
+        for i in range(r):
+            for j in range(c):
+                res[i,j] = self.roundSingle(res[i,j])
+        return res
 
     def getPolyObjects(self):
         objList  = {}
@@ -154,6 +176,7 @@ class PureData(SolutionData):
     """
     def __init__(self):
         SolutionData.__init__(self)
+        self.xid         = self.ifrac_pure
         self.concentration.data       = np.array([     0 ]) # mass fraction
         
     def reshapeData(self, dataArray, length):
@@ -199,7 +222,8 @@ class DigitalData(SolutionData):
     
     def writeToFile(self, data, array):
         fullPath = self.getFile(data)
-        return np.savetxt(fullPath, array, fmt='%1.8e')
+        stdFmt = "%1.{0}e".format(int(self.significantDigits-1))
+        return np.savetxt(fullPath, array, fmt=stdFmt)
     
     def getTrange(self):
         if self.Tmin<self.Tmax:
@@ -221,21 +245,47 @@ class DigitalData(SolutionData):
         generate the data and write it.
         """
         
-        baseArray = np.zeros( (len(self.temperature.data),len(self.concentration.data)) )
+        forceUpdate = False
         
-        if (os.path.isfile(self.getFile(data))): # File found
-            fileArray = self.getFromFile(data)
-            if fileArray.shape==baseArray.shape:
-                return fileArray
+        if self.temperature.data==None or self.concentration.data==None: # no data set, try to get it from file
+            if self.temperature.data!=None: raise ValueError("Temperature is not None, but concentration is.")
+            if self.concentration.data!=None: raise ValueError("Concentration is not None, but temperature is.")
+            if (os.path.isfile(self.getFile(data))): # File found
+                fileArray = self.getFromFile(data)
+                self.temperature.data = np.copy(fileArray[1:,0])
+                self.concentration.data = np.copy(fileArray[0,1:])
             else:
-                raise ValueError("The array shapes do not match!")
-        else: # File cannot be read 
+                raise ValueError("No temperature and concentration data given and no readable file found.")
+            
+        tData = self.round(self.temperature.data)[:,0]
+        xData = self.round(self.concentration.data)[:,0]
+
+        baseArray = np.zeros( (len(tData)+1,len(xData)+1) )
+        
+        if (os.path.isfile(self.getFile(data)) and not forceUpdate): # File found and no update wanted
+            fileArray = self.getFromFile(data)
+            if fileArray.shape==baseArray.shape: # Shapes match
+                if np.all(tData==fileArray[1:,0]): # Temperature data matches
+                    if np.all(xData==fileArray[0,1:]): # Concentration data matches
+                        baseArray = fileArray 
+                    else:
+                        raise ValueError("Concentration arrays do not match. Check {0} \n and have a look at \n {1} \n vs \n {2}".format(self.getFile(data),xData,fileArray[0,1:]))
+                else:
+                    raise ValueError("Temperature arrays do not match. Check {0} \n and have a look at \n {1} \n vs \n {2}".format(self.getFile(data),tData,fileArray[1:,0]))
+            else:
+                raise ValueError("The array shapes do not match. Check {0}".format(self.getFile(data)))
+        else: # file not found or update forced
+            if func==None and forceUpdate:
+                raise ValueError("Need a function to update the data file.")
             for cT,T in enumerate(self.temperature.data):
                 for cx,x in enumerate(self.concentration.data):
-                    baseArray[cT][cx] = func(T,x)
+                    baseArray[cT+1][cx+1] = func(T,x)
+            baseArray[0,0] = np.NaN
+            baseArray[1:,0] = np.copy(self.temperature.data)
+            baseArray[0,1:] = np.copy(self.concentration.data)
             self.writeToFile(data, baseArray)
-            return baseArray
-                
+
+        return np.copy(baseArray.T[1:].T[1:]) # Remove the first column and row and return
 
 
 class PureExample(PureData):
@@ -263,9 +313,6 @@ class SolutionExample(SolutionData):
         self.name = "ExampleSolution"
         self.description = "Ethanol ice slurry"
         self.reference = "SecCool software"
-        self.Tmax = -10 + 273.15
-        self.Tmin = -45 + 273.15
-        self.TminPsat =  self.Tmax
         
         self.temperature.data         = np.array([   -45 ,    -40 ,    -35 ,    -30 ,    -25 ,    -20 ,    -15 ,    -10])+273.15 # Kelvin
         self.concentration.data       = np.array([     5 ,     10 ,     15 ,     20 ,     25 ,     30 ,     35 ])/100.0 # mass fraction
@@ -281,6 +328,14 @@ class SolutionExample(SolutionData):
           [1021.5,    1015.3,    1009.2,    1003.1,     997.1,     991.2,     985.4]]) # kg/m3
         
         self.specific_heat.data = np.copy(self.density.data)
+        
+        self.Tmax = np.max(self.temperature.data)
+        self.Tmin = np.min(self.temperature.data)
+        self.xmax = np.max(self.concentration.data)
+        self.xmin = np.min(self.concentration.data)
+        self.xid         = self.ifrac_mass
+        self.TminPsat =  self.Tmax
+        
 #        self.density.data             = np.array([
 #          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
 #          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
@@ -304,6 +359,7 @@ class DigitalExample(DigitalData):
         self.Tmax = 500.00;
         self.xmax = 1.0
         self.xmin = 0.0
+        self.xid         = self.ifrac_mass
         self.TminPsat = self.Tmin;
         
         self.temperature.data         = self.getTrange()

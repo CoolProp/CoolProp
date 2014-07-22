@@ -163,6 +163,7 @@ class SolutionDataWriter(object):
         jobj['Tmin'] = data.Tmin         # Minimum temperature in K
         jobj['xmax'] = data.xmax         # Maximum concentration
         jobj['xmin'] = data.xmin         # Minimum concentration
+        jobj['xid'] = data.xid           # Concentration is mole, mass or volume-based
         jobj['TminPsat'] = data.TminPsat     # Minimum saturation temperature in K
         jobj['Tbase'] = data.Tbase       # Base value for temperature fits
         jobj['xbase'] = data.xbase       # Base value for concentration fits
@@ -175,12 +176,14 @@ class SolutionDataWriter(object):
         jobj['conductivity'] = data.conductivity.toJSON() # Thermal conductivity in W/(m.K)
         jobj['saturation_pressure'] = data.saturation_pressure.toJSON() # Saturation pressure in Pa
         jobj['T_freeze'] = data.T_freeze.toJSON() # Freezing temperature in K
-        jobj['volume2mass'] = data.volume2mass.toJSON() # dd
-        jobj['mass2mole'] = data.mass2mole.toJSON() # dd
+        jobj['mass2input'] = data.mass2input.toJSON() # dd
+        jobj['volume2input'] = data.volume2input.toJSON() # dd
+        jobj['mole2input'] = data.mole2input.toJSON() # dd
                
         original_float_repr = json.encoder.FLOAT_REPR 
         #print json.dumps(1.0001) 
-        json.encoder.FLOAT_REPR = lambda o: format(o, ' .8e') 
+        stdFmt = " .{0}e".format(int(data.significantDigits-1))
+        json.encoder.FLOAT_REPR = lambda o: format(o, stdFmt) 
         dump = json.dumps(jobj, indent = 2, sort_keys = True)
         json.encoder.FLOAT_REPR = original_float_repr
         
