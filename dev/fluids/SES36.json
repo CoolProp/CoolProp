@@ -277,7 +277,7 @@
     }
   ], 
   "NAME": "SES36", 
-  "REFPROP_NAME": "SES36", 
+  "REFPROP_NAME": "N/A", 
   "STATES": {
     "critical": {
       "T": 450.7, 
