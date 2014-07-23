@@ -146,9 +146,7 @@ template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(c
  *  vector. By default, Eigen prefers column
  *  major ordering, just like Fortran.
  */
-template< class T> Eigen::Matrix<T,Eigen::Dynamic,1> makeVector(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix) {
-	return makeColVector(matrix);
-}
+
 template< class T> Eigen::Matrix<T,Eigen::Dynamic,1> makeColVector(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix){
 	std::size_t r = matrix.rows();
 	std::size_t c = matrix.cols();
@@ -161,6 +159,9 @@ template< class T> Eigen::Matrix<T,Eigen::Dynamic,1> makeColVector(const Eigen::
 		throw ValueError(format("Your matrix (%d,%d) cannot be converted into a vector (x,1).",r,c));
 	}
 	return vector;
+}
+template< class T> Eigen::Matrix<T,Eigen::Dynamic,1> makeVector(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix) {
+	return makeColVector(matrix);
 }
 template< class T> Eigen::Matrix<T,1,Eigen::Dynamic> makeRowVector(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &matrix){
 	std::size_t r = matrix.rows();
