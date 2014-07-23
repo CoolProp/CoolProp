@@ -1219,7 +1219,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
 #include "CoolProp.h"
 #include "catch.hpp"
 
-TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
+TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
 {
     SECTION("Saturation densities agree within 0.5% at T/Tc = 0.9")
     {
@@ -1233,12 +1233,12 @@ TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
             // Skip fluids not in REFPROP
             if (RPName.find("N/A") == 0){continue;}
 
-            ::shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
+            shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
             double Tr = S1->T_critical();
             S1->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
             double rho_CP = S1->rhomolar();
 
-            ::shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
+            shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
             S2->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
             double rho_RP = S2->rhomolar();
 
@@ -1311,10 +1311,11 @@ TEST_CASE("Check REFPROP H,S reference states equal to CoolProp","[REFPROP]")
             CAPTURE(h_RP);
             CAPTURE(s_CP);
             CAPTURE(s_RP);
-            double DH = (S1->hmass()-S2->hmass())/S1->cpmass();
-            double DS = (S1->smass()-S2->smass())/S1->cpmass();
-            CHECK(fabs(DH) < 1e-3);
-            CHECK(fabs(DS) < 1e-3);
+            double DH = (S1->hmass()-S2->hmass());
+            double DS = (S1->smass()-S2->smass());
+            
+            CHECK(fabs(DH/h_RP) < 0.001);
+            CHECK(fabs(DS/s_RP) < 0.001);
         }
     }
 }
