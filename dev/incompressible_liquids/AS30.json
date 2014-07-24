@@ -3,23 +3,23 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  2.72500000e+02, 
-  "Tmax":  3.00000000e+02, 
-  "Tmin":  2.45000000e+02, 
-  "TminPsat":  3.00000000e+02, 
+  "Tbase":  2.72500e+02, 
+  "Tmax":  3.00000e+02, 
+  "Tmin":  2.45000e+02, 
+  "TminPsat":  3.00000e+02, 
   "conductivity": {
     "coeffs": [
       [
-         4.59588393e-01
+         4.59588e-01
       ], 
       [
-         1.25587866e-03
+         1.25588e-03
       ], 
       [
-        -4.49550450e-08
+        -4.49550e-08
       ], 
       [
-         5.18000518e-10
+         5.18001e-10
       ]
     ], 
     "type": "polynomial"
@@ -27,22 +27,26 @@
   "density": {
     "coeffs": [
       [
-         1.18406429e+03
+         1.18406e+03
       ], 
       [
-        -3.08365708e-01
+        -3.08366e-01
       ], 
       [
-        -1.05494505e-03
+        -1.05495e-03
       ], 
       [
-         1.57472157e-05
+         1.57472e-05
       ]
     ], 
     "type": "polynomial"
   }, 
   "description": "Aspen Temper -30", 
-  "mass2mole": {
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -55,16 +59,16 @@
   "specific_heat": {
     "coeffs": [
       [
-         3.07310446e+03
+         3.07310e+03
       ], 
       [
-         3.02664141e+00
+         3.02664e+00
       ], 
       [
-        -2.70639361e-02
+        -2.70639e-02
       ], 
       [
-        -3.41880342e-06
+        -3.41880e-06
       ]
     ], 
     "type": "polynomial"
@@ -72,25 +76,26 @@
   "viscosity": {
     "coeffs": [
       [
-        -5.50367600e+00
+        -5.50368e+00
       ], 
       [
-        -4.05991079e-02
+        -4.05991e-02
       ], 
       [
-         3.65396739e-04
+         3.65397e-04
       ], 
       [
-         2.17071510e-06
+         2.17072e-06
       ]
     ], 
     "type": "exppolynomial"
   }, 
-  "volume2mass": {
+  "volume2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "xbase":  0.00000000e+00, 
-  "xmax":  1.00000000e+00, 
-  "xmin":  0.00000000e+00
+  "xbase":  0.00000e+00, 
+  "xid": 4, 
+  "xmax":  1.00000e+00, 
+  "xmin":  0.00000e+00
 }

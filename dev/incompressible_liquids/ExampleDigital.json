@@ -1,0 +1,115 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  3.86500e+02, 
+  "Tmax":  5.00000e+02, 
+  "Tmin":  2.73000e+02, 
+  "TminPsat":  2.73000e+02, 
+  "conductivity": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         8.23000e+02, 
+         4.86501e+02, 
+         1.25770e-03, 
+        -1.22838e-02, 
+        -8.31261e-03, 
+         3.23636e-02
+      ], 
+      [
+         2.00000e+00, 
+         1.00000e+00, 
+         4.19928e-05, 
+        -6.28733e-05, 
+        -1.22770e-04, 
+         0.00000e+00
+      ], 
+      [
+         1.02233e-08, 
+         4.05814e-08, 
+        -1.06230e-07, 
+        -2.78235e-07, 
+         0.00000e+00, 
+         0.00000e+00
+      ], 
+      [
+         4.11400e-10, 
+         6.05000e-11, 
+        -3.13820e-09, 
+         0.00000e+00, 
+         0.00000e+00, 
+         0.00000e+00
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "some fluid", 
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "ExampleDigital", 
+  "reference": "none", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         8.36650e+02, 
+         4.36500e+02, 
+         2.45855e-04, 
+         7.75294e-03, 
+         2.27666e-03, 
+        -2.27117e-02
+      ], 
+      [
+         2.10000e+00, 
+         9.99993e-01, 
+        -3.68693e-05, 
+        -5.69655e-06, 
+         1.22510e-04, 
+         0.00000e+00
+      ], 
+      [
+         1.64250e-08, 
+         1.86468e-08, 
+        -1.66197e-07, 
+        -2.16904e-07, 
+         0.00000e+00, 
+         0.00000e+00
+      ], 
+      [
+         2.67400e-10, 
+         7.86400e-10, 
+        -8.08000e-11, 
+         0.00000e+00, 
+         0.00000e+00, 
+         0.00000e+00
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "volume2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  5.00000e-01, 
+  "xid": 0, 
+  "xmax":  1.00000e+00, 
+  "xmin":  0.00000e+00
+}

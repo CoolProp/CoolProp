@@ -3,17 +3,17 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  0.00000000e+00, 
-  "Tmax":  3.73150000e+02, 
-  "Tmin":  1.93150000e+02, 
-  "TminPsat":  3.73150000e+02, 
+  "Tbase":  0.00000e+00, 
+  "Tmax":  3.73150e+02, 
+  "Tmin":  1.93150e+02, 
+  "TminPsat":  3.73150e+02, 
   "conductivity": {
     "coeffs": [
       [
-         1.72305000e-04
+         1.72305e-04
       ], 
       [
-        -2.11212000e-07
+        -2.11212e-07
       ]
     ], 
     "type": "polynomial"
@@ -21,16 +21,20 @@
   "density": {
     "coeffs": [
       [
-         1.15594000e+03
+         1.15594e+03
       ], 
       [
-        -1.02576000e+00
+        -1.02576e+00
       ]
     ], 
     "type": "polynomial"
   }, 
   "description": "Polydimethylsiloxan 2. - Syltherm XLT Dow Corning Co.", 
-  "mass2mole": {
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -43,10 +47,10 @@
   "specific_heat": {
     "coeffs": [
       [
-         1.15355000e+03
+         1.15355e+03
       ], 
       [
-         2.10788000e+00
+         2.10788e+00
       ]
     ], 
     "type": "polynomial"
@@ -54,22 +58,23 @@
   "viscosity": {
     "coeffs": [
       [
-         5.66926000e+00
+         5.66926e+00
       ], 
       [
-        -6.55820000e-02
+        -6.55820e-02
       ], 
       [
-         8.09988000e-05
+         8.09988e-05
       ]
     ], 
     "type": "exppolynomial"
   }, 
-  "volume2mass": {
+  "volume2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "xbase":  0.00000000e+00, 
-  "xmax":  1.00000000e+00, 
-  "xmin":  0.00000000e+00
+  "xbase":  0.00000e+00, 
+  "xid": 4, 
+  "xmax":  1.00000e+00, 
+  "xmin":  0.00000e+00
 }

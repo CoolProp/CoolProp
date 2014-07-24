@@ -1,5 +1,6 @@
 from __future__ import division, absolute_import, print_function
 import numpy as np
+from scipy import interpolate
 from CPIncomp.BaseObjects import IncompressibleData
 import os, CPIncomp, math
 
@@ -82,26 +83,27 @@ class SolutionData(object):
         #digits = -1*np.floor(np.log10(res))+self.significantDigits-1 
         for i in range(r):
             for j in range(c):
-                res[i,j] = self.roundSingle(res[i,j])
+                if np.isfinite(res[i,j]):
+                    res[i,j] = self.roundSingle(res[i,j])
         return res
 
-    def getPolyObjects(self):
-        objList  = {}
-        objList["density"] = self.density
-        objList["specific heat"] = self.specific_heat
+#    def getPolyObjects(self):
+#        objList  = {}
+#        objList["density"] = self.density
+#        objList["specific heat"] = self.specific_heat
+##        objList["viscosity"] = self.viscosity
+#        objList["conductivity"] = self.conductivity
+##        objList["saturation_pressure"] = self.saturation_pressure
+##        objList["T_freeze"] = self.T_freeze
+##        objList["volume2mass"] = self.volume2mass
+##        objList["mass2mole"] = self.mass2mole
+#        return objList
+#    
+#    def getExpPolyObjects(self):
+#        objList  = {}
 #        objList["viscosity"] = self.viscosity
-        objList["conductivity"] = self.conductivity
-#        objList["saturation_pressure"] = self.saturation_pressure
-#        objList["T_freeze"] = self.T_freeze
-#        objList["volume2mass"] = self.volume2mass
-#        objList["mass2mole"] = self.mass2mole
-        return objList
-    
-    def getExpPolyObjects(self):
-        objList  = {}
-        objList["viscosity"] = self.viscosity
-        objList["saturation pressure"] = self.saturation_pressure
-        return objList
+#        objList["saturation pressure"] = self.saturation_pressure
+#        return objList
         
     
     def rho (self, T, p=0.0, x=0.0, c=None):
@@ -246,6 +248,8 @@ class DigitalData(SolutionData):
         """
         
         forceUpdate = False
+        readFromFile = False
+        fileArray = None
         
         if self.temperature.data==None or self.concentration.data==None: # no data set, try to get it from file
             if self.temperature.data!=None: raise ValueError("Temperature is not None, but concentration is.")
@@ -254,6 +258,7 @@ class DigitalData(SolutionData):
                 fileArray = self.getFromFile(data)
                 self.temperature.data = np.copy(fileArray[1:,0])
                 self.concentration.data = np.copy(fileArray[0,1:])
+                readFromFile = True
             else:
                 raise ValueError("No temperature and concentration data given and no readable file found.")
             
@@ -263,15 +268,43 @@ class DigitalData(SolutionData):
         baseArray = np.zeros( (len(tData)+1,len(xData)+1) )
         
         if (os.path.isfile(self.getFile(data)) and not forceUpdate): # File found and no update wanted
-            fileArray = self.getFromFile(data)
-            if fileArray.shape==baseArray.shape: # Shapes match
-                if np.all(tData==fileArray[1:,0]): # Temperature data matches
-                    if np.all(xData==fileArray[0,1:]): # Concentration data matches
+            if fileArray==None: fileArray = self.getFromFile(data)
+            
+#            tFile = fileArray[1:,0]
+#            xFile = fileArray[0,1:]
+#            curDataLim = np.array([np.min(tData),np.max(tData),np.min(xData),np.max(xData)])
+#            curFileLim = np.array([np.min(tFile),np.max(tFile),np.min(xFile),np.max(xFile)])
+#            if np.allclose(curDataLim, curFileLim, rtol=1e-2) and fileArray.shape!=baseArray.shape: # We might have to interpolate
+#                if len(tData)<len(tFile) or len(xData)<len(xFile): # OK, we can interpolate
+#                    data = fileArray[1:,1:]
+#                    if len(tFile)==1: # 1d in concentration
+#                        f = interpolate.interp1d(xFile, data.flat)#, kind='cubic')
+#                        dataNew = f(xData).reshape((1,len(xData)))
+#                    elif len(xFile)==1: # 1d in temperature
+#                        f = interpolate.interp1d(tFile, data.flat)#, kind='cubic')
+#                        dataNew = f(tData).reshape((len(tData),1))
+#                    else: # 2d
+#                        f = interpolate.interp2d(xFile, tFile, data)#, kind='cubic')
+#                        dataNew = f(xData,tData)
+#                    fileArray = np.copy(baseArray)
+#                    fileArray[1:,1:] = dataNew
+#                    fileArray[1:,0] = tData
+#                    fileArray[0,1:] = xData
+#                else:
+#                    raise ValueError("Less points in file, not enough data for interpolation.")
+#            elif fileArray.shape==baseArray.shape:
+#                pass
+#            else:
+#                raise ValueError("The array shapes do not match. Check {0}".format(self.getFile(data)))
+
+            if readFromFile or fileArray.shape==baseArray.shape: # Shapes match
+                if readFromFile or np.allclose(tData, fileArray[1:,0]): # Temperature data matches
+                    if readFromFile or np.allclose(xData, fileArray[0,1:]): # Concentration data matches
                         baseArray = fileArray 
                     else:
-                        raise ValueError("Concentration arrays do not match. Check {0} \n and have a look at \n {1} \n vs \n {2}".format(self.getFile(data),xData,fileArray[0,1:]))
+                        raise ValueError("Concentration arrays do not match. Check {0} \n and have a look at \n {1} \n vs \n {2} \n yielding \n {3}".format(self.getFile(data),xData,fileArray[0,1:],(xData==fileArray[0,1:])))
                 else:
-                    raise ValueError("Temperature arrays do not match. Check {0} \n and have a look at \n {1} \n vs \n {2}".format(self.getFile(data),tData,fileArray[1:,0]))
+                    raise ValueError("Temperature arrays do not match. Check {0} \n and have a look at \n {1} \n vs \n {2} \n yielding \n {3}".format(self.getFile(data),tData,fileArray[1:,0],(tData==fileArray[1:,0])))
             else:
                 raise ValueError("The array shapes do not match. Check {0}".format(self.getFile(data)))
         else: # file not found or update forced
@@ -365,10 +398,13 @@ class DigitalExample(DigitalData):
         self.temperature.data         = self.getTrange()
         self.concentration.data       = self.getxrange()
         
-        def func(T,x):
+        def funcRho(T,x):
             return T + x*100.0 + T*(x+0.5)
+        self.density.data             = self.getArray(funcRho,"rho")
         
-        self.density.data             = self.getArray(func,"rho")
+        def funcCp(T,x):
+            return T + x*50.0 + T*(x+0.6)
+        self.specific_heat.data             = self.getArray(funcCp,"cp")
         
 
 if __name__ == '__main__':

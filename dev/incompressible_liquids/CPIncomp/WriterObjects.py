@@ -19,7 +19,7 @@ class SolutionDataWriter(object):
     information came from. 
     """
     def __init__(self):
-        self.verbose = True
+        pass 
     
     def fitAll(self, data):
         T = data.temperature.data
@@ -38,22 +38,34 @@ class SolutionDataWriter(object):
         
         errList = (ValueError, AttributeError, TypeError, RuntimeError)
         
-        for name,entry in data.getPolyObjects().iteritems():
+        polyDict = {}
+        polyDict["density"] = data.density
+        polyDict["specific heat"] = data.specific_heat
+#        polyDict["viscosity"] = self.viscosity
+        polyDict["conductivity"] = data.conductivity
+#        polyDict["saturation_pressure"] = self.saturation_pressure
+#        polyDict["T_freeze"] = self.T_freeze
+
+        expDict = {}
+        expDict["viscosity"] = data.viscosity
+        expDict["saturation pressure"] = data.saturation_pressure
+        
+        for name,entry in polyDict.iteritems():
             try:
                 entry.coeffs = np.copy(std_coeffs)
                 entry.type   = entry.INCOMPRESSIBLE_POLYNOMIAL
                 entry.fitCoeffs(T,x,data.Tbase,data.xbase)
             except errList as ve:
-                if self.verbose: print("{0}: Could not fit {1} coefficients: {2}".format(fluid,name,ve))
+                if entry.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluid,name,ve))
                 pass 
             
-        for name,entry in data.getExpPolyObjects().iteritems():
+        for name,entry in expDict.iteritems():
             try:
                 entry.coeffs = np.copy(std_coeffs)
                 entry.type   = entry.INCOMPRESSIBLE_EXPPOLYNOMIAL
                 entry.fitCoeffs(T,x,data.Tbase,data.xbase)
             except errList as ve:
-                if self.verbose: print("{0}: Could not fit {1} coefficients: {2}".format(fluid,name,ve))
+                if entry.DEBUG: print("{0}: Could not fit exponential {1} coefficients: {2}".format(fluid,name,ve))
                 pass 
 
         try:        
@@ -61,7 +73,7 @@ class SolutionDataWriter(object):
             data.T_freeze.type   = data.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
             data.T_freeze.fitCoeffs(x,0.0,data.xbase,0.0)
         except errList as ve:
-            if self.verbose: print("{0}: Could not fit {1} coefficients: {2}".format(fluid,"T_freeze",ve))
+            if data.T_freeze.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(fluid,"T_freeze",ve))
             pass
 
 
@@ -183,7 +195,9 @@ class SolutionDataWriter(object):
         original_float_repr = json.encoder.FLOAT_REPR 
         #print json.dumps(1.0001) 
         stdFmt = " .{0}e".format(int(data.significantDigits-1))
-        json.encoder.FLOAT_REPR = lambda o: format(o, stdFmt) 
+        #pr = np.finfo(float).eps * 10.0
+        pr = np.finfo(float).precision - 2 # stay away from numerical precision
+        json.encoder.FLOAT_REPR = lambda o: format(np.around(o,decimals=pr), stdFmt) 
         dump = json.dumps(jobj, indent = 2, sort_keys = True)
         json.encoder.FLOAT_REPR = original_float_repr
         

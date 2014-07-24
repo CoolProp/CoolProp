@@ -3,17 +3,17 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  0.00000000e+00, 
-  "Tmax":  3.73150000e+02, 
-  "Tmin":  1.93150000e+02, 
-  "TminPsat":  3.73150000e+02, 
+  "Tbase":  0.00000e+00, 
+  "Tmax":  3.73150e+02, 
+  "Tmin":  1.93150e+02, 
+  "TminPsat":  3.73150e+02, 
   "conductivity": {
     "coeffs": [
       [
-         1.89132000e-04
+         1.89132e-04
       ], 
       [
-        -2.06364000e-07
+        -2.06364e-07
       ]
     ], 
     "type": "polynomial"
@@ -21,16 +21,20 @@
   "density": {
     "coeffs": [
       [
-         1.07650000e+03
+         1.07650e+03
       ], 
       [
-        -7.31182000e-01
+        -7.31182e-01
       ]
     ], 
     "type": "polynomial"
   }, 
   "description": "Diethylbenzene mixture - Dowtherm J Dow Chemical Co.", 
-  "mass2mole": {
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -43,10 +47,10 @@
   "specific_heat": {
     "coeffs": [
       [
-         9.99729000e+02
+         9.99729e+02
       ], 
       [
-         2.87576000e+00
+         2.87576e+00
       ]
     ], 
     "type": "polynomial"
@@ -54,22 +58,23 @@
   "viscosity": {
     "coeffs": [
       [
-         3.55030000e+00
+         3.55030e+00
       ], 
       [
-        -5.66396000e-02
+        -5.66396e-02
       ], 
       [
-         7.03331000e-05
+         7.03331e-05
       ]
     ], 
     "type": "exppolynomial"
   }, 
-  "volume2mass": {
+  "volume2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "xbase":  0.00000000e+00, 
-  "xmax":  1.00000000e+00, 
-  "xmin":  0.00000000e+00
+  "xbase":  0.00000e+00, 
+  "xid": 4, 
+  "xmax":  1.00000e+00, 
+  "xmin":  0.00000e+00
 }

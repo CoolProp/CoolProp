@@ -13,11 +13,12 @@ import CPIncomp.MelinderFluids
 import CPIncomp.DigitalFluids
 
 from CPIncomp.WriterObjects import SolutionDataWriter
-from CPIncomp.DataObjects import PureExample, SolutionExample
+from CPIncomp.DataObjects import PureExample, SolutionExample, DigitalExample
 from CPIncomp.CoefficientObjects import SecCoolExample, MelinderExample
+from CPIncomp.SecCoolFluids import SecCoolSolutionData
 
 def getExampleData():
-    return [PureExample(), SolutionExample()]
+    return [PureExample(), SolutionExample(), DigitalExample()]
 
 def getExampleCoef():
     return [SecCoolExample(), MelinderExample()]
@@ -102,6 +103,24 @@ def fitFluidList(fluidObjs):
             pass 
     return
 
+def fitSecCoolList(fluidObjs):
+    for obj in fluidObjs:
+        if obj==fluidObjs[0]:
+            print(" {0}".format(obj.name), end="")
+        elif obj==fluidObjs[-1]:
+            print(", {0}".format(obj.name), end="")
+        else:
+            print(", {0}".format(obj.name), end="")
+            
+        try: 
+            obj.fitFluid()
+        except (TypeError, ValueError) as e:
+            print("An error occurred for fluid: {0}".format(obj.name))
+            print(obj)
+            print(e)
+            pass 
+    return
+
 def writeFluidList(fluidObjs):
     for obj in fluidObjs:
         if obj==fluidObjs[0]:
@@ -124,13 +143,17 @@ if __name__ == '__main__':
     
     writer = SolutionDataWriter()
     
+    doneObjs = []
     dataObjs = getExampleData()
     for obj in dataObjs:
         writer.fitAll(obj)
+    doneObjs += dataObjs[:]
         
-    dataObjs += getExampleCoef()
-    for obj in dataObjs:
-        writer.toJSON(obj,quiet=True)
+    doneObjs += getExampleCoef()
+        
+    print("Writing coefficients for example fluids: ", end="")
+    writeFluidList(doneObjs)
+    print(" ... done")
         
     # If the examples did not cause any errors, 
     # we can proceed to the real data.
@@ -153,9 +176,20 @@ if __name__ == '__main__':
     print(" ... done")
     doneObjs += dataObjs[:]
     
-    
-        
-    doneObjs += getCoefficientObjects()[:]
+    dataObjs = SecCoolSolutionData.factory()
+    print("Fitting SecCool fluids:", end="")
+    fitSecCoolList(dataObjs)
+    print(" ... done")
+    doneObjs += dataObjs[:]   
+            
+    #doneObjs += getCoefficientObjects()[:]   
+    doneObjs = sorted(doneObjs, key=lambda x: x.name)
+    oldName = ''
+    for obj in doneObjs:
+        if obj.name==oldName:
+            raise ValueError("Two elements have the same name, that does not work: {0}".format(oldName))
+        else:
+            oldName = obj.name
     
     
     print("Writing coefficients for fluids: ", end="")
