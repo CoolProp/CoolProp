@@ -135,11 +135,11 @@
       "BibTeX_EOS": "Jacobsen-FPE-1992", 
       "STATES": {
         "reducing": {
-          "T": 471.06, 
+          "T": 471.11, 
           "T_units": "K", 
           "p": 4394000, 
           "p_units": "Pa", 
-          "rhomolar": 4113.039426940773, 
+          "rhomolar": 4032.962, 
           "rhomolar_units": "mol/m^3"
         }, 
         "sat_min_liquid": {
@@ -212,8 +212,8 @@
           "type": "IdealGasHelmholtzPlanckEinstein"
         }, 
         {
-          "a1": -19.9828934089637, 
-          "a2": 12.619996028432, 
+          "a1": -20.0312014458899, 
+          "a2": 12.6387040144928, 
           "reference": "IIR", 
           "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
@@ -242,7 +242,7 @@
  0.451564882590,
 -0.339265767612,
  0.114338523359,
- 0.319527833995e-1,
+ 0.319537833995e-1,
  0.367908259780e-1,
 -0.961768948364e-5,
  0.246717966418e-2,
