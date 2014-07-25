@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
-import os, CPIncomp, math
-from CPIncomp.BaseObjects import IncompressibleData
+import os, math
+from BaseObjects import IncompressibleData
 from abc import ABCMeta
 
 class SolutionData(object):
@@ -218,7 +218,7 @@ class DigitalData(SolutionData):
         SolutionData.__init__(self)
         
     def getFile(self, data):
-        return os.path.join(CPIncomp.__path__[0], 'data', self.name+"_"+data+".txt")
+        return os.path.join(os.path.dirname(__file__), 'data', self.name+"_"+data+".txt")
     
     def getFromFile(self, data):
         fullPath = self.getFile(data)

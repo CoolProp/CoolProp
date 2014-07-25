@@ -3,23 +3,17 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  2.65120e+02, 
-  "Tmax":  3.37420e+02, 
-  "Tmin":  1.92820e+02, 
-  "TminPsat":  3.37420e+02, 
+  "Tbase":  0.00000e+00, 
+  "Tmax":  3.73150e+02, 
+  "Tmin":  1.93150e+02, 
+  "TminPsat":  3.73150e+02, 
   "conductivity": {
     "coeffs": [
       [
-         7.52837e-02
+         9.92958e-05
       ], 
       [
-        -1.95480e-04
-      ], 
-      [
-        -0.00000e+00
-      ], 
-      [
-         0.00000e+00
+        -8.33333e-08
       ]
     ], 
     "type": "polynomial"
@@ -27,21 +21,15 @@
   "density": {
     "coeffs": [
       [
-         1.55652e+03
+         1.82237e+03
       ], 
       [
-        -2.26900e+00
-      ], 
-      [
-         0.00000e+00
-      ], 
-      [
-         0.00000e+00
+        -9.18485e-01
       ]
     ], 
     "type": "polynomial"
   }, 
-  "description": "HFE-7100, Hydrofluoroether", 
+  "description": "Hydrofluoroether - HFE-7100 3M Novec", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -51,7 +39,7 @@
     "type": "notdefined"
   }, 
   "name": "HFE", 
-  "reference": "3M Novec, SecCool software", 
+  "reference": "Melinder-BOOK-2010", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -59,16 +47,10 @@
   "specific_heat": {
     "coeffs": [
       [
-         1.11694e+03
+         8.71834e+02
       ], 
       [
-         2.00000e+00
-      ], 
-      [
-        -0.00000e+00
-      ], 
-      [
-        -0.00000e+00
+         8.58788e+05
       ]
     ], 
     "type": "polynomial"
@@ -76,16 +58,13 @@
   "viscosity": {
     "coeffs": [
       [
-        -5.75185e-01
+        -4.22878e+00
       ], 
       [
-        -1.47112e-02
+        -1.14765e-02
       ], 
       [
-         1.03197e-04
-      ], 
-      [
-        -7.16839e-07
+         7.39823e-06
       ]
     ], 
     "type": "exppolynomial"
@@ -96,6 +75,6 @@
   }, 
   "xbase":  0.00000e+00, 
   "xid": 4, 
-  "xmax":  0.00000e+00, 
+  "xmax":  1.00000e+00, 
   "xmin":  0.00000e+00
 }

@@ -3,23 +3,23 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  4.28150e+02, 
-  "Tmax":  5.93150e+02, 
-  "Tmin":  2.63150e+02, 
-  "TminPsat":  5.93150e+02, 
+  "Tbase":  4.20650e+02, 
+  "Tmax":  6.03150e+02, 
+  "Tmin":  2.38150e+02, 
+  "TminPsat":  6.03150e+02, 
   "conductivity": {
     "coeffs": [
       [
-         9.74343e-02
+         1.12964e-01
       ], 
       [
-        -5.07671e-05
+        -1.66747e-04
       ], 
       [
-         3.12739e-08
+        -2.56024e-07
       ], 
       [
-        -3.78807e-12
+         1.77943e-09
       ]
     ], 
     "type": "polynomial"
@@ -27,21 +27,21 @@
   "density": {
     "coeffs": [
       [
-         7.97296e+02
+         8.73686e+02
       ], 
       [
-        -6.64728e-01
+        -7.65340e-01
       ], 
       [
-        -1.01063e-04
+        -1.03470e-05
       ], 
       [
-         5.77600e-08
+         1.08805e-07
       ]
     ], 
     "type": "polynomial"
   }, 
-  "description": "Paratherm NF, Hydrotreated mineral oil", 
+  "description": "Dowtherm Q, Diphenylethane/alkylated aromatics", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -50,8 +50,8 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "name": "PNF", 
-  "reference": "Paratherm Ltd, SecCool software", 
+  "name": "DowQ2", 
+  "reference": "Dow Chemicals, SecCool software", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -59,16 +59,16 @@
   "specific_heat": {
     "coeffs": [
       [
-         2.53143e+03
+         2.05210e+03
       ], 
       [
-         5.13638e+00
+         3.05246e+00
       ], 
       [
-         3.97886e-06
+        -5.70581e-04
       ], 
       [
-         5.06695e-07
+        -2.39204e-07
       ]
     ], 
     "type": "polynomial"
@@ -76,16 +76,16 @@
   "viscosity": {
     "coeffs": [
       [
-        -6.85265e+00
+        -2.92247e+00
       ], 
       [
-        -1.20170e-02
+        -8.56067e-03
       ], 
       [
-         6.15699e-05
+         4.48552e-05
       ], 
       [
-        -4.56293e-07
+        -1.85248e-07
       ]
     ], 
     "type": "exppolynomial"

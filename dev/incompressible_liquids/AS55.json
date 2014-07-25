@@ -3,23 +3,20 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  2.60000e+02, 
-  "Tmax":  3.00000e+02, 
-  "Tmin":  2.20000e+02, 
-  "TminPsat":  3.00000e+02, 
+  "Tbase":  2.73150e+02, 
+  "Tmax":  3.03150e+02, 
+  "Tmin": -55, 
+  "TminPsat":  3.03150e+02, 
   "conductivity": {
     "coeffs": [
       [
-         4.13854e-01
+         4.25799e-01
       ], 
       [
-         8.78212e-04
+         9.37902e-04
       ], 
       [
-         2.28225e-06
-      ], 
-      [
-        -2.06398e-10
+         2.28700e-06
       ]
     ], 
     "type": "polynomial"
@@ -27,21 +24,21 @@
   "density": {
     "coeffs": [
       [
-         1.25576e+03
+         1.24975e+03
       ], 
       [
-        -4.34815e-01
+        -4.76296e-01
       ], 
       [
-        -1.94014e-03
+        -1.17189e-03
       ], 
       [
-         1.94358e-05
+         1.98824e-05
       ]
     ], 
     "type": "polynomial"
   }, 
-  "description": "Aspen Temper -55", 
+  "description": "Aspen Temper -55, Potassium acetate/formate", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -51,7 +48,7 @@
     "type": "notdefined"
   }, 
   "name": "AS55", 
-  "reference": "SecCool Software", 
+  "reference": "Aspen Petroleum AB, SecCool software", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -59,16 +56,13 @@
   "specific_heat": {
     "coeffs": [
       [
-         2.80543e+03
+         2.83985e+03
       ], 
       [
-         2.94466e+00
+         2.29000e+00
       ], 
       [
-        -2.48679e-02
-      ], 
-      [
-        -4.12797e-07
+        -2.48618e-02
       ]
     ], 
     "type": "polynomial"
@@ -76,16 +70,16 @@
   "viscosity": {
     "coeffs": [
       [
-        -4.48837e+00
+         1.79891e+00
       ], 
       [
-        -4.78803e-02
+        -6.30089e-02
       ], 
       [
-         5.15321e-04
+         4.30552e-04
       ], 
       [
-        -8.21971e-06
+         7.31131e-07
       ]
     ], 
     "type": "exppolynomial"
@@ -95,7 +89,7 @@
     "type": "notdefined"
   }, 
   "xbase":  0.00000e+00, 
-  "xid": 4, 
+  "xid": 3, 
   "xmax":  1.00000e+00, 
   "xmin":  0.00000e+00
 }

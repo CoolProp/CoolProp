@@ -3,23 +3,17 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  7.23150e+02, 
+  "Tbase":  2.73150e+02, 
   "Tmax":  8.73150e+02, 
   "Tmin":  5.73150e+02, 
   "TminPsat":  8.73150e+02, 
   "conductivity": {
     "coeffs": [
       [
-         5.28500e-01
+         4.43000e-01
       ], 
       [
          1.90000e-04
-      ], 
-      [
-         0.00000e+00
-      ], 
-      [
-         0.00000e+00
       ]
     ], 
     "type": "polynomial"
@@ -27,16 +21,10 @@
   "density": {
     "coeffs": [
       [
-         1.80380e+03
+         2.09000e+03
       ], 
       [
-        -6.36008e-01
-      ], 
-      [
-         0.00000e+00
-      ], 
-      [
-         7.94000e-11
+        -6.36000e-01
       ]
     ], 
     "type": "polynomial"
@@ -59,16 +47,10 @@
   "specific_heat": {
     "coeffs": [
       [
-         1.52040e+03
+         1.44300e+03
       ], 
       [
-         1.72016e-01
-      ], 
-      [
-        -0.00000e+00
-      ], 
-      [
-        -1.28840e-09
+         1.72000e-01
       ]
     ], 
     "type": "polynomial"
@@ -76,26 +58,26 @@
   "viscosity": {
     "coeffs": [
       [
-        -6.50576e+00
+         2.27140e-02
       ], 
       [
-        -2.89370e-03
+        -1.20000e-04
       ], 
       [
-         9.26676e-06
+         2.28100e-07
       ], 
       [
-        -4.76840e-08
+        -1.47400e-10
       ]
     ], 
-    "type": "exppolynomial"
+    "type": "polynomial"
   }, 
   "volume2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "xbase":  0.00000e+00, 
-  "xid": 4, 
+  "xid": 3, 
   "xmax":  1.00000e+00, 
   "xmin":  0.00000e+00
 }

@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 
-import hashlib, os, CPIncomp, json
+import hashlib, os, json
 
 class SolutionDataWriter(object):
     """ 
@@ -99,7 +99,7 @@ class SolutionDataWriter(object):
         return hashlib.sha224(data).hexdigest()
     
     def get_hash_file(self):
-        return os.path.join(CPIncomp.__path__[0], 'data', "hashes.json")
+        return os.path.join(os.path.dirname(__file__), 'data', "hashes.json")
     
     def load_hashes(self):
         hashes_fname = self.get_hash_file()

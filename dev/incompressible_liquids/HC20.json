@@ -19,7 +19,7 @@
          0.00000e+00
       ], 
       [
-        -0.00000e+00
+         2.49882e-20
       ]
     ], 
     "type": "polynomial"
@@ -53,21 +53,8 @@
   "name": "HC20", 
   "reference": "Dynalene data sheet", 
   "saturation_pressure": {
-    "coeffs": [
-      [
-         1.10195e+01
-      ], 
-      [
-         3.82431e-02
-      ], 
-      [
-        -1.11777e-04
-      ], 
-      [
-         1.45814e-07
-      ]
-    ], 
-    "type": "exppolynomial"
+    "coeffs": "null", 
+    "type": "notdefined"
   }, 
   "specific_heat": {
     "coeffs": [
@@ -81,7 +68,7 @@
         -7.60109e-06
       ], 
       [
-         1.87680e-09
+         1.87681e-09
       ]
     ], 
     "type": "polynomial"
