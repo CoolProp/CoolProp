@@ -198,6 +198,12 @@
         {
           "a": 1.5, 
           "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "a1": -18.6104772308484, 
+          "a2": 4.94617011642842, 
+          "reference": "OTH", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [

@@ -193,6 +193,12 @@
             4
           ], 
           "type": "IdealGasHelmholtzCP0PolyT"
+        }, 
+        {
+          "a1": -14.8563435687485, 
+          "a2": 20.1558709204447, 
+          "reference": "OTH", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [

@@ -194,6 +194,12 @@
             -1.75
           ], 
           "type": "IdealGasHelmholtzPower"
+        }, 
+        {
+          "a1": -0.965940085369186, 
+          "a2": 0.723282863334932, 
+          "reference": "OTH", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
