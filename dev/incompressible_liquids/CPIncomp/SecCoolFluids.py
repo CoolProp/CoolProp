@@ -1,8 +1,7 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import division, print_function
 import numpy as np
-from CPIncomp.CoefficientObjects import CoefficientData
 from CPIncomp.BaseObjects import IncompressibleData
-from CPIncomp.DataObjects import DigitalData
+from CPIncomp.DataObjects import DigitalData, PureData 
 import os, CPIncomp
 
 
@@ -179,7 +178,7 @@ class SecCoolSolutionData(DigitalData):
                     if not self.allowNegativeData and nu<0:
                         nu = np.NAN # invalid entries
                 except (ValueError, TypeError) as ve:
-                    #print "Could not convert entry: {0}".format(ve)
+                    if False: print("Could not convert entry: {0}".format(ve))
                     if i==0: nu = 0.0 # Dummy for tables without concentration (TFreeze and Vol2Mass)
                     pass
                 numbers[i,j] = nu
@@ -262,7 +261,7 @@ class SecCoolSolutionData(DigitalData):
         sec += [SecCoolSolutionData(sFile='VDI, Sodium Chloride'         ,sFolder='xMass',name='VNA' ,desc='VDI, Sodium Chloride'         ,ref='VDI Waermeatlas 9th Edition 2002, SecCool software')]
         print(", {0}".format(sec[-1].name), end="")
 
-        sec += [SecCoolSolutionData(sFile='HFE-7100'     ,sFolder='xPure',name='HFE' ,desc='HFE-7100, Hydrofluoroether'                      ,ref='3M Novec, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='HFE-7100'     ,sFolder='xPure',name='HFE2' ,desc='HFE-7100, Hydrofluoroether'                      ,ref='3M Novec, SecCool software')]
         print(", {0}".format(sec[-1].name), end="")
         sec += [SecCoolSolutionData(sFile='NBS, Water'   ,sFolder='xPure',name='NBS' ,desc='NBS, Water'                                      ,ref='Properties of Water and Steam in SI-Units, 2nd Revised and Updated Printing, Springer 1979, pp. 175 ff., SecCool software')]
         print(", {0}".format(sec[-1].name), end="")
@@ -288,12 +287,166 @@ class SecCoolSolutionData(DigitalData):
         print(", {0}".format(sec[-1].name), end="")
         sec += [SecCoolSolutionData(sFile='Zitrec S55'   ,sFolder='xPure',name='ZS55',desc='Zitrec S55, Potassium formate/Sodium propionate' ,ref='Arteco, SecCool software')]
         print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Syltherm XLT'   ,sFolder='xPure',name='XLT2',desc='Syltherm XLT, Polydimethylsiloxan' ,ref='Dow Chemicals, SecCool software')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Dowtherm J'   ,sFolder='xPure',name='DowJ2',desc='Dowtherm J, Diethylbenzene mixture' ,ref='Dow Chemicals, SecCool software')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Dowtherm Q'   ,sFolder='xPure',name='DowQ2',desc='Dowtherm Q, Diphenylethane/alkylated aromatics' ,ref='Dow Chemicals, SecCool software')]
+        print(", {0}".format(sec[-1].name), end="")
+        
+        sec += [ThermogenVP1869()]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [Freezium()]
+        print(", {0}".format(sec[-1].name), end="")
+        
+        
         
         print(" ... done")
         
         return sec
 
 
+class ThermogenVP1869(PureData,DigitalData):
+    """ 
+    Source: SecCool Software
+    """ 
+    def __init__(self):
+        PureData.__init__(self)
+        DigitalData.__init__(self) 
+        self.name = "TVP1869"
+        self.description = "Thermogen VP 1869"
+        self.reference = "Hoechst, SecCool software"
+        
+        self.Tmax =  20 + 273.15
+        self.Tmin = -80 + 273.15
+        self.TminPsat =  self.Tmax
+    
+        self.Tbase =   0.00 + 273.15
+       
+        self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
+        self.density.coeffs = np.array([[945.5454545],[-1.054545455]])
+        
+        self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
+        self.specific_heat.coeffs = np.array([[2.322218182],[0.003843636]])*1000
+
+        self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
+        self.conductivity.coeffs = np.array([[0.15],[-0.000154545]])
+        
+        self.temperature.data         = self.getTrange()
+        self.concentration.data       = np.array([0]) # mass fraction
+        
+        
+    def fitFluid(self):        
+        key = 'Mu'
+        def funcMu(T,x):
+            T = T-self.Tbase
+            return (341.3688975+T*(-0.713408301+0.017723992*T))/ \
+              (1+T*(0.034502393+T*(0.000401319+1.57288E-06*T)))*1e-2
+
+        self.viscosity.data = self.getArray(funcMu,key)
+        self.viscosity.type = self.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
+        try:
+            self.viscosity.coeffs = np.zeros((4,6))
+            self.viscosity.fitCoeffs(self.temperature.data,self.concentration.data,self.Tbase,self.xbase)
+        except (ValueError, AttributeError, TypeError, RuntimeError) as e:
+            if self.viscosity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(self.name,'viscosity',e))
+            pass 
 
 
+        
+class Freezium(DigitalData):
+    def __init__(self):
+        DigitalData.__init__(self) 
+        
+        self.name = "FRE"
+        self.description = "Freezium, Potassium Formate"
+        self.reference = "Kemira Chemicals OY, SecCool software"
+        
+        self.Tmin = -40 + 273.00
+        self.Tmax = +40 + 273.00
+        self.xmax = 0.50
+        self.xmin = 0.19
+        self.xid  = self.ifrac_mass
+        self.TminPsat = self.Tmax
+        
+        self.Tbase = 273.15
+        self.xbase = 0.0
+        
+        self.temperature.data         = self.getTrange()
+        self.concentration.data       = self.getxrange()
+        
+        self.density.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
+        self.density.coeffs = np.array([[1015,462,406],[-40/100.0,0.0,0.0]])
+
+        self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
+        self.conductivity.coeffs = np.array([[0.55,-0.15],[0.18/100.0,-0.16/100.0]])
+        
+        
+    def fitFluid(self):
+            
+        key = 'Cp'
+        def funcCp(T,x):
+            T = (T-self.Tbase)/100.0
+            return (4.15*np.exp(-0.9*x)+0.63*T*x)*1000.0
+
+        self.specific_heat.data = self.getArray(funcCp,key)
+        self.specific_heat.type = self.viscosity.INCOMPRESSIBLE_POLYNOMIAL
+        try:
+            self.specific_heat.coeffs = np.zeros((4,6))
+            self.specific_heat.fitCoeffs(self.temperature.data,self.concentration.data,self.Tbase,self.xbase)
+        except (ValueError, AttributeError, TypeError, RuntimeError) as e:
+            if self.specific_heat.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(self.name,'specific heat',e))
+            pass 
+        funcCp = None
+        
+
+        key = 'Mu'
+        def funcMu(T,x):
+            Tr = (T-self.Tbase)/100.0
+            result = 0.32+x*(-0.70+x*2.26)+Tr*(-1.26+Tr*(1.12-Tr*0.894))
+            return self.rho(T, 1e6, x)*np.power(10,result)*1E-3;
+
+        self.viscosity.data = self.getArray(funcMu,key)
+        self.viscosity.type = self.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
+        try:
+            self.viscosity.coeffs = np.zeros((4,6))
+            self.viscosity.fitCoeffs(self.temperature.data,self.concentration.data,self.Tbase,self.xbase)
+        except (ValueError, AttributeError, TypeError, RuntimeError) as e:
+            if self.viscosity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(self.name,'viscosity',e))
+            pass
+        funcMu = None
+        
+        
+        # Changed the coefficient order for TFreeze
+        key = 'Tfreeze'
+        def funcTf(x,T):
+            a =  0.03422039835160944
+            b = -0.05425629002714395
+            c = -0.007991085555390726
+            d =  0.001036937163846157
+            e =  0.0003268582531827402
+            f = -7.721483884155584E-06
+            g = -4.841293026057464E-06
+            h =  1.216929917247388E-08
+            i =  2.41704396074865E-08
+            j =  4.314861246570078E-11
+            return ((a+x*(c+x*(e+x*(g+i*x))))/(1+x*(b+x*(d+x*(f+x*(h+j*x))))))+273.15
+        
+        # Change the coefficients for TFreeze
+        self.temperature.data   = self.getxrange()
+        self.concentration.data = np.array([0.0])
+        self.T_freeze.data      = self.getArray(funcTf,key)
+        self.temperature.data   = self.getTrange()
+        self.concentration.data = self.getxrange()
+        self.T_freeze.type      = self.viscosity.INCOMPRESSIBLE_POLYNOMIAL
+        
+        try:        
+            self.T_freeze.coeffs = np.zeros((4,6))
+            self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
+            self.T_freeze.fitCoeffs(self.concentration.data,0.0,self.xbase,0.0)
+        except (ValueError, AttributeError, TypeError, RuntimeError) as e:
+            if self.T_freeze.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(self.name,'T freeze',e))
+            pass 
+        funcTf = None
+        
 
