@@ -1,0 +1,101 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase":  2.65650e+02, 
+  "Tmax":  3.13150e+02, 
+  "Tmin":  2.18150e+02, 
+  "TminPsat":  3.13150e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+         4.24482e-01
+      ], 
+      [
+         6.12252e-04
+      ], 
+      [
+         1.78241e-07
+      ], 
+      [
+         9.18760e-09
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+         1.25100e+03
+      ], 
+      [
+        -4.00000e-01
+      ], 
+      [
+        -0.00000e+00
+      ], 
+      [
+         0.00000e+00
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Tyfoxit 1.24, Potassium Acetate", 
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "TY24", 
+  "reference": "Tyforop Chemie Gmbh - Technical information 09/99, SecCool software", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+         2.87008e+03
+      ], 
+      [
+         3.14283e+00
+      ], 
+      [
+        -2.44908e-03
+      ], 
+      [
+        -1.25780e-04
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      [
+         2.01528e-01
+      ], 
+      [
+        -4.51575e-02
+      ], 
+      [
+         3.92889e-04
+      ], 
+      [
+        -2.87396e-06
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase":  0.00000e+00, 
+  "xid": 4, 
+  "xmax":  0.00000e+00, 
+  "xmin":  0.00000e+00
+}

@@ -144,9 +144,11 @@ class IncompressibleData(object):
         if (xr==1 and xc==1 and cr>1):
             if self.DEBUG: print("Discarding coefficient rows, {0} -> {1}".format(cr,xr))
             self.coeffs = self.coeffs[0]
+            self.coeffs = self.coeffs.reshape((1,cc))
         if (yr==1 and yc==1 and cc>1):
             if self.DEBUG: print("Discarding coefficient columns, {0} -> {1}".format(cc,yc))
-            self.coeffs = self.coeffs.T[0].T
+            self.coeffs = self.coeffs.T[0]
+            self.coeffs = self.coeffs.reshape((cr,1))
         cr,cc,_ = self.shapeArray(self.coeffs)
                 
         if self.DEBUG: print("Coefficients before fitting: \n{0}".format(self.coeffs))

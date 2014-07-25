@@ -40,6 +40,8 @@ public:
 
     // Helmholtz EOS backend uses mole fractions
     bool using_mole_fractions(){return true;}
+    bool using_mass_fractions(){return false;}
+    bool using_volu_fractions(){return false;}
 
     const std::vector<CoolPropFluid*> &get_components(){return components;};
     std::vector<long double> &get_K(){return K;};

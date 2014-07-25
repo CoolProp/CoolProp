@@ -333,7 +333,7 @@ std::string extract_concentrations(const std::string &fluid_string, std::vector<
 	// Check if per cent or fraction syntax is used
 	if (!strcmp(pEnd,"%")){	x *= 0.01;}
 	fractions.push_back(x);
-	if (get_debug_level()>10) std::cout << format("%s:%d: Detected incompressible concentration of %d for %s.",__FILE__,__LINE__,vec_to_string(fractions).c_str(), fluid_parts[0].c_str());
+	if (get_debug_level()>10) std::cout << format("%s:%d: Detected incompressible concentration of %s for %s.",__FILE__,__LINE__,vec_to_string(fractions).c_str(), fluid_parts[0].c_str());
 	return backend_string + fluid_parts[0];
 }
 
@@ -363,9 +363,12 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
 
         if (State->using_mole_fractions()){
             State->set_mole_fractions(z);
-        }
-        else{
+        } else if (State->using_mass_fractions()){
             State->set_mass_fractions(z);
+        } else if (State->using_volu_fractions()){
+            State->set_volu_fractions(z);
+        } else {
+        	if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
         }
 
         // Obtain the input pair

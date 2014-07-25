@@ -1,7 +1,8 @@
 from __future__ import division, absolute_import, print_function
 import numpy as np
+from scipy import interpolate
 from CPIncomp.BaseObjects import IncompressibleData
-import os, CPIncomp
+import os, CPIncomp, math
 
 class SolutionData(object):
     """ 
@@ -11,6 +12,14 @@ class SolutionData(object):
     information came from. 
     """
     def __init__(self):
+        self.ifrac_mass      = 0
+        self.ifrac_mole      = 1
+        self.ifrac_volume    = 2
+        self.ifrac_undefined = 3
+        self.ifrac_pure      = 4
+        
+        self.significantDigits = 6
+        
         self.name        = None # Name of the current fluid
         self.description = None # Description of the current fluid
         self.reference   = None # Reference data for the current fluid
@@ -19,6 +28,7 @@ class SolutionData(object):
         self.Tmin        = None # Minimum temperature in K
         self.xmax        = 1.0 # Maximum concentration
         self.xmin        = 0.0 # Minimum concentration
+        self.xid         = self.ifrac_undefined # Concentration is mole, mass or volume-based
         self.TminPsat    = None # Minimum saturation temperature in K
         self.Tbase       = 0.0  # Base value for temperature fits
         self.xbase       = 0.0  # Base value for concentration fits
@@ -31,8 +41,9 @@ class SolutionData(object):
         self.conductivity  = IncompressibleData() # Thermal conductivity in W/(m.K)
         self.saturation_pressure = IncompressibleData() # Saturation pressure in Pa
         self.T_freeze      = IncompressibleData() # Freezing temperature in K
-        self.volume2mass   = IncompressibleData() # dd
-        self.mass2mole     = IncompressibleData() # dd
+        self.mass2input    = IncompressibleData() # dd
+        self.volume2input  = IncompressibleData() # dd
+        self.mole2input    = IncompressibleData() # dd
         
         ## Some of the functions might need a guess array
         #self.viscosity.type = self.viscosity.INCOMPRESSIBLE_EXPONENTIAL
@@ -63,23 +74,36 @@ class SolutionData(object):
 #        objList["mass2mole"] = self.mass2mole
 #        return objList
 
-    def getPolyObjects(self):
-        objList  = {}
-        objList["density"] = self.density
-        objList["specific heat"] = self.specific_heat
+    def roundSingle(self,x):
+        if x==0.0: return 0.0
+        return round(x, self.significantDigits-int(math.floor(math.log10(abs(x))))-1) 
+
+    def round(self, x):
+        r,c,res = IncompressibleData.shapeArray(x)
+        #digits = -1*np.floor(np.log10(res))+self.significantDigits-1 
+        for i in range(r):
+            for j in range(c):
+                if np.isfinite(res[i,j]):
+                    res[i,j] = self.roundSingle(res[i,j])
+        return res
+
+#    def getPolyObjects(self):
+#        objList  = {}
+#        objList["density"] = self.density
+#        objList["specific heat"] = self.specific_heat
+##        objList["viscosity"] = self.viscosity
+#        objList["conductivity"] = self.conductivity
+##        objList["saturation_pressure"] = self.saturation_pressure
+##        objList["T_freeze"] = self.T_freeze
+##        objList["volume2mass"] = self.volume2mass
+##        objList["mass2mole"] = self.mass2mole
+#        return objList
+#    
+#    def getExpPolyObjects(self):
+#        objList  = {}
 #        objList["viscosity"] = self.viscosity
-        objList["conductivity"] = self.conductivity
-#        objList["saturation_pressure"] = self.saturation_pressure
-#        objList["T_freeze"] = self.T_freeze
-#        objList["volume2mass"] = self.volume2mass
-#        objList["mass2mole"] = self.mass2mole
-        return objList
-    
-    def getExpPolyObjects(self):
-        objList  = {}
-        objList["viscosity"] = self.viscosity
-        objList["saturation pressure"] = self.saturation_pressure
-        return objList
+#        objList["saturation pressure"] = self.saturation_pressure
+#        return objList
         
     
     def rho (self, T, p=0.0, x=0.0, c=None):
@@ -154,6 +178,7 @@ class PureData(SolutionData):
     """
     def __init__(self):
         SolutionData.__init__(self)
+        self.xid         = self.ifrac_pure
         self.concentration.data       = np.array([     0 ]) # mass fraction
         
     def reshapeData(self, dataArray, length):
@@ -199,7 +224,8 @@ class DigitalData(SolutionData):
     
     def writeToFile(self, data, array):
         fullPath = self.getFile(data)
-        return np.savetxt(fullPath, array, fmt='%1.8e')
+        stdFmt = "%1.{0}e".format(int(self.significantDigits-1))
+        return np.savetxt(fullPath, array, fmt=stdFmt)
     
     def getTrange(self):
         if self.Tmin<self.Tmax:
@@ -221,21 +247,78 @@ class DigitalData(SolutionData):
         generate the data and write it.
         """
         
-        baseArray = np.zeros( (len(self.temperature.data),len(self.concentration.data)) )
+        forceUpdate = False
+        readFromFile = False
+        fileArray = None
         
-        if (os.path.isfile(self.getFile(data))): # File found
-            fileArray = self.getFromFile(data)
-            if fileArray.shape==baseArray.shape:
-                return fileArray
+        if self.temperature.data==None or self.concentration.data==None: # no data set, try to get it from file
+            if self.temperature.data!=None: raise ValueError("Temperature is not None, but concentration is.")
+            if self.concentration.data!=None: raise ValueError("Concentration is not None, but temperature is.")
+            if (os.path.isfile(self.getFile(data))): # File found
+                fileArray = self.getFromFile(data)
+                self.temperature.data = np.copy(fileArray[1:,0])
+                self.concentration.data = np.copy(fileArray[0,1:])
+                readFromFile = True
             else:
-                raise ValueError("The array shapes do not match!")
-        else: # File cannot be read 
+                raise ValueError("No temperature and concentration data given and no readable file found.")
+            
+        tData = self.round(self.temperature.data)[:,0]
+        xData = self.round(self.concentration.data)[:,0]
+
+        baseArray = np.zeros( (len(tData)+1,len(xData)+1) )
+        
+        if (os.path.isfile(self.getFile(data)) and not forceUpdate): # File found and no update wanted
+            if fileArray==None: fileArray = self.getFromFile(data)
+            
+#            tFile = fileArray[1:,0]
+#            xFile = fileArray[0,1:]
+#            curDataLim = np.array([np.min(tData),np.max(tData),np.min(xData),np.max(xData)])
+#            curFileLim = np.array([np.min(tFile),np.max(tFile),np.min(xFile),np.max(xFile)])
+#            if np.allclose(curDataLim, curFileLim, rtol=1e-2) and fileArray.shape!=baseArray.shape: # We might have to interpolate
+#                if len(tData)<len(tFile) or len(xData)<len(xFile): # OK, we can interpolate
+#                    data = fileArray[1:,1:]
+#                    if len(tFile)==1: # 1d in concentration
+#                        f = interpolate.interp1d(xFile, data.flat)#, kind='cubic')
+#                        dataNew = f(xData).reshape((1,len(xData)))
+#                    elif len(xFile)==1: # 1d in temperature
+#                        f = interpolate.interp1d(tFile, data.flat)#, kind='cubic')
+#                        dataNew = f(tData).reshape((len(tData),1))
+#                    else: # 2d
+#                        f = interpolate.interp2d(xFile, tFile, data)#, kind='cubic')
+#                        dataNew = f(xData,tData)
+#                    fileArray = np.copy(baseArray)
+#                    fileArray[1:,1:] = dataNew
+#                    fileArray[1:,0] = tData
+#                    fileArray[0,1:] = xData
+#                else:
+#                    raise ValueError("Less points in file, not enough data for interpolation.")
+#            elif fileArray.shape==baseArray.shape:
+#                pass
+#            else:
+#                raise ValueError("The array shapes do not match. Check {0}".format(self.getFile(data)))
+
+            if readFromFile or fileArray.shape==baseArray.shape: # Shapes match
+                if readFromFile or np.allclose(tData, fileArray[1:,0]): # Temperature data matches
+                    if readFromFile or np.allclose(xData, fileArray[0,1:]): # Concentration data matches
+                        baseArray = fileArray 
+                    else:
+                        raise ValueError("Concentration arrays do not match. Check {0} \n and have a look at \n {1} \n vs \n {2} \n yielding \n {3}".format(self.getFile(data),xData,fileArray[0,1:],(xData==fileArray[0,1:])))
+                else:
+                    raise ValueError("Temperature arrays do not match. Check {0} \n and have a look at \n {1} \n vs \n {2} \n yielding \n {3}".format(self.getFile(data),tData,fileArray[1:,0],(tData==fileArray[1:,0])))
+            else:
+                raise ValueError("The array shapes do not match. Check {0}".format(self.getFile(data)))
+        else: # file not found or update forced
+            if func==None and forceUpdate:
+                raise ValueError("Need a function to update the data file.")
             for cT,T in enumerate(self.temperature.data):
                 for cx,x in enumerate(self.concentration.data):
-                    baseArray[cT][cx] = func(T,x)
+                    baseArray[cT+1][cx+1] = func(T,x)
+            baseArray[0,0] = np.NaN
+            baseArray[1:,0] = np.copy(self.temperature.data)
+            baseArray[0,1:] = np.copy(self.concentration.data)
             self.writeToFile(data, baseArray)
-            return baseArray
-                
+
+        return np.copy(baseArray.T[1:].T[1:]) # Remove the first column and row and return
 
 
 class PureExample(PureData):
@@ -263,9 +346,6 @@ class SolutionExample(SolutionData):
         self.name = "ExampleSolution"
         self.description = "Ethanol ice slurry"
         self.reference = "SecCool software"
-        self.Tmax = -10 + 273.15
-        self.Tmin = -45 + 273.15
-        self.TminPsat =  self.Tmax
         
         self.temperature.data         = np.array([   -45 ,    -40 ,    -35 ,    -30 ,    -25 ,    -20 ,    -15 ,    -10])+273.15 # Kelvin
         self.concentration.data       = np.array([     5 ,     10 ,     15 ,     20 ,     25 ,     30 ,     35 ])/100.0 # mass fraction
@@ -281,6 +361,14 @@ class SolutionExample(SolutionData):
           [1021.5,    1015.3,    1009.2,    1003.1,     997.1,     991.2,     985.4]]) # kg/m3
         
         self.specific_heat.data = np.copy(self.density.data)
+        
+        self.Tmax = np.max(self.temperature.data)
+        self.Tmin = np.min(self.temperature.data)
+        self.xmax = np.max(self.concentration.data)
+        self.xmin = np.min(self.concentration.data)
+        self.xid         = self.ifrac_mass
+        self.TminPsat =  self.Tmax
+        
 #        self.density.data             = np.array([
 #          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
 #          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
@@ -304,15 +392,19 @@ class DigitalExample(DigitalData):
         self.Tmax = 500.00;
         self.xmax = 1.0
         self.xmin = 0.0
+        self.xid         = self.ifrac_mass
         self.TminPsat = self.Tmin;
         
         self.temperature.data         = self.getTrange()
         self.concentration.data       = self.getxrange()
         
-        def func(T,x):
+        def funcRho(T,x):
             return T + x*100.0 + T*(x+0.5)
+        self.density.data             = self.getArray(funcRho,"rho")
         
-        self.density.data             = self.getArray(func,"rho")
+        def funcCp(T,x):
+            return T + x*50.0 + T*(x+0.6)
+        self.specific_heat.data             = self.getArray(funcCp,"cp")
         
 
 if __name__ == '__main__':

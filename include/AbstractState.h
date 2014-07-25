@@ -272,16 +272,20 @@ public:
 
     // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
     virtual bool using_mole_fractions(void) = 0;
+    virtual bool using_mass_fractions(void) = 0;
+    virtual bool using_volu_fractions(void) = 0;
 
     virtual void update(long input_pair, double Value1, double Value2) = 0;
     virtual void set_mole_fractions(const std::vector<long double> &mole_fractions) = 0;
     virtual void set_mass_fractions(const std::vector<long double> &mass_fractions) = 0;
+    virtual void set_volu_fractions(const std::vector<long double> &mass_fractions){throw NotImplementedError("Volume composition has not been implemented.");}
 
     /// Clear all the cached values
     bool clear();
 
     void set_mole_fractions(const std::vector<double> &mole_fractions){set_mole_fractions(std::vector<long double>(mole_fractions.begin(), mole_fractions.end()));};
     void set_mass_fractions(const std::vector<double> &mass_fractions){set_mass_fractions(std::vector<long double>(mass_fractions.begin(), mass_fractions.end()));};
+    void set_volu_fractions(const std::vector<double> &volu_fractions){set_volu_fractions(std::vector<long double>(volu_fractions.begin(), volu_fractions.end()));};
 
     const CoolProp::SimpleState & get_reducing(){return _reducing;};
 

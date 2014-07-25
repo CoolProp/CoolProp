@@ -3,17 +3,17 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  0.00000000e+00, 
-  "Tmax":  3.73150000e+02, 
-  "Tmin":  1.93150000e+02, 
-  "TminPsat":  3.73150000e+02, 
+  "Tbase":  0.00000e+00, 
+  "Tmax":  3.73150e+02, 
+  "Tmin":  1.93150e+02, 
+  "TminPsat":  3.73150e+02, 
   "conductivity": {
     "coeffs": [
       [
-         1.53716000e-04
+         1.53716e-04
       ], 
       [
-        -1.51212000e-07
+        -1.51212e-07
       ]
     ], 
     "type": "polynomial"
@@ -21,16 +21,20 @@
   "density": {
     "coeffs": [
       [
-         9.71725000e+02
+         9.71725e+02
       ], 
       [
-        -7.18788000e-01
+        -7.18788e-01
       ]
     ], 
     "type": "polynomial"
   }, 
   "description": "Hydrocarbon mixture (synthetic) - Therminol D12 (Gilotherm D12) Solutia", 
-  "mass2mole": {
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -43,10 +47,10 @@
   "specific_heat": {
     "coeffs": [
       [
-         8.44023000e+02
+         8.44023e+02
       ], 
       [
-         4.31212000e+00
+         4.31212e+00
       ]
     ], 
     "type": "polynomial"
@@ -54,22 +58,23 @@
   "viscosity": {
     "coeffs": [
       [
-         1.83237000e+01
+         1.83237e+01
       ], 
       [
-        -1.47060000e-01
+        -1.47060e-01
       ], 
       [
-         2.09096000e-04
+         2.09096e-04
       ]
     ], 
     "type": "exppolynomial"
   }, 
-  "volume2mass": {
+  "volume2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "xbase":  0.00000000e+00, 
-  "xmax":  1.00000000e+00, 
-  "xmin":  0.00000000e+00
+  "xbase":  0.00000e+00, 
+  "xid": 4, 
+  "xmax":  1.00000e+00, 
+  "xmin":  0.00000e+00
 }

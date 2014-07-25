@@ -64,6 +64,7 @@ class LiBrData(DigitalData):
         self.Tmax = 500.00;
         self.xmax = 0.75
         self.xmin = 0.00
+        self.xid  = self.ifrac_mass
         self.TminPsat = self.Tmin;
         
         self.temperature.data         = self.getTrange()

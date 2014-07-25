@@ -42,7 +42,7 @@ struct IncompressibleData {
 	};
 };
 
-/// A thermophysical property provider for critical and reducing values as well as derivatives of Helmholtz energy
+/// A property provider for incompressible solutions and pure fluids
 /**
 This fluid instance is populated using an entry from a JSON file
 */
@@ -57,6 +57,7 @@ protected:
 
 	double Tmin, Tmax;
 	double xmin, xmax;
+	int xid;
 
 	double TminPsat;
 	double xref, Tref, pref;
@@ -106,12 +107,23 @@ protected:
 	 *  If 1D, should be a column vector of concentration coefficients
 	 */
 	IncompressibleData T_freeze;
-	/// Volume to mass fraction coefficients
-	/** Not implemented, yet */
-	IncompressibleData volToMass;
-	/// Mass to mole fraction coefficients
-	/** Not implemented, yet */
-	IncompressibleData massToMole;
+
+	/// Mass fraction conversion coefficients
+	/** If the fluid type is mass-based, it does not do anything. Otherwise,
+	 *  it converts the mass fraction to the required input.
+	 */
+	IncompressibleData mass2input;
+	/// Volume fraction conversion coefficients
+	/** If the fluid type is volume-based, it does not do anything. Otherwise,
+	 *  it converts the volume fraction to the required input.
+	 */
+	IncompressibleData volume2input;
+	/// Mole fraction conversion coefficients
+	/** If the fluid type is mole-based, it does not do anything. Otherwise,
+	 *  it converts the mole fraction to the required input.
+	 */
+	IncompressibleData mole2input;
+
 
 	Polynomial2DFrac poly;
 
@@ -120,7 +132,7 @@ protected:
 	//double u_h(double T, double p, double x);
 
 public:
-	IncompressibleFluid(){strict = true;};
+	IncompressibleFluid(){strict = true; xid = ifrac_undefined;};
 	virtual ~IncompressibleFluid(){};
 
 	std::string getName() const {return name;}
@@ -132,6 +144,7 @@ public:
 	double getTmin() const {return Tmin;}
 	double getxmax() const {return xmax;}
 	double getxmin() const {return xmin;}
+	int getxid() const {return xid;}
 	double getTminPsat() const {return TminPsat;}
 	double getTref() const {return Tref;}
 	double getpref() const {return pref;}
@@ -148,6 +161,7 @@ public:
 	void setTmin(double Tmin) {this->Tmin = Tmin;}
 	void setxmax(double xmax) {this->xmax = xmax;}
 	void setxmin(double xmin) {this->xmin = xmin;}
+	void setxid(int xid) {this->xid = xid;}
 	void setTminPsat(double TminPsat) {this->TminPsat = TminPsat;}
 	//void setTref(double Tref) {this->Tref = Tref;}
 	//void setpref(double pref) {this->pref = pref;}
@@ -163,8 +177,11 @@ public:
 	void setConductivity(IncompressibleData conductivity){this->conductivity = conductivity;}
 	void setPsat(IncompressibleData p_sat){this->p_sat = p_sat;}
 	void setTfreeze(IncompressibleData T_freeze){this->T_freeze = T_freeze;}
-	void setVolToMass(IncompressibleData volToMass){this->volToMass = volToMass;}
-	void setMassToMole(IncompressibleData massToMole){this->massToMole = massToMole;}
+
+	/// Setters for the concentration conversion coefficients
+	void setMass2input(IncompressibleData mass2input){this->mass2input = mass2input;}
+	void setVolume2input(IncompressibleData volume2input){this->volume2input = volume2input;}
+	void setMole2input(IncompressibleData mole2input){this->mole2input = mole2input;}
 
 	/// A function to check coefficients and equation types.
 	void validate();
@@ -202,10 +219,21 @@ public:
 	double psat(double T,           double x);
 	/// Freezing temperature as a function of pressure and composition.
 	double Tfreeze(       double p, double x);
-	/// Conversion from volume-based to mass-based composition.
-	double V2M (double T,           double y);
-	/// Conversion from mass-based to mole-based composition.
-	double M2M (double T,           double x);
+
+	/// Mass fraction conversion function
+	/** If the fluid type is mass-based, it does not do anything. Otherwise,
+	 *  it converts the mass fraction to the required input. */
+	double inputFromMass (double T,     double x);
+	/// Volume fraction conversion function
+	/** If the fluid type is volume-based, it does not do anything. Otherwise,
+	 *  it converts the volume fraction to the required input. */
+	double inputFromVolume (double T,   double x);
+	/// Mole fraction conversion function
+	/** If the fluid type is mole-based, it does not do anything. Otherwise,
+	 *  it converts the mole fraction to the required input. */
+	double inputFromMole (double T,     double x);
+
+
 
 	/* Some functions can be inverted directly, those are listed
 	 * here. It is also possible to solve for other quantities, but

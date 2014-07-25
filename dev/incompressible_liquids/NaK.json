@@ -3,23 +3,23 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  7.23150000e+02, 
-  "Tmax":  8.73150000e+02, 
-  "Tmin":  5.73150000e+02, 
-  "TminPsat":  8.73150000e+02, 
+  "Tbase":  7.23150e+02, 
+  "Tmax":  8.73150e+02, 
+  "Tmin":  5.73150e+02, 
+  "TminPsat":  8.73150e+02, 
   "conductivity": {
     "coeffs": [
       [
-         5.28500000e-01
+         5.28500e-01
       ], 
       [
-         1.90000000e-04
+         1.90000e-04
       ], 
       [
-         0.00000000e+00
+         0.00000e+00
       ], 
       [
-         2.50868954e-21
+         0.00000e+00
       ]
     ], 
     "type": "polynomial"
@@ -27,22 +27,26 @@
   "density": {
     "coeffs": [
       [
-         1.80380000e+03
+         1.80380e+03
       ], 
       [
-        -6.36007848e-01
+        -6.36008e-01
       ], 
       [
-         0.00000000e+00
+         0.00000e+00
       ], 
       [
-         7.94436257e-11
+         7.94000e-11
       ]
     ], 
     "type": "polynomial"
   }, 
   "description": "NitrateSalt", 
-  "mass2mole": {
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -55,16 +59,16 @@
   "specific_heat": {
     "coeffs": [
       [
-         1.52040000e+03
+         1.52040e+03
       ], 
       [
-         1.72016302e-01
+         1.72016e-01
       ], 
       [
-         0.00000000e+00
+        -0.00000e+00
       ], 
       [
-        -1.28836916e-09
+        -1.28840e-09
       ]
     ], 
     "type": "polynomial"
@@ -72,25 +76,26 @@
   "viscosity": {
     "coeffs": [
       [
-        -6.50575747e+00
+        -6.50576e+00
       ], 
       [
-        -2.89369670e-03
+        -2.89370e-03
       ], 
       [
-         9.26676133e-06
+         9.26676e-06
       ], 
       [
-        -4.76839935e-08
+        -4.76840e-08
       ]
     ], 
     "type": "exppolynomial"
   }, 
-  "volume2mass": {
+  "volume2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "xbase":  0.00000000e+00, 
-  "xmax":  1.00000000e+00, 
-  "xmin":  0.00000000e+00
+  "xbase":  0.00000e+00, 
+  "xid": 4, 
+  "xmax":  1.00000e+00, 
+  "xmin":  0.00000e+00
 }

@@ -32,6 +32,8 @@ public:
 
     // REFPROP backend uses mole fractions
     bool using_mole_fractions(){return true;}
+    bool using_mass_fractions(){return false;}
+    bool using_volu_fractions(){return false;}
 
 	/// Updating function for REFPROP
 	/**

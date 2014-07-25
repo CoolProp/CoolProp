@@ -3,23 +3,23 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  3.53150000e+02, 
-  "Tmax":  5.33150000e+02, 
-  "Tmin":  1.73150000e+02, 
-  "TminPsat":  5.33150000e+02, 
+  "Tbase":  3.53150e+02, 
+  "Tmax":  5.33150e+02, 
+  "Tmin":  1.73150e+02, 
+  "TminPsat":  5.33150e+02, 
   "conductivity": {
     "coeffs": [
       [
-         9.72730770e-02
+         9.72731e-02
       ], 
       [
-        -2.34149211e-04
+        -2.34149e-04
       ], 
       [
-        -1.43952388e-07
+        -1.43952e-07
       ], 
       [
-         1.12031038e-10
+         1.12000e-10
       ]
     ], 
     "type": "polynomial"
@@ -27,22 +27,26 @@
   "density": {
     "coeffs": [
       [
-         7.93646132e+02
+         7.93646e+02
       ], 
       [
-        -1.02717732e+00
+        -1.02718e+00
       ], 
       [
-         1.63389320e-07
+         1.63389e-07
       ], 
       [
-         1.03681183e-09
+         1.03680e-09
       ]
     ], 
     "type": "polynomial"
   }, 
   "description": "SylthermXLT", 
-  "mass2mole": {
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -55,16 +59,16 @@
   "specific_heat": {
     "coeffs": [
       [
-         1.89774486e+03
+         1.89774e+03
       ], 
       [
-         2.10000000e+00
+         2.10000e+00
       ], 
       [
-         7.71753811e-07
+         7.71754e-07
       ], 
       [
-        -2.55438032e-16
+        -0.00000e+00
       ]
     ], 
     "type": "polynomial"
@@ -72,25 +76,26 @@
   "viscosity": {
     "coeffs": [
       [
-        -7.42522263e+00
+        -7.42522e+00
       ], 
       [
-        -1.02901971e-02
+        -1.02902e-02
       ], 
       [
-         4.86717539e-05
+         4.86718e-05
       ], 
       [
-        -1.75240358e-07
+        -1.75240e-07
       ]
     ], 
     "type": "exppolynomial"
   }, 
-  "volume2mass": {
+  "volume2input": {
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "xbase":  0.00000000e+00, 
-  "xmax":  1.00000000e+00, 
-  "xmin":  0.00000000e+00
+  "xbase":  0.00000e+00, 
+  "xid": 4, 
+  "xmax":  1.00000e+00, 
+  "xmin":  0.00000e+00
 }

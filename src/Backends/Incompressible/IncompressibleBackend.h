@@ -4,6 +4,7 @@
 
 #include "IncompressibleFluid.h"
 #include "AbstractState.h"
+#include "DataStructures.h"
 #include "Exceptions.h"
 
 #include <vector>
@@ -12,13 +13,13 @@ namespace CoolProp {
 
 class IncompressibleBackend : public AbstractState  {
 protected:
-    int Ncomp;
-    bool _mole_fractions_set;
-    static bool _REFPROP_supported;
-    std::vector<long double> mass_fractions;
+    //int Ncomp;
+    //static bool _REFPROP_supported;
+    //int _fractions_id;
+    std::vector<long double> _fractions;
     IncompressibleFluid *fluid;
 public:
-    IncompressibleBackend(){};
+    IncompressibleBackend();
     virtual ~IncompressibleBackend(){};
 
     /// The instantiator
@@ -31,8 +32,10 @@ public:
 	/// @param fluid_names The vector of strings of the fluid components, without file ending
 	IncompressibleBackend(const std::vector<std::string> &component_names);
 
-    // Incompressible backend uses mole fractions
-    bool using_mole_fractions(){return false;};
+    // Incompressible backend uses different compositions
+    bool using_mole_fractions(){return this->fluid->getxid()==ifrac_mole;};
+    bool using_mass_fractions(){return (this->fluid->getxid()==ifrac_mass || this->fluid->getxid()==ifrac_pure);};
+    bool using_volu_fractions(){return this->fluid->getxid()==ifrac_volume;};
 
     /// Updating function for incompressible fluid
     /**
@@ -57,11 +60,11 @@ public:
     */
     void set_mass_fractions(const std::vector<long double> &mass_fractions);
 
-    /// Set the mass fraction
+    /// Set the volume fractions
     /**
-    @param mass_fractions The mass fraction of the component other than water
+    @param volu_fractions The vector of volume fractions of the components
     */
-    void set_mass_fractions(const long double &mass_fraction);
+    void set_volu_fractions(const std::vector<long double> &volu_fractions);
 
     /// Check if the mole fractions have been set, etc.
     void check_status();
@@ -97,16 +100,16 @@ public:
     long double PUmass_flash(long double p, long double umass);
 
     /// Get the viscosity [Pa-s]
-    long double calc_viscosity(void){return fluid->visc(_T, _p, mass_fractions[0]);};
+    long double calc_viscosity(void){return fluid->visc(_T, _p, _fractions[0]);};
     /// Get the thermal conductivity [W/m/K] (based on the temperature and pressure in the state class)
-    long double calc_conductivity(void){return fluid->cond(_T, _p, mass_fractions[0]);};
+    long double calc_conductivity(void){return fluid->cond(_T, _p, _fractions[0]);};
 
-    long double calc_rhomass(void){return fluid->rho(_T, _p, mass_fractions[0]);};
-    long double calc_hmass(void){return fluid->h(_T, _p, mass_fractions[0]);};
-    long double calc_smass(void){return fluid->s(_T, _p, mass_fractions[0]);};
-    long double calc_umass(void){return fluid->u(_T, _p, mass_fractions[0]);};
-    long double calc_cpmass(void){return fluid->cp(_T, _p, mass_fractions[0]);};
-    long double calc_cvmass(void){return fluid->cv(_T, _p, mass_fractions[0]);};
+    long double calc_rhomass(void){return fluid->rho(_T, _p, _fractions[0]);};
+    long double calc_hmass(void){return fluid->h(_T, _p, _fractions[0]);};
+    long double calc_smass(void){return fluid->s(_T, _p, _fractions[0]);};
+    long double calc_umass(void){return fluid->u(_T, _p, _fractions[0]);};
+    long double calc_cpmass(void){return fluid->cp(_T, _p, _fractions[0]);};
+    long double calc_cvmass(void){return fluid->cv(_T, _p, _fractions[0]);};
 };
 
 } /* namespace CoolProp */
