@@ -639,7 +639,7 @@ double IdealGasMolarEnthalpy_Water(double T, double vmolar)
 {
     double hbar_w_0, tau, rhomolar, hbar_w;
     // Ideal-Gas contribution to enthalpy of water
-    hbar_w_0 = -0.01102303806;//[J/mol]
+    hbar_w_0 = -0.01102303806; //[J/mol]
     tau = Water->keyed_output(CoolProp::iT_reducing)/T;
     rhomolar = 1/vmolar; //[mol/m^3]
     Water->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
@@ -710,6 +710,10 @@ double MolarEnthalpy(double T, double p, double psi_w, double vmolar)
         hbar_w = IdealGasMolarEnthalpy_Water(T, vmolar);
         hbar_a = IdealGasMolarEnthalpy_Air(T, vmolar);
     }
+
+    // If the user changes the reference state for water or Air, we need to ensure that the values returned from this 
+    // function are always the same as the formulation expects.  Therefore we can use a state point for which we know what the 
+    // enthalpy should be and then correct the calculated values for the enthalpy.
 
     hbar = hbar_0+(1-psi_w)*hbar_a+psi_w*hbar_w+R_bar*T*((B_m(T,psi_w)-T*dB_m_dT(T,psi_w))/vmolar+(C_m(T,psi_w)-T/2.0*dC_m_dT(T,psi_w))/(vmolar*vmolar));
     return hbar; //[J/mol]
@@ -852,7 +856,7 @@ double DewpointTemperature(double T, double p, double psi_w)
 class WetBulbSolver : public CoolProp::FuncWrapper1D
 {
 private:
-    double _T,_p,_W,LHS,v_bar_w,M_ha;
+    double _T,_p,_W,LHS,RHS,v_bar_w,M_ha;
 public:
     WetBulbSolver(double T, double p, double psi_w){
         _T = T;
@@ -861,7 +865,7 @@ public:
 
         //These things are all not a function of Twb
         v_bar_w = MolarVolume(T,p,psi_w);
-        M_ha = MM_Water()*psi_w+(1-psi_w)*28.966;
+        M_ha = MM_Water()*psi_w+(1-psi_w)*0.028966;
         LHS = MolarEnthalpy(T,p,psi_w,v_bar_w)*(1+_W)/M_ha;
     };
     ~WetBulbSolver(){};
@@ -903,9 +907,9 @@ public:
         }
         // Mole masses of wetbulb and humid air
 
-        M_ha_wb=MM_Water()*psi_wb+(1-psi_wb)*28.966;
+        M_ha_wb = MM_Water()*psi_wb+(1-psi_wb)*0.028966;
         v_bar_wb=MolarVolume(Twb,_p,psi_wb);
-        double RHS = (MolarEnthalpy(Twb,_p,psi_wb,v_bar_wb)*(1+W_s_wb)/M_ha_wb+(_W-W_s_wb)*h_w);
+        RHS = (MolarEnthalpy(Twb,_p,psi_wb,v_bar_wb)*(1+W_s_wb)/M_ha_wb+(_W-W_s_wb)*h_w);
         if (!ValidNumber(LHS-RHS)){throw CoolProp::ValueError();}
         return LHS - RHS;
     }
@@ -956,7 +960,7 @@ double WetbulbTemperature(double T, double p, double psi_w)
 
     double return_val;
     try{
-        return_val = Secant(WBS,Tmax,0.0001,1e-8,50,errstr);
+        return_val = Secant(WBS,Tmax-1,-0.0001,1e-8,50,errstr);
 
         // Solution obtained is out of range (T>Tmax)
         if (return_val > Tmax) {throw CoolProp::ValueError();}
@@ -1770,6 +1774,12 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]")
         for (std::size_t i = 0; i < inputs.size(); ++i){
             set_values(inputs[i]);
             call();
+            CAPTURE(inputs[i].in1);
+            CAPTURE(inputs[i].v1);
+            CAPTURE(inputs[i].in2);
+            CAPTURE(inputs[i].v2);
+            CAPTURE(inputs[i].in3);
+            CAPTURE(inputs[i].v3);
             CAPTURE(out);
             CAPTURE(actual);
             CAPTURE(expected);
@@ -1782,6 +1792,12 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]")
         for (std::size_t i = 0; i < inputs.size(); ++i){
             set_values(inputs[i]);
             call();
+            CAPTURE(inputs[i].in1);
+            CAPTURE(inputs[i].v1);
+            CAPTURE(inputs[i].in2);
+            CAPTURE(inputs[i].v2);
+            CAPTURE(inputs[i].in3);
+            CAPTURE(inputs[i].v3);
             CAPTURE(out);
             CAPTURE(actual);
             CAPTURE(expected);
@@ -1794,6 +1810,12 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]")
         for (std::size_t i = 0; i < inputs.size(); ++i){
             set_values(inputs[i]);
             call();
+            CAPTURE(inputs[i].in1);
+            CAPTURE(inputs[i].v1);
+            CAPTURE(inputs[i].in2);
+            CAPTURE(inputs[i].v2);
+            CAPTURE(inputs[i].in3);
+            CAPTURE(inputs[i].v3);
             CAPTURE(out);
             CAPTURE(actual);
             CAPTURE(expected);
