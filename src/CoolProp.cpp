@@ -784,7 +784,7 @@ std::string get_BibTeXKey(std::string Ref, std::string key)
     else if (!key.compare("VISCOSITY")){ return HEOS.get_components()[0]->transport.BibTeX_viscosity; }
 	else if (!key.compare("CONDUCTIVITY")){ return HEOS.get_components()[0]->transport.BibTeX_conductivity; }
 	else if (!key.compare("ECS_LENNARD_JONES")){ throw NotImplementedError(); }
-	else if (!key.compare("ECS_VISCSOSITY_FITS")){ throw NotImplementedError(); }
+	else if (!key.compare("ECS_VISCOSITY_FITS")){ throw NotImplementedError(); }
     else if (!key.compare("ECS_CONDUCTIVITY_FITS")){ throw NotImplementedError(); }
     else if (!key.compare("SURFACE_TENSION")){ return HEOS.get_components()[0]->ancillaries.surface_tension.BibTeX;}
 	else{ return "Bad key";}
