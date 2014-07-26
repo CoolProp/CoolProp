@@ -19,7 +19,7 @@
         -1.72984e-07
       ], 
       [
-         3.50000e-12
+         3.52351e-12
       ]
     ], 
     "type": "polynomial"
@@ -53,21 +53,8 @@
   "name": "TVP1", 
   "reference": "Therminol Heat Transfer Reference Disk", 
   "saturation_pressure": {
-    "coeffs": [
-      [
-         1.02917e+01
-      ], 
-      [
-         2.77329e-02
-      ], 
-      [
-        -9.22368e-05
-      ], 
-      [
-         2.53513e-07
-      ]
-    ], 
-    "type": "exppolynomial"
+    "coeffs": "null", 
+    "type": "notdefined"
   }, 
   "specific_heat": {
     "coeffs": [

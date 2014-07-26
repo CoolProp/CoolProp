@@ -1,4 +1,4 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import division, print_function
 import numpy as np
 from scipy.optimize._minimize import minimize
 from scipy.optimize.minpack import curve_fit

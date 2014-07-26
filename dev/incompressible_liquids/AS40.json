@@ -3,23 +3,17 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  2.67500e+02, 
-  "Tmax":  3.00000e+02, 
-  "Tmin":  2.35000e+02, 
-  "TminPsat":  3.00000e+02, 
+  "Tbase":  2.73150e+02, 
+  "Tmax":  3.03150e+02, 
+  "Tmin": -40, 
+  "TminPsat":  3.03150e+02, 
   "conductivity": {
     "coeffs": [
       [
-         4.37153e-01
+         4.43327e-01
       ], 
       [
-         1.09943e-03
-      ], 
-      [
-        -6.04396e-08
-      ], 
-      [
-        -1.20664e-09
+         1.09900e-03
       ]
     ], 
     "type": "polynomial"
@@ -27,21 +21,21 @@
   "density": {
     "coeffs": [
       [
-         1.21692e+03
+         1.21484e+03
       ], 
       [
-        -3.64871e-01
+        -3.78199e-01
       ], 
       [
-        -1.37912e-03
+        -1.09307e-03
       ], 
       [
-         1.73591e-05
+         1.68350e-05
       ]
     ], 
     "type": "polynomial"
   }, 
-  "description": "Aspen Temper -40", 
+  "description": "Aspen Temper -40, Potassium acetate/formate", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -51,7 +45,7 @@
     "type": "notdefined"
   }, 
   "name": "AS40", 
-  "reference": "SecCool Software", 
+  "reference": "Aspen Petroleum AB, SecCool software", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -59,16 +53,13 @@
   "specific_heat": {
     "coeffs": [
       [
-         2.96376e+03
+         2.97788e+03
       ], 
       [
-         2.71943e+00
+         2.28000e+00
       ], 
       [
-        -3.87363e-02
-      ], 
-      [
-        -1.20664e-06
+        -3.87227e-02
       ]
     ], 
     "type": "polynomial"
@@ -76,16 +67,16 @@
   "viscosity": {
     "coeffs": [
       [
-        -5.05918e+00
+         1.73307e+00
       ], 
       [
-        -4.11341e-02
+        -5.42737e-02
       ], 
       [
-         4.27271e-04
+         2.78602e-04
       ], 
       [
-        -4.66582e-06
+         4.99909e-07
       ]
     ], 
     "type": "exppolynomial"
@@ -95,7 +86,7 @@
     "type": "notdefined"
   }, 
   "xbase":  0.00000e+00, 
-  "xid": 4, 
+  "xid": 3, 
   "xmax":  1.00000e+00, 
   "xmin":  0.00000e+00
 }

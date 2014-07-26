@@ -16,10 +16,10 @@
         -1.21312e-04
       ], 
       [
-        -4.10000e-11
+        -4.09811e-11
       ], 
       [
-        -1.70000e-12
+        -1.66940e-12
       ]
     ], 
     "type": "polynomial"
@@ -53,21 +53,8 @@
   "name": "T72", 
   "reference": "Therminol Heat Transfer Reference Disk", 
   "saturation_pressure": {
-    "coeffs": [
-      [
-         1.01243e+01
-      ], 
-      [
-         1.63872e-02
-      ], 
-      [
-        -1.58443e-06
-      ], 
-      [
-         1.41000e-11
-      ]
-    ], 
-    "type": "exppolynomial"
+    "coeffs": "null", 
+    "type": "notdefined"
   }, 
   "specific_heat": {
     "coeffs": [
@@ -81,7 +68,7 @@
         -6.76773e-07
       ], 
       [
-         4.27170e-09
+         4.27171e-09
       ]
     ], 
     "type": "polynomial"

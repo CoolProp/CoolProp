@@ -1,8 +1,8 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import division, print_function
 import numpy as np
-from scipy import interpolate
-from CPIncomp.BaseObjects import IncompressibleData
-import os, CPIncomp, math
+import os, math
+from BaseObjects import IncompressibleData
+from abc import ABCMeta
 
 class SolutionData(object):
     """ 
@@ -11,6 +11,7 @@ class SolutionData(object):
     put in your data and add some documentation for where the
     information came from. 
     """
+    __metaclass__ = ABCMeta
     def __init__(self):
         self.ifrac_mass      = 0
         self.ifrac_mole      = 1
@@ -176,6 +177,7 @@ class PureData(SolutionData):
     An extension of the solution data that makes it 
     easier to gather data for pure fluids. 
     """
+    __metaclass__ = ABCMeta
     def __init__(self):
         SolutionData.__init__(self)
         self.xid         = self.ifrac_pure
@@ -211,11 +213,12 @@ class DigitalData(SolutionData):
     easier to generate fitting data from fluids available
     as Python packages.
     """
+    __metaclass__ = ABCMeta
     def __init__(self):
         SolutionData.__init__(self)
         
     def getFile(self, data):
-        return os.path.join(CPIncomp.__path__[0], 'data', self.name+"_"+data+".txt")
+        return os.path.join(os.path.dirname(__file__), 'data', self.name+"_"+data+".txt")
     
     def getFromFile(self, data):
         fullPath = self.getFile(data)
@@ -254,20 +257,20 @@ class DigitalData(SolutionData):
         if self.temperature.data==None or self.concentration.data==None: # no data set, try to get it from file
             if self.temperature.data!=None: raise ValueError("Temperature is not None, but concentration is.")
             if self.concentration.data!=None: raise ValueError("Concentration is not None, but temperature is.")
-            if (os.path.isfile(self.getFile(data))): # File found
+            if (data!=None and os.path.isfile(self.getFile(data))): # File found
                 fileArray = self.getFromFile(data)
                 self.temperature.data = np.copy(fileArray[1:,0])
                 self.concentration.data = np.copy(fileArray[0,1:])
                 readFromFile = True
             else:
-                raise ValueError("No temperature and concentration data given and no readable file found.")
+                raise ValueError("No temperature and concentration data given and no readable file found for {0}".format(data))
             
         tData = self.round(self.temperature.data)[:,0]
         xData = self.round(self.concentration.data)[:,0]
 
         baseArray = np.zeros( (len(tData)+1,len(xData)+1) )
         
-        if (os.path.isfile(self.getFile(data)) and not forceUpdate): # File found and no update wanted
+        if (data!=None and os.path.isfile(self.getFile(data)) and not forceUpdate): # File found and no update wanted
             if fileArray==None: fileArray = self.getFromFile(data)
             
 #            tFile = fileArray[1:,0]
@@ -316,132 +319,190 @@ class DigitalData(SolutionData):
             baseArray[0,0] = np.NaN
             baseArray[1:,0] = np.copy(self.temperature.data)
             baseArray[0,1:] = np.copy(self.concentration.data)
-            self.writeToFile(data, baseArray)
+            if data!=None: self.writeToFile(data, baseArray)
 
         return np.copy(baseArray.T[1:].T[1:]) # Remove the first column and row and return
 
 
-class PureExample(PureData):
-    def __init__(self):
-        PureData.__init__(self) 
-        self.name = "ExamplePure"
-        self.description = "Heat transfer fluid TherminolD12 by Solutia"
-        self.reference = "Solutia data sheet"
-        self.Tmax = 150 + 273.15
-        self.Tmin =  50 + 273.15
-        self.TminPsat =  self.Tmax
-        
-        self.temperature.data         = np.array([   50,   60,    70,     80,    90,   100,   110,   120,   130,   140,   150])+273.15 # Kelvin
-        self.density.data             = np.array([  740,   733,   726,   717,   710,   702,   695,   687,   679,   670,   662])        # kg/m3
-        self.specific_heat.data       = np.array([ 2235,  2280,  2326,  2361,  2406,  2445,  2485,  2528,  2571,  2607,  2645])        # J/kg-K
-        self.viscosity.data           = np.array([0.804, 0.704, 0.623, 0.556, 0.498, 0.451, 0.410, 0.374, 0.346, 0.317, 0.289])        # Pa-s
-        self.conductivity.data        = np.array([0.105, 0.104, 0.102, 0.100, 0.098, 0.096, 0.095, 0.093, 0.091, 0.089, 0.087])        # W/m-K
-        self.saturation_pressure.data = np.array([  0.5,   0.9,   1.4,   2.3,   3.9,   6.0,   8.7,  12.4,  17.6,  24.4,  33.2])        # Pa
-        self.reshapeAll()
-
-
-class SolutionExample(SolutionData):
+class CoefficientData(SolutionData):
+    """ 
+    A class to convert parameter arrays from different other sources
+    """ 
+    __metaclass__ = ABCMeta
     def __init__(self):
         SolutionData.__init__(self) 
-        self.name = "ExampleSolution"
-        self.description = "Ethanol ice slurry"
+        self.reference = "Some other software"
+        
+    def convertSecCoolArray(self, array):
+        if len(array)!=18:
+            raise ValueError("The lenght is not equal to 18!")
+        
         self.reference = "SecCool software"
+        array = np.array(array)        
+        tmp = np.zeros((4,6))
         
-        self.temperature.data         = np.array([   -45 ,    -40 ,    -35 ,    -30 ,    -25 ,    -20 ,    -15 ,    -10])+273.15 # Kelvin
-        self.concentration.data       = np.array([     5 ,     10 ,     15 ,     20 ,     25 ,     30 ,     35 ])/100.0 # mass fraction
+        tmp[0][0] = array[0]
+        tmp[0][1] = array[1]
+        tmp[0][2] = array[2]
+        tmp[0][3] = array[3]
+        tmp[0][4] = array[4]
+        tmp[0][5] = array[5]
         
-        self.density.data             = np.array([
-          [1064.0,    1054.6,    1045.3,    1036.3,    1027.4,    1018.6,    1010.0],
-          [1061.3,    1052.1,    1043.1,    1034.3,    1025.6,    1017.0,    1008.6],
-          [1057.6,    1048.8,    1040.1,    1031.5,    1023.1,    1014.8,    1006.7],
-          [1053.1,    1044.6,    1036.2,    1028.0,    1019.9,    1012.0,    1004.1],
-          [1047.5,    1039.4,    1031.5,    1023.7,    1016.0,    1008.4,    1000.9],
-          [1040.7,    1033.2,    1025.7,    1018.4,    1011.2,    1004.0,     997.0],
-          [1032.3,    1025.3,    1018.5,    1011.7,    1005.1,     998.5,     992.0],
-          [1021.5,    1015.3,    1009.2,    1003.1,     997.1,     991.2,     985.4]]) # kg/m3
+        tmp[1][0] = array[6]
+        tmp[1][1] = array[7]
+        tmp[1][2] = array[8]
+        tmp[1][3] = array[9]
+        tmp[1][4] = array[10]
+        #tmp[1][5] = array[11]
         
-        self.specific_heat.data = np.copy(self.density.data)
+        tmp[2][0] = array[11]
+        tmp[2][1] = array[12]
+        tmp[2][2] = array[13]
+        tmp[2][3] = array[14]
+        #tmp[2][4] = array[4]
+        #tmp[2][5] = array[5]
         
-        self.Tmax = np.max(self.temperature.data)
-        self.Tmin = np.min(self.temperature.data)
-        self.xmax = np.max(self.concentration.data)
-        self.xmin = np.min(self.concentration.data)
-        self.xid         = self.ifrac_mass
-        self.TminPsat =  self.Tmax
+        tmp[3][0] = array[15]
+        tmp[3][1] = array[16]
+        tmp[3][2] = array[17]
+        #tmp[3][3] = array[3]
+        #tmp[3][4] = array[4]
+        #tmp[3][5] = array[5]
         
-#        self.density.data             = np.array([
-#          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
-#          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
-#          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
-#          [np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
-#          [np.nan,    np.nan,    np.nan,    np.nan,    1016.0,    1008.4,    np.nan],
-#          [np.nan,    1033.2,    np.nan,    np.nan,    np.nan,    np.nan,    np.nan],
-#          [np.nan,    1025.3,    1018.5,    np.nan,    np.nan,     998.5,     992.0],
-#          [np.nan,    np.nan,    1009.2,    np.nan,    np.nan,    np.nan,    np.nan]]) # kg/m3
+        # Concentration is no longer handled in per cent!
+        for i in range(6):
+            tmp.T[i] *= 100.0**i 
+                
+        return tmp
+    
+    
+    def convertSecCoolTfreeze(self, array):
+        expo = -1.0
+        for i in range(len(array)):
+            array[i] = array[i]*np.power(100.0,expo+i)
+        array[1] = array[1] + 273.15
+        #self.T_freeze.type = self.T_freeze.INCOMPRESSIBLE_POLYOFFSET
+        return array
 
-class DigitalExample(DigitalData):
 
-    def __init__(self):
-        DigitalData.__init__(self) 
 
-        self.name = "ExampleDigital"
-        self.description = "some fluid"
-        self.reference = "none"
+    def convertMelinderArray(self, array):
+        """The same function as the SecCool converter, 
+        the original source code is slightly different though.
+        That is why the implementation is in a transposed form..."""
         
-        self.Tmin = 273.00;
-        self.Tmax = 500.00;
-        self.xmax = 1.0
-        self.xmin = 0.0
-        self.xid         = self.ifrac_mass
-        self.TminPsat = self.Tmin;
+        if len(array)!=18:
+            raise ValueError("The lenght is not equal to 18!")
         
-        self.temperature.data         = self.getTrange()
-        self.concentration.data       = self.getxrange()
+        self.reference = "Melinder Book"
+        array = np.array(array)        
+        tmp = np.zeros((6,4))
         
-        def funcRho(T,x):
-            return T + x*100.0 + T*(x+0.5)
-        self.density.data             = self.getArray(funcRho,"rho")
+        tmp[0][0] = array[0] 
+        tmp[0][1] = array[6] 
+        tmp[0][2] = array[11]
+        tmp[0][3] = array[15]
         
-        def funcCp(T,x):
-            return T + x*50.0 + T*(x+0.6)
-        self.specific_heat.data             = self.getArray(funcCp,"cp")
+        tmp[1][0] = array[1] 
+        tmp[1][1] = array[7] 
+        tmp[1][2] = array[12]
+        tmp[1][3] = array[16]
         
-
-if __name__ == '__main__':
-    pass 
-##   An example with a pure fluid
-#    obj = PureExample()
-#    obj.density.type   = obj.density.INCOMPRESSIBLE_POLYNOMIAL
-#    obj.density.coeffs = np.zeros((4,6))
-#    print(obj.density.coeffs)
-#    obj.density.fitCoeffs(obj.temperature.data)
-#    print(obj.density.coeffs)
-#    obj.saturation_pressure.type   = obj.density.INCOMPRESSIBLE_EXPPOLYNOMIAL
-#    obj.saturation_pressure.coeffs = np.zeros((4,6))
-#    print(obj.saturation_pressure.coeffs)
-#    obj.saturation_pressure.fitCoeffs(obj.temperature.data)
-#    print(obj.saturation_pressure.coeffs)
-#    print(obj.density.data[2][0],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[0]))
-#    print(obj.density.data[5][0],obj.rho(obj.temperature.data[5],10e5,obj.concentration.data[0]))
-#    print(obj.saturation_pressure.data[2][0],obj.psat(obj.temperature.data[2],obj.concentration.data[0]))
-#    print(obj.saturation_pressure.data[5][0],obj.psat(obj.temperature.data[5],obj.concentration.data[0]))
-
-##   An example with a solution
-#    obj = SolutionExample()
-#    obj.density.type   = obj.density.INCOMPRESSIBLE_POLYNOMIAL
-#    obj.density.coeffs = np.ones((3,5))
-#    print(obj.density.coeffs)
-#    obj.density.fitCoeffs(obj.temperature.data,obj.concentration.data)
-#    print(obj.density.coeffs)
-#    print(obj.density.data[2][0],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[0]))
-#    print(obj.density.data[2][2],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[2]))
-
-##   An example with a digital fluid
-#    obj = DigitalExample()
-#    obj.density.type   = obj.density.INCOMPRESSIBLE_POLYNOMIAL
-#    obj.density.coeffs = np.ones((3,5))
-#    print(obj.density.coeffs)
-#    obj.density.fitCoeffs(obj.temperature.data,obj.concentration.data)
-#    print(obj.density.coeffs)
-#    print(obj.density.data[2][0],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[0]))
-#    print(obj.density.data[2][2],obj.rho(obj.temperature.data[2],10e5,obj.concentration.data[2]))
+        tmp[2][0] = array[2] 
+        tmp[2][1] = array[8] 
+        tmp[2][2] = array[13]
+        tmp[2][3] = array[17]
+        
+        tmp[3][0] = array[3] 
+        tmp[3][1] = array[9] 
+        tmp[3][2] = array[14]
+        
+        tmp[4][0] = array[4] 
+        tmp[4][1] = array[10]
+        
+        tmp[5][0] = array[5] 
+        
+        # Concentration is no longer handled in per cent!
+        for i in range(6):
+            tmp[i] *= 100.0**i 
+                
+        return tmp.T
+    
+    def convertMelinderMatrix(self, array):
+        """Function to convert the full coefficient array
+        from the very first CoolProp implementation
+        based on the book by Melinder"""
+        if len(array)!=18:
+            raise ValueError("The lenght is not equal to 18!")
+        if len(array[0])!=5:
+            raise ValueError("The lenght is not equal to 5!")
+        array = np.array(array)
+        tmp = np.zeros((18,5))
+        
+        for j in range(5):
+            tmp[ 0][j] = array[ 0][j]
+            tmp[ 1][j] = array[ 4][j]
+            tmp[ 2][j] = array[ 8][j]
+            tmp[ 3][j] = array[12][j]
+            tmp[ 4][j] = array[15][j]
+            tmp[ 5][j] = array[17][j]
+            tmp[ 6][j] = array[ 1][j]
+            tmp[ 7][j] = array[ 5][j]
+            tmp[ 8][j] = array[ 9][j]
+            tmp[ 9][j] = array[13][j]
+            tmp[10][j] = array[16][j]
+            tmp[11][j] = array[ 2][j]
+            tmp[12][j] = array[ 6][j]
+            tmp[13][j] = array[10][j]
+            tmp[14][j] = array[14][j]
+            tmp[15][j] = array[ 3][j]
+            tmp[16][j] = array[ 7][j]
+            tmp[17][j] = array[11][j]
+            
+        return tmp
+    
+    
+    
+    def setMelinderMatrix(self, matrix):
+#        matrix = np.array([
+#        [-26.29           , 958.1           ,3887           ,   0.4175            ,   1.153           ],
+#        [ -0.000002575    ,  -0.4151        ,   7.201       ,   0.0007271         ,  -0.03866         ],
+#        [ -0.000006732    ,  -0.002261      ,  -0.08979     ,   0.0000002823      ,   0.0002779       ],
+#        [  0.000000163    ,   0.0000002998  ,  -0.000439    ,   0.000000009718    ,  -0.000001543     ],
+#        [ -1.187          ,  -1.391         , -18.5         ,  -0.004421          ,   0.005448        ],
+#        [ -0.00001609     ,  -0.0151        ,   0.2984      ,  -0.00002952        ,   0.0001008       ],
+#        [  0.000000342    ,   0.0001113     ,  -0.001865    ,   0.00000007336     ,  -0.000002809     ],
+#        [  0.0000000005687,  -0.0000003264  ,  -0.00001718  ,   0.0000000004328   ,   0.000000009811  ],
+#        [ -0.01218        ,  -0.01105       ,  -0.03769     ,   0.00002044        ,  -0.0005552       ],
+#        [  0.0000003865   ,   0.0001828     ,  -0.01196     ,   0.0000003413      ,   0.000008384     ],
+#        [  0.000000008768 ,  -0.000001641   ,   0.00009801  ,  -0.000000003665    ,  -0.00000003997   ],
+#        [ -0.0000000002095,   0.0000000151  ,   0.000000666 ,  -0.00000000002791  ,  -0.0000000003466 ],
+#        [ -0.00006823     ,  -0.0001208     ,  -0.003776    ,   0.0000002943      ,   0.000003038     ],
+#        [  0.00000002137  ,   0.000002992   ,  -0.00005611  ,  -0.0000000009646   ,  -0.00000007435   ],
+#        [ -0.0000000004271,   0.000000001455,  -0.0000007811,   0.00000000003174  ,   0.0000000007442 ],
+#        [  0.0000001297   ,   0.000004927   ,  -0.0001504   ,  -0.0000000008666   ,   0.00000006669   ],
+#        [ -0.0000000005407,  -0.0000001325  ,   0.000007373 ,  -0.0000000000004573,  -0.0000000009105 ],
+#        [  0.00000002363  ,  -0.00000007727 ,   0.000006433 ,  -0.0000000002033   ,  -0.0000000008472 ]
+#        ])
+        
+        coeffs = self.convertMelinderMatrix(matrix).T
+        
+        self.T_freeze.type = self.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
+        self.T_freeze.coeffs = self.convertMelinderArray(coeffs[0])
+        
+        self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
+        self.density.coeffs = self.convertMelinderArray(coeffs[1])
+        
+        self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
+        self.specific_heat.coeffs = self.convertMelinderArray(coeffs[2])
+        
+        self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
+        self.conductivity.coeffs = self.convertMelinderArray(coeffs[3])
+        
+        self.viscosity.type = self.viscosity.INCOMPRESSIBLE_POLYNOMIAL
+        self.viscosity.coeffs = self.convertMelinderArray(coeffs[4])
+    
+    
+    
+    
+    

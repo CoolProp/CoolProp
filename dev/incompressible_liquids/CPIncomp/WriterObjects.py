@@ -1,15 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
-from CPIncomp.BaseObjects import IncompressibleData
-import CPIncomp.DataObjects as DO
-import CPIncomp.CoefficientObjects as CO
 
-
-from CoolProp.CoolProp import FluidsList
-import CoolProp.CoolProp as CP
-import hashlib
-import os, CPIncomp
-import json
+import hashlib, os, json
 
 class SolutionDataWriter(object):
     """ 
@@ -21,15 +13,15 @@ class SolutionDataWriter(object):
     def __init__(self):
         pass 
     
-    def fitAll(self, data):
-        T = data.temperature.data
-        x = data.concentration.data
-        fluid = data.name
+    def fitAll(self, fluidObject):
         
-        if data.Tbase==0.0:
-            data.Tbase = (np.min(T) + np.max(T)) / 2.0
-        if data.xbase==0.0:
-            data.xbase = (np.min(x) + np.max(x)) / 2.0
+        tempData = fluidObject.temperature.data
+        concData = fluidObject.concentration.data
+        
+        if fluidObject.Tbase==0.0 or fluidObject.Tbase==None:
+            fluidObject.Tbase = (np.min(tempData) + np.max(tempData)) / 2.0
+        if fluidObject.xbase==0.0 or fluidObject.xbase==None:
+            fluidObject.xbase = (np.min(concData) + np.max(concData)) / 2.0
             
         # Set the standard order for polynomials
         std_xorder = 3+1
@@ -38,115 +30,76 @@ class SolutionDataWriter(object):
         
         errList = (ValueError, AttributeError, TypeError, RuntimeError)
         
-        polyDict = {}
-        polyDict["density"] = data.density
-        polyDict["specific heat"] = data.specific_heat
-#        polyDict["viscosity"] = self.viscosity
-        polyDict["conductivity"] = data.conductivity
-#        polyDict["saturation_pressure"] = self.saturation_pressure
-#        polyDict["T_freeze"] = self.T_freeze
-
-        expDict = {}
-        expDict["viscosity"] = data.viscosity
-        expDict["saturation pressure"] = data.saturation_pressure
-        
-        for name,entry in polyDict.iteritems():
-            try:
-                entry.coeffs = np.copy(std_coeffs)
-                entry.type   = entry.INCOMPRESSIBLE_POLYNOMIAL
-                entry.fitCoeffs(T,x,data.Tbase,data.xbase)
-            except errList as ve:
-                if entry.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluid,name,ve))
-                pass 
-            
-        for name,entry in expDict.iteritems():
-            try:
-                entry.coeffs = np.copy(std_coeffs)
-                entry.type   = entry.INCOMPRESSIBLE_EXPPOLYNOMIAL
-                entry.fitCoeffs(T,x,data.Tbase,data.xbase)
-            except errList as ve:
-                if entry.DEBUG: print("{0}: Could not fit exponential {1} coefficients: {2}".format(fluid,name,ve))
-                pass 
-
-        try:        
-            data.T_freeze.coeffs = np.copy(std_coeffs)
-            data.T_freeze.type   = data.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
-            data.T_freeze.fitCoeffs(x,0.0,data.xbase,0.0)
+        try:
+            fluidObject.density.coeffs = np.copy(std_coeffs)
+            fluidObject.density.type   = fluidObject.density.INCOMPRESSIBLE_POLYNOMIAL
+            fluidObject.density.fitCoeffs(tempData,concData,fluidObject.Tbase,fluidObject.xbase)
         except errList as ve:
-            if data.T_freeze.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(fluid,"T_freeze",ve))
+            if fluidObject.density.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'density',ve))
             pass
-
-
         
-#        try:
-#            data.density.coeffs = np.copy(std_coeffs)
-#            data.density.type   = data.density.INCOMPRESSIBLE_POLYNOMIAL
-#            data.density.fit(T,x,data.Tbase,data.xbase)
-#        except errList as ve:
-#            if self.verbose: print(name, ": Could not fit density coefficients: ", ve)
-#            pass        
-#
-#        try:        
-#            data.specific_heat.coeffs = np.copy(std_coeffs)
-#            data.specific_heat.type   = data.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
-#            data.specific_heat.fit(T,x,data.Tbase,data.xbase)
-#        except errList as ve:
-#            if self.verbose: print(name, ": Could not fit specific heat coefficients: ", ve)
-#            pass
-#        
-#        try:
-#            data.viscosity.coeffs = np.copy(std_coeffs)
-#            data.viscosity.type   = data.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
-#            data.viscosity.fit(T,x,data.Tbase,data.xbase)
-#        except errList as ve:
-#            if self.verbose: print(name, ": Could not fit viscosity coefficients: ", ve)
-#            pass
-#
-#        try:        
-#            data.conductivity.coeffs = np.copy(std_coeffs)
-#            data.conductivity.type   = data.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-#            data.conductivity.fit(T,x,data.Tbase,data.xbase)
-#        except errList as ve:
-#            if self.verbose: print(name, ": Could not fit conductivity coefficients: ", ve)
-#            pass
-#        
-#        try:
-#            data.saturation_pressure.coeffs = np.copy(std_coeffs)
-#            data.saturation_pressure.type   = data.saturation_pressure.INCOMPRESSIBLE_EXPPOLYNOMIAL
-#            data.saturation_pressure.fit(T,x,data.Tbase,data.xbase)
-#        except errList as ve:
-#            if self.verbose: print(name, ": Could not fit saturation pressure coefficients: ", ve)
-#            pass
-#
-#        try:        
-#            data.T_freeze.coeffs = np.copy(std_coeffs)
-#            data.T_freeze.type   = data.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
-#            data.T_freeze.fit(0.0,x,0.0,data.xbase)
-#        except errList as ve:
-#            if self.verbose: print(name, ": Could not fit TFreeze coefficients: ", ve)
-#            pass
+        try:
+            fluidObject.specific_heat.coeffs = np.copy(std_coeffs)
+            fluidObject.specific_heat.type   = fluidObject.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
+            fluidObject.specific_heat.fitCoeffs(tempData,concData,fluidObject.Tbase,fluidObject.xbase)
+        except errList as ve:
+            if fluidObject.specific_heat.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'specific heat',ve))
+            pass 
+        
+        try:
+            fluidObject.conductivity.coeffs = np.copy(std_coeffs)
+            fluidObject.conductivity.type   = fluidObject.conductivity.INCOMPRESSIBLE_POLYNOMIAL
+            fluidObject.conductivity.fitCoeffs(tempData,concData,fluidObject.Tbase,fluidObject.xbase)
+        except errList as ve:
+            if fluidObject.conductivity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'conductivity',ve))
+            pass
+        
+        try:
+            fluidObject.viscosity.coeffs = np.copy(std_coeffs)
+            fluidObject.viscosity.type   = fluidObject.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
+            fluidObject.viscosity.fitCoeffs(tempData,concData,fluidObject.Tbase,fluidObject.xbase)
+        except errList as ve:
+            if fluidObject.viscosity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'viscosity',ve))
+            pass
+        
+        # reset data for getArray and read special files
+        if fluidObject.xid!=fluidObject.ifrac_pure and fluidObject.xid!=fluidObject.ifrac_undefined:
+            try:        
+                fluidObject.T_freeze.coeffs = np.copy(std_coeffs)
+                fluidObject.T_freeze.type   = fluidObject.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
+                fluidObject.T_freeze.fitCoeffs(concData,0.0,fluidObject.xbase,0.0)
+            except errList as ve:
+                if fluidObject.T_freeze.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(fluidObject.name,"T_freeze",ve))
+                pass
+# 
+#            # reset data for getArray again
+#            if fluidObject.xid==fluidObject.ifrac_volume:
+#                try:
+#                    fluidObject.mass2input.coeffs = np.copy(std_coeffs)
+#                    fluidObject.mass2input.type   = fluidObject.mass2input.INCOMPRESSIBLE_POLYNOMIAL
+#                    fluidObject.mass2input.fitCoeffs([fluidObject.Tbase],massData,fluidObject.Tbase,fluidObject.xbase)
+#                except errList as ve:
+#                    if fluidObject.mass2input.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(fluidObject.name,"mass2input",ve))
+#                    pass
+#            elif fluidObject.xid==fluidObject.ifrac_mass:
+#                _,_,fluidObject.volume2input.data = IncompressibleData.shfluidObject.ray(massData,axs=1)
+#                #_,_,volData = IncompressibleData.shapeArray(volData,axs=1)
+#                try:
+#                    fluidObject.volume2input.coeffs = np.copy(std_coeffs)
+#                    fluidObject.volume2input.type   = fluidObject.volume2input.INCOMPRESSIBLE_POLYNOMIAL
+#                    fluidObject.volume2input.fitCoeffs([fluidObject.Tbase],volData,fluidObject.Tbase,fluidObject.xbase)
+#                except errList as ve:
+#                    if fluidObject.volume2input.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(fluidObject.name,"volume2input",ve))
+#                    pass
+#            else:
+#                raise ValueError("Unknown xid specified.")
 
-#        try:        
-#            data.volume2mass.coeffs = np.copy(std_coeffs)
-#            data.volume2mass.type   = data.volume2mass.INCOMPRESSIBLE_POLYNOMIAL
-#            data.volume2mass.fit(T,x,data.Tbase,data.xbase)
-#        except errList as ve:
-#            if self.verbose: print(name, ": Could not fit V2M coefficients: ", ve)
-#            pass
-#
-#        try:        
-#            data.mass2mole.coeffs = np.copy(std_coeffs)
-#            data.mass2mole.type   = data.mass2mole.INCOMPRESSIBLE_POLYNOMIAL
-#            data.mass2mole.fit(T,x,data.Tbase,data.xbase)
-#        except errList as ve:
-#            if self.verbose: print(name, ": Could not fit M2M coefficients: ", ve)
-#            pass
 
     def get_hash(self,data):
         return hashlib.sha224(data).hexdigest()
     
     def get_hash_file(self):
-        return os.path.join(CPIncomp.__path__[0], 'data', "hashes.json")
+        return os.path.join(os.path.dirname(__file__), 'data', "hashes.json")
     
     def load_hashes(self):
         hashes_fname = self.get_hash_file()
@@ -196,8 +149,9 @@ class SolutionDataWriter(object):
         #print json.dumps(1.0001) 
         stdFmt = " .{0}e".format(int(data.significantDigits-1))
         #pr = np.finfo(float).eps * 10.0
-        pr = np.finfo(float).precision - 2 # stay away from numerical precision
-        json.encoder.FLOAT_REPR = lambda o: format(np.around(o,decimals=pr), stdFmt) 
+        #pr = np.finfo(float).precision - 2 # stay away from numerical precision
+        #json.encoder.FLOAT_REPR = lambda o: format(np.around(o,decimals=pr), stdFmt) 
+        json.encoder.FLOAT_REPR = lambda o: format(o, stdFmt)
         dump = json.dumps(jobj, indent = 2, sort_keys = True)
         json.encoder.FLOAT_REPR = original_float_repr
         
@@ -222,7 +176,62 @@ class SolutionDataWriter(object):
             if not quiet: print(" ({0})".format("i"), end="")
                 
         
-        
+    def printStatusID(self, fluidObjs, obj): 
+        #obj = fluidObjs[num]
+        if obj==fluidObjs[0]:
+            print(" {0}".format(obj.name), end="")
+        elif obj==fluidObjs[-1]:
+            print(", {0}".format(obj.name), end="")
+        else:
+            print(", {0}".format(obj.name), end="")
+
+        return
+
+
+    def fitFluidList(self, fluidObjs):
+        print("Fitting normal fluids:", end="")
+        for obj in fluidObjs:
+            self.printStatusID(fluidObjs, obj) 
+            try: 
+                self.fitAll(obj)
+            except (TypeError, ValueError) as e:
+                print("An error occurred for fluid: {0}".format(obj.name))
+                print(obj)
+                print(e)
+                pass 
+        print(" ... done")
+        return
+    
+    
+    def fitSecCoolList(self, fluidObjs):
+        print("Fitting SecCool fluids:", end="")
+        for obj in fluidObjs:
+            self.printStatusID(fluidObjs, obj) 
+            try: 
+                obj.fitFluid()
+            except (TypeError, ValueError) as e:
+                print("An error occurred for fluid: {0}".format(obj.name))
+                print(obj)
+                print(e)
+                pass 
+        print(" ... done")
+        return
+    
+    
+    def writeFluidList(self, fluidObjs):
+        print("Legend: FluidName (w) | (i) -> (w)=written, (i)=ignored, unchanged coefficients")
+        print("Writing fluids to JSON:", end="")
+        for obj in fluidObjs:
+            self.printStatusID(fluidObjs, obj)                 
+            try: 
+                self.toJSON(obj)
+            except (TypeError, ValueError) as e:
+                print("An error occurred for fluid: {0}".format(obj.name))
+                print(obj)
+                print(e)
+                pass
+        print(" ... done") 
+        return 
         
         
 #class FitGraphWriter(object):

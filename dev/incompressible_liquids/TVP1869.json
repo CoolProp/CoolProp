@@ -3,23 +3,17 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase":  4.28150e+02, 
-  "Tmax":  5.93150e+02, 
-  "Tmin":  2.63150e+02, 
-  "TminPsat":  5.93150e+02, 
+  "Tbase":  2.73150e+02, 
+  "Tmax":  2.93150e+02, 
+  "Tmin":  1.93150e+02, 
+  "TminPsat":  2.93150e+02, 
   "conductivity": {
     "coeffs": [
       [
-         9.74343e-02
+         1.50000e-01
       ], 
       [
-        -5.07671e-05
-      ], 
-      [
-         3.12739e-08
-      ], 
-      [
-        -3.78807e-12
+        -1.54545e-04
       ]
     ], 
     "type": "polynomial"
@@ -27,21 +21,15 @@
   "density": {
     "coeffs": [
       [
-         7.97296e+02
+         9.45545e+02
       ], 
       [
-        -6.64728e-01
-      ], 
-      [
-        -1.01063e-04
-      ], 
-      [
-         5.77600e-08
+        -1.05455e+00
       ]
     ], 
     "type": "polynomial"
   }, 
-  "description": "Paratherm NF, Hydrotreated mineral oil", 
+  "description": "Thermogen VP 1869", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -50,8 +38,8 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "name": "PNF", 
-  "reference": "Paratherm Ltd, SecCool software", 
+  "name": "TVP1869", 
+  "reference": "Hoechst, SecCool software", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -59,16 +47,10 @@
   "specific_heat": {
     "coeffs": [
       [
-         2.53143e+03
+         2.32222e+03
       ], 
       [
-         5.13638e+00
-      ], 
-      [
-         3.97886e-06
-      ], 
-      [
-         5.06695e-07
+         3.84364e+00
       ]
     ], 
     "type": "polynomial"
@@ -76,16 +58,16 @@
   "viscosity": {
     "coeffs": [
       [
-        -6.85265e+00
+         1.25642e+00
       ], 
       [
-        -1.20170e-02
+        -3.57244e-02
       ], 
       [
-         6.15699e-05
+         1.07130e-04
       ], 
       [
-        -4.56293e-07
+        -5.10205e-06
       ]
     ], 
     "type": "exppolynomial"
@@ -95,7 +77,7 @@
     "type": "notdefined"
   }, 
   "xbase":  0.00000e+00, 
-  "xid": 4, 
-  "xmax":  0.00000e+00, 
+  "xid": 3, 
+  "xmax":  1.00000e+00, 
   "xmin":  0.00000e+00
 }

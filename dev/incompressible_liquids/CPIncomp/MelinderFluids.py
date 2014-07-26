@@ -1,6 +1,6 @@
+from __future__ import division, print_function
 import numpy as np
-from CPIncomp.CoefficientObjects import CoefficientData
-from CPIncomp.DataObjects import PureData
+from CPIncomp.DataObjects import PureData,CoefficientData
 
 
 class DEBLiquidClass(CoefficientData,PureData):

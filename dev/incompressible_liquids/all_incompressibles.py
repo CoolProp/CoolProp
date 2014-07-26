@@ -1,203 +1,71 @@
 from __future__ import division, absolute_import, print_function
-import inspect
-import numpy as np
-import itertools,scipy.interpolate
-
-import CoolProp.CoolProp as CP
-
-import CPIncomp.DataObjects
-import CPIncomp.CoefficientObjects
-
-import CPIncomp.PureFluids
-import CPIncomp.MelinderFluids
-import CPIncomp.DigitalFluids
-
 from CPIncomp.WriterObjects import SolutionDataWriter
-from CPIncomp.DataObjects import PureExample, SolutionExample, DigitalExample
-from CPIncomp.CoefficientObjects import SecCoolExample, MelinderExample
-from CPIncomp.SecCoolFluids import SecCoolSolutionData
+from CPIncomp import getExampleNames, getPureFluids, getCoefficientFluids,\
+    getDigitalFluids, getSecCoolFluids, getMelinderFluids
+import sys
 
-def getExampleData():
-    return [PureExample(), SolutionExample(), DigitalExample()]
-
-def getExampleCoef():
-    return [SecCoolExample(), MelinderExample()]
-
-def getExampleObjects():
-    return getExampleData() + getExampleCoef()
-
-def getBaseClassNames():
-    ignList = []
-    for i in inspect.getmembers(CPIncomp.DataObjects):
-        ignList.append(i[0])
-    for i in inspect.getmembers(CPIncomp.CoefficientObjects):
-        ignList.append(i[0])
-    return ignList
-
-def getPureDataObjects():
-    classes = []
-    ignList = getBaseClassNames()
-
-    for name, obj in inspect.getmembers(CPIncomp.PureFluids):
-        if inspect.isclass(obj):
-            #print(name)
-            if not name in ignList: # Ignore the base classes
-                classes += [obj()]
-    return classes 
-
-def getSolutionDataObjects():
-    return []
-    classes = []
-    ignList = getBaseClassNames()
-
-    for name, obj in inspect.getmembers(CPIncomp.SolutionFluids):
-        if inspect.isclass(obj):
-            #print(name)
-            if not name in ignList: # Ignore the base classes
-                classes += [obj()]
-    return classes 
-
-def getDigitalDataObjects():
-    classes = []
-    ignList = getBaseClassNames()
-
-    for name, obj in inspect.getmembers(CPIncomp.DigitalFluids):
-        if inspect.isclass(obj):
-            #print(name)
-            if not name in ignList: # Ignore the base classes
-                classes += [obj()]
-    return classes 
-
-def getCoefficientObjects():
-    classes = []
-    ignList = getBaseClassNames()
-
-    for name, obj in inspect.getmembers(CPIncomp.MelinderFluids):
-        if inspect.isclass(obj):
-            #print(name)
-            if not name in ignList: # Ignore the base classes
-                classes += [obj()]
-#    for name, obj in inspect.getmembers(CPIncomp.SecCoolFluids):
-#        if inspect.isclass(obj):
-#            #print(name)
-#            if not name in ignList: # Ignore the base classes
-#                classes += [obj()]
-    return classes 
-
-
-def fitFluidList(fluidObjs):
-    for obj in fluidObjs:
-        if obj==fluidObjs[0]:
-            print(" {0}".format(obj.name), end="")
-        elif obj==fluidObjs[-1]:
-            print(", {0}".format(obj.name), end="")
-        else:
-            print(", {0}".format(obj.name), end="")
-            
-        try: 
-            writer.fitAll(obj)
-        except (TypeError, ValueError) as e:
-            print("An error occurred for fluid: {0}".format(obj.name))
-            print(obj)
-            print(e)
-            pass 
-    return
-
-def fitSecCoolList(fluidObjs):
-    for obj in fluidObjs:
-        if obj==fluidObjs[0]:
-            print(" {0}".format(obj.name), end="")
-        elif obj==fluidObjs[-1]:
-            print(", {0}".format(obj.name), end="")
-        else:
-            print(", {0}".format(obj.name), end="")
-            
-        try: 
-            obj.fitFluid()
-        except (TypeError, ValueError) as e:
-            print("An error occurred for fluid: {0}".format(obj.name))
-            print(obj)
-            print(e)
-            pass 
-    return
-
-def writeFluidList(fluidObjs):
-    for obj in fluidObjs:
-        if obj==fluidObjs[0]:
-            print("{0}".format(obj.name), end="")
-        elif obj==fluidObjs[-1]:
-            print(", {0}".format(obj.name), end="")
-        else:
-            print(", {0}".format(obj.name), end="")
-            
-        try: 
-            writer.toJSON(obj)
-        except (TypeError, ValueError) as e:
-            print("An error occurred for fluid: {0}".format(obj.name))
-            print(obj)
-            print(e)
-            pass 
-    return 
 
 if __name__ == '__main__':   
     
     writer = SolutionDataWriter()
-    
     doneObjs = []
-    dataObjs = getExampleData()
-    for obj in dataObjs:
-        writer.fitAll(obj)
-    doneObjs += dataObjs[:]
-        
-    doneObjs += getExampleCoef()
-        
-    print("Writing coefficients for example fluids: ", end="")
-    writeFluidList(doneObjs)
-    print(" ... done")
+    
+    # To debug single fluids
+    #writer.fitSecCoolList([Freezium()])
+    #sys.exit(0)
+    
+    fluidObjs = getExampleNames(obj=True)
+    examplesToFit = ["ExamplePure","ExampleSolution","ExampleDigital"]
+    for obj in fluidObjs:
+        if obj.name in examplesToFit:
+            writer.fitAll(obj)
+    doneObjs += fluidObjs[:]
+    
+    print("\nProcessing example fluids")
+    writer.writeFluidList(doneObjs)
         
     # If the examples did not cause any errors, 
     # we can proceed to the real data.
     doneObjs = []
-    dataObjs = getPureDataObjects()
-    print("Fitting pure fluids:", end="")
-    fitFluidList(dataObjs)
-    print(" ... done")
-    doneObjs += dataObjs[:]
     
-    dataObjs = getSolutionDataObjects()
-    print("Fitting solutions:", end="")
-    fitFluidList(dataObjs)
-    print(" ... done")
-    doneObjs += dataObjs[:]
+    print("\nProcessing fluids with given coefficients")
+    fluidObjs = getCoefficientFluids()
+    doneObjs += fluidObjs[:]
     
-    dataObjs = getDigitalDataObjects()
-    print("Fitting digital fluids:", end="")
-    fitFluidList(dataObjs)
-    print(" ... done")
-    doneObjs += dataObjs[:]
+    print("\nProcessing digital fluids")
+    fluidObjs = getDigitalFluids()
+    writer.fitFluidList(fluidObjs)
+    doneObjs += fluidObjs[:]
     
-    dataObjs = SecCoolSolutionData.factory()
-    print("Fitting SecCool fluids:", end="")
-    fitSecCoolList(dataObjs)
-    print(" ... done")
-    doneObjs += dataObjs[:]   
-            
-    #doneObjs += getCoefficientObjects()[:]   
+    print("\nProcessing Melinder fluids")
+    fluidObjs = getMelinderFluids()
+    doneObjs += fluidObjs[:]
+    
+    print("\nProcessing pure fluids")
+    fluidObjs = getPureFluids()
+    writer.fitFluidList(fluidObjs)
+    doneObjs += fluidObjs[:]
+    
+    print("\nProcessing SecCool fluids")
+    fluidObjs = getSecCoolFluids()
+    writer.fitSecCoolList(fluidObjs)
+    doneObjs += fluidObjs[:]
+    
+    print("\nAll {0} fluids processed, all coefficients should be set.".format(len(doneObjs)))
+    print("Checking the list of fluid objects.")
+    #doneObjs += getCoefficientObjects()[:]
     doneObjs = sorted(doneObjs, key=lambda x: x.name)
-    oldName = ''
-    for obj in doneObjs:
-        if obj.name==oldName:
-            raise ValueError("Two elements have the same name, that does not work: {0}".format(oldName))
-        else:
-            oldName = obj.name
+    for i in range(len(doneObjs)-1):
+        if doneObjs[i].name==doneObjs[i+1].name:
+            print("Conflict between {0} and {1}, aborting".format(doneObjs[i],doneObjs[i+1]))
+            raise ValueError("Two elements have the same name, that does not work: {0}".format(doneObjs[i].name))
     
     
-    print("Writing coefficients for fluids: ", end="")
-    print("FluidName (w) | (i) -> (w)=written, (i)=ignored")
-    writeFluidList(doneObjs)
-    print(" ... done")
+    print("All checks passed, going to write to disk.")
+    writer.writeFluidList(doneObjs)
 
-
+    print("All done, bye")
+    sys.exit(0)
     
 #    data = SecCoolExample()    
 #    writer.toJSON(data)

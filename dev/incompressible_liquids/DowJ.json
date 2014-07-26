@@ -16,10 +16,10 @@
         -2.12843e-04
       ], 
       [
-        -3.45330e-09
+        -3.45327e-09
       ], 
       [
-         3.58000e-11
+         3.58008e-11
       ]
     ], 
     "type": "polynomial"
@@ -53,21 +53,8 @@
   "name": "DowJ", 
   "reference": "Dow Chemicals data sheet", 
   "saturation_pressure": {
-    "coeffs": [
-      [
-         1.01299e+01
-      ], 
-      [
-         3.44363e-02
-      ], 
-      [
-        -1.14945e-04
-      ], 
-      [
-         2.27823e-07
-      ]
-    ], 
-    "type": "exppolynomial"
+    "coeffs": "null", 
+    "type": "notdefined"
   }, 
   "specific_heat": {
     "coeffs": [

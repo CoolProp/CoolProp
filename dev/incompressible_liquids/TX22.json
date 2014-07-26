@@ -19,7 +19,7 @@
         -1.45409e-08
       ], 
       [
-         1.39500e-10
+         1.39476e-10
       ]
     ], 
     "type": "polynomial"
@@ -53,21 +53,8 @@
   "name": "TX22", 
   "reference": "Texaco data sheet", 
   "saturation_pressure": {
-    "coeffs": [
-      [
-         2.41277e+00
-      ], 
-      [
-         6.23844e-02
-      ], 
-      [
-        -1.41831e-04
-      ], 
-      [
-        -8.17047e-08
-      ]
-    ], 
-    "type": "exppolynomial"
+    "coeffs": "null", 
+    "type": "notdefined"
   }, 
   "specific_heat": {
     "coeffs": [
