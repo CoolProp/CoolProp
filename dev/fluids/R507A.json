@@ -335,18 +335,18 @@
     "pressure_max_sat": {
       "T": 343.7658099,
       "T_units": "K",
-      "p": 3704883.269
+      "p": 3704883.269,
       "p_units": "Pa",
       "rhomolar": 4961.302819,
-      "rhomolar_units": "mol/m^3",
+      "rhomolar_units": "mol/m^3"
     },
     "temperature_max_sat": {
       "T": 343.7658302,
       "T_units": "K",
-      "p": 3704881.627
+      "p": 3704881.627,
       "p_units": "Pa",
       "rhomolar": 4953.55251,
-      "rhomolar_units": "mol/m^3",
+      "rhomolar_units": "mol/m^3"
     }
   }, 
   "TRANSPORT": {
