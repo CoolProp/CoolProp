@@ -224,8 +224,15 @@ if (COOLPROP_OCTAVE_MODULE)
     SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB})
   endif()
   
-  if (OSX)
-    set_target_properties(CoolProp PROPERTIES LINK_FLAGS "-stdlib=libc++")
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    # We need to see which library to link with on OSX - clang++ or stdc++
+    execute_process(COMMAND "otool -L ${OCTAVE_LIB} | grep libc++" OUTPUT_VARIABLE COOLPROP_OCTAVE_USING_CLANG)
+    if ("${COOLPROP_OCTAVE_USING_CLANG} " STREQUAL " ")
+      message(STATUS "Using -stdlib=libc++")
+      set_target_properties(CoolProp PROPERTIES LINK_FLAGS "-stdlib=libc++")
+    else()
+      message(STATUS "Using -stdlib=libstdc++")
+    endif()
   endif()
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
