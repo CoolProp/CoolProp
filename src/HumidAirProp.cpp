@@ -640,19 +640,35 @@ double IdealGasMolarEnthalpy_Water(double T, double vmolar)
     double hbar_w_0, tau, rhomolar, hbar_w;
     // Ideal-Gas contribution to enthalpy of water
     hbar_w_0 = -0.01102303806; //[J/mol]
+    
+    // Calculate the offset in the water enthalpy from a given state with a known (desired) enthalpy
+    double Tref = 473.15, vmolarref = 0.038837428192186184, href = 51885.582451893446;
+    Water->update(CoolProp::DmolarT_INPUTS,1/vmolarref,Tref);
+    double tauref = Water->keyed_output(CoolProp::iT_reducing)/Tref; //[no units]
+    double href_EOS = R_bar*Tref*(1+tauref*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
+    double hoffset = href_EOS - href;
+    
     tau = Water->keyed_output(CoolProp::iT_reducing)/T;
     rhomolar = 1/vmolar; //[mol/m^3]
     Water->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
-    hbar_w = hbar_w_0+R_bar*T*(1+tau*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
+    hbar_w = hbar_w_0 + hoffset + R_bar*T*(1+tau*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
     return hbar_w;
 }
 double IdealGasMolarEntropy_Water(double T, double p)
 {
     double sbar_w, tau, R_bar;
     R_bar = 8.314371; //[J/mol/K]
+    
+    // Calculate the offset in the water entropy from a given state with a known (desired) entropy
+    double Tref = 473.15, pref = 101325, sref = 141.18297895840303;
+    Water->update(CoolProp::DmolarT_INPUTS,pref/(R_bar*Tref),Tref);
+    double tauref = Water->keyed_output(CoolProp::iT_reducing)/Tref; //[no units]
+    double sref_EOS = R_bar*(tauref*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Water->keyed_output(CoolProp::ialpha0));
+    double soffset = sref_EOS - sref;
+    
     tau = Water->keyed_output(CoolProp::iT_reducing)/T;
     Water->update(CoolProp::DmolarT_INPUTS,p/(R_bar*T),T);
-    sbar_w = R_bar*(tau*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Water->keyed_output(CoolProp::ialpha0)); //[kJ/kmol/K]
+    sbar_w = soffset + R_bar*(tau*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Water->keyed_output(CoolProp::ialpha0)); //[kJ/kmol/K]
     return sbar_w;
 }
 double IdealGasMolarEnthalpy_Air(double T, double vmolar)
@@ -660,13 +676,21 @@ double IdealGasMolarEnthalpy_Air(double T, double vmolar)
     double hbar_a_0, tau, rhomolar, hbar_a, R_bar_Lemmon;
     // Ideal-Gas contribution to enthalpy of air
     hbar_a_0 = -7914.149298; //[J/mol]
+    
+    R_bar_Lemmon = 8.314510; //[J/mol/K]
+    // Calculate the offset in the air enthalpy from a given state with a known (desired) enthalpy
+    double Tref = 473.15, vmolarref = 0.038837428192186184, href = 13782.240592933371;
+    Air->update(CoolProp::DmolarT_INPUTS, 1/vmolarref, Tref);
+    double tauref = 132.6312/Tref; //[no units]
+    double href_EOS = R_bar_Lemmon*Tref*(1+tauref*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)); 
+    double hoffset = href_EOS - href;
+    
     // Tj is given by 132.6312 K
     tau = 132.6312/T;
     rhomolar = 1/vmolar; //[mol/m^3]
-    R_bar_Lemmon = 8.314510; //[J/mol/K]
+    // Now calculate it based on the given inputs
     Air->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
-    double dd = Air->keyed_output(CoolProp::idalpha0_dtau_constdelta);
-    hbar_a = hbar_a_0 + R_bar_Lemmon*T*(1+tau*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)); //[J/mol]
+    hbar_a = hbar_a_0 + hoffset + R_bar_Lemmon*T*(1+tau*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)); //[J/mol]
     return hbar_a;
 }
 double IdealGasMolarEntropy_Air(double T, double vmolar_a)
@@ -674,16 +698,22 @@ double IdealGasMolarEntropy_Air(double T, double vmolar_a)
     double sbar_0_Lem, tau, sbar_a, R_bar_Lemmon = 8.314510, T0=273.15, p0=101325, vmolar_a_0;
 
     // Ideal-Gas contribution to entropy of air
-    sbar_0_Lem=-196.1375815; //[J/mol/K]
-
-    // Tj and rhoj are given by 132.6312 and 302.5507652 respectively
-    tau = 132.6312/T; //[no units]
+    sbar_0_Lem = -196.1375815; //[J/mol/K]
 
     vmolar_a_0 = R_bar_Lemmon*T0/p0; //[m^3/mol]
 
+    // Calculate the offset in the air entropy from a given state with a known (desired) entropy
+    double Tref = 473.15, vmolarref = 0.038837605637863169, sref = 212.22365283759311;
+    Air->update(CoolProp::DmolarT_INPUTS, 1/vmolar_a_0, Tref);
+    double tauref = 132.6312/Tref; //[no units]
+    double sref_EOS = R_bar_Lemmon*(tauref*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Air->keyed_output(CoolProp::ialpha0))+R_bar_Lemmon*log(vmolarref/vmolar_a_0);
+    double soffset = sref_EOS - sref;
+    
+    // Tj and rhoj are given by 132.6312 and 302.5507652 respectively
+    tau = 132.6312/T; //[no units]
+    
     Air->update(CoolProp::DmolarT_INPUTS,1/vmolar_a_0,T);
-
-    sbar_a=sbar_0_Lem+R_bar_Lemmon*(tau*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Air->keyed_output(CoolProp::ialpha0))+R_bar_Lemmon*log(vmolar_a/vmolar_a_0); //[J/mol/K]
+    sbar_a=sbar_0_Lem + soffset + R_bar_Lemmon*(tau*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Air->keyed_output(CoolProp::ialpha0))+R_bar_Lemmon*log(vmolar_a/vmolar_a_0); //[J/mol/K]
 
     return sbar_a; //[J/mol/K]
 }
