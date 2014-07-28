@@ -646,7 +646,7 @@ double IdealGasMolarEnthalpy_Water(double T, double vmolar)
     Water->update(CoolProp::DmolarT_INPUTS,1/vmolarref,Tref);
     double tauref = Water->keyed_output(CoolProp::iT_reducing)/Tref; //[no units]
     double href_EOS = R_bar*Tref*(1+tauref*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
-    double hoffset = href_EOS - href;
+    double hoffset = href - href_EOS;
     
     tau = Water->keyed_output(CoolProp::iT_reducing)/T;
     rhomolar = 1/vmolar; //[mol/m^3]
@@ -664,7 +664,7 @@ double IdealGasMolarEntropy_Water(double T, double p)
     Water->update(CoolProp::DmolarT_INPUTS,pref/(R_bar*Tref),Tref);
     double tauref = Water->keyed_output(CoolProp::iT_reducing)/Tref; //[no units]
     double sref_EOS = R_bar*(tauref*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Water->keyed_output(CoolProp::ialpha0));
-    double soffset = sref_EOS - sref;
+    double soffset = sref - sref_EOS;
     
     tau = Water->keyed_output(CoolProp::iT_reducing)/T;
     Water->update(CoolProp::DmolarT_INPUTS,p/(R_bar*T),T);
@@ -683,7 +683,7 @@ double IdealGasMolarEnthalpy_Air(double T, double vmolar)
     Air->update(CoolProp::DmolarT_INPUTS, 1/vmolarref, Tref);
     double tauref = 132.6312/Tref; //[no units]
     double href_EOS = R_bar_Lemmon*Tref*(1+tauref*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)); 
-    double hoffset = href_EOS - href;
+    double hoffset = href - href_EOS;
     
     // Tj is given by 132.6312 K
     tau = 132.6312/T;
@@ -707,7 +707,7 @@ double IdealGasMolarEntropy_Air(double T, double vmolar_a)
     Air->update(CoolProp::DmolarT_INPUTS, 1/vmolar_a_0, Tref);
     double tauref = 132.6312/Tref; //[no units]
     double sref_EOS = R_bar_Lemmon*(tauref*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Air->keyed_output(CoolProp::ialpha0))+R_bar_Lemmon*log(vmolarref/vmolar_a_0);
-    double soffset = sref_EOS - sref;
+    double soffset = sref - sref_EOS;
     
     // Tj and rhoj are given by 132.6312 and 302.5507652 respectively
     tau = 132.6312/T; //[no units]
