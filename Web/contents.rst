@@ -13,3 +13,4 @@ CoolProp is an open-source database of fluid and humid air properties, formulate
     coolprop/contents.rst
     apidoc/modules.rst
     
+    phpinfo.rst
