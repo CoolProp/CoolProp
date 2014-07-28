@@ -1,3 +1,11 @@
+PHP test
+========
 
 .. raw:: html
-    :file: phpinfo.php
+
+    <p> test </p>
+    <script language="php">
+        echo phpinfo();
+    </script>
+    
+    
