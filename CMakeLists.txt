@@ -198,13 +198,10 @@ if (COOLPROP_OCTAVE_MODULE)
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
   
-  # Search for static libraries
-  set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX})
-  
   # Find the required libraries
-  find_library(OCTAVE_LIB liboctave.a PATHS ${OCTAVE_LINK_DIRS})
-  find_library(OCTINTERP_LIB liboctinterp.a PATHS ${OCTAVE_LINK_DIRS})
-  find_library(CRUFT_LIB libcruft.a PATHS ${OCTAVE_LINK_DIRS})
+  find_library(OCTAVE_LIB octave PATHS ${OCTAVE_LINK_DIRS})
+  find_library(OCTINTERP_LIB octinterp PATHS ${OCTAVE_LINK_DIRS})
+  find_library(CRUFT_LIB cruft PATHS ${OCTAVE_LINK_DIRS})
   
   message(STATUS "OCTAVE_LIB=${OCTAVE_LIB}")
   message(STATUS "OCTINTERP_LIB=${OCTINTERP_LIB}")
@@ -225,6 +222,17 @@ if (COOLPROP_OCTAVE_MODULE)
     SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB} ${CRUFT_LIB})  
   else()
     SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB})
+  endif()
+  
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    # We need to see which library to link with on OSX - clang++ or stdc++
+    execute_process(COMMAND "otool -L ${OCTAVE_LIB} | grep libc++" OUTPUT_VARIABLE COOLPROP_OCTAVE_USING_CLANG)
+    if ("${COOLPROP_OCTAVE_USING_CLANG} " STREQUAL " ")
+      message(STATUS "Using -stdlib=libc++")
+      set_target_properties(CoolProp PROPERTIES LINK_FLAGS "-stdlib=libc++")
+    else()
+      message(STATUS "Using -stdlib=libstdc++")
+    endif()
   endif()
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
