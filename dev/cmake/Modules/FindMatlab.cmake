@@ -21,28 +21,41 @@ ELSE()
 
         FIND_LIBRARY( MATLAB_MEX_LIBRARY
                       NAMES libmex mex
-                      PATHS $ENV{MATLAB_ROOT}/bin $ENV{MATLAB_ROOT}/extern/lib 
-                      PATH_SUFFIXES glnxa64 glnx86 win64/microsoft win32/microsoft)
-
+                      PATHS $ENV{MATLAB_ROOT}/bin $ENV{MATLAB_ROOT}/extern/lib
+                      PATH_SUFFIXES glnxa64 glnx86 win64/microsoft win32/microsoft maci64 maci32
+                      NO_DEFAULT_PATH)
         FIND_LIBRARY( MATLAB_MX_LIBRARY
                       NAMES libmx mx
-                      PATHS $ENV{MATLAB_ROOT}/bin $ENV{MATLAB_ROOT}/extern/lib 
-                      PATH_SUFFIXES glnxa64 glnx86 win64/microsoft win32/microsoft)
-
-    
+                      PATHS $ENV{MATLAB_ROOT}/bin $ENV{MATLAB_ROOT}/extern/lib
+                      PATH_SUFFIXES glnxa64 glnx86 win64/microsoft win32/microsoft maci64 maci32
+                      NO_DEFAULT_PATH)
+		FIND_LIBRARY( MATLAB_MAT_LIBRARY
+                      NAMES libmat mat
+                      PATHS $ENV{MATLAB_ROOT}/bin $ENV{MATLAB_ROOT}/extern/lib
+                      PATH_SUFFIXES glnxa64 glnx86 win64/microsoft win32/microsoft maci64 maci32
+                      NO_DEFAULT_PATH)
 
 ENDIF()
 
-# This is common to UNIX and Win32:
+if (MATLAB_MAT_LIBRARY)
+SET(MATLAB_LIBRARIES
+  ${MATLAB_MEX_LIBRARY}
+  ${MATLAB_MX_LIBRARY}
+  ${MATLAB_MAT_LIBRARY}
+)
+else()
 SET(MATLAB_LIBRARIES
   ${MATLAB_MEX_LIBRARY}
   ${MATLAB_MX_LIBRARY}
 )
+endif()
+
 MESSAGE (STATUS "MATLAB_ROOT: $ENV{MATLAB_ROOT}")
 MESSAGE (STATUS "MATLAB_INCLUDE_DIR: ${MATLAB_INCLUDE_DIR}")
 MESSAGE (STATUS "MATLAB_LIBRARIES: ${MATLAB_LIBRARIES}")
 MESSAGE (STATUS "MATLAB_MEX_LIBRARY: ${MATLAB_MEX_LIBRARY}")
 MESSAGE (STATUS "MATLAB_MX_LIBRARY: ${MATLAB_MX_LIBRARY}")
+MESSAGE (STATUS "MATLAB_MAT_LIBRARY: ${MATLAB_MAT_LIBRARY}")
 
 IF(MATLAB_INCLUDE_DIR AND MATLAB_LIBRARIES)
   SET(MATLAB_FOUND 1)
