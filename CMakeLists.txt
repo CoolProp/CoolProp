@@ -311,6 +311,7 @@ if (COOLPROP_JAVA_MODULE)
 
   include_directories(${JAVA_INCLUDE_PATH})
   include_directories(${JAVA_INCLUDE_PATH}/win32)
+  include_directories(${JAVA_INCLUDE_PATH}/linux)
 
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
 
