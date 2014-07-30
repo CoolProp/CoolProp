@@ -3,7 +3,7 @@
 #include "mex.h"   /*--This one is required*/
 #include <cstdio>
 #include <string>
-#include <stdio>
+#include <cstring>
 #include "float.h"
 
 extern "C" void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
