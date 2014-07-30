@@ -425,6 +425,8 @@ if (COOLPROP_MATLAB_MODULE)
   endif()
   add_dependencies (PropsSI generate_headers)
   add_dependencies (HAPropsSI generate_headers)
+  
+  install (TARGETS PropsSI HAPropsSI DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
 endif()
 
 if (COOLPROP_PYTHON_LOCAL_INSTALL)
