@@ -10,21 +10,25 @@ if __name__ == '__main__':
     writer = SolutionDataWriter()
     doneObjs = []
     
-    # To debug single fluids
-    from CPIncomp.SecCoolFluids import Freezium
-    #solObjs = [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder-BOOK-2010, SecCool software')]
-    solObjs = [Freezium()]
-    solObjs[0].T_freeze.DEBUG = True
-    writer.fitSecCoolList(solObjs)
-    #
-    ##from CPIncomp.ExampleObjects import SecCoolExample
-    ##solObjs = [SecCoolExample()]
-    writer.writeFluidList(solObjs)
-    writer.writeReportList(solObjs)
-    sys.exit(0)
+#    # To debug single fluids
+#    from CPIncomp.SecCoolFluids import Freezium
+#    #solObjs = [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder-BOOK-2010, SecCool software')]
+#    solObjs = [Freezium()]
+#    #solObjs[0].density.DEBUG = True
+#    #solObjs[0].specific_heat.DEBUG = True
+#    #solObjs[0].conductivity.DEBUG = True
+#    #solObjs[0].viscosity.DEBUG = True
+#    solObjs[0].T_freeze.DEBUG = True
+#    writer.fitSecCoolList(solObjs)
+#    #
+#    ##from CPIncomp.ExampleObjects import SecCoolExample
+#    ##solObjs = [SecCoolExample()]
+#    writer.writeFluidList(solObjs)
+#    writer.writeReportList(solObjs)
+#    sys.exit(0)
     
     fluidObjs = getExampleNames(obj=True)
-    examplesToFit = ["ExamplePure","ExampleSolution","ExampleDigital"]
+    examplesToFit = ["ExamplePure","ExampleSolution","ExampleDigital","ExampleDigitalPure"]
     for obj in fluidObjs:
         if obj.name in examplesToFit:
             writer.fitAll(obj)
@@ -32,6 +36,9 @@ if __name__ == '__main__':
     
     print("\nProcessing example fluids")
     writer.writeFluidList(doneObjs)
+    
+    writer.writeReportList(doneObjs)
+    #sys.exit(0)
         
     # If the examples did not cause any errors, 
     # we can proceed to the real data.

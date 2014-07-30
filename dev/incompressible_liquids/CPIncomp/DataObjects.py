@@ -3,6 +3,7 @@ import numpy as np
 import os, math
 from BaseObjects import IncompressibleData
 from abc import ABCMeta
+from CPIncomp.BaseObjects import IncompressibleFitter
 
 class SolutionData(object):
     """ 
@@ -11,13 +12,15 @@ class SolutionData(object):
     put in your data and add some documentation for where the
     information came from. 
     """
+    ifrac_mass      = "mass"
+    ifrac_mole      = "mole"
+    ifrac_volume    = "volume"
+    ifrac_undefined = "not defined"
+    ifrac_pure      = "pure"
+    
     __metaclass__ = ABCMeta
     def __init__(self):
-        self.ifrac_mass      = "mass"
-        self.ifrac_mole      = "mole"
-        self.ifrac_volume    = "volume"
-        self.ifrac_undefined = "not defined"
-        self.ifrac_pure      = "pure"
+
         
         self.significantDigits = 6
         
@@ -77,10 +80,10 @@ class SolutionData(object):
 
     def roundSingle(self,x):
         if x==0.0: return 0.0
-        return round(x, self.significantDigits-int(math.floor(math.log10(abs(x))))-1) 
+        return round(x, self.significantDigits-int(math.floor(math.log10(abs(x))))-1)
 
     def round(self, x):
-        r,c,res = IncompressibleData.shapeArray(x)
+        r,c,res = IncompressibleFitter.shapeArray(x)
         #digits = -1*np.floor(np.log10(res))+self.significantDigits-1 
         for i in range(r):
             for j in range(c):
@@ -243,7 +246,7 @@ class DigitalData(SolutionData):
     
     def getFromFile(self, data):
         fullPath = self.getFile(data)
-        _,_,res = IncompressibleData.shapeArray(np.loadtxt(fullPath))
+        _,_,res = IncompressibleFitter.shapeArray(np.loadtxt(fullPath))
         return res 
     
     def writeToFile(self, data, array):
@@ -258,91 +261,90 @@ class DigitalData(SolutionData):
             return np.array([0.0])
     
     def getxrange(self):
-        if self.xmin<self.xmax:
+        if self.xmin<self.xmax and self.xid!=self.ifrac_pure:
             return np.linspace(self.xmin, self.xmax, 20)
         else:
             return np.array([0.0])
     
-    def getArray(self, func=None, data=None):
+    def getArray(self, dataID=None, func=None, x_in=None, y_in=None, DEBUG=False):
+        """ Tries to read a data file, overwrites it if x or y do not match
+        
+        :param dataID  : ID to contruct the path to the data file
+        :param func    : Callable object that can take x_in and y_in
+        :param x_in    : a 1D array in x direction or 2D with one column, most likely temperature
+        :param y_in    : a 1D array in y direction or 2D with one row, most likely cocentration
+        :param DEBUG   : a boolean that controls verbosity 
+        
+        :returns       : Returns a tuple with three entries: x(1D),y(1D),data(2D)
         """
-        func is a callable object that takes T,x as inputs
-        and data is the file name for the data. 
-        We try to read the file and if unsuccessful, we 
-        generate the data and write it.
-        """
         
-        forceUpdate = False
-        readFromFile = False
-        fileArray = None
+        x = None
+        y = None
+        z = None
+
+        # First we try to read the file
+        if (dataID!=None and os.path.isfile(self.getFile(dataID))): # File found
+            fileArray = self.getFromFile(dataID)
+            x = np.copy(fileArray[1:,0 ])
+            y = np.copy(fileArray[0 ,1:])
+            z = np.copy(fileArray[1:,1:])
+        else:
+            if DEBUG: print("No readable file found for {0}: {1}".format(dataID,self.getFile(dataID)))
         
-        if self.temperature.data==None or self.concentration.data==None: # no data set, try to get it from file
-            if self.temperature.data!=None: raise ValueError("Temperature is not None, but concentration is.")
-            if self.concentration.data!=None: raise ValueError("Concentration is not None, but temperature is.")
-            if (data!=None and os.path.isfile(self.getFile(data))): # File found
-                fileArray = self.getFromFile(data)
-                self.temperature.data = np.copy(fileArray[1:,0])
-                self.concentration.data = np.copy(fileArray[0,1:])
-                readFromFile = True
-            else:
-                raise ValueError("No temperature and concentration data given and no readable file found for {0}".format(data))
+        updateFile = DEBUG
+
+        if x_in!=None: # Might need update     
+            if x!=None: # Both given, check if different
+                mask = np.isfinite(x)
+                if np.allclose(x[mask], x_in[mask]): 
+                    if DEBUG: print("Both x-arrays are the same, no action required.")
+                    updateFile = (updateFile or False) # Do not change a True value to False
+                else: 
+                    updateFile = True
+                    if DEBUG: print("x-arrays do not match. {0} contains \n {1} \n and will be updated with \n {2}".format(self.getFile(dataID),x,x_in))
+            else: updateFile = True
+        elif x==None: raise ValueError("Could not load x from file and no x_in provided, aborting.")
+        else: updateFile = (updateFile or False) # Do not change a True value to False
+        
+        if y_in!=None: # Might need update     
+            if y!=None: # Both given, check if different
+                mask = np.isfinite(y)
+                if np.allclose(y[mask], y_in[mask]): 
+                    if DEBUG: print("Both y-arrays are the same, no action required.")
+                    updateFile = (updateFile or False) # Do not change a True value to False
+                else: 
+                    updateFile = True
+                    if DEBUG: print("y-arrays do not match. {0} contains \n {1} \n and will be updated with \n {2}".format(self.getFile(dataID),y,y_in))
+            else: updateFile = True
+        elif y==None: raise ValueError("Could not load y from file and no y_in provided, aborting.")
+        else: updateFile = (updateFile or False) # Do not change a True value to False
             
-        tData = self.round(self.temperature.data)[:,0]
-        xData = self.round(self.concentration.data)[:,0]
-
-        baseArray = np.zeros( (len(tData)+1,len(xData)+1) )
+        if DEBUG: print("Updating data file {0}".format(updateFile))
         
-        if (data!=None and os.path.isfile(self.getFile(data)) and not forceUpdate): # File found and no update wanted
-            if fileArray==None: fileArray = self.getFromFile(data)
-            
-#            tFile = fileArray[1:,0]
-#            xFile = fileArray[0,1:]
-#            curDataLim = np.array([np.min(tData),np.max(tData),np.min(xData),np.max(xData)])
-#            curFileLim = np.array([np.min(tFile),np.max(tFile),np.min(xFile),np.max(xFile)])
-#            if np.allclose(curDataLim, curFileLim, rtol=1e-2) and fileArray.shape!=baseArray.shape: # We might have to interpolate
-#                if len(tData)<len(tFile) or len(xData)<len(xFile): # OK, we can interpolate
-#                    data = fileArray[1:,1:]
-#                    if len(tFile)==1: # 1d in concentration
-#                        f = interpolate.interp1d(xFile, data.flat)#, kind='cubic')
-#                        dataNew = f(xData).reshape((1,len(xData)))
-#                    elif len(xFile)==1: # 1d in temperature
-#                        f = interpolate.interp1d(tFile, data.flat)#, kind='cubic')
-#                        dataNew = f(tData).reshape((len(tData),1))
-#                    else: # 2d
-#                        f = interpolate.interp2d(xFile, tFile, data)#, kind='cubic')
-#                        dataNew = f(xData,tData)
-#                    fileArray = np.copy(baseArray)
-#                    fileArray[1:,1:] = dataNew
-#                    fileArray[1:,0] = tData
-#                    fileArray[0,1:] = xData
-#                else:
-#                    raise ValueError("Less points in file, not enough data for interpolation.")
-#            elif fileArray.shape==baseArray.shape:
-#                pass
-#            else:
-#                raise ValueError("The array shapes do not match. Check {0}".format(self.getFile(data)))
-
-            if readFromFile or fileArray.shape==baseArray.shape: # Shapes match
-                if readFromFile or np.allclose(tData, fileArray[1:,0]): # Temperature data matches
-                    if readFromFile or np.allclose(xData, fileArray[0,1:]): # Concentration data matches
-                        baseArray = fileArray 
-                    else:
-                        raise ValueError("Concentration arrays do not match. Check {0} \n and have a look at \n {1} \n vs \n {2} \n yielding \n {3}".format(self.getFile(data),xData,fileArray[0,1:],(xData==fileArray[0,1:])))
-                else:
-                    raise ValueError("Temperature arrays do not match. Check {0} \n and have a look at \n {1} \n vs \n {2} \n yielding \n {3}".format(self.getFile(data),tData,fileArray[1:,0],(tData==fileArray[1:,0])))
-            else:
-                raise ValueError("The array shapes do not match. Check {0}".format(self.getFile(data)))
-        else: # file not found or update forced
-            if func==None and forceUpdate:
-                raise ValueError("Need a function to update the data file.")
-            for cT,T in enumerate(self.temperature.data):
-                for cx,x in enumerate(self.concentration.data):
-                    baseArray[cT+1][cx+1] = func(T,x)
-            baseArray[0,0] = np.NaN
-            baseArray[1:,0] = np.copy(self.temperature.data)
-            baseArray[0,1:] = np.copy(self.concentration.data)
-            if data!=None: self.writeToFile(data, baseArray)
-
-        return np.copy(baseArray.T[1:].T[1:]) # Remove the first column and row and return
+        if not updateFile: return x,y,z # Done, data read from file
+        
+        # Overwrite inputs
+        x = x_in 
+        y = y_in
+        z = np.zeros( (len(x)+1,len(y)+1) )
+        r,c = z.shape
+        
+        if func==None: raise ValueError("Need a function to update the data file.")
+        
+        for i in range(r-1):
+            for j in range(c-1):
+                z[i+1,j+1] = func(x[i],y[j])
+        z[0,0 ] = np.NaN
+        z[1:,0] = x
+        z[0,1:] = y
+        
+        if dataID!=None: 
+            self.writeToFile(dataID, z)
+        else:
+            if DEBUG: print("Not updating data file, dataID is missing.")
+        
+        return x,y,z[1:,1:]
+        
 
 
 class CoefficientData(SolutionData):
@@ -512,6 +514,7 @@ class CoefficientData(SolutionData):
         self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
         self.T_freeze.coeffs = self.convertMelinderArray(coeffs[0])
         self.T_freeze.coeffs[0,0] += 273.15
+        self.T_freeze.coeffs = np.array([self.T_freeze.coeffs[0]])
         #print(self.T_freeze.coeffs)
         
         self.density.source           = self.density.SOURCE_COEFFS
@@ -528,7 +531,7 @@ class CoefficientData(SolutionData):
         
         self.viscosity.source         = self.viscosity.SOURCE_COEFFS
         self.viscosity.type = self.viscosity.INCOMPRESSIBLE_POLYNOMIAL
-        self.viscosity.coeffs = self.convertMelinderArray(coeffs[4])
+        self.viscosity.coeffs = self.convertMelinderArray(coeffs[4])/1e3
         
         
         

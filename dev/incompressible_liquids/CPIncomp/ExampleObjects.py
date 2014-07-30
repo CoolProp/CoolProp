@@ -81,14 +81,62 @@ class DigitalExample(DigitalData):
         
         def funcRho(T,x):
             return T + x*100.0 + T*(x+0.5)
-        self.density.data             = self.getArray(funcRho,"rho")
+        self.density.xData,self.density.yData,self.density.data = self.getArray(dataID="D", func=funcRho, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.density.DEBUG)
+        self.density.source           = self.density.SOURCE_EQUATION
         
         def funcCp(T,x):
             return T + x*50.0 + T*(x+0.6)
-        self.specific_heat.data             = self.getArray(funcCp,"cp")
-        
-        self.density.source           = self.density.SOURCE_EQUATION
+        self.specific_heat.xData,self.specific_heat.yData,self.specific_heat.data = self.getArray(dataID="C", func=funcCp, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.specific_heat.DEBUG)
         self.specific_heat.source     = self.specific_heat.SOURCE_EQUATION
+        
+class DigitalExamplePure(PureData,DigitalData):
+    def __init__(self):
+        DigitalData.__init__(self) 
+        PureData.__init__(self) 
+
+        self.name = "ExampleDigitalPure"
+        self.description = "water"
+        self.reference = "none"
+        
+        self.Tmin = 280.00;
+        self.Tmax = 500.00;
+
+        self.TminPsat = self.Tmin;
+        
+        self.temperature.data         = self.getTrange()
+        self.concentration.data       = self.getxrange()
+        
+        import CoolProp.CoolProp as CP
+        
+        def funcD(T,x):
+            return CP.PropsSI('D','T',T,'P',1e7,'water')
+        def funcC(T,x):
+            return CP.PropsSI('C','T',T,'P',1e7,'water')
+        def funcL(T,x):
+            return CP.PropsSI('L','T',T,'P',1e7,'water')
+        def funcV(T,x):
+            return CP.PropsSI('V','T',T,'P',1e7,'water')
+        def funcP(T,x):
+            return CP.PropsSI('P','T',T,'Q',0.0,'water')
+        
+        self.density.xData,self.density.yData,self.density.data = self.getArray(dataID="D", func=funcD, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.density.DEBUG)
+        self.density.source           = self.density.SOURCE_EQUATION
+
+        self.specific_heat.xData,self.specific_heat.yData,self.specific_heat.data = self.getArray(dataID="C", func=funcC, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.specific_heat.DEBUG)
+        self.specific_heat.source     = self.specific_heat.SOURCE_EQUATION
+        
+        self.conductivity.xData,self.conductivity.yData,self.conductivity.data = self.getArray(dataID="L", func=funcL, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.conductivity.DEBUG)
+        self.conductivity.source           = self.conductivity.SOURCE_EQUATION
+        
+        self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID="V", func=funcV, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
+        self.viscosity.source           = self.viscosity.SOURCE_EQUATION
+        
+        self.saturation_pressure.xData,self.saturation_pressure.yData,self.saturation_pressure.data = self.getArray(dataID="P", func=funcP, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.saturation_pressure.DEBUG)
+        self.saturation_pressure.source           = self.saturation_pressure.SOURCE_EQUATION
+              
+        
+        
+        
         
 
 class SecCoolExample(CoefficientData):
