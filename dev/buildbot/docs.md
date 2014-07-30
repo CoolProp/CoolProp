@@ -48,4 +48,4 @@ On linux, you can add the following lines to the end of your ``.xsessionrc`` fil
 # Connect to the buildbot master
 buildslave start ~/slave
 ```
-Alternatively you can add it in the /etc/rc.local file
+Alternatively you can add the code to start the slave in the ``/etc/rc.local`` file
