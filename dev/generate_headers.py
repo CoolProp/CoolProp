@@ -205,7 +205,7 @@ def combine_json(root_dir):
     
     master = []
     
-    for file in glob.glob(os.path.join(root_dir,'dev','incompressible_liquids','*.json')):
+    for file in glob.glob(os.path.join(root_dir,'dev','incompressible_liquids','json','*.json')):
         
         path, file_name = os.path.split(file)
         fluid_name = file_name.split('.')[0]

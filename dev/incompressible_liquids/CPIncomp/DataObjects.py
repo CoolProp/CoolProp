@@ -13,11 +13,11 @@ class SolutionData(object):
     """
     __metaclass__ = ABCMeta
     def __init__(self):
-        self.ifrac_mass      = 0
-        self.ifrac_mole      = 1
-        self.ifrac_volume    = 2
-        self.ifrac_undefined = 3
-        self.ifrac_pure      = 4
+        self.ifrac_mass      = "mass"
+        self.ifrac_mole      = "mole"
+        self.ifrac_volume    = "volume"
+        self.ifrac_undefined = "not defined"
+        self.ifrac_pure      = "pure"
         
         self.significantDigits = 6
         
@@ -145,11 +145,32 @@ class SolutionData(object):
     def cond(self, T, p=0.0, x=0.0, c=None):
         return self.conductivity.baseFunction(T, x, self.Tbase, self.xbase, c=c)
         
-    def psat(self, T,        x=0.0, c=None):
+    def    psat(self, T, p=0.0, x=0.0, c=None):
         return self.saturation_pressure.baseFunction(T, x, self.Tbase, self.xbase, c=c)
         
-    def Tfreeze(self, p=0.0, x=0.0, c=None):
-        return self.T_freeze.baseFunction(x, 0.0, self.xbase, 0.0, c=c)
+    def Tfreeze(self, T, p=0.0, x=0.0, c=None):
+        if c==None:
+            c = self.T_freeze.coeffs
+
+        if self.T_freeze.type==self.T_freeze.INCOMPRESSIBLE_POLYNOMIAL:
+            return np.polynomial.polynomial.polyval2d(p-0.0, x-self.xbase, c)
+        
+        elif self.T_freeze.type==self.T_freeze.INCOMPRESSIBLE_POLYOFFSET:
+            #if y!=0.0: raise ValueError("This is 1D only, use x not y.")
+            return self.T_freeze.basePolyOffset(c, x) # offset included in coeffs
+        
+        elif self.T_freeze.type==self.T_freeze.INCOMPRESSIBLE_EXPONENTIAL:
+            #if y!=0.0: raise ValueError("This is 1D only, use x not y.")
+            return self.T_freeze.baseExponential(c, x)
+        
+        elif self.T_freeze.type==self.T_freeze.INCOMPRESSIBLE_EXPPOLYNOMIAL:
+            return np.exp(np.polynomial.polynomial.polyval2d(p-0.0, x-self.xbase, c))
+        
+        else:
+            raise ValueError("Unknown function: {0}.".format(self.type))
+  
+    
+    
     
     #def V2M (T,           y);
     #def M2M (T,           x);
@@ -371,7 +392,7 @@ class CoefficientData(SolutionData):
         
         # Concentration is no longer handled in per cent!
         for i in range(6):
-            tmp.T[i] *= 100.0**i 
+            tmp.T[i] *= 100.0**i
                 
         return tmp
     
@@ -487,20 +508,33 @@ class CoefficientData(SolutionData):
         
         coeffs = self.convertMelinderMatrix(matrix).T
         
-        self.T_freeze.type = self.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
+        self.T_freeze.source = self.T_freeze.SOURCE_COEFFS
+        self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
         self.T_freeze.coeffs = self.convertMelinderArray(coeffs[0])
+        self.T_freeze.coeffs[0,0] += 273.15
+        #print(self.T_freeze.coeffs)
         
+        self.density.source           = self.density.SOURCE_COEFFS
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         self.density.coeffs = self.convertMelinderArray(coeffs[1])
         
+        self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
         self.specific_heat.coeffs = self.convertMelinderArray(coeffs[2])
         
+        self.conductivity.source      = self.conductivity.SOURCE_COEFFS
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
         self.conductivity.coeffs = self.convertMelinderArray(coeffs[3])
         
+        self.viscosity.source         = self.viscosity.SOURCE_COEFFS
         self.viscosity.type = self.viscosity.INCOMPRESSIBLE_POLYNOMIAL
         self.viscosity.coeffs = self.convertMelinderArray(coeffs[4])
+        
+        
+        
+        
+        
+        
     
     
     

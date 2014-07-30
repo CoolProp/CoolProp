@@ -13,6 +13,12 @@ class PureExample(PureData):
         self.Tmin =  50 + 273.15
         self.TminPsat =  self.Tmax
         
+        self.density.source           = self.density.SOURCE_DATA
+        self.specific_heat.source     = self.specific_heat.SOURCE_DATA
+        self.conductivity.source      = self.conductivity.SOURCE_DATA
+        self.viscosity.source         = self.viscosity.SOURCE_DATA
+        self.saturation_pressure.source = self.saturation_pressure.SOURCE_DATA
+        
         self.temperature.data         = np.array([   50,   60,    70,     80,    90,   100,   110,   120,   130,   140,   150])+273.15 # Kelvin
         self.density.data             = np.array([  740,   733,   726,   717,   710,   702,   695,   687,   679,   670,   662])        # kg/m3
         self.specific_heat.data       = np.array([ 2235,  2280,  2326,  2361,  2406,  2445,  2485,  2528,  2571,  2607,  2645])        # J/kg-K
@@ -43,6 +49,9 @@ class SolutionExample(SolutionData):
           [1021.5,    1015.3,    1009.2,    1003.1,     997.1,     991.2,     985.4]]) # kg/m3
         
         self.specific_heat.data = np.copy(self.density.data)
+        
+        self.density.source           = self.density.SOURCE_DATA
+        self.specific_heat.source     = self.specific_heat.SOURCE_DATA
         
         self.Tmax = np.max(self.temperature.data)
         self.Tmin = np.min(self.temperature.data)
@@ -77,6 +86,9 @@ class DigitalExample(DigitalData):
         def funcCp(T,x):
             return T + x*50.0 + T*(x+0.6)
         self.specific_heat.data             = self.getArray(funcCp,"cp")
+        
+        self.density.source           = self.density.SOURCE_EQUATION
+        self.specific_heat.source     = self.specific_heat.SOURCE_EQUATION
         
 
 class SecCoolExample(CoefficientData):
@@ -186,12 +198,18 @@ class SecCoolExample(CoefficientData):
            4.482000E-09]))
 
         self.T_freeze.type = self.T_freeze.INCOMPRESSIBLE_POLYOFFSET
-        self.T_freeze.coeffs = self.convertSecCoolTfreeze(np.array([
-           27.755555600,
-          -22.973221700, 
-          -1.1040507200, 
-          -0.0120762281, 
-          -9.343458E-05]))
+        self.T_freeze.coeffs = np.array([
+           27.755555600/100.0,
+          -22.973221700+273.15, 
+          -1.1040507200*100.0, 
+          -0.0120762281*100.0*100.0, 
+          -9.343458E-05*100.0*100.0*100.0])
+        
+        self.density.source           = self.density.SOURCE_COEFFS
+        self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
+        self.conductivity.source      = self.conductivity.SOURCE_COEFFS
+        self.viscosity.source         = self.viscosity.SOURCE_COEFFS
+        self.T_freeze.source          = self.T_freeze.SOURCE_COEFFS
         
         
 class MelinderExample(CoefficientData):

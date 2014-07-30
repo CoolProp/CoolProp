@@ -11,8 +11,17 @@ if __name__ == '__main__':
     doneObjs = []
     
     # To debug single fluids
-    #writer.fitSecCoolList([Freezium()])
-    #sys.exit(0)
+    from CPIncomp.SecCoolFluids import Freezium
+    #solObjs = [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder-BOOK-2010, SecCool software')]
+    solObjs = [Freezium()]
+    solObjs[0].T_freeze.DEBUG = True
+    writer.fitSecCoolList(solObjs)
+    #
+    ##from CPIncomp.ExampleObjects import SecCoolExample
+    ##solObjs = [SecCoolExample()]
+    writer.writeFluidList(solObjs)
+    writer.writeReportList(solObjs)
+    sys.exit(0)
     
     fluidObjs = getExampleNames(obj=True)
     examplesToFit = ["ExamplePure","ExampleSolution","ExampleDigital"]
@@ -62,7 +71,9 @@ if __name__ == '__main__':
     
     
     print("All checks passed, going to write to disk.")
+    
     writer.writeFluidList(doneObjs)
+    writer.writeReportList(doneObjs)
 
     print("All done, bye")
     sys.exit(0)

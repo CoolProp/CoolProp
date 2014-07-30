@@ -49,14 +49,17 @@ class LiBrData(DigitalData):
         def funcD(T,x):
             return CP.PropsSI(key,'T',T,'P',1e8,self.name+"-{0:.4f}%".format(x*100.0))
         self.density.data = self.getArray(funcD,key)
+        self.density.source           = self.density.SOURCE_EQUATION
         
         key = 'C'
         def funcC(T,x):
             return CP.PropsSI(key,'T',T,'P',1e8,self.name+"-{0:.4f}%".format(x*100.0))
         self.specific_heat.data = self.getArray(funcC,key)
+        self.specific_heat.source     = self.specific_heat.SOURCE_EQUATION
         
         key = 'Psat'
         def funcP(T,x):
             return CP.PropsSI(key,'T',T,'P',1e8,self.name+"-{0:.4f}%".format(x*100.0))
-        self.saturation_pressure.data = self.getArray(funcP,key)
+        self.saturation_pressure.data   = self.getArray(funcP,key)
+        self.saturation_pressure.source = self.saturation_pressure.SOURCE_EQUATION
 

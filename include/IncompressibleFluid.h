@@ -30,9 +30,8 @@ struct IncompressibleData {
 	enum IncompressibleTypeEnum {
 		INCOMPRESSIBLE_NOT_SET,
 		INCOMPRESSIBLE_POLYNOMIAL,
-		INCOMPRESSIBLE_EXPONENTIAL,
 		INCOMPRESSIBLE_EXPPOLYNOMIAL,
-		INCOMPRESSIBLE_EXPOFFSET,
+		INCOMPRESSIBLE_EXPONENTIAL,
 		INCOMPRESSIBLE_POLYOFFSET
 	};
 	Eigen::MatrixXd coeffs; //TODO: Can we store the Eigen::Matrix objects more efficiently?

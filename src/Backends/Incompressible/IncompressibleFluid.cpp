@@ -46,12 +46,6 @@ double IncompressibleFluid::baseExponential(IncompressibleData data, double y, d
 	if (strict && (r!=3 || c!=1) ) throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).",__FILE__,__LINE__,r,c));
 	return exp( (double) (coeffs[0] / ( (y-ybase)+coeffs[1] ) - coeffs[2] ) );
 }
-double IncompressibleFluid::baseExponentialOffset(IncompressibleData data, double y){
-	Eigen::VectorXd coeffs = makeVector(data.coeffs);
-	size_t r=coeffs.rows(),c=coeffs.cols();
-	if (strict && (r!=4 || c!=1) ) throw ValueError(format("%s (%d): You have to provide a 4,1 matrix of coefficients, not  (%d,%d).",__FILE__,__LINE__,r,c));
-	return exp( (double) (coeffs[1] / ( (y-coeffs[0])+coeffs[2] ) - coeffs[3] ) );
-}
 double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, double z){
 	size_t r=data.coeffs.rows(),c=data.coeffs.cols();
 	double offset = 0.0;
@@ -81,13 +75,10 @@ double IncompressibleFluid::rho (double T, double p, double x){
 			return poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-			return baseExponential(density, T, Tbase);
+			return baseExponential(density, T, 0.0);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 			return exp(poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase));
-			break;
-		case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
-			return baseExponentialOffset(density, T);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
 			return basePolyOffset(density, T, x);
@@ -163,13 +154,10 @@ double IncompressibleFluid::visc(double T, double p, double x){
 			return poly.evaluate(viscosity.coeffs, T, x, 0, 0, Tbase, xbase);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-			return baseExponential(viscosity, T, Tbase);
+			return baseExponential(viscosity, T, 0.0);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 			return exp(poly.evaluate(viscosity.coeffs, T, x, 0, 0, Tbase, xbase));
-			break;
-		case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
-			return baseExponentialOffset(viscosity, T);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
 			return basePolyOffset(viscosity, T, x);
@@ -190,13 +178,10 @@ double IncompressibleFluid::cond(double T, double p, double x){
 			return poly.evaluate(conductivity.coeffs, T, x, 0, 0, Tbase, xbase);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-			return baseExponential(conductivity, T, Tbase);
+			return baseExponential(conductivity, T, 0.0);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 			return exp(poly.evaluate(conductivity.coeffs, T, x, 0, 0, Tbase, xbase));
-			break;
-		case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
-			return baseExponentialOffset(conductivity, T);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
 			return basePolyOffset(conductivity, T, x);
@@ -218,13 +203,10 @@ double IncompressibleFluid::psat(double T,           double x){
 			return poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-			return baseExponential(p_sat, T, Tbase);
+			return baseExponential(p_sat, T, 0.0);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 			return exp(poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase));
-			break;
-		case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
-			return baseExponentialOffset(p_sat, T);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
 			return basePolyOffset(p_sat, T, x);
@@ -242,19 +224,16 @@ double IncompressibleFluid::psat(double T,           double x){
 double IncompressibleFluid::Tfreeze(       double p, double x){
 	switch (T_freeze.type) {
 		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-			return poly.evaluate(T_freeze.coeffs, x, p, 0, 0, xbase, 0.0);
+			return poly.evaluate(T_freeze.coeffs, p, x, 0, 0, 0.0, xbase);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-			return baseExponential(T_freeze, x, xbase);
+			return baseExponential(T_freeze, x, 0.0);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-			return exp(poly.evaluate(T_freeze.coeffs, x, p, 0, 0, xbase, 0.0));
-			break;
-		case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
-			return baseExponentialOffset(T_freeze, x);
+			return exp(poly.evaluate(T_freeze.coeffs, p, x, 0, 0, 0.0, xbase));
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
-			return basePolyOffset(T_freeze, x, p);
+			return basePolyOffset(T_freeze, p, x);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
 			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,T_freeze.type));
@@ -281,13 +260,10 @@ double IncompressibleFluid::inputFromMass (double T,     double x){
 				return poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-				return baseExponential(mass2input, T, Tbase);
+				return baseExponential(mass2input, T, 0.0);
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 				return exp(poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
-				break;
-			case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
-				return baseExponentialOffset(mass2input, T);
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
 				return basePolyOffset(mass2input, T, x);
@@ -318,13 +294,10 @@ double IncompressibleFluid::inputFromVolume (double T,   double x){
 				return poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-				return baseExponential(volume2input, T, Tbase);
+				return baseExponential(volume2input, T, 0.0);
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 				return exp(poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
-				break;
-			case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
-				return baseExponentialOffset(volume2input, T);
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
 				return basePolyOffset(volume2input, T, x);
@@ -355,13 +328,10 @@ double IncompressibleFluid::inputFromMole (double T,     double x){
 				return poly.evaluate(mole2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-				return baseExponential(mole2input, T, Tbase);
+				return baseExponential(mole2input, T, 0.0);
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 				return exp(poly.evaluate(mole2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
-				break;
-			case IncompressibleData::INCOMPRESSIBLE_EXPOFFSET:
-				return baseExponentialOffset(mole2input, T);
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
 				return basePolyOffset(mole2input, T, x);

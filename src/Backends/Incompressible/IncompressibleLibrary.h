@@ -154,6 +154,7 @@ protected:
     /// A general function to parse the json files that hold the coefficient matrices
     IncompressibleData parse_coefficients(rapidjson::Value &obj, std::string id, bool vital);
     double parse_value(rapidjson::Value &obj, std::string id, bool vital, double def);
+    int parse_ifrac(rapidjson::Value &obj, std::string id);
 
 public:
     // Default constructor;
