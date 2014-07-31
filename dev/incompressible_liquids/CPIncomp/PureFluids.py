@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from CPIncomp.DataObjects import PureData  
+from CPIncomp.DataObjects import PureData  , DigitalData
    
 class TherminolD12(PureData):
     """ 
@@ -336,3 +336,4 @@ class HC10(PureData):
         self.reference   = "Dynalene data sheet"
         self.reshapeAll()
 
+    

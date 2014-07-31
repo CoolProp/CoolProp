@@ -5,8 +5,9 @@ import hashlib, os, json, sys
 import matplotlib.pyplot as plt 
 import matplotlib.gridspec as gridspec
 from CPIncomp.DataObjects import SolutionData
-from CPIncomp.BaseObjects import IncompressibleData
+from CPIncomp.BaseObjects import IncompressibleData, IncompressibleFitter
 from matplotlib.patches import Rectangle
+from matplotlib.ticker import MaxNLocator
 
 class SolutionDataWriter(object):
     """ 
@@ -19,8 +20,6 @@ class SolutionDataWriter(object):
         pass 
     
     def fitAll(self, fluidObject=SolutionData()):
-        
-        
         
         if fluidObject.Tbase==None:
             fluidObject.Tbase = (fluidObject.Tmin + fluidObject.Tmax) / 2.0
@@ -71,10 +70,10 @@ class SolutionDataWriter(object):
             fluidObject.viscosity.setxyData(tData,xData)
             tried = False
             if len(fluidObject.viscosity.yData)==1:# and np.isfinite(fluidObject.viscosity.data).sum()<10:
-                fluidObject.viscosity.coeffs = np.array([+7e+2, -6e+1, +1e+1])
+                fluidObject.viscosity.coeffs = np.array([+5e+2, -6e+1, +1e+1])
                 fluidObject.viscosity.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
                 fluidObject.viscosity.fitCoeffs(tBase,xBase)
-                if fluidObject.viscosity.coeffs==None or np.allclose(fluidObject.viscosity.coeffs, np.array([+7e+2, -6e+1, +1e+1])): # Fit failed
+                if fluidObject.viscosity.coeffs==None or IncompressibleFitter.allClose(fluidObject.viscosity.coeffs, np.array([+5e+2, -6e+1, +1e+1])): # Fit failed
                     tried = True
             if len(fluidObject.viscosity.yData)>1 or tried:
                 fluidObject.viscosity.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
@@ -86,13 +85,17 @@ class SolutionDataWriter(object):
         
         try:
             fluidObject.saturation_pressure.setxyData(tData,xData)
+            tried = False
             if len(fluidObject.saturation_pressure.yData)==1:# and np.isfinite(fluidObject.saturation_pressure.data).sum()<10:
                 fluidObject.saturation_pressure.coeffs = np.array([-5e+3, +6e+1, -1e+1]) 
                 fluidObject.saturation_pressure.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
-            else:
+                fluidObject.saturation_pressure.fitCoeffs(tBase,xBase)
+                if fluidObject.saturation_pressure.coeffs==None or IncompressibleFitter.allClose(fluidObject.saturation_pressure.coeffs, np.array([-5e+3, +6e+1, -1e+1])): # Fit failed
+                    tried = True
+            if len(fluidObject.saturation_pressure.yData)>1 or tried:
                 fluidObject.saturation_pressure.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
                 fluidObject.saturation_pressure.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
-            fluidObject.saturation_pressure.fitCoeffs(tBase,xBase)
+                fluidObject.saturation_pressure.fitCoeffs(tBase,xBase)
         except errList as ve:
             if fluidObject.saturation_pressure.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'saturation pressure',ve))
             pass
@@ -307,7 +310,7 @@ class SolutionDataWriter(object):
         
         pos = np.isfinite(B_a)
         pos2 = (B_a>eps)
-        result = np.zeros_like(A_a)
+        result = np.ones_like(A_a)*np.NAN
         
         result[pos & pos2] = (A_a[pos & pos2]-B_a[pos & pos2])/B_a[pos & pos2]
 
@@ -416,9 +419,7 @@ class SolutionDataWriter(object):
                         zError[i,j]= func(tData[i],pData,xData[j])
                                                    
                 zError = self.relError(zData, zError) * 1e2
-                
-                if xFunction: axis = 1
-                else: axis = 0
+
                   
                 ## Find the column with the largest single error
                 #maxVal = np.amax(zError, axis=0) # largest error per column
@@ -426,17 +427,21 @@ class SolutionDataWriter(object):
                 ## Find the column with the largest total error
                 #totVal = np.sum(zError, axis=0) # summed error per column
                 #col2plot = np.argmax(totVal) # largest error in row
-                # Find the column with the largest average error
-                avgVal = np.average(zError, axis=axis) # summed error per column
-                set2plot = np.argmax(avgVal) # largest error in row
+                # Find the column with the largest average error                
                 if xFunction: 
+                    #avgVal = np.average(zError, axis=1) # summed error per column
+                    #set2plot = np.argmax(avgVal) # largest error in row
+                    set2plot = int(np.round(r/2.0))
                     tData = np.array([tData[set2plot]])
                     zData = zData[set2plot]
                     zError= zError[set2plot]
                 else:
+                    #avgVal = np.average(zError, axis=0) # summed error per column
+                    #set2plot = np.argmax(avgVal) # largest error in row
+                    set2plot = int(np.round(c/2.0))
                     xData = np.array([xData[set2plot]])
                     zData = zData.T[set2plot]
-                    zError= zError.T[set2plot]                
+                    zError= zError.T[set2plot]
             else:
                 raise ValueError("You have to provide data and a fitted function.")
         
@@ -472,6 +477,10 @@ class SolutionDataWriter(object):
         xFunc = xData
         pFunc = pData
         zFunc = None
+        zMiMa = None
+        xFree = xData
+        tFree = tData
+        zFree = None
         
         if func!=None:
             if len(tFunc)<points and len(tFunc)>1:
@@ -488,7 +497,30 @@ class SolutionDataWriter(object):
                 zFunc = np.array(zFunc.flat)
             else:
                 raise ValueError("Cannot plot non-flat arrays!")
-        
+            
+            if xFunction:
+                tMiMa = np.array([solObj.Tmin, solObj.Tmax])
+                xMiMa = xFunc
+            else:
+                tMiMa = tFunc
+                xMiMa = np.array([solObj.xmin, solObj.xmax])
+                
+            zMiMa = np.zeros((len(tMiMa),len(xMiMa)))
+            for i in range(len(tMiMa)):
+                for j in range(len(xMiMa)):
+                    zMiMa[i,j] = func(tMiMa[i],pFunc,xMiMa[j])
+                    
+            if not xFunction: # add the freezing front
+                if solObj.T_freeze.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
+                    cols = len(tMiMa)
+                    conc = np.linspace(solObj.xmin, solObj.xmax, num=cols)
+                    tFree = np.zeros_like(conc)
+                    zFree = np.zeros_like(conc)
+                    for i in range(cols):
+                        tFree[i] = solObj.Tfreeze(10.0, p=pFunc, x=conc[i])
+                        zFree[i] = func(tFree[i],pFunc,conc[i])
+                    #zMiMa = np.hstack((zMiMa,temp.reshape((len(conc),1)))) 
+
         fitFormatter = {}
         fitFormatter['color'] = 'red'
         fitFormatter['ls'] = 'solid'
@@ -500,18 +532,32 @@ class SolutionDataWriter(object):
         errorFormatter['alpha'] = 0.25
         
         pData = None
+        pFree = None
         if xFunction:
             pData = xData
             pFunc = xFunc
+            pMiMa = xMiMa
+            zMiMa = zMiMa.T
+            #pFree = xFree
+            #zFree = zFree.T
         else:
             pData = tData - 273.15 
-            pFunc = tFunc - 273.15 
+            pFunc = tFunc - 273.15
+            pMiMa = tMiMa - 273.15  
+            #zMiMa = zMiMa
+            pFree = tFree - 273.15
             
         if zData!=None and axVal!=None: 
             axVal.plot(pData, zData, label='data', **dataFormatter)
 
         if zFunc!=None and axVal!=None:
             axVal.plot(pFunc, zFunc, label='function' , **fitFormatter)
+            
+        if zMiMa!=None and axVal!=None:
+            axVal.plot(pMiMa, zMiMa, alpha=0.25, ls=':', color=fitFormatter["color"])
+            
+        if zFree!=None and axVal!=None:
+            axVal.plot(pFree, zFree, alpha=0.25, ls=':', color=fitFormatter["color"])
             
         if zError!=None and axErr!=None:
             axErr.plot(pData, zError, label='error' , **errorFormatter)
@@ -671,7 +717,7 @@ class SolutionDataWriter(object):
         density_axis.set_ylabel(r'Density [$\mathdefault{kg/m^3\!}$]')
         density_axis.set_xlabel(tempLabel)
         density_error.set_ylabel(errLabel)
-        if solObj.density.source!=solObj.density.SOURCE_NOT_SET:        
+        if solObj.density.source!=solObj.density.SOURCE_NOT_SET:
             self.plotValues(density_axis,density_error,solObj=solObj,dataObj=solObj.density,func=solObj.rho)
         else:
             raise ValueError("Density data has to be provided!")
@@ -751,13 +797,15 @@ class SolutionDataWriter(object):
         #mass2input_axis   = plt.subplot2grid((3,2), (2,0))
         #volume2input_axis = plt.subplot2grid((3,2), (2,0))
         
-        # Set a minimum error level
+        # Set a minimum error level and do some more formatting
         minAbsErrorScale = 0.05 # in per cent
         for a in fig.axes:
             if a.get_ylabel()==errLabel:
                 mi,ma = a.get_ylim()
                 if mi>-minAbsErrorScale: a.set_ylim(bottom=-minAbsErrorScale)
                 if ma< minAbsErrorScale: a.set_ylim(   top= minAbsErrorScale)
+            a.xaxis.set_major_locator(MaxNLocator(5))
+            #a.yaxis.set_major_locator(MaxNLocator(7))
                 
         
         
@@ -779,7 +827,7 @@ class SolutionDataWriter(object):
         
         table_axis.legend( 
           legVal, legKey, 
-          bbox_to_anchor=(0.0, 0.015, 1., 0.015), 
+          bbox_to_anchor=(0.0, -0.025, 1., -0.025), 
           ncol=len(legKey), mode="expand", borderaxespad=0.,
           numpoints=1)
         #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)

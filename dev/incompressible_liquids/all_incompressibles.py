@@ -10,22 +10,28 @@ if __name__ == '__main__':
     writer = SolutionDataWriter()
     doneObjs = []
     
-#    # To debug single fluids
-#    from CPIncomp.SecCoolFluids import Freezium
-#    #solObjs = [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder-BOOK-2010, SecCool software')]
-#    solObjs = [Freezium()]
-#    #solObjs[0].density.DEBUG = True
-#    #solObjs[0].specific_heat.DEBUG = True
-#    #solObjs[0].conductivity.DEBUG = True
-#    #solObjs[0].viscosity.DEBUG = True
-#    solObjs[0].T_freeze.DEBUG = True
-#    writer.fitSecCoolList(solObjs)
-#    #
-#    ##from CPIncomp.ExampleObjects import SecCoolExample
-#    ##solObjs = [SecCoolExample()]
-#    writer.writeFluidList(solObjs)
-#    writer.writeReportList(solObjs)
-#    sys.exit(0)
+    # To debug single fluids
+    from CPIncomp.SecCoolFluids import SecCoolSolutionData,SecCoolIceData
+    from CPIncomp.PureFluids import Therminol72
+    #solObjs  = [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder-BOOK-2010, SecCool software')]
+    #solObjs += [SecCoolIceData(sFile='IceNA'   ,sFolder='xMass',name='IceNA',desc='Ice slurry with NaCl' ,ref='Danish Technological Institute, SecCool software')]
+    #solObjs = [Freezium()]
+    #solObjs[0].density.DEBUG = True
+    #solObjs[0].specific_heat.DEBUG = True
+    #solObjs[0].conductivity.DEBUG = True
+    #solObjs[0].viscosity.DEBUG = True
+    #solObjs[0].T_freeze.DEBUG = True
+    #writer.fitSecCoolList(solObjs)
+    solObjs = [Therminol72()]
+    solObjs[0].viscosity.DEBUG=True
+    #solObjs[0].saturation_pressure.DEBUG=True
+    writer.fitFluidList([solObjs[-1]])
+    #
+    ##from CPIncomp.ExampleObjects import SecCoolExample
+    ##solObjs = [SecCoolExample()]
+    writer.writeFluidList(solObjs)
+    writer.writeReportList(solObjs)
+    sys.exit(0)
     
     fluidObjs = getExampleNames(obj=True)
     examplesToFit = ["ExamplePure","ExampleSolution","ExampleDigital","ExampleDigitalPure"]

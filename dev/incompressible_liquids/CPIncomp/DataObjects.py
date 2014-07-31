@@ -108,9 +108,45 @@ class SolutionData(object):
 #        objList["viscosity"] = self.viscosity
 #        objList["saturation pressure"] = self.saturation_pressure
 #        return objList
+
+
+    def checkT(self, T, p, x):
+        if self.Tmin <= 0.: raise ValueError("Please specify the minimum temperature.")
+        if self.Tmax <= 0.: raise ValueError("Please specify the maximum temperature.");
+        if ((self.Tmin > T) or (T > self.Tmax)): raise ValueError("Your temperature {0} is not between {1} and {2}.".format(T, self.Tmin, self.Tmax))
+        TF = 0.0
+        if (self.T_freeze.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET): TF = self.Tfreeze(T, p, x)
+        if ( T<TF ): raise ValueError("Your temperature {0} is below the freezing point of {1}.".format(T, TF))
+        else: return True
+        return False
+
+    def checkP(self, T, p, x):
+        ps = 0.0
+        if (self.saturation_pressure.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET): ps = self.psat(T, p, x)
+        if (p < 0.0): raise  ValueError("You cannot use negative pressures: {0} < {1}. ".format(p, 0.0))
+        if (p < ps) : raise ValueError("Equations are valid for liquid phase only: {0} < {1}. ".format(p, ps))
+        else        : return True
+        return False
+
+
+    def checkX(self, x):
+        if (self.xmin < 0.0 or self.xmin > 1.0): raise ValueError("Please specify the minimum concentration between 0 and 1.");
+        if (self.xmax < 0.0 or self.xmax > 1.0): raise ValueError("Please specify the maximum concentration between 0 and 1.");
+        if ((self.xmin > x) or (x > self.xmax)): raise ValueError("Your composition {0} is not between {1} and {2}.".format(x, self.xmin, self.xmax))
+        else: return True
+        return False
+    
+    def checkTPX(self, T, p, x):
+        try: 
+            return (self.checkT(T,p,x) and self.checkP(T,p,x) and self.checkX(x))
+        except ValueError as ve:
+            #print("Check failed: {0}".format(ve))
+            pass
+        return False
         
     
     def rho (self, T, p=0.0, x=0.0, c=None):
+        if not self.checkTPX(T, p, x): return np.NAN
         if c==None: 
             c=self.density.coeffs
         if self.density.type==self.density.INCOMPRESSIBLE_POLYNOMIAL:
@@ -118,6 +154,7 @@ class SolutionData(object):
         else:  raise ValueError("Unknown function.")
     
     def c   (self, T, p=0.0, x=0.0, c=None):
+        if not self.checkTPX(T, p, x): return np.NAN
         if c==None: 
             c = self.specific_heat.coeffs
         if self.specific_heat.type==self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL:
@@ -131,6 +168,7 @@ class SolutionData(object):
         return self.c(T,p,x,c)
     
     def u   (self, T, p=0.0, x=0.0, c=None):
+        if not self.checkTPX(T, p, x): return np.NAN
         if c==None: 
             c = self.specific_heat.coeffs
         if self.specific_heat.type==self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL:
@@ -143,15 +181,18 @@ class SolutionData(object):
         return self.h_u(T,p,x)
     
     def visc(self, T, p=0.0, x=0.0, c=None):
+        if not self.checkTPX(T, p, x): return np.NAN
         return self.viscosity.baseFunction(T, x, self.Tbase, self.xbase, c=c)
     
     def cond(self, T, p=0.0, x=0.0, c=None):
+        if not self.checkTPX(T, p, x): return np.NAN
         return self.conductivity.baseFunction(T, x, self.Tbase, self.xbase, c=c)
         
     def    psat(self, T, p=0.0, x=0.0, c=None):
+        if (T<=self.TminPsat): return 0.0
         return self.saturation_pressure.baseFunction(T, x, self.Tbase, self.xbase, c=c)
         
-    def Tfreeze(self, T, p=0.0, x=0.0, c=None):
+    def Tfreeze(self, T, p=0.0, x=0.0, c=None):        
         if c==None:
             c = self.T_freeze.coeffs
 
@@ -296,27 +337,31 @@ class DigitalData(SolutionData):
         if x_in!=None: # Might need update     
             if x!=None: # Both given, check if different
                 mask = np.isfinite(x)
-                if np.allclose(x[mask], x_in[mask]): 
+                if IncompressibleFitter.allClose(x[mask], x_in[mask]): 
                     if DEBUG: print("Both x-arrays are the same, no action required.")
                     updateFile = (updateFile or False) # Do not change a True value to False
                 else: 
                     updateFile = True
                     if DEBUG: print("x-arrays do not match. {0} contains \n {1} \n and will be updated with \n {2}".format(self.getFile(dataID),x,x_in))
             else: updateFile = True
-        elif x==None: raise ValueError("Could not load x from file and no x_in provided, aborting.")
+        elif x==None: 
+            if DEBUG: print("Could not load x from file {0} and no x_in provided, aborting.".format(self.getFile(dataID)))
+            return None,None,None
         else: updateFile = (updateFile or False) # Do not change a True value to False
         
         if y_in!=None: # Might need update     
             if y!=None: # Both given, check if different
                 mask = np.isfinite(y)
-                if np.allclose(y[mask], y_in[mask]): 
+                if IncompressibleFitter.allClose(y[mask], y_in[mask]): 
                     if DEBUG: print("Both y-arrays are the same, no action required.")
                     updateFile = (updateFile or False) # Do not change a True value to False
                 else: 
                     updateFile = True
                     if DEBUG: print("y-arrays do not match. {0} contains \n {1} \n and will be updated with \n {2}".format(self.getFile(dataID),y,y_in))
             else: updateFile = True
-        elif y==None: raise ValueError("Could not load y from file and no y_in provided, aborting.")
+        elif y==None:
+            if DEBUG: print("Could not load y from file {0} and no y_in provided, aborting.".format(self.getFile(dataID)))
+            return None,None,None
         else: updateFile = (updateFile or False) # Do not change a True value to False
             
         if DEBUG: print("Updating data file {0}".format(updateFile))

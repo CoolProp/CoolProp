@@ -439,26 +439,21 @@ double IncompressibleFluid::T_u   (double Umass, double p, double x){
  *  freezing point calculation. This is not necessarily
  *  defined for all fluids, default values do not cause errors. */
 bool IncompressibleFluid::checkT(double T, double p, double x) {
-	if (Tmin <= 0.) {
-		throw ValueError("Please specify the minimum temperature.");
-	} else if (Tmax <= 0.) {
-		throw ValueError("Please specify the maximum temperature.");
-	} else if ((Tmin > T) || (T > Tmax)) {
-		throw ValueError(
+	if (Tmin <= 0.) throw ValueError("Please specify the minimum temperature.");
+	if (Tmax <= 0.) throw ValueError("Please specify the maximum temperature.");
+	if ((Tmin > T) || (T > Tmax)) throw ValueError(
 				format("Your temperature %f is not between %f and %f.",
 						T, Tmin, Tmax));
+	double TF = 0.0;
+	if (T_freeze.type!=IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
+		TF = Tfreeze(p, x);
+	}
+	if ( T<TF) {
+		throw ValueError(
+			format("Your temperature %f is below the freezing point of %f.",
+					T, TF));
 	} else {
-		double TF = 0.0;
-		if (T_freeze.type!=IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
-			TF = Tfreeze(p, x);
-		}
-		if ( T<Tfreeze(p, x)) {
-			throw ValueError(
-				format("Your temperature %f is below the freezing point of %f.",
-						T, Tfreeze(p, x)));
-		} else {
-			return true;
-		}
+		return true;
 	}
 	return false;
 }
