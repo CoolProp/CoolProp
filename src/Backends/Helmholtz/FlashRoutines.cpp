@@ -53,7 +53,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 rhoLsat = HEOS.solver_rho_Tp(HEOS._T, psatLanc, rhoLanc);
                 rhoVsat = HEOS.solver_rho_Tp(HEOS._T, psatVanc, rhoVanc);
                 if (!ValidNumber(rhoLsat) || !ValidNumber(rhoVsat) ||
-                     fabs(rhoLsat/rhoLanc-1) > 0.1 || fabs(rhoVanc/rhoVsat-1) > 0.1)
+                     fabs(rhoLsat/rhoLanc-1) > 0.5 || fabs(rhoVanc/rhoVsat-1) > 0.5)
                 {
                     throw ValueError("pseudo-pure failed");
                 }
@@ -325,9 +325,59 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
             throw NotImplementedError("PHSU_D_flash not ready for mixtures");
     }
 }
+void FlashRoutines::HSU_P_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, int other, long double T0, long double rhomolar0)
+{
+}
 void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 {
-    throw NotImplementedError("HSU_P_flash Not implemented yet");
+    if (HEOS.imposed_phase_index > -1)
+    {
+        // Use the phase defined by the imposed phase
+        HEOS._phase = HEOS.imposed_phase_index;
+    }
+    else
+    {
+        if (HEOS.is_pure_or_pseudopure)
+        {
+            // Find the phase, while updating all internal variables possible
+            switch (other)
+            {
+                case iSmolar:
+                    HEOS.p_phase_determination_pure_or_pseudopure(iSmolar, HEOS._smolar); break;
+                case iHmolar:
+                    HEOS.p_phase_determination_pure_or_pseudopure(iHmolar, HEOS._hmolar); break;
+                case iUmolar:
+                    HEOS.p_phase_determination_pure_or_pseudopure(iUmolar, HEOS._umolar); break;
+                default:
+                    throw ValueError(format("Input for other [%s] is invalid", get_parameter_information(other, "long").c_str()));
+            }
+        }
+        else
+        {
+            HEOS._phase = iphase_gas;
+            throw NotImplementedError("HSU_P_flash does not support mixtures (yet)");
+            // Find the phase, while updating all internal variables possible
+        }
+    }
+
+    if (HEOS.isHomogeneousPhase() && !ValidNumber(HEOS._p))
+    {
+        switch (other)
+        {
+            case iDmolar:
+                break;
+            case iHmolar:
+                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._hmolar, iHmolar); break;
+            case iSmolar:
+                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._smolar, iSmolar); break;
+            case iUmolar:
+                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._umolar, iUmolar); break;
+            default:
+                break;
+        }
+        HEOS.calc_pressure();
+        HEOS._Q = -1;
+    }
 }
 void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 {

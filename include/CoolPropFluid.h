@@ -18,6 +18,8 @@
 #include <map>
 #include <assert.h>
 #include <iterator>
+#include "Eigen/Core"
+#include "PolyMath.h"
 
 namespace CoolProp {
 
@@ -289,55 +291,89 @@ public:
 class SaturationAncillaryFunction
 {
 private:
+    Eigen::MatrixXd num_coeffs, ///< Coefficients for numerator in rational polynomial 
+                    den_coeffs; ///< Coefficients for denominator in rational polynomial
     std::vector<double> n, t, s;
     bool using_tau_r;
-    double Tmax, Tmin, reducing_value, T_r;
+    long double Tmax, Tmin, reducing_value, T_r, max_abs_error;
     int type;
-    enum ancillaryfunctiontypes{TYPE_NOT_EXPONENTIAL = 0, TYPE_EXPONENTIAL = 1};
+    enum ancillaryfunctiontypes{TYPE_NOT_SET = -1, TYPE_NOT_EXPONENTIAL = 0, TYPE_EXPONENTIAL = 1, TYPE_RATIONAL_POLYNOMIAL = 2};
     std::size_t N;
 public:
 
-    SaturationAncillaryFunction(){};
+    SaturationAncillaryFunction(){type = TYPE_NOT_SET;};
+    
     SaturationAncillaryFunction(rapidjson::Value &json_code)
     {
-        n = cpjson::get_double_array(json_code["n"]);
-        t = cpjson::get_double_array(json_code["t"]);
-        Tmin = cpjson::get_double(json_code,"Tmin");
-        Tmax = cpjson::get_double(json_code,"Tmax");
-        reducing_value = cpjson::get_double(json_code,"reducing_value");
-        using_tau_r = cpjson::get_bool(json_code,"using_tau_r");
-        T_r = cpjson::get_double(json_code,"T_r");
+        
         std::string type = cpjson::get_string(json_code,"type");
-
-        if (!type.compare("rhoLnoexp"))
+        if (!type.compare("rational_polynomial"))
+        {
+            std::vector<double> A = cpjson::get_double_array(json_code["A"]);
+            std::vector<double> B = cpjson::get_double_array(json_code["B"]);
+            std::reverse(A.begin(), A.end());
+            std::reverse(B.begin(), B.end());
+            num_coeffs = vec_to_eigen(A);
+            den_coeffs = vec_to_eigen(B);
+        }
+        else
+        {
+            n = cpjson::get_double_array(json_code["n"]);
+            t = cpjson::get_double_array(json_code["t"]);
+            Tmin = cpjson::get_double(json_code,"Tmin");
+            Tmax = cpjson::get_double(json_code,"Tmax");
+            reducing_value = cpjson::get_double(json_code,"reducing_value");
+            using_tau_r = cpjson::get_bool(json_code,"using_tau_r");
+            T_r = cpjson::get_double(json_code,"T_r");    
+        }   
+        
+        if (!type.compare("rational_polynomial"))
+            this->type = TYPE_RATIONAL_POLYNOMIAL;
+        else if (!type.compare("rhoLnoexp"))
             this->type = TYPE_NOT_EXPONENTIAL;
         else
             this->type = TYPE_EXPONENTIAL;
         this->N = n.size();
         s = n;
     };
+    
+    /// Get the maximum absolute error for this fit
+    long double get_max_abs_error(){return max_abs_error;};
+    
     double evaluate(double T)
     {
-        double THETA = 1-T/T_r;
-
-        for (std::size_t i = 0; i < N; ++i)
+        if (type == TYPE_NOT_SET)
         {
-            s[i] = n[i]*pow(THETA, t[i]);
+            throw ValueError(format("type not set"));
         }
-        double summer = std::accumulate(s.begin(), s.end(), 0.0);
-
-        if (type == TYPE_NOT_EXPONENTIAL)
+        else if (type == TYPE_RATIONAL_POLYNOMIAL)
         {
-            return reducing_value*(1+summer);
+            Polynomial2D poly;
+            return poly.evaluate(num_coeffs, T)/poly.evaluate(den_coeffs, T);
         }
         else
         {
-            double tau_r_value;
-            if (using_tau_r)
-                tau_r_value = T_r/T;
+            double THETA = 1-T/T_r;
+
+            for (std::size_t i = 0; i < N; ++i)
+            {
+                s[i] = n[i]*pow(THETA, t[i]);
+            }
+            double summer = std::accumulate(s.begin(), s.end(), 0.0);
+
+            if (type == TYPE_NOT_EXPONENTIAL)
+            {
+                return reducing_value*(1+summer);
+            }
             else
-                tau_r_value = 1.0;
-            return reducing_value*exp(tau_r_value*summer);
+            {
+                double tau_r_value;
+                if (using_tau_r)
+                    tau_r_value = T_r/T;
+                else
+                    tau_r_value = 1.0;
+                return reducing_value*exp(tau_r_value*summer);
+            }
         }
     }
     double invert(double value)
@@ -464,7 +500,7 @@ public:
 
 struct Ancillaries
 {
-    SaturationAncillaryFunction pL, pV, rhoL, rhoV;
+    SaturationAncillaryFunction pL, pV, rhoL, rhoV, hL, hV, sL, sV;
     MeltingLineVariables melting_line;
     SurfaceTensionCorrelation surface_tension;
 };

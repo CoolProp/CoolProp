@@ -42,26 +42,28 @@ def fit_rational_polynomial(x, y, xfine, n, d):
             
         AB = scipy.optimize.curve_fit(obj, x, y, p0 = ABlin)[0]
 
-        poles = np.roots(list(ABnonlin[n+1::])+[1])
+        poles = np.roots(list(AB[n+1::])+[1])
         poles = poles[np.isreal(poles)]
         poles = poles[poles > min(x)]
         poles = poles[poles < max(x)]
         
     else:
         # Find a pole that is not in the range of x
-        def obj2(Tpole,x,y,AB):
+        def obj2(Tpole, x, y, AB):
             B = -1/Tpole
-            A = np.polyfit(x,y*(x*B+1),n)
-            yfit = np.polyval(A,x)/(x*B + 1)
+            A = np.polyfit(x, y*(x*B+1), n)
+            yfit = np.polyval(A, x)/(x*B + 1)
             AB[:] = list(A) + [B] # Set so that it uses the AB passed in rather than making local variable
-            rms = np.sqrt(np.sum(np.power(yfit-y,2)))
+            rms = np.sqrt(np.sum(np.power(yfit-y, 2)))
             return rms
             
         AB = []
         scipy.optimize.fminbound(obj2, Tc+0.1, 1.5*Tc, args = (x, y, AB))
     
     return dict(max_abs_error = np.max(np.abs(obj(x, *AB)-y)),
-                yfitnonlin = obj(xfine, *AB)
+                yfitnonlin = obj(xfine, *AB),
+                A = AB[0:n+1],
+                B = list(AB[n+1::]) + [1]
                 )
         
 class SplineFitter(object):
@@ -115,7 +117,7 @@ def strictly_decreasing(L):
 from matplotlib.backends.backend_pdf import PdfPages
 pp = PdfPages('multipage.pdf')
 
-for i, fluid in enumerate(sorted(CoolProp.__fluids__)):
+for i, fluid in enumerate(['n-Propane']):#sorted(CoolProp.__fluids__)):
     
     fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2, 2)
     
@@ -150,6 +152,8 @@ for i, fluid in enumerate(sorted(CoolProp.__fluids__)):
         ax1.plot(xfine, rp['yfitnonlin'],'r')
         ax1.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
         ax1.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
+        
+        print rp['A'], rp['B']
         
         rp = fit_rational_polynomial(x, hfg, xfine, n, d)
         ax2.plot(x, hfg)

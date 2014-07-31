@@ -258,7 +258,7 @@ public:
 	/// @param coefficients vector containing the ordered coefficients
 	/// @param x_in double value that represents the current input in the 1st dimension
 	/// @param firstExponent integer value that represents the lowest exponent of the polynomial
-	/// @param x_base double value that represents the base value for a centred fit in the 1st dimension
+	/// @param x_base double value that represents the base value for a centered fit in the 1st dimension
 	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const int &firstExponent=0, const double &x_base=0.0);
 
 	/// @param coefficients matrix containing the ordered coefficients
@@ -266,8 +266,8 @@ public:
 	/// @param y_in double value that represents the current input in the 2nd dimension
 	/// @param x_exp integer value that represents the lowest exponent of the polynomial in the 1st dimension
 	/// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
-	/// @param x_base double value that represents the base value for a centred fit in the 1st dimension
-	/// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
+	/// @param x_base double value that represents the base value for a centered fit in the 1st dimension
+	/// @param y_base double value that represents the base value for a centered fit in the 2nd dimension
 	double evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &x_exp, const int &y_exp, const double &x_base=0.0, const double &y_base=0.0);
 
 	/// @param coefficients vector containing the ordered coefficients

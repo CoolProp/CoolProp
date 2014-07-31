@@ -926,6 +926,16 @@ protected:
         fluid.ancillaries.pV = SaturationAncillaryFunction(ancillaries["pV"]);
         fluid.ancillaries.rhoL = SaturationAncillaryFunction(ancillaries["rhoL"]);
         fluid.ancillaries.rhoV = SaturationAncillaryFunction(ancillaries["rhoV"]);
+        
+        if (ancillaries.HasMember("hL"))
+        {
+            fluid.ancillaries.hL = SaturationAncillaryFunction(ancillaries["hL"]);
+        }
+        else
+        {
+            if (get_debug_level() > 0){ std::cout << "Missing hL ancillary for fluid " << fluid.name; }
+        }
+        
     };
 
     /// Parse the surface_tension

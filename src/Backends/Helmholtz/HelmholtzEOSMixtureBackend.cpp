@@ -625,6 +625,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
 
         switch (other)
         {
+            // First try the ancillaries, use them to determine the state if you can
             case iT:
             {
                 long double p_vap = 0.98*static_cast<double>(_pVanc);
@@ -637,6 +638,28 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                     this->_phase = iphase_liquid; _Q = 1000; return;
                 }
                 break;
+            }
+            case iHmolar:
+            {
+                long double h_liq = components[0]->ancillaries.hL.evaluate(_TLanc);
+                long double h_vap = components[0]->ancillaries.hV.evaluate(_T);
+                
+                // Check if in range given the accuracy of the fit
+                if (value > h_vap + components[0]->ancillaries.hV.get_max_abs_error()){
+                    this->_phase = iphase_gas; _Q = -1000; return;
+                }
+                else if (value < h_liq - components[0]->ancillaries.hL.get_max_abs_error()){
+                    this->_phase = iphase_liquid; _Q = 1000; return;
+                }
+                break;
+            }
+            case iSmolar:
+            {
+                // Add entropy ancillary code here 
+            }
+            case iUmolar:
+            {
+                // Add entropy ancillary code here 
             }
             default:
             {
