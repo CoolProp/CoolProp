@@ -5,6 +5,46 @@
     "ORTHOHYDROGEN"
   ], 
   "ANCILLARIES": {
+    "hL": {
+      "A": [
+        76.74334659659594, 
+        -101.5488761229308, 
+        17.191315604011216, 
+        -1.3954887186286047, 
+        0.06640883549389157, 
+        -0.00187469167204015, 
+        2.900984007502281e-05, 
+        -1.9101983704681749e-07
+      ], 
+      "B": [
+        1, 
+        -0.029679936897774917
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 1.8797294580369908, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "hLV": {
+      "A": [
+        -130.46982993352924, 
+        305.2438634274798, 
+        -46.92526959675389, 
+        3.748215570666283, 
+        -0.17899033365052175, 
+        0.005042543130716849, 
+        -7.758144576559005e-05, 
+        5.064479567107727e-07
+      ], 
+      "B": [
+        1, 
+        -0.02965985869970159
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 3.928363410339273, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
     "pL": {
       "T_r": 33.22, 
       "Tmax": 33.219999999999914, 
@@ -108,6 +148,46 @@
       ], 
       "type": "rhoV", 
       "using_tau_r": true
+    }, 
+    "sL": {
+      "A": [
+        -21.73092547881907, 
+        1.1510788238621612, 
+        0.14652264793655045, 
+        -0.020483929793297006, 
+        0.001176429165346133, 
+        -3.695281645983469e-05, 
+        6.137742961933415e-07, 
+        -4.247126816782711e-09
+      ], 
+      "B": [
+        1, 
+        -0.029685219663665392
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.05572822592006332, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "sLV": {
+      "A": [
+        261.75151245718473, 
+        -40.74841227765948, 
+        3.2619106050507884, 
+        -0.155888317912262, 
+        0.004369843937013193, 
+        -6.601812018541422e-05, 
+        4.020554323279109e-07, 
+        3.5489658012434257e-10
+      ], 
+      "B": [
+        1, 
+        -0.029652839124616717
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.12160426060111273, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
     }
   }, 
   "CAS": "1333-74-0o", 

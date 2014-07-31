@@ -3,6 +3,46 @@
     "ACETICACID"
   ], 
   "ANCILLARIES": {
+    "hL": {
+      "A": [
+        12758.056465297714, 
+        -634.7650949629073, 
+        4.556744199370361, 
+        -0.014640606848418622, 
+        2.622189062646462e-05, 
+        -2.701772065704181e-08, 
+        1.479544467735133e-11, 
+        -3.500722688068665e-15
+      ], 
+      "B": [
+        1, 
+        -0.0016804741004110453
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 382.75739581867674, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "hLV": {
+      "A": [
+        71873.78764199898, 
+        -1077.809232217666, 
+        10.30425905435211, 
+        -0.05544054674169774, 
+        0.00016986362316469245, 
+        -2.9590337706660195e-07, 
+        2.726489392705376e-10, 
+        -1.0307397542864516e-13
+      ], 
+      "B": [
+        1, 
+        -0.001676744902455541
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 842.9668776526187, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
     "pL": {
       "T_r": 590.7, 
       "Tmax": 590.699999999999, 
@@ -106,6 +146,46 @@
       ], 
       "type": "rhoV", 
       "using_tau_r": true
+    }, 
+    "sL": {
+      "A": [
+        20.914555171891188, 
+        -2.3819473304452545, 
+        0.020637500567186988, 
+        -7.91170927294203e-05, 
+        1.6960725180556327e-07, 
+        -2.1208329069309748e-10, 
+        1.448462279753299e-13, 
+        -4.215259801936533e-17
+      ], 
+      "B": [
+        1, 
+        -0.0016806993520197522
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.6602809710610842, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "sLV": {
+      "A": [
+        318.655251991481, 
+        -1.4679862736016203, 
+        0.0008021805877214059, 
+        3.2930877056400092e-06, 
+        1.7278713686566526e-08, 
+        -9.245434007733191e-11, 
+        1.382496162780719e-13, 
+        -6.925294114264174e-17
+      ], 
+      "B": [
+        1, 
+        -0.0016765169338728817
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 1.4107575034707782, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
     }
   }, 
   "CAS": "64-19-7", 

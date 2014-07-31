@@ -4,6 +4,46 @@
     "AIR"
   ], 
   "ANCILLARIES": {
+    "hL": {
+      "A": [
+        -4608.8937171887555, 
+        -165.9164283140375, 
+        9.431844290446804, 
+        -0.18930369153383966, 
+        0.0021568890762098114, 
+        -1.4583433790567517e-05, 
+        5.4401724669910924e-08, 
+        -8.679506675910783e-11
+      ], 
+      "B": [
+        1, 
+        -0.007479156728067951
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 18.6574791150274, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "hLV": {
+      "A": [
+        -981.6675345195271, 
+        665.1439895087647, 
+        -26.48021730116276, 
+        0.5207184365198337, 
+        -0.0060192341191555475, 
+        4.1160637176889036e-05, 
+        -1.545920328946512e-07, 
+        2.472422556502641e-10
+      ], 
+      "B": [
+        1, 
+        -0.007461406120779349
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 41.27682675739038, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
     "pL": {
       "T_r": 132.5306, 
       "Tmax": 132.53059999999968, 
@@ -107,6 +147,46 @@
       ], 
       "type": "rhoV", 
       "using_tau_r": true
+    }, 
+    "sL": {
+      "A": [
+        -24.314750958810038, 
+        2.4852156132443697, 
+        -0.023482489291351584, 
+        -0.00021528765964859157, 
+        6.037510007332497e-06, 
+        -5.5070947242526553e-08, 
+        2.402712797796871e-10, 
+        -4.222925572772897e-13
+      ], 
+      "B": [
+        1, 
+        -0.0074796088084243175
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.14014278761634102, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "sLV": {
+      "A": [
+        677.4051239999346, 
+        -28.771509799194543, 
+        0.5936912315545311, 
+        -0.00723130914855934, 
+        5.3238358265711634e-05, 
+        -2.2739606865473991e-07, 
+        4.926623308556518e-10, 
+        -3.5570292148690013e-13
+      ], 
+      "B": [
+        1, 
+        -0.007458551765931568
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.3289855249126683, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
     }
   }, 
   "CAS": "AIR.PPF", 

@@ -4,6 +4,46 @@
     "FLUORINE"
   ], 
   "ANCILLARIES": {
+    "hL": {
+      "A": [
+        -14637.0355974977, 
+        -74.75115293801638, 
+        8.07422525149588, 
+        -0.15507754969162527, 
+        0.0016809736747624194, 
+        -1.07744556430038e-05, 
+        3.7921139201707695e-08, 
+        -5.675156129685591e-11
+      ], 
+      "B": [
+        1, 
+        -0.006839197424837962
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 41.96278181197522, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "hLV": {
+      "A": [
+        3380.327658570949, 
+        379.6238285556217, 
+        -16.319176161312743, 
+        0.3181732010033591, 
+        -0.0036099135645805587, 
+        2.405132342297735e-05, 
+        -8.737458273790491e-08, 
+        1.342317268368105e-10
+      ], 
+      "B": [
+        1, 
+        -0.006851429522256655
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 97.15895298073326, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
     "melting_line": {
       "BibTeX": "deReuck-BOOK-1990", 
       "T_m": 53.15, 
@@ -126,6 +166,46 @@
       ], 
       "type": "rhoV", 
       "using_tau_r": true
+    }, 
+    "sL": {
+      "A": [
+        -171.6280524846239, 
+        2.8556377119035132, 
+        -0.0028292039998420314, 
+        -0.0004912362825808859, 
+        7.941538474632331e-06, 
+        -6.01157326561234e-08, 
+        2.310239803510899e-10, 
+        -3.636023091622209e-13
+      ], 
+      "B": [
+        1, 
+        -0.0068437649193744815
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.27808322539470254, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "sLV": {
+      "A": [
+        696.1229908548039, 
+        -29.060835223631358, 
+        0.6064579611029021, 
+        -0.0076191847766340064, 
+        5.9157879645730906e-05, 
+        -2.7647131445540545e-07, 
+        7.07383922911575e-10, 
+        -7.489252959670237e-13
+      ], 
+      "B": [
+        1, 
+        -0.006842327608206819
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.7550915038310362, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
     }, 
     "surface_tension": {
       "BibTeX": "Mulero-JPCRD-2012", 

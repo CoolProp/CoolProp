@@ -3,6 +3,46 @@
     "R410a"
   ], 
   "ANCILLARIES": {
+    "hL": {
+      "A": [
+        144117.7552612765, 
+        -4181.541388623841, 
+        50.419269102494546, 
+        -0.32919195814421104, 
+        0.0012755772739085733, 
+        -2.9509064132448716e-06, 
+        3.7773898902733584e-09, 
+        -2.066936533825422e-12
+      ], 
+      "B": [
+        1, 
+        -0.0028875872811254385
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 240.31272995674954, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "hLV": {
+      "A": [
+        -359043.74231721344, 
+        10619.546566208952, 
+        -126.38944790270814, 
+        0.8230015369120081, 
+        -0.0031979761981466986, 
+        7.425444224897163e-06, 
+        -9.545456177926045e-09, 
+        5.2464644318664206e-12
+      ], 
+      "B": [
+        1, 
+        -0.0028833184176863353
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 438.81214601666, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
     "pL": {
       "T_r": 344.494, 
       "Tmax": 344.49399999999923, 
@@ -106,6 +146,46 @@
       ], 
       "type": "rhoV", 
       "using_tau_r": true
+    }, 
+    "sL": {
+      "A": [
+        242.08300328057726, 
+        -8.740797047170318, 
+        0.11847865763609104, 
+        -0.0008184125088076397, 
+        3.2655053829303333e-06, 
+        -7.68714737984781e-09, 
+        9.950191508063663e-12, 
+        -5.483187863376289e-15
+      ], 
+      "B": [
+        1, 
+        -0.0028877981593657866
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.6911660329033396, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "sLV": {
+      "A": [
+        -214.56580641721666, 
+        15.938466784683298, 
+        -0.24023455114414358, 
+        0.00174226509588004, 
+        -7.195373195953608e-06, 
+        1.7371939824471505e-08, 
+        -2.294076043955419e-11, 
+        1.2855468832620826e-14
+      ], 
+      "B": [
+        1, 
+        -0.002883612151306938
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 1.2619575555954086, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
     }
   }, 
   "CAS": "R410A.PPF", 
@@ -306,6 +386,22 @@
       "rhomolar": 6323.999999999999, 
       "rhomolar_units": "mol/m^3"
     }, 
+    "pressure_max_sat": {
+      "T": 344.4942687, 
+      "T_units": "K", 
+      "p": 4901296.586, 
+      "p_units": "Pa", 
+      "rhomolar": 6365.195238, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "temperature_max_sat": {
+      "T": 344.4943434, 
+      "T_units": "K", 
+      "p": 4901288.901, 
+      "p_units": "Pa", 
+      "rhomolar": 6350.735221, 
+      "rhomolar_units": "mol/m^3"
+    }, 
     "triple_liquid": {
       "T": 200.0, 
       "T_units": "K", 
@@ -320,22 +416,6 @@
       "p": 29.009781591566753, 
       "p_units": "Pa", 
       "rhomolar": 17.796769503206775, 
-      "rhomolar_units": "mol/m^3"
-    },
-    "pressure_max_sat": {
-      "T": 344.4942687,
-      "T_units": "K",
-      "p": 4901296.586,
-      "p_units": "Pa",
-      "rhomolar": 6365.195238,
-      "rhomolar_units": "mol/m^3"
-    },
-    "temperature_max_sat": {
-      "T": 344.4943434,
-      "T_units": "K",
-      "p": 4901288.901,
-      "p_units": "Pa",
-      "rhomolar": 6350.735221,
       "rhomolar_units": "mol/m^3"
     }
   }, 

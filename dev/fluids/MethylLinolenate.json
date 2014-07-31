@@ -3,6 +3,46 @@
     "METHYLLINOLENATE"
   ], 
   "ANCILLARIES": {
+    "hL": {
+      "A": [
+        -357837.3566524591, 
+        2094.9185929977925, 
+        -7.334064713977934, 
+        0.02018597625396016, 
+        -3.592046736095472e-05, 
+        3.784576097736534e-08, 
+        -2.2168079217189303e-11, 
+        5.521889824769181e-15
+      ], 
+      "B": [
+        1, 
+        -0.0012743245529301197
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 1117.4485966106295, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "hLV": {
+      "A": [
+        296610.54841213237, 
+        -1940.261024264729, 
+        7.8388662904167035, 
+        -0.020808688445024214, 
+        3.47437358109929e-05, 
+        -3.4954074861824327e-08, 
+        1.9086364436805117e-11, 
+        -4.2397696376403805e-15
+      ], 
+      "B": [
+        1, 
+        -0.0012718479268983948
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 2261.078296098494, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
     "pL": {
       "T_r": 772.0, 
       "Tmax": 771.9999999999981, 
@@ -106,6 +146,46 @@
       ], 
       "type": "rhoV", 
       "using_tau_r": true
+    }, 
+    "sL": {
+      "A": [
+        -1852.9541581704036, 
+        17.208247326633938, 
+        -0.07824443607073696, 
+        0.00022405895226640477, 
+        -4.049508734491727e-07, 
+        4.444015731058975e-10, 
+        -2.7141051629436607e-13, 
+        7.078985951573785e-17
+      ], 
+      "B": [
+        1, 
+        -0.0012415573927753447
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 2.3559964043578248, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "sLV": {
+      "A": [
+        3912.8695845444468, 
+        -41.20209816848285, 
+        0.20806534585676115, 
+        -0.0006161177602200376, 
+        1.1209635785655315e-06, 
+        -1.234382352179822e-09, 
+        7.555480052294351e-13, 
+        -1.9737402022697654e-16
+      ], 
+      "B": [
+        1, 
+        -0.0012228745791495607
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 5.041880221206014, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
     }
   }, 
   "CAS": "301-00-8", 

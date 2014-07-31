@@ -5,15 +5,55 @@
     "ETHANOL"
   ], 
   "ANCILLARIES": {
+    "hL": {
+      "A": [
+        -14871.844423963625, 
+        113.25780383665455, 
+        -0.18223098634979035, 
+        0.0003174095444095744, 
+        -2.250879921716918e-06, 
+        8.74410068266626e-09, 
+        -1.5382827727647846e-11, 
+        9.438921395678272e-15
+      ], 
+      "B": [
+        1, 
+        -0.0019193748656282713
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 251.6427925822136, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "hLV": {
+      "A": [
+        51173.58130954279, 
+        -74.85699127504975, 
+        -0.521344878493574, 
+        0.0023668556030838075, 
+        -3.221275630912837e-06, 
+        -4.438278992818382e-09, 
+        1.554497097348777e-11, 
+        -1.0436367314018358e-14
+      ], 
+      "B": [
+        1, 
+        -0.0019256387855470629
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 446.7553041901374, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
     "melting_line": {
       "BibTeX": "Sun-BBPC-1988", 
-      "T_m": 158.8,
+      "T_m": 158.8, 
       "parts": [
         {
           "T_0": 158.37, 
           "T_max": 10000, 
           "T_min": 158.37, 
-          "a": 436.9e6, 
+          "a": 436900000.0, 
           "c": 2.6432, 
           "p_0": 0
         }
@@ -123,6 +163,46 @@
       ], 
       "type": "rhoV", 
       "using_tau_r": true
+    }, 
+    "sL": {
+      "A": [
+        -152.45139299186621, 
+        1.8284785054992174, 
+        -0.008297536602485044, 
+        2.199740837917561e-05, 
+        -3.5308398833169985e-08, 
+        3.211100569919926e-11, 
+        -1.742703686760453e-14, 
+        5.621077873197953e-18
+      ], 
+      "B": [
+        1, 
+        -0.0019217825093340876
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.4445679355804657, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "sLV": {
+      "A": [
+        1359.5226352442694, 
+        -17.697817647728755, 
+        0.1172752427842101, 
+        -0.00047309057740738624, 
+        1.1990296044185077e-06, 
+        -1.8716383761454754e-09, 
+        1.6477087418858376e-12, 
+        -6.256485038156953e-16
+      ], 
+      "B": [
+        1, 
+        -0.0019176813166149602
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 1.729460672212539, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
     }, 
     "surface_tension": {
       "BibTeX": "Mulero-JPCRD-2012", 

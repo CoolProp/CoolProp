@@ -1,6 +1,46 @@
 {
   "ALIASES": [], 
   "ANCILLARIES": {
+    "hL": {
+      "A": [
+        111044.0581928122, 
+        -4205.593578064658, 
+        47.47384927911115, 
+        -0.2791825488173804, 
+        0.0009757560857071677, 
+        -2.04042451481534e-06, 
+        2.359807327870418e-09, 
+        -1.1646911057767523e-12
+      ], 
+      "B": [
+        1, 
+        -0.0025587402411148185
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 209.00622030658224, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "hLV": {
+      "A": [
+        -591660.1083328814, 
+        15171.802662213959, 
+        -158.89151834722088, 
+        0.912983707501098, 
+        -0.003131435687491967, 
+        6.41682149710792e-06, 
+        -7.2765545681086014e-09, 
+        3.52525582047218e-12
+      ], 
+      "B": [
+        1, 
+        -0.0025571107252517957
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 449.20764161233205, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
     "pL": {
       "T_r": 388.38, 
       "Tmax": 388.37999999999914, 
@@ -104,6 +144,46 @@
       ], 
       "type": "rhoV", 
       "using_tau_r": true
+    }, 
+    "sL": {
+      "A": [
+        -180.71906690878504, 
+        -2.745942821540499, 
+        0.055172011377171176, 
+        -0.00038352829584478075, 
+        1.4644008399755968e-06, 
+        -3.259990895560318e-09, 
+        3.9622089811097585e-12, 
+        -2.037788750204291e-15
+      ], 
+      "B": [
+        1, 
+        -0.002558765516810847
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.5382565391090921, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "sLV": {
+      "A": [
+        -398.90865141125397, 
+        19.60183165915577, 
+        -0.25117566524548524, 
+        0.0015937253392855342, 
+        -5.805600601337399e-06, 
+        1.2400528769602216e-08, 
+        -1.4502359404043164e-11, 
+        7.19678155760975e-15
+      ], 
+      "B": [
+        1, 
+        -0.002557285231583
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 1.1491935335405286, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
     }, 
     "surface_tension": {
       "BibTeX": "Mulero-JPCRD-2012", 

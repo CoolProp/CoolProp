@@ -6,6 +6,46 @@
     "N-HEPTANE"
   ], 
   "ANCILLARIES": {
+    "hL": {
+      "A": [
+        -108321.68080737616, 
+        353.89165324914666, 
+        0.19614553057854042, 
+        -0.003963297278096784, 
+        1.5600440342227704e-05, 
+        -3.255401243065239e-08, 
+        3.42624603641553e-11, 
+        -1.469828015002066e-14
+      ], 
+      "B": [
+        1, 
+        -0.0018205407973626016
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 54.822712630772, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "hLV": {
+      "A": [
+        53436.70360193957, 
+        -27.371383988760524, 
+        -1.7368396946758322, 
+        0.011246484739700247, 
+        -3.6738994015700005e-05, 
+        6.766877287216092e-08, 
+        -6.70665503996025e-11, 
+        2.813446274041939e-14
+      ], 
+      "B": [
+        1, 
+        -0.0018092706468373953
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 183.98509254900773, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
     "pL": {
       "T_r": 540.13, 
       "Tmax": 540.1299999999987, 
@@ -109,6 +149,46 @@
       ], 
       "type": "rhoV", 
       "using_tau_r": true
+    }, 
+    "sL": {
+      "A": [
+        -590.1422660911662, 
+        5.189135038502934, 
+        -0.025086173989912825, 
+        8.253916912305594e-05, 
+        -1.7622252870262268e-07, 
+        2.2918840907410816e-10, 
+        -1.6611801102970415e-13, 
+        5.1328580500681823e-17
+      ], 
+      "B": [
+        1, 
+        -0.0018171566386731082
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.12751424428964242, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "sLV": {
+      "A": [
+        1353.5070240324246, 
+        -17.026322488479334, 
+        0.10620039693762613, 
+        -0.0003984817708001068, 
+        9.337620276476188e-07, 
+        -1.340561109244819e-09, 
+        1.0803611836500354e-12, 
+        -3.7436574699226667e-16
+      ], 
+      "B": [
+        1, 
+        -0.0017909753679211241
+      ], 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "max_abs_error": 0.5116214099266507, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
     }, 
     "surface_tension": {
       "BibTeX": "Mulero-JPCRD-2012", 
@@ -315,8 +395,8 @@
     "conductivity": {
       "BibTeX": "Assael-JPCRD-2013-Heptane", 
       "critical": {
-        "R0": 1.02,
-        "GAMMA": 0.0586,
+        "GAMMA": 0.0586, 
+        "R0": 1.02, 
         "qD": 1250000000.0, 
         "type": "simplified_Olchowy_Sengers", 
         "zeta0": 2.45e-10
@@ -395,7 +475,7 @@
         ], 
         "type": "polynomial"
       }
-    },
+    }, 
     "viscosity": {
       "BibTeX": "Michailidou-JPCRD-2014-Heptane", 
       "dilute": {
@@ -403,7 +483,7 @@
         "a": [
           0.33974, 
           -0.49396, 
-          0.08050
+          0.0805
         ], 
         "molar_mass": 0.100202, 
         "molar_mass_units": "kg/mol", 
@@ -444,7 +524,7 @@
         ], 
         "type": "Rainwater-Friend"
       }, 
-      "sigma_eta": 0.61362e-9, 
+      "sigma_eta": 6.1362e-10, 
       "sigma_eta_units": "m"
     }
   }

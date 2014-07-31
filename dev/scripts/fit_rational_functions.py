@@ -1,5 +1,6 @@
 from __future__ import division
 
+import json
 import matplotlib
 matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
@@ -8,6 +9,7 @@ import CoolProp
 import numpy as np
 import scipy.optimize
 import xalglib
+import os,sys
 
 def fit_rational_polynomial(x, y, xfine, n, d):
     
@@ -114,69 +116,108 @@ def strictly_increasing(L):
 def strictly_decreasing(L):
     return all(x>y for x, y in zip(L, L[1:]))
             
-from matplotlib.backends.backend_pdf import PdfPages
-pp = PdfPages('multipage.pdf')
+if not os.path.exists('hsancillaries.json'):
+    from matplotlib.backends.backend_pdf import PdfPages
+    pp = PdfPages('multipage.pdf')
 
-for i, fluid in enumerate(['n-Propane']):#sorted(CoolProp.__fluids__)):
-    
-    fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2, 2)
-    
-    plt.suptitle(fluid)
-    print i,fluid
-    
-    N = 10000
-    Tc = CP.Props(fluid,'Tcrit')
-    rhoc = CP.Props(fluid,'rhocrit')
-    try:
-        T = np.r_[np.linspace(Tc-0.1, CP.Props(fluid,'Tmin'), N)]#, np.linspace(Tc-0.1, Tc-1e-1, N)]
-        hfg = CP.PropsSI('H','T',T,'Q',1,fluid) - CP.PropsSI('H','T',T,'Q',0,fluid)
-        sfg = CP.PropsSI('S','T',T,'Q',1,fluid) - CP.PropsSI('S','T',T,'Q',0,fluid)
-    except BaseException as E:
-        print E
-        continue
-    
-    try:
-        p = CP.PropsSI('P','T',T,'Q',0,fluid)
-        rho = CP.PropsSI('D','T',T,'Q',0,fluid)
-        sL = CP.PropsSI('S','T',T,'Q',0,fluid)
-        hL = CP.PropsSI('H','T',T,'Q',0,fluid)
+    jj = {}
+    for i, fluid in enumerate(sorted(CoolProp.__fluids__)):
         
-        x = T
-        xfine = np.linspace(np.min(x),np.max(x),5000)
+        fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2, 2)
         
-        n = 7
-        d = 1
+        plt.suptitle(fluid)
+        print i,fluid
         
-        rp = fit_rational_polynomial(x, hL, xfine, n, d)
-        ax1.plot(x, hL)
-        ax1.plot(xfine, rp['yfitnonlin'],'r')
-        ax1.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
-        ax1.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
+        N = 10000
+        Tc = CP.Props(fluid,'Tcrit')
+        rhoc = CP.Props(fluid,'rhocrit')
+        MM = CP.Props(fluid,'molemass')
+        try:
+            T = np.r_[np.linspace(Tc-0.1, CP.Props(fluid,'Tmin'), N)]#, np.linspace(Tc-0.1, Tc-1e-1, N)]
+            hfg = (CP.PropsSI('H','T',T,'Q',1,fluid) - CP.PropsSI('H','T',T,'Q',0,fluid))*MM/1000
+            sfg = (CP.PropsSI('S','T',T,'Q',1,fluid) - CP.PropsSI('S','T',T,'Q',0,fluid))*MM/1000
+        except BaseException as E:
+            print E
+            continue
         
-        print rp['A'], rp['B']
-        
-        rp = fit_rational_polynomial(x, hfg, xfine, n, d)
-        ax2.plot(x, hfg)
-        ax2.plot(xfine, rp['yfitnonlin'],'r')
-        ax2.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
-        ax2.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
-        
-        rp = fit_rational_polynomial(x, sL, xfine, n, d)
-        ax3.plot(x, sL)
-        ax3.plot(xfine, rp['yfitnonlin'],'r')
-        ax3.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
-        ax3.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
-        
-        rp = fit_rational_polynomial(x, sfg, xfine, n, d)
-        ax4.plot(x, sfg)
-        ax4.plot(xfine, rp['yfitnonlin'],'r')
-        ax4.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
-        ax4.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
-        
-    except BaseException as E:
-        print E
+        try:
+            p = CP.PropsSI('P','T',T,'Q',0,fluid)
+            rho = CP.PropsSI('D','T',T,'Q',0,fluid)
+            sL = CP.PropsSI('S','T',T,'Q',0,fluid)*MM/1000
+            hL = CP.PropsSI('H','T',T,'Q',0,fluid)*MM/1000
             
-    pp.savefig()
-    plt.close()
+            x = T
+            xfine = np.linspace(np.min(x),np.max(x),5000)
+            
+            n = 7
+            d = 1
+            
+            commons = dict(_note = "coefficients are in increasing order; input in K, output in J/mol", type = "rational_polynomial", max_abs_error_units = 'J/mol')
+            
+            rp = fit_rational_polynomial(x, hL, xfine, n, d)
+            ax1.plot(x, hL)
+            ax1.plot(xfine, rp['yfitnonlin'],'r')
+            ax1.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
+            ax1.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
+            hLdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], **commons)
+            
+            rp = fit_rational_polynomial(x, hfg, xfine, n, d)
+            ax2.plot(x, hfg)
+            ax2.plot(xfine, rp['yfitnonlin'],'r')
+            ax2.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
+            ax2.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
+            hLVdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], **commons)
+            
+            rp = fit_rational_polynomial(x, sL, xfine, n, d)
+            ax3.plot(x, sL)
+            ax3.plot(xfine, rp['yfitnonlin'],'r')
+            ax3.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
+            ax3.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
+            sLdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], **commons)
+            
+            rp = fit_rational_polynomial(x, sfg, xfine, n, d)
+            ax4.plot(x, sfg)
+            ax4.plot(xfine, rp['yfitnonlin'],'r')
+            ax4.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
+            ax4.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
+            sLVdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], **commons)
+            
+            jj[fluid] = dict(hL = hLdict, hLV = hLVdict, sL = sLdict, sLV = sLVdict)
+            
+        except BaseException as E:
+            print E
+                
+        pp.savefig()
+        plt.close()
 
-pp.close()
+    pp.close()
+
+    fp = open('hsancillaries.json', 'w')
+    fp.write(json.dumps(jj, **{'indent' : 2, 'sort_keys' : True}))
+    fp.close()
+else:
+    # Inject
+    fp = open('hsancillaries.json', 'r')
+    ancillaries = json.load(fp)
+    fp.close()
+    
+    for fluid in ancillaries:
+        
+        fluid_path = '../fluids/'+fluid+'.json'
+        
+        # Open the fluid JSON file
+        fp = open(fluid_path, 'r')
+        j = json.load(fp)
+        fp.close()
+        
+        j['ANCILLARIES'].update(ancillaries[fluid])
+        
+        sys.path.append('..')
+        from package_json import json_options
+        fp = open(fluid_path, 'w')
+        fp.write(json.dumps(j, **json_options))
+        fp.close()
+        
+        
+        
+        
