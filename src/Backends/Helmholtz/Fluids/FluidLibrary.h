@@ -927,13 +927,30 @@ protected:
         fluid.ancillaries.rhoL = SaturationAncillaryFunction(ancillaries["rhoL"]);
         fluid.ancillaries.rhoV = SaturationAncillaryFunction(ancillaries["rhoV"]);
         
-        if (ancillaries.HasMember("hL"))
-        {
+        if (ancillaries.HasMember("hL")){
             fluid.ancillaries.hL = SaturationAncillaryFunction(ancillaries["hL"]);
         }
-        else
-        {
+        else{
             if (get_debug_level() > 0){ std::cout << "Missing hL ancillary for fluid " << fluid.name; }
+        }
+        if (ancillaries.HasMember("hLV")){
+            fluid.ancillaries.hLV = SaturationAncillaryFunction(ancillaries["hLV"]);
+        }
+        else{
+            if (get_debug_level() > 0){ std::cout << "Missing hLV ancillary for fluid " << fluid.name; }
+        }
+        
+        if (ancillaries.HasMember("sL")){
+            fluid.ancillaries.sL = SaturationAncillaryFunction(ancillaries["sL"]);
+        }
+        else{
+            if (get_debug_level() > 0){ std::cout << "Missing sL ancillary for fluid " << fluid.name; }
+        }
+        if (ancillaries.HasMember("sLV")){
+            fluid.ancillaries.sLV = SaturationAncillaryFunction(ancillaries["sLV"]);
+        }
+        else{
+            if (get_debug_level() > 0){ std::cout << "Missing sLV ancillary for fluid " << fluid.name; }
         }
         
     };

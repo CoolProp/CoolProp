@@ -305,16 +305,12 @@ public:
     
     SaturationAncillaryFunction(rapidjson::Value &json_code)
     {
-        
         std::string type = cpjson::get_string(json_code,"type");
         if (!type.compare("rational_polynomial"))
         {
-            std::vector<double> A = cpjson::get_double_array(json_code["A"]);
-            std::vector<double> B = cpjson::get_double_array(json_code["B"]);
-            std::reverse(A.begin(), A.end());
-            std::reverse(B.begin(), B.end());
-            num_coeffs = vec_to_eigen(A);
-            den_coeffs = vec_to_eigen(B);
+            num_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["A"]));
+            den_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["B"]));
+            max_abs_error = cpjson::get_double(json_code,"max_abs_error");
         }
         else
         {
@@ -500,7 +496,7 @@ public:
 
 struct Ancillaries
 {
-    SaturationAncillaryFunction pL, pV, rhoL, rhoV, hL, hV, sL, sV;
+    SaturationAncillaryFunction pL, pV, rhoL, rhoV, hL, hLV, sL, sLV;
     MeltingLineVariables melting_line;
     SurfaceTensionCorrelation surface_tension;
 };

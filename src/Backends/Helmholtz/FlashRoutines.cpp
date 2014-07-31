@@ -327,6 +327,95 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 }
 void FlashRoutines::HSU_P_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, int other, long double T0, long double rhomolar0)
 {
+    double A[2][2], B[2][2];
+    long double y;
+    HelmholtzEOSMixtureBackend _HEOS(HEOS.get_components());
+    _HEOS.update(DmolarT_INPUTS, rhomolar0, T0);
+    long double Tc = HEOS.calc_T_critical();
+    long double rhoc = HEOS.calc_rhomolar_critical();
+    long double R = HEOS.gas_constant();
+    long double p = HEOS.p();
+    switch (other)
+    {
+        case iHmolar: y = HEOS.hmolar(); break;
+        case iSmolar: y = HEOS.smolar(); break;
+    }
+    
+    long double worst_error = 999;
+    int iter = 0;
+    bool failed = false;
+    long double omega = 1.0, f2, df2_dtau, df2_ddelta;
+    long double tau = _HEOS.tau(), delta = _HEOS.delta();
+    while (worst_error>1e-6 && failed == false)
+    {
+        
+        // All the required partial derivatives
+        long double a0 = _HEOS.calc_alpha0_deriv_nocache(0,0,HEOS.mole_fractions, tau, delta,Tc,rhoc);
+        long double da0_ddelta = _HEOS.calc_alpha0_deriv_nocache(0,1,HEOS.mole_fractions, tau, delta,Tc,rhoc);
+        long double da0_dtau = _HEOS.calc_alpha0_deriv_nocache(1,0,HEOS.mole_fractions, tau, delta,Tc,rhoc);
+        long double d2a0_dtau2 = _HEOS.calc_alpha0_deriv_nocache(2,0,HEOS.mole_fractions, tau, delta,Tc,rhoc);
+        long double d2a0_ddelta_dtau = 0.0;
+        
+        long double ar = _HEOS.calc_alphar_deriv_nocache(0,0,HEOS.mole_fractions, tau, delta);
+        long double dar_dtau = _HEOS.calc_alphar_deriv_nocache(1,0,HEOS.mole_fractions, tau, delta);
+        long double dar_ddelta = _HEOS.calc_alphar_deriv_nocache(0,1,HEOS.mole_fractions, tau, delta);
+        long double d2ar_ddelta_dtau = _HEOS.calc_alphar_deriv_nocache(1,1,HEOS.mole_fractions, tau, delta);
+        long double d2ar_ddelta2 = _HEOS.calc_alphar_deriv_nocache(0,2,HEOS.mole_fractions, tau, delta);
+        long double d2ar_dtau2 = _HEOS.calc_alphar_deriv_nocache(2,0,HEOS.mole_fractions, tau, delta);
+
+        long double f1 = delta/tau*(1+delta*dar_ddelta)-p/(rhoc*R*Tc);
+        long double df1_dtau = (1+delta*dar_ddelta)*(-delta/tau/tau)+delta/tau*(delta*d2ar_ddelta_dtau);
+        long double df1_ddelta = (1.0/tau)*(1+2.0*delta*dar_ddelta+delta*delta*d2ar_ddelta2);
+        switch (other)
+        {
+            case iHmolar:
+            {
+                f2 = (1+delta*dar_ddelta)+tau*(da0_dtau+dar_dtau) - tau*y/(R*Tc);
+                df2_dtau = delta*d2ar_ddelta_dtau+da0_dtau+dar_dtau+tau*(d2a0_dtau2+d2ar_dtau2) - y/(R*Tc);
+                df2_ddelta = (dar_ddelta+delta*d2ar_ddelta2)+tau*(d2a0_ddelta_dtau+d2ar_ddelta_dtau);    
+                break;
+            }
+            case iSmolar:
+            {
+                f2 = tau*(da0_dtau+dar_dtau)-ar-a0-y/R;
+                df2_dtau = tau*(d2a0_dtau2 + d2ar_dtau2)+(da0_dtau+dar_dtau)-dar_dtau-da0_dtau;
+                df2_ddelta = tau*(d2a0_ddelta_dtau+d2ar_ddelta_dtau)-dar_ddelta-da0_ddelta;
+                break;
+            }
+            default:
+                break;
+        }
+
+        //First index is the row, second index is the column
+        A[0][0]=df1_dtau;
+        A[0][1]=df1_ddelta;
+        A[1][0]=df2_dtau;
+        A[1][1]=df2_ddelta;
+
+        //double det = A[0][0]*A[1][1]-A[1][0]*A[0][1];
+
+        MatInv_2(A,B);
+        tau -= omega*(B[0][0]*f1+B[0][1]*f2);
+        delta -= omega*(B[1][0]*f1+B[1][1]*f2);
+
+        if (fabs(f1)>fabs(f2))
+            worst_error=fabs(f1);
+        else
+            worst_error=fabs(f2);
+
+        if (!ValidNumber(f1) || !ValidNumber(f2))
+        {
+            throw SolutionError(format("Invalid values for inputs p=%g y=%g for fluid %s in HSU_P_flash_singlephase", p, y, _HEOS.name().c_str()));
+        }
+
+        iter += 1;
+        if (iter>100)
+        {
+            throw SolutionError(format("HSU_P_flash_singlephase did not converge with inputs p=%g h=%g for fluid %s", p, y,_HEOS.name().c_str()));
+        }
+    }
+    
+    HEOS.update(DmolarT_INPUTS, rhoc*delta, Tc/tau);
 }
 void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 {
@@ -354,28 +443,15 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
         }
         else
         {
-            HEOS._phase = iphase_gas;
             throw NotImplementedError("HSU_P_flash does not support mixtures (yet)");
-            // Find the phase, while updating all internal variables possible
         }
     }
 
-    if (HEOS.isHomogeneousPhase() && !ValidNumber(HEOS._p))
+    if (HEOS.isHomogeneousPhase() && !ValidNumber(HEOS._T))
     {
-        switch (other)
-        {
-            case iDmolar:
-                break;
-            case iHmolar:
-                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._hmolar, iHmolar); break;
-            case iSmolar:
-                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._smolar, iSmolar); break;
-            case iUmolar:
-                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._umolar, iUmolar); break;
-            default:
-                break;
-        }
-        HEOS.calc_pressure();
+        long double T0 = 300, rho0 = 100;
+        HSU_P_flash_singlephase(HEOS, other, T0, rho0);
+        
         HEOS._Q = -1;
     }
 }

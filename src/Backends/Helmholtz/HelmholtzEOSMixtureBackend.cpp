@@ -642,20 +642,34 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             case iHmolar:
             {
                 long double h_liq = components[0]->ancillaries.hL.evaluate(_TLanc);
-                long double h_vap = components[0]->ancillaries.hV.evaluate(_T);
+                long double h_liq_error_band = components[0]->ancillaries.hL.get_max_abs_error();
+                long double h_vap = h_liq + components[0]->ancillaries.hLV.evaluate(_TLanc);
+                long double h_vap_error_band = h_liq_error_band + components[0]->ancillaries.hLV.get_max_abs_error();
                 
                 // Check if in range given the accuracy of the fit
-                if (value > h_vap + components[0]->ancillaries.hV.get_max_abs_error()){
+                if (value > h_vap + h_vap_error_band){
                     this->_phase = iphase_gas; _Q = -1000; return;
                 }
-                else if (value < h_liq - components[0]->ancillaries.hL.get_max_abs_error()){
+                else if (value < h_liq - h_liq_error_band){
                     this->_phase = iphase_liquid; _Q = 1000; return;
                 }
                 break;
             }
             case iSmolar:
             {
-                // Add entropy ancillary code here 
+                long double s_liq = components[0]->ancillaries.sL.evaluate(_TLanc);
+                long double s_liq_error_band = components[0]->ancillaries.sL.get_max_abs_error();
+                long double s_vap = s_liq + components[0]->ancillaries.sLV.evaluate(_TLanc);
+                long double s_vap_error_band = s_liq_error_band + components[0]->ancillaries.sLV.get_max_abs_error();
+                
+                // Check if in range given the accuracy of the fit
+                if (value > s_vap + s_vap_error_band){
+                    this->_phase = iphase_gas; _Q = -1000; return;
+                }
+                else if (value < s_liq - s_liq_error_band){
+                    this->_phase = iphase_liquid; _Q = 1000; return;
+                }
+                break;
             }
             case iUmolar:
             {
