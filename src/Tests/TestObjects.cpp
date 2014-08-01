@@ -171,6 +171,7 @@ CoolProp::IncompressibleFluid CoolPropTesting::incompressibleFluidObject(){
 	CoolProp::IncompressibleData T_freeze;
 	T_freeze.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYOFFSET;
 	T_freeze.coeffs = CoolProp::vec_to_eigen(tmpVector);
+	T_freeze.coeffs.transposeInPlace();
 
 	// After preparing the coefficients, we have to create the objects
 	CoolProp::IncompressibleFluid CH3OH;
@@ -181,7 +182,7 @@ CoolProp::IncompressibleFluid CoolPropTesting::incompressibleFluidObject(){
 	CH3OH.setTmin(-50 + 273.15);
 	CH3OH.setxmax(0.5);
 	CH3OH.setxmin(0.0);
-	CH3OH.setxid(CoolProp::ifrac_mass);
+	CH3OH.setxid(CoolProp::IFRAC_MASS);
 	CH3OH.setTminPsat( 20 + 273.15);
 
 	CH3OH.setTbase(-4.48 + 273.15);

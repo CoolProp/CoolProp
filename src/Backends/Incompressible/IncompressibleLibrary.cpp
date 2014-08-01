@@ -1,5 +1,6 @@
 #include "IncompressibleLibrary.h"
 #include "MatrixMath.h"
+#include "DataStructures.h"
 //#include "crossplatform_shared_ptr.h"
 #include "rapidjson/rapidjson_include.h"
 #include "all_incompressibles_JSON.h" // Makes a std::string variable called all_incompressibles_JSON
@@ -367,14 +368,14 @@ IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Valu
 					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
 					return fluidData;
 				}
+				else if (!type.compare("logexponential")){
+					fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL;
+					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
+					return fluidData;
+				}
 				else if (!type.compare("exppolynomial")){
 					fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL;
 					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(obj[id.c_str()]["coeffs"]));
-					return fluidData;
-				}
-				else if (!type.compare("expoffset")){
-					fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPOFFSET;
-					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
 					return fluidData;
 				}
 				else if (!type.compare("polyoffset")){
@@ -420,6 +421,19 @@ double JSONIncompressibleLibrary::parse_value(rapidjson::Value &obj, std::string
 	}
 }
 
+/// Get an integer from the JSON storage to identify the composition
+composition_types JSONIncompressibleLibrary::parse_ifrac(rapidjson::Value &obj, std::string id){
+	std::string res = cpjson::get_string(obj, id);
+	if (!res.compare("mass")) return IFRAC_UNDEFINED;
+	if (!res.compare("mole")) return IFRAC_MOLE;
+	if (!res.compare("volume")) return IFRAC_VOLUME;
+	if (!res.compare("not defined")) return IFRAC_UNDEFINED;
+	if (!res.compare("pure")) return IFRAC_PURE;
+
+	throw ValueError(format("Cannot recognise the entry for [%s], [%s] is unknown for incompressible fluids.", id.c_str(), res.c_str()));
+	return IFRAC_UNDEFINED;
+}
+
 /// Add all the fluid entries in the rapidjson::Value instance passed in
 void JSONIncompressibleLibrary::add_many(rapidjson::Value &listing) {
 	for (rapidjson::Value::ValueIterator itr = listing.Begin();
@@ -448,11 +462,11 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
     	if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading base values for %s ",fluid.getName().c_str()) << std::endl;
 	    fluid.setDescription(cpjson::get_string(fluid_json, "description"));
 	    fluid.setReference(cpjson::get_string(fluid_json, "reference"));
-	    fluid.setTmax(parse_value(fluid_json, "Tmax", true, 0.0));
-	    fluid.setTmin(parse_value(fluid_json, "Tmin", true, 0.0));
-	    fluid.setxmax(parse_value(fluid_json, "xmax", false, 1.0));
-	    fluid.setxmin(parse_value(fluid_json, "xmin", false, 0.0));
-	    fluid.setxid((int) parse_value(fluid_json, "xid", true, 0.0));
+	    fluid.setTmax(    parse_value(fluid_json, "Tmax", true, 0.0));
+	    fluid.setTmin(    parse_value(fluid_json, "Tmin", true, 0.0));
+	    fluid.setxmax(    parse_value(fluid_json, "xmax", false, 1.0));
+	    fluid.setxmin(    parse_value(fluid_json, "xmin", false, 0.0));
+	    fluid.setxid(     parse_ifrac(fluid_json, "xid") );
 	    fluid.setTminPsat(parse_value(fluid_json, "TminPsat", false, 0.0));
 
 	    fluid.setTbase(parse_value(fluid_json, "Tbase", false, 0.0));

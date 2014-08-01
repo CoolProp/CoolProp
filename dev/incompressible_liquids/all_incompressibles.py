@@ -3,6 +3,7 @@ from CPIncomp.WriterObjects import SolutionDataWriter
 from CPIncomp import getExampleNames, getPureFluids, getCoefficientFluids,\
     getDigitalFluids, getSecCoolFluids, getMelinderFluids
 import sys
+from CPIncomp.DataObjects import SolutionData
 
 
 if __name__ == '__main__':   
@@ -10,12 +11,31 @@ if __name__ == '__main__':
     writer = SolutionDataWriter()
     doneObjs = []
     
-    # To debug single fluids
-    #writer.fitSecCoolList([Freezium()])
-    #sys.exit(0)
+#    # To debug single fluids
+#    from CPIncomp.SecCoolFluids import SecCoolSolutionData,SecCoolIceData
+#    from CPIncomp.PureFluids import Therminol72, DowthermJ
+#    #solObjs  = [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder-BOOK-2010, SecCool software')]
+#    #solObjs += [SecCoolIceData(sFile='IceNA'   ,sFolder='xMass',name='IceNA',desc='Ice slurry with NaCl' ,ref='Danish Technological Institute, SecCool software')]
+#    #solObjs = [Freezium()]
+#    #solObjs[0].density.DEBUG = True
+#    #solObjs[0].specific_heat.DEBUG = True
+#    #solObjs[0].conductivity.DEBUG = True
+#    #solObjs[0].viscosity.DEBUG = True
+#    #solObjs[0].T_freeze.DEBUG = True
+#    #writer.fitSecCoolList(solObjs)
+#    solObjs = [Therminol72()]#,Therminol72()]
+#    #solObjs[0].viscosity.DEBUG=True
+#    solObjs[0].saturation_pressure.DEBUG=True
+#    #
+#    ##from CPIncomp.ExampleObjects import SecCoolExample
+#    ##solObjs = [SecCoolExample()]
+#    writer.fitFluidList(solObjs)
+#    writer.writeFluidList(solObjs)
+#    writer.writeReportList(solObjs)
+#    sys.exit(0)
     
     fluidObjs = getExampleNames(obj=True)
-    examplesToFit = ["ExamplePure","ExampleSolution","ExampleDigital"]
+    examplesToFit = ["ExamplePure","ExampleSolution","ExampleDigital","ExampleDigitalPure"]
     for obj in fluidObjs:
         if obj.name in examplesToFit:
             writer.fitAll(obj)
@@ -23,6 +43,9 @@ if __name__ == '__main__':
     
     print("\nProcessing example fluids")
     writer.writeFluidList(doneObjs)
+    
+    writer.writeReportList(doneObjs, pdfFile="all_examples.pdf")
+    #sys.exit(0)
         
     # If the examples did not cause any errors, 
     # we can proceed to the real data.
@@ -55,14 +78,39 @@ if __name__ == '__main__':
     print("Checking the list of fluid objects.")
     #doneObjs += getCoefficientObjects()[:]
     doneObjs = sorted(doneObjs, key=lambda x: x.name)
+    
+    purefluids= []
+    solutions = []
+    errors    = []
     for i in range(len(doneObjs)-1):
         if doneObjs[i].name==doneObjs[i+1].name:
             print("Conflict between {0} and {1}, aborting".format(doneObjs[i],doneObjs[i+1]))
             raise ValueError("Two elements have the same name, that does not work: {0}".format(doneObjs[i].name))
+        else:
+            if doneObjs[i].xid==SolutionData.ifrac_mass or \
+              doneObjs[i].xid==SolutionData.ifrac_mole or \
+              doneObjs[i].xid==SolutionData.ifrac_volume:
+                solutions += [doneObjs[i]]
+            elif doneObjs[i].xid==SolutionData.ifrac_pure:
+                purefluids += [doneObjs[i]]
+            else: errors += [doneObjs[i]]
+        
+    print("All checks passed, going to write parameters to disk.")
+    writer.writeFluidList(doneObjs)    
     
-    
-    print("All checks passed, going to write to disk.")
-    writer.writeFluidList(doneObjs)
+    print("Creating the fitting reports for the different groups.")
+    #writer.writeReportList(doneObjs)
+    #doneObjs.sort(key=lambda x: (x.xid ,x.name))
+    if len(purefluids)>0:
+        print("Processing {0:2d} pure fluids   - ".format(len(purefluids)), end="")
+        writer.writeReportList(purefluids, pdfFile="all_pure.pdf")
+    if len(solutions)>0:
+        print("Processing {0:2d} solutions     - ".format(len(solutions)), end="")
+        writer.writeReportList(solutions, pdfFile="all_solutions.pdf")  
+    if len(errors)>0:
+        print("Processing {0:2d} faulty fluids - ".format(len(errors)), end="")
+        writer.writeReportList(errors, pdfFile="all_errors.pdf")
+       
 
     print("All done, bye")
     sys.exit(0)

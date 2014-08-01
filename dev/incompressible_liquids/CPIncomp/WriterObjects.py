@@ -1,7 +1,14 @@
 from __future__ import division, print_function
 import numpy as np
 
-import hashlib, os, json
+import hashlib, os, json, sys
+import matplotlib.pyplot as plt 
+import matplotlib.gridspec as gridspec
+from CPIncomp.DataObjects import SolutionData
+from CPIncomp.BaseObjects import IncompressibleData, IncompressibleFitter
+from matplotlib.patches import Rectangle
+from matplotlib.ticker import MaxNLocator
+from matplotlib.backends.backend_pdf import PdfPages
 
 class SolutionDataWriter(object):
     """ 
@@ -13,15 +20,18 @@ class SolutionDataWriter(object):
     def __init__(self):
         pass 
     
-    def fitAll(self, fluidObject):
+    def fitAll(self, fluidObject=SolutionData()):
         
-        tempData = fluidObject.temperature.data
-        concData = fluidObject.concentration.data
-        
-        if fluidObject.Tbase==0.0 or fluidObject.Tbase==None:
-            fluidObject.Tbase = (np.min(tempData) + np.max(tempData)) / 2.0
-        if fluidObject.xbase==0.0 or fluidObject.xbase==None:
-            fluidObject.xbase = (np.min(concData) + np.max(concData)) / 2.0
+        if fluidObject.Tbase==None:
+            fluidObject.Tbase = (fluidObject.Tmin + fluidObject.Tmax) / 2.0
+            
+        if fluidObject.xbase==None:
+            fluidObject.xbase = (fluidObject.xmin + fluidObject.xmax) / 2.0
+            
+        tData = fluidObject.temperature.data
+        xData = fluidObject.concentration.data
+        tBase = fluidObject.Tbase
+        xBase = fluidObject.xbase
             
         # Set the standard order for polynomials
         std_xorder = 3+1
@@ -31,43 +41,79 @@ class SolutionDataWriter(object):
         errList = (ValueError, AttributeError, TypeError, RuntimeError)
         
         try:
+            fluidObject.density.setxyData(tData,xData)
             fluidObject.density.coeffs = np.copy(std_coeffs)
-            fluidObject.density.type   = fluidObject.density.INCOMPRESSIBLE_POLYNOMIAL
-            fluidObject.density.fitCoeffs(tempData,concData,fluidObject.Tbase,fluidObject.xbase)
+            fluidObject.density.type   = IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
+            fluidObject.density.fitCoeffs(tBase,xBase)
         except errList as ve:
             if fluidObject.density.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'density',ve))
             pass
         
         try:
+            fluidObject.specific_heat.setxyData(tData,xData)
             fluidObject.specific_heat.coeffs = np.copy(std_coeffs)
-            fluidObject.specific_heat.type   = fluidObject.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
-            fluidObject.specific_heat.fitCoeffs(tempData,concData,fluidObject.Tbase,fluidObject.xbase)
+            fluidObject.specific_heat.type   = IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
+            fluidObject.specific_heat.fitCoeffs(tBase,xBase)
         except errList as ve:
             if fluidObject.specific_heat.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'specific heat',ve))
             pass 
         
         try:
+            fluidObject.conductivity.setxyData(tData,xData)
             fluidObject.conductivity.coeffs = np.copy(std_coeffs)
-            fluidObject.conductivity.type   = fluidObject.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-            fluidObject.conductivity.fitCoeffs(tempData,concData,fluidObject.Tbase,fluidObject.xbase)
+            fluidObject.conductivity.type   = IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
+            fluidObject.conductivity.fitCoeffs(tBase,xBase)
         except errList as ve:
             if fluidObject.conductivity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'conductivity',ve))
             pass
         
         try:
-            fluidObject.viscosity.coeffs = np.copy(std_coeffs)
-            fluidObject.viscosity.type   = fluidObject.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
-            fluidObject.viscosity.fitCoeffs(tempData,concData,fluidObject.Tbase,fluidObject.xbase)
+            fluidObject.viscosity.setxyData(tData,xData)
+            tried = False
+            if len(fluidObject.viscosity.yData)==1:# and np.isfinite(fluidObject.viscosity.data).sum()<10:
+                fluidObject.viscosity.coeffs = np.array([+5e+2, -6e+1, +1e+1])
+                fluidObject.viscosity.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
+                fluidObject.viscosity.fitCoeffs(tBase,xBase)
+                if fluidObject.viscosity.coeffs==None or IncompressibleFitter.allClose(fluidObject.viscosity.coeffs, np.array([+5e+2, -6e+1, +1e+1])): # Fit failed
+                    tried = True
+            if len(fluidObject.viscosity.yData)>1 or tried:
+                #fluidObject.viscosity.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
+                fluidObject.viscosity.coeffs = np.copy(std_coeffs)
+                fluidObject.viscosity.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
+                fluidObject.viscosity.fitCoeffs(tBase,xBase)
         except errList as ve:
             if fluidObject.viscosity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'viscosity',ve))
             pass
         
+        try:
+            fluidObject.saturation_pressure.setxyData(tData,xData)
+            tried = False
+            if len(fluidObject.saturation_pressure.yData)==1:# and np.isfinite(fluidObject.saturation_pressure.data).sum()<10:
+                fluidObject.saturation_pressure.coeffs = np.array([-5e+3, +6e+1, -1e+1]) 
+                fluidObject.saturation_pressure.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
+                fluidObject.saturation_pressure.fitCoeffs(tBase,xBase)
+                if fluidObject.saturation_pressure.coeffs==None or IncompressibleFitter.allClose(fluidObject.saturation_pressure.coeffs, np.array([-5e+3, +6e+1, -1e+1])): # Fit failed
+                    tried = True
+            if len(fluidObject.saturation_pressure.yData)>1 or tried:
+                #fluidObject.saturation_pressure.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
+                fluidObject.saturation_pressure.coeffs = np.copy(std_coeffs)
+                fluidObject.saturation_pressure.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
+                fluidObject.saturation_pressure.fitCoeffs(tBase,xBase)
+        except errList as ve:
+            if fluidObject.saturation_pressure.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'saturation pressure',ve))
+            pass
+        
         # reset data for getArray and read special files
         if fluidObject.xid!=fluidObject.ifrac_pure and fluidObject.xid!=fluidObject.ifrac_undefined:
-            try:        
-                fluidObject.T_freeze.coeffs = np.copy(std_coeffs)
-                fluidObject.T_freeze.type   = fluidObject.T_freeze.INCOMPRESSIBLE_POLYNOMIAL
-                fluidObject.T_freeze.fitCoeffs(concData,0.0,fluidObject.xbase,0.0)
+            fluidObject.T_freeze.setxyData([0.0],xData)
+            try:
+                if len(fluidObject.T_freeze.xData)==1:# and np.isfinite(fluidObject.T_freeze.data).sum()<10:
+                    fluidObject.T_freeze.coeffs = np.array([+7e+2, -6e+1, +1e+1])
+                    fluidObject.T_freeze.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
+                else:   
+                    fluidObject.specific_heat.coeffs = np.copy(std_coeffs)
+                    fluidObject.T_freeze.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
+                fluidObject.T_freeze.fitCoeffs(tBase,xBase)
             except errList as ve:
                 if fluidObject.T_freeze.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(fluidObject.name,"T_freeze",ve))
                 pass
@@ -147,7 +193,7 @@ class SolutionDataWriter(object):
                
         original_float_repr = json.encoder.FLOAT_REPR 
         #print json.dumps(1.0001) 
-        stdFmt = " .{0}e".format(int(data.significantDigits-1))
+        stdFmt = "1.{0}e".format(int(data.significantDigits-1))
         #pr = np.finfo(float).eps * 10.0
         #pr = np.finfo(float).precision - 2 # stay away from numerical precision
         #json.encoder.FLOAT_REPR = lambda o: format(np.around(o,decimals=pr), stdFmt) 
@@ -165,12 +211,11 @@ class SolutionDataWriter(object):
           hashes[name] != hash: # update hashes and write file
             
             hashes[name] = hash
-            self.write_hashes(hashes)           
-            
-            fp = open(name+'.json', 'w')
+            self.write_hashes(hashes)
+            path = os.path.join("json",name+'.json')
+            fp = open(path, 'w')
             fp.write(dump)
-            fp.close()
-            
+            fp.close()            
             if not quiet: print(" ({0})".format("w"), end="")
         else:
             if not quiet: print(" ({0})".format("i"), end="")
@@ -184,7 +229,8 @@ class SolutionDataWriter(object):
             print(", {0}".format(obj.name), end="")
         else:
             print(", {0}".format(obj.name), end="")
-
+            
+        sys.stdout.flush()
         return
 
 
@@ -213,7 +259,7 @@ class SolutionDataWriter(object):
                 print("An error occurred for fluid: {0}".format(obj.name))
                 print(obj)
                 print(e)
-                pass 
+                pass
         print(" ... done")
         return
     
@@ -232,6 +278,623 @@ class SolutionDataWriter(object):
                 pass
         print(" ... done") 
         return 
+    
+    def writeReportList(self, fluidObjs, pdfFile=None):
+        print("Writing fitting reports:", end="")
+        pdfObj = None
+        if pdfFile!=None: pdfObj = PdfPages(pdfFile)
+        for obj in fluidObjs:
+            self.printStatusID(fluidObjs, obj)
+            self.makeFitReportPage(obj,pdfObj=pdfObj)           
+            try: 
+                self.makeFitReportPage(obj)
+            except (TypeError, ValueError) as e:
+                print("An error occurred for fluid: {0}".format(obj.name))
+                print(obj)
+                print(e)
+                pass
+        if pdfFile!=None: pdfObj.close()
+        print(" ... done") 
+        return 
+    
+
+#####################################
+# Plotting routines
+#####################################    
+    def relError(self, A=[], B=[], PCT=False):
+        """
+        Returns the absolute relative Error from either 
+        (B-A)/B or (A-B)/A for abs(B)>abs(A) and abs(A)>abs(B), 
+        respectively. If PCT is True, it returns it in percent.
+        """        
+        A_a = np.array(A)
+        B_a = np.array(B)
+        
+        abl = np.absolute(B_a)
+        eps = np.ones_like(abl) * np.finfo(float).eps 
+        #div = np.amax(np.hstack((abl,eps)), axis=1)*np.sign(B_a)
+        
+        pos = np.isfinite(B_a)
+        pos2 = (B_a>eps)
+        result = np.ones_like(A_a)*np.NAN
+        
+        result[pos & pos2] = (A_a[pos & pos2]-B_a[pos & pos2])/B_a[pos & pos2]
+
+        if PCT:
+            return result * 100. 
+        else:
+            return result
+        
+    ############################################################
+    # Define the general purpose routines for plotting
+    ############################################################
+    def wireFrame2D(self,xz,yz,linesX=5,linesY=None,color='black',ax=None,plot=False):
+        """
+        xz is a 2D array that holds x-values for constant z1 and z2.
+        yz is a 2D array that holds y-values for the same z1 and z2. 
+        xz and yz have to have the same size.
+        The first dimension of xz should be greater than 
+        or equal to the lines input.  
+        """
+        if xz.ndim!=2:
+            raise ValueError("xz has to be a 2D array.")
+        if yz.ndim!=2:
+            raise ValueError("yz has to be a 2D array.")
+        if xz.shape!=yz.shape:
+            raise ValueError("xz and yz have to have the same shape: {0} != {1}".format(xz.shape,yz.shape))
+        if linesY==None and linesX!=None:
+            linesY = linesX
+        if linesX==None and linesY!=None:
+            linesX = linesY
+        if linesY==None and linesX==None:
+            raise ValueError("You have to provide linesX or linesY")
+        
+        xl,yl = xz.shape
+        x_index = np.round(np.linspace(0, xl-1, linesX))
+        y_index = np.round(np.linspace(0, yl-1, linesY))
+        x_toPlot = []
+        y_toPlot = []
+        for i in x_index:
+            x_toPlot += [xz.T[i]]
+            y_toPlot += [yz.T[i]]
+        for i in y_index:
+            x_toPlot += [xz[i]]
+            y_toPlot += [yz[i]]
+        if plot==False:
+            return x_toPlot,y_toPlot
+        if ax==None:
+            raise ValueError("You have to give an axis to plot.")
+        for i in range(len(x_toPlot)):
+            ax.plot(x_toPlot[i],y_toPlot[i],color=color)
+        return x_toPlot,y_toPlot
+    
+    
+    def plotValues(self,axVal,axErr,solObj=SolutionData(),dataObj=IncompressibleData(),func=None,old=None):
+        """
+        Plots two data series using the same axis. You can 
+        choose if you prefer points or a line for the reference
+        data. This can be used to show that we have experimental
+        data or a reference equation. 
+        You can use the old input to call CoolProp with this ID. 
+        You can use this feature to visualise changes for new 
+        data fits. Primarily intended to highlight changes from 
+        v4 to v5 of CoolProp. 
+        """ 
+        
+        if dataObj.type==dataObj.INCOMPRESSIBLE_NOT_SET \
+          or dataObj.source==dataObj.SOURCE_NOT_SET:
+            return
+        
+        # TODO: Improve this work-around
+        xFunction = False
+        try:
+            if solObj.T_freeze.coeffs.shape==dataObj.coeffs.shape:
+                if np.all(solObj.T_freeze.coeffs==dataObj.coeffs):
+                    xFunction = True
+        except AttributeError as ae:
+            if False: print(ae)
+            pass
+        
+        points = 30
+        
+        dataFormatter = {}
+        tData = None
+        xData = None
+        pData = None
+        zData = None
+        zError= None
+        
+        if dataObj.source==dataObj.SOURCE_DATA or dataObj.source==dataObj.SOURCE_EQUATION:
+            dataFormatter['color']  = 'blue'
+            dataFormatter['marker'] = 'o'
+            dataFormatter['ls']     = 'none'
+            
+            
+            dataObj.setxyData(solObj.temperature.data,solObj.concentration.data)
+            
+            tData = dataObj.xData
+            xData = dataObj.yData
+            pData = 1e7 # 100 bar
+            zData = dataObj.data
+                        
+            if func!=None and zData!=None:
+                r,c = zData.shape
+                zError= np.zeros((r,c))
+                for i in range(r):
+                    for j in range(c):
+                        zError[i,j]= func(tData[i],pData,xData[j])
+                                                   
+                zError = self.relError(zData, zError) * 1e2
+
+                  
+                ## Find the column with the largest single error
+                #maxVal = np.amax(zError, axis=0) # largest error per column
+                #col2plot = np.argmax(maxVal) # largest error in row
+                ## Find the column with the largest total error
+                #totVal = np.sum(zError, axis=0) # summed error per column
+                #col2plot = np.argmax(totVal) # largest error in row
+                # Find the column with the largest average error                
+                if xFunction: 
+                    #avgVal = np.average(zError, axis=1) # summed error per column
+                    #set2plot = np.argmax(avgVal) # largest error in row
+                    set2plot = int(np.round(r/2.0))
+                    tData = np.array([tData[set2plot]])
+                    zData = zData[set2plot]
+                    zError= zError[set2plot]
+                else:
+                    #avgVal = np.average(zError, axis=0) # summed error per column
+                    #set2plot = np.argmax(avgVal) # largest error in row
+                    set2plot = int(np.round(c/2.0))
+                    xData = np.array([xData[set2plot]])
+                    zData = zData.T[set2plot]
+                    zError= zError.T[set2plot]
+            else:
+                raise ValueError("You have to provide data and a fitted function.")
+        
+        elif dataObj.source==dataObj.SOURCE_COEFFS:
+            dataFormatter['color']  = 'blue'
+            #dataFormatter['marker'] = 'o'
+            dataFormatter['ls']     = 'solid'
+            
+            if xFunction:
+                xData = np.linspace(solObj.xmin, solObj.xmax, num=points)
+                if solObj.xid==solObj.ifrac_pure: tData = np.array([0.0])
+                else: tData = np.array([solObj.Tmin+solObj.Tmax])/2.0
+            else:
+                tData = np.linspace(solObj.Tmin, solObj.Tmax, num=points)
+                if solObj.xid==solObj.ifrac_pure: xData = np.array([0.0])
+                else: xData = np.array([solObj.xmin+solObj.xmax])/2.0
+
+            pData = 1e7 # 100 bar
+            
+            #zData= np.zeros((len(tData),len(xData)))
+            #for i in range(len(tData)):
+            #    for j in range(len(xData)):
+            #        zData[i,j] = func(tData[i],pData,xData[j])
+            #r,c = zData.shape
+            #if r==1 or c==1:
+            #    zData = np.array(zData.flat)
+            #else:
+            #    raise ValueError("Cannot plot non-flat arrays!")
+        
+        
+        # Copy the arrays
+        tFunc = tData
+        xFunc = xData
+        pFunc = pData
+        zFunc = None
+        zMiMa = None
+        xFree = xData
+        tFree = tData
+        zFree = None
+        
+        if func!=None:
+            if len(tFunc)<points and len(tFunc)>1:
+                tFunc = np.linspace(solObj.Tmin, solObj.Tmax, num=points)
+            if len(xFunc)<points and len(xFunc)>1:
+                xFunc = np.linspace(solObj.xmin, solObj.xmax, num=points)
+ 
+            zFunc = np.zeros((len(tFunc),len(xFunc)))
+            for i in range(len(tFunc)):
+                for j in range(len(xFunc)):
+                    zFunc[i,j] = func(tFunc[i],pFunc,xFunc[j])
+            r,c = zFunc.shape
+            if r==1 or c==1:
+                zFunc = np.array(zFunc.flat)
+            else:
+                raise ValueError("Cannot plot non-flat arrays!")
+            
+            if xFunction:
+                tMiMa = np.array([solObj.Tmin, solObj.Tmax])
+                xMiMa = xFunc
+            else:
+                tMiMa = tFunc
+                xMiMa = np.array([solObj.xmin, solObj.xmax])
+                
+            zMiMa = np.zeros((len(tMiMa),len(xMiMa)))
+            for i in range(len(tMiMa)):
+                for j in range(len(xMiMa)):
+                    zMiMa[i,j] = func(tMiMa[i],pFunc,xMiMa[j])
+                    
+            if not xFunction: # add the freezing front
+                if solObj.T_freeze.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
+                    cols = len(tMiMa)
+                    conc = np.linspace(solObj.xmin, solObj.xmax, num=cols)
+                    tFree = np.zeros_like(conc)
+                    zFree = np.zeros_like(conc)
+                    for i in range(cols):
+                        tFree[i] = solObj.Tfreeze(10.0, p=pFunc, x=conc[i])
+                        zFree[i] = func(tFree[i],pFunc,conc[i])
+                    #zMiMa = np.hstack((zMiMa,temp.reshape((len(conc),1)))) 
+
+        fitFormatter = {}
+        fitFormatter['color'] = 'red'
+        fitFormatter['ls'] = 'solid'
+        
+        errorFormatter = {}
+        errorFormatter['color'] = dataFormatter['color']
+        errorFormatter['marker'] = 'o'
+        errorFormatter['ls'] = 'none'
+        errorFormatter['alpha'] = 0.25
+        
+        pData = None
+        pFree = None
+        if xFunction:
+            pData = xData
+            pFunc = xFunc
+            pMiMa = xMiMa
+            zMiMa = zMiMa.T
+            #pFree = xFree
+            #zFree = zFree.T
+        else:
+            pData = tData - 273.15 
+            pFunc = tFunc - 273.15
+            pMiMa = tMiMa - 273.15  
+            #zMiMa = zMiMa
+            pFree = tFree - 273.15
+            
+        if zData!=None and axVal!=None: 
+            axVal.plot(pData, zData, label='data', **dataFormatter)
+
+        if zFunc!=None and axVal!=None:
+            axVal.plot(pFunc, zFunc, label='function' , **fitFormatter)
+            if solObj.xid!=solObj.ifrac_pure and not xFunction:
+                axVal.set_title("showing x={0:3.2f}".format(xFunc[0]))
+            else:
+                axVal.set_title(" ")
+            
+        if zMiMa!=None and axVal!=None:
+            axVal.plot(pMiMa, zMiMa, alpha=0.25, ls=':', color=fitFormatter["color"])
+            
+        if zFree!=None and axVal!=None:
+            axVal.plot(pFree, zFree, alpha=0.25, ls=':', color=fitFormatter["color"])
+            
+        if zError!=None and axErr!=None:
+            axErr.plot(pData, zError, label='error' , **errorFormatter)
+
+        elif axErr!=None:
+            errorFormatter['alpha'] = 0.00
+            axErr.plot([pData[0],pData[-1]], [0,0], **errorFormatter)
+            #axErr.xaxis.set_visible(False)
+            #axErr.yaxis.set_visible(False)
+            #axErr.plot(pData, zFunc, label='function' , **fitFormatter)
+        
+        
+            
+                 
+            
+        #else:
+        #    plt.setp(axErr.get_yticklabels(), visible=False)
+        #    plt.setp(axErr.yaxis.get_label(), visible=False)
+    
+    
+    def printFluidInfo(self,ax,solObj=SolutionData()):
+        """
+        Prints some fluid information on top of the fitting report.
+        """
+        #ax = subplot(111, frame_on=False)
+        ax.xaxis.set_visible(False)
+        ax.yaxis.set_visible(False)
+        
+        #cellText  = [["1","2"],["3","4"]]
+        #rowLabels = ["Name","Source"]
+        ## Add a table at the bottom of the axes
+        #the_table = ax.table(cellText=cellText)
+        
+        annotateSettingsTitle = {}
+        #annotateSettingsLabel['xycoords']=('figure fraction', 'figure fraction')
+        annotateSettingsTitle['ha']         = 'center'
+        annotateSettingsTitle['va']         = 'baseline'
+        annotateSettingsTitle['fontsize']   = 'xx-large'
+        annotateSettingsTitle['fontweight'] = 'bold'
+        
+        annotateSettingsLabel = {}
+        #annotateSettingsLabel['xycoords']=('figure fraction', 'figure fraction') 
+        annotateSettingsLabel['ha']         = 'right'
+        annotateSettingsLabel['va']         = 'baseline'
+        #annotateSettingsLabel['fontsize']   = 'large'
+        annotateSettingsLabel['fontweight'] = 'semibold'
+        
+        annotateSettingsText = {}
+        #annotateSettingsText['xycoords']=('figure fraction', 'figure fraction') 
+        annotateSettingsText['ha']         = 'left'
+        annotateSettingsText['va']         = 'baseline'
+        #annotateSettingsText['fontsize']   = 'large'
+        annotateSettingsText['fontweight'] = 'medium'
+        
+        
+        #ax.set_title('Fitting Report for {0}'.format(solObj.name))
+        ax.text(0.5, 0.8, 'Fitting Report for {0}'.format(solObj.name), **annotateSettingsTitle)
+        
+        def myAnnotate(label,text,x=0.0,y=0.0):
+            dx = 0.005
+            ax.text(x-dx,y, label, **annotateSettingsLabel)
+            ax.text(x+dx,y, text,  **annotateSettingsText)
+        
+        #ax.annotate(r'Enthalpy [$\mathdefault{10^5\!J/kg}$]', xy=(0.25, 0.03), **annotateSettings)
+        #ax.annotate(r'Enthalpy [$\mathdefault{10^5\!J/kg}$]', xy=(0.25, 0.03), **annotateSettings)
+        
+        dx = 0.50
+        dy = 0.10
+        
+        xStart = 0.175 ; x = xStart
+        yStart = 0.575; y = yStart
+        
+        #myAnnotate('Name: ',solObj.name,x=x,y=y); x += .0; y -= dy        
+        myAnnotate('Description: ',solObj.description,x=x,y=y); x += .0; y -= dy
+        myAnnotate('Source: ',solObj.reference,x=x,y=y); x += .0; y -= dy
+        myAnnotate('Temperature: ',u'{0} \u00B0C to {1} \u00B0C'.format(solObj.Tmin-273.15, solObj.Tmax-273.15),x=x,y=y); x += .0; y -= dy
+        conc = False
+        if solObj.xid==solObj.ifrac_mass: conc=True
+        if solObj.xid==solObj.ifrac_volume: conc=True
+        if solObj.xid==solObj.ifrac_mole: conc=True
+        if conc==True:
+            myAnnotate('Composition: ',u'{0} % to {1} %, {2}'.format(solObj.xmin*100., solObj.xmax*100., solObj.xid),x=x,y=y)
+        else:
+            myAnnotate('Composition: ','pure fluid',x=x,y=y)
+        x += .0; y -= dy
+            
+        if solObj.density.source!=solObj.density.SOURCE_NOT_SET:
+            myAnnotate('Density: ',u'{0} to {1} {2}'.format(solObj.density.source, solObj.density.type, solObj.density.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Density: ','no information',x=x,y=y)
+        x += .0; y -= dy
+        if solObj.specific_heat.source!=solObj.specific_heat.SOURCE_NOT_SET:
+            myAnnotate('Spec. Heat: ',u'{0} to {1} {2}'.format(solObj.specific_heat.source, solObj.specific_heat.type, solObj.specific_heat.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Spec. Heat: ','no information',x=x,y=y)
+        x += .0; y -= dy
+            
+        x = xStart + dx; y = yStart-dy-dy
+        if solObj.conductivity.source!=solObj.conductivity.SOURCE_NOT_SET:
+            myAnnotate('Th. Cond.: ',u'{0} to {1} {2}'.format(solObj.conductivity.source, solObj.conductivity.type, solObj.conductivity.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Th. Cond.: ','no information',x=x,y=y)
+        x += .0; y -= dy
+        if solObj.viscosity.source!=solObj.viscosity.SOURCE_NOT_SET:
+            myAnnotate('Viscosity: ',u'{0} to {1} {2}'.format(solObj.viscosity.source, solObj.viscosity.type, solObj.viscosity.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Viscosity: ','no information',x=x,y=y)
+        x += .0; y -= dy
+        if solObj.saturation_pressure.source!=solObj.saturation_pressure.SOURCE_NOT_SET:
+            myAnnotate('Psat: ',u'{0} to {1} {2}'.format(solObj.saturation_pressure.source, solObj.saturation_pressure.type, solObj.saturation_pressure.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Psat: ','no information',x=x,y=y)
+        x += .0; y -= dy
+        if solObj.T_freeze.source!=solObj.T_freeze.SOURCE_NOT_SET:
+            myAnnotate('Tfreeze: ',u'{0} to {1} {2}'.format(solObj.T_freeze.source, solObj.T_freeze.type, solObj.T_freeze.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Tfreeze: ','no information',x=x,y=y)
+        x += .0; y -= dy
+
+        
+        #ax5.set_xlabel(ur'$\mathregular{Temperature\/(\u00B0C)}$')
+        
+        #x += dx; y = yStart
+        #myAnnotate('Name: ',solObj.name,x=x,y=y); x += .0; y -= dy
+        
+        ax.set_xlim((0,1))
+        ax.set_ylim((0,1))
+    
+    
+    def printFitDetails(self):
+        pass
+    
+    
+    
+    def makeFitReportPage(self, solObj=SolutionData(), pdfObj=None):
+        """
+        Creates a whole page with some plots and basic information
+        for both fit quality, reference data, data sources and 
+        more. 
+        """
+        
+        # First we determine some basic settings       
+        
+        gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.5,3,3,3])
+        #gs.update(top=0.75, hspace=0.05)
+        div = 22
+        fig = plt.figure(figsize=(210/div,297/div))
+        table_axis         = plt.subplot(gs[0,:], frame_on=False)
+        
+        
+        
+        
+        # Info text settings
+        infoText = {}
+        infoText['ha']         = 'center'
+        infoText['va']         = 'baseline'
+        infoText['fontsize']   = 'smaller'
+        infoText['xycoords']   =('axes fraction', 'axes fraction')
+        
+        # Setting the labels
+        #errLabel  = ur'$\mathdefault{rel.\/Error\/[\u2030]}$'
+        errLabel  = r'$\mathdefault{rel.\/Error\/[\%]}$'
+        tempLabel = ur'$\mathdefault{Temperature\/(\u00B0C)}$'
+        
+        density_axis       = plt.subplot(gs[1,0])
+        density_error      = density_axis.twinx()
+        density_axis.set_ylabel(r'Density [$\mathdefault{kg/m^3\!}$]')
+        density_axis.set_xlabel(tempLabel)
+        density_error.set_ylabel(errLabel)
+        if solObj.density.source!=solObj.density.SOURCE_NOT_SET:
+            self.plotValues(density_axis,density_error,solObj=solObj,dataObj=solObj.density,func=solObj.rho)
+        else:
+            raise ValueError("Density data has to be provided!")
+        
+        capacity_axis      = plt.subplot(gs[1,1])
+        capacity_error     = capacity_axis.twinx()
+        capacity_axis.set_ylabel(r'Heat Capacity [$\mathdefault{J/kg/K}$]')
+        capacity_axis.set_xlabel(tempLabel)
+        capacity_error.set_ylabel(errLabel)
+        if solObj.specific_heat.source!=solObj.specific_heat.SOURCE_NOT_SET:
+            self.plotValues(capacity_axis,capacity_error,solObj=solObj,dataObj=solObj.specific_heat,func=solObj.c)
+        else:
+            raise ValueError("Specific heat data has to be provided!")
+            
+        # Optional plots, might not all be shown
+        conductivity_axis  = plt.subplot(gs[2,0])#, sharex=density_axis)
+        conductivity_error = conductivity_axis.twinx()
+        conductivity_axis.set_ylabel(r'Thermal Conductivity [$\mathdefault{W/m/K}$]')
+        conductivity_axis.set_xlabel(tempLabel)
+        conductivity_error.set_ylabel(errLabel)
+        if solObj.conductivity.source!=solObj.conductivity.SOURCE_NOT_SET:
+            self.plotValues(conductivity_axis,conductivity_error,solObj=solObj,dataObj=solObj.conductivity,func=solObj.cond)
+        else:
+            #conductivity_axis.xaxis.set_visible(False)
+            #conductivity_axis.yaxis.set_visible(False)
+            #conductivity_error.xaxis.set_visible(False)
+            #conductivity_error.yaxis.set_visible(False)
+            conductivity_axis.annotate("No conductivity information",xy=(0.5,0.5),**infoText)
+            
+        viscosity_axis     = plt.subplot(gs[2,1])#, sharex=capacity_axis)
+        viscosity_error    = viscosity_axis.twinx()
+        viscosity_axis.set_yscale('log')
+        viscosity_axis.set_ylabel(r'Dynamic Viscosity [$\mathdefault{Pa\/s}$]')
+        viscosity_axis.set_xlabel(tempLabel)
+        viscosity_error.set_ylabel(errLabel)
+        if solObj.viscosity.source!=solObj.viscosity.SOURCE_NOT_SET:
+            self.plotValues(viscosity_axis,viscosity_error,solObj=solObj,dataObj=solObj.viscosity,func=solObj.visc)
+        else:
+            #viscosity_axis.xaxis.set_visible(False)
+            #viscosity_axis.yaxis.set_visible(False)
+            #viscosity_error.xaxis.set_visible(False)
+            #viscosity_error.yaxis.set_visible(False)
+            viscosity_axis.annotate("No viscosity information",xy=(0.5,0.5),**infoText)
+        
+        saturation_axis  = plt.subplot(gs[3,0])#, sharex=density_axis)
+        saturation_error = saturation_axis.twinx()
+        saturation_axis.set_yscale('log')
+        saturation_axis.set_ylabel(r'Saturation Pressure [$\mathdefault{Pa}$]')
+        saturation_axis.set_xlabel(tempLabel)
+        saturation_error.set_ylabel(errLabel)
+        if solObj.saturation_pressure.source != solObj.saturation_pressure.SOURCE_NOT_SET: # exists
+            self.plotValues(saturation_axis,saturation_error,solObj=solObj,dataObj=solObj.saturation_pressure,func=solObj.psat)
+        else:
+            #saturation_axis.xaxis.set_visible(False)
+            #saturation_axis.yaxis.set_visible(False)
+            #saturation_error.xaxis.set_visible(False)
+            #saturation_error.yaxis.set_visible(False)
+            saturation_axis.annotate("No saturation state information",xy=(0.5,0.5),**infoText)
+            
+        Tfreeze_axis     = plt.subplot(gs[3,1])#, sharex=capacity_axis)
+        Tfreeze_error    = Tfreeze_axis.twinx()
+        Tfreeze_axis.set_ylabel(r'Freezing Temperature [$\mathdefault{K}$]')
+        Tfreeze_axis.set_xlabel("{0} fraction".format(solObj.xid.title()))
+        Tfreeze_error.set_ylabel(errLabel)
+        if solObj.T_freeze.source != solObj.T_freeze.SOURCE_NOT_SET: # exists
+            self.plotValues(Tfreeze_axis,Tfreeze_error,solObj=solObj,dataObj=solObj.T_freeze,func=solObj.Tfreeze)
+        else:
+            #Tfreeze_axis.xaxis.set_visible(False)
+            #Tfreeze_axis.yaxis.set_visible(False)
+            #Tfreeze_error.xaxis.set_visible(False)
+            #Tfreeze_error.yaxis.set_visible(False)
+            Tfreeze_axis.annotate("No freezing point information",xy=(0.5,0.5),**infoText)
+            Tfreeze_axis.set_xlabel("Fraction")
+            
+        #saturation_axis   = plt.subplot2grid((3,2), (2,0))
+        #Tfreeze_axis       = plt.subplot2grid((3,2), (2,0))
+        #mass2input_axis   = plt.subplot2grid((3,2), (2,0))
+        #volume2input_axis = plt.subplot2grid((3,2), (2,0))
+        
+        # Set a minimum error level and do some more formatting
+        minAbsErrorScale = 0.05 # in per cent
+        for a in fig.axes:
+            if a.get_ylabel()==errLabel:
+                mi,ma = a.get_ylim()
+                if mi>-minAbsErrorScale: a.set_ylim(bottom=-minAbsErrorScale)
+                if ma< minAbsErrorScale: a.set_ylim(   top= minAbsErrorScale)
+            a.xaxis.set_major_locator(MaxNLocator(5))
+            #a.yaxis.set_major_locator(MaxNLocator(7))
+                
+        
+        
+        # print headlines etc.
+        self.printFluidInfo(table_axis, solObj)
+        # Prepare the legend
+        legenddict = {}
+        for a in fig.axes:
+            handles, labels = a.get_legend_handles_labels()
+            for i in range(len(labels)):
+                legenddict[labels[i]] = handles[i]
+                
+        legKey  = ["Legend: "]
+        legVal  = [Rectangle((0, 0), 1, 1, alpha=0.0)]
+        legKey += legenddict.keys()
+        legVal += legenddict.values()
+        legKey += [" "]
+        legVal += [Rectangle((0, 0), 1, 1, alpha=0.0)]
+        
+        table_axis.legend( 
+          legVal, legKey, 
+          bbox_to_anchor=(0.0, -0.025, 1., -0.025), 
+          ncol=len(legKey), mode="expand", borderaxespad=0.,
+          numpoints=1)
+        #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)
+
+#
+#        
+#        
+#        
+#        
+#        
+#        
+#        t = arange(0.01, 5.0, 0.01)
+#s1 = sin(2*pi*t)
+#s2 = exp(-t)
+#s3 = sin(4*pi*t)
+#ax1 = subplot(311)
+#plot(t,s1)
+#setp( ax1.get_xticklabels(), fontsize=6)
+#
+### share x only
+#ax2 = subplot(312, sharex=ax1)
+#plot(t, s2)
+## make these tick labels invisible
+#setp( ax2.get_xticklabels(), visible=False)
+#
+## share x and y
+#ax3 = subplot(313,  sharex=ax1, sharey=ax1)
+#plot(t, s3)
+#xlim(0.01,5.0)
+#show()
+
+        gs.tight_layout(fig)#, rect=[0, 0, 1, 0.75])
+        # Fine-tune figure; make subplots close to each other 
+        # and hide x ticks for all but bottom plot.
+        #fig.subplots_adjust(wspace=0)
+        #plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
+        
+        plt.savefig(os.path.join("report","{0}_fitreport.pdf".format(solObj.name)))
+        if pdfObj!=None: pdfObj.savefig(fig)
+        plt.close()
+        pass
+    
+    
+    
+        
+    
+    
         
         
 #class FitGraphWriter(object):
@@ -266,15 +929,7 @@ class SolutionDataWriter(object):
 ##        containerList += [ZS10(), ZS25(), ZS40(), ZS45(), ZS55()]
 #        return containerList
 #    
-#    def relError(A=[],B=[],PCT=False):
-#        """
-#        Returns the relative Error from (A-B)/B, if PCT is True, it returns percent.
-#        """
-#        result = (np.array(A)-np.array(B))/np.array(B);
-#        if PCT:
-#            return result * 100. 
-#        else:
-#            return result
+
 #        
 #        
 #    def makePlots(self, fluid):

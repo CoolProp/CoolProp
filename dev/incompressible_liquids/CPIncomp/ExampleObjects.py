@@ -13,6 +13,12 @@ class PureExample(PureData):
         self.Tmin =  50 + 273.15
         self.TminPsat =  self.Tmax
         
+        self.density.source           = self.density.SOURCE_DATA
+        self.specific_heat.source     = self.specific_heat.SOURCE_DATA
+        self.conductivity.source      = self.conductivity.SOURCE_DATA
+        self.viscosity.source         = self.viscosity.SOURCE_DATA
+        self.saturation_pressure.source = self.saturation_pressure.SOURCE_DATA
+        
         self.temperature.data         = np.array([   50,   60,    70,     80,    90,   100,   110,   120,   130,   140,   150])+273.15 # Kelvin
         self.density.data             = np.array([  740,   733,   726,   717,   710,   702,   695,   687,   679,   670,   662])        # kg/m3
         self.specific_heat.data       = np.array([ 2235,  2280,  2326,  2361,  2406,  2445,  2485,  2528,  2571,  2607,  2645])        # J/kg-K
@@ -44,6 +50,9 @@ class SolutionExample(SolutionData):
         
         self.specific_heat.data = np.copy(self.density.data)
         
+        self.density.source           = self.density.SOURCE_DATA
+        self.specific_heat.source     = self.specific_heat.SOURCE_DATA
+        
         self.Tmax = np.max(self.temperature.data)
         self.Tmin = np.min(self.temperature.data)
         self.xmax = np.max(self.concentration.data)
@@ -72,11 +81,62 @@ class DigitalExample(DigitalData):
         
         def funcRho(T,x):
             return T + x*100.0 + T*(x+0.5)
-        self.density.data             = self.getArray(funcRho,"rho")
+        self.density.xData,self.density.yData,self.density.data = self.getArray(dataID="D", func=funcRho, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.density.DEBUG)
+        self.density.source           = self.density.SOURCE_EQUATION
         
         def funcCp(T,x):
             return T + x*50.0 + T*(x+0.6)
-        self.specific_heat.data             = self.getArray(funcCp,"cp")
+        self.specific_heat.xData,self.specific_heat.yData,self.specific_heat.data = self.getArray(dataID="C", func=funcCp, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.specific_heat.DEBUG)
+        self.specific_heat.source     = self.specific_heat.SOURCE_EQUATION
+        
+class DigitalExamplePure(PureData,DigitalData):
+    def __init__(self):
+        DigitalData.__init__(self) 
+        PureData.__init__(self) 
+
+        self.name = "ExampleDigitalPure"
+        self.description = "water at 100 bar"
+        self.reference = "none"
+        
+        self.Tmin = 280.00;
+        self.Tmax = 500.00;
+
+        self.TminPsat = self.Tmin;
+        
+        self.temperature.data         = self.getTrange()
+        self.concentration.data       = self.getxrange()
+        
+        import CoolProp.CoolProp as CP
+        
+        def funcD(T,x):
+            return CP.PropsSI('D','T',T,'P',1e7,'water')
+        def funcC(T,x):
+            return CP.PropsSI('C','T',T,'P',1e7,'water')
+        def funcL(T,x):
+            return CP.PropsSI('L','T',T,'P',1e7,'water')
+        def funcV(T,x):
+            return CP.PropsSI('V','T',T,'P',1e7,'water')
+        def funcP(T,x):
+            return CP.PropsSI('P','T',T,'Q',0.0,'water')
+        
+        self.density.xData,self.density.yData,self.density.data = self.getArray(dataID="D", func=funcD, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.density.DEBUG)
+        self.density.source           = self.density.SOURCE_EQUATION
+
+        self.specific_heat.xData,self.specific_heat.yData,self.specific_heat.data = self.getArray(dataID="C", func=funcC, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.specific_heat.DEBUG)
+        self.specific_heat.source     = self.specific_heat.SOURCE_EQUATION
+        
+        self.conductivity.xData,self.conductivity.yData,self.conductivity.data = self.getArray(dataID="L", func=funcL, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.conductivity.DEBUG)
+        self.conductivity.source           = self.conductivity.SOURCE_EQUATION
+        
+        self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID="V", func=funcV, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
+        self.viscosity.source           = self.viscosity.SOURCE_EQUATION
+        
+        self.saturation_pressure.xData,self.saturation_pressure.yData,self.saturation_pressure.data = self.getArray(dataID="P", func=funcP, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.saturation_pressure.DEBUG)
+        self.saturation_pressure.source           = self.saturation_pressure.SOURCE_EQUATION
+              
+        
+        
+        
         
 
 class SecCoolExample(CoefficientData):
@@ -186,12 +246,18 @@ class SecCoolExample(CoefficientData):
            4.482000E-09]))
 
         self.T_freeze.type = self.T_freeze.INCOMPRESSIBLE_POLYOFFSET
-        self.T_freeze.coeffs = self.convertSecCoolTfreeze(np.array([
-           27.755555600,
-          -22.973221700, 
-          -1.1040507200, 
-          -0.0120762281, 
-          -9.343458E-05]))
+        self.T_freeze.coeffs = np.array([
+           27.755555600/100.0,
+          -22.973221700+273.15, 
+          -1.1040507200*100.0, 
+          -0.0120762281*100.0*100.0, 
+          -9.343458E-05*100.0*100.0*100.0])
+        
+        self.density.source           = self.density.SOURCE_COEFFS
+        self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
+        self.conductivity.source      = self.conductivity.SOURCE_COEFFS
+        self.viscosity.source         = self.viscosity.SOURCE_COEFFS
+        self.T_freeze.source          = self.T_freeze.SOURCE_COEFFS
         
         
 class MelinderExample(CoefficientData):

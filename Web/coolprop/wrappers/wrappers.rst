@@ -13,12 +13,12 @@ Superpacks are available at XXXXXXX which include all the code for a given opera
 =======================                    ===========================  =======================================
 Language                                   Operating Systems            Notes
 =======================                    ===========================  =======================================
+:ref:`Python <Python>`                     linux, OSX, win
 :ref:`Octave <Octave>`                     linux, OSX, win              Wrapper is SWIG based
 :ref:`C# <Csharp>`                         linux, OSX, win              Wrapper is SWIG based
-Java                                       linux, OSX, win              Wrapper is SWIG based
+:ref:`MATLAB <MATLAB>`                     linux, OSX, win              Wrapper is SWIG based (VERY experimental)
+:ref:`Java <Java>`                         linux, OSX, win              Wrapper is SWIG based
 Scilab                                     linux, OSX, win              Wrapper is SWIG based (experimental)
-MATLAB                                     linux, OSX, win              Wrapper is SWIG based (VERY experimental)
-Python                                     linux, OSX, win
 Modelica                                   linux, OSX, win
 Javascript                                 linux, OSX, win              Also works in all internet browsers
 Maple                  
