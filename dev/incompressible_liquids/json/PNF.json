@@ -1,0 +1,92 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase": 0.00000e+00, 
+  "Tmax": 5.93150e+02, 
+  "Tmin": 2.63150e+02, 
+  "TminPsat": 5.93150e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+        1.25200e-01
+      ], 
+      [
+        -7.96302e-05
+      ], 
+      [
+        3.61395e-08
+      ], 
+      [
+        -3.78807e-12
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+        1.05884e+03
+      ], 
+      [
+        -5.46423e-01
+      ], 
+      [
+        -1.75253e-04
+      ], 
+      [
+        5.77600e-08
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Paratherm NF, Hydrotreated mineral oil", 
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "PNF", 
+  "reference": "Paratherm Ltd, SecCool software", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+        2.93252e+02
+      ], 
+      [
+        5.41162e+00
+      ], 
+      [
+        -6.46846e-04
+      ], 
+      [
+        5.06695e-07
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      -2.40089e+02, 
+      2.88014e+00, 
+      5.92829e+00
+    ], 
+    "type": "logexponential"
+  }, 
+  "volume2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase": 0.00000e+00, 
+  "xid": "pure", 
+  "xmax": 0.00000e+00, 
+  "xmin": 0.00000e+00
+}

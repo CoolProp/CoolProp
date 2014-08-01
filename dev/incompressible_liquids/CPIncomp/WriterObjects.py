@@ -40,83 +40,89 @@ class SolutionDataWriter(object):
         
         errList = (ValueError, AttributeError, TypeError, RuntimeError)
         
-        try:
-            fluidObject.density.setxyData(tData,xData)
-            fluidObject.density.coeffs = np.copy(std_coeffs)
-            fluidObject.density.type   = IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
-            fluidObject.density.fitCoeffs(tBase,xBase)
-        except errList as ve:
-            if fluidObject.density.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'density',ve))
-            pass
+        if fluidObject.density.coeffs == None:
+            try:
+                fluidObject.density.setxyData(tData,xData)
+                fluidObject.density.coeffs = np.copy(std_coeffs)
+                fluidObject.density.type   = IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
+                fluidObject.density.fitCoeffs(tBase,xBase)
+            except errList as ve:
+                if fluidObject.density.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'density',ve))
+                pass
         
-        try:
-            fluidObject.specific_heat.setxyData(tData,xData)
-            fluidObject.specific_heat.coeffs = np.copy(std_coeffs)
-            fluidObject.specific_heat.type   = IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
-            fluidObject.specific_heat.fitCoeffs(tBase,xBase)
-        except errList as ve:
-            if fluidObject.specific_heat.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'specific heat',ve))
-            pass 
+        if fluidObject.specific_heat.coeffs == None:
+            try:
+                fluidObject.specific_heat.setxyData(tData,xData)
+                fluidObject.specific_heat.coeffs = np.copy(std_coeffs)
+                fluidObject.specific_heat.type   = IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
+                fluidObject.specific_heat.fitCoeffs(tBase,xBase)
+            except errList as ve:
+                if fluidObject.specific_heat.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'specific heat',ve))
+                pass 
         
-        try:
-            fluidObject.conductivity.setxyData(tData,xData)
-            fluidObject.conductivity.coeffs = np.copy(std_coeffs)
-            fluidObject.conductivity.type   = IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
-            fluidObject.conductivity.fitCoeffs(tBase,xBase)
-        except errList as ve:
-            if fluidObject.conductivity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'conductivity',ve))
-            pass
+        if fluidObject.conductivity.coeffs == None:
+            try:
+                fluidObject.conductivity.setxyData(tData,xData)
+                fluidObject.conductivity.coeffs = np.copy(std_coeffs)
+                fluidObject.conductivity.type   = IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
+                fluidObject.conductivity.fitCoeffs(tBase,xBase)
+            except errList as ve:
+                if fluidObject.conductivity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'conductivity',ve))
+                pass
         
-        try:
-            fluidObject.viscosity.setxyData(tData,xData)
-            tried = False
-            if len(fluidObject.viscosity.yData)==1:# and np.isfinite(fluidObject.viscosity.data).sum()<10:
-                fluidObject.viscosity.coeffs = np.array([+5e+2, -6e+1, +1e+1])
-                fluidObject.viscosity.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
-                fluidObject.viscosity.fitCoeffs(tBase,xBase)
-                if fluidObject.viscosity.coeffs==None or IncompressibleFitter.allClose(fluidObject.viscosity.coeffs, np.array([+5e+2, -6e+1, +1e+1])): # Fit failed
-                    tried = True
-            if len(fluidObject.viscosity.yData)>1 or tried:
-                #fluidObject.viscosity.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
-                fluidObject.viscosity.coeffs = np.copy(std_coeffs)
-                fluidObject.viscosity.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
-                fluidObject.viscosity.fitCoeffs(tBase,xBase)
-        except errList as ve:
-            if fluidObject.viscosity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'viscosity',ve))
-            pass
+        if fluidObject.viscosity.coeffs == None:
+            try:
+                fluidObject.viscosity.setxyData(tData,xData)
+                tried = False
+                if len(fluidObject.viscosity.yData)==1:# and np.isfinite(fluidObject.viscosity.data).sum()<10:
+                    fluidObject.viscosity.coeffs = np.array([+5e+2, -6e+1, +1e+1])
+                    fluidObject.viscosity.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
+                    fluidObject.viscosity.fitCoeffs(tBase,xBase)
+                    if fluidObject.viscosity.coeffs==None or IncompressibleFitter.allClose(fluidObject.viscosity.coeffs, np.array([+5e+2, -6e+1, +1e+1])): # Fit failed
+                        tried = True
+                if len(fluidObject.viscosity.yData)>1 or tried:
+                    #fluidObject.viscosity.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
+                    fluidObject.viscosity.coeffs = np.copy(std_coeffs)
+                    fluidObject.viscosity.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
+                    fluidObject.viscosity.fitCoeffs(tBase,xBase)
+            except errList as ve:
+                if fluidObject.viscosity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'viscosity',ve))
+                pass
         
-        try:
-            fluidObject.saturation_pressure.setxyData(tData,xData)
-            tried = False
-            if len(fluidObject.saturation_pressure.yData)==1:# and np.isfinite(fluidObject.saturation_pressure.data).sum()<10:
-                fluidObject.saturation_pressure.coeffs = np.array([-5e+3, +6e+1, -1e+1]) 
-                fluidObject.saturation_pressure.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
-                fluidObject.saturation_pressure.fitCoeffs(tBase,xBase)
-                if fluidObject.saturation_pressure.coeffs==None or IncompressibleFitter.allClose(fluidObject.saturation_pressure.coeffs, np.array([-5e+3, +6e+1, -1e+1])): # Fit failed
-                    tried = True
-            if len(fluidObject.saturation_pressure.yData)>1 or tried:
-                #fluidObject.saturation_pressure.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
-                fluidObject.saturation_pressure.coeffs = np.copy(std_coeffs)
-                fluidObject.saturation_pressure.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
-                fluidObject.saturation_pressure.fitCoeffs(tBase,xBase)
-        except errList as ve:
-            if fluidObject.saturation_pressure.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'saturation pressure',ve))
-            pass
+        if fluidObject.saturation_pressure.coeffs == None:
+            try:
+                fluidObject.saturation_pressure.setxyData(tData,xData)
+                tried = False
+                if len(fluidObject.saturation_pressure.yData)==1:# and np.isfinite(fluidObject.saturation_pressure.data).sum()<10:
+                    fluidObject.saturation_pressure.coeffs = np.array([-5e+3, +6e+1, -1e+1]) 
+                    fluidObject.saturation_pressure.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
+                    fluidObject.saturation_pressure.fitCoeffs(tBase,xBase)
+                    if fluidObject.saturation_pressure.coeffs==None or IncompressibleFitter.allClose(fluidObject.saturation_pressure.coeffs, np.array([-5e+3, +6e+1, -1e+1])): # Fit failed
+                        tried = True
+                if len(fluidObject.saturation_pressure.yData)>1 or tried:
+                    #fluidObject.saturation_pressure.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
+                    fluidObject.saturation_pressure.coeffs = np.copy(std_coeffs)
+                    fluidObject.saturation_pressure.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
+                    fluidObject.saturation_pressure.fitCoeffs(tBase,xBase)
+            except errList as ve:
+                if fluidObject.saturation_pressure.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'saturation pressure',ve))
+                pass
         
         # reset data for getArray and read special files
         if fluidObject.xid!=fluidObject.ifrac_pure and fluidObject.xid!=fluidObject.ifrac_undefined:
-            fluidObject.T_freeze.setxyData([0.0],xData)
-            try:
-                if len(fluidObject.T_freeze.xData)==1:# and np.isfinite(fluidObject.T_freeze.data).sum()<10:
-                    fluidObject.T_freeze.coeffs = np.array([+7e+2, -6e+1, +1e+1])
-                    fluidObject.T_freeze.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
-                else:   
-                    fluidObject.specific_heat.coeffs = np.copy(std_coeffs)
-                    fluidObject.T_freeze.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
-                fluidObject.T_freeze.fitCoeffs(tBase,xBase)
-            except errList as ve:
-                if fluidObject.T_freeze.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(fluidObject.name,"T_freeze",ve))
-                pass
+            if fluidObject.T_freeze.coeffs == None:
+                fluidObject.T_freeze.setxyData([0.0],xData)
+                try:
+                    if len(fluidObject.T_freeze.xData)==1:# and np.isfinite(fluidObject.T_freeze.data).sum()<10:
+                        fluidObject.T_freeze.coeffs = np.array([+7e+2, -6e+1, +1e+1])
+                        fluidObject.T_freeze.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
+                    else:   
+                        fluidObject.specific_heat.coeffs = np.copy(std_coeffs)
+                        fluidObject.T_freeze.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
+                    fluidObject.T_freeze.fitCoeffs(tBase,xBase)
+                except errList as ve:
+                    if fluidObject.T_freeze.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(fluidObject.name,"T_freeze",ve))
+                    pass
 # 
 #            # reset data for getArray again
 #            if fluidObject.xid==fluidObject.ifrac_volume:
@@ -891,7 +897,14 @@ class SolutionDataWriter(object):
         pass
     
     
-    
+    def makeOverviewMassSolutions(self, solObjs, pdfObj=None):
+        """
+        Creates a page with plots for several fluids.
+        """
+        
+        
+        pass 
+        
         
     
     

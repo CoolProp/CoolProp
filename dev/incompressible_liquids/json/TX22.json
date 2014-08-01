@@ -1,0 +1,105 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase": 0.00000e+00, 
+  "Tmax": 6.23150e+02, 
+  "Tmin": 2.73150e+02, 
+  "TminPsat": 3.13150e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+        1.41248e-01
+      ], 
+      [
+        2.13287e-05
+      ], 
+      [
+        -2.02059e-07
+      ], 
+      [
+        1.39476e-10
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+        1.08285e+03
+      ], 
+      [
+        -9.44552e-01
+      ], 
+      [
+        9.24144e-04
+      ], 
+      [
+        -9.53654e-07
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Texatherm22", 
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "TX22", 
+  "reference": "Texaco data sheet", 
+  "saturation_pressure": {
+    "coeffs": [
+      [
+        -4.66760e+01
+      ], 
+      [
+        1.40279e-01
+      ], 
+      [
+        -3.19829e-05
+      ], 
+      [
+        -8.17047e-08
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+        7.73995e+02
+      ], 
+      [
+        3.85287e+00
+      ], 
+      [
+        -2.73136e-04
+      ], 
+      [
+        4.31912e-08
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      8.82959e+02, 
+      -1.72610e+02, 
+      9.64661e+00
+    ], 
+    "type": "exponential"
+  }, 
+  "volume2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase": 0.00000e+00, 
+  "xid": "pure", 
+  "xmax": 1.00000e+00, 
+  "xmin": 0.00000e+00
+}

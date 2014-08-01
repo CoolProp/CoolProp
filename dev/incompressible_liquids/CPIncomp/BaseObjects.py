@@ -124,7 +124,7 @@ class IncompressibleData(object):
         bestRMS    = np.sqrt(np.square(bestsErr).mean()).sum()
         
         count = 0
-        while bestRMS>0.01 and count<2:
+        while bestRMS>0.03 and count<2:
             #if self.DEBUG: print("Poor solution found, trying once more with more coefficients.")
             if self.type==IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL:
                 if self.DEBUG: print("Poor solution found with exponential, trying once more with log exponential.")
@@ -552,7 +552,7 @@ class IncompressibleFitter(object):
                     if res.success:
                         success = True
                         if DEBUG: print("Fit succeeded with: {0}".format(algorithm))
-                        sErr = zData - fun(np.array(res.x), xData)
+                        sErr = zData - fun(np.array(res.x), xData, None)
                         #if res.has_key('fvec'):
                             #ssErr = (res['fvec']**2).sum()
                             #ssTot = ((zData-zData.mean())**2).sum()
