@@ -11,6 +11,9 @@
 
 #include "crossplatform_shared_ptr.h"
 #include "catch.hpp"
+#include "CoolPropTools.h"
+#include "CoolProp.h"
+#include "CoolPropLIB.h"
 
 namespace TransportValidation{
 
@@ -485,9 +488,9 @@ static int inputs[] = {
     CoolProp::DmolarSmolar_INPUTS,
     CoolProp::DmolarUmolar_INPUTS,
 
+    //CoolProp::HmolarP_INPUTS,
+    //CoolProp::PSmolar_INPUTS,
     /*
-    CoolProp::HmolarP_INPUTS,
-    CoolProp::PSmolar_INPUTS,
     CoolProp::PUmolar_INPUTS,
     */
 
@@ -598,6 +601,19 @@ TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for CO2 using all val
                 CAPTURE(x2);
                 CHECK_NOTHROW(single_phase_consistency_check());
             }
+        }
+    }
+}
+
+TEST_CASE("Test saturation properties for a few fluids", "[slow]")
+{
+    SECTION("sat_p")
+    {
+        std::vector<double> pv = linspace(Props1SI("Water", "ptriple")+1, Props1SI("Water", "pcrit")-1e-6,5);
+        for (int i = 0; i < pv.size(); ++i)
+        {
+            CAPTURE(pv[i]);
+            CHECK_NOTHROW(CoolProp::PropsSI("T","P",pv[i],"Q",0,"Water"));
         }
     }
 }
