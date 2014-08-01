@@ -1,0 +1,92 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase": 0.00000e+00, 
+  "Tmax": 3.63150e+02, 
+  "Tmin": 2.35150e+02, 
+  "TminPsat": 3.63150e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+        1.55437e-01
+      ], 
+      [
+        1.13870e-03
+      ], 
+      [
+        -1.41541e-07
+      ], 
+      [
+        -5.06761e-12
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+        1.41694e+03
+      ], 
+      [
+        -5.67309e-01
+      ], 
+      [
+        -4.20079e-10
+      ], 
+      [
+        4.71245e-13
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Zitrec S40, Potassium formate/Sodium propionate", 
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "ZS40", 
+  "reference": "Arteco, SecCool software", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+        9.58474e+02
+      ], 
+      [
+        1.64495e+01
+      ], 
+      [
+        -5.30948e-02
+      ], 
+      [
+        6.19904e-05
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      4.56189e+02, 
+      -1.56387e+02, 
+      9.22127e+00
+    ], 
+    "type": "exponential"
+  }, 
+  "volume2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase": 0.00000e+00, 
+  "xid": "pure", 
+  "xmax": 0.00000e+00, 
+  "xmin": 0.00000e+00
+}

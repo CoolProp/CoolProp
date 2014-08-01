@@ -1,0 +1,92 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase": 0.00000e+00, 
+  "Tmax": 4.53150e+02, 
+  "Tmin": 2.33150e+02, 
+  "TminPsat": 4.53150e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+        1.65996e-01
+      ], 
+      [
+        -4.39731e-05
+      ], 
+      [
+        -9.02852e-08
+      ], 
+      [
+        8.72844e-11
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+        9.85936e+02
+      ], 
+      [
+        -7.10000e-01
+      ], 
+      [
+        -6.54658e-14
+      ], 
+      [
+        -2.19009e-17
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Paracryol, Aliphatic Hydrocarbon", 
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "PCL", 
+  "reference": "Sulzer Chemtech AG, SecCool software", 
+  "saturation_pressure": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+        8.25169e+02
+      ], 
+      [
+        3.92350e+00
+      ], 
+      [
+        2.29849e-04
+      ], 
+      [
+        -1.95575e-07
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      7.97626e+02, 
+      -9.23918e+01, 
+      8.01697e+00
+    ], 
+    "type": "exponential"
+  }, 
+  "volume2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase": 0.00000e+00, 
+  "xid": "pure", 
+  "xmax": 0.00000e+00, 
+  "xmin": 0.00000e+00
+}
