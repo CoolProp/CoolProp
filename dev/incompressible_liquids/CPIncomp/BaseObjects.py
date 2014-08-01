@@ -26,7 +26,10 @@ class IncompressibleData(object):
     SOURCE_COEFFS   = 'coefficients'
     SOURCE_NOT_SET  = 'notdefined'
     
-    maxLog = np.log(np.finfo(np.float64).max-1)
+    maxLin = np.finfo(np.float64).max-1
+    minLin = -maxLin
+    
+    maxLog = np.log(maxLin)
     minLog = -maxLog
     
     def __init__(self):                
@@ -36,8 +39,8 @@ class IncompressibleData(object):
         self.data   = None # None #np.zeros((10,10))
         self.xData  = None # In case you need a customised first data set (temperature?)
         self.yData  = None # In case you need a customised second data set (concentration?)
-        self.rsq    = None # Coefficient of determination
-        self.DEBUG = False
+        self.sErr   = None # Coefficient of determination
+        self.DEBUG  = False
         
     @staticmethod
     def baseFunc(x, y=0.0, xbase=0.0, ybase=0.0, eqnType=None, c=None):
@@ -77,10 +80,10 @@ class IncompressibleData(object):
     @staticmethod
     def baseLogexponential(co, x):
         r,c,coeffs = IncompressibleFitter.shapeArray(co)
-        if not ( (r==4 and c==1) or (r==1 and c==4) ):
+        if not ( (r==3 and c==1) or (r==1 and c==3) ):
             raise ValueError("You have to provide a 4,1 matrix of coefficients, not ({0},{1}).".format(r,c))
         coeffs_tmp = np.array(coeffs.flat)
-        return np.exp(np.clip(np.log(1.0/(x+coeffs_tmp[0]) + 1.0/(x+coeffs_tmp[1])**2)*coeffs_tmp[2]+coeffs_tmp[3],IncompressibleData.minLog,IncompressibleData.maxLog))
+        return np.exp(np.clip(np.log(np.clip(1.0/(x+coeffs_tmp[0]) + 1.0/(x+coeffs_tmp[0])**2,1e-10,IncompressibleData.maxLin))*coeffs_tmp[1]+coeffs_tmp[2],IncompressibleData.minLog,IncompressibleData.maxLog))
 
     @staticmethod
     def basePolyOffset(co, x):
@@ -110,40 +113,69 @@ class IncompressibleData(object):
         #res = None
         #r2 = None
         
-        res,r2 = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
+        res,sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
                   xbase=xbase, ybase=ybase, \
                   eqnType=self.type, \
                   coeffs=self.coeffs, DEBUG=self.DEBUG)
         
-        #count = 0
-        #while r2<0.9 and count<1:
-            ##if self.DEBUG: print("Poor solution found, trying once more with more coefficients.")
-            #if self.type==IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL:
-                #if self.DEBUG: print("Poor solution found, trying once more with log exponential.")
-                #self.type=IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL
-                #self.coeffs = np.array([-250,-250,2,2])
-                #res,r2 = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
-                      #xbase=xbase, ybase=ybase, \
-                      #eqnType=self.type, \
-                      #coeffs=self.coeffs, DEBUG=self.DEBUG)
+        bestCoeffs = np.copy(res)
+        bestType   = self.type
+        bestsErr   = np.copy(sErr)
+        bestRMS    = np.sqrt(np.square(bestsErr).mean()).sum()
+        
+        count = 0
+        while bestRMS>0.01 and count<2:
+            #if self.DEBUG: print("Poor solution found, trying once more with more coefficients.")
+            if self.type==IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL:
+                if self.DEBUG: print("Poor solution found with exponential, trying once more with log exponential.")
+                self.type=IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL
+                self.coeffs = np.array([-250,1.5,10])
+                res,sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
+                      xbase=xbase, ybase=ybase, \
+                      eqnType=self.type, \
+                      coeffs=self.coeffs, DEBUG=self.DEBUG)
             
-            #if self.type==IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL or \
-              #self.type==IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL:
-                #if self.DEBUG: print("Poor solution found, trying once more with more coefficients.")
-                #self.coeffs = np.zeros(np.round(np.array(self.coeffs.shape) * 1.5))
-                #res,r2 = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
-                      #xbase=xbase, ybase=ybase, \
-                      #eqnType=self.type, \
-                      #coeffs=self.coeffs, DEBUG=self.DEBUG)
-            #count += 1
+            elif self.type==IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL:
+                if self.DEBUG: print("Poor solution found with log exponential, trying once more with exponential polynomial.")
+                self.type=IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
+                self.coeffs = np.zeros((4,6))
+                res,sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
+                      xbase=xbase, ybase=ybase, \
+                      eqnType=self.type, \
+                      coeffs=self.coeffs, DEBUG=self.DEBUG)
+                
+#            elif self.type==IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL:
+#                if self.DEBUG: print("Poor solution found with exponential polynomial, trying once more with normal polynomial.")
+#                self.type=IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL
+#                self.coeffs = np.zeros((4,6))
+#                res,sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
+#                      xbase=xbase, ybase=ybase, \
+#                      eqnType=self.type, \
+#                      coeffs=self.coeffs, DEBUG=self.DEBUG)
+
+            RMS = np.sqrt(np.square(sErr).mean()).sum()
+            if RMS<bestRMS: # Better fit
+                bestCoeffs = np.copy(res)
+                bestType   = self.type
+                bestsErr   = np.copy(sErr)
+                bestRMS    = RMS
+            
+            count += 1
          
-        if res==None:
+        if bestCoeffs==None:
             if self.DEBUG: print("There was a fitting error, no solution found.")
-        elif IncompressibleFitter.allClose(res, self.coeffs):
+        elif IncompressibleFitter.allClose(bestCoeffs, self.coeffs):
             if self.DEBUG: print("Coefficients did not change.")
         else:
-            self.coeffs = res
-            self.rsq    = r2 
+            if self.DEBUG: print("Best fit for: {0}".format(bestType))
+            self.coeffs = bestCoeffs
+            self.type   = bestType 
+            self.sErr   = bestsErr
+            
+            #if self.DEBUG: print("Fitting statistics:")
+            #SSE = np.square(self.sErr).sum() # Sum of squares due to error
+            #SST = ((zData-zData.mean())**2).sum()
+            #R2  = 1-(ssErr/ssTot )
             
 
     def setxData(self, xData):
@@ -257,7 +289,7 @@ class IncompressibleFitter(object):
         
         if zr==1 and zc==1: # 
             if DEBUG: print("Data no set, we cannot fit the coefficients")
-            return None
+            return None,None
                 
         if (xc!=1): raise ValueError("The first input has to be a 2D array with one column.")
         if (yr!=1): raise ValueError("The second input has to be a 2D array with one row.")
@@ -298,10 +330,12 @@ class IncompressibleFitter(object):
             z_input = np.copy(z)
             if eqnType==IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL:
                 z_input = np.log(z_input)
-            coeffs,r2 = IncompressibleFitter.getCoeffs2d(x_input, y_input, z_input, cr-1, cc-1, DEBUG=DEBUG)
+            coeffs,sErr = IncompressibleFitter.getCoeffs2d(x_input, y_input, z_input, cr-1, cc-1, DEBUG=DEBUG)
             if DEBUG: print("Coefficients after fitting: \n{0}".format(coeffs))
-            if DEBUG: print("Coefficient of determination: {0}".format(r2))
-            return coeffs,r2
+            if DEBUG: print("Standard deviation: {0}".format(np.nanstd(sErr)))
+            if DEBUG: print("Sum of squared errors: {0}".format(np.square(sErr).sum()))
+            if DEBUG: print("Root mean squared errors: {0}".format(np.sqrt(np.square(sErr).mean()).sum()))
+            return coeffs,sErr
         
         
         # Select if 1D or 2D fitting
@@ -309,14 +343,16 @@ class IncompressibleFitter(object):
             if DEBUG: print("1D function detected.")
             if yc==1: 
                 if DEBUG: print("Fitting {0} in x-direction.".format(eqnType))
-                coeffs,r2 = IncompressibleFitter.getCoeffsIterative1D(x, z, eqnType=eqnType, coeffs=coeffs, DEBUG=DEBUG)
+                coeffs,sErr = IncompressibleFitter.getCoeffsIterative1D(x, z, eqnType=eqnType, coeffs=coeffs, DEBUG=DEBUG)
             elif xr==1: 
                 if DEBUG: print("Fitting {0} in y-direction.".format(eqnType))
-                coeffs,r2 = IncompressibleFitter.getCoeffsIterative1D(y, z, eqnType=eqnType, coeffs=coeffs, DEBUG=DEBUG)
+                coeffs,sErr = IncompressibleFitter.getCoeffsIterative1D(y, z, eqnType=eqnType, coeffs=coeffs, DEBUG=DEBUG)
             else: raise ValueError("Unknown error in matrix shapes.")    
             if DEBUG: print("Coefficients after fitting: \n{0}".format(coeffs))
-            if DEBUG: print("Coefficient of determination: {0}".format(r2))
-            return coeffs, r2
+            if DEBUG: print("Standard deviation:    {0}".format(np.nanstd(sErr)))
+            if DEBUG: print("Sum of squared errors: {0}".format(np.square(sErr).sum()))
+            if DEBUG: print("Root mean squared errors: {0}".format(np.sqrt(np.square(sErr).mean()).sum()))
+            return coeffs, sErr
 
         elif yc>1: # 2D fitting
             raise ValueError("There are no other 2D fitting functions than polynomials, cannot use {0}.".format(eqnType))
@@ -344,8 +380,6 @@ class IncompressibleFitter(object):
         if x_order==None: raise ValueError("You did not provide data for x_order.")
         if y_order==None: raise ValueError("You did not provide data for y_order.")
         if DEBUG==None: raise ValueError("You did not provide data for DEBUG.")
-        
-        r2 = None
         
         x_order += 1
         y_order += 1
@@ -387,6 +421,8 @@ class IncompressibleFitter(object):
         # Remove np.nan elements
         mask = np.isfinite(zz)
         A = A[mask]
+        xx = xx[mask]
+        yy = yy[mask]
         zz = zz[mask]
         
         if (len(A) < cols):
@@ -399,10 +435,10 @@ class IncompressibleFitter(object):
         if DEBUG: print(rank)
         if DEBUG: print(singulars)
         
-        if resids.size>0:
-            r2 = 1 - resids / (zz.size * zz.var())
-        else:
-            r2 = 0
+        #if resids.size>0:
+        #    r2 = 1 - resids / (zz.size * zz.var())
+        #else:
+        #    r2 = 0
         #print("\n r2 2d: ",r2.shape,r2,"\n")
         
         #Rearrange coefficients to a matrix shape
@@ -410,7 +446,8 @@ class IncompressibleFitter(object):
         for i, (xi,yi) in enumerate(xy_exp): # makes columns
             C[xi][yi] = coeffs[i]
         
-        return C, r2
+        sErr = zz - np.polynomial.polynomial.polyval2d(xx, yy, C)
+        return C, sErr
     
     @staticmethod
     def getCoeffsIterative1D(x_in, z_in, eqnType, coeffs, DEBUG=False):
@@ -421,7 +458,7 @@ class IncompressibleFitter(object):
         if coeffs==None: raise ValueError("You did not provide data for the coefficients.")
         if DEBUG==None: raise ValueError("You did not provide data for DEBUG.")
         
-        r2 = None
+        sErr = None 
         
         #fit = "Powell" # use Powell's algorithm
         #fit = "BFGS" # use Broyden-Fletcher-Goldfarb-Shanno
@@ -483,16 +520,17 @@ class IncompressibleFitter(object):
                     if np.any(popt!=coeffs):
                         success = True
                         if DEBUG: print("Fit succeeded with: {0}".format(algorithm))
-#                        print "Fit succeeded for "+fit[counter]+": "
-#                        print "data: {0}, func: {1}".format(yData[ 2],func(xData[ 2], popt))
-#                        print "data: {0}, func: {1}".format(yData[ 6],func(xData[ 6], popt))
-#                        print "data: {0}, func: {1}".format(yData[-1],func(xData[-1], popt))
+                        sErr = zData - func(xData, popt)
+                        #print "Fit succeeded for "+fit[counter]+": "
+                        #print "data: {0}, func: {1}".format(yData[ 2],func(xData[ 2], popt))
+                        #print "data: {0}, func: {1}".format(yData[ 6],func(xData[ 6], popt))
+                        #print "data: {0}, func: {1}".format(yData[-1],func(xData[-1], popt))
                         #if DEBUG: print("Estimated covariance of parameters: {0}".format(pcov))
-                        ssErr = np.sqrt(np.diag(pcov)).sum()
-                        ssTot = ((zData-zData.mean())**2).sum()
-                        r2 = 1-(ssErr/ssTot )
+                        #ssErr = np.sqrt(np.diag(pcov)).sum()
+                        #ssTot = ((zData-zData.mean())**2).sum()
+                        #r2 = 1-(ssErr/ssTot )
                         #print("\n r2 FMA: ",r2.shape,r2,"\n")
-                        return popt,r2
+                        return popt,sErr
                     else:
                         if DEBUG: print("Fit failed for {0}.".format(algorithm))
                         if DEBUG: sys.stdout.flush()
@@ -514,12 +552,13 @@ class IncompressibleFitter(object):
                     if res.success:
                         success = True
                         if DEBUG: print("Fit succeeded with: {0}".format(algorithm))
-                        if res.has_key('fvec'):
-                            ssErr = (res['fvec']**2).sum()
-                            ssTot = ((zData-zData.mean())**2).sum()
-                            r2 = 1-(ssErr/ssTot )
+                        sErr = zData - fun(np.array(res.x), xData)
+                        #if res.has_key('fvec'):
+                            #ssErr = (res['fvec']**2).sum()
+                            #ssTot = ((zData-zData.mean())**2).sum()
+                            #r2 = 1-(ssErr/ssTot )
                         #print("\n r2 : ",r2.shape,r2,algorithm,"\n")                    
-                        return res.x,r2
+                        return res.x,sErr
                     else:
                         if DEBUG: print("Fit failed for {0}.".format(algorithm))
                         if DEBUG: sys.stdout.flush()
@@ -546,7 +585,7 @@ class IncompressibleFitter(object):
                 if DEBUG: print("--------------------------------------------------------------")
                 if DEBUG: print("Fit failed for {0}. ".format(fit))
                 if DEBUG: print("--------------------------------------------------------------")
-                return None,None
+                return coeffs,1
             
                     
     

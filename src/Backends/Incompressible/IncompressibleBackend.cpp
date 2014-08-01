@@ -101,6 +101,7 @@ void IncompressibleBackend::update(long input_pair, double value1, double value2
     if (_T < 0){ throw ValueError("T is less than zero");}
     if (!ValidNumber(_T)){ throw ValueError("T is not a valid number");}
     if (get_debug_level()>=50) std::cout << format("Incompressible backend: Update finished T=%f, p=%f, x=%s ",this->_T,this->_p,vec_to_string(_fractions).c_str()) << std::endl;
+    fluid->checkTPX(_T,_p,_fractions[0]);
 }
 
 /// Set the mole fractions
@@ -468,6 +469,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		CAPTURE(res);
 		CHECK( check_abs(val,res,acc) );
 		}
+		CoolProp::set_debug_level(100);
 		// ... as %
 		res = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("-%f%s",x*100.0,"%"));
 		{

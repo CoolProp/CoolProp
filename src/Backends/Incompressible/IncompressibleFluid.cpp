@@ -1,9 +1,9 @@
 
+#include "DataStructures.h"
 #include "IncompressibleFluid.h"
 #include "math.h"
 #include "MatrixMath.h"
 #include "PolyMath.h"
-#include "DataStructures.h"
 
 namespace CoolProp {
 
@@ -39,13 +39,21 @@ bool IncompressibleFluid::is_pure() {
 	return false;
 }
 
-/// Base functions that handle the custom data type, just a place holder to show the structure.
+/// Base exponential function
 double IncompressibleFluid::baseExponential(IncompressibleData data, double y, double ybase){
 	Eigen::VectorXd coeffs = makeVector(data.coeffs);
 	size_t r=coeffs.rows(),c=coeffs.cols();
 	if (strict && (r!=3 || c!=1) ) throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).",__FILE__,__LINE__,r,c));
 	return exp( (double) (coeffs[0] / ( (y-ybase)+coeffs[1] ) - coeffs[2] ) );
 }
+/// Base exponential function with logarithmic term
+double IncompressibleFluid::baseLogexponential(IncompressibleData data, double y, double ybase){
+	Eigen::VectorXd coeffs = makeVector(data.coeffs);
+	size_t r=coeffs.rows(),c=coeffs.cols();
+	if (strict && (r!=3 || c!=1) ) throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).",__FILE__,__LINE__,r,c));
+	return exp( (double) ( log( (double) (1.0/((y-ybase)+coeffs[0]) + 1.0/((y-ybase)+coeffs[0])/((y-ybase)+coeffs[0]) ) ) *coeffs[1]+coeffs[2] ) );
+}
+
 double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, double z){
 	size_t r=data.coeffs.rows(),c=data.coeffs.cols();
 	double offset = 0.0;
@@ -76,6 +84,9 @@ double IncompressibleFluid::rho (double T, double p, double x){
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
 			return baseExponential(density, T, 0.0);
+			break;
+		case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+			return baseLogexponential(density, T, 0.0);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 			return exp(poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase));
@@ -156,6 +167,9 @@ double IncompressibleFluid::visc(double T, double p, double x){
 		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
 			return baseExponential(viscosity, T, 0.0);
 			break;
+		case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+			return baseLogexponential(viscosity, T, 0.0);
+			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 			return exp(poly.evaluate(viscosity.coeffs, T, x, 0, 0, Tbase, xbase));
 			break;
@@ -179,6 +193,9 @@ double IncompressibleFluid::cond(double T, double p, double x){
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
 			return baseExponential(conductivity, T, 0.0);
+			break;
+		case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+			return baseLogexponential(conductivity, T, 0.0);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 			return exp(poly.evaluate(conductivity.coeffs, T, x, 0, 0, Tbase, xbase));
@@ -205,6 +222,9 @@ double IncompressibleFluid::psat(double T,           double x){
 		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
 			return baseExponential(p_sat, T, 0.0);
 			break;
+		case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+			return baseLogexponential(p_sat, T, 0.0);
+			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 			return exp(poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase));
 			break;
@@ -228,6 +248,9 @@ double IncompressibleFluid::Tfreeze(       double p, double x){
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
 			return baseExponential(T_freeze, x, 0.0);
+			break;
+		case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+			return baseLogexponential(T_freeze, x, 0.0);
 			break;
 		case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 			return exp(poly.evaluate(T_freeze.coeffs, p, x, 0, 0, 0.0, xbase));
@@ -260,7 +283,10 @@ double IncompressibleFluid::inputFromMass (double T,     double x){
 				return poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-				return baseExponential(mass2input, T, 0.0);
+				return baseExponential(mass2input, x, 0.0);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+				return baseLogexponential(mass2input, x, 0.0);
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 				return exp(poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
@@ -294,7 +320,10 @@ double IncompressibleFluid::inputFromVolume (double T,   double x){
 				return poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-				return baseExponential(volume2input, T, 0.0);
+				return baseExponential(volume2input, x, 0.0);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+				return baseLogexponential(volume2input, x, 0.0);
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 				return exp(poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
@@ -328,7 +357,10 @@ double IncompressibleFluid::inputFromMole (double T,     double x){
 				return poly.evaluate(mole2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-				return baseExponential(mole2input, T, 0.0);
+				return baseExponential(mole2input, x, 0.0);
+				break;
+			case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+				return baseLogexponential(mole2input, x, 0.0);
 				break;
 			case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
 				return exp(poly.evaluate(mole2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
@@ -441,21 +473,11 @@ double IncompressibleFluid::T_u   (double Umass, double p, double x){
 bool IncompressibleFluid::checkT(double T, double p, double x) {
 	if (Tmin <= 0.) throw ValueError("Please specify the minimum temperature.");
 	if (Tmax <= 0.) throw ValueError("Please specify the maximum temperature.");
-	if ((Tmin > T) || (T > Tmax)) throw ValueError(
-				format("Your temperature %f is not between %f and %f.",
-						T, Tmin, Tmax));
+	if ((Tmin > T) || (T > Tmax)) throw ValueError(format("Your temperature %f is not between %f and %f.", T, Tmin, Tmax));
 	double TF = 0.0;
-	if (T_freeze.type!=IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
-		TF = Tfreeze(p, x);
-	}
-	if ( T<TF) {
-		throw ValueError(
-			format("Your temperature %f is below the freezing point of %f.",
-					T, TF));
-	} else {
-		return true;
-	}
-	return false;
+	if (T_freeze.type!=IncompressibleData::INCOMPRESSIBLE_NOT_SET) TF = Tfreeze(p, x);
+	if ( T<TF) throw ValueError(format("Your temperature %f is below the freezing point of %f.", T, TF));
+	return true;
 }
 
 /// Check validity of pressure input.
@@ -467,21 +489,10 @@ bool IncompressibleFluid::checkT(double T, double p, double x) {
  *  */
 bool IncompressibleFluid::checkP(double T, double p, double x) {
 	double ps = 0.0;
-	if (p_sat.type!=IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
-		ps = psat(T, x);
-	}
-	if (p < 0.0) {
-		throw ValueError(
-				format("You cannot use negative pressures: %f < %f. ",
-						p, 0.0));
-	} else if (p < ps) {
-		throw ValueError(
-				format("Equations are valid for liquid phase only: %f < %f. ",
-						p, ps));
-	} else {
-		return true;
-	}
-	return false;
+	if (p_sat.type!=IncompressibleData::INCOMPRESSIBLE_NOT_SET) ps = psat(T, x);
+	if (p < 0.0) throw ValueError(format("You cannot use negative pressures: %f < %f. ", p, 0.0));
+	if (ps>0.0 && p < ps)  throw ValueError(format("Equations are valid for liquid phase only: %f < %f (psat). ", p, ps));
+	return true;
 }
 
 /// Check validity of composition input.
@@ -489,18 +500,10 @@ bool IncompressibleFluid::checkP(double T, double p, double x) {
  *  maximum value. Enforces the redefinition of xmin and
  *  xmax since the default values cause an error. */
 bool IncompressibleFluid::checkX(double x){
-	if (xmin < 0. || xmin > 1.0) {
-		throw ValueError("Please specify the minimum concentration between 0 and 1.");
-	} else if (xmax < 0.0 || xmax > 1.0) {
-		throw ValueError("Please specify the maximum concentration between 0 and 1.");
-	} else if ((xmin > x) || (x > xmax)) {
-		throw ValueError(
-				format("Your composition %f is not between %f and %f.",
-						x, xmin, xmax));
-	} else {
-		return true;
-	}
-	return false;
+	if (xmin < 0.0 || xmin > 1.0) throw ValueError("Please specify the minimum concentration between 0 and 1.");
+	if (xmax < 0.0 || xmax > 1.0) throw ValueError("Please specify the maximum concentration between 0 and 1.");
+	if ((xmin > x) || (x > xmax)) throw ValueError(format("Your composition %f is not between %f and %f.", x, xmin, xmax));
+	return true;
 }
 
 } /* namespace CoolProp */

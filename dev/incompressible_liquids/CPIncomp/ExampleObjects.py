@@ -95,7 +95,7 @@ class DigitalExamplePure(PureData,DigitalData):
         PureData.__init__(self) 
 
         self.name = "ExampleDigitalPure"
-        self.description = "water"
+        self.description = "water at 100 bar"
         self.reference = "none"
         
         self.Tmin = 280.00;

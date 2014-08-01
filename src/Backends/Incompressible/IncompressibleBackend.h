@@ -2,9 +2,9 @@
 #ifndef INCOMPRESSIBLEBACKEND_H_
 #define INCOMPRESSIBLEBACKEND_H_
 
+#include "DataStructures.h"
 #include "IncompressibleFluid.h"
 #include "AbstractState.h"
-#include "DataStructures.h"
 #include "Exceptions.h"
 
 #include <vector>
@@ -33,9 +33,9 @@ public:
 	IncompressibleBackend(const std::vector<std::string> &component_names);
 
     // Incompressible backend uses different compositions
-    bool using_mole_fractions(){return this->fluid->getxid()==ifrac_mole;};
+    bool using_mole_fractions(){return  this->fluid->getxid()==ifrac_mole;};
     bool using_mass_fractions(){return (this->fluid->getxid()==ifrac_mass || this->fluid->getxid()==ifrac_pure);};
-    bool using_volu_fractions(){return this->fluid->getxid()==ifrac_volume;};
+    bool using_volu_fractions(){return  this->fluid->getxid()==ifrac_volume;};
 
     /// Updating function for incompressible fluid
     /**

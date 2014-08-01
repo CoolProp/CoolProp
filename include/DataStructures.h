@@ -74,10 +74,10 @@ int get_parameter_index(const std::string &param_name);
 std::string get_csv_parameter_list();
 
 /// These are constants for the compositions
-enum compositions {ifrac_mass, ifrac_mole, ifrac_volume, ifrac_undefined, ifrac_pure};
+enum compositions{ifrac_mass, ifrac_mole, ifrac_volume, ifrac_undefined, ifrac_pure};
 
 /// These are constants for the phases of the fluid
-enum phases {iphase_liquid, iphase_supercritical, iphase_gas, iphase_twophase, iphase_unknown};
+enum phases{ iphase_liquid, iphase_supercritical, iphase_gas, iphase_twophase, iphase_unknown };
 
 /// These are unit types for the fluid
 enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLUID_TYPE_INCOMPRESSIBLE_LIQUID, FLUID_TYPE_INCOMPRESSIBLE_SOLUTION, FLUID_TYPE_UNDEFINED};

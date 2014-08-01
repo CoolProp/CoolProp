@@ -367,6 +367,11 @@ IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Valu
 					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
 					return fluidData;
 				}
+				else if (!type.compare("logexponential")){
+					fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL;
+					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array(obj[id.c_str()]["coeffs"]));
+					return fluidData;
+				}
 				else if (!type.compare("exppolynomial")){
 					fluidData.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL;
 					fluidData.coeffs = vec_to_eigen(cpjson::get_double_array2D(obj[id.c_str()]["coeffs"]));

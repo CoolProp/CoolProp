@@ -32,6 +32,7 @@ struct IncompressibleData {
 		INCOMPRESSIBLE_POLYNOMIAL,
 		INCOMPRESSIBLE_EXPPOLYNOMIAL,
 		INCOMPRESSIBLE_EXPONENTIAL,
+		INCOMPRESSIBLE_LOGEXPONENTIAL,
 		INCOMPRESSIBLE_POLYOFFSET
 	};
 	Eigen::MatrixXd coeffs; //TODO: Can we store the Eigen::Matrix objects more efficiently?
@@ -191,6 +192,7 @@ public:
 protected:
 	/// Base functions that handle the custom function types
 	double baseExponential(IncompressibleData data, double y, double ybase);
+	double baseLogexponential(IncompressibleData data, double y, double ybase);
 	double baseExponentialOffset(IncompressibleData data, double y);
 	double basePolyOffset(IncompressibleData data, double y, double z=0.0);
 
@@ -309,6 +311,7 @@ protected:
 	 *  xmax since the default values cause an error. */
 	bool checkX(double x);
 
+public:
 	/// Check validity of temperature, pressure and composition input.
 	bool checkTPX(double T, double p, double x){
 		return (checkT(T,p,x) && checkP(T,p,x) && checkX(x));

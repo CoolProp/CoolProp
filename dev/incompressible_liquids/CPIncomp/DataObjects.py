@@ -207,11 +207,15 @@ class SolutionData(object):
             #if y!=0.0: raise ValueError("This is 1D only, use x not y.")
             return self.T_freeze.baseExponential(c, x)
         
+        elif self.T_freeze.type==IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL:
+            #if y!=0.0: raise ValueError("This is 1D only, use x not y.")
+            return self.T_freeze.baseLogexponential(c, x)
+        
         elif self.T_freeze.type==self.T_freeze.INCOMPRESSIBLE_EXPPOLYNOMIAL:
             return np.exp(np.polynomial.polynomial.polyval2d(p-0.0, x-self.xbase, c))
         
         else:
-            raise ValueError("Unknown function: {0}.".format(self.type))
+            raise ValueError("Unknown function: {0}.".format(self.T_freeze.type))
   
     
     

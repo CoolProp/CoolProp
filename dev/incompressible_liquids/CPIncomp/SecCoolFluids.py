@@ -54,8 +54,8 @@ class SecCoolSolutionData(DigitalData):
         
         try:
             self.specific_heat.xData,self.specific_heat.yData,self.specific_heat.data = self.getArray(dataID='Cp')
-            while np.max(self.specific_heat.data[np.isfinite(self.specific_heat.data)])<500: # Expect values around 1e3
-                self.specific_heat.data *= 1e3 
+            while np.max(self.specific_heat.data[np.isfinite(self.specific_heat.data)])<1000: # Expect values around 2e3
+                self.specific_heat.data *= 10.0
             self.specific_heat.source = self.specific_heat.SOURCE_DATA
         except:
             if self.density.DEBUG: print("Could not load {}".format(self.getFile("Cp")))
@@ -63,8 +63,8 @@ class SecCoolSolutionData(DigitalData):
             
         try:
             self.conductivity.xData,self.conductivity.yData,self.conductivity.data   = self.getArray(dataID='Cond')
-            while np.max(self.conductivity.data[np.isfinite(self.conductivity.data)])>10: # Expect value below 1
-                self.conductivity.data *= 1e-3 
+            while np.max(self.conductivity.data[np.isfinite(self.conductivity.data)])>2: # Expect value below 1
+                self.conductivity.data *=  0.1 
             self.conductivity.source = self.conductivity.SOURCE_DATA
         except:
             if self.density.DEBUG: print("Could not load {}".format(self.getFile("Cond")))
@@ -72,8 +72,8 @@ class SecCoolSolutionData(DigitalData):
         
         try:
             self.viscosity.xData,self.viscosity.yData,self.viscosity.data   = self.getArray(dataID='Mu')
-            while np.max(self.viscosity.data[np.isfinite(self.viscosity.data)])>100: # Expect value below 10
-                self.viscosity.data *= 1e-3 
+            while np.max(self.viscosity.data[np.isfinite(self.viscosity.data)])>0.2: # Expect value below 0.1
+                self.viscosity.data *=  0.1
             self.viscosity.source = self.viscosity.SOURCE_DATA
         except:
             if self.density.DEBUG: print("Could not load {}".format(self.getFile("Mu")))
@@ -168,7 +168,7 @@ class SecCoolSolutionData(DigitalData):
                 if self.viscosity.coeffs==None or IncompressibleFitter.allClose(self.viscosity.coeffs, np.array([+7e+2, -6e+1, +1e+1])): # Fit failed
                     tried = True
             if len(self.viscosity.yData)>1 or tried:
-                self.viscosity.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
+                self.viscosity.coeffs = np.copy(std_coeffs)#np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
                 self.viscosity.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
                 self.viscosity.fitCoeffs(self.Tbase,self.xbase)
         except errList as ve:
@@ -189,13 +189,16 @@ class SecCoolSolutionData(DigitalData):
                 self.T_freeze.data = z.T
                 try:
                     self.T_freeze.source = self.T_freeze.SOURCE_DATA
-                    if np.isfinite(self.T_freeze.data).sum()<2:
-                        self.T_freeze.coeffs = np.array([+7e+6, +6e+4, +1e+1])
-                        self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_EXPONENTIAL
-                    else:   
-                        self.T_freeze.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 2))
-                        self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_EXPPOLYNOMIAL
+                    self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_EXPONENTIAL
+                    self.T_freeze.coeffs = np.array([+7e+6, +6e+4, +1e+1])
                     self.T_freeze.fitCoeffs(self.Tbase,self.xbase)
+                    #if np.isfinite(self.T_freeze.data).sum()<10:
+                    #    self.T_freeze.coeffs = np.array([+7e+6, +6e+4, +1e+1])
+                    #    self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_EXPONENTIAL
+                    #else:   
+                    #    self.T_freeze.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 2))
+                    #    self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_EXPPOLYNOMIAL
+                    #self.T_freeze.fitCoeffs(self.Tbase,self.xbase)
                 except errList as ve:
                     if self.T_freeze.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(self.name,"T_freeze",ve))
                     pass

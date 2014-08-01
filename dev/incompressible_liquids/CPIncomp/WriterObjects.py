@@ -8,6 +8,7 @@ from CPIncomp.DataObjects import SolutionData
 from CPIncomp.BaseObjects import IncompressibleData, IncompressibleFitter
 from matplotlib.patches import Rectangle
 from matplotlib.ticker import MaxNLocator
+from matplotlib.backends.backend_pdf import PdfPages
 
 class SolutionDataWriter(object):
     """ 
@@ -76,7 +77,8 @@ class SolutionDataWriter(object):
                 if fluidObject.viscosity.coeffs==None or IncompressibleFitter.allClose(fluidObject.viscosity.coeffs, np.array([+5e+2, -6e+1, +1e+1])): # Fit failed
                     tried = True
             if len(fluidObject.viscosity.yData)>1 or tried:
-                fluidObject.viscosity.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
+                #fluidObject.viscosity.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
+                fluidObject.viscosity.coeffs = np.copy(std_coeffs)
                 fluidObject.viscosity.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
                 fluidObject.viscosity.fitCoeffs(tBase,xBase)
         except errList as ve:
@@ -93,7 +95,8 @@ class SolutionDataWriter(object):
                 if fluidObject.saturation_pressure.coeffs==None or IncompressibleFitter.allClose(fluidObject.saturation_pressure.coeffs, np.array([-5e+3, +6e+1, -1e+1])): # Fit failed
                     tried = True
             if len(fluidObject.saturation_pressure.yData)>1 or tried:
-                fluidObject.saturation_pressure.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
+                #fluidObject.saturation_pressure.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1.5))
+                fluidObject.saturation_pressure.coeffs = np.copy(std_coeffs)
                 fluidObject.saturation_pressure.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
                 fluidObject.saturation_pressure.fitCoeffs(tBase,xBase)
         except errList as ve:
@@ -104,11 +107,11 @@ class SolutionDataWriter(object):
         if fluidObject.xid!=fluidObject.ifrac_pure and fluidObject.xid!=fluidObject.ifrac_undefined:
             fluidObject.T_freeze.setxyData([0.0],xData)
             try:
-                if len(fluidObject.T_freeze.xData)==1 and np.isfinite(fluidObject.T_freeze.data).sum()<2:
+                if len(fluidObject.T_freeze.xData)==1:# and np.isfinite(fluidObject.T_freeze.data).sum()<10:
                     fluidObject.T_freeze.coeffs = np.array([+7e+2, -6e+1, +1e+1])
                     fluidObject.T_freeze.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
                 else:   
-                    fluidObject.T_freeze.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 1))
+                    fluidObject.specific_heat.coeffs = np.copy(std_coeffs)
                     fluidObject.T_freeze.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
                 fluidObject.T_freeze.fitCoeffs(tBase,xBase)
             except errList as ve:
@@ -276,11 +279,13 @@ class SolutionDataWriter(object):
         print(" ... done") 
         return 
     
-    def writeReportList(self, fluidObjs):
+    def writeReportList(self, fluidObjs, pdfFile=None):
         print("Writing fitting reports:", end="")
+        pdfObj = None
+        if pdfFile!=None: pdfObj = PdfPages(pdfFile)
         for obj in fluidObjs:
             self.printStatusID(fluidObjs, obj)
-            self.makeFitReportPage(obj)           
+            self.makeFitReportPage(obj,pdfObj=pdfObj)           
             try: 
                 self.makeFitReportPage(obj)
             except (TypeError, ValueError) as e:
@@ -288,6 +293,7 @@ class SolutionDataWriter(object):
                 print(obj)
                 print(e)
                 pass
+        if pdfFile!=None: pdfObj.close()
         print(" ... done") 
         return 
     
@@ -552,6 +558,10 @@ class SolutionDataWriter(object):
 
         if zFunc!=None and axVal!=None:
             axVal.plot(pFunc, zFunc, label='function' , **fitFormatter)
+            if solObj.xid!=solObj.ifrac_pure and not xFunction:
+                axVal.set_title("showing x={0:3.2f}".format(xFunc[0]))
+            else:
+                axVal.set_title(" ")
             
         if zMiMa!=None and axVal!=None:
             axVal.plot(pMiMa, zMiMa, alpha=0.25, ls=':', color=fitFormatter["color"])
@@ -561,10 +571,7 @@ class SolutionDataWriter(object):
             
         if zError!=None and axErr!=None:
             axErr.plot(pData, zError, label='error' , **errorFormatter)
-            if solObj.xid!=solObj.ifrac_pure and not xFunction:
-                axErr.set_title("showing x={0:3.2f}".format(xData[0]))
-            else:
-                axErr.set_title(" ")
+
         elif axErr!=None:
             errorFormatter['alpha'] = 0.00
             axErr.plot([pData[0],pData[-1]], [0,0], **errorFormatter)
@@ -642,29 +649,42 @@ class SolutionDataWriter(object):
         if solObj.xid==solObj.ifrac_volume: conc=True
         if solObj.xid==solObj.ifrac_mole: conc=True
         if conc==True:
-            myAnnotate('Composition: ',u'{0} % to {1} %, {2}'.format(solObj.xmin*100., solObj.xmax*100., solObj.xid),x=x,y=y); x += .0; y -= dy
+            myAnnotate('Composition: ',u'{0} % to {1} %, {2}'.format(solObj.xmin*100., solObj.xmax*100., solObj.xid),x=x,y=y)
         else:
-            x += .0; y -= dy
+            myAnnotate('Composition: ','pure fluid',x=x,y=y)
+        x += .0; y -= dy
             
         if solObj.density.source!=solObj.density.SOURCE_NOT_SET:
             myAnnotate('Density: ',u'{0} to {1} {2}'.format(solObj.density.source, solObj.density.type, solObj.density.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Density: ','no information',x=x,y=y)
         x += .0; y -= dy
         if solObj.specific_heat.source!=solObj.specific_heat.SOURCE_NOT_SET:
             myAnnotate('Spec. Heat: ',u'{0} to {1} {2}'.format(solObj.specific_heat.source, solObj.specific_heat.type, solObj.specific_heat.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Spec. Heat: ','no information',x=x,y=y)
         x += .0; y -= dy
             
         x = xStart + dx; y = yStart-dy-dy
         if solObj.conductivity.source!=solObj.conductivity.SOURCE_NOT_SET:
             myAnnotate('Th. Cond.: ',u'{0} to {1} {2}'.format(solObj.conductivity.source, solObj.conductivity.type, solObj.conductivity.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Th. Cond.: ','no information',x=x,y=y)
         x += .0; y -= dy
         if solObj.viscosity.source!=solObj.viscosity.SOURCE_NOT_SET:
             myAnnotate('Viscosity: ',u'{0} to {1} {2}'.format(solObj.viscosity.source, solObj.viscosity.type, solObj.viscosity.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Viscosity: ','no information',x=x,y=y)
         x += .0; y -= dy
         if solObj.saturation_pressure.source!=solObj.saturation_pressure.SOURCE_NOT_SET:
             myAnnotate('Psat: ',u'{0} to {1} {2}'.format(solObj.saturation_pressure.source, solObj.saturation_pressure.type, solObj.saturation_pressure.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Psat: ','no information',x=x,y=y)
         x += .0; y -= dy
         if solObj.T_freeze.source!=solObj.T_freeze.SOURCE_NOT_SET:
             myAnnotate('Tfreeze: ',u'{0} to {1} {2}'.format(solObj.T_freeze.source, solObj.T_freeze.type, solObj.T_freeze.coeffs.shape),x=x,y=y)
+        else:
+            myAnnotate('Tfreeze: ','no information',x=x,y=y)
         x += .0; y -= dy
 
         
@@ -682,7 +702,7 @@ class SolutionDataWriter(object):
     
     
     
-    def makeFitReportPage(self, solObj=SolutionData()):
+    def makeFitReportPage(self, solObj=SolutionData(), pdfObj=None):
         """
         Creates a whole page with some plots and basic information
         for both fit quality, reference data, data sources and 
@@ -866,11 +886,8 @@ class SolutionDataWriter(object):
         #plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
         
         plt.savefig(os.path.join("report","{0}_fitreport.pdf".format(solObj.name)))
+        if pdfObj!=None: pdfObj.savefig(fig)
         plt.close()
-
-        
-        
-        
         pass
     
     
