@@ -14,26 +14,27 @@ IF( "$ENV{MATLAB_ROOT}" STREQUAL "" )
     MESSAGE(STATUS "MATLAB_ROOT=D:\\Program Files\\MATLAB\\R2011a" )
 ELSE()
 
-        FIND_PATH(MATLAB_INCLUDE_DIR mex.h
-                  $ENV{MATLAB_ROOT}/extern/include)
+	MESSAGE (STATUS "MATLAB_INCLUDE maybe: $ENV{MATLAB_ROOT}/extern/include")
+	FIND_PATH(MATLAB_INCLUDE_DIR mex.h
+			  $ENV{MATLAB_ROOT}/extern/include)
 
-        INCLUDE_DIRECTORIES(${MATLAB_INCLUDE_DIR})
+	INCLUDE_DIRECTORIES(${MATLAB_INCLUDE_DIR})
 
-        FIND_LIBRARY( MATLAB_MEX_LIBRARY
-                      NAMES libmex mex
-                      PATHS $ENV{MATLAB_ROOT}/bin $ENV{MATLAB_ROOT}/extern/lib
-                      PATH_SUFFIXES glnxa64 glnx86 win64/microsoft win32/microsoft maci64 maci32
-                      NO_DEFAULT_PATH)
-        FIND_LIBRARY( MATLAB_MX_LIBRARY
-                      NAMES libmx mx
-                      PATHS $ENV{MATLAB_ROOT}/bin $ENV{MATLAB_ROOT}/extern/lib
-                      PATH_SUFFIXES glnxa64 glnx86 win64/microsoft win32/microsoft maci64 maci32
-                      NO_DEFAULT_PATH)
-		FIND_LIBRARY( MATLAB_MAT_LIBRARY
-                      NAMES libmat mat
-                      PATHS $ENV{MATLAB_ROOT}/bin $ENV{MATLAB_ROOT}/extern/lib
-                      PATH_SUFFIXES glnxa64 glnx86 win64/microsoft win32/microsoft maci64 maci32
-                      NO_DEFAULT_PATH)
+	FIND_LIBRARY( MATLAB_MEX_LIBRARY
+				  NAMES libmex mex
+				  PATHS $ENV{MATLAB_ROOT}/bin $ENV{MATLAB_ROOT}/extern/lib
+				  PATH_SUFFIXES glnxa64 glnx86 win64/microsoft win32/microsoft maci64 maci32
+				  NO_DEFAULT_PATH)
+	FIND_LIBRARY( MATLAB_MX_LIBRARY
+				  NAMES libmx mx
+				  PATHS $ENV{MATLAB_ROOT}/bin $ENV{MATLAB_ROOT}/extern/lib
+				  PATH_SUFFIXES glnxa64 glnx86 win64/microsoft win32/microsoft maci64 maci32
+				  NO_DEFAULT_PATH)
+	FIND_LIBRARY( MATLAB_MAT_LIBRARY
+				  NAMES libmat mat
+				  PATHS $ENV{MATLAB_ROOT}/bin $ENV{MATLAB_ROOT}/extern/lib
+				  PATH_SUFFIXES glnxa64 glnx86 win64/microsoft win32/microsoft maci64 maci32
+				  NO_DEFAULT_PATH)
 
 ENDIF()
 

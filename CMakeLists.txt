@@ -198,30 +198,21 @@ if (COOLPROP_OCTAVE_MODULE)
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
   
-  # Find the required libraries
-  find_library(OCTAVE_LIB octave PATHS ${OCTAVE_LINK_DIRS})
-  find_library(OCTINTERP_LIB octinterp PATHS ${OCTAVE_LINK_DIRS})
-  find_library(CRUFT_LIB cruft PATHS ${OCTAVE_LINK_DIRS})
-  
-  message(STATUS "OCTAVE_LIB=${OCTAVE_LIB}")
-  message(STATUS "OCTINTERP_LIB=${OCTINTERP_LIB}")
-  message(STATUS "CRUFT_LIB=${CRUFT_LIB}")
-  
   # Set the include folders
   SET(OCTAVE_WRAP_INCLUDE_DIRS ${INCLUDE_DIR})
   foreach(ITR ${OCTAVE_INCLUDE_DIRS})
     list(APPEND OCTAVE_WRAP_INCLUDE_DIRS ${ITR})
   endforeach()
-  include_directories(${OCTAVE_WRAP_INCLUDE_DIRS})
+  include_directories(${OCTAVE_INCLUDE_DIRS})
 
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
 
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   SWIG_ADD_MODULE(CoolProp octave ${I_FILE} ${APP_SOURCES})
   if (!OSX)
-    SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB} ${CRUFT_LIB})  
+    SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_OCTAVE_LIB} ${OCTAVE_OCTINTERP_LIB} ${OCTAVE_CRUFT_LIB})  
   else()
-    SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIB} ${OCTINTERP_LIB})
+    SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_OCTAVE_LIB} ${OCTAVE_OCTINTERP_LIB})
   endif()
   
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
