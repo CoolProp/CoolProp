@@ -72,7 +72,7 @@ You need to just slightly modify the building procedure::
     set MATLAB_ROOT=c:\Program Files\MATLAB\R2014a
     # Build the makefile using CMake
     cmake ../.. -DCOOLPROP_MATLAB_MODULE=ON -DBUILD_TESTING=ON
-    # Make the MEX files (by default files will be generated in folder install_root/Octave relative to CMakeLists.txt file)
+    # Make the MEX files (by default files will be generated in folder install_root/MATLAB relative to CMakeLists.txt file)
     make install
     # Run the integration tests
     ctest --extra-verbose
