@@ -13,7 +13,7 @@ Superpacks are available at XXXXXXX which include all the code for a given opera
 =======================                    ===========================  =======================================
 Language                                   Operating Systems            Notes
 =======================                    ===========================  =======================================
-:ref:`Python <Python>`                     linux, OSX, win
+:ref:`Python <Python>`                     linux, OSX, win              Wrapper is Cython based
 :ref:`Octave <Octave>`                     linux, OSX, win              Wrapper is SWIG based
 :ref:`C# <Csharp>`                         linux, OSX, win              Wrapper is SWIG based
 :ref:`MATLAB <MATLAB>`                     linux, OSX, win              Wrapper is SWIG based (VERY experimental)
@@ -24,7 +24,7 @@ Javascript                                 linux, OSX, win              Also wor
 Maple                  
 Mathematica                      
 FORTRAN                                    linux, OSX, win
-EES                                        windows only
+:ref:`EES <EES>`                           windows only
 Microsoft Excel                            windows only
 =======================                    ===========================  =======================================
 
