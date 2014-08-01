@@ -238,6 +238,9 @@ protected:
     virtual long double calc_cpmass(void){return cpmolar()/molar_mass();}
     virtual long double calc_cvmass(void){return cvmolar()/molar_mass();}
     virtual long double calc_umass(void){return umolar()/molar_mass();}
+    
+    /// Update the states after having changed the reference state for enthalpy and entropy
+    virtual void update_states(void){throw NotImplementedError("This backend does not implement update states function");};
 
 public:
 
@@ -280,6 +283,8 @@ public:
     virtual void set_mass_fractions(const std::vector<long double> &mass_fractions) = 0;
     virtual void set_volu_fractions(const std::vector<long double> &mass_fractions){throw NotImplementedError("Volume composition has not been implemented.");}
 
+    
+    
     /// Clear all the cached values
     bool clear();
 

@@ -718,6 +718,7 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
         double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
         double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "IIR");
+        HEOS->update_states();
 	}
 	else if (!reference_state.compare("ASHRAE"))
 	{
@@ -729,6 +730,7 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
 		double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
         double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "ASHRAE");
+        HEOS->update_states();
 	}
 	else if (!reference_state.compare("NBP"))
 	{
@@ -740,6 +742,7 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
 		double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
         double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "NBP");
+        HEOS->update_states();
 	}
     else if (!reference_state.compare("DEF"))
     {

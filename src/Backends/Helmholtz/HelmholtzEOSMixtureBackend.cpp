@@ -111,6 +111,20 @@ void HelmholtzEOSMixtureBackend::set_excess_term()
 {
     Excess.construct(components);
 }
+void HelmholtzEOSMixtureBackend::update_states(void)
+{
+    CoolPropFluid &component = *(components[0]);
+    EquationOfState &EOS = component.EOSVector[0];
+    long double rho, T;
+    // Clear the state class
+    clear();
+    // Calculate the new enthalpy and entropy values
+    update(DmolarT_INPUTS, EOS.hs_anchor.rhomolar, EOS.hs_anchor.T);
+    EOS.hs_anchor.hmolar = hmolar();
+    EOS.hs_anchor.smolar = smolar();
+    // Clear again just to be sure
+    clear();
+}
 long double HelmholtzEOSMixtureBackend::calc_gas_constant(void)
 {
     double summer = 0;
@@ -649,12 +663,6 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 long double h_liq_error_band = component.ancillaries.hL.get_max_abs_error();
                 long double h_vap = h_liq + component.ancillaries.hLV.evaluate(_TLanc);
                 long double h_vap_error_band = h_liq_error_band + component.ancillaries.hLV.get_max_abs_error();
-                
-                #ifdef DEBUG
-                HelmholtzEOSMixtureBackend HEOS(components);
-                HEOS.update(QT_INPUTS, 0, _TLanc);
-                long double hh = HEOS.hmolar();
-                #endif
                                 
                 // Check if in range given the accuracy of the fit
                 if (value > h_vap + h_vap_error_band){
@@ -673,12 +681,6 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 long double s_liq_error_band = component.ancillaries.sL.get_max_abs_error();
                 long double s_vap = s_liq + component.ancillaries.sLV.evaluate(_TLanc);
                 long double s_vap_error_band = s_liq_error_band + component.ancillaries.sLV.get_max_abs_error();
-                
-                #ifdef DEBUG
-                HelmholtzEOSMixtureBackend HEOS(components);
-                HEOS.update(QT_INPUTS, 0, _TLanc);
-                long double ss = HEOS.smolar();
-                #endif
                 
                 // Check if in range given the accuracy of the fit
                 if (value > s_vap + s_vap_error_band){

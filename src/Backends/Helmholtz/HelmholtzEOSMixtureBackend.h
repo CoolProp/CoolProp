@@ -185,6 +185,8 @@ public:
     */
     long double calc_first_partial_deriv_nocache(long double T, long double rhomolar, int Of, int Wrt, int Constant);
 
+    void update_states();
+    
     void mass_to_molar_inputs(long &input_pair, double &value1, double &value2);
 
     // ***************************************************************
@@ -195,6 +197,8 @@ public:
     void T_phase_determination_pure_or_pseudopure(int other, long double value);
     void p_phase_determination_pure_or_pseudopure(int other, long double value);
     void DmolarP_phase_determination();
+    
+    
 
 
     // ***************************************************************
