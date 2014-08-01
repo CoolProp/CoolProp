@@ -328,6 +328,15 @@ protected:
 
         parse_alphar(EOS_json["alphar"], EOS);
         parse_alpha0(EOS_json["alpha0"], EOS);
+        
+        if (EOS_json["STATES"].HasMember("hs_anchor")){
+            rapidjson::Value &hs_anchor = EOS_json["STATES"]["hs_anchor"];
+            EOS.hs_anchor.T = cpjson::get_double(hs_anchor, "T");
+            EOS.hs_anchor.p = cpjson::get_double(hs_anchor, "p");
+            EOS.hs_anchor.rhomolar = cpjson::get_double(hs_anchor, "rhomolar");
+            EOS.hs_anchor.hmolar = cpjson::get_double(hs_anchor, "hmolar");
+            EOS.hs_anchor.smolar = cpjson::get_double(hs_anchor, "smolar");
+        }
 
         // Validate the equation of state that was just created
         EOS.validate();
@@ -915,7 +924,6 @@ protected:
             fluid.triple_vapor.p = cpjson::get_double(triple_vapor, "p");
             fluid.triple_vapor.rhomolar = cpjson::get_double(triple_vapor, "rhomolar");
         }
-
     };
 
     /// Parse the critical state for the given EOS

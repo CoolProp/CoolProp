@@ -130,7 +130,8 @@ namespace cpjson
 		if (!v.IsArray()) {throw CoolProp::ValueError("input is not an array"); }
 		for (rapidjson::Value::ValueIterator itr = v.Begin(); itr != v.End(); ++itr)
 		{
-		    cpjson::value_information vi = cpjson::get_information((*itr));
+		    // This is here for debugging purposes
+		    // cpjson::value_information vi = cpjson::get_information((*itr));
 			if (!(itr->IsArray())) {
                 throw CoolProp::ValueError(format("input \"%s\" is not a 2D array",cpjson::json2string(v).c_str())); 
             }

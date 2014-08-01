@@ -560,6 +560,9 @@ long double HelmholtzEOSMixtureBackend::calc_dCvirial_dT()
 }
 void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int other, long double value)
 {
+    // Reference declaration to save indexing
+    CoolPropFluid &component = *(components[0]);
+    
     // Check supercritical pressure
     if (_p > _crit.p)
     {
@@ -641,11 +644,18 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             }
             case iHmolar:
             {
-                long double h_liq = components[0]->ancillaries.hL.evaluate(_TLanc);
-                long double h_liq_error_band = components[0]->ancillaries.hL.get_max_abs_error();
-                long double h_vap = h_liq + components[0]->ancillaries.hLV.evaluate(_TLanc);
-                long double h_vap_error_band = h_liq_error_band + components[0]->ancillaries.hLV.get_max_abs_error();
+                // Ancillaries are h-h_anchor, so add back h_anchor
+                long double h_liq = component.ancillaries.hL.evaluate(_TLanc) + component.EOSVector[0].hs_anchor.hmolar;
+                long double h_liq_error_band = component.ancillaries.hL.get_max_abs_error();
+                long double h_vap = h_liq + component.ancillaries.hLV.evaluate(_TLanc);
+                long double h_vap_error_band = h_liq_error_band + component.ancillaries.hLV.get_max_abs_error();
                 
+                #ifdef DEBUG
+                HelmholtzEOSMixtureBackend HEOS(components);
+                HEOS.update(QT_INPUTS, 0, _TLanc);
+                long double hh = HEOS.hmolar();
+                #endif
+                                
                 // Check if in range given the accuracy of the fit
                 if (value > h_vap + h_vap_error_band){
                     this->_phase = iphase_gas; _Q = -1000; return;
@@ -657,10 +667,18 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             }
             case iSmolar:
             {
-                long double s_liq = components[0]->ancillaries.sL.evaluate(_TLanc);
-                long double s_liq_error_band = components[0]->ancillaries.sL.get_max_abs_error();
-                long double s_vap = s_liq + components[0]->ancillaries.sLV.evaluate(_TLanc);
-                long double s_vap_error_band = s_liq_error_band + components[0]->ancillaries.sLV.get_max_abs_error();
+                // Ancillaries are s-s_anchor, so add back s_anchor
+                long double s_anchor = component.EOSVector[0].hs_anchor.smolar;
+                long double s_liq = component.ancillaries.sL.evaluate(_TLanc) + s_anchor;
+                long double s_liq_error_band = component.ancillaries.sL.get_max_abs_error();
+                long double s_vap = s_liq + component.ancillaries.sLV.evaluate(_TLanc);
+                long double s_vap_error_band = s_liq_error_band + component.ancillaries.sLV.get_max_abs_error();
+                
+                #ifdef DEBUG
+                HelmholtzEOSMixtureBackend HEOS(components);
+                HEOS.update(QT_INPUTS, 0, _TLanc);
+                long double ss = HEOS.smolar();
+                #endif
                 
                 // Check if in range given the accuracy of the fit
                 if (value > s_vap + s_vap_error_band){
@@ -678,8 +696,8 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             default:
             {
                 // Always calculate the densities using the ancillaries
-                _rhoVanc = components[0]->ancillaries.rhoV.evaluate(_T);
-                _rhoLanc = components[0]->ancillaries.rhoL.evaluate(_T);
+                _rhoVanc = component.ancillaries.rhoV.evaluate(_T);
+                _rhoLanc = component.ancillaries.rhoL.evaluate(_T);
                 long double rho_vap = 0.95*static_cast<double>(_rhoVanc);
                 long double rho_liq = 1.05*static_cast<double>(_rhoLanc);
                 switch (other)
