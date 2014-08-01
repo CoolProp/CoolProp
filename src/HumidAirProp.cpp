@@ -143,7 +143,6 @@ static double Brent_HAProps_T(char *OutputName, char *Input1Name, double Input1,
         double Input1,Input2,TargetVal;
         char *OutputName,*Input1Name,*Input2Name;
     public:
-        double rhoL, rhoV;
         BrentSolverResids(char *OutputName, char *Input1Name, double Input1, char *Input2Name, double Input2, double TargetVal)
         {
             this->OutputName = OutputName;
