@@ -8,6 +8,7 @@
 #ifndef DATASTRUCTURES_H_
 #define DATASTRUCTURES_H_
 
+#include "CoolPropTools.h"
 #include "Exceptions.h"
 #include <map>
 namespace CoolProp {
@@ -15,6 +16,8 @@ namespace CoolProp {
 struct SimpleState
 {
     double rhomolar, T, p, hmolar, smolar, umolar;
+    SimpleState(){rhomolar = _HUGE; T = _HUGE; p = _HUGE; 
+                  hmolar = _HUGE; smolar = _HUGE, umolar = _HUGE;}
 };
 
 /// --------------------------------------------------
