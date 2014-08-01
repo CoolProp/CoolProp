@@ -242,14 +242,23 @@
             if (double_vectors.find(s) != double_vectors.end()){ return double_vectors[s]; } else{ throw std::exception(); }
         };
     };
-
-    /// Utility function for a std::map of pointers
+    /// Utility function to clear a std::map of pointers
     //http://stackoverflow.com/questions/569110/why-is-memory-still-accessible-after-stdmapclear-is-called
     template <typename M> void freeClear( M & amap ) {
         for ( typename M::iterator it = amap.begin(); it != amap.end(); ++it ) {
             delete it->second;
         }
         amap.clear();
+    }
+
+    /// Make a linearly spaced vector of points
+    template <typename T> std::vector<T> linspace(T xmin, T xmax, int n) {
+        std::vector<T> x(n, 0.0);
+        
+        for ( std::size_t i = 0;  i < n; ++i) {
+            x[i] = (xmax-xmin)/(n-1)*i+xmin;
+        }
+        return x;
     }
 
     /// Some functions related to testing and comparison of values
