@@ -4,6 +4,8 @@
 EES Wrapper
 ***********
 
+EES is an acausal solver that can be used to solve a wide range of technical problems.  Though EES has its own set of thermodynamic properties, CoolProp also implements a number of things that are not in EES (incompressibles, interpolation methods).
+
 Pre-compiled Binaries
 =====================
 Pre-compiled binaries can be downloaded from XXXXXXXXXXXXXX
