@@ -904,6 +904,10 @@ class SolutionDataWriter(object):
         
         
         pass 
+    
+    def generateRstTable(self):
+        
+        pass
         
         
     
