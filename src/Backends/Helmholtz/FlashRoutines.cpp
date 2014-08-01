@@ -33,6 +33,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
             // Actually call the solver
             SaturationSolvers::saturation_T_pure(&HEOS, HEOS._T, options);
             // Load the outputs
+            HEOS._phase = iphase_twophase;
             HEOS._p = HEOS._Q*HEOS.SatV->p() + (1- HEOS._Q)*HEOS.SatL->p();
             HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
         }
@@ -63,8 +64,11 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 rhoLsat = rhoLanc;
                 rhoVsat = rhoVanc;
             }
+            HEOS._phase = iphase_twophase;
             HEOS._p = HEOS._Q*psatVanc + (1-HEOS._Q)*psatLanc;
             HEOS._rhomolar = 1/(HEOS._Q/rhoVsat + (1-HEOS._Q)/rhoLsat);
+            HEOS.SatL->update(DmolarT_INPUTS, rhoLsat, HEOS._T);
+            HEOS.SatV->update(DmolarT_INPUTS, rhoVsat, HEOS._T);
         }
     }
     else
@@ -107,13 +111,14 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             // Set some imput options
             SaturationSolvers::saturation_PHSU_pure_options options;
             // Specified variable is pressure
-            options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_PV;
+            options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_PL;
             // Use logarithm of delta as independent variables
             options.use_logdelta = false;
             // Actually call the solver
             SaturationSolvers::saturation_PHSU_pure(&HEOS, HEOS._p, options);
 
             // Load the outputs
+            HEOS._phase = iphase_twophase;
             HEOS._p = HEOS._Q*HEOS.SatV->p() + (1 - HEOS._Q)*HEOS.SatL->p();
             HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
             HEOS._T = HEOS.SatL->T();
@@ -136,6 +141,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
 
         // Load the outputs
+        HEOS._phase = iphase_twophase;
         HEOS._p = HEOS.SatV->p();
         HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
         HEOS._T = HEOS.SatL->T();
@@ -242,7 +248,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 if (value > Sat->keyed_output(other))
                 {
                     solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
-
+                    HEOS._phase = iphase_twophase;
                     HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax(), DBL_EPSILON, 1e-12, 100, errstring);
                     HEOS._Q = 10000;
                     HEOS.calc_pressure();
@@ -276,7 +282,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 if (value > y)
                 {
                     solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
-
+                    HEOS._phase = iphase_gas;
                     HEOS._T = Brent(resid, TVtriple, HEOS.Tmax(), DBL_EPSILON, 1e-12, 100, errstring);
                     HEOS._Q = 10000;
                     HEOS.calc_pressure();
@@ -310,7 +316,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 if (value > y)
                 {
                     solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
-
+                    HEOS._phase = iphase_liquid;
                     HEOS._T = Brent(resid, TLtriple, HEOS.Tmax(), DBL_EPSILON, 1e-12, 100, errstring);
                     HEOS._Q = 10000;
                     HEOS.calc_pressure();
@@ -451,7 +457,6 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
     {
         long double T0 = 300, rho0 = 100;
         HSU_P_flash_singlephase(HEOS, other, T0, rho0);
-        
         HEOS._Q = -1;
     }
 }

@@ -25,9 +25,9 @@ protected:
 
     SimpleState _crit;
     int imposed_phase_index;
-    int N; // Number of components
+    int N; ///< Number of components
 public:
-    HelmholtzEOSMixtureBackend(){imposed_phase_index = -1;};
+    HelmholtzEOSMixtureBackend(){imposed_phase_index = -1; _phase = iphase_unknown;};
     HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
     virtual ~HelmholtzEOSMixtureBackend(){};
@@ -65,7 +65,7 @@ public:
     \brief Specify the phase - this phase will always be used in calculations
     @param phase_index The index from CoolProp::phases
     */
-    void specify_phase(int phase_index){imposed_phase_index = phase_index;};
+    void specify_phase(int phase_index){imposed_phase_index = phase_index; _phase = phase_index;};
 
     void set_reducing_function();
     void set_excess_term();

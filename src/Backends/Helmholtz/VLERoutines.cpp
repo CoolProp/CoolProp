@@ -135,6 +135,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
             J[1][2] = deltaV*d2alphar_ddelta2V+2*dalphar_ddeltaV+1/deltaV;
         }
 
+        // Derivatives of the specification equation
         switch (options.specified_variable){
             case saturation_PHSU_pure_options::IMPOSED_PL:
                 // dr_3/dtau

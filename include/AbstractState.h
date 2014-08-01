@@ -39,7 +39,7 @@ protected:
 
     /// Some administrative variables
     long _fluid_type;
-    long _phase;
+    long _phase; ///< The key for the phase from CoolProp::phases enum
     bool _forceSinglePhase, _forceTwoPhase;
 
     //~ bool isCompressibleFluid(void){

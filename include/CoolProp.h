@@ -1,13 +1,9 @@
 /*
-Add some pre-processor directives to this file so that it can either be built as 
-usual, or if the COOLPROP_LIB macro is defined, it will export the functions in 
-this file for building a static or dynamic library.  
+This header file includes the high level API that is meant to be accessed via C++.  Functions may accept C++ types like std::vector
 
-The __stdcall calling convention is used by default.  By providing the macro CONVENTION, the 
-calling convention can be changed at build time.
+For the C-style wrapper, refer to CoolPropLIB.h
 
-Any functions that are exported to DLL must also add the "EXPORT_CODE function_name CONVENTION ..." code 
-to the CoolProp.cpp implementation.  See the Props function for instance
+\sa CoolPropLIB.h
 */
 
 /*! \mainpage CoolProp Core Code Documentation
