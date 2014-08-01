@@ -272,9 +272,9 @@ double IncompressibleFluid::Tfreeze(       double p, double x){
 /** If the fluid type is mass-based, it does not do anything. Otherwise,
  *  it converts the mass fraction to the required input. */
 double IncompressibleFluid::inputFromMass (double T,     double x){
-	if (this->xid==ifrac_pure) {
+	if (this->xid==IFRAC_PURE) {
 			return _HUGE;
-	} else if (this->xid==ifrac_mass) {
+	} else if (this->xid==IFRAC_MASS) {
 		return x;
 	} else {
 		throw NotImplementedError("Mass composition conversion has not been implemented.");
@@ -309,9 +309,9 @@ double IncompressibleFluid::inputFromMass (double T,     double x){
 /** If the fluid type is volume-based, it does not do anything. Otherwise,
  *  it converts the volume fraction to the required input. */
 double IncompressibleFluid::inputFromVolume (double T,   double x){
-	if (this->xid==ifrac_pure) {
+	if (this->xid==IFRAC_PURE) {
 			return _HUGE;
-	} else if (this->xid==ifrac_volume) {
+	} else if (this->xid==IFRAC_VOLUME) {
 		return x;
 	} else {
 		throw NotImplementedError("Volume composition conversion has not been implemented.");
@@ -346,9 +346,9 @@ double IncompressibleFluid::inputFromVolume (double T,   double x){
 /** If the fluid type is mole-based, it does not do anything. Otherwise,
  *  it converts the mole fraction to the required input. */
 double IncompressibleFluid::inputFromMole (double T,     double x){
-	if (this->xid==ifrac_pure) {
+	if (this->xid==IFRAC_PURE) {
 			return _HUGE;
-	} else if (this->xid==ifrac_mole) {
+	} else if (this->xid==IFRAC_MOLE) {
 		return x;
 	} else {
 		throw NotImplementedError("Mole composition conversion has not been implemented.");

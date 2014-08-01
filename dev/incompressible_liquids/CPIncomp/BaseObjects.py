@@ -576,7 +576,7 @@ class IncompressibleFitter(object):
                 #print("Fit did not succeed with {0}, reducing tolerance to {1}.".format(algorithm,tol))
                 success = False
                 counter += 1
-            elif tolerance<1e-10:
+            elif tolerance<1e-3:
                 tolerance *= 1e2
                 if DEBUG: print("Fit did not succeed, reducing tolerance to {0}.".format(tolerance))
                 success = False

@@ -26,7 +26,6 @@
 namespace CoolProp {
 
 struct IncompressibleData {
-	int type;
 	enum IncompressibleTypeEnum {
 		INCOMPRESSIBLE_NOT_SET,
 		INCOMPRESSIBLE_POLYNOMIAL,
@@ -35,6 +34,7 @@ struct IncompressibleData {
 		INCOMPRESSIBLE_LOGEXPONENTIAL,
 		INCOMPRESSIBLE_POLYOFFSET
 	};
+	IncompressibleTypeEnum type;
 	Eigen::MatrixXd coeffs; //TODO: Can we store the Eigen::Matrix objects more efficiently?
 	//std::vector<std::vector<double> > coeffs;
 	IncompressibleData() {
@@ -57,7 +57,7 @@ protected:
 
 	double Tmin, Tmax;
 	double xmin, xmax;
-	int xid;
+	composition_types xid;
 
 	double TminPsat;
 	double xref, Tref, pref;
@@ -132,7 +132,7 @@ protected:
 	//double u_h(double T, double p, double x);
 
 public:
-	IncompressibleFluid(){strict = true; xid = ifrac_undefined;};
+	IncompressibleFluid(){strict = true; xid = IFRAC_UNDEFINED;};
 	virtual ~IncompressibleFluid(){};
 
 	std::string getName() const {return name;}
@@ -144,7 +144,7 @@ public:
 	double getTmin() const {return Tmin;}
 	double getxmax() const {return xmax;}
 	double getxmin() const {return xmin;}
-	int getxid() const {return xid;}
+	composition_types getxid() const {return xid;}
 	double getTminPsat() const {return TminPsat;}
 	double getTref() const {return Tref;}
 	double getpref() const {return pref;}
@@ -161,7 +161,7 @@ public:
 	void setTmin(double Tmin) {this->Tmin = Tmin;}
 	void setxmax(double xmax) {this->xmax = xmax;}
 	void setxmin(double xmin) {this->xmin = xmin;}
-	void setxid(int xid) {this->xid = xid;}
+	void setxid(composition_types xid) {this->xid = xid;}
 	void setTminPsat(double TminPsat) {this->TminPsat = TminPsat;}
 	//void setTref(double Tref) {this->Tref = Tref;}
 	//void setpref(double pref) {this->pref = pref;}

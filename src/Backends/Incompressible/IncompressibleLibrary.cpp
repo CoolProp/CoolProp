@@ -1,5 +1,6 @@
 #include "IncompressibleLibrary.h"
 #include "MatrixMath.h"
+#include "DataStructures.h"
 //#include "crossplatform_shared_ptr.h"
 #include "rapidjson/rapidjson_include.h"
 #include "all_incompressibles_JSON.h" // Makes a std::string variable called all_incompressibles_JSON
@@ -421,16 +422,16 @@ double JSONIncompressibleLibrary::parse_value(rapidjson::Value &obj, std::string
 }
 
 /// Get an integer from the JSON storage to identify the composition
-int JSONIncompressibleLibrary::parse_ifrac(rapidjson::Value &obj, std::string id){
+composition_types JSONIncompressibleLibrary::parse_ifrac(rapidjson::Value &obj, std::string id){
 	std::string res = cpjson::get_string(obj, id);
-	if (!res.compare("mass")) return CoolProp::ifrac_undefined;
-	if (!res.compare("mole")) return CoolProp::ifrac_mole;
-	if (!res.compare("volume")) return CoolProp::ifrac_volume;
-	if (!res.compare("not defined")) return CoolProp::ifrac_undefined;
-	if (!res.compare("pure")) return CoolProp::ifrac_pure;
+	if (!res.compare("mass")) return IFRAC_UNDEFINED;
+	if (!res.compare("mole")) return IFRAC_MOLE;
+	if (!res.compare("volume")) return IFRAC_VOLUME;
+	if (!res.compare("not defined")) return IFRAC_UNDEFINED;
+	if (!res.compare("pure")) return IFRAC_PURE;
 
 	throw ValueError(format("Cannot recognise the entry for [%s], [%s] is unknown for incompressible fluids.", id.c_str(), res.c_str()));
-	return CoolProp::ifrac_undefined;
+	return IFRAC_UNDEFINED;
 }
 
 /// Add all the fluid entries in the rapidjson::Value instance passed in
