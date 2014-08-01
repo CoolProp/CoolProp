@@ -67,7 +67,7 @@ namespace SaturationSolvers
     */
     void saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, long double specified_value, saturation_PHSU_pure_options &options);
 
-    long double successive_substitution(HelmholtzEOSMixtureBackend &HEOS,
+    void successive_substitution(HelmholtzEOSMixtureBackend &HEOS,
                                         const long double beta,
                                         long double T,
                                         long double p,

@@ -499,7 +499,7 @@ void SaturationSolvers::x_and_y_from_K(long double beta, const std::vector<long 
     }
 }
 
-long double SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS, const long double beta, long double T, long double p, const std::vector<long double> &z,
+void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS, const long double beta, long double T, long double p, const std::vector<long double> &z,
                                                        std::vector<long double> &K, mixture_VLE_IO &options)
 {
     int iter = 1;
@@ -574,8 +574,7 @@ long double SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBacken
         iter += 1;
         if (iter > 50)
         {
-            return _HUGE;
-            //throw ValueError(format("saturation_p was unable to reach a solution within 50 iterations"));
+            throw ValueError(format("saturation_p was unable to reach a solution within 50 iterations"));
         }
     }
     while(fabs(f) > 1e-12 || iter < options.Nstep_max);
