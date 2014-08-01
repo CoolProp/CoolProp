@@ -424,7 +424,7 @@ double JSONIncompressibleLibrary::parse_value(rapidjson::Value &obj, std::string
 /// Get an integer from the JSON storage to identify the composition
 composition_types JSONIncompressibleLibrary::parse_ifrac(rapidjson::Value &obj, std::string id){
 	std::string res = cpjson::get_string(obj, id);
-	if (!res.compare("mass")) return IFRAC_UNDEFINED;
+	if (!res.compare("mass")) return IFRAC_MASS;
 	if (!res.compare("mole")) return IFRAC_MOLE;
 	if (!res.compare("volume")) return IFRAC_VOLUME;
 	if (!res.compare("not defined")) return IFRAC_UNDEFINED;
