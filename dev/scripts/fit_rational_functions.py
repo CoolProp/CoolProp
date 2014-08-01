@@ -143,8 +143,12 @@ if not os.path.exists('hsancillaries.json'):
         try:
             p = CP.PropsSI('P','T',T,'Q',0,fluid)
             rho = CP.PropsSI('D','T',T,'Q',0,fluid)
-            sL = CP.PropsSI('S','T',T,'Q',0,fluid)*MM/1000
-            hL = CP.PropsSI('H','T',T,'Q',0,fluid)*MM/1000
+            Tanchor = 1.1*Tc
+            rhoanchor = 0.9*rhoc
+            hanchor_molar = CP.PropsSI('H','T',Tanchor,'D',rhoanchor,fluid)*MM/1000
+            sanchor_molar = CP.PropsSI('S','T',Tanchor,'D',rhoanchor,fluid)*MM/1000
+            sL = CP.PropsSI('S','T',T,'Q',0,fluid)*MM/1000 - sanchor_molar
+            hL = CP.PropsSI('H','T',T,'Q',0,fluid)*MM/1000 - hanchor_molar
             
             x = T
             xfine = np.linspace(np.min(x),np.max(x),5000)
@@ -152,35 +156,35 @@ if not os.path.exists('hsancillaries.json'):
             n = 7
             d = 1
             
-            commons = dict(_note = "coefficients are in increasing order; input in K, output in J/mol", type = "rational_polynomial", max_abs_error_units = 'J/mol')
+            commons = dict(type = "rational_polynomial")
             
             rp = fit_rational_polynomial(x, hL, xfine, n, d)
             ax1.plot(x, hL)
             ax1.plot(xfine, rp['yfitnonlin'],'r')
             ax1.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
             ax1.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
-            hLdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], **commons)
+            hLdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], _note = "coefficients are in increasing order; input in K, output in J/mol; value is enthalpy minus hs_anchor enthalpy", max_abs_error_units = 'J/mol', **commons)
             
             rp = fit_rational_polynomial(x, hfg, xfine, n, d)
             ax2.plot(x, hfg)
             ax2.plot(xfine, rp['yfitnonlin'],'r')
             ax2.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
             ax2.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
-            hLVdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], **commons)
+            hLVdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], _note = "coefficients are in increasing order; input in K, output in J/mol; value is enthalpy minus hs_anchor enthalpy", max_abs_error_units = 'J/mol', **commons)
             
             rp = fit_rational_polynomial(x, sL, xfine, n, d)
             ax3.plot(x, sL)
             ax3.plot(xfine, rp['yfitnonlin'],'r')
             ax3.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
             ax3.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
-            sLdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], **commons)
+            sLdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'],  _note = "coefficients are in increasing order; input in K, output in J/mol/K; value is entropy minus hs_anchor entropy", max_abs_error_units = 'J/mol/K', **commons)
             
             rp = fit_rational_polynomial(x, sfg, xfine, n, d)
             ax4.plot(x, sfg)
             ax4.plot(xfine, rp['yfitnonlin'],'r')
             ax4.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
             ax4.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
-            sLVdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], **commons)
+            sLVdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], _note = "coefficients are in increasing order; input in K, output in J/mol/K; value is entropy minus hs_anchor entropy", max_abs_error_units = 'J/mol/K', **commons)
             
             jj[fluid] = dict(hL = hLdict, hLV = hLVdict, sL = sLdict, sLV = sLVdict)
             
@@ -217,7 +221,4 @@ else:
         fp = open(fluid_path, 'w')
         fp.write(json.dumps(j, **json_options))
         fp.close()
-        
-        
-        
         

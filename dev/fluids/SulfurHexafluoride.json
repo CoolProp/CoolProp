@@ -6,21 +6,21 @@
   "ANCILLARIES": {
     "hL": {
       "A": [
-        1802118.5976371872, 
-        -49223.038398131466, 
-        566.4562292532783, 
-        -3.6040150854849324, 
-        0.01373673234516329, 
-        -3.1379984110440415e-05, 
-        3.9779156113931714e-08, 
-        -2.1590293164588774e-11
+        1803593.3447617888, 
+        -49228.405303038846, 
+        566.4660803641377, 
+        -3.6040772395984475, 
+        0.01373696715700519, 
+        -3.138051529305096e-05, 
+        3.97798223469064e-08, 
+        -2.159065058079221e-11
       ], 
       "B": [
         1, 
-        -0.003121083918359949
+        -0.0031210842129058437
       ], 
-      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
-      "max_abs_error": 102.98644325931946, 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol; value is enthalpy minus hs_anchor enthalpy", 
+      "max_abs_error": 102.98081872370585, 
       "max_abs_error_units": "J/mol", 
       "type": "rational_polynomial"
     }, 
@@ -39,7 +39,7 @@
         1, 
         -0.0031203600249498993
       ], 
-      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol; value is enthalpy minus hs_anchor enthalpy", 
       "max_abs_error": 233.26837306424068, 
       "max_abs_error_units": "J/mol", 
       "type": "rational_polynomial"
@@ -150,22 +150,22 @@
     }, 
     "sL": {
       "A": [
-        5351.196490830041, 
-        -148.5107863476198, 
-        1.7172514843582922, 
-        -0.010937260472718357, 
-        4.167771006096291e-05, 
-        -9.514394846501817e-08, 
-        1.2051251789603327e-10, 
-        -6.534934537247631e-14
+        5384.530527191837, 
+        -148.61951863581388, 
+        1.7173118934571916, 
+        -0.010937641598400917, 
+        4.167914984304062e-05, 
+        -9.514720530529102e-08, 
+        1.2051660252112963e-10, 
+        -6.535153651693359e-14
       ], 
       "B": [
         1, 
-        -0.0031213317194417507
+        -0.0031213323012930995
       ], 
-      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
-      "max_abs_error": 0.3198113942760443, 
-      "max_abs_error_units": "J/mol", 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol/K; value is entropy minus hs_anchor entropy", 
+      "max_abs_error": 0.3197760782733283, 
+      "max_abs_error_units": "J/mol/K", 
       "type": "rational_polynomial"
     }, 
     "sLV": {
@@ -183,9 +183,9 @@
         1, 
         -0.0031206559200436354
       ], 
-      "_note": "coefficients are in increasing order; input in K, output in J/mol", 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol/K; value is entropy minus hs_anchor entropy", 
       "max_abs_error": 0.7228750117859399, 
-      "max_abs_error_units": "J/mol", 
+      "max_abs_error_units": "J/mol/K", 
       "type": "rational_polynomial"
     }, 
     "surface_tension": {
