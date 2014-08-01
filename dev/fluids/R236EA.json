@@ -218,6 +218,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Rui-FPE-2013", 
       "STATES": {
+        "hs_anchor": {
+          "T": 453.684, 
+          "T_units": "K", 
+          "p": 5814693.4536230955, 
+          "p_units": "Pa", 
+          "rhomolar": 3344.4, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 412.44, 
           "T_units": "K", 

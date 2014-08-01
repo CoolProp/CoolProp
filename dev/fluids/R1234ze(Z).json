@@ -194,6 +194,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Akasaka-DELFT-2013", 
       "STATES": {
+        "hs_anchor": {
+          "T": 465.59700000000004, 
+          "T_units": "K", 
+          "p": 6082696.015266488, 
+          "p_units": "Pa", 
+          "rhomolar": 3714.0265196296004, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 423.27, 
           "T_units": "K", 

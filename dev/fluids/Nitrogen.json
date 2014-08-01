@@ -237,6 +237,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Span-JPCRD-2000", 
       "STATES": {
+        "hs_anchor": {
+          "T": 138.8112, 
+          "T_units": "K", 
+          "p": 5255537.623499579, 
+          "p_units": "Pa", 
+          "rhomolar": 10065.511318122559, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 126.192, 
           "T_units": "K", 

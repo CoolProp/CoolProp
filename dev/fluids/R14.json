@@ -214,6 +214,14 @@
       "BibTeX_CP0": "Platzer-BOOK-1990", 
       "BibTeX_EOS": "Platzer-BOOK-1990", 
       "STATES": {
+        "hs_anchor": {
+          "T": 250.26100000000002, 
+          "T_units": "K", 
+          "p": 6118662.656716033, 
+          "p_units": "Pa", 
+          "rhomolar": 6398.47746, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 227.51, 
           "T_units": "K", 

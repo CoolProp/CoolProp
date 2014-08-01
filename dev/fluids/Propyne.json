@@ -217,6 +217,14 @@
       "BibTeX_CP0": "Polt-CT-1992", 
       "BibTeX_EOS": "Polt-CT-1992", 
       "STATES": {
+        "hs_anchor": {
+          "T": 442.61800000000005, 
+          "T_units": "K", 
+          "p": 9149388.83636857, 
+          "p_units": "Pa", 
+          "rhomolar": 5501.997, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 402.38, 
           "T_units": "K", 

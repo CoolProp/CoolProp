@@ -198,6 +198,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Akasaka-IJR-2012", 
       "STATES": {
+        "hs_anchor": {
+          "T": 415.7131, 
+          "T_units": "K", 
+          "p": 6187531.691209243, 
+          "p_units": "Pa", 
+          "rhomolar": 4183.3266696, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 377.921, 
           "T_units": "K", 

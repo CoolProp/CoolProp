@@ -217,6 +217,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Colonna-FPE-2006", 
       "STATES": {
+        "hs_anchor": {
+          "T": 645.1403990570001, 
+          "T_units": "K", 
+          "p": 2353169.4942233916, 
+          "p_units": "Pa", 
+          "rhomolar": 931.6100790000011, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 586.49127187, 
           "T_units": "K", 

@@ -112,6 +112,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Thol-2012", 
       "STATES": {
+        "hs_anchor": {
+          "T": 495.77000000000004, 
+          "T_units": "K", 
+          "p": 4973463.003872622, 
+          "p_units": "Pa", 
+          "rhomolar": 2520.0, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 450.7, 
           "T_units": "K", 

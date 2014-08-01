@@ -214,6 +214,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-JCED-2006", 
       "STATES": {
+        "hs_anchor": {
+          "T": 349.008, 
+          "T_units": "K", 
+          "p": 9795328.292723022, 
+          "p_units": "Pa", 
+          "rhomolar": 8370.0, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 317.28, 
           "T_units": "K", 

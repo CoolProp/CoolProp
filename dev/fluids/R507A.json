@@ -125,6 +125,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-IJT-2003", 
       "STATES": {
+        "hs_anchor": {
+          "T": 378.1415, 
+          "T_units": "K", 
+          "p": 6205991.073617162, 
+          "p_units": "Pa", 
+          "rhomolar": 4467.626685225048, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 343.765, 
           "T_units": "K", 
@@ -316,6 +324,22 @@
       "rhomolar": 4964.029650250053, 
       "rhomolar_units": "mol/m^3"
     }, 
+    "pressure_max_sat": {
+      "T": 343.7658099, 
+      "T_units": "K", 
+      "p": 3704883.269, 
+      "p_units": "Pa", 
+      "rhomolar": 4961.302819, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "temperature_max_sat": {
+      "T": 343.7658302, 
+      "T_units": "K", 
+      "p": 3704881.627, 
+      "p_units": "Pa", 
+      "rhomolar": 4953.55251, 
+      "rhomolar_units": "mol/m^3"
+    }, 
     "triple_liquid": {
       "T": 200.0, 
       "T_units": "K", 
@@ -330,22 +354,6 @@
       "p": 23.22194234304102, 
       "p_units": "Pa", 
       "rhomolar": 14.225518221449525, 
-      "rhomolar_units": "mol/m^3"
-    },
-    "pressure_max_sat": {
-      "T": 343.7658099,
-      "T_units": "K",
-      "p": 3704883.269,
-      "p_units": "Pa",
-      "rhomolar": 4961.302819,
-      "rhomolar_units": "mol/m^3"
-    },
-    "temperature_max_sat": {
-      "T": 343.7658302,
-      "T_units": "K",
-      "p": 3704881.627,
-      "p_units": "Pa",
-      "rhomolar": 4953.55251,
       "rhomolar_units": "mol/m^3"
     }
   }, 

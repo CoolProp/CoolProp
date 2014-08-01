@@ -232,6 +232,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Zhou-PREPRINT-2014", 
       "STATES": {
+        "hs_anchor": {
+          "T": 608.96, 
+          "T_units": "K", 
+          "p": 6629217.978243157, 
+          "p_units": "Pa", 
+          "rhomolar": 2901.6, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 553.6, 
           "T_units": "K", 

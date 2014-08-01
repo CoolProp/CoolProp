@@ -238,6 +238,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Tegeler-JPCRD-1999", 
       "STATES": {
+        "hs_anchor": {
+          "T": 165.75570000000002, 
+          "T_units": "K", 
+          "p": 7442485.613080791, 
+          "p_units": "Pa", 
+          "rhomolar": 12066.686692700509, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 150.687, 
           "T_units": "K", 

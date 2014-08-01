@@ -196,6 +196,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "", 
       "STATES": {
+        "hs_anchor": {
+          "T": 482.62500000000006, 
+          "T_units": "K", 
+          "p": 5982345.633645476, 
+          "p_units": "Pa", 
+          "rhomolar": 3303.0, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 438.75, 
           "T_units": "K", 

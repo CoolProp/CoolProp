@@ -218,6 +218,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Richardson-JPCRD-2013", 
       "STATES": {
+        "hs_anchor": {
+          "T": 42.17400000000001, 
+          "T_units": "K", 
+          "p": 2471528.9989254335, 
+          "p_units": "Pa", 
+          "rhomolar": 15507.0, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 38.34, 
           "T_units": "K", 

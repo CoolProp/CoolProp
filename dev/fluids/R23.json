@@ -216,6 +216,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Penoncello-JPCRD-2003", 
       "STATES": {
+        "hs_anchor": {
+          "T": 329.2223, 
+          "T_units": "K", 
+          "p": 8051397.403705393, 
+          "p_units": "Pa", 
+          "rhomolar": 6767.999999999999, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 299.293, 
           "T_units": "K", 

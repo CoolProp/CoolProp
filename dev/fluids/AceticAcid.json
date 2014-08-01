@@ -194,6 +194,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Piazza-FPE-2011", 
       "STATES": {
+        "hs_anchor": {
+          "T": 649.7700000000001, 
+          "T_units": "K", 
+          "p": 10747777.343976192, 
+          "p_units": "Pa", 
+          "rhomolar": 5260.444455101882, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 590.7, 
           "T_units": "K", 

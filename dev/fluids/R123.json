@@ -214,6 +214,14 @@
       "BibTeX_CP0": "Younglove-JPCRD-1994", 
       "BibTeX_EOS": "Younglove-JPCRD-1994", 
       "STATES": {
+        "hs_anchor": {
+          "T": 502.51410000000004, 
+          "T_units": "K", 
+          "p": 6124255.249228583, 
+          "p_units": "Pa", 
+          "rhomolar": 3236.7753, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 456.831, 
           "T_units": "K", 

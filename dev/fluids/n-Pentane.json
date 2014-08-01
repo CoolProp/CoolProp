@@ -239,6 +239,14 @@
       "BibTeX_CP0": "Jaeschke-IJT-1995", 
       "BibTeX_EOS": "Span-IJT-2003B", 
       "STATES": {
+        "hs_anchor": {
+          "T": 516.6700000000001, 
+          "T_units": "K", 
+          "p": 5578204.572176037, 
+          "p_units": "Pa", 
+          "rhomolar": 2894.0198295799323, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 469.7, 
           "T_units": "K", 

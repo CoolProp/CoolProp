@@ -238,6 +238,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Leachman-JPCRD-2009", 
       "STATES": {
+        "hs_anchor": {
+          "T": 36.459500000000006, 
+          "T_units": "K", 
+          "p": 1860910.8658656576, 
+          "p_units": "Pa", 
+          "rhomolar": 13957.2, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 33.145, 
           "T_units": "K", 

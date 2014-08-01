@@ -236,6 +236,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Katti-ACE-1986", 
       "STATES": {
+        "hs_anchor": {
+          "T": 48.94098, 
+          "T_units": "K", 
+          "p": 4015530.8948663487, 
+          "p_units": "Pa", 
+          "rhomolar": 21493.8, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 44.4918, 
           "T_units": "K", 

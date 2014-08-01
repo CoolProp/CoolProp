@@ -240,6 +240,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Lemmon-PROPYLENE-2013", 
       "STATES": {
+        "hs_anchor": {
+          "T": 400.63210000000004, 
+          "T_units": "K", 
+          "p": 7310423.540616655, 
+          "p_units": "Pa", 
+          "rhomolar": 4911.3, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 364.211, 
           "T_units": "K", 

@@ -214,6 +214,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "deVries-ICR-1995", 
       "STATES": {
+        "hs_anchor": {
+          "T": 434.96750000000003, 
+          "T_units": "K", 
+          "p": 6063856.182495859, 
+          "p_units": "Pa", 
+          "rhomolar": 3692.951591559554, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 395.425, 
           "T_units": "K", 

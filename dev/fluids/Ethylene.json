@@ -248,6 +248,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Smukala-JPCRD-2000", 
       "STATES": {
+        "hs_anchor": {
+          "T": 310.58500000000004, 
+          "T_units": "K", 
+          "p": 7935253.189623136, 
+          "p_units": "Pa", 
+          "rhomolar": 6873.089382670986, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 282.35, 
           "T_units": "K", 

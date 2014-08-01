@@ -221,6 +221,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "TillnerRoth-DKV-1993", 
       "STATES": {
+        "hs_anchor": {
+          "T": 445.94, 
+          "T_units": "K", 
+          "p": 18635643.933141716, 
+          "p_units": "Pa", 
+          "rhomolar": 11890.599438881152, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 405.4, 
           "T_units": "K", 

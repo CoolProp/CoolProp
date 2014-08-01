@@ -218,6 +218,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Huber-EF-2009", 
       "STATES": {
+        "hs_anchor": {
+          "T": 852.5000000000001, 
+          "T_units": "K", 
+          "p": 2648682.0367071885, 
+          "p_units": "Pa", 
+          "rhomolar": 714.87, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 775, 
           "T_units": "K", 

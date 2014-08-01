@@ -240,6 +240,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Buecker-JPCRD-2006", 
       "STATES": {
+        "hs_anchor": {
+          "T": 335.85420000000005, 
+          "T_units": "K", 
+          "p": 7713793.4963343, 
+          "p_units": "Pa", 
+          "rhomolar": 6171.1980165, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 305.322, 
           "T_units": "K", 

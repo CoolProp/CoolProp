@@ -216,6 +216,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Pan-FPE-2012", 
       "STATES": {
+        "hs_anchor": {
+          "T": 437.877, 
+          "T_units": "K", 
+          "p": 5466375.384464215, 
+          "p_units": "Pa", 
+          "rhomolar": 3263.4, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 398.07, 
           "T_units": "K", 

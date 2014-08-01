@@ -220,6 +220,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "McLinden-PREPRINT-2013", 
       "STATES": {
+        "hs_anchor": {
+          "T": 412.39, 
+          "T_units": "K", 
+          "p": 4993978.548757494, 
+          "p_units": "Pa", 
+          "rhomolar": 3145.5, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 374.9, 
           "T_units": "K", 

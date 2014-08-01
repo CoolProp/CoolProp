@@ -216,6 +216,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "TillnerRoth-JPCRD-1994", 
       "STATES": {
+        "hs_anchor": {
+          "T": 411.598, 
+          "T_units": "K", 
+          "p": 6858750.808053113, 
+          "p_units": "Pa", 
+          "rhomolar": 4480.9471539000015, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 374.18, 
           "T_units": "K", 

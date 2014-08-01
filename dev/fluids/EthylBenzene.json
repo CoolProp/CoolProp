@@ -206,6 +206,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Zhou-JPCRD-2012", 
       "STATES": {
+        "hs_anchor": {
+          "T": 678.8320000000001, 
+          "T_units": "K", 
+          "p": 6163997.811448937, 
+          "p_units": "Pa", 
+          "rhomolar": 2466.9144, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 617.12, 
           "T_units": "K", 

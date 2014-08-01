@@ -218,6 +218,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Gedanitz-PREPRINT-2013", 
       "STATES": {
+        "hs_anchor": {
+          "T": 562.892, 
+          "T_units": "K", 
+          "p": 7347467.012219227, 
+          "p_units": "Pa", 
+          "rhomolar": 3438.000000000001, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 511.72, 
           "T_units": "K", 

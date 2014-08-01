@@ -216,6 +216,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Marx-BOOK-1992", 
       "STATES": {
+        "hs_anchor": {
+          "T": 423.63200000000006, 
+          "T_units": "K", 
+          "p": 6687504.662641632, 
+          "p_units": "Pa", 
+          "rhomolar": 4205.503130349922, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 385.12, 
           "T_units": "K", 

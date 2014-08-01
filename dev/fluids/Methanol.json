@@ -244,6 +244,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Piazza-FPE-2013", 
       "STATES": {
+        "hs_anchor": {
+          "T": 563.75, 
+          "T_units": "K", 
+          "p": 15029457.577355228, 
+          "p_units": "Pa", 
+          "rhomolar": 7668.022380513673, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 512.5, 
           "T_units": "K", 

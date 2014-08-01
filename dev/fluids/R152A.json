@@ -216,6 +216,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Outcalt-JPCRD-1996-R152A", 
       "STATES": {
+        "hs_anchor": {
+          "T": 425.05210000000005, 
+          "T_units": "K", 
+          "p": 7588911.784445826, 
+          "p_units": "Pa", 
+          "rhomolar": 5014.305, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 386.411, 
           "T_units": "K", 

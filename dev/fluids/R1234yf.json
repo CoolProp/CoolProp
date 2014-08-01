@@ -216,6 +216,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Richter-JCED-2011", 
       "STATES": {
+        "hs_anchor": {
+          "T": 404.63500000000005, 
+          "T_units": "K", 
+          "p": 5661102.092360271, 
+          "p_units": "Pa", 
+          "rhomolar": 3753.0, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 367.85, 
           "T_units": "K", 

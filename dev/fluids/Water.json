@@ -280,6 +280,14 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Wagner-JPCRD-2002", 
       "STATES": {
+        "hs_anchor": {
+          "T": 711.8056, 
+          "T_units": "K", 
+          "p": 38398578.56983629, 
+          "p_units": "Pa", 
+          "rhomolar": 16086.355196048155, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 647.096, 
           "T_units": "K", 
