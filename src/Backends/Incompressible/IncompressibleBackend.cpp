@@ -469,7 +469,6 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		CAPTURE(res);
 		CHECK( check_abs(val,res,acc) );
 		}
-		CoolProp::set_debug_level(100);
 		// ... as %
 		res = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("-%f%s",x*100.0,"%"));
 		{
