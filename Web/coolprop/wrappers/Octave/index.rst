@@ -43,7 +43,7 @@ Build
 Once the dependencies are installed, you can run the builder and tests using::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp
+    git clone https://github.com/CoolProp/CoolProp --recursive
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder
@@ -60,7 +60,7 @@ Once the dependencies are installed, you can run the builder and tests using::
 On windows, you need to just slightly modify the building procedure::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp
+    git clone https://github.com/CoolProp/CoolProp --recursive
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder
