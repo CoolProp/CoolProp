@@ -12,6 +12,9 @@ def remove_files():
     
 if __name__=='__main__':
 
+    import subprocess, shutil, os, sys, glob
+    
+    # Check if a sdist build for pypi
     if '--pypi' in sys.argv:
         sys.argv.remove('--pypi')
         pypi = True
@@ -42,7 +45,7 @@ if __name__=='__main__':
     else:
         _profiling_enabled = False
         
-    import subprocess, shutil, os, sys, glob
+    
 
     # Determine the path to the root of the repository, the folder that contains the CMakeLists.txt file 
     # for normal builds, or the main directory for sdist builds
@@ -115,7 +118,8 @@ if __name__=='__main__':
                         [os.path.join('CoolProp5','CoolProp.pyx')]+sources,
                         **common_args)
      
-    copy_files()
+    if not pypi:
+        copy_files()
 
     from setuptools import setup
     from Cython.Distutils.extension import Extension
@@ -132,9 +136,7 @@ if __name__=='__main__':
                ext_modules = cythonize([CoolProp_module, AbstractState_module]),
                package_data = {'CoolProp5':['State.pxd',
                                             'CoolProp.pxd',
-                                            '../../include',
-                                            'include/rapidjson/*.h',
-                                            'include/rapidjson/internal/*.h',
+                                            'include',
                                             'CoolPropBibTeXLibrary.bib']},
                cmdclass={'build_ext': build_ext},
                
@@ -149,7 +151,9 @@ if __name__=='__main__':
                 ],
                )
     except BaseException as E:
-        remove_files()
+        if not pypi:
+            remove_files()
         raise
     else:
-        remove_files()
+        if not pypi:
+            remove_files()
