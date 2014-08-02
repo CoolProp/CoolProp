@@ -8,9 +8,6 @@ This section includes information about the CoolProp software, listings of input
     :maxdepth: 3
 
     wrappers/wrappers.rst
-    citation.rst
-    TTSE.rst
-    FluidInformation.rst
+    HighLevelAPI.rst
+    LowLevelAPI.rst
     changelog.rst
-    apidoc/modules.rst
-    examples/examples.rst
