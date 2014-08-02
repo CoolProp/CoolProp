@@ -6,7 +6,8 @@ from . import CoolProp
 # from . import State
 from .constants import *
 
-# __fluids__ = CoolProp.FluidsList()
+__fluids__ = CoolProp.get_global_param_string(b'FluidList')
+__incompressibles__ = CoolProp.get_global_param_string(b'IncompressibleList')
 __version__ = CoolProp.get_global_param_string(b'version')
 __gitrevision__ = CoolProp.get_global_param_string(b'gitrevision')
 
@@ -27,8 +28,8 @@ def get_include_directory():
     include_directory: The path to the include folder for CoolProp
     """
     import os
-    head,file = os.path.split(__file__)
-    return os.path.join(head,'include')
+    head, file = os.path.split(__file__)
+    return os.path.join(head, 'include')
     
 def copy_BibTeX_library(file = None, folder = None):
     """

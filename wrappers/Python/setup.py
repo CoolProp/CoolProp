@@ -1,190 +1,99 @@
 from __future__ import print_function
-#Check for cython >= 0.17 due to the use of STL containers
-try:
-    import Cython
-except ImportError:
-    raise ImportError("Cython not found")
-major,minor = Cython.__version__.split('.')[0:2]
-#Convert major to integer
-major = int(major)
-iEnd = 0
-while minor[iEnd].isdigit():
-    iEnd+=1
-    if iEnd == len(minor):
-        break
 
-minor = int(minor[0:iEnd])
-if not(major > 0 or minor >= 17):
-    raise ImportError('Cython version >= 0.17 required due to the use of STL wrappers.  Please update your version of cython')
-
-if minor >= 20:
-    _profiling_enabled = True
-else:
-    _profiling_enabled = False
-
-try:
-    import psutil
-    for proc in psutil.get_process_list():
-        cmdline = proc.cmdline
-        if cmdline and ''.join(cmdline).find('pycompletionserver.py') > 0:
-            proc.terminate()
-            print('Python completion server killed')
-            break
-except ImportError:
-    print('psutil was not found, it is used to kill the python completion server in Eclipse which keeps CoolProp from building sometimes.  psutils can be easy_install-ed')
-        
-from distutils.core import setup, Extension
-import subprocess, shutil, os, sys, glob
-from Cython.Build import cythonize
-from Cython.Distutils import build_ext
-from Cython.Distutils.extension import Extension as CyExtension
-from distutils.sysconfig import get_python_inc
-from distutils.ccompiler import new_compiler 
-from distutils.dep_util import newer_group
-
-#This will generate HTML to show where there are still pythonic bits hiding out
-Cython.Compiler.Options.annotate = True
-
-# Two options for the location of the C++ files.  Either in the normal ../../CoolProp folder
-# or they are in the CoolPropSource folder in this folder
-
-# For PYPI purposes
-if 'sdist' in sys.argv:
-    CProot = '.'
-    shutil.copy2(os.path.join('..','..','version.txt'),'version.txt')
-    shutil.copytree(os.path.join('..','..','CoolProp'),'CoolPropSource')
-else:
-    CProot = os.path.join('..','..')
+def copy_files():
+    import shutil
+    shutil.copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp5','include'))
+    shutil.copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp5', 'CoolPropBibTeXLibrary.bib'))
     
-if os.path.exists('CoolPropSource'):
-    CPSourceDir = 'CoolPropSource'
-    CProot = '.'
-else:
-    CPSourceDir = os.path.join(CProot,'CoolProp')
+def remove_files():
+    import shutil
+    shutil.rmtree(os.path.join('CoolProp5','include'), ignore_errors = True)
+    os.remove(os.path.join('CoolProp5', 'CoolPropBibTeXLibrary.bib'))
     
-version = open(os.path.join(CProot,'version.txt'),'r').read().strip()
-
 if __name__=='__main__':
 
-    def gitrev_to_file():
-        """
-        If a git repo, use git to update the gitrevision
-        """
-        try:
-            try:
-                subprocess.check_call('git --version', shell=True)
-                print('git was found')
-            except subprocess.CalledProcessError:
-                print('git was not found')
-                return
-            #subprocess.call('git fetch', shell = True)            
-            p = subprocess.Popen('git rev-parse HEAD', 
-                                 stdout=subprocess.PIPE, 
-                                 stderr=subprocess.PIPE,
-                                 shell = True)
-            stdout, stderr = p.communicate()
+    if '--pypi' in sys.argv:
+        sys.argv.remove('--pypi')
+        pypi = True
+    else:
+        pypi = False
+    
+    """
+    Modes of operation:
+    1) Building the source distro (generate_headers.py must have been run before making the repo)
+    2) Installing from source (generate_headers.py must have been run before making the repo)
+    3) Installing from git repo (need to make sure to run generate_headers.py)
+    4) 
+    """
 
-            if p.returncode != 0:
-                print('tried to update git revision, but it failed for some reason (building from zip file?)')
-                return
-            
-            rev = stdout.strip()
-            print('git revision is',rev)
-            
-            gitstring = 'std::string gitrevision = "'+str(rev)+'";'
-            _write = False
-            try:
-                is_hash = rev.find(' ') == -1 # python 2.x
-            except TypeError:
-                is_hash = ' ' not in str(rev) # python 3.x
-                
-            if not os.path.exists(os.path.join(CPSourceDir,'gitrevision.h')):
-                _write = True
-            elif not is_hash:
-                _write = False
-            else:
-                
-                #  Check if it is different than the current version
-                f = open(os.path.join(CPSourceDir,'gitrevision.h'),'r')
-                current_git = f.read()
-                f.close()
-                if not current_git.strip() == gitstring.strip():
-                    _write = True
-                else:
-                    _write = False
-                
-            if _write:
-                f = open(os.path.join(CPSourceDir,'gitrevision.h'),'w')
-                f.write(gitstring)
-                f.close()
-        except (subprocess.CalledProcessError,OSError):
-            pass
+    # Check for cython >= 0.21 due to the use of cpdef enum
+    try:
+        import Cython
+    except ImportError:
+        raise ImportError("Cython not found, please install it.  You can do a pip install Cython")
         
-    gitrev_to_file()
+    major, minor = [int(p) for p in Cython.__version__.split('.')][0:2]
 
-    def version_to_file():
-        string_for_file = 'static char version [] ="{v:s}";'.format(v = version)
-        f = open(os.path.join(CPSourceDir,'version.h'),'r')
-        current_version = f.read()
-        f.close()
-        if not current_version.strip() == string_for_file.strip():
-            f = open(os.path.join(CPSourceDir,'version.h'),'w')
-            f.write(string_for_file)
-            f.close()
+    #~ if not(major > 0 or minor >= 21):
+        #~ raise ImportError('Your version of Cython %s must be >= 0.21 .  Please update your version of cython' % (Cython.__version__,))
+
+    if minor >= 20:
+        _profiling_enabled = True
+    else:
+        _profiling_enabled = False
         
-    version_to_file()
+    import subprocess, shutil, os, sys, glob
+
+    # Determine the path to the root of the repository, the folder that contains the CMakeLists.txt file 
+    # for normal builds, or the main directory for sdist builds
+    if pypi:
+        CProot = '.'
+    else:
+        if os.path.exists(os.path.join('..','..','CMakeLists.txt')):
+            # Good working directory
+            CProot = os.path.join('..','..')
+        else:
+            raise ValueError('Could not run script from this folder(' + os.path.abspath(os.path.curdir()) + '). Run from wrappers/Python folder')
+    
+        # Generate the headers - no op if up to date - but only if not pypi
+        subprocess.check_call(['python','generate_headers.py'], 
+                              shell = True, 
+                              stdout = sys.stdout, 
+                              cwd = os.path.join(CProot, 'dev')
+                              )
+                    
+    # Read the version from a bare string
+    version = open(os.path.join(CProot,'.version'),'r').read().strip()
+
+    from setuptools import setup, Extension, find_packages
+    from Cython.Distutils.extension import Extension
+    from Cython.Build import cythonize
+    from Cython.Distutils import build_ext
+
+    def find_cpp_sources(root = os.path.join('..','..','src'), extensions = ['.cpp'], skip_files = None):
+        file_listing = []
+        for path, dirs, files in os.walk(root):
+            for file in files:
+                n,ext = os.path.splitext(file)
+                fname = os.path.relpath(os.path.join(path, file))
+                if skip_files is not None and fname in skip_files: continue
+                if ext in extensions:
+                    file_listing.append(fname)
+        return file_listing
+        
+    # This will generate HTML to show where there are still pythonic bits hiding out
+    Cython.Compiler.Options.annotate = True
+        
+    # Set variables for C++ sources and include directories
+    sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp') 
+    include_dirs = [os.path.join(CProot, 'include'), os.path.join(CProot, 'externals', 'Eigen')]
     
     #This will generate HTML to show where there are still pythonic bits hiding out
     Cython.Compiler.Options.annotate = True
 
-    ## If the file is run directly without any parameters, build and install
+    ## If the file is run directly without any parameters, clean, build and install
     if len(sys.argv)==1:
-        #sys.argv += ['build_ext','--inplace']
-#        sys.argv += ['build','--compiler=mingw32','--force','install']
-        sys.argv += ['build','install']
-        #sys.argv += ['install']
-        
-    badfiles = [os.path.join('CoolProp','__init__.pyc'),
-                os.path.join('CoolProp','__init__.py')]
-    for file in badfiles:
-        try:
-            os.remove(file)
-        except:
-            pass
-
-    #########################
-    ## __init__.py builder ##
-    #########################
-
-    #Unpack the __init__.py file template and add some things to the __init__ file
-    lines=open('__init__.py.template','r').readlines()
-
-    f = open(os.path.join(CPSourceDir,'gitrevision.h'),'r')
-    rev = f.read().strip().split('=')[1].strip('";').strip()
-    f.close()
-    gitstring = '__gitrevision__ ='+rev+'"\n'
-    
-    for i in range(len(lines)-1,-1,-1):
-        if lines[i].strip().startswith('#') or len(lines[i].strip())==0: 
-            lines.pop(i)
-    lines=['from __future__ import absolute_import\n']+['__version__=\''+version+'\'\n']+[gitstring]+lines
-    fp=open(os.path.join('CoolProp','__init__.py'),'w')
-    for line in lines:
-        fp.write(line)
-    fp.close()
-
-    Sources = glob.glob(os.path.join(CPSourceDir,'*.cpp'))
-    
-    ### Include folders for build
-    include_dirs = [os.path.join(CPSourceDir),get_python_inc(False)]
-
-    def touch(fname):
-        open(fname, 'a').close()
-        os.utime(fname, None)
-
-    #If library has been updated but the cython sources haven't been,
-    #force cython to build by touching the cython sources
-    cython_sources = [os.path.join('CoolProp','CoolProp.pyx')]
+       sys.argv += ['clean','build','install']
 
     if _profiling_enabled:
         cython_directives = dict(profile = True,
@@ -193,88 +102,54 @@ if __name__=='__main__':
         cython_directives = dict(embed_signature = True)
         
     common_args = dict(include_dirs = include_dirs,
-                        language='c++',
-                        cython_c_in_temp = True,
-                        cython_directives = cython_directives
+                       language='c++',
+                       cython_c_in_temp = True,
+                       cython_directives = cython_directives
                        )
                         
-    CoolProp_module = CyExtension('CoolProp.CoolProp',
-                        [os.path.join('CoolProp','CoolProp.pyx')]+Sources,
+    AbstractState_module = Extension('CoolProp5.AbstractState',
+                        [os.path.join('CoolProp5','AbstractState.pyx')]+sources,
                         **common_args)
-        
-    param_constants_module = CyExtension('CoolProp.param_constants',
-                            [os.path.join('CoolProp','param_constants.pyx')],
-                            **common_args)
-                            
-    phase_constants_module = CyExtension('CoolProp.phase_constants',
-                            [os.path.join('CoolProp','phase_constants.pyx')],
-                            **common_args)
-                            
-    unit_systems_constants_module = CyExtension('CoolProp.unit_systems_constants',
-                            [os.path.join('CoolProp','unit_systems_constants.pyx')],
-                            **common_args)
-                            
-    #Collect all the header files in the main folder into an include folder
+                        
+    CoolProp_module = Extension('CoolProp5.CoolProp',
+                        [os.path.join('CoolProp5','CoolProp.pyx')]+sources,
+                        **common_args)
+     
+    copy_files()
+
+    from setuptools import setup
+    from Cython.Distutils.extension import Extension
+    from Cython.Build import cythonize
+
     try:
-        os.mkdir(os.path.join('CoolProp','include'))
-    except:
-        pass
-        
-    for folder in [os.path.join(CPSourceDir)]:
-        for header in glob.glob(os.path.join(folder,'*.h')):
-            pth,fName = os.path.split(header)
-            shutil.copy2(header,os.path.join('CoolProp','include',fName))
-    
-    try:
-        shutil.copytree(os.path.join(CPSourceDir,'rapidjson'),os.path.join('CoolProp','include','rapidjson'))
-    except:
-        pass
-    shutil.copy2(os.path.join(CPSourceDir,'CoolPropBibTeXLibrary.bib'),os.path.join('CoolProp','CoolPropBibTeXLibrary.bib'))
-    
-    setup (name = 'CoolProp',
-           version = version, #look above for the definition of version variable - don't modify it here
-           author = "Ian Bell",
-           author_email='ian.h.bell@gmail.com',
-           url='http://coolprop.sourceforge.net',
-           description = """Open-source thermodynamic and transport properties database""",
-           packages = ['CoolProp','CoolProp.Plots','CoolProp.tests','CoolProp.GUI'],
-           ext_modules = [CoolProp_module,param_constants_module,phase_constants_module,unit_systems_constants_module],
-           package_dir = {'CoolProp':'CoolProp',},
-           package_data = {'CoolProp':['State.pxd','CoolProp.pxd','param_constants_header.pxd','include/*.h','include/rapidjson/*.h','include/rapidjson/internal/*.h','CoolPropBibTeXLibrary.bib']},
-           cmdclass={'build_ext': build_ext},
-           
-           classifiers = [
-            "Programming Language :: Python",
-            "Development Status :: 4 - Beta",
-            "Environment :: Other Environment",
-            "Intended Audience :: Developers",
-            "License :: OSI Approved :: MIT License",
-            "Operating System :: OS Independent",
-            "Topic :: Software Development :: Libraries :: Python Modules"
-            ],
-           )
-    
-    #Clean up the include folder
-    shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
-    os.remove(os.path.join('CoolProp','CoolPropBibTeXLibrary.bib'))
-    
-    for file in glob.glob(os.path.join('CoolProp','__init__.*')):
-        try:
-            os.remove(file)
-        except:
-            pass
-    
-    if 'sdist' in sys.argv:
-        shutil.rmtree('CoolPropSource')
-        os.remove('version.txt')
-    touch('setup.py')
-    
-#    try:
-#        import nose
-#        import CoolProp
-#        CoolProp.test()
-#    except ImportError:
-#        print("Could not run tests, nose not installed")
-        
-        
-    
+        setup (name = 'CoolProp5',
+               version = version, #look above for the definition of version variable - don't modify it here
+               author = "Ian Bell",
+               author_email='ian.h.bell@gmail.com',
+               url='http://www.coolprop.org',
+               description = """Open-source thermodynamic and transport properties database""",
+               packages = find_packages(),
+               ext_modules = cythonize([CoolProp_module, AbstractState_module]),
+               package_data = {'CoolProp5':['State.pxd',
+                                            'CoolProp.pxd',
+                                            '../../include',
+                                            'include/rapidjson/*.h',
+                                            'include/rapidjson/internal/*.h',
+                                            'CoolPropBibTeXLibrary.bib']},
+               cmdclass={'build_ext': build_ext},
+               
+               classifiers = [
+                "Programming Language :: Python",
+                "Development Status :: 4 - Beta",
+                "Environment :: Other Environment",
+                "Intended Audience :: Developers",
+                "License :: OSI Approved :: MIT License",
+                "Operating System :: OS Independent",
+                "Topic :: Software Development :: Libraries :: Python Modules"
+                ],
+               )
+    except BaseException as E:
+        remove_files()
+        raise
+    else:
+        remove_files()
