@@ -11,12 +11,12 @@
 #elif defined(__ISLINUX__)
     #include <tr1/memory>
     using namespace std::tr1;
-#elif defined(__GNUC__) && defined(__ISAPPLE__)
-    #include <tr1/memory>
-    using namespace std::tr1;
-#elif defined(__ISAPPLE__)
+#elif defined(__ISAPPLE__) && (defined(__llvm__) || defined(__clang__))
     #include <memory>
     using std::shared_ptr;
+#elif defined(__ISAPPLE__)
+    #include <tr1/memory>
+    using namespace std::tr1;
 #elif defined(__ISWINDOWS__) && defined(__MINGW32__)
     #include <tr1/memory>
     using namespace std::tr1;
