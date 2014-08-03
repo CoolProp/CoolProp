@@ -23,8 +23,6 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
     const SimpleState & reduce = HEOS->get_reducing();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS->SatL,
                                            SatV = HEOS->SatV;
-    const std::vector<long double> & mole_fractions = HEOS->get_mole_fractions();
-    const long double R_u = HEOS->gas_constant();
 
     long double T, rhoL,rhoV;
     long double deltaL=0, deltaV=0, tau=0, error;
@@ -216,10 +214,9 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
     const SimpleState & reduce = HEOS->get_reducing();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS->SatL,
                                            SatV = HEOS->SatV;
-    const std::vector<long double> & mole_fractions = HEOS->get_mole_fractions();
 
     long double T, rhoL,rhoV;
-    long double deltaL=0, deltaV=0, tau=0, error;
+    long double deltaL=0, deltaV=0, tau=0, error, p_error;
     int iter=0;
 
     // Use the density ancillary function as the starting point for the solver
@@ -277,7 +274,6 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
         double dalphar_ddeltaL = SatL->dalphar_dDelta();
         double dalphar_ddeltaV = SatV->dalphar_dDelta();
 
-
         // -r_1
         r[0] = -(deltaV*(1+deltaV*dalphar_ddeltaV)-deltaL*(1+deltaL*dalphar_ddeltaL));
         // -r_2
@@ -317,7 +313,7 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
             }
         }
 
-        double DET = J[0][0]*J[1][1]-J[0][1]*J[1][0];
+        //double DET = J[0][0]*J[1][1]-J[0][1]*J[1][0];
 
         v = linsolve(J, r);
 
@@ -341,6 +337,8 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
         rhoL = deltaL*reduce.rhomolar;
         rhoV = deltaV*reduce.rhomolar;
         T = reduce.T/tau;
+		
+		p_error = (pL-pV)/pL;
 
         error = sqrt(pow(r[0], 2)+pow(r[1], 2));
         iter++;
@@ -353,6 +351,10 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
         }
     }
     while (error > 1e-9);
+	double p_error_limit = 1e-3;
+	if (fabs(p_error) > p_error_limit);
+		throw SolutionError(format("saturation_D_pure solver abs error on p [%g] > limit [%g] < 0", p_error, p_error_limit));
+	
 }
 void SaturationSolvers::saturation_T_pure(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_options &options)
 {

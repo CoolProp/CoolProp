@@ -629,7 +629,6 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 
 	if (int_exp<-1) throw NotImplementedError(format("%s (%d): This function is only implemented for lowest exponents >= -1, int_exp=%d ",__FILE__,__LINE__,int_exp));
 
-	double result = 0;
 	size_t r = newCoefficients.rows();
 	size_t c = newCoefficients.cols();
 
