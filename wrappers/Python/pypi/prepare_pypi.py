@@ -23,7 +23,7 @@ if __name__=='__main__':
 
     import shutil, os, sys, subprocess
     
-    subprocess.check_call(['python','generate_headers.py'], shell = True, cwd = os.path.join('..','..','..','dev'), stdout = sys.stdout, stderr = sys.stderr)
+    subprocess.check_call('python generate_headers.py', shell = True, cwd = os.path.join('..','..','..','dev'), stdout = sys.stdout, stderr = sys.stderr)
     name = 'CoolProp5'
     
     # Make a temporary directory in this folder
@@ -34,7 +34,7 @@ if __name__=='__main__':
         collect(tmp)
 
         # Make the source distro in this folder
-        subprocess.check_call(['python','setup.py','sdist'] + sys.argv[1::], shell = True, cwd = tmp, stdout = sys.stdout, stderr = sys.stderr)
+        subprocess.check_call(' '.join(['python','setup.py','sdist'] + sys.argv[1::]), shell = True, cwd = tmp, stdout = sys.stdout, stderr = sys.stderr)
         
     except BaseException as B:
     
