@@ -54,20 +54,11 @@
   "reference": "Texaco data sheet", 
   "saturation_pressure": {
     "coeffs": [
-      [
-        -4.66760e+01
-      ], 
-      [
-        1.40279e-01
-      ], 
-      [
-        -3.19829e-05
-      ], 
-      [
-        -8.17047e-08
-      ]
+      -8.89676e+03, 
+      -4.34651e+01, 
+      -2.43801e+01
     ], 
-    "type": "exppolynomial"
+    "type": "exponential"
   }, 
   "specific_heat": {
     "coeffs": [

@@ -870,13 +870,73 @@ class SolutionDataWriter(object):
         pass
     
     
-    def makeOverviewMassSolutions(self, solObjs, pdfObj=None):
+    def makeSolutionPlots(self, solObjs=[SolutionData()], pdfObj=None):
         """
-        Creates a page with plots for several fluids.
+        Creates a whole page with some plots and basic information
+        for both fit quality, reference data, data sources and 
+        more. 
         """
+        # First we determine some basic settings
+        water=None
+        solutions=[]
+        
+        for i in range(len(solObjs)-1):
+            if solObjs[i].xid==SolutionData.ifrac_mass or \
+               solObjs[i].xid==SolutionData.ifrac_mole or \
+               solObjs[i].xid==SolutionData.ifrac_volume:
+                solutions += [solObjs[i]]
+            #elif solObjs[i].xid==SolutionData.ifrac_pure:
+            #    purefluids += [doneObjs[i]]
+            elif solObjs[i].name=="NBS":
+                water = solObjs[i]
+                solutions += [solObjs[i]]
+        
+        if water==None: raise ValueError("No water found, reference values missing.")
+        
+        # Set temperature data for all fluids
+        dataDict = {}
+        dataList = []
+        obj = SolutionData()
+        for i in range(len(solutions)-1):
+            obj = solutions[i]
+            T = np.linspace(obj.Tmin, obj.Tmax, num=int(obj.Tmax-obj.Tmin))
+            P = 100e5
+            x = obj.xmin
+            dataDict["name"] = obj.name
+            dataDict["T"] = T 
+            dataDict["P"] = P
+            dataDict["x"] = x
+            if obj.density.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
+                dataDict["D"] = [obj.rho(Ti, P, x) for Ti in T]
+            else: dataDict["D"] = None
+            if obj.specific_heat.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
+                dataDict["C"] = [obj.c(Ti, P, x) for Ti in T]
+            else: dataDict["C"] = None
+            if obj.conductivity.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
+                dataDict["L"] = [obj.cond(Ti, P, x) for Ti in T]
+            else: dataDict["L"] = None
+            if obj.viscosity.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
+                dataDict["V"] = [obj.visc(Ti, P, x) for Ti in T]
+            else: dataDict["V"] = None
+            dataList.append(dataDict.copy())
+            
+            
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        
+        #obj = water
+        #T = np.linspace(obj.Tmin, obj.Tmax, num=int(obj.Tmax-obj.Tmin))
+        #D = 
+        
+        for i in range(len(dataList)-1):
+            obj = dataList[i]
+            if obj["T"]!=None and obj["D"]!=None:
+                ax.plot(obj["T"],obj["D"],label=obj["name"])
+            
+        plt.savefig("aaa_fitreport.pdf")
         
         
-        pass 
+        
     
     def generateRstTable(self):
         
