@@ -11,7 +11,7 @@
 #elif defined(__ISLINUX__)
     #include <tr1/memory>
     using namespace std::tr1;
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) && defined(__ISAPPLE__)
     #include <tr1/memory>
     using namespace std::tr1;
 #elif defined(__ISAPPLE__)
