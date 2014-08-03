@@ -93,8 +93,27 @@ def TO_CPP(root_dir, hashes):
             
 def version_to_file(root_dir):
     
-    # Get the version from the version.txt file
-    version = open(os.path.join(root_dir,'version.txt'),'r').read().strip()
+    # Parse the CMakeLists.txt file to generate the version
+    """
+    Should have lines like
+    "
+    set (CoolProp_VERSION_MAJOR 5)
+    set (CoolProp_VERSION_MINOR 0)
+    set (CoolProp_VERSION_PATCH 0)
+    "
+    """
+    
+    lines = open(os.path.join(root_dir,'CMakeLists.txt'),'r').readlines()
+    # Find the necessary lines
+    MAJOR_line = [line for line in lines if ('VERSION_MAJOR' in line and 'MINOR' not in line)]
+    MINOR_line = [line for line in lines if ('VERSION_MINOR' in line and 'MAJOR' not in line)]
+    PATCH_line = [line for line in lines if ('VERSION_PATCH' in line and 'MINOR' not in line)]
+    # String processing
+    MAJOR = MAJOR_line[0].strip().split('VERSION_MAJOR')[1].split(')')[0].strip()
+    MINOR = MINOR_line[0].strip().split('VERSION_MINOR')[1].split(')')[0].strip()
+    PATCH = PATCH_line[0].strip().split('VERSION_PATCH')[1].split(')')[0].strip()
+    # Generate the strings
+    version = '.'.join([MAJOR,MINOR,PATCH])
     
     # Get the hash of the version
     if 'version' not in hashes or ('version' in hashes and hashes['version'] != get_hash(version)):
@@ -114,10 +133,21 @@ def version_to_file(root_dir):
         f.write(string_for_file)
         f.close()
         
-        print(os.path.join(include_dir,'cpversion.h') + ' written to file')
+        print('version written to file: ' + file_name)
+        
+        hidden_file_name = os.path.join(root_dir,'.version')
+        
+        # Write to file
+        f = open(hidden_file_name,'w')
+        f.write(version)
+        f.close()
+        
+        print('version written to hidden file: ' + hidden_file_name + " for use in builders that don't use git repo")
         
     else:
         print('cpversion.h is up to date')
+        
+    
     
 def gitrev_to_file(root_dir):
     """

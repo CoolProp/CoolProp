@@ -28,24 +28,27 @@ if __name__=='__main__':
     3) Installing from git repo (need to make sure to run generate_headers.py)
     4) 
     """
-
-    # Check for cython >= 0.21 due to the use of cpdef enum
-    try:
-        import Cython
-    except ImportError:
-        raise ImportError("Cython not found, please install it.  You can do a pip install Cython")
-        
-    major, minor = [int(p) for p in Cython.__version__.split('.')][0:2]
-
-    #~ if not(major > 0 or minor >= 21):
-        #~ raise ImportError('Your version of Cython %s must be >= 0.21 .  Please update your version of cython' % (Cython.__version__,))
-
-    if minor >= 20:
-        _profiling_enabled = True
-    else:
-        _profiling_enabled = False
-        
     
+    # Determine whether or not to use Cython - default is to use cython unless the file .build_without_cython is found in the current working directory
+    USE_CYTHON = not os.path.exists('.build_without_cython')
+    cy_ext = 'pyx' if USE_CYTHON else 'cpp'
+
+    if USE_CYTHON:
+        # Check for cython >= 0.21 due to the use of cpdef enum
+        try:
+            import Cython
+        except ImportError:
+            raise ImportError("Cython not found, please install it.  You can do a pip install Cython")
+            
+        major, minor = [int(p) for p in Cython.__version__.split('.')][0:2]
+
+        #~ if not(major > 0 or minor >= 21):
+            #~ raise ImportError('Your version of Cython %s must be >= 0.21 .  Please update your version of cython' % (Cython.__version__,))
+
+        if minor >= 20:
+            _profiling_enabled = True
+        else:
+            _profiling_enabled = False
 
     # Determine the path to the root of the repository, the folder that contains the CMakeLists.txt file 
     # for normal builds, or the main directory for sdist builds
@@ -56,7 +59,7 @@ if __name__=='__main__':
             # Good working directory
             CProot = os.path.join('..','..')
         else:
-            raise ValueError('Could not run script from this folder(' + os.path.abspath(os.path.curdir()) + '). Run from wrappers/Python folder')
+            raise ValueError('Could not run script from this folder(' + os.path.abspath(os.path.curdir) + '). Run from wrappers/Python folder')
     
         # Generate the headers - no op if up to date - but only if not pypi
         subprocess.check_call(['python','generate_headers.py'], 
@@ -65,13 +68,22 @@ if __name__=='__main__':
                               cwd = os.path.join(CProot, 'dev')
                               )
                     
-    # Read the version from a bare string
+    # Read the version from a bare string stored in file in root directory
     version = open(os.path.join(CProot,'.version'),'r').read().strip()
 
     from setuptools import setup, Extension, find_packages
-    from Cython.Distutils.extension import Extension
-    from Cython.Build import cythonize
-    from Cython.Distutils import build_ext
+    if USE_CYTHON:
+        import Cython.Compiler
+        from Cython.Distutils.extension import Extension
+        from Cython.Build import cythonize
+        from Cython.Distutils import build_ext
+        
+        # This will generate HTML to show where there are still pythonic bits hiding out
+        Cython.Compiler.Options.annotate = True
+        print('Cython will be used; cy_ext is ' + cy_ext)
+    else:
+        cythonize = lambda args: args # A dummy cythonize function that just returns the extensions again
+        print('Cython will not be used; cy_ext is ' + cy_ext)
 
     def find_cpp_sources(root = os.path.join('..','..','src'), extensions = ['.cpp'], skip_files = None):
         file_listing = []
@@ -84,9 +96,6 @@ if __name__=='__main__':
                     file_listing.append(fname)
         return file_listing
         
-    # This will generate HTML to show where there are still pythonic bits hiding out
-    Cython.Compiler.Options.annotate = True
-        
     # Set variables for C++ sources and include directories
     sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp') 
     include_dirs = [os.path.join(CProot, 'include'), os.path.join(CProot, 'externals', 'Eigen')]
@@ -96,7 +105,7 @@ if __name__=='__main__':
 
     ## If the file is run directly without any parameters, clean, build and install
     if len(sys.argv)==1:
-       sys.argv += ['clean','build','install']
+       sys.argv += ['clean','build']
 
     if _profiling_enabled:
         cython_directives = dict(profile = True,
@@ -111,23 +120,18 @@ if __name__=='__main__':
                        )
                         
     AbstractState_module = Extension('CoolProp5.AbstractState',
-                        [os.path.join('CoolProp5','AbstractState.pyx')]+sources,
+                        [os.path.join('CoolProp5','AbstractState.' + cy_ext)] + sources,
                         **common_args)
-                        
     CoolProp_module = Extension('CoolProp5.CoolProp',
-                        [os.path.join('CoolProp5','CoolProp.pyx')]+sources,
+                        [os.path.join('CoolProp5','CoolProp.' + cy_ext)] + sources,
                         **common_args)
      
     if not pypi:
         copy_files()
 
-    from setuptools import setup
-    from Cython.Distutils.extension import Extension
-    from Cython.Build import cythonize
-
     try:
         setup (name = 'CoolProp5',
-               version = version, #look above for the definition of version variable - don't modify it here
+               version = version, # look above for the definition of version variable - don't modify it here
                author = "Ian Bell",
                author_email='ian.h.bell@gmail.com',
                url='http://www.coolprop.org',
@@ -136,8 +140,7 @@ if __name__=='__main__':
                ext_modules = cythonize([CoolProp_module, AbstractState_module]),
                package_data = {'CoolProp5':['State.pxd',
                                             'CoolProp.pxd',
-                                            'include',
-                                            'CoolPropBibTeXLibrary.bib']},
+                                            'CoolPropBibTeXLibrary.bib'] + find_cpp_sources(os.path.join('include'), '*.h')},
                cmdclass={'build_ext': build_ext},
                
                classifiers = [

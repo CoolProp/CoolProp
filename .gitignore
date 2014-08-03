@@ -6,6 +6,7 @@
 *.h.gch
 *.directory
 *.DS_Store
+.version
 
 /dev/VS2010
 

@@ -42,16 +42,6 @@ protected:
     long _phase; ///< The key for the phase from CoolProp::phases enum
     bool _forceSinglePhase, _forceTwoPhase;
 
-    //~ bool isCompressibleFluid(void){
-        //~ return !(_fluid_type == FLUID_TYPE_INCOMPRESSIBLE_LIQUID
-              //~ || _fluid_type == FLUID_TYPE_INCOMPRESSIBLE_SOLUTION);
-    //~ }
-
-    //~ bool checkCompressible(void){
-        //~ if (!this->isCompressibleFluid()){throw ValueError(ERR_NOT_COMPRESSIBLE);}
-        //~ return true;
-    //~ }
-
     bool isHomogeneousPhase(void){
         return (this->_phase==iphase_liquid || this->_phase==iphase_gas || this->_phase == iphase_supercritical);
     }
