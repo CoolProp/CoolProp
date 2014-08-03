@@ -163,6 +163,8 @@ double AbstractState::trivial_keyed_output(int key)
     {
 	case imolar_mass:
         return molar_mass();
+	case iT_triple:
+        return Ttriple();
     case iT_reducing:
         return get_reducing().T;
     case irhomolar_reducing:

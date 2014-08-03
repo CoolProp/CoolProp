@@ -52,6 +52,7 @@ parameter_info parameter_info_list[] = {
 	parameter_info(irhomass_critical, "rhomass_critical","O","kg/m^3","Mass density at critical point",true),
     parameter_info(iT_reducing, "T_reducing","O","K","Temperature at the reducing point",true),
     parameter_info(iT_critical, "T_critical","O","K","Temperature at the critical point",true),
+	parameter_info(iT_triple, "T_triple","O","K","Temperature at the triple point",true),
 	parameter_info(iP_critical, "p_critical","O","Pa","Pressure at the critical point",true),
     parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility",false),
     parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound",false),
@@ -89,6 +90,7 @@ public:
         index_map.insert(std::pair<std::string, int>("L", iconductivity));
 		index_map.insert(std::pair<std::string, int>("pcrit", iP_critical));
 		index_map.insert(std::pair<std::string, int>("Tcrit", iT_critical));
+		index_map.insert(std::pair<std::string, int>("Ttriple", iT_triple));
 		index_map.insert(std::pair<std::string, int>("rhocrit", irhomass_critical));
     }
 };
