@@ -168,6 +168,3 @@ if __name__=='__main__':
     else:
         if not pypi:
             remove_files()
-            
-    sys.path.pop(0)
-    import CoolProp5
