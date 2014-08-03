@@ -2,6 +2,7 @@ from __future__ import print_function
 
 def copy_files():
     import shutil
+    shutil.rmtree(os.path.join('CoolProp5','include'), ignore_errors = True)
     shutil.copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp5','include'))
     shutil.copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp5', 'CoolPropBibTeXLibrary.bib'))
     
@@ -119,10 +120,7 @@ if __name__=='__main__':
                                 cython_directives = cython_directives
                                 )
                            )
-                        
-    AbstractState_module = Extension('CoolProp5.AbstractState',
-                        [os.path.join('CoolProp5','AbstractState.' + cy_ext)] + sources,
-                        **common_args)
+                       
     CoolProp_module = Extension('CoolProp5.CoolProp',
                         [os.path.join('CoolProp5','CoolProp.' + cy_ext)] + sources,
                         **common_args)
@@ -134,7 +132,7 @@ if __name__=='__main__':
     if not pypi:
         copy_files()
 
-    ext_modules = [CoolProp_module, AbstractState_module, constants_module]
+    ext_modules = [CoolProp_module, constants_module]
     
     if USE_CYTHON:
         ext_modules = cythonize(ext_modules)

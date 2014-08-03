@@ -60,6 +60,8 @@ int main()
 {
 	#if 1
 
+		double T = PropsSI("T","P",8.7257510472904255e+02,"Q",0.0000000000000000e+00,"Water");
+		std::cout << get_global_param_string("errstring");
 		double Tc = Props1SI("Water","Tcrit");
 		double rhoc = Props1SI("Water","rhocrit");
 		std::cout << Tc << rhoc << std::endl;

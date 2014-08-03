@@ -6,8 +6,14 @@ from __future__ import division
 # Each of the functions from the CoolProp header are renamed in cython code to
 # an underscored name so that the same name can be used in the exposed functions below
 
+import cython
+cimport cython
+
 import math
 import warnings
+
+from libcpp.string cimport string
+from libcpp.vector cimport vector
 
 from constants import *
 from constants_header cimport *
@@ -25,6 +31,7 @@ cpdef ndarray_or_iterable(object input):
         return input
 
 include "HumidAirProp.pyx"
+include "AbstractState.pyx"
     
 # def set_reference_state(string_like FluidName, *args):
 #     """
@@ -100,7 +107,7 @@ include "HumidAirProp.pyx"
 #         if not len(err_string) == 0:
 #             raise ValueError("{err:s} :: inputs were :{iin1:d},{in1:g},{iin2:d},{in2:g},{iFluid:d}".format(err= err_string,iin1=iInput1,in1=Input1,iin2=iInput2,in2=Input2,iFluid = iFluid))
 #         else:
-#             raise ValueError("IProps failed ungracefully with inputs:\"{in1:g}\",\"{in2:g}\"; please file a ticket at https://sourceforge.net/p/coolprop/tickets/".format(in1=Input1,in2=Input2))
+#             raise ValueError("IProps failed ungracefully with inputs:\"{in1:g}\",\"{in2:g}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(in1=Input1,in2=Input2))
 #     else:
 #         return val
 
@@ -114,14 +121,14 @@ cpdef get_fluid_param_string(string_like fluid, string_like param):
 #     if not len(errstr) == 0:
 #         raise ValueError("{err:s} :: inputs were :\"{in1:s}\",\"{in2:s}\"".format(err= errstr,in1=in1,in2=in2))
 #     else:
-#         raise ValueError("Props failed ungracefully with inputs:\"{in1:s}\",\"{in2:s}\"; please file a ticket at https://github.com/ibell/coolprop/issues".format(in1=in1,in2=in2))
+#         raise ValueError("Props failed ungracefully with inputs:\"{in1:s}\",\"{in2:s}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(in1=in1,in2=in2))
 #         
 cpdef __Props_err2(in1, in2, in3, in4, in5, in6):
-    errstr = get_global_param_string('errstring')
+    errstr = _get_global_param_string('errstring')
     if not len(errstr) == 0:
         raise ValueError("{err:s} :: inputs were:\"{in1:s}\",\"{in2:s}\",{in3:0.16e},\"{in4:s}\",{in5:0.16e},\"{in6:s}\"".format(err=errstr,in1=in1,in2=in2,in3=in3,in4=in4,in5=in5,in6=in6))
     else:
-        raise ValueError("Props failed ungracefully :: inputs were:\"{in1:s}\",\"{in2:s}\",{in3:0.16e},\"{in4:s}\",{in5:0.16e},\"{in6:s}\"; please file a ticket at https://github.com/ibell/coolprop/issues".format(in1=in1,in2=in2,in3=in3,in4=in4,in5=in5,in6=in6))
+        raise ValueError("Props failed ungracefully :: inputs were:\"{in1:s}\",\"{in2:s}\",{in3:0.16e},\"{in4:s}\",{in5:0.16e},\"{in6:s}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(in1=in1,in2=in2,in3=in3,in4=in4,in5=in5,in6=in6))
 
 # cpdef Props(in1, in2, in3, in4, in5, in6, in7 = None):
 #     """
@@ -214,11 +221,12 @@ cpdef string get_REFPROPname(str Fluid):
 #          empty string if Fluid not in CoolProp, "Bad key" if key is invalid
 #     """
 #     return _get_BibTeXKey(Fluid, key)
-# cpdef string get_errstr():
-#     """
-#     Return the current error string
-#     """
-#     return _get_global_param_string("errstring")
+cpdef string get_errstr():
+    """
+    Return the current error string
+    """
+    return _get_global_param_string("errstring")
+    
 cpdef set_debug_level(int level):
     """
     Set the current debug level as integer in the range [0,10]
@@ -351,7 +359,7 @@ cdef class State:
 #         return rebuildState,(d,)
         
     cpdef set_Fluid(self, string Fluid, string backend):
-        self.pAS = AbstractState.AbstractState(backend, Fluid)
+        self.pAS = AbstractState(backend, Fluid)
         
 #     cpdef update_ph(self, double p, double h):
 #         """

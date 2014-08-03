@@ -26,7 +26,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
 
     long double T, rhoL,rhoV;
     long double deltaL=0, deltaV=0, tau=0, error;
-    int iter=0;
+    int iter=0, specified_parameter;
 
     // Use the density ancillary function as the starting point for the solver
     try
@@ -148,6 +148,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
                 }
                 // dr_3/ddelta'' (liquid pressure not a function of vapor density)
                 J[2][2] = 0;
+				specified_parameter = CoolProp::iP;
                 break;
             case saturation_PHSU_pure_options::IMPOSED_PV:
                 // dr_3/dtau
@@ -162,6 +163,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
                     // dr_3/ddelta''
                     J[2][2] = SatV->first_partial_deriv(iP,iDelta,iTau)/specified_value;
                 }
+				specified_parameter = CoolProp::iP;
                 break;
             default:
                 throw ValueError(format("options.specified_variable to saturation_PHSU_pure [%d] is invalid",options.specified_variable));
@@ -191,7 +193,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
             throw SolutionError(format("saturation_PHSU_pure solver T < 0"));
         }
         if (iter > 200){
-            throw SolutionError(format("saturation_PHSU_pure solver did not converge after 100 iterations with specified value: %g with index %d",specified_value, options.specified_variable));
+			std::string info = get_parameter_information(specified_parameter, "short");
+            throw SolutionError(format("saturation_PHSU_pure solver did not converge after 200 iterations for %s=%Lg current error is %Lg", info.c_str(), specified_value, error));
         }
     }
     while (error > 1e-11);
@@ -386,7 +389,7 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
                                            SatV = HEOS->SatV;
 
     long double rhoL,rhoV,JL,JV,KL,KV,dJL,dJV,dKL,dKV;
-    long double DELTA, deltaL=0, deltaV=0, tau=0, error, PL, PV, stepL, stepV;
+    long double DELTA, deltaL=0, deltaV=0, tau, error, PL, PV, stepL, stepV;
     int iter=0;
     // Use the density ancillary function as the starting point for the solver
     try
@@ -490,6 +493,12 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
         }
     }
     while (error > 1e-10 && fabs(stepL) > 10*DBL_EPSILON*fabs(stepL) && fabs(stepV) > 10*DBL_EPSILON*fabs(stepV));
+	
+	double p_error_limit = 1e-3;
+	double p_error = (PL - PV)/PL;
+	if (fabs(p_error) > p_error_limit){
+	throw SolutionError(format("saturation_T_pure_Akasaka solver abs error on p [%g] > limit [%g]", fabs(p_error), p_error_limit));
+	}
 }
 
 void SaturationSolvers::x_and_y_from_K(long double beta, const std::vector<long double> &K, const std::vector<long double> &z, std::vector<long double> &x, std::vector<long double> &y)

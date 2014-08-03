@@ -4,7 +4,7 @@ cimport cython
 
 from libcpp.vector cimport vector
 
-cimport AbstractState
+include "AbstractState.pxd"
 
 # Default string in Python 3.x is a unicode string (type str)
 # Default string in Python 2.x is a byte string(type bytes) 
@@ -29,25 +29,21 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     vector[double] _PropsSI "CoolProp::PropsSI"(string Output, string Name1, vector[double] Prop1, string Name2, vector[double] Prop2, string FluidName, vector[double] fractions)
     string _get_global_param_string "CoolProp::get_global_param_string"(string ParamName)
     
-#     double _Props1SI "Props1SI"(string Ref, string Output)
+#     double _Props1SI "CoolProp::Props1SI"(string Ref, string Output)
     
-#     double _IProps "IProps"(long Output, long Name1, double Prop1, long Name2, double Prop2, long Ref)
+#     double _IProps "CoolProp::IProps"(long Output, long Name1, double Prop1, long Name2, double Prop2, long Ref)
     
-#     double _Props "Props"(string Output, string Name1, double Prop1, string Name2, double Prop2, string Ref)
-#     double _Props1 "Props1"(string Ref, string Output)
+#     double _Props "CoolProp::Props"(string Output, string Name1, double Prop1, string Name2, double Prop2, string Ref)
+#     double _Props1 "CoolProp::Props1"(string Ref, string Output)
     
-#     string _get_fluid_param_string "get_fluid_param_string"(string ParamName, string FluidName)
+#     string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName)
     
-#     long _set_phase "set_phase" (string phase)
-#     long _get_Fluid_index "get_Fluid_index" (string Fluid)
-    long _get_parameter_index "get_parameter_index" (string param)
+#     long _get_Fluid_index "CoolProp::get_Fluid_index" (string Fluid)
+    long _get_parameter_index "CoolProp::get_parameter_index" (string param)
+    int _get_debug_level "CoolProp::get_debug_level"()
+    void _set_debug_level "CoolProp::set_debug_level"(int level)
 #     
-#     string _add_REFPROP_fluid "add_REFPROP_fluid"(string FluidName) except +
-#     
-#     int _get_debug_level "get_debug_level"()
-#     void _set_debug_level "set_debug_level"(int level)
-#     
-#     string _get_BibTeXKey "get_BibTeXKey"(string Ref, string key)
+#     string _get_BibTeXKey "CoolProp::get_BibTeXKey"(string Ref, string key)
     
     # Convenience functions
 #     int _IsFluidType "IsFluidType"(char* Ref, char* Type)
@@ -58,7 +54,7 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
 #     double _cair_sat "cair_sat"(double T)
        
 cdef class State:
-    cdef AbstractState.AbstractState pAS
+    cdef AbstractState pAS
     cdef readonly string Fluid, phase
     cdef int iFluid,iParam1,iParam2,iOutput
     cdef double T_, rho_, p_
