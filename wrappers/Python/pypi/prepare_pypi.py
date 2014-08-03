@@ -16,6 +16,8 @@ def collect(tmp):
     shutil.copy2(os.path.join('..','setup.py'),os.path.join(tmp,'setup.py'))
     print('touching .build_without_cython')
     fp = open(os.path.join(tmp,'.build_without_cython'), 'w'); fp.close()
+    print('touching .use_this_directory_as_root')
+    fp = open(os.path.join(tmp,'.use_this_directory_as_root'), 'w'); fp.close()
     
 if __name__=='__main__':
 
@@ -32,7 +34,8 @@ if __name__=='__main__':
         collect(tmp)
        
         # Try to make the source distro
-        subprocess.check_call(['python','setup.py','sdist','--pypi'], shell = True, cwd = tmp, stdout = sys.stdout, stderr = sys.stderr)
+        subprocess.check_call(['python','setup.py','sdist'], shell = True, cwd = tmp, stdout = sys.stdout, stderr = sys.stderr)
+        
     except BaseException as B:
     
         #shutil.rmtree(tmp)

@@ -24,7 +24,7 @@ cpdef ndarray_or_iterable(object input):
     else:
         return input
 
-#include "HumidAirProp.pyx"
+include "HumidAirProp.pyx"
     
 # def set_reference_state(string_like FluidName, *args):
 #     """
@@ -173,7 +173,6 @@ cpdef get_aliases(str Fluid):
     cdef bytes _Fluid = Fluid.encode('ascii')
     return [F.encode('ascii') for F in (_get_fluid_param_string(_Fluid,'aliases').encode('ascii')).decode('ascii').split(',')]
 
-#     
 cpdef string get_REFPROPname(str Fluid):
     """
     Return the REFPROP compatible name for the fluid
@@ -214,7 +213,7 @@ cpdef string get_REFPROPname(str Fluid):
 #     key, string
 #          empty string if Fluid not in CoolProp, "Bad key" if key is invalid
 #     """
-#     return _get_BibTeXKey(Fluid.encode('ascii'), key.encode('ascii'))
+#     return _get_BibTeXKey(Fluid, key)
 # cpdef string get_errstr():
 #     """
 #     Return the current error string
@@ -245,7 +244,7 @@ cpdef int get_debug_level():
         the more verbose the output will be
     """
     return _get_debug_level()
-#     
+
 # cpdef bint IsFluidType(string Fluid, string Type):
 #     """
 #     Check if a fluid is of a given type

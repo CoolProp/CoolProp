@@ -35,7 +35,7 @@ cpdef HAProps(str OutputName, str Input1Name, Input1, str Input2Name, Input2, st
 
     There are also strings for the mixture volume and mixture enthalpy that will return the properties on a total humid air flow rate basis, they are given by 'Vha' [units of m^3/kg humid air] and 'Cha' [units of kJ/kg humid air/K] and 'Hha' [units of kJ/kg humid air] respectively.
 
-    For more information, go to http://coolprop.sourceforge.net
+    For more information, go to http://www.coolprop.org
     """
     #Convert all strings to byte-strings
     cdef bytes _OutputName = OutputName.encode('ascii')

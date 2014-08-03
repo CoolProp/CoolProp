@@ -2,8 +2,8 @@ from __future__ import absolute_import
 
 from . import AbstractState
 from . import CoolProp
-# from . import HumidAirProp
-# from . import State
+from . import HumidAirProp
+from . import State
 from .constants import *
 
 __fluids__ = CoolProp.get_global_param_string(b'FluidList')

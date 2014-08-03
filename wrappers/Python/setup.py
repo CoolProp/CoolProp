@@ -15,11 +15,7 @@ if __name__=='__main__':
     import subprocess, shutil, os, sys, glob
     
     # Check if a sdist build for pypi
-    if '--pypi' in sys.argv:
-        sys.argv.remove('--pypi')
-        pypi = True
-    else:
-        pypi = False
+    pypi = os.path.exists('.use_this_directory_as_root')
     
     """
     Modes of operation:
@@ -27,7 +23,7 @@ if __name__=='__main__':
     2) Installing from source (generate_headers.py must have been run before making the repo)
     3) Installing from git repo (need to make sure to run generate_headers.py)
     4) 
-    """
+    """ 
     
     # Determine whether or not to use Cython - default is to use cython unless the file .build_without_cython is found in the current working directory
     USE_CYTHON = not os.path.exists('.build_without_cython')
@@ -49,6 +45,14 @@ if __name__=='__main__':
             _profiling_enabled = True
         else:
             _profiling_enabled = False
+            
+        if _profiling_enabled:
+            cython_directives = dict(profile = True,
+                                     embed_signature = True)
+        else:
+            cython_directives = dict(embed_signature = True)
+    else:
+        cython_directives = {}
 
     # Determine the path to the root of the repository, the folder that contains the CMakeLists.txt file 
     # for normal builds, or the main directory for sdist builds
@@ -67,10 +71,12 @@ if __name__=='__main__':
                               stdout = sys.stdout, 
                               cwd = os.path.join(CProot, 'dev')
                               )
+    
                     
     # Read the version from a bare string stored in file in root directory
     version = open(os.path.join(CProot,'.version'),'r').read().strip()
 
+    setup_kwargs = {}
     from setuptools import setup, Extension, find_packages
     if USE_CYTHON:
         import Cython.Compiler
@@ -78,11 +84,13 @@ if __name__=='__main__':
         from Cython.Build import cythonize
         from Cython.Distutils import build_ext
         
-        # This will generate HTML to show where there are still pythonic bits hiding out
+        # This will always generate HTML to show where there are still pythonic bits hiding out
         Cython.Compiler.Options.annotate = True
+        
+        setup_kwargs['cmdclass'] = dict(build_ext = build_ext)
+        
         print('Cython will be used; cy_ext is ' + cy_ext)
     else:
-        cythonize = lambda args: args # A dummy cythonize function that just returns the extensions again
         print('Cython will not be used; cy_ext is ' + cy_ext)
 
     def find_cpp_sources(root = os.path.join('..','..','src'), extensions = ['.cpp'], skip_files = None):
@@ -99,25 +107,19 @@ if __name__=='__main__':
     # Set variables for C++ sources and include directories
     sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp') 
     include_dirs = [os.path.join(CProot, 'include'), os.path.join(CProot, 'externals', 'Eigen')]
-    
-    #This will generate HTML to show where there are still pythonic bits hiding out
-    Cython.Compiler.Options.annotate = True
 
     ## If the file is run directly without any parameters, clean, build and install
     if len(sys.argv)==1:
-       sys.argv += ['clean','build']
-
-    if _profiling_enabled:
-        cython_directives = dict(profile = True,
-                                 embed_signature = True)
-    else:
-        cython_directives = dict(embed_signature = True)
+       sys.argv += ['clean', 'build', 'install']
         
     common_args = dict(include_dirs = include_dirs,
-                       language='c++',
-                       cython_c_in_temp = True,
-                       cython_directives = cython_directives
-                       )
+                       language='c++')
+   
+    if USE_CYTHON:
+        common_args.update(dict(cython_c_in_temp = True,
+                                cython_directives = cython_directives
+                                )
+                           )
                         
     AbstractState_module = Extension('CoolProp5.AbstractState',
                         [os.path.join('CoolProp5','AbstractState.' + cy_ext)] + sources,
@@ -125,10 +127,18 @@ if __name__=='__main__':
     CoolProp_module = Extension('CoolProp5.CoolProp',
                         [os.path.join('CoolProp5','CoolProp.' + cy_ext)] + sources,
                         **common_args)
+    constants_module = Extension('CoolProp5.constants',
+                        [os.path.join('CoolProp5','constants.' + cy_ext)],
+                        **common_args)
+     
      
     if not pypi:
         copy_files()
 
+    ext_modules = [CoolProp_module, AbstractState_module, constants_module]
+    
+    if USE_CYTHON:
+        ext_modules = cythonize(ext_modules)
     try:
         setup (name = 'CoolProp5',
                version = version, # look above for the definition of version variable - don't modify it here
@@ -137,12 +147,10 @@ if __name__=='__main__':
                url='http://www.coolprop.org',
                description = """Open-source thermodynamic and transport properties database""",
                packages = find_packages(),
-               ext_modules = cythonize([CoolProp_module, AbstractState_module]),
+               ext_modules = ext_modules,
                package_data = {'CoolProp5':['State.pxd',
                                             'CoolProp.pxd',
                                             'CoolPropBibTeXLibrary.bib'] + find_cpp_sources(os.path.join('include'), '*.h')},
-               cmdclass={'build_ext': build_ext},
-               
                classifiers = [
                 "Programming Language :: Python",
                 "Development Status :: 4 - Beta",
@@ -152,6 +160,7 @@ if __name__=='__main__':
                 "Operating System :: OS Independent",
                 "Topic :: Software Development :: Libraries :: Python Modules"
                 ],
+               **setup_kwargs
                )
     except BaseException as E:
         if not pypi:
@@ -160,3 +169,6 @@ if __name__=='__main__':
     else:
         if not pypi:
             remove_files()
+            
+    sys.path.pop(0)
+    import CoolProp5
