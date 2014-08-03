@@ -443,6 +443,7 @@ if (COOLPROP_PYTHON_BINARIES)
     set(_AND_UPLOAD upload)
   else()
     set(_AND_UPLOAD )
+  endif()
   
   add_custom_target(CoolProp
                     COMMAND ${PYTHON_EXECUTABLE} setup.py ${COOLPROP_PYTHON_BINARY_VERSIONS} ${_AND_UPLOAD} --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
@@ -457,6 +458,7 @@ if (COOLPROP_PYTHON_PYPI)
     set(_AND_UPLOAD upload)
   else()
     set(_AND_UPLOAD )
+  endif()
     
   add_custom_target(CoolProp
                     COMMAND ${PYTHON_EXECUTABLE} prepare_pypi.py  ${_AND_UPLOAD} --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
