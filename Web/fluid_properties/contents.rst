@@ -6,8 +6,7 @@ Fluid Properties
     :maxdepth: 3
 
     PurePseudoPure
-    TTSE
     Mixtures
-    Incompressibles
     HumidAir
+    Incompressibles
     more_reading
