@@ -11,10 +11,10 @@
 #elif defined(__ISLINUX__)
     #include <tr1/memory>
     using namespace std::tr1;
-#elif defined(__ISAPPLE__)
+#elif defined(__ISAPPLE__) && (defined(__llvm__) || defined(__clang__))
     // See also http://stackoverflow.com/questions/13445742/apple-and-shared-ptr
-    #include <tr1/memory>
-    using std::tr1::shared_ptr;
+    #include <memory>
+    using std::shared_ptr;
 #elif defined(__GNUC__)
     #include <tr1/memory>
     using namespace std::tr1;
