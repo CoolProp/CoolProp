@@ -132,6 +132,7 @@ endif()
 add_custom_target(generate_headers
                   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/dev/generate_headers.py")
 
+                  
 ###      COOLPROP LIB or DLL        ###
 if (COOLPROP_STATIC_LIBRARY)
     add_library(${app_name} STATIC ${APP_SOURCES})
@@ -429,6 +430,21 @@ if (COOLPROP_MATLAB_MODULE)
   add_dependencies (HAPropsSI generate_headers)
   
   install (TARGETS PropsSI HAPropsSI DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+endif()
+
+if (COOLPROP_PYTHON_BINARIES)
+  add_custom_target(CoolProp
+                    COMMAND ${PYTHON_EXECUTABLE} setup.py bdist_wheel bdist_wininst --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
+                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python
+                    )
+endif()
+
+if (COOLPROP_PYTHON_PYPI)
+  
+  add_custom_target(CoolProp
+                    COMMAND ${PYTHON_EXECUTABLE} prepare_pypi.py  --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
+                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python/pypi
+                    )
 endif()
 
 if (COOLPROP_PYTHON_LOCAL_INSTALL)

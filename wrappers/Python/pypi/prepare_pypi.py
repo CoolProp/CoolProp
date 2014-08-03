@@ -32,14 +32,14 @@ if __name__=='__main__':
     
     try:
         collect(tmp)
-       
-        # Try to make the source distro
-        subprocess.check_call(['python','setup.py','sdist'], shell = True, cwd = tmp, stdout = sys.stdout, stderr = sys.stderr)
+
+        # Make the source distro in this folder
+        subprocess.check_call(['python','setup.py','sdist'] + sys.argv[1::], shell = True, cwd = tmp, stdout = sys.stdout, stderr = sys.stderr)
         
     except BaseException as B:
     
-        #shutil.rmtree(tmp)
+        shutil.rmtree(tmp)
         raise
     else:
         pass
-        #shutil.rmtree(tmp)
+        shutil.rmtree(tmp)
