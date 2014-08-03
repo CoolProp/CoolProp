@@ -36,12 +36,11 @@ if __name__=='__main__':
         except ImportError:
             raise ImportError("Cython not found, please install it.  You can do a pip install Cython")
             
-        major, minor = [int(p) for p in Cython.__version__.split('.')][0:2]
+        from pkg_resources import parse_version
+        if parse_version(Cython.__version__) < parse_version('0.20'):
+            raise ImportError('Your version of Cython (%s) must be >= 0.20 .  Please update your version of cython' % (Cython.__version__,))
 
-        #~ if not(major > 0 or minor >= 21):
-            #~ raise ImportError('Your version of Cython %s must be >= 0.21 .  Please update your version of cython' % (Cython.__version__,))
-
-        if minor >= 20:
+        if parse_version(Cython.__version__) >= parse_version('0.20'):
             _profiling_enabled = True
         else:
             _profiling_enabled = False
@@ -65,8 +64,8 @@ if __name__=='__main__':
         else:
             raise ValueError('Could not run script from this folder(' + os.path.abspath(os.path.curdir) + '). Run from wrappers/Python folder')
     
-        # Generate the headers - no op if up to date - but only if not pypi
-        subprocess.check_call(['python','generate_headers.py'], 
+        # Generate the headers - does nothing if up to date - but only if not pypi
+        subprocess.check_call('python generate_headers.py', 
                               shell = True, 
                               stdout = sys.stdout, 
                               cwd = os.path.join(CProot, 'dev')
