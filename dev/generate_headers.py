@@ -135,17 +135,17 @@ def version_to_file(root_dir):
         
         print('version written to file: ' + file_name)
         
-        hidden_file_name = os.path.join(root_dir,'.version')
-        
-        # Write to file
-        f = open(hidden_file_name,'w')
-        f.write(version)
-        f.close()
-        
-        print('version written to hidden file: ' + hidden_file_name + " for use in builders that don't use git repo")
-        
     else:
         print('cpversion.h is up to date')
+        
+    hidden_file_name = os.path.join(root_dir,'.version')
+        
+    # Write to file
+    f = open(hidden_file_name,'w')
+    f.write(version)
+    f.close()
+    
+    print('version written to hidden file: ' + hidden_file_name + " for use in builders that don't use git repo")
         
     
     

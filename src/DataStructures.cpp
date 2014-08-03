@@ -8,58 +8,61 @@ namespace CoolProp{
 
 struct parameter_info
 {
+	bool trivial; ///< True if the input is trivial, and can be directly calculated (constants like critical properties, etc.)
     int key;
     std::string short_desc, IO, units, description;
 public:
-    parameter_info(int key, std::string short_desc, std::string IO, std::string units, std::string description): key(key), short_desc(short_desc), IO(IO), units(units), description(description){};
+    parameter_info(int key, std::string short_desc, std::string IO, std::string units, std::string description, bool trivial): key(key), short_desc(short_desc), IO(IO), units(units), description(description), trivial(trivial){};
 };
 
 parameter_info parameter_info_list[] = {
     /// Input/Output parameters
-    parameter_info(iT, "T", "IO", "K", "Temperature"),
-    parameter_info(iP, "P", "IO", "Pa", "Pressure"),
-    parameter_info(iDmolar, "Dmolar","IO","mol/m^3","Molar density"),
-    parameter_info(iHmolar, "Hmolar","IO","J/mol","Molar specific enthalpy"),
-    parameter_info(iSmolar, "Smolar","IO","J/mol/K","Molar specific entropy"),
-    parameter_info(iUmolar, "Umolar","IO","J/mol","Molar specific internal energy"),
-    parameter_info(iDmass, "Dmass","IO","kg/m^3","Mass density"),
-    parameter_info(iHmass, "Hmass","IO","J/kg","Mass specific enthalpy"),
-    parameter_info(iSmass, "Smass","IO","J/kg/K","Mass specific entropy"),
-    parameter_info(iUmass, "Umass","IO","J/kg","Mass specific internal energy"),
-    parameter_info(iQ, "Q","IO","mol/mol","Mass vapor quality"),
-    parameter_info(iDelta, "Delta","IO","-","Reduced density (rho/rhoc)"),
-    parameter_info(iTau, "Tau","IO","-","Reciprocal reduced temperature (Tc/T)"),
+    parameter_info(iT, "T", "IO", "K", "Temperature",false),
+    parameter_info(iP, "P", "IO", "Pa", "Pressure",false),
+    parameter_info(iDmolar, "Dmolar","IO","mol/m^3","Molar density",false),
+    parameter_info(iHmolar, "Hmolar","IO","J/mol","Molar specific enthalpy",false),
+    parameter_info(iSmolar, "Smolar","IO","J/mol/K","Molar specific entropy",false),
+    parameter_info(iUmolar, "Umolar","IO","J/mol","Molar specific internal energy",false),
+    parameter_info(iDmass, "Dmass","IO","kg/m^3","Mass density",false),
+    parameter_info(iHmass, "Hmass","IO","J/kg","Mass specific enthalpy",false),
+    parameter_info(iSmass, "Smass","IO","J/kg/K","Mass specific entropy",false),
+    parameter_info(iUmass, "Umass","IO","J/kg","Mass specific internal energy",false),
+    parameter_info(iQ, "Q","IO","mol/mol","Mass vapor quality",false),
+    parameter_info(iDelta, "Delta","IO","-","Reduced density (rho/rhoc)",false),
+    parameter_info(iTau, "Tau","IO","-","Reciprocal reduced temperature (Tc/T)",false),
     /// Output only
-    parameter_info(iCpmolar, "Cpmolar","O","J/mol/K","Molar specific constant presssure specific heat"),
-    parameter_info(iCpmass, "Cpmass","O","J/kg/K","Mass specific constant presssure specific heat"),
-    parameter_info(iCvmolar, "Cvmolar","O","J/mol/K","Molar specific constant volume specific heat"),
-    parameter_info(iCvmass, "Cvmass","O","J/kg/K","Mass specific constant volume specific heat"),
-    parameter_info(iGWP20, "GWP20","O","-","20-year gobal warming potential"),
-    parameter_info(iGWP100, "GWP100","O","-","100-year gobal warming potential"),
-    parameter_info(iGWP500, "GWP500","O","-","500-year gobal warming potential"),
-    parameter_info(iFH, "FH","O","-","Flammability hazard"),
-    parameter_info(iHH, "HH","O","-","Health hazard"),
-    parameter_info(iPH, "PH","O","-","Physical hazard"),
-    parameter_info(iODP, "ODP","O","-","Ozone depletion potential"),
-    parameter_info(iBvirial, "Bvirial","O","-","Second virial coefficient"),
-    parameter_info(iCvirial, "Cvirial","O","-","Third virial coefficient"),
-    parameter_info(idBvirial_dT, "dBvirial_dT","O","-","Derivative of second virial coefficient with respect to T"),
-    parameter_info(idCvirial_dT, "dCvirial_dT","O","-","Derivative of third virial coefficient with respect to T"),
-    parameter_info(imolar_mass, "molar_mass","O","kg/mol","Molar mass"),
-    parameter_info(irhomolar_reducing, "rhomolar_reducing","O","mol/m^3","Molar density at reducing point"),
-    parameter_info(irhomolar_critical, "rhomolar_critical","O","mol/m^3","Molar density at critical point"),
-    parameter_info(iT_reducing, "T_reducing","O","K","Temperature at the reducing point"),
-    parameter_info(iT_critical, "T_critical","O","K","Temperature at the critical point"),
-    parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility"),
-    parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound"),
-    parameter_info(iviscosity, "viscosity","O","Pa-s","Viscosity"),
-    parameter_info(iconductivity, "conductivity","O","W/m/K","Thermal conductivity"),
+    parameter_info(iCpmolar, "Cpmolar","O","J/mol/K","Molar specific constant presssure specific heat",false),
+    parameter_info(iCpmass, "Cpmass","O","J/kg/K","Mass specific constant presssure specific heat",false),
+    parameter_info(iCvmolar, "Cvmolar","O","J/mol/K","Molar specific constant volume specific heat",false),
+    parameter_info(iCvmass, "Cvmass","O","J/kg/K","Mass specific constant volume specific heat",false),
+    parameter_info(iGWP20, "GWP20","O","-","20-year gobal warming potential",false),
+    parameter_info(iGWP100, "GWP100","O","-","100-year gobal warming potential",false),
+    parameter_info(iGWP500, "GWP500","O","-","500-year gobal warming potential",false),
+    parameter_info(iFH, "FH","O","-","Flammability hazard",false),
+    parameter_info(iHH, "HH","O","-","Health hazard",false),
+    parameter_info(iPH, "PH","O","-","Physical hazard",false),
+    parameter_info(iODP, "ODP","O","-","Ozone depletion potential",false),
+    parameter_info(iBvirial, "Bvirial","O","-","Second virial coefficient",false),
+    parameter_info(iCvirial, "Cvirial","O","-","Third virial coefficient",false),
+    parameter_info(idBvirial_dT, "dBvirial_dT","O","-","Derivative of second virial coefficient with respect to T",false),
+    parameter_info(idCvirial_dT, "dCvirial_dT","O","-","Derivative of third virial coefficient with respect to T",false),
+    parameter_info(imolar_mass, "molar_mass","O","kg/mol","Molar mass",true),
+    parameter_info(irhomolar_reducing, "rhomolar_reducing","O","mol/m^3","Molar density at reducing point",true),
+    parameter_info(irhomolar_critical, "rhomolar_critical","O","mol/m^3","Molar density at critical point",true),
+	parameter_info(irhomass_critical, "rhomass_critical","O","kg/m^3","Molar density at critical point",true),
+    parameter_info(iT_reducing, "T_reducing","O","K","Temperature at the reducing point",true),
+    parameter_info(iT_critical, "T_critical","O","K","Temperature at the critical point",true),
+    parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility",false),
+    parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound",false),
+    parameter_info(iviscosity, "viscosity","O","Pa-s","Viscosity",false),
+    parameter_info(iconductivity, "conductivity","O","W/m/K","Thermal conductivity",false),
 };
 
 class ParameterInformation
 {
 public:
-    std::map<int, std::string> short_desc_map, description_map, IO_map, units_map;
+    std::map<int, bool> trivial_map;
+	std::map<int, std::string> short_desc_map, description_map, IO_map, units_map;
     std::map<std::string, int> index_map;
     ParameterInformation()
     {
@@ -72,6 +75,7 @@ public:
             units_map.insert(std::pair<int, std::string>(el.key, el.units));
             description_map.insert(std::pair<int, std::string>(el.key, el.description));
             index_map.insert(std::pair<std::string, int>(el.short_desc, el.key));
+			trivial_map.insert(std::pair<int, bool>(el.key, el.trivial));
         }
         // Backward compatibility aliases
         index_map.insert(std::pair<std::string, int>("D", iDmass));
@@ -82,10 +86,30 @@ public:
         index_map.insert(std::pair<std::string, int>("O", iCvmass));
         index_map.insert(std::pair<std::string, int>("V", iviscosity));
         index_map.insert(std::pair<std::string, int>("L", iconductivity));
+		index_map.insert(std::pair<std::string, int>("Tcrit", iT_critical));
+		index_map.insert(std::pair<std::string, int>("rhocrit", irhomass_critical));
     }
 };
 
 static ParameterInformation parameter_information;
+
+bool is_trivial_parameter(int key)
+{
+    std::map<int, bool>::iterator it;
+
+    // Try to find it
+    it = parameter_information.trivial_map.find(key);
+    // If equal to end, not found
+    if (it != parameter_information.trivial_map.end())
+    {
+        // Found it, return it
+        return it->second;
+    }
+    else
+    {
+        throw ValueError(format("Unable to match the key [%d] in is_trivial_parameter",key));
+    }
+}
 
 std::string get_parameter_information(int key, std::string info)
 {

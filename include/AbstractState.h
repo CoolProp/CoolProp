@@ -231,6 +231,8 @@ protected:
     
     /// Update the states after having changed the reference state for enthalpy and entropy
     virtual void update_states(void){throw NotImplementedError("This backend does not implement update states function");};
+	
+	
 
 public:
 
@@ -272,8 +274,6 @@ public:
     virtual void set_mole_fractions(const std::vector<long double> &mole_fractions) = 0;
     virtual void set_mass_fractions(const std::vector<long double> &mass_fractions) = 0;
     virtual void set_volu_fractions(const std::vector<long double> &mass_fractions){throw NotImplementedError("Volume composition has not been implemented.");}
-
-    
     
     /// Clear all the cached values
     bool clear();
@@ -285,6 +285,7 @@ public:
     const CoolProp::SimpleState & get_reducing(){return _reducing;};
 
     double keyed_output(int key);
+	double trivial_keyed_output(int key);
 
     long double first_partial_deriv(int Of, int Wrt, int Constant){return calc_first_partial_deriv(Of,Wrt,Constant);};
 

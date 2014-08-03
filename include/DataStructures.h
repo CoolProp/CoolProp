@@ -31,6 +31,7 @@ enum parameters{
 
     // General parameters
     imolar_mass, irhomolar_reducing, irhomolar_critical, iT_reducing, iT_critical,
+	irhomass_reducing, irhomass_critical,
 
     // Bulk properties
     iT,  iP, iQ, iTau, iDelta,
@@ -73,7 +74,8 @@ enum parameters{
 std::string get_parameter_information(int key, std::string info);
 /// Return the integer key corresponding to the parameter name ("Dmolar" for instance)
 int get_parameter_index(const std::string &param_name);
-
+/// Returns true if the input is trivial (constants, critical parameters, etc.)
+bool is_trivial_parameter(int key);
 std::string get_csv_parameter_list();
 
 /// These are constants for the compositions

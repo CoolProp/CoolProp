@@ -17,6 +17,8 @@ using namespace CoolProp;
 #include "Tests.h"
 #endif
 #include "SpeedTest.h"
+#include "HumidAirProp.h"
+#include "CoolPropLib.h"
 
 #include "crossplatform_shared_ptr.h"
 
@@ -60,12 +62,64 @@ struct element
 
 int main()
 {
-    if (1){
-        shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("INCOMP","ExamplePure"));
-        AS->update(CoolProp::PT_INPUTS, 101325, 373);
-        double mu = AS->conductivity();
-        int rr =0;
+	if (1)
+	{
+		double Tc = Props1SI("Water","Tcrit");
+		double rhoc = Props1SI("Water","rhocrit");
+		int r =4;
+	}
+    if (1)
+    {
+        double T11 = PropsSI("T","P",101325,"Q",0, "Propane");
+        double h3 = PropsSI("Hmolar","T",T11,"Q",0.5, "Propane");
+        double T3 = PropsSI("T","P",101325,"Hmolar",h3, "Propane");
+        double h4 = PropsSI("Hmolar","T",T3,"P",101325, "Propane");
+        
+        CoolProp::set_reference_stateS("Propane","NBP");
+        double h0 = PropsSI("H","P",101325,"T",300, "Propane");
+        double T0 = PropsSI("T","P",101325,"H",h0, "Propane");
+        double h1 = PropsSI("H","T",T0,"P",101325, "Propane");
+        
+        double s0 = PropsSI("S","P",101325,"T",300, "Propane");
+        double _T0 = PropsSI("T","P",101325,"S",s0, "Propane");
+        double s1 = PropsSI("S","T",T0,"P",101325, "Propane");
+        int r = 0;
     }
+    if (0)
+    {
+        std::string eos = get_BibTeXKey(std::string("R152A"),std::string("EOS"));
+        std::cout << eos << std::endl;
+        
+        double p0 = PropsSI("C","T",300+273.15,"D",1e-10, "REFPROP::R152A");
+        double pa = PropsSI("C","T",300+273.15,"D",1e-10, "HEOS::R152A");
+        double p1 = PropsSI("P","T",273.15,"D",1,"REFPROP::R123");
+        double p2 = PropsSI("P","T",273.15,"D",1,"HEOS::R123");
+        std::cout << p1 << std::endl;
+        std::cout << p2 << std::endl;
+        double errd = p1 - p2;
+        
+        double l1 = PropsSI("D","T",368,"Q",1,"REFPROP::Propane");
+        double l2 = PropsSI("D","T",368,"Q",1,"HEOS::Propane");
+        double errl = l1 - l2;
+        
+        int err = 0;
+    }
+    if (0){
+        shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS","Water"));
+        AS->update(CoolProp::QT_INPUTS, 0, 300);
+        double h1 = AS->hmass();
+        shared_ptr<CoolProp::AbstractState> AR(AbstractState::factory("REFPROP","Air"));
+        AR->update(CoolProp::QT_INPUTS, 0, 100);
+        double h2 = AR->hmass();
+
+        int rr = 0;
+    }
+    //if (1){
+    //    shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("INCOMP","ExamplePure"));
+    //    AS->update(CoolProp::PT_INPUTS, 101325, 373);
+    //    double mu = AS->conductivity();
+    //    int rr =0;
+    //}
 //    if (1)
 //    {
 //        std::string s = get_csv_parameter_list();
@@ -81,10 +135,17 @@ int main()
 //        std::cout << s << std::endl;
 //        int rr =0;
 //    }
-    set_debug_level(1);
+    CoolProp::set_debug_level(1);
 
-
-    if (0)
+	
+    if (1)
+    {
+        double rr0 = HumidAir::HAPropsSI("H","T",473.15,"W",0,"P",101325);
+        CoolProp::set_reference_stateS("Air","RESET");
+        double rr1 = HumidAir::HAPropsSI("H","T",473.15,"W",0,"P",101325);
+        int r = 1;
+    }
+    if (1)
     {
         // First type (slowest, most string processing, exposed in DLL)
         double r0A = PropsSI("Dmolar","T",298,"P",1e5,"Propane[0.5]&Ethane[0.5]"); // Default backend is HEOS
@@ -146,9 +207,9 @@ int main()
         double rr = 0;
         return 0;
     }
-    if (0)
+    if (1)
     {
-        std::string NBP_refs[] = {"D5","D6","MD2M","MDM","Benzene","Helium","Ethylene","Ethanol","n-Dodecane","Benzene","n-Undecane","Neon","Fluorine","Methanol","Acetone","Methane","Ethane","n-Pentane","n-Hexane","n-Heptane","n-Octane","CycloHexane","MD3M","MM","D4","MethylPalmitate","MethylStearate","MethylOleate","MethylLinoleate","MethylLinolenate","m-Xylene","Air"};
+        std::string NBP_refs[] = {"D5","D6","MD2M","MDM","Benzene","Helium","Ethylene","Ethanol","n-Dodecane","Benzene","n-Undecane","Neon","Fluorine","Methanol","Acetone","Methane","Ethane","n-Pentane","n-Hexane","n-Heptane","n-Octane","CycloHexane","MD3M","MM","D4","MethylPalmitate","MethylStearate","MethylOleate","MethylLinoleate","MethylLinolenate","m-Xylene"};
         std::string IIR_refs[] = {"SES36","R143a","CycloPropane","Propylene","R227EA","R365MFC","R161","HFE143m","SulfurHexafluoride","CarbonDioxide","R1234ze(E)","R22","R124","Propyne","R507A","R152A","R123","R11","n-Butane","IsoButane","RC318","R21","R114","R13","R12","R113","R1233zd(E)","R41"};
         for (std::size_t i = 0; i < sizeof(NBP_refs)/sizeof(NBP_refs[0]); ++i)
         {
@@ -180,6 +241,45 @@ int main()
             catch(const std::exception &e)
             {
                 std::cout << "ERROR FOR " << IIR_refs[i] << std::endl;
+            }
+        }
+        std::string OTH_refs[] = {"Ammonia","Argon","R14"};
+        for (std::size_t i = 0; i < sizeof(OTH_refs)/sizeof(OTH_refs[0]); ++i)
+        {
+            try{
+                set_reference_stateS(OTH_refs[i],"RESET");
+                std::vector<std::string> comps(1,OTH_refs[i]);
+                HelmholtzEOSMixtureBackend HEOS(comps);
+                REFPROPBackend REOS(OTH_refs[i]);
+                HEOS.update(PQ_INPUTS, 101325, 0);
+                REOS.update(PQ_INPUTS, 101325, 0);
+                double delta_a1 = (HEOS.smass()-REOS.smass())/(HEOS.gas_constant()/HEOS.molar_mass());
+                double delta_a2 = -(HEOS.hmass()-REOS.hmass())/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing().T);
+                std::cout << format("%s,%s,%16.15g,%16.15g\n",OTH_refs[i].c_str(),"OTH",delta_a1, delta_a2);
+            }
+            catch(const std::exception &e)
+            {
+                std::cout << "ERROR FOR " << OTH_refs[i] << ": " << e.what() << std::endl;
+            }
+        }
+
+        std::string OTH2_refs[] = {"Air"};
+        for (std::size_t i = 0; i < sizeof(OTH2_refs)/sizeof(OTH2_refs[0]); ++i)
+        {
+            try{
+                //set_reference_stateS(OTH2_refs[i],"RESET");
+                std::vector<std::string> comps(1,OTH2_refs[i]);
+                HelmholtzEOSMixtureBackend HEOS(comps);
+                REFPROPBackend REOS(OTH2_refs[i]);
+                HEOS.update(QT_INPUTS, 0, 100);
+                REOS.update(QT_INPUTS, 0, 100);
+                double delta_a1 = (HEOS.smass()-REOS.smass())/(HEOS.gas_constant()/HEOS.molar_mass());
+                double delta_a2 = -(HEOS.hmass()-REOS.hmass())/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing().T);
+                std::cout << format("%s,%s,%16.15g,%16.15g\n",OTH2_refs[i].c_str(),"OTH",delta_a1, delta_a2);
+            }
+            catch(const std::exception &e)
+            {
+                std::cout << "ERROR FOR " << OTH2_refs[i] << ": " << e.what() << std::endl;
             }
         }
         double rr = 0;

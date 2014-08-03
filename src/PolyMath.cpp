@@ -165,7 +165,7 @@ double Polynomial2D::evaluate(const Eigen::MatrixXd &coefficients, const double 
 /// @param x_in double value that represents the current input in the 1st dimension
 /// @param y_in double value that represents the current input in the 2nd dimension
 double Polynomial2D::evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in){
-	size_t r = coefficients.rows(), c = coefficients.cols();
+	size_t r = coefficients.rows();
 	double result = evaluate(coefficients.row(r-1), y_in);
 	for(int i=r-2; i>=0; i--) {
 		result *= x_in;
@@ -718,7 +718,7 @@ Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, con
 	}
 
 	if (this->do_debug()) std::cout << "Coefficients: " << mat_to_string( Eigen::MatrixXd(tmpCoefficients) ) << std::endl;
-	Eigen::PolynomialSolver<double,Eigen::Dynamic> polySolver( tmpCoefficients );
+	Eigen::PolynomialSolver<double,-1> polySolver( tmpCoefficients );
 	std::vector<double> rootsVec;
 	polySolver.realRoots(rootsVec);
 	if (this->do_debug()) std::cout << "Real roots: " << vec_to_string(rootsVec) << std::endl;

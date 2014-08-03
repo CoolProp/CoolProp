@@ -156,7 +156,27 @@ bool AbstractState::clear() {
 
     return true;
 }
-
+double AbstractState::trivial_keyed_output(int key)
+{
+	if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
+    switch (key)
+    {
+	case imolar_mass:
+        return molar_mass();
+    case iT_reducing:
+        return get_reducing().T;
+    case irhomolar_reducing:
+        return get_reducing().rhomolar;
+    case iT_critical:
+        return this->T_critical();
+    case irhomolar_critical:
+        return this->rhomolar_critical();
+    case irhomass_critical:
+        return this->rhomolar_critical()*molar_mass();
+	default:
+		throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));
+	}
+}
 double AbstractState::keyed_output(int key)
 {
 	if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;

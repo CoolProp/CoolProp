@@ -40,8 +40,7 @@ std::string format(const char* fmt, ...)
 
 std::vector<std::string> strsplit(std::string s, char del)
 {
-	int iL = 0, iR = 0, N;
-	N = s.size();
+	std::size_t iL = 0, iR = 0, N = s.size();
 	std::vector<std::string> v;
 	// Find the first instance of the delimiter
 	iR = s.find_first_of(del);
@@ -68,7 +67,7 @@ std::vector<std::string> strsplit(std::string s, char del)
     
 double interp1d(std::vector<double> *x, std::vector<double> *y, double x0)
 {
-	unsigned int i,L,R,M;
+	std::size_t i,L,R,M;
 	L=0;
 	R=(*x).size()-1;
 	M=(L+R)/2;

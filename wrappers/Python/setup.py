@@ -138,6 +138,7 @@ if __name__=='__main__':
     
     if USE_CYTHON:
         ext_modules = cythonize(ext_modules)
+        
     try:
         setup (name = 'CoolProp5',
                version = version, # look above for the definition of version variable - don't modify it here

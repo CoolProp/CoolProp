@@ -605,15 +605,17 @@ TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for CO2 using all val
     }
 }
 
-TEST_CASE("Test saturation properties for a few fluids", "[slow]")
+TEST_CASE("Test saturation properties for a few fluids", "[saturation],[slow]")
 {
     SECTION("sat_p")
     {
-        std::vector<double> pv = linspace(Props1SI("Water", "ptriple")+1, Props1SI("Water", "pcrit")-1e-6,5);
+        std::vector<double> pv = linspace(Props1SI("CO2", "ptriple"), Props1SI("CO2", "pcrit")-1e-6,5);
         for (int i = 0; i < pv.size(); ++i)
         {
             CAPTURE(pv[i]);
-            CHECK_NOTHROW(CoolProp::PropsSI("T","P",pv[i],"Q",0,"Water"));
+            double T = CoolProp::PropsSI("T","P",pv[i],"Q",0,"CO2");
+
+
         }
     }
 }

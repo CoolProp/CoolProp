@@ -240,7 +240,7 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
     std::vector<std::string> names;
     std::string all_pairs, backend_string;
     // Start at the "::" if it is found to chop off the delimiter between backend and fluid
-    int i = fluid_string.find("::");
+    std::size_t i = fluid_string.find("::");
 
     // If no backend/fluid delimiter
     if (i < 0){
@@ -307,7 +307,7 @@ std::string extract_concentrations(const std::string &fluid_string, std::vector<
 	std::string all_pairs, backend_string;
 
 	// Start at the "::" if it is found to chop off the delimiter between backend and fluid
-	int i = fluid_string.find("::");
+	std::size_t i = fluid_string.find("::");
 
 	// If no backend/fluid delimiter
 	if (i < 0) {
@@ -349,51 +349,46 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
 
     // Convert all the input and output parameters to integers
     long iOutput = get_parameter_index(Output);
-    long iName1 = get_parameter_index(Name1);
-    long iName2 = get_parameter_index(Name2);
 
     // The state we are going to use
     shared_ptr<AbstractState> State;
-    try
-    {
-        // We are going to let the factory function determine which backend to use
-        //
-        // Generate the State class pointer using the factory function with unknown backend
-        State.reset(AbstractState::factory(unknown_backend, Ref));
+    
+	// We are going to let the factory function determine which backend to use
+	//
+	// Generate the State class pointer using the factory function with unknown backend
+	State.reset(AbstractState::factory(unknown_backend, Ref));
+	
+	// First check if it is a trivial input (critical/max parameters for instance)
+	if (is_trivial_parameter(iOutput))
+	{
+		double val = State->trivial_keyed_output(iOutput);
+		return val;
+	};
+	
+	long iName1 = get_parameter_index(Name1);
+	long iName2 = get_parameter_index(Name2);
 
-        if (State->using_mole_fractions()){
-            State->set_mole_fractions(z);
-        } else if (State->using_mass_fractions()){
-            State->set_mass_fractions(z);
-        } else if (State->using_volu_fractions()){
-            State->set_volu_fractions(z);
-        } else {
-        	if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
-        }
+	if (State->using_mole_fractions()){
+		State->set_mole_fractions(z);
+	} else if (State->using_mass_fractions()){
+		State->set_mass_fractions(z);
+	} else if (State->using_volu_fractions()){
+		State->set_volu_fractions(z);
+	} else {
+		if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
+	}
 
-        // Obtain the input pair
-        long pair = generate_update_pair(iName1, Prop1, iName2, Prop2, x1, x2);
+	// Obtain the input pair
+	long pair = generate_update_pair(iName1, Prop1, iName2, Prop2, x1, x2);
 
-        // First check if it is a trivial input (critical/max parameters for instance)
-        // TODO: check for trivial inputs that do not require the use of the eos
-        /*if (State->is_trivial_output(iOutput))
-        {
-            double val = State->trivial_keyed_output(iOutput);
-            return val;
-        };*/
+	// Update the state
+	State->update(pair, x1, x2);
 
-        // Update the state
-        State->update(pair, x1, x2);
+	// Return the desired output
+	double val = State->keyed_output(iOutput);
 
-        // Return the desired output
-        double val = State->keyed_output(iOutput);
-
-        // Return the value
-        return val;
-    }
-    catch(...){
-        throw;
-    }
+	// Return the value
+	return val;
 }
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref, const std::vector<double> &z)
 {
