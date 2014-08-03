@@ -433,36 +433,35 @@ if (COOLPROP_MATLAB_MODULE)
 endif()
 
 if (COOLPROP_PYTHON_BINARIES)
+  if (WIN32)
+    set(COOLPROP_PYTHON_BINARY_VERSIONS  bdist_wheel bdist_wininst)
+  elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(COOLPROP_PYTHON_BINARY_VERSIONS  bdist_wheel)
+  endif()
+  
+  if (DEFINED AND_UPLOAD)
+    set(_AND_UPLOAD upload)
+  else()
+    set(_AND_UPLOAD )
+  
   add_custom_target(CoolProp
-                    COMMAND ${PYTHON_EXECUTABLE} setup.py bdist_wheel bdist_wininst --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
+                    COMMAND ${PYTHON_EXECUTABLE} setup.py ${COOLPROP_PYTHON_BINARY_VERSIONS} ${_AND_UPLOAD} --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python
                     )
+  
 endif()
 
 if (COOLPROP_PYTHON_PYPI)
   
+  if (DEFINED AND_UPLOAD)
+    set(_AND_UPLOAD upload)
+  else()
+    set(_AND_UPLOAD )
+    
   add_custom_target(CoolProp
-                    COMMAND ${PYTHON_EXECUTABLE} prepare_pypi.py  --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
+                    COMMAND ${PYTHON_EXECUTABLE} prepare_pypi.py  ${_AND_UPLOAD} --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python/pypi
                     )
-endif()
-
-if (COOLPROP_PYTHON_LOCAL_INSTALL)
-    set(SETUP_PY_IN "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Python/setup.py.in")
-    set(SETUP_PY    "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
-    set(DEPS        "${CMAKE_CURRENT_SOURCE_DIR}/module/__init__.py")
-    set(OUTPUT      "${CMAKE_CURRENT_BINARY_DIR}/build/timestamp")
-
-    configure_file(${SETUP_PY_IN} ${SETUP_PY})
-
-    add_custom_command(OUTPUT ${OUTPUT}
-                       COMMAND ${PYTHON} ${SETUP_PY} build
-                       COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT}
-                       DEPENDS ${DEPS})
-
-    add_custom_target(target ALL DEPENDS ${OUTPUT})
-
-    install(CODE "execute_process(COMMAND ${PYTHON} ${SETUP_PY} install)")
 endif()
 
 # NOT WORKING!
