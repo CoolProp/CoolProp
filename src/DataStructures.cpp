@@ -49,9 +49,10 @@ parameter_info parameter_info_list[] = {
     parameter_info(imolar_mass, "molar_mass","O","kg/mol","Molar mass",true),
     parameter_info(irhomolar_reducing, "rhomolar_reducing","O","mol/m^3","Molar density at reducing point",true),
     parameter_info(irhomolar_critical, "rhomolar_critical","O","mol/m^3","Molar density at critical point",true),
-	parameter_info(irhomass_critical, "rhomass_critical","O","kg/m^3","Molar density at critical point",true),
+	parameter_info(irhomass_critical, "rhomass_critical","O","kg/m^3","Mass density at critical point",true),
     parameter_info(iT_reducing, "T_reducing","O","K","Temperature at the reducing point",true),
     parameter_info(iT_critical, "T_critical","O","K","Temperature at the critical point",true),
+	parameter_info(iP_critical, "p_critical","O","Pa","Pressure at the critical point",true),
     parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility",false),
     parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound",false),
     parameter_info(iviscosity, "viscosity","O","Pa-s","Viscosity",false),
@@ -86,6 +87,7 @@ public:
         index_map.insert(std::pair<std::string, int>("O", iCvmass));
         index_map.insert(std::pair<std::string, int>("V", iviscosity));
         index_map.insert(std::pair<std::string, int>("L", iconductivity));
+		index_map.insert(std::pair<std::string, int>("pcrit", iP_critical));
 		index_map.insert(std::pair<std::string, int>("Tcrit", iT_critical));
 		index_map.insert(std::pair<std::string, int>("rhocrit", irhomass_critical));
     }

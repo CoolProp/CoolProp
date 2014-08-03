@@ -35,12 +35,19 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
         {
             // Invert liquid density ancillary to get temperature
             // TODO: fit inverse ancillaries too
-            T = HEOS->get_components()[0]->ancillaries.pL.invert(specified_value);
+			try{
+				T = HEOS->get_components()[0]->ancillaries.pL.invert(specified_value);
+			}
+			catch(std::exception &e)
+			{
+				throw ValueError("Unable to invert ancillary equation");
+			}
         }
         else
         {
             throw ValueError(format("options.specified_variable to saturation_PHSU_pure [%d] is invalid",options.specified_variable));
         }
+		if (T > HEOS->T_critical()-1){ T -= 1; }
 
         // Evaluate densities from the ancillary equations
         rhoV = HEOS->get_components()[0]->ancillaries.rhoV.evaluate(T);
@@ -391,7 +398,7 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
     long double rhoL,rhoV,JL,JV,KL,KV,dJL,dJV,dKL,dKV;
     long double DELTA, deltaL=0, deltaV=0, tau, error, PL, PV, stepL, stepV;
     int iter=0;
-    // Use the density ancillary function as the starting point for the solver
+    
     try
     {
         if (options.use_guesses)
@@ -402,24 +409,26 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
         }
         else
         {
+			// Use the density ancillary function as the starting point for the solver
+			
             // If very close to the critical temp, evaluate the ancillaries for a slightly lower temperature
             if (T > 0.99*HEOS->get_reducing().T){
-                rhoL = HEOS->get_components()[0]->ancillaries.rhoL.evaluate(T-1);
-                rhoV = HEOS->get_components()[0]->ancillaries.rhoV.evaluate(T-1);
+                rhoL = HEOS->get_components()[0]->ancillaries.rhoL.evaluate(T-0.1);
+                rhoV = HEOS->get_components()[0]->ancillaries.rhoV.evaluate(T-0.1);
             }
             else{
                 rhoL = HEOS->get_components()[0]->ancillaries.rhoL.evaluate(T);
                 rhoV = HEOS->get_components()[0]->ancillaries.rhoV.evaluate(T);
+				
+				// Apply a single step of Newton's method to improve guess value for liquid
+				// based on the error between the gas pressure (which is usually very close already)
+				// and the liquid pressure, which can sometimes (especially at low pressure),
+				// be way off, and often times negative
+				SatL->update(DmolarT_INPUTS, rhoL, T);
+				SatV->update(DmolarT_INPUTS, rhoV, T);
+				rhoL += -(SatL->p()-SatV->p())/SatL->first_partial_deriv(iP, iDmolar, iT);
             }
         }
-
-        // Apply a single step of Newton's method to improve guess value for liquid
-        // based on the error between the gas pressure (which is usually very close already)
-        // and the liquid pressure, which can sometimes (especially at low pressure),
-        // be way off, and often times negative
-        SatL->update(DmolarT_INPUTS, rhoL, T);
-        SatV->update(DmolarT_INPUTS, rhoV, T);
-        rhoL += -(SatL->p()-SatV->p())/SatL->first_partial_deriv(iP, iDmolar, iT);
 
         deltaL = rhoL/reduce.rhomolar;
         deltaV = rhoV/reduce.rhomolar;
@@ -474,7 +483,7 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
 
         DELTA = dJV*dKL-dJL*dKV;
 
-        error = fabs(KL-KV)+fabs(JL-JV);
+        error = sqrt((KL-KV)*(KL-KV)+(JL-JV)*(JL-JV));
 
         //  Get the predicted step
         stepL = options.omega/DELTA*( (KV-KL)*dJV-(JV-JL)*dKV);
@@ -485,14 +494,14 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
             rhoL = deltaL*reduce.rhomolar; rhoV = deltaV*reduce.rhomolar;
         }
         else{
-            throw ValueError(format("rhosatPure_Akasaka failed"));
+            throw ValueError(format("rhosatPure_Akasaka densities are crossed"));
         }
         iter++;
         if (iter > 100){
             throw SolutionError(format("Akasaka solver did not converge after 100 iterations"));
         }
     }
-    while (error > 1e-10 && fabs(stepL) > 10*DBL_EPSILON*fabs(stepL) && fabs(stepV) > 10*DBL_EPSILON*fabs(stepV));
+    while (error > 1e-12 && fabs(stepL) > 10*DBL_EPSILON*fabs(stepL) && fabs(stepV) > 10*DBL_EPSILON*fabs(stepV));
 	
 	double p_error_limit = 1e-3;
 	double p_error = (PL - PV)/PL;

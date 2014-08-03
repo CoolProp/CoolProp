@@ -295,7 +295,7 @@ bool has_solution_concentration(const std::string &fluid_string)
     // Start at the "::" if it is found to chop off the delimiter between backend and fluid
     std::size_t i = fluid_string.find("::");
     // If can find "-", expect mass fractions encoded as string
-    if (fluid_string.find('-',i+2)!=std::string::npos)
+    if (fluid_string.find('-',i+2)!=std::string::npos && fluid_string.find("INCOMP")==0)
     	return true;
     return false;
 }
@@ -419,7 +419,6 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
             // Extract the fractions and reformulate the list of fluids INCOMP::EG-0.2 -> INCOMP::EG and [0.2]
             std::string Ref2 = extract_concentrations(Ref, fractions);
             return _PropsSI(Output, Name1, Prop1, Name2, Prop2, Ref2, fractions);
-
         }
         else
         {

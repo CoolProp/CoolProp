@@ -28,7 +28,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         {
             // Set some imput options
             SaturationSolvers::saturation_T_pure_options options;
-            options.omega = 1.0;
+            options.omega = 0.1;
             options.use_guesses = false;
             // Actually call the solver
             SaturationSolvers::saturation_T_pure(&HEOS, HEOS._T, options);
@@ -114,6 +114,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_PL;
             // Use logarithm of delta as independent variables
             options.use_logdelta = false;
+			options.omega = 0.3;
             // Actually call the solver
             SaturationSolvers::saturation_PHSU_pure(&HEOS, HEOS._p, options);
 

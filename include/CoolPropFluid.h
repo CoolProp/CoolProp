@@ -395,7 +395,12 @@ public:
         solver_resid resid(this, value);
         std::string errstring;
 
-        return Brent(resid,Tmin,Tmax,DBL_EPSILON,1e-12,100,errstring);
+		try{
+			return Brent(resid,Tmin,Tmax,DBL_EPSILON,1e-12,100,errstring);
+		}
+		catch(std::exception &e){
+			return Secant(resid,Tmax, -0.01, 1e-12, 100, errstring);
+		}
     }
 };
 

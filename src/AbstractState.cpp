@@ -167,6 +167,8 @@ double AbstractState::trivial_keyed_output(int key)
         return get_reducing().T;
     case irhomolar_reducing:
         return get_reducing().rhomolar;
+	case iP_critical:
+        return this->p_critical();
     case iT_critical:
         return this->T_critical();
     case irhomolar_critical:
@@ -220,10 +222,6 @@ double AbstractState::keyed_output(int key)
         return get_reducing().rhomolar;
     case ispeed_sound:
         return speed_sound();
-    //case iT_critical:
-    //    return get_critical().T;
-    //case irhomolar_critical:
-    //    return get_critical().rhomolar; // TODO
     case ialpha0:
         return alpha0();
     case idalpha0_ddelta_consttau:
