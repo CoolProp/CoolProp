@@ -37,11 +37,7 @@ void generate_melting_curve_data(const char* file_name, const char *fluid_name, 
             State->update(PT_INPUTS,pp,T);
             double rho = State->rhomolar();
             State->update(DmolarT_INPUTS,rho,T);
-            double pp2 = State->p();
-            if  (fabs(pp2-pp) > 0.01)
-            {
-                double rr = 0;
-            }
+            //double pp2 = State->p();
             //printf("%g,%g,%g\n",T,pp,rho);
             fprintf(fp, "%g,%g,%g\n",T,pp,rho);
         }
@@ -62,14 +58,14 @@ struct element
 
 int main()
 {
-	if (1)
-	{
+	#if 1
+
 		double Tc = Props1SI("Water","Tcrit");
 		double rhoc = Props1SI("Water","rhocrit");
-		int r =4;
-	}
-    if (1)
-    {
+		std::cout << Tc << rhoc << std::endl;
+	
+	#endif
+    #if 0
         double T11 = PropsSI("T","P",101325,"Q",0, "Propane");
         double h3 = PropsSI("Hmolar","T",T11,"Q",0.5, "Propane");
         double T3 = PropsSI("T","P",101325,"Hmolar",h3, "Propane");
@@ -84,9 +80,8 @@ int main()
         double _T0 = PropsSI("T","P",101325,"S",s0, "Propane");
         double s1 = PropsSI("S","T",T0,"P",101325, "Propane");
         int r = 0;
-    }
-    if (0)
-    {
+    #endif
+    #if 0
         std::string eos = get_BibTeXKey(std::string("R152A"),std::string("EOS"));
         std::cout << eos << std::endl;
         
@@ -103,8 +98,8 @@ int main()
         double errl = l1 - l2;
         
         int err = 0;
-    }
-    if (0){
+    #endif
+    #if 0
         shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS","Water"));
         AS->update(CoolProp::QT_INPUTS, 0, 300);
         double h1 = AS->hmass();
@@ -113,7 +108,7 @@ int main()
         double h2 = AR->hmass();
 
         int rr = 0;
-    }
+    #endif
     //if (1){
     //    shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("INCOMP","ExamplePure"));
     //    AS->update(CoolProp::PT_INPUTS, 101325, 373);
@@ -137,16 +132,13 @@ int main()
 //    }
     CoolProp::set_debug_level(1);
 
-	
-    if (1)
-    {
+    #if 0
         double rr0 = HumidAir::HAPropsSI("H","T",473.15,"W",0,"P",101325);
         CoolProp::set_reference_stateS("Air","RESET");
         double rr1 = HumidAir::HAPropsSI("H","T",473.15,"W",0,"P",101325);
         int r = 1;
-    }
-    if (1)
-    {
+    #endif
+    #if 0
         // First type (slowest, most string processing, exposed in DLL)
         double r0A = PropsSI("Dmolar","T",298,"P",1e5,"Propane[0.5]&Ethane[0.5]"); // Default backend is HEOS
         double r0B = PropsSI("Dmolar","T",298,"P",1e5,"HEOS::Propane[0.5]&Ethane[0.5]");
@@ -166,10 +158,9 @@ int main()
         //double r2C = PropsSIZ("Dmolar","T",298,"P",1e5,"REFPROP::Propane&Ethane", pz, n);
 
         double tt = 0;
-    }
+    #endif
 
-    if (0)
-    {
+    #if 0
         shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS","ETHANE&PROPANE"));
         std::vector<double>x(2,0.5);
         AS->set_mole_fractions(x);
@@ -206,8 +197,8 @@ int main()
 
         double rr = 0;
         return 0;
-    }
-    if (1)
+    #endif
+    #if 0
     {
         std::string NBP_refs[] = {"D5","D6","MD2M","MDM","Benzene","Helium","Ethylene","Ethanol","n-Dodecane","Benzene","n-Undecane","Neon","Fluorine","Methanol","Acetone","Methane","Ethane","n-Pentane","n-Hexane","n-Heptane","n-Octane","CycloHexane","MD3M","MM","D4","MethylPalmitate","MethylStearate","MethylOleate","MethylLinoleate","MethylLinolenate","m-Xylene"};
         std::string IIR_refs[] = {"SES36","R143a","CycloPropane","Propylene","R227EA","R365MFC","R161","HFE143m","SulfurHexafluoride","CarbonDioxide","R1234ze(E)","R22","R124","Propyne","R507A","R152A","R123","R11","n-Butane","IsoButane","RC318","R21","R114","R13","R12","R113","R1233zd(E)","R41"};
@@ -284,7 +275,8 @@ int main()
         }
         double rr = 0;
     }
-    if (0)
+	#endif
+    #if 0
     {
         generate_melting_curve_data("Ethylene-I.mlt","ethylene",103.989,110.369);
         generate_melting_curve_data("Ethylene-II.mlt","ethylene",110.369,450);
@@ -311,7 +303,8 @@ int main()
         generate_melting_curve_data("CycloHexane.mlt","cyclohex",279.7,2000);
         generate_melting_curve_data("CarbonDioxide.mlt","CO2",217,2000);
     }
-    if (0)
+	#endif
+    #if 0
     {
         std::cout << "Water DmolarT at 1e-3,300 \n-----------------\n";
         CoolProp::compare_REFPROP_and_CoolProp("Water",DmolarT_INPUTS, 1e-3, 300, 10000, 0, 1e-8);
@@ -331,7 +324,8 @@ int main()
         std::cout << "R134a PQ at 101325 Pa\n-----------------\n";
         CoolProp::compare_REFPROP_and_CoolProp("R134a",PQ_INPUTS, 101325, 1, 10000, 1e-2, 0);
     }
-    if (0)
+	#endif
+    #if 0
     {
         std::vector<std::string> ss = strsplit(get_global_param_string("FluidsList"),',');
 
@@ -342,13 +336,16 @@ int main()
             std::cout << format("%s %17.15g\n", S->name().c_str(), S->p());
         }
     }
-    if (1){
+	#endif
+	#if 0
+	{
         shared_ptr<CoolProp::AbstractState> ASR(CoolProp::AbstractState::factory("HEOS","H2S"));
         ASR->update(PT_INPUTS, 1000e6, 200);
         double v  = ASR->viscosity();
         int rr =0;
     }
-    if (0)
+	#endif
+    #if 0
     {
         shared_ptr<CoolProp::AbstractState> ASR(CoolProp::AbstractState::factory("REFPROP","CO2"));
         double p1 = ASR->calc_melt_p_T(250);
@@ -361,7 +358,8 @@ int main()
         double rrr2 = PropsSI("speed_of_sound","T",300,"Dmolar",700,"R125");
         double rrr =0 ;
     }
-    if (0)
+	#endif
+    #if 0
     {
         shared_ptr<AbstractState> ASR(AbstractState::factory("REFPROP","CO2"));
         ASR->update(QT_INPUTS, 1, 304);
@@ -372,7 +370,8 @@ int main()
         double muC = ASC->conductivity();
         double rr = 4;
     }
-    if (0)
+	#endif
+    #if 0
     {
         #if ENABLE_CATCH
             std::vector<std::string> tags;
@@ -381,7 +380,8 @@ int main()
             double rr = 0;
         #endif
     }
-    if (0)
+	#endif
+    #if 0
     {
         /*double h1 = PropsSI("S","P",101325,"Q",0,"n-Pentane");
         std::string er = get_global_param_string("errstring");
@@ -421,7 +421,8 @@ int main()
         o = PropsSI(in1,in2,T,in3,P,Ref,z);
         double tr = 0;
     }
-    if (0)
+	#endif
+    #if 0
     {
         // First type (slowest, most string processing, exposed in DLL)
         double r0A = PropsSI("Dmolar","T",298,"P",1e5,"Propane[0.5]&Ethane[0.5]"); // Default backend is HEOS
@@ -443,13 +444,15 @@ int main()
 
         double tt = 0;
     }
-    if (0)
+	#endif
+    #if 0
     {
         #ifdef ENABLE_CATCH
         run_tests();
         #endif
     }
-    if (0)
+	#endif
+    #if 0
     {
 
 
@@ -507,7 +510,8 @@ int main()
         printf("%g %g\n",elap, summer);
         int rr =5;
     }
-    if (1)
+	#endif
+    #if 0
     {
         shared_ptr<AbstractState> MixRP(AbstractState::factory(std::string("REFPROP"),std::string("propane")));
         MixRP->update(QT_INPUTS, 0, 330);
@@ -517,7 +521,8 @@ int main()
         Mix->update(QT_INPUTS, 0, 330);
         long double s2 = Mix->surface_tension();
     }
-    if (0)
+	#endif
+    #if 0
     {
 
         double T = 300;
@@ -560,7 +565,8 @@ int main()
 
         double rr = 0;
     }
-    if (0)
+	#endif
+    #if 0
     {
         int N = 2;
         std::vector<long double> z(N, 1.0/N);
@@ -595,7 +601,8 @@ int main()
 
         double rr = 0;
     }
-    if (0)
+	#endif
+    #if 0
     {
         int N = 2;
         std::vector<long double> z(N, 1.0/N);
@@ -611,7 +618,8 @@ int main()
             std::cout << format(" %g %g\n",Mix->p(),Mix->T());
         }
     }
-    if(0)
+	#endif
+    #if 0
     {
         time_t t1,t2;
 
@@ -640,10 +648,9 @@ int main()
         double eee = 0;
         return 0;
     }
+	#endif
 
-
-
-    if (0)
+    #if 0
     {
         shared_ptr<AbstractState> State(AbstractState::factory(std::string("REFPROP"), std::string("Methane|Ethane")));
 
@@ -654,7 +661,8 @@ int main()
         double mu = State->viscosity();
         double sigma = State->surface_tension();
     }
-    if (0)
+	#endif
+    #if 0
     {
         time_t t1,t2;
         t1 = clock();
@@ -668,8 +676,8 @@ int main()
         double elap = ((double)(t2-t1))/CLOCKS_PER_SEC/((double)N)*1e6;
         printf("%g\n",elap);
     }
-
-    if(0)
+	#endif
+    #if 0
     {
         shared_ptr<AbstractState> State(AbstractState::factory(std::string("REFPROP"), std::string("Methane")));
 
@@ -690,4 +698,5 @@ int main()
         double elap = ((double)(t2-t1))/CLOCKS_PER_SEC;
         printf("%g\n",elap);
     }
+	#endif
 }
