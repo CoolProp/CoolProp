@@ -454,40 +454,46 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		double T   = -5  + 273.15;
 		double p   = 10e5;
 		double x   = 0.3;
-		double val = 0;
-		double res = 0;
+		double expected = 0;
+		double actual = 0;
 
 		// Compare different inputs
 		// ... as vector
-		val = 9.6212e+02;
-		res = CoolProp::PropsSI("D","T",T,"P",p,fluid,std::vector<double>(1,x));
+		expected = 9.6212e+02;
+		actual = CoolProp::PropsSI("D","T",T,"P",p,fluid,std::vector<double>(1,x));
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 		// ... as %
-		res = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("-%f%s",x*100.0,"%"));
+		actual = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("-%f%s",x*100.0,"%"));
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		std::string errmsg = CoolProp::get_global_param_string("errstring");
+		CAPTURE(errmsg);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 		// ... as mass fraction
-		res = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("[%f]",x));
+		actual = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("[%f]",x));
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		std::string name = fluid+format("[%f]",x);
+		CAPTURE(name);
+		std::string errmsg = CoolProp::get_global_param_string("errstring");
+		CAPTURE(errmsg);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
 
@@ -498,27 +504,31 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		std::vector<double> x_vec = std::vector<double>(1,x);
 
 		// Compare d
-		val = 9.4844e+02;
-		res = CoolProp::PropsSI("D","T",T,"P",p,fluid,x_vec);
+		expected = 9.4844e+02;
+		actual = CoolProp::PropsSI("D","T",T,"P",p,fluid,x_vec);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		std::string errmsg = CoolProp::get_global_param_string("errstring");
+		CAPTURE(errmsg);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
 		// Compare cp
-		val = 3.6304e+03;
-		res = CoolProp::PropsSI("C","T",T,"P",p,fluid,x_vec);
+		expected = 3.6304e+03;
+		actual = CoolProp::PropsSI("C","T",T,"P",p,fluid,x_vec);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		std::string errmsg = CoolProp::get_global_param_string("errstring");
+		CAPTURE(errmsg);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
 		fluid = std::string("INCOMP::ExamplePure");
@@ -526,27 +536,31 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		p   = 10e5;
 
 		// Compare d
-		val = 7.3646e+02;
-		res = CoolProp::PropsSI("D","T",T,"P",p,fluid);
+		expected = 7.3646e+02;
+		actual = CoolProp::PropsSI("D","T",T,"P",p,fluid);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		std::string errmsg = CoolProp::get_global_param_string("errstring");
+		CAPTURE(errmsg);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
 		// Compare cp
-		val = 2.2580e+03;
-		res = CoolProp::PropsSI("C","T",T,"P",p,fluid);
+		expected = 2.2580e+03;
+		actual = CoolProp::PropsSI("C","T",T,"P",p,fluid);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		std::string errmsg = CoolProp::get_global_param_string("errstring");
+		CAPTURE(errmsg);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 	}
 

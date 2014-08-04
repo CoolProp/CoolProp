@@ -907,136 +907,144 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		double T   = 273.15+10;
 		double p   = 10e5;
 		double x   = 0.25;
-		double val = 0;
-		double res = 0;
+		double expected = 0;
+		double actual = 0;
 
 		// Compare density
-		val = 963.2886528091547;
-		res = CH3OH.rho(T,p,x);
+		expected = 963.2886528091547;
+		actual = CH3OH.rho(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
 		// Compare cp
-		val = 3993.9748117022423;
-		res = CH3OH.c(T,p,x);
+		expected = 3993.9748117022423;
+		actual = CH3OH.c(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
 		// Compare s
-		val = -206.62646783739274;
-		res = CH3OH.s(T,p,x);
+		expected = -206.62646783739274;
+		actual = CH3OH.s(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
-		val = 0.0;
-		res = CH3OH.s(Tref,pref,xref);
+		expected = 0.0;
+		actual = CH3OH.s(Tref,pref,xref);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( val==res );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		CHECK( expected==actual );
 		}
 
 		// Compare u
-		val = -60043.78429641827;
-		res = CH3OH.u(T,p,x);
+		expected = -60043.78429641827;
+		actual = CH3OH.u(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
-		val = href - pref/CH3OH.rho(Tref,pref,xref);
-		res = CH3OH.u(Tref,pref,xref);
+		expected = href - pref/CH3OH.rho(Tref,pref,xref);
+		actual = CH3OH.u(Tref,pref,xref);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( val==res );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		CHECK( expected==actual );
 		}
 
 		// Compare h
-		val = -59005.67386390795;
-		res = CH3OH.h(T,p,x);
+		expected = -59005.67386390795;
+		actual = CH3OH.h(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
-		val = 0.0;
-		res = CH3OH.h(Tref,pref,xref);
+		expected = 0.0;
+		actual = CH3OH.h(Tref,pref,xref);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( val==res );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		std::string errmsg = CoolProp::get_global_param_string("errstring");
+		CAPTURE(errmsg);
+		CHECK( expected==actual );
 		}
 
 		// Compare v
-		val = 0.0023970245009602097;
-		res = CH3OH.visc(T,p,x)/1e3;
+		expected = 0.0023970245009602097;
+		actual = CH3OH.visc(T,p,x)/1e3;
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		std::string errmsg = CoolProp::get_global_param_string("errstring");
+		CAPTURE(errmsg);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
 		// Compare l
-		val = 0.44791148414693727;
-		res = CH3OH.cond(T,p,x);
+		expected = 0.44791148414693727;
+		actual = CH3OH.cond(T,p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		std::string errmsg = CoolProp::get_global_param_string("errstring");
+		CAPTURE(errmsg);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
 		// Compare Tfreeze
-		val = -20.02+273.15;// 253.1293105454671;
-		res = CH3OH.Tfreeze(p,x);
+		expected = -20.02+273.15;// 253.1293105454671;
+		actual = CH3OH.Tfreeze(p,x);
 		{
 		CAPTURE(T);
 		CAPTURE(p);
 		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
+		CAPTURE(expected);
+		CAPTURE(actual);
+		std::string errmsg = CoolProp::get_global_param_string("errstring");
+		CAPTURE(errmsg);
+		CHECK( check_abs(expected,actual,acc) );
 		}
 
 
