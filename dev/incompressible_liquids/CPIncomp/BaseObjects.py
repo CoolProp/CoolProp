@@ -135,7 +135,7 @@ class IncompressibleData(object):
                       eqnType=self.type, \
                       coeffs=self.coeffs, DEBUG=self.DEBUG)
             
-            elif self.type==IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL:
+            elif self.type==IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL and self.data.size>15:
                 if self.DEBUG: print("Poor solution found with log exponential, trying once more with exponential polynomial.")
                 self.type=IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
                 self.coeffs = np.zeros((4,6))

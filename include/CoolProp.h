@@ -1,9 +1,9 @@
 /*
 This header file includes the high level API that is meant to be accessed via C++.  Functions may accept C++ types like std::vector
 
-For the C-style wrapper, refer to CoolPropLIB.h
+For the C-style wrapper, refer to CoolPropLib.h
 
-\sa CoolPropLIB.h
+\sa CoolPropLib.h
 */
 
 /*! \mainpage CoolProp Core Code Documentation

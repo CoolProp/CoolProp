@@ -70,8 +70,14 @@ option (COOLPROP_TESTING
 
 file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
 file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h")
+
+## You can exclude this file, in case you want to run your own tests or use Catch
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
-## You can exclude this file as well, in case you want to run your own tests
+list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+
+## This file is only needed for the library, normal builds do not need it.
+list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+
 
 set (APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/Eigen")
 foreach (_headerFile ${APP_HEADERS})
@@ -131,10 +137,14 @@ endif()
 ###     FLUIDS, MIXTURES JSON       ###
 add_custom_target(generate_headers
                   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/dev/generate_headers.py")
-
                   
 ###      COOLPROP LIB or DLL        ###
+if (COOLPROP_SHARED_LIBRARY)
+    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+endif()
+
 if (COOLPROP_STATIC_LIBRARY)
+    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
     add_library(${app_name} STATIC ${APP_SOURCES})
     add_dependencies (${app_name} generate_headers)
     set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")

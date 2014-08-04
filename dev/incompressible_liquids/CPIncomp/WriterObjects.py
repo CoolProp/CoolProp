@@ -200,8 +200,8 @@ class SolutionDataWriter(object):
         original_float_repr = json.encoder.FLOAT_REPR 
         #print json.dumps(1.0001) 
         stdFmt = "1.{0}e".format(int(data.significantDigits-1))
-        #pr = np.finfo(float).eps * 10.0
-        #pr = np.finfo(float).precision - 2 # stay away from numerical precision
+        #pr = np.finfo(float64).eps * 10.0
+        #pr = np.finfo(float64).precision - 2 # stay away from numerical precision
         #json.encoder.FLOAT_REPR = lambda o: format(np.around(o,decimals=pr), stdFmt) 
         json.encoder.FLOAT_REPR = lambda o: format(o, stdFmt)
         dump = json.dumps(jobj, indent = 2, sort_keys = True)
@@ -858,33 +858,6 @@ class SolutionDataWriter(object):
           numpoints=1)
         #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)
 
-#
-#        
-#        
-#        
-#        
-#        
-#        
-#        t = arange(0.01, 5.0, 0.01)
-#s1 = sin(2*pi*t)
-#s2 = exp(-t)
-#s3 = sin(4*pi*t)
-#ax1 = subplot(311)
-#plot(t,s1)
-#setp( ax1.get_xticklabels(), fontsize=6)
-#
-### share x only
-#ax2 = subplot(312, sharex=ax1)
-#plot(t, s2)
-## make these tick labels invisible
-#setp( ax2.get_xticklabels(), visible=False)
-#
-## share x and y
-#ax3 = subplot(313,  sharex=ax1, sharey=ax1)
-#plot(t, s3)
-#xlim(0.01,5.0)
-#show()
-
         gs.tight_layout(fig)#, rect=[0, 0, 1, 0.75])
         # Fine-tune figure; make subplots close to each other 
         # and hide x ticks for all but bottom plot.
@@ -897,13 +870,73 @@ class SolutionDataWriter(object):
         pass
     
     
-    def makeOverviewMassSolutions(self, solObjs, pdfObj=None):
+    def makeSolutionPlots(self, solObjs=[SolutionData()], pdfObj=None):
         """
-        Creates a page with plots for several fluids.
+        Creates a whole page with some plots and basic information
+        for both fit quality, reference data, data sources and 
+        more. 
         """
+        # First we determine some basic settings
+        water=None
+        solutions=[]
+        
+        for i in range(len(solObjs)-1):
+            if solObjs[i].xid==SolutionData.ifrac_mass or \
+               solObjs[i].xid==SolutionData.ifrac_mole or \
+               solObjs[i].xid==SolutionData.ifrac_volume:
+                solutions += [solObjs[i]]
+            #elif solObjs[i].xid==SolutionData.ifrac_pure:
+            #    purefluids += [doneObjs[i]]
+            elif solObjs[i].name=="NBS":
+                water = solObjs[i]
+                solutions += [solObjs[i]]
+        
+        if water==None: raise ValueError("No water found, reference values missing.")
+        
+        # Set temperature data for all fluids
+        dataDict = {}
+        dataList = []
+        obj = SolutionData()
+        for i in range(len(solutions)-1):
+            obj = solutions[i]
+            T = np.linspace(obj.Tmin, obj.Tmax, num=int(obj.Tmax-obj.Tmin))
+            P = 100e5
+            x = obj.xmin
+            dataDict["name"] = obj.name
+            dataDict["T"] = T 
+            dataDict["P"] = P
+            dataDict["x"] = x
+            if obj.density.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
+                dataDict["D"] = [obj.rho(Ti, P, x) for Ti in T]
+            else: dataDict["D"] = None
+            if obj.specific_heat.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
+                dataDict["C"] = [obj.c(Ti, P, x) for Ti in T]
+            else: dataDict["C"] = None
+            if obj.conductivity.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
+                dataDict["L"] = [obj.cond(Ti, P, x) for Ti in T]
+            else: dataDict["L"] = None
+            if obj.viscosity.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
+                dataDict["V"] = [obj.visc(Ti, P, x) for Ti in T]
+            else: dataDict["V"] = None
+            dataList.append(dataDict.copy())
+            
+            
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        
+        #obj = water
+        #T = np.linspace(obj.Tmin, obj.Tmax, num=int(obj.Tmax-obj.Tmin))
+        #D = 
+        
+        for i in range(len(dataList)-1):
+            obj = dataList[i]
+            if obj["T"]!=None and obj["D"]!=None:
+                ax.plot(obj["T"],obj["D"],label=obj["name"])
+            
+        plt.savefig("aaa_fitreport.pdf")
         
         
-        pass 
+        
     
     def generateRstTable(self):
         
@@ -911,58 +944,5 @@ class SolutionDataWriter(object):
         
         
     
-    
-        
-        
-#class FitGraphWriter(object):
-#    """ 
-#    A base class that defines all the variables needed 
-#    in order to make a proper fit. You can copy this code
-#    put in your data and add some documentation for where the
-#    information came from. 
-#    """
-#    def __init__(self):
-#        self.verbose = True
-#        
-#    def inCoolProp(self,name):
-#        #print FluidsList() 
-#        result = name in FluidsList()
-#        if not result:
-#            try:
-#                CP.PropsU('Tmin','T',0,'P',0,name,"SI")
-#                return True
-#            except ValueError as e:
-#                print e
-#                return False
-#            
-#    def getFluidList(self):
-#        containerList = []
-##        containerList += [TherminolD12()]
-##        containerList += [TherminolVP1(), Therminol66(), Therminol72()]
-##        containerList += [DowthermJ(), DowthermQ()]
-##        containerList += [Texatherm22(),  NitrateSalt(), SylthermXLT()]
-##        containerList += [HC50(), HC40(), HC30(), HC20(), HC10()]
-##        containerList += [AS10(), AS20(), AS30(), AS40(), AS55()]
-##        containerList += [ZS10(), ZS25(), ZS40(), ZS45(), ZS55()]
-#        return containerList
-#    
-
-#        
-#        
-#    def makePlots(self, fluid):
-#        # row and column sharing for test plots
-#        #matplotlib.pyplot.subplots_adjust(top=0.85)
-#        f, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = matplotlib.pyplot.subplots(3, 2, sharex='col')
-#        f.set_size_inches(matplotlib.pyplot.figaspect(1.2)*1.5)
-#        #f.suptitle("Fit for "+str(data.Desc), fontsize=14)
-#        
-##        ### This is the actual fitting
-#        tData = data.T
-#        tDat1 = numpy.linspace(numpy.min(tData)+1, numpy.max(tData)-1, 10)
-#        Pin = 1e20 # Dummy pressure
-#        inCP =liqObj.inCoolProp(data.Name)
-#        print "Fluid in CoolProp: "+str(inCP)
-#        print
-        
     
          
