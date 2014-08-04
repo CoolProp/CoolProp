@@ -501,7 +501,7 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
             throw SolutionError(format("Akasaka solver did not converge after 100 iterations"));
         }
     }
-    while (error > 1e-12 && fabs(stepL) > 10*DBL_EPSILON*fabs(stepL) && fabs(stepV) > 10*DBL_EPSILON*fabs(stepV));
+    while (error > 1e-10 && fabs(stepL) > 10*DBL_EPSILON*fabs(stepL) && fabs(stepV) > 10*DBL_EPSILON*fabs(stepV));
 	
 	double p_error_limit = 1e-3;
 	double p_error = (PL - PV)/PL;
