@@ -89,7 +89,7 @@ class HFELiquidClass(CoefficientData,PureData):
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1822.37,-0.918485]))
 
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.specific_heat.coeffs = IncompressibleFitter.shapeArray(np.array([871.834,858788]))
+        _,_,self.specific_heat.coeffs = IncompressibleFitter.shapeArray(np.array([871.834,0.858788]))
 
         self.viscosity.type = self.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([-4.22878,-0.0114765,7.39823e-06]))

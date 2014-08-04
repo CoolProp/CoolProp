@@ -922,7 +922,7 @@ class SolutionDataWriter(object):
             
             
         fig = plt.figure()
-        ax = fig.add_subplot(111)
+        ax = fig.add_subplot(131)
         
         #obj = water
         #T = np.linspace(obj.Tmin, obj.Tmax, num=int(obj.Tmax-obj.Tmin))
@@ -931,8 +931,13 @@ class SolutionDataWriter(object):
         for i in range(len(dataList)-1):
             obj = dataList[i]
             if obj["T"]!=None and obj["D"]!=None:
-                ax.plot(obj["T"],obj["D"],label=obj["name"])
-            
+                if np.all(np.isfinite(obj["D"])):
+                    ax.plot(obj["T"],obj["D"],label=obj["name"])
+                if np.min(obj["D"])<500 or not np.all(np.isfinite(obj["D"])): 
+                    print("Name: {0}, Dmin: {1}, Dmax: {1}".format(obj["name"],np.min(obj["D"]),np.max(obj["D"]))) 
+        
+        ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., ncol=3)
+        plt.tight_layout()
         plt.savefig("aaa_fitreport.pdf")
         
         
