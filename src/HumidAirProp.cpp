@@ -1812,6 +1812,8 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]")
             CAPTURE(out);
             CAPTURE(actual);
             CAPTURE(expected);
+			std::string errmsg = CoolProp::get_global_param_string("errstring");
+			CAPTURE(errmsg);
             CHECK(fabs(actual/expected-1) < 0.01);
         }
     }
@@ -1830,6 +1832,8 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]")
             CAPTURE(out);
             CAPTURE(actual);
             CAPTURE(expected);
+			std::string errmsg = CoolProp::get_global_param_string("errstring");
+			CAPTURE(errmsg);
             CHECK(fabs(actual/expected-1) < 0.01);
         }
     }
@@ -1848,6 +1852,8 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]")
             CAPTURE(out);
             CAPTURE(actual);
             CAPTURE(expected);
+			std::string errmsg = CoolProp::get_global_param_string("errstring");
+			CAPTURE(errmsg);
             CHECK(fabs(actual/expected-1) < 0.01);
         }
     }
