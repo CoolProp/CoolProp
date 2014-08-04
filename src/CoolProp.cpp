@@ -28,6 +28,7 @@
 #include "Solvers.h"
 #include "MatrixMath.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "Backends/Incompressible/IncompressibleLibrary.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 
 namespace CoolProp
@@ -224,127 +225,119 @@ void set_error_string(std::string error){
 //}
 //
 
+// Return true if the string has "BACKEND::*" format where * signifies a wildcard
+bool has_backend_in_string(const std::string &fluid_string, std::size_t &i)
+{
+	i = fluid_string.find("::");
+    return i != std::string::npos;
+}
+
+void extract_backend(const std::string &fluid_string, std::string &backend, std::string &fluid)
+{
+	std::size_t i;
+	if (has_backend_in_string(fluid_string, i))
+	{
+		// Part without the ::
+		backend = fluid_string.substr(0, i);
+		// Fluid name after the ::
+		fluid = fluid_string.substr(i+2);
+	}
+	else
+	{
+		backend = "?";
+		fluid = fluid_string;
+	}
+	if (get_debug_level()>10) std::cout << format("%s:%d: backend extracted. backend: %s. fluid: %s\n",__FILE__,__LINE__, backend.c_str(), fluid.c_str());
+}
+
 bool has_fractions_in_string(const std::string &fluid_string)
 {
-    // Start at the "::" if it is found to chop off the delimiter between backend and fluid
-    std::size_t i = fluid_string.find("::");
-    // If can find both "&" and "]", it must have mole fractions encoded as string
-    //return fluid_string.find("&",i+2) != -1 && fluid_string.find("]",i+2);
     // If can find both "[" and "]", it must have mole fractions encoded as string
-    return (fluid_string.find("[",i+2)!=std::string::npos && fluid_string.find("]",i+2)!=std::string::npos);
+    return (fluid_string.find("[")!=std::string::npos && fluid_string.find("]")!=std::string::npos);
+}
+bool has_solution_concentration(const std::string &fluid_string)
+{
+    // If can find "-", expect mass fractions encoded as string
+    return (fluid_string.find('-') != std::string::npos);
 }
 
 std::string extract_fractions(const std::string &fluid_string, std::vector<double> &fractions)
 {
-    fractions.clear();
-    std::vector<std::string> names;
-    std::string all_pairs, backend_string;
-    // Start at the "::" if it is found to chop off the delimiter between backend and fluid
-    std::size_t i = fluid_string.find("::");
+	if (has_fractions_in_string(fluid_string))
+	{
+		fractions.clear();
+		std::vector<std::string> names;
 
-    // If no backend/fluid delimiter
-    if (i < 0){
-        // Just use the full string
-        backend_string = "";
-        all_pairs = fluid_string;
-    }
-    else{
-        // Part including the ::
-        backend_string = fluid_string.substr(0, i+2);
-        // Keep the part after "::"
-        all_pairs = fluid_string.substr(i+2);
-    }
+		// Break up into pairs - like "Ethane[0.5]&Methane[0.5]" -> ("Ethane[0.5]","Methane[0.5]")
+		std::vector<std::string> pairs = strsplit(fluid_string, '&');
 
-    // Break up into pairs (like "Methane[0.5]")
-    std::vector<std::string> pairs = strsplit(all_pairs, '&');
+		for (std::size_t i = 0; i < pairs.size(); ++i)
+		{
+			std::string fluid = pairs[i];
 
-    for (std::size_t i = 0; i < pairs.size(); ++i)
-    {
-        std::string fluid = pairs[i];
+			// Must end with ']'
+			if (fluid[fluid.size()-1] != ']')
+				throw ValueError(format("Fluid entry [%s] must end with ']' character",pairs[i].c_str()));
 
-        // Must end with ']'
-        if (fluid[fluid.size()-1] != ']')
-            throw ValueError(format("Fluid entry [%s] must end with ']' character",pairs[i].c_str()));
+			// Split at '[', but first remove the ']' from the end by taking a substring
+			std::vector<std::string> name_fraction = strsplit(fluid.substr(0, fluid.size()-1), '[');
 
-        // Split at '[', but first remove the ']' from the end by taking a substring
-        std::vector<std::string> name_fraction = strsplit(fluid.substr(0, fluid.size()-1), '[');
+			if (name_fraction.size() != 2){throw ValueError(format("Could not break [%s] into name/fraction", fluid.substr(0, fluid.size()-1).c_str()));}
 
-        if (name_fraction.size() != 2){throw ValueError(format("Could not break [%s] into name/fraction", fluid.substr(0, fluid.size()-1).c_str()));}
+			// Convert fraction to a double
+			char *pEnd;
+			std::string &name = name_fraction[0], &fraction = name_fraction[1];
+			double f = strtod(fraction.c_str(), &pEnd);
 
-        // Convert fraction to a double
-        char *pEnd;
-        std::string &name = name_fraction[0], &fraction = name_fraction[1];
-        double f = strtod(fraction.c_str(), &pEnd);
+			// If pEnd points to the last character in the string, it wasn't able to do the conversion
+			if (pEnd == &(fraction[fraction.size()-1])){throw ValueError(format("Could not convert [%s] into number", fraction.c_str()));}
 
-        // If pEnd points to the last character in the string, it wasn't able to do the conversion
-        if (pEnd == &(fraction[fraction.size()-1])){throw ValueError(format("Could not convert [%s] into number", fraction.c_str()));}
+			// And add to vector
+			fractions.push_back(f);
 
-        // And add to vector
-        fractions.push_back(f);
+			// Add name
+			names.push_back(name);
+		}
 
-        // Add name
-        names.push_back(name);
-    }
+		if (get_debug_level()>10) std::cout << format("%s:%d: Detected fractions of %s for %s.",__FILE__,__LINE__,vec_to_string(fractions).c_str(), (strjoin(names, "&")).c_str());
+		// Join fluids back together
+		return strjoin(names, "&");
+	}
+	else if (has_solution_concentration(fluid_string))
+	{
+		fractions.clear();
+		double x;
 
-    // Join fluids back together
-    return backend_string + strjoin(names, "&");
-}
+		std::vector<std::string> fluid_parts = strsplit(fluid_string,'-');
+		// Check it worked
+		if (fluid_parts.size() != 2){
+			throw ValueError(format("Format of incompressible solution string [%s] is invalid, should be like \"EG-20%\" or \"EG-0.2\" ", fluid_string.c_str()) );
+		}
 
-bool has_solution_concentration(const std::string &fluid_string)
-{
-    // Start at the "::" if it is found to chop off the delimiter between backend and fluid
-    std::size_t i = fluid_string.find("::");
-    // If can find "-", expect mass fractions encoded as string
-    if (fluid_string.find('-',i+2)!=std::string::npos && fluid_string.find("INCOMP")==0)
-    	return true;
-    return false;
-}
+		// Convert the concentration into a string
+		char* pEnd;
+		x = strtod(fluid_parts[1].c_str(), &pEnd);
 
-std::string extract_concentrations(const std::string &fluid_string, std::vector<double> &fractions)
-{
-	fractions.clear();
-	double x;
-	std::string all_pairs, backend_string;
-
-	// Start at the "::" if it is found to chop off the delimiter between backend and fluid
-	std::size_t i = fluid_string.find("::");
-
-	// If no backend/fluid delimiter
-	if (i < 0) {
-		backend_string = "";
-		all_pairs = fluid_string;
+		// Check if per cent or fraction syntax is used
+		if (!strcmp(pEnd,"%")){	x *= 0.01;}
+		fractions.push_back(x);
+		if (get_debug_level()>10) std::cout << format("%s:%d: Detected incompressible concentration of %s for %s.",__FILE__,__LINE__,vec_to_string(fractions).c_str(), fluid_parts[0].c_str());
+		return fluid_parts[0];
 	}
 	else
-	{
-		backend_string = fluid_string.substr(0, i+2);
-		all_pairs = fluid_string.substr(i+2);
+	{ 
+		return fluid_string;
 	}
-
-	std::vector<std::string> fluid_parts = strsplit(all_pairs,'-');
-	// Check it worked
-	if (fluid_parts.size() != 2){
-		throw ValueError(format("Format of incompressible solution string [%s] is invalid, should be like \"EG-20%\" or \"EG-0.2\" ", fluid_string.c_str()) );
-	}
-
-	// Convert the concentration into a string
-	char* pEnd;
-	x = strtod(fluid_parts[1].c_str(), &pEnd);
-
-	// Check if per cent or fraction syntax is used
-	if (!strcmp(pEnd,"%")){	x *= 0.01;}
-	fractions.push_back(x);
-	if (get_debug_level()>10) std::cout << format("%s:%d: Detected incompressible concentration of %s for %s.",__FILE__,__LINE__,vec_to_string(fractions).c_str(), fluid_parts[0].c_str());
-	return backend_string + fluid_parts[0];
 }
 
 // Internal function to do the actual calculations, make this a wrapped function so
 // that error bubbling can be done properly
-double _PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref, const std::vector<double> &z)
+double _PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &backend, const std::string &Ref, const std::vector<double> &z)
 {
-    static std::string unknown_backend = "?";
     double x1, x2;
+	
     if (get_debug_level()>5){
-        std::cout << format("%s:%d: _PropsSI(%s,%s,%g,%s,%g,%s,%s)\n",__FILE__,__LINE__,Output.c_str(),Name1.c_str(),Prop1,Name2.c_str(),Prop2,Ref.c_str(), vec_to_string(z).c_str()).c_str();
+        std::cout << format("%s:%d: _PropsSI(%s,%s,%g,%s,%g,%s,%s)\n",__FILE__,__LINE__,Output.c_str(),Name1.c_str(),Prop1,Name2.c_str(),Prop2,backend.c_str(),Ref.c_str(), vec_to_string(z).c_str()).c_str();
     }
 
     // Convert all the input and output parameters to integers
@@ -353,10 +346,23 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
     // The state we are going to use
     shared_ptr<AbstractState> State;
     
-	// We are going to let the factory function determine which backend to use
-	//
-	// Generate the State class pointer using the factory function with unknown backend
-	State.reset(AbstractState::factory(unknown_backend, Ref));
+	// If the fractions of the components have been encoded in the string, extract them
+	// If they have not, this function does nothing
+	std::vector<double> fractions;
+	if (z.empty())
+	{
+		// Make a one-element vector
+		fractions = std::vector<double>(1, 1);
+	}
+	else{
+		// Make a copy
+		fractions = z;
+	}
+	
+	std::string fluid_string = extract_fractions(Ref, fractions);
+	
+	// We are going to let the factory function load the state
+	State.reset(AbstractState::factory(backend, fluid_string));
 	
 	// First check if it is a trivial input (critical/max parameters for instance)
 	if (is_trivial_parameter(iOutput))
@@ -369,11 +375,11 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
 	long iName2 = get_parameter_index(Name2);
 
 	if (State->using_mole_fractions()){
-		State->set_mole_fractions(z);
+		State->set_mole_fractions(fractions);
 	} else if (State->using_mass_fractions()){
-		State->set_mass_fractions(z);
+		State->set_mass_fractions(fractions);
 	} else if (State->using_volu_fractions()){
-		State->set_volu_fractions(z);
+		State->set_volu_fractions(fractions);
 	} else {
 		if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
 	}
@@ -392,7 +398,10 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
 }
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref, const std::vector<double> &z)
 {
-    CATCH_ALL_ERRORS_RETURN_HUGE(return _PropsSI(Output,Name1,Prop1,Name2,Prop2,Ref,z);)
+	std::string backend, fluid;
+	// Fractions are already provided, we just need to parse the Ref string
+	extract_backend(Ref, backend, fluid);
+    CATCH_ALL_ERRORS_RETURN_HUGE(return _PropsSI(Output,Name1,Prop1,Name2,Prop2,backend, fluid,z);)
 }
 double PropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *FluidName, const std::vector<double> &x)
 {
@@ -401,31 +410,11 @@ double PropsSI(const char *Output, const char *Name1, double Prop1, const char *
 }
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref)
 {
+	std::string backend, fluid;
     // In this function the error catching happens;
     try{
-        // Extract fractions if they are encoded in the fluid string
-        if (has_fractions_in_string(Ref))
-        {
-        	if (get_debug_level()>10) std::cout << format("%s:%d: Trying to extract mole fractions from %s.",__FILE__,__LINE__,Ref.c_str()) << std::endl;
-            std::vector<double> fractions;
-            // Extract the fractions and reformulate the list of fluids REFPROP::Methane[0.5]&Ethane[0.5] -> REFPROP::Methane&Ethane and [0.5,0.5]
-            std::string Ref2 = extract_fractions(Ref, fractions);
-            return _PropsSI(Output, Name1, Prop1, Name2, Prop2, Ref2, fractions);
-        }
-        else if (has_solution_concentration(Ref))
-        {
-        	if (get_debug_level()>10) std::cout << format("%s:%d: Trying to extract mass fractions from %s.",__FILE__,__LINE__,Ref.c_str()) << std::endl;
-            std::vector<double> fractions;
-            // Extract the fractions and reformulate the list of fluids INCOMP::EG-0.2 -> INCOMP::EG and [0.2]
-            std::string Ref2 = extract_concentrations(Ref, fractions);
-            return _PropsSI(Output, Name1, Prop1, Name2, Prop2, Ref2, fractions);
-        }
-        else
-        {
-        	if (get_debug_level()>10) std::cout << format("%s:%d: Filling fractions for %s with [1.0].",__FILE__,__LINE__,Ref.c_str()) << std::endl;
-            // Here it must be a pure fluid since the fractions are not coded in the string.  If not, it will fail internally
-            return _PropsSI(Output, Name1, Prop1, Name2, Prop2, Ref, std::vector<double>(1,1));
-        }
+		extract_backend(Ref, backend, fluid);
+		return _PropsSI(Output, Name1, Prop1, Name2, Prop2, backend, fluid, std::vector<double>());
     }
     catch(const std::exception& e){ set_error_string(e.what()); return _HUGE; }
     catch(...){ return _HUGE; }
@@ -809,6 +798,9 @@ std::string get_global_param_string(std::string ParamName)
 	}
 	else if (!ParamName.compare("FluidsList") || !ParamName.compare("fluids_list") || !ParamName.compare("fluidslist")){
 		return get_fluid_list();
+	}
+	else if (!ParamName.compare("IncompressiblesList") || !ParamName.compare("incompressibles_list")){
+		return get_incompressible_list();
 	}
 	else if (!ParamName.compare("parameter_list") )
     {
