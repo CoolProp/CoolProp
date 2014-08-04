@@ -536,8 +536,17 @@ if (COOLPROP_SNIPPETS)
       target_link_libraries (${snippet_name} ${CMAKE_DL_LIBS})
     endif()
     
-    add_test(NAME ${snippet_name}
-           COMMAND  -out:Example.exe ${CSHARP_PLAT} ${cp_cs_path} ${cp_example_path})
+    if ( MSVC )
+        set_target_properties( ${snippet_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
+        set_target_properties( ${snippet_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/bin )
+        set_target_properties( ${snippet_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/bin )
+        # etc for the other available configuration types (MinSizeRel, RelWithDebInfo)
+    endif ()
+    message(STATUS "${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name}.output")
+    # Run it and save the output to a file with .output appended
+    add_custom_command(TARGET ${snippet_name}
+                       POST_BUILD
+                       COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name}.output)
   
   endforeach()
   
