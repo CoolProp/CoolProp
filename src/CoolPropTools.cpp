@@ -45,7 +45,7 @@ std::vector<std::string> strsplit(std::string s, char del)
 	// Find the first instance of the delimiter
 	iR = s.find_first_of(del);
 	// Delimiter not found, return the same string again
-	if (iR < 0){
+	if (iR == std::string::npos){
 		v.push_back(s);
 		return v;
 	}
