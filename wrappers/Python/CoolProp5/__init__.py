@@ -6,8 +6,8 @@ from . import HumidAirProp
 from . import State
 from .constants import *
 
-__fluids__ = CoolProp.get_global_param_string(b'FluidsList').split(b',')
-__incompressibles__ = CoolProp.get_global_param_string(b'IncompressibleList')
+__fluids__ = CoolProp.get_global_param_string(b'fluids_list').split(b',')
+__incompressibles__ = CoolProp.get_global_param_string(b'incompressibles_list').split(b',')
 __version__ = CoolProp.get_global_param_string(b'version')
 __gitrevision__ = CoolProp.get_global_param_string(b'gitrevision')
 

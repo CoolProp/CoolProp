@@ -1019,7 +1019,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 		CHECK( check_abs(expected,actual,acc) );
 		}
 
-		// Compare l
+		// Compare conductivity
 		expected = 0.44791148414693727;
 		actual = CH3OH.cond(T,p,x);
 		{

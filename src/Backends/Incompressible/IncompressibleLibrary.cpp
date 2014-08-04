@@ -498,6 +498,9 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 
 	    // Add name->index mapping
 	    string_to_index_map[fluid.getName()] = index;
+        
+        // Add name to vector of names
+        this->name_vector.push_back(fluid.getName());
     }
     catch(std::exception &e)
     {
