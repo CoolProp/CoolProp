@@ -163,8 +163,12 @@ double AbstractState::trivial_keyed_output(int key)
     {
 	case imolar_mass:
         return molar_mass();
+	case iT_min:
+        return Tmin();
 	case iT_triple:
         return Ttriple();
+	case iT_max:
+        return Tmax();
     case iT_reducing:
         return get_reducing().T;
     case irhomolar_reducing:
@@ -256,6 +260,9 @@ double AbstractState::tau(void){
 double AbstractState::delta(void){
     if (!_delta) _delta = calc_reduced_density();
     return _delta;
+}
+double AbstractState::Tmin(void){
+    return calc_Tmin();
 }
 double AbstractState::Tmax(void){
     return calc_Tmax();

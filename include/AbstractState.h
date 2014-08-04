@@ -170,6 +170,8 @@ protected:
 
     /// Using this backend, calculate the maximum temperature in K
     virtual long double calc_Tmax(void){throw NotImplementedError("calc_Tmax is not implemented for this backend");};
+	/// Using this backend, calculate the minimum temperature in K
+    virtual long double calc_Tmin(void){throw NotImplementedError("calc_Tmin is not implemented for this backend");};
     /// Using this backend, calculate the maximum pressure in Pa
     virtual long double calc_pmax(void){throw NotImplementedError("calc_pmax is not implemented for this backend");};
 
@@ -231,8 +233,6 @@ protected:
     
     /// Update the states after having changed the reference state for enthalpy and entropy
     virtual void update_states(void){throw NotImplementedError("This backend does not implement update states function");};
-	
-	
 
 public:
 
@@ -290,6 +290,7 @@ public:
     long double first_partial_deriv(int Of, int Wrt, int Constant){return calc_first_partial_deriv(Of,Wrt,Constant);};
 
     // Limits
+	double Tmin(void);
     double Tmax(void);
     double pmax(void);
     double Ttriple(void);

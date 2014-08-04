@@ -38,6 +38,12 @@ bool IncompressibleFluid::is_pure() {
 	if (density.coeffs.cols()==1) return true;
 	return false;
 }
+long double IncompressibleFluid::calc_Tmax(void){
+	return this->Tmax;
+}
+long double IncompressibleFluid::calc_Tmin(void){
+	return this->Tmin;
+}
 
 /// Base exponential function
 double IncompressibleFluid::baseExponential(IncompressibleData data, double y, double ybase){

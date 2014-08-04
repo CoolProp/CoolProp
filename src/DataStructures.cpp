@@ -53,6 +53,8 @@ parameter_info parameter_info_list[] = {
     parameter_info(iT_reducing, "T_reducing","O","K","Temperature at the reducing point",true),
     parameter_info(iT_critical, "T_critical","O","K","Temperature at the critical point",true),
 	parameter_info(iT_triple, "T_triple","O","K","Temperature at the triple point",true),
+	parameter_info(iT_max, "T_max","O","K","Maximum temperature limit",true),
+	parameter_info(iT_min, "T_min","O","K","Minimum temperature limit",true),
 	parameter_info(iP_critical, "p_critical","O","Pa","Pressure at the critical point",true),
     parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility",false),
     parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound",false),

@@ -432,6 +432,15 @@ long double HelmholtzEOSMixtureBackend::calc_Tmax(void)
     }
     return summer;
 }
+long double HelmholtzEOSMixtureBackend::calc_Tmin(void)
+{
+    double summer = 0;
+    for (unsigned int i = 0; i < components.size(); ++i)
+    {
+        summer += mole_fractions[i]*components[i]->pEOS->limits.Tmin;
+    }
+    return summer;
+}
 long double HelmholtzEOSMixtureBackend::calc_pmax(void)
 {
     double summer = 0;

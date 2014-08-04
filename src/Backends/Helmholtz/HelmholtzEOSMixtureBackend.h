@@ -130,7 +130,8 @@ public:
     long double calc_conductivity(void);
     long double calc_conductivity_background(void);
 
-    long double calc_Tmax(void);
+    long double calc_Tmin(void);
+	long double calc_Tmax(void);
     long double calc_pmax(void);
     long double calc_Ttriple(void);
 
