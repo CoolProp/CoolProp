@@ -28,10 +28,24 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         {
             // Set some imput options
             SaturationSolvers::saturation_T_pure_options options;
-            options.omega = 0.1;
             options.use_guesses = false;
-            // Actually call the solver
-            SaturationSolvers::saturation_T_pure(&HEOS, HEOS._T, options);
+			double increment = 0.2;
+			for (double omega = 1.0; omega > 0; omega -= increment){
+				try{
+					options.omega = omega;
+					
+					// Actually call the solver
+					SaturationSolvers::saturation_T_pure(&HEOS, HEOS._T, options);
+					
+					// If you get here, there was no error, all is well
+					break;
+				}
+				catch(std::exception &e){
+					if (omega < 1.1*increment){
+						throw;
+					}
+				}
+			}
             // Load the outputs
             HEOS._phase = iphase_twophase;
             HEOS._p = HEOS._Q*HEOS.SatV->p() + (1- HEOS._Q)*HEOS.SatL->p();
@@ -114,9 +128,24 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_PL;
             // Use logarithm of delta as independent variables
             options.use_logdelta = false;
-			options.omega = 0.3;
-            // Actually call the solver
-            SaturationSolvers::saturation_PHSU_pure(&HEOS, HEOS._p, options);
+			
+			double increment = 0.2;
+			for (double omega = 1.0; omega > 0; omega -= increment){
+				try{
+					options.omega = omega;
+					
+					// Actually call the solver
+					SaturationSolvers::saturation_PHSU_pure(&HEOS, HEOS._p, options);
+					
+					// If you get here, there was no error, all is well
+					break;
+				}
+				catch(std::exception &e){
+					if (omega < 1.1*increment){
+						throw;
+					}
+				}
+			}
 
             // Load the outputs
             HEOS._phase = iphase_twophase;
