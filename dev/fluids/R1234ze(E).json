@@ -218,6 +218,165 @@
   "EOS": [
     {
       "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Thol-REFPROP-9.1", 
+      "STATES": {
+        "hs_anchor": {
+          "T": 420.772, 
+          "T_units": "K", 
+          "hmolar": 28839.214088937955, 
+          "hmolar_units": "J/mol", 
+          "p": 6134356.997572467, 
+          "p_units": "Pa", 
+          "rhomolar": 3861.0, 
+          "rhomolar_units": "mol/m^3", 
+          "smolar": 90.9606597528683, 
+          "smolar_units": "J/mol/K"
+        }, 
+        "reducing": {
+          "T": 382.52, 
+          "T_units": "K", 
+          "p": 3636250, 
+          "p_units": "Pa", 
+          "rhomolar": 4290, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_liquid": {
+          "T": 168.62, 
+          "T_units": "K", 
+          "p": 0.23128175666601208, 
+          "p_units": "Pa", 
+          "rhomolar": 13194.862559792387, 
+          "rhomolar_units": "mol/m^3"
+        }, 
+        "sat_min_vapor": {
+          "T": 168.62, 
+          "T_units": "K", 
+          "p": 0.23128175666601208, 
+          "p_units": "Pa", 
+          "rhomolar": 0.1650276209820342, 
+          "rhomolar_units": "mol/m^3"
+        }
+      }, 
+      "T_max": 420, 
+      "T_max_units": "K", 
+      "Ttriple": 168.62, 
+      "Ttriple_units": "K", 
+      "accentric": 0.313, 
+      "accentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": 0, 
+          "a2": 0, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 3.0, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            9.3575, 
+            10.717
+          ], 
+          "t": [
+            1.34113088966911,
+            5.15538034001459
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }, 
+        {
+          "a1": -12.5586602313194, 
+          "a2": 8.79132625741231, 
+          "reference": "IIR", 
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            4.0, 1.0, 1.0, 2.0, 3.0, 1.0, 3.0, 2.0, 2.0, 7.0
+          ], 
+          "l": [
+            0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 1.0, 2.0, 1.0
+          ], 
+          "n": [
+            0.03982797, 1.812227, -2.537512, -0.5333254, 0.1677031, -1.323801, -0.6694654, 0.8072718, -0.7740229, -0.01843846
+          ], 
+          "t": [
+            1.0, 0.223, 0.755, 1.24, 0.44, 2.0, 2.2, 1.2, 1.5, 0.9
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }, 
+        {
+          "beta": [
+            1.21, 
+            1.37, 
+            0.98, 
+            171, 
+            47.4,
+            15.4
+          ], 
+          "d": [
+            1, 
+            1, 
+            3, 
+            3, 
+            2,
+            1
+          ], 
+          "epsilon": [
+            0.728, 
+            0.87, 
+            0.855, 
+            0.79, 
+            1.3,
+            0.71
+          ], 
+          "eta": [
+            1.0,
+            1.61, 
+            1.24, 
+            9.34,
+            5.78,
+            3.08
+          ], 
+          "gamma": [
+            0.943, 
+            0.642, 
+            0.59, 
+            1.2, 
+            1.33,
+            0.64
+          ], 
+          "n": [
+            1.407916, 
+            -0.4237082, 
+            -0.2270068, 
+            -0.8052130, 
+            0.009943180,
+            -0.008798793
+          ], 
+          "t": [
+            1.33, 
+            1.75, 
+            2.11, 
+            1, 
+            1.5,
+            1
+          ], 
+          "type": "ResidualHelmholtzGaussian"
+        }
+      ], 
+      "gas_constant": 8.314472, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.1140415928, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 15000000, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false
+    },
+    {
+      "BibTeX_CP0": "", 
       "BibTeX_EOS": "McLinden-PURDUE-2010", 
       "STATES": {
         "hs_anchor": {
@@ -270,7 +429,7 @@
           "type": "IdealGasHelmholtzLead"
         }, 
         {
-          "a": 6.259, 
+          "a": 5.259, 
           "type": "IdealGasHelmholtzLogTau"
         }, 
         {
