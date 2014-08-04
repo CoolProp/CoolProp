@@ -79,20 +79,20 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
         SatL->update(DmolarT_INPUTS, rhoL, T);
         SatV->update(DmolarT_INPUTS, rhoV, T);
 
-        double pL = SatL->p();
-        double pV = SatV->p();
+        long double pL = SatL->p();
+        long double pV = SatV->p();
 
         // These derivatives are needed for both cases
-        double alpharL = SatL->alphar();
-        double alpharV = SatV->alphar();
-        double dalphar_dtauL = SatL->dalphar_dTau();
-        double dalphar_dtauV = SatV->dalphar_dTau();
-        double d2alphar_ddelta_dtauL = SatL->d2alphar_dDelta_dTau();
-        double d2alphar_ddelta_dtauV = SatV->d2alphar_dDelta_dTau();
-        double dalphar_ddeltaL = SatL->dalphar_dDelta();
-        double dalphar_ddeltaV = SatV->dalphar_dDelta();
-        double d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
-        double d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
+        long double alpharL = SatL->alphar();
+        long double alpharV = SatV->alphar();
+        long double dalphar_dtauL = SatL->dalphar_dTau();
+        long double dalphar_dtauV = SatV->dalphar_dTau();
+        long double d2alphar_ddelta_dtauL = SatL->d2alphar_dDelta_dTau();
+        long double d2alphar_ddelta_dtauV = SatV->d2alphar_dDelta_dTau();
+        long double dalphar_ddeltaL = SatL->dalphar_dDelta();
+        long double dalphar_ddeltaV = SatV->dalphar_dDelta();
+        long double d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
+        long double d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
 
         // -r_1
         negativer[0] = -(deltaV*(1+deltaV*dalphar_ddeltaV)-deltaL*(1+deltaL*dalphar_ddeltaL));
@@ -204,7 +204,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
             throw SolutionError(format("saturation_PHSU_pure solver did not converge after 200 iterations for %s=%Lg current error is %Lg", info.c_str(), specified_value, error));
         }
     }
-    while (error > 1e-11);
+    while (error > 1e-10);
 }
 void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long double rhomolar, saturation_D_pure_options &options)
 {
@@ -271,18 +271,18 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
         SatL->update(DmolarT_INPUTS, rhoL, T);
         SatV->update(DmolarT_INPUTS, rhoV, T);
 
-        double pL = SatL->p();
-        double pV = SatV->p();
+        long double pL = SatL->p();
+        long double pV = SatV->p();
 
         // These derivatives are needed for both cases
-        double dalphar_dtauL = SatL->dalphar_dTau();
-        double dalphar_dtauV = SatV->dalphar_dTau();
-        double d2alphar_ddelta_dtauL = SatL->d2alphar_dDelta_dTau();
-        double d2alphar_ddelta_dtauV = SatV->d2alphar_dDelta_dTau();
-        double alpharL = SatL->alphar();
-        double alpharV = SatV->alphar();
-        double dalphar_ddeltaL = SatL->dalphar_dDelta();
-        double dalphar_ddeltaV = SatV->dalphar_dDelta();
+        long double dalphar_dtauL = SatL->dalphar_dTau();
+        long double dalphar_dtauV = SatV->dalphar_dTau();
+        long double d2alphar_ddelta_dtauL = SatL->d2alphar_dDelta_dTau();
+        long double d2alphar_ddelta_dtauV = SatV->d2alphar_dDelta_dTau();
+        long double alpharL = SatL->alphar();
+        long double alpharV = SatV->alphar();
+        long double dalphar_ddeltaL = SatL->dalphar_dDelta();
+        long double dalphar_ddeltaV = SatV->dalphar_dDelta();
 
         // -r_1
         r[0] = -(deltaV*(1+deltaV*dalphar_ddeltaV)-deltaL*(1+deltaL*dalphar_ddeltaL));
@@ -296,7 +296,7 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
 
         if (options.imposed_rho == saturation_D_pure_options::IMPOSED_RHOL)
         {
-            double d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
+            long double d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
             if (options.use_logdelta)
             {
                 J[0][1] = deltaV+2*pow(deltaV,2)*dalphar_ddeltaV+pow(deltaV,3)*d2alphar_ddelta2V;
@@ -310,7 +310,7 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
         }
         else if (options.imposed_rho == saturation_D_pure_options::IMPOSED_RHOV)
         {
-            double d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
+            long double d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
             if (options.use_logdelta)
             {
                 J[0][1] = -deltaL-2*pow(deltaL,2)*dalphar_ddeltaL-pow(deltaL,3)*d2alphar_ddelta2L;
@@ -361,10 +361,10 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
         }
     }
     while (error > 1e-9);
-	double p_error_limit = 1e-3;
-	if (fabs(p_error) > p_error_limit);
-		throw SolutionError(format("saturation_D_pure solver abs error on p [%g] > limit [%g] < 0", p_error, p_error_limit));
-	
+	long double p_error_limit = 1e-3;
+	if (fabs(p_error) > p_error_limit){
+		throw SolutionError(format("saturation_D_pure solver abs error on p [%Lg] > limit [%Lg]", p_error, p_error_limit));
+	}
 }
 void SaturationSolvers::saturation_T_pure(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_options &options)
 {
@@ -460,12 +460,12 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
         // Calculate once to save on calls to EOS
         SatL->update(DmolarT_INPUTS, rhoL, T);
         SatV->update(DmolarT_INPUTS, rhoV, T);
-        double alpharL = SatL->alphar();
-        double alpharV = SatV->alphar();
-        double dalphar_ddeltaL = SatL->dalphar_dDelta();
-        double dalphar_ddeltaV = SatV->dalphar_dDelta();
-        double d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
-        double d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
+        long double alpharL = SatL->alphar();
+        long double alpharV = SatV->alphar();
+        long double dalphar_ddeltaL = SatL->dalphar_dDelta();
+        long double dalphar_ddeltaV = SatV->dalphar_dDelta();
+        long double d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
+        long double d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
 
         JL = deltaL * (1 + deltaL*dalphar_ddeltaL);
         JV = deltaV * (1 + deltaV*dalphar_ddeltaV);
@@ -503,10 +503,10 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
     }
     while (error > 1e-10 && fabs(stepL) > 10*DBL_EPSILON*fabs(stepL) && fabs(stepV) > 10*DBL_EPSILON*fabs(stepV));
 	
-	double p_error_limit = 1e-3;
-	double p_error = (PL - PV)/PL;
+	long double p_error_limit = 1e-3;
+	long double p_error = (PL - PV)/PL;
 	if (fabs(p_error) > p_error_limit){
-	throw SolutionError(format("saturation_T_pure_Akasaka solver abs error on p [%g] > limit [%g]", fabs(p_error), p_error_limit));
+		throw SolutionError(format("saturation_T_pure_Akasaka solver abs error on p [%g] > limit [%g]", fabs(p_error), p_error_limit));
 	}
 }
 
