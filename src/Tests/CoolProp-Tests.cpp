@@ -13,7 +13,7 @@
 #include "catch.hpp"
 #include "CoolPropTools.h"
 #include "CoolProp.h"
-#include "CoolPropLIB.h"
+#include "CoolPropLib.h"
 
 namespace TransportValidation{
 
