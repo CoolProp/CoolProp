@@ -513,6 +513,36 @@ if (COOLPROP_CPP_EXAMPLE_TEST)
   add_test(DocumentationTest docuTest.exe)
 endif()
 
+if (COOLPROP_SNIPPETS)
+
+  # Make the static library with which the snippets will be linked
+  add_library(${app_name} STATIC ${APP_SOURCES})
+  add_dependencies (${app_name} generate_headers)
+  set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
+  
+  # Collect all the snippets
+  file(GLOB_RECURSE snippets "${CMAKE_SOURCE_DIR}/doc/snippets/*.cxx")
+  
+  message(STATUS "snippets found = ${snippets}")
+  foreach (snippet ${snippets})
+    
+    get_filename_component(snippet_name ${snippet} NAME)
+    message(STATUS "snippet_name = ${snippet_name}")
+    
+    add_executable        (${snippet_name} ${snippet})
+    add_dependencies      (${snippet_name} CoolProp)
+    target_link_libraries (${snippet_name} CoolProp)
+    if(UNIX)
+      target_link_libraries (${snippet_name} ${CMAKE_DL_LIBS})
+    endif()
+    
+    add_test(NAME ${snippet_name}
+           COMMAND  -out:Example.exe ${CSHARP_PLAT} ${cp_cs_path} ${cp_example_path})
+  
+  endforeach()
+  
+endif()
+
 
 # TODO: check relevance of http://www.cmake.org/Wiki/BuildingWinDLL
 
