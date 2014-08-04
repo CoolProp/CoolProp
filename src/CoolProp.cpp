@@ -799,8 +799,11 @@ std::string get_global_param_string(std::string ParamName)
 	else if (!ParamName.compare("FluidsList") || !ParamName.compare("fluids_list") || !ParamName.compare("fluidslist")){
 		return get_fluid_list();
 	}
-	else if (!ParamName.compare("IncompressiblesList") || !ParamName.compare("incompressibles_list")){
-		return get_incompressible_list();
+	else if (!ParamName.compare("incompressible_list_pure")){
+		return get_incompressible_list_pure();
+	}
+	else if (!ParamName.compare("incompressible_list_solution")){
+		return get_incompressible_list_solution();
 	}
 	else if (!ParamName.compare("parameter_list") )
     {

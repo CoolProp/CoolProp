@@ -147,7 +147,7 @@ class JSONIncompressibleLibrary
 	 *  defined for blends of heat transfer fluids and solutions.
      */
     std::map<std::size_t, IncompressibleFluid> fluid_map;
-    std::vector<std::string> name_vector;
+    std::vector<std::string> name_vector_pure, name_vector_solution;
     std::map<std::string, std::size_t> string_to_index_map;
     bool _is_empty;
 
@@ -181,15 +181,20 @@ public:
     */
     IncompressibleFluid& get(std::size_t key);
 
-    /// Return a comma-separated list of fluid names
-    std::string get_fluid_list(void){ return strjoin(name_vector, ",");};
+    /// Return a comma-separated list of incompressible pure fluid names
+    std::string get_incompressible_list_pure(void){ return strjoin(name_vector_pure, ",");};
+	/// Return a comma-separated list of solution names
+	std::string get_incompressible_list_solution(void){ return strjoin(name_vector_solution, ",");};
 };
 
 /// Get a reference to the library instance
 JSONIncompressibleLibrary & get_incompressible_library(void);
 
-/// Get a comma-separated-list of incompressible fluids that are included
-std::string get_incompressible_list(void);
+/// Return a comma-separated list of incompressible pure fluid names
+std::string get_incompressible_list_pure(void);
+
+/// Return a comma-separated list of solution names
+std::string get_incompressible_list_solution(void);
 
 /// Get the fluid structure returned as a reference
 IncompressibleFluid& get_incompressible_fluid(std::string fluid_string);

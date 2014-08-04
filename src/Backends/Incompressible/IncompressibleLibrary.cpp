@@ -500,7 +500,12 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 	    string_to_index_map[fluid.getName()] = index;
         
         // Add name to vector of names
-        this->name_vector.push_back(fluid.getName());
+		if (fluid.is_pure()){
+			this->name_vector_pure.push_back(fluid.getName());
+		}
+		else{
+			this->name_vector_solution.push_back(fluid.getName());
+		}
     }
     catch(std::exception &e)
     {
@@ -617,9 +622,13 @@ IncompressibleFluid& get_incompressible_fluid(std::string fluid_string){
     return library.get(fluid_string);
 }
 
-std::string get_incompressible_list(void){
+std::string get_incompressible_list_pure(void){
     if (library.is_empty()){ load_incompressible_library(); }
-    return library.get_fluid_list();
+    return library.get_incompressible_list_pure();
+};
+std::string get_incompressible_list_solution(void){
+    if (library.is_empty()){ load_incompressible_library(); }
+    return library.get_incompressible_list_solution();
 };
 
 } /* namespace CoolProp */
