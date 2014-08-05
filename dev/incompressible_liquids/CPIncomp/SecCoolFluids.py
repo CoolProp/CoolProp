@@ -535,15 +535,14 @@ class ThermogenVP1869(PureData,DigitalData):
         self.conductivity.coeffs = np.array([[0.15],[-0.000154545]])
         
         self.temperature.data         = self.getTrange()
-        self.concentration.data       = np.array([0]) # mass fraction
+        self.concentration.data       = np.array([0.0]) # mass fraction
         
         
     def fitFluid(self):        
         key = 'Mu'
         def funcMu(T,x):
             T = T-self.Tbase
-            return (341.3688975+T*(-0.713408301+0.017723992*T))/ \
-              (1+T*(0.034502393+T*(0.000401319+1.57288E-06*T)))*1e-2*1e-3
+            return (341.3688975+T*(-0.713408301+0.017723992*T))/(1.0+T*(0.034502393+T*(0.000401319+1.57288E-06*T)))*1e-2*1e-3
 
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data)
         
@@ -551,7 +550,7 @@ class ThermogenVP1869(PureData,DigitalData):
             self.viscosity.source = self.viscosity.SOURCE_EQUATION
             self.viscosity.type = self.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
             self.viscosity.coeffs = np.zeros((4,6))
-            self.viscosity.fitCoeffs(self.temperature.data,self.concentration.data,self.Tbase,self.xbase)
+            self.viscosity.fitCoeffs(self.Tbase,self.xbase)
         except (ValueError, AttributeError, TypeError, RuntimeError) as e:
             if self.viscosity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(self.name,'viscosity',e))
             pass 

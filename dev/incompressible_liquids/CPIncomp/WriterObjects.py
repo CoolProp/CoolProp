@@ -226,6 +226,10 @@ class SolutionDataWriter(object):
             if not quiet: print(" ({0})".format("w"), end="")
         else:
             if not quiet: print(" ({0})".format("i"), end="")
+            
+        
+        # Update the object:
+        self.fromJSON(data=data)
 
     
     def fromJSON(self,data=SolutionData()):
