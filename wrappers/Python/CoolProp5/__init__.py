@@ -15,7 +15,7 @@ __gitrevision__ = CoolProp.get_global_param_string(b'gitrevision')
 def get(s):
     """
     This is just a shorthand function for getting a parameter from
-    CoolProp.get_global_param_string
+    ``CoolProp.get_global_param_string``
     """
     return CoolProp.get_global_param_string(s)
 def test():
