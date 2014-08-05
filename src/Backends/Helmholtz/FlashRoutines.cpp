@@ -109,11 +109,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure)
     {
-        double pc = HEOS.components[0]->pEOS->reduce.p;
-        double Tc = HEOS.components[0]->pEOS->reduce.T;
-        double Tt = HEOS.components[0]->pEOS->Ttriple;
-        double pt = HEOS.components[0]->pEOS->ptriple;
-        double Tsat_guess = 1/(1/Tc-(1/Tt-1/Tc)/log(pc/pt)*log(HEOS._p/pc));
+        
 
         if (HEOS.components[0]->pEOS->pseudo_pure){
             // It is a psedo-pure mixture
@@ -156,6 +152,13 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
     }
     else
     {
+
+        double pc = HEOS.components[0]->pEOS->reduce.p;
+        double Tc = HEOS.components[0]->pEOS->reduce.T;
+        double Tt = HEOS.components[0]->pEOS->Ttriple;
+        double pt = HEOS.components[0]->pEOS->ptriple;
+        double Tsat_guess = 1/(1/Tc-(1/Tt-1/Tc)/log(pc/pt)*log(HEOS._p/pc));
+
         // Set some imput options
         SaturationSolvers::mixture_VLE_IO io;
         io.sstype = SaturationSolvers::imposed_p;

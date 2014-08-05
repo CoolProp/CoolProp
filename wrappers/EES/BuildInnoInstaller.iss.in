@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "CoolProp"
-#define MyAppVersion "${COOLPROP_VERSION}"
+#define MyAppVersion "${CoolProp_VERSION}"
 #define MyAppPublisher "University of Liege"
 #define MyAppURL "www.coolprop.org"
 
@@ -33,7 +33,6 @@ Source: "CoolProp.htm"; DestDir: "{app}"; Flags: ignoreversion
 Source: "CoolProp.LIB"; DestDir: "{app}"; Flags: ignoreversion
 Source: "COOLPROP_EES.dlf"; DestDir: "{app}"; Flags: ignoreversion
 Source: "CoolProp_EES_Sample.EES"; DestDir: "{app}"; Flags: ignoreversion
-Source: "coolpropsi.LIB"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

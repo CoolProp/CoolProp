@@ -58,12 +58,13 @@ struct element
 
 int main()
 {
-	#if 1
-
-		double T = PropsSI("T","P",8.7257510472904255e+02,"Q",0.0000000000000000e+00,"Water");
+	#if 0
+		double T = PropsSI("P","T",5.9020000000000005e+02,"Q",0.0000000000000000e+00,"AceticAcid");
 		std::cout << get_global_param_string("errstring");
-		double Tc = Props1SI("Water","Tcrit");
+		double Tc = Props1SI("Water","T_triple");
+		std::cout << get_global_param_string("errstring");
 		double rhoc = Props1SI("Water","rhocrit");
+		double pc = Props1SI("Water","pcrit");
 		std::cout << Tc << rhoc << std::endl;
 	
 	#endif
@@ -132,15 +133,22 @@ int main()
 //        std::cout << s << std::endl;
 //        int rr =0;
 //    }
-    CoolProp::set_debug_level(1);
+    CoolProp::set_debug_level(11);
 
-    #if 0
-        double rr0 = HumidAir::HAPropsSI("H","T",473.15,"W",0,"P",101325);
-        CoolProp::set_reference_stateS("Air","RESET");
-        double rr1 = HumidAir::HAPropsSI("H","T",473.15,"W",0,"P",101325);
+    #if 1
+		std::cout << get_global_param_string("incompressible_list_pure");
+		std::cout << get_global_param_string("incompressible_list_solution");
+		double rr2 = CoolProp::PropsSI("T","P",101325,"Q",0,"WATER");
+		double rra = CoolProp::PropsSI("C","T",300,"D",1e-10,"HEOS::R1234ze(E)");
+		double rrv = CoolProp::PropsSI("C","T",300,"D",1e-10,"REFPROP::R1234ze");
+		
+		std::cout << get_global_param_string("errstring");
+        double rr0 = HumidAir::HAPropsSI("B","T",473.15,"W",0.5,"P",101325);
+        //CoolProp::set_reference_stateS("Air","RESET");
+        double rr1 = HumidAir::HAPropsSI("B","T",473.15,"W",0.5,"P",101325);
         int r = 1;
     #endif
-    #if 0
+    #if 1
         // First type (slowest, most string processing, exposed in DLL)
         double r0A = PropsSI("Dmolar","T",298,"P",1e5,"Propane[0.5]&Ethane[0.5]"); // Default backend is HEOS
         double r0B = PropsSI("Dmolar","T",298,"P",1e5,"HEOS::Propane[0.5]&Ethane[0.5]");
@@ -200,7 +208,7 @@ int main()
         double rr = 0;
         return 0;
     #endif
-    #if 0
+    #if 1
     {
         std::string NBP_refs[] = {"D5","D6","MD2M","MDM","Benzene","Helium","Ethylene","Ethanol","n-Dodecane","Benzene","n-Undecane","Neon","Fluorine","Methanol","Acetone","Methane","Ethane","n-Pentane","n-Hexane","n-Heptane","n-Octane","CycloHexane","MD3M","MM","D4","MethylPalmitate","MethylStearate","MethylOleate","MethylLinoleate","MethylLinolenate","m-Xylene"};
         std::string IIR_refs[] = {"SES36","R143a","CycloPropane","Propylene","R227EA","R365MFC","R161","HFE143m","SulfurHexafluoride","CarbonDioxide","R1234ze(E)","R22","R124","Propyne","R507A","R152A","R123","R11","n-Butane","IsoButane","RC318","R21","R114","R13","R12","R113","R1233zd(E)","R41"};
@@ -223,7 +231,7 @@ int main()
         for (std::size_t i = 0; i < sizeof(IIR_refs)/sizeof(IIR_refs[0]); ++i)
         {
             try{
-                //set_reference_stateS(IIR_refs[i],"RESET");
+                set_reference_stateS(IIR_refs[i],"RESET");
                 std::vector<std::string> comps(1,IIR_refs[i]);
                 HelmholtzEOSMixtureBackend HEOS(comps);
                 HEOS.update(QT_INPUTS, 0, 273.15);
@@ -373,7 +381,7 @@ int main()
         double rr = 4;
     }
 	#endif
-    #if 0
+    #if 1
     {
         #if ENABLE_CATCH
             std::vector<std::string> tags;

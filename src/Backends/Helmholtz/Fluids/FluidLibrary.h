@@ -1086,6 +1086,9 @@ public:
             for (std::size_t i = 0; i < fluid.aliases.size(); ++i)
             {
                 string_to_index_map[fluid.aliases[i]] = index;
+				
+				// Add uppercase alias for EES compatibility
+				string_to_index_map[upper(fluid.aliases[i])] = index;
             }
 
             if (get_debug_level() > 5){ std::cout << format("Loaded.\n"); }

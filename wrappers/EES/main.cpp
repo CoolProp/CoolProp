@@ -29,13 +29,13 @@
 //																							  //
 //  Ian Bell                                                                                  //
 //  Thermodynamics Laboratory                                                                 //
-//  University of Liège                                                                       //
+//  University of LiÃ¨ge                                                                       //
 //                                                                                            //
 //  January 2013                                                                              //
 //============================================================================================//
 
 #define _CRT_SECURE_NO_WARNINGS
-#include <algorithm>
+#include <algorithm> 
 #include <string>
 #include <stdio.h> 
 #include <string.h>
@@ -43,7 +43,7 @@
 #include "CoolProp.h"
 #include "CoolPropTools.h"
 
-static const bool EES_DEBUG = false;
+static bool EES_DEBUG = false;
 
 // Structure for handling ees calling syntax
 struct EesParamRec {
@@ -54,8 +54,7 @@ struct EesParamRec {
 using namespace CoolProp;
 
 // Tell C++ to use the "C" style calling conventions rather than the C++ mangled names
-
-extern "C"  
+extern "C"
 {
 	__declspec (dllexport)  double COOLPROP_EES(char fluid[256], int mode, struct EesParamRec *input_rec)
 	{        
@@ -66,19 +65,19 @@ extern "C"
         
         std::vector<double> z;
         
-		std::string ErrorMsg, Outstr, In1str, In2str, Fluidstr;
+		std::string ErrorMsg, Outstr, In1str, In2str, Fluidstr, Units;
 		std::vector<std::string> fluid_split;
 
 		if (mode==-1) {	
-			strcpy(fluid,"T = coolprop('D','P',101.325,'Q',0,'R134a')"); 
+			strcpy(fluid,"T = PropsSI('T','P',101325,'Q',0,'Water')"); 
 			return 0;
 		}
 
 		// Split the string that is passed in at the '~' delimiter that was used to join it
 		fluid_split = strsplit(fluid_string,'~');
-		if (fluid_split.size() != 4) 
+		if (fluid_split.size() != 5)
 		{
-			sprintf(err_str,"fluid[%s] length[%d] not 4 elements long",fluid_string.c_str(),fluid_split.size()); 
+			sprintf(err_str,"fluid[%s] length[%d] not 5 elements long",fluid_string.c_str(),fluid_split.size()); 
 			strcpy(fluid,err_str);
             if (EES_DEBUG)
             {
@@ -95,6 +94,15 @@ extern "C"
 			Outstr = upper(fluid_split[1]);
 			In1str = upper(fluid_split[2]);
 			In2str = upper(fluid_split[3]);
+			Units = upper(fluid_split[4]);
+		}
+		
+		if (Fluidstr.find("$DEBUG") != std::string::npos){
+			EES_DEBUG = true;
+			Fluidstr = Fluidstr.substr(0,Fluidstr.find("$DEBUG"));
+		}
+		else{
+			EES_DEBUG = false;
 		}
 		
 		// Check the number of inputs
@@ -128,31 +136,47 @@ extern "C"
         {
             FILE *fp;
             fp = fopen("log.txt","a+");
-            fprintf(fp,"%s %s %g %s %g %s\n",Outstr.c_str(),In1str.c_str(),In1,In2str.c_str(),In2,Fluidstr.c_str());
+            fprintf(fp,"Inputs: %s %s %g %s %g %s %s\n",Outstr.c_str(),In1str.c_str(),In1,In2str.c_str(),In2,Fluidstr.c_str(), Units.c_str());
             fclose(fp);
         }
 
-		//~ if (EES_DEBUG)
-        //~ {
-            //~ // This redirect standard output to file2.txt
-            //~ freopen("log_stdout.txt", "w", stdout);
-            //~ set_debug_level(10); // Maximum debugging
-        //~ }
+		if (EES_DEBUG)
+        {
+			// This redirects standard output to log_stdout.txt
+            freopen("log_stdout.txt", "w", stdout);
+            set_debug_level(100000); // Maximum debugging
+        }
 
 		try
 		{
-            if (z.size() > 0){
-                // Mole fractions are given
-                out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr, z);
-            }
-            else{
-                out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr);
-            }
+			if (!Units.compare("SI")){
+				if (z.size() > 0){
+					// Mole fractions are given
+					out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr, z);
+				}
+				else{
+					// Mole fractions are not given
+					out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr);
+				}
+			}
+			else{
+				// Mole fractions are not given
+				out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr);
+			}
 		}
 		catch(...)
 		{
 			std::string err_str = format("Uncaught error: \"%s\",\"%s\",%g,\"%s\",%g,\"%s\"\n",Outstr.c_str(),In1str.c_str(),In1,In2str.c_str(),In2,Fluidstr.c_str());
+			// There was an error
+            if (EES_DEBUG)
+            {
+                FILE *fp;
+                fp = fopen("log.txt","a+");
+                fprintf(fp,"Error: %s \n",err_str.c_str());
+                fclose(fp);
+            }
 			strcpy(fluid, err_str.c_str());
+			
 			return 0.0;
 		}
 
@@ -186,6 +210,13 @@ extern "C"
                 // There was a warning, write it back
                 strcpy(fluid, warn_string.c_str());
             }
+			if (EES_DEBUG)
+			{
+				FILE *fp;
+				fp = fopen("log.txt", "a+");
+				fprintf(fp,"Output: %g\n", out);
+				fclose(fp);
+			}
 			return out;
         }
 	}

@@ -192,11 +192,37 @@ if (COOLPROP_EES_MODULE)
   set_target_properties (COOLPROP_EES PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
   add_dependencies (COOLPROP_EES generate_headers)
   set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
+  # Put the version into the InnoInstaller setup file
+  CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/EES/BuildInnoInstaller.iss.in" "${CMAKE_CURRENT_BINARY_DIR}/BuildInnoInstaller.iss")
   if (!MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
-  add_dependencies (COOLPROP_EES generate_headers)  
-  install (TARGETS COOLPROP_EES DESTINATION EES/${CMAKE_SYSTEM_NAME})
+  add_dependencies (COOLPROP_EES generate_headers)
+  
+  if ( MSVC )
+    set_target_properties( COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
+    set_target_properties( COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
+    set_target_properties( COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR})
+    # etc for the other available configuration types (MinSizeRel, RelWithDebInfo)
+  endif ()
+  # copy required files
+  set(REQUIRED_FILES
+    CoolProp.htm
+    CoolProp.LIB
+    CoolProp_EES_Sample.EES
+    )
+    foreach (_FILE ${REQUIRED_FILES})
+        add_custom_command(TARGET COOLPROP_EES
+                           PRE_BUILD
+                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/wrappers/EES/${_FILE} ${CMAKE_CURRENT_BINARY_DIR}/.)
+    endforeach()
+  
+  # Run InnoSetup to make the installer (must be on your path)
+  add_custom_command(TARGET COOLPROP_EES
+                     POST_BUILD
+                     COMMAND Compil32.exe /cc BuildInnoInstaller.iss
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  install (TARGETS ${CMAKE_CURRENT_BINARY_DIR}/Output/SetupCOOLPROP_EES.exe DESTINATION EES/${CMAKE_SYSTEM_NAME})
 endif()
 
 if (COOLPROP_OCTAVE_MODULE)
@@ -552,8 +578,9 @@ if (COOLPROP_SNIPPETS)
         set_target_properties( ${snippet_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/bin )
         # etc for the other available configuration types (MinSizeRel, RelWithDebInfo)
     endif ()
-    message(STATUS "${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name}.output")
     # Run it and save the output to a file with .output appended
+    message(STATUS "${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name}.output")
+    
     add_custom_command(TARGET ${snippet_name}
                        POST_BUILD
                        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name}.output)
