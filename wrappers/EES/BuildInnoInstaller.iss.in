@@ -2,9 +2,9 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "CoolProp"
-#define MyAppVersion "4.2"
+#define MyAppVersion "${COOLPROP_VERSION}"
 #define MyAppPublisher "University of Liege"
-#define MyAppURL "coolprop.sf.net"
+#define MyAppURL "www.coolprop.org"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -29,11 +29,11 @@ SolidCompression=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "C:\Users\Belli\Documents\Code\CoolProp\wrappers\EES\CoolProp.htm"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Belli\Documents\Code\CoolProp\wrappers\EES\CoolProp.LIB"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Belli\Documents\Code\CoolProp\wrappers\EES\COOLPROP_EES.dlf"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Belli\Documents\Code\CoolProp\wrappers\EES\CoolProp_EES_Sample.EES"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Belli\Documents\Code\CoolProp\wrappers\EES\coolpropsi.LIB"; DestDir: "{app}"; Flags: ignoreversion
+Source: "CoolProp.htm"; DestDir: "{app}"; Flags: ignoreversion
+Source: "CoolProp.LIB"; DestDir: "{app}"; Flags: ignoreversion
+Source: "COOLPROP_EES.dlf"; DestDir: "{app}"; Flags: ignoreversion
+Source: "CoolProp_EES_Sample.EES"; DestDir: "{app}"; Flags: ignoreversion
+Source: "coolpropsi.LIB"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
