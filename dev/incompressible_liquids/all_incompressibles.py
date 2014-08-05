@@ -8,20 +8,11 @@ from CPIncomp.DataObjects import SolutionData
 
 if __name__ == '__main__':   
     
-    runTest     = False
-    runExamples = False
-    
-    runCoeffs   = True #Processing fluids with given coefficients
-    runDigital  = True #Processing digital fluids
-    runMelinder = True #Processing Melinder fluids
-    runPure     = True #Processing pure fluids
-    runSecCool  = True #Processing SecCool fluids
-    
-    runReports  = False
+    runTest     = False    
+    runFitting  = True
+    runReports  = True
     runSummary  = True
-    
-    
-    
+        
     writer = SolutionDataWriter()
     doneObjs = []
     
@@ -51,49 +42,47 @@ if __name__ == '__main__':
         sys.exit(0)
     
     # treat the examples first
-    if runExamples:
-        fluidObjs = getExampleNames(obj=True)
-        examplesToFit = ["ExamplePure","ExampleSolution","ExampleDigital","ExampleDigitalPure"]
-        
-        print("\nProcessing example fluids")
-        for obj in fluidObjs:
-            if obj.name in examplesToFit:
-                writer.fitAll(obj)
-        doneObjs += fluidObjs[:]       
-        writer.writeFluidList(doneObjs)
-        writer.writeReportList(doneObjs, pdfFile="all_examples.pdf")
+    fluidObjs = getExampleNames(obj=True)
+    examplesToFit = ["ExamplePure","ExampleSolution","ExampleDigital","ExampleDigitalPure"]
+    
+    print("\nProcessing example fluids")
+    for obj in fluidObjs:
+        if obj.name in examplesToFit:
+            if runFitting: writer.fitAll(obj)
+            else: writer.fromJSON(obj)
+    doneObjs += fluidObjs[:]
+    if runFitting: writer.writeFluidList(doneObjs)
+    if runReports: writer.writeReportList(doneObjs, pdfFile="all_examples.pdf")
         
     # If the examples did not cause any errors, 
     # we can proceed to the real data.
     doneObjs = []
     
-    if runCoeffs:
-        print("\nProcessing fluids with given coefficients")
-        fluidObjs = getCoefficientFluids()
-        doneObjs += fluidObjs[:]
+    print("\nProcessing fluids with given coefficients")
+    fluidObjs = getCoefficientFluids()
+    doneObjs += fluidObjs[:]
+
+    print("\nProcessing digital fluids")
+    fluidObjs = getDigitalFluids()
+    if runFitting: writer.fitFluidList(fluidObjs)
+    else: writer.readFluidList(fluidObjs)
+    doneObjs += fluidObjs[:]
     
-    if runDigital:
-        print("\nProcessing digital fluids")
-        fluidObjs = getDigitalFluids()
-        writer.fitFluidList(fluidObjs)
-        doneObjs += fluidObjs[:]
+    print("\nProcessing Melinder fluids")
+    fluidObjs = getMelinderFluids()
+    doneObjs += fluidObjs[:]
     
-    if runMelinder:
-        print("\nProcessing Melinder fluids")
-        fluidObjs = getMelinderFluids()
-        doneObjs += fluidObjs[:]
-    
-    if runPure:
-        print("\nProcessing pure fluids")
-        fluidObjs = getPureFluids()
-        writer.fitFluidList(fluidObjs)
-        doneObjs += fluidObjs[:]
-    
-    if runSecCool:
-        print("\nProcessing SecCool fluids")
-        fluidObjs = getSecCoolFluids()
-        writer.fitSecCoolList(fluidObjs)
-        doneObjs += fluidObjs[:]
+    print("\nProcessing pure fluids")
+    fluidObjs = getPureFluids()
+    if runFitting: writer.fitFluidList(fluidObjs)
+    else: writer.readFluidList(fluidObjs)
+    doneObjs += fluidObjs[:]
+
+    print("\nProcessing SecCool fluids")
+    fluidObjs = getSecCoolFluids()
+    if runFitting: writer.fitSecCoolList(fluidObjs)
+    else: writer.readFluidList(fluidObjs)
+    doneObjs += fluidObjs[:]
     
     print("\nAll {0} fluids processed, all coefficients should be set.".format(len(doneObjs)))
     print("Checking the list of fluid objects.")
@@ -124,23 +113,25 @@ if __name__ == '__main__':
     solutions += solMole
     solutions += solVolu
         
-    print("All checks passed, going to write parameters to disk.")
-    writer.writeFluidList(doneObjs)
+    if runFitting: print("All checks passed, going to write parameters to disk.")
+    if runFitting: writer.writeFluidList(doneObjs)
     
-    print("Creating the fitting reports for the different groups.")
-    #writer.writeReportList(doneObjs)
-    #doneObjs.sort(key=lambda x: (x.xid ,x.name))
-    if len(purefluids)>0 and runReports:
-        print("Processing {0:2d} pure fluids   - ".format(len(purefluids)), end="")
-        writer.writeReportList(purefluids, pdfFile="all_pure.pdf")
-    if len(solutions)>0 and runReports:
-        print("Processing {0:2d} solutions     - ".format(len(solutions)), end="")
-        writer.writeReportList(solutions, pdfFile="all_solutions.pdf")  
-    if len(errors)>0 and runReports:
-        print("Processing {0:2d} faulty fluids - ".format(len(errors)), end="")
-        writer.writeReportList(errors, pdfFile="all_errors.pdf")
-       
-    writer.makeSolutionPlots(solObjs=doneObjs, pdfObj=None)
+    if runReports: 
+        print("Creating the fitting reports for the different groups.")
+        #writer.writeReportList(doneObjs)
+        #doneObjs.sort(key=lambda x: (x.xid ,x.name))
+        if len(purefluids)>0 and runReports:
+            print("Processing {0:2d} pure fluids   - ".format(len(purefluids)), end="")
+            writer.writeReportList(purefluids, pdfFile="all_pure.pdf")
+        if len(solutions)>0 and runReports:
+            print("Processing {0:2d} solutions     - ".format(len(solutions)), end="")
+            writer.writeReportList(solutions, pdfFile="all_solutions.pdf")  
+        if len(errors)>0 and runReports:
+            print("Processing {0:2d} faulty fluids - ".format(len(errors)), end="")
+            writer.writeReportList(errors, pdfFile="all_errors.pdf")
+    
+    if runSummary:
+        writer.makeSolutionPlots(solObjs=doneObjs, pdfObj=None)
 
     print("All done, bye")
     sys.exit(0)

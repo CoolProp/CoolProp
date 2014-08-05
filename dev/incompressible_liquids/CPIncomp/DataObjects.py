@@ -18,7 +18,6 @@ class SolutionData(object):
     ifrac_undefined = "not defined"
     ifrac_pure      = "pure"
     
-    __metaclass__ = ABCMeta
     def __init__(self):
 
         

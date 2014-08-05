@@ -135,7 +135,7 @@ class IncompressibleData(object):
                       eqnType=self.type, \
                       coeffs=self.coeffs, DEBUG=self.DEBUG)
             
-            elif self.type==IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL and self.data.size>15:
+            elif self.type==IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL and self.data.size>10:
                 if self.DEBUG: print("Poor solution found with log exponential, trying once more with exponential polynomial.")
                 self.type=IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
                 self.coeffs = np.zeros((4,6))
@@ -206,6 +206,15 @@ class IncompressibleData(object):
         j['type']   = self.type
         return j
     
+    def fromJSON(self, j):
+        try:
+            self.coeffs = np.array(j['coeffs'])
+            self.type   = j['type']
+        except:
+            self.coeffs = None
+            self.type   = IncompressibleData.INCOMPRESSIBLE_NOT_SET
+            
+        return
     
 
 class IncompressibleFitter(object):
