@@ -19,7 +19,7 @@ if __name__ == '__main__':
     # To debug single fluids
     if runTest:
         solObjs = []
-        from CPIncomp.SecCoolFluids import SecCoolSolutionData,SecCoolIceData
+        from CPIncomp.SecCoolFluids import SecCoolSolutionData,SecCoolIceData,ThermogenVP1869
         from CPIncomp.PureFluids import Texatherm22
         solObjs += [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder-BOOK-2010, SecCool software')]
         solObjs += [SecCoolIceData(sFile='IceNA'   ,sFolder='xMass',name='IceNA',desc='Ice slurry with NaCl' ,ref='Danish Technological Institute, SecCool software')]
@@ -30,13 +30,14 @@ if __name__ == '__main__':
         #solObjs[0].viscosity.DEBUG = True
         #solObjs[0].T_freeze.DEBUG = True
         #writer.fitSecCoolList(solObjs)
-        solObjs += [Texatherm22()]#,Therminol72()]
+        solObjs = [ThermogenVP1869()]#,Therminol72()]
         solObjs[0].viscosity.DEBUG=True
         #solObjs[0].saturation_pressure.DEBUG=True
         #
         ##from CPIncomp.ExampleObjects import SecCoolExample
         ##solObjs = [SecCoolExample()]
-        writer.fitFluidList(solObjs)
+        #writer.fitFluidList(solObjs)
+        writer.fitSecCoolList(solObjs)
         writer.writeFluidList(solObjs)
         writer.writeReportList(solObjs)
         sys.exit(0)

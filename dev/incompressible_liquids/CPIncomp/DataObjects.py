@@ -21,7 +21,7 @@ class SolutionData(object):
     def __init__(self):
 
         
-        self.significantDigits = 6
+        self.significantDigits = 10
         
         self.name        = None # Name of the current fluid
         self.description = None # Description of the current fluid
