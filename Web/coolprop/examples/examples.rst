@@ -8,7 +8,7 @@ This page serves as a teaser of the functionality of CoolProp.  These examples a
 
 Sample Props Code
 -------------------
-To use the Props function, import it and do some calls, do something like this
+To use the ``PropsSI`` function, import it and do some calls, do something like this
 
 .. ipython::
 
