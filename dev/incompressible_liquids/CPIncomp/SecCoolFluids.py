@@ -47,6 +47,8 @@ class SecCoolSolutionData(DigitalData):
         
         try:
             self.density.xData,self.density.yData,self.density.data = self.getArray(dataID="Rho")
+            while np.max(self.density.data[np.isfinite(self.density.data)])<500: # Expect values around 1e3
+                self.density.data *= 10.0
             self.density.source = self.density.SOURCE_DATA
         except:
             if self.density.DEBUG: print("Could not load {}".format(self.getFile("Rho")))

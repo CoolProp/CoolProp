@@ -206,6 +206,15 @@ class IncompressibleData(object):
         j['type']   = self.type
         return j
     
+    def fromJSON(self, j):
+        try:
+            self.coeffs = np.array(j['coeffs'])
+            self.type   = j['type']
+        except:
+            self.coeffs = None
+            self.type   = IncompressibleData.INCOMPRESSIBLE_NOT_SET
+            
+        return
     
 
 class IncompressibleFitter(object):

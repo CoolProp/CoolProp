@@ -9,6 +9,7 @@ from CPIncomp.BaseObjects import IncompressibleData, IncompressibleFitter
 from matplotlib.patches import Rectangle
 from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_pdf import PdfPages
+import itertools
 
 class SolutionDataWriter(object):
     """ 
@@ -225,7 +226,42 @@ class SolutionDataWriter(object):
             if not quiet: print(" ({0})".format("w"), end="")
         else:
             if not quiet: print(" ({0})".format("i"), end="")
-                
+
+    
+    def fromJSON(self,data=SolutionData()):
+        
+        path = os.path.join("json",data.name+'.json')
+        
+        with open(path) as json_file:
+            jobj = json.load(json_file)
+            
+            data.name        = jobj['name']  # Name of the current fluid
+            data.description = jobj['description']  # Description of the current fluid
+            data.reference   = jobj['reference']  # Reference data for the current fluid
+            
+            data.Tmax = jobj['Tmax']          # Maximum temperature in K
+            data.Tmin = jobj['Tmin']          # Minimum temperature in K
+            data.xmax = jobj['xmax']          # Maximum concentration
+            data.xmin = jobj['xmin']          # Minimum concentration
+            data.xid = jobj['xid']            # Concentration is mole, mass or volume-based
+            data.TminPsat = jobj['TminPsat']      # Minimum saturation temperature in K
+            data.Tbase = jobj['Tbase']        # Base value for temperature fits
+            data.xbase = jobj['xbase']        # Base value for concentration fits
+        
+            #data.temperature  # Temperature for data points in K
+            #data.concentration  # Concentration data points in weight fraction
+            data.density.fromJSON(jobj['density']) # Density in kg/m3
+            data.specific_heat.fromJSON(jobj['specific_heat']) # Heat capacity in J/(kg.K)
+            data.viscosity.fromJSON(jobj['viscosity']) # Dynamic viscosity in Pa.s
+            data.conductivity.fromJSON(jobj['conductivity']) # Thermal conductivity in W/(m.K)
+            data.saturation_pressure.fromJSON(jobj['saturation_pressure']) # Saturation pressure in Pa
+            data.T_freeze.fromJSON(jobj['T_freeze']) # Freezing temperature in K
+            data.mass2input.fromJSON(jobj['mass2input']) # dd
+            data.volume2input.fromJSON(jobj['volume2input']) # dd
+            data.mole2input.fromJSON(jobj['mole2input']) # dd
+            
+            return data
+                    
         
     def printStatusID(self, fluidObjs, obj): 
         #obj = fluidObjs[num]
@@ -246,6 +282,21 @@ class SolutionDataWriter(object):
             self.printStatusID(fluidObjs, obj) 
             try: 
                 self.fitAll(obj)
+            except (TypeError, ValueError) as e:
+                print("An error occurred for fluid: {0}".format(obj.name))
+                print(obj)
+                print(e)
+                pass 
+        print(" ... done")
+        return
+    
+    
+    def readFluidList(self, fluidObjs):
+        print("Reading fluids:", end="")
+        for obj in fluidObjs:
+            self.printStatusID(fluidObjs, obj) 
+            try: 
+                self.fromJSON(obj)
             except (TypeError, ValueError) as e:
                 print("An error occurred for fluid: {0}".format(obj.name))
                 print(obj)
@@ -899,46 +950,66 @@ class SolutionDataWriter(object):
         obj = SolutionData()
         for i in range(len(solutions)-1):
             obj = solutions[i]
-            T = np.linspace(obj.Tmin, obj.Tmax, num=int(obj.Tmax-obj.Tmin))
+            T = np.arange(np.max([275,np.round(obj.Tmin)]), np.min([300,np.round(obj.Tmax)]), 1)
             P = 100e5
             x = obj.xmin
             dataDict["name"] = obj.name
+            dataDict["desc"] = obj.description
             dataDict["T"] = T 
             dataDict["P"] = P
             dataDict["x"] = x
             if obj.density.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
-                dataDict["D"] = [obj.rho(Ti, P, x) for Ti in T]
+                dataDict["D"] = np.array([obj.rho(Ti, P, x) for Ti in T])
             else: dataDict["D"] = None
             if obj.specific_heat.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
-                dataDict["C"] = [obj.c(Ti, P, x) for Ti in T]
+                dataDict["C"] = np.array([obj.c(Ti, P, x) for Ti in T])
             else: dataDict["C"] = None
             if obj.conductivity.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
-                dataDict["L"] = [obj.cond(Ti, P, x) for Ti in T]
+                dataDict["L"] = np.array([obj.cond(Ti, P, x) for Ti in T])
             else: dataDict["L"] = None
             if obj.viscosity.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET:
-                dataDict["V"] = [obj.visc(Ti, P, x) for Ti in T]
+                dataDict["V"] = np.array([obj.visc(Ti, P, x) for Ti in T])
             else: dataDict["V"] = None
             dataList.append(dataDict.copy())
             
-            
-        fig = plt.figure()
-        ax = fig.add_subplot(131)
+        rat = np.array([5.5,3.05])
+        mul =  2.25
+        #fig = plt.figure(figsize=(297/div,210/div))
+        fig = plt.figure(figsize=rat*mul)
+        
+        ax = fig.add_subplot(121)
+        ax.set_xlabel(r'Temperature [$\mathdefault{K}$]')
+        ax.set_ylabel(r'Density [$\mathdefault{kg/m^3\!}$]')
+        fig.suptitle(r'Aqueous solutions with a concentration of 0.0',fontsize='x-large',fontweight='bold')
         
         #obj = water
         #T = np.linspace(obj.Tmin, obj.Tmax, num=int(obj.Tmax-obj.Tmin))
-        #D = 
+        #D =
+        
+        #import matplotlib.pyplot as plt
+        #from itertools import cycle
+        lines   = ["-","--","-.", ":"]
+        colours = ['r', 'g', 'b', 'c', 'm']
+        
+        linecycler   = itertools.cycle(lines)
+        colourcycler = itertools.cycle(colours)
         
         for i in range(len(dataList)-1):
             obj = dataList[i]
             if obj["T"]!=None and obj["D"]!=None:
-                if np.all(np.isfinite(obj["D"])):
-                    ax.plot(obj["T"],obj["D"],label=obj["name"])
-                if np.min(obj["D"])<500 or not np.all(np.isfinite(obj["D"])): 
-                    print("Name: {0}, Dmin: {1}, Dmax: {1}".format(obj["name"],np.min(obj["D"]),np.max(obj["D"]))) 
+                if obj["x"]==0.0 and np.any(np.isfinite(obj["D"])) and obj["name"]!="NBS": 
+                    lc = next(colourcycler)
+                    if lc==colours[0]: ls = next(linecycler) 
+                    ax.plot(obj["T"],obj["D"],label="{0}: {1}".format(obj["name"],obj["desc"]),ls=ls,color=lc)
+                #if not np.any(np.isfinite(obj["D"])): 
+                #    print("Name: {0}, Dmin: {1}, Dmax: {1}".format(obj["name"],np.min(obj["D"]),np.max(obj["D"]))) 
         
-        ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., ncol=3)
-        plt.tight_layout()
-        plt.savefig("aaa_fitreport.pdf")
+        obj = (item for item in dataList if item["name"] == "NBS").next()        
+        ax.plot(obj["T"],obj["D"],label="{0}: {1}".format(obj["name"],obj["desc"]),ls='-',color='black')
+        
+        ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., ncol=1)#, prop={'size':'smaller'})
+        plt.tight_layout(rect=(0, 0, 1, 0.95))
+        plt.savefig("all_solutions_00.pdf")
         
         
         
