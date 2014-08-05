@@ -2,16 +2,16 @@
 using namespace CoolProp;
 int main()
 {
-    // First type (slowest, most string processing, exposed in DLL)
-    double r0A = PropsSI("Dmolar","T",298,"P",1e5,"Propane[0.5]&Ethane[0.5]"); // Default backend is HEOS
-    double r0B = PropsSI("Dmolar","T",298,"P",1e5,"HEOS::Propane[0.5]&Ethane[0.5]");
-    double r0C = PropsSI("Dmolar","T",298,"P",1e5,"REFPROP::Propane[0.5]&Ethane[0.5]");
+    // First type (slowest, due to most string processing, exposed in DLL)
+    std::cout << PropsSI("Dmolar","T",298,"P",1e5,"Propane[0.5]&Ethane[0.5]") << std::endl; // Default backend is HEOS
+    std::cout << PropsSI("Dmolar","T",298,"P",1e5,"HEOS::Propane[0.5]&Ethane[0.5]") << std::endl;
+    std::cout << PropsSI("Dmolar","T",298,"P",1e5,"REFPROP::Propane[0.5]&Ethane[0.5]") << std::endl;
 
     std::vector<double> z(2,0.5);
     // Second type (C++ only, a bit faster)
-    double r1A = PropsSI("Dmolar","T",298,"P",1e5,"Propane&Ethane", z);
-    double r1B = PropsSI("Dmolar","T",298,"P",1e5,"HEOS::Propane&Ethane", z);
-    double r1C = PropsSI("Dmolar","T",298,"P",1e5,"REFPROP::Propane&Ethane", z);
+    std::cout << PropsSI("Dmolar","T",298,"P",1e5,"Propane&Ethane", z) << std::endl;
+    std::cout << PropsSI("Dmolar","T",298,"P",1e5,"HEOS::Propane&Ethane", z) << std::endl;
+    std::cout << PropsSI("Dmolar","T",298,"P",1e5,"REFPROP::Propane&Ethane", z) << std::endl;
     
     return EXIT_SUCCESS;
 }
