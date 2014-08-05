@@ -560,7 +560,7 @@ if (COOLPROP_SNIPPETS)
   set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
   
   # Collect all the snippets
-  file(GLOB_RECURSE snippets "${CMAKE_SOURCE_DIR}/doc/snippets/*.cxx")
+  file(GLOB_RECURSE snippets "${CMAKE_SOURCE_DIR}/Web/coolprop/snippets/*.cxx")
   
   message(STATUS "snippets found = ${snippets}")
   foreach (snippet ${snippets})
@@ -586,7 +586,7 @@ if (COOLPROP_SNIPPETS)
     
     add_custom_command(TARGET ${snippet_name}
                        POST_BUILD
-                       COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name}.output)
+                       COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_SOURCE_DIR}/Web/coolprop/snippets/${snippet_name}.output)
   
   endforeach()
   
