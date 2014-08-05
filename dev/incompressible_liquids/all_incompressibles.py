@@ -9,8 +9,8 @@ from CPIncomp.DataObjects import SolutionData
 if __name__ == '__main__':   
     
     runTest     = False    
-    runFitting  = False
-    runReports  = False
+    runFitting  = True
+    runReports  = True
     runSummary  = True
         
     writer = SolutionDataWriter()
