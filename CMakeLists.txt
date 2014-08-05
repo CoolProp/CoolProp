@@ -222,7 +222,10 @@ if (COOLPROP_EES_MODULE)
                      POST_BUILD
                      COMMAND Compil32.exe /cc BuildInnoInstaller.iss
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  install (TARGETS ${CMAKE_CURRENT_BINARY_DIR}/Output/SetupCOOLPROP_EES.exe DESTINATION EES/${CMAKE_SYSTEM_NAME})
+  # install the generated executable installer from InnoSetup
+  install(
+    CODE "file( INSTALL ${CMAKE_CURRENT_BINARY_DIR}/Output/SetupCOOLPROP_EES.exe DESTINATION ${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME} )"
+  )
 endif()
 
 if (COOLPROP_OCTAVE_MODULE)
