@@ -543,7 +543,7 @@ class ThermogenVP1869(PureData,DigitalData):
         def funcMu(T,x):
             T = T-self.Tbase
             return (341.3688975+T*(-0.713408301+0.017723992*T))/ \
-              (1+T*(0.034502393+T*(0.000401319+1.57288E-06*T)))*1e-2
+              (1+T*(0.034502393+T*(0.000401319+1.57288E-06*T)))*1e-2*1e-3
 
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data)
         
