@@ -12,6 +12,12 @@ __incompressibles_solution__ = CoolProp.get_global_param_string(b'incompressible
 __version__ = CoolProp.get_global_param_string(b'version')
 __gitrevision__ = CoolProp.get_global_param_string(b'gitrevision')
 
+def get(s):
+    """
+    This is just a shorthand function for getting a parameter from
+    CoolProp.get_global_param_string
+    """
+    return CoolProp.get_global_param_string(s)
 def test():
     """
     Run the tests in the test folder
