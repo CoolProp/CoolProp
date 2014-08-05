@@ -128,7 +128,6 @@ if __name__=='__main__':
                         [os.path.join('CoolProp5','constants.' + cy_ext)],
                         **common_args)
      
-     
     if not pypi:
         copy_files()
 

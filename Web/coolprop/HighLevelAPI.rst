@@ -12,3 +12,6 @@ Code
 Output
 ------
 .. literalinclude:: snippets/propssi.cxx.output
+
+
+.. include:: parameter_table.rst.in

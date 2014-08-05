@@ -111,6 +111,12 @@ include "AbstractState.pyx"
 #     else:
 #         return val
 
+cpdef int get_parameter_index(string key):
+    return _get_parameter_index(key)
+    
+cpdef string get_parameter_information(int key, string info):
+    return _get_parameter_information(key, info)
+
 cpdef get_global_param_string(string param):
     return _get_global_param_string(param)
      
@@ -145,7 +151,7 @@ cpdef PropsSI(in1, in2, in3, in4, in5, in6, in7 = None):
     cdef double val
     if in7 is None:
         val = _PropsSI(in1, in2, in3, in4, in5, in6)
-        if not _ValidNumber(val): 
+        if not iterable(val) and not _ValidNumber(val): 
             __Props_err2(in1, in2, in3, in4, in5, in6)
         else:
             return val

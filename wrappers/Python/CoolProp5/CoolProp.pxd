@@ -15,19 +15,18 @@ include "AbstractState.pxd"
 ctypedef fused string_like:
     cython.bytes
     cython.unicode
-        
-# cdef extern from "CoolPropDLL.h":
-#     int _set_reference_stateS "set_reference_stateS"(char *, char *)
-#     int _set_reference_stateD "set_reference_stateD"(char *, double T, double rho, double h0, double s0)
-#     int _get_standard_unit_system "get_standard_unit_system"()
     
 cdef extern from "CoolPropTools.h" namespace "CoolProp":
     bint _ValidNumber "ValidNumber"(double)
     
+cdef extern from "DataStructures.h" namespace "CoolProp":    
+    string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
+    int _get_parameter_index "CoolProp::get_parameter_index"(string) except +
+    
 cdef extern from "CoolProp.h" namespace "CoolProp":
     double _PropsSI "CoolProp::PropsSI"(string Output, string Name1, double Prop1, string Name2, double Prop2, string FluidName) 
     vector[double] _PropsSI "CoolProp::PropsSI"(string Output, string Name1, vector[double] Prop1, string Name2, vector[double] Prop2, string FluidName, vector[double] fractions)
-    string _get_global_param_string "CoolProp::get_global_param_string"(string ParamName)
+    string _get_global_param_string "CoolProp::get_global_param_string"(string ParamName) except +
     
 #     double _Props1SI "CoolProp::Props1SI"(string Ref, string Output)
     
@@ -39,10 +38,9 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
 #     string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName)
     
 #     long _get_Fluid_index "CoolProp::get_Fluid_index" (string Fluid)
-    long _get_parameter_index "CoolProp::get_parameter_index" (string param)
+    #long _get_parameter_index "CoolProp::get_parameter_index" (string param)
     int _get_debug_level "CoolProp::get_debug_level"()
     void _set_debug_level "CoolProp::set_debug_level"(int level)
-#     
 #     string _get_BibTeXKey "CoolProp::get_BibTeXKey"(string Ref, string key)
     
     # Convenience functions

@@ -58,7 +58,8 @@ struct element
 
 int main()
 {
-	#if 0
+	#if 1
+		std::cout << get_global_param_string("parameter_list") << std::endl;
 		double T = PropsSI("P","T",5.9020000000000005e+02,"Q",0.0000000000000000e+00,"AceticAcid");
 		std::cout << get_global_param_string("errstring");
 		double Tc = Props1SI("Water","T_triple");
