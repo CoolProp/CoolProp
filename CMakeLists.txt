@@ -505,6 +505,28 @@ if (COOLPROP_PYTHON_PYPI)
                     )
 endif()
 
+if (COOLPROP_JAVASCRIPT_MODULE)
+  # cmake -DCOOLPROP_JAVASCRIPT_MODULE=ON 
+  #       -DCMAKE_TOOLCHAIN_FILE=~/Downloads/emsdk-portable/emscripten/master/cmake/Platform/Emscripten.cmake 
+  #       -DCMAKE_BUILD_TYPE=Release 
+  #       ../..
+
+  #include(Emscripten.cmake)
+  #set(CMAKE_TOOLCHAIN_FILE "$ENV{EMSCRIPTEN}/cmake/Platform/Emscripten.cmake")
+  #set(CMAKE_MODULE_PATH "$ENV{EMSCRIPTEN}/cmake")
+
+  add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
+  add_definitions(-s ASSERTIONS=1)
+  set(CMAKE_EXE_LINKER_FLAGS "-DEXTERNC -s EXPORTED_FUNCTIONS=\"['_main','_F2K','_Props1SI','_PropsSI','_get_global_param_string','_HAProps']\"")
+  
+  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+  include_directories(${APP_INCLUDE_DIRS})
+  add_executable(coolprop ${APP_SOURCES})
+  add_dependencies (coolprop generate_headers)
+  SET_TARGET_PROPERTIES(coolprop PROPERTIES PREFIX "" SUFFIX .js)
+  install (TARGETS coolprop DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
+endif()
+
 # NOT WORKING!
 if (COOLPROP_MATHEMATICA_MODULE)
 
@@ -524,6 +546,9 @@ if (COOLPROP_MAIN_MODULE)
   list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cxx")
   add_executable        (Main ${APP_SOURCES})
   add_dependencies      (Main generate_headers)
+if(UNIX)
+    target_link_libraries (Main ${CMAKE_DL_LIBS})
+  endif()
 endif()
 
 ###      COOLPROP TESTING APP       ###
@@ -590,6 +615,21 @@ if (COOLPROP_SNIPPETS)
   
   endforeach()
   
+endif()
+
+if()
+
+endif()
+
+
+if (COOLPROP_COVERAGE)
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    # See also http://stackoverflow.com/a/16536401 (detailed guide on using gcov with cmake)
+    include(CodeCoverage)
+    SET(CMAKE_CXX_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
+    SET(CMAKE_C_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
+    setup_target_for_coverage(CoolProp_coverage Main coverage)
+  endif()
 endif()
 
 
