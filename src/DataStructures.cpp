@@ -55,6 +55,7 @@ parameter_info parameter_info_list[] = {
 	parameter_info(iT_triple, "T_triple","O","K","Temperature at the triple point",true),
 	parameter_info(iT_max, "T_max","O","K","Maximum temperature limit",true),
 	parameter_info(iT_min, "T_min","O","K","Minimum temperature limit",true),
+	parameter_info(iP_max, "P_max","O","Pa","Maximum pressure limit",true),
 	parameter_info(iP_critical, "p_critical","O","Pa","Pressure at the critical point",true),
     parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility",false),
     parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound",false),
@@ -94,6 +95,9 @@ public:
 		index_map.insert(std::pair<std::string, int>("Tcrit", iT_critical));
 		index_map.insert(std::pair<std::string, int>("Ttriple", iT_triple));
 		index_map.insert(std::pair<std::string, int>("rhocrit", irhomass_critical));
+		index_map.insert(std::pair<std::string, int>("Tmin", iT_min));
+		index_map.insert(std::pair<std::string, int>("Tmax", iT_max));
+		index_map.insert(std::pair<std::string, int>("pmax", iP_max));
     }
 };
 

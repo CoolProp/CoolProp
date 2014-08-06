@@ -169,6 +169,8 @@ double AbstractState::trivial_keyed_output(int key)
         return Ttriple();
 	case iT_max:
         return Tmax();
+	case iP_max:
+		return pmax();
     case iT_reducing:
         return get_reducing().T;
     case irhomolar_reducing:

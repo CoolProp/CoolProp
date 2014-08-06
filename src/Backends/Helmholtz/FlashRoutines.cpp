@@ -24,6 +24,13 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure)
     {
+		// \todo: fix the min and max saturation temperatures
+		double Tmax_sat = HEOS.T_critical();
+		double Tmin_sat = HEOS.Tmin();
+		// Check limits
+		if (!is_in_closed_range(Tmin_sat, Tmax_sat, HEOS._T)){
+			throw ValueError(format("Temperature to QT_flash [%6g K] must be in range [%8g K, %8g K]",HEOS._T, Tmin_sat, Tmax_sat));
+		}
         if (!(HEOS.components[0]->pEOS->pseudo_pure))
         {
             // Set some imput options

@@ -97,6 +97,13 @@ public:
     long double calc_melt_T_p(long double p);
     long double calc_melt_rho_T(long double T);
     double calc_melt_Tmax();
+	
+	/// A wrapper function to calculate the limits for the EOS
+	void limits(double &Tmin, double &Tmax, double &rhomolarmax, double &pmax);
+	/// Calculate the maximum pressure
+	long double calc_pmax(void);
+	/// Calculate the maximum temperature
+	long double calc_Tmax(void);
 };
 
 } /* namespace CoolProp */
