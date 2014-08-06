@@ -585,6 +585,49 @@ void REFPROPMixtureBackend::check_status(void)
 {
     if (!_mole_fractions_set){ throw ValueError("Mole fractions not yet set");}
 }
+
+void REFPROPMixtureBackend::limits(double &Tmin, double &Tmax, double &rhomolarmax, double &pmax)
+{
+	/*
+	 * 
+		  subroutine LIMITS (htyp,x,tmin,tmax,Dmax,pmax)
+	c
+	c  returns limits of a property model as a function of composition
+	c
+	c  Pure fluid limits are read in from the .fld files; for mixtures, a
+	c  simple mole fraction weighting in reduced variables is used.
+	c
+	c  inputs:
+	c     htyp--flag indicating which models are to be checked [character*3]
+	c           'EOS':  equation of state for thermodynamic properties
+	c           'ETA':  viscosity
+	c           'TCX':  thermal conductivity
+	c           'STN':  surface tension
+	c        x--composition array [mol frac]
+	c  outputs:
+	c     tmin--minimum temperature for model specified by htyp [K]
+	c     tmax--maximum temperature [K]
+	c     Dmax--maximum density [mol/L]
+	c     pmax--maximum pressure [kPa]
+	 * 
+	 */
+	double Dmax_mol_L,pmax_kPa;
+    char htyp[] = "EOS";
+	LIMITSdll(htyp, &(mole_fractions[0]), &Tmin, &Tmax, &Dmax_mol_L, &pmax_kPa, 3);
+	pmax = pmax_kPa*1000;
+	rhomolarmax = Dmax_mol_L*1000;
+}
+long double REFPROPMixtureBackend::calc_pmax(void){
+	double Tmin, Tmax, rhomolarmax, pmax;
+	limits(Tmin, Tmax, rhomolarmax, pmax);
+	return static_cast<long double>(pmax);
+};
+long double REFPROPMixtureBackend::calc_Tmax(void){
+	double Tmin, Tmax, rhomolarmax, pmax;
+	limits(Tmin, Tmax, rhomolarmax, pmax);
+	return static_cast<long double>(Tmax);
+};
+	
 double REFPROPMixtureBackend::calc_melt_Tmax()
 {
     long ierr;
