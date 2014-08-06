@@ -507,17 +507,16 @@ endif()
 
 if (COOLPROP_JAVASCRIPT_MODULE)
   # cmake -DCOOLPROP_JAVASCRIPT_MODULE=ON 
-  #       -DCMAKE_TOOLCHAIN_FILE=~/Downloads/emsdk-portable/emscripten/master/cmake/Platform/Emscripten.cmake 
-  #       -DCMAKE_BUILD_TYPE=Release 
+  #       -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Platform/Emscripten.cmake 
   #       ../..
 
-  #include(Emscripten.cmake)
-  #set(CMAKE_TOOLCHAIN_FILE "$ENV{EMSCRIPTEN}/cmake/Platform/Emscripten.cmake")
-  #set(CMAKE_MODULE_PATH "$ENV{EMSCRIPTEN}/cmake")
+  # Toolchain MUST be defined in the call to CMake
 
   add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
   add_definitions(-s ASSERTIONS=1)
+  add_definitions(-DEXTERNC)
   set(CMAKE_EXE_LINKER_FLAGS "-DEXTERNC -s EXPORTED_FUNCTIONS=\"['_main','_F2K','_Props1SI','_PropsSI','_get_global_param_string','_HAProps']\"")
+  set(CMAKE_BUILD_TYPE Release)
   
   list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
   include_directories(${APP_INCLUDE_DIRS})
