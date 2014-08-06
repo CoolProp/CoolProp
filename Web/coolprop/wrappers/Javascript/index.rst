@@ -20,9 +20,9 @@ Developers
 
 On linux, but binaries generated are cross-platform, follow the instructions from `emscripten.org <http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_ - download the portable emscripten SDK `emsdk` for linux.
 
-0. First download node.js and clang++ using 
+0. First download node.js, clang++ and llvm using 
     
-    sudo apt-get install nodejs clang++
+    sudo apt-get install nodejs clang++ llvm
     
 1. Expand the SDK zip file linked above
 2. At the console in the folder that contains the file emsdk run the commands 
