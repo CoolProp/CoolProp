@@ -411,13 +411,17 @@ double PropsSI(const char *Output, const char *Name1, double Prop1, const char *
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref)
 {
 	std::string backend, fluid;
+	#ifndef PROPSI_NO_ERROR_CATCH
     // In this function the error catching happens;
     try{
+	#endif
 		extract_backend(Ref, backend, fluid);
 		return _PropsSI(Output, Name1, Prop1, Name2, Prop2, backend, fluid, std::vector<double>());
+	#ifndef PROPSI_NO_ERROR_CATCH
     }
     catch(const std::exception& e){ set_error_string(e.what()); return _HUGE; }
     catch(...){ return _HUGE; }
+	#endif
 }
 std::vector<double> PropsSI(const std::string &Output, const std::string &Name1, const std::vector<double> &Prop1, const std::string &Name2, const std::vector<double> Prop2, const std::string &Ref, const std::vector<double> &z)
 {
