@@ -187,6 +187,7 @@ endif()
 # EES is only compiled for windows
 if (COOLPROP_EES_MODULE)
   list (APPEND APP_SOURCES "wrappers/EES/main.cpp")
+  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
   include_directories(${APP_INCLUDE_DIRS})
   add_library(COOLPROP_EES SHARED ${APP_SOURCES})
   set_target_properties (COOLPROP_EES PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
@@ -198,7 +199,7 @@ if (COOLPROP_EES_MODULE)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
   add_dependencies (COOLPROP_EES generate_headers)
-  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+  
   
   if ( MSVC )
     set_target_properties( COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
