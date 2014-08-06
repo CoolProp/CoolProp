@@ -145,7 +145,7 @@ extern "C"
         {
 			// This redirects standard output to log_stdout.txt
             freopen("log_stdout.txt", "w", stdout);
-            set_debug_level(100000); // Maximum debugging
+            ::set_debug_level(100000); // Maximum debugging
         }
 
 		try
@@ -162,7 +162,7 @@ extern "C"
 			}
 			else{
 				// Mole fractions are not given
-				out = Props(Outstr, In1str, In1, In2str, In2, Fluidstr);
+				out = Props(Outstr.c_str(), In1str[0], In1, In2str[0], In2, Fluidstr.c_str());
 			}
 		}
 		catch(...)
