@@ -41,6 +41,7 @@
 #include <string.h>
 #include <vector>
 #include "CoolProp.h"
+#include "CoolPropLib.h"
 #include "CoolPropTools.h"
 
 static bool EES_DEBUG = false;
@@ -161,7 +162,7 @@ extern "C"
 			}
 			else{
 				// Mole fractions are not given
-				out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr);
+				out = Props(Outstr, In1str, In1, In2str, In2, Fluidstr);
 			}
 		}
 		catch(...)
