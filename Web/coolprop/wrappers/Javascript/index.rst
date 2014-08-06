@@ -18,24 +18,35 @@ Precompiled binaries
 Developers
 ==========
 
-On linux, but binaries generated are cross-platform, follow the instructions from `emscripten.org <http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_ - download the portable emscripten SDK `emsdk` for linux.
+On linux, but binaries generated are cross-platform.  We are following the instructions from `emscripten.org <http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_ - download the portable emscripten SDK `emsdk` for linux.
 
-0. First download node.js, clang++ and llvm using 
+1. First download node.js, clang++ and llvm using 
     
     sudo apt-get install nodejs clang++ llvm
     
-1. Expand the SDK zip file linked above
-2. At the console in the folder that contains the file emsdk run the commands 
+2. Expand the SDK zip file linked above
+
+3. At the console in the folder that contains the file emsdk run the commands 
 
     emsdk update # This will fetch the list of things to download
     
     emsdk install latest # This will download and install the full toolchain
-    
-3. Go enjoy a nice walk or a cup of coffee - it could be a while
-    
-4. Set the environmental variable ``EMSCRIPTEN`` to point to the root of the toolchain.  For instance in your /etc/rc.local file you can add the line
 
-    export EMSCRIPTEN=/path/to/folder/containing/emsdk
+4. Go enjoy a nice walk or a cup of coffee - it will be a while
+
+5. Activate the SDK just compiled
+
+    emsdk activate latest # This will make the file ~/.emscripten with the paths to most of the binaries compiled in SDK
     
-5. 
+6. Modify the file ``~/.emscripten`` to make NODE_JS path equal to `which nodejs`
+
+7. Check out coolprop
+
+    git clone https://github.com/CoolProp/CoolProp
+    
+8. Folder creating
+
+    mkdir -p build/JS && cd build/JS
+    
+9. cmake ../.. 
 
