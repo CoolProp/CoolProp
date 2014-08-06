@@ -24,7 +24,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS->SatL,
                                            SatV = HEOS->SatV;
 
-    long double T, rhoL,rhoV;
+    long double T, rhoL, rhoV, pL, pV;
     long double deltaL=0, deltaV=0, tau=0, error;
     int iter=0, specified_parameter;
 
@@ -79,8 +79,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
         SatL->update(DmolarT_INPUTS, rhoL, T);
         SatV->update(DmolarT_INPUTS, rhoV, T);
 
-        long double pL = SatL->p();
-        long double pV = SatV->p();
+        pL = SatL->p();
+        pV = SatV->p();
 
         // These derivatives are needed for both cases
         long double alpharL = SatL->alphar();
@@ -205,6 +205,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
         }
     }
     while (error > 1e-10);
+    HEOS->SatL->update(DmolarT_INPUTS, rhoL, T);
+    HEOS->SatV->update(DmolarT_INPUTS, rhoV, T);
 }
 void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long double rhomolar, saturation_D_pure_options &options)
 {

@@ -116,14 +116,14 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure)
     {
-        
-
         if (HEOS.components[0]->pEOS->pseudo_pure){
             // It is a psedo-pure mixture
-            throw NotImplementedError("PQ_flash not implemented for pseudo-pure fluids");
+            throw NotImplementedError("PQ_flash not implemented for pseudo-pure fluids yet");
         }
         else{
+            // ------------------
             // It is a pure fluid
+            // ------------------
 
             // Set some imput options
             SaturationSolvers::saturation_PHSU_pure_options options;
@@ -371,7 +371,8 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
             throw NotImplementedError("PHSU_D_flash not ready for mixtures");
     }
 }
-void FlashRoutines::HSU_P_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, int other, long double T0, long double rhomolar0)
+
+void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &HEOS, int other, long double T0, long double rhomolar0)
 {
     double A[2][2], B[2][2];
     long double y;
@@ -463,8 +464,61 @@ void FlashRoutines::HSU_P_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, in
     
     HEOS.update(DmolarT_INPUTS, rhoc*delta, Tc/tau);
 }
+void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HEOS, int other, long double value, long double Tmin, long double Tmax)
+{
+    if (!ValidNumber(HEOS._p)){throw ValueError("value for p in HSU_P_flash_singlephase_Brent is invalid");};
+    if (!ValidNumber(value)){throw ValueError("value for other in HSU_P_flash_singlephase_Brent is invalid");};
+	class solver_resid : public FuncWrapper1D
+    {
+    public:
+
+        HelmholtzEOSMixtureBackend *HEOS;
+        long double r, eos, p, value, T, rhomolar;
+        int other;
+        int iter;
+        long double r0, r1, T1, T0;
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, long double p, long double value, int other) : HEOS(HEOS), p(p), value(value), other(other){iter = 0;};
+        double call(double T){
+
+			this->T = T;
+
+			// Run the solver with T,P as inputs;
+			HEOS->update(PT_INPUTS, p, T);
+			
+			// Get the value of the desired variable
+			eos = HEOS->keyed_output(other);
+
+			// Difference between the two is to be driven to zero
+            r = eos - value;
+			
+            // Store values for later use if there are errors
+            if (iter == 0){ 
+                r0 = r; T0 = T; 
+            }
+            else if (iter == 1){
+                r1 = r; T1 = T; 
+            }
+            else{
+                r0 = r1; T0 = T1;
+                r1 = r;  T1 = T;
+            }
+
+            iter++;
+            std::cout << format("%g %g\n",T,r);
+            return r;
+        };
+    };
+	solver_resid resid(&HEOS, HEOS._p, value, other);
+	
+	std::string errstr;
+	Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100, errstr);
+}
+
+// P given and one of H, S, or U
 void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 {
+    bool saturation_called = false;
+    long double value;
     if (HEOS.imposed_phase_index > -1)
     {
         // Use the phase defined by the imposed phase
@@ -474,31 +528,57 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
     {
         if (HEOS.is_pure_or_pseudopure)
         {
+
             // Find the phase, while updating all internal variables possible
             switch (other)
             {
                 case iSmolar:
-                    HEOS.p_phase_determination_pure_or_pseudopure(iSmolar, HEOS._smolar); break;
+                    value = HEOS.smolar(); HEOS.p_phase_determination_pure_or_pseudopure(iSmolar, value, saturation_called); break;
                 case iHmolar:
-                    HEOS.p_phase_determination_pure_or_pseudopure(iHmolar, HEOS._hmolar); break;
+                    value = HEOS.hmolar(); HEOS.p_phase_determination_pure_or_pseudopure(iHmolar, value, saturation_called); break;
                 case iUmolar:
-                    HEOS.p_phase_determination_pure_or_pseudopure(iUmolar, HEOS._umolar); break;
+                    value = HEOS.umolar(); HEOS.p_phase_determination_pure_or_pseudopure(iUmolar, value, saturation_called); break;
                 default:
                     throw ValueError(format("Input for other [%s] is invalid", get_parameter_information(other, "long").c_str()));
             }
+			if (HEOS.isHomogeneousPhase())
+			{
+                // Now we use the single-phase solver to find T,rho given P,Y using a 
+                // bounded 1D solver by adjusting T and using given value of p
+                long double Tmin, Tmax;
+                switch(HEOS._phase)
+                {
+                    case iphase_gas:
+                    {
+                        Tmax = HEOS.Tmax();
+                        if (saturation_called){ Tmin = HEOS.SatV->T() + 1e-2;}else{Tmin = HEOS._TVanc.pt() + 0.5;}
+                        break;
+                    }
+                    case iphase_liquid:
+                    {
+                        if (saturation_called){ Tmax = HEOS.SatL->T() + 1e-2;}else{Tmax = HEOS._TLanc.pt() - 0.5;}
+                        Tmin = HEOS.Tmin() + 1; // or melting curve data
+                        break;
+                    }
+                    case iphase_supercritical:
+                    {
+                        Tmax = HEOS.Tmax();
+                        Tmin = HEOS.Tmin();
+                        break;
+                    }
+                    default:
+                    { throw ValueError(format("Not a valid homogeneous state")); }
+                }
+				HSU_P_flash_singlephase_Brent(HEOS, other, value, Tmin, Tmax);
+				HEOS._Q = -1;
+			}
+            else{throw ValueError("Can't be non homogeneous phase at this point");}
         }
         else
         {
             throw NotImplementedError("HSU_P_flash does not support mixtures (yet)");
         }
-    }
-
-    if (HEOS.isHomogeneousPhase() && !ValidNumber(HEOS._T))
-    {
-        long double T0 = 300, rho0 = 100;
-        HSU_P_flash_singlephase(HEOS, other, T0, rho0);
-        HEOS._Q = -1;
-    }
+    }    
 }
 void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 {

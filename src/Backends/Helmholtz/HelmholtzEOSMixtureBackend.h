@@ -36,6 +36,8 @@ public:
 
     friend class FlashRoutines; // Allows the static methods in the FlashRoutines class to have access to all the protected members and methods of this class
     friend class TransportRoutines; // Allows the static methods in the TransportRoutines class to have access to all the protected members and methods of this class
+    
+
     //friend class MixtureDerivatives; //
 
     // Helmholtz EOS backend uses mole fractions
@@ -196,7 +198,7 @@ public:
     // ***************************************************************
     // ***************************************************************
     void T_phase_determination_pure_or_pseudopure(int other, long double value);
-    void p_phase_determination_pure_or_pseudopure(int other, long double value);
+    void p_phase_determination_pure_or_pseudopure(int other, long double value, bool &saturation_called);
     void DmolarP_phase_determination();
     
     

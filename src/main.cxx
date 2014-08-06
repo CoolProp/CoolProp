@@ -18,7 +18,7 @@ using namespace CoolProp;
 #endif
 #include "SpeedTest.h"
 #include "HumidAirProp.h"
-#include "CoolPropLib.h"
+//#include "CoolPropLib.h"
 
 #include "crossplatform_shared_ptr.h"
 
@@ -59,7 +59,21 @@ struct element
 int main()
 {
 	#if 1
+        double T0 = 295;
+        double dT = 0.010011;
+        double pV = CoolProp::PropsSI("P","T",T0,"Q",1,"Water");    
+        double hV = CoolProp::PropsSI("Hmolar","T",T0 + dT,"P",pV,"Water");
+		std::cout << get_global_param_string("errstring");
+        double TV = CoolProp::PropsSI("T","Hmolar",hV,"P",pV,"Water");
+        std::cout << get_global_param_string("errstring");
+
+        double ahV = CoolProp::PropsSI("P", "Q", 0, "T", 373.124, "Water");
+
 		std::cout << get_global_param_string("parameter_list") << std::endl;
+		
+    #endif	
+    #if 0
+		
 		double pm = CoolProp::PropsSI("pmax","T",-100,"Q",0.0000000000000000e+00,"REFPROP::Water");
 		double Tm = PropsSI("Tmax","T",-100,"Q",0.0000000000000000e+00,"REFPROP::Water");
 		double Tt = PropsSI("P","T",-100,"Q",0.0000000000000000e+00,"AceticAcid");
