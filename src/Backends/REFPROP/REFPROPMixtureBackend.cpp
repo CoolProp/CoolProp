@@ -528,9 +528,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         // that of the currently loaded refrigerant
         if (LoadedREFPROPRef.compare(components_joined))
         {
-            char path_HMX_BNC[refpropcharlength];
-            //strcpy(path_HMX_BNC,fdPath.c_str());
-            strcpy(path_HMX_BNC, rel_path_HMC_BNC);
+            char path_HMX_BNC[refpropcharlength+1];
+            strcpy(path_HMX_BNC, fdPath.c_str());
+            strcat(path_HMX_BNC, rel_path_HMC_BNC);
             strcpy(component_string, components_joined.c_str());
 
             //...Call SETUP to initialize the program
