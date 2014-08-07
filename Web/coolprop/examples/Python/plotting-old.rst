@@ -17,7 +17,7 @@ propane (R290):
 
     from CoolProp.Plots.Plots import Ts
 
-    Ts('R290', show=True)
+    Ts('R290', show=False)
 
 The following example can be used to create a Pressure-Enthalpy plot for R410A:
 
@@ -26,7 +26,7 @@ The following example can be used to create a Pressure-Enthalpy plot for R410A:
 
     from CoolProp.Plots.Plots import Ph
 
-    Ph('R410A', show=True)
+    Ph('R410A', show=False)
 
 The available plots are:
 
@@ -52,7 +52,7 @@ Pressure-Enthalpy plot.
 
     Ph('R410A')
     SimpleCycle('R410A', 250, 300, 5, 5, 0.7)
-    pyplot.show()
+    #pyplot.show()
 
 A more advanced example using built-in functions to draw lines of constant
 properties is given below. Note the different ways to invoke drawIsoLines:
@@ -71,4 +71,4 @@ properties is given below. Note the different ways to invoke drawIsoLines:
     isobars = drawIsoLines(Ref, 'Ts', 'P', [100, 2000], num=5, axis=ax)
     isochores = drawIsoLines(Ref, 'Ts', 'D', [2, 600], num=7, axis=ax)
     #isenthalps = drawIsoLines(Ref, 'Ts', 'H', [100, 300], num=5, axis=ax)
-    pyplot.show()
+    #pyplot.show()
