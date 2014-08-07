@@ -1725,7 +1725,7 @@ TEST_CASE("Isothermal compressibility from Table A.5","[RP1485]")
 }
 TEST_CASE("Henry constant from Table A.6","[RP1485]")
 {
-    CHECK(fabs(HumidAir::HenryConstant(0+273.15)/(0.22600e-9)-1) < 1e-3);
+    CHECK(fabs(HumidAir::HenryConstant(0.010001+273.15)/(0.22600e-9)-1) < 1e-3);
     CHECK(fabs(HumidAir::HenryConstant(300+273.15)/(0.58389e-9)-1) < 1e-3);
 }
 
