@@ -39,23 +39,25 @@ We are following the instructions from `emscripten.org <http://kripken.github.io
 
     emsdk activate latest # This will make the file ~/.emscripten with the paths to most of the binaries compiled in SDK
     
-6. Modify the file ``~/.emscripten`` to make NODE_JS path equal to ``\`which nodejs\```
+6. Modify the file ``~/.emscripten`` to make NODE_JS path equal to ``\`which nodejs\``` if it doesn't already
 
-7. Check out coolprop
+7. Make an environmental variable (in ~/.profile) ``EMSCRIPTEN`` that points to the folder that contains ``emc++``, ``emcc``, etc.
+
+8. Check out coolprop
 
     git clone https://github.com/CoolProp/CoolProp --recursive
     
-8. Folder creating
+9. Folder creating
 
     mkdir -p build/JS && cd build/JS
     
-9. cmake ../.. 
+10. cmake ../.. -DCOOLPROP_JAVASCRIPT_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Platform/Emscripten.cmake
 
 Windows
 -------
-1) Download the `EMSDK installer <http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_, run the web download installer, that will install everything, and get you ready.
+1. Download the `EMSDK installer <http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_, run the web download installer, that will install everything, and get you ready.
 
-2) In the ``%HOME%/.emscripten`` file, make sure that there is only one entry for NODE_JS and it points to the right place.  Mine looks like:
+2. In the ``%HOME%/.emscripten`` file, make sure that there is only one entry for NODE_JS and it points to the right place.  Mine looks like:
 
     import os
     SPIDERMONKEY_ENGINE = ''
@@ -69,12 +71,12 @@ Windows
     COMPILER_ENGINE = NODE_JS
     JS_ENGINES = [NODE_JS]
 
-3) Open an Emscripten command Prompt (Start->Emscripten->Emscripten command Prompt)
+3. Open an Emscripten command Prompt (Start->Emscripten->Emscripten command Prompt)
 
-4) Navigate to the root of the source
+4. Make an environmental variable ``EMSCRIPTEN`` that points to the folder that contains ``emc++``, ``emcc``, etc.
 
-5) mkdir build/JS && cd build/JS
+5. Navigate to the root of the source
 
-6) cmake ../..
+6. mkdir build/JS && cd build/JS
 
-7)
+7. cmake ../.. -DCOOLPROP_JAVASCRIPT_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=%EMSCRIPTEN%/cmake/Platform/Emscripten.cmake
