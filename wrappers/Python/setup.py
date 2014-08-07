@@ -65,13 +65,11 @@ if __name__=='__main__':
         else:
             raise ValueError('Could not run script from this folder(' + os.path.abspath(os.path.curdir) + '). Run from wrappers/Python folder')
     
+        sys.path.append(os.path.join(CProot, 'dev'))
+        import generate_headers
         # Generate the headers - does nothing if up to date - but only if not pypi
-        subprocess.check_call('python generate_headers.py', 
-                              shell = True, 
-                              stdout = sys.stdout, 
-                              cwd = os.path.join(CProot, 'dev')
-                              )
-    
+        generate_headers.generate()
+        del generate_headers
                     
     # Read the version from a bare string stored in file in root directory
     version = open(os.path.join(CProot,'.version'),'r').read().strip()

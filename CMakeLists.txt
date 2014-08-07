@@ -475,19 +475,13 @@ endif()
 
 if (COOLPROP_PYTHON_BINARIES)
   if (WIN32)
-    set(COOLPROP_PYTHON_BINARY_VERSIONS  bdist_wheel bdist_wininst)
+    set(COOLPROP_PYTHON_BINARY_VERSIONS  bdist_wheel --dist-dir ${CMAKE_INSTALL_PREFIX}/Python bdist_wininst --dist-dir ${CMAKE_INSTALL_PREFIX}/Python)
   elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(COOLPROP_PYTHON_BINARY_VERSIONS  bdist_wheel)
-  endif()
-  
-  if (DEFINED AND_UPLOAD)
-    set(_AND_UPLOAD upload)
-  else()
-    set(_AND_UPLOAD )
+    set(COOLPROP_PYTHON_BINARY_VERSIONS  bdist_wheel --dist-dir ${CMAKE_INSTALL_PREFIX}/Python)
   endif()
   
   add_custom_target(CoolProp
-                    COMMAND ${PYTHON_EXECUTABLE} setup.py ${COOLPROP_PYTHON_BINARY_VERSIONS} ${_AND_UPLOAD} --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
+                    COMMAND ${PYTHON_EXECUTABLE} setup.py ${COOLPROP_PYTHON_BINARY_VERSIONS} 
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python
                     )
   
