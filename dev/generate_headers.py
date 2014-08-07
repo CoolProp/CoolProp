@@ -190,7 +190,7 @@ def gitrev_to_file(root_dir):
             if not is_hash:
                 raise ValueError('No hash returned from call to git, got '+rev+' instead')
         
-        gitrev = str(gitrev, encoding='ascii')
+        gitrev = gitrev.encode('ascii')
         print('git revision is', gitrev)
         
         if 'gitrevision' not in hashes or ('gitrevision' in hashes and hashes['gitrevision'] != get_hash(gitrev.encode('ascii'))):
