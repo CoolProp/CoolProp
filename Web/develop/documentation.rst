@@ -19,7 +19,7 @@ Make a virtualenv - helps to keep sane !
 Then install prerequisites into this virtualenv:
   
     pip install Cython
-    pip install CoolProp sphinx sphinxcontrib-doxylink cloud-sptheme ipython matplotlib numpy scipy
+    pip install CoolProp sphinx sphinxcontrib-doxylink sphinxcontrib-napoleon cloud-sptheme ipython matplotlib numpy scipy
 
 To build the documentation, go into the CoolProp/Web folder and run:
 
