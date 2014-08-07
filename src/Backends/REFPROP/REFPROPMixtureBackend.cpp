@@ -728,7 +728,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
         hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,
         w=_HUGE,q=_HUGE, mm=_HUGE, p_kPa = _HUGE;
     long ierr;
-    char herr[255];
+    char herr[256];
 
     clear();
 
@@ -1224,7 +1224,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
 
             // Use flash routine to find properties
             TQFLSHdll(&_T,&_Q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
-                &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
+			     &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                 &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
