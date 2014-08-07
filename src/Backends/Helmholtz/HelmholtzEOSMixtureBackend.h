@@ -136,6 +136,8 @@ public:
 	long double calc_Tmax(void);
     long double calc_pmax(void);
     long double calc_Ttriple(void);
+	long double calc_pmax_sat(void);
+	long double calc_Tmax_sat(void);
 
     long double calc_T_critical(void);
     long double calc_p_critical(void);

@@ -423,6 +423,39 @@ long double HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void)
         return components[0]->crit.rhomolar;
     }
 }
+long double HelmholtzEOSMixtureBackend::calc_pmax_sat(void)
+{
+	if (is_pure_or_pseudopure)
+	{
+		if (components[0]->pEOS->pseudo_pure)
+		{
+			throw ValueError("calc_pmax_sat not yet defined for pseudo-pure");
+		}
+		else{
+			return p_critical();
+		}
+	}
+	else{
+		throw ValueError("calc_pmax_sat not yet defined for mixtures");
+	}
+}
+long double HelmholtzEOSMixtureBackend::calc_Tmax_sat(void)
+{
+	if (is_pure_or_pseudopure)
+	{
+		if (components[0]->pEOS->pseudo_pure)
+		{
+			throw ValueError("calc_Tmax_sat not yet defined for pseudo-pure");
+		}
+		else{
+			return T_critical();
+		}
+	}
+	else{
+		throw ValueError("calc_Tmax_sat not yet defined for mixtures");
+	}
+}
+
 long double HelmholtzEOSMixtureBackend::calc_Tmax(void)
 {
     double summer = 0;
