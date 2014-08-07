@@ -62,9 +62,9 @@ Low-level debugging
 -------------------
 To make and use a debug DLL, do (from root of repo)
 
-mkdir build/EES
-cd build/EES
-cmake ../.. -G "Visual Studio 10 2010" -DCOOLPROP_EES_MODULE=ON
+    mkdir build/EES
+    cd build/EES
+    cmake ../.. -G "Visual Studio 10 2010" -DCOOLPROP_EES_MODULE=ON
 
 This will make a Visual Studio Project called CoolProp.sln.  Open the visual studio project, for the COOLPROP_EES project:
 
