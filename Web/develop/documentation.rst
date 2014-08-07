@@ -11,19 +11,21 @@ Build Sphinx documentation
 
     git clone https://github.com/CoolProp/CoolProp --recursive
 
-Make a virtualenv - helps to keep sane ! 
+2. Make a virtualenv - helps to keep sane ! 
 
     virtualenv ~/env/py27
     source ~/env/py27/bin/activate # Turn on this virtual env, should see (py27) in your command shell next to the prompt to tell you that environment is active
 
-Then install prerequisites into this virtualenv:
+3. Then install prerequisites into this virtualenv:
   
     pip install Cython
     pip install CoolProp sphinx sphinxcontrib-doxylink sphinxcontrib-napoleon cloud-sptheme ipython matplotlib numpy scipy
 
-To build the documentation, go into the CoolProp/Web folder and run:
+4. To build the documentation, go into the CoolProp/Web folder and run:
 
     make html
+    
+5. Move the generated docs in ``_build`` to wherever you want
   
 Build Doxygen documentation
 ---------------------------
