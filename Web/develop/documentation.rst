@@ -36,5 +36,5 @@ All the configuration is done in the ``Doxyfile`` file.
 
 2. Simply fire up a shell in the root of the repo, and type 
 
-  doxygen Doxyfile
+    doxygen Doxyfile
   
