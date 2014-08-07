@@ -55,7 +55,7 @@ Windows
 -------
 1) Download the `EMSDK installer <http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_, run the web download installer, that will install everything, and get you ready.
 
-2) In the HOME/.emscripten file, make sure that there is only one entry for NODE_JS and it points to the right place.  Mine looks like:
+2) In the ``%HOME%/.emscripten`` file, make sure that there is only one entry for NODE_JS and it points to the right place.  Mine looks like:
 
     import os
     SPIDERMONKEY_ENGINE = ''
