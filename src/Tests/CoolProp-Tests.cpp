@@ -610,14 +610,133 @@ TEST_CASE("Test saturation properties for a few fluids", "[saturation],[slow]")
     SECTION("sat_p")
     {
         std::vector<double> pv = linspace(Props1SI("CO2", "ptriple"), Props1SI("CO2", "pcrit")-1e-6,5);
-        for (int i = 0; i < pv.size(); ++i)
+		
+		SECTION("All pressures are ok" )
+        for (std::size_t i = 0; i < pv.size(); ++i)
         {
             CAPTURE(pv[i]);
             double T = CoolProp::PropsSI("T","P",pv[i],"Q",0,"CO2");
-
-
         }
     }
+}
+
+TEST_CASE("Tests for solvers in P,T flash using Water", "[flash],[PT]")
+{
+	SECTION("Check that T,P for saturated state yields error")
+	{
+		double Ts, ps, rho;
+		CHECK_NOTHROW(Ts = PropsSI("T","P",101325,"Q",0,"Water"));
+		CHECK(ValidNumber(Ts));
+		CAPTURE(Ts);
+		CHECK_NOTHROW(rho = PropsSI("D","T",Ts,"P",101325,"Water"));
+		CAPTURE(rho);
+		CHECK(!ValidNumber(rho));
+	}
+	SECTION("Subcritical p slightly subcooled should be ok")
+	{
+		double Ts, ps, rho, dT = 1e-8;
+		CHECK_NOTHROW(Ts = PropsSI("T","P",101325,"Q",0,"Water"));
+		CAPTURE(Ts);
+		CHECK(ValidNumber(Ts));
+		CAPTURE(dT);
+		CHECK_NOTHROW(rho = PropsSI("D","T",Ts-dT,"P",101325,"Water"));
+		CAPTURE(rho);
+		CHECK(ValidNumber(rho));
+	}
+	SECTION("Subcritical p slightly superheated should be ok")
+	{
+		double Ts, ps, rho, dT = 1e-8;
+		CHECK_NOTHROW(Ts = PropsSI("T","P",101325,"Q",0,"Water"));
+		CAPTURE(Ts);
+		CHECK(ValidNumber(Ts));
+		CAPTURE(dT);
+		CHECK_NOTHROW(rho = PropsSI("D","T",Ts+dT,"P",101325,"Water"));
+		CAPTURE(rho);
+		CHECK(ValidNumber(rho));
+	}
+	
+}
+
+TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]")
+{
+	double Ts, y, T2;
+	// See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+	std::string Ykeys[] = {"H","S","U","Hmass","Smass","Umass","Hmolar","Smolar","Umolar"};
+	for (int i = 0; i < 9; ++i) {
+		const char *ykey = Ykeys[i].c_str();
+		std::ostringstream ss1;
+		ss1 << "Subcritical superheated P," << ykey;
+		SECTION(ss1.str(),"")
+		{
+			double dT = 10;
+			CHECK_NOTHROW(Ts=PropsSI("T","P",101325,"Q",0,"Water"));
+			CHECK(ValidNumber(Ts));
+			CAPTURE(Ts);
+			CHECK_NOTHROW(y=PropsSI(ykey,"T",Ts+dT,"P",101325,"Water"));
+			CAPTURE(dT);
+			CAPTURE(y);
+			CHECK(ValidNumber(y));
+			CHECK_NOTHROW(T2=PropsSI("T",ykey,y,"P",101325,"Water"));
+			CAPTURE(CoolProp::get_global_param_string("errstring"));
+			CAPTURE(T2);
+			CHECK(ValidNumber(T2));
+		}
+		std::ostringstream ss2;
+		ss2 << "Subcritical barely superheated P," << ykey;
+		SECTION(ss2.str(), "")
+		{
+			double dT = 1e-10;
+			CHECK_NOTHROW(Ts=PropsSI("T","P",101325,"Q",0,"Water"));
+			CHECK(ValidNumber(Ts));
+			CAPTURE(Ts);
+			CHECK_NOTHROW(y=PropsSI(ykey,"T",Ts+dT,"P",101325,"Water"));
+			CAPTURE(dT);
+			CAPTURE(y);
+			CHECK(ValidNumber(y));
+			CHECK_NOTHROW(T2=PropsSI("T",ykey,y,"P",101325,"Water"));
+			CAPTURE(CoolProp::get_global_param_string("errstring"));
+			CAPTURE(T2);
+			CHECK(ValidNumber(T2));
+		}
+		std::ostringstream ss3;
+		ss3 << "Subcritical subcooled P," << ykey;
+		SECTION(ss3.str(), "")
+		{
+			double dT = -10;
+			CHECK_NOTHROW(Ts=PropsSI("T","P",101325,"Q",0,"Water"));
+			CHECK(ValidNumber(Ts));
+			CAPTURE(Ts);
+			CHECK_NOTHROW(y=PropsSI(ykey,"T",Ts+dT,"P",101325,"Water"));
+			CAPTURE(dT);
+			CAPTURE(y);
+			CHECK(ValidNumber(y));
+			CHECK_NOTHROW(T2=PropsSI("T",ykey,y,"P",101325,"Water"));
+			CAPTURE(CoolProp::get_global_param_string("errstring"));
+			CAPTURE(T2);
+			CHECK(ValidNumber(T2));
+		}
+		std::ostringstream ss4;
+		ss4 << "Subcritical barely subcooled P," << ykey;
+		SECTION(ss4.str(), "")
+		{
+			double dT = -1e-10;
+			CHECK_NOTHROW(Ts=PropsSI("T","P",101325,"Q",0,"Water"));
+			CHECK(ValidNumber(Ts));
+			CAPTURE(Ts);
+			CHECK_NOTHROW(y=PropsSI(ykey,"T",Ts+dT,"P",101325,"Water"));
+			CAPTURE(dT);
+			CAPTURE(y);
+			CHECK(ValidNumber(y));
+			CHECK_NOTHROW(T2=PropsSI("T",ykey,y,"P",101325,"Water"));
+			CAPTURE(CoolProp::get_global_param_string("errstring"));
+			CAPTURE(T2);
+			CHECK(ValidNumber(T2));
+		}
+	
+  }
+
+
+    
 }
 
 #endif

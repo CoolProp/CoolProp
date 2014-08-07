@@ -58,9 +58,9 @@ struct element
 
 int main()
 {
-	#if 1
+	#if 0
         double T0 = 295;
-        double dT = 0.010011;
+        double dT = 0.00000001;
         double pV = CoolProp::PropsSI("P","T",T0,"Q",1,"Water");    
         double hV = CoolProp::PropsSI("Hmolar","T",T0 + dT,"P",pV,"Water");
 		std::cout << get_global_param_string("errstring");
@@ -151,9 +151,9 @@ int main()
 //        std::cout << s << std::endl;
 //        int rr =0;
 //    }
-    CoolProp::set_debug_level(11);
+    CoolProp::set_debug_level(0);
 
-    #if 1
+    #if 0
 		std::cout << get_global_param_string("incompressible_list_pure");
 		std::cout << get_global_param_string("incompressible_list_solution");
 		double rr2 = CoolProp::PropsSI("T","P",101325,"Q",0,"WATER");
@@ -166,7 +166,7 @@ int main()
         double rr1 = HumidAir::HAPropsSI("B","T",473.15,"W",0.5,"P",101325);
         int r = 1;
     #endif
-    #if 1
+    #if 0
         // First type (slowest, most string processing, exposed in DLL)
         double r0A = PropsSI("Dmolar","T",298,"P",1e5,"Propane[0.5]&Ethane[0.5]"); // Default backend is HEOS
         double r0B = PropsSI("Dmolar","T",298,"P",1e5,"HEOS::Propane[0.5]&Ethane[0.5]");
@@ -226,7 +226,7 @@ int main()
         double rr = 0;
         return 0;
     #endif
-    #if 1
+    #if 0
     {
         std::string NBP_refs[] = {"D5","D6","MD2M","MDM","Benzene","Helium","Ethylene","Ethanol","n-Dodecane","Benzene","n-Undecane","Neon","Fluorine","Methanol","Acetone","Methane","Ethane","n-Pentane","n-Hexane","n-Heptane","n-Octane","CycloHexane","MD3M","MM","D4","MethylPalmitate","MethylStearate","MethylOleate","MethylLinoleate","MethylLinolenate","m-Xylene"};
         std::string IIR_refs[] = {"SES36","R143a","CycloPropane","Propylene","R227EA","R365MFC","R161","HFE143m","SulfurHexafluoride","CarbonDioxide","R1234ze(E)","R22","R124","Propyne","R507A","R152A","R123","R11","n-Butane","IsoButane","RC318","R21","R114","R13","R12","R113","R1233zd(E)","R41"};
@@ -399,13 +399,27 @@ int main()
         double rr = 4;
     }
 	#endif
-    #if 1
+    #if 0
     {
+		run_tests();
+		char c;
+		std::cin >> c;
+	}
+	#endif
+	#if 1
+	{
+		char ykey[] ="Hmolar";
+		double Ts, y, T2, dT = 1;
+		Ts=PropsSI("T","P",101325,"Q",0,"Water");
+		y=PropsSI(ykey,"T",Ts+dT,"P",101325,"Water");
+		T2=PropsSI("T",ykey,y,"P",101325,"Water");
         #if ENABLE_CATCH
             std::vector<std::string> tags;
-            tags.push_back("[transport]");
+            tags.push_back("[flash]");
             run_user_defined_tests(tags);
             double rr = 0;
+			char c;
+		std::cin >> c;
         #endif
     }
 	#endif

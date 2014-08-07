@@ -6,18 +6,21 @@ namespace CoolProp{
 
 void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
-    // Find the phase, while updating all internal variables possible
-    HEOS.T_phase_determination_pure_or_pseudopure(iP, HEOS._p);
-
-    if (!HEOS.isHomogeneousPhase())
-    {
-        throw ValueError("twophase not implemented yet");
-    }
-    else
-    {
-        // Find density
-        HEOS._rhomolar = HEOS.solver_rho_Tp(HEOS._T, HEOS._p);
-    }
+	if (HEOS.imposed_phase_index == -1) // If no phase index is imposed (see set_components function)
+	{
+		// Find the phase, while updating all internal variables possible
+		HEOS.T_phase_determination_pure_or_pseudopure(iP, HEOS._p);
+		
+		// Check if twophase solution
+		if (!HEOS.isHomogeneousPhase())
+		{
+			throw ValueError("twophase not implemented yet");
+		}
+	}
+	
+	// Find density
+	HEOS._rhomolar = HEOS.solver_rho_Tp(HEOS._T, HEOS._p);
+	HEOS._Q = -1;
 }
 
 void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
@@ -481,6 +484,9 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
         double call(double T){
 
 			this->T = T;
+			
+			// Specify that the stat
+			HEOS->specify_phase(iphase_gas);
 
 			// Run the solver with T,P as inputs;
 			HEOS->update(PT_INPUTS, p, T);
@@ -504,7 +510,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
             }
 
             iter++;
-            std::cout << format("%g %g\n",T,r);
+            std::cout << format("%g %Lg\n",T,r);
             return r;
         };
     };
@@ -551,12 +557,14 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                     case iphase_gas:
                     {
                         Tmax = HEOS.Tmax();
-                        if (saturation_called){ Tmin = HEOS.SatV->T() + 1e-2;}else{Tmin = HEOS._TVanc.pt() + 0.5;}
+                        // Need to turn off checking that inputs are two-phase in TP solver
+                        if (saturation_called){ Tmin = HEOS.SatV->T();}else{Tmin = HEOS._TVanc.pt() + 0.5;}
                         break;
                     }
                     case iphase_liquid:
                     {
-                        if (saturation_called){ Tmax = HEOS.SatL->T() + 1e-2;}else{Tmax = HEOS._TLanc.pt() - 0.5;}
+                        // Need to turn off checking that inputs are two-phase in TP solver
+                        if (saturation_called){ Tmax = HEOS.SatL->T() + 1e-8;}else{Tmax = HEOS._TLanc.pt() - 0.5;}
                         Tmin = HEOS.Tmin() + 1; // or melting curve data
                         break;
                     }

@@ -79,10 +79,6 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
 bool AbstractState::clear() {
     // Reset all instances of CachedElement and overwrite
     // the internal double values with -_HUGE
-    this->_fluid_type = FLUID_TYPE_UNDEFINED;
-    this->_phase = iphase_unknown;
-    this->_forceSinglePhase = false;
-    this->_forceTwoPhase = false;
     this->_R = _HUGE;
 
     /// Ancillary curve values
@@ -370,6 +366,10 @@ TEST_CASE("Check AbstractState","[AbstractState]")
     SECTION("bad backend")
     {
         CHECK_THROWS(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("DEFINITELY_A_BAD_BACKEND", "Water")));
+    }
+	SECTION("good backend - helmholtz")
+    {
+        CHECK_THROWS(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("HEOS", "Water")));
     }
 }
 
