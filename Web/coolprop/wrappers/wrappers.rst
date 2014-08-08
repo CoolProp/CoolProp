@@ -8,8 +8,6 @@ CoolProp at its core is a C++ library, but it can be of interest to use this cod
 
 Downloads and instructions for each wrapper are included in the page for the wrapper given in the table below.
 
-Superpacks are available at XXXXXXX which include all the code for a given operating system.
-
 =======================================       ===========================  =======================================
 Language                                      Operating Systems            Notes
 =======================================       ===========================  =======================================
@@ -18,12 +16,12 @@ Language                                      Operating Systems            Notes
 :ref:`C# <Csharp>`                            linux, OSX, win              Wrapper is SWIG based
 :ref:`MATLAB <MATLAB>`                        linux, OSX, win              Wrapper is SWIG based (VERY experimental)
 :ref:`Java <Java>`                            linux, OSX, win              Wrapper is SWIG based
-Scilab                                        linux, OSX, win              Wrapper is SWIG based (experimental)
-Modelica                                      linux, OSX, win
-:ref:`Javascript <Javascript>`                linux, OSX, win              Also works in all internet browsers
-Maple                                        
-Mathematica                      
-FORTRAN                                       linux, OSX, win
+:ref:`Scilab <Scilab>`                        linux, OSX, win              Wrapper is SWIG based (experimental)
+:ref:`Modelica <Modelica>`                    linux, OSX, win
+:ref:`Javascript <Javascript>`                cross-platform               Also works in all internet browsers
+:ref:`Maple <Maple>`                          linux, OSX, win,                     
+:ref:`Mathematica <Mathematica>`
+:ref:`FORTRAN <FORTRAN>`                      linux, OSX, win
 :ref:`EES <EES>`                              windows only
 :ref:`Microsoft Excel <Excel>`                windows only
 =======================================       ===========================  =======================================
