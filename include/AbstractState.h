@@ -356,7 +356,7 @@ public:
     /// Return the molar internal energy in J/mol
     double umolar(void);
     /// Return the mass internal energy in J/kg
-    double umass(void){return calc_umolar();};
+    double umass(void){return calc_umass();};
     /// Return the molar constant pressure specific heat in J/mol/K
     double cpmolar(void);
     /// Return the mass constant pressure specific heat in J/kg/K

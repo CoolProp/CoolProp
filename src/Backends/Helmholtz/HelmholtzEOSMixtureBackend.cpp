@@ -456,6 +456,21 @@ long double HelmholtzEOSMixtureBackend::calc_Tmax_sat(void)
 	}
 }
 
+long double HelmholtzEOSMixtureBackend::calc_Tmin_sat(long double &Tmin_satL, long double &Tmin_satV)
+{
+	if (is_pure_or_pseudopure)
+	{
+		Tmin_satL = components[0]->pEOS->sat_min_liquid.T;
+		Tmin_satV = components[0]->pEOS->sat_min_vapor.T;
+	}
+	else{
+		throw ValueError("calc_Tmin_sat not yet defined for mixtures");
+	}
+}
+
+// Minimum allowed saturation temperature the maximum of the saturation temperatures of liquid and vapor
+		// For pure fluids, both values are the same, for pseudo-pure they are probably the same, for mixtures they are definitely not the same
+
 long double HelmholtzEOSMixtureBackend::calc_Tmax(void)
 {
     double summer = 0;
@@ -747,7 +762,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 long double s_anchor = component.EOSVector[0].hs_anchor.smolar;
                 long double s_liq = component.ancillaries.sL.evaluate(_TLanc) + s_anchor;
                 long double s_liq_error_band = component.ancillaries.sL.get_max_abs_error();
-                long double s_vap = s_liq + component.ancillaries.sLV.evaluate(_TLanc);
+                long double s_vap = s_liq + component.ancillaries.sLV.evaluate(_TVanc);
                 long double s_vap_error_band = s_liq_error_band + component.ancillaries.sLV.get_max_abs_error();
                 
                 // Check if in range given the accuracy of the fit
@@ -758,10 +773,33 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                     this->_phase = iphase_liquid; _Q = 1000; return;
                 }
                 else if (value > s_liq + s_liq_error_band && value < s_vap - s_vap_error_band){ definitely_two_phase = true;}
+				break;
             }
             case iUmolar:
             {
-                // Add entropy ancillary code here 
+				// u = h-p/rho
+				// Ancillaries are h-h_anchor, so add back h_anchor
+                long double h_liq = component.ancillaries.hL.evaluate(_TLanc) + component.EOSVector[0].hs_anchor.hmolar;
+                long double h_liq_error_band = component.ancillaries.hL.get_max_abs_error();
+                long double h_vap = h_liq + component.ancillaries.hLV.evaluate(_TLanc);
+                long double h_vap_error_band = h_liq_error_band + component.ancillaries.hLV.get_max_abs_error();
+				long double rho_vap = component.ancillaries.rhoV.evaluate(_TVanc);
+				long double rho_liq = component.ancillaries.rhoL.evaluate(_TLanc);
+				long double u_liq = h_liq-_p/rho_liq;
+				long double u_vap = h_vap-_p/rho_vap;
+				long double u_liq_error_band = 1.5*h_liq_error_band; // Most of error is in enthalpy
+				long double u_vap_error_band = 1.5*h_vap_error_band; // Most of error is in enthalpy
+				
+				// Check if in range given the accuracy of the fit
+                if (value > u_vap + u_vap_error_band){
+                    this->_phase = iphase_gas; _Q = -1000; return;
+                }
+                else if (value < u_liq - u_liq_error_band){
+                    this->_phase = iphase_liquid; _Q = 1000; return;
+                }
+                else if (value > u_liq + u_liq_error_band && value < u_vap - u_vap_error_band){ definitely_two_phase = true;}
+				break;
+                
             }
             default:
             {
@@ -788,47 +826,6 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                     }
                     break;
                 }
-                //default:
-                //{
-                //    // If it is not density, update the saturation states, needed to calculate other inputs
-                //    SatV->update(DmolarT_INPUTS, _rhoVanc, _TVanc);
-                //    SatL->update(DmolarT_INPUTS, _rhoLanc, _TLanc);
-
-                //    switch (other)
-                //    {
-                //        case iSmolar:
-                //        {
-                //            if (value > SatV->calc_smolar()){
-                //                this->_phase = iphase_gas; return;
-                //            }
-                //            if (value < SatL->calc_smolar()){
-                //                this->_phase = iphase_liquid; return;
-                //            }
-                //            break;
-                //        }
-                //        case iHmolar:
-                //        {
-                //            if (value > SatV->calc_hmolar()){
-                //                this->_phase = iphase_gas; return;
-                //            }
-                //            else if (value < SatL->calc_hmolar()){
-                //                this->_phase = iphase_liquid; return;
-                //            }
-                //        }
-                //        case iUmolar:
-                //        {
-                //            if (value > SatV->calc_umolar()){
-                //                this->_phase = iphase_gas; return;
-                //            }
-                //            else if (value < SatL->calc_umolar()){
-                //                this->_phase = iphase_liquid; return;
-                //            }
-                //            break;
-                //        }
-                //        default:
-                //            throw ValueError(format("invalid input for other to T_phase_determination_pure_or_pseudopure"));
-                //    }
-                //}
             }
         }
 
@@ -1498,7 +1495,12 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         }
         catch(std::exception &)
         {
-            Secant(resid, rhomolar_guess, 0.0001*rhomolar_guess, 1e-8, 100, errstring);
+			try{
+				Secant(resid, rhomolar_guess, 0.0001*rhomolar_guess, 1e-8, 100, errstring);
+			}
+			catch(...){
+				throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%Lg, p=%Lg",T,p));
+			}
             return _HUGE;
         }
     }
@@ -1694,19 +1696,27 @@ long double HelmholtzEOSMixtureBackend::calc_umolar_nocache(long double T, long 
 }
 long double HelmholtzEOSMixtureBackend::calc_umolar(void)
 {
-    // Calculate the reducing parameters
-    _delta = _rhomolar/_reducing.rhomolar;
-    _tau = _reducing.T/_T;
+	if (isTwoPhase())
+    {
+        _umolar = _Q*SatV->umolar() + (1 - _Q)*SatL->umolar();
+        return static_cast<long double>(_umolar);
+    }
+    else if (isHomogeneousPhase())
+    {
+		// Calculate the reducing parameters
+		_delta = _rhomolar/_reducing.rhomolar;
+		_tau = _reducing.T/_T;
 
-    // Calculate derivatives if needed, or just use cached values
-    long double da0_dTau = dalpha0_dTau();
-    long double dar_dTau = dalphar_dTau();
-    long double R_u = gas_constant();
+		// Calculate derivatives if needed, or just use cached values
+		long double da0_dTau = dalpha0_dTau();
+		long double dar_dTau = dalphar_dTau();
+		long double R_u = gas_constant();
 
-    // Get molar internal energy
-    _umolar = R_u*_T*_tau.pt()*(da0_dTau+dar_dTau);
+		// Get molar internal energy
+		_umolar = R_u*_T*_tau.pt()*(da0_dTau+dar_dTau);
 
-    return static_cast<long double>(_umolar);
+		return static_cast<long double>(_umolar);
+	}
 }
 long double HelmholtzEOSMixtureBackend::calc_cvmolar(void)
 {

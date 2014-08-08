@@ -99,11 +99,13 @@ public:
     long double calc_cvmolar(void);
     long double calc_cpmolar(void);
     long double calc_cpmolar_idealgas(void);
-    long double calc_hmolar(void);
-    long double calc_smolar(void);
     long double calc_pressure_nocache(long double T, long double rhomolar);
-    long double calc_smolar_nocache(long double T, long double rhomolar);
-    long double calc_hmolar_nocache(long double T, long double rhomolar);
+    long double calc_smolar(void);
+	long double calc_smolar_nocache(long double T, long double rhomolar);
+    
+	long double calc_hmolar(void);
+	long double calc_hmolar_nocache(long double T, long double rhomolar);
+	
     long double calc_umolar_nocache(long double T, long double rhomolar);
     long double calc_umolar(void);
     long double calc_speed_sound(void);
@@ -138,6 +140,7 @@ public:
     long double calc_Ttriple(void);
 	long double calc_pmax_sat(void);
 	long double calc_Tmax_sat(void);
+	long double calc_Tmin_sat(long double &Tmin_satL, long double &Tmin_satV);
 
     long double calc_T_critical(void);
     long double calc_p_critical(void);

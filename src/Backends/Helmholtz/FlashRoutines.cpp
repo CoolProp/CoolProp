@@ -27,14 +27,21 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure)
     {
-		// \todo: fix the min and max saturation temperatures
-		double Tmax_sat = HEOS.T_critical();
-		double Tmin_sat = HEOS.Tmin();
+		// The maximum possible saturation temperature
+		// Critical point for pure fluids, slightly different for pseudo-pure, very different for mixtures
+		long double Tmax_sat = HEOS.calc_Tmax_sat();
+		
+		// Check what the minimum limits for the equation of state are
+		long double Tmin_satL, Tmin_satV, Tmin_sat;
+		HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
+		Tmin_sat = std::max(Tmin_satL, Tmin_satV);
+		
 		// Check limits
-		if (!is_in_closed_range(Tmin_sat, Tmax_sat, HEOS._T)){
+		if (!is_in_closed_range(Tmin_sat, Tmax_sat, static_cast<long double>(HEOS._T))){
 			throw ValueError(format("Temperature to QT_flash [%6g K] must be in range [%8g K, %8g K]",HEOS._T, Tmin_sat, Tmax_sat));
 		}
-        if (!(HEOS.components[0]->pEOS->pseudo_pure))
+        
+		if (!(HEOS.components[0]->pEOS->pseudo_pure))
         {
             // Set some imput options
             SaturationSolvers::saturation_T_pure_options options;
@@ -510,7 +517,6 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
             }
 
             iter++;
-            std::cout << format("%g %Lg\n",T,r);
             return r;
         };
     };
@@ -557,14 +563,12 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                     case iphase_gas:
                     {
                         Tmax = HEOS.Tmax();
-                        // Need to turn off checking that inputs are two-phase in TP solver
                         if (saturation_called){ Tmin = HEOS.SatV->T();}else{Tmin = HEOS._TVanc.pt() + 0.5;}
                         break;
                     }
                     case iphase_liquid:
                     {
-                        // Need to turn off checking that inputs are two-phase in TP solver
-                        if (saturation_called){ Tmax = HEOS.SatL->T() + 1e-8;}else{Tmax = HEOS._TLanc.pt() - 0.5;}
+                        if (saturation_called){ Tmax = HEOS.SatL->T();}else{Tmax = HEOS._TLanc.pt() - 0.5;}
                         Tmin = HEOS.Tmin() + 1; // or melting curve data
                         break;
                     }
