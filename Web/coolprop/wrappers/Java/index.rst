@@ -26,9 +26,9 @@ Linux & OSX
 
 3. Add the ``bin`` folder of the JDK that you installed.  For instance, add the following to ~/.profile:
       
-      export /path/to/java/SDK/bin:$PATH to ~/.profile where
+      export /path/to/java/SDK/bin:$PATH 
       
-  where the path ``/path/to/java/SDK/bin`` points to the absolute path appropriate to
+  to ~/.profile where the path ``/path/to/java/SDK/bin`` points to the absolute path appropriate to
 
 
 Windows
@@ -47,13 +47,7 @@ Once the dependencies are installed, you can run the builder and tests using::
     # Check out the sources for CoolProp
     git clone https://github.com/CoolProp/CoolProp --recursive
     # Move into the folder you just created
-    cd CoolProp
-    # Make a build folder
-    mkdir -p build/MATLAB
-    # Move into that folder
-    cd build/MATLAB
-    # Set an environmental variable that points to your MATLAB installation for use in CMake (adjust if needed)
-    export MATLAB_ROOT=/usr/local/MATLAB/R2014a # or /Applications/MATLAB_R2014a.app
+    mkdir -p  CoolProp/build/Java && cd CoolProp/build/Java
     # Build the makefile using CMake
     cmake ../.. -DCOOLPROP_MATLAB_MODULE=ON -DBUILD_TESTING=ON
     # Make the MEX files (by default files will be generated in folder install_root/MATLAB relative to CMakeLists.txt file)
