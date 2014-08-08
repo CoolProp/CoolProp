@@ -10,23 +10,23 @@ Downloads and instructions for each wrapper are included in the page for the wra
 
 Superpacks are available at XXXXXXX which include all the code for a given operating system.
 
-=======================                    ===========================  =======================================
-Language                                   Operating Systems            Notes
-=======================                    ===========================  =======================================
-:ref:`Python <Python>`                     linux, OSX, win              Wrapper is Cython based
-:ref:`Octave <Octave>`                     linux, OSX, win              Wrapper is SWIG based
-:ref:`C# <Csharp>`                         linux, OSX, win              Wrapper is SWIG based
-:ref:`MATLAB <MATLAB>`                     linux, OSX, win              Wrapper is SWIG based (VERY experimental)
-:ref:`Java <Java>`                         linux, OSX, win              Wrapper is SWIG based
-Scilab                                     linux, OSX, win              Wrapper is SWIG based (experimental)
-Modelica                                   linux, OSX, win
-Javascript                                 linux, OSX, win              Also works in all internet browsers
-Maple                  
+=======================================       ===========================  =======================================
+Language                                      Operating Systems            Notes
+=======================================       ===========================  =======================================
+:ref:`Python <Python>`                        linux, OSX, win              Wrapper is Cython based
+:ref:`Octave <Octave>`                        linux, OSX, win              Wrapper is SWIG based
+:ref:`C# <Csharp>`                            linux, OSX, win              Wrapper is SWIG based
+:ref:`MATLAB <MATLAB>`                        linux, OSX, win              Wrapper is SWIG based (VERY experimental)
+:ref:`Java <Java>`                            linux, OSX, win              Wrapper is SWIG based
+Scilab                                        linux, OSX, win              Wrapper is SWIG based (experimental)
+Modelica                                      linux, OSX, win
+:ref:`Javascript <Javascript>`                linux, OSX, win              Also works in all internet browsers
+Maple                                        
 Mathematica                      
-FORTRAN                                    linux, OSX, win
-:ref:`EES <EES>`                           windows only
-Microsoft Excel                            windows only
-=======================                    ===========================  =======================================
+FORTRAN                                       linux, OSX, win
+:ref:`EES <EES>`                              windows only
+:ref:`Microsoft Excel <Excel>`                windows only
+=======================================       ===========================  =======================================
 
 .. _wrapper_common_prereqs:
 
