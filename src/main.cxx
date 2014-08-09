@@ -408,11 +408,20 @@ int main()
 	#endif
 	#if 1
 	{
-		char ykey[] ="Hmolar";
-		double Ts, y, T2, dT = 1;
-		Ts=PropsSI("T","P",101325,"Q",0,"Water");
-		y=PropsSI(ykey,"T",Ts+dT,"P",101325,"Water");
-		T2=PropsSI("T",ykey,y,"P",101325,"Water");
+		char ykey[] = "H";
+		double Ts, y, T2, dT = -1;
+		
+		double dd = PropsSI("T","P",101325,"T",114.357,"n-Propane");
+		
+		shared_ptr<AbstractState> AS(AbstractState::factory("HEOS","water"));
+		double ptt = AS->melting_line(iP, iT, 273.159);
+		
+		Ts = PropsSI("T","P",101325,"Q",0,"n-Propane");
+		std::cout << get_global_param_string("errstring");
+		y = PropsSI(ykey,"T",Ts+dT,"P",101325,"n-Propane");
+		T2 = PropsSI("T",ykey,y,"P",101325,"n-Propane");
+		std::cout << get_global_param_string("errstring");
+		
         #if ENABLE_CATCH
             std::vector<std::string> tags;
             tags.push_back("[flash]");

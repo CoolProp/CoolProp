@@ -189,12 +189,7 @@
 
     template<class T> T is_in_closed_range( T x1, T x2, T x)
     {
-        if (x1 > x2)
-        {
-            std::swap(x1, x2);
-        }
-
-	    return (x >= x1 && x <= x2);
+	    return (x >= std::min(x1,x2) && x <= std::max(x1,x2));
     };
 
 	void solve_cubic(double a, double b, double c, double d, int &N, double &x0, double &x1, double &x2);

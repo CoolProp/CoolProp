@@ -92,10 +92,7 @@ public:
 	long double calc_surface_tension(void);
 
     long double calc_fugacity_coefficient(int i);
-
-    long double calc_melt_p_T(long double T);
-    long double calc_melt_T_p(long double p);
-    long double calc_melt_rho_T(long double T);
+	long double calc_melting_line(int param, int given, long double value);
     double calc_melt_Tmax();
 	
 	/// A wrapper function to calculate the limits for the EOS

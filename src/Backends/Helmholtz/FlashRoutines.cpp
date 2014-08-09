@@ -492,8 +492,8 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
 
 			this->T = T;
 			
-			// Specify that the stat
-			HEOS->specify_phase(iphase_gas);
+			// Specify the state to avoid saturation calls
+			HEOS->specify_phase(HEOS->phase());
 
 			// Run the solver with T,P as inputs;
 			HEOS->update(PT_INPUTS, p, T);
@@ -569,7 +569,13 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                     case iphase_liquid:
                     {
                         if (saturation_called){ Tmax = HEOS.SatL->T();}else{Tmax = HEOS._TLanc.pt() - 0.5;}
-                        Tmin = HEOS.Tmin() + 1; // or melting curve data
+						
+						if (HEOS.has_melting_curve()){
+							Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p);
+						}
+						else{
+							Tmin = HEOS.Tmin() + 1;
+						}
                         break;
                     }
                     case iphase_supercritical:

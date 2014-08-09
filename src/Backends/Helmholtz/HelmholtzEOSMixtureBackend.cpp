@@ -149,26 +149,16 @@ long double HelmholtzEOSMixtureBackend::calc_molar_mass(void)
     }
     return summer;
 }
-long double HelmholtzEOSMixtureBackend::calc_melt_p_T(long double T)
+
+long double HelmholtzEOSMixtureBackend::calc_melting_line(int param, int given, long double value)
 {
     if (is_pure_or_pseudopure)
     {
-        return components[0]->ancillaries.melting_line.evaluate(iP, iT, T);
+        return components[0]->ancillaries.melting_line.evaluate(param, given, value);
     }
     else
     {
-        throw NotImplementedError(format("calc_melt_p_T not implemented for mixtures"));
-    }
-}
-long double HelmholtzEOSMixtureBackend::calc_surface_tension(void)
-{
-    if (is_pure_or_pseudopure)
-    {
-        return components[0]->ancillaries.surface_tension.evaluate(_T);
-    }
-    else
-    {
-        throw NotImplementedError(format("surface tension not implemented for mixtures"));
+        throw NotImplementedError(format("calc_melting_line not implemented for mixtures"));
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void)
@@ -456,12 +446,13 @@ long double HelmholtzEOSMixtureBackend::calc_Tmax_sat(void)
 	}
 }
 
-long double HelmholtzEOSMixtureBackend::calc_Tmin_sat(long double &Tmin_satL, long double &Tmin_satV)
+void HelmholtzEOSMixtureBackend::calc_Tmin_sat(long double &Tmin_satL, long double &Tmin_satV)
 {
 	if (is_pure_or_pseudopure)
 	{
 		Tmin_satL = components[0]->pEOS->sat_min_liquid.T;
 		Tmin_satV = components[0]->pEOS->sat_min_vapor.T;
+		return;
 	}
 	else{
 		throw ValueError("calc_Tmin_sat not yet defined for mixtures");
@@ -1499,7 +1490,8 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
 				Secant(resid, rhomolar_guess, 0.0001*rhomolar_guess, 1e-8, 100, errstring);
 			}
 			catch(...){
-				throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%Lg, p=%Lg",T,p));
+				
+				throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%10Lg, p=%10Lg, with guess value %10Lg",T,p,rhomolar_guess));
 			}
             return _HUGE;
         }

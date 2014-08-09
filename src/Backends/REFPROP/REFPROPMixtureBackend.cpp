@@ -643,27 +643,37 @@ double REFPROPMixtureBackend::calc_melt_Tmax()
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return Tmax_melt;
 }
-long double REFPROPMixtureBackend::calc_melt_p_T(long double T)
+long double REFPROPMixtureBackend::calc_melting_line(int param, int given, long double value)
 {
-    double _T = static_cast<double>(T), p_kPa;
-    long ierr;
+	long ierr;
     char herr[255];
 
-    MELTTdll(&_T, &(mole_fractions[0]),
+	if (param == iP && given == iT){
+		double _T = static_cast<double>(value), p_kPa;
+		MELTTdll(&_T, &(mole_fractions[0]),
              &p_kPa,
              &ierr,herr,errormessagelength);      // Error message
-    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }
-    //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-    return p_kPa*1000;
+	    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+		return p_kPa*1000;
+	}
+	else if (param == iT && given == iP){
+		double p_kPa = static_cast<double>(value), _T;
+		MELTPdll(&p_kPa, &(mole_fractions[0]),
+             &_T,
+             &ierr,herr,errormessagelength);      // Error message
+	    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+		return p_kPa*1000;
+	}
+	else{
+		throw ValueError(format("calc_melting_line(%s,%s,%Lg) is an invalid set of inputs ",
+		                        get_parameter_information(param,"short").c_str(),
+								get_parameter_information(given,"short").c_str(),
+								value
+								)
+						);
+	}
 }
-long double REFPROPMixtureBackend::calc_melt_T_p(long double p)
-{
-    throw NotImplementedError();
-}
-long double REFPROPMixtureBackend::calc_melt_rho_T(long double T)
-{
-    throw NotImplementedError();
-}
+
 
 long double REFPROPMixtureBackend::calc_viscosity(void)
 {
@@ -739,8 +749,6 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
     WMOLdll(&(mole_fractions[0]), &mm); // returns mole mass in kg/kmol
     _molar_mass = 0.001*mm; // [kg/mol]
 
-
-
     switch(input_pair)
     {
         case PT_INPUTS:
@@ -753,7 +761,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions[0]), // Saturation terms
                       &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
                       &ierr,herr,errormessagelength); //
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("PT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -775,7 +783,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
                       &ierr,herr,errormessagelength);
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("DmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
@@ -804,7 +812,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                 &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength);  // Error terms
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("DmolarP: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _rhomolar = value1;
@@ -834,7 +842,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&emol,&smol,&cvmol,&cpmol,&w,
                       &ierr,herr,errormessagelength);
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("DmolarHmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
@@ -864,7 +872,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&emol,&hmol,&cvmol,&cpmol,&w,
                       &ierr,herr,errormessagelength);
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("DmolarSmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
@@ -894,7 +902,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&hmol,&hmol,&cvmol,&cpmol,&w,
                       &ierr,herr,errormessagelength);
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("DmolarUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
@@ -923,7 +931,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                 &q,&emol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("HmolarPmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value2;
@@ -953,7 +961,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &q,&emol,&hmol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("PSmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -984,7 +992,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &q,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("PUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -1013,7 +1021,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &q,&emol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("HmolarSmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
@@ -1044,7 +1052,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &q,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("SmolarUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
@@ -1083,7 +1091,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &q,&emol,&hmol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("SmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
@@ -1121,7 +1129,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &q,&emol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("HmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
@@ -1159,7 +1167,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &q,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("TUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
@@ -1197,7 +1205,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("PQ: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -1228,7 +1236,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { throw ValueError(format("TQ: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa

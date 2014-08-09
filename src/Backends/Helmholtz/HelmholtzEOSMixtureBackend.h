@@ -44,6 +44,10 @@ public:
     bool using_mole_fractions(){return true;}
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
+	
+	bool has_melting_curve(){ return is_pure_or_pseudopure && components[0]->ancillaries.melting_line.enabled();};
+	long double calc_melting_line(int param, int given, long double value);
+	int calc_phase(void){return _phase;};
 
     const std::vector<CoolPropFluid*> &get_components(){return components;};
     std::vector<long double> &get_K(){return K;};
@@ -125,8 +129,7 @@ public:
     long double calc_d2alpha0_dDelta_dTau(void);
     long double calc_d2alpha0_dTau2(void);
 
-    long double calc_melt_p_T(long double T);
-    long double calc_surface_tension(void);
+    //long double calc_surface_tension(void);
     long double calc_viscosity(void);
     long double calc_viscosity_dilute(void);
     long double calc_viscosity_background(void);
@@ -140,7 +143,7 @@ public:
     long double calc_Ttriple(void);
 	long double calc_pmax_sat(void);
 	long double calc_Tmax_sat(void);
-	long double calc_Tmin_sat(long double &Tmin_satL, long double &Tmin_satV);
+	void calc_Tmin_sat(long double &Tmin_satL, long double &Tmin_satV);
 
     long double calc_T_critical(void);
     long double calc_p_critical(void);

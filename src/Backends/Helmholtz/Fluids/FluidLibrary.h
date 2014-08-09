@@ -834,6 +834,7 @@ protected:
             if (!type.compare("Simon"))
             {
                 rapidjson::Value &parts = melting_line["parts"];
+				fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_SIMON_TYPE;
                 for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr)
                 {
                     MeltingLinePiecewiseSimonSegment data;
@@ -845,11 +846,11 @@ protected:
                     data.p_0 = cpjson::get_double((*itr),"p_0");
                     fluid.ancillaries.melting_line.simon.parts.push_back(data);
                 }
-                fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_SIMON_TYPE;
             }
             else if (!type.compare("polynomial_in_Tr"))
             {
                 rapidjson::Value &parts = melting_line["parts"];
+				fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_TR_TYPE;
                 for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr)
                 {
                     MeltingLinePiecewisePolynomialInTrSegment data;
@@ -861,11 +862,11 @@ protected:
                     data.p_0 = cpjson::get_double((*itr),"p_0");
                     fluid.ancillaries.melting_line.polynomial_in_Tr.parts.push_back(data);
                 }
-                fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_TR_TYPE;
             }
             else if (!type.compare("polynomial_in_Theta"))
             {
                 rapidjson::Value &parts = melting_line["parts"];
+				fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE;
                 for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr)
                 {
                     MeltingLinePiecewisePolynomialInThetaSegment data;
@@ -877,11 +878,12 @@ protected:
                     data.p_0 = cpjson::get_double((*itr),"p_0");
                     fluid.ancillaries.melting_line.polynomial_in_Theta.parts.push_back(data);
                 }
-                fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE;
             }
             else{
                 throw ValueError(format("melting line type [%s] is not understood for fluid %s", type.c_str(), fluid.name.c_str()));
             }
+			// Set the limits for the melting line curve
+			fluid.ancillaries.melting_line.set_limits();
         }
         else{
             throw ValueError(format("melting line does not have \"type\" for fluid %s", fluid.name.c_str()));

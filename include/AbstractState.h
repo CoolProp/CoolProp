@@ -232,7 +232,11 @@ protected:
     virtual long double calc_umass(void){return umolar()/molar_mass();}
     
     /// Update the states after having changed the reference state for enthalpy and entropy
-    virtual void update_states(void){throw NotImplementedError("This backend does not implement update states function");};
+    virtual void update_states(void){throw NotImplementedError("This backend does not implement update_states function");};
+	
+	virtual long double calc_melting_line(int param, int given, long double value){throw NotImplementedError("This backend does not implement calc_melting_line function");};
+	
+	virtual int calc_phase(void){throw NotImplementedError("This backend does not implement calc_phase function");};
 
 public:
 
@@ -294,6 +298,8 @@ public:
     double Tmax(void);
     double pmax(void);
     double Ttriple(void);
+	
+	int phase(void){return calc_phase();};
 
     /// Return the critical temperature in K
     /**
@@ -374,6 +380,8 @@ public:
     double fugacity_coefficient(int i);
     void build_phase_envelope(const std::string &type);
     //double fundamental_derivative_of_gas_dynamics(void);
+	
+	double melting_line(int param, int given, double value);
 
     // ----------------------------------------
     // Transport properties
