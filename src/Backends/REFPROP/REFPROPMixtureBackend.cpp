@@ -101,7 +101,7 @@ std::string LoadedREFPROPRef;
   #endif
 #endif
 
-std::string endings[] = {".fld", ".ppf"};
+std::string endings[] = {"", ".fld", ".ppf"};
 
 static char rel_path_HMC_BNC[] = "HMX.BNC";
 static char default_reference_state[] = "DEF";
@@ -508,7 +508,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
 
     // Loop over the file names - first we try with .fld, then .ppf - means you can't mix and match
 
-    for (unsigned int k = 0; k < 2; k++)
+    for (unsigned int k = 0; k < 3; k++)
     {
         // Build the mixture string
         for (unsigned int j = 0; j < (unsigned int)N; j++)
