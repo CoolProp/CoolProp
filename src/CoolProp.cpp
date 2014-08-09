@@ -258,7 +258,7 @@ bool has_fractions_in_string(const std::string &fluid_string)
 bool has_solution_concentration(const std::string &fluid_string)
 {
     // If can find "-", expect mass fractions encoded as string
-    return (fluid_string.find('-') != std::string::npos);
+    return (fluid_string.find('-') != std::string::npos && fluid_string.find('%') != std::string::npos);
 }
 
 std::string extract_fractions(const std::string &fluid_string, std::vector<double> &fractions)
