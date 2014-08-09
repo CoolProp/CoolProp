@@ -69,8 +69,6 @@ def TO_CPP(root_dir, hashes):
         # Put the lines back together again
         # The chunks are joined together with commas, and then EOL are used to join the rest
         hex_string = ',\n'.join([', '.join(chunk) for chunk in chunks])
-        
-        print(type(hex_string))
             
         # Check if hash is up to date based on using variable as key
         if variable not in hashes or (variable in hashes and hashes[variable] != get_hash(hex_string.encode('ascii'))):
