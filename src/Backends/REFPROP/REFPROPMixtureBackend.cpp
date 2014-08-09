@@ -737,7 +737,7 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
     double rho_mol_L=_HUGE, rhoLmol_L=_HUGE, rhoVmol_L=_HUGE,
         hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,
         w=_HUGE,q=_HUGE, mm=_HUGE, p_kPa = _HUGE;
-    long ierr;
+    long ierr = 0;
     char herr[errormessagelength+1];
 
     clear();
@@ -1236,7 +1236,9 @@ void REFPROPMixtureBackend::update(long input_pair, double value1, double value2
                 &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { throw ValueError(format("TQ(%s): %s",LoadedREFPROPRef.c_str(), herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (ierr > 0) { 
+				throw ValueError(format("TQ(%s): %s",LoadedREFPROPRef.c_str(), herr).c_str()); 
+				}// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
