@@ -732,6 +732,26 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
 			CAPTURE(T2);
 			CHECK(ValidNumber(T2));
 		}
+        std::ostringstream ss5;
+		ss5 << "Supercritical \"gas\" P," << ykey;
+		SECTION(ss5.str(), "")
+		{
+            double Tc = Props1SI("Water","Tcrit");
+            double pc = Props1SI("Water","pcrit");
+            double p = pc*1.3;
+            double T = Tc*1.3;
+            CAPTURE(T);
+            CAPTURE(p);
+            CHECK(ValidNumber(T));
+            CHECK(ValidNumber(p));
+			CHECK_NOTHROW(y=PropsSI("H","P",p,"T",T,"Water"));
+			CAPTURE(y);
+			CHECK(ValidNumber(y));
+			CHECK_NOTHROW(T2=PropsSI("T",ykey,y,"P",p,"Water"));
+			CAPTURE(CoolProp::get_global_param_string("errstring"));
+			CAPTURE(T2);
+			CHECK(ValidNumber(T2));
+		}
 	
   }
 
