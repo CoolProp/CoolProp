@@ -131,6 +131,18 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             throw NotImplementedError("PQ_flash not implemented for pseudo-pure fluids yet");
         }
         else{
+            // Critical point for pure fluids, slightly different for pseudo-pure, very different for mixtures
+            long double pmax_sat = HEOS.calc_pmax_sat();
+            
+            // Check what the minimum limits for the equation of state are
+            long double pmin_satL, pmin_satV, pmin_sat;
+            HEOS.calc_pmin_sat(pmin_satL, pmin_satV);
+            pmin_sat = std::max(pmin_satL, pmin_satV);
+            
+            // Check limits
+            if (!is_in_closed_range(pmin_sat, pmax_sat, static_cast<long double>(HEOS._p))){
+                throw ValueError(format("Temperature to PQ_flash [%6g Pa] must be in range [%8g Pa, %8g Pa]",HEOS._p, pmin_sat, pmax_sat));
+            }
             // ------------------
             // It is a pure fluid
             // ------------------

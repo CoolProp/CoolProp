@@ -419,7 +419,7 @@ long double HelmholtzEOSMixtureBackend::calc_pmax_sat(void)
 	{
 		if (components[0]->pEOS->pseudo_pure)
 		{
-			throw ValueError("calc_pmax_sat not yet defined for pseudo-pure");
+			return components[0]->pEOS->max_sat_p.p;
 		}
 		else{
 			return p_critical();
@@ -435,7 +435,7 @@ long double HelmholtzEOSMixtureBackend::calc_Tmax_sat(void)
 	{
 		if (components[0]->pEOS->pseudo_pure)
 		{
-			throw ValueError("calc_Tmax_sat not yet defined for pseudo-pure");
+			return components[0]->pEOS->max_sat_T.T;
 		}
 		else{
 			return T_critical();
@@ -456,6 +456,19 @@ void HelmholtzEOSMixtureBackend::calc_Tmin_sat(long double &Tmin_satL, long doub
 	}
 	else{
 		throw ValueError("calc_Tmin_sat not yet defined for mixtures");
+	}
+}
+
+void HelmholtzEOSMixtureBackend::calc_pmin_sat(long double &pmin_satL, long double &pmin_satV)
+{
+	if (is_pure_or_pseudopure)
+	{
+		pmin_satL = components[0]->pEOS->sat_min_liquid.p;
+		pmin_satV = components[0]->pEOS->sat_min_vapor.p;
+		return;
+	}
+	else{
+		throw ValueError("calc_pmin_sat not yet defined for mixtures");
 	}
 }
 

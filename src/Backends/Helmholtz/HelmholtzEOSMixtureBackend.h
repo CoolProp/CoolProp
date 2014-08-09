@@ -144,6 +144,7 @@ public:
 	long double calc_pmax_sat(void);
 	long double calc_Tmax_sat(void);
 	void calc_Tmin_sat(long double &Tmin_satL, long double &Tmin_satV);
+    void calc_pmin_sat(long double &pmin_satL, long double &pmin_satV);
 
     long double calc_T_critical(void);
     long double calc_p_critical(void);

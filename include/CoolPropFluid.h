@@ -265,7 +265,9 @@ public:
     SimpleState reduce, ///< Reducing state used for the EOS (usually, but not always, the critical point)
                 sat_min_liquid, ///< The saturated liquid state at the minimum saturation temperature
                 sat_min_vapor, ///< The saturated vapor state at the minimum saturation temperature
-                hs_anchor; ///< A fixed anchor state at Tc*1.1 and rhoc*0.9 used as a reference state for enthalpy and entropy ancillary curves
+                hs_anchor, ///< A fixed anchor state at Tc*1.1 and rhoc*0.9 used as a reference state for enthalpy and entropy ancillary curves
+                max_sat_T, ///< The state at the maximum saturation temperature for pseudo-pure
+                max_sat_p; ///< The state at the maximum saturation pressure for pseudo-pure
     EOSLimits limits; ///< Limits on the EOS
     double R_u, ///< The universal gas constant used for this EOS (usually, but not always, 8.314472 J/mol/K)
            molar_mass, ///< The molar mass in kg/mol (note NOT kg/kmol)
@@ -327,7 +329,6 @@ public:
     {
         return alphar.dTau3(tau, delta);
     };
-
 
     long double base0(const long double &tau, const long double &delta) throw()
     {
