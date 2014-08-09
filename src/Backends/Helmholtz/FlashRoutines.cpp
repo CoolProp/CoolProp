@@ -590,10 +590,17 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 						}
                         break;
                     }
+                    case iphase_supercritical_liquid:
+                    case iphase_supercritical_gas:
                     case iphase_supercritical:
                     {
                         Tmax = HEOS.Tmax();
-                        Tmin = HEOS.Tmin();
+                        if (HEOS.has_melting_curve()){
+							Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p);
+						}
+						else{
+							Tmin = HEOS.Tmin() + 1;
+						}
                         break;
                     }
                     default:

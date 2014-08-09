@@ -42,8 +42,12 @@ protected:
     long _phase; ///< The key for the phase from CoolProp::phases enum
     bool _forceSinglePhase, _forceTwoPhase;
 
+    bool isSupercriticalPhase(void){
+        return (this->_phase == iphase_supercritical || this->_phase == iphase_supercritical_liquid || this->_phase == iphase_supercritical_gas);
+    }
+    
     bool isHomogeneousPhase(void){
-        return (this->_phase==iphase_liquid || this->_phase==iphase_gas || this->_phase == iphase_supercritical);
+        return (this->_phase==iphase_liquid || this->_phase==iphase_gas || isSupercriticalPhase());
     }
 
     bool isTwoPhase(void){

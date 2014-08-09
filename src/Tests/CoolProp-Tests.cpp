@@ -733,7 +733,7 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
 			CHECK(ValidNumber(T2));
 		}
         std::ostringstream ss5;
-		ss5 << "Supercritical \"gas\" P," << ykey;
+		ss5 << "Supercritical P," << ykey;
 		SECTION(ss5.str(), "")
 		{
             double Tc = Props1SI("Water","Tcrit");
@@ -744,7 +744,7 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
             CAPTURE(p);
             CHECK(ValidNumber(T));
             CHECK(ValidNumber(p));
-			CHECK_NOTHROW(y=PropsSI("H","P",p,"T",T,"Water"));
+			CHECK_NOTHROW(y=PropsSI(ykey,"P",p,"T",T,"Water"));
 			CAPTURE(y);
 			CHECK(ValidNumber(y));
 			CHECK_NOTHROW(T2=PropsSI("T",ykey,y,"P",p,"Water"));
@@ -752,7 +752,46 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
 			CAPTURE(T2);
 			CHECK(ValidNumber(T2));
 		}
-	
+        std::ostringstream ss6;
+		ss6 << "Supercritical \"gas\" P," << ykey;
+		SECTION(ss6.str(), "")
+		{
+            double Tc = Props1SI("Water","Tcrit");
+            double pc = Props1SI("Water","pcrit");
+            double p = pc*0.7;
+            double T = Tc*1.3;
+            CAPTURE(T);
+            CAPTURE(p);
+            CHECK(ValidNumber(T));
+            CHECK(ValidNumber(p));
+			CHECK_NOTHROW(y=PropsSI(ykey,"P",p,"T",T,"Water"));
+			CAPTURE(y);
+			CHECK(ValidNumber(y));
+			CHECK_NOTHROW(T2=PropsSI("T",ykey,y,"P",p,"Water"));
+			CAPTURE(CoolProp::get_global_param_string("errstring"));
+			CAPTURE(T2);
+			CHECK(ValidNumber(T2));
+		}
+        std::ostringstream ss7;
+		ss7 << "Supercritical \"liquid\" P," << ykey;
+		SECTION(ss7.str(), "")
+		{
+            double Tc = Props1SI("Water","Tcrit");
+            double pc = Props1SI("Water","pcrit");
+            double p = pc*1.3;
+            double T = Tc*0.7;
+            CAPTURE(T);
+            CAPTURE(p);
+            CHECK(ValidNumber(T));
+            CHECK(ValidNumber(p));
+			CHECK_NOTHROW(y=PropsSI(ykey,"P",p,"T",T,"Water"));
+			CAPTURE(y);
+			CHECK(ValidNumber(y));
+			CHECK_NOTHROW(T2=PropsSI("T",ykey,y,"P",p,"Water"));
+			CAPTURE(CoolProp::get_global_param_string("errstring"));
+			CAPTURE(T2);
+			CHECK(ValidNumber(T2));
+		}
   }
 
 

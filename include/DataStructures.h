@@ -73,17 +73,26 @@ enum parameters{
 /// @param key The key, one of iT, iP, etc.
 /// @param info The thing you want, one of "IO" ("IO" if input/output, "O" if output only), "short" (very short description), "long" (a longer description), "units"
 std::string get_parameter_information(int key, std::string info);
+
 /// Return the integer key corresponding to the parameter name ("Dmolar" for instance)
 int get_parameter_index(const std::string &param_name);
+
 /// Returns true if the input is trivial (constants, critical parameters, etc.)
 bool is_trivial_parameter(int key);
+
 std::string get_csv_parameter_list();
 
 /// These are constants for the compositions
 enum composition_types{IFRAC_MASS, IFRAC_MOLE, IFRAC_VOLUME, IFRAC_UNDEFINED, IFRAC_PURE};
 
 /// These are constants for the phases of the fluid
-enum phases{iphase_liquid, iphase_supercritical, iphase_gas, iphase_twophase, iphase_unknown};
+enum phases{iphase_liquid, ///< Subcritical liquid 
+            iphase_supercritical, ///< Supercritical (p > pc, T > Tc)
+            iphase_supercritical_gas, ///< Supercritical gas (p < pc, T > Tc)
+            iphase_supercritical_liquid, ///< Supercritical liquid (p > pc, T < Tc)
+            iphase_gas, ///< Subcritical gas
+            iphase_twophase, ///< Twophase
+            iphase_unknown};
 
 /// These are unit types for the fluid
 enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLUID_TYPE_INCOMPRESSIBLE_LIQUID, FLUID_TYPE_INCOMPRESSIBLE_SOLUTION, FLUID_TYPE_UNDEFINED};
@@ -238,10 +247,9 @@ template<class T> long generate_update_pair(long key1, T value1, long key2, T va
 
 /// Return the short description of an input pair key ("DmolarT_INPUTS" for instance)
 std::string get_input_pair_short_desc(int pair);
+
 /// Return the long description of an input pair key ("Molar density in mol/m^3, Temperature in K" for instance)
 std::string get_input_pair_long_desc(int pair);
-
-
 
 } /* namespace CoolProp */
 #endif /* DATASTRUCTURES_H_ */

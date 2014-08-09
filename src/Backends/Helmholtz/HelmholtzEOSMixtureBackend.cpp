@@ -664,43 +664,43 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                     this->_phase = iphase_supercritical; return;
                 }
                 else{
-                    this->_phase = iphase_liquid; return;
+                    this->_phase = iphase_supercritical_liquid; return;
                 }
             }
             case iDmolar:
             {
                 if (_rhomolar < _crit.rhomolar){
-                    this->_phase = iphase_supercritical; return;
+                    this->_phase = iphase_supercritical_gas; return;
                 }
                 else{
-                    this->_phase = iphase_liquid; return;
+                    this->_phase = iphase_supercritical_liquid; return;
                 }
             }
             case iSmolar:
             {
                 if (_smolar.pt() > _crit.smolar){
-                    this->_phase = iphase_supercritical; return;
+                    this->_phase = iphase_supercritical_gas; return;
                 }
                 else{
-                    this->_phase = iphase_liquid; return;
+                    this->_phase = iphase_supercritical_liquid; return;
                 }
             }
             case iHmolar:
             {
                 if (_hmolar.pt() > _crit.hmolar){
-                    this->_phase = iphase_supercritical; return;
+                    this->_phase = iphase_supercritical_gas; return;
                 }
                 else{
-                    this->_phase = iphase_liquid; return;
+                    this->_phase = iphase_supercritical_liquid; return;
                 }
             }
             case iUmolar:
             {
                 if (_umolar.pt() > _crit.umolar){
-                    this->_phase = iphase_supercritical; return;
+                    this->_phase = iphase_supercritical_gas; return;
                 }
                 else{
-                    this->_phase = iphase_liquid; return;
+                    this->_phase = iphase_supercritical_liquid; return;
                 }
             }
             default:
@@ -1044,43 +1044,43 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                     this->_phase = iphase_supercritical; return;
                 }
                 else{
-                    this->_phase = iphase_gas; return;
+                    this->_phase = iphase_supercritical_gas; return;
                 }
             }
             case iDmolar:
             {
                 if (_rhomolar > _crit.rhomolar){
-                    this->_phase = iphase_supercritical; return;
+                    this->_phase = iphase_supercritical_liquid; return;
                 }
                 else{
-                    this->_phase = iphase_gas; return;
+                    this->_phase = iphase_supercritical_gas; return;
                 }
             }
             case iSmolar:
             {
                 if (_smolar.pt() > _crit.smolar){
-                    this->_phase = iphase_supercritical; return;
+                    this->_phase = iphase_supercritical_gas; return;
                 }
                 else{
-                    this->_phase = iphase_gas; return;
+                    this->_phase = iphase_supercritical_liquid; return;
                 }
             }
             case iHmolar:
             {
                 if (_hmolar.pt() > _crit.hmolar){
-                    this->_phase = iphase_supercritical; return;
+                    this->_phase = iphase_supercritical_gas; return;
                 }
                 else{
-                    this->_phase = iphase_gas; return;
+                    this->_phase = iphase_supercritical_liquid; return;
                 }
             }
             case iUmolar:
             {
                 if (_umolar.pt() > _crit.umolar){
-                    this->_phase = iphase_supercritical; return;
+                    this->_phase = iphase_supercritical_gas; return;
                 }
                 else{
-                    this->_phase = iphase_gas; return;
+                    this->_phase = iphase_supercritical_liquid; return;
                 }
             }
             default:
