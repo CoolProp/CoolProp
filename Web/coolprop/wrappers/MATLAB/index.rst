@@ -6,10 +6,22 @@ MATLAB Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled binaries can be downloaded from XXXXXXXXXXXXXX
+Pre-compiled binaries can be downloaded from :sfdownloads:`MATLAB`.  Download the files appropriate to your installation of MATLAB.
 
-User-Compiled Binaries
-======================
+Usage
+-----
+
+Place the mex files somewhere on the MATLAB path.
+
+If you place mex file somewhere outside MATLAB path, you have to use
+"addpath" function at begining of your code.
+
+Example: adding the folder that contains CoolProp.mexw32 file to the Octave path::
+
+    addpath('/home/USERNAME/Some_folder/CoolProp')
+
+Developer Notes
+===============
 
 Common Requirements
 -------------------
@@ -43,9 +55,7 @@ Once the dependencies are installed, you can run the builder and tests using::
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder
-    mkdir -p build/MATLAB
-    # Move into that folder
-    cd build/MATLAB
+    mkdir build && cd build
     # Set an environmental variable that points to your MATLAB installation for use in CMake (adjust if needed)
     export MATLAB_ROOT=/usr/local/MATLAB/R2014a # or /Applications/MATLAB_R2014a.app
     # Build the makefile using CMake
@@ -65,9 +75,7 @@ You need to just slightly modify the building procedure::
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder
-    mkdir build/MATLAB
-    # Move into that folder
-    cd build/MATLAB
+    mkdir build && cd build
     # Set an environmental variable that points to your MATLAB installation for use in CMake (adjust if needed)
     set MATLAB_ROOT=c:\Program Files\MATLAB\R2014a
     # Build the makefile using CMake
@@ -77,14 +85,3 @@ You need to just slightly modify the building procedure::
     # Run the integration tests
     ctest --extra-verbose
 
-Usage
-=====
-
-Place the mex files somewhere on the MATLAB path.
-
-If you place mex file somewhere outside MATLAB path, you have to use
-"addpath" function at begining of your code.
-
-Example: adding the folder that contains CoolProp.mexw32 file to the Octave path::
-
-    addpath('/home/USERNAME/Some_folder/CoolProp')
