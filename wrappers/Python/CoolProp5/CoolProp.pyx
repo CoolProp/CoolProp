@@ -12,6 +12,12 @@ cimport cython
 import math
 import warnings
 
+try:
+    import numpy as np
+    _numpy_supported = True
+except ImportError:
+    _numpy_supported = False
+
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 

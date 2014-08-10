@@ -114,7 +114,7 @@ public:
 
 struct MeltingLinePiecewiseSimonSegment
 {
-    long double T_0, a, c, p_0, T_max, T_min;
+    long double T_0, a, c, p_0, T_max, T_min, p_min, p_max;
 };
 struct MeltingLinePiecewiseSimonData
 {
@@ -123,7 +123,15 @@ struct MeltingLinePiecewiseSimonData
 struct MeltingLinePiecewisePolynomialInTrSegment
 {
     std::vector<long double> a, t;
-    long double T_0, p_0, T_max, T_min;
+    long double T_0, p_0, T_max, T_min, p_min, p_max;
+    long double evaluate(long double T)
+    {
+        long double summer = 0;
+        for (std::size_t i =0; i < a.size(); ++i){
+            summer += a[i]*(pow(T/T_0,t[i])-1);
+        }
+        return p_0*(1+summer);
+    }
 };
 struct MeltingLinePiecewisePolynomialInTrData
 {

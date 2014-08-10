@@ -65,4 +65,8 @@ cdef class AbstractState:
     
     cpdef double molar_mass(self) except *: 
         """ Get the molar mass kg/mol - wrapper of c++ function :cpapi:`AbstractState::molar_mass` """
-        return self.thisptr.molar_mass()    
+        return self.thisptr.molar_mass()   
+    
+    cpdef double melting_line(self, int param, int given, double value) except *: 
+        """ Get values from the melting line - wrapper of c++ function :cpapi:`AbstractState::melting_line` """
+        return self.thisptr.melting_line(param, given, value)

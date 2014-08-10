@@ -18,7 +18,7 @@ using namespace CoolProp;
 #endif
 #include "SpeedTest.h"
 #include "HumidAirProp.h"
-//#include "CoolPropLib.h"
+#include "CoolPropLib.h"
 
 #include "crossplatform_shared_ptr.h"
 
@@ -401,22 +401,35 @@ int main()
 	#endif
     #if 0
     {
+        double Tc = Props1SI("Water","Tcrit");
+        double pc = Props1SI("Water","pcrit");
+        double p = pc*2;
+        double T = Tc*0.5;
+        char ykey[] = "H";
+        double y = PropsSI(ykey,"P",p,"T",T,"Water");
+        double TT = PropsSI("T","P",p,ykey,y,"Water");
+        int rr = 0;
+    }
+    #endif
+    #if 1
+    {
 		run_tests();
 		char c;
 		std::cin >> c;
 	}
 	#endif
-	#if 1
+	#if 0
 	{
 		char ykey[] = "H";
 		double Ts, y, T2, dT = -1;
 		
-		double dd = PropsSI("T","P",101325,"T",114.357,"n-Propane");
 		
 		shared_ptr<AbstractState> AS(AbstractState::factory("HEOS","water"));
-		double ptt = AS->melting_line(iP, iT, 273.159);
+		double ptt = AS->melting_line(iT, iP, 138.268e6);
 		
-		Ts = PropsSI("T","P",101325,"Q",0,"n-Propane");
+        
+
+		Ts = PropsSI("H","T",841.225,"P",2.86832e+007,"Water");
 		std::cout << get_global_param_string("errstring");
 		y = PropsSI(ykey,"T",Ts+dT,"P",101325,"n-Propane");
 		T2 = PropsSI("T",ykey,y,"P",101325,"n-Propane");

@@ -8,6 +8,14 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
 		irhomolar_critical
 		iT_reducing
 		iT_critical
+		irhomass_reducing
+		irhomass_critical
+		iP_critical
+		iT_triple
+		iP_triple
+		iT_min
+		iT_max
+		iP_max
 		iT
 		iP
 		iQ

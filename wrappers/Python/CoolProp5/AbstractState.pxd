@@ -28,3 +28,5 @@ cdef class AbstractState:
     
     cpdef double molar_mass(self) except *
     cpdef double keyed_output(self, long) except *
+    
+    cpdef double melting_line(self, int, int, double) except *

@@ -186,6 +186,11 @@ double AbstractState::trivial_keyed_output(int key)
 double AbstractState::keyed_output(int key)
 {
 	if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
+    // Handle trivial inputs
+    if (is_trivial_parameter(key))
+    {
+        return trivial_keyed_output(key);
+    }
     switch (key)
     {
     case iQ:

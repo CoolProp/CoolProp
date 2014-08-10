@@ -38,6 +38,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double viscosity() except+
         double conductivity() except+
         double surface_tension() except+
+        
+        double melting_line(int,int,double) except+
 
 # The static factory method for the AbstractState
 cdef extern from "AbstractState.h" namespace "CoolProp::AbstractState":

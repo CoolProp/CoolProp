@@ -778,8 +778,8 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
         {
             double Tc = Props1SI("Water","Tcrit");
             double pc = Props1SI("Water","pcrit");
-            double p = pc*1.3;
-            double T = Tc*0.7;
+            double p = pc*2;
+            double T = Tc*0.5;
             CAPTURE(T);
             CAPTURE(p);
             CHECK(ValidNumber(T));
@@ -793,9 +793,6 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
             CHECK(ValidNumber(T2));
         }
   }
-
-
-    
 }
 
 #endif

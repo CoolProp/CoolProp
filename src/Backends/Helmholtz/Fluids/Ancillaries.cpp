@@ -1,5 +1,13 @@
 #include "Ancillaries.h"
 #include "DataStructures.h"
+#include "AbstractState.h"
+
+#if defined(ENABLE_CATCH)
+
+#include "crossplatform_shared_ptr.h"
+#include "catch.hpp"
+
+#endif
 
 namespace CoolProp{
 
@@ -103,20 +111,29 @@ double SaturationAncillaryFunction::invert(double value)
 void MeltingLineVariables::set_limits(void)
 {
 	if (type == MELTING_LINE_SIMON_TYPE){
-		MeltingLinePiecewiseSimonSegment &partmin = simon.parts[0];
-		MeltingLinePiecewiseSimonSegment &partmax = simon.parts[simon.parts.size()-1];
-		Tmin = partmin.T_0;
-		Tmax = partmax.T_max;
-		pmin = partmin.p_0;
-		pmax = evaluate(iP, iT, Tmax);
+		
+        // Fill in the min and max pressures for each part
+        for (std::size_t i = 0; i < simon.parts.size(); ++i){
+            MeltingLinePiecewiseSimonSegment &part = simon.parts[i];
+            part.p_min = part.p_0 + part.a*(pow(part.T_min/part.T_0,part.c)-1);
+            part.p_max = part.p_0 + part.a*(pow(part.T_max/part.T_0,part.c)-1);
+        }
+        pmin = simon.parts.front().p_min;
+		pmax = simon.parts.back().p_max;
+        Tmin = simon.parts.front().T_min;
+		Tmax = simon.parts.back().T_max;
 	}
 	else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE){
-		MeltingLinePiecewisePolynomialInTrSegment &partmin = polynomial_in_Tr.parts[0];
-		MeltingLinePiecewisePolynomialInTrSegment &partmax = polynomial_in_Tr.parts[polynomial_in_Tr.parts.size() - 1];
-		Tmin = partmin.T_0;
-		Tmax = partmax.T_max;
-		pmin = partmin.p_0;
-		pmax = evaluate(iP, iT, Tmax);
+        // Fill in the min and max pressures for each part
+        for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i){
+            MeltingLinePiecewisePolynomialInTrSegment &part = polynomial_in_Tr.parts[i];
+            part.p_min = part.evaluate(part.T_min);
+            part.p_max = part.evaluate(part.T_max);
+        }
+        Tmin = polynomial_in_Tr.parts.front().T_min;
+        pmin = polynomial_in_Tr.parts.front().p_min;
+		Tmax = polynomial_in_Tr.parts.back().T_max;
+        pmax = polynomial_in_Tr.parts.back().p_max;
 	}
 	else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE){
 		MeltingLinePiecewisePolynomialInThetaSegment &partmin = polynomial_in_Theta.parts[0];
@@ -124,7 +141,7 @@ void MeltingLineVariables::set_limits(void)
 		Tmin = partmin.T_0;
 		Tmax = partmax.T_max;
 		pmin = partmin.p_0;
-		pmax = evaluate(iP, iT, Tmax);
+		//pmax = evaluate(iP, iT, Tmax);
 	}
 	else{
 		throw ValueError("only Simon supported now");
@@ -151,11 +168,7 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
 			for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i){
 				MeltingLinePiecewisePolynomialInTrSegment &part = polynomial_in_Tr.parts[i];
 				if (is_in_closed_range(part.T_min, part.T_max, T)){
-					long double summer = 0;
-					for (std::size_t i =0; i < part.a.size(); ++i){
-						summer += part.a[i]*(pow(T/part.T_0,part.t[i])-1);
-					}
-					return part.p_0*(1+summer);
+					return part.evaluate(T);
 				}
 			}
 			throw ValueError("unable to calculate melting line (p,T) for polynomial_in_Tr curve");
@@ -189,23 +202,21 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
 					return T;
 				}
 			}
-			throw ValueError("unable to calculate melting line (p,T) for Simon curve");
+			throw ValueError("unable to calculate melting line p(T) for Simon curve");
 		}
-		else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE || type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE)
+		else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE)
 		{
-			class solver_resid : public FuncWrapper1D
+            class solver_resid : public FuncWrapper1D
 			{
 			public:
-
-				MeltingLineVariables *line;
+				MeltingLinePiecewisePolynomialInTrSegment *part;
 				long double r, given_p, calc_p, T;
-				solver_resid(MeltingLineVariables *line, long double p) : line(line), given_p(p){};
+				solver_resid(MeltingLinePiecewisePolynomialInTrSegment *part, long double p) : part(part), given_p(p){};
 				double call(double T){
 
 					this->T = T;
 
-					// Calculate p using melting line
-					calc_p = line->evaluate(iP, iT, T);
+					calc_p = part->evaluate(T);
 
 					// Difference between the two is to be driven to zero
 					r = given_p - calc_p;
@@ -213,17 +224,63 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
 					return r;
 				};
 			};
-			solver_resid resid(this, value);
-			
-			double pmin = evaluate(iP, iT, Tmin);
-			double pmax = evaluate(iP, iT, Tmax);
-			std::string errstr;
-			return Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100, errstr);
+
+			// Need to find the right segment
+			for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i){
+                MeltingLinePiecewisePolynomialInTrSegment &part = polynomial_in_Tr.parts[i];
+                if (is_in_closed_range(part.p_min, part.p_max, value)){
+                    std::string errstr;
+                    solver_resid resid(&part, value);
+                    double T = Brent(resid, part.T_min, part.T_max, DBL_EPSILON, 1e-12, 100, errstr);
+                    return T;
+                }
+            }
+            throw ValueError("unable to calculate melting line T(p) for polynomial_in_Tr curve");
 		}
 		else{
-			throw ValueError(format("Invalid melting line type (T,p) [%d]",type));
+			throw ValueError(format("Invalid melting line type T(p) [%d]",type));
 		}
 	}
 }
 
 }; /* namespace CoolProp */
+
+#if defined(ENABLE_CATCH)
+TEST_CASE("Water melting line", "")
+{
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS","water"));
+    int iT = CoolProp::iT, iP = CoolProp::iP;
+    SECTION("Ice Ih-liquid")
+    {
+		double actual = AS->melting_line(iT, iP, 138.268e6);
+        double expected = 260.0;
+        CAPTURE(actual);
+        CAPTURE(expected);
+        CHECK(std::abs(actual-expected) < 0.01);
+    }
+    SECTION("Ice III-liquid")
+    {
+		double actual = AS->melting_line(iT, iP, 268.685e6);
+        double expected = 254;
+        CAPTURE(actual);
+        CAPTURE(expected);
+        CHECK(std::abs(actual-expected) < 0.01);
+    }
+    SECTION("Ice V-liquid")
+    {
+		double actual = AS->melting_line(iT, iP, 479.640e6);
+        double expected = 265;
+        CAPTURE(actual);
+        CAPTURE(expected);
+        CHECK(std::abs(actual-expected) < 0.01);
+    }
+    SECTION("Ice VI-liquid")
+    {
+		double actual = AS->melting_line(iT, iP, 1356.76e6);
+        double expected = 320;
+        CAPTURE(actual);
+        CAPTURE(expected);
+        CHECK(std::abs(actual-expected) < 1);
+    }
+}
+#endif
