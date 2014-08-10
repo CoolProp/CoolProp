@@ -1497,7 +1497,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
     catch(std::exception &)
     {
         try{
-            // Next we try with Secant method
+            // Next we try with Secant method shooting off from the guess value
             double rhomolar = Secant(resid, rhomolar_guess, 0.0001*rhomolar_guess, 1e-8, 100, errstring);
             if (!ValidNumber(rhomolar)){throw ValueError();}
             return rhomolar;
@@ -1505,7 +1505,10 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         catch(std::exception &)
         {
 			try{
-				Secant(resid, rhomolar_guess, 0.0001*rhomolar_guess, 1e-8, 100, errstring);
+                // Next we try with a Brent method bounded solver since the function is 1-1
+                double rhomolar = Brent(resid, 0.1*rhomolar_guess, 2*rhomolar_guess,DBL_EPSILON,1e-8,100,errstring);
+                if (!ValidNumber(rhomolar)){throw ValueError();}
+                return rhomolar;
 			}
 			catch(...){
 				
