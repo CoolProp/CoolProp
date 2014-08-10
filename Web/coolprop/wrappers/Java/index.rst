@@ -24,17 +24,16 @@ Linux & OSX
 
 2. Expand the zip file you downloaded
 
-3. Add the ``bin`` folder of the JDK that you installed.  For instance, add the following to ~/.profile:
+3. Add the ``bin`` folder of the JDK that you installed.  For instance, add this:
       
       export /path/to/java/SDK/bin:$PATH 
       
-  to ~/.profile where the path ``/path/to/java/SDK/bin`` points to the absolute path appropriate to
-
+  to ~/.profile where the path ``/path/to/java/SDK/bin`` points to the absolute path for the ``bin`` folder of your Java installation.
 
 Windows
 -------
 
-Install MATLAB using installer downloaded from www.mathworks.com.  As of version R2014a, both of 32-bit and 64-bit MATLAB is available
+Download and run the JDK installer from `Oracle downloads <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_. If you are in a 32-bit system, download the 32-bit system, else download the 64-bit version.
 
 Build
 -----
@@ -47,10 +46,10 @@ Once the dependencies are installed, you can run the builder and tests using::
     # Check out the sources for CoolProp
     git clone https://github.com/CoolProp/CoolProp --recursive
     # Move into the folder you just created
-    mkdir -p  CoolProp/build/Java && cd CoolProp/build/Java
+    mkdir -p  CoolProp/build && cd CoolProp/build
     # Build the makefile using CMake
-    cmake ../.. -DCOOLPROP_MATLAB_MODULE=ON -DBUILD_TESTING=ON
-    # Make the MEX files (by default files will be generated in folder install_root/MATLAB relative to CMakeLists.txt file)
+    cmake .. -DCOOLPROP_JAVA_MODULE=ON -DBUILD_TESTING=ON
+    # Make the java files
     make install
     # Run the integration tests
     ctest --extra-verbose
@@ -65,26 +64,10 @@ You need to just slightly modify the building procedure::
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder
-    mkdir build/MATLAB
-    # Move into that folder
-    cd build/MATLAB
-    # Set an environmental variable that points to your MATLAB installation for use in CMake (adjust if needed)
-    set MATLAB_ROOT=c:\Program Files\MATLAB\R2014a
+    mkdir build && cd build
     # Build the makefile using CMake
-    cmake ../.. -DCOOLPROP_MATLAB_MODULE=ON -DBUILD_TESTING=ON
-    # Make the MEX files (by default files will be generated in folder install_root/MATLAB relative to CMakeLists.txt file)
+    cmake .. -DCOOLPROP_MATLAB_MODULE=ON -DBUILD_TESTING=ON
+    # Make the Java shared library
     make install
     # Run the integration tests
     ctest --extra-verbose
-
-Usage
-=====
-
-Place the mex files somewhere on the MATLAB path.
-
-If you place mex file somewhere outside MATLAB path, you have to use
-"addpath" function at begining of your code.
-
-Example: adding the folder that contains CoolProp.mexw32 file to the Octave path::
-
-    addpath('/home/USERNAME/Some_folder/CoolProp')
