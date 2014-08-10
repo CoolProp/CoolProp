@@ -1017,6 +1017,10 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
             default:
                 throw ValueError(format("bad input for other"));
         }
+        
+        // Update the states
+        this->SatL->update(DmolarT_INPUTS, HEOS.SatL->rhomolar(), HEOS.SatL->T());
+        this->SatV->update(DmolarT_INPUTS, HEOS.SatV->rhomolar(), HEOS.SatV->T());
 
         if (Q < -100*DBL_EPSILON){
             this->_phase = iphase_liquid; _Q = -1000; return;

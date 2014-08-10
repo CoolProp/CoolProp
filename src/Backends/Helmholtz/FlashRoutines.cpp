@@ -609,7 +609,6 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 				HSU_P_flash_singlephase_Brent(HEOS, other, value, Tmin, Tmax);
 				HEOS._Q = -1;
 			}
-            else{throw ValueError("Can't be non homogeneous phase at this point");}
         }
         else
         {
