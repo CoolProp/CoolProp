@@ -879,6 +879,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         _Q = Q;
         // Load the outputs
         _p = _Q*HEOS.SatV->p() + (1-_Q)*HEOS.SatL->p();
+        _T = _Q*HEOS.SatV->T() + (1-_Q)*HEOS.SatL->T();
         _rhomolar = 1/(_Q/HEOS.SatV->rhomolar() + (1-_Q)/HEOS.SatL->rhomolar());
         return;
     }
