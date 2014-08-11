@@ -55,6 +55,8 @@ If you are compiling for Python 2.7, you can install Visual Studio 2008 Express 
 
 If you are compiling for Python 3.x, you can install Visual Studio 2010 Express from `VS2010Express installer <http://www.visualstudio.com/en-us/downloads#d-2010-express>`_.
 
+If you want to build 64-bit extensions, you MUST install VS2010 Professional, which can be obtained for free if you have a student ID card from Microsoft Dreamspark
+
 All three compilers should co-exist happily on the path, so you should be fine installing all three, but they are rather sizeable installs.
 
 Linux
