@@ -49,7 +49,7 @@ public:
 	long double calc_melting_line(int param, int given, long double value);
 	int calc_phase(void){return _phase;};
     
-    const CoolProp::SimpleState calc_state(const std::string &state);
+    const CoolProp::SimpleState &calc_state(const std::string &state);
 
     const std::vector<CoolPropFluid*> &get_components(){return components;};
     std::vector<long double> &get_K(){return K;};

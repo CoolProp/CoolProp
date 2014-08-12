@@ -140,7 +140,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             pmin_sat = std::max(pmin_satL, pmin_satV);
             
             // Check limits
-            if (!is_in_closed_range(pmin_sat, pmax_sat, static_cast<long double>(HEOS._p))){
+            if (!is_in_closed_range(pmin_sat*0.999999, pmax_sat*1.000001, static_cast<long double>(HEOS._p))){
                 throw ValueError(format("Pressure to PQ_flash [%6g Pa] must be in range [%8g Pa, %8g Pa]",HEOS._p, pmin_sat, pmax_sat));
             }
             // ------------------

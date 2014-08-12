@@ -131,7 +131,7 @@ void HelmholtzEOSMixtureBackend::update_states(void)
     // Clear again just to be sure
     clear();
 }
-const CoolProp::SimpleState HelmholtzEOSMixtureBackend::calc_state(const std::string &state)
+const CoolProp::SimpleState & HelmholtzEOSMixtureBackend::calc_state(const std::string &state)
 {
     if (is_pure_or_pseudopure)
     {
@@ -738,7 +738,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         }
     }
     // Check between triple point pressure and psat_max
-    else if (_p > components[0]->pEOS->ptriple && _p < _crit.p)
+    else if (_p >= components[0]->pEOS->ptriple*0.9999 && _p <= _crit.p)
     {
         // First try the ancillaries, use them to determine the state if you can
         
@@ -911,9 +911,12 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         _rhomolar = 1/(_Q/HEOS.SatV->rhomolar() + (1-_Q)/HEOS.SatL->rhomolar());
         return;
     }
-    else if (_p < components[0]->pEOS->ptriple)
+    else if (_p < components[0]->pEOS->ptriple*0.9999)
     {
         throw NotImplementedError(format("for now, we don't support p [%g Pa] below ptriple [%g Pa]",_p, components[0]->pEOS->ptriple));
+    }
+    else{
+        throw ValueError(format("The pressure [%g Pa] cannot be used in p_phase_determination",_p));
     }
 }
 void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int other, long double value)

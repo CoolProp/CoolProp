@@ -234,7 +234,7 @@ protected:
     
     /// Using this backend, calculate a phase given by the state string
     /// @param state A string that describes the state desired, one of "hs_anchor", "critical"/"crit", "reducing"
-    virtual const CoolProp::SimpleState calc_state(const std::string &state){throw NotImplementedError("calc_state is not implemented for this backend");};
+    virtual const CoolProp::SimpleState & calc_state(const std::string &state){throw NotImplementedError("calc_state is not implemented for this backend");};
 
 public:
 
@@ -397,7 +397,7 @@ public:
     /// @param Q The quality for the parameter that is given (0 = saturated liquid, 1 = saturated vapor)
     /// @param given The key for the parameter that is given
     /// @param value The value for the parameter that is given
-    double saturation_ancillary(int param, int Q, int given, double value);
+    //double saturation_ancillary(int param, int Q, int given, double value);
 
     // ----------------------------------------
     // Transport properties
