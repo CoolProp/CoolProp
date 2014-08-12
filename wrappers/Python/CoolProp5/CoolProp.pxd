@@ -31,10 +31,8 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     double _Props1SI "CoolProp::Props1SI"(string Ref, string Output)
     
 #     double _IProps "CoolProp::IProps"(long Output, long Name1, double Prop1, long Name2, double Prop2, long Ref)
-    
 #     double _Props "CoolProp::Props"(string Output, string Name1, double Prop1, string Name2, double Prop2, string Ref)
 #     double _Props1 "CoolProp::Props1"(string Ref, string Output)
-    
 #     string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName)
     
 #     long _get_Fluid_index "CoolProp::get_Fluid_index" (string Fluid)

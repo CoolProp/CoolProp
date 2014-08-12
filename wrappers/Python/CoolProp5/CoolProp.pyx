@@ -142,7 +142,7 @@ cpdef __Props_err2(in1, in2, in3, in4, in5, in6):
     else:
         raise ValueError("Props failed ungracefully :: inputs were:\"{in1:s}\",\"{in2:s}\",{in3:0.16e},\"{in4:s}\",{in5:0.16e},\"{in6:s}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(in1=in1,in2=in2,in3=in3,in4=in4,in5=in5,in6=in6))
 
-# cpdef Props(in1, in2, in3, in4, in5, in6, in7 = None):
+# cpdef Props(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = None):
 #     """
 #     $$Props$$
 #     """ 
@@ -150,19 +150,20 @@ cpdef __Props_err2(in1, in2, in3, in4, in5, in6):
 #         return _Props(in1, in2, in3, in4, in5, in6) 
 #     else:
 #         return _Props(in1, in2, in3, in4, in5, in6, in7)
-cpdef PropsSI(in1, in2, in3, in4, in5, in6, in7 = None):
+cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = None):
     """
     $$PropsSI$$
     """ 
     cdef double val
-    if in7 is None:
+    if in3 is None and in4 is None and in5 is None and in6 is None and in7 is None:
+        val = _Props1SI(in1, in2)
+        return val
+    elif in7 is None:
         val = _PropsSI(in1, in2, in3, in4, in5, in6)
         if not iterable(val) and not _ValidNumber(val): 
             __Props_err2(in1, in2, in3, in4, in5, in6)
         else:
             return val
-    elif in3 is None and in4 is None and in5 is None and in6 is None and in7 is None:
-        val = _Props1SI(in1, in2)
     else:
         return _PropsSI(in1, in2, in3, in4, in5, in6, in7)
 

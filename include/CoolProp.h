@@ -21,6 +21,10 @@ You might want to start by looking at CoolProp.h
 
     namespace CoolProp {
 
+    /// Return a value that does not depend on the thermodynamic state - this is a convenience function that does the call PropsSI(Output, "", 0, "", 0, FluidName)
+	/// @param FluidName The fluid name
+    /// @param Output The output parameter, one of "Tcrit","D","H",etc.
+    double Props1SI(const std::string &FluidName, const std::string &Output);
     /// Return a value that depends on the thermodynamic state
 	/// @param Output The output parameter, one of "T","D","H",etc.
 	/// @param Name1 The first state variable name, one of "T","D","H",etc.

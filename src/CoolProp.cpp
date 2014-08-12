@@ -408,6 +408,16 @@ double PropsSI(const char *Output, const char *Name1, double Prop1, const char *
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;
     return PropsSI(_Output,_Name1,Prop1,_Name2,Prop2,_FluidName, x);
 }
+double Props1SI(const std::string &FluidName, const std::string &Output)
+{
+    std::string  _FluidName = FluidName, empty_string = "", _Output = Output;
+    double val1 = PropsSI(_FluidName, empty_string, 0, empty_string, 0, _Output);
+    if (!ValidNumber(val1)){
+        // Try with them flipped
+        val1 = PropsSI(_Output, empty_string, 0, empty_string, 0, _FluidName);
+    }
+    return val1;
+}
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref)
 {
 	std::string backend, fluid;

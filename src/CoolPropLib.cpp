@@ -123,7 +123,7 @@ EXPORT_CODE double CONVENTION Props(const char *Output, char Name1, double Prop1
 EXPORT_CODE double CONVENTION Props1SI(const char *FluidName, const char *Output)
 {
     std::string _Output = Output, _FluidName = FluidName;
-    return CoolProp::PropsSI(_Output, "", 0, "", 0, _FluidName);
+    return CoolProp::Props1SI(_FluidName, _Output);
 }
 EXPORT_CODE double CONVENTION PropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName)
 {

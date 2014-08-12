@@ -119,10 +119,10 @@ if __name__=='__main__':
                                 )
                            )
                        
-    CoolProp_module = Extension('CoolProp5.CoolProp',
+    CoolProp_module = Extension('CoolProp.CoolProp',
                         [os.path.join('CoolProp5','CoolProp.' + cy_ext)] + sources,
                         **common_args)
-    constants_module = Extension('CoolProp5.constants',
+    constants_module = Extension('CoolProp.constants',
                         [os.path.join('CoolProp5','constants.' + cy_ext)],
                         **common_args)
      
@@ -135,7 +135,7 @@ if __name__=='__main__':
         ext_modules = cythonize(ext_modules)
         
     try:
-        setup (name = 'CoolProp5',
+        setup (name = 'CoolProp',
                version = version, # look above for the definition of version variable - don't modify it here
                author = "Ian Bell",
                author_email='ian.h.bell@gmail.com',
@@ -143,7 +143,7 @@ if __name__=='__main__':
                description = """Open-source thermodynamic and transport properties database""",
                packages = find_packages(),
                ext_modules = ext_modules,
-               package_data = {'CoolProp5':['State.pxd',
+               package_data = {'CoolProp':['State.pxd',
                                             'CoolProp.pxd',
                                             'CoolPropBibTeXLibrary.bib'] + find_cpp_sources(os.path.join('include'), '*.h')},
                classifiers = [
