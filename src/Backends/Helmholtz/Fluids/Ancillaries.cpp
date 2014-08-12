@@ -206,7 +206,7 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
 					return T;
 				}
 			}
-			throw ValueError(format("unable to calculate melting line T(p) for Simon curve for p=%g; bounds are %g,%g Pa", value, pmin, pmax));
+			throw ValueError(format("unable to calculate melting line T(p) for Simon curve for p=%Lg; bounds are %Lg,%Lg Pa", value, pmin, pmax));
 		}
 		else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE)
 		{
@@ -239,7 +239,7 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
                     return T;
                 }
             }
-            throw ValueError(format("unable to calculate melting line T(p) for polynomial_in_Theta curve for p=%g; bounds are %g,%g Pa", value, pmin, pmax));
+            throw ValueError(format("unable to calculate melting line T(p) for polynomial_in_Theta curve for p=%Lg; bounds are %Lg,%Lg Pa", value, pmin, pmax));
         }
         else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE)
         {
@@ -274,7 +274,7 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
                 }
             }
             
-            throw ValueError(format("unable to calculate melting line T(p) for polynomial_in_Theta curve for p=%g; bounds are %g,%g Pa", value, pmin, pmax));
+            throw ValueError(format("unable to calculate melting line T(p) for polynomial_in_Theta curve for p=%Lg; bounds are %Lg,%Lg Pa", value, pmin, pmax));
 		}
 		else{
 			throw ValueError(format("Invalid melting line type T(p) [%d]",type));
@@ -364,6 +364,17 @@ TEST_CASE("Tests for values from melting lines", "[melting]")
                 CHECK(actual_T < Tmax);
             }   
         }
+        // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+        std::ostringstream ss2;
+        ss2 << "Ensure melting line valid for " << fluids[i] << " @ EOS pmax";
+        SECTION(ss2.str(),"")
+        {
+            double actual_T;
+            double EOS_pmax = AS->pmax();
+            CAPTURE(EOS_pmax);
+            CHECK_NOTHROW(actual_T = AS->melting_line(iT, iP, EOS_pmax));
+            CAPTURE(actual_T);
+        }   
     }
 }
 #endif

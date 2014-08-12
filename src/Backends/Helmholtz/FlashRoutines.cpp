@@ -587,8 +587,9 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                     {
                         if (saturation_called){ Tmax = HEOS.SatL->T();}else{Tmax = HEOS._TLanc.pt();}
 						
-						if (HEOS.has_melting_line()){
-							Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p)-1e-3;
+                        // Sometimes the minimum pressure for the melting line is a bit above the triple point pressure
+						if (HEOS.has_melting_line() && HEOS._p > HEOS.calc_melting_line(iP_min, -1, -1)){
+                            Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p)-1e-3;
 						}
 						else{
 							Tmin = HEOS.Tmin()-1e-3;
@@ -600,7 +601,8 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                     case iphase_supercritical:
                     {
                         Tmax = HEOS.Tmax()+1;
-                        if (HEOS.has_melting_line()){
+                        // Sometimes the minimum pressure for the melting line is a bit above the triple point pressure
+                        if (HEOS.has_melting_line() && HEOS._p > HEOS.calc_melting_line(iP_min, -1, -1)){
 							Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p)-1e-3;
 						}
 						else{
