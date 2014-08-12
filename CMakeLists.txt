@@ -53,8 +53,8 @@ option (COOLPROP_EES_MODULE
         "Build the EES module"
         OFF)
         
-option (COOLPROP_TESTING 
-        "Build with test flags and include main() from catch" 
+option (BUILD_TESTING 
+        "Enable testing for this given builder" 
         OFF)
 
 #######################################
@@ -143,14 +143,14 @@ if (COOLPROP_SHARED_LIBRARY)
     list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
 endif()
 
-if (COOLPROP_STATIC_LIBRARY)
+if (COOLPROP_STATIC_LIBRARY_MODULE OR COOLPROP_STATIC_LIBRARY)
     list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
     add_library(${app_name} STATIC ${APP_SOURCES})
     add_dependencies (${app_name} generate_headers)
     install (TARGETS ${app_name} DESTINATION static_library/${CMAKE_SYSTEM_NAME})
 endif()
 
-if (COOLPROP_64BIT_SHARED_LIBRARY_MODULE)
+if (COOLPROP_64BIT_SHARED_LIBRARY_MODULE OR COOLPROP_64BIT_SHARED_LIBRARY)
     list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
     add_library(${app_name} SHARED ${APP_SOURCES})
     set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
@@ -162,7 +162,7 @@ if (COOLPROP_64BIT_SHARED_LIBRARY_MODULE)
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/64bit)
 endif()
 
-if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY_MODULE)
+if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_CDECL_SHARED_LIBRARY)
     list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
     add_library(${app_name} SHARED ${APP_SOURCES})
     set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
@@ -174,7 +174,7 @@ if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY_MODULE)
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
 endif()
 
-if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY_MODULE)
+if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_STDCALL_SHARED_LIBRARY)
     list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
     add_library(${app_name} SHARED ${APP_SOURCES})
     set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__stdcall")
