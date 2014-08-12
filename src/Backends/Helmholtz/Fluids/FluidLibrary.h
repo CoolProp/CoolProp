@@ -320,6 +320,7 @@ protected:
 
         /// \todo: define limits of EOS better
         EOS.limits.Tmin = cpjson::get_double(satminL_state, "T");
+        EOS.ptriple = cpjson::get_double(satminL_state, "p");
         EOS.Ttriple = EOS.limits.Tmin;
 
         // BibTex keys

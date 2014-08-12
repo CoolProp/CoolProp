@@ -204,6 +204,8 @@ protected:
 
     /// Using this backend, get the triple point temperature in K
     virtual long double calc_Ttriple(void){throw NotImplementedError("calc_Ttriple is not implemented for this backend");};
+    /// Using this backend, get the triple point pressure in Pa
+    virtual long double calc_p_triple(void){throw NotImplementedError("calc_p_triple is not implemented for this backend");};
 
     /// Using this backend, get the critical point temperature in K
     virtual long double calc_T_critical(void){throw NotImplementedError("calc_T_critical is not implemented for this backend");};
@@ -229,6 +231,10 @@ protected:
 	virtual long double calc_melting_line(int param, int given, long double value){throw NotImplementedError("This backend does not implement calc_melting_line function");};
 	
 	virtual int calc_phase(void){throw NotImplementedError("This backend does not implement calc_phase function");};
+    
+    /// Using this backend, calculate a phase given by the state string
+    /// @param state A string that describes the state desired, one of "hs_anchor", "critical"/"crit", "reducing"
+    virtual const CoolProp::SimpleState calc_state(const std::string &state){throw NotImplementedError("calc_state is not implemented for this backend");};
 
 public:
 
@@ -278,7 +284,8 @@ public:
     void set_mass_fractions(const std::vector<double> &mass_fractions){set_mass_fractions(std::vector<long double>(mass_fractions.begin(), mass_fractions.end()));};
     void set_volu_fractions(const std::vector<double> &volu_fractions){set_volu_fractions(std::vector<long double>(volu_fractions.begin(), volu_fractions.end()));};
 
-    const CoolProp::SimpleState & get_reducing(){return _reducing;};
+    const CoolProp::SimpleState & get_reducing_state(){return _reducing;};
+    const CoolProp::SimpleState & get_state(const std::string &state){return calc_state(state);};
 
     double keyed_output(int key);
 	double trivial_keyed_output(int key);
@@ -311,6 +318,9 @@ public:
     For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
     */
     double rhomolar_critical(void);
+    
+    /// Return the triple point pressure 
+    double p_triple(void);
 
     std::string name(){return calc_name();};
 
@@ -376,7 +386,18 @@ public:
     /// Return true if the fluid has a melting line - default is false, but can be re-implemented by derived class
     virtual bool has_melting_line(void){return false;};
     
+    /// Return a value from the melting line
+    /// @param param The key for the parameter to be returned
+    /// @param given The key for the parameter that is given
+    /// @param value The value for the parameter that is given
 	double melting_line(int param, int given, double value);
+    
+    /// Return the value from a saturation ancillary curve (if the backend implements it)
+    /// @param param The key for the parameter to be returned
+    /// @param Q The quality for the parameter that is given (0 = saturated liquid, 1 = saturated vapor)
+    /// @param given The key for the parameter that is given
+    /// @param value The value for the parameter that is given
+    double saturation_ancillary(parameters param, int Q, int given, double value);
 
     // ----------------------------------------
     // Transport properties

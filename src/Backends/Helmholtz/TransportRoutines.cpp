@@ -527,9 +527,9 @@ long double TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(
                 GAMMA = data.GAMMA,
                 zeta0 = data.zeta0,
                 qD = data.qD,
-                Tc = HEOS.get_reducing().T, // [K]
-                rhoc = HEOS.get_reducing().rhomolar, // [mol/m^3]
-                Pcrit = HEOS.get_reducing().p, // [Pa]
+                Tc = HEOS.get_reducing_state().T, // [K]
+                rhoc = HEOS.get_reducing_state().rhomolar, // [mol/m^3]
+                Pcrit = HEOS.get_reducing_state().p, // [Pa]
 		        Tref, // [K]
 		        cp,cv,delta,num,zeta,mu,pi=M_PI,tau,
                 OMEGA_tilde,OMEGA_tilde0;

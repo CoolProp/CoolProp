@@ -20,7 +20,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
     std::vector<std::vector<long double> > J(3, std::vector<long double>(3,_HUGE));
 
     HEOS->calc_reducing_state();
-    const SimpleState & reduce = HEOS->get_reducing();
+    const SimpleState & reduce = HEOS->get_reducing_state();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS->SatL,
                                            SatV = HEOS->SatV;
 
@@ -223,7 +223,7 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
     std::vector<std::vector<long double> > J(2, std::vector<long double>(2,_HUGE));
 
     HEOS->calc_reducing_state();
-    const SimpleState & reduce = HEOS->get_reducing();
+    const SimpleState & reduce = HEOS->get_reducing_state();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS->SatL,
                                            SatV = HEOS->SatV;
 
@@ -392,7 +392,7 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
     */
 
     HEOS->calc_reducing_state();
-    const SimpleState & reduce = HEOS->get_reducing();
+    const SimpleState & reduce = HEOS->get_reducing_state();
     long double R_u = HEOS->calc_gas_constant();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS->SatL,
                                            SatV = HEOS->SatV;
@@ -414,7 +414,7 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
 			// Use the density ancillary function as the starting point for the solver
 			
             // If very close to the critical temp, evaluate the ancillaries for a slightly lower temperature
-            if (T > 0.99*HEOS->get_reducing().T){
+            if (T > 0.99*HEOS->get_reducing_state().T){
                 rhoL = HEOS->get_components()[0]->ancillaries.rhoL.evaluate(T-0.1);
                 rhoV = HEOS->get_components()[0]->ancillaries.rhoV.evaluate(T-0.1);
             }

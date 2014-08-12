@@ -121,7 +121,6 @@
     <File Name="../../include/SpeedTest.h"/>
     <File Name="../../include/TestObjects.h"/>
     <File Name="../../include/Tests.h"/>
-    <File Name="../../src/Backends/Helmholtz/Fluids/Ancillaries.h"/>
     <File Name="../../include/Ancillaries.h"/>
   </VirtualDirectory>
   <Description/>

@@ -729,7 +729,7 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
 		double deltah = HEOS->hmass() - 200000; // offset from 200000 J/kg enthalpy
 		double deltas = HEOS->smass() - 1000; // offset from 1000 J/kg/K entropy
         double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
-        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
+        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing_state().T);
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "IIR");
         HEOS->update_states();
 	}
@@ -741,7 +741,7 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
 		double deltah = HEOS->hmass() - 0; // offset from 0 J/kg enthalpy
 		double deltas = HEOS->smass() - 0; // offset from 0 J/kg/K entropy
 		double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
-        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
+        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing_state().T);
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "ASHRAE");
         HEOS->update_states();
 	}
@@ -753,7 +753,7 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
 		double deltah = HEOS->hmass() - 0; // offset from 0 kJ/kg enthalpy
 		double deltas = HEOS->smass() - 0; // offset from 0 kJ/kg/K entropy
 		double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
-        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing().T);
+        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing_state().T);
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "NBP");
         HEOS->update_states();
 	}

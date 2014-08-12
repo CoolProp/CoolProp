@@ -377,4 +377,30 @@ TEST_CASE("Tests for values from melting lines", "[melting]")
         }   
     }
 }
+
+TEST_CASE("Test that hs_anchor enthalpy/entropy agrees with EOS", "[ancillaries]")
+{
+    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+    for (std::size_t i = 0; i < fluids.size(); ++i) 
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS",fluids[i]));
+        
+        CoolProp::SimpleState hs_anchor = AS->get_state("hs_anchor");
+        
+        // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+        std::ostringstream ss1;
+        ss1 << "Check hs_anchor for " << fluids[i];
+        SECTION(ss1.str(),"")
+        {
+            std::string note = "The enthalpy and entropy are hardcoded in the fluid JSON files.  They MUST agree with the values calculated by the EOS";
+            AS->update(CoolProp::DmolarT_INPUTS, hs_anchor.rhomolar, hs_anchor.T);
+            CAPTURE(hs_anchor.hmolar);
+            CAPTURE(hs_anchor.smolar);
+            double EOS_hmolar = AS->hmolar();
+            double EOS_smolar = AS->smolar();
+            CHECK( std::abs(EOS_hmolar - hs_anchor.hmolar) < 1e-3);
+            CHECK( std::abs(EOS_smolar - hs_anchor.smolar) < 1e-3);
+        }   
+    }
+}
 #endif

@@ -168,9 +168,9 @@ double AbstractState::trivial_keyed_output(int key)
 	case iP_max:
 		return pmax();
     case iT_reducing:
-        return get_reducing().T;
+        return get_reducing_state().T;
     case irhomolar_reducing:
-        return get_reducing().rhomolar;
+        return get_reducing_state().rhomolar;
 	case iP_critical:
         return this->p_critical();
     case iT_critical:
@@ -179,6 +179,8 @@ double AbstractState::trivial_keyed_output(int key)
         return this->rhomolar_critical();
     case irhomass_critical:
         return this->rhomolar_critical()*molar_mass();
+    case iP_triple:
+        return this->p_triple();
 	default:
 		throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));
 	}
@@ -226,9 +228,9 @@ double AbstractState::keyed_output(int key)
     case imolar_mass:
         return molar_mass();
     case iT_reducing:
-        return get_reducing().T;
+        return get_reducing_state().T;
     case irhomolar_reducing:
-        return get_reducing().rhomolar;
+        return get_reducing_state().rhomolar;
     case ispeed_sound:
         return speed_sound();
     case ialpha0:
@@ -281,6 +283,9 @@ double AbstractState::T_critical(void){
 }
 double AbstractState::p_critical(void){
     return calc_p_critical();
+}
+double AbstractState::p_triple(void){
+    return calc_p_triple();
 }
 double AbstractState::rhomolar_critical(void){
     return calc_rhomolar_critical();

@@ -131,6 +131,27 @@ void HelmholtzEOSMixtureBackend::update_states(void)
     // Clear again just to be sure
     clear();
 }
+const CoolProp::SimpleState HelmholtzEOSMixtureBackend::calc_state(const std::string &state)
+{
+    if (is_pure_or_pseudopure)
+    {
+        if (!state.compare("hs_anchor")){
+            return components[0]->pEOS->hs_anchor;
+        }
+        else if (!state.compare("max_sat_T")){
+            return components[0]->pEOS->max_sat_T;
+        }
+        else if (!state.compare("max_sat_p")){
+            return components[0]->pEOS->max_sat_p;
+        }
+        else{
+            throw ValueError(format("This state [%s] is invalid to calc_state",state.c_str()));
+        }
+    }
+    else{
+        throw ValueError(format("calc_state not supported for mixtures"));
+    }
+};
 long double HelmholtzEOSMixtureBackend::calc_gas_constant(void)
 {
     double summer = 0;
@@ -373,6 +394,14 @@ long double HelmholtzEOSMixtureBackend::calc_Ttriple(void)
     double summer = 0;
     for (unsigned int i = 0; i < components.size(); ++i){
         summer += mole_fractions[i]*components[i]->pEOS->Ttriple;
+    }
+    return summer;
+}
+long double HelmholtzEOSMixtureBackend::calc_p_triple(void)
+{
+    double summer = 0;
+    for (unsigned int i = 0; i < components.size(); ++i){
+        summer += mole_fractions[i]*components[i]->pEOS->ptriple;
     }
     return summer;
 }
@@ -625,21 +654,21 @@ void HelmholtzEOSMixtureBackend::update(long input_pair, double value1, double v
 
 long double HelmholtzEOSMixtureBackend::calc_Bvirial()
 {
-    return 1/get_reducing().rhomolar*calc_alphar_deriv_nocache(0,1,mole_fractions,_tau,1e-12);
+    return 1/get_reducing_state().rhomolar*calc_alphar_deriv_nocache(0,1,mole_fractions,_tau,1e-12);
 }
 long double HelmholtzEOSMixtureBackend::calc_dBvirial_dT()
 {
-    long double dtau_dT =-get_reducing().T/pow(_T,2);
-    return 1/get_reducing().rhomolar*calc_alphar_deriv_nocache(1,1,mole_fractions,_tau,1e-12)*dtau_dT;
+    long double dtau_dT =-get_reducing_state().T/pow(_T,2);
+    return 1/get_reducing_state().rhomolar*calc_alphar_deriv_nocache(1,1,mole_fractions,_tau,1e-12)*dtau_dT;
 }
 long double HelmholtzEOSMixtureBackend::calc_Cvirial()
 {
-    return 1/pow(get_reducing().rhomolar,2)*calc_alphar_deriv_nocache(0,2,mole_fractions,_tau,1e-12);
+    return 1/pow(get_reducing_state().rhomolar,2)*calc_alphar_deriv_nocache(0,2,mole_fractions,_tau,1e-12);
 }
 long double HelmholtzEOSMixtureBackend::calc_dCvirial_dT()
 {
-    long double dtau_dT =-get_reducing().T/pow(_T,2);
-    return 1/pow(get_reducing().rhomolar,2)*calc_alphar_deriv_nocache(1,2,mole_fractions,_tau,1e-12)*dtau_dT;
+    long double dtau_dT =-get_reducing_state().T/pow(_T,2);
+    return 1/pow(get_reducing_state().rhomolar,2)*calc_alphar_deriv_nocache(1,2,mole_fractions,_tau,1e-12)*dtau_dT;
 }
 void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int other, long double value, bool &saturation_called)
 {
@@ -738,7 +767,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             case iHmolar:
             {
                 // Ancillaries are h-h_anchor, so add back h_anchor
-                long double h_liq = component.ancillaries.hL.evaluate(_TLanc) + component.EOSVector[0].hs_anchor.hmolar;
+                long double h_liq = component.ancillaries.hL.evaluate(_TLanc) + component.pEOS->hs_anchor.hmolar;
                 long double h_liq_error_band = component.ancillaries.hL.get_max_abs_error();
                 long double h_vap = h_liq + component.ancillaries.hLV.evaluate(_TLanc);
                 long double h_vap_error_band = h_liq_error_band + component.ancillaries.hLV.get_max_abs_error();
@@ -1211,8 +1240,8 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
 
 void get_dtau_ddelta(HelmholtzEOSMixtureBackend *HEOS, long double T, long double rho, int index, long double &dtau, long double &ddelta)
 {
-    long double rhor = HEOS->get_reducing().rhomolar,
-                Tr = HEOS->get_reducing().T,
+    long double rhor = HEOS->get_reducing_state().rhomolar,
+                Tr = HEOS->get_reducing_state().T,
                 dT_dtau = -pow(T, 2)/Tr,
                 R = HEOS->gas_constant(),
                 delta = rho/rhor,
@@ -1441,8 +1470,8 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         HelmholtzEOSMixtureBackend *HEOS;
 
         solver_TP_resid(HelmholtzEOSMixtureBackend *HEOS, long double T, long double p){
-            this->HEOS = HEOS; this->T = T; this->p = p; this->rhor = HEOS->get_reducing().rhomolar;
-            this->tau = HEOS->get_reducing().T/T; this->R_u = HEOS->gas_constant();
+            this->HEOS = HEOS; this->T = T; this->p = p; this->rhor = HEOS->get_reducing_state().rhomolar;
+            this->tau = HEOS->get_reducing_state().T/T; this->R_u = HEOS->gas_constant();
         };
         double call(double rhomolar){
             this->rhomolar = rhomolar;

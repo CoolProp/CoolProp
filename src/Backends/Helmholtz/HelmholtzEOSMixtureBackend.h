@@ -48,6 +48,8 @@ public:
 	bool has_melting_line(){ return is_pure_or_pseudopure && components[0]->ancillaries.melting_line.enabled();};
 	long double calc_melting_line(int param, int given, long double value);
 	int calc_phase(void){return _phase;};
+    
+    const CoolProp::SimpleState calc_state(const std::string &state);
 
     const std::vector<CoolPropFluid*> &get_components(){return components;};
     std::vector<long double> &get_K(){return K;};
@@ -141,6 +143,7 @@ public:
 	long double calc_Tmax(void);
     long double calc_pmax(void);
     long double calc_Ttriple(void);
+    long double calc_p_triple(void);
 	long double calc_pmax_sat(void);
 	long double calc_Tmax_sat(void);
 	void calc_Tmin_sat(long double &Tmin_satL, long double &Tmin_satV);
