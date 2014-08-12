@@ -16,7 +16,10 @@ import glob
 json_options = {'indent' : 2, 'sort_keys' : True}
 
 def get_hash(data):
-    return hashlib.sha224(data).hexdigest()
+    try:
+        return hashlib.sha224(data).hexdigest()
+    except TypeError:
+        return hashlib.sha224(data.encode('ascii')).hexdigest()
 
 # unicode
 repo_root_path = os.path.normpath(os.path.join(os.path.abspath(__file__), '..', '..'))
