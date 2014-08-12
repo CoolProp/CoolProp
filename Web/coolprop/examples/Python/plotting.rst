@@ -3,11 +3,6 @@
 Python Plotting
 ===============
 
-.. note::
-    The python plotting API has been changed as of v4.0. The examples shown
-    on this page use the new python plotting API. Examples using the old
-    python plotting API can be found here :ref:`python-plotting-old`.
-
 The following example can be used to create a Temperature-Entropy plot for
 propane (R290):
 
