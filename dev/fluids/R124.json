@@ -400,8 +400,22 @@
       "rhomolar": 4103.279546177282, 
       "rhomolar_units": "mol/m^3"
     }, 
-    "triple_liquid": {}, 
-    "triple_vapor": {}
+    "triple_liquid": {
+      "T": 120.0, 
+      "T_units": "K", 
+      "p": 0.026738573993065225, 
+      "p_units": "Pa", 
+      "rhomolar": 13575.607811207094, 
+      "rhomolar_units": "mol/m^3"
+    }, 
+    "triple_vapor": {
+      "T": 120.0, 
+      "T_units": "K", 
+      "p": 0.02673837899772714, 
+      "p_units": "Pa", 
+      "rhomolar": 2.6799046464180504e-05, 
+      "rhomolar_units": "mol/m^3"
+    }
   }, 
   "TRANSPORT": {
     "conductivity": {
