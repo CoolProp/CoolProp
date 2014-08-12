@@ -361,18 +361,22 @@ bool load_REFPROP()
     {
         // Load it
         #if defined(__ISWINDOWS__)
-            #if defined(ENV64BIT)
-                // 64-bit code here.
-                TCHAR refpropdllstring[100] = TEXT("refprp64.dll");
-                RefpropdllInstance = LoadLibrary(refpropdllstring);
-            #elif defined (ENV32BIT)
+            /* We need this logic on windows because if you use the bitness
+             * macros it requires that the build bitness and the target bitness 
+             * are the same which is in general not the case.  Therefore, checking
+             * both is safe
+             */
+            // First try to load the 64-bit version
+            // 64-bit code here.
+            TCHAR refpropdllstring[100] = TEXT("refprp64.dll");
+            RefpropdllInstance = LoadLibrary(refpropdllstring);
+            
+            if (RefpropdllInstance==NULL){
+                // That didn't work, let's try the 32-bit version
                 // 32-bit code here.
-                TCHAR refpropdllstring[100] = TEXT("refprop.dll");
-                RefpropdllInstance = LoadLibrary(refpropdllstring);
-            #else
-                // INCREASE ROBUSTNESS. ALWAYS THROW AN ERROR ON THE ELSE.
-                #error "Must define either ENV32BIT or ENV64BIT"
-            #endif
+                TCHAR refpropdllstring32[100] = TEXT("refprop.dll");
+                RefpropdllInstance = LoadLibrary(refpropdllstring32);
+            }
 
         #elif defined(__ISLINUX__)
             RefpropdllInstance = dlopen ("librefprop.so", RTLD_LAZY);
