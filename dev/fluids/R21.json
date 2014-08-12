@@ -237,17 +237,17 @@
         "sat_min_liquid": {
           "T": 200.0, 
           "T_units": "K", 
-          "p": 0.8728349799124349, 
+          "p": 872.8349775227838, 
           "p_units": "Pa", 
-          "rhomolar": 15359.760861872839, 
+          "rhomolar": 15359.760861872772, 
           "rhomolar_units": "mol/m^3"
         }, 
         "sat_min_vapor": {
           "T": 200.0, 
           "T_units": "K", 
-          "p": 0.8728349799124349, 
+          "p": 872.8349799237332, 
           "p_units": "Pa", 
-          "rhomolar": 0.5254904978375974, 
+          "rhomolar": 0.5254904978376088, 
           "rhomolar_units": "mol/m^3"
         }
       }, 
