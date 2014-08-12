@@ -168,7 +168,7 @@ def gitrev_to_file(root_dir):
                              stderr=subprocess.PIPE,
                              shell = True)
         stdout, stderr = p.communicate()
-        stdout = stdout.decode(sys.stdout.encoding)
+        stdout = stdout.decode('utf-8')
 
         # Include path relative to the root
         include_dir = os.path.join(root_dir,'include')
@@ -184,7 +184,7 @@ def gitrev_to_file(root_dir):
         else:
             gitrev = stdout.strip()
             
-            is_hash = ' ' in gitrev
+            is_hash = not ' ' in gitrev
                                 
             if not is_hash:
                 raise ValueError('No hash returned from call to git, got '+rev+' instead')
