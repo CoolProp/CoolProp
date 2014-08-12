@@ -161,6 +161,8 @@ cpdef PropsSI(in1, in2, in3, in4, in5, in6, in7 = None):
             __Props_err2(in1, in2, in3, in4, in5, in6)
         else:
             return val
+    elif in3 is None and in4 is None and in5 is None and in6 is None and in7 is None:
+        val = _Props1SI(in1, in2)
     else:
         return _PropsSI(in1, in2, in3, in4, in5, in6, in7)
 
