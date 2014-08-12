@@ -241,13 +241,13 @@
         "hs_anchor": {
           "T": 467.63750000000005, 
           "T_units": "K", 
-          "hmolar": 11138.845115233811, 
+          "hmolar": 47861.671413925265, 
           "hmolar_units": "J/mol", 
-          "p": 6189994.483731955, 
+          "p": 6189994.4837319525, 
           "p_units": "Pa", 
           "rhomolar": 3530.492651689028, 
           "rhomolar_units": "mol/m^3", 
-          "smolar": 3.3505266859321288, 
+          "smolar": 152.79309067928807, 
           "smolar_units": "J/mol/K"
         }, 
         "reducing": {
