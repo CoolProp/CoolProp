@@ -7,10 +7,10 @@
 namespace CoolProp{
 
 struct parameter_info
-{
-	bool trivial; ///< True if the input is trivial, and can be directly calculated (constants like critical properties, etc.)
+{	
     int key;
     std::string short_desc, IO, units, description;
+    bool trivial; ///< True if the input is trivial, and can be directly calculated (constants like critical properties, etc.)
 public:
     parameter_info(int key, std::string short_desc, std::string IO, std::string units, std::string description, bool trivial): key(key), short_desc(short_desc), IO(IO), units(units), description(description), trivial(trivial){};
 };
@@ -57,6 +57,7 @@ parameter_info parameter_info_list[] = {
 	parameter_info(iT_min, "T_min","O","K","Minimum temperature limit",true),
 	parameter_info(iP_max, "P_max","O","Pa","Maximum pressure limit",true),
 	parameter_info(iP_critical, "p_critical","O","Pa","Pressure at the critical point",true),
+    parameter_info(iP_triple, "p_triple","O","Pa","Pressure at the triple point (pure only)",true),
     parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility",false),
     parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound",false),
     parameter_info(iviscosity, "viscosity","O","Pa-s","Viscosity",false),
@@ -94,10 +95,12 @@ public:
 		index_map.insert(std::pair<std::string, int>("pcrit", iP_critical));
 		index_map.insert(std::pair<std::string, int>("Tcrit", iT_critical));
 		index_map.insert(std::pair<std::string, int>("Ttriple", iT_triple));
+        index_map.insert(std::pair<std::string, int>("ptriple", iP_triple));
 		index_map.insert(std::pair<std::string, int>("rhocrit", irhomass_critical));
 		index_map.insert(std::pair<std::string, int>("Tmin", iT_min));
 		index_map.insert(std::pair<std::string, int>("Tmax", iT_max));
 		index_map.insert(std::pair<std::string, int>("pmax", iP_max));
+        index_map.insert(std::pair<std::string, int>("molemass", imolar_mass));
     }
 };
 
