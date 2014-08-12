@@ -3,7 +3,7 @@ In this module, we do some of the preparatory work that is needed to get
 CoolProp ready to build.  This includes setting the correct versions in the 
 headers, generating the fluid files, etc.
 """
-from __future__ import division, print_function
+from __future__ import division, print_function, unicode_literals
 from datetime import datetime
 import subprocess
 import os
@@ -55,16 +55,15 @@ def TO_CPP(root_dir, hashes):
     
     for infile,outfile,variable in values:
         
-        json = open(os.path.join(root_dir,'dev',infile),'r').read()
+        json = open(os.path.join(root_dir,'dev',infile),'r').read().encode('ascii')
 
         # convert each character to hex and add a terminating NULL character to end the 
         # string, join into a comma separated string
-        if sys.version_info[0] == 2:
-            h = [hex(struct.unpack("b",b)[0]) for b in json] + ['0x00']
-        else:
-            # Encode as ASCII characters
-            json = json.encode('ascii')
-            h = [str(hex(b)) for b in json] + [str('0x00')]
+        
+        try:
+            h = ["0x{:02x}".format(ord(b)) for b in json] + ['0x00']
+        except TypeError:
+            h = ["0x{:02x}".format(int(b)) for b in json] + ['0x00']
         
         # Break up the file into lines of 16 hex characters
         chunks = to_chunks(h, 16)
