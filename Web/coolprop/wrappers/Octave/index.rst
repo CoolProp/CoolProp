@@ -6,8 +6,19 @@ Octave Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled binaries can be downloaded from XXXXXXXXXXXXXX
+Pre-compiled release binaries can be downloaded from :sfdownloads:`MATLAB`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`MATLAB`.  Download the oct file appropriate to your system.
 
+On Linux systems you can put the generated .oct file in
+``/usr/share/octave/?octave.version.number?/m`` folder. You will need superuser
+privileges to do this.
+
+If you place .oct file somewhere outside octave path, you have to use
+"addpath" function at begining of your code.
+
+Example: adding the folder that contains CoolProp.oct file to the Octave path::
+
+    addpath('/home/?user_name?/Some_folder/CoolProp')
+    
 User-Compiled Binaries
 ======================
 
@@ -76,15 +87,3 @@ On windows, you need to just slightly modify the building procedure::
 
 This building process on windows requires that make and the ``bin`` folder of Octave are on the ``PATH``.  The MinGW version of Octave conveniently also includes the MinGW C++ compiler used to build it, look inside the distribution.
 
-Usage
-=====
-On Linux systems you can put generated .oct file in
-``/usr/share/octave/?octave.version.number?/m`` folder. You will need superuser
-privileges to do this.
-
-If you place .oct file somewhere outside octave path, you have to use
-"addpath" function at begining of your code.
-
-Example: adding the folder that contains CoolProp.oct file to the Octave path::
-
-    addpath('/home/?user_name?/Some_folder/CoolProp')
