@@ -47,12 +47,8 @@ Once the dependencies are installed, you can run the installer with::
 
     # Check out the sources for CoolProp
     git clone https://github.com/CoolProp/CoolProp --recursive
-    # Move into the folder you just created
-    cd CoolProp
     # Make a build folder
-    mkdir build/EES
-    # Move into that folder
-    cd build/EES
+    mkdir CoolProp/build && cd CoolProp/build
     # Build the makefile using CMake
     cmake ../.. -DCOOLPROP_EES_MODULE=ON
     # Make the DLF file and the installer (by default installer will be generated in folder install_root/EES relative to CMakeLists.txt file)
@@ -69,7 +65,7 @@ To make and use a debug DLL, do (from root of repo)
 This will make a Visual Studio Project called CoolProp.sln.  Open the visual studio project, for the COOLPROP_EES project:
 
 1. Change the output directory to C:\\ees32\\userlib\\COOLPROP_EES (this is where the DLF will go)
-2. Under debugging, set the command to c:\\ees32\\ees
+2. Under debugging, set the command to c:\\ees32\\ees.  You can also set the arguments to the file that you want EES to open
 3. Set a breakpoint somewhere that it will get hit (in the COOLPROP_EES function for instance)
 4. Run the project, it will build and start EES, open your code or call some inputs for EES
 5. Debugger should stop at your breakpoint
