@@ -32,7 +32,7 @@ enum parameters{
     // General parameters
     imolar_mass, irhomolar_reducing, irhomolar_critical, iT_reducing, iT_critical,
 	irhomass_reducing, irhomass_critical, iP_critical, iT_triple, iP_triple, iT_min, 
-	iT_max,iP_max,
+	iT_max,iP_max, iP_min,
 
     // Bulk properties
     iT,  iP, iQ, iTau, iDelta,

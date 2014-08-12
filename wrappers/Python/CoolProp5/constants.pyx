@@ -15,6 +15,7 @@ iP_triple = constants_header.iP_triple
 iT_min = constants_header.iT_min
 iT_max = constants_header.iT_max
 iP_max = constants_header.iP_max
+iP_min = constants_header.iP_min
 iT = constants_header.iT
 iP = constants_header.iP
 iQ = constants_header.iQ

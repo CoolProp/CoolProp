@@ -45,7 +45,7 @@ public:
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
 	
-	bool has_melting_curve(){ return is_pure_or_pseudopure && components[0]->ancillaries.melting_line.enabled();};
+	bool has_melting_line(){ return is_pure_or_pseudopure && components[0]->ancillaries.melting_line.enabled();};
 	long double calc_melting_line(int param, int given, long double value);
 	int calc_phase(void){return _phase;};
 

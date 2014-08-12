@@ -16,6 +16,7 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
 		iT_min
 		iT_max
 		iP_max
+		iP_min
 		iT
 		iP
 		iQ

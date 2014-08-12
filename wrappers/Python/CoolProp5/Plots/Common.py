@@ -16,8 +16,9 @@ class BasePlot(object):
                    'P': ["Pressure", r"[kPa]"],
                    'S': ["Entropy", r"[kJ/kg/K]"],
                    'H': ["Enthalpy", r"[kJ/kg]"],
-                   'V': [],
-                   'D': ["Density", r"[kg/m$^3$]"]}
+                   'U': ["Internal Energy", r"[kJ/kg]"],
+                   'D': ["Density", r"[kg/m$^3$]"]
+                   }
 
     COLOR_MAP = {'T': 'Darkred',
                  'P': 'DarkCyan',
@@ -26,12 +27,21 @@ class BasePlot(object):
                  'S': 'DarkOrange',
                  'Q': 'black'}
 
-    SYMBOL_MAP = {'T' : [r'$T = ', r'$ K'],
-                  'P' : [r'$p = ', r'$ kPa'],
-                  'H' : [r'$h = ', r'$ kJ/kg'],
-                  'D' : [r'$\rho = ', r'$ kg/m$^3$'],
-                  'S' : [r'$s = ', r'$ kJ/kg-K'],
-                  'Q' : [r'$x = ', r'$']}
+    SYMBOL_MAP_KSI = {'T' : [r'$T = ', r'$ K'],
+                      'P' : [r'$p = ', r'$ kPa'],
+                      'H' : [r'$h = ', r'$ kJ/kg'],
+                      'U' : [r'$h = ', r'$ kJ/kg'],
+                      'D' : [r'$\rho = ', r'$ kg/m$^3$'],
+                      'S' : [r'$s = ', r'$ kJ/kg-K'],
+                      'Q' : [r'$x = ', r'$']}
+                  
+    SYMBOL_MAP_SI = {'T' : [r'$T = ', r'$ K'],
+                     'P' : [r'$p = ', r'$ Pa'],
+                     'H' : [r'$h = ', r'$ J/kg'],
+                     'U' : [r'$h = ', r'$ J/kg'],
+                     'D' : [r'$\rho = ', r'$ kg/m$^3$'],
+                     'S' : [r'$s = ', r'$ J/kg-K'],
+                     'Q' : [r'$x = ', r'$']}
 
     LINE_IDS = {'TS': ['P', 'D'], #'H'],
                 'PH': ['S', 'T', 'D'],
@@ -39,11 +49,12 @@ class BasePlot(object):
                 'PS': ['H', 'T', 'D'],
                 'PD': ['T', 'S', 'H'],
                 'TD': ['P'], #'S', 'H'],
-                'PT': ['D', 'P', 'S'],}
+                'PT': ['D', 'P', 'S'],
+                'PU': []}
 
     def __init__(self, fluid_ref, graph_type, **kwargs):
         if not isinstance(graph_type, str):
-            raise TypeError("Invalid graph_type input, expeceted a string")
+            raise TypeError("Invalid graph_type input, expected a string")
 
         graph_type = graph_type.upper()
         if len(graph_type) >= 2 and graph_type[1:len(graph_type)] == 'RHO':
@@ -51,7 +62,7 @@ class BasePlot(object):
 
         if graph_type.upper() not in self.LINE_IDS.keys():
             raise ValueError(''.join(["You have to specify the kind of ",
-                                      "plot, use ",
+                                      "plot, use one of",
                                       str(self.LINE_IDS.keys())]))
 
         self.graph_drawn = False
@@ -168,10 +179,10 @@ class BasePlot(object):
                     'y': y_vals[i],
                     'smax': smax}
 
-            line['label'] = self.SYMBOL_MAP['Q'][0] + str(x[i])
+            line['label'] = self.SYMBOL_MAP_KSI['Q'][0] + str(x[i])
             line['type'] = 'Q'
             line['value'] = x[i]
-            line['unit'] = self.SYMBOL_MAP['Q'][1]
+            line['unit'] = self.SYMBOL_MAP_KSI['Q'][1]
             line['opts'] = {'color': self.COLOR_MAP['Q'],
                             'lw': 1.0}
 

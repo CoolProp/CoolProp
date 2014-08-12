@@ -20,6 +20,20 @@ void ResidualHelmholtzPower::to_json(rapidjson::Value &el, rapidjson::Document &
     el.AddMember("t",_t,doc.GetAllocator());
     el.AddMember("l",_l,doc.GetAllocator());
 }
+long double kahanSum(std::vector<long double> &x)
+{
+    long double sum = x[0], y, t;
+    long double c = 0.0;          //A running compensation for lost low-order bits.
+    for (std::size_t i = 1; i < x.size(); ++i)
+    {
+        y = x[i] - c;    //So far, so good: c is zero.
+        t = sum + y;         //Alas, sum is big, y small, so low-order digits of y are lost.
+        c = (t - sum) - y;   //(t - sum) recovers the high-order part of y; subtracting y recovers -(low part of y)
+        sum = t;             //Algebraically, c should always be zero. Beware eagerly optimising compilers!
+    }
+    return sum;
+}
+bool wayToSort(long double i, long double j) { return std::abs(i) > std::abs(j); }
 long double ResidualHelmholtzPower::base(const long double &tau, const long double &delta) throw()
 {
     if (N==0){return 0.0;}
@@ -36,7 +50,19 @@ long double ResidualHelmholtzPower::base(const long double &tau, const long doub
             s[i] = ni*exp(ti*log_tau+di*log_delta);
         }
     }
-    return std::accumulate(s.begin(), s.end(), 0.0);
+    
+    /* 
+    Two ideas for how to reduce the summation error are to sort first and then sum, or use Kahan summation,
+    both were tried but neither results in a significant improvement
+    
+    std::vector<long double> ss = s;
+    std::sort(ss.begin(), ss.end(), wayToSort);
+    long double sum2 = std::accumulate(ss.begin(), ss.end(), 0.0);
+    long double sum3 = kahanSum(ss);
+    */
+
+    long double sum1 = std::accumulate(s.begin(), s.end(), 0.0);
+    return sum1;
 };
 long double ResidualHelmholtzPower::dDelta(const long double &tau, const long double &delta) throw()
 {

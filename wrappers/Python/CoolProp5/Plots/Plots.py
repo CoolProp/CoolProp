@@ -429,15 +429,15 @@ class IsoLines(BasePlot):
 
 
 class PropsPlot(BasePlot):
-    def __init__(self, fluid_ref, graph_type, **kwargs):
+    def __init__(self, fluid_name, graph_type, units = 'SI', reciprocal_density = False, **kwargs):
         """
         Create graph for the specified fluid properties
 
         Parameters
         -----------
-        fluid_ref : str
-            The refence fluid
-        graph_type : str
+        fluid_ref : string
+            The name of the fluid to be plotted
+        graph_type : string
             The graph type to be plotted
         axis : :func:`matplotlib.pyplot.gca()`, Optional
             The current axis system to be plotted to.
@@ -445,6 +445,10 @@ class PropsPlot(BasePlot):
         fig : :func:`matplotlib.pyplot.figure()`, Optional
             The current figure to be plotted to.
             Default: create a new figure
+        units : string, ['KSI','SI']
+            Select the units used for the plotting.  'KSI' is kPa, kJ, K; 'SI' is Pa, J, K
+        reciprocal_density : bool
+            If True, 1/rho will be plotted instead of rho
 
         Examples
         ---------
@@ -461,13 +465,15 @@ class PropsPlot(BasePlot):
 
         .. note::
 
-            See the online documentation for a the available fluids and
+            See the online documentation for a list of the available fluids and
             graph types
         """
-        BasePlot.__init__(self, fluid_ref, graph_type, **kwargs)
+        BasePlot.__init__(self, fluid_name, graph_type, **kwargs)
 
         self.smin = kwargs.get('smin', None)
         self.smax = kwargs.get('smax', None)
+        
+        self._draw_graph()
 
     def __draw_region_lines(self):
         lines = self._get_sat_lines(kind='T',
@@ -498,7 +504,7 @@ def Ts(Ref, Tmin=None, Tmax=None, show=False, axis=None, *args, **kwargs):
     Parameters
     -----------
     Ref : str
-        The given reference fluid
+        The given fluid
     Tmin : float, Optional
         Minimum limit for the saturation line
     Tmax : float, Optional

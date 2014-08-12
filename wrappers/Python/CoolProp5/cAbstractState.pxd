@@ -5,42 +5,43 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
     cdef cppclass AbstractState:
         
         ## Nullary Constructor
-        AbstractState() except +
+        AbstractState() except +ValueError
         
         ## Constructor with fluid name
-        AbstractState(string FluidName) except +
+        AbstractState(string FluidName) except +ValueError
 
         ## Property updater
         ## Uses the indices in CoolProp for the input parameters
-        void update(long iInput1, double Value1, double Value2) except +
+        void update(long iInput1, double Value1, double Value2) except +ValueError
 
         ## Bulk properties accessors - temperature and density are directly calculated every time
         ## All other parameters are calculated on an as-needed basis
         ## If single-phase, just plug into the EOS, otherwise need to do two-phase analysis
-        double T() except +
-        double rhomolar() except +
-        double p() except +
-        double hmolar() except +
-        double smolar() except +
-        double cpmolar() except +
-        double cvmolar() except +
-        double speed_sound() except +
-        double rhomass() except +
-        double hmass() except +
-        double smass() except +
-        double cpmass() except +
-        double cvmass() except +
+        double T() except +ValueError
+        double rhomolar() except +ValueError
+        double p() except +ValueError
+        double hmolar() except +ValueError
+        double smolar() except +ValueError
+        double cpmolar() except +ValueError
+        double cvmolar() except +ValueError
+        double speed_sound() except +ValueError
+        double rhomass() except +ValueError
+        double hmass() except +ValueError
+        double smass() except +ValueError
+        double cpmass() except +ValueError
+        double cvmass() except +ValueError
         
-        double keyed_output(long) except+
-        double molar_mass() except+
-        double gas_constant() except+
-        double build_phase_envelope() except+
-        double viscosity() except+
-        double conductivity() except+
-        double surface_tension() except+
+        double keyed_output(long) except+ValueError
+        double molar_mass() except+ValueError
+        double gas_constant() except+ValueError
+        double build_phase_envelope() except+ValueError
+        double viscosity() except+ValueError
+        double conductivity() except+ValueError
+        double surface_tension() except+ValueError
         
-        double melting_line(int,int,double) except+
+        double melting_line(int,int,double) except+ValueError
+        bool has_melting_line() except+ValueError
 
 # The static factory method for the AbstractState
 cdef extern from "AbstractState.h" namespace "CoolProp::AbstractState":
-    AbstractState* factory(const string &backend, const string &fluid_string) except+
+    AbstractState* factory(const string &backend, const string &fluid_string) except+ValueError

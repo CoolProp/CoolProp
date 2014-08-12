@@ -108,7 +108,7 @@ if __name__=='__main__':
 
     ## If the file is run directly without any parameters, clean, build and install
     if len(sys.argv)==1:
-       sys.argv += ['clean', 'build', 'install']
+       sys.argv += ['clean', 'develop']
         
     common_args = dict(include_dirs = include_dirs,
                        language='c++')

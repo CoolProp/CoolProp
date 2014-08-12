@@ -62,11 +62,12 @@ cdef class AbstractState:
     cpdef double speed_sound(self) except *: 
         """ Get the speed of sound in m/s - wrapper of c++ function :cpapi:`AbstractState::speed_sound` """
         return self.thisptr.speed_sound()
-    
     cpdef double molar_mass(self) except *: 
-        """ Get the molar mass kg/mol - wrapper of c++ function :cpapi:`AbstractState::molar_mass` """
+        """ Get the molar mass in kg/mol - wrapper of c++ function :cpapi:`AbstractState::molar_mass` """
         return self.thisptr.molar_mass()   
-    
     cpdef double melting_line(self, int param, int given, double value) except *: 
         """ Get values from the melting line - wrapper of c++ function :cpapi:`AbstractState::melting_line` """
         return self.thisptr.melting_line(param, given, value)
+    cpdef bool has_melting_line(self) except *: 
+        """ Check if the fluid has a melting line - True if is does, False otherwise - wrapper of c++ function :cpapi:`AbstractState::has_melting_line` """
+        return self.thisptr.has_melting_line()

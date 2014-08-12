@@ -149,7 +149,6 @@ long double HelmholtzEOSMixtureBackend::calc_molar_mass(void)
     }
     return summer;
 }
-
 long double HelmholtzEOSMixtureBackend::calc_melting_line(int param, int given, long double value)
 {
     if (is_pure_or_pseudopure)
@@ -1470,9 +1469,12 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
     {
         rhomolar_guess = solver_rho_Tp_SRK(T, p, phase);
 
-        if (phase == iphase_gas && rhomolar_guess < 0)// If the guess is bad, probably high temperature, use ideal gas
+        if (phase == iphase_gas || phase == iphase_supercritical_gas)
         {
-            rhomolar_guess = p/(gas_constant()*T);
+            if (rhomolar_guess < 0 || !ValidNumber(rhomolar_guess)) // If the guess is bad, probably high temperature, use ideal gas
+            {
+                rhomolar_guess = p/(gas_constant()*T);
+            }
         }
         else
         {

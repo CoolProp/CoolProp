@@ -311,7 +311,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 {
                     solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
                     HEOS._phase = iphase_twophase;
-                    HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax(), DBL_EPSILON, 1e-12, 100, errstring);
+                    HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax()+1, DBL_EPSILON, 1e-12, 100, errstring);
                     HEOS._Q = 10000;
                     HEOS.calc_pressure();
                 }
@@ -345,7 +345,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 {
                     solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
                     HEOS._phase = iphase_gas;
-                    HEOS._T = Brent(resid, TVtriple, HEOS.Tmax(), DBL_EPSILON, 1e-12, 100, errstring);
+                    HEOS._T = Brent(resid, TVtriple, HEOS.Tmax()+1, DBL_EPSILON, 1e-12, 100, errstring);
                     HEOS._Q = 10000;
                     HEOS.calc_pressure();
                 }
@@ -379,7 +379,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 {
                     solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
                     HEOS._phase = iphase_liquid;
-                    HEOS._T = Brent(resid, TLtriple, HEOS.Tmax(), DBL_EPSILON, 1e-12, 100, errstring);
+                    HEOS._T = Brent(resid, TLtriple, HEOS.Tmax()+1, DBL_EPSILON, 1e-12, 100, errstring);
                     HEOS._Q = 10000;
                     HEOS.calc_pressure();
                 }
@@ -498,20 +498,24 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
         long double r, eos, p, value, T, rhomolar;
         int other;
         int iter;
-        long double r0, r1, T1, T0;
+        long double r0, r1, T1, T0, pp;
         solver_resid(HelmholtzEOSMixtureBackend *HEOS, long double p, long double value, int other) : HEOS(HEOS), p(p), value(value), other(other){iter = 0;};
         double call(double T){
 
 			this->T = T;
-			
+            
 			// Specify the state to avoid saturation calls
 			HEOS->specify_phase(HEOS->phase());
 
 			// Run the solver with T,P as inputs;
 			HEOS->update(PT_INPUTS, p, T);
 			
+            rhomolar = HEOS->rhomolar();
+            HEOS->update(DmolarT_INPUTS, rhomolar, T);
 			// Get the value of the desired variable
 			eos = HEOS->keyed_output(other);
+            pp = HEOS->p();
+            
 
 			// Difference between the two is to be driven to zero
             r = eos - value;
@@ -535,7 +539,8 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
 	solver_resid resid(&HEOS, HEOS._p, value, other);
 	
 	std::string errstr;
-	Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100, errstr);
+	double T = Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100, errstr);
+    int rr = 4;
 }
 
 // P given and one of H, S, or U
@@ -574,19 +579,19 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 {
                     case iphase_gas:
                     {
-                        Tmax = HEOS.Tmax();
-                        if (saturation_called){ Tmin = HEOS.SatV->T();}else{Tmin = HEOS._TVanc.pt() + 0.5;}
+                        Tmax = HEOS.Tmax()+1;
+                        if (saturation_called){ Tmin = HEOS.SatV->T();}else{Tmin = HEOS._TVanc.pt();}
                         break;
                     }
                     case iphase_liquid:
                     {
-                        if (saturation_called){ Tmax = HEOS.SatL->T();}else{Tmax = HEOS._TLanc.pt() - 0.5;}
+                        if (saturation_called){ Tmax = HEOS.SatL->T();}else{Tmax = HEOS._TLanc.pt();}
 						
-						if (HEOS.has_melting_curve()){
-							Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p);
+						if (HEOS.has_melting_line()){
+							Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p)-1e-3;
 						}
 						else{
-							Tmin = HEOS.Tmin() + 1;
+							Tmin = HEOS.Tmin()-1e-3;
 						}
                         break;
                     }
@@ -594,12 +599,12 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                     case iphase_supercritical_gas:
                     case iphase_supercritical:
                     {
-                        Tmax = HEOS.Tmax();
-                        if (HEOS.has_melting_curve()){
-							Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p);
+                        Tmax = HEOS.Tmax()+1;
+                        if (HEOS.has_melting_line()){
+							Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p)-1e-3;
 						}
 						else{
-							Tmin = HEOS.Tmin() + 1;
+							Tmin = HEOS.Tmin()-1e-3;
 						}
                         break;
                     }

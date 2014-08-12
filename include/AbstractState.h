@@ -54,18 +54,6 @@ protected:
         return (this->_phase==iphase_twophase);
     }
 
-    //~ bool checkTwoPhase(void){
-        //~ if (!this->isCompressibleFluid()){throw ValueError(ERR_NOT_A_TWO_PHASE_FLUID);}
-        //~ if (!this->isTwoPhase()&&!_forceTwoPhase){throw ValueError(ERR_NOT_A_TWO_PHASE_STATE);}
-        //~ return true;
-    //~ }
-
-    //~ bool checkSinglePhase(void){
-        //~ if (!this->isHomogeneousPhase()||!_forceSinglePhase){throw ValueError(ERR_NOT_A_TWO_PHASE_FUNCTION);}
-        //~ return true;
-    //~ }
-
-
     /// Two important points
     SimpleState _critical, _reducing;
 
@@ -385,6 +373,9 @@ public:
     void build_phase_envelope(const std::string &type);
     //double fundamental_derivative_of_gas_dynamics(void);
 	
+    /// Return true if the fluid has a melting line - default is false, but can be re-implemented by derived class
+    virtual bool has_melting_line(void){return false;};
+    
 	double melting_line(int param, int given, double value);
 
     // ----------------------------------------

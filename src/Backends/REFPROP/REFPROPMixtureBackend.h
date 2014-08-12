@@ -93,6 +93,7 @@ public:
 
     long double calc_fugacity_coefficient(int i);
 	long double calc_melting_line(int param, int given, long double value);
+    bool has_melting_line(){return true;};
     double calc_melt_Tmax();
 	
 	/// A wrapper function to calculate the limits for the EOS

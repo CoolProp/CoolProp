@@ -411,25 +411,54 @@ int main()
         int rr = 0;
     }
     #endif
-    #if 1
+    #if 0
+    {
+        #if ENABLE_CATCH
+            std::vector<std::string> tags;
+            tags.push_back("[melting]");
+            run_user_defined_tests(tags);
+            double rr = 0;
+			char c;
+            std::cin >> c;
+        #endif
+    }
+    #endif
+    #if 0
     {
 		run_tests();
 		char c;
 		std::cin >> c;
 	}
 	#endif
-	#if 0
+    #if 0
+    {
+        double h = 193888.412582; 
+        double p = 25548108.8918;
+        double TTTs = PropsSI("T","H",h,"P",p,"Water");
+        double ddTs = PropsSI("Dmolar","H",h,"P",p,"Water");
+        double hhTs = PropsSI("H","T",TTTs,"Dmolar",ddTs,"Water");
+        double ppTs = PropsSI("P","T",TTTs,"Dmolar",ddTs,"Water");
+        int rr =1;
+    }
+    #endif
+	#if 1
 	{
 		char ykey[] = "H";
 		double Ts, y, T2, dT = -1;
 		
-		
-		shared_ptr<AbstractState> AS(AbstractState::factory("HEOS","water"));
-		double ptt = AS->melting_line(iT, iP, 138.268e6);
-		
+        double dd = PropsSI("D","Q",0,"P",0.5e-3,"n-Propane");
         
+		shared_ptr<AbstractState> Water(AbstractState::factory("REFPROP","water"));
+        Water->update(PT_INPUTS, 101325, 0);
+		double ptt = Water->melting_line(iT, iP, 138.268e6);
+        
+        Water->update(QT_INPUTS, 0.5, 300);
+        double hmolar = Water->hmolar();
+        double p = Water->p();
+        Water->update(HmolarP_INPUTS, hmolar, p);
+        double T = Water->T();
 
-		Ts = PropsSI("H","T",841.225,"P",2.86832e+007,"Water");
+		
 		std::cout << get_global_param_string("errstring");
 		y = PropsSI(ykey,"T",Ts+dT,"P",101325,"n-Propane");
 		T2 = PropsSI("T",ykey,y,"P",101325,"n-Propane");

@@ -30,3 +30,4 @@ cdef class AbstractState:
     cpdef double keyed_output(self, long) except *
     
     cpdef double melting_line(self, int, int, double) except *
+    cpdef bool has_melting_line(self) except *

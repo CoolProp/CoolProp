@@ -136,12 +136,16 @@ void MeltingLineVariables::set_limits(void)
         pmax = polynomial_in_Tr.parts.back().p_max;
 	}
 	else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE){
-		MeltingLinePiecewisePolynomialInThetaSegment &partmin = polynomial_in_Theta.parts[0];
-		MeltingLinePiecewisePolynomialInThetaSegment &partmax = polynomial_in_Theta.parts[polynomial_in_Theta.parts.size()-1];
-		Tmin = partmin.T_0;
-		Tmax = partmax.T_max;
-		pmin = partmin.p_0;
-		//pmax = evaluate(iP, iT, Tmax);
+        // Fill in the min and max pressures for each part
+        for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i){
+            MeltingLinePiecewisePolynomialInThetaSegment &part = polynomial_in_Theta.parts[i];
+            part.p_min = part.evaluate(part.T_min);
+            part.p_max = part.evaluate(part.T_max);
+        }
+        Tmin = polynomial_in_Theta.parts.front().T_min;
+        pmin = polynomial_in_Theta.parts.front().p_min;
+		Tmax = polynomial_in_Theta.parts.back().T_max;
+        pmax = polynomial_in_Theta.parts.back().p_max;
 	}
 	else{
 		throw ValueError("only Simon supported now");
@@ -151,7 +155,11 @@ void MeltingLineVariables::set_limits(void)
 long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
 {
 	if (type == MELTING_LINE_NOT_SET){throw ValueError("Melting line curve not set");}
-	if (OF == iP && GIVEN == iT){
+    if (OF == iP_max){ return pmax;}
+    else if (OF == iP_min){ return pmin;}
+    else if (OF == iT_max){ return Tmax;}
+    else if (OF == iT_min){ return Tmin;}
+	else if (OF == iP && GIVEN == iT){
 		long double T = value;
 		if (type == MELTING_LINE_SIMON_TYPE){
 			// Need to find the right segment
@@ -178,11 +186,7 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
 			for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i){
 				MeltingLinePiecewisePolynomialInThetaSegment &part = polynomial_in_Theta.parts[i];
 				if (is_in_closed_range(part.T_min, part.T_max, T)){
-					long double summer = 0;
-					for (std::size_t i =0; i < part.a.size(); ++i){
-						summer += part.a[i]*pow(T/part.T_0-1,part.t[i]);
-					}
-					return part.p_0*(1+summer);
+					return part.evaluate(T);
 				}
 			}
 			throw ValueError("unable to calculate melting line (p,T) for polynomial_in_Theta curve");
@@ -202,7 +206,7 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
 					return T;
 				}
 			}
-			throw ValueError("unable to calculate melting line p(T) for Simon curve");
+			throw ValueError(format("unable to calculate melting line T(p) for Simon curve for p=%g; bounds are %g,%g Pa", value, pmin, pmax));
 		}
 		else if (type == MELTING_LINE_POLYNOMIAL_IN_TR_TYPE)
 		{
@@ -224,9 +228,9 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
 					return r;
 				};
 			};
-
-			// Need to find the right segment
-			for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i){
+            
+            // Need to find the right segment
+            for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i){
                 MeltingLinePiecewisePolynomialInTrSegment &part = polynomial_in_Tr.parts[i];
                 if (is_in_closed_range(part.p_min, part.p_max, value)){
                     std::string errstr;
@@ -235,7 +239,42 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
                     return T;
                 }
             }
-            throw ValueError("unable to calculate melting line T(p) for polynomial_in_Tr curve");
+            throw ValueError(format("unable to calculate melting line T(p) for polynomial_in_Theta curve for p=%g; bounds are %g,%g Pa", value, pmin, pmax));
+        }
+        else if (type == MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE)
+        {
+            
+            class solver_resid : public FuncWrapper1D
+			{
+			public:
+				MeltingLinePiecewisePolynomialInThetaSegment *part;
+				long double r, given_p, calc_p, T;
+				solver_resid(MeltingLinePiecewisePolynomialInThetaSegment *part, long double p) : part(part), given_p(p){};
+				double call(double T){
+
+					this->T = T;
+
+					calc_p = part->evaluate(T);
+
+					// Difference between the two is to be driven to zero
+					r = given_p - calc_p;
+
+					return r;
+				};
+			};
+            
+            // Need to find the right segment
+            for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i){
+                MeltingLinePiecewisePolynomialInThetaSegment &part = polynomial_in_Theta.parts[i];
+                if (is_in_closed_range(part.p_min, part.p_max, value)){
+                    std::string errstr;
+                    solver_resid resid(&part, value);
+                    double T = Brent(resid, part.T_min, part.T_max, DBL_EPSILON, 1e-12, 100, errstr);
+                    return T;
+                }
+            }
+            
+            throw ValueError(format("unable to calculate melting line T(p) for polynomial_in_Theta curve for p=%g; bounds are %g,%g Pa", value, pmin, pmax));
 		}
 		else{
 			throw ValueError(format("Invalid melting line type T(p) [%d]",type));
@@ -246,7 +285,7 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
 }; /* namespace CoolProp */
 
 #if defined(ENABLE_CATCH)
-TEST_CASE("Water melting line", "")
+TEST_CASE("Water melting line", "[melting]")
 {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS","water"));
     int iT = CoolProp::iT, iP = CoolProp::iP;
@@ -281,6 +320,50 @@ TEST_CASE("Water melting line", "")
         CAPTURE(actual);
         CAPTURE(expected);
         CHECK(std::abs(actual-expected) < 1);
+    }
+}
+
+TEST_CASE("Tests for values from melting lines", "[melting]")
+{
+    int iT = CoolProp::iT, iP = CoolProp::iP;
+    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+    for (std::size_t i = 0; i < fluids.size(); ++i) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS",fluids[i]));
+        
+        // Water has its own better tests; skip fluids without melting line
+        if (!AS->has_melting_line() || !fluids[i].compare("Water")){continue;}
+        
+        double pmax = AS->melting_line(CoolProp::iP_max, iT, 0);
+        double pmin = AS->melting_line(CoolProp::iP_min, iT, 0);
+        double Tmax = AS->melting_line(CoolProp::iT_max, iT, 0);
+        double Tmin = AS->melting_line(CoolProp::iT_min, iT, 0);
+        
+        // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+        std::ostringstream ss0;
+        ss0 << "Check melting line limits for fluid " << fluids[i];
+        SECTION(ss0.str(),"")
+        {
+            CAPTURE(Tmin);
+            CAPTURE(Tmax);
+            CAPTURE(pmin);
+            CAPTURE(pmax);
+            CHECK(Tmax > Tmin);
+            CHECK(pmax > pmin);
+        }
+        for (double p = 0.1*(pmax-pmin) + pmin; p < pmax; p += 0.2*(pmax-pmin)){
+            // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+            std::ostringstream ss1;
+            ss1 << "Melting line for " << fluids[i] << " at p=" << p;
+            SECTION(ss1.str(),"")
+            {
+                double actual_T = AS->melting_line(iT, iP, p);
+                CAPTURE(Tmin);
+                CAPTURE(Tmax);
+                CAPTURE(actual_T);
+                CHECK(actual_T > Tmin);
+                CHECK(actual_T < Tmax);
+            }   
+        }
     }
 }
 #endif

@@ -488,11 +488,9 @@ static int inputs[] = {
     CoolProp::DmolarSmolar_INPUTS,
     CoolProp::DmolarUmolar_INPUTS,
 
-    //CoolProp::HmolarP_INPUTS,
-    //CoolProp::PSmolar_INPUTS,
-    /*
+    CoolProp::HmolarP_INPUTS,
+    CoolProp::PSmolar_INPUTS,
     CoolProp::PUmolar_INPUTS,
-    */
 
     /*
     CoolProp::HmolarSmolar_INPUTS,
