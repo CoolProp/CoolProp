@@ -26,6 +26,7 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
 cdef extern from "CoolProp.h" namespace "CoolProp":
     double _PropsSI "CoolProp::PropsSI"(string Output, string Name1, double Prop1, string Name2, double Prop2, string FluidName) 
     vector[double] _PropsSI "CoolProp::PropsSI"(string Output, string Name1, vector[double] Prop1, string Name2, vector[double] Prop2, string FluidName, vector[double] fractions)
+    vector[double] _PropsSII "CoolProp::PropsSI"(string Output, string Name1, vector[double] Prop1, string Name2, vector[double] Prop2, string FluidName)
     string _get_global_param_string "CoolProp::get_global_param_string"(string ParamName) except +
     
     double _Props1SI "CoolProp::Props1SI"(string Ref, string Output)

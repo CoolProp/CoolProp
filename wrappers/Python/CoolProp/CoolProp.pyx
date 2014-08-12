@@ -24,11 +24,15 @@ from libcpp.vector cimport vector
 from constants import *
 from constants_header cimport *
 
-cpdef bint iterable(object a):
+cdef bint iterable(object a):
+    """
+    If numpy is supported, this function retuns true if the argument is a 
+    numpy array or another iterable, otherwise just checks if list or tuple
+    """
     if _numpy_supported:
-        return isinstance(a,(list,tuple, np.ndarray))
+        return isinstance(a,(list, tuple, np.ndarray))
     else:
-        return isinstance(a,(list,tuple))
+        return isinstance(a,(list, tuple))
 
 cpdef ndarray_or_iterable(object input):
     if _numpy_supported:
@@ -128,13 +132,13 @@ cpdef get_global_param_string(string param):
      
 cpdef get_fluid_param_string(string_like fluid, string_like param):
     return _get_fluid_param_string(fluid, param)
-#     
-# cpdef __Props_err1(in1,in2,errstr):
-#     if not len(errstr) == 0:
-#         raise ValueError("{err:s} :: inputs were :\"{in1:s}\",\"{in2:s}\"".format(err= errstr,in1=in1,in2=in2))
-#     else:
-#         raise ValueError("Props failed ungracefully with inputs:\"{in1:s}\",\"{in2:s}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(in1=in1,in2=in2))
-#         
+     
+cpdef __Props_err1(in1,in2):
+    errstr = _get_global_param_string('errstring')
+    if not len(errstr) == 0:
+        raise ValueError("{err:s} :: inputs were :\"{in1:s}\",\"{in2:s}\"".format(err= errstr,in1=in1,in2=in2))
+    else:
+        raise ValueError("Props failed ungracefully with inputs:\"{in1:s}\",\"{in2:s}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(in1=in1,in2=in2))
 cpdef __Props_err2(in1, in2, in3, in4, in5, in6):
     errstr = _get_global_param_string('errstring')
     if not len(errstr) == 0:
@@ -150,20 +154,32 @@ cpdef __Props_err2(in1, in2, in3, in4, in5, in6):
 #         return _Props(in1, in2, in3, in4, in5, in6) 
 #     else:
 #         return _Props(in1, in2, in3, in4, in5, in6, in7)
+
 cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = None):
     """
     $$PropsSI$$
     """ 
     cdef double val
+    
+    # Two parameter inputs
     if in3 is None and in4 is None and in5 is None and in6 is None and in7 is None:
         val = _Props1SI(in1, in2)
-        return val
-    elif in7 is None:
-        val = _PropsSI(in1, in2, in3, in4, in5, in6)
-        if not iterable(val) and not _ValidNumber(val): 
-            __Props_err2(in1, in2, in3, in4, in5, in6)
+        if not _ValidNumber(val):
+            __Props_err1(in1, in2)
         else:
             return val
+    # Six parameter inputs
+    elif in7 is None:
+        if iterable(in3) and iterable(in5):
+            # This version takes iterables
+            return _PropsSII(in1, in2, in3, in4, in5, in6)
+        else:
+            # This version takes doubles
+            val = _PropsSI(in1, in2, in3, in4, in5, in6)
+            if not _ValidNumber(val):
+                __Props_err2(in1, in2, in3, in4, in5, in6)
+            else:
+                return val
     else:
         return _PropsSI(in1, in2, in3, in4, in5, in6, in7)
 

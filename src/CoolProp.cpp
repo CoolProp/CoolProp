@@ -445,6 +445,10 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
 	}
 	#endif
 }
+std::vector<double> PropsSI(const std::string &Output, const std::string &Name1, const std::vector<double> &Prop1, const std::string &Name2, const std::vector<double> Prop2, const std::string &FluidName)
+{
+    return PropsSI(Output, Name1, Prop1, Name2, Prop2, FluidName, std::vector<double>(1,1));
+}
 std::vector<double> PropsSI(const std::string &Output, const std::string &Name1, const std::vector<double> &Prop1, const std::string &Name2, const std::vector<double> Prop2, const std::string &Ref, const std::vector<double> &z)
 {
     std::vector<double> out(Prop1.size(), _HUGE);

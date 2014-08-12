@@ -445,10 +445,12 @@ int main()
 	{
 		char ykey[] = "H";
 		double Ts, y, T2, dT = -1;
-		
+		double dd0 = CoolProp::Props1SI("Tmax","n-Propane");
+        double dd1 = CoolProp::Props1SI("n-Propane","Tmax");
+        
         double dd = PropsSI("D","Q",0,"P",0.5e-3,"n-Propane");
         
-		shared_ptr<AbstractState> Water(AbstractState::factory("REFPROP","water"));
+		shared_ptr<AbstractState> Water(AbstractState::factory("HEOS","water"));
         Water->update(PT_INPUTS, 101325, 0);
 		double ptt = Water->melting_line(iT, iP, 138.268e6);
         

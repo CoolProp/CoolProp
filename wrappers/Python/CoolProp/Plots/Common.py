@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import matplotlib
 import numpy
@@ -8,7 +8,6 @@ import numpy
 import CoolProp.CoolProp as CP
 
 SMALL = 1E-5
-
 
 class BasePlot(object):
     #TODO: Simplify / Consolidate dictionary maps
@@ -27,6 +26,15 @@ class BasePlot(object):
                  'S': 'DarkOrange',
                  'Q': 'black'}
 
+    #: Scale factors to multiply SI units by in order to obtain kSI units
+    KSI_SCALE_FACTOR = {'T' : 1.0,
+                        'P' : 0.001,
+                        'H' : 0.001,
+                        'U' : 0.001,
+                        'D' : 1,
+                        'S' : 0.001,
+                        'Q' : 1.0}
+                      
     SYMBOL_MAP_KSI = {'T' : [r'$T = ', r'$ K'],
                       'P' : [r'$p = ', r'$ kPa'],
                       'H' : [r'$h = ', r'$ kJ/kg'],
@@ -52,7 +60,7 @@ class BasePlot(object):
                 'PT': ['D', 'P', 'S'],
                 'PU': []}
 
-    def __init__(self, fluid_ref, graph_type, **kwargs):
+    def __init__(self, fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
         if not isinstance(graph_type, str):
             raise TypeError("Invalid graph_type input, expected a string")
 
@@ -68,6 +76,7 @@ class BasePlot(object):
         self.graph_drawn = False
         self.fluid_ref = fluid_ref
         self.graph_type = graph_type.upper()
+        self.unit_system = unit_system
 
         self.axis = kwargs.get('axis', None)
         if self.axis is None:
@@ -89,8 +98,8 @@ class BasePlot(object):
             name = 'temperature'
             min_key = 'Tmin'
 
-        fluid_min = CP.Props(self.fluid_ref, min_key)
-        fluid_crit = CP.Props(self.fluid_ref, ''.join([kind, 'crit']))
+        fluid_min = CP.PropsSI(self.fluid_ref, min_key)
+        fluid_crit = CP.PropsSI(self.fluid_ref, ''.join([kind, 'crit']))
 
         if smin is None:
             smin = fluid_min + SMALL
@@ -126,13 +135,13 @@ class BasePlot(object):
         y_vals = []
         x_vals = []
 
+        # Calculate the values in SI units
         for i, p1_val in enumerate(prop1_vals):
             x_vals.append(prop2_vals[i])
-            y_vals.append(CP.Props(req_prop,
-                                   prop1_name, p1_val,
-                                   prop2_name, prop2_vals[i],
-                                   self.fluid_ref))
-
+            y_vals.append(CP.PropsSI(req_prop,
+                                     prop1_name, [p1_val]*len(prop2_vals[i]), # Convert to an iterable the same size as second input array
+                                     prop2_name, prop2_vals[i],
+                                     self.fluid_ref))
         return numpy.array([x_vals, y_vals])
 
     def _get_sat_lines(self, kind='T', smin=None,
@@ -169,6 +178,10 @@ class BasePlot(object):
             _, y_vals = self._get_fluid_data(self.graph_type[0],
                                              'Q', x,
                                              kind, sat_mesh)
+                                             
+        if self.unit_system == 'KSI':
+            x_vals *= self.KSI_SCALE_FACTOR[self.graph_type[1]]
+            y_vals *= self.KSI_SCALE_FACTOR[self.graph_type[0]]
 
         # Merge the two lines, capital Y holds important information.
         # We merge on X values

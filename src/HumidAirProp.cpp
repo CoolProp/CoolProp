@@ -362,11 +362,9 @@ static double dC_m_dT(double T, double psi_w)
 {
     // dCm_dT has units of m^6/mol^2/K
 
-    double Tj,tau_Air,tau_Water,dC_dT_aaa,dC_dT_www,dC_dT_aww,dC_dT_aaw;
+    double Tj,dC_dT_aaa,dC_dT_www,dC_dT_aww,dC_dT_aaw;
     // NDG for fluid EOS for virial terms
     Tj=132.6312;
-    tau_Air=Tj/T;
-    tau_Water=Water->keyed_output(CoolProp::iT_reducing)/T;
     if (FlagUseVirialCorrelations)
     {
         dC_dT_aaa=-2.46582342273e-10 +4.425401935447e-12*T -3.669987371644e-14*pow(T,2) +1.765891183964e-16*pow(T,3) -5.240097805744e-19*pow(T,4) +9.502177003614e-22*pow(T,5) -9.694252610339e-25*pow(T,6) +4.276261986741e-28*pow(T,7);

@@ -117,7 +117,7 @@ bool is_trivial_parameter(int key)
     }
     else
     {
-        throw ValueError(format("Unable to match the key [%d] in is_trivial_parameter",key));
+        throw ValueError(format("Unable to match the key [%d: %s] in is_trivial_parameter",key, get_parameter_information(key, "short").c_str()));
     }
 }
 

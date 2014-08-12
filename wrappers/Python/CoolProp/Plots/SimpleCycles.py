@@ -1,8 +1,7 @@
 import matplotlib,numpy
 
-from CoolProp.CoolProp import Props
+from CoolProp.CoolProp import PropsSI
 from scipy.optimize import newton
-
 
 def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     """
@@ -29,23 +28,23 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     p=numpy.zeros_like(T)
     s=numpy.zeros_like(T)
     T[1]=Te+DTsh
-    pe=Props('P','T',Te,'Q',1.0,Ref)
-    pc=Props('P','T',Tc,'Q',1.0,Ref)
-    h[1]=Props('H','T',T[1],'P',pe,Ref)
-    s[1]=Props('S','T',T[1],'P',pe,Ref)
-    T2s=newton(lambda T: Props('S','T',T,'P',pc,Ref)-s[1],T[1]+30)
-    h2s=Props('H','T',T2s,'P',pc,Ref)
+    pe=PropsSI('P','T',Te,'Q',1.0,Ref)
+    pc=PropsSI('P','T',Tc,'Q',1.0,Ref)
+    h[1]=PropsSI('H','T',T[1],'P',pe,Ref)
+    s[1]=PropsSI('S','T',T[1],'P',pe,Ref)
+    T2s=newton(lambda T: PropsSI('S','T',T,'P',pc,Ref)-s[1],T[1]+30)
+    h2s=PropsSI('H','T',T2s,'P',pc,Ref)
     h[2]=(h2s-h[1])/eta_a+h[1]
-    T[2]=Props('T','H',h[2],'P',pc,Ref)
-    s[2]=Props('S','T',T[2],'P',pc,Ref)
+    T[2]=PropsSI('T','H',h[2],'P',pc,Ref)
+    s[2]=PropsSI('S','T',T[2],'P',pc,Ref)
 
-    sbubble_c=Props('S','P',pc,'Q',0,Ref)
-    sdew_c=Props('S','P',pc,'Q',1,Ref)
-    sbubble_e=Props('S','P',pe,'Q',0,Ref)
-    sdew_e=Props('S','P',pe,'Q',1,Ref)
+    sbubble_c=PropsSI('S','P',pc,'Q',0,Ref)
+    sdew_c=PropsSI('S','P',pc,'Q',1,Ref)
+    sbubble_e=PropsSI('S','P',pe,'Q',0,Ref)
+    sdew_e=PropsSI('S','P',pe,'Q',1,Ref)
     T[3]=Tc-DTsc
-    h[3]=Props('H','T',T[3],'P',pc,Ref)
-    s[3]=Props('S','T',T[3],'P',pc,Ref)
+    h[3]=PropsSI('H','T',T[3],'P',pc,Ref)
+    s[3]=PropsSI('S','T',T[3],'P',pc,Ref)
     h[4]=h[3]
     h[5]=h[1]
     s[5]=s[1]
@@ -54,12 +53,12 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     COP=(h[1]-h[4])/(h[2]-h[1])
     COPH=(h[2]-h[3])/(h[2]-h[1])
 
-    hsatL=Props('H','T',Te,'Q',0,Ref)
-    hsatV=Props('H','T',Te,'Q',1,Ref)
-    ssatL=Props('S','T',Te,'Q',0,Ref)
-    ssatV=Props('S','T',Te,'Q',1,Ref)
-    vsatL=1/Props('D','T',Te,'Q',0,Ref)
-    vsatV=1/Props('D','T',Te,'Q',1,Ref)
+    hsatL=PropsSI('H','T',Te,'Q',0,Ref)
+    hsatV=PropsSI('H','T',Te,'Q',1,Ref)
+    ssatL=PropsSI('S','T',Te,'Q',0,Ref)
+    ssatV=PropsSI('S','T',Te,'Q',1,Ref)
+    vsatL=1/PropsSI('D','T',Te,'Q',0,Ref)
+    vsatV=1/PropsSI('D','T',Te,'Q',1,Ref)
     x=(h[4]-hsatL)/(hsatV-hsatL)
     s[4]=x*ssatV+(1-x)*ssatL
     T[4]=x*Te+(1-x)*Te
@@ -117,52 +116,52 @@ def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=
     T[0]=numpy.NAN
     s[0]=numpy.NAN
     T[1]=Te+DTsh
-    pe=Props('P','T',Te,'Q',1.0,Ref)
-    pc=Props('P','T',Tc,'Q',1.0,Ref)
-    pic=Props('P','T',Tsat_ic,'Q',1.0,Ref)
-    Tbubble_c=Props('T','P',pc,'Q',0,Ref)
-    Tbubble_e=Props('T','P',pe,'Q',0,Ref)
+    pe=PropsSI('P','T',Te,'Q',1.0,Ref)
+    pc=PropsSI('P','T',Tc,'Q',1.0,Ref)
+    pic=PropsSI('P','T',Tsat_ic,'Q',1.0,Ref)
+    Tbubble_c=PropsSI('T','P',pc,'Q',0,Ref)
+    Tbubble_e=PropsSI('T','P',pe,'Q',0,Ref)
 
-    h[1]=Props('H','T',T[1],'P',pe,Ref)
-    s[1]=Props('S','T',T[1],'P',pe,Ref)
-    rho[1]=Props('D','T',T[1],'P',pe,Ref)
+    h[1]=PropsSI('H','T',T[1],'P',pe,Ref)
+    s[1]=PropsSI('S','T',T[1],'P',pe,Ref)
+    rho[1]=PropsSI('D','T',T[1],'P',pe,Ref)
     T[5]=Tbubble_c-DTsc
-    h[5]=Props('H','T',T[5],'P',pc,Ref)
-    s[5]=Props('S','T',T[5],'P',pc,Ref)
-    rho[5]=Props('D','T',T[5],'P',pc,Ref)
+    h[5]=PropsSI('H','T',T[5],'P',pc,Ref)
+    s[5]=PropsSI('S','T',T[5],'P',pc,Ref)
+    rho[5]=PropsSI('D','T',T[5],'P',pc,Ref)
     mdot=Q/(h[1]-h[5])
 
-    rho1=Props('D','T',T[1],'P',pe,Ref)
-    h2s=Props('H','S',s[1],'P',pic,Ref)
+    rho1=PropsSI('D','T',T[1],'P',pe,Ref)
+    h2s=PropsSI('H','S',s[1],'P',pic,Ref)
     Wdot1=mdot*(h2s-h[1])/eta_oi
     h[2]=h[1]+(1-f_p)*Wdot1/mdot
-    T[2]=Props('T','H',h[2],'P',pic,Ref)
-    s[2]=Props('S','T',T[2],'P',pic,Ref)
-    rho[2]=Props('D','T',T[2],'P',pic,Ref)
+    T[2]=PropsSI('T','H',h[2],'P',pic,Ref)
+    s[2]=PropsSI('S','T',T[2],'P',pic,Ref)
+    rho[2]=PropsSI('D','T',T[2],'P',pic,Ref)
     T[3]=288
     p[3]=pic
-    h[3]=Props('H','T',T[3],'P',pic,Ref)
-    s[3]=Props('S','T',T[3],'P',pic,Ref)
-    rho[3]=Props('D','T',T[3],'P',pic,Ref)
-    rho3=Props('D','T',T[3],'P',pic,Ref)
-    h4s=Props('H','T',s[3],'P',pc,Ref)
+    h[3]=PropsSI('H','T',T[3],'P',pic,Ref)
+    s[3]=PropsSI('S','T',T[3],'P',pic,Ref)
+    rho[3]=PropsSI('D','T',T[3],'P',pic,Ref)
+    rho3=PropsSI('D','T',T[3],'P',pic,Ref)
+    h4s=PropsSI('H','T',s[3],'P',pc,Ref)
     Wdot2=mdot*(h4s-h[3])/eta_oi
     h[4]=h[3]+(1-f_p)*Wdot2/mdot
-    T[4]=Props('T','H',h[4],'P',pc,Ref)
-    s[4]=Props('S','T',T[4],'P',pc,Ref)
-    rho[4]=Props('D','T',T[4],'P',pc,Ref)
+    T[4]=PropsSI('T','H',h[4],'P',pc,Ref)
+    s[4]=PropsSI('S','T',T[4],'P',pc,Ref)
+    rho[4]=PropsSI('D','T',T[4],'P',pc,Ref)
 
-    sbubble_e=Props('S','T',Tbubble_e,'Q',0,Ref)
-    sbubble_c=Props('S','T',Tbubble_c,'Q',0,Ref)
-    sdew_e=Props('S','T',Te,'Q',1,Ref)
-    sdew_c=Props('S','T',Tc,'Q',1,Ref)
+    sbubble_e=PropsSI('S','T',Tbubble_e,'Q',0,Ref)
+    sbubble_c=PropsSI('S','T',Tbubble_c,'Q',0,Ref)
+    sdew_e=PropsSI('S','T',Te,'Q',1,Ref)
+    sdew_c=PropsSI('S','T',Tc,'Q',1,Ref)
 
-    hsatL=Props('H','T',Tbubble_e,'Q',0,Ref)
-    hsatV=Props('H','T',Te,'Q',1,Ref)
-    ssatL=Props('S','T',Tbubble_e,'Q',0,Ref)
-    ssatV=Props('S','T',Te,'Q',1,Ref)
-    vsatL=1/Props('D','T',Tbubble_e,'Q',0,Ref)
-    vsatV=1/Props('D','T',Te,'Q',1,Ref)
+    hsatL=PropsSI('H','T',Tbubble_e,'Q',0,Ref)
+    hsatV=PropsSI('H','T',Te,'Q',1,Ref)
+    ssatL=PropsSI('S','T',Tbubble_e,'Q',0,Ref)
+    ssatV=PropsSI('S','T',Te,'Q',1,Ref)
+    vsatL=1/PropsSI('D','T',Tbubble_e,'Q',0,Ref)
+    vsatV=1/PropsSI('D','T',Te,'Q',1,Ref)
     x=(h[5]-hsatL)/(hsatV-hsatL)
     s[6]=x*ssatV+(1-x)*ssatL
     T[6]=x*Te+(1-x)*Tbubble_e
@@ -257,25 +256,25 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     T[0]=numpy.NAN
     s[0]=numpy.NAN
     T[1]=Te+DTsh
-    pe=Props('P','T',Te,'Q',1.0,Ref)
-    pc=Props('P','T',Tc,'Q',1.0,Ref)
-    pi=Props('P','T',Ti,'Q',1.0,Ref)
+    pe=PropsSI('P','T',Te,'Q',1.0,Ref)
+    pc=PropsSI('P','T',Tc,'Q',1.0,Ref)
+    pi=PropsSI('P','T',Ti,'Q',1.0,Ref)
     p[1]=pe
-    h[1]=Props('H','T',T[1],'P',pe,Ref)
-    s[1]=Props('S','T',T[1],'P',pe,Ref)
-    rho[1]=Props('D','T',T[1],'P',pe,Ref)
-    h2s=Props('H','S',s[1],'P',pi,Ref)
+    h[1]=PropsSI('H','T',T[1],'P',pe,Ref)
+    s[1]=PropsSI('S','T',T[1],'P',pe,Ref)
+    rho[1]=PropsSI('D','T',T[1],'P',pe,Ref)
+    h2s=PropsSI('H','S',s[1],'P',pi,Ref)
     wdot1=(h2s-h[1])/eta_oi
     h[2]=h[1]+(1-f_p[0])*wdot1
     p[2]=pi
     T[2]=T_hp(Ref,h[2],pi,T2s)
-    s[2]=Props('S','T',T[2],'P',pi,Ref)
-    rho[2]=Props('D','T',T[2],'P',pi,Ref)
+    s[2]=PropsSI('S','T',T[2],'P',pi,Ref)
+    rho[2]=PropsSI('D','T',T[2],'P',pi,Ref)
 
     T[5]=Tc-DTsc
-    h[5]=Props('H','T',T[5],'P',pc,Ref)
-    s[5]=Props('S','T',T[5],'P',pc,Ref)
-    rho[5]=Props('D','T',T[5],'P',pc,Ref)
+    h[5]=PropsSI('H','T',T[5],'P',pc,Ref)
+    s[5]=PropsSI('S','T',T[5],'P',pc,Ref)
+    rho[5]=PropsSI('D','T',T[5],'P',pc,Ref)
 
     p[5]=pc
     p[6]=pi
@@ -285,13 +284,13 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     p[8]=pi
     p[6]=pi
     T[7]=Ti
-    h[7]=Props('H','T',Ti,'Q',1,Ref)
-    s[7]=Props('S','T',Ti,'Q',1,Ref)
-    rho[7]=Props('D','T',Ti,'Q',1,Ref)
+    h[7]=PropsSI('H','T',Ti,'Q',1,Ref)
+    s[7]=PropsSI('S','T',Ti,'Q',1,Ref)
+    rho[7]=PropsSI('D','T',Ti,'Q',1,Ref)
     T[8]=Ti
-    h[8]=Props('H','T',Ti,'Q',0,Ref)
-    s[8]=Props('S','T',Ti,'Q',0,Ref)
-    rho[8]=Props('D','T',Ti,'Q',0,Ref)
+    h[8]=PropsSI('H','T',Ti,'Q',0,Ref)
+    s[8]=PropsSI('S','T',Ti,'Q',0,Ref)
+    rho[8]=PropsSI('D','T',Ti,'Q',0,Ref)
     x6=(h[6]-h[8])/(h[7]-h[8]) #Vapor Quality
     s[6]=s[7]*x6+s[8]*(1-x6)
     rho[6]=1.0/(x6/rho[7]+(1-x6)/rho[8])
@@ -304,26 +303,26 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     p[3]=pi
     h[3]=(m*h[2]+x*h[7])/(m+x)
     T[3]=T_hp(Ref,h[3],pi,T[2])
-    s[3]=Props('S','T',T[3],'P',pi,Ref)
-    rho[3]=Props('D','T',T[3],'P',pi,Ref)
-    T4s=newton(lambda T: Props('S','T',T,'P',pc,Ref)-s[3],T[2]+30)
-    h4s=Props('H','T',T4s,'P',pc,Ref)
+    s[3]=PropsSI('S','T',T[3],'P',pi,Ref)
+    rho[3]=PropsSI('D','T',T[3],'P',pi,Ref)
+    T4s=newton(lambda T: PropsSI('S','T',T,'P',pc,Ref)-s[3],T[2]+30)
+    h4s=PropsSI('H','T',T4s,'P',pc,Ref)
     p[4]=pc
     wdot2=(h4s-h[3])/eta_oi
     h[4]=h[3]+(1-f_p[1])*wdot2
     T[4]=T_hp(Ref,h[4],pc,T4s)
-    s[4]=Props('S','T',T[4],'P',pc,Ref)
-    rho[4]=Props('D','T',T[4],'P',pc,Ref)
+    s[4]=PropsSI('S','T',T[4],'P',pc,Ref)
+    rho[4]=PropsSI('D','T',T[4],'P',pc,Ref)
 
     p[9]=pe
     h[9]=h[8]
     T[9]=Te
-    hsatL_e=Props('H','T',Te,'Q',0,Ref)
-    hsatV_e=Props('H','T',Te,'Q',1,Ref)
-    ssatL_e=Props('S','T',Te,'Q',0,Ref)
-    ssatV_e=Props('S','T',Te,'Q',1,Ref)
-    vsatL_e=1/Props('D','T',Te,'Q',0,Ref)
-    vsatV_e=1/Props('D','T',Te,'Q',1,Ref)
+    hsatL_e=PropsSI('H','T',Te,'Q',0,Ref)
+    hsatV_e=PropsSI('H','T',Te,'Q',1,Ref)
+    ssatL_e=PropsSI('S','T',Te,'Q',0,Ref)
+    ssatV_e=PropsSI('S','T',Te,'Q',1,Ref)
+    vsatL_e=1/PropsSI('D','T',Te,'Q',0,Ref)
+    vsatV_e=1/PropsSI('D','T',Te,'Q',1,Ref)
     x9=(h[9]-hsatL_e)/(hsatV_e-hsatL_e) #Vapor Quality
     s[9]=ssatV_e*x9+ssatL_e*(1-x9)
     rho[9]=1.0/(x9*vsatV_e+(1-x9)*vsatL_e)
@@ -335,10 +334,10 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 
     Tbubble_e=Te
     Tbubble_c=Tc
-    sbubble_e=Props('S','T',Tbubble_e,'Q',0,Ref)
-    sbubble_c=Props('S','T',Tbubble_c,'Q',0,Ref)
-    sdew_e=Props('S','T',Te,'Q',1,Ref)
-    sdew_c=Props('S','T',Tc,'Q',1,Ref)
+    sbubble_e=PropsSI('S','T',Tbubble_e,'Q',0,Ref)
+    sbubble_c=PropsSI('S','T',Tbubble_c,'Q',0,Ref)
+    sdew_e=PropsSI('S','T',Te,'Q',1,Ref)
+    sdew_c=PropsSI('S','T',Tc,'Q',1,Ref)
 
     Wdot1=m*wdot1
     Wdot2=(m+x)*wdot2

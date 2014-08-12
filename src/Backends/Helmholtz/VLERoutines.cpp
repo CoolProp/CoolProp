@@ -398,7 +398,7 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
                                            SatV = HEOS->SatV;
 
     long double rhoL,rhoV,JL,JV,KL,KV,dJL,dJV,dKL,dKV;
-    long double DELTA, deltaL=0, deltaV=0, tau, error, PL, PV, stepL, stepV;
+    long double DELTA, deltaL=0, deltaV=0, error, PL, PV, stepL, stepV;
     int iter=0;
     
     try
@@ -434,7 +434,6 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
 
         deltaL = rhoL/reduce.rhomolar;
         deltaV = rhoV/reduce.rhomolar;
-        tau = reduce.T/T;
     }
     catch(NotImplementedError &)
     {

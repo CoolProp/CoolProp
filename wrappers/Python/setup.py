@@ -2,14 +2,14 @@ from __future__ import print_function
 
 def copy_files():
     import shutil
-    shutil.rmtree(os.path.join('CoolProp5','include'), ignore_errors = True)
-    shutil.copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp5','include'))
-    shutil.copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp5', 'CoolPropBibTeXLibrary.bib'))
+    shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
+    shutil.copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp','include'))
+    shutil.copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     
 def remove_files():
     import shutil
-    shutil.rmtree(os.path.join('CoolProp5','include'), ignore_errors = True)
-    os.remove(os.path.join('CoolProp5', 'CoolPropBibTeXLibrary.bib'))
+    shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
+    os.remove(os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     
 if __name__=='__main__':
 
@@ -120,10 +120,10 @@ if __name__=='__main__':
                            )
                        
     CoolProp_module = Extension('CoolProp.CoolProp',
-                        [os.path.join('CoolProp5','CoolProp.' + cy_ext)] + sources,
+                        [os.path.join('CoolProp','CoolProp.' + cy_ext)] + sources,
                         **common_args)
     constants_module = Extension('CoolProp.constants',
-                        [os.path.join('CoolProp5','constants.' + cy_ext)],
+                        [os.path.join('CoolProp','constants.' + cy_ext)],
                         **common_args)
      
     if not pypi:
