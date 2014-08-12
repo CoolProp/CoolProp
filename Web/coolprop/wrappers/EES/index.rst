@@ -50,7 +50,7 @@ Once the dependencies are installed, you can run the installer with::
     # Make a build folder
     mkdir CoolProp/build && cd CoolProp/build
     # Build the makefile using CMake
-    cmake ../.. -DCOOLPROP_EES_MODULE=ON
+    cmake .. -DCOOLPROP_EES_MODULE=ON
     # Make the DLF file and the installer (by default installer will be generated in folder install_root/EES relative to CMakeLists.txt file)
     cmake --build . --target install
 
@@ -58,9 +58,8 @@ Low-level debugging
 -------------------
 To make and use a debug DLL, do (from root of repo)
 
-    mkdir build/EES
-    cd build/EES
-    cmake ../.. -G "Visual Studio 10 2010" -DCOOLPROP_EES_MODULE=ON
+    mkdir build && cd build
+    cmake .. -G "Visual Studio 10 2010" -DCOOLPROP_EES_MODULE=ON
 
 This will make a Visual Studio Project called CoolProp.sln.  Open the visual studio project, for the COOLPROP_EES project:
 

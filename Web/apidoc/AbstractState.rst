@@ -1,6 +1,6 @@
 AbstractState Module
 ====================
 
-.. automodule:: CoolProp5.AbstractState 
+.. automodule:: CoolProp.AbstractState 
     :members: AbstractState
     :undoc-members:  

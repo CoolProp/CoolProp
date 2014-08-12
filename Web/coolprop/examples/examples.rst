@@ -15,8 +15,8 @@ To use the ``PropsSI`` function, import it and do some calls, do something like 
     # Import the things you need
     In [1]: from CoolProp.CoolProp import PropsSI
 
-    # Print the currently used version of coolprop
-    In [1]: import CoolProp; print(CoolProp.__version__)
+    # Print some information on the currently used version of coolprop
+    In [1]: import CoolProp; print(CoolProp.__version__, CoolProp.__gitrevision__)
 
     # Density of carbon dioxide at 100 bar and 25C
     In [2]: PropsSI('D', 'T', 298.15, 'P', 100e5, 'CO2')
@@ -36,17 +36,17 @@ To use the HAProps function, import it and do some calls, do something like this
 .. ipython::
 
     # import the things you need
-    In [1]: from CoolProp.HumidAirProp import HAProps, HAProps_Aux
+    In [1]: from CoolProp.HumidAirProp import HAPropsSI
 
-    # Enthalpy (kJ per kg dry air) as a function of temperature, pressure,
+    # Enthalpy (J per kg dry air) as a function of temperature, pressure,
     #    and relative humidity at STP
-    In [2]: h = HAProps('H','T',298.15,'P',101.325,'R',0.5); print h
+    In [2]: h = HAPropsSI('H','T',298.15,'P',101325,'R',0.5); print h
 
     # Temperature of saturated air at the previous enthalpy
-    In [2]: T = HAProps('T','P',101.325,'H',h,'R',1.0); print T
+    In [2]: T = HAPropsSI('T','P',101.325,'H',h,'R',1.0); print T
 
     # Temperature of saturated air - order of inputs doesn't matter
-    In [2]: T = HAProps('T','H',h,'R',1.0,'P',101.325); print T
+    In [2]: T = HAPropsSI('T','H',h,'R',1.0,'P',101.325); print T
 
 Or go to the :ref:`Humid-Air` documentation.
 

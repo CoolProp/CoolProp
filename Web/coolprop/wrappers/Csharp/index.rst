@@ -6,7 +6,7 @@ C# Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled binaries can be downloaded from XXXXXXXXXXXXXX
+Pre-compiled release binaries can be downloaded from :sfdownloads:`Csharp`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`Csharp`.  Download the files appropriate to your system.
 
 User-Compiled Binaries
 ======================
@@ -41,11 +41,9 @@ Once mono c# is installed, you can run the builder and tests using::
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder
-    mkdir -p build/Csharp
-    # Move into that folder
-    cd build/Csharp
+    mkdir -p build/Csharp && cd build
     # Build the makefile using CMake
-    cmake ../.. -DCOOLPROP_CSHARP_MODULE=ON -DBUILD_TESTING=ON
+    cmake .. -DCOOLPROP_CSHARP_MODULE=ON -DBUILD_TESTING=ON
     # Make the C# files (by default files will be generated in folder install_root/Csharp relative to CMakeLists.txt file)
     make install
     # Run the integration tests

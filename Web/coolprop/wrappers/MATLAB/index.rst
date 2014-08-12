@@ -20,8 +20,8 @@ Example: adding the folder that contains CoolProp.mexw32 file to the Octave path
 
     addpath('/home/USERNAME/Some_folder/CoolProp')
 
-Developer Notes
-===============
+User-Compiled Binaries
+======================
 
 Common Requirements
 -------------------
@@ -59,7 +59,7 @@ Once the dependencies are installed, you can run the builder and tests using::
     # Set an environmental variable that points to your MATLAB installation for use in CMake (adjust if needed)
     export MATLAB_ROOT=/usr/local/MATLAB/R2014a # or /Applications/MATLAB_R2014a.app
     # Build the makefile using CMake
-    cmake ../.. -DCOOLPROP_MATLAB_MODULE=ON -DBUILD_TESTING=ON
+    cmake .. -DCOOLPROP_MATLAB_MODULE=ON -DBUILD_TESTING=ON
     # Make the MEX files (by default files will be generated in folder install_root/MATLAB relative to CMakeLists.txt file)
     make install
     # Run the integration tests
@@ -79,7 +79,7 @@ You need to just slightly modify the building procedure::
     # Set an environmental variable that points to your MATLAB installation for use in CMake (adjust if needed)
     set MATLAB_ROOT=c:\Program Files\MATLAB\R2014a
     # Build the makefile using CMake
-    cmake ../.. -DCOOLPROP_MATLAB_MODULE=ON -DBUILD_TESTING=ON
+    cmake .. -DCOOLPROP_MATLAB_MODULE=ON -DBUILD_TESTING=ON
     # Make the MEX files (by default files will be generated in folder install_root/MATLAB relative to CMakeLists.txt file)
     make install
     # Run the integration tests

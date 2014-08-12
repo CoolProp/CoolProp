@@ -6,7 +6,7 @@ Java Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled binaries can be downloaded from :sfdownloads:`Java`, which come from the continuous development buildbot server at :ref:`http://www.coolprop.dreamhosters.com:8010/binaries`.
+Pre-compiled binaries can be downloaded from :sfdownloads:`Java`, which come from  :bbbinaries:`the continuous development buildbot server <Java>`.
 
 When the binaries are found, java should by executed () with 
 
@@ -24,11 +24,11 @@ Linux & OSX
 
 2. Expand the zip file you downloaded
 
-3. Add the ``bin`` folder of the JDK that you installed.  For instance, add this:
+3. Add the ``bin`` folder of the JDK that you installed.  For instance, add this::
       
-      export /path/to/java/SDK/bin:$PATH 
+    export /path/to/java/SDK/bin:$PATH 
       
-  to ~/.profile where the path ``/path/to/java/SDK/bin`` points to the absolute path for the ``bin`` folder of your Java installation.
+  to ``~/.profile`` where the path ``/path/to/java/SDK/bin`` points to the absolute path for the ``bin`` folder of your Java installation.
 
 Windows
 -------

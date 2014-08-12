@@ -6,7 +6,7 @@ Octave Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled release binaries can be downloaded from :sfdownloads:`MATLAB`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`MATLAB`.  Download the oct file appropriate to your system.
+Pre-compiled release binaries can be downloaded from :sfdownloads:`Octave`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`Octave`.  Download the oct file appropriate to your system.
 
 On Linux systems you can put the generated .oct file in
 ``/usr/share/octave/?octave.version.number?/m`` folder. You will need superuser
@@ -58,11 +58,9 @@ Once the dependencies are installed, you can run the builder and tests using::
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder
-    mkdir -p build/Octave
-    # Move into that folder
-    cd build/Octave
+    mkdir -p build &&  cd build
     # Build the makefile using CMake
-    cmake ../.. -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON
+    cmake .. -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON
     # Make the OCT files (by default files will be generated in folder install_root/Octave relative to CMakeLists.txt file)
     make install
     # Run the integration tests
@@ -79,7 +77,7 @@ On windows, you need to just slightly modify the building procedure::
     # Move into that folder
     cd build/Octave
     # Build the makefile using CMake
-    cmake ../.. -G "MinGW Makefiles" -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON
+    cmake .. -G "MinGW Makefiles" -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON
     # Make the OCT files (by default files will be generated in folder install_root/Octave relative to CMakeLists.txt file)
     make install
     # Run the integration tests
