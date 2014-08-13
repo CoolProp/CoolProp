@@ -40,14 +40,15 @@ namespace CoolProp {
     };
     solver_resid resid(HEOS, T, options.rhoL, options.rhoV);
     
-    if (!ValidNumber(options.p)){throw ValueError("options.p is not valid in saturation_T_pure_1D_P");};
-    if (!ValidNumber(options.rhoL)){throw ValueError("options.rhoL is not valid in saturation_T_pure_1D_P");};
-    if (!ValidNumber(options.rhoV)){throw ValueError("options.rhoV is not valid in saturation_T_pure_1D_P");};
+    if (!ValidNumber(options.p)){throw ValueError(format("options.p is not valid in saturation_T_pure_1D_P for T = %Lg",T));};
+    if (!ValidNumber(options.rhoL)){throw ValueError(format("options.rhoL is not valid in saturation_T_pure_1D_P for T = %Lg",T));};
+    if (!ValidNumber(options.rhoV)){throw ValueError(format("options.rhoV is not valid in saturation_T_pure_1D_P for T = %Lg",T));};
     
     std::string errstr;
     long double pmax = std::min(options.p*1.03, static_cast<long double>(HEOS->p_critical()+1e-6));
     long double pmin = std::max(options.p*0.97, static_cast<long double>(HEOS->p_triple()-1e-6));
-    BoundedSecant(resid, options.p, pmin, pmax, sqrt(pmin*pmax), 1e-10, 100, errstr);
+    
+    Brent(resid, pmin, pmax, LDBL_EPSILON, 1e-8, 100, errstr);
 }
 
 void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend *HEOS, long double p, saturation_PHSU_pure_options &options){
@@ -90,9 +91,9 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend *HEOS,
     if (!ValidNumber(options.rhoV)){throw ValueError("options.rhoV is not valid in saturation_P_pure_1D_T");};
     
     std::string errstr;
-    long double Tmax = std::min(options.T + 1, static_cast<long double>(HEOS->T_critical()-1e-6));
-    long double Tmin = std::max(options.T - 1, static_cast<long double>(HEOS->Ttriple()+1e-6));
-    BoundedSecant(resid, options.T, Tmin, Tmax, 0.5, 1e-11, 100, errstr);
+    long double Tmax = std::min(options.T + 2, static_cast<long double>(HEOS->T_critical()-1e-6));
+    long double Tmin = std::max(options.T - 2, static_cast<long double>(HEOS->Ttriple()+1e-6));
+    Brent(resid, Tmin, Tmax, LDBL_EPSILON, 1e-11, 100, errstr);
 }
     
 void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, long double specified_value, saturation_PHSU_pure_options &options)
@@ -478,7 +479,7 @@ void SaturationSolvers::saturation_T_pure(HelmholtzEOSMixtureBackend *HEOS, long
         options.rhoL = _options.rhoL;
         options.rhoV = _options.rhoV;
         options.p = _options.pL;
-        throw;
+        SaturationSolvers::saturation_T_pure_1D_P(HEOS, T, options);
     }
 }
 void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_Akasaka_options &options)

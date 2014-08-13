@@ -1501,6 +1501,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         phase = _phase;
     if (rhomolar_guess < 0) // Not provided
     {
+        // Calculate a guess value using SRK equation of state
         rhomolar_guess = solver_rho_Tp_SRK(T, p, phase);
 
         if (phase == iphase_gas || phase == iphase_supercritical_gas)
@@ -1514,9 +1515,9 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         {
             if (phase == iphase_liquid)
             {
-                _rhoLanc = components[0]->ancillaries.rhoL.evaluate(T);
-                if (rhomolar_guess < static_cast<long double>(_rhoLanc)){
-                    rhomolar_guess = static_cast<long double>(_rhoLanc);
+                long double _rhoLancval = static_cast<long double>(components[0]->ancillaries.rhoL.evaluate(T));
+                if (!ValidNumber(rhomolar_guess) || rhomolar_guess < _rhoLancval){
+                    rhomolar_guess = _rhoLancval;
                 }
             }
         }

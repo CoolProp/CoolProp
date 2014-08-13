@@ -58,10 +58,11 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                         // If you get here, there was no error, all is well
                         break;
                     }
-                    catch(std::exception &e){
+                    catch(std::exception &){
                         if (omega < 1.1*increment){
                             throw;
                         }
+                        // else we are going to try again with a smaller omega
                     }
                 }
             }
@@ -147,7 +148,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             
             // Check limits
             if (!is_in_closed_range(pmin_sat*0.999999, pmax_sat*1.000001, static_cast<long double>(HEOS._p))){
-                throw ValueError(format("Pressure to PQ_flash [%6g Pa] must be in range [%8g Pa, %8g Pa]",HEOS._p, pmin_sat, pmax_sat));
+                throw ValueError(format("Pressure to PQ_flash [%6g Pa] must be in range [%8Lg Pa, %8Lg Pa]",HEOS._p, pmin_sat, pmax_sat));
             }
             // ------------------
             // It is a pure fluid
@@ -177,6 +178,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
                         if (omega < 1.1*increment){
                             throw;
                         }
+                        // else we are going to try again with a smaller omega
                     }
                 }
             }

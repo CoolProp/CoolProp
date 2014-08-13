@@ -427,7 +427,6 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
 	#else
 	std::cout << "macro is on; error checking disabled in PropsSI" << std::endl;
 	#endif
-		
 		// Here is the real code
 		extract_backend(Ref, backend, fluid);
 		return _PropsSI(Output, Name1, Prop1, Name2, Prop2, backend, fluid, std::vector<double>());
