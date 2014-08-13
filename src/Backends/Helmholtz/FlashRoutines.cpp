@@ -47,22 +47,28 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
             SaturationSolvers::saturation_T_pure_options options;
             options.use_guesses = false;
 			double increment = 0.2;
-			for (double omega = 1.0; omega > 0; omega -= increment){
-				try{
-					options.omega = omega;
-					
-					// Actually call the solver
-					SaturationSolvers::saturation_T_pure(&HEOS, HEOS._T, options);
-					
-					// If you get here, there was no error, all is well
-					break;
-				}
-				catch(std::exception &e){
-					if (omega < 1.1*increment){
-						throw;
-					}
-				}
-			}
+            try{
+                for (double omega = 1.0; omega > 0; omega -= increment){
+                    try{
+                        options.omega = omega;
+                        
+                        // Actually call the solver
+                        SaturationSolvers::saturation_T_pure(&HEOS, HEOS._T, options);
+                        
+                        // If you get here, there was no error, all is well
+                        break;
+                    }
+                    catch(std::exception &e){
+                        if (omega < 1.1*increment){
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch(std::exception &){
+                // We may need to polish the solution at low pressure
+                SaturationSolvers::saturation_T_pure_1D_P(&HEOS, HEOS._T, options);
+            }
             // Load the outputs
             HEOS._phase = iphase_twophase;
             HEOS._p = HEOS._Q*HEOS.SatV->p() + (1- HEOS._Q)*HEOS.SatL->p();

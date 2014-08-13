@@ -118,7 +118,7 @@ bool AbstractState::clear() {
     this->_gibbsmolar.clear();
     this->_logp.clear();
     this->_logrhomolar.clear();
-
+ 
     ///// Smoothing values
     //this->rhospline = -_HUGE;
     //this->dsplinedp = -_HUGE;

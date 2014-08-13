@@ -11,10 +11,12 @@ namespace SaturationSolvers
     struct saturation_T_pure_Akasaka_options{
         bool use_guesses; ///< true to start off at the values specified by rhoL, rhoV
         long double omega, rhoL, rhoV, pL, pV;
+        saturation_T_pure_Akasaka_options(){omega = _HUGE; rhoV = _HUGE; rhoL = _HUGE; pV = _HUGE, pL = _HUGE;}
     };
     struct saturation_T_pure_options{
         bool use_guesses; ///< true to start off at the values specified by rhoL, rhoV
-        long double omega, rhoL, rhoV, pL, pV;
+        long double omega, rhoL, rhoV, pL, pV, p;
+        saturation_T_pure_options(){omega = _HUGE; rhoV = _HUGE; rhoL = _HUGE; rhoL = _HUGE; pV = _HUGE, pL = _HUGE;}
     };
     
     struct saturation_D_pure_options{
@@ -59,7 +61,7 @@ namespace SaturationSolvers
         bool use_guesses, ///< True to start off at the values specified by rhoL, rhoV, T
              use_logdelta; ///< True to use partials with respect to log(delta) rather than delta
         int specified_variable;
-        long double omega, rhoL, rhoV, pL, pV, T;
+        long double omega, rhoL, rhoV, pL, pV, T, p;
         saturation_PHSU_pure_options(){ specified_variable = IMPOSED_INVALID_INPUT; use_guesses = true; omega = 1.0; }
     };
     /**
@@ -69,13 +71,23 @@ namespace SaturationSolvers
 
     /* \brief This is a backup saturation_p solver for the case where the Newton solver cannot approach closely enough the solution
      *
-     * This is especially a problem at low pressures where the truncation error occurs, especially in the saturated vapor side
+     * This is especially a problem at low pressures where catastrophic truncation error occurs, especially in the saturated vapor side
      * 
      * @param HEOS The Helmholtz EOS backend instance to be used
      * @param p Imposed pressure in kPa
      * @param options Options to be passed to the function (at least T, rhoL and rhoV must be provided)
      */
     void saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend *HEOS, long double p, saturation_PHSU_pure_options &options);
+    
+    /* \brief This is a backup saturation_T solver for the case where the Newton solver cannot approach closely enough the solution
+     *
+     * This is especially a problem at low pressures where catastrophic truncation error occurs, especially in the saturated vapor side
+     * 
+     * @param HEOS The Helmholtz EOS backend instance to be used
+     * @param T Imposed temperature in K
+     * @param options Options to be passed to the function (at least p, rhoL and rhoV must be provided)
+     */
+    void saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_options &options);
 
     void successive_substitution(HelmholtzEOSMixtureBackend &HEOS,
                                         const long double beta,

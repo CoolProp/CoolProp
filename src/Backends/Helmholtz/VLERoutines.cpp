@@ -5,6 +5,51 @@
 
 namespace CoolProp {
 
+    void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_options &options){
+    
+    // Define the residual to be driven to zero
+    class solver_resid : public FuncWrapper1D
+    {
+    public:
+
+        HelmholtzEOSMixtureBackend *HEOS;
+        long double r, T, rhomolar_liq, rhomolar_vap, value, p, gL, gV;
+        int other;
+
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, long double T, long double rhomolar_liq_guess, long double rhomolar_vap_guess) 
+            : HEOS(HEOS), T(T), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
+        double call(double p){
+            this->p = p;
+            // Recalculate the densities using the current guess values
+            rhomolar_liq = HEOS->SatL->solver_rho_Tp(T, p, rhomolar_liq);
+            rhomolar_vap = HEOS->SatV->solver_rho_Tp(T, p, rhomolar_vap);
+            
+            // Set the densities in the saturation classes
+            HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
+            HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, T);
+            
+            // Calculate the Gibbs functions for liquid and vapor
+            gL = HEOS->SatL->gibbsmolar();
+            gV = HEOS->SatV->gibbsmolar();
+            
+            // Residual is difference in Gibbs function
+            r = gL - gV;
+            
+            return r;
+        };
+    };
+    solver_resid resid(HEOS, T, options.rhoL, options.rhoV);
+    
+    if (!ValidNumber(options.p)){throw ValueError("options.p is not valid in saturation_T_pure_1D_P");};
+    if (!ValidNumber(options.rhoL)){throw ValueError("options.rhoL is not valid in saturation_T_pure_1D_P");};
+    if (!ValidNumber(options.rhoV)){throw ValueError("options.rhoV is not valid in saturation_T_pure_1D_P");};
+    
+    std::string errstr;
+    long double pmax = std::min(options.p*1.03, static_cast<long double>(HEOS->p_critical()+1e-6));
+    long double pmin = std::max(options.p*0.97, static_cast<long double>(HEOS->p_triple()-1e-6));
+    BoundedSecant(resid, options.p, pmin, pmax, sqrt(pmin*pmax), 1e-10, 100, errstr);
+}
+
 void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend *HEOS, long double p, saturation_PHSU_pure_options &options){
     
     // Define the residual to be driven to zero
@@ -48,7 +93,6 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend *HEOS,
     long double Tmax = std::min(options.T + 1, static_cast<long double>(HEOS->T_critical()-1e-6));
     long double Tmin = std::max(options.T - 1, static_cast<long double>(HEOS->Ttriple()+1e-6));
     BoundedSecant(resid, options.T, Tmin, Tmax, 0.5, 1e-11, 100, errstr);
-    int r =3;
 }
     
 void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, long double specified_value, saturation_PHSU_pure_options &options)
@@ -423,8 +467,19 @@ void SaturationSolvers::saturation_T_pure(HelmholtzEOSMixtureBackend *HEOS, long
     SaturationSolvers::saturation_T_pure_Akasaka_options _options;
     _options.omega = 1.0;
     _options.use_guesses = false;
-    // Actually call the solver
-    SaturationSolvers::saturation_T_pure_Akasaka(HEOS, T, _options);
+    try{
+        // Actually call the solver
+        SaturationSolvers::saturation_T_pure_Akasaka(HEOS, T, _options);
+    }
+    catch(std::exception &){
+        // If there was an error, store values for use in later solvers
+        options.pL = _options.pL;
+        options.pV = _options.pV;
+        options.rhoL = _options.rhoL;
+        options.rhoV = _options.rhoV;
+        options.p = _options.pL;
+        throw;
+    }
 }
 void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_Akasaka_options &options)
 {
@@ -556,6 +611,10 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
 	long double p_error_limit = 1e-3;
 	long double p_error = (PL - PV)/PL;
 	if (fabs(p_error) > p_error_limit){
+        options.pL = PL;
+        options.pV = PV;
+        options.rhoL = rhoL;
+        options.rhoV = rhoV;
 		throw SolutionError(format("saturation_T_pure_Akasaka solver abs error on p [%g] > limit [%g]", fabs(p_error), p_error_limit));
 	}
 }
