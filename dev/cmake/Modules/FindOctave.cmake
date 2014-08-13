@@ -151,6 +151,29 @@ else()
   message(FATAL_ERROR "Did not find octave-config executable")
 endif()
 
+FIND_LIBRARY( OCTAVE_OCTAVE_LIBRARY
+			  NAMES octave liboctave
+			  PATHS ${OCTAVE_LINK_DIRS}				  
+			  NO_DEFAULT_PATH)
+			  
+FIND_LIBRARY( OCTAVE_OCTINTERP_LIBRARY
+			  NAMES octinterp liboctinterp
+			  PATHS ${OCTAVE_LINK_DIRS}				  
+			  NO_DEFAULT_PATH)
+			  
+FIND_LIBRARY( OCTAVE_CRUFT_LIBRARY
+			  NAMES cruft libcruft
+			  PATHS ${OCTAVE_LINK_DIRS}				  
+			  NO_DEFAULT_PATH)			  
+
+SET(OCTAVE_LIBRARIES
+  ${OCTAVE_OCTAVE_LIBRARY}
+  ${OCTAVE_OCTINTERP_LIBRARY})
+
+if (OCTAVE_CRUFT_LIBRARY)
+    list(APPEND OCTAVE_LIBRARIES ${OCTAVE_CRUFT_LIBRARY})
+endif()
+				  
 message(STATUS "OCTAVE_VERSION=${OCTAVE_VERSION}" )
 message(STATUS "OCTAVE_CXXFLAGS=${_mkoctfile_cppflags}" )
 message(STATUS "OCTAVE_LINK_FLAGS=${_mkoctfile_ldflags}" )
@@ -159,6 +182,7 @@ message(STATUS "OCTAVE_LINK_DIRS=${_mkoctfile_ldirs}")
 message(STATUS "OCTAVE_LIBRARY=${_mkoctfile_libs}")
 message(STATUS "OCTAVE_LIBRARY_RELEASE=${OCTAVE_LIBRARY} ")
 message(STATUS "OCTAVE_LIBRARY_DEBUG=${OCTAVE_LIBRARY} ")
+message(STATUS "OCTAVE_LIBRARIES=${OCTAVE_LIBRARIES} ")
 
 MARK_AS_ADVANCED(
     OCTAVE_LIBRARY_FOUND
