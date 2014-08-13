@@ -42,6 +42,11 @@ Windows
 
 Install MATLAB using installer downloaded from www.mathworks.com.  As of version R2014a, both of 32-bit and 64-bit MATLAB is available
 
+
+SWIG+MATLAB
+-----------
+On Ubuntu, to cross-compile, add the package ``mingw-w64`` in the Synaptic Package manager.  This will install a cross-platform installation toolchain
+
 Build
 -----
 
