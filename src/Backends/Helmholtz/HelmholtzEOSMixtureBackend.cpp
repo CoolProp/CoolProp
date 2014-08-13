@@ -121,13 +121,15 @@ void HelmholtzEOSMixtureBackend::update_states(void)
 {
     CoolPropFluid &component = *(components[0]);
     EquationOfState &EOS = component.EOSVector[0];
-    long double rho, T;
+    
     // Clear the state class
     clear();
+    
     // Calculate the new enthalpy and entropy values
     update(DmolarT_INPUTS, EOS.hs_anchor.rhomolar, EOS.hs_anchor.T);
     EOS.hs_anchor.hmolar = hmolar();
     EOS.hs_anchor.smolar = smolar();
+    
     // Clear again just to be sure
     clear();
 }
@@ -1764,6 +1766,9 @@ long double HelmholtzEOSMixtureBackend::calc_umolar(void)
 
 		return static_cast<long double>(_umolar);
 	}
+    else{
+        throw ValueError(format("phase is invalid"));
+    }
 }
 long double HelmholtzEOSMixtureBackend::calc_cvmolar(void)
 {
@@ -1833,7 +1838,34 @@ long double HelmholtzEOSMixtureBackend::calc_speed_sound(void)
 
     return static_cast<double>(_speed_sound);
 }
+long double HelmholtzEOSMixtureBackend::calc_gibbsmolar(void)
+{
+    if (isTwoPhase())
+    {
+        _gibbsmolar = _Q*SatV->gibbsmolar() + (1 - _Q)*SatL->gibbsmolar();
+        return static_cast<long double>(_gibbsmolar);
+    }
+    else if (isHomogeneousPhase())
+    {
+        // Calculate the reducing parameters
+        _delta = _rhomolar/_reducing.rhomolar;
+        _tau = _reducing.T/_T;
 
+        // Calculate derivatives if needed, or just use cached values
+        long double ar = alphar();
+        long double a0 = alpha0();
+        long double dar_dDelta = dalphar_dDelta();
+        long double R_u = gas_constant();
+
+        // Get molar entropy
+        _gibbsmolar = R_u*_T*(1 + a0 + ar +_delta.pt()*dar_dDelta);
+
+        return static_cast<long double>(_gibbsmolar);
+    }
+    else{
+        throw ValueError(format("phase is invalid"));
+    }
+}
 long double HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(int i)
 {
     return exp(mixderiv_ln_fugacity_coefficient(i));

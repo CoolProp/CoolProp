@@ -104,6 +104,7 @@ public:
     long double calc_pressure(void);
     long double calc_cvmolar(void);
     long double calc_cpmolar(void);
+    long double calc_gibbsmolar(void);
     long double calc_cpmolar_idealgas(void);
     long double calc_pressure_nocache(long double T, long double rhomolar);
     long double calc_smolar(void);

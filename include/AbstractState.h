@@ -71,7 +71,7 @@ protected:
     /// Transport properties
     CachedElement _viscosity, _conductivity, _surface_tension;
 
-    CachedElement _hmolar, _smolar, _umolar, _logp, _logrhomolar, _cpmolar, _cvmolar, _speed_sound;
+    CachedElement _hmolar, _smolar, _umolar, _logp, _logrhomolar, _cpmolar, _cvmolar, _speed_sound, _gibbsmolar;
 
     /// Ancillary values
     CachedElement _rhoLanc, _rhoVanc, _pLanc, _pVanc, _TLanc, _TVanc;
@@ -108,6 +108,8 @@ protected:
     virtual long double calc_cpmolar(void){throw NotImplementedError("calc_cpmolar is not implemented for this backend");};
     /// Using this backend, calculate the molar constant-volume specific heat in J/mol/K
     virtual long double calc_cvmolar(void){throw NotImplementedError("calc_cvmolar is not implemented for this backend");};
+    /// Using this backend, calculate the molar Gibbs function in J/mol
+    virtual long double calc_gibbsmolar(void){throw NotImplementedError("calc_gibbsmolar is not implemented for this backend");};
     /// Using this backend, calculate the speed of sound in m/s
     virtual long double calc_speed_sound(void){throw NotImplementedError("calc_speed_sound is not implemented for this backend");};
     /// Using this backend, calculate the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa
@@ -373,6 +375,8 @@ public:
     double cvmolar(void);
     /// Return the mass constant volume specific heat in J/kg/K
     double cvmass(void){return calc_cvmass();};
+    /// Return the Gibbs function in J/mol
+    double gibbsmolar(void){return calc_gibbsmolar();};
     /// Return the speed of sound in m/s
     double speed_sound(void);
     /// Return the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa

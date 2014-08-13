@@ -5,6 +5,52 @@
 
 namespace CoolProp {
 
+void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend *HEOS, long double p, saturation_PHSU_pure_options &options){
+    
+    // Define the residual to be driven to zero
+    class solver_resid : public FuncWrapper1D
+    {
+    public:
+
+        HelmholtzEOSMixtureBackend *HEOS;
+        long double r, p, rhomolar_liq, rhomolar_vap, value, T, gL, gV;
+        int other;
+
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, long double p, long double rhomolar_liq_guess, long double rhomolar_vap_guess) 
+            : HEOS(HEOS), p(p), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
+        double call(double T){
+            this->T = T;
+            // Recalculate the densities using the current guess values
+            rhomolar_liq = HEOS->SatL->solver_rho_Tp(T, p, rhomolar_liq);
+            rhomolar_vap = HEOS->SatV->solver_rho_Tp(T, p, rhomolar_vap);
+            
+            // Set the densities in the saturation classes
+            HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
+            HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, T);
+            
+            // Calculate the Gibbs functions for liquid and vapor
+            gL = HEOS->SatL->gibbsmolar();
+            gV = HEOS->SatV->gibbsmolar();
+            
+            // Residual is difference in Gibbs function
+            r = gL - gV;
+            
+            return r;
+        };
+    };
+    solver_resid resid(HEOS, p, options.rhoL, options.rhoV);
+    
+    if (!ValidNumber(options.T)){throw ValueError("options.T is not valid in saturation_P_pure_1D_T");};
+    if (!ValidNumber(options.rhoL)){throw ValueError("options.rhoL is not valid in saturation_P_pure_1D_T");};
+    if (!ValidNumber(options.rhoV)){throw ValueError("options.rhoV is not valid in saturation_P_pure_1D_T");};
+    
+    std::string errstr;
+    long double Tmax = std::min(options.T + 1, static_cast<long double>(HEOS->T_critical()-1e-6));
+    long double Tmin = std::max(options.T - 1, static_cast<long double>(HEOS->Ttriple()+1e-6));
+    BoundedSecant(resid, options.T, Tmin, Tmax, 0.5, 1e-11, 100, errstr);
+    int r =3;
+}
+    
 void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, long double specified_value, saturation_PHSU_pure_options &options)
 {
     /*
@@ -199,9 +245,12 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
         {
             throw SolutionError(format("saturation_PHSU_pure solver T < 0"));
         }
-        if (iter > 200){
+        if (iter > 25){
+            // Set values back into the options structure for use in next solver
+            options.rhoL = rhoL; options.rhoV = rhoV; options.T = T;
+            // Error out
 			std::string info = get_parameter_information(specified_parameter, "short");
-            throw SolutionError(format("saturation_PHSU_pure solver did not converge after 200 iterations for %s=%Lg current error is %Lg", info.c_str(), specified_value, error));
+            throw SolutionError(format("saturation_PHSU_pure solver did not converge after 25 iterations for %s=%Lg current error is %Lg", info.c_str(), specified_value, error));
         }
     }
     while (error > 1e-10);

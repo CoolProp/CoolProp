@@ -59,13 +59,23 @@ namespace SaturationSolvers
         bool use_guesses, ///< True to start off at the values specified by rhoL, rhoV, T
              use_logdelta; ///< True to use partials with respect to log(delta) rather than delta
         int specified_variable;
-        long double omega, rhoL, rhoV, pL, pV;
+        long double omega, rhoL, rhoV, pL, pV, T;
         saturation_PHSU_pure_options(){ specified_variable = IMPOSED_INVALID_INPUT; use_guesses = true; omega = 1.0; }
     };
     /**
 
     */
     void saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, long double specified_value, saturation_PHSU_pure_options &options);
+
+    /* \brief This is a backup saturation_p solver for the case where the Newton solver cannot approach closely enough the solution
+     *
+     * This is especially a problem at low pressures where the truncation error occurs, especially in the saturated vapor side
+     * 
+     * @param HEOS The Helmholtz EOS backend instance to be used
+     * @param p Imposed pressure in kPa
+     * @param options Options to be passed to the function (at least T, rhoL and rhoV must be provided)
+     */
+    void saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend *HEOS, long double p, saturation_PHSU_pure_options &options);
 
     void successive_substitution(HelmholtzEOSMixtureBackend &HEOS,
                                         const long double beta,

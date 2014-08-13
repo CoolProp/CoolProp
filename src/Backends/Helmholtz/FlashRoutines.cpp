@@ -155,22 +155,29 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             options.use_logdelta = false;
 			
 			double increment = 0.2;
-			for (double omega = 1.0; omega > 0; omega -= increment){
-				try{
-					options.omega = omega;
-					
-					// Actually call the solver
-					SaturationSolvers::saturation_PHSU_pure(&HEOS, HEOS._p, options);
-					
-					// If you get here, there was no error, all is well
-					break;
-				}
-				catch(std::exception &e){
-					if (omega < 1.1*increment){
-						throw;
-					}
-				}
-			}
+
+            try{
+                for (double omega = 1.0; omega > 0; omega -= increment){
+                    try{
+                        options.omega = omega;
+                        
+                        // Actually call the solver
+                        SaturationSolvers::saturation_PHSU_pure(&HEOS, HEOS._p, options);
+                        
+                        // If you get here, there was no error, all is well
+                        break;
+                    }
+                    catch(std::exception &e){
+                        if (omega < 1.1*increment){
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch(std::exception &){
+                // We may need to polish the solution at low pressure
+                SaturationSolvers::saturation_P_pure_1D_T(&HEOS, HEOS._p, options);
+            }
 
             // Load the outputs
             HEOS._phase = iphase_twophase;

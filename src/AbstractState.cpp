@@ -115,6 +115,7 @@ bool AbstractState::clear() {
     this->_speed_sound.clear();
     this->_hmolar.clear();
     this->_smolar.clear();
+    this->_gibbsmolar.clear();
     this->_logp.clear();
     this->_logrhomolar.clear();
 
