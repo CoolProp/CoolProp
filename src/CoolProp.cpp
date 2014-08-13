@@ -427,13 +427,15 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
 	#else
 	std::cout << "macro is on; error checking disabled in PropsSI" << std::endl;
 	#endif
-		// Here is the real code
+        // BEGIN OF TRY
+		// Here is the real code that is inside the try block
 		extract_backend(Ref, backend, fluid);
 		return _PropsSI(Output, Name1, Prop1, Name2, Prop2, backend, fluid, std::vector<double>());
+        // END OF TRY
 	#if !defined(PROPSSI_NO_ERROR_CATCH)
     }
     catch(const std::exception& e){
-		set_error_string(e.what()); 
+		set_error_string(e.what() + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")",Output.c_str(),Name1.c_str(), Prop1, Name2.c_str(), Prop2, Ref.c_str())); 
 		#if defined (PROPSSI_ERROR_STDOUT)
 		std::cout << e.what() << std::endl;
 		#endif
