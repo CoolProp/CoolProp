@@ -18,6 +18,7 @@ Language                                      Operating Systems            Notes
 :ref:`Java <Java>`                            linux, OSX, win              Wrapper is SWIG based
 :ref:`Scilab <Scilab>`                        linux, OSX, win              Wrapper is SWIG based (experimental)
 :ref:`Modelica <Modelica>`                    linux, OSX, win
+:ref:`PHP <PHP>`                              linux, OSX, win              Mostly used on linux
 :ref:`Javascript <Javascript>`                cross-platform               Also works in all internet browsers
 :ref:`Maple <Maple>`                          linux, OSX, win,                     
 :ref:`Mathematica <Mathematica>`
