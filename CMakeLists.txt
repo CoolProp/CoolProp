@@ -377,6 +377,44 @@ if (COOLPROP_JAVA_MODULE)
            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
 endif()
 
+if (COOLPROP_PHP_MODULE)
+
+  # Must have SWIG
+  FIND_PACKAGE(SWIG REQUIRED)
+  INCLUDE(${SWIG_USE_FILE})
+
+  execute_process(
+    COMMAND php-config --includes
+    OUTPUT_VARIABLE php_config_includes
+    RESULT_VARIABLE php_config_failed
+    )
+  string(STRIP ${php_config_includes} php_config_includes)
+  string(REPLACE "-I" "" PHP_INCLUDES ${php_config_includes})
+  SEPARATE_ARGUMENTS(PHP_INCLUDES)
+
+  message(STATUS "php includes=${PHP_INCLUDES}")
+  include_directories(${PHP_INCLUDES})
+
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
+
+  SWIG_ADD_MODULE(CoolProp php ${I_FILE} ${APP_SOURCES})
+
+  if (WIN32)
+    set_target_properties(CoolProp PROPERTIES PREFIX "")
+  endif()
+  
+  if (!MSVC)
+    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
+  endif()
+  add_dependencies (CoolProp generate_headers)
+  
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp.php DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP)
+  install (TARGETS ${app_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/${CMAKE_SYSTEM_NAME})
+
+endif()
+
 if (COOLPROP_MATLAB_SWIG_MODULE)
   
   # Must have SWIG
