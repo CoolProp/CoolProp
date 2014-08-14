@@ -410,7 +410,7 @@ if (COOLPROP_PHP_MODULE)
   endif()
   add_dependencies (CoolProp generate_headers)
   
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp.php DESTINATION ${CMAKE_INSTALL_PREFIX}/cross-platform/PHP)
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp.php DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/cross-platform)
   install (TARGETS ${app_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/PHP/${CMAKE_SYSTEM_NAME})
 
 endif()
