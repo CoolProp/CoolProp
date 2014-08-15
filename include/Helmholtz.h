@@ -103,6 +103,10 @@ struct Derivatives
 {
     long double alphar, dalphar_ddelta, dalphar_dtau, d2alphar_ddelta2, d2alphar_dtau2, d2alphar_ddelta_dtau, 
                 d3alphar_ddelta3, d3alphar_ddelta_dtau2, d3alphar_ddelta2_dtau, d3alphar_dtau3;
+    void reset(){alphar = 0; dalphar_ddelta = 0; dalphar_dtau = 0; d2alphar_ddelta2 = 0; d2alphar_dtau2 = 0; d2alphar_ddelta_dtau = 0;
+                d3alphar_ddelta3 = 0; d3alphar_ddelta_dtau2 = 0; d3alphar_ddelta2_dtau = 0; d3alphar_dtau3 = 0;
+                }
+    Derivatives(){reset();};
 };
 
 struct ResidualHelmholtzGeneralizedExponentialElement
