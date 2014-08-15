@@ -23,10 +23,12 @@ parameter_info parameter_info_list[] = {
     parameter_info(iHmolar, "Hmolar","IO","J/mol","Molar specific enthalpy",false),
     parameter_info(iSmolar, "Smolar","IO","J/mol/K","Molar specific entropy",false),
     parameter_info(iUmolar, "Umolar","IO","J/mol","Molar specific internal energy",false),
+    parameter_info(iGmolar, "Gmolar","IO","J/mol","Molar specific Gibbs energy",false),
     parameter_info(iDmass, "Dmass","IO","kg/m^3","Mass density",false),
     parameter_info(iHmass, "Hmass","IO","J/kg","Mass specific enthalpy",false),
     parameter_info(iSmass, "Smass","IO","J/kg/K","Mass specific entropy",false),
     parameter_info(iUmass, "Umass","IO","J/kg","Mass specific internal energy",false),
+    parameter_info(iGmass, "Gmass","IO","J/kg","Mass specific Gibbs energy",false),
     parameter_info(iQ, "Q","IO","mol/mol","Mass vapor quality",false),
     parameter_info(iDelta, "Delta","IO","-","Reduced density (rho/rhoc)",false),
     parameter_info(iTau, "Tau","IO","-","Reciprocal reduced temperature (Tc/T)",false),
@@ -62,6 +64,15 @@ parameter_info parameter_info_list[] = {
     parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound",false),
     parameter_info(iviscosity, "viscosity","O","Pa-s","Viscosity",false),
     parameter_info(iconductivity, "conductivity","O","W/m/K","Thermal conductivity",false),
+    
+    parameter_info(ialphar, "","O","-","Residual Helmholtz energy",false),
+    parameter_info(idalphar_dtau_constdelta, "","O","-","Derivative of residual Helmholtz energy with tau",false),
+    parameter_info(idalphar_ddelta_consttau, "","O","-","Derivative of residual Helmholtz energy with delta",false),
+    
+    parameter_info(ialpha0, "","O","-","Ideal Helmholtz energy",false),
+    parameter_info(idalpha0_dtau_constdelta, "","O","-","Derivative of ideal Helmholtz energy with tau",false),
+    parameter_info(idalpha0_ddelta_consttau, "","O","-","Derivative of ideal Helmholtz energy with delta",false),
+    
 };
 
 class ParameterInformation
