@@ -290,7 +290,7 @@ GERG2008DepartureFunction::GERG2008DepartureFunction(const std::vector<double> &
         std::vector<long double> _d(d.begin(), d.begin()+Npower);
         std::vector<long double> _t(t.begin(), t.begin()+Npower);
         std::vector<long double> _l(Npower, 0.0);
-        phi1 = ResidualHelmholtzPower(_n, _d, _t, _l);
+        phi.add_Power(_n, _d, _t, _l);
     }
     if (n.size() == Npower)
     {
@@ -306,63 +306,8 @@ GERG2008DepartureFunction::GERG2008DepartureFunction(const std::vector<double> &
         std::vector<long double> _epsilon(epsilon.begin()+Npower, epsilon.end());
         std::vector<long double> _beta(beta.begin()+Npower,          beta.end());
         std::vector<long double> _gamma(gamma.begin()+Npower,       gamma.end());
-        phi2 = ResidualHelmholtzGERG2008Gaussian(_n, _d, _t, _eta, _epsilon, _beta, _gamma);
+        phi.add_GERG2008Gaussian(_n, _d, _t, _eta, _epsilon, _beta, _gamma);
     }
-}
-
-double GERG2008DepartureFunction::alphar(double tau, double delta)
-{
-	if (using_gaussian){
-		return phi1.base(tau, delta) + phi2.base(tau, delta);
-	}
-	else{
-		return phi1.base(tau, delta);
-	}
-}
-double GERG2008DepartureFunction::dalphar_dDelta(double tau, double delta)
-{
-	if (using_gaussian){
-		return phi1.dDelta(tau, delta) + phi2.dDelta(tau, delta);
-	}
-	else{
-		return phi1.dDelta(tau, delta);
-	}
-}
-double GERG2008DepartureFunction::d2alphar_dDelta2(double tau, double delta)
-{
-	if (using_gaussian){
-		return phi1.dDelta2(tau, delta) + phi2.dDelta2(tau, delta);
-	}
-	else{
-		return phi1.dDelta2(tau, delta);
-	}
-}
-double GERG2008DepartureFunction::d2alphar_dDelta_dTau(double tau, double delta)
-{
-	if (using_gaussian){
-		return phi1.dDelta_dTau(tau, delta) + phi2.dDelta_dTau(tau, delta);
-	}
-	else{
-		return phi1.dDelta_dTau(tau, delta);
-	}
-}
-double GERG2008DepartureFunction::dalphar_dTau(double tau, double delta)
-{
-	if (using_gaussian){
-		return phi1.dTau(tau, delta) + phi2.dTau(tau, delta);
-	}
-	else{
-		return phi1.dTau(tau, delta);
-	}
-}
-double GERG2008DepartureFunction::d2alphar_dTau2(double tau, double delta)
-{
-	if (using_gaussian){
-		return phi1.dTau2(tau, delta) + phi2.dTau2(tau, delta);
-	}
-	else{
-		return phi1.dTau2(tau, delta);
-	}
 }
 
 } /* namespace CoolProp */

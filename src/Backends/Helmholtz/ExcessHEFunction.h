@@ -109,20 +109,20 @@ class GERG2008DepartureFunction : public DepartureFunction
 {
 protected:
 	bool using_gaussian;
-	ResidualHelmholtzPower phi1;
-	ResidualHelmholtzGERG2008Gaussian phi2;
+	ResidualHelmholtzGeneralizedExponential phi;
 public:
 	GERG2008DepartureFunction(){};
     GERG2008DepartureFunction(const std::vector<double> &n,const std::vector<double> &d,const std::vector<double> &t,
                               const std::vector<double> &eta,const std::vector<double> &epsilon,const std::vector<double> &beta,
                               const std::vector<double> &gamma, unsigned int Npower);
 	~GERG2008DepartureFunction(){};
-	double alphar(double tau, double delta);
-	double dalphar_dDelta(double tau, double delta);
-	double d2alphar_dDelta_dTau(double tau, double delta);
-	double dalphar_dTau(double tau, double delta);
-	double d2alphar_dDelta2(double tau, double delta);
-	double d2alphar_dTau2(double tau, double delta);
+
+    double alphar(double tau, double delta){return phi.base(tau, delta);};
+	double dalphar_dDelta(double tau, double delta){return phi.dDelta(tau, delta);};
+	double d2alphar_dDelta_dTau(double tau, double delta){return phi.dDelta_dTau(tau, delta);};
+	double dalphar_dTau(double tau, double delta){return phi.dTau(tau, delta);};
+	double d2alphar_dDelta2(double tau, double delta){return phi.dDelta2(tau, delta);};
+	double d2alphar_dTau2(double tau, double delta){return phi.dTau2(tau, delta);};
 };
 
 } /* namespace CoolProp */
