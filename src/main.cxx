@@ -505,7 +505,7 @@ int main()
         
         Derivatives derivs;
         time_t t1,t2;
-        long N = 1000000;
+        long N = 10000;
         double ss = 0;
         
         std::vector<CoolPropFluid*> components = Water->get_components();
@@ -519,6 +519,7 @@ int main()
         t2 = clock();
         std::cout << format("value: %0.13g, %g us/call", ss, ((double)(t2-t1))/CLOCKS_PER_SEC/double(N)*1e6);
         
+
         ss = 0;
         t1 = clock();
         for (long i = 0; i < N; ++i){

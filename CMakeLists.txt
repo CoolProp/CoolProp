@@ -653,6 +653,13 @@ if()
 
 endif()
 
+if (COOLPROP_PROFILE)
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    SET(CMAKE_CXX_FLAGS "-pg -O2")
+    SET(CMAKE_C_FLAGS "-pg -O2")
+  endif()
+endif()
+
 
 if (COOLPROP_COVERAGE)
   if(CMAKE_COMPILER_IS_GNUCXX)
