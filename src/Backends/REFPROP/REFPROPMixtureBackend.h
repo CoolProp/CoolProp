@@ -17,7 +17,7 @@ namespace CoolProp {
 
 class REFPROPMixtureBackend : public AbstractState  {
 protected:
-    int Ncomp;
+    std::size_t Ncomp;
 	bool _mole_fractions_set;
 	static bool _REFPROP_supported;
 	std::vector<double> mole_fractions, mass_fractions;
