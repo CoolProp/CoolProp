@@ -19,6 +19,8 @@ using namespace CoolProp;
 #include "SpeedTest.h"
 #include "HumidAirProp.h"
 #include "CoolPropLib.h"
+#include "time.h"
+#include "Helmholtz.h"
 
 #include "crossplatform_shared_ptr.h"
 
@@ -415,7 +417,7 @@ int main()
     {
         #if ENABLE_CATCH
             std::vector<std::string> tags;
-            tags.push_back("[melting]");
+            tags.push_back("[ancillaries]");
             run_user_defined_tests(tags);
             double rr = 0;
 			char c;
@@ -441,16 +443,36 @@ int main()
         int rr =1;
     }
     #endif
-	#if 1
+	#if 0
 	{
+        
+        ::set_debug_level(100);
+        
+        shared_ptr<AbstractState> Water(AbstractState::factory("HEOS","water"));
+        Water->update(PT_INPUTS, 800,  300);
+        
+        Water->update(HmolarP_INPUTS, 45960.1, 800);
+        CoolProp::phases phase = Water->phase();
+        double tt = Water->T();
+        
+        double ee6 = PropsSI("T","P",101325,"Q",0,"Water");
 		char ykey[] = "H";
 		double Ts, y, T2, dT = -1;
 		double dd0 = CoolProp::Props1SI("Tmax","n-Propane");
         double dd1 = CoolProp::Props1SI("n-Propane","Tmax");
+        double Tc = CoolProp::Props1SI("n-Propane","Tcrit");
         
-        double dd = PropsSI("D","Q",0,"P",0.5e-3,"n-Propane");
+        double dd6 = PropsSI("P","T",Tc-1e-4,"Q",0,"TTSE&HEOS::n-Propane");
         
-		shared_ptr<AbstractState> Water(AbstractState::factory("HEOS","water"));
+        double dd7 = PropsSI("P","T",Tc-1e-4,"Q",0,"n-Propane");
+        std::cout << get_global_param_string("errstring");
+        
+        double dd8 = PropsSI("D","T",-8.5525000000000006e+01,"Q",0,"REFPROP::Propane");
+        std::cout << get_global_param_string("errstring");
+        double dd9 = PropsSI("T","U",3.7175480877288617e+05,"P",1.7372110031440207e-04,"n-Propane");
+        std::cout << get_global_param_string("errstring");
+        
+		
         Water->update(PT_INPUTS, 101325, 0);
 		double ptt = Water->melting_line(iT, iP, 138.268e6);
         
@@ -459,7 +481,6 @@ int main()
         double p = Water->p();
         Water->update(HmolarP_INPUTS, hmolar, p);
         double T = Water->T();
-
 		
 		std::cout << get_global_param_string("errstring");
 		y = PropsSI(ykey,"T",Ts+dT,"P",101325,"n-Propane");
@@ -476,6 +497,45 @@ int main()
         #endif
     }
 	#endif
+    #if 1
+    {
+        std::vector<std::string> names(1,"Water");
+        shared_ptr<HelmholtzEOSMixtureBackend> Water(new HelmholtzEOSMixtureBackend(names));
+        Water->set_mole_fractions(std::vector<long double>(1,1));
+        
+        Derivatives derivs;
+        time_t t1,t2;
+        long N = 1000000;
+        double ss = 0;
+        
+        std::vector<CoolPropFluid*> components = Water->get_components();
+        ResidualHelmholtzPower Power = components[0]->pEOS->alphar.Power;
+        long double tau = 0.8, delta = 2.2;
+        t1 = clock();
+        for (long i = 0; i < N; ++i){
+            Power.all(tau, delta+i*1e-10, derivs);
+            ss += derivs.alphar+derivs.dalphar_ddelta+derivs.dalphar_dtau+derivs.d2alphar_ddelta2+derivs.d2alphar_ddelta_dtau+derivs.d2alphar_dtau2;
+        }
+        t2 = clock();
+        std::cout << format("value: %0.13g, %g us/call", ss, ((double)(t2-t1))/CLOCKS_PER_SEC/double(N)*1e6);
+        
+        ss = 0;
+        t1 = clock();
+        for (long i = 0; i < N; ++i){
+            long double alphar = Power.base(tau, delta+i*1e-10);
+            long double dalphar_ddelta = Power.dDelta(tau, delta+i*1e-10);
+            long double dalphar_dtau = Power.dTau(tau, delta+i*1e-10);
+            long double d2alphar_ddelta2 = Power.dDelta2(tau, delta+i*1e-10);
+            long double d2alphar_ddelta_dtau = Power.dDelta_dTau(tau, delta+i*1e-10);
+            long double d2alphar_dtau2 = Power.dTau2(tau, delta+i*1e-10);
+            ss += alphar+dalphar_ddelta+dalphar_dtau+d2alphar_ddelta2+d2alphar_ddelta_dtau+d2alphar_dtau2;
+        }
+        t2 = clock();
+        std::cout << format("value: %0.13g, %g us/call", ss, ((double)(t2-t1))/CLOCKS_PER_SEC/double(N)*1e6);
+        
+        exit(0);
+    }
+    #endif
     #if 0
     {
         /*double h1 = PropsSI("S","P",101325,"Q",0,"n-Pentane");
