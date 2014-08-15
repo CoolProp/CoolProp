@@ -721,90 +721,32 @@ long double ResidualHelmholtzSAFTAssociating::d3g_deta3(const long double &eta)
 long double ResidualHelmholtzSAFTAssociating::eta(const long double &delta){
     return this->vbarn*delta;
 }
-long double ResidualHelmholtzSAFTAssociating::base(const long double &tau, const long double &delta) throw()
-{
-    if (disabled){return 0;}
-    long double X = this->X(delta, this->Deltabar(tau, delta));
-    return this->m*this->a*((log(X)-X/2.0+0.5));
-}
-long double ResidualHelmholtzSAFTAssociating::dDelta(const long double &tau, const long double &delta) throw()
-{
-    if (disabled){return 0;}
-    long double X = this->X(delta, this->Deltabar(tau, delta));
-    return this->m*this->a*(1/X-0.5)*this->dX_ddelta(tau, delta);
-}
-long double ResidualHelmholtzSAFTAssociating::dTau(const long double &tau, const long double &delta) throw()
-{
-    if (disabled){return 0;}
-    long double X = this->X(delta, this->Deltabar(tau, delta));
-    return this->m*this->a*(1/X-0.5)*this->dX_dtau(tau, delta);
-}
-long double ResidualHelmholtzSAFTAssociating::dTau2(const long double &tau, const long double &delta) throw()
-{
-    if (disabled){return 0;}
-    long double X = this->X(delta, this->Deltabar(tau, delta));
-    long double X_tau = this->dX_dtau(tau, delta);
-    long double X_tautau = this->d2X_dtau2(tau, delta);
-    return this->m*this->a*((1/X-0.5)*X_tautau-pow(X_tau/X, 2));
-}
-long double ResidualHelmholtzSAFTAssociating::dDelta2(const long double &tau, const long double &delta) throw()
-{
-    if (disabled){return 0;}
-    long double X = this->X(delta, this->Deltabar(tau, delta));
-    long double X_delta = this->dX_ddelta(tau, delta);
-    long double X_deltadelta = this->d2X_ddelta2(tau, delta);
-    return this->m*this->a*((1/X-0.5)*X_deltadelta-pow(X_delta/X,2));
-}
-long double ResidualHelmholtzSAFTAssociating::dDelta_dTau(const long double &tau, const long double &delta) throw()
-{
-    if (disabled){return 0;}
-    long double X = this->X(delta, this->Deltabar(tau, delta));
-    long double X_delta = this->dX_ddelta(tau, delta);
-    long double X_tau = this->dX_dtau(tau, delta);
-    long double X_deltatau = this->d2X_ddeltadtau(tau, delta);
-    return this->m*this->a*((-X_tau/X/X)*X_delta+X_deltatau*(1/X-0.5));
-}
-long double ResidualHelmholtzSAFTAssociating::dTau3(const long double &tau, const long double &delta) throw()
-{
-    if (disabled){return 0;}
-    long double X = this->X(delta, this->Deltabar(tau, delta));
-    long double X_t = this->dX_dtau(tau, delta);
-    long double X_tt = this->d2X_dtau2(tau, delta);
-    long double X_ttt = this->d3X_dtau3(tau, delta);
-    return this->m*this->a*((1/X-1.0/2.0)*X_ttt+(-X_t/pow(X,(int)2))*X_tt-2*(pow(X,(int)2)*(X_t*X_tt)-pow(X_t,(int)2)*(X*X_t))/pow(X,(int)4));
-}
-long double ResidualHelmholtzSAFTAssociating::dDelta_dTau2(const long double &tau, const long double &delta) throw()
-{
-    if (disabled){return 0;}
-    long double X = this->X(delta, this->Deltabar(tau, delta));
-    long double X_t = this->dX_dtau(tau, delta);
-    long double X_d = this->dX_ddelta(tau, delta);
-    long double X_tt = this->d2X_dtau2(tau, delta);
-    long double X_dt = this->d2X_ddeltadtau(tau, delta);
-    long double X_dtt = this->d3X_ddeltadtau2(tau, delta);
-    return this->m*this->a*((1/X-1.0/2.0)*X_dtt-X_d/pow(X,(int)2)*X_tt-2*(pow(X,(int)2)*(X_t*X_dt)-pow(X_t,(int)2)*(X*X_d))/pow(X,(int)4));
-}
-long double ResidualHelmholtzSAFTAssociating::dDelta2_dTau(const long double &tau, const long double &delta) throw()
-{
-    if (disabled){return 0;}
-    long double X = this->X(delta, this->Deltabar(tau, delta));
-    long double X_t = this->dX_dtau(tau, delta);
-    long double X_d = this->dX_ddelta(tau, delta);
-    long double X_dd = this->d2X_ddelta2(tau, delta);
-    long double X_dt = this->d2X_ddeltadtau(tau, delta);
-    long double X_ddt = this->d3X_ddelta2dtau(tau, delta);
-    return this->m*this->a*((1/X-1.0/2.0)*X_ddt-X_t/pow(X,(int)2)*X_dd-2*(pow(X,(int)2)*(X_d*X_dt)-pow(X_d,(int)2)*(X*X_t))/pow(X,(int)4));
-}
-long double ResidualHelmholtzSAFTAssociating::dDelta3(const long double &tau, const long double &delta) throw()
-{
-    if (disabled){return 0;}
-    long double X = this->X(delta, this->Deltabar(tau, delta));
-    long double X_d = this->dX_ddelta(tau, delta);
-    long double X_dd = this->d2X_ddelta2(tau, delta);
-    long double X_ddd = this->d3X_ddelta3(tau, delta);
-    return this->m*this->a*((1/X-1.0/2.0)*X_ddd-X_d/pow(X,(int)2)*X_dd-2*(pow(X,(int)2)*(X_d*X_dd)-pow(X_d,(int)2)*(X*X_d))/pow(X,(int)4));
-}
 
+void ResidualHelmholtzSAFTAssociating::all(const long double &tau, const long double &delta, Derivatives &deriv) throw()
+{
+    if (disabled){return;}
+    long double X = this->X(delta, this->Deltabar(tau, delta));
+    long double X_t = this->dX_dtau(tau, delta);
+    long double X_d = this->dX_ddelta(tau, delta);
+    long double X_tt = this->d2X_dtau2(tau, delta);
+    long double X_dd = this->d2X_ddelta2(tau, delta);
+    long double X_dt = this->d2X_ddeltadtau(tau, delta);
+    long double X_ttt = this->d3X_dtau3(tau, delta);
+    long double X_dtt = this->d3X_ddeltadtau2(tau, delta);
+    long double X_ddt = this->d3X_ddelta2dtau(tau, delta);
+    long double X_ddd = this->d3X_ddelta3(tau, delta);
+    
+    deriv.alphar += this->m*this->a*((log(X)-X/2.0+0.5));
+    deriv.dalphar_ddelta += this->m*this->a*(1/X-0.5)*this->dX_ddelta(tau, delta);
+    deriv.dalphar_dtau += this->m*this->a*(1/X-0.5)*this->dX_dtau(tau, delta);
+    deriv.d2alphar_dtau2 += this->m*this->a*((1/X-0.5)*X_tt-pow(X_t/X, 2));
+    deriv.d2alphar_ddelta2 += this->m*this->a*((1/X-0.5)*X_dd-pow(X_d/X,2));
+    deriv.d2alphar_ddelta_dtau += this->m*this->a*((-X_t/X/X)*X_d + X_dt*(1/X-0.5));
+    deriv.d3alphar_dtau3 += this->m*this->a*((1/X-1.0/2.0)*X_ttt+(-X_t/pow(X,(int)2))*X_tt-2*(pow(X,(int)2)*(X_t*X_tt)-pow(X_t,(int)2)*(X*X_t))/pow(X,(int)4));
+    deriv.d3alphar_ddelta_dtau2 += this->m*this->a*((1/X-1.0/2.0)*X_dtt-X_d/pow(X,(int)2)*X_tt-2*(pow(X,(int)2)*(X_t*X_dt)-pow(X_t,(int)2)*(X*X_d))/pow(X,(int)4));
+    deriv.d3alphar_ddelta2_dtau += this->m*this->a*((1/X-1.0/2.0)*X_ddt-X_t/pow(X,(int)2)*X_dd-2*(pow(X,(int)2)*(X_d*X_dt)-pow(X_d,(int)2)*(X*X_t))/pow(X,(int)4));
+    deriv.d3alphar_ddelta3 += this->m*this->a*((1/X-1.0/2.0)*X_ddd-X_d/pow(X,(int)2)*X_dd-2*(pow(X,(int)2)*(X_d*X_dd)-pow(X_d,(int)2)*(X*X_d))/pow(X,(int)4));
+}
 
 void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value &el, rapidjson::Document &doc)
 {

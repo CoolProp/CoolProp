@@ -163,7 +163,7 @@ int main()
 		double rrv = CoolProp::PropsSI("C","T",300,"D",1e-10,"REFPROP::R1234ze");
 		
 		std::cout << get_global_param_string("errstring");
-        double rr0 = HumidAir::HAPropsSI("B","T",473.15,"W",0.5,"P",101325);
+        double rr0 = HumidAir::HAPropsSI("S","T",473.15,"W",0,"P",1e6);
         //CoolProp::set_reference_stateS("Air","RESET");
         double rr1 = HumidAir::HAPropsSI("B","T",473.15,"W",0.5,"P",101325);
         int r = 1;
@@ -505,34 +505,23 @@ int main()
         
         Derivatives derivs;
         time_t t1,t2;
-        long N = 10000;
+        long N = 100000;
         double ss = 0;
         
         std::vector<CoolPropFluid*> components = Water->get_components();
-        ResidualHelmholtzPower Power = components[0]->pEOS->alphar.Power;
+        ResidualHelmholtzGeneralizedExponential GenExp = components[0]->pEOS->alphar.GenExp;
+        
         long double tau = 0.8, delta = 2.2;
+        
+        GenExp.all(tau, delta, derivs);
+        
         t1 = clock();
         for (long i = 0; i < N; ++i){
-            Power.all(tau, delta+i*1e-10, derivs);
+            GenExp.all(tau, delta+i*1e-10, derivs);
             ss += derivs.alphar+derivs.dalphar_ddelta+derivs.dalphar_dtau+derivs.d2alphar_ddelta2+derivs.d2alphar_ddelta_dtau+derivs.d2alphar_dtau2;
         }
         t2 = clock();
-        std::cout << format("value: %0.13g, %g us/call", ss, ((double)(t2-t1))/CLOCKS_PER_SEC/double(N)*1e6);
-        
-
-        ss = 0;
-        t1 = clock();
-        for (long i = 0; i < N; ++i){
-            long double alphar = Power.base(tau, delta+i*1e-10);
-            long double dalphar_ddelta = Power.dDelta(tau, delta+i*1e-10);
-            long double dalphar_dtau = Power.dTau(tau, delta+i*1e-10);
-            long double d2alphar_ddelta2 = Power.dDelta2(tau, delta+i*1e-10);
-            long double d2alphar_ddelta_dtau = Power.dDelta_dTau(tau, delta+i*1e-10);
-            long double d2alphar_dtau2 = Power.dTau2(tau, delta+i*1e-10);
-            ss += alphar+dalphar_ddelta+dalphar_dtau+d2alphar_ddelta2+d2alphar_ddelta_dtau+d2alphar_dtau2;
-        }
-        t2 = clock();
-        std::cout << format("value: %0.13g, %g us/call", ss, ((double)(t2-t1))/CLOCKS_PER_SEC/double(N)*1e6);
+        std::cout << format("value: %0.13g, %g us/call\n", ss, ((double)(t2-t1))/CLOCKS_PER_SEC/double(N)*1e6);
         
         exit(0);
     }

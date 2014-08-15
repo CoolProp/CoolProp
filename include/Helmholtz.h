@@ -377,16 +377,18 @@ public:
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
 
-    long double base(const long double &tau, const long double &delta) throw();
-    long double dDelta(const long double &tau, const long double &delta) throw();
-    long double dTau(const long double &tau, const long double &delta) throw();
-    long double dDelta2(const long double &tau, const long double &delta) throw();
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw();
-    long double dTau2(const long double &tau, const long double &delta) throw();
-    long double dDelta3(const long double &tau, const long double &delta) throw();
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw();
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw();
-    long double dTau3(const long double &tau, const long double &delta) throw();
+    long double base(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.alphar;};
+    long double dDelta(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.dalphar_ddelta;};
+    long double dTau(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.dalphar_dtau;};
+    long double dDelta2(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta2;};
+    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta_dtau;};
+    long double dTau2(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_dtau2;};
+    long double dDelta3(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta3;};
+    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta2_dtau;};
+    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta_dtau2;};
+    long double dTau3(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_dtau3;};
+    
+    void all(const long double &tau, const long double &delta, Derivatives &deriv) throw();
 };
 
 class ResidualHelmholtzContainer
