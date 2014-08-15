@@ -15,8 +15,8 @@ namespace SaturationSolvers
     };
     struct saturation_T_pure_options{
         bool use_guesses; ///< true to start off at the values specified by rhoL, rhoV
-        long double omega, rhoL, rhoV, pL, pV, p;
-        saturation_T_pure_options(){omega = _HUGE; rhoV = _HUGE; rhoL = _HUGE; rhoL = _HUGE; pV = _HUGE, pL = _HUGE;}
+        long double omega, rhoL, rhoV, pL, pV, p, T;
+        saturation_T_pure_options(){omega = _HUGE; rhoV = _HUGE; rhoL = _HUGE; rhoL = _HUGE; pV = _HUGE, pL = _HUGE; T = _HUGE;}
     };
     
     struct saturation_D_pure_options{
@@ -89,6 +89,21 @@ namespace SaturationSolvers
      */
     void saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_options &options);
 
+    /* \brief A robust but slow solver in the very-near-critical region
+     * 
+     * This solver operates in the following fashion:
+     * 1. Using a bounded interval for rho'':[rhoc, rhoc-??], guess a value for rho''
+     * 2. For guessed value of rho'' and given value of T, calculate p
+     * 3. Using a Brent solver on the other co-existing phase (rho'), calculate the (bounded) value of rho' that yields the same pressure
+     * 4. Use another outer Brent solver on rho'' to enforce the same Gibbs function between liquid and vapor
+     * 5. Fin.
+     * 
+     * @param HEOS The Helmholtz EOS backend instance to be used
+     * @param ykey The CoolProp::parameters key to be imposed - one of iT or iP
+     * @param y The value for the imposed variable
+     */
+    void saturation_critical(HelmholtzEOSMixtureBackend *HEOS, CoolProp::parameters ykey, long double y);
+        
     void successive_substitution(HelmholtzEOSMixtureBackend &HEOS,
                                         const long double beta,
                                         long double T,

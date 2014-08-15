@@ -92,7 +92,8 @@ enum phases{iphase_liquid, ///< Subcritical liquid
             iphase_supercritical_liquid, ///< Supercritical liquid (p > pc, T < Tc)
             iphase_gas, ///< Subcritical gas
             iphase_twophase, ///< Twophase
-            iphase_unknown};
+            iphase_unknown, ///< Unknown phase
+            iphase_not_imposed}; ///< Phase is not imposed
 
 /// These are unit types for the fluid
 enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLUID_TYPE_INCOMPRESSIBLE_LIQUID, FLUID_TYPE_INCOMPRESSIBLE_SOLUTION, FLUID_TYPE_UNDEFINED};

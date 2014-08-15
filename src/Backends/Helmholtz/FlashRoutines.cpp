@@ -6,7 +6,7 @@ namespace CoolProp{
 
 void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
-	if (HEOS.imposed_phase_index == -1) // If no phase index is imposed (see set_components function)
+	if (HEOS.imposed_phase_index == iphase_not_imposed) // If no phase index is imposed (see set_components function)
 	{
 		// Find the phase, while updating all internal variables possible
 		HEOS.T_phase_determination_pure_or_pseudopure(iP, HEOS._p);
@@ -25,6 +25,7 @@ void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend &HEOS)
 
 void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
+    long double T = HEOS._T;
     if (HEOS.is_pure_or_pseudopure)
     {
 		// The maximum possible saturation temperature
@@ -67,8 +68,13 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 }
             }
             catch(std::exception &){
-                // We may need to polish the solution at low pressure
-                SaturationSolvers::saturation_T_pure_1D_P(&HEOS, HEOS._T, options);
+                try{
+                    // We may need to polish the solution at low pressure
+                    SaturationSolvers::saturation_T_pure_1D_P(&HEOS, T, options);
+                }
+                catch(std::exception &){
+                    SaturationSolvers::saturation_critical(&HEOS, iT, T);
+                }
             }
             // Load the outputs
             HEOS._phase = iphase_twophase;
@@ -263,7 +269,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 
     std::string errstring;
 
-    if (HEOS.imposed_phase_index > -1)
+    if (HEOS.imposed_phase_index != iphase_not_imposed)
     {
         // Use the phase defined by the imposed phase
         HEOS._phase = HEOS.imposed_phase_index;
@@ -467,7 +473,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &H
                 break;
             }
             default:
-                break;
+                throw ValueError("other variable in HSU_P_flash_singlephase_Newton is invalid");
         }
 
         //First index is the row, second index is the column
@@ -563,7 +569,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 {
     bool saturation_called = false;
     long double value;
-    if (HEOS.imposed_phase_index > -1)
+    if (HEOS.imposed_phase_index != iphase_not_imposed)
     {
         // Use the phase defined by the imposed phase
         HEOS._phase = HEOS.imposed_phase_index;
@@ -640,7 +646,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 }
 void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 {
-    if (HEOS.imposed_phase_index > -1)
+    if (HEOS.imposed_phase_index != iphase_not_imposed)
     {
         // Use the phase defined by the imposed phase
         HEOS._phase = HEOS.imposed_phase_index;

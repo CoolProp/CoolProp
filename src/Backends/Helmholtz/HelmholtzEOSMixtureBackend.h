@@ -24,10 +24,10 @@ protected:
                              lnK; ///< The natural logarithms of the K factors of the components
 
     SimpleState _crit;
-    int imposed_phase_index;
+    phases imposed_phase_index;
     int N; ///< Number of components
 public:
-    HelmholtzEOSMixtureBackend(){imposed_phase_index = -1; _phase = iphase_unknown;};
+    HelmholtzEOSMixtureBackend(){imposed_phase_index = iphase_not_imposed; _phase = iphase_unknown;};
     HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
     virtual ~HelmholtzEOSMixtureBackend(){};
@@ -47,7 +47,7 @@ public:
 	
 	bool has_melting_line(){ return is_pure_or_pseudopure && components[0]->ancillaries.melting_line.enabled();};
 	long double calc_melting_line(int param, int given, long double value);
-	int calc_phase(void){return _phase;};
+	phases calc_phase(void){return _phase;};
     
     const CoolProp::SimpleState &calc_state(const std::string &state);
 
@@ -73,7 +73,7 @@ public:
     \brief Specify the phase - this phase will always be used in calculations
     @param phase_index The index from CoolProp::phases
     */
-    void specify_phase(int phase_index){imposed_phase_index = phase_index; _phase = phase_index;};
+    void specify_phase(phases phase_index){imposed_phase_index = phase_index; _phase = phase_index;};
 
     void set_reducing_function();
     void set_excess_term();
@@ -193,7 +193,7 @@ public:
     \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta}{\left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta}
     \f]
     */
-    long double calc_first_partial_deriv(int Of, int Wrt, int Constant);
+    long double calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
 
     /**
     This version doesn't use any cached values

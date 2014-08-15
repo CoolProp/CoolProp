@@ -793,4 +793,45 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
   }
 }
 
+//TEST_CASE("Test that states agree with CoolProp", "[states]")
+//{
+//    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+//    for (std::size_t i = 0; i < fluids.size(); ++i) 
+//    {
+//        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS",fluids[i]));
+//        
+//        CoolProp::SimpleState &triple_liquid = AS->get_state("triple_liquid");
+//        CoolProp::SimpleState &triple_vapor = AS->get_state("triple_vapor");
+//        
+//        // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+//        std::ostringstream ss1;
+//        ss1 << "Check state for triple_liquid for " << fluids[i];
+//        SECTION(ss1.str(),"")
+//        {
+//            std::string note = "The enthalpy and entropy are hardcoded in the fluid JSON files.  They MUST agree with the values calculated by the EOS";
+//            AS->update(CoolProp::DmolarT_INPUTS, hs_anchor.rhomolar, hs_anchor.T);
+//            CAPTURE(hs_anchor.hmolar);
+//            CAPTURE(hs_anchor.smolar);
+//            double EOS_hmolar = AS->hmolar();
+//            double EOS_smolar = AS->smolar();
+//            CHECK( std::abs(EOS_hmolar - hs_anchor.hmolar) < 1e-3);
+//            CHECK( std::abs(EOS_smolar - hs_anchor.smolar) < 1e-3);
+//        }   
+//        
+//        // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+//        std::ostringstream ss2;
+//        ss2 << "Check state for triple_vapor for " << fluids[i];
+//        SECTION(ss2.str(),"")
+//        {
+//            std::string note = "The enthalpy and entropy are hardcoded in the fluid JSON files.  They MUST agree with the values calculated by the EOS";
+//            AS->update(CoolProp::DmolarT_INPUTS, hs_anchor.rhomolar, hs_anchor.T);
+//            CAPTURE(hs_anchor.hmolar);
+//            CAPTURE(hs_anchor.smolar);
+//            double EOS_hmolar = AS->hmolar();
+//            double EOS_smolar = AS->smolar();
+//            CHECK( std::abs(EOS_hmolar - hs_anchor.hmolar) < 1e-3);
+//            CHECK( std::abs(EOS_smolar - hs_anchor.smolar) < 1e-3);
+//        }   
+//    }
+//}
 #endif

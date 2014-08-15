@@ -74,7 +74,7 @@ void HelmholtzEOSMixtureBackend::set_components(std::vector<CoolPropFluid*> comp
         set_excess_term();
     }
 
-    imposed_phase_index = -1;
+    imposed_phase_index = iphase_not_imposed;
 
     // Top-level class can hold copies of the base saturation classes,
     // saturation classes cannot hold copies of the saturation classes
@@ -581,7 +581,6 @@ void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(long &input_pair, double &
                 case DmassSmass_INPUTS: input_pair = DmolarSmolar_INPUTS; value1 /= mm; value2 *= mm;  break;
                 case DmassUmass_INPUTS: input_pair = DmolarUmolar_INPUTS; value1 /= mm; value2 *= mm;  break;
             }
-
         }
         default:
             return;
@@ -589,6 +588,8 @@ void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(long &input_pair, double &
 }
 void HelmholtzEOSMixtureBackend::update(long input_pair, double value1, double value2 )
 {
+    if (get_debug_level() > 0){std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)",__FILE__,__LINE__, input_pair, get_input_pair_short_desc(input_pair).c_str(), value1, value2) << std::endl;}
+    
     clear();
 
     if (is_pure_or_pseudopure == false && mole_fractions.size() == 0) {
@@ -1305,7 +1306,7 @@ long double HelmholtzEOSMixtureBackend::calc_first_partial_deriv_nocache(long do
 
     return (dOf_dtau*dConstant_ddelta-dOf_ddelta*dConstant_dtau)/(dWrt_dtau*dConstant_ddelta-dWrt_ddelta*dConstant_dtau);
 }
-long double HelmholtzEOSMixtureBackend::calc_first_partial_deriv(int Of, int Wrt, int Constant)
+long double HelmholtzEOSMixtureBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
 {
     return calc_first_partial_deriv_nocache(_T, _rhomolar, Of, Wrt, Constant);
 }
@@ -1465,7 +1466,7 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
 }
 long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double p, long double rhomolar_guess)
 {
-    int phase;
+    phases phase;
 
     // Define the residual to be driven to zero
     class solver_TP_resid : public FuncWrapper1D
@@ -1495,10 +1496,14 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
     solver_TP_resid resid(this,T,p);
     std::string errstring;
 
-    if (imposed_phase_index > -1)
+    // Check if the phase is imposed
+    if (imposed_phase_index != iphase_not_imposed)
+        // Use the imposed phase index
         phase = imposed_phase_index;
     else
+        // Use the phase index in the class
         phase = _phase;
+        
     if (rhomolar_guess < 0) // Not provided
     {
         // Calculate a guess value using SRK equation of state

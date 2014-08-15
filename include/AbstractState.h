@@ -39,7 +39,7 @@ protected:
 
     /// Some administrative variables
     long _fluid_type;
-    long _phase; ///< The key for the phase from CoolProp::phases enum
+    phases _phase; ///< The key for the phase from CoolProp::phases enum
     bool _forceSinglePhase, _forceTwoPhase;
 
     bool isSupercriticalPhase(void){
@@ -185,7 +185,9 @@ protected:
     virtual long double calc_physical_hazard(void){throw NotImplementedError("calc_physical_hazard is not implemented for this backend");};
 
     /// Calculate the first partial derivative for the desired derivative
-    virtual long double calc_first_partial_deriv(int Of, int Wrt, int Constant){throw NotImplementedError("calc_first_partial_deriv is not implemented for this backend");};
+    virtual long double calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){throw NotImplementedError("calc_first_partial_deriv is not implemented for this backend");};
+    /// Calculate the second partial derivative using the given backend
+    virtual long double calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2){throw NotImplementedError("calc_second_partial_deriv is not implemented for this backend");};
 
     /// Using this backend, calculate the reduced density (rho/rhoc)
     virtual long double calc_reduced_density(void){throw NotImplementedError("calc_reduced_density is not implemented for this backend");};
@@ -232,7 +234,7 @@ protected:
 	
 	virtual long double calc_melting_line(int param, int given, long double value){throw NotImplementedError("This backend does not implement calc_melting_line function");};
 	
-	virtual int calc_phase(void){throw NotImplementedError("This backend does not implement calc_phase function");};
+	virtual phases calc_phase(void){throw NotImplementedError("This backend does not implement calc_phase function");};
     
     /// Using this backend, calculate a phase given by the state string
     /// @param state A string that describes the state desired, one of "hs_anchor", "critical"/"crit", "reducing"
@@ -291,8 +293,31 @@ public:
 
     double keyed_output(int key);
 	double trivial_keyed_output(int key);
-
-    long double first_partial_deriv(int Of, int Wrt, int Constant){return calc_first_partial_deriv(Of,Wrt,Constant);};
+     
+    /** \brief The first partial derivative in homogeneous phases
+     * 
+     * \f[ \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta}{\left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta} = \frac{N}{D}\f]
+     */
+    long double first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){return calc_first_partial_deriv(Of, Wrt, Constant);};
+    
+    /** \brief The second partial derivative in homogeneous phases
+     * 
+     *  \sa \ref CoolProp::AbstractState::first_partial_deriv
+     * 
+     * \f[
+     * \frac{\partial}{\partial D}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_E = \frac{\frac{\partial}{\partial \tau}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\delta\left(\frac{\partial E}{\partial \delta}\right)_\tau-\frac{\partial}{\partial \delta}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_\tau\left(\frac{\partial E}{\partial \tau}\right)_\delta}{\left(\frac{\partial D}{\partial \tau}\right)_\delta\left(\frac{\partial E}{\partial \delta}\right)_\tau-\left(\frac{\partial D}{\partial \delta}\right)_\tau\left(\frac{\partial E}{\partial \tau}\right)_\delta}
+     * \f]
+     * 
+     * which can be expressed in parts as
+     * 
+     * \f[\left(\frac{\partial N}{\partial \delta}\right)_{\tau} = \left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial^2 C}{\partial \delta^2}\right)_{\tau}+\left(\frac{\partial^2 A}{\partial \tau\partial\delta}\right)\left(\frac{\partial C}{\partial \delta}\right)_{\tau}-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial^2 C}{\partial \tau\partial\delta}\right)-\left(\frac{\partial^2 A}{\partial \delta^2}\right)_{\tau}\left(\frac{\partial C}{\partial \tau}\right)_\delta\f]
+     * \f[\left(\frac{\partial D}{\partial \delta}\right)_{\tau} = \left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial^2 C}{\partial \delta^2}\right)_{\tau}+\left(\frac{\partial^2 B}{\partial \tau\partial\delta}\right)\left(\frac{\partial C}{\partial \delta}\right)_{\tau}-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial^2 C}{\partial \tau\partial\delta}\right)-\left(\frac{\partial^2 B}{\partial \delta^2}\right)_{\tau}\left(\frac{\partial C}{\partial \tau}\right)_\delta\f]
+     * \f[\left(\frac{\partial N}{\partial \tau}\right)_{\delta} = \left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial^2 C}{\partial \delta\partial\tau}\right)+\left(\frac{\partial^2 A}{\partial \tau^2}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_{\tau}-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial^2 C}{\partial \tau^2}\right)_\delta-\left(\frac{\partial^2 A}{\partial \delta\partial\tau}\right)\left(\frac{\partial C}{\partial \tau}\right)_\delta\f]
+     * \f[\left(\frac{\partial D}{\partial \tau}\right)_{\delta} = \left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial^2 C}{\partial \delta\partial\tau}\right)+\left(\frac{\partial^2 B}{\partial \tau^2}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_{\tau}-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial^2 C}{\partial \tau^2}\right)_\delta-\left(\frac{\partial^2 B}{\partial \delta\partial\tau}\right)\left(\frac{\partial C}{\partial \tau}\right)_\delta\f]
+     * \f[\frac{\partial}{\partial \tau}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\delta = \frac{D\left(\frac{\partial N}{\partial \tau}\right)_{\delta}-N\left(\frac{\partial D}{\partial \tau}\right)_{\delta}}{D^2}\f]
+     * \f[\frac{\partial}{\partial \delta}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\tau = \frac{D\left(\frac{\partial N}{\partial \delta}\right)_{\tau}-N\left(\frac{\partial D}{\partial \delta}\right)_{\tau}}{D^2}\f]
+     */
+    long double second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2){return calc_second_partial_deriv(Of1,Wrt1,Constant1,Of2,Constant2);};
 
     // Limits
 	double Tmin(void);
@@ -300,7 +325,7 @@ public:
     double pmax(void);
     double Ttriple(void);
 	
-	int phase(void){return calc_phase();};
+	phases phase(void){return calc_phase();};
 
     /// Return the critical temperature in K
     /**

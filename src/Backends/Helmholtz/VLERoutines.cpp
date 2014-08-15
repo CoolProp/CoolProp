@@ -4,8 +4,77 @@
 #include "MatrixMath.h"
 
 namespace CoolProp {
+    
+void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend *HEOS, parameters ykey, long double y){
+    
+    class inner_resid : public FuncWrapper1D{
+        public:
+        HelmholtzEOSMixtureBackend *HEOS;
+        long double T, desired_p, rhomolar_liq, calc_p, rhomolar_crit;
+        
+        inner_resid(HelmholtzEOSMixtureBackend *HEOS, long double T, long double desired_p)
+            : HEOS(HEOS), T(T), desired_p(desired_p){};
+        double call(double rhomolar_liq){
+            this->rhomolar_liq = rhomolar_liq;
+            HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
+            calc_p = HEOS->SatL->p();
+            std::cout << format("inner p: %0.16Lg; res: %0.16Lg", calc_p, calc_p - desired_p) << std::endl;
+            return calc_p - desired_p;
+        }
+    };
+    
+    // Define the outer residual to be driven to zero - this is the equality of 
+    // Gibbs function for both co-existing phases
+    class outer_resid : public FuncWrapper1D
+    {
+    public:
 
-    void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_options &options){
+        HelmholtzEOSMixtureBackend *HEOS;
+        parameters ykey;
+        long double y;
+        long double r, T, rhomolar_liq, rhomolar_vap, value, p, gL, gV, rhomolar_crit;
+        int other;
+
+        outer_resid(HelmholtzEOSMixtureBackend *HEOS, CoolProp::parameters ykey, long double y) 
+            : HEOS(HEOS), ykey(ykey), y(y){
+                rhomolar_crit = HEOS->rhomolar_critical();
+            };
+        double call(double rhomolar_vap){
+            this->y = y;
+            
+            // Calculate the other variable (T->p or p->T) for given vapor density
+            if (ykey == iT){
+                T = y;
+                HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, y);
+                this->p = HEOS->SatV->p();
+                std::cout << format("outer p: %0.16Lg",this->p) << std::endl;
+                inner_resid inner(HEOS, T, p);
+                std::string errstr2;
+                rhomolar_liq = Brent(inner, rhomolar_crit*1.5, rhomolar_crit*(1+1e-8), LDBL_EPSILON, 1e-10, 100, errstr2);
+            }
+            HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
+            HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, T);
+            
+            // Calculate the Gibbs functions for liquid and vapor
+            gL = HEOS->SatL->gibbsmolar();
+            gV = HEOS->SatV->gibbsmolar();
+            
+            // Residual is difference in Gibbs function
+            r = gL - gV;
+            
+            return this->p;
+        };
+    };
+    outer_resid resid(HEOS, iT, y);
+    
+    double rhomolar_crit = HEOS->rhomolar_critical();
+    
+    std::string errstr;
+    Brent(&resid, rhomolar_crit*(1-1e-8), rhomolar_crit*0.5, DBL_EPSILON, 1e-9, 20, errstr);
+}
+
+void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_options &options)
+{
     
     // Define the residual to be driven to zero
     class solver_resid : public FuncWrapper1D

@@ -12,6 +12,7 @@
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "Backends/Tabular/TabularBackends.h"
 
 namespace CoolProp {
 
@@ -46,9 +47,11 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     {
 		return new IncompressibleBackend(fluid_string);
     }
-    else if (!backend.compare("BRINE"))
+    else if (backend.find("TTSE&") == 0)
     {
-        throw ValueError("BRINE backend not yet implemented");
+        // Will throw if there is a problem with this backend
+        shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_string));
+		return new TTSEBackend(*AS.get());
     }
     else if (!backend.compare("TREND"))
     {
