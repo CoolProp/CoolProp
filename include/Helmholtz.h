@@ -4,6 +4,7 @@
 
 #include <vector>
 #include "rapidjson/rapidjson_include.h"
+#include "time.h"
 
 namespace CoolProp{
 
@@ -97,6 +98,11 @@ public:
 // #############################################################################
 // #############################################################################
 
+struct Derivatives
+{
+    long double alphar, dalphar_ddelta, dalphar_dtau, d2alphar_ddelta2, d2alphar_dtau2, d2alphar_ddelta_dtau;
+};
+
 struct ResidualHelmholtzPowerElement
 {
     long double n,d,t,ld;
@@ -126,6 +132,7 @@ public:
     {
         N = n.size();
         s.resize(N);
+        
         for (std::size_t i = 0; i < n.size(); ++i)
         {
             ResidualHelmholtzPowerElement el;
@@ -153,6 +160,8 @@ public:
     long double dDelta2_dTau(const long double &tau, const long double &delta) throw();
     long double dDelta_dTau2(const long double &tau, const long double &delta) throw();
     long double dTau3(const long double &tau, const long double &delta) throw();
+    
+    void all(const long double &tau, const long double &delta, Derivatives &derivs) throw();
 };
 
 struct ResidualHelmholtzExponentialElement

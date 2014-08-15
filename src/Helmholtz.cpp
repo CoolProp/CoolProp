@@ -34,6 +34,60 @@ long double kahanSum(std::vector<long double> &x)
     return sum;
 }
 bool wayToSort(long double i, long double j) { return std::abs(i) > std::abs(j); }
+
+void ResidualHelmholtzPower::all(const long double &tau, const long double &delta, Derivatives &derivs) throw()
+{
+    long double log_tau = log(tau), log_delta = log(delta), u, du_ddelta, du_dtau, d2u_ddelta2, d2u_dtau2, ndteu, 
+                one_over_delta = 1/delta, one_over_tau = 1/tau, // division is much slower than multiplication, so do one division here
+                B_delta, B_tau, B_delta2, B_tau2;
+    derivs.alphar = 0.0;
+    derivs.dalphar_ddelta = 0.0;
+    derivs.dalphar_dtau = 0.0;
+    derivs.d2alphar_ddelta2 = 0.0;
+    derivs.d2alphar_dtau2 = 0.0;
+    derivs.d2alphar_ddelta_dtau = 0.0;
+    
+    for (std::size_t i = 0; i < N; ++i)
+    {
+        ResidualHelmholtzPowerElement &el = elements[i];
+        long double ni = el.n, di = el.d, ti = el.t;
+        int li = el.l;
+        if (li > 0){
+            u = -pow(delta, li);
+            du_ddelta = li*u*one_over_delta;
+            du_dtau = 0;
+            d2u_ddelta2 = (li-1)*du_ddelta*one_over_delta;
+            d2u_dtau2 = 0;
+        }
+        else{
+            u = 0;
+            du_ddelta = 0;
+            du_dtau = 0;
+            d2u_ddelta2 = 0;
+            d2u_dtau2 = 0;
+        }
+        ndteu = ni*exp(ti*log_tau+di*log_delta+u);
+        
+        B_delta = (delta*du_ddelta + di);
+        B_tau = (tau*du_dtau + ti);
+        B_delta2 = (POW2(delta)*(d2u_ddelta2 + POW2(du_ddelta)) + 2*di*delta*du_ddelta + di*(di-1));
+        B_tau2 = (POW2(tau)*(d2u_dtau2 + POW2(du_dtau)) + 2*ti*tau*du_dtau + ti*(ti-1));
+        
+        derivs.alphar += ndteu;
+        derivs.dalphar_ddelta += ndteu*B_delta;
+        derivs.dalphar_dtau += ndteu*B_tau;
+        derivs.d2alphar_ddelta2 += ndteu*B_delta2;
+        derivs.d2alphar_dtau2 += ndteu*B_tau2;
+        derivs.d2alphar_ddelta_dtau += ndteu*B_delta*B_tau;
+    }
+    derivs.dalphar_ddelta       *= one_over_delta;
+    derivs.dalphar_dtau         *= one_over_tau;
+    derivs.d2alphar_ddelta2     *= POW2(one_over_delta);
+    derivs.d2alphar_dtau2       *= POW2(one_over_tau);
+    derivs.d2alphar_ddelta_dtau *= one_over_delta*one_over_tau;
+    return;
+};
+
 long double ResidualHelmholtzPower::base(const long double &tau, const long double &delta) throw()
 {
     if (N==0){return 0.0;}
