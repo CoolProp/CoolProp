@@ -56,7 +56,7 @@ std::vector<std::string> strsplit(std::string s, char del)
 		iR = s.find_first_of(del,iR+1);
 		// Move the iL to the right to avoid the delimiter
 		iL += 1;
-		if (iR == (int)std::string::npos)
+		if (iR == std::string::npos)
 		{
 			v.push_back(s.substr(iL,N-iL));
 			break;

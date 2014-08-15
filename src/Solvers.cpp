@@ -186,11 +186,11 @@ double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, doub
     while (iter<=3 || fabs(fval)>tol)
     {
         if (iter==1){x1=x0; x=x1;}
-        if (iter==2){x2=x0+dx; x=x2;}
-        if (iter>2) {x=x2;}
+        else if (iter==2){x2=x0+dx; x=x2;}
+        else {x=x2;}
 			fval=f->call(x);
         if (iter==1){y1=fval;}
-        if (iter>1)
+        else
         {
             y2=fval;
             x3=x2-y2/(y2-y1)*(x2-x1);

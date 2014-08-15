@@ -362,9 +362,8 @@ static double dC_m_dT(double T, double psi_w)
 {
     // dCm_dT has units of m^6/mol^2/K
 
-    double Tj,dC_dT_aaa,dC_dT_www,dC_dT_aww,dC_dT_aaw;
+    double dC_dT_aaa,dC_dT_www,dC_dT_aww,dC_dT_aaw;
     // NDG for fluid EOS for virial terms
-    Tj=132.6312;
     if (FlagUseVirialCorrelations)
     {
         dC_dT_aaa=-2.46582342273e-10 +4.425401935447e-12*T -3.669987371644e-14*pow(T,2) +1.765891183964e-16*pow(T,3) -5.240097805744e-19*pow(T,4) +9.502177003614e-22*pow(T,5) -9.694252610339e-25*pow(T,6) +4.276261986741e-28*pow(T,7);
@@ -423,10 +422,10 @@ double isothermal_compressibility(double T, double p)
 }
 double f_factor(double T, double p)
 {
-    double f=0,Rbar=8.314371,eps=1e-8,Tj;
+    double f=0,Rbar=8.314371,eps=1e-8;
     double x1=0,x2=0,x3,y1=0,y2,change=_HUGE;
     int iter=1;
-    double p_ws,tau_Air,tau_Water,B_aa,B_aw,B_ww,C_aaa,C_aaw,C_aww,C_www,
+    double p_ws,B_aa,B_aw,B_ww,C_aaa,C_aaw,C_aww,C_www,
         line1,line2,line3,line4,line5,line6,line7,line8,k_T,beta_H,LHS,RHS,psi_ws,
         vbar_ws;
 
@@ -457,9 +456,6 @@ double f_factor(double T, double p)
     }
 
     // NDG for fluid EOS for virial terms
-    Tj=132.6312;
-    tau_Air=Tj/T;
-    tau_Water=Water->keyed_output(CoolProp::iT_reducing)/T;
     if (FlagUseVirialCorrelations)
     {
         B_aa=-0.000721183853646 +1.142682674467e-05*T -8.838228412173e-08*pow(T,2)
@@ -1430,11 +1426,7 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
     // Requires W since it is nice and fast and always defined.  Put a dummy value if you want something that doesn't use humidity
 
     // Takes temperature, pressure, and humidity ratio W as inputs;
-    double psi_w,Tj,tau_Water,tau_Air,B_aa,C_aaa,B_ww,C_www,B_aw,C_aaw,C_aww,v_bar;
-
-    Tj=132.6312;
-    tau_Air=Tj/T;
-    tau_Water=Water->keyed_output(CoolProp::iT_critical)/T;
+    double psi_w,B_aa,C_aaa,B_ww,C_www,B_aw,C_aaw,C_aww,v_bar;
 
     try{
     if (!strcmp(Name,"Baa"))

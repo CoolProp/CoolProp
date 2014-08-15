@@ -69,7 +69,7 @@ Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd &coefficient
 		break;
 	}
 
-	std::size_t r, c, i, j;
+	std::size_t r, c;
 	for (int k = 0; k < times; k++){
 		oldCoefficients = Eigen::MatrixXd(newCoefficients);
 		r = oldCoefficients.rows(), c = oldCoefficients.cols();
@@ -642,7 +642,7 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 		else {
 			// Reduce the coefficients to the integration dimension:
 			newCoefficients = Eigen::MatrixXd(r,1);
-			for (int i=0; i<r; i++){
+			for (std::size_t i=0; i<r; i++){
 				newCoefficients(i,0) = evaluate(coefficients.row(i), other_val, other_exp, other_base);
 			}
 			return fracIntCentral(newCoefficients.transpose(),int_val,int_base);
