@@ -100,7 +100,171 @@ public:
 
 struct Derivatives
 {
-    long double alphar, dalphar_ddelta, dalphar_dtau, d2alphar_ddelta2, d2alphar_dtau2, d2alphar_ddelta_dtau;
+    long double alphar, dalphar_ddelta, dalphar_dtau, d2alphar_ddelta2, d2alphar_dtau2, d2alphar_ddelta_dtau, 
+                d3alphar_ddelta3, d3alphar_ddelta_dtau2, d3alphar_ddelta2_dtau, d3alphar_dtau3;
+};
+
+struct ResidualHelmholtzGeneralizedExponentialElement
+{
+    /// These variables are for the n*delta^d_i*tau^t_i part
+    long double n,d,t;
+    /// These variables are for the exp(u) part
+    /// u is given by -c*delta^l_i-omega*tau^m_i-eta1*(delta-epsilon1)-eta2*(delta-epsilon2)^2-beta1*(tau-gamma1)-beta2*(tau-gamma2)^2
+    long double c, l_double, omega, m_double, eta1, epsilon1, eta2, epsilon2, beta1, gamma1, beta2, gamma2;
+    /// If l_i or m_i are integers, we will store them as integers in order to call pow(double, int) rather than pow(double, double)
+    int l_int, m_int;
+    
+    ResidualHelmholtzGeneralizedExponentialElement()
+    {
+        n = _HUGE; d = _HUGE; t = _HUGE;
+        c = _HUGE; l_double = _HUGE; omega = _HUGE; m_double = _HUGE; 
+        eta1 = _HUGE; epsilon1 = _HUGE; eta2 = _HUGE; epsilon2 = _HUGE;
+        beta1 = _HUGE; gamma1 = _HUGE; beta2 = _HUGE; gamma2 = _HUGE;
+        l_int = -100000;
+        m_int = -100000;
+    }
+};
+class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm{
+    
+public:
+    bool delta_li_in_u, tau_mi_in_u, eta1_in_u, eta2_in_u, beta1_in_u, beta2_in_u;
+    std::vector<long double> s;
+    std::size_t N;
+    std::vector<ResidualHelmholtzGeneralizedExponentialElement> elements;
+    // Default Constructor
+    ResidualHelmholtzGeneralizedExponential(){N = 0; 
+                                              delta_li_in_u = false; 
+                                              tau_mi_in_u = false;
+                                              eta1_in_u = false;
+                                              eta2_in_u = false;
+                                              beta1_in_u = false;
+                                              beta2_in_u = false;
+                                              };
+    
+    void add_Power(const std::vector<long double> &n, const std::vector<long double> &d, 
+                   const std::vector<long double> &t, const std::vector<long double> &l)
+    {
+        for (std::size_t i = 0; i < n.size(); ++i)
+        {
+            ResidualHelmholtzGeneralizedExponentialElement el;
+            el.n = n[i];
+            el.d = d[i];
+            el.t = t[i];
+            el.l_double = l[i];
+            el.l_int = (int)el.l_double;
+            if (el.l_double > 0)
+                el.c = 1.0;
+            else
+                el.c = 0.0;
+            elements.push_back(el);
+        }
+        delta_li_in_u = true;
+    };
+    void add_Exponential(const std::vector<long double> &n, const std::vector<long double> &d, 
+                         const std::vector<long double> &t, const std::vector<long double> &g, 
+                         const std::vector<long double> &l)
+    {
+        for (std::size_t i = 0; i < n.size(); ++i)
+        {
+            ResidualHelmholtzGeneralizedExponentialElement el;
+            el.n = n[i];
+            el.d = d[i];
+            el.t = t[i];
+            el.c = g[i];
+            el.l_double = l[i];
+            el.l_int = (int)el.l_double;
+            elements.push_back(el);
+        }
+        delta_li_in_u = true;
+    }   
+    void add_Gaussian(const std::vector<long double> &n, 
+                      const std::vector<long double> &d, 
+                      const std::vector<long double> &t, 
+                      const std::vector<long double> &eta, 
+                      const std::vector<long double> &epsilon,
+                      const std::vector<long double> &beta,
+                      const std::vector<long double> &gamma
+                      )
+    { 
+        for (std::size_t i = 0; i < n.size(); ++i)
+        {
+            ResidualHelmholtzGeneralizedExponentialElement el;
+            el.n = n[i];
+            el.d = d[i];
+            el.t = t[i];
+            el.eta2 = eta[i];
+            el.epsilon2 = epsilon[i];
+            el.beta2 = beta[i];
+            el.gamma2 = gamma[i];
+            elements.push_back(el);
+        }
+        eta2_in_u = true;
+        beta2_in_u = true;
+    };
+    void add_GERG2008Gaussian(const std::vector<long double> &n, 
+                              const std::vector<long double> &d, 
+                              const std::vector<long double> &t, 
+                              const std::vector<long double> &eta, 
+                              const std::vector<long double> &epsilon,
+                              const std::vector<long double> &beta,
+                              const std::vector<long double> &gamma)
+    { 
+        for (std::size_t i = 0; i < n.size(); ++i)
+        {
+            ResidualHelmholtzGeneralizedExponentialElement el;
+            el.n = n[i];
+            el.d = d[i];
+            el.t = t[i];
+            el.eta2 = eta[i];
+            el.epsilon2 = epsilon[i];
+            el.eta1 = beta[i];
+            el.epsilon1 = gamma[i];
+            elements.push_back(el);
+        }
+        eta2_in_u = true;
+        eta1_in_u = true;
+    };
+    void add_Lemmon2005(const std::vector<long double> &n, 
+                        const std::vector<long double> &d, 
+                        const std::vector<long double> &t, 
+                        const std::vector<long double> &l, 
+                        const std::vector<long double> &m)
+    {
+        for (std::size_t i = 0; i < n.size(); ++i)
+        {
+            ResidualHelmholtzGeneralizedExponentialElement el;
+            el.n = n[i];
+            el.d = d[i];
+            el.t = t[i];
+            el.c = 1.0;
+            el.omega = 1.0;
+            el.l_double = l[i];
+            el.m_double = m[i];
+            el.l_int = (int)el.l_double;
+            el.m_int = (int)el.m_double;
+            elements.push_back(el);
+        }
+        delta_li_in_u = true;
+        tau_mi_in_u = true;
+    };
+
+    ///< Destructor for the class.  No implementation
+    ~ResidualHelmholtzGeneralizedExponential(){};
+
+    void to_json(rapidjson::Value &el, rapidjson::Document &doc);
+    
+    long double base(const long double &tau, const long double &delta) throw(){return 0;};
+    long double dDelta(const long double &tau, const long double &delta) throw(){return 0;};
+    long double dTau(const long double &tau, const long double &delta) throw(){return 0;};
+    long double dDelta2(const long double &tau, const long double &delta) throw(){return 0;};
+    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){return 0;};
+    long double dTau2(const long double &tau, const long double &delta) throw(){return 0;};
+    long double dDelta3(const long double &tau, const long double &delta) throw(){return 0;};
+    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){return 0;};
+    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){return 0;};
+    long double dTau3(const long double &tau, const long double &delta) throw(){return 0;};
+    
+    void all(const long double &tau, const long double &delta, Derivatives &derivs) throw();
 };
 
 struct ResidualHelmholtzPowerElement
@@ -108,6 +272,8 @@ struct ResidualHelmholtzPowerElement
     long double n,d,t,ld;
     int l;
 };
+
+
 /// Power term
 /*!
 Term of the form 
@@ -144,7 +310,7 @@ public:
             elements.push_back(el);
         }
     };
-
+    
     ///< Destructor for the alphar_power class.  No implementation
     ~ResidualHelmholtzPower(){};
 
@@ -160,8 +326,6 @@ public:
     long double dDelta2_dTau(const long double &tau, const long double &delta) throw();
     long double dDelta_dTau2(const long double &tau, const long double &delta) throw();
     long double dTau3(const long double &tau, const long double &delta) throw();
-    
-    void all(const long double &tau, const long double &delta, Derivatives &derivs) throw();
 };
 
 struct ResidualHelmholtzExponentialElement
@@ -497,78 +661,72 @@ class ResidualHelmholtzContainer
 {
     
 public:
-    ResidualHelmholtzPower Power;
-    ResidualHelmholtzExponential Exponential;
-    ResidualHelmholtzGaussian Gaussian;
-    ResidualHelmholtzLemmon2005 Lemmon2005;
     ResidualHelmholtzNonAnalytic NonAnalytic;
     ResidualHelmholtzSAFTAssociating SAFT;
+    ResidualHelmholtzGeneralizedExponential GenExp; 
 
     long double base(long double tau, long double delta)
     {
-        return (Power.base(tau, delta) + Exponential.base(tau, delta)
-                +Gaussian.base(tau, delta) + Lemmon2005.base(tau, delta)
-                +NonAnalytic.base(tau, delta) + SAFT.base(tau,delta));
+        Derivatives derivs;
+        GenExp.all(tau, delta, derivs);
+        return (derivs.alphar + NonAnalytic.base(tau, delta) + SAFT.base(tau,delta));
     };
-
     long double dDelta(long double tau, long double delta)
     {
-        return (Power.dDelta(tau, delta) + Exponential.dDelta(tau, delta) 
-                + Gaussian.dDelta(tau, delta) + Lemmon2005.dDelta(tau, delta) 
-                + NonAnalytic.dDelta(tau, delta) + SAFT.dDelta(tau,delta));
+        Derivatives derivs;
+        GenExp.all(tau, delta, derivs);
+        return (derivs.dalphar_ddelta + NonAnalytic.dDelta(tau, delta) + SAFT.dDelta(tau,delta));
     };
     long double dTau(long double tau, long double delta)
     {
-        return (Power.dTau(tau, delta) + Exponential.dTau(tau, delta) 
-                + Gaussian.dTau(tau, delta) + Lemmon2005.dTau(tau, delta) 
-                + NonAnalytic.dTau(tau, delta) + SAFT.dTau(tau,delta));
+        Derivatives derivs;
+        GenExp.all(tau, delta, derivs);
+        return (derivs.dalphar_dtau + NonAnalytic.dTau(tau, delta) + SAFT.dTau(tau,delta));
     };
-
     long double dDelta2(long double tau, long double delta)
     {
-        return (Power.dDelta2(tau, delta) + Exponential.dDelta2(tau, delta)
-                +Gaussian.dDelta2(tau, delta) + Lemmon2005.dDelta2(tau, delta)
-                +NonAnalytic.dDelta2(tau, delta) + SAFT.dDelta2(tau,delta));
+        Derivatives derivs;
+        GenExp.all(tau, delta, derivs);
+        return (derivs.d2alphar_ddelta2 + NonAnalytic.dDelta2(tau, delta) + SAFT.dDelta2(tau,delta));
     };
     long double dDelta_dTau(long double tau, long double delta)
     {
-        return (Power.dDelta_dTau(tau, delta) + Exponential.dDelta_dTau(tau, delta) 
-                + Gaussian.dDelta_dTau(tau, delta) + Lemmon2005.dDelta_dTau(tau, delta) 
-                + NonAnalytic.dDelta_dTau(tau, delta) + SAFT.dDelta_dTau(tau,delta));
+        Derivatives derivs;
+        GenExp.all(tau, delta, derivs);
+        return (derivs.d2alphar_ddelta_dtau + NonAnalytic.dDelta_dTau(tau, delta) + SAFT.dDelta_dTau(tau,delta));
     };
     long double dTau2(long double tau, long double delta)
     {
-        return (Power.dTau2(tau, delta) + Exponential.dTau2(tau, delta) 
-                + Gaussian.dTau2(tau, delta) + Lemmon2005.dTau2(tau, delta) 
-                + NonAnalytic.dTau2(tau, delta) + SAFT.dTau2(tau,delta));
+        Derivatives derivs;
+        GenExp.all(tau, delta, derivs);
+        return (derivs.d2alphar_dtau2 + NonAnalytic.dTau2(tau, delta) + SAFT.dTau2(tau,delta));
     };
     
     long double dDelta3(long double tau, long double delta) 
     {
-        return (Power.dDelta3(tau, delta) + Exponential.dDelta3(tau, delta)
-                +Gaussian.dDelta3(tau, delta) + Lemmon2005.dDelta3(tau, delta)
-                +NonAnalytic.dDelta3(tau, delta) + SAFT.dDelta3(tau,delta));
+        Derivatives derivs;
+        GenExp.all(tau, delta, derivs);
+        return (derivs.d3alphar_ddelta3 + NonAnalytic.dDelta3(tau, delta) + SAFT.dDelta3(tau,delta));
     };
     long double dDelta2_dTau(long double tau, long double delta)
     {
-        return (Power.dDelta2_dTau(tau, delta) + Exponential.dDelta2_dTau(tau, delta) 
-                + Gaussian.dDelta2_dTau(tau, delta) + Lemmon2005.dDelta2_dTau(tau, delta) 
-                + NonAnalytic.dDelta2_dTau(tau, delta) + SAFT.dDelta2_dTau(tau,delta));
+        Derivatives derivs;
+        GenExp.all(tau, delta, derivs);
+        return (derivs.d3alphar_ddelta2_dtau + NonAnalytic.dDelta2_dTau(tau, delta) + SAFT.dDelta2_dTau(tau,delta));
     };
     long double dDelta_dTau2(long double tau, long double delta)
     {
-        return (Power.dDelta_dTau2(tau, delta) + Exponential.dDelta_dTau2(tau, delta) 
-                + Gaussian.dDelta_dTau2(tau, delta) + Lemmon2005.dDelta_dTau2(tau, delta) 
-                + NonAnalytic.dDelta_dTau2(tau, delta) + SAFT.dDelta_dTau2(tau,delta));
+        Derivatives derivs;
+        GenExp.all(tau, delta, derivs);
+        return (derivs.d3alphar_ddelta_dtau2 + NonAnalytic.dDelta_dTau2(tau, delta) + SAFT.dDelta_dTau2(tau,delta));
     };
     long double dTau3(long double tau, long double delta)
     {
-        return (Power.dTau3(tau, delta) + Exponential.dTau3(tau, delta)
-                +Gaussian.dTau3(tau, delta) + Lemmon2005.dTau3(tau, delta)
-                +NonAnalytic.dTau3(tau, delta) + SAFT.dTau3(tau,delta));
+        Derivatives derivs;
+        GenExp.all(tau, delta, derivs);
+        return (derivs.d3alphar_dtau3 + NonAnalytic.dTau3(tau, delta) + SAFT.dTau3(tau,delta));
     };
 };
-
 
 // #############################################################################
 // #############################################################################

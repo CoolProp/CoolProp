@@ -136,12 +136,12 @@
 	double interp1d(std::vector<double> *x, std::vector<double> *y, double x0);
 	double powInt(double x, int y);
     
-    #define POW2(x) x*x
-    #define POW3(x) x*x*x
-    #define POW4(x) x*x*x*x
-    #define POW5(x) x*x*x*x*x
-    #define POW6(x) x*x*x*x*x*x
-    #define POW7(x) x*x*x*x*x*x*x
+    #define POW2(x) (x)*(x)
+    #define POW3(x) (x)*(x)*(x)
+    #define POW4(x) (x)*(x)*(x)*(x)
+    #define POW5(x) (x)*(x)*(x)*(x)*(x)
+    #define POW6(x) (x)*(x)*(x)*(x)*(x)*(x)
+    #define POW7(x) (x)*(x)*(x)*(x)*(x)*(x)*(x)
 
     template<class T> T LinearInterp(T x0, T x1, T y0, T y1, T x)
     {

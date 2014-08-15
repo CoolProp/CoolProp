@@ -195,6 +195,7 @@
         <IncludePath Value="../../include"/>
         <IncludePath Value="../../externals/Eigen"/>
         <Preprocessor Value="NDEBUG"/>
+        <Preprocessor Value="ENABLE_CATCH"/>
       </Compiler>
       <Linker Options="" Required="yes"/>
       <ResourceCompiler Options="" Required="no"/>

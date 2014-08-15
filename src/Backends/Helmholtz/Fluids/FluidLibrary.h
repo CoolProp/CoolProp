@@ -42,7 +42,6 @@ protected:
 
             if (!type.compare("ResidualHelmholtzPower"))
             {
-                if (EOS.alphar.Power.N > 0){throw ValueError("Cannot add ");}
                 std::vector<long double> n = cpjson::get_long_double_array(contribution["n"]);
                 std::vector<long double> d = cpjson::get_long_double_array(contribution["d"]);
                 std::vector<long double> t = cpjson::get_long_double_array(contribution["t"]);
@@ -50,11 +49,10 @@ protected:
                 assert(n.size() == d.size());
                 assert(n.size() == t.size());
                 assert(n.size() == l.size());
-                EOS.alphar.Power = ResidualHelmholtzPower(n,d,t,l);
+                EOS.alphar.GenExp.add_Power(n,d,t,l);
             }
             else if (!type.compare("ResidualHelmholtzGaussian"))
             {
-                if (EOS.alphar.Gaussian.N > 0){throw ValueError("Cannot add ");}
                 std::vector<long double> n = cpjson::get_long_double_array(contribution["n"]);
                 std::vector<long double> d = cpjson::get_long_double_array(contribution["d"]);
                 std::vector<long double> t = cpjson::get_long_double_array(contribution["t"]);
@@ -68,7 +66,7 @@ protected:
                 assert(n.size() == epsilon.size());
                 assert(n.size() == beta.size());
                 assert(n.size() == gamma.size());
-                EOS.alphar.Gaussian = ResidualHelmholtzGaussian(n,d,t,eta,epsilon,beta,gamma);
+                EOS.alphar.GenExp.add_Gaussian(n,d,t,eta,epsilon,beta,gamma);
             }
             else if (!type.compare("ResidualHelmholtzNonAnalytic"))
             {
@@ -92,7 +90,6 @@ protected:
             }
             else if (!type.compare("ResidualHelmholtzLemmon2005"))
             {
-                if (EOS.alphar.Lemmon2005.N > 0){throw ValueError("Cannot add ");}
                 std::vector<long double> n = cpjson::get_long_double_array(contribution["n"]);
                 std::vector<long double> d = cpjson::get_long_double_array(contribution["d"]);
                 std::vector<long double> t = cpjson::get_long_double_array(contribution["t"]);
@@ -102,11 +99,10 @@ protected:
                 assert(n.size() == t.size());
                 assert(n.size() == l.size());
                 assert(n.size() == m.size());
-                EOS.alphar.Lemmon2005 = ResidualHelmholtzLemmon2005(n,d,t,l,m);
+                EOS.alphar.GenExp.add_Lemmon2005(n,d,t,l,m);
             }
             else if (!type.compare("ResidualHelmholtzExponential"))
             {
-                if (EOS.alphar.Exponential.N > 0){throw ValueError("Cannot add ");}
                 std::vector<long double> n = cpjson::get_long_double_array(contribution["n"]);
                 std::vector<long double> d = cpjson::get_long_double_array(contribution["d"]);
                 std::vector<long double> t = cpjson::get_long_double_array(contribution["t"]);
@@ -116,7 +112,7 @@ protected:
                 assert(n.size() == t.size());
                 assert(n.size() == g.size());
                 assert(n.size() == l.size());
-                EOS.alphar.Exponential = ResidualHelmholtzExponential(n,d,t,g,l);
+                EOS.alphar.GenExp.add_Exponential(n,d,t,g,l);
             }
             else if (!type.compare("ResidualHelmholtzAssociating"))
             {

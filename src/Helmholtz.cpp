@@ -35,56 +35,143 @@ long double kahanSum(std::vector<long double> &x)
 }
 bool wayToSort(long double i, long double j) { return std::abs(i) > std::abs(j); }
 
-void ResidualHelmholtzPower::all(const long double &tau, const long double &delta, Derivatives &derivs) throw()
+void ResidualHelmholtzGeneralizedExponential::all(const long double &tau, const long double &delta, Derivatives &derivs) throw()
 {
-    long double log_tau = log(tau), log_delta = log(delta), u, du_ddelta, du_dtau, d2u_ddelta2, d2u_dtau2, ndteu, 
+    long double log_tau = log(tau), log_delta = log(delta), ndteu, 
+                u, du_ddelta, du_dtau, d2u_ddelta2, d2u_dtau2, d3u_ddelta3, d3u_dtau3,
                 one_over_delta = 1/delta, one_over_tau = 1/tau, // division is much slower than multiplication, so do one division here
-                B_delta, B_tau, B_delta2, B_tau2;
+                B_delta, B_tau, B_delta2, B_tau2, B_delta3, B_tau3,
+                u_increment, du_ddelta_increment, du_dtau_increment, 
+                d2u_ddelta2_increment, d3u_ddelta3_increment, d2u_dtau2_increment, d3u_dtau3_increment;
+                
     derivs.alphar = 0.0;
     derivs.dalphar_ddelta = 0.0;
     derivs.dalphar_dtau = 0.0;
     derivs.d2alphar_ddelta2 = 0.0;
     derivs.d2alphar_dtau2 = 0.0;
     derivs.d2alphar_ddelta_dtau = 0.0;
+    derivs.d3alphar_dtau3 = 0.0;
+    derivs.d3alphar_ddelta_dtau2 = 0.0;
+    derivs.d3alphar_ddelta2_dtau = 0.0;
+    derivs.d3alphar_ddelta3 = 0.0;
+    
+    const std::size_t N = elements.size();
+    
+    // We define them locally as constants so that the compiler 
+    // can more intelligently branch the for loop
+    const bool delta_li_in_u = this->delta_li_in_u;
+    const bool tau_mi_in_u = this->tau_mi_in_u;
+    const bool eta2_in_u = this->eta2_in_u;
+    const bool beta2_in_u = this->beta2_in_u;
+    const bool eta1_in_u = this->eta1_in_u;
+    const bool beta1_in_u = this->beta1_in_u;
     
     for (std::size_t i = 0; i < N; ++i)
     {
-        ResidualHelmholtzPowerElement &el = elements[i];
+        ResidualHelmholtzGeneralizedExponentialElement &el = elements[i];
         long double ni = el.n, di = el.d, ti = el.t;
-        int li = el.l;
-        if (li > 0){
-            u = -pow(delta, li);
-            du_ddelta = li*u*one_over_delta;
-            du_dtau = 0;
-            d2u_ddelta2 = (li-1)*du_ddelta*one_over_delta;
-            d2u_dtau2 = 0;
+        
+        // Set the u part of exp(u) to zero
+        u = 0;
+        du_ddelta = 0;
+        du_dtau = 0;
+        d2u_ddelta2 = 0;
+        d2u_dtau2 = 0;
+        d3u_ddelta3 = 0;
+        d3u_dtau3 = 0;
+        
+        if (delta_li_in_u){
+            long double  ci = el.c, l_double = el.l_double;
+            int l_int = el.l_int;
+            if (ValidNumber(l_double) && l_int > 0){
+                u_increment = -ci*pow(delta, l_int);
+                du_ddelta_increment = l_double*u_increment*one_over_delta;
+                d2u_ddelta2_increment = (l_double-1)*du_ddelta_increment*one_over_delta;
+                d3u_ddelta3_increment = (l_double-2)*d2u_ddelta2_increment*one_over_delta;
+                u += u_increment;
+                du_ddelta += du_ddelta_increment;
+                d2u_ddelta2 += d2u_ddelta2_increment;
+                d3u_ddelta3 += d3u_ddelta3_increment;
+            }
         }
-        else{
-            u = 0;
-            du_ddelta = 0;
-            du_dtau = 0;
-            d2u_ddelta2 = 0;
-            d2u_dtau2 = 0;
+        if (tau_mi_in_u){
+            long double omegai = el.omega, m_double = el.m_double;
+            if (std::abs(m_double) > 0){
+                u_increment = -omegai*pow(tau, m_double);
+                du_dtau_increment = m_double*u_increment*one_over_tau;
+                d2u_dtau2_increment = (m_double-1)*du_dtau_increment*one_over_tau;
+                d3u_dtau3_increment = (m_double-2)*d2u_dtau2_increment*one_over_tau;
+                u += u_increment;
+                du_dtau += du_dtau_increment;
+                d2u_dtau2 += d2u_dtau2_increment;
+                d3u_dtau3 += d3u_dtau3_increment;
+            }
         }
+        if (eta1_in_u){
+            long double eta1 = el.eta1, epsilon1 = el.epsilon1;
+            if (ValidNumber(eta1)){
+                u += -eta1*(delta-epsilon1);
+                du_ddelta += -eta1;
+            }
+        }
+        if (eta2_in_u){
+            long double eta2 = el.eta2, epsilon2 = el.epsilon2;
+            if (ValidNumber(eta2)){
+                u += -eta2*POW2(delta-epsilon2);
+                du_ddelta += -2*eta2*(delta-epsilon2);
+                d2u_ddelta2 += -2*eta2;
+            }
+        }
+        if (beta1_in_u){
+            long double beta1 = el.beta1, gamma1 = el.gamma1;
+            if (ValidNumber(beta1)){
+                u += -beta1*(tau-gamma1);
+                du_dtau += -beta1;
+            }
+        }
+        if (beta2_in_u){
+            long double beta2 = el.beta2, gamma2 = el.gamma2;
+            if (ValidNumber(beta2)){
+                u += -beta2*POW2(tau-gamma2);
+                du_dtau += -2*beta2*(tau-gamma2);
+                d2u_dtau2 += -2*beta2;
+            }
+        }
+        
         ndteu = ni*exp(ti*log_tau+di*log_delta+u);
         
         B_delta = (delta*du_ddelta + di);
         B_tau = (tau*du_dtau + ti);
         B_delta2 = (POW2(delta)*(d2u_ddelta2 + POW2(du_ddelta)) + 2*di*delta*du_ddelta + di*(di-1));
         B_tau2 = (POW2(tau)*(d2u_dtau2 + POW2(du_dtau)) + 2*ti*tau*du_dtau + ti*(ti-1));
+        B_delta3 = POW3(delta)*d3u_ddelta3 + 3*di*POW2(delta)*d2u_ddelta2+3*POW3(delta)*d2u_ddelta2*du_ddelta+3*di*POW2(delta*du_ddelta)+3*di*(di-1)*delta*du_ddelta+di*(di-1)*(di-2)+POW3(delta*du_ddelta);
+        B_tau3 = POW3(tau)*d3u_dtau3 + 3*ti*POW2(tau)*d2u_dtau2+3*POW3(tau)*d2u_dtau2*du_dtau+3*ti*POW2(tau*du_dtau)+3*ti*(ti-1)*tau*du_dtau+ti*(ti-1)*(ti-2)+POW3(tau*du_dtau);
         
         derivs.alphar += ndteu;
+        
         derivs.dalphar_ddelta += ndteu*B_delta;
         derivs.dalphar_dtau += ndteu*B_tau;
+        
         derivs.d2alphar_ddelta2 += ndteu*B_delta2;
-        derivs.d2alphar_dtau2 += ndteu*B_tau2;
         derivs.d2alphar_ddelta_dtau += ndteu*B_delta*B_tau;
+        derivs.d2alphar_dtau2 += ndteu*B_tau2;
+        
+        derivs.d3alphar_ddelta3 += ndteu*B_delta3;
+        derivs.d3alphar_ddelta2_dtau += ndteu*B_delta2*B_tau;
+        derivs.d3alphar_ddelta_dtau2 += ndteu*B_delta*B_tau2;
+        derivs.d3alphar_dtau3 += ndteu*B_tau3;
     }
-    derivs.dalphar_ddelta       *= one_over_delta;
-    derivs.dalphar_dtau         *= one_over_tau;
-    derivs.d2alphar_ddelta2     *= POW2(one_over_delta);
-    derivs.d2alphar_dtau2       *= POW2(one_over_tau);
-    derivs.d2alphar_ddelta_dtau *= one_over_delta*one_over_tau;
+    derivs.dalphar_ddelta        *= one_over_delta;
+    derivs.dalphar_dtau          *= one_over_tau;
+    derivs.d2alphar_ddelta2      *= POW2(one_over_delta);
+    derivs.d2alphar_dtau2        *= POW2(one_over_tau);
+    derivs.d2alphar_ddelta_dtau  *= one_over_delta*one_over_tau;
+    
+    derivs.d3alphar_ddelta3      *= POW3(one_over_delta);
+    derivs.d3alphar_dtau3        *= POW3(one_over_tau);
+    derivs.d3alphar_ddelta2_dtau *= POW2(one_over_delta)*one_over_tau;
+    derivs.d3alphar_ddelta_dtau2 *= one_over_delta*POW2(one_over_tau);
+    
     return;
 };
 
