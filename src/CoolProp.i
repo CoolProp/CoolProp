@@ -26,17 +26,13 @@ namespace std {
 // 
 %rename(CoolProp_SimpleState) CoolProp::SimpleState;
 
-#ifdef SWIGOCTAVE
-    %ignore DerivTerms(char *Term, double T, double rho, Fluid * pFluid, bool SinglePhase, bool TwoPhase);
-#endif
-
 // This stuff will get included verbatim in CoolProp_wrap
 %{
-#include "AbstractState.h"
 #include "DataStructures.h"
+#include "AbstractState.h"
 #include "CoolProp.h"
 %}
 
-%include "AbstractState.h"
 %include "DataStructures.h"
+%include "AbstractState.h"
 %include "CoolProp.h"
