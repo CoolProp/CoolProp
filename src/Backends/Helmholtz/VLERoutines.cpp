@@ -220,6 +220,10 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
         SatL->update(DmolarT_INPUTS, rhoL, T);
         SatV->update(DmolarT_INPUTS, rhoV, T);
         rhoL += -(SatL->p()-SatV->p())/SatL->first_partial_deriv(iP, iDmolar, iT);
+        
+        // Update the state again with the better guess for the liquid density
+        SatL->update(DmolarT_INPUTS, rhoL, T);
+        SatV->update(DmolarT_INPUTS, rhoV, T);
 
         deltaL = rhoL/reduce.rhomolar;
         deltaV = rhoV/reduce.rhomolar;
@@ -234,10 +238,6 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
         /*if (get_debug_level()>8){
             std::cout << format("%s:%d: right before the derivs with deltaL = %g deltaV = %g tau = %g\n",__FILE__,__LINE__,deltaL, deltaV, tau).c_str();
         }*/
-
-        // Calculate once to save on calls to EOS
-        SatL->update(DmolarT_INPUTS, rhoL, T);
-        SatV->update(DmolarT_INPUTS, rhoV, T);
 
         pL = SatL->p();
         pV = SatV->p();
@@ -352,6 +352,9 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
         rhoL = deltaL*reduce.rhomolar;
         rhoV = deltaV*reduce.rhomolar;
         T = reduce.T/tau;
+        
+        SatL->update(DmolarT_INPUTS, rhoL, T);
+        SatV->update(DmolarT_INPUTS, rhoV, T);
 
         error = sqrt(pow(negativer[0], 2)+pow(negativer[1], 2)+pow(negativer[2], 2));
         iter++;

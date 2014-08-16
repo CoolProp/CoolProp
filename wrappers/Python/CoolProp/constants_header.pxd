@@ -38,9 +38,6 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
 		iCvmass
 		iUmass
 		iGmass
-		idrhodh_constp_smoothed
-		idrhodp_consth_smoothed
-		irho_smoothed
 		iviscosity
 		iconductivity
 		isurface_tension
@@ -49,7 +46,6 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
 		iisothermal_compressibility
 		iisobaric_expansion_coefficient
 		ifundamental_derivative_of_gas_dynamics
-		id2pdv2_consts
 		ialphar
 		idalphar_dtau_constdelta
 		idalphar_ddelta_consttau
@@ -58,11 +54,9 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
 		idalpha0_ddelta_consttau
 		iBvirial
 		iCvirial
-		iZ
 		idBvirial_dT
 		idCvirial_dT
-		idZdDelta
-		idZdTau
+		iZ
 		iGWP20
 		iGWP100
 		iGWP500
@@ -70,6 +64,7 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
 		iHH
 		iPH
 		iODP
+		iundefined_parameter
 	enum input_pairs:
 		QT_INPUTS
 		PQ_INPUTS

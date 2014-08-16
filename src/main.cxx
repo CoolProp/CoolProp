@@ -413,7 +413,7 @@ int main()
         int rr = 0;
     }
     #endif
-    #if 1
+    #if 0
     {
         #if ENABLE_CATCH
             std::vector<std::string> tags;
@@ -499,9 +499,27 @@ int main()
 	#endif
     #if 1
     {
+        time_t t1,t2;
+        long N = 100000;
+        double ss = 0;
         std::vector<std::string> names(1,"Water");
         shared_ptr<HelmholtzEOSMixtureBackend> Water(new HelmholtzEOSMixtureBackend(names));
         Water->set_mole_fractions(std::vector<long double>(1,1));
+        t1 = clock();
+        for (long i = 0; i < N; ++i){
+            Water->update(DmolarT_INPUTS, 1e-8, 300+i*1e-8);
+            ss += Water->p();
+        }
+        t2 = clock();
+        std::cout << format("value: %0.13g, %g us/call\n", ss, ((double)(t2-t1))/CLOCKS_PER_SEC/double(N)*1e6);
+    }
+    #endif
+    #if 0
+    {
+        std::vector<std::string> names(1,"Water");
+        shared_ptr<HelmholtzEOSMixtureBackend> Water(new HelmholtzEOSMixtureBackend(names));
+        Water->set_mole_fractions(std::vector<long double>(1,1));
+        Water->update(PQ_INPUTS, 101325, 0);
         
         HelmholtzDerivatives derivs;
         time_t t1,t2;

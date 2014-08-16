@@ -27,6 +27,8 @@
 #include "FlashRoutines.h"
 #include "TransportRoutines.h"
 
+static int deriv_counter = 0;
+
 namespace CoolProp {
 
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(std::vector<std::string> &component_names, bool generate_SatL_and_SatV) {
@@ -1895,6 +1897,28 @@ void HelmholtzEOSMixtureBackend::calc_reducing_state(void)
     _reducing = calc_reducing_state_nocache(mole_fractions);
     _crit = _reducing;
 }
+void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<long double> &mole_fractions, const long double &tau, const long double &delta)
+{
+    deriv_counter++;
+    //std::cout << ".";
+    if (is_pure_or_pseudopure){
+        HelmholtzDerivatives derivs = components[0]->pEOS->alphar.all(tau, delta);
+        _alphar = derivs.alphar;
+        _dalphar_dDelta = derivs.dalphar_ddelta;
+        _dalphar_dTau = derivs.dalphar_dtau;
+        _d2alphar_dDelta2 = derivs.d2alphar_ddelta2;
+        _d2alphar_dDelta_dTau = derivs.d2alphar_ddelta_dtau;
+        _d2alphar_dTau2 = derivs.d2alphar_dtau2;
+        _d3alphar_dDelta3 = derivs.d3alphar_ddelta3;
+        _d3alphar_dDelta2_dTau = derivs.d3alphar_ddelta2_dtau;
+        _d3alphar_dDelta_dTau2 = derivs.d3alphar_ddelta_dtau2;
+        _d3alphar_dTau3 = derivs.d3alphar_dtau3;
+    }
+    else{
+        throw NotImplementedError("calc_all_alphar_deriv_nocache not yet implemented for mixtures");
+    }
+}
+
 long double HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<long double> &mole_fractions, const long double &tau, const long double &delta)
 {
     if (is_pure_or_pseudopure)
@@ -2071,35 +2095,34 @@ long double HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
 }
 long double HelmholtzEOSMixtureBackend::calc_alphar(void)
 {
-    const int nTau = 0, nDelta = 0;
-    return calc_alphar_deriv_nocache(nTau, nDelta, mole_fractions, _tau, _delta);
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<long double>(_alphar);
 }
 long double HelmholtzEOSMixtureBackend::calc_dalphar_dDelta(void)
 {
-    const int nTau = 0, nDelta = 1;
-    return calc_alphar_deriv_nocache(nTau, nDelta, mole_fractions, _tau, _delta);
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<long double>(_dalphar_dDelta);
 }
 long double HelmholtzEOSMixtureBackend::calc_dalphar_dTau(void)
 {
-    const int nTau = 1, nDelta = 0;
-    return calc_alphar_deriv_nocache(nTau, nDelta, mole_fractions, _tau, _delta);
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<long double>(_dalphar_dTau);
 }
 long double HelmholtzEOSMixtureBackend::calc_d2alphar_dTau2(void)
 {
-    const int nTau = 2, nDelta = 0;
-    return calc_alphar_deriv_nocache(nTau, nDelta, mole_fractions, _tau, _delta);
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<long double>(_d2alphar_dTau2);
 }
 long double HelmholtzEOSMixtureBackend::calc_d2alphar_dDelta_dTau(void)
 {
-    const int nTau = 1, nDelta = 1;
-    return calc_alphar_deriv_nocache(nTau, nDelta, mole_fractions, _tau, _delta);
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<long double>(_d2alphar_dDelta_dTau);
 }
 long double HelmholtzEOSMixtureBackend::calc_d2alphar_dDelta2(void)
 {
-    const int nTau = 0, nDelta = 2;
-    return calc_alphar_deriv_nocache(nTau, nDelta, mole_fractions, _tau, _delta);
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<long double>(_d2alphar_dDelta2);
 }
-
 long double HelmholtzEOSMixtureBackend::calc_alpha0(void)
 {
     const int nTau = 0, nDelta = 0;
