@@ -44,7 +44,7 @@ enum parameters{
     iDmass, iHmass, iSmass, iCpmass, iCp0mass, iCvmass, iUmass, iGmass,
 
     // Smoothing functions for density
-    idrhodh_constp_smoothed, idrhodp_consth_smoothed, irho_smoothed,
+    //idrhodh_constp_smoothed, idrhodp_consth_smoothed, irho_smoothed,
 
     // Transport properties
     iviscosity, iconductivity, isurface_tension, iPrandtl,
@@ -53,7 +53,7 @@ enum parameters{
     ispeed_sound, iisothermal_compressibility, iisobaric_expansion_coefficient,
 
     // Fundamental derivative of gas dynamics
-    ifundamental_derivative_of_gas_dynamics, id2pdv2_consts,
+    ifundamental_derivative_of_gas_dynamics,
 
     // Derivatives of the residual non-dimensionalized Helmholtz energy with respect to the EOS variables
     ialphar, idalphar_dtau_constdelta, idalphar_ddelta_consttau,
@@ -62,10 +62,14 @@ enum parameters{
     ialpha0, idalpha0_dtau_constdelta, idalpha0_ddelta_consttau,
 
     // Other functions and derivatives
-    iBvirial, iCvirial, iZ, idBvirial_dT, idCvirial_dT, idZdDelta, idZdTau,
+    iBvirial, iCvirial, idBvirial_dT, idCvirial_dT, iZ,
 
     // Environmental parameters
-    iGWP20, iGWP100, iGWP500, iFH, iHH, iPH, iODP
+    iGWP20, iGWP100, iGWP500, iFH, iHH, iPH, iODP,
+    
+    // The last parameter, so we can check that all parameters are described in DataStructures.cpp
+    iundefined_parameter
+    
 };
 // !! If you add a parameter, update the map in the corresponding CPP file !!
 

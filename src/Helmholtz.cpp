@@ -26,17 +26,6 @@ void ResidualHelmholtzGeneralizedExponential::all(const long double &tau, const 
                 B_delta, B_tau, B_delta2, B_tau2, B_delta3, B_tau3,
                 u_increment, du_ddelta_increment, du_dtau_increment, 
                 d2u_ddelta2_increment, d3u_ddelta3_increment, d2u_dtau2_increment, d3u_dtau3_increment;
-                
-    derivs.alphar = 0.0;
-    derivs.dalphar_ddelta = 0.0;
-    derivs.dalphar_dtau = 0.0;
-    derivs.d2alphar_ddelta2 = 0.0;
-    derivs.d2alphar_dtau2 = 0.0;
-    derivs.d2alphar_ddelta_dtau = 0.0;
-    derivs.d3alphar_dtau3 = 0.0;
-    derivs.d3alphar_ddelta_dtau2 = 0.0;
-    derivs.d3alphar_ddelta2_dtau = 0.0;
-    derivs.d3alphar_ddelta3 = 0.0;
     
     const std::size_t N = elements.size();
     

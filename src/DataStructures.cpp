@@ -37,6 +37,8 @@ parameter_info parameter_info_list[] = {
     parameter_info(iCpmass, "Cpmass","O","J/kg/K","Mass specific constant presssure specific heat",false),
     parameter_info(iCvmolar, "Cvmolar","O","J/mol/K","Molar specific constant volume specific heat",false),
     parameter_info(iCvmass, "Cvmass","O","J/kg/K","Mass specific constant volume specific heat",false),
+    parameter_info(iCp0molar, "Cp0molar","O","J/mol/K","Ideal gas molar specific constant presssure specific heat",false),
+    parameter_info(iCp0mass, "Cp0mass","O","J/kg/K","Ideal gas mass specific constant presssure specific heat",false),
     parameter_info(iGWP20, "GWP20","O","-","20-year gobal warming potential",false),
     parameter_info(iGWP100, "GWP100","O","-","100-year gobal warming potential",false),
     parameter_info(iGWP500, "GWP500","O","-","500-year gobal warming potential",false),
@@ -49,6 +51,7 @@ parameter_info parameter_info_list[] = {
     parameter_info(idBvirial_dT, "dBvirial_dT","O","-","Derivative of second virial coefficient with respect to T",false),
     parameter_info(idCvirial_dT, "dCvirial_dT","O","-","Derivative of third virial coefficient with respect to T",false),
     parameter_info(imolar_mass, "molar_mass","O","kg/mol","Molar mass",true),
+    parameter_info(irhomass_reducing, "rhomass_reducing","O","kg/m^3","Mass density at reducing point",true),
     parameter_info(irhomolar_reducing, "rhomolar_reducing","O","mol/m^3","Molar density at reducing point",true),
     parameter_info(irhomolar_critical, "rhomolar_critical","O","mol/m^3","Molar density at critical point",true),
 	parameter_info(irhomass_critical, "rhomass_critical","O","kg/m^3","Mass density at critical point",true),
@@ -57,13 +60,21 @@ parameter_info parameter_info_list[] = {
 	parameter_info(iT_triple, "T_triple","O","K","Temperature at the triple point",true),
 	parameter_info(iT_max, "T_max","O","K","Maximum temperature limit",true),
 	parameter_info(iT_min, "T_min","O","K","Minimum temperature limit",true),
-	parameter_info(iP_max, "P_max","O","Pa","Maximum pressure limit",true),
+	parameter_info(iP_min, "P_min","O","Pa","Minimum pressure limit",true),
+    parameter_info(iP_max, "P_max","O","Pa","Maximum pressure limit",true),
 	parameter_info(iP_critical, "p_critical","O","Pa","Pressure at the critical point",true),
     parameter_info(iP_triple, "p_triple","O","Pa","Pressure at the triple point (pure only)",true),
-    parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility",false),
+    
     parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound",false),
     parameter_info(iviscosity, "viscosity","O","Pa-s","Viscosity",false),
     parameter_info(iconductivity, "conductivity","O","W/m/K","Thermal conductivity",false),
+    parameter_info(isurface_tension, "surface_tension","O","N/m","Surface tension",false),
+    parameter_info(iPrandtl, "Prandtl","O","-","Prandtl number",false),
+    
+    parameter_info(iisothermal_compressibility, "isothermal_compressibility","O","1/Pa","Isothermal compressibility",false),
+    parameter_info(iisobaric_expansion_coefficient, "isobaric_expansion_coefficient","O","1/K","Isobaric expansion coefficient",false),
+    parameter_info(iZ, "Z","O","-","Compressibility factor",false),
+    parameter_info(ifundamental_derivative_of_gas_dynamics, "fundamental_derivative_of_gas_dynamics","O","-","Fundamental_derivative_of_gas_dynamics",false),
     
     parameter_info(ialphar, "","O","-","Residual Helmholtz energy",false),
     parameter_info(idalphar_dtau_constdelta, "","O","-","Derivative of residual Helmholtz energy with tau",false),
@@ -268,4 +279,31 @@ std::string get_input_pair_long_desc(int pair)
     return input_pair_information.long_desc_map[pair];
 }
 
+
+
 } /* namespace CoolProp */
+
+
+
+#ifdef ENABLE_CATCH
+#include "catch.hpp"
+
+TEST_CASE("Check that all parameters are descibed","")
+{
+    for (int i = 0; i < CoolProp::iundefined_parameter; ++i){
+        std::ostringstream ss;
+        ss << "Parameter index," << i << "last index:" << CoolProp::iundefined_parameter;
+        SECTION(ss.str(), "")
+        {   
+            std::string prior;
+            if (i > 0){
+                CHECK_NOTHROW(prior = CoolProp::get_parameter_information(i-1,"short"));
+                CAPTURE(prior);
+            }
+            CHECK_NOTHROW(CoolProp::get_parameter_information(i,"short"));
+        }
+    }
+}
+
+#endif
+
