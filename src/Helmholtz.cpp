@@ -18,7 +18,7 @@ long double kahanSum(std::vector<long double> &x)
 }
 bool wayToSort(long double i, long double j) { return std::abs(i) > std::abs(j); }
 
-void ResidualHelmholtzGeneralizedExponential::all(const long double &tau, const long double &delta, Derivatives &derivs) throw()
+void ResidualHelmholtzGeneralizedExponential::all(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw()
 {
     long double log_tau = log(tau), log_delta = log(delta), ndteu, 
                 u, du_ddelta, du_dtau, d2u_ddelta2, d2u_dtau2, d3u_ddelta3, d3u_dtau3,
@@ -176,7 +176,7 @@ void ResidualHelmholtzNonAnalytic::to_json(rapidjson::Value &el, rapidjson::Docu
     el.AddMember("D",_D,doc.GetAllocator());
 }
 
-void ResidualHelmholtzNonAnalytic::all(const long double &tau, const long double &delta, Derivatives &derivs) throw()
+void ResidualHelmholtzNonAnalytic::all(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw()
 {
     if (N==0){return;}
     for (unsigned int i=0; i<N; ++i)
@@ -785,7 +785,7 @@ long double ResidualHelmholtzSAFTAssociating::eta(const long double &delta){
     return this->vbarn*delta;
 }
 
-void ResidualHelmholtzSAFTAssociating::all(const long double &tau, const long double &delta, Derivatives &deriv) throw()
+void ResidualHelmholtzSAFTAssociating::all(const long double &tau, const long double &delta, HelmholtzDerivatives &deriv) throw()
 {
     if (disabled){return;}
     long double X = this->X(delta, this->Deltabar(tau, delta));

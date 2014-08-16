@@ -413,11 +413,11 @@ int main()
         int rr = 0;
     }
     #endif
-    #if 0
+    #if 1
     {
         #if ENABLE_CATCH
             std::vector<std::string> tags;
-            tags.push_back("[ancillaries]");
+            tags.push_back("[helmholtz]");
             run_user_defined_tests(tags);
             double rr = 0;
 			char c;
@@ -503,7 +503,7 @@ int main()
         shared_ptr<HelmholtzEOSMixtureBackend> Water(new HelmholtzEOSMixtureBackend(names));
         Water->set_mole_fractions(std::vector<long double>(1,1));
         
-        Derivatives derivs;
+        HelmholtzDerivatives derivs;
         time_t t1,t2;
         long N = 100000;
         double ss = 0;

@@ -99,14 +99,14 @@ public:
 // #############################################################################
 // #############################################################################
 
-struct Derivatives
+struct HelmholtzDerivatives
 {
     long double alphar, dalphar_ddelta, dalphar_dtau, d2alphar_ddelta2, d2alphar_dtau2, d2alphar_ddelta_dtau, 
                 d3alphar_ddelta3, d3alphar_ddelta_dtau2, d3alphar_ddelta2_dtau, d3alphar_dtau3;
     void reset(){alphar = 0; dalphar_ddelta = 0; dalphar_dtau = 0; d2alphar_ddelta2 = 0; d2alphar_dtau2 = 0; d2alphar_ddelta_dtau = 0;
                 d3alphar_ddelta3 = 0; d3alphar_ddelta_dtau2 = 0; d3alphar_ddelta2_dtau = 0; d3alphar_dtau3 = 0;
                 }
-    Derivatives(){reset();};
+    HelmholtzDerivatives(){reset();};
 };
 
 struct ResidualHelmholtzGeneralizedExponentialElement
@@ -269,7 +269,7 @@ public:
     long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){return 0;};
     long double dTau3(const long double &tau, const long double &delta) throw(){return 0;};
     
-    void all(const long double &tau, const long double &delta, Derivatives &derivs) throw();
+    void all(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
 };
 
 struct ResidualHelmholtzNonAnalyticElement
@@ -327,7 +327,7 @@ public:
     long double dDelta_dTau2(const long double &tau, const long double &delta) throw();
     long double dTau3(const long double &tau, const long double &delta) throw();
     
-    void all(const long double &tau, const long double &delta, Derivatives &derivs) throw();
+    void all(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
 };
 
 class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm{
@@ -383,18 +383,18 @@ public:
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
 
-    long double base(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.alphar;};
-    long double dDelta(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.dalphar_ddelta;};
-    long double dTau(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.dalphar_dtau;};
-    long double dDelta2(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta2;};
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta_dtau;};
-    long double dTau2(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_dtau2;};
-    long double dDelta3(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta3;};
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta2_dtau;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta_dtau2;};
-    long double dTau3(const long double &tau, const long double &delta) throw(){Derivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_dtau3;};
+    long double base(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.alphar;};
+    long double dDelta(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.dalphar_ddelta;};
+    long double dTau(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.dalphar_dtau;};
+    long double dDelta2(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta2;};
+    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta_dtau;};
+    long double dTau2(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_dtau2;};
+    long double dDelta3(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta3;};
+    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta2_dtau;};
+    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta_dtau2;};
+    long double dTau3(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_dtau3;};
     
-    void all(const long double &tau, const long double &delta, Derivatives &deriv) throw();
+    void all(const long double &tau, const long double &delta, HelmholtzDerivatives &deriv) throw();
 };
 
 class ResidualHelmholtzContainer
@@ -405,75 +405,24 @@ public:
     ResidualHelmholtzSAFTAssociating SAFT;
     ResidualHelmholtzGeneralizedExponential GenExp; 
 
-    Derivatives all(const long double tau, const long double delta)
+    HelmholtzDerivatives all(const long double tau, const long double delta)
     {
-        Derivatives derivs; // zeros out the elements
+        HelmholtzDerivatives derivs; // zeros out the elements
         GenExp.all(tau, delta, derivs);
         NonAnalytic.all(tau, delta, derivs);
         SAFT.all(tau, delta, derivs);
         return derivs;
     };
-    long double base(long double tau, long double delta)
-    {
-        Derivatives derivs; // zeros out the elements
-        GenExp.all(tau, delta, derivs);
-        return (derivs.alphar + NonAnalytic.base(tau, delta) + SAFT.base(tau,delta));
-    };
-    long double dDelta(long double tau, long double delta)
-    {
-        Derivatives derivs;
-        GenExp.all(tau, delta, derivs);
-        return (derivs.dalphar_ddelta + NonAnalytic.dDelta(tau, delta) + SAFT.dDelta(tau,delta));
-    };
-    long double dTau(long double tau, long double delta)
-    {
-        Derivatives derivs;
-        GenExp.all(tau, delta, derivs);
-        return (derivs.dalphar_dtau + NonAnalytic.dTau(tau, delta) + SAFT.dTau(tau,delta));
-    };
-    long double dDelta2(long double tau, long double delta)
-    {
-        Derivatives derivs;
-        GenExp.all(tau, delta, derivs);
-        return (derivs.d2alphar_ddelta2 + NonAnalytic.dDelta2(tau, delta) + SAFT.dDelta2(tau,delta));
-    };
-    long double dDelta_dTau(long double tau, long double delta)
-    {
-        Derivatives derivs;
-        GenExp.all(tau, delta, derivs);
-        return (derivs.d2alphar_ddelta_dtau + NonAnalytic.dDelta_dTau(tau, delta) + SAFT.dDelta_dTau(tau,delta));
-    };
-    long double dTau2(long double tau, long double delta)
-    {
-        Derivatives derivs;
-        GenExp.all(tau, delta, derivs);
-        return (derivs.d2alphar_dtau2 + NonAnalytic.dTau2(tau, delta) + SAFT.dTau2(tau,delta));
-    };
-    
-    long double dDelta3(long double tau, long double delta) 
-    {
-        Derivatives derivs;
-        GenExp.all(tau, delta, derivs);
-        return (derivs.d3alphar_ddelta3 + NonAnalytic.dDelta3(tau, delta) + SAFT.dDelta3(tau,delta));
-    };
-    long double dDelta2_dTau(long double tau, long double delta)
-    {
-        Derivatives derivs;
-        GenExp.all(tau, delta, derivs);
-        return (derivs.d3alphar_ddelta2_dtau + NonAnalytic.dDelta2_dTau(tau, delta) + SAFT.dDelta2_dTau(tau,delta));
-    };
-    long double dDelta_dTau2(long double tau, long double delta)
-    {
-        Derivatives derivs;
-        GenExp.all(tau, delta, derivs);
-        return (derivs.d3alphar_ddelta_dtau2 + NonAnalytic.dDelta_dTau2(tau, delta) + SAFT.dDelta_dTau2(tau,delta));
-    };
-    long double dTau3(long double tau, long double delta)
-    {
-        Derivatives derivs;
-        GenExp.all(tau, delta, derivs);
-        return (derivs.d3alphar_dtau3 + NonAnalytic.dTau3(tau, delta) + SAFT.dTau3(tau,delta));
-    };
+    long double base(long double tau, long double delta) { return all(tau,delta).alphar; };
+    long double dDelta(long double tau, long double delta) { return all(tau,delta).dalphar_ddelta; };
+    long double dTau(long double tau, long double delta) { return all(tau, delta).dalphar_dtau; };
+    long double dDelta2(long double tau, long double delta) {  return all(tau, delta).d2alphar_ddelta2; };
+    long double dDelta_dTau(long double tau, long double delta) { return all(tau, delta).d2alphar_ddelta_dtau; };
+    long double dTau2(long double tau, long double delta) { return all(tau, delta).d2alphar_dtau2; };
+    long double dDelta3(long double tau, long double delta) { return all(tau, delta).d3alphar_ddelta3; };
+    long double dDelta2_dTau(long double tau, long double delta) { return all(tau, delta).d3alphar_ddelta2_dtau; };
+    long double dDelta_dTau2(long double tau, long double delta) { return all(tau, delta).d3alphar_ddelta_dtau2; };
+    long double dTau3(long double tau, long double delta) { return all(tau, delta).d3alphar_dtau3; };
 };
 
 // #############################################################################
