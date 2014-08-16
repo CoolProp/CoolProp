@@ -176,6 +176,80 @@ void ResidualHelmholtzNonAnalytic::to_json(rapidjson::Value &el, rapidjson::Docu
     el.AddMember("D",_D,doc.GetAllocator());
 }
 
+void ResidualHelmholtzNonAnalytic::all(const long double &tau, const long double &delta, Derivatives &derivs) throw()
+{
+    if (N==0){return;}
+    for (unsigned int i=0; i<N; ++i)
+    {
+        ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        long double ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
+        long double Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
+        long double theta = (1.0-tau)+Ai*pow(pow(delta-1.0,2),1.0/(2.0*betai));
+        long double dtheta_dDelta = Ai/(2*betai)*pow(pow(delta-1,2),1/(2*betai)-1)*2*(delta-1);
+        
+        long double PSI = exp(-Ci*pow(delta-1.0,2)-Di*pow(tau-1.0,2));
+        long double dPSI_dDelta = -2.0*Ci*(delta-1.0)*PSI;
+        long double dPSI_dTau = -2.0*Di*(tau-1.0)*PSI;
+        long double dPSI2_dDelta2 = (2.0*Ci*pow(delta-1.0,2)-1.0)*2.0*Ci*PSI;
+        long double dPSI2_dDelta_dTau = 4.0*Ci*Di*(delta-1.0)*(tau-1.0)*PSI;
+        long double dPSI2_dTau2 = (2.0*Di*pow(tau-1.0,2)-1.0)*2.0*Di*PSI;
+        long double dPSI3_dDelta3 = 2.0*Ci*PSI*(-4*Ci*Ci*pow(delta-1.0,3)+6*Ci*(delta-1));
+        long double dPSI3_dDelta2_dTau = (2.0*Ci*pow(delta-1.0,2)-1.0)*2.0*Ci*dPSI_dTau;
+        long double dPSI3_dDelta_dTau2 = 2*Di*(2*Di*pow(tau-1,2)-1)*dPSI_dDelta;
+        long double dPSI3_dTau3 = 2.0*Di*PSI*(-4*Di*Di*pow(tau-1,3)+6*Di*(tau-1));
+        
+        long double DELTA = pow(theta,2)+Bi*pow(pow(delta-1.0,2),ai);
+        long double dDELTA_dTau = -2*theta;
+        long double dDELTA2_dDelta_dTau = 2.0*Ai/(betai)*pow(pow(delta-1,2),1.0/(2.0*betai)-0.5);
+        long double dDELTA_dDelta = (delta-1.0)*(Ai*theta*2.0/betai*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)+2.0*Bi*ai*pow(pow(delta-1.0,2),ai-1.0));
+        long double dDELTA3_dDelta2_dTau = 2.0*Ai*(betai-1)/(betai*betai)*pow(pow(delta-1,2),1/(2*betai)-1.0);
+        
+        long double dDELTAbi_dDelta, dDELTA2_dDelta2, dDELTAbi2_dDelta2, dDELTAbi3_dDelta3, dDELTA3_dDelta3;
+        if (fabs(delta-1) < 10*DBL_EPSILON){
+            dDELTAbi_dDelta = 0;
+            dDELTA2_dDelta2 = 0;
+            dDELTA3_dDelta3 = 0;
+            dDELTAbi2_dDelta2 = 0;
+            dDELTAbi3_dDelta3 = 0;
+        }
+        else{
+            dDELTAbi_dDelta=bi*pow(DELTA,bi-1.0)*dDELTA_dDelta;
+            long double dDELTA_dDelta_over_delta_minus_1=(Ai*theta*2.0/betai*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)+2.0*Bi*ai*pow(pow(delta-1.0,2),ai-1.0));
+            dDELTA2_dDelta2 = dDELTA_dDelta_over_delta_minus_1+pow(delta-1.0,2)*(4.0*Bi*ai*(ai-1.0)*pow(pow(delta-1,2),ai-2.0)+2.0*pow(Ai/betai,2)*pow(pow(pow(delta-1,2),1.0/(2.0*betai)-1.0),2)+Ai*theta*4.0/betai*(1.0/(2.0*betai)-1.0)*pow(pow(delta-1.0,2),1.0/(2.0*betai)-2.0));
+            long double PI = 4*Bi*ai*(ai-1)*pow(pow(delta-1,2),ai-2)+2*pow(Ai/betai,2)*pow(pow(delta-1,2),1/betai-2)+4*Ai*theta/betai*(1/(2*betai)-1)*pow(pow(delta-1,2),1/(2*betai)-2);
+            long double dPI_dDelta = -8*Bi*ai*(ai-1)*(ai-2)*pow(pow(delta-1,2),ai-5.0/2.0)-8*pow(Ai/betai,2)*(1/(2*betai)-1)*pow(pow(delta-1,2),1/betai-5.0/2.0)-(8*Ai*theta)/betai*(1/(2*betai)-1)*(1/(2*betai)-2)*pow(pow(delta-1,2),1/(2*betai)-5.0/2.0)+4*Ai/betai*(1/(2*betai)-1)*pow(pow(delta-1,2),1/(2*betai)-2)*dtheta_dDelta;
+            dDELTA3_dDelta3 = 1/(delta-1)*dDELTA2_dDelta2-1/pow(delta-1,2)*dDELTA_dDelta+pow(delta-1,2)*dPI_dDelta+2*(delta-1)*PI;
+            dDELTAbi2_dDelta2 = bi*(pow(DELTA,bi-1.0)*dDELTA2_dDelta2+(bi-1.0)*pow(DELTA,bi-2.0)*pow(dDELTA_dDelta,2));
+            dDELTAbi3_dDelta3 = bi*(pow(DELTA,bi-1)*dDELTA3_dDelta3+dDELTA2_dDelta2*(bi-1)*pow(DELTA,bi-2)*dDELTA_dDelta+(bi-1)*(pow(DELTA,bi-2)*2*dDELTA_dDelta*dDELTA2_dDelta2+pow(dDELTA_dDelta,2)*(bi-2)*pow(DELTA,bi-3)*dDELTA_dDelta));
+        }
+        
+        long double dDELTAbi_dTau = -2.0*theta*bi*pow(DELTA,bi-1.0);
+        
+        long double dDELTAbi2_dDelta_dTau=-Ai*bi*2.0/betai*pow(DELTA,bi-1.0)*(delta-1.0)*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)-2.0*theta*bi*(bi-1.0)*pow(DELTA,bi-2.0)*dDELTA_dDelta;
+        long double dDELTAbi2_dTau2 = 2.0*bi*pow(DELTA,bi-1.0)+4.0*pow(theta,2)*bi*(bi-1.0)*pow(DELTA,bi-2.0);
+        long double dDELTAbi3_dTau3 = -12.0*theta*bi*(bi-1.0)*pow(DELTA,bi-2)-8*pow(theta,3)*bi*(bi-1)*(bi-2)*pow(DELTA,bi-3.0);
+        long double dDELTAbi3_dDelta_dTau2 = 2*bi*(bi-1)*pow(DELTA,bi-2)*dDELTA_dDelta+4*pow(theta,2)*bi*(bi-1)*(bi-2)*pow(DELTA,bi-3)*dDELTA_dDelta+8*theta*bi*(bi-1)*pow(DELTA,bi-2)*dtheta_dDelta;
+        long double dDELTAbi3_dDelta2_dTau = bi*((bi-1)*pow(DELTA,bi-2)*dDELTA_dTau*dDELTA2_dDelta2 + pow(DELTA,bi-1)*dDELTA3_dDelta2_dTau+(bi-1)*((bi-2)*pow(DELTA,bi-3)*dDELTA_dTau*pow(dDELTA_dDelta,2)+pow(DELTA,bi-2)*2*dDELTA_dDelta*dDELTA2_dDelta_dTau));
+        
+        derivs.alphar += ni*pow(DELTA, bi)*delta*PSI;
+        
+        derivs.dalphar_ddelta += ni*(pow(DELTA,bi)*(PSI+delta*dPSI_dDelta)+dDELTAbi_dDelta*delta*PSI);
+        derivs.dalphar_dtau += ni*delta*(dDELTAbi_dTau*PSI+pow(DELTA,bi)*dPSI_dTau);
+        
+        derivs.d2alphar_ddelta2 += ni*(pow(DELTA,bi)*(2.0*dPSI_dDelta+delta*dPSI2_dDelta2)+2.0*dDELTAbi_dDelta*(PSI+delta*dPSI_dDelta)+dDELTAbi2_dDelta2*delta*PSI);
+        derivs.d2alphar_ddelta_dtau += ni*(pow(DELTA,bi)*(dPSI_dTau+delta*dPSI2_dDelta_dTau)+delta*dDELTAbi_dDelta*dPSI_dTau+ dDELTAbi_dTau*(PSI+delta*dPSI_dDelta)+dDELTAbi2_dDelta_dTau*delta*PSI);
+        derivs.d2alphar_dtau2 += ni*delta*(dDELTAbi2_dTau2*PSI+2.0*dDELTAbi_dTau*dPSI_dTau+pow(DELTA,bi)*dPSI2_dTau2);
+        
+        derivs.d3alphar_ddelta3 += ni*(pow(DELTA,bi)*(3.0*dPSI2_dDelta2+delta*dPSI3_dDelta3)+3.0*dDELTAbi_dDelta*(2*dPSI_dDelta+delta*dPSI2_dDelta2)+3*dDELTAbi2_dDelta2*(PSI+delta*dPSI_dDelta)+dDELTAbi3_dDelta3*PSI*delta);
+        long double Line1 = pow(DELTA,bi)*(2*dPSI2_dDelta_dTau+delta*dPSI3_dDelta2_dTau)+dDELTAbi_dTau*(2*dPSI_dDelta+delta*dPSI2_dDelta2);
+        long double Line2 = 2*dDELTAbi_dDelta*(dPSI_dTau+delta*dPSI2_dDelta_dTau)+2*dDELTAbi2_dDelta_dTau*(PSI+delta*dPSI_dDelta);
+        long double Line3 = dDELTAbi2_dDelta2*delta*dPSI_dTau + dDELTAbi3_dDelta2_dTau*delta*PSI;
+        derivs.d3alphar_ddelta2_dtau += ni*(Line1+Line2+Line3);
+        derivs.d3alphar_ddelta_dtau2 += ni*delta*(dDELTAbi2_dTau2*dPSI_dDelta+dDELTAbi3_dDelta_dTau2*PSI+2*dDELTAbi_dTau*dPSI2_dDelta_dTau+2.0*dDELTAbi2_dDelta_dTau*dPSI_dTau+pow(DELTA,bi)*dPSI3_dDelta_dTau2+dDELTAbi_dDelta*dPSI2_dTau2)+ni*(dDELTAbi2_dTau2*PSI+2.0*dDELTAbi_dTau*dPSI_dTau+pow(DELTA,bi)*dPSI2_dTau2);
+        derivs.d3alphar_dtau3 += ni*delta*(dDELTAbi3_dTau3*PSI+(3.0*dDELTAbi2_dTau2)*dPSI_dTau+(3*dDELTAbi_dTau)*dPSI2_dTau2+pow(DELTA,bi)*dPSI3_dTau3);
+    }
+}
+
 long double ResidualHelmholtzNonAnalytic::base(const long double &tau, const long double &delta) throw()
 {
     if (N==0){return 0.0;}

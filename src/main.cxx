@@ -510,18 +510,34 @@ int main()
         
         std::vector<CoolPropFluid*> components = Water->get_components();
         ResidualHelmholtzGeneralizedExponential GenExp = components[0]->pEOS->alphar.GenExp;
+        ResidualHelmholtzNonAnalytic NonAnal = components[0]->pEOS->alphar.NonAnalytic;
         
         long double tau = 0.8, delta = 2.2;
-        
+        derivs.reset();
         GenExp.all(tau, delta, derivs);
         
         t1 = clock();
         for (long i = 0; i < N; ++i){
+            derivs.reset();
             GenExp.all(tau, delta+i*1e-10, derivs);
             ss += derivs.alphar+derivs.dalphar_ddelta+derivs.dalphar_dtau+derivs.d2alphar_ddelta2+derivs.d2alphar_ddelta_dtau+derivs.d2alphar_dtau2;
         }
         t2 = clock();
         std::cout << format("value: %0.13g, %g us/call\n", ss, ((double)(t2-t1))/CLOCKS_PER_SEC/double(N)*1e6);
+        
+        tau = 0.99; delta = 1.01;
+        derivs.reset();
+        NonAnal.all(tau, delta, derivs);
+        long double a00 = NonAnal.base(tau, delta);
+        long double a10 = NonAnal.dDelta(tau, delta);
+        long double a01 = NonAnal.dTau(tau, delta);
+        long double a20 = NonAnal.dDelta2(tau, delta);
+        long double a11 = NonAnal.dDelta_dTau(tau, delta);
+        long double a02 = NonAnal.dTau2(tau, delta);
+        long double a03 = NonAnal.dTau3(tau, delta);
+        long double a12 = NonAnal.dDelta_dTau2(tau, delta);
+        long double a21 = NonAnal.dDelta2_dTau(tau, delta);
+        long double a30 = NonAnal.dDelta3(tau, delta);
         
         exit(0);
     }

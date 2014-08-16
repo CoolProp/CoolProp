@@ -326,6 +326,8 @@ public:
     long double dDelta2_dTau(const long double &tau, const long double &delta) throw();
     long double dDelta_dTau2(const long double &tau, const long double &delta) throw();
     long double dTau3(const long double &tau, const long double &delta) throw();
+    
+    void all(const long double &tau, const long double &delta, Derivatives &derivs) throw();
 };
 
 class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm{
@@ -403,9 +405,17 @@ public:
     ResidualHelmholtzSAFTAssociating SAFT;
     ResidualHelmholtzGeneralizedExponential GenExp; 
 
+    Derivatives all(const long double tau, const long double delta)
+    {
+        Derivatives derivs; // zeros out the elements
+        GenExp.all(tau, delta, derivs);
+        NonAnalytic.all(tau, delta, derivs);
+        SAFT.all(tau, delta, derivs);
+        return derivs;
+    };
     long double base(long double tau, long double delta)
     {
-        Derivatives derivs;
+        Derivatives derivs; // zeros out the elements
         GenExp.all(tau, delta, derivs);
         return (derivs.alphar + NonAnalytic.base(tau, delta) + SAFT.base(tau,delta));
     };
