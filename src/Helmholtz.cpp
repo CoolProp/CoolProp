@@ -21,22 +21,9 @@ bool wayToSort(long double i, long double j) { return std::abs(i) > std::abs(j);
 void ResidualHelmholtzGeneralizedExponential::all(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw()
 {
     long double log_tau = log(tau), log_delta = log(delta), ndteu, 
-                u, du_ddelta, du_dtau, d2u_ddelta2, d2u_dtau2, d3u_ddelta3, d3u_dtau3,
-                one_over_delta = 1/delta, one_over_tau = 1/tau, // division is much slower than multiplication, so do one division here
-                B_delta, B_tau, B_delta2, B_tau2, B_delta3, B_tau3,
-                u_increment, du_ddelta_increment, du_dtau_increment, 
-                d2u_ddelta2_increment, d3u_ddelta3_increment, d2u_dtau2_increment, d3u_dtau3_increment;
+                one_over_delta = 1/delta, one_over_tau = 1/tau; // division is much slower than multiplication, so do one division here
     
     const std::size_t N = elements.size();
-    
-    // We define them locally as constants so that the compiler 
-    // can more intelligently branch the for loop
-    const bool delta_li_in_u = this->delta_li_in_u;
-    const bool tau_mi_in_u = this->tau_mi_in_u;
-    const bool eta2_in_u = this->eta2_in_u;
-    const bool beta2_in_u = this->beta2_in_u;
-    const bool eta1_in_u = this->eta1_in_u;
-    const bool beta1_in_u = this->beta1_in_u;
     
     for (std::size_t i = 0; i < N; ++i)
     {
@@ -44,22 +31,22 @@ void ResidualHelmholtzGeneralizedExponential::all(const long double &tau, const 
         long double ni = el.n, di = el.d, ti = el.t;
         
         // Set the u part of exp(u) to zero
-        u = 0;
-        du_ddelta = 0;
-        du_dtau = 0;
-        d2u_ddelta2 = 0;
-        d2u_dtau2 = 0;
-        d3u_ddelta3 = 0;
-        d3u_dtau3 = 0;
+        long double u = 0;
+        long double du_ddelta = 0;
+        long double du_dtau = 0;
+        long double d2u_ddelta2 = 0;
+        long double d2u_dtau2 = 0;
+        long double d3u_ddelta3 = 0;
+        long double d3u_dtau3 = 0;
         
         if (delta_li_in_u){
             long double  ci = el.c, l_double = el.l_double;
             int l_int = el.l_int;
             if (ValidNumber(l_double) && l_int > 0){
-                u_increment = -ci*pow(delta, l_int);
-                du_ddelta_increment = l_double*u_increment*one_over_delta;
-                d2u_ddelta2_increment = (l_double-1)*du_ddelta_increment*one_over_delta;
-                d3u_ddelta3_increment = (l_double-2)*d2u_ddelta2_increment*one_over_delta;
+                long double u_increment = -ci*pow(delta, l_int);
+                long double du_ddelta_increment = l_double*u_increment*one_over_delta;
+                long double d2u_ddelta2_increment = (l_double-1)*du_ddelta_increment*one_over_delta;
+                long double d3u_ddelta3_increment = (l_double-2)*d2u_ddelta2_increment*one_over_delta;
                 u += u_increment;
                 du_ddelta += du_ddelta_increment;
                 d2u_ddelta2 += d2u_ddelta2_increment;
@@ -69,10 +56,10 @@ void ResidualHelmholtzGeneralizedExponential::all(const long double &tau, const 
         if (tau_mi_in_u){
             long double omegai = el.omega, m_double = el.m_double;
             if (std::abs(m_double) > 0){
-                u_increment = -omegai*pow(tau, m_double);
-                du_dtau_increment = m_double*u_increment*one_over_tau;
-                d2u_dtau2_increment = (m_double-1)*du_dtau_increment*one_over_tau;
-                d3u_dtau3_increment = (m_double-2)*d2u_dtau2_increment*one_over_tau;
+                long double u_increment = -omegai*pow(tau, m_double);
+                long double du_dtau_increment = m_double*u_increment*one_over_tau;
+                long double d2u_dtau2_increment = (m_double-1)*du_dtau_increment*one_over_tau;
+                long double d3u_dtau3_increment = (m_double-2)*d2u_dtau2_increment*one_over_tau;
                 u += u_increment;
                 du_dtau += du_dtau_increment;
                 d2u_dtau2 += d2u_dtau2_increment;
@@ -112,12 +99,12 @@ void ResidualHelmholtzGeneralizedExponential::all(const long double &tau, const 
         
         ndteu = ni*exp(ti*log_tau+di*log_delta+u);
         
-        B_delta = (delta*du_ddelta + di);
-        B_tau = (tau*du_dtau + ti);
-        B_delta2 = (POW2(delta)*(d2u_ddelta2 + POW2(du_ddelta)) + 2*di*delta*du_ddelta + di*(di-1));
-        B_tau2 = (POW2(tau)*(d2u_dtau2 + POW2(du_dtau)) + 2*ti*tau*du_dtau + ti*(ti-1));
-        B_delta3 = POW3(delta)*d3u_ddelta3 + 3*di*POW2(delta)*d2u_ddelta2+3*POW3(delta)*d2u_ddelta2*du_ddelta+3*di*POW2(delta*du_ddelta)+3*di*(di-1)*delta*du_ddelta+di*(di-1)*(di-2)+POW3(delta*du_ddelta);
-        B_tau3 = POW3(tau)*d3u_dtau3 + 3*ti*POW2(tau)*d2u_dtau2+3*POW3(tau)*d2u_dtau2*du_dtau+3*ti*POW2(tau*du_dtau)+3*ti*(ti-1)*tau*du_dtau+ti*(ti-1)*(ti-2)+POW3(tau*du_dtau);
+        long double B_delta = (delta*du_ddelta + di);
+        long double B_tau = (tau*du_dtau + ti);
+        long double B_delta2 = (POW2(delta)*(d2u_ddelta2 + POW2(du_ddelta)) + 2*di*delta*du_ddelta + di*(di-1));
+        long double B_tau2 = (POW2(tau)*(d2u_dtau2 + POW2(du_dtau)) + 2*ti*tau*du_dtau + ti*(ti-1));
+        long double B_delta3 = POW3(delta)*d3u_ddelta3 + 3*di*POW2(delta)*d2u_ddelta2+3*POW3(delta)*d2u_ddelta2*du_ddelta+3*di*POW2(delta*du_ddelta)+3*di*(di-1)*delta*du_ddelta+di*(di-1)*(di-2)+POW3(delta*du_ddelta);
+        long double B_tau3 = POW3(tau)*d3u_dtau3 + 3*ti*POW2(tau)*d2u_dtau2+3*POW3(tau)*d2u_dtau2*du_dtau+3*ti*POW2(tau*du_dtau)+3*ti*(ti-1)*tau*du_dtau+ti*(ti-1)*(ti-2)+POW3(tau*du_dtau);
         
         derivs.alphar += ndteu;
         
