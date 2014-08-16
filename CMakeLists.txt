@@ -253,6 +253,11 @@ if (COOLPROP_OCTAVE_MODULE)
 
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
+    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
+    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
+    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
+  ) 
   SWIG_ADD_MODULE(CoolProp octave ${I_FILE} ${APP_SOURCES})
   SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIBRARIES})  
   
@@ -286,6 +291,11 @@ if (COOLPROP_CSHARP_MODULE)
 
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
 	
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
+    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
+    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
+    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
+  )     
   # Set properties before adding module
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   if (WIN32)
@@ -349,6 +359,11 @@ if (COOLPROP_JAVA_MODULE)
 
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
 
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
+    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
+    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
+    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
+  ) 
   SWIG_ADD_MODULE(CoolProp java ${I_FILE} ${APP_SOURCES})
 
   if (WIN32)
@@ -399,6 +414,11 @@ if (COOLPROP_PHP_MODULE)
 
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
 
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
+    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
+    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
+    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
+  ) 
   SWIG_ADD_MODULE(CoolProp php ${I_FILE} ${APP_SOURCES})
 
   if (WIN32)
