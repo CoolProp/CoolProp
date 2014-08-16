@@ -502,7 +502,7 @@ int main()
         time_t t1,t2;
         long N = 100000;
         double ss = 0;
-        std::vector<std::string> names(1,"Water");
+        std::vector<std::string> names(1,"Propane");
         shared_ptr<HelmholtzEOSMixtureBackend> Water(new HelmholtzEOSMixtureBackend(names));
         Water->set_mole_fractions(std::vector<long double>(1,1));
         t1 = clock();

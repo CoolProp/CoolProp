@@ -167,7 +167,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             // Use logarithm of delta as independent variables
             options.use_logdelta = false;
 			
-			double increment = 0.2;
+			double increment = 0.4;
 
             try{
                 for (double omega = 1.0; omega > 0; omega -= increment){

@@ -136,12 +136,8 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend *HEOS,
         double call(double T){
             this->T = T;
             // Recalculate the densities using the current guess values
-            rhomolar_liq = HEOS->SatL->solver_rho_Tp(T, p, rhomolar_liq);
-            rhomolar_vap = HEOS->SatV->solver_rho_Tp(T, p, rhomolar_vap);
-            
-            // Set the densities in the saturation classes
-            HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
-            HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, T);
+            HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
+            HEOS->SatV->update_TP_guessrho(T, p, rhomolar_vap);
             
             // Calculate the Gibbs functions for liquid and vapor
             gL = HEOS->SatL->gibbsmolar();
@@ -370,9 +366,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, l
             throw SolutionError(format("saturation_PHSU_pure solver did not converge after 25 iterations for %s=%Lg current error is %Lg", info.c_str(), specified_value, error));
         }
     }
-    while (error > 1e-10);
-    HEOS->SatL->update(DmolarT_INPUTS, rhoL, T);
-    HEOS->SatV->update(DmolarT_INPUTS, rhoV, T);
+    while (error > 1e-9);
 }
 void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long double rhomolar, saturation_D_pure_options &options)
 {
