@@ -4,6 +4,7 @@
 
 #include <vector>
 #include "rapidjson/rapidjson_include.h"
+#include "Eigen/Core"
 #include "time.h"
 
 namespace CoolProp{
@@ -101,7 +102,7 @@ public:
 
 struct HelmholtzDerivatives
 {
-    long double alphar, dalphar_ddelta, dalphar_dtau, d2alphar_ddelta2, d2alphar_dtau2, d2alphar_ddelta_dtau, 
+    double alphar, dalphar_ddelta, dalphar_dtau, d2alphar_ddelta2, d2alphar_dtau2, d2alphar_ddelta_dtau, 
                 d3alphar_ddelta3, d3alphar_ddelta_dtau2, d3alphar_ddelta2_dtau, d3alphar_dtau3;
     void reset(){alphar = 0; dalphar_ddelta = 0; dalphar_dtau = 0; d2alphar_ddelta2 = 0; d2alphar_dtau2 = 0; d2alphar_ddelta_dtau = 0;
                 d3alphar_ddelta3 = 0; d3alphar_ddelta_dtau2 = 0; d3alphar_ddelta2_dtau = 0; d3alphar_dtau3 = 0;
@@ -121,20 +122,28 @@ struct ResidualHelmholtzGeneralizedExponentialElement
     
     ResidualHelmholtzGeneralizedExponentialElement()
     {
-        n = _HUGE; d = _HUGE; t = _HUGE;
-        c = _HUGE; l_double = _HUGE; omega = _HUGE; m_double = _HUGE; 
-        eta1 = _HUGE; epsilon1 = _HUGE; eta2 = _HUGE; epsilon2 = _HUGE;
-        beta1 = _HUGE; gamma1 = _HUGE; beta2 = _HUGE; gamma2 = _HUGE;
-        l_int = -100000;
-        m_int = -100000;
+        n = 0; d = 0; t = 0; c = 0; 
+        l_double = 0; omega = 0; m_double = 0; 
+        eta1 = 0; epsilon1 = 0; eta2 = 0; epsilon2 = 0;
+        beta1 = 0; gamma1 = 0; beta2 = 0; gamma2 = 0;
+        l_int = 0; m_int = 0;
     }
 };
 class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm{
     
 public:
-    bool delta_li_in_u, tau_mi_in_u, eta1_in_u, eta2_in_u, beta1_in_u, beta2_in_u;
+    bool delta_li_in_u, tau_mi_in_u, eta1_in_u, eta2_in_u, beta1_in_u, beta2_in_u, finished;
     std::vector<long double> s;
     std::size_t N;
+    
+    /// These variables are for the exp(u) part
+    /// u is given by -c*delta^l_i-omega*tau^m_i-eta1*(delta-epsilon1)-eta2*(delta-epsilon2)^2-beta1*(tau-gamma1)-beta2*(tau-gamma2)^2
+    std::vector<double> n,d,t,c, l_double, omega, m_double, eta1, epsilon1, eta2, epsilon2, beta1, gamma1, beta2, gamma2;
+    /// If l_i or m_i are integers, we will store them as integers in order to call pow(double, int) rather than pow(double, double)
+    std::vector<int> l_int, m_int;
+    
+    Eigen::ArrayXd uE, du_ddeltaE, du_dtauE, d2u_ddelta2E, d2u_dtau2E, d3u_ddelta3E, d3u_dtau3E;
+        
     std::vector<ResidualHelmholtzGeneralizedExponentialElement> elements;
     // Default Constructor
     ResidualHelmholtzGeneralizedExponential(){N = 0; 
@@ -144,6 +153,7 @@ public:
                                               eta2_in_u = false;
                                               beta1_in_u = false;
                                               beta2_in_u = false;
+                                              finished = false;
                                               };
     
     void add_Power(const std::vector<long double> &n, const std::vector<long double> &d, 
@@ -252,6 +262,36 @@ public:
         delta_li_in_u = true;
         tau_mi_in_u = true;
     };
+    
+    void finish(){
+        n.resize(elements.size()); d.resize(elements.size());
+        t.resize(elements.size()); c.resize(elements.size());
+        l_double.resize(elements.size()); l_int.resize(elements.size());
+        epsilon2.resize(elements.size()); eta2.resize(elements.size());
+        gamma2.resize(elements.size()); beta2.resize(elements.size());
+        
+        for (std::size_t i = 0; i < elements.size(); ++i){
+            n[i] = elements[i].n;
+            d[i] = elements[i].d;
+            t[i] = elements[i].t;
+            c[i] = elements[i].c;
+            l_double[i] = elements[i].l_double;
+            l_int[i] = elements[i].l_int;
+            epsilon2[i] = elements[i].epsilon2;
+            eta2[i] = elements[i].eta2;
+            gamma2[i] = elements[i].gamma2;
+            beta2[i] = elements[i].beta2;
+        }
+        uE.resize(elements.size());
+        du_ddeltaE.resize(elements.size());
+        du_dtauE.resize(elements.size());
+        d2u_ddelta2E.resize(elements.size());
+        d2u_dtau2E.resize(elements.size());
+        d3u_ddelta3E.resize(elements.size());
+        d3u_dtau3E.resize(elements.size());
+        
+        finished = true;
+    }
 
     ///< Destructor for the class.  No implementation
     ~ResidualHelmholtzGeneralizedExponential(){};
@@ -270,6 +310,7 @@ public:
     long double dTau3(const long double &tau, const long double &delta) throw(){return 0;};
     
     void all(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
+    void allEigen(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
 };
 
 struct ResidualHelmholtzNonAnalyticElement

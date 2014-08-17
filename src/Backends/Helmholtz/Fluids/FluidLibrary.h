@@ -129,6 +129,9 @@ protected:
                 throw ValueError(format("Unsupported Residual helmholtz type: %s",type.c_str()));
             }
         }
+        
+        // Finish adding parts to the Generalized Exponential term, build other vectors
+        EOS.alphar.GenExp.finish();
     };
 
     /// Parse the contributions to the ideal-gas Helmholtz energy

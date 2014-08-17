@@ -506,6 +506,36 @@ int main()
         
         shared_ptr<HelmholtzEOSMixtureBackend> Water(new HelmholtzEOSMixtureBackend(names));
         Water->set_mole_fractions(std::vector<long double>(1,1));
+        ResidualHelmholtzGeneralizedExponential GenExp = Water->get_components()[0]->pEOS->alphar.GenExp;
+        
+        HelmholtzDerivatives derivs1, derivs2;
+        double tau = 0.8, delta = 1.1;
+        
+        ss = 0;
+        t1 = clock();
+        for (long i = 0; i < N; ++i){
+            derivs1.reset();
+            GenExp.all(tau, delta+i*1e-18, derivs1);
+            ss += derivs1.alphar;
+        }
+        t2 = clock();
+        std::cout << format("value(all): %0.13g, %0.13g, %g us/call\n", ss, derivs1.alphar, ((double)(t2-t1))/CLOCKS_PER_SEC/double(N)*1e6);
+        
+        ss = 0;
+        t1 = clock(); 
+        for (long i = 0; i < N; ++i){
+            derivs2.reset();
+            GenExp.allEigen(tau, delta+i*1e-18, derivs2);
+            ss += derivs2.alphar;
+        }
+        t2 = clock();
+        std::cout << format("value(allEigen): %0.13g, %0.13g, %g us/call\n", ss, derivs2.alphar, ((double)(t2-t1))/CLOCKS_PER_SEC/double(N)*1e6);
+
+        int r44 =0;
+    }
+    #endif
+    #if 0
+    {
         
         t1 = clock();
         for (long i = 0; i < N; ++i){
