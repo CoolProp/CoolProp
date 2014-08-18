@@ -8,14 +8,27 @@ namespace CoolProp{
 struct SinglePhaseGriddedTableData{
     CoolProp::parameters xkey, ykey;
     std::vector< std::vector<double> > T, p, rhomolar, hmolar, smolar;
+    std::vector< std::vector<double> > dTdx, dTdy, dpdx, dpdy, drhomolardx, drhomolardy, dhmolardx, dhmolardy, dsmolardx, dsmolardy;
     
     void resize(std::size_t Nx, std::size_t Ny){
-        
+        // State variables
         T.resize(Nx, std::vector<double>(Ny, _HUGE));
         p.resize(Nx, std::vector<double>(Ny, _HUGE));
         rhomolar.resize(Nx, std::vector<double>(Ny, _HUGE));
         hmolar.resize(Nx, std::vector<double>(Ny, _HUGE));
         smolar.resize(Nx, std::vector<double>(Ny, _HUGE));
+        
+        // First derivatives of state variables
+        dTdx.resize(Nx, std::vector<double>(Ny, _HUGE));
+        dpdx.resize(Nx, std::vector<double>(Ny, _HUGE));
+        drhomolardx.resize(Nx, std::vector<double>(Ny, _HUGE));
+        dhmolardx.resize(Nx, std::vector<double>(Ny, _HUGE));
+        dsmolardx.resize(Nx, std::vector<double>(Ny, _HUGE));
+        dTdy.resize(Nx, std::vector<double>(Ny, _HUGE));
+        dpdy.resize(Nx, std::vector<double>(Ny, _HUGE));
+        drhomolardy.resize(Nx, std::vector<double>(Ny, _HUGE));
+        dhmolardy.resize(Nx, std::vector<double>(Ny, _HUGE));
+        dsmolardy.resize(Nx, std::vector<double>(Ny, _HUGE));
     };
 };
 class GriddedTableBackend : public AbstractState
