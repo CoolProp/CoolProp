@@ -929,7 +929,10 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
     if (!ValidNumber(value)){
         throw ValueError(format("value to T_phase_determination_pure_or_pseudopure is invalid"));};
     // T is known, another input P, T, H, S, U is given (all molar)
-    if (_T < _crit.T)
+    if (_T < _crit.T && _p > _crit.p){
+        _phase = iphase_supercritical_liquid;
+    }
+    else if (_T < _crit.T)
     {
         // Start to think about the saturation stuff
         // First try to use the ancillary equations if you are far enough away
