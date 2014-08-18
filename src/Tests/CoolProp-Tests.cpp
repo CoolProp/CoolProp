@@ -863,7 +863,9 @@ TEST_CASE("Test partial derivatives using PropsSI", "[derivatives]")
         CAPTURE(drhomolardp__T_PropsSI_num);
         CAPTURE(drhomolardp__T_PropsSI);
         double rel_err_exact = std::abs(drhomolardp__T_AbstractState-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI;
+        double rel_err_approx = std::abs(drhomolardp__T_PropsSI_num-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI;
         CHECK(rel_err_exact < 0.001);
+        CHECK(rel_err_approx < 0.001);
     }
     SECTION("Invalid first partial derivatives","")
     {
@@ -876,31 +878,6 @@ TEST_CASE("Test partial derivatives using PropsSI", "[derivatives]")
         CHECK(!ValidNumber(PropsSI("d(Bvirial)/d(P)T","T",300,"P",101325,"n-Propane")));
         CHECK(!ValidNumber(PropsSI("d(Tcrit)/d(P)T","T",300,"P",101325,"n-Propane")));
     }
-    
-//    SECTION{
-//        
-//        CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101325, 300));
-//        hmolar = AS->hmolar();
-//        hmass = AS->hmass();
-//        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
-//        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
-//        hmolar = AS->hmolar();
-//        hmass = AS->hmass();
-//        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
-//        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
-//        hmolar = AS->hmolar();
-//        hmass = AS->hmass();
-//        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
-//        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
-//        hmolar = AS->hmolar();
-//        hmass = AS->hmass();
-//        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
-//        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
-//        hmolar = AS->hmolar();
-//        hmass = AS->hmass();
-//        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
-//        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
-//    }
 }
 
 //TEST_CASE("Test that states agree with CoolProp", "[states]")
