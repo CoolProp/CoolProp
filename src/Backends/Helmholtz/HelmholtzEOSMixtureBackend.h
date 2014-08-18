@@ -220,8 +220,6 @@ public:
     void p_phase_determination_pure_or_pseudopure(int other, long double value, bool &saturation_called);
     void DmolarP_phase_determination();
     
-    
-
 
     // ***************************************************************
     // ***************************************************************
@@ -232,10 +230,6 @@ public:
     long double solver_rho_Tp(long double T, long double p, long double rho_guess = -1);
     long double solver_rho_Tp_SRK(long double T, long double p, int phase);
     long double solver_for_rho_given_T_oneof_HSU(long double T, long double value, int other);
-
-
-
-
 
 
 

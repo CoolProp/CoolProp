@@ -3,6 +3,7 @@
 #include "DataStructures.h"
 #include "Exceptions.h"
 #include "CoolPropTools.h"
+#include "CoolProp.h"
 
 namespace CoolProp{
 
@@ -192,19 +193,62 @@ std::string get_csv_parameter_list()
     }
     return strjoin(strings, ",");
 }
-int get_parameter_index(const std::string &param_name)
+bool is_valid_parameter(const std::string &param_name, parameters &iOutput)
 {
     std::map<std::string, int>::iterator it;
+    
     // Try to find it
     it = parameter_information.index_map.find(param_name);
     // If equal to end, not found
-    if (it != parameter_information.index_map.end())
-    {
+    if (it != parameter_information.index_map.end()){
         // Found, return it
-        return it->second;
+        iOutput = static_cast<parameters>(it->second);
+        return true;
     }
-    else
-    {
+    else{
+        return false;
+    }
+}
+
+bool is_valid_first_derivative(const std::string & name, parameters &iOf, parameters &iWrt, parameters &iConstant)
+{
+    std::size_t iN0, iN1, iD0, iD1;
+    parameters Of, Wrt, Constant;
+    if (get_debug_level() > 5){std::cout << format("is_valid_first_derivative(%s)",name.c_str());}
+    // There should be exactly one /
+    // There should be exactly one |
+    
+    // Suppose we start with "d(P)/d(T)|Dmolar"
+    std::vector<std::string> split_at_bar = strsplit(name, '|'); // "d(P)/d(T)"  and "Dmolar"
+    if (split_at_bar.size() != 2){return false;}
+    
+    std::vector<std::string> split_at_slash = strsplit(split_at_bar[0], '/'); // "d(P)" and "d(T)"
+    if (split_at_slash.size() != 2){return false;}
+    
+    iN0 = split_at_slash[0].find("(");
+    iN1 = split_at_slash[0].find(")", iN0);
+    if (!(iN0 > 0 && iN1 > 0 && iN1 > iN0)){return false;}
+    std::string num = split_at_slash[0].substr(iN0+1, iN1-2);
+    
+    iD0 = split_at_slash[1].find("(");
+    iD1 = split_at_slash[1].find(")", iD0);
+    if (!(iD0 > 0 && iD1 > 0 && iD1 > iD0)){return false;}
+    std::string den = split_at_slash[1].substr(iD0+1, iD1-2);
+    
+    if (is_valid_parameter(num, Of) && is_valid_parameter(den, Wrt) && is_valid_parameter(split_at_bar[1], Constant)){
+        iOf = Of; iWrt = Wrt; iConstant = Constant; return true;
+    }
+    else{
+        return false;
+    }
+}
+int get_parameter_index(const std::string &param_name)
+{
+    parameters iOutput;
+    if (is_valid_parameter(param_name, iOutput)){
+        return iOutput;
+    }
+    else{
         throw ValueError(format("Your input name [%s] is not valid in get_parameter_index (names are case sensitive)",param_name.c_str()));
     }
 }

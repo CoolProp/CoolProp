@@ -300,7 +300,11 @@ public:
     
     /** \brief The second partial derivative in homogeneous phases
      * 
-     *  \sa \ref CoolProp::AbstractState::first_partial_deriv
+     * The first partial derivative (\ref CoolProp::AbstractState::first_partial_deriv) can be expressed as
+     * 
+     * \f[ \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta}{\left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta} = \frac{N}{D}\f]
+     * 
+     * and the second derivative can be expressed as
      * 
      * \f[
      * \frac{\partial}{\partial D}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_E = \frac{\frac{\partial}{\partial \tau}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\delta\left(\frac{\partial E}{\partial \delta}\right)_\tau-\frac{\partial}{\partial \delta}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_\tau\left(\frac{\partial E}{\partial \tau}\right)_\delta}{\left(\frac{\partial D}{\partial \tau}\right)_\delta\left(\frac{\partial E}{\partial \delta}\right)_\tau-\left(\frac{\partial D}{\partial \delta}\right)_\tau\left(\frac{\partial E}{\partial \tau}\right)_\delta}
@@ -314,6 +318,8 @@ public:
      * \f[\left(\frac{\partial D}{\partial \tau}\right)_{\delta} = \left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial^2 C}{\partial \delta\partial\tau}\right)+\left(\frac{\partial^2 B}{\partial \tau^2}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_{\tau}-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial^2 C}{\partial \tau^2}\right)_\delta-\left(\frac{\partial^2 B}{\partial \delta\partial\tau}\right)\left(\frac{\partial C}{\partial \tau}\right)_\delta\f]
      * \f[\frac{\partial}{\partial \tau}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\delta = \frac{D\left(\frac{\partial N}{\partial \tau}\right)_{\delta}-N\left(\frac{\partial D}{\partial \tau}\right)_{\delta}}{D^2}\f]
      * \f[\frac{\partial}{\partial \delta}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\tau = \frac{D\left(\frac{\partial N}{\partial \delta}\right)_{\tau}-N\left(\frac{\partial D}{\partial \delta}\right)_{\tau}}{D^2}\f]
+     * 
+     * The terms \f$ N \f$ and \f$ D \f$ are the numerator and denominator from \ref CoolProp::AbstractState::first_partial_deriv respectively
      */
     long double second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2){return calc_second_partial_deriv(Of1,Wrt1,Constant1,Of2,Constant2);};
 

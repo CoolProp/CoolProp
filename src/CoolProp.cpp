@@ -334,14 +334,15 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
 // that error bubbling can be done properly
 double _PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &backend, const std::string &Ref, const std::vector<double> &z)
 {
+    parameters iOutput = iundefined_parameter;
+    parameters iOf = iundefined_parameter, iWrt = iundefined_parameter, iConstant = iundefined_parameter, 
+               iOf1 = iundefined_parameter, iWrt1 = iundefined_parameter, iConstant1 = iundefined_parameter, 
+               iWrt2 = iundefined_parameter, iConstant2 = iundefined_parameter;
     double x1, x2;
 	
     if (get_debug_level()>5){
         std::cout << format("%s:%d: _PropsSI(%s,%s,%g,%s,%g,%s,%s)\n",__FILE__,__LINE__,Output.c_str(),Name1.c_str(),Prop1,Name2.c_str(),Prop2,backend.c_str(),Ref.c_str(), vec_to_string(z).c_str()).c_str();
     }
-
-    // Convert all the input and output parameters to integers
-    long iOutput = get_parameter_index(Output);
 
     // The state we are going to use
     shared_ptr<AbstractState> State;
@@ -363,13 +364,13 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
 	
 	// We are going to let the factory function load the state
 	State.reset(AbstractState::factory(backend, fluid_string));
-	
+    
 	// First check if it is a trivial input (critical/max parameters for instance)
-	if (is_trivial_parameter(iOutput))
+	if (is_valid_parameter(Output, iOutput) && is_trivial_parameter(iOutput))
 	{
 		double val = State->trivial_keyed_output(iOutput);
 		return val;
-	};
+	}
 	
 	long iName1 = get_parameter_index(Name1);
 	long iName2 = get_parameter_index(Name2);
@@ -389,12 +390,25 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
 
 	// Update the state
 	State->update(pair, x1, x2);
-
-	// Return the desired output
-	double val = State->keyed_output(iOutput);
-
-	// Return the value
-	return val;
+    
+    if (iOutput != iundefined_parameter){
+        // Return the desired output
+        double val = State->keyed_output(iOutput);
+        
+        // Return the value
+        return val;
+    }
+    else if (is_valid_first_derivative(Output, iOf, iWrt, iConstant)){
+        // Return the desired output
+        double val = State->first_partial_deriv(iOf, iWrt, iConstant);
+        
+        // Return the value
+        return val;
+    }
+    else{// if is_valid_second_derivative(Output, iOf1, iWrt1, iConstant1, iWrt2, iConstant2){
+        return _HUGE;
+    };
+	
 }
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref, const std::vector<double> &z)
 {

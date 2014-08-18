@@ -84,6 +84,11 @@ int get_parameter_index(const std::string &param_name);
 /// Returns true if the input is trivial (constants, critical parameters, etc.)
 bool is_trivial_parameter(int key);
 
+/// Returns true if a valid parameter, and sets value in the variable iOutput
+bool is_valid_parameter(const std::string & name, parameters & iOutput);
+
+bool is_valid_first_derivative(const std::string & name, parameters &iOf, parameters &iWrt, parameters &iConstant);
+
 std::string get_csv_parameter_list();
 
 /// These are constants for the compositions

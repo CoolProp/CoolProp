@@ -824,6 +824,85 @@ TEST_CASE("Tests for solvers in P,H flash using Propane", "[flashdups],[flash],[
     }
 }
 
+TEST_CASE("Multiple calls to state class are consistent", "[flashdups],[flash],[PH],[consistency]")
+{
+    double hmolar, hmass;
+    SECTION("3 times PH with HEOS AbstractState yields same results every time","")
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
+        
+        CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101325, 300));
+        hmolar = AS->hmolar();
+        hmass = AS->hmass();
+        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+        hmolar = AS->hmolar();
+        hmass = AS->hmass();
+        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+        hmolar = AS->hmolar();
+        hmass = AS->hmass();
+        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+    }
+}
+
+TEST_CASE("Test partial derivatives using PropsSI", "[derivatives]")
+{
+    double hmolar, hmass, T = 300;
+    SECTION("Check drhodp|T 3 ways","")
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
+        AS->update(CoolProp::PT_INPUTS, 101325, 300);
+        
+        double drhomolardp__T_AbstractState = AS->first_partial_deriv(CoolProp::iDmolar, CoolProp::iP, CoolProp::iT);
+        double drhomolardp__T_PropsSI_num = (PropsSI("Dmolar","T",T,"P",101325+1e-3,"n-Propane") - PropsSI("Dmolar","T",T,"P",101325-1e-3,"n-Propane"))/(2*1e-3);
+        double drhomolardp__T_PropsSI = PropsSI("d(Dmolar)/d(P)|T","T",T,"P",101325,"n-Propane");
+        
+        CAPTURE(drhomolardp__T_AbstractState);
+        CAPTURE(drhomolardp__T_PropsSI_num);
+        CAPTURE(drhomolardp__T_PropsSI);
+        double rel_err_exact = std::abs(drhomolardp__T_AbstractState-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI;
+        CHECK(rel_err_exact < 0.001);
+    }
+    SECTION("Invalid first partial derivatives","")
+    {
+        CHECK(!ValidNumber(PropsSI("d()/d(P)|T","T",300,"P",101325,"n-Propane")));
+        CHECK(!ValidNumber(PropsSI("d(Dmolar)/d()|T","T",300,"P",101325,"n-Propane")));
+        CHECK(!ValidNumber(PropsSI("d(Dmolar)/d(P)|","T",300,"P",101325,"n-Propane")));
+        CHECK(!ValidNumber(PropsSI("d(XXXX)/d(P)|T","T",300,"P",101325,"n-Propane")));
+        CHECK(!ValidNumber(PropsSI("d(Dmolar)d(P)|T","T",300,"P",101325,"n-Propane")));
+        CHECK(!ValidNumber(PropsSI("d(Dmolar)/d(P)T","T",300,"P",101325,"n-Propane")));
+        CHECK(!ValidNumber(PropsSI("d(Bvirial)/d(P)T","T",300,"P",101325,"n-Propane")));
+        CHECK(!ValidNumber(PropsSI("d(Tcrit)/d(P)T","T",300,"P",101325,"n-Propane")));
+    }
+    
+//    SECTION{
+//        
+//        CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101325, 300));
+//        hmolar = AS->hmolar();
+//        hmass = AS->hmass();
+//        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+//        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+//        hmolar = AS->hmolar();
+//        hmass = AS->hmass();
+//        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+//        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+//        hmolar = AS->hmolar();
+//        hmass = AS->hmass();
+//        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+//        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+//        hmolar = AS->hmolar();
+//        hmass = AS->hmass();
+//        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+//        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+//        hmolar = AS->hmolar();
+//        hmass = AS->hmass();
+//        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+//        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+//    }
+}
+
 //TEST_CASE("Test that states agree with CoolProp", "[states]")
 //{
 //    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
