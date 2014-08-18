@@ -520,13 +520,16 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
         int other;
         int iter;
         long double r0, r1, T1, T0, pp;
-        solver_resid(HelmholtzEOSMixtureBackend *HEOS, long double p, long double value, int other) : HEOS(HEOS), p(p), value(value), other(other){iter = 0;};
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, long double p, long double value, int other) : 
+                HEOS(HEOS), p(p), value(value), other(other)
+                {
+                    iter = 0;
+                    // Specify the state to avoid saturation calls
+                    HEOS->specify_phase(HEOS->phase());
+                };
         double call(double T){
 
 			this->T = T;
-            
-			// Specify the state to avoid saturation calls
-			HEOS->specify_phase(HEOS->phase());
 
 			// Run the solver with T,P as inputs;
 			HEOS->update(PT_INPUTS, p, T);
@@ -561,6 +564,9 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
 	
 	std::string errstr;
 	double T = Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100, errstr);
+
+    // Un-impose the phase of the fluid
+    HEOS.specify_phase(iphase_not_imposed);
     int rr = 4;
 }
 

@@ -793,6 +793,37 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
   }
 }
 
+TEST_CASE("Tests for solvers in P,H flash using Propane", "[flashdups],[flash],[PH],[consistency]")
+{
+    double hmolar, hmass;
+    SECTION("5 times PH with HEOS AbstractState yields same results every time","")
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
+        
+        CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101325, 300));
+        hmolar = AS->hmolar();
+        hmass = AS->hmass();
+        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+        hmolar = AS->hmolar();
+        hmass = AS->hmass();
+        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+        hmolar = AS->hmolar();
+        hmass = AS->hmass();
+        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+        hmolar = AS->hmolar();
+        hmass = AS->hmass();
+        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+        hmolar = AS->hmolar();
+        hmass = AS->hmass();
+        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
+        CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
+    }
+}
+
 //TEST_CASE("Test that states agree with CoolProp", "[states]")
 //{
 //    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
