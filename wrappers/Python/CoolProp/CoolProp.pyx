@@ -142,7 +142,7 @@ cpdef __Props_err1(in1,in2):
 cpdef __Props_err2(in1, in2, in3, in4, in5, in6):
     errstr = _get_global_param_string('errstring')
     if not len(errstr) == 0:
-        raise ValueError("{err:s} :: inputs were:\"{in1:s}\",\"{in2:s}\",{in3:0.16e},\"{in4:s}\",{in5:0.16e},\"{in6:s}\"".format(err=errstr,in1=in1,in2=in2,in3=in3,in4=in4,in5=in5,in6=in6))
+        raise ValueError("{err:s}".format(err=errstr))
     else:
         raise ValueError("Props failed ungracefully :: inputs were:\"{in1:s}\",\"{in2:s}\",{in3:0.16e},\"{in4:s}\",{in5:0.16e},\"{in6:s}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(in1=in1,in2=in2,in3=in3,in4=in4,in5=in5,in6=in6))
 
