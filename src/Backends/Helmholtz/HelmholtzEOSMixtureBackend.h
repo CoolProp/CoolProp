@@ -74,6 +74,11 @@ public:
     @param phase_index The index from CoolProp::phases
     */
     void specify_phase(phases phase_index){imposed_phase_index = phase_index; _phase = phase_index;};
+    
+    /**
+    \brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
+    */
+    void unspecify_phase(){imposed_phase_index = iphase_not_imposed;};
 
     void set_reducing_function();
     void set_excess_term();

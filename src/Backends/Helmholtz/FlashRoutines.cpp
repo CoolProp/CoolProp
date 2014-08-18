@@ -563,10 +563,17 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
 	solver_resid resid(&HEOS, HEOS._p, value, other);
 	
 	std::string errstr;
-	double T = Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100, errstr);
-
-    // Un-impose the phase of the fluid
-    HEOS.specify_phase(iphase_not_imposed);
+    try{
+        double T = Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100, errstr);
+        // Un-specify the phase of the fluid
+        HEOS.unspecify_phase();
+    }
+    catch(std::exception &e){
+        // Un-specify the phase of the fluid
+        HEOS.unspecify_phase();
+        throw;
+    }
+    
     int rr = 4;
 }
 

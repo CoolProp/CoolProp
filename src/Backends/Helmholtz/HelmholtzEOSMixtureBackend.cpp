@@ -590,7 +590,7 @@ void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(long &input_pair, double &
 }
 void HelmholtzEOSMixtureBackend::update(long input_pair, double value1, double value2 )
 {
-    if (get_debug_level() > 0){std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)",__FILE__,__LINE__, input_pair, get_input_pair_short_desc(input_pair).c_str(), value1, value2) << std::endl;}
+    if (get_debug_level() > 10){std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)",__FILE__,__LINE__, input_pair, get_input_pair_short_desc(input_pair).c_str(), value1, value2) << std::endl;}
     
     clear();
 
@@ -1688,7 +1688,7 @@ long double HelmholtzEOSMixtureBackend::calc_hmolar(void)
         return static_cast<long double>(_hmolar);
     }
     else{
-        throw ValueError(format("phase is invalid"));
+        throw ValueError(format("phase is invalid in calc_hmolar"));
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_smolar_nocache(long double T, long double rhomolar)
@@ -1734,7 +1734,7 @@ long double HelmholtzEOSMixtureBackend::calc_smolar(void)
         return static_cast<long double>(_smolar);
     }
     else{
-        throw ValueError(format("phase is invalid"));
+        throw ValueError(format("phase is invalid in calc_smolar"));
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_umolar_nocache(long double T, long double rhomolar)
@@ -1775,7 +1775,7 @@ long double HelmholtzEOSMixtureBackend::calc_umolar(void)
 		return static_cast<long double>(_umolar);
 	}
     else{
-        throw ValueError(format("phase is invalid"));
+        throw ValueError(format("phase is invalid in calc_umolar"));
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_cvmolar(void)
@@ -1865,13 +1865,13 @@ long double HelmholtzEOSMixtureBackend::calc_gibbsmolar(void)
         long double dar_dDelta = dalphar_dDelta();
         long double R_u = gas_constant();
 
-        // Get molar entropy
+        // Get molar gibbs function
         _gibbsmolar = R_u*_T*(1 + a0 + ar +_delta.pt()*dar_dDelta);
 
         return static_cast<long double>(_gibbsmolar);
     }
     else{
-        throw ValueError(format("phase is invalid"));
+        throw ValueError(format("phase is invalid in calc_gibbsmolar"));
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(int i)
