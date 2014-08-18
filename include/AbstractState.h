@@ -40,7 +40,6 @@ protected:
     /// Some administrative variables
     long _fluid_type;
     phases _phase; ///< The key for the phase from CoolProp::phases enum
-    bool _forceSinglePhase, _forceTwoPhase;
 
     bool isSupercriticalPhase(void){
         return (this->_phase == iphase_supercritical || this->_phase == iphase_supercritical_liquid || this->_phase == iphase_supercritical_gas);
@@ -267,7 +266,6 @@ public:
     4. "TTSE&XXXX": The TTSE backend will be used, and the tables will be generated using the XXXX backend where XXXX is one of the base backends("HEOS", "REFPROP", etc. )
     5. "BICUBIC&XXXX": The Bicubic backend will be used, and the tables will be generated using the XXXX backend where XXXX is one of the base backends("HEOS", "REFPROP", etc. )
     6. "INCOMP": The incompressible backend will be used
-    7. "BRINE": The brine backend will be used
     */
     static AbstractState * factory(const std::string &backend, const std::string &fluid_string);
 
