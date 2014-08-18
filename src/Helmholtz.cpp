@@ -27,126 +27,25 @@ double ramp(double x)
         return 0;
 }
 
-void ResidualHelmholtzGeneralizedExponential::allArmadillo(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw()
-{
-    double log_tau = log(tau), log_delta = log(delta), 
-           one_over_delta = 1/delta, one_over_tau = 1/tau; // division is much slower than multiplication, so do one division here
-
-    arma::vec nE = arma::conv_to< arma::vec >::from(n);
-    arma::vec dE = arma::conv_to< arma::vec >::from(d);
-    arma::vec tE = arma::conv_to< arma::vec >::from(t);
-    arma::vec cE = arma::conv_to< arma::vec >::from(c);
-
-    arma::vec eta1E = arma::conv_to< arma::vec >::from(eta1);
-    arma::vec eta2E = arma::conv_to< arma::vec >::from(eta2);
-    arma::vec beta1E = arma::conv_to< arma::vec >::from(beta1);
-    arma::vec beta2E = arma::conv_to< arma::vec >::from(beta2);
-    arma::vec epsilon1E = arma::conv_to< arma::vec >::from(epsilon1);
-    arma::vec epsilon2E = arma::conv_to< arma::vec >::from(epsilon2);
-    arma::vec gamma1E = arma::conv_to< arma::vec >::from(gamma1);
-    arma::vec gamma2E = arma::conv_to< arma::vec >::from(gamma2);
-
-    arma::vec l_doubleE = arma::conv_to< arma::vec >::from(l_double);
-    
-    // ****************************************
-    // The u part in exp(u) and its derivatives
-    // ****************************************
-    
-    #if defined(EIGEN_VECTORIZE_SSE2)
-        //std::cout << "EIGEN_VECTORIZE_SSE2" << std::endl;
-    #endif
-
-    // Set the u part of exp(u) to zero
-    uA.fill(0);
-    du_ddeltaA.fill(0);
-    du_dtauA.fill(0);
-    d2u_ddelta2A.fill(0);
-    d2u_dtau2A.fill(0);
-    d3u_ddelta3A.fill(0);
-    d3u_dtau3A.fill(0);
-    
-    if (delta_li_in_u){
-        arma::vec u_increment = -cE % arma::exp(log_delta*l_doubleE); //pow(delta,L) -> exp(L*log(delta))
-        uA += u_increment;
-        du_ddeltaA += l_doubleE%u_increment*one_over_delta;
-        d2u_ddelta2A += (l_doubleE-1) % l_doubleE % u_increment*one_over_delta*one_over_delta;
-        d3u_ddelta3A += (l_doubleE-2) % (l_doubleE-1) % l_doubleE % u_increment*one_over_delta*one_over_delta*one_over_delta;
-    }
-    /*
-    if (tau_mi_in_u){
-        long double omegai = el.omega, m_double = el.m_double;
-        if (std::abs(m_double) > 0){
-            long double u_increment = -omegai*pow(tau, m_double);
-            long double du_dtau_increment = m_double*u_increment*one_over_tau;
-            long double d2u_dtau2_increment = (m_double-1)*du_dtau_increment*one_over_tau;
-            long double d3u_dtau3_increment = (m_double-2)*d2u_dtau2_increment*one_over_tau;
-            u += u_increment;
-            du_dtau += du_dtau_increment;
-            d2u_dtau2 += d2u_dtau2_increment;
-            d3u_dtau3 += d3u_dtau3_increment;
-        }
-    }*/
-    if (eta1_in_u){
-        uA += -eta1E%(delta-epsilon1E);
-        du_ddeltaA += -eta1E;
-    }
-    if (eta2_in_u){
-        uA += -eta2E % arma::pow(delta-epsilon2E,2);
-        du_ddeltaA += -2*eta2E%(delta-epsilon2E);
-        d2u_ddelta2A += -2*eta2E;
-    }
-    if (beta1_in_u){
-        uA += -beta1E%(tau-gamma1E);
-        du_dtauA += -beta1E;
-    }
-    if (beta2_in_u){
-        uA += -beta2E % arma::pow(tau-gamma2E,2);
-        du_dtauA += -2*beta2E % (tau-gamma2E);
-        d2u_dtau2A += -2*beta2E;
-    }
-    
-    arma::vec ndteuE = nE % arma::exp(tE*log_tau + dE*log_delta + uA);
-    arma::vec B_deltaE = delta*du_ddeltaA + dE;
-    arma::vec B_tauE = tau*du_dtauA + tE;
-    arma::vec B_delta2E = POW2(delta)*(d2u_ddelta2A + arma::pow(du_ddeltaA,2)) + 2*delta*dE % du_ddeltaA + dE % (dE-1);
-    arma::vec B_tau2E = POW2(tau)*(d2u_dtau2A + arma::pow(du_dtauA,2)) + 2*tau*tE % du_dtauA + tE % (tE-1);
-    arma::vec B_delta3E = POW3(delta)*d3u_ddelta3A + 3*POW2(delta)*dE%d2u_ddelta2A+3*POW3(delta)*d2u_ddelta2A%du_ddeltaA+3*POW2(delta)*dE%arma::pow(du_ddeltaA,2)+3*delta*dE%(dE-1)%du_ddeltaA+dE%(dE-1)%(dE-2)+arma::pow(delta*du_ddeltaA,3);
-    arma::vec B_tau3E = POW3(tau)*d3u_dtau3A + 3*POW2(tau)*tE%d2u_dtau2A+3*POW3(tau)*d2u_dtau2A%du_dtauA+3*tE%arma::pow(tau*du_dtauA,2)+3*tau*tE%(tE-1)%du_dtauA+tE%(tE-1)%(tE-2)+arma::pow(tau*du_dtauA,3);
-    
-    derivs.alphar                += arma::sum(ndteuE);
-    derivs.dalphar_ddelta        += arma::sum(ndteuE%B_deltaE)*one_over_delta;
-    derivs.dalphar_dtau          += arma::sum(ndteuE%B_tauE)*one_over_tau;
-    derivs.d2alphar_ddelta2      += arma::sum(ndteuE%B_delta2E)*POW2(one_over_delta);
-    derivs.d2alphar_dtau2        += arma::sum(ndteuE%B_tau2E)*POW2(one_over_tau);
-    derivs.d2alphar_ddelta_dtau  += arma::sum(ndteuE%B_deltaE%B_tauE)*one_over_delta*one_over_tau;
-    
-    derivs.d3alphar_ddelta3      += arma::sum(ndteuE%B_delta3E)*POW3(one_over_delta);
-    derivs.d3alphar_dtau3        += arma::sum(ndteuE%B_tau3E)*POW3(one_over_tau);
-    derivs.d3alphar_ddelta2_dtau += arma::sum(ndteuE%B_delta2E%B_tauE)*POW2(one_over_delta)*one_over_tau;
-    derivs.d3alphar_ddelta_dtau2 += arma::sum(ndteuE%B_deltaE%B_tau2E)*one_over_delta*POW2(one_over_tau);
-    
-    return;
-};
-
 void ResidualHelmholtzGeneralizedExponential::allEigen(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw()
 {
     double log_tau = log(tau), log_delta = log(delta), 
            one_over_delta = 1/delta, one_over_tau = 1/tau; // division is much slower than multiplication, so do one division here
     
-    Eigen::Map<Eigen::ArrayXd> nE(n.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> dE(d.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> tE(t.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> cE(c.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXi> l_intE(l_int.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> l_doubleE(l_double.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> eta1E(eta1.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> eta2E(eta2.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> epsilon1E(epsilon1.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> epsilon2E(epsilon2.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> beta1E(beta1.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> beta2E(beta2.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> gamma1E(gamma1.data(), elements.size());
-    Eigen::Map<Eigen::ArrayXd> gamma2E(gamma2.data(), elements.size());
+    Eigen::Map<Eigen::ArrayXd> nE(&(n[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> dE(&(d[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> tE(&(t[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> cE(&(c[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXi> l_intE(&(l_int[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> l_doubleE(&(l_double[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> eta1E(&(eta1[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> eta2E(&(eta2[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> epsilon1E(&(epsilon1[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> epsilon2E(&(epsilon2[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> beta1E(&(beta1[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> beta2E(&(beta2[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> gamma1E(&(gamma1[0]), elements.size());
+    Eigen::Map<Eigen::ArrayXd> gamma2E(&(gamma2[0]), elements.size());
     
     // ****************************************
     // The u part in exp(u) and its derivatives

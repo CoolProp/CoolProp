@@ -2,7 +2,6 @@
 #ifndef HELMHOLTZ_H
 #define HELMHOLTZ_H
 
-#include "armadillo"
 #include <vector>
 #include "rapidjson/rapidjson_include.h"
 #include "Eigen/Core"
@@ -145,8 +144,6 @@ public:
     std::vector<int> l_int, m_int;
     
     Eigen::ArrayXd uE, du_ddeltaE, du_dtauE, d2u_ddelta2E, d2u_dtau2E, d3u_ddelta3E, d3u_dtau3E;
-
-    arma::vec uA, du_ddeltaA, du_dtauA, d2u_ddelta2A, d2u_dtau2A, d3u_ddelta3A, d3u_dtau3A;
         
     std::vector<ResidualHelmholtzGeneralizedExponentialElement> elements;
     // Default Constructor
@@ -293,14 +290,6 @@ public:
         d2u_dtau2E.resize(elements.size());
         d3u_ddelta3E.resize(elements.size());
         d3u_dtau3E.resize(elements.size());
-
-        uA.resize(static_cast<int>(elements.size()));
-        du_ddeltaA.resize(static_cast<int>(elements.size()));
-        du_dtauA.resize(static_cast<int>(elements.size()));
-        d2u_ddelta2A.resize(static_cast<int>(elements.size()));
-        d2u_dtau2A.resize(static_cast<int>(elements.size()));
-        d3u_ddelta3A.resize(static_cast<int>(elements.size()));
-        d3u_dtau3A.resize(static_cast<int>(elements.size()));
         
         finished = true;
     };
@@ -323,7 +312,6 @@ public:
     
     void all(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
     void allEigen(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
-    void allArmadillo(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
 };
 
 struct ResidualHelmholtzNonAnalyticElement
