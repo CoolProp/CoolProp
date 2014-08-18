@@ -48,32 +48,32 @@
 
     /**
     \overload
-    \sa Props1SI(std::string, std::string)
+    \sa \ref CoolProp::Props1SI(std::string, std::string)
     */
     EXPORT_CODE double CONVENTION Props1SI(const char *FluidName, const char* Output);
     /**
     \overload
-    \sa PropsSI(std::string, std::string, double, std::string, double, std::string)
+    \sa \ref CoolProp::PropsSI(const std::string &, const std::string &, double, const std::string &, double, const std::string&)
     */
     EXPORT_CODE double CONVENTION PropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref);
     /**
     \overload
-    \sa Props(std::string, std::string, double, std::string, double, std::string)
+    \sa \ref CoolProp::Props(std::string, std::string, double, std::string, double, std::string)
     */
     EXPORT_CODE double CONVENTION PropsS(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref);
     /**
     \overload
-    \sa Props(std::string, std::string, double, std::string, double, std::string)
+    \sa \ref CoolProp::Props(const std::string &, const std::string &, double, const std::string &, double, const std::string&)
     */
     EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double Prop1, const char Name2, double Prop2, const char *Ref);
     /**
     \overload
-    \sa Props1(std::string, std::string)
+    \sa \ref CoolProp::Props1(std::string &, std::string &)
     */
     EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output);
     /**
     \overload
-    \sa IsFluidType(std::string, std::string)
+    \sa \ref IsFluidType(std::string, std::string)
     */
     EXPORT_CODE int CONVENTION IsFluidType(const char *Ref, const char *Type);
     EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char *Output);
@@ -82,12 +82,12 @@
 
     /**
     \overload
-    \sa set_reference_stateS(std::string, std::string)
+    \sa \ref CoolProp::set_reference_stateS(const std::string &, const std::string&)
     */
     EXPORT_CODE int CONVENTION set_reference_stateS(const char *Ref, const char *reference_state);
     /**
     \overload
-    \sa set_reference_stateD(std::string, double, double, double, double)
+    \sa \ref CoolProp::set_reference_stateD(const std::string &, double, double, double, double)
     */
     EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, double rho, double h0, double s0);
     /*
@@ -101,7 +101,7 @@
 
     /**
     \brief FORTRAN 77 style wrapper of the PropsSI function
-    \sa PropsSI(std::string, std::string, double, std::string, double, std::string)
+    \sa \ref CoolProp::PropsSI(const std::string &, const std::string &, double, const std::string &, double, const std::string&)
     */
     EXPORT_CODE void CONVENTION propssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Ref, double *output);
     /**
@@ -142,6 +142,7 @@
 
     /**
     \brief FORTRAN 77 style wrapper of the HAPropsSI function
+     * \sa \ref HumidAirProp::PropsSI(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, const char *Input3Name, double Input3);
     */
     EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char *Name3, double *Prop3, double *output);
 
