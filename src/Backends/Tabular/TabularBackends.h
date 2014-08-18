@@ -5,12 +5,27 @@
 
 namespace CoolProp{
 
+struct SinglePhaseGriddedTableData{
+    CoolProp::parameters xkey, ykey;
+    std::vector< std::vector<double> > T, p, rhomolar, hmolar, smolar;
+    
+    void resize(std::size_t Nx, std::size_t Ny){
+        
+        T.resize(Nx, std::vector<double>(Ny, _HUGE));
+        p.resize(Nx, std::vector<double>(Ny, _HUGE));
+        rhomolar.resize(Nx, std::vector<double>(Ny, _HUGE));
+        hmolar.resize(Nx, std::vector<double>(Ny, _HUGE));
+        smolar.resize(Nx, std::vector<double>(Ny, _HUGE));
+    };
+};
 class GriddedTableBackend : public AbstractState
 {
     protected:
     enum tabular_types {LOGPH_TABLE};
     AbstractState *AS;
     public:
+    SinglePhaseGriddedTableData single_phase;
+    
     bool using_mole_fractions(void){return true;}
     bool using_mass_fractions(void){return false;}
     bool using_volu_fractions(void){return false;}
