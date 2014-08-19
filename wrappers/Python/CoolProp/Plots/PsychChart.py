@@ -2,7 +2,7 @@
 This file implements a psychrometric chart for air at 1 atm
 """
 
-from CoolProp.HumidAirProp import HAProps
+from CoolProp.HumidAirProp import HAPropsSI
 from CoolProp.Plots.Plots import InlineLabel 
 import matplotlib, numpy, textwrap
 
@@ -49,13 +49,13 @@ class PlotFormatting(object):
 class SaturationLine(object):
     
     def plot(self,ax):
-        w = [HAProps('W','T',T,'P',p,'R',1.0) for T in Tdb]
+        w = [HAPropsSI('W','T',T,'P',p,'R',1.0) for T in Tdb]
         ax.plot(Tdb-273.15,w,lw=2)
         
     def __str__(self):
         return textwrap.dedent("""
                # Saturation line
-               w = [HAProps('W','T',T,'P',p,'R',1.0) for T in Tdb]
+               w = [HAPropsSI('W','T',T,'P',p,'R',1.0) for T in Tdb]
                ax.plot(Tdb-273.15,w,lw=2)
                """
                )
@@ -68,8 +68,8 @@ class HumidityLabels(object):
     def plot(self,ax):
         xv = Tdb #[K]
         for RH in self.RH_values:
-            yv = [HAProps('W','T',T,'P',p,'R',RH) for T in Tdb]
-            y = HAProps('W','P',p,'H',self.h,'R',RH)
+            yv = [HAPropsSI('W','T',T,'P',p,'R',RH) for T in Tdb]
+            y = HAPropsSI('W','P',p,'H',self.h,'R',RH)
             T_K,w,rot = InlineLabel(xv, yv, y=y, axis = ax)
             string = r'$\phi$='+str(RH*100)+'%'
             #Make a temporary label to get its bounding box
@@ -80,8 +80,8 @@ class HumidityLabels(object):
         return textwrap.dedent("""
                 xv = Tdb #[K]
                 for RH in {RHValues:s}:
-                    yv = [HAProps('W','T',T,'P',p,'R',RH) for T in Tdb]
-                    y = HAProps('W','P',p,'H',{h:f},'R',RH)
+                    yv = [HAPropsSI('W','T',T,'P',p,'R',RH) for T in Tdb]
+                    y = HAPropsSI('W','P',p,'H',{h:f},'R',RH)
                     T_K,w,rot = InlineLabel(xv, yv, y=y, axis = ax)
                     string = r'$\phi$='+str(RH*100)+'%'
                     bbox_opts = dict(boxstyle='square,pad=0.0',fc='white',ec='None',alpha = 0.5)
@@ -96,7 +96,7 @@ class HumidityLines(object):
         
     def plot(self,ax):
         for RH in self.RH_values:
-            w = [HAProps('W','T',T,'P',p,'R',RH) for T in Tdb]
+            w = [HAPropsSI('W','T',T,'P',p,'R',RH) for T in Tdb]
             ax.plot(Tdb-273.15,w,'r',lw=1)
         
     def __str__(self):
@@ -104,7 +104,7 @@ class HumidityLines(object):
                # Humidity lines
                RHValues = {RHValues:s}
                for RH in RHValues:
-                   w = [HAProps('W','T',T,'P',p,'R',RH) for T in Tdb]
+                   w = [HAPropsSI('W','T',T,'P',p,'R',RH) for T in Tdb]
                    ax.plot(Tdb-273.15,w,'r',lw=1)
                """.format(RHValues=str(self.RH_values))
                )
@@ -117,10 +117,10 @@ class EnthalpyLines(object):
     def plot(self,ax):
         for H in self.H_values:
             #Line goes from saturation to zero humidity ratio for this enthalpy
-            T1 = HAProps('T','H',H,'P',p,'R',1.0)-273.15
-            T0 = HAProps('T','H',H,'P',p,'R',0.0)-273.15
-            w1 = HAProps('W','H',H,'P',p,'R',1.0)
-            w0 = HAProps('W','H',H,'P',p,'R',0.0)
+            T1 = HAPropsSI('T','H',H,'P',p,'R',1.0)-273.15
+            T0 = HAPropsSI('T','H',H,'P',p,'R',0.0)-273.15
+            w1 = HAPropsSI('W','H',H,'P',p,'R',1.0)
+            w0 = HAPropsSI('W','H',H,'P',p,'R',0.0)
             ax.plot(numpy.r_[T1,T0],numpy.r_[w1,w0],'r',lw=1)
         
     def __str__(self):
@@ -128,10 +128,10 @@ class EnthalpyLines(object):
                # Humidity lines
                for H in {HValues:s}:
                    #Line goes from saturation to zero humidity ratio for this enthalpy
-                   T1 = HAProps('T','H',H,'P',p,'R',1.0)-273.15
-                   T0 = HAProps('T','H',H,'P',p,'R',0.0)-273.15
-                   w1 = HAProps('W','H',H,'P',p,'R',1.0)
-                   w0 = HAProps('W','H',H,'P',p,'R',0.0)
+                   T1 = HAPropsSI('T','H',H,'P',p,'R',1.0)-273.15
+                   T0 = HAPropsSI('T','H',H,'P',p,'R',0.0)-273.15
+                   w1 = HAPropsSI('W','H',H,'P',p,'R',1.0)
+                   w0 = HAPropsSI('W','H',H,'P',p,'R',0.0)
                    ax.plot(numpy.r_[T1,T0],numpy.r_[w1,w0],'r',lw=1)
                """.format(HValues=str(self.H_values))
                )
