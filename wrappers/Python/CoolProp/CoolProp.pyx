@@ -13,7 +13,7 @@ import math
 import warnings
 
 try:
-    import numpy as npp
+    import numpy as np
     _numpy_supported = True
 except ImportError:
     _numpy_supported = False
