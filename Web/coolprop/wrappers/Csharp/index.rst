@@ -8,6 +8,24 @@ Pre-compiled Binaries
 =====================
 Pre-compiled release binaries can be downloaded from :sfdownloads:`Csharp`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`Csharp`.  Download the files appropriate to your system.
 
+To Use
+------
+
+Copy all the .cs files to a location you want.  You will need to have a copy of some version of C#.
+
+At the command prompt, run::
+
+    call "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat"
+    csc *.cs /platform:x86
+    call Example
+
+where you might need to update the path to visual studio depending on your version installed.  
+
+32-bit: Use `/platform:x86` to avoid PINVOKE errors!
+64-bit: Use `/platform:x64` to avoid PINVOKE errors!
+
+Alternatively, you can add all the .cs files to a visual studio project.
+
 User-Compiled Binaries
 ======================
 
