@@ -1,8 +1,8 @@
 
 program hello
 
-    Use cpinterface
-
+    USE cpinterface
+    
     implicit none
 
     !Initialize the variables used in the example
@@ -24,7 +24,7 @@ program hello
       
     dens1 = PropsSI(out1, n1, T, n2, Q, fluid)                                !calling props, strings are Variables
       
-    dens2 = PropsSI("D"//CHAR(0), "T"//CHAR(0), T, "Q"//CHAR(0), Q, fluid)    !calling props defining the strings directlly in the arguments 
+    dens2 = PropsSI("D"//CHAR(0), "T"//CHAR(0), T, "Q"//CHAR(0), Q, fluid)    !calling props defining the strings directly in the arguments 
 
     Print *, dens1, dens2  
 
