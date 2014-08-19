@@ -9,15 +9,26 @@
 </head>
 
 <body>
-<h3>General Information</h3>
+<h1>General Information</h1>
 
 <p>The CoolProp library is a standard interface between EES and the CoolProp
 library. CoolProp is a fluid property database written by <a
-href="mailto:ian.h.bell@gmail.com">Ian Bell</a> and is open-source and free. In
+href="mailto:ian.h.bell@gmail.com">Ian Bell</a> and co-authors and is open-source and free. In
 addition, REFPROP can be called through CoolProp if is installed on the
 computer</p>
 
+<p> More information on CoolProp can be obtained at <a href="http://www.coolprop.org">www.coolprop.org</a>.  Furthermore, information on the EES wrapper can be found at <a href="http://www.coolprop.org/coolprop/wrappers/EES"> EES</a>.</p>
 <p></p>
+
+<h4>CoolProp v5+ Support</h4>
+
+The wrapper for EES is now essentially 100% in line with the other wrappers for Python, Excel, etc. Users should use the PropsSI function.  This function always takes in and returns base SI units (Pa, J, kg, mol, etc.).
+
+The documentation for the PropsSI function is exactly in line with that for the High Level API.  No other functions from the high-level API are exposed through the EES interface.
+
+<h4>CoolProp v4 backwards compatibility </h4>
+
+For backwards compatibility, the coolprop() function has been retained in EES.  The coolprop() function has been officially deprecated and will be removed in a future release.  The PropsSI function is the only function that will be supported in the future.
 
 <p>The general call looks like:</p>
 

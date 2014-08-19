@@ -5,16 +5,6 @@ cimport cython
 from libcpp.vector cimport vector
 
 include "AbstractState.pxd"
-
-# Default string in Python 3.x is a unicode string (type str)
-# Default string in Python 2.x is a byte string(type bytes) 
-#
-# Create a fused type that allows for either unicode string or bytestring
-# We encode unicode strings using the ASCII encoding since we know they are all
-# ASCII strings 
-ctypedef fused string_like:
-    cython.bytes
-    cython.unicode
     
 cdef extern from "CoolPropTools.h" namespace "CoolProp":
     bint _ValidNumber "ValidNumber"(double)

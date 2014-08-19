@@ -8,7 +8,12 @@ Pre-compiled Binaries
 =====================
 Pre-compiled binaries can be downloaded from :sfdownloads:`Java`, which come from  :bbbinaries:`the continuous development buildbot server <Java>`.
 
-When the binaries are found, java should by executed () with 
+Usage
+-----
+At the console, run::
+
+    javac *.java
+    java Example
 
 User-Compiled Binaries
 ======================

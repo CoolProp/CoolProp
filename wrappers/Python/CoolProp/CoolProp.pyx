@@ -1,4 +1,4 @@
-#cython: embedsignature = True, c_string_type=str, c_string_encoding=ascii
+#cython: embedsignature = True, c_string_type = unicode, c_string_encoding = ascii
 from __future__ import division
 #
 # This file provides wrapper functions of all the CoolProp functions
@@ -13,7 +13,7 @@ import math
 import warnings
 
 try:
-    import numpy as np
+    import numpy as npp
     _numpy_supported = True
 except ImportError:
     _numpy_supported = False
@@ -130,7 +130,7 @@ cpdef string get_parameter_information(int key, string info):
 cpdef get_global_param_string(string param):
     return _get_global_param_string(param)
      
-cpdef get_fluid_param_string(string_like fluid, string_like param):
+cpdef get_fluid_param_string(string fluid, string param):
     return _get_fluid_param_string(fluid, param)
      
 cpdef __Props_err1(in1,in2):
@@ -204,14 +204,14 @@ cpdef list FluidsList():
     """ 
     return _get_global_param_string("FluidsList").split(',')
 
-cpdef get_aliases(str Fluid):
+cpdef get_aliases(string Fluid):
     """
     Return a comma separated string of aliases for the given fluid
     """
     cdef bytes _Fluid = Fluid.encode('ascii')
-    return [F.encode('ascii') for F in (_get_fluid_param_string(_Fluid,'aliases').encode('ascii')).decode('ascii').split(',')]
+    return [F for F in _get_fluid_param_string(_Fluid, 'aliases').split(',')]
 
-cpdef string get_REFPROPname(str Fluid):
+cpdef string get_REFPROPname(string Fluid):
     """
     Return the REFPROP compatible name for the fluid
     
@@ -227,8 +227,7 @@ cpdef string get_REFPROPname(str Fluid):
        
        In [2]: PropsSI('D', 'T', 300, 'P', 300, Fluid)
     """
-    cdef bytes _Fluid = Fluid.encode('ascii')
-    return _get_fluid_param_string(_Fluid,'REFPROP_name')
+    return _get_fluid_param_string(Fluid,'REFPROP_name')
 
 # cpdef string get_BibTeXKey(str Fluid, str key):
 #     """
@@ -252,6 +251,7 @@ cpdef string get_REFPROPname(str Fluid):
 #          empty string if Fluid not in CoolProp, "Bad key" if key is invalid
 #     """
 #     return _get_BibTeXKey(Fluid, key)
+
 cpdef string get_errstr():
     """
     Return the current error string
