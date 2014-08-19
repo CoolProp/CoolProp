@@ -272,3 +272,6 @@ class BasePlot(object):
     def show(self):
         self._draw_graph()
         matplotlib.pyplot.show()
+        
+    def savefig(self, *args, **kwargs):
+        matplotlib.pyplot.savefig(*args, **kwargs)
