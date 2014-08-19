@@ -39,7 +39,7 @@ We are following the instructions from `emscripten.org <http://kripken.github.io
     
 6. Modify the file ``~/.emscripten`` to make NODE_JS path equal to ``which nodejs`` if it doesn't already
 
-7. Make an environmental variable (in ~/.profile) ``EMSCRIPTEN`` that points to the folder that contains ``emc++``, ``emcc``, etc.
+7. Make an environmental variable (in ~/.profile) ``export EMSCRIPTEN=/path/to/emsdk`` that points to the folder that contains ``emc++``, ``emcc``, etc.
 
 8. Check out coolprop::
 
@@ -51,7 +51,7 @@ We are following the instructions from `emscripten.org <http://kripken.github.io
     
 10. Build the Javascript module::
 
-    cmake .. -DCOOLPROP_JAVASCRIPT_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Platform/Emscripten.cmake
+     cmake .. -DCOOLPROP_JAVASCRIPT_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Platform/Emscripten.cmake
 
 Windows
 -------
