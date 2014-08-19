@@ -672,12 +672,13 @@ endif()
 
 if (COOLPROP_CLANG_ADDRESS_SANITIZER)
 
-  SET(CMAKE_CXX_FLAGS "-fsanitize=address")
+  SET(CMAKE_CXX_FLAGS "-fsanitize=address -g")
   list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/test_main.cxx")
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable        (CatchTestRunner ${APP_SOURCES})
   add_dependencies      (CatchTestRunner generate_headers)
   set_target_properties (CatchTestRunner PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
+  set(CMAKE_EXE_LINKER_FLAGS "-fsanitize=address -lstdc++")
   if(UNIX)
     target_link_libraries (CatchTestRunner ${CMAKE_DL_LIBS})
   endif()
