@@ -1,4 +1,4 @@
-#cython: embedsignature = True, c_string_type=str, c_string_encoding=ascii
+#cython: embedsignature = True, c_string_type=bytes, c_string_encoding=ascii
 from __future__ import division
 #
 # This file provides wrapper functions of all the CoolProp functions
