@@ -147,6 +147,7 @@ if (COOLPROP_STATIC_LIBRARY_MODULE OR COOLPROP_STATIC_LIBRARY)
     list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
     add_library(${app_name} STATIC ${APP_SOURCES})
     add_dependencies (${app_name} generate_headers)
+    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC")
     install (TARGETS ${app_name} DESTINATION static_library/${CMAKE_SYSTEM_NAME})
 endif()
 
@@ -315,7 +316,7 @@ if (COOLPROP_CSHARP_MODULE)
     CODE "file( GLOB _GeneratedCsharpSources \"${CMAKE_CURRENT_BINARY_DIR}/*.cs\" )"
     CODE "file( INSTALL \${_GeneratedCsharpSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Csharp/platform-independent )"
   )
-  install (FILES ${CMAKE_SOURCE_DIR}/wrappers/C\#/Example.cs DESTINATION Csharp)
+  install (FILES ${CMAKE_SOURCE_DIR}/Web/coolprop/wrappers/Csharp/Example.cs DESTINATION Csharp)
   install (TARGETS ${app_name} DESTINATION Csharp/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
   if (DEFINED BUILD_TESTING)
@@ -380,7 +381,7 @@ if (COOLPROP_JAVA_MODULE)
     CODE "file( GLOB _GeneratedJavaSources \"${CMAKE_CURRENT_BINARY_DIR}/*.java\" )"
     CODE "file( INSTALL \${_GeneratedJavaSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/platform-independent )"
   )
-  install (FILES ${CMAKE_SOURCE_DIR}/wrappers/Java/Example.java DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
+  install (FILES ${CMAKE_SOURCE_DIR}/Web/coolprop/wrappers/Java/Example.java DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
   install (TARGETS ${app_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
   execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
