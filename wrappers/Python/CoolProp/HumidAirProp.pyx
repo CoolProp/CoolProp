@@ -1,12 +1,12 @@
 #This file gets directly included in CoolProp.pyx, separate here for cleanness of code
 
-cpdef HAProps(str OutputName, str Input1Name, Input1, str Input2Name, Input2, str Input3Name, Input3):
+cpdef HAPropsSI(string OutputName, string Input1Name, Input1, string Input2Name, Input2, string Input3Name, Input3):
     """
     Copyright Ian Bell, 2011 email: ian.h.bell@gmail.com
 
     The function is called like
 
-    HAProps('H','T',298.15,'P',101.325,'R',0.5)
+    HAPropsSI('H','T',298.15,'P',101325,'R',0.5)
 
     which will return the enthalpy of the air for a set of inputs of dry bulb temperature of 25C, atmospheric pressure, and a relative humidity of 50%.
 
@@ -22,29 +22,24 @@ cpdef HAProps(str OutputName, str Input1Name, Input1, str Input2Name, Input2, st
     T         Tdb         Dry-Bulb Temperature [K]
     B         Twb         Wet-Bulb Temperature [K]
     D         Tdp         Dew-Point Temperature [K]
-    P                     Pressure [kPa]
+    P                     Pressure [Pa]
     V         Vda         Mixture volume [m3/kg dry air]
     R         RH          Relative humidity in (0,1) [-]
     W         Omega       Humidity Ratio [kg water/kg dry air]
-    H         Hda         Mixture enthalpy [kJ/kg dry air]
-    S         Sda         Mixture entropy [kJ/kg dry air/K]
-    C         cp          Mixture specific heat [kJ/kg dry air/K]
+    H         Hda         Mixture enthalpy [J/kg dry air]
+    S         Sda         Mixture entropy [J/kg dry air/K]
+    C         cp          Mixture specific heat [J/kg dry air/K]
     M         Visc        Mixture viscosity [Pa-s]
-    K                     Mixture thermal conductivity [kW/m/K]
+    K                     Mixture thermal conductivity [W/m/K]
     ========  ========    ========================================
 
     There are also strings for the mixture volume and mixture enthalpy that will return the properties on a total humid air flow rate basis, they are given by 'Vha' [units of m^3/kg humid air] and 'Cha' [units of kJ/kg humid air/K] and 'Hha' [units of kJ/kg humid air] respectively.
 
     For more information, go to http://www.coolprop.org
     """
-    #Convert all strings to byte-strings
-    cdef bytes _OutputName = OutputName.encode('ascii')
-    cdef bytes _Input1Name = Input1Name.encode('ascii')
-    cdef bytes _Input2Name = Input2Name.encode('ascii')
-    cdef bytes _Input3Name = Input3Name.encode('ascii')
     
     if isinstance(Input1, (int, long, float, complex)) and isinstance(Input2, (int, long, float, complex)) and isinstance(Input3, (int, long, float, complex)):
-        val = _HAProps(_OutputName,_Input1Name,Input1,_Input2Name,Input2,_Input3Name,Input3)
+        val = _HAPropsSI(OutputName, Input1Name, Input1, Input2Name, Input2, Input3Name, Input3)
     
         if math.isinf(val) or math.isnan(val):
             err_string = _get_global_param_string('errstring')
@@ -70,7 +65,6 @@ cpdef HAProps(str OutputName, str Input1Name, Input1, str Input2Name, Input2, st
             raise TypeError("Iterable inputs are not all the same length.  Lengths: "+str(iterable_lengths))
         else:
             L = iterable_lengths[0]
-            
         
         if isinstance(Input1, (int, long, float, complex)):
             Input1vec = [Input1]*L
@@ -90,7 +84,7 @@ cpdef HAProps(str OutputName, str Input1Name, Input1, str Input2Name, Input2, st
         vals = []
         
         for _Input1, _Input2, _Input3 in zip(Input1vec, Input2vec, Input3vec):
-            val = _HAProps(_OutputName,_Input1Name,_Input1,_Input2Name,_Input2,_Input3Name,_Input3)
+            val = _HAPropsSI(OutputName, Input1Name, Input1, Input2Name, Input2, Input3Name, Input3)
         
             if math.isinf(val) or math.isnan(val):
                 err_string = _get_global_param_string('errstring')

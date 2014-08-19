@@ -10,7 +10,7 @@ namespace HumidAir
 // -----------------------
 // Standard I/O function
 // -----------------------
-double HAPropsSI(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, const char *Input3Name, double Input3);
+double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, const std::string &Input3Name, double Input3);
 
 // -----------------------
 // Extra I/O function

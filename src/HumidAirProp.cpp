@@ -19,11 +19,21 @@
 #include <string.h>
 #include <iostream>
 
+/// This is a stub overload to help with all the strcmp calls below and avoid needing to rewrite all of them
+std::size_t strcmp(const std::string &s, const std::string e){
+    return s.compare(e);
+}
+
+// This is a lazy stub function to avoid recoding all the strcpy calls below
+void strcpy(std::string &s, const std::string e){
+    s = e;
+}
 
 shared_ptr<CoolProp::AbstractState> Water, Air;
 
 namespace HumidAir
 {
+
 
 void check_fluid_instantiation()
 {
@@ -134,16 +144,16 @@ void UseIdealGasEnthalpyCorrelations(int flag)
         printf("UseIdealGasEnthalpyCorrelations takes an integer, either 0 (no) or 1 (yes)\n");
     }
 }
-static double Brent_HAProps_T(char *OutputName, char *Input1Name, double Input1, char *Input2Name, double Input2, double TargetVal, double T_min, double T_max)
+static double Brent_HAProps_T(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, double TargetVal, double T_min, double T_max)
 {
     double T;
     class BrentSolverResids : public CoolProp::FuncWrapper1D
     {
     private:
         double Input1,Input2,TargetVal;
-        char *OutputName,*Input1Name,*Input2Name;
+        std::string OutputName, Input1Name, Input2Name;
     public:
-        BrentSolverResids(char *OutputName, char *Input1Name, double Input1, char *Input2Name, double Input2, double TargetVal)
+        BrentSolverResids(std::string OutputName, std::string Input1Name, double Input1, std::string Input2Name, double Input2, double TargetVal)
         {
             this->OutputName = OutputName;
             this->Input1Name = Input1Name;
@@ -155,7 +165,7 @@ static double Brent_HAProps_T(char *OutputName, char *Input1Name, double Input1,
         ~BrentSolverResids(){};
 
         double call(double T){
-            return HAPropsSI(OutputName,(char *)"T",T,Input1Name,Input1,Input2Name,Input2)-TargetVal;
+            return HAPropsSI(OutputName,"T",T,Input1Name,Input1,Input2Name,Input2)-TargetVal;
         }
     };
 
@@ -167,18 +177,19 @@ static double Brent_HAProps_T(char *OutputName, char *Input1Name, double Input1,
     return T;
 }
 
-static double Secant_HAProps_T(char *OutputName, char *Input1Name, double Input1, char *Input2Name, double Input2, double TargetVal, double T_guess)
+static double Secant_HAProps_T(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, double TargetVal, double T_guess)
 {
     // Use a secant solve in order to yield a target output value for HAProps by altering T
     double x1=0,x2=0,x3=0,y1=0,y2=0,eps=5e-7,f=999,T=300,change;
     int iter=1;
+    std::string sT = "T";
 
     while ((iter<=3 || (fabs(f)>eps && fabs(change)>1e-10)) && iter<100)
     {
         if (iter==1){x1=T_guess; T=x1;}
         if (iter==2){x2=T_guess+0.001; T=x2;}
         if (iter>2) {T=x2;}
-            f=HAPropsSI(OutputName,(char *)"T",T,Input1Name,Input1,Input2Name,Input2)-TargetVal;
+            f=HAPropsSI(OutputName,sT,T,Input1Name,Input1,Input2Name,Input2)-TargetVal;
         if (iter==1){y1=f;}
         if (iter>1)
         {
@@ -192,7 +203,7 @@ static double Secant_HAProps_T(char *OutputName, char *Input1Name, double Input1
     return T;
 }
 
-static double Secant_HAProps_W(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, double TargetVal, double W_guess)
+static double Secant_HAProps_W(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, double TargetVal, double W_guess)
 {
     // Use a secant solve in order to yield a target output value for HAProps by altering humidity ratio
     double x1=0,x2=0,x3=0,y1=0,y2=0,eps=1e-8,f=999,W=0.0001;
@@ -1009,7 +1020,7 @@ double WetbulbTemperature(double T, double p, double psi_w)
     }
     return return_val;
 }
-static int Name2Type(const char *Name)
+static int Name2Type(const std::string &Name)
 {
     if (!strcmp(Name,"Omega") || !strcmp(Name,"HumRat") || !strcmp(Name,"W"))
         return GIVEN_HUMRAT;
@@ -1032,10 +1043,10 @@ static int Name2Type(const char *Name)
     else if (!strcmp(Name,"k") || !strcmp(Name,"Conductivity") || !strcmp(Name,"K"))
         return GIVEN_COND;
     else
-        printf("Sorry, your input [%s] was not understood to Name2Type in HumAir.c. Acceptable values are T,P,R,W,D,B,H,M,K and aliases thereof\n",Name);
+        printf("Sorry, your input [%s] was not understood to Name2Type in HumAir.c. Acceptable values are T,P,R,W,D,B,H,M,K and aliases thereof\n",Name.c_str());
         return -1;
 }
-int TypeMatch(int TypeCode, const char *Input1Name, const char *Input2Name, const char *Input3Name)
+int TypeMatch(int TypeCode, const std::string &Input1Name, const std::string &Input2Name, const std::string &Input3Name)
 {
     // Return the index of the input variable that matches the input, otherwise return -1 for failure
     if (TypeCode==Name2Type(Input1Name))
@@ -1128,7 +1139,7 @@ double RelativeHumidity(double T, double p, double psi_w)
     // Find relative humidity using W/e=phi*p_s/(p-phi*p_s)
     return W/epsilon*p/(p_s*(1+W/epsilon));
 }
-double HAPropsSI(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, const char *Input3Name, double Input3)
+double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, const std::string &Input3Name, double Input3)
 {
     try
     {
@@ -1138,16 +1149,16 @@ double HAPropsSI(const char *OutputName, const char *Input1Name, double Input1, 
         int In1Type, In2Type, In3Type,iT,iW,iTdp,iRH,ip,Type1,Type2;
         double vals[3],p,T,RH,W,Tdp,psi_w,M_ha,v_bar,h_bar,s_bar,MainInputValue,SecondaryInputValue,T_guess;
         double Value1,Value2,W_guess;
-        char MainInputName[100], SecondaryInputName[100],Name1[100],Name2[100];
+        std::string MainInputName, SecondaryInputName, Name1, Name2;
 
         vals[0]=Input1;
         vals[1]=Input2;
         vals[2]=Input3;
 
         // First figure out what kind of inputs you have, convert names to Macro expansions
-        In1Type=Name2Type(Input1Name);
-        In2Type=Name2Type(Input2Name);
-        In3Type=Name2Type(Input3Name);
+        In1Type=Name2Type(Input1Name.c_str());
+        In2Type=Name2Type(Input2Name.c_str());
+        In3Type=Name2Type(Input3Name.c_str());
 
         // Pressure must be included
         ip=TypeMatch(GIVEN_P,Input1Name,Input2Name,Input3Name);
