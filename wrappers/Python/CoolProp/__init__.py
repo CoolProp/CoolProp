@@ -6,11 +6,11 @@ from . import HumidAirProp
 from . import State
 from .constants import *
 
-__fluids__ = CoolProp.get_global_param_string('fluids_list').decode('ascii').split(',')
-__incompressibles_pure__ = CoolProp.get_global_param_string('incompressible_list_pure').decode('ascii').split(',')
-__incompressibles_solution__ = CoolProp.get_global_param_string('incompressible_list_solution').decode('ascii').split(',')
-__version__ = CoolProp.get_global_param_string('version').decode('ascii')
-__gitrevision__ = CoolProp.get_global_param_string('gitrevision').decode('ascii')
+__fluids__ = CoolProp.get_global_param_string('fluids_list').split(',')
+__incompressibles_pure__ = CoolProp.get_global_param_string('incompressible_list_pure').split(',')
+__incompressibles_solution__ = CoolProp.get_global_param_string('incompressible_list_solution').split(',')
+__version__ = CoolProp.get_global_param_string('version')
+__gitrevision__ = CoolProp.get_global_param_string('gitrevision')
 
 def get(s):
     """

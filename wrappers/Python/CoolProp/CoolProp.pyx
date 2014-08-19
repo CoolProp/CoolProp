@@ -1,4 +1,4 @@
-#cython: embedsignature = True, c_string_type=bytes, c_string_encoding=ascii
+#cython: embedsignature = True, c_string_type = unicode, c_string_encoding = ascii
 from __future__ import division
 #
 # This file provides wrapper functions of all the CoolProp functions
@@ -13,7 +13,7 @@ import math
 import warnings
 
 try:
-    import numpy as np
+    import numpy as npp
     _numpy_supported = True
 except ImportError:
     _numpy_supported = False
@@ -202,14 +202,14 @@ cpdef list FluidsList():
        In [1]: FluidsList()
        
     """ 
-    return _get_global_param_string("FluidsList").decode('ascii').split(',')
+    return _get_global_param_string("FluidsList").split(',')
 
 cpdef get_aliases(string Fluid):
     """
     Return a comma separated string of aliases for the given fluid
     """
     cdef bytes _Fluid = Fluid.encode('ascii')
-    return [F.encode('ascii') for F in (_get_fluid_param_string(_Fluid,'aliases').encode('ascii')).decode('ascii').split(',')]
+    return [F for F in _get_fluid_param_string(_Fluid, 'aliases').split(',')]
 
 cpdef string get_REFPROPname(string Fluid):
     """
@@ -251,6 +251,7 @@ cpdef string get_REFPROPname(string Fluid):
 #          empty string if Fluid not in CoolProp, "Bad key" if key is invalid
 #     """
 #     return _get_BibTeXKey(Fluid, key)
+
 cpdef string get_errstr():
     """
     Return the current error string
