@@ -142,7 +142,8 @@ struct ViscosityDiluteGasCollisionIntegralData
 };
 struct ViscosityDiluteCollisionIntegralPowersOfTstarData
 {
-    long double T_reducing, C;
+    long double T_reducing, ///< Reducing temperature [K[
+                C;          ///< Leading constant
     std::vector<long double> a, t;
 };
 struct ViscosityDiluteGasPowersOfT
@@ -151,19 +152,18 @@ struct ViscosityDiluteGasPowersOfT
 };
 struct ViscosityDiluteVariables
 {
-    enum ViscosityDiluteType {VISCOSITY_DILUTE_COLLISION_INTEGRAL,
-                              VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR,
-                              VISCOSITY_DILUTE_KINETIC_THEORY,
-                              VISCOSITY_DILUTE_ETHANE,
-                              VISCOSITY_DILUTE_CYCLOHEXANE,
-                              VISCOSITY_DILUTE_POWERS_OF_T,
+    enum ViscosityDiluteType {VISCOSITY_DILUTE_COLLISION_INTEGRAL, ///< Use \ref TransportRoutines::viscosity_dilute_collision_integral
+                              VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR, ///< Use \ref TransportRoutines::viscosity_dilute_collision_integral_powers_of_T
+                              VISCOSITY_DILUTE_KINETIC_THEORY, ///< Use \ref TransportRoutines::viscosity_dilute_kinetic_theory
+                              VISCOSITY_DILUTE_ETHANE,  ///< Use \ref TransportRoutines::viscosity_dilute_ethane
+                              VISCOSITY_DILUTE_CYCLOHEXANE,  ///< Use \ref TransportRoutines::viscosity_dilute_cyclohexane
+                              VISCOSITY_DILUTE_POWERS_OF_T, ///< Use \ref TransportRoutines::viscosity_dilute_powers_of_T
                               VISCOSITY_DILUTE_NOT_SET
                               };
     ViscosityDiluteType type;
-    ViscosityDiluteGasCollisionIntegralData collision_integral;
-    ViscosityDiluteCollisionIntegralPowersOfTstarData collision_integral_powers_of_Tstar;
-    ViscosityDiluteGasPowersOfT powers_of_T;
-
+    ViscosityDiluteGasCollisionIntegralData collision_integral; ///< Data for \ref TransportRoutines::viscosity_dilute_collision_integral
+    ViscosityDiluteCollisionIntegralPowersOfTstarData collision_integral_powers_of_Tstar; ///< Data for \ref TransportRoutines::viscosity_dilute_collision_integral_powers_of_T
+    ViscosityDiluteGasPowersOfT powers_of_T; ///< Data for \ref TransportRoutines::viscosity_dilute_powers_of_T
     ViscosityDiluteVariables(){type = VISCOSITY_DILUTE_NOT_SET;}
 };
 
@@ -179,13 +179,13 @@ struct ViscosityInitialDensityEmpiricalData
 
 struct ViscosityInitialDensityVariables
 {
-    enum ViscosityInitialDensityEnum {VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND,
-                                      VISCOSITY_INITIAL_DENSITY_EMPIRICAL,
+    enum ViscosityInitialDensityEnum {VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND, ///< Use \ref TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend
+                                      VISCOSITY_INITIAL_DENSITY_EMPIRICAL, ///< Use \ref TransportRoutines::viscosity_initial_density_dependence_empirical
                                       VISCOSITY_INITIAL_DENSITY_NOT_SET
                                       };
     ViscosityInitialDensityEnum type;
-    ViscosityRainWaterFriendData rainwater_friend;
-    ViscosityInitialDensityEmpiricalData empirical;
+    ViscosityRainWaterFriendData rainwater_friend;  ///< Data for \ref TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend
+    ViscosityInitialDensityEmpiricalData empirical; ///< Data for \ref TransportRoutines::viscosity_initial_density_dependence_empirical
     ViscosityInitialDensityVariables(){type = VISCOSITY_INITIAL_DENSITY_NOT_SET;}
 };
 
@@ -202,17 +202,17 @@ struct ViscosityFrictionTheoryData
 };
 struct ViscosityHigherOrderVariables
 {
-    enum ViscosityHigherOrderEnum {VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND,
-                                   VISCOSITY_HIGHER_ORDER_HYDROGEN,
-                                   VISCOSITY_HIGHER_ORDER_HEXANE,
-                                   VISCOSITY_HIGHER_ORDER_HEPTANE,
-                                   VISCOSITY_HIGHER_ORDER_ETHANE,
-                                   VISCOSITY_HIGHER_ORDER_FRICTION_THEORY,
+    enum ViscosityHigherOrderEnum {VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND, ///< Use \ref TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand
+                                   VISCOSITY_HIGHER_ORDER_HYDROGEN, ///< Use \ref TransportRoutines::viscosity_hydrogen_higher_order_hardcoded
+                                   VISCOSITY_HIGHER_ORDER_HEXANE, ///< Use \ref TransportRoutines::viscosity_hexane_higher_order_hardcoded
+                                   VISCOSITY_HIGHER_ORDER_HEPTANE, ///< Use \ref TransportRoutines::viscosity_heptane_higher_order_hardcoded
+                                   VISCOSITY_HIGHER_ORDER_ETHANE, ///< Use \ref TransportRoutines::viscosity_ethane_higher_order_hardcoded
+                                   VISCOSITY_HIGHER_ORDER_FRICTION_THEORY, ///< Use \ref TransportRoutines::viscosity_higher_order_friction_theory
                                    VISCOSITY_HIGHER_ORDER_NOT_SET
                                    };
     ViscosityHigherOrderEnum type;
-    ViscosityModifiedBatschinskiHildebrandData modified_Batschinski_Hildebrand;
-    ViscosityFrictionTheoryData friction_theory;
+    ViscosityModifiedBatschinskiHildebrandData modified_Batschinski_Hildebrand; ///< Data for \ref TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand
+    ViscosityFrictionTheoryData friction_theory;  ///< Data for \ref TransportRoutines::viscosity_higher_order_friction_theory
     ViscosityHigherOrderVariables(){type = VISCOSITY_HIGHER_ORDER_NOT_SET;};
 };
 
@@ -225,15 +225,15 @@ struct ViscosityECSVariables{
 class TransportPropertyData
 {
 public:
-    enum ViscosityDiluteEnum {VISCOSITY_HARDCODED_WATER,
-                              VISCOSITY_HARDCODED_HELIUM,
-                              VISCOSITY_HARDCODED_R23,
+    enum ViscosityHardcodedEnum {VISCOSITY_HARDCODED_WATER, ///< Use \ref TransportRoutines::viscosity_water_hardcoded
+                              VISCOSITY_HARDCODED_HELIUM, ///< Use \ref TransportRoutines::viscosity_helium_hardcoded
+                              VISCOSITY_HARDCODED_R23, ///< Use \ref TransportRoutines::viscosity_R23_hardcoded
                               VISCOSITY_NOT_HARDCODED
                               };
-    enum ConductivityDiluteEnum {
-                                 CONDUCTIVITY_HARDCODED_WATER,
-                                 CONDUCTIVITY_HARDCODED_R23,
-                                 CONDUCTIVITY_HARDCODED_HELIUM,
+    enum ConductivityHardcodedEnum {
+                                 CONDUCTIVITY_HARDCODED_WATER, ///< Use \ref TransportRoutines::conductivity_hardcoded_water
+                                 CONDUCTIVITY_HARDCODED_R23, ///< Use \ref TransportRoutines::conductivity_hardcoded_R23
+                                 CONDUCTIVITY_HARDCODED_HELIUM, ///< Use \ref TransportRoutines::conductivity_hardcoded_helium
                                  CONDUCTIVITY_NOT_HARDCODED
                                  };
     ViscosityDiluteVariables viscosity_dilute;
@@ -245,11 +245,14 @@ public:
     ConductivityCriticalVariables conductivity_critical;
     ConductivityECSVariables conductivity_ecs;
 
-    std::string BibTeX_viscosity, BibTeX_conductivity;
+    std::string BibTeX_viscosity,  ///< The BibTeX key for the viscosity model
+                BibTeX_conductivity;  ///< The BibTeX key for the conductivity model
     bool viscosity_using_ECS; ///< A flag for whether to use extended corresponding states for viscosity.  False for no
     bool conductivity_using_ECS; ///< A flag for whether to use extended corresponding states for conductivity.  False for no
-    long double sigma_eta, epsilon_over_k;
-    int hardcoded_viscosity, hardcoded_conductivity;
+    long double sigma_eta, ///< The Lennard-Jones 12-6 \f$ \sigma \f$ parameter
+                epsilon_over_k; ///< The Lennard-Jones 12-6 \f$ \varepsilon/k \f$ parameter
+    ViscosityHardcodedEnum hardcoded_viscosity; ///< Hardcoded flags for the viscosity
+    ConductivityHardcodedEnum hardcoded_conductivity; ///< Hardcoded flags for the conductivity
     TransportPropertyData(){hardcoded_viscosity = VISCOSITY_NOT_HARDCODED;
                             hardcoded_conductivity = CONDUCTIVITY_NOT_HARDCODED;
                             viscosity_using_ECS = false;

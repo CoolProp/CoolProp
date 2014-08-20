@@ -164,7 +164,7 @@ long double TransportRoutines::viscosity_initial_density_dependence_Rainwater_Fr
 
 long double TransportRoutines::viscosity_initial_density_dependence_empirical(HelmholtzEOSMixtureBackend &HEOS)
 {
-    // Inspired by the form from Tariq, JPCRD, 2
+    // Inspired by the form from Tariq, JPCRD, 2014
     if (HEOS.is_pure_or_pseudopure)
     {
         // Retrieve values from the state class
@@ -259,7 +259,9 @@ long double TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBack
 	// Dilute and finite gas portions
 	visc_Helper(Tbar, rhobar, &mubar_0, &mubar_1);
 
-	///************************ Critical Enhancement ************************
+    // **********************************************************************
+	// ************************ Critical Enhancement ************************
+    // **********************************************************************
 	delta=rhobar;
 	// "Normal" calculation
 	tau=1/Tbar;
