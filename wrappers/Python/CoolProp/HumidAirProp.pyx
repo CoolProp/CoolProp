@@ -44,9 +44,9 @@ cpdef HAPropsSI(string OutputName, string Input1Name, Input1, string Input2Name,
         if math.isinf(val) or math.isnan(val):
             err_string = _get_global_param_string('errstring')
             if not len(err_string) == 0:
-                raise ValueError("{err:s} :: inputs were:\"{out:s}\",\'{in1n:s}\',{in1:0.16e},\'{in2n:s}\',{in2:0.16e},\'{in3n:s}\',{in3:0.16e} ".format(err=err_string,out=OutputName,in1n=Input1Name,in1=Input1,in2n=_Input2Name,in2=Input2,in3n=_Input3Name,in3=Input3))
+                raise ValueError("{err:s} :: inputs were:\"{out:s}\",\'{in1n:s}\',{in1:0.16e},\'{in2n:s}\',{in2:0.16e},\'{in3n:s}\',{in3:0.16e} ".format(err=err_string,out=OutputName,in1n=Input1Name,in1=Input1,in2n=Input2Name,in2=Input2,in3n=Input3Name,in3=Input3))
             else:
-                raise ValueError("HAProps failed ungracefully with inputs: \"{out:s}\",\'{in1n:s}\',{in1:0.16e},\'{in2n:s}\',{in2:0.16e},\'{in3n:s}\',{in3:0.16e} ".format(out=OutputName,in1n=Input1Name,in1=Input1,in2n=_Input2Name,in2=Input2,in3n=_Input3Name,in3=Input3))
+                raise ValueError("HAProps failed ungracefully with inputs: \"{out:s}\",\'{in1n:s}\',{in1:0.16e},\'{in2n:s}\',{in2:0.16e},\'{in3n:s}\',{in3:0.16e} ".format(out=OutputName,in1n=Input1Name,in1=Input1,in2n=Input2Name,in2=Input2,in3n=Input3Name,in3=Input3))
         
         return val #Error raised by HAProps on failure
         
