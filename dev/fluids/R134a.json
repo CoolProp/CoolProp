@@ -416,6 +416,62 @@
     }
   }, 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "McLinden-IJR-2000",
+      "critical": {
+        "GAMMA": 0.0496, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 1.89202e9, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.94e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.0105248, 
+          8.00982e-5
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 1, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.0037740609300000003, 
+          0.010534223865, 
+          -0.002952794565, 
+          0.00128672592
+        ], 
+        "_note" : "from v4.x : delta = rho/(5.049886*102.032); // Does not use either the reduce.rho value or crit.rho value !!! Or the value listed in Huber, 2003 either",
+        "T_reducing": 1, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "rhomass_reducing": 515.249968352, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Huber-IECR-2003", 
       "dilute": {

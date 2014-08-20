@@ -452,6 +452,13 @@ vel("Helium", "T", 5.3, "P", 2.3e5, "L", 0.0149, 1e-1),
 //vel("R410A", "T", 332.09, "P", 3.690e6, "L", 22.76e-3, 0.03),
 //vel("R507A", "T", 254.85, "P", 0.101e6, "L", 0.01007, 0.03),
 //vel("R507A", "T", 333.18, "P", 2.644e6, "L", 21.31e-3, 0.03),
+
+// From REFPROP 9.1 since no data provided
+vel("R134a", "T", 240, "D", 1e-10, "L", 0.008698768 , 1e-4),
+vel("R134a", "T", 330, "D", 1e-10, "L", 0.015907606 , 1e-4),
+vel("R134a", "T", 330, "Q", 0, "L", 0.06746432253 , 1e-4),
+vel("R134a", "T", 240, "Q", 1, "L", 0.00873242359, 1e-4),
+
 };
 
 TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity],[transport]")
