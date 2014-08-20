@@ -160,6 +160,12 @@ if (COOLPROP_64BIT_SHARED_LIBRARY_MODULE OR COOLPROP_64BIT_SHARED_LIBRARY)
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    if (MSVC)
+      add_custom_command(TARGET ${app_name}
+                         POST_BUILD
+                         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+      install (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/64bit)
+    endif()
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/64bit)
     install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
@@ -173,6 +179,12 @@ if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_CDECL_SHARED_LI
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    if (MSVC)
+      add_custom_command(TARGET ${app_name}
+                         POST_BUILD
+                         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+      install (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
+    endif()
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
     install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
@@ -186,6 +198,12 @@ if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_STDCALL_SHARE
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    if (MSVC)
+      add_custom_command(TARGET ${app_name}
+                         POST_BUILD
+                         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+      install (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__stdcall_calling_convention)
+    endif()
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__stdcall_calling_convention)
     install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
