@@ -274,4 +274,5 @@ class BasePlot(object):
         matplotlib.pyplot.show()
         
     def savefig(self, *args, **kwargs):
+        self._draw_graph()
         matplotlib.pyplot.savefig(*args, **kwargs)
