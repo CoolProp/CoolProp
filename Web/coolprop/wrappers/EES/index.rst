@@ -56,17 +56,18 @@ Once the dependencies are installed, you can run the installer with::
 
 Low-level debugging
 -------------------
-To make and use a debug DLL, do (from root of repo)
+To make and use a debug DLL, do (from root of repo)::
 
     mkdir build && cd build
     cmake .. -G "Visual Studio 10 2010" -DCOOLPROP_EES_MODULE=ON
 
-This will make a Visual Studio Project called CoolProp.sln.  Open the visual studio project, for the COOLPROP_EES project:
+This will make a Visual Studio Project called CoolProp.sln defaulting to 32-bit build.  Open the visual studio project, for the COOLPROP_EES project:
 
-1. Change the output directory to C:\\ees32\\userlib\\COOLPROP_EES (this is where the DLF will go)
-2. Under debugging, set the command to c:\\ees32\\ees.  You can also set the arguments to the file that you want EES to open
+1. Change the output directory to C:\\EES32\\Userlib\\COOLPROP_EES (this is where the DLF will go)
+2. Under debugging, set the command to c:\\EES32\\ees.  You can also set the arguments to the file that you want EES to open
 3. Set a breakpoint somewhere that it will get hit (in the COOLPROP_EES function for instance)
-4. Run the project, it will build and start EES, open your code or call some inputs for EES
-5. Debugger should stop at your breakpoint
+4. Right-click on the COOLPROP_EES project, select "Set as StartUp Project"
+5. Run the project, it will build and start EES, open your code or call some inputs for EES
+6. Debugger should stop at your breakpoint
 
 
