@@ -736,7 +736,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
     if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }
 }
 
-void REFPROPMixtureBackend::update(long input_pair, double value1, double value2)
+void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2)
 {
     double rho_mol_L=_HUGE, rhoLmol_L=_HUGE, rhoVmol_L=_HUGE,
         hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,

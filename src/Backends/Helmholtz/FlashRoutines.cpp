@@ -140,8 +140,22 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
     if (HEOS.is_pure_or_pseudopure)
     {
         if (HEOS.components[0]->pEOS->pseudo_pure){
-            // It is a psedo-pure mixture
-            throw NotImplementedError("PQ_flash not implemented for pseudo-pure fluids yet");
+            // It is a pseudo-pure mixture
+            
+            HEOS._TLanc = HEOS.components[0]->ancillaries.pL.invert(HEOS._p);
+            HEOS._TVanc = HEOS.components[0]->ancillaries.pV.invert(HEOS._p);
+            // Get guesses for the ancillaries for density
+            long double rhoL = HEOS.components[0]->ancillaries.rhoL.evaluate(HEOS._TLanc);
+            long double rhoV = HEOS.components[0]->ancillaries.rhoV.evaluate(HEOS._TVanc);
+            // Solve for the density
+            HEOS.SatL->update_TP_guessrho(HEOS._TLanc, HEOS._p, rhoL);
+            HEOS.SatV->update_TP_guessrho(HEOS._TVanc, HEOS._p, rhoV);
+            
+            // Load the outputs
+            HEOS._phase = iphase_twophase;
+            HEOS._p = HEOS._Q*HEOS.SatV->p() + (1 - HEOS._Q)*HEOS.SatL->p();
+            HEOS._T = HEOS._Q*HEOS.SatV->T() + (1 - HEOS._Q)*HEOS.SatL->T();
+            HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
         }
         else{
             // Critical point for pure fluids, slightly different for pseudo-pure, very different for mixtures

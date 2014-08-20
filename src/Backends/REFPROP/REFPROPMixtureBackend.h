@@ -46,7 +46,7 @@ public:
 	@param value1 First input value
 	@param value2 Second input value
 	*/
-	void update(long input_pair,
+	void update(CoolProp::input_pairs,
 				double value1,
 				double value2
 				);

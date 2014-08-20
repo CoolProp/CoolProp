@@ -386,7 +386,7 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
 	}
 
 	// Obtain the input pair
-	long pair = generate_update_pair(iName1, Prop1, iName2, Prop2, x1, x2);
+	CoolProp::input_pairs pair = generate_update_pair(iName1, Prop1, iName2, Prop2, x1, x2);
 
 	// Update the state
 	State->update(pair, x1, x2);

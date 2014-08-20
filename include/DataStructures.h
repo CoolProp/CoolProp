@@ -152,9 +152,9 @@ inline bool match_pair(long key1, long key2, long x1, long x2, bool &swap)
     swap = !(key1 == x1);
     return ((key1 == x1 && key2 == x2) || (key2 == x1 && key1 == x2));
 };
-template<class T> long generate_update_pair(long key1, T value1, long key2, T value2, T &out1, T&out2)
+template<class T> CoolProp::input_pairs generate_update_pair(long key1, T value1, long key2, T value2, T &out1, T&out2)
     {
-        long pair;
+        CoolProp::input_pairs pair;
         bool swap;
 
         if (match_pair(key1, key2, iQ, iT, swap)){

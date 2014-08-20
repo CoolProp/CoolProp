@@ -15,6 +15,10 @@ namespace CoolProp {
 class FlashRoutines;
 
 class HelmholtzEOSMixtureBackend : public AbstractState {
+    
+private:
+    void pre_update(CoolProp::input_pairs &input_pair, long double &value1, long double &value2 );
+    void post_update();
 protected:
     std::vector<CoolPropFluid*> components; ///< The components that are in use
 
@@ -26,6 +30,7 @@ protected:
     SimpleState _crit;
     phases imposed_phase_index;
     int N; ///< Number of components
+    
 public:
     HelmholtzEOSMixtureBackend(){imposed_phase_index = iphase_not_imposed; _phase = iphase_unknown;};
     HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
@@ -58,7 +63,7 @@ public:
     void resize(unsigned int N);
     shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///<
 
-    void update(long input_pair, double value1, double value2);
+    void update(CoolProp::input_pairs input_pair, double value1, double value2);
 
     void update_TP_guessrho(long double T, long double p, long double rho_guess);
 
@@ -209,7 +214,7 @@ public:
 
     void update_states();
     
-    void mass_to_molar_inputs(long &input_pair, double &value1, double &value2);
+    void mass_to_molar_inputs(CoolProp::input_pairs &input_pair, long double &value1, long double &value2);
 
     // ***************************************************************
     // ***************************************************************

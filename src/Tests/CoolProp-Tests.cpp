@@ -221,7 +221,7 @@ class TransportValidationFixture
 protected:
     long double actual, x1, x2;
     shared_ptr<CoolProp::AbstractState> pState;
-    int pair;
+    CoolProp::input_pairs pair;
 public:
     TransportValidationFixture(){ }
     ~TransportValidationFixture(){ }
@@ -232,7 +232,7 @@ public:
         double o1, o2;
         long iin1 = CoolProp::get_parameter_index(in1);
         long iin2 = CoolProp::get_parameter_index(in2);
-        long pair = CoolProp::generate_update_pair(iin1, v1, iin2, v2, o1, o2);
+        CoolProp::input_pairs pair = CoolProp::generate_update_pair(iin1, v1, iin2, v2, o1, o2);
         pState->update(pair, o1, o2);
     }
     void get_value(long key)
@@ -484,7 +484,7 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
 
 }; /* namespace TransportValidation */
 
-static int inputs[] = {
+static CoolProp::input_pairs inputs[] = {
     CoolProp::DmolarT_INPUTS,
     //CoolProp::SmolarT_INPUTS,
     //CoolProp::HmolarT_INPUTS,
@@ -511,14 +511,14 @@ class ConsistencyFixture
 protected:
     long double hmolar, pmolar, smolar, umolar, rhomolar, T, p, x1, x2;
     shared_ptr<CoolProp::AbstractState> pState;
-    int pair;
+    CoolProp::input_pairs pair;
 public:
     ConsistencyFixture(){}
     ~ConsistencyFixture(){}
     void set_backend(std::string backend, std::string fluid_name){
         pState.reset(CoolProp::AbstractState::factory(backend, fluid_name));
     }
-    void set_pair(int pair){
+    void set_pair(CoolProp::input_pairs pair){
         this->pair = pair;
     }
     void set_TP(long double T, long double p)
@@ -569,6 +569,9 @@ public:
             x1 = hmolar; x2 = smolar; break;
         case CoolProp::SmolarUmolar_INPUTS:
             x1 = smolar; x2 = umolar; break;
+            
+        default:
+            throw CoolProp::ValueError();
         }
     }
     void single_phase_consistency_check()
@@ -595,7 +598,7 @@ TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for CO2 using all val
 
             for (int i = 0; i < inputsN; ++i)
             {
-                int pair = inputs[i];
+                CoolProp::input_pairs pair = inputs[i];
                 std::string pair_desc = CoolProp::get_input_pair_short_desc(pair);
                 set_pair(pair);
                 CAPTURE(pair_desc);

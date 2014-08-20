@@ -535,13 +535,23 @@ long double HelmholtzEOSMixtureBackend::calc_pmax(void)
     return summer;
 }
 
-void HelmholtzEOSMixtureBackend::update_TP_guessrho(long double T, long double p, long double rho_guess)
+void HelmholtzEOSMixtureBackend::update_TP_guessrho(long double T, long double p, long double rhomolar_guess)
 {
-    double rho = solver_rho_Tp(T, p, rho_guess);
-    update(DmolarT_INPUTS, rho, T);
+    CoolProp::input_pairs pair = PT_INPUTS;
+    // Set up the state
+    pre_update(pair, p, T);
+    
+    // Do the flash call
+    double rhomolar = solver_rho_Tp(T, p, rhomolar_guess);
+    
+    // Update the class with the new calculated density
+    update(DmolarT_INPUTS, rhomolar, T);
+    
+    // Cleanup
+    post_update();
 }
 
-void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(long &input_pair, double &value1, double &value2)
+void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(CoolProp::input_pairs &input_pair, long double &value1, long double &value2)
 {
     // Check if a mass based input, convert it to molar units
 
@@ -588,24 +598,33 @@ void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(long &input_pair, double &
             return;
     }
 }
-void HelmholtzEOSMixtureBackend::update(long input_pair, double value1, double value2 )
+
+void HelmholtzEOSMixtureBackend::pre_update(CoolProp::input_pairs &input_pair, long double &value1, long double &value2 )
 {
-    if (get_debug_level() > 10){std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)",__FILE__,__LINE__, input_pair, get_input_pair_short_desc(input_pair).c_str(), value1, value2) << std::endl;}
-    
+    // Clear the state
     clear();
 
     if (is_pure_or_pseudopure == false && mole_fractions.size() == 0) {
         throw ValueError("Mole fractions must be set");
     }
-
+    
+    // If the inputs are in mass units, convert them to molar units
     mass_to_molar_inputs(input_pair, value1, value2);
 
     // Set the mole-fraction weighted gas constant for the mixture
     // (or the pure/pseudo-pure fluid) if it hasn't been set yet
     gas_constant();
 
-    // Reducing state
+    // Calculate and cache the reducing state
     calc_reducing_state();
+}
+
+void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2 )
+{
+    if (get_debug_level() > 10){std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)",__FILE__,__LINE__, input_pair, get_input_pair_short_desc(input_pair).c_str(), value1, value2) << std::endl;}
+    
+    long double ld_value1 = value1, ld_value2 = value2;
+    pre_update(input_pair, ld_value1, ld_value2);
 
     switch(input_pair)
     {
@@ -640,6 +659,13 @@ void HelmholtzEOSMixtureBackend::update(long input_pair, double value1, double v
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
     }
+    
+    post_update();
+    
+}
+
+void HelmholtzEOSMixtureBackend::post_update()
+{
     // Check the values that must always be set
     //if (_p < 0){ throw ValueError("p is less than zero");}
     if (!ValidNumber(_p)){ throw ValueError("p is not a valid number");}
@@ -1960,6 +1986,7 @@ SimpleState HelmholtzEOSMixtureBackend::calc_reducing_state_nocache(const std::v
 }
 void HelmholtzEOSMixtureBackend::calc_reducing_state(void)
 {
+    /// \todo set critical independently
     _reducing = calc_reducing_state_nocache(mole_fractions);
     _crit = _reducing;
 }

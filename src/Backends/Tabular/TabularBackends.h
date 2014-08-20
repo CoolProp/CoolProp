@@ -43,7 +43,7 @@ class GriddedTableBackend : public AbstractState
     bool using_mass_fractions(void){return false;}
     bool using_volu_fractions(void){return false;}
     
-    void update(long input_pair, double Value1, double Value2){};
+    void update(CoolProp::input_pairs input_pair, double Value1, double Value2){};
     void set_mole_fractions(const std::vector<long double> &mole_fractions){};
     void set_mass_fractions(const std::vector<long double> &mass_fractions){};
     
