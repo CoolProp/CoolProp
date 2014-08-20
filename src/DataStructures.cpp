@@ -124,6 +124,13 @@ public:
 		index_map.insert(std::pair<std::string, int>("Tmax", iT_max));
 		index_map.insert(std::pair<std::string, int>("pmax", iP_max));
         index_map.insert(std::pair<std::string, int>("molemass", imolar_mass));
+
+        std::map<std::string,int>::iterator it;
+        for(it = index_map.begin(); it != index_map.end(); ++it )
+        {
+            // Add all upper-case aliases for EES support (fine to just do it if is already there)
+            index_map.insert(std::pair<std::string, int>(upper(it->first), it->second));
+        }
     }
 };
 
