@@ -417,19 +417,19 @@
   }, 
   "TRANSPORT": {
     "conductivity": {
-      "BibTeX": "McLinden-IJR-2000",
+      "BibTeX": "McLinden-IJR-2000", 
       "critical": {
         "GAMMA": 0.0496, 
         "R0": 1.03, 
         "gamma": 1.239, 
-        "qD": 1.89202e9, 
+        "qD": 1892020000.0, 
         "type": "simplified_Olchowy_Sengers", 
         "zeta0": 1.94e-10
       }, 
       "dilute": {
         "A": [
           -0.0105248, 
-          8.00982e-5
+          8.00982e-05
         ], 
         "B": [
           1.0
@@ -452,9 +452,9 @@
           -0.002952794565, 
           0.00128672592
         ], 
-        "_note" : "from v4.x : delta = rho/(5.049886*102.032); // Does not use either the reduce.rho value or crit.rho value !!! Or the value listed in Huber, 2003 either",
         "T_reducing": 1, 
         "T_reducing_units": "K", 
+        "_note": "from v4.x : delta = rho/(5.049886*102.032); // Does not use either the reduce.rho value or crit.rho value !!! Or the value listed in Huber, 2003 either", 
         "d": [
           1, 
           2, 
