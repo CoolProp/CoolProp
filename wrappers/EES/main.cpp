@@ -161,6 +161,8 @@ extern "C"
 				}
 			}
 			else{
+                if (In1str.size() != 0){ strcpy(fluid, format("Input #1 [%s] can only be 1 character long for coolprop()",In1str.c_str()).c_str());
+                if (In2str.size() != 0){ strcpy(fluid, format("Input #2 [%s] can only be 1 character long for coolprop()",In2str.c_str()).c_str());
 				// Mole fractions are not given
 				out = Props(Outstr.c_str(), In1str[0], In1, In2str[0], In2, Fluidstr.c_str());
 			}
