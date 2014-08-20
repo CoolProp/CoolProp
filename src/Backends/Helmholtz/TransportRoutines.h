@@ -67,12 +67,23 @@ public:
     IMPORTANT: This function returns \f$B_{\eta}\f$, not \f$\eta_{RF}\f$
     */
     static long double viscosity_initial_density_dependence_Rainwater_Friend(HelmholtzEOSMixtureBackend &HEOS);
+    
+    /**
+     * \brief An empirical form for the initial density dependence 
+     * 
+     * Given by the polynomial-like form
+     * \f[
+     *  \eta^1 = \sum_i n_i\delta^{d_i}\tau^{t_i}
+     * \f]
+     * where the output is in Pa-s
+     */
+    static long double viscosity_initial_density_dependence_empirical(HelmholtzEOSMixtureBackend &HEOS);
 
     /**
     \brief The modified Batschinski-Hildebrand contribution to the viscosity
 
     \f[
-    \Delta\eta = \displaystyle\sum_{i}a_{i}\delta^{d1_i}\tau^{t1_j}+\left(\displaystyle\sum_{i}f_i\delta^{d2_i}\tau^{t2_i}\right)\left(\frac{1}{\delta_0(\tau)-\delta}-\frac{1}{\delta_0(\tau)}\right)
+    \Delta\eta = \displaystyle\sum_{i}a_{i}\delta^{d1_i}\tau^{t1_j}\exp(\gamma_i\delta^{l_i})+\left(\displaystyle\sum_{i}f_i\delta^{d2_i}\tau^{t2_i}\right)\left(\frac{1}{\delta_0(\tau)-\delta}-\frac{1}{\delta_0(\tau)}\right)
     \f]
     where \f$\tau = T_c/T\f$ and \f$\delta = \rho/\rho_c\f$
     \f[
@@ -83,6 +94,7 @@ public:
     static long double viscosity_higher_order_modified_Batschinski_Hildebrand(HelmholtzEOSMixtureBackend &HEOS);
 
     static long double viscosity_dilute_ethane(HelmholtzEOSMixtureBackend &HEOS);
+    static long double viscosity_dilute_cyclohexane(HelmholtzEOSMixtureBackend &HEOS);
 
     static long double viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend &HEOS);

@@ -162,6 +162,29 @@ long double TransportRoutines::viscosity_initial_density_dependence_Rainwater_Fr
     }
 }
 
+long double TransportRoutines::viscosity_initial_density_dependence_empirical(HelmholtzEOSMixtureBackend &HEOS)
+{
+    // Inspired by the form from Tariq, JPCRD, 2
+    if (HEOS.is_pure_or_pseudopure)
+    {
+        // Retrieve values from the state class
+        CoolProp::ViscosityInitialDensityEmpiricalData &data = HEOS.components[0]->transport.viscosity_initial.empirical;
+        const std::vector<long double> &n = data.n, &d = data.d, &t = data.t;
+
+        long double tau = data.T_reducing/HEOS.T(); // [no units]
+        long double delta = HEOS.rhomolar()/data.rhomolar_reducing; // [no units]
+
+        long double summer = 0;
+        for (unsigned int i = 0; i < n.size(); ++i){
+            summer += n[i]*pow(delta, d[i])*pow(tau, t[i]);
+        }
+        return summer; // [Pa-s]
+    }
+    else{
+        throw NotImplementedError("TransportRoutines::viscosity_initial_density_dependence_empirical is only for pure and pseudo-pure");
+    }
+}
+
 static void visc_Helper(double Tbar, double rhobar, double *mubar_0, double *mubar_1)
 {
 	std::vector<std::vector<long double> > H(6,std::vector<long double>(7,0));
@@ -436,6 +459,13 @@ long double TransportRoutines::viscosity_dilute_ethane(HelmholtzEOSMixtureBacken
 
 	return 12.0085*sqrt(Tstar)*OMEGA_2_2/1e6; //[Pa-s]
 }
+long double TransportRoutines::viscosity_dilute_cyclohexane(HelmholtzEOSMixtureBackend &HEOS)
+{
+    // From Tariq, JPCRD, 2014
+    long double T = HEOS.T();
+    long double S_eta = exp(-1.5093 + 364.87/T - 39537/pow(T, 2)); //[nm^2]
+	return 0.19592*sqrt(T)/S_eta/1e6; //[Pa-s]
+}
 long double TransportRoutines::viscosity_ethane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
 {
 	double r[] = {0,1,1,2,2,2,3,3,4,4,1,1};
@@ -531,7 +561,7 @@ long double TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(
                 rhoc = HEOS.get_reducing_state().rhomolar, // [mol/m^3]
                 Pcrit = HEOS.get_reducing_state().p, // [Pa]
 		        Tref, // [K]
-		        cp,cv,delta,num,zeta,mu,pi=M_PI,tau,
+		        cp,cv,delta,num,zeta,mu,pi=M_PI,
                 OMEGA_tilde,OMEGA_tilde0;
 
         if (ValidNumber(data.T_ref))
@@ -541,7 +571,6 @@ long double TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(
 
 	    delta = HEOS.delta();
 
-	    tau = HEOS.tau();
         double dp_drho = HEOS.gas_constant()*HEOS.T()*(1+2*delta*HEOS.dalphar_dDelta()+delta*delta*HEOS.d2alphar_dDelta2());
 	    double X = Pcrit/pow(rhoc,2)*HEOS.rhomolar()/dp_drho;
 
@@ -660,7 +689,7 @@ long double TransportRoutines::conductivity_hardcoded_water(HelmholtzEOSMixtureB
 
 	double lambdabar_0,lambdabar_1,lambdabar_2,rhobar,Tbar,sum;
 	double Tstar=647.096,rhostar=322,pstar=22064000,lambdastar=1e-3,mustar=1e-6;
-	double tau,xi;
+	double xi;
 	int i,j;
 
 	Tbar = HEOS.T()/Tstar;
@@ -680,7 +709,6 @@ long double TransportRoutines::conductivity_hardcoded_water(HelmholtzEOSMixtureB
 
 	double nu=0.630,GAMMA =177.8514,gamma=1.239,xi_0=0.13,Lambda_0=0.06,Tr_bar=1.5,
         qd_bar=1/0.4,pi=3.141592654, delta = HEOS.delta(), R=461.51805;//J/kg/K
-	tau=1/Tbar;
 
 	double drhodp = 1/(R*HEOS.T()*(1+2*rhobar*HEOS.dalphar_dDelta()+rhobar*rhobar*HEOS.d2alphar_dDelta2()));
 	double drhobar_dpbar = pstar/rhostar*drhodp;

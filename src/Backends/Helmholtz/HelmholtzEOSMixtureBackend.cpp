@@ -202,6 +202,8 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void)
             eta_dilute = TransportRoutines::viscosity_dilute_collision_integral_powers_of_T(*this); break;
         case ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE:
             eta_dilute = TransportRoutines::viscosity_dilute_ethane(*this); break;
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_CYCLOHEXANE:
+            eta_dilute = TransportRoutines::viscosity_dilute_cyclohexane(*this); break;
         default:
             throw ValueError(format("dilute viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
         }
@@ -220,13 +222,29 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity_background()
 }
 long double HelmholtzEOSMixtureBackend::calc_viscosity_background(long double eta_dilute)
 {
-    // Residual part
-    long double B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
-    long double rho = rhomolar();
-    long double initial_part = eta_dilute*B_eta_initial*rho;
+    long double initial_part = 0.0;
+    
+    switch(components[0]->transport.viscosity_initial.type){        
+        case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND:
+        {
+            long double B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
+            long double rho = rhomolar();
+            initial_part = eta_dilute*B_eta_initial*rho;
+            break;
+        }
+        case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EMPIRICAL:
+        {
+            initial_part = TransportRoutines::viscosity_initial_density_dependence_empirical(*this);
+            break;
+        }
+        case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_NOT_SET:
+        {
+            break;
+        }
+    }
 
     // Higher order terms
-    long double delta_eta_h;
+    long double delta_eta_h = 0.0;
     switch(components[0]->transport.viscosity_higher_order.type)
     {
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND:
@@ -592,7 +610,9 @@ void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(CoolProp::input_pairs &inp
                 case DmassHmass_INPUTS: input_pair = DmolarHmolar_INPUTS; value1 /= mm; value2 *= mm;  break;
                 case DmassSmass_INPUTS: input_pair = DmolarSmolar_INPUTS; value1 /= mm; value2 *= mm;  break;
                 case DmassUmass_INPUTS: input_pair = DmolarUmolar_INPUTS; value1 /= mm; value2 *= mm;  break;
+                default: break;
             }
+            break;
         }
         default:
             return;
@@ -625,6 +645,7 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
     
     long double ld_value1 = value1, ld_value2 = value2;
     pre_update(input_pair, ld_value1, ld_value2);
+    value1 = ld_value1; value2 = ld_value2;
 
     switch(input_pair)
     {

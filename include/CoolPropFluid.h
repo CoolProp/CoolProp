@@ -151,14 +151,15 @@ struct ViscosityDiluteGasPowersOfT
 };
 struct ViscosityDiluteVariables
 {
-    enum ViscosityDiluteEnum {VISCOSITY_DILUTE_COLLISION_INTEGRAL,
+    enum ViscosityDiluteType {VISCOSITY_DILUTE_COLLISION_INTEGRAL,
                               VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR,
                               VISCOSITY_DILUTE_KINETIC_THEORY,
                               VISCOSITY_DILUTE_ETHANE,
+                              VISCOSITY_DILUTE_CYCLOHEXANE,
                               VISCOSITY_DILUTE_POWERS_OF_T,
                               VISCOSITY_DILUTE_NOT_SET
                               };
-    int type;
+    ViscosityDiluteType type;
     ViscosityDiluteGasCollisionIntegralData collision_integral;
     ViscosityDiluteCollisionIntegralPowersOfTstarData collision_integral_powers_of_Tstar;
     ViscosityDiluteGasPowersOfT powers_of_T;
@@ -170,9 +171,22 @@ struct ViscosityRainWaterFriendData
 {
     std::vector<long double> b, t;
 };
+struct ViscosityInitialDensityEmpiricalData
+{
+    std::vector<long double> n, d, t;
+    long double T_reducing, rhomolar_reducing;
+};
+
 struct ViscosityInitialDensityVariables
 {
+    enum ViscosityInitialDensityEnum {VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND,
+                                      VISCOSITY_INITIAL_DENSITY_EMPIRICAL,
+                                      VISCOSITY_INITIAL_DENSITY_NOT_SET
+                                      };
+    ViscosityInitialDensityEnum type;
     ViscosityRainWaterFriendData rainwater_friend;
+    ViscosityInitialDensityEmpiricalData empirical;
+    ViscosityInitialDensityVariables(){type = VISCOSITY_INITIAL_DENSITY_NOT_SET;}
 };
 
 struct ViscosityModifiedBatschinskiHildebrandData
@@ -188,15 +202,15 @@ struct ViscosityFrictionTheoryData
 };
 struct ViscosityHigherOrderVariables
 {
-    enum ViscosityDiluteEnum {VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND,
-                              VISCOSITY_HIGHER_ORDER_HYDROGEN,
-                              VISCOSITY_HIGHER_ORDER_HEXANE,
-                              VISCOSITY_HIGHER_ORDER_HEPTANE,
-                              VISCOSITY_HIGHER_ORDER_ETHANE,
-                              VISCOSITY_HIGHER_ORDER_FRICTION_THEORY,
-                              VISCOSITY_HIGHER_ORDER_NOT_SET
-                              };
-    int type;
+    enum ViscosityHigherOrderEnum {VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND,
+                                   VISCOSITY_HIGHER_ORDER_HYDROGEN,
+                                   VISCOSITY_HIGHER_ORDER_HEXANE,
+                                   VISCOSITY_HIGHER_ORDER_HEPTANE,
+                                   VISCOSITY_HIGHER_ORDER_ETHANE,
+                                   VISCOSITY_HIGHER_ORDER_FRICTION_THEORY,
+                                   VISCOSITY_HIGHER_ORDER_NOT_SET
+                                   };
+    ViscosityHigherOrderEnum type;
     ViscosityModifiedBatschinskiHildebrandData modified_Batschinski_Hildebrand;
     ViscosityFrictionTheoryData friction_theory;
     ViscosityHigherOrderVariables(){type = VISCOSITY_HIGHER_ORDER_NOT_SET;};

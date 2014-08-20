@@ -206,6 +206,21 @@ vel("Ethane", "T", 100, "Dmolar", 21330, "V", 878.6e-6, 1e-2),
 vel("Ethane", "T", 430, "Dmolar", 12780, "V", 58.70e-6, 1e-2),
 vel("Ethane", "T", 500, "Dmolar", 11210, "V", 48.34e-6, 1e-2),
 
+// From Xiang, JPCRD, 2006
+
+vel("Methanol", "T", 600, "Dmass", 800.23, "V", 0.1888e-3, 1e-4),
+vel("Methanol", "T", 600, "Dmass", 833.20, "V", 0.2092e-3, 1e-4),
+vel("Methanol", "T", 600, "Dmass", 861.37, "V", 0.2279e-3, 1e-4),
+vel("Methanol", "T", 600, "Dmass", 908.33, "V", 0.2634e-3, 1e-4),
+vel("Methanol", "T", 620, "Dmass", 788.58, "V", 0.1779e-3, 1e-4),
+vel("Methanol", "T", 620, "Dmass", 822.14, "V", 0.1972e-3, 1e-4),
+vel("Methanol", "T", 620, "Dmass", 850.77, "V", 0.2148e-3, 1e-4),
+vel("Methanol", "T", 620, "Dmass", 898.48, "V", 0.2477e-3, 1e-4),
+vel("Methanol", "T", 630, "Dmass", 782.76, "V", 0.1729e-3, 1e-4),
+vel("Methanol", "T", 630, "Dmass", 811.06, "V", 0.1917e-3, 1e-4),
+vel("Methanol", "T", 630, "Dmass", 840.11, "V", 0.2088e-3, 1e-4),
+vel("Methanol", "T", 630, "Dmass", 888.50, "V", 0.2405e-3, 1e-4),
+
 // From REFPROP 9.1 since no data provided
 vel("n-Butane", "T", 150, "Q", 0, "V", 0.0013697657668, 1e-4),
 vel("n-Butane", "T", 400, "Q", 1, "V", 1.2027464524762453e-005, 1e-4),
@@ -213,6 +228,17 @@ vel("IsoButane", "T", 120, "Q", 0, "V", 0.0060558450757844271, 1e-4),
 vel("IsoButane", "T", 400, "Q", 1, "V", 1.4761041187617117e-005, 2e-4),
 vel("R134a", "T", 175, "Q", 0, "V", 0.0017558494524138289, 1e-4),
 vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-4),
+
+// From Tariq, JPCRD, 2014
+vel("Cyclohexane", "T", 300, "Dmolar", 1e-10, "V", 7.058e-6, 1e-4),
+vel("Cyclohexane", "T", 300, "Dmolar", 0.0430e3, "V", 6.977e-6, 1e-4),
+vel("Cyclohexane", "T", 300, "Dmolar", 9.1756e3, "V", 863.66e-6, 1e-4),
+vel("Cyclohexane", "T", 300, "Dmolar", 9.9508e3, "V", 2850.18e-6, 1e-4),
+vel("Cyclohexane", "T", 500, "Dmolar", 1e-10, "V", 11.189e-6, 1e-4),
+vel("Cyclohexane", "T", 500, "Dmolar", 6.0213e3, "V", 94.842e-6, 1e-4),
+vel("Cyclohexane", "T", 500, "Dmolar", 8.5915e3, "V", 380.04e-6, 1e-4),
+vel("Cyclohexane", "T", 700, "Dmolar", 1e-10, "V", 15.093e-6, 1e-4),
+vel("Cyclohexane", "T", 700, "Dmolar", 7.4765e3, "V", 176.749e-6, 1e-4),
 
 };
 
@@ -255,7 +281,7 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against publis
         CAPTURE(el.in2);
         CAPTURE(el.v2);
         CHECK_NOTHROW(set_pair(el.in1, el.v1, el.in2, el.v2));
-        get_value(CoolProp::iviscosity);
+        CHECK_NOTHROW(get_value(CoolProp::iviscosity));
         CAPTURE(el.expected);
         CAPTURE(actual);
         CHECK(fabs(actual/el.expected-1) < el.tol);

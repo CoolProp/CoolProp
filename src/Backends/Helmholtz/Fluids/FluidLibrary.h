@@ -378,8 +378,8 @@ protected:
             if (!target.compare("Ethane")){
                 fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE; return;
             }
-            else if (!target.compare("Ethane")){
-                fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE; return;
+            else if (!target.compare("Cyclohexane")){
+                fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_CYCLOHEXANE; return;
             }
             else{
                 throw ValueError(format("hardcoded dilute viscosity [%s] is not understood for fluid %s",target.c_str(),fluid.name.c_str()));
@@ -430,16 +430,33 @@ protected:
     };
 
     /// Parse the transport properties
-    void parse_initial_density_viscosity(rapidjson::Value &dilute, CoolPropFluid & fluid)
+    void parse_initial_density_viscosity(rapidjson::Value &initial_density, CoolPropFluid & fluid)
     {
-        std::string type = cpjson::get_string(dilute, "type");
+        std::string type = cpjson::get_string(initial_density, "type");
         if (!type.compare("Rainwater-Friend")){
             // Get a reference to the entry in the fluid instance
             CoolProp::ViscosityRainWaterFriendData &RF = fluid.transport.viscosity_initial.rainwater_friend;
 
             // Load up the values
-            RF.b = cpjson::get_long_double_array(dilute["b"]);
-            RF.t = cpjson::get_long_double_array(dilute["t"]);
+            RF.b = cpjson::get_long_double_array(initial_density["b"]);
+            RF.t = cpjson::get_long_double_array(initial_density["t"]);
+            
+            // Set the type flag
+            fluid.transport.viscosity_initial.type = CoolProp::ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND;
+        }
+        else if (!type.compare("empirical")){
+            // Get a reference to the entry in the fluid instance
+            CoolProp::ViscosityInitialDensityEmpiricalData &EM = fluid.transport.viscosity_initial.empirical;
+
+            // Load up the values
+            EM.n = cpjson::get_long_double_array(initial_density["n"]);
+            EM.d = cpjson::get_long_double_array(initial_density["d"]);
+            EM.t = cpjson::get_long_double_array(initial_density["t"]);
+            EM.T_reducing = cpjson::get_double(initial_density,"T_reducing");
+            EM.rhomolar_reducing = cpjson::get_double(initial_density,"rhomolar_reducing");
+            
+            // Set the type flag
+            fluid.transport.viscosity_initial.type = CoolProp::ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EMPIRICAL;
         }
         else{
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));
