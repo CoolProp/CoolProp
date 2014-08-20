@@ -161,6 +161,7 @@ if (COOLPROP_64BIT_SHARED_LIBRARY_MODULE OR COOLPROP_64BIT_SHARED_LIBRARY)
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/64bit)
+    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
 
 if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_CDECL_SHARED_LIBRARY)
@@ -173,6 +174,7 @@ if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_CDECL_SHARED_LI
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
+    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
 
 if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_STDCALL_SHARED_LIBRARY)
@@ -185,6 +187,7 @@ if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_STDCALL_SHARE
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__stdcall_calling_convention)
+    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
 
 # EES is only compiled for windows
