@@ -245,6 +245,8 @@ def combine_json(root_dir):
             # Load the fluid file
             fluid = json.load(open(file, 'r'))
         except ValueError:
+            print('"python -mjson.tool '+file+'" returns ->', end='')
+            subprocess.call('python -mjson.tool '+file, shell = True)
             raise ValueError('unable to decode file %s' % file)
         
         master += [fluid]
