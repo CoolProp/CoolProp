@@ -9,7 +9,7 @@ namespace ConsoleApplication1
         static void Main(string[] args)
         {
             AbstractState State = AbstractState.factory("HEOS","Water");
-            State.update((int)input_pairs.PT_INPUTS, 1e5, 300);
+            State.update(input_pairs.PT_INPUTS, 1e5, 300);
             double hmol = State.hmolar();
             Console.Write("Hmol: " + hmol + " J/kg" + "\n");
             
