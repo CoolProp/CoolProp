@@ -2,7 +2,7 @@
 # DO NOT MODIFY THE CONTENTS OF THIS FILE!
 
 cdef extern from "DataStructures.h" namespace "CoolProp":
-	enum parameters:
+	ctypedef enum parameters:
 		imolar_mass
 		irhomolar_reducing
 		irhomolar_critical
@@ -65,7 +65,7 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
 		iPH
 		iODP
 		iundefined_parameter
-	enum input_pairs:
+	ctypedef enum input_pairs:
 		QT_INPUTS
 		PQ_INPUTS
 		PT_INPUTS
@@ -95,7 +95,7 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
 		DmolarSmolar_INPUTS
 		DmassUmass_INPUTS
 		DmolarUmolar_INPUTS
-	enum fluid_types:
+	ctypedef enum fluid_types:
 		FLUID_TYPE_PURE
 		FLUID_TYPE_PSEUDOPURE
 		FLUID_TYPE_REFPROP

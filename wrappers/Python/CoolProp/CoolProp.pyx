@@ -23,6 +23,7 @@ from libcpp.vector cimport vector
 
 from constants import *
 from constants_header cimport *
+import constants_header
 
 cdef bint iterable(object a):
     """
