@@ -6,7 +6,7 @@ MATLAB Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled binaries can be downloaded from :sfdownloads:`MATLAB`.  Download the files appropriate to your installation of MATLAB.
+Pre-compiled binaries can be downloaded from :sfdownloads:`MATLAB` for your architecture, or from the development buildbot server at :bbbinaries:`MATLAB`.  Download the files appropriate to your installation of MATLAB.
 
 Usage
 -----

@@ -8,7 +8,7 @@ Javascript Wrapper
 Pre-Compiled Binaries
 =====================
 
-* Download the precompiled binaries from :sfdownloads:`Javascript`
+* Download the precompiled binaries from :sfdownloads:`Javascript`, or the development versions from the buildbot server at :bbbinaries:`Javascript`
 
 * Load your js file into your website, following the structure of `the example here <https://github.com/CoolProp/CoolProp/blob/master/wrappers/Javascript/index.html>`_, which is also included at the above download link
 
