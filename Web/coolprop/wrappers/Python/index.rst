@@ -117,7 +117,9 @@ Usage
 =====
 
 Once installed, you can use CoolProp for various things:
+
 * Compute special values in SI units::
+
     import CoolProp.CoolProp as CP
     fluid = 'Water'
     pressure_at_critical_point = CP.PropsSI(fluid,'pcrit')
@@ -127,12 +129,17 @@ Once installed, you can use CoolProp for various things:
     vL = 1/CP.PropsSI('D','P',1e5,'Q',0,fluid)
     # Same for saturated vapor
     vG = 1/CP.PropsSI('D','P',1e5,'Q',1,fluid)
+
 * Get some nice graphs::
+
     import CoolProp.Plots as CPP
     ph_plot = CPP.PropsPlot('Water','Ph')
     ph_plot.savefig('enthalpy_pressure_graph_for_Water.png')
-* Solve thermodynamics exercices (see for example 
-https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_resolution_cycle_diesel.py)
+
+* Solve thermodynamics exercices (see for example https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_resolution_cycle_diesel.py)
+
 * Make you own more complex graphs if you are not comfortable with the 
 graphing interface (see for example 
 https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_diagramme_Ph_coolprop.py)
+
+* Make even more complex graphs using 3D stuff (see https://github.com/CoolProp/CoolProp/blob/master/dev/TTSE/TTSE_ranges.py)
