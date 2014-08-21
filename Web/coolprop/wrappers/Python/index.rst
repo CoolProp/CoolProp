@@ -78,8 +78,8 @@ Then, follow the commands::
     sudo python setup.py install
 
 If you would like to install CoolProp just for a given version of Python (for 
-example if @python@ links to @python3.4@ and you also have a @python2.7@ 
-executable), simply use this version of python to execute the @setup.py@ 
+example if ``python`` links to ``python3.4`` and you also have a ``python2.7`` 
+executable), simply use this version of python to execute the ``setup.py`` 
 script::
 
     sudo python2.7 setup.py install
@@ -88,7 +88,7 @@ For Pyzo users
 --------------
 
 Suppose the directory containing pyzo is on your Desktop in 
-@~/Desktop/pyzo2014a/@. Then you can install CoolProp to be used within pyzo 
+``~/Desktop/pyzo2014a/``. Then you can install CoolProp to be used within pyzo 
 by following the same lines as above::
 
     # Check out the sources for CoolProp
@@ -136,10 +136,14 @@ Once installed, you can use CoolProp for various things:
     ph_plot = CPP.PropsPlot('Water','Ph')
     ph_plot.savefig('enthalpy_pressure_graph_for_Water.png')
 
-* Solve thermodynamics exercices (see for example https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_resolution_cycle_diesel.py)
+* Solve `thermodynamics exercices`_ 
 
-* Make you own more complex graphs if you are not comfortable with the 
-graphing interface (see for example 
-https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_diagramme_Ph_coolprop.py)
+* Make you own `more complex graphs`_ if you feel the graphing interface is lacking something
 
-* Make even more complex graphs using 3D stuff (see https://github.com/CoolProp/CoolProp/blob/master/dev/TTSE/TTSE_ranges.py)
+* Make even more complex graphs using `3D stuff`_ 
+
+.. _thermodynamics exercices: https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_resolution_cycle_diesel.py
+.. _more complex graphs: https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_diagramme_Ph_coolprop.py
+.. _3D stuff: https://github.com/CoolProp/CoolProp/blob/master/dev/TTSE/TTSE_ranges.py
+
+
