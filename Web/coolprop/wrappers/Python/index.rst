@@ -14,15 +14,15 @@ concerning version 5
 Linux and MacOS X
 -----------------
 
-Depending on which you prefer, you can run either of the two commands
+Depending on which you prefer, you can run either of the two commands::
 
    sudo easy_install CoolProp
 
-or
+or::
 
    sudo pip install CoolProp
 
-You may need to first install Cython
+You may need to first install Cython::
    
    sudo easy_install Cython
 
@@ -34,7 +34,7 @@ If you never used any command-line installation before, chances are that you
 do not have the compiling utilities needed. Thus you need to first install 
 Xcode: see the description on the page http://guide.macports.org/#installing.xcode
 After installing, you need to accept the licence by running the following 
-command in the Terminal
+command in the Terminal::
 
    xcodebuild -license
    
@@ -55,7 +55,7 @@ Special MacOS X requirement
 Same advices as the one in the previous section apply: make sure you have 
 Xcode installed (see the description on the page 
 http://guide.macports.org/#installing.xcode) and make sure you've run the 
-command
+command::
 
    xcodebuild -license
    
@@ -64,11 +64,11 @@ and explicitly typing "agree" before closing.
 Linux and MacOS X
 -----------------
 
-If not already there, you need Cython to be installed:
+If not already there, you need Cython to be installed::
 
     sudo easy_install Cython
 
-Then, follow the commands
+Then, follow the commands::
 
     # Check out the sources for CoolProp
     git clone https://github.com/CoolProp/CoolProp --recursive
@@ -80,7 +80,7 @@ Then, follow the commands
 If you would like to install CoolProp just for a given version of Python (for 
 example if @python@ links to @python3.4@ and you also have a @python2.7@ 
 executable), simply use this version of python to execute the @setup.py@ 
-script
+script::
 
     sudo python2.7 setup.py install
     
@@ -89,7 +89,7 @@ For Pyzo users
 
 Suppose the directory containing pyzo is on your Desktop in 
 @~/Desktop/pyzo2014a/@. Then you can install CoolProp to be used within pyzo 
-by following the same lines as above
+by following the same lines as above::
 
     # Check out the sources for CoolProp
     git clone https://github.com/CoolProp/CoolProp --recursive
@@ -117,7 +117,7 @@ Usage
 =====
 
 Once installed, you can use CoolProp for various things:
-* Compute special values in SI units
+* Compute special values in SI units::
     import CoolProp.CoolProp as CP
     fluid = 'Water'
     pressure_at_critical_point = CP.PropsSI(fluid,'pcrit')
@@ -127,7 +127,7 @@ Once installed, you can use CoolProp for various things:
     vL = 1/CP.PropsSI('D','P',1e5,'Q',0,fluid)
     # Same for saturated vapor
     vG = 1/CP.PropsSI('D','P',1e5,'Q',1,fluid)
-* Get some nice graphs
+* Get some nice graphs::
     import CoolProp.Plots as CPP
     ph_plot = CPP.PropsPlot('Water','Ph')
     ph_plot.savefig('enthalpy_pressure_graph_for_Water.png')
