@@ -510,7 +510,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
     }
 
-    // Loop over the file names - first we try with .fld, then .ppf - means you can't mix and match
+    // Loop over the file names - first we try with nothing, then .fld, then .ppf - means you can't mix and match
 
     for (unsigned int k = 0; k < 3; k++)
     {
@@ -556,7 +556,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             }
             else if (ierr > 0) // Error
             {
-                if (k < 2 && N == 1)
+                if (k < 2)
                     continue; // Allow us to use PPF if a pure fluid
                 else
                     throw ValueError(format("%s", herr));
