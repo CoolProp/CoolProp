@@ -311,7 +311,7 @@ public:
     long double dTau3(const long double &tau, const long double &delta) throw(){return 0;};
     
     void all(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
-    void allEigen(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
+    //void allEigen(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
 };
 
 struct ResidualHelmholtzNonAnalyticElement

@@ -352,6 +352,16 @@ protected:
             EOS.max_sat_p.rhomolar = cpjson::get_double(s, "rhomolar");
         }
         
+        if (EOS_json.HasMember("critical_region_splines")){
+            rapidjson::Value &spline = EOS_json["critical_region_splines"];
+            EOS.critical_region_splines.T_min = cpjson::get_double(spline, "T_min");
+            EOS.critical_region_splines.T_max = cpjson::get_double(spline, "T_max");
+            EOS.critical_region_splines.rhomolar_min = cpjson::get_double(spline, "rhomolar_min");
+            EOS.critical_region_splines.rhomolar_max = cpjson::get_double(spline, "rhomolar_max");
+            EOS.critical_region_splines.cL = cpjson::get_double_array(spline["cL"]);
+            EOS.critical_region_splines.cV = cpjson::get_double_array(spline["cV"]);
+            EOS.critical_region_splines.enabled = true;
+        }
 
         // Validate the equation of state that was just created
         EOS.validate();

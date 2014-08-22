@@ -425,6 +425,25 @@
           "type": "ResidualHelmholtzPower"
         }
       ], 
+      "critical_region_splines": {
+        "T_max": 44.491800000000005, 
+        "T_min": 44.49141355465158, 
+        "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
+        "cL": [
+          0.0, 
+          0.0, 
+          -1.5811616648711508e-06, 
+          44.52956130288046
+        ], 
+        "cV": [
+          0.0, 
+          0.0, 
+          1.5834258838542428e-06, 
+          44.4539846230418
+        ], 
+        "rhomolar_max": 24126.40596873362, 
+        "rhomolar_min": 23637.943519451463
+      }, 
       "gas_constant": 8.31434, 
       "gas_constant_units": "J/mol/K", 
       "molar_mass": 0.020179, 
