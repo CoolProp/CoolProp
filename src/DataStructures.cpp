@@ -109,6 +109,7 @@ public:
         // Backward compatibility aliases
         index_map.insert(std::pair<std::string, int>("D", iDmass));
         index_map.insert(std::pair<std::string, int>("H", iHmass));
+        index_map.insert(std::pair<std::string, int>("M", imolar_mass));
         index_map.insert(std::pair<std::string, int>("S", iSmass));
         index_map.insert(std::pair<std::string, int>("U", iUmass));
         index_map.insert(std::pair<std::string, int>("C", iCpmass));
