@@ -6,25 +6,33 @@ C# Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled release binaries can be downloaded from :sfdownloads:`Csharp`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`Csharp`.  Download the files appropriate to your system.
+Pre-compiled release binaries can be downloaded from :sfdownloads:`Csharp`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`Csharp`.
 
 To Use
 ------
 
-Copy all the .cs files to a location you want.  You will need to have a copy of some version of C#.
+Copy all the platform-independent .cs files to a folder on your computer you want, here we call it ``platform-independent``.  Copy the DLL for your system architecture to the same location.  Copy the Example.cs file to the same location.  You will need to have a copy of some version of C#.
+
+Windows
+^^^^^^^
 
 At the command prompt, run::
 
     call "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat"
-    csc *.cs /platform:x86
-    call Example
+    csc Example.cs platform-independent/*.cs -platform:x64
+    Example
 
-where you might need to update the path to visual studio depending on your version installed.  
+where you might need to update the path to visual studio depending on your version installed.  Use `-platform:x86` to tell C# that your DLL is 32-bit if you are on 32-bit, or `-platform:x64` if you are on 64-bit.
 
-32-bit: Use `/platform:x86` to avoid PINVOKE errors!
-64-bit: Use `/platform:x64` to avoid PINVOKE errors!
+Alternatively, you can add all the .cs files to a visual studio project.  
 
-Alternatively, you can add all the .cs files to a visual studio project.
+Linux/OSX
+^^^^^^^^^
+
+Same idea as windows, but command line is just a bit different::
+
+    mcs Example.cs platform-independent/*.cs -platform:x64
+    ./Example
 
 User-Compiled Binaries
 ======================
