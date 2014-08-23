@@ -27,6 +27,7 @@ double ramp(double x)
         return 0;
 }
 
+/*
 void ResidualHelmholtzGeneralizedExponential::allEigen(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw()
 {
     double log_tau = log(tau), log_delta = log(delta), 
@@ -71,20 +72,20 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const long double &tau, c
         d2u_ddelta2E += (l_doubleE-1)*l_doubleE*u_increment*one_over_delta*one_over_delta;
         d3u_ddelta3E += (l_doubleE-2)*(l_doubleE-1)*l_doubleE*u_increment*one_over_delta*one_over_delta*one_over_delta;
     }
-    /*
-    if (tau_mi_in_u){
-        long double omegai = el.omega, m_double = el.m_double;
-        if (std::abs(m_double) > 0){
-            long double u_increment = -omegai*pow(tau, m_double);
-            long double du_dtau_increment = m_double*u_increment*one_over_tau;
-            long double d2u_dtau2_increment = (m_double-1)*du_dtau_increment*one_over_tau;
-            long double d3u_dtau3_increment = (m_double-2)*d2u_dtau2_increment*one_over_tau;
-            u += u_increment;
-            du_dtau += du_dtau_increment;
-            d2u_dtau2 += d2u_dtau2_increment;
-            d3u_dtau3 += d3u_dtau3_increment;
-        }
-    }*/
+    
+//    if (tau_mi_in_u){
+//        long double omegai = el.omega, m_double = el.m_double;
+//        if (std::abs(m_double) > 0){
+//            long double u_increment = -omegai*pow(tau, m_double);
+//            long double du_dtau_increment = m_double*u_increment*one_over_tau;
+//            long double d2u_dtau2_increment = (m_double-1)*du_dtau_increment*one_over_tau;
+//            long double d3u_dtau3_increment = (m_double-2)*d2u_dtau2_increment*one_over_tau;
+//            u += u_increment;
+//            du_dtau += du_dtau_increment;
+//            d2u_dtau2 += d2u_dtau2_increment;
+//            d3u_dtau3 += d3u_dtau3_increment;
+//        }
+//    }
     if (eta1_in_u){
         uE += -eta1E*(delta-epsilon1E);
         du_ddeltaE += -eta1E;
@@ -126,7 +127,7 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const long double &tau, c
     
     return;
 };
-
+*/
 void ResidualHelmholtzGeneralizedExponential::all(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw()
 {
     long double log_tau = log(tau), log_delta = log(delta), ndteu, 
