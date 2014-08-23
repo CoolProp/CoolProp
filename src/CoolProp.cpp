@@ -392,7 +392,7 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
 	State->update(pair, x1, x2);
     
     if (iOutput != iundefined_parameter){
-        // Return the desired output
+        // Get the desired output
         double val = State->keyed_output(iOutput);
         
         // Return the value
