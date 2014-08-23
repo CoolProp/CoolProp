@@ -114,10 +114,14 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend *HEOS,
     if (!ValidNumber(options.rhoV)){throw ValueError(format("options.rhoV is not valid in saturation_T_pure_1D_P for T = %Lg",T));};
     
     std::string errstr;
-    long double pmax = std::min(options.p*1.03, static_cast<long double>(HEOS->p_critical()+1e-6));
-    long double pmin = std::max(options.p*0.97, static_cast<long double>(HEOS->p_triple()-1e-6));
-    
-    Brent(resid, pmin, pmax, LDBL_EPSILON, 1e-8, 100, errstr);
+    try{
+        Secant(resid, options.p, options.p*1.1, 1e-10, 100, errstr);
+    }
+    catch(std::exception &){
+        long double pmax = std::min(options.p*1.03, static_cast<long double>(HEOS->p_critical()+1e-6));
+        long double pmin = std::max(options.p*0.97, static_cast<long double>(HEOS->p_triple()-1e-6));
+        Brent(resid, pmin, pmax, LDBL_EPSILON, 1e-8, 100, errstr);
+    }
 }
 
 void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend *HEOS, long double p, saturation_PHSU_pure_options &options){
