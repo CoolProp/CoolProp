@@ -202,7 +202,7 @@
 	inline double min3(double x1, double x2, double x3){return std::min(std::min(x1, x2), x3);};
 	inline double max3(double x1, double x2, double x3){return std::max(std::max(x1, x2), x3);};
 
-	inline bool double_equal(double a, double b){return fabs(a - b) <= 1 * DBL_EPSILON * std::max(fabs(a), fabs(b));};
+	inline bool double_equal(double a, double b){return std::abs(a - b) <= 1 * DBL_EPSILON * std::max(std::abs(a), std::abs(b));};
 
     template<class T> T max_abs_value(std::vector<T> x)
     {
@@ -210,7 +210,7 @@
         std::size_t N = x.size();
         for (std::size_t i = 0; i < N; ++i)
         {
-            T axi = fabs(x[i]);
+            T axi = std::abs(x[i]);
             if (axi > max){ max = axi; }
         }
         return max;
@@ -263,11 +263,11 @@
 
     /// Some functions related to testing and comparison of values
     bool inline check_abs(double A, double B, double D){
-    	double max = fabs(A);
-    	double min = fabs(B);
+    	double max = std::abs(A);
+    	double min = std::abs(B);
     	if (min>max) {
     		max = min;
-    		min = fabs(A);
+    		min = std::abs(A);
     	}
     	if (max>DBL_EPSILON*1e3) return ( ( 1.0-min/max*1e0 ) < D );
     	else throw CoolProp::ValueError(format("Too small numbers: %f cannot be tested with an accepted error of %f for a machine precision of %f. ",max,D,DBL_EPSILON));

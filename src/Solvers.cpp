@@ -30,7 +30,7 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<doubl
 	std::vector<double> f0,v,negative_f0;
 	std::vector<std::vector<double> > J;
 	double error = 999;
-	while (iter==0 || fabs(error)>tol){
+	while (iter==0 || std::abs(error)>tol){
 		f0 = f->call(x0);
 		J = f->Jacobian(x0);
 		
@@ -68,7 +68,7 @@ double Newton(FuncWrapper1D* f, double x0, double ftol, int maxiter, std::string
     int iter=1;
     errstring.clear();
 	x = x0;
-    while (iter < 2 || fabs(fval) > ftol)
+    while (iter < 2 || std::abs(fval) > ftol)
     {
 		fval = f->call(x);
 		dx = -fval/f->deriv(x);
@@ -79,7 +79,7 @@ double Newton(FuncWrapper1D* f, double x0, double ftol, int maxiter, std::string
 
         x += dx;
 
-		if (fabs(dx/x) < 10*DBL_EPSILON)
+		if (std::abs(dx/x) < 10*DBL_EPSILON)
 		{
 			return x;
 		}
@@ -116,8 +116,8 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, s
     int iter=1;
 	errstring = "";
 	
-	if (fabs(dx)==0){ errstring="dx cannot be zero"; return _HUGE;}
-    while (iter<=2 || fabs(fval)>tol)
+	if (std::abs(dx)==0){ errstring="dx cannot be zero"; return _HUGE;}
+    while (iter<=2 || std::abs(fval)>tol)
     {
         if (iter==1){x1=x0; x=x1;}
         if (iter==2){x2=x0+dx; x=x2;}
@@ -137,9 +137,9 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, s
         if (iter>1)
         {
 			double deltax = x2-x1;
-			if (fabs(deltax)<1e-14) 
+			if (std::abs(deltax)<1e-14) 
 			{ 
-				if (fabs(fval) < tol*10)
+				if (std::abs(fval) < tol*10)
 				{
 					return x; 
 				}
@@ -182,8 +182,8 @@ double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, doub
     int iter=1;
 	errstring = "";
 	
-	if (fabs(dx)==0){ errstring = "dx cannot be zero"; return _HUGE;}
-    while (iter<=3 || fabs(fval)>tol)
+	if (std::abs(dx)==0){ errstring = "dx cannot be zero"; return _HUGE;}
+    while (iter<=3 || std::abs(fval)>tol)
     {
         if (iter==1){x1=x0; x=x1;}
         else if (iter==2){x2=x0+dx; x=x2;}
@@ -241,11 +241,11 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
     fb = f->call(b);
 
 	// If one of the boundaries is to within tolerance, just stop
-	if (fabs(fb) < t) { return b;}
+	if (std::abs(fb) < t) { return b;}
 	if (!ValidNumber(fb)){
 		throw ValueError(format("Brent's method f(b) is NAN for b = %g",b).c_str());
 	}
-	if (fabs(fa) < t) { return a;}
+	if (std::abs(fa) < t) { return a;}
 	if (!ValidNumber(fa)){
 		throw ValueError(format("Brent's method f(a) is NAN for a = %g",a).c_str());
 	}
@@ -256,7 +256,7 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
     c=a;
     fc=fa;
 	iter=1;
-	if (fabs(fc)<fabs(fb)){
+	if (std::abs(fc)<std::abs(fb)){
         // Goto ext: from Brent ALGOL code
         a=b;
         b=c;
@@ -268,10 +268,10 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
     d=b-a;
     e=b-a;
     m=0.5*(c-b);
-    tol=2*macheps*fabs(b)+t;
-	while (fabs(m)>tol && fb!=0){
+    tol=2*macheps*std::abs(b)+t;
+	while (std::abs(m)>tol && fb!=0){
         // See if a bisection is forced
-		if (fabs(e)<tol || fabs(fa) <= fabs(fb)){
+		if (std::abs(e)<tol || std::abs(fa) <= std::abs(fb)){
             m=0.5*(c-b);
             d=e=m;
 		}
@@ -299,7 +299,7 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
             s=e;
             e=d;
             m=0.5*(c-b);
-			if (2*p<3*m*q-fabs(tol*q) || p<fabs(0.5*s*q)){
+			if (2*p<3*m*q-std::abs(tol*q) || p<std::abs(0.5*s*q)){
                 d=p/q;
 			}
 			else{
@@ -309,7 +309,7 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
 		}
         a=b;
         fa=fb;
-		if (fabs(d)>tol){
+		if (std::abs(d)>tol){
             b+=d;
 		}
         else if (m>0){
@@ -328,7 +328,7 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
             fc=fa;
             d=e=b-a;
 		}
-		if (fabs(fc)<fabs(fb)){
+		if (std::abs(fc)<std::abs(fb)){
             // Goto ext: from Brent ALGOL code
             a=b;
             b=c;
@@ -338,7 +338,7 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
             fc=fa;
 		}
         m=0.5*(c-b);
-        tol=2*macheps*fabs(b)+t;
+        tol=2*macheps*std::abs(b)+t;
 		iter+=1;
 		if (!ValidNumber(a)){
 			throw ValueError(format("Brent's method a is NAN").c_str());}
@@ -348,7 +348,7 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
 			throw ValueError(format("Brent's method c is NAN").c_str());}
 		if (iter>maxiter){
 			throw SolutionError(std::string("Brent's method reached maximum number of steps of %d ", maxiter));}
-        if (std::abs(fb)< 2*macheps*fabs(b)){
+        if (std::abs(fb)< 2*macheps*std::abs(b)){
             return b;
         }
 	}

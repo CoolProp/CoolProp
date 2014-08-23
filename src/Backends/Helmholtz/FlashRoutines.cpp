@@ -119,7 +119,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 rhoLsat = HEOS.solver_rho_Tp(HEOS._T, psatLanc, rhoLanc);
                 rhoVsat = HEOS.solver_rho_Tp(HEOS._T, psatVanc, rhoVanc);
                 if (!ValidNumber(rhoLsat) || !ValidNumber(rhoVsat) ||
-                     fabs(rhoLsat/rhoLanc-1) > 0.5 || fabs(rhoVanc/rhoVsat-1) > 0.5)
+                     std::abs(rhoLsat/rhoLanc-1) > 0.5 || std::abs(rhoVanc/rhoVsat-1) > 0.5)
                 {
                     throw ValueError("pseudo-pure failed");
                 }
@@ -524,10 +524,10 @@ void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &H
         tau -= omega*(B[0][0]*f1+B[0][1]*f2);
         delta -= omega*(B[1][0]*f1+B[1][1]*f2);
 
-        if (fabs(f1)>fabs(f2))
-            worst_error=fabs(f1);
+        if (std::abs(f1) > std::abs(f2))
+            worst_error = std::abs(f1);
         else
-            worst_error=fabs(f2);
+            worst_error = std::abs(f2);
 
         if (!ValidNumber(f1) || !ValidNumber(f2))
         {

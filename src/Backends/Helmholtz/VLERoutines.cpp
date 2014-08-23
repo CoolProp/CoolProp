@@ -524,7 +524,7 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long
     }
     while (error > 1e-9);
 	long double p_error_limit = 1e-3;
-	if (fabs(p_error) > p_error_limit){
+	if (std::abs(p_error) > p_error_limit){
 		throw SolutionError(format("saturation_D_pure solver abs error on p [%Lg] > limit [%Lg]", p_error, p_error_limit));
 	}
 }
@@ -673,16 +673,16 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HE
             throw SolutionError(format("Akasaka solver did not converge after 100 iterations"));
         }
     }
-    while (error > 1e-10 && fabs(stepL) > 10*DBL_EPSILON*fabs(stepL) && fabs(stepV) > 10*DBL_EPSILON*fabs(stepV));
+    while (error > 1e-10 && std::abs(stepL) > 10*DBL_EPSILON*std::abs(stepL) && std::abs(stepV) > 10*DBL_EPSILON*std::abs(stepV));
 	
 	long double p_error_limit = 1e-3;
 	long double p_error = (PL - PV)/PL;
-	if (fabs(p_error) > p_error_limit){
+	if (std::abs(p_error) > p_error_limit){
         options.pL = PL;
         options.pV = PV;
         options.rhoL = rhoL;
         options.rhoV = rhoV;
-		throw SolutionError(format("saturation_T_pure_Akasaka solver abs error on p [%g] > limit [%g]", fabs(p_error), p_error_limit));
+		throw SolutionError(format("saturation_T_pure_Akasaka solver abs error on p [%g] > limit [%g]", std::abs(p_error), p_error_limit));
 	}
 }
 
@@ -774,7 +774,7 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
             throw ValueError(format("saturation_p was unable to reach a solution within 50 iterations"));
         }
     }
-    while(fabs(f) > 1e-12 || iter < options.Nstep_max);
+    while(std::abs(f) > 1e-12 || iter < options.Nstep_max);
 
     HEOS.SatL->update_TP_guessrho(T, p, rhomolar_liq);
     HEOS.SatV->update_TP_guessrho(T, p, rhomolar_vap);
@@ -910,7 +910,7 @@ void SaturationSolvers::newton_raphson_VLE_GV::call(HelmholtzEOSMixtureBackend *
         IO.T = exp(log(IO.T) + v[N]);
         IO.rhomolar_liq = exp(log(IO.rhomolar_liq) + v[N+1]);
 
-        if (fabs(IO.T) > 1e6)
+        if (std::abs(IO.T) > 1e6)
         {
             /*std::cout << "J = " << vec_to_string(J,"%16.15g");
             std::cout << "nr = " << vec_to_string(r,"%16.15g");*/

@@ -184,7 +184,7 @@ static double Secant_HAProps_T(const std::string &OutputName, const std::string 
     int iter=1;
     std::string sT = "T";
 
-    while ((iter<=3 || (fabs(f)>eps && fabs(change)>1e-10)) && iter<100)
+    while ((iter<=3 || (std::abs(f)>eps && std::abs(change)>1e-10)) && iter<100)
     {
         if (iter==1){x1=T_guess; T=x1;}
         if (iter==2){x2=T_guess+0.001; T=x2;}
@@ -209,7 +209,7 @@ static double Secant_HAProps_W(const std::string &OutputName, const std::string 
     double x1=0,x2=0,x3=0,y1=0,y2=0,eps=1e-8,f=999,W=0.0001;
     int iter=1;
 
-    while ((iter<=3 || fabs(f)>eps) && iter<100)
+    while ((iter<=3 || std::abs(f)>eps) && iter<100)
     {
         if (iter == 1){x1 = W_guess; W = x1;}
         if (iter == 2){x2 = W_guess+0.001; W = x2;}
@@ -522,7 +522,7 @@ double f_factor(double T, double p)
         {
             y2=LHS-RHS;
             x3=x2-y2/(y2-y1)*(x2-x1);
-            change=fabs(y2/(y2-y1)*(x2-x1));
+            change=std::abs(y2/(y2-y1)*(x2-x1));
             y1=y2; x1=x2; x2=x3;
         }
         iter=iter+1;
@@ -619,7 +619,7 @@ double MolarVolume(double T, double p, double psi_w)
     Cm=C_m(T,psi_w);
 
     iter=1; eps=1e-11; resid=999;
-    while ((iter<=3 || fabs(resid)>eps) && iter<100)
+    while ((iter<=3 || std::abs(resid)>eps) && iter<100)
     {
         if (iter==1){x1=v_bar0; v_bar=x1;}
         if (iter==2){x2=v_bar0+0.000001; v_bar=x2;}
@@ -788,7 +788,7 @@ double MolarEntropy(double T, double p, double psi_w, double v_bar)
 
     vbar_a_guess = R_bar_Lem*T/p; //[m^3/mol] since p in [Pa]
 
-    while ((iter<=3 || fabs(f)>eps) && iter<100)
+    while ((iter<=3 || std::abs(f)>eps) && iter<100)
     {
         if (iter==1){x1=vbar_a_guess; vbar_a=x1;}
         if (iter==2){x2=vbar_a_guess+0.001; vbar_a=x2;}
@@ -853,7 +853,7 @@ double DewpointTemperature(double T, double p, double psi_w)
     // p_w_s = p_w, and get guess for T from saturation temperature
 
     iter=1; eps=1e-8; resid=999;
-    while ((iter<=3 || fabs(resid)>eps) && iter<100)
+    while ((iter<=3 || std::abs(resid)>eps) && iter<100)
     {
         if (iter==1){x1 = T0; Tdp=x1;}
         if (iter==2){x2 = x1 + 0.1; Tdp=x2;}
@@ -1303,7 +1303,7 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
                 try{
                     T = Secant_HAProps_T(SecondaryInputName,(char *)"P",p,MainInputName,MainInputValue,SecondaryInputValue,T_guess);
                     double val = HAPropsSI(SecondaryInputName,(char *)"T",T,(char *)"P",p,MainInputName,MainInputValue);
-                    if (!ValidNumber(T) || !ValidNumber(val) || !(T_min < T && T < T_max) || fabs(val-SecondaryInputValue)>1e-6)
+                    if (!ValidNumber(T) || !ValidNumber(val) || !(T_min < T && T < T_max) || std::abs(val-SecondaryInputValue)>1e-6)
                     {
                         throw CoolProp::ValueError();
                     }
@@ -1661,73 +1661,73 @@ TEST_CASE("Check HA Virials from Table A.2.1","[RP1485]")
 {
     SECTION("B_aa")
     {
-        CHECK(fabs(HumidAir::B_Air(-60+273.15)/(-33.065/1e6)-1) < 1e-3);
-        CHECK(fabs(HumidAir::B_Air(0+273.15)/(-13.562/1e6)-1) < 1e-3);
-        CHECK(fabs(HumidAir::B_Air(200+273.15)/(11.905/1e6)-1) < 1e-3);
-        CHECK(fabs(HumidAir::B_Air(350+273.15)/(18.949/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::B_Air(-60+273.15)/(-33.065/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::B_Air(0+273.15)/(-13.562/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::B_Air(200+273.15)/(11.905/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::B_Air(350+273.15)/(18.949/1e6)-1) < 1e-3);
     }
     SECTION("B_ww")
     {
-        CHECK(fabs(HumidAir::B_Water(-60+273.15)/(-11174/1e6)-1) < 1e-3);
-        CHECK(fabs(HumidAir::B_Water(0+273.15)/(-2025.6/1e6)-1) < 1e-3);
-        CHECK(fabs(HumidAir::B_Water(200+273.15)/(-200.52/1e6)-1) < 1e-3);
-        CHECK(fabs(HumidAir::B_Water(350+273.15)/(-89.888/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::B_Water(-60+273.15)/(-11174/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::B_Water(0+273.15)/(-2025.6/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::B_Water(200+273.15)/(-200.52/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::B_Water(350+273.15)/(-89.888/1e6)-1) < 1e-3);
     }
     SECTION("B_aw")
     {
-        CHECK(fabs(HumidAir::_B_aw(-60+273.15)/(-68.306/1e6)-1) < 1e-3);
-        CHECK(fabs(HumidAir::_B_aw(0+273.15)/(-38.074/1e6)-1) < 1e-3);
-        CHECK(fabs(HumidAir::_B_aw(200+273.15)/(-2.0472/1e6)-1) < 1e-3);
-        CHECK(fabs(HumidAir::_B_aw(350+273.15)/(7.5200/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_B_aw(-60+273.15)/(-68.306/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_B_aw(0+273.15)/(-38.074/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_B_aw(200+273.15)/(-2.0472/1e6)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_B_aw(350+273.15)/(7.5200/1e6)-1) < 1e-3);
     }
 
     SECTION("C_aaa")
     {
-        CHECK(fabs(HumidAir::C_Air(-60+273.15)/(2177.9/1e12)-1) < 1e-3);
-        CHECK(fabs(HumidAir::C_Air(0+273.15)/(1893.1/1e12)-1) < 1e-3);
-        CHECK(fabs(HumidAir::C_Air(200+273.15)/(1551.2/1e12)-1) < 1e-3);
-        CHECK(fabs(HumidAir::C_Air(350+273.15)/(1464.7/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::C_Air(-60+273.15)/(2177.9/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::C_Air(0+273.15)/(1893.1/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::C_Air(200+273.15)/(1551.2/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::C_Air(350+273.15)/(1464.7/1e12)-1) < 1e-3);
     }
     SECTION("C_www")
     {
-        CHECK(fabs(HumidAir::C_Water(-60+273.15)/(-1.5162999202e-04)-1) < 1e-3); // Relaxed criterion for this parameter
-        CHECK(fabs(HumidAir::C_Water(0+273.15)/(-10981960/1e12)-1) < 1e-3);
-        CHECK(fabs(HumidAir::C_Water(200+273.15)/(-0.00000003713759442)-1) < 1e-3);
-        CHECK(fabs(HumidAir::C_Water(350+273.15)/(-0.000000001198914198)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::C_Water(-60+273.15)/(-1.5162999202e-04)-1) < 1e-3); // Relaxed criterion for this parameter
+        CHECK(std::abs(HumidAir::C_Water(0+273.15)/(-10981960/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::C_Water(200+273.15)/(-0.00000003713759442)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::C_Water(350+273.15)/(-0.000000001198914198)-1) < 1e-3);
     }
     SECTION("C_aaw")
     {
-        CHECK(fabs(HumidAir::_C_aaw(-60+273.15)/(1027.3/1e12)-1) < 1e-3);
-        CHECK(fabs(HumidAir::_C_aaw(0+273.15)/(861.02/1e12)-1) < 1e-3);
-        CHECK(fabs(HumidAir::_C_aaw(200+273.15)/(627.15/1e12)-1) < 1e-3);
-        CHECK(fabs(HumidAir::_C_aaw(350+273.15)/(583.79/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_C_aaw(-60+273.15)/(1027.3/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_C_aaw(0+273.15)/(861.02/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_C_aaw(200+273.15)/(627.15/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_C_aaw(350+273.15)/(583.79/1e12)-1) < 1e-3);
     }
     SECTION("C_aww")
     {
-        CHECK(fabs(HumidAir::_C_aww(-60+273.15)/(-1821432/1e12)-1) < 1e-3);
-        CHECK(fabs(HumidAir::_C_aww(0+273.15)/(-224234/1e12)-1) < 1e-3);
-        CHECK(fabs(HumidAir::_C_aww(200+273.15)/(-8436.5/1e12)-1) < 1e-3);
-        CHECK(fabs(HumidAir::_C_aww(350+273.15)/(-2486.9/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_C_aww(-60+273.15)/(-1821432/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_C_aww(0+273.15)/(-224234/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_C_aww(200+273.15)/(-8436.5/1e12)-1) < 1e-3);
+        CHECK(std::abs(HumidAir::_C_aww(350+273.15)/(-2486.9/1e12)-1) < 1e-3);
     }
 }
 TEST_CASE("Enhancement factor from Table A.3","[RP1485]")
 {
-    CHECK(fabs(HumidAir::f_factor(-60+273.15,101325)/(1.00708)-1) < 1e-3);
-    CHECK(fabs(HumidAir::f_factor( 80+273.15,101325)/(1.00573)-1) < 1e-3);
-    CHECK(fabs(HumidAir::f_factor(-60+273.15,10000e3)/(2.23918)-1) < 1e-3);
-    CHECK(fabs(HumidAir::f_factor(300+273.15,10000e3)/(1.04804)-1) < 1e-3);
+    CHECK(std::abs(HumidAir::f_factor(-60+273.15,101325)/(1.00708)-1) < 1e-3);
+    CHECK(std::abs(HumidAir::f_factor( 80+273.15,101325)/(1.00573)-1) < 1e-3);
+    CHECK(std::abs(HumidAir::f_factor(-60+273.15,10000e3)/(2.23918)-1) < 1e-3);
+    CHECK(std::abs(HumidAir::f_factor(300+273.15,10000e3)/(1.04804)-1) < 1e-3);
 }
 TEST_CASE("Isothermal compressibility from Table A.5","[RP1485]")
 {
-    CHECK(fabs(HumidAir::isothermal_compressibility(-60+273.15,101325)/(0.10771e-9)-1) < 1e-3);
-    CHECK(fabs(HumidAir::isothermal_compressibility( 80+273.15,101325)/(0.46009e-9)-1) < 1e-2);  // Relaxed criterion for this parameter
-    CHECK(fabs(HumidAir::isothermal_compressibility(-60+273.15,10000e3)/(0.10701e-9)-1) < 1e-3);
-    CHECK(fabs(HumidAir::isothermal_compressibility(300+273.15,10000e3)/(3.05896e-9)-1) < 1e-3);
+    CHECK(std::abs(HumidAir::isothermal_compressibility(-60+273.15,101325)/(0.10771e-9)-1) < 1e-3);
+    CHECK(std::abs(HumidAir::isothermal_compressibility( 80+273.15,101325)/(0.46009e-9)-1) < 1e-2);  // Relaxed criterion for this parameter
+    CHECK(std::abs(HumidAir::isothermal_compressibility(-60+273.15,10000e3)/(0.10701e-9)-1) < 1e-3);
+    CHECK(std::abs(HumidAir::isothermal_compressibility(300+273.15,10000e3)/(3.05896e-9)-1) < 1e-3);
 }
 TEST_CASE("Henry constant from Table A.6","[RP1485]")
 {
-    CHECK(fabs(HumidAir::HenryConstant(0.010001+273.15)/(0.22600e-9)-1) < 1e-3);
-    CHECK(fabs(HumidAir::HenryConstant(300+273.15)/(0.58389e-9)-1) < 1e-3);
+    CHECK(std::abs(HumidAir::HenryConstant(0.010001+273.15)/(0.22600e-9)-1) < 1e-3);
+    CHECK(std::abs(HumidAir::HenryConstant(300+273.15)/(0.58389e-9)-1) < 1e-3);
 }
 
 // A structure to hold the values for one call to HAProps
@@ -1815,7 +1815,7 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]")
             CAPTURE(expected);
 			std::string errmsg = CoolProp::get_global_param_string("errstring");
 			CAPTURE(errmsg);
-            CHECK(fabs(actual/expected-1) < 0.01);
+            CHECK(std::abs(actual/expected-1) < 0.01);
         }
     }
     SECTION("Table A.11")
@@ -1835,7 +1835,7 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]")
             CAPTURE(expected);
 			std::string errmsg = CoolProp::get_global_param_string("errstring");
 			CAPTURE(errmsg);
-            CHECK(fabs(actual/expected-1) < 0.01);
+            CHECK(std::abs(actual/expected-1) < 0.01);
         }
     }
     SECTION("Table A.12")
@@ -1855,7 +1855,7 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]")
             CAPTURE(expected);
 			std::string errmsg = CoolProp::get_global_param_string("errstring");
 			CAPTURE(errmsg);
-            CHECK(fabs(actual/expected-1) < 0.01);
+            CHECK(std::abs(actual/expected-1) < 0.01);
         }
     }
 

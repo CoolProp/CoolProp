@@ -284,7 +284,7 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against publis
         CHECK_NOTHROW(get_value(CoolProp::iviscosity));
         CAPTURE(el.expected);
         CAPTURE(actual);
-        CHECK(fabs(actual/el.expected-1) < el.tol);
+        CHECK(std::abs(actual/el.expected-1) < el.tol);
     }
 }
 
@@ -503,7 +503,7 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
         get_value(CoolProp::iconductivity);
         CAPTURE(el.expected);
         CAPTURE(actual);
-        CHECK(fabs(actual/el.expected-1) < el.tol);
+        CHECK(std::abs(actual/el.expected-1) < el.tol);
     }
 }
 
@@ -606,8 +606,8 @@ public:
         State.update(pair, x1, x2);
 
         // Make sure we end up back at the same temperature and pressure we started out with
-        if(fabs(T-State.T()) > 1e-2) throw CoolProp::ValueError(format("Error on T [%g K] is greater than 1e-2",fabs(State.T()-T)));
-        if(fabs(p-State.p())/p*100 > 1e-2)  throw CoolProp::ValueError(format("Error on p [%g %%] is greater than 1e-2 %%",fabs(p-State.p())/p ));
+        if(std::abs(T-State.T()) > 1e-2) throw CoolProp::ValueError(format("Error on T [%g K] is greater than 1e-2",std::abs(State.T()-T)));
+        if(std::abs(p-State.p())/p*100 > 1e-2)  throw CoolProp::ValueError(format("Error on p [%g %%] is greater than 1e-2 %%",std::abs(p-State.p())/p ));
     }
 };
 
@@ -980,7 +980,7 @@ TEST_CASE("Triple point checks", "[triple_point]")
     for (std::size_t i = 0; i < fluids.size(); ++i){
         
         std::ostringstream ss1;
-        ss1 << "Triple point pressures matches for fluid " << fluids[i];
+        ss1 << "Triple point pressures matches for pure " << fluids[i];
         SECTION(ss1.str(), "")
         {
             std::vector<std::string> names(1,fluids[i]);

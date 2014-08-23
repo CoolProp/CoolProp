@@ -305,7 +305,7 @@ void ResidualHelmholtzNonAnalytic::all(const long double &tau, const long double
         long double dDELTA3_dDelta2_dTau = 2.0*Ai*(betai-1)/(betai*betai)*pow(pow(delta-1,2),1/(2*betai)-1.0);
         
         long double dDELTAbi_dDelta, dDELTA2_dDelta2, dDELTAbi2_dDelta2, dDELTAbi3_dDelta3, dDELTA3_dDelta3;
-        if (fabs(delta-1) < 10*DBL_EPSILON){
+        if (std::abs(delta-1) < 10*DBL_EPSILON){
             dDELTAbi_dDelta = 0;
             dDELTA2_dDelta2 = 0;
             dDELTA3_dDelta3 = 0;
@@ -382,7 +382,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta(const long double &tau, const l
         long double dDELTA_dDelta=(delta-1.0)*(Ai*theta*2.0/betai*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)+2.0*Bi*ai*pow(pow(delta-1.0,2),ai-1.0));
 
         // At critical point, DELTA is 0, and 1/0^n is undefined
-        if (fabs(DELTA) < 10*DBL_EPSILON)
+        if (std::abs(DELTA) < 10*DBL_EPSILON)
         {
             dDELTAbi_dDelta = 0;
         }
@@ -432,7 +432,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta2(const long double &tau, const 
 
         long double dPSI2_dDelta2=(2.0*Ci*pow(delta-1.0,2)-1.0)*2.0*Ci*PSI;
 
-        if (fabs(delta-1) < 10*DBL_EPSILON){
+        if (std::abs(delta-1) < 10*DBL_EPSILON){
             dDELTA2_dDelta2 = 0;
             dDELTAbi2_dDelta2 = 0;
         }
@@ -442,7 +442,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta2(const long double &tau, const 
         }
 
         // At critical point, DELTA is 0, and 1/0^n is undefined
-        if (fabs(DELTA) < 10*DBL_EPSILON)
+        if (std::abs(DELTA) < 10*DBL_EPSILON)
         {
             dDELTAbi_dDelta = 0;
         }
@@ -476,7 +476,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta_dTau(const long double &tau, co
         long double dDELTAbi_dTau=-2.0*theta*bi*pow(DELTA,bi-1.0);
 
         // At critical point, DELTA is 0, and 1/0^n is undefined
-        if (fabs(DELTA) < 10*DBL_EPSILON)
+        if (std::abs(DELTA) < 10*DBL_EPSILON)
         {
             dDELTAbi_dDelta = 0;
         }
@@ -537,7 +537,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta3(const long double &tau, const 
         long double dDELTAbi3_dDelta3 = bi*(pow(DELTA,bi-1)*dDELTA3_dDelta3+dDELTA2_dDelta2*(bi-1)*pow(DELTA,bi-2)*dDELTA_dDelta+(bi-1)*(pow(DELTA,bi-2)*2*dDELTA_dDelta*dDELTA2_dDelta2+pow(dDELTA_dDelta,2)*(bi-2)*pow(DELTA,bi-3)*dDELTA_dDelta));
 
         // At critical point, DELTA is 0, and 1/0^n is undefined
-        if (fabs(DELTA) < 10*DBL_EPSILON)
+        if (std::abs(DELTA) < 10*DBL_EPSILON)
         {
             dDELTAbi_dDelta = 0;
         }
@@ -580,7 +580,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta_dTau2(const long double &tau, c
         long double dDELTAbi3_dDelta_dTau2 = 2*bi*(bi-1)*pow(DELTA,bi-2)*dDELTA_dDelta+4*pow(theta,2)*bi*(bi-1)*(bi-2)*pow(DELTA,bi-3)*dDELTA_dDelta+8*theta*bi*(bi-1)*pow(DELTA,bi-2)*dtheta_dDelta;
 
         // At critical point, DELTA is 0, and 1/0^n is undefined
-        if (fabs(DELTA) < 10*DBL_EPSILON)
+        if (std::abs(DELTA) < 10*DBL_EPSILON)
         {
             dDELTAbi_dDelta = 0;
         }
@@ -620,7 +620,7 @@ long double ResidualHelmholtzNonAnalytic::dDelta2_dTau(const long double &tau, c
         long double dDELTAbi2_dDelta_dTau=-Ai*bi*2.0/betai*pow(DELTA,bi-1.0)*(delta-1.0)*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)-2.0*theta*bi*(bi-1.0)*pow(DELTA,bi-2.0)*dDELTA_dDelta;
 
         // At critical point, DELTA is 0, and 1/0^n is undefined
-        if (fabs(DELTA) < 10*DBL_EPSILON)
+        if (std::abs(DELTA) < 10*DBL_EPSILON)
         {
             dDELTAbi_dDelta = 0;
         }
@@ -930,11 +930,11 @@ long double IdealHelmholtzCP0PolyT::base(const long double &tau, const long doub
 {
     double sum=0;
     for (std::size_t i = 0; i < N; ++i){
-        if (fabs(t[i])<10*DBL_EPSILON)
+        if (std::abs(t[i])<10*DBL_EPSILON)
         {
             sum += c[i]-c[i]*tau/tau0+c[i]*log(tau/tau0);
         }
-        else if (fabs(t[i]+1) < 10*DBL_EPSILON)
+        else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
         {
             sum += c[i]*tau/Tc*log(tau0/tau)+c[i]/Tc*(tau-tau0);
         }
@@ -949,11 +949,11 @@ long double IdealHelmholtzCP0PolyT::dTau(const long double &tau, const long doub
 {
     double sum=0;
     for (std::size_t i = 0; i < N; ++i){
-        if (fabs(t[i])<10*DBL_EPSILON)
+        if (std::abs(t[i])<10*DBL_EPSILON)
         {
             sum += c[i]/tau-c[i]/tau0;
         }
-        else if (fabs(t[i]+1) < 10*DBL_EPSILON)
+        else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
         {
             sum += c[i]/Tc*log(tau0/tau);
         }
@@ -968,11 +968,11 @@ long double IdealHelmholtzCP0PolyT::dTau2(const long double &tau, const long dou
 {
     double sum=0;
     for (std::size_t i = 0; i < N; ++i){
-        if (fabs(t[i])<10*DBL_EPSILON)
+        if (std::abs(t[i])<10*DBL_EPSILON)
         {
             sum += -c[i]/(tau*tau);
         }
-        else if (fabs(t[i]+1) < 10*DBL_EPSILON)
+        else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
         {
             sum += -c[i]/(tau*Tc);
         }
@@ -987,11 +987,11 @@ long double IdealHelmholtzCP0PolyT::dTau3(const long double &tau, const long dou
 {
     double sum=0;
     for (std::size_t i = 0; i < N; ++i){
-        if (fabs(t[i])<10*DBL_EPSILON)
+        if (std::abs(t[i])<10*DBL_EPSILON)
         {
             sum += 2*c[i]/(tau*tau*tau);
         }
-        else if (fabs(t[i]+1) < 10*DBL_EPSILON)
+        else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
         {
             sum += c[i]/(tau*tau*Tc);
         }
@@ -1272,11 +1272,11 @@ public:
     };
     double err(double v1, double v2)
     {
-        if (fabs(v2) > 1e-15){
-            return fabs((v1-v2)/v2);
+        if (std::abs(v2) > 1e-15){
+            return std::abs((v1-v2)/v2);
         }
         else{
-            return fabs(v1-v2);
+            return std::abs(v1-v2);
         }
     }
 };
