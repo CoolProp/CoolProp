@@ -2,7 +2,7 @@
 
 #include "AbstractState.h"
 #include "DataStructures.h"
-
+#include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 // ############################################
 //                      TESTS
 // ############################################
@@ -926,7 +926,7 @@ TEST_CASE("Ancillary functions", "[ancillary]")
         double Tc = AS->T_critical();
         double Tt = AS->Ttriple();
         
-        for (double f = 0.1; f < 1; f += 0.2)
+        for (double f = 0.1; f < 1; f += 0.4)
         {
             double T = f*Tc + (1-f)*Tt;
             
@@ -971,6 +971,64 @@ TEST_CASE("Ancillary functions", "[ancillary]")
                 CHECK(err < 0.03);
             }
         }
+    }
+}
+
+TEST_CASE("Triple point checks", "[triple_point]")
+{
+    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+    for (std::size_t i = 0; i < fluids.size(); ++i){
+        
+        std::ostringstream ss1;
+        ss1 << "Triple point pressures matches for fluid " << fluids[i];
+        SECTION(ss1.str(), "")
+        {
+            std::vector<std::string> names(1,fluids[i]);
+            shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(names));
+            REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 0, HEOS->Ttriple()););
+            
+            double p_EOS = HEOS->p();
+            double p_sat_min_liquid = HEOS->get_components()[0]->pEOS->sat_min_liquid.p;
+            double p_sat_min_vapor = HEOS->get_components()[0]->pEOS->sat_min_vapor.p;
+            double err_sat_min_liquid = std::abs(p_EOS-p_sat_min_liquid)/p_sat_min_liquid;
+            double err_sat_min_vapor = std::abs(p_EOS-p_sat_min_vapor)/p_sat_min_vapor;
+            double p_triple_liquid = HEOS->get_components()[0]->triple_liquid.p;
+            double p_triple_vapor = HEOS->get_components()[0]->triple_liquid.p;
+            double err_triple_liquid = std::abs(p_EOS-p_triple_liquid)/p_triple_liquid;
+            double err_triple_vapor = std::abs(p_EOS-p_triple_vapor)/p_triple_vapor;
+            
+            CAPTURE(err_sat_min_liquid);
+            CAPTURE(err_sat_min_vapor);
+            CHECK(err_sat_min_liquid < 1e-3);
+            CHECK(err_sat_min_vapor < 1e-3);
+            CHECK(err_triple_liquid < 1e-3);
+            CHECK(err_triple_vapor < 1e-3);
+            
+        }
+//        std::ostringstream ss2;
+//        ss2 << "Liquid density error < 3% for fluid " << fluids[i] << " at " << T << " K";
+//        SECTION(ss2.str(), "")
+//        {
+//            double rho_EOS = AS->rhomolar();
+//            double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 0, CoolProp::iT, T);
+//            double err = std::abs(rho_EOS-rho_anc)/rho_anc;
+//            CAPTURE(rho_EOS);
+//            CAPTURE(rho_anc);
+//            CAPTURE(T);
+//            CHECK(err < 0.03);
+//        }
+//        std::ostringstream ss3;
+//        ss3 << "Vapor density error < 3% for fluid " << fluids[i] << " at " << T << " K";
+//        SECTION(ss3.str(), "")
+//        {
+//            double rho_EOS = AS->rhomolar();
+//            double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 1, CoolProp::iT, T);
+//            double err = std::abs(rho_EOS-rho_anc)/rho_anc;
+//            CAPTURE(rho_EOS);
+//            CAPTURE(rho_anc);
+//            CAPTURE(T);
+//            CHECK(err < 0.03);
+//        }
     }
 }
 
