@@ -232,6 +232,12 @@ protected:
     virtual void update_states(void){throw NotImplementedError("This backend does not implement update_states function");};
 	
 	virtual long double calc_melting_line(int param, int given, long double value){throw NotImplementedError("This backend does not implement calc_melting_line function");};
+    
+    /// @param param The key for the parameter to be returned
+    /// @param Q The quality for the parameter that is given (0 = saturated liquid, 1 = saturated vapor)
+    /// @param given The key for the parameter that is given
+    /// @param value The value for the parameter that is given
+    virtual long double calc_saturation_ancillary(parameters param, int Q, parameters given, double value){throw NotImplementedError("This backend does not implement calc_saturation_ancillary");};
 	
 	virtual phases calc_phase(void){throw NotImplementedError("This backend does not implement calc_phase function");};
     
@@ -430,7 +436,7 @@ public:
     /// @param Q The quality for the parameter that is given (0 = saturated liquid, 1 = saturated vapor)
     /// @param given The key for the parameter that is given
     /// @param value The value for the parameter that is given
-    //double saturation_ancillary(int param, int Q, int given, double value);
+    double saturation_ancillary(parameters param, int Q, parameters given, double value);
 
     // ----------------------------------------
     // Transport properties

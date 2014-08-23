@@ -174,6 +174,64 @@ long double HelmholtzEOSMixtureBackend::calc_molar_mass(void)
     }
     return summer;
 }
+long double HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters param, int Q, parameters given, double value)
+{
+    if (is_pure_or_pseudopure)
+    {
+        if (param == iP && given == iT){
+            // p = f(T), direct evaluation
+            switch (Q)
+            {
+                case 0:
+                    return components[0]->ancillaries.pL.evaluate(value);
+                case 1:
+                    return components[0]->ancillaries.pV.evaluate(value);
+            }
+        }
+        else if (param == iT && given == iP){
+            // T = f(p), inverse evaluation
+            switch (Q)
+            {
+                case 0:
+                    return components[0]->ancillaries.pL.invert(value);
+                case 1:
+                    return components[0]->ancillaries.pV.invert(value);
+            }
+        }
+        else if (param == iDmolar && given == iT){
+            // rho = f(T), inverse evaluation
+            switch (Q)
+            {
+                case 0:
+                    return components[0]->ancillaries.rhoL.evaluate(value);
+                case 1:
+                    return components[0]->ancillaries.rhoV.evaluate(value);
+            }
+        }
+        else if (param == iT && given == iDmolar){
+            // T = f(rho), inverse evaluation
+            switch (Q)
+            {
+                case 0:
+                    return components[0]->ancillaries.rhoL.invert(value);
+                case 1:
+                    return components[0]->ancillaries.rhoV.invert(value);
+            }
+        }
+        else{
+            throw ValueError(format("calc of %s given %s is invalid in calc_saturation_ancillary", 
+                                    get_parameter_information(param,"short").c_str(), 
+                                    get_parameter_information(given,"short").c_str()));
+        }
+        
+        throw ValueError(format("Q [%d] is invalid in calc_saturation_ancillary", Q));
+    }
+    else
+    {
+        throw NotImplementedError(format("calc_saturation_ancillary not implemented for mixtures"));
+    }
+}
+
 long double HelmholtzEOSMixtureBackend::calc_melting_line(int param, int given, long double value)
 {
     if (is_pure_or_pseudopure)
@@ -1624,22 +1682,25 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         // Calculate a guess value using SRK equation of state
         rhomolar_guess = solver_rho_Tp_SRK(T, p, phase);
 
-        if (phase == iphase_gas || phase == iphase_supercritical_gas)
+        // A gas-like phase, ideal gas might not be the perfect model, but probably good enough
+        if (phase == iphase_gas || phase == iphase_supercritical_gas || iphase_supercritical)
         {
             if (rhomolar_guess < 0 || !ValidNumber(rhomolar_guess)) // If the guess is bad, probably high temperature, use ideal gas
             {
                 rhomolar_guess = p/(gas_constant()*T);
             }
         }
-        else
+        // It's liquid at subcritical pressure, we can use ancillaries as a backup
+        else if (phase == iphase_liquid)
         {
-            if (phase == iphase_liquid)
-            {
-                long double _rhoLancval = static_cast<long double>(components[0]->ancillaries.rhoL.evaluate(T));
-                if (!ValidNumber(rhomolar_guess) || rhomolar_guess < _rhoLancval){
-                    rhomolar_guess = _rhoLancval;
-                }
+            long double _rhoLancval = static_cast<long double>(components[0]->ancillaries.rhoL.evaluate(T));
+            if (!ValidNumber(rhomolar_guess) || rhomolar_guess < _rhoLancval){
+                rhomolar_guess = _rhoLancval;
             }
+        }
+        else if (phase == iphase_supercritical_liquid){
+            long double T = static_cast<long double>(components[0]->ancillaries.pL.invert(_p));
+            rhomolar_guess = components[0]->ancillaries.rhoL.evaluate(T);
         }
     }
 

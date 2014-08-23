@@ -916,6 +916,64 @@ TEST_CASE("Test partial derivatives using PropsSI", "[derivatives]")
     }
 }
 
+
+TEST_CASE("Ancillary functions", "[ancillary]")
+{
+    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+    for (std::size_t i = 0; i < fluids.size(); ++i){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+        
+        double Tc = AS->T_critical();
+        double Tt = AS->Ttriple();
+        
+        for (double f = 0.1; f < 1; f += 0.2)
+        {
+            double T = f*Tc + (1-f)*Tt;
+            
+            
+            std::ostringstream ss1;
+            ss1 << "Pressure error < 2% for fluid " << fluids[i] << " at " << T << " K";
+            SECTION(ss1.str(), "")
+            {
+                AS->update(CoolProp::QT_INPUTS, 0, T);
+                double p_EOS = AS->p();
+                double p_anc = AS->saturation_ancillary(CoolProp::iP, 0, CoolProp::iT, T);
+                double err = std::abs(p_EOS-p_anc)/p_anc;
+                CAPTURE(p_EOS);
+                CAPTURE(p_anc);
+                CAPTURE(T);
+                CHECK(err < 0.02);
+            }
+            std::ostringstream ss2;
+            ss2 << "Liquid density error < 3% for fluid " << fluids[i] << " at " << T << " K";
+            SECTION(ss2.str(), "")
+            {
+                AS->update(CoolProp::QT_INPUTS, 0, T);
+                double rho_EOS = AS->rhomolar();
+                double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 0, CoolProp::iT, T);
+                double err = std::abs(rho_EOS-rho_anc)/rho_anc;
+                CAPTURE(rho_EOS);
+                CAPTURE(rho_anc);
+                CAPTURE(T);
+                CHECK(err < 0.03);
+            }
+            std::ostringstream ss3;
+            ss3 << "Vapor density error < 3% for fluid " << fluids[i] << " at " << T << " K";
+            SECTION(ss3.str(), "")
+            {
+                AS->update(CoolProp::QT_INPUTS, 1, T);
+                double rho_EOS = AS->rhomolar();
+                double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 1, CoolProp::iT, T);
+                double err = std::abs(rho_EOS-rho_anc)/rho_anc;
+                CAPTURE(rho_EOS);
+                CAPTURE(rho_anc);
+                CAPTURE(T);
+                CHECK(err < 0.03);
+            }
+        }
+    }
+}
+
 //TEST_CASE("Test that states agree with CoolProp", "[states]")
 //{
 //    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
