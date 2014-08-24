@@ -916,7 +916,7 @@ TEST_CASE("Multiple calls to state class are consistent", "[flashdups],[flash],[
     }
 }
 
-TEST_CASE("Test partial derivatives using PropsSI", "[derivatives]")
+TEST_CASE("Test first partial derivatives using PropsSI", "[derivatives]")
 {
     double hmolar, hmass, T = 300;
     SECTION("Check drhodp|T 3 ways","")
@@ -985,6 +985,39 @@ TEST_CASE("Test partial derivatives using PropsSI", "[derivatives]")
     }
 }
 
+TEST_CASE("Test second partial derivatives using PropsSI", "[derivatives]")
+{
+    double hmolar, hmass, T = 300;
+    SECTION("Check d2pdrho2|T 3 ways","")
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        double rhomolar = 60000;
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
+        double p = AS->p();
+        
+        double d2pdrhomolar2__T_AbstractState = AS->second_partial_deriv(CoolProp::iP, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT);
+        // Centered second derivative
+        double del = 1e0;
+        double d2pdrhomolar2__T_PropsSI_num = (PropsSI("P","T",T,"Dmolar",rhomolar+del,"Water") - 2*PropsSI("P","T",T,"Dmolar",rhomolar,"Water") + PropsSI("P","T",T,"Dmolar",rhomolar-del,"Water"))/pow(del, 2);
+        double d2pdrhomolar2__T_PropsSI = PropsSI("d(d(P)/d(Dmolar)|T)/d(Dmolar)|T","T",T,"Dmolar",rhomolar,"Water");
+        
+        CAPTURE(d2pdrhomolar2__T_AbstractState);
+        CAPTURE(d2pdrhomolar2__T_PropsSI_num);
+        double rel_err_exact = std::abs((d2pdrhomolar2__T_AbstractState-d2pdrhomolar2__T_PropsSI)/d2pdrhomolar2__T_PropsSI);
+        double rel_err_approx = std::abs((d2pdrhomolar2__T_PropsSI_num-d2pdrhomolar2__T_AbstractState)/d2pdrhomolar2__T_AbstractState);
+        CHECK(rel_err_exact < 1e-5);
+        CHECK(rel_err_approx < 1e-5);
+    }
+    SECTION("Valid second partial derivatives","")
+    {
+        CHECK(ValidNumber(PropsSI("d(d(Hmolar)/d(P)|T)/d(T)|Dmolar","T",300,"P",101325,"n-Propane")));
+    }
+    SECTION("Invalid second partial derivatives","")
+    {
+        CHECK(!ValidNumber(PropsSI("d(d()/d(P)|T)/d()|","T",300,"P",101325,"n-Propane")));
+        CHECK(!ValidNumber(PropsSI("dd(Dmolar)/d()|T)|T","T",300,"P",101325,"n-Propane")));
+    }
+}
 
 TEST_CASE("Ancillary functions", "[ancillary]")
 {

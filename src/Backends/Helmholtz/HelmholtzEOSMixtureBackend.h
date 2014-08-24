@@ -134,7 +134,11 @@ public:
     long double calc_dalphar_dTau(void);
     long double calc_d2alphar_dDelta2(void);
     long double calc_d2alphar_dDelta_dTau(void);
-    long double calc_d2alphar_dTau2(void);
+    long double calc_d2alphar_dTau2(void);    
+    long double calc_d3alphar_dDelta3(void);
+    long double calc_d3alphar_dDelta2_dTau(void);
+    long double calc_d3alphar_dDelta_dTau2(void);
+    long double calc_d3alphar_dTau3(void);
 
     long double calc_alpha0(void);
     long double calc_dalpha0_dDelta(void);
@@ -142,6 +146,10 @@ public:
     long double calc_d2alpha0_dDelta2(void);
     long double calc_d2alpha0_dDelta_dTau(void);
     long double calc_d2alpha0_dTau2(void);
+    long double calc_d3alpha0_dDelta3(void);
+    long double calc_d3alpha0_dDelta2_dTau(void);
+    long double calc_d3alpha0_dDelta_dTau2(void);
+    long double calc_d3alpha0_dTau3(void);
 
     //long double calc_surface_tension(void);
     long double calc_viscosity(void);
@@ -206,12 +214,8 @@ public:
     \f]
     */
     long double calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
-
-    /**
-    This version doesn't use any cached values
-    \sa calc_first_partial_deriv
-    */
-    long double calc_first_partial_deriv_nocache(long double T, long double rhomolar, parameters Of, parameters Wrt, parameters Constant);
+    
+    long double calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
 
     void update_states();
     

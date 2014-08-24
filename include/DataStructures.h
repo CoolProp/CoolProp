@@ -89,6 +89,8 @@ bool is_valid_parameter(const std::string & name, parameters & iOutput);
 
 bool is_valid_first_derivative(const std::string & name, parameters &iOf, parameters &iWrt, parameters &iConstant);
 
+bool is_valid_second_derivative(const std::string & name, parameters &iOf1, parameters &iWrt1, parameters &iConstant1, parameters &iWrt2, parameters &iConstant2);
+
 std::string get_csv_parameter_list();
 
 /// These are constants for the compositions
