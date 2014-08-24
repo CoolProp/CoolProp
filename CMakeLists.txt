@@ -648,6 +648,8 @@ if (COOLPROP_CATCH_MODULE)
   enable_testing()
 
   list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/test_main.cxx")
+  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+  
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable        (CatchTestRunner ${APP_SOURCES})
   add_dependencies      (CatchTestRunner generate_headers)
