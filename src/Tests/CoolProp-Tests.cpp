@@ -985,7 +985,7 @@ TEST_CASE("Test first partial derivatives using PropsSI", "[derivatives]")
     }
 }
 
-TEST_CASE("Test second partial derivatives using PropsSI", "[derivatives]")
+TEST_CASE("Test second partial derivatives", "[derivatives]")
 {
     double hmolar, hmass, T = 300;
     SECTION("Check d2pdrho2|T 3 ways","")
@@ -1016,6 +1016,97 @@ TEST_CASE("Test second partial derivatives using PropsSI", "[derivatives]")
     {
         CHECK(!ValidNumber(PropsSI("d(d()/d(P)|T)/d()|","T",300,"P",101325,"n-Propane")));
         CHECK(!ValidNumber(PropsSI("dd(Dmolar)/d()|T)|T","T",300,"P",101325,"n-Propane")));
+    }
+    SECTION("Check derivatives with respect to T","")
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        double rhomolar = 100, dT = 1e-1;
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
+        
+        // base state
+        long double T0 = AS->T(), rhomolar0 = AS->rhomolar(), hmolar0 = AS->hmolar(), smolar0 = AS->smolar(), umolar0 = AS->umolar(), p0 = AS->p();
+        long double dhdT_rho_ana = AS->first_partial_deriv(CoolProp::iHmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double d2hdT2_rho_ana = AS->second_partial_deriv(CoolProp::iHmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double dsdT_rho_ana = AS->first_partial_deriv(CoolProp::iSmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double d2sdT2_rho_ana = AS->second_partial_deriv(CoolProp::iSmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double dudT_rho_ana = AS->first_partial_deriv(CoolProp::iUmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double d2udT2_rho_ana = AS->second_partial_deriv(CoolProp::iUmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double dpdT_rho_ana = AS->first_partial_deriv(CoolProp::iP, CoolProp::iT, CoolProp::iDmolar);
+        long double d2pdT2_rho_ana = AS->second_partial_deriv(CoolProp::iP, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar);
+        
+        // increment T
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T+dT);
+        long double Tpt = AS->T(), rhomolarpt = AS->rhomolar(), hmolarpt = AS->hmolar(), smolarpt = AS->smolar(), umolarpt = AS->umolar(), ppt = AS->p();
+        // decrement T
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T-dT);
+        long double Tmt = AS->T(), rhomolarmt = AS->rhomolar(), hmolarmt = AS->hmolar(), smolarmt = AS->smolar(), umolarmt = AS->umolar(), pmt = AS->p();
+        
+        long double dhdT_rho_num = (hmolarpt-hmolarmt)/(2*dT);
+        long double d2hdT2_rho_num = (hmolarpt-2*hmolar0+hmolarmt)/pow(dT,2);
+        long double dsdT_rho_num = (smolarpt-smolarmt)/(2*dT);
+        long double d2sdT2_rho_num = (smolarpt-2*smolar0+smolarmt)/pow(dT,2);
+        long double dudT_rho_num = (umolarpt-umolarmt)/(2*dT);
+        long double d2udT2_rho_num = (umolarpt-2*umolar0+umolarmt)/pow(dT,2);
+        long double dpdT_rho_num = (ppt-pmt)/(2*dT);
+        long double d2pdT2_rho_num = (ppt-2*p0+pmt)/pow(dT,2);
+        
+        CAPTURE(format("%0.15Lg",d2pdT2_rho_ana).c_str());
+        
+        double tol = 1e-4;
+        CHECK(std::abs((dhdT_rho_num-dhdT_rho_ana)/dhdT_rho_ana) < tol);
+        CHECK(std::abs((d2hdT2_rho_num-d2hdT2_rho_ana)/d2hdT2_rho_ana) < tol);
+        CHECK(std::abs((dpdT_rho_num-dpdT_rho_ana)/dpdT_rho_ana) < tol);
+        CHECK(std::abs((d2pdT2_rho_num-d2pdT2_rho_ana)/d2pdT2_rho_ana) < tol);
+        CHECK(std::abs((dsdT_rho_num-dsdT_rho_ana)/dsdT_rho_ana) < tol);
+        CHECK(std::abs((d2sdT2_rho_num-d2sdT2_rho_ana)/d2sdT2_rho_ana) < tol);
+        CHECK(std::abs((dudT_rho_num-dudT_rho_ana)/dudT_rho_ana) < tol);
+        CHECK(std::abs((d2udT2_rho_num-d2udT2_rho_ana)/d2udT2_rho_ana) < tol);
+    }
+    
+    SECTION("Check derivatives with respect to rho","")
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        double rhomolar = 100, drho = 1e-1;
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
+        
+        // base state
+        long double T0 = AS->T(), rhomolar0 = AS->rhomolar(), hmolar0 = AS->hmolar(), smolar0 = AS->smolar(), umolar0 = AS->umolar(), p0 = AS->p();
+        long double dhdrho_T_ana = AS->first_partial_deriv(CoolProp::iHmolar, CoolProp::iDmolar, CoolProp::iT);
+        long double d2hdrho2_T_ana = AS->second_partial_deriv(CoolProp::iHmolar, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT);
+        long double dsdrho_T_ana = AS->first_partial_deriv(CoolProp::iSmolar, CoolProp::iDmolar, CoolProp::iT);
+        long double d2sdrho2_T_ana = AS->second_partial_deriv(CoolProp::iSmolar, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT);
+        long double dudrho_T_ana = AS->first_partial_deriv(CoolProp::iUmolar, CoolProp::iDmolar, CoolProp::iT);
+        long double d2udrho2_T_ana = AS->second_partial_deriv(CoolProp::iUmolar, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT);
+        long double dpdrho_T_ana = AS->first_partial_deriv(CoolProp::iP, CoolProp::iDmolar, CoolProp::iT);
+        long double d2pdrho2_T_ana = AS->second_partial_deriv(CoolProp::iP, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT);
+        
+        // increment rho
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar+drho, T);
+        long double Tpr = AS->T(), rhomolarpr = AS->rhomolar(), hmolarpr = AS->hmolar(), smolarpr = AS->smolar(), umolarpr = AS->umolar(), ppr = AS->p();
+        // decrement rho
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar-drho, T);
+        long double Tmr = AS->T(), rhomolarmr = AS->rhomolar(), hmolarmr = AS->hmolar(), smolarmr = AS->smolar(), umolarmr = AS->umolar(), pmr = AS->p();
+        
+        long double dhdrho_T_num = (hmolarpr-hmolarmr)/(2*drho);
+        long double d2hdrho2_T_num = (hmolarpr-2*hmolar0+hmolarmr)/pow(drho,2);
+        long double dsdrho_T_num = (smolarpr-smolarmr)/(2*drho);
+        long double d2sdrho2_T_num = (smolarpr-2*smolar0+smolarmr)/pow(drho,2);
+        long double dudrho_T_num = (umolarpr-umolarmr)/(2*drho);
+        long double d2udrho2_T_num = (umolarpr-2*umolar0+umolarmr)/pow(drho,2);
+        long double dpdrho_T_num = (ppr-pmr)/(2*drho);
+        long double d2pdrho2_T_num = (ppr-2*p0+pmr)/pow(drho,2);
+        
+        CAPTURE(format("%0.15Lg",d2pdrho2_T_ana).c_str());
+        
+        double tol = 1e-4;
+        CHECK(std::abs((dhdrho_T_num-dhdrho_T_ana)/dhdrho_T_ana) < tol);
+        CHECK(std::abs((d2hdrho2_T_num-d2hdrho2_T_ana)/d2hdrho2_T_ana) < tol);
+        CHECK(std::abs((dpdrho_T_num-dpdrho_T_ana)/dpdrho_T_ana) < tol);
+        CHECK(std::abs((d2pdrho2_T_num-d2pdrho2_T_ana)/d2pdrho2_T_ana) < tol);
+        CHECK(std::abs((dsdrho_T_num-dsdrho_T_ana)/dsdrho_T_ana) < tol);
+        CHECK(std::abs((d2sdrho2_T_num-d2sdrho2_T_ana)/d2sdrho2_T_ana) < tol);
+        CHECK(std::abs((dudrho_T_num-dudrho_T_ana)/dudrho_T_ana) < tol);
+        CHECK(std::abs((d2udrho2_T_num-d2udrho2_T_ana)/d2udrho2_T_ana) < tol);
     }
 }
 

@@ -1323,7 +1323,7 @@ void get_dT_drho_second_derivatives(HelmholtzEOSMixtureBackend *HEOS, int index,
         drho_dT = 0;
         break;
     case iTau:
-        dT2 = 0; drho_dT = 0; drho2 = 0; break;
+        dT2 = 2*Tr/pow(T,3); drho_dT = 0; drho2 = 0; break;
     case iDelta:
         dT2 = 0; drho_dT = 0; drho2 = 0; break;
     case iP:
@@ -1336,7 +1336,7 @@ void get_dT_drho_second_derivatives(HelmholtzEOSMixtureBackend *HEOS, int index,
     case iHmolar:
     {
         // d2h/drho2|T
-        drho2 = R*T/pow(rho, 2)*pow(delta,2)*(tau*HEOS->d3alpha0_dDelta2_dTau() + 2*derivs.d2alphar_ddelta2 + delta*derivs.d2alphar_ddelta2);
+        drho2 = R*T*pow(delta/rho,2)*(tau*derivs.d3alphar_ddelta2_dtau + 2*derivs.d2alphar_ddelta2 + delta*derivs.d3alphar_ddelta3);
         // d2h/dT2|rho
         dT2 = R/T*pow(tau, 2)*(tau*(HEOS->d3alpha0_dTau3()+derivs.d3alphar_dtau3) + 2*(HEOS->d2alpha0_dTau2()+derivs.d2alphar_dtau2) + delta*derivs.d3alphar_ddelta_dtau2);
         // d2h/drho/dT
