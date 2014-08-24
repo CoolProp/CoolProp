@@ -237,17 +237,17 @@
         "sat_min_liquid": {
           "T": 98.15, 
           "T_units": "K", 
-          "p": 0.9055740053728855, 
+          "p": 0.9055722975009364, 
           "p_units": "Pa", 
-          "rhomolar": 17699.80590189875, 
+          "rhomolar": 17699.805901898737, 
           "rhomolar_units": "mol/m^3"
         }, 
         "sat_min_vapor": {
           "T": 98.15, 
           "T_units": "K", 
-          "p": 0.9055727598606715, 
+          "p": 0.9055727598606561, 
           "p_units": "Pa", 
-          "rhomolar": 0.0011096803080018055, 
+          "rhomolar": 0.0011096803080017864, 
           "rhomolar_units": "mol/m^3"
         }
       }, 
@@ -436,17 +436,17 @@
     "triple_liquid": {
       "T": 98.15, 
       "T_units": "K", 
-      "p": 0.9055740053728855, 
+      "p": 0.9055722975009364, 
       "p_units": "Pa", 
-      "rhomolar": 17699.80590189875, 
+      "rhomolar": 17699.805901898737, 
       "rhomolar_units": "mol/m^3"
     }, 
     "triple_vapor": {
       "T": 98.15, 
       "T_units": "K", 
-      "p": 0.9055727598606715, 
+      "p": 0.9055727598606561, 
       "p_units": "Pa", 
-      "rhomolar": 0.0011096803080018055, 
+      "rhomolar": 0.0011096803080017864, 
       "rhomolar_units": "mol/m^3"
     }
   }

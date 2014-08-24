@@ -516,15 +516,15 @@ static CoolProp::input_pairs inputs[] = {
     //CoolProp::HmolarT_INPUTS,
     //CoolProp::TUmolar_INPUTS,
 
-    CoolProp::DmolarP_INPUTS,
-    CoolProp::DmolarHmolar_INPUTS,
-    CoolProp::DmolarSmolar_INPUTS,
-    CoolProp::DmolarUmolar_INPUTS,
-
-    CoolProp::HmolarP_INPUTS,
-    CoolProp::PSmolar_INPUTS,
-    CoolProp::PUmolar_INPUTS,
-
+//    CoolProp::DmolarP_INPUTS,
+//    CoolProp::DmolarHmolar_INPUTS,
+//    CoolProp::DmolarSmolar_INPUTS,
+//    CoolProp::DmolarUmolar_INPUTS,
+//
+//    CoolProp::HmolarP_INPUTS,
+//    CoolProp::PSmolar_INPUTS,
+//    CoolProp::PUmolar_INPUTS,
+//
     /*
     CoolProp::HmolarSmolar_INPUTS,
     CoolProp::HmolarUmolar_INPUTS,
@@ -606,37 +606,70 @@ public:
         State.update(pair, x1, x2);
 
         // Make sure we end up back at the same temperature and pressure we started out with
-        if(std::abs(T-State.T()) > 1e-2) throw CoolProp::ValueError(format("Error on T [%g K] is greater than 1e-2",std::abs(State.T()-T)));
-        if(std::abs(p-State.p())/p*100 > 1e-2)  throw CoolProp::ValueError(format("Error on p [%g %%] is greater than 1e-2 %%",std::abs(p-State.p())/p ));
+        if(std::abs(T-State.T()) > 1e-2) throw CoolProp::ValueError(format("Error on T [%Lg K] is greater than 1e-2",std::abs(State.T()-T)));
+        if(std::abs(p-State.p())/p*100 > 1e-2)  throw CoolProp::ValueError(format("Error on p [%Lg %%] is greater than 1e-2 %%",std::abs(p-State.p())/p ));
     }
 };
 
-TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for CO2 using all valid backends", "[]")
+TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for Water using all valid backends", "[consistency]")
 {
-    CHECK_NOTHROW(set_backend("HEOS", "CO2"));
+    CHECK_NOTHROW(set_backend("HEOS", "Water"));
 
-    int inputsN = sizeof(inputs)/sizeof(inputs[0]);
-    for (double p = 600000; p < 800000000.0; p *= 5)
-    {
-        for (double T = 220; T < pState->Tmax(); T += 5)
+    SECTION("Subcritical pressure liquid",""){
+            
+        // Subcritical pressure liquid
+        int inputsN = sizeof(inputs)/sizeof(inputs[0]);
+        for (double p = pState->p_triple()*1.01; p < pState->p_critical(); p *= 3)
         {
-            CHECK_NOTHROW(set_TP(T, p));
-
-            for (int i = 0; i < inputsN; ++i)
+            double Ts = PropsSI("T","P",p,"Q",0,"Water");
+            double Tmelt = pState->melting_line(CoolProp::iT, CoolProp::iP, p);
+            for (double T = Tmelt; T < Ts; T += 0.1)
             {
-                CoolProp::input_pairs pair = inputs[i];
-                std::string pair_desc = CoolProp::get_input_pair_short_desc(pair);
-                set_pair(pair);
-                CAPTURE(pair_desc);
-                CAPTURE(T);
-                CAPTURE(p);
-                get_variables();
-                CAPTURE(x1);
-                CAPTURE(x2);
-                CHECK_NOTHROW(single_phase_consistency_check());
+                CHECK_NOTHROW(set_TP(T, p));
+
+                for (int i = 0; i < inputsN; ++i)
+                {
+                    CoolProp::input_pairs pair = inputs[i];
+                    std::string pair_desc = CoolProp::get_input_pair_short_desc(pair);
+                    set_pair(pair);
+                    CAPTURE(pair_desc);
+                    CAPTURE(T);
+                    CAPTURE(p);
+                    get_variables();
+                    CAPTURE(x1);
+                    CAPTURE(x2);
+                    double rho_RP = PropsSI("Dmolar","P",p,"T",T,"REFPROP::Water");
+                    if (ValidNumber(rho_RP)){
+                        CHECK_NOTHROW(single_phase_consistency_check());
+                        CHECK(std::abs((rho_RP-rhomolar)/rhomolar) < 1e-3);
+                    }
+                }
             }
         }
     }
+    
+//    int inputsN = sizeof(inputs)/sizeof(inputs[0]);
+//    for (double p = 600000; p < pState->pmax(); p *= 3)
+//    {
+//        for (double T = 220; T < pState->Tmax(); T += 1)
+//        {
+//            CHECK_NOTHROW(set_TP(T, p));
+//
+//            for (int i = 0; i < inputsN; ++i)
+//            {
+//                CoolProp::input_pairs pair = inputs[i];
+//                std::string pair_desc = CoolProp::get_input_pair_short_desc(pair);
+//                set_pair(pair);
+//                CAPTURE(pair_desc);
+//                CAPTURE(T);
+//                CAPTURE(p);
+//                get_variables();
+//                CAPTURE(x1);
+//                CAPTURE(x2);
+//                CHECK_NOTHROW(single_phase_consistency_check());
+//            }
+//        }
+//    }
 }
 
 TEST_CASE("Test saturation properties for a few fluids", "[saturation],[slow]")
@@ -889,7 +922,7 @@ TEST_CASE("Test partial derivatives using PropsSI", "[derivatives]")
     SECTION("Check drhodp|T 3 ways","")
     {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
-        AS->update(CoolProp::PT_INPUTS, 101325, 300);
+        AS->update(CoolProp::PT_INPUTS, 101325, T);
         
         double drhomolardp__T_AbstractState = AS->first_partial_deriv(CoolProp::iDmolar, CoolProp::iP, CoolProp::iT);
         double drhomolardp__T_PropsSI_num = (PropsSI("Dmolar","T",T,"P",101325+1e-3,"n-Propane") - PropsSI("Dmolar","T",T,"P",101325-1e-3,"n-Propane"))/(2*1e-3);
@@ -898,10 +931,46 @@ TEST_CASE("Test partial derivatives using PropsSI", "[derivatives]")
         CAPTURE(drhomolardp__T_AbstractState);
         CAPTURE(drhomolardp__T_PropsSI_num);
         CAPTURE(drhomolardp__T_PropsSI);
-        double rel_err_exact = std::abs(drhomolardp__T_AbstractState-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI;
-        double rel_err_approx = std::abs(drhomolardp__T_PropsSI_num-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI;
-        CHECK(rel_err_exact < 0.001);
-        CHECK(rel_err_approx < 0.001);
+        double rel_err_exact = std::abs((drhomolardp__T_AbstractState-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI);
+        double rel_err_approx = std::abs((drhomolardp__T_PropsSI_num-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI);
+        CHECK(rel_err_exact < 1e-7);
+        CHECK(rel_err_approx < 1e-7);
+    }
+    SECTION("Check drhodp|T 3 ways for water","")
+    {
+        T = 80+273.15;
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::PT_INPUTS, 101325, T);
+        
+        double drhomolardp__T_AbstractState = AS->first_partial_deriv(CoolProp::iDmolar, CoolProp::iP, CoolProp::iT);
+        double drhomolardp__T_PropsSI_num = (PropsSI("Dmolar","T",T,"P",101325+1,"Water") - PropsSI("Dmolar","T",T,"P",101325-1,"Water"))/(2*1);
+        double drhomolardp__T_PropsSI = PropsSI("d(Dmolar)/d(P)|T","T",T,"P",101325,"Water");
+        
+        CAPTURE(drhomolardp__T_AbstractState);
+        CAPTURE(drhomolardp__T_PropsSI_num);
+        CAPTURE(drhomolardp__T_PropsSI);
+        double rel_err_exact = std::abs((drhomolardp__T_AbstractState-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI);
+        double rel_err_approx = std::abs((drhomolardp__T_PropsSI_num-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI);
+        CHECK(rel_err_exact < 1e-6);
+        CHECK(rel_err_approx < 1e-6);
+    }
+    SECTION("Check dpdrho|T 3 ways for water","")
+    {
+        T = 80+273.15;
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::PT_INPUTS, 101325, T);
+        long double rhomolar = AS->rhomolar();
+        double dpdrhomolar__T_AbstractState = AS->first_partial_deriv(CoolProp::iP, CoolProp::iDmolar, CoolProp::iT);
+        double dpdrhomolar__T_PropsSI_num = (PropsSI("P","T",T,"Dmolar",rhomolar+1e-3,"Water") - PropsSI("P","T",T,"Dmolar",rhomolar-1e-3,"Water"))/(2*1e-3);
+        double dpdrhomolar__T_PropsSI = PropsSI("d(P)/d(Dmolar)|T","T",T,"P",101325,"Water");
+        CAPTURE(rhomolar);
+        CAPTURE(dpdrhomolar__T_AbstractState);
+        CAPTURE(dpdrhomolar__T_PropsSI_num);
+        CAPTURE(dpdrhomolar__T_PropsSI);
+        double rel_err_exact = std::abs((dpdrhomolar__T_AbstractState-dpdrhomolar__T_PropsSI)/dpdrhomolar__T_PropsSI);
+        double rel_err_approx = std::abs((dpdrhomolar__T_PropsSI_num-dpdrhomolar__T_PropsSI)/dpdrhomolar__T_PropsSI);
+        CHECK(rel_err_exact < 1e-7);
+        CHECK(rel_err_approx < 1e-7);
     }
     SECTION("Invalid first partial derivatives","")
     {

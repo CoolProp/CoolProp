@@ -30,12 +30,12 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
     {
 		// The maximum possible saturation temperature
 		// Critical point for pure fluids, slightly different for pseudo-pure, very different for mixtures
-		long double Tmax_sat = HEOS.calc_Tmax_sat();
+		long double Tmax_sat = HEOS.calc_Tmax_sat() + 1e-13;
 		
 		// Check what the minimum limits for the equation of state are
 		long double Tmin_satL, Tmin_satV, Tmin_sat;
 		HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
-		Tmin_sat = std::max(Tmin_satL, Tmin_satV);
+		Tmin_sat = std::max(Tmin_satL, Tmin_satV) - 1e-13;
 		
         // Get a reference to keep the code a bit cleaner
         CriticalRegionSplines &splines = HEOS.components[0]->pEOS->critical_region_splines;
@@ -95,7 +95,6 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 }
                 catch(std::exception &){
                     throw;
-                    //SaturationSolvers::saturation_critical(&HEOS, iT, T);
                 }
             }
             
@@ -560,8 +559,10 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
                 HEOS(HEOS), p(p), value(value), other(other)
                 {
                     iter = 0;
-                    // Specify the state to avoid saturation calls
-                    HEOS->specify_phase(HEOS->phase());
+                    // Specify the state to avoid saturation calls, but only if phase is subcritical
+                    if (HEOS->phase() == iphase_liquid || HEOS->phase() == iphase_gas ){
+                        HEOS->specify_phase(HEOS->phase());
+                    }
                 };
         double call(double T){
 

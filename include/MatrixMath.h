@@ -556,7 +556,7 @@ template<typename T> void divide_row_by(std::vector<std::vector<T> > *A, size_t 
 
 template<typename T> size_t get_pivot_row(std::vector<std::vector<T> > *A, size_t col)
 {
-	int index = col;
+	std::size_t index = col;
 	T max = 0, val;
 
 	for (size_t row = col; row < (*A).size(); row++)
@@ -622,7 +622,7 @@ template<typename T> std::vector<std::vector<T> > linsolve_Gauss_Jordan(std::vec
 			}
 		}
 	}
-	for (int col = NcolA - 1; col > 0; col--)
+	for (std::size_t col = NcolA - 1; col > 0; col--)
 	{
 		for (int row = col - 1; row >=0; row--)
 		{

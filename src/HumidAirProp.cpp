@@ -1720,6 +1720,7 @@ TEST_CASE("Enhancement factor from Table A.3","[RP1485]")
 TEST_CASE("Isothermal compressibility from Table A.5","[RP1485]")
 {
     CHECK(std::abs(HumidAir::isothermal_compressibility(-60+273.15,101325)/(0.10771e-9)-1) < 1e-3);
+    CAPTURE(HumidAir::isothermal_compressibility( 80+273.15,101325));
     CHECK(std::abs(HumidAir::isothermal_compressibility( 80+273.15,101325)/(0.46009e-9)-1) < 1e-2);  // Relaxed criterion for this parameter
     CHECK(std::abs(HumidAir::isothermal_compressibility(-60+273.15,10000e3)/(0.10701e-9)-1) < 1e-3);
     CHECK(std::abs(HumidAir::isothermal_compressibility(300+273.15,10000e3)/(3.05896e-9)-1) < 1e-3);

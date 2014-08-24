@@ -211,7 +211,7 @@ public:
     This version doesn't use any cached values
     \sa calc_first_partial_deriv
     */
-    long double calc_first_partial_deriv_nocache(long double T, long double rhomolar, int Of, int Wrt, int Constant);
+    long double calc_first_partial_deriv_nocache(long double T, long double rhomolar, parameters Of, parameters Wrt, parameters Constant);
 
     void update_states();
     

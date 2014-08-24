@@ -1354,7 +1354,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
 //	}
 //}
 
-void get_dtau_ddelta(HelmholtzEOSMixtureBackend *HEOS, long double T, long double rho, int index, long double &dtau, long double &ddelta)
+void get_dtau_ddelta(HelmholtzEOSMixtureBackend *HEOS, long double T, long double rho, parameters index, long double &dtau, long double &ddelta)
 {
     long double rhor = HEOS->get_reducing_state().rhomolar,
                 Tr = HEOS->get_reducing_state().T,
@@ -1362,7 +1362,7 @@ void get_dtau_ddelta(HelmholtzEOSMixtureBackend *HEOS, long double T, long doubl
                 R = HEOS->gas_constant(),
                 delta = rho/rhor,
                 tau = Tr/T;
-
+    
     switch (index)
     {
     case iT:
@@ -1371,13 +1371,10 @@ void get_dtau_ddelta(HelmholtzEOSMixtureBackend *HEOS, long double T, long doubl
         dtau = 0; ddelta = rhor; break;
     case iP:
         {
-        long double dalphar_dDelta = HEOS->calc_alphar_deriv_nocache(0, 1, HEOS->get_mole_fractions(), tau, delta);
-        long double d2alphar_dDelta2 = HEOS->calc_alphar_deriv_nocache(0, 2, HEOS->get_mole_fractions(), tau, delta);
-        long double d2alphar_dDelta_dTau = HEOS->calc_alphar_deriv_nocache(1, 1, HEOS->get_mole_fractions(), tau, delta);
         // dp/ddelta|tau
-        ddelta = rhor*R*T*(1+2*delta*dalphar_dDelta+pow(delta, 2)*d2alphar_dDelta2);
+        ddelta = rhor*R*T*(1+2*delta*HEOS->dalphar_dDelta()+pow(delta, 2)*HEOS->d2alphar_dDelta2());
         // dp/dtau|delta
-        dtau = dT_dtau*rho*R*(1+delta*dalphar_dDelta-tau*delta*d2alphar_dDelta_dTau);
+        dtau = dT_dtau*rho*R*(1+delta*HEOS->dalphar_dDelta() - tau*delta*HEOS->d2alphar_dDelta_dTau());
         break;
         }
     case iHmolar:
@@ -1469,7 +1466,7 @@ void get_dtau_ddelta_second_derivatives(HelmholtzEOSMixtureBackend *HEOS, long d
 //        throw ValueError(format("input to get_dtau_ddelta[%s] is invalid",get_parameter_information(index,"short").c_str()));
 //    }
 }
-long double HelmholtzEOSMixtureBackend::calc_first_partial_deriv_nocache(long double T, long double rhomolar, int Of, int Wrt, int Constant)
+long double HelmholtzEOSMixtureBackend::calc_first_partial_deriv_nocache(long double T, long double rhomolar, parameters Of, parameters Wrt, parameters Constant)
 {
     long double dOf_dtau, dOf_ddelta, dWrt_dtau, dWrt_ddelta, dConstant_dtau, dConstant_ddelta;
 
@@ -1477,6 +1474,7 @@ long double HelmholtzEOSMixtureBackend::calc_first_partial_deriv_nocache(long do
     get_dtau_ddelta(this, T, rhomolar, Wrt, dWrt_dtau, dWrt_ddelta);
     get_dtau_ddelta(this, T, rhomolar, Constant, dConstant_dtau, dConstant_ddelta);
 
+    //std::cout << dOf_dtau << " " << dOf_ddelta << " " << dWrt_dtau << " " << dWrt_ddelta << " "  << dConstant_dtau << " " << dConstant_ddelta  << std::endl;
     return (dOf_dtau*dConstant_ddelta-dOf_ddelta*dConstant_dtau)/(dWrt_dtau*dConstant_ddelta-dWrt_ddelta*dConstant_dtau);
 }
 long double HelmholtzEOSMixtureBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
@@ -1683,7 +1681,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         rhomolar_guess = solver_rho_Tp_SRK(T, p, phase);
 
         // A gas-like phase, ideal gas might not be the perfect model, but probably good enough
-        if (phase == iphase_gas || phase == iphase_supercritical_gas || iphase_supercritical)
+        if (phase == iphase_gas || phase == iphase_supercritical_gas || phase == iphase_supercritical)
         {
             if (rhomolar_guess < 0 || !ValidNumber(rhomolar_guess)) // If the guess is bad, probably high temperature, use ideal gas
             {
@@ -1694,13 +1692,19 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         else if (phase == iphase_liquid)
         {
             long double _rhoLancval = static_cast<long double>(components[0]->ancillaries.rhoL.evaluate(T));
-            if (!ValidNumber(rhomolar_guess) || rhomolar_guess < _rhoLancval){
-                rhomolar_guess = _rhoLancval;
-            }
+            // Next we try with a Brent method bounded solver since the function is 1-1
+            double rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100,errstring);
+            if (!ValidNumber(rhomolar)){throw ValueError();}
+            return rhomolar;
         }
         else if (phase == iphase_supercritical_liquid){
-            long double T = static_cast<long double>(components[0]->ancillaries.pL.invert(_p));
-            rhomolar_guess = components[0]->ancillaries.rhoL.evaluate(T);
+            
+            long double rhoLancval = static_cast<long double>(components[0]->ancillaries.rhoL.evaluate(T));
+            
+            // Next we try with a Brent method bounded solver since the function is 1-1
+            double rhomolar = Brent(resid, rhoLancval*0.99, rhomolar_critical()*4, DBL_EPSILON,1e-8,100,errstring);
+            if (!ValidNumber(rhomolar)){throw ValueError();}
+            return rhomolar;
         }
     }
 
@@ -1716,7 +1720,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
     {
         try{
             // Next we try with Secant method shooting off from the guess value
-            double rhomolar = Secant(resid, rhomolar_guess, 0.0001*rhomolar_guess, 1e-8, 100, errstring);
+            double rhomolar = Secant(resid, rhomolar_guess, 1.1*rhomolar_guess, 1e-8, 100, errstring);
             if (!ValidNumber(rhomolar)){throw ValueError();}
             return rhomolar;
         }
