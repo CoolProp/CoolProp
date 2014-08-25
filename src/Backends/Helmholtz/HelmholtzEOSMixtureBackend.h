@@ -256,34 +256,40 @@ public:
     long double mixderiv_d2alphar_dxi_dDelta(int i);
     long double mixderiv_d2alphardxidxj(int i, int j);
 
-    /*! The derivative term
+    /*! \brief GERG 2004 Monograph equation 7.61
+     * 
+     * The derivative term
 	\f[
 	\left(\frac{\partial p}{\partial T} \right)_{V,\bar n} = \rho R(1+\delta \alpha_{\delta}^r-\delta \tau \alpha^r_{\delta\tau})
 	\f]
-	GERG 2004 Monograph equation 7.61
+	
 	*/
 	long double mixderiv_dpdT__constV_n();
 
     long double mixderiv_dpdrho__constT_n();
 
-	/*! The derivative term
+	/** \brief GERG 2004 Monograph equation 7.62
+     * 
+     * The derivative term
 	\f[
 	n\left(\frac{\partial p}{\partial V} \right)_{T,\bar n} = -\rho^2 RT(1+2\delta \alpha_{\delta}^r+\delta^2\alpha^r_{\delta\delta})
 	\f]
-	GERG 2004 Monograph equation 7.62
 	*/
 	long double mixderiv_ndpdV__constT_n();
 
-	/*! The derivative term
+	/** \brief GERG 2004 Monograph equation 7.63
+     * 
+     * The derivative term
 	\f[
 	n\left(\frac{\partial p}{\partial n_i} \right)_{T,V,n_j} = \rho RT\left[1+\delta\alpha_{\delta}^r\left[2- \frac{1}{\rho_r}\cdot n\left( \frac{\partial \rho_r}{\partial n_i}\right)_{n_j}\right] +\delta\cdot n\left(\frac{\partial\alpha_{\delta}^r}{\partial n_i}\right)_{T,V,n_j}\right]
 	\f]
-	GERG 2004 Monograph equation 7.63
+	
 	*/
 	long double mixderiv_ndpdni__constT_V_nj(int i);
 
-    /// GERG 2004 monograph Eqn. 7.32
-    /*! The partial molar volume
+    /** GERG 2004 monograph Eqn. 7.32
+     
+      * The partial molar volume
 	\f[
 	\hat v_i = \left( \frac{\partial V}{\partial n_i}\right)_{T,p,n_j} = \frac{-\left(\dfrac{\partial p}{\partial n_i}\right)_{T,V,n_j}}{\left(\dfrac{\partial p}{\partial V}\right)_{T,\bar n}}
 	\f]
@@ -352,15 +358,28 @@ public:
 	long double mixderiv_ndln_fugacity_coefficient_dnj__constT_p(int i, int j);
 
 	/// Gernert Equation 3.115
-	/// Catch test provided
+    /** The derivative term
+	\f[
+	\left(\frac{\partial \ln \phi_i}{\partial x_j}\right)_{T,p,x_{k\neq j}} = \left(\frac{\partial^2n\alpha^r}{\partial x_j \partial n_i} \right)_{T,V}+\frac{1}{RT}\frac{\left(\frac{\partial p}{\partial n_i}\right)_{T,V,n_{k\neq i}}\left(\frac{\partial p}{\partial x_j}\right)_{T,V,x_{k\neq j}}}{\left(\frac{\partial p}{\partial V}\right)_{T,\bar n}}
+	\f]
+	*/
 	long double mixderiv_dln_fugacity_coefficient_dxj__constT_p_xi(int i, int j);
 
 	/// Gernert Equation 3.130
-	/// Catch test provided
+    /** The derivative term
+	\f[
+    \left(\frac{\partial p}{\partial x_j} \right)_{T,V,x_{k\neq j}} = \rho RT\left(-\frac{1}{\rho_r}\left(\frac{\partial \rho_r}{\partial x_j}\right)_{x_{k\neq j}} \delta\alpha_{\delta}^r + \delta\left(\frac{\partial}{\partial x_j}\left(\left( \frac{\partial \alpha^r}{\partial \delta}\right)_{\tau,\bar x}\right)\right)_{T,V,x_{k\neq j}}\right)
+	\f]
+    */
 	long double mixderiv_dpdxj__constT_V_xi(int j);
 
 	/// Gernert Equation 3.117
-    long double mixderiv_d2nalphar_dni_dxj__constT_V(int i, int j){ return mixderiv_d_ndalphardni_dxj__constT_V_xi(i, j) + mixderiv_dalphar_dxj__constT_V_xi(j);};
+    /** The derivative term
+	\f[
+    \left(\frac{\partial^2n\alpha^r}{\partial x_i\partial n_j} \right)_{T,V} = \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_{j\neq i}}\right)\right)_{T,V,x_{k\neq j}} +\left(\frac{\partial \alpha^r}{\partial x_j}\right)_{T,V,x_{k\neq j}}
+	\f]
+	*/
+    long double mixderiv_d2nalphar_dxi_dxj__constT_V(int i, int j){ return mixderiv_d_ndalphardni_dxj__constT_V_xi(i, j) + mixderiv_dalphar_dxj__constT_V_xi(j);};
 
 	/// Gernert Equation 3.119
 	/// Catch test provided
@@ -403,8 +422,9 @@ public:
 	*/
 	long double mixderiv_d_ndalphardni_dTau(int i);
 
-	/// GERG 2004 Monograph Equation 7.50 and Table B4, Kunz, JCED, 2012
-    /** The derivative term
+	/** \brief GERG 2004 Monograph Equation 7.50 and Table B4, Kunz, JCED, 2012
+     * 
+     The derivative term
 	\f{eqnarray*}{
 	\left(\frac{\partial }{\partial \delta} \left( n\left(\frac{\partial \phi^r}{\partial n_i} \right)_{T,V,n_j} \right)\right)_{\tau,\bar x} &=& (\alpha_{\delta}^r+\delta\alpha_{\delta\delta}^r)\left[1-\frac{1}{\rho_r}\cdot n\left(\frac{\partial \rho_r}{\partial n_i}\right)_{n_j} \right] \\
 	&+&\tau\alpha^r_{\delta\tau}\frac{1}{T_r}\cdot n\left(\frac{\partial T_r}{\partial n_i}\right)_{n_j}\\
@@ -413,7 +433,8 @@ public:
 	*/
 	long double mixderiv_d_ndalphardni_dDelta(int i);
 
-	/** GERG 2004 Monograph equation 7.41:
+	/** \brief GERG 2004 Monograph equation 7.41
+     * The derivative term
 	\f[
 	n\left(\frac{\partial^2n\alpha^r}{\partial n_i \partial n_j} \right)_{T,V} = n\left( \frac{\partial}{\partial n_j}\left(\frac{\partial n\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)_{T,V,n_i}
 	\f]
@@ -431,24 +452,26 @@ public:
 	*/
 	long double mixderiv_nd2nalphardnidnj__constT_V(int i, int j);
 
-    /// GERG 2004 Monograph equation 7.48
-	/** The derivative term
+    /** \brief GERG 2004 Monograph equation 7.48
+    The derivative term
 	\f[
 	n\left(\frac{\partial \delta}{\partial n_i} \right)_{T,V,n_j} = \delta - \frac{\delta}{\rho_r}\cdot n\left(\frac{\partial \rho_r}{\partial n_i} \right)_{n_j}
 	\f]
 	*/
 	long double mixderiv_nddeltadni__constT_V_nj(int i);
 
-    /// GERG 2004 Monograph equation 7.49
-    /** The derivative term
+    /** \brief GERG 2004 Monograph equation 7.49
+     * 
+    The derivative term
 	\f[
 	n\left(\frac{\partial \tau}{\partial n_i} \right)_{T,V,n_j} = \frac{\tau}{T_r}\cdot n\left(\frac{\partial T_r}{\partial n_i} \right)_{n_j}
 	\f]
 	*/
 	long double mixderiv_ndtaudni__constT_V_nj(int i);
 
-    /// \brief GERG 2004 Monograph equation 7.52
-	/** The derivative term
+    /** \brief GERG 2004 Monograph equation 7.52
+     * 
+	The derivative term
 	\f{eqnarray*}{
 	\left( \frac{\partial}{\partial x_j}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\delta,\tau,x_i} &=& \delta\alpha_{\delta x_j}^{r}\left[ 1-\frac{1}{\rho_r}\cdot n\left(\frac{\partial \rho_r}{\partial n_i}\right)_{n_j}\right] \\
 	&-& \delta\alpha_{\delta}^{r}\frac{1}{\rho_r}\left[ \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \rho_r}{\partial n_i}\right)_{n_j}\right)\right)_{x_i}-\frac{1}{\rho_r}\left(\frac{\partial \rho_r}{\partial x_j}\right)_{x_i}\cdot n\left(\frac{\partial \rho_r}{\partial n_i}\right)_{n_j}\right] \\
