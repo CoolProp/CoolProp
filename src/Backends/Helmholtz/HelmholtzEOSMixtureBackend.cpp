@@ -1590,16 +1590,15 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         };
         double call(double rhomolar){
             this->rhomolar = rhomolar;
-            delta = rhomolar/rhor;
-            dalphar_dDelta = HEOS->calc_alphar_deriv_nocache(0, 1, HEOS->get_mole_fractions(), tau, delta);
-            peos = rhomolar*R_u*T*(1+delta*dalphar_dDelta);
+            delta = rhomolar/rhor; // needed for derivative
+            HEOS->update(DmolarT_INPUTS, rhomolar, T);
+            peos = HEOS->p();
             r = (peos-p)/p;
             return r;
         };
         double deriv(double rhomolar){
-            long double d2alphar_dDelta2 = HEOS->calc_alphar_deriv_nocache(0, 2, HEOS->get_mole_fractions(), tau, delta);
-            // dp/ddelta|tau / pspecified
-            return R_u*T*(1+2*delta*dalphar_dDelta+pow(delta, 2)*d2alphar_dDelta2)/p;
+            // dp/drho|T / pspecified
+            return R_u*T*(1+2*delta*HEOS->dalphar_dDelta()+pow(delta, 2)*HEOS->d2alphar_dDelta2())/p;
         };
     };
     solver_TP_resid resid(this,T,p);
@@ -2032,7 +2031,25 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<l
         _d3alphar_dTau3 = derivs.d3alphar_dtau3;
     }
     else{
-        throw NotImplementedError("calc_all_alphar_deriv_nocache not yet implemented for mixtures");
+        std::size_t N = mole_fractions.size();
+        long double summer_base = 0, summer_dTau = 0, summer_dDelta = 0, 
+                    summer_dTau2 = 0, summer_dDelta2 = 0, summer_dDelta_dTau = 0;
+        for (std::size_t i = 0; i < N; ++i){
+            HelmholtzDerivatives derivs = components[i]->pEOS->alphar.all(tau, delta);
+            long double xi = mole_fractions[i];
+            summer_base += xi*derivs.alphar;
+            summer_dDelta += xi*derivs.dalphar_ddelta;
+            summer_dTau += xi*derivs.dalphar_dtau;
+            summer_dDelta2 += xi*derivs.d2alphar_ddelta2;
+            summer_dDelta_dTau += xi*derivs.d2alphar_ddelta_dtau;
+            summer_dTau2 += xi*derivs.d2alphar_dtau2;
+        }
+        _alphar = summer_base + Excess.alphar(tau, delta, mole_fractions);
+        _dalphar_dDelta = summer_dDelta + Excess.dalphar_dDelta(tau, delta, mole_fractions);
+        _dalphar_dTau = summer_dTau + Excess.dalphar_dTau(tau, delta, mole_fractions);
+        _d2alphar_dDelta2 = summer_dDelta2 + Excess.d2alphar_dDelta2(tau, delta, mole_fractions);
+        _d2alphar_dDelta_dTau = summer_dDelta_dTau + Excess.d2alphar_dDelta_dTau(tau, delta, mole_fractions);
+        _d2alphar_dTau2 = summer_dTau2 + Excess.d2alphar_dTau2(tau, delta, mole_fractions);
     }
 }
 

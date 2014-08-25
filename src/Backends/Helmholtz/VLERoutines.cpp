@@ -770,6 +770,8 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
         }
 
         x_and_y_from_K(beta, K, z, x, y);
+        normalize_vector(x);
+        normalize_vector(y);
         HEOS.SatL->set_mole_fractions(x);
         HEOS.SatV->set_mole_fractions(y);
 
@@ -779,7 +781,7 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
             throw ValueError(format("saturation_p was unable to reach a solution within 50 iterations"));
         }
     }
-    while(std::abs(f) > 1e-12 || iter < options.Nstep_max);
+    while(std::abs(f) > 1e-12 && iter < options.Nstep_max);
 
     HEOS.SatL->update_TP_guessrho(T, p, rhomolar_liq);
     HEOS.SatV->update_TP_guessrho(T, p, rhomolar_vap);
