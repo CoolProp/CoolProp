@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 
 if (DEFINED COOLPROP_INSTALL_PREFIX)
-    set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
+    #set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
 else()
     set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
@@ -27,10 +27,10 @@ set(app_name ${project_name})
 project(${project_name})
 
 # Project version
-set (CoolProp_VERSION_MAJOR 5)
-set (CoolProp_VERSION_MINOR 0)
-set (CoolProp_VERSION_PATCH 0)
-set (CoolProp_VERSION ${CoolProp_VERSION_MAJOR}.${CoolProp_VERSION_MINOR}.${CoolProp_VERSION_PATCH})
+set (COOLPROP_VERSION_MAJOR 5)
+set (COOLPROP_VERSION_MINOR 0)
+set (COOLPROP_VERSION_PATCH 0)
+set (COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH})
 
 #######################################
 #           BUILD OPTIONS             #
@@ -168,6 +168,19 @@ if (COOLPROP_64BIT_SHARED_LIBRARY_MODULE OR COOLPROP_64BIT_SHARED_LIBRARY)
     endif()
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/64bit)
     install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
+endif()
+
+if (COOLPROP_DEBIAN_PACKAGE)
+    if(!UNIX)
+      message(FATAL_ERROR "COOLPROP_DEBIAN_PACKAGE can only be used on linux host")
+    endif()
+    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+    add_library(${app_name} SHARED ${APP_SOURCES})
+    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
+    set_target_properties (${app_name} PROPERTIES VERSION ${COOLPROP_VERSION} SOVERSION ${COOLPROP_VERSION_MAJOR})
+    add_dependencies (${app_name} generate_headers)
+    install (TARGETS ${app_name} DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/lib")
+    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include")
 endif()
 
 if (COOLPROP_32BIT_SHARED_LIBRARY_LINUX_MODULE OR COOLPROP_32BIT_SHARED_LIBRARY_LINUX)

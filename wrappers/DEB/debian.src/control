@@ -1,0 +1,17 @@
+Source: coolprop
+Maintainer: Jorrit Wronski <jowr@mek.dtu.dk>
+Section: science
+Homepage: http://www.coolprop.org
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 7), cmake (>= 2.7)
+
+Package: coolprop
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, dl
+Description: Fluid properties for the masses
+ CoolProp is a C++ library that implements 
+  - Pure and pseudo-pure fluid equations of state and transport properties for over 100 components
+  - Mixture properties using high-accuracy Helmholtz energy formulations (or cubic EOS)
+  - Correlations of properties for approximately 100 incompressible fluids and brines
+  - Highest accuracy psychrometric routines

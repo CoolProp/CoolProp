@@ -1,0 +1,65 @@
+#!/bin/bash 
+###############################################
+# This file bootstraps a folder structure to
+# package CoolProp for Debian systems, yes 
+# including the famous Ubuntu.
+###############################################
+#
+#CPVER="5.0" #TODO: automate this!
+CPPAT="../.." # relative (!) path to CoolProp sources
+CPVER=$( grep COOLPROP_VERSION_MAJOR $CPPAT/CMakeLists.txt | head -1 | cut -d " " -f 3 | cut -d ")" -f1 ).$( grep COOLPROP_VERSION_MINOR $CPPAT/CMakeLists.txt | head -1 | cut -d " " -f 3 | cut -d ")" -f1 )
+#
+# Constants, should not be changed
+WORKINGDIR="$PWD"
+#
+VANILLAEXT="orig.tar.gz"
+VANILLANAM="coolprop" # only lowercase allowed
+VANILLAFIL="$VANILLANAM"_"$CPVER"."$VANILLAEXT"
+VANILLAFOL="$VANILLANAM"-"$CPVER"
+#
+DEBIANFOL="debian.src"
+#
+#CPPAT="$WORKINGDIR/$CPPAT" # Add the prefix to make an absolute path
+#
+DEBUG="True"
+#
+function executeCommand {
+  local CMD="$1"
+  if [ "$DEBUG" = "True" ]; then
+    echo "$CMD"
+  fi
+  eval "$CMD"
+}
+#
+function createVanillaTarBallAndDir {
+  executeCommand "mkdir -p \"$VANILLAFOL\""
+  pushd "$CPPAT"
+  executeCommand "rsync -a -q --delete-excluded --exclude '.git' --exclude 'Web' --exclude 'wrappers' . \"$WORKINGDIR/$VANILLAFOL\""
+  popd
+#   pushd "$VANILLAFOL"
+#   executeCommand "cmake . -DCOOLPROP_DEBIAN_PACKAGE=ON -DCOOLPROP_INSTALL_PREFIX=\"\""
+#   popd
+  rm -f "$VANILLAFIL"
+  executeCommand "tar -czf \"$VANILLAFIL\" \"$VANILLAFOL\""
+}
+#
+function addDebianFiles {
+  executeCommand "rsync -a -q --delete \"$DEBIANFOL/\" \"$VANILLAFOL/debian\""
+  executeCommand "cp \"$CPPAT/LICENSE\" \"$VANILLAFOL/debian/copyright\""
+  #cp "$CPPAT/LICENSE" "$DEBIANFOL/copyright"
+}
+#
+function buildSourcePackage {
+  pushd "$VANILLAFOL"
+  #cp "$CPPAT/LICENSE" "$DEBIANFOL/copyright"
+  debuild -us -uc
+  popd
+}
+#
+#
+# General work flow:
+createVanillaTarBallAndDir
+addDebianFiles
+buildSourcePackage
+
+exit 0
