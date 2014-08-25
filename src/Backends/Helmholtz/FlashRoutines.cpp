@@ -30,19 +30,40 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
     {
 		// The maximum possible saturation temperature
 		// Critical point for pure fluids, slightly different for pseudo-pure, very different for mixtures
-		long double Tmax_sat = HEOS.calc_Tmax_sat();
+		long double Tmax_sat = HEOS.calc_Tmax_sat() + 1e-13;
 		
 		// Check what the minimum limits for the equation of state are
 		long double Tmin_satL, Tmin_satV, Tmin_sat;
 		HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
-		Tmin_sat = std::max(Tmin_satL, Tmin_satV);
+		Tmin_sat = std::max(Tmin_satL, Tmin_satV) - 1e-13;
 		
+        // Get a reference to keep the code a bit cleaner
+        CriticalRegionSplines &splines = HEOS.components[0]->pEOS->critical_region_splines;
+        
 		// Check limits
 		if (!is_in_closed_range(Tmin_sat, Tmax_sat, static_cast<long double>(HEOS._T))){
 			throw ValueError(format("Temperature to QT_flash [%6g K] must be in range [%8g K, %8g K]",HEOS._T, Tmin_sat, Tmax_sat));
 		}
         
-		if (!(HEOS.components[0]->pEOS->pseudo_pure))
+        //splines.enabled = false;
+        
+        // If exactly at the critical temperature, liquid and vapor have the critial density
+        if (std::abs(T-HEOS.T_critical())< 1e-14){
+             HEOS.SatL->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
+             HEOS.SatV->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
+             HEOS._rhomolar = HEOS.rhomolar_critical();
+             HEOS._p = HEOS.SatL->p();
+        }
+        else if (splines.enabled && HEOS._T > splines.T_min){
+            double rhoL, rhoV;
+            // Use critical region spline if it has it and temperature is in its range
+            splines.get_densities(T, splines.rhomolar_min, HEOS.rhomolar_critical(), splines.rhomolar_max, rhoL, rhoV);
+            HEOS.SatL->update(DmolarT_INPUTS, rhoL, HEOS._T);
+            HEOS.SatV->update(DmolarT_INPUTS, rhoV, HEOS._T);
+            HEOS._p = HEOS._Q*HEOS.SatV->p() + (1- HEOS._Q)*HEOS.SatL->p();
+            HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
+        }
+        else if (!(HEOS.components[0]->pEOS->pseudo_pure))
         {
             // Set some imput options
             SaturationSolvers::saturation_T_pure_options options;
@@ -73,11 +94,10 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                     SaturationSolvers::saturation_T_pure_1D_P(&HEOS, T, options);
                 }
                 catch(std::exception &){
-                    SaturationSolvers::saturation_critical(&HEOS, iT, T);
+                    throw;
                 }
             }
-            // Load the outputs
-            HEOS._phase = iphase_twophase;
+            
             HEOS._p = HEOS._Q*HEOS.SatV->p() + (1- HEOS._Q)*HEOS.SatL->p();
             HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
         }
@@ -98,7 +118,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 rhoLsat = HEOS.solver_rho_Tp(HEOS._T, psatLanc, rhoLanc);
                 rhoVsat = HEOS.solver_rho_Tp(HEOS._T, psatVanc, rhoVanc);
                 if (!ValidNumber(rhoLsat) || !ValidNumber(rhoVsat) ||
-                     fabs(rhoLsat/rhoLanc-1) > 0.5 || fabs(rhoVanc/rhoVsat-1) > 0.5)
+                     std::abs(rhoLsat/rhoLanc-1) > 0.5 || std::abs(rhoVanc/rhoVsat-1) > 0.5)
                 {
                     throw ValueError("pseudo-pure failed");
                 }
@@ -108,12 +128,13 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 rhoLsat = rhoLanc;
                 rhoVsat = rhoVanc;
             }
-            HEOS._phase = iphase_twophase;
             HEOS._p = HEOS._Q*psatVanc + (1-HEOS._Q)*psatLanc;
             HEOS._rhomolar = 1/(HEOS._Q/rhoVsat + (1-HEOS._Q)/rhoLsat);
             HEOS.SatL->update(DmolarT_INPUTS, rhoLsat, HEOS._T);
             HEOS.SatV->update(DmolarT_INPUTS, rhoVsat, HEOS._T);
         }
+        // Load the outputs
+        HEOS._phase = iphase_twophase;
     }
     else
     {
@@ -221,7 +242,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         double Tc = HEOS.components[0]->pEOS->reduce.T;
         double Tt = HEOS.components[0]->pEOS->Ttriple;
         double pt = HEOS.components[0]->pEOS->ptriple;
-        double Tsat_guess = 1/(1/Tc-(1/Tt-1/Tc)/log(pc/pt)*log(HEOS._p/pc));
+        //double Tsat_guess = 1/(1/Tc-(1/Tt-1/Tc)/log(pc/pt)*log(HEOS._p/pc));
 
         // Set some imput options
         SaturationSolvers::mixture_VLE_IO io;
@@ -502,10 +523,10 @@ void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &H
         tau -= omega*(B[0][0]*f1+B[0][1]*f2);
         delta -= omega*(B[1][0]*f1+B[1][1]*f2);
 
-        if (fabs(f1)>fabs(f2))
-            worst_error=fabs(f1);
+        if (std::abs(f1) > std::abs(f2))
+            worst_error = std::abs(f1);
         else
-            worst_error=fabs(f2);
+            worst_error = std::abs(f2);
 
         if (!ValidNumber(f1) || !ValidNumber(f2))
         {
@@ -538,8 +559,10 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
                 HEOS(HEOS), p(p), value(value), other(other)
                 {
                     iter = 0;
-                    // Specify the state to avoid saturation calls
-                    HEOS->specify_phase(HEOS->phase());
+                    // Specify the state to avoid saturation calls, but only if phase is subcritical
+                    if (HEOS->phase() == iphase_liquid || HEOS->phase() == iphase_gas ){
+                        HEOS->specify_phase(HEOS->phase());
+                    }
                 };
         double call(double T){
 

@@ -1305,7 +1305,7 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
             CAPTURE(rho_RP);
 
             double DH = (rho_RP-rho_CP)/rho_RP;
-            CHECK(fabs(DH) < 0.005);
+            CHECK(std::abs(DH) < 0.005);
         }
     }
     SECTION("Saturation specific heats agree within 0.5% at T/Tc = 0.9")
@@ -1336,7 +1336,7 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
             CAPTURE(0.9*Tr);
 
             double Dcp = (cp_RP-cp_CP)/cp_RP;
-            CHECK(fabs(Dcp) < 0.005);
+            CHECK(std::abs(Dcp) < 0.005);
         }
     }
     SECTION("Enthalpy and entropy reference state")
@@ -1371,8 +1371,8 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
             double DH = (S1->hmass()-S2->hmass());
             double DS = (S1->smass()-S2->smass());
             
-            CHECK(fabs(DH/h_RP) < 0.001);
-            CHECK(fabs(DS/s_RP) < 0.001);
+            CHECK(std::abs(DH/h_RP) < 0.001);
+            CHECK(std::abs(DS/s_RP) < 0.001);
         }
     }
 }

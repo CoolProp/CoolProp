@@ -556,15 +556,15 @@ template<typename T> void divide_row_by(std::vector<std::vector<T> > *A, size_t 
 
 template<typename T> size_t get_pivot_row(std::vector<std::vector<T> > *A, size_t col)
 {
-	int index = col;
+	std::size_t index = col;
 	T max = 0, val;
 
 	for (size_t row = col; row < (*A).size(); row++)
 	{
 		val = (*A)[row][col];
-		if (fabs(val) > max)
+		if (std::abs(val) > max)
 		{
-			max = fabs(val);
+			max = std::abs(val);
 			index = row;
 		}
 	}
@@ -602,7 +602,7 @@ template<typename T> std::vector<std::vector<T> > linsolve_Gauss_Jordan(std::vec
 		// Find the pivot value
 		pivot_row = get_pivot_row(&AB, col);
 
-		if (fabs(AB[pivot_row][col]) < 10*DBL_EPSILON){ throw ValueError(format("Zero occurred in row %d, the matrix is singular. ",pivot_row));}
+		if (std::abs(AB[pivot_row][col]) < 10*DBL_EPSILON){ throw ValueError(format("Zero occurred in row %d, the matrix is singular. ",pivot_row));}
 
 		if (pivot_row>=col){
 			// Swap pivot row and current row
@@ -622,7 +622,7 @@ template<typename T> std::vector<std::vector<T> > linsolve_Gauss_Jordan(std::vec
 			}
 		}
 	}
-	for (int col = NcolA - 1; col > 0; col--)
+	for (std::size_t col = NcolA - 1; col > 0; col--)
 	{
 		for (int row = col - 1; row >=0; row--)
 		{
@@ -671,7 +671,7 @@ template<typename T> std::vector<std::vector<T> > linsolve_Gauss_Jordan(std::vec
 //		pivot_row     = 0;
 //		pivot_element = 0.0;
 //		for (size_t row = col; row < NrowA; row++){
-//			tmp_element = fabs(AB[row][col]);
+//			tmp_element = std::abs(AB[row][col]);
 //			if (tmp_element>pivot_element) {
 //				pivot_element = tmp_element;
 //				pivot_row = row;

@@ -282,14 +282,14 @@ long double TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBack
 	else
 	{
 		psi_D=acos(pow(1+powInt(qd*zeta,2),-1.0/2.0));
-		w=sqrt(fabs((qc*zeta-1)/(qc*zeta+1)))*tan(psi_D/2.0);
+		w=sqrt(std::abs((qc*zeta-1)/(qc*zeta+1)))*tan(psi_D/2.0);
 		if (qc*zeta>1){
 			L=log((1+w)/(1-w));
 		}
 		else{
-			L=2*atan(fabs(w));
+			L=2*atan(std::abs(w));
 		}
-		Y=1.0/12.0*sin(3*psi_D)-1/(4*qc*zeta)*sin(2*psi_D)+1.0/powInt(qc*zeta,2)*(1-5.0/4.0*powInt(qc*zeta,2))*sin(psi_D)-1.0/powInt(qc*zeta,3)*((1-3.0/2.0*powInt(qc*zeta,2))*psi_D-pow(fabs(powInt(qc*zeta,2)-1),3.0/2.0)*L);
+		Y=1.0/12.0*sin(3*psi_D)-1/(4*qc*zeta)*sin(2*psi_D)+1.0/powInt(qc*zeta,2)*(1-5.0/4.0*powInt(qc*zeta,2))*sin(psi_D)-1.0/powInt(qc*zeta,3)*((1-3.0/2.0*powInt(qc*zeta,2))*psi_D-pow(std::abs(powInt(qc*zeta,2)-1),3.0/2.0)*L);
 	}
 	mubar_2=exp(x_mu*Y);
 
@@ -780,7 +780,7 @@ long double TransportRoutines::conductivity_critical_hardcoded_ammonia(Helmholtz
 	double pi=3.141592654,a_chi,k_B=1.3806504e-23,X_T,DELTA_lambda,dPdT,eta_B,DELTA_lambda_id,DELTA_lambda_i;
 
     rho = HEOS.keyed_output(CoolProp::iDmass);
-	t = fabs((T-Tc)/Tc);
+	t = std::abs((T-Tc)/Tc);
 	a_chi = a_zeta/0.7;
 	eta_B = (2.60+1.6*t)*1e-5;
 	dPdT = (2.18-0.12/exp(17.8*t))*1e5; // [Pa-K]
@@ -831,7 +831,7 @@ long double TransportRoutines::conductivity_hardcoded_helium(HelmholtzEOSMixture
         double x0 = 0.392, E1 = 2.8461, E2 = 0.27156, beta = 0.3554, gamma = 1.1743, delta = 4.304, rhoc_crit = 69.158,
             Tc = 5.18992, pc = 2.2746e5;
 
-        double DeltaT = fabs(1-T/Tc), DeltaRho = fabs(1-rho/rhoc_crit);
+        double DeltaT = std::abs(1-T/Tc), DeltaRho = std::abs(1-rho/rhoc_crit);
         double eta = HEOS.viscosity(); // [Pa-s]
         double K_T = HEOS.isothermal_compressibility(), K_Tprime, K_Tbar;
         double dpdT = HEOS.first_partial_deriv(CoolProp::iP, CoolProp::iT, CoolProp::iDmolar);

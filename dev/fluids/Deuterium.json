@@ -241,17 +241,17 @@
         "sat_min_liquid": {
           "T": 18.724, 
           "T_units": "K", 
-          "p": 17189.101973171564, 
+          "p": 17189.101973439818, 
           "p_units": "Pa", 
-          "rhomolar": 43350.9208903564, 
+          "rhomolar": 43350.92089035643, 
           "rhomolar_units": "mol/m^3"
         }, 
         "sat_min_vapor": {
           "T": 18.724, 
           "T_units": "K", 
-          "p": 17189.101973253782, 
+          "p": 17189.101973253517, 
           "p_units": "Pa", 
-          "rhomolar": 112.95640342174978, 
+          "rhomolar": 112.956403421748, 
           "rhomolar_units": "mol/m^3"
         }
       }, 
@@ -438,6 +438,25 @@
           "type": "ResidualHelmholtzGaussian"
         }
       ], 
+      "critical_region_splines": {
+        "T_max": 38.34, 
+        "T_min": 38.3399506598222, 
+        "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
+        "cL": [
+          0.0, 
+          0.0, 
+          -8.339819490855398e-07, 
+          38.35436950898275
+        ], 
+        "cV": [
+          0.0, 
+          0.0, 
+          8.380089288669903e-07, 
+          38.325561106155625
+        ], 
+        "rhomolar_max": 17289.162165151512, 
+        "rhomolar_min": 17171.122133543762
+      }, 
       "gas_constant": 8.3144621, 
       "gas_constant_units": "J/mol/K", 
       "molar_mass": 0.0040282, 
@@ -461,17 +480,17 @@
     "triple_liquid": {
       "T": 18.724, 
       "T_units": "K", 
-      "p": 17189.101973171564, 
+      "p": 17189.101973439818, 
       "p_units": "Pa", 
-      "rhomolar": 43350.9208903564, 
+      "rhomolar": 43350.92089035643, 
       "rhomolar_units": "mol/m^3"
     }, 
     "triple_vapor": {
       "T": 18.724, 
       "T_units": "K", 
-      "p": 17189.101973253782, 
+      "p": 17189.101973253517, 
       "p_units": "Pa", 
-      "rhomolar": 112.95640342174978, 
+      "rhomolar": 112.956403421748, 
       "rhomolar_units": "mol/m^3"
     }
   }

@@ -222,7 +222,7 @@ protected:
                 long double T0 = cpjson::get_double(contribution, "T0");
 
                 // Take the constant term if nonzero and set it as a polyT term
-                if (fabs(constants[0]) > 1e-14){
+                if (std::abs(constants[0]) > 1e-14){
                     std::vector<long double> c(1,constants[0]), t(1,0);
                     if (EOS.alpha0.CP0PolyT.is_enabled() == true){
                         EOS.alpha0.CP0PolyT.extend(c,t);
@@ -233,7 +233,7 @@ protected:
                 }
 
                 std::vector<long double> n, c, d, t;
-                if (fabs(constants[1]) > 1e-14){
+                if (std::abs(constants[1]) > 1e-14){
                     // sinh term can be converted by setting  a_k = C, b_k = 2*D, c_k = -1, d_k = 1
                     n.push_back(constants[1]);
                     t.push_back(-2*constants[2]/Tc);
@@ -241,7 +241,7 @@ protected:
                     d.push_back(-1);
                 }
 
-                if (fabs(constants[3]) > 1e-14){
+                if (std::abs(constants[3]) > 1e-14){
                     // cosh term can be converted by setting  a_k = C, b_k = 2*D, c_k = 1, d_k = 1
                     n.push_back(-constants[3]);
                     t.push_back(-2*constants[4]/Tc);
@@ -352,6 +352,16 @@ protected:
             EOS.max_sat_p.rhomolar = cpjson::get_double(s, "rhomolar");
         }
         
+        if (EOS_json.HasMember("critical_region_splines")){
+            rapidjson::Value &spline = EOS_json["critical_region_splines"];
+            EOS.critical_region_splines.T_min = cpjson::get_double(spline, "T_min");
+            EOS.critical_region_splines.T_max = cpjson::get_double(spline, "T_max");
+            EOS.critical_region_splines.rhomolar_min = cpjson::get_double(spline, "rhomolar_min");
+            EOS.critical_region_splines.rhomolar_max = cpjson::get_double(spline, "rhomolar_max");
+            EOS.critical_region_splines.cL = cpjson::get_double_array(spline["cL"]);
+            EOS.critical_region_splines.cV = cpjson::get_double_array(spline["cV"]);
+            EOS.critical_region_splines.enabled = true;
+        }
 
         // Validate the equation of state that was just created
         EOS.validate();

@@ -53,6 +53,7 @@ public:
 	bool has_melting_line(){ return is_pure_or_pseudopure && components[0]->ancillaries.melting_line.enabled();};
 	long double calc_melting_line(int param, int given, long double value);
 	phases calc_phase(void){return _phase;};
+    long double calc_saturation_ancillary(parameters param, int Q, parameters given, double value);
     
     const CoolProp::SimpleState &calc_state(const std::string &state);
 
@@ -133,7 +134,11 @@ public:
     long double calc_dalphar_dTau(void);
     long double calc_d2alphar_dDelta2(void);
     long double calc_d2alphar_dDelta_dTau(void);
-    long double calc_d2alphar_dTau2(void);
+    long double calc_d2alphar_dTau2(void);    
+    long double calc_d3alphar_dDelta3(void);
+    long double calc_d3alphar_dDelta2_dTau(void);
+    long double calc_d3alphar_dDelta_dTau2(void);
+    long double calc_d3alphar_dTau3(void);
 
     long double calc_alpha0(void);
     long double calc_dalpha0_dDelta(void);
@@ -141,6 +146,10 @@ public:
     long double calc_d2alpha0_dDelta2(void);
     long double calc_d2alpha0_dDelta_dTau(void);
     long double calc_d2alpha0_dTau2(void);
+    long double calc_d3alpha0_dDelta3(void);
+    long double calc_d3alpha0_dDelta2_dTau(void);
+    long double calc_d3alpha0_dDelta_dTau2(void);
+    long double calc_d3alpha0_dTau3(void);
 
     //long double calc_surface_tension(void);
     long double calc_viscosity(void);
@@ -205,12 +214,8 @@ public:
     \f]
     */
     long double calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
-
-    /**
-    This version doesn't use any cached values
-    \sa calc_first_partial_deriv
-    */
-    long double calc_first_partial_deriv_nocache(long double T, long double rhomolar, int Of, int Wrt, int Constant);
+    
+    long double calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
 
     void update_states();
     

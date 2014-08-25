@@ -40,6 +40,37 @@ struct EnvironmentalFactorsStruct
     double GWP20, GWP100, GWP500, ODP, HH, PH, FH;
     std::string ASHRAE34;
 };
+struct CriticalRegionSplines{
+    double T_min, T_max, rhomolar_min, rhomolar_max;
+    std::vector<double> cL, cV;
+    bool enabled;
+    CriticalRegionSplines(){enabled = false;};
+    void get_densities(double T, double rho_min, double rho_crit, double rho_max, double &rhoL, double &rhoV){
+        bool ok1 = false, ok2 = false, ok3 = false;
+        int Nsoln = -1, Ngood = 0;
+        double rho1, rho2, rho3;
+        
+        // -----------
+        // Liquid part
+        // -----------
+        Ngood = 0;
+        solve_cubic(cL[0], cL[1], cL[2], cL[3]-T, Nsoln, rho1, rho2, rho3);
+        if (rho1 < rho_max && rho1 > rho_crit){ ok1 = true; Ngood++; rhoL = rho1; }
+        if (rho2 < rho_max && rho2 > rho_crit){ ok2 = true; Ngood++; rhoL = rho2; }
+        if (rho3 < rho_max && rho3 > rho_crit){ ok3 = true; Ngood++; rhoL = rho3; }
+        if (Ngood != 1){ throw ValueError(format("more than one liquid solution found for critical spline for T=%g",T));};
+        
+        // ----------
+        // Vapor part
+        // ----------
+        Ngood = 0;
+        solve_cubic(cV[0], cV[1], cV[2], cV[3]-T, Nsoln, rho1, rho2, rho3);
+        if (rho1 > rho_min && rho1 < rho_crit){ ok1 = true; Ngood++; rhoV = rho1; }
+        if (rho2 > rho_min && rho2 < rho_crit){ ok2 = true; Ngood++; rhoV = rho2; }
+        if (rho3 > rho_min && rho3 < rho_crit){ ok3 = true; Ngood++; rhoV = rho3; }
+        if (Ngood != 1){ throw ValueError(format("more than one vapor solution found for critical spline for T=%g",T));};
+    };
+};
 
 /// A set of limits for the eos parameters
 struct EOSLimits
@@ -296,6 +327,7 @@ public:
     IdealHelmholtzContainer alpha0; ///< The ideal Helmholtz energy
     std::string BibTeX_EOS, ///< The bibtex key for the equation of state
                 BibTeX_CP0; ///< The bibtex key for the ideal gas specific heat correlation
+    CriticalRegionSplines critical_region_splines; ///< A cubic spline in the form T = f(rho) for saturated liquid and saturated vapor curves in the near-critical region
 
     /// Validate the EOS that was just constructed
     void validate()

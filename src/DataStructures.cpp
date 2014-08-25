@@ -77,13 +77,13 @@ parameter_info parameter_info_list[] = {
     parameter_info(iZ, "Z","O","-","Compressibility factor",false),
     parameter_info(ifundamental_derivative_of_gas_dynamics, "fundamental_derivative_of_gas_dynamics","O","-","Fundamental_derivative_of_gas_dynamics",false),
     
-    parameter_info(ialphar, "","O","-","Residual Helmholtz energy",false),
-    parameter_info(idalphar_dtau_constdelta, "","O","-","Derivative of residual Helmholtz energy with tau",false),
-    parameter_info(idalphar_ddelta_consttau, "","O","-","Derivative of residual Helmholtz energy with delta",false),
+    parameter_info(ialphar, "alphar","O","-","Residual Helmholtz energy",false),
+    parameter_info(idalphar_dtau_constdelta, "dalphar_dtau_constdelta","O","-","Derivative of residual Helmholtz energy with tau",false),
+    parameter_info(idalphar_ddelta_consttau, "dalphar_ddelta_consttau","O","-","Derivative of residual Helmholtz energy with delta",false),
     
-    parameter_info(ialpha0, "","O","-","Ideal Helmholtz energy",false),
-    parameter_info(idalpha0_dtau_constdelta, "","O","-","Derivative of ideal Helmholtz energy with tau",false),
-    parameter_info(idalpha0_ddelta_consttau, "","O","-","Derivative of ideal Helmholtz energy with delta",false),
+    parameter_info(ialpha0, "alpha0","O","-","Ideal Helmholtz energy",false),
+    parameter_info(idalpha0_dtau_constdelta, "dalpha0_dtau_constdelta","O","-","Derivative of ideal Helmholtz energy with tau",false),
+    parameter_info(idalpha0_ddelta_consttau, "dalpha0_ddelta_consttau","O","-","Derivative of ideal Helmholtz energy with delta",false),
     
 };
 
@@ -250,6 +250,39 @@ bool is_valid_first_derivative(const std::string & name, parameters &iOf, parame
         return false;
     }
 }
+
+bool is_valid_second_derivative(const std::string & name, parameters &iOf1, parameters &iWrt1, parameters &iConstant1, parameters &iWrt2, parameters &iConstant2)
+{
+    if (get_debug_level() > 5){std::cout << format("is_valid_second_derivative(%s)",name.c_str());}
+    
+    // Suppose we start with "d(d(P)/d(Dmolar)|T)/d(Dmolar)|T"
+    std::size_t i_bar = name.rfind('|');
+    if (i_bar == std::string::npos){return false;}
+    std::string constant2 = name.substr(i_bar+1); // "T"
+    if (!is_valid_parameter(constant2, iConstant2)){return false;};
+    std::string left_of_bar = name.substr(0, i_bar); // "d(d(P)/d(Dmolar)|T)/d(Dmolar)"
+    
+    std::size_t i_slash = left_of_bar.rfind('/');
+    if (i_slash == std::string::npos){return false;}
+    
+    std::string left_of_slash = left_of_bar.substr(0, i_slash); // "d(d(P)/d(Dmolar)|T)"
+    std::size_t iN0 = left_of_slash.find("(");
+    std::size_t iN1 = left_of_slash.rfind(")");
+    if (!(iN0 > 0 && iN1 > 0 && iN1 > iN0)){return false;}
+    std::string num = left_of_slash.substr(iN0+1, iN1-2); // "d(P)/d(Dmolar)|T"
+    if (!is_valid_first_derivative(num, iOf1, iWrt1, iConstant1)){return false;}
+    
+    std::string right_of_slash = left_of_bar.substr(i_slash+1); // "d(Dmolar)"
+    std::size_t iD0 = right_of_slash.find("(");
+    std::size_t iD1 = right_of_slash.rfind(")");
+    if (!(iD0 > 0 && iD1 > 0 && iD1 > iD0)){return false;}
+    std::string den = right_of_slash.substr(iD0+1, iD1-2); // "Dmolar"
+    if (!is_valid_parameter(den, iWrt2)){return false;}
+    
+    // If we haven't quit yet, all is well
+    return true;
+}
+
 int get_parameter_index(const std::string &param_name)
 {
     parameters iOutput;

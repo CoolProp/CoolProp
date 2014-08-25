@@ -457,7 +457,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const dou
 	if ( (r!=1) && (c!=1) ) {
 		throw ValueError(format("%s (%d): You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",__FILE__,__LINE__,coefficients.rows(),coefficients.cols()));
 	}
-	if ( (firstExponent<0) && (fabs(x_in-x_base)<DBL_EPSILON)) {
+	if ( (firstExponent<0) && (std::abs(x_in-x_base)<DBL_EPSILON)) {
 		throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ",__FILE__,__LINE__,x_in-x_base));
 	}
 
@@ -500,10 +500,10 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const dou
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
 /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
 double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
-	if ( (x_exp<0) && (fabs(x_in-x_base)<DBL_EPSILON)) {
+	if ( (x_exp<0) && (std::abs(x_in-x_base)<DBL_EPSILON)) {
 		throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ",__FILE__,__LINE__,x_in-x_base));
 	}
-	if ( (y_exp<0) && (fabs(y_in-y_base)<DBL_EPSILON)) {
+	if ( (y_exp<0) && (std::abs(y_in-y_base)<DBL_EPSILON)) {
 		throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, y_in-y_base=%f ",__FILE__,__LINE__,y_in-y_base));
 	}
 
@@ -633,7 +633,7 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
 	size_t c = newCoefficients.cols();
 
 	if (int_exp==-1) {
-		if (fabs(int_base)<DBL_EPSILON){
+		if (std::abs(int_base)<DBL_EPSILON){
 			Eigen::MatrixXd tmpCoefficients = newCoefficients.row(0) * log(int_val-int_base);
 			newCoefficients = integrateCoeffs(newCoefficients.block(1,0,r-1,c), 0, 1);
 			newCoefficients.row(0) = tmpCoefficients;
@@ -1044,7 +1044,7 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp","
 
 		double x = 0.3, y = 255.3, val1, val2, val3, val4;
 
-		//CHECK( fabs( polyInt.derivative(x,y,0)-poly2D.evaluate(x,y) ) <= 1e-10 );
+		//CHECK( std::abs( polyInt.derivative(x,y,0)-poly2D.evaluate(x,y) ) <= 1e-10 );
 
 		std::string tmpStr;
 

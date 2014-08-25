@@ -84,26 +84,26 @@ TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h","
 		Eigen::MatrixXd matrix = CoolProp::vec_to_eigen(vec2D);
 		for (size_t i = 0; i < matrix.cols(); ++i) {
 			for (size_t j = 0; j < matrix.rows(); ++j) {
-				CHECK( fabs(matrix(j,i)-vec2D[j][i]) <= 1e-10 );
+				CHECK( std::abs(matrix(j,i)-vec2D[j][i]) <= 1e-10 );
 			}
 		}
 		vec2D = CoolProp::eigen_to_vec(matrix);
 		for (size_t i = 0; i < matrix.cols(); ++i) {
 			for (size_t j = 0; j < matrix.rows(); ++j) {
-				CHECK( fabs(matrix(j,i)-vec2D[j][i]) <= 1e-10 );
+				CHECK( std::abs(matrix(j,i)-vec2D[j][i]) <= 1e-10 );
 			}
 		}
 		std::vector<double> vec1D(cHeat);
 		matrix = CoolProp::vec_to_eigen(vec1D);
 		for (size_t i = 0; i < matrix.cols(); ++i) {
 			for (size_t j = 0; j < matrix.rows(); ++j) {
-				CHECK( fabs(matrix(j,i)-vec1D[j]) <= 1e-10 );
+				CHECK( std::abs(matrix(j,i)-vec1D[j]) <= 1e-10 );
 			}
 		}
 		vec1D = CoolProp::eigen_to_vec1D(matrix);
 		for (size_t i = 0; i < matrix.cols(); ++i) {
 			for (size_t j = 0; j < matrix.rows(); ++j) {
-				CHECK( fabs(matrix(j,i)-vec1D[j]) <= 1e-10 );
+				CHECK( std::abs(matrix(j,i)-vec1D[j]) <= 1e-10 );
 			}
 		}
 	}

@@ -4,26 +4,43 @@
 FORTRAN Wrapper
 ***************
 
+Compilers
+=========
+
+On linux, you need gcc and gfortran, which are easy to install using your package manager.
+
+On windows, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from mingw-get.  Theese are the versions used as of June 20, 2014::
+
+    >gfortran --version
+    GNU Fortran (GCC) 4.8.1
+    Copyright (C) 2013 Free Software Foundation, Inc.
+
+    >gcc --version
+    gcc (GCC) 4.8.1
+    Copyright (C) 2013 Free Software Foundation, Inc.
+    
+
 FORTRAN 95/2003 using ISO_C_BINDING
 ==================================
 
-Build static library (windows + MinGW)
---------------------------------------
+Build static library
+--------------------
 
-Start in root folder of recursively-cloned CoolProp repo::
+On linux/OSX, start in root folder of recursively-cloned CoolProp repo and do::
+
+    mkdir build && cd build
+    mkdir gccstatic && cd gccstatic
+    cmake ../.. -DCOOLPROP_STATIC_LIBRARY=ON
+    cmake --build .
+
+On Windows, the call to CMake should be done using the MinGW generator, but otherwise procedure is the same::
 
     mkdir build && cd build
     mkdir gccstatic && cd gccstatic
     cmake ../.. -G "MinGW Makefiles" -DCOOLPROP_STATIC_LIBRARY=ON
     cmake --build .
 
-This will generate the file libCoolProp.a which is a GCC static library that can be linked with GCC/GFORTRAN code
-
-Make sure that the macro EXTERNC is defined - this will give extern "C" decorations for all the CoolPropLib.h functions.
-
-Copy this .a file into the directory with the coolprop FORTRAN example
-
-The simple example file ``cool_fortran_bind.f90``:
+This will generate the file libCoolProp.a which is a GCC static library that can be linked with GCC/GFORTRAN code.  Copy this .a file into the directory with the coolprop FORTRAN example ``cool_fortran_bind.f90``:
 
 .. code-block:: fortran
 
@@ -75,26 +92,14 @@ with the interface file ``cpinterface.f90``:
 In order to link all the files together, do::
 
     gfortran -c -Wall cpinterface.f90 cool_fortran_bind.f90
-    gfortran -o main *.o libCoolProp.a -lstdc++
+    gfortran -o main *.o libCoolProp.a -lstdc++ -ldl
     main
     
+On windows, you can leave off the ``-ldl``.
+
 .. warning::
 
-    You MUST(!!!) put the -lstdc++ standard libary *after* the cool_fortran_bind.f90  Same thing if you compile the fortran to object file, static library must always be at the end.
-
-Compiling on Windows
---------------------
-
-At the moment, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from mingw-get.  Theese are the versions used as of June 20, 2014::
-
-    >gfortran --version
-    GNU Fortran (GCC) 4.8.1
-    Copyright (C) 2013 Free Software Foundation, Inc.
-
-    >gcc --version
-    gcc (GCC) 4.8.1
-    Copyright (C) 2013 Free Software Foundation, Inc.
-    
+    You MUST(!!!) put the -lstdc++ standard libary *after* libCoolProp.a.  Same thing if you compile the fortran to object file, static library must always be at the end.
 
 FORTRAN77
 =========
@@ -102,12 +107,12 @@ FORTRAN77
 Pre-Compiled Binaries
 ---------------------
 
-* Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the development versions from the buildbot server at :bbbinaries:`shared_library`. 
+* Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the development versions from the buildbot server at :bbbinaries:`shared_library`. Or you can built it yourself given the instructions at :ref:`shared_libraries`.
 
 Run
 ---
 
-Use the sample file ``example.f77`` given by:
+Use the sample file ``example.for`` given by:
 
 .. code-block:: fortran
 
@@ -129,13 +134,20 @@ Use the sample file ``example.f77`` given by:
 
     write(*,*) "Saturation pressure for R134a: "
     call propssi(Output, Name1, Prop1, Name2, Prop2, Ref, outVal)
-    write(*,*) "Result was: ", outVal/1e2, " bar"
+    write(*,*) "Result was: ", outVal/1e5, " bar"
     write(*,*) "-----------------------------------------------"
     
     end program
 
-Place the shared library and the sample file in the same directory.  Build and run the example.f77 file with::
+Place the shared library and the sample file in the same directory.  
 
-    gfortran -g -o example example.f77 -L. -lCoolProp
+On linux, build and run the example.for file with::
+
+    gfortran -g -o example example.for -L. -lCoolProp
+    LD_LIBRARY_PATH=$PWD:$LD_LIBRARY_PATH example
+    
+On windows, the current folder is always searched for DLL, so you can just do::
+
+    gfortran -g -o example example.for -L. -lCoolProp
     example
 

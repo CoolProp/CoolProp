@@ -260,7 +260,7 @@
         "sat_min_liquid": {
           "T": 90.6941, 
           "T_units": "K", 
-          "p": 11696.064115023479, 
+          "p": 11696.064115433426, 
           "p_units": "Pa", 
           "rhomolar": 28141.91479265919, 
           "rhomolar_units": "mol/m^3"
@@ -268,9 +268,9 @@
         "sat_min_vapor": {
           "T": 90.6941, 
           "T_units": "K", 
-          "p": 11696.064115134473, 
+          "p": 11696.064115134383, 
           "p_units": "Pa", 
-          "rhomolar": 15.629691809717388, 
+          "rhomolar": 15.62969180971727, 
           "rhomolar_units": "mol/m^3"
         }
       }, 
@@ -516,6 +516,25 @@
           "type": "ResidualHelmholtzGaussian"
         }
       ], 
+      "critical_region_splines": {
+        "T_max": 190.564, 
+        "T_min": 190.5639673093741, 
+        "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
+        "cL": [
+          0.0, 
+          0.0, 
+          -8.298041773773189e-07, 
+          190.57241349076935
+        ], 
+        "cV": [
+          0.0, 
+          0.0, 
+          8.001489626516288e-07, 
+          190.5558871872486
+        ], 
+        "rhomolar_max": 10178.523590876614, 
+        "rhomolar_min": 10098.272325109083
+      }, 
       "gas_constant": 8.31451, 
       "gas_constant_units": "J/mol/K", 
       "molar_mass": 0.0160428, 
@@ -539,7 +558,7 @@
     "triple_liquid": {
       "T": 90.6941, 
       "T_units": "K", 
-      "p": 11696.064115023479, 
+      "p": 11696.064115433426, 
       "p_units": "Pa", 
       "rhomolar": 28141.91479265919, 
       "rhomolar_units": "mol/m^3"
@@ -547,9 +566,9 @@
     "triple_vapor": {
       "T": 90.6941, 
       "T_units": "K", 
-      "p": 11696.064115134473, 
+      "p": 11696.064115134383, 
       "p_units": "Pa", 
-      "rhomolar": 15.629691809717388, 
+      "rhomolar": 15.62969180971727, 
       "rhomolar_units": "mol/m^3"
     }
   }
