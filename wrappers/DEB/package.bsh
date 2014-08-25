@@ -33,11 +33,11 @@ function executeCommand {
 function createVanillaTarBallAndDir {
   executeCommand "mkdir -p \"$VANILLAFOL\""
   pushd "$CPPAT"
-  executeCommand "rsync -a -q --delete-excluded --exclude '.git' --exclude 'wrappers' . \"$WORKINGDIR/$VANILLAFOL\""
+  executeCommand "rsync -a -q --delete-excluded --exclude '.git' --exclude 'Web' --exclude 'wrappers' . \"$WORKINGDIR/$VANILLAFOL\""
   popd
-  pushd "$VANILLAFOL"
-  executeCommand "cmake . -DCOOLPROP_DEBIAN_PACKAGE=ON -DCOOLPROP_INSTALL_PREFIX=\".\""
-  popd
+#   pushd "$VANILLAFOL"
+#   executeCommand "cmake . -DCOOLPROP_DEBIAN_PACKAGE=ON -DCOOLPROP_INSTALL_PREFIX=\"\""
+#   popd
   rm -f "$VANILLAFIL"
   executeCommand "tar -czf \"$VANILLAFIL\" \"$VANILLAFOL\""
 }
