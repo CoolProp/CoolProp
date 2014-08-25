@@ -26,6 +26,7 @@
 #include "VLERoutines.h"
 #include "FlashRoutines.h"
 #include "TransportRoutines.h"
+#include "MixtureDerivatives.h"
 
 static int deriv_counter = 0;
 
@@ -1132,7 +1133,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         // Run the saturation routines to determine the saturation densities and pressures
         HelmholtzEOSMixtureBackend HEOS(components);
         SaturationSolvers::saturation_T_pure_options options;
-        SaturationSolvers::saturation_T_pure(&HEOS, _T, options);
+        SaturationSolvers::saturation_T_pure(HEOS, _T, options);
 
         long double Q;
 
@@ -1991,7 +1992,7 @@ long double HelmholtzEOSMixtureBackend::calc_gibbsmolar(void)
 }
 long double HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(int i)
 {
-    return exp(mixderiv_ln_fugacity_coefficient(i));
+    return exp(MixtureDerivatives::ln_fugacity_coefficient(*this, i));
 }
 
 SimpleState HelmholtzEOSMixtureBackend::calc_reducing_state_nocache(const std::vector<long double> & mole_fractions)
@@ -2288,230 +2289,6 @@ long double HelmholtzEOSMixtureBackend::calc_d3alpha0_dTau3(void)
 {
     const int nTau = 3, nDelta = 0;
     return calc_alpha0_deriv_nocache(nTau, nDelta, mole_fractions, _tau, _delta, _reducing.T, _reducing.rhomolar);
-}
-
-
-long double HelmholtzEOSMixtureBackend::mixderiv_dalphar_dxi(int i)
-{
-    return components[i]->pEOS->baser(_tau, _delta) + Excess.dalphar_dxi(_tau, _delta, mole_fractions, i);
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_d2alphar_dxi_dTau(int i)
-{
-    return components[i]->pEOS->dalphar_dTau(_tau, _delta) + Excess.d2alphar_dxi_dTau(_tau, _delta, mole_fractions, i);
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_d2alphar_dxi_dDelta(int i)
-{
-    return components[i]->pEOS->dalphar_dDelta(_tau, _delta) + Excess.d2alphar_dxi_dDelta(_tau, _delta, mole_fractions, i);
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_d2alphardxidxj(int i, int j)
-{
-    return 0                           + Excess.d2alphardxidxj(_tau, _delta, mole_fractions, i, j);
-}
-
-long double HelmholtzEOSMixtureBackend::mixderiv_ln_fugacity_coefficient(int i)
-{
-    return alphar() + mixderiv_ndalphar_dni__constT_V_nj(i)-log(1+_delta.pt()*dalphar_dDelta());
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_dln_fugacity_coefficient_dT__constrho_n(int i)
-{
-    double dtau_dT = -_tau.pt()/_T; //[1/K]
-    return (dalphar_dTau() + mixderiv_d_ndalphardni_dTau(i)-1/(1+_delta.pt()*dalphar_dDelta())*(_delta.pt()*d2alphar_dDelta_dTau()))*dtau_dT;
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_dln_fugacity_coefficient_drho__constT_n(int i)
-{
-    double ddelta_drho = 1/_reducing.rhomolar; //[m^3/mol]
-    return (dalphar_dDelta() + mixderiv_d_ndalphardni_dDelta(i)-1/(1+_delta.pt()*dalphar_dDelta())*(_delta.pt()*d2alphar_dDelta2()+dalphar_dDelta()))*ddelta_drho;
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_dnalphar_dni__constT_V_nj(int i)
-{
-    // GERG Equation 7.42
-    return alphar() + mixderiv_ndalphar_dni__constT_V_nj(i);
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_d2nalphar_dni_dT(int i)
-{
-    return -_tau.pt()/_T*(dalphar_dTau() + mixderiv_d_ndalphardni_dTau(i));
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_dln_fugacity_coefficient_dT__constp_n(int i)
-{
-    double T = _reducing.T/_tau.pt();
-    long double R_u = static_cast<long double>(_gas_constant);
-    return mixderiv_d2nalphar_dni_dT(i) + 1/T-mixderiv_partial_molar_volume(i)/(R_u*T)*mixderiv_dpdT__constV_n();
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_partial_molar_volume(int i)
-{
-    return -mixderiv_ndpdni__constT_V_nj(i)/mixderiv_ndpdV__constT_n();
-}
-
-long double HelmholtzEOSMixtureBackend::mixderiv_dln_fugacity_coefficient_dp__constT_n(int i)
-{
-    // GERG equation 7.30
-    long double R_u = static_cast<long double>(_gas_constant);
-    double partial_molar_volume = mixderiv_partial_molar_volume(i); // [m^3/mol]
-    double term1 = partial_molar_volume/(R_u*_T); // m^3/mol/(N*m)*mol = m^2/N = 1/Pa
-    double term2 = 1.0/p();
-    return term1 - term2;
-}
-
-long double HelmholtzEOSMixtureBackend::mixderiv_dln_fugacity_coefficient_dxj__constT_p_xi(int i, int j)
-{
-    // Gernert 3.115
-    long double R_u = static_cast<long double>(_gas_constant);
-    // partial molar volume is -dpdn/dpdV, so need to flip the sign here
-    return mixderiv_d2nalphar_dni_dxj__constT_V(i,j) - mixderiv_partial_molar_volume(i)/(R_u*_T)*mixderiv_dpdxj__constT_V_xi(j);
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_dpdxj__constT_V_xi(int j)
-{
-    // Gernert 3.130
-    long double R_u = static_cast<long double>(_gas_constant);
-    return _rhomolar*R_u*_T*(mixderiv_ddelta_dxj__constT_V_xi(j)*dalphar_dDelta()+_delta.pt()*mixderiv_d_dalpharddelta_dxj__constT_V_xi(j));
-}
-
-long double HelmholtzEOSMixtureBackend::mixderiv_d_dalpharddelta_dxj__constT_V_xi(int j)
-{
-    // Gernert Equation 3.134 (Catch test provided)
-    return d2alphar_dDelta2()*mixderiv_ddelta_dxj__constT_V_xi(j)
-         + d2alphar_dDelta_dTau()*mixderiv_dtau_dxj__constT_V_xi(j)
-         + mixderiv_d2alphar_dxi_dDelta(j);
-}
-
-long double HelmholtzEOSMixtureBackend::mixderiv_dalphar_dxj__constT_V_xi(int j)
-{
-    //Gernert 3.119 (Catch test provided)
-    return dalphar_dDelta()*mixderiv_ddelta_dxj__constT_V_xi(j)+dalphar_dTau()*mixderiv_dtau_dxj__constT_V_xi(j)+mixderiv_dalphar_dxi(j);
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_d_ndalphardni_dxj__constT_V_xi(int i, int j)
-{
-    // Gernert 3.118
-    return mixderiv_d_ndalphardni_dxj__constdelta_tau_xi(i,j)
-          + mixderiv_ddelta_dxj__constT_V_xi(j)*mixderiv_d_ndalphardni_dDelta(i)
-          + mixderiv_dtau_dxj__constT_V_xi(j)*mixderiv_d_ndalphardni_dTau(i);
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_ddelta_dxj__constT_V_xi(int j)
-{
-    // Gernert 3.121 (Catch test provided)
-    return -_delta.pt()/_reducing.rhomolar*Reducing.p->drhormolardxi__constxj(mole_fractions,j);
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_dtau_dxj__constT_V_xi(int j)
-{
-    // Gernert 3.122 (Catch test provided)
-    return 1/_T*Reducing.p->dTrdxi__constxj(mole_fractions,j);
-}
-
-long double HelmholtzEOSMixtureBackend::mixderiv_dpdT__constV_n()
-{
-    long double R_u = static_cast<long double>(_gas_constant);
-    return _rhomolar*R_u*(1+_delta.pt()*dalphar_dDelta()-_delta.pt()*_tau.pt()*d2alphar_dDelta_dTau());
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_dpdrho__constT_n()
-{
-    long double R_u = static_cast<long double>(_gas_constant);
-    return R_u*_T*(1+2*_delta.pt()*dalphar_dDelta()+pow(_delta.pt(),2)*d2alphar_dDelta2());
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_ndpdV__constT_n()
-{
-    long double R_u = static_cast<long double>(_gas_constant);
-    return -pow(_rhomolar,2)*R_u*_T*(1+2*_delta.pt()*dalphar_dDelta()+pow(_delta.pt(),2)*d2alphar_dDelta2());
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_ndpdni__constT_V_nj(int i)
-{
-    // Eqn 7.64 and 7.63
-    long double R_u = static_cast<long double>(_gas_constant);
-    double ndrhorbar_dni__constnj = Reducing.p->ndrhorbardni__constnj(mole_fractions,i);
-    double ndTr_dni__constnj = Reducing.p->ndTrdni__constnj(mole_fractions,i);
-    double summer = 0;
-    for (unsigned int k = 0; k < mole_fractions.size(); ++k)
-    {
-        summer += mole_fractions[k]*mixderiv_d2alphar_dxi_dDelta(k);
-    }
-    double nd2alphar_dni_dDelta = _delta.pt()*d2alphar_dDelta2()*(1-1/_reducing.rhomolar*ndrhorbar_dni__constnj)+_tau.pt()*d2alphar_dDelta_dTau()/_reducing.T*ndTr_dni__constnj+mixderiv_d2alphar_dxi_dDelta(i)-summer;
-    return _rhomolar*R_u*_T*(1+_delta.pt()*dalphar_dDelta()*(2-1/_reducing.rhomolar*ndrhorbar_dni__constnj)+_delta.pt()*nd2alphar_dni_dDelta);
-}
-
-long double HelmholtzEOSMixtureBackend::mixderiv_ndalphar_dni__constT_V_nj(int i)
-{
-    double term1 = _delta.pt()*dalphar_dDelta()*(1-1/_reducing.rhomolar*Reducing.p->ndrhorbardni__constnj(mole_fractions,i));
-    double term2 = _tau.pt()*dalphar_dTau()*(1/_reducing.T)*Reducing.p->ndTrdni__constnj(mole_fractions,i);
-
-    double s = 0;
-    for (unsigned int k = 0; k < mole_fractions.size(); k++)
-    {
-        s += mole_fractions[k]*mixderiv_dalphar_dxi(k);
-    }
-    double term3 = mixderiv_dalphar_dxi(i);
-    return term1 + term2 + term3 - s;
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_ndln_fugacity_coefficient_dnj__constT_p(int i, int j)
-{
-    long double R_u = static_cast<long double>(_gas_constant);
-    return mixderiv_nd2nalphardnidnj__constT_V(j, i) + 1 - mixderiv_partial_molar_volume(j)/(R_u*_T)*mixderiv_ndpdni__constT_V_nj(i);
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_nddeltadni__constT_V_nj(int i)
-{
-    return _delta.pt()-_delta.pt()/_reducing.rhomolar*Reducing.p->ndrhorbardni__constnj(mole_fractions, i);
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_ndtaudni__constT_V_nj(int i)
-{
-    return _tau.pt()/_reducing.T*Reducing.p->ndTrdni__constnj(mole_fractions, i);
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_d_ndalphardni_dxj__constdelta_tau_xi(int i, int j)
-{
-    double line1 = _delta.pt()*mixderiv_d2alphar_dxi_dDelta(j)*(1-1/_reducing.rhomolar*Reducing.p->ndrhorbardni__constnj(mole_fractions, i));
-    double line2 = -_delta.pt()*dalphar_dDelta()*(1/_reducing.rhomolar)*(Reducing.p->d_ndrhorbardni_dxj__constxi(mole_fractions, i, j)-1/_reducing.rhomolar*Reducing.p->drhormolardxi__constxj(mole_fractions,j)*Reducing.p->ndrhorbardni__constnj(mole_fractions,i));
-    double line3 = _tau.pt()*mixderiv_d2alphar_dxi_dTau(j)*(1/_reducing.T)*Reducing.p->ndTrdni__constnj(mole_fractions, i);
-    double line4 = _tau.pt()*dalphar_dTau()*(1/_reducing.T)*(Reducing.p->d_ndTrdni_dxj__constxi(mole_fractions,i,j)-1/_reducing.T*Reducing.p->dTrdxi__constxj(mole_fractions,j)*Reducing.p->ndTrdni__constnj(mole_fractions, i));
-    double s = 0;
-    for (unsigned int m = 0; m < mole_fractions.size(); m++)
-    {
-        s += mole_fractions[m]*mixderiv_d2alphardxidxj(j,m);
-    }
-    double line5 = mixderiv_d2alphardxidxj(i,j)-mixderiv_dalphar_dxi(j)-s;
-    return line1+line2+line3+line4+line5;
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_nd2nalphardnidnj__constT_V(int i, int j)
-{
-    double line0 = mixderiv_ndalphar_dni__constT_V_nj(j); // First term from 7.46
-    double line1 = mixderiv_d_ndalphardni_dDelta(i)*mixderiv_nddeltadni__constT_V_nj(j);
-    double line2 = mixderiv_d_ndalphardni_dTau(i)*mixderiv_ndtaudni__constT_V_nj(j);
-    double summer = 0;
-    for (unsigned int k = 0; k < mole_fractions.size(); k++)
-    {
-        summer += mole_fractions[k]*mixderiv_d_ndalphardni_dxj__constdelta_tau_xi(i, k);
-    }
-    double line3 = mixderiv_d_ndalphardni_dxj__constdelta_tau_xi(i, j)-summer;
-    return line0 + line1 + line2 + line3;
-}
-long double HelmholtzEOSMixtureBackend::mixderiv_d_ndalphardni_dDelta(int i)
-{
-    // The first line
-    double term1 = (_delta.pt()*d2alphar_dDelta2()+dalphar_dDelta())*(1-1/_reducing.rhomolar*Reducing.p->ndrhorbardni__constnj(mole_fractions, i));
-
-    // The second line
-    double term2 = _tau.pt()*d2alphar_dDelta_dTau()*(1/_reducing.T)*Reducing.p->ndTrdni__constnj(mole_fractions, i);
-
-    // The third line
-    double term3 = mixderiv_d2alphar_dxi_dDelta(i);
-    for (unsigned int k = 0; k < mole_fractions.size(); k++)
-    {
-        term3 -= mole_fractions[k]*mixderiv_d2alphar_dxi_dDelta(k);
-    }
-    return term1 + term2 + term3;
-}
-
-long double HelmholtzEOSMixtureBackend::mixderiv_d_ndalphardni_dTau(int i)
-{
-    // The first line
-    double term1 = _delta.pt()*d2alphar_dDelta_dTau()*(1-1/_reducing.rhomolar*Reducing.p->ndrhorbardni__constnj(mole_fractions, i));
-
-    // The second line
-    double term2 = (_tau.pt()*d2alphar_dTau2()+dalphar_dTau())*(1/_reducing.T)*Reducing.p->ndTrdni__constnj(mole_fractions, i);
-
-    // The third line
-    double term3 = mixderiv_d2alphar_dxi_dTau(i);
-    for (unsigned int k = 0; k < mole_fractions.size(); k++)
-    {
-        term3 -= mole_fractions[k]*mixderiv_d2alphar_dxi_dTau(k);
-    }
-    return term1 + term2 + term3;
 }
 
 

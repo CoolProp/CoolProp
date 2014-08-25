@@ -75,7 +75,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                         options.omega = omega;
                         
                         // Actually call the solver
-                        SaturationSolvers::saturation_T_pure(&HEOS, HEOS._T, options);
+                        SaturationSolvers::saturation_T_pure(HEOS, HEOS._T, options);
                         
                         // If you get here, there was no error, all is well
                         break;
@@ -91,7 +91,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
             catch(std::exception &){
                 try{
                     // We may need to polish the solution at low pressure
-                    SaturationSolvers::saturation_T_pure_1D_P(&HEOS, T, options);
+                    SaturationSolvers::saturation_T_pure_1D_P(HEOS, T, options);
                 }
                 catch(std::exception &){
                     throw;
@@ -144,10 +144,10 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         options.Nstep_max = 20;
 
         // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
-        long double pguess = SaturationSolvers::saturation_preconditioner(&HEOS, HEOS._T, SaturationSolvers::imposed_T, HEOS.mole_fractions);
+        long double pguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._T, SaturationSolvers::imposed_T, HEOS.mole_fractions);
 
         // Use Wilson iteration to obtain updated guess for pressure
-        pguess = SaturationSolvers::saturation_Wilson(&HEOS, HEOS._Q, HEOS._T, SaturationSolvers::imposed_T, HEOS.mole_fractions, pguess);
+        pguess = SaturationSolvers::saturation_Wilson(HEOS, HEOS._Q, HEOS._T, SaturationSolvers::imposed_T, HEOS.mole_fractions, pguess);
 
         // Actually call the successive substitution solver
         SaturationSolvers::successive_substitution(HEOS, HEOS._Q, HEOS._T, pguess, HEOS.mole_fractions, HEOS.K, options);
@@ -210,7 +210,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
                         options.omega = omega;
                         
                         // Actually call the solver
-                        SaturationSolvers::saturation_PHSU_pure(&HEOS, HEOS._p, options);
+                        SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS._p, options);
                         
                         // If you get here, there was no error, all is well
                         break;
@@ -225,7 +225,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             }
             catch(std::exception &){
                 // We may need to polish the solution at low pressure
-                SaturationSolvers::saturation_P_pure_1D_T(&HEOS, HEOS._p, options);
+                SaturationSolvers::saturation_P_pure_1D_T(HEOS, HEOS._p, options);
             }
 
             // Load the outputs
@@ -250,10 +250,10 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         io.Nstep_max = 20;
 
         // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
-        long double Tguess = SaturationSolvers::saturation_preconditioner(&HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
+        long double Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
 
         // Use Wilson iteration to obtain updated guess for temperature
-        Tguess = SaturationSolvers::saturation_Wilson(&HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
+        Tguess = SaturationSolvers::saturation_Wilson(HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
 
         // Actually call the successive substitution solver
         SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
@@ -350,14 +350,14 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
                 if (HEOS._rhomolar > HEOS._crit.rhomolar)
                 {
                     options.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOL;
-                    SaturationSolvers::saturation_D_pure(&HEOS, HEOS._rhomolar, options);
+                    SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, options);
                     // SatL and SatV have the saturation values
                     Sat = HEOS.SatL;
                 }
                 else
                 {
                     options.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOV;
-                    SaturationSolvers::saturation_D_pure(&HEOS, HEOS._rhomolar, options);
+                    SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, options);
                     // SatL and SatV have the saturation values
                     Sat = HEOS.SatV;
                 }
