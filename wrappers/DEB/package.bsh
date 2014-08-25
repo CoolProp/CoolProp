@@ -5,8 +5,9 @@
 # including the famous Ubuntu.
 ###############################################
 #
-CPVER="5.0" #TODO: automate this!
+#CPVER="5.0" #TODO: automate this!
 CPPAT="../.." # relative (!) path to CoolProp sources
+CPVER=$( grep COOLPROP_VERSION_MAJOR $CPPAT/CMakeLists.txt | head -1 | cut -d " " -f 3 | cut -d ")" -f1 ).$( grep COOLPROP_VERSION_MINOR $CPPAT/CMakeLists.txt | head -1 | cut -d " " -f 3 | cut -d ")" -f1 )
 #
 # Constants, should not be changed
 WORKINGDIR="$PWD"
