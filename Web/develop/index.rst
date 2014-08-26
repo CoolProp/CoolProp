@@ -1,3 +1,4 @@
+.. _develop:
 
 **************************
 Information for Developers
@@ -5,6 +6,7 @@ Information for Developers
 
 .. toctree::
 
+  code.rst
   cmake.rst
   buildbot.rst
   documentation.rst

@@ -96,6 +96,12 @@ public:
     static long double viscosity_dilute_ethane(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_dilute_cyclohexane(HelmholtzEOSMixtureBackend &HEOS);
 
+    /** \brief Viscosity hardcoded for Methanol
+     * 
+     * From Xiang et al., A New Reference Correlation for the Viscosity of Methanol, J. Phys. Chem. Ref. Data, Vol. 35, No. 4, 2006
+     */
+    static long double viscosity_methanol_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+
     static long double viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_R23_hardcoded(HelmholtzEOSMixtureBackend &HEOS);

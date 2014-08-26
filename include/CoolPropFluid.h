@@ -53,8 +53,6 @@ struct CriticalRegionSplines{
         // Liquid part
         // -----------
         Ngood = 0;
-        long double v1 = cL[0]*pow(rho_crit,3) + cL[1]*pow(rho_crit,2) + cL[2]*pow(rho_crit,1) + cL[3];
-        long double v2 = cL[0]*pow(rho_max,3) + cL[1]*pow(rho_max,2) + cL[2]*pow(rho_max,1) + cL[3];
         solve_cubic(cL[0], cL[1], cL[2], cL[3]-T, Nsoln, rho1, rho2, rho3);
         if (rho1 < rho_max && rho1 > rho_crit){ Ngood++; rhoL = rho1; }
         if (rho2 < rho_max && rho2 > rho_crit){ Ngood++; rhoL = rho2; }
@@ -262,6 +260,7 @@ public:
     enum ViscosityHardcodedEnum {VISCOSITY_HARDCODED_WATER, ///< Use \ref TransportRoutines::viscosity_water_hardcoded
                               VISCOSITY_HARDCODED_HELIUM, ///< Use \ref TransportRoutines::viscosity_helium_hardcoded
                               VISCOSITY_HARDCODED_R23, ///< Use \ref TransportRoutines::viscosity_R23_hardcoded
+                              VISCOSITY_HARDCODED_METHANOL, ///< Use \ref TransportRoutines::viscosity_methanol_hardcoded
                               VISCOSITY_NOT_HARDCODED
                               };
     enum ConductivityHardcodedEnum {
