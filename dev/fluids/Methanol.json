@@ -455,5 +455,11 @@
       "rhomolar": 0.00012793439653979163, 
       "rhomolar_units": "mol/m^3"
     }
+  },
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Xiang-JPCRD-2006", 
+      "hardcoded": "Methanol"
+    }
   }
 }

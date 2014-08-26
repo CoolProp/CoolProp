@@ -127,8 +127,6 @@ R113
 
 :::::::::::: QUEUE :::::::::::::
 ECS params for new fluids
-Methanol
-    visc: Xiang
 Ethylene
     visc & cond: Holland 1983
 Methane
