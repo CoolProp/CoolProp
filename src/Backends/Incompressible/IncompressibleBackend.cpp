@@ -37,7 +37,7 @@ IncompressibleBackend::IncompressibleBackend(const std::vector<std::string> &com
 	throw NotImplementedError("Mixture-style constructor is not implemented yet for incompressible fluids");
 }
 
-void IncompressibleBackend::update(long input_pair, double value1, double value2) {
+void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
     //if (mass_fractions.empty()){
     //    throw ValueError("mass fractions have not been set");
     //}

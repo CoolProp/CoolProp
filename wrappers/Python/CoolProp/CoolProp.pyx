@@ -23,6 +23,7 @@ from libcpp.vector cimport vector
 
 from constants import *
 from constants_header cimport *
+cimport constants_header
 
 cdef bint iterable(object a):
     """
@@ -34,7 +35,7 @@ cdef bint iterable(object a):
     else:
         return isinstance(a,(list, tuple))
 
-cpdef ndarray_or_iterable(object input):
+cdef ndarray_or_iterable(object input):
     if _numpy_supported:
         return np.array(input)
     else:
@@ -133,27 +134,38 @@ cpdef get_global_param_string(string param):
 cpdef get_fluid_param_string(string fluid, string param):
     return _get_fluid_param_string(fluid, param)
      
-cpdef __Props_err1(in1,in2):
+cpdef __Props_err1(fcn, in1,in2):
     errstr = _get_global_param_string('errstring')
     if not len(errstr) == 0:
         raise ValueError("{err:s} :: inputs were :\"{in1:s}\",\"{in2:s}\"".format(err= errstr,in1=in1,in2=in2))
     else:
-        raise ValueError("Props failed ungracefully with inputs:\"{in1:s}\",\"{in2:s}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(in1=in1,in2=in2))
-cpdef __Props_err2(in1, in2, in3, in4, in5, in6):
+        raise ValueError("{fcn:s} failed ungracefully with inputs:\"{in1:s}\",\"{in2:s}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(fcn=fcn, in1=in1,in2=in2))
+        
+cpdef __Props_err2(fcn, in1, in2, in3, in4, in5, in6):
     errstr = _get_global_param_string('errstring')
     if not len(errstr) == 0:
         raise ValueError("{err:s}".format(err=errstr))
     else:
-        raise ValueError("Props failed ungracefully :: inputs were:\"{in1:s}\",\"{in2:s}\",{in3:0.16e},\"{in4:s}\",{in5:0.16e},\"{in6:s}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(in1=in1,in2=in2,in3=in3,in4=in4,in5=in5,in6=in6))
+        raise ValueError("{fcn:s} failed ungracefully :: inputs were:\"{in1:s}\",\"{in2:s}\",{in3:0.16e},\"{in4:s}\",{in5:0.16e},\"{in6:s}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(fcn = fcn, in1=in1,in2=in2,in3=in3,in4=in4,in5=in5,in6=in6))
 
-# cpdef Props(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = None):
-#     """
-#     $$Props$$
-#     """ 
-#     if in7 is None:
-#         return _Props(in1, in2, in3, in4, in5, in6) 
-#     else:
-#         return _Props(in1, in2, in3, in4, in5, in6, in7)
+cpdef Props(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None):
+    """
+    ${CoolProp::Props}
+    """ 
+    import warnings
+    dep_warning = "Props() function is deprecated; Use the PropsSI() function"
+    warnings.warn_explicit(dep_warning, category=UserWarning, filename='CoolProp.pyx', lineno = -1)
+    if len(in2) != 1: 
+        raise ValueError('Length of input name #1 must be 1 character')
+    if len(in4) != 1: 
+        raise ValueError('Length of input name #2 must be 1 character')
+    cdef char* c1 = (<bytes>in2)
+    cdef char* c2 = (<bytes>in4)
+    val = _Props(in1, c1[0], in3, c2[0], in5, in6)
+    if not _ValidNumber(val):
+        __Props_err2("Props", in1, in2, in3, in4, in5, in6)
+    else:
+        return val
 
 cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = None):
     """
@@ -165,7 +177,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
     if in3 is None and in4 is None and in5 is None and in6 is None and in7 is None:
         val = _Props1SI(in1, in2)
         if not _ValidNumber(val):
-            __Props_err1(in1, in2)
+            __Props_err1("PropsSI", in1, in2)
         else:
             return val
     # Six parameter inputs
@@ -177,7 +189,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             # This version takes doubles
             val = _PropsSI(in1, in2, in3, in4, in5, in6)
             if not _ValidNumber(val):
-                __Props_err2(in1, in2, in3, in4, in5, in6)
+                __Props_err2("PropsSI", in1, in2, in3, in4, in5, in6)
             else:
                 return val
     else:

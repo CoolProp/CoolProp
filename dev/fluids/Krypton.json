@@ -255,17 +255,17 @@
         "sat_min_liquid": {
           "T": 115.77, 
           "T_units": "K", 
-          "p": 73502.83747455706, 
+          "p": 73502.83747459138, 
           "p_units": "Pa", 
-          "rhomolar": 29197.322406785577, 
+          "rhomolar": 29197.322406785574, 
           "rhomolar_units": "mol/m^3"
         }, 
         "sat_min_vapor": {
           "T": 115.77, 
           "T_units": "K", 
-          "p": 73502.83747460482, 
+          "p": 73502.83747460498, 
           "p_units": "Pa", 
-          "rhomolar": 78.41752340870158, 
+          "rhomolar": 78.41752340870174, 
           "rhomolar_units": "mol/m^3"
         }
       }, 
@@ -347,6 +347,25 @@
           "type": "ResidualHelmholtzPower"
         }
       ], 
+      "critical_region_splines": {
+        "T_max": 209.48000000000002, 
+        "T_min": 209.47310506132737, 
+        "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
+        "cL": [
+          6.390300964893231e-11, 
+          -2.199509680360674e-06, 
+          0.02516089390363733, 
+          113.79346021244321
+        ], 
+        "cV": [
+          -3.436623953002642e-11, 
+          1.0066209446840255e-06, 
+          -0.009706635600422744, 
+          240.19068612286947
+        ], 
+        "rhomolar_max": 11108.82129459245, 
+        "rhomolar_min": 10591.412518037536
+      }, 
       "gas_constant": 8.314472, 
       "gas_constant_units": "J/mol/K", 
       "molar_mass": 0.083798, 
@@ -370,17 +389,17 @@
     "triple_liquid": {
       "T": 115.77, 
       "T_units": "K", 
-      "p": 73502.83747455706, 
+      "p": 73502.83747459138, 
       "p_units": "Pa", 
-      "rhomolar": 29197.322406785577, 
+      "rhomolar": 29197.322406785574, 
       "rhomolar_units": "mol/m^3"
     }, 
     "triple_vapor": {
       "T": 115.77, 
       "T_units": "K", 
-      "p": 73502.83747460482, 
+      "p": 73502.83747460498, 
       "p_units": "Pa", 
-      "rhomolar": 78.41752340870158, 
+      "rhomolar": 78.41752340870174, 
       "rhomolar_units": "mol/m^3"
     }
   }

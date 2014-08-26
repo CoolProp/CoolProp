@@ -1,6 +1,8 @@
 from libcpp cimport bool 
 from libcpp.string cimport string
 
+
+cimport constants_header
 cdef extern from "AbstractState.h" namespace "CoolProp":
     cdef cppclass AbstractState:
         
@@ -12,7 +14,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
 
         ## Property updater
         ## Uses the indices in CoolProp for the input parameters
-        void update(long iInput1, double Value1, double Value2) except +ValueError
+        void update(constants_header.input_pairs iInput1, double Value1, double Value2) except +ValueError
 
         ## Bulk properties accessors - temperature and density are directly calculated every time
         ## All other parameters are calculated on an as-needed basis
@@ -31,7 +33,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double cpmass() except +ValueError
         double cvmass() except +ValueError
         
-        double keyed_output(long) except+ValueError
+        double keyed_output(constants_header.parameters) except+ValueError
         double molar_mass() except+ValueError
         double gas_constant() except+ValueError
         double build_phase_envelope() except+ValueError

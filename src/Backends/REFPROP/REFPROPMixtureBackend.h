@@ -46,17 +46,12 @@ public:
 	@param value1 First input value
 	@param value2 Second input value
 	*/
-	void update(long input_pair,
+	void update(CoolProp::input_pairs,
 				double value1,
 				double value2
 				);
 
-    long double calc_molar_mass(void){
-        if (!_molar_mass){
-            calc_molar_mass();
-        }
-        return _molar_mass.pt();
-    };
+    long double calc_molar_mass(void);
 
 	/// Returns true if REFPROP is supported on this platform
 	bool REFPROP_supported(void);
@@ -95,6 +90,10 @@ public:
 	long double calc_melting_line(int param, int given, long double value);
     bool has_melting_line(){return true;};
     double calc_melt_Tmax();
+    long double calc_T_critical(void);
+    long double calc_p_critical(void);
+    long double calc_rhomolar_critical(void);
+    long double calc_Ttriple(void);
 	
 	/// A wrapper function to calculate the limits for the EOS
 	void limits(double &Tmin, double &Tmax, double &rhomolarmax, double &pmax);

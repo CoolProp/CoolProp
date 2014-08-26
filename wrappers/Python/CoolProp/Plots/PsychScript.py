@@ -1,7 +1,8 @@
-
+import matplotlib
+matplotlib.use('TKAgg')
 import numpy, matplotlib
 import CoolProp
-CoolProp.CoolProp.set_debug_level(10)
+#CoolProp.CoolProp.set_debug_level(10)
 from CoolProp.HumidAirProp import HAPropsSI
 from CoolProp.Plots.Plots import InlineLabel 
 
@@ -12,13 +13,10 @@ Tdb = numpy.linspace(-10, 60, 100)+273.15
 fig=matplotlib.pyplot.figure(figsize=(10,8))
 ax=fig.add_axes((0.1,0.1,0.85,0.85))
 
-print HAPropsSI('W','T',273.155,'P',p,'R',1.0)
-
 # Saturation line
 w = HAPropsSI('W','T',Tdb,'P',[p]*len(Tdb),'R',1.0)
 ax.plot(Tdb-273.15,w,lw=2)
 
-matplotlib.pyplot.show()
 
 # Humidity lines
 RHValues = [0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
@@ -27,13 +25,13 @@ for RH in RHValues:
     ax.plot(Tdb-273.15,w,'r',lw=1)
 
 #~ # Humidity lines
-#~ for H in [-20000, -10000, 0000, 10000, 20000, 30000, 40000, 50000, 60000, 700000, 80000, 90000]:
-    #~ #Line goes from saturation to zero humidity ratio for this enthalpy
-    #~ T1 = HAPropsSI('T','H',H,'P',p,'R',1.0)-273.15
-    #~ T0 = HAPropsSI('T','H',H,'P',p,'R',0.0)-273.15
-    #~ w1 = HAPropsSI('W','H',H,'P',p,'R',1.0)
-    #~ w0 = HAPropsSI('W','H',H,'P',p,'R',0.0)
-    #~ ax.plot(numpy.r_[T1,T0],numpy.r_[w1,w0], 'r', lw=1)
+for H in [-20000, -10000, 0000, 10000, 20000, 30000, 40000, 50000, 60000, 700000, 80000, 90000]:
+    #Line goes from saturation to zero humidity ratio for this enthalpy
+    T1 = HAPropsSI('T','H',H,'P',p,'R',1.0)-273.15
+    T0 = HAPropsSI('T','H',H,'P',p,'R',0.0)-273.15
+    w1 = HAPropsSI('W','H',H,'P',p,'R',1.0)
+    w0 = HAPropsSI('W','H',H,'P',p,'R',0.0)
+    ax.plot(numpy.r_[T1,T0],numpy.r_[w1,w0], 'r', lw=1)
 
 ax.set_xlim(Tdb[0]-273.15,Tdb[-1]-273.15)
 ax.set_ylim(0,0.03)

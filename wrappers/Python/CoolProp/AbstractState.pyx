@@ -1,5 +1,7 @@
-#cython: embedsignature = True, c_string_type=str, c_string_encoding=ascii
-        
+# This file is embedded directly in CoolProp.pyx
+
+cimport constants_header
+
 cdef class AbstractState:
     """
     This class is a one-to-one python wrapper of the :cpapi:`AbstractState` class
@@ -11,7 +13,7 @@ cdef class AbstractState:
     def __dealloc__(self):
         del self.thisptr
     
-    cpdef update(self, long ipair, double Value1, double Value2):
+    cpdef update(self, constants_header.input_pairs ipair, double Value1, double Value2):
         """ Update function - mirrors c++ function :cpapi:`AbstractState::update` """
         self.thisptr.update(ipair, Value1, Value2)
     
@@ -19,7 +21,7 @@ cdef class AbstractState:
     ##        Fluid property accessors
     ## ----------------------------------------
     
-    cpdef double keyed_output(self, long iOutput) except *: 
+    cpdef double keyed_output(self, parameters iOutput) except *: 
         """ Update :cpapi:`AbstractState::update` """
         return self.thisptr.keyed_output(iOutput)
     

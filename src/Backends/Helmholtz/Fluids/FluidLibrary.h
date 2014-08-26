@@ -222,7 +222,7 @@ protected:
                 long double T0 = cpjson::get_double(contribution, "T0");
 
                 // Take the constant term if nonzero and set it as a polyT term
-                if (fabs(constants[0]) > 1e-14){
+                if (std::abs(constants[0]) > 1e-14){
                     std::vector<long double> c(1,constants[0]), t(1,0);
                     if (EOS.alpha0.CP0PolyT.is_enabled() == true){
                         EOS.alpha0.CP0PolyT.extend(c,t);
@@ -233,7 +233,7 @@ protected:
                 }
 
                 std::vector<long double> n, c, d, t;
-                if (fabs(constants[1]) > 1e-14){
+                if (std::abs(constants[1]) > 1e-14){
                     // sinh term can be converted by setting  a_k = C, b_k = 2*D, c_k = -1, d_k = 1
                     n.push_back(constants[1]);
                     t.push_back(-2*constants[2]/Tc);
@@ -241,7 +241,7 @@ protected:
                     d.push_back(-1);
                 }
 
-                if (fabs(constants[3]) > 1e-14){
+                if (std::abs(constants[3]) > 1e-14){
                     // cosh term can be converted by setting  a_k = C, b_k = 2*D, c_k = 1, d_k = 1
                     n.push_back(-constants[3]);
                     t.push_back(-2*constants[4]/Tc);
@@ -352,6 +352,16 @@ protected:
             EOS.max_sat_p.rhomolar = cpjson::get_double(s, "rhomolar");
         }
         
+        if (EOS_json.HasMember("critical_region_splines")){
+            rapidjson::Value &spline = EOS_json["critical_region_splines"];
+            EOS.critical_region_splines.T_min = cpjson::get_double(spline, "T_min");
+            EOS.critical_region_splines.T_max = cpjson::get_double(spline, "T_max");
+            EOS.critical_region_splines.rhomolar_min = cpjson::get_double(spline, "rhomolar_min");
+            EOS.critical_region_splines.rhomolar_max = cpjson::get_double(spline, "rhomolar_max");
+            EOS.critical_region_splines.cL = cpjson::get_double_array(spline["cL"]);
+            EOS.critical_region_splines.cV = cpjson::get_double_array(spline["cV"]);
+            EOS.critical_region_splines.enabled = true;
+        }
 
         // Validate the equation of state that was just created
         EOS.validate();
@@ -378,8 +388,8 @@ protected:
             if (!target.compare("Ethane")){
                 fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE; return;
             }
-            else if (!target.compare("Ethane")){
-                fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE; return;
+            else if (!target.compare("Cyclohexane")){
+                fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_CYCLOHEXANE; return;
             }
             else{
                 throw ValueError(format("hardcoded dilute viscosity [%s] is not understood for fluid %s",target.c_str(),fluid.name.c_str()));
@@ -430,16 +440,33 @@ protected:
     };
 
     /// Parse the transport properties
-    void parse_initial_density_viscosity(rapidjson::Value &dilute, CoolPropFluid & fluid)
+    void parse_initial_density_viscosity(rapidjson::Value &initial_density, CoolPropFluid & fluid)
     {
-        std::string type = cpjson::get_string(dilute, "type");
+        std::string type = cpjson::get_string(initial_density, "type");
         if (!type.compare("Rainwater-Friend")){
             // Get a reference to the entry in the fluid instance
             CoolProp::ViscosityRainWaterFriendData &RF = fluid.transport.viscosity_initial.rainwater_friend;
 
             // Load up the values
-            RF.b = cpjson::get_long_double_array(dilute["b"]);
-            RF.t = cpjson::get_long_double_array(dilute["t"]);
+            RF.b = cpjson::get_long_double_array(initial_density["b"]);
+            RF.t = cpjson::get_long_double_array(initial_density["t"]);
+            
+            // Set the type flag
+            fluid.transport.viscosity_initial.type = CoolProp::ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND;
+        }
+        else if (!type.compare("empirical")){
+            // Get a reference to the entry in the fluid instance
+            CoolProp::ViscosityInitialDensityEmpiricalData &EM = fluid.transport.viscosity_initial.empirical;
+
+            // Load up the values
+            EM.n = cpjson::get_long_double_array(initial_density["n"]);
+            EM.d = cpjson::get_long_double_array(initial_density["d"]);
+            EM.t = cpjson::get_long_double_array(initial_density["t"]);
+            EM.T_reducing = cpjson::get_double(initial_density,"T_reducing");
+            EM.rhomolar_reducing = cpjson::get_double(initial_density,"rhomolar_reducing");
+            
+            // Set the type flag
+            fluid.transport.viscosity_initial.type = CoolProp::ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EMPIRICAL;
         }
         else{
             throw ValueError(format("type [%s] is not understood for fluid %s",type.c_str(),fluid.name.c_str()));

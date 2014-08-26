@@ -175,7 +175,7 @@ void solve_cubic(double a, double b, double c, double d, int &N, double &x0, dou
 		double t0;
 		if (4*p*p*p+27*q*q>0 && p<0)
 		{
-			t0 = -2.0*fabs(q)/q*sqrt(-p/3.0)*cosh(1.0/3.0*acosh(-3.0*fabs(q)/(2.0*p)*sqrt(-3.0/p)));
+			t0 = -2.0*std::abs(q)/q*sqrt(-p/3.0)*cosh(1.0/3.0*acosh(-3.0*std::abs(q)/(2.0*p)*sqrt(-3.0/p)));
 		}
 		else
 		{

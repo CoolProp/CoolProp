@@ -4,9 +4,11 @@ from libcpp.string cimport string
 # A header defining the AbstractState class
 cimport cAbstractState
 
+cimport constants_header
+
 cdef class AbstractState:
     cdef cAbstractState.AbstractState *thisptr     # hold a C++ instance which we're wrapping
-    cpdef update(self, long iInput1, double Value1, double Value2)
+    cpdef update(self, constants_header.input_pairs iInput1, double Value1, double Value2)
     
     ## ---------------------------------------- 
     ##        Fluid property accessors
@@ -27,7 +29,7 @@ cdef class AbstractState:
     cpdef double speed_sound(self) except *
     
     cpdef double molar_mass(self) except *
-    cpdef double keyed_output(self, long) except *
+    cpdef double keyed_output(self, constants_header.parameters) except *
     
     cpdef double melting_line(self, int, int, double) except *
     cpdef bool has_melting_line(self) except *

@@ -218,17 +218,17 @@
         "sat_min_liquid": {
           "T": 18.724, 
           "T_units": "K", 
-          "p": 17189.10197323676, 
+          "p": 17189.1019733087, 
           "p_units": "Pa", 
-          "rhomolar": 43350.92089035642, 
+          "rhomolar": 43350.92089035645, 
           "rhomolar_units": "mol/m^3"
         }, 
         "sat_min_vapor": {
           "T": 18.724, 
           "T_units": "K", 
-          "p": 17189.10197325382, 
+          "p": 17189.101973253477, 
           "p_units": "Pa", 
-          "rhomolar": 112.95640342175003, 
+          "rhomolar": 112.95640342174774, 
           "rhomolar_units": "mol/m^3"
         }
       }, 
@@ -413,6 +413,25 @@
           "type": "ResidualHelmholtzGaussian"
         }
       ], 
+      "critical_region_splines": {
+        "T_max": 38.34, 
+        "T_min": 38.33996730937413, 
+        "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
+        "cL": [
+          0.0, 
+          0.0, 
+          -6.849502299785245e-07, 
+          38.35180169246253
+        ], 
+        "cV": [
+          0.0, 
+          0.0, 
+          6.848389037037868e-07, 
+          38.32820022568919
+        ], 
+        "rhomolar_max": 17277.727009113827, 
+        "rhomolar_min": 17182.26523245882
+      }, 
       "gas_constant": 8.3144621, 
       "gas_constant_units": "J/mol/K", 
       "molar_mass": 0.0040282, 
@@ -436,17 +455,17 @@
     "triple_liquid": {
       "T": 18.724, 
       "T_units": "K", 
-      "p": 17189.10197323676, 
+      "p": 17189.1019733087, 
       "p_units": "Pa", 
-      "rhomolar": 43350.92089035642, 
+      "rhomolar": 43350.92089035645, 
       "rhomolar_units": "mol/m^3"
     }, 
     "triple_vapor": {
       "T": 18.724, 
       "T_units": "K", 
-      "p": 17189.10197325382, 
+      "p": 17189.101973253477, 
       "p_units": "Pa", 
-      "rhomolar": 112.95640342175003, 
+      "rhomolar": 112.95640342174774, 
       "rhomolar_units": "mol/m^3"
     }
   }

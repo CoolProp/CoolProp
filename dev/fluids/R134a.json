@@ -239,17 +239,17 @@
         "sat_min_liquid": {
           "T": 169.85, 
           "T_units": "K", 
-          "p": 389.56378852776, 
+          "p": 389.56378913655766, 
           "p_units": "Pa", 
-          "rhomolar": 15594.200379934837, 
+          "rhomolar": 15594.20037993484, 
           "rhomolar_units": "mol/m^3"
         }, 
         "sat_min_vapor": {
           "T": 169.85, 
           "T_units": "K", 
-          "p": 389.56378860749015, 
+          "p": 389.56378860748816, 
           "p_units": "Pa", 
-          "rhomolar": 0.2761122800115182, 
+          "rhomolar": 0.2761122800115168, 
           "rhomolar_units": "mol/m^3"
         }
       }, 
@@ -378,6 +378,25 @@
           "type": "ResidualHelmholtzPower"
         }
       ], 
+      "critical_region_splines": {
+        "T_max": 374.21, 
+        "T_min": 374.15599701305536, 
+        "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
+        "cL": [
+          -2.358891970526994e-10, 
+          3.35250579170572e-06, 
+          -0.015826824353177796, 
+          399.0175702243528
+        ], 
+        "cV": [
+          2.033032586375043e-10, 
+          -3.2541387283179285e-06, 
+          0.017300443262052236, 
+          343.6482870886872
+        ], 
+        "rhomolar_max": 5442.556273932187, 
+        "rhomolar_min": 4580.218882520725
+      }, 
       "gas_constant": 8.314471, 
       "gas_constant_units": "J/mol/K", 
       "molar_mass": 0.102032, 
@@ -401,21 +420,77 @@
     "triple_liquid": {
       "T": 169.85, 
       "T_units": "K", 
-      "p": 389.56378852776, 
+      "p": 389.56378913655766, 
       "p_units": "Pa", 
-      "rhomolar": 15594.200379934837, 
+      "rhomolar": 15594.20037993484, 
       "rhomolar_units": "mol/m^3"
     }, 
     "triple_vapor": {
       "T": 169.85, 
       "T_units": "K", 
-      "p": 389.56378860749015, 
+      "p": 389.56378860748816, 
       "p_units": "Pa", 
-      "rhomolar": 0.2761122800115182, 
+      "rhomolar": 0.2761122800115168, 
       "rhomolar_units": "mol/m^3"
     }
   }, 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "McLinden-IJR-2000", 
+      "critical": {
+        "GAMMA": 0.0496, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 1892020000.0, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 1.94e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.0105248, 
+          8.00982e-05
+        ], 
+        "B": [
+          1.0
+        ], 
+        "T_reducing": 1, 
+        "T_reducing_units": "K", 
+        "m": [
+          0
+        ], 
+        "n": [
+          0, 
+          1
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.0037740609300000003, 
+          0.010534223865, 
+          -0.002952794565, 
+          0.00128672592
+        ], 
+        "T_reducing": 1, 
+        "T_reducing_units": "K", 
+        "_note": "from v4.x : delta = rho/(5.049886*102.032); // Does not use either the reduce.rho value or crit.rho value !!! Or the value listed in Huber, 2003 either", 
+        "d": [
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "rhomass_reducing": 515.249968352, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          0, 
+          0, 
+          0
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Huber-IECR-2003", 
       "dilute": {

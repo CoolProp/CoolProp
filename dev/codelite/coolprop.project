@@ -48,6 +48,8 @@
         <File Name="../../src/Backends/Helmholtz/TransportRoutines.h"/>
         <File Name="../../src/Backends/Helmholtz/VLERoutines.cpp"/>
         <File Name="../../src/Backends/Helmholtz/VLERoutines.h"/>
+        <File Name="../../src/Backends/Helmholtz/MixtureDerivatives.cpp"/>
+        <File Name="../../src/Backends/Helmholtz/MixtureDerivatives.h"/>
       </VirtualDirectory>
       <VirtualDirectory Name="Incompressible">
         <File Name="../../src/Backends/Incompressible/IncompressibleBackend.cpp"/>
@@ -190,12 +192,11 @@
       </Completion>
     </Configuration>
     <Configuration Name="Release" CompilerType="MinGW ( CodeLite-4.8.1 )" DebuggerType="GNU gdb debugger" Type="Executable" BuildCmpWithGlobalSettings="append" BuildLnkWithGlobalSettings="append" BuildResWithGlobalSettings="append">
-      <Compiler Options="-O3;-Wall;-msse2" C_Options="-O2;-Wall" Assembler="" Required="yes" PreCompiledHeader="" PCHInCommandLine="no" UseDifferentPCHFlags="no" PCHFlags="">
+      <Compiler Options="-O3;-Wall;-march=native;" C_Options="-O2;-Wall" Assembler="" Required="yes" PreCompiledHeader="" PCHInCommandLine="no" UseDifferentPCHFlags="no" PCHFlags="">
         <IncludePath Value="."/>
         <IncludePath Value="../../include"/>
         <IncludePath Value="../../externals/Eigen"/>
         <Preprocessor Value="NDEBUG"/>
-        <Preprocessor Value="ENABLE_CATCH"/>
       </Compiler>
       <Linker Options="" Required="yes"/>
       <ResourceCompiler Options="" Required="no"/>

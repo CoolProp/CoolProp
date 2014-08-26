@@ -1,5 +1,5 @@
 from __future__ import division
-
+import os
 import glob
 import string
 import random
@@ -38,21 +38,21 @@ class GeneticAncillaryFitter(object):
         self.Ref = Ref 
         
         #Thermodynamics
-        from CoolProp.CoolProp import Props
+        from CoolProp.CoolProp import PropsSI
         
         if values is None:
-            self.Tc = Props(Ref,'Tcrit')
-            self.pc = Props(Ref,'pcrit')
-            self.rhoc = Props(Ref,'rhocrit')
-            self.Tmin = Props(Ref,'Tmin')
+            self.Tc = PropsSI(Ref,'Tcrit')
+            self.pc = PropsSI(Ref,'pcrit')
+            self.rhoc = PropsSI(Ref,'rhocrit')
+            self.Tmin = PropsSI(Ref,'Tmin')
             if Tlims is None:
                 self.T = np.append(np.linspace(self.Tmin+1e-14, self.Tc-1,150), np.logspace(np.log10(self.Tc-1), np.log10(self.Tc)-1e-15,40))
             else:
                 self.T = np.linspace(Tlims[0],Tlims[1])
-            self.pL = Props('P','T',self.T,'Q',0,Ref)
-            self.pV = Props('P','T',self.T,'Q',1,Ref)
-            self.rhoL = Props('D','T',self.T,'Q',0,Ref)
-            self.rhoV = Props('D','T',self.T,'Q',1,Ref)
+            self.pL = np.array(PropsSI('P','T',self.T,'Q',[0]*len(self.T),Ref))/1000
+            self.pV = np.array(PropsSI('P','T',self.T,'Q',[1]*len(self.T),Ref))/1000
+            self.rhoL = PropsSI('D','T',self.T,'Q',[0]*len(self.T),Ref)
+            self.rhoV = PropsSI('D','T',self.T,'Q',[1]*len(self.T),Ref)
         else:
             self.Tc = values['Tcrit']
             self.pc = values['pcrit']
@@ -72,7 +72,7 @@ class GeneticAncillaryFitter(object):
         
         self.x = 1.0-self.T/self.Tc
         
-        MM = Props(Ref,'molemass')
+        MM = PropsSI(Ref,'molemass')
         self.T_r = self.Tc
         
         if self.value == 'pL':
@@ -82,7 +82,7 @@ class GeneticAncillaryFitter(object):
                 self.description = "p' = pc*exp(sum(n_i*theta^t_i))"
             else:
                 self.description = "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))"
-            self.reducing_value = self.pc*1000
+            self.reducing_value = self.pc
         elif self.value == 'pV':
             self.LHS = self.logpVpc.copy()
             self.EOS_value = self.pV.copy()
@@ -90,7 +90,7 @@ class GeneticAncillaryFitter(object):
                 self.description = "p'' = pc*exp(sum(n_i*theta^t_i))"
             else:
                 self.description = "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))"
-            self.reducing_value = self.pc*1000
+            self.reducing_value = self.pc
         elif self.value == 'rhoL':
             self.LHS = self.logrhoLrhoc.copy()
             self.EOS_value = self.rhoL
@@ -98,7 +98,7 @@ class GeneticAncillaryFitter(object):
                 self.description = "rho' = rhoc*exp(sum(n_i*theta^t_i))"
             else:
                 self.description = "rho' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))"
-            self.reducing_value = self.rhoc/MM*1000
+            self.reducing_value = self.rhoc/MM
         elif self.value == 'rhoV':
             self.LHS = self.logrhoVrhoc.copy()
             self.EOS_value = self.rhoV
@@ -106,12 +106,12 @@ class GeneticAncillaryFitter(object):
                 self.description = "rho'' = rhoc*exp(sum(n_i*theta^t_i))"
             else:
                 self.description = "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))"
-            self.reducing_value = self.rhoc/MM*1000
+            self.reducing_value = self.rhoc/MM
         elif self.value == 'rhoLnoexp':
             self.LHS = (self.rhoLrhoc-1).copy()
             self.EOS_value = self.rhoL
             self.description = "rho' = rhoc*(1+sum(n_i*theta^t_i))"
-            self.reducing_value = self.rhoc/MM*1000
+            self.reducing_value = self.rhoc/MM
         else:
             raise ValueError
             
@@ -336,8 +336,9 @@ def build_all_ancillaries():
         
 if __name__ == "__main__":
     
-#     fluid = 'R407F'
-#     build_ancillaries(fluid, Tlims = [CP.Props(fluid,'Ttriple'), CP.Props(fluid, 'Tcrit')-2])
+    fluid = 'AceticAcid'
+    RPfluid = fluid
+    build_ancillaries(RPfluid, Tlims = [CP.PropsSI(fluid,'Ttriple'), CP.PropsSI(fluid, 'Tcrit')-5])
     
-    build_all_ancillaries()
+    #~ build_all_ancillaries()
 #     inject_ancillaries()

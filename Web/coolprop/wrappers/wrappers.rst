@@ -80,6 +80,10 @@ OSX should come with a c++ compiler (clang), for git and cmake your best bet is 
     Octave/index.rst
     Csharp/index.rst
     MATLAB/index.rst
+    FORTRAN/index.rst
+    PHP/index.rst
     EES/index.rst
     Java/index.rst
+    Javascript/index.rst
+    Python/index.rst
     Excel/index.rst

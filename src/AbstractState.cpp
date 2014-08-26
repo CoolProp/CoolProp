@@ -330,6 +330,9 @@ double AbstractState::conductivity(void){
 double AbstractState::melting_line(int param, int given, double value){
     return calc_melting_line(param, given, value);
 }
+double AbstractState::saturation_ancillary(parameters param, int Q, parameters given, double value){
+    return calc_saturation_ancillary(param, Q, given, value);
+}
 double AbstractState::surface_tension(void){
     if (!_surface_tension) _surface_tension = calc_surface_tension();
     return _surface_tension;

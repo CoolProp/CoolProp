@@ -37,13 +37,13 @@ Sample Code
     In [1]: import timeit
     
     # Specific heat (kJ/kg/K) of 20% ethylene glycol as a function of T
-    In [2]: PropsSI('C','T',298.15,'P',101.325,'INCOMP::EG-20%')
+    In [2]: PropsSI('C','T',298.15,'P',101.325,'INCOMP::MEG-20%')
     
     # Density of Air at standard atmosphere in kg/m^3
     In [2]: PropsSI('D','T',298.15,'P',101.325,'Air')
     
     # Saturation temperature of Water at 1 atm
-    In [2]: PropsSI('T','P',101.325,'Q',0,'Water')
+    In [2]: PropsSI('T','P',101325,'Q',0,'Water')
     
     # Saturated vapor density of R134a at 0C
     In [2]: PropsSI('H','T',273.15,'Q',1,'R134a')

@@ -6,6 +6,12 @@ from libcpp.vector cimport vector
 
 include "AbstractState.pxd"
     
+cdef extern from "Python.h":
+    char* __FILE__
+
+cdef extern from "Python.h":
+    int __LINE__
+    
 cdef extern from "CoolPropTools.h" namespace "CoolProp":
     bint _ValidNumber "ValidNumber"(double)
     
@@ -13,20 +19,19 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
     string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
     int _get_parameter_index "CoolProp::get_parameter_index"(string) except +
     
+cdef extern from "CoolPropLib.h":
+    double _Props "Props"(const char* Output, char Name1, double Prop1, char Name2, double Prop2, const char* Ref)
+    
 cdef extern from "CoolProp.h" namespace "CoolProp":
     double _Props1SI "CoolProp::Props1SI"(string Ref, string Output)
     double _PropsSI "CoolProp::PropsSI"(string Output, string Name1, double Prop1, string Name2, double Prop2, string FluidName) 
     vector[double] _PropsSI "CoolProp::PropsSI"(string Output, string Name1, vector[double] Prop1, string Name2, vector[double] Prop2, string FluidName, vector[double] fractions)
     vector[double] _PropsSII "CoolProp::PropsSI"(string Output, string Name1, vector[double] Prop1, string Name2, vector[double] Prop2, string FluidName)
     string _get_global_param_string "CoolProp::get_global_param_string"(string ParamName) except +
-    
-#     double _Props "CoolProp::Props"(string Output, string Name1, double Prop1, string Name2, double Prop2, string Ref)
-#     double _Props1 "CoolProp::Props1"(string Ref, string Output)
-#     string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName)
-    
-    #long _get_parameter_index "CoolProp::get_parameter_index" (string param)
     int _get_debug_level "CoolProp::get_debug_level"()
     void _set_debug_level "CoolProp::set_debug_level"(int level)
+#     string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName)
+    #long _get_parameter_index "CoolProp::get_parameter_index" (string param)
     
     # Convenience functions
 #     int _IsFluidType "IsFluidType"(char* Ref, char* Type)

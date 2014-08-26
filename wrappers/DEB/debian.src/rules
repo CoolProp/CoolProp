@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+%:
+	dh $@ 
+
+build :
+	$ ( cmake . -DCOOLPROP_DEBIAN_PACKAGE=ON -DCOOLPROP_INSTALL_PREFIX="" )
+	$ ( cmake --build . )
+
+#override_dh_auto_install:
+#	$(MAKE) DESTDIR=$$(pwd)/debian/coolprop prefix=/usr/local install

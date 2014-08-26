@@ -510,7 +510,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
     }
 
-    // Loop over the file names - first we try with .fld, then .ppf - means you can't mix and match
+    // Loop over the file names - first we try with nothing, then .fld, then .ppf - means you can't mix and match
 
     for (unsigned int k = 0; k < 3; k++)
     {
@@ -556,7 +556,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             }
             else if (ierr > 0) // Error
             {
-                if (k < 2 && N == 1)
+                if (k < 2)
                     continue; // Allow us to use PPF if a pure fluid
                 else
                     throw ValueError(format("%s", herr));
@@ -630,6 +630,41 @@ long double REFPROPMixtureBackend::calc_Tmax(void){
 	double Tmin, Tmax, rhomolarmax, pmax;
 	limits(Tmin, Tmax, rhomolarmax, pmax);
 	return static_cast<long double>(Tmax);
+};
+long double REFPROPMixtureBackend::calc_T_critical(){
+    long ierr;
+    char herr[255];
+    double Tcrit, pcrit_kPa, dcrit_mol_L;
+    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+	return static_cast<long double>(Tcrit);
+};
+long double REFPROPMixtureBackend::calc_p_critical(){
+    long ierr;
+    char herr[255];
+    double Tcrit, pcrit_kPa, dcrit_mol_L;
+    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+	return static_cast<long double>(pcrit_kPa*1000);
+};
+long double REFPROPMixtureBackend::calc_rhomolar_critical(){
+    long ierr;
+    char herr[255];
+    double Tcrit, pcrit_kPa, dcrit_mol_L;
+    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+	return static_cast<long double>(dcrit_mol_L*1000);
+};
+long double REFPROPMixtureBackend::calc_Ttriple(){
+    if (mole_fractions.size() != 1){throw ValueError("calc_Ttriple cannot be evaluated for mixtures");}
+    long icomp = 0;
+    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
+    INFOdll(&icomp, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
+	return static_cast<long double>(ttrp);
+};
+long double REFPROPMixtureBackend::calc_molar_mass(void)
+{
+    double wmm_kg_kmol;
+    WMOLdll(&(mole_fractions[0]), &wmm_kg_kmol); // returns mole mass in kg/kmol
+    _molar_mass = wmm_kg_kmol/1000; // kg/mol
+	return static_cast<long double>(_molar_mass.pt());
 };
 	
 double REFPROPMixtureBackend::calc_melt_Tmax()
@@ -736,7 +771,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
     if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }
 }
 
-void REFPROPMixtureBackend::update(long input_pair, double value1, double value2)
+void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2)
 {
     double rho_mol_L=_HUGE, rhoLmol_L=_HUGE, rhoVmol_L=_HUGE,
         hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,
@@ -1292,11 +1327,11 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
 
             shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
             double Tr = S1->T_critical();
-            S1->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
+            CHECK_NOTHROW(S1->update(CoolProp::QT_INPUTS, 0, Tr*0.9););
             double rho_CP = S1->rhomolar();
 
             shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
-            S2->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
+            CHECK_NOTHROW(S2->update(CoolProp::QT_INPUTS, 0, Tr*0.9););
             double rho_RP = S2->rhomolar();
 
             CAPTURE(Name);
@@ -1305,7 +1340,7 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
             CAPTURE(rho_RP);
 
             double DH = (rho_RP-rho_CP)/rho_RP;
-            CHECK(fabs(DH) < 0.005);
+            CHECK(std::abs(DH) < 0.005);
         }
     }
     SECTION("Saturation specific heats agree within 0.5% at T/Tc = 0.9")
@@ -1336,7 +1371,7 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
             CAPTURE(0.9*Tr);
 
             double Dcp = (cp_RP-cp_CP)/cp_RP;
-            CHECK(fabs(Dcp) < 0.005);
+            CHECK(std::abs(Dcp) < 0.005);
         }
     }
     SECTION("Enthalpy and entropy reference state")
@@ -1353,12 +1388,12 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
 
             shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
             double Tr = S1->T_critical();
-            S1->update(CoolProp::QT_INPUTS, 0, 0.9*Tr);
+            CHECK_NOTHROW(S1->update(CoolProp::QT_INPUTS, 0, 0.9*Tr););
             double h_CP = S1->hmass();
             double s_CP = S1->smass();
 
             shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
-            S2->update(CoolProp::QT_INPUTS, 0, 0.9*Tr);
+            CHECK_NOTHROW(S2->update(CoolProp::QT_INPUTS, 0, 0.9*Tr););
             double h_RP = S2->hmass();
             double s_RP = S2->smass();
 
@@ -1371,10 +1406,22 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
             double DH = (S1->hmass()-S2->hmass());
             double DS = (S1->smass()-S2->smass());
             
-            CHECK(fabs(DH/h_RP) < 0.001);
-            CHECK(fabs(DS/s_RP) < 0.001);
+            CHECK(std::abs(DH/h_RP) < 0.001);
+            CHECK(std::abs(DS/s_RP) < 0.001);
         }
     }
 }
+
+TEST_CASE("Check some inputs for REFPROP work","[REFPROP]")
+{
+    SECTION("Critical parameters","")
+    {
+        CHECK(ValidNumber(CoolProp::PropsSI("PCRIT","P",0,"T",0,"REFPROP::R245FA")));
+        CHECK(ValidNumber(CoolProp::PropsSI("TCRIT","P",0,"T",0,"REFPROP::R245FA")));
+        CHECK(ValidNumber(CoolProp::PropsSI("RHOCRIT","P",0,"T",0,"REFPROP::R245FA")));
+        CHECK(ValidNumber(CoolProp::PropsSI("MOLEMASS","P",0,"T",0,"REFPROP::R245FA")));
+    }
+}
+
 
 #endif

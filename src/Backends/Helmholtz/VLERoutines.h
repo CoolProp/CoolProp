@@ -33,7 +33,7 @@ namespace SaturationSolvers
     {
         int sstype, Nstep_max;
         long double rhomolar_liq, rhomolar_vap, p, T, beta;
-        std::vector<long double> *x, *y, *K;
+        std::vector<long double> x, y, K;
     };
 
     /*! Returns the natural logarithm of K for component i using the method from Wilson as in
@@ -45,14 +45,14 @@ namespace SaturationSolvers
 	@param p Pressure [Pa]
 	@param i Index of component [-]
 	*/
-	static long double Wilson_lnK_factor(HelmholtzEOSMixtureBackend *HEOS, long double T, long double p, int i){ 
-        EquationOfState *EOS = (HEOS->get_components())[i]->pEOS; 
+	static long double Wilson_lnK_factor(HelmholtzEOSMixtureBackend &HEOS, long double T, long double p, int i){ 
+        EquationOfState *EOS = (HEOS.get_components())[i]->pEOS; 
         return log(EOS->reduce.p/p)+5.373*(1 + EOS->accentric)*(1-EOS->reduce.T/T);
     };
 
-    void saturation_D_pure(HelmholtzEOSMixtureBackend *HEOS, long double rhomolar, saturation_D_pure_options &options);
-    void saturation_T_pure(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_options &options);
-    void saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_Akasaka_options &options);
+    void saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long double rhomolar, saturation_D_pure_options &options);
+    void saturation_T_pure(HelmholtzEOSMixtureBackend &HEOS, long double T, saturation_T_pure_options &options);
+    void saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HEOS, long double T, saturation_T_pure_Akasaka_options &options);
     
     /**
     */
@@ -67,7 +67,7 @@ namespace SaturationSolvers
     /**
 
     */
-    void saturation_PHSU_pure(HelmholtzEOSMixtureBackend *HEOS, long double specified_value, saturation_PHSU_pure_options &options);
+    void saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, long double specified_value, saturation_PHSU_pure_options &options);
 
     /* \brief This is a backup saturation_p solver for the case where the Newton solver cannot approach closely enough the solution
      *
@@ -77,7 +77,7 @@ namespace SaturationSolvers
      * @param p Imposed pressure in kPa
      * @param options Options to be passed to the function (at least T, rhoL and rhoV must be provided)
      */
-    void saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend *HEOS, long double p, saturation_PHSU_pure_options &options);
+    void saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend &HEOS, long double p, saturation_PHSU_pure_options &options);
     
     /* \brief This is a backup saturation_T solver for the case where the Newton solver cannot approach closely enough the solution
      *
@@ -87,7 +87,7 @@ namespace SaturationSolvers
      * @param T Imposed temperature in K
      * @param options Options to be passed to the function (at least p, rhoL and rhoV must be provided)
      */
-    void saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend *HEOS, long double T, saturation_T_pure_options &options);
+    void saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS, long double T, saturation_T_pure_options &options);
 
     /* \brief A robust but slow solver in the very-near-critical region
      * 
@@ -102,7 +102,7 @@ namespace SaturationSolvers
      * @param ykey The CoolProp::parameters key to be imposed - one of iT or iP
      * @param y The value for the imposed variable
      */
-    void saturation_critical(HelmholtzEOSMixtureBackend *HEOS, CoolProp::parameters ykey, long double y);
+    void saturation_critical(HelmholtzEOSMixtureBackend &HEOS, CoolProp::parameters ykey, long double y);
         
     void successive_substitution(HelmholtzEOSMixtureBackend &HEOS,
                                         const long double beta,
@@ -127,8 +127,8 @@ namespace SaturationSolvers
         std::vector<long double> *K;
 	    HelmholtzEOSMixtureBackend *HEOS;
 
-	    WilsonK_resid(HelmholtzEOSMixtureBackend *HEOS, double beta, double imposed_value, int input_type, const std::vector<long double> &z, std::vector<long double> &K){ 
-            this->z = &z; this->K = &K; this->HEOS = HEOS; this->beta = beta; this->input_type = input_type;
+	    WilsonK_resid(HelmholtzEOSMixtureBackend &HEOS, double beta, double imposed_value, int input_type, const std::vector<long double> &z, std::vector<long double> &K){ 
+            this->z = &z; this->K = &K; this->HEOS = &HEOS; this->beta = beta; this->input_type = input_type;
             if (input_type == imposed_T){
                 this->T = imposed_value;
             }
@@ -145,19 +145,19 @@ namespace SaturationSolvers
                 T = input_value; // Iterate on temperature, pressure imposed
             }
 		    for (unsigned int i = 0; i< (*z).size(); i++) {
-			    (*K)[i] = exp(Wilson_lnK_factor(HEOS,T,p,i));
+			    (*K)[i] = exp(Wilson_lnK_factor(*HEOS,T,p,i));
 			    summer += (*z)[i]*((*K)[i]-1)/(1-beta+beta*(*K)[i]);
 		    }
 		    return summer;
 	    };
     };
-    inline double saturation_preconditioner(HelmholtzEOSMixtureBackend *HEOS, double input_value, int input_type, const std::vector<long double> &z)
+    inline double saturation_preconditioner(HelmholtzEOSMixtureBackend &HEOS, double input_value, int input_type, const std::vector<long double> &z)
     {
 	    double ptriple = 0, pcrit = 0, Ttriple = 0, Tcrit = 0;
 	    
 	    for (unsigned int i = 0; i < z.size(); i++)
 	    {
-            EquationOfState *EOS = (HEOS->get_components())[i]->pEOS; 
+            EquationOfState *EOS = (HEOS.get_components())[i]->pEOS; 
 
 		    ptriple += EOS->sat_min_liquid.p*z[i];
             pcrit += EOS->reduce.p*z[i];
@@ -175,14 +175,14 @@ namespace SaturationSolvers
         }
         else{ throw ValueError();}
     }
-    inline double saturation_Wilson(HelmholtzEOSMixtureBackend *HEOS, double beta, double input_value, int input_type, const std::vector<long double> &z, double guess)
+    inline double saturation_Wilson(HelmholtzEOSMixtureBackend &HEOS, double beta, double input_value, int input_type, const std::vector<long double> &z, double guess)
     {
 	    double T;
 
 	    std::string errstr;
 
 	    // Find first guess for T using Wilson K-factors
-        WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS->get_K());
+        WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS.get_K());
 	    T = Secant(Resid, guess, 0.001, 1e-10, 100, errstr);
 	
 	    if (!ValidNumber(T)){throw ValueError("saturation_p_Wilson failed to get good T");}
@@ -193,6 +193,70 @@ namespace SaturationSolvers
         long double T,p;
     };
 
+    struct newton_raphson_saturation_options{
+        enum imposed_variable_options {IMPOSED_P, IMPOSED_T};
+        int Nstep_max;
+        long double omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T;
+        imposed_variable_options imposed_variable;
+        std::vector<long double> x, y;
+        newton_raphson_saturation_options(){ } // Defaults
+    };
+
+    /** \brief A class to do newton raphson solver for VLE given guess values for vapor-liquid equilibria.  This class will then be included in the Mixture class
+     * 
+     * A class is used rather than a function so that it is easier to store iteration histories, additional output values, etc.
+     * 
+     * This class only handles bubble and dew lines since the independent variables are N-1 of the mole fractions in the incipient phase along with one of T, p, or rho
+     */
+    class newton_raphson_saturation
+    {
+    public:
+	    long double error_rms, rhomolar_liq, rhomolar_vap, T, p, max_rel_change;
+	    unsigned int N;
+	    bool logging;
+	    int Nsteps;
+	    STLMatrix J;
+        HelmholtzEOSMixtureBackend *HEOS;
+	    std::vector<long double> K, x, y, phi_ij_liq, phi_ij_vap, dlnphi_drho_liq, dlnphi_drho_vap, r, negative_r, dXdS, neg_dFdS;
+	    std::vector<SuccessiveSubstitutionStep> step_logger;
+
+	    newton_raphson_saturation(){};
+
+	    void resize(unsigned int N);
+	
+	    // Reset the state of all the internal variables
+	    void pre_call()
+	    {
+		    K.clear(); x.clear(); y.clear();  phi_ij_liq.clear(); 
+            phi_ij_vap.clear(); dlnphi_drho_liq.clear(), dlnphi_drho_vap.clear(),
+            step_logger.clear(); error_rms = 1e99; Nsteps = 0;
+		    rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
+	    };
+
+	    /*! Call the Newton-Raphson VLE Solver
+
+	    This solver must be passed reasonable guess values for the mole fractions, 
+	    densities, etc.  You may want to take a few steps of successive substitution
+	    before you start with Newton Raphson.
+
+	    @param HEOS HelmholtzEOSMixtureBackend instance
+	    @param z Bulk mole fractions [-]
+	    @param z_incipient Initial guesses for the mole fractions of the incipient phase [-]
+	    */
+	    void call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &z_incipient, newton_raphson_saturation_options &IO);
+
+	    /*! Build the arrays for the Newton-Raphson solve
+
+	    This method builds the Jacobian matrix, the sensitivity matrix, etc.
+         * 
+	    */
+	    void build_arrays();
+
+        /** Check the derivatives in the Jacobian using numerical derivatives.
+        */
+        void check_Jacobian();
+    };
+    
     /*!
     A class to do newton raphson solver for VLE given guess values for vapor-liquid equilibria.  This class will then be included in the Mixture class
 
@@ -234,7 +298,7 @@ namespace SaturationSolvers
 	    @param z Bulk mole fractions [-]
 	    @param K Array of K-factors [-]
 	    */
-	    void call(HelmholtzEOSMixtureBackend *HEOS, const std::vector<long double> &z, std::vector<long double> &K, mixture_VLE_IO &IO);
+	    void call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &K, mixture_VLE_IO &IO);
 
 	    /*! Build the arrays for the Newton-Raphson solve
 
@@ -246,11 +310,11 @@ namespace SaturationSolvers
 	    @param z Bulk mole fractions [-]
 	    @param K Array of K-factors [-]
 	    */
-	    void build_arrays(HelmholtzEOSMixtureBackend *HEOS, long double beta, long double T, long double rhomolar_liq, const long double rho_vapor, const std::vector<long double> &z, std::vector<long double> & K);
+	    void build_arrays(HelmholtzEOSMixtureBackend &HEOS, long double beta, long double T, long double rhomolar_liq, const long double rho_vapor, const std::vector<long double> &z, std::vector<long double> & K);
 
         /** Check the derivatives in the Jacobian using numerical derivatives.
         */
-        void check_Jacobian(HelmholtzEOSMixtureBackend *HEOS, const std::vector<long double> &z, std::vector<long double> &K, mixture_VLE_IO &IO);
+        void check_Jacobian(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &K, mixture_VLE_IO &IO);
     };
 };
 
@@ -299,7 +363,7 @@ namespace PhaseEnvelope
     public:
 	    PhaseEnvelopeLog bubble, dew;
 
-        void build(HelmholtzEOSMixtureBackend *HEOS, const std::vector<long double> &z, std::vector<long double> &K, SaturationSolvers::mixture_VLE_IO &IO);
+        void build(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &K, SaturationSolvers::mixture_VLE_IO &IO);
     };
 };
 

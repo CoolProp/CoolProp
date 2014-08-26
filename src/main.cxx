@@ -415,14 +415,12 @@ int main()
     #endif
     #if 0
     {
-        #if ENABLE_CATCH
-            std::vector<std::string> tags;
-            tags.push_back("[helmholtz]");
-            run_user_defined_tests(tags);
-            double rr = 0;
-			char c;
-            std::cin >> c;
-        #endif
+        //::set_debug_level(10);
+        std::vector<std::string> tags;
+        tags.push_back("[REFPROP]");
+        run_user_defined_tests(tags);
+        char c;
+        std::cin >> c;
     }
     #endif
     #if 0
@@ -432,15 +430,24 @@ int main()
 		std::cin >> c;
 	}
 	#endif
-    #if 0
-    {
-        double h = 193888.412582; 
-        double p = 25548108.8918;
-        double TTTs = PropsSI("T","H",h,"P",p,"Water");
-        double ddTs = PropsSI("Dmolar","H",h,"P",p,"Water");
-        double hhTs = PropsSI("H","T",TTTs,"Dmolar",ddTs,"Water");
-        double ppTs = PropsSI("P","T",TTTs,"Dmolar",ddTs,"Water");
+    #if 1
+    { 
+        ::set_debug_level(0);
+        double tryuk = PropsSI("D","P",6500000,"S",4894.530733,"Air");
+        std::cout << get_global_param_string("errstring") << std::endl;
+        double TTT = PropsSI("T","P",5e6,"Q",1,"Methane[0.5]&Propane[0.5]");
+        //double refretrte = PropsSI("P","Dmolar",107.9839357,"T",116.5360225,"Methane[0.5]&Propane[0.5]");
+        for (double p = 101325; p < 9e6; p *= 1.05){
+            std::cout << p << " " << PropsSI("T","P",p,"Q",1,"Methane[0.5]&Propane[0.5]") << std::endl;
+            //std::cout << get_global_param_string("errstring") << std::endl;
+        }
         int rr =1;
+    }
+    #endif
+    #if 0
+    {        
+        ::set_debug_level(6);
+        double dd6 = PropsSI("P","T",300,"Q",0,"TTSE&HEOS::n-Propane");
     }
     #endif
 	#if 0
@@ -497,7 +504,7 @@ int main()
         #endif
     }
 	#endif
-    #if 1
+    #if 0
     {
         time_t t1,t2;
         long N = 100000;
@@ -515,7 +522,7 @@ int main()
         t1 = clock();
         for (long i = 0; i < N; ++i){
             derivs1.reset();
-            GenExp.all(tau, delta+i*1e-18, derivs1);
+            GenExp.all(tau, delta+i*1e-10, derivs1);
             ss += derivs1.alphar;
         }
         t2 = clock();
@@ -525,7 +532,7 @@ int main()
         t1 = clock(); 
         for (long i = 0; i < N; ++i){
             derivs2.reset();
-            GenExp.allEigen(tau, delta+i*1e-18, derivs2);
+            GenExp.allEigen(tau, delta+i*1e-10, derivs2);
             ss += derivs2.alphar;
         }
         t2 = clock();

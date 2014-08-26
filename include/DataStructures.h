@@ -89,6 +89,8 @@ bool is_valid_parameter(const std::string & name, parameters & iOutput);
 
 bool is_valid_first_derivative(const std::string & name, parameters &iOf, parameters &iWrt, parameters &iConstant);
 
+bool is_valid_second_derivative(const std::string & name, parameters &iOf1, parameters &iWrt1, parameters &iConstant1, parameters &iWrt2, parameters &iConstant2);
+
 std::string get_csv_parameter_list();
 
 /// These are constants for the compositions
@@ -152,9 +154,9 @@ inline bool match_pair(long key1, long key2, long x1, long x2, bool &swap)
     swap = !(key1 == x1);
     return ((key1 == x1 && key2 == x2) || (key2 == x1 && key1 == x2));
 };
-template<class T> long generate_update_pair(long key1, T value1, long key2, T value2, T &out1, T&out2)
+template<class T> CoolProp::input_pairs generate_update_pair(long key1, T value1, long key2, T value2, T &out1, T&out2)
     {
-        long pair;
+        CoolProp::input_pairs pair;
         bool swap;
 
         if (match_pair(key1, key2, iQ, iT, swap)){

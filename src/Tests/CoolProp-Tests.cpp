@@ -2,7 +2,7 @@
 
 #include "AbstractState.h"
 #include "DataStructures.h"
-
+#include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 // ############################################
 //                      TESTS
 // ############################################
@@ -13,7 +13,8 @@
 #include "catch.hpp"
 #include "CoolPropTools.h"
 #include "CoolProp.h"
-#include "CoolPropLib.h"
+
+using namespace CoolProp;
 
 namespace TransportValidation{
 
@@ -206,6 +207,21 @@ vel("Ethane", "T", 100, "Dmolar", 21330, "V", 878.6e-6, 1e-2),
 vel("Ethane", "T", 430, "Dmolar", 12780, "V", 58.70e-6, 1e-2),
 vel("Ethane", "T", 500, "Dmolar", 11210, "V", 48.34e-6, 1e-2),
 
+// From Xiang, JPCRD, 2006
+
+vel("Methanol", "T", 600, "Dmass", 800.23, "V", 0.1888e-3, 1e-4),
+vel("Methanol", "T", 600, "Dmass", 833.20, "V", 0.2092e-3, 1e-4),
+vel("Methanol", "T", 600, "Dmass", 861.37, "V", 0.2279e-3, 1e-4),
+vel("Methanol", "T", 600, "Dmass", 908.33, "V", 0.2634e-3, 1e-4),
+vel("Methanol", "T", 620, "Dmass", 788.58, "V", 0.1779e-3, 1e-4),
+vel("Methanol", "T", 620, "Dmass", 822.14, "V", 0.1972e-3, 1e-4),
+vel("Methanol", "T", 620, "Dmass", 850.77, "V", 0.2148e-3, 1e-4),
+vel("Methanol", "T", 620, "Dmass", 898.48, "V", 0.2477e-3, 1e-4),
+vel("Methanol", "T", 630, "Dmass", 782.76, "V", 0.1729e-3, 1e-4),
+vel("Methanol", "T", 630, "Dmass", 811.06, "V", 0.1917e-3, 1e-4),
+vel("Methanol", "T", 630, "Dmass", 840.11, "V", 0.2088e-3, 1e-4),
+vel("Methanol", "T", 630, "Dmass", 888.50, "V", 0.2405e-3, 1e-4),
+
 // From REFPROP 9.1 since no data provided
 vel("n-Butane", "T", 150, "Q", 0, "V", 0.0013697657668, 1e-4),
 vel("n-Butane", "T", 400, "Q", 1, "V", 1.2027464524762453e-005, 1e-4),
@@ -214,6 +230,17 @@ vel("IsoButane", "T", 400, "Q", 1, "V", 1.4761041187617117e-005, 2e-4),
 vel("R134a", "T", 175, "Q", 0, "V", 0.0017558494524138289, 1e-4),
 vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-4),
 
+// From Tariq, JPCRD, 2014
+vel("Cyclohexane", "T", 300, "Dmolar", 1e-10, "V", 7.058e-6, 1e-4),
+vel("Cyclohexane", "T", 300, "Dmolar", 0.0430e3, "V", 6.977e-6, 1e-4),
+vel("Cyclohexane", "T", 300, "Dmolar", 9.1756e3, "V", 863.66e-6, 1e-4),
+vel("Cyclohexane", "T", 300, "Dmolar", 9.9508e3, "V", 2850.18e-6, 1e-4),
+vel("Cyclohexane", "T", 500, "Dmolar", 1e-10, "V", 11.189e-6, 1e-4),
+vel("Cyclohexane", "T", 500, "Dmolar", 6.0213e3, "V", 94.842e-6, 1e-4),
+vel("Cyclohexane", "T", 500, "Dmolar", 8.5915e3, "V", 380.04e-6, 1e-4),
+vel("Cyclohexane", "T", 700, "Dmolar", 1e-10, "V", 15.093e-6, 1e-4),
+vel("Cyclohexane", "T", 700, "Dmolar", 7.4765e3, "V", 176.749e-6, 1e-4),
+
 };
 
 class TransportValidationFixture
@@ -221,7 +248,7 @@ class TransportValidationFixture
 protected:
     long double actual, x1, x2;
     shared_ptr<CoolProp::AbstractState> pState;
-    int pair;
+    CoolProp::input_pairs pair;
 public:
     TransportValidationFixture(){ }
     ~TransportValidationFixture(){ }
@@ -232,7 +259,7 @@ public:
         double o1, o2;
         long iin1 = CoolProp::get_parameter_index(in1);
         long iin2 = CoolProp::get_parameter_index(in2);
-        long pair = CoolProp::generate_update_pair(iin1, v1, iin2, v2, o1, o2);
+        CoolProp::input_pairs pair = CoolProp::generate_update_pair(iin1, v1, iin2, v2, o1, o2);
         pState->update(pair, o1, o2);
     }
     void get_value(long key)
@@ -255,10 +282,10 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against publis
         CAPTURE(el.in2);
         CAPTURE(el.v2);
         CHECK_NOTHROW(set_pair(el.in1, el.v1, el.in2, el.v2));
-        get_value(CoolProp::iviscosity);
+        CHECK_NOTHROW(get_value(CoolProp::iviscosity));
         CAPTURE(el.expected);
         CAPTURE(actual);
-        CHECK(fabs(actual/el.expected-1) < el.tol);
+        CHECK(std::abs(actual/el.expected-1) < el.tol);
     }
 }
 
@@ -452,6 +479,13 @@ vel("Helium", "T", 5.3, "P", 2.3e5, "L", 0.0149, 1e-1),
 //vel("R410A", "T", 332.09, "P", 3.690e6, "L", 22.76e-3, 0.03),
 //vel("R507A", "T", 254.85, "P", 0.101e6, "L", 0.01007, 0.03),
 //vel("R507A", "T", 333.18, "P", 2.644e6, "L", 21.31e-3, 0.03),
+
+// From REFPROP 9.1 since no data provided
+vel("R134a", "T", 240, "D", 1e-10, "L", 0.008698768 , 1e-4),
+vel("R134a", "T", 330, "D", 1e-10, "L", 0.015907606 , 1e-4),
+vel("R134a", "T", 330, "Q", 0, "L", 0.06746432253 , 1e-4),
+vel("R134a", "T", 240, "Q", 1, "L", 0.00873242359, 1e-4),
+
 };
 
 TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity],[transport]")
@@ -470,28 +504,28 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
         get_value(CoolProp::iconductivity);
         CAPTURE(el.expected);
         CAPTURE(actual);
-        CHECK(fabs(actual/el.expected-1) < el.tol);
+        CHECK(std::abs(actual/el.expected-1) < el.tol);
     }
 }
 
 
 }; /* namespace TransportValidation */
 
-static int inputs[] = {
+static CoolProp::input_pairs inputs[] = {
     CoolProp::DmolarT_INPUTS,
     //CoolProp::SmolarT_INPUTS,
     //CoolProp::HmolarT_INPUTS,
     //CoolProp::TUmolar_INPUTS,
 
-    CoolProp::DmolarP_INPUTS,
-    CoolProp::DmolarHmolar_INPUTS,
-    CoolProp::DmolarSmolar_INPUTS,
-    CoolProp::DmolarUmolar_INPUTS,
-
-    CoolProp::HmolarP_INPUTS,
-    CoolProp::PSmolar_INPUTS,
-    CoolProp::PUmolar_INPUTS,
-
+//    CoolProp::DmolarP_INPUTS,
+//    CoolProp::DmolarHmolar_INPUTS,
+//    CoolProp::DmolarSmolar_INPUTS,
+//    CoolProp::DmolarUmolar_INPUTS,
+//
+//    CoolProp::HmolarP_INPUTS,
+//    CoolProp::PSmolar_INPUTS,
+//    CoolProp::PUmolar_INPUTS,
+//
     /*
     CoolProp::HmolarSmolar_INPUTS,
     CoolProp::HmolarUmolar_INPUTS,
@@ -504,14 +538,14 @@ class ConsistencyFixture
 protected:
     long double hmolar, pmolar, smolar, umolar, rhomolar, T, p, x1, x2;
     shared_ptr<CoolProp::AbstractState> pState;
-    int pair;
+    CoolProp::input_pairs pair;
 public:
     ConsistencyFixture(){}
     ~ConsistencyFixture(){}
     void set_backend(std::string backend, std::string fluid_name){
         pState.reset(CoolProp::AbstractState::factory(backend, fluid_name));
     }
-    void set_pair(int pair){
+    void set_pair(CoolProp::input_pairs pair){
         this->pair = pair;
     }
     void set_TP(long double T, long double p)
@@ -562,6 +596,9 @@ public:
             x1 = hmolar; x2 = smolar; break;
         case CoolProp::SmolarUmolar_INPUTS:
             x1 = smolar; x2 = umolar; break;
+            
+        default:
+            throw CoolProp::ValueError();
         }
     }
     void single_phase_consistency_check()
@@ -570,37 +607,70 @@ public:
         State.update(pair, x1, x2);
 
         // Make sure we end up back at the same temperature and pressure we started out with
-        if(fabs(T-State.T()) > 1e-2) throw CoolProp::ValueError(format("Error on T [%g K] is greater than 1e-2",fabs(State.T()-T)));
-        if(fabs(p-State.p())/p*100 > 1e-2)  throw CoolProp::ValueError(format("Error on p [%g %%] is greater than 1e-2 %%",fabs(p-State.p())/p ));
+        if(std::abs(T-State.T()) > 1e-2) throw CoolProp::ValueError(format("Error on T [%Lg K] is greater than 1e-2",std::abs(State.T()-T)));
+        if(std::abs(p-State.p())/p*100 > 1e-2)  throw CoolProp::ValueError(format("Error on p [%Lg %%] is greater than 1e-2 %%",std::abs(p-State.p())/p ));
     }
 };
 
-TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for CO2 using all valid backends", "[]")
+TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for Water using all valid backends", "[consistency]")
 {
-    CHECK_NOTHROW(set_backend("HEOS", "CO2"));
+    CHECK_NOTHROW(set_backend("HEOS", "Water"));
 
-    int inputsN = sizeof(inputs)/sizeof(inputs[0]);
-    for (double p = 600000; p < 800000000.0; p *= 5)
-    {
-        for (double T = 220; T < pState->Tmax(); T += 5)
+    SECTION("Subcritical pressure liquid",""){
+            
+        // Subcritical pressure liquid
+        int inputsN = sizeof(inputs)/sizeof(inputs[0]);
+        for (double p = pState->p_triple()*1.01; p < pState->p_critical(); p *= 3)
         {
-            CHECK_NOTHROW(set_TP(T, p));
-
-            for (int i = 0; i < inputsN; ++i)
+            double Ts = PropsSI("T","P",p,"Q",0,"Water");
+            double Tmelt = pState->melting_line(CoolProp::iT, CoolProp::iP, p);
+            for (double T = Tmelt; T < Ts; T += 0.1)
             {
-                int pair = inputs[i];
-                std::string pair_desc = CoolProp::get_input_pair_short_desc(pair);
-                set_pair(pair);
-                CAPTURE(pair_desc);
-                CAPTURE(T);
-                CAPTURE(p);
-                get_variables();
-                CAPTURE(x1);
-                CAPTURE(x2);
-                CHECK_NOTHROW(single_phase_consistency_check());
+                CHECK_NOTHROW(set_TP(T, p));
+
+                for (int i = 0; i < inputsN; ++i)
+                {
+                    CoolProp::input_pairs pair = inputs[i];
+                    std::string pair_desc = CoolProp::get_input_pair_short_desc(pair);
+                    set_pair(pair);
+                    CAPTURE(pair_desc);
+                    CAPTURE(T);
+                    CAPTURE(p);
+                    get_variables();
+                    CAPTURE(x1);
+                    CAPTURE(x2);
+                    double rho_RP = PropsSI("Dmolar","P",p,"T",T,"REFPROP::Water");
+                    if (ValidNumber(rho_RP)){
+                        CHECK_NOTHROW(single_phase_consistency_check());
+                        CHECK(std::abs((rho_RP-rhomolar)/rhomolar) < 1e-3);
+                    }
+                }
             }
         }
     }
+    
+//    int inputsN = sizeof(inputs)/sizeof(inputs[0]);
+//    for (double p = 600000; p < pState->pmax(); p *= 3)
+//    {
+//        for (double T = 220; T < pState->Tmax(); T += 1)
+//        {
+//            CHECK_NOTHROW(set_TP(T, p));
+//
+//            for (int i = 0; i < inputsN; ++i)
+//            {
+//                CoolProp::input_pairs pair = inputs[i];
+//                std::string pair_desc = CoolProp::get_input_pair_short_desc(pair);
+//                set_pair(pair);
+//                CAPTURE(pair_desc);
+//                CAPTURE(T);
+//                CAPTURE(p);
+//                get_variables();
+//                CAPTURE(x1);
+//                CAPTURE(x2);
+//                CHECK_NOTHROW(single_phase_consistency_check());
+//            }
+//        }
+//    }
 }
 
 TEST_CASE("Test saturation properties for a few fluids", "[saturation],[slow]")
@@ -847,13 +917,13 @@ TEST_CASE("Multiple calls to state class are consistent", "[flashdups],[flash],[
     }
 }
 
-TEST_CASE("Test partial derivatives using PropsSI", "[derivatives]")
+TEST_CASE("Test first partial derivatives using PropsSI", "[derivatives]")
 {
     double hmolar, hmass, T = 300;
     SECTION("Check drhodp|T 3 ways","")
     {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
-        AS->update(CoolProp::PT_INPUTS, 101325, 300);
+        AS->update(CoolProp::PT_INPUTS, 101325, T);
         
         double drhomolardp__T_AbstractState = AS->first_partial_deriv(CoolProp::iDmolar, CoolProp::iP, CoolProp::iT);
         double drhomolardp__T_PropsSI_num = (PropsSI("Dmolar","T",T,"P",101325+1e-3,"n-Propane") - PropsSI("Dmolar","T",T,"P",101325-1e-3,"n-Propane"))/(2*1e-3);
@@ -862,10 +932,46 @@ TEST_CASE("Test partial derivatives using PropsSI", "[derivatives]")
         CAPTURE(drhomolardp__T_AbstractState);
         CAPTURE(drhomolardp__T_PropsSI_num);
         CAPTURE(drhomolardp__T_PropsSI);
-        double rel_err_exact = std::abs(drhomolardp__T_AbstractState-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI;
-        double rel_err_approx = std::abs(drhomolardp__T_PropsSI_num-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI;
-        CHECK(rel_err_exact < 0.001);
-        CHECK(rel_err_approx < 0.001);
+        double rel_err_exact = std::abs((drhomolardp__T_AbstractState-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI);
+        double rel_err_approx = std::abs((drhomolardp__T_PropsSI_num-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI);
+        CHECK(rel_err_exact < 1e-7);
+        CHECK(rel_err_approx < 1e-7);
+    }
+    SECTION("Check drhodp|T 3 ways for water","")
+    {
+        T = 80+273.15;
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::PT_INPUTS, 101325, T);
+        
+        double drhomolardp__T_AbstractState = AS->first_partial_deriv(CoolProp::iDmolar, CoolProp::iP, CoolProp::iT);
+        double drhomolardp__T_PropsSI_num = (PropsSI("Dmolar","T",T,"P",101325+1,"Water") - PropsSI("Dmolar","T",T,"P",101325-1,"Water"))/(2*1);
+        double drhomolardp__T_PropsSI = PropsSI("d(Dmolar)/d(P)|T","T",T,"P",101325,"Water");
+        
+        CAPTURE(drhomolardp__T_AbstractState);
+        CAPTURE(drhomolardp__T_PropsSI_num);
+        CAPTURE(drhomolardp__T_PropsSI);
+        double rel_err_exact = std::abs((drhomolardp__T_AbstractState-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI);
+        double rel_err_approx = std::abs((drhomolardp__T_PropsSI_num-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI);
+        CHECK(rel_err_exact < 1e-6);
+        CHECK(rel_err_approx < 1e-6);
+    }
+    SECTION("Check dpdrho|T 3 ways for water","")
+    {
+        T = 80+273.15;
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::PT_INPUTS, 101325, T);
+        long double rhomolar = AS->rhomolar();
+        double dpdrhomolar__T_AbstractState = AS->first_partial_deriv(CoolProp::iP, CoolProp::iDmolar, CoolProp::iT);
+        double dpdrhomolar__T_PropsSI_num = (PropsSI("P","T",T,"Dmolar",rhomolar+1e-3,"Water") - PropsSI("P","T",T,"Dmolar",rhomolar-1e-3,"Water"))/(2*1e-3);
+        double dpdrhomolar__T_PropsSI = PropsSI("d(P)/d(Dmolar)|T","T",T,"P",101325,"Water");
+        CAPTURE(rhomolar);
+        CAPTURE(dpdrhomolar__T_AbstractState);
+        CAPTURE(dpdrhomolar__T_PropsSI_num);
+        CAPTURE(dpdrhomolar__T_PropsSI);
+        double rel_err_exact = std::abs((dpdrhomolar__T_AbstractState-dpdrhomolar__T_PropsSI)/dpdrhomolar__T_PropsSI);
+        double rel_err_approx = std::abs((dpdrhomolar__T_PropsSI_num-dpdrhomolar__T_PropsSI)/dpdrhomolar__T_PropsSI);
+        CHECK(rel_err_exact < 1e-7);
+        CHECK(rel_err_approx < 1e-7);
     }
     SECTION("Invalid first partial derivatives","")
     {
@@ -877,6 +983,246 @@ TEST_CASE("Test partial derivatives using PropsSI", "[derivatives]")
         CHECK(!ValidNumber(PropsSI("d(Dmolar)/d(P)T","T",300,"P",101325,"n-Propane")));
         CHECK(!ValidNumber(PropsSI("d(Bvirial)/d(P)T","T",300,"P",101325,"n-Propane")));
         CHECK(!ValidNumber(PropsSI("d(Tcrit)/d(P)T","T",300,"P",101325,"n-Propane")));
+    }
+}
+
+TEST_CASE("Test second partial derivatives", "[derivatives]")
+{
+    double hmolar, hmass, T = 300;
+    SECTION("Check d2pdrho2|T 3 ways","")
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        double rhomolar = 60000;
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
+        double p = AS->p();
+        
+        double d2pdrhomolar2__T_AbstractState = AS->second_partial_deriv(CoolProp::iP, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT);
+        // Centered second derivative
+        double del = 1e0;
+        double d2pdrhomolar2__T_PropsSI_num = (PropsSI("P","T",T,"Dmolar",rhomolar+del,"Water") - 2*PropsSI("P","T",T,"Dmolar",rhomolar,"Water") + PropsSI("P","T",T,"Dmolar",rhomolar-del,"Water"))/pow(del, 2);
+        double d2pdrhomolar2__T_PropsSI = PropsSI("d(d(P)/d(Dmolar)|T)/d(Dmolar)|T","T",T,"Dmolar",rhomolar,"Water");
+        
+        CAPTURE(d2pdrhomolar2__T_AbstractState);
+        CAPTURE(d2pdrhomolar2__T_PropsSI_num);
+        double rel_err_exact = std::abs((d2pdrhomolar2__T_AbstractState-d2pdrhomolar2__T_PropsSI)/d2pdrhomolar2__T_PropsSI);
+        double rel_err_approx = std::abs((d2pdrhomolar2__T_PropsSI_num-d2pdrhomolar2__T_AbstractState)/d2pdrhomolar2__T_AbstractState);
+        CHECK(rel_err_exact < 1e-5);
+        CHECK(rel_err_approx < 1e-5);
+    }
+    SECTION("Valid second partial derivatives","")
+    {
+        CHECK(ValidNumber(PropsSI("d(d(Hmolar)/d(P)|T)/d(T)|Dmolar","T",300,"P",101325,"n-Propane")));
+    }
+    SECTION("Invalid second partial derivatives","")
+    {
+        CHECK(!ValidNumber(PropsSI("d(d()/d(P)|T)/d()|","T",300,"P",101325,"n-Propane")));
+        CHECK(!ValidNumber(PropsSI("dd(Dmolar)/d()|T)|T","T",300,"P",101325,"n-Propane")));
+    }
+    SECTION("Check derivatives with respect to T","")
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        double rhomolar = 100, dT = 1e-1;
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
+        
+        // base state
+        long double T0 = AS->T(), rhomolar0 = AS->rhomolar(), hmolar0 = AS->hmolar(), smolar0 = AS->smolar(), umolar0 = AS->umolar(), p0 = AS->p();
+        long double dhdT_rho_ana = AS->first_partial_deriv(CoolProp::iHmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double d2hdT2_rho_ana = AS->second_partial_deriv(CoolProp::iHmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double dsdT_rho_ana = AS->first_partial_deriv(CoolProp::iSmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double d2sdT2_rho_ana = AS->second_partial_deriv(CoolProp::iSmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double dudT_rho_ana = AS->first_partial_deriv(CoolProp::iUmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double d2udT2_rho_ana = AS->second_partial_deriv(CoolProp::iUmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar);
+        long double dpdT_rho_ana = AS->first_partial_deriv(CoolProp::iP, CoolProp::iT, CoolProp::iDmolar);
+        long double d2pdT2_rho_ana = AS->second_partial_deriv(CoolProp::iP, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar);
+        
+        // increment T
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T+dT);
+        long double Tpt = AS->T(), rhomolarpt = AS->rhomolar(), hmolarpt = AS->hmolar(), smolarpt = AS->smolar(), umolarpt = AS->umolar(), ppt = AS->p();
+        // decrement T
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T-dT);
+        long double Tmt = AS->T(), rhomolarmt = AS->rhomolar(), hmolarmt = AS->hmolar(), smolarmt = AS->smolar(), umolarmt = AS->umolar(), pmt = AS->p();
+        
+        long double dhdT_rho_num = (hmolarpt-hmolarmt)/(2*dT);
+        long double d2hdT2_rho_num = (hmolarpt-2*hmolar0+hmolarmt)/pow(dT,2);
+        long double dsdT_rho_num = (smolarpt-smolarmt)/(2*dT);
+        long double d2sdT2_rho_num = (smolarpt-2*smolar0+smolarmt)/pow(dT,2);
+        long double dudT_rho_num = (umolarpt-umolarmt)/(2*dT);
+        long double d2udT2_rho_num = (umolarpt-2*umolar0+umolarmt)/pow(dT,2);
+        long double dpdT_rho_num = (ppt-pmt)/(2*dT);
+        long double d2pdT2_rho_num = (ppt-2*p0+pmt)/pow(dT,2);
+        
+        CAPTURE(format("%0.15Lg",d2pdT2_rho_ana).c_str());
+        
+        double tol = 1e-4;
+        CHECK(std::abs((dhdT_rho_num-dhdT_rho_ana)/dhdT_rho_ana) < tol);
+        CHECK(std::abs((d2hdT2_rho_num-d2hdT2_rho_ana)/d2hdT2_rho_ana) < tol);
+        CHECK(std::abs((dpdT_rho_num-dpdT_rho_ana)/dpdT_rho_ana) < tol);
+        CHECK(std::abs((d2pdT2_rho_num-d2pdT2_rho_ana)/d2pdT2_rho_ana) < tol);
+        CHECK(std::abs((dsdT_rho_num-dsdT_rho_ana)/dsdT_rho_ana) < tol);
+        CHECK(std::abs((d2sdT2_rho_num-d2sdT2_rho_ana)/d2sdT2_rho_ana) < tol);
+        CHECK(std::abs((dudT_rho_num-dudT_rho_ana)/dudT_rho_ana) < tol);
+        CHECK(std::abs((d2udT2_rho_num-d2udT2_rho_ana)/d2udT2_rho_ana) < tol);
+    }
+    
+    SECTION("Check derivatives with respect to rho","")
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        double rhomolar = 100, drho = 1e-1;
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
+        
+        // base state
+        long double T0 = AS->T(), rhomolar0 = AS->rhomolar(), hmolar0 = AS->hmolar(), smolar0 = AS->smolar(), umolar0 = AS->umolar(), p0 = AS->p();
+        long double dhdrho_T_ana = AS->first_partial_deriv(CoolProp::iHmolar, CoolProp::iDmolar, CoolProp::iT);
+        long double d2hdrho2_T_ana = AS->second_partial_deriv(CoolProp::iHmolar, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT);
+        long double dsdrho_T_ana = AS->first_partial_deriv(CoolProp::iSmolar, CoolProp::iDmolar, CoolProp::iT);
+        long double d2sdrho2_T_ana = AS->second_partial_deriv(CoolProp::iSmolar, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT);
+        long double dudrho_T_ana = AS->first_partial_deriv(CoolProp::iUmolar, CoolProp::iDmolar, CoolProp::iT);
+        long double d2udrho2_T_ana = AS->second_partial_deriv(CoolProp::iUmolar, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT);
+        long double dpdrho_T_ana = AS->first_partial_deriv(CoolProp::iP, CoolProp::iDmolar, CoolProp::iT);
+        long double d2pdrho2_T_ana = AS->second_partial_deriv(CoolProp::iP, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT);
+        
+        // increment rho
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar+drho, T);
+        long double Tpr = AS->T(), rhomolarpr = AS->rhomolar(), hmolarpr = AS->hmolar(), smolarpr = AS->smolar(), umolarpr = AS->umolar(), ppr = AS->p();
+        // decrement rho
+        AS->update(CoolProp::DmolarT_INPUTS, rhomolar-drho, T);
+        long double Tmr = AS->T(), rhomolarmr = AS->rhomolar(), hmolarmr = AS->hmolar(), smolarmr = AS->smolar(), umolarmr = AS->umolar(), pmr = AS->p();
+        
+        long double dhdrho_T_num = (hmolarpr-hmolarmr)/(2*drho);
+        long double d2hdrho2_T_num = (hmolarpr-2*hmolar0+hmolarmr)/pow(drho,2);
+        long double dsdrho_T_num = (smolarpr-smolarmr)/(2*drho);
+        long double d2sdrho2_T_num = (smolarpr-2*smolar0+smolarmr)/pow(drho,2);
+        long double dudrho_T_num = (umolarpr-umolarmr)/(2*drho);
+        long double d2udrho2_T_num = (umolarpr-2*umolar0+umolarmr)/pow(drho,2);
+        long double dpdrho_T_num = (ppr-pmr)/(2*drho);
+        long double d2pdrho2_T_num = (ppr-2*p0+pmr)/pow(drho,2);
+        
+        CAPTURE(format("%0.15Lg",d2pdrho2_T_ana).c_str());
+        
+        double tol = 1e-4;
+        CHECK(std::abs((dhdrho_T_num-dhdrho_T_ana)/dhdrho_T_ana) < tol);
+        CHECK(std::abs((d2hdrho2_T_num-d2hdrho2_T_ana)/d2hdrho2_T_ana) < tol);
+        CHECK(std::abs((dpdrho_T_num-dpdrho_T_ana)/dpdrho_T_ana) < tol);
+        CHECK(std::abs((d2pdrho2_T_num-d2pdrho2_T_ana)/d2pdrho2_T_ana) < tol);
+        CHECK(std::abs((dsdrho_T_num-dsdrho_T_ana)/dsdrho_T_ana) < tol);
+        CHECK(std::abs((d2sdrho2_T_num-d2sdrho2_T_ana)/d2sdrho2_T_ana) < tol);
+        CHECK(std::abs((dudrho_T_num-dudrho_T_ana)/dudrho_T_ana) < tol);
+        CHECK(std::abs((d2udrho2_T_num-d2udrho2_T_ana)/d2udrho2_T_ana) < tol);
+    }
+}
+
+TEST_CASE("Ancillary functions", "[ancillary]")
+{
+    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+    for (std::size_t i = 0; i < fluids.size(); ++i){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+        
+        double Tc = AS->T_critical();
+        double Tt = AS->Ttriple();
+        
+        for (double f = 0.1; f < 1; f += 0.4)
+        {
+            double T = f*Tc + (1-f)*Tt;
+            
+            
+            std::ostringstream ss1;
+            ss1 << "Pressure error < 2% for fluid " << fluids[i] << " at " << T << " K";
+            SECTION(ss1.str(), "")
+            {
+                AS->update(CoolProp::QT_INPUTS, 0, T);
+                double p_EOS = AS->p();
+                double p_anc = AS->saturation_ancillary(CoolProp::iP, 0, CoolProp::iT, T);
+                double err = std::abs(p_EOS-p_anc)/p_anc;
+                CAPTURE(p_EOS);
+                CAPTURE(p_anc);
+                CAPTURE(T);
+                CHECK(err < 0.02);
+            }
+            std::ostringstream ss2;
+            ss2 << "Liquid density error < 3% for fluid " << fluids[i] << " at " << T << " K";
+            SECTION(ss2.str(), "")
+            {
+                AS->update(CoolProp::QT_INPUTS, 0, T);
+                double rho_EOS = AS->rhomolar();
+                double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 0, CoolProp::iT, T);
+                double err = std::abs(rho_EOS-rho_anc)/rho_anc;
+                CAPTURE(rho_EOS);
+                CAPTURE(rho_anc);
+                CAPTURE(T);
+                CHECK(err < 0.03);
+            }
+            std::ostringstream ss3;
+            ss3 << "Vapor density error < 3% for fluid " << fluids[i] << " at " << T << " K";
+            SECTION(ss3.str(), "")
+            {
+                AS->update(CoolProp::QT_INPUTS, 1, T);
+                double rho_EOS = AS->rhomolar();
+                double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 1, CoolProp::iT, T);
+                double err = std::abs(rho_EOS-rho_anc)/rho_anc;
+                CAPTURE(rho_EOS);
+                CAPTURE(rho_anc);
+                CAPTURE(T);
+                CHECK(err < 0.03);
+            }
+        }
+    }
+}
+
+TEST_CASE("Triple point checks", "[triple_point]")
+{
+    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+    for (std::size_t i = 0; i < fluids.size(); ++i){
+        
+        std::ostringstream ss1;
+        ss1 << "Triple point pressures matches for pure " << fluids[i];
+        SECTION(ss1.str(), "")
+        {
+            std::vector<std::string> names(1,fluids[i]);
+            shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(names));
+            REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 0, HEOS->Ttriple()););
+            
+            double p_EOS = HEOS->p();
+            double p_sat_min_liquid = HEOS->get_components()[0]->pEOS->sat_min_liquid.p;
+            double p_sat_min_vapor = HEOS->get_components()[0]->pEOS->sat_min_vapor.p;
+            double err_sat_min_liquid = std::abs(p_EOS-p_sat_min_liquid)/p_sat_min_liquid;
+            double err_sat_min_vapor = std::abs(p_EOS-p_sat_min_vapor)/p_sat_min_vapor;
+            double p_triple_liquid = HEOS->get_components()[0]->triple_liquid.p;
+            double p_triple_vapor = HEOS->get_components()[0]->triple_liquid.p;
+            double err_triple_liquid = std::abs(p_EOS-p_triple_liquid)/p_triple_liquid;
+            double err_triple_vapor = std::abs(p_EOS-p_triple_vapor)/p_triple_vapor;
+            
+            CAPTURE(err_sat_min_liquid);
+            CAPTURE(err_sat_min_vapor);
+            CHECK(err_sat_min_liquid < 1e-3);
+            CHECK(err_sat_min_vapor < 1e-3);
+            CHECK(err_triple_liquid < 1e-3);
+            CHECK(err_triple_vapor < 1e-3);
+            
+        }
+//        std::ostringstream ss2;
+//        ss2 << "Liquid density error < 3% for fluid " << fluids[i] << " at " << T << " K";
+//        SECTION(ss2.str(), "")
+//        {
+//            double rho_EOS = AS->rhomolar();
+//            double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 0, CoolProp::iT, T);
+//            double err = std::abs(rho_EOS-rho_anc)/rho_anc;
+//            CAPTURE(rho_EOS);
+//            CAPTURE(rho_anc);
+//            CAPTURE(T);
+//            CHECK(err < 0.03);
+//        }
+//        std::ostringstream ss3;
+//        ss3 << "Vapor density error < 3% for fluid " << fluids[i] << " at " << T << " K";
+//        SECTION(ss3.str(), "")
+//        {
+//            double rho_EOS = AS->rhomolar();
+//            double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 1, CoolProp::iT, T);
+//            double err = std::abs(rho_EOS-rho_anc)/rho_anc;
+//            CAPTURE(rho_EOS);
+//            CAPTURE(rho_anc);
+//            CAPTURE(T);
+//            CHECK(err < 0.03);
+//        }
     }
 }
 

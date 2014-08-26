@@ -63,6 +63,8 @@ index_doc = "index"
 
 numpydoc_show_class_members = False
 
+mathjax_path = 'http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -177,7 +179,7 @@ edit_on_github_path_prefix = 'Web'
 # The style sheet to use for HTML and HTML Help pages. A file of that name
 # must exist either in Sphinx' static/ path, or in one of the custom paths
 # given in html_static_path.
-#html_style = 'Coolprop.css'
+#html_style = 'CoolProp2.css'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

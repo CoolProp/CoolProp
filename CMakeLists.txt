@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 
 if (DEFINED COOLPROP_INSTALL_PREFIX)
-    set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
+    #set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
 else()
     set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
@@ -27,10 +27,10 @@ set(app_name ${project_name})
 project(${project_name})
 
 # Project version
-set (CoolProp_VERSION_MAJOR 5)
-set (CoolProp_VERSION_MINOR 0)
-set (CoolProp_VERSION_PATCH 0)
-set (CoolProp_VERSION ${CoolProp_VERSION_MAJOR}.${CoolProp_VERSION_MINOR}.${CoolProp_VERSION_PATCH})
+set (COOLPROP_VERSION_MAJOR 5)
+set (COOLPROP_VERSION_MINOR 0)
+set (COOLPROP_VERSION_PATCH 0)
+set (COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH})
 
 #######################################
 #           BUILD OPTIONS             #
@@ -65,7 +65,7 @@ option (BUILD_TESTING
 # this makes it easier for developers #
 # to quickly find relevant includes.  #
 # This section finds all sources,     #
-# headers and corrosponding dirs.     #
+# headers and corresponding dirs.     #
 #######################################
 
 file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
@@ -160,7 +160,45 @@ if (COOLPROP_64BIT_SHARED_LIBRARY_MODULE OR COOLPROP_64BIT_SHARED_LIBRARY)
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    if (MSVC)
+      add_custom_command(TARGET ${app_name}
+                         POST_BUILD
+                         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+      install (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/64bit)
+    endif()
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/64bit)
+    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
+endif()
+
+if (COOLPROP_DEBIAN_PACKAGE)
+    if(!UNIX)
+      message(FATAL_ERROR "COOLPROP_DEBIAN_PACKAGE can only be used on linux host")
+    endif()
+    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+    add_library(${app_name} SHARED ${APP_SOURCES})
+    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
+    set_target_properties (${app_name} PROPERTIES VERSION ${COOLPROP_VERSION} SOVERSION ${COOLPROP_VERSION_MAJOR})
+    add_dependencies (${app_name} generate_headers)
+    install (TARGETS ${app_name} DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/lib")
+    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include")
+endif()
+
+if (COOLPROP_32BIT_SHARED_LIBRARY_LINUX_MODULE OR COOLPROP_32BIT_SHARED_LIBRARY_LINUX)
+    if(!UNIX)
+      message(FATAL_ERROR "COOLPROP_32BIT_SHARED_LIBRARY_LINUX_MODULE can only be used on linux host")
+    endif()
+    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+    add_library(${app_name} SHARED ${APP_SOURCES})
+    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
+    add_dependencies (${app_name} generate_headers)
+    if (MSVC)
+      add_custom_command(TARGET ${app_name}
+                         POST_BUILD
+                         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+      install (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
+    endif()
+    install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
+    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
 
 if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_CDECL_SHARED_LIBRARY)
@@ -172,7 +210,14 @@ if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_CDECL_SHARED_LI
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    if (MSVC)
+      add_custom_command(TARGET ${app_name}
+                         POST_BUILD
+                         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+      install (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
+    endif()
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
+    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
 
 if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_STDCALL_SHARED_LIBRARY)
@@ -184,7 +229,14 @@ if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_STDCALL_SHARE
     endif()
     add_dependencies (${app_name} generate_headers)
     set_target_properties(${app_name} PROPERTIES PREFIX "")
+    if (MSVC)
+      add_custom_command(TARGET ${app_name}
+                         POST_BUILD
+                         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+      install (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__stdcall_calling_convention)
+    endif()
     install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__stdcall_calling_convention)
+    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
 
 # EES is only compiled for windows
@@ -196,13 +248,13 @@ if (COOLPROP_EES_MODULE)
   set_target_properties (COOLPROP_EES PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
   add_dependencies (COOLPROP_EES generate_headers)
   set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
+  message(STATUS "Injecting the version COOLPROP_VERSION=${COOLPROP_VERSION}")
   # Put the version into the InnoInstaller setup file
   CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/EES/BuildInnoInstaller.iss.in" "${CMAKE_CURRENT_BINARY_DIR}/BuildInnoInstaller.iss")
   if (!MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
   add_dependencies (COOLPROP_EES generate_headers)
-  
   
   if ( MSVC )
     set_target_properties( COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
@@ -225,7 +277,7 @@ if (COOLPROP_EES_MODULE)
   # Run InnoSetup to make the installer (must be on your path)
   add_custom_command(TARGET COOLPROP_EES
                      POST_BUILD
-                     COMMAND Compil32.exe /cc BuildInnoInstaller.iss
+                     COMMAND iscc /cc BuildInnoInstaller.iss
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   # install the generated executable installer from InnoSetup
   install(
@@ -609,6 +661,8 @@ if (COOLPROP_CATCH_MODULE)
   enable_testing()
 
   list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/test_main.cxx")
+  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+  
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable        (CatchTestRunner ${APP_SOURCES})
   add_dependencies      (CatchTestRunner generate_headers)

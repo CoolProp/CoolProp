@@ -46,7 +46,7 @@ public:
     @param value1 First input value
     @param value2 Second input value
     */
-    void update(long input_pair, double value1, double value2);
+    void update(CoolProp::input_pairs input_pair, double value1, double value2);
 
     /// Set the mole fractions
     /**

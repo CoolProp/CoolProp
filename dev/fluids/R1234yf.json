@@ -239,17 +239,17 @@
         "sat_min_liquid": {
           "T": 220.0, 
           "T_units": "K", 
-          "p": 31507.55884772476, 
+          "p": 31507.55884789486, 
           "p_units": "Pa", 
-          "rhomolar": 11633.107308832523, 
+          "rhomolar": 11633.107308832527, 
           "rhomolar_units": "mol/m^3"
         }, 
         "sat_min_vapor": {
           "T": 220.0, 
           "T_units": "K", 
-          "p": 31507.5588478072, 
+          "p": 31507.558847807257, 
           "p_units": "Pa", 
-          "rhomolar": 17.583525551905595, 
+          "rhomolar": 17.583525551905623, 
           "rhomolar_units": "mol/m^3"
         }
       }, 
@@ -390,6 +390,25 @@
           "type": "ResidualHelmholtzGaussian"
         }
       ], 
+      "critical_region_splines": {
+        "T_max": 367.85, 
+        "T_min": 367.84983035809745, 
+        "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
+        "cL": [
+          0.0, 
+          0.0, 
+          -7.28092281910778e-06, 
+          367.8803614481557
+        ], 
+        "cV": [
+          0.0, 
+          0.0, 
+          7.273842039048367e-06, 
+          367.8196680786972
+        ], 
+        "rhomolar_max": 4193.299505682264, 
+        "rhomolar_min": 4146.67781322612
+      }, 
       "gas_constant": 8.314472, 
       "gas_constant_units": "J/mol/K", 
       "molar_mass": 0.1140415928, 
@@ -413,17 +432,17 @@
     "triple_liquid": {
       "T": 220.0, 
       "T_units": "K", 
-      "p": 31507.55884772476, 
+      "p": 31507.55884789486, 
       "p_units": "Pa", 
-      "rhomolar": 11633.107308832523, 
+      "rhomolar": 11633.107308832527, 
       "rhomolar_units": "mol/m^3"
     }, 
     "triple_vapor": {
       "T": 220.0, 
       "T_units": "K", 
-      "p": 31507.5588478072, 
+      "p": 31507.558847807257, 
       "p_units": "Pa", 
-      "rhomolar": 17.583525551905595, 
+      "rhomolar": 17.583525551905623, 
       "rhomolar_units": "mol/m^3"
     }
   }, 

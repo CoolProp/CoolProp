@@ -239,17 +239,17 @@
         "sat_min_liquid": {
           "T": 131.66, 
           "T_units": "K", 
-          "p": 2.2107279574228698, 
+          "p": 2.2107301544161135, 
           "p_units": "Pa", 
-          "rhomolar": 19149.5234686767, 
+          "rhomolar": 19149.52346867671, 
           "rhomolar_units": "mol/m^3"
         }, 
         "sat_min_vapor": {
           "T": 131.66, 
           "T_units": "K", 
-          "p": 2.21072831726571, 
+          "p": 2.21072831726572, 
           "p_units": "Pa", 
-          "rhomolar": 0.0020195317198106835, 
+          "rhomolar": 0.0020195317198106926, 
           "rhomolar_units": "mol/m^3"
         }
       }, 
@@ -387,6 +387,25 @@
           "type": "ResidualHelmholtzGaussian"
         }
       ], 
+      "critical_region_splines": {
+        "T_max": 400.378, 
+        "T_min": 400.3774167354802, 
+        "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
+        "cL": [
+          0.0, 
+          0.0, 
+          -1.846177917829548e-05, 
+          400.48766296831906
+        ], 
+        "cV": [
+          0.0, 
+          0.0, 
+          1.8536722158567707e-05, 
+          400.2678918703781
+        ], 
+        "rhomolar_max": 5971.593082884313, 
+        "rhomolar_min": 5908.534646267459
+      }, 
       "gas_constant": 8.314472, 
       "gas_constant_units": "J/mol/K", 
       "molar_mass": 0.04606844, 
@@ -410,17 +429,17 @@
     "triple_liquid": {
       "T": 131.66, 
       "T_units": "K", 
-      "p": 2.2107279574228698, 
+      "p": 2.2107301544161135, 
       "p_units": "Pa", 
-      "rhomolar": 19149.5234686767, 
+      "rhomolar": 19149.52346867671, 
       "rhomolar_units": "mol/m^3"
     }, 
     "triple_vapor": {
       "T": 131.66, 
       "T_units": "K", 
-      "p": 2.21072831726571, 
+      "p": 2.21072831726572, 
       "p_units": "Pa", 
-      "rhomolar": 0.0020195317198106835, 
+      "rhomolar": 0.0020195317198106926, 
       "rhomolar_units": "mol/m^3"
     }
   }, 

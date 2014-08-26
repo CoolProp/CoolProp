@@ -386,13 +386,13 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
 	}
 
 	// Obtain the input pair
-	long pair = generate_update_pair(iName1, Prop1, iName2, Prop2, x1, x2);
+	CoolProp::input_pairs pair = generate_update_pair(iName1, Prop1, iName2, Prop2, x1, x2);
 
 	// Update the state
 	State->update(pair, x1, x2);
     
     if (iOutput != iundefined_parameter){
-        // Return the desired output
+        // Get the desired output
         double val = State->keyed_output(iOutput);
         
         // Return the value
@@ -405,10 +405,16 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
         // Return the value
         return val;
     }
-    else{// if is_valid_second_derivative(Output, iOf1, iWrt1, iConstant1, iWrt2, iConstant2){
-        return _HUGE;
-    };
-	
+    else if (is_valid_second_derivative(Output, iOf1, iWrt1, iConstant1, iWrt2, iConstant2)){
+        // Return the desired output
+        double val = State->second_partial_deriv(iOf1, iWrt1, iConstant1, iWrt2, iConstant2);
+        
+        // Return the value
+        return val;
+    }
+    else{
+        throw ValueError(format("Output [%s] is not a parameter or a string representation of a derivative",Output.c_str()).c_str());
+    }
 }
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref, const std::vector<double> &z)
 {

@@ -158,6 +158,14 @@ protected:
     virtual long double calc_d2alpha0_dDelta2(void){throw NotImplementedError("calc_d2alpha0_dDelta2 is not implemented for this backend");};
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\tau\tau}\f$ (dimensionless)
     virtual long double calc_d2alpha0_dTau2(void){throw NotImplementedError("calc_d2alpha0_dTau2 is not implemented for this backend");};
+    /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\delta\delta\delta}\f$ (dimensionless)
+    virtual long double calc_d3alpha0_dDelta3(void){throw NotImplementedError("calc_d3alpha0_dDelta3 is not implemented for this backend");};
+    /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\delta\delta\tau}\f$ (dimensionless)
+    virtual long double calc_d3alpha0_dDelta2_dTau(void){throw NotImplementedError("calc_d3alpha0_dDelta2_dTau is not implemented for this backend");};
+    /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\delta\tau\tau}\f$ (dimensionless)
+    virtual long double calc_d3alpha0_dDelta_dTau2(void){throw NotImplementedError("calc_d3alpha0_dDelta_dTau2 is not implemented for this backend");};
+    /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\tau\tau\tau}\f$ (dimensionless)
+    virtual long double calc_d3alpha0_dTau3(void){throw NotImplementedError("calc_d3alpha0_dTau3 is not implemented for this backend");};
 
     virtual void calc_reducing_state(void){throw NotImplementedError("calc_reducing_state is not implemented for this backend");};
 
@@ -232,6 +240,12 @@ protected:
     virtual void update_states(void){throw NotImplementedError("This backend does not implement update_states function");};
 	
 	virtual long double calc_melting_line(int param, int given, long double value){throw NotImplementedError("This backend does not implement calc_melting_line function");};
+    
+    /// @param param The key for the parameter to be returned
+    /// @param Q The quality for the parameter that is given (0 = saturated liquid, 1 = saturated vapor)
+    /// @param given The key for the parameter that is given
+    /// @param value The value for the parameter that is given
+    virtual long double calc_saturation_ancillary(parameters param, int Q, parameters given, double value){throw NotImplementedError("This backend does not implement calc_saturation_ancillary");};
 	
 	virtual phases calc_phase(void){throw NotImplementedError("This backend does not implement calc_phase function");};
     
@@ -274,7 +288,7 @@ public:
     virtual bool using_mass_fractions(void) = 0;
     virtual bool using_volu_fractions(void) = 0;
 
-    virtual void update(long input_pair, double Value1, double Value2) = 0;
+    virtual void update(CoolProp::input_pairs input_pair, double Value1, double Value2) = 0;
     virtual void set_mole_fractions(const std::vector<long double> &mole_fractions) = 0;
     virtual void set_mass_fractions(const std::vector<long double> &mass_fractions) = 0;
     virtual void set_volu_fractions(const std::vector<long double> &mass_fractions){throw NotImplementedError("Volume composition has not been implemented.");}
@@ -302,22 +316,22 @@ public:
      * 
      * The first partial derivative (\ref CoolProp::AbstractState::first_partial_deriv) can be expressed as
      * 
-     * \f[ \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta}{\left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta} = \frac{N}{D}\f]
+     * \f[ \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_T-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial C}{\partial T}\right)_\rho}{\left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_T-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial C}{\partial T}\right)_\rho} = \frac{N}{D}\f]
      * 
      * and the second derivative can be expressed as
      * 
      * \f[
-     * \frac{\partial}{\partial D}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_E = \frac{\frac{\partial}{\partial \tau}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\delta\left(\frac{\partial E}{\partial \delta}\right)_\tau-\frac{\partial}{\partial \delta}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_\tau\left(\frac{\partial E}{\partial \tau}\right)_\delta}{\left(\frac{\partial D}{\partial \tau}\right)_\delta\left(\frac{\partial E}{\partial \delta}\right)_\tau-\left(\frac{\partial D}{\partial \delta}\right)_\tau\left(\frac{\partial E}{\partial \tau}\right)_\delta}
+     * \frac{\partial}{\partial D}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_E = \frac{\frac{\partial}{\partial T}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\rho\left(\frac{\partial E}{\partial \rho}\right)_T-\frac{\partial}{\partial \rho}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_T\left(\frac{\partial E}{\partial T}\right)_\rho}{\left(\frac{\partial D}{\partial T}\right)_\rho\left(\frac{\partial E}{\partial \rho}\right)_T-\left(\frac{\partial D}{\partial \rho}\right)_T\left(\frac{\partial E}{\partial T}\right)_\rho}
      * \f]
      * 
      * which can be expressed in parts as
      * 
-     * \f[\left(\frac{\partial N}{\partial \delta}\right)_{\tau} = \left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial^2 C}{\partial \delta^2}\right)_{\tau}+\left(\frac{\partial^2 A}{\partial \tau\partial\delta}\right)\left(\frac{\partial C}{\partial \delta}\right)_{\tau}-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial^2 C}{\partial \tau\partial\delta}\right)-\left(\frac{\partial^2 A}{\partial \delta^2}\right)_{\tau}\left(\frac{\partial C}{\partial \tau}\right)_\delta\f]
-     * \f[\left(\frac{\partial D}{\partial \delta}\right)_{\tau} = \left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial^2 C}{\partial \delta^2}\right)_{\tau}+\left(\frac{\partial^2 B}{\partial \tau\partial\delta}\right)\left(\frac{\partial C}{\partial \delta}\right)_{\tau}-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial^2 C}{\partial \tau\partial\delta}\right)-\left(\frac{\partial^2 B}{\partial \delta^2}\right)_{\tau}\left(\frac{\partial C}{\partial \tau}\right)_\delta\f]
-     * \f[\left(\frac{\partial N}{\partial \tau}\right)_{\delta} = \left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial^2 C}{\partial \delta\partial\tau}\right)+\left(\frac{\partial^2 A}{\partial \tau^2}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_{\tau}-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial^2 C}{\partial \tau^2}\right)_\delta-\left(\frac{\partial^2 A}{\partial \delta\partial\tau}\right)\left(\frac{\partial C}{\partial \tau}\right)_\delta\f]
-     * \f[\left(\frac{\partial D}{\partial \tau}\right)_{\delta} = \left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial^2 C}{\partial \delta\partial\tau}\right)+\left(\frac{\partial^2 B}{\partial \tau^2}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_{\tau}-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial^2 C}{\partial \tau^2}\right)_\delta-\left(\frac{\partial^2 B}{\partial \delta\partial\tau}\right)\left(\frac{\partial C}{\partial \tau}\right)_\delta\f]
-     * \f[\frac{\partial}{\partial \tau}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\delta = \frac{D\left(\frac{\partial N}{\partial \tau}\right)_{\delta}-N\left(\frac{\partial D}{\partial \tau}\right)_{\delta}}{D^2}\f]
-     * \f[\frac{\partial}{\partial \delta}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\tau = \frac{D\left(\frac{\partial N}{\partial \delta}\right)_{\tau}-N\left(\frac{\partial D}{\partial \delta}\right)_{\tau}}{D^2}\f]
+     * \f[\left(\frac{\partial N}{\partial \rho}\right)_{T} = \left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho^2}\right)_{T}+\left(\frac{\partial^2 A}{\partial T\partial\rho}\right)\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T\partial\rho}\right)-\left(\frac{\partial^2 A}{\partial \rho^2}\right)_{T}\left(\frac{\partial C}{\partial T}\right)_\rho\f]
+     * \f[\left(\frac{\partial D}{\partial \rho}\right)_{T} = \left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho^2}\right)_{T}+\left(\frac{\partial^2 B}{\partial T\partial\rho}\right)\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T\partial\rho}\right)-\left(\frac{\partial^2 B}{\partial \rho^2}\right)_{T}\left(\frac{\partial C}{\partial T}\right)_\rho\f]
+     * \f[\left(\frac{\partial N}{\partial T}\right)_{\rho} = \left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho\partial T}\right)+\left(\frac{\partial^2 A}{\partial T^2}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T^2}\right)_\rho-\left(\frac{\partial^2 A}{\partial \rho\partial T}\right)\left(\frac{\partial C}{\partial T}\right)_\rho\f]
+     * \f[\left(\frac{\partial D}{\partial T}\right)_{\rho} = \left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho\partial T}\right)+\left(\frac{\partial^2 B}{\partial T^2}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T^2}\right)_\rho-\left(\frac{\partial^2 B}{\partial \rho\partial T}\right)\left(\frac{\partial C}{\partial T}\right)_\rho\f]
+     * \f[\frac{\partial}{\partial \rho}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_T = \frac{D\left(\frac{\partial N}{\partial \rho}\right)_{T}-N\left(\frac{\partial D}{\partial \rho}\right)_{\tau}}{D^2}\f]
+     * \f[\frac{\partial}{\partial T}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\rho = \frac{D\left(\frac{\partial N}{\partial T}\right)_{\rho}-N\left(\frac{\partial D}{\partial T}\right)_{\rho}}{D^2}\f]
      * 
      * The terms \f$ N \f$ and \f$ D \f$ are the numerator and denominator from \ref CoolProp::AbstractState::first_partial_deriv respectively
      */
@@ -430,7 +444,7 @@ public:
     /// @param Q The quality for the parameter that is given (0 = saturated liquid, 1 = saturated vapor)
     /// @param given The key for the parameter that is given
     /// @param value The value for the parameter that is given
-    //double saturation_ancillary(int param, int Q, int given, double value);
+    double saturation_ancillary(parameters param, int Q, parameters given, double value);
 
     // ----------------------------------------
     // Transport properties
@@ -470,12 +484,22 @@ public:
         if (!_d2alpha0_dTau2) _d2alpha0_dTau2 = calc_d2alpha0_dTau2();
         return _d2alpha0_dTau2;
     };
-    /*
-    virtual double d3alpha0_dDelta3(void) = 0;
-    virtual double d3alpha0_dDelta2_dTau(void) = 0;
-    virtual double d3alpha0_dDelta_dTau2(void) = 0;
-    virtual double d3alpha0_dTau3(void) = 0;
-    */
+    long double d3alpha0_dTau3(void){
+        if (!_d3alpha0_dTau3) _d3alpha0_dTau3 = calc_d3alpha0_dTau3();
+        return _d3alpha0_dTau3;
+    };
+    long double d3alpha0_dDelta_dTau2(void){
+        if (!_d3alpha0_dDelta_dTau2) _d3alpha0_dDelta_dTau2 = calc_d3alpha0_dDelta_dTau2();
+        return _d3alpha0_dDelta_dTau2;
+    };
+    long double d3alpha0_dDelta2_dTau(void){
+        if (!_d3alpha0_dDelta2_dTau) _d3alpha0_dDelta2_dTau = calc_d3alpha0_dDelta2_dTau();
+        return _d3alpha0_dDelta2_dTau;
+    };
+    long double d3alpha0_dDelta3(void){
+        if (!_d3alpha0_dDelta3) _d3alpha0_dDelta3 = calc_d3alpha0_dDelta3();
+        return _d3alpha0_dDelta3;
+    };
 
     long double alphar(void){
         if (!_alphar) _alphar = calc_alphar();
