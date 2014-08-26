@@ -485,7 +485,7 @@ class PropsPlot(BasePlot):
     def draw_isolines(self, iso_type, iso_range, num=10, rounding=False):
         iso_lines = IsoLines(self.fluid_ref,
                              self.graph_type,
-                             iso_type,
+                             iso_type, unit_system = self.unit_system,
                              axis=self.axis)
         iso_lines.draw_isolines(iso_range, num, rounding)
 

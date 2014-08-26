@@ -11,12 +11,20 @@ SMALL = 1E-5
 
 class BasePlot(object):
     #TODO: Simplify / Consolidate dictionary maps
-    AXIS_LABELS = {'T': ["Temperature", r"[K]"],
-                   'P': ["Pressure", r"[Pa]"],
-                   'S': ["Entropy", r"[J/kg/K]"],
-                   'H': ["Enthalpy", r"[J/kg]"],
-                   'U': ["Internal Energy", r"[J/kg]"],
-                   'D': ["Density", r"[kg/m$^3$]"]
+    AXIS_LABELS = {'KSI': {'T': ["Temperature", r"[K]"],
+                           'P': ["Pressure", r"[kPa]"],
+                           'S': ["Entropy", r"[kJ/kg/K]"],
+                           'H': ["Enthalpy", r"[kJ/kg]"],
+                           'U': ["Internal Energy", r"[kJ/kg]"],
+                           'D': ["Density", r"[kg/m$^3$]"]
+                          },
+                    'SI': {'T': ["Temperature", r"[K]"],
+                           'P': ["Pressure", r"[Pa]"],
+                           'S': ["Entropy", r"[J/kg/K]"],
+                           'H': ["Enthalpy", r"[J/kg]"],
+                           'U': ["Internal Energy", r"[J/kg]"],
+                           'D': ["Density", r"[kg/m$^3$]"]
+                          }
                    }
 
     COLOR_MAP = {'T': 'Darkred',
@@ -158,6 +166,8 @@ class BasePlot(object):
         the keys 'kmax', 'label' and 'opts', those can be used for plotting
         as well.
         """
+        print(self)
+        print(self.unit_system)
         if not kind.upper() in ['T', 'P']:
             raise ValueError(''.join(["Invalid input for determining the ",
                                       "saturation lines... Expected either ",
@@ -180,6 +190,7 @@ class BasePlot(object):
                                              kind, sat_mesh)
                                              
         if self.unit_system == 'KSI':
+            print("got here")
             x_vals *= self.KSI_SCALE_FACTOR[self.graph_type[1]]
             y_vals *= self.KSI_SCALE_FACTOR[self.graph_type[0]]
 
@@ -236,13 +247,13 @@ class BasePlot(object):
 
         tl_str = "%s - %s Graph for %s"
         if not self.axis.get_title():
-            self.axis.set_title(tl_str % (self.AXIS_LABELS[y_axis_id][0],
-                                          self.AXIS_LABELS[x_axis_id][0],
+            self.axis.set_title(tl_str % (self.AXIS_LABELS[self.unit_system][y_axis_id][0],
+                                          self.AXIS_LABELS[self.unit_system][x_axis_id][0],
                                           filter_fluid_ref(self.fluid_ref)))
         if not self.axis.get_xlabel():
-            self.axis.set_xlabel(' '.join(self.AXIS_LABELS[x_axis_id]))
+            self.axis.set_xlabel(' '.join(self.AXIS_LABELS[self.unit_system][x_axis_id]))
         if not self.axis.get_ylabel():
-            self.axis.set_ylabel(' '.join(self.AXIS_LABELS[y_axis_id]))
+            self.axis.set_ylabel(' '.join(self.AXIS_LABELS[self.unit_system][y_axis_id]))
 
     def _draw_graph(self):
         return
