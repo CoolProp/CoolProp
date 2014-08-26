@@ -76,6 +76,15 @@ class MixtureDerivatives{
 	 */
 	static long double partial_molar_volume(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
 
+    /** \brief Fugacity of the i-th component
+     * 
+     * Given by the equation
+     * \f[
+     * f_i(\delta, \tau, \bar x) = x_i\rho R T \exp\left(\frac{\partial n\alpha^r}{\partial n_i}\right)_{T,V,n_{j \neq i}}
+     * \f]
+     */
+    static long double fugacity_i(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+      
     /** \brief Natural logarithm of the fugacity coefficient
      * 
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
@@ -172,11 +181,11 @@ class MixtureDerivatives{
      * 
      * The derivative term
 	 * \f[
-     * \left(\frac{\partial^2n\alpha^r}{\partial x_i\partial n_j} \right)_{T,V} = \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_{j\neq i}}\right)\right)_{T,V,x_{k\neq j}} +\left(\frac{\partial \alpha^r}{\partial x_j}\right)_{T,V,x_{k\neq j}}
+     * \left(\frac{\partial^2n\alpha^r}{\partial x_j\partial n_i} \right)_{T,V} = \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_{j\neq i}}\right)\right)_{T,V,x_{k\neq j}} +\left(\frac{\partial \alpha^r}{\partial x_j}\right)_{T,V,x_{k\neq j}}
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-    static long double d2nalphar_dxi_dnj__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j){ return MixtureDerivatives::d_ndalphardni_dxj__constT_V_xi(HEOS, i, j) + MixtureDerivatives::dalphar_dxj__constT_V_xi(HEOS, j);};
+    static long double d2nalphar_dxj_dni__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, std::size_t i){ return MixtureDerivatives::d_ndalphardni_dxj__constT_V_xi(HEOS, i, j) + MixtureDerivatives::dalphar_dxj__constT_V_xi(HEOS, j);};
 
 	/// Gernert Equation 3.119
 	/// Catch test provided

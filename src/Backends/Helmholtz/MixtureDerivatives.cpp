@@ -19,6 +19,9 @@ long double MixtureDerivatives::d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS,
     return 0                           + HEOS.Excess.d2alphardxidxj(HEOS._tau, HEOS._delta, HEOS.mole_fractions, i, j);
 }
 
+long double MixtureDerivatives::fugacity_i(HelmholtzEOSMixtureBackend &HEOS, std::size_t i){
+    return HEOS.mole_fractions[i]*HEOS.rhomolar()*HEOS.gas_constant()*HEOS.T()*exp( dnalphar_dni__constT_V_nj(HEOS, i));
+}
 long double MixtureDerivatives::ln_fugacity_coefficient(HelmholtzEOSMixtureBackend &HEOS, std::size_t i)
 {
     return HEOS.alphar() + ndalphar_dni__constT_V_nj(HEOS, i)-log(1+HEOS._delta.pt()*HEOS.dalphar_dDelta());
@@ -68,7 +71,7 @@ long double MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(Helmho
     // Gernert 3.115
     long double R_u = HEOS.gas_constant();
     // partial molar volume is -dpdn/dpdV, so need to flip the sign here
-    return d2nalphar_dxi_dnj__constT_V(HEOS, i, j) - partial_molar_volume(HEOS, i)/(R_u*HEOS._T)*dpdxj__constT_V_xi(HEOS, j);
+    return d2nalphar_dxj_dni__constT_V(HEOS, j, i) - partial_molar_volume(HEOS, i)/(R_u*HEOS._T)*dpdxj__constT_V_xi(HEOS, j);
 }
 long double MixtureDerivatives::dpdxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j)
 {

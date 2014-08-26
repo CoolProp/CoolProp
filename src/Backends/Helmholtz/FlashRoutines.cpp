@@ -252,16 +252,16 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         // Actually call the successive substitution solver
         SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
 
-        //SaturationSolvers::newton_raphson_saturation NR;
-        //SaturationSolvers::newton_raphson_saturation_options IO;
-        //IO.rhomolar_liq = io.rhomolar_liq;
-        //IO.rhomolar_vap = io.rhomolar_vap;
-        //IO.T = io.T;
-        //IO.p = io.p;
-        //IO.Nstep_max = 25;
+        SaturationSolvers::newton_raphson_saturation NR;
+        SaturationSolvers::newton_raphson_saturation_options IO;
+        IO.rhomolar_liq = io.rhomolar_liq;
+        IO.rhomolar_vap = io.rhomolar_vap;
+        IO.T = io.T;
+        IO.p = io.p;
+        IO.Nstep_max = 25;
         
         // Dewpoint
-        //NR.call(HEOS, io.y, io.x, IO);
+        NR.call(HEOS, io.y, io.x, IO);
         
         // Load the outputs
         HEOS._phase = iphase_twophase;

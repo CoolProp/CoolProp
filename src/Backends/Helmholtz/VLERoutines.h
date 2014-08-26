@@ -33,7 +33,7 @@ namespace SaturationSolvers
     {
         int sstype, Nstep_max;
         long double rhomolar_liq, rhomolar_vap, p, T, beta;
-        std::vector<long double> *x, *y, *K;
+        std::vector<long double> x, y, K;
     };
 
     /*! Returns the natural logarithm of K for component i using the method from Wilson as in
@@ -193,6 +193,70 @@ namespace SaturationSolvers
         long double T,p;
     };
 
+    struct newton_raphson_saturation_options{
+        enum imposed_variable_options {IMPOSED_P, IMPOSED_T};
+        int Nstep_max;
+        long double omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T;
+        imposed_variable_options imposed_variable;
+        std::vector<long double> x, y;
+        newton_raphson_saturation_options(){ } // Defaults
+    };
+
+    /** \brief A class to do newton raphson solver for VLE given guess values for vapor-liquid equilibria.  This class will then be included in the Mixture class
+     * 
+     * A class is used rather than a function so that it is easier to store iteration histories, additional output values, etc.
+     * 
+     * This class only handles bubble and dew lines since the independent variables are N-1 of the mole fractions in the incipient phase along with one of T, p, or rho
+     */
+    class newton_raphson_saturation
+    {
+    public:
+	    long double error_rms, rhomolar_liq, rhomolar_vap, T, p, max_rel_change;
+	    unsigned int N;
+	    bool logging;
+	    int Nsteps;
+	    STLMatrix J;
+        HelmholtzEOSMixtureBackend *HEOS;
+	    std::vector<long double> K, x, y, phi_ij_liq, phi_ij_vap, dlnphi_drho_liq, dlnphi_drho_vap, r, negative_r, dXdS, neg_dFdS;
+	    std::vector<SuccessiveSubstitutionStep> step_logger;
+
+	    newton_raphson_saturation(){};
+
+	    void resize(unsigned int N);
+	
+	    // Reset the state of all the internal variables
+	    void pre_call()
+	    {
+		    K.clear(); x.clear(); y.clear();  phi_ij_liq.clear(); 
+            phi_ij_vap.clear(); dlnphi_drho_liq.clear(), dlnphi_drho_vap.clear(),
+            step_logger.clear(); error_rms = 1e99; Nsteps = 0;
+		    rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
+	    };
+
+	    /*! Call the Newton-Raphson VLE Solver
+
+	    This solver must be passed reasonable guess values for the mole fractions, 
+	    densities, etc.  You may want to take a few steps of successive substitution
+	    before you start with Newton Raphson.
+
+	    @param HEOS HelmholtzEOSMixtureBackend instance
+	    @param z Bulk mole fractions [-]
+	    @param z_incipient Initial guesses for the mole fractions of the incipient phase [-]
+	    */
+	    void call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &z_incipient, newton_raphson_saturation_options &IO);
+
+	    /*! Build the arrays for the Newton-Raphson solve
+
+	    This method builds the Jacobian matrix, the sensitivity matrix, etc.
+         * 
+	    */
+	    void build_arrays();
+
+        /** Check the derivatives in the Jacobian using numerical derivatives.
+        */
+        void check_Jacobian();
+    };
+    
     /*!
     A class to do newton raphson solver for VLE given guess values for vapor-liquid equilibria.  This class will then be included in the Mixture class
 
