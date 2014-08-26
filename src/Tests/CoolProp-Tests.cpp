@@ -211,7 +211,7 @@ vel("Ethane", "T", 500, "Dmolar", 11210, "V", 48.34e-6, 1e-2),
 vel("Methanol", "T", 300, "Dmass", 0.12955, "V", 0.009696e-3, 1e-3),
 vel("Methanol", "T", 300, "Dmass", 788.41, "V", 0.5422e-3, 1e-3),
 vel("Methanol", "T", 630, "Dmass", 0.061183, "V", 0.02081e-3, 1e-3),
-vel("Methanol", "T", 630, "Dmass", 888.50, "V", 0.2405e-3, 1e-1),
+vel("Methanol", "T", 630, "Dmass", 888.50, "V", 0.2405e-3, 1e-1), // They use a different EOS in the high pressure region
 
 // From REFPROP 9.1 since no data provided
 vel("n-Butane", "T", 150, "Q", 0, "V", 0.0013697657668, 1e-4),
