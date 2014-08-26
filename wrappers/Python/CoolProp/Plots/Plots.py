@@ -247,6 +247,11 @@ class IsoLines(BasePlot):
             limits[0][1] = min([limits[0][1], max(self.axis.get_xlim())])
             limits[1][0] = max([limits[1][0], min(self.axis.get_ylim())])
             limits[1][1] = min([limits[1][1], max(self.axis.get_ylim())])
+            
+        # Limits correction in case of KSI unit_system
+        if self.unit_system == 'KSI':
+            limits[0] = [l*self.KSI_SCALE_FACTOR[self.graph_type[1]] for l in limits[0]]
+            limits[1] = [l*self.KSI_SCALE_FACTOR[self.graph_type[0]] for l in limits[1]]
 
         self.axis.set_xlim(limits[0])
         self.axis.set_ylim(limits[1])

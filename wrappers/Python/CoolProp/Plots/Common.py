@@ -166,8 +166,6 @@ class BasePlot(object):
         the keys 'kmax', 'label' and 'opts', those can be used for plotting
         as well.
         """
-        print(self)
-        print(self.unit_system)
         if not kind.upper() in ['T', 'P']:
             raise ValueError(''.join(["Invalid input for determining the ",
                                       "saturation lines... Expected either ",
@@ -190,7 +188,6 @@ class BasePlot(object):
                                              kind, sat_mesh)
                                              
         if self.unit_system == 'KSI':
-            print("got here")
             x_vals *= self.KSI_SCALE_FACTOR[self.graph_type[1]]
             y_vals *= self.KSI_SCALE_FACTOR[self.graph_type[0]]
 
