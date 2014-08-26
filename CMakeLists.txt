@@ -159,8 +159,11 @@ if (COOLPROP_64BIT_SHARED_LIBRARY_MODULE OR COOLPROP_64BIT_SHARED_LIBRARY)
       set_target_properties(${app_name} PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
     endif()
     add_dependencies (${app_name} generate_headers)
-    set_target_properties(${app_name} PROPERTIES PREFIX "")
+    
     if (MSVC)
+      
+      # No lib prefix for the shared library
+      set_target_properties(${app_name} PROPERTIES PREFIX "")
       add_custom_command(TARGET ${app_name}
                          POST_BUILD
                          COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
@@ -549,6 +552,9 @@ if (COOLPROP_MATLAB_MODULE)
   add_library(HAPropsSI SHARED ${APP_SOURCES} ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/HAProps.cpp)
   target_link_libraries(PropsSI ${MATLAB_LIBRARIES})
   target_link_libraries(HAPropsSI ${MATLAB_LIBRARIES})
+ 
+  set_target_properties(PropsSI ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) #Put .lib in this directory so it won't get installed
+  set_target_properties(HAPropsSI ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) #Put .lib in this directory so it won't get installed
 
   if(WIN32) # 32-bit or 64-bit mex
     if (CMAKE_CL_64)
