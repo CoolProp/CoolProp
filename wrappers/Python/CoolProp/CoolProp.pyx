@@ -35,7 +35,7 @@ cdef bint iterable(object a):
     else:
         return isinstance(a,(list, tuple))
 
-cpdef ndarray_or_iterable(object input):
+cdef ndarray_or_iterable(object input):
     if _numpy_supported:
         return np.array(input)
     else:
