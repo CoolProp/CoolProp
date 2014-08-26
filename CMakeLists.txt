@@ -65,7 +65,7 @@ option (BUILD_TESTING
 # this makes it easier for developers #
 # to quickly find relevant includes.  #
 # This section finds all sources,     #
-# headers and corrosponding dirs.     #
+# headers and corresponding dirs.     #
 #######################################
 
 file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
@@ -248,13 +248,13 @@ if (COOLPROP_EES_MODULE)
   set_target_properties (COOLPROP_EES PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
   add_dependencies (COOLPROP_EES generate_headers)
   set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
+  message(STATUS "Injecting the version COOLPROP_VERSION=${COOLPROP_VERSION}")
   # Put the version into the InnoInstaller setup file
   CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/EES/BuildInnoInstaller.iss.in" "${CMAKE_CURRENT_BINARY_DIR}/BuildInnoInstaller.iss")
   if (!MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
   add_dependencies (COOLPROP_EES generate_headers)
-  
   
   if ( MSVC )
     set_target_properties( COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
@@ -277,7 +277,7 @@ if (COOLPROP_EES_MODULE)
   # Run InnoSetup to make the installer (must be on your path)
   add_custom_command(TARGET COOLPROP_EES
                      POST_BUILD
-                     COMMAND Compil32.exe /cc BuildInnoInstaller.iss
+                     COMMAND iscc /cc BuildInnoInstaller.iss
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   # install the generated executable installer from InnoSetup
   install(
