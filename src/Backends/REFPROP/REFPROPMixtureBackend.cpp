@@ -659,6 +659,13 @@ long double REFPROPMixtureBackend::calc_Ttriple(){
     INFOdll(&icomp, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
 	return static_cast<long double>(ttrp);
 };
+long double REFPROPMixtureBackend::calc_molar_mass(void)
+{
+    double wmm_kg_kmol;
+    WMOLdll(&(mole_fractions[0]), &wmm_kg_kmol); // returns mole mass in kg/kmol
+    _molar_mass = wmm_kg_kmol/1000; // kg/mol
+	return static_cast<long double>(_molar_mass.pt());
+};
 	
 double REFPROPMixtureBackend::calc_melt_Tmax()
 {
@@ -1320,11 +1327,11 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
 
             shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
             double Tr = S1->T_critical();
-            S1->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
+            CHECK_NOTHROW(S1->update(CoolProp::QT_INPUTS, 0, Tr*0.9););
             double rho_CP = S1->rhomolar();
 
             shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
-            S2->update(CoolProp::QT_INPUTS, 0, Tr*0.9);
+            CHECK_NOTHROW(S2->update(CoolProp::QT_INPUTS, 0, Tr*0.9););
             double rho_RP = S2->rhomolar();
 
             CAPTURE(Name);
@@ -1381,12 +1388,12 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
 
             shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
             double Tr = S1->T_critical();
-            S1->update(CoolProp::QT_INPUTS, 0, 0.9*Tr);
+            CHECK_NOTHROW(S1->update(CoolProp::QT_INPUTS, 0, 0.9*Tr););
             double h_CP = S1->hmass();
             double s_CP = S1->smass();
 
             shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
-            S2->update(CoolProp::QT_INPUTS, 0, 0.9*Tr);
+            CHECK_NOTHROW(S2->update(CoolProp::QT_INPUTS, 0, 0.9*Tr););
             double h_RP = S2->hmass();
             double s_RP = S2->smass();
 
@@ -1404,5 +1411,17 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
         }
     }
 }
+
+TEST_CASE("Check some inputs for REFPROP work","[REFPROP]")
+{
+    SECTION("Critical parameters","")
+    {
+        CHECK(ValidNumber(CoolProp::PropsSI("PCRIT","P",0,"T",0,"REFPROP::R245FA")));
+        CHECK(ValidNumber(CoolProp::PropsSI("TCRIT","P",0,"T",0,"REFPROP::R245FA")));
+        CHECK(ValidNumber(CoolProp::PropsSI("RHOCRIT","P",0,"T",0,"REFPROP::R245FA")));
+        CHECK(ValidNumber(CoolProp::PropsSI("MOLEMASS","P",0,"T",0,"REFPROP::R245FA")));
+    }
+}
+
 
 #endif

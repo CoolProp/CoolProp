@@ -51,12 +51,7 @@ public:
 				double value2
 				);
 
-    long double calc_molar_mass(void){
-        if (!_molar_mass){
-            calc_molar_mass();
-        }
-        return _molar_mass.pt();
-    };
+    long double calc_molar_mass(void);
 
 	/// Returns true if REFPROP is supported on this platform
 	bool REFPROP_supported(void);
