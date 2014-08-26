@@ -161,9 +161,47 @@ std::string get_file_contents(const char *filename)
 void solve_cubic(double a, double b, double c, double d, int &N, double &x0, double &x1, double &x2)
 {
 	// 0 = ax^3 + b*x^2 + c*x + d
+    
+    
+    if (std::abs(a) < 10*DBL_EPSILON){
+        if (std::abs(b) < 10*DBL_EPSILON){
+            // Linear solution if a = 0 and b = 0
+            x0 = -d/c;
+            N = 1;
+            return;
+        }
+        else{
+            // Quadratic solution(s) if a = 0 and b != 0
+            x0 = (-c+sqrt(c*c-4*b*d))/(2*b);
+            x1 = (-c-sqrt(c*c-4*b*d))/(2*b);
+            N = 2;
+            return;
+        }
+    }
+    
+    // Ok, it is really a cubic
 
 	// Discriminant
 	double DELTA = 18*a*b*c*d-4*b*b*b*d+b*b*c*c-4*a*c*c*c-27*a*a*d*d;
+    double DELTA0 = b*b*b-2*a*c;
+    
+    // Deal with special cases
+    if (std::abs(DELTA) < 10*DBL_EPSILON){
+        if (std::abs(DELTA0)>0){
+            x0 = (9*a*d-b*c)/(2*DELTA0);
+            x1 = x0;
+            x2 = (4*a*b*c - 9*a*a*d - b*b*b)/(a*DELTA0);
+            N = 3;
+            return;
+        }
+        else{
+            x0 = -b/(3*a);
+            x1 = x0;
+            x2 = x0;
+            N = 3;
+            return;
+        }
+    }
 
 	// Coefficients for the depressed cubic t^3+p*t+q = 0
 	double p = (3*a*c-b*b)/(3*a*a);

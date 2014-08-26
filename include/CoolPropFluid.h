@@ -46,29 +46,32 @@ struct CriticalRegionSplines{
     bool enabled;
     CriticalRegionSplines(){enabled = false;};
     void get_densities(double T, double rho_min, double rho_crit, double rho_max, double &rhoL, double &rhoV){
-        bool ok1 = false, ok2 = false, ok3 = false;
         int Nsoln = -1, Ngood = 0;
-        double rho1, rho2, rho3;
+        double rho1 =0, rho2 = 0, rho3 = 0;
         
         // -----------
         // Liquid part
         // -----------
         Ngood = 0;
+        long double v1 = cL[0]*pow(rho_crit,3) + cL[1]*pow(rho_crit,2) + cL[2]*pow(rho_crit,1) + cL[3];
+        long double v2 = cL[0]*pow(rho_max,3) + cL[1]*pow(rho_max,2) + cL[2]*pow(rho_max,1) + cL[3];
         solve_cubic(cL[0], cL[1], cL[2], cL[3]-T, Nsoln, rho1, rho2, rho3);
-        if (rho1 < rho_max && rho1 > rho_crit){ ok1 = true; Ngood++; rhoL = rho1; }
-        if (rho2 < rho_max && rho2 > rho_crit){ ok2 = true; Ngood++; rhoL = rho2; }
-        if (rho3 < rho_max && rho3 > rho_crit){ ok3 = true; Ngood++; rhoL = rho3; }
-        if (Ngood != 1){ throw ValueError(format("more than one liquid solution found for critical spline for T=%g",T));};
+        if (rho1 < rho_max && rho1 > rho_crit){ Ngood++; rhoL = rho1; }
+        if (rho2 < rho_max && rho2 > rho_crit){ Ngood++; rhoL = rho2; }
+        if (rho3 < rho_max && rho3 > rho_crit){ Ngood++; rhoL = rho3; }
+        if (Ngood > 1){ throw ValueError(format("More than one liquid solution found for critical spline for T=%g",T));};
+        if (Ngood < 1){ throw ValueError(format("No liquid solution found for critical spline for T=%g",T));};
         
         // ----------
         // Vapor part
         // ----------
         Ngood = 0;
         solve_cubic(cV[0], cV[1], cV[2], cV[3]-T, Nsoln, rho1, rho2, rho3);
-        if (rho1 > rho_min && rho1 < rho_crit){ ok1 = true; Ngood++; rhoV = rho1; }
-        if (rho2 > rho_min && rho2 < rho_crit){ ok2 = true; Ngood++; rhoV = rho2; }
-        if (rho3 > rho_min && rho3 < rho_crit){ ok3 = true; Ngood++; rhoV = rho3; }
-        if (Ngood != 1){ throw ValueError(format("more than one vapor solution found for critical spline for T=%g",T));};
+        if (rho1 > rho_min && rho1 < rho_crit){ Ngood++; rhoV = rho1; }
+        if (rho2 > rho_min && rho2 < rho_crit){ Ngood++; rhoV = rho2; }
+        if (rho3 > rho_min && rho3 < rho_crit){ Ngood++; rhoV = rho3; }
+        if (Ngood > 1){ throw ValueError(format("More than one vapor solution found for critical spline for T=%g",T));};
+        if (Ngood < 1){ throw ValueError(format("No vapor solution found for critical spline for T=%g",T));};
     };
 };
 
