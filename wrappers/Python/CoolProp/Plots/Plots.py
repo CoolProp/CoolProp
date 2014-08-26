@@ -183,8 +183,8 @@ def drawLines(Ref,lines,axis,plt_kwargs=None):
 
 
 class IsoLines(BasePlot):
-    def __init__(self, fluid_ref, graph_type, iso_type, **kwargs):
-        BasePlot.__init__(self, fluid_ref, graph_type, **kwargs)
+    def __init__(self, fluid_ref, graph_type, iso_type, unit_system='SI', **kwargs):
+        BasePlot.__init__(self, fluid_ref, graph_type, unit_system=unit_system,**kwargs)
 
         if not isinstance(iso_type, str):
             raise TypeError("Invalid iso_type input, expected a string")
@@ -465,7 +465,7 @@ class PropsPlot(BasePlot):
             See the online documentation for a list of the available fluids and
             graph types
         """
-        BasePlot.__init__(self, fluid_name, graph_type, **kwargs)
+        BasePlot.__init__(self, fluid_name, graph_type, unit_system=units, **kwargs)
 
         self.smin = kwargs.get('smin', None)
         self.smax = kwargs.get('smax', None)

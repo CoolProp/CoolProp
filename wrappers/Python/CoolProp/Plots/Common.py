@@ -12,10 +12,10 @@ SMALL = 1E-5
 class BasePlot(object):
     #TODO: Simplify / Consolidate dictionary maps
     AXIS_LABELS = {'T': ["Temperature", r"[K]"],
-                   'P': ["Pressure", r"[kPa]"],
-                   'S': ["Entropy", r"[kJ/kg/K]"],
-                   'H': ["Enthalpy", r"[kJ/kg]"],
-                   'U': ["Internal Energy", r"[kJ/kg]"],
+                   'P': ["Pressure", r"[Pa]"],
+                   'S': ["Entropy", r"[J/kg/K]"],
+                   'H': ["Enthalpy", r"[J/kg]"],
+                   'U': ["Internal Energy", r"[J/kg]"],
                    'D': ["Density", r"[kg/m$^3$]"]
                    }
 
