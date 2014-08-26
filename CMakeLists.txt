@@ -553,8 +553,8 @@ if (COOLPROP_MATLAB_MODULE)
   target_link_libraries(PropsSI ${MATLAB_LIBRARIES})
   target_link_libraries(HAPropsSI ${MATLAB_LIBRARIES})
  
-  set_target_properties(PropsSI ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) #Put .lib in this directory so it won't get installed
-  set_target_properties(HAPropsSI ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) #Put .lib in this directory so it won't get installed
+  set_target_properties(PropsSI PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) #Put .lib in this directory so it won't get installed
+  set_target_properties(HAPropsSI PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) #Put .lib in this directory so it won't get installed
 
   if(WIN32) # 32-bit or 64-bit mex
     if (CMAKE_CL_64)
