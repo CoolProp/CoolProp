@@ -48,6 +48,8 @@
         <File Name="../../src/Backends/Helmholtz/TransportRoutines.h"/>
         <File Name="../../src/Backends/Helmholtz/VLERoutines.cpp"/>
         <File Name="../../src/Backends/Helmholtz/VLERoutines.h"/>
+        <File Name="../../src/Backends/Helmholtz/MixtureDerivatives.cpp"/>
+        <File Name="../../src/Backends/Helmholtz/MixtureDerivatives.h"/>
       </VirtualDirectory>
       <VirtualDirectory Name="Incompressible">
         <File Name="../../src/Backends/Incompressible/IncompressibleBackend.cpp"/>
