@@ -238,16 +238,10 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
     else
     {
 
-        double pc = HEOS.components[0]->pEOS->reduce.p;
-        double Tc = HEOS.components[0]->pEOS->reduce.T;
-        double Tt = HEOS.components[0]->pEOS->Ttriple;
-        double pt = HEOS.components[0]->pEOS->ptriple;
-        //double Tsat_guess = 1/(1/Tc-(1/Tt-1/Tc)/log(pc/pt)*log(HEOS._p/pc));
-
         // Set some imput options
         SaturationSolvers::mixture_VLE_IO io;
         io.sstype = SaturationSolvers::imposed_p;
-        io.Nstep_max = 20;
+        io.Nstep_max = 5;
 
         // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
         long double Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
@@ -258,14 +252,24 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         // Actually call the successive substitution solver
         SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
 
+        //SaturationSolvers::newton_raphson_saturation NR;
+        //SaturationSolvers::newton_raphson_saturation_options IO;
+        //IO.rhomolar_liq = io.rhomolar_liq;
+        //IO.rhomolar_vap = io.rhomolar_vap;
+        //IO.T = io.T;
+        //IO.p = io.p;
+        //IO.Nstep_max = 25;
+        
+        // Dewpoint
+        //NR.call(HEOS, io.y, io.x, IO);
+        
         // Load the outputs
         HEOS._phase = iphase_twophase;
         HEOS._p = HEOS.SatV->p();
         HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
         HEOS._T = HEOS.SatL->T();
-
-        //PhaseEnvelope::PhaseEnvelope_GV ENV_GV;
-        //ENV_GV.build(&HEOS, HEOS.mole_fractions, HEOS.K, io);
+        
+        int rr = 4;
     }
 }
 // D given and one of P,H,S,U
@@ -554,7 +558,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
         long double r, eos, p, value, T, rhomolar;
         int other;
         int iter;
-        long double r0, r1, T1, T0, pp;
+        long double r0, r1, T1, T0, eos0, eos1, pp;
         solver_resid(HelmholtzEOSMixtureBackend *HEOS, long double p, long double value, int other) : 
                 HEOS(HEOS), p(p), value(value), other(other)
                 {
@@ -583,14 +587,14 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
 			
             // Store values for later use if there are errors
             if (iter == 0){ 
-                r0 = r; T0 = T; 
+                r0 = r; T0 = T; eos0 = eos;
             }
             else if (iter == 1){
-                r1 = r; T1 = T; 
+                r1 = r; T1 = T; eos1 = eos; 
             }
             else{
-                r0 = r1; T0 = T1;
-                r1 = r;  T1 = T;
+                r0 = r1; T0 = T1; eos0 = eos1;
+                r1 = r;  T1 = T; eos1 = eos;
             }
 
             iter++;
@@ -608,6 +612,16 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
     catch(std::exception &e){
         // Un-specify the phase of the fluid
         HEOS.unspecify_phase();
+        
+        // Determine why you were out of range if you can
+        // 
+        long double eos0 = resid.eos0, eos1 = resid.eos1;
+        if (eos1 > eos0 && value > eos1){
+            throw ValueError(format("HSU_P_flash_singlephase_Brent could not find a solution because %s is above the maximum value of %0.12Lg", get_parameter_information(other,"short").c_str(), eos1));
+        }
+        if (eos1 > eos0 && value < eos0){
+            throw ValueError(format("HSU_P_flash_singlephase_Brent could not find a solution because %s is below the minimum value of %0.12Lg", get_parameter_information(other,"short").c_str(), eos0));
+        }
         throw;
     }
     
