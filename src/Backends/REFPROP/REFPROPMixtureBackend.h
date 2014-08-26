@@ -95,6 +95,10 @@ public:
 	long double calc_melting_line(int param, int given, long double value);
     bool has_melting_line(){return true;};
     double calc_melt_Tmax();
+    long double calc_T_critical(void);
+    long double calc_p_critical(void);
+    long double calc_rhomolar_critical(void);
+    long double calc_Ttriple(void);
 	
 	/// A wrapper function to calculate the limits for the EOS
 	void limits(double &Tmin, double &Tmax, double &rhomolarmax, double &pmax);

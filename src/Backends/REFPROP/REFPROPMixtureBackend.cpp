@@ -631,6 +631,34 @@ long double REFPROPMixtureBackend::calc_Tmax(void){
 	limits(Tmin, Tmax, rhomolarmax, pmax);
 	return static_cast<long double>(Tmax);
 };
+long double REFPROPMixtureBackend::calc_T_critical(){
+    long ierr;
+    char herr[255];
+    double Tcrit, pcrit_kPa, dcrit_mol_L;
+    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+	return static_cast<long double>(Tcrit);
+};
+long double REFPROPMixtureBackend::calc_p_critical(){
+    long ierr;
+    char herr[255];
+    double Tcrit, pcrit_kPa, dcrit_mol_L;
+    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+	return static_cast<long double>(pcrit_kPa*1000);
+};
+long double REFPROPMixtureBackend::calc_rhomolar_critical(){
+    long ierr;
+    char herr[255];
+    double Tcrit, pcrit_kPa, dcrit_mol_L;
+    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+	return static_cast<long double>(dcrit_mol_L*1000);
+};
+long double REFPROPMixtureBackend::calc_Ttriple(){
+    if (mole_fractions.size() != 1){throw ValueError("calc_Ttriple cannot be evaluated for mixtures");}
+    long icomp = 0;
+    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
+    INFOdll(&icomp, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
+	return static_cast<long double>(ttrp);
+};
 	
 double REFPROPMixtureBackend::calc_melt_Tmax()
 {
