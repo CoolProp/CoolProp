@@ -151,7 +151,7 @@ def drawLines(Ref,lines,axis,plt_kwargs=None):
     saturation curve. Closes the gap at the critical point and
     adds a marker between the two last points of bubble and
     dew line if they reach up to critical point.
-    Returns the an array of line objects that can be used to change
+    Returns an array of line objects that can be used to change
     the colour or style afterwards.
     """
     if not plt_kwargs is None:
