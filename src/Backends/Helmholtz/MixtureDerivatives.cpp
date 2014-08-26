@@ -342,12 +342,12 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 zp[j] += dz;
                 rHEOS.set_mole_fractions(zp);
                 rHEOS.update(PT_INPUTS, 101325, 300);
-                double v1 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i), tau1 = rHEOS.tau();
+                double v1 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i);
                 std::vector<long double> zm = z; /// Copy base composition
                 zm[j] -= dz;
                 rHEOS.set_mole_fractions(zm);
                 rHEOS.update(PT_INPUTS, 101325, 300);
-                double v2 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i), tau2 = rHEOS.tau();
+                double v2 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i);
                 
                 double numeric = (v1 - v2)/(2*dz);
                 double err = std::abs((numeric-analytic)/analytic);
