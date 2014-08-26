@@ -531,7 +531,7 @@ def Ts(Ref, Tmin=None, Tmax=None, show=False, axis=None, *args, **kwargs):
     >>> ax = fig.gca()
     >>> Ts('R290', show=True, axis=ax)
     """
-    plt = PropsPlot(Ref, 'Ts', smin=Tmin, smax=Tmax, axis=axis)
+    plt = PropsPlot(Ref, 'Ts', smin=Tmin, smax=Tmax, axis=axis, *args, **kwargs)
     plt._draw_graph()
     if show:
         plt.show()
@@ -576,7 +576,7 @@ def Ph(Ref, Tmin=None, Tmax=None, show=False, axis=None, *args, **kwargs):
     >>> ax = fig.gca()
     >>> Ph('R290', show=True, axis=ax)
     """
-    plt = PropsPlot(Ref, 'Ph', smin=Tmin, smax=Tmax, axis=axis)
+    plt = PropsPlot(Ref, 'Ph', smin=Tmin, smax=Tmax, axis=axis, *args, **kwargs)
     if show:
         plt.show()
     else:
@@ -620,7 +620,7 @@ def Ps(Ref, Tmin=None, Tmax=None, show=False, axis=None, *args, **kwargs):
     >>> ax = fig.gca()
     >>> Ps('R290', show=True, axis=ax)
     """
-    plt = PropsPlot(Ref, 'Ps', smin=Tmin, smax=Tmax, axis=axis)
+    plt = PropsPlot(Ref, 'Ps', smin=Tmin, smax=Tmax, axis=axis, *args, **kwargs)
     if show:
         plt.show()
     else:
@@ -663,7 +663,7 @@ def PT(Ref, Tmin=None, Tmax=None, show=False, axis=None, *args, **kwargs):
     >>> ax = fig.gca()
     >>> PT('R290', show=True, axis=ax)
     """
-    plt = PropsPlot(Ref, 'PT', smin=Tmin, smax=Tmax, axis=axis)
+    plt = PropsPlot(Ref, 'PT', smin=Tmin, smax=Tmax, axis=axis, *args, **kwargs)
     if show:
         plt.show()
     else:
@@ -706,7 +706,7 @@ def Prho(Ref, Tmin=None, Tmax=None, show=False, axis=None, *args, **kwargs):
     >>> ax = fig.gca()
     >>> Prho('R290', show=True, axis=ax)
     """
-    plt = PropsPlot(Ref, 'PD', smin=Tmin, smax=Tmax, axis=axis)
+    plt = PropsPlot(Ref, 'PD', smin=Tmin, smax=Tmax, axis=axis, *args, **kwargs)
     if show:
         plt.show()
     else:
@@ -749,7 +749,7 @@ def Trho(Ref, Tmin=None, Tmax=None, show=False, axis=None, *args, **kwargs):
     >>> ax = fig.gca()
     >>> Trho('R290', show=True, axis=ax)
     """
-    plt = PropsPlot(Ref, 'TD', smin=Tmin, smax=Tmax, axis=axis)
+    plt = PropsPlot(Ref, 'TD', smin=Tmin, smax=Tmax, axis=axis, *args, **kwargs)
     if show:
         plt.show()
     else:
@@ -792,7 +792,7 @@ def hs(Ref, Tmin=None, Tmax=None, show=False, axis=None, *args, **kwargs):
     >>> ax = fig.gca()
     >>> hs('R290', show=True, axis=ax)
     """
-    plt = PropsPlot(Ref, 'hs', smin=Tmin, smax=Tmax, axis=axis)
+    plt = PropsPlot(Ref, 'hs', smin=Tmin, smax=Tmax, axis=axis, *args, **kwargs)
     if show:
         plt.show()
     else:
