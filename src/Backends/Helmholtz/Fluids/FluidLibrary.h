@@ -640,6 +640,9 @@ protected:
             else if (!target.compare("R23")){
                 fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_R23; return;
             }
+            else if (!target.compare("Methanol")){
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_METHANOL; return;
+            }
             else{
                 throw ValueError(format("hardcoded viscosity [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
             }

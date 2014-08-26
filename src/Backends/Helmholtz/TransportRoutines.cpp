@@ -372,8 +372,6 @@ long double TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzE
     else{
         throw NotImplementedError("TransportRoutines::viscosity_higher_order_friction_theory is only for pure and pseudo-pure");
     }
-
-
 }
 
 long double TransportRoutines::viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
@@ -416,6 +414,67 @@ long double TransportRoutines::viscosity_helium_hardcoded(HelmholtzEOSMixtureBac
         // Correlation yields viscosity in micro g/(cm-s); to get Pa-s, divide by 10 to get micro Pa-s, then another 1e6 to get Pa-s
 		return (exp(ln_eta)+eta_0-exp(eta_0_slash))/10.0/1e6;
 	}
+}
+
+long double TransportRoutines::viscosity_methanol_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
+{
+    long double B_eta, C_eta,
+                epsilon_over_k = 577.87, /* [K]*/
+                sigma0 = 0.3408e-9, /* [m] */
+                delta = 0.4575, /* NOT the reduced density, that is rhor here*/
+                N_A = 6.02214129e23,
+                M = 32.04216, /* kg/kmol */
+                T = HEOS.T();
+    long double rhomolar = HEOS.rhomolar();
+    
+    long double B_eta_star, C_eta_star;
+    long double Tstar = T/epsilon_over_k; // [no units]
+    long double rhor = HEOS.rhomass()/273;
+    long double Tr = T/512.6;
+
+    // Rainwater-Friend initial density terms
+    { // Scoped here so that we can re-use the b variable
+        long double b[9] = {-19.572881, 219.73999, -1015.3226, 2471.01251, -3375.1717, 2491.6597, -787.26086, 14.085455, -0.34664158};
+        long double t[9] = {0, -0.25, -0.5, -0.75, -1.0, -1.25, -1.5, -2.5, -5.5};
+        long double summer = 0;
+        for (unsigned int i = 0; i < 9; ++i){
+            summer += b[i]*pow(Tstar, t[i]);
+        }
+        B_eta_star = summer; // [no units]
+        B_eta = N_A*pow(sigma0, 3)*B_eta_star; // [m^3/mol]
+        
+        long double c[2] = {1.86222085e-3, 9.990338};
+        C_eta_star = c[0]*pow(Tstar,3)*exp(c[1]*pow(Tstar,-0.5)); // [no units]
+        C_eta = pow(N_A*pow(sigma0, 3), 2)*C_eta_star; // [m^6/mol^2]
+    }
+    
+    long double eta_g = 1 + B_eta*rhomolar + C_eta*rhomolar*rhomolar;
+    long double a[13] = {1.16145, -0.14874, 0.52487, -0.77320, 2.16178, -2.43787, 0.95976e-3, 0.10225, -0.97346, 0.10657, -0.34528, -0.44557, -2.58055};
+    long double d[7] = {-1.181909, 0.5031030, -0.6268461, 0.5169312, -0.2351349, 5.3980235e-2, -4.9069617e-3};
+    long double e[10] = {0, 4.018368, -4.239180, 2.245110, -0.5750698, 2.3021026e-2, 2.5696775e-2, -6.8372749e-3, 7.2707189e-4, -2.9255711e-5}; 
+
+    long double OMEGA_22_star_LJ = a[0]*pow(Tstar,a[1])+a[2]*exp(a[3]*Tstar)+a[4]*exp(a[5]*Tstar);
+    long double OMEGA_22_star_delta = a[7]*pow(Tstar,a[8]) + a[9]*exp(a[10]*Tstar) + a[11]*exp(a[12]*Tstar);
+    long double OMEGA_22_star_SM = OMEGA_22_star_LJ*(1+pow(delta,2)/(1+a[6]*pow(delta,6))*OMEGA_22_star_delta);
+    long double eta_0 = 2.66957e-26*sqrt(M*T)/(pow(sigma0,2)*OMEGA_22_star_SM);
+    
+    long double summerd = 0;
+    for (unsigned int i = 0; i < 7; ++i){
+        summerd += d[i]/pow(Tr, i);
+    }
+    for (unsigned int j = 1; j < 10; ++j){
+        summerd += e[j]*pow(rhor, j);
+    }
+    long double sigmac = 0.7193422e-9; // [m]
+    long double sigma_HS = summerd*sigmac; // [m]
+    long double b = 2*M_PI*N_A*pow(sigma_HS,3)/3; // [m^3/mol]
+    long double zeta = b*rhomolar/4; // [-]
+    long double g_sigma_HS = (1 - 0.5*zeta)/pow(1 - zeta, 3); // [-]
+    long double eta_E = 1/g_sigma_HS + 0.8*b*rhomolar + 0.761*g_sigma_HS*pow(b*rhomolar,2); // [-]
+    
+    long double f = 1/(1+exp(5*(rhor-1)));
+    return eta_0*(f*eta_g + (1-f)*eta_E);
+
 }
 
 long double TransportRoutines::viscosity_R23_hardcoded(HelmholtzEOSMixtureBackend &HEOS)

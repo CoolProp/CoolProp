@@ -208,19 +208,10 @@ vel("Ethane", "T", 430, "Dmolar", 12780, "V", 58.70e-6, 1e-2),
 vel("Ethane", "T", 500, "Dmolar", 11210, "V", 48.34e-6, 1e-2),
 
 // From Xiang, JPCRD, 2006
-
-vel("Methanol", "T", 600, "Dmass", 800.23, "V", 0.1888e-3, 1e-4),
-vel("Methanol", "T", 600, "Dmass", 833.20, "V", 0.2092e-3, 1e-4),
-vel("Methanol", "T", 600, "Dmass", 861.37, "V", 0.2279e-3, 1e-4),
-vel("Methanol", "T", 600, "Dmass", 908.33, "V", 0.2634e-3, 1e-4),
-vel("Methanol", "T", 620, "Dmass", 788.58, "V", 0.1779e-3, 1e-4),
-vel("Methanol", "T", 620, "Dmass", 822.14, "V", 0.1972e-3, 1e-4),
-vel("Methanol", "T", 620, "Dmass", 850.77, "V", 0.2148e-3, 1e-4),
-vel("Methanol", "T", 620, "Dmass", 898.48, "V", 0.2477e-3, 1e-4),
-vel("Methanol", "T", 630, "Dmass", 782.76, "V", 0.1729e-3, 1e-4),
-vel("Methanol", "T", 630, "Dmass", 811.06, "V", 0.1917e-3, 1e-4),
-vel("Methanol", "T", 630, "Dmass", 840.11, "V", 0.2088e-3, 1e-4),
-vel("Methanol", "T", 630, "Dmass", 888.50, "V", 0.2405e-3, 1e-4),
+vel("Methanol", "T", 300, "Dmass", 0.12955, "V", 0.009696e-3, 1e-3),
+vel("Methanol", "T", 300, "Dmass", 788.41, "V", 0.5422e-3, 1e-3),
+vel("Methanol", "T", 630, "Dmass", 0.061183, "V", 0.02081e-3, 1e-3),
+vel("Methanol", "T", 630, "Dmass", 888.50, "V", 0.2405e-3, 1e-1),
 
 // From REFPROP 9.1 since no data provided
 vel("n-Butane", "T", 150, "Q", 0, "V", 0.0013697657668, 1e-4),
@@ -275,7 +266,7 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against publis
     {
         vel el = viscosity_validation_data[i];
         CHECK_NOTHROW(set_backend("HEOS", el.fluid));
-
+        
         CAPTURE(el.fluid);
         CAPTURE(el.in1);
         CAPTURE(el.v1);
@@ -1124,7 +1115,6 @@ TEST_CASE("Ancillary functions", "[ancillary]")
         {
             double T = f*Tc + (1-f)*Tt;
             
-            
             std::ostringstream ss1;
             ss1 << "Pressure error < 2% for fluid " << fluids[i] << " at " << T << " K";
             SECTION(ss1.str(), "")
@@ -1186,17 +1176,11 @@ TEST_CASE("Triple point checks", "[triple_point]")
             double p_sat_min_vapor = HEOS->get_components()[0]->pEOS->sat_min_vapor.p;
             double err_sat_min_liquid = std::abs(p_EOS-p_sat_min_liquid)/p_sat_min_liquid;
             double err_sat_min_vapor = std::abs(p_EOS-p_sat_min_vapor)/p_sat_min_vapor;
-            double p_triple_liquid = HEOS->get_components()[0]->triple_liquid.p;
-            double p_triple_vapor = HEOS->get_components()[0]->triple_liquid.p;
-            double err_triple_liquid = std::abs(p_EOS-p_triple_liquid)/p_triple_liquid;
-            double err_triple_vapor = std::abs(p_EOS-p_triple_vapor)/p_triple_vapor;
             
             CAPTURE(err_sat_min_liquid);
             CAPTURE(err_sat_min_vapor);
             CHECK(err_sat_min_liquid < 1e-3);
             CHECK(err_sat_min_vapor < 1e-3);
-            CHECK(err_triple_liquid < 1e-3);
-            CHECK(err_triple_vapor < 1e-3);
             
         }
 //        std::ostringstream ss2;
