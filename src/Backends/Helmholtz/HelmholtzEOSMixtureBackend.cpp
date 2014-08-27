@@ -1993,7 +1993,8 @@ long double HelmholtzEOSMixtureBackend::calc_gibbsmolar(void)
 }
 long double HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(int i)
 {
-    return exp(MixtureDerivatives::ln_fugacity_coefficient(*this, i));
+    x_N_dependency_flag xN_flag = XN_DEPENDENT;
+    return exp(MixtureDerivatives::ln_fugacity_coefficient(*this, i, xN_flag));
 }
 
 SimpleState HelmholtzEOSMixtureBackend::calc_reducing_state_nocache(const std::vector<long double> & mole_fractions)

@@ -1,0 +1,17 @@
+p: 675616.5260238834
+p calculated by rho*R*T*(1+deltadar_dDelta): 675616.5260238834
+rhor: 5375.073740431392
+Tr: 354.7802371525603
+dalphar_dDelta: -1.740349537597104
+dTr_dxi: -60.84527088778825
+drhor_dxi: 1587.916430678275
+ndpdV__constT_n: -181257322.2040499
+dpdxj__constT_V_xi(0): 48181.54565089135
+ln_fugacity_coefficient(0): -0.04441530290159221
+ln_fugacity_coefficient(1): -1.#IND
+ndpdni__constT_V_nj(0): 640327.2332516684
+dln_fugacity_coefficient_dxj__constT_p_xi(0,0): -1.#IND
+dln_fugacity_coefficient_dxj__constT_p_xi(1,0): -1.#IND
+d2nalphar_dxj_dni__constT_V(0,0): -1.#IND
+d2nalphar_dxj_dni__constT_V(1,0): -1.#IND
+d2alphar_dxi_dDelta(0): 0.001221607211340736

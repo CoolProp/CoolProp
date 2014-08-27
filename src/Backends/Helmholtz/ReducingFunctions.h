@@ -8,6 +8,9 @@ namespace CoolProp{
 
 typedef std::vector<std::vector<long double> > STLMatrix;
 
+enum x_N_dependency_flag{XN_INDEPENDENT, ///< x_N is an independent variable, and not calculated by \f$ x_N = 1-\sum_i x_i\f$
+                         XN_DEPENDENT}; ///< x_N is an dependent variable, calculated by \f$ x_N = 1-\sum_i x_i\f$
+                         
 /// A container for the mixing parameters for CoolProp mixtures
 /**
 
@@ -60,7 +63,7 @@ reducing parameters \f$ \rho_r \f$ and \f$ T_r \f$
 class ReducingFunction
 {
 protected:
-	unsigned int N;
+	std::size_t N;
 public:
 	ReducingFunction(){};
 	virtual ~ReducingFunction(){};
@@ -71,32 +74,32 @@ public:
 	/// The reduced temperature
 	virtual long double Tr(const std::vector<long double> &x) = 0;
 	/// The derivative of reduced temperature with respect to component i mole fraction
-	virtual long double dTrdxi__constxj(const std::vector<long double> &x, int i) = 0;
+	virtual long double dTrdxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
 	/// The molar reducing density
 	virtual long double rhormolar(const std::vector<long double> &x) = 0;
 	///Derivative of the molar reducing density with respect to component i mole fraction
-	virtual long double drhormolardxi__constxj(const std::vector<long double> &x, int i) = 0;
+	virtual long double drhormolardxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
 
-	virtual long double d2rhormolardxi2__constxj(const std::vector<long double> &x, int i) = 0;
-	virtual long double d2rhormolardxidxj(const std::vector<long double> &x, int i, int j) = 0;
-	virtual long double d2Trdxi2__constxj(const std::vector<long double> &x, int i) = 0;
-	virtual long double d2Trdxidxj(const std::vector<long double> &x, int i, int j) = 0;
+	virtual long double d2rhormolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
+	virtual long double d2rhormolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) = 0;
+	virtual long double d2Trdxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
+	virtual long double d2Trdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) = 0;
 
 	/*! GERG 2004 Monograph equation 7.56:
 	\f[
 	\left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial T_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2T_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial T_r}{\partial x_j}\right)_{x_i}-\sum_{k=1}^Nx_k\left(\frac{\partial^2T_r}{\partial x_j \partial x_k}\right)
 	\f]
 	*/
-	long double d_ndTrdni_dxj__constxi(const std::vector<long double> &x, int i, int j);
+	long double d_ndTrdni_dxj__constxi(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 	/*! GERG 2004 Monograph equation 7.55:
 	\f[
 	\left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \rho_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2\rho_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial \rho_r}{\partial x_j}\right)_{x_i}-\sum_{k=1}^Nx_k\left(\frac{\partial^2\rho_r}{\partial x_j \partial x_k}\right)
 	\f]
 	*/
-	long double d_ndrhorbardni_dxj__constxi(const std::vector<long double> &x, int i, int j);
+	long double d_ndrhorbardni_dxj__constxi(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
-	long double ndrhorbardni__constnj(const std::vector<long double> &x, int i);
-	long double ndTrdni__constnj(const std::vector<long double> &x, int i);
+	long double ndrhorbardni__constnj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	long double ndTrdni__constnj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
 };
 
 /*! 
@@ -114,7 +117,9 @@ protected:
 	STLMatrix gamma_v; ///< \f$ \gamma_{v,ij} \f$ from GERG-2008
 	STLMatrix beta_T; ///< \f$ \beta_{T,ij} \f$ from GERG-2008
 	STLMatrix gamma_T; ///< \f$ \gamma_{T,ij} \f$ from GERG-2008
-	std::vector<CoolPropFluid *> pFluids; ///< List of pointers to fluids
+    std::vector<long double> Yc_T; ///< Vector of critical temperatures for all components
+    std::vector<long double> Yc_v; ///< Vector of critical molar volumes for all components
+	std::vector<CoolPropFluid *> pFluids; ///< List of postd::size_ters to fluids
 
 public:
 	GERG2008ReducingFunction(std::vector<CoolPropFluid *> pFluids, STLMatrix beta_v, STLMatrix gamma_v, STLMatrix beta_T, STLMatrix gamma_T)
@@ -127,13 +132,17 @@ public:
 		this->N = pFluids.size();
 		T_c.resize(N,std::vector<long double>(N,0));
 		v_c.resize(N,std::vector<long double>(N,0));
-		for (unsigned int i = 0; i < N; ++i)
+        Yc_T.resize(N);
+        Yc_v.resize(N);
+		for (std::size_t i = 0; i < N; ++i)
 		{
-			for (unsigned int j = 0; j < N; j++)
+			for (std::size_t j = 0; j < N; j++)
 			{
 				T_c[i][j] = sqrt(pFluids[i]->pEOS->reduce.T*pFluids[j]->pEOS->reduce.T);
-				v_c[i][j] = 1.0/8.0*pow(pow(pFluids[i]->pEOS->reduce.rhomolar, -1.0/3.0)+pow(pFluids[j]->pEOS->reduce.rhomolar, -1.0/3.0),(int)3);
+				v_c[i][j] = 1.0/8.0*pow(pow(pFluids[i]->pEOS->reduce.rhomolar, -1.0/3.0)+pow(pFluids[j]->pEOS->reduce.rhomolar, -1.0/3.0),(std::size_t)3);
 			}
+            Yc_T[i] = pFluids[i]->pEOS->reduce.T;
+            Yc_v[i] = 1/pFluids[i]->pEOS->reduce.rhomolar;
 		}
 	};
 
@@ -142,29 +151,31 @@ public:
 	/// The reduced temperature
 	long double Tr(const std::vector<long double> &x);
 	/// The derivative of reduced temperature with respect to component i mole fraction
-	long double dTrdxi__constxj(const std::vector<long double> &x, int i);
+	long double dTrdxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
 	/// The molar reducing density
 	long double rhormolar(const std::vector<long double> &x);
 	///Derivative of the molar reducing density with respect to component i mole fraction
-	long double drhormolardxi__constxj(const std::vector<long double> &x, int i);
-	long double dvrmolardxi__constxj(const std::vector<long double> &x, int i);
+	long double drhormolardxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	long double dvrmolardxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag  xN_fla);
 
-	long double d2vrmolardxi2__constxj(const std::vector<long double> &x, int i);
-	long double d2rhormolardxi2__constxj(const std::vector<long double> &x, int i);
-	long double d2vrmolardxidxj(const std::vector<long double> &x, int i, int j);
-	long double d2rhormolardxidxj(const std::vector<long double> &x, int i, int j);
-	long double d2Trdxi2__constxj(const std::vector<long double> &x, int i);
-	long double d2Trdxidxj(const std::vector<long double> &x, int i, int j);
+	long double d2vrmolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	long double d2rhormolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	long double d2vrmolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+	long double d2rhormolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+	long double d2Trdxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	long double d2Trdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
-	long double c_Y_ij(int i, int j, std::vector< std::vector< long double> > &beta, std::vector< std::vector< long double> > &gamma, std::vector< std::vector< long double> > &Y_c);
-	long double c_Y_ji(int j, int i, std::vector< std::vector< long double> > &beta, std::vector< std::vector< long double> > &gamma, std::vector< std::vector< long double> > &Y_c);
-	long double f_Y_ij(const std::vector<long double> &x, int i, int j, std::vector< std::vector< long double> > &beta);
+    long double Yr(const std::vector<long double> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc);
+    long double dYrdxi__constxj(const std::vector<long double> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
+	long double c_Y_ij(std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c);
+	long double c_Y_ji(std::size_t j, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c);
+	long double f_Y_ij(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta);
 
-	long double dfYkidxi__constxk(const std::vector<long double> &x, int k, int i,std::vector< std::vector< long double> > &beta);
-	long double dfYikdxi__constxk(const std::vector<long double> &x, int i, int k, std::vector< std::vector< long double> > &beta);
-	long double d2fYkidxi2__constxk(const std::vector<long double> &x, int k, int i, std::vector< std::vector< long double> > &beta);
-	long double d2fYikdxi2__constxk(const std::vector<long double> &x, int i, int k, std::vector< std::vector< long double> > &beta);
-	long double d2fYijdxidxj(const std::vector<long double> &x, int i, int k, std::vector< std::vector< long double> > &beta);
+	long double dfYkidxi__constxk(const std::vector<long double> &x, std::size_t k, std::size_t i, const STLMatrix &beta);
+	long double dfYikdxi__constxk(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
+	long double d2fYkidxi2__constxk(const std::vector<long double> &x, std::size_t k, std::size_t i, const STLMatrix &beta);
+	long double d2fYikdxi2__constxk(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
+	long double d2fYijdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
 };
 
 /*! From Lemmon, JPCRD, 2000 for the properties of Dry Air, and also from Lemmon, JPCRD, 2004 for the properties of R404A, R410A, etc.	
@@ -194,7 +205,7 @@ protected:
     LemmonAirHFCReducingFunction(const LemmonAirHFCReducingFunction &);
 public:
 	/// Set the coefficients based on reducing parameters loaded from JSON
-	static void convert_to_GERG(const std::vector<CoolPropFluid*> &pFluids, int i, int j, Dictionary d, long double &beta_T, long double &beta_v, long double &gamma_T, long double &gamma_v)
+	static void convert_to_GERG(const std::vector<CoolPropFluid*> &pFluids, std::size_t i, std::size_t j, Dictionary d, long double &beta_T, long double &beta_v, long double &gamma_T, long double &gamma_v)
     {
         long double xi_ij = d.get_number("xi");
         long double zeta_ij = d.get_number("zeta");
@@ -204,7 +215,7 @@ public:
 	    long double v_i = 1/pFluids[i]->pEOS->reduce.rhomolar;
 	    long double v_j = 1/pFluids[j]->pEOS->reduce.rhomolar;
 	    long double one_third = 1.0/3.0;
-	    gamma_v = (v_i + v_j + zeta_ij)/(0.25*pow(pow(v_i, one_third)+pow(v_j, one_third),(int)3));
+	    gamma_v = (v_i + v_j + zeta_ij)/(0.25*pow(pow(v_i, one_third)+pow(v_j, one_third),(std::size_t)3));
     };
 };
 
