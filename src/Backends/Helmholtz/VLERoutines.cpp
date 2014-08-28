@@ -1079,7 +1079,7 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
     
     // Derivatives with respect to x0
     double dx = 1e-5, T = T0;
-    x = x0; x[0] += dx;// x[1] -= dx;
+    x = x0; x[0] += dx; x[1] -= dx;
     rSatL.set_mole_fractions(x);
     rSatL.update_TP_guessrho(T, p, rhomolar_liq); rhomolar_liq = rSatL.rhomolar();
     build_arrays(); r1 = r;
@@ -1119,7 +1119,7 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
         // Build the Jacobian and residual vectors
         build_arrays();
         
-        check_Jacobian();
+        //check_Jacobian();
 
         // Solve for the step; v is the step with the contents
         // [delta(x_0), delta(x_1), ..., delta(x_{N-2}), delta(spec)]

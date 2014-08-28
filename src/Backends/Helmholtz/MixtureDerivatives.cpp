@@ -10,7 +10,7 @@ long double MixtureDerivatives::dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, st
     else if(xN_flag == XN_DEPENDENT){
         std::vector<long double> &x = HEOS.mole_fractions;
         std::size_t N = x.size();
-        if (i==N-1) return _HUGE;
+        if (i==N-1) return 0;
         double dar_dxi = HEOS.components[i]->pEOS->baser(HEOS._tau, HEOS._delta) - HEOS.components[N-1]->pEOS->baser(HEOS._tau, HEOS._delta);
         double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->alphar(HEOS._tau, HEOS._delta);
         dar_dxi += (1-2*x[i])*FiNariN;
@@ -34,7 +34,7 @@ long double MixtureDerivatives::d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend &HE
     else if(xN_flag == XN_DEPENDENT){
         std::vector<long double> &x = HEOS.mole_fractions;
         std::size_t N = x.size();
-        if (i==N-1) return _HUGE;
+        if (i==N-1) return 0;
         double d2ar_dxi_dTau = HEOS.components[i]->pEOS->dalphar_dTau(HEOS._tau, HEOS._delta) - HEOS.components[N-1]->pEOS->dalphar_dTau(HEOS._tau, HEOS._delta);
         double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->dalphar_dTau(HEOS._tau, HEOS._delta);
         d2ar_dxi_dTau += (1-2*x[i])*FiNariN;
@@ -59,7 +59,7 @@ long double MixtureDerivatives::d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend &
     else if(xN_flag == XN_DEPENDENT){
         std::vector<long double> &x = HEOS.mole_fractions;
         std::size_t N = x.size();
-        if (i==N-1) return _HUGE;
+        if (i==N-1) return 0;
         double d2ar_dxi_dDelta = HEOS.components[i]->pEOS->dalphar_dDelta(HEOS._tau, HEOS._delta) - HEOS.components[N-1]->pEOS->dalphar_dDelta(HEOS._tau, HEOS._delta);
         double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->dalphar_dDelta(HEOS._tau, HEOS._delta);
         d2ar_dxi_dDelta += (1-2*x[i])*FiNariN;
@@ -85,8 +85,8 @@ long double MixtureDerivatives::d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS,
         std::size_t N = HEOS.mole_fractions.size();
         if (i == N-1){ return 0;}
         double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->alphar(HEOS._tau, HEOS._delta);
-        if (i == j) { return FiNariN; }
-        if (j == N-1){ return _HUGE; }
+        if (i == j) { return -2*FiNariN; }
+        if (j == N-1){ return 0; }
         
         double Fijarij = HEOS.Excess.F[i][j]*HEOS.Excess.DepartureFunctionMatrix[i][j]->alphar(HEOS._tau, HEOS._delta);
         double FjNarjN = HEOS.Excess.F[j][N-1]*HEOS.Excess.DepartureFunctionMatrix[j][N-1]->alphar(HEOS._tau, HEOS._delta);
@@ -252,18 +252,19 @@ long double MixtureDerivatives::ndtaudni__constT_V_nj(HelmholtzEOSMixtureBackend
 long double MixtureDerivatives::d_ndalphardni_dxj__constdelta_tau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
     double line1 = HEOS._delta.pt()*d2alphar_dxi_dDelta(HEOS, j, xN_flag)*(1-1/HEOS._reducing.rhomolar*HEOS.Reducing.p->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
-    double line2 = -HEOS._delta.pt()*HEOS.dalphar_dDelta()*(1/HEOS._reducing.rhomolar)*(HEOS.Reducing.p->d_ndrhorbardni_dxj__constxi(HEOS.mole_fractions, i, j, xN_flag)-1/HEOS._reducing.rhomolar*HEOS.Reducing.p->drhormolardxi__constxj(HEOS.mole_fractions,j, xN_flag)*HEOS.Reducing.p->ndrhorbardni__constnj(HEOS.mole_fractions,i, xN_flag));
     double line3 = HEOS._tau.pt()*d2alphar_dxi_dTau(HEOS, j, xN_flag)*(1/HEOS._reducing.T)*HEOS.Reducing.p->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+    double line2 = -HEOS._delta.pt()*HEOS.dalphar_dDelta()*(1/HEOS._reducing.rhomolar)*(HEOS.Reducing.p->d_ndrhorbardni_dxj__constxi(HEOS.mole_fractions, i, j, xN_flag)-1/HEOS._reducing.rhomolar*HEOS.Reducing.p->drhormolardxi__constxj(HEOS.mole_fractions,j, xN_flag)*HEOS.Reducing.p->ndrhorbardni__constnj(HEOS.mole_fractions,i, xN_flag));
     double line4 = HEOS._tau.pt()*HEOS.dalphar_dTau()*(1/HEOS._reducing.T)*(HEOS.Reducing.p->d_ndTrdni_dxj__constxi(HEOS.mole_fractions,i,j, xN_flag)-1/HEOS._reducing.T*HEOS.Reducing.p->dTrdxi__constxj(HEOS.mole_fractions, j, xN_flag)*HEOS.Reducing.p->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag));
+    
     double s = 0;
-    std::size_t mmax = HEOS.mole_fractions.size();
-    if (xN_flag == XN_DEPENDENT){ mmax--; }
-    for (unsigned int m = 0; m < mmax; m++)
+    std::size_t kmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ kmax--; }
+    for (unsigned int k = 0; k < kmax; k++)
     {
-        s += HEOS.mole_fractions[m]*d2alphardxidxj(HEOS, j,m, xN_flag);
+        s += HEOS.mole_fractions[k]*d2alphardxidxj(HEOS, j, k, xN_flag);
     }
-    double line5 = d2alphardxidxj(HEOS, i,j, xN_flag)-dalphar_dxi(HEOS, j, xN_flag)-s;
-    return line1+line2+line3+line4+line5;
+    double line5 = d2alphardxidxj(HEOS, i, j, xN_flag)-dalphar_dxi(HEOS, j, xN_flag)-s;
+    return line1 + line2 + line3 + line4 + line5;
 }
 long double MixtureDerivatives::nd2nalphardnidnj__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
@@ -397,6 +398,27 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
             double err = std::abs((numeric-analytic)/analytic);
             CHECK(err < 1e-8);
         }
+        
+        std::ostringstream ss3a;
+        ss3a << "d2alphar_dxi_dDelta, i=" << i;
+        SECTION(ss3a.str(), "")
+        {
+            if (i==1){break;}
+            double p1 = 101325, dP = 1e-1;
+            rHEOS.specify_phase(iphase_gas);
+            
+            rHEOS.update(PT_INPUTS, p1, 300);
+            double analytic = MixtureDerivatives::d2alphar_dxi_dDelta(rHEOS, i, xN_flag);
+            
+            rHEOS.update(PT_INPUTS, p1 + dP, 300);
+            double v1 = MixtureDerivatives::dalphar_dxi(rHEOS, i, xN_flag), delta1 = rHEOS.delta();
+            rHEOS.update(PT_INPUTS, p1 - dP, 300);
+            double v2 = MixtureDerivatives::dalphar_dxi(rHEOS, i, xN_flag), delta2 = rHEOS.delta();
+            
+            double numeric = (v1 - v2)/(delta1 - delta2);
+            double err = std::abs((numeric-analytic)/analytic);
+            CHECK(err < 1e-8);
+        }
         std::ostringstream ss4;
         ss4 << "d_ndalphardni_dTau, i=" << i;
         SECTION(ss4.str(), "")
@@ -418,10 +440,33 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
             double err = std::abs((numeric-analytic)/analytic);
             CHECK(err < 1e-8);
         }
+        std::ostringstream ss4a;
+        ss4a << "d2alphar_dxi_dTau, i=" << i;
+        SECTION(ss4a.str(), "")
+        {
+            if (i == 1){ break; }
+            double p1 = 101325, dT = 1e-2;
+            rHEOS.specify_phase(iphase_gas);
+            rHEOS.update(PT_INPUTS, 101325, 300);
+            double rho1 = rHEOS.rhomolar();
+            
+            rHEOS.update(DmolarT_INPUTS, rho1, 300);
+            double analytic = MixtureDerivatives::d2alphar_dxi_dTau(rHEOS, i, xN_flag);
+            
+            rHEOS.update(DmolarT_INPUTS, rho1, 300 + dT);
+            double v1 = MixtureDerivatives::dalphar_dxi(rHEOS, i, xN_flag), tau1 = rHEOS.tau();
+            rHEOS.update(DmolarT_INPUTS, rho1, 300 - dT);
+            double v2 = MixtureDerivatives::dalphar_dxi(rHEOS, i, xN_flag), tau2 = rHEOS.tau();
+            
+            double numeric = (v1 - v2)/(tau1 - tau2);
+            double err = std::abs((numeric-analytic)/analytic);
+            CHECK(err < 1e-8);
+        }
         std::ostringstream ss5;
         ss5 << "dpdxj__constT_V_xi, i=" << i;
         SECTION(ss5.str(), "")
         {
+            if (i==1){break;}
             double dz = 1e-6;
             rHEOS.specify_phase(iphase_gas);
             rHEOS.update(DmolarT_INPUTS, 300, 300);
@@ -429,12 +474,12 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
             double rho1 = rHEOS.rhomolar();
             double analytic = MixtureDerivatives::dpdxj__constT_V_xi(rHEOS, i, xN_flag);
             std::vector<long double> zp = z; /// Copy base composition
-            zp[i] += dz;
+            zp[i] += dz; zp[1-i] -= dz;
             rHEOS.set_mole_fractions(zp);
             rHEOS.update(DmolarT_INPUTS, rho1, 300);
             double v1 = rHEOS.p();
             std::vector<long double> zm = z; /// Copy base composition
-            zm[i] -= dz;
+            zm[i] -= dz; zm[1-i] += dz;
             rHEOS.set_mole_fractions(zm);
             rHEOS.update(DmolarT_INPUTS, rho1, 300);
             double v2 = rHEOS.p();
@@ -444,13 +489,13 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
             
             CAPTURE(numeric);
             CAPTURE(analytic);
-            CHECK(err < 1e-80);
-        }
-        
+            CHECK(err < 1e-8);
+        }       
         std::ostringstream ss6;
         ss6 << "d_dalpharddelta_dxj__constT_V_xi, i=" << i;
         SECTION(ss6.str(), "")
         {
+            if (i==1){break;}
             double dz = 1e-6;
             rHEOS.specify_phase(iphase_gas);
             rHEOS.update(DmolarT_INPUTS, 300, 300);
@@ -460,14 +505,14 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
             
             // Increment mole fraction
             std::vector<long double> zp = z; /// Copy base composition
-            zp[i] += dz;
+            zp[i] += dz; zp[1-i] -= dz;
             rHEOS.set_mole_fractions(zp);
             rHEOS.update(DmolarT_INPUTS, rho1, 300);
             double v1 = rHEOS.dalphar_dDelta();
             
             // Decrement mole fraction
             std::vector<long double> zm = z; /// Copy base composition
-            zm[i] -= dz;
+            zm[i] -= dz; zm[1-i] += dz;
             rHEOS.set_mole_fractions(zm);
             rHEOS.update(DmolarT_INPUTS, rho1, 300);
             double v2 = rHEOS.dalphar_dDelta();
@@ -477,15 +522,15 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
             
             CAPTURE(numeric);
             CAPTURE(analytic);
-            CHECK(err < 1e-60);
-        }
-            
+            CHECK(err < 1e-8);
+        }            
         // These derivatives depend on both the i and j indices
         for (std::size_t j = 0; j < z.size(); ++j){
             std::ostringstream ss1;
             ss1 << "dln_fugacity_coefficient_dxj__constT_p_xi, i=" << i << ", j=" << j;
             SECTION(ss1.str(), "")
             {
+                if (j == 1){break;}
                 double dz = 1e-6;
                 rHEOS.specify_phase(iphase_gas);
                 rHEOS.update(DmolarT_INPUTS, 300, 300);
@@ -495,12 +540,12 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 double rho1 = rHEOS.rhomolar();
                 double analytic = MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rHEOS, i, j, xN_flag);
                 std::vector<long double> zp = z; /// Copy base composition
-                zp[j] += dz;
+                zp[j] += dz; zp[1-j] -= dz;
                 rHEOS.set_mole_fractions(zp);
                 rHEOS.update(PT_INPUTS, p, 300);
                 double v1 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i, xN_flag);
                 std::vector<long double> zm = z; /// Copy base composition
-                zm[j] -= dz;
+                zm[j] -= dz; zm[1-j] += dz;
                 rHEOS.set_mole_fractions(zm);
                 rHEOS.update(PT_INPUTS, p, 300);
                 double v2 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i, xN_flag);
@@ -512,10 +557,77 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 CAPTURE(analytic);
                 CHECK(err < 1e-8);
             }
-            std::ostringstream ss3;
-            ss2 << "d_ndalphardni_dxj__constT_V_xi, i=" << i << ", j=" << j;
+            std::ostringstream ss2;
+            ss2 << "d_ndTrdni_dxj, i=" << i << ", j=" << j;
             SECTION(ss2.str(), "")
             {
+                if (j == 1){break;}
+                double dz = 1e-6;
+                rHEOS.specify_phase(iphase_gas);
+                rHEOS.update(DmolarT_INPUTS, 300, 300);
+                
+                double rho1 = rHEOS.rhomolar();
+                double analytic = rHEOS.Reducing.p->d_ndTrdni_dxj__constxi(rHEOS.get_const_mole_fractions(), i, j, xN_flag);
+                
+                // Increment mole fraction
+                std::vector<long double> zp = z; /// Copy base composition
+                zp[j] += dz; zp[1-j] -= dz;
+                rHEOS.set_mole_fractions(zp);
+                rHEOS.update(DmolarT_INPUTS, rho1, 300);
+                double v1 = rHEOS.Reducing.p->ndTrdni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
+                
+                // Decrement mole fraction
+                std::vector<long double> zm = z; /// Copy base composition
+                zm[j] -= dz; zm[1-j] += dz;
+                rHEOS.set_mole_fractions(zm);
+                rHEOS.update(DmolarT_INPUTS, rho1, 300);
+                double v2 = rHEOS.Reducing.p->ndTrdni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
+                
+                double numeric = (v1 - v2)/(2*dz);
+                double err = std::abs((numeric-analytic)/analytic);
+                
+                CAPTURE(numeric);
+                CAPTURE(analytic);
+                CHECK(err < 1e-8);
+            }
+            std::ostringstream ss4;
+            ss4 << "d_ndrhomolarrdni_dxj, i=" << i << ", j=" << j;
+            SECTION(ss4.str(), "")
+            {
+                if (j == 1){break;}
+                double dz = 1e-6;
+                rHEOS.specify_phase(iphase_gas);
+                rHEOS.update(DmolarT_INPUTS, 300, 300);
+                
+                double rho1 = rHEOS.rhomolar();
+                double analytic = rHEOS.Reducing.p->d_ndrhorbardni_dxj__constxi(rHEOS.get_const_mole_fractions(), i, j, xN_flag);
+                
+                // Increment mole fraction
+                std::vector<long double> zp = z; /// Copy base composition
+                zp[j] += dz; zp[1-j] -= dz;
+                rHEOS.set_mole_fractions(zp);
+                rHEOS.update(DmolarT_INPUTS, rho1, 300);
+                double v1 = rHEOS.Reducing.p->ndrhorbardni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
+                
+                // Decrement mole fraction
+                std::vector<long double> zm = z; /// Copy base composition
+                zm[j] -= dz; zm[1-j] += dz;
+                rHEOS.set_mole_fractions(zm);
+                rHEOS.update(DmolarT_INPUTS, rho1, 300);
+                double v2 = rHEOS.Reducing.p->ndrhorbardni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
+                
+                double numeric = (v1 - v2)/(2*dz);
+                double err = std::abs((numeric-analytic)/analytic);
+                
+                CAPTURE(numeric);
+                CAPTURE(analytic);
+                CHECK(err < 1e-8);
+            }
+            std::ostringstream ss3;
+            ss3 << "d_ndalphardni_dxj__constT_V_xi, i=" << i << ", j=" << j;
+            SECTION(ss3.str(), "")
+            {
+                if (j == 1){break;}
                 double dz = 1e-6;
                 rHEOS.specify_phase(iphase_gas);
                 rHEOS.update(DmolarT_INPUTS, 300, 300);
@@ -525,14 +637,14 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 
                 // Increment mole fraction
                 std::vector<long double> zp = z; /// Copy base composition
-                zp[j] += dz;
+                zp[j] += dz; zp[1-j] -= dz;
                 rHEOS.set_mole_fractions(zp);
                 rHEOS.update(DmolarT_INPUTS, rho1, 300);
                 double v1 = MixtureDerivatives::ndalphar_dni__constT_V_nj(rHEOS, i, xN_flag);
                 
                 // Decrement mole fraction
                 std::vector<long double> zm = z; /// Copy base composition
-                zm[j] -= dz;
+                zm[j] -= dz; zm[1-j] -= dz;
                 rHEOS.set_mole_fractions(zm);
                 rHEOS.update(DmolarT_INPUTS, rho1, 300);
                 double v2 = MixtureDerivatives::ndalphar_dni__constT_V_nj(rHEOS, i, xN_flag);
@@ -544,7 +656,39 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 CAPTURE(analytic);
                 CHECK(err < 1e-60);
             }
-            
+            std::ostringstream ss3a;
+            ss3a << "d2alphardxidxj, i=" << i << ", j=" << j;
+            SECTION(ss3a.str(), "")
+            {
+                if (j == 1){break;}
+                double dz = 1e-6;
+                rHEOS.specify_phase(iphase_gas);
+                rHEOS.update(DmolarT_INPUTS, 300, 300);
+                
+                double rho1 = rHEOS.rhomolar();
+                double analytic = MixtureDerivatives::d2alphardxidxj(rHEOS,i,j,xN_flag);
+                
+                // Increment mole fraction
+                std::vector<long double> zp = z; /// Copy base composition
+                zp[j] += dz; zp[1-j] -= dz;
+                rHEOS.set_mole_fractions(zp);
+                rHEOS.update(DmolarT_INPUTS, rho1, 300);
+                double v1 = MixtureDerivatives::dalphar_dxi(rHEOS, i, xN_flag);
+                
+                // Decrement mole fraction
+                std::vector<long double> zm = z; /// Copy base composition
+                zm[j] -= dz; zm[1-j] -= dz;
+                rHEOS.set_mole_fractions(zm);
+                rHEOS.update(DmolarT_INPUTS, rho1, 300);
+                double v2 = MixtureDerivatives::dalphar_dxi(rHEOS, i, xN_flag);
+                
+                double numeric = (v1 - v2)/(2*dz);
+                double err = std::abs((numeric-analytic)/analytic);
+                
+                CAPTURE(numeric);
+                CAPTURE(analytic);
+                CHECK(err < 1e-60);
+            }
         }
         
     }

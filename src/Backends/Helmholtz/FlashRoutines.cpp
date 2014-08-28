@@ -241,7 +241,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         // Set some imput options
         SaturationSolvers::mixture_VLE_IO io;
         io.sstype = SaturationSolvers::imposed_p;
-        io.Nstep_max = 5;
+        io.Nstep_max = 2;
 
         // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
         long double Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
@@ -258,7 +258,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         IO.rhomolar_vap = io.rhomolar_vap;
         IO.T = io.T;
         IO.p = io.p;
-        IO.Nstep_max = 25;
+        IO.Nstep_max = 100;
         
         // Dewpoint
         NR.call(HEOS, io.y, io.x, IO);

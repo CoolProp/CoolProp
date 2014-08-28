@@ -146,12 +146,28 @@ ReducingFunction *ReducingFunction::factory(const std::vector<CoolPropFluid*> &c
 
 long double ReducingFunction::d_ndTrdni_dxj__constxi(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
-	long double s = 0;
-	for (std::size_t k = 0; k < N; k++)
-	{
-		s += x[k]*d2Trdxidxj(x,j,k, xN_flag);
-	}
-	return d2Trdxidxj(x,i,j, xN_flag)-dTrdxi__constxj(x,j, xN_flag)-s;
+    if (xN_flag == XN_INDEPENDENT){
+        long double s = 0;
+        for (std::size_t k = 0; k < N; k++)
+        {
+            s += x[k]*d2Trdxidxj(x,j,k, xN_flag);
+        }
+        return d2Trdxidxj(x,i,j, xN_flag)-dTrdxi__constxj(x,j, xN_flag)-s;
+    }
+    else if (xN_flag == XN_DEPENDENT){
+        if (j == N-1){ return 0;}
+        long double s = 0;
+        for (std::size_t k = 0; k < N-1; k++)
+        {
+            s += x[k]*d2Trdxidxj(x,j,k, xN_flag);
+        }
+        long double val = d2Trdxidxj(x,i,j, xN_flag)-dTrdxi__constxj(x,j, xN_flag)-s;
+        return val;
+    }
+    else{
+        throw ValueError(format("xN dependency flag invalid"));
+    }
+    
 }
 long double ReducingFunction::d_ndrhorbardni_dxj__constxi(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
@@ -217,6 +233,14 @@ long double GERG2008ReducingFunction::dTrdxi__constxj(const std::vector<long dou
 {
 	return dYrdxi__constxj(x, i, beta_T, gamma_T, T_c, Yc_T, xN_flag);
 }
+long double GERG2008ReducingFunction::d2Trdxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag)
+{
+	return d2Yrdxi2__constxj(x, i, beta_T, gamma_T, T_c, Yc_T, xN_flag);
+}
+long double GERG2008ReducingFunction::d2Trdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+{
+	return d2Yrdxidxj__constxj(x, i, j, beta_T, gamma_T, T_c, Yc_T, xN_flag);
+}
 long double GERG2008ReducingFunction::rhormolar(const std::vector<long double> &x)
 {
 	return 1/Yr(x, beta_v, gamma_v, v_c, Yc_v);
@@ -228,6 +252,14 @@ long double GERG2008ReducingFunction::drhormolardxi__constxj(const std::vector<l
 long double GERG2008ReducingFunction::dvrmolardxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag)
 {
     return dYrdxi__constxj(x, i, beta_v, gamma_v, v_c, Yc_v, xN_flag);
+}
+long double GERG2008ReducingFunction::d2vrmolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    return d2Yrdxi2__constxj(x, i, beta_v, gamma_v, v_c, Yc_v, xN_flag);
+}
+long double GERG2008ReducingFunction::d2vrmolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+{
+    return d2Yrdxidxj__constxj(x, i, j, beta_v, gamma_v, v_c, Yc_v, xN_flag);
 }
 long double GERG2008ReducingFunction::d2rhormolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag)
 {
@@ -243,105 +275,22 @@ long double GERG2008ReducingFunction::d2rhormolardxidxj(const std::vector<long d
 	return 2*pow(rhor,(std::size_t)3)*dvrbardxi*dvrbardxj-pow(rhor,(std::size_t)2)*this->d2vrmolardxidxj(x,i,j, xN_flag);
 }
 
-long double GERG2008ReducingFunction::d2Trdxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag)
-{
-	// See Table B9 from Kunz Wagner 2012 (GERG 2008)
-	long double d2Tr_dxi2 = 2*pFluids[i]->pEOS->reduce.T;
-	for (std::size_t k = 0; k < i; k++)
-	{
-		d2Tr_dxi2 += c_Y_ij(k,i,beta_T,gamma_T,T_c)*d2fYkidxi2__constxk(x,k,i,beta_T);
-	}
-	for (std::size_t k = i+1; k < N; k++)
-	{
-		d2Tr_dxi2 += c_Y_ij(i,k,beta_T,gamma_T,T_c)*d2fYikdxi2__constxk(x,i,k,beta_T);
-	}
-	return d2Tr_dxi2;
-}
-long double GERG2008ReducingFunction::d2Trdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
-{
-	if (i == j)
-	{
-		return d2Trdxi2__constxj(x, i, xN_flag);
-	}
-	else
-	{
-		// See Table B9 from Kunz Wagner 2012 (GERG 2008)
-		return c_Y_ij(i, j, beta_T, gamma_T, T_c)*d2fYijdxidxj(x, i, j, beta_T);
-	}
-}
-
-long double GERG2008ReducingFunction::d2vrmolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
-{
-	if (i == j)
-	{
-		return d2vrmolardxi2__constxj(x, i, xN_flag);
-	}
-	else
-	{
-		return c_Y_ij(i, j, beta_v, gamma_v, v_c)*d2fYijdxidxj(x, i, j, beta_v);
-	}
-}
-
-long double GERG2008ReducingFunction::d2vrmolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag)
-{
-	// See Table B9 from Kunz Wagner 2012 (GERG 2008)
-	double d2vrbardxi2 = 2/pFluids[i]->pEOS->reduce.rhomolar;
-
-	for (std::size_t k = 0; k < i; k++)
-	{
-		d2vrbardxi2 += c_Y_ij(k, i, beta_v, gamma_v, v_c)*d2fYkidxi2__constxk(x, k, i, beta_v);
-	}
-	for (std::size_t k = i+1; k < N; k++)
-	{
-		d2vrbardxi2 += c_Y_ij(i, k, beta_v, gamma_v, v_c)*d2fYikdxi2__constxk(x, i, k, beta_v);	
-	}
-	return d2vrbardxi2;
-}
-
 long double GERG2008ReducingFunction::Yr(const std::vector<long double> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc)
 {
 	long double Yr = 0;
-//    if (xN_flag == XN_INDEPENDENT)
-//    {
-        for (std::size_t i = 0; i < N; i++)
-        {
-            double xi = x[i];
-            Yr += xi*xi*Yc[i];
-            
-            // The last term is only used for the pure component, as it is sum_{i=1}^{N-1}sum_{j=1}^{N}
-            if (i==N-1){ break; }
+    for (std::size_t i = 0; i < N; i++)
+    {
+        double xi = x[i];
+        Yr += xi*xi*Yc[i];
+        
+        // The last term is only used for the pure component, as it is sum_{i=1}^{N-1}sum_{j=1}^{N}
+        if (i==N-1){ break; }
 
-            for (std::size_t j = i+1; j < N; j++)
-            {
-                Yr += c_Y_ij(i, j, beta, gamma, Y_c_ij)*f_Y_ij(x, i, j, beta);
-            }
+        for (std::size_t j = i+1; j < N; j++)
+        {
+            Yr += c_Y_ij(i, j, beta, gamma, Y_c_ij)*f_Y_ij(x, i, j, beta);
         }
-//    }
-//    else if (xN_flag == XN_DEPENDENT){
-//        
-//        // A.43 from Gernert, 2014, supplemental information
-//        for (std::size_t k = 0; k < N-1; ++k)
-//        {
-//            double xk = x[k];
-//            Yr += xk*xk*Yc[k];
-//        }
-//        for (std::size_t k = 0; k < N-2; ++k)
-//        {
-//            for (std::size_t m = k+1; m < N-1; ++m)
-//            {
-//                Yr += c_Y_ij(k, m, beta, gamma, Y_c_ij)*f_Y_ij(x, k, m, beta);
-//            }
-//        }
-//        for (std::size_t k = 0; k < N-1; ++k)
-//        {
-//            Yr += c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*f_Y_ij(x, k, N-1, beta);
-//        }
-//        double xN = x[N-1];
-//        Yr += xN*xN*Yc[N-1];
-//    }
-//    else{
-//        throw ValueError(format("xN dependency flag invalid"));
-//    }
+    }
 	return Yr;
 }
 long double GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<long double> &x, std::size_t i,  const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag)
@@ -362,6 +311,7 @@ long double GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<long dou
     }
     else if (xN_flag == XN_DEPENDENT){
         // Table S1 from Gernert, 2014, supplemental information
+        if (i == N-1){return 0.0;}
         long double dYr_dxi = 2*x[i]*Yc[i] - 2*x[N-1]*Yc[N-1];
         for (std::size_t k = 0; k < i; k++)
         {
@@ -379,6 +329,84 @@ long double GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<long dou
             dYr_dxi += c_Y_ji(k, N-1, beta, gamma, Y_c_ij)*(-x[k]*(x[k]+xN)/(pow(beta_Y_kN,2)*x[k]+xN)+(1-beta_Y_kN*beta_Y_kN)*xN*x[k]*x[k]/pow(beta_Y_kN*beta_Y_kN*x[k]+xN, 2));        
         }
         return dYr_dxi;
+    }
+    else{
+        throw ValueError(format("xN dependency flag invalid"));
+    }
+}
+long double GERG2008ReducingFunction::d2Yrdxi2__constxj(const std::vector<long double> &x, std::size_t i,  const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag)
+{
+    if (xN_flag == XN_INDEPENDENT){
+        // See Table B9 from Kunz Wagner 2012 (GERG 2008)
+        long double d2Yr_dxi2 = 2*Yc[i];
+        for (std::size_t k = 0; k < i; k++)
+        {
+            d2Yr_dxi2 += c_Y_ij(k,i,beta,gamma,Y_c_ij)*d2fYkidxi2__constxk(x,k,i,beta);
+        }
+        for (std::size_t k = i+1; k < N; k++)
+        {
+            d2Yr_dxi2 += c_Y_ij(i,k,beta,gamma,Y_c_ij)*d2fYikdxi2__constxk(x,i,k,beta);
+        }
+        return d2Yr_dxi2;
+    }
+    else if (xN_flag == XN_DEPENDENT){
+        // Table S1 from Gernert, 2014, supplemental information
+        if (i == N-1){return 0.0;}
+        long double d2Yr_dxi2 = 2*Yc[i] + 2*Yc[N-1];
+        for (std::size_t k = 0; k < i; k++)
+        {
+            d2Yr_dxi2 += c_Y_ji(k, i, beta, gamma, Y_c_ij)*d2fYkidxi2__constxk(x,k,i,beta);
+        }
+        for (std::size_t k = i+1; k < N-1; k++)
+        {
+            d2Yr_dxi2 += c_Y_ji(i, k, beta, gamma, Y_c_ij)*d2fYkidxi2__constxk(x,i,k,beta);
+        }
+        double beta_Y_iN = beta[i][N-1], xN = x[N-1];
+        d2Yr_dxi2 += 2*c_Y_ji(i, N-1, beta, gamma, Y_c_ij)*(-(x[i]+xN)/(pow(beta_Y_iN,2)*x[i]+xN)+(1-beta_Y_iN*beta_Y_iN)*(xN*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 2)+((1-beta_Y_iN*beta_Y_iN)*x[i]*xN*xN-beta_Y_iN*beta_Y_iN*x[i]*x[i]*xN)/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 3)));
+        for (std::size_t k = 0; k < N-1; ++k)
+        {
+            double beta_Y_kN = beta[k][N-1];
+            d2Yr_dxi2 += 2*c_Y_ji(k, N-1, beta, gamma, Y_c_ij)*x[k]*x[k]*(1-beta_Y_kN*beta_Y_kN)/pow(pow(beta_Y_kN,2)*x[k]+xN, 2)*(xN/(beta_Y_kN*beta_Y_kN*x[k]+xN)-1);
+        }
+        return d2Yr_dxi2;
+    }
+    else{
+        throw ValueError(format("xN dependency flag invalid"));
+    }
+}
+
+long double GERG2008ReducingFunction::d2Yrdxidxj__constxj(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag)
+{
+    if (xN_flag == XN_INDEPENDENT){
+        if (i == j)
+        {
+            return d2Yrdxi2__constxj(x, i, beta, gamma, Y_c_ij, Yc, xN_flag);
+        }
+        else
+        {
+            // See Table B9 from Kunz Wagner 2012 (GERG 2008)
+            return c_Y_ij(i, j, beta, gamma, Y_c_ij)*d2fYijdxidxj(x, i, j, beta);
+        }
+    }
+    else if (xN_flag == XN_DEPENDENT){
+        // Table S1 from Gernert, 2014, supplemental information
+        if (j == N-1 || i == N-1){ return 0.0; }
+        if (i == j){ return d2Yrdxi2__constxj(x, i, beta, gamma, Y_c_ij, Yc, xN_flag); }
+        long double xN = x[N-1];
+        long double d2Yr_dxidxj = 2*Yc[N-1];
+        d2Yr_dxidxj += c_Y_ji(i, j, beta, gamma, Y_c_ij)*d2fYijdxidxj(x,i,j,beta);
+        
+        for (std::size_t k = 0; k < N-1; k++)
+        {
+            double beta_Y_kN = beta[k][N-1];
+            d2Yr_dxidxj += 2*c_Y_ji(k, N-1, beta, gamma, Y_c_ij)*x[k]*x[k]*(1-beta_Y_kN*beta_Y_kN)/pow(beta_Y_kN*beta_Y_kN*x[k]+xN,2)*(xN/(beta_Y_kN*beta_Y_kN*x[k]+xN)-1);
+        }
+        
+        double beta_Y_iN = beta[i][N-1], beta_Y_jN = beta[j][N-1];
+        d2Yr_dxidxj +=  c_Y_ji(i, N-1, beta, gamma, Y_c_ij)*((1-beta_Y_iN*beta_Y_iN)*(2*x[i]*xN*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 3)-x[i]*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 2)) - (x[i]+xN)/(beta_Y_iN*beta_Y_iN*x[i]+xN));
+        d2Yr_dxidxj += -c_Y_ji(j, N-1, beta, gamma, Y_c_ij)*((1-beta_Y_jN*beta_Y_jN)*(2*x[j]*x[j]*xN*beta_Y_jN*beta_Y_jN/pow(beta_Y_jN*beta_Y_jN*x[j]+xN, 3)-x[j]*xN/pow(beta_Y_jN*beta_Y_jN*x[j]+xN, 2)) - (x[j]+xN)/(beta_Y_jN*beta_Y_jN*x[j]+xN));
+        
+        return d2Yr_dxidxj;
     }
     else{
         throw ValueError(format("xN dependency flag invalid"));

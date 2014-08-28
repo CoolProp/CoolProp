@@ -9,7 +9,8 @@ namespace CoolProp{
 typedef std::vector<std::vector<long double> > STLMatrix;
 
 enum x_N_dependency_flag{XN_INDEPENDENT, ///< x_N is an independent variable, and not calculated by \f$ x_N = 1-\sum_i x_i\f$
-                         XN_DEPENDENT}; ///< x_N is an dependent variable, calculated by \f$ x_N = 1-\sum_i x_i\f$
+                         XN_DEPENDENT ///< x_N is an dependent variable, calculated by \f$ x_N = 1-\sum_i x_i\f$
+                         };
                          
 /// A container for the mixing parameters for CoolProp mixtures
 /**
@@ -119,7 +120,7 @@ protected:
 	STLMatrix gamma_T; ///< \f$ \gamma_{T,ij} \f$ from GERG-2008
     std::vector<long double> Yc_T; ///< Vector of critical temperatures for all components
     std::vector<long double> Yc_v; ///< Vector of critical molar volumes for all components
-	std::vector<CoolPropFluid *> pFluids; ///< List of postd::size_ters to fluids
+	std::vector<CoolPropFluid *> pFluids; ///< List of pointer to fluids
 
 public:
 	GERG2008ReducingFunction(std::vector<CoolPropFluid *> pFluids, STLMatrix beta_v, STLMatrix gamma_v, STLMatrix beta_T, STLMatrix gamma_T)
@@ -167,6 +168,8 @@ public:
 
     long double Yr(const std::vector<long double> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc);
     long double dYrdxi__constxj(const std::vector<long double> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
+    long double d2Yrdxi2__constxj(const std::vector<long double> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
+    long double d2Yrdxidxj__constxj(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
 	long double c_Y_ij(std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c);
 	long double c_Y_ji(std::size_t j, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c);
 	long double f_Y_ij(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta);
