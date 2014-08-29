@@ -1,0 +1,25 @@
+p: 675616.5260238834
+p calculated by rho*R*T*(1+delta*deltadar_dDelta): 675616.5260238834
+rhor: 5375.073740431392
+Tr: 354.7802371525603
+dalphar_dDelta: -1.740349537597104
+dTr_dxi: -60.84527088778825
+drhor_dxi: 1587.916430678275
+ndpdV__constT_n: -181257322.2040499
+dpdxj__constT_V_xi(0): 48181.54565089135
+dalphar_dxi|T,V,xk(0): 0.06467412878843236
+dalphar_dxi|tau_delta_xk(0): 4.187330988393492e-005
+ln_fugacity_coefficient(0): -0.04441530290159221
+ln_fugacity_coefficient(1): -0.1090894316900246
+ndpdni__constT_V_nj(0): 640327.2332516684
+tau*d_ndalphardni_dTau(0): -0.09709340835471267
+tau*d_ndalphardni_dTau(1): -0.2484618994956092
+delta*d_ndalphardni_dDelta(0): -0.04715912844791718
+delta*d_ndalphardni_dDelta(1): -0.1115469220723501
+d_ndalphardni_dxj__constdelta_tau_xi(0, 0): -0.04493881035511202
+d_ndalphardni_dxj__constT_V_xi(0, 0): -0.01435530858047472
+dln_fugacity_coefficient_dxj__constT_p_xi(0,0): -0.01791995312054628
+dln_fugacity_coefficient_dxj__constT_p_xi(1,0): 0.005973317706848738
+d2nalphar_dxj_dni__constT_V(0,0): 0.05031882020795764
+d2nalphar_dxj_dni__constT_V(1,0): 0
+delta*d2alphar_dxi_dDelta(0): 0.001221607211340736

@@ -49,8 +49,8 @@ class GeneticAncillaryFitter(object):
                 self.T = np.append(np.linspace(self.Tmin+1e-14, self.Tc-1,150), np.logspace(np.log10(self.Tc-1), np.log10(self.Tc)-1e-15,40))
             else:
                 self.T = np.linspace(Tlims[0],Tlims[1])
-            self.pL = np.array(PropsSI('P','T',self.T,'Q',[0]*len(self.T),Ref))/1000
-            self.pV = np.array(PropsSI('P','T',self.T,'Q',[1]*len(self.T),Ref))/1000
+            self.pL = np.array(PropsSI('P','T',self.T,'Q',[0]*len(self.T),Ref))
+            self.pV = np.array(PropsSI('P','T',self.T,'Q',[1]*len(self.T),Ref))
             self.rhoL = PropsSI('D','T',self.T,'Q',[0]*len(self.T),Ref)
             self.rhoV = PropsSI('D','T',self.T,'Q',[1]*len(self.T),Ref)
         else:
@@ -336,9 +336,9 @@ def build_all_ancillaries():
         
 if __name__ == "__main__":
     
-    fluid = 'AceticAcid'
+    fluid = 'R245fa'
     RPfluid = fluid
-    build_ancillaries(RPfluid, Tlims = [CP.PropsSI(fluid,'Ttriple'), CP.PropsSI(fluid, 'Tcrit')-5])
+    build_ancillaries(RPfluid, Tlims = [CP.PropsSI(fluid,'Ttriple'), CP.PropsSI(fluid, 'Tcrit')-0.01])
     
     #~ build_all_ancillaries()
 #     inject_ancillaries()

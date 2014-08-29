@@ -737,18 +737,19 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
         f = 0;
         df = 0;
 
+        x_N_dependency_flag xN_flag = XN_INDEPENDENT;
         for (std::size_t i = 0; i < N; ++i)
         {
-            ln_phi_liq[i] = MixtureDerivatives::ln_fugacity_coefficient(*(HEOS.SatL.get()), i);
-            ln_phi_vap[i] = MixtureDerivatives::ln_fugacity_coefficient(*(HEOS.SatV.get()), i);
+            ln_phi_liq[i] = MixtureDerivatives::ln_fugacity_coefficient(*(HEOS.SatL.get()), i, xN_flag);
+            ln_phi_vap[i] = MixtureDerivatives::ln_fugacity_coefficient(*(HEOS.SatV.get()), i, xN_flag);
 
             if (options.sstype == imposed_p){
-                deriv_liq = MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(*(HEOS.SatL.get()), i);
-                deriv_vap = MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(*(HEOS.SatV.get()), i);
+                deriv_liq = MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(*(HEOS.SatL.get()), i, xN_flag);
+                deriv_vap = MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(*(HEOS.SatV.get()), i, xN_flag);
             }
             else if (options.sstype == imposed_T){
-                deriv_liq = MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(*(HEOS.SatL.get()), i);
-                deriv_vap = MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(*(HEOS.SatV.get()), i);
+                deriv_liq = MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(*(HEOS.SatL.get()), i, xN_flag);
+                deriv_vap = MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(*(HEOS.SatV.get()), i, xN_flag);
             }
             else {throw ValueError();}
 
@@ -960,25 +961,26 @@ void SaturationSolvers::newton_raphson_VLE_GV::build_arrays(HelmholtzEOSMixtureB
     // -------
     // Build the residual vector and the Jacobian matrix
 
+    x_N_dependency_flag xN_flag = XN_INDEPENDENT;
     // For the residuals F_i
     for (unsigned int i = 0; i < N; ++i)
     {
-        long double ln_phi_liq = MixtureDerivatives::ln_fugacity_coefficient(*(HEOS.SatL.get()), i);
-        long double phi_iT_liq = MixtureDerivatives::dln_fugacity_coefficient_dT__constrho_n(*(HEOS.SatL.get()), i);
-        dlnphi_drho_liq[i] = MixtureDerivatives::dln_fugacity_coefficient_drho__constT_n(*(HEOS.SatL.get()), i);
+        long double ln_phi_liq = MixtureDerivatives::ln_fugacity_coefficient(*(HEOS.SatL.get()), i, xN_flag);
+        long double phi_iT_liq = MixtureDerivatives::dln_fugacity_coefficient_dT__constrho_n(*(HEOS.SatL.get()), i, xN_flag);
+        dlnphi_drho_liq[i] = MixtureDerivatives::dln_fugacity_coefficient_drho__constT_n(*(HEOS.SatL.get()), i, xN_flag);
         for (unsigned int j = 0; j < N; ++j)
         {
             // I think this is wrong.
-            phi_ij_liq[j] = MixtureDerivatives::ndln_fugacity_coefficient_dnj__constT_p(rSatL, i, j) + (MixtureDerivatives::partial_molar_volume(rSatL, i)/(SatL->gas_constant()*T)-1/p)*MixtureDerivatives::ndpdni__constT_V_nj(rSatL, i); // 7.126 from GERG monograph
+            phi_ij_liq[j] = MixtureDerivatives::ndln_fugacity_coefficient_dnj__constT_p(rSatL, i, j, xN_flag) + (MixtureDerivatives::partial_molar_volume(rSatL, i, xN_flag)/(SatL->gas_constant()*T)-1/p)*MixtureDerivatives::ndpdni__constT_V_nj(rSatL, i, xN_flag); // 7.126 from GERG monograph
         }
 
-        long double ln_phi_vap = MixtureDerivatives::ln_fugacity_coefficient(*(HEOS.SatV.get()), i);
-        long double phi_iT_vap = MixtureDerivatives::dln_fugacity_coefficient_dT__constrho_n(*(HEOS.SatV.get()), i);
-        dlnphi_drho_vap[i] = MixtureDerivatives::dln_fugacity_coefficient_drho__constT_n(*(HEOS.SatV.get()), i);
+        long double ln_phi_vap = MixtureDerivatives::ln_fugacity_coefficient(*(HEOS.SatV.get()), i, xN_flag);
+        long double phi_iT_vap = MixtureDerivatives::dln_fugacity_coefficient_dT__constrho_n(*(HEOS.SatV.get()), i, xN_flag);
+        dlnphi_drho_vap[i] = MixtureDerivatives::dln_fugacity_coefficient_drho__constT_n(*(HEOS.SatV.get()), i, xN_flag);
         for (unsigned int j = 0; j < N; ++j)
         {
             // I think this is wrong.
-            phi_ij_vap[j] = MixtureDerivatives::ndln_fugacity_coefficient_dnj__constT_p(rSatV, i,j) + (MixtureDerivatives::partial_molar_volume(rSatV, i)/(SatV->gas_constant()*T)-1/p)*MixtureDerivatives::ndpdni__constT_V_nj(rSatV, i); ; // 7.126 from GERG monograph
+            phi_ij_vap[j] = MixtureDerivatives::ndln_fugacity_coefficient_dnj__constT_p(rSatV, i,j, xN_flag) + (MixtureDerivatives::partial_molar_volume(rSatV, i, xN_flag)/(SatV->gas_constant()*T)-1/p)*MixtureDerivatives::ndpdni__constT_V_nj(rSatV, i, xN_flag); ; // 7.126 from GERG monograph
         }
 
         r[i] = log(K[i]) + ln_phi_vap - ln_phi_liq;
@@ -1077,12 +1079,12 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
     
     // Derivatives with respect to x0
     double dx = 1e-5, T = T0;
-    x = x0; x[0] += dx;// x[1] -= dx;
+    x = x0; x[0] += dx; x[1] -= dx;
     rSatL.set_mole_fractions(x);
     rSatL.update_TP_guessrho(T, p, rhomolar_liq); rhomolar_liq = rSatL.rhomolar();
     build_arrays(); r1 = r;
     
-    x = x0; x[0] -= dx;// x[1] += dx;
+    x = x0; x[0] -= dx; x[1] += dx;
     rSatL.set_mole_fractions(x);
     rSatL.update_TP_guessrho(T, p, rhomolar_liq); rhomolar_liq = rSatL.rhomolar();
     build_arrays(); r2 = r;
@@ -1094,41 +1096,6 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
     std::cout << "analytic: " << vec_to_string(get_col(J0, 0), "%0.11Lg") << std::endl;
     
     int rrr = 0;
-
-//    Jnum.resize(N, std::vector<long double>(N, 0));
-//
-//    for (std::size_t j = 0; j < N; ++j)
-//    {
-//        std::vector<long double> KK = K;
-//        KK[j] += 1e-6;
-//        build_arrays(HEOS,beta0,T0,rhomolar_liq0,rhomolar_vap0,z,KK);
-//        std::vector<long double> r1 = r;
-//        for (std::size_t i = 0; i < N+2; ++i)
-//        {
-//            Jnum[i][j] = (r1[i]-r0[i])/(log(KK[j])-log(K[j]));
-//        }
-//        std::cout << vec_to_string(get_col(Jnum,j),"%12.11f") << std::endl;
-//        std::cout << vec_to_string(get_col(J,j),"%12.11f") << std::endl;
-//    }
-//
-//    build_arrays(HEOS,beta0,T0+1e-6,rhomolar_liq0,rhomolar_vap0,z,K);
-//    std::vector<long double> r1 = r, JN = r;
-//    for (std::size_t i = 0; i < r.size(); ++i)
-//    {
-//        Jnum[i][N] = (r1[i]-r0[i])/(log(T0+1e-6)-log(T0));
-//    }
-//    std::cout << vec_to_string(get_col(Jnum,N),"%12.11f") << std::endl;
-//    std::cout << vec_to_string(get_col(J,N),"%12.11f") << std::endl;
-//
-//    // Build the Jacobian and residual vectors for given inputs of K_i,T,p
-//    build_arrays(HEOS,beta0,T0,rhomolar_liq0+1e-3,rhomolar_vap0,z,K);
-//    std::vector<long double> r2 = r, JNp1 = r;
-//    for (std::size_t i = 0; i < r.size(); ++i)
-//    {
-//        Jnum[i][N+1] = (r2[i]-r0[i])/(log(rhomolar_liq0+1e-3)-log(rhomolar_liq0));
-//    }
-//    std::cout << vec_to_string(get_col(Jnum, N+1),"%12.11f") << std::endl;
-//    std::cout << vec_to_string(get_col(J,N+1),"%12.11f") << std::endl;
 }
 void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &z_incipient, newton_raphson_saturation_options &IO)
 {
@@ -1147,17 +1114,17 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
     // Hold a pointer to the backend
     this->HEOS = &HEOS;
 
-    check_Jacobian();
-
     do
     {
         // Build the Jacobian and residual vectors
         build_arrays();
+        
+        //check_Jacobian();
 
         // Solve for the step; v is the step with the contents
         // [delta(x_0), delta(x_1), ..., delta(x_{N-2}), delta(spec)]
-        std::cout << vec_to_string(negative_r, "%0.12Lg") << std::endl;
-        std::cout << vec_to_string(J, "%0.12Lg") << std::endl;
+        std::cout << "-r: " << vec_to_string(negative_r, "%0.12Lg") << std::endl;
+        std::cout << "J: " << vec_to_string(J, "%0.12Lg") << std::endl;
         std::vector<long double> v = linsolve(J, negative_r);
 
         max_rel_change = max_abs_value(v);
@@ -1209,30 +1176,31 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
     // -------
     // Build the residual vector and the Jacobian matrix
 
+    x_N_dependency_flag xN_flag = XN_DEPENDENT;
     // For the residuals F_i (equality of fugacities)
     for (std::size_t i = 0; i < N; ++i)
     {
         // Equate the liquid and vapor fugacities
-        long double ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i));
-        long double ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i));
+        long double ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
+        long double ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
         r[i] = ln_f_liq - ln_f_vap;
         
         if (bubble_point){
             throw NotImplementedError();
         }
-        else{
+        else{ // its a dewpoint calculation
             for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
                 if (i == N-1){
-                    J[i][j] = (-1/x[i] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatL,i,j));
+                    J[N-1][j] = (-1/x[N-1] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatL,N-1,j, xN_flag));
                 }
                 else if (i != j){
-                    J[i][j] = MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatL,i,j);   
+                    J[i][j] = MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatL,i,j, xN_flag);   
                 }
                 else{
-                    J[i][i] = (1/x[i] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatL,i,i));
+                    J[i][i] = (1/x[i] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatL,i,i, xN_flag));
                 }
             }
-            J[i][N-1] = MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatL, i) - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatV, i);
+            J[i][N-1] = MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatV, i, xN_flag);
         }
     }
 

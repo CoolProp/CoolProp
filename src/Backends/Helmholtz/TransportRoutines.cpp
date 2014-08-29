@@ -444,7 +444,7 @@ long double TransportRoutines::viscosity_methanol_hardcoded(HelmholtzEOSMixtureB
         B_eta = N_A*pow(sigma0, 3)*B_eta_star; // [m^3/mol]
         
         long double c[2] = {1.86222085e-3, 9.990338};
-        C_eta_star = c[0]*pow(Tstar,3)*exp(c[1]*pow(Tstar,-0.5)); // [no units]
+        C_eta_star = c[0]*pow(Tstar, 3)*exp(c[1]*pow(Tstar,static_cast<long double>(-0.5))); // [no units]
         C_eta = pow(N_A*pow(sigma0, 3), 2)*C_eta_star; // [m^6/mol^2]
     }
     
@@ -459,10 +459,10 @@ long double TransportRoutines::viscosity_methanol_hardcoded(HelmholtzEOSMixtureB
     long double eta_0 = 2.66957e-26*sqrt(M*T)/(pow(sigma0,2)*OMEGA_22_star_SM);
     
     long double summerd = 0;
-    for (unsigned int i = 0; i < 7; ++i){
+    for (int i = 0; i < 7; ++i){
         summerd += d[i]/pow(Tr, i);
     }
-    for (unsigned int j = 1; j < 10; ++j){
+    for (int j = 1; j < 10; ++j){
         summerd += e[j]*pow(rhor, j);
     }
     long double sigmac = 0.7193422e-9; // [m]

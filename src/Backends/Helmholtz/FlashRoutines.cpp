@@ -115,8 +115,8 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                     throw ValueError("pseudo-pure failed");
                 }
 
-                rhoLsat = HEOS.solver_rho_Tp(HEOS._T, psatLanc, rhoLanc);
-                rhoVsat = HEOS.solver_rho_Tp(HEOS._T, psatVanc, rhoVanc);
+                HEOS.SatL->update_TP_guessrho(HEOS._T, psatLanc, rhoLanc);
+                HEOS.SatV->update_TP_guessrho(HEOS._T, psatVanc, rhoVanc);
                 if (!ValidNumber(rhoLsat) || !ValidNumber(rhoVsat) ||
                      std::abs(rhoLsat/rhoLanc-1) > 0.5 || std::abs(rhoVanc/rhoVsat-1) > 0.5)
                 {
@@ -124,12 +124,12 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 }
             }
             catch (std::exception &){
-                // Near the critical point, the behavior is not very nice, so we will just use the ancillary near the critical point
+                // Near the critical point, the behavior is not very nice, so we will just use the ancillary
                 rhoLsat = rhoLanc;
                 rhoVsat = rhoVanc;
             }
             HEOS._p = HEOS._Q*psatVanc + (1-HEOS._Q)*psatLanc;
-            HEOS._rhomolar = 1/(HEOS._Q/rhoVsat + (1-HEOS._Q)/rhoLsat);
+            HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
             HEOS.SatL->update(DmolarT_INPUTS, rhoLsat, HEOS._T);
             HEOS.SatV->update(DmolarT_INPUTS, rhoVsat, HEOS._T);
         }
@@ -241,7 +241,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         // Set some imput options
         SaturationSolvers::mixture_VLE_IO io;
         io.sstype = SaturationSolvers::imposed_p;
-        io.Nstep_max = 5;
+        io.Nstep_max = 2;
 
         // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
         long double Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
@@ -258,7 +258,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         IO.rhomolar_vap = io.rhomolar_vap;
         IO.T = io.T;
         IO.p = io.p;
-        IO.Nstep_max = 25;
+        IO.Nstep_max = 100;
         
         // Dewpoint
         NR.call(HEOS, io.y, io.x, IO);

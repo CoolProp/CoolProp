@@ -417,7 +417,7 @@ int main()
     {
         //::set_debug_level(10);
         std::vector<std::string> tags;
-        tags.push_back("[REFPROP]");
+        tags.push_back("[mixture_derivs]");
         run_user_defined_tests(tags);
         char c;
         std::cin >> c;
@@ -432,9 +432,10 @@ int main()
 	#endif
     #if 1
     { 
+        double TTgreygfrekT = PropsSI("P","T",300,"Q",1,"R410A");
+        
         ::set_debug_level(0);
-        double tryuk = PropsSI("D","P",6500000,"S",4894.530733,"Air");
-        std::cout << get_global_param_string("errstring") << std::endl;
+        
         double TTT = PropsSI("T","P",5e6,"Q",1,"Methane[0.5]&Propane[0.5]");
         //double refretrte = PropsSI("P","Dmolar",107.9839357,"T",116.5360225,"Methane[0.5]&Propane[0.5]");
         for (double p = 101325; p < 9e6; p *= 1.05){
@@ -453,7 +454,7 @@ int main()
 	#if 0
 	{
         
-        ::set_debug_level(100);
+        ::set_debug_level(0);
         
         shared_ptr<AbstractState> Water(AbstractState::factory("HEOS","water"));
         Water->update(PT_INPUTS, 800,  300);

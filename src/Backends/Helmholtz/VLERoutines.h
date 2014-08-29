@@ -233,16 +233,17 @@ namespace SaturationSolvers
 		    rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
 	    };
 
-	    /*! Call the Newton-Raphson VLE Solver
-
-	    This solver must be passed reasonable guess values for the mole fractions, 
-	    densities, etc.  You may want to take a few steps of successive substitution
-	    before you start with Newton Raphson.
-
-	    @param HEOS HelmholtzEOSMixtureBackend instance
-	    @param z Bulk mole fractions [-]
-	    @param z_incipient Initial guesses for the mole fractions of the incipient phase [-]
-	    */
+	    /** Call the Newton-Raphson VLE Solver
+         *
+	     * This solver must be passed reasonable guess values for the mole fractions, 
+	     * densities, etc.  You may want to take a few steps of successive substitution
+	     * before you start with Newton Raphson.
+         * 
+	     * @param HEOS HelmholtzEOSMixtureBackend instance
+	     * @param z Bulk mole fractions [-]
+	     * @param z_incipient Initial guesses for the mole fractions of the incipient phase [-]
+         * @param IO The input/output data structure
+	     */
 	    void call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &z_incipient, newton_raphson_saturation_options &IO);
 
 	    /*! Build the arrays for the Newton-Raphson solve
@@ -287,30 +288,31 @@ namespace SaturationSolvers
 		    rhobar_liq = _HUGE; rhobar_vap = _HUGE; T = _HUGE; p = _HUGE;
 	    };
 
-	    /*! Call the Newton-Raphson VLE Solver
-
-	    This solver must be passed reasonable guess values for the mole fractions, 
-	    densities, etc.  You may want to take a few steps of successive substitution
-	    before you start with Newton Raphson.
-
-	    @param HEOS Temperature [K]
-	    @param z Pressure [Pa]
-	    @param z Bulk mole fractions [-]
-	    @param K Array of K-factors [-]
-	    */
+	    /** Call the Newton-Raphson VLE Solver
+         *
+	     * This solver must be passed reasonable guess values for the mole fractions, 
+	     * densities, etc.  You may want to take a few steps of successive substitution
+         * before you start with Newton Raphson.
+         * 
+	     * @param HEOS Temperature [K]
+	     * @param z Bulk mole fractions [-]
+	     * @param K Array of K-factors [-]
+         * @param IO The input/output data structure
+	     */
 	    void call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &K, mixture_VLE_IO &IO);
 
-	    /*! Build the arrays for the Newton-Raphson solve
-
-	    This method builds the Jacobian matrix, the sensitivity matrix, etc.
-
-	    @param beta Void fraction [-] (0: bubble, 1: dew)
-	    @param T Temperature [K]
-	    @param p Pressure [Pa]
-	    @param z Bulk mole fractions [-]
-	    @param K Array of K-factors [-]
-	    */
-	    void build_arrays(HelmholtzEOSMixtureBackend &HEOS, long double beta, long double T, long double rhomolar_liq, const long double rho_vapor, const std::vector<long double> &z, std::vector<long double> & K);
+	    /** \brief Build the arrays for the Newton-Raphson solve
+         *
+	     * This method builds the Jacobian matrix, the sensitivity matrix, etc.
+         * 
+	     * @param beta Void fraction [-] (0: bubble, 1: dew)
+	     * @param T Temperature [K]
+	     * @param rhomolar_liq Molar density of liquid [mol/m3]
+         * @param rhomolar_vap Molar density of liquid [mol/m3]
+	     * @param z Bulk mole fractions [-]
+	     * @param K Array of K-factors [-]
+	     */
+	    void build_arrays(HelmholtzEOSMixtureBackend &HEOS, long double beta, long double T, long double rhomolar_liq, const long double rhomolar_vapor, const std::vector<long double> &z, std::vector<long double> & K);
 
         /** Check the derivatives in the Jacobian using numerical derivatives.
         */

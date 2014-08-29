@@ -29,11 +29,16 @@ and not pollute the HelmholtzEOSMixtureBackend namespace
 class MixtureDerivatives{
     public:
     
-    static long double dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
-    static long double d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
-    static long double d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
-    static long double d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j);
-
+    /** \brief GERG 2004 Monograph equation 7.62
+     * 
+     * The derivative term
+	 * \f[
+	 * n\left(\frac{\partial p}{\partial V} \right)_{T,\bar n} = -\rho^2 RT(1+2\delta \alpha_{\delta}^r+\delta^2\alpha^r_{\delta\delta})
+	 * \f]
+     * @param HEOS The HelmholtzEOSMixtureBackend to be used
+	 */
+	static long double ndpdV__constT_n(HelmholtzEOSMixtureBackend &HEOS);
+    
     /** \brief GERG 2004 Monograph equation 7.61
      * 
      * The derivative term
@@ -45,16 +50,13 @@ class MixtureDerivatives{
 	static long double dpdT__constV_n(HelmholtzEOSMixtureBackend &HEOS);
 
     static long double dpdrho__constT_n(HelmholtzEOSMixtureBackend &HEOS);
+    
+    static long double dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static long double d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static long double d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static long double d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
-	/** \brief GERG 2004 Monograph equation 7.62
-     * 
-     * The derivative term
-	 * \f[
-	 * n\left(\frac{\partial p}{\partial V} \right)_{T,\bar n} = -\rho^2 RT(1+2\delta \alpha_{\delta}^r+\delta^2\alpha^r_{\delta\delta})
-	 * \f]
-     * @param HEOS The HelmholtzEOSMixtureBackend to be used
-	 */
-	static long double ndpdV__constT_n(HelmholtzEOSMixtureBackend &HEOS);
+	
 
 	/** \brief GERG 2004 Monograph equation 7.63
      * 
@@ -64,7 +66,7 @@ class MixtureDerivatives{
 	 * \f]
 	 * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double ndpdni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double ndpdni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 monograph Eqn. 7.32
      * 
@@ -74,7 +76,7 @@ class MixtureDerivatives{
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double partial_molar_volume(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double partial_molar_volume(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief Fugacity of the i-th component
      * 
@@ -83,25 +85,25 @@ class MixtureDerivatives{
      * f_i(\delta, \tau, \bar x) = x_i\rho R T \exp\left(\frac{\partial n\alpha^r}{\partial n_i}\right)_{T,V,n_{j \neq i}}
      * \f]
      */
-    static long double fugacity_i(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+    static long double fugacity_i(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
       
     /** \brief Natural logarithm of the fugacity coefficient
      * 
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-    static long double ln_fugacity_coefficient(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+    static long double ln_fugacity_coefficient(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
 	/** \brief Derivative of the natural logarithm of the fugacity coefficient with respect to T
      * 
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double dln_fugacity_coefficient_dT__constrho_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double dln_fugacity_coefficient_dT__constrho_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /**	\brief Derivative of the natural logarithm of the fugacity coefficient with respect to T
      * 
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double dln_fugacity_coefficient_drho__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double dln_fugacity_coefficient_drho__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph Eqn. 7.29
      * 
@@ -112,7 +114,7 @@ class MixtureDerivatives{
      * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double dln_fugacity_coefficient_dT__constp_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double dln_fugacity_coefficient_dT__constp_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief Table B4, Kunz, JCED, 2012 for the original term and the subsequent substitutions
      * 
@@ -128,10 +130,10 @@ class MixtureDerivatives{
 	 * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double ndalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double ndalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
 	/// GERG Equation 7.42
-	static long double dnalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double dnalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph Eqn. 7.30
      * 
@@ -141,7 +143,7 @@ class MixtureDerivatives{
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	*/
-	static long double dln_fugacity_coefficient_dp__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double dln_fugacity_coefficient_dp__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
 	/** \brief GERG 2004 Monograph Equation 7.31
      * 
@@ -155,7 +157,7 @@ class MixtureDerivatives{
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	*/
-	static long double ndln_fugacity_coefficient_dnj__constT_p(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j);
+	static long double ndln_fugacity_coefficient_dnj__constT_p(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
 	/** \brief Gernert Equation 3.115
      * 
@@ -165,7 +167,7 @@ class MixtureDerivatives{
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	*/
-	static long double dln_fugacity_coefficient_dxj__constT_p_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j);
+	static long double dln_fugacity_coefficient_dxj__constT_p_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
 	/** \brief Gernert Equation 3.130
      * 
@@ -175,7 +177,7 @@ class MixtureDerivatives{
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
      */
-	static long double dpdxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j);
+	static long double dpdxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
 
 	/** \brief Gernert Equation 3.117
      * 
@@ -185,27 +187,27 @@ class MixtureDerivatives{
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-    static long double d2nalphar_dxj_dni__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, std::size_t i){ return MixtureDerivatives::d_ndalphardni_dxj__constT_V_xi(HEOS, i, j) + MixtureDerivatives::dalphar_dxj__constT_V_xi(HEOS, j);};
+    static long double d2nalphar_dxj_dni__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, std::size_t i, x_N_dependency_flag xN_flag){ return MixtureDerivatives::d_ndalphardni_dxj__constT_V_xi(HEOS, i, j, xN_flag) + MixtureDerivatives::dalphar_dxj__constT_V_xi(HEOS, j, xN_flag);};
 
 	/// Gernert Equation 3.119
 	/// Catch test provided
-	static long double dalphar_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j);
+	static long double dalphar_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
 
 	/// Gernert Equation 3.118
 	/// Catch test provided
-	static long double d_ndalphardni_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j);
+	static long double d_ndalphardni_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
 	/// Gernert Equation 3.134
 	/// Catch test provided
-	static long double d_dalpharddelta_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j);
+	static long double d_dalpharddelta_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
 
 	/// Gernert Equation 3.121
 	/// Catch test provided
-	static long double ddelta_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j);
+	static long double ddelta_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
 
 	/// Gernert Equation 3.122
 	/// Catch test provided
-	static long double dtau_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j);
+	static long double dtau_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
 
 	/** \brief GERG 2004 Monograph, equations 7.44 and 7.51
      * 
@@ -218,7 +220,7 @@ class MixtureDerivatives{
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	*/
-	static long double d2nalphar_dni_dT(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double d2nalphar_dni_dT(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
 	/** \brief GERG 2004 Monograph Equation 7.51 and Table B4, Kunz, JCED, 2012
      * 
@@ -230,7 +232,7 @@ class MixtureDerivatives{
 	 * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double d_ndalphardni_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double d_ndalphardni_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
 	/** \brief GERG 2004 Monograph Equation 7.50 and Table B4, Kunz, JCED, 2012
      * 
@@ -242,7 +244,7 @@ class MixtureDerivatives{
 	 * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double d_ndalphardni_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double d_ndalphardni_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
 	/** \brief GERG 2004 Monograph equation 7.41
      * 
@@ -263,7 +265,7 @@ class MixtureDerivatives{
 	 * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double nd2nalphardnidnj__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j);
+	static long double nd2nalphardnidnj__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph equation 7.48
      * 
@@ -273,7 +275,7 @@ class MixtureDerivatives{
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */ 
-	static long double nddeltadni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double nddeltadni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph equation 7.49
      * 
@@ -283,7 +285,7 @@ class MixtureDerivatives{
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double ndtaudni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i);
+	static long double ndtaudni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph equation 7.52
      * 
@@ -297,7 +299,7 @@ class MixtureDerivatives{
 	 * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double d_ndalphardni_dxj__constdelta_tau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j);
+	static long double d_ndalphardni_dxj__constdelta_tau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
 }; /* class MixtureDerivatives */
 
