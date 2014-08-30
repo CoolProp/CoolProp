@@ -196,6 +196,7 @@ namespace SaturationSolvers
     struct newton_raphson_saturation_options{
         enum imposed_variable_options {IMPOSED_P, IMPOSED_T};
         int Nstep_max;
+        bool bubble_point;
         long double omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T;
         imposed_variable_options imposed_variable;
         std::vector<long double> x, y;
@@ -214,6 +215,7 @@ namespace SaturationSolvers
 	    long double error_rms, rhomolar_liq, rhomolar_vap, T, p, max_rel_change;
 	    unsigned int N;
 	    bool logging;
+        bool bubble_point;
 	    int Nsteps;
 	    STLMatrix J;
         HelmholtzEOSMixtureBackend *HEOS;

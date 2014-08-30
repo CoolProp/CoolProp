@@ -1104,12 +1104,23 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
     // Reset all the variables and resize
     pre_call();
     resize(z.size());
-    y = z;
-    x = z_incipient;
+    
+    this->bubble_point = IO.bubble_point;
     rhomolar_liq = IO.rhomolar_liq;
     rhomolar_vap = IO.rhomolar_vap;
     T = IO.T;
     p = IO.p;
+    
+    if (bubble_point){
+        // Bubblepoint, vapor (y) is the incipient phase
+        x = z;
+        y = z_incipient;
+    }
+    else{
+        // Dewpoint, liquid (x) is the incipient phase
+        y = z;
+        x = z_incipient;
+    }
     
     // Hold a pointer to the backend
     this->HEOS = &HEOS;
@@ -1123,18 +1134,27 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
 
         // Solve for the step; v is the step with the contents
         // [delta(x_0), delta(x_1), ..., delta(x_{N-2}), delta(spec)]
-        std::cout << "-r: " << vec_to_string(negative_r, "%0.12Lg") << std::endl;
-        std::cout << "J: " << vec_to_string(J, "%0.12Lg") << std::endl;
+        //std::cout << "-r: " << vec_to_string(negative_r, "%0.12Lg") << std::endl;
+        //std::cout << "J: " << vec_to_string(J, "%0.12Lg") << std::endl;
         std::vector<long double> v = linsolve(J, negative_r);
 
         max_rel_change = max_abs_value(v);
 
-        for (unsigned int i = 0; i < N-1; ++i){
-            x[i] += v[i];
-        }
+        //std::cout << "v: " << vec_to_string(v, "%0.12Lg") << std::endl;
         T += v[N-1];
-        x[N-1] = 1 - std::accumulate(x.begin(), x.end()-1, 0.0);
-        std::cout << vec_to_string(x, "%0.12Lg") << std::endl;
+        if (bubble_point){
+            for (unsigned int i = 0; i < N-1; ++i){
+                y[i] += v[i];
+            }        
+            y[N-1] = 1 - std::accumulate(y.begin(), y.end()-1, 0.0);
+        }
+        else{
+            for (unsigned int i = 0; i < N-1; ++i){
+                x[i] += v[i];
+            }        
+            x[N-1] = 1 - std::accumulate(x.begin(), x.end()-1, 0.0);
+        }
+        //std::cout << format("\t%Lg ", this->error_rms) << vec_to_string(v, "%0.10Lg")  << " " << vec_to_string(x, "%0.10Lg") << std::endl;
 
         iter++;
     }
@@ -1143,6 +1163,9 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
     IO.p = p;
     IO.x = x; // Mole fractions in liquid
     IO.y = y; // Mole fractions in vapor
+    IO.T = T;
+    IO.rhomolar_liq = rhomolar_liq;
+    IO.rhomolar_vap = rhomolar_vap;
 }
 
 void SaturationSolvers::newton_raphson_saturation::build_arrays()
@@ -1150,7 +1173,6 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
     // References to the classes for concision
     HelmholtzEOSMixtureBackend &rSatL = *(HEOS->SatL.get()), &rSatV = *(HEOS->SatV.get());
     
-    bool bubble_point = false;
     // Step 0:
     // -------
     // Set mole fractions for the incipient phase
@@ -1164,8 +1186,10 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
     }
     
     // Update the liquid and vapor classes
-    rSatL.update_TP_guessrho(T, p, rhomolar_liq);
-    rSatV.update_TP_guessrho(T, p, rhomolar_vap);
+    rSatL.update_TP_guessrho(T, p, rhomolar_liq); rhomolar_liq = rSatL.rhomolar();
+    rSatV.update_TP_guessrho(T, p, rhomolar_vap); rhomolar_vap = rSatV.rhomolar();
+    
+    //std::cout << format("\t\t%Lg %Lg %Lg %s\n", T, rhomolar_liq, rhomolar_vap, vec_to_string(y,"%0.12Lg").c_str());
 
     // For diagnostic purposes calculate the pressures (no derivatives are evaluated)
     long double p_liq = rSatL.p();
@@ -1186,9 +1210,19 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
         r[i] = ln_f_liq - ln_f_vap;
         
         if (bubble_point){
-            throw NotImplementedError();
+            for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
+                if (i == N-1){
+                    J[N-1][j] = -1*(-1/y[N-1] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatV,N-1,j, xN_flag));
+                }
+                else if (i != j){
+                    J[i][j] = -1*MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatV,i,j, xN_flag);   
+                }
+                else{
+                    J[i][i] = -1*(1/y[i] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatV,i,i, xN_flag));
+                }
+            }
         }
-        else{ // its a dewpoint calculation
+        else{ 
             for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
                 if (i == N-1){
                     J[N-1][j] = (-1/x[N-1] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatL,N-1,j, xN_flag));
@@ -1200,8 +1234,8 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
                     J[i][i] = (1/x[i] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatL,i,i, xN_flag));
                 }
             }
-            J[i][N-1] = MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatV, i, xN_flag);
         }
+        J[i][N-1] = MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatV, i, xN_flag);
     }
 
     // Flip all the signs of the entries in the residual vector since we are solving Jv = -r, not Jv=r

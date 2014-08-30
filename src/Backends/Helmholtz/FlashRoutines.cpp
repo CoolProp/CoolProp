@@ -260,14 +260,34 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         IO.p = io.p;
         IO.Nstep_max = 100;
         
-        // Dewpoint
-        NR.call(HEOS, io.y, io.x, IO);
+        if (std::abs(static_cast<long double>(HEOS._Q)) < 10*DBL_EPSILON){
+            IO.bubble_point = true;
+        }
+        else{
+            IO.bubble_point = false;
+        }
+        IO.x = io.x;
+        IO.y = io.y;
         
-        // Load the outputs
-        HEOS._phase = iphase_twophase;
-        HEOS._p = HEOS.SatV->p();
-        HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
-        HEOS._T = HEOS.SatL->T();
+        for (;; IO.p *= 1.01)
+        {
+            if (IO.bubble_point){
+                // Bubblepoint, vapor (y) is incipient phase
+                NR.call(HEOS, IO.x, IO.y, IO);
+            }
+            else{
+                // Dewpoint, liquid (x) is incipient phase
+                NR.call(HEOS, IO.y, IO.x, IO);
+            }
+            
+            std::cout << IO.p << " " << IO.T << " " << IO.rhomolar_liq << " " << IO.rhomolar_vap << std::endl;
+            
+            // Load the outputs
+            HEOS._phase = iphase_twophase;
+            HEOS._p = HEOS.SatV->p();
+            HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
+            HEOS._T = HEOS.SatL->T();
+        }
         
         int rr = 4;
     }
