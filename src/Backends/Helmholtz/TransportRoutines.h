@@ -108,6 +108,7 @@ public:
 
     static long double viscosity_ethane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_hydrogen_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static long double viscosity_benzene_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_hexane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_heptane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static long double viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend &HEOS);

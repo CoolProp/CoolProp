@@ -232,6 +232,14 @@ vel("Cyclohexane", "T", 500, "Dmolar", 8.5915e3, "V", 380.04e-6, 1e-4),
 vel("Cyclohexane", "T", 700, "Dmolar", 1e-10, "V", 15.093e-6, 1e-4),
 vel("Cyclohexane", "T", 700, "Dmolar", 7.4765e3, "V", 176.749e-6, 1e-4),
 
+// From Avgeri, JPCRD, 2014
+vel("Benzene", "T", 300, "Dmass", 1e-10, "V", 7.625e-6, 1e-4),
+vel("Benzene", "T", 400, "Dmass", 1e-10, "V", 10.102e-6, 1e-4),
+vel("Benzene", "T", 550, "Dmass", 1e-10, "V", 13.790e-6, 1e-4),
+vel("Benzene", "T", 300, "Dmass", 875, "V", 608.52e-6, 1e-4),
+vel("Benzene", "T", 400, "Dmass", 760, "V", 211.74e-6, 1e-4),
+vel("Benzene", "T", 550, "Dmass", 500, "V", 60.511e-6, 1e-4),
+
 };
 
 class TransportValidationFixture

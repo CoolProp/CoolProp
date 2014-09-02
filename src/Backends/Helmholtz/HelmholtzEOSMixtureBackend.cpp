@@ -318,6 +318,8 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity_background(long double et
         delta_eta_h = TransportRoutines::viscosity_heptane_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_ETHANE:
         delta_eta_h = TransportRoutines::viscosity_ethane_higher_order_hardcoded(*this); break;
+    case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BENZENE:
+        delta_eta_h = TransportRoutines::viscosity_benzene_higher_order_hardcoded(*this); break;
     default:
         throw ValueError(format("higher order viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
     }

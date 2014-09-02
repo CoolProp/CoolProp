@@ -295,14 +295,18 @@ long double TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBack
 
 	return (mubar_0*mubar_1*mubar_2)/1e6;
 }
-
 long double TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
 {
     long double Tr = HEOS.T()/33.145, rhor = HEOS.keyed_output(CoolProp::iDmass)*0.011;
     long double c[] = {0, 6.43449673e-6, 4.56334068e-2, 2.32797868e-1, 9.58326120e-1, 1.27941189e-1, 3.63576595e-1};
     return c[1]*pow(rhor,2)*exp(c[2]*Tr+c[3]/Tr+c[4]*pow(rhor,2)/(c[5]+Tr)+c[6]*pow(rhor,6));
 }
-
+long double TransportRoutines::viscosity_benzene_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
+{
+    long double Tr = HEOS.T()/562.02, rhor = HEOS.rhomass()/304.792;
+    long double c[] = {-9.98945, 86.06260, 2.74872, 1.11130, -1.0, -134.1330, -352.473, 6.60989, 88.4174};
+    return 1e-6*pow(rhor,2.0/3.0)*sqrt(Tr)*(c[0]*pow(rhor,2) + c[1]*rhor/(c[2]+c[3]*Tr+c[4]*rhor) + (c[5]*rhor+c[6]*pow(rhor,2))/(c[7]+c[8]*pow(rhor,2)));
+}
 long double TransportRoutines::viscosity_hexane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
 {
 
