@@ -215,6 +215,18 @@
         }
         return max;
     }
+    
+    template<class T> T min_abs_value(std::vector<T> x)
+    {
+        T min = 1e40;
+        std::size_t N = x.size();
+        for (std::size_t i = 0; i < N; ++i)
+        {
+            T axi = std::abs(x[i]);
+            if (axi < min){ min = axi; }
+        }
+        return min;
+    }
 
 	inline int Kronecker_delta(int i, int j){if (i == j) {return 1;} else {return 0;}};
 
