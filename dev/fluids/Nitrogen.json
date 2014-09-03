@@ -501,22 +501,22 @@
       ], 
       "critical_region_splines": {
         "T_max": 126.19200000000001, 
-        "T_min": 126.19199998688855, 
+        "T_min": 126.19199984500558, 
         "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
         "cL": [
           0.0, 
           0.0, 
-          -1.547800694886972e-07, 
-          126.19373104504585
+          -1.7874713257311775e-07, 
+          126.19399909031777
         ], 
         "cV": [
           0.0, 
           0.0, 
-          9.95463660457675e-10, 
-          126.19198886683252
+          1.1629442664483669e-08, 
+          126.19186993745916
         ], 
-        "rhomolar_max": 11183.986174852074, 
-        "rhomolar_min": 11170.73026187868
+        "rhomolar_max": 11184.76858012661, 
+        "rhomolar_min": 11170.573704081868
       }, 
       "gas_constant": 8.31451, 
       "gas_constant_units": "J/mol/K", 
