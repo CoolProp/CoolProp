@@ -65,6 +65,7 @@ public:
     void update(CoolProp::input_pairs input_pair, double value1, double value2);
 
     void update_TP_guessrho(long double T, long double p, long double rho_guess);
+    void update_DmolarT_direct(long double rhomolar, long double T);
 
     /// Set the components of the mixture
     /**

@@ -8,8 +8,19 @@ void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
 	if (HEOS.imposed_phase_index == iphase_not_imposed) // If no phase index is imposed (see set_components function)
 	{
-		// Find the phase, while updating all internal variables possible
-		HEOS.T_phase_determination_pure_or_pseudopure(iP, HEOS._p);
+        // At very low temperature (near the triple point temp), the isotherms are VERY steep
+        // Thus it can be very difficult to determine state based on ps = f(T)
+        // So in this case, we do a phase determination based on p, generally it will be useful enough
+        if (HEOS._T < 0.9*HEOS.Ttriple() + 0.1*HEOS.calc_Tmax_sat())
+        {
+            // Find the phase, while updating all internal variables possible using the pressure
+            bool saturation_called = false;
+            HEOS.p_phase_determination_pure_or_pseudopure(iT, HEOS._T, saturation_called);
+        }
+		else{
+            // Find the phase, while updating all internal variables possible using the temperature
+            HEOS.T_phase_determination_pure_or_pseudopure(iP, HEOS._p);
+        }
 		
 		// Check if twophase solution
 		if (!HEOS.isHomogeneousPhase())

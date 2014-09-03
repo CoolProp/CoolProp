@@ -616,6 +616,21 @@ long double HelmholtzEOSMixtureBackend::calc_pmax(void)
     return summer;
 }
 
+void HelmholtzEOSMixtureBackend::update_DmolarT_direct(long double rhomolar, long double T)
+{
+    CoolProp::input_pairs pair = DmolarT_INPUTS;
+    // Set up the state
+    pre_update(pair, rhomolar, T);
+    
+    _rhomolar = rhomolar;
+    _T = T;
+    _p = calc_pressure();
+    _Q = -1;
+    
+    // Cleanup
+    post_update();
+}
+
 void HelmholtzEOSMixtureBackend::update_TP_guessrho(long double T, long double p, long double rhomolar_guess)
 {
     CoolProp::input_pairs pair = PT_INPUTS;
@@ -868,13 +883,13 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         {
             case iT:
             {
-                long double p_vap = 0.98*static_cast<double>(_pVanc);
-                long double p_liq = 1.02*static_cast<double>(_pLanc);
+                long double T_vap =  0.1 + static_cast<double>(_TVanc);
+                long double T_liq = -0.1 + static_cast<double>(_TLanc);
 
-                if (value < p_vap){
+                if (value > T_vap){
                     this->_phase = iphase_gas; _Q = -1000; return;
                 }
-                else if (value > p_liq){
+                else if (value < T_liq){
                     this->_phase = iphase_liquid; _Q = 1000; return;
                 }
                 break;
@@ -993,6 +1008,17 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         
         long double Q;
 
+        if (other == iT){
+            if (value < HEOS.SatL->T()-100*DBL_EPSILON){
+                this->_phase = iphase_liquid; _Q = -1000;  return;
+            }
+            else if (value > HEOS.SatV->T()+100*DBL_EPSILON){
+                this->_phase = iphase_gas; _Q = 1000; return;
+            }
+            else{
+                this->_phase = iphase_twophase;
+            }
+        }
         switch (other)
         {
             case iDmolar:
@@ -1021,7 +1047,6 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         
         _Q = Q;
         // Load the outputs
-        _p = _Q*HEOS.SatV->p() + (1-_Q)*HEOS.SatL->p();
         _T = _Q*HEOS.SatV->T() + (1-_Q)*HEOS.SatL->T();
         _rhomolar = 1/(_Q/HEOS.SatV->rhomolar() + (1-_Q)/HEOS.SatL->rhomolar());
         return;
@@ -1595,7 +1620,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         double call(double rhomolar){
             this->rhomolar = rhomolar;
             delta = rhomolar/rhor; // needed for derivative
-            HEOS->update(DmolarT_INPUTS, rhomolar, T);
+            HEOS->update_DmolarT_direct(rhomolar, T);
             peos = HEOS->p();
             r = (peos-p)/p;
             return r;
@@ -1738,6 +1763,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(long double T, long do
         case iphase_liquid:
             rhomolar = max3(rhomolar0, rhomolar1, rhomolar2); break;
         case iphase_gas:
+        case iphase_supercritical_gas:
             rhomolar = min3(rhomolar0, rhomolar1, rhomolar2); break;
         default:
             throw ValueError("Bad phase to solver_rho_Tp_SRK");
