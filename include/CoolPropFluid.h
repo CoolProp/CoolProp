@@ -57,8 +57,8 @@ struct CriticalRegionSplines{
         if (rho1 < rho_max && rho1 > rho_crit){ Ngood++; rhoL = rho1; }
         if (rho2 < rho_max && rho2 > rho_crit){ Ngood++; rhoL = rho2; }
         if (rho3 < rho_max && rho3 > rho_crit){ Ngood++; rhoL = rho3; }
-        if (Ngood > 1){ throw ValueError(format("More than one liquid solution found for critical spline for T=%g",T));};
-        if (Ngood < 1){ throw ValueError(format("No liquid solution found for critical spline for T=%g",T));};
+        if (Ngood > 1){ throw ValueError(format("More than one liquid solution found for critical spline for T=%0.12g",T));};
+        if (Ngood < 1){ throw ValueError(format("No liquid solution found for critical spline for T=%0.12g",T));};
         
         // ----------
         // Vapor part
@@ -68,8 +68,8 @@ struct CriticalRegionSplines{
         if (rho1 > rho_min && rho1 < rho_crit){ Ngood++; rhoV = rho1; }
         if (rho2 > rho_min && rho2 < rho_crit){ Ngood++; rhoV = rho2; }
         if (rho3 > rho_min && rho3 < rho_crit){ Ngood++; rhoV = rho3; }
-        if (Ngood > 1){ throw ValueError(format("More than one vapor solution found for critical spline for T=%g",T));};
-        if (Ngood < 1){ throw ValueError(format("No vapor solution found for critical spline for T=%g",T));};
+        if (Ngood > 1){ throw ValueError(format("More than one vapor solution found for critical spline for T=%0.12g",T));};
+        if (Ngood < 1){ throw ValueError(format("No vapor solution found for critical spline for T=%0.12g",T));};
     };
 };
 
