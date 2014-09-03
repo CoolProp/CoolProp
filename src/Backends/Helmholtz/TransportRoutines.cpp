@@ -305,7 +305,7 @@ long double TransportRoutines::viscosity_benzene_higher_order_hardcoded(Helmholt
 {
     long double Tr = HEOS.T()/562.02, rhor = HEOS.rhomass()/304.792;
     long double c[] = {-9.98945, 86.06260, 2.74872, 1.11130, -1.0, -134.1330, -352.473, 6.60989, 88.4174};
-    return 1e-6*pow(rhor,2.0/3.0)*sqrt(Tr)*(c[0]*pow(rhor,2) + c[1]*rhor/(c[2]+c[3]*Tr+c[4]*rhor) + (c[5]*rhor+c[6]*pow(rhor,2))/(c[7]+c[8]*pow(rhor,2)));
+    return 1e-6*pow(rhor,static_cast<long double>(2.0/3.0))*sqrt(Tr)*(c[0]*pow(rhor,2) + c[1]*rhor/(c[2]+c[3]*Tr+c[4]*rhor) + (c[5]*rhor+c[6]*pow(rhor,2))/(c[7]+c[8]*pow(rhor,2)));
 }
 long double TransportRoutines::viscosity_hexane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
 {
