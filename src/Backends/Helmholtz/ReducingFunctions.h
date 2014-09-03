@@ -140,7 +140,7 @@ public:
 			for (std::size_t j = 0; j < N; j++)
 			{
 				T_c[i][j] = sqrt(pFluids[i]->pEOS->reduce.T*pFluids[j]->pEOS->reduce.T);
-				v_c[i][j] = 1.0/8.0*pow(pow(pFluids[i]->pEOS->reduce.rhomolar, -1.0/3.0)+pow(pFluids[j]->pEOS->reduce.rhomolar, -1.0/3.0),(std::size_t)3);
+				v_c[i][j] = 1.0/8.0*pow(pow(pFluids[i]->pEOS->reduce.rhomolar, -1.0/3.0)+pow(pFluids[j]->pEOS->reduce.rhomolar, -1.0/3.0),3);
 			}
             Yc_T[i] = pFluids[i]->pEOS->reduce.T;
             Yc_v[i] = 1/pFluids[i]->pEOS->reduce.rhomolar;
@@ -218,7 +218,7 @@ public:
 	    long double v_i = 1/pFluids[i]->pEOS->reduce.rhomolar;
 	    long double v_j = 1/pFluids[j]->pEOS->reduce.rhomolar;
 	    long double one_third = 1.0/3.0;
-	    gamma_v = (v_i + v_j + zeta_ij)/(0.25*pow(pow(v_i, one_third)+pow(v_j, one_third),(std::size_t)3));
+	    gamma_v = (v_i + v_j + zeta_ij)/(0.25*pow(pow(v_i, one_third)+pow(v_j, one_third),3));
     };
 };
 

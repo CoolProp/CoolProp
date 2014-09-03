@@ -265,14 +265,14 @@ long double GERG2008ReducingFunction::d2rhormolardxi2__constxj(const std::vector
 {
 	long double rhor = this->rhormolar(x);
 	long double dvrbardxi = this->dvrmolardxi__constxj(x,i, xN_flag);
-	return 2*pow(rhor,(std::size_t)3)*pow(dvrbardxi,(std::size_t)2)-pow(rhor,(std::size_t)2)*this->d2vrmolardxi2__constxj(x,i, xN_flag);
+	return 2*pow(rhor,3)*pow(dvrbardxi,2)-pow(rhor,2)*this->d2vrmolardxi2__constxj(x,i, xN_flag);
 }
 long double GERG2008ReducingFunction::d2rhormolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
 	double rhor = this->rhormolar(x);
 	double dvrbardxi = this->dvrmolardxi__constxj(x,i, xN_flag);
 	double dvrbardxj = this->dvrmolardxi__constxj(x,j, xN_flag);
-	return 2*pow(rhor,(std::size_t)3)*dvrbardxi*dvrbardxj-pow(rhor,(std::size_t)2)*this->d2vrmolardxidxj(x,i,j, xN_flag);
+	return 2*pow(rhor,3)*dvrbardxi*dvrbardxj-pow(rhor,2)*this->d2vrmolardxidxj(x,i,j, xN_flag);
 }
 
 long double GERG2008ReducingFunction::Yr(const std::vector<long double> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc)
@@ -451,7 +451,7 @@ long double GERG2008ReducingFunction::d2fYijdxidxj(const std::vector<long double
 	double xi = x[i], xj = x[j], beta_Y = beta[i][j], beta_Y2 = beta_Y*beta_Y;
 	return (xi+xj)/(beta_Y2*xi+xj) + xj/(beta_Y2*xi+xj)*(1-(xi+xj)/(beta_Y2*xi+xj))
 		+xi/(beta_Y2*xi+xj)*(1-beta_Y2*(xi+xj)/(beta_Y2*xi+xj))
-		-xi*xj/pow(beta_Y2*xi+xj,(std::size_t)2)*(1+beta_Y2-2*beta_Y2*(xi+xj)/(beta_Y2*xi+xj));
+		-xi*xj/pow(beta_Y2*xi+xj,2)*(1+beta_Y2-2*beta_Y2*(xi+xj)/(beta_Y2*xi+xj));
 }
 
 
