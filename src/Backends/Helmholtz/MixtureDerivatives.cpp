@@ -104,15 +104,13 @@ long double MixtureDerivatives::ln_fugacity_coefficient(HelmholtzEOSMixtureBacke
 {
     return HEOS.alphar() + ndalphar_dni__constT_V_nj(HEOS, i, xN_flag)-log(1+HEOS._delta.pt()*HEOS.dalphar_dDelta());
 }
-long double MixtureDerivatives::dln_fugacity_coefficient_dT__constrho_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+long double MixtureDerivatives::dln_fugacity_i_dT__constrho_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
-    double dtau_dT = -HEOS._tau.pt()/HEOS._T; //[1/K]
-    return (HEOS.dalphar_dTau() + d_ndalphardni_dTau(HEOS, i, xN_flag)-1/(1+HEOS._delta.pt()*HEOS.dalphar_dDelta())*(HEOS._delta.pt()*HEOS.d2alphar_dDelta_dTau()))*dtau_dT;
+    return 1/HEOS.T()*(1-HEOS.tau()*HEOS.dalphar_dTau()-HEOS.tau()*d_ndalphardni_dTau(HEOS, i, xN_flag));
 }
-long double MixtureDerivatives::dln_fugacity_coefficient_drho__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+long double MixtureDerivatives::dln_fugacity_i_drho__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
-    double ddelta_drho = 1/HEOS._reducing.rhomolar; //[m^3/mol]
-    return (HEOS.dalphar_dDelta() + d_ndalphardni_dDelta(HEOS, i, xN_flag)-1/(1+HEOS._delta.pt()*HEOS.dalphar_dDelta())*(HEOS._delta.pt()*HEOS.d2alphar_dDelta2()+HEOS.dalphar_dDelta()))*ddelta_drho;
+    return 1/HEOS.rhomolar()*(1+HEOS.delta()*HEOS.dalphar_dDelta() + HEOS.delta()*d_ndalphardni_dDelta(HEOS, i, xN_flag));
 }
 long double MixtureDerivatives::dnalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
@@ -142,6 +140,40 @@ long double MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(HelmholtzE
     double term1 = partial_molar_volumeval/(R_u*HEOS._T); // m^3/mol/(N*m)*mol = m^2/N = 1/Pa
     double term2 = 1.0/HEOS.p();
     return term1 - term2;
+}
+long double MixtureDerivatives::dln_fugacity_i_dtau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    return -1/HEOS.tau() + HEOS.dalphar_dTau() + d_ndalphardni_dTau(HEOS, i, xN_flag);
+}
+long double MixtureDerivatives::dln_fugacity_i_ddelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    return 1 + HEOS.delta()*HEOS.dalphar_dDelta() + HEOS.delta()*d_ndalphardni_dDelta(HEOS, i, xN_flag);
+}
+long double MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+{
+    long double rhor = HEOS.Reducing.p->rhormolar(HEOS.get_const_mole_fractions());
+    long double Tr = HEOS.Reducing.p->Tr(HEOS.get_const_mole_fractions());
+    long double dTrdxj = HEOS.Reducing.p->dTrdxi__constxj(HEOS.get_const_mole_fractions(),j,xN_flag);
+    long double drhordxj = HEOS.Reducing.p->drhormolardxi__constxj(HEOS.get_const_mole_fractions(),j,xN_flag);
+    
+    // These lines are all the same
+    long double line1 = dln_fugacity_i_dtau__constdelta_x(HEOS, i, xN_flag)*1/HEOS.T()*dTrdxj;
+    long double line2 = -dln_fugacity_i_ddelta__consttau_x(HEOS, i, xN_flag)*1/rhor*drhordxj;
+    long double line4 = dalphar_dxi(HEOS, j, xN_flag) + d_ndalphardni_dxj__constdelta_tau_xi(HEOS, i, j, xN_flag);
+    
+    const std::vector<long double> &x = HEOS.get_const_mole_fractions();
+    std::size_t N = x.size();
+    
+    // This is a term to which some more might be added depending on i and j
+    long double line3 = 1/rhor*HEOS.Reducing.p->drhormolardxi__constxj(x, j, xN_flag) + 1/Tr*HEOS.Reducing.p->dTrdxi__constxj(x, j, xN_flag);
+    
+    if (i == N-1){
+        line3 += -1/x[N-1];
+    }
+    else if (i == j){
+        line3 += 1/x[j];
+    }
+    return line1 + line2 + line3 + line4;
 }
 
 long double MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
@@ -339,6 +371,48 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
     // These ones only require the i index
     for (std::size_t i = 0; i< z.size();++i)
     {
+        std::ostringstream ss0;
+        ss0 << "dln_fugacity_i_dT__constrho_n, i=" << i;
+        SECTION(ss0.str(),"")
+        {
+            rHEOS.set_mole_fractions(z);
+            double T1 = 300, dT = 1e-3, rho1 = 300;
+            rHEOS.specify_phase(iphase_gas);
+            rHEOS.update(DmolarT_INPUTS, rho1, T1);
+            double analytic = MixtureDerivatives::dln_fugacity_i_dT__constrho_n(rHEOS, i, xN_flag);
+            rHEOS.update(DmolarT_INPUTS, rho1, T1 + dT);
+            double v1 = log(MixtureDerivatives::fugacity_i(rHEOS, i, xN_flag));
+            rHEOS.update(DmolarT_INPUTS, rho1, T1 - dT);
+            double v2 = log(MixtureDerivatives::fugacity_i(rHEOS, i, xN_flag));
+            rHEOS.unspecify_phase();
+            double numeric = (v1 - v2)/(2*dT);
+            double err = std::abs((numeric-analytic)/analytic);
+            CAPTURE(numeric);
+            CAPTURE(analytic);
+            CHECK(err < 1e-8);
+        }
+        std::ostringstream ss0b;
+        ss0b << "dln_fugacity_i_drho__constT_n, i=" << i;
+        SECTION(ss0b.str(), "")
+        {
+            if (i==1){break;}
+            double drho = 1e-3;
+            rHEOS.specify_phase(iphase_gas);
+            
+            rHEOS.update(DmolarT_INPUTS, 300, 300);
+            double analytic = MixtureDerivatives::dln_fugacity_i_drho__constT_n(rHEOS, i, xN_flag);
+            
+            rHEOS.update(DmolarT_INPUTS, 300 + drho, 300);
+            double v1 = log(MixtureDerivatives::fugacity_i(rHEOS, i, xN_flag));
+            rHEOS.update(DmolarT_INPUTS, 300 - drho, 300);
+            double v2 = log(MixtureDerivatives::fugacity_i(rHEOS, i, xN_flag));
+            
+            double numeric = (v1 - v2)/(2*drho);
+            double err = std::abs((numeric-analytic)/analytic);
+            CAPTURE(numeric);
+            CAPTURE(analytic);
+            CHECK(err < 1e-8);
+        }
         std::ostringstream ss1;
         ss1 << "dln_fugacity_coefficient_dT__constp_n, i=" << i;
         SECTION(ss1.str(), "")
@@ -363,16 +437,16 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
         ss2 << "dln_fugacity_coefficient_dp__constT_n, i=" << i;
         SECTION(ss2.str(), "")
         {
-            double p0 = 101325, dP = 1e-4;
+            double p0 = 101325, drho = 1e-4;
             rHEOS.specify_phase(iphase_gas);
             
             rHEOS.update(PT_INPUTS, p0, 300);
             double analytic = MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(rHEOS, i, xN_flag);
             double rho1 = rHEOS.rhomolar();
             
-            rHEOS.update(DmolarT_INPUTS, rho1 + dP, 300);
+            rHEOS.update(DmolarT_INPUTS, rho1 + drho, 300);
             double v1 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i, xN_flag), p1 = rHEOS.p();
-            rHEOS.update(DmolarT_INPUTS, rho1 - dP, 300);
+            rHEOS.update(DmolarT_INPUTS, rho1 - drho, 300);
             double v2 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i, xN_flag), p2 = rHEOS.p();
             
             double numeric = (v1 - v2)/(p1 - p2);
@@ -523,7 +597,9 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
             CAPTURE(numeric);
             CAPTURE(analytic);
             CHECK(err < 1e-8);
-        }            
+        }    
+
+        
         // These derivatives depend on both the i and j indices
         for (std::size_t j = 0; j < z.size(); ++j){
             std::ostringstream ss1;
@@ -549,6 +625,37 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 rHEOS.set_mole_fractions(zm);
                 rHEOS.update(PT_INPUTS, p, 300);
                 double v2 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i, xN_flag);
+                
+                double numeric = (v1 - v2)/(2*dz);
+                double err = std::abs((numeric-analytic)/analytic);
+                
+                CAPTURE(numeric);
+                CAPTURE(analytic);
+                CHECK(err < 1e-8);
+            }
+            std::ostringstream ss1a;
+            ss1a << "dln_fugacity_dxj__constT_rho_xi, i=" << i << ", j=" << j;
+            SECTION(ss1a.str(), "")
+            {
+                if (j == 1){break;}
+                double dz = 1e-6;
+                rHEOS.specify_phase(iphase_gas);
+                rHEOS.update(DmolarT_INPUTS, 300, 300);
+                double p = rHEOS.p();
+                CAPTURE(p);
+                
+                double rho1 = rHEOS.rhomolar();
+                double analytic = MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rHEOS, i, j, xN_flag);
+                std::vector<long double> zp = z; /// Copy base composition
+                zp[j] += dz; zp[1-j] -= dz;
+                rHEOS.set_mole_fractions(zp);
+                rHEOS.update(DmolarT_INPUTS, 300, 300);
+                double v1 = log(MixtureDerivatives::fugacity_i(rHEOS, i, xN_flag));
+                std::vector<long double> zm = z; /// Copy base composition
+                zm[j] -= dz; zm[1-j] += dz;
+                rHEOS.set_mole_fractions(zm);
+                rHEOS.update(DmolarT_INPUTS, 300, 300);
+                double v2 = log(MixtureDerivatives::fugacity_i(rHEOS, i, xN_flag));
                 
                 double numeric = (v1 - v2)/(2*dz);
                 double err = std::abs((numeric-analytic)/analytic);
@@ -654,7 +761,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 
                 CAPTURE(numeric);
                 CAPTURE(analytic);
-                CHECK(err < 1e-60);
+                CHECK(err < 1e-8);
             }
             std::ostringstream ss3a;
             ss3a << "d2alphardxidxj, i=" << i << ", j=" << j;
@@ -687,7 +794,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 
                 CAPTURE(numeric);
                 CAPTURE(analytic);
-                CHECK(err < 1e-60);
+                CHECK(err < 1e-8);
             }
         }
         

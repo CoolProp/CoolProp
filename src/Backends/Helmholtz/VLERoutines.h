@@ -60,7 +60,7 @@ namespace SaturationSolvers
         enum specified_variable_options{IMPOSED_HL, IMPOSED_HV, IMPOSED_PL, IMPOSED_PV, IMPOSED_SL, IMPOSED_SV, IMPOSED_UL, IMPOSED_UV, IMPOSED_INVALID_INPUT};
         bool use_guesses, ///< True to start off at the values specified by rhoL, rhoV, T
              use_logdelta; ///< True to use partials with respect to log(delta) rather than delta
-        int specified_variable;
+        specified_variable_options specified_variable;
         long double omega, rhoL, rhoV, pL, pV, T, p;
         saturation_PHSU_pure_options(){ specified_variable = IMPOSED_INVALID_INPUT; use_guesses = true; omega = 1.0; }
     };
@@ -197,10 +197,11 @@ namespace SaturationSolvers
         enum imposed_variable_options {IMPOSED_P, IMPOSED_T};
         int Nstep_max;
         bool bubble_point;
+        std::size_t Nsteps;
         long double omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T;
         imposed_variable_options imposed_variable;
         std::vector<long double> x, y;
-        newton_raphson_saturation_options(){ } // Defaults
+        newton_raphson_saturation_options(){ Nsteps = 0;} // Defaults
     };
 
     /** \brief A class to do newton raphson solver for VLE given guess values for vapor-liquid equilibria.  This class will then be included in the Mixture class
@@ -212,7 +213,7 @@ namespace SaturationSolvers
     class newton_raphson_saturation
     {
     public:
-	    long double error_rms, rhomolar_liq, rhomolar_vap, T, p, max_rel_change;
+	    long double error_rms, rhomolar_liq, rhomolar_vap, T, p, max_rel_change, min_abs_change;
 	    unsigned int N;
 	    bool logging;
         bool bubble_point;
@@ -259,118 +260,8 @@ namespace SaturationSolvers
         */
         void check_Jacobian();
     };
+};
     
-    /*!
-    A class to do newton raphson solver for VLE given guess values for vapor-liquid equilibria.  This class will then be included in the Mixture class
-
-    A class is used rather than a function so that it is easier to store iteration histories, additional output values, etc.
-    */
-    class newton_raphson_VLE_GV
-    {
-    public:
-	    long double error_rms, rhobar_liq, rhobar_vap, T, p, max_rel_change;
-	    unsigned int N;
-	    bool logging;
-	    int Nsteps;
-	    STLMatrix J;
-        HelmholtzEOSMixtureBackend *SatL, *SatV;
-	    std::vector<long double> K, x, y, phi_ij_liq, phi_ij_vap, dlnphi_drho_liq, dlnphi_drho_vap, r, negative_r, dXdS, neg_dFdS;
-	    std::vector<SuccessiveSubstitutionStep> step_logger;
-
-	    newton_raphson_VLE_GV(){};
-
-	    void resize(unsigned int N);
-	
-	    // Reset the state of all the internal variables
-	    void pre_call()
-	    {
-		    K.clear(); x.clear(); y.clear();  phi_ij_liq.clear(); 
-            phi_ij_vap.clear(); dlnphi_drho_liq.clear(), dlnphi_drho_vap.clear(),
-            step_logger.clear(); error_rms = 1e99; Nsteps = 0;
-		    rhobar_liq = _HUGE; rhobar_vap = _HUGE; T = _HUGE; p = _HUGE;
-	    };
-
-	    /** Call the Newton-Raphson VLE Solver
-         *
-	     * This solver must be passed reasonable guess values for the mole fractions, 
-	     * densities, etc.  You may want to take a few steps of successive substitution
-         * before you start with Newton Raphson.
-         * 
-	     * @param HEOS Temperature [K]
-	     * @param z Bulk mole fractions [-]
-	     * @param K Array of K-factors [-]
-         * @param IO The input/output data structure
-	     */
-	    void call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &K, mixture_VLE_IO &IO);
-
-	    /** \brief Build the arrays for the Newton-Raphson solve
-         *
-	     * This method builds the Jacobian matrix, the sensitivity matrix, etc.
-         * 
-	     * @param beta Void fraction [-] (0: bubble, 1: dew)
-	     * @param T Temperature [K]
-	     * @param rhomolar_liq Molar density of liquid [mol/m3]
-         * @param rhomolar_vap Molar density of liquid [mol/m3]
-	     * @param z Bulk mole fractions [-]
-	     * @param K Array of K-factors [-]
-	     */
-	    void build_arrays(HelmholtzEOSMixtureBackend &HEOS, long double beta, long double T, long double rhomolar_liq, const long double rhomolar_vapor, const std::vector<long double> &z, std::vector<long double> & K);
-
-        /** Check the derivatives in the Jacobian using numerical derivatives.
-        */
-        void check_Jacobian(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &K, mixture_VLE_IO &IO);
-    };
-};
-
-namespace PhaseEnvelope
-{
-    class PhaseEnvelopeLog
-    {
-    public:
-	    std::vector< std::vector<long double> > K, lnK, x, y;
-	    std::vector<long double> T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap;
-        void resize(std::size_t N)
-        {
-            K.resize(N);
-            lnK.resize(N);
-            x.resize(N);
-            y.resize(N);
-        }
-	    void store_variables(const long double T, 
-		                     const long double p, 
-						     const long double rhomolar_liq, 
-						     const long double rhomolar_vap, 
-						     const std::vector<long double> & K,
-						     const std::vector<long double> & x, 
-						     const std::vector<long double> & y)
-	    {
-            std::size_t N = K.size();
-		    this->p.push_back(p);
-		    this->T.push_back(T);
-		    this->lnT.push_back(log(T));
-		    this->lnp.push_back(log(p));
-		    this->rhomolar_liq.push_back(rhomolar_liq);
-		    this->rhomolar_vap.push_back(rhomolar_vap);
-		    this->lnrhomolar_liq.push_back(log(rhomolar_liq));
-		    this->lnrhomolar_vap.push_back(log(rhomolar_vap));
-		    for (unsigned int i = 0; i < N; i++)
-		    {
-			    this->K[i].push_back(K[i]);
-			    this->lnK[i].push_back(log(K[i]));
-                this->x[i].push_back(x[i]);
-			    this->y[i].push_back(y[i]);
-		    }
-	    };
-    };
-    class PhaseEnvelope_GV
-    {
-    public:
-	    PhaseEnvelopeLog bubble, dew;
-
-        void build(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &K, SaturationSolvers::mixture_VLE_IO &IO);
-    };
-};
-
 } /* namespace CoolProp*/
 
 #endif

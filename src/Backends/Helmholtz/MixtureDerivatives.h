@@ -93,17 +93,25 @@ class MixtureDerivatives{
 	 */
     static long double ln_fugacity_coefficient(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
-	/** \brief Derivative of the natural logarithm of the fugacity coefficient with respect to T
+	/** \brief Derivative of the natural logarithm of the fugacity with respect to T
      * 
+     * From Witzke, Eqn. 3.14
+     * \f[
+     *  \left(\frac{\partial \ln(f_i)}{\partial T} \right)_{\rho,x} = -\frac{1}{T}\left(1-\tau\alphar^r_{\tau}-\tau n\left(\frac{\partial\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j}}{\partial \tau}\right)_{\delta,\bar x}    \right)
+     * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double dln_fugacity_coefficient_dT__constrho_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+	static long double dln_fugacity_i_dT__constrho_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
-    /**	\brief Derivative of the natural logarithm of the fugacity coefficient with respect to T
+    /**	\brief Derivative of the natural logarithm of the fugacity with respect to T
      * 
+     * From Witzke, Eqn. 3.15
+     * \f[
+     *  \left(\frac{\partial \ln(f_i)}{\partial \rho} \right)_{T, x} = \frac{1}{\rho}\left(1+\delta\alphar^r_{\delta}+\delta n\left(\frac{\partial\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j}}{\partial \delta}\right)_{\tau,\bar x}    \right)
+     * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
-	static long double dln_fugacity_coefficient_drho__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+	static long double dln_fugacity_i_drho__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph Eqn. 7.29
      * 
@@ -116,6 +124,9 @@ class MixtureDerivatives{
 	 */
 	static long double dln_fugacity_coefficient_dT__constp_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
+    static long double dln_fugacity_i_dtau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static long double dln_fugacity_i_ddelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static long double dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
     /** \brief Table B4, Kunz, JCED, 2012 for the original term and the subsequent substitutions
      * 
      * The derivative term

@@ -7,6 +7,7 @@
 #include "ReducingFunctions.h"
 #include "ExcessHEFunction.h"
 #include "Solvers.h"
+#include "PhaseEnvelope.h"
 
 #include <vector>
 
@@ -38,10 +39,12 @@ public:
     virtual ~HelmholtzEOSMixtureBackend(){};
     ReducingFunctionContainer Reducing;
     ExcessTerm Excess;
+    PhaseEnvelopeData PhaseEnvelope;
 
     friend class FlashRoutines; // Allows the static methods in the FlashRoutines class to have access to all the protected members and methods of this class
     friend class TransportRoutines; // Allows the static methods in the TransportRoutines class to have access to all the protected members and methods of this class
     friend class MixtureDerivatives; // Allows the static methods in the MixtureDerivatives class to have access to all the protected members and methods of this class
+    friend class PhaseEnvelopeRoutines; // Allows the static methods in the PhaseEnvelopeRoutines class to have access to all the protected members and methods of this class
 
     // Helmholtz EOS backend uses mole fractions
     bool using_mole_fractions(){return true;}

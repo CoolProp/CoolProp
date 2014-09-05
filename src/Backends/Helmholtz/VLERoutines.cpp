@@ -91,12 +91,8 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS,
         double call(double p){
             this->p = p;
             // Recalculate the densities using the current guess values
-            rhomolar_liq = HEOS->SatL->solver_rho_Tp(T, p, rhomolar_liq);
-            rhomolar_vap = HEOS->SatV->solver_rho_Tp(T, p, rhomolar_vap);
-            
-            // Set the densities in the saturation classes
-            HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
-            HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, T);
+            HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
+            HEOS->SatV->update_TP_guessrho(T, p, rhomolar_vap);
             
             // Calculate the Gibbs functions for liquid and vapor
             gL = HEOS->SatL->gibbsmolar();
@@ -794,255 +790,15 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
     options.x = x;
     options.y = y;
 }
-
-void SaturationSolvers::newton_raphson_VLE_GV::resize(unsigned int N)
-{
-    this->N = N;
-    x.resize(N);
-    y.resize(N);
-    phi_ij_liq.resize(N);
-    phi_ij_vap.resize(N);
-    dlnphi_drho_liq.resize(N);
-    dlnphi_drho_vap.resize(N);
-
-    r.resize(N+2);
-    negative_r.resize(N+2);
-    J.resize(N+2, std::vector<long double>(N+2, 0));
-
-    neg_dFdS.resize(N+2);
-    dXdS.resize(N+2);
-
-    // Fill the vector -dFdS with zeros (Gerg Eqn. 7.132)
-    std::fill(neg_dFdS.begin(), neg_dFdS.end(), (double)0.0);
-    // Last entry is 1
-    neg_dFdS[N+1] = 1.0;
-}
-void SaturationSolvers::newton_raphson_VLE_GV::check_Jacobian(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &K, mixture_VLE_IO &IO)
-{
-    // Reset all the variables and resize
-    pre_call();
-    std::size_t N = K.size();
-    resize(N);
-
-    shared_ptr<HelmholtzEOSMixtureBackend> SatL(new HelmholtzEOSMixtureBackend(HEOS.get_components())),
-                                           SatV(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
-    SatL->specify_phase(iphase_liquid);
-    SatV->specify_phase(iphase_gas);
-
-    long double rhomolar_liq0 = IO.rhomolar_liq;
-    const long double rhomolar_vap0 = IO.rhomolar_vap;
-    long double T0 = IO.T;
-    long double beta0 = IO.beta;
-
-    // Build the Jacobian and residual vectors for given inputs of K_i,T,p
-    build_arrays(HEOS,beta0,T0,rhomolar_liq0,rhomolar_vap0,z,K);
-
-    // Make copies of the base
-    std::vector<long double> r0 = r;
-    STLMatrix J0 = J;
-    STLMatrix Jnum = J;
-
-    for (std::size_t i = 0; i < N+2; ++i)
-    {
-        for (std::size_t j = 0; j < N+2; ++j)
-        {
-            Jnum[i][j] = _HUGE;
-        }
-    }
-
-    for (std::size_t j = 0; j < N; ++j)
-    {
-        std::vector<long double> KK = K;
-        KK[j] += 1e-6;
-        build_arrays(HEOS,beta0,T0,rhomolar_liq0,rhomolar_vap0,z,KK);
-        std::vector<long double> r1 = r;
-        for (std::size_t i = 0; i < N+2; ++i)
-        {
-            Jnum[i][j] = (r1[i]-r0[i])/(log(KK[j])-log(K[j]));
-        }
-        std::cout << vec_to_string(get_col(Jnum,j),"%12.11f") << std::endl;
-        std::cout << vec_to_string(get_col(J,j),"%12.11f") << std::endl;
-    }
-
-    build_arrays(HEOS,beta0,T0+1e-6,rhomolar_liq0,rhomolar_vap0,z,K);
-    std::vector<long double> r1 = r, JN = r;
-    for (std::size_t i = 0; i < r.size(); ++i)
-    {
-        Jnum[i][N] = (r1[i]-r0[i])/(log(T0+1e-6)-log(T0));
-    }
-    std::cout << vec_to_string(get_col(Jnum,N),"%12.11f") << std::endl;
-    std::cout << vec_to_string(get_col(J,N),"%12.11f") << std::endl;
-
-    // Build the Jacobian and residual vectors for given inputs of K_i,T,p
-    build_arrays(HEOS,beta0,T0,rhomolar_liq0+1e-3,rhomolar_vap0,z,K);
-    std::vector<long double> r2 = r, JNp1 = r;
-    for (std::size_t i = 0; i < r.size(); ++i)
-    {
-        Jnum[i][N+1] = (r2[i]-r0[i])/(log(rhomolar_liq0+1e-3)-log(rhomolar_liq0));
-    }
-    std::cout << vec_to_string(get_col(Jnum, N+1),"%12.11f") << std::endl;
-    std::cout << vec_to_string(get_col(J,N+1),"%12.11f") << std::endl;
-}
-void SaturationSolvers::newton_raphson_VLE_GV::call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &K, mixture_VLE_IO &IO)
-{
-    int iter = 0;
-
-    // Reset all the variables and resize
-    pre_call();
-    resize(K.size());
-
-    shared_ptr<HelmholtzEOSMixtureBackend> SatL(new HelmholtzEOSMixtureBackend(HEOS.get_components())),
-                                           SatV(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
-    SatL->specify_phase(iphase_liquid); // So it will always just use single-phase solution
-    SatV->specify_phase(iphase_gas); // So it will always just use single-phase solution
-
-    do
-    {
-        // Build the Jacobian and residual vectors for given inputs of K_i,T,p
-        build_arrays(HEOS,IO.beta,IO.T,IO.rhomolar_liq,IO.rhomolar_vap,z,K);
-
-        // Solve for the step; v is the step with the contents
-        // [delta(lnK0), delta(lnK1), ..., delta(lnT), delta(lnrho')]
-        std::vector<long double> v = linsolve(J, negative_r);
-
-        max_rel_change = max_abs_value(v);
-
-        // Set the variables again, the same structure independent of the specified variable
-        for (unsigned int i = 0; i < N; i++)
-        {
-            K[i] = exp(log(K[i]) + v[i]);
-            if (!ValidNumber(K[i]))
-            {
-                throw ValueError(format("K[i] (%g) is invalid",K[i]).c_str());
-            }
-        }
-        IO.T = exp(log(IO.T) + v[N]);
-        IO.rhomolar_liq = exp(log(IO.rhomolar_liq) + v[N+1]);
-
-        if (std::abs(IO.T) > 1e6)
-        {
-            /*std::cout << "J = " << vec_to_string(J,"%16.15g");
-            std::cout << "nr = " << vec_to_string(r,"%16.15g");*/
-            throw ValueError("Temperature or p has bad value");
-        }
-
-        //std::cout << iter << " " << T << " " << p << " " << error_rms << std::endl;
-        iter++;
-    }
-    while(this->error_rms > 1e-8 && max_rel_change > 1000*LDBL_EPSILON && iter < IO.Nstep_max);
-    Nsteps = iter;
-    IO.p = p;
-    IO.x = x; // Mole fractions in liquid
-    IO.y = y; // Mole fractions in vapor
-}
-void SaturationSolvers::newton_raphson_VLE_GV::build_arrays(HelmholtzEOSMixtureBackend &HEOS, long double beta, long double T, long double rhomolar_liq, const long double rhomolar_vap, const std::vector<long double> &z, std::vector<long double> &K)
-{
-    // Step 0:
-    // --------
-    // Calculate the mole fractions in liquid and vapor phases
-    x_and_y_from_K(beta, K, z, x, y);
-
-    // Set the mole fractions in the classes
-    SatL->set_mole_fractions(x);
-    SatV->set_mole_fractions(y);
-    
-    HelmholtzEOSMixtureBackend &rSatV = *SatV, &rSatL = *SatL;
-
-    // Update the liquid and vapor classes
-    SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
-    SatV->update(DmolarT_INPUTS, rhomolar_vap, T);
-
-    // For diagnostic purposes calculate the pressures (no derivatives are evaluated)
-    long double p_liq = SatL->p();
-    long double p_vap = SatV->p();
-    p = 0.5*(p_liq+p_vap);
-
-    // Step 2:
-    // -------
-    // Build the residual vector and the Jacobian matrix
-
-    x_N_dependency_flag xN_flag = XN_INDEPENDENT;
-    // For the residuals F_i
-    for (unsigned int i = 0; i < N; ++i)
-    {
-        long double ln_phi_liq = MixtureDerivatives::ln_fugacity_coefficient(*(HEOS.SatL.get()), i, xN_flag);
-        long double phi_iT_liq = MixtureDerivatives::dln_fugacity_coefficient_dT__constrho_n(*(HEOS.SatL.get()), i, xN_flag);
-        dlnphi_drho_liq[i] = MixtureDerivatives::dln_fugacity_coefficient_drho__constT_n(*(HEOS.SatL.get()), i, xN_flag);
-        for (unsigned int j = 0; j < N; ++j)
-        {
-            // I think this is wrong.
-            phi_ij_liq[j] = MixtureDerivatives::ndln_fugacity_coefficient_dnj__constT_p(rSatL, i, j, xN_flag) + (MixtureDerivatives::partial_molar_volume(rSatL, i, xN_flag)/(SatL->gas_constant()*T)-1/p)*MixtureDerivatives::ndpdni__constT_V_nj(rSatL, i, xN_flag); // 7.126 from GERG monograph
-        }
-
-        long double ln_phi_vap = MixtureDerivatives::ln_fugacity_coefficient(*(HEOS.SatV.get()), i, xN_flag);
-        long double phi_iT_vap = MixtureDerivatives::dln_fugacity_coefficient_dT__constrho_n(*(HEOS.SatV.get()), i, xN_flag);
-        dlnphi_drho_vap[i] = MixtureDerivatives::dln_fugacity_coefficient_drho__constT_n(*(HEOS.SatV.get()), i, xN_flag);
-        for (unsigned int j = 0; j < N; ++j)
-        {
-            // I think this is wrong.
-            phi_ij_vap[j] = MixtureDerivatives::ndln_fugacity_coefficient_dnj__constT_p(rSatV, i,j, xN_flag) + (MixtureDerivatives::partial_molar_volume(rSatV, i, xN_flag)/(SatV->gas_constant()*T)-1/p)*MixtureDerivatives::ndpdni__constT_V_nj(rSatV, i, xN_flag); ; // 7.126 from GERG monograph
-        }
-
-        r[i] = log(K[i]) + ln_phi_vap - ln_phi_liq;
-        // dF_i/d(ln(K_j))
-        for (unsigned int j = 0; j < N; ++j)
-        {
-            J[i][j] = K[j]*z[j]/pow(1-beta+beta*K[j],(int)2)*((1-beta)*phi_ij_vap[j]+beta*phi_ij_liq[j])+Kronecker_delta(i,j);
-        }
-        // dF_{i}/d(ln(T))
-        J[i][N] = T*(phi_iT_vap-phi_iT_liq);
-        // dF_{i}/d(ln(rho'))
-        J[i][N+1] = -rhomolar_liq*dlnphi_drho_liq[i];
-    }
-
-    double summer1 = 0;
-    for (unsigned int i = 0; i < N; ++i)
-    {
-        // Although the definition of this term is given by
-        // y[i]-x[i], when x and y are normalized, you get
-        // the wrong values.  Why? No idea.
-        summer1 += z[i]*(K[i]-1)/(1-beta+beta*K[i]);
-    }
-    r[N] = summer1;
-
-    // For the residual term F_{N}, only non-zero derivatives are with respect
-    // to ln(K[i])
-    for (unsigned int j = 0; j < N; ++j)
-    {
-        J[N][j] = K[j]*z[j]/pow(1-beta+beta*K[j],(int)2);
-    }
-
-    // For the residual term F_{N+1} = p'-p''
-    r[N+1] = p_liq-p_vap;
-    for (unsigned int j = 0; j < N; ++j)
-    {
-        J[N+1][j] = HEOS.gas_constant()*T*K[j]*z[j]/pow(1-beta+beta*K[j],(int)2)*((1-beta)*dlnphi_drho_vap[j]+beta*dlnphi_drho_liq[j]);
-    }
-    // dF_{N+1}/d(ln(T))
-    J[N+1][N] = T*(MixtureDerivatives::dpdT__constV_n(*(HEOS.SatL.get())) - MixtureDerivatives::dpdT__constV_n(*(HEOS.SatV.get())));
-    // dF_{N+1}/d(ln(rho'))
-    J[N+1][N+1] = rhomolar_liq*MixtureDerivatives::dpdrho__constT_n(*(HEOS.SatL.get()));
-
-    // Flip all the signs of the entries in the residual vector since we are solving Jv = -r, not Jv=r
-    // Also calculate the rms error of the residual vector at this step
-    error_rms = 0;
-    for (unsigned int i = 0; i < N+2; ++i)
-    {
-        negative_r[i] = -r[i];
-        error_rms += r[i]*r[i]; // Sum the squares
-    }
-    error_rms = sqrt(error_rms); // Square-root (The R in RMS)
-}
-
 void SaturationSolvers::newton_raphson_saturation::resize(unsigned int N)
 {
     this->N = N;
     x.resize(N);
     y.resize(N);
 
-    r.resize(N);
-    negative_r.resize(N);
-    J.resize(N, std::vector<long double>(N, 0));
+    r.resize(N+1);
+    negative_r.resize(N+1);
+    J.resize(N+1, std::vector<long double>(N+1, 0));
 }
 void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
 {
@@ -1056,42 +812,71 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
     long double T0 = T;
     std::vector<long double> r0 = r, x0 = x;
     STLMatrix J0 = J;
+    long double rhomolar_liq = rSatL.rhomolar();
+    long double rhomolar_vap = rSatV.rhomolar();
     
     // Derivatives with respect to T
     double dT = 1e-3, T1 = T+dT, T2 = T-dT;
-    T = T1;
-    rSatL.update_TP_guessrho(T,p,rhomolar_liq); rhomolar_liq = rSatL.rhomolar();
-    rSatV.update_TP_guessrho(T,p,rhomolar_vap); rhomolar_vap = rSatV.rhomolar();
+    this->T = T1;
+    this->rhomolar_liq = rhomolar_liq;
+    this->rhomolar_vap = rhomolar_vap;
     build_arrays();
     std::vector<long double> r1 = r;
-    T = T2;
-    rSatL.update_TP_guessrho(T,p,rhomolar_liq); rhomolar_liq = rSatL.rhomolar();
-    rSatV.update_TP_guessrho(T,p,rhomolar_vap); rhomolar_vap = rSatV.rhomolar();
+    this->T = T2;
+    this->rhomolar_liq = rhomolar_liq;
+    this->rhomolar_vap = rhomolar_vap;
     build_arrays();
     std::vector<long double> r2 = r;
     
-    std::vector<long double> diffn(N, _HUGE);
-    for (std::size_t i = 0; i < N; ++i){
+    std::vector<long double> diffn(N+1, _HUGE);
+    for (std::size_t i = 0; i < N+1; ++i){
         diffn[i] = (r1[i]-r2[i])/(2*dT);
     }
+    std::cout << format("For T\n");
     std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
     std::cout << "analytic: " << vec_to_string(get_col(J0, N-1), "%0.11Lg") << std::endl;
     
+    // Derivatives with respect to rho'
+    double drho = 1;
+    this->T = T0;
+    this->rhomolar_liq = rhomolar_liq+drho;
+    this->rhomolar_vap = rhomolar_vap;
+    build_arrays();
+    std::vector<long double> rr1 = r;
+    this->T = T0;
+    this->rhomolar_liq = rhomolar_liq-drho;
+    this->rhomolar_vap = rhomolar_vap;
+    build_arrays();
+    std::vector<long double> rr2 = r;
+    
+    std::vector<long double> difffn(N+1, _HUGE);
+    for (std::size_t i = 0; i < N+1; ++i){
+        difffn[i] = (rr1[i]-rr2[i])/(2*drho);
+    }
+    std::cout << format("For rho\n");
+    std::cout << "numerical: " << vec_to_string(difffn, "%0.11Lg") << std::endl;
+    std::cout << "analytic: " << vec_to_string(get_col(J0, N), "%0.11Lg") << std::endl;
+    
     // Derivatives with respect to x0
-    double dx = 1e-5, T = T0;
+    double dx = 1e-5;
     x = x0; x[0] += dx; x[1] -= dx;
+    this->T = T0;
+    this->rhomolar_liq = rhomolar_liq;
+    this->rhomolar_vap = rhomolar_vap;
     rSatL.set_mole_fractions(x);
-    rSatL.update_TP_guessrho(T, p, rhomolar_liq); rhomolar_liq = rSatL.rhomolar();
     build_arrays(); r1 = r;
     
     x = x0; x[0] -= dx; x[1] += dx;
     rSatL.set_mole_fractions(x);
-    rSatL.update_TP_guessrho(T, p, rhomolar_liq); rhomolar_liq = rSatL.rhomolar();
+    this->T = T0;
+    this->rhomolar_liq = rhomolar_liq;
+    this->rhomolar_vap = rhomolar_vap;
     build_arrays(); r2 = r;
     
-    for (std::size_t i = 0; i < N; ++i){
+    for (std::size_t i = 0; i < N+1; ++i){
         diffn[i] = (r1[i]-r2[i])/(2*dx);
     }
+    std::cout << format("For x0\n");
     std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
     std::cout << "analytic: " << vec_to_string(get_col(J0, 0), "%0.11Lg") << std::endl;
     
@@ -1100,6 +885,8 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
 void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &z_incipient, newton_raphson_saturation_options &IO)
 {
     int iter = 0;
+    
+    if (get_debug_level() > 9){std::cout << " NRsat::call:  p" << IO.p << " T" << IO.T << " dl" << IO.rhomolar_liq << " dv" << IO.rhomolar_vap << std::endl;}
 
     // Reset all the variables and resize
     pre_call();
@@ -1125,23 +912,20 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
     // Hold a pointer to the backend
     this->HEOS = &HEOS;
 
+    //check_Jacobian();
+
     do
     {
         // Build the Jacobian and residual vectors
         build_arrays();
-        
-        //check_Jacobian();
 
         // Solve for the step; v is the step with the contents
         // [delta(x_0), delta(x_1), ..., delta(x_{N-2}), delta(spec)]
-        //std::cout << "-r: " << vec_to_string(negative_r, "%0.12Lg") << std::endl;
-        //std::cout << "J: " << vec_to_string(J, "%0.12Lg") << std::endl;
         std::vector<long double> v = linsolve(J, negative_r);
 
         max_rel_change = max_abs_value(v);
-
-        //std::cout << "v: " << vec_to_string(v, "%0.12Lg") << std::endl;
-        T += v[N-1];
+        min_abs_change = min_abs_value(v);
+        
         if (bubble_point){
             for (unsigned int i = 0; i < N-1; ++i){
                 y[i] += v[i];
@@ -1154,12 +938,14 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
             }        
             x[N-1] = 1 - std::accumulate(x.begin(), x.end()-1, 0.0);
         }
-        //std::cout << format("\t%Lg ", this->error_rms) << vec_to_string(v, "%0.10Lg")  << " " << vec_to_string(x, "%0.10Lg") << std::endl;
+        T += v[N-1];
+        rhomolar_liq += v[N];
+        //std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " " << vec_to_string(v, "%0.10Lg")  << " " << vec_to_string(x, "%0.10Lg") << std::endl;
 
         iter++;
     }
-    while(this->error_rms > 1e-12 && max_rel_change > 1000*LDBL_EPSILON && iter < IO.Nstep_max);
-    Nsteps = iter;
+    while(this->error_rms > 1e-7 && max_rel_change > 1000*LDBL_EPSILON && min_abs_change > 100*DBL_EPSILON && iter < IO.Nstep_max);
+    IO.Nsteps = iter;
     IO.p = p;
     IO.x = x; // Mole fractions in liquid
     IO.y = y; // Mole fractions in vapor
@@ -1185,16 +971,15 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
         rSatL.set_mole_fractions(x);
     }
     
-    // Update the liquid and vapor classes
-    rSatL.update_TP_guessrho(T, p, rhomolar_liq); rhomolar_liq = rSatL.rhomolar();
-    rSatV.update_TP_guessrho(T, p, rhomolar_vap); rhomolar_vap = rSatV.rhomolar();
+    rSatL.update(DmolarT_INPUTS, rhomolar_liq, T);
+    rSatV.update(DmolarT_INPUTS, rhomolar_vap, T);
     
-    //std::cout << format("\t\t%Lg %Lg %Lg %s\n", T, rhomolar_liq, rhomolar_vap, vec_to_string(y,"%0.12Lg").c_str());
+    //std::cout << format("\t\t%Lg %Lg %Lg %s\n", T, rhomolar_liq, rhomolar_vap, vec_to_string(x,"%0.12Lg").c_str());
 
     // For diagnostic purposes calculate the pressures (no derivatives are evaluated)
     long double p_liq = rSatL.p();
     long double p_vap = rSatV.p();
-    p = 0.5*(p_liq+p_vap);
+    p = 0.5*(p_liq + p_vap);
 
     // Step 2:
     // -------
@@ -1211,114 +996,37 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
         
         if (bubble_point){
             for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
-                if (i == N-1){
-                    J[N-1][j] = -1*(-1/y[N-1] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatV,N-1,j, xN_flag));
-                }
-                else if (i != j){
-                    J[i][j] = -1*MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatV,i,j, xN_flag);   
-                }
-                else{
-                    J[i][i] = -1*(1/y[i] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatV,i,i, xN_flag));
-                }
+                J[i][j] = -MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rSatV, i, j, xN_flag);
             }
         }
         else{ 
             for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
-                if (i == N-1){
-                    J[N-1][j] = (-1/x[N-1] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatL,N-1,j, xN_flag));
-                }
-                else if (i != j){
-                    J[i][j] = MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatL,i,j, xN_flag);   
-                }
-                else{
-                    J[i][i] = (1/x[i] + MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(rSatL,i,i, xN_flag));
-                }
+                J[i][j] = MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rSatL, i, j, xN_flag);
             }
         }
-        J[i][N-1] = MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatV, i, xN_flag);
+        J[i][N-1] = MixtureDerivatives::dln_fugacity_i_dT__constrho_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dT__constrho_n(rSatV, i, xN_flag);
+        J[i][N] = MixtureDerivatives::dln_fugacity_i_drho__constT_n(rSatL, i, xN_flag);
     }
+    // ---------------------------------------------------------------
+    // Derivatives of pL(T,rho',x)-p(T,rho'',y) with respect to inputs
+    // ---------------------------------------------------------------
+    r[N] = p_liq - p_vap;
+    for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
+        J[N][j] = MixtureDerivatives::dpdxj__constT_V_xi(rSatL, j, xN_flag); // p'' not a function of x0
+    }
+    // Fixed composition derivatives
+    J[N][N-1] = rSatL.first_partial_deriv(iP, iT, iDmolar)-rSatV.first_partial_deriv(iP, iT, iDmolar);
+    J[N][N] = rSatL.first_partial_deriv(iP, iDmolar, iT);
 
     // Flip all the signs of the entries in the residual vector since we are solving Jv = -r, not Jv=r
     // Also calculate the rms error of the residual vector at this step
     error_rms = 0;
-    for (unsigned int i = 0; i < N; ++i)
+    for (unsigned int i = 0; i < J.size(); ++i)
     {
         negative_r[i] = -r[i];
         error_rms += r[i]*r[i]; // Sum the squares
     }
     error_rms = sqrt(error_rms); // Square-root (The R in RMS)
-}
-
-void PhaseEnvelope::PhaseEnvelope_GV::build(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &K, SaturationSolvers::mixture_VLE_IO &IO)
-{
-    // Use the residual function based on ln(K_i), ln(T) and ln(rho') as independent variables.  rho'' is specified
-    SaturationSolvers::newton_raphson_VLE_GV NRVLE;
-    SaturationSolvers::mixture_VLE_IO IO_NRVLE = IO;
-    bubble.resize(z.size());
-    dew.resize(z.size());
-
-    // HACK
-    IO_NRVLE.beta = 1.0;
-    IO_NRVLE.Nstep_max = 30;
-    int iter = 0;
-    long double factor = IO_NRVLE.rhomolar_vap*0.01;
-    for (;;)
-    {
-        if (iter > 0){ IO_NRVLE.rhomolar_vap += factor;}
-        if (iter == 2 || (factor > 2 && factor < 0.24))
-        {
-            long double x = log(IO_NRVLE.rhomolar_vap);
-            IO_NRVLE.T = exp(LinearInterp(dew.lnrhomolar_vap,dew.lnT,iter-2,iter-1,x));
-            IO_NRVLE.rhomolar_liq = exp(LinearInterp(dew.lnrhomolar_vap,dew.lnrhomolar_liq,iter-2,iter-1,x));
-            for (std::size_t i = 0; i < K.size(); ++i)
-            {
-                K[i] = exp(LinearInterp(dew.lnrhomolar_vap,dew.lnK[i],iter-2,iter-1,x));
-            }
-        }
-        else if (iter == 3)
-        {
-            long double x = log(IO_NRVLE.rhomolar_vap);
-            IO_NRVLE.T = exp(QuadInterp(dew.lnrhomolar_vap,dew.lnT,iter-3,iter-2,iter-1,x));
-            IO_NRVLE.rhomolar_liq = exp(QuadInterp(dew.lnrhomolar_vap,dew.lnrhomolar_liq,iter-3,iter-2,iter-1,x));
-            for (std::size_t i = 0; i < K.size(); ++i)
-            {
-                K[i] = exp(QuadInterp(dew.lnrhomolar_vap,dew.lnK[i],iter-3,iter-2,iter-1,x));
-            }
-        }
-        else if (iter > 3)
-        {
-            long double x = log(IO_NRVLE.rhomolar_vap);
-            IO_NRVLE.T = exp(CubicInterp(dew.lnrhomolar_vap, dew.lnT, iter-4, iter-3, iter-2, iter-1, x));
-            IO_NRVLE.rhomolar_liq = exp(CubicInterp(dew.lnrhomolar_vap, dew.lnrhomolar_liq, iter-4, iter-3, iter-2, iter-1, x));
-            for (std::size_t i = 0; i < K.size(); ++i)
-            {
-                K[i] = exp(CubicInterp(dew.lnrhomolar_vap, dew.lnK[i], iter-4, iter-3, iter-2, iter-1, x));
-            }
-        }
-        /*if (IO_NRVLE.T > 344)
-        {
-            NRVLE.check_Jacobian(HEOS,z,K,IO_NRVLE);
-        }*/
-        NRVLE.call(HEOS,z,K,IO_NRVLE);
-        dew.store_variables(IO_NRVLE.T,IO_NRVLE.p,IO_NRVLE.rhomolar_liq,IO_NRVLE.rhomolar_vap,K,IO_NRVLE.x,IO_NRVLE.y);
-        iter ++;
-        std::cout << format("%g %g %g %g %g %d %g\n",IO_NRVLE.p,IO_NRVLE.rhomolar_liq,IO_NRVLE.rhomolar_vap,IO_NRVLE.T,K[0],NRVLE.Nsteps,factor);
-        if (iter < 5){continue;}
-        if (NRVLE.Nsteps > 10)
-        {
-            factor /= 5;
-        }
-        else if (NRVLE.Nsteps > 5)
-        {
-            factor /= 1.2;
-        }
-        else if (NRVLE.Nsteps <= 4)
-        {
-            factor *= 1.2;
-        }
-        // Min step is 0.1 mol/m^3
-        factor = std::max(factor,static_cast<long double>(0.1));
-    }
 }
 
 } /* namespace CoolProp*/
