@@ -37,7 +37,7 @@ else:
 values = [
     ('all_fluids.json','all_fluids_JSON.h','all_fluids_JSON'),
     ('all_incompressibles.json','all_incompressibles_JSON.h','all_incompressibles_JSON'),
-    ('mixtures/mixture_excess_term.json', 'mixture_excess_term_JSON.h', 'mixture_excess_term_JSON'),
+    ('mixtures/mixture_departure_functions.json', 'mixture_departure_functions_JSON.h', 'mixture_departure_functions_JSON'),
     ('mixtures/mixture_reducing_parameters.json', 'mixture_reducing_parameters_JSON.h', 'mixture_reducing_parameters_JSON')
 ]
 
