@@ -4,7 +4,7 @@ namespace CoolProp{
 
 class PhaseEnvelopeRoutines{
 public:
-    static void build(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, SaturationSolvers::newton_raphson_saturation_options &IO);
+    static void build(HelmholtzEOSMixtureBackend &HEOS);
 };
     
 } /* namespace CoolProp */

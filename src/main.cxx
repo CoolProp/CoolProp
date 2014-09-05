@@ -432,11 +432,40 @@ int main()
 	#endif
     #if 1
     { 
-        double TTgreygfrekT = PropsSI("P","T",300,"Q",1,"R410A");
-        
+//        std::vector<std::string> names(1, "n-Propane");
+//        shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(names));
+//        
+//        for (double p = HEOS->melting_line(iP_min, -1, -1)*1.01; p < HEOS->melting_line(iP_max, -1, -1); p *= 1.1)
+//        {
+//            double Tmelt = HEOS->melting_line(iT, iP, p);
+//            //HEOS->specify_phase(iphase_liquid);
+//            HEOS->clear();
+//            HEOS->update(PT_INPUTS, p, Tmelt);
+//            std::cout << format("%0.16g %0.16g %0.16g %0.16g %d %0.16g\n", Tmelt, p, HEOS->delta(), HEOS->hmolar(), HEOS->phase(), PropsSI("Dmass","P",p,"T",Tmelt,"REFPROP::Propane"));
+//            if (HEOS->phase() == iphase_twophase){
+//                HEOS->update(PT_INPUTS, p, Tmelt);};
+//            std::cout << get_global_param_string("errstring") << std::endl;
+//        }
         ::set_debug_level(0);
         
-        double TTT = PropsSI("T","P",5e6,"Q",1,"Methane[0.5]&Propane[0.5]");
+        
+        
+        shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Ethane&Propane"));
+        std::vector<long double> z(2,0.85); z[1] = 1-z[0];
+        HEOS->set_mole_fractions(z);
+        time_t t1, t2;
+        t1 = clock();
+        try{
+            HEOS->build_phase_envelope("dummy");
+        }
+        catch(std::exception &e){}
+        t2 = clock();
+        std::cout << format("value(all): %g s/call\n", ((double)(t2-t1))/CLOCKS_PER_SEC);
+        exit(EXIT_SUCCESS);
+        
+        double TTT = PropsSI("T","P",1e6,"Q",1,"Ethane[0.5]&Propane[0.5]");
+        std::cout << get_global_param_string("errstring") << std::endl;
+        exit(EXIT_FAILURE);
         //double refretrte = PropsSI("P","Dmolar",107.9839357,"T",116.5360225,"Methane[0.5]&Propane[0.5]");
         for (double p = 101325; p < 9e6; p *= 1.05){
             std::cout << p << " " << PropsSI("T","P",p,"Q",1,"Methane[0.5]&Propane[0.5]") << std::endl;

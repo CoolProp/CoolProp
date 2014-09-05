@@ -1,6 +1,8 @@
 #ifndef PHASE_ENVELOPE_H
 #define PHASE_ENVELOPE_H
 
+#include "Exceptions.h"
+
 class PhaseEnvelopeData
 {
 public:
@@ -21,6 +23,7 @@ public:
                          const std::vector<long double> & y)
     {
         std::size_t N = K.size();
+        if (N==0){throw CoolProp::ValueError("Cannot store variables in phase envelope since resize() function has not been called");}
         this->p.push_back(p);
         this->T.push_back(T);
         this->lnT.push_back(log(T));

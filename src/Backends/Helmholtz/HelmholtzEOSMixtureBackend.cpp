@@ -27,6 +27,7 @@
 #include "FlashRoutines.h"
 #include "TransportRoutines.h"
 #include "MixtureDerivatives.h"
+#include "PhaseEnvelopeRoutines.h"
 
 static int deriv_counter = 0;
 
@@ -112,6 +113,10 @@ void HelmholtzEOSMixtureBackend::resize(unsigned int N)
     this->K.resize(N);
     this->lnK.resize(N);
 }
+void HelmholtzEOSMixtureBackend::calc_phase_envelope(const std::string &type)
+{
+    PhaseEnvelopeRoutines::build(*this);
+};
 void HelmholtzEOSMixtureBackend::set_reducing_function()
 {
     Reducing.set(ReducingFunction::factory(components));
