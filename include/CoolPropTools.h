@@ -164,7 +164,7 @@
         L2=((x-x0)*(x-x1))/((x2-x0)*(x2-x1));
         return L0*f0+L1*f1+L2*f2;
     };
-	template<class T> T QuadInterp(std::vector<T> x, std::vector<T> y, int i0, int i1, int i2, T val)
+	template<class T> T QuadInterp(std::vector<T> x, std::vector<T> y, std::size_t i0, std::size_t i1, std::size_t i2, T val)
     {
         return QuadInterp(x[i0],x[i1],x[i2],y[i0],y[i1],y[i2],val);
     };
@@ -182,7 +182,7 @@
 	    L3=((x-x0)*(x-x1)*(x-x2))/((x3-x0)*(x3-x1)*(x3-x2));
 	    return L0*f0+L1*f1+L2*f2+L3*f3;
     };
-    template<class T> T CubicInterp(std::vector<T> x, std::vector<T> y, int i0, int i1, int i2, int i3, T val)
+    template<class T> T CubicInterp(std::vector<T> x, std::vector<T> y, std::size_t i0, std::size_t i1, std::size_t i2, std::size_t i3, T val)
     {
         return CubicInterp(x[i0],x[i1],x[i2],x[i3],y[i0],y[i1],y[i2],y[i3],val);
     };
