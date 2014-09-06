@@ -116,6 +116,9 @@ void HelmholtzEOSMixtureBackend::resize(unsigned int N)
 }
 void HelmholtzEOSMixtureBackend::calc_phase_envelope(const std::string &type)
 {
+    // Clear the phase envelope data
+    PhaseEnvelope = PhaseEnvelopeData();
+    // Build the phase envelope
     PhaseEnvelopeRoutines::build(*this);
 };
 void HelmholtzEOSMixtureBackend::set_mixture_parameters()
