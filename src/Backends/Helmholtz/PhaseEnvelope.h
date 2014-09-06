@@ -7,7 +7,7 @@ class PhaseEnvelopeData
 {
 public:
     std::vector< std::vector<long double> > K, lnK, x, y;
-    std::vector<long double> T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap;
+    std::vector<long double> T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap;
     void resize(std::size_t N)
     {
         K.resize(N);
@@ -19,6 +19,10 @@ public:
                          const long double p, 
                          const long double rhomolar_liq, 
                          const long double rhomolar_vap,
+                         const long double hmolar_liq, 
+                         const long double hmolar_vap,
+                         const long double smolar_liq, 
+                         const long double smolar_vap,
                          const std::vector<long double> & x, 
                          const std::vector<long double> & y)
     {
@@ -30,6 +34,10 @@ public:
         this->lnp.push_back(log(p));
         this->rhomolar_liq.push_back(rhomolar_liq);
         this->rhomolar_vap.push_back(rhomolar_vap);
+        this->hmolar_liq.push_back(hmolar_liq);
+        this->hmolar_vap.push_back(hmolar_vap);
+        this->smolar_liq.push_back(smolar_liq);
+        this->smolar_vap.push_back(smolar_vap);
         this->lnrhomolar_liq.push_back(log(rhomolar_liq));
         this->lnrhomolar_vap.push_back(log(rhomolar_vap));
         for (unsigned int i = 0; i < N; i++)

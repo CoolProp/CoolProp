@@ -198,7 +198,7 @@ namespace SaturationSolvers
         int Nstep_max;
         bool bubble_point;
         std::size_t Nsteps;
-        long double omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T;
+        long double omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap;
         imposed_variable_options imposed_variable;
         std::vector<long double> x, y;
         newton_raphson_saturation_options(){ Nsteps = 0;} // Defaults

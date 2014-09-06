@@ -857,28 +857,31 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
     std::cout << "numerical: " << vec_to_string(difffn, "%0.11Lg") << std::endl;
     std::cout << "analytic: " << vec_to_string(get_col(J0, N), "%0.11Lg") << std::endl;
     
-    // Derivatives with respect to x0
-    double dx = 1e-5;
-    x = x0; x[0] += dx; x[1] -= dx;
-    this->T = T0;
-    this->rhomolar_liq = rhomolar_liq;
-    this->rhomolar_vap = rhomolar_vap;
-    rSatL.set_mole_fractions(x);
-    build_arrays(); r1 = r;
+    for (std::size_t i = 0; i < x.size()-1;  ++i)
+    {
+        // Derivatives with respect to x0
+        double dx = 1e-5;
+        x = x0; x[i] += dx; x[x.size()-1] -= dx;
+        this->T = T0;
+        this->rhomolar_liq = rhomolar_liq;
+        this->rhomolar_vap = rhomolar_vap;
+        rSatL.set_mole_fractions(x);
+        build_arrays(); r1 = r;
     
-    x = x0; x[0] -= dx; x[1] += dx;
-    rSatL.set_mole_fractions(x);
-    this->T = T0;
-    this->rhomolar_liq = rhomolar_liq;
-    this->rhomolar_vap = rhomolar_vap;
-    build_arrays(); r2 = r;
+        x = x0; x[i] -= dx; x[x.size()-1] += dx;
+        rSatL.set_mole_fractions(x);
+        this->T = T0;
+        this->rhomolar_liq = rhomolar_liq;
+        this->rhomolar_vap = rhomolar_vap;
+        build_arrays(); r2 = r;
     
-    for (std::size_t i = 0; i < N+1; ++i){
-        diffn[i] = (r1[i]-r2[i])/(2*dx);
+        for (std::size_t j = 0; j < N+1; ++j){
+            diffn[i] = (r1[j]-r2[j])/(2*dx);
+        }
+        std::cout << format("For x%d\n", i);
+        std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
+        std::cout << "analytic: " << vec_to_string(get_col(J0, i), "%0.11Lg") << std::endl;
     }
-    std::cout << format("For x0\n");
-    std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
-    std::cout << "analytic: " << vec_to_string(get_col(J0, 0), "%0.11Lg") << std::endl;
 }
 void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &z_incipient, newton_raphson_saturation_options &IO)
 {
@@ -950,6 +953,10 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
     IO.T = T;
     IO.rhomolar_liq = rhomolar_liq;
     IO.rhomolar_vap = rhomolar_vap;
+    IO.hmolar_liq = HEOS.SatL.get()->hmolar();
+    IO.hmolar_vap = HEOS.SatV.get()->hmolar();
+    IO.smolar_liq = HEOS.SatL.get()->smolar();
+    IO.smolar_vap = HEOS.SatV.get()->smolar();
 }
 
 void SaturationSolvers::newton_raphson_saturation::build_arrays()
