@@ -31,8 +31,10 @@ namespace std {
 #include "DataStructures.h"
 #include "AbstractState.h"
 #include "CoolProp.h"
+#include "PhaseEnvelope.h"
 %}
 
 %include "DataStructures.h"
 %include "AbstractState.h"
 %include "CoolProp.h"
+%include "PhaseEnvelope.h"
