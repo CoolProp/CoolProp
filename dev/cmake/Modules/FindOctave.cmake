@@ -12,15 +12,24 @@
 
 cmake_minimum_required(VERSION 2.8)
 
+IF (WIN32)
+  IF( "$ENV{OCTAVE_ROOT}" STREQUAL "" )
+    message(FATAL_ERROR "On windows, environmental variable OCTAVE_ROOT must be set to folder containing folders bin, include, etc. for octave")
+  ENDIF()
+ENDIF()
+
+set(OCTAVE_BIN)
+IF( "$ENV{OCTAVE_ROOT}" STREQUAL "" )
+ELSE()
+    set(OCTAVE_BIN $ENV{OCTAVE_ROOT}/bin)
+ENDIF()
+
 # use mkoctfile
 set(MKOCTFILE_EXECUTABLE MKOCTFILE_EXECUTABLE-NOTFOUND)
-find_program(MKOCTFILE_EXECUTABLE NAME mkoctfile PATHS)
+find_program(MKOCTFILE_EXECUTABLE 
+             NAME mkoctfile 
+             PATHS ${OCTAVE_BIN})
 mark_as_advanced(MKOCTFILE_EXECUTABLE)
-
-# use octave_config
-set(OCTAVE_CONFIG_EXECUTABLE OCTAVE_CONFIG_EXECUTABLE-NOTFOUND)
-find_program(OCTAVE_CONFIG_EXECUTABLE NAME octave-config PATHS)
-mark_as_advanced(OCTAVE_CONFIG_EXECUTABLE)
 
 if(MKOCTFILE_EXECUTABLE)
   set(OCTAVE_FOUND 1)
@@ -120,6 +129,14 @@ else()
 
 	message(FATAL_ERROR "Unable to find mkoctfile executable")
 endif()
+
+# use octave_config
+set(OCTAVE_CONFIG_EXECUTABLE OCTAVE_CONFIG_EXECUTABLE-NOTFOUND)
+find_program(OCTAVE_CONFIG_EXECUTABLE 
+             NAME octave-config 
+             PATHS ${OCTAVE_BIN})
+mark_as_advanced(OCTAVE_CONFIG_EXECUTABLE)
+
 if(OCTAVE_CONFIG_EXECUTABLE)
   message(STATUS "Found octave-config executable")
   execute_process(
@@ -150,6 +167,15 @@ if(OCTAVE_CONFIG_EXECUTABLE)
 else()
   message(FATAL_ERROR "Did not find octave-config executable")
 endif()
+
+IF (WIN32)
+  list(APPEND OCTAVE_LINK_DIRS "$ENV{OCTAVE_ROOT}/lib/octave/${OCTAVE_VERSION}")
+  message(STATUS "OCTAVE_LINK_DIRS :: ${OCTAVE_LINK_DIRS}")
+  list(APPEND OCTAVE_INCLUDE_DIRS "$ENV{OCTAVE_ROOT}/include")
+  list(APPEND OCTAVE_INCLUDE_DIRS "$ENV{OCTAVE_ROOT}/include/octave-${OCTAVE_VERSION}")
+  list(APPEND OCTAVE_INCLUDE_DIRS "$ENV{OCTAVE_ROOT}/include/octave-${OCTAVE_VERSION}/octave")
+  message(STATUS "OCTAVE_INCLUDE_DIRS :: ${OCTAVE_INCLUDE_DIRS}")
+ENDIF()
 
 FIND_LIBRARY( OCTAVE_OCTAVE_LIBRARY
 			  NAMES octave liboctave
