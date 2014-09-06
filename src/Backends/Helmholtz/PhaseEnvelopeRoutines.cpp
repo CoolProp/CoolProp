@@ -61,8 +61,8 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         }
         else if (iter - iter0 == 2)
         {
-            IO.T = LinearInterp(env.rhomolar_vap,env.T,iter-2,iter-1,x);
-            IO.rhomolar_liq = LinearInterp(env.rhomolar_vap,env.rhomolar_liq,iter-2,iter-1,x);
+            IO.T = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, x);
+            IO.rhomolar_liq = LinearInterp(env.rhomolar_vap, env.rhomolar_liq, iter-2, iter-1, x);
             for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
             {            
                 IO.x[i] = LinearInterp(env.rhomolar_vap, env.x[i], iter-2, iter-1, x);
@@ -96,9 +96,11 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         env.store_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.x, IO.y);
         
         iter ++;
+
+        long double abs_rho_difference = std::abs((IO.rhomolar_liq - IO.rhomolar_vap)/IO.rhomolar_liq);
         
         // Critical point jump
-        if (std::abs((IO.rhomolar_liq - IO.rhomolar_vap)/IO.rhomolar_liq) < 0.05 && IO.rhomolar_liq  > IO.rhomolar_vap){
+        if (abs_rho_difference < 0.01 && IO.rhomolar_liq  > IO.rhomolar_vap){
             //std::cout << "dv" << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
             long double rhoc_approx = 0.5*IO.rhomolar_liq + 0.5*IO.rhomolar_vap;
             long double rho_vap_new = 2*rhoc_approx - IO.rhomolar_vap;

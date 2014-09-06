@@ -429,14 +429,14 @@ int main()
 		std::cin >> c;
 	}
 	#endif
-    #if 1
+    #if 0
     {
         double TTT0 = PropsSI("T","P",1e6,"Q",1,"REFPROP::Ethane[0.5]&Propane[0.5]");
         double TTT1 = PropsSI("T","P",1e6,"Q",1,"HEOS::Ethane[0.5]&Propane[0.5]");
         int rr =0;
     }
     #endif
-    #if 0
+    #if 1
     { 
 //        std::vector<std::string> names(1, "n-Propane");
 //        shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(names));
@@ -456,19 +456,21 @@ int main()
         
         ::set_debug_level(0);
         
-        shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Ethane&Nitrogen"));
-        std::vector<long double> z(2,0.2); z[1] = 1-z[0];
+        shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Ethanol&Water"));
+        std::vector<long double> z(2,0.25); z[1] = 1-z[0];
         HEOS->set_mole_fractions(z);
+        std::cout << get_global_param_string("errstring") << std::endl;
         time_t t1, t2;
         t1 = clock();
         try{
             HEOS->build_phase_envelope("dummy");
         }
-        catch(std::exception &e){}
+        catch(std::exception &e){
+            std::cout << get_global_param_string("errstring") << std::endl;
+        }
         t2 = clock();
         std::cout << format("value(all): %g s/call\n", ((double)(t2-t1))/CLOCKS_PER_SEC);
         exit(EXIT_SUCCESS);
-        
         
         std::cout << get_global_param_string("errstring") << std::endl;
         exit(EXIT_FAILURE);
