@@ -49,6 +49,8 @@ protected:
                 assert(n.size() == d.size());
                 assert(n.size() == t.size());
                 assert(n.size() == l.size());
+                // Normalize the gas constants to yield the same (CODATA 2010) value for all fluids - needed for mixtures
+                for (std::size_t i = 0; i < n.size(); ++i){ n[i] *= EOS.R_u/R_u_CODATA; }
                 EOS.alphar.GenExp.add_Power(n,d,t,l);
             }
             else if (!type.compare("ResidualHelmholtzGaussian"))
@@ -66,6 +68,10 @@ protected:
                 assert(n.size() == epsilon.size());
                 assert(n.size() == beta.size());
                 assert(n.size() == gamma.size());
+
+                // Normalize the gas constants to yield the same (CODATA 2010) value for all fluids - needed for mixtures
+                for (std::size_t i = 0; i < n.size(); ++i){ n[i] *= EOS.R_u/R_u_CODATA; }
+                
                 EOS.alphar.GenExp.add_Gaussian(n,d,t,eta,epsilon,beta,gamma);
             }
             else if (!type.compare("ResidualHelmholtzNonAnalytic"))
@@ -86,6 +92,10 @@ protected:
                 assert(n.size() == B.size());
                 assert(n.size() == C.size());
                 assert(n.size() == D.size());
+
+                // Normalize the gas constants to yield the same (CODATA 2010) value for all fluids - needed for mixtures
+                for (std::size_t i = 0; i < n.size(); ++i){ n[i] *= EOS.R_u/R_u_CODATA; }
+                
                 EOS.alphar.NonAnalytic = ResidualHelmholtzNonAnalytic(n,a,b,beta,A,B,C,D);
             }
             else if (!type.compare("ResidualHelmholtzLemmon2005"))
@@ -99,6 +109,10 @@ protected:
                 assert(n.size() == t.size());
                 assert(n.size() == l.size());
                 assert(n.size() == m.size());
+
+                // Normalize the gas constants to yield the same (CODATA 2010) value for all fluids - needed for mixtures
+                for (std::size_t i = 0; i < n.size(); ++i){ n[i] *= EOS.R_u/R_u_CODATA; }
+                
                 EOS.alphar.GenExp.add_Lemmon2005(n,d,t,l,m);
             }
             else if (!type.compare("ResidualHelmholtzExponential"))
@@ -112,6 +126,10 @@ protected:
                 assert(n.size() == t.size());
                 assert(n.size() == g.size());
                 assert(n.size() == l.size());
+
+                // Normalize the gas constants to yield the same (CODATA 2010) value for all fluids - needed for mixtures
+                for (std::size_t i = 0; i < n.size(); ++i){ n[i] *= EOS.R_u/R_u_CODATA; }
+
                 EOS.alphar.GenExp.add_Exponential(n,d,t,g,l);
             }
             else if (!type.compare("ResidualHelmholtzAssociating"))
@@ -122,6 +140,8 @@ protected:
                 long double epsilonbar = cpjson::get_double(contribution,"epsilonbar");
                 long double vbarn = cpjson::get_double(contribution,"vbarn");
                 long double kappabar = cpjson::get_double(contribution,"kappabar");
+                // Normalize the gas constants to yield the same (CODATA 2010) value for all fluids - needed for mixtures
+                a *= EOS.R_u/R_u_CODATA;
                 EOS.alphar.SAFT = ResidualHelmholtzSAFTAssociating(a,m,epsilonbar,vbarn,kappabar);
             }
             else
@@ -365,6 +385,10 @@ protected:
 
         // Validate the equation of state that was just created
         EOS.validate();
+
+        // Set the universal gas constant to the CODATA 2010 value for consistency.
+        // This must be the LAST step since the loaded value is used to adjust the coefficients n_i
+        EOS.R_u = R_u_CODATA;
 
     }
 
