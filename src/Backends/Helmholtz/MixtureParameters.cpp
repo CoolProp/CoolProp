@@ -101,7 +101,7 @@ std::string get_reducing_function_name(std::string CAS1, std::string CAS2)
     std::sort(CAS.begin(), CAS.end());
     
     if (mixturebinarypairlibrary.binary_pair_map.find(CAS) != mixturebinarypairlibrary.binary_pair_map.end()){
-        return mixturebinarypairlibrary.binary_pair_map.at(CAS)[0].get_string("function");
+        return mixturebinarypairlibrary.binary_pair_map[CAS][0].get_string("function");
     }
     else{
         throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.",CAS1.c_str(), CAS2.c_str()));
