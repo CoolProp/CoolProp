@@ -139,7 +139,6 @@ public:
     long double d2Yrdxi2__constxj(const std::vector<long double> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
     long double d2Yrdxidxj__constxj(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
 	long double c_Y_ij(std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c);
-	long double c_Y_ji(std::size_t j, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c);
 	long double f_Y_ij(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta);
 
 	long double dfYkidxi__constxk(const std::vector<long double> &x, std::size_t k, std::size_t i, const STLMatrix &beta);

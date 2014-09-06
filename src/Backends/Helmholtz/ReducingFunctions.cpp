@@ -17,9 +17,9 @@ long double ReducingFunction::d_ndTrdni_dxj__constxi(const std::vector<long doub
         long double s = 0;
         for (std::size_t k = 0; k < N-1; k++)
         {
-            s += x[k]*d2Trdxidxj(x,j,k, xN_flag);
+            s += x[k]*d2Trdxidxj(x,k,j, xN_flag);
         }
-        long double val = d2Trdxidxj(x,i,j, xN_flag)-dTrdxi__constxj(x,j, xN_flag)-s;
+        long double val = d2Trdxidxj(x,j,i,xN_flag)-dTrdxi__constxj(x,j, xN_flag)-s;
         return val;
     }
     else{
@@ -158,7 +158,7 @@ long double GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<long dou
         long double dYr_dxi = 2*xi*Yc[i];
         for (std::size_t k = 0; k < i; k++)
         {
-            dYr_dxi += c_Y_ji(k,i,beta,gamma,Y_c_ij)*dfYkidxi__constxk(x,k,i,beta);
+            dYr_dxi += c_Y_ij(k,i,beta,gamma,Y_c_ij)*dfYkidxi__constxk(x,k,i,beta);
         }
         for (std::size_t k = i+1; k < N; k++)
         {
@@ -172,18 +172,18 @@ long double GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<long dou
         long double dYr_dxi = 2*x[i]*Yc[i] - 2*x[N-1]*Yc[N-1];
         for (std::size_t k = 0; k < i; k++)
         {
-            dYr_dxi += c_Y_ji(k, i, beta, gamma, Y_c_ij)*dfYkidxi__constxk(x,k,i,beta);
+            dYr_dxi += c_Y_ij(k, i, beta, gamma, Y_c_ij)*dfYkidxi__constxk(x,k,i,beta);
         }
         for (std::size_t k = i+1; k < N-1; k++)
         {
-            dYr_dxi += c_Y_ji(i, k, beta, gamma, Y_c_ij)*dfYkidxi__constxk(x,i,k,beta);
+            dYr_dxi += c_Y_ij(i, k, beta, gamma, Y_c_ij)*dfYkidxi__constxk(x,i,k,beta);
         }
         double beta_Y_iN = beta[i][N-1], xN = x[N-1];
-        dYr_dxi += c_Y_ji(i, N-1, beta, gamma, Y_c_ij)*(xN*(x[i]+xN)/(pow(beta_Y_iN,2)*x[i]+xN)+(1-beta_Y_iN*beta_Y_iN)*x[i]*xN*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 2));
+        dYr_dxi += c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*(xN*(x[i]+xN)/(pow(beta_Y_iN,2)*x[i]+xN)+(1-beta_Y_iN*beta_Y_iN)*x[i]*xN*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 2));
         for (std::size_t k = 0; k < N-1; ++k)
         {
             double beta_Y_kN = beta[k][N-1];
-            dYr_dxi += c_Y_ji(k, N-1, beta, gamma, Y_c_ij)*(-x[k]*(x[k]+xN)/(pow(beta_Y_kN,2)*x[k]+xN)+(1-beta_Y_kN*beta_Y_kN)*xN*x[k]*x[k]/pow(beta_Y_kN*beta_Y_kN*x[k]+xN, 2));        
+            dYr_dxi += c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*(-x[k]*(x[k]+xN)/(pow(beta_Y_kN,2)*x[k]+xN)+(1-beta_Y_kN*beta_Y_kN)*xN*x[k]*x[k]/pow(beta_Y_kN*beta_Y_kN*x[k]+xN, 2));        
         }
         return dYr_dxi;
     }
@@ -212,18 +212,18 @@ long double GERG2008ReducingFunction::d2Yrdxi2__constxj(const std::vector<long d
         long double d2Yr_dxi2 = 2*Yc[i] + 2*Yc[N-1];
         for (std::size_t k = 0; k < i; k++)
         {
-            d2Yr_dxi2 += c_Y_ji(k, i, beta, gamma, Y_c_ij)*d2fYkidxi2__constxk(x,k,i,beta);
+            d2Yr_dxi2 += c_Y_ij(k, i, beta, gamma, Y_c_ij)*d2fYkidxi2__constxk(x,k,i,beta);
         }
         for (std::size_t k = i+1; k < N-1; k++)
         {
-            d2Yr_dxi2 += c_Y_ji(i, k, beta, gamma, Y_c_ij)*d2fYkidxi2__constxk(x,i,k,beta);
+            d2Yr_dxi2 += c_Y_ij(i, k, beta, gamma, Y_c_ij)*d2fYkidxi2__constxk(x,i,k,beta);
         }
         double beta_Y_iN = beta[i][N-1], xN = x[N-1];
-        d2Yr_dxi2 += 2*c_Y_ji(i, N-1, beta, gamma, Y_c_ij)*(-(x[i]+xN)/(pow(beta_Y_iN,2)*x[i]+xN)+(1-beta_Y_iN*beta_Y_iN)*(xN*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 2)+((1-beta_Y_iN*beta_Y_iN)*x[i]*xN*xN-beta_Y_iN*beta_Y_iN*x[i]*x[i]*xN)/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 3)));
+        d2Yr_dxi2 += 2*c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*(-(x[i]+xN)/(pow(beta_Y_iN,2)*x[i]+xN)+(1-beta_Y_iN*beta_Y_iN)*(xN*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 2)+((1-beta_Y_iN*beta_Y_iN)*x[i]*xN*xN-beta_Y_iN*beta_Y_iN*x[i]*x[i]*xN)/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 3)));
         for (std::size_t k = 0; k < N-1; ++k)
         {
             double beta_Y_kN = beta[k][N-1];
-            d2Yr_dxi2 += 2*c_Y_ji(k, N-1, beta, gamma, Y_c_ij)*x[k]*x[k]*(1-beta_Y_kN*beta_Y_kN)/pow(pow(beta_Y_kN,2)*x[k]+xN, 2)*(xN/(beta_Y_kN*beta_Y_kN*x[k]+xN)-1);
+            d2Yr_dxi2 += 2*c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*x[k]*x[k]*(1-beta_Y_kN*beta_Y_kN)/pow(pow(beta_Y_kN,2)*x[k]+xN, 2)*(xN/(beta_Y_kN*beta_Y_kN*x[k]+xN)-1);
         }
         return d2Yr_dxi2;
     }
@@ -251,17 +251,17 @@ long double GERG2008ReducingFunction::d2Yrdxidxj__constxj(const std::vector<long
         if (i == j){ return d2Yrdxi2__constxj(x, i, beta, gamma, Y_c_ij, Yc, xN_flag); }
         long double xN = x[N-1];
         long double d2Yr_dxidxj = 2*Yc[N-1];
-        d2Yr_dxidxj += c_Y_ji(i, j, beta, gamma, Y_c_ij)*d2fYijdxidxj(x,i,j,beta);
+        d2Yr_dxidxj += c_Y_ij(i, j, beta, gamma, Y_c_ij)*d2fYijdxidxj(x,i,j,beta);
         
         for (std::size_t k = 0; k < N-1; k++)
         {
             double beta_Y_kN = beta[k][N-1];
-            d2Yr_dxidxj += 2*c_Y_ji(k, N-1, beta, gamma, Y_c_ij)*x[k]*x[k]*(1-beta_Y_kN*beta_Y_kN)/pow(beta_Y_kN*beta_Y_kN*x[k]+xN,2)*(xN/(beta_Y_kN*beta_Y_kN*x[k]+xN)-1);
+            d2Yr_dxidxj += 2*c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*x[k]*x[k]*(1-beta_Y_kN*beta_Y_kN)/pow(beta_Y_kN*beta_Y_kN*x[k]+xN,2)*(xN/(beta_Y_kN*beta_Y_kN*x[k]+xN)-1);
         }
         
         double beta_Y_iN = beta[i][N-1], beta_Y_jN = beta[j][N-1];
-        d2Yr_dxidxj +=  c_Y_ji(i, N-1, beta, gamma, Y_c_ij)*((1-beta_Y_iN*beta_Y_iN)*(2*x[i]*xN*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 3)-x[i]*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 2)) - (x[i]+xN)/(beta_Y_iN*beta_Y_iN*x[i]+xN));
-        d2Yr_dxidxj += -c_Y_ji(j, N-1, beta, gamma, Y_c_ij)*((1-beta_Y_jN*beta_Y_jN)*(2*x[j]*x[j]*xN*beta_Y_jN*beta_Y_jN/pow(beta_Y_jN*beta_Y_jN*x[j]+xN, 3)-x[j]*xN/pow(beta_Y_jN*beta_Y_jN*x[j]+xN, 2)) - (x[j]+xN)/(beta_Y_jN*beta_Y_jN*x[j]+xN));
+        d2Yr_dxidxj +=  c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*((1-beta_Y_iN*beta_Y_iN)*(2*x[i]*xN*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 3)-x[i]*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 2)) - (x[i]+xN)/(beta_Y_iN*beta_Y_iN*x[i]+xN));
+        d2Yr_dxidxj += -c_Y_ij(j, N-1, beta, gamma, Y_c_ij)*((1-beta_Y_jN*beta_Y_jN)*(2*x[j]*x[j]*xN*beta_Y_jN*beta_Y_jN/pow(beta_Y_jN*beta_Y_jN*x[j]+xN, 3)-x[j]*xN/pow(beta_Y_jN*beta_Y_jN*x[j]+xN, 2)) - (x[j]+xN)/(beta_Y_jN*beta_Y_jN*x[j]+xN));
         
         return d2Yr_dxidxj;
     }
@@ -283,10 +283,6 @@ long double GERG2008ReducingFunction::dfYikdxi__constxk(const std::vector<long d
 long double GERG2008ReducingFunction::c_Y_ij(std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c)
 {
 	return 2*beta[i][j]*gamma[i][j]*Y_c[i][j];
-}
-long double GERG2008ReducingFunction::c_Y_ji(std::size_t j, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c)
-{
-	return 2/beta[i][j]*gamma[i][j]*Y_c[i][j];
 }
 long double GERG2008ReducingFunction::f_Y_ij(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta)
 {
