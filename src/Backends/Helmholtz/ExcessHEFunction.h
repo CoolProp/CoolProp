@@ -48,7 +48,33 @@ public:
 	GERG2008DepartureFunction(){};
     GERG2008DepartureFunction(const std::vector<double> &n,const std::vector<double> &d,const std::vector<double> &t,
                               const std::vector<double> &eta,const std::vector<double> &epsilon,const std::vector<double> &beta,
-                              const std::vector<double> &gamma, unsigned int Npower);
+                              const std::vector<double> &gamma, unsigned int Npower)
+    {
+        /// Break up into power and gaussian terms
+        {
+            std::vector<long double> _n(n.begin(), n.begin()+Npower);
+            std::vector<long double> _d(d.begin(), d.begin()+Npower);
+            std::vector<long double> _t(t.begin(), t.begin()+Npower);
+            std::vector<long double> _l(Npower, 0.0);
+            phi.add_Power(_n, _d, _t, _l);
+        }
+        if (n.size() == Npower)
+        {
+            using_gaussian = false;
+        }
+        else
+        {
+            using_gaussian = true;
+            std::vector<long double> _n(n.begin()+Npower,                   n.end());
+            std::vector<long double> _d(d.begin()+Npower,                   d.end());
+            std::vector<long double> _t(t.begin()+Npower,                   t.end());
+            std::vector<long double> _eta(eta.begin()+Npower,             eta.end());
+            std::vector<long double> _epsilon(epsilon.begin()+Npower, epsilon.end());
+            std::vector<long double> _beta(beta.begin()+Npower,          beta.end());
+            std::vector<long double> _gamma(gamma.begin()+Npower,       gamma.end());
+            phi.add_GERG2008Gaussian(_n, _d, _t, _eta, _epsilon, _beta, _gamma);
+        }
+    };
 	~GERG2008DepartureFunction(){};
 
     double alphar(double tau, double delta){return phi.base(tau, delta);};

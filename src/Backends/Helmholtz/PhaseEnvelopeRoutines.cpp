@@ -17,6 +17,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
     
     // Set the pressure to a low pressure 
     HEOS._p = 100000;
+    HEOS._Q = 1;
     
     // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
     long double Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
@@ -26,7 +27,6 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
     
     // Actually call the successive substitution solver
     io.beta = 1;
-    HEOS._Q = 1;
     SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
         
     // Use the residual function based on x_i, T and rho' as independent variables.  rho'' is specified
@@ -92,7 +92,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         // Dewpoint calculation, liquid (x) is incipient phase
         NR.call(HEOS, IO.y, IO.x, IO);
         
-        std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " x " << vec_to_string(IO.x, "%0.10Lg") << " y " << vec_to_string(IO.y, "%0.10Lg") << " Ns " << IO.Nsteps << std::endl;
+        std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p << " x " << vec_to_string(IO.x, "%0.10Lg") << " y " << vec_to_string(IO.y, "%0.10Lg") << " Ns " << IO.Nsteps << std::endl;
         env.store_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.x, IO.y);
         
         iter ++;
