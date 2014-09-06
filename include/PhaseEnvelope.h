@@ -3,6 +3,8 @@
 
 #include "Exceptions.h"
 
+namespace CoolProp{
+    
 class PhaseEnvelopeData
 {
 public:
@@ -49,5 +51,8 @@ public:
         }
     };
 };
+
+
+} /* namespace CoolProp */
 
 #endif
