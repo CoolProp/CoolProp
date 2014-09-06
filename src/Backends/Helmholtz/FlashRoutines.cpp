@@ -270,7 +270,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
     }
 }
 // D given and one of P,H,S,U
-void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
+void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other)
 {
     // Define the residual to be driven to zero
     class solver_resid : public FuncWrapper1D
@@ -451,7 +451,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
     }
 }
 
-void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &HEOS, int other, long double T0, long double rhomolar0)
+void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &HEOS, parameters other, long double T0, long double rhomolar0)
 {
     double A[2][2], B[2][2];
     long double y = _HUGE;
@@ -544,7 +544,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &H
     
     HEOS.update(DmolarT_INPUTS, rhoc*delta, Tc/tau);
 }
-void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HEOS, int other, long double value, long double Tmin, long double Tmax)
+void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HEOS, parameters other, long double value, long double Tmin, long double Tmax)
 {
     if (!ValidNumber(HEOS._p)){throw ValueError("value for p in HSU_P_flash_singlephase_Brent is invalid");};
     if (!ValidNumber(value)){throw ValueError("value for other in HSU_P_flash_singlephase_Brent is invalid");};
@@ -625,7 +625,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
 }
 
 // P given and one of H, S, or U
-void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
+void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other)
 {
     bool saturation_called = false;
     long double value;
@@ -704,7 +704,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
         }
     }    
 }
-void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
+void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other)
 {
     if (HEOS.imposed_phase_index != iphase_not_imposed)
     {
