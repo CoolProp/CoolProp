@@ -52,8 +52,8 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
     long double factor = 1.05;
     for (;;)
     {
-        long double x = IO.rhomolar_vap;
         if (iter - iter0 > 0){ IO.rhomolar_vap *= factor;}
+        long double x = IO.rhomolar_vap;
         if (dont_extrapolate)
         {
             // Reset the step to a reasonably small size
