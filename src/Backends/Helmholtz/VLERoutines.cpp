@@ -569,7 +569,7 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
 
-    long double rhoL,rhoV,JL,JV,KL,KV,dJL,dJV,dKL,dKV;
+    long double rhoL = _HUGE, rhoV = _HUGE,JL,JV,KL,KV,dJL,dJV,dKL,dKV;
     long double DELTA, deltaL=0, deltaV=0, error, PL, PV, stepL, stepV;
     int iter=0;
     
@@ -879,8 +879,6 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
     std::cout << format("For x0\n");
     std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
     std::cout << "analytic: " << vec_to_string(get_col(J0, 0), "%0.11Lg") << std::endl;
-    
-    int rrr = 0;
 }
 void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &z_incipient, newton_raphson_saturation_options &IO)
 {

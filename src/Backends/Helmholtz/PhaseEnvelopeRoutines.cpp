@@ -111,7 +111,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
             IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
             factor = rho_vap_new/IO.rhomolar_vap;
             dont_extrapolate = true; // So that we use the mole fractions we calculated here instead of the extrapolated values
-            std::cout << "dv " << rho_vap_new << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
+            //std::cout << "dv " << rho_vap_new << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
             iter0 = iter - 1; // Back to linear interpolation again
             continue;
         }

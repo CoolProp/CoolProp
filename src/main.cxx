@@ -18,7 +18,6 @@ using namespace CoolProp;
 #endif
 #include "SpeedTest.h"
 #include "HumidAirProp.h"
-#include "CoolPropLib.h"
 #include "time.h"
 #include "Helmholtz.h"
 
@@ -431,6 +430,13 @@ int main()
 	}
 	#endif
     #if 1
+    {
+        double TTT0 = PropsSI("T","P",1e6,"Q",1,"REFPROP::Ethane[0.5]&Propane[0.5]");
+        double TTT1 = PropsSI("T","P",1e6,"Q",1,"HEOS::Ethane[0.5]&Propane[0.5]");
+        int rr =0;
+    }
+    #endif
+    #if 0
     { 
 //        std::vector<std::string> names(1, "n-Propane");
 //        shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(names));
@@ -446,12 +452,12 @@ int main()
 //                HEOS->update(PT_INPUTS, p, Tmelt);};
 //            std::cout << get_global_param_string("errstring") << std::endl;
 //        }
+        double TTT = PropsSI("T","P",1e6,"Q",1,"Ethane[0.5]&Propane[0.5]");
+        
         ::set_debug_level(0);
         
-        
-        
-        shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Ethane&Propane"));
-        std::vector<long double> z(2,0.85); z[1] = 1-z[0];
+        shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Ethane&Nitrogen"));
+        std::vector<long double> z(2,0.2); z[1] = 1-z[0];
         HEOS->set_mole_fractions(z);
         time_t t1, t2;
         t1 = clock();
@@ -463,7 +469,7 @@ int main()
         std::cout << format("value(all): %g s/call\n", ((double)(t2-t1))/CLOCKS_PER_SEC);
         exit(EXIT_SUCCESS);
         
-        double TTT = PropsSI("T","P",1e6,"Q",1,"Ethane[0.5]&Propane[0.5]");
+        
         std::cout << get_global_param_string("errstring") << std::endl;
         exit(EXIT_FAILURE);
         //double refretrte = PropsSI("P","Dmolar",107.9839357,"T",116.5360225,"Methane[0.5]&Propane[0.5]");

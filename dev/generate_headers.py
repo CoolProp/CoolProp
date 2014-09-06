@@ -38,7 +38,7 @@ values = [
     ('all_fluids.json','all_fluids_JSON.h','all_fluids_JSON'),
     ('all_incompressibles.json','all_incompressibles_JSON.h','all_incompressibles_JSON'),
     ('mixtures/mixture_departure_functions.json', 'mixture_departure_functions_JSON.h', 'mixture_departure_functions_JSON'),
-    ('mixtures/mixture_reducing_parameters.json', 'mixture_reducing_parameters_JSON.h', 'mixture_reducing_parameters_JSON')
+    ('mixtures/mixture_binary_pairs.json', 'mixture_binary_pairs_JSON.h', 'mixture_binary_pairs_JSON')
 ]
 
 def TO_CPP(root_dir, hashes):
@@ -55,6 +55,12 @@ def TO_CPP(root_dir, hashes):
     
     for infile,outfile,variable in values:
         
+        import json
+        
+        # Confirm that the JSON file can be loaded and doesn't have any formatting problems
+        with open(os.path.join(root_dir,'dev',infile), 'r') as fp:
+            jj = json.load(fp)
+            
         json = open(os.path.join(root_dir,'dev',infile),'r').read().encode('ascii')
 
         # convert each character to hex and add a terminating NULL character to end the 

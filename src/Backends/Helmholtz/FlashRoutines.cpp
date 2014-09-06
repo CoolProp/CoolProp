@@ -66,7 +66,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
              HEOS._p = HEOS.SatL->p();
         }
         else if (splines.enabled && HEOS._T > splines.T_min){
-            double rhoL, rhoV;
+            double rhoL = _HUGE, rhoV = _HUGE;
             // Use critical region spline if it has it and temperature is in its range
             splines.get_densities(T, splines.rhomolar_min, HEOS.rhomolar_critical(), splines.rhomolar_max, rhoL, rhoV);
             HEOS.SatL->update(DmolarT_INPUTS, rhoL, HEOS._T);
@@ -114,7 +114,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         }
         else{
             // Pseudo-pure fluid
-            long double rhoLanc, rhoVanc, rhoLsat, rhoVsat;
+            long double rhoLanc = _HUGE, rhoVanc = _HUGE, rhoLsat = _HUGE, rhoVsat = _HUGE;
             long double psatLanc = HEOS.components[0]->ancillaries.pL.evaluate(HEOS._T); // These ancillaries are used explicitly
             long double psatVanc = HEOS.components[0]->ancillaries.pV.evaluate(HEOS._T); // These ancillaries are used explicitly
             try{
@@ -454,7 +454,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, int other)
 void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &HEOS, int other, long double T0, long double rhomolar0)
 {
     double A[2][2], B[2][2];
-    long double y;
+    long double y = _HUGE;
     HelmholtzEOSMixtureBackend _HEOS(HEOS.get_components());
     _HEOS.update(DmolarT_INPUTS, rhomolar0, T0);
     long double Tc = HEOS.calc_T_critical();
@@ -465,6 +465,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &H
     {
         case iHmolar: y = HEOS.hmolar(); break;
         case iSmolar: y = HEOS.smolar(); break;
+        default: throw ValueError("other is invalid in HSU_P_flash_singlephase_Newton");
     }
     
     long double worst_error = 999;
@@ -602,7 +603,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
 	
 	std::string errstr;
     try{
-        double T = Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100, errstr);
+        Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100, errstr);
         // Un-specify the phase of the fluid
         HEOS.unspecify_phase();
     }
@@ -621,8 +622,6 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
         }
         throw;
     }
-    
-    int rr = 4;
 }
 
 // P given and one of H, S, or U

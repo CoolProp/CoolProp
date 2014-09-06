@@ -236,22 +236,48 @@
         std::map<std::string, double> numbers;
         std::map<std::string, std::string> strings;
         std::map<std::string, std::vector<double> > double_vectors;
+        std::map<std::string, std::vector<std::string> > string_vectors;
     public:
         Dictionary(){};
         void add_string(std::string s1, std::string s2){ strings.insert(std::pair<std::string, std::string>(s1, s2));}
         void add_number(std::string s1, double d){ numbers.insert(std::pair<std::string, double>(s1, d));}
         void add_double_vector(std::string s1, std::vector<double> d){ double_vectors.insert(std::pair<std::string, std::vector<double> >(s1, d));}
+        void add_string_vector(std::string s1, std::vector<std::string> d){ string_vectors.insert(std::pair<std::string, std::vector<std::string> >(s1, d));}
         std::string get_string(std::string s)
         {
-            if (strings.find(s) != strings.end()){ return strings[s]; } else{ throw std::exception(); }
+            if (strings.find(s) != strings.end()){ 
+                return strings[s]; 
+            } 
+            else{ 
+                throw CoolProp::ValueError(format("%s could not be matched in get_string",s.c_str())); 
+            }
         };
         double get_number(std::string s)
         {
-            if (numbers.find(s) != numbers.end()){ return numbers[s]; } else{ throw std::exception(); }
+            if (numbers.find(s) != numbers.end()){ 
+                return numbers[s]; 
+            } 
+            else{ 
+                throw CoolProp::ValueError(format("%s could not be matched in get_number",s.c_str())); 
+            }
         };
         std::vector<double> get_double_vector(std::string s)
         {
-            if (double_vectors.find(s) != double_vectors.end()){ return double_vectors[s]; } else{ throw std::exception(); }
+            if (double_vectors.find(s) != double_vectors.end()){ 
+                return double_vectors[s]; 
+            } 
+            else{ 
+                throw CoolProp::ValueError(format("%s could not be matched in get_double_vector",s.c_str()));
+            }
+        };
+        std::vector<std::string> get_string_vector(std::string s)
+        {
+            if (string_vectors.find(s) != string_vectors.end()){ 
+                return string_vectors[s]; 
+            } 
+            else{ 
+                throw CoolProp::ValueError(format("%s could not be matched in get_string_vector",s.c_str()));
+            }
         };
     };
     /// Utility function to clear a std::map of pointers

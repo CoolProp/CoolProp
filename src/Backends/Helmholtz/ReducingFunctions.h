@@ -1,8 +1,15 @@
-#ifndef DEPARTURE_FUNCTIONS_H
-#define DEPARTURE_FUNCTIONS_H
+/** \brief Code for all the binary pairs in the mixture
+ * 
+ * This includes both binary pair information for the reducing functions as well as the departure 
+ * functions for the given binary pair.
+ */
+ 
+#ifndef MIXTURE_BINARY_PAIRS_H
+#define MIXTURE_BINARY_PAIRS_H
 
 #include <vector>
 #include "CoolPropFluid.h"
+#include "crossplatform_shared_ptr.h"
 
 namespace CoolProp{
 
@@ -11,55 +18,13 @@ typedef std::vector<std::vector<long double> > STLMatrix;
 enum x_N_dependency_flag{XN_INDEPENDENT, ///< x_N is an independent variable, and not calculated by \f$ x_N = 1-\sum_i x_i\f$
                          XN_DEPENDENT ///< x_N is an dependent variable, calculated by \f$ x_N = 1-\sum_i x_i\f$
                          };
-                         
-/// A container for the mixing parameters for CoolProp mixtures
-/**
+                 
+std::string get_reducing_function_name(std::string CAS1, std::string CAS2);
 
-*/
-class MixingParameterLibrary
-{
-public:
-    /// Map from sorted pair of CAS numbers to reducing parameter map.  The reducing parameter map is a map from key (string) to value (double)
-    std::map<std::vector<std::string>, std::vector<Dictionary> > reducing_map;
-    MixingParameterLibrary();
-
-    /// Parse a term from GERG 2008
-    void parse_Kunz_JCED_2012(Dictionary &d, rapidjson::Value &val, bool swapped)
-    {
-        d.add_number("gammaV", cpjson::get_double(val, "gammaV"));
-        d.add_number("gammaT", cpjson::get_double(val, "gammaT"));
-    
-        double betaV = cpjson::get_double(val, "betaV");
-        double betaT = cpjson::get_double(val, "betaT");
-        if (swapped){
-            d.add_number("betaV", 1/betaV);
-            d.add_number("betaT", 1/betaT);
-        }
-        else{
-            d.add_number("betaV", betaV);
-            d.add_number("betaT", betaT);
-        }
-    };
-
-    /// Parse a term from HFC mixtures
-    void parse_Lemmon_JPCRD_2004(Dictionary &d, rapidjson::Value &val, bool swapped)
-    {
-        d.add_number("xi", cpjson::get_double(val, "xi"));
-        d.add_number("zeta", cpjson::get_double(val, "zeta"));
-    };
-
-    /// Parse a term from Air
-    void parse_Lemmon_JPCRD_2000(Dictionary &d, rapidjson::Value &val, bool swapped)
-    {
-        d.add_number("xi", cpjson::get_double(val, "xi"));
-        d.add_number("zeta", cpjson::get_double(val, "zeta"));
-    };
-};
-
-/*! 
-An abstract base class for the reducing function to allow for
-Lemmon-Jacobsen, GERG, or other reducing function to yield the
-reducing parameters \f$ \rho_r \f$ and \f$ T_r \f$
+/** \brief Abstract base class for reducing function
+ * An abstract base class for the reducing function to allow for
+ * Lemmon-Jacobsen, GERG, or other reducing function to yield the 
+ * reducing parameters \f$\rho_r\f$ and \f$T_r\f$
 */
 class ReducingFunction
 {
@@ -69,8 +34,8 @@ public:
 	ReducingFunction(){};
 	virtual ~ReducingFunction(){};
 
-    /// A factory function to generate the required reducing function
-    static ReducingFunction *factory(const std::vector<CoolPropFluid*> &components);
+    /// A factory function to generate the requiredreducing function
+    static shared_ptr<ReducingFunction> factory(const std::vector<CoolPropFluid*> &components, std::vector< std::vector< long double> > &F);
 
 	/// The reduced temperature
 	virtual long double Tr(const std::vector<long double> &x) = 0;
@@ -86,27 +51,30 @@ public:
 	virtual long double d2Trdxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
 	virtual long double d2Trdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) = 0;
 
-	/*! GERG 2004 Monograph equation 7.56:
-	\f[
-	\left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial T_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2T_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial T_r}{\partial x_j}\right)_{x_i}-\sum_{k=1}^Nx_k\left(\frac{\partial^2T_r}{\partial x_j \partial x_k}\right)
-	\f]
-	*/
+	/** \brief GERG 2004 Monograph equation 7.56:
+     * 
+	 * \f[
+	 * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial T_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2T_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial T_r}{\partial x_j}\right)_{x_i}-\sum_{k=1}^Nx_k\left(\frac{\partial^2T_r}{\partial x_j \partial x_k}\right)
+	 * \f]
+	 */
 	long double d_ndTrdni_dxj__constxi(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
-	/*! GERG 2004 Monograph equation 7.55:
-	\f[
-	\left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \rho_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2\rho_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial \rho_r}{\partial x_j}\right)_{x_i}-\sum_{k=1}^Nx_k\left(\frac{\partial^2\rho_r}{\partial x_j \partial x_k}\right)
-	\f]
-	*/
+	/** \brief GERG 2004 Monograph equation 7.55:
+     * 
+	 * \f[
+	 * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \rho_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2\rho_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial \rho_r}{\partial x_j}\right)_{x_i}-\sum_{k=1}^Nx_k\left(\frac{\partial^2\rho_r}{\partial x_j \partial x_k}\right)
+	 * \f]
+	 */
 	long double d_ndrhorbardni_dxj__constxi(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
 	long double ndrhorbardni__constnj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
 	long double ndTrdni__constnj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
 };
 
-/*! 
-The Reducing parameter model used by the GERG-2008 formulation to yield the
-reducing parameters \f$ \rho_r \f$ and \f$ T_r \f$ and derivatives thereof
-*/
+/** \brief The reducing function model of GERG-2008
+ * 
+ * Used by the GERG-2008 formulation to yield the
+ * reducing parameters \f$ \rho_r \f$ and \f$ T_r \f$ and derivatives thereof
+ */
 class GERG2008ReducingFunction : public ReducingFunction
 {
 private:
@@ -181,27 +149,29 @@ public:
 	long double d2fYijdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
 };
 
-/*! From Lemmon, JPCRD, 2000 for the properties of Dry Air, and also from Lemmon, JPCRD, 2004 for the properties of R404A, R410A, etc.	
-\f[
-\rho_r(\bar x) = \left[ \sum_{i=1}^m\frac{x_i}{\rho_{c_i}}+\sum_{i=1}^{m-1}\sum_{j=i+1}^{m}x_ix_j\zeta_{ij}\right]^{-1}
-\f]
-\f[
-T_r(\bar x) = \sum_{i=1}^mx_iT_{c_i}+\sum_{i=1}^{m-1}\sum_{j=i+1}^mx_ix_j\xi_{ij}
-\f]
-
-These can be converted to the form of GERG by the following equations:
-\f[
-\beta_T = 1\ \ \ \ \beta_v = 1 
-\f]
-and
-\f[
-    \boxed{\gamma_T = \dfrac{T_{c0}+T_{c1}+\xi_{01}}{2\sqrt{T_{c0}T_{c1}}}}
-\f]
-and
-\f[
-    \boxed{\gamma_v = \dfrac{v_{c0}+v_{c1}+\zeta_{01}}{\frac{1}{4}\left(\frac{1}{\rho_{c,i}^{1/3}}+\frac{1}{\rho_{c,j}^{1/3}}\right)^{3}}}
-\f]
-*/
+/** \brief Reducing function converter for dry air and HFC blends
+ * 
+ * From Lemmon, JPCRD, 2000 for the properties of Dry Air, and also from Lemmon, JPCRD, 2004 for the properties of R404A, R410A, etc.
+ * \f[
+ * \rho_r(\bar x) = \left[ \sum_{i=1}^m\frac{x_i}{\rho_{c_i}}+\sum_{i=1}^{m-1}\sum_{j=i+1}^{m}x_ix_j\zeta_{ij}\right]^{-1}
+ * \f]
+ * \f[
+ * T_r(\bar x) = \sum_{i=1}^mx_iT_{c_i}+\sum_{i=1}^{m-1}\sum_{j=i+1}^mx_ix_j\xi_{ij}
+ * \f]
+ * 
+ * These can be converted to the form of GERG by the following equations:
+ * \f[
+ * \beta_T = 1\ \ \ \ \beta_v = 1 
+ * \f] 
+ * and
+ * \f[
+ * \boxed{\gamma_T = \dfrac{T_{c0}+T_{c1}+\xi_{01}}{2\sqrt{T_{c0}T_{c1}}}}
+ * \f]
+ * and
+ * \f[
+ * \boxed{\gamma_v = \dfrac{v_{c0}+v_{c1}+\zeta_{01}}{\frac{1}{4}\left(\frac{1}{\rho_{c,i}^{1/3}}+\frac{1}{\rho_{c,j}^{1/3}}\right)^{3}}}
+ * \f]
+ */
 class LemmonAirHFCReducingFunction
 {
 protected:
@@ -221,25 +191,6 @@ public:
 	    gamma_v = (v_i + v_j + zeta_ij)/(0.25*pow(pow(v_i, one_third)+pow(v_j, one_third),3));
     };
 };
-
-class ReducingFunctionContainer
-{
-private:
-    ReducingFunctionContainer(const ReducingFunctionContainer&);
-    ReducingFunctionContainer& operator=(const ReducingFunctionContainer&);
-public:
-    ReducingFunction *p;
-    ReducingFunctionContainer(){
-        p = NULL;
-    };
-    void set(ReducingFunction *pReducing){p = pReducing;};
-    ReducingFunctionContainer(ReducingFunction *pReducing){
-        p = pReducing;
-    };
-    ~ReducingFunctionContainer(){delete(p);};
-
-};
-
 
 } /* namespace CoolProp */
 #endif

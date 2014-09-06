@@ -151,10 +151,10 @@ long double MixtureDerivatives::dln_fugacity_i_ddelta__consttau_x(HelmholtzEOSMi
 }
 long double MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
-    long double rhor = HEOS.Reducing.p->rhormolar(HEOS.get_const_mole_fractions());
-    long double Tr = HEOS.Reducing.p->Tr(HEOS.get_const_mole_fractions());
-    long double dTrdxj = HEOS.Reducing.p->dTrdxi__constxj(HEOS.get_const_mole_fractions(),j,xN_flag);
-    long double drhordxj = HEOS.Reducing.p->drhormolardxi__constxj(HEOS.get_const_mole_fractions(),j,xN_flag);
+    long double rhor = HEOS.Reducing->rhormolar(HEOS.get_const_mole_fractions());
+    long double Tr = HEOS.Reducing->Tr(HEOS.get_const_mole_fractions());
+    long double dTrdxj = HEOS.Reducing->dTrdxi__constxj(HEOS.get_const_mole_fractions(),j,xN_flag);
+    long double drhordxj = HEOS.Reducing->drhormolardxi__constxj(HEOS.get_const_mole_fractions(),j,xN_flag);
     
     // These lines are all the same
     long double line1 = dln_fugacity_i_dtau__constdelta_x(HEOS, i, xN_flag)*1/HEOS.T()*dTrdxj;
@@ -165,7 +165,7 @@ long double MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixt
     std::size_t N = x.size();
     
     // This is a term to which some more might be added depending on i and j
-    long double line3 = 1/rhor*HEOS.Reducing.p->drhormolardxi__constxj(x, j, xN_flag) + 1/Tr*HEOS.Reducing.p->dTrdxi__constxj(x, j, xN_flag);
+    long double line3 = 1/rhor*HEOS.Reducing->drhormolardxi__constxj(x, j, xN_flag) + 1/Tr*HEOS.Reducing->dTrdxi__constxj(x, j, xN_flag);
     
     if (i == N-1){
         line3 += -1/x[N-1];
@@ -213,12 +213,12 @@ long double MixtureDerivatives::d_ndalphardni_dxj__constT_V_xi(HelmholtzEOSMixtu
 long double MixtureDerivatives::ddelta_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag)
 {
     // Gernert 3.121 (Catch test provided)
-    return -HEOS._delta.pt()/HEOS._reducing.rhomolar*HEOS.Reducing.p->drhormolardxi__constxj(HEOS.mole_fractions,j, xN_flag);
+    return -HEOS._delta.pt()/HEOS._reducing.rhomolar*HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions,j, xN_flag);
 }
 long double MixtureDerivatives::dtau_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag)
 {
     // Gernert 3.122 (Catch test provided)
-    return 1/HEOS._T*HEOS.Reducing.p->dTrdxi__constxj(HEOS.mole_fractions,j, xN_flag);
+    return 1/HEOS._T*HEOS.Reducing->dTrdxi__constxj(HEOS.mole_fractions,j, xN_flag);
 }
 
 long double MixtureDerivatives::dpdT__constV_n(HelmholtzEOSMixtureBackend &HEOS)
@@ -240,8 +240,8 @@ long double MixtureDerivatives::ndpdni__constT_V_nj(HelmholtzEOSMixtureBackend &
 {
     // Eqn 7.64 and 7.63
     long double R_u = HEOS.gas_constant();
-    double ndrhorbar_dni__constnj = HEOS.Reducing.p->ndrhorbardni__constnj(HEOS.mole_fractions,i, xN_flag);
-    double ndTr_dni__constnj = HEOS.Reducing.p->ndTrdni__constnj(HEOS.mole_fractions,i, xN_flag);
+    double ndrhorbar_dni__constnj = HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions,i, xN_flag);
+    double ndTr_dni__constnj = HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions,i, xN_flag);
     double summer = 0;
     std::size_t kmax = HEOS.mole_fractions.size();
     if (xN_flag == XN_DEPENDENT){ kmax--; }
@@ -255,8 +255,8 @@ long double MixtureDerivatives::ndpdni__constT_V_nj(HelmholtzEOSMixtureBackend &
 
 long double MixtureDerivatives::ndalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
-    double term1 = HEOS._delta.pt()*HEOS.dalphar_dDelta()*(1-1/HEOS._reducing.rhomolar*HEOS.Reducing.p->ndrhorbardni__constnj(HEOS.mole_fractions,i, xN_flag));
-    double term2 = HEOS._tau.pt()*HEOS.dalphar_dTau()*(1/HEOS._reducing.T)*HEOS.Reducing.p->ndTrdni__constnj(HEOS.mole_fractions,i, xN_flag);
+    double term1 = HEOS._delta.pt()*HEOS.dalphar_dDelta()*(1-1/HEOS._reducing.rhomolar*HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions,i, xN_flag));
+    double term2 = HEOS._tau.pt()*HEOS.dalphar_dTau()*(1/HEOS._reducing.T)*HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions,i, xN_flag);
 
     double s = 0;
     std::size_t kmax = HEOS.mole_fractions.size();
@@ -275,18 +275,18 @@ long double MixtureDerivatives::ndln_fugacity_coefficient_dnj__constT_p(Helmholt
 }
 long double MixtureDerivatives::nddeltadni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
-    return HEOS._delta.pt()-HEOS._delta.pt()/HEOS._reducing.rhomolar*HEOS.Reducing.p->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag);
+    return HEOS._delta.pt()-HEOS._delta.pt()/HEOS._reducing.rhomolar*HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag);
 }
 long double MixtureDerivatives::ndtaudni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
-    return HEOS._tau.pt()/HEOS._reducing.T*HEOS.Reducing.p->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+    return HEOS._tau.pt()/HEOS._reducing.T*HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
 }
 long double MixtureDerivatives::d_ndalphardni_dxj__constdelta_tau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
-    double line1 = HEOS._delta.pt()*d2alphar_dxi_dDelta(HEOS, j, xN_flag)*(1-1/HEOS._reducing.rhomolar*HEOS.Reducing.p->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
-    double line3 = HEOS._tau.pt()*d2alphar_dxi_dTau(HEOS, j, xN_flag)*(1/HEOS._reducing.T)*HEOS.Reducing.p->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
-    double line2 = -HEOS._delta.pt()*HEOS.dalphar_dDelta()*(1/HEOS._reducing.rhomolar)*(HEOS.Reducing.p->d_ndrhorbardni_dxj__constxi(HEOS.mole_fractions, i, j, xN_flag)-1/HEOS._reducing.rhomolar*HEOS.Reducing.p->drhormolardxi__constxj(HEOS.mole_fractions,j, xN_flag)*HEOS.Reducing.p->ndrhorbardni__constnj(HEOS.mole_fractions,i, xN_flag));
-    double line4 = HEOS._tau.pt()*HEOS.dalphar_dTau()*(1/HEOS._reducing.T)*(HEOS.Reducing.p->d_ndTrdni_dxj__constxi(HEOS.mole_fractions,i,j, xN_flag)-1/HEOS._reducing.T*HEOS.Reducing.p->dTrdxi__constxj(HEOS.mole_fractions, j, xN_flag)*HEOS.Reducing.p->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag));
+    double line1 = HEOS._delta.pt()*d2alphar_dxi_dDelta(HEOS, j, xN_flag)*(1-1/HEOS._reducing.rhomolar*HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
+    double line3 = HEOS._tau.pt()*d2alphar_dxi_dTau(HEOS, j, xN_flag)*(1/HEOS._reducing.T)*HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+    double line2 = -HEOS._delta.pt()*HEOS.dalphar_dDelta()*(1/HEOS._reducing.rhomolar)*(HEOS.Reducing->d_ndrhorbardni_dxj__constxi(HEOS.mole_fractions, i, j, xN_flag)-1/HEOS._reducing.rhomolar*HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions,j, xN_flag)*HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions,i, xN_flag));
+    double line4 = HEOS._tau.pt()*HEOS.dalphar_dTau()*(1/HEOS._reducing.T)*(HEOS.Reducing->d_ndTrdni_dxj__constxi(HEOS.mole_fractions,i,j, xN_flag)-1/HEOS._reducing.T*HEOS.Reducing->dTrdxi__constxj(HEOS.mole_fractions, j, xN_flag)*HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag));
     
     double s = 0;
     std::size_t kmax = HEOS.mole_fractions.size();
@@ -316,10 +316,10 @@ long double MixtureDerivatives::nd2nalphardnidnj__constT_V(HelmholtzEOSMixtureBa
 long double MixtureDerivatives::d_ndalphardni_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
     // The first line
-    double term1 = (HEOS._delta.pt()*HEOS.d2alphar_dDelta2()+HEOS.dalphar_dDelta())*(1-1/HEOS._reducing.rhomolar*HEOS.Reducing.p->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
+    double term1 = (HEOS._delta.pt()*HEOS.d2alphar_dDelta2()+HEOS.dalphar_dDelta())*(1-1/HEOS._reducing.rhomolar*HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
 
     // The second line
-    double term2 = HEOS._tau.pt()*HEOS.d2alphar_dDelta_dTau()*(1/HEOS._reducing.T)*HEOS.Reducing.p->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+    double term2 = HEOS._tau.pt()*HEOS.d2alphar_dDelta_dTau()*(1/HEOS._reducing.T)*HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
 
     // The third line
     double term3 = d2alphar_dxi_dDelta(HEOS, i, xN_flag);
@@ -334,10 +334,10 @@ long double MixtureDerivatives::d_ndalphardni_dDelta(HelmholtzEOSMixtureBackend 
 long double MixtureDerivatives::d_ndalphardni_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
     // The first line
-    double term1 = HEOS._delta.pt()*HEOS.d2alphar_dDelta_dTau()*(1-1/HEOS._reducing.rhomolar*HEOS.Reducing.p->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
+    double term1 = HEOS._delta.pt()*HEOS.d2alphar_dDelta_dTau()*(1-1/HEOS._reducing.rhomolar*HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
 
     // The second line
-    double term2 = (HEOS._tau.pt()*HEOS.d2alphar_dTau2()+HEOS.dalphar_dTau())*(1/HEOS._reducing.T)*HEOS.Reducing.p->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+    double term2 = (HEOS._tau.pt()*HEOS.d2alphar_dTau2()+HEOS.dalphar_dTau())*(1/HEOS._reducing.T)*HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
 
     // The third line
     double term3 = d2alphar_dxi_dTau(HEOS, i, xN_flag);
@@ -674,21 +674,21 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 rHEOS.update(DmolarT_INPUTS, 300, 300);
                 
                 double rho1 = rHEOS.rhomolar();
-                double analytic = rHEOS.Reducing.p->d_ndTrdni_dxj__constxi(rHEOS.get_const_mole_fractions(), i, j, xN_flag);
+                double analytic = rHEOS.Reducing->d_ndTrdni_dxj__constxi(rHEOS.get_const_mole_fractions(), i, j, xN_flag);
                 
                 // Increment mole fraction
                 std::vector<long double> zp = z; /// Copy base composition
                 zp[j] += dz; zp[1-j] -= dz;
                 rHEOS.set_mole_fractions(zp);
                 rHEOS.update(DmolarT_INPUTS, rho1, 300);
-                double v1 = rHEOS.Reducing.p->ndTrdni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
+                double v1 = rHEOS.Reducing->ndTrdni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
                 
                 // Decrement mole fraction
                 std::vector<long double> zm = z; /// Copy base composition
                 zm[j] -= dz; zm[1-j] += dz;
                 rHEOS.set_mole_fractions(zm);
                 rHEOS.update(DmolarT_INPUTS, rho1, 300);
-                double v2 = rHEOS.Reducing.p->ndTrdni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
+                double v2 = rHEOS.Reducing->ndTrdni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
                 
                 double numeric = (v1 - v2)/(2*dz);
                 double err = std::abs((numeric-analytic)/analytic);
@@ -707,21 +707,21 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 rHEOS.update(DmolarT_INPUTS, 300, 300);
                 
                 double rho1 = rHEOS.rhomolar();
-                double analytic = rHEOS.Reducing.p->d_ndrhorbardni_dxj__constxi(rHEOS.get_const_mole_fractions(), i, j, xN_flag);
+                double analytic = rHEOS.Reducing->d_ndrhorbardni_dxj__constxi(rHEOS.get_const_mole_fractions(), i, j, xN_flag);
                 
                 // Increment mole fraction
                 std::vector<long double> zp = z; /// Copy base composition
                 zp[j] += dz; zp[1-j] -= dz;
                 rHEOS.set_mole_fractions(zp);
                 rHEOS.update(DmolarT_INPUTS, rho1, 300);
-                double v1 = rHEOS.Reducing.p->ndrhorbardni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
+                double v1 = rHEOS.Reducing->ndrhorbardni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
                 
                 // Decrement mole fraction
                 std::vector<long double> zm = z; /// Copy base composition
                 zm[j] -= dz; zm[1-j] += dz;
                 rHEOS.set_mole_fractions(zm);
                 rHEOS.update(DmolarT_INPUTS, rho1, 300);
-                double v2 = rHEOS.Reducing.p->ndrhorbardni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
+                double v2 = rHEOS.Reducing->ndrhorbardni__constnj(rHEOS.get_const_mole_fractions(), i, xN_flag);
                 
                 double numeric = (v1 - v2)/(2*dz);
                 double err = std::abs((numeric-analytic)/analytic);

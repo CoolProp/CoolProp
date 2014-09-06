@@ -30,14 +30,15 @@ protected:
 
     SimpleState _crit;
     phases imposed_phase_index;
-    int N; ///< Number of components
+    std::size_t N; ///< Number of components
     
 public:
-    HelmholtzEOSMixtureBackend(){imposed_phase_index = iphase_not_imposed; _phase = iphase_unknown;};
+    HelmholtzEOSMixtureBackend(){
+        imposed_phase_index = iphase_not_imposed; _phase = iphase_unknown;};
     HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
     virtual ~HelmholtzEOSMixtureBackend(){};
-    ReducingFunctionContainer Reducing;
+    shared_ptr<ReducingFunction> Reducing;
     ExcessTerm Excess;
     PhaseEnvelopeData PhaseEnvelope;
 
@@ -45,6 +46,7 @@ public:
     friend class TransportRoutines; // Allows the static methods in the TransportRoutines class to have access to all the protected members and methods of this class
     friend class MixtureDerivatives; // Allows the static methods in the MixtureDerivatives class to have access to all the protected members and methods of this class
     friend class PhaseEnvelopeRoutines; // Allows the static methods in the PhaseEnvelopeRoutines class to have access to all the protected members and methods of this class
+    friend class MixtureParameters; //  Allows the static methods in the MixtureParameters class to have access to all the protected members and methods of this class
 
     // Helmholtz EOS backend uses mole fractions
     bool using_mole_fractions(){return true;}
@@ -70,40 +72,40 @@ public:
     void update_TP_guessrho(long double T, long double p, long double rho_guess);
     void update_DmolarT_direct(long double rhomolar, long double T);
 
-    /// Set the components of the mixture
-    /**
-    @param components The components that are to be used in this mixture
-    @param generate_SatL_and_SatV true if SatL and SatV classes should be added, false otherwise.  Added so that saturation classes can be added without infinite recursion of adding saturation classes
-    */
+    /** \brief Set the components of the mixture
+     * 
+     * @param components The components that are to be used in this mixture
+     * @param generate_SatL_and_SatV true if SatL and SatV classes should be added, false otherwise.  Added so that saturation classes can be added without infinite recursion of adding saturation classes
+     */
     void set_components(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
 
-    /**
-    \brief Specify the phase - this phase will always be used in calculations
-    @param phase_index The index from CoolProp::phases
-    */
+    /** \brief Specify the phase - this phase will always be used in calculations
+     * 
+     * @param phase_index The index from CoolProp::phases
+     */
     void specify_phase(phases phase_index){imposed_phase_index = phase_index; _phase = phase_index;};
     
-    /**
-    \brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
-    */
+    /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
+     */
     void unspecify_phase(){imposed_phase_index = iphase_not_imposed;};
 
-    void set_reducing_function();
-    void set_excess_term();
+    /** \brief Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
+     */
+    void set_mixture_parameters();
 
-    /// Set the mole fractions
-    /**
-    @param mole_fractions The vector of mole fractions of the components
-    */
+    /** \brief Set the mole fractions
+     * 
+     * @param mole_fractions The vector of mole fractions of the components
+     */
     void set_mole_fractions(const std::vector<long double> &mole_fractions);
 
     std::vector<long double> &get_mole_fractions(){return mole_fractions;};
     const std::vector<long double> &get_const_mole_fractions(){return mole_fractions;};
 
-    /// Set the mass fractions
-    /**
-    @param mass_fractions The vector of mass fractions of the components
-    */
+    /** \brief Set the mass fractions
+     * 
+     * @param mass_fractions The vector of mass fractions of the components
+     */
     void set_mass_fractions(const std::vector<long double> &mass_fractions){throw std::exception();};
 
     long double calc_molar_mass(void);

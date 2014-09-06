@@ -322,6 +322,9 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
 		if (!ValidNumber(fb)){
 			throw ValueError(format("Brent's method f(t) is NAN for t = %g",b).c_str());
 		}
+        if (std::abs(fb) < macheps){
+            return b;
+        }
 		if (fb*fc>0){
             // Goto int: from Brent ALGOL code
             c=a;

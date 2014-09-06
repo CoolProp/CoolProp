@@ -84,7 +84,7 @@ namespace cpjson
             return el.GetBool();
 		}
 	};
-     /// A convenience function to get a string from a JSON value, including error checking
+    /// A convenience function to get a string from a JSON value, including error checking
 	inline std::string get_string(rapidjson::Value &v, std::string m)
 	{
 		if (!v.HasMember(m.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",m.c_str())); }
@@ -95,7 +95,10 @@ namespace cpjson
             return el.GetString();
 		}
 	};
-
+    
+    
+    
+    
 	/// A convenience function to get a double array compactly
 	inline std::vector<double> get_double_array(rapidjson::Value &v)
 	{
@@ -108,6 +111,15 @@ namespace cpjson
 		}
 		return out;
 	};
+    
+    /// A convenience function to get a double array compactly
+	inline std::vector<double> get_double_array(rapidjson::Value &v, std::string m)
+	{
+        if (!v.HasMember(m.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",m.c_str())); }
+        else{
+            return get_double_array(v[m.c_str()]);
+        }
+	};    
 
     /// A convenience function to get a long double array compactly
 	inline std::vector<long double> get_long_double_array(rapidjson::Value &v)
@@ -190,6 +202,15 @@ namespace cpjson
 			out.push_back(itr->GetString());
 		}
 		return out;
+	};
+    
+    /// A convenience function to get a double array compactly
+	inline std::vector<std::string> get_string_array(rapidjson::Value &v, std::string m)
+	{
+        if (!v.HasMember(m.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",m.c_str())); }
+        else{
+            return get_string_array(v[m.c_str()]);
+        }
 	};
 
 	/// A convenience function to get a std::string from a JSON value

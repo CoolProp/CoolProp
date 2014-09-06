@@ -28,6 +28,8 @@
 #include "TransportRoutines.h"
 #include "MixtureDerivatives.h"
 #include "PhaseEnvelopeRoutines.h"
+#include "ReducingFunctions.h"
+#include "MixtureParameters.h"
 
 static int deriv_counter = 0;
 
@@ -73,9 +75,8 @@ void HelmholtzEOSMixtureBackend::set_components(std::vector<CoolPropFluid*> comp
     // Set the excess Helmholtz energy if a mixture
     if (!is_pure_or_pseudopure)
     {
-        // Set the reducing model
-        set_reducing_function();
-        set_excess_term();
+        // Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
+        set_mixture_parameters();
     }
 
     imposed_phase_index = iphase_not_imposed;
@@ -117,13 +118,10 @@ void HelmholtzEOSMixtureBackend::calc_phase_envelope(const std::string &type)
 {
     PhaseEnvelopeRoutines::build(*this);
 };
-void HelmholtzEOSMixtureBackend::set_reducing_function()
+void HelmholtzEOSMixtureBackend::set_mixture_parameters()
 {
-    Reducing.set(ReducingFunction::factory(components));
-}
-void HelmholtzEOSMixtureBackend::set_excess_term()
-{
-    Excess.construct(components);
+    // Build the matrix of binary-pair reducing functions
+    MixtureParameters::set_mixture_parameters(*this);
 }
 void HelmholtzEOSMixtureBackend::update_states(void)
 {
@@ -1335,7 +1333,6 @@ void get_dT_drho_second_derivatives(HelmholtzEOSMixtureBackend *HEOS, int index,
                 rho = HEOS->rhomolar(),
                 rhor = HEOS->get_reducing_state().rhomolar,
                 Tr = HEOS->get_reducing_state().T,
-                dT_dtau = -pow(T, 2)/Tr,
                 R = HEOS->gas_constant(),
                 delta = rho/rhor,
                 tau = Tr/T;
@@ -1605,6 +1602,9 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
         {
             throw ValueError();
         }
+    }
+    else{
+        throw ValueError(format("phase to solver_for_rho_given_T_oneof_HSU is invalid"));
     }
 }
 long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double p, long double rhomolar_guess)
@@ -2038,8 +2038,8 @@ SimpleState HelmholtzEOSMixtureBackend::calc_reducing_state_nocache(const std::v
 
     }
     else{
-        reducing.T = Reducing.p->Tr(mole_fractions);
-        reducing.rhomolar = Reducing.p->rhormolar(mole_fractions);
+        reducing.T = Reducing->Tr(mole_fractions);
+        reducing.rhomolar = Reducing->rhormolar(mole_fractions);
     }
     return reducing;
 }
