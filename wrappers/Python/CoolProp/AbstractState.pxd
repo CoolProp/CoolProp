@@ -6,9 +6,13 @@ cimport cAbstractState
 
 cimport constants_header
 
+cdef class PyPhaseEnvelopeData:
+    cpdef public list T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap
+
 cdef class AbstractState:
     cdef cAbstractState.AbstractState *thisptr     # hold a C++ instance which we're wrapping
     cpdef update(self, constants_header.input_pairs iInput1, double Value1, double Value2)
+    cpdef set_mole_fractions(self, vector[double] z)
     
     ## ---------------------------------------- 
     ##        Fluid property accessors
@@ -33,3 +37,6 @@ cdef class AbstractState:
     
     cpdef double melting_line(self, int, int, double) except *
     cpdef bool has_melting_line(self) except *
+    
+    cpdef build_phase_envelope(self, string)
+    cpdef PyPhaseEnvelopeData get_phase_envelope_data(self)

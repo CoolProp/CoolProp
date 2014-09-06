@@ -1,8 +1,13 @@
 from libcpp cimport bool 
 from libcpp.string cimport string
-
+from libcpp.vector cimport vector
 
 cimport constants_header
+
+cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
+    cdef cppclass PhaseEnvelopeData:
+        vector[long double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap
+    
 cdef extern from "AbstractState.h" namespace "CoolProp":
     cdef cppclass AbstractState:
         
@@ -41,8 +46,13 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double conductivity() except+ValueError
         double surface_tension() except+ValueError
         
+        void set_mole_fractions(vector[double]) except+ValueError
+        
         double melting_line(int,int,double) except+ValueError
         bool has_melting_line() except+ValueError
+        
+        void build_phase_envelope(string) except+ValueError
+        PhaseEnvelopeData get_phase_envelope_data() except+ValueError
 
 # The static factory method for the AbstractState
 cdef extern from "AbstractState.h" namespace "CoolProp::AbstractState":
