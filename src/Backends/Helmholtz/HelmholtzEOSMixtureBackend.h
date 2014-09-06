@@ -63,6 +63,8 @@ public:
     const std::vector<CoolPropFluid*> &get_components(){return components;};
     std::vector<long double> &get_K(){return K;};
     std::vector<long double> &get_lnK(){return lnK;};
+    
+    const CoolProp::PhaseEnvelopeData &calc_phase_envelope_data(){return PhaseEnvelope;};
 
     void resize(unsigned int N);
     shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///<

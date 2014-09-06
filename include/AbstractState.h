@@ -11,6 +11,7 @@
 #include "CachedElement.h"
 #include "Exceptions.h"
 #include "DataStructures.h"
+#include "PhaseEnvelope.h"
 
 #include <numeric>
 
@@ -252,6 +253,8 @@ protected:
     /// Using this backend, calculate a phase given by the state string
     /// @param state A string that describes the state desired, one of "hs_anchor", "critical"/"crit", "reducing"
     virtual const CoolProp::SimpleState & calc_state(const std::string &state){throw NotImplementedError("calc_state is not implemented for this backend");};
+    
+    virtual const CoolProp::PhaseEnvelopeData & calc_phase_envelope_data(void){throw NotImplementedError("calc_phase_envelope_data is not implemented for this backend");};
 
 public:
 
@@ -302,6 +305,7 @@ public:
 
     const CoolProp::SimpleState & get_reducing_state(){return _reducing;};
     const CoolProp::SimpleState & get_state(const std::string &state){return calc_state(state);};
+    const CoolProp::PhaseEnvelopeData &get_phase_envelope_data(){return calc_phase_envelope_data();};
 
     double keyed_output(int key);
 	double trivial_keyed_output(int key);
