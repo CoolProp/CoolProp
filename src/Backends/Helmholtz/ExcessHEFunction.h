@@ -114,16 +114,125 @@ public:
 	    }
     };
 
-	double alphar(double tau, double delta, const std::vector<long double> &x);
-	double dalphar_dDelta(double tau, double delta, const std::vector<long double> &x);
-	double d2alphar_dDelta2(double tau, double delta, const std::vector<long double> &x);
-	double d2alphar_dDelta_dTau(double tau, double delta, const std::vector<long double> &x);
-	double dalphar_dTau(double tau, double delta, const std::vector<long double> &x);
-	double d2alphar_dTau2(double tau, double delta, const std::vector<long double> &x);
-	double dalphar_dxi(double tau, double delta, const std::vector<long double> &x, unsigned int i);
-	double d2alphardxidxj(double tau, double delta, const std::vector<long double> &x, unsigned int i, unsigned int j);
-	double d2alphar_dxi_dTau(double tau, double delta, const std::vector<long double> &x, unsigned int i);
-	double d2alphar_dxi_dDelta(double tau, double delta, const std::vector<long double> &x, unsigned int i);
+	double alphar(double tau, double delta, const std::vector<long double> &x)
+    {
+        double summer = 0;
+	    for (unsigned int i = 0; i < N-1; i++)
+	    {
+		    for (unsigned int j = i + 1; j < N; j++)
+		    {
+			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->alphar(tau,delta);
+		    }
+	    }
+	    return summer;
+    }
+	double dalphar_dDelta(double tau, double delta, const std::vector<long double> &x)
+    {
+        double summer = 0;
+	    for (unsigned int i = 0; i < N-1; i++)
+	    {
+		    for (unsigned int j = i + 1; j < N; j++)
+		    {
+			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dDelta(tau,delta);
+		    }
+	    }
+	    return summer;
+    }
+	double d2alphar_dDelta2(double tau, double delta, const std::vector<long double> &x)
+    {
+        double summer = 0;
+        for (unsigned int i = 0; i < N-1; i++)
+        {
+	        for (unsigned int j = i + 1; j < N; j++)
+	        {
+		        summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dDelta2(tau,delta);
+	        }
+        }
+        return summer;
+    };
+	double d2alphar_dDelta_dTau(double tau, double delta, const std::vector<long double> &x)
+    {
+        double summer = 0;
+        for (unsigned int i = 0; i < N-1; i++)
+        {
+	        for (unsigned int j = i + 1; j < N; j++)
+	        {
+		        summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dDelta_dTau(tau,delta);
+	        }
+        }
+        return summer;
+    }
+	double dalphar_dTau(double tau, double delta, const std::vector<long double> &x)
+    {
+        double summer = 0;
+	    for (unsigned int i = 0; i < N-1; i++)
+	    {
+		    for (unsigned int j = i + 1; j < N; j++)
+		    {
+			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dTau(tau,delta);
+		    }
+	    }
+	    return summer;
+    };
+	double d2alphar_dTau2(double tau, double delta, const std::vector<long double> &x)
+    {
+        double summer = 0;
+	    for (unsigned int i = 0; i < N-1; i++)
+	    {
+		    for (unsigned int j = i + 1; j < N; j++)
+		    {
+			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dTau2(tau,delta);
+		    }
+	    }
+	    return summer;
+    };
+	double dalphar_dxi(double tau, double delta, const std::vector<long double> &x, unsigned int i)
+    {
+        double summer = 0;
+	    for (unsigned int k = 0; k < N; k++)
+	    {
+		    if (i != k)
+		    {
+			    summer += x[k]*F[i][k]*DepartureFunctionMatrix[i][k]->alphar(tau,delta);
+		    }
+	    }
+	    return summer;
+    };
+    double d2alphardxidxj(double tau, double delta, const std::vector<long double> &x, unsigned int i, unsigned int j)
+    {
+        if (i != j)
+	    {
+		    return F[i][j]*DepartureFunctionMatrix[i][j]->alphar(tau,delta);
+	    }
+	    else
+	    {
+		    return 0;
+	    }
+    };
+	double d2alphar_dxi_dTau(double tau, double delta, const std::vector<long double> &x, unsigned int i)
+    {
+        double summer = 0;
+	    for (unsigned int k = 0; k < N; k++)
+	    {
+		    if (i != k)
+		    {
+			    summer += x[k]*F[i][k]*DepartureFunctionMatrix[i][k]->dalphar_dTau(tau,delta);
+		    }
+	    }
+	    return summer;
+    };
+	double d2alphar_dxi_dDelta(double tau, double delta, const std::vector<long double> &x, unsigned int i)
+    {
+        double summer = 0;
+	    for (unsigned int k = 0; k < N; k++)
+	    {
+		    if (i != k)
+		    {
+			    summer += x[k]*F[i][k]*DepartureFunctionMatrix[i][k]->dalphar_dDelta(tau,delta);
+		    }
+	    }
+	    return summer;
+    };
 };
 
 } /* namespace CoolProp */
