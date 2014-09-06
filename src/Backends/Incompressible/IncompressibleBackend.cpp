@@ -195,7 +195,7 @@ long double IncompressibleBackend::HmassP_flash(long double hmass, long double p
 		double p,x,h_in;
 		IncompressibleFluid* fluid;
 	protected:
-		HmassP_residual();
+        HmassP_residual(){};
 	public:
 		HmassP_residual(IncompressibleFluid* fluid, const double &p,  const double &x, const double &h_in){
 			this->p = p;
