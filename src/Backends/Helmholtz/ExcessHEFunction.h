@@ -48,7 +48,7 @@ public:
 	GERG2008DepartureFunction(){};
     GERG2008DepartureFunction(const std::vector<double> &n,const std::vector<double> &d,const std::vector<double> &t,
                               const std::vector<double> &eta,const std::vector<double> &epsilon,const std::vector<double> &beta,
-                              const std::vector<double> &gamma, unsigned int Npower)
+                              const std::vector<double> &gamma, std::size_t Npower)
     {
         /// Break up into power and gaussian terms
         {
@@ -123,7 +123,7 @@ typedef shared_ptr<DepartureFunction> DepartureFunctionPointer;
 class ExcessTerm
 {
 public:
-	unsigned int N;
+	std::size_t N;
 	std::vector<std::vector<DepartureFunctionPointer> > DepartureFunctionMatrix;
 	std::vector<std::vector<long double> > F;
 
@@ -143,9 +143,9 @@ public:
 	double alphar(double tau, double delta, const std::vector<long double> &x)
     {
         double summer = 0;
-	    for (unsigned int i = 0; i < N-1; i++)
+	    for (std::size_t i = 0; i < N-1; i++)
 	    {
-		    for (unsigned int j = i + 1; j < N; j++)
+		    for (std::size_t j = i + 1; j < N; j++)
 		    {
 			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->alphar(tau,delta);
 		    }
@@ -155,9 +155,9 @@ public:
 	double dalphar_dDelta(double tau, double delta, const std::vector<long double> &x)
     {
         double summer = 0;
-	    for (unsigned int i = 0; i < N-1; i++)
+	    for (std::size_t i = 0; i < N-1; i++)
 	    {
-		    for (unsigned int j = i + 1; j < N; j++)
+		    for (std::size_t j = i + 1; j < N; j++)
 		    {
 			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dDelta(tau,delta);
 		    }
@@ -167,9 +167,9 @@ public:
 	double d2alphar_dDelta2(double tau, double delta, const std::vector<long double> &x)
     {
         double summer = 0;
-        for (unsigned int i = 0; i < N-1; i++)
+        for (std::size_t i = 0; i < N-1; i++)
         {
-	        for (unsigned int j = i + 1; j < N; j++)
+	        for (std::size_t j = i + 1; j < N; j++)
 	        {
 		        summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dDelta2(tau,delta);
 	        }
@@ -179,9 +179,9 @@ public:
 	double d2alphar_dDelta_dTau(double tau, double delta, const std::vector<long double> &x)
     {
         double summer = 0;
-        for (unsigned int i = 0; i < N-1; i++)
+        for (std::size_t i = 0; i < N-1; i++)
         {
-	        for (unsigned int j = i + 1; j < N; j++)
+	        for (std::size_t j = i + 1; j < N; j++)
 	        {
 		        summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dDelta_dTau(tau,delta);
 	        }
@@ -191,9 +191,9 @@ public:
 	double dalphar_dTau(double tau, double delta, const std::vector<long double> &x)
     {
         double summer = 0;
-	    for (unsigned int i = 0; i < N-1; i++)
+	    for (std::size_t i = 0; i < N-1; i++)
 	    {
-		    for (unsigned int j = i + 1; j < N; j++)
+		    for (std::size_t j = i + 1; j < N; j++)
 		    {
 			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dTau(tau,delta);
 		    }
@@ -203,9 +203,9 @@ public:
 	double d2alphar_dTau2(double tau, double delta, const std::vector<long double> &x)
     {
         double summer = 0;
-	    for (unsigned int i = 0; i < N-1; i++)
+	    for (std::size_t i = 0; i < N-1; i++)
 	    {
-		    for (unsigned int j = i + 1; j < N; j++)
+		    for (std::size_t j = i + 1; j < N; j++)
 		    {
 			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dTau2(tau,delta);
 		    }
@@ -215,7 +215,7 @@ public:
 	double dalphar_dxi(double tau, double delta, const std::vector<long double> &x, unsigned int i)
     {
         double summer = 0;
-	    for (unsigned int k = 0; k < N; k++)
+	    for (std::size_t k = 0; k < N; k++)
 	    {
 		    if (i != k)
 		    {
@@ -238,7 +238,7 @@ public:
 	double d2alphar_dxi_dTau(double tau, double delta, const std::vector<long double> &x, unsigned int i)
     {
         double summer = 0;
-	    for (unsigned int k = 0; k < N; k++)
+	    for (std::size_t k = 0; k < N; k++)
 	    {
 		    if (i != k)
 		    {
@@ -250,7 +250,7 @@ public:
 	double d2alphar_dxi_dDelta(double tau, double delta, const std::vector<long double> &x, unsigned int i)
     {
         double summer = 0;
-	    for (unsigned int k = 0; k < N; k++)
+	    for (std::size_t k = 0; k < N; k++)
 	    {
 		    if (i != k)
 		    {
