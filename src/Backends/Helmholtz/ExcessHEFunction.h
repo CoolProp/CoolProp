@@ -212,7 +212,7 @@ public:
 	    }
 	    return summer;
     };
-	double dalphar_dxi(double tau, double delta, const std::vector<long double> &x, unsigned int i)
+	double dalphar_dxi(double tau, double delta, const std::vector<long double> &x, std::size_t i)
     {
         double summer = 0;
 	    for (std::size_t k = 0; k < N; k++)
@@ -224,7 +224,7 @@ public:
 	    }
 	    return summer;
     };
-    double d2alphardxidxj(double tau, double delta, const std::vector<long double> &x, unsigned int i, unsigned int j)
+    double d2alphardxidxj(double tau, double delta, const std::vector<long double> &x, std::size_t i, std::size_t j)
     {
         if (i != j)
 	    {
@@ -235,7 +235,7 @@ public:
 		    return 0;
 	    }
     };
-	double d2alphar_dxi_dTau(double tau, double delta, const std::vector<long double> &x, unsigned int i)
+	double d2alphar_dxi_dTau(double tau, double delta, const std::vector<long double> &x, std::size_t i)
     {
         double summer = 0;
 	    for (std::size_t k = 0; k < N; k++)
@@ -247,7 +247,7 @@ public:
 	    }
 	    return summer;
     };
-	double d2alphar_dxi_dDelta(double tau, double delta, const std::vector<long double> &x, unsigned int i)
+	double d2alphar_dxi_dDelta(double tau, double delta, const std::vector<long double> &x, std::size_t i)
     {
         double summer = 0;
 	    for (std::size_t k = 0; k < N; k++)
