@@ -1,0 +1,89 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "Set of departure functions for CoolProp",
+    "type": "array",
+    "items": {
+        "title": "Departure function",
+        "type": "object",
+        "properties": {
+            "BibTeX": {
+                "description": "The BibTeX key for the reference",
+                "type": "string"
+            },
+            "Name": {
+                "description": "Name of the binary pair - must be unique",
+                "type": "string"
+            },
+            "type": {
+                "description": "Type of the binary pair reducing function",
+                "type": "string",
+                "enum": ["GERG-2008", "Exponential"]
+            },
+            "n": {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                },
+                "minItems": 0
+            },
+            "d": {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                },
+                "minItems": 0
+            },
+            "t": {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                },
+                "minItems": 0
+            },
+            "l": {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                },
+                "minItems": 0
+            },
+            "eta": {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                },
+                "minItems": 0
+            },
+            "epsilon": {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                },
+                "minItems": 0
+            },
+            "beta": {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                },
+                "minItems": 0
+            },
+            "gamma": {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                },
+                "minItems": 0
+            },
+            "aliases": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "minItems": 0,
+                "uniqueItems": true
+            }
+        },
+        "required": ["n", "d", "t", "type", "Name", "BibTeX", "aliases"]
+    }
+}
