@@ -10,6 +10,7 @@ namespace CoolProp{
 
 void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
 {
+    std::size_t failure_count = 0;
     // Set some imput options
     SaturationSolvers::mixture_VLE_IO io;
     io.sstype = SaturationSolvers::imposed_p;
@@ -52,6 +53,13 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
     long double factor = 1.05;
     for (;;)
     {
+        top_of_loop: ; // A goto label so that nested loops can break out to the top of this loop
+        
+        if (failure_count > 5){
+            // Stop since we are stuck at a bad point
+            throw SolutionError("stuck");
+        }
+        
         if (iter - iter0 > 0){ IO.rhomolar_vap *= factor;}
         long double x = IO.rhomolar_vap;
         if (dont_extrapolate)
@@ -81,16 +89,46 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         {
             IO.T = CubicInterp(env.rhomolar_vap, env.T, iter-4, iter-3, iter-2, iter-1, x);
             IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, iter-4, iter-3, iter-2, iter-1, x);
+            
+            // Check if there is a large deviation from linear interpolation - this suggests a step size that is so large that a minima or maxima of the interpolation function is crossed
+            long double T_linear = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, x);
+            if (std::abs((T_linear-IO.T)/IO.T) > 0.1){
+                // Try again, but with a smaller step
+                IO.rhomolar_vap /= factor;
+                factor = 1 + (factor-1)/2;
+                failure_count++;
+                continue;
+            }
             for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
             {
                 IO.x[i] = CubicInterp(env.rhomolar_vap, env.x[i], iter-4, iter-3, iter-2, iter-1, x);
+                if (IO.x[i] < 0 || IO.x[i] > 1){
+                    // Try again, but with a smaller step
+                    IO.rhomolar_vap /= factor;
+                    factor = 1 + (factor-1)/2;
+                    failure_count++;
+                    goto top_of_loop;
+                }
             }
         }
+    
         // The last mole fraction is sum of N-1 first elements
         IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
         
+        // Uncomment to check guess values for Newton-Raphson
+        //std::cout << "\t\tdv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " x " << vec_to_string(IO.x, "%0.10Lg") << std::endl;
+        
         // Dewpoint calculation, liquid (x) is incipient phase
-        NR.call(HEOS, IO.y, IO.x, IO);
+        try{
+            NR.call(HEOS, IO.y, IO.x, IO);
+        }
+        catch(std::exception &e){
+            // Try again, but with a smaller step
+            IO.rhomolar_vap /= factor;
+            factor = 1 + (factor-1)/2;
+            failure_count++;
+            continue;
+        }
         
         std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p  << " hl " << IO.hmolar_liq  << " hv " << IO.hmolar_vap  << " sl " << IO.smolar_liq  << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")  << " Ns " << IO.Nsteps << std::endl;
         env.store_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y);
@@ -134,6 +172,12 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         }
         // Min step is 1.01
         factor = std::max(factor, static_cast<long double>(1.01));
+        
+        // Stop if the pressure is below the starting pressure
+        if (iter > 4 && IO.p < env.p[0]){ return; }
+        
+        // Reset the failure counter
+        failure_count = 0;
     }
 }
 
