@@ -8,14 +8,23 @@ namespace CoolProp{
 class PhaseEnvelopeData
 {
 public:
+    bool built; ///< True if the phase envelope has been constructed
     std::vector< std::vector<long double> > K, lnK, x, y;
     std::vector<long double> T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap;
+    
+    PhaseEnvelopeData(){ built = false; };
+    
     void resize(std::size_t N)
     {
         K.resize(N);
         lnK.resize(N);
         x.resize(N);
         y.resize(N);
+    }
+    void clear(){
+        T.clear(); p.clear(); lnT.clear(); lnp.clear(); rhomolar_liq.clear(); rhomolar_vap.clear(); 
+        lnrhomolar_liq.clear(); lnrhomolar_vap.clear(); hmolar_liq.clear(); hmolar_vap.clear(); smolar_liq.clear(); smolar_vap.clear();
+        K.clear(); lnK.clear(); x.clear(); y.clear();
     }
     void store_variables(const long double T, 
                          const long double p, 

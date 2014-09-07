@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CodeLite_Project Name="coolprop" InternalType="Console">
   <Plugins>
+    <Plugin Name="CppCheck"/>
     <Plugin Name="qmake">
       <![CDATA[00020001N0005Debug0000000000000001N0007Release000000000000]]>
     </Plugin>

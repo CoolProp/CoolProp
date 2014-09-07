@@ -452,14 +452,19 @@ int main()
 //                HEOS->update(PT_INPUTS, p, Tmelt);};
 //            std::cout << get_global_param_string("errstring") << std::endl;
 //        }
-        double TTT = PropsSI("T","P",1e6,"Q",1,"Ethane[0.5]&Propane[0.5]");
+        double TTTA = PropsSI("T","P",1e5,"Q",0,"Methane[0.25]&Ethane[0.2]&Propane[0.1]");
+        double TTT = PropsSI("Dmolar","P",1e5,"T",300,"Methane[0.25]&Ethane[0.2]&Propane[0.1]");
+        double TTTB = PropsSI("T","P",3e6,"Q",0,"R32[0.5]&R125[0.5]");
+        double TTTB2 = PropsSI("T","P",3e6,"Q",0,"REFPROP::R32[0.5]&R125[0.5]");
         
         ::set_debug_level(0);
         
-        shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Ethanol&Water"));
-        std::vector<long double> z(2,0.25); z[1] = 1-z[0];
+        //shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Ethane&Propane"));
+        //std::vector<long double> z(2, 0.3); z[1] = 0.7;
+        shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Methane&Propane&Ethane&n-Butane"));
+        std::vector<long double> z(4, 0.1); z[1] = 0.35; z[2] = 0.35, z[3] = 0.2;
         HEOS->set_mole_fractions(z);
-        std::cout << get_global_param_string("errstring") << std::endl;
+        
         time_t t1, t2;
         t1 = clock();
         try{

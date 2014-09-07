@@ -111,6 +111,13 @@ namespace SaturationSolvers
                                         const std::vector<long double> &z,
                                         std::vector<long double> &K,
                                         mixture_VLE_IO &options);
+    /** \brief Extract the mole fractions of liquid (x) and vapor (y) given the bulk composition (z), vapor mole fraction and K-factors
+     * @param beta Vapor molar fraction [-]
+     * @param K K-factors for the components [-]
+     * @param z Bulk molar composition [-]
+     * @param x Liquid molar composition [-]
+     * @param y Vapor molar composition [-]
+     */
     void x_and_y_from_K(long double beta, const std::vector<long double> &K, const std::vector<long double> &z, std::vector<long double> &x, std::vector<long double> &y);
 
     /*! A wrapper function around the residual to find the initial guess for the bubble point temperature

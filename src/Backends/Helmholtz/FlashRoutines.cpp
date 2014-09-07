@@ -4,29 +4,94 @@
 
 namespace CoolProp{
 
+template<class T> T g_RachfordRice(const std::vector<T> &z, const std::vector<T> &lnK, T beta)
+{
+	// g function from Rachford-Rice
+	T summer = 0;
+	for (std::size_t i = 0; i < z.size(); i++)
+	{
+		T Ki = exp(lnK[i]);
+		summer += z[i]*(Ki-1)/(1-beta+beta*Ki);
+	}
+	return summer;
+}
+template<class T> T dgdbeta_RachfordRice(const std::vector<T> &z, const std::vector<T> &lnK, T beta)
+{
+	// derivative of g function from Rachford-Rice with respect to beta
+	T summer = 0;
+	for (std::size_t i = 0; i < z.size(); i++)
+	{
+		T Ki = exp(lnK[i]);
+		summer += -z[i]*pow((Ki-1)/(1-beta+beta*Ki),2);
+	}
+	return summer;
+}
+
+void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
+{
+    if (false){//HEOS.PhaseEnvelope.built){
+        // Use the phase envelope if already constructed to determine phase boundary
+    }
+    else{
+        // Following the strategy of Gernert, 2014
+        
+        // Step 1 a) Get lnK factors using Wilson
+        std::vector<long double> lnK(HEOS.get_mole_fractions().size());
+        for (std::size_t i = 0; i < lnK.size(); ++i){
+            lnK[i] = SaturationSolvers::Wilson_lnK_factor(HEOS, HEOS._T, HEOS._p, i);
+        }
+        
+        // Use Rachford-Rice to check whether you are in a homogeneous phase
+        long double g_RR_0 = g_RachfordRice(HEOS.get_const_mole_fractions(), lnK, 0.0L);
+        if (g_RR_0 < 0){
+            // Subcooled liquid - done
+            long double rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_liquid);
+            HEOS.specify_phase(iphase_liquid);
+            HEOS.update_TP_guessrho(HEOS._T, HEOS._p, rhomolar_guess);
+            HEOS.unspecify_phase();
+            return;
+        }
+        else{
+            long double g_RR_1 = g_RachfordRice(HEOS.get_const_mole_fractions(), lnK, 1.0L);
+            if (g_RR_1 > 0){
+                // Superheated vapor - done
+                long double rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_gas);
+                HEOS.specify_phase(iphase_gas);
+                HEOS.update_TP_guessrho(HEOS._T, HEOS._p, rhomolar_guess);
+                HEOS.unspecify_phase();
+                return;
+            }
+        }
+    }
+}
 void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
 	if (HEOS.imposed_phase_index == iphase_not_imposed) // If no phase index is imposed (see set_components function)
 	{
-        // At very low temperature (near the triple point temp), the isotherms are VERY steep
-        // Thus it can be very difficult to determine state based on ps = f(T)
-        // So in this case, we do a phase determination based on p, generally it will be useful enough
-        if (HEOS._T < 0.9*HEOS.Ttriple() + 0.1*HEOS.calc_Tmax_sat())
+        if (HEOS.is_pure_or_pseudopure)
         {
-            // Find the phase, while updating all internal variables possible using the pressure
-            bool saturation_called = false;
-            HEOS.p_phase_determination_pure_or_pseudopure(iT, HEOS._T, saturation_called);
+            // At very low temperature (near the triple point temp), the isotherms are VERY steep
+            // Thus it can be very difficult to determine state based on ps = f(T)
+            // So in this case, we do a phase determination based on p, generally it will be useful enough
+            if (HEOS._T < 0.9*HEOS.Ttriple() + 0.1*HEOS.calc_Tmax_sat())
+            {
+                // Find the phase, while updating all internal variables possible using the pressure
+                bool saturation_called = false;
+                HEOS.p_phase_determination_pure_or_pseudopure(iT, HEOS._T, saturation_called);
+            }
+            else{
+                // Find the phase, while updating all internal variables possible using the temperature
+                HEOS.T_phase_determination_pure_or_pseudopure(iP, HEOS._p);
+            }
+            // Check if twophase solution
+            if (!HEOS.isHomogeneousPhase())
+            {
+                throw ValueError("twophase not implemented yet");
+            }
         }
 		else{
-            // Find the phase, while updating all internal variables possible using the temperature
-            HEOS.T_phase_determination_pure_or_pseudopure(iP, HEOS._p);
+            PT_flash_mixtures(HEOS);
         }
-		
-		// Check if twophase solution
-		if (!HEOS.isHomogeneousPhase())
-		{
-			throw ValueError("twophase not implemented yet");
-		}
 	}
 	
 	// Find density

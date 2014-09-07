@@ -15,7 +15,7 @@ long double MixtureDerivatives::dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, st
         double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->alphar(HEOS._tau, HEOS._delta);
         dar_dxi += (1-2*x[i])*FiNariN;
         for (std::size_t k = 0; k < N-1; ++k){
-            if (i==k) continue;
+            if (i == k) continue;
             double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->alphar(HEOS._tau, HEOS._delta);
             double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->alphar(HEOS._tau, HEOS._delta);
             dar_dxi += x[k]*(Fikarik - FiNariN - FkNarkN);
@@ -89,7 +89,7 @@ long double MixtureDerivatives::d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS,
         
         double Fijarij = HEOS.Excess.F[i][j]*HEOS.Excess.DepartureFunctionMatrix[i][j]->alphar(HEOS._tau, HEOS._delta);
         double FjNarjN = HEOS.Excess.F[j][N-1]*HEOS.Excess.DepartureFunctionMatrix[j][N-1]->alphar(HEOS._tau, HEOS._delta);
-        return Fijarij-FiNariN-FjNarjN;
+        return Fijarij - FiNariN - FjNarjN;
     }
     else{
         throw ValueError(format("xN_flag is invalid"));

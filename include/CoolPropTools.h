@@ -192,8 +192,7 @@
 	    return (x >= std::min(x1,x2) && x <= std::max(x1,x2));
     };
 
-    /**
-     * Solve a cubic with coefficients in decreasing order
+    /** \brief Solve a cubic with coefficients in decreasing order
      * 
      * 0 = ax^3 + b*x^2 + c*x + d
      */

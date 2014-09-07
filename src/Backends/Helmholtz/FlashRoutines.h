@@ -39,6 +39,10 @@ public:
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void PT_flash(HelmholtzEOSMixtureBackend &HEOS);
     
+    /// Flash for given pressure and temperature for mixtures
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    static void PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS);
+    
     /// A generic flash routine for the pairs (T,D), (T,H), (T,S), and (T,U).  Similar analysis is needed
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iDmolar, iHmolar, iSmolar, iUmolar

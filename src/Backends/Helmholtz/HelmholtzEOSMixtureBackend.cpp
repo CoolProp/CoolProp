@@ -644,7 +644,7 @@ void HelmholtzEOSMixtureBackend::update_TP_guessrho(long double T, long double p
     pre_update(pair, p, T);
     
     // Do the flash call
-    double rhomolar = solver_rho_Tp(T, p, rhomolar_guess);
+    long double rhomolar = solver_rho_Tp(T, p, rhomolar_guess);
     
     // Update the class with the new calculated density
     update(DmolarT_INPUTS, rhomolar, T);
