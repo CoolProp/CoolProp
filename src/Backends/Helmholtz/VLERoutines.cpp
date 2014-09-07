@@ -812,73 +812,78 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
     long double T0 = T;
     std::vector<long double> r0 = r, x0 = x;
     STLMatrix J0 = J;
-    long double rhomolar_liq = rSatL.rhomolar();
-    long double rhomolar_vap = rSatV.rhomolar();
+    long double rhomolar_liq0 = rSatL.rhomolar();
+    long double rhomolar_vap0 = rSatV.rhomolar();
     
-    // Derivatives with respect to T
-    double dT = 1e-3, T1 = T+dT, T2 = T-dT;
-    this->T = T1;
-    this->rhomolar_liq = rhomolar_liq;
-    this->rhomolar_vap = rhomolar_vap;
-    build_arrays();
-    std::vector<long double> r1 = r;
-    this->T = T2;
-    this->rhomolar_liq = rhomolar_liq;
-    this->rhomolar_vap = rhomolar_vap;
-    build_arrays();
-    std::vector<long double> r2 = r;
-    
-    std::vector<long double> diffn(N+1, _HUGE);
-    for (std::size_t i = 0; i < N+1; ++i){
-        diffn[i] = (r1[i]-r2[i])/(2*dT);
+    {
+        // Derivatives with respect to T
+        double dT = 1e-3, T1 = T+dT, T2 = T-dT;
+        this->T = T1;
+        this->rhomolar_liq = rhomolar_liq0;
+        this->rhomolar_vap = rhomolar_vap0;
+        build_arrays();
+        std::vector<long double> r1 = r;
+        this->T = T2;
+        this->rhomolar_liq = rhomolar_liq0;
+        this->rhomolar_vap = rhomolar_vap0;
+        build_arrays();
+        std::vector<long double> r2 = r;
+        
+        std::vector<long double> diffn(N+1, _HUGE);
+        for (std::size_t i = 0; i < N+1; ++i){
+            diffn[i] = (r1[i]-r2[i])/(2*dT);
+        }
+        std::cout << format("For T\n");
+        std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
+        std::cout << "analytic: " << vec_to_string(get_col(J0, N-1), "%0.11Lg") << std::endl;
     }
-    std::cout << format("For T\n");
-    std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
-    std::cout << "analytic: " << vec_to_string(get_col(J0, N-1), "%0.11Lg") << std::endl;
-    
-    // Derivatives with respect to rho'
-    double drho = 1;
-    this->T = T0;
-    this->rhomolar_liq = rhomolar_liq+drho;
-    this->rhomolar_vap = rhomolar_vap;
-    build_arrays();
-    std::vector<long double> rr1 = r;
-    this->T = T0;
-    this->rhomolar_liq = rhomolar_liq-drho;
-    this->rhomolar_vap = rhomolar_vap;
-    build_arrays();
-    std::vector<long double> rr2 = r;
-    
-    std::vector<long double> difffn(N+1, _HUGE);
-    for (std::size_t i = 0; i < N+1; ++i){
-        difffn[i] = (rr1[i]-rr2[i])/(2*drho);
+    {
+        // Derivatives with respect to rho'
+        double drho = 1;
+        this->T = T0;
+        this->rhomolar_liq = rhomolar_liq0+drho;
+        this->rhomolar_vap = rhomolar_vap0;
+        build_arrays();
+        std::vector<long double> rr1 = r;
+        this->T = T0;
+        this->rhomolar_liq = rhomolar_liq0-drho;
+        this->rhomolar_vap = rhomolar_vap0;
+        build_arrays();
+        std::vector<long double> rr2 = r;
+        
+        std::vector<long double> difffn(N+1, _HUGE);
+        for (std::size_t i = 0; i < N+1; ++i){
+            difffn[i] = (rr1[i]-rr2[i])/(2*drho);
+        }
+        std::cout << format("For rho\n");
+        std::cout << "numerical: " << vec_to_string(difffn, "%0.11Lg") << std::endl;
+        std::cout << "analytic: " << vec_to_string(get_col(J0, N), "%0.11Lg") << std::endl;
     }
-    std::cout << format("For rho\n");
-    std::cout << "numerical: " << vec_to_string(difffn, "%0.11Lg") << std::endl;
-    std::cout << "analytic: " << vec_to_string(get_col(J0, N), "%0.11Lg") << std::endl;
-    
     for (std::size_t i = 0; i < x.size()-1;  ++i)
     {
-        // Derivatives with respect to x0
+        // Derivatives with respect to x[i]
         double dx = 1e-5;
-        x = x0; x[i] += dx; x[x.size()-1] -= dx;
+        this->x = x0; 
+        this->x[i] += dx; this->x[x.size()-1] -= dx;
         this->T = T0;
-        this->rhomolar_liq = rhomolar_liq;
-        this->rhomolar_vap = rhomolar_vap;
-        rSatL.set_mole_fractions(x);
-        build_arrays(); r1 = r;
+        this->rhomolar_liq = rhomolar_liq0;
+        this->rhomolar_vap = rhomolar_vap0;
+        build_arrays(); 
+        std::vector<long double> r1 = this->r;
     
-        x = x0; x[i] -= dx; x[x.size()-1] += dx;
-        rSatL.set_mole_fractions(x);
+        this->x = x0; 
+        this->x[i] -= dx; this->x[x.size()-1] += dx;
         this->T = T0;
-        this->rhomolar_liq = rhomolar_liq;
-        this->rhomolar_vap = rhomolar_vap;
-        build_arrays(); r2 = r;
+        this->rhomolar_liq = rhomolar_liq0;
+        this->rhomolar_vap = rhomolar_vap0;
+        build_arrays(); 
+        std::vector<long double> r2 = this->r;
     
+        std::vector<long double> diffn(N+1, _HUGE);
         for (std::size_t j = 0; j < N+1; ++j){
-            diffn[i] = (r1[j]-r2[j])/(2*dx);
+            diffn[j] = (r1[j]-r2[j])/(2*dx);
         }
-        std::cout << format("For x%d\n", i);
+        std::cout << format("For x%d N %d\n", i, N);
         std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
         std::cout << "analytic: " << vec_to_string(get_col(J0, i), "%0.11Lg") << std::endl;
     }
@@ -944,6 +949,10 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
         //std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " " << vec_to_string(v, "%0.10Lg")  << " " << vec_to_string(x, "%0.10Lg") << std::endl;
 
         iter++;
+        
+        if (iter == IO.Nstep_max){
+            throw ValueError(format("newton_raphson_saturation::call reached max number of iterations [%d]",IO.Nstep_max));
+        }
     }
     while(this->error_rms > 1e-7 && max_rel_change > 1000*LDBL_EPSILON && min_abs_change > 100*DBL_EPSILON && iter < IO.Nstep_max);
     IO.Nsteps = iter;

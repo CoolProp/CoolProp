@@ -41,7 +41,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
     IO.rhomolar_vap = io.rhomolar_vap;
     IO.T = io.T;
     IO.p = io.p;
-    IO.Nstep_max = 100;
+    IO.Nstep_max = 30;
     
     bool dont_extrapolate = false;
     
