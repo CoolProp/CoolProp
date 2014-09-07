@@ -91,7 +91,7 @@ cdef class AbstractState:
     ## ----------------------------------------
     
     cpdef build_phase_envelope(self, string type):
-        """ Build the phase envelope data - wrapper of c++ function :cpapi:`AbstractState::build_phase_envelope` """
+        """ Build the phase envelope - wrapper of c++ function :cpapi:`AbstractState::build_phase_envelope` """
         self.thisptr.build_phase_envelope(type)
     cpdef PyPhaseEnvelopeData get_phase_envelope_data(self):
         """ Get the phase envelope data - wrapper of c++ function :cpapi:`AbstractState::get_phase_envelope_data` """
@@ -101,6 +101,8 @@ cdef class AbstractState:
         pe_out.p = pe_data.p
         pe_out.rhomolar_liq = pe_data.rhomolar_liq
         pe_out.rhomolar_vap = pe_data.rhomolar_vap
+        pe_out.hmolar_liq = pe_data.hmolar_liq
+        pe_out.hmolar_vap = pe_data.hmolar_vap
         
         return pe_out
         
