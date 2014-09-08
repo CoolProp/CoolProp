@@ -1110,6 +1110,23 @@ TEST_CASE("Test second partial derivatives", "[derivatives]")
     }
 }
 
+TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]")
+{
+    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+    for (std::size_t i = 0; i < fluids.size(); ++i){
+        std::ostringstream ss1;
+        ss1 << "Check that REFPROP fluid name for fluid " << fluids[i] << " is valid";
+        SECTION(ss1.str(), "")
+        {
+            std::string RPName = get_fluid_param_string(fluids[i],"REFPROPName");
+            CHECK(!RPName.empty());
+            CAPTURE(RPName);
+            if (!RPName.compare("N/A")){break;}
+            CHECK(ValidNumber(Props1SI("REFPROP::"+RPName,"molemass")));
+            CHECK(ValidNumber(Props1SI(RPName,"molemass")));
+        }
+    }
+}
 TEST_CASE("Ancillary functions", "[ancillary]")
 {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
