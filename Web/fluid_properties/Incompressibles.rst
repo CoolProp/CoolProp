@@ -9,25 +9,29 @@ here is the generated file with the table of incompressibles
 
 here is a pdf file :download:`pdf <doc/mypdf.pdf>`
 
+Testing the
+.. program-output:: python -V
+ auto generated version.
+
 Incompressible Liquids
 ----------------------
-There is also a selection of incompressible liquids implemented.  These only allow for calls with 
-temperature and pressure as input and provide only a subset of thermophysical properties, namely: 
+There is also a selection of incompressible liquids implemented.  These only allow for calls with
+temperature and pressure as input and provide only a subset of thermophysical properties, namely:
 density, heat capacity, internal energy, enthalpy, entropy, viscosity and thermal conductivity.
-Hence, the available output keys for the ``Props`` function are: "D", "C", "U", "H", "S", "V", "L", 
-"Tmin", Tmax" and "Psat". An internal iteration allows us to use enthalpy and pressure as inputs, 
+Hence, the available output keys for the ``Props`` function are: "D", "C", "U", "H", "S", "V", "L",
+"Tmin", "Tmax" and "Psat". An internal iteration allows us to use enthalpy and pressure as inputs,
 but be aware of the reduced computational efficiency.
 
 .. ipython::
 
     In [1]: from CoolProp.CoolProp import PropsSI
-    
+
     #Density of HFE-7100 at 300 K and 1 atm.
     In [1]: PropsSI('D','T',300,'P',101325,'INCOMP::HFE')
- 
 
-For refrigeration applications, 8 fluids were implemented from Aake Melinder "Properties of 
-Secondary Working Fluids for Indirect Systems" published in 2010 by IIR and coefficients are 
+
+For refrigeration applications, 8 fluids were implemented from Aake Melinder "Properties of
+Secondary Working Fluids for Indirect Systems" published in 2010 by IIR and coefficients are
 obtained from a fit between -80 and +100 degrees Celsius.
 
 ==========================   ===================================================
@@ -43,9 +47,9 @@ Fluid Name                   Description
 ``TCO``                      Terpene from citrus oils
 ==========================   ===================================================
 
-Some additional secondary cooling fluids are based on data compiled by Morten Juel Skovrup in 
-his `SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_ 
-provided by his employer `IPU <http://en.ipu.dk>`_. Fits have been made according to the manufacturer 
+Some additional secondary cooling fluids are based on data compiled by Morten Juel Skovrup in
+his `SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
+provided by his employer `IPU <http://en.ipu.dk>`_. Fits have been made according to the manufacturer
 data stored in the sodtware. The Aspen Temper fluids are a blend of potassium formate and sodiumpropionate
 and the Zitrec S group consists mainly of potassium acetate and potassium formate.
 
@@ -64,8 +68,8 @@ Fluid Name                   Description
 ``ZS55``                     Zitrec S -55 (-55 to +85 C)
 ==========================   ===================================================
 
-There are also a few high temperature heat transfer fluids with individual temperature ranges. Please 
-refer to the file IncompLiquid.h for a complete overview. For these fluids, information from commercial 
+There are also a few high temperature heat transfer fluids with individual temperature ranges. Please
+refer to the file IncompLiquid.h for a complete overview. For these fluids, information from commercial
 data sheets was used to obtain coefficients.
 
 ==========================   ===================================================
@@ -87,55 +91,55 @@ Fluid Name                   Description
 ``HC50``                     Dynalene HC-50 (-50 to +210 C)
 ==========================   ===================================================
 
-All fluids are implemented with polynomials for density and heat capacity with typically 4 coefficients 
-and hence a third order polynomial. Thermal conductivity is a second order polynomial and viscosity and 
-vapour pressure are exponential functions. 
+All fluids are implemented with polynomials for density and heat capacity with typically 4 coefficients
+and hence a third order polynomial. Thermal conductivity is a second order polynomial and viscosity and
+vapour pressure are exponential functions.
 
 .. math::
 
     \rho    &= \sum_{i=0}^n C_{\rho}[i] \cdot T^i \\
     c        &= \sum_{i=0}^n C_{c}[i] \cdot T^i \\
-    u        &= \int_{0}^{1} c\left( T \right) dT 
-              = \sum_{i=0}^n \frac{1}{i+1} \cdot C_{c}[i] 
+    u        &= \int_{0}^{1} c\left( T \right) dT
+              = \sum_{i=0}^n \frac{1}{i+1} \cdot C_{c}[i]
                 \cdot \left( T_1^{i+1} - T_0^{i+1} \right) \\
     s        &= \int_{0}^{1} \frac{c\left( T \right)}{T} dT
-              = C_{c}[0] \cdot \ln\left(\frac{T_1}{T_0}\right) 
-                + \sum_{i=0}^{n-1} \frac{1}{i+1} \cdot C_{c}[i+1] 
+              = C_{c}[0] \cdot \ln\left(\frac{T_1}{T_0}\right)
+                + \sum_{i=0}^{n-1} \frac{1}{i+1} \cdot C_{c}[i+1]
                 \cdot \left( T_1^{i+1} - T_0^{i+1} \right) \\
     \lambda &= \sum_{i=0}^n C_{\lambda}[i] \cdot T^i \\
     \mu     &= \exp\left( \frac{C_{\mu}[0]}{T+C_{\mu}[1]} - C_{\mu}[2] \right) \\
     p_{sat}  &= \exp\left( \frac{C_{sat}[0]}{T+C_{sat}[1]} - C_{sat}[2] \right) \\
-    
-    
+
+
 Brines and Solutions
 --------------------
-All the brines and solutions can be accessed through the Props function. To use them, the fluid name 
+All the brines and solutions can be accessed through the Props function. To use them, the fluid name
 is something like ``"MEG-20%"`` which is a 20% by mass ethylene glycol solution. Note that these fluids
-have an arbitrary reference state: Be careful with enthalpy and entropy calculations. Again, only 
-temperature and pressure inputs are supported directly to calculate the same subset of thermophysical 
-properties as above , namely: density, heat capacity, internal energy, enthalpy, entropy, viscosity 
-and thermal conductivity. Hence, the available output keys for the ``Props`` function are: "D", "C", 
-"U", "H", "S", "V", "L", "Tmin", Tmax" and "Tfreeze". An internal iteration allows us to use enthalpy 
+have an arbitrary reference state: Be careful with enthalpy and entropy calculations. Again, only
+temperature and pressure inputs are supported directly to calculate the same subset of thermophysical
+properties as above , namely: density, heat capacity, internal energy, enthalpy, entropy, viscosity
+and thermal conductivity. Hence, the available output keys for the ``Props`` function are: "D", "C",
+"U", "H", "S", "V", "L", "Tmin", Tmax" and "Tfreeze". An internal iteration allows us to use enthalpy
 and pressure as inputs, but be aware of the reduced computational efficiency.
 
 .. ipython::
 
     In [1]: from CoolProp.CoolProp import PropsSI
-    
+
     #Specific heat 20% mass ethylene glycol solution at 300 K and 1 atm.
     In [1]: PropsSI('C','T',300,'P',101.325,'INCOMP::MEG-20%')
 
-For Lithium-Bromide, the publication by Patek and Klomfar from 2005 was implemented based on the 
-source code provided by the authors. The `paper <http://dx.doi.org/10.1016/j.ijrefrig.2005.10.007>`_ 
-covering the equations can be found in the 
-`International Journal of Refrigeration <http://dx.doi.org/10.1016/j.ijrefrig.2005.10.007>`_. Data is 
+For Lithium-Bromide, the publication by Patek and Klomfar from 2005 was implemented based on the
+source code provided by the authors. The `paper <http://dx.doi.org/10.1016/j.ijrefrig.2005.10.007>`_
+covering the equations can be found in the
+`International Journal of Refrigeration <http://dx.doi.org/10.1016/j.ijrefrig.2005.10.007>`_. Data is
 available for temperatures from 0 C to 225 C and for the full composition range. Use ``LiBr`` to acccess
 the functions.
 
-A number of aqueous solutions are implemented using the coefficients from Aake Melinder "Properties of 
-Secondary Working Fluids for Indirect Systems" published in 2010 by IIR.  According to the book, 2D 
-polynomials are given in a form that satisfies :math:`0 \leq i \leq 5`, :math:`0 \leq j \leq 3` 
-and :math:`i + j \leq 5` yielding a triangular matrix of coefficients. It is only for the freezing 
+A number of aqueous solutions are implemented using the coefficients from Aake Melinder "Properties of
+Secondary Working Fluids for Indirect Systems" published in 2010 by IIR.  According to the book, 2D
+polynomials are given in a form that satisfies :math:`0 \leq i \leq 5`, :math:`0 \leq j \leq 3`
+and :math:`i + j \leq 5` yielding a triangular matrix of coefficients. It is only for the freezing
 temperature calculation that the implemented procedures differ from what is presented in Melinder's
 book the dependency on the current temperature is removed. In CoolProp, :math:`T_{freeze}` only depends
 on concentration.
@@ -158,13 +162,13 @@ Melinder Fluids              Description                                        
 ``MLI``                      Lithium Chloride (LiCl)                               +40 C               24 %
 ==========================   ===================================================   =================   =================
 
-Furthermore, there is a number of other secondary fluids that can be accessed in the same way. Most 
-information is based on the data compiled by Morten Juel Skovrup in his `SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_ 
-provided by his employer `IPU <http://en.ipu.dk>`_. The coefficient matrix of the SecCool-based fluids 
-has the same structure as mentioned above. 
+Furthermore, there is a number of other secondary fluids that can be accessed in the same way. Most
+information is based on the data compiled by Morten Juel Skovrup in his `SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
+provided by his employer `IPU <http://en.ipu.dk>`_. The coefficient matrix of the SecCool-based fluids
+has the same structure as mentioned above.
 
-For slurry ice, the concentration :math:`x` refers to the solid content and the heat capacity includes the heat of fusion. 
-It might be necessary to adjust the solid content during heat transfer. The implementation is based on the data available 
+For slurry ice, the concentration :math:`x` refers to the solid content and the heat capacity includes the heat of fusion.
+It might be necessary to adjust the solid content during heat transfer. The implementation is based on the data available
 in SecCool, which was originally recorded at the `Danish Technological Institute (DTI) <http://www.dti.dk/>`_.
 
 ==========================   ===================================================   =================   =================
@@ -179,35 +183,35 @@ SecCool Fluids               Description                                        
 
 
 
-In both of the above cases, :math:`i` is the exponent for the concentration :math:`x` and :math:`j` 
-is used with the temperature :math:`T`. Properties are modelled with the following polynomials: 
+In both of the above cases, :math:`i` is the exponent for the concentration :math:`x` and :math:`j`
+is used with the temperature :math:`T`. Properties are modelled with the following polynomials:
 
 .. math::
 
     \rho      &= \sum_{i=0}^n x^i  \cdot \sum_{j=0}^m C_{\rho}[i,j] \cdot T^j \\
     c          &= \sum_{i=0}^n x^i  \cdot \sum_{j=0}^m C_{c}[i,j] \cdot T^j \\
-    u          &= \int_{0}^{1} c\left( x,T \right) dT 
-                = \sum_{i=0}^n x^i \cdot \sum_{j=0}^m \frac{1}{j+1} \cdot C_{c}[i,j] 
+    u          &= \int_{0}^{1} c\left( x,T \right) dT
+                = \sum_{i=0}^n x^i \cdot \sum_{j=0}^m \frac{1}{j+1} \cdot C_{c}[i,j]
                   \cdot \left( T_1^{j+1} - T_0^{j+1} \right) \\
-    s          &= \int_{0}^{1} \frac{c\left( x,T \right)}{T} dT 
-                = \sum_{i=0}^n x^i \cdot \left( 
-                  C_{c}[i,0] \cdot \ln\left(\frac{T_1}{T_0}\right) 
+    s          &= \int_{0}^{1} \frac{c\left( x,T \right)}{T} dT
+                = \sum_{i=0}^n x^i \cdot \left(
+                  C_{c}[i,0] \cdot \ln\left(\frac{T_1}{T_0}\right)
                   + \sum_{j=0}^{m-1} \frac{1}{j+1} \cdot C_{c}[i,j+1] \cdot \left( T_1^{j+1} - T_0^{j+1} \right)
                   \right) \\
     \lambda   &= \sum_{i=0}^n x^i  \cdot \sum_{j=0}^m C_{\lambda}[i,j] \cdot T^j \\
     \mu       &= \exp \left( \sum_{i=0}^n x^i  \cdot \sum_{j=0}^m C_{\mu}[i,j] \cdot T^j \right) \\
     T_{freeze} &= \sum_{i=0}^n C_{freeze}[i] \cdot x^i \\
 
-Using a centered approach for the independent variables, 
-the fit quality can be enhanced. Therefore, all solutions have a reference temperature and concentration 
-in the original work by Melinder and Skovrup as well as in CoolProp: :math:`x = x_{real} - x_{ref}` 
+Using a centered approach for the independent variables,
+the fit quality can be enhanced. Therefore, all solutions have a reference temperature and concentration
+in the original work by Melinder and Skovrup as well as in CoolProp: :math:`x = x_{real} - x_{ref}`
 and :math:`T = T_{real} - T_{ref}`, this technique does not affect the calculation
 of the derived quantity internal energy since the formula contains temperature differences.
 However, integrating :math:`c(x,T)T^{-1}dT` for the entropy requires some changes due to
 the logarithm. To structure the problem, we introduce a variable :math:`d(j,T_{real})`, which will be expressed by a third sum.
-As a first step for simplification, one has to expand the the binomial :math:`(T_{real}-T_{ref})^n` to a series. 
-Only containing :math:`j` and :math:`T_{real}`, :math:`d` is independent from :math:`x` and can be 
-computed outside the loop for enhanced computational efficiency. An integration of the expanded binomial 
+As a first step for simplification, one has to expand the the binomial :math:`(T_{real}-T_{ref})^n` to a series.
+Only containing :math:`j` and :math:`T_{real}`, :math:`d` is independent from :math:`x` and can be
+computed outside the loop for enhanced computational efficiency. An integration of the expanded binomial
 then yields the final factor :math:`D` to be multiplied with the other coefficients and the concentration.
 
 .. math::
