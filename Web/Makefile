@@ -29,7 +29,7 @@ help:
 clean:
 	-rm -rf _build/*
 
-html:
+html: incompressible_includes
 	$(SPHINXBUILD) -j3 -b html $(ALLSPHINXOPTS) _build/html
 	@echo
 	@echo "Build finished. The HTML pages are in _build/html."
@@ -103,3 +103,18 @@ rst: FluidInfoGenerator.py
 	mv Fluids/FluidInformation.rst.2 Fluids/FluidInformation.rst
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) _build/html
 
+
+PYGEN_DIR = $(CURDIR)/../dev/incompressible_liquids
+
+.PHONY: incompressible_includes
+incompressible_includes: fluid_properties/all_pure.pdf fluid_properties/Incompressibles_Fluids.txt
+
+fluid_properties/Incompressibles_Fluids.txt: $(addprefix $(PYGEN_DIR)/, Incompressibles_include_generator.py)
+	cd $(PYGEN_DIR); \
+	python Incompressibles_include_generator.py
+
+fluid_properties/all_pure.pdf: $(addprefix $(PYGEN_DIR)/, all_incompressibles.py)
+	cd $(PYGEN_DIR); \
+	python all_incompressibles.py
+	cp $(PYGEN_DIR)/all_pure.pdf fluid_properties/
+	cp $(PYGEN_DIR)/all_solutions.pdf fluid_properties/

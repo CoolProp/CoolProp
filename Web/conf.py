@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath('_ext'))
 try:
     import sphinxcontrib.doxylink
 except ImportError:
-    
+
     print('Unable to import sphinxcontrib.doxylink; try to run "pip install sphinxcontrib-doxylink"')
 
 #~ # If your extensions are in another directory, add it here. If the directory
@@ -27,7 +27,7 @@ except ImportError:
 
 doxylink = {
     'cpapi' : ('../CoolPropDoxyLink.tag', 'http://www.coolprop.dreamhosters.com/doc/CoolProp5/')
-}    
+}
 
 # -- General configuration -----------------------------------------------------
 
@@ -40,10 +40,11 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
               'sphinx.ext.mathjax',
               'sphinx.ext.extlinks',
               'sphinxcontrib.napoleon',
+              'sphinxcontrib.programoutput',
               'sphinxcontrib.doxylink',
               'matplotlib.sphinxext.plot_directive',
               'edit_on_github',  # see https://gist.github.com/mgedmin/6052926#file-edit_on_github-pyb
-              
+
               # cloud's extensions
             #'cloud_sptheme.ext.autodoc_sections',
             #'cloud_sptheme.ext.index_styling',
@@ -51,7 +52,7 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
             #'cloud_sptheme.ext.escaped_samp_literals',
             #'cloud_sptheme.ext.issue_tracker',
             #'cloud_sptheme.ext.table_styling',
-              
+
               #'inheritance_diagram',
               #'numpydoc',
               #'breathe'
@@ -136,7 +137,7 @@ pygments_style = 'sphinx'
 #'class' - Only the class’ docstring is inserted. This is the default.
 #'init' - Only the __init__ method’s docstring is inserted.
 #'both' - Both the class’ and the __init__ method’s docstring are concatenated and inserted
-autoclass_content = 'both' 
+autoclass_content = 'both'
 
 
 # -- Options for HTML output ---------------------------------------------------
@@ -145,7 +146,7 @@ try:
     import cloud_sptheme as csp
 except:
     print('unable to import cloud_sptheme as csp; try a "pip install cloud_sptheme"')
-    
+
 # import Cloud
 import cloud_sptheme as csp
 
