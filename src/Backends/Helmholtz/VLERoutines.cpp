@@ -566,7 +566,6 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
     HEOS.calc_reducing_state();
     const SimpleState & reduce = HEOS.get_reducing_state();
     long double R_u = HEOS.gas_constant();
-    long double R_ratio = HEOS.calc_gas_constant_specified()/R_u;
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
 
@@ -641,10 +640,10 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
         long double d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
         long double d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
 
-        JL = deltaL * (R_ratio + deltaL*dalphar_ddeltaL);
-        JV = deltaV * (R_ratio + deltaV*dalphar_ddeltaV);
-        KL = deltaL*dalphar_ddeltaL + alpharL + log(deltaL)*R_ratio;
-        KV = deltaV*dalphar_ddeltaV + alpharV + log(deltaV)*R_ratio;
+        JL = deltaL * (1 + deltaL*dalphar_ddeltaL);
+        JV = deltaV * (1 + deltaV*dalphar_ddeltaV);
+        KL = deltaL*dalphar_ddeltaL + alpharL + log(deltaL);
+        KV = deltaV*dalphar_ddeltaV + alpharV + log(deltaV);
 
         PL = R_u*reduce.rhomolar*T*JL;
         PV = R_u*reduce.rhomolar*T*JV;
