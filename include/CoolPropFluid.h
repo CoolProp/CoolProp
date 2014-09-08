@@ -320,7 +320,8 @@ public:
                 max_sat_T, ///< The state at the maximum saturation temperature for pseudo-pure
                 max_sat_p; ///< The state at the maximum saturation pressure for pseudo-pure
     EOSLimits limits; ///< Limits on the EOS
-    double R_u, ///< The universal gas constant used for this EOS (usually, but not always, 8.314472 J/mol/K)
+    double R_u_specified, ///< The universal gas constant that was specified in the equation of state
+           R_u, ///< The universal gas constant used for this EOS (usually, but not always, 8.314472 J/mol/K)
            molar_mass, ///< The molar mass in kg/mol (note NOT kg/kmol)
            accentric, ///< The accentric factor \f$ \omega = -log_{10}\left(\frac{p_s(T/T_c=0.7)}{p_c}\right)-1\f$
            Ttriple, ///< Triple point temperature (K)

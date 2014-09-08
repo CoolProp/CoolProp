@@ -97,7 +97,7 @@ class MixtureDerivatives{
      * 
      * From Witzke, Eqn. 3.14
      * \f[
-     *  \left(\frac{\partial \ln(f_i)}{\partial T} \right)_{\rho,x} = -\frac{1}{T}\left(1-\tau\alphar^r_{\tau}-\tau n\left(\frac{\partial\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j}}{\partial \tau}\right)_{\delta,\bar x}    \right)
+     *  \left(\frac{\partial \ln(f_i)}{\partial T} \right)_{\rho,x} = -\frac{1}{T}\left(1-\tau\alpha^r_{\tau}-\tau n\left(\frac{\partial\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j}}{\partial \tau}\right)_{\delta,\bar x}    \right)
      * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */
@@ -107,7 +107,7 @@ class MixtureDerivatives{
      * 
      * From Witzke, Eqn. 3.15
      * \f[
-     *  \left(\frac{\partial \ln(f_i)}{\partial \rho} \right)_{T, x} = \frac{1}{\rho}\left(1+\delta\alphar^r_{\delta}+\delta n\left(\frac{\partial\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j}}{\partial \delta}\right)_{\tau,\bar x}    \right)
+     *  \left(\frac{\partial \ln(f_i)}{\partial \rho} \right)_{T, x} = \frac{1}{\rho}\left(1+\delta\alpha^r_{\delta}+\delta n\left(\frac{\partial\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j}}{\partial \delta}\right)_{\tau,\bar x}    \right)
      * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
 	 */

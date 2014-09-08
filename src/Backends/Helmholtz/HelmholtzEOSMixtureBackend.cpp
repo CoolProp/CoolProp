@@ -172,6 +172,15 @@ long double HelmholtzEOSMixtureBackend::calc_gas_constant(void)
     }
     return summer;
 }
+long double HelmholtzEOSMixtureBackend::calc_gas_constant_specified(void)
+{
+    double summer = 0;
+    for (unsigned int i = 0; i < components.size(); ++i)
+    {
+        summer += mole_fractions[i]*components[i]->pEOS->R_u_specified;
+    }
+    return summer;
+}
 long double HelmholtzEOSMixtureBackend::calc_molar_mass(void)
 {
     double summer = 0;
@@ -1288,7 +1297,8 @@ void get_dT_drho(HelmholtzEOSMixtureBackend *HEOS, parameters index, long double
                 dT_dtau = -pow(T, 2)/Tr,
                 R = HEOS->gas_constant(),
                 delta = rho/rhor,
-                tau = Tr/T;
+                tau = Tr/T,
+                R_u_ratio = HEOS->calc_gas_constant_specified()/HEOS->gas_constant(); // This term falls out as a result of normalizing gas constants - it is R_u given by EOS divided by CODATA value;
     
     switch (index)
     {
@@ -1299,9 +1309,9 @@ void get_dT_drho(HelmholtzEOSMixtureBackend *HEOS, parameters index, long double
     case iP:
     {
         // dp/drho|T
-        drho = R*T*(1+2*delta*HEOS->dalphar_dDelta()+pow(delta, 2)*HEOS->d2alphar_dDelta2());
+        drho = R*T*(R_u_ratio+2*delta*HEOS->dalphar_dDelta()+pow(delta, 2)*HEOS->d2alphar_dDelta2());
         // dp/dT|rho
-        dT = rho*R*(1+delta*HEOS->dalphar_dDelta() - tau*delta*HEOS->d2alphar_dDelta_dTau());
+        dT = rho*R*(R_u_ratio+delta*HEOS->dalphar_dDelta() - tau*delta*HEOS->d2alphar_dDelta_dTau());
         break;
     }
     case iHmolar:
@@ -1789,9 +1799,10 @@ long double HelmholtzEOSMixtureBackend::calc_pressure(void)
     // Calculate derivative if needed
     long double dar_dDelta = dalphar_dDelta();
     long double R_u = gas_constant();
+    long double R_u_ratio = calc_gas_constant_specified()/R_u; // This term falls out as a result of normalizing gas constants - it is R_u given by EOS divided by CODATA value
 
     // Get pressure
-    _p = _rhomolar*R_u*_T*(1+_delta.pt()*dar_dDelta);
+    _p = _rhomolar*R_u*_T*(R_u_ratio + _delta.pt()*dar_dDelta);
 
     //std::cout << format("p: %13.12f %13.12f %10.9f %10.9f %10.9f %10.9f %g\n",_T,_rhomolar,_tau,_delta,mole_fractions[0],dar_dDelta,_p);
     //if (_p < 0){
@@ -1834,9 +1845,10 @@ long double HelmholtzEOSMixtureBackend::calc_hmolar(void)
         long double dar_dTau = dalphar_dTau();
         long double dar_dDelta = dalphar_dDelta();
         long double R_u = gas_constant();
+        long double R_u_ratio = calc_gas_constant_specified()/R_u; // This term falls out as a result of normalizing gas constants - it is R_u given by EOS divided by CODATA value
 
         // Get molar enthalpy
-        _hmolar = R_u*_T*(1 + _tau.pt()*(da0_dTau+dar_dTau) + _delta.pt()*dar_dDelta);
+        _hmolar = R_u*_T*(R_u_ratio + _tau.pt()*(da0_dTau+dar_dTau) + _delta.pt()*dar_dDelta);
 
         return static_cast<long double>(_hmolar);
     }
@@ -1960,9 +1972,10 @@ long double HelmholtzEOSMixtureBackend::calc_cpmolar(void)
     long double d2ar_dDelta_dTau = d2alphar_dDelta_dTau();
     long double d2ar_dTau2 = d2alphar_dTau2();
     long double R_u = static_cast<double>(_gas_constant);
+    long double R_u_ratio = calc_gas_constant_specified()/R_u; // This term falls out as a result of normalizing gas constants - it is R_u given by EOS divided by CODATA value
 
     // Get cp
-    _cpmolar = R_u*(-pow(_tau.pt(),2)*(d2ar_dTau2 + d2a0_dTau2)+pow(1+_delta.pt()*dar_dDelta-_delta.pt()*_tau.pt()*d2ar_dDelta_dTau,2)/(1+2*_delta.pt()*dar_dDelta+pow(_delta.pt(),2)*d2ar_dDelta2));
+    _cpmolar = R_u*(-pow(_tau.pt(),2)*(d2ar_dTau2 + d2a0_dTau2)+pow(R_u_ratio+_delta.pt()*dar_dDelta-_delta.pt()*_tau.pt()*d2ar_dDelta_dTau,2)/(R_u_ratio+2*_delta.pt()*dar_dDelta+pow(_delta.pt(),2)*d2ar_dDelta2));
 
     return static_cast<double>(_cpmolar);
 }
@@ -2017,9 +2030,10 @@ long double HelmholtzEOSMixtureBackend::calc_gibbsmolar(void)
         long double a0 = alpha0();
         long double dar_dDelta = dalphar_dDelta();
         long double R_u = gas_constant();
+        long double R_u_ratio = calc_gas_constant_specified()/R_u; // This term falls out as a result of normalizing gas constants - it is R_u given by EOS divided by CODATA value
 
         // Get molar gibbs function
-        _gibbsmolar = R_u*_T*(1 + a0 + ar +_delta.pt()*dar_dDelta);
+        _gibbsmolar = R_u*_T*(R_u_ratio + a0 + ar +_delta.pt()*dar_dDelta);
 
         return static_cast<long double>(_gibbsmolar);
     }

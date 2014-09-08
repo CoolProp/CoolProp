@@ -112,6 +112,7 @@ public:
 
     long double calc_molar_mass(void);
     long double calc_gas_constant(void);
+    long double calc_gas_constant_specified(void);
 
     long double calc_Bvirial(void);
     long double calc_Cvirial(void);

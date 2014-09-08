@@ -53,16 +53,28 @@ public:
 
 	/** \brief GERG 2004 Monograph equation 7.56:
      * 
+     * If the \f$x_i\f$ are all independent
 	 * \f[
-	 * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial T_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2T_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial T_r}{\partial x_j}\right)_{x_i}-\sum_{k=1}^Nx_k\left(\frac{\partial^2T_r}{\partial x_j \partial x_k}\right)
+	 * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial T_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2T_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial T_r}{\partial x_j}\right)_{x_i}-\sum_{k=0}^{N-1}x_k\left(\frac{\partial^2T_r}{\partial x_j \partial x_k}\right)
+	 * \f]
+     * If \f$x_N = 1-\sum x_i\f$:
+	 * \f[
+	 * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial T_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2T_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial T_r}{\partial x_j}\right)_{x_i}-\sum_{k=0}^{N-1}x_k\left(\frac{\partial^2T_r}{\partial x_j \partial x_k}\right)
 	 * \f]
 	 */
 	long double d_ndTrdni_dxj__constxi(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
-	/** \brief GERG 2004 Monograph equation 7.55:
+	/** \brief 
      * 
+     * GERG 2004 Monograph equation 7.55:
+     * If the \f$x_i\f$ are all independent
 	 * \f[
-	 * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \rho_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2\rho_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial \rho_r}{\partial x_j}\right)_{x_i}-\sum_{k=1}^Nx_k\left(\frac{\partial^2\rho_r}{\partial x_j \partial x_k}\right)
+	 * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \rho_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2\rho_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial \rho_r}{\partial x_j}\right)_{x_i}-\sum_{k=0}^{N-1}x_k\left(\frac{\partial^2\rho_r}{\partial x_j \partial x_k}\right)
 	 * \f]
+     * Gernert, JPCRD, 2014, A28
+     * If \f$x_N = 1-\sum x_i\f$:
+     * \f[
+	 * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \rho_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2\rho_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial \rho_r}{\partial x_j}\right)_{x_i}-\sum_{k=0}^{N-2}x_k\left(\frac{\partial^2\rho_r}{\partial x_j \partial x_k}\right)
+	 * \f] 
 	 */
 	long double d_ndrhorbardni_dxj__constxi(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
