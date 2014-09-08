@@ -351,6 +351,7 @@ TEST_CASE("Tests for values from melting lines", "[melting]")
             CAPTURE(pmax);
             CHECK(Tmax > Tmin);
             CHECK(pmax > pmin);
+            CHECK(pmin > 0);
         }
         for (double p = 0.1*(pmax-pmin) + pmin; p < pmax; p += 0.2*(pmax-pmin)){
             // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
