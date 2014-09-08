@@ -489,7 +489,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                     
                     double numeric = (v1 - v2)/(2*dT);
                     double err = std::abs((numeric-analytic)/analytic);
-                    CHECK(err < 1e-8);
+                    CHECK(err < 1e-6);
                 }
                 
                 std::ostringstream ss3;
@@ -642,8 +642,21 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 {
                     if (i == z.size()-1){break;}
                     double analytic = MixtureDerivatives::dalphar_dxi(rHEOS, i, xN_flag);
-                    double v1 = rHEOS_pluszi.alphar();
-                    double v2 = rHEOS_minuszi.alphar();
+                    
+                    shared_ptr<HelmholtzEOSMixtureBackend> plus(new HelmholtzEOSMixtureBackend(names));
+                    plus->specify_phase(iphase_gas);
+                    plus->set_mole_fractions(zp);
+                    plus->calc_reducing_state();
+                    SimpleState red = plus->get_reducing_state();
+                    plus->update(DmolarT_INPUTS, red.rhomolar*rHEOS.delta(), red.T/rHEOS.tau());
+                    double v1 = plus->alphar();
+                    shared_ptr<HelmholtzEOSMixtureBackend> minus(new HelmholtzEOSMixtureBackend(names));
+                    minus->specify_phase(iphase_gas);
+                    minus->set_mole_fractions(zm);
+                    minus->calc_reducing_state();
+                    red = minus->get_reducing_state();
+                    minus->update(DmolarT_INPUTS, red.rhomolar*rHEOS.delta(), red.T/rHEOS.tau());
+                    double v2 = minus->alphar();
                     double numeric = (v1 - v2)/(2*dz);
                     double err = std::abs((numeric-analytic)/analytic);
                     CAPTURE(numeric);
@@ -733,8 +746,21 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                     {
                         if (j == z.size()-1){break;}
                         double analytic = MixtureDerivatives::d2alphardxidxj(rHEOS,i,j,xN_flag);
-                        double v1 = MixtureDerivatives::dalphar_dxi(rHEOS_pluszj, i, xN_flag);
-                        double v2 = MixtureDerivatives::dalphar_dxi(rHEOS_minuszj, i, xN_flag);
+                        
+                        shared_ptr<HelmholtzEOSMixtureBackend> plus(new HelmholtzEOSMixtureBackend(names));
+                        plus->specify_phase(iphase_gas);
+                        plus->set_mole_fractions(zp);
+                        plus->calc_reducing_state();
+                        SimpleState red = plus->get_reducing_state();
+                        plus->update(DmolarT_INPUTS, red.rhomolar*rHEOS.delta(), red.T/rHEOS.tau());
+                        double v1 = MixtureDerivatives::dalphar_dxi(*(plus.get()), i, xN_flag);
+                        shared_ptr<HelmholtzEOSMixtureBackend> minus(new HelmholtzEOSMixtureBackend(names));
+                        minus->specify_phase(iphase_gas);
+                        minus->set_mole_fractions(zm);
+                        minus->calc_reducing_state();
+                        red = minus->get_reducing_state();
+                        minus->update(DmolarT_INPUTS, red.rhomolar*rHEOS.delta(), red.T/rHEOS.tau());
+                        double v2 = MixtureDerivatives::dalphar_dxi(*(minus.get()), i, xN_flag);
                         double numeric = (v1 - v2)/(2*dz);
                         double err = std::abs((numeric-analytic)/analytic);
                         if (std::abs(numeric) < DBL_EPSILON && std::abs(analytic) < DBL_EPSILON){break;}
