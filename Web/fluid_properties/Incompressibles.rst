@@ -7,11 +7,14 @@ here is the generated file with the table of incompressibles
 
 .. include:: Incompressibles_Fluids.txt
 
-here is a pdf file :download:`pdf <doc/mypdf.pdf>`
 
-Testing the
-.. program-output:: python -V
- auto generated version.
+Fitting Reports
+=====================
+
+here is a pdf file for all pure fluids :download:`pdf <all_pure.pdf>`
+
+here is a pdf file for all solutions :download:`pdf <all_solutions.pdf>`
+
 
 Incompressible Liquids
 ----------------------
