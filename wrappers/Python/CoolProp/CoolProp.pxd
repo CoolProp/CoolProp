@@ -30,7 +30,7 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     string _get_global_param_string "CoolProp::get_global_param_string"(string ParamName) except +
     int _get_debug_level "CoolProp::get_debug_level"()
     void _set_debug_level "CoolProp::set_debug_level"(int level)
-#     string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName)
+    string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName)
     #long _get_parameter_index "CoolProp::get_parameter_index" (string param)
     
     # Convenience functions

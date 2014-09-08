@@ -1,6 +1,5 @@
 import CoolProp.CoolProp as CP
-import CoolProp.unit_systems_constants
-from CoolProp import param_constants
+import CoolProp
 from CoolProp.State import State
 
 def test_global_param_strings():
