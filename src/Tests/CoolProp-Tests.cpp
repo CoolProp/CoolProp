@@ -1127,6 +1127,17 @@ TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]")
         }
     }
 }
+TEST_CASE("Backwards compatibility for REFPROP v4 fluid name convention", "[REFPROP_backwards_compatibility]")
+{
+    SECTION("REFPROP-", "")
+    {
+        CHECK(ValidNumber(Props1SI("REFPROP-Water","Tcrit")));
+    }
+    SECTION("REFPROP-MIX:", "")
+    {
+        CHECK(ValidNumber(PropsSI("T","P",101325,"Q",0,"REFPROP-MIX:Methane[0.5]&Ethane[0.5]")));
+    }
+}
 TEST_CASE("Ancillary functions", "[ancillary]")
 {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');

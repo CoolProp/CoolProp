@@ -235,17 +235,27 @@ bool has_backend_in_string(const std::string &fluid_string, std::size_t &i)
 void extract_backend(const std::string &fluid_string, std::string &backend, std::string &fluid)
 {
 	std::size_t i;
-	if (has_backend_in_string(fluid_string, i))
+    std::string _fluid_string = fluid_string;
+    // For backwards compatibility reasons, if "REFPROP-" or "REFPROP-MIX:" start the fluid_string, replace them with "REFPROP::"
+    if (_fluid_string.find("REFPROP-MIX:") == 0)
+    {
+        _fluid_string.replace(0, 12, "REFPROP::");
+    }
+    if (_fluid_string.find("REFPROP-") == 0)
+    {
+        _fluid_string.replace(0, 8, "REFPROP::");
+    }
+	if (has_backend_in_string(_fluid_string, i))
 	{
 		// Part without the ::
-		backend = fluid_string.substr(0, i);
+		backend = _fluid_string.substr(0, i);
 		// Fluid name after the ::
-		fluid = fluid_string.substr(i+2);
+		fluid = _fluid_string.substr(i+2);
 	}
 	else
 	{
 		backend = "?";
-		fluid = fluid_string;
+		fluid = _fluid_string;
 	}
 	if (get_debug_level()>10) std::cout << format("%s:%d: backend extracted. backend: %s. fluid: %s\n",__FILE__,__LINE__, backend.c_str(), fluid.c_str());
 }
