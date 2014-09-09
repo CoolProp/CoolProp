@@ -1,5 +1,100 @@
 # Makefile for Sphinx documentation
 #
+#
+############################################################
+# Generate and copy the include files for the documetation #
+############################################################
+#
+INCOMP_INCLUDES_SOURCE:=$(realpath $(CURDIR)/../dev/incompressible_liquids )
+#INCOMP_INCLUDES_TARGET:=$(realpath $(CURDIR)/fluid_properties )
+INCOMP_INCLUDES_TARGET:=fluid_properties
+# JSON, PDF and JPG all depend on Python, regenerate all of them if Python sources change
+INCOMP_INCLUDES_PYTHON:=$(shell find $(INCOMP_INCLUDES_SOURCE)/CPIncomp -iname '*.py') # recursively
+INCOMP_INCLUDES_JSONLI:=$(shell find $(INCOMP_INCLUDES_SOURCE)/json -iname '*.json') # recursively
+INCOMP_INCLUDES_FNAMES:=$(basename $(notdir $(INCOMP_INCLUDES_JSONLI) ) ) # all fluid IDs
+# All the required files
+INCOMP_INCLUDES_PDFREP:=$(addprefix $(INCOMP_INCLUDES_TARGET)/report/, $(addsuffix _fitreport.pdf, $(INCOMP_INCLUDES_FNAMES) ) )
+INCOMP_INCLUDES_PDFEXT:= all_pure-pdf all_solutions.pdf
+INCOMP_INCLUDES_PDFEXT:=$(addprefix $(INCOMP_INCLUDES_TARGET)/, $(INCOMP_INCLUDES_PDFEXT) )
+INCOMP_INCLUDES_TXTTAB:= pure-fluids.txt mass-based-fluids.txt mole-based-fluids.txt volume-based-fluids.txt
+INCOMP_INCLUDES_TXTTAB:=$(addprefix $(INCOMP_INCLUDES_TARGET)/, $(INCOMP_INCLUDES_TXTTAB) )
+#   
+# Define one single target to be referenced 
+.PHONY: incompressible_includes
+incompressible_includes: $(INCOMP_INCLUDES_PDFREP) $(INCOMP_INCLUDES_PDFEXT) $(INCOMP_INCLUDES_TXTTAB)
+#
+# Now we split it up again and maps dependencies to their generators
+$(INCOMP_INCLUDES_TXTTAB):: $(INCOMP_INCLUDES_SOURCE)/Incompressibles_include_generator.py
+	cd $(<D); \
+	python $(<F)
+	
+	
+$(INCOMP_INCLUDES_TARGET)/report/%.pdf: $(INCOMP_INCLUDES_SOURCE)/report/%.pdf
+	mkdir -p $(@D); \
+    cp $< $@
+    
+    #%.foo: $$(addsuffix .bar, $$(DATA_$$*))
+    
+
+$(INCOMP_INCLUDES_SOURCE)/report/%.pdf: $(INCOMP_INCLUDES_SOURCE)/all_incompressibles.py $(INCOMP_INCLUDES_PYTHON)
+	cd $(<D); \
+	python $(<F)
+
+#$(INCOMP_INCLUDES_PDFREP):: $(INCOMP_INCLUDES_SOURCE)/all_incompressibles.py $(INCOMP_INCLUDES_PYTHON)
+#	cd $(<D); \
+#	python $(<F)
+
+
+#$(INCOMP_INCLUDES_TARGET)/Incompressibles_Fluids.txt: $(addprefix $(PYGEN_DIR)/, Incompressibles_include_generator.py)
+#	cd $(PYGEN_DIR); \
+#	python Incompressibles_include_generator.py
+#
+#fluid_properties/all_pure.pdf: $(addprefix $(PYGEN_DIR)/, all_incompressibles.py)
+#	cd $(PYGEN_DIR); \
+#	python all_incompressibles.py
+#	cp $(PYGEN_DIR)/all_pure.pdf fluid_properties/
+#	cp $(PYGEN_DIR)/all_solutions.pdf fluid_properties/
+#
+## general rules for the fit reports
+#PYGEN_FILES=$(shell echo $(COOLPROPDIR)*.cpp)
+#
+#
+## Make the .pdf report files, they all come from the same script
+#$(INCOMP_INCLUDES_FOLDER)/%.pdf : $(INCOMP_INCLUDES_DIR)/all_incompressibles.py $(INCOMP_INCLUDES_PYTHON)
+#	cd $(INCOMP_INCLUDES_FOLDER); \
+#	python all_incompressibles.py
+#	
+### Make the .pdf report files, they all come from the same script
+##$(INCOMP_INCLUDES_FOLDER)/report/%.pdf : $(INCOMP_INCLUDES_PYTHON)
+##	cd $(INCOMP_INCLUDES_FOLDER); \
+##	python all_incompressibles.py
+
+
+
+	
+	
+.PHONY : check_incomp_flags
+check_incomp_flags:
+	@printf "\nMakefile variables:\n\
+	  INCOMP_INCLUDES_SOURCE=$(INCOMP_INCLUDES_SOURCE)\n\
+	  INCOMP_INCLUDES_TARGET=$(INCOMP_INCLUDES_TARGET)\n\
+	  INCOMP_INCLUDES_PYTHON=$(INCOMP_INCLUDES_PYTHON)\n\
+	  INCOMP_INCLUDES_JSONLI=$(INCOMP_INCLUDES_JSONLI)\n\
+	  INCOMP_INCLUDES_FNAMES=$(INCOMP_INCLUDES_FNAMES)\n\
+	  INCOMP_INCLUDES_PDFREP=$(INCOMP_INCLUDES_PDFREP)\n\
+	  INCOMP_INCLUDES_PDFEXT=$(INCOMP_INCLUDES_PDFEXT)\n\
+	  INCOMP_INCLUDES_TXTTAB=$(INCOMP_INCLUDES_TXTTAB)\n"
+
+
+
+
+
+
+
+
+
+
+
 
 # You can set these variables from the command line.
 SPHINXOPTS    = 
@@ -106,40 +201,4 @@ rst: FluidInfoGenerator.py
 
 
 
-############################################################
-# Generate and copy the include files for the documetation
-############################################################
-#
-INCOMP_INCLUDES_DIR:=$(CURDIR)/../dev/incompressible_liquids
-INCOMP_INCLUDES_PDF:=$(shell find $(INCOMP_INCLUDES_DIR) -name '*.pdf')
 
-
-
-
-.PHONY: incompressible_includes
-incompressible_includes: fluid_properties/all_pure.pdf fluid_properties/Incompressibles_Fluids.txt
-
-fluid_properties/Incompressibles_Fluids.txt: $(addprefix $(PYGEN_DIR)/, Incompressibles_include_generator.py)
-	cd $(PYGEN_DIR); \
-	python Incompressibles_include_generator.py
-
-fluid_properties/all_pure.pdf: $(addprefix $(PYGEN_DIR)/, all_incompressibles.py)
-	cd $(PYGEN_DIR); \
-	python all_incompressibles.py
-	cp $(PYGEN_DIR)/all_pure.pdf fluid_properties/
-	cp $(PYGEN_DIR)/all_solutions.pdf fluid_properties/
-
-# general rules for the fit reports
-PYGEN_FILES=$(shell echo $(COOLPROPDIR)*.cpp)
-
-# Make the .pdf report files 
-$(PYGEN_DIR)/report/%.pdf : %.cpp
-	$(CC) $(_CPPFLAGS) -c $(_INCLUDES) $< -o $@
-	
-	
-	
-.PHONY : check_incomp_flags
-check_incomp_flags:
-	@printf "\nMakefile variables:\n\
-	  INCOMP_INCLUDES_DIR=$(INCOMP_INCLUDES_DIR)\n\
-	  INCOMP_INCLUDES_PDF=$(INCOMP_INCLUDES_PDF)\n"
