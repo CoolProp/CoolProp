@@ -16,37 +16,49 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         
         ## Constructor with fluid name
         AbstractState(string FluidName) except +ValueError
+        
+        bool clear()
 
         ## Property updater
         ## Uses the indices in CoolProp for the input parameters
         void update(constants_header.input_pairs iInput1, double Value1, double Value2) except +ValueError
 
-        ## Bulk properties accessors - temperature and density are directly calculated every time
+        ## Bulk properties accessors - temperature, pressure and density are directly calculated every time
         ## All other parameters are calculated on an as-needed basis
         ## If single-phase, just plug into the EOS, otherwise need to do two-phase analysis
         double T() except +ValueError
         double rhomolar() except +ValueError
+        double rhomass() except +ValueError
         double p() except +ValueError
         double hmolar() except +ValueError
-        double smolar() except +ValueError
-        double cpmolar() except +ValueError
-        double cvmolar() except +ValueError
-        double speed_sound() except +ValueError
-        double rhomass() except +ValueError
         double hmass() except +ValueError
+        double smolar() except +ValueError
         double smass() except +ValueError
+        double umolar() except +ValueError
+        double umass() except +ValueError
+        double cpmolar() except +ValueError
         double cpmass() except +ValueError
+        double cp0molar() except +ValueError
+        double cp0mass() except +ValueError
+        double cvmolar() except +ValueError
         double cvmass() except +ValueError
+        double speed_sound() except +ValueError
         
         double keyed_output(constants_header.parameters) except+ValueError
         double molar_mass() except+ValueError
         double gas_constant() except+ValueError
         double build_phase_envelope() except+ValueError
+        
         double viscosity() except+ValueError
         double conductivity() except+ValueError
         double surface_tension() except+ValueError
         
+        long double first_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
+        long double second_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
+        
         void set_mole_fractions(vector[double]) except+ValueError
+        void set_mass_fractions(vector[double]) except+ValueError
+        void set_volu_fractions(vector[double]) except+ValueError
         
         double melting_line(int,int,double) except+ValueError
         bool has_melting_line() except+ValueError

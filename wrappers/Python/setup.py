@@ -5,11 +5,13 @@ def copy_files():
     shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
     shutil.copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp','include'))
     shutil.copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
+    print('files copied.')
     
 def remove_files():
     import shutil
     shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
     os.remove(os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
+    print('files removed.')
     
 if __name__=='__main__':
 
@@ -143,9 +145,13 @@ if __name__=='__main__':
                description = """Open-source thermodynamic and transport properties database""",
                packages = find_packages(),
                ext_modules = ext_modules,
-               package_data = {'CoolProp':['State.pxd',
-                                            'CoolProp.pxd',
-                                            'CoolPropBibTeXLibrary.bib'] + find_cpp_sources(os.path.join('include'), '*.h')},
+               package_dir = {'CoolProp':'CoolProp',},
+               package_data = {'CoolProp':['*.pxd',
+                                           'CoolPropBibTeXLibrary.bib',
+                                           'include/*.h',
+                                           'include/rapidjson/*.h',
+                                           'include/rapidjson/rapidjson/*.h',
+                                           'include/rapidjson/rapidjson/internal/*.h']},
                classifiers = [
                 "Programming Language :: Python",
                 "Development Status :: 4 - Beta",

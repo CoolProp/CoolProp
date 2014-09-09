@@ -114,6 +114,7 @@ bool AbstractState::clear() {
 
     this->_umolar.clear();
     this->_cpmolar.clear();
+    this->_cp0molar.clear();
     this->_cvmolar.clear();
     this->_speed_sound.clear();
     this->_hmolar.clear();
@@ -227,8 +228,12 @@ double AbstractState::keyed_output(int key)
         return cvmass();
     case iCpmolar:
         return cpmolar();
+    case iCp0molar:
+        return cp0molar();
     case iCpmass:
         return cpmass();
+    case iCp0mass:
+        return cp0mass();
     case imolar_mass:
         return molar_mass();
     case iT_reducing:
@@ -310,6 +315,9 @@ double AbstractState::umolar(void){
 double AbstractState::cpmolar(void){
     if (!_cpmolar) _cpmolar = calc_cpmolar();
     return _cpmolar;
+}
+double AbstractState::cp0molar(void){
+    return calc_cpmolar_idealgas();
 }
 double AbstractState::cvmolar(void){
     if (!_cvmolar) _cvmolar = calc_cvmolar();

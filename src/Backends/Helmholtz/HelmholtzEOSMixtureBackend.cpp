@@ -1989,7 +1989,7 @@ long double HelmholtzEOSMixtureBackend::calc_cpmolar_idealgas(void)
     long double R_u = static_cast<double>(_gas_constant);
 
     // Get cp of the ideal gas
-    return R_u*-pow(_tau.pt(),2)*d2a0_dTau2;
+    return R_u*(1+(-pow(_tau.pt(),2))*d2a0_dTau2);
 }
 long double HelmholtzEOSMixtureBackend::calc_speed_sound(void)
 {

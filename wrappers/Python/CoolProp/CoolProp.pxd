@@ -18,6 +18,7 @@ cdef extern from "CoolPropTools.h" namespace "CoolProp":
 cdef extern from "DataStructures.h" namespace "CoolProp":    
     string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
     int _get_parameter_index "CoolProp::get_parameter_index"(string) except +
+    constants_header.input_pairs _generate_update_pair "CoolProp::generate_update_pair"(long key1, double value1, long key2, double value2, double &out1, double &out2) except +
     
 cdef extern from "CoolPropLib.h":
     double _Props "Props"(const char* Output, char Name1, double Prop1, char Name2, double Prop2, const char* Ref)
@@ -46,68 +47,33 @@ cdef extern from "HumidAirProp.h":
        
 cdef class State:
     cdef AbstractState pAS
-    cdef readonly string Fluid, phase
+    cdef readonly bytes Fluid, phase
     cdef int iFluid,iParam1,iParam2,iOutput
     cdef double T_, rho_, p_
-    cdef readonly bint is_CPFluid
     
     cpdef set_Fluid(self, string Fluid, string backend)
-#     cpdef speed_test(self, int N)
-#     cpdef update(self, dict params)
-#     cpdef update_ph(self, double p, double h)
-    cpdef update_Trho(self, double T, double rho)
-#     cpdef State copy(self)
-#     cpdef double Props(self, long iOutput) except *
-#     cpdef long Phase(self) except *
-    
-#     cpdef double get_Q(self) except *
-#     cpdef double get_T(self) except *
-#     cpdef double get_p(self) except *
-#     cpdef double get_h(self) except *
-#     cpdef double get_rho(self) except *
-#     cpdef double get_s(self) except *
-#     cpdef double get_u(self) except *
-#     cpdef double get_visc(self) except *
-#     cpdef double get_cond(self) except *
-#     cpdef double get_cp(self) except *
-#     cpdef double get_cp0(self) except *
-#     cpdef double get_cv(self) except *
-#     cpdef double get_MM(self) except *
-#     cpdef double get_dpdT(self) except *
-#     cpdef double get_speed_sound(self) except *
-#     cpdef get_Tsat(self, double Q = *)
-#     cpdef get_subcooling(self)
-#     cpdef get_superheat(self)cdef class State:
-#     cdef CoolPropStateClassSI CPS
-#     cdef readonly string Fluid, phase
-#     cdef int iFluid,iParam1,iParam2,iOutput
-#     cdef double T_, rho_, p_
-#     cdef readonly bint is_CPFluid
-#     
-#     cpdef set_Fluid(self, string_like Fluid)
     cpdef speed_test(self, int N)
-#     cpdef update(self, dict params)
-#     cpdef update_ph(self, double p, double h)
-#     cpdef update_Trho(self, double T, double rho)
-#     cpdef State copy(self)
-#     cpdef double Props(self, long iOutput) except *
-#     cpdef long Phase(self) except *
-#     
-#     cpdef double get_Q(self) except *
-#     cpdef double get_T(self) except *
-#     cpdef double get_p(self) except *
-#     cpdef double get_h(self) except *
-#     cpdef double get_rho(self) except *
-#     cpdef double get_s(self) except *
-#     cpdef double get_u(self) except *
-#     cpdef double get_visc(self) except *
-#     cpdef double get_cond(self) except *
-#     cpdef double get_cp(self) except *
-#     cpdef double get_cp0(self) except *
-#     cpdef double get_cv(self) except *
-#     cpdef double get_MM(self) except *
-#     cpdef double get_dpdT(self) except *
-#     cpdef double get_speed_sound(self) except *
-#     cpdef get_Tsat(self, double Q = *)
-#     cpdef get_subcooling(self)
-#     cpdef get_superheat(self)
+    cpdef update(self, dict params)
+    cpdef update_ph(self, double p, double h)
+    cpdef update_Trho(self, double T, double rho)
+    cpdef State copy(self)
+    cpdef double Props(self, constants_header.parameters iOutput) except *
+    cpdef long Phase(self) except *
+    cpdef double get_Q(self) except *
+    cpdef double get_T(self) except *
+    cpdef double get_p(self) except *
+    cpdef double get_h(self) except *
+    cpdef double get_rho(self) except *
+    cpdef double get_s(self) except *
+    cpdef double get_u(self) except *
+    cpdef double get_visc(self) except *
+    cpdef double get_cond(self) except *
+    cpdef double get_cp(self) except *
+    cpdef double get_cp0(self) except *
+    cpdef double get_cv(self) except *
+    cpdef double get_MM(self) except *
+    cpdef double get_dpdT(self) except *
+    cpdef double get_speed_sound(self) except *
+    cpdef get_Tsat(self, double Q = *)
+    cpdef get_subcooling(self)
+    cpdef get_superheat(self)

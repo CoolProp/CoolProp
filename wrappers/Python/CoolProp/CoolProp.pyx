@@ -314,7 +314,16 @@ cpdef int get_debug_level():
 #         return False
 #     
 
-# from math import pow as pow_
+cdef toSI(constants_header.parameters key, double val):
+    """
+    Convert a value in kSI system to SI system (supports a limited subset of variables)
+    """
+    if key in [iT, iDmass]:
+        return val
+    elif key in [iP, iHmass, iSmass, iUmass]:
+        return val*1000
+    else:
+        raise KeyError('key is invalid to toSI')
 
 #A dictionary mapping parameter index to string for use with non-CoolProp fluids
 cdef dict paras = {iDmass : 'D',
@@ -324,16 +333,16 @@ cdef dict paras = {iDmass : 'D',
                    iHmass : 'H',
                    iP : 'P',
                    iCpmass : 'C',
-#                    iC0 : 'C0',
+                   iCp0mass : 'C0',
                    iCvmass : 'O',
                    iviscosity : 'V',
                    iconductivity : 'L',
+                   ispeed_sound: 'A',
                    iSmass : 'S',
-                   iUmass : 'U',
-#                    iDpdT : 'dpdT'
+                   iUmass : 'U'
 }
 
-# cdef dict paras_inverse = {v:k for k,v in paras.iteritems()}
+cdef dict paras_inverse = {v:k for k,v in paras.iteritems()}
 
 cdef class State:
     """
@@ -380,12 +389,14 @@ cdef class State:
             return
         else:
             if backend is None:
-                backend = '?'
+                backend = u'?'
             self.set_Fluid(Fluid, backend)
-#         
-#         self.phase = _phase
-#         #Parse the inputs provided
-#         self.update(StateDict)
+        self.Fluid = _Fluid
+        self.phase = phase
+        if phase is None:
+            self.phase = u'??'.encode('ascii')
+        # Parse the inputs provided
+        self.update(StateDict)
 #         #Set the phase flag
 #         if self.phase == <string>'Gas' or self.phase == <string>'Liquid' or self.phase == <string>'Supercritical':
 #             if self.is_CPFluid and (self.phase == <string>'Gas' or self.phase == <string>'Liquid'):
@@ -404,35 +415,20 @@ cdef class State:
     cpdef set_Fluid(self, string Fluid, string backend):
         self.pAS = AbstractState(backend, Fluid)
         
-#     cpdef update_ph(self, double p, double h):
-#         """
-#         Use the pressure and enthalpy directly
-#         
-#         Parameters
-#         ----------
-#         p: float
-#             Pressure (absolute) [kPa]
-#         h: float
-#             Enthalpy [kJ/kg]
-#         
-#         """
-#         p = _toSIints(iP, p, _get_standard_unit_system());
-#         h = _toSIints(iH, h, _get_standard_unit_system());
-#         self.p_ = p
-#         cdef double T
-#         
-#         if self.is_CPFluid:
-#             self.CPS.update(iP, p, iH, h)
-#             self.T_ = self.CPS.T()
-#             self.rho_ = self.CPS.rho()
-#         else:
-#             T = _PropsSI('T','P',p,'H',h,self.Fluid)
-#             if abs(T)<1e90:
-#                 self.T_=T
-#             else:
-#                 errstr = _get_global_param_string('errstring')
-#                 raise ValueError(errstr)
-#             self.rho_ = _Props('D','P',p,'H',h,self.Fluid)
+    cpdef update_ph(self, double p, double h):
+        """
+        Use the pressure and enthalpy directly
+        
+        Parameters
+        ----------
+        p: float
+            Pressure (absolute) [kPa]
+        h: float
+            Enthalpy [kJ/kg]
+        """
+        self.pAS.update(HmassP_INPUTS, p*1000, h*1000)
+        self.T_ = self.pAS.T()
+        self.rho_ = self.pAS.rhomass()
             
     cpdef update_Trho(self, double T, double rho):
         """
@@ -444,313 +440,277 @@ cdef class State:
             Temperature [K]
         rho: float
             Density [kg/m^3]
-            
         """
         self.T_ = T
         self.rho_ = rho
-        
         self.pAS.update(DmassT_INPUTS, rho, T)
         
-#     cpdef update(self, dict params):
-#         """
-#         Parameters
-#         params, dictionary 
-#             A dictionary of terms to be updated, with keys equal to single-char inputs to the Props function,
-#             for instance ``dict(T=298, P = 101.325)`` would be one standard atmosphere
-#         """
-#         
-#         # Convert to integer_pair input
-#             
-#         cdef double p, val1, val2
-#         cdef long iInput1, iInput2
-#         cdef bytes errstr
-#             
-#         if self.is_CPFluid:
-#             items = list(params.items())
-#             iInput1 = paras_inverse[items[0][0]]
-#             iInput2 = paras_inverse[items[1][0]]
-#             # Convert to SI units
-#             val1 = _toSIints(iInput1, items[0][1], _get_standard_unit_system());
-#             val2 = _toSIints(iInput2, items[1][1], _get_standard_unit_system());
-#             try: 
-#                 self.CPS.update(iInput1, val1, iInput2, val2)
-#             except:
-#                 raise
-#             self.T_ = self.CPS.T()
-#             self.p_ =  _fromSIints(iP, self.CPS.p(), _get_standard_unit_system());
-#             self.rho_ = self.CPS.rho()
-#             
-#             if not _ValidNumber(self.T_) or not _ValidNumber(self.p_) or not _ValidNumber(self.rho_):
-#                 raise ValueError(str(params))
-#             return
-#         
-#         #Get the density if T,P provided, or pressure if T,rho provided
-#         if 'P' in params:
-#             self.p_=params['P']
-#             rho = _Props('D','T',self.T_,'P',self.p_,self.Fluid)
-#             
-#             if abs(rho) < 1e90:
-#                 self.rho_=rho
-#             else:
-#                 errstr = _get_global_param_string('errstring')
-#                 raise ValueError(errstr)
-#         elif 'D' in params:
-#             self.rho_=params['D']
-#             p = _Props('P','T',self.T_,'D',self.rho_,self.Fluid)
-#             
-#             if abs(p)<1e90:
-#                 self.p_=p
-#             else:
-#                 errstr = _get_global_param_string('errstring')
-#                 raise ValueError(errstr+str(params))
-#         elif 'Q' in params:
-#             p = _Props('P','T',self.T_,'Q',params['Q'],self.Fluid)
-#             self.rho_ = _Props('D','T',self.T_,'Q',params['Q'],self.Fluid)
-#             
-#             if abs(self.rho_)<1e90:
-#                 pass
-#             else:
-#                 errstr = _get_global_param_string('errstring')
-#                 raise ValueError(errstr+str(params))
-#         else:
-#             raise KeyError("Dictionary must contain the key 'T' and one of 'P' or 'D'")
+    cpdef update(self, dict params):
+        """
+        Parameters
+        params, dictionary 
+            A dictionary of terms to be updated, with keys equal to single-char inputs to the Props function,
+            for instance ``dict(T=298, P = 101.325)`` would be one standard atmosphere
+        """
         
-#     cpdef long Phase(self) except *:
-#         """
-#         Returns an integer flag for the phase of the fluid, where the flag value
-#         is one of iLiquid, iSupercritical, iGas, iTwoPhase
-#         
-#         These constants are defined in the phase_constants module, and are imported
-#         into this module
-#         """
-#         
-#         if self.is_CPFluid:
-#             return self.CPS.phase()
-#         else:
-#             raise NotImplementedError("Phase not defined for fluids other than CoolProp fluids")
+        # Convert to integer_pair input
+            
+        cdef double p, val1, val2, o1 = 0, o2 = 0
+        cdef long iInput1, iInput2
+        cdef bytes errstr
+        cdef constants_header.input_pairs input_pair
         
-#     cpdef double Props(self, long iOutput) except *: 
-#         if iOutput<0:
-#             raise ValueError('Your output is invalid') 
-#         
-#         if self.is_CPFluid:
-#             val = self.CPS.keyed_output(iOutput)
-#             return _fromSIints(iOutput,val,_get_standard_unit_system());
-#         else:
-#             return _Props(paras[iOutput],'T',self.T_,'D',self.rho_,self.Fluid)
-#             
-#     cpdef double get_Q(self) except *:
-#         """ Get the quality [-] """
-#         return self.Props(iQ)
-#     property Q:
-#         """ The quality [-] """
-#         def __get__(self):
-#             return self.get_Q()
-#     
-#     cpdef double get_MM(self) except *:
-#         """ Get the mole mass [kg/kmol] or [g/mol] """
-#         return self.Props(iMM)
-#     
-#     cpdef double get_rho(self) except *:
-#         """ Get the density [kg/m^3] """ 
-#         return self.Props(iD)
-#     property rho:
-#         """ The density [kg/m^3] """
-#         def __get__(self):
-#             return self.Props(iD)
-#             
-#     cpdef double get_p(self) except *:
-#         """ Get the pressure [kPa] """ 
-#         return self.Props(iP)
-#     property p:
-#         """ The pressure [kPa] """
-#         def __get__(self):
-#             return self.get_p()
-#     
-#     cpdef double get_T(self) except *: 
-#         """ Get the temperature [K] """
-#         return self.Props(iT)
-#     property T:
-#         """ The temperature [K] """
-#         def __get__(self):
-#             return self.get_T()
-#     
-#     cpdef double get_h(self) except *: 
-#         """ Get the specific enthalpy [kJ/kg] """
-#         return self.Props(iH)
-#     property h:
-#         """ The specific enthalpy [kJ/kg] """
-#         def __get__(self):
-#             return self.get_h()
-#           
-#     cpdef double get_u(self) except *: 
-#         """ Get the specific internal energy [kJ/kg] """
-#         return self.Props(iU)
-#     property u:
-#         """ The internal energy [kJ/kg] """
-#         def __get__(self):
-#             return self.get_u()
-#             
-#     cpdef double get_s(self) except *: 
-#         """ Get the specific enthalpy [kJ/kg/K] """
-#         return self.Props(iS)
-#     property s:
-#         """ The specific enthalpy [kJ/kg/K] """
-#         def __get__(self):
-#             return self.get_s()
-#     
-#     cpdef double get_cp0(self) except *:
-#         """ Get the specific heat at constant pressure for the ideal gas [kJ/kg/K] """
-#         return self.Props(iC0)
-#     
-#     cpdef double get_cp(self) except *: 
-#         """ Get the specific heat at constant pressure  [kJ/kg/K] """
-#         return self.Props(iC)
-#     property cp:
-#         """ The specific heat at constant pressure  [kJ/kg/K] """
-#         def __get__(self):
-#             return self.get_cp()
-#             
-#     cpdef double get_cv(self) except *: 
-#         """ Get the specific heat at constant volume  [kJ/kg/K] """
-#         return self.Props(iO)
-#     property cv:
-#         """ The specific heat at constant volume  [kJ/kg/K] """
-#         def __get__(self):
-#             return self.get_cv()
-#         
-#     cpdef double get_speed_sound(self) except *: 
-#         """ Get the speed of sound  [m/s] """
-#         return self.Props(iA)
-#             
-#     cpdef double get_visc(self) except *:
-#         """ Get the viscosity, in [Pa-s]"""
-#         return self.Props(iV)
-#     property visc:
-#         """ The viscosity, in [Pa-s]"""
-#         def __get__(self):
-#             return self.get_visc()
+        # Convert inputs to input pair
+        items = list(params.items())
+        key1 = paras_inverse[items[0][0]]
+        key2 = paras_inverse[items[1][0]]
+        # Convert to SI units
+        val1 = toSI(key1, items[0][1])
+        val2 = toSI(key2, items[1][1])
+        
+        input_pair = _generate_update_pair(key1, val1, key2, val2, o1, o2)
+        self.pAS.update(input_pair, o1, o2);
+        
+        self.T_ = self.pAS.T()
+        self.p_ =  self.pAS.p()/1000;
+        self.rho_ = self.pAS.rhomass()
+        
+    cpdef long Phase(self) except *:
+        """
+        Returns an integer flag for the phase of the fluid, where the flag value
+        is one of iLiquid, iSupercritical, iGas, iTwoPhase
+        
+        These constants are defined in the phase_constants module, and are imported
+        into this module
+        """
+        
+        if self.is_CPFluid:
+            return self.pAS.phase()
+        else:
+            raise NotImplementedError("Phase not defined for fluids other than CoolProp fluids")
+        
+    cpdef double Props(self, constants_header.parameters iOutput) except *: 
+        if iOutput<0:
+            raise ValueError('Your output is invalid') 
+        return self.pAS.keyed_output(iOutput)
+            
+    cpdef double get_Q(self) except *:
+        """ Get the quality [-] """
+        return self.Props(iQ)
+    property Q:
+        """ The quality [-] """
+        def __get__(self):
+            return self.get_Q()
+    
+    cpdef double get_MM(self) except *:
+        """ Get the mole mass [kg/kmol] or [g/mol] """
+        return self.Props(imolar_mass)*1000
+    property MM:
+        """ The molar mass [kg/kmol] or [g/mol] """
+        def __get__(self):
+            return self.get_MM()
+            
+    cpdef double get_rho(self) except *:
+        """ Get the density [kg/m^3] """ 
+        return self.Props(iDmass)
+    property rho:
+        """ The density [kg/m^3] """
+        def __get__(self):
+            return self.Props(iDmass)
+            
+    cpdef double get_p(self) except *:
+        """ Get the pressure [kPa] """ 
+        return self.Props(iP)/1000
+    property p:
+        """ The pressure [kPa] """
+        def __get__(self):
+            return self.get_p()
+    
+    cpdef double get_T(self) except *: 
+        """ Get the temperature [K] """
+        return self.Props(iT)
+    property T:
+        """ The temperature [K] """
+        def __get__(self):
+            return self.get_T()
+    
+    cpdef double get_h(self) except *: 
+        """ Get the specific enthalpy [kJ/kg] """
+        return self.Props(iHmass)/1000
+    property h:
+        """ The specific enthalpy [kJ/kg] """
+        def __get__(self):
+            return self.get_h()
+          
+    cpdef double get_u(self) except *: 
+        """ Get the specific internal energy [kJ/kg] """
+        return self.Props(iUmass)/1000
+    property u:
+        """ The internal energy [kJ/kg] """
+        def __get__(self):
+            return self.get_u()
+            
+    cpdef double get_s(self) except *: 
+        """ Get the specific enthalpy [kJ/kg/K] """
+        return self.Props(iSmass)/1000
+    property s:
+        """ The specific enthalpy [kJ/kg/K] """
+        def __get__(self):
+            return self.get_s()
+    
+    cpdef double get_cp0(self) except *:
+        """ Get the specific heat at constant pressure for the ideal gas [kJ/kg/K] """
+        return self.Props(iCp0mass)/1000
+    property cp0:
+        """ The ideal-gas specific heat at constant pressure  [kJ/kg/K] """
+        def __get__(self):
+            return self.get_cp0()
+    
+    cpdef double get_cp(self) except *: 
+        """ Get the specific heat at constant pressure  [kJ/kg/K] """
+        return self.Props(iCpmass)/1000
+    property cp:
+        """ The specific heat at constant pressure  [kJ/kg/K] """
+        def __get__(self):
+            return self.get_cp()
+            
+    cpdef double get_cv(self) except *: 
+        """ Get the specific heat at constant volume  [kJ/kg/K] """
+        return self.Props(iCvmass)/1000
+    property cv:
+        """ The specific heat at constant volume  [kJ/kg/K] """
+        def __get__(self):
+            return self.get_cv()
+        
+    cpdef double get_speed_sound(self) except *: 
+        """ Get the speed of sound  [m/s] """
+        return self.Props(ispeed_sound)
+            
+    cpdef double get_visc(self) except *:
+        """ Get the viscosity, in [Pa-s]"""
+        return self.Props(iviscosity)
+    property visc:
+        """ The viscosity, in [Pa-s]"""
+        def __get__(self):
+            return self.get_visc()
 
-#     cpdef double get_cond(self) except *:
-#         """ Get the thermal conductivity, in [kW/m/K]"""
-#         return self.Props(iL)
-#     property k:
-#         """ The thermal conductivity, in [kW/m/K]"""
-#         def __get__(self):
-#             return self.get_cond()
-#         
-#     cpdef get_Tsat(self, double Q = 1):
-#         """ 
-#         Get the saturation temperature, in [K]
-#         
-#         Returns ``None`` if pressure is not within the two-phase pressure range 
-#         """
-#         if self.p_ > _Props1(self.Fluid,'pcrit') or self.p_ < _Props1(self.Fluid,'ptriple'):
-#             return None 
-#         else:
-#             return _Props('T', 'P', self.p_, 'Q', Q, self.Fluid)
-#     property Tsat:
-#         """ The saturation temperature (dew) for the given pressure, in [K]"""
-#         def __get__(self):
-#             return self.get_Tsat(1.0)
-#         
-#     cpdef get_superheat(self):
-#         """ 
-#         Get the amount of superheat above the saturation temperature corresponding to the pressure, in [K]
-#         
-#         Returns ``None`` if pressure is not within the two-phase pressure range 
-#         """
-#         
-#         Tsat = self.get_Tsat(1) #dewpoint temp
-#         
-#         if Tsat is not None:
-#             return self.T_-Tsat
-#         else:
-#             return None
-#     property superheat:
-#         """ 
-#         The amount of superheat above the saturation temperature corresponding to the pressure, in [K]
-#         
-#         Returns ``None`` if pressure is not within the two-phase pressure range 
-#         """
-#         def __get__(self):    
-#             return self.get_superheat()
-#         
-#     cpdef get_subcooling(self):
-#         """ 
-#         Get the amount of subcooling below the saturation temperature corresponding to the pressure, in [K]
-#         
-#         Returns ``None`` if pressure is not within the two-phase pressure range 
-#         """
-#         
-#         Tsat = self.get_Tsat(0) #bubblepoint temp
-#         
-#         if Tsat is not None:
-#             return Tsat - self.T_
-#         else:
-#             return None
-#     property subcooling:
-#         """ 
-#         The amount of subcooling below the saturation temperature corresponding to the pressure, in [K]
-#         
-#         Returns ``None`` if pressure is not within the two-phase pressure range 
-#         """
-#         def __get__(self):    
-#             return self.get_subcooling()
-#             
-#     property Prandtl:
-#         """ The Prandtl number (cp*mu/k) [-] """
-#         def __get__(self):
-#             return self.cp * self.visc / self.k
-#             
-#     cpdef double get_dpdT(self) except *:
-#         if self.is_CPFluid:
-#             return _fromSIints(iDERdp_dT__rho, self.CPS.dpdT_constrho(), _get_standard_unit_system());
-#         else:
-#             raise ValueError("get_dpdT not supported for fluids that are not in CoolProp")
-#     property dpdT:
-#         def __get__(self):
-#             return self.get_dpdT()
-#         
+    cpdef double get_cond(self) except *:
+        """ Get the thermal conductivity, in [kW/m/K]"""
+        return self.Props(iconductivity)/1000
+    property k:
+        """ The thermal conductivity, in [kW/m/K]"""
+        def __get__(self):
+            return self.get_cond()
+        
+    cpdef get_Tsat(self, double Q = 1):
+        """ 
+        Get the saturation temperature, in [K]
+        
+        Returns ``None`` if pressure is not within the two-phase pressure range 
+        """
+        if self.p_ > _Props('pcrit','T',0,'P',0,self.Fluid) or self.p_ < _Props('ptriple','T',0,'P',0, self.Fluid):
+            return None 
+        else:
+            return _Props('T', 'P', self.p_, 'Q', Q, self.Fluid)
+    property Tsat:
+        """ The saturation temperature (dew) for the given pressure, in [K]"""
+        def __get__(self):
+            return self.get_Tsat(1.0)
+        
+    cpdef get_superheat(self):
+        """ 
+        Get the amount of superheat above the saturation temperature corresponding to the pressure, in [K]
+        
+        Returns ``None`` if pressure is not within the two-phase pressure range 
+        """
+        
+        Tsat = self.get_Tsat(1) #dewpoint temp
+        
+        if Tsat is not None:
+            return self.T_-Tsat
+        else:
+            return None
+    property superheat:
+        """ 
+        The amount of superheat above the saturation temperature corresponding to the pressure, in [K]
+        
+        Returns ``None`` if pressure is not within the two-phase pressure range 
+        """
+        def __get__(self):    
+            return self.get_superheat()
+        
+    cpdef get_subcooling(self):
+        """ 
+        Get the amount of subcooling below the saturation temperature corresponding to the pressure, in [K]
+        
+        Returns ``None`` if pressure is not within the two-phase pressure range 
+        """
+        
+        Tsat = self.get_Tsat(0) #bubblepoint temp
+        
+        if Tsat is not None:
+            return Tsat - self.T_
+        else:
+            return None
+    property subcooling:
+        """ 
+        The amount of subcooling below the saturation temperature corresponding to the pressure, in [K]
+        
+        Returns ``None`` if pressure is not within the two-phase pressure range 
+        """
+        def __get__(self):    
+            return self.get_subcooling()
+            
+    property Prandtl:
+        """ The Prandtl number (cp*mu/k) [-] """
+        def __get__(self):
+            return self.cp * self.visc / self.k
+            
+    cpdef double get_dpdT(self) except *:
+        return self.pAS.first_partial_deriv(iP, iT, iDmolar)/1000;
+    property dpdT:
+        def __get__(self):
+            return self.get_dpdT()
+        
     cpdef speed_test(self, int N):
         from time import clock
-#         cdef int i
-#         cdef char * k
-#         cdef long ikey
-#         cdef string Fluid = self.Fluid
-#         cdef long IT = 'T'
-#         cdef long ID = 'D'
-#         import CoolProp as CP
-#         
-#         print 'Call to the Python call layer (CoolProp.CoolProp.Props)'
-#         print "'M' involves basically no computational effort and is a good measure of the function call overhead"
-#         keys = ['H','P','S','U','C','O','V','L','M','C0','dpdT']
-#         for key in keys:
-#             t1=clock()
-#             for i in range(N):
-#                 CP.Props(key,'T',self.T_,'D',self.rho_,Fluid)
-#             t2=clock()
-#             print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6)
-#             
-#         print 'Direct c++ call to CoolProp without the Python call layer (_Props function)'
-#         print "'M' involves basically no computational effort and is a good measure of the function call overhead"
-#         keys = ['H','P','S','U','C','O','V','L','M','C0','dpdT']
-#         for key in keys:
-#             t1=clock()
-#             for i in range(N):
-#                 _Props(key,'T',self.T_,'D',self.rho_,Fluid)
-#             t2=clock()
-#             print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6)
-#         
-#         print 'Call to the c++ layer through IProps'
-#         keys = [iH,iP,iS,iU,iC,iO,iV,iL,iMM,iC0,iDpdT]
-#         for key in keys:
-#             t1=clock()
-#             for i in range(N):
-#                 _IProps(key,iT,self.T_,iD,self.rho_,self.iFluid)
-#             t2=clock()
-#             print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,paras[key],(t2-t1)/N*1e6)
-#             
+        cdef int i
+        cdef char * k
+        cdef long ikey
+        cdef bytes Fluid = self.Fluid
+        cdef long IT = 'T'
+        cdef long ID = 'D'
+        import CoolProp as CP
+        
+        print 'Call to the Python call layer (CoolProp.CoolProp.Props)'
+        print "'M' involves basically no computational effort and is a good measure of the function call overhead"
+        keys = ['H','P','S','U','C','O','V','L','M','C0','dpdT']
+        for key in keys:
+            t1=clock()
+            for i in range(N):
+                CP.Props(key,'T',self.T_,'D',self.rho_,Fluid)
+            t2=clock()
+            print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6)
+            
+        print 'Direct c++ call to CoolProp without the Python call layer (_Props function)'
+        print "'M' involves basically no computational effort and is a good measure of the function call overhead"
+        keys = ['H','P','S','U','C','O','V','L','M','C0','dpdT']
+        for key in keys:
+            t1=clock()
+            for i in range(N):
+                _Props(key,'T',self.T_,'D',self.rho_,Fluid)
+            t2=clock()
+            print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6)
+        
+        print 'Call to the c++ layer through IProps'
+        keys = [iH,iP,iS,iU,iC,iO,iV,iL,iMM,iC0,iDpdT]
+        for key in keys:
+            t1=clock()
+            for i in range(N):
+                _IProps(key,iT,self.T_,iD,self.rho_,self.iFluid)
+            t2=clock()
+            print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,paras[key],(t2-t1)/N*1e6)
+            
         print 'Call to the c++ layer using integers'
         keys = [iHmass, iP,iSmass,iUmass]
         for key in keys:
@@ -760,11 +720,11 @@ cdef class State:
                 self.pAS.keyed_output(key)
             t2=clock()
             print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,paras[key],(t2-t1)/N*1e6)
-#         
-#         keys = [iH,iP,iS,iU,iC,iO,iV,iL,iMM,iC0,iDpdT]
-#         isenabled = _isenabled_TTSE_LUT(<bytes>Fluid)
-#         _enable_TTSE_LUT(<bytes>Fluid)
-#         _IProps(iH,iT,self.T_,iD,self.rho_,self.iFluid)
+        
+        #~ keys = [iH,iP,iS,iU,iC,iO,iV,iL,iMM,iC0,iDpdT]
+        #~ isenabled = _isenabled_TTSE_LUT(<bytes>Fluid)
+        #~ _enable_TTSE_LUT(<bytes>Fluid)
+        #~ _IProps(iH,iT,self.T_,iD,self.rho_,self.iFluid)
 #         
 #         print 'Call using TTSE with T,rho'
 #         print "'M' involves basically no computational effort and is a good measure of the function call overhead"
@@ -800,43 +760,45 @@ cdef class State:
 #         if not isenabled:
 #             _disable_TTSE_LUT(<bytes>Fluid)
 #     
-#     def __str__(self):
-#         """
-#         Return a string representation of the state
-#         """
-#         units={'T': 'K', 
-#                'p': 'kPa', 
-#                'rho': 'kg/m^3',
-#                'Q':'kg/kg',
-#                'h':'kJ/kg',
-#                'u':'kJ/kg',
-#                's':'kJ/kg/K',
-#                'visc':'Pa-s',
-#                'k':'kW/m/K',
-#                'cp':'kJ/kg/K',
-#                'cv':'kJ/kg/K',
-#                'dpdT':'kPa/K',
-#                'Tsat':'K',
-#                'superheat':'K',
-#                'subcooling':'K',
-#         }
-#         s='phase = '+self.phase+'\n'
-#         for k in ['T','p','rho','Q','h','u','s','visc','k','cp','cv','dpdT','Prandtl','superheat','subcooling']:
-#             if k in units:
-#                 s+=k+' = '+str(getattr(self,k))+' '+units[k]+'\n'
-#             else:
-#                 s+=k+' = '+str(getattr(self,k))+' NO UNITS'+'\n'
-#         return s.rstrip()
-#         
-#     cpdef State copy(self):
-#         """
-#         Make a copy of this State class
-#         """
-#         cdef State S = State(self.Fluid,dict(T=self.T_,D=self.rho_))
-#         S.phase = self.phase
-#         return S
-#     
-# def rebuildState(d):
-#     S=State(d['Fluid'],{'T':d['T'],'D':d['rho']},phase=d['phase'])
-#     return S
-#     
+    def __str__(self):
+        """
+        Return a string representation of the state
+        """
+        units={'T': 'K', 
+               'p': 'kPa', 
+               'rho': 'kg/m^3',
+               'Q':'kg/kg',
+               'h':'kJ/kg',
+               'u':'kJ/kg',
+               's':'kJ/kg/K',
+               'visc':'Pa-s',
+               'k':'kW/m/K',
+               'cp':'kJ/kg/K',
+               'cp0':'kJ/kg/K',
+               'cv':'kJ/kg/K',
+               'dpdT':'kPa/K',
+               'Tsat':'K',
+               'superheat':'K',
+               'subcooling':'K',
+               'MM':'kg/kmol'
+        }
+        s='phase = '+self.phase+'\n'
+        for k in ['T','p','rho','Q','h','u','s','visc','k','cp','cp0','cv','dpdT','Prandtl','superheat','subcooling','MM']:
+            if k in units:
+                s+=k+' = '+str(getattr(self,k))+' '+units[k]+'\n'
+            else:
+                s+=k+' = '+str(getattr(self,k))+' NO UNITS'+'\n'
+        return s.rstrip()
+        
+    cpdef State copy(self):
+        """
+        Make a copy of this State class
+        """
+        cdef State S = State(self.Fluid,dict(T=self.T_,D=self.rho_))
+        S.phase = self.phase
+        return S
+    
+def rebuildState(d):
+    S=State(d['Fluid'],{'T':d['T'],'D':d['rho']},phase=d['phase'])
+    return S
+    

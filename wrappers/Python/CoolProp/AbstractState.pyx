@@ -17,12 +17,18 @@ cdef class AbstractState:
         del self.thisptr
     
     cpdef update(self, constants_header.input_pairs ipair, double Value1, double Value2):
-        """ Update function - mirrors c++ function :cpapi:`AbstractState::update` """
+        """ Update function - wrapper of c++ function :cpapi:`AbstractState::update` """
         self.thisptr.update(ipair, Value1, Value2)
     
     cpdef set_mole_fractions(self, vector[double] z): 
         """ Set the mole fractions - wrapper of c++ function :cpapi:`AbstractState::set_mole_fractions` """
         self.thisptr.set_mole_fractions(z)
+    cpdef set_mass_fractions(self, vector[double] z): 
+        """ Set the mass fractions - wrapper of c++ function :cpapi:`AbstractState::set_mass_fractions` """
+        self.thisptr.set_mass_fractions(z)
+    cpdef set_volu_fractions(self, vector[double] z): 
+        """ Set the volume fractions - wrapper of c++ function :cpapi:`AbstractState::set_volu_fractions` """
+        self.thisptr.set_volu_fractions(z)
         
     ## ----------------------------------------	
     ##        Fluid property accessors
@@ -45,26 +51,38 @@ cdef class AbstractState:
         """ Get the density in kg/m^3 - wrapper of c++ function :cpapi:`AbstractState::rhomass` """
         return self.thisptr.rhomass()
     cpdef double hmolar(self) except *: 
-        """ Get the enthalpy in J/mol - wrapper of c++ function :cpapi:`AbstractState::hmolar` """
+        """ Get the enthalpy in J/mol - wrapper of c++ function :cpapi:`AbstractState::hmolar` """        
         return self.thisptr.hmolar()
+    cpdef double hmass(self) except *: 
+        """ Get the enthalpy in J/kg - wrapper of c++ function :cpapi:`AbstractState::hmass` """
+        return self.thisptr.hmass()        
+    cpdef double umolar(self) except *: 
+        """ Get the internal energy in J/mol - wrapper of c++ function :cpapi:`AbstractState::umolar` """
+        return self.thisptr.umolar()
+    cpdef double umass(self) except *: 
+        """ Get the internal energy in J/kg - wrapper of c++ function :cpapi:`AbstractState::umass` """
+        return self.thisptr.umass()
     cpdef double smolar(self) except *: 
         """ Get the entropy in J/mol/K - wrapper of c++ function :cpapi:`AbstractState::smolar` """
         return self.thisptr.smolar()
-    cpdef double cpmolar(self) except *: 
-        """ Get the constant pressure specific heat in J/mol/K - wrapper of c++ function :cpapi:`AbstractState::cpmolar` """
-        return self.thisptr.cpmolar()
-    cpdef double cvmolar(self) except *: 
-        """ Get the constant volume specific heat in J/mol/K - wrapper of c++ function :cpapi:`AbstractState::cvmolar` """
-        return self.thisptr.cvmolar()
-    cpdef double hmass(self) except *: 
-        """ Get the enthalpy in J/kg - wrapper of c++ function :cpapi:`AbstractState::hmass` """
-        return self.thisptr.hmass()
     cpdef double smass(self) except *: 
         """ Get the entropy in J/kg/K - wrapper of c++ function :cpapi:`AbstractState::smass` """
         return self.thisptr.smass()
+    cpdef double cpmolar(self) except *: 
+        """ Get the constant pressure specific heat in J/mol/K - wrapper of c++ function :cpapi:`AbstractState::cpmolar` """
+        return self.thisptr.cpmolar()
     cpdef double cpmass(self) except *: 
         """ Get the constant pressure specific heat in J/kg/K - wrapper of c++ function :cpapi:`AbstractState::cpmass` """
         return self.thisptr.cpmass()
+    cpdef double cp0molar(self) except *: 
+        """ Get the ideal gas constant pressure specific heat in J/mol/K - wrapper of c++ function :cpapi:`AbstractState::cp0molar` """
+        return self.thisptr.cp0molar()
+    cpdef double cp0mass(self) except *: 
+        """ Get the ideal gas constant pressure specific heat in J/kg/K - wrapper of c++ function :cpapi:`AbstractState::cp0mass` """
+        return self.thisptr.cp0mass()
+    cpdef double cvmolar(self) except *: 
+        """ Get the constant volume specific heat in J/mol/K - wrapper of c++ function :cpapi:`AbstractState::cvmolar` """
+        return self.thisptr.cvmolar()
     cpdef double cvmass(self) except *: 
         """ Get the constant volume specific heat in J/kg/K - wrapper of c++ function :cpapi:`AbstractState::cvmass` """
         return self.thisptr.cvmass()
@@ -76,15 +94,27 @@ cdef class AbstractState:
         return self.thisptr.molar_mass()
         
     ## ----------------------------------------	
+    ##        Derivatives
+    ## ----------------------------------------
+    
+    cpdef long double first_partial_deriv(self, constants_header.parameters OF , constants_header.parameters WRT, constants_header.parameters CONSTANT) except *: 
+        """ Get the first partial derivative - wrapper of c++ function :cpapi:`AbstractState::first_partial_deriv` """
+        return self.thisptr.first_partial_deriv(OF, WRT, CONSTANT)
+    cpdef long double second_partial_deriv(self, constants_header.parameters OF , constants_header.parameters WRT1, constants_header.parameters CONSTANT1, constants_header.parameters WRT2, constants_header.parameters CONSTANT2) except *: 
+        """ Get the second partial derivative - wrapper of c++ function :cpapi:`AbstractState::second_partial_deriv` """
+        return self.thisptr.second_partial_deriv(OF, WRT1, CONSTANT1, WRT2, CONSTANT2)
+        
+    ## ----------------------------------------	
     ##        Melting Line
     ## ----------------------------------------
     
-    cpdef double melting_line(self, int param, int given, double value) except *: 
-        """ Get values from the melting line - wrapper of c++ function :cpapi:`AbstractState::melting_line` """
-        return self.thisptr.melting_line(param, given, value)
     cpdef bint has_melting_line(self) except *: 
         """ Check if the fluid has a melting line - True if is does, False otherwise - wrapper of c++ function :cpapi:`AbstractState::has_melting_line` """
         return self.thisptr.has_melting_line()
+    cpdef double melting_line(self, int param, int given, double value) except *: 
+        """ Get values from the melting line - wrapper of c++ function :cpapi:`AbstractState::melting_line` """
+        return self.thisptr.melting_line(param, given, value)
+    
     
     ## ----------------------------------------	
     ##        Phase envelope

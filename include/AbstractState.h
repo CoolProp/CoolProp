@@ -71,7 +71,7 @@ protected:
     /// Transport properties
     CachedElement _viscosity, _conductivity, _surface_tension;
 
-    CachedElement _hmolar, _smolar, _umolar, _logp, _logrhomolar, _cpmolar, _cvmolar, _speed_sound, _gibbsmolar;
+    CachedElement _hmolar, _smolar, _umolar, _logp, _logrhomolar, _cpmolar, _cp0molar, _cvmolar, _speed_sound, _gibbsmolar;
 
     /// Ancillary values
     CachedElement _rhoLanc, _rhoVanc, _pLanc, _pVanc, _TLanc, _TVanc;
@@ -106,6 +106,8 @@ protected:
     virtual long double calc_umolar(void){throw NotImplementedError("calc_umolar is not implemented for this backend");};
     /// Using this backend, calculate the molar constant-pressure specific heat in J/mol/K
     virtual long double calc_cpmolar(void){throw NotImplementedError("calc_cpmolar is not implemented for this backend");};
+    /// Using this backend, calculate the ideal gas molar constant-pressure specific heat in J/mol/K
+    virtual long double calc_cpmolar_idealgas(void){throw NotImplementedError("calc_cpmolar_idealgas is not implemented for this backend");};
     /// Using this backend, calculate the molar constant-volume specific heat in J/mol/K
     virtual long double calc_cvmolar(void){throw NotImplementedError("calc_cvmolar is not implemented for this backend");};
     /// Using this backend, calculate the molar Gibbs function in J/mol
@@ -234,6 +236,7 @@ protected:
     virtual long double calc_hmass(void){return hmolar()/molar_mass();}
     virtual long double calc_smass(void){return smolar()/molar_mass();}
     virtual long double calc_cpmass(void){return cpmolar()/molar_mass();}
+    virtual long double calc_cp0mass(void){return cp0molar()/molar_mass();}
     virtual long double calc_cvmass(void){return cvmolar()/molar_mass();}
     virtual long double calc_umass(void){return umolar()/molar_mass();}
     
@@ -305,41 +308,8 @@ public:
 
     const CoolProp::SimpleState & get_reducing_state(){return _reducing;};
     const CoolProp::SimpleState & get_state(const std::string &state){return calc_state(state);};
-    const CoolProp::PhaseEnvelopeData &get_phase_envelope_data(){return calc_phase_envelope_data();};
-
-    double keyed_output(int key);
-	double trivial_keyed_output(int key);
      
-    /** \brief The first partial derivative in homogeneous phases
-     * 
-     * \f[ \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta}{\left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta} = \frac{N}{D}\f]
-     */
-    long double first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){return calc_first_partial_deriv(Of, Wrt, Constant);};
     
-    /** \brief The second partial derivative in homogeneous phases
-     * 
-     * The first partial derivative (\ref CoolProp::AbstractState::first_partial_deriv) can be expressed as
-     * 
-     * \f[ \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_T-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial C}{\partial T}\right)_\rho}{\left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_T-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial C}{\partial T}\right)_\rho} = \frac{N}{D}\f]
-     * 
-     * and the second derivative can be expressed as
-     * 
-     * \f[
-     * \frac{\partial}{\partial D}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_E = \frac{\frac{\partial}{\partial T}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\rho\left(\frac{\partial E}{\partial \rho}\right)_T-\frac{\partial}{\partial \rho}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_T\left(\frac{\partial E}{\partial T}\right)_\rho}{\left(\frac{\partial D}{\partial T}\right)_\rho\left(\frac{\partial E}{\partial \rho}\right)_T-\left(\frac{\partial D}{\partial \rho}\right)_T\left(\frac{\partial E}{\partial T}\right)_\rho}
-     * \f]
-     * 
-     * which can be expressed in parts as
-     * 
-     * \f[\left(\frac{\partial N}{\partial \rho}\right)_{T} = \left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho^2}\right)_{T}+\left(\frac{\partial^2 A}{\partial T\partial\rho}\right)\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T\partial\rho}\right)-\left(\frac{\partial^2 A}{\partial \rho^2}\right)_{T}\left(\frac{\partial C}{\partial T}\right)_\rho\f]
-     * \f[\left(\frac{\partial D}{\partial \rho}\right)_{T} = \left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho^2}\right)_{T}+\left(\frac{\partial^2 B}{\partial T\partial\rho}\right)\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T\partial\rho}\right)-\left(\frac{\partial^2 B}{\partial \rho^2}\right)_{T}\left(\frac{\partial C}{\partial T}\right)_\rho\f]
-     * \f[\left(\frac{\partial N}{\partial T}\right)_{\rho} = \left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho\partial T}\right)+\left(\frac{\partial^2 A}{\partial T^2}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T^2}\right)_\rho-\left(\frac{\partial^2 A}{\partial \rho\partial T}\right)\left(\frac{\partial C}{\partial T}\right)_\rho\f]
-     * \f[\left(\frac{\partial D}{\partial T}\right)_{\rho} = \left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho\partial T}\right)+\left(\frac{\partial^2 B}{\partial T^2}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T^2}\right)_\rho-\left(\frac{\partial^2 B}{\partial \rho\partial T}\right)\left(\frac{\partial C}{\partial T}\right)_\rho\f]
-     * \f[\frac{\partial}{\partial \rho}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_T = \frac{D\left(\frac{\partial N}{\partial \rho}\right)_{T}-N\left(\frac{\partial D}{\partial \rho}\right)_{\tau}}{D^2}\f]
-     * \f[\frac{\partial}{\partial T}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\rho = \frac{D\left(\frac{\partial N}{\partial T}\right)_{\rho}-N\left(\frac{\partial D}{\partial T}\right)_{\rho}}{D^2}\f]
-     * 
-     * The terms \f$ N \f$ and \f$ D \f$ are the numerator and denominator from \ref CoolProp::AbstractState::first_partial_deriv respectively
-     */
-    long double second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2){return calc_second_partial_deriv(Of1,Wrt1,Constant1,Of2,Constant2);};
 
     // Limits
 	double Tmin(void);
@@ -377,6 +347,11 @@ public:
     // Bulk properties - temperature and density are directly calculated every time
     // All other parameters are calculated on an as-needed basis
     // ----------------------------------------
+    /// Retrieve a value by key
+    double keyed_output(int key);
+    /// A trivial keyed output like molar mass that does not depend on the state
+	double trivial_keyed_output(int key);
+    
     /// Return the temperature in K
     double T(void)  {return _T;};
     /// Return the molar density in mol/m^3
@@ -387,7 +362,6 @@ public:
     double p(void)  {return _p;};
     /// Return the vapor quality (mol/mol); Q = 0 for saturated liquid
     double Q(void)  {return _Q;};
-
     /// Return the reciprocal of the reduced temperature (\f$\tau = T_c/T\f$)
     double tau(void);
     /// Return the reduced density (\f$\delta = \rho/\rho_c\f$)
@@ -396,7 +370,6 @@ public:
     double molar_mass(void);
     /// Return the mole-fraction weighted gas constant in J/mol/K
     double gas_constant(void);
-
     double Bvirial(void);
     double dBvirial_dT(void);
     double Cvirial(void);
@@ -418,6 +391,10 @@ public:
     double cpmolar(void);
     /// Return the mass constant pressure specific heat in J/kg/K
     double cpmass(void){return calc_cpmass();};
+    /// Return the molar constant pressure specific heat for ideal gas part only in J/mol/K
+    double cp0molar(void);
+    /// Return the mass constant pressure specific heat for ideal gas part only in J/kg/K
+    double cp0mass(void){return calc_cp0mass();};
     /// Return the molar constant volume specific heat in J/mol/K
     double cvmolar(void);
     /// Return the mass constant volume specific heat in J/kg/K
@@ -431,18 +408,62 @@ public:
     /// Return the isobaric expansion coefficient \f$ \beta = \frac{1}{v}\left.\frac{\partial v}{\partial T}\right|_p = -\frac{1}{\rho}\left.\frac{\partial \rho}{\partial T}\right|_p\f$  in 1/K
     double isobaric_expansion_coefficient(void);
     double fugacity_coefficient(int i);
-    void build_phase_envelope(const std::string &type);
     //double fundamental_derivative_of_gas_dynamics(void);
+    
+    // ----------------------------------------
+    //    Partial derivatives
+    // ----------------------------------------
+    
+    /** \brief The first partial derivative in homogeneous phases
+     * 
+     * \f[ \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta}{\left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta} = \frac{N}{D}\f]
+     */
+    long double first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){return calc_first_partial_deriv(Of, Wrt, Constant);};
+    
+    /** \brief The second partial derivative in homogeneous phases
+     * 
+     * The first partial derivative (\ref CoolProp::AbstractState::first_partial_deriv) can be expressed as
+     * 
+     * \f[ \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_T-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial C}{\partial T}\right)_\rho}{\left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_T-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial C}{\partial T}\right)_\rho} = \frac{N}{D}\f]
+     * 
+     * and the second derivative can be expressed as
+     * 
+     * \f[
+     * \frac{\partial}{\partial D}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_E = \frac{\frac{\partial}{\partial T}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\rho\left(\frac{\partial E}{\partial \rho}\right)_T-\frac{\partial}{\partial \rho}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_T\left(\frac{\partial E}{\partial T}\right)_\rho}{\left(\frac{\partial D}{\partial T}\right)_\rho\left(\frac{\partial E}{\partial \rho}\right)_T-\left(\frac{\partial D}{\partial \rho}\right)_T\left(\frac{\partial E}{\partial T}\right)_\rho}
+     * \f]
+     * 
+     * which can be expressed in parts as
+     * 
+     * \f[\left(\frac{\partial N}{\partial \rho}\right)_{T} = \left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho^2}\right)_{T}+\left(\frac{\partial^2 A}{\partial T\partial\rho}\right)\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T\partial\rho}\right)-\left(\frac{\partial^2 A}{\partial \rho^2}\right)_{T}\left(\frac{\partial C}{\partial T}\right)_\rho\f]
+     * \f[\left(\frac{\partial D}{\partial \rho}\right)_{T} = \left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho^2}\right)_{T}+\left(\frac{\partial^2 B}{\partial T\partial\rho}\right)\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T\partial\rho}\right)-\left(\frac{\partial^2 B}{\partial \rho^2}\right)_{T}\left(\frac{\partial C}{\partial T}\right)_\rho\f]
+     * \f[\left(\frac{\partial N}{\partial T}\right)_{\rho} = \left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho\partial T}\right)+\left(\frac{\partial^2 A}{\partial T^2}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T^2}\right)_\rho-\left(\frac{\partial^2 A}{\partial \rho\partial T}\right)\left(\frac{\partial C}{\partial T}\right)_\rho\f]
+     * \f[\left(\frac{\partial D}{\partial T}\right)_{\rho} = \left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho\partial T}\right)+\left(\frac{\partial^2 B}{\partial T^2}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T^2}\right)_\rho-\left(\frac{\partial^2 B}{\partial \rho\partial T}\right)\left(\frac{\partial C}{\partial T}\right)_\rho\f]
+     * \f[\frac{\partial}{\partial \rho}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_T = \frac{D\left(\frac{\partial N}{\partial \rho}\right)_{T}-N\left(\frac{\partial D}{\partial \rho}\right)_{\tau}}{D^2}\f]
+     * \f[\frac{\partial}{\partial T}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\rho = \frac{D\left(\frac{\partial N}{\partial T}\right)_{\rho}-N\left(\frac{\partial D}{\partial T}\right)_{\rho}}{D^2}\f]
+     * 
+     * The terms \f$ N \f$ and \f$ D \f$ are the numerator and denominator from \ref CoolProp::AbstractState::first_partial_deriv respectively
+     */
+    long double second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2){return calc_second_partial_deriv(Of1,Wrt1,Constant1,Of2,Constant2);};
+    
+    
+    // ----------------------------------------
+    //    Phase envelope for mixtures
+    // ----------------------------------------
+    
+    void build_phase_envelope(const std::string &type);
+    const CoolProp::PhaseEnvelopeData &get_phase_envelope_data(){return calc_phase_envelope_data();};
 	
+    // ----------------------------------------
+    //    Ancillary equations
+    // ----------------------------------------
+    
     /// Return true if the fluid has a melting line - default is false, but can be re-implemented by derived class
     virtual bool has_melting_line(void){return false;};
-    
     /// Return a value from the melting line
     /// @param param The key for the parameter to be returned
     /// @param given The key for the parameter that is given
     /// @param value The value for the parameter that is given
 	double melting_line(int param, int given, double value);
-    
     /// Return the value from a saturation ancillary curve (if the backend implements it)
     /// @param param The key for the parameter to be returned
     /// @param Q The quality for the parameter that is given (0 = saturated liquid, 1 = saturated vapor)
