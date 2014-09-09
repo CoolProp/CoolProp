@@ -96,6 +96,7 @@ sfpdf:
 	cd _build/latex; \
 	scp sampledoc.pdf jdh2358,matplotlib@web.sf.net:/home/groups/m/ma/matplotlib/htdocs/sampledoc/
 
+
 rst: FluidInfoGenerator.py
 	python FluidInfoGenerator.py
 	mv Fluids/FluidInformation.rst Fluids/FluidInformation.rst.2
@@ -104,7 +105,16 @@ rst: FluidInfoGenerator.py
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) _build/html
 
 
-PYGEN_DIR = $(CURDIR)/../dev/incompressible_liquids
+
+############################################################
+# Generate and copy the include files for the documetation
+############################################################
+#
+INCOMP_INCLUDES_DIR:=$(CURDIR)/../dev/incompressible_liquids
+INCOMP_INCLUDES_PDF:=$(shell find $(INCOMP_INCLUDES_DIR) -name '*.pdf')
+
+
+
 
 .PHONY: incompressible_includes
 incompressible_includes: fluid_properties/all_pure.pdf fluid_properties/Incompressibles_Fluids.txt
@@ -118,3 +128,18 @@ fluid_properties/all_pure.pdf: $(addprefix $(PYGEN_DIR)/, all_incompressibles.py
 	python all_incompressibles.py
 	cp $(PYGEN_DIR)/all_pure.pdf fluid_properties/
 	cp $(PYGEN_DIR)/all_solutions.pdf fluid_properties/
+
+# general rules for the fit reports
+PYGEN_FILES=$(shell echo $(COOLPROPDIR)*.cpp)
+
+# Make the .pdf report files 
+$(PYGEN_DIR)/report/%.pdf : %.cpp
+	$(CC) $(_CPPFLAGS) -c $(_INCLUDES) $< -o $@
+	
+	
+	
+.PHONY : check_incomp_flags
+check_incomp_flags:
+	@printf "\nMakefile variables:\n\
+	  INCOMP_INCLUDES_DIR=$(INCOMP_INCLUDES_DIR)\n\
+	  INCOMP_INCLUDES_PDF=$(INCOMP_INCLUDES_PDF)\n"

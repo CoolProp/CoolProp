@@ -3,17 +3,17 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase": 2.731500000e+02, 
-  "Tmax": 2.931500000e+02, 
-  "Tmin": 2.281500000e+02, 
-  "TminPsat": 2.931500000e+02, 
+  "Tbase": 2.731500e+02, 
+  "Tmax": 2.931500e+02, 
+  "Tmin": 2.281500e+02, 
+  "TminPsat": 2.931500e+02, 
   "conductivity": {
     "coeffs": [
       [
-        4.750000000e-01
+        4.750000e-01
       ], 
       [
-        1.674000000e-03
+        1.674000e-03
       ]
     ], 
     "type": "polynomial"
@@ -21,10 +21,10 @@
   "density": {
     "coeffs": [
       [
-        1.328700000e+03
+        1.328700e+03
       ], 
       [
-        -5.307540000e-01
+        -5.307540e-01
       ]
     ], 
     "type": "polynomial"
@@ -42,28 +42,28 @@
   "reference": "Hydro Chemicals", 
   "saturation_pressure": {
     "coeffs": [
-      -5.000000000e+03, 
-      6.000000000e+01, 
-      -1.000000000e+01
+      -5.000000e+03, 
+      6.000000e+01, 
+      -1.000000e+01
     ], 
     "type": "exponential"
   }, 
   "specific_heat": {
     "coeffs": [
       [
-        2.578000000e+03
+        2.578000e+03
       ], 
       [
-        2.300000000e+00
+        2.300000e+00
       ]
     ], 
     "type": "polynomial"
   }, 
   "viscosity": {
     "coeffs": [
-      4.790608656e+02, 
-      -1.466028691e+02, 
-      2.408912031e+00
+      4.790609e+02, 
+      -1.466029e+02, 
+      2.408912e+00
     ], 
     "type": "exponential"
   }, 
@@ -71,8 +71,8 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "xbase": 0.000000000e+00, 
+  "xbase": 0.000000e+00, 
   "xid": "pure", 
-  "xmax": 1.000000000e+00, 
-  "xmin": 0.000000000e+00
+  "xmax": 1.000000e+00, 
+  "xmin": 0.000000e+00
 }
