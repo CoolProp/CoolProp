@@ -50,6 +50,8 @@ protected:
                 assert(n.size() == d.size());
                 assert(n.size() == t.size());
                 assert(n.size() == l.size());
+                
+                if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){for(std::size_t i = 0; i < n.size(); ++i){n[i] *= EOS.R_u/R_u_CODATA;}}
                 EOS.alphar.GenExp.add_Power(n,d,t,l);
             }
             else if (!type.compare("ResidualHelmholtzGaussian"))
@@ -67,6 +69,7 @@ protected:
                 assert(n.size() == epsilon.size());
                 assert(n.size() == beta.size());
                 assert(n.size() == gamma.size());
+                if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){for(std::size_t i = 0; i < n.size(); ++i){n[i] *= EOS.R_u/R_u_CODATA;}}
                 EOS.alphar.GenExp.add_Gaussian(n,d,t,eta,epsilon,beta,gamma);
             }
             else if (!type.compare("ResidualHelmholtzNonAnalytic"))
@@ -87,6 +90,7 @@ protected:
                 assert(n.size() == B.size());
                 assert(n.size() == C.size());
                 assert(n.size() == D.size());
+                if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){for(std::size_t i = 0; i < n.size(); ++i){n[i] *= EOS.R_u/R_u_CODATA;}}
                 EOS.alphar.NonAnalytic = ResidualHelmholtzNonAnalytic(n,a,b,beta,A,B,C,D);
             }
             else if (!type.compare("ResidualHelmholtzLemmon2005"))
@@ -100,6 +104,7 @@ protected:
                 assert(n.size() == t.size());
                 assert(n.size() == l.size());
                 assert(n.size() == m.size());
+                if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){for(std::size_t i = 0; i < n.size(); ++i){n[i] *= EOS.R_u/R_u_CODATA;}}
                 EOS.alphar.GenExp.add_Lemmon2005(n,d,t,l,m);
             }
             else if (!type.compare("ResidualHelmholtzExponential"))
@@ -113,6 +118,7 @@ protected:
                 assert(n.size() == t.size());
                 assert(n.size() == g.size());
                 assert(n.size() == l.size());
+                if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){for(std::size_t i = 0; i < n.size(); ++i){n[i] *= EOS.R_u/R_u_CODATA;}}
                 EOS.alphar.GenExp.add_Exponential(n,d,t,g,l);
             }
             else if (!type.compare("ResidualHelmholtzAssociating"))
@@ -368,6 +374,10 @@ protected:
 
         // Validate the equation of state that was just created
         EOS.validate();
+        
+        if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){
+            EOS.R_u = R_u_CODATA;
+        }
     }
 
     /// Parse the list of possible equations of state

@@ -120,6 +120,8 @@ void HelmholtzEOSMixtureBackend::calc_phase_envelope(const std::string &type)
     PhaseEnvelope = PhaseEnvelopeData();
     // Build the phase envelope
     PhaseEnvelopeRoutines::build(*this);
+    // Finalize the phase envelope
+    PhaseEnvelopeRoutines::finalize(*this);
 };
 void HelmholtzEOSMixtureBackend::set_mixture_parameters()
 {

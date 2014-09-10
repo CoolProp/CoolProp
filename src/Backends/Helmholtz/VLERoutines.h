@@ -225,6 +225,7 @@ namespace SaturationSolvers
 	    bool logging;
         bool bubble_point;
 	    int Nsteps;
+        long double dTsat_dPsat, dPsat_dTsat;
 	    STLMatrix J;
         HelmholtzEOSMixtureBackend *HEOS;
 	    std::vector<long double> K, x, y, phi_ij_liq, phi_ij_vap, dlnphi_drho_liq, dlnphi_drho_vap, r, negative_r, dXdS, neg_dFdS;

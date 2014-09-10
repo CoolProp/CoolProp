@@ -1041,6 +1041,16 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
         error_rms += r[i]*r[i]; // Sum the squares
     }
     error_rms = sqrt(error_rms); // Square-root (The R in RMS)
+    
+    // Calculate derivatives along phase boundary;
+    long double dQ_dPsat = 0, dQ_dTsat = 0;
+    for (std::size_t i = 0; i < N; ++i)
+    {
+        dQ_dPsat += x[i]*(MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(rSatV, i, xN_flag));
+        dQ_dTsat += x[i]*(MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rSatV, i, xN_flag));
+    }
+    dTsat_dPsat = -dQ_dPsat/dQ_dTsat;
+    dPsat_dTsat = -dQ_dTsat/dQ_dPsat;
 }
 
 } /* namespace CoolProp*/

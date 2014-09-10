@@ -5,6 +5,7 @@
 #include "VLERoutines.h"
 #include "PhaseEnvelopeRoutines.h"
 #include "PhaseEnvelope.h"
+#include "CoolPropTools.h"
 
 namespace CoolProp{
 
@@ -57,7 +58,8 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         
         if (failure_count > 5){
             // Stop since we are stuck at a bad point
-            throw SolutionError("stuck");
+            //throw SolutionError("stuck");
+            return;
         }
         
         if (iter - iter0 > 0){ IO.rhomolar_vap *= factor;}
@@ -123,6 +125,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
             NR.call(HEOS, IO.y, IO.x, IO);
         }
         catch(std::exception &e){
+            std::cout << e.what() << std::endl;
             // Try again, but with a smaller step
             IO.rhomolar_vap /= factor;
             factor = 1 + (factor-1)/2;
@@ -178,6 +181,131 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         
         // Reset the failure counter
         failure_count = 0;
+    }
+}
+
+void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
+{
+    enum maxima_points {PMAX_SAT = 0, TMAX_SAT = 1};
+    std::size_t imax; // Index of the maximal temperature or pressure
+    
+    PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
+    
+    // Find the index of the point with the highest temperature
+    std::size_t iTmax = std::distance(env.T.begin(), std::max_element(env.T.begin(), env.T.end()));
+    
+    // Find the index of the point with the highest pressure
+    std::size_t ipmax = std::distance(env.p.begin(), std::max_element(env.p.begin(), env.p.end()));
+        
+    // Determine if the phase envelope corresponds to a Type I mixture
+    // For now we consider a mixture to be Type I if the pressure at the 
+    // end of the envelope is lower than max pressure pressure
+    env.TypeI = env.p[env.p.size()-1] < env.p[ipmax];
+    
+    // Approximate solutions for the maxima of the phase envelope
+    // See method in Gernert.  We use our spline class to find the coefficients
+    if (env.TypeI){
+        for (int imaxima = 0; imaxima <= 1; ++imaxima){
+            maxima_points maxima;
+            if (imaxima == PMAX_SAT){
+                maxima = PMAX_SAT;
+            }
+            else if (imaxima == TMAX_SAT){
+                maxima = TMAX_SAT;
+            }
+            
+            // Spline using the points around it
+            SplineClass spline;
+            if (maxima == TMAX_SAT){
+                imax = iTmax;
+                spline.add_4value_constraints(env.rhomolar_vap[iTmax-1], env.rhomolar_vap[iTmax], env.rhomolar_vap[iTmax+1], env.rhomolar_vap[iTmax+2],
+                                              env.T[iTmax-1], env.T[iTmax], env.T[iTmax+1], env.T[iTmax+2] );
+            }
+            else{
+                imax = ipmax;
+                spline.add_4value_constraints(env.rhomolar_vap[ipmax-1], env.rhomolar_vap[ipmax], env.rhomolar_vap[ipmax+1], env.rhomolar_vap[ipmax+2],
+                                              env.p[ipmax-1], env.p[ipmax], env.p[ipmax+1], env.p[ipmax+2] );
+            }
+            spline.build(); // y = a*rho^3 + b*rho^2 + c*rho + d
+            
+            // Take derivative
+            // dy/drho = 3*a*rho^2 + 2*b*rho + c
+            // Solve quadratic for derivative to find rho
+            int Nsoln = 0; double rho0 = _HUGE, rho1 = _HUGE, rho2 = _HUGE;
+            solve_cubic(0, 3*spline.a, 2*spline.b, spline.c, Nsoln, rho0, rho1, rho2);
+            
+            SaturationSolvers::newton_raphson_saturation_options IO;
+            IO.rhomolar_vap = _HUGE;
+            // Find the correct solution
+            if (Nsoln == 1){
+                IO.rhomolar_vap = rho0;
+            }
+            else if (Nsoln == 2){
+                if (is_in_closed_range(env.rhomolar_vap[imax-1], env.rhomolar_vap[imax+1], (long double)rho0)){ IO.rhomolar_vap = rho0; }
+                if (is_in_closed_range(env.rhomolar_vap[imax-1], env.rhomolar_vap[imax+1], (long double)rho1)){ IO.rhomolar_vap = rho1; }
+            }
+            else{
+                throw ValueError("More than 2 solutions found");
+            }
+            
+            class solver_resid : public FuncWrapper1D
+            {
+            public:
+                std::size_t imax;
+                maxima_points maxima;
+                HelmholtzEOSMixtureBackend *HEOS;
+                SaturationSolvers::newton_raphson_saturation NR;
+                SaturationSolvers::newton_raphson_saturation_options IO;
+                solver_resid(HelmholtzEOSMixtureBackend &HEOS, std::size_t imax, maxima_points maxima)
+                {
+                    this->HEOS = &HEOS, this->imax = imax; this->maxima = maxima;
+                };
+                double call(double rhomolar_vap){
+                    PhaseEnvelopeData &env = HEOS->PhaseEnvelope;
+                    IO.bubble_point = false;
+                    IO.rhomolar_vap = rhomolar_vap;
+                    IO.y = HEOS->get_mole_fractions();
+                    IO.x = IO.y; // Just to give it good size
+                    IO.T = CubicInterp(env.rhomolar_vap, env.T, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
+                    IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
+                    for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
+                    {
+                        IO.x[i] = CubicInterp(env.rhomolar_vap, env.x[i], imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
+                    }
+                    IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
+                    NR.call(*HEOS, IO.y, IO.x, IO);
+                    if (maxima == TMAX_SAT){
+                        return NR.dTsat_dPsat;
+                    }
+                    else{
+                        return NR.dPsat_dTsat;
+                    }
+                };
+            };
+            
+            solver_resid resid(HEOS, imax, maxima);
+            std::string errstr;
+            double rho = Brent(resid, IO.rhomolar_vap*0.95, IO.rhomolar_vap*1.05, DBL_EPSILON, 1e-12, 100, errstr);
+            
+            // If maxima point is greater than density at point from the phase envelope, increase index by 1 so that the 
+            // insertion will happen *after* the point in the envelope since density is monotonically increasing.
+            if (rho > env.rhomolar_vap[imax]){ imax++; }
+            
+            env.insert_variables(resid.IO.T, resid.IO.p, resid.IO.rhomolar_liq, resid.IO.rhomolar_vap, resid.IO.hmolar_liq, 
+                                 resid.IO.hmolar_vap, resid.IO.smolar_liq, resid.IO.smolar_vap, resid.IO.x, resid.IO.y, imax);
+            
+            if (maxima == TMAX_SAT){
+                env.iTsat_max = imax;
+                if (imax <= env.ipsat_max){
+                    // Psat_max goes first; an insertion at a smaller index bumps up the index 
+                    // for ipsat_max, so we bump the index to keep pace
+                    env.ipsat_max++;
+                }
+            }
+            else{
+                env.ipsat_max = imax;
+            }
+        }
     }
 }
 

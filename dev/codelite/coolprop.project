@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CodeLite_Project Name="coolprop" InternalType="Console">
   <Plugins>
-    <Plugin Name="CppCheck"/>
     <Plugin Name="qmake">
       <![CDATA[00020001N0005Debug0000000000000001N0007Release000000000000]]>
     </Plugin>
+    <Plugin Name="CppCheck"/>
     <Plugin Name="CMakePlugin">
       <![CDATA[[{
   "name": "Debug",
@@ -52,9 +52,10 @@
         <File Name="../../src/Backends/Helmholtz/MixtureDerivatives.h"/>
         <File Name="../../src/Backends/Helmholtz/PhaseEnvelopeRoutines.cpp"/>
         <File Name="../../src/Backends/Helmholtz/PhaseEnvelopeRoutines.h"/>
-        <File Name="../../src/Backends/Helmholtz/PhaseEnvelope.h"/>
         <File Name="../../src/Backends/Helmholtz/MixtureParameters.cpp"/>
         <File Name="../../src/Backends/Helmholtz/MixtureParameters.h"/>
+        <File Name="../../src/Backends/Helmholtz/Configuration.h"/>
+        <File Name="../../src/Backends/Helmholtz/Configuration.cpp"/>
       </VirtualDirectory>
       <VirtualDirectory Name="Incompressible">
         <File Name="../../src/Backends/Incompressible/IncompressibleBackend.cpp"/>
