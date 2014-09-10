@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "HumidAirProp.h"
-#include "AbstractState.h"
+#include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Solvers.h"
 #include "CoolPropTools.h"
 #include "Ice.h"
@@ -29,7 +29,7 @@ void strcpy(std::string &s, const std::string e){
     s = e;
 }
 
-shared_ptr<CoolProp::AbstractState> Water, Air;
+shared_ptr<CoolProp::HelmholtzEOSBackend> Water, Air;
 
 namespace HumidAir
 {
@@ -38,10 +38,10 @@ namespace HumidAir
 void check_fluid_instantiation()
 {
     if (!Water.get()){
-        Water.reset(CoolProp::AbstractState::factory("HEOS", "Water"));
+        Water.reset(new CoolProp::HelmholtzEOSBackend("Water"));
     }
     if (!Air.get()){
-        Air.reset(CoolProp::AbstractState::factory("HEOS", "Air"));
+        Air.reset(new CoolProp::HelmholtzEOSBackend("Air"));
     }
 };
 
@@ -654,7 +654,9 @@ double IdealGasMolarEnthalpy_Water(double T, double vmolar)
     
     tau = Water->keyed_output(CoolProp::iT_reducing)/T;
     rhomolar = 1/vmolar; //[mol/m^3]
-    Water->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
+    Water->specify_phase(CoolProp::iphase_gas);
+    Water->update_DmolarT_direct(rhomolar, T);
+    Water->unspecify_phase();
     hbar_w = hbar_w_0 + hoffset + R_bar*T*(1+tau*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
     return hbar_w;
 }
@@ -671,7 +673,9 @@ double IdealGasMolarEntropy_Water(double T, double p)
     double soffset = sref - sref_EOS;
     
     tau = Water->keyed_output(CoolProp::iT_reducing)/T;
+    Water->specify_phase(CoolProp::iphase_gas);
     Water->update(CoolProp::DmolarT_INPUTS,p/(R_bar*T),T);
+    Water->unspecify_phase();
     sbar_w = soffset + R_bar*(tau*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Water->keyed_output(CoolProp::ialpha0)); //[kJ/kmol/K]
     return sbar_w;
 }
@@ -693,7 +697,9 @@ double IdealGasMolarEnthalpy_Air(double T, double vmolar)
     tau = 132.6312/T;
     rhomolar = 1/vmolar; //[mol/m^3]
     // Now calculate it based on the given inputs
-    Air->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
+    Air->specify_phase(CoolProp::iphase_gas);
+    Air->update_DmolarT_direct(rhomolar, T);
+    Air->unspecify_phase();
     hbar_a = hbar_a_0 + hoffset + R_bar_Lemmon*T*(1+tau*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)); //[J/mol]
     return hbar_a;
 }
@@ -716,7 +722,9 @@ double IdealGasMolarEntropy_Air(double T, double vmolar_a)
     // Tj and rhoj are given by 132.6312 and 302.5507652 respectively
     tau = 132.6312/T; //[no units]
     
-    Air->update(CoolProp::DmolarT_INPUTS,1/vmolar_a_0,T);
+    Air->specify_phase(CoolProp::iphase_gas);
+    Air->update_DmolarT_direct(1/vmolar_a_0,T);
+    Air->unspecify_phase();
     sbar_a=sbar_0_Lem + soffset + R_bar_Lemmon*(tau*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Air->keyed_output(CoolProp::ialpha0))+R_bar_Lemmon*log(vmolar_a/vmolar_a_0); //[J/mol/K]
 
     return sbar_a; //[J/mol/K]
@@ -994,10 +1002,10 @@ double WetbulbTemperature(double T, double p, double psi_w)
 
     double return_val;
     try{
-        return_val = Secant(WBS,Tmax-1,-0.0001,1e-8,50,errstr);
+        return_val = Brent(WBS,Tmax+1,200, DBL_EPSILON, 1e-12, 50, errstr);
 
         // Solution obtained is out of range (T>Tmax)
-        if (return_val > Tmax) {throw CoolProp::ValueError();}
+        if (return_val > Tmax + 1) {throw CoolProp::ValueError();}
     }
     catch(std::exception &)
     {
@@ -1288,7 +1296,7 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
             }
             else
             {
-                printf("Sorry, but currently at least one of the variables as an input to HAProps() must be temperature, relative humidity, humidity ratio, or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now\n");
+                printf("Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now\n");
                 return -1000;
             }
 
@@ -1303,7 +1311,7 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
                 try{
                     T = Secant_HAProps_T(SecondaryInputName,(char *)"P",p,MainInputName,MainInputValue,SecondaryInputValue,T_guess);
                     double val = HAPropsSI(SecondaryInputName,(char *)"T",T,(char *)"P",p,MainInputName,MainInputValue);
-                    if (!ValidNumber(T) || !ValidNumber(val) || !(T_min < T && T < T_max) || std::abs(val-SecondaryInputValue)>1e-6)
+                    if (!ValidNumber(T) || !ValidNumber(val) || !(T_min < T && T < T_max) || std::abs(val-SecondaryInputValue)>1e-3)
                     {
                         throw CoolProp::ValueError();
                     }

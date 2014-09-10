@@ -40,10 +40,10 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
 #     long _get_Fluid_index "CoolProp::get_Fluid_index" (string Fluid)
 #     double _IProps "CoolProp::IProps"(long Output, long Name1, double Prop1, long Name2, double Prop2, long Ref)
  
-cdef extern from "HumidAirProp.h":
+cdef extern from "HumidAirProp.h" namespace "HumidAir":
     double _HAPropsSI "HumidAir::HAPropsSI"(string OutputName, string Input1Name, double Input1, string Input2Name, double Input2, string Input3Name, double Input3)
-#     double _HAProps_Aux "HAProps_Aux"(const char* Name,double T, double p, double W, char *units)
-#     double _cair_sat "cair_sat"(double T)
+    double _HAProps_Aux "HumidAir::HAProps_Aux"(const char* Name,double T, double p, double W, char *units)
+    double _cair_sat "HumidAir::cair_sat"(double T)
        
 cdef class State:
     cdef AbstractState pAS

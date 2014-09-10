@@ -9,10 +9,10 @@ import matplotlib, numpy, textwrap
 import_template=(
 """
 import numpy, matplotlib
-from CoolProp.HumidAirProp import HAProps
+from CoolProp.HumidAirProp import HAPropsSI
 from CoolProp.Plots.Plots import InlineLabel 
 
-p = 101.325
+p = 101325
 Tdb = numpy.linspace(-10,60,100)+273.15
 
 #Make the figure and the axes
@@ -28,7 +28,7 @@ matplotlib.pyplot.show()
 )
 
 Tdb = numpy.linspace(-10,60,100)+273.15
-p = 101.325
+p = 101325
 
 class PlotFormatting(object):
     
@@ -153,7 +153,7 @@ if __name__=='__main__':
     RHLabels = HumidityLabels([0.05,0.1,0.15,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9], h=65)
     RHLabels.plot(ax)
      
-    HL = EnthalpyLines(range(-20,100,10))
+    HL = EnthalpyLines(range(-20000,100000,10000))
     HL.plot(ax)
     
     PF = PlotFormatting()
