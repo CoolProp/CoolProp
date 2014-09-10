@@ -431,7 +431,7 @@ class IsoLines(BasePlot):
 
 
 class PropsPlot(BasePlot):
-    def __init__(self, fluid_name, graph_type, units = 'SI', reciprocal_density = False, **kwargs):
+    def __init__(self, fluid_name, graph_type, units = 'KSI', reciprocal_density = False, **kwargs):
         """
         Create graph for the specified fluid properties
 
