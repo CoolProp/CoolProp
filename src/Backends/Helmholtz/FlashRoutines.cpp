@@ -725,7 +725,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                 {
                     case iphase_gas:
                     {
-                        Tmax = HEOS.Tmax()+1;
+                        Tmax = 1.5*HEOS.Tmax();
                         if (saturation_called){ Tmin = HEOS.SatV->T();}else{Tmin = HEOS._TVanc.pt();}
                         break;
                     }
@@ -746,7 +746,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                     case iphase_supercritical_gas:
                     case iphase_supercritical:
                     {
-                        Tmax = HEOS.Tmax()+1;
+                        Tmax = 1.5*HEOS.Tmax();
                         // Sometimes the minimum pressure for the melting line is a bit above the triple point pressure
                         if (HEOS.has_melting_line() && HEOS._p > HEOS.calc_melting_line(iP_min, -1, -1)){
 							Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p)-1e-3;
