@@ -431,7 +431,7 @@ int main()
         std::cin >> c;
     }
     #endif
-    #if 1
+    #if 0
     {
 		run_tests();
 		char c;
@@ -445,33 +445,15 @@ int main()
         int rr =0;
     }
     #endif
-    #if 0
+    #if 1
     { 
-//        std::vector<std::string> names(1, "n-Propane");
-//        shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(names));
-//        
-//        for (double p = HEOS->melting_line(iP_min, -1, -1)*1.01; p < HEOS->melting_line(iP_max, -1, -1); p *= 1.1)
-//        {
-//            double Tmelt = HEOS->melting_line(iT, iP, p);
-//            //HEOS->specify_phase(iphase_liquid);
-//            HEOS->clear();
-//            HEOS->update(PT_INPUTS, p, Tmelt);
-//            std::cout << format("%0.16g %0.16g %0.16g %0.16g %d %0.16g\n", Tmelt, p, HEOS->delta(), HEOS->hmolar(), HEOS->phase(), PropsSI("Dmass","P",p,"T",Tmelt,"REFPROP::Propane"));
-//            if (HEOS->phase() == iphase_twophase){
-//                HEOS->update(PT_INPUTS, p, Tmelt);};
-//            std::cout << get_global_param_string("errstring") << std::endl;
-//        }
-//        double TTTA = PropsSI("T","P",1e5,"Q",0,"Methane[0.25]&Ethane[0.2]&Propane[0.1]");
-//        double TTT = PropsSI("Dmolar","P",1e5,"T",300,"Methane[0.25]&Ethane[0.2]&Propane[0.1]");
-//        double TTTB = PropsSI("T","P",3e6,"Q",0,"R32[0.5]&R125[0.5]");
-//        double TTTB2 = PropsSI("T","P",3e6,"Q",0,"REFPROP::R32[0.5]&R125[0.5]");
         
         ::set_debug_level(0);
         
-        //shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Ethane&Propane"));
-        //std::vector<long double> z(2, 0.3); z[1] = 0.7;
-        shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Methane&Propane&Ethane&n-Butane"));
-        std::vector<long double> z(4, 0.1); z[1] = 0.35; z[2] = 0.35, z[3] = 0.2;
+        shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Methane&Propane"));
+        std::vector<long double> z(2, 0.3); z[1] = 0.7;
+        //shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Methane&Propane&Ethane&n-Butane"));
+        //std::vector<long double> z(4, 0.1); z[1] = 0.35; z[2] = 0.35, z[3] = 0.2;
         HEOS->set_mole_fractions(z);
         
         time_t t1, t2;

@@ -171,7 +171,7 @@ long double HelmholtzEOSMixtureBackend::calc_gas_constant(void)
         return components[0]->gas_constant();
     }
     else{
-        if (get_config_bool(NORMALIZE_GAS_CONSTANTS2)){
+        if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){
             return R_u_CODATA;
         }
         else{
@@ -184,7 +184,6 @@ long double HelmholtzEOSMixtureBackend::calc_gas_constant(void)
             return summer;
         }
     }
-    
 }
 long double HelmholtzEOSMixtureBackend::calc_molar_mass(void)
 {
@@ -2091,7 +2090,7 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<l
             HelmholtzDerivatives derivs = components[i]->pEOS->alphar.all(tau, delta);
             long double xi = mole_fractions[i];
             long double R_u_ratio = 1;
-            if (get_config_bool(NORMALIZE_GAS_CONSTANTS2)){
+            if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){
                 R_u_ratio = components[0]->pEOS->R_u/R_u_CODATA;
             }
             summer_base += xi*derivs.alphar;

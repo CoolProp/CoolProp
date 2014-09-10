@@ -4,7 +4,7 @@
 #include "Exceptions.h"
 #include "CoolPropTools.h"
 
-enum configuration_keys {NORMALIZE_GAS_CONSTANTS2};
+enum configuration_keys {NORMALIZE_GAS_CONSTANTS};
 
 namespace CoolProp
 {
