@@ -10,6 +10,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_pdf import PdfPages
 import itertools
+from datetime import datetime
 
 class SolutionDataWriter(object):
     """
@@ -41,7 +42,7 @@ class SolutionDataWriter(object):
 
         errList = (ValueError, AttributeError, TypeError, RuntimeError)
 
-        if fluidObject.density.coeffs == None:
+        if fluidObject.density.coeffs is None:
             try:
                 fluidObject.density.setxyData(tData,xData)
                 fluidObject.density.coeffs = np.copy(std_coeffs)
@@ -51,7 +52,7 @@ class SolutionDataWriter(object):
                 if fluidObject.density.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'density',ve))
                 pass
 
-        if fluidObject.specific_heat.coeffs == None:
+        if fluidObject.specific_heat.coeffs is None:
             try:
                 fluidObject.specific_heat.setxyData(tData,xData)
                 fluidObject.specific_heat.coeffs = np.copy(std_coeffs)
@@ -61,7 +62,7 @@ class SolutionDataWriter(object):
                 if fluidObject.specific_heat.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'specific heat',ve))
                 pass
 
-        if fluidObject.conductivity.coeffs == None:
+        if fluidObject.conductivity.coeffs is None:
             try:
                 fluidObject.conductivity.setxyData(tData,xData)
                 fluidObject.conductivity.coeffs = np.copy(std_coeffs)
@@ -71,7 +72,7 @@ class SolutionDataWriter(object):
                 if fluidObject.conductivity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'conductivity',ve))
                 pass
 
-        if fluidObject.viscosity.coeffs == None:
+        if fluidObject.viscosity.coeffs is None:
             try:
                 fluidObject.viscosity.setxyData(tData,xData)
                 tried = False
@@ -90,7 +91,7 @@ class SolutionDataWriter(object):
                 if fluidObject.viscosity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(fluidObject.name,'viscosity',ve))
                 pass
 
-        if fluidObject.saturation_pressure.coeffs == None:
+        if fluidObject.saturation_pressure.coeffs is None:
             try:
                 fluidObject.saturation_pressure.setxyData(tData,xData)
                 tried = False
@@ -111,7 +112,7 @@ class SolutionDataWriter(object):
 
         # reset data for getArray and read special files
         if fluidObject.xid!=fluidObject.ifrac_pure and fluidObject.xid!=fluidObject.ifrac_undefined:
-            if fluidObject.T_freeze.coeffs == None:
+            if fluidObject.T_freeze.coeffs is None:
                 fluidObject.T_freeze.setxyData([0.0],xData)
                 try:
                     if len(fluidObject.T_freeze.xData)==1:# and np.isfinite(fluidObject.T_freeze.data).sum()<10:
@@ -170,6 +171,13 @@ class SolutionDataWriter(object):
         return True
 
 
+    def get_json_file(self,name):
+        return os.path.join("json","{0}.json".format(name))
+
+    def get_report_file(self,name):
+        return os.path.join("report","{0}_fitreport.pdf".format(name))
+
+
     def toJSON(self,data,quiet=False):
         jobj = {}
 
@@ -215,14 +223,17 @@ class SolutionDataWriter(object):
         name = jobj['name']
 
         if name not in hashes or \
-          hashes[name] != hash: # update hashes and write file
+          hashes[name] != hash or \
+          not os.path.isfile(self.get_json_file(name)): # update hashes and write file
 
             hashes[name] = hash
             self.write_hashes(hashes)
-            path = os.path.join("json",name+'.json')
-            fp = open(path, 'w')
-            fp.write(dump)
-            fp.close()
+            path = self.get_json_file(name)
+            if not os.path.exists(os.path.dirname(path)):
+                os.makedirs(os.path.dirname(path))
+            with open(path, 'w') as fp:
+                fp.write(dump)
+
             if not quiet: print(" ({0})".format("w"), end="")
         else:
             if not quiet: print(" ({0})".format("i"), end="")
@@ -235,6 +246,9 @@ class SolutionDataWriter(object):
     def fromJSON(self,data=SolutionData()):
 
         path = os.path.join("json",data.name+'.json')
+
+        if not os.path.isfile(path):
+            return None
 
         with open(path) as json_file:
             jobj = json.load(json_file)
@@ -326,7 +340,6 @@ class SolutionDataWriter(object):
 
 
     def writeFluidList(self, fluidObjs):
-        print("Legend: FluidName (w) | (i) -> (w)=written, (i)=ignored, unchanged coefficients")
         print("Writing fluids to JSON:", end="")
         for obj in fluidObjs:
             self.printStatusID(fluidObjs, obj)
@@ -342,19 +355,29 @@ class SolutionDataWriter(object):
 
     def writeReportList(self, fluidObjs, pdfFile=None):
         print("Writing fitting reports:", end="")
-        pdfObj = None
-        if not pdfFile is None: pdfObj = PdfPages(pdfFile)
-        for obj in fluidObjs:
-            self.printStatusID(fluidObjs, obj)
-            self.makeFitReportPage(obj,pdfObj=pdfObj)
-            try:
-                self.makeFitReportPage(obj)
-            except (TypeError, ValueError) as e:
-                print("An error occurred for fluid: {0}".format(obj.name))
-                print(obj)
-                print(e)
-                pass
-        if not pdfFile is None: pdfObj.close()
+
+        if not pdfFile is None:
+            with PdfPages(pdfFile) as pdfObj:
+                for obj in fluidObjs:
+                    self.printStatusID(fluidObjs, obj)
+                    try:
+                        self.makeFitReportPage(obj,pdfObj=pdfObj)
+                    except (TypeError, ValueError) as e:
+                        print("An error occurred for fluid: {0}".format(obj.name))
+                        print(obj)
+                        print(e)
+                        pass
+        else:
+            for obj in fluidObjs:
+                self.printStatusID(fluidObjs, obj)
+                try:
+                    self.makeFitReportPage(obj)
+                except (TypeError, ValueError) as e:
+                    print("An error occurred for fluid: {0}".format(obj.name))
+                    print(obj)
+                    print(e)
+                    pass
+
         print(" ... done")
         return
 
@@ -763,14 +786,45 @@ class SolutionDataWriter(object):
 
 
 
-    def makeFitReportPage(self, solObj=SolutionData(), pdfObj=None):
+    def makeFitReportPage(self, solObj=SolutionData(), pdfObj=None, quiet=False):
         """
         Creates a whole page with some plots and basic information
         for both fit quality, reference data, data sources and
         more.
         """
 
-        # First we determine some basic settings
+        # First we determine some basic settings and check the JSON file
+
+        json_path = self.get_json_file(solObj.name)
+        report_path = self.get_report_file(solObj.name)
+
+        if os.path.isfile(json_path):
+            json_time = os.path.getctime(json_path)
+        else:
+            json_time = 0
+
+        if os.path.isfile(report_path):
+            report_time = os.path.getctime(report_path)
+        else:
+            report_time = 0
+
+        if json_time<report_time and pdfObj is None:
+            #print("The JSON file {0} has not been updated, skipping.".format(self.get_json_file(solObj.name)))
+            if not quiet: print(" ({0})".format("i"), end="")
+            return 1
+
+#         from os import path
+# from time import ctime
+# from datetime import datetime, timedelta
+#
+# two_days_ago = datetime.now() - timedelta(days=2)
+# filetime = datetime.fromtimestamp(path.getctime(file))
+#
+# if filetime < two_days_ago:
+#   print "File is more than two days old"
+
+
+
 
         gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.5,3,3,3])
         #gs.update(top=0.75, hspace=0.05)
@@ -919,8 +973,16 @@ class SolutionDataWriter(object):
         #fig.subplots_adjust(wspace=0)
         #plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
 
-        plt.savefig(os.path.join("report","{0}_fitreport.pdf".format(solObj.name)))
+        if json_time<report_time:
+            if not quiet: print(" ({0})".format("i"), end="")
+        else:
+            if not os.path.exists(os.path.dirname(report_path)):
+                os.makedirs(os.path.dirname(report_path))
+            plt.savefig(report_path)
+            if not quiet: print(" ({0})".format("w"), end="")
+
         if not pdfObj is None: pdfObj.savefig(fig)
+
         plt.close()
         pass
 
@@ -1014,6 +1076,7 @@ class SolutionDataWriter(object):
         ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., ncol=1)#, prop={'size':'smaller'})
         plt.tight_layout(rect=(0, 0, 1, 0.95))
         plt.savefig("all_solutions_00.pdf")
+        return 0
 
 
 

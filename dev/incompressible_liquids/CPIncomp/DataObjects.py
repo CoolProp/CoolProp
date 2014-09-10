@@ -295,6 +295,8 @@ class DigitalData(SolutionData):
 
     def writeToFile(self, data, array):
         fullPath = self.getFile(data)
+        if not os.path.exists(os.path.dirname(fullPath)):
+            os.makedirs(os.path.dirname(fullPath))
         stdFmt = "%1.{0}e".format(int(self.significantDigits-1))
         return np.savetxt(fullPath, array, fmt=stdFmt)
 

@@ -14,64 +14,25 @@ INCOMP_INCLUDES_JSONLI:=$(shell find $(INCOMP_INCLUDES_SOURCE)/json -iname '*.js
 INCOMP_INCLUDES_FNAMES:=$(basename $(notdir $(INCOMP_INCLUDES_JSONLI) ) ) # all fluid IDs
 # All the required files
 INCOMP_INCLUDES_PDFREP:=$(addprefix $(INCOMP_INCLUDES_TARGET)/report/, $(addsuffix _fitreport.pdf, $(INCOMP_INCLUDES_FNAMES) ) )
-INCOMP_INCLUDES_PDFEXT:= all_pure-pdf all_solutions.pdf
+INCOMP_INCLUDES_PDFEXT:= all_incompressibles.pdf
 INCOMP_INCLUDES_PDFEXT:=$(addprefix $(INCOMP_INCLUDES_TARGET)/, $(INCOMP_INCLUDES_PDFEXT) )
 INCOMP_INCLUDES_TXTTAB:= pure-fluids.txt mass-based-fluids.txt mole-based-fluids.txt volume-based-fluids.txt
 INCOMP_INCLUDES_TXTTAB:=$(addprefix $(INCOMP_INCLUDES_TARGET)/, $(INCOMP_INCLUDES_TXTTAB) )
 #   
 # Define one single target to be referenced 
 .PHONY: incompressible_includes
-incompressible_includes: $(INCOMP_INCLUDES_PDFREP) $(INCOMP_INCLUDES_PDFEXT) $(INCOMP_INCLUDES_TXTTAB)
+incompressible_includes: $(INCOMP_INCLUDES_TXTTAB) $(INCOMP_INCLUDES_PDFEXT) $(INCOMP_INCLUDES_PDFREP) 
 #
 # Now we split it up again and maps dependencies to their generators
-$(INCOMP_INCLUDES_TXTTAB):: $(INCOMP_INCLUDES_SOURCE)/Incompressibles_include_generator.py
+# TODO: Fix this! The test files do not depend on all_incompressibles.py, but it is needed to generate the PDFs...
+$(INCOMP_INCLUDES_TXTTAB):: $(INCOMP_INCLUDES_SOURCE)/Incompressibles_include_generator.py $(INCOMP_INCLUDES_SOURCE)/all_incompressibles.py $(INCOMP_INCLUDES_PYTHON)
 	cd $(<D); \
-	python $(<F)
-	
-	
-$(INCOMP_INCLUDES_TARGET)/report/%.pdf: $(INCOMP_INCLUDES_SOURCE)/report/%.pdf
+	python Incompressibles_include_generator.py; \
+	python all_incompressibles.py -ns -fr
+
+$(INCOMP_INCLUDES_TARGET)/%.pdf: $(INCOMP_INCLUDES_SOURCE)/%.pdf
 	mkdir -p $(@D); \
-    cp $< $@
-    
-    #%.foo: $$(addsuffix .bar, $$(DATA_$$*))
-    
-
-$(INCOMP_INCLUDES_SOURCE)/report/%.pdf: $(INCOMP_INCLUDES_SOURCE)/all_incompressibles.py $(INCOMP_INCLUDES_PYTHON)
-	cd $(<D); \
-	python $(<F)
-
-#$(INCOMP_INCLUDES_PDFREP):: $(INCOMP_INCLUDES_SOURCE)/all_incompressibles.py $(INCOMP_INCLUDES_PYTHON)
-#	cd $(<D); \
-#	python $(<F)
-
-
-#$(INCOMP_INCLUDES_TARGET)/Incompressibles_Fluids.txt: $(addprefix $(PYGEN_DIR)/, Incompressibles_include_generator.py)
-#	cd $(PYGEN_DIR); \
-#	python Incompressibles_include_generator.py
-#
-#fluid_properties/all_pure.pdf: $(addprefix $(PYGEN_DIR)/, all_incompressibles.py)
-#	cd $(PYGEN_DIR); \
-#	python all_incompressibles.py
-#	cp $(PYGEN_DIR)/all_pure.pdf fluid_properties/
-#	cp $(PYGEN_DIR)/all_solutions.pdf fluid_properties/
-#
-## general rules for the fit reports
-#PYGEN_FILES=$(shell echo $(COOLPROPDIR)*.cpp)
-#
-#
-## Make the .pdf report files, they all come from the same script
-#$(INCOMP_INCLUDES_FOLDER)/%.pdf : $(INCOMP_INCLUDES_DIR)/all_incompressibles.py $(INCOMP_INCLUDES_PYTHON)
-#	cd $(INCOMP_INCLUDES_FOLDER); \
-#	python all_incompressibles.py
-#	
-### Make the .pdf report files, they all come from the same script
-##$(INCOMP_INCLUDES_FOLDER)/report/%.pdf : $(INCOMP_INCLUDES_PYTHON)
-##	cd $(INCOMP_INCLUDES_FOLDER); \
-##	python all_incompressibles.py
-
-
-
-	
+	cp $< $@
 	
 .PHONY : check_incomp_flags
 check_incomp_flags:

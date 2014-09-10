@@ -15,7 +15,6 @@ from CPIncomp.BaseObjects import IncompressibleData
 def make_table(grid):
     max_cols = [max(out) for out in map(list, zip(*[[len(item) for item in row] for row in grid]))]
     rst = table_div(max_cols, 1)
-
     for i, row in enumerate(grid):
         header_flag = False
         if i == 0 or i == len(grid)-1: header_flag = True
@@ -29,12 +28,16 @@ def table_div(max_cols, header_flag=1):
         style = "="
     else:
         style = "-"
-
     for max_col in max_cols:
         out += max_col * style + " "
-
     out += "\n"
     return out
+
+def normalize_row(row, max_cols):
+    r = ""
+    for i, max_col in enumerate(max_cols):
+        r += row[i] + (max_col  - len(row[i]) + 1) * " "
+    return r + "\n"
 
 
 def writeTextToFile(path,text):
@@ -47,14 +50,25 @@ def writeTextToFile(path,text):
 def writeTableToFile(path,table):
     return writeTextToFile(path, make_table(table))
 
+def getReportLink(name):
+    reportFile = os.path.join("report","{0}_fitreport.pdf".format(name))
+    return d(name,reportFile)
 
-def normalize_row(row, max_cols):
-    r = ""
-    for i, max_col in enumerate(max_cols):
-        r += row[i] + (max_col  - len(row[i]) + 1) * " "
+def d(text,target):
+    link = ":download:`{0}<{1}>`".format(text,target)
+    return link
 
-    return r + "\n"
+def m(math):
+    text = ":math:`{0}`".format(math)
+    return text
 
+def c(number):
+    text = "{0:5.2f} deg C".format(number-273.15)
+    return text
+
+def x(number):
+    text = "{0:3.2f}".format(number)
+    return text
 
 
 if __name__ == '__main__':
@@ -118,23 +132,28 @@ if __name__ == '__main__':
 
     # After all the list got populated, we can process the entries
     # and generate some tables
-
-    header = ['Name', 'Description', 'Reference']
-
     #
     objLists = [pureBasedObjs,massBasedObjs,moleBasedObjs,voluBasedObjs]
+    for i in range(len(objLists)):
+        objLists[i] = sorted(objLists[i], key=lambda x: x.name)
     filLists = [FLUID_INFO_PURE_LIST,FLUID_INFO_MASS_LIST]
     filLists +=[FLUID_INFO_MOLE_LIST,FLUID_INFO_VOLU_LIST]
+    #
+    header = ['Name', 'Description', 'Reference', m('T_{min}'), m('T_{max}')]
+    testTable = []
+    testTable.append(header) # Headline
+    for fluid in objLists[0]:
+        testTable.append([getReportLink(fluid.name), fluid.description, fluid.reference, c(fluid.Tmin), c(fluid.Tmax)])
+    writeTableToFile(filLists[0], testTable)
+    #
+    # Process solutions
+    header.extend([m('x_{min}'), m('x_{max}')])
 
-    for i in range(len(objLists)):
+    for i in range(1,len(objLists)):
         testTable = []
         testTable.append(header) # Headline
-
         for fluid in objLists[i]:
-            testTable.append([fluid.name, fluid.description, fluid.reference])
-
+            testTable.append([getReportLink(fluid.name), fluid.description, fluid.reference, c(fluid.Tmin), c(fluid.Tmax), x(fluid.xmin), x(fluid.xmax)])
         writeTableToFile(filLists[i], testTable)
-
-
 
 

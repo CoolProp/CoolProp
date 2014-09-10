@@ -22,8 +22,8 @@ The first entry in the tables below is the fluid ID that can be used to call the
 fluid from the high-level interface. A single PDF page showing the fit quality is
 linked to that ID in case you would like to see a few more details about any
 specific fluid. To get an overview over all the fits, there are also combined
-documents with all the :download:`pure fluids <all_pure.pdf>` and all the
-:download:`aqueous solutions <all_solutions.pdf>`.
+documents with all the
+:download:`pure fluids and all the aqueous solutions<all_incompressibles.pdf>`.
 
 Incompressible fluids only allow  These only allow for calls with
 temperature and pressure as input and provide only a subset of thermophysical properties, namely:
@@ -78,7 +78,7 @@ Volume-based binary mixtures
 Fitting Reports
 =====================
 
-here is a pdf file for all pure fluids :download:`pdf <all_pure.pdf>`
+here is a pdf file for all pure fluids :download:`pdf <all_incompressibles.pdf>`
 
 
 
