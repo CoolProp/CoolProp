@@ -71,7 +71,7 @@ class HumidityLabels(object):
             yv = [HAPropsSI('W','T',T,'P',p,'R',RH) for T in Tdb]
             y = HAPropsSI('W','P',p,'H',self.h,'R',RH)
             T_K,w,rot = InlineLabel(xv, yv, y=y, axis = ax)
-            string = r'$\phi$='+str(RH*100)+'%'
+            string = r'$\phi$='+'{s:0.0f}'.format(s=RH*100)+'%'
             #Make a temporary label to get its bounding box
             bbox_opts = dict(boxstyle='square,pad=0.0',fc='white',ec='None',alpha = 0.5)
             ax.text(T_K-273.15,w,string,rotation = rot,ha ='center',va='center',bbox=bbox_opts)
@@ -83,10 +83,10 @@ class HumidityLabels(object):
                     yv = [HAPropsSI('W','T',T,'P',p,'R',RH) for T in Tdb]
                     y = HAPropsSI('W','P',p,'H',{h:f},'R',RH)
                     T_K,w,rot = InlineLabel(xv, yv, y=y, axis = ax)
-                    string = r'$\phi$='+str(RH*100)+'%'
+                    string = r'$\phi$='+{s:s}+'%'
                     bbox_opts = dict(boxstyle='square,pad=0.0',fc='white',ec='None',alpha = 0.5)
                     ax.text(T_K-273.15,w,string,rotation = rot,ha ='center',va='center',bbox=bbox_opts)
-                """.format(h=self.h, RHValues=str(self.RH_values))
+                """.format(h=self.h, RHValues=str(self.RH_values), s="'{s:0.0f}'.format(s=RH*100)")
                 )
         
 class HumidityLines(object):
@@ -150,7 +150,7 @@ if __name__=='__main__':
     RHL = HumidityLines([0.05,0.1,0.15,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9])
     RHL.plot(ax)
     
-    RHLabels = HumidityLabels([0.05,0.1,0.15,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9], h=65)
+    RHLabels = HumidityLabels([0.05,0.1,0.15,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9], h=65000)
     RHLabels.plot(ax)
      
     HL = EnthalpyLines(range(-20000,100000,10000))

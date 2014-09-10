@@ -37,9 +37,9 @@ ax.set_ylabel(r"Humidity ratio ($m_{water}/m_{dry\ air}$) [-]")
 xv = Tdb #[K]
 for RH in [0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
     yv = [HAPropsSI('W','T',T,'P',p,'R',RH) for T in Tdb]
-    y = HAPropsSI('W','P',p,'H',65.000000,'R',RH)
+    y = HAPropsSI('W','P',p,'H',65000.000000,'R',RH)
     T_K,w,rot = InlineLabel(xv, yv, y=y, axis = ax)
-    string = r'$\phi$='+str(RH*100)+'%'
+    string = r'$\phi$='+'{s:0.0f}'.format(s=RH*100)+'%'
     bbox_opts = dict(boxstyle='square,pad=0.0',fc='white',ec='None',alpha = 0.5)
     ax.text(T_K-273.15,w,string,rotation = rot,ha ='center',va='center',bbox=bbox_opts)
 
