@@ -171,7 +171,7 @@ long double HelmholtzEOSMixtureBackend::calc_gas_constant(void)
         return components[0]->gas_constant();
     }
     else{
-        if (get_config_bool(NORMALIZE_GAS_CONSTANTS) || get_config_bool(NORMALIZE_GAS_CONSTANTS2)){
+        if (get_config_bool(NORMALIZE_GAS_CONSTANTS2)){
             return R_u_CODATA;
         }
         else{
