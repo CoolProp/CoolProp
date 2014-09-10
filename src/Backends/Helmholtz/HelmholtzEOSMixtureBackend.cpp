@@ -171,11 +171,11 @@ long double HelmholtzEOSMixtureBackend::calc_gas_constant(void)
         return components[0]->gas_constant();
     }
     else{
-        if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){
+        if (get_config_bool(NORMALIZE_GAS_CONSTANTS) || get_config_bool(NORMALIZE_GAS_CONSTANTS2)){
             return R_u_CODATA;
         }
         else{
-            // mass fraction weighet average of the components
+            // mass fraction weighted average of the components
             double summer = 0;
             for (unsigned int i = 0; i < components.size(); ++i)
             {
@@ -1954,7 +1954,7 @@ long double HelmholtzEOSMixtureBackend::calc_cvmolar(void)
     // Calculate derivatives if needed, or just use cached values
     long double d2ar_dTau2 = d2alphar_dTau2();
     long double d2a0_dTau2 = d2alpha0_dTau2();
-    long double R_u = static_cast<double>(_gas_constant);
+    long double R_u = gas_constant();
 
     // Get cv
     _cvmolar = -R_u*pow(_tau.pt(),2)*(d2ar_dTau2 + d2a0_dTau2);
@@ -1973,7 +1973,7 @@ long double HelmholtzEOSMixtureBackend::calc_cpmolar(void)
     long double d2ar_dDelta2 = d2alphar_dDelta2();
     long double d2ar_dDelta_dTau = d2alphar_dDelta_dTau();
     long double d2ar_dTau2 = d2alphar_dTau2();
-    long double R_u = static_cast<double>(_gas_constant);
+    long double R_u = gas_constant();
 
     // Get cp
     _cpmolar = R_u*(-pow(_tau.pt(),2)*(d2ar_dTau2 + d2a0_dTau2)+pow(1+_delta.pt()*dar_dDelta-_delta.pt()*_tau.pt()*d2ar_dDelta_dTau,2)/(1+2*_delta.pt()*dar_dDelta+pow(_delta.pt(),2)*d2ar_dDelta2));
@@ -1988,7 +1988,7 @@ long double HelmholtzEOSMixtureBackend::calc_cpmolar_idealgas(void)
 
     // Calculate derivatives if needed, or just use cached values
     long double d2a0_dTau2 = d2alpha0_dTau2();
-    long double R_u = static_cast<double>(_gas_constant);
+    long double R_u = gas_constant();
 
     // Get cp of the ideal gas
     return R_u*(1+(-pow(_tau.pt(),2))*d2a0_dTau2);
@@ -2090,6 +2090,10 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<l
         for (std::size_t i = 0; i < N; ++i){
             HelmholtzDerivatives derivs = components[i]->pEOS->alphar.all(tau, delta);
             long double xi = mole_fractions[i];
+            long double R_u_ratio = 1;
+            if (get_config_bool(NORMALIZE_GAS_CONSTANTS2)){
+                R_u_ratio = components[0]->pEOS->R_u/R_u_CODATA;
+            }
             summer_base += xi*derivs.alphar;
             summer_dDelta += xi*derivs.dalphar_ddelta;
             summer_dTau += xi*derivs.dalphar_dtau;

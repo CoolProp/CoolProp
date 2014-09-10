@@ -414,15 +414,24 @@ int main()
     #endif
     #if 0
     {
-        //::set_debug_level(10);
+        double h = HumidAir::HAPropsSI("H","T",303.15,"R",1.0000000000000000e+00,"P",1.0132500000000000e+05 );
+        double T = HumidAir::HAPropsSI("T","H",h,"R",1.0000000000000000e+00,"P",1.0132500000000000e+05 );
+        double hh = HumidAir::HAPropsSI("H","T",T,"R",1.0000000000000000e+00,"P",1.0132500000000000e+05 );
+        double s = HumidAir::HAPropsSI("S","T",2.1814999999999998e+02,"R",1.0000000000000000e+00,"P",1.0132500000000000e+05);
+        int r = 3;
+    }
+    #endif
+    #if 0
+    {
+        ::set_debug_level(11);
         std::vector<std::string> tags;
-        tags.push_back("[mixture_derivs]");
+        tags.push_back("[REFPROP_backwards_compatibility]");
         run_user_defined_tests(tags);
         char c;
         std::cin >> c;
     }
     #endif
-    #if 0
+    #if 1
     {
 		run_tests();
 		char c;
@@ -436,7 +445,7 @@ int main()
         int rr =0;
     }
     #endif
-    #if 1
+    #if 0
     { 
 //        std::vector<std::string> names(1, "n-Propane");
 //        shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(names));
@@ -452,10 +461,10 @@ int main()
 //                HEOS->update(PT_INPUTS, p, Tmelt);};
 //            std::cout << get_global_param_string("errstring") << std::endl;
 //        }
-        double TTTA = PropsSI("T","P",1e5,"Q",0,"Methane[0.25]&Ethane[0.2]&Propane[0.1]");
-        double TTT = PropsSI("Dmolar","P",1e5,"T",300,"Methane[0.25]&Ethane[0.2]&Propane[0.1]");
-        double TTTB = PropsSI("T","P",3e6,"Q",0,"R32[0.5]&R125[0.5]");
-        double TTTB2 = PropsSI("T","P",3e6,"Q",0,"REFPROP::R32[0.5]&R125[0.5]");
+//        double TTTA = PropsSI("T","P",1e5,"Q",0,"Methane[0.25]&Ethane[0.2]&Propane[0.1]");
+//        double TTT = PropsSI("Dmolar","P",1e5,"T",300,"Methane[0.25]&Ethane[0.2]&Propane[0.1]");
+//        double TTTB = PropsSI("T","P",3e6,"Q",0,"R32[0.5]&R125[0.5]");
+//        double TTTB2 = PropsSI("T","P",3e6,"Q",0,"REFPROP::R32[0.5]&R125[0.5]");
         
         ::set_debug_level(0);
         
@@ -474,7 +483,7 @@ int main()
             std::cout << get_global_param_string("errstring") << std::endl;
         }
         t2 = clock();
-        std::cout << format("value(all): %g s/call\n", ((double)(t2-t1))/CLOCKS_PER_SEC);
+        std::cout << format("time: %g s/call\n", ((double)(t2-t1))/CLOCKS_PER_SEC);
         exit(EXIT_SUCCESS);
         
         std::cout << get_global_param_string("errstring") << std::endl;

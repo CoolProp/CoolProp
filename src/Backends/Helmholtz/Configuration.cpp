@@ -16,6 +16,8 @@ bool get_config_bool(configuration_keys key)
     switch(key)
     {
         case NORMALIZE_GAS_CONSTANTS:
+            return false;
+        case NORMALIZE_GAS_CONSTANTS2:
             return true;
         default:
             throw ValueError(format("%d is invalid key to get_config_bool",key));
