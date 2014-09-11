@@ -136,7 +136,12 @@ public:
     long double calc_umolar_nocache(long double T, long double rhomolar);
     long double calc_umolar(void);
     long double calc_speed_sound(void);
+    /** \brief The phase identification parameter of Venkatarathnam et al., FPE, 2011
+     * 
+     * 
+     */
     long double calc_fugacity_coefficient(int i);
+    long double calc_phase_identification_parameter(void);
 
     long double calc_alphar(void);
     long double calc_dalphar_dDelta(void);

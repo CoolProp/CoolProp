@@ -2045,6 +2045,10 @@ long double HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(int i)
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
     return exp(MixtureDerivatives::ln_fugacity_coefficient(*this, i, xN_flag));
 }
+long double HelmholtzEOSMixtureBackend::calc_phase_identification_parameter(void)
+{
+    return 2 - rhomolar()*(second_partial_deriv(iP, iDmolar, iT, iT, iDmolar)/first_partial_deriv(iP, iT, iDmolar) -  second_partial_deriv(iP, iDmolar, iT, iDmolar, iT)/first_partial_deriv(iP, iDmolar, iT));
+}
 
 SimpleState HelmholtzEOSMixtureBackend::calc_reducing_state_nocache(const std::vector<long double> & mole_fractions)
 {
