@@ -87,4 +87,5 @@ OSX should come with a c++ compiler (clang), for git and cmake your best bet is 
     Java/index.rst
     Javascript/index.rst
     Python/index.rst
+    LibreOffice/index.rst
     Excel/index.rst
