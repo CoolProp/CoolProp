@@ -11,6 +11,7 @@ from CPIncomp import getCoefficientFluids, getDigitalFluids, getMelinderFluids,\
 from CPIncomp.DataObjects import SolutionData
 from CPIncomp.BaseObjects import IncompressibleData
 import numpy as np
+import csv
 
 # See http://stackoverflow.com/questions/11347505/what-are-some-approaches-to-outputting-a-python-data-structure-to-restructuredte
 def make_table(grid):
@@ -23,8 +24,10 @@ def make_table(grid):
         rst += table_div(max_cols, header_flag )
     return rst
 
-def table_div(max_cols, header_flag=1):
+def table_div(max_cols, header_flag=1, indent=2):
     out = ""
+    for i in range(indent):
+        out += " "
     if header_flag == 1:
         style = "="
     else:
@@ -34,8 +37,11 @@ def table_div(max_cols, header_flag=1):
     out += "\n"
     return out
 
-def normalize_row(row, max_cols):
+def normalize_row(row, max_cols, indent=2):
     r = ""
+    for i in range(indent):
+        r += " "
+
     for i, max_col in enumerate(max_cols):
         r += row[i] + (max_col  - len(row[i]) + 1) * " "
     return r + "\n"
@@ -48,8 +54,22 @@ def writeTextToFile(path,text):
     f.close()
     return True
 
+def writeTxtTableToFile(path,table):
+    return writeTextToFile(path+".txt", make_table(table))
+
+def writeCsvTableToFile(path,table):
+    with open(path+".csv", 'wb') as f:
+        writer = csv.writer(f)
+        writer.writerows(table)
+    return True
+
+# Interface
 def writeTableToFile(path,table):
-    return writeTextToFile(path, make_table(table))
+    writeCsvTableToFile(path,table)
+    writeTxtTableToFile(path,table)
+    return True
+
+
 
 def getReportLink(name):
     reportFile = os.path.join("report","{0}_fitreport.pdf".format(name))
@@ -91,10 +111,10 @@ if __name__ == '__main__':
 
     FLUID_INFO_FOLDER=os.path.abspath(os.path.join("..","..","Web","fluid_properties"))
 
-    FLUID_INFO_MASS_LIST=os.path.join(FLUID_INFO_FOLDER,"mass-based-fluids.txt")
-    FLUID_INFO_MOLE_LIST=os.path.join(FLUID_INFO_FOLDER,"mole-based-fluids.txt")
-    FLUID_INFO_VOLU_LIST=os.path.join(FLUID_INFO_FOLDER,"volume-based-fluids.txt")
-    FLUID_INFO_PURE_LIST=os.path.join(FLUID_INFO_FOLDER,"pure-fluids.txt")
+    FLUID_INFO_MASS_LIST=os.path.join(FLUID_INFO_FOLDER,"mass-based-fluids")
+    FLUID_INFO_MOLE_LIST=os.path.join(FLUID_INFO_FOLDER,"mole-based-fluids")
+    FLUID_INFO_VOLU_LIST=os.path.join(FLUID_INFO_FOLDER,"volume-based-fluids")
+    FLUID_INFO_PURE_LIST=os.path.join(FLUID_INFO_FOLDER,"pure-fluids")
 
 
 
