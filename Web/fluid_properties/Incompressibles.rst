@@ -3,17 +3,115 @@
 Incompressible Fluids
 =====================
 
-here is the generated file with the table of incompressibles
+In CoolProp, the incompressible fluids are divided into four major groups.
 
-.. include:: Incompressibles_Fluids.txt
+ * :ref:`Pure fluids <Pure>`.
+ * :ref:`Mass-based binary mixtures <MassMix>`.
+ * :ref:`Mole-based binary mixtures <MoleMix>`.
+ * :ref:`Volume-based binary mixtures <VoluMix>`.
 
+The pure fluids and mass-based binary mixtures are by far the most common fluids
+in this library. While the pure fluids contain data for many different kinds of
+incompressible liquids, almost all of the binary mixtures are aqueous solutions.
+For these liquids, the concentration always refers to the added component ranging
+from 0.0 for pure water to 1.0 for no water at all. Please refer to the tables
+below to find the allowed minimum and maximum concentrations. Those are likely
+to be above 0.0 and below 1.0, respectively.
+
+The first entry in the tables below is the fluid ID that can be used to call the
+fluid from the high-level interface. A single PDF page showing the fit quality is
+linked to that ID in case you would like to see a few more details about any
+specific fluid. To get an overview over all the fits, there are also combined
+documents with all the
+:download:`pure fluids and all the aqueous solutions<all_incompressibles.pdf>`.
+You can read more about these reports in a dedicated
+:ref:`section<FittingReports>` called :ref:`Fitting Reports<FittingReports>` below.
+
+Incompressible fluids only allow  These only allow for calls with
+temperature and pressure as input and provide only a subset of thermophysical properties, namely:
+density, heat capacity, internal energy, enthalpy, entropy, viscosity and thermal conductivity.
+Hence, the available output keys for the ``Props`` function are: "D", "C", "U", "H", "S", "V", "L",
+"Tmin", "Tmax" and "Psat". An internal iteration allows us to use enthalpy and pressure as inputs,
+but be aware of the reduced computational efficiency.
+
+.. ipython::
+
+    In [1]: from CoolProp.CoolProp import PropsSI
+
+    #Density of HFE-7100 at 300 K and 1 atm.
+    In [1]: PropsSI('D','T',300,'P',101325,'INCOMP::HFE')
+
+.. _Pure:
+
+Pure Fluids
+-----------
+.. include:: pure-fluids.txt
+
+
+
+.. _MassMix:
+
+Mass-based binary mixtures
+--------------------------
+
+.. include:: mass-based-fluids.txt
+
+
+
+.. _MoleMix:
+
+Mole-based binary mixtures
+--------------------------
+
+.. include:: mole-based-fluids.txt
+
+
+.. _VoluMix:
+
+Volume-based binary mixtures
+----------------------------
+
+.. include:: volume-based-fluids.txt
+
+
+
+.. _FittingReports:
 
 Fitting Reports
 =====================
 
-here is a pdf file for all pure fluids :download:`pdf <all_pure.pdf>`
+A file with all fitting reports for the incompressible fluids can be obtained
+from :download:`here <all_incompressibles.pdf>`. These reports help you to
+get an overview over the different incompressible fluids
+included in CoolProp. The reports start with some basic information about
+the fluid. There is the name by which it can be accessed through the
+interface in the title "Fitting Report for *FluidName*" as well as a description
+of what the fluid actually is, this could also be a trade name or a commonly
+used non-scientific name. The next item tells you where we got the data from. This
+would typically be a data sheet from a manufacturers homepage, some other software
+database, a scientific publication or experimental data.
 
-here is a pdf file for all solutions :download:`pdf <all_solutions.pdf>`
+If all data is available, there is a graphs for each of the basic quantities
+density :math:`\rho`, specific heat capacity :math:`c`, thermal conductivity
+:math:`\lambda`, dynamic viscosity :math:`\mu`, saturation pressure
+:math:`p_{sat}`, and freezing temperature :math:`T_{freeze}`. These graphs show
+data points in dark blue, the fitted function from CoolProp as a red line and the
+relative error in light blue dots. Note that the relative error uses the ordinate
+on the right hand side while the other two data series refer to the axis on the
+left hand side. In case of a solution, these graphs refer to a given concentration
+that typically lies in the middle of the allowed range. Dashed red lines indicate
+the limits in terms of concentration as well as the freezing temperature.
+
+
+
+.. figure:: report2up.*
+    :align: center
+    :alt: Fitting reports for pure fluid and solution
+
+    The figure above shows two examples for fitting reports generated for a pure
+    fluid and a binary mixture. You can also have a look at the
+    :download:`PDF version<report2up.pdf>` of the reports side by side.
+
 
 
 Incompressible Liquids

@@ -21,7 +21,7 @@ class SolutionData(object):
     def __init__(self):
 
 
-        self.significantDigits = 10
+        self.significantDigits = 7
 
         self.name        = None # Name of the current fluid
         self.description = None # Description of the current fluid
@@ -146,7 +146,7 @@ class SolutionData(object):
 
     def rho (self, T, p=0.0, x=0.0, c=None):
         if not self.checkTPX(T, p, x): return np.NAN
-        if c==None:
+        if c is None:
             c=self.density.coeffs
         if self.density.type==self.density.INCOMPRESSIBLE_POLYNOMIAL:
             return np.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, c)
@@ -154,7 +154,7 @@ class SolutionData(object):
 
     def c   (self, T, p=0.0, x=0.0, c=None):
         if not self.checkTPX(T, p, x): return np.NAN
-        if c==None:
+        if c is None:
             c = self.specific_heat.coeffs
         if self.specific_heat.type==self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL:
             return np.polynomial.polynomial.polyval2d(T-self.Tbase, x-self.xbase, c)
@@ -168,7 +168,7 @@ class SolutionData(object):
 
     def u   (self, T, p=0.0, x=0.0, c=None):
         if not self.checkTPX(T, p, x): return np.NAN
-        if c==None:
+        if c is None:
             c = self.specific_heat.coeffs
         if self.specific_heat.type==self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL:
             c_tmp = np.polynomial.polynomial.polyint(c)
@@ -192,7 +192,7 @@ class SolutionData(object):
         return self.saturation_pressure.baseFunction(T, x, self.Tbase, self.xbase, c=c)
 
     def Tfreeze(self, T, p=0.0, x=0.0, c=None):
-        if c==None:
+        if c is None:
             c = self.T_freeze.coeffs
 
         if self.T_freeze.type==self.T_freeze.INCOMPRESSIBLE_POLYNOMIAL:
@@ -295,6 +295,8 @@ class DigitalData(SolutionData):
 
     def writeToFile(self, data, array):
         fullPath = self.getFile(data)
+        if not os.path.exists(os.path.dirname(fullPath)):
+            os.makedirs(os.path.dirname(fullPath))
         stdFmt = "%1.{0}e".format(int(self.significantDigits-1))
         return np.savetxt(fullPath, array, fmt=stdFmt)
 
@@ -327,7 +329,7 @@ class DigitalData(SolutionData):
         z = None
 
         # First we try to read the file
-        if (dataID!=None and os.path.isfile(self.getFile(dataID))): # File found
+        if (not dataID is None and os.path.isfile(self.getFile(dataID))): # File found
             fileArray = self.getFromFile(dataID)
             x = np.copy(fileArray[1:,0 ])
             y = np.copy(fileArray[0 ,1:])
@@ -377,7 +379,7 @@ class DigitalData(SolutionData):
         z = np.zeros( (len(x)+1,len(y)+1) )
         r,c = z.shape
 
-        if func==None: raise ValueError("Need a function to update the data file.")
+        if func is None: raise ValueError("Need a function to update the data file.")
 
         for i in range(r-1):
             for j in range(c-1):
@@ -386,7 +388,7 @@ class DigitalData(SolutionData):
         z[1:,0] = x
         z[0,1:] = y
 
-        if dataID!=None:
+        if not dataID is None:
             self.writeToFile(dataID, z)
         else:
             if DEBUG: print("Not updating data file, dataID is missing.")
