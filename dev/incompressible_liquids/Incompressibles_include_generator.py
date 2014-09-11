@@ -10,6 +10,7 @@ from CPIncomp import getCoefficientFluids, getDigitalFluids, getMelinderFluids,\
     getPureFluids, getSecCoolFluids
 from CPIncomp.DataObjects import SolutionData
 from CPIncomp.BaseObjects import IncompressibleData
+import numpy as np
 
 # See http://stackoverflow.com/questions/11347505/what-are-some-approaches-to-outputting-a-python-data-structure-to-restructuredte
 def make_table(grid):
@@ -54,6 +55,14 @@ def getReportLink(name):
     reportFile = os.path.join("report","{0}_fitreport.pdf".format(name))
     return d(name,reportFile)
 
+def checkForNumber(number):
+    try:
+        n = float(number)
+    except:
+        n = np.NAN
+        pass
+    return n
+
 def d(text,target):
     link = ":download:`{0}<{1}>`".format(text,target)
     return link
@@ -63,11 +72,11 @@ def m(math):
     return text
 
 def c(number):
-    text = "{0:5.2f} deg C".format(number-273.15)
+    text = "{0:5.2f} deg C".format(checkForNumber(number)-273.15)
     return text
 
 def x(number):
-    text = "{0:3.2f}".format(number)
+    text = "{0:3.2f}".format(checkForNumber(number))
     return text
 
 
