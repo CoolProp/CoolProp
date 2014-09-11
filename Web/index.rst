@@ -31,7 +31,7 @@ In most languages, the code to calculate density ``D`` of Nitrogen at a temperat
 
     rho = PropsSI('D', 'T', 298.15, 'P', 101325, 'Nitrogen')
     
-See more examples at `examples/examples <Examples>`_
+See more examples at `Examples <examples/examples>`_
     
 ===================================
 Open-Source Projects Using CoolProp
