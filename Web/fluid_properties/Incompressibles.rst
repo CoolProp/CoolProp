@@ -24,8 +24,8 @@ linked to that ID in case you would like to see a few more details about any
 specific fluid. To get an overview over all the fits, there are also combined
 documents with all the
 :download:`pure fluids and all the aqueous solutions<all_incompressibles.pdf>`.
-You can read more about these reports in a dedicated :ref:`section <FittingReports>`
- called :ref:`Fitting Reports <FittingReports>` below.
+You can read more about these reports in a dedicated
+:ref:`section<FittingReports>` called :ref:`Fitting Reports<FittingReports>` below.
 
 Incompressible fluids only allow  These only allow for calls with
 temperature and pressure as input and provide only a subset of thermophysical properties, namely:
@@ -80,10 +80,9 @@ Volume-based binary mixtures
 Fitting Reports
 =====================
 
-A file with all fitting reports for the incompressible fluids can be downloaded
-from :download:`here <all_incompressibles.pdf>`.
-
-The reports help you to get an overview over the different incompressible fluids
+A file with all fitting reports for the incompressible fluids can be obtained
+from :download:`here <all_incompressibles.pdf>`. These reports help you to
+get an overview over the different incompressible fluids
 included in CoolProp. The reports start with some basic information about
 the fluid. There is the name by which it can be accessed through the
 interface in the title "Fitting Report for *FluidName*" as well as a description
@@ -102,6 +101,16 @@ on the right hand side while the other two data series refer to the axis on the
 left hand side. In case of a solution, these graphs refer to a given concentration
 that typically lies in the middle of the allowed range. Dashed red lines indicate
 the limits in terms of concentration as well as the freezing temperature.
+
+
+
+.. figure:: report2up.*
+    :align: center
+    :alt: Fitting reports for pure fluid and solution
+
+    The figure above shows two examples for fitting reports generated for a pure
+    fluid and a binary mixture. You can also have a look at the
+    :download:`PDF version<report2up.pdf>` of the reports side by side.
 
 
 

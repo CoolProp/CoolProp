@@ -23,7 +23,7 @@ INCOMP_INCLUDES_TXTTAB:= pure-fluids.txt mass-based-fluids.txt mole-based-fluids
 INCOMP_INCLUDES_TXTTAB:=$(addprefix $(INCOMP_INCLUDES_TARGET)/, $(INCOMP_INCLUDES_TXTTAB) )
 # Special figures
 INCOMP_INCLUDES_COMFIG:=$(INCOMP_INCLUDES_TARGET)/report2up
-INCOMP_INCLUDES_COMFIG_SRC:=$(INCOMP_INCLUDES_TARGET)/report/NBS_fitreport.pdf $(INCOMP_INCLUDES_TARGET)/report/AEG_fitreport.pdf
+INCOMP_INCLUDES_COMFIG_SRC:=$(INCOMP_INCLUDES_TARGET)/report/ExamplePure_fitreport.pdf $(INCOMP_INCLUDES_TARGET)/report/ExampleSolution_fitreport.pdf
 
 
 # the script generates the overview PDF (and more)
