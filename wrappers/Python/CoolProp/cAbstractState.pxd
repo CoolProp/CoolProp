@@ -8,7 +8,7 @@ cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
     cdef cppclass PhaseEnvelopeData:
         bool TypeI
         size_t iTsat_max, ipsat_max, icrit
-        vector[long double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap
+        vector[long double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
     
 cdef extern from "AbstractState.h" namespace "CoolProp":
     cdef cppclass AbstractState:
@@ -67,6 +67,9 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         
         void build_phase_envelope(string) except+ValueError
         PhaseEnvelopeData get_phase_envelope_data() except+ValueError
+        
+        vector[long double] mole_fractions_liquid() except +ValueError
+        vector[long double] mole_fractions_vapor() except +ValueError
 
 # The static factory method for the AbstractState
 cdef extern from "AbstractState.h" namespace "CoolProp::AbstractState":

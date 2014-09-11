@@ -258,6 +258,9 @@ protected:
     virtual const CoolProp::SimpleState & calc_state(const std::string &state){throw NotImplementedError("calc_state is not implemented for this backend");};
     
     virtual const CoolProp::PhaseEnvelopeData & calc_phase_envelope_data(void){throw NotImplementedError("calc_phase_envelope_data is not implemented for this backend");};
+    
+    virtual std::vector<long double> calc_mole_fractions_liquid(void){throw NotImplementedError("calc_mole_fractions_liquid is not implemented for this backend");};
+    virtual std::vector<long double> calc_mole_fractions_vapor(void){throw NotImplementedError("calc_mole_fractions_vapor is not implemented for this backend");};
 
 public:
 
@@ -308,8 +311,6 @@ public:
 
     const CoolProp::SimpleState & get_reducing_state(){return _reducing;};
     const CoolProp::SimpleState & get_state(const std::string &state){return calc_state(state);};
-     
-    
 
     // Limits
 	double Tmin(void);
@@ -409,6 +410,9 @@ public:
     double isobaric_expansion_coefficient(void);
     double fugacity_coefficient(int i);
     //double fundamental_derivative_of_gas_dynamics(void);
+    
+    std::vector<long double> mole_fractions_liquid(void){return calc_mole_fractions_liquid();};
+    std::vector<long double> mole_fractions_vapor(void){return calc_mole_fractions_vapor();};
     
     // ----------------------------------------
     //    Partial derivatives

@@ -75,6 +75,9 @@ public:
 	void set_mass_fractions(const std::vector<long double> &mass_fractions);
 
 	void calc_phase_envelope(const std::string &type);
+    
+    std::vector<long double> calc_mole_fractions_liquid(void){return std::vector<long double>(mole_fractions_liq.begin(), mole_fractions_liq.end());}
+    std::vector<long double> calc_mole_fractions_vapor(void){return std::vector<long double>(mole_fractions_vap.begin(), mole_fractions_vap.end());}
 
 	/// Check if the mole fractions have been set, etc.
 	void check_status();

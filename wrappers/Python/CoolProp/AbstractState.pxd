@@ -9,7 +9,7 @@ cimport constants_header
 cdef class PyPhaseEnvelopeData:
     cpdef public bool TypeI
     cpdef public size_t iTsat_max, ipsat_max, icrit
-    cpdef public list T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap
+    cpdef public list T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
 
 cdef class AbstractState:
     cdef cAbstractState.AbstractState *thisptr     # hold a C++ instance which we're wrapping
@@ -51,3 +51,6 @@ cdef class AbstractState:
     
     cpdef build_phase_envelope(self, string)
     cpdef PyPhaseEnvelopeData get_phase_envelope_data(self)
+    
+    cpdef mole_fractions_liquid(self)
+    cpdef mole_fractions_vapor(self)

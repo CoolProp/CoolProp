@@ -92,6 +92,13 @@ cdef class AbstractState:
     cpdef double molar_mass(self) except *: 
         """ Get the molar mass in kg/mol - wrapper of c++ function :cpapi:`AbstractState::molar_mass` """
         return self.thisptr.molar_mass()
+    
+    cpdef mole_fractions_liquid(self):
+        """ Get the mole fractions of the liquid phase - wrapper of c++ function :cpapi:`AbstractState::mole_fractions_liquid` """
+        return self.thisptr.mole_fractions_liquid()
+    cpdef mole_fractions_vapor(self):
+        """ Get the mole fractions of the vapor phase - wrapper of c++ function :cpapi:`AbstractState::mole_fractions_vapor` """
+        return self.thisptr.mole_fractions_vapor()
         
     ## ----------------------------------------	
     ##        Derivatives
@@ -129,6 +136,7 @@ cdef class AbstractState:
         cdef PyPhaseEnvelopeData pe_out = PyPhaseEnvelopeData()
         pe_out.T = pe_data.T
         pe_out.p = pe_data.p
+        pe_out.Q = pe_data.Q
         pe_out.rhomolar_liq = pe_data.rhomolar_liq
         pe_out.rhomolar_vap = pe_data.rhomolar_vap
         pe_out.hmolar_liq = pe_data.hmolar_liq
