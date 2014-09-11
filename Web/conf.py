@@ -26,7 +26,7 @@ except ImportError:
 #~ sys.path.append(os.path.abspath('sphinxext'))
 
 doxylink = {
-    'cpapi' : ('../CoolPropDoxyLink.tag', 'http://www.coolprop.dreamhosters.com/doc/CoolProp5/')
+    'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', '_static/doxygen/html')
 }
 
 # -- General configuration -----------------------------------------------------
