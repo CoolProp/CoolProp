@@ -64,40 +64,7 @@
     "function": "GeneralizedHFC", 
     "xi": 4.202, 
     "zeta": 4.223e-06
-  }, 
-  {
-    "BibTeX": "Lemmon-JPCRD-2000", 
-    "CAS1": "7727-37-9", 
-    "CAS2": "7440-37-1", 
-    "F": 1.121527, 
-    "Name1": "Nitrogen", 
-    "Name2": "Argon", 
-    "function": "GeneralizedAirComponents", 
-    "xi": -1.237713, 
-    "zeta": -7.6031e-07
-  }, 
-  {
-    "BibTeX": "Lemmon-JPCRD-2000", 
-    "CAS1": "7727-37-9", 
-    "CAS2": "7782-44-7", 
-    "F": 1.0, 
-    "Name1": "Nitrogen", 
-    "Name2": "Oxygen", 
-    "function": "GeneralizedAirComponents", 
-    "xi": -0.85635, 
-    "zeta": -4.1847e-07
-  }, 
-  {
-    "BibTeX": "Lemmon-JPCRD-2000", 
-    "CAS1": "7440-37-1", 
-    "CAS2": "7782-44-7", 
-    "F": 0.597203, 
-    "Name1": "Argon", 
-    "Name2": "Oxygen", 
-    "function": "GeneralizedAirComponents", 
-    "xi": -2.115126, 
-    "zeta": -4.1232e-07
-  }, 
+  },
   {
     "BibTeX": "Kunz-JCED-2012", 
     "CAS1": "74-82-8", 
@@ -2645,5 +2612,38 @@
     "function": "Ethanol-Water", 
     "gammaT": 0.93996768, 
     "gammaV": 0.8687762
+  }, 
+  {
+    "BibTeX": "Lemmon-JPCRD-2000", 
+    "CAS1": "7727-37-9", 
+    "CAS2": "7440-37-1", 
+    "F": 1.121527, 
+    "Name1": "Nitrogen", 
+    "Name2": "Argon", 
+    "function": "GeneralizedAirComponents", 
+    "xi": -1.237713, 
+    "zeta": -7.6031e-07
+  }, 
+  {
+    "BibTeX": "Lemmon-JPCRD-2000", 
+    "CAS1": "7727-37-9", 
+    "CAS2": "7782-44-7", 
+    "F": 1.0, 
+    "Name1": "Nitrogen", 
+    "Name2": "Oxygen", 
+    "function": "GeneralizedAirComponents", 
+    "xi": -0.85635, 
+    "zeta": -4.1847e-07
+  }, 
+  {
+    "BibTeX": "Lemmon-JPCRD-2000", 
+    "CAS1": "7440-37-1", 
+    "CAS2": "7782-44-7", 
+    "F": 0.597203, 
+    "Name1": "Argon", 
+    "Name2": "Oxygen", 
+    "function": "GeneralizedAirComponents", 
+    "xi": -2.115126, 
+    "zeta": -4.1232e-07
   }
 ]
