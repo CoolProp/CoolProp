@@ -141,7 +141,6 @@ cdef class AbstractState:
         pe_out.rhomolar_vap = pe_data.rhomolar_vap
         pe_out.hmolar_liq = pe_data.hmolar_liq
         pe_out.hmolar_vap = pe_data.hmolar_vap
-        print pe_data.iTsat_max, pe_data.ipsat_max
         pe_out.iTsat_max = pe_data.iTsat_max
         pe_out.ipsat_max = pe_data.ipsat_max
         pe_out.TypeI = pe_data.TypeI
