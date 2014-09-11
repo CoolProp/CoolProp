@@ -18,7 +18,7 @@ public:
                 icrit; ///< The index of the point corresponding to the critical point
                 
     std::vector< std::vector<long double> > K, lnK, x, y;
-    std::vector<long double> T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap;
+    std::vector<long double> T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q;
     
     PhaseEnvelopeData(){ built = false; TypeI = false; };
     
@@ -32,7 +32,7 @@ public:
     void clear(){
         T.clear(); p.clear(); lnT.clear(); lnp.clear(); rhomolar_liq.clear(); rhomolar_vap.clear(); 
         lnrhomolar_liq.clear(); lnrhomolar_vap.clear(); hmolar_liq.clear(); hmolar_vap.clear(); smolar_liq.clear(); smolar_vap.clear();
-        K.clear(); lnK.clear(); x.clear(); y.clear();
+        K.clear(); lnK.clear(); x.clear(); y.clear(); Q.clear();
     }
     void insert_variables(const long double T, 
                           const long double p, 
@@ -67,6 +67,12 @@ public:
             this->x[j].insert(this->x[j].begin() + i, x[j]);
             this->y[j].insert(this->y[j].begin() + i, y[j]);
         }
+        if (rhomolar_liq > rhomolar_vap){
+            this->Q.insert(this->Q.begin(), 1);
+        }
+        else{
+            this->Q.insert(this->Q.begin(), 0);
+        }
     };
     void store_variables(const long double T, 
                          const long double p, 
@@ -99,6 +105,12 @@ public:
             this->lnK[i].push_back(log(y[i]/x[i]));
             this->x[i].push_back(x[i]);
             this->y[i].push_back(y[i]);
+        }
+        if (rhomolar_liq > rhomolar_vap){
+            this->Q.push_back(1);
+        }
+        else{
+            this->Q.push_back(0);
         }
     };
 };

@@ -201,7 +201,7 @@ namespace SaturationSolvers
     };
 
     struct newton_raphson_saturation_options{
-        enum imposed_variable_options {IMPOSED_P, IMPOSED_T};
+        enum imposed_variable_options {NO_VARIABLE_IMPOSED = 0, P_IMPOSED, RHOV_IMPOSED};
         int Nstep_max;
         bool bubble_point;
         std::size_t Nsteps;
@@ -219,8 +219,9 @@ namespace SaturationSolvers
      */
     class newton_raphson_saturation
     {
-    public:
-	    long double error_rms, rhomolar_liq, rhomolar_vap, T, p, max_rel_change, min_abs_change;
+        public:
+        newton_raphson_saturation_options::imposed_variable_options imposed_variable;
+	    long double error_rms, rhomolar_liq, rhomolar_vap, T, p, min_rel_change;
 	    unsigned int N;
 	    bool logging;
         bool bubble_point;
@@ -228,7 +229,7 @@ namespace SaturationSolvers
         long double dTsat_dPsat, dPsat_dTsat;
 	    STLMatrix J;
         HelmholtzEOSMixtureBackend *HEOS;
-	    std::vector<long double> K, x, y, phi_ij_liq, phi_ij_vap, dlnphi_drho_liq, dlnphi_drho_vap, r, negative_r, dXdS, neg_dFdS;
+	    std::vector<long double> K, x, y, phi_ij_liq, phi_ij_vap, dlnphi_drho_liq, dlnphi_drho_vap, r, negative_r, dXdS, neg_dFdS, err_rel;
 	    std::vector<SuccessiveSubstitutionStep> step_logger;
 
 	    newton_raphson_saturation(){};

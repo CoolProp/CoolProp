@@ -15,7 +15,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
     // Set some imput options
     SaturationSolvers::mixture_VLE_IO io;
     io.sstype = SaturationSolvers::imposed_p;
-    io.Nstep_max = 2;
+    io.Nstep_max = 20;
     
     // Set the pressure to a low pressure 
     HEOS._p = 100000;
@@ -44,6 +44,22 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
     IO.p = io.p;
     IO.Nstep_max = 30;
     
+    /*
+    IO.p = 1e5;
+    IO.rhomolar_liq = 17257.17130;
+    IO.rhomolar_vap = 56.80022884;
+    IO.T = 219.5200523;
+    IO.x[0] = 0.6689704673;
+    IO.x[1] = 0.3310295327;
+    */
+    IO.rhomolar_liq *= 1.2;
+    IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
+
+    NR.call(HEOS, IO.y, IO.x, IO);
+    
+    // Switch to density imposed
+    IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::RHOV_IMPOSED;
+    
     bool dont_extrapolate = false;
     
     PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
@@ -63,7 +79,6 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         }
         
         if (iter - iter0 > 0){ IO.rhomolar_vap *= factor;}
-        long double x = IO.rhomolar_vap;
         if (dont_extrapolate)
         {
             // Reset the step to a reasonably small size
@@ -71,29 +86,29 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         }
         else if (iter - iter0 == 2)
         {
-            IO.T = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, x);
-            IO.rhomolar_liq = LinearInterp(env.rhomolar_vap, env.rhomolar_liq, iter-2, iter-1, x);
+            IO.T = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, IO.rhomolar_vap);
+            IO.rhomolar_liq = LinearInterp(env.rhomolar_vap, env.rhomolar_liq, iter-2, iter-1, IO.rhomolar_vap);
             for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
             {            
-                IO.x[i] = LinearInterp(env.rhomolar_vap, env.x[i], iter-2, iter-1, x);
+                IO.x[i] = LinearInterp(env.rhomolar_vap, env.x[i], iter-2, iter-1, IO.rhomolar_vap);
             }
         }
         else if (iter - iter0 == 3)
         {
-            IO.T = QuadInterp(env.rhomolar_vap, env.T, iter-3, iter-2, iter-1, x);
-            IO.rhomolar_liq = QuadInterp(env.rhomolar_vap, env.rhomolar_liq, iter-3, iter-2, iter-1, x);
+            IO.T = QuadInterp(env.rhomolar_vap, env.T, iter-3, iter-2, iter-1, IO.rhomolar_vap);
+            IO.rhomolar_liq = QuadInterp(env.rhomolar_vap, env.rhomolar_liq, iter-3, iter-2, iter-1, IO.rhomolar_vap);
             for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
             {
-                IO.x[i] = QuadInterp(env.rhomolar_vap, env.x[i], iter-3, iter-2, iter-1, x);
+                IO.x[i] = QuadInterp(env.rhomolar_vap, env.x[i], iter-3, iter-2, iter-1, IO.rhomolar_vap);
             }
         }
         else if (iter - iter0 > 3)
         {
-            IO.T = CubicInterp(env.rhomolar_vap, env.T, iter-4, iter-3, iter-2, iter-1, x);
-            IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, iter-4, iter-3, iter-2, iter-1, x);
+            IO.T = CubicInterp(env.rhomolar_vap, env.T, iter-4, iter-3, iter-2, iter-1, IO.rhomolar_vap);
+            IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, iter-4, iter-3, iter-2, iter-1, IO.rhomolar_vap);
             
             // Check if there is a large deviation from linear interpolation - this suggests a step size that is so large that a minima or maxima of the interpolation function is crossed
-            long double T_linear = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, x);
+            long double T_linear = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, IO.rhomolar_vap);
             if (std::abs((T_linear-IO.T)/IO.T) > 0.1){
                 // Try again, but with a smaller step
                 IO.rhomolar_vap /= factor;
@@ -103,7 +118,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
             }
             for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
             {
-                IO.x[i] = CubicInterp(env.rhomolar_vap, env.x[i], iter-4, iter-3, iter-2, iter-1, x);
+                IO.x[i] = CubicInterp(env.rhomolar_vap, env.x[i], iter-4, iter-3, iter-2, iter-1, IO.rhomolar_vap);
                 if (IO.x[i] < 0 || IO.x[i] > 1){
                     // Try again, but with a smaller step
                     IO.rhomolar_vap /= factor;
@@ -123,13 +138,18 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         // Dewpoint calculation, liquid (x) is incipient phase
         try{
             NR.call(HEOS, IO.y, IO.x, IO);
+            if (!ValidNumber(IO.rhomolar_liq) || !ValidNumber(IO.p) || !ValidNumber(IO.T)){
+                throw ValueError("Invalid number");
+            }
         }
         catch(std::exception &e){
             std::cout << e.what() << std::endl;
+            std::cout << IO.T << " " << IO.p << std::endl;
             // Try again, but with a smaller step
             IO.rhomolar_vap /= factor;
             factor = 1 + (factor-1)/2;
             failure_count++;
+            
             continue;
         }
         

@@ -96,6 +96,14 @@ long double MixtureDerivatives::d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS,
     }
 }
 
+long double MixtureDerivatives::dln_fugacity_i_dT__constp_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    return dln_fugacity_coefficient_dT__constp_n(HEOS, i, xN_flag);
+}
+long double MixtureDerivatives::dln_fugacity_i_dp__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    return dln_fugacity_coefficient_dp__constT_n(HEOS, i, xN_flag) + 1/HEOS.p();
+}
 long double MixtureDerivatives::fugacity_i(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
     return HEOS.mole_fractions[i]*HEOS.rhomolar()*HEOS.gas_constant()*HEOS.T()*exp( dnalphar_dni__constT_V_nj(HEOS, i, xN_flag));
 }
@@ -147,6 +155,20 @@ long double MixtureDerivatives::dln_fugacity_i_dtau__constdelta_x(HelmholtzEOSMi
 long double MixtureDerivatives::dln_fugacity_i_ddelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
     return 1 + HEOS.delta()*HEOS.dalphar_dDelta() + HEOS.delta()*d_ndalphardni_dDelta(HEOS, i, xN_flag);
+}
+long double MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+{
+    // This is a term to which some more might be added depending on i and j
+    long double val = dln_fugacity_coefficient_dxj__constT_p_xi(HEOS, i, j, xN_flag);
+    const std::vector<long double> &x = HEOS.get_const_mole_fractions();
+    std::size_t N = x.size();
+    if (i == N-1){
+        val += -1/x[N-1];
+    }
+    else if (i == j){
+        val += 1/x[j];
+    }
+    return val;
 }
 long double MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
@@ -363,6 +385,8 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
         ss00 << "Mixture with " << Ncomp << " components";
         SECTION(ss00.str(),"")
         {
+            x_N_dependency_flag xN_flag = XN_INDEPENDENT;
+            
             std::vector<std::string> names;
             std::vector<long double> z;
             shared_ptr<HelmholtzEOSMixtureBackend> HEOS, HEOS_plusT_constrho, HEOS_plusrho_constT, HEOS_minusT_constrho, HEOS_minusrho_constT;
@@ -414,7 +438,6 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
             
             rHEOS.update(DmolarT_INPUTS, rho1, T1);
         
-            x_N_dependency_flag xN_flag = XN_DEPENDENT;
             // These ones only require the i index
             for (std::size_t i = 0; i< z.size();++i)
             {
@@ -423,7 +446,9 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 HEOS_pluszi->specify_phase(iphase_gas); 
                 HelmholtzEOSMixtureBackend &rHEOS_pluszi = *(HEOS_pluszi.get());
                 std::vector<long double> zp = z; /// Copy base composition
-                zp[i] += dz; zp[z.size()-1] -= dz;
+                zp[i] += dz; 
+                if (xN_flag = XN_DEPENDENT)
+                    zp[z.size()-1] -= dz;
                 rHEOS_pluszi.set_mole_fractions(zp);
                 rHEOS_pluszi.update(DmolarT_INPUTS, rho1, T1);
             
@@ -431,7 +456,9 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                 HEOS_minuszi->specify_phase(iphase_gas); 
                 HelmholtzEOSMixtureBackend &rHEOS_minuszi = *(HEOS_minuszi.get());
                 std::vector<long double> zm = z; /// Copy base composition
-                zm[i] -= dz; zm[z.size()-1] += dz;
+                zm[i] -= dz; 
+                if (xN_flag = XN_DEPENDENT)
+                    zm[z.size()-1] += dz;
                 rHEOS_minuszi.set_mole_fractions(zm);
                 rHEOS_minuszi.update(DmolarT_INPUTS, rho1, T1);
                 
@@ -443,6 +470,19 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                     double v1 = log(MixtureDerivatives::fugacity_i(rHEOS_plusT_constrho, i, xN_flag));
                     double v2 = log(MixtureDerivatives::fugacity_i(rHEOS_minusT_constrho, i, xN_flag));
                     double numeric = (v1 - v2)/(2*dT);
+                    double err = std::abs((numeric-analytic)/analytic);
+                    CAPTURE(numeric);
+                    CAPTURE(analytic);
+                    CHECK(err < 1e-8);
+                }
+                std::ostringstream ss0a;
+                ss0a << "dln_fugacity_i_dp__constT_n, i=" << i;
+                SECTION(ss0a.str(),"")
+                {
+                    double analytic = MixtureDerivatives::dln_fugacity_i_dp__constT_n(rHEOS, i, xN_flag);
+                    double v1 = log(MixtureDerivatives::fugacity_i(rHEOS_plusrho_constT, i, xN_flag)), p1 = rHEOS_plusrho_constT.p();
+                    double v2 = log(MixtureDerivatives::fugacity_i(rHEOS_minusrho_constT, i, xN_flag)), p2 = rHEOS_minusrho_constT.p();
+                    double numeric = (v1 - v2)/(p1 - p2);
                     double err = std::abs((numeric-analytic)/analytic);
                     CAPTURE(numeric);
                     CAPTURE(analytic);
@@ -486,6 +526,25 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                     double v1 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i, xN_flag);
                     rHEOS.update(PT_INPUTS, 101325, T1 - dT);
                     double v2 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i, xN_flag);
+                    
+                    double numeric = (v1 - v2)/(2*dT);
+                    double err = std::abs((numeric-analytic)/analytic);
+                    CHECK(err < 1e-6);
+                }
+                std::ostringstream ss1a;
+                ss1a << "dln_fugacity_i_dT__constp_n, i=" << i;
+                SECTION(ss1a.str(), "")
+                {
+                    double T1 = 300, dT = 1e-3;
+                    rHEOS.specify_phase(iphase_gas);
+                    
+                    rHEOS.update(PT_INPUTS, 101325, T1);
+                    double analytic = MixtureDerivatives::dln_fugacity_i_dT__constp_n(rHEOS, i, xN_flag);
+                    
+                    rHEOS.update(PT_INPUTS, 101325, T1 + dT);
+                    double v1 = log(MixtureDerivatives::fugacity_i(rHEOS, i, xN_flag));
+                    rHEOS.update(PT_INPUTS, 101325, T1 - dT);
+                    double v2 = log(MixtureDerivatives::fugacity_i(rHEOS, i, xN_flag));
                     
                     double numeric = (v1 - v2)/(2*dT);
                     double err = std::abs((numeric-analytic)/analytic);

@@ -64,6 +64,9 @@ public:
     std::vector<long double> &get_K(){return K;};
     std::vector<long double> &get_lnK(){return lnK;};
     
+    std::vector<long double> calc_mole_fractions_liquid(void){return SatL->get_mole_fractions();};
+    std::vector<long double> calc_mole_fractions_vapor(void){return SatV->get_mole_fractions();};
+    
     const CoolProp::PhaseEnvelopeData &calc_phase_envelope_data(){return PhaseEnvelope;};
 
     void resize(unsigned int N);
