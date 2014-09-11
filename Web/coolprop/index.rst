@@ -7,7 +7,7 @@ This section includes information about the CoolProp software, listings of input
 .. toctree::
     :maxdepth: 3
 
-    wrappers/wrappers.rst
+    wrappers/index.rst
     HighLevelAPI.rst
     LowLevelAPI.rst
     changelog.rst

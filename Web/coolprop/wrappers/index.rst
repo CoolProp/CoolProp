@@ -25,6 +25,7 @@ Language                                      Operating Systems            Notes
 :ref:`FORTRAN <FORTRAN>`                      linux, OSX, win
 :ref:`EES <EES>`                              windows only
 :ref:`Microsoft Excel <Excel>`                windows only
+:ref:`LibreOffice <LibreOffice>`              windows only
 =======================================       ===========================  =======================================
 
 .. _wrapper_common_prereqs:
