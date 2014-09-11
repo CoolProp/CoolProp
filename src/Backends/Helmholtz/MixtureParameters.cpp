@@ -217,6 +217,11 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
             // ***************************************************
             //         Reducing parameters for binary pair
             // ***************************************************
+            
+            if (mixturebinarypairlibrary.binary_pair_map.find(CAS) == mixturebinarypairlibrary.binary_pair_map.end())
+            {
+                throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.", CAS[0].c_str(), CAS[1].c_str()));
+            }
 
             // Get a reference to the first matching binary pair in the dictionary
             Dictionary &dict_red = mixturebinarypairlibrary.binary_pair_map[CAS][0];
@@ -249,6 +254,16 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
             //     Departure functions used in excess term
             // ***************************************************
             
+            // Set the scaling factor F for the excess term
+            HEOS.Excess.F[i][j] = dict_red.get_number("F");
+            
+            if (std::abs(HEOS.Excess.F[i][j]) < DBL_EPSILON){
+                // Empty departure function that will just return 0
+                std::vector<double> n(1,0), d(1,1), t(1,1), l(1,0);
+                HEOS.Excess.DepartureFunctionMatrix[i][j].reset(new ExponentialDepartureFunction(n,d,t,l));
+                continue;
+            }
+            
             // Get the name of the departure function to be used for this binary pair
             std::string Name = CoolProp::get_reducing_function_name(components[i]->CAS, components[j]->CAS);
             
@@ -259,9 +274,6 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
             std::vector<double> n = dict_dep.get_double_vector("n");
             std::vector<double> d = dict_dep.get_double_vector("d");
             std::vector<double> t = dict_dep.get_double_vector("t");
-            
-            // Set the scaling factor F for the excess term
-            HEOS.Excess.F[i][j] = dict_red.get_number("F");
             
             std::string type_dep = dict_dep.get_string("type");
             
