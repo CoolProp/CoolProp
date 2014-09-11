@@ -27,12 +27,17 @@ documents with all the
 You can read more about these reports in a dedicated
 :ref:`section<FittingReports>` called :ref:`Fitting Reports<FittingReports>` below.
 
-Incompressible fluids only allow  These only allow for calls with
-temperature and pressure as input and provide only a subset of thermophysical properties, namely:
-density, heat capacity, internal energy, enthalpy, entropy, viscosity and thermal conductivity.
-Hence, the available output keys for the ``Props`` function are: "D", "C", "U", "H", "S", "V", "L",
-"Tmin", "Tmax" and "Psat". An internal iteration allows us to use enthalpy and pressure as inputs,
-but be aware of the reduced computational efficiency.
+Incompressible fluids only allow  for a limited subset of input variables. The
+following input pairs are supported: :math:`p,T`, :math:`h,p`, :math:`\rho,T`,
+:math:`p,u` and :math:`p,s`. All functions iterate on :math:`f(p,T)` calls
+internally, which makes this combinations by far the fastest. However, also the
+other inputs should be fast compared to the full Helmholtz-based EOS implemented
+for then compressible fluids.
+
+A call to the top-level function ``PropsSI`` can provide : density, heat capacity,
+internal energy, enthalpy, entropy, viscosity and thermal conductivity. Hence,
+the available output keys are: "D", "C", "U", "H", "S", "V", "L", "Tmin", "Tmax"
+and "Psat".
 
 .. ipython::
 
@@ -40,6 +45,7 @@ but be aware of the reduced computational efficiency.
 
     #Density of HFE-7100 at 300 K and 1 atm.
     In [1]: PropsSI('D','T',300,'P',101325,'INCOMP::HFE')
+
 
 .. _Pure:
 
@@ -91,6 +97,14 @@ used non-scientific name. The next item tells you where we got the data from. Th
 would typically be a data sheet from a manufacturers homepage, some other software
 database, a scientific publication or experimental data.
 
+.. figure:: report2up.*
+    :align: center
+    :alt: Fitting reports for pure fluid and solution
+
+    The figure above shows two examples for fitting reports generated for a pure
+    fluid and a binary mixture. You can also have a look at the
+    :download:`PDF version<report2up.pdf>` of the reports side by side.
+
 If all data is available, there is a graphs for each of the basic quantities
 density :math:`\rho`, specific heat capacity :math:`c`, thermal conductivity
 :math:`\lambda`, dynamic viscosity :math:`\mu`, saturation pressure
@@ -102,15 +116,6 @@ left hand side. In case of a solution, these graphs refer to a given concentrati
 that typically lies in the middle of the allowed range. Dashed red lines indicate
 the limits in terms of concentration as well as the freezing temperature.
 
-
-
-.. figure:: report2up.*
-    :align: center
-    :alt: Fitting reports for pure fluid and solution
-
-    The figure above shows two examples for fitting reports generated for a pure
-    fluid and a binary mixture. You can also have a look at the
-    :download:`PDF version<report2up.pdf>` of the reports side by side.
 
 
 
