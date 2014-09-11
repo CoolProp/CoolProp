@@ -64,7 +64,14 @@ def checkForNumber(number):
     return n
 
 def d(text,target):
-    link = ":download:`{0}<{1}>`".format(text,target)
+    try:
+        if os.path.isfile(target):
+            link = ":download:`{0}<{1}>`".format(text,target)
+        else:
+            link = "{0}".format(text)
+    except:
+        link = "{0}".format(text)
+        pass
     return link
 
 def m(math):

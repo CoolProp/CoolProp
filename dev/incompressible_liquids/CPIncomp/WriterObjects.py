@@ -11,6 +11,7 @@ from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_pdf import PdfPages
 import itertools
 from datetime import datetime
+import matplotlib
 
 class SolutionDataWriter(object):
     """
@@ -359,6 +360,7 @@ class SolutionDataWriter(object):
         if not pdfFile is None:
             with PdfPages(pdfFile) as pdfObj:
                 for obj in fluidObjs:
+                    matplotlib.pyplot.close("all")
                     self.printStatusID(fluidObjs, obj)
                     try:
                         self.makeFitReportPage(obj,pdfObj=pdfObj)
@@ -369,6 +371,7 @@ class SolutionDataWriter(object):
                         pass
         else:
             for obj in fluidObjs:
+                matplotlib.pyplot.close("all")
                 self.printStatusID(fluidObjs, obj)
                 try:
                     self.makeFitReportPage(obj)

@@ -8,59 +8,50 @@
 INCOMP_INCLUDES_SOURCE:=$(realpath $(CURDIR)/../dev/incompressible_liquids )
 #INCOMP_INCLUDES_TARGET:=$(realpath $(CURDIR)/fluid_properties )
 INCOMP_INCLUDES_TARGET:=fluid_properties
+INCOMP_INCLUDES_LOGFIL:=$(INCOMP_INCLUDES_TARGET)/generator.log.txt
 # JSON, PDF and JPG all depend on Python, regenerate all of them if Python sources change
 INCOMP_INCLUDES_PYTHON:=$(shell find $(INCOMP_INCLUDES_SOURCE)/CPIncomp -iname '*.py') # recursively
-INCOMP_INCLUDES_JSONLI:=$(shell find $(INCOMP_INCLUDES_SOURCE)/json -iname '*.json') # recursively
-INCOMP_INCLUDES_FNAMES:=$(basename $(notdir $(INCOMP_INCLUDES_JSONLI) ) ) # all fluid IDs
-# All the required files
-INCOMP_INCLUDES_PDFREP:=$(addprefix $(INCOMP_INCLUDES_TARGET)/report/, $(addsuffix _fitreport.pdf, $(INCOMP_INCLUDES_FNAMES) ) )
+INCOMP_INCLUDES_PYTHON:=$(INCOMP_INCLUDES_PYTHON) $(INCOMP_INCLUDES_SOURCE)/all_incompressibles.py
+INCOMP_INCLUDES_PYTHON:=$(INCOMP_INCLUDES_PYTHON) $(INCOMP_INCLUDES_SOURCE)/Incompressibles_include_generator.py
+#INCOMP_INCLUDES_JSONLI:=$(shell find $(INCOMP_INCLUDES_SOURCE)/json -iname '*.json') # recursively
+#INCOMP_INCLUDES_FNAMES:=$(basename $(notdir $(INCOMP_INCLUDES_JSONLI) ) ) # all fluid IDs
+## All the required files
+#INCOMP_INCLUDES_PDFREP:=$(addprefix $(INCOMP_INCLUDES_TARGET)/report/, $(addsuffix _fitreport.pdf, $(INCOMP_INCLUDES_FNAMES) ) )
 INCOMP_INCLUDES_PDFEXT:= all_incompressibles.pdf
 INCOMP_INCLUDES_PDFEXT:=$(addprefix $(INCOMP_INCLUDES_TARGET)/, $(INCOMP_INCLUDES_PDFEXT) )
 INCOMP_INCLUDES_TXTTAB:= pure-fluids.txt mass-based-fluids.txt mole-based-fluids.txt volume-based-fluids.txt
 INCOMP_INCLUDES_TXTTAB:=$(addprefix $(INCOMP_INCLUDES_TARGET)/, $(INCOMP_INCLUDES_TXTTAB) )
-#
-INCOMP_INCLUDES_DUMMY:=$(shell cd $(INCOMP_INCLUDES_SOURCE); python all_incompressibles.py -ns -fr )
+# Special figures
+INCOMP_INCLUDES_COMFIG:=$(INCOMP_INCLUDES_TARGET)/report2up
+INCOMP_INCLUDES_COMFIG_SRC:=$(INCOMP_INCLUDES_TARGET)/report/NBS_fitreport.pdf $(INCOMP_INCLUDES_TARGET)/report/AEG_fitreport.pdf
 
-.PHONY : check_incomp_script
-check_incomp_script:
-	@printf "\nMakefile variables:\n\
-	  INCOMP_INCLUDES_DUMMY=$(INCOMP_INCLUDES_DUMMY)\n"
 
-#   
+# the script generates the overview PDF (and more)
+$(INCOMP_INCLUDES_PDFEXT): run_incomp_script
+
+# Make sure this expensive step only gets carried out once
+INCOMP_INCLUDES_DUMMY:=$(shell date; cd $(INCOMP_INCLUDES_SOURCE); python all_incompressibles.py -ns -fr )
+.PHONY : run_incomp_script
+run_incomp_script: $(INCOMP_INCLUDES_PYTHON)
+	@echo "\nOutput from fitting the incompressibles:\n\
+	  $(INCOMP_INCLUDES_DUMMY)\n" > $(INCOMP_INCLUDES_LOGFIL)
+	@rsync -am --include='*.pdf' --include='*/' --exclude='*' --delete $(INCOMP_INCLUDES_SOURCE)/ $(INCOMP_INCLUDES_TARGET)/
+
+# Note that we have to use a static pattern to avoid multiple invocations of the generator!
+$(INCOMP_INCLUDES_TXTTAB): %.txt: $(INCOMP_INCLUDES_SOURCE)/Incompressibles_include_generator.py $(INCOMP_INCLUDES_PYTHON)
+	@cd $(<D); python Incompressibles_include_generator.py
+
+# Create the image that is used to describe the fitting reports
+$(INCOMP_INCLUDES_COMFIG).jpg: $(INCOMP_INCLUDES_COMFIG).pdf
+	@convert -density 300 $< $@ # Convert the PDF to JPG
+	@convert -crop 100%x47%+0+30 -resize '850x' -quality 75 $@ $@ # Resize it 
+
+$(INCOMP_INCLUDES_COMFIG).pdf: $(INCOMP_INCLUDES_COMFIG_SRC)
+	@pdfnup --quiet --nup 2x1 --delta "1cm 0cm" $^ -o $(INCOMP_INCLUDES_COMFIG).pdf
+
 # Define one single target to be referenced 
 .PHONY: incompressible_includes
-incompressible_includes: $(INCOMP_INCLUDES_TXTTAB) $(INCOMP_INCLUDES_PDFEXT) $(INCOMP_INCLUDES_PDFREP) check_incomp_script
-#
-# Now we split it up again and maps dependencies to their generators
-# TODO: Fix this! The test files do not depend on all_incompressibles.py, but it is needed to generate the PDFs...
-$(INCOMP_INCLUDES_TXTTAB):: $(INCOMP_INCLUDES_SOURCE)/Incompressibles_include_generator.py $(INCOMP_INCLUDES_PYTHON)
-	cd $(<D); \
-	python Incompressibles_include_generator.py
-	
-#$(INCOMP_INCLUDES_PDFEXT):: $(INCOMP_INCLUDES_SOURCE)/all_incompressibles.py $(INCOMP_INCLUDES_PYTHON)
-#	cd $(<D); \
-#	python all_incompressibles.py -ns -fr
-
-$(INCOMP_INCLUDES_TARGET)/%.pdf: $(INCOMP_INCLUDES_SOURCE)/%.pdf
-	mkdir -p $(@D); \
-	cp $< $@
-	
-.PHONY : check_incomp_flags
-check_incomp_flags:
-	@printf "\nMakefile variables:\n\
-	  INCOMP_INCLUDES_SOURCE=$(INCOMP_INCLUDES_SOURCE)\n\
-	  INCOMP_INCLUDES_TARGET=$(INCOMP_INCLUDES_TARGET)\n\
-	  INCOMP_INCLUDES_PYTHON=$(INCOMP_INCLUDES_PYTHON)\n\
-	  INCOMP_INCLUDES_JSONLI=$(INCOMP_INCLUDES_JSONLI)\n\
-	  INCOMP_INCLUDES_FNAMES=$(INCOMP_INCLUDES_FNAMES)\n\
-	  INCOMP_INCLUDES_PDFREP=$(INCOMP_INCLUDES_PDFREP)\n\
-	  INCOMP_INCLUDES_PDFEXT=$(INCOMP_INCLUDES_PDFEXT)\n\
-	  INCOMP_INCLUDES_TXTTAB=$(INCOMP_INCLUDES_TXTTAB)\n"
-
-
-
-
-
+incompressible_includes: $(INCOMP_INCLUDES_TXTTAB) $(INCOMP_INCLUDES_PDFEXT) $(INCOMP_INCLUDES_COMFIG).jpg
 
 
 
