@@ -24,6 +24,8 @@ linked to that ID in case you would like to see a few more details about any
 specific fluid. To get an overview over all the fits, there are also combined
 documents with all the
 :download:`pure fluids and all the aqueous solutions<all_incompressibles.pdf>`.
+You can read more about these reports in a dedicated :ref:`section <FittingReports>`
+ called :ref:`Fitting Reports <FittingReports>` below.
 
 Incompressible fluids only allow  These only allow for calls with
 temperature and pressure as input and provide only a subset of thermophysical properties, namely:
@@ -78,8 +80,28 @@ Volume-based binary mixtures
 Fitting Reports
 =====================
 
-here is a pdf file for all pure fluids :download:`pdf <all_incompressibles.pdf>`
+A file with all fitting reports for the incompressible fluids can be downloaded
+from :download:`here <all_incompressibles.pdf>`.
 
+The reports help you to get an overview over the different incompressible fluids
+included in CoolProp. The reports start with some basic information about
+the fluid. There is the name by which it can be accessed through the
+interface in the title "Fitting Report for *FluidName*" as well as a description
+of what the fluid actually is, this could also be a trade name or a commonly
+used non-scientific name. The next item tells you where we got the data from. This
+would typically be a data sheet from a manufacturers homepage, some other software
+database, a scientific publication or experimental data.
+
+If all data is available, there is a graphs for each of the basic quantities
+density :math:`\rho`, specific heat capacity :math:`c`, thermal conductivity
+:math:`\lambda`, dynamic viscosity :math:`\mu`, saturation pressure
+:math:`p_{sat}`, and freezing temperature :math:`T_{freeze}`. These graphs show
+data points in dark blue, the fitted function from CoolProp as a red line and the
+relative error in light blue dots. Note that the relative error uses the ordinate
+on the right hand side while the other two data series refer to the axis on the
+left hand side. In case of a solution, these graphs refer to a given concentration
+that typically lies in the middle of the allowed range. Dashed red lines indicate
+the limits in terms of concentration as well as the freezing temperature.
 
 
 

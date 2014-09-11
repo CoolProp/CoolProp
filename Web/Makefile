@@ -18,17 +18,28 @@ INCOMP_INCLUDES_PDFEXT:= all_incompressibles.pdf
 INCOMP_INCLUDES_PDFEXT:=$(addprefix $(INCOMP_INCLUDES_TARGET)/, $(INCOMP_INCLUDES_PDFEXT) )
 INCOMP_INCLUDES_TXTTAB:= pure-fluids.txt mass-based-fluids.txt mole-based-fluids.txt volume-based-fluids.txt
 INCOMP_INCLUDES_TXTTAB:=$(addprefix $(INCOMP_INCLUDES_TARGET)/, $(INCOMP_INCLUDES_TXTTAB) )
+#
+INCOMP_INCLUDES_DUMMY:=$(shell cd $(INCOMP_INCLUDES_SOURCE); python all_incompressibles.py -ns -fr )
+
+.PHONY : check_incomp_script
+check_incomp_script:
+	@printf "\nMakefile variables:\n\
+	  INCOMP_INCLUDES_DUMMY=$(INCOMP_INCLUDES_DUMMY)\n"
+
 #   
 # Define one single target to be referenced 
 .PHONY: incompressible_includes
-incompressible_includes: $(INCOMP_INCLUDES_TXTTAB) $(INCOMP_INCLUDES_PDFEXT) $(INCOMP_INCLUDES_PDFREP) 
+incompressible_includes: $(INCOMP_INCLUDES_TXTTAB) $(INCOMP_INCLUDES_PDFEXT) $(INCOMP_INCLUDES_PDFREP) check_incomp_script
 #
 # Now we split it up again and maps dependencies to their generators
 # TODO: Fix this! The test files do not depend on all_incompressibles.py, but it is needed to generate the PDFs...
-$(INCOMP_INCLUDES_TXTTAB):: $(INCOMP_INCLUDES_SOURCE)/Incompressibles_include_generator.py $(INCOMP_INCLUDES_SOURCE)/all_incompressibles.py $(INCOMP_INCLUDES_PYTHON)
+$(INCOMP_INCLUDES_TXTTAB):: $(INCOMP_INCLUDES_SOURCE)/Incompressibles_include_generator.py $(INCOMP_INCLUDES_PYTHON)
 	cd $(<D); \
-	python Incompressibles_include_generator.py; \
-	python all_incompressibles.py -ns -fr
+	python Incompressibles_include_generator.py
+	
+#$(INCOMP_INCLUDES_PDFEXT):: $(INCOMP_INCLUDES_SOURCE)/all_incompressibles.py $(INCOMP_INCLUDES_PYTHON)
+#	cd $(<D); \
+#	python all_incompressibles.py -ns -fr
 
 $(INCOMP_INCLUDES_TARGET)/%.pdf: $(INCOMP_INCLUDES_SOURCE)/%.pdf
 	mkdir -p $(@D); \
