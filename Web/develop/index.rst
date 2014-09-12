@@ -7,14 +7,21 @@ Information for Developers
 .. toctree::
 
   code.rst
+  backends.rst
   cmake.rst
   buildbot.rst
   documentation.rst
   
 Address Sanitizer
 -----------------
-1. Clang >3.6, build from source on linux following instructions
-2. Check out CoolProp using git:
+
+Address sanitizer is a module of the clang compiler that can help to pinpoint several memory problems, like addressing memory that is out of range.  
+
+The instructions here explain how to get address sanitizer working for CoolProp for testing purposes.
+
+1. You need Clang >3.6, build from source on linux following instructions
+
+2. Check out CoolProp using git::
 
     git clone https://github.com/CoolProp/CoolProp --recursive
 
