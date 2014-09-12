@@ -1,6 +1,7 @@
 #include "VLERoutines.h"
 #include "FlashRoutines.h"
 #include "HelmholtzEOSMixtureBackend.h"
+#include "PhaseEnvelopeRoutines.h"
 
 namespace CoolProp{
 
@@ -29,8 +30,45 @@ template<class T> T dgdbeta_RachfordRice(const std::vector<T> &z, const std::vec
 
 void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
 {
-    if (false){//HEOS.PhaseEnvelope.built){
+    if (HEOS.PhaseEnvelope.built){
         // Use the phase envelope if already constructed to determine phase boundary
+        // Determine whether you are inside (two-phase) or outside (single-phase)
+        SimpleState closest_state;
+        std::size_t i;
+        bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS, iP, HEOS._p, iT, HEOS._T, i, closest_state);
+        if (!twophase && HEOS._T > closest_state.T){
+            // Gas solution - bounded between phase envelope temperature and very high temperature
+            //
+            // Start with a guess value from SRK
+            long double rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_gas);
+            
+            solver_TP_resid resid(HEOS, HEOS._T, HEOS._p);
+            std::string errstr;
+            HEOS.specify_phase(iphase_gas);
+            try{
+                // Try using Newton's method
+                long double rhomolar = Newton(resid, rhomolar_guess, 1e-10, 100, errstr);
+                // Make sure the solution is within the bounds
+                if (!is_in_closed_range(static_cast<long double>(closest_state.rhomolar), 0.0L, rhomolar)){
+                    throw ValueError("out of range");
+                }
+                HEOS.update_DmolarT_direct(rhomolar, HEOS._T);
+            }
+            catch(std::exception &e){
+                // If that fails, try a bounded solver
+                long double rhomolar = Brent(resid, closest_state.rhomolar, 1e-10, DBL_EPSILON, 1e-10, 100, errstr);
+                // Make sure the solution is within the bounds
+                if (!is_in_closed_range(static_cast<long double>(closest_state.rhomolar), 0.0L, rhomolar)){
+                    throw ValueError("out of range");
+                }
+            }
+            HEOS.unspecify_phase();
+            
+        }
+        else{
+            // Liquid solution
+            throw ValueError();
+        }
     }
     else{
         // Following the strategy of Gernert, 2014
@@ -643,7 +681,6 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
 			// Get the value of the desired variable
 			eos = HEOS->keyed_output(other);
             pp = HEOS->p();
-            
 
 			// Difference between the two is to be driven to zero
             r = eos - value;
@@ -694,6 +731,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
 {
     bool saturation_called = false;
     long double value;
+    std::cout << "PHSU" << std::endl;
     if (HEOS.imposed_phase_index != iphase_not_imposed)
     {
         // Use the phase defined by the imposed phase
@@ -701,21 +739,25 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
     }
     else
     {
+        std::cout << "PHSU not imposed" << std::endl;
+        // Find the phase, while updating all internal variables possible
+        switch (other)
+        {
+            case iSmolar:
+                value = HEOS.smolar(); break;
+            case iHmolar:
+                value = HEOS.hmolar(); break;
+            case iUmolar:
+                value = HEOS.umolar(); break;
+            default:
+                throw ValueError(format("Input for other [%s] is invalid", get_parameter_information(other, "long").c_str()));
+        }
         if (HEOS.is_pure_or_pseudopure)
         {
 
             // Find the phase, while updating all internal variables possible
-            switch (other)
-            {
-                case iSmolar:
-                    value = HEOS.smolar(); HEOS.p_phase_determination_pure_or_pseudopure(iSmolar, value, saturation_called); break;
-                case iHmolar:
-                    value = HEOS.hmolar(); HEOS.p_phase_determination_pure_or_pseudopure(iHmolar, value, saturation_called); break;
-                case iUmolar:
-                    value = HEOS.umolar(); HEOS.p_phase_determination_pure_or_pseudopure(iUmolar, value, saturation_called); break;
-                default:
-                    throw ValueError(format("Input for other [%s] is invalid", get_parameter_information(other, "long").c_str()));
-            }
+            HEOS.p_phase_determination_pure_or_pseudopure(other, value, saturation_called);
+            
 			if (HEOS.isHomogeneousPhase())
 			{
                 // Now we use the single-phase solver to find T,rho given P,Y using a 
@@ -765,7 +807,30 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
         }
         else
         {
-            throw NotImplementedError("HSU_P_flash does not support mixtures (yet)");
+            std::cout << format("PHSU flash for mixture\n");
+            if (HEOS.PhaseEnvelope.built){
+                // Determine whether you are inside or outside
+                SimpleState closest_state;
+                std::size_t iclosest;
+                std::cout << format("pre is inside\n");
+                bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS, iP, HEOS._p, other, value, iclosest, closest_state);
+                std::cout << format("post is inside\n");
+                
+                std::string errstr;
+                if (!twophase){
+                    PY_singlephase_flash_resid resid(HEOS, HEOS._p, other, value);
+                    // If that fails, try a bounded solver
+                    long double rhomolar = Brent(resid, closest_state.T+10, 1000, DBL_EPSILON, 1e-10, 100, errstr);
+                    HEOS.unspecify_phase();
+                }
+                else{
+                    throw ValueError("two-phase solution for Y");
+                }
+                
+            }
+            else{
+                throw ValueError("phase envelope must be built");
+            }
         }
     }    
 }

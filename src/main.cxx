@@ -423,9 +423,9 @@ int main()
     #endif
     #if 0
     {
-        ::set_debug_level(11);
+        ::set_debug_level(0);
         std::vector<std::string> tags;
-        tags.push_back("[REFPROP_backwards_compatibility]");
+        tags.push_back("[mixture_derivs]");
         run_user_defined_tests(tags);
         char c;
         std::cin >> c;
@@ -440,8 +440,8 @@ int main()
 	#endif
     #if 0
     {
-        double TTT0 = PropsSI("T","P",1e6,"Q",1,"REFPROP::Ethane[0.5]&Propane[0.5]");
-        double TTT1 = PropsSI("T","P",1e6,"Q",1,"HEOS::Ethane[0.5]&Propane[0.5]");
+        double TTT0 = PropsSI("T","Q",1,"P",3e6,"REFPROP::R32[0.3]&R125[0.7]");
+        double TTT1 = PropsSI("T","Q",1,"P",3e6,"HEOS::R125[0.7]&R32[0.3]");
         int rr =0;
     }
     #endif
@@ -450,8 +450,8 @@ int main()
         
         ::set_debug_level(0);
         
-        shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Methane&Propane"));
-        std::vector<long double> z(2, 0.3); z[1] = 0.7;
+        shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Methane&Ethane"));
+        std::vector<long double> z(2, 0.8); z[1] = 1-z[0];
         //shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Methane&Propane&Ethane&n-Butane"));
         //std::vector<long double> z(4, 0.1); z[1] = 0.35; z[2] = 0.35, z[3] = 0.2;
         HEOS->set_mole_fractions(z);
@@ -465,6 +465,16 @@ int main()
             std::cout << get_global_param_string("errstring") << std::endl;
         }
         t2 = clock();
+        HEOS->update(PSmolar_INPUTS, 4e6, 79.1048486373);
+        long double TT = HEOS->T();
+        HEOS->update(PQ_INPUTS, 1.3e5, 1);
+        double ssat = HEOS->smolar();
+        double hsat = HEOS->hmolar();
+        double dsat = HEOS->rhomolar();
+        for (long double s = ssat + 60; s > ssat; s -= 5){
+            HEOS->update(PSmolar_INPUTS, 1.3e5, s);
+            std::cout << s << " " << HEOS->rhomolar() << " " << dsat << std::endl;
+        }
         std::cout << format("time: %g s/call\n", ((double)(t2-t1))/CLOCKS_PER_SEC);
         exit(EXIT_SUCCESS);
         

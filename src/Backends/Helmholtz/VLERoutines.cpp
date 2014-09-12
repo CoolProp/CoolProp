@@ -972,7 +972,7 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
             throw ValueError(format("newton_raphson_saturation::call reached max number of iterations [%d]",IO.Nstep_max));
         }
     }
-    while(this->error_rms > 1e-9 && min_rel_change > 10*DBL_EPSILON && iter < IO.Nstep_max);
+    while(this->error_rms > 1e-9 && min_rel_change > 1000*DBL_EPSILON && iter < IO.Nstep_max);
 
     IO.Nsteps = iter;
     IO.p = p;
@@ -1002,7 +1002,6 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
     else{
         // Liquid is incipient phase, set its composition
         rSatL.set_mole_fractions(x);
-        rSatV.set_mole_fractions(y);
     }
     
     if (imposed_variable == newton_raphson_saturation_options::RHOV_IMPOSED){
@@ -1014,9 +1013,9 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
         rSatV.update_TP_guessrho(T, p, rhomolar_vap);
     }
     else{
-        throw ValueError();
+        throw ValueError("imposed variable not set for NR VLE");
     }
-
+    
     // For diagnostic purposes calculate the pressures (no derivatives are evaluated)
     long double p_liq = rSatL.p();
     long double p_vap = rSatV.p();
@@ -1029,7 +1028,6 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
     
     if (imposed_variable == newton_raphson_saturation_options::RHOV_IMPOSED){
-        x_N_dependency_flag xN_flag = XN_DEPENDENT;
         // For the residuals F_i (equality of fugacities)
         for (std::size_t i = 0; i < N; ++i)
         {
@@ -1101,6 +1099,7 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
     error_rms = sqrt(error_rms); // Square-root (The R in RMS)
     
     // Calculate derivatives along phase boundary;
+    // Gernert thesis 3.96 and 3.97
     long double dQ_dPsat = 0, dQ_dTsat = 0;
     for (std::size_t i = 0; i < N; ++i)
     {

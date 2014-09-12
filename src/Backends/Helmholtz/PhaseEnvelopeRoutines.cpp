@@ -52,7 +52,9 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
     IO.x[0] = 0.6689704673;
     IO.x[1] = 0.3310295327;
     */
-    IO.rhomolar_liq *= 1.2;
+    
+    //IO.rhomolar_liq *= 1.2;
+    
     IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
 
     NR.call(HEOS, IO.y, IO.x, IO);
@@ -197,11 +199,12 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         factor = std::max(factor, static_cast<long double>(1.01));
         
         // Stop if the pressure is below the starting pressure
-        if (iter > 4 && IO.p < env.p[0]){ return; }
+        if (iter > 4 && IO.p < env.p[0]){ env.built = true; std::cout << format("envelope built.\n"); return; }
         
         // Reset the failure counter
         failure_count = 0;
     }
+    
 }
 
 void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
@@ -282,6 +285,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
                 };
                 double call(double rhomolar_vap){
                     PhaseEnvelopeData &env = HEOS->PhaseEnvelope;
+                    IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::RHOV_IMPOSED;
                     IO.bubble_point = false;
                     IO.rhomolar_vap = rhomolar_vap;
                     IO.y = HEOS->get_mole_fractions();
@@ -325,6 +329,109 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
             else{
                 env.ipsat_max = imax;
             }
+        }
+    }
+}
+
+std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_intersections(HelmholtzEOSMixtureBackend &HEOS, parameters iInput, long double value)
+{
+    std::vector<std::pair<std::size_t, std::size_t> > intersections;
+    
+    PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
+    for (std::size_t i = 0; i < env.p.size()-1; ++i){
+        bool matched = false;
+        switch(iInput){
+            case iP:
+                if (is_in_closed_range(env.p[i], env.p[i+1], value)){ matched = true; } break;
+            case iT:
+                if (is_in_closed_range(env.T[i], env.T[i+1], value)){ matched = true; } break;
+            case iHmolar:
+                if (is_in_closed_range(env.hmolar_vap[i], env.hmolar_vap[i+1], value)){ matched = true; } break;
+            case iSmolar:
+                if (is_in_closed_range(env.smolar_vap[i], env.smolar_vap[i+1], value)){ matched = true; } break;
+            default:
+                throw ValueError(format("bad index to find_intersections"));
+        }
+        
+        if (matched){
+            std::cout << i << " " << i+1 << std::endl;
+            intersections.push_back(std::pair<std::size_t, std::size_t>(i, i+1)); 
+        }
+    }
+    return intersections;
+}
+bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, parameters iInput1, long double value1, parameters iInput2, long double value2, std::size_t &iclosest, SimpleState &closest_state)
+{
+    PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
+    std::vector<std::pair<std::size_t, std::size_t> > intersections = find_intersections(HEOS, iInput1, value1);
+    
+    // For now, first input must be p
+    if (iInput1 != iP){throw ValueError("For now, first input must be p in is_inside");}
+    
+    // If number of intersections is 0, input is out of range, quit
+    if (intersections.size() == 0){ throw ValueError("Input is out of range; no intersections found"); }
+    
+    // If number of intersections is 1, input will be determined based on the single intersection
+    // Need to know if values increase or decrease to the right of the intersection point
+    if (intersections.size()%2 != 0){ throw ValueError("Input is weird; odd number of intersections found"); }
+    
+    // If number of intersections is even, might be a bound
+    if (intersections.size()%2 == 0){
+        if (intersections.size() != 2){throw ValueError("for now only even value accepted is 2"); }
+        std::vector<std::size_t> other_indices(4, 0);
+        std::vector<long double> *y;
+        std::vector<long double> other_values(4, 0);
+        other_indices[0] = intersections[0].first; other_indices[1] = intersections[0].second;
+        other_indices[2] = intersections[1].first; other_indices[3] = intersections[1].second;
+        
+        switch(iInput2){
+            case iT: y = &(env.T); break;
+            case iP: y = &(env.p); break;
+            case iHmolar: y = &(env.hmolar_vap); break; 
+            case iSmolar: y = &(env.smolar_vap); break;
+            default: break;
+        }
+        
+        other_values[0] = (*y)[other_indices[0]]; other_values[1] = (*y)[other_indices[1]];
+        other_values[2] = (*y)[other_indices[2]]; other_values[3] = (*y)[other_indices[3]];
+        
+        long double min_other = *(std::min_element(other_values.begin(), other_values.end()));
+        long double max_other = *(std::max_element(other_values.begin(), other_values.end()));
+        
+        std::cout << format("min: %Lg max: %Lg val: %Lg\n", min_other, max_other, value2);
+        
+        // If by using the outer bounds of the second variable, we are outside the range, 
+        // then the value is definitely not inside the phase envelope and we don't need to 
+        // do any more analysis.
+        if (!is_in_closed_range(min_other, max_other, value2)){
+            std::vector<long double> d(4, 0);
+            d[0] = std::abs(other_values[0]-value2); d[1] = std::abs(other_values[1]-value2);
+            d[2] = std::abs(other_values[2]-value2); d[3] = std::abs(other_values[3]-value2);
+            
+            // Index of minimum distance in the other_values vector
+            std::size_t idist = std::distance(d.begin(), std::min_element(d.begin(), d.end()));
+            // Index of closest point in the phase envelope
+            std::size_t iclosest = other_indices[idist];
+            
+            // Get the state for the point which is closest to the desired value - this
+            // can be used as a bounding value in the outer single-phase flash routine
+            // since you know (100%) that it is a good bound
+            closest_state.T = env.T[iclosest];
+            closest_state.p = env.p[iclosest];
+            closest_state.rhomolar = env.rhomolar_vap[iclosest];
+            closest_state.hmolar = env.hmolar_vap[iclosest];
+            closest_state.smolar = env.smolar_vap[iclosest];
+            closest_state.Q = env.Q[iclosest];
+            
+            std::cout << format("it is not inside") << std::endl;
+            return false;
+        }
+        else{
+            // Now we have to do a saturation flash call in order to determine whether or not we are inside the phase envelope or not
+            
+            // First we can interpolate using the phase envelope to get good guesses for the necessary values
+            
+            throw ValueError("For now can't be inside");
         }
     }
 }

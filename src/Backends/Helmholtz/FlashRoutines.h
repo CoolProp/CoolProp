@@ -13,6 +13,7 @@ state is based.
 #define FLASHROUTINES_H
 
 #include "HelmholtzEOSMixtureBackend.h"
+#include "Solvers.h"
 
 namespace CoolProp{
 
@@ -72,6 +73,88 @@ public:
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iP, iHmolar, iSmolar, iUmolar
     static void PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other);
+};
+
+
+/** A residual function for the rho(T,P) solver
+ */
+class solver_TP_resid : public FuncWrapper1D
+{
+public:
+    long double T, p, r, peos, rhomolar, rhor, tau, R_u, delta, dalphar_dDelta;
+    HelmholtzEOSMixtureBackend *HEOS;
+
+    solver_TP_resid(HelmholtzEOSMixtureBackend &HEOS, long double T, long double p){
+        this->HEOS = &HEOS; this->T = T; this->p = p; this->rhor = HEOS.get_reducing_state().rhomolar;
+        this->tau = HEOS.get_reducing_state().T/T; this->R_u = HEOS.gas_constant();
+    };
+    double call(double rhomolar){
+        this->rhomolar = rhomolar;
+        delta = rhomolar/rhor; // needed for derivative
+        HEOS->update_DmolarT_direct(rhomolar, T);
+        peos = HEOS->p();
+        r = (peos-p)/p;
+        return r;
+    };
+    double deriv(double rhomolar){
+        // dp/drho|T / pspecified
+        return R_u*T*(1+2*delta*HEOS->dalphar_dDelta()+pow(delta, 2)*HEOS->d2alphar_dDelta2())/p;
+    };
+};
+
+/** A residual function for the f(P, Y) solver
+ */
+class PY_singlephase_flash_resid : public FuncWrapper1D
+{
+public:
+
+    HelmholtzEOSMixtureBackend *HEOS;
+    long double p;
+    parameters other;
+    long double r, eos, value, T, rhomolar;
+    
+    int iter;
+    long double r0, r1, T1, T0, eos0, eos1, pp;
+    PY_singlephase_flash_resid(HelmholtzEOSMixtureBackend &HEOS, long double p, parameters other, long double value) : 
+            HEOS(&HEOS), p(p), other(other), value(value)
+            {
+                iter = 0;
+                // Specify the state to avoid saturation calls, but only if phase is subcritical
+                if (HEOS.phase() == iphase_liquid || HEOS.phase() == iphase_gas ){
+                    HEOS.specify_phase(HEOS.phase());
+                }
+            };
+    double call(double T){
+
+        this->T = T;
+
+        // Run the solver with T,P as inputs;
+        HEOS->update(PT_INPUTS, p, T);
+        
+        rhomolar = HEOS->rhomolar();
+        HEOS->update(DmolarT_INPUTS, rhomolar, T);
+        // Get the value of the desired variable
+        eos = HEOS->keyed_output(other);
+        pp = HEOS->p();
+
+        // Difference between the two is to be driven to zero
+        r = eos - value;
+        
+        // Store values for later use if there are errors
+        if (iter == 0){ 
+            r0 = r; T0 = T; eos0 = eos;
+        }
+        else if (iter == 1){
+            r1 = r; T1 = T; eos1 = eos; 
+        }
+        else{
+            r0 = r1; T0 = T1; eos0 = eos1;
+            r1 = r;  T1 = T; eos1 = eos;
+        }
+
+        iter++;
+        return r;
+    };
 };
 
 } /* namespace CoolProp */

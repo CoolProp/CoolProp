@@ -1696,11 +1696,19 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
     }
 
     try{
+        
         // First we try with Newton's method with analytic derivative
         double rhomolar = Newton(resid, rhomolar_guess, 1e-8, 100, errstring);
         if (!ValidNumber(rhomolar)){
             throw ValueError();
         }
+//        double rr = this->rhomolar();
+//        for (double rho = rr*0.1; rho < 1.1*rr; rho += 100){
+//            specify_phase(iphase_gas);
+//            this->update(DmolarT_INPUTS, rho, T);
+//            unspecify_phase();
+//            std::cout << format("%g %g\n", rho, this->p());
+//        }
         return rhomolar;
     }
     catch(std::exception &)
@@ -1710,6 +1718,7 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
             double rhomolar = Secant(resid, rhomolar_guess, 1.1*rhomolar_guess, 1e-8, 100, errstring);
             if (!ValidNumber(rhomolar)){throw ValueError();}
             return rhomolar;
+            
         }
         catch(std::exception &)
         {
