@@ -597,7 +597,7 @@ if (COOLPROP_PYTHON_BINARIES)
   endif()
   
   add_custom_target(CoolProp
-                    COMMAND ${PYTHON_EXECUTABLE} setup.py ${COOLPROP_PYTHON_BINARY_VERSIONS} 
+                    COMMAND python setup.py ${COOLPROP_PYTHON_BINARY_VERSIONS} 
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python
                     )
   
@@ -612,7 +612,7 @@ if (COOLPROP_PYTHON_PYPI)
   endif()
     
   add_custom_target(CoolProp
-                    COMMAND ${PYTHON_EXECUTABLE} prepare_pypi.py  ${_AND_UPLOAD} --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
+                    COMMAND python prepare_pypi.py  ${_AND_UPLOAD} --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python/pypi
                     )
 endif()
