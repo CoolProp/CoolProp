@@ -21,7 +21,7 @@ On windows, the most reliable mixed compilation seems to be using the mingw-prov
     
 
 FORTRAN 95/2003 using ISO_C_BINDING
-==================================
+===================================
 
 Build static library
 --------------------
