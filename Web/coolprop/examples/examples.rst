@@ -26,10 +26,11 @@ To use the ``PropsSI`` function, import it and do some calls, do something like 
     # Saturated vapor enthalpy [J/kg] of R134a at 25C
     In [2]: PropsSI('H', 'T', 298.15, 'Q', 1, 'R134a')
 
-Or go to the :ref:`Fluid-Properties` documentation.
-
 All the possible input and output parameters are listed in the
 :ref:`High-Level API <high_level_api>` documentation
+
+To understand more about what is going on under the hood, go to :ref:`Fluid-Properties` documentation.
+
 
 Sample HAProps Code
 -------------------
