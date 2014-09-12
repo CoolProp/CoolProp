@@ -22,7 +22,7 @@ Programming Languages:
 Architectures:
 
 - 32-bit/64-bit
-- Windows, Linux, OSX, Raspberry PI, VxWorks Compact Rio, etc. (if you can compile C++ for it, CoolProp will run)
+- Windows, Linux, OSX, Raspberry PI, VxWorks Compact Rio, etc. (if you can compile C++ on it, CoolProp will run)
 
 ============================
 High-Level Interface Example
@@ -31,7 +31,7 @@ In most languages, the code to calculate density ``D`` of Nitrogen at a temperat
 
     rho = PropsSI('D', 'T', 298.15, 'P', 101325, 'Nitrogen')
     
-See more examples at `Examples <examples/examples>`_
+See more examples of PropsSI usage at :ref:`High-Level API <high_level_api>` or :ref:`Examples <coolprop/examples/examples>`
     
 ===================================
 Open-Source Projects Using CoolProp

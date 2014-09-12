@@ -1,3 +1,5 @@
+.. _examples:
+
 Examples
 ========
 This page serves as a teaser of the functionality of CoolProp.  These examples are written in the Python programming language.  For more information see:
@@ -27,7 +29,7 @@ To use the ``PropsSI`` function, import it and do some calls, do something like 
 Or go to the :ref:`Fluid-Properties` documentation.
 
 All the possible input and output parameters are listed in the
-:py:func:`CoolProp.CoolProp.Props` documentation
+:ref:`High-Level API <high_level_api>` documentation
 
 Sample HAProps Code
 -------------------

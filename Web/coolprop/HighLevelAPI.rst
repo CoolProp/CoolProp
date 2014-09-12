@@ -1,3 +1,5 @@
+.. _high_level_api:
+
 **************
 High-Level API
 **************
