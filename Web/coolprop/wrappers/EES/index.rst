@@ -11,11 +11,11 @@ Users
 
 Install
 -------
-Pre-compiled binaries can be downloaded from :sfdownloads:`EES` - follow the instructions there
+Pre-compiled binaries can be downloaded from :sfdownloads:`EES` - follow the instructions there.  Of you can download an installer from the development server at :bbbinaries:`EES`.
 
 Usage
 -----
-Open EES, you should see the external function COOLPROP_EES.  The functions ``PropsSI`` takes the same inputs as described in the high-level API for C-only inputs.  You can use something like::
+Open EES, you should see the external function COOLPROP_EES.  The function ``PropsSI`` takes the same inputs as described in the :ref:`High-Level API <high_level_api>`.  You can use something like::
 
     xx = string$(0.5)
     yy = string$(0.5)
@@ -28,7 +28,7 @@ The function ``PropsSIZ`` takes the normal inputs, but then also takes the mole 
 Debugging
 ---------
 1. Install CoolProp EES wrapper
-2. Append '$DEBUG' to the fluid name
+2. Append ``'$DEBUG'`` to the fluid name
 3. Open the log.txt and log_stdout.txt files in c:\\ees32\\userlib\\COOLPROP_EES to see the error.
 
 Developers
