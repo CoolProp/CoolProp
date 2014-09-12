@@ -1,8 +1,8 @@
 .. _high_level_api:
 
-**************
-High-Level API
-**************
+********************
+High-Level Interface
+********************
 
 For many users, all that is needed is a simple call to the ``PropsSI`` function for pure fluids, pseudo-pure fluids and mixtures.  For humid air properties, see :ref:`Humid air properties <Humid-Air>`.  An example using ``PropsSI``:
 
@@ -17,12 +17,12 @@ For many users, all that is needed is a simple call to the ``PropsSI`` function 
 More information: 
 
 * :ref:`Table of inputs to PropsSI function <parameter_table>`
-* :ref`More examples of the high-level API <Props_Sample>`
+* :ref:`More examples of the high-level API <Props_Sample>`
 * :cpapi:`Documentation for all high-level functions exposed <CoolPropLib.h>`
 
-All :ref:`the wrappers <wrappers>` wrap this function in the same way.
+All :ref:`the wrappers <wrappers>` wrap this function in exactly the same way.
 
-For pure and pseudo-pure fluids, two state points are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, rho` will always be the fastest inputs.  P,T will be a bit slower (3-10 times), and then comes inputs where neither :math:`T` nor :math:`\rho` are given like :math:`p,h`.  They will be much slower.  If speed is an issue, you can look into table-based interpolation methods using TTSE or bicubic interpolation. 
+For pure and pseudo-pure fluids, two state points are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs.  :math:`P,T` will be a bit slower (3-10 times), and then comes inputs where neither :math:`T` nor :math:`\rho` are given, like :math:`p,h`.  They will be much slower.  If speed is an issue, you can look into table-based interpolation methods using TTSE or bicubic interpolation. 
 
 Code
 ----
@@ -34,6 +34,9 @@ Output
 .. literalinclude:: snippets/propssi.cxx.output
 
 .. _parameter_table:
+
+Table of string inputs to PropsSI function
+------------------------------------------
 
 .. include:: parameter_table.rst.in
 
