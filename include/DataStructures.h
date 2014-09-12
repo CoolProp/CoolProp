@@ -15,9 +15,10 @@ namespace CoolProp {
 
 struct SimpleState
 {
-    double rhomolar, T, p, hmolar, smolar, umolar;
+    double rhomolar, T, p, hmolar, smolar, umolar, Q;
     SimpleState(){rhomolar = _HUGE; T = _HUGE; p = _HUGE; 
-                  hmolar = _HUGE; smolar = _HUGE, umolar = _HUGE;}
+                  hmolar = _HUGE; smolar = _HUGE, umolar = _HUGE;
+                  Q = _HUGE;}
 };
 
 /// --------------------------------------------------
