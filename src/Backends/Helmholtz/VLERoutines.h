@@ -201,7 +201,7 @@ namespace SaturationSolvers
     };
 
     struct newton_raphson_saturation_options{
-        enum imposed_variable_options {NO_VARIABLE_IMPOSED = 0, P_IMPOSED, RHOV_IMPOSED};
+        enum imposed_variable_options {NO_VARIABLE_IMPOSED = 0, P_IMPOSED, RHOV_IMPOSED, T_IMPOSED};
         int Nstep_max;
         bool bubble_point;
         std::size_t Nsteps;
