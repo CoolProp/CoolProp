@@ -63,7 +63,6 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
                 }
             }
             HEOS.unspecify_phase();
-            
         }
         else{
             // Liquid solution
@@ -351,25 +350,73 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
     }
     else
     {
-        // Set some imput options
-        SaturationSolvers::mixture_VLE_IO io;
-        io.sstype = SaturationSolvers::imposed_p;
-        io.Nstep_max = 10;
+        if (HEOS.PhaseEnvelope.built){
+            // Find the intersections in the phase envelope
+            std::vector< std::pair<std::size_t, std::size_t> > intersections = PhaseEnvelopeRoutines::find_intersections(HEOS, iP, HEOS._p);
+            
+            PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
+            
+            // Find the correct solution
+            std::vector<std::size_t> solutions;
+            for (std::vector< std::pair<std::size_t, std::size_t> >::iterator it = intersections.begin(); it != intersections.end(); ++it){
+                if (std::abs(env.Q[it->first] - HEOS._Q) < 10*DBL_EPSILON && std::abs(env.Q[it->second] - HEOS._Q) < 10*DBL_EPSILON ){
+                    solutions.push_back(it->first);
+                }
+            }
+            if (solutions.size() == 1){
+                if (std::abs(HEOS._Q-1) > 1e-6){ throw NotImplementedError("Q=1 only for now"); }
+                std::size_t &imax = solutions[0];
+                SaturationSolvers::newton_raphson_saturation NR;
+                SaturationSolvers::newton_raphson_saturation_options IO;
+                IO.bubble_point = false; // because Q = 1
+                IO.p = HEOS._p;
+                IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
+                // p -> rhomolar_vap
+                IO.rhomolar_vap = CubicInterp(env.p, env.rhomolar_vap, imax-1, imax, imax+1, imax+2, static_cast<long double>(IO.p));
+                IO.y = HEOS.get_mole_fractions(); // because Q = 1
+                IO.x = IO.y; // Just to give it good size
+                IO.T = CubicInterp(env.rhomolar_vap, env.T, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
+                IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
+                for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
+                {
+                    IO.x[i] = CubicInterp(env.rhomolar_vap, env.x[i], imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
+                }
+                IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
+                NR.call(HEOS, IO.y, IO.x, IO);
+            }
+            else if (solutions.size() == 0){
+                throw ValueError("No solution was found in PQ_flash");
+            }
+            else{
+                throw ValueError("More than 1 solution was ");
+            }
+            // Load the outputs
+            HEOS._phase = iphase_twophase;
+            HEOS._p = HEOS.SatV->p();
+            HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
+            HEOS._T = HEOS.SatL->T();
+        }
+        else{
+            // Set some imput options
+            SaturationSolvers::mixture_VLE_IO io;
+            io.sstype = SaturationSolvers::imposed_p;
+            io.Nstep_max = 10;
 
-        // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
-        long double Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
+            // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
+            long double Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
 
-        // Use Wilson iteration to obtain updated guess for temperature
-        Tguess = SaturationSolvers::saturation_Wilson(HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
+            // Use Wilson iteration to obtain updated guess for temperature
+            Tguess = SaturationSolvers::saturation_Wilson(HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
 
-        // Actually call the successive substitution solver
-        SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
-        
-        // Load the outputs
-        HEOS._phase = iphase_twophase;
-        HEOS._p = HEOS.SatV->p();
-        HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
-        HEOS._T = HEOS.SatL->T();
+            // Actually call the successive substitution solver
+            SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
+            
+            // Load the outputs
+            HEOS._phase = iphase_twophase;
+            HEOS._p = HEOS.SatV->p();
+            HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
+            HEOS._T = HEOS.SatL->T();
+        }
     }
 }
 // D given and one of P,H,S,U
