@@ -65,6 +65,8 @@ class MixtureDerivatives{
 	 * n\left(\frac{\partial p}{\partial n_i} \right)_{T,V,n_j} = \rho RT\left[1+\delta\alpha_{\delta}^r\left[2- \frac{1}{\rho_r}\cdot n\left( \frac{\partial \rho_r}{\partial n_i}\right)_{n_j}\right] +\delta\cdot n\left(\frac{\partial\alpha_{\delta}^r}{\partial n_i}\right)_{T,V,n_j}\right]
 	 * \f]
 	 * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
 	static long double ndpdni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -75,6 +77,8 @@ class MixtureDerivatives{
      * \hat v_i = \left( \frac{\partial V}{\partial n_i}\right)_{T,p,n_j} = \frac{-\left(\dfrac{\partial p}{\partial n_i}\right)_{T,V,n_j}}{\left(\dfrac{\partial p}{\partial V}\right)_{T,\bar n}}
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
 	static long double partial_molar_volume(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -90,6 +94,8 @@ class MixtureDerivatives{
     /** \brief Natural logarithm of the fugacity coefficient
      * 
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
     static long double ln_fugacity_coefficient(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -100,6 +106,8 @@ class MixtureDerivatives{
      *  \left(\frac{\partial \ln(f_i)}{\partial T} \right)_{\rho,x} = -\frac{1}{T}\left(1-\tau\alpha^r_{\tau}-\tau n\left(\frac{\partial\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j}}{\partial \tau}\right)_{\delta,\bar x}    \right)
      * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
 	static long double dln_fugacity_i_dT__constrho_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -110,6 +118,8 @@ class MixtureDerivatives{
      *  \left(\frac{\partial \ln(f_i)}{\partial \rho} \right)_{T, x} = \frac{1}{\rho}\left(1+\delta\alpha^r_{\delta}+\delta n\left(\frac{\partial\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j}}{\partial \delta}\right)_{\tau,\bar x}    \right)
      * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
 	static long double dln_fugacity_i_drho__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -121,6 +131,8 @@ class MixtureDerivatives{
 	 * \left(\frac{\partial \ln \phi_i}{\partial T} \right)_{p,\bar n} = \left(\frac{\partial^2n\alpha^r}{\partial T\partial n_i} \right)_{V,n_j} + \frac{1}{T}-\frac{\hat v}{RT}\left(\frac{\partial p}{\partial T}\right)_{V,\bar n}
      * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
 	static long double dln_fugacity_coefficient_dT__constp_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -144,6 +156,8 @@ class MixtureDerivatives{
 	 * && +\phi^r_{x_i}-\sum_{k=1}^{N}x_k\phi^r_{x_k}
 	 * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
 	static long double ndalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -157,6 +171,8 @@ class MixtureDerivatives{
 	 * \left(\frac{\partial \ln \phi_i}{\partial p} \right)_{T,\bar n} = \frac{\hat v_i}{RT}-\frac{1}{p}
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	*/
 	static long double dln_fugacity_coefficient_dp__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -171,6 +187,9 @@ class MixtureDerivatives{
 	 * n\left(\frac{\partial \ln \phi_i}{\partial n_j}\right)_{T,p} = n\left(\frac{\partial^2n\alpha^r}{\partial n_j \partial n_i} \right)_{T,V}+1-\frac{\hat v_i}{RT}\left[n\left(\frac{\partial p}{\partial n_j}\right)_{T,V,n_i}\right]
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param j The second index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	*/
 	static long double ndln_fugacity_coefficient_dnj__constT_p(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
@@ -181,6 +200,10 @@ class MixtureDerivatives{
 	 * \left(\frac{\partial \ln \phi_i}{\partial x_j}\right)_{T,p,x_{k\neq j}} = \left(\frac{\partial^2n\alpha^r}{\partial x_j \partial n_i} \right)_{T,V}+\frac{1}{RT}\frac{\left(\frac{\partial p}{\partial n_i}\right)_{T,V,n_{k\neq i}}\left(\frac{\partial p}{\partial x_j}\right)_{T,V,x_{k\neq j}}}{\left(\frac{\partial p}{\partial V}\right)_{T,\bar n}}
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The first index of interest
+     * @param j The second index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
+     * 
 	*/
 	static long double dln_fugacity_coefficient_dxj__constT_p_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
@@ -191,6 +214,8 @@ class MixtureDerivatives{
      * \left(\frac{\partial p}{\partial x_j} \right)_{T,V,x_{k\neq j}} = \rho RT\left(-\frac{1}{\rho_r}\left(\frac{\partial \rho_r}{\partial x_j}\right)_{x_{k\neq j}} \delta\alpha_{\delta}^r + \delta\left(\frac{\partial}{\partial x_j}\left(\left( \frac{\partial \alpha^r}{\partial \delta}\right)_{\tau,\bar x}\right)\right)_{T,V,x_{k\neq j}}\right)
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param j The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
 	static long double dpdxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
 
@@ -201,6 +226,9 @@ class MixtureDerivatives{
      * \left(\frac{\partial^2n\alpha^r}{\partial x_j\partial n_i} \right)_{T,V} = \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_{j\neq i}}\right)\right)_{T,V,x_{k\neq j}} +\left(\frac{\partial \alpha^r}{\partial x_j}\right)_{T,V,x_{k\neq j}}
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param j The first index of interest
+     * @param i The second index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
     static long double d2nalphar_dxj_dni__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, std::size_t i, x_N_dependency_flag xN_flag){ return MixtureDerivatives::d_ndalphardni_dxj__constT_V_xi(HEOS, i, j, xN_flag) + MixtureDerivatives::dalphar_dxj__constT_V_xi(HEOS, j, xN_flag);};
 
@@ -234,6 +262,8 @@ class MixtureDerivatives{
 	 * \left(\frac{\partial^2n\alpha^r}{\partial T\partial n_i} \right)_{V,n_j} = -\frac{\tau}{T}\left[\alpha_{\tau}^r +\left( \frac{\partial}{\partial \tau}\left(n\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\delta,\bar x}\right]
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The second index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	*/
 	static long double d2nalphar_dni_dT(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -246,6 +276,8 @@ class MixtureDerivatives{
 	 * && +\phi^r_{x_i\tau}-\sum_{k=1}^{N}x_k\phi^r_{x_k\tau}
 	 * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
 	static long double d_ndalphardni_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -258,6 +290,8 @@ class MixtureDerivatives{
 	 * &+&\phi^r_{\delta x_i}-\sum_{k=1}^{N}x_k\phi^r_{\delta x_k}
 	 * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
 	static long double d_ndalphardni_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -279,6 +313,9 @@ class MixtureDerivatives{
 	 * &+& \left( \frac{\partial}{\partial x_j}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\delta,\tau,x_i}-\sum_{k=1}^{N}x_k \left( \frac{\partial}{\partial x_k}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\delta,\tau,x_i}\\
 	 * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param j The second index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
 	static long double nd2nalphardnidnj__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
@@ -289,6 +326,8 @@ class MixtureDerivatives{
 	 * n\left(\frac{\partial \delta}{\partial n_i} \right)_{T,V,n_j} = \delta - \frac{\delta}{\rho_r}\cdot n\left(\frac{\partial \rho_r}{\partial n_i} \right)_{n_j}
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */ 
 	static long double nddeltadni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -299,6 +338,8 @@ class MixtureDerivatives{
 	 * n\left(\frac{\partial \tau}{\partial n_i} \right)_{T,V,n_j} = \frac{\tau}{T_r}\cdot n\left(\frac{\partial T_r}{\partial n_i} \right)_{n_j}
 	 * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
 	static long double ndtaudni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
@@ -313,6 +354,9 @@ class MixtureDerivatives{
 	 * &+& \alpha_{x_ix_j}^r-\alpha_{x_j}^r-\sum_{m=1}^Nx_m\alpha_{x_jx_m}^r
 	 * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param j The second index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
 	 */
 	static long double d_ndalphardni_dxj__constdelta_tau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 

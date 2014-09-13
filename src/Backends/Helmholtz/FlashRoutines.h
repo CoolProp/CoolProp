@@ -58,7 +58,7 @@ public:
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iHmolar, iSmolar, iUmolar
     /// @param T0 The initial guess value for the temperature [K]
-    /// @param rho0 The initial guess value for the density [mol/m^3]
+    /// @param rhomolar0 The initial guess value for the density [mol/m^3]
     static void HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &HEOS, parameters other, long double T0, long double rhomolar0);
 	
 	/// The single-phase flash routine for the pairs (P,H), (P,S), and (P,U).  Similar analysis is needed
