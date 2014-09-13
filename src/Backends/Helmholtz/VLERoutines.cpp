@@ -948,25 +948,30 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
         
         if (bubble_point){
             for (unsigned int i = 0; i < N-1; ++i){
+                err_rel[i] = v[i]/y[i];
                 y[i] += v[i];
             }        
             y[N-1] = 1 - std::accumulate(y.begin(), y.end()-1, 0.0);
         }
         else{
             for (unsigned int i = 0; i < N-1; ++i){
-                err_rel[i] = v[i]/y[i];
+                err_rel[i] = v[i]/x[i];
                 x[i] += v[i];
             }        
             x[N-1] = 1 - std::accumulate(x.begin(), x.end()-1, 0.0);
         }
-        if (imposed_variable == newton_raphson_saturation_options::P_IMPOSED || imposed_variable == newton_raphson_saturation_options::RHOV_IMPOSED){
+        if (imposed_variable == newton_raphson_saturation_options::P_IMPOSED){
             T += v[N-1]; err_rel[N-1] = v[N-1]/T;
         }
         else if (imposed_variable == newton_raphson_saturation_options::T_IMPOSED){
             p += v[N-1]; err_rel[N-1] = v[N-1]/p;
         }
-        if (imposed_variable == newton_raphson_saturation_options::RHOV_IMPOSED){
+        else if (imposed_variable == newton_raphson_saturation_options::RHOV_IMPOSED){
+            T += v[N-1]; err_rel[N-1] = v[N-1]/T;
             rhomolar_liq += v[N]; err_rel[N] = v[N]/rhomolar_liq;
+        }
+        else{
+            throw ValueError("invalid imposed_variable");
         }
         //std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
         
@@ -1003,12 +1008,15 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
     if (bubble_point){
         // Vapor is incipient phase, set its composition
         rSatV.set_mole_fractions(y);
+        rSatL.set_mole_fractions(x);
     }
     else{
         // Liquid is incipient phase, set its composition
         rSatL.set_mole_fractions(x);
+        rSatV.set_mole_fractions(y);
     }
-    
+    std::vector<long double> &x = rSatL.get_mole_fractions();
+    std::vector<long double> &y = rSatV.get_mole_fractions();
     if (imposed_variable == newton_raphson_saturation_options::RHOV_IMPOSED){
         rSatL.update(DmolarT_INPUTS, rhomolar_liq, T);
         rSatV.update(DmolarT_INPUTS, rhomolar_vap, T);
@@ -1041,13 +1049,11 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
             long double ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
             r[i] = ln_f_liq - ln_f_vap;
             
-            if (bubble_point){
-                for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
+            for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
+                if (bubble_point){
                     J[i][j] = -MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rSatV, i, j, xN_flag);
                 }
-            }
-            else{ 
-                for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
+                else{ 
                     J[i][j] = MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rSatL, i, j, xN_flag);
                 }
             }
@@ -1066,7 +1072,7 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
         J[N][N] = rSatL.first_partial_deriv(iP, iDmolar, iT);
     }
     else if (imposed_variable == newton_raphson_saturation_options::P_IMPOSED){
-        // Independent variables are N-1 mole fractions of incipient phase, T and rho'
+        // Independent variables are N-1 mole fractions of incipient phase and T
         
         // For the residuals F_i (equality of fugacities)
         for (std::size_t i = 0; i < N; ++i)
@@ -1076,13 +1082,11 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
             long double ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
             r[i] = ln_f_liq - ln_f_vap;
             
-            if (bubble_point){
-                for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
+            for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
+                if (bubble_point){
                     J[i][j] = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatV, i, j, xN_flag);
                 }
-            }
-            else{ 
-                for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
+                else{ 
                     J[i][j] = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatL, i, j, xN_flag);
                 }
             }
@@ -1090,7 +1094,7 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
         }
     }
     else if (imposed_variable == newton_raphson_saturation_options::T_IMPOSED){
-        // Independent variables are N-1 mole fractions of incipient phase, p and rho'
+        // Independent variables are N-1 mole fractions of incipient phase and p
         
         // For the residuals F_i (equality of fugacities)
         for (std::size_t i = 0; i < N; ++i)
@@ -1100,13 +1104,11 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
             long double ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
             r[i] = ln_f_liq - ln_f_vap;
             
-            if (bubble_point){
-                for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
+            for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
+                if (bubble_point){
                     J[i][j] = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatV, i, j, xN_flag);
                 }
-            }
-            else{ 
-                for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
+                else{
                     J[i][j] = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatL, i, j, xN_flag);
                 }
             }

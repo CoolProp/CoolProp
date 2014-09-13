@@ -257,6 +257,17 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
             
             PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
             
+            std::size_t quality;
+            if (std::abs(HEOS._Q) < 100*DBL_EPSILON){
+                quality = 0;
+            }
+            else if (std::abs(HEOS._Q - 1) < 100*DBL_EPSILON){
+                quality = 1;
+            }
+            else{
+                throw ValueError("Quality is neither 0 or 1");
+            }
+            
             // Find the correct solution
             std::vector<std::size_t> solutions;
             for (std::vector< std::pair<std::size_t, std::size_t> >::iterator it = intersections.begin(); it != intersections.end(); ++it){
@@ -265,25 +276,40 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 }
             }
             if (solutions.size() == 1){
-                if (std::abs(HEOS._Q-1) > 1e-6){ throw NotImplementedError("Q = 1 only for now"); }
                 std::size_t &imax = solutions[0];
                 SaturationSolvers::newton_raphson_saturation NR;
                 SaturationSolvers::newton_raphson_saturation_options IO;
-                IO.bubble_point = false; // because Q = 1
                 IO.T = HEOS._T;
                 IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::T_IMPOSED;
                 // p -> rhomolar_vap
                 IO.rhomolar_vap = CubicInterp(env.T, env.rhomolar_vap, imax-1, imax, imax+1, imax+2, static_cast<long double>(IO.T));
-                IO.y = HEOS.get_mole_fractions(); // because Q = 1
-                IO.x = IO.y; // Just to give it good size
                 IO.p = CubicInterp(env.rhomolar_vap, env.p, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
                 IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
-                for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
-                {
-                    IO.x[i] = CubicInterp(env.rhomolar_vap, env.x[i], imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
+                
+                if (quality == 1){
+                    IO.bubble_point = false;
+                    IO.y = HEOS.get_mole_fractions();
+                    IO.x.resize(IO.y.size());
+                    for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
+                    {
+                        IO.x[i] = CubicInterp(env.rhomolar_vap, env.x[i], imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
+                    }
+                    IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
+                    NR.call(HEOS, IO.y, IO.x, IO);
                 }
-                IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
-                NR.call(HEOS, IO.y, IO.x, IO);
+                else{
+                    IO.bubble_point = true;
+                    IO.x = HEOS.get_mole_fractions();
+                    IO.y.resize(IO.x.size());
+                    for (std::size_t i = 0; i < IO.y.size()-1; ++i) // First N-1 elements
+                    {
+                        IO.y[i] = CubicInterp(env.rhomolar_vap, env.x[i], imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
+                    }
+                    IO.y[IO.y.size()-1] = 1 - std::accumulate(IO.y.begin(), IO.y.end()-1, 0.0);
+                    NR.call(HEOS, IO.x, IO.y, IO);
+                }
+                
+                
             }
             else if (solutions.size() == 0){
                 throw ValueError("No solution was found in PQ_flash");
@@ -404,6 +430,17 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             
             PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
             
+            std::size_t quality;
+            if (std::abs(HEOS._Q) < 100*DBL_EPSILON){
+                quality = 0;
+            }
+            else if (std::abs(HEOS._Q - 1) < 100*DBL_EPSILON){
+                quality = 1;
+            }
+            else{
+                throw ValueError("Quality is neither 0 or 1");
+            }
+            
             // Find the correct solution
             std::vector<std::size_t> solutions;
             for (std::vector< std::pair<std::size_t, std::size_t> >::iterator it = intersections.begin(); it != intersections.end(); ++it){
@@ -412,17 +449,21 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
                 }
             }
             if (solutions.size() == 1){
-                if (std::abs(HEOS._Q-1) > 1e-6){ throw NotImplementedError("Q=1 only for now"); }
                 std::size_t &imax = solutions[0];
                 SaturationSolvers::newton_raphson_saturation NR;
                 SaturationSolvers::newton_raphson_saturation_options IO;
-                IO.bubble_point = false; // because Q = 1
+                if (quality == 1){
+                    IO.bubble_point = false;
+                }
+                else{
+                    IO.bubble_point = true;
+                }
                 IO.p = HEOS._p;
                 IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
                 // p -> rhomolar_vap
                 IO.rhomolar_vap = CubicInterp(env.p, env.rhomolar_vap, imax-1, imax, imax+1, imax+2, static_cast<long double>(IO.p));
                 IO.y = HEOS.get_mole_fractions(); // because Q = 1
-                IO.x = IO.y; // Just to give it good size
+                IO.x.resize(IO.y.size());
                 IO.T = CubicInterp(env.rhomolar_vap, env.T, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
                 IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
                 for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
