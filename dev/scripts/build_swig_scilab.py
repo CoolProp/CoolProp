@@ -12,3 +12,4 @@ subprocess.check_call('./autogen.sh', shell = True, stdout = sys.stdout, stderr 
 subprocess.check_call('./configure --disable-ccache --with-scilab-inc=${SCILAB_HOME}/include --with-scilab=${SCILAB_HOME}/bin/scilab-cli --prefix=${PWD}/swig-scilab-bin', shell = True, stdout = sys.stdout, stderr = sys.stderr)
 subprocess.check_call('make', shell = True, stdout = sys.stdout, stderr = sys.stderr)
 subprocess.check_call('make install', shell = True, stdout = sys.stdout, stderr = sys.stderr)
+subprocess.check_call('cp swig swig3.0', shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd='swig-scilab-bin')
