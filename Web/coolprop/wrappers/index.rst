@@ -20,7 +20,7 @@ Language                                      Operating Systems            Notes
 :ref:`Modelica <Modelica>`                    linux, OSX, win
 :ref:`PHP <PHP>`                              linux, OSX, win              Mostly used on linux
 :ref:`Javascript <Javascript>`                cross-platform               Also works in all internet browsers
-:ref:`Maple <Maple>`                          linux, OSX, win,                     
+:ref:`Maple <Maple>`                          linux, OSX, win                     
 :ref:`Mathematica <Mathematica>`
 :ref:`FORTRAN <FORTRAN>`                      linux, OSX, win
 :ref:`EES <EES>`                              windows only
