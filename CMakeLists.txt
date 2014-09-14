@@ -518,37 +518,30 @@ if (COOLPROP_SCILAB_SWIG_MODULE)
     ${CMAKE_SOURCE_DIR}/include/AbstractState.h
   ) 
   set(SCILAB_INCLUDE_PATH "$ENV{SCILAB_ROOT}/include")
+
+  foreach (_headerFile ${APP_SOURCES})
+      get_filename_component(_dir ${_headerFile} PATH)
+      list (APPEND APP_INCLUDE_DIRS ${_dir})
+  endforeach()
+  list(REMOVE_DUPLICATES APP_INCLUDE_DIRS)
     	
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
   JOIN("${APP_SOURCES}" "," SWIG_SOURCES)
-  
-  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-addsources;${SWIG_SOURCES}")
+
+  include_directories(${APP_INCLUDE_DIRS})
+  include_directories(${SCILAB_INCLUDE_PATH})  
+  include_directories(${SCILAB_INCLUDE_PATH}/scilab)
+
+  JOIN("${APP_INCLUDE_DIRS}" ";-I" SWIG_INCLUDES)
+
+  set(SWIG_OPTIONS "-addsources;${SWIG_SOURCES};-buildverbositylevel;2;-addcflags;\"-I${SWIG_INCLUDES}\"")
+  message("${SWIG_OPTIONS}")
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
 
   SWIG_ADD_MODULE(CoolProp scilab ${I_FILE})
 
-  include_directories(${SCILAB_INCLUDE_PATH})  
-  include_directories(${SCILAB_INCLUDE_PATH}/scilab)
 
-  #IF(SCILAB_FOUND)
-  #    message(STATUS "Scilab Found.")
-  #ELSE()
-  #    MESSAGE(FATAL ERROR "Scilab not found...")
-  #ENDIF()
-
-  #if(WIN32) # 32-bit or 64-bit mex
-  #  if (CMAKE_CL_64)
-  #      SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexw64)
-  #  else()
-  #      SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES SUFFIX .mexw32)
-  #  endif()
-  #else()
-  #  if (CMAKE_SIZEOF_VOID_P MATCHES "8")
-  #      SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
-  #  else()
-  #      SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
-  #  endif()
-  #endif()
   add_dependencies (CoolProp generate_headers)
 endif()
 
