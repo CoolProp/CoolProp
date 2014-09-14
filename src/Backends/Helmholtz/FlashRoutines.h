@@ -36,6 +36,12 @@ public:
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void QT_flash(HelmholtzEOSMixtureBackend &HEOS);
     
+    /// Flash for mixture given temperature or pressure and (molar) quality
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    /// @param other The parameter that is imposed, either iT or iP
+    /// @param value The value for the imposed parameter
+    static void PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parameters other, long double value);
+    
     /// Flash for given pressure and temperature
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void PT_flash(HelmholtzEOSMixtureBackend &HEOS);

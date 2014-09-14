@@ -199,6 +199,66 @@ namespace SaturationSolvers
     {
         long double T,p;
     };
+    
+    struct newton_raphson_twophase_options{
+        enum imposed_variable_options {NO_VARIABLE_IMPOSED = 0, P_IMPOSED, T_IMPOSED};
+        int Nstep_max;
+        std::size_t Nsteps;
+        long double beta, omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap;
+        imposed_variable_options imposed_variable;
+        std::vector<long double> x, y, z;
+        newton_raphson_twophase_options(){ Nstep_max = 30; Nsteps = 0; beta = -1; omega =1;} // Defaults
+    };
+
+    /** \brief A class to do newton raphson solver for VLE for p,q or T,q
+     * 
+     * A class is used rather than a function so that it is easier to store iteration histories, additional output values, etc.
+     * 
+     * This class only handles bubble and dew lines since the independent variables are N-1 of the mole fractions in the incipient phase along with one of T, p, or rho
+     */
+    class newton_raphson_twophase
+    {
+        public:
+        newton_raphson_twophase_options::imposed_variable_options imposed_variable;
+	    long double error_rms, rhomolar_liq, rhomolar_vap, T, p, min_rel_change, beta;
+	    unsigned int N;
+	    bool logging;
+	    int Nsteps;
+	    STLMatrix J;
+        HelmholtzEOSMixtureBackend *HEOS;
+	    std::vector<long double> K, x, y, z, r, negative_r, err_rel;
+	    std::vector<SuccessiveSubstitutionStep> step_logger;
+
+	    newton_raphson_twophase(){};
+
+	    void resize(unsigned int N);
+	
+	    // Reset the state of all the internal variables
+	    void pre_call()
+	    {
+		    K.clear(); x.clear(); y.clear();  step_logger.clear(); error_rms = 1e99; Nsteps = 0;
+		    rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
+	    };
+
+	    /** Call the Newton-Raphson VLE Solver
+         *
+	     * This solver must be passed reasonable guess values for the mole fractions, 
+	     * densities, etc.  You may want to take a few steps of successive substitution
+	     * before you start with Newton Raphson.
+         * 
+	     * @param HEOS HelmholtzEOSMixtureBackend instance
+         * @param IO The input/output data structure
+	     */
+	    void call(HelmholtzEOSMixtureBackend &HEOS, newton_raphson_twophase_options &IO);
+
+	    /*! Build the arrays for the Newton-Raphson solve
+
+	    This method builds the Jacobian matrix, the sensitivity matrix, etc.
+         * 
+	    */
+	    void build_arrays();
+    };
+    
 
     struct newton_raphson_saturation_options{
         enum imposed_variable_options {NO_VARIABLE_IMPOSED = 0, P_IMPOSED, RHOV_IMPOSED, T_IMPOSED};
@@ -208,7 +268,7 @@ namespace SaturationSolvers
         long double omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap;
         imposed_variable_options imposed_variable;
         std::vector<long double> x, y;
-        newton_raphson_saturation_options(){ Nsteps = 0;} // Defaults
+        newton_raphson_saturation_options(){ Nstep_max = 30;  Nsteps = 0;} // Defaults
     };
 
     /** \brief A class to do newton raphson solver for VLE given guess values for vapor-liquid equilibria.  This class will then be included in the Mixture class
@@ -226,10 +286,10 @@ namespace SaturationSolvers
 	    bool logging;
         bool bubble_point;
 	    int Nsteps;
-        long double dTsat_dPsat, dPsat_dTsat;
 	    STLMatrix J;
         HelmholtzEOSMixtureBackend *HEOS;
-	    std::vector<long double> K, x, y, phi_ij_liq, phi_ij_vap, dlnphi_drho_liq, dlnphi_drho_vap, r, negative_r, dXdS, neg_dFdS, err_rel;
+        long double dTsat_dPsat, dPsat_dTsat;
+	    std::vector<long double> K, x, y, r, negative_r, err_rel;
 	    std::vector<SuccessiveSubstitutionStep> step_logger;
 
 	    newton_raphson_saturation(){};
@@ -239,8 +299,7 @@ namespace SaturationSolvers
 	    // Reset the state of all the internal variables
 	    void pre_call()
 	    {
-		    K.clear(); x.clear(); y.clear();  phi_ij_liq.clear(); 
-            phi_ij_vap.clear(); dlnphi_drho_liq.clear(), dlnphi_drho_vap.clear(),
+		    K.clear(); x.clear(); y.clear();  
             step_logger.clear(); error_rms = 1e99; Nsteps = 0;
 		    rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
 	    };

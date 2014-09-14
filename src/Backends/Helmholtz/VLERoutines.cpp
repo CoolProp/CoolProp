@@ -1141,4 +1141,169 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
     dPsat_dTsat = -dQ_dTsat/dQ_dPsat;
 }
 
+void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend &HEOS, newton_raphson_twophase_options &IO)
+{
+    int iter = 0;
+    
+    if (get_debug_level() > 9){std::cout << " NRsat::call:  p" << IO.p << " T" << IO.T << " dl" << IO.rhomolar_liq << " dv" << IO.rhomolar_vap << std::endl;}
+    
+    // Reset all the variables and resize
+    pre_call();
+    
+    rhomolar_liq = IO.rhomolar_liq;
+    rhomolar_vap = IO.rhomolar_vap;
+    T = IO.T;
+    p = IO.p;
+    imposed_variable = IO.imposed_variable;
+    x = IO.x;
+    y = IO.y;
+    z = IO.z;
+    beta = IO.beta;
+    
+    this->N = z.size();
+    x.resize(N);
+    y.resize(N);
+    r.resize(2*N-1);
+    negative_r.resize(2*N-1);
+    J.resize(2*N-1, std::vector<long double>(2*N-1, 0));
+    err_rel.resize(2*N-1);
+    
+    // Hold a pointer to the backend
+    this->HEOS = &HEOS;
+
+    do
+    {
+        // Build the Jacobian and residual vectors
+        build_arrays();
+
+        // Solve for the step; v is the step with the contents
+        // [delta(x_0), delta(x_1), ..., delta(x_{N-2}), delta(spec)]
+        
+        // Uncomment to see Jacobian and residual at every step
+        // std::cout << vec_to_string(J, "%0.12Lg") << std::endl;
+        // std::cout << vec_to_string(negative_r, "%0.12Lg") << std::endl;
+        
+        std::vector<long double> v = linsolve(J, negative_r);
+        for (unsigned int i = 0; i < N-1; ++i){
+            err_rel[i] = v[i]/x[i];
+            x[i] += v[i];
+            err_rel[i+(N-1)] = v[i+(N-1)]/y[i];
+            y[i] += v[i+(N-1)];
+        }        
+        x[N-1] = 1 - std::accumulate(x.begin(), x.end()-1, 0.0);
+        y[N-1] = 1 - std::accumulate(y.begin(), y.end()-1, 0.0);
+            
+        if (imposed_variable == newton_raphson_twophase_options::P_IMPOSED){
+            T += v[2*N-2]; err_rel[2*N-2] = v[2*N-2]/T;
+        }
+        else if (imposed_variable == newton_raphson_twophase_options::T_IMPOSED){
+            p += v[2*N-2]; err_rel[2*N-2] = v[2*N-2]/p;
+        }
+        else{
+            throw ValueError("invalid imposed_variable");
+        }
+        //std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
+        
+        min_rel_change = min_abs_value(err_rel);
+        iter++;
+        
+        if (iter == IO.Nstep_max){
+            throw ValueError(format("newton_raphson_saturation::call reached max number of iterations [%d]",IO.Nstep_max));
+        }
+    }
+    while(this->error_rms > 1e-9 && min_rel_change > 1000*DBL_EPSILON && iter < IO.Nstep_max);
+
+    IO.Nsteps = iter;
+    IO.p = p;
+    IO.x = x; // Mole fractions in liquid
+    IO.y = y; // Mole fractions in vapor
+    IO.T = T;
+    IO.rhomolar_liq = rhomolar_liq;
+    IO.rhomolar_vap = rhomolar_vap;
+    IO.hmolar_liq = HEOS.SatL.get()->hmolar();
+    IO.hmolar_vap = HEOS.SatV.get()->hmolar();
+    IO.smolar_liq = HEOS.SatL.get()->smolar();
+    IO.smolar_vap = HEOS.SatV.get()->smolar();
+}
+
+void SaturationSolvers::newton_raphson_twophase::build_arrays()
+{
+    // References to the classes for concision
+    HelmholtzEOSMixtureBackend &rSatL = *(HEOS->SatL.get()), &rSatV = *(HEOS->SatV.get());
+    
+    // Step 0:
+    // -------
+    // Set mole fractions 
+    rSatL.set_mole_fractions(x);
+    rSatV.set_mole_fractions(y);
+
+    //std::vector<long double> &x = rSatL.get_mole_fractions();
+    //std::vector<long double> &y = rSatV.get_mole_fractions();
+
+    rSatL.update_TP_guessrho(T, p, rhomolar_liq); rhomolar_liq = rSatL.rhomolar();
+    rSatV.update_TP_guessrho(T, p, rhomolar_vap); rhomolar_vap = rSatV.rhomolar();
+    
+    // For diagnostic purposes calculate the pressures (no derivatives are evaluated)
+    long double p_liq = rSatL.p();
+    long double p_vap = rSatV.p();
+    p = 0.5*(p_liq + p_vap);
+    
+    // Step 2:
+    // -------
+    // Build the residual vector and the Jacobian matrix
+    
+    x_N_dependency_flag xN_flag = XN_DEPENDENT;
+    
+    // Form of residuals do not depend on which variable is imposed
+    for (std::size_t i = 0; i < N; ++i)
+    {
+        // Equate the liquid and vapor fugacities
+        long double ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
+        long double ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
+        r[i] = ln_f_liq - ln_f_vap; // N of these
+    
+        if (i != N-1){
+            // Equate the specified vapor mole fraction and that given defined by the ith component
+            r[i+N] = (z[i]-x[i])/(y[i]-x[i]) - beta; // N-1 of these
+        }
+    }
+
+    // First part of derivatives with respect to ln f_i
+    for (std::size_t i = 0; i < N; ++i)
+    {
+        for (std::size_t j = 0; j < N-1; ++j){
+            J[i][j] = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatL, i, j, xN_flag);
+            J[i][j+N-1] = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatV, i, j, xN_flag);
+        }
+                
+        // Last derivative with respect to either T or p depending on what is imposed
+        if (imposed_variable == newton_raphson_twophase_options::P_IMPOSED){
+            J[i][2*N-2] = MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatV, i, xN_flag);
+        }
+        else if (imposed_variable == newton_raphson_twophase_options::T_IMPOSED){
+            J[i][2*N-2] = MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatV, i, xN_flag);
+        }
+        else{
+            throw ValueError();
+        }
+    }
+    // Derivatives with respect to the vapor mole fractions residual
+    for (std::size_t i = 0; i < N-1; ++i)
+    {
+        std::size_t k = i + N; // N ln f_i residuals
+        J[k][i] =  (z[i]-y[i])/pow(y[i]-x[i], 2);
+        J[k][i+(N-1)] = -(z[i]-x[i])/pow(y[i]-x[i], 2);
+    }
+
+    // Flip all the signs of the entries in the residual vector since we are solving Jv = -r, not Jv=r
+    // Also calculate the rms error of the residual vector at this step
+    error_rms = 0;
+    for (unsigned int i = 0; i < J.size(); ++i)
+    {
+        negative_r[i] = -r[i];
+        error_rms += r[i]*r[i]; // Sum the squares
+    }
+    error_rms = sqrt(error_rms); // Square-root (The R in RMS)
+}
+
 } /* namespace CoolProp*/
