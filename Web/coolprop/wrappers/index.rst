@@ -89,3 +89,4 @@ OSX should come with a c++ compiler (clang), for git and cmake your best bet is 
     Python/index.rst
     LibreOffice/index.rst
     Excel/index.rst
+    Maple/index.rst
