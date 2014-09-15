@@ -1,7 +1,7 @@
 """
 CPIncomp - Jorrit's collection of routines for fitting incompressible liquids
 =====
- 
+
 readme.md       - General instructions and copyright information / credits.
 
 """
@@ -9,6 +9,7 @@ from __future__ import division, absolute_import, print_function
 import inspect
 from . import DataObjects,ExampleObjects,PureFluids,CoefficientFluids,DigitalFluids,MelinderFluids
 from CPIncomp.SecCoolFluids import SecCoolSolutionData
+from CPIncomp import SolutionFluids
 
 
 def getBaseClassNames():
@@ -124,6 +125,23 @@ def getPureFluids():
     classes = []
     ignList = getIgnoreNames()
     for name, obj in inspect.getmembers(PureFluids):
+        if inspect.isclass(obj):
+            #print(name)
+            if not name in ignList: # Ignore the base classes
+                classes.append(obj())
+    return classes
+
+
+def getSolutionFluids():
+    """
+    Returns a list of SolutionData objects, which
+    contain data for fitting solutions. These
+    objects only hold the data and you still have
+    to call the fitting routines.
+    """
+    classes = []
+    ignList = getIgnoreNames()
+    for name, obj in inspect.getmembers(SolutionFluids):
         if inspect.isclass(obj):
             #print(name)
             if not name in ignList: # Ignore the base classes

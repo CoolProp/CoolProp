@@ -23,7 +23,7 @@ INCOMP_INCLUDES_TXTTAB:= pure-fluids.txt mass-based-fluids.txt mole-based-fluids
 INCOMP_INCLUDES_TXTTAB:=$(addprefix $(INCOMP_INCLUDES_TARGET)/, $(INCOMP_INCLUDES_TXTTAB) )
 # Special figures
 INCOMP_INCLUDES_COMFIG:=$(INCOMP_INCLUDES_TARGET)/report2up
-INCOMP_INCLUDES_COMFIG_SRC:=$(INCOMP_INCLUDES_TARGET)/report/ExamplePure_fitreport.pdf $(INCOMP_INCLUDES_TARGET)/report/ExampleSolution_fitreport.pdf
+INCOMP_INCLUDES_COMFIG_SRC:=$(INCOMP_INCLUDES_TARGET)/report/DowQ_fitreport.pdf $(INCOMP_INCLUDES_TARGET)/report/LiBr_fitreport.pdf
 
 
 # the script generates the overview PDF (and more)
@@ -56,11 +56,16 @@ incompressible_includes_expensive: $(INCOMP_INCLUDES_PDFEXT) $(INCOMP_INCLUDES_C
 # Define one single target to be referenced 
 .PHONY: incompressible_includes_cheap
 incompressible_includes_cheap: $(INCOMP_INCLUDES_TXTTAB)
+	@rm -rf $(INCOMP_INCLUDES_SOURCE)/CPIncomp/data
 
-
-
-
-
+#
+#
+############################################################
+# Collect all expensive operations to be run by a cron job #
+############################################################
+#
+.PHONY: includes_expensive
+includes_expensive: incompressible_includes_expensive
 #
 #
 ############################################################

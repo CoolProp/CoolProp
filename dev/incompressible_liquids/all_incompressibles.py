@@ -1,7 +1,6 @@
 from __future__ import division, absolute_import, print_function
 from CPIncomp.WriterObjects import SolutionDataWriter
-from CPIncomp import getExampleNames, getPureFluids, getCoefficientFluids,\
-    getDigitalFluids, getSecCoolFluids, getMelinderFluids
+from CPIncomp import getExampleNames, getPureFluids, getSolutionFluids, getCoefficientFluids, getDigitalFluids, getSecCoolFluids, getMelinderFluids
 import sys
 from CPIncomp.DataObjects import SolutionData
 import argparse
@@ -126,6 +125,12 @@ if __name__ == '__main__':
 
     print("\nProcessing pure fluids")
     fluidObjs = getPureFluids()
+    if runFitting: writer.fitFluidList(fluidObjs)
+    else: writer.readFluidList(fluidObjs)
+    doneObjs += fluidObjs[:]
+
+    print("\nProcessing solutions")
+    fluidObjs = getSolutionFluids()
     if runFitting: writer.fitFluidList(fluidObjs)
     else: writer.readFluidList(fluidObjs)
     doneObjs += fluidObjs[:]
