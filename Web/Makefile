@@ -30,7 +30,7 @@ INCOMP_INCLUDES_COMFIG_SRC:=$(INCOMP_INCLUDES_TARGET)/report/DowQ_fitreport.pdf 
 $(INCOMP_INCLUDES_PDFEXT): run_incomp_script
 
 # Make sure this expensive step only gets carried out once
-INCOMP_INCLUDES_DUMMY:=$(shell date; cd $(INCOMP_INCLUDES_SOURCE); python all_incompressibles.py -ns -fr )
+INCOMP_INCLUDES_DUMMY=$(shell date; cd $(INCOMP_INCLUDES_SOURCE); python all_incompressibles.py -ns -fr )
 .PHONY : run_incomp_script
 run_incomp_script: $(INCOMP_INCLUDES_PYTHON)
 	@echo "\nOutput from fitting the incompressibles:\n\
