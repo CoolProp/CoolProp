@@ -1702,13 +1702,12 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp(long double T, long double
         if (!ValidNumber(rhomolar)){
             throw ValueError();
         }
-//        double rr = this->rhomolar();
-//        for (double rho = rr*0.1; rho < 1.1*rr; rho += 100){
-//            specify_phase(iphase_gas);
-//            this->update(DmolarT_INPUTS, rho, T);
-//            unspecify_phase();
-//            std::cout << format("%g %g\n", rho, this->p());
-//        }
+        if (phase == iphase_liquid && !is_pure_or_pseudopure && first_partial_deriv(iP, iDmolar, iT) < 0){
+            
+            // Try again with a larger density in order to end up at the right solution
+            rhomolar = Newton(resid, rhomolar_guess*1.5, 1e-8, 100, errstring);
+            return rhomolar;
+        }
         return rhomolar;
     }
     catch(std::exception &)
