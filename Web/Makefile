@@ -35,11 +35,7 @@ INCOMP_INCLUDES_DUMMY:=$(shell date; cd $(INCOMP_INCLUDES_SOURCE); python all_in
 run_incomp_script: $(INCOMP_INCLUDES_PYTHON)
 	@echo "\nOutput from fitting the incompressibles:\n\
 	  $(INCOMP_INCLUDES_DUMMY)\n" > $(INCOMP_INCLUDES_LOGFIL)
-	@rsync -am --include='*.pdf' --include='*/' --exclude='*' --delete $(INCOMP_INCLUDES_SOURCE)/ $(INCOMP_INCLUDES_TARGET)/
-
-# Note that we have to use a static pattern to avoid multiple invocations of the generator!
-$(INCOMP_INCLUDES_TXTTAB): %.txt: $(INCOMP_INCLUDES_SOURCE)/Incompressibles_include_generator.py $(INCOMP_INCLUDES_PYTHON)
-	@cd $(<D); python Incompressibles_include_generator.py
+	@rsync -am --include='*.pdf' --include='*/' --exclude='*' $(INCOMP_INCLUDES_SOURCE)/ $(INCOMP_INCLUDES_TARGET)/
 
 # Create the image that is used to describe the fitting reports
 $(INCOMP_INCLUDES_COMFIG).jpg: $(INCOMP_INCLUDES_COMFIG).pdf
@@ -49,16 +45,28 @@ $(INCOMP_INCLUDES_COMFIG).jpg: $(INCOMP_INCLUDES_COMFIG).pdf
 $(INCOMP_INCLUDES_COMFIG).pdf: $(INCOMP_INCLUDES_COMFIG_SRC)
 	@pdfnup --quiet --nup 2x1 --delta "1cm 0cm" $^ -o $(INCOMP_INCLUDES_COMFIG).pdf
 
+# Note that we have to use a static pattern to avoid multiple invocations of the generator!
+$(INCOMP_INCLUDES_TXTTAB): %.txt: $(INCOMP_INCLUDES_SOURCE)/Incompressibles_include_generator.py $(INCOMP_INCLUDES_PYTHON)
+	@cd $(<D); python $(<F)
+
+# Define targets to be referenced below
+.PHONY: incompressible_includes_expensive
+incompressible_includes_expensive: $(INCOMP_INCLUDES_PDFEXT) $(INCOMP_INCLUDES_COMFIG).jpg $(INCOMP_INCLUDES_COMFIG).pdf
+
 # Define one single target to be referenced 
-.PHONY: incompressible_includes
-incompressible_includes: $(INCOMP_INCLUDES_TXTTAB) $(INCOMP_INCLUDES_PDFEXT) $(INCOMP_INCLUDES_COMFIG).jpg
+.PHONY: incompressible_includes_cheap
+incompressible_includes_cheap: $(INCOMP_INCLUDES_TXTTAB)
 
 
 
 
 
-
-
+#
+#
+############################################################
+# These are the sphinx targets, looks like matplotlib :-)  #
+############################################################
+#
 # You can set these variables from the command line.
 SPHINXOPTS    = 
 SPHINXBUILD   = sphinx-build
@@ -87,7 +95,7 @@ help:
 clean:
 	-rm -rf _build/*
 
-html: incompressible_includes
+html: incompressible_includes_cheap
 	$(SPHINXBUILD) -j3 -b html $(ALLSPHINXOPTS) _build/html
 	@echo
 	@echo "Build finished. The HTML pages are in _build/html."
