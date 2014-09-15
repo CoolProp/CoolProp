@@ -347,7 +347,7 @@ namespace SaturationSolvers
 		    rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
 	    };
 
-	    /** Call the Newton-Raphson VLE Solver
+	    /** \brief Call the Newton-Raphson VLE Solver
          *
 	     * This solver must be passed reasonable guess values for the mole fractions, 
 	     * densities, etc.  You may want to take a few steps of successive substitution
@@ -360,15 +360,15 @@ namespace SaturationSolvers
 	     */
 	    void call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &z_incipient, newton_raphson_saturation_options &IO);
 
-	    /*! Build the arrays for the Newton-Raphson solve
-
-	    This method builds the Jacobian matrix, the sensitivity matrix, etc.
+	    /** \brief Build the arrays for the Newton-Raphson solve
          * 
-	    */
+	     * This method builds the Jacobian matrix, the sensitivity matrix, etc.
+         * 
+	     */
 	    void build_arrays();
 
-        /** Check the derivatives in the Jacobian using numerical derivatives.
-        */
+        /** \brief Check the derivatives in the Jacobian using numerical derivatives.
+         */
         void check_Jacobian();
     };
 };

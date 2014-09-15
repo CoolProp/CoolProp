@@ -145,8 +145,8 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
             }
         }
         catch(std::exception &e){
-            std::cout << e.what() << std::endl;
-            std::cout << IO.T << " " << IO.p << std::endl;
+            //std::cout << e.what() << std::endl;
+            //std::cout << IO.T << " " << IO.p << std::endl;
             // Try again, but with a smaller step
             IO.rhomolar_vap /= factor;
             factor = 1 + (factor-1)/2;
@@ -199,14 +199,73 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         factor = std::max(factor, static_cast<long double>(1.01));
         
         // Stop if the pressure is below the starting pressure
-        if (iter > 4 && IO.p < env.p[0]){ env.built = true; std::cout << format("envelope built.\n"); return; }
+        if (iter > 4 && IO.p < env.p[0]){ 
+            env.built = true; 
+            std::cout << format("envelope built.\n"); 
+            
+            // Now we refine the phase envelope to add some points in places that are still pretty rough
+            // Can be re-enabled by just uncommenting the following line
+            refine(HEOS);
+            
+            return; 
+        }
         
         // Reset the failure counter
         failure_count = 0;
     }
-    
 }
 
+void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
+{
+    PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
+    SaturationSolvers::newton_raphson_saturation NR;
+    SaturationSolvers::newton_raphson_saturation_options IO;
+    IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::RHOV_IMPOSED;
+    IO.bubble_point = false;
+    IO.y = HEOS.get_mole_fractions();
+    
+    std::size_t i = 0;
+    do{
+        // Don't do anything if change in density is small enough
+        if (std::abs(env.rhomolar_vap[i]/env.rhomolar_vap[i+1]-1) < 0.2){ i++; continue; }
+        
+        double rhomolar_vap_start = env.rhomolar_vap[i],
+               rhomolar_vap_end = env.rhomolar_vap[i+1];
+        
+        // Ok, now we are going to do some more refining in this step
+        for (double rhomolar_vap = rhomolar_vap_start*1.1; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= 1.1)
+        {
+            IO.rhomolar_vap = rhomolar_vap;
+            IO.x.resize(IO.y.size());
+            if (i < env.T.size()-3){
+                IO.T = CubicInterp(env.rhomolar_vap, env.T, i, i+1, i+2, i+3, IO.rhomolar_vap);
+                IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, i, i+1, i+2, i+3, IO.rhomolar_vap);
+                for (std::size_t j = 0; j < IO.x.size()-1; ++j){ // First N-1 elements
+                    IO.x[j] = CubicInterp(env.rhomolar_vap, env.x[j], i, i+1, i+2, i+3, IO.rhomolar_vap);
+                }
+            }
+            else{
+                IO.T = CubicInterp(env.rhomolar_vap, env.T, i, i-1, i-2, i-3, IO.rhomolar_vap);
+                IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, i, i-1, i-2, i-3, IO.rhomolar_vap);
+                for (std::size_t j = 0; j < IO.x.size()-1; ++j){ // First N-1 elements
+                    IO.x[j] = CubicInterp(env.rhomolar_vap, env.x[j], i, i-1, i-2, i-3, IO.rhomolar_vap);
+                }
+            }
+            IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
+            try{
+                NR.call(HEOS, IO.y, IO.x, IO);
+                env.insert_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, 
+                                     IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y, i+1);
+                std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p  << " hl " << IO.hmolar_liq  << " hv " << IO.hmolar_vap  << " sl " << IO.smolar_liq  << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")  << " Ns " << IO.Nsteps << std::endl;
+            }
+            catch(std::exception &e){
+                continue;
+            }
+            i++;
+        }
+    }
+    while (i < env.T.size()-1);
+}
 void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
 {
     enum maxima_points {PMAX_SAT = 0, TMAX_SAT = 1};
@@ -354,7 +413,6 @@ std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_in
         }
         
         if (matched){
-            std::cout << i << " " << i+1 << std::endl;
             intersections.push_back(std::pair<std::size_t, std::size_t>(i, i+1)); 
         }
     }
