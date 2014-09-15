@@ -264,10 +264,6 @@ protected:
 
 public:
 
-    virtual long double calc_melt_p_T(long double T){throw NotImplementedError("calc_melt_p_T is not implemented for this backend");};
-    virtual long double calc_melt_T_p(long double p){throw NotImplementedError("calc_melt_T_p is not implemented for this backend");};
-    virtual long double calc_melt_rho_T(long double T){throw NotImplementedError("calc_melt_rho_T is not implemented for this backend");};
-
     AbstractState(){};
     virtual ~AbstractState(){};
 
