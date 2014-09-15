@@ -18,6 +18,9 @@ cdef class AbstractState:
     cpdef set_mass_fractions(self, vector[double] z)
     cpdef set_volu_fractions(self, vector[double] z)
     
+    cpdef specify_phase(self, constants_header.phases phase)
+    cpdef unspecify_phase(self)
+    
     ## ---------------------------------------- 
     ##        Fluid property accessors
     ## ----------------------------------------

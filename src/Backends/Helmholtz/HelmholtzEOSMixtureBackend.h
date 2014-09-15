@@ -56,6 +56,8 @@ public:
 	bool has_melting_line(){ return is_pure_or_pseudopure && components[0]->ancillaries.melting_line.enabled();};
 	long double calc_melting_line(int param, int given, long double value);
 	phases calc_phase(void){return _phase;};
+    void calc_specify_phase(phases phase){ specify_phase(phase); }
+    void calc_unspecify_phase(){ unspecify_phase(); }
     long double calc_saturation_ancillary(parameters param, int Q, parameters given, double value);
     
     const CoolProp::SimpleState &calc_state(const std::string &state);

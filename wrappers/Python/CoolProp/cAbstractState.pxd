@@ -19,6 +19,10 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         ## Constructor with fluid name
         AbstractState(string FluidName) except +ValueError
         
+        void specify_phase(constants_header.phases phase) except +ValueError
+        
+        void unspecify_phase() except +ValueError
+        
         bool clear()
 
         ## Property updater

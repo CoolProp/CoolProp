@@ -15,6 +15,13 @@ cdef class AbstractState:
         
     def __dealloc__(self):
         del self.thisptr
+        
+    cpdef specify_phase(self, constants_header.phases phase):
+        """ Specify the phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::specify_phase` """
+        self.thisptr.specify_phase(phase)
+    cpdef unspecify_phase(self):
+        """ Unspecify the phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::specify_phase` """
+        self.thisptr.unspecify_phase()
     
     cpdef update(self, constants_header.input_pairs ipair, double Value1, double Value2):
         """ Update function - wrapper of c++ function :cpapi:`CoolProp::AbstractState::update` """
