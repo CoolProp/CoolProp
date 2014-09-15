@@ -1,3 +1,6 @@
+
+.. |degC| replace:: :math:`^\circ\!\!` C
+
 .. _Incompressibles:
 
 Incompressible Fluids
@@ -5,10 +8,10 @@ Incompressible Fluids
 
 In CoolProp, the incompressible fluids are divided into four major groups.
 
- * :ref:`Pure fluids <Pure>`.
- * :ref:`Mass-based binary mixtures <MassMix>`.
- * :ref:`Mole-based binary mixtures <MoleMix>`.
- * :ref:`Volume-based binary mixtures <VoluMix>`.
+* :ref:`Pure fluids <Pure>`.
+* :ref:`Mass-based binary mixtures <MassMix>`.
+.. * :ref:`Mole-based binary mixtures <MoleMix>`.
+* :ref:`Volume-based binary mixtures <VoluMix>`.
 
 The pure fluids and mass-based binary mixtures are by far the most common fluids
 in this library. While the pure fluids contain data for many different kinds of
@@ -23,62 +26,115 @@ fluid from the high-level interface. A single PDF page showing the fit quality i
 linked to that ID in case you would like to see a few more details about any
 specific fluid. To get an overview over all the fits, there are also combined
 documents with all the
-:download:`pure fluids and all the aqueous solutions<all_incompressibles.pdf>`.
+:download:`pure fluids and all the aqueous solutions</_static/fluid_properties/incompressible/report/all_incompressibles.pdf>`.
 You can read more about these reports in a dedicated
 :ref:`section<FittingReports>` called :ref:`Fitting Reports<FittingReports>` below.
 
 Incompressible fluids only allow  for a limited subset of input variables. The
-following input pairs are supported: :math:`p,T`, :math:`h,p`, :math:`\rho,T`,
-:math:`p,u` and :math:`p,s`. All functions iterate on :math:`f(p,T)` calls
-internally, which makes this combinations by far the fastest. However, also the
+following input pairs are supported: :math:`f(p,T)`, :math:`f(h,p)`, :math:`f(\rho,T)`,
+:math:`f(p,u)` and :math:`f(p,s)`. All functions iterate on :math:`f(p,T)` calls
+internally, which makes this combination by far the fastest. However, also the
 other inputs should be fast compared to the full Helmholtz-based EOS implemented
 for then compressible fluids.
 
 A call to the top-level function ``PropsSI`` can provide : density, heat capacity,
 internal energy, enthalpy, entropy, viscosity and thermal conductivity. Hence,
-the available output keys are: "D", "C", "U", "H", "S", "V", "L", "Tmin", "Tmax"
-and "Psat".
+the available output keys are: ``D``, ``C``, ``U``, ``H``, ``S``, ``V``, ``L``,
+``Tmin``, ``Tmax`` and ``Psat``.
 
 .. ipython::
 
     In [1]: from CoolProp.CoolProp import PropsSI
 
-    #Density of HFE-7100 at 300 K and 1 atm.
-    In [1]: PropsSI('D','T',300,'P',101325,'INCOMP::HFE')
+    #Density of Downtherm Q at 500 K and 1 atm.
+    In [1]: PropsSI('D','T',500,'P',101325,'INCOMP::DowQ')
+
+    #Specific heat capacity of Downtherm Q at 500 K and 1 atm
+    In [1]: PropsSI('C','T',500,'P',101325,'INCOMP::DowQ')
+
+    #Internal energy of Downtherm Q at 500 K and 1 atm
+    In [1]: PropsSI('U','T',500,'P',101325,'INCOMP::DowQ')
+
+    #Enthalpy of Downtherm Q at 500 K and 1 atm
+    In [1]: PropsSI('H','T',500,'P',101325,'INCOMP::DowQ')
+
+    #Entropy of Downtherm Q at 500 K and 1 atm
+    In [1]: PropsSI('S','T',500,'P',101325,'INCOMP::DowQ')
+
+    #Viscosity of Downtherm Q at 500 K and 1 atm
+    In [1]: PropsSI('V','T',500,'P',101325,'INCOMP::DowQ')
+
+    #Thermal conductivity of Downtherm Q at 500 K and 1 atm
+    In [1]: PropsSI('L','T',500,'P',101325,'INCOMP::DowQ')
+
+    #Minimum temperature for Downtherm Q
+    In [1]: PropsSI('Tmin','T',0,'P',0,'INCOMP::DowQ')
+
+    #Maximum temperature for Downtherm Q
+    In [1]: PropsSI('Tmax','T',0,'P',0,'INCOMP::DowQ')
 
 
-.. _Pure:
+..    #Vapour pressure of Downtherm Q at 500 K, note the dummy pressure to work around https://github.com/CoolProp/CoolProp/issues/145
+    In [1]: PropsSI('Psat','T',500,'P',1e8,'INCOMP::DowQ')
+
+
 
 Pure Fluids
 -----------
-.. include:: pure-fluids.txt
 
+See :cite:`Melinder-BOOK-2010` for an introduction to non-standard analysis.
+
+For refrigeration applications, 8 fluids were implemented from Aake Melinder
+"Properties of Secondary Working Fluids for Indirect Systems" published in 2010
+by IIR and coefficients are obtained from a fit between -80 |degC| and +100 |degC|:
+DEB, HCM, HFE, PMS1, PMS2, SAB, HCB and TCO.
+
+Some additional secondary cooling fluids are based on data compiled by Morten
+Juel Skovrup in his `SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
+provided by his employer `IPU <http://en.ipu.dk>`_. Fits have been made for the
+manufacturer data stored in the software. The Aspen Temper fluids (AS10, AS20,
+AS30, AS40, AS55) are a blend of potassium formate and sodiumpropionate and the
+Zitrec S group (ZS10, ZS25, ZS40, ZS45 and ZS55) consists mainly of potassium
+acetate and potassium formate.
+
+There are also a few high temperature heat transfer fluids with individual
+temperature ranges. Please refer to the table below for a complete overview.
+For these fluids, information from commercial data sheets was used to obtain
+coefficients.
+
+.. _Pure:
+
+.. csv-table:: All incompressible pure fluids included in CoolProp
+   :widths: 10, 35, 25, 15, 15
+   :header-rows: 1
+   :file: ../_static/fluid_properties/incompressible/table/pure-fluids.csv
+
+
+
+Aqueous Mixtures - Solutions and Brines
+---------------------------------------
 
 
 .. _MassMix:
 
-Mass-based binary mixtures
---------------------------
+.. csv-table:: All incompressible mass-based binary mixtures included in CoolProp
+   :widths: 10, 30, 20, 10, 10, 10, 10
+   :header-rows: 1
+   :file: ../_static/fluid_properties/incompressible/table/mass-based-fluids.csv
 
-.. include:: mass-based-fluids.txt
+.. .. _MoleMix:
 
-
-
-.. _MoleMix:
-
-Mole-based binary mixtures
---------------------------
-
-.. include:: mole-based-fluids.txt
-
+.. .. csv-table:: All incompressible mole-based binary mixtures included in CoolProp
+   :widths: 10, 30, 20, 10, 10, 10, 10
+   :header-rows: 1
+   :file: ../_static/fluid_properties/incompressible/table/mole-based-fluids.csv
 
 .. _VoluMix:
 
-Volume-based binary mixtures
-----------------------------
-
-.. include:: volume-based-fluids.txt
-
+.. csv-table:: All incompressible volume-based binary mixtures included in CoolProp
+   :widths: 10, 30, 20, 10, 10, 10, 10
+   :header-rows: 1
+   :file: ../_static/fluid_properties/incompressible/table/volume-based-fluids.csv
 
 
 .. _FittingReports:
@@ -87,7 +143,7 @@ Fitting Reports
 =====================
 
 A file with all fitting reports for the incompressible fluids can be obtained
-from :download:`here <all_incompressibles.pdf>`. These reports help you to
+from :download:`here </_static/fluid_properties/incompressible/report/all_incompressibles.pdf>`. These reports help you to
 get an overview over the different incompressible fluids
 included in CoolProp. The reports start with some basic information about
 the fluid. There is the name by which it can be accessed through the
@@ -97,13 +153,13 @@ used non-scientific name. The next item tells you where we got the data from. Th
 would typically be a data sheet from a manufacturers homepage, some other software
 database, a scientific publication or experimental data.
 
-.. figure:: report2up.*
+.. figure:: /_static/fluid_properties/incompressible/report/report2up.jpg
     :align: center
     :alt: Fitting reports for pure fluid and solution
 
     The figure above shows two examples for fitting reports generated for a pure
     fluid and a binary mixture. You can also have a look at the
-    :download:`PDF version<report2up.pdf>` of the reports side by side.
+    :download:`PDF version</_static/fluid_properties/incompressible/report/report2up.pdf>` of the reports side by side.
 
 If all data is available, there is a graphs for each of the basic quantities
 density :math:`\rho`, specific heat capacity :math:`c`, thermal conductivity
@@ -116,6 +172,12 @@ left hand side. In case of a solution, these graphs refer to a given concentrati
 that typically lies in the middle of the allowed range. Dashed red lines indicate
 the limits in terms of concentration as well as the freezing temperature.
 
+
+
+Equations
+----------------------
+
+Exp or log for visc, other poly or log poly
 
 
 
@@ -324,3 +386,8 @@ then yields the final factor :math:`D` to be multiplied with the other coefficie
 
     s          &= \int_{0}^{1} \frac{c\left( x,T \right)}{T} dT = \sum_{i=0}^n x^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot D(j,T_0,T_1) \\
     D          &= (-1)^j \cdot \ln \left( \frac{T_1}{T_0} \right) \cdot T_{ref}^j + \sum_{k=0}^{j-1} \binom{j}{k} \cdot \frac{(-1)^k}{j-k} \cdot \left( T_1^{j-k} - T_0^{j-k} \right) \cdot T_{ref}^k
+
+
+
+.. bibliography:: ../../CoolPropBibTeXLibrary.bib
+  :style: unsrt

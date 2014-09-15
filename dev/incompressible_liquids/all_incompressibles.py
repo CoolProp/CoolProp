@@ -1,7 +1,6 @@
 from __future__ import division, absolute_import, print_function
 from CPIncomp.WriterObjects import SolutionDataWriter
-from CPIncomp import getExampleNames, getPureFluids, getCoefficientFluids,\
-    getDigitalFluids, getSecCoolFluids, getMelinderFluids
+from CPIncomp import getExampleNames, getPureFluids, getSolutionFluids, getCoefficientFluids, getDigitalFluids, getSecCoolFluids, getMelinderFluids
 import sys
 from CPIncomp.DataObjects import SolutionData
 import argparse
@@ -34,8 +33,8 @@ if __name__ == '__main__':
     parser.add_argument("-nf","--nofit", action='store_true', help="Do not fit the data, but read the JSON files")
     parser.add_argument("-nr","--noreports", action='store_true', help="Do not write the fitting reports")
     parser.add_argument("-ns","--nosummary", action='store_true', help="Do not generate the summary figures")
+    parser.add_argument("-nt","--notables", action='store_true', help="Do not write the fluid tables")
     #parser.add_argument("-f","--fluid", help="Only process the fluid FLUID")
-    parser.add_argument("-fr","--fullreport", action='store_true', help="Generate one file with all fitting reports")
 
     args = parser.parse_args()
 #    if args.verbosity:
@@ -49,8 +48,8 @@ if __name__ == '__main__':
     else:              runReports = True
     if args.nosummary: runSummary = False
     else:              runSummary = True
-    if args.fullreport:runFullreport = True
-    else:              runFullreport = False
+    if args.notables:  runTables  = False
+    else:              runTables  = True
     #if args.fluid:     onlyFluid  = args.fluid
     #else:              onlyFluid  = None
 
@@ -101,7 +100,8 @@ if __name__ == '__main__':
     if runFitting: writer.writeFluidList(doneObjs)
     if runReports:
         # TODO: The new method for multipage PDFs produces larger files, why?
-        writer.writeReportList(doneObjs, pdfFile="all_examples.pdf")
+        combined_name = os.path.join(os.path.abspath("report"),"all_examples.pdf")
+        writer.writeReportList(doneObjs, pdfFile=combined_name)
         #singleNames = [writer.get_report_file(fl.name) for fl in doneObjs]
         #mergePdfIfNewer(singleNames, "all_examples.pdf")
 
@@ -126,6 +126,12 @@ if __name__ == '__main__':
 
     print("\nProcessing pure fluids")
     fluidObjs = getPureFluids()
+    if runFitting: writer.fitFluidList(fluidObjs)
+    else: writer.readFluidList(fluidObjs)
+    doneObjs += fluidObjs[:]
+
+    print("\nProcessing solutions")
+    fluidObjs = getSolutionFluids()
     if runFitting: writer.fitFluidList(fluidObjs)
     else: writer.readFluidList(fluidObjs)
     doneObjs += fluidObjs[:]
@@ -180,41 +186,49 @@ if __name__ == '__main__':
     solutions += solMole
     solutions += solVolu
 
-    if runFitting: print("All checks passed, going to write parameters to disk.")
-    if runFitting: writer.writeFluidList(doneObjs)
+    if runFitting:
+        print("All checks passed, going to write parameters to disk.")
+        writer.writeFluidList(doneObjs)
 
     if runReports:
-        print("Creating the fitting reports for the different groups.")
-        #writer.writeReportList(doneObjs)
-        #doneObjs.sort(key=lambda x: (x.xid ,x.name))
-        if len(purefluids)>0:
-            print("Processing {0:2d} pure fluids   - ".format(len(purefluids)), end="")
-            writer.writeReportList(purefluids)#, pdfFile="all_pure.pdf")
-            #singleNames = [writer.get_report_file(fl.name) for fl in purefluids]
-            #mergePdfIfNewer(singleNames, "all_pure.pdf")
-
-        if len(solutions)>0:
-            print("Processing {0:2d} solutions     - ".format(len(solutions)), end="")
-            writer.writeReportList(solutions)#, pdfFile="all_solutions.pdf")
-            #singleNames = [writer.get_report_file(fl.name) for fl in solutions]
-            #mergePdfIfNewer(singleNames, "all_solutions.pdf")
-
-    if runFullreport:
-        print("Creating the full fitting report.")
-
         combined_name = "all_incompressibles.pdf"
+        print("Creating the fitting reports in {0}".format(combined_name))
 
-        if len(doneObjs)>0:
-            singles_time = np.array([])
-            for fl in doneObjs:
-                singles_time = np.append(singles_time, [getTime(writer.get_report_file(fl.name))])
-            combined_time = getTime(combined_name)
-            if np.any(singles_time>combined_time):
-                print("Processing {0:2d} fluids        - ".format(len(doneObjs)), end="")
-                writer.writeReportList(doneObjs, pdfFile=combined_name)
+        singles_time = np.array([])
+        for fl in doneObjs:
+            singles_time = np.append(singles_time, [getTime(writer.get_json_file(fl.name))])
+
+        combined_name = os.path.join(os.path.abspath("report"),combined_name)
+        combined_time = getTime(combined_name)
+        if np.any(singles_time>combined_time):
+            print("Processing {0:2d} fluids - ".format(len(doneObjs)), end="")
+            writer.writeReportList(doneObjs, pdfFile=combined_name)
+        else:
+            print("No newer file found, aborting.")
+
 
     if runSummary:
         writer.makeSolutionPlots(solObjs=doneObjs, pdfObj=None)
+
+    if runTables:
+        #####################################
+        # Table generation routines
+        #####################################
+        FLUID_INFO_FOLDER=os.path.abspath("table")
+        FLUID_INFO_MASS_LIST=os.path.join(FLUID_INFO_FOLDER,"mass-based-fluids")
+        FLUID_INFO_MOLE_LIST=os.path.join(FLUID_INFO_FOLDER,"mole-based-fluids")
+        FLUID_INFO_VOLU_LIST=os.path.join(FLUID_INFO_FOLDER,"volume-based-fluids")
+        FLUID_INFO_PURE_LIST=os.path.join(FLUID_INFO_FOLDER,"pure-fluids")
+
+        # After all the list got populated, we can process the entries
+        # and generate some tables
+        #
+        objLists = [purefluids,solMass,solMole,solVolu]
+        filLists = [FLUID_INFO_PURE_LIST,FLUID_INFO_MASS_LIST]
+        filLists +=[FLUID_INFO_MOLE_LIST,FLUID_INFO_VOLU_LIST]
+        #
+        for i in range(len(objLists)):
+            writer.generateRstTable(objLists[i], filLists[i])
 
     print("All done, bye")
     sys.exit(0)

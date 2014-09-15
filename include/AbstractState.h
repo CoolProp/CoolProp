@@ -251,7 +251,12 @@ protected:
     /// @param value The value for the parameter that is given
     virtual long double calc_saturation_ancillary(parameters param, int Q, parameters given, double value){throw NotImplementedError("This backend does not implement calc_saturation_ancillary");};
 	
+    /// Using this backend, calculate the phase
 	virtual phases calc_phase(void){throw NotImplementedError("This backend does not implement calc_phase function");};
+    /// Using this backend, specify the phase to be used for all further calculations
+    virtual void calc_specify_phase(phases phase){throw NotImplementedError("This backend does not implement calc_specify_phase function");};
+    /// Using this backend, unspecify the phase
+    virtual void calc_unspecify_phase(void){throw NotImplementedError("This backend does not implement calc_unspecify_phase function");};
     
     /// Using this backend, calculate a phase given by the state string
     /// @param state A string that describes the state desired, one of "hs_anchor", "critical"/"crit", "reducing"
@@ -263,10 +268,6 @@ protected:
     virtual std::vector<long double> calc_mole_fractions_vapor(void){throw NotImplementedError("calc_mole_fractions_vapor is not implemented for this backend");};
 
 public:
-
-    virtual long double calc_melt_p_T(long double T){throw NotImplementedError("calc_melt_p_T is not implemented for this backend");};
-    virtual long double calc_melt_T_p(long double p){throw NotImplementedError("calc_melt_T_p is not implemented for this backend");};
-    virtual long double calc_melt_rho_T(long double T){throw NotImplementedError("calc_melt_rho_T is not implemented for this backend");};
 
     AbstractState(){};
     virtual ~AbstractState(){};
@@ -318,7 +319,12 @@ public:
     double pmax(void);
     double Ttriple(void);
 	
+    /// Get the phase of the state
 	phases phase(void){return calc_phase();};
+    /// Specify the phase for all further calculations with this state class
+    void specify_phase(phases phase){calc_specify_phase(phase);};
+    /// Unspecify the phase and go back to calculating it based on the inputs
+    void unspecify_phase(void){calc_unspecify_phase();};
 
     /// Return the critical temperature in K
     /**

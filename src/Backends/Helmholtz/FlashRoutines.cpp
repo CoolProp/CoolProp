@@ -427,6 +427,10 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parame
             
             std::size_t &imax = solutions[0];
             
+            // Shift the solution if needed to ensure that imax+2 and imax-1 are both in range
+            if (imax+2 >= env.T.size()){ imax--; }
+            else if (imax-1 < 0){ imax++; }
+            
             SaturationSolvers::newton_raphson_saturation NR;
             SaturationSolvers::newton_raphson_saturation_options IO;
             
@@ -435,13 +439,16 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parame
                 IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
                 // p -> rhomolar_vap
                 IO.rhomolar_vap = CubicInterp(env.p, env.rhomolar_vap, imax-1, imax, imax+1, imax+2, static_cast<long double>(IO.p));
+                IO.T = CubicInterp(env.rhomolar_vap, env.T, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
             }
             else if (other == iT){
                 IO.T = HEOS._T;
                 IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::T_IMPOSED;
-                // p -> rhomolar_vap
+                // T -> rhomolar_vap
                 IO.rhomolar_vap = CubicInterp(env.T, env.rhomolar_vap, imax-1, imax, imax+1, imax+2, static_cast<long double>(IO.T));
+                IO.p = CubicInterp(env.rhomolar_vap, env.p, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
             }
+            IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
             
             if (quality == SATURATED_VAPOR){
                 IO.bubble_point = false;
@@ -458,9 +465,13 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parame
                 IO.bubble_point = true;
                 IO.x = HEOS.get_mole_fractions(); // Because Q = 0
                 IO.y.resize(IO.x.size());
+                // Phases are inverted, so "liquid" is actually the lighter phase
+                std::swap(IO.rhomolar_liq, IO.rhomolar_vap);
                 for (std::size_t i = 0; i < IO.y.size()-1; ++i) // First N-1 elements
                 {
-                    IO.y[i] = CubicInterp(env.rhomolar_vap, env.x[i], imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
+                    // Phases are inverted, so liquid mole fraction (x) of phase envelope is actually the vapor phase mole fraction
+                    // Use the liquid density as well
+                    IO.y[i] = CubicInterp(env.rhomolar_vap, env.x[i], imax-1, imax, imax+1, imax+2, IO.rhomolar_liq);
                 }
                 IO.y[IO.y.size()-1] = 1 - std::accumulate(IO.y.begin(), IO.y.end()-1, 0.0);
                 NR.call(HEOS, IO.x, IO.y, IO);
