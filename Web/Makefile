@@ -56,7 +56,6 @@ incompressible_includes_expensive: $(INCOMP_INCLUDES_PDFEXT) $(INCOMP_INCLUDES_C
 # Define one single target to be referenced 
 .PHONY: incompressible_includes_cheap
 incompressible_includes_cheap: $(INCOMP_INCLUDES_TXTTAB)
-	@rm -rf $(INCOMP_INCLUDES_SOURCE)/CPIncomp/data
 
 #
 #
