@@ -102,3 +102,12 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
 		FLUID_TYPE_INCOMPRESSIBLE_LIQUID
 		FLUID_TYPE_INCOMPRESSIBLE_SOLUTION
 		FLUID_TYPE_UNDEFINED
+	ctypedef enum phases:
+		iphase_liquid
+		iphase_supercritical
+		iphase_supercritical_gas
+		iphase_supercritical_liquid
+		iphase_gas
+		iphase_twophase
+		iphase_unknown
+		iphase_not_imposed

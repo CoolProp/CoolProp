@@ -58,5 +58,5 @@ def generate_cython(data):
     shutil.copy2('constants.pyx',os.path.join('..','..','wrappers','Python','CoolProp','constants.pyx'))
         
 if __name__=='__main__':
-    data = [(enum,params_constants(enum)) for enum in ['parameters', 'input_pairs', 'fluid_types']]
+    data = [(enum,params_constants(enum)) for enum in ['parameters', 'input_pairs', 'fluid_types', 'phases']]
     generate_cython(data)
