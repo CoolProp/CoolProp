@@ -12,6 +12,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import itertools
 from datetime import datetime
 import matplotlib
+import csv
 
 class SolutionDataWriter(object):
     """
@@ -358,6 +359,8 @@ class SolutionDataWriter(object):
         print("Writing fitting reports:", end="")
 
         if not pdfFile is None:
+            if not os.path.exists(os.path.dirname(pdfFile)):
+                os.makedirs(os.path.dirname(pdfFile))
             with PdfPages(pdfFile) as pdfObj:
                 for obj in fluidObjs:
                     matplotlib.pyplot.close("all")
@@ -385,9 +388,9 @@ class SolutionDataWriter(object):
         return
 
 
-#####################################
-# Plotting routines
-#####################################
+    #####################################
+    # Plotting routines
+    #####################################
     def relError(self, A=[], B=[], PCT=False):
         """
         Returns the absolute relative Error from either
@@ -1083,10 +1086,132 @@ class SolutionDataWriter(object):
 
 
 
+    #####################################
+    # Table generation routines
+    #####################################
+    # See http://stackoverflow.com/questions/11347505/what-are-some-approaches-to-outputting-a-python-data-structure-to-restructuredte
+    def make_table(self, grid):
+        max_cols = [max(out) for out in map(list, zip(*[[len(item) for item in row] for row in grid]))]
+        rst = self.table_div(max_cols, 1)
+        for i, row in enumerate(grid):
+            header_flag = False
+            if i == 0 or i == len(grid)-1: header_flag = True
+            rst += self.normalize_row(row,max_cols)
+            rst += self.table_div(max_cols, header_flag )
+        return rst
 
-    def generateRstTable(self):
+    def table_div(self, max_cols, header_flag=1, indent=2):
+        out = ""
+        for i in range(indent):
+            out += " "
+        if header_flag == 1:
+            style = "="
+        else:
+            style = "-"
+        for max_col in max_cols:
+            out += max_col * style + " "
+        out += "\n"
+        return out
 
-        pass
+    def normalize_row(self, row, max_cols, indent=2):
+        r = ""
+        for i in range(indent):
+            r += " "
+
+        for i, max_col in enumerate(max_cols):
+            r += row[i] + (max_col  - len(row[i]) + 1) * " "
+        return r + "\n"
+
+
+    def writeTextToFile(self, path,text):
+        #print("Writing to file: {0}".format(path))
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+        with open(path, 'w') as f:
+            f.write(text)
+        return True
+
+    def writeTxtTableToFile(self, path,table,head=""):
+        if not head == "":
+            return self.writeTextToFile(path+".txt", head+"\n\n"+self.make_table(table))
+        return self.writeTextToFile(path+".txt", self.make_table(table))
+
+    def writeCsvTableToFile(self, path,table):
+        if not os.path.exists(os.path.dirname(path+".csv")):
+            os.makedirs(os.path.dirname(path+".csv"))
+        with open(path+".csv", 'wb') as f:
+            writer = csv.writer(f)
+            writer.writerows(table)
+        return True
+
+    # Interface
+    def writeTableToFile(self, path,table):
+        self.writeCsvTableToFile(path,table)
+        self.writeTxtTableToFile(path,table)
+        return True
+
+
+
+    def getReportLink(self, name):
+        reportFile = os.path.join("..","_static","fluid_properties","incompressible","report","{0}_fitreport.pdf".format(name))
+        return self.d(name,reportFile)
+
+    def checkForNumber(self, number):
+        try:
+            n = float(number)
+        except:
+            n = np.NAN
+            pass
+        return n
+
+    def d(self, text,target):
+#         try:
+#             if os.path.isfile(target):
+#                 link = ":download:`{0}<{1}>`".format(text,target)
+#             else:
+#                 link = "{0}".format(text)
+#         except:
+#             link = "{0}".format(text)
+#             pass
+        # TODO: Fix this!
+        link = ":download:`{0}<{1}>`".format(text,target)
+        return link
+
+    def m(self, math):
+        text = ":math:`{0}`".format(math)
+        return text
+
+    def c(self, number):
+        #text = "{0:5.2f} |degC|".format(self.checkForNumber(number)-273.15)
+        text = "{0:5.2f}".format(self.checkForNumber(number)-273.15)
+        return text
+
+    def x(self, number):
+        text = "{0:3.2f}".format(self.checkForNumber(number))
+        return text
+
+
+    def generateRstTable(self, solObjs=[SolutionData()], path="table"):
+
+        solObjs = sorted(solObjs, key=lambda x: x.name)
+        xmin = np.array([x.xmin for x in solObjs])
+        xmax = np.array([x.xmax for x in solObjs])
+
+        if np.any(xmin>0.0) and np.any(xmax<1.0): use_x = True
+        else: use_x = False
+
+        header = ['Name', 'Description', 'Reference', \
+          self.m('T_{min}')+" (|degC|)", self.m('T_{max}')+" (|degC|)"]
+        if use_x: header.extend([self.m('x_{min}'), self.m('x_{max}')])
+
+        testTable = []
+        testTable.append(header) # Headline
+        for fluid in solObjs:
+            testTable.append([self.getReportLink(fluid.name), fluid.description, fluid.reference, self.c(fluid.Tmin), self.c(fluid.Tmax)])
+            if use_x: testTable[-1].extend([self.x(fluid.xmin), self.x(fluid.xmax)])
+
+        self.writeTableToFile(path, testTable)
+        return True
 
 
 
