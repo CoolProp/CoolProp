@@ -204,7 +204,6 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
             std::cout << format("envelope built.\n"); 
             
             // Now we refine the phase envelope to add some points in places that are still pretty rough
-            // Can be re-enabled by just uncommenting the following line
             refine(HEOS);
             
             return; 
@@ -376,20 +375,14 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
             
             env.insert_variables(resid.IO.T, resid.IO.p, resid.IO.rhomolar_liq, resid.IO.rhomolar_vap, resid.IO.hmolar_liq, 
                                  resid.IO.hmolar_vap, resid.IO.smolar_liq, resid.IO.smolar_vap, resid.IO.x, resid.IO.y, imax);
-            
-            if (maxima == TMAX_SAT){
-                env.iTsat_max = imax;
-                if (imax <= env.ipsat_max){
-                    // Psat_max goes first; an insertion at a smaller index bumps up the index 
-                    // for ipsat_max, so we bump the index to keep pace
-                    env.ipsat_max++;
-                }
-            }
-            else{
-                env.ipsat_max = imax;
-            }
         }
     }
+    
+    // Find the index of the point with the highest temperature
+    env.iTsat_max = std::distance(env.T.begin(), std::max_element(env.T.begin(), env.T.end()));
+    
+    // Find the index of the point with the highest pressure
+    env.ipsat_max = std::distance(env.p.begin(), std::max_element(env.p.begin(), env.p.end()));
 }
 
 std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_intersections(HelmholtzEOSMixtureBackend &HEOS, parameters iInput, long double value)
