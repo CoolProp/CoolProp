@@ -71,7 +71,7 @@ You need to just slightly modify the building procedure::
     # Make a build folder
     mkdir build && cd build
     # Build the makefile using CMake
-    cmake .. -DCOOLPROP_MATLAB_MODULE=ON -DBUILD_TESTING=ON
+    cmake .. -DCOOLPROP_JAVA_MODULE=ON -DBUILD_TESTING=ON
     # Make the Java shared library
     make install
     # Run the integration tests

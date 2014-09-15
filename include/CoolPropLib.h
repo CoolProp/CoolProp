@@ -1,3 +1,22 @@
+/**
+ * This file defines an interface for shared library (DLL) wrapping
+ * 
+ * In general the functions defined here take strings which are 0-terminated (C-style),  
+ * vectors of doubles are passed as double* and length
+ * These functions pass directly to equivalently named functions in CoolProp.h in the CoolProp namespace
+ * that take std::string, vector<double> etc.
+ * 
+ * Functions with the call type like
+ * EXPORT_CODE void CONVENTION AFunction(double, double);
+ * will be exported to the DLL
+ * 
+ * The exact symbol that will be exported depends on the values of the preprocessor macros COOLPROP_LIB, EXPORT_CODE, CONVENTION, etc.
+ * 
+ * In order to have 100% control over the export macros, you can specify EXPORT_CODE and CONVENTION directly. Check out
+ * CMakeLists.txt in the repo root to see some examples.
+ * 
+ */
+
 #ifndef COOLPROPDLL_H
 #define COOLPROPDLL_H
 
@@ -31,88 +50,51 @@
     #if defined(__powerpc__) || defined(EXTERNC)
     #  undef EXPORT_CODE
     #  define EXPORT_CODE extern "C"
-    #endif
-
-    // Functions with the call type like
-    // EXPORT_CODE void CONVENTION AFunction(double, double);
-    // will be exported to the DLL
-
-    /*
-    ####################################################################################
-    Overloads for DLL wrapping purposes
-
-    These functions take strings which are 0-terminated.  These functions pass directly to
-    equivalently named functions in CoolProp.h that take std::string
-    ####################################################################################
-    */
+    #endif    
 
     /**
-    \overload
-    \sa \ref CoolProp::Props1SI(std::string, std::string)
-    */
+     * \overload
+     * \sa \ref CoolProp::Props1SI(std::string, std::string)
+     */
     EXPORT_CODE double CONVENTION Props1SI(const char *FluidName, const char* Output);
     /**
-    \overload
-    \sa \ref CoolProp::PropsSI(const std::string &, const std::string &, double, const std::string &, double, const std::string&)
-    */
+     *\overload
+     *\sa \ref CoolProp::PropsSI(const std::string &, const std::string &, double, const std::string &, double, const std::string&)
+     */
     EXPORT_CODE double CONVENTION PropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref);
-    /**
-    \overload
-    \sa \ref CoolProp::Props(std::string, std::string, double, std::string, double, std::string)
-    */
-    EXPORT_CODE double CONVENTION PropsS(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref);
-    /**
-    \overload
-    \sa \ref CoolProp::Props(const std::string &, const std::string &, double, const std::string &, double, const std::string&)
-    */
-    EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double Prop1, const char Name2, double Prop2, const char *Ref);
-    /**
-    \overload
-    \sa \ref CoolProp::Props1(std::string &, std::string &)
-    */
-    EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output);
-    /**
-    \overload
-    \sa \ref IsFluidType(std::string, std::string)
-    */
-    EXPORT_CODE int CONVENTION IsFluidType(const char *Ref, const char *Type);
+    
     EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char *Output);
+    /**
+     * \overload
+     * \sa \ref CoolProp::get_parameter_information_string
+     */
     EXPORT_CODE long CONVENTION get_parameter_information_string(const char *key, char *Output);
+    /** 
+     * \overload
+     * \sa \ref CoolProp::get_fluid_param_string
+     */
     EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char *Output);
 
     /**
-    \overload
-    \sa \ref CoolProp::set_reference_stateS(const std::string &, const std::string&)
-    */
+     * \overload
+     * \sa \ref CoolProp::set_reference_stateS
+     */
     EXPORT_CODE int CONVENTION set_reference_stateS(const char *Ref, const char *reference_state);
     /**
-    \overload
-    \sa \ref CoolProp::set_reference_stateD(const std::string &, double, double, double, double)
-    */
+     * \overload
+     * \sa \ref CoolProp::set_reference_stateD
+     */
     EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, double rho, double h0, double s0);
-    /*
-    ####################################################################################
-    Implemented functions
 
-    These functions take inputs that are compatible with DLL passing and are
-    implemented in CoolPropDLL.cpp
-    ####################################################################################
-    */
-
-    /**
-    \brief FORTRAN 77 style wrapper of the PropsSI function
-    \sa \ref CoolProp::PropsSI(const std::string &, const std::string &, double, const std::string &, double, const std::string&)
-    */
+    /** \brief FORTRAN 77 style wrapper of the PropsSI function
+     * \sa \ref CoolProp::PropsSI(const std::string &, const std::string &, double, const std::string &, double, const std::string&)
+     */
     EXPORT_CODE void CONVENTION propssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Ref, double *output);
     /**
-
-    */
+     * \overload
+     * \sa \ref CoolProp::PropsSIZ
+     */
     EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *FluidName, const double *z, int n);
-
-    // This version uses the indices in place of the strings for speed.  Get the parameter indices
-    // from get_param_index('D') for instance and the Fluid index from get_Fluid_index('Air') for instance
-    EXPORT_CODE double CONVENTION IPropsSI(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid);
-    EXPORT_CODE double CONVENTION IProps(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid);
 
     /// Convert from degrees Fahrenheit to Kelvin (useful primarily for testing)
     EXPORT_CODE double CONVENTION F2K(double T_F);
@@ -137,15 +119,44 @@
     //        Humid Air Properties
     // ---------------------------------
 
-
+    /** \brief DLL wrapper of the HAPropsSI function
+     * \sa \ref HumidAir::HAPropsSI(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, const char *Input3Name, double Input3);
+     */
     EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Name3, double Prop3);
 
-    /**
-    \brief FORTRAN 77 style wrapper of the HAPropsSI function
-     * \sa \ref HumidAirProp::PropsSI(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, const char *Input3Name, double Input3);
-    */
+    /** \brief FORTRAN 77 style wrapper of the HAPropsSI function
+     * \sa \ref HumidAir::HAPropsSI(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, const char *Input3Name, double Input3);
+     */
     EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char *Name3, double *Prop3, double *output);
 
 
+    // *************************************************************************************
+    // *************************************************************************************
+    // *****************************  DEPRECATED *******************************************
+    // *************************************************************************************
+    // *************************************************************************************
 
+    /**
+    \overload
+    \sa \ref Props(const char *Output, const char Name1, double Prop1, const char Name2, double Prop2, const char *Ref)
+    */
+    EXPORT_CODE double CONVENTION PropsS(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref);
+    /**
+    Works just like \ref CoolProp::PropsSI, but units are in KSI system.  This function is deprecated, no longer supported, and users should transition to using the PropsSI function
+    */
+    EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double Prop1, const char Name2, double Prop2, const char *Ref);
+    /**
+    Works just like \ref CoolProp::Props1SI, but units are in KSI system.  This function is deprecated, no longer supported, and users should transition to using the Props1SI function
+    */
+    EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output);
+    ///**
+    //\overload
+    // IsFluidType(std::string, std::string)
+    //*/
+    //EXPORT_CODE int CONVENTION IsFluidType(const char *Ref, const char *Type);
+
+    // This version uses the indices in place of the strings for speed.  Get the parameter indices
+    // from get_param_index('D') for instance and the Fluid index from get_Fluid_index('Air') for instance
+    EXPORT_CODE double CONVENTION IPropsSI(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid);
+    EXPORT_CODE double CONVENTION IProps(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid);
 #endif

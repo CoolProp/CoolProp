@@ -47,35 +47,73 @@ and "Psat".
     In [1]: PropsSI('D','T',300,'P',101325,'INCOMP::HFE')
 
 
-.. _Pure:
 
 Pure Fluids
 -----------
+
+For refrigeration applications, 8 fluids were implemented from Aake Melinder
+"Properties of Secondary Working Fluids for Indirect Systems" published in 2010
+by IIR and coefficients are obtained from a fit between -80 and +100 degrees
+Celsius: DEB, HCM, HFE, PMS1, PMS2, SAB, HCB and TCO.
+
+Some additional secondary cooling fluids are based on data compiled by Morten
+Juel Skovrup in his `SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
+provided by his employer `IPU <http://en.ipu.dk>`_. Fits have been made for the
+manufacturer data stored in the software. The Aspen Temper fluids (AS10, AS20,
+AS30, AS40, AS55) are a blend of potassium formate and sodiumpropionate and the
+Zitrec S group (ZS10, ZS25, ZS40, ZS45 and ZS55) consists mainly of potassium
+acetate and potassium formate.
+
+There are also a few high temperature heat transfer fluids with individual
+temperature ranges. Please refer to the table below for a complete overview.
+For these fluids, information from commercial data sheets was used to obtain
+coefficients.
+
+
+.. _Pure:
+
+.. .. csv-table:: All incompressible pure fluids included in CoolProp
+   :header-rows: 1
+   :file: pure-fluids.csv
+
+.. table:: All incompressible pure fluids included in CoolProp
+
 .. include:: pure-fluids.txt
 
+
+Aqueous Mixtures - Solutions and Brines
+---------------------------------------
 
 
 .. _MassMix:
 
-Mass-based binary mixtures
---------------------------
+.. .. csv-table:: All incompressible mass-based binary mixtures included in CoolProp
+   :header-rows: 1
+   :file: mass-based-fluids.csv
+
+.. table:: All incompressible mass-based binary mixtures included in CoolProp
 
 .. include:: mass-based-fluids.txt
 
 
-
 .. _MoleMix:
 
-Mole-based binary mixtures
---------------------------
+.. .. csv-table:: All incompressible mole-based binary mixtures included in CoolProp
+   :header-rows: 1
+   :file: mole-based-fluids.csv
+
+.. table:: All incompressible mole-based binary mixtures included in CoolProp
 
 .. include:: mole-based-fluids.txt
 
 
 .. _VoluMix:
 
-Volume-based binary mixtures
-----------------------------
+.. .. csv-table:: All incompressible volume-based binary mixtures included in CoolProp
+   :header-rows: 1
+   :file: volume-based-fluids.csv
+
+.. table:: All incompressible volume-based binary mixtures included in CoolProp
 
 .. include:: volume-based-fluids.txt
 
@@ -116,6 +154,12 @@ left hand side. In case of a solution, these graphs refer to a given concentrati
 that typically lies in the middle of the allowed range. Dashed red lines indicate
 the limits in terms of concentration as well as the freezing temperature.
 
+
+
+Equations
+----------------------
+
+Exp or log for visc, other poly or log poly
 
 
 

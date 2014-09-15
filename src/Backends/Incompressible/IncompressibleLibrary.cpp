@@ -534,10 +534,7 @@ void JSONIncompressibleLibrary::add_obj(IncompressibleFluid fluid_obj) {
     string_to_index_map[fluid.getName()] = index;
 }
 
-/// Get an IncompressibleFluid instance stored in this library
-/**
- @param name Name of the fluid
- */
+// Get an IncompressibleFluid instance stored in this library
 IncompressibleFluid& JSONIncompressibleLibrary::get(std::string key) {
 	std::map<std::string, std::size_t>::iterator it;
 	// Try to find it

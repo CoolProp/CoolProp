@@ -29,7 +29,7 @@ public:
     /// @param fluid_name the string with the fluid name
     IncompressibleBackend(const std::string &fluid_name);
     /// The instantiator
-	/// @param fluid_names The vector of strings of the fluid components, without file ending
+	/// @param component_names The vector of strings of the fluid components, without file ending
 	IncompressibleBackend(const std::vector<std::string> &component_names);
 
     // Incompressible backend uses different compositions

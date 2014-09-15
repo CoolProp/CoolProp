@@ -436,7 +436,7 @@ class PropsPlot(BasePlot):
         Create graph for the specified fluid properties
 
         Parameters
-        -----------
+        ----------
         fluid_ref : string
             The name of the fluid to be plotted
         graph_type : string
@@ -453,7 +453,7 @@ class PropsPlot(BasePlot):
             If True, 1/rho will be plotted instead of rho
 
         Examples
-        ---------
+        --------
         >>> from CoolProp.Plots import PropsPlot
         >>> plt = PropsPlot('Water', 'Ph')
         >>> plt.show()

@@ -199,23 +199,126 @@ namespace SaturationSolvers
     {
         long double T,p;
     };
+    
+    struct newton_raphson_twophase_options{
+        enum imposed_variable_options {NO_VARIABLE_IMPOSED = 0, P_IMPOSED, T_IMPOSED};
+        int Nstep_max;
+        std::size_t Nsteps;
+        long double beta, omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap;
+        imposed_variable_options imposed_variable;
+        std::vector<long double> x, y, z;
+        newton_raphson_twophase_options(){ Nstep_max = 30; Nsteps = 0; beta = -1; omega =1;} // Defaults
+    };
+
+    /** \brief A class to do newton raphson solver for mixture VLE for p,Q or T,Q
+     * 
+     * A class is used rather than a function so that it is easier to store iteration histories, additional output values, etc.
+     * 
+     * As in Gernert, FPE, 2014, except that only one of T and P are known
+     * 
+     * The independent variables are \f$N-1\f$ mole fractions in liquid, \f$N-1\f$ mole fractions in vapor, and the non-specified variable in p or T, for a total of \f$2N-1\f$ independent variables
+     * 
+     * First N residuals are from
+     * 
+     * \f$F_k = \ln f_i(T,p,\mathbf{x}) - \ln f_i(T,p,\mathbf{y})\f$ for \f$i = 1, ... N\f$ and \f$k=i\f$
+     * 
+     * Derivatives are the same as for the saturation solver \ref newton_raphson_saturation
+     * 
+     * Second N-1 residuals are from
+     * 
+     * \f$F_k = \dfrac{z_i-x_i}{y_i-x_i} - \beta_{spec}\f$ for \f$ i = 1, ... N-2\f$ and \f$k = i+N\f$
+     * 
+     * Gernert eq. 35
+     * 
+     * \f$\dfrac{\partial F_k}{\partial x_i} = \dfrac{z_i-y_i}{(y_i-x_i)^2}\f$
+     * 
+     * Gernert eq. 36
+     * 
+     * \f$\dfrac{\partial F_k}{\partial y_i} = -\dfrac{z_i-x_i}{(y_i-x_i)^2}\f$
+     * 
+     * \f$\dfrac{\partial F_k}{\partial T} = 0\f$ Because x, y and T are independent by definition of the formulation
+     * 
+     * \f$\dfrac{\partial F_k}{\partial p} = 0\f$ Because x, y and p are independent by definition of the formulation
+     */
+    class newton_raphson_twophase
+    {
+        public:
+        newton_raphson_twophase_options::imposed_variable_options imposed_variable;
+	    long double error_rms, rhomolar_liq, rhomolar_vap, T, p, min_rel_change, beta;
+	    unsigned int N;
+	    bool logging;
+	    int Nsteps;
+	    STLMatrix J;
+        HelmholtzEOSMixtureBackend *HEOS;
+	    std::vector<long double> K, x, y, z, r, negative_r, err_rel;
+	    std::vector<SuccessiveSubstitutionStep> step_logger;
+
+	    newton_raphson_twophase(){};
+
+	    void resize(unsigned int N);
+	
+	    // Reset the state of all the internal variables
+	    void pre_call()
+	    {
+		    K.clear(); x.clear(); y.clear();  step_logger.clear(); error_rms = 1e99; Nsteps = 0;
+		    rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
+	    };
+
+	    /** \brief Call the Newton-Raphson VLE Solver
+         *
+	     * This solver must be passed reasonable guess values for the mole fractions, 
+	     * densities, etc.  You may want to take a few steps of successive substitution
+	     * before you start with Newton Raphson.
+         * 
+	     * @param HEOS HelmholtzEOSMixtureBackend instance
+         * @param IO The input/output data structure
+	     */
+	    void call(HelmholtzEOSMixtureBackend &HEOS, newton_raphson_twophase_options &IO);
+
+	    /* \brief Build the arrays for the Newton-Raphson solve
+         * 
+	     */
+	    void build_arrays();
+    };
+    
 
     struct newton_raphson_saturation_options{
-        enum imposed_variable_options {NO_VARIABLE_IMPOSED = 0, P_IMPOSED, RHOV_IMPOSED};
+        enum imposed_variable_options {NO_VARIABLE_IMPOSED = 0, P_IMPOSED, RHOV_IMPOSED, T_IMPOSED};
         int Nstep_max;
         bool bubble_point;
         std::size_t Nsteps;
         long double omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap;
         imposed_variable_options imposed_variable;
         std::vector<long double> x, y;
-        newton_raphson_saturation_options(){ Nsteps = 0;} // Defaults
+        newton_raphson_saturation_options(){ Nstep_max = 30;  Nsteps = 0;} // Defaults
     };
 
-    /** \brief A class to do newton raphson solver for VLE given guess values for vapor-liquid equilibria.  This class will then be included in the Mixture class
+    /** \brief A class to do newton raphson solver mixture bubble point and dew point calculations
      * 
-     * A class is used rather than a function so that it is easier to store iteration histories, additional output values, etc.
+     * A class is used rather than a function so that it is easier to store iteration histories, additional output 
+     * values, etc.  This class is used in \ref PhaseEnvelopeRoutines for the construction of the phase envelope
      * 
-     * This class only handles bubble and dew lines since the independent variables are N-1 of the mole fractions in the incipient phase along with one of T, p, or rho
+     * This class only handles bubble and dew lines.  The independent variables are the first N-1 mole fractions 
+     * in the incipient phase along with one of T, p, or \f$\rho''\f$.
+     * 
+     * These methods are based on the work of Gernert, FPE, 2014, the thesis of Gernert, as well as much 
+     * help from Andreas Jaeger of Uni. Bochum.
+     * 
+     * There are N residuals from
+     * 
+     * \f$F_i = \ln f_i(T, p, \mathbf{x}) - \ln f_i(T, p, \mathbf{y})\f$ for \f$i = 1, ... N\f$
+     * 
+     * if either T or p are imposed. In this case a solver is used to find \f$\rho\f$ given \f$T\f$ and \f$p\f$.  
+     * 
+     * In the case that \f$\rho''\f$ is imposed, the case is much nicer and the first \f$N\f$ residuals are
+     * 
+     * \f$F_i = \ln f_i(T, \rho', \mathbf{x}) - \ln f_i(T, \rho'', \mathbf{y})\f$ for \f$i = 1, ... N\f$ 
+     * 
+     * which requires no iteration. A final residual is set up to ensure the same pressures in the phases:
+     * 
+     * \f$p(T,\rho',\mathbf{x})-p(T,\rho'',\mathbf{y}) = 0\f$
+     * 
+     * Documentation of the derivatives needed can be found in the work of Gernert, FPE, 2014
      */
     class newton_raphson_saturation
     {
@@ -226,10 +329,10 @@ namespace SaturationSolvers
 	    bool logging;
         bool bubble_point;
 	    int Nsteps;
-        long double dTsat_dPsat, dPsat_dTsat;
 	    STLMatrix J;
         HelmholtzEOSMixtureBackend *HEOS;
-	    std::vector<long double> K, x, y, phi_ij_liq, phi_ij_vap, dlnphi_drho_liq, dlnphi_drho_vap, r, negative_r, dXdS, neg_dFdS, err_rel;
+        long double dTsat_dPsat, dPsat_dTsat;
+	    std::vector<long double> K, x, y, r, negative_r, err_rel;
 	    std::vector<SuccessiveSubstitutionStep> step_logger;
 
 	    newton_raphson_saturation(){};
@@ -239,8 +342,7 @@ namespace SaturationSolvers
 	    // Reset the state of all the internal variables
 	    void pre_call()
 	    {
-		    K.clear(); x.clear(); y.clear();  phi_ij_liq.clear(); 
-            phi_ij_vap.clear(); dlnphi_drho_liq.clear(), dlnphi_drho_vap.clear(),
+		    K.clear(); x.clear(); y.clear();  
             step_logger.clear(); error_rms = 1e99; Nsteps = 0;
 		    rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
 	    };

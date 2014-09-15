@@ -491,6 +491,60 @@ if (COOLPROP_PHP_MODULE)
 
 endif()
 
+function(JOIN VALUES GLUE OUTPUT)
+  string (REGEX REPLACE "([^\\]|^);" "\\1${GLUE}" _TMP_STR "${VALUES}")
+  string (REGEX REPLACE "[\\](.)" "\\1" _TMP_STR "${_TMP_STR}") #fixes escaping
+  set (${OUTPUT} "${_TMP_STR}" PARENT_SCOPE)
+endfunction()
+
+if (COOLPROP_SCILAB_SWIG_MODULE)
+  
+  # Must have SWIG
+  FIND_PACKAGE(SWIG REQUIRED)
+  INCLUDE(${SWIG_USE_FILE})
+
+  IF( "$ENV{SCILAB_ROOT}" STREQUAL "" )
+      MESSAGE(STATUS "SCILAB_ROOT environment variable not set." )
+      MESSAGE(STATUS "In Linux this can be done in your user .bashrc file by appending the corresponding line, e.g:" )
+      MESSAGE(STATUS "export SCILAB_ROOT=/usr/local/SCILAB" )
+      MESSAGE(STATUS "In Windows this can be done by adding system variable, e.g:" )
+      MESSAGE(STATUS "SCILAB_ROOT=D:\\Program Files\\SCILAB" )
+  	MESSAGE(FATAL_ERROR "Quitting.")
+  endif()
+
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
+    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
+    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
+    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
+  ) 
+  set(SCILAB_INCLUDE_PATH "$ENV{SCILAB_ROOT}/include")
+
+  foreach (_headerFile ${APP_SOURCES})
+      get_filename_component(_dir ${_headerFile} PATH)
+      list (APPEND APP_INCLUDE_DIRS ${_dir})
+  endforeach()
+  list(REMOVE_DUPLICATES APP_INCLUDE_DIRS)
+    	
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  JOIN("${APP_SOURCES}" "," SWIG_SOURCES)
+
+  include_directories(${APP_INCLUDE_DIRS})
+  include_directories(${SCILAB_INCLUDE_PATH})  
+  include_directories(${SCILAB_INCLUDE_PATH}/scilab)
+
+  JOIN("${APP_INCLUDE_DIRS}" ";-I" SWIG_INCLUDES)
+
+  set(SWIG_OPTIONS "-addsources;${SWIG_SOURCES};-buildverbositylevel;2;-addcflags;\"-I${SWIG_INCLUDES}\"")
+  message("${SWIG_OPTIONS}")
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
+
+  SWIG_ADD_MODULE(CoolProp scilab ${I_FILE})
+
+
+  add_dependencies (CoolProp generate_headers)
+endif()
+
 if (COOLPROP_MATLAB_SWIG_MODULE)
   
   # Must have SWIG
@@ -597,7 +651,7 @@ if (COOLPROP_PYTHON_BINARIES)
   endif()
   
   add_custom_target(CoolProp
-                    COMMAND ${PYTHON_EXECUTABLE} setup.py ${COOLPROP_PYTHON_BINARY_VERSIONS} 
+                    COMMAND python setup.py ${COOLPROP_PYTHON_BINARY_VERSIONS} 
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python
                     )
   
@@ -612,7 +666,7 @@ if (COOLPROP_PYTHON_PYPI)
   endif()
     
   add_custom_target(CoolProp
-                    COMMAND ${PYTHON_EXECUTABLE} prepare_pypi.py  ${_AND_UPLOAD} --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
+                    COMMAND python prepare_pypi.py  ${_AND_UPLOAD} --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python/pypi
                     )
 endif()

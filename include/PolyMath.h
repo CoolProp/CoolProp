@@ -183,8 +183,8 @@ protected:
 
 public:
 	/// Residual of a polynomial
-	/// @param Polynomial2D &poly polynomial object used to evaluate the calls
-	/// @param const Eigen::MatrixXd &coefficients,
+	/// @param poly polynomial object used to evaluate the calls
+	/// @param coefficients
 	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
@@ -388,8 +388,8 @@ protected:
 
 public:
 	/// Residual of a polynomial divided by the independent variable
-	/// @param Polynomial2DFrac &poly polynomial object used to evaluate the calls
-	/// @param const Eigen::MatrixXd &coefficients,
+	/// @param poly polynomial object used to evaluate the calls
+	/// @param coefficients
 	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)
@@ -413,8 +413,8 @@ protected:
 
 public:
 	/// Residual of an integrated polynomial divided by the independent variable
-	/// @param Polynomial2DFrac &poly polynomial object used to evaluate the calls
-	/// @param const Eigen::MatrixXd &coefficients,
+	/// @param poly polynomial object used to evaluate the calls
+	/// @param coefficients vector of coefficients
 	/// @param in double value that represents the current input in x (1st dimension) or y (2nd dimension)
 	/// @param z_in double value that represents the current output in the 3rd dimension
 	/// @param axis unsigned integer value that represents the axis to solve for (0=x, 1=y)

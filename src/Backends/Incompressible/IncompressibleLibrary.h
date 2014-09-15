@@ -143,7 +143,7 @@ a rapidjson array of fluids to the add_many function.
 class JSONIncompressibleLibrary
 {
     /// Map from CAS code to JSON instance.
-	/** This is not practical for the incomressibles, the CAS may not be
+	/** This is not practical for the incompressibles, the CAS may not be
 	 *  defined for blends of heat transfer fluids and solutions.
      */
     std::map<std::size_t, IncompressibleFluid> fluid_map;
@@ -169,16 +169,16 @@ public:
     void add_one(rapidjson::Value &fluid_json);
     void add_obj(IncompressibleFluid fluid_obj);
 
-    /// Get an IncompressibleFluid instance stored in this library
-    /**
-    @param name Name of the fluid
-    */
-    IncompressibleFluid& get(std::string key);
+    /** \brief Get an IncompressibleFluid instance stored in this library
+     * 
+     * @param name Name of the fluid
+     */
+    IncompressibleFluid& get(std::string name);
 
-    /// Get a CoolPropFluid instance stored in this library
-    /**
-    @param key The index of the fluid in the map
-    */
+    /** \brief Get a CoolPropFluid instance stored in this library
+     * 
+     * @param key The index of the fluid in the map
+     */
     IncompressibleFluid& get(std::size_t key);
 
     /// Return a comma-separated list of incompressible pure fluid names

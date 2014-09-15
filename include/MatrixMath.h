@@ -70,8 +70,9 @@ template<class T> std::size_t         num_cols  (std::vector<std::vector<T> > co
 /** Conversion functions for the different kinds of object-like
  *  parameters. This might be obsolete at a later stage, but now
  *  it is still needed.
+ *  @param coefficients matrix containing the ordered coefficients
+ *  @param axis axis along which to extract
  */
-/// @param coefficients matrix containing the ordered coefficients
 template <typename T> std::vector<T> eigen_to_vec1D(const Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &coefficients, int axis = 0){
 	std::vector<T> result;
 	size_t r = coefficients.rows(), c = coefficients.cols();
@@ -120,7 +121,10 @@ template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(c
 	}
 	return result;
 }
-/// @param coefficients matrix containing the ordered coefficients
+/** 
+ * @param coefficients matrix containing the ordered coefficients
+ * @param axis axis along which to extract data
+ */
 template <class T> Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> vec_to_eigen(const std::vector<T> &coefficients, int axis = 0){
 	size_t nRows = num_rows(coefficients);
 	Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> result;
