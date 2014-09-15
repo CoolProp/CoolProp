@@ -82,12 +82,10 @@ the available output keys are: ``D``, ``C``, ``U``, ``H``, ``S``, ``V``, ``L``,
 Pure Fluids
 -----------
 
-See :cite:`Melinder-BOOK-2010` for an introduction to non-standard analysis.
-
-For refrigeration applications, 8 fluids were implemented from Aake Melinder
-"Properties of Secondary Working Fluids for Indirect Systems" published in 2010
-by IIR and coefficients are obtained from a fit between -80 |degC| and +100 |degC|:
-DEB, HCM, HFE, PMS1, PMS2, SAB, HCB and TCO.
+For refrigeration applications, 8 fluids were implemented from Aake Melinder's
+book "Properties of Secondary Working Fluids for Indirect Systems" published in 2010
+by IIR :cite:`Melinder-BOOK-2010` with coefficients obtained from a fit between
+-80 |degC| and +100 |degC|: DEB, HCM, HFE, PMS1, PMS2, SAB, HCB and TCO.
 
 Some additional secondary cooling fluids are based on data compiled by Morten
 Juel Skovrup in his `SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
@@ -137,10 +135,11 @@ Aqueous Mixtures - Solutions and Brines
    :file: ../_static/fluid_properties/incompressible/table/volume-based-fluids.csv
 
 
+
 .. _FittingReports:
 
 Fitting Reports
-=====================
+---------------------------------------
 
 A file with all fitting reports for the incompressible fluids can be obtained
 from :download:`here </_static/fluid_properties/incompressible/report/all_incompressibles.pdf>`. These reports help you to
