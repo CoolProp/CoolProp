@@ -41,7 +41,7 @@
 },
 {
 "Name" : "Ethanol-Water",
-"aliases" : ["KWB"],
+"aliases" : ["KW8"],
 "BibTeX" : "From REFPROP 9.1 with permission",
 "type" : "Exponential",
 "n" : [1.09765e+00, 1.94679e+00, -2.16809e+00, -1.37077e-01, 4.86690e-02, 1.04024e+00],
