@@ -541,7 +541,6 @@ if (COOLPROP_SCILAB_SWIG_MODULE)
 
   SWIG_ADD_MODULE(CoolProp scilab ${I_FILE})
 
-
   add_dependencies (CoolProp generate_headers)
 endif()
 
