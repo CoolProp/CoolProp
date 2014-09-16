@@ -692,32 +692,23 @@ cdef class State:
         
         print 'Call to the Python call layer (CoolProp.CoolProp.Props)'
         print "'M' involves basically no computational effort and is a good measure of the function call overhead"
-        keys = ['H','P','S','U','C','O','V','L','M','C0','dpdT']
+        keys = ['H','P','S','U','C','O','V','L','M','d(P)/d(T)|Dmolar']
         for key in keys:
             t1=clock()
             for i in range(N):
-                CP.Props(key,'T',self.T_,'D',self.rho_,Fluid)
+                CP.PropsSI(key,'T',self.T_,'D',self.rho_,Fluid)
             t2=clock()
             print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6)
             
         print 'Direct c++ call to CoolProp without the Python call layer (_Props function)'
         print "'M' involves basically no computational effort and is a good measure of the function call overhead"
-        keys = ['H','P','S','U','C','O','V','L','M','C0','dpdT']
+        keys = ['H','P','S','U','C','O','V','L','M','C0','d(P)/d(T)|Dmolar']
         for key in keys:
             t1=clock()
             for i in range(N):
-                _Props(key,'T',self.T_,'D',self.rho_,Fluid)
+                _PropsSI(key,'T',self.T_,'D',self.rho_,Fluid)
             t2=clock()
             print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6)
-        
-        print 'Call to the c++ layer through IProps'
-        keys = [iH,iP,iS,iU,iC,iO,iV,iL,iMM,iC0,iDpdT]
-        for key in keys:
-            t1=clock()
-            for i in range(N):
-                _IProps(key,iT,self.T_,iD,self.rho_,self.iFluid)
-            t2=clock()
-            print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,paras[key],(t2-t1)/N*1e6)
             
         print 'Call to the c++ layer using integers'
         keys = [iHmass, iP,iSmass,iUmass]
@@ -728,11 +719,14 @@ cdef class State:
                 self.pAS.keyed_output(key)
             t2=clock()
             print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,paras[key],(t2-t1)/N*1e6)
+            
+        print 'Call to the AbstractState for molar mass (fast)'
+        t1=clock()
+        for i in range(N):
+            self.pAS.keyed_output(imolar_mass)
+        t2=clock()
+        print 'Elapsed time for {0:d} calls at {1:g} us/call'.format(N, (t2-t1)/N*1e6)
         
-        #~ keys = [iH,iP,iS,iU,iC,iO,iV,iL,iMM,iC0,iDpdT]
-        #~ isenabled = _isenabled_TTSE_LUT(<bytes>Fluid)
-        #~ _enable_TTSE_LUT(<bytes>Fluid)
-        #~ _IProps(iH,iT,self.T_,iD,self.rho_,self.iFluid)
 #         
 #         print 'Call using TTSE with T,rho'
 #         print "'M' involves basically no computational effort and is a good measure of the function call overhead"
