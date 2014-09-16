@@ -431,6 +431,8 @@
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-IECR-2003", 
+      "T_reducing": 1.0, 
+      "T_reducing_units": "K", 
       "f_int": {
         "a": [
           0.000436654, 
@@ -460,8 +462,8 @@
     }, 
     "viscosity": {
       "BibTeX": "Huber-IECR-2003", 
-      "epsilon_over_K": 289.65, 
-      "epsilon_over_K_units": "K", 
+      "epsilon_over_k": 289.65, 
+      "epsilon_over_k_units": "K", 
       "psi": {
         "a": [
           0.7954, 
