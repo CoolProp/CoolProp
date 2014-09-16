@@ -3,6 +3,8 @@
 
 from __future__ import division, absolute_import, print_function
 from pybtex.database.input import bibtex
+from pybtex.plugin import find_plugin
+import io
 
 
 
@@ -30,10 +32,23 @@ class BibTeXerClass(object):
         self.loadLibrary(fName)
 
 
-    def loadLibrary(self, path):
-        parser = bibtex.Parser()
-        self.library = parser.parse_file(path)
-        self.entries = self.library.entries
+    def loadLibrary(self, path, keys=[]):
+        if len(keys)>0:
+            bib_parser = bibtex.Parser(wanted_entries=keys)
+        else:
+            bib_parser = bibtex.Parser()
+
+        self.library = bib_parser.parse_file(path)
+
+        #filename = path.splitext(aux_filename)[0]
+        #aux_data = auxfile.parse_file(aux_filename, output_encoding)
+        #bib_parser = find_plugin('pybtex.database.input', "bibtex")
+        #bib_data = bib_parser(
+        #    encoding=bib_encoding,
+        #    wanted_entries=aux_data.citations,
+        #    min_crossrefs=min_crossrefs,
+        #).parse_files(aux_data.data, bib_parser.default_suffix)
+
 
 
     def getEntry(self, key):
@@ -82,7 +97,7 @@ class BibTeXerClass(object):
         if key.startswith('__'):
             return ''
 
-        entry = self.entries[key]
+        entry = self.getEntry(key)
 
         if entry is None:
             return ''
@@ -139,7 +154,7 @@ class BibTeXerClass(object):
         if key.startswith('__'):
             return ''
 
-        entry = self.entries[key]
+        entry = self.getEntry(key)
 
         if entry is None:
             return ''
@@ -191,11 +206,36 @@ class BibTeXerClass(object):
         else:
             print(entry)
 
-    def findentry(self, key):
-        for entry in self.entries:
-            if entry['key'] == key:
-                return entry
+
+    def entries2All(self,
+        keys=[],
+        output_encoding=None,
+        output_backend='plaintext',
+        style='unsrt'):
+
+        style_cls = find_plugin('pybtex.style.formatting', style)
+        style = style_cls()
+        bib_data = self.library #[ self.getEntry(key) for key in keys ]
+        formatted_bibliography = style.format_bibliography(bib_data)
+
+        output_backend = find_plugin('pybtex.backends', output_backend)
+        #output_filename = filename + output_backend.default_suffix
+        #output_backend(output_encoding).write_to_file(formatted_bibliography, output_filename)
+
+        stream = io.StringIO()
+        output_backend(output_encoding).write_to_stream(formatted_bibliography, stream)
+        # Retrieve contents
+        contents = stream.getvalue()
+        # Close object and discard memory buffer --
+        # .getvalue() will now raise an exception.
+        stream.close()
+        print(contents)
 
 if __name__=='__main__':
     B = BibTeXerClass()
-    print(B.entry2rst('Mulero-JPCRD-2012'))
+    B.loadLibrary('../../../Web/fluid_properties/Incompressibles.bib')
+    print(B.entry2rst('Cesar2013'))
+    print(B.entries2All(keys=['Cesar2013']))
+#     B = BibTeXerClass(fName='../../../Web/CoolPropBibTeXLibrary.bib')
+#     print(B.entry2rst('Mulero-JPCRD-2012'))
+#     print(B.entries2All(keys=['Mulero-JPCRD-2012']))
