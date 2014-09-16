@@ -10,5 +10,7 @@ convert -crop 100%x47%+0+30 -resize '850x' -quality 75 report/report2up.jpg repo
 echo "Please copy the report and the table directory to the Web/_static/fluid_properties/incompressible folder."
 mkdir -p ../../Web/_static/fluid_properties/incompressible
 rsync -am report table ../../Web/_static/fluid_properties/incompressible/
+echo "Building the tar archive"
+tar czvf ../../Web/_static/fluid_properties/incompressibles.tar.gz report table
 echo $SEP
 exit 0

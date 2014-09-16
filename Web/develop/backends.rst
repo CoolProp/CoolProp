@@ -6,7 +6,7 @@ Backends in CoolProp
 
 AbstractState
 -------------
-The :cpapi:`AbstractState` defines an interface between CoolProp and the rest of the world.  The public methods like :cpapi:`AbstractState::rhomolar` are meant to be called by other code, while the protected functions like :cpapi:`AbstractState::calc_rhomolar` are meant to be implemented by the other backends.
+The :cpapi:`AbstractState` defines an interface between CoolProp and the rest of the world.  The public methods like :cpapi:`rhomolar<CoolProp::AbstractState::rhomolar>` are meant to be called by other code, while the protected functions like :cpapi:`AbstractState::calc_rhomolar()` are meant to be implemented by the other backends.
 
 Derived Backends
 ----------------
@@ -14,7 +14,7 @@ Derived Backends
 The backends in CoolProp provide the implementation of the protocol defined by the abstract base class.  There are a few primary backends:
 
 * :cpapi:`HelmholtzEOSMixtureBackend` : This backend is the backend that provides properties using the CoolProp code.
-* :cpapi:`IncompressibleBackend` : This backend provided the thermophysical properties for incompressible pure fluids, incompressible mixtures, and brines
+* :cpapi:`IncompressibleBackend` : This backend provides the thermophysical properties for incompressible pure fluids, incompressible mixtures, and brines
 * :cpapi:`REFPROPMixtureBackend` : This backend provides a clean interface between CoolProp and REFPROP
 
 Example Backend
