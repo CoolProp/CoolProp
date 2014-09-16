@@ -403,9 +403,9 @@
   "TRANSPORT": {
     "conductivity": {
       "BibTeX": "Huber-IECR-2003", 
-      "T_reducing": 1.0, 
-      "T_reducing_units": "K", 
       "f_int": {
+        "T_reducing": 1.0, 
+        "T_reducing_units": "K", 
         "a": [
           0.00132, 
           0.0
