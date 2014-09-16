@@ -13,6 +13,7 @@ import itertools
 from datetime import datetime
 import matplotlib
 import csv
+from CoolProp.BibtexParser import BibTeXerClass
 
 class SolutionDataWriter(object):
     """
@@ -22,6 +23,8 @@ class SolutionDataWriter(object):
     information came from.
     """
     def __init__(self):
+        self.bibtexer = BibTeXerClass()
+        self.bibtexer.loadLibrary('../../Web/fluid_properties/Incompressibles.bib')
         pass
 
     def fitAll(self, fluidObject=SolutionData()):
@@ -732,7 +735,11 @@ class SolutionDataWriter(object):
 
         #myAnnotate('Name: ',solObj.name,x=x,y=y); x += .0; y -= dy
         myAnnotate('Description: ',solObj.description,x=x,y=y); x += .0; y -= dy
+
+        # TODO: Debug bibtexer
         myAnnotate('Source: ',solObj.reference,x=x,y=y); x += .0; y -= dy
+        #myAnnotate('Source: ',self.bibtexer.entry2txt(solObj.reference),x=x,y=y); x += .0; y -= dy
+
         myAnnotate('Temperature: ',u'{0} \u00B0C to {1} \u00B0C'.format(solObj.Tmin-273.15, solObj.Tmax-273.15),x=x,y=y); x += .0; y -= dy
         conc = False
         if solObj.xid==solObj.ifrac_mass: conc=True
