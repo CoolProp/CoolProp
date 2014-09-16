@@ -932,7 +932,6 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
 {
     bool saturation_called = false;
     long double value;
-    std::cout << "PHSU" << std::endl;
     if (HEOS.imposed_phase_index != iphase_not_imposed)
     {
         // Use the phase defined by the imposed phase
@@ -940,7 +939,6 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
     }
     else
     {
-        std::cout << "PHSU not imposed" << std::endl;
         // Find the phase, while updating all internal variables possible
         switch (other)
         {
