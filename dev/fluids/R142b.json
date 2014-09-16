@@ -382,5 +382,59 @@
       "rhomolar": 0.0030613593463350687, 
       "rhomolar_units": "mol/m^3"
     }
+  }, 
+  "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Huber-IECR-2003", 
+      "f_int": {
+        "a": [
+          0.000940725, 
+          9.88196e-07
+        ], 
+        "t": [
+          0, 
+          1
+        ]
+      }, 
+      "psi": {
+        "a": [
+          1.0749, 
+          -0.0177916
+        ], 
+        "rhomolar_reducing": 4438.0, 
+        "rhomolar_reducing_units": "mol/m^3", 
+        "t": [
+          0, 
+          1
+        ]
+      }, 
+      "q_D": 1624288967.5044746, 
+      "q_D_units": "m", 
+      "reference_fluid": "Propane", 
+      "type": "ECS"
+    }, 
+    "viscosity": {
+      "BibTeX": "Huber-IECR-2003", 
+      "epsilon_over_K": 278.2, 
+      "epsilon_over_K_units": "K", 
+      "psi": {
+        "a": [
+          0.9716, 
+          0.019181, 
+          0.0
+        ], 
+        "rhomolar_reducing": 4438.0, 
+        "rhomolar_reducing_units": "mol/m^3", 
+        "t": [
+          0, 
+          1, 
+          2
+        ]
+      }, 
+      "reference_fluid": "Propane", 
+      "sigma_eta": 5.362000000000001e-10, 
+      "sigma_eta_units": "m", 
+      "type": "ECS"
+    }
   }
 }
