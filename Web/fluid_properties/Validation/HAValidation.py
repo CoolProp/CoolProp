@@ -214,10 +214,10 @@ print "Isothermal Compressibility of water (kT) [1/Pa]"
 from CoolProp.HumidAirProp import HAProps_Aux
 import numpy as np
 Tv=np.linspace(-60,300,13)+273.15
-Pv=[101325,200,500,1000]
+Pv=[101325,200000,500000,1000000]
 variables="%-10s"%('T')
 for p in Pv:
-    variables+="%-20s"%("p = %-0.3f kPa "%(p))
+    variables+="%-20s"%("p = %-0.3f Pa "%(p))
 print variables
 #Build the actual table
 for T in Tv:
@@ -235,10 +235,10 @@ print "Molar volume of saturated liquid water or ice (vbar_ws) [m^3/mol_H2O]"
 from CoolProp.HumidAirProp import HAProps_Aux
 import numpy as np
 Tv=np.linspace(-60,300,13)+273.15
-Pv=[101325,200,500,1000]
+Pv=[101325,200000,500000,1000000]
 variables="%-10s"%('T')
 for p in Pv:
-    variables+="%-20s"%("p = %-0.3f kPa "%(p))
+    variables+="%-20s"%("p = %-0.3f Pa "%(p))
 print variables
 #Build the actual table
 for T in Tv:
@@ -256,10 +256,10 @@ print "Enhancement factor (f) [no units]"
 from CoolProp.HumidAirProp import HAProps_Aux
 import numpy as np
 Tv=np.array([-60,-40,-20,0,40,80,120,160,200,250,300,350])+273.15
-Pv=[101325,200,500,1000,10000]
+Pv=[101325,200000,500000,1000000,10000000]
 variables="%-10s"%(u'T')
 for p in Pv:
-    variables+="%-20s"%("p = %-0.3f kPa "%(p))
+    variables+="%-20s"%("p = %-0.3f Pa "%(p))
 print variables
 #Build the actual table
 for T in Tv:
