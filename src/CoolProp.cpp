@@ -461,10 +461,8 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
 		// Here is the real code that is inside the try block
 		extract_backend(Ref, backend, fluid);
 		double val = _PropsSI(Output, Name1, Prop1, Name2, Prop2, backend, fluid, std::vector<double>());
-		if (get_debug_level() > 1){
-                    std::cout << format("_PropsSI will return %g",val) << std::endl;
-                }
-                
+		if (get_debug_level() > 1){ std::cout << format("_PropsSI will return %g",val) << std::endl; }
+        return val;
         // END OF TRY
 	#if !defined(PROPSSI_NO_ERROR_CATCH)
     }
