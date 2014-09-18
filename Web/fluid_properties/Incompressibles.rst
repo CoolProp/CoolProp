@@ -6,12 +6,13 @@
 Incompressible Fluids
 =====================
 
-In CoolProp, the incompressible fluids are divided into four major groups.
+In CoolProp, the incompressible fluids are divided into three major groups.
 
 * :ref:`Pure fluids <Pure>`.
 * :ref:`Mass-based binary mixtures <MassMix>`.
-.. * :ref:`Mole-based binary mixtures <MoleMix>`.
 * :ref:`Volume-based binary mixtures <VoluMix>`.
+
+.. * :ref:`Mole-based binary mixtures <MoleMix>`.
 
 The pure fluids and mass-based binary mixtures are by far the most common fluids
 in this library. While the pure fluids contain data for many different kinds of
