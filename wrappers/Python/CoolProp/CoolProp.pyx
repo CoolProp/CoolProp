@@ -454,7 +454,7 @@ cdef class State:
         h: float
             Enthalpy [kJ/kg]
         """
-        self.pAS.update(HmassP_INPUTS, p*1000, h*1000)
+        self.pAS.update(HmassP_INPUTS, h*1000, p*1000)
         self.T_ = self.pAS.T()
         self.rho_ = self.pAS.rhomass()
             
