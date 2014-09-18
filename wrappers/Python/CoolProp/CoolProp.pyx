@@ -396,21 +396,26 @@ cdef class State:
         if _Fluid == <string>'none':
             return
         else:
-            if backend is None:
+            if '::' in Fluid:
+                backend, Fluid = Fluid.split(u'::',1)
+            elif backend is None:
                 backend = u'?'
+                
             self.set_Fluid(Fluid, backend)
         self.Fluid = _Fluid
+        
+        # Parse the inputs provided
+        self.update(StateDict)
+        
         self.phase = phase
         if phase is None:
             self.phase = u'??'.encode('ascii')
-        # Parse the inputs provided
-        self.update(StateDict)
-#         #Set the phase flag
-#         if self.phase == <string>'Gas' or self.phase == <string>'Liquid' or self.phase == <string>'Supercritical':
-#             if self.is_CPFluid and (self.phase == <string>'Gas' or self.phase == <string>'Liquid'):
-#                 self.CPS.flag_SinglePhase = True
-#             elif not self.is_CPFluid and phase is not None:
-#                 _set_phase(self.phase)
+        
+        # Set the phase flag
+        if self.phase.lower() == 'gas':
+            self.pAS.specify_phase(constants_header.iphase_gas)
+        elif self.phase.lower() == 'liquid':
+            self.pAS.specify_phase(constants_header.iphase_liquid)
             
 #     def __reduce__(self):
 #         d={}
@@ -421,7 +426,22 @@ cdef class State:
 #         return rebuildState,(d,)
         
     cpdef set_Fluid(self, string Fluid, string backend):
-        self.pAS = AbstractState(backend, Fluid)
+        
+        cdef object _Fluid = Fluid
+        cdef object _backend = backend
+        new_fluid = []
+        fracs = []
+        if '[' in _Fluid and ']' in _Fluid:
+            pairs = _Fluid.split('&')
+            for pair in pairs:
+                fluid, frac = pair.split('[')
+                new_fluid.append(fluid)
+                fracs.append(float(frac.strip(']')))
+            _Fluid = '&'.join(new_fluid)
+        else:
+            fracs = [1]
+        self.pAS = AbstractState(_backend, _Fluid)
+        self.pAS.set_mole_fractions(fracs)
         
     cpdef update_ph(self, double p, double h):
         """
