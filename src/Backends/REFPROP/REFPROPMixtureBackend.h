@@ -55,6 +55,10 @@ public:
 
 	/// Returns true if REFPROP is supported on this platform
 	bool REFPROP_supported(void);
+    
+    long double calc_cpmolar_idealgas(void);
+    
+    long double calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
 
 	/// Set the fluids in REFPROP DLL by calling the SETUPdll function
 	/**
