@@ -190,7 +190,8 @@ Values here are obtained at documentation build-time using the Humid Air Propert
  
 .. ipython::
 
-    In [1]: execfile('Validation/HAValidation.py')
+    In [1]: execfile('fluid_properties/Validation/HAValidation.py')
+    
     
 .. 
 
