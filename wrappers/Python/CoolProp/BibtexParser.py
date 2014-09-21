@@ -5,9 +5,7 @@ from __future__ import division, absolute_import, print_function
 from __future__ import generators
 import pybtex.plugin, pybtex.database.input.bibtex, pybtex.errors
 import io
-import latexcodec, codecs
-import copy
-import warnings
+import codecs, latexcodec
 
 
 
@@ -91,7 +89,6 @@ class BibTeXerClass(object):
             return text
 
         stripped = text.translate(table)
-        if self.DEBUG: print(u"From {0} to {1}".format(text, stripped))
         return stripped
 
 
