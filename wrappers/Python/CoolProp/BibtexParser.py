@@ -3,13 +3,12 @@
 
 from __future__ import division, absolute_import, print_function
 from __future__ import generators
-from pybtex.database.input import bibtex
-from pybtex.plugin import find_plugin
+import pybtex.plugin, pybtex.database.input.bibtex, pybtex.errors
 import io
-import latexcodec.codec
+import latexcodec, codecs
 import copy
-import string
-from pybtex.database import FieldDict
+import warnings
+
 
 
 class BibTeXerClass(object):
@@ -19,269 +18,197 @@ class BibTeXerClass(object):
     """
 
     def __init__(self, fName = u'../../../CoolPropBibTeXLibrary.bib'):
-        self.DEBUG = False
-
-        latexcodec.codec.register()
-
-        self.sanitizeDict = {}
-        self.sanitizeDict['year']        = "no year"
-        self.sanitizeDict['title']       = "no title"
-        self.sanitizeDict['journal']     = "no journal"
-        self.sanitizeDict['volume']      = "no volume"
-        self.sanitizeDict['pages']       = "no pages"
-        self.sanitizeDict['booktitle']   = "no book title"
-        self.sanitizeDict['school']      = "no school"
-        self.sanitizeDict['note']        = "no note"
-        self.sanitizeDict['publisher']   = "no publisher"
-        self.sanitizeDict['institution'] = "no institution"
         self.loadLibrary(fName)
 
 
-    def loadLibrary(self, path, keys=[]):
+    def loadLibrary(self, path, keys=[], encoding="latex"):
+        """Open a BibTex file and do some initial parsing.
+        The path to the file has to be provided, otherwise an exception is raised.
+
+        Optionally, you can provide an array of keys to reduce the amount of
+        processed entries immediately.
+
+        By default, the Bibtex file gets scanned with the artificial \"latex\"
+        encoding, which translates Latex commands to their unicode equivalents.
+        If you need Latex output, you can skip this step by passing another
+        codec to the \"encoding\" parameter, for example \"ascii\" or \"utf-8\".
+        """
+
+        if path is None:
+            raise ValueError("You have to provide a path to a bibtex file.")
+
+        # Create the parser object
         if len(keys)>0:
-            bib_parser = bibtex.Parser(wanted_entries=keys)
+            bib_parser = pybtex.database.input.bibtex.Parser(wanted_entries=keys)
         else:
-            bib_parser = bibtex.Parser()
+            bib_parser = pybtex.database.input.bibtex.Parser()
 
-        self.library = bib_parser.parse_file(path)
+        # Do not print that many warnings
+        pybtex.errors.set_strict_mode(enable=False)
 
-        #filename = path.splitext(aux_filename)[0]
-        #aux_data = auxfile.parse_file(aux_filename, output_encoding)
-        #bib_parser = find_plugin('pybtex.database.input', "bibtex")
-        #bib_data = bib_parser(
-        #    encoding=bib_encoding,
-        #    wanted_entries=aux_data.citations,
-        #    min_crossrefs=min_crossrefs,
-        #).parse_files(aux_data.data, bib_parser.default_suffix)
+        # Open the file and convert it according to the encoding
+        with codecs.open(path, encoding=encoding) as stream:
+            self.library = bib_parser.parse_stream(stream)
 
+        # Do some post-processing if encoding was latex
+        if encoding=="latex":
+            for tag in self.library.entries:
+                entry = self.library.entries[tag]
+                for key, value in entry.fields.iteritems():
+                    entry.fields[key] = self.stripCurls(value)
+                for key in entry.persons.keys():
+                    for i in range(len(entry.persons[key])):
+                        entry.persons[key][i]._first = self.stripCurls(entry.persons[key][i].first())
+                        entry.persons[key][i]._middle = self.stripCurls(entry.persons[key][i].middle())
+                        entry.persons[key][i]._prelast = self.stripCurls(entry.persons[key][i].prelast())
+                        entry.persons[key][i]._last = self.stripCurls(entry.persons[key][i].last())
+                        entry.persons[key][i]._lineage = self.stripCurls(entry.persons[key][i].lineage())
 
-
-    ########################################
-    # Find entry in library and make unicode
-    ########################################
-    def getUnicodeEntry(self, key):
-        if self.library is None:
-            raise ValueError("Library has not been loaded.")
-        entry = copy.deepcopy(self.library.entries[key])
-
-        for key, value in entry.fields.iteritems():
-            entry.fields[key] = self.fromLatex(value)
-
-        for key in entry.persons.keys():
-            for i in range(len(entry.persons[key])):
-                entry.persons[key][i]._first = self.fromLatex(entry.persons[key][i].first())
-                entry.persons[key][i]._middle = self.fromLatex(entry.persons[key][i].middle())
-                entry.persons[key][i]._prelast = self.fromLatex(entry.persons[key][i].prelast())
-                entry.persons[key][i]._last = self.fromLatex(entry.persons[key][i].last())
-                entry.persons[key][i]._lineage = self.fromLatex(entry.persons[key][i].lineage())
-
-        return entry
-
-
-    ########################################
-    # Basic text processing functions
-    ########################################
 
     def stripCurls(self, text):
+        """Remove curly brackets from processed Latex code
+
+        A function that always returns unicode. It also tries to recurse into
+        lists and dicts, but be careful this is not thoroughly tested.
+        """
         table = { ord(u'{'): None, ord(u'}'): None }
+
+        if isinstance(text, str): # ordinary string
+            text = unicode(text)
+        elif isinstance(text, unicode): # unicode string
+            pass
+        else:
+            try:
+                for k in text.keys():
+                    text[k] = self.stripCurls(text[k])
+            except AttributeError:
+                pass
+            # Check for list
+            if type(text)==type([]):
+                for i in range(len(text)):
+                    text[i] = self.stripCurls(text[i])
+            # return the plain object
+            return text
+
         stripped = text.translate(table)
         if self.DEBUG: print(u"From {0} to {1}".format(text, stripped))
         return stripped
 
 
-    def fromLatex(self, latexStr):
-        """Converter for Latex strings
-
-        A function that always returns unicode. It also tries to recurse into
-        lists and dicts, but be careful this is not tested.
+    def getBibliography(self, keys=[], fmt="plaintext", style="unsrtalpha", enc=None, objects=False):
+        """This function creates a formatted bibliography according to the
+        defined parameters using Pybtex.
+        Specify your desired output format using the \"fmt\" parameter. Supported
+        formats are defined by Pybtex and the parameter is only passed on to the
+        plugin search function: latex, html, plaintext and markdown.
+        The \"style\" parameter is handled similarly. At the moment, Pybtex partly
+        supports the styles: alpha, plain, unsrt and unsrtalpha.
+        Use the objects parameter to obtain the formatted bibliography and the
+        backend renderer instead of the unicode object.
         """
-        if isinstance(latexStr, str): # ordinary string
-            latexStr = unicode(latexStr)
-        elif isinstance(latexStr, unicode): # unicode string
-            pass
-        else:
-            try:
-                for k in latexStr.keys():
-                    latexStr[k] = self.fromLatex(latexStr[k])
-            except AttributeError:
-                pass
-            # Check for list
-            if type(latexStr)==type([]):
-                for i in range(len(latexStr)):
-                    latexStr[i] = self.fromLatex(latexStr[i])
-            # return the plain object
-            return latexStr
 
-        if self.DEBUG: print(u"From {0} ".format(latexStr),end=u"")
-        decoded = latexStr.decode('latex')
-        if self.DEBUG: print(u"to {0} ".format(decoded))
-        return decoded
+        if self.library is None:
+            raise ValueError("No library has been loaded, yet.")
 
-
-    #######################################
-    # Custom output routines
-    #######################################
-
-    def prepareSingleEntry(self, key):
-
-        # TODO: What is this for?
-        if key.startswith('__'):
-            return None,None
-
-        entry = self.getUnicodeEntry(key)
-        authors = u'; '.join( unicode(author) for author in entry.persons['author'] )
-        authors = self.stripCurls(authors)
-
-        # Strip off the opening and closing brackets
-        for key in entry.fields:
-            if entry.fields[key].startswith('{') and entry.fields[key].endswith('}'):
-                entry.fields[key] = entry.fields[key][1:len(entry.fields[key])-1]
-
-        # Use the basic dictionary and update it with existing values
-        #entry.fields = FieldDict(self.sanitizeDict).update(entry.fields)
-        for key in self.sanitizeDict:
-            if not key in entry.fields:
-                entry.fields[key] = self.sanitizeDict[key]
-
-        return authors,entry
-
-
-    def entry2txt(self, key):
-
-        authors,entry = self.prepareSingleEntry(key)
-        if authors is None:
-            return None
-        else:
-            year        = entry.fields['year']
-            title       = entry.fields['title']
-            journal     = entry.fields['journal']
-            volume      = entry.fields['volume']
-            pages       = entry.fields['pages']
-            booktitle   = entry.fields['booktitle']
-            school      = entry.fields['school']
-            note        = entry.fields['note']
-            publisher   = entry.fields['publisher']
-            institution = entry.fields['institution']
-
-            if entry.type == 'article':
-                return authors + ', ' + year + ', ' + title + ', ' + journal + ', ' + volume + ':' + pages
-            elif entry.type == 'conference':
-                return authors + ', ' + year + ', ' + title + ', ' + booktitle
-            elif entry.type == 'mastersthesis' or entry.type == 'phdthesis':
-                return authors + ', ' + year + ', ' + title + ', ' + school
-            elif entry.type == 'unpublished':
-                return authors + ', ' + year + ', ' + title + ', note: ' + note
-            elif entry.type == 'book':
-                return authors + ', ' + year + ', ' + title + ', ' + publisher
-            elif entry.type == 'techreport':
-                return authors + ', ' + year + ', ' + title + ', ' + institution
-            else:
-                print(u"There was an error processing: {0}".format(entry))
-                return None
-
-
-    def entry2rst(self, key):
-
-        authors,entry = self.prepareSingleEntry(key)
-        if authors is None:
-            return None
-        else:
-            year        = entry.fields['year']
-            title       = entry.fields['title']
-            journal     = entry.fields['journal']
-            volume      = entry.fields['volume']
-            pages       = entry.fields['pages']
-            booktitle   = entry.fields['booktitle']
-            school      = entry.fields['school']
-            note        = entry.fields['note']
-            publisher   = entry.fields['publisher']
-            institution = entry.fields['institution']
-
-            if entry.type == 'article':
-                return authors + ', ' + year + ', ' + title + ', *' + journal + '*, ' + volume + ':' + pages
-            elif entry.type == 'conference':
-                return authors + ', ' + year + ', ' + title + ', *' + booktitle + '*'
-            elif entry.type == 'mastersthesis' or entry.type == 'phdthesis':
-                return authors + ', ' + year + ', ' + title + ', *' + school + '*'
-            elif entry.type == 'unpublished':
-                return authors + ', ' + year + ', ' + title + ', note: ' + note
-            elif entry.type == 'book':
-                return authors + ', ' + year + ', *' + title + '*, ' + publisher
-            elif entry.type == 'techreport':
-                return authors + ', ' + year + ', *' + title + '*, ' + institution
-            else:
-                print(u"There was an error processing: {0}".format(entry))
-                return None
-
-
-    def entry2html(self, key):
-
-        authors,entry = self.prepareSingleEntry(key)
-        if authors is None:
-            return None
-        else:
-            year        = entry.fields['year']
-            title       = entry.fields['title']
-            journal     = entry.fields['journal']
-            volume      = entry.fields['volume']
-            pages       = entry.fields['pages']
-            booktitle   = entry.fields['booktitle']
-            school      = entry.fields['school']
-            note        = entry.fields['note']
-            publisher   = entry.fields['publisher']
-            institution = entry.fields['institution']
-
-            if entry.type == 'article':
-                return authors + ', ' + year + ', ' + title + ', <i>' + journal + '</i>, ' + volume + ':' + pages
-            elif entry.type == 'conference':
-                return authors + ', ' + year + ', ' + title + ', <i>' + booktitle + '</i>'
-            elif entry.type == 'mastersthesis' or entry.type == 'phdthesis':
-                return authors + ', ' + year + ', ' + title + ', <i>' + school + '</i>'
-            elif entry.type == 'unpublished':
-                return authors + ', ' + year + ', ' + title + ', note: ' + note
-            elif entry.type == 'book':
-                return authors + ', ' + year + ', <i>' + title + '</i>, ' + publisher
-            elif entry.type == 'techreport':
-                return authors + ', ' + year + ', <i>' + title + '</i>, ' + institution
-            else:
-                print(u"There was an error processing: {0}".format(entry))
-                return None
-
-
-    def entries2All(self,
-
-        keys=None,
-        output_encoding=None,
-        output_backend='plaintext',
-        style='unsrt'):
-
-        style_cls = find_plugin('pybtex.style.formatting', style)
+        style_cls   = pybtex.plugin.find_plugin('pybtex.style.formatting', style)
         style = style_cls()
-        bib_data = self.library #[ self.getEntry(key) for key in keys ]
-        formatted_bibliography = style.format_bibliography(bib_data,citations=keys)
+        data = self.library
+        biblio = style.format_bibliography(data,citations=keys)
 
-        output_backend = find_plugin('pybtex.backends', output_backend)
-        #output_filename = filename + output_backend.default_suffix
-        #output_backend(output_encoding).write_to_file(formatted_bibliography, output_filename)
+        backend_cls = pybtex.plugin.find_plugin('pybtex.backends', fmt)
+        backend = backend_cls(encoding=enc)
+
+        if objects:
+            return biblio,backend
 
         stream = io.StringIO()
-        output_backend(output_encoding).write_to_stream(formatted_bibliography, stream)
-        # Retrieve contents
+        backend.write_to_stream(biblio, stream)
         contents = stream.getvalue()
-        # Close object and discard memory buffer --
-        # .getvalue() will now raise an exception.
         stream.close()
         return contents
 
 
+    def getEntry(self, key, label=False, fmt="plaintext", style="unsrtalpha", enc=None):
+        """If you only want a single entry from your bibliography and not the
+        whole thing, this function is for you.
+        It uses Pybtex, but removes the prologue and the epilogue and optionally
+        deletes the label.
+        For the other parameters, have a look at :func:`getBibliography`.
+        """
+        # TODO: What is this for?
+        if key.startswith('__'):
+            return None
+
+        biblio,backend = self.getBibliography(keys=[key], fmt=fmt, style=style, enc=enc, objects=True)
+
+        # Disable prologue and the epilogue
+        backend.write_prologue = lambda : None
+        backend.write_epilogue = lambda : None
+
+        stream = io.StringIO()
+        backend.write_to_stream(biblio, stream)
+        contents = stream.getvalue()
+        stream.close()
+
+        if label:
+            return contents
+
+        label_table = {
+            'latex'     : '}',
+            'html'      : '</dt>',
+            'markdown'  : ']',
+            'plaintext' : ']',
+            } # How do we find the end of the label?
+
+        end_of_label = contents.index(label_table[fmt])
+        contents = contents[end_of_label+1:].strip()
+        return contents
+
+
+
+#getEntry(self, key, label=False, fmt="markdown", style="unsrtalpha", enc=None):
 
 if __name__=='__main__':
-#     B = BibTeXerClass()
-#     B.loadLibrary('../../../Web/fluid_properties/Incompressibles.bib')
-#     print(B.entry2rst('Cesar2013'))
-#     print(B.entry2html('Cesar2013'))
-#     print(B.entries2All(keys=['Cesar2013']))
-    B = BibTeXerClass('../../../CoolPropBibTeXLibrary.bib')
-    print(B.entry2rst('Mulero-JPCRD-2012'))
-    print(B.entry2html('Mulero-JPCRD-2012'))
-    print(B.entries2All(keys=['Mulero-JPCRD-2012']))
+    B = BibTeXerClass()
+    B.loadLibrary('../../../Web/fluid_properties/Incompressibles.bib')
+    print(B.getEntry('Cesar2013'))
+    print(B.getEntry('Skovrup2013'))
+    print(B.getEntry('Therminol2014'))
+
+#     B = BibTeXerClass('../../../Web/fluid_properties/Incompressibles.bib')
+#     print("\nHTML:")
+#     print(B.entries2All(keys=['Skovrup2013'], output_backend='html'))
+#    print("\nMarkdown:")
+#    print(B.entries2All(keys=['Skovrup2013'], output_backend='markdown'))
+#     print("\nText:")
+#     print(B.entries2All(keys=['Skovrup2013'], output_backend='text'))
+#
+#     B = BibTeXerClass('../../../CoolPropBibTeXLibrary.bib')
+#     print("\nHTML:")
+#     print(B.entries2All(keys=['Mulero-JPCRD-2012'], output_backend='html'))
+#     print("\nMarkdown:")
+#     print(B.entries2All(keys=['Mulero-JPCRD-2012'], output_backend='markdown'))
+#     print("\nText:")
+#     print(B.entries2All(keys=['Mulero-JPCRD-2012'], output_backend='text'))
+#
+#
+#     from pybtex.richtext import Text, Tag, Symbol, HRef
+#     from pybtex.backends.markdown import Backend
+#
+#     link_href = HRef(
+#       'http://www.test.test/directory/file.ext?para=in&sec=out', # URL
+#       'testing links with href class'
+#       )
+#     tag_emph  = Tag('emph', Text(u'Emph', Symbol('nbsp'), u'text'))
+#     unicode_text = Text(u'Л.:', Symbol('nbsp'), u'<<Химия>>')
+#     latex_text   = Text(u'{\\aa}', Symbol(u'nbsp'), u'\\\'e')
+#     markd_text   = Text(u'{ and & and *', Symbol(u'nbsp'), u'\\')
+#
+#     for i in [link_href,tag_emph,unicode_text,latex_text,markd_text]:
+#         print(i.render(Backend()))
+
+
+
+
+
+
