@@ -85,7 +85,7 @@ Pure Fluids
 
 For refrigeration applications, 8 fluids were implemented from Aake Melinder's
 book "Properties of Secondary Working Fluids for Indirect Systems" published in 2010
-by IIR :cite:`Melinder-BOOK-2010` with coefficients obtained from a fit between
+by IIR :cite:`Melinder2010` with coefficients obtained from a fit between
 -80 |degC| and +100 |degC|: DEB, HCM, HFE, PMS1, PMS2, SAB, HCB and TCO.
 
 Some additional secondary cooling fluids are based on data compiled by Morten
@@ -104,7 +104,7 @@ coefficients.
 .. _Pure:
 
 .. csv-table:: All incompressible pure fluids included in CoolProp
-   :widths: 10, 35, 25, 15, 15
+   :widths: 10, 35, 15, 20, 20
    :header-rows: 1
    :file: ../_static/fluid_properties/incompressible/table/pure-fluids.csv
 
@@ -117,21 +117,21 @@ Aqueous Mixtures - Solutions and Brines
 .. _MassMix:
 
 .. csv-table:: All incompressible mass-based binary mixtures included in CoolProp
-   :widths: 10, 30, 20, 10, 10, 10, 10
+   :widths: 10, 30, 12, 12, 12, 12, 12
    :header-rows: 1
    :file: ../_static/fluid_properties/incompressible/table/mass-based-fluids.csv
 
 .. .. _MoleMix:
 
 .. .. csv-table:: All incompressible mole-based binary mixtures included in CoolProp
-   :widths: 10, 30, 20, 10, 10, 10, 10
+   :widths: 10, 30, 12, 12, 12, 12, 12
    :header-rows: 1
    :file: ../_static/fluid_properties/incompressible/table/mole-based-fluids.csv
 
 .. _VoluMix:
 
 .. csv-table:: All incompressible volume-based binary mixtures included in CoolProp
-   :widths: 10, 30, 20, 10, 10, 10, 10
+   :widths: 10, 30, 12, 12, 12, 12, 12
    :header-rows: 1
    :file: ../_static/fluid_properties/incompressible/table/volume-based-fluids.csv
 
@@ -389,5 +389,5 @@ then yields the final factor :math:`D` to be multiplied with the other coefficie
 
 
 
-.. bibliography:: ../../CoolPropBibTeXLibrary.bib
+.. bibliography:: Incompressibles.bib.filtered.bib
   :style: unsrt

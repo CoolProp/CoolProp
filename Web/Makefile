@@ -34,6 +34,7 @@ clean:
 	-rm -rf _build/*
 
 html: 
+	python ../dev/incompressible_liquids/all_incompressibles.py --nofit --noreports --nosummary --notables
 	$(SPHINXBUILD) -j3 -b html $(ALLSPHINXOPTS) _build/html
 	@echo
 	@echo "Build finished. The HTML pages are in _build/html."

@@ -23,7 +23,8 @@ class SolutionDataWriter(object):
     information came from.
     """
     def __init__(self):
-        self.bibtexer = BibTeXerClass('../../Web/fluid_properties/Incompressibles.bib')
+        bibFile = os.path.join(os.path.dirname(__file__),'../../../Web/fluid_properties/Incompressibles.bib')
+        self.bibtexer = BibTeXerClass(bibFile)
 
     def fitAll(self, fluidObject=SolutionData()):
 
@@ -1180,6 +1181,10 @@ class SolutionDataWriter(object):
         reportFile = os.path.join("..","_static","fluid_properties","incompressible","report","{0}_fitreport.pdf".format(name))
         return self.d(name,reportFile)
 
+    def getCitation(self, keys):
+        return u":cite:`{0}`".format(keys)
+
+
     def checkForNumber(self, number):
         try:
             n = float(number)
@@ -1231,7 +1236,13 @@ class SolutionDataWriter(object):
         testTable = []
         testTable.append(header) # Headline
         for fluid in solObjs:
-            testTable.append([self.getReportLink(fluid.name), fluid.description, fluid.reference, self.c(fluid.Tmin), self.c(fluid.Tmax)])
+            testTable.append([
+                self.getReportLink(fluid.name),
+                fluid.description,
+                self.getCitation(fluid.reference),
+                self.c(fluid.Tmin),
+                self.c(fluid.Tmax)
+            ])
             if use_x: testTable[-1].extend([self.x(fluid.xmin), self.x(fluid.xmax)])
 
         self.writeTableToFile(path, testTable)

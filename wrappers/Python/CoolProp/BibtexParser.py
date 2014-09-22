@@ -6,6 +6,7 @@ from __future__ import generators
 import pybtex.plugin, pybtex.database.input.bibtex, pybtex.errors
 import io
 import codecs, latexcodec
+import os
 
 
 
@@ -44,9 +45,20 @@ class BibTeXerClass(object):
         # Do not print that many warnings
         pybtex.errors.set_strict_mode(enable=False)
 
+        # TODO: Remove empty lines to keep Pybtex from choking
+        with open(path, "r") as f:
+            lines = f.readlines()
+            cleaned = [l.strip() for l in lines if l.strip()]
+
+        path = path+".filtered.bib"
+        with open(path, "w") as f:
+            f.writelines('\n'.join(cleaned))
+
         # Open the file and convert it according to the encoding
         with codecs.open(path, encoding=encoding) as stream:
             self.library = bib_parser.parse_stream(stream)
+
+        #os.remove(path)
 
         # Do some post-processing if encoding was latex
         if encoding=="latex":

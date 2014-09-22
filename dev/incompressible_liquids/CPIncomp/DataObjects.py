@@ -467,7 +467,7 @@ class CoefficientData(SolutionData):
         if len(array)!=18:
             raise ValueError("The lenght is not equal to 18!")
 
-        self.reference = "Melinder Book"
+        #self.reference = "Melinder Book"
         array = np.array(array)
         tmp = np.zeros((6,4))
 
