@@ -109,7 +109,7 @@
     "type": "notdefined"
   }, 
   "name": "AEG", 
-  "reference": "ASHRAE Fundamentals Handbook 2001, SecCool software", 
+  "reference": "ASHRAE2001,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

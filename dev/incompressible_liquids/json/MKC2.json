@@ -1,11 +1,16 @@
 {
   "T_freeze": {
     "coeffs": [
-      9.337457e+05, 
-      6.000000e+04, 
-      1.000000e+01
+      [
+        5.610043e+00, 
+        1.018931e-01, 
+        -3.926708e+00, 
+        2.335889e+01, 
+        -6.343317e+01, 
+        5.565994e+01
+      ]
     ], 
-    "type": "exponential"
+    "type": "exppolynomial"
   }, 
   "Tbase": 0.000000e+00, 
   "Tmax": 3.031500e+02, 
@@ -95,7 +100,7 @@
     "type": "notdefined"
   }, 
   "name": "MKC2", 
-  "reference": "Melinder-BOOK-2010, SecCool software", 
+  "reference": "Melinder2010,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

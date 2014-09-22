@@ -133,7 +133,7 @@
     "type": "notdefined"
   }, 
   "name": "AKF", 
-  "reference": "Clariant GmbH Jan. 2000, SecCool software", 
+  "reference": "Clariant2000,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

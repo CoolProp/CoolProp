@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "TY10", 
-  "reference": "Tyforop Chemie Gmbh - Technical information 09/99, SecCool software", 
+  "reference": "Tyfoprop1999,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

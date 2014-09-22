@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "DowQ", 
-  "reference": "Dow Chemicals data sheet", 
+  "reference": "Dow1997", 
   "saturation_pressure": {
     "coeffs": [
       -3.242462e+02, 

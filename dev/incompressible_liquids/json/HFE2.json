@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "HFE2", 
-  "reference": "3M Novec, SecCool software", 
+  "reference": "3M2007,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

@@ -95,7 +95,7 @@
     "type": "notdefined"
   }, 
   "name": "VNA", 
-  "reference": "VDI Waermeatlas 9th Edition 2002, SecCool software", 
+  "reference": "Preisegger2010,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

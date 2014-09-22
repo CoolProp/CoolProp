@@ -10,10 +10,10 @@ from matplotlib.patches import Rectangle
 from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_pdf import PdfPages
 import itertools
-from datetime import datetime
 import matplotlib
 import csv
 from CoolProp.BibtexParser import BibTeXerClass
+from warnings import warn
 
 class SolutionDataWriter(object):
     """
@@ -23,9 +23,7 @@ class SolutionDataWriter(object):
     information came from.
     """
     def __init__(self):
-        self.bibtexer = BibTeXerClass()
-        self.bibtexer.loadLibrary('../../Web/fluid_properties/Incompressibles.bib')
-        pass
+        self.bibtexer = BibTeXerClass('../../Web/fluid_properties/Incompressibles.bib')
 
     def fitAll(self, fluidObject=SolutionData()):
 
@@ -663,6 +661,9 @@ class SolutionDataWriter(object):
             axVal.plot(pFree, zFree, alpha=0.25, ls=':', color=fitFormatter["color"])
 
         if not zError is None and not axErr is None:
+            #formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
+            #axErr.yaxis.set_major_formatter(formatter)
+            #axErr.yaxis.get_major_formatter().useOffset=False
             axErr.plot(pData, zError, label='error' , **errorFormatter)
 
         elif not axErr is None:
@@ -737,9 +738,25 @@ class SolutionDataWriter(object):
         myAnnotate('Description: ',solObj.description,x=x,y=y); x += .0; y -= dy
 
         # TODO: Debug bibtexer
-        myAnnotate('Source: ',solObj.reference,x=x,y=y); x += .0; y -= dy
-        #myAnnotate('Source: ',self.bibtexer.entry2txt(solObj.reference),x=x,y=y); x += .0; y -= dy
+        refs = solObj.reference.split(",")
+        maxLength = 75
+        for i in range(len(refs)):
+            refs[i] = refs[i].strip()
+            try:
+                refs[i] = self.bibtexer.getEntry(key=refs[i], fmt='plaintext').strip()
+            except Exception as e:
+                warn("Your string \"{0}\"was not a valid Bibtex key, I will use it directly: {1}".format(refs[i],e))
+                pass
+            if len(refs[i])>maxLength:
+                refs[i] = refs[i][0:maxLength-3]+u'...'
 
+            if i==0:
+                myAnnotate('Source: ',refs[i],x=x,y=y); x += .0 #; y -= 2*dy
+            elif i==1:
+                myAnnotate(   '     ',refs[i],x=x,y=y-dy); x += .0 #; y -= 2*dy
+
+        y -= 2*dy
+        yRestart = y
         myAnnotate('Temperature: ',u'{0} \u00B0C to {1} \u00B0C'.format(solObj.Tmin-273.15, solObj.Tmax-273.15),x=x,y=y); x += .0; y -= dy
         conc = False
         if solObj.xid==solObj.ifrac_mass: conc=True
@@ -762,7 +779,7 @@ class SolutionDataWriter(object):
             myAnnotate('Spec. Heat: ','no information',x=x,y=y)
         x += .0; y -= dy
 
-        x = xStart + dx; y = yStart-dy-dy
+        x = xStart + dx; y = yRestart
         if solObj.conductivity.source!=solObj.conductivity.SOURCE_NOT_SET:
             myAnnotate('Th. Cond.: ',u'{0} to {1} {2}'.format(solObj.conductivity.source, solObj.conductivity.type, solObj.conductivity.coeffs.shape),x=x,y=y)
         else:
@@ -975,7 +992,7 @@ class SolutionDataWriter(object):
 
         table_axis.legend(
           legVal, legKey,
-          bbox_to_anchor=(0.0, -0.025, 1., -0.025),
+          bbox_to_anchor=(0.0, -0.03, 1., -0.03),
           ncol=len(legKey), mode="expand", borderaxespad=0.,
           numpoints=1)
         #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)

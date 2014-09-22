@@ -4,22 +4,22 @@
     "type": "notdefined"
   }, 
   "Tbase": 0.000000e+00, 
-  "Tmax": 3.631500e+02, 
-  "Tmin": 2.181500e+02, 
-  "TminPsat": 3.631500e+02, 
+  "Tmax": 5.031500e+02, 
+  "Tmin": 1.881500e+02, 
+  "TminPsat": 3.681500e+02, 
   "conductivity": {
     "coeffs": [
       [
-        2.446378e-01
+        1.752725e-01
       ], 
       [
-        5.583948e-04
+        -8.246367e-05
       ], 
       [
-        5.290335e-07
+        6.437195e-09
       ], 
       [
-        -1.144975e-12
+        -5.383617e-12
       ]
     ], 
     "type": "polynomial"
@@ -27,21 +27,21 @@
   "density": {
     "coeffs": [
       [
-        1.488824e+03
+        9.779182e+02
       ], 
       [
-        -6.044286e-01
+        -7.391660e-01
       ], 
       [
-        -2.253584e-12
+        1.022684e-05
       ], 
       [
-        -3.942105e-15
+        -1.054994e-08
       ]
     ], 
     "type": "polynomial"
   }, 
-  "description": "Zitrec S55, Potassium formate/Sodium propionate", 
+  "description": "Paratherm LR", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -50,45 +50,49 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "name": "ZS55", 
-  "reference": "Arteco2010,Skovrup2013", 
+  "name": "PLR", 
+  "reference": "Paratherm2013", 
   "saturation_pressure": {
-    "coeffs": "null", 
-    "type": "notdefined"
+    "coeffs": [
+      [
+        9.986393e+01
+      ], 
+      [
+        -7.381715e-01
+      ], 
+      [
+        1.892038e-03
+      ], 
+      [
+        -1.535903e-06
+      ]
+    ], 
+    "type": "exppolynomial"
   }, 
   "specific_heat": {
     "coeffs": [
       [
-        2.377828e+03
+        6.687819e+02
       ], 
       [
-        -7.620141e-01
+        5.676328e+00
       ], 
       [
-        4.742969e-03
+        -5.336007e-03
       ], 
       [
-        1.001109e-10
+        5.156555e-06
       ]
     ], 
     "type": "polynomial"
   }, 
   "viscosity": {
     "coeffs": [
-      [
-        6.368799e+01
-      ], 
-      [
-        -5.902275e-01
-      ], 
-      [
-        1.689699e-03
-      ], 
-      [
-        -1.648687e-06
-      ]
+      6.701186e+02, 
+      -1.187849e+02, 
+      1.717146e+01
     ], 
-    "type": "exppolynomial"
+    "type": "exponential"
   }, 
   "volume2input": {
     "coeffs": "null", 
@@ -96,6 +100,6 @@
   }, 
   "xbase": 0.000000e+00, 
   "xid": "pure", 
-  "xmax": 0.000000e+00, 
+  "xmax": 1.000000e+00, 
   "xmin": 0.000000e+00
 }

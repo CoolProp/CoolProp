@@ -1,11 +1,13 @@
 {
   "T_freeze": {
     "coeffs": [
-      9.288690e+05, 
-      6.000000e+04, 
-      1.000000e+01
+      [
+        5.477459e+00, 
+        6.932423e-01, 
+        -1.434348e+00
+      ]
     ], 
-    "type": "exponential"
+    "type": "exppolynomial"
   }, 
   "Tbase": 0.000000e+00, 
   "Tmax": 3.731500e+02, 
@@ -112,7 +114,7 @@
     "type": "notdefined"
   }, 
   "name": "ZFC", 
-  "reference": "Arteco, SecCool software", 
+  "reference": "Arteco2010,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

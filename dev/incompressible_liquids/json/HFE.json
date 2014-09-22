@@ -39,7 +39,7 @@
     "type": "notdefined"
   }, 
   "name": "HFE", 
-  "reference": "Melinder-BOOK-2010", 
+  "reference": "Melinder2010", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

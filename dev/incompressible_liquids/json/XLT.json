@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "XLT", 
-  "reference": "Dow Chemicals data sheet", 
+  "reference": "Dow1997", 
   "saturation_pressure": {
     "coeffs": [
       -5.000000e+03, 

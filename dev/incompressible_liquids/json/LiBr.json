@@ -85,7 +85,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Lithium-Bromide solution from Patek2006", 
+  "description": "Aqueous lithium-bromide solution ", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

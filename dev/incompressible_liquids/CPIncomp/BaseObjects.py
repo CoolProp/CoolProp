@@ -135,14 +135,21 @@ class IncompressibleData(object):
                       eqnType=self.type, \
                       coeffs=self.coeffs, DEBUG=self.DEBUG)
 
-            elif self.type==IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL and self.data.size>10:
-                if self.DEBUG: print("Poor solution found with log exponential, trying once more with exponential polynomial.")
-                self.type=IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
-                self.coeffs = np.zeros((4,6))
-                res,sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
-                      xbase=xbase, ybase=ybase, \
-                      eqnType=self.type, \
-                      coeffs=self.coeffs, DEBUG=self.DEBUG)
+            elif self.type==IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL:
+                xLen = np.round([len(x)/1.5])
+                yLen = np.round([len(y)/1.5])
+                xLen = np.min([xLen,4])
+                yLen = np.min([yLen,6])
+
+                if (xLen+yLen) > 2:
+                    if self.DEBUG: print("Poor solution found with log exponential, trying once more with exponential polynomial.")
+                    self.type=IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
+
+                    self.coeffs = np.zeros((xLen,yLen))
+                    res,sErr = IncompressibleFitter.fitter(x=x, y=y, z=self.data, \
+                          xbase=xbase, ybase=ybase, \
+                          eqnType=self.type, \
+                          coeffs=self.coeffs, DEBUG=self.DEBUG)
 
 #            elif self.type==IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL:
 #                if self.DEBUG: print("Poor solution found with exponential polynomial, trying once more with normal polynomial.")
@@ -485,7 +492,7 @@ class IncompressibleFitter(object):
             expLog = True
 
         xData = np.array(x_in.flat)
-        if expLog: zData = np.log(z_in.flat)
+        if expLog: zData = np.log(np.clip(z_in.flat,1e-10,IncompressibleData.maxLin))
         else: zData = np.array(z_in.flat)
 
         # Remove np.nan elements

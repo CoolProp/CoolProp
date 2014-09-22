@@ -29,7 +29,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "HYCOOL 40, Potassium formate", 
+  "description": "HyCool 40, Potassium formate", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -39,7 +39,7 @@
     "type": "notdefined"
   }, 
   "name": "HY40", 
-  "reference": "Hydro Chemicals", 
+  "reference": "Hydro2000", 
   "saturation_pressure": {
     "coeffs": [
       -5.000000e+03, 

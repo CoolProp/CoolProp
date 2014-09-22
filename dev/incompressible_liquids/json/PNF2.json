@@ -4,22 +4,22 @@
     "type": "notdefined"
   }, 
   "Tbase": 0.000000e+00, 
-  "Tmax": 3.631500e+02, 
-  "Tmin": 2.181500e+02, 
-  "TminPsat": 3.631500e+02, 
+  "Tmax": 5.931500e+02, 
+  "Tmin": 2.631500e+02, 
+  "TminPsat": 5.931500e+02, 
   "conductivity": {
     "coeffs": [
       [
-        2.446378e-01
+        1.252004e-01
       ], 
       [
-        5.583948e-04
+        -7.963016e-05
       ], 
       [
-        5.290335e-07
+        3.613946e-08
       ], 
       [
-        -1.144975e-12
+        -3.788073e-12
       ]
     ], 
     "type": "polynomial"
@@ -27,21 +27,21 @@
   "density": {
     "coeffs": [
       [
-        1.488824e+03
+        1.058840e+03
       ], 
       [
-        -6.044286e-01
+        -5.464228e-01
       ], 
       [
-        -2.253584e-12
+        -1.752530e-04
       ], 
       [
-        -3.942105e-15
+        5.776002e-08
       ]
     ], 
     "type": "polynomial"
   }, 
-  "description": "Zitrec S55, Potassium formate/Sodium propionate", 
+  "description": "Paratherm NF, Hydrotreated mineral oil", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -50,8 +50,8 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "name": "ZS55", 
-  "reference": "Arteco2010,Skovrup2013", 
+  "name": "PNF2", 
+  "reference": "Paratherm2013,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -59,36 +59,27 @@
   "specific_heat": {
     "coeffs": [
       [
-        2.377828e+03
+        2.932522e+02
       ], 
       [
-        -7.620141e-01
+        5.411624e+00
       ], 
       [
-        4.742969e-03
+        -6.468458e-04
       ], 
       [
-        1.001109e-10
+        5.066952e-07
       ]
     ], 
     "type": "polynomial"
   }, 
   "viscosity": {
     "coeffs": [
-      [
-        6.368799e+01
-      ], 
-      [
-        -5.902275e-01
-      ], 
-      [
-        1.689699e-03
-      ], 
-      [
-        -1.648687e-06
-      ]
+      -2.400889e+02, 
+      2.880136e+00, 
+      5.928291e+00
     ], 
-    "type": "exppolynomial"
+    "type": "logexponential"
   }, 
   "volume2input": {
     "coeffs": "null", 

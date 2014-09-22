@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "XLT2", 
-  "reference": "Dow Chemicals, SecCool software", 
+  "reference": "Dow1997,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

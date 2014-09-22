@@ -109,7 +109,7 @@
     "type": "notdefined"
   }, 
   "name": "GKN", 
-  "reference": "pro KUEHLSOLE GmbH, SecCool software", 
+  "reference": "PKS2005,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

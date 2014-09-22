@@ -54,7 +54,7 @@
     "type": "notdefined"
   }, 
   "name": "FRE", 
-  "reference": "Kemira Chemicals OY, SecCool software", 
+  "reference": "Kemira1998,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

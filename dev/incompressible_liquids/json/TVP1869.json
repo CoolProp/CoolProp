@@ -39,7 +39,7 @@
     "type": "notdefined"
   }, 
   "name": "TVP1869", 
-  "reference": "Hoechst, SecCool software", 
+  "reference": "Hoechst1995,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
