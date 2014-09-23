@@ -491,7 +491,7 @@ bool IncompressibleFluid::checkP(double T, double p, double x) {
 	double ps = 0.0;
 	if (p_sat.type!=IncompressibleData::INCOMPRESSIBLE_NOT_SET) ps = psat(T, x);
 	if (p < 0.0) throw ValueError(format("You cannot use negative pressures: %f < %f. ", p, 0.0));
-	if (ps>0.0 && p < ps)  throw ValueError(format("Equations are valid for liquid phase only: %f < %f (psat). ", p, ps));
+	if (ps> 0.0 && p < ps)  throw ValueError(format("Equations are valid for liquid phase only: %f < %f (psat). ", p, ps));
 	return true;
 }
 

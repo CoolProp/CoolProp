@@ -67,7 +67,7 @@ void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double valu
 	this->_phase = iphase_liquid;
 	if (get_debug_level()>=50) std::cout << format("Incompressible backend: Phase type is  %d ",this->_phase) << std::endl;
 
-	switch (input_pair) 
+	switch (input_pair)
 	{
         case PT_INPUTS: {
             _p = value1;
@@ -92,6 +92,12 @@ void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double valu
         case HmassP_INPUTS: {
         	_p = value2;
         	_T = this->HmassP_flash(value1, value2);
+            break;
+        }
+        case QT_INPUTS: {
+        	if (value1!=0) {throw ValueError("Incompressible fluids can only handle saturated liquid, Q=0.");}
+        	_T = value2;
+        	_p = fluid->psat(value2, _fractions[0]);
             break;
         }
         default: {
@@ -139,7 +145,11 @@ void IncompressibleBackend::set_mass_fractions(const std::vector<long double> &m
 		this->_fractions = std::vector<long double>(1,0);
 		if (get_debug_level()>=20) std::cout << format("Incompressible backend: Overwriting fractions for pure fluid with %s -> %s",vec_to_string(mass_fractions).c_str(),vec_to_string(this->_fractions).c_str()) << std::endl;
 	} else if (fluid->getxid()==IFRAC_MASS) {
-		this->_fractions = mass_fractions;
+		if (this->_fractions[0]!=mass_fractions[0]) {
+			if (get_debug_level()>=20) std::cout << format("Incompressible backend: Updating the mass fractions triggered a change in reference state %s -> %s",vec_to_string(mass_fractions).c_str(),vec_to_string(this->_fractions).c_str()) << std::endl;
+			this->_fractions = mass_fractions;
+			fluid->set_reference_state(fluid->getTref(), fluid->getpref(), this->_fractions[0], fluid->gethref(), fluid->getsref());
+		}
 	} else {
 		this->_fractions.clear();
 		for (std::size_t i = 0; i < mass_fractions.size(); i++) {
