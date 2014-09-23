@@ -42,17 +42,20 @@ class BibTeXerClass(object):
         else:
             bib_parser = pybtex.database.input.bibtex.Parser()
 
-        # Do not print that many warnings
-        pybtex.errors.set_strict_mode(enable=False)
+        # TODO: not needed anymore?
+        oldLatexCodec = False
+        if oldLatexCodec:
+            # Do not print that many warnings
+            pybtex.errors.set_strict_mode(enable=False)
 
-        # TODO: Remove empty lines to keep Pybtex from choking
-        with open(path, "r") as f:
-            lines = f.readlines()
-            cleaned = [l.strip() for l in lines if l.strip()]
+            # TODO: Remove empty lines to keep Pybtex from choking
+            with open(path, "r") as f:
+                lines = f.readlines()
+                cleaned = [l.strip() for l in lines if l.strip()]
 
-        path = path+".filtered.bib"
-        with open(path, "w") as f:
-            f.writelines('\n'.join(cleaned))
+            path = path+".filtered.bib"
+            with open(path, "w") as f:
+                f.writelines('\n'.join(cleaned))
 
         # Open the file and convert it according to the encoding
         with codecs.open(path, encoding=encoding) as stream:

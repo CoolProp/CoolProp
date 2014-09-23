@@ -1,10 +1,15 @@
 
 .. |degC| replace:: :math:`^\circ\!\!` C
+.. |degF| replace:: :math:`^\circ\!\!` F
 
 .. _Incompressibles:
 
 Incompressible Fluids
 =====================
+
+
+General Introduction
+--------------------
 
 In CoolProp, the incompressible fluids are divided into three major groups.
 
@@ -30,6 +35,15 @@ documents with all the
 :download:`pure fluids and all the aqueous solutions</_static/fluid_properties/incompressible/report/all_incompressibles.pdf>`.
 You can read more about these reports in a dedicated
 :ref:`section<FittingReports>` called :ref:`Fitting Reports<FittingReports>` below.
+
+All incompressible fluids have an arbitrary reference state for enthalpy and entropy.
+During initialisation, the reference state is defined in temperature and pressure
+according to the U.S. National Institute of Standards and Technology [NIST](http://www.nist.gov).
+
+
+
+Pure Fluid Examples
+-------------------
 
 Incompressible fluids only allow  for a limited subset of input variables. The
 following input pairs are supported: :math:`f(p,T)`, :math:`f(h,p)`, :math:`f(\rho,T)`,
@@ -79,27 +93,59 @@ the available output keys are: ``D``, ``C``, ``U``, ``H``, ``S``, ``V``, ``L``,
     In [1]: PropsSI('Psat','T',500,'P',1e8,'INCOMP::DowQ')
 
 
+Mixture Examples
+----------------
 
-Pure Fluids
------------
+Almost the same syntax can be used for mixtures. Please note that the mixture
+interface developed for CoolProp 5 has not been ported to the incompressible
+fluids, yet. For now, you have to use the `PropsSI` function with a special
+composition notation. Depending on your fluid, you have to supply either the
+:ref:`mass fraction<MassMix>` or the :ref:`volume fraction<VoluMix>` as additional
+parameter. This is done via the fluid name by appending a dash (-) and the
+fraction of the substance other than water. The fraction notation can be in the
+form of percent, `LiBr-23%`, or as a fraction like in `LiBr-0.23` or `LiBr\[0.23\]`.
 
-For refrigeration applications, 8 fluids were implemented from Aake Melinder's
-book "Properties of Secondary Working Fluids for Indirect Systems" published in 2010
-by IIR :cite:`Melinder2010` with coefficients obtained from a fit between
--80 |degC| and +100 |degC|: DEB, HCM, HFE, PMS1, PMS2, SAB, HCB and TCO.
 
-Some additional secondary cooling fluids are based on data compiled by Morten
-Juel Skovrup in his `SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
-provided by his employer `IPU <http://en.ipu.dk>`_. Fits have been made for the
-manufacturer data stored in the software. The Aspen Temper fluids (AS10, AS20,
-AS30, AS40, AS55) are a blend of potassium formate and sodiumpropionate and the
-Zitrec S group (ZS10, ZS25, ZS40, ZS45 and ZS55) consists mainly of potassium
-acetate and potassium formate.
 
-There are also a few high temperature heat transfer fluids with individual
-temperature ranges. Please refer to the table below for a complete overview.
-For these fluids, information from commercial data sheets was used to obtain
-coefficients.
+
+
+All the brines and solutions can be accessed through the Props function. To use them, the fluid name
+is something like ``"MEG-20%"`` which is a 20% by mass ethylene glycol solution. Note that these fluids
+have an arbitrary reference state: Be careful with enthalpy and entropy calculations. Again, only
+temperature and pressure inputs are supported directly to calculate the same subset of thermophysical
+properties as above , namely: density, heat capacity, internal energy, enthalpy, entropy, viscosity
+and thermal conductivity. Hence, the available output keys for the ``Props`` function are: "D", "C",
+"U", "H", "S", "V", "L", "Tmin", Tmax" and "Tfreeze". An internal iteration allows us to use enthalpy
+and pressure as inputs, but be aware of the reduced computational efficiency.
+
+.. ipython::
+
+    In [1]: from CoolProp.CoolProp import PropsSI
+
+    #Specific heat 20% mass ethylene glycol solution at 300 K and 1 atm.
+    In [1]: PropsSI('C','T',300,'P',101.325,'INCOMP::MEG-20%')
+
+
+
+The Different Fluids
+--------------------
+
+The fluids implemented in CoolProp cover a wide range of industrial heat
+transfer media. This database has initially been developed with refrigeration
+systems in mind. That is why the majority of fluids are secondary refrigerants
+with application temperatures close to the freezing point of water. Besides those,
+there is also incompressible water, high temperature heat transfer oils and a
+molten salt mixture for extreme temperatures.
+
+Besides the different technical data sheets and calculation tools provided by
+manufactures, two specific publications provided a lot of data used for the
+incompressible fluids: Åke Melinder's book *Properties of Secondary Working
+Fluids for Indirect Systems* :cite:`Melinder2010` has inspired both, the work on
+pure fluids and aqueous solutions. The second major source of inspiration is the
+`SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
+:cite:`Skovrup2013` software, which contains data compiled by Morten Juel
+Skovrup. It is provided free of charge by his employer `IPU <http://en.ipu.dk>`_.
+
 
 .. _Pure:
 
@@ -109,9 +155,10 @@ coefficients.
    :file: ../_static/fluid_properties/incompressible/table/pure-fluids.csv
 
 
-
-Aqueous Mixtures - Solutions and Brines
----------------------------------------
+There are also a number of water-based mixtures implemented in CoolProp. Most of them
+are secondary heat transfer fluids, but there are also aqueous solutions of
+ammonia :cite:`Melinder2010`, :download:`MAM<../_static/fluid_properties/incompressible/report/MAM_fitreport.pdf>`,
+and lithium bromide :cite:`Patek2006`, :download:`LiBr<../_static/fluid_properties/incompressible/report/LiBr_fitreport.pdf>`.
 
 
 .. _MassMix:
@@ -389,5 +436,6 @@ then yields the final factor :math:`D` to be multiplied with the other coefficie
 
 
 
-.. bibliography:: Incompressibles.bib.filtered.bib
-  :style: unsrt
+.. bibliography:: Incompressibles.bib
+   :filter: docname in docnames
+   :style: unsrt
