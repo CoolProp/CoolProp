@@ -1,15 +1,15 @@
-import CoolProp5
+import CoolProp
 import pandas
 grouping = dict()
 grouping2 = []
 # Group aliases
-for parameter in CoolProp5.get('parameter_list').split(','):
+for parameter in CoolProp.get('parameter_list').split(','):
     
-    index = CoolProp5.CoolProp.get_parameter_index(parameter)
-    units = CoolProp5.CoolProp.get_parameter_information(index, 'units').replace('-',' ')
-    IO = CoolProp5.CoolProp.get_parameter_information(index, 'IO')
-    long = CoolProp5.CoolProp.get_parameter_information(index, 'long')
-    short = CoolProp5.CoolProp.get_parameter_information(index, 'short')
+    index = CoolProp.CoolProp.get_parameter_index(parameter)
+    units = CoolProp.CoolProp.get_parameter_information(index, 'units').replace('-',' ')
+    IO = CoolProp.CoolProp.get_parameter_information(index, 'IO')
+    long = CoolProp.CoolProp.get_parameter_information(index, 'long')
+    short = CoolProp.CoolProp.get_parameter_information(index, 'short')
     
     RHS = (units, IO, long)
     if RHS not in grouping:
