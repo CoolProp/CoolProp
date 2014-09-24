@@ -4,6 +4,7 @@
 
 namespace CoolProp{
 
+    
 /** \brief A library of binary pair parameters for the mixture
  * 
  * Each entry in the binary pair library includes reducing parameters as well as the name of the reducing function to be used and 
@@ -90,6 +91,16 @@ public:
     }
 };
 static MixtureBinaryPairLibrary mixturebinarypairlibrary;
+
+std::string get_csv_mixture_binary_pairs()
+{
+    std::vector<std::string> out;
+    for (std::map< std::vector<std::string>, std::vector<Dictionary> >::iterator it = mixturebinarypairlibrary.binary_pair_map.begin(); it != mixturebinarypairlibrary.binary_pair_map.end(); ++it)
+    {
+        out.push_back(strjoin(it->first, "&"));
+    }
+    return strjoin(out, ",");
+}
 
 std::string get_reducing_function_name(std::string CAS1, std::string CAS2)
 {

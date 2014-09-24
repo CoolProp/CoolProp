@@ -30,6 +30,8 @@
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/Incompressible/IncompressibleLibrary.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
+#include "Backends/Helmholtz/MixtureParameters.h"
+
 
 namespace CoolProp
 {
@@ -868,6 +870,9 @@ std::string get_global_param_string(std::string ParamName)
 	}
 	else if (!ParamName.compare("incompressible_list_solution")){
 		return get_incompressible_list_solution();
+	}
+    else if (!ParamName.compare("mixture_binary_pairs_list")){
+		return get_csv_mixture_binary_pairs();
 	}
 	else if (!ParamName.compare("parameter_list") )
     {
