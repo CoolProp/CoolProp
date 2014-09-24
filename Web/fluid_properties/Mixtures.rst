@@ -25,7 +25,7 @@ The only types of inputs that are allowed for mixtures right now are
         try:
             HEOS.build_phase_envelope("dummy")
         except ValueError as VE:
-            print VE
+            print(VE)
         PE = HEOS.get_phase_envelope_data()
         plt.plot(PE.rhomolar_vap, PE.rhomolar_liq, 'o-')
 
