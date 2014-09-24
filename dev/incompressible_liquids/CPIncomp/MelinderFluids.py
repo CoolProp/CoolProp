@@ -18,6 +18,7 @@ class DEBLiquidClass(CoefficientData,PureData):
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1076.5,-0.731182]))
@@ -51,6 +52,7 @@ class HCMLiquidClass(CoefficientData,PureData):
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([971.725,-0.718788]))
@@ -84,6 +86,7 @@ class HFELiquidClass(CoefficientData,PureData):
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1822.37,-0.918485]))
@@ -117,6 +120,7 @@ class PMS1LiquidClass(CoefficientData,PureData):
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1172.35,-0.9025]))
@@ -150,6 +154,7 @@ class PMS2LiquidClass(CoefficientData,PureData):
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1155.94,-1.02576]))
@@ -183,6 +188,7 @@ class SABLiquidClass(CoefficientData,PureData):
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1102.34,-0.801667]))
@@ -216,6 +222,7 @@ class HCBLiquidClass(CoefficientData,PureData):
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1071.78,-0.772024]))
@@ -249,6 +256,7 @@ class TCOLiquidClass(CoefficientData,PureData):
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1071.02,-0.778166]))

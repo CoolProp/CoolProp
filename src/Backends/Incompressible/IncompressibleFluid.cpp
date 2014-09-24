@@ -16,6 +16,7 @@ This fluid instance is populated using an entry from a JSON file
 //IncompressibleFluid::IncompressibleFluid();
 
 void IncompressibleFluid::set_reference_state(double T0, double p0, double x0, double h0, double s0){
+	this->Tref = T0;
 	this->rhoref = rho(T0,p0,x0);
 	this->pref = p0;
 	this->uref = h0 - p0/rhoref;
@@ -491,7 +492,7 @@ bool IncompressibleFluid::checkP(double T, double p, double x) {
 	double ps = 0.0;
 	if (p_sat.type!=IncompressibleData::INCOMPRESSIBLE_NOT_SET) ps = psat(T, x);
 	if (p < 0.0) throw ValueError(format("You cannot use negative pressures: %f < %f. ", p, 0.0));
-	if (ps>0.0 && p < ps)  throw ValueError(format("Equations are valid for liquid phase only: %f < %f (psat). ", p, ps));
+	if (ps> 0.0 && p < ps)  throw ValueError(format("Equations are valid for liquid phase only: %f < %f (psat). ", p, ps));
 	return true;
 }
 
