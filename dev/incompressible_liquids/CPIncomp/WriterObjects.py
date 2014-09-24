@@ -188,7 +188,7 @@ class SolutionDataWriter(object):
                         fluidObject.T_freeze.coeffs = np.array([+7e+2, -6e+1, +1e+1])
                         fluidObject.T_freeze.type   = IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL
                     else:
-                        fluidObject.specific_heat.coeffs = np.copy(std_coeffs)
+                        fluidObject.T_freeze.coeffs = np.copy(std_coeffs)
                         fluidObject.T_freeze.type   = IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL
                     fluidObject.T_freeze.fitCoeffs(tBase,xBase)
                 except errList as ve:
@@ -1297,7 +1297,7 @@ class SolutionDataWriter(object):
         else: use_x = False
 
         header = [u'Name', u'Description', u'Reference', \
-          self.m(u'T_\\text{min}')+u" (°C)", self.m(u'T_\\text{max}')+u" (°C)"]
+          self.m(u'T_\\text{min}')+u" (°C)", self.m(u'T_\\text{max}')+u" (°C)", self.m(u'T_\\text{base}')+u" (K)"]
         if use_x: header.extend([self.m(u'x_\\text{min}'), self.m(u'x_\\text{max}')])
 
         testTable = []
@@ -1308,7 +1308,8 @@ class SolutionDataWriter(object):
                 fluid.description,
                 self.getCitation(fluid.reference),
                 self.c(fluid.Tmin),
-                self.c(fluid.Tmax)
+                self.c(fluid.Tmax),
+                self.c(fluid.Tbase+273.15)
             ])
             if use_x: testTable[-1].extend([self.x(fluid.xmin), self.x(fluid.xmax)])
 
