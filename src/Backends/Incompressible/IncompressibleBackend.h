@@ -18,6 +18,13 @@ protected:
     //int _fractions_id;
     std::vector<long double> _fractions;
     IncompressibleFluid *fluid;
+
+    /// Set the fractions
+    /**
+    @param fractions The vector of fractions of the components converted to the correct input
+    */
+    void set_fractions(const std::vector<long double> &fractions);
+
 public:
     IncompressibleBackend();
     virtual ~IncompressibleBackend(){};
@@ -68,7 +75,7 @@ public:
 
     /// Check if the mole fractions have been set, etc.
     void check_status();
-        
+
     /// Calculate T given pressure and density
     /**
     @param rhomass The mass density in kg/m^3
@@ -90,7 +97,7 @@ public:
     @returns T The temperature in K
     */
     long double PSmass_flash(long double p, long double smass);
-    
+
     /// Calculate T given pressure and internal energy
     /**
     @param umass The mass internal energy in J/kg

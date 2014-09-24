@@ -16,6 +16,7 @@ This fluid instance is populated using an entry from a JSON file
 //IncompressibleFluid::IncompressibleFluid();
 
 void IncompressibleFluid::set_reference_state(double T0, double p0, double x0, double h0, double s0){
+	this->Tref = T0;
 	this->rhoref = rho(T0,p0,x0);
 	this->pref = p0;
 	this->uref = h0 - p0/rhoref;

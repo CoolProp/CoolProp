@@ -40,10 +40,10 @@ and a pressure of 1 atm according to the U.S. National Institute of Standards an
 Technology ([NIST](http://www.nist.gov)).
 
 .. math::
-   T_\text{ref} &=  293.15\,\text{K}  &= 68\,\text{°F} \\
-   p_\text{ref} &=  101325\,\text{Pa} &= 14.696\,\text{psi} \\
-   h_\text{ref} &=  0 & \\
-   s_\text{ref} &=  0 & \\
+   T_\text{ref} &=  293.15\:\text{K}  &=     68\:\text{°F} \\
+   p_\text{ref} &=  101325\:\text{Pa} &= 14.696\:\text{psi} \\
+   h_\text{ref} &=  0\:\text{KJ}\,\text{kg}^{-1} & \\
+   s_\text{ref} &=  0\:\text{KJ}\,\text{kg}^{-1}\,\text{K}^{-1} & \\
 
 If you use a mixture, the reference state gets updated each time you change the
 composition.
@@ -60,10 +60,10 @@ internally, which makes this combination by far the fastest. However, also the
 other inputs should be fast compared to the full Helmholtz-based EOS implemented
 for then compressible fluids.
 
-A call to the top-level function ``PropsSI`` can provide : density, heat capacity,
-internal energy, enthalpy, entropy, viscosity and thermal conductivity. Hence,
-the available output keys are: ``D``, ``C``, ``U``, ``H``, ``S``, ``V``, ``L``,
-``Tmin`` and ``Tmax``.
+A call to the top-level function ``PropsSI`` can provide : temperature, pressure,
+density, heat capacity, internal energy, enthalpy, entropy, viscosity and
+thermal conductivity. Hence, the available output keys are: ``T``, ``P``, ``D``,
+``C``, ``U``, ``H``, ``S``, ``V``, ``L``, ``Tmin`` and ``Tmax``.
 
 .. ipython::
 

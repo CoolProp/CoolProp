@@ -9,11 +9,11 @@ namespace CoolProp{
 
 /**
 In this formulation of the Multi-Dimensional Newton-Raphson solver the Jacobian matrix is known.
-Therefore, the dx vector can be obtained from 
+Therefore, the dx vector can be obtained from
 
 J(x)dx=-f(x)
 
-for a given value of x.  The pointer to the class FuncWrapperND that is passed in must implement the call() and Jacobian() 
+for a given value of x.  The pointer to the class FuncWrapperND that is passed in must implement the call() and Jacobian()
 functions, each of which take the vector x. The data is managed using std::vector<double> vectors
 
 @param f A pointer to an subclass of the FuncWrapperND class that implements the call() and Jacobian() functions
@@ -33,7 +33,7 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<doubl
 	while (iter==0 || std::abs(error)>tol){
 		f0 = f->call(x0);
 		J = f->Jacobian(x0);
-		
+
 		// Negate f0
 		negative_f0 = f0;
 		for (unsigned int i = 0; i<f0.size(); i++){ negative_f0[i] *= -1;}
@@ -55,7 +55,7 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<doubl
 /**
 In the newton function, a 1-D Newton-Raphson solver is implemented using exact solutions.  An initial guess for the solution is provided.
 
-@param f A pointer to an instance of the FuncWrapper1D class that implements the call() function 
+@param f A pointer to an instance of the FuncWrapper1D class that implements the call() function
 @param x0 The inital guess for the solution
 @param ftol The absolute value of the tolerance accepted for the objective function
 @param maxiter Maximum number of iterations
@@ -97,7 +97,7 @@ double Newton(FuncWrapper1D* f, double x0, double ftol, int maxiter, std::string
 /**
 In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial guess for the solution is provided.
 
-@param f A pointer to an instance of the FuncWrapper1D class that implements the call() function 
+@param f A pointer to an instance of the FuncWrapper1D class that implements the call() function
 @param x0 The inital guess for the solutionh
 @param dx The initial amount that is added to x in order to build the numerical derivative
 @param tol The absolute value of the tolerance accepted for the objective function
@@ -115,7 +115,7 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, s
 	double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
     int iter=1;
 	errstring = "";
-	
+
 	if (std::abs(dx)==0){ errstring="dx cannot be zero"; return _HUGE;}
     while (iter<=2 || std::abs(fval)>tol)
     {
@@ -137,11 +137,11 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, s
         if (iter>1)
         {
 			double deltax = x2-x1;
-			if (std::abs(deltax)<1e-14) 
-			{ 
+			if (std::abs(deltax)<1e-14)
+			{
 				if (std::abs(fval) < tol*10)
 				{
-					return x; 
+					return x;
 				}
 				else
 				{
@@ -151,7 +151,7 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, s
             y2=fval;
             x3=x2-y2/(y2-y1)*(x2-x1);
             y1=y2; x1=x2; x2=x3;
-			
+
         }
 		if (iter>maxiter)
 		{
@@ -166,7 +166,7 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, s
 /**
 In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial guess for the solution is provided.
 
-@param f A pointer to an instance of the FuncWrapper1D class that implements the call() function 
+@param f A pointer to an instance of the FuncWrapper1D class that implements the call() function
 @param x0 The inital guess for the solution
 @param xmax The upper bound for the solution
 @param xmin The lower bound for the solution
@@ -181,7 +181,7 @@ double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, doub
 	double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
     int iter=1;
 	errstring = "";
-	
+
 	if (std::abs(dx)==0){ errstring = "dx cannot be zero"; return _HUGE;}
     while (iter<=3 || std::abs(fval)>tol)
     {
@@ -204,7 +204,7 @@ double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, doub
 				x3 = (xmax + x2)/2;
 			}
             y1=y2; x1=x2; x2=x3;
-			
+
         }
 		if (iter>maxiter)
 		{
@@ -216,7 +216,7 @@ double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, doub
     return x3;
 }
 
-/** 
+/**
 
 This function implements a 1-D bounded solver using the algorithm from Brent, R. P., Algorithms for Minimization Without Derivatives.
 Englewood Cliffs, NJ: Prentice-Hall, 1973. Ch. 3-4.
@@ -243,11 +243,11 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
 	// If one of the boundaries is to within tolerance, just stop
 	if (std::abs(fb) < t) { return b;}
 	if (!ValidNumber(fb)){
-		throw ValueError(format("Brent's method f(b) is NAN for b = %g",b).c_str());
+		throw ValueError(format("Brent's method f(b) is NAN for b = %g, other input was a = %g",b,a).c_str());
 	}
 	if (std::abs(fa) < t) { return a;}
 	if (!ValidNumber(fa)){
-		throw ValueError(format("Brent's method f(a) is NAN for a = %g",a).c_str());
+		throw ValueError(format("Brent's method f(a) is NAN for a = %g, other input was b = %g",a,b).c_str());
 	}
 	if (fa*fb>0){
 		throw ValueError(format("Inputs in Brent [%f,%f] do not bracket the root.  Function values are [%f,%f]",a,b,fa,fb));
