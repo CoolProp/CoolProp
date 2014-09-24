@@ -42,7 +42,7 @@ cdef class AbstractState:
     ## ----------------------------------------
     
     cpdef double keyed_output(self, parameters iOutput) except *: 
-        """ Update :cpapi:`CoolProp::AbstractState::update` """
+        """ Update :cpapi:`CoolProp::AbstractState::keyed_output(parameters key)` """
         return self.thisptr.keyed_output(iOutput)
     
     cpdef double T(self) except *: 
