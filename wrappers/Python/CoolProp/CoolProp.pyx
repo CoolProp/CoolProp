@@ -150,7 +150,7 @@ cpdef __Props_err2(fcn, in1, in2, in3, in4, in5, in6):
 
 cpdef Props(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None):
     """
-    ${CoolProp::Props}
+    A Python wrapper of :cpapi:'`CoolProp::Props`.  This function is deprecated, use PropsSI instead
     """ 
     import warnings
     dep_warning = "Props() function is deprecated; Use the PropsSI() function"
@@ -169,7 +169,7 @@ cpdef Props(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None):
 
 cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = None):
     """
-    $$PropsSI$$
+    A Python wrapper of C++ function :cpapi:'`CoolProp::PropsSI`.
     """ 
     cdef double val
     
@@ -355,6 +355,10 @@ cdef dict paras_inverse = {v:k for k,v in paras.iteritems()}
 cdef class State:
     """
     A class that contains all the code that represents a thermodynamic state
+    
+    .. warning::
+    
+        This class is deprecated.  You should use :py:class:`CoolProp.AbstractState` instead
     
     The motivation for this class is that it is useful to be able to define the
     state once using whatever state inputs you like and then be able to calculate

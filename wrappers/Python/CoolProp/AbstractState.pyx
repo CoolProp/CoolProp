@@ -46,65 +46,65 @@ cdef class AbstractState:
         return self.thisptr.keyed_output(iOutput)
     
     cpdef double T(self) except *: 
-        """ Get the temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::T` """
+        """ Get the temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::T(void)` """
         return self.thisptr.T()
     cpdef double p(self) except *: 
-        """ Get the pressure in Pa - wrapper of c++ function :cpapi:`CoolProp::AbstractState::p` """
+        """ Get the pressure in Pa - wrapper of c++ function :cpapi:`CoolProp::AbstractState::p(void)` """
         return self.thisptr.p()
     cpdef double rhomolar(self) except *: 
-        """ Get the density in mol/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomolar` """
+        """ Get the density in mol/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomolar(void)` """
         return self.thisptr.rhomolar()
     cpdef double rhomass(self) except *: 
-        """ Get the density in kg/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomass` """
+        """ Get the density in kg/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomass(void)` """
         return self.thisptr.rhomass()
     cpdef double hmolar(self) except *: 
-        """ Get the enthalpy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmolar` """        
+        """ Get the enthalpy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmolar(void)` """        
         return self.thisptr.hmolar()
     cpdef double hmass(self) except *: 
-        """ Get the enthalpy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmass` """
+        """ Get the enthalpy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmass(void)` """
         return self.thisptr.hmass()        
     cpdef double umolar(self) except *: 
-        """ Get the internal energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::umolar` """
+        """ Get the internal energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::umolar(void)` """
         return self.thisptr.umolar()
     cpdef double umass(self) except *: 
-        """ Get the internal energy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::umass` """
+        """ Get the internal energy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::umass(void)` """
         return self.thisptr.umass()
     cpdef double smolar(self) except *: 
-        """ Get the entropy in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smolar` """
+        """ Get the entropy in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smolar(void)` """
         return self.thisptr.smolar()
     cpdef double smass(self) except *: 
-        """ Get the entropy in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smass` """
+        """ Get the entropy in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smass(void)` """
         return self.thisptr.smass()
     cpdef double cpmolar(self) except *: 
-        """ Get the constant pressure specific heat in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cpmolar` """
+        """ Get the constant pressure specific heat in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cpmolar(void)` """
         return self.thisptr.cpmolar()
     cpdef double cpmass(self) except *: 
-        """ Get the constant pressure specific heat in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cpmass` """
+        """ Get the constant pressure specific heat in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cpmass(void)` """
         return self.thisptr.cpmass()
     cpdef double cp0molar(self) except *: 
-        """ Get the ideal gas constant pressure specific heat in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cp0molar` """
+        """ Get the ideal gas constant pressure specific heat in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cp0molar(void)` """
         return self.thisptr.cp0molar()
     cpdef double cp0mass(self) except *: 
-        """ Get the ideal gas constant pressure specific heat in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cp0mass` """
+        """ Get the ideal gas constant pressure specific heat in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cp0mass(void)` """
         return self.thisptr.cp0mass()
     cpdef double cvmolar(self) except *: 
-        """ Get the constant volume specific heat in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cvmolar` """
+        """ Get the constant volume specific heat in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cvmolar(void)` """
         return self.thisptr.cvmolar()
     cpdef double cvmass(self) except *: 
-        """ Get the constant volume specific heat in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cvmass` """
+        """ Get the constant volume specific heat in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cvmass(void)` """
         return self.thisptr.cvmass()
     cpdef double speed_sound(self) except *: 
-        """ Get the speed of sound in m/s - wrapper of c++ function :cpapi:`CoolProp::AbstractState::speed_sound` """
+        """ Get the speed of sound in m/s - wrapper of c++ function :cpapi:`CoolProp::AbstractState::speed_sound(void)` """
         return self.thisptr.speed_sound()
     cpdef double molar_mass(self) except *: 
-        """ Get the molar mass in kg/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::molar_mass` """
+        """ Get the molar mass in kg/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::molar_mass(void)` """
         return self.thisptr.molar_mass()
     
     cpdef mole_fractions_liquid(self):
-        """ Get the mole fractions of the liquid phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_liquid` """
+        """ Get the mole fractions of the liquid phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_liquid(void)` """
         return self.thisptr.mole_fractions_liquid()
     cpdef mole_fractions_vapor(self):
-        """ Get the mole fractions of the vapor phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_vapor` """
+        """ Get the mole fractions of the vapor phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_vapor(void)` """
         return self.thisptr.mole_fractions_vapor()
         
     ## ----------------------------------------	
