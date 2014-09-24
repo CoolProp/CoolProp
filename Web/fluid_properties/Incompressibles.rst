@@ -303,21 +303,21 @@ which can be used to calculated absorption chillers.
 .. _MassMix:
 
 .. csv-table:: All incompressible mass-based binary mixtures included in CoolProp
-   :widths: 10, 30, 10, 10, 10, 10, 10, 10
+   :widths: 10, 30, 11, 11, 11, 11, 8, 8
    :header-rows: 1
    :file: ../_static/fluid_properties/incompressible/table/mass-based-fluids.csv
 
 .. .. _MoleMix:
 
 .. .. csv-table:: All incompressible mole-based binary mixtures included in CoolProp
-   :widths: 10, 30, 10, 10, 10, 10, 10, 10
+   :widths: 10, 30, 11, 11, 11, 11, 8, 8
    :header-rows: 1
    :file: ../_static/fluid_properties/incompressible/table/mole-based-fluids.csv
 
 .. _VoluMix:
 
 .. csv-table:: All incompressible volume-based binary mixtures included in CoolProp
-   :widths: 10, 30, 10, 10, 10, 10, 10, 10
+   :widths: 10, 30, 11, 11, 11, 11, 8, 8
    :header-rows: 1
    :file: ../_static/fluid_properties/incompressible/table/volume-based-fluids.csv
 
