@@ -65,23 +65,13 @@ if __name__ == '__main__':
     if runTest:
         solObjs = []
         from CPIncomp.SecCoolFluids import SecCoolSolutionData,SecCoolIceData,ThermogenVP1869
-        from CPIncomp.PureFluids import Texatherm22
-        solObjs += [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder-BOOK-2010, SecCool software')]
-        solObjs += [SecCoolIceData(sFile='IceNA'   ,sFolder='xMass',name='IceNA',desc='Ice slurry with NaCl' ,ref='Danish Technological Institute, SecCool software')]
-        #solObjs = [Freezium()]
-        #solObjs[0].density.DEBUG = True
-        #solObjs[0].specific_heat.DEBUG = True
-        #solObjs[0].conductivity.DEBUG = True
-        #solObjs[0].viscosity.DEBUG = True
-        #solObjs[0].T_freeze.DEBUG = True
-        #writer.fitSecCoolList(solObjs)
-        solObjs = [ThermogenVP1869()]#,Therminol72()]
-        solObjs[0].viscosity.DEBUG=True
-        #solObjs[0].saturation_pressure.DEBUG=True
-        #
-        ##from CPIncomp.ExampleObjects import SecCoolExample
-        ##solObjs = [SecCoolExample()]
-        #writer.fitFluidList(solObjs)
+        from CPIncomp.PureFluids import PMR
+        #from CPIncomp.PureFluids import Texatherm22
+        #solObjs += [SecCoolSolutionData(sFile='Melinder, Ethanol'            ,sFolder='xMass',name='MEA2',desc='Melinder, Ethanol'            ,ref='Melinder2010,Skovrup2013')]
+        #solObjs += [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder2010,Skovrup2013')]
+
+        solObjs += [PMR()]
+
         writer.fitSecCoolList(solObjs)
         writer.writeFluidList(solObjs)
         writer.writeReportList(solObjs)

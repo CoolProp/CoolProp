@@ -51,14 +51,23 @@
     "type": "notdefined"
   }, 
   "name": "TX22", 
-  "reference": "Texaco data sheet", 
+  "reference": "Chevron2004", 
   "saturation_pressure": {
     "coeffs": [
-      -8.896764e+03, 
-      -4.346506e+01, 
-      -2.438007e+01
+      [
+        -4.667597e+01
+      ], 
+      [
+        1.402790e-01
+      ], 
+      [
+        -3.198287e-05
+      ], 
+      [
+        -8.170467e-08
+      ]
     ], 
-    "type": "exponential"
+    "type": "exppolynomial"
   }, 
   "specific_heat": {
     "coeffs": [

@@ -1,0 +1,105 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase": 0.000000e+00, 
+  "Tmax": 5.031500e+02, 
+  "Tmin": 1.881500e+02, 
+  "TminPsat": 3.681500e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+        1.752725e-01
+      ], 
+      [
+        -8.246367e-05
+      ], 
+      [
+        6.437195e-09
+      ], 
+      [
+        -5.383617e-12
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+        9.779182e+02
+      ], 
+      [
+        -7.391660e-01
+      ], 
+      [
+        1.022684e-05
+      ], 
+      [
+        -1.054994e-08
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Paratherm LR", 
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "PLR", 
+  "reference": "Paratherm2013", 
+  "saturation_pressure": {
+    "coeffs": [
+      [
+        9.986393e+01
+      ], 
+      [
+        -7.381715e-01
+      ], 
+      [
+        1.892038e-03
+      ], 
+      [
+        -1.535903e-06
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+        6.687819e+02
+      ], 
+      [
+        5.676328e+00
+      ], 
+      [
+        -5.336007e-03
+      ], 
+      [
+        5.156555e-06
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      6.701186e+02, 
+      -1.187849e+02, 
+      1.717146e+01
+    ], 
+    "type": "exponential"
+  }, 
+  "volume2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase": 0.000000e+00, 
+  "xid": "pure", 
+  "xmax": 1.000000e+00, 
+  "xmin": 0.000000e+00
+}

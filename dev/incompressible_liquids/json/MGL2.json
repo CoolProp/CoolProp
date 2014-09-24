@@ -1,11 +1,16 @@
 {
   "T_freeze": {
     "coeffs": [
-      9.321636e+05, 
-      6.000000e+04, 
-      1.000000e+01
+      [
+        5.643904e+00, 
+        -5.983132e-01, 
+        3.208226e+00, 
+        -1.038046e+01, 
+        1.531831e+01, 
+        -9.146761e+00
+      ]
     ], 
-    "type": "exponential"
+    "type": "exppolynomial"
   }, 
   "Tbase": 0.000000e+00, 
   "Tmax": 3.131500e+02, 
@@ -95,7 +100,7 @@
     "type": "notdefined"
   }, 
   "name": "MGL2", 
-  "reference": "Melinder-BOOK-2010, SecCool software", 
+  "reference": "Melinder2010,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

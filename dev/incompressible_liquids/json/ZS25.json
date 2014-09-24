@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "ZS25", 
-  "reference": "Arteco, SecCool software", 
+  "reference": "Arteco2010,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

@@ -1,0 +1,105 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase": 0.000000e+00, 
+  "Tmax": 6.431500e+02, 
+  "Tmin": 2.581500e+02, 
+  "TminPsat": 4.701500e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+        1.057443e-01
+      ], 
+      [
+        1.094539e-04
+      ], 
+      [
+        -2.440677e-07
+      ], 
+      [
+        3.113233e-11
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+        1.184850e+03
+      ], 
+      [
+        -7.644911e-01
+      ], 
+      [
+        -1.218437e-05
+      ], 
+      [
+        9.408965e-09
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Paratherm HR", 
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "PHR", 
+  "reference": "Paratherm2013", 
+  "saturation_pressure": {
+    "coeffs": [
+      [
+        -2.614839e+01
+      ], 
+      [
+        1.237943e-01
+      ], 
+      [
+        -1.354870e-04
+      ], 
+      [
+        5.544196e-08
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+        1.582541e+03
+      ], 
+      [
+        1.287975e-01
+      ], 
+      [
+        4.655061e-03
+      ], 
+      [
+        -3.240899e-06
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      7.500522e+02, 
+      -1.738728e+02, 
+      1.679323e+01
+    ], 
+    "type": "exponential"
+  }, 
+  "volume2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase": 0.000000e+00, 
+  "xid": "pure", 
+  "xmax": 1.000000e+00, 
+  "xmin": 0.000000e+00
+}

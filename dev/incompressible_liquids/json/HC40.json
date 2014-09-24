@@ -16,7 +16,7 @@
         1.000000e-03
       ], 
       [
-        9.106767e-17
+        9.107021e-17
       ], 
       [
         1.979940e-20
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "HC40", 
-  "reference": "Dynalene data sheet", 
+  "reference": "Dynalene2014", 
   "saturation_pressure": {
     "coeffs": [
       [

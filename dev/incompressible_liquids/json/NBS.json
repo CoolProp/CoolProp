@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "NBS", 
-  "reference": "Properties of Water and Steam in SI-Units, 2nd Revised and Updated Printing, Springer 1979, pp. 175 ff., SecCool software", 
+  "reference": "Schmidt1979,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

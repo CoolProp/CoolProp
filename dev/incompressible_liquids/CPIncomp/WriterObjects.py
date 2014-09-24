@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
 from __future__ import division, print_function
 import numpy as np
 
@@ -10,9 +12,73 @@ from matplotlib.patches import Rectangle
 from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_pdf import PdfPages
 import itertools
-from datetime import datetime
 import matplotlib
-import csv
+from CoolProp.BibtexParser import BibTeXerClass
+from warnings import warn
+
+# See: https://docs.python.org/2/library/csv.html#csv-examples
+import csv, codecs, cStringIO
+
+class UTF8Recoder:
+    """
+    Iterator that reads an encoded stream and reencodes the input to UTF-8
+    """
+    def __init__(self, f, encoding):
+        self.reader = codecs.getreader(encoding)(f)
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        return self.reader.next().encode("utf-8")
+
+class UnicodeReader:
+    """
+    A CSV reader which will iterate over lines in the CSV file "f",
+    which is encoded in the given encoding.
+    """
+
+    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
+        f = UTF8Recoder(f, encoding)
+        self.reader = csv.reader(f, dialect=dialect, **kwds)
+
+    def next(self):
+        row = self.reader.next()
+        return [unicode(s, "utf-8") for s in row]
+
+    def __iter__(self):
+        return self
+
+class UnicodeWriter:
+    """
+    A CSV writer which will write rows to CSV file "f",
+    which is encoded in the given encoding.
+    """
+
+    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
+        # Redirect output to a queue
+        self.queue = cStringIO.StringIO()
+        self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
+        self.stream = f
+        self.encoder = codecs.getincrementalencoder(encoding)()
+
+    def writerow(self, row):
+        self.writer.writerow([s.encode("utf-8") for s in row])
+        # Fetch UTF-8 output from the queue ...
+        data = self.queue.getvalue()
+        data = data.decode("utf-8")
+        # ... and reencode it into the target encoding
+        data = self.encoder.encode(data)
+        # write to the target stream
+        self.stream.write(data)
+        # empty queue
+        self.queue.truncate(0)
+
+    def writerows(self, rows):
+        for row in rows:
+            self.writerow(row)
+
+
 
 class SolutionDataWriter(object):
     """
@@ -22,7 +88,8 @@ class SolutionDataWriter(object):
     information came from.
     """
     def __init__(self):
-        pass
+        bibFile = os.path.join(os.path.dirname(__file__),'../../../Web/fluid_properties/Incompressibles.bib')
+        self.bibtexer = BibTeXerClass(bibFile)
 
     def fitAll(self, fluidObject=SolutionData()):
 
@@ -660,6 +727,9 @@ class SolutionDataWriter(object):
             axVal.plot(pFree, zFree, alpha=0.25, ls=':', color=fitFormatter["color"])
 
         if not zError is None and not axErr is None:
+            #formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
+            #axErr.yaxis.set_major_formatter(formatter)
+            #axErr.yaxis.get_major_formatter().useOffset=False
             axErr.plot(pData, zError, label='error' , **errorFormatter)
 
         elif not axErr is None:
@@ -732,7 +802,27 @@ class SolutionDataWriter(object):
 
         #myAnnotate('Name: ',solObj.name,x=x,y=y); x += .0; y -= dy
         myAnnotate('Description: ',solObj.description,x=x,y=y); x += .0; y -= dy
-        myAnnotate('Source: ',solObj.reference,x=x,y=y); x += .0; y -= dy
+
+        # TODO: Debug bibtexer
+        refs = solObj.reference.split(",")
+        maxLength = 75
+        for i in range(len(refs)):
+            refs[i] = refs[i].strip()
+            try:
+                refs[i] = self.bibtexer.getEntry(key=refs[i], fmt='plaintext').strip()
+            except Exception as e:
+                warn("Your string \"{0}\"was not a valid Bibtex key, I will use it directly: {1}".format(refs[i],e))
+                pass
+            if len(refs[i])>maxLength:
+                refs[i] = refs[i][0:maxLength-3]+u'...'
+
+            if i==0:
+                myAnnotate('Source: ',refs[i],x=x,y=y); x += .0 #; y -= 2*dy
+            elif i==1:
+                myAnnotate(   '     ',refs[i],x=x,y=y-dy); x += .0 #; y -= 2*dy
+
+        y -= 2*dy
+        yRestart = y
         myAnnotate('Temperature: ',u'{0} \u00B0C to {1} \u00B0C'.format(solObj.Tmin-273.15, solObj.Tmax-273.15),x=x,y=y); x += .0; y -= dy
         conc = False
         if solObj.xid==solObj.ifrac_mass: conc=True
@@ -755,7 +845,7 @@ class SolutionDataWriter(object):
             myAnnotate('Spec. Heat: ','no information',x=x,y=y)
         x += .0; y -= dy
 
-        x = xStart + dx; y = yStart-dy-dy
+        x = xStart + dx; y = yRestart
         if solObj.conductivity.source!=solObj.conductivity.SOURCE_NOT_SET:
             myAnnotate('Th. Cond.: ',u'{0} to {1} {2}'.format(solObj.conductivity.source, solObj.conductivity.type, solObj.conductivity.coeffs.shape),x=x,y=y)
         else:
@@ -968,7 +1058,7 @@ class SolutionDataWriter(object):
 
         table_axis.legend(
           legVal, legKey,
-          bbox_to_anchor=(0.0, -0.025, 1., -0.025),
+          bbox_to_anchor=(0.0, -0.03, 1., -0.03),
           ncol=len(legKey), mode="expand", borderaxespad=0.,
           numpoints=1)
         #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)
@@ -1101,26 +1191,26 @@ class SolutionDataWriter(object):
         return rst
 
     def table_div(self, max_cols, header_flag=1, indent=2):
-        out = ""
+        out = u""
         for i in range(indent):
-            out += " "
+            out += u" "
         if header_flag == 1:
-            style = "="
+            style = u"="
         else:
-            style = "-"
+            style = u"-"
         for max_col in max_cols:
-            out += max_col * style + " "
-        out += "\n"
+            out += max_col * style + u" "
+        out += u"\n"
         return out
 
     def normalize_row(self, row, max_cols, indent=2):
-        r = ""
+        r = u""
         for i in range(indent):
-            r += " "
+            r += u" "
 
         for i, max_col in enumerate(max_cols):
-            r += row[i] + (max_col  - len(row[i]) + 1) * " "
-        return r + "\n"
+            r += row[i] + (max_col  - len(row[i]) + 1) * u" "
+        return r + u"\n"
 
 
     def writeTextToFile(self, path,text):
@@ -1128,19 +1218,21 @@ class SolutionDataWriter(object):
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
         with open(path, 'w') as f:
-            f.write(text)
+            f.write(text.encode('utf-8'))
+
         return True
 
-    def writeTxtTableToFile(self, path,table,head=""):
-        if not head == "":
-            return self.writeTextToFile(path+".txt", head+"\n\n"+self.make_table(table))
+    def writeTxtTableToFile(self, path,table,head=u""):
+        if not head == u"":
+            return self.writeTextToFile(path+".txt", head+u"\n\n"+self.make_table(table))
         return self.writeTextToFile(path+".txt", self.make_table(table))
 
     def writeCsvTableToFile(self, path,table):
         if not os.path.exists(os.path.dirname(path+".csv")):
             os.makedirs(os.path.dirname(path+".csv"))
         with open(path+".csv", 'wb') as f:
-            writer = csv.writer(f)
+            #writer = csv.writer(f)
+            writer = UnicodeWriter(f)
             writer.writerows(table)
         return True
 
@@ -1155,6 +1247,10 @@ class SolutionDataWriter(object):
     def getReportLink(self, name):
         reportFile = os.path.join("..","_static","fluid_properties","incompressible","report","{0}_fitreport.pdf".format(name))
         return self.d(name,reportFile)
+
+    def getCitation(self, keys):
+        return u":cite:`{0}`".format(keys)
+
 
     def checkForNumber(self, number):
         try:
@@ -1174,20 +1270,20 @@ class SolutionDataWriter(object):
 #             link = "{0}".format(text)
 #             pass
         # TODO: Fix this!
-        link = ":download:`{0}<{1}>`".format(text,target)
+        link = u":download:`{0}<{1}>`".format(text,target)
         return link
 
     def m(self, math):
-        text = ":math:`{0}`".format(math)
+        text = u":math:`{0}`".format(math)
         return text
 
     def c(self, number):
         #text = "{0:5.2f} |degC|".format(self.checkForNumber(number)-273.15)
-        text = "{0:5.2f}".format(self.checkForNumber(number)-273.15)
+        text = u"{0:5.2f}".format(self.checkForNumber(number)-273.15)
         return text
 
     def x(self, number):
-        text = "{0:3.2f}".format(self.checkForNumber(number))
+        text = u"{0:3.2f}".format(self.checkForNumber(number))
         return text
 
 
@@ -1200,14 +1296,20 @@ class SolutionDataWriter(object):
         if np.any(xmin>0.0) and np.any(xmax<1.0): use_x = True
         else: use_x = False
 
-        header = ['Name', 'Description', 'Reference', \
-          self.m('T_{min}')+" (|degC|)", self.m('T_{max}')+" (|degC|)"]
-        if use_x: header.extend([self.m('x_{min}'), self.m('x_{max}')])
+        header = [u'Name', u'Description', u'Reference', \
+          self.m(u'T_\\text{min}')+u" (°C)", self.m(u'T_\\text{max}')+u" (°C)"]
+        if use_x: header.extend([self.m(u'x_\\text{min}'), self.m(u'x_\\text{max}')])
 
         testTable = []
         testTable.append(header) # Headline
         for fluid in solObjs:
-            testTable.append([self.getReportLink(fluid.name), fluid.description, fluid.reference, self.c(fluid.Tmin), self.c(fluid.Tmax)])
+            testTable.append([
+                self.getReportLink(fluid.name),
+                fluid.description,
+                self.getCitation(fluid.reference),
+                self.c(fluid.Tmin),
+                self.c(fluid.Tmax)
+            ])
             if use_x: testTable[-1].extend([self.x(fluid.xmin), self.x(fluid.xmax)])
 
         self.writeTableToFile(path, testTable)

@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "TVP1", 
-  "reference": "Therminol Heat Transfer Reference Disk", 
+  "reference": "Therminol2014", 
   "saturation_pressure": {
     "coeffs": [
       -4.313871e+03, 

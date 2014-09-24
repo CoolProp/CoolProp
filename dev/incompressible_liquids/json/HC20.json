@@ -16,7 +16,7 @@
         1.000000e-03
       ], 
       [
-        4.945495e-17
+        4.945410e-17
       ], 
       [
         4.446923e-20
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "HC20", 
-  "reference": "Dynalene data sheet", 
+  "reference": "Dynalene2014", 
   "saturation_pressure": {
     "coeffs": [
       [

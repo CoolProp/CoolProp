@@ -770,6 +770,26 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
                &ierr, herr, errormessagelength);       // Error message
     if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); }
 }
+long double REFPROPMixtureBackend::calc_cpmolar_idealgas(void)
+{
+    double rho_mol_L = 0.001*_rhomolar;
+    double p0, e0, h0, s0, cv0, cp0, w0, A0, G0;
+    THERM0dll(&_T,&rho_mol_L,&(mole_fractions[0]),&p0,&e0,&h0,&s0,&cv0,&cp0,&w0,&A0,&G0);
+    return static_cast<long double>(cp0);
+}
+long double REFPROPMixtureBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
+{
+    if (Of == iP && Wrt == iT && (Constant == iDmolar || Constant == iDmass))
+    {
+        double rho_mol_L = 0.001*_rhomolar;
+        double dpt;
+        DPDTdll(&_T, &rho_mol_L, &(mole_fractions[0]), &dpt);
+        return static_cast<long double>(dpt*1000);
+    }
+    else{
+        throw ValueError(format("These derivative terms are not supported"));
+    }
+}
 
 void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2)
 {

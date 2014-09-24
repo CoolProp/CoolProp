@@ -5,20 +5,20 @@ from CPIncomp.DataObjects import PureData, SolutionData, DigitalData,\
 
 class PureExample(PureData):
     def __init__(self):
-        PureData.__init__(self) 
+        PureData.__init__(self)
         self.name = "ExamplePure"
         self.description = "Heat transfer fluid TherminolD12 by Solutia"
         self.reference = "Solutia data sheet"
         self.Tmax = 150 + 273.15
         self.Tmin =  50 + 273.15
         self.TminPsat =  self.Tmax
-        
+
         self.density.source           = self.density.SOURCE_DATA
         self.specific_heat.source     = self.specific_heat.SOURCE_DATA
         self.conductivity.source      = self.conductivity.SOURCE_DATA
         self.viscosity.source         = self.viscosity.SOURCE_DATA
         self.saturation_pressure.source = self.saturation_pressure.SOURCE_DATA
-        
+
         self.temperature.data         = np.array([   50,   60,    70,     80,    90,   100,   110,   120,   130,   140,   150])+273.15 # Kelvin
         self.density.data             = np.array([  740,   733,   726,   717,   710,   702,   695,   687,   679,   670,   662])        # kg/m3
         self.specific_heat.data       = np.array([ 2235,  2280,  2326,  2361,  2406,  2445,  2485,  2528,  2571,  2607,  2645])        # J/kg-K
@@ -30,14 +30,14 @@ class PureExample(PureData):
 
 class SolutionExample(SolutionData):
     def __init__(self):
-        SolutionData.__init__(self) 
+        SolutionData.__init__(self)
         self.name = "ExampleSolution"
         self.description = "Ethanol ice slurry"
-        self.reference = "SecCool software"
-        
+        self.reference = "SecCool software,Skovrup2013"
+
         self.temperature.data         = np.array([   -45 ,    -40 ,    -35 ,    -30 ,    -25 ,    -20 ,    -15 ,    -10])+273.15 # Kelvin
         self.concentration.data       = np.array([     5 ,     10 ,     15 ,     20 ,     25 ,     30 ,     35 ])/100.0 # mass fraction
-        
+
         self.density.data             = np.array([
           [1064.0,    1054.6,    1045.3,    1036.3,    1027.4,    1018.6,    1010.0],
           [1061.3,    1052.1,    1043.1,    1034.3,    1025.6,    1017.0,    1008.6],
@@ -47,12 +47,12 @@ class SolutionExample(SolutionData):
           [1040.7,    1033.2,    1025.7,    1018.4,    1011.2,    1004.0,     997.0],
           [1032.3,    1025.3,    1018.5,    1011.7,    1005.1,     998.5,     992.0],
           [1021.5,    1015.3,    1009.2,    1003.1,     997.1,     991.2,     985.4]]) # kg/m3
-        
+
         self.specific_heat.data = np.copy(self.density.data)
-        
+
         self.density.source           = self.density.SOURCE_DATA
         self.specific_heat.source     = self.specific_heat.SOURCE_DATA
-        
+
         self.Tmax = np.max(self.temperature.data)
         self.Tmin = np.min(self.temperature.data)
         self.xmax = np.max(self.concentration.data)
@@ -63,51 +63,51 @@ class SolutionExample(SolutionData):
 
 class DigitalExample(DigitalData):
     def __init__(self):
-        DigitalData.__init__(self) 
+        DigitalData.__init__(self)
 
         self.name = "ExampleDigital"
         self.description = "some fluid"
         self.reference = "none"
-        
+
         self.Tmin = 273.00;
         self.Tmax = 500.00;
         self.xmax = 1.0
         self.xmin = 0.0
         self.xid         = self.ifrac_mass
         self.TminPsat = self.Tmin;
-        
+
         self.temperature.data         = self.getTrange()
         self.concentration.data       = self.getxrange()
-        
+
         def funcRho(T,x):
             return T + x*100.0 + T*(x+0.5)
         self.density.xData,self.density.yData,self.density.data = self.getArray(dataID="D", func=funcRho, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.density.DEBUG)
         self.density.source           = self.density.SOURCE_EQUATION
-        
+
         def funcCp(T,x):
             return T + x*50.0 + T*(x+0.6)
         self.specific_heat.xData,self.specific_heat.yData,self.specific_heat.data = self.getArray(dataID="C", func=funcCp, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.specific_heat.DEBUG)
         self.specific_heat.source     = self.specific_heat.SOURCE_EQUATION
-        
+
 class DigitalExamplePure(PureData,DigitalData):
     def __init__(self):
-        DigitalData.__init__(self) 
-        PureData.__init__(self) 
+        DigitalData.__init__(self)
+        PureData.__init__(self)
 
         self.name = "ExampleDigitalPure"
         self.description = "water at 100 bar"
         self.reference = "none"
-        
+
         self.Tmin = 280.00;
         self.Tmax = 500.00;
 
         self.TminPsat = self.Tmin;
-        
+
         self.temperature.data         = self.getTrange()
         self.concentration.data       = self.getxrange()
-        
+
         import CoolProp.CoolProp as CP
-        
+
         def funcD(T,x):
             return CP.PropsSI('D','T',T,'P',1e7,'water')
         def funcC(T,x):
@@ -118,34 +118,34 @@ class DigitalExamplePure(PureData,DigitalData):
             return CP.PropsSI('V','T',T,'P',1e7,'water')
         def funcP(T,x):
             return CP.PropsSI('P','T',T,'Q',0.0,'water')
-        
+
         self.density.xData,self.density.yData,self.density.data = self.getArray(dataID="D", func=funcD, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.density.DEBUG)
         self.density.source           = self.density.SOURCE_EQUATION
 
         self.specific_heat.xData,self.specific_heat.yData,self.specific_heat.data = self.getArray(dataID="C", func=funcC, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.specific_heat.DEBUG)
         self.specific_heat.source     = self.specific_heat.SOURCE_EQUATION
-        
+
         self.conductivity.xData,self.conductivity.yData,self.conductivity.data = self.getArray(dataID="L", func=funcL, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.conductivity.DEBUG)
         self.conductivity.source           = self.conductivity.SOURCE_EQUATION
-        
+
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID="V", func=funcV, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
         self.viscosity.source           = self.viscosity.SOURCE_EQUATION
-        
+
         self.saturation_pressure.xData,self.saturation_pressure.yData,self.saturation_pressure.data = self.getArray(dataID="P", func=funcP, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.saturation_pressure.DEBUG)
         self.saturation_pressure.source           = self.saturation_pressure.SOURCE_EQUATION
-              
-        
-        
-        
-        
+
+
+
+
+
 
 class SecCoolExample(CoefficientData):
-    """ 
+    """
     Ethanol-Water mixture according to Melinder book
     Source: SecCool Software
-    """ 
+    """
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "ExampleSecCool"
         self.description = "Methanol solution"
         #self.reference = "SecCool software"
@@ -155,17 +155,17 @@ class SecCoolExample(CoefficientData):
         self.xmin = 0.0
         self.xid         = self.ifrac_mass
         self.TminPsat =  20 + 273.15
-    
+
         self.Tbase =  -4.48 + 273.15
         self.xbase =  31.57 / 100.0
-       
+
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         self.density.coeffs = self.convertSecCoolArray(np.array([
-           960.24665800, 
-          -1.2903839100, 
-          -0.0161042520, 
-          -0.0001969888, 
-           1.131559E-05, 
+           960.24665800,
+          -1.2903839100,
+          -0.0161042520,
+          -0.0001969888,
+           1.131559E-05,
            9.181999E-08,
           -0.4020348270,
           -0.0162463989,
@@ -176,12 +176,12 @@ class SecCoolExample(CoefficientData):
            0.0001101514,
           -2.320217E-07,
            7.794999E-08,
-           9.937483E-06, 
+           9.937483E-06,
           -1.346886E-06,
            4.141999E-08]))
-        
-        
-        
+
+
+
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
         self.specific_heat.coeffs = self.convertSecCoolArray(np.array([
            3822.9712300,
@@ -189,97 +189,97 @@ class SecCoolExample(CoefficientData):
            0.0678775826,
            0.0022413893,
           -0.0003045332,
-          -4.758000E-06, 
-           2.3501449500, 
-           0.1788839410, 
-           0.0006828000, 
-           0.0002101166, 
-          -9.812000E-06, 
-          -0.0004724176, 
-          -0.0003317949, 
-           0.0001002032, 
-          -5.306000E-06, 
-           4.242194E-05, 
-           2.347190E-05, 
+          -4.758000E-06,
+           2.3501449500,
+           0.1788839410,
+           0.0006828000,
+           0.0002101166,
+          -9.812000E-06,
+          -0.0004724176,
+          -0.0003317949,
+           0.0001002032,
+          -5.306000E-06,
+           4.242194E-05,
+           2.347190E-05,
           -1.894000E-06]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
         self.conductivity.coeffs = self.convertSecCoolArray(np.array([
-           0.4082066700, 
-          -0.0039816870, 
-           1.583368E-05, 
-          -3.552049E-07, 
-          -9.884176E-10, 
-           4.460000E-10, 
-           0.0006629321, 
-          -2.686475E-05, 
-           9.039150E-07, 
-          -2.128257E-08, 
-          -5.562000E-10, 
-           3.685975E-07, 
-           7.188416E-08, 
-          -1.041773E-08, 
-           2.278001E-10, 
-           4.703395E-08, 
-           7.612361E-11, 
+           0.4082066700,
+          -0.0039816870,
+           1.583368E-05,
+          -3.552049E-07,
+          -9.884176E-10,
+           4.460000E-10,
+           0.0006629321,
+          -2.686475E-05,
+           9.039150E-07,
+          -2.128257E-08,
+          -5.562000E-10,
+           3.685975E-07,
+           7.188416E-08,
+          -1.041773E-08,
+           2.278001E-10,
+           4.703395E-08,
+           7.612361E-11,
           -2.734000E-10]))
 
         self.viscosity.type = self.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
         self.viscosity.coeffs = self.convertSecCoolArray(np.array([
-           1.4725525500, 
-           0.0022218998, 
-          -0.0004406139, 
-           6.047984E-06, 
-          -1.954730E-07, 
-          -2.372000E-09, 
-          -0.0411841566, 
-           0.0001784479, 
-          -3.564413E-06, 
-           4.064671E-08, 
-           1.915000E-08, 
-           0.0002572862, 
-          -9.226343E-07, 
-          -2.178577E-08, 
-          -9.529999E-10, 
-          -1.699844E-06, 
-          -1.023552E-07, 
+           1.4725525500,
+           0.0022218998,
+          -0.0004406139,
+           6.047984E-06,
+          -1.954730E-07,
+          -2.372000E-09,
+          -0.0411841566,
+           0.0001784479,
+          -3.564413E-06,
+           4.064671E-08,
+           1.915000E-08,
+           0.0002572862,
+          -9.226343E-07,
+          -2.178577E-08,
+          -9.529999E-10,
+          -1.699844E-06,
+          -1.023552E-07,
            4.482000E-09]))
 
         self.T_freeze.type = self.T_freeze.INCOMPRESSIBLE_POLYOFFSET
         self.T_freeze.coeffs = np.array([
            27.755555600/100.0,
-          -22.973221700+273.15, 
-          -1.1040507200*100.0, 
-          -0.0120762281*100.0*100.0, 
+          -22.973221700+273.15,
+          -1.1040507200*100.0,
+          -0.0120762281*100.0*100.0,
           -9.343458E-05*100.0*100.0*100.0])
-        
+
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
         self.conductivity.source      = self.conductivity.SOURCE_COEFFS
         self.viscosity.source         = self.viscosity.SOURCE_COEFFS
         self.T_freeze.source          = self.T_freeze.SOURCE_COEFFS
-        
-        
+
+
 class MelinderExample(CoefficientData):
-    """ 
+    """
     Methanol-Water mixture according to Melinder book
     Source: Book
-    """ 
+    """
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "ExampleMelinder"
         self.description = "Methanol solution"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
         self.Tmax =  40 + 273.15
         self.Tmin = -50 + 273.15
         self.xmax = 0.6
         self.xmin = 0.0
         self.xid         = self.ifrac_mass
         self.TminPsat =  self.Tmax
-    
+
         self.Tbase =   3.5359 + 273.15;
         self.xbase =  30.5128 / 100.0
-       
+
         coeffs = np.array([
         [-26.29           , 958.1           ,3887           ,   0.4175            ,   1.153           ],
         [ -0.000002575    ,  -0.4151        ,   7.201       ,   0.0007271         ,  -0.03866         ],
@@ -300,7 +300,6 @@ class MelinderExample(CoefficientData):
         [ -0.0000000005407,  -0.0000001325  ,   0.000007373 ,  -0.0000000000004573,  -0.0000000009105 ],
         [  0.00000002363  ,  -0.00000007727 ,   0.000006433 ,  -0.0000000002033   ,  -0.0000000008472 ]
         ])
-        
+
         self.setMelinderMatrix(coeffs)
-        
-        
+

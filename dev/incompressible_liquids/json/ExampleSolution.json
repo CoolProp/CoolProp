@@ -95,7 +95,7 @@
     "type": "notdefined"
   }, 
   "name": "ExampleSolution", 
-  "reference": "SecCool software", 
+  "reference": "SecCool software,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": [
       [

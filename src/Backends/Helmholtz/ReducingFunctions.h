@@ -147,17 +147,88 @@ public:
 	long double d2Trdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
     long double Yr(const std::vector<long double> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc);
+    /** \brief First composition derivative of \f$Y_r\f$ with \f$x_i\f$
+     * 
+     * If \f$x_N\f$ is given by \f$ x_N = 1-\sum_{i=1}^{N-1}x_i\f$ (Gernert, FPE, 2014, Table S1):
+     * \f{eqnarray*}{
+     * \left(\frac{\partial Y_r}{\partial x_i}\right)_{\substack{x_{j\neq i} \\ i<N}} &=& 2x_iY_{c,j}-2x_NY_{c,N} + \sum_{k=1}^{i-1}c_{Y,ki}\frac{\partial f_{Y,ki}(x_k, x_i)}{\partial x_i}+\sum_{k=i+1}^{N-1}c_{Y,ik}\frac{\partial f_{Y,ik}(x_i, x_k)}{\partial x_i} \\
+     * &&+c_{Y,iN}\left(\frac{x_{N}(x_i+x_{N})}{\beta_{Y,iN}^2x_i+x_{N}}+(1-\beta_{Y,iN}^2)\frac{x_ix_{N}^2}{(\beta_{Y,i(N)}^2x_i+x_{N})^2}\right) \\
+     * &&+\sum_{k=0}^{N-2}c_{Y,kN}\left(-\frac{x_k(x_k+x_N)}{\beta_{Y,kN}^2 x_k+x_N}+(1-\beta_{Y,kN}^2)\frac{x_Nx_k^2}{(\beta_{Y,kN}^2x_k+x_N)^2}\right)
+     * \f}
+     *
+     * Otherwise, if \f$x_i\f$ are all independent:
+     * \f[
+     * \left(\frac{\partial Y_r}{\partial x_i}\right)_{\substack{x_{j\neq i}}} = 2x_iY_{c,i} + \sum_{k=1}^{i-1}c_{Y,ki}\frac{\partial f_{Y,ki}(x_k,x_i)}{\partial x_i} + \sum_{k=i+1}^{N}c_{Y,ik}\frac{\partial f_{Y,ik}(x_i,x_k)}{\partial x_i}
+     * \f]
+     * 
+     */
     long double dYrdxi__constxj(const std::vector<long double> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
+    /** \brief Second composition derivative of \f$Y_r\f$ with \f$x_i\f$
+     * 
+     * If \f$x_N\f$ is given by \f$ x_N = 1-\sum_{i=1}^{N-1}x_i\f$ (Gernert, FPE, 2014, Table S1):
+     * \f{eqnarray*}{
+     * \left(\frac{\partial^2 Y_r}{\partial x_i^2}\right)_{\substack{x_{j\neq i} \\ i<N}} &=& 2(Y_{c,i}+Y_{c,N}) + \sum_{k=1}^{i-1}c_{Y,ki}\frac{\partial^2 f_{Y,ki}(x_k, x_i)}{\partial x_i^2}+\sum_{k=i+1}^{N-1}c_{Y,ik}\frac{\partial^2 f_{Y,ik}(x_i, x_k)}{\partial x_i^2} \\
+     * &&+2c_{Y,iN}\left(-\frac{x_i+x_N}{\beta_{Y,iN}^2x_i+x_N}+(1-\beta_{Y,iN}^2)\left( \frac{x_N^2}{(\beta_{Y,iN}^2x_i+x_N)^2} + \frac{(1-\beta_{Y,iN}^2)x_ix_{N}^2-\beta_{Y,iN}^2x_i^2x_N}{(\beta_{Y,iN}^2x_i+x_N)^3}\right)\right) \\
+     * &&+\sum_{k=1}^{N-1}2c_{Y,kN}x_k^2\frac{1-\beta_{Y,kN}^2}{(\beta_{Y,kN}^2x_k+x_N)^2} \left(\frac{x_N}{\beta_{Y,kN}^2 x_k+x_N}-1\right)
+     * \f}
+     *
+     * Otherwise, if \f$x_i\f$ are all independent:
+     * \f[
+     * \left(\frac{\partial^2 Y_r}{\partial x_i^2}\right)_{x_{j\neq i}} = 2Y_{c,i} + \sum_{k=1}^{i-1}c_{Y,ki}\frac{\partial^2 f_{Y,ki}(x_k,x_i)}{\partial x_i^2} + \sum_{k=i+1}^{N}c_{Y,ik}\frac{\partial^2 f_{Y,ik}(x_i,x_k)}{\partial x_i^2}
+     * \f]
+     */
     long double d2Yrdxi2__constxj(const std::vector<long double> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
+    /** \brief Second mixed composition derivative of \f$Y_r\f$ with \f$x_i\f$ and  \f$x_j\f$
+     * 
+     * If \f$x_N\f$ is given by \f$ x_N = 1-\sum_{i=1}^{N-1}x_i\f$ (Gernert, FPE, 2014, Table S1):
+     * \f{eqnarray*}{
+     * \left(\frac{\partial^2 Y_r}{\partial x_i\partial x_j}\right)_{\substack{x_{k\neq j\neq i} \\ i<N \\ j < N}} &=& 2Y_{c,N} + c_{Y,ij}\frac{\partial^2 f_{Y,ij}(x_i, x_j)}{\partial x_i\partial x_j}+\sum_{k=1}^{N-1}2c_{Y,kN}x_k^2 \frac{1-\beta_{Y,kN}^2}{(\beta_{Y,kN}^2x_k+x_N)^2} \left(\frac{x_N}{\beta_{Y,kN}^2 x_k+x_N}-1\right) \\
+     * &&+c_{Y,iN}\left((1-\beta_{Y,iN}^2)\left(\frac{2x_ix_N^2}{(\beta_{Y,iN}^2x_i+x_N)^3}-\frac{x_ix_N}{(\beta_{Y,iN}^2x_i+x_N)^2}\right) - \frac{x_i+x_N}{\beta_{Y,iN}^2x_i+x_N} \right) \\
+     * &&-c_{Y,jN}\left((1-\beta_{Y,jN}^2)\left(\frac{2x_j^2x_N\beta_{Y,jN}^2}{(\beta_{Y,jN}^2x_j+x_N)^3}-\frac{x_jx_N}{(\beta_{Y,jN}^2x_j+x_N)^2}\right) + \frac{x_j+x_N}{\beta_{Y,jN}^2x_j+x_N} \right)
+     * \f}
+     *
+     * Otherwise, if \f$x_i\f$ are all independent:
+     * \f[
+     * \left(\frac{\partial^2 Y_r}{\partial x_i\partial x_j}\right)_{\substack{x_{k\neq j\neq i}}} = c_{Y,ij}\frac{\partial^2f_{Y,ij}(x_i,x_j)}{\partial x_i\partial x_j}
+     * \f]
+     */
     long double d2Yrdxidxj__constxj(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
 	long double c_Y_ij(std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c);
 	long double f_Y_ij(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta);
 
+    /**
+     * 
+     * \f[
+     * \left(\frac{\partial f_{Y,ki}(x_k, x_i)}{\partial x_i}\right)_{x_{k\neq i}} = x_k\frac{x_k+x_i}{\beta_{Y,ki}^2x_k+x_i} + \frac{x_kx_i}{\beta_{Y,ki}^2x_k+x_i}\left(1-\frac{x_k+x_i}{\beta_{Y,ki}^2x_k+x_i}\right)
+     * \f]
+     */
 	long double dfYkidxi__constxk(const std::vector<long double> &x, std::size_t k, std::size_t i, const STLMatrix &beta);
+    /**
+     * 
+     * \f[
+     * \left(\frac{\partial f_{Y,ik}(x_i, x_k)}{\partial x_i}\right)_{x_k} = x_k\frac{x_i+x_k}{\beta_{Y,ik}^2x_i+x_k} + \frac{x_ix_k}{\beta_{Y,ik}^2x_i+x_k}\left(1-\beta_{Y,ik}^2\frac{x_i+x_k}{\beta_{Y,ik}^2x_i+x_k}\right)
+     * \f]
+     */
 	long double dfYikdxi__constxk(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
-	long double d2fYkidxi2__constxk(const std::vector<long double> &x, std::size_t k, std::size_t i, const STLMatrix &beta);
+	/**
+     * \f[
+     * \left(\frac{\partial^2 f_{Y,ki}(x_k, x_i)}{\partial x_i^2}\right)_{x_{k\neq i}} = \frac{1}{\beta_{Y,ki}^2x_k+x_i}\left(1-\frac{x_k+x_i}{\beta_{Y,ki}^2x_k+x_i}\right)\left(2x_k-\frac{2x_kx_i}{\beta_{Y,ki}^2x_k+x_i}\right)
+     * \f]
+     */
+    long double d2fYkidxi2__constxk(const std::vector<long double> &x, std::size_t k, std::size_t i, const STLMatrix &beta);
+    /**
+     * \f[
+     * \left(\frac{\partial^2 f_{Y,ik}(x_i, x_k)}{\partial x_i^2}\right)_{x_{k}} = \frac{1}{\beta_{Y,ik}^2x_i+x_k}\left(1-\beta_{Y,ik}^2\frac{x_i+x_k}{\beta_{Y,ik}^2x_i+x_k}\right)\left(2x_k-\frac{2x_ix_k\beta_{Y,ik}^2}{\beta_{Y,ik}^2x_i+x_k}\right)
+     * \f]
+     */
 	long double d2fYikdxi2__constxk(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
-	long double d2fYijdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
+	/**
+     * \f{eqnarray*}{
+     * \left(\frac{\partial^2 f_{Y,ki}(x_k, x_i)}{\partial x_i\partial x_j}\right)_{x_{k\neq j\neq i}} &=& \frac{x_i+x_j}{\beta_{Y,ij}^2x_i+x_j} + \frac{x_j}{\beta_{Y,ij}^2x_i+x_j}\left(1-\frac{x_i+x_j}{\beta_{Y,ij}^2x_i+x_j}\right) \\
+     * &+& \frac{x_i}{\beta_{Y,ij}^2x_i+x_j}\left(1-\beta_{Y,ij}^2\frac{x_i+x_j}{\beta_{Y,ij}^2x_i+x_j}\right) - \frac{x_ix_j}{(\beta_{Y,ij}^2x_i+x_j)^2}\left(1+\beta_{Y,ij}^2-2\beta_{Y,ij}^2\frac{x_i+x_j}{\beta_{Y,ij}^2x_i+x_j}\right)
+     * \f}
+     */
+     long double d2fYijdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
 };
 
 /** \brief Reducing function converter for dry air and HFC blends

@@ -80,7 +80,7 @@
         0.000000e+00
       ], 
       [
-        3.270564e-08, 
+        3.270563e-08, 
         -2.261472e-07, 
         3.368862e-07, 
         0.000000e+00, 
@@ -109,7 +109,7 @@
     "type": "notdefined"
   }, 
   "name": "APG", 
-  "reference": "ASHRAE Fundamentals Handbook 2001, SecCool software", 
+  "reference": "ASHRAE2001,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

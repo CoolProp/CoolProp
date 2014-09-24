@@ -36,7 +36,7 @@
         -4.200618e-10
       ], 
       [
-        4.712469e-13
+        4.712470e-13
       ]
     ], 
     "type": "polynomial"
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "ZS40", 
-  "reference": "Arteco, SecCool software", 
+  "reference": "Arteco2010,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

@@ -16,7 +16,7 @@
         7.000000e-04
       ], 
       [
-        6.853149e-17
+        6.853806e-17
       ], 
       [
         -2.456396e-20
@@ -33,7 +33,7 @@
         -4.000000e-01
       ], 
       [
-        -8.005915e-15
+        -8.003880e-15
       ], 
       [
         -3.881444e-17
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "TY15", 
-  "reference": "Tyforop Chemie Gmbh - Technical information 09/99, SecCool software", 
+  "reference": "Tyfoprop1999,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

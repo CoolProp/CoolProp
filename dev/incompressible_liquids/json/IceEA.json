@@ -91,7 +91,7 @@
     "type": "notdefined"
   }, 
   "name": "IceEA", 
-  "reference": "Danish Technological Institute, SecCool software", 
+  "reference": "Kauffeld2001,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

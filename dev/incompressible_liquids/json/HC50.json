@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "HC50", 
-  "reference": "Dynalene data sheet", 
+  "reference": "Dynalene2014", 
   "saturation_pressure": {
     "coeffs": [
       [

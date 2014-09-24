@@ -486,7 +486,7 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 
 	    if (get_debug_level()>=20) std::cout << format("Incompressible library: Loading reference state for %s ",fluid.getName().c_str()) << std::endl;
 	    fluid.set_reference_state(
-			    parse_value(fluid_json, "Tref", false, 25+273.15) ,
+			    parse_value(fluid_json, "Tref", false, 20+273.15) ,
 			    parse_value(fluid_json, "pref", false, 1.01325e5) ,
 			    parse_value(fluid_json, "xref", false, 0.0) ,
 			    parse_value(fluid_json, "href", false, 0.0) ,
@@ -498,7 +498,7 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 
 	    // Add name->index mapping
 	    string_to_index_map[fluid.getName()] = index;
-        
+
         // Add name to vector of names
 		if (fluid.is_pure()){
 			this->name_vector_pure.push_back(fluid.getName());

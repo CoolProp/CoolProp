@@ -295,104 +295,104 @@ class SecCoolSolutionData(DigitalData):
         """
         print("Loading SecCool fluids: ", end="")
         sec = []
-        sec += [SecCoolSolutionData(sFile='Antifrogen KF'           ,sFolder='xVolume',name='AKF',desc='Antifrogen KF, Potassium Formate'       ,ref='Clariant GmbH Jan. 2000, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Antifrogen KF'           ,sFolder='xVolume',name='AKF',desc='Antifrogen KF, Potassium Formate'       ,ref='Clariant2000,Skovrup2013')]
         print("{0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Antifrogen L'            ,sFolder='xVolume',name='AL' ,desc='Antifrogen L, Propylene Glycol'         ,ref='Clariant GmbH Jan. 2000, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Antifrogen L'            ,sFolder='xVolume',name='AL' ,desc='Antifrogen L, Propylene Glycol'         ,ref='Clariant2000,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Antifrogen N'            ,sFolder='xVolume',name='AN' ,desc='Antifrogen N, Ethylene Glycol'          ,ref='Clariant GmbH Jan. 2000, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Antifrogen N'            ,sFolder='xVolume',name='AN' ,desc='Antifrogen N, Ethylene Glycol'          ,ref='Clariant2000,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='ASHRAE, Ethylene Glycol' ,sFolder='xVolume',name='AEG',desc='ASHRAE, Ethylene Glycol'                ,ref='ASHRAE Fundamentals Handbook 2001, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='ASHRAE, Ethylene Glycol' ,sFolder='xVolume',name='AEG',desc='ASHRAE, Ethylene Glycol'                ,ref='ASHRAE2001,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='ASHRAE, Propylene Glycol',sFolder='xVolume',name='APG',desc='ASHRAE, Propylene Glycol'               ,ref='ASHRAE Fundamentals Handbook 2001, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='ASHRAE, Propylene Glycol',sFolder='xVolume',name='APG',desc='ASHRAE, Propylene Glycol'               ,ref='ASHRAE2001,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Glykosol N'              ,sFolder='xVolume',name='GKN',desc='Glykosol N, Ethylene Glycol'            ,ref='pro KUEHLSOLE GmbH, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Glykosol N'              ,sFolder='xVolume',name='GKN',desc='Glykosol N, Ethylene Glycol'            ,ref='PKS2005,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Pekasol 2000'            ,sFolder='xVolume',name='PK2',desc='Pekasol 2000, Potassium acetate/formate',ref='pro KUEHLSOLE GmbH, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Pekasol 2000'            ,sFolder='xVolume',name='PK2',desc='Pekasol 2000, Potassium acetate/formate',ref='PKS2005,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Pekasol L'               ,sFolder='xVolume',name='PKL',desc='Pekasol L, Propylene Glycol'            ,ref='pro KUEHLSOLE GmbH, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Pekasol L'               ,sFolder='xVolume',name='PKL',desc='Pekasol L, Propylene Glycol'            ,ref='PKS2005,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec AC'               ,sFolder='xVolume',name='ZAC',desc='Zitrec AC, Corrosion Inhibitor'         ,ref='Arteco, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Zitrec AC'               ,sFolder='xVolume',name='ZAC',desc='Zitrec AC, Corrosion Inhibitor'         ,ref='Arteco2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec FC'               ,sFolder='xVolume',name='ZFC',desc='Zitrec FC, Propylene Glycol'            ,ref='Arteco, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Zitrec FC'               ,sFolder='xVolume',name='ZFC',desc='Zitrec FC, Propylene Glycol'            ,ref='Arteco2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec LC'               ,sFolder='xVolume',name='ZLC',desc='Zitrec LC, Propylene Glycol'            ,ref='Arteco, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Zitrec LC'               ,sFolder='xVolume',name='ZLC',desc='Zitrec LC, Propylene Glycol'            ,ref='Arteco2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec MC'               ,sFolder='xVolume',name='ZMC',desc='Zitrec MC, Ethylene Glycol'             ,ref='Arteco, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Zitrec MC'               ,sFolder='xVolume',name='ZMC',desc='Zitrec MC, Ethylene Glycol'             ,ref='Arteco2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec M'                ,sFolder='xVolume',name='ZM' ,desc='Zitrec M, Ethylene Glycol'              ,ref='Arteco, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-
-        sec += [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder-BOOK-2010, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Calcium Cloride'    ,sFolder='xMass',name='MCA2',desc='Melinder, Calcium Chloride'   ,ref='Melinder-BOOK-2010, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Ethanol'            ,sFolder='xMass',name='MEA2',desc='Melinder, Ethanol'            ,ref='Melinder-BOOK-2010, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Ethylene glycol'    ,sFolder='xMass',name='MEG2',desc='Melinder, Ethylene Glycol'    ,ref='Melinder-BOOK-2010, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Glycerol'           ,sFolder='xMass',name='MGL2',desc='Melinder, Glycerol'           ,ref='Melinder-BOOK-2010, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Magnesium Chloride' ,sFolder='xMass',name='MMG2',desc='Melinder, Magnesium Chloride' ,ref='Melinder-BOOK-2010, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Methanol'           ,sFolder='xMass',name='MMA2',desc='Melinder, Methanol'           ,ref='Melinder-BOOK-2010, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Potassium Acetate'  ,sFolder='xMass',name='MKA2',desc='Melinder, Potassium Acetate'  ,ref='Melinder-BOOK-2010, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Potassium Carbonate',sFolder='xMass',name='MKC2',desc='Melinder, Potassium Carbonate',ref='Melinder-BOOK-2010, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Propylene Glycol'   ,sFolder='xMass',name='MPG2',desc='Melinder, Propylene Glycol'   ,ref='Melinder-BOOK-2010, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Sodium Chloride'    ,sFolder='xMass',name='MNA2',desc='Melinder, Sodium Chloride'    ,ref='Melinder-BOOK-2010, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='VDI, Calcium Cloride'         ,sFolder='xMass',name='VCA' ,desc='VDI, Calcium Cloride'         ,ref='VDI Waermeatlas 9th Edition 2002, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='VDI, Magnesium Chloride'      ,sFolder='xMass',name='VMG' ,desc='VDI, Magnesium Chloride'      ,ref='VDI Waermeatlas 9th Edition 2002, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='VDI, Methanol'                ,sFolder='xMass',name='VMA' ,desc='VDI, Methanol'                ,ref='VDI Waermeatlas 9th Edition 2002, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='VDI, Potassium Carbonate'     ,sFolder='xMass',name='VKC' ,desc='VDI, Potassium Carbonate'     ,ref='VDI Waermeatlas 9th Edition 2002, SecCool software')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='VDI, Sodium Chloride'         ,sFolder='xMass',name='VNA' ,desc='VDI, Sodium Chloride'         ,ref='VDI Waermeatlas 9th Edition 2002, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Zitrec M'                ,sFolder='xVolume',name='ZM' ,desc='Zitrec M, Ethylene Glycol'              ,ref='Arteco2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
 
-        sec += [SecCoolSolutionData(sFile='HFE-7100'     ,sFolder='xPure',name='HFE2' ,desc='HFE-7100, Hydrofluoroether'                      ,ref='3M Novec, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='NBS, Water'   ,sFolder='xPure',name='NBS' ,desc='NBS, Water'                                      ,ref='Properties of Water and Steam in SI-Units, 2nd Revised and Updated Printing, Springer 1979, pp. 175 ff., SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Calcium Cloride'    ,sFolder='xMass',name='MCA2',desc='Melinder, Calcium Chloride'   ,ref='Melinder2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Paracryol'    ,sFolder='xPure',name='PCL' ,desc='Paracryol, Aliphatic Hydrocarbon'                ,ref='Sulzer Chemtech AG, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Ethanol'            ,sFolder='xMass',name='MEA2',desc='Melinder, Ethanol'            ,ref='Melinder2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Paratherm NF' ,sFolder='xPure',name='PNF' ,desc='Paratherm NF, Hydrotreated mineral oil'          ,ref='Paratherm Ltd, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Ethylene glycol'    ,sFolder='xMass',name='MEG2',desc='Melinder, Ethylene Glycol'    ,ref='Melinder2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.10' ,sFolder='xPure',name='TY10',desc='Tyfoxit 1.10, Potassium Acetate'                 ,ref='Tyforop Chemie Gmbh - Technical information 09/99, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Glycerol'           ,sFolder='xMass',name='MGL2',desc='Melinder, Glycerol'           ,ref='Melinder2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.15' ,sFolder='xPure',name='TY15',desc='Tyfoxit 1.15, Potassium Acetate'                 ,ref='Tyforop Chemie Gmbh - Technical information 09/99, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Magnesium Chloride' ,sFolder='xMass',name='MMG2',desc='Melinder, Magnesium Chloride' ,ref='Melinder2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.20' ,sFolder='xPure',name='TY20',desc='Tyfoxit 1.20, Potassium Acetate'                 ,ref='Tyforop Chemie Gmbh - Technical information 09/99, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Methanol'           ,sFolder='xMass',name='MMA2',desc='Melinder, Methanol'           ,ref='Melinder2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.24' ,sFolder='xPure',name='TY24',desc='Tyfoxit 1.24, Potassium Acetate'                 ,ref='Tyforop Chemie Gmbh - Technical information 09/99, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Potassium Acetate'  ,sFolder='xMass',name='MKA2',desc='Melinder, Potassium Acetate'  ,ref='Melinder2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec S10'   ,sFolder='xPure',name='ZS10',desc='Zitrec S10, Potassium formate/Sodium propionate' ,ref='Arteco, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Potassium Carbonate',sFolder='xMass',name='MKC2',desc='Melinder, Potassium Carbonate',ref='Melinder2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec S25'   ,sFolder='xPure',name='ZS25',desc='Zitrec S25, Potassium formate/Sodium propionate' ,ref='Arteco, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Propylene Glycol'   ,sFolder='xMass',name='MPG2',desc='Melinder, Propylene Glycol'   ,ref='Melinder2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec S40'   ,sFolder='xPure',name='ZS40',desc='Zitrec S40, Potassium formate/Sodium propionate' ,ref='Arteco, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Sodium Chloride'    ,sFolder='xMass',name='MNA2',desc='Melinder, Sodium Chloride'    ,ref='Melinder2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec S45'   ,sFolder='xPure',name='ZS45',desc='Zitrec S45, Potassium formate/Sodium propionate' ,ref='Arteco, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='VDI, Calcium Cloride'         ,sFolder='xMass',name='VCA' ,desc='VDI, Calcium Cloride'         ,ref='Preisegger2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec S55'   ,sFolder='xPure',name='ZS55',desc='Zitrec S55, Potassium formate/Sodium propionate' ,ref='Arteco, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='VDI, Magnesium Chloride'      ,sFolder='xMass',name='VMG' ,desc='VDI, Magnesium Chloride'      ,ref='Preisegger2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Syltherm XLT'   ,sFolder='xPure',name='XLT2',desc='Syltherm XLT, Polydimethylsiloxan' ,ref='Dow Chemicals, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='VDI, Methanol'                ,sFolder='xMass',name='VMA' ,desc='VDI, Methanol'                ,ref='Preisegger2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Dowtherm J'   ,sFolder='xPure',name='DowJ2',desc='Dowtherm J, Diethylbenzene mixture' ,ref='Dow Chemicals, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='VDI, Potassium Carbonate'     ,sFolder='xMass',name='VKC' ,desc='VDI, Potassium Carbonate'     ,ref='Preisegger2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Dowtherm Q'   ,sFolder='xPure',name='DowQ2',desc='Dowtherm Q, Diphenylethane/alkylated aromatics' ,ref='Dow Chemicals, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='VDI, Sodium Chloride'         ,sFolder='xMass',name='VNA' ,desc='VDI, Sodium Chloride'         ,ref='Preisegger2010,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
 
-        sec += [SecCoolIceData(sFile='IceEA'   ,sFolder='xMass',name='IceEA',desc='Ice slurry with Ethanol' ,ref='Danish Technological Institute, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='HFE-7100'     ,sFolder='xPure',name='HFE2' ,desc='HFE-7100, Hydrofluoroether'                      ,ref='3M2007,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolIceData(sFile='IceNA'   ,sFolder='xMass',name='IceNA',desc='Ice slurry with NaCl' ,ref='Danish Technological Institute, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='NBS, Water'   ,sFolder='xPure',name='NBS' ,desc='NBS, Water'                                      ,ref='Schmidt1979,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolIceData(sFile='IcePG'   ,sFolder='xMass',name='IcePG',desc='Ice slurry with Propylene Glycol' ,ref='Danish Technological Institute, SecCool software')]
+        sec += [SecCoolSolutionData(sFile='Paracryol'    ,sFolder='xPure',name='PCL' ,desc='Paracryol, Aliphatic Hydrocarbon'                ,ref='Sulzer1999,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Paratherm NF' ,sFolder='xPure',name='PNF2' ,desc='Paratherm NF, Hydrotreated mineral oil'          ,ref='Paratherm2013,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.10' ,sFolder='xPure',name='TY10',desc='Tyfoxit 1.10, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.15' ,sFolder='xPure',name='TY15',desc='Tyfoxit 1.15, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.20' ,sFolder='xPure',name='TY20',desc='Tyfoxit 1.20, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.24' ,sFolder='xPure',name='TY24',desc='Tyfoxit 1.24, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Zitrec S10'   ,sFolder='xPure',name='ZS10',desc='Zitrec S10, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Zitrec S25'   ,sFolder='xPure',name='ZS25',desc='Zitrec S25, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Zitrec S40'   ,sFolder='xPure',name='ZS40',desc='Zitrec S40, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Zitrec S45'   ,sFolder='xPure',name='ZS45',desc='Zitrec S45, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Zitrec S55'   ,sFolder='xPure',name='ZS55',desc='Zitrec S55, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Syltherm XLT'   ,sFolder='xPure',name='XLT2',desc='Syltherm XLT, Polydimethylsiloxan' ,ref='Dow1997,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Dowtherm J'   ,sFolder='xPure',name='DowJ2',desc='Dowtherm J, Diethylbenzene mixture' ,ref='Dow1997,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Dowtherm Q'   ,sFolder='xPure',name='DowQ2',desc='Dowtherm Q, Diphenylethane/alkylated aromatics' ,ref='Dow1997,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+
+        sec += [SecCoolIceData(sFile='IceEA'   ,sFolder='xMass',name='IceEA',desc='Ice slurry with Ethanol' ,ref='Kauffeld2001,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolIceData(sFile='IceNA'   ,sFolder='xMass',name='IceNA',desc='Ice slurry with NaCl' ,ref='Kauffeld2001,Skovrup2013')]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolIceData(sFile='IcePG'   ,sFolder='xMass',name='IcePG',desc='Ice slurry with Propylene Glycol' ,ref='Kauffeld2001,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
 
         sec += [ThermogenVP1869()]
@@ -421,7 +421,7 @@ class SecCoolIceData(SecCoolSolutionData):
     A base class that can be fed with a fluid ID from SecCool
     to read data files sitting in data/SecCool/xTables.
     """
-    def __init__(self,sFile=None,sFolder=None,name=None,desc=None,ref='Danish Technological Institute, SecCool software'):
+    def __init__(self,sFile=None,sFolder=None,name=None,desc=None,ref='Danish Technological Institute,Skovrup2013'):
         SecCoolSolutionData.__init__(self,sFile=sFile,sFolder=sFolder,name=name,desc=desc,ref=ref)
 
         #self.density.xData,self.density.yData,self.density.data = self.getArray(dataID="Rho")
@@ -520,7 +520,7 @@ class ThermogenVP1869(PureData,DigitalData):
         PureData.__init__(self)
         self.name = "TVP1869"
         self.description = "Thermogen VP 1869"
-        self.reference = "Hoechst, SecCool software"
+        self.reference = "Hoechst1995,Skovrup2013"
 
         self.Tmax =  20 + 273.15
         self.Tmin = -80 + 273.15
@@ -569,7 +569,7 @@ class Freezium(DigitalData):
 
         self.name = "FRE"
         self.description = "Freezium, Potassium Formate"
-        self.reference = "Kemira Chemicals OY, SecCool software"
+        self.reference = "Kemira1998,Skovrup2013"
 
         self.Tmin = -40 + 273.00
         self.Tmax = +40 + 273.00
@@ -668,7 +668,7 @@ class AS10(PureData,DigitalData):
         PureData.__init__(self)
         self.name = "AS10"
         self.description = "Aspen Temper -10, Potassium acetate/formate"
-        self.reference = "Aspen Petroleum AB, SecCool software"
+        self.reference = "Aspen2001,Skovrup2013"
 
         self.Tmax = 30 + 273.15
         self.Tmin = -10 + 273.15
@@ -704,7 +704,7 @@ class AS20(PureData,DigitalData):
         PureData.__init__(self)
         self.name = "AS20"
         self.description = "Aspen Temper -20, Potassium acetate/formate"
-        self.reference = "Aspen Petroleum AB, SecCool software"
+        self.reference = "Aspen2001,Skovrup2013"
 
         self.Tmax = 30 + 273.15
         self.Tmin = -20 + 273.15
@@ -752,7 +752,7 @@ class AS30(PureData,DigitalData):
         PureData.__init__(self)
         self.name = "AS30"
         self.description = "Aspen Temper -30, Potassium acetate/formate"
-        self.reference = "Aspen Petroleum AB, SecCool software"
+        self.reference = "Aspen2001,Skovrup2013"
 
         self.Tmax = 30 + 273.15
         self.Tmin = -30 + 273.15
@@ -800,7 +800,7 @@ class AS40(PureData,DigitalData):
         PureData.__init__(self)
         self.name = "AS40"
         self.description = "Aspen Temper -40, Potassium acetate/formate"
-        self.reference = "Aspen Petroleum AB, SecCool software"
+        self.reference = "Aspen2001,Skovrup2013"
 
         self.Tmax = 30 + 273.15
         self.Tmin = -40 + 273.15
@@ -847,7 +847,7 @@ class AS55(PureData,DigitalData):
         PureData.__init__(self)
         self.name = "AS55"
         self.description = "Aspen Temper -55, Potassium acetate/formate"
-        self.reference = "Aspen Petroleum AB, SecCool software"
+        self.reference = "Aspen2001,Skovrup2013"
 
         self.Tmax = 30 + 273.15
         self.Tmin = -55 + 273.15

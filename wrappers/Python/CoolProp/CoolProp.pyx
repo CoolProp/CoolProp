@@ -396,21 +396,26 @@ cdef class State:
         if _Fluid == <string>'none':
             return
         else:
-            if backend is None:
+            if '::' in Fluid:
+                backend, Fluid = Fluid.split(u'::',1)
+            elif backend is None:
                 backend = u'?'
+                
             self.set_Fluid(Fluid, backend)
         self.Fluid = _Fluid
+        
+        # Parse the inputs provided
+        self.update(StateDict)
+        
         self.phase = phase
         if phase is None:
             self.phase = u'??'.encode('ascii')
-        # Parse the inputs provided
-        self.update(StateDict)
-#         #Set the phase flag
-#         if self.phase == <string>'Gas' or self.phase == <string>'Liquid' or self.phase == <string>'Supercritical':
-#             if self.is_CPFluid and (self.phase == <string>'Gas' or self.phase == <string>'Liquid'):
-#                 self.CPS.flag_SinglePhase = True
-#             elif not self.is_CPFluid and phase is not None:
-#                 _set_phase(self.phase)
+        
+        # Set the phase flag
+        if self.phase.lower() == 'gas':
+            self.pAS.specify_phase(constants_header.iphase_gas)
+        elif self.phase.lower() == 'liquid':
+            self.pAS.specify_phase(constants_header.iphase_liquid)
             
 #     def __reduce__(self):
 #         d={}
@@ -421,7 +426,22 @@ cdef class State:
 #         return rebuildState,(d,)
         
     cpdef set_Fluid(self, string Fluid, string backend):
-        self.pAS = AbstractState(backend, Fluid)
+        
+        cdef object _Fluid = Fluid
+        cdef object _backend = backend
+        new_fluid = []
+        fracs = []
+        if '[' in _Fluid and ']' in _Fluid:
+            pairs = _Fluid.split('&')
+            for pair in pairs:
+                fluid, frac = pair.split('[')
+                new_fluid.append(fluid)
+                fracs.append(float(frac.strip(']')))
+            _Fluid = '&'.join(new_fluid)
+        else:
+            fracs = [1]
+        self.pAS = AbstractState(_backend, _Fluid)
+        self.pAS.set_mole_fractions(fracs)
         
     cpdef update_ph(self, double p, double h):
         """
@@ -434,7 +454,7 @@ cdef class State:
         h: float
             Enthalpy [kJ/kg]
         """
-        self.pAS.update(HmassP_INPUTS, p*1000, h*1000)
+        self.pAS.update(HmassP_INPUTS, h*1000, p*1000)
         self.T_ = self.pAS.T()
         self.rho_ = self.pAS.rhomass()
             
@@ -692,32 +712,23 @@ cdef class State:
         
         print 'Call to the Python call layer (CoolProp.CoolProp.Props)'
         print "'M' involves basically no computational effort and is a good measure of the function call overhead"
-        keys = ['H','P','S','U','C','O','V','L','M','C0','dpdT']
+        keys = ['H','P','S','U','C','O','V','L','M','d(P)/d(T)|Dmolar']
         for key in keys:
             t1=clock()
             for i in range(N):
-                CP.Props(key,'T',self.T_,'D',self.rho_,Fluid)
+                CP.PropsSI(key,'T',self.T_,'D',self.rho_,Fluid)
             t2=clock()
             print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6)
             
         print 'Direct c++ call to CoolProp without the Python call layer (_Props function)'
         print "'M' involves basically no computational effort and is a good measure of the function call overhead"
-        keys = ['H','P','S','U','C','O','V','L','M','C0','dpdT']
+        keys = ['H','P','S','U','C','O','V','L','M','C0','d(P)/d(T)|Dmolar']
         for key in keys:
             t1=clock()
             for i in range(N):
-                _Props(key,'T',self.T_,'D',self.rho_,Fluid)
+                _PropsSI(key,'T',self.T_,'D',self.rho_,Fluid)
             t2=clock()
             print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6)
-        
-        print 'Call to the c++ layer through IProps'
-        keys = [iH,iP,iS,iU,iC,iO,iV,iL,iMM,iC0,iDpdT]
-        for key in keys:
-            t1=clock()
-            for i in range(N):
-                _IProps(key,iT,self.T_,iD,self.rho_,self.iFluid)
-            t2=clock()
-            print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,paras[key],(t2-t1)/N*1e6)
             
         print 'Call to the c++ layer using integers'
         keys = [iHmass, iP,iSmass,iUmass]
@@ -728,11 +739,14 @@ cdef class State:
                 self.pAS.keyed_output(key)
             t2=clock()
             print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,paras[key],(t2-t1)/N*1e6)
+            
+        print 'Call to the AbstractState for molar mass (fast)'
+        t1=clock()
+        for i in range(N):
+            self.pAS.keyed_output(imolar_mass)
+        t2=clock()
+        print 'Elapsed time for {0:d} calls at {1:g} us/call'.format(N, (t2-t1)/N*1e6)
         
-        #~ keys = [iH,iP,iS,iU,iC,iO,iV,iL,iMM,iC0,iDpdT]
-        #~ isenabled = _isenabled_TTSE_LUT(<bytes>Fluid)
-        #~ _enable_TTSE_LUT(<bytes>Fluid)
-        #~ _IProps(iH,iT,self.T_,iD,self.rho_,self.iFluid)
 #         
 #         print 'Call using TTSE with T,rho'
 #         print "'M' involves basically no computational effort and is a good measure of the function call overhead"

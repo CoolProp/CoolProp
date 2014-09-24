@@ -80,7 +80,7 @@
         0.000000e+00
       ], 
       [
-        7.584600e-07, 
+        7.584599e-07, 
         -1.681891e-06, 
         8.927989e-07, 
         0.000000e+00, 
@@ -109,7 +109,7 @@
     "type": "notdefined"
   }, 
   "name": "PK2", 
-  "reference": "pro KUEHLSOLE GmbH, SecCool software", 
+  "reference": "PKS2005,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

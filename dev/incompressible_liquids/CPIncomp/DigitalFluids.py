@@ -20,7 +20,7 @@ class HyCool20(PureData,DigitalData):
 
         self.name = "HY20"
         self.description = "HYCOOL 20, Potassium formate"
-        self.reference = "Hydro Chemicals"
+        self.reference = "Hydro2000"
 
         self.Tmax =  50 + 273.15
         self.Tmin = -20 + 273.15
@@ -61,8 +61,8 @@ class HyCool30(PureData,DigitalData):
         PureData.__init__(self)
 
         self.name = "HY30"
-        self.description = "HYCOOL 30, Potassium formate"
-        self.reference = "Hydro Chemicals"
+        self.description = "HyCool 30, Potassium formate"
+        self.reference = "Hydro2000"
 
         self.Tmax =  50 + 273.15
         self.Tmin = -30 + 273.15
@@ -103,8 +103,8 @@ class HyCool40(PureData,DigitalData):
         PureData.__init__(self)
 
         self.name = "HY40"
-        self.description = "HYCOOL 40, Potassium formate"
-        self.reference = "Hydro Chemicals"
+        self.description = "HyCool 40, Potassium formate"
+        self.reference = "Hydro2000"
 
         self.Tmax =  20 + 273.15
         self.Tmin = -40 + 273.15
@@ -139,8 +139,8 @@ class HyCool45(PureData,DigitalData):
         PureData.__init__(self)
 
         self.name = "HY45"
-        self.description = "HYCOOL 45, Potassium formate"
-        self.reference = "Hydro Chemicals"
+        self.description = "HyCool 45, Potassium formate"
+        self.reference = "Hydro2000"
 
         self.Tmax =  20 + 273.15
         self.Tmin = -45 + 273.15
@@ -175,8 +175,8 @@ class HyCool50(PureData,DigitalData):
         PureData.__init__(self)
 
         self.name = "HY50"
-        self.description = "HYCOOL 50, Potassium formate"
-        self.reference = "Hydro Chemicals"
+        self.description = "HyCool 50, Potassium formate"
+        self.reference = "Hydro2000"
 
         self.Tmax =  20 + 273.15
         self.Tmin = -50 + 273.15

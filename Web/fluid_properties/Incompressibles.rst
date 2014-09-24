@@ -1,17 +1,21 @@
 
-.. |degC| replace:: :math:`^\circ\!\!` C
 
 .. _Incompressibles:
 
 Incompressible Fluids
 =====================
 
-In CoolProp, the incompressible fluids are divided into four major groups.
+
+General Introduction
+--------------------
+
+In CoolProp, the incompressible fluids are divided into three major groups.
 
 * :ref:`Pure fluids <Pure>`.
 * :ref:`Mass-based binary mixtures <MassMix>`.
-.. * :ref:`Mole-based binary mixtures <MoleMix>`.
 * :ref:`Volume-based binary mixtures <VoluMix>`.
+
+.. * :ref:`Mole-based binary mixtures <MoleMix>`.
 
 The pure fluids and mass-based binary mixtures are by far the most common fluids
 in this library. While the pure fluids contain data for many different kinds of
@@ -30,17 +34,36 @@ documents with all the
 You can read more about these reports in a dedicated
 :ref:`section<FittingReports>` called :ref:`Fitting Reports<FittingReports>` below.
 
+All incompressible fluids have an arbitrary reference state for enthalpy and entropy.
+During initialisation, the reference state is defined as a temperature of 20 °C
+and a pressure of 1 atm according to the U.S. National Institute of Standards and
+Technology ([NIST](http://www.nist.gov)).
+
+.. math::
+   T_\text{ref} &=  293.15\:\text{K}  &=     68\:\text{°F} \\
+   p_\text{ref} &=  101325\:\text{Pa} &= 14.696\:\text{psi} \\
+   h_\text{ref} &=  0\:\text{KJ}\,\text{kg}^{-1} & \\
+   s_\text{ref} &=  0\:\text{KJ}\,\text{kg}^{-1}\,\text{K}^{-1} & \\
+
+If you use a mixture, the reference state gets updated each time you change the
+composition.
+
+
+Pure Fluid Examples
+-------------------
+
 Incompressible fluids only allow  for a limited subset of input variables. The
-following input pairs are supported: :math:`f(p,T)`, :math:`f(h,p)`, :math:`f(\rho,T)`,
-:math:`f(p,u)` and :math:`f(p,s)`. All functions iterate on :math:`f(p,T)` calls
+following input pairs are supported: :math:`f(p,T)`, :math:`f(p,h)`, :math:`f(p,\rho)`,
+:math:`f(p,u)` and :math:`f(p,s)`. Some fluids also provide saturation state
+information as :math:`f(Q,T)` with :math:`Q=0`. All functions iterate on :math:`f(p,T)` calls
 internally, which makes this combination by far the fastest. However, also the
 other inputs should be fast compared to the full Helmholtz-based EOS implemented
 for then compressible fluids.
 
-A call to the top-level function ``PropsSI`` can provide : density, heat capacity,
-internal energy, enthalpy, entropy, viscosity and thermal conductivity. Hence,
-the available output keys are: ``D``, ``C``, ``U``, ``H``, ``S``, ``V``, ``L``,
-``Tmin``, ``Tmax`` and ``Psat``.
+A call to the top-level function ``PropsSI`` can provide : temperature, pressure,
+density, heat capacity, internal energy, enthalpy, entropy, viscosity and
+thermal conductivity. Hence, the available output keys are: ``T``, ``P``, ``D``,
+``C``, ``U``, ``H``, ``S``, ``V``, ``L``, ``Tmin`` and ``Tmax``.
 
 .. ipython::
 
@@ -52,20 +75,10 @@ the available output keys are: ``D``, ``C``, ``U``, ``H``, ``S``, ``V``, ``L``,
     #Specific heat capacity of Downtherm Q at 500 K and 1 atm
     In [1]: PropsSI('C','T',500,'P',101325,'INCOMP::DowQ')
 
-    #Internal energy of Downtherm Q at 500 K and 1 atm
-    In [1]: PropsSI('U','T',500,'P',101325,'INCOMP::DowQ')
+    In [1]: PropsSI('C','D',809.0659,'P',101325,'INCOMP::DowQ')
 
-    #Enthalpy of Downtherm Q at 500 K and 1 atm
-    In [1]: PropsSI('H','T',500,'P',101325,'INCOMP::DowQ')
-
-    #Entropy of Downtherm Q at 500 K and 1 atm
-    In [1]: PropsSI('S','T',500,'P',101325,'INCOMP::DowQ')
-
-    #Viscosity of Downtherm Q at 500 K and 1 atm
-    In [1]: PropsSI('V','T',500,'P',101325,'INCOMP::DowQ')
-
-    #Thermal conductivity of Downtherm Q at 500 K and 1 atm
-    In [1]: PropsSI('L','T',500,'P',101325,'INCOMP::DowQ')
+    #Saturation pressure of Downtherm Q at 500 K
+    In [1]: PropsSI('P','T',500,'Q',0,'INCOMP::DowQ')
 
     #Minimum temperature for Downtherm Q
     In [1]: PropsSI('Tmin','T',0,'P',0,'INCOMP::DowQ')
@@ -74,65 +87,40 @@ the available output keys are: ``D``, ``C``, ``U``, ``H``, ``S``, ``V``, ``L``,
     In [1]: PropsSI('Tmax','T',0,'P',0,'INCOMP::DowQ')
 
 
-..    #Vapour pressure of Downtherm Q at 500 K, note the dummy pressure to work around https://github.com/CoolProp/CoolProp/issues/145
-    In [1]: PropsSI('Psat','T',500,'P',1e8,'INCOMP::DowQ')
+
+Mixture Examples
+----------------
+
+Almost the same syntax can be used for mixtures. Please note that the mixture
+interface developed for CoolProp 5 has not been ported to the incompressible
+fluids, yet. For now, you have to use the ``PropsSI`` function with a special
+composition notation. Depending on your fluid, you have to supply either the
+:ref:`mass fraction<MassMix>` or the :ref:`volume fraction<VoluMix>` as additional
+parameter. This is done via the fluid name by appending a dash and the
+fraction of the substance other than water. The fraction notation can be in the
+form of percent, ``LiBr-23%``, or as a fraction like in ``LiBr-0.23`` or
+``LiBr[0.23]``, which corresponds to the new mixture syntax in CoolProp5.
+
+..  In addition to the properties available for the pure fluids (``D``, ``C``,
+  ``U``, ``H``, ``S``, ``V``, ``L``,``Tmin`` and ``Tmax``, some mixtures also
+  provide the freezing temperature ``Tfreeze`` as a function of composition.
+
+
+.. ipython::
+
+    In [1]: from CoolProp.CoolProp import PropsSI
+
+    #Density of a lithium bromide solution at 300 K and 1 atm.
+    In [1]: PropsSI('D','T',300,'P',101325,'INCOMP::LiBr[0.23]')
+
+    #Specific heat capacity of a lithium bromide solution at 300 K and 1 atm
+    In [1]: PropsSI('C','T',300,'P',101325,'INCOMP::LiBr-0.23%')
 
 
 
-Pure Fluids
------------
-
-For refrigeration applications, 8 fluids were implemented from Aake Melinder's
-book "Properties of Secondary Working Fluids for Indirect Systems" published in 2010
-by IIR :cite:`Melinder-BOOK-2010` with coefficients obtained from a fit between
--80 |degC| and +100 |degC|: DEB, HCM, HFE, PMS1, PMS2, SAB, HCB and TCO.
-
-Some additional secondary cooling fluids are based on data compiled by Morten
-Juel Skovrup in his `SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
-provided by his employer `IPU <http://en.ipu.dk>`_. Fits have been made for the
-manufacturer data stored in the software. The Aspen Temper fluids (AS10, AS20,
-AS30, AS40, AS55) are a blend of potassium formate and sodiumpropionate and the
-Zitrec S group (ZS10, ZS25, ZS40, ZS45 and ZS55) consists mainly of potassium
-acetate and potassium formate.
-
-There are also a few high temperature heat transfer fluids with individual
-temperature ranges. Please refer to the table below for a complete overview.
-For these fluids, information from commercial data sheets was used to obtain
-coefficients.
-
-.. _Pure:
-
-.. csv-table:: All incompressible pure fluids included in CoolProp
-   :widths: 10, 35, 25, 15, 15
-   :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/pure-fluids.csv
 
 
 
-Aqueous Mixtures - Solutions and Brines
----------------------------------------
-
-
-.. _MassMix:
-
-.. csv-table:: All incompressible mass-based binary mixtures included in CoolProp
-   :widths: 10, 30, 20, 10, 10, 10, 10
-   :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/mass-based-fluids.csv
-
-.. .. _MoleMix:
-
-.. .. csv-table:: All incompressible mole-based binary mixtures included in CoolProp
-   :widths: 10, 30, 20, 10, 10, 10, 10
-   :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/mole-based-fluids.csv
-
-.. _VoluMix:
-
-.. csv-table:: All incompressible volume-based binary mixtures included in CoolProp
-   :widths: 10, 30, 20, 10, 10, 10, 10
-   :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/volume-based-fluids.csv
 
 
 
@@ -178,85 +166,12 @@ Equations
 
 Exp or log for visc, other poly or log poly
 
+.. math::
 
+    x(T) &= \sum_{i=0}^n C[i] \cdot T^i \\
+    x(T) &= \exp\left( \frac{C[0]}{T+C[1]} - C[2] \right) \\
+    x(T) &= \exp\left( \log  \left( \left(T+C[0]\right)^{-1} + \left( T+C[0] \right)^{-2} \right) *C[1]+C[2] \right) \\
 
-Incompressible Liquids
-----------------------
-There is also a selection of incompressible liquids implemented.  These only allow for calls with
-temperature and pressure as input and provide only a subset of thermophysical properties, namely:
-density, heat capacity, internal energy, enthalpy, entropy, viscosity and thermal conductivity.
-Hence, the available output keys for the ``Props`` function are: "D", "C", "U", "H", "S", "V", "L",
-"Tmin", "Tmax" and "Psat". An internal iteration allows us to use enthalpy and pressure as inputs,
-but be aware of the reduced computational efficiency.
-
-.. ipython::
-
-    In [1]: from CoolProp.CoolProp import PropsSI
-
-    #Density of HFE-7100 at 300 K and 1 atm.
-    In [1]: PropsSI('D','T',300,'P',101325,'INCOMP::HFE')
-
-
-For refrigeration applications, 8 fluids were implemented from Aake Melinder "Properties of
-Secondary Working Fluids for Indirect Systems" published in 2010 by IIR and coefficients are
-obtained from a fit between -80 and +100 degrees Celsius.
-
-==========================   ===================================================
-Fluid Name                   Description
-==========================   ===================================================
-``DEB``                      Diethyl Benzene
-``HCM``                      Hydrocarbon Mixture (Therminol D12 Solutia)
-``HFE``                      Hydrofluoroether HFE-7100
-``PMS1``                     Polydimethylsiloxan 1.
-``PMS2``                     Polydimethylsiloxan 2.
-``SAB``                      Synthetic alkyl benzene
-``HCB``                      Hydrocarbon blend (Dynalene MV)
-``TCO``                      Terpene from citrus oils
-==========================   ===================================================
-
-Some additional secondary cooling fluids are based on data compiled by Morten Juel Skovrup in
-his `SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
-provided by his employer `IPU <http://en.ipu.dk>`_. Fits have been made according to the manufacturer
-data stored in the sodtware. The Aspen Temper fluids are a blend of potassium formate and sodiumpropionate
-and the Zitrec S group consists mainly of potassium acetate and potassium formate.
-
-==========================   ===================================================
-Fluid Name                   Description
-==========================   ===================================================
-``AS10``                     Aspen Temper -10 (-10 to +27.5 C)
-``AS20``                     Aspen Temper -20 (-20 to +27.5 C)
-``AS30``                     Aspen Temper -30 (-30 to +27.5 C)
-``AS40``                     Aspen Temper -40 (-40 to +27.5 C)
-``AS55``                     Aspen Temper -55 (-55 to +27.5 C)
-``ZS10``                     Zitrec S -10 (-10 to +85 C)
-``ZS25``                     Zitrec S -25 (-25 to +85 C)
-``ZS40``                     Zitrec S -40 (-40 to +85 C)
-``ZS45``                     Zitrec S -45 (-45 to +85 C)
-``ZS55``                     Zitrec S -55 (-55 to +85 C)
-==========================   ===================================================
-
-There are also a few high temperature heat transfer fluids with individual temperature ranges. Please
-refer to the file IncompLiquid.h for a complete overview. For these fluids, information from commercial
-data sheets was used to obtain coefficients.
-
-==========================   ===================================================
-Fluid Name                   Description
-==========================   ===================================================
-``TD12``                     Therminol D12 (-85 to +230 C)
-``TVP1``                     Therminol VP-1 (+12 to +397 C)
-``T72``                      Therminol 72 (-10 to +380 C)
-``T66``                      Therminol 66 (0 to +345 C)
-``DowJ``                     Dowtherm J (-80 to +345 C)
-``DowQ``                     Dowtherm Q (-35 to +360 C)
-``TX22``                     Texatherm 22 (0 to +350 C)
-``NaK``                      Nitrate Salt Blend (+300 to +600 C)
-``XLT``                      Syltherm XLT (-100 to +260 C)
-``HC10``                     Dynalene HC-10 (-10 to +218 C)
-``HC20``                     Dynalene HC-20 (-20 to +210 C)
-``HC30``                     Dynalene HC-30 (-30 to +210 C)
-``HC40``                     Dynalene HC-40 (-40 to +200 C)
-``HC50``                     Dynalene HC-50 (-50 to +210 C)
-==========================   ===================================================
 
 All fluids are implemented with polynomials for density and heat capacity with typically 4 coefficients
 and hence a third order polynomial. Thermal conductivity is a second order polynomial and viscosity and
@@ -276,6 +191,8 @@ vapour pressure are exponential functions.
     \lambda &= \sum_{i=0}^n C_{\lambda}[i] \cdot T^i \\
     \mu     &= \exp\left( \frac{C_{\mu}[0]}{T+C_{\mu}[1]} - C_{\mu}[2] \right) \\
     p_{sat}  &= \exp\left( \frac{C_{sat}[0]}{T+C_{sat}[1]} - C_{sat}[2] \right) \\
+
+In some cases, the fit quality for the
 
 
 Brines and Solutions
@@ -388,5 +305,76 @@ then yields the final factor :math:`D` to be multiplied with the other coefficie
 
 
 
-.. bibliography:: ../../CoolPropBibTeXLibrary.bib
-  :style: unsrt
+
+
+
+
+The Different Fluids
+--------------------
+
+The fluids implemented in CoolProp cover a wide range of industrial heat
+transfer media. This database has initially been developed with refrigeration
+systems in mind. That is why the majority of fluids are secondary refrigerants
+with application temperatures close to the freezing point of water. Besides those,
+there is also incompressible water, high temperature heat transfer oils and a
+molten salt mixture for extreme temperatures.
+
+Besides the different technical data sheets and calculation tools provided by
+manufactures, two specific publications provided a lot of data used for the
+incompressible fluids: Åke Melinder's book *Properties of Secondary Working
+Fluids for Indirect Systems* :cite:`Melinder2010` has inspired both, the work on
+pure fluids and aqueous solutions. The second major source of inspiration is the
+`SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
+:cite:`Skovrup2013` software, which contains data compiled by Morten Juel
+Skovrup. It is provided free of charge by his employer `IPU <http://en.ipu.dk>`_.
+
+
+.. _Pure:
+
+.. csv-table:: All incompressible pure fluids included in CoolProp
+   :widths: 10, 35, 15, 20, 20
+   :header-rows: 1
+   :file: ../_static/fluid_properties/incompressible/table/pure-fluids.csv
+
+
+There are also a number of water-based mixtures implemented in CoolProp. Most of them
+are secondary heat transfer fluids, but there are also aqueous solutions of
+ammonia :cite:`Melinder2010`, :download:`MAM<../_static/fluid_properties/incompressible/report/MAM_fitreport.pdf>`,
+and lithium bromide :cite:`Patek2006`, :download:`LiBr<../_static/fluid_properties/incompressible/report/LiBr_fitreport.pdf>`.
+
+
+.. _MassMix:
+
+.. csv-table:: All incompressible mass-based binary mixtures included in CoolProp
+   :widths: 10, 30, 12, 12, 12, 12, 12
+   :header-rows: 1
+   :file: ../_static/fluid_properties/incompressible/table/mass-based-fluids.csv
+
+.. .. _MoleMix:
+
+.. .. csv-table:: All incompressible mole-based binary mixtures included in CoolProp
+   :widths: 10, 30, 12, 12, 12, 12, 12
+   :header-rows: 1
+   :file: ../_static/fluid_properties/incompressible/table/mole-based-fluids.csv
+
+.. _VoluMix:
+
+.. csv-table:: All incompressible volume-based binary mixtures included in CoolProp
+   :widths: 10, 30, 12, 12, 12, 12, 12
+   :header-rows: 1
+   :file: ../_static/fluid_properties/incompressible/table/volume-based-fluids.csv
+
+
+For slurry ice, the concentration :math:`x` refers to the solid content and the
+heat capacity includes the heat of fusion. It might be necessary to adjust the
+solid content during heat transfer. The implementation is based on the data
+available in `SecCool<http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_,
+which was originally recorded at the `Danish Technological Institute (DTI) <http://www.dti.dk/>`_.
+
+
+References
+----------
+
+.. bibliography:: Incompressibles.bib
+   :filter: docname in docnames
+   :style: unsrt

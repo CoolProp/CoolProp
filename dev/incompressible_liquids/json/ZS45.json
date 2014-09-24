@@ -33,7 +33,7 @@
         -5.524646e-01
       ], 
       [
-        -3.713730e-11
+        -3.713729e-11
       ], 
       [
         3.828340e-14
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "ZS45", 
-  "reference": "Arteco, SecCool software", 
+  "reference": "Arteco2010,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

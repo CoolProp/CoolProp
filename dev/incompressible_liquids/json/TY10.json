@@ -33,10 +33,10 @@
         -4.000000e-01
       ], 
       [
-        -2.441934e-14
+        -2.441148e-14
       ], 
       [
-        4.087442e-17
+        4.090153e-17
       ]
     ], 
     "type": "polynomial"
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "TY10", 
-  "reference": "Tyforop Chemie Gmbh - Technical information 09/99, SecCool software", 
+  "reference": "Tyfoprop1999,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

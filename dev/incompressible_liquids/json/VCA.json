@@ -1,11 +1,13 @@
 {
   "T_freeze": {
     "coeffs": [
-      9.290333e+05, 
-      6.000000e+04, 
-      1.000000e+01
+      [
+        5.362735e+00, 
+        2.668310e+00, 
+        -8.579530e+00
+      ]
     ], 
-    "type": "exponential"
+    "type": "exppolynomial"
   }, 
   "Tbase": 0.000000e+00, 
   "Tmax": 2.931500e+02, 
@@ -87,7 +89,7 @@
     "type": "notdefined"
   }, 
   "name": "VCA", 
-  "reference": "VDI Waermeatlas 9th Edition 2002, SecCool software", 
+  "reference": "Preisegger2010,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

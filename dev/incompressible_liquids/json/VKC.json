@@ -1,11 +1,15 @@
 {
   "T_freeze": {
     "coeffs": [
-      9.319965e+05, 
-      6.000000e+04, 
-      1.000000e+01
+      [
+        5.665198e+00, 
+        -1.100695e+00, 
+        5.859190e+00, 
+        -1.501478e+01, 
+        1.017784e+01
+      ]
     ], 
-    "type": "exponential"
+    "type": "exppolynomial"
   }, 
   "Tbase": 0.000000e+00, 
   "Tmax": 2.931500e+02, 
@@ -95,7 +99,7 @@
     "type": "notdefined"
   }, 
   "name": "VKC", 
-  "reference": "VDI Waermeatlas 9th Edition 2002, SecCool software", 
+  "reference": "Preisegger2010,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
