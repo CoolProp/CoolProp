@@ -14,12 +14,16 @@ The only types of inputs that are allowed for mixtures right now are
 - Temperature/quality
 - Temperature/pressure
 
+.. csv-table:: All binary pairs included in CoolProp
+   :header-rows: 1
+   :file: mixture_binary_pairs.csv 
+
 .. plot::
 
     import CoolProp
     import matplotlib.pyplot as plt
 
-    HEOS = CoolProp.AbstractState('HEOS','R32&R134a')
+    HEOS = CoolProp.AbstractState('HEOS','Methane&Ethane')
     for x0 in [0.02, 0.2, 0.4, 0.6, 0.8, 0.98]:
         HEOS.set_mole_fractions([x0, 1 - x0])
         try:
@@ -27,8 +31,16 @@ The only types of inputs that are allowed for mixtures right now are
         except ValueError as VE:
             print(VE)
         PE = HEOS.get_phase_envelope_data()
-        plt.plot(PE.rhomolar_vap, PE.rhomolar_liq, 'o-')
+        plt.plot(PE.T, PE.p, 'o-')
 
     plt.xlabel('Temperature [K]')
     plt.ylabel('Pressure [Pa]')
     plt.tight_layout()
+    
+
+References
+----------
+
+.. bibliography:: CoolPropBibTeXLibrary.bib
+   :filter: docname in docnames
+   :style: unsrt

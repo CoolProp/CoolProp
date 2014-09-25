@@ -20,6 +20,9 @@ except ImportError:
 
     print('Unable to import sphinxcontrib.doxylink; try to run "pip install sphinxcontrib-doxylink"')
 
+import subprocess
+subprocess.call('python make_binary_pairs_table.py', cwd = 'fluid_properties')
+
 #~ # If your extensions are in another directory, add it here. If the directory
 #~ # is relative to the documentation root, use os.path.abspath to make it
 #~ # absolute, like shown here.
