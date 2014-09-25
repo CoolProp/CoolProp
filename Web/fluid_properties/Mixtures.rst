@@ -41,6 +41,6 @@ The only types of inputs that are allowed for mixtures right now are
 References
 ----------
 
-.. bibliography:: CoolPropBibTeXLibrary.bib
+.. bibliography:: ../../CoolPropBibTeXLibrary.bib
    :filter: docname in docnames
    :style: unsrt

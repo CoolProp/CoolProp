@@ -25,8 +25,6 @@ import pandas
 df = pandas.DataFrame(d.data)
 df = df.sort(['BibTeX','name1'], ascending = [0, 1])
 
-CoolProp.copy_BibTeX_library()
-
 with open('mixture_binary_pairs.csv','w') as fp:
     fp.write('Ref.,Name1,Name2,function,F,xi,zeta,betaT,betaV,gammaT,gammaV\n')
     for index, row in df.iterrows():
