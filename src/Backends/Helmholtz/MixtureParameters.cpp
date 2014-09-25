@@ -102,6 +102,38 @@ std::string get_csv_mixture_binary_pairs()
     return strjoin(out, ",");
 }
 
+std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &key)
+{
+    // Find pair
+    std::vector<std::string> CAS;
+    CAS.push_back(CAS1);
+    CAS.push_back(CAS2);
+    
+    if (mixturebinarypairlibrary.binary_pair_map.find(CAS) != mixturebinarypairlibrary.binary_pair_map.end()){
+        std::vector<Dictionary> &v = mixturebinarypairlibrary.binary_pair_map[CAS];
+        try{
+            if (key == "name1"){ return v[0].get_string("name1"); }
+            else if (key == "name2"){ return v[0].get_string("name2"); }
+            else if (key == "BibTeX"){ return v[0].get_string("BibTeX"); }
+            else if (key == "F"){ return v[0].get_string("F"); }
+            else if (key == "function"){ return v[0].get_string("function"); }
+            else if (key == "type"){ return v[0].get_string("type"); }
+            else if (key == "xi"){ return format("%0.16g", v[0].get_double("xi")); }
+            else if (key == "zeta"){ return format("%0.16g", v[0].get_double("zeta")); }
+            else if (key == "gammaT"){ return format("%0.16g", v[0].get_double("gammaT")); }
+            else if (key == "gammaV"){ return format("%0.16g", v[0].get_double("gammaV")); }
+            else if (key == "betaT"){ return format("%0.16g", v[0].get_double("betaT")); }
+            else if (key == "betaV"){ return format("%0.16g", v[0].get_double("betaV")); }
+            else{ }
+        }
+        catch(std::exception &e){ }
+        throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(), CAS1.c_str(), CAS2.c_str()));
+    }
+    else{
+        throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.",CAS1.c_str(), CAS2.c_str()));
+    }
+}
+
 std::string get_reducing_function_name(std::string CAS1, std::string CAS2)
 {
     std::vector<std::string> CAS;

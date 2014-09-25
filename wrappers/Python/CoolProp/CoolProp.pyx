@@ -124,9 +124,12 @@ include "AbstractState.pyx"
 
 cpdef int get_parameter_index(string key):
     return _get_parameter_index(key)
-    
+
 cpdef string get_parameter_information(int key, string info):
     return _get_parameter_information(key, info)
+    
+cpdef string get_mixture_binary_pair_data(CAS1, CAS2, key) except *:
+    return _get_mixture_binary_pair_data(CAS1, CAS2, key)
 
 cpdef get_global_param_string(string param):
     return _get_global_param_string(param)

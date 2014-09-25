@@ -106,7 +106,7 @@ if __name__=='__main__':
         
     # Set variables for C++ sources and include directories
     sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp') 
-    include_dirs = [os.path.join(CProot, 'include'), os.path.join(CProot, 'externals', 'Eigen')]
+    include_dirs = [os.path.join(CProot, 'include'), os.path.join(CProot, 'src'), os.path.join(CProot, 'externals', 'Eigen')]
 
     ## If the file is run directly without any parameters, clean, build and install
     if len(sys.argv)==1:
