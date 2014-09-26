@@ -32,7 +32,7 @@ specific fluid. To get an overview over all the fits, there are also combined
 documents with all the
 :download:`pure fluids and all the aqueous solutions</_static/fluid_properties/incompressible/report/all_incompressibles.pdf>`.
 You can read more about these reports in a dedicated
-:ref:`section<FittingReports>` called :ref:`Fitting Reports<FittingReports>` below.
+:ref:`section<FittingReports>` called :ref:`Fitting Reports<FittingReports>`.
 
 All incompressible fluids have an arbitrary reference state for enthalpy and entropy.
 During initialisation, the reference state is defined as a temperature of 20 °C
@@ -146,10 +146,10 @@ A file with all fitting reports for the incompressible fluids can be obtained
 from :download:`here</_static/fluid_properties/incompressible/report/all_incompressibles.pdf>`. These reports help you to
 get an overview over the different incompressible fluids
 included in CoolProp. The reports start with some basic information about
-the fluid. There is the name by which it can be accessed through the
-interface in the title "Fitting Report for *FluidName*" as well as a description
-of what the fluid actually is, this could also be a trade name or a commonly
-used non-scientific name. The next item tells you where we got the data from. This
+the fluid. The fluid name used in CoolProp is in the title "Fitting Report for *FluidName*"
+and there is also a description of what the fluid actually is. The latter
+could also be a trade name or a commonly used non-scientific name. The next item
+tells you where we got the data from. This
 would typically be a data sheet from a manufacturers homepage, some other software
 database, a scientific publication or experimental data.
 
