@@ -32,7 +32,7 @@ specific fluid. To get an overview over all the fits, there are also combined
 documents with all the
 :download:`pure fluids and all the aqueous solutions</_static/fluid_properties/incompressible/report/all_incompressibles.pdf>`.
 You can read more about these reports in a dedicated
-:ref:`section<FittingReports>` called :ref:`Fitting Reports<FittingReports>` below.
+:ref:`section<FittingReports>` called :ref:`Fitting Reports<FittingReports>`.
 
 All incompressible fluids have an arbitrary reference state for enthalpy and entropy.
 During initialisation, the reference state is defined as a temperature of 20 °C
@@ -66,7 +66,7 @@ internally, which makes this combination by far the fastest. However, also the
 other inputs should be fast compared to the full Helmholtz-based EOS implemented
 for then compressible fluids.
 
-A call to the top-level function ``PropsSI`` can provide : temperature, pressure,
+A call to the top-level function ``PropsSI`` can provide: temperature, pressure,
 density, heat capacity, internal energy, enthalpy, entropy, viscosity and
 thermal conductivity. Hence, the available output keys are: ``T``, ``P``, ``D``,
 ``C``, ``U``, ``H``, ``S``, ``V``, ``L``, ``Tmin`` and ``Tmax``.
@@ -104,7 +104,7 @@ composition notation. Depending on your fluid, you have to supply either the
 :ref:`mass fraction<MassMix>` or the :ref:`volume fraction<VoluMix>` as additional
 parameter. This is done via the fluid name by appending a dash and the
 fraction of the substance other than water. The fraction notation can be in the
-form of percent, ``LiBr-23%``, or as a fraction ``LiBr[0.23]``, which
+form of percent, ``LiBr-23%``, or as a fraction, ``LiBr[0.23]``, which
 corresponds to the new mixture syntax in CoolProp5.
 
 ..  In addition to the properties available for the pure fluids (``D``, ``C``,
@@ -146,11 +146,11 @@ A file with all fitting reports for the incompressible fluids can be obtained
 from :download:`here</_static/fluid_properties/incompressible/report/all_incompressibles.pdf>`. These reports help you to
 get an overview over the different incompressible fluids
 included in CoolProp. The reports start with some basic information about
-the fluid. There is the name by which it can be accessed through the
-interface in the title "Fitting Report for *FluidName*" as well as a description
-of what the fluid actually is, this could also be a trade name or a commonly
-used non-scientific name. The next item tells you where we got the data from. This
-would typically be a data sheet from a manufacturers homepage, some other software
+the fluid. The fluid name used in CoolProp is in the title "Fitting Report for *FluidName*"
+and there is also a description of what the fluid actually consists of. The latter
+could also be a trade name or a commonly used non-scientific name. The next item
+tells you where we got the data from. This
+would typically be a data sheet from a manufacturer's homepage, some other software
 database, a scientific publication or experimental data.
 
 .. figure:: /_static/fluid_properties/incompressible/report/report2up.jpg
@@ -161,7 +161,7 @@ database, a scientific publication or experimental data.
     fluid and a binary mixture. You can also have a look at the
     :download:`PDF version</_static/fluid_properties/incompressible/report/report2up.pdf>` of the reports side by side.
 
-If all data is available, there is a graphs for each of the basic quantities
+If all data are available, there is a graph for each of the basic quantities:
 density :math:`\rho`, specific heat capacity :math:`c`, thermal conductivity
 :math:`\lambda`, dynamic viscosity :math:`\mu`, saturation pressure
 :math:`p_\text{sat}`, and freezing temperature :math:`T_\text{freeze}`. These graphs show
@@ -190,14 +190,14 @@ properties of incompressible fluids in CoolProp:
 
 Only the last two are suitable for mixtures with the input parameter :math:`x`
 denoting the fraction of component other than water. Following the works of
-Melinder :cite:`Melinder2010` and Skovrup :cite:`Skovrup2013`, the exponents are
+Melinder :cite:`Melinder2010` and Skovrup :cite:`Skovrup2013`, the exponents
 for the polynomials are arranged in a triangular matrix to avoid overfitting.
 These conditions satisfy :math:`0 \leq i \leq n`, :math:`0 \leq j \leq m`
 and :math:`i + j \leq \max(n,m)`. It is only for the freezing temperature calculation
 that the implemented procedures differ from what is presented in Melinder's
 book :cite:`Melinder2010`. Freezing temperature is only a function of concentration
-and the dependency on the fluid temperature has been removed. For mixtures, the
-default values for :math:`m=5` and :math:`n=3` are chosen.
+and the dependency on the fluid temperature has been removed. For mixtures,
+:math:`m=5` and :math:`n=3` are assigned as default values.
 Omitting the composition term with :math:`n=0` yields the pure fluid formulations
 for which we selected :math:`l=1` and :math:`m=4`.
 
@@ -280,7 +280,7 @@ manufactures, two specific publications provided a lot of data used for the
 incompressible fluids: Åke Melinder's book *Properties of Secondary Working
 Fluids for Indirect Systems* :cite:`Melinder2010` has inspired both, the work on
 pure fluids and aqueous solutions. The second major source of inspiration is the
-`SecCool software <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
+`SecCool <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_
 :cite:`Skovrup2013` software, which contains data compiled by Morten Juel
 Skovrup. It is provided free of charge by his employer `IPU <http://en.ipu.dk>`_.
 
@@ -297,7 +297,7 @@ There are also a number of water-based mixtures implemented in CoolProp. Most of
 are secondary heat transfer fluids, but there are also aqueous solutions of
 ammonia :cite:`Melinder2010`, :download:`MAM<../_static/fluid_properties/incompressible/report/MAM_fitreport.pdf>`,
 and lithium bromide :cite:`Patek2006`, :download:`LiBr<../_static/fluid_properties/incompressible/report/LiBr_fitreport.pdf>`,
-which can be used to calculated absorption chillers.
+which can be used to model absorption chillers.
 
 
 .. _MassMix:

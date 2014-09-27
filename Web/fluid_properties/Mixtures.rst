@@ -20,11 +20,21 @@ The only types of inputs that are allowed for mixtures right now are
 - Temperature/quality
 - Temperature/pressure
 
+.. Used in Python script later on
+.. role:: raw-html(raw)
+   :format: html
+
 Binary pairs
 ------------
+
+.. note::
+   Please hover the mouse pointer over the coefficients to get the full accuracy
+   for the listed coefficients. You can also get more information on references
+   that are not in bibliography.
+
 .. csv-table:: All binary pairs included in CoolProp
    :header-rows: 1
-   :file: mixture_binary_pairs.csv 
+   :file: mixture_binary_pairs.csv
 
 Phase Envelope
 --------------
@@ -46,7 +56,7 @@ Phase Envelope
     plt.xlabel('Temperature [K]')
     plt.ylabel('Pressure [Pa]')
     plt.tight_layout()
-    
+
 References
 ----------
 

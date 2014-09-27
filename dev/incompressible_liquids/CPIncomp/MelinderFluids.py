@@ -30,7 +30,7 @@ class DEBLiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([3.5503,-0.0566396,7.03331e-05]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000189132,-2.06364e-07]))
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.189132,-2.06364e-04]))
 
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
@@ -64,7 +64,7 @@ class HCMLiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([18.3237,-0.14706,0.000209096]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000153716,-1.51212e-07]))
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.153716,-1.51212e-04]))
 
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
@@ -98,7 +98,7 @@ class HFELiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([-4.22878,-0.0114765,7.39823e-06]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([9.92958e-05,-8.33333e-08]))
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([9.92958e-01,-8.33333e-05]))
 
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
@@ -132,7 +132,7 @@ class PMS1LiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([6.36183,-0.0636352,7.51428e-05]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000207526,-2.84167e-07]))
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.207526,-2.84167e-04]))
 
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
@@ -166,7 +166,7 @@ class PMS2LiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([5.66926,-0.065582,8.09988e-05]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000172305,-2.11212e-07]))
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.172305,-2.11212e-04]))
 
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
@@ -200,7 +200,7 @@ class SABLiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([5.21288,-0.0665792,8.5066e-05]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000208374,-2.61667e-07]))
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.208374,-2.61667e-04]))
 
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
@@ -234,7 +234,7 @@ class HCBLiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([7.16819,-0.0863212,0.000130604]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000203186,-2.3869e-07]))
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.203186,-2.3869e-04]))
 
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
@@ -268,7 +268,7 @@ class TCOLiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([-3.47971,-0.0107031,1.14086e-06]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000174156,-1.85052e-07]))
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.174156,-1.85052e-04]))
 
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS

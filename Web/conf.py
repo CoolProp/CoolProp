@@ -13,6 +13,7 @@
 # serve to show the default.
 
 import sys, os
+
 sys.path.insert(0, os.path.abspath('_ext'))
 try:
     import sphinxcontrib.doxylink
@@ -20,8 +21,16 @@ except ImportError:
 
     print('Unable to import sphinxcontrib.doxylink; try to run "pip install sphinxcontrib-doxylink"')
 
+
+import glob
 import subprocess
-subprocess.call('python make_binary_pairs_table.py', cwd = 'fluid_properties', shell = True)
+
+# This part finds all scripts and runs them
+scripts = glob.glob(os.path.join('scripts','*.py'))
+for script in scripts:
+    subprocess.call('python {0}'.format(os.path.basename(script)), cwd='scripts', shell=True)
+
+
 
 #~ # If your extensions are in another directory, add it here. If the directory
 #~ # is relative to the documentation root, use os.path.abspath to make it
