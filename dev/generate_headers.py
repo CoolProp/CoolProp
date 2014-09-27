@@ -59,7 +59,15 @@ def TO_CPP(root_dir, hashes):
         
         # Confirm that the JSON file can be loaded and doesn't have any formatting problems
         with open(os.path.join(root_dir,'dev',infile), 'r') as fp:
-            jj = json.load(fp)
+            try:
+                jj = json.load(fp)
+            except ValueError:
+                file = os.path.join(root_dir,'dev',infile)
+                print('"python -mjson.tool '+file+'" returns ->', end='')
+                subprocess.call('python -mjson.tool '+file, shell = True)
+                raise ValueError('unable to decode file %s' % file)
+            
+            
             
         json = open(os.path.join(root_dir,'dev',infile),'r').read().encode('ascii')
 
