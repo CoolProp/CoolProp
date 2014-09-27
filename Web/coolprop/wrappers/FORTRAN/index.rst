@@ -9,7 +9,7 @@ Compilers
 
 On linux, you need gcc and gfortran, which are easy to install using your package manager.
 
-On windows, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from mingw-get.  Theese are the versions used as of June 20, 2014::
+On windows, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from mingw-get.  These are the versions used as of June 20, 2014::
 
     >gfortran --version
     GNU Fortran (GCC) 4.8.1
