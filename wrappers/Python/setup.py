@@ -13,7 +13,13 @@ def remove_files():
     os.remove(os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files removed.')
     
+def touch(fname):
+    open(fname, 'a').close()
+    os.utime(fname, None)
+    
 if __name__=='__main__':
+    
+    
     
     import subprocess, shutil, os, sys, glob
         
@@ -37,6 +43,9 @@ if __name__=='__main__':
     cmake_build_args = ['--config','"Release"']
     STATIC_LIBRARY_BUILT = False
     if USING_CMAKE:
+        
+        # Always force build since any changes in the C++ files will not force a rebuild
+        touch('CoolProp/CoolProp.pyx')
         
         if 'clean' in sys.argv:
             if os.path.exists('cmake_build'):
