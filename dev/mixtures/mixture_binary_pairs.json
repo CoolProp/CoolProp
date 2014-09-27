@@ -2844,5 +2844,31 @@
     "betaV": 0.992025, 
     "gammaT": 1.00643, 
     "gammaV": 1
+  },
+  {
+    "BibTeX": "Akasaka-FPE-2013", 
+    "CAS1": "75-10-5", 
+    "CAS2": "754-12-1", 
+    "F": -0.277708, 
+    "Name1": "R32", 
+    "Name2": "R1234yf", 
+    "function": "Methane-CarbonDioxide", 
+    "betaT": 1.00052, 
+    "betaV": 0.993346, 
+    "gammaT": 0.948538, 
+    "gammaV": 1.02211
+  },
+  {
+    "BibTeX": "Akasaka-FPE-2013", 
+    "CAS1": "75-10-5", 
+    "CAS2": "29118-24-9", 
+    "F": -0.265419, 
+    "Name1": "R32", 
+    "Name2": "R1234ze(E)", 
+    "function": "Methane-Propane", 
+    "betaT": 1.00343, 
+    "betaV": 1.00586, 
+    "gammaT": 0.977857, 
+    "gammaV": 0.982707
   }
 ]
