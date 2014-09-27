@@ -915,6 +915,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             }
             case iHmolar:
             {
+                if (!component.ancillaries.hL.enabled()){break;}
                 // Ancillaries are h-h_anchor, so add back h_anchor
                 long double h_liq = component.ancillaries.hL.evaluate(_TLanc) + component.pEOS->hs_anchor.hmolar;
                 long double h_liq_error_band = component.ancillaries.hL.get_max_abs_error();
@@ -939,6 +940,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             }
             case iSmolar:
             {
+                if (!component.ancillaries.sL.enabled()){break;}
                 // Ancillaries are s-s_anchor, so add back s_anchor
                 long double s_anchor = component.EOSVector[0].hs_anchor.smolar;
                 long double s_liq = component.ancillaries.sL.evaluate(_TLanc) + s_anchor;
@@ -958,7 +960,9 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             }
             case iUmolar:
             {
+                if (!component.ancillaries.hL.enabled()){break;}
 				// u = h-p/rho
+                
 				// Ancillaries are h-h_anchor, so add back h_anchor
                 long double h_liq = component.ancillaries.hL.evaluate(_TLanc) + component.EOSVector[0].hs_anchor.hmolar;
                 long double h_liq_error_band = component.ancillaries.hL.get_max_abs_error();
