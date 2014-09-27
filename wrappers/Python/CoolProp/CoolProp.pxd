@@ -24,7 +24,7 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
     constants_header.input_pairs _generate_update_pair "CoolProp::generate_update_pair"(long key1, double value1, long key2, double value2, double &out1, double &out2) except +
     
 cdef extern from "CoolPropLib.h":
-    double _Props "Props"(const char* Output, char Name1, double Prop1, char Name2, double Prop2, const char* Ref)
+    double _Props "Props"(const char* Output, const char Name1, double Prop1, const char Name2, double Prop2, const char* Ref)
     
 cdef extern from "CoolProp.h" namespace "CoolProp":
     double _Props1SI "CoolProp::Props1SI"(string Ref, string Output)
