@@ -3,7 +3,7 @@
     "nDodecane", 
     "Dodecane", 
     "DODECANE", 
-    "N-DODECANE",
+    "N-DODECANE", 
     "C12"
   ], 
   "ANCILLARIES": {
@@ -360,22 +360,22 @@
       ], 
       "critical_region_splines": {
         "T_max": 658.1, 
-        "T_min": 658.0842932852254, 
+        "T_min": 658.0986713196614, 
         "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
         "cL": [
           0.0, 
-          -8.162186259380569e-07, 
-          0.002171141544995267, 
-          656.6561908725781
+          -2.1192739463715689e-07, 
+          0.0005637268697348361, 
+          657.7251216316264
         ], 
         "cV": [
-          0.0, 
-          -1.7627161847925473e-06, 
-          0.00468882505154816, 
-          654.9819313407205
+          1.345410821444352e-08, 
+          -5.389362597299564e-05, 
+          0.07196012902658075, 
+          626.0728305909759
         ], 
-        "rhomolar_max": 1468.7201111458296, 
-        "rhomolar_min": 1235.6044584051854
+        "rhomolar_max": 1409.180220111776, 
+        "rhomolar_min": 1288.4723365719328
       }, 
       "gas_constant": 8.314472, 
       "gas_constant_units": "J/mol/K", 

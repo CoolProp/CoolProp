@@ -2,7 +2,7 @@
   "ALIASES": [
     "Orthohydrogen", 
     "orthohydrogen", 
-    "ORTHOHYDROGEN",
+    "ORTHOHYDROGEN", 
     "ORTHOHYD"
   ], 
   "ANCILLARIES": {
@@ -380,22 +380,22 @@
       ], 
       "critical_region_splines": {
         "T_max": 33.22, 
-        "T_min": 33.21999999998802, 
+        "T_min": 33.216973257617425, 
         "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
         "cL": [
-          0.0, 
-          0.0, 
-          -4.57432325893615e-10, 
-          33.220007064832
+          4.066468806855226e-12, 
+          -2.0485786362827496e-07, 
+          0.003417899984425546, 
+          14.316580566669387
         ], 
         "cV": [
-          0.0, 
-          0.0, 
-          4.301031431449862e-10, 
-          33.219993357254666
+          -3.379814959674437e-12, 
+          1.404217131242082e-07, 
+          -0.0019188970430762365, 
+          41.812545688089735
         ], 
-        "rhomolar_max": 15444.566501913807, 
-        "rhomolar_min": 15444.512461229047
+        "rhomolar_max": 15899.98591137461, 
+        "rhomolar_min": 14989.857909343546
       }, 
       "gas_constant": 8.314472, 
       "gas_constant_units": "J/mol/K", 

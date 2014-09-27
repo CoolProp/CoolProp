@@ -1,6 +1,6 @@
 {
   "ALIASES": [
-    "METHYLPALMITATE",
+    "METHYLPALMITATE", 
     "MPALMITA"
   ], 
   "ANCILLARIES": {
@@ -396,22 +396,22 @@
       ], 
       "critical_region_splines": {
         "T_max": 755.0, 
-        "T_min": 754.9999999319605, 
+        "T_min": 754.9979946139788, 
         "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
         "cL": [
-          0.0, 
-          0.0, 
-          -1.7213757676923328e-06, 
-          755.0015440740636
+          -8.453804974988888e-07, 
+          0.0022314430347624794, 
+          -1.9626065342276378, 
+          1330.1589912157262
         ], 
         "cV": [
-          0.0, 
-          0.0, 
-          1.7239651981209695e-06, 
-          754.9984536032173
+          8.346377269227008e-07, 
+          -0.002289692013105165, 
+          2.0930363910460232, 
+          117.46650514532276
         ], 
-        "rhomolar_max": 897.0395262628024, 
-        "rhomolar_min": 896.9605331088118
+        "rhomolar_max": 903.4045446436754, 
+        "rhomolar_min": 890.603960171529
       }, 
       "gas_constant": 8.314472, 
       "gas_constant_units": "J/mol/K", 
