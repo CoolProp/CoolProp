@@ -2831,5 +2831,18 @@
     "function": "GeneralizedAirComponents", 
     "xi": -2.115126, 
     "zeta": -4.1232e-07
+  },
+  {
+    "BibTeX": "Akasaka-Purdue-2014", 
+    "CAS1": "811-97-2", 
+    "CAS2": "460-73-1", 
+    "F": 0.107754, 
+    "Name1": "R134a", 
+    "Name2": "R245fa", 
+    "function": "Methane-Ethane", 
+    "betaT": 1, 
+    "betaV": 0.992025, 
+    "gammaT": 1.00643, 
+    "gammaV": 1
   }
 ]
