@@ -2,6 +2,7 @@
 #include "FlashRoutines.h"
 #include "HelmholtzEOSMixtureBackend.h"
 #include "PhaseEnvelopeRoutines.h"
+#include "Configuration.h"
 
 namespace CoolProp{
 
@@ -158,8 +159,6 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
 			throw ValueError(format("Temperature to QT_flash [%6g K] must be in range [%8g K, %8g K]",HEOS._T, Tmin_sat, Tmax_sat));
 		}
         
-        //splines.enabled = false;
-        
         // If exactly at the critical temperature, liquid and vapor have the critial density
         if (std::abs(T-HEOS.T_critical())< 1e-14){
              HEOS.SatL->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
@@ -167,7 +166,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
              HEOS._rhomolar = HEOS.rhomolar_critical();
              HEOS._p = HEOS.SatL->p();
         }
-        else if (splines.enabled && HEOS._T > splines.T_min){
+        else if (get_config_bool(CRITICAL_SPLINES_ENABLED) && splines.enabled && HEOS._T > splines.T_min){
             double rhoL = _HUGE, rhoV = _HUGE;
             // Use critical region spline if it has it and temperature is in its range
             splines.get_densities(T, splines.rhomolar_min, HEOS.rhomolar_critical(), splines.rhomolar_max, rhoL, rhoV);
