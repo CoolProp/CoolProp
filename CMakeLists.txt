@@ -661,15 +661,9 @@ if (COOLPROP_PYTHON_BINARIES)
 endif()
 
 if (COOLPROP_PYTHON_PYPI)
-  
-  if (DEFINED AND_UPLOAD)
-    set(_AND_UPLOAD upload)
-  else()
-    set(_AND_UPLOAD )
-  endif()
     
   add_custom_target(CoolProp
-                    COMMAND python prepare_pypi.py  ${_AND_UPLOAD} --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
+                    COMMAND python prepare_pypi.py --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python/pypi
                     )
 endif()
