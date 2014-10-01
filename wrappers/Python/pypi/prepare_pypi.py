@@ -23,7 +23,7 @@ if __name__=='__main__':
 
     import shutil, os, sys, subprocess
     
-    subprocess.check_call('python generate_headers.py', shell = True, cwd = os.path.join('..','..','..','dev'), stdout = sys.stdout, stderr = sys.stderr)
+    subprocess.check_call('python setup.py build_ext --inplace', shell = True, cwd = os.path.join('..'), stdout = sys.stdout, stderr = sys.stderr)
     name = 'CoolProp'
     
     # Make a temporary directory in this folder
