@@ -429,7 +429,7 @@
   }, 
   "TRANSPORT": {
     "conductivity": {
-      "BibTeX": "Geller-PURDUE-2001", 
+      "BibTeX": "Geller-IJT-2001", 
       "critical": {
         "hardcoded": "None"
       }, 

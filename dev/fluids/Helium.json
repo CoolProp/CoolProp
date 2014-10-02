@@ -496,11 +496,11 @@
   }, 
   "TRANSPORT": {
     "conductivity": {
-      "BibTeX": "HANDS-CRYO-1981", 
+      "BibTeX": "Hands-CRYO-1981", 
       "hardcoded": "Helium"
     }, 
     "viscosity": {
-      "BibTeX": "ARP-NIST-1998", 
+      "BibTeX": "Arp-NIST-1998", 
       "hardcoded": "Helium"
     }
   }
