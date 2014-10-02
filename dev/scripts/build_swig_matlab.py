@@ -7,7 +7,7 @@ else:
 
 os.chdir('swig-matlab')
 if not glob.glob('pcre-*.tar.gz'):
-    for major in ['8.34','8.35','8.36']:
+    for rev in ['8.34','8.35','8.36']:
         try:
             wget.download('ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-'+rev+'.tar.gz'); break
         except:
