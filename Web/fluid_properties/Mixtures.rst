@@ -1,10 +1,10 @@
 .. _mixtures:
 
-.. contents:: :depth: 2
-
 ********
 Mixtures
 ********
+
+.. contents:: :depth: 2
 
 Theoretical description
 -----------------------

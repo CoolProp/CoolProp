@@ -3,6 +3,8 @@
 Pure and Pseudo-Pure fluid properties
 =====================================
 
+.. contents:: :depth: 2
+
 Introduction
 ------------
 
@@ -90,3 +92,22 @@ The EOS is set up with temperature and density as the two independent properties
 #. No solution for density as a function of temperature and pressure if the fluid is two-phase
     
 The documentation of the :mod:`CoolProp.CoolProp` module, or the :mod:`CoolProp.State` module are also available.
+
+.. _list_of_fluids:
+
+List of Fluids
+--------------
+
+.. note::
+   You can click on the fluid name to get more information about the fluid
+
+.. csv-table:: All the fluids included in CoolProp
+   :header-rows: 1
+   :file: Fluids.csv
+   
+References
+----------
+
+.. bibliography:: ../../CoolPropBibTeXLibrary.bib
+   :filter: docname in docnames
+   :style: unsrt

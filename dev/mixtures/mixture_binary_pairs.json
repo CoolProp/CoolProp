@@ -87,7 +87,7 @@
     "Name2": "Nitrogen", 
     "betaT": 0.994140013, 
     "betaV": 1.107654104, 
-    "function": "CarbonDioxide-Nitrogen", 
+    "function": "Nitrogen-CarbonDioxide", 
     "gammaT": 1.022709642, 
     "gammaV": 1.047578256
   }, 

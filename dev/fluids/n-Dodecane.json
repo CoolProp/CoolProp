@@ -416,7 +416,7 @@
   }, 
   "TRANSPORT": {
     "conductivity": {
-      "BibTeX": "Huber-FPE-2005", 
+      "BibTeX": "Huber-EF-2004", 
       "critical": {
         "GAMMA": 0.0496, 
         "R0": 1.03, 
