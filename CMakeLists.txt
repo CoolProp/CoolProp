@@ -331,6 +331,10 @@ if (COOLPROP_OCTAVE_MODULE)
       message(STATUS "Using -stdlib=libstdc++")
     endif()
   endif()
+  
+  if (WIN32)
+    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-fpermissive")
+  endif()
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
   add_dependencies (${app_name} generate_headers)  
