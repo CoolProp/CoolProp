@@ -11,6 +11,11 @@ namespace CoolProp{
  */
 std::string get_csv_mixture_binary_pairs();
 
+/** \brief Get the parameters for a predefined mixture - R410A, R404A, etc.
+ * 
+ */
+bool is_predefined_mixture(const std::string name, Dictionary &dict);
+    
 /** \brief Get a string for the given binary pair
  * 
  * 

@@ -1,9 +1,51 @@
 #include "MixtureParameters.h"
 #include "mixture_departure_functions_JSON.h" // Creates the variable mixture_departure_functions_JSON
 #include "mixture_binary_pairs_JSON.h" // Creates the variable mixture_binary_pairs_JSON
+#include "predefined_mixtures_JSON.h" // Makes a std::string variable called predefined_mixtures_JSON
 
 namespace CoolProp{
 
+/** \brief A library of predefined mixtures
+ * 
+ * Each entry in the predefined mixture library contains the names and mole fractions for the binary pairs
+ */
+class PredefinedMixturesLibrary{
+    public:
+    std::map<std::string, Dictionary> predefined_mixture_map;
+    
+    PredefinedMixturesLibrary(){
+        rapidjson::Document doc;
+
+        doc.Parse<0>(predefined_mixtures_JSON.c_str());
+        if (doc.HasParseError()){throw ValueError();}
+        
+        // Iterate over the papers in the listing
+        for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr)
+        {
+            // Instantiate the empty dictionary to be filled
+            Dictionary dict;
+            // Get the name
+            std::string name = cpjson::get_string(*itr, "name")+".mix";
+            // Get the fluid names
+            dict.add_string_vector("fluids", cpjson::get_string_array(*itr, "fluids"));
+            // Get the mole fractions            
+            dict.add_double_vector("mole_fractions", cpjson::get_double_array(*itr,"mole_fractions"));
+            
+            predefined_mixture_map.insert(std::pair<std::string, Dictionary >(name, dict));
+        }
+    }
+};
+static PredefinedMixturesLibrary predefined_mixtures_library;
+
+bool is_predefined_mixture(const std::string name, Dictionary &dict){
+    if (predefined_mixtures_library.predefined_mixture_map.find(name) != predefined_mixtures_library.predefined_mixture_map.end()){
+        dict = predefined_mixtures_library.predefined_mixture_map[name];
+        return true;
+    }
+    else{
+        return false;
+    }
+}
     
 /** \brief A library of binary pair parameters for the mixture
  * 
