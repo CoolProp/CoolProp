@@ -447,9 +447,9 @@ class CoolPropFluid {
         std::string CAS; ///< The CAS number of the fluid
         std::vector <std::string> aliases; ///< A vector of aliases of names for the fluid
 
-        BibTeXKeysStruct BibTeXKeys;
-        EnvironmentalFactorsStruct environment;
-        Ancillaries ancillaries;
+        BibTeXKeysStruct BibTeXKeys; ///< The BibTeX keys associated 
+        EnvironmentalFactorsStruct environment; ///< The environmental variables for global warming potential, ODP, etc.
+        Ancillaries ancillaries; ///< The set of ancillary equations for dewpoint, bubblepoint, surface tension, etc.
         TransportPropertyData transport;
         SimpleState crit, ///< The state at the critical point
                     triple_liquid, ///< The saturated liquid state at the triple point temperature

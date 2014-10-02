@@ -36,7 +36,7 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     void _set_debug_level "CoolProp::set_debug_level"(int level) except +
     string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName) except +
     
-    # Convenience functions
+    # Convenience functions from v4
 #     long _get_parameter_index "CoolProp::get_parameter_index" (string param)
 #     int _IsFluidType "IsFluidType"(char* Ref, char* Type)
 #     string _get_BibTeXKey "CoolProp::get_BibTeXKey"(string Ref, string key)

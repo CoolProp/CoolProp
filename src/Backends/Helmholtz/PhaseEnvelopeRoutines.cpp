@@ -414,6 +414,7 @@ std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_in
 bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, parameters iInput1, long double value1, parameters iInput2, long double value2, std::size_t &iclosest, SimpleState &closest_state)
 {
     PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
+    // Find the indices that bound the solution(s)
     std::vector<std::pair<std::size_t, std::size_t> > intersections = find_intersections(HEOS, iInput1, value1);
     
     // For now, first input must be p
