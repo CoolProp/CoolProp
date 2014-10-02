@@ -3,20 +3,20 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase": 0.000000e+00, 
+  "Tbase": 3.531500e+02, 
   "Tmax": 5.331500e+02, 
   "Tmin": 1.731500e+02, 
   "TminPsat": 5.331500e+02, 
   "conductivity": {
     "coeffs": [
       [
-        1.569510e-01
+        9.727559e-02
       ], 
       [
-        -8.934465e-05
+        -2.342283e-04
       ], 
       [
-        -2.662428e-07
+        -1.440181e-07
       ], 
       [
         1.153661e-10
@@ -27,13 +27,13 @@
   "density": {
     "coeffs": [
       [
-        1.156393e+03
+        7.936494e+02
       ], 
       [
-        -1.027201e+00
+        -1.027147e+00
       ], 
       [
-        1.438114e-07
+        9.214212e-09
       ], 
       [
         -1.270445e-10
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "XLT2", 
-  "reference": "Dow Chemicals, SecCool software", 
+  "reference": "Dow1997,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -59,16 +59,16 @@
   "specific_heat": {
     "coeffs": [
       [
-        1.156385e+03
+        1.898000e+03
       ], 
       [
         2.100000e+00
       ], 
       [
-        8.650944e-15
+        0.000000e+00
       ], 
       [
-        -1.546072e-16
+        -3.692213e-16
       ]
     ], 
     "type": "polynomial"

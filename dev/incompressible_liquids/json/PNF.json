@@ -3,23 +3,23 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase": 0.000000e+00, 
-  "Tmax": 5.931500e+02, 
+  "Tbase": 4.256500e+02, 
+  "Tmax": 5.881500e+02, 
   "Tmin": 2.631500e+02, 
-  "TminPsat": 5.931500e+02, 
+  "TminPsat": 4.661500e+02, 
   "conductivity": {
     "coeffs": [
       [
-        1.252004e-01
+        9.755338e-02
       ], 
       [
-        -7.963016e-05
+        -5.079925e-05
       ], 
       [
-        3.613946e-08
+        2.895566e-08
       ], 
       [
-        -3.788073e-12
+        -6.226963e-12
       ]
     ], 
     "type": "polynomial"
@@ -27,21 +27,21 @@
   "density": {
     "coeffs": [
       [
-        1.058840e+03
+        7.962994e+02
       ], 
       [
-        -5.464228e-01
+        -6.633203e-01
       ], 
       [
-        -1.752530e-04
+        -1.599625e-06
       ], 
       [
-        5.776002e-08
+        2.345312e-08
       ]
     ], 
     "type": "polynomial"
   }, 
-  "description": "Paratherm NF, Hydrotreated mineral oil", 
+  "description": "Paratherm NF", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -51,35 +51,57 @@
     "type": "notdefined"
   }, 
   "name": "PNF", 
-  "reference": "Paratherm Ltd, SecCool software", 
+  "reference": "Paratherm2013", 
   "saturation_pressure": {
-    "coeffs": "null", 
-    "type": "notdefined"
+    "coeffs": [
+      [
+        7.454724e+00
+      ], 
+      [
+        9.086822e-03
+      ], 
+      [
+        6.755908e-05
+      ], 
+      [
+        -2.748032e-07
+      ]
+    ], 
+    "type": "exppolynomial"
   }, 
   "specific_heat": {
     "coeffs": [
       [
-        2.932522e+02
+        2.519448e+03
       ], 
       [
-        5.411624e+00
+        5.190252e+00
       ], 
       [
-        -6.468458e-04
+        -8.317855e-05
       ], 
       [
-        5.066952e-07
+        -4.589360e-06
       ]
     ], 
     "type": "polynomial"
   }, 
   "viscosity": {
     "coeffs": [
-      -2.400889e+02, 
-      2.880136e+00, 
-      5.928291e+00
+      [
+        -1.358055e+01
+      ], 
+      [
+        -1.134548e-02
+      ], 
+      [
+        5.841657e-05
+      ], 
+      [
+        -5.051335e-07
+      ]
     ], 
-    "type": "logexponential"
+    "type": "exppolynomial"
   }, 
   "volume2input": {
     "coeffs": "null", 
@@ -87,6 +109,6 @@
   }, 
   "xbase": 0.000000e+00, 
   "xid": "pure", 
-  "xmax": 0.000000e+00, 
+  "xmax": 1.000000e+00, 
   "xmin": 0.000000e+00
 }

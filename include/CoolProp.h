@@ -161,19 +161,7 @@ You might want to start by looking at CoolProp.h
 	/// @param T Temperature [K]
 	/// @param p Pressure [kPa]
 	/// @returns Phase as string, one of ""Two-Phase","Supercritical","Gas","Liquid"
-	std::string Phase_Tp(std::string FluidName, double T, double p);
-    /// Return some low level derivative terms, see source for a complete list
-	/// @param Term String, some options are "phir" (residual Helmholtz energy),"dphir_dDelta", "dphir_dTau", etc.
-	/// @param T Temperature [K]
-	/// @param rho Density [kg/m^3]
-	/// @param FluidName String
-	double DerivTerms(std::string Term, double T, double rho, std::string FluidName);
-	/// Return some low level derivative terms, see source for a complete list
-	/// @param iTerm long desired output
-	/// @param T Temperature [K]
-	/// @param rho Density [kg/m^3]
-	/// @param pFluid Pointer to Fluid instance
-	double DerivTerms(long iTerm, double T, double rho, Fluid * pFluid);*/
+	std::string Phase_Tp(std::string FluidName, double T, double p);*/
 
     } /* namespace CoolProp */
 #endif

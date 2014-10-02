@@ -15,13 +15,16 @@ cdef extern from "Python.h":
 cdef extern from "CoolPropTools.h" namespace "CoolProp":
     bint _ValidNumber "ValidNumber"(double)
     
+cdef extern from "Backends/Helmholtz/MixtureParameters.h" namespace "CoolProp":
+    string _get_mixture_binary_pair_data "CoolProp::get_mixture_binary_pair_data"(const string CAS1, const string CAS2, const string key) except +
+    
 cdef extern from "DataStructures.h" namespace "CoolProp":    
     string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
     int _get_parameter_index "CoolProp::get_parameter_index"(string) except +
     constants_header.input_pairs _generate_update_pair "CoolProp::generate_update_pair"(long key1, double value1, long key2, double value2, double &out1, double &out2) except +
     
 cdef extern from "CoolPropLib.h":
-    double _Props "Props"(const char* Output, char Name1, double Prop1, char Name2, double Prop2, const char* Ref)
+    double _Props "Props"(const char* Output, const char Name1, double Prop1, const char Name2, double Prop2, const char* Ref)
     
 cdef extern from "CoolProp.h" namespace "CoolProp":
     double _Props1SI "CoolProp::Props1SI"(string Ref, string Output)
@@ -33,6 +36,7 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     void _set_debug_level "CoolProp::set_debug_level"(int level)
     string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName)
     #long _get_parameter_index "CoolProp::get_parameter_index" (string param)
+    
     
     # Convenience functions
 #     int _IsFluidType "IsFluidType"(char* Ref, char* Type)

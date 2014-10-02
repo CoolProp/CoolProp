@@ -134,8 +134,6 @@
     <File Name="../../include/Ice.h"/>
     <File Name="../../include/IncompressibleFluid.h"/>
     <File Name="../../include/MatrixMath.h"/>
-    <File Name="../../include/mixture_excess_term_JSON.h"/>
-    <File Name="../../include/mixture_reducing_parameters_JSON.h"/>
     <File Name="../../include/PlatformDetermination.h"/>
     <File Name="../../include/PolyMath.h"/>
     <File Name="../../include/Solvers.h"/>

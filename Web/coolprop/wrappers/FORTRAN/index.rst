@@ -9,7 +9,7 @@ Compilers
 
 On linux, you need gcc and gfortran, which are easy to install using your package manager.
 
-On windows, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from mingw-get.  Theese are the versions used as of June 20, 2014::
+On windows, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from mingw-get.  These are the versions used as of June 20, 2014::
 
     >gfortran --version
     GNU Fortran (GCC) 4.8.1
@@ -30,14 +30,14 @@ On linux/OSX, start in root folder of recursively-cloned CoolProp repo and do::
 
     mkdir build && cd build
     mkdir gccstatic && cd gccstatic
-    cmake ../.. -DCOOLPROP_STATIC_LIBRARY=ON
+    cmake ../.. -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON
     cmake --build .
 
-On Windows, the call to CMake should be done using the MinGW generator, but otherwise procedure is the same::
+On Windows, the call to CMake should be done using the MinGW generator, but otherwise the procedure is the same::
 
     mkdir build && cd build
     mkdir gccstatic && cd gccstatic
-    cmake ../.. -G "MinGW Makefiles" -DCOOLPROP_STATIC_LIBRARY=ON
+    cmake ../.. -G "MinGW Makefiles" -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON
     cmake --build .
 
 This will generate the file libCoolProp.a which is a GCC static library that can be linked with GCC/GFORTRAN code.  Copy this .a file into the directory with the coolprop FORTRAN example ``cool_fortran_bind.f90``:

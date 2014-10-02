@@ -5,19 +5,20 @@ from CPIncomp.BaseObjects import IncompressibleFitter
 
 
 class DEBLiquidClass(CoefficientData,PureData):
-    """ 
+    """
     Pure fluid according to Melinder's book
-    """ 
+    """
     def __init__(self):
         CoefficientData.__init__(self)
-        PureData.__init__(self) 
+        PureData.__init__(self)
         self.name = "DEB"
         self.description = "Diethylbenzene mixture - Dowtherm J Dow Chemical Co."
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1076.5,-0.731182]))
@@ -29,8 +30,8 @@ class DEBLiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([3.5503,-0.0566396,7.03331e-05]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000189132,-2.06364e-07]))
-        
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.189132,-2.06364e-04]))
+
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
         self.conductivity.source      = self.conductivity.SOURCE_COEFFS
@@ -38,19 +39,20 @@ class DEBLiquidClass(CoefficientData,PureData):
 
 
 class HCMLiquidClass(CoefficientData,PureData):
-    """ 
+    """
     Pure fluid according to Melinder's book
-    """ 
+    """
     def __init__(self):
-        CoefficientData.__init__(self) 
-        PureData.__init__(self) 
+        CoefficientData.__init__(self)
+        PureData.__init__(self)
         self.name = "HCM"
         self.description = "Hydrocarbon mixture (synthetic) - Therminol D12 (Gilotherm D12) Solutia"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([971.725,-0.718788]))
@@ -62,8 +64,8 @@ class HCMLiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([18.3237,-0.14706,0.000209096]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000153716,-1.51212e-07]))
-        
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.153716,-1.51212e-04]))
+
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
         self.conductivity.source      = self.conductivity.SOURCE_COEFFS
@@ -71,19 +73,20 @@ class HCMLiquidClass(CoefficientData,PureData):
 
 
 class HFELiquidClass(CoefficientData,PureData):
-    """ 
+    """
     Pure fluid according to Melinder's book
-    """ 
+    """
     def __init__(self):
-        CoefficientData.__init__(self) 
-        PureData.__init__(self) 
+        CoefficientData.__init__(self)
+        PureData.__init__(self)
         self.name = "HFE"
         self.description = "Hydrofluoroether - HFE-7100 3M Novec"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1822.37,-0.918485]))
@@ -95,8 +98,8 @@ class HFELiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([-4.22878,-0.0114765,7.39823e-06]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([9.92958e-05,-8.33333e-08]))
-        
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([9.92958e-01,-8.33333e-05]))
+
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
         self.conductivity.source      = self.conductivity.SOURCE_COEFFS
@@ -104,19 +107,20 @@ class HFELiquidClass(CoefficientData,PureData):
 
 
 class PMS1LiquidClass(CoefficientData,PureData):
-    """ 
+    """
     Pure fluid according to Melinder's book
-    """ 
+    """
     def __init__(self):
-        CoefficientData.__init__(self) 
-        PureData.__init__(self) 
+        CoefficientData.__init__(self)
+        PureData.__init__(self)
         self.name = "PMS1"
         self.description = "Polydimethylsiloxan 1. - Baysilone KT3"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1172.35,-0.9025]))
@@ -128,8 +132,8 @@ class PMS1LiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([6.36183,-0.0636352,7.51428e-05]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000207526,-2.84167e-07]))
-        
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.207526,-2.84167e-04]))
+
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
         self.conductivity.source      = self.conductivity.SOURCE_COEFFS
@@ -137,19 +141,20 @@ class PMS1LiquidClass(CoefficientData,PureData):
 
 
 class PMS2LiquidClass(CoefficientData,PureData):
-    """ 
+    """
     Pure fluid according to Melinder's book
-    """ 
+    """
     def __init__(self):
-        CoefficientData.__init__(self) 
-        PureData.__init__(self) 
+        CoefficientData.__init__(self)
+        PureData.__init__(self)
         self.name = "PMS2"
         self.description = "Polydimethylsiloxan 2. - Syltherm XLT Dow Corning Co."
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1155.94,-1.02576]))
@@ -161,8 +166,8 @@ class PMS2LiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([5.66926,-0.065582,8.09988e-05]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000172305,-2.11212e-07]))
-        
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.172305,-2.11212e-04]))
+
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
         self.conductivity.source      = self.conductivity.SOURCE_COEFFS
@@ -170,19 +175,20 @@ class PMS2LiquidClass(CoefficientData,PureData):
 
 
 class SABLiquidClass(CoefficientData,PureData):
-    """ 
+    """
     Pure fluid according to Melinder's book
-    """ 
+    """
     def __init__(self):
-        CoefficientData.__init__(self) 
-        PureData.__init__(self) 
+        CoefficientData.__init__(self)
+        PureData.__init__(self)
         self.name = "SAB"
         self.description = "Synthetic alkyl benzene - Marlotherm X"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1102.34,-0.801667]))
@@ -194,8 +200,8 @@ class SABLiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([5.21288,-0.0665792,8.5066e-05]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000208374,-2.61667e-07]))
-        
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.208374,-2.61667e-04]))
+
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
         self.conductivity.source      = self.conductivity.SOURCE_COEFFS
@@ -203,19 +209,20 @@ class SABLiquidClass(CoefficientData,PureData):
 
 
 class HCBLiquidClass(CoefficientData,PureData):
-    """ 
+    """
     Pure fluid according to Melinder's book
-    """ 
+    """
     def __init__(self):
-        CoefficientData.__init__(self) 
-        PureData.__init__(self) 
+        CoefficientData.__init__(self)
+        PureData.__init__(self)
         self.name = "HCB"
         self.description = "Hydrocarbon blend - Dynalene MV"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1071.78,-0.772024]))
@@ -227,8 +234,8 @@ class HCBLiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([7.16819,-0.0863212,0.000130604]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000203186,-2.3869e-07]))
-        
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.203186,-2.3869e-04]))
+
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
         self.conductivity.source      = self.conductivity.SOURCE_COEFFS
@@ -236,19 +243,20 @@ class HCBLiquidClass(CoefficientData,PureData):
 
 
 class TCOLiquidClass(CoefficientData,PureData):
-    """ 
+    """
     Pure fluid according to Melinder's book
-    """ 
+    """
     def __init__(self):
-        CoefficientData.__init__(self) 
-        PureData.__init__(self) 
+        CoefficientData.__init__(self)
+        PureData.__init__(self)
         self.name = "TCO"
         self.description = "Terpene from citrus oils - d-Limonene"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
         self.Tmax = 100.0 + 273.15
         self.TminPsat =  self.Tmax
+        self.Tbase = 0.0
 
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
         _,_,self.density.coeffs = IncompressibleFitter.shapeArray(np.array([1071.02,-0.778166]))
@@ -260,8 +268,8 @@ class TCOLiquidClass(CoefficientData,PureData):
         _,_,self.viscosity.coeffs = IncompressibleFitter.shapeArray(np.array([-3.47971,-0.0107031,1.14086e-06]))
 
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
-        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0.000174156,-1.85052e-07]))
-        
+        _,_,self.conductivity.coeffs = IncompressibleFitter.shapeArray(np.array([0000.174156,-1.85052e-04]))
+
         self.density.source           = self.density.SOURCE_COEFFS
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
         self.conductivity.source      = self.conductivity.SOURCE_COEFFS
@@ -275,18 +283,18 @@ class TCOLiquidClass(CoefficientData,PureData):
 
 
 
-       
-        
+
+
 class EGSolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MEG"
         self.description = "Ethylene Glycol"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
         self.Tmax     = 100 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.6
@@ -317,18 +325,18 @@ class EGSolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class PGSolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MPG"
         self.description = "Propylene Glycol"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
         self.Tmax     = 100 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.6
@@ -359,18 +367,18 @@ class PGSolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class EASolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MEA"
         self.description = "Ethyl Alcohol (Ethanol)"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
         self.Tmax     =  40 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.6
@@ -401,18 +409,18 @@ class EASolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class MASolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MMA"
         self.description = "Methyl Alcohol (Methanol)"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
         self.Tmax     =  40 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.6
@@ -444,18 +452,18 @@ class MASolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class GLSolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MGL"
         self.description = "Glycerol"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
         self.Tmax     =  40 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.6
@@ -486,18 +494,18 @@ class GLSolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class AMSolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MAM"
         self.description = "Ammonia (NH3)"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
         self.Tmax     =  30 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.3
@@ -528,18 +536,18 @@ class AMSolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class KCSolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MKC"
         self.description = "Potassium Carbonate (K2CO3)"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
         self.Tmax     =  40 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.4
@@ -570,18 +578,18 @@ class KCSolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class CASolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MCA"
         self.description = "Calcium Chloride (CaCl2)"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15
         self.Tmax     =  40.0 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.3
@@ -612,18 +620,18 @@ class CASolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class MGSolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MMG"
         self.description = "(MgCl2)"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15
         self.Tmax     =  40.0 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.3
@@ -654,18 +662,18 @@ class MGSolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class NASolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MNA"
         self.description = "Sodium Chloride (NaCl)"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15
         self.Tmax     =  40.0 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.23
@@ -696,18 +704,18 @@ class NASolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class KASolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MKA"
         self.description = "Potassium Acetate (CH3CO2K)"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15
         self.Tmax     =  40.0 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.45
@@ -738,18 +746,18 @@ class KASolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class KFSolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MKF"
         self.description = "Potassium Formate (CHKO2)"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15
         self.Tmax     =  40.0 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.48
@@ -780,18 +788,18 @@ class KFSolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+
 
 class LISolution(CoefficientData):
     def __init__(self):
-        CoefficientData.__init__(self) 
+        CoefficientData.__init__(self)
         self.name = "MLI"
         self.description = "Lithium Chloride (LiCl)"
-        self.reference = "Melinder-BOOK-2010"
+        self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15
         self.Tmax     =  40.0 + 273.15
-        self.TminPsat = self.Tmax 
+        self.TminPsat = self.Tmax
 
         self.xmin     = 0.0
         self.xmax     = 0.24
@@ -822,4 +830,4 @@ class LISolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-        
+

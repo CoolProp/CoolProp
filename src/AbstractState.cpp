@@ -22,7 +22,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     if (!backend.compare("HEOS"))
     {
         if (fluid_string.find('&') == std::string::npos){
-            return new HelmholtzEOSBackend(&get_fluid(fluid_string));
+            return new HelmholtzEOSBackend(fluid_string);
         }
         else{
             // Split at the '&'

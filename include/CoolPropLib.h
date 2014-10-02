@@ -69,6 +69,11 @@
      * \sa \ref CoolProp::get_parameter_information_string
      */
     EXPORT_CODE long CONVENTION get_parameter_information_string(const char *key, char *Output);
+    /**
+     * \overload
+     * \sa \ref CoolProp::get_mixture_binary_pair_data
+     */
+    EXPORT_CODE long CONVENTION get_mixture_binary_pair_data(const char *CAS1, const char *CAS2, const char *key);
     /** 
      * \overload
      * \sa \ref CoolProp::get_fluid_param_string

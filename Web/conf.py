@@ -13,6 +13,7 @@
 # serve to show the default.
 
 import sys, os
+
 sys.path.insert(0, os.path.abspath('_ext'))
 try:
     import sphinxcontrib.doxylink
@@ -20,13 +21,24 @@ except ImportError:
 
     print('Unable to import sphinxcontrib.doxylink; try to run "pip install sphinxcontrib-doxylink"')
 
+
+import glob
+import subprocess
+
+# This part finds all scripts and runs them
+scripts = glob.glob(os.path.join('scripts','*.py'))
+for script in scripts:
+    subprocess.call('python {0}'.format(os.path.basename(script)), cwd='scripts', shell=True)
+
+
+
 #~ # If your extensions are in another directory, add it here. If the directory
 #~ # is relative to the documentation root, use os.path.abspath to make it
 #~ # absolute, like shown here.
 #~ sys.path.append(os.path.abspath('sphinxext'))
 
 doxylink = {
-    'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', '_static/doxygen/html')
+    'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', '../_static/doxygen/html')
 }
 
 # -- General configuration -----------------------------------------------------

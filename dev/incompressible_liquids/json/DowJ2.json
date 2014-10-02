@@ -3,20 +3,20 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase": 0.000000e+00, 
+  "Tbase": 3.941500e+02, 
   "Tmax": 5.881500e+02, 
   "Tmin": 2.001500e+02, 
   "TminPsat": 5.881500e+02, 
   "conductivity": {
     "coeffs": [
       [
-        1.560412e-01
+        1.244832e-01
       ], 
       [
-        -7.580656e-05
+        -8.228663e-05
       ], 
       [
-        -1.597822e-08
+        -4.623924e-10
       ], 
       [
         1.312176e-11
@@ -27,13 +27,13 @@
   "density": {
     "coeffs": [
       [
-        1.115217e+03
+        7.844671e+02
       ], 
       [
-        -1.169420e+00
+        -8.449387e-01
       ], 
       [
-        1.690565e-03
+        -8.673233e-04
       ], 
       [
         -2.163211e-06
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "DowJ2", 
-  "reference": "Dow Chemicals, SecCool software", 
+  "reference": "Dow1997,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -59,13 +59,13 @@
   "specific_heat": {
     "coeffs": [
       [
-        1.225943e+03
+        2.166752e+03
       ], 
       [
-        1.153546e+00
+        3.623602e+00
       ], 
       [
-        3.120896e-03
+        3.145896e-03
       ], 
       [
         2.114289e-08

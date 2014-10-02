@@ -9,8 +9,9 @@ CoolProp at its core is a C++ library, but it can be of interest to use this cod
 Downloads and instructions for each wrapper are included in the page for the wrapper given in the table below.
 
 =======================================       ===========================  =======================================
-Language                                      Operating Systems            Notes
+Target                                        Operating Systems            Notes
 =======================================       ===========================  =======================================
+:ref:`Static library <static_library>`        linux, OSX, win              
 :ref:`Python <Python>`                        linux, OSX, win              Wrapper is Cython based
 :ref:`Octave <Octave>`                        linux, OSX, win              Wrapper is SWIG based
 :ref:`C# <Csharp>`                            linux, OSX, win              Wrapper is SWIG based
@@ -90,3 +91,4 @@ OSX should come with a c++ compiler (clang), for git and cmake your best bet is 
     LibreOffice/index.rst
     Excel/index.rst
     Maple/index.rst
+    StaticLibrary/index.rst

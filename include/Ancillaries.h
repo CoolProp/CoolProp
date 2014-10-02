@@ -85,16 +85,19 @@ private:
     std::vector<double> n, t, s;
     bool using_tau_r;
     long double Tmax, Tmin, reducing_value, T_r, max_abs_error;
-    int type;
-    enum ancillaryfunctiontypes{TYPE_NOT_SET = -1, 
-	                            TYPE_NOT_EXPONENTIAL = 0, 
-								TYPE_EXPONENTIAL = 1, 
-								TYPE_RATIONAL_POLYNOMIAL = 2};
+    enum ancillaryfunctiontypes{TYPE_NOT_SET = 0, 
+	                            TYPE_NOT_EXPONENTIAL, 
+								TYPE_EXPONENTIAL, 
+								TYPE_RATIONAL_POLYNOMIAL};
+    ancillaryfunctiontypes type;
     std::size_t N;
 public:
 
     SaturationAncillaryFunction(){type = TYPE_NOT_SET;};
     SaturationAncillaryFunction(rapidjson::Value &json_code);
+    
+    /// Return true if the ancillary is enabled
+    bool enabled(void){return type != TYPE_NOT_SET;}
     
     /// Get the maximum absolute error for this fit
 	/// @returns max_abs_error the maximum absolute error for ancillaries that are characterized by maximum absolute error

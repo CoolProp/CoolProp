@@ -11,7 +11,7 @@ class LiBrData(SolutionData):
     def __init__(self):
         SolutionData.__init__(self)
         self.name = "LiBr"
-        self.description = "Lithium-Bromide solution from Patek2006"
+        self.description = "Aqueous lithium-bromide solution "
         self.reference = "Patek2006"
 
         self.temperature.data         = np.array([2.73000e+02, 2.84947e+02, 2.96895e+02, 3.08842e+02, 3.20789e+02, 3.32737e+02, 3.44684e+02, 3.56632e+02, 3.68579e+02, 3.80526e+02, 3.92474e+02, 4.04421e+02, 4.16368e+02, 4.28316e+02, 4.40263e+02, 4.52211e+02, 4.64158e+02, 4.76105e+02, 4.88053e+02, 5.00000e+02]) # Kelvin

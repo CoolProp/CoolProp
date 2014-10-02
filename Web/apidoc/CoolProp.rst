@@ -1,9 +1,32 @@
-CoolProp Module
-===============
+CoolProp package
+================
 
-.. automodule:: CoolProp.CoolProp 
-    :synopsis:
+Subpackages
+-----------
+
+.. toctree::
+
+    CoolProp.GUI
+    CoolProp.Plots
+    CoolProp.tests
+
+Submodules
+----------
+
+.. toctree::
+
+   CoolProp.BibtexParser
+   CoolProp.CoolProp
+   CoolProp.CoolProp
+   CoolProp.HumidAirProp
+   CoolProp.State
+   CoolProp.constants
+   CoolProp.constants
+
+Module contents
+---------------
+
+.. automodule:: CoolProp
     :members:
     :undoc-members:
     :show-inheritance:
-    :exclude-members: State,HAProps,HAProps_Aux,PureFluidClass

@@ -3,20 +3,20 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase": 0.000000e+00, 
+  "Tbase": 2.731500e+02, 
   "Tmax": 3.131500e+02, 
   "Tmin": 2.331500e+02, 
   "TminPsat": 3.131500e+02, 
   "conductivity": {
     "coeffs": [
       [
-        2.493904e-01
+        4.546277e-01
       ], 
       [
-        9.065415e-04
+        6.590067e-04
       ], 
       [
-        -7.979978e-07
+        -1.082251e-07
       ], 
       [
         8.417508e-10
@@ -27,16 +27,16 @@
   "density": {
     "coeffs": [
       [
-        1.317260e+03
+        1.208000e+03
       ], 
       [
         -4.000000e-01
       ], 
       [
-        2.591269e-14
+        4.439808e-17
       ], 
       [
-        -5.114724e-17
+        8.418830e-18
       ]
     ], 
     "type": "polynomial"
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "TY20", 
-  "reference": "Tyforop Chemie Gmbh - Technical information 09/99, SecCool software", 
+  "reference": "Tyfoprop1999,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -59,13 +59,13 @@
   "specific_heat": {
     "coeffs": [
       [
-        2.179115e+03
+        3.031688e+03
       ], 
       [
-        4.613835e+00
+        2.256734e+00
       ], 
       [
-        -7.763528e-03
+        -8.658009e-04
       ], 
       [
         8.417508e-06

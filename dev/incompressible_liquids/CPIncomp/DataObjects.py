@@ -33,8 +33,8 @@ class SolutionData(object):
         self.xmin        = 0.0 # Minimum concentration
         self.xid         = self.ifrac_undefined # Concentration is mole, mass or volume-based
         self.TminPsat    = None # Minimum saturation temperature in K
-        self.Tbase       = 0.0  # Base value for temperature fits
-        self.xbase       = 0.0  # Base value for concentration fits
+        self.Tbase       = None  # Base value for temperature fits
+        self.xbase       = None  # Base value for concentration fits
 
         self.temperature   = IncompressibleData() # Temperature for data points in K
         self.concentration = IncompressibleData() # Concentration data points in weight fraction
@@ -248,6 +248,7 @@ class PureData(SolutionData):
     __metaclass__ = ABCMeta
     def __init__(self):
         SolutionData.__init__(self)
+        self.xbase = 0.0
         self.xid         = self.ifrac_pure
         self.concentration.data       = np.array([     0 ]) # mass fraction
 
@@ -467,7 +468,7 @@ class CoefficientData(SolutionData):
         if len(array)!=18:
             raise ValueError("The lenght is not equal to 18!")
 
-        self.reference = "Melinder Book"
+        #self.reference = "Melinder Book"
         array = np.array(array)
         tmp = np.zeros((6,4))
 

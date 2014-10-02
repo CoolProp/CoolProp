@@ -29,7 +29,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "NitrateSalt", 
+  "description": "Nitrate salt, heat transfer fluid based on 60% NaNO3 and 40% KNO3", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -39,7 +39,7 @@
     "type": "notdefined"
   }, 
   "name": "NaK", 
-  "reference": "Solar Power Tower Design Basis Document,  Alexis B. Zavoico, Sandia Labs, USA", 
+  "reference": "Zavoico2001", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

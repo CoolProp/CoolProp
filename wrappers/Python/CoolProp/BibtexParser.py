@@ -6,6 +6,7 @@ from __future__ import generators
 import pybtex.plugin, pybtex.database.input.bibtex, pybtex.errors
 import io
 import codecs, latexcodec
+import os
 
 
 
@@ -41,12 +42,26 @@ class BibTeXerClass(object):
         else:
             bib_parser = pybtex.database.input.bibtex.Parser()
 
-        # Do not print that many warnings
-        pybtex.errors.set_strict_mode(enable=False)
+        # TODO: not needed anymore?
+        oldLatexCodec = False
+        if oldLatexCodec:
+            # Do not print that many warnings
+            pybtex.errors.set_strict_mode(enable=False)
+
+            # TODO: Remove empty lines to keep Pybtex from choking
+            with open(path, "r") as f:
+                lines = f.readlines()
+                cleaned = [l.strip() for l in lines if l.strip()]
+
+            path = path+".filtered.bib"
+            with open(path, "w") as f:
+                f.writelines('\n'.join(cleaned))
 
         # Open the file and convert it according to the encoding
         with codecs.open(path, encoding=encoding) as stream:
             self.library = bib_parser.parse_stream(stream)
+
+        #os.remove(path)
 
         # Do some post-processing if encoding was latex
         if encoding=="latex":
@@ -92,7 +107,7 @@ class BibTeXerClass(object):
         return stripped
 
 
-    def getBibliography(self, keys=[], fmt="plaintext", style="unsrtalpha", enc=None, objects=False):
+    def getBibliography(self, keys=None, fmt="plaintext", style="unsrtalpha", enc=None, objects=False):
         """This function creates a formatted bibliography according to the
         defined parameters using Pybtex.
         Specify your desired output format using the \"fmt\" parameter. Supported
@@ -158,7 +173,16 @@ class BibTeXerClass(object):
             } # How do we find the end of the label?
 
         end_of_label = contents.index(label_table[fmt])
-        contents = contents[end_of_label+1:].strip()
+        contents = contents[end_of_label+len(label_table[fmt]):].strip()
+
+        if fmt=="latex":
+            contents = contents.replace(u"\\newblock ","")
+        elif fmt=="html":
+            contents = contents.replace(u"<dd>","")
+            contents = contents.replace(u"</dd>","")
+
+        contents = contents.replace(u"\n","")
+
         return contents
 
 
@@ -166,43 +190,15 @@ class BibTeXerClass(object):
 #getEntry(self, key, label=False, fmt="markdown", style="unsrtalpha", enc=None):
 
 if __name__=='__main__':
-    B = BibTeXerClass()
-    B.loadLibrary('../../../Web/fluid_properties/Incompressibles.bib')
-    print(B.getEntry('Cesar2013'))
-    print(B.getEntry('Skovrup2013'))
-    print(B.getEntry('Therminol2014'))
-
-#     B = BibTeXerClass('../../../Web/fluid_properties/Incompressibles.bib')
-#     print("\nHTML:")
-#     print(B.entries2All(keys=['Skovrup2013'], output_backend='html'))
-#    print("\nMarkdown:")
-#    print(B.entries2All(keys=['Skovrup2013'], output_backend='markdown'))
-#     print("\nText:")
-#     print(B.entries2All(keys=['Skovrup2013'], output_backend='text'))
-#
-#     B = BibTeXerClass('../../../CoolPropBibTeXLibrary.bib')
-#     print("\nHTML:")
-#     print(B.entries2All(keys=['Mulero-JPCRD-2012'], output_backend='html'))
-#     print("\nMarkdown:")
-#     print(B.entries2All(keys=['Mulero-JPCRD-2012'], output_backend='markdown'))
-#     print("\nText:")
-#     print(B.entries2All(keys=['Mulero-JPCRD-2012'], output_backend='text'))
-#
-#
-#     from pybtex.richtext import Text, Tag, Symbol, HRef
-#     from pybtex.backends.markdown import Backend
-#
-#     link_href = HRef(
-#       'http://www.test.test/directory/file.ext?para=in&sec=out', # URL
-#       'testing links with href class'
-#       )
-#     tag_emph  = Tag('emph', Text(u'Emph', Symbol('nbsp'), u'text'))
-#     unicode_text = Text(u'Л.:', Symbol('nbsp'), u'<<Химия>>')
-#     latex_text   = Text(u'{\\aa}', Symbol(u'nbsp'), u'\\\'e')
-#     markd_text   = Text(u'{ and & and *', Symbol(u'nbsp'), u'\\')
-#
-#     for i in [link_href,tag_emph,unicode_text,latex_text,markd_text]:
-#         print(i.render(Backend()))
+    B = BibTeXerClass('../../../CoolPropBibTeXLibrary.bib')
+    print("\nLatex:")
+    print(B.getEntry(key='Mulero-JPCRD-2012', fmt='latex'))
+    print("\nHTML:")
+    print(B.getEntry(key='Mulero-JPCRD-2012', fmt='html'))
+    print("\nMarkdown:")
+    print(B.getEntry(key='Mulero-JPCRD-2012', fmt='markdown'))
+    print("\nText:")
+    print(B.getEntry(key='Mulero-JPCRD-2012', fmt='plaintext'))
 
 
 

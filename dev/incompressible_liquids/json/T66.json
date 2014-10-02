@@ -3,20 +3,20 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase": 0.000000e+00, 
+  "Tbase": 4.631500e+02, 
   "Tmax": 6.531500e+02, 
   "Tmin": 2.731500e+02, 
   "TminPsat": 3.431500e+02, 
   "conductivity": {
     "coeffs": [
       [
-        1.139842e-01
+        1.065831e-01
       ], 
       [
-        6.274883e-05
+        -9.178790e-05
       ], 
       [
-        -1.762916e-07
+        -1.573730e-07
       ], 
       [
         1.361587e-11
@@ -27,13 +27,13 @@
   "density": {
     "coeffs": [
       [
-        1.226233e+03
+        8.924651e+02
       ], 
       [
-        -8.825220e-01
+        -7.182484e-01
       ], 
       [
-        6.938379e-04
+        -3.391502e-04
       ], 
       [
         -7.434511e-07
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "T66", 
-  "reference": "Therminol Heat Transfer Reference Disk", 
+  "reference": "Therminol2014", 
   "saturation_pressure": {
     "coeffs": [
       -9.020703e+03, 
@@ -63,13 +63,13 @@
   "specific_heat": {
     "coeffs": [
       [
-        5.734665e+02
+        2.157819e+03
       ], 
       [
-        3.426990e+00
+        3.630114e+00
       ], 
       [
-        -4.785383e-04
+        9.171095e-04
       ], 
       [
         1.004461e-06

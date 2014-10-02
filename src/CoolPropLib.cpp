@@ -97,7 +97,7 @@ EXPORT_CODE double CONVENTION PropsS(const char *Output, const char* Name1, doub
 	double val = Props(Output,Name1[0],Prop1,Name2[0],Prop2,Ref);
 	return val;
 }
-EXPORT_CODE double CONVENTION Props(const char *Output, char Name1, double Prop1, char Name2, double Prop2, const char * Ref)
+EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double Prop1, const char Name2, double Prop2, const char * Ref)
 {
     try
     {

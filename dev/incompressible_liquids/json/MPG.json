@@ -100,7 +100,7 @@
     "type": "notdefined"
   }, 
   "name": "MPG", 
-  "reference": "Melinder Book", 
+  "reference": "Melinder2010", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

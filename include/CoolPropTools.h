@@ -251,7 +251,7 @@
                 throw CoolProp::ValueError(format("%s could not be matched in get_string",s.c_str())); 
             }
         };
-        double get_number(std::string s)
+        double get_double(std::string s)
         {
             if (numbers.find(s) != numbers.end()){ 
                 return numbers[s]; 
@@ -259,6 +259,10 @@
             else{ 
                 throw CoolProp::ValueError(format("%s could not be matched in get_number",s.c_str())); 
             }
+        };
+        double get_number(std::string s)
+        {
+            return get_double(s);
         };
         std::vector<double> get_double_vector(std::string s)
         {

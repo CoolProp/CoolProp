@@ -10,10 +10,10 @@
   "conductivity": {
     "coeffs": [
       [
-        1.891320e-04
+        1.891320e-01
       ], 
       [
-        -2.063640e-07
+        -2.063640e-04
       ]
     ], 
     "type": "polynomial"
@@ -39,7 +39,7 @@
     "type": "notdefined"
   }, 
   "name": "DEB", 
-  "reference": "Melinder-BOOK-2010", 
+  "reference": "Melinder2010", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

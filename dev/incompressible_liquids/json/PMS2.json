@@ -10,10 +10,10 @@
   "conductivity": {
     "coeffs": [
       [
-        1.723050e-04
+        1.723050e-01
       ], 
       [
-        -2.112120e-07
+        -2.112120e-04
       ]
     ], 
     "type": "polynomial"
@@ -39,7 +39,7 @@
     "type": "notdefined"
   }, 
   "name": "PMS2", 
-  "reference": "Melinder-BOOK-2010", 
+  "reference": "Melinder2010", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

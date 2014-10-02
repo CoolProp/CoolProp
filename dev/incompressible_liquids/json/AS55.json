@@ -48,7 +48,7 @@
     "type": "notdefined"
   }, 
   "name": "AS55", 
-  "reference": "Aspen Petroleum AB, SecCool software", 
+  "reference": "Aspen2001,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"

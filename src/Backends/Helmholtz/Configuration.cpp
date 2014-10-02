@@ -17,6 +17,8 @@ bool get_config_bool(configuration_keys key)
     {
         case NORMALIZE_GAS_CONSTANTS:
             return true;
+        case CRITICAL_SPLINES_ENABLED:
+            return true;
         default:
             throw ValueError(format("%d is invalid key to get_config_bool",key));
     }

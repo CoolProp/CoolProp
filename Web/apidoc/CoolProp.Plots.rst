@@ -1,35 +1,22 @@
-Plots Package
-=============
+CoolProp.Plots package
+======================
 
-:mod:`Plots` Package
---------------------
+Submodules
+----------
+
+.. toctree::
+
+   CoolProp.Plots.Common
+   CoolProp.Plots.Plots
+   CoolProp.Plots.PsychChart
+   CoolProp.Plots.PsychScript
+   CoolProp.Plots.SimpleCycles
+   CoolProp.Plots.Tests
+
+Module contents
+---------------
 
 .. automodule:: CoolProp.Plots
     :members:
     :undoc-members:
     :show-inheritance:
-
-:mod:`Plots` Module
--------------------
-
-.. automodule:: CoolProp.Plots.Plots
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`PsychChart` Module
-------------------------
-
-.. automodule:: CoolProp.Plots.PsychChart
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`SimpleCycles` Module
---------------------------
-
-.. automodule:: CoolProp.Plots.SimpleCycles
-    :members:
-    :undoc-members:
-    :show-inheritance:
-

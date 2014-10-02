@@ -13,9 +13,80 @@ def remove_files():
     os.remove(os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files removed.')
     
+def touch(fname):
+    open(fname, 'a').close()
+    os.utime(fname, None)
+    
 if __name__=='__main__':
-
+    
+    
+    
     import subprocess, shutil, os, sys, glob
+        
+    if '--cmake-compiler' in sys.argv:
+        i = sys.argv.index('--cmake-compiler')
+        sys.argv.pop(i)
+        cmake_compiler = sys.argv.pop(i)
+    else:
+        cmake_compiler = ''
+        
+    if '--cmake-bitness' in sys.argv:
+        i = sys.argv.index('--cmake-bitness')
+        sys.argv.pop(i)
+        cmake_bitness = sys.argv.pop(i)
+    else:
+        cmake_bitness = ''
+        
+    USING_CMAKE = cmake_compiler or cmake_bitness
+        
+    cmake_config_args = []
+    cmake_build_args = ['--config','"Release"']
+    STATIC_LIBRARY_BUILT = False
+    if USING_CMAKE:
+        
+        # Always force build since any changes in the C++ files will not force a rebuild
+        touch('CoolProp/CoolProp.pyx')
+        
+        if 'clean' in sys.argv:
+            if os.path.exists('cmake_build'):
+                print('removing cmake_build folder...')
+                shutil.rmtree('cmake_build')
+                print('removed.')
+            
+        if cmake_compiler == 'vc9':
+            if cmake_bitness == '32':
+                generator = ['-G','"Visual Studio 9 2008"']
+            elif cmake_bitness == '64':
+                generator = ['-G','"Visual Studio 9 2008 Win64"']
+            else:
+                raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
+        elif cmake_compiler == 'vc10':
+            if cmake_bitness == '32':
+                generator = ['-G','"Visual Studio 10 2010"']
+            elif cmake_bitness == '64':
+                generator = ['-G','"Visual Studio 10 2010 Win64"']
+            else:
+                raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
+        else:
+            raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
+            
+        cmake_build_dir = os.path.join('cmake_build', '{compiler}-{bitness}bit'.format(compiler=cmake_compiler, bitness=cmake_bitness))
+        if not os.path.exists(cmake_build_dir):
+            os.makedirs(cmake_build_dir)
+        subprocess.check_call(' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON']+generator+cmake_config_args), shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
+        subprocess.check_call(' '.join(['cmake','--build', '.']+cmake_build_args), shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
+        
+        # Now find the static library that we just built
+        if sys.platform == 'win32':
+            static_libs = []
+            for search_suffix in ['Release/*.lib','Release/*.a', 'Debug/*.lib', 'Debug/*.a']:
+                static_libs += glob.glob(os.path.join(cmake_build_dir,search_suffix))
+        
+        if len(static_libs) != 1:
+            raise ValueError("Found more than one static library using CMake build.  Found: "+str(static_libs))
+        else:
+            STATIC_LIBRARY_BUILT = True
+            static_library_path = os.path.dirname(static_libs[0])
     
     # Check if a sdist build for pypi
     pypi = os.path.exists('.use_this_directory_as_root')
@@ -68,10 +139,11 @@ if __name__=='__main__':
             raise ValueError('Could not run script from this folder(' + os.path.abspath(os.path.curdir) + '). Run from wrappers/Python folder')
     
         sys.path.append(os.path.join(CProot, 'dev'))
-        import generate_headers
-        # Generate the headers - does nothing if up to date - but only if not pypi
-        generate_headers.generate()
-        del generate_headers
+        if not USING_CMAKE:
+            import generate_headers
+            # Generate the headers - does nothing if up to date - but only if not pypi
+            generate_headers.generate()
+            del generate_headers
                     
     # Read the version from a bare string stored in file in root directory
     version = open(os.path.join(CProot,'.version'),'r').read().strip()
@@ -106,11 +178,11 @@ if __name__=='__main__':
         
     # Set variables for C++ sources and include directories
     sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp') 
-    include_dirs = [os.path.join(CProot, 'include'), os.path.join(CProot, 'externals', 'Eigen')]
+    include_dirs = [os.path.join(CProot, 'include'), os.path.join(CProot, 'src'), os.path.join(CProot, 'externals', 'Eigen')]
 
     ## If the file is run directly without any parameters, clean, build and install
     if len(sys.argv)==1:
-       sys.argv += ['clean', 'develop']
+       sys.argv += ['clean', 'install']
         
     common_args = dict(include_dirs = include_dirs,
                        language='c++')
@@ -121,9 +193,16 @@ if __name__=='__main__':
                                 )
                            )
                        
-    CoolProp_module = Extension('CoolProp.CoolProp',
-                        [os.path.join('CoolProp','CoolProp.' + cy_ext)] + sources,
-                        **common_args)
+    if STATIC_LIBRARY_BUILT == True:
+        CoolProp_module = Extension('CoolProp.CoolProp',
+                            [os.path.join('CoolProp','CoolProp.' + cy_ext)],
+                            libraries = ['CoolProp'],
+                            library_dirs = [static_library_path],
+                            **common_args)
+    else:
+        CoolProp_module = Extension('CoolProp.CoolProp',
+                            [os.path.join('CoolProp','CoolProp.' + cy_ext)] + sources,
+                            **common_args)
     constants_module = Extension('CoolProp.constants',
                         [os.path.join('CoolProp','constants.' + cy_ext)],
                         **common_args)

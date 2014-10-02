@@ -2,7 +2,7 @@
   "ALIASES": [
     "Parahydrogen", 
     "parahydrogen", 
-    "PARAHYDROGEN",
+    "PARAHYDROGEN", 
     "PARAHYD"
   ], 
   "ANCILLARIES": {
@@ -420,22 +420,22 @@
       ], 
       "critical_region_splines": {
         "T_max": 32.938, 
-        "T_min": 32.93799999997271, 
+        "T_min": 32.93599461397884, 
         "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K", 
         "cL": [
-          0.0, 
-          0.0, 
-          -6.176636722223463e-10, 
-          32.938009597258144
+          4.253205081213295e-12, 
+          -2.116493776473347e-07, 
+          0.0034966692458426726, 
+          13.749966028178376
         ], 
         "cV": [
-          0.0, 
-          0.0, 
-          5.786265121310599e-10, 
-          32.93799100930126
+          -3.141534424322369e-12, 
+          1.338646257848717e-07, 
+          -0.0018846003827776433, 
+          41.68699310689614
         ], 
-        "rhomolar_max": 15538.044190612114, 
-        "rhomolar_min": 15537.952830972841
+        "rhomolar_max": 15953.359013823481, 
+        "rhomolar_min": 15115.765516662266
       }, 
       "gas_constant": 8.314472, 
       "gas_constant_units": "J/mol/K", 

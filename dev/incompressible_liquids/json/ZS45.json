@@ -3,20 +3,20 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase": 0.000000e+00, 
+  "Tbase": 2.966500e+02, 
   "Tmax": 3.631500e+02, 
   "Tmin": 2.301500e+02, 
   "TminPsat": 3.631500e+02, 
   "conductivity": {
     "coeffs": [
       [
-        2.016794e-01
+        4.725506e-01
       ], 
       [
-        8.068574e-04
+        1.019496e-03
       ], 
       [
-        3.576270e-07
+        3.591727e-07
       ], 
       [
         1.736871e-12
@@ -27,16 +27,16 @@
   "density": {
     "coeffs": [
       [
-        1.432999e+03
+        1.269110e+03
       ], 
       [
         -5.524646e-01
       ], 
       [
-        -3.713730e-11
+        -3.092193e-12
       ], 
       [
-        3.828340e-14
+        3.814783e-14
       ]
     ], 
     "type": "polynomial"
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "ZS45", 
-  "reference": "Arteco, SecCool software", 
+  "reference": "Arteco2010,Skovrup2013", 
   "saturation_pressure": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -59,16 +59,16 @@
   "specific_heat": {
     "coeffs": [
       [
-        2.045102e+03
+        2.699434e+03
       ], 
       [
-        2.205743e+00
+        2.205734e+00
       ], 
       [
-        -2.881286e-08
+        1.170975e-09
       ], 
       [
-        3.369149e-11
+        3.369155e-11
       ]
     ], 
     "type": "polynomial"

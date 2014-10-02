@@ -143,13 +143,17 @@ if (COOLPROP_SHARED_LIBRARY)
     list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
 endif()
 
-if (COOLPROP_STATIC_LIBRARY_MODULE OR COOLPROP_STATIC_LIBRARY)
+if (COOLPROP_STATIC_LIBRARY_MODULE OR COOLPROP_STATIC_LIBRARY OR COOLPROP_EXTERNC_STATIC_LIBRARY)
     list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
     add_library(${app_name} STATIC ${APP_SOURCES})
     add_dependencies (${app_name} generate_headers)
-    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC")
     install (TARGETS ${app_name} DESTINATION static_library/${CMAKE_SYSTEM_NAME})
 endif()
+
+if (COOLPROP_EXTERNC_STATIC_LIBRARY)
+  set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC")
+endif()
+
 
 if (COOLPROP_64BIT_SHARED_LIBRARY_MODULE OR COOLPROP_64BIT_SHARED_LIBRARY)
     list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
@@ -657,15 +661,9 @@ if (COOLPROP_PYTHON_BINARIES)
 endif()
 
 if (COOLPROP_PYTHON_PYPI)
-  
-  if (DEFINED AND_UPLOAD)
-    set(_AND_UPLOAD upload)
-  else()
-    set(_AND_UPLOAD )
-  endif()
     
   add_custom_target(CoolProp
-                    COMMAND python prepare_pypi.py  ${_AND_UPLOAD} --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
+                    COMMAND python prepare_pypi.py --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python/pypi
                     )
 endif()
