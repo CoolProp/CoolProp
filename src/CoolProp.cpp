@@ -906,9 +906,36 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
 		{
             return fluid->REFPROPname;
 		}
+        else if (ParamName.find("BibTeX") == 0) // Starts with "BibTeX"
+        {
+            std::vector<std::string> parts = strsplit(ParamName,'-');
+            // 
+            std::string item = parts[1];
+            if (item == "EOS"){
+                return fluid->pEOS->BibTeX_EOS;
+            }
+            else if (item == "CP0"){
+                return fluid->pEOS->BibTeX_CP0;
+            }
+            else if (item == "SURFACE_TENSION"){
+                return fluid->ancillaries.surface_tension.BibTeX;
+            }
+            else if (item == "MELTING_LINE"){
+                return fluid->ancillaries.melting_line.BibTeX;
+            }
+            else if (item == "VISCOSITY"){
+                return fluid->transport.BibTeX_viscosity;
+            }
+            else if (item == "CONDUCTIVITY"){
+                return fluid->transport.BibTeX_conductivity;
+            }
+            else{
+                return format("Could not match BibTeX item: %s", item.c_str());
+            }
+        }
 		else
 		{
-			return format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str(),FluidName.c_str()).c_str();
+			return format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str(),FluidName.c_str());
 		}
 	}
 	catch(std::exception &e)
