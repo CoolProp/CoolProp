@@ -252,7 +252,7 @@ cpdef string get_REFPROPname(string Fluid):
     """
     return _get_fluid_param_string(Fluid,'REFPROP_name')
 
-cpdef string get_BibTeXKey(str Fluid, str key):
+cpdef string get_BibTeXKey(string Fluid, string key):
     """
     Return the BibTeX key for the given fluid.
     
