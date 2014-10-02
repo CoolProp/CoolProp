@@ -808,6 +808,9 @@ protected:
     /// Parse the thermal conductivity data
     void parse_thermal_conductivity(rapidjson::Value &conductivity, CoolPropFluid & fluid)
     {
+        // Load the BibTeX key
+        fluid.transport.BibTeX_conductivity = cpjson::get_string(conductivity,"BibTeX");
+        
         // If it is using ECS, set ECS parameters and quit
         if (conductivity.HasMember("type") && !cpjson::get_string(conductivity, "type").compare("ECS")){
             parse_ECS_conductivity(conductivity, fluid);
@@ -829,9 +832,6 @@ protected:
                 throw ValueError(format("hardcoded residual conductivity term [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
             }
         }
-
-        // Load the BibTeX key
-        fluid.transport.BibTeX_conductivity = cpjson::get_string(conductivity,"BibTeX");
 
         // Load dilute conductivity term
         if (conductivity.HasMember("dilute")){

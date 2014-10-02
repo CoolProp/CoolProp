@@ -23,6 +23,14 @@ if __name__=='__main__':
     
     import subprocess, shutil, os, sys, glob
         
+      
+    # ******************************
+    #       CMAKE OPTIONS
+    # ******************************
+
+    # Example using CMake to build static library:
+    # python setup.py install --cmake-compiler vc9 --cmake-bitness 64
+    
     if '--cmake-compiler' in sys.argv:
         i = sys.argv.index('--cmake-compiler')
         sys.argv.pop(i)

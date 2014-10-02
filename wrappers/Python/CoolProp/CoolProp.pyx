@@ -252,28 +252,29 @@ cpdef string get_REFPROPname(string Fluid):
     """
     return _get_fluid_param_string(Fluid,'REFPROP_name')
 
-# cpdef string get_BibTeXKey(str Fluid, str key):
-#     """
-#     Return the BibTeX key for the given fluid.
-#     
-#     The possible keys are
-#     
-#     * ``EOS``
-#     * ``CP0``
-#     * ``VISCOSITY``
-#     * ``CONDUCTIVITY``
-#     * ``ECS_LENNARD_JONES``
-#     * ``ECS_FITS``
-#     * ``SURFACE_TENSION``
-#     
-#     BibTeX keys refer to the BibTeX file in the trunk/CoolProp folder
-#     
-#     Returns
-#     -------
-#     key, string
-#          empty string if Fluid not in CoolProp, "Bad key" if key is invalid
-#     """
-#     return _get_BibTeXKey(Fluid, key)
+cpdef string get_BibTeXKey(str Fluid, str key):
+    """
+    Return the BibTeX key for the given fluid.
+    
+    The possible keys are
+    
+    * ``EOS``
+    * ``CP0``
+    * ``VISCOSITY``
+    * ``CONDUCTIVITY``
+    * ``ECS_LENNARD_JONES``
+    * ``ECS_FITS``
+    * ``SURFACE_TENSION``
+    * ``MELTING_LINE``
+    
+    BibTeX keys refer to the BibTeX file in the trunk/CoolProp folder
+    
+    Returns
+    -------
+    key, string
+         empty string if Fluid not in CoolProp, "Bad key" if key is invalid
+    """
+    return _get_fluid_param_string(Fluid, "BibTeX-"+key)
 
 cpdef string get_errstr():
     """
