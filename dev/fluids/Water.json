@@ -47,7 +47,7 @@
       "type": "rational_polynomial"
     }, 
     "melting_line": {
-      "BibTeX": "IAPWS", 
+      "BibTeX": "IAPWS-Melting-2011", 
       "T_m": -1, 
       "parts": [
         {
