@@ -46,7 +46,13 @@ For OSX, your best best is a binary installer (see http://wiki.octave.org/Octave
 
 Windows
 -------
-Due to difficulties with interfacing CMake/SWIG/Visual Studio, the Visual Studio compiled versions of octave are not supported as of version 5.  The only windows port of Octave that is supported is the MinGW compiled version.
+For windows, the situation is ok, but not great.  Only the MinGW builds are supported, and not comfortably
+
+1. Download a MinGW build from `http://wiki.octave.org/Octave_for_Microsoft_Windows`_.
+
+2. Extract the zip file to somewhere on your computer without any spaces in the path (c:\\octave-x.x.x is a good choice)
+
+3. Rename the sh.exe in the bin folder of your installation to _sh.exe
 
 Build
 -----
@@ -68,6 +74,10 @@ Once the dependencies are installed, you can run the builder and tests using::
 
 On windows, you need to just slightly modify the building procedure::
 
+    # The folder containing the folders bin, mingw, include, etc. (or set a system variable in your windows installation)
+    set OCTAVE_ROOT=c:\path\to\octave\root 
+    # Add the bin folder of your octave install to the system path
+    set PATH=c:\path\to\octave\bin;%PATH%
     # Check out the sources for CoolProp
     git clone https://github.com/CoolProp/CoolProp --recursive
     # Move into the folder you just created
@@ -82,6 +92,4 @@ On windows, you need to just slightly modify the building procedure::
     make install
     # Run the integration tests
     ctest --extra-verbose
-
-This building process on windows requires that make and the ``bin`` folder of Octave are on the ``PATH``.  The MinGW version of Octave conveniently also includes the MinGW C++ compiler used to build it, look inside the distribution.
 
