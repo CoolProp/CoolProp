@@ -11,6 +11,17 @@ endif()
 
 set(CMAKE_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX} CACHE PATH "default install path" FORCE)
 
+#if (COOLPROP_OCTAVE_MODULE AND WIN32)
+#  IF( "$ENV{OCTAVE_ROOT}" STREQUAL "" )
+#    message(FATAL_ERROR "On windows, environmental variable OCTAVE_ROOT must be set to folder containing folders bin, include, etc. for octave")
+#  ENDIF()
+#  set(CMAKE_C_COMPILER "$ENV{OCTAVE_ROOT}/bin/gcc.exe")
+#  set(CMAKE_CXX_COMPILER "$ENV{OCTAVE_ROOT}/bin/g++.exe")
+#  message(STATUS "CMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
+#  message(STATUS "CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
+#endif()
+  
+  
 #######################################
 #         PROJECT INFORMATION         #
 #-------------------------------------#
@@ -294,6 +305,11 @@ endif()
 
 if (COOLPROP_OCTAVE_MODULE)
 
+
+  if (WIN32)
+    SET(ENV{PATH} "${OCTAVE_ROOT}/bin;$ENV{PATH}")
+  endif()
+  
   # Must have SWIG and Octave
   FIND_PACKAGE(SWIG REQUIRED)
   INCLUDE(${SWIG_USE_FILE})
@@ -319,7 +335,6 @@ if (COOLPROP_OCTAVE_MODULE)
     ${CMAKE_SOURCE_DIR}/include/AbstractState.h
   ) 
   SWIG_ADD_MODULE(CoolProp octave ${I_FILE} ${APP_SOURCES})
-  SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIBRARIES})  
   
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     # We need to see which library to link with on OSX - clang++ or stdc++
@@ -333,7 +348,13 @@ if (COOLPROP_OCTAVE_MODULE)
   endif()
   
   if (WIN32)
+    include_directories($ENV{OCTAVE_ROOT}/include)
+    include_directories($ENV{OCTAVE_ROOT}/include/octave-${OCTAVE_VERSION}/octave)
     set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-fpermissive")
+    SWIG_LINK_LIBRARIES(CoolProp octave octinterp)
+    set_target_properties(CoolProp PROPERTIES LINK_FLAGS "-L$ENV{OCTAVE_ROOT}/lib/octave/${OCTAVE_VERSION}")
+  else()
+    SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIBRARIES})  
   endif()
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
