@@ -9,18 +9,7 @@ else()
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
 endif()
 
-set(CMAKE_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX} CACHE PATH "default install path" FORCE)
-
-#if (COOLPROP_OCTAVE_MODULE AND WIN32)
-#  IF( "$ENV{OCTAVE_ROOT}" STREQUAL "" )
-#    message(FATAL_ERROR "On windows, environmental variable OCTAVE_ROOT must be set to folder containing folders bin, include, etc. for octave")
-#  ENDIF()
-#  set(CMAKE_C_COMPILER "$ENV{OCTAVE_ROOT}/bin/gcc.exe")
-#  set(CMAKE_CXX_COMPILER "$ENV{OCTAVE_ROOT}/bin/g++.exe")
-#  message(STATUS "CMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
-#  message(STATUS "CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
-#endif()
-  
+set(CMAKE_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX} CACHE PATH "default install path" FORCE)  
   
 #######################################
 #         PROJECT INFORMATION         #
@@ -304,11 +293,6 @@ if (COOLPROP_EES_MODULE)
 endif()
 
 if (COOLPROP_OCTAVE_MODULE)
-
-
-  if (WIN32)
-    SET(ENV{PATH} "${OCTAVE_ROOT}/bin;$ENV{PATH}")
-  endif()
   
   # Must have SWIG and Octave
   FIND_PACKAGE(SWIG REQUIRED)
