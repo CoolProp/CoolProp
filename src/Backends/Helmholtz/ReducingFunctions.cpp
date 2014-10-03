@@ -96,7 +96,7 @@ long double GERG2008ReducingFunction::d2Trdxi2__constxj(const std::vector<long d
 }
 long double GERG2008ReducingFunction::d2Trdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
-	return d2Yrdxidxj__constxj(x, i, j, beta_T, gamma_T, T_c, Yc_T, xN_flag);
+	return d2Yrdxidxj(x, i, j, beta_T, gamma_T, T_c, Yc_T, xN_flag);
 }
 long double GERG2008ReducingFunction::rhormolar(const std::vector<long double> &x)
 {
@@ -116,7 +116,7 @@ long double GERG2008ReducingFunction::d2vrmolardxi2__constxj(const std::vector<l
 }
 long double GERG2008ReducingFunction::d2vrmolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
-    return d2Yrdxidxj__constxj(x, i, j, beta_v, gamma_v, v_c, Yc_v, xN_flag);
+    return d2Yrdxidxj(x, i, j, beta_v, gamma_v, v_c, Yc_v, xN_flag);
 }
 long double GERG2008ReducingFunction::d2rhormolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag)
 {
@@ -232,7 +232,7 @@ long double GERG2008ReducingFunction::d2Yrdxi2__constxj(const std::vector<long d
     }
 }
 
-long double GERG2008ReducingFunction::d2Yrdxidxj__constxj(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag)
+long double GERG2008ReducingFunction::d2Yrdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){
         if (i == j)

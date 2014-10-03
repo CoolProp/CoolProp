@@ -129,23 +129,77 @@ public:
 
 	/// Default destructor
 	~GERG2008ReducingFunction(){};
-	/// The reduced temperature
+	/** \brief The reducing temperature
+     * Calculated from \ref Yr with \f$T = Y\f$
+     */
 	long double Tr(const std::vector<long double> &x);
-	/// The derivative of reduced temperature with respect to component i mole fraction
+	/** \brief The derivative of reducing temperature with respect to component i mole fraction
+     * 
+     * Calculated from \ref dYrdxi__constxj with \f$T = Y\f$
+     */
 	long double dTrdxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
-	/// The molar reducing density
-	long double rhormolar(const std::vector<long double> &x);
-	///Derivative of the molar reducing density with respect to component i mole fraction
-	long double drhormolardxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
-	long double dvrmolardxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag  xN_fla);
-
-	long double d2vrmolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
-	long double d2rhormolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
-	long double d2vrmolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
-	long double d2rhormolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
-	long double d2Trdxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	/** \brief The second derivative of reducing temperature with respect to component i mole fraction
+     * 
+     * Calculated from \ref d2Yrdxi2__constxj with \f$T = Y\f$
+     */
+    long double d2Trdxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+    /** \brief The second derivative of reducing temperature with respect to component i and j mole fractions
+     * 
+     * Calculated from \ref d2Yrdxidxj with \f$T = Y\f$
+     */
 	long double d2Trdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
-
+    
+    /** \brief The derivative of reducing molar volume with respect to component i mole fraction
+     * 
+     * Calculated from \ref dYrdxi__constxj with \f$v = Y\f$
+     */
+    long double dvrmolardxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag  xN_fla);
+    /** \brief The second derivative of reducing molar volume with respect to component i mole fraction
+     * 
+     * Calculated from \ref d2Yrdxi2__constxj with \f$v = Y\f$
+     */
+    long double d2vrmolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+    /** \brief The second derivative of reducing molar volume with respect to component i and j mole fractions
+     * 
+     * Calculated from \ref d2Yrdxidxj with \f$v = Y\f$
+     */
+    long double d2vrmolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    /** \brief The molar reducing density
+     * 
+     * Given by \f$ \rho_r = 1/v_r \f$
+     */
+	long double rhormolar(const std::vector<long double> &x);
+    /** \brief Derivative of the molar reducing density with respect to component i mole fraction
+     * 
+     * See also GERG 2004, Eqn. 7.57
+     * \f[
+     * \left(\frac{\partial \rho_r}{\partial x_i}\right)_{x_{i\neq j}} = -\rho_r^2\left(\frac{\partial v_r}{\partial x_i}\right)_{x_{i\neq j}}
+     * \f]
+     */
+	long double drhormolardxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);    
+	/** \brief Derivative of the molar reducing density with respect to component i mole fraction
+     * 
+     * See also GERG 2004, Eqn. 7.58
+     * \f[
+     * \left(\frac{\partial^2 \rho_r}{\partial x_i^2}\right)_{x_{i\neq j}} = 2\rho_r^3\left(\left(\frac{\partial v_r}{\partial x_i}\right)_{x_{i\neq j}}\right)^2-\rho_r\left(\left(\frac{\partial^2 v_r}{\partial x_i^2}\right)_{x_{i\neq j}}\right)
+     * \f]
+     */
+    long double d2rhormolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+    /** \brief Derivative of the molar reducing density with respect to component i  and j mole fractions
+     * 
+     * See also GERG 2004, Eqn. 7.59
+     * \f[
+     * \left(\frac{\partial^2 \rho_r}{\partial x_i\partial x_j}\right) = 2\rho_r^3\left(\left(\frac{\partial v_r}{\partial x_i}\right)_{x_{i\neq j}}\right)\left(\left(\frac{\partial v_r}{\partial x_j}\right)_{x_{i\neq j}}\right)-\rho_r^2\left(\left(\frac{\partial v_r}{\partial x_i\partial x_j}\right)\right)
+     * \f]
+     */
+	long double d2rhormolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+	
+    /** \brief Generalized reducing term \f$Y_r\f$
+     * 
+     * \f[
+     * Y_r = \sum_{i=1}^{N}x_iY_{c,i}^2+\sum_{i=1}^{N-1}\sum_{j=i+1}^{N} c_{Y,ij}f_{Y,ij}(x_i,x_j)
+     * \f]
+     */
     long double Yr(const std::vector<long double> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc);
     /** \brief First composition derivative of \f$Y_r\f$ with \f$x_i\f$
      * 
@@ -192,10 +246,20 @@ public:
      * \left(\frac{\partial^2 Y_r}{\partial x_i\partial x_j}\right)_{\substack{x_{k\neq j\neq i}}} = c_{Y,ij}\frac{\partial^2f_{Y,ij}(x_i,x_j)}{\partial x_i\partial x_j}
      * \f]
      */
-    long double d2Yrdxidxj__constxj(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
+    long double d2Yrdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
+    /** \brief The coefficient \f$ c_{Y,ij} \f$
+     * 
+     * \f[
+     * c_{Y,ij} = 2\beta_{Y,ij}\gamma_{Y,ij}Y_{c,ij}
+     * \f]
+     */
 	long double c_Y_ij(std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c);
+    
+    /** \brief The function \f$ f_{Y,ij}(x_i,x_j) \f$
+     * 
+     * \f[ f_{Y,ij}(x_i,x_j) = x_ix_j\frac{x_i+x_j}{\beta_{Y,ij}^2x_i+x_j} \f]
+     */
 	long double f_Y_ij(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta);
-
     /**
      * 
      * \f[
