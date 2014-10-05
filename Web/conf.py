@@ -238,6 +238,10 @@ html_static_path = ['_static']
 # html_sidebars = {'index': 'indexsidebar.html',
 #                  }
 
+html_sidebars = {
+   '**': ['globaltoc.html'],
+}
+
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
 # html_additional_pages = {'index': 'index.html'}
