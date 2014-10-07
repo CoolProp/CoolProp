@@ -37,18 +37,64 @@ and add it to a cron job
 Slaves
 ------
 
-To start a slave connected to a buildbot master at IP address 10.0.0.2 (default for host for VirtualBox), with a slave named ``example-slave`` and passsword ``pass``, run the command::
+To start a slave connected to a buildbot master at IP address 10.0.0.2 (default for 
+host for VirtualBox), with a slave named ``example-slave`` and passsword ``pass``, 
+run the command::
 
     buildslave create-slave slave 10.0.0.2:9989 example-slave pass
     buildslave start slave
 
 
-If the master is somewhere else, just change the IP address.  As of Sept, 2014, the master was at www.coolprop.dreamhosters.com.  The buildbot_private.py on the master holds the required passwords.
+If the master is somewhere else, just change the IP address.  As of Sept, 2014, the 
+master was at www.coolprop.dreamhosters.com.  The buildbot_private.py on the master 
+holds the required passwords.
 
-On linux, you can add the following lines to the end of your ``~/.profile`` file (similar ideas apply on other platforms) to autostart the slave when the user logs in::
+On linux, you can add the following lines to the end of your ``~/.profile`` file (similar 
+ideas apply on other platforms) to autostart the slave when the user logs in::
 
     # Connect to the buildbot master
     buildslave start ~/slave
+    
+... or even better, you install a service that gets started and shutdown together with 
+your computer. For Debian/Ubuntu, we recommend as script like::
+
+
+    #! /bin/sh
+    # /etc/init.d/buildbotslave
+    #
+    
+    # Some things that run always
+    touch /var/lock/buildbotslave
+    
+    # Carry out specific functions when asked to by the system
+    case "$1" in
+      start)
+        echo "Starting script buildbotslave "
+        sudo -u username buildslave start "/home/username/slave/"
+        ;;
+      stop)
+        echo "Stopping script buildbotslave"
+        sudo -u username buildslave stop "/home/username/slave/"
+        ;;
+      restart)
+        echo "Restarting script buildbotslave"
+        sudo -u username buildslave stop "/home/username/slave/"
+        sudo -u username buildslave start "/home/username/slave/"
+        ;;
+      *)
+        echo "Usage: /etc/init.d/buildbotslave {start|stop|restart}"
+        exit 1
+        ;;
+    esac
+    
+    exit 0
+    
+Which the can be added to the scheduler with ``update-rc.d buildbotslave defaults``. 
+This should gracefully terminate the bot at shutdown and restart it again after reboot. 
+To disable the service, run ``update-rc.d -f buildbotslave remove``.
+
+
+    
 
 
 Setting MIME type handler
