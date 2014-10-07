@@ -46,8 +46,10 @@ All the configuration is done in the ``Doxyfile`` file.
     doxygen Doxyfile
   
 
-Creating a documentation slave 
-------------------------------
+Creating a Linux documentation slave 
+------------------------------------
+
+0. Add your public rsa key to the server for passwordless login
 
 1. Make sure you have what you need. For Linux::
 
