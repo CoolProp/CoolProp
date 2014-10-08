@@ -5,7 +5,7 @@ import CoolProp
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
 root_dir = os.path.abspath(os.path.join(web_dir, '..')) 
-csvfile = os.path.join(web_dir,'fluid_properties','Fluids.csv')
+csvfile = os.path.join(web_dir,'fluid_properties','PurePseudoPure.csv')
 
 class Dossier:
     def __init__(self):

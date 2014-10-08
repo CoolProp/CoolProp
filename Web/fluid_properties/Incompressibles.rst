@@ -290,7 +290,7 @@ Skovrup. It is provided free of charge by his employer `IPU <http://en.ipu.dk>`_
 .. csv-table:: All incompressible pure fluids included in CoolProp
    :widths: 10, 35, 13, 14, 14, 14
    :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/pure-fluids.csv
+   :file: Incompressibles_pure-fluids.csv
 
 
 There are also a number of water-based mixtures implemented in CoolProp. Most of them
@@ -305,21 +305,21 @@ which can be used to model absorption chillers.
 .. csv-table:: All incompressible mass-based binary mixtures included in CoolProp
    :widths: 10, 30, 11, 11, 11, 11, 8, 8
    :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/mass-based-fluids.csv
+   :file: Incompressibles_mass-based-fluids.csv
 
 .. .. _MoleMix:
 
 .. .. csv-table:: All incompressible mole-based binary mixtures included in CoolProp
    :widths: 10, 30, 11, 11, 11, 11, 8, 8
    :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/mole-based-fluids.csv
+   :file: Incompressibles_mole-based-fluids.csv
 
 .. _VoluMix:
 
 .. csv-table:: All incompressible volume-based binary mixtures included in CoolProp
    :widths: 10, 30, 11, 11, 11, 11, 8, 8
    :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/volume-based-fluids.csv
+   :file: Incompressibles_volume-based-fluids.csv
 
 
 For slurry ice, the concentration :math:`x` refers to the solid content and the

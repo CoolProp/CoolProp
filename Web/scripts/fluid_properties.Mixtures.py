@@ -5,7 +5,7 @@ import CoolProp
 import os.path
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
-csvfile = os.path.join(web_dir,'fluid_properties','mixture_binary_pairs.csv')
+csvfile = os.path.join(web_dir,'fluid_properties','Mixtures.csv')
 
 def merge_args(*args):
     return " :raw-html:`<br/>` ".join(list(args))

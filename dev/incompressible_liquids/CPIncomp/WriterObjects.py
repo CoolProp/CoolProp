@@ -1239,13 +1239,13 @@ class SolutionDataWriter(object):
     # Interface
     def writeTableToFile(self, path,table):
         self.writeCsvTableToFile(path,table)
-        self.writeTxtTableToFile(path,table)
+        #self.writeTxtTableToFile(path,table)
         return True
 
 
 
     def getReportLink(self, name):
-        reportFile = os.path.join("..","_static","fluid_properties","incompressible","report","{0}_fitreport.pdf".format(name))
+        reportFile = os.path.join("..","_static","fluid_properties","Incompressibles_reports","{0}_fitreport.pdf".format(name))
         return self.d(name,reportFile)
 
     def getCitation(self, keys):
