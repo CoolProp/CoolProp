@@ -70,16 +70,16 @@ your computer. For Debian/Ubuntu, we recommend as script like::
     case "$1" in
       start)
         echo "Starting script buildbotslave "
-        sudo -u username buildslave start "/home/username/slave/"
+        sudo -u username buildslave start /home/username/slave/
         ;;
       stop)
         echo "Stopping script buildbotslave"
-        sudo -u username buildslave stop "/home/username/slave/"
+        sudo -u username buildslave stop /home/username/slave/
         ;;
       restart)
         echo "Restarting script buildbotslave"
-        sudo -u username buildslave stop "/home/username/slave/"
-        sudo -u username buildslave start "/home/username/slave/"
+        sudo -u username buildslave stop /home/username/slave/
+        sudo -u username buildslave start /home/username/slave/
         ;;
       *)
         echo "Usage: /etc/init.d/buildbotslave {start|stop|restart}"
@@ -118,15 +118,19 @@ To change the MIME types on the server so that unknown file types will map prope
 and then do a ``buildbot restart master``
 
 
-Nightly Documentation Builds
-============================
+Documentation Builds
+====================
 
 Some parts of the documentation are quite involved. That is why we decided not
-to rebuild the whole documentation after every commit. There is a special buildbot
-slave that runs once a day and performs the most expensive jobs. This covers the
-generation of validation figures for all fluids and the fitting reports for the
-incompressible fluids.
+to rebuild the whole documentation after every commit. There is a special python
+script that runs once every 36 hours and performs the most expensive jobs during 
+documentation rebuild. This covers the generation of validation figures for all 
+fluids and the fitting reports for the incompressible fluids.
 
 If you have some tasks that take a long time, make sure to add them to that
-special machine. This helps us to keep the continuous integration servers running
-with an acceptable latency with regard to the commit to the git repository.
+special script int ``Web/scripts/__init__.py``. This helps us to keep the continuous 
+integration servers running with an acceptable latency with regard to the commits 
+to the git repository. However, if you are unlucky and your commit is the first one 
+after 36 hours since the figures have been generated, you will experience a long 
+delay between your commit and the appearance of the freshly generated documentation
+on the website. You can follow the progress in the logfiles on the buildbot master.

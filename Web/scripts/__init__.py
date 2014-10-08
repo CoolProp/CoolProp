@@ -27,7 +27,7 @@ script_dir   = os.path.abspath(os.path.join(web_dir,'scripts'))
 touch_file   = os.path.abspath(os.path.join(script_dir,'last_run'))
 #
 cur_time = time.time()
-lim_days = 7
+lim_days = 1.5
 lim_time = cur_time - 60*60*24*lim_days # seconds
 fil_time = get_ftime(touch_file)
 #
@@ -48,6 +48,7 @@ if full_rebuild:
     script_files = glob.glob(os.path.join(script_dir,'*.sh'))
     for script in script_files:
 	print "Executing {0}".format(script)
+	subprocess.call('chmod +x {0}'.format(os.path.basename(script)), cwd=script_dir, shell=True)
 	subprocess.call('./{0}'.format(os.path.basename(script)), cwd=script_dir, shell=True)
 else:
     print "Skipping the computationally expensive scripts for generating the static files."

@@ -18,9 +18,9 @@ Build Sphinx documentation
 
 3. Then install prerequisites into this virtualenv::
   
-    pip install --upgrade Cython
-    pip install numpy scipy matplotlib
+    pip install cython numpy scipy matplotlib python-dateutil pytz pandas
     pip install sphinx ipython sphinxcontrib-bibtex sphinxcontrib-doxylink sphinxcontrib-napoleon cloud-sptheme
+    pip install --upgrade cython sphinx
 
 
 4. To build the documentation, go into the CoolProp/Web folder and run::
@@ -29,10 +29,6 @@ Build Sphinx documentation
     
 5. Move the generated docs in ``_build`` to wherever you want
 
-6. In case you try to set up a new buildbot (from http://docs.buildbot.net/current/tutorial/firstrun.html)::
-
-    pip install sqlalchemy==0.7.10 buildbot-slave
-    buildslave create-slave your-slave coolprop.dreamhosters.com:port your-slave pass
   
 Build Doxygen documentation
 ---------------------------
@@ -53,15 +49,17 @@ Creating a Linux documentation slave
 
 1. Make sure you have what you need. For Linux::
 
-    sudo aptitude install build-essential gfortran python-matplotlib python-pip python-dev cmake ipython git 
-    sudo aptitude install libblas-dev liblapack-dev ngrep doxygen 
-    sudo pip install --upgrade Cython
-    sudo pip install numpy scipy matplotlib
-    sudo pip install --upgrade sphinx ipython sphinxcontrib-bibtex sphinxcontrib-doxylink sphinxcontrib-napoleon cloud-sptheme
+    sudo aptitude install build-essential git gfortran cmake doxygen
+    sudo aptitude install python-dev ipython python-pip
+    sudo aptitude install python-numpy python-matplotlib python-scipy python-pandas
+    sudo aptitude build-deb cython
+    sudo pip install --upgrade cython
     
 2. Create a new buildbot slave (from http://docs.buildbot.net/current/tutorial/firstrun.html)::
 
-    sudo pip install sqlalchemy==0.7.10 buildbot-slave
+    virtualenv linux-slave-sandbox
+    source linux-slave-sandbox/bin/activate    
+    pip install sqlalchemy==0.7.10 buildbot-slave
     buildslave create-slave your-slave coolprop.dreamhosters.com:port your-slave password
     buildslave start your-slave
     
