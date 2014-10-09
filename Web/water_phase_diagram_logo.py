@@ -5,68 +5,104 @@ import CoolProp as CP
 import matplotlib.pyplot as plt
 import scipy.interpolate
 
+# Prepare the constants 
 Water = CP.AbstractState("HEOS", "Water")
 pc = Water.keyed_output(CP.iP_critical)
 Tc = Water.keyed_output(CP.iT_critical)
-Tmin = 200
-Tmax = 1000
-pmax = Water.keyed_output(CP.iP_max)
-pt = 611.657
-Tt = 273.16
-fillcolor = 'g'
+T_min = 200
+T_max = 1000
+p_max = Water.keyed_output(CP.iP_max)
+p_triple = 611.657
+T_triple = 273.16
 
-fig = plt.figure(figsize = (3,3))
-ax = fig.add_axes((0.02,0.00,0.98,1))
-lw = 3
-melt_args = dict(lw = lw, solid_capstyle = 'round')
+# Prepare the data for the melting line
+steps = 2000
+
 TT = []
-PP = list(np.logspace(np.log10(pt), np.log10(pmax),1000))
+PP = list(np.logspace(np.log10(p_triple), np.log10(p_max),steps))
 for p in PP:
     TT.append(Water.melting_line(CP.iT, CP.iP, p))
 
 #Zone VI
-for T in np.linspace(max(TT), 355):
+for T in np.linspace(max(TT), 355, int(steps/10)):
     TT.append(T)
     theta = T/273.31
     pi = 1-1.07476*(1-theta**4.6)
     p = pi*632.4e6
     PP.append(p)
 
-#~ #Zone VII
-#~ for T in np.linspace(355, 715):
-    #~ TT.append(T)
-    #~ theta = T/355
-    #~ lnpi = 0.173683e1*(1-1/theta)-0.544606e-1*(1-theta**5)+0.806106e-7*(1-theta**22)
-    #~ p = np.exp(lnpi)*2216e6
-    #~ PP.append(p)
-plt.plot(TT,PP,'darkblue',**melt_args)
+#Zone VII
+for T in np.linspace(355, 715, int(steps/10)):
+    TT.append(T)
+    theta = T/355
+    lnpi = 0.173683e1*(1-1/theta)-0.544606e-1*(1-theta**5)+0.806106e-7*(1-theta**22)
+    p = np.exp(lnpi)*2216e6
+    PP.append(p)
 
-Ts = np.linspace(273.16, Tc, 1000)
-ps = CP.CoolProp.PropsSI('P','T',Ts,'Q',[0]*len(Ts),'Water',[1])
+# Changes number of points
+steps = int(steps/10.0)
 
-# Supercritical
-pe = 1.3e10
+p_melt   = np.logspace(np.log10(np.min(PP)), np.log10(np.max(PP)),steps)
+T_melt_f = scipy.interpolate.interp1d(np.log10(PP),TT)
+#T_melt_f = scipy.interpolate.spline(np.log10(PP),TT,np.log10(p_melt))
+T_melt = T_melt_f(np.log10(p_melt))
+#T_melt = np.array(TT)
+#p_melt = np.array(PP)
 
-plt.plot(Ts,ps,'orange',lw = lw, solid_capstyle = 'round')
+#
+# Prepare the data for the saturation line
+T_sat = np.linspace(273.16, Tc, len(T_melt))
+p_sat = CP.CoolProp.PropsSI('P','T',T_sat,'Q',[0]*len(T_sat),'Water',[1])
 
-TD,DD,PD = [], [], []
-for T in np.linspace(240,1000,200):
-    for p in np.logspace(np.log10(612),np.log10(1e9),200):
-        Tm = scipy.interpolate.interp1d(PP,TT)(p)
+#
+# Prepare density data
+TT,DD,PP = [], [], []
+for T in np.linspace(T_min, T_max, steps):
+    for p in np.logspace(np.log10(p_triple), np.log10(p_max), steps):
+        Tm = scipy.interpolate.interp1d(p_melt, T_melt)(p)
         if T < Tm: continue
         D = CP.CoolProp.PropsSI('D','T',T,'P',p,'Water')
-        TD.append(T)
+        TT.append(T)
         DD.append(np.log10(D))
-        PD.append(p)
-        
-nm = matplotlib.colors.Normalize(min(DD), max(DD))
-plt.scatter(TD, PD, c = DD, edgecolor = 'none', s = 6, cmap=plt.cm.get_cmap('Blues'), norm = nm)
+        PP.append(p)
 
-plt.ylim(611,1e9)
-plt.gca().set_yscale('log')    
-#plt.gca().set_xlim(Tmin*0.99, Tmax)
-plt.gca().set_xlim(240, 1000)
-plt.gca().axis('off')
+tt = np.linspace(T_min, T_max, steps)
+pp = np.logspace(np.log10(p_triple), np.log10(p_max), steps)
+tt, pp = np.meshgrid(tt, pp)
+dd = np.empty(tt.shape)
+dd[:][:] = np.NAN
+
+nr,nc = tt.shape
+
+for i in range(nr):
+    for j in range(nc):
+        Tm = T_melt_f(np.log10(pp[i][j]))
+        if tt[i][j] < Tm: continue
+        D = CP.CoolProp.PropsSI('D','T',tt[i][j],'P',pp[i][j],'Water')
+        dd[i][j] = np.log10(D)
+
+#
+# Define colours etc
+lw = 3
+melt_args = dict(color = 'orange', lw = lw, solid_capstyle = 'round')
+sat_args  = melt_args.copy()
+
+nm = matplotlib.colors.Normalize(min(DD), max(DD))
+rho_args = dict(cmap=plt.cm.get_cmap('Blues'), norm = nm)
+
+fig = plt.figure(figsize = (3,3))
+ax = fig.add_axes((0.0,0.0,1.0,1.0))
+
+plt.plot(T_melt, p_melt, **melt_args)
+plt.plot(T_sat,  p_sat,  **sat_args )
+plt.scatter(TT, PP, c=DD, edgecolor = 'none', s = 6, **rho_args )
+#plt.contourf(tt, pp, dd, steps, **rho_args )
+
+#ax.set_ylim(p_triple,p_max)
+ax.set_yscale('log') 
+ax.set_xlim(T_min, T_max)
+ax.axis('off')
+
 plt.savefig('WaterPhaseDiagram.pdf')
 plt.savefig('WaterPhaseDiagram.png', transparent = True)
 plt.close()

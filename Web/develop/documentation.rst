@@ -13,14 +13,14 @@ Build Sphinx documentation
 
 2. Make a virtualenv::
 
-    virtualenv ~/env/py27
+    virtualenv --distribute ~/env/py27
     source ~/env/py27/bin/activate # Turn on this virtual env, should see (py27) in your command shell next to the prompt to tell you that environment is active
 
 3. Then install prerequisites into this virtualenv::
   
+    pip install --upgrade setuptools cython
     pip install cython numpy scipy matplotlib python-dateutil pytz pandas
     pip install sphinx ipython sphinxcontrib-bibtex sphinxcontrib-doxylink sphinxcontrib-napoleon cloud-sptheme
-    pip install --upgrade cython sphinx
 
 
 4. To build the documentation, go into the CoolProp/Web folder and run::
@@ -49,11 +49,15 @@ Creating a Linux documentation slave
 
 1. Make sure you have what you need. For Linux::
 
-    sudo aptitude install build-essential git gfortran cmake doxygen
-    sudo aptitude install python-dev ipython python-pip
-    sudo aptitude install python-numpy python-matplotlib python-scipy python-pandas
-    sudo aptitude build-deb cython
-    sudo pip install --upgrade cython
+    sudo aptitude install build-essential git gfortran cmake doxygen ipython python-pip python-virtualenv
+    sudo aptitude install libatlas-base-dev libatlas3-base # numpy
+    sudo aptitude install gcc gfortran python-dev libblas-dev liblapack-dev libblas3 liblapack3 # scipy
+    sudo aptitude install python-dev libpng-dev tk libfreetype6-dev # matplotlib
+    sudo aptitude install libxml2-dev libxslt1-dev libxslt1.1 python-all-dev # pandas
+    
+    
+    sudo aptitude install cython python-matplotlib python-scipy python-numpy python-pandas 
+    sudo aptitude install buildbot buildbot-slave
     
 2. Create a new buildbot slave (from http://docs.buildbot.net/current/tutorial/firstrun.html)::
 
