@@ -8,8 +8,6 @@ if len(sys.argv)== 2:
     if   sys.argv[1]=="True": full_rebuild = True
     elif sys.argv[1]=="1"   : full_rebuild = True
     else: full_rebuild = False
-    print str(sys.argv[1])
-    print "full_rebuild was set to: {0}".format(full_rebuild)
 if len(sys.argv) > 2: 
     full_rebuild = False
     print "Cannot process more than one parameter: {0}".format(str(sys.argv))
@@ -27,23 +25,35 @@ script_dir   = os.path.abspath(os.path.join(web_dir,'scripts'))
 touch_file   = os.path.abspath(os.path.join(script_dir,'last_run'))
 #
 cur_time = time.time()
-lim_days = 1.5
-lim_time = cur_time - 60*60*24*lim_days # seconds
 fil_time = get_ftime(touch_file)
 #
+reg_hour   = time.strftime("%H")
+reg_minute = time.strftime("%M")
+sch_hour   = 13 #scheduled hour = 4am Boulder = 1pm CPH
+sch_minute =  7 #scheduled minute = 7 past
+#
+lim_days = 1
+lim_time = cur_time - 60*60*24*lim_days # seconds
+if int(reg_hour)==sch_hour and sch_minute+2>reg_minute and sch_minute-2<reg_minute and not full_rebuild:
+    print "This is a scheduled rebuild at {0}:{1}.".format(sch_hour,sch_minute)
+    if fil_time < lim_time: full_rebuild = True
+    else: print "It looks like the files have been rebuilt during the last day, reduced rebuild."
+#
+lim_days = 1.5
+lim_time = cur_time - 60*60*24*lim_days # seconds
 if fil_time < lim_time and not full_rebuild:
     print "The static files have not been updated in {0} days, forcing an update now.".format(lim_days)
     full_rebuild = True
 
-req_dir = [os.path.abspath(os.path.join(web_dir,'_static','fluid_properties','Incompressibles_reports'))]
-req_fil = [os.path.abspath(os.path.join(web_dir,'fluid_properties','Mixtures.csv')),
-  os.path.abspath(os.path.join(web_dir,'fluid_properties','PurePseudoPure.csv')),
-  os.path.abspath(os.path.join(web_dir,'fluid_properties','Incompressibles_pure-fluids.csv'))]
-
-for d in req_dir:
-    if not os.path.exists(d): 
-        print "The required directory {0} is missing, trying to rebuild it.".format(d)
-        full_rebuild = True
+#req_dir = [os.path.abspath(os.path.join(web_dir,'_static','fluid_properties','Incompressibles_reports'))]
+#req_fil = [os.path.abspath(os.path.join(web_dir,'fluid_properties','Mixtures.csv')),
+#  os.path.abspath(os.path.join(web_dir,'fluid_properties','PurePseudoPure.csv')),
+#  os.path.abspath(os.path.join(web_dir,'fluid_properties','Incompressibles_pure-fluids.csv'))]
+#
+#for d in req_dir:
+#    if not os.path.exists(d) and not full_rebuild:
+#        print "The required directory {0} is missing, trying to rebuild it.".format(d)
+#        full_rebuild = True
 #for f in req_fil:
 #    if not os.path.exists(f): 
 #        print "The required file {0} is missing, trying to rebuild it.".format(f)
