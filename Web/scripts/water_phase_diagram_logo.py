@@ -7,7 +7,6 @@ tar_fil = os.path.join(web_dir,'_static','CoolPropLogo.png')
 tar_fil_long = os.path.join(web_dir,'_static','CoolPropLogoLong.png')
 
 import matplotlib
-matplotlib.use('TkAgg')
 import numpy as np
 import CoolProp as CP
 import matplotlib.pyplot as plt
