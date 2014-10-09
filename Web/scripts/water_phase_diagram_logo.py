@@ -1,3 +1,11 @@
+
+import CoolProp
+import os.path
+
+web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
+tar_fil = os.path.join(web_dir,'_static','CoolPropLogo.png')
+tar_fil_long = os.path.join(web_dir,'_static','CoolPropLogoLong.png')
+
 import matplotlib
 matplotlib.use('TkAgg')
 import numpy as np
@@ -103,6 +111,31 @@ ax.set_ylim(np.min(p_melt), np.max(p_melt))
 ax.set_yscale('log') 
 ax.axis('off')
 
-plt.savefig('WaterPhaseDiagram.pdf')
-plt.savefig('WaterPhaseDiagram.png', transparent = True)
+plt.savefig(os.path.basename(__file__)+'.pdf')
+plt.savefig(tar_fil, transparent = True)
 plt.close()
+
+fig = plt.figure(figsize = (9,3))
+ax = fig.add_axes((0.666,0.0,0.333,1.0))
+plt.plot(T_melt, p_melt, **melt_args)
+plt.plot(T_sat,  p_sat,  **sat_args )
+plt.scatter(TT, PP, c=DD, edgecolor = 'none', s = 6, **rho_args )
+
+#ax.text(0.4,800, "CoolProp", size = 12)
+ax.annotate('CoolProp', xy=(-0.1, 0.5), xycoords='axes fraction', fontsize=88, ha='right', va='center') # va='baseline')
+
+
+ax.set_xlim(np.min(T_melt), np.max(T_melt))
+ax.set_ylim(np.min(p_melt), np.max(p_melt))
+ax.set_yscale('log') 
+ax.axis('off')
+
+plt.savefig(tar_fil_long, transparent = True)
+plt.close()
+
+
+
+
+
+
+
