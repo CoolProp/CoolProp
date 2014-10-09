@@ -11,12 +11,17 @@ Master
 
 From the root of the git checkout (this will use the master.cfg from CoolProp)::
 
-    pip install buildbot
+    virtualenv buildbot-sandbox
+    source buildbot-sandbox/bin/activate
+    pip install sqlalchemy==0.7.10 buildbot
     cd dev/buildbot
     buildbot create-master master
     buildbot start master
 
-The file ``buildbot-private.py`` (which is a python module with the passwords for the slaves as well as the buildbot website), should also be placed in the master folder next to master.cfg.  Alternatively, you can put the ``buildbot_private.py`` in another folder on the master's computer and make a soft-link in the master folder to point to the buildbot_private.py file.
+The file ``buildbot-private.py`` (which is a python module with the passwords for the slaves as well as 
+the buildbot website), should also be placed in the master folder next to master.cfg.  Alternatively, 
+you can put the ``buildbot_private.py`` in another folder on the master's computer and make a soft-link 
+in the master folder to point to the buildbot_private.py file.
 
 If you want to completely restart the master, you can do::
 
@@ -38,12 +43,14 @@ Slaves
 ------
 
 To start a slave connected to a buildbot master at IP address 10.0.0.2 (default for 
-host for VirtualBox), with a slave named ``example-slave`` and passsword ``pass``, 
+host for VirtualBox), with a slave named ``a-slave`` and passsword ``pass``, 
 run the command::
 
-    buildslave create-slave slave 10.0.0.2:9989 example-slave pass
-    buildslave start slave
-
+    virtualenv a-slave-sandbox
+    source a-slave-sandbox/bin/activate
+    pip install sqlalchemy==0.7.10 buildbot-slave
+    buildslave create-slave a-slave coolprop.dreamhosters.com:port a-slave pass
+    buildslave start a-slave
 
 If the master is somewhere else, just change the IP address.  As of Sept, 2014, the 
 master was at www.coolprop.dreamhosters.com.  The buildbot_private.py on the master 
@@ -58,43 +65,124 @@ ideas apply on other platforms) to autostart the slave when the user logs in::
 ... or even better, you install a service that gets started and shutdown together with 
 your computer. For Debian/Ubuntu, we recommend as script like::
 
-
     #! /bin/sh
-    # /etc/init.d/buildbotslave
+    ### BEGIN INIT INFO
+    # Provides:          buildslave
+    # Required-Start:    $remote_fs $syslog
+    # Required-Stop:     $remote_fs $syslog
+    # Default-Start:     2 3 4 5
+    # Default-Stop:      0 1 6
+    # Short-Description: A script to start the buildbot slave at boot time
+    # Description:       This file activates the virtual environment and starts
+    #                    the buildbot slaves. It also shuts them down if the
+    #                    system is halted. Place it in /etc/init.d.
+    ### END INIT INFO
+    
+    # Author: Jorrit Wronski <jowr@mek.dtu.dk>
+    #
+    # Please remove the "Author" lines above and replace them
+    # with your own name if you copy and modify this script.
+    
+    EXECUSER=username
+    NAME="a-slave"
+    CTRLSCRI="/home/username/$NAME.bsh"
+    
+    # Load the VERBOSE setting and other rcS variables
+    . /lib/init/vars.sh
+    
+    # Define LSB log_* functions.
+    # Depend on lsb-base (>= 3.2-14) to ensure that this file is present
+    # and status_of_proc is working.
+    . /lib/lsb/init-functions
+    
+    #
+    # Function that starts the daemon/service
+    #
+    do_start(){
+      sudo -u $EXECUSER $CTRLSCRI start
+      #start-stop-daemon --start --user $EXECUSER --chuid $EXECUSER --startas $CTRLSCRI -- start
+      RETVAL="$?"
+      return "$RETVAL"
+    }
+    
+    #
+    # Function that stops the daemon/service
     #
     
-    # Some things that run always
-    touch /var/lock/buildbotslave
+    # Function that stops the daemon/service
+    #
+    do_stop() {
+      #start-stop-daemon --stop --user $EXECUSER --startas
+      sudo -u $EXECUSER $CTRLSCRI stop
+      RETVAL="$?"
+      return "$RETVAL"
+    }
     
+    case "$1" in
+    start)
+        log_action_msg "Starting $NAME"
+        do_start
+        ;;
+    stop)
+        log_action_msg "Stopping $NAME"
+        do_stop
+        ;;
+    restart)
+        log_action_msg "Restarting $NAME"
+        do_stop
+        do_start
+        ;;
+    *)
+        log_action_msg "Usage: $0 {start|stop|restart}"
+        exit 2
+        ;;
+    esac
+    exit 0
+    
+Which the can be added to the scheduler with ``update-rc.d buildslave defaults``. 
+This should gracefully terminate the bot at shutdown and restart it again after reboot. 
+To disable the service, run ``update-rc.d -f buildslave remove``. You can enable and 
+disable the daemon by runnning ``update-rc.d buildslave enable|disable``. Note that the
+example above call a user-script that activates the virtual environment and starts
+the buildslave. Such a script could look like this::
+
+    #! /bin/bash
+    #
+    # Description:       This file activates the virtual environment and starts
+    #                    the buildbot slaves. It also shuts them down if the
+    #                    system is halted. Place it in /etc/init.d.
+    #
+    # Author: Jorrit Wronski <jowr@mek.dtu.dk>
+    #
+    # Please remove the "Author" lines above and replace them
+    # with your own name if you copy and modify this script.
+    #
+    VIRTENV=/home/username/a-slave-sandbox
+    SLAVEDIR=/home/username/a-slave
+    #
     # Carry out specific functions when asked to by the system
     case "$1" in
       start)
         echo "Starting script buildbotslave "
-        sudo -u username buildslave start /home/username/slave/
+        source $VIRTENV/bin/activate
+        $VIRTENV/bin/buildslave start $SLAVEDIR 
         ;;
       stop)
         echo "Stopping script buildbotslave"
-        sudo -u username buildslave stop /home/username/slave/
-        ;;
-      restart)
-        echo "Restarting script buildbotslave"
-        sudo -u username buildslave stop /home/username/slave/
-        sudo -u username buildslave start /home/username/slave/
+        $VIRTENV/bin/buildslave stop $SLAVEDIR                                                                                                   
+        ;;                                                                                                                                       
+      restart)                                                                                                                                   
+        echo "Restarting script buildbotslave"                                                                                                   
+        source $VIRTENV/bin/activate                                                                                                             
+        $VIRTENV/bin/buildslave stop $SLAVEDIR                                                                                                   
+        $VIRTENV/bin/buildslave start $SLAVEDIR                                                                                                  
         ;;
       *)
-        echo "Usage: /etc/init.d/buildbotslave {start|stop|restart}"
+        echo "Usage: $0 {start|stop|restart}"
         exit 1
         ;;
     esac
-    
     exit 0
-    
-Which the can be added to the scheduler with ``update-rc.d buildbotslave defaults``. 
-This should gracefully terminate the bot at shutdown and restart it again after reboot. 
-To disable the service, run ``update-rc.d -f buildbotslave remove``.
-
-
-    
 
 
 Setting MIME type handler
@@ -123,14 +211,14 @@ Documentation Builds
 
 Some parts of the documentation are quite involved. That is why we decided not
 to rebuild the whole documentation after every commit. There is a special python
-script that runs once every 36 hours and performs the most expensive jobs during 
+script that runs a day and performs the most expensive jobs during 
 documentation rebuild. This covers the generation of validation figures for all 
 fluids and the fitting reports for the incompressible fluids.
 
 If you have some tasks that take a long time, make sure to add them to that
 special script int ``Web/scripts/__init__.py``. This helps us to keep the continuous 
 integration servers running with an acceptable latency with regard to the commits 
-to the git repository. However, if you are unlucky and your commit is the first one 
-after 36 hours since the figures have been generated, you will experience a long 
+to the git repository. However, if you are unlucky and your commit coincides with
+figure generation, you will experience a long 
 delay between your commit and the appearance of the freshly generated documentation
-on the website. You can follow the progress in the logfiles on the buildbot master.
+on the website. You can follow the progress in the logfiles on the buildbot master though.

@@ -29,7 +29,7 @@ fil_time = get_ftime(touch_file)
 #
 reg_hour   = time.strftime("%H")
 reg_minute = time.strftime("%M")
-sch_hour   = 13 #scheduled hour = 4am Boulder = 1pm CPH
+sch_hour   = 12 #scheduled hour = 3am Boulder = 12pm CPH
 sch_minute =  7 #scheduled minute = 7 past
 #
 lim_days = 1

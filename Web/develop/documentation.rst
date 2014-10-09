@@ -42,12 +42,10 @@ All the configuration is done in the ``Doxyfile`` file.
     doxygen Doxyfile
   
 
-Creating a Linux documentation slave 
-------------------------------------
+Building the documentation on Linux
+-----------------------------------
 
-0. Add your public rsa key to the server for passwordless login
-
-1. Make sure you have what you need. For Linux::
+1. Make sure you have what you need::
 
     sudo aptitude install build-essential git gfortran cmake doxygen ipython python-pip python-virtualenv
     sudo aptitude install libatlas-base-dev libatlas3-base # numpy
@@ -55,17 +53,4 @@ Creating a Linux documentation slave
     sudo aptitude install python-dev libpng-dev tk libfreetype6-dev # matplotlib
     sudo aptitude install libxml2-dev libxslt1-dev libxslt1.1 python-all-dev # pandas
     
-    
-    sudo aptitude install cython python-matplotlib python-scipy python-numpy python-pandas 
-    sudo aptitude install buildbot buildbot-slave
-    
-2. Create a new buildbot slave (from http://docs.buildbot.net/current/tutorial/firstrun.html)::
-
-    virtualenv linux-slave-sandbox
-    source linux-slave-sandbox/bin/activate    
-    pip install sqlalchemy==0.7.10 buildbot-slave
-    buildslave create-slave your-slave coolprop.dreamhosters.com:port your-slave password
-    buildslave start your-slave
-    
-3. Go to the homepage http://coolprop.dreamhosters.com:8010 and watch your slave work.
-  
+2. Follow the instructions above to create the virtual environment.
