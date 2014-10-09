@@ -51,35 +51,35 @@ T_melt = T_melt_f(np.log10(p_melt))
 
 #
 # Prepare the data for the saturation line
-T_sat = np.linspace(273.16, Tc, len(T_melt))
+T_sat = np.linspace(T_triple, Tc, len(T_melt))
 p_sat = CP.CoolProp.PropsSI('P','T',T_sat,'Q',[0]*len(T_sat),'Water',[1])
 
 #
 # Prepare density data
 TT,DD,PP = [], [], []
 for T in np.linspace(T_min, T_max, steps):
-    for p in np.logspace(np.log10(p_triple), np.log10(p_max), steps):
+    for p in np.logspace(np.log10(np.min(p_melt)), np.log10(np.max(p_melt)), steps):
         Tm = scipy.interpolate.interp1d(p_melt, T_melt)(p)
         if T < Tm: continue
-        D = CP.CoolProp.PropsSI('D','T',T,'P',p,'Water')
+        if p > p_max: pin = p_max
+        else: pin = p
+        D = CP.CoolProp.PropsSI('D','T',T,'P',pin,'Water')
         TT.append(T)
         DD.append(np.log10(D))
         PP.append(p)
 
-tt = np.linspace(T_min, T_max, steps)
-pp = np.logspace(np.log10(p_triple), np.log10(p_max), steps)
-tt, pp = np.meshgrid(tt, pp)
-dd = np.empty(tt.shape)
-dd[:][:] = np.NAN
-
-nr,nc = tt.shape
-
-for i in range(nr):
-    for j in range(nc):
-        Tm = T_melt_f(np.log10(pp[i][j]))
-        if tt[i][j] < Tm: continue
-        D = CP.CoolProp.PropsSI('D','T',tt[i][j],'P',pp[i][j],'Water')
-        dd[i][j] = np.log10(D)
+#tt = np.linspace(T_min, T_max, steps)
+#pp = np.logspace(np.log10(p_triple), np.log10(p_max), steps)
+#tt, pp = np.meshgrid(tt, pp)
+#dd = np.empty(tt.shape)
+#dd[:][:] = np.NAN
+#nr,nc = tt.shape
+#for i in range(nr):
+    #for j in range(nc):
+        #Tm = T_melt_f(np.log10(pp[i][j]))
+        #if tt[i][j] < Tm: continue
+        #D = CP.CoolProp.PropsSI('D','T',tt[i][j],'P',pp[i][j],'Water')
+        #dd[i][j] = np.log10(D)
 
 #
 # Define colours etc
@@ -98,9 +98,9 @@ plt.plot(T_sat,  p_sat,  **sat_args )
 plt.scatter(TT, PP, c=DD, edgecolor = 'none', s = 6, **rho_args )
 #plt.contourf(tt, pp, dd, steps, **rho_args )
 
-#ax.set_ylim(p_triple,p_max)
+ax.set_xlim(np.min(T_melt), np.max(T_melt))
+ax.set_ylim(np.min(p_melt), np.max(p_melt))
 ax.set_yscale('log') 
-ax.set_xlim(T_min, T_max)
 ax.axis('off')
 
 plt.savefig('WaterPhaseDiagram.pdf')

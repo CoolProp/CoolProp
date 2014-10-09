@@ -34,6 +34,21 @@ fil_time = get_ftime(touch_file)
 if fil_time < lim_time and not full_rebuild:
     print "The static files have not been updated in {0} days, forcing an update now.".format(lim_days)
     full_rebuild = True
+
+req_dir = [os.path.abspath(os.path.join(web_dir,'_static','fluid_properties','Incompressibles_reports'))]
+req_fil = [os.path.abspath(os.path.join(web_dir,'fluid_properties','Mixtures.csv')),
+  os.path.abspath(os.path.join(web_dir,'fluid_properties','PurePseudoPure.csv')),
+  os.path.abspath(os.path.join(web_dir,'fluid_properties','Incompressibles_pure-fluids.csv'))]
+
+for d in req_dir:
+    if not os.path.exists(d): 
+        print "The required directory {0} is missing, trying to rebuild it.".format(d)
+        full_rebuild = True
+#for f in req_fil:
+#    if not os.path.exists(f): 
+#        print "The required file {0} is missing, trying to rebuild it.".format(f)
+#        full_rebuild = True
+
 #
 print "Executing the normal scripts for generating the static files."
 script_files = glob.glob(os.path.join(script_dir,'*.py')) # Avoid recursion
