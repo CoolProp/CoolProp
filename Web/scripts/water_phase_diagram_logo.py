@@ -115,7 +115,7 @@ plt.savefig(tar_fil, transparent = True)
 plt.close()
 
 fig = plt.figure(figsize = (9,3))
-ax = fig.add_axes((0.666,0.0,0.333,1.0))
+ax = fig.add_axes((0.66,0.0,0.333,1.0))
 plt.plot(T_melt, p_melt, **melt_args)
 plt.plot(T_sat,  p_sat,  **sat_args )
 plt.scatter(TT, PP, c=DD, edgecolor = 'none', s = 6, **rho_args )
