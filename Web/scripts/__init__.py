@@ -2,13 +2,13 @@
 # -*- coding: utf8 -*-
 import os.path, glob, subprocess, sys, time
 #
-if len(sys.argv) < 2: 
+if len(sys.argv) < 2:
     full_rebuild = False
-if len(sys.argv)== 2: 
+if len(sys.argv)== 2:
     if   sys.argv[1]=="True": full_rebuild = True
     elif sys.argv[1]=="1"   : full_rebuild = True
     else: full_rebuild = False
-if len(sys.argv) > 2: 
+if len(sys.argv) > 2:
     full_rebuild = False
     print "Cannot process more than one parameter: {0}".format(str(sys.argv))
 #
@@ -37,9 +37,9 @@ lim_time = cur_time - 60*60*24*lim_days # seconds
 if int(reg_hour)==sch_hour and sch_minute+2>reg_minute and sch_minute-2<reg_minute and not full_rebuild:
     print "This is a scheduled rebuild at {0}:{1}.".format(sch_hour,sch_minute)
     if fil_time < lim_time: full_rebuild = True
-    else: print "It looks like the files have been rebuilt during the last day, reduced rebuild."
+    else: print "It looks like the files have been rebuilt during the last day."
 #
-lim_days = 1.5
+lim_days = 10
 lim_time = cur_time - 60*60*24*lim_days # seconds
 if fil_time < lim_time and not full_rebuild:
     print "The static files have not been updated in {0} days, forcing an update now.".format(lim_days)
@@ -55,25 +55,47 @@ if fil_time < lim_time and not full_rebuild:
 #        print "The required directory {0} is missing, trying to rebuild it.".format(d)
 #        full_rebuild = True
 #for f in req_fil:
-#    if not os.path.exists(f): 
+#    if not os.path.exists(f):
 #        print "The required file {0} is missing, trying to rebuild it.".format(f)
 #        full_rebuild = True
-
+# print "Executing the normal scripts for generating the static files."
+# script_files = glob.glob(os.path.join(script_dir,'*.py')) # Avoid recursion
+# script_files = [os.path.abspath(f) for f in script_files if not os.path.abspath(f)==os.path.abspath(__file__)]
+# for script in script_files:
+#     print "Executing {0}".format(script)
+#     subprocess.call('python {0}'.format(os.path.basename(script)), cwd=script_dir, shell=True)
 #
-print "Executing the normal scripts for generating the static files."
-script_files = glob.glob(os.path.join(script_dir,'*.py')) # Avoid recursion
-script_files = [os.path.abspath(f) for f in script_files if not os.path.abspath(f)==os.path.abspath(__file__)]
-for script in script_files:
+def run_script(path):
+    if os.path.exists(path):
+        file_path = os.path.dirname(path)
+        file_name = os.path.basename(path)
+        file_extension = path.split(".")[-1]
+        #file_name, file_extension = os.path.splitext(path)
+
+        if file_extension.lower()==".py":
+            subprocess.call('python {0}'.format(file_name), cwd=file_path, shell=True)
+        elif file_extension.lower()==".sh" or file_extension.lower()==".bsh":
+            subprocess.call('chmod +x {0}'.format(file_name), cwd=file_path, shell=True)
+            subprocess.call('./{0}'.format(file_name), cwd=file_path, shell=True)
+        else:
+            print "Unknown file extension in {0}".format(path)
+    else:
+        print "Could not find the file {0}".format(path)
+
+# The normal tasks that are carried out each time the script runs
+normal_tasks = [ "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py"]
+expensive_tasks = [ "fluid_properties.Incompressibles.sh", "logo_2014.py"]
+#
+print "Executing the normal scripts for generating static files."
+for script in normal_tasks:
     print "Executing {0}".format(script)
-    subprocess.call('python {0}'.format(os.path.basename(script)), cwd=script_dir, shell=True)
+    run_script(os.path.join(script_dir,script))
 #
 if full_rebuild:
     print "Executing the computationally expensive scripts for generating the static files."
     touch(touch_file)
-    script_files = glob.glob(os.path.join(script_dir,'*.sh'))
-    for script in script_files:
-	print "Executing {0}".format(script)
-	subprocess.call('chmod +x {0}'.format(os.path.basename(script)), cwd=script_dir, shell=True)
-	subprocess.call('./{0}'.format(os.path.basename(script)), cwd=script_dir, shell=True)
+    for script in expensive_tasks:
+        print "Executing {0}".format(script)
+        run_script(os.path.join(script_dir,script))
 else:
     print "Skipping the computationally expensive scripts for generating the static files."

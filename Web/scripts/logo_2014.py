@@ -12,7 +12,7 @@ import CoolProp as CP
 import matplotlib.pyplot as plt
 import scipy.interpolate
 
-# Prepare the constants 
+# Prepare the constants
 Water = CP.AbstractState("HEOS", "Water")
 pc = Water.keyed_output(CP.iP_critical)
 Tc = Water.keyed_output(CP.iT_critical)
@@ -104,10 +104,15 @@ plt.plot(T_melt, p_melt, **melt_args)
 plt.plot(T_sat,  p_sat,  **sat_args )
 plt.scatter(TT, PP, c=DD, edgecolor = 'none', s = 6, **rho_args )
 #plt.contourf(tt, pp, dd, steps, **rho_args )
+delta_x = np.min(T_melt)*0.01
+x_lim = [np.min(T_melt)-delta_x, np.max(T_melt)+delta_x]
+y_lim = [np.min(p_melt)*0.875  , np.max(p_melt)*1.125]
+#y_lim = [np.power(np.log10(np.min(p_melt))*1.01,10),
+#         np.power(np.log10(np.max(p_melt))*1.01,10)]
 
-ax.set_xlim(np.min(T_melt), np.max(T_melt))
-ax.set_ylim(np.min(p_melt), np.max(p_melt))
-ax.set_yscale('log') 
+ax.set_xlim(x_lim)
+ax.set_ylim(y_lim)
+ax.set_yscale('log')
 ax.axis('off')
 
 plt.savefig(os.path.basename(__file__)+'.pdf')
@@ -115,7 +120,7 @@ plt.savefig(tar_fil, transparent = True)
 plt.close()
 
 fig = plt.figure(figsize = (9,3))
-ax = fig.add_axes((0.66,0.0,0.333,1.0))
+ax = fig.add_axes((0.66,0.01,0.333,0.98))
 plt.plot(T_melt, p_melt, **melt_args)
 plt.plot(T_sat,  p_sat,  **sat_args )
 plt.scatter(TT, PP, c=DD, edgecolor = 'none', s = 6, **rho_args )
@@ -124,9 +129,9 @@ plt.scatter(TT, PP, c=DD, edgecolor = 'none', s = 6, **rho_args )
 ax.annotate('CoolProp', xy=(-0.1, 0.5), xycoords='axes fraction', fontsize=88, ha='right', va='center') # va='baseline')
 
 
-ax.set_xlim(np.min(T_melt), np.max(T_melt))
-ax.set_ylim(np.min(p_melt), np.max(p_melt))
-ax.set_yscale('log') 
+ax.set_xlim(x_lim)
+ax.set_ylim(y_lim)
+ax.set_yscale('log')
 ax.axis('off')
 
 plt.savefig(tar_fil_long, transparent = True)

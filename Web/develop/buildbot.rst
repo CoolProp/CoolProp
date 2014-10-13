@@ -18,9 +18,9 @@ From the root of the git checkout (this will use the master.cfg from CoolProp)::
     buildbot create-master master
     buildbot start master
 
-The file ``buildbot-private.py`` (which is a python module with the passwords for the slaves as well as 
-the buildbot website), should also be placed in the master folder next to master.cfg.  Alternatively, 
-you can put the ``buildbot_private.py`` in another folder on the master's computer and make a soft-link 
+The file ``buildbot-private.py`` (which is a python module with the passwords for the slaves as well as
+the buildbot website), should also be placed in the master folder next to master.cfg.  Alternatively,
+you can put the ``buildbot_private.py`` in another folder on the master's computer and make a soft-link
 in the master folder to point to the buildbot_private.py file.
 
 If you want to completely restart the master, you can do::
@@ -39,11 +39,12 @@ To ensure that the buildbot server stays online, you can make a script with the 
 
 and add it to a cron job
 
+
 Slaves
 ------
 
-To start a slave connected to a buildbot master at IP address 10.0.0.2 (default for 
-host for VirtualBox), with a slave named ``a-slave`` and passsword ``pass``, 
+To start a slave connected to a buildbot master at IP address 10.0.0.2 (default for
+host for VirtualBox), with a slave named ``a-slave`` and passsword ``pass``,
 run the command::
 
     virtualenv a-slave-sandbox
@@ -52,17 +53,21 @@ run the command::
     buildslave create-slave a-slave coolprop.dreamhosters.com:port a-slave pass
     buildslave start a-slave
 
-If the master is somewhere else, just change the IP address.  As of Sept, 2014, the 
-master was at www.coolprop.dreamhosters.com.  The buildbot_private.py on the master 
+If the master is somewhere else, just change the IP address.  As of Sept, 2014, the
+master was at www.coolprop.dreamhosters.com.  The buildbot_private.py on the master
 holds the required passwords.
 
-On linux, you can add the following lines to the end of your ``~/.profile`` file (similar 
+
+Buildbot as a daemon
+--------------------
+
+On linux, you can add the following lines to the end of your ``~/.profile`` file (similar
 ideas apply on other platforms) to autostart the slave when the user logs in::
 
     # Connect to the buildbot master
     buildslave start ~/slave
-    
-... or even better, you install a service that gets started and shutdown together with 
+
+... or even better, you install a service that gets started and shutdown together with
 your computer. For Debian/Ubuntu, we recommend as script like::
 
     #! /bin/sh
@@ -77,24 +82,24 @@ your computer. For Debian/Ubuntu, we recommend as script like::
     #                    the buildbot slaves. It also shuts them down if the
     #                    system is halted. Place it in /etc/init.d.
     ### END INIT INFO
-    
+
     # Author: Jorrit Wronski <jowr@mek.dtu.dk>
     #
     # Please remove the "Author" lines above and replace them
     # with your own name if you copy and modify this script.
-    
+
     EXECUSER=username
     NAME="a-slave"
     CTRLSCRI="/home/username/$NAME.bsh"
-    
+
     # Load the VERBOSE setting and other rcS variables
     . /lib/init/vars.sh
-    
+
     # Define LSB log_* functions.
     # Depend on lsb-base (>= 3.2-14) to ensure that this file is present
     # and status_of_proc is working.
     . /lib/lsb/init-functions
-    
+
     #
     # Function that starts the daemon/service
     #
@@ -104,11 +109,11 @@ your computer. For Debian/Ubuntu, we recommend as script like::
       RETVAL="$?"
       return "$RETVAL"
     }
-    
+
     #
     # Function that stops the daemon/service
     #
-    
+
     # Function that stops the daemon/service
     #
     do_stop() {
@@ -117,7 +122,7 @@ your computer. For Debian/Ubuntu, we recommend as script like::
       RETVAL="$?"
       return "$RETVAL"
     }
-    
+
     case "$1" in
     start)
         log_action_msg "Starting $NAME"
@@ -138,10 +143,10 @@ your computer. For Debian/Ubuntu, we recommend as script like::
         ;;
     esac
     exit 0
-    
-Which the can be added to the scheduler with ``update-rc.d buildslave defaults``. 
-This should gracefully terminate the bot at shutdown and restart it again after reboot. 
-To disable the service, run ``update-rc.d -f buildslave remove``. You can enable and 
+
+Which the can be added to the scheduler with ``update-rc.d buildslave defaults``.
+This should gracefully terminate the bot at shutdown and restart it again after reboot.
+To disable the service, run ``update-rc.d -f buildslave remove``. You can enable and
 disable the daemon by runnning ``update-rc.d buildslave enable|disable``. Note that the
 example above call a user-script that activates the virtual environment and starts
 the buildslave. Such a script could look like this::
@@ -150,7 +155,7 @@ the buildslave. Such a script could look like this::
     #
     # Description:       This file activates the virtual environment and starts
     #                    the buildbot slaves. It also shuts them down if the
-    #                    system is halted. Place it in /etc/init.d.
+    #                    system is halted.
     #
     # Author: Jorrit Wronski <jowr@mek.dtu.dk>
     #
@@ -165,17 +170,17 @@ the buildslave. Such a script could look like this::
       start)
         echo "Starting script buildbotslave "
         source $VIRTENV/bin/activate
-        $VIRTENV/bin/buildslave start $SLAVEDIR 
+        $VIRTENV/bin/buildslave start $SLAVEDIR
         ;;
       stop)
         echo "Stopping script buildbotslave"
-        $VIRTENV/bin/buildslave stop $SLAVEDIR                                                                                                   
-        ;;                                                                                                                                       
-      restart)                                                                                                                                   
-        echo "Restarting script buildbotslave"                                                                                                   
-        source $VIRTENV/bin/activate                                                                                                             
-        $VIRTENV/bin/buildslave stop $SLAVEDIR                                                                                                   
-        $VIRTENV/bin/buildslave start $SLAVEDIR                                                                                                  
+        $VIRTENV/bin/buildslave stop $SLAVEDIR
+        ;;
+      restart)
+        echo "Restarting script buildbotslave"
+        source $VIRTENV/bin/activate
+        $VIRTENV/bin/buildslave stop $SLAVEDIR
+        $VIRTENV/bin/buildslave start $SLAVEDIR
         ;;
       *)
         echo "Usage: $0 {start|stop|restart}"
@@ -211,14 +216,14 @@ Documentation Builds
 
 Some parts of the documentation are quite involved. That is why we decided not
 to rebuild the whole documentation after every commit. There is a special python
-script that runs a day and performs the most expensive jobs during 
-documentation rebuild. This covers the generation of validation figures for all 
+script that runs a day and performs the most expensive jobs during
+documentation rebuild. This covers the generation of validation figures for all
 fluids and the fitting reports for the incompressible fluids.
 
 If you have some tasks that take a long time, make sure to add them to that
-special script int ``Web/scripts/__init__.py``. This helps us to keep the continuous 
-integration servers running with an acceptable latency with regard to the commits 
+special script in ``Web/scripts/__init__.py``. This helps us to keep the continuous
+integration servers running with an acceptable latency with regard to the commits
 to the git repository. However, if you are unlucky and your commit coincides with
-figure generation, you will experience a long 
+figure generation, you will experience a long
 delay between your commit and the appearance of the freshly generated documentation
 on the website. You can follow the progress in the logfiles on the buildbot master though.
