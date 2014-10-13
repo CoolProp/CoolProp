@@ -26,7 +26,7 @@ BibTeX citation::
         journal = {Industrial \& Engineering Chemistry Research},
         volume = {53},
         number = {6},
-        pages = {2498-2508},
+        pages = {2498--2508},
         year = {2014},
         doi = {10.1021/ie4033999},
 
