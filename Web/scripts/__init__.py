@@ -31,15 +31,20 @@ reg_hour   = time.strftime("%H")
 reg_minute = time.strftime("%M")
 sch_hour   = 12 #scheduled hour = 3am Boulder = 12pm CPH
 sch_minute =  7 #scheduled minute = 7 past
+sch_delta  = 10 #delta for scheduling
 #
-lim_days = 1
+lim_days = 0.95
 lim_time = cur_time - 60*60*24*lim_days # seconds
-if int(reg_hour)==sch_hour and sch_minute+2>reg_minute and sch_minute-2<reg_minute and not full_rebuild:
-    print "This is a scheduled rebuild at {0}:{1}.".format(sch_hour,sch_minute)
+#
+if int(sch_hour)==int(reg_hour) and \
+    int(sch_minute+0.0*sch_delta) > int(reg_minute) and \
+    int(sch_minute-1.0*sch_delta) < int(reg_minute) and \
+    not full_rebuild:
+    print "This is a scheduled rebuild at {0:02d}:{1:02d}.".format(sch_hour,sch_minute)
     if fil_time < lim_time: full_rebuild = True
     else: print "It looks like the files have been rebuilt during the last day."
 #
-lim_days = 10
+lim_days = 3
 lim_time = cur_time - 60*60*24*lim_days # seconds
 if fil_time < lim_time and not full_rebuild:
     print "The static files have not been updated in {0} days, forcing an update now.".format(lim_days)
