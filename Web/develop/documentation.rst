@@ -17,7 +17,7 @@ Build Sphinx documentation
     source ~/env/py27/bin/activate # Turn on this virtual env, should see (py27) in your command shell next to the prompt to tell you that environment is active
 
 3. Then install prerequisites into this virtualenv::
-  
+
     pip install --upgrade setuptools cython
     pip install cython numpy scipy matplotlib python-dateutil pytz pandas
     pip install sphinx ipython sphinxcontrib-bibtex sphinxcontrib-doxylink sphinxcontrib-napoleon cloud-sptheme
@@ -26,10 +26,10 @@ Build Sphinx documentation
 4. To build the documentation, go into the CoolProp/Web folder and run::
 
     make html
-    
+
 5. Move the generated docs in ``_build`` to wherever you want
 
-  
+
 Build Doxygen documentation
 ---------------------------
 
@@ -40,17 +40,17 @@ All the configuration is done in the ``Doxyfile`` file.
 2. Simply fire up a shell in the root of the repo, and type::
 
     doxygen Doxyfile
-  
+
 
 Building the documentation on Linux
 -----------------------------------
 
 1. Make sure you have what you need::
 
-    sudo aptitude install build-essential git gfortran cmake doxygen ipython python-pip python-virtualenv
+    sudo aptitude install build-essential imagemagick git gfortran cmake doxygen ipython python-pip python-virtualenv
     sudo aptitude install libatlas-base-dev libatlas3-base # numpy
     sudo aptitude install gcc gfortran python-dev libblas-dev liblapack-dev libblas3 liblapack3 # scipy
     sudo aptitude install python-dev libpng-dev tk libfreetype6-dev # matplotlib
     sudo aptitude install libxml2-dev libxslt1-dev libxslt1.1 python-all-dev # pandas
-    
+
 2. Follow the instructions above to create the virtual environment.
