@@ -445,8 +445,14 @@ double Props1SI(const std::string &FluidName, const std::string &Output)
     std::string  _FluidName = FluidName, empty_string = "", _Output = Output;
     double val1 = PropsSI(_FluidName, empty_string, 0, empty_string, 0, _Output);
     if (!ValidNumber(val1)){
+        // flush the error
+        set_error_string("");
         // Try with them flipped
         val1 = PropsSI(_Output, empty_string, 0, empty_string, 0, _FluidName);
+    }
+    if (!ValidNumber(val1)){
+        set_error_string(format("Unable to use inputs %s,%s in Props1SI (order doesn't matter)"));
+        return _HUGE;
     }
     return val1;
 }
@@ -972,7 +978,7 @@ std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &N
 {
     double Phase_double = PropsSI("Phase",Name1,Prop1,Name2,Prop2,FluidName);
     if (!ValidNumber(Phase_double)){ return "";}
-    std::size_t Phase_int = static_cast<std::size_t>(round(Phase_double));
+    std::size_t Phase_int = static_cast<std::size_t>(Phase_double);
     return phase_lookup_string(static_cast<phases>(Phase_int));
 }
     
@@ -980,7 +986,7 @@ std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &N
 {
     double Phase_double = PropsSI("Phase",Name1,Prop1,Name2,Prop2,FluidName,z);
     if (!ValidNumber(Phase_double)){ return "";}
-    std::size_t Phase_int = static_cast<std::size_t>(round(Phase_double));
+    std::size_t Phase_int = static_cast<std::size_t>(Phase_double);
     return phase_lookup_string(static_cast<phases>(Phase_int));
 }
 
