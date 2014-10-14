@@ -137,6 +137,7 @@ EXPORT_CODE long CONVENTION PhaseSI(const char *Output, const char *Name1, doubl
     if (ph.size() > strlen(phase)){
         strcpy(phase, ph.c_str());
     }
+    return 0;
 }
 EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName, const double *z, int n)
 {

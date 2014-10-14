@@ -159,7 +159,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
 			throw ValueError(format("Temperature to QT_flash [%6g K] must be in range [%8g K, %8g K]",HEOS._T, Tmin_sat, Tmax_sat));
 		}
         
-        // If exactly at the critical temperature, liquid and vapor have the critial density
+        // If exactly(ish) at the critical temperature, liquid and vapor have the critial density
         if (std::abs(T-HEOS.T_critical())< 1e-14){
              HEOS.SatL->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
              HEOS.SatV->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);

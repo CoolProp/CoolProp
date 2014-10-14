@@ -195,6 +195,15 @@
     /** \brief Solve a cubic with coefficients in decreasing order
      * 
      * 0 = ax^3 + b*x^2 + c*x + d
+     * 
+     * @param a The x^3 coefficient
+     * @param b The x^2 coefficient
+     * @param c The x^1 coefficient
+     * @param d The x^0 coefficient
+     * @param N The number of unique real solutions found
+     * @param x0 The first solution found
+     * @param x1 The second solution found
+     * @param x2 The third solution found
      */
 	void solve_cubic(double a, double b, double c, double d, int &N, double &x0, double &x1, double &x2);
 
