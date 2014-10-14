@@ -85,6 +85,8 @@ parameter_info parameter_info_list[] = {
     parameter_info(idalpha0_dtau_constdelta, "dalpha0_dtau_constdelta","O","-","Derivative of ideal Helmholtz energy with tau",false),
     parameter_info(idalpha0_ddelta_consttau, "dalpha0_ddelta_consttau","O","-","Derivative of ideal Helmholtz energy with delta",false),
     
+    parameter_info(iPhase, "Phase","O","-","Phase index from \ref phases",false),
+    
 };
 
 class ParameterInformation

@@ -262,6 +262,8 @@ double AbstractState::keyed_output(int key)
         return viscosity();
     case iconductivity:
         return conductivity();
+    case iPhase:
+        return phase();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for keyed_output",key,get_parameter_information(key,"short").c_str()));
     }

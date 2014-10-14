@@ -63,6 +63,15 @@
      */
     EXPORT_CODE double CONVENTION PropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref);
     
+    /**
+     *\overload
+     *\sa \ref CoolProp::PhaseSI(const std::string &, double, const std::string &, double, const std::string&)
+     * 
+     * \note this function returns the phase string in pre-allocated phase variable
+     */
+    EXPORT_CODE long CONVENTION PhaseSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref, const char *phase);
+    
+    
     EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char *Output);
     /**
      * \overload

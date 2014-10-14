@@ -66,10 +66,15 @@ enum parameters{
     iBvirial, iCvirial, idBvirial_dT, idCvirial_dT, iZ,
 
     // Environmental parameters
-    iGWP20, iGWP100, iGWP500, iFH, iHH, iPH, iODP,
-    
-    // The last parameter, so we can check that all parameters are described in DataStructures.cpp
-    iundefined_parameter
+    iGWP20, ///< The 20-year global warming potential
+    iGWP100, ///< The 100-year global warming potential
+    iGWP500, ///< The 500-year global warming potential
+    iFH, ///< Fire hazard index
+    iHH, ///< Health hazard index
+    iPH, ///< 
+    iODP, ///< Ozone depletion potential (R-11 = 1.0)
+    iPhase, ///< The phase index of the given state
+    iundefined_parameter ///< The last parameter, so we can check that all parameters are described in DataStructures.cpp
     
 };
 // !! If you add a parameter, update the map in the corresponding CPP file !!

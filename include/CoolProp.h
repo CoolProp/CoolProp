@@ -40,15 +40,15 @@ You might want to start by looking at CoolProp.h
 	/// @param Name2 The second state variable name, one of "T","D","H",etc.
 	/// @param Prop2 The second state variable value
 	/// @param FluidName The fluid name
-    /// @param x The mole or mass fractions depending on the requirements of the backend
-    double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &x);
+    /// @param z The mole or mass fractions depending on the requirements of the backend
+    double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z);
     /// Return a value that depends on the thermodynamic state
 	/// @param Output The output parameter, one of "T","D","H",etc.
 	/// @param Name1 The first state variable name, one of "T","D","H",etc.
 	/// @param Prop1 The first state variable value
 	/// @param Name2 The second state variable name, one of "T","D","H",etc.
 	/// @param Prop2 The second state variable value
-	/// @param FluidName The fluid name
+	/// @param FluidName The fluid name, or names seperated by '&' if a mixture
     /// @param z The mole or mass fractions depending on the requirements of the backend
     std::vector<double> PropsSI(const std::string &Output, const std::string &Name1, const std::vector<double> &Prop1, const std::string &Name2, const std::vector<double> Prop2, const std::string &FluidName, const std::vector<double> &z);
     /// Return a value that depends on the thermodynamic state
@@ -142,27 +142,25 @@ You might want to start by looking at CoolProp.h
 	/// @param h0 Enthalpy at reference state [J/kg]
 	/// @param s0 Entropy at references state [J/kg/K]
 	//void set_reference_stateD(std::string FluidName, double T, double rho, double h0, double s0);
-
-    /*
-    /// Return the phase of the given state point with temperature, pressure as inputs
-	/// @param FluidName The name of the fluid
-	/// @param T Temperature [K]
-	/// @param p Pressure [kPa]
-	/// @returns Phase as string, one of ""Two-Phase","Supercritical","Gas","Liquid"
-	std::string Phase(std::string FluidName, double T, double p);
-	/// Return the phase of the given state point with temperature, density as inputs
-	/// @param FluidName The name of the fluid
-	/// @param T Temperature [K]
-	/// @param rho Density [kg/m^3]
-	/// @returns Phase as string, one of ""Two-Phase","Supercritical","Gas","Liquid"
-	std::string Phase_Trho(std::string FluidName, double T, double rho);
-	/// Return the phase of the given state point with temperature, pressure as inputs
-	/// @param FluidName The name of the fluid
-	/// @param T Temperature [K]
-	/// @param p Pressure [kPa]
-	/// @returns Phase as string, one of ""Two-Phase","Supercritical","Gas","Liquid"
-	std::string Phase_Tp(std::string FluidName, double T, double p);*/
-
+    
+    /// Return a string representation of the phase
+	/// @param Name1 The first state variable name, one of "T","D","H",etc.
+	/// @param Prop1 The first state variable value
+	/// @param Name2 The second state variable name, one of "T","D","H",etc.
+	/// @param Prop2 The second state variable value
+	/// @param FluidName The fluid name
+    /// \note Returns empty string if there was an error; use get_global_param_string("errstring") to retrieve the error
+    std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName);
+    /// Return a string representation of the phase
+	/// @param Name1 The first state variable name, one of "T","D","H",etc.
+	/// @param Prop1 The first state variable value
+	/// @param Name2 The second state variable name, one of "T","D","H",etc.
+	/// @param Prop2 The second state variable value
+	/// @param FluidName The fluid name
+    /// @param z The mole or mass fractions depending on the requirements of the backend
+    /// \note Returns empty string if there was an error; use get_global_param_string("errstring") to retrieve the error
+    std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z);
+    
     } /* namespace CoolProp */
 #endif
 

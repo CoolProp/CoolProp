@@ -31,7 +31,7 @@
 #include "Backends/Incompressible/IncompressibleLibrary.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Helmholtz/MixtureParameters.h"
-
+#include "DataStructures.h"
 
 namespace CoolProp
 {
@@ -945,6 +945,43 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
 	catch(...){
 		return(std::string("CoolProp error: Indeterminate error"));
 	}
+}
+std::string phase_lookup_string(phases Phase)
+{
+    switch (Phase)
+    {
+        case iphase_liquid: ///< Liquid
+            return "liquid";
+        case iphase_supercritical: ///< Supercritical (p > pc, T > Tc)
+            return "supercritical";
+        case iphase_supercritical_gas: ///< Supercritical gas (p < pc, T > Tc)
+            return "supercritical_gas";
+        case iphase_supercritical_liquid: ///< Supercritical liquid (p > pc, T < Tc)
+            return "supercritical_liquid";
+        case iphase_gas: ///< Subcritical gas
+            return "gas";
+        case iphase_twophase: ///< Twophase
+            return "twophase";
+        case iphase_unknown: ///< Unknown phase
+            return "unknown";
+        case iphase_not_imposed:
+            return "not_imposed";
+    }
+}
+std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName)
+{
+    double Phase_double = PropsSI("Phase",Name1,Prop1,Name2,Prop2,FluidName);
+    if (!ValidNumber(Phase_double)){ return "";}
+    std::size_t Phase_int = static_cast<std::size_t>(round(Phase_double));
+    return phase_lookup_string(static_cast<phases>(Phase_int));
+}
+    
+std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z)
+{
+    double Phase_double = PropsSI("Phase",Name1,Prop1,Name2,Prop2,FluidName,z);
+    if (!ValidNumber(Phase_double)){ return "";}
+    std::size_t Phase_int = static_cast<std::size_t>(round(Phase_double));
+    return phase_lookup_string(static_cast<phases>(Phase_int));
 }
 
 } /* namespace CoolProp */
