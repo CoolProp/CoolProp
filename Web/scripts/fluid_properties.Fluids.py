@@ -1,5 +1,5 @@
 from CPWeb.BibtexTools import getCitationOrAlternative, getBibtexParser
-import CoolProp
+from CPWeb.SphinxTools import FluidGenerator
 import os.path
 import CoolProp
 
@@ -16,7 +16,7 @@ class Dossier:
         self.data[key].append(value)
 
 d = Dossier()
-
+        
 from pybtex.database.input import bibtex
 parser = bibtex.Parser()
 bibdata = parser.parse_file(os.path.join(root_dir,"CoolPropBibTeXLibrary.bib"))
@@ -29,7 +29,16 @@ bibtex_map = {'EOS': 'EOS',
               'VISCOSITY': ':math:`\eta`',
               'MELTING_LINE': 'melt'}
 bibtex_keys = ['EOS','CP0','CONDUCTIVITY','VISCOSITY','MELTING_LINE']
+
+fluids_path = os.path.join(web_dir,'fluid_properties','fluids')
+if not os.path.exists(fluids_path):
+    os.makedirs(fluids_path)
+    
 for fluid in CoolProp.__fluids__:
+    
+    FG = FluidGenerator(fluid)
+    FG.write(fluids_path)
+        
     d.add('name', fluid)
     for key in bibtex_keys:
         try:
@@ -54,7 +63,7 @@ def build_citation(key):
         return ':cite:`'+key+'`'
 
 def fluid_reference(fluid):
-    return fluid
+    return ':ref:`{fluid:s} <fluid_{fluid:s}>`'.format(fluid = fluid)
 
 # Write the table
 with open(csvfile,'w') as fp:
@@ -63,5 +72,3 @@ with open(csvfile,'w') as fp:
     for index, row in df.iterrows():
         rowdata = [fluid_reference(row['name'])] + [build_citation(row[key]) for key in bibtex_keys]
         fp.write(','.join(rowdata)+'\n')
-        
-
