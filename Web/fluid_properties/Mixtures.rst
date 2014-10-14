@@ -34,7 +34,7 @@ Binary pairs
 
 .. csv-table:: All binary pairs included in CoolProp
    :header-rows: 1
-   :file: mixture_binary_pairs.csv
+   :file: Mixtures.csv
 
 Phase Envelope
 --------------

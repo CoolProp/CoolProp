@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+import os.path, glob, subprocess, sys, time
+#
+if len(sys.argv) < 2:
+    full_rebuild = False
+if len(sys.argv)== 2:
+    if   sys.argv[1]=="True": full_rebuild = True
+    elif sys.argv[1]=="1"   : full_rebuild = True
+    else: full_rebuild = False
+if len(sys.argv) > 2:
+    full_rebuild = False
+    print "Cannot process more than one parameter: {0}".format(str(sys.argv))
+#
+def touch(fname):
+    if os.path.exists(fname): os.utime(fname, None)
+    else: open(fname, 'a').close()
+#
+def get_ftime(fname):
+    if os.path.isfile(fname): return os.path.getctime(fname)
+    else: return 0
+#
+web_dir      = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
+script_dir   = os.path.abspath(os.path.join(web_dir,'scripts'))
+touch_file   = os.path.abspath(os.path.join(script_dir,'last_run'))
+#
+cur_time = time.time()
+fil_time = get_ftime(touch_file)
+#
+reg_hour   = time.strftime("%H")
+reg_minute = time.strftime("%M")
+sch_hour   = 12 #scheduled hour = 3am Boulder = 12pm CPH
+sch_minute =  7 #scheduled minute = 7 past
+sch_delta  = 10 #delta for scheduling
+#
+lim_days = 0.95
+lim_time = cur_time - 60*60*24*lim_days # seconds
+#
+if int(sch_hour)==int(reg_hour) and \
+    int(sch_minute+0.0*sch_delta) > int(reg_minute) and \
+    int(sch_minute-1.0*sch_delta) < int(reg_minute) and \
+    not full_rebuild:
+    print "This is a scheduled rebuild at {0:02d}:{1:02d}.".format(sch_hour,sch_minute)
+    if fil_time < lim_time: full_rebuild = True
+    else: print "It looks like the files have been rebuilt during the last day."
+#
+lim_days = 3
+lim_time = cur_time - 60*60*24*lim_days # seconds
+if fil_time < lim_time and not full_rebuild:
+    print "The static files have not been updated in {0} days, forcing an update now.".format(lim_days)
+    full_rebuild = True
+
+#req_dir = [os.path.abspath(os.path.join(web_dir,'_static','fluid_properties','Incompressibles_reports'))]
+#req_fil = [os.path.abspath(os.path.join(web_dir,'fluid_properties','Mixtures.csv')),
+#  os.path.abspath(os.path.join(web_dir,'fluid_properties','PurePseudoPure.csv')),
+#  os.path.abspath(os.path.join(web_dir,'fluid_properties','Incompressibles_pure-fluids.csv'))]
+#
+#for d in req_dir:
+#    if not os.path.exists(d) and not full_rebuild:
+#        print "The required directory {0} is missing, trying to rebuild it.".format(d)
+#        full_rebuild = True
+#for f in req_fil:
+#    if not os.path.exists(f):
+#        print "The required file {0} is missing, trying to rebuild it.".format(f)
+#        full_rebuild = True
+# print "Executing the normal scripts for generating the static files."
+# script_files = glob.glob(os.path.join(script_dir,'*.py')) # Avoid recursion
+# script_files = [os.path.abspath(f) for f in script_files if not os.path.abspath(f)==os.path.abspath(__file__)]
+# for script in script_files:
+#     print "Executing {0}".format(script)
+#     subprocess.call('python {0}'.format(os.path.basename(script)), cwd=script_dir, shell=True)
+#
+def run_script(path):
+    if os.path.exists(path):
+        file_path = os.path.dirname(path)
+        file_name = os.path.basename(path)
+        file_extension = path.split(".")[-1]
+        #file_name, file_extension = os.path.splitext(path)
+
+        if file_extension.lower()=="py":
+            subprocess.call('python {0}'.format(file_name), cwd=file_path, shell=True)
+        elif file_extension.lower()=="sh" or file_extension.lower()=="bsh":
+            subprocess.call('chmod +x {0}'.format(file_name), cwd=file_path, shell=True)
+            subprocess.call('./{0}'.format(file_name), cwd=file_path, shell=True)
+        else:
+            print "Unknown file extension in {0}".format(path)
+    else:
+        print "Could not find the file {0}".format(path)
+
+# The normal tasks that are carried out each time the script runs
+normal_tasks = [ "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py"]
+expensive_tasks = [ "fluid_properties.Incompressibles.sh", "logo_2014.py"]
+#
+print "Executing the normal scripts for generating static files."
+for script in normal_tasks:
+    print "Executing {0}".format(script)
+    run_script(os.path.join(script_dir,script))
+#
+if full_rebuild:
+    print "Executing the computationally expensive scripts for generating the static files."
+    touch(touch_file)
+    for script in expensive_tasks:
+        print "Executing {0}".format(script)
+        run_script(os.path.join(script_dir,script))
+else:
+    print "Skipping the computationally expensive scripts for generating the static files."

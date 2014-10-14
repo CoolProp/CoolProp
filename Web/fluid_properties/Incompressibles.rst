@@ -30,7 +30,7 @@ fluid from the high-level interface. A single PDF page showing the fit quality i
 linked to that ID in case you would like to see a few more details about any
 specific fluid. To get an overview over all the fits, there are also combined
 documents with all the
-:download:`pure fluids and all the aqueous solutions</_static/fluid_properties/incompressible/report/all_incompressibles.pdf>`.
+:download:`pure fluids and all the aqueous solutions</_static/fluid_properties/Incompressibles_reports/all_incompressibles.pdf>`.
 You can read more about these reports in a dedicated
 :ref:`section<FittingReports>` called :ref:`Fitting Reports<FittingReports>`.
 
@@ -143,7 +143,7 @@ Fitting Reports
 ---------------------------------------
 
 A file with all fitting reports for the incompressible fluids can be obtained
-from :download:`here</_static/fluid_properties/incompressible/report/all_incompressibles.pdf>`. These reports help you to
+from :download:`here</_static/fluid_properties/Incompressibles_reports/all_incompressibles.pdf>`. These reports help you to
 get an overview over the different incompressible fluids
 included in CoolProp. The reports start with some basic information about
 the fluid. The fluid name used in CoolProp is in the title "Fitting Report for *FluidName*"
@@ -153,13 +153,13 @@ tells you where we got the data from. This
 would typically be a data sheet from a manufacturer's homepage, some other software
 database, a scientific publication or experimental data.
 
-.. figure:: /_static/fluid_properties/incompressible/report/report2up.jpg
+.. figure:: /_static/fluid_properties/Incompressibles_reports/report2up.jpg
     :align: center
     :alt: Fitting reports for pure fluid and solution
 
     The figure above shows two examples for fitting reports generated for a pure
     fluid and a binary mixture. You can also have a look at the
-    :download:`PDF version</_static/fluid_properties/incompressible/report/report2up.pdf>` of the reports side by side.
+    :download:`PDF version</_static/fluid_properties/Incompressibles_reports/report2up.pdf>` of the reports side by side.
 
 If all data are available, there is a graph for each of the basic quantities:
 density :math:`\rho`, specific heat capacity :math:`c`, thermal conductivity
@@ -290,13 +290,13 @@ Skovrup. It is provided free of charge by his employer `IPU <http://en.ipu.dk>`_
 .. csv-table:: All incompressible pure fluids included in CoolProp
    :widths: 10, 35, 13, 14, 14, 14
    :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/pure-fluids.csv
+   :file: Incompressibles_pure-fluids.csv
 
 
 There are also a number of water-based mixtures implemented in CoolProp. Most of them
 are secondary heat transfer fluids, but there are also aqueous solutions of
-ammonia :cite:`Melinder2010`, :download:`MAM<../_static/fluid_properties/incompressible/report/MAM_fitreport.pdf>`,
-and lithium bromide :cite:`Patek2006`, :download:`LiBr<../_static/fluid_properties/incompressible/report/LiBr_fitreport.pdf>`,
+ammonia :cite:`Melinder2010`, :download:`MAM<../_static/fluid_properties/Incompressibles_reports/MAM_fitreport.pdf>`,
+and lithium bromide :cite:`Patek2006`, :download:`LiBr<../_static/fluid_properties/Incompressibles_reports/LiBr_fitreport.pdf>`,
 which can be used to model absorption chillers.
 
 
@@ -305,21 +305,21 @@ which can be used to model absorption chillers.
 .. csv-table:: All incompressible mass-based binary mixtures included in CoolProp
    :widths: 10, 30, 11, 11, 11, 11, 8, 8
    :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/mass-based-fluids.csv
+   :file: Incompressibles_mass-based-fluids.csv
 
 .. .. _MoleMix:
 
 .. .. csv-table:: All incompressible mole-based binary mixtures included in CoolProp
    :widths: 10, 30, 11, 11, 11, 11, 8, 8
    :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/mole-based-fluids.csv
+   :file: Incompressibles_mole-based-fluids.csv
 
 .. _VoluMix:
 
 .. csv-table:: All incompressible volume-based binary mixtures included in CoolProp
    :widths: 10, 30, 11, 11, 11, 11, 8, 8
    :header-rows: 1
-   :file: ../_static/fluid_properties/incompressible/table/volume-based-fluids.csv
+   :file: Incompressibles_volume-based-fluids.csv
 
 
 For slurry ice, the concentration :math:`x` refers to the solid content and the

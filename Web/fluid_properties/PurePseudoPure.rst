@@ -103,7 +103,7 @@ List of Fluids
 
 .. csv-table:: All the fluids included in CoolProp
    :header-rows: 1
-   :file: Fluids.csv
+   :file: PurePseudoPure.csv
    
 References
 ----------

@@ -5,6 +5,11 @@ Humid Air Properties
 
 If you are feeling impatient, jump to :ref:`HAProps_Sample`, or to go to the code documentation :mod:`CoolProp.HumidAirProp`, otherwise, hang in there.
 
+The equations implemented in CoolProp are based on a publication by Hermann et al. :cite:`Herrmann2009`, which describes the outcome of the ASHRAE research project ASHREA-RP1485. 
+The same source has been used in the ASHRAE Handbook 2009 to generate reference saturation property tables. The code implemented here passes all tests and reproduces the original 
+data with a very high accuracy. It is applicable for pressure from 0.01 kPa up to 10 MPa, in a temperature range from -143.15 °C up to 350 °C with a humidity ratio from 0 kg of water 
+up to 10 kg of water per kg of dry air.
+
 Humid air can be modeled as a mixture of air and water vapor.  In the simplest analysis, water and air are treated as ideal gases but in principle there is interaction between the air and water molecules that must be included through the use of interaction parameters.
 
 Because humid air is a mixture of dry air (treated as a pseudo-pure gas) and water vapor (treated as a real gas), three variables are required to fix the state by the state postulate.
@@ -270,3 +275,15 @@ Values here are obtained at documentation build-time using the Humid Air Propert
     .. math::
 
         \frac{{\delta \bar h}}{{\delta T}} = \left( {1 - {\psi _w}} \right)\frac{{d\bar h_a^0}}{{d\tau }}\frac{{d\tau }}{{dT}} + {\psi _w}\frac{{d\bar h_w^0}}{{d\tau }}\frac{{d\tau }}{{dT}} + \bar R\left[ {\left( {{B_m} - T\frac{{d{B_m}}}{{dT}}} \right)\frac{1}{{\bar v}} + \frac{{{C_m}}}{{{{\bar v}^2}}}} \right] + \bar R{T^2}\left[ {\left( { - \frac{{{d^2}{B_m}}}{{d{T^2}}}} \right)\frac{1}{{\bar v}} + \left( { - \frac{1}{2}\frac{{{d^2}{C_m}}}{{d{T^2}}}} \right)\frac{1}{{{{\bar v}^2}}}} \right]
+        
+        
+        
+        
+        
+References
+----------
+
+.. bibliography:: ../../CoolPropBibTeXLibrary.bib
+   :filter: docname in docnames
+   :style: unsrt
+   

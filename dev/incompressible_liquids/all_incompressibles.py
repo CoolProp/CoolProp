@@ -204,11 +204,17 @@ if __name__ == '__main__':
         #####################################
         # Table generation routines
         #####################################
-        FLUID_INFO_FOLDER=os.path.abspath("table")
-        FLUID_INFO_MASS_LIST=os.path.join(FLUID_INFO_FOLDER,"mass-based-fluids")
-        FLUID_INFO_MOLE_LIST=os.path.join(FLUID_INFO_FOLDER,"mole-based-fluids")
-        FLUID_INFO_VOLU_LIST=os.path.join(FLUID_INFO_FOLDER,"volume-based-fluids")
-        FLUID_INFO_PURE_LIST=os.path.join(FLUID_INFO_FOLDER,"pure-fluids")
+        #FLUID_INFO_FOLDER=os.path.abspath("table")
+        #FLUID_INFO_MASS_LIST=os.path.join(FLUID_INFO_FOLDER,"mass-based-fluids")
+        #FLUID_INFO_MOLE_LIST=os.path.join(FLUID_INFO_FOLDER,"mole-based-fluids")
+        #FLUID_INFO_VOLU_LIST=os.path.join(FLUID_INFO_FOLDER,"volume-based-fluids")
+        #FLUID_INFO_PURE_LIST=os.path.join(FLUID_INFO_FOLDER,"pure-fluids")
+        FLUID_INFO_FOLDER=os.path.abspath("tables")
+        FLUID_INFO_MASS_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_mass-based-fluids")
+        FLUID_INFO_MOLE_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_mole-based-fluids")
+        FLUID_INFO_VOLU_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_volume-based-fluids")
+        FLUID_INFO_PURE_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_pure-fluids")
+        
 
         # After all the list got populated, we can process the entries
         # and generate some tables

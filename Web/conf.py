@@ -22,16 +22,6 @@ except ImportError:
     print('Unable to import sphinxcontrib.doxylink; try to run "pip install sphinxcontrib-doxylink"')
 
 
-import glob
-import subprocess
-
-# This part finds all scripts and runs them
-scripts = glob.glob(os.path.join('scripts','*.py'))
-for script in scripts:
-    subprocess.call('python {0}'.format(os.path.basename(script)), cwd='scripts', shell=True)
-
-
-
 #~ # If your extensions are in another directory, add it here. If the directory
 #~ # is relative to the documentation root, use os.path.abspath to make it
 #~ # absolute, like shown here.
@@ -62,13 +52,16 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
             #'cloud_sptheme.ext.index_styling',
             'cloud_sptheme.ext.relbar_toc',
             #'cloud_sptheme.ext.escaped_samp_literals',
-            #'cloud_sptheme.ext.issue_tracker',
+            'cloud_sptheme.ext.issue_tracker',
             #'cloud_sptheme.ext.table_styling',
 
               #'inheritance_diagram',
               #'numpydoc',
               #'breathe'
               ]
+
+# set path to issue tracker:
+issue_tracker_url = "gh:CoolProp/CoolProp"
 
 plot_formats = [('png',80)]
 
@@ -211,7 +204,7 @@ edit_on_github_path_prefix = 'Web'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "_static/PVTCP.png"
+html_logo = "_static/CoolPropLogoLong.png"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
