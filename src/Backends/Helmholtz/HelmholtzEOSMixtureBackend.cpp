@@ -2256,7 +2256,7 @@ long double HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         }
         if (!ValidNumber(val)){
            //calc_alpha0_deriv_nocache(nTau,nDelta,mole_fractions,tau,delta,Tr,rhor);
-           throw ValueError(format("calc_alpha0_deriv_nocache returned invalid number with inputs nTau: %d, nDelta: %d", nTau, nDelta));
+           throw ValueError(format("calc_alpha0_deriv_nocache returned invalid number with inputs nTau: %d, nDelta: %d, tau: %Ld, delta: %Ld", nTau, nDelta, tau, delta));
         }
         else{
             return val;
