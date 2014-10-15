@@ -134,9 +134,7 @@ EXPORT_CODE long CONVENTION PhaseSI(const char *Output, const char *Name1, doubl
 {
     std::string _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;
     std::string ph = CoolProp::PhaseSI(_Name1, Prop1, _Name2, Prop2, _FluidName);
-    if (ph.size() > strlen(phase)){
-        strcpy(phase, ph.c_str());
-    }
+    if (ph.size() > strlen(phase)){ strcpy(phase, ph.c_str()); }
     return 0;
 }
 EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName, const double *z, int n)
