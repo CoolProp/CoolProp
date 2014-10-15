@@ -972,6 +972,24 @@ TEST_CASE("Test first partial derivatives using PropsSI", "[derivatives]")
         CHECK(rel_err_exact < 1e-7);
         CHECK(rel_err_approx < 1e-7);
     }
+    SECTION("Check dpdrho|T 3 ways for water using mass based","")
+    {
+        T = 80+273.15;
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::PT_INPUTS, 101325, T);
+        long double rhomass = AS->rhomass();
+        double dpdrhomass__T_AbstractState = AS->first_partial_deriv(CoolProp::iP, CoolProp::iDmass, CoolProp::iT);
+        double dpdrhomass__T_PropsSI_num = (PropsSI("P","T",T,"Dmass",rhomass+1e-3,"Water") - PropsSI("P","T",T,"Dmass",rhomass-1e-3,"Water"))/(2*1e-3);
+        double dpdrhomass__T_PropsSI = PropsSI("d(P)/d(Dmass)|T","T",T,"P",101325,"Water");
+        CAPTURE(rhomass);
+        CAPTURE(dpdrhomass__T_AbstractState);
+        CAPTURE(dpdrhomass__T_PropsSI_num);
+        CAPTURE(dpdrhomass__T_PropsSI);
+        double rel_err_exact = std::abs((dpdrhomass__T_AbstractState-dpdrhomass__T_PropsSI)/dpdrhomass__T_PropsSI);
+        double rel_err_approx = std::abs((dpdrhomass__T_PropsSI_num-dpdrhomass__T_PropsSI)/dpdrhomass__T_PropsSI);
+        CHECK(rel_err_exact < 1e-7);
+        CHECK(rel_err_approx < 1e-7);
+    }    
     SECTION("Invalid first partial derivatives","")
     {
         CHECK(!ValidNumber(PropsSI("d()/d(P)|T","T",300,"P",101325,"n-Propane")));
