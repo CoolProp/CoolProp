@@ -1331,8 +1331,9 @@ void get_dT_drho(HelmholtzEOSMixtureBackend *HEOS, parameters index, long double
         // dh/drhomolar|T
         drho = T*R/rho*(tau*delta*HEOS->d2alphar_dDelta_dTau()+delta*HEOS->dalphar_dDelta()+pow(delta,2)*HEOS->d2alphar_dDelta2());
         if (index == iHmass){
-            // dh/drho|T * drhomass/drhomolar where drhomass/drhomolar = mole mass
-            drho *= HEOS->molar_mass();
+            // dhmolar/drhomolar|T * dhmass/dhmolar where dhmass/dhmolar = 1/mole mass
+            drho /= HEOS->molar_mass();
+            dT /= HEOS->molar_mass();
         }
         break;
     }
@@ -1344,8 +1345,9 @@ void get_dT_drho(HelmholtzEOSMixtureBackend *HEOS, parameters index, long double
         // ds/drho|T
         drho = R/rho*(-(1+delta*HEOS->dalphar_dDelta()-tau*delta*HEOS->d2alphar_dDelta_dTau()));
         if (index == iSmass){
-            // ds/drho|T * drhomass/drhomolar where drhomass/drhomolar = mole mass
-            drho *= HEOS->molar_mass();
+            // ds/drho|T / drhomass/drhomolar where drhomass/drhomolar = mole mass
+            drho /= HEOS->molar_mass();
+            dT /= HEOS->molar_mass();
         }
         break;
     }
@@ -1357,8 +1359,9 @@ void get_dT_drho(HelmholtzEOSMixtureBackend *HEOS, parameters index, long double
         // du/drho|T
         drho = HEOS->T()*R/rho*(tau*delta*HEOS->d2alphar_dDelta_dTau());
         if (index == iUmass){
-            // du/drho|T * drhomass/drhomolar where drhomass/drhomolar = mole mass
-            drho *= HEOS->molar_mass();
+            // du/drho|T / drhomass/drhomolar where drhomass/drhomolar = mole mass
+            drho /= HEOS->molar_mass();
+            dT /= HEOS->molar_mass();
         }
         break;
     }
@@ -1418,8 +1421,9 @@ void get_dT_drho_second_derivatives(HelmholtzEOSMixtureBackend *HEOS, int index,
         // d2h/drho/dT
         drho_dT = R/rho*delta*(delta*derivs.d2alphar_ddelta2 - pow(tau,2)*derivs.d3alphar_ddelta_dtau2 + derivs.dalphar_ddelta - tau*delta*derivs.d3alphar_ddelta2_dtau - tau*derivs.d2alphar_ddelta_dtau);
         if (index == iHmass){
-            drho2 *= POW2(HEOS->molar_mass());
-            drho_dT *= HEOS->molar_mass();
+            drho2 /= HEOS->molar_mass();
+            drho_dT /= HEOS->molar_mass();
+            dT /= HEOS->molar_mass();
         }
         break;
     }
@@ -1433,8 +1437,9 @@ void get_dT_drho_second_derivatives(HelmholtzEOSMixtureBackend *HEOS, int index,
         // d2s/drho/dT
         drho_dT = R/(T*rho)*(-pow(tau,2)*delta*derivs.d3alphar_ddelta_dtau2);
         if (index == iSmass){
-            drho2 *= POW2(HEOS->molar_mass());
-            drho_dT *= HEOS->molar_mass();
+            drho2 /= HEOS->molar_mass();
+            drho_dT /= HEOS->molar_mass();
+            dT /= HEOS->molar_mass();
         }
         break;
     }
@@ -1448,8 +1453,9 @@ void get_dT_drho_second_derivatives(HelmholtzEOSMixtureBackend *HEOS, int index,
         // d2u/drho/dT
         drho_dT = R/rho*(-pow(tau,2)*delta*derivs.d3alphar_ddelta_dtau2);
         if (index == iUmass){
-            drho2 *= POW2(HEOS->molar_mass());
-            drho_dT *= HEOS->molar_mass();
+            drho2 /= HEOS->molar_mass();
+            drho_dT /= HEOS->molar_mass();
+            dT /= HEOS->molar_mass();
         }
         break;
     }
