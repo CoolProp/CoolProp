@@ -4,6 +4,10 @@
 FORTRAN Wrapper
 ***************
 
+Common Requirements
+===================
+Compilation of the Fortran wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
+
 Compilers
 =========
 
