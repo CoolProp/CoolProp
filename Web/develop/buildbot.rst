@@ -58,8 +58,51 @@ master was at www.coolprop.dreamhosters.com.  The buildbot_private.py on the mas
 holds the required passwords.
 
 
-Buildbot as a daemon
---------------------
+Python Slaves
+-------------
+
+Based on the miniconda Python ecosystem, you can create your own virtual
+environments for building the Python wheels. This requires the following
+steps on a Windows machine::
+
+  conda create -n CoolProp27 python=2
+  conda create -n CoolProp34 python=3
+  conda install -n CoolProp27 cython pip pywin32
+  conda install -n CoolProp34 cython pip pywin32
+
+  activate CoolProp27
+  pip install wheel
+  deactivate
+  activate CoolProp34
+  pip install wheel
+  deactivate
+
+Please repeat the steps above for both 32bit and 64bit Python environments. In
+addition to the Python tools, you also need the Microsoft compilers. Please
+install Visual Studio 2010 for Python 3.4 and Visual Studio 2008 for Python 2.7.
+
+
+Buildbot as a service (Windows)
+-------------------------------
+
+On Windows, you create a batch script that activates your virtual environment
+and starts the buildslave::
+
+  @echo off
+  call "C:\Program Files (x86)\Miniconda32_27\Scripts\activate.bat" Buildbot
+  buildslave start "C:\CoolProp-slave"
+
+This script can then be added to the system services via::
+
+  sc create <serviceName> binpath= <pathToBatFile> DisplayName= "CoolProp Buildbot" start= auto
+
+You might want to run ``services.msc`` to edit the user that runs the service. If
+you are tired of the error messages from the non-returning script, you could
+also use a service wrapper like `NSSM <http://nssm.cc/>`_ to start the script.
+
+
+Buildbot as a daemon (Linux)
+----------------------------
 
 On linux, you can add the following lines to the end of your ``~/.profile`` file (similar
 ideas apply on other platforms) to autostart the slave when the user logs in::
@@ -190,6 +233,8 @@ the buildslave. Such a script could look like this::
     exit 0
 
 
+
+
 Setting MIME type handler
 =========================
 
@@ -209,6 +254,8 @@ To change the MIME types on the server so that unknown file types will map prope
   ...
 
 and then do a ``buildbot restart master``
+
+
 
 
 Documentation Builds
