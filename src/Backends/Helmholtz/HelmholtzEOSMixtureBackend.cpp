@@ -1086,9 +1086,29 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
 {
     if (!ValidNumber(value)){
         throw ValueError(format("value to T_phase_determination_pure_or_pseudopure is invalid"));};
+    
+    
     // T is known, another input P, T, H, S, U is given (all molar)
     if (_T < _crit.T && _p > _crit.p){
         _phase = iphase_supercritical_liquid;
+    }
+    else if (std::abs(_T - _crit.T) < 10*DBL_EPSILON)
+    {
+        switch (other)
+        {
+            case iDmolar:
+                if (std::abs(_rhomolar - _crit.rhomolar) < 10*DBL_EPSILON){
+                    _phase = iphase_critical_point; break;
+                }
+                else if (_rhomolar > _crit.rhomolar){
+                    _phase = iphase_supercritical_liquid; break;
+                }
+                else{
+                    _phase = iphase_supercritical_gas; break;
+                }
+            default:
+                throw ValueError(format("T=Tcrit; invalid input for other to T_phase_determination_pure_or_pseudopure"));
+        }
     }
     else if (_T < _crit.T)
     {

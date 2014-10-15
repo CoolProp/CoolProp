@@ -964,6 +964,8 @@ std::string phase_lookup_string(phases Phase)
             return "supercritical_gas";
         case iphase_supercritical_liquid: ///< Supercritical liquid (p > pc, T < Tc)
             return "supercritical_liquid";
+        case iphase_critical_point: ///< At the critical point
+            return "critical_point";
         case iphase_gas: ///< Subcritical gas
             return "gas";
         case iphase_twophase: ///< Twophase

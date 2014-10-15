@@ -47,7 +47,7 @@ protected:
     }
     
     bool isHomogeneousPhase(void){
-        return (this->_phase==iphase_liquid || this->_phase==iphase_gas || isSupercriticalPhase());
+        return (this->_phase==iphase_liquid || this->_phase==iphase_gas || isSupercriticalPhase() || this->_phase == iphase_critical_point);
     }
 
     bool isTwoPhase(void){

@@ -109,6 +109,7 @@ enum phases{iphase_liquid, ///< Subcritical liquid
             iphase_supercritical, ///< Supercritical (p > pc, T > Tc)
             iphase_supercritical_gas, ///< Supercritical gas (p < pc, T > Tc)
             iphase_supercritical_liquid, ///< Supercritical liquid (p > pc, T < Tc)
+            iphase_critical_point, ///< At the critical point
             iphase_gas, ///< Subcritical gas
             iphase_twophase, ///< Twophase
             iphase_unknown, ///< Unknown phase
