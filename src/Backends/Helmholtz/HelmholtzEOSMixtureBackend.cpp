@@ -1423,7 +1423,7 @@ void get_dT_drho_second_derivatives(HelmholtzEOSMixtureBackend *HEOS, int index,
         if (index == iHmass){
             drho2 /= HEOS->molar_mass();
             drho_dT /= HEOS->molar_mass();
-            dT /= HEOS->molar_mass();
+            dT2 /= HEOS->molar_mass();
         }
         break;
     }
@@ -1439,7 +1439,7 @@ void get_dT_drho_second_derivatives(HelmholtzEOSMixtureBackend *HEOS, int index,
         if (index == iSmass){
             drho2 /= HEOS->molar_mass();
             drho_dT /= HEOS->molar_mass();
-            dT /= HEOS->molar_mass();
+            dT2 /= HEOS->molar_mass();
         }
         break;
     }
@@ -1455,7 +1455,7 @@ void get_dT_drho_second_derivatives(HelmholtzEOSMixtureBackend *HEOS, int index,
         if (index == iUmass){
             drho2 /= HEOS->molar_mass();
             drho_dT /= HEOS->molar_mass();
-            dT /= HEOS->molar_mass();
+            dT2 /= HEOS->molar_mass();
         }
         break;
     }
