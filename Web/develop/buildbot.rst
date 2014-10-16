@@ -69,7 +69,7 @@ steps on a Windows machine::
   conda create -n CoolProp34 python=3
   conda install -n CoolProp27 cython pip pywin32
   conda install -n CoolProp34 cython pip pywin32
-
+  
   activate CoolProp27
   pip install wheel
   deactivate
@@ -81,6 +81,22 @@ Please repeat the steps above for both 32bit and 64bit Python environments. In
 addition to the Python tools, you also need the Microsoft compilers. Please
 install Visual Studio 2010 for Python 3.4 and Visual Studio 2008 for Python 2.7.
 
+On a Linux system, one would typically use the system commands to accomplish the 
+tasks described above. The 32bit slaves have been set up by running::
+
+  sudo aptitude install build-essential git cmake python python3 python-virtualenv python-dev python3-dev
+
+  virtualenv --distribute lin32_py27-sandbox
+  virtualenv --distribute --python=python3 lin32_py32-sandbox
+  
+  source lin32_py27-sandbox/bin/activate
+  pip install cython wheel
+  deactivate
+  source lin32_py32-sandbox/bin/activate
+  pip install cython wheel
+  dwactivate
+  
+Afterwards, you can build the wheel for CoolProp.
 
 Buildbot as a service (Windows)
 -------------------------------
