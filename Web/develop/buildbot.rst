@@ -99,6 +99,9 @@ Please make sure that the standard shell ``/bin/sh`` used by the builbot is
 bash or zsh. We make use of the ``source`` command, which is not part of the
 POSIX specification.
 
+At the moment, it is not possible to use several slaves for the same build job.
+We have to find a new way to generate the configuration.
+
 Buildbot as a service (Windows)
 -------------------------------
 
