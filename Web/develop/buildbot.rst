@@ -79,7 +79,9 @@ steps on a Windows machine::
 
 Please repeat the steps above for both 32bit and 64bit Python environments. In
 addition to the Python tools, you also need the Microsoft compilers. Please
-install Visual Studio 2010 for Python 3.4 and Visual Studio 2008 for Python 2.7.
+install Visual Studio 2010 for Python 3.4 and Visual Studio 2008 for Python 2.7. 
+The latter requires ServicePack 1, otherwise your are going to get quite cryptic
+error messages during compilation.
 
 On a Linux system, things only change a little bit::
 

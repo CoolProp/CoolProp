@@ -24,7 +24,8 @@ namespace std {
 }
 
 // 
-%rename(CoolProp_SimpleState) CoolProp::SimpleState;
+%rename(SS) CoolProp::SimpleState;
+%rename(PED) CoolProp::PhaseEnvelopeData;
 
 // This stuff will get included verbatim in CoolProp_wrap
 %{
