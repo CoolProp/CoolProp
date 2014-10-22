@@ -543,30 +543,23 @@ if (COOLPROP_SCILAB_SWIG_MODULE)
     ${CMAKE_SOURCE_DIR}/include/AbstractState.h
   ) 
   set(SCILAB_INCLUDE_PATH "$ENV{SCILAB_ROOT}/include")
-
-  foreach (_headerFile ${APP_SOURCES})
-      get_filename_component(_dir ${_headerFile} PATH)
-      list (APPEND APP_INCLUDE_DIRS ${_dir})
-  endforeach()
-  list(REMOVE_DUPLICATES APP_INCLUDE_DIRS)
     	
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
-  JOIN("${APP_SOURCES}" "," SWIG_SOURCES)
 
-  include_directories(${APP_INCLUDE_DIRS})
   include_directories(${SCILAB_INCLUDE_PATH})  
   include_directories(${SCILAB_INCLUDE_PATH}/scilab)
 
-  JOIN("${APP_INCLUDE_DIRS}" ";-I" SWIG_INCLUDES)
-
-  set(SWIG_OPTIONS "-addsources;${SWIG_SOURCES};-buildverbositylevel;2;-addcflags;\"-I${SWIG_INCLUDES}\"")
-  message("${SWIG_OPTIONS}")
+  set(SWIG_OPTIONS "-nobuilder")
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
 
-  SWIG_ADD_MODULE(CoolProp scilab ${I_FILE})
+  list(APPEND APP_SOURCES gw_CoolProp.c)
+  set_source_files_properties(gw_CoolProp.c PROPERTIES GENERATED TRUE)
+
+  SWIG_ADD_MODULE(CoolProp scilab ${I_FILE} ${APP_SOURCES})
 
   add_dependencies (CoolProp generate_headers)
+
 endif()
 
 if (COOLPROP_MATLAB_SWIG_MODULE)
