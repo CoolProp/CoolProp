@@ -45,7 +45,7 @@ void check_fluid_instantiation()
     }
 };
 
-enum givens{GIVEN_TDP,GIVEN_HUMRAT,GIVEN_V,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND};
+enum givens{GIVEN_TDP,GIVEN_HUMRAT,GIVEN_V,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTROPY,GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND};
 
 static double epsilon=0.621945,R_bar=8.314472;
 static int FlagUseVirialCorrelations=0,FlagUseIsothermCompressCorrelation=0,FlagUseIdealGasEnthalpyCorrelations=0;
@@ -1038,6 +1038,8 @@ static int Name2Type(const std::string &Name)
         return GIVEN_TWB;
     else if (!strcmp(Name,"Enthalpy") || !strcmp(Name,"H"))
         return GIVEN_ENTHALPY;
+    else if (!strcmp(Name,"Entropy") || !strcmp(Name,"S"))
+        return GIVEN_ENTROPY;        
     else if (!strcmp(Name,"RH") || !strcmp(Name,"RelHum") || !strcmp(Name,"R"))
         return GIVEN_RH;
     else if (!strcmp(Name,"Tdb") || !strcmp(Name,"T_db") || !strcmp(Name,"T"))
@@ -1051,7 +1053,7 @@ static int Name2Type(const std::string &Name)
     else if (!strcmp(Name,"k") || !strcmp(Name,"Conductivity") || !strcmp(Name,"K"))
         return GIVEN_COND;
     else
-        printf("Sorry, your input [%s] was not understood to Name2Type in HumAir.c. Acceptable values are T,P,R,W,D,B,H,M,K and aliases thereof\n",Name.c_str());
+        printf("Sorry, your input [%s] was not understood to Name2Type. Acceptable values are T,P,R,W,D,B,H,S,M,K and aliases thereof\n",Name.c_str());
         return -1;
 }
 int TypeMatch(int TypeCode, const std::string &Input1Name, const std::string &Input2Name, const std::string &Input3Name)
