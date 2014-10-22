@@ -11,6 +11,7 @@
 #include "Ice.h"
 #include "CoolProp.h"
 #include "crossplatform_shared_ptr.h"
+#include "Exceptions.h"
 
 #include <stdlib.h>
 #include "math.h"
@@ -45,7 +46,7 @@ void check_fluid_instantiation()
     }
 };
 
-enum givens{GIVEN_TDP,GIVEN_HUMRAT,GIVEN_V,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTROPY,GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND};
+enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_HUMRAT,GIVEN_V,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTROPY,GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND};
 
 static double epsilon=0.621945,R_bar=8.314472;
 static int FlagUseVirialCorrelations=0,FlagUseIsothermCompressCorrelation=0,FlagUseIdealGasEnthalpyCorrelations=0;
@@ -1028,7 +1029,7 @@ double WetbulbTemperature(double T, double p, double psi_w)
     }
     return return_val;
 }
-static int Name2Type(const std::string &Name)
+static givens Name2Type(const std::string &Name)
 {
     if (!strcmp(Name,"Omega") || !strcmp(Name,"HumRat") || !strcmp(Name,"W"))
         return GIVEN_HUMRAT;
@@ -1053,8 +1054,7 @@ static int Name2Type(const std::string &Name)
     else if (!strcmp(Name,"k") || !strcmp(Name,"Conductivity") || !strcmp(Name,"K"))
         return GIVEN_COND;
     else
-        printf("Sorry, your input [%s] was not understood to Name2Type. Acceptable values are T,P,R,W,D,B,H,S,M,K and aliases thereof\n",Name.c_str());
-        return -1;
+        throw CoolProp::ValueError(format("Sorry, your input [%s] was not understood to Name2Type. Acceptable values are T,P,R,W,D,B,H,S,M,K and aliases thereof\n",Name.c_str()));
 }
 int TypeMatch(int TypeCode, const std::string &Input1Name, const std::string &Input2Name, const std::string &Input3Name)
 {
@@ -1149,6 +1149,62 @@ double RelativeHumidity(double T, double p, double psi_w)
     // Find relative humidity using W/e=phi*p_s/(p-phi*p_s)
     return W/epsilon*p/(p_s*(1+W/epsilon));
 }
+
+void convert_to_SI(const std::string &Name, double &val)
+{
+    switch(Name2Type(Name))
+    {
+        case GIVEN_COND:
+        case GIVEN_ENTHALPY:
+        case GIVEN_ENTROPY:
+        case GIVEN_P:
+            val *= 1000; return;
+        case GIVEN_T:
+        case GIVEN_TDP:
+        case GIVEN_TWB:
+        case GIVEN_RH:
+        case GIVEN_V:
+        case GIVEN_HUMRAT:
+        case GIVEN_VISC:
+            return;
+        case GIVEN_INVALID:
+            throw CoolProp::ValueError(format("invalid input to convert_to_SI"));
+    }
+}
+void convert_from_SI(const std::string &Name, double &val)
+{
+    switch(Name2Type(Name))
+    {
+        case GIVEN_COND:
+        case GIVEN_ENTHALPY:
+        case GIVEN_ENTROPY:
+        case GIVEN_P:
+            val /= 1000; return;
+        case GIVEN_T:
+        case GIVEN_TDP:
+        case GIVEN_TWB:
+        case GIVEN_RH:
+        case GIVEN_V:
+        case GIVEN_HUMRAT:
+        case GIVEN_VISC:
+            return;
+        case GIVEN_INVALID:
+            throw CoolProp::ValueError(format("invalid input to convert_to_SI"));
+    }
+}
+double HAProps(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, const std::string &Input3Name, double Input3)
+{
+    convert_to_SI(Input1Name, Input1);
+    convert_to_SI(Input2Name, Input2);
+    convert_to_SI(Input3Name, Input3);
+    
+    double out = HAPropsSI(OutputName, Input1Name, Input1, Input2Name, Input2, Input3Name, Input3);
+    
+    convert_from_SI(OutputName, out);
+    
+    return out;
+}
+
 double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, const std::string &Input3Name, double Input3)
 {
     try

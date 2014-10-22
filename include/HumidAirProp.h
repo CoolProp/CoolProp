@@ -7,10 +7,16 @@
 
 namespace HumidAir
 {
-// -----------------------
-// Standard I/O function
-// -----------------------
+/* \brief Standard I/O function using base SI units exclusively
+ * 
+ */
 double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, const std::string &Input3Name, double Input3);
+
+/* \brief Standard I/O function using mixed kSI units
+ * 
+ * \warning DEPRECATED!! Use \ref HAPropsSI
+ */
+double HAProps(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, const std::string &Input3Name, double Input3);
 
 // -----------------------
 // Extra I/O function

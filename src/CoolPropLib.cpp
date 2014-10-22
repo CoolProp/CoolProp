@@ -196,3 +196,12 @@ EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, do
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _Name3 = Name3;
 	*output = HumidAir::HAPropsSI(_Output, _Name1, *Prop1, _Name2, *Prop2, _Name3, *Prop3);
 }
+EXPORT_CODE double CONVENTION HAProps(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
+{
+    std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _Name3 = Name3;
+	return HumidAir::HAProps(Output, _Name1, Prop1, _Name2, Prop2, _Name3, Prop3);
+}
+EXPORT_CODE void CONVENTION haprops_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Name3, double * Prop3, double *output)
+{
+	*output = HAProps(Output, Name1, *Prop1, Name2, *Prop2, Name3, *Prop3);
+}
