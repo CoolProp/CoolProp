@@ -77,11 +77,7 @@ steps on a Windows machine::
   pip install wheel
   deactivate
 
-Please repeat the steps above for both 32bit and 64bit Python environments. In
-addition to the Python tools, you also need the Microsoft compilers. Please
-install Visual Studio 2010 for Python 3.4 and Visual Studio 2008 for Python 2.7. 
-The latter requires ServicePack 1, otherwise your are going to get quite cryptic
-error messages during compilation.
+Please repeat the steps above for both 32bit and 64bit Python environments. 
 
 On a Linux system, things only change a little bit::
 
@@ -104,13 +100,8 @@ POSIX specification.
 At the moment, it is not possible to use several slaves for the same build job.
 We have to find a new way to generate the configuration.
 
-
-Octave Slaves
--------------
-
-Octave requires MinGW for building the CoolProp wrapper. Install it from 
-`MinGW <http://www.mingw.org/>`_ to get the open-source toolchains needed.
-This module also depends on `SWIG <http://www.swig.org/>`_ and Python.
+Information on building the single wrappers can be found on 
+:ref:`this dedicated page<wrapper_common_prereqs>`.
 
 
 Buildbot as a service (Windows)
