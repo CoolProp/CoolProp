@@ -104,6 +104,15 @@ POSIX specification.
 At the moment, it is not possible to use several slaves for the same build job.
 We have to find a new way to generate the configuration.
 
+
+Octave Slaves
+-------------
+
+Octave requires MinGW for building the CoolProp wrapper. Install it from 
+`MinGW <http://www.mingw.org/>`_ to get the open-source toolchains needed.
+This module also depends on `SWIG <http://www.swig.org/>`_ and Python.
+
+
 Buildbot as a service (Windows)
 -------------------------------
 
