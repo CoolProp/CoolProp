@@ -52,7 +52,7 @@ For git, your best best is the installer from http://msysgit.github.io/.  Check 
     C:\Users\XXXX>git --version
     git version 1.9.4.msysgit.0
 
-For the C++ compiler, the options are a bit more complicated.  There are multiple (binary incompatible) versions of Visual Studio, as well as G++ ports for windows (MinGW).  Unless you are compiling the python wrappers, you can compile with MinGW, so you should obtain the `MinGW installer <http://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download>`_ and run it.  You should install all the packages available, and you must install to a path without spaces. ``C:\MinGW`` is recommended as an installation path.  
+For the C++ compiler, the options are a bit more complicated.  There are multiple (binary incompatible) versions of Visual Studio, as well as G++ ports for windows (MinGW).  Unless you are compiling the python wrappers, you can compile with MinGW, so you should obtain the `MinGW installer <http://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download>`_ and run it.  You should install all the packages available, and you must install to a path without spaces. ``C:\MinGW`` is recommended as an installation path. Be sure to add the binaries in ``C:\MinGW\bin\`` to your PATH variable.
 
 If you are compiling for Python 2.7, you can install Visual Studio 2008 Express from `VS2008Express installer <http://go.microsoft.com/?linkid=7729279>`_.
 Make sure you install ServicePack 1, otherwise your are going to get quite cryptic error messages during compilation.
