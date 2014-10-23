@@ -19,3 +19,4 @@ subprocess.check_call('./configure --disable-ccache --with-matlab=/usr/local/MAT
 subprocess.check_call('make', shell = True, stdout = sys.stdout, stderr = sys.stderr)
 subprocess.check_call('make install', shell = True, stdout = sys.stdout, stderr = sys.stderr)
 subprocess.check_call('cp swig swig3.0', shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd='swig-matlab-bin/bin')
+subprocess.check_call('cp swig swig2.0', shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd='swig-matlab-bin/bin')
