@@ -1,3 +1,4 @@
+# run with cmake -DCMAKE_TOOLCHAIN_FILE=...
 # the name of the target operating system
 SET(CMAKE_SYSTEM_NAME Windows)
 
@@ -26,9 +27,12 @@ set(COMPILER_PREFIX "x86_64-w64-mingw32")
 # ... or rely on the system path
 #SET(CMAKE_RC_COMPILER ${COMPILER_PREFIX}-windres)
 #
-find_program(CMAKE_RC_COMPILER NAMES ${COMPILER_PREFIX}-windres)
-find_program(CMAKE_C_COMPILER NAMES ${COMPILER_PREFIX}-gcc)
-find_program(CMAKE_CXX_COMPILER NAMES ${COMPILER_PREFIX}-g++)
+#find_program(CMAKE_RC_COMPILER NAMES ${COMPILER_PREFIX}-windres)
+#find_program(CMAKE_C_COMPILER NAMES ${COMPILER_PREFIX}-gcc)
+#find_program(CMAKE_CXX_COMPILER NAMES ${COMPILER_PREFIX}-g++)
+SET(CMAKE_RC_COMPILER ${COMPILER_PREFIX}-windres)
+SET(CMAKE_C_COMPILER ${COMPILER_PREFIX}-gcc)
+SET(CMAKE_CXX_COMPILER ${COMPILER_PREFIX}-g++)
 #
 #
 #######################################
