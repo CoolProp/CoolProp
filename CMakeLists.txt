@@ -57,6 +57,14 @@ option (BUILD_TESTING
         "Enable testing for this given builder" 
         OFF)
 
+option (FORCE_BITNESS_32
+       "Force a 32bit build regardless of the host"
+       OFF)
+
+option (FORCE_BITNESS_64
+       "Force a 64bit build regardless of the host"
+       OFF)
+        
 #######################################
 #         FIND ALL SOURCES            #
 #-------------------------------------#
@@ -124,6 +132,12 @@ else()
     SET(BITNESS "32")
   endif()
 endif()
+
+IF(FORCE_BITNESS_32)
+  SET(BITNESS "32")
+ELSEIF(FORCE_BITNESS_64)
+  SET(BITNESS "64")
+ENDIF()
 
 #######################################
 #         MAKE ARTIFACTS              #
