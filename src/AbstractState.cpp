@@ -172,6 +172,9 @@ double AbstractState::trivial_keyed_output(int key)
         return Tmax();
 	case iP_max:
 		return pmax();
+    case iP_min:
+    case iP_triple:
+        return this->p_triple();
     case iT_reducing:
         return get_reducing_state().T;
     case irhomolar_reducing:
@@ -184,8 +187,7 @@ double AbstractState::trivial_keyed_output(int key)
         return this->rhomolar_critical();
     case irhomass_critical:
         return this->rhomolar_critical()*molar_mass();
-    case iP_triple:
-        return this->p_triple();
+    
 	default:
 		throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));
 	}

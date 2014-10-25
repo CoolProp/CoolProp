@@ -126,6 +126,7 @@ public:
 		index_map.insert(std::pair<std::string, int>("Tmin", iT_min));
 		index_map.insert(std::pair<std::string, int>("Tmax", iT_max));
 		index_map.insert(std::pair<std::string, int>("pmax", iP_max));
+        index_map.insert(std::pair<std::string, int>("pmin", iP_min));
         index_map.insert(std::pair<std::string, int>("molemass", imolar_mass));
         index_map.insert(std::pair<std::string, int>("A", ispeed_sound));
 
