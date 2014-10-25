@@ -57,6 +57,14 @@ option (BUILD_TESTING
         "Enable testing for this given builder" 
         OFF)
 
+option (FORCE_BITNESS_32
+       "Force a 32bit build regardless of the host"
+       OFF)
+
+option (FORCE_BITNESS_64
+       "Force a 64bit build regardless of the host"
+       OFF)
+        
 #######################################
 #         FIND ALL SOURCES            #
 #-------------------------------------#
@@ -125,6 +133,28 @@ else()
   endif()
 endif()
 
+IF(MSVC AND (FORCE_BITNESS_32 OR FORCE_BITNESS_64))
+  MESSAGE(STATUS "You cannot force a certain bitness for Visual Studio, use the generator settings for this purpose." )
+  MESSAGE(STATUS "Pass '-G \"Visual Studio 10 2010 Win64\"' to CMake to make a 64bit binary using VS2010." )
+  MESSAGE(STATUS "Pass '-G \"Visual Studio 10 2010\"' to CMake to make a 32bit binary using VS2010." )
+  MESSAGE(STATUS "Pass '-G \"Visual Studio 9 2008 Win64\"' to CMake to make a 64bit binary using VS2008." )
+  MESSAGE(STATUS "Pass '-G \"Visual Studio 9 2008\"' to CMake to make a 32bit binary using VS2008." )
+  MESSAGE(FATAL_ERROR "Fix that and try again...")  
+ENDIF()
+
+IF(FORCE_BITNESS_32)
+  SET(BITNESS "32")
+ELSEIF(FORCE_BITNESS_64)
+  SET(BITNESS "64")
+ENDIF()
+
+if (!MSVC)
+  #set_target_properties(${app_name} PROPERTIES COMPILE_FLAGS "-m${BITNESS}" LINK_FLAGS "-m${BITNESS}")
+  #set_target_properties(${app_name} PROPERTIES                        COMPILE_FLAGS "-m${BITNESS}" LINK_FLAGS "-m${BITNESS}")
+  set_target_properties(${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-m${BITNESS}")
+  set_target_properties(${app_name} PROPERTIES APPEND_STRING PROPERTY    LINK_FLAGS "-m${BITNESS}") 
+endif()
+
 #######################################
 #         MAKE ARTIFACTS              #
 #-------------------------------------#
@@ -149,6 +179,8 @@ if (COOLPROP_STATIC_LIBRARY_MODULE OR COOLPROP_STATIC_LIBRARY OR COOLPROP_EXTERN
     add_dependencies (${app_name} generate_headers)
     install (TARGETS ${app_name} DESTINATION static_library/${CMAKE_SYSTEM_NAME})
 endif()
+
+###      Process some more options  ###
 
 if (COOLPROP_EXTERNC_STATIC_LIBRARY)
   set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC")
