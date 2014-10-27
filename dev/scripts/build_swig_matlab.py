@@ -1,7 +1,15 @@
 import subprocess, wget, os, shutil, sys, glob
 
+if '--windows' in sys.argv:
+    compilers = "CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc "
+    extra = ' LDFLAGS="-static-libgcc -static-libstdc++ -static"'
+else:
+    compilers = ''
+    extra = ''
+commons = dict(shell = True, stdout = sys.stdout, stderr = sys.stderr)
+
 if not os.path.exists('swig-matlab'):
-	subprocess.call('git clone https://github.com/KrisThielemans/swig swig-matlab'**commons)
+	subprocess.call('git clone https://github.com/KrisThielemans/swig swig-matlab', **commons)
 else:
 	subprocess.call('git pull', shell = True, cwd = 'swig-matlab', stdout = sys.stdout, stderr = sys.stderr)
 
@@ -12,14 +20,6 @@ if not glob.glob('pcre-*.tar.gz'):
             wget.download('ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-'+rev+'.tar.gz'); break
         except:
             pass
-        
-if '--windows' in sys.argv:
-    compilers = "CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc "
-    extra = ' LDFLAGS="-static-libgcc -static-libstdc++ -static"'
-else:
-    compilers = ''
-    extra = ''
-commons = dict(shell = True, stdout = sys.stdout, stderr = sys.stderr)
 
 subprocess.check_call(compilers+'Tools/pcre-build.sh', **commons)
 subprocess.check_call(compilers+'./autogen.sh', **commons)
