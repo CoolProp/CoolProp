@@ -1,7 +1,7 @@
 import subprocess, wget, os, shutil, sys, glob
 
 if not os.path.exists('swig-matlab'):
-	subprocess.call('git clone https://github.com/KrisThielemans/swig swig-matlab', shell = True, stdout = sys.stdout, stderr = sys.stderr)
+	subprocess.call('git clone https://github.com/KrisThielemans/swig swig-matlab'**commons)
 else:
 	subprocess.call('git pull', shell = True, cwd = 'swig-matlab', stdout = sys.stdout, stderr = sys.stderr)
 
@@ -13,10 +13,23 @@ if not glob.glob('pcre-*.tar.gz'):
         except:
             pass
         
-subprocess.check_call('Tools/pcre-build.sh', shell = True, stdout = sys.stdout, stderr = sys.stderr)
-subprocess.check_call('./autogen.sh', shell = True, stdout = sys.stdout, stderr = sys.stderr)
-subprocess.check_call('./configure --disable-ccache --with-matlab=/usr/local/MATLAB/R2014a --prefix=${PWD}/swig-matlab-bin', shell = True, stdout = sys.stdout, stderr = sys.stderr)
-subprocess.check_call('make', shell = True, stdout = sys.stdout, stderr = sys.stderr)
-subprocess.check_call('make install', shell = True, stdout = sys.stdout, stderr = sys.stderr)
-subprocess.check_call('cp swig swig3.0', shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd='swig-matlab-bin/bin')
-subprocess.check_call('cp swig swig2.0', shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd='swig-matlab-bin/bin')
+if '--windows' in sys.argv:
+    compilers = "CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc "
+    extra = ' LDFLAGS="-static-libgcc -static-libstdc++ -static"'
+else:
+    compilers = ''
+    extra = ''
+commons = dict(shell = True, stdout = sys.stdout, stderr = sys.stderr)
+
+subprocess.check_call(compilers+'Tools/pcre-build.sh', **commons)
+subprocess.check_call(compilers+'./autogen.sh', **commons)
+subprocess.check_call(compilers+'./configure --disable-ccache --with-matlab=/usr/local/MATLAB/R2014a --prefix=${PWD}/swig-matlab-bin' + extra, **commons)
+subprocess.check_call(compilers+'make', **commons)
+subprocess.check_call(compilers+'make install', **commons)
+
+if '--windows' in sys.argv:
+    subprocess.check_call('cp swig.exe swig3.0.exe', cwd='swig-matlab-bin/bin', **commons)
+    subprocess.check_call('cp swig.exe swig2.0.exe', cwd='swig-matlab-bin/bin', **commons)
+else:
+    subprocess.check_call('cp swig swig3.0', cwd='swig-matlab-bin/bin', **commons)
+    subprocess.check_call('cp swig swig2.0', cwd='swig-matlab-bin/bin', **commons)
