@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
-import os.path, glob, subprocess, sys, time
+import os.path, glob, subprocess, sys, time, datetime, pytz
 #
 if len(sys.argv) < 2:
     full_rebuild = False
@@ -27,20 +27,29 @@ touch_file   = os.path.abspath(os.path.join(script_dir,'last_run'))
 cur_time = time.time()
 fil_time = get_ftime(touch_file)
 #
-reg_hour   = time.strftime("%H")
-reg_minute = time.strftime("%M")
-sch_hour   = 12 #scheduled hour = 3am Boulder = 12pm CPH
-sch_minute =  7 #scheduled minute = 7 past
-sch_delta  = 10 #delta for scheduling
+# Static execution time
+#reg_hour   = time.strftime("%H")
+#reg_minute = time.strftime("%M")
+#sch_hour   = 12 #scheduled hour = 3am Boulder = 12pm CPH
+#sch_minute =  7 #scheduled minute = 7 past
 #
-lim_days = 0.95
+# Dynamically calculated execution (includes daylight saving time etc
+masterTime = pytz.timezone('US/Pacific')
+#slaveTime  = pytz.timezone('Europe/Copenhagen')
+now_master = datetime.datetime.now(masterTime)
+run_master = datetime.datetime.strptime("03:00:00", '%H:%M:%S')
+#
+now_master     = datetime.time(now_master.hour, now_master.minute  , now_master.second)
+run_master     = datetime.time(run_master.hour, run_master.minute  , run_master.second)
+run_master_end = datetime.time(run_master.hour, run_master.minute+5, run_master.second)
+#
+lim_days = 0.90
 lim_time = cur_time - 60*60*24*lim_days # seconds
 #
-if int(sch_hour)==int(reg_hour) and \
-    int(sch_minute+0.0*sch_delta) > int(reg_minute) and \
-    int(sch_minute-1.0*sch_delta) < int(reg_minute) and \
-    not full_rebuild:
-    print "This is a scheduled rebuild at {0:02d}:{1:02d}.".format(sch_hour,sch_minute)
+if now_master >= run_master     and \
+   now_master <= run_master_end and \
+   not full_rebuild:
+    print "This is a scheduled rebuild at {0}.".format(run_master)
     if fil_time < lim_time: full_rebuild = True
     else: print "It looks like the files have been rebuilt during the last day."
 #
