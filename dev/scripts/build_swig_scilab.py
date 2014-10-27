@@ -12,14 +12,15 @@ if not glob.glob('pcre-*.tar.gz'):
         except:
             pass
 
-if '--windows' is in sys.argv:
+if '--windows' not 	in sys.argv:
     env = {}
     prefix = '--prefix=${PWD}/swig-scilab-win32-bin'
 else:
-    env = dict(CC = 'i686-w64-mingw32-g++', CC = 'i686-w64-mingw32-gcc')
+    env = dict(CXX = 'i686-w64-mingw32-g++', CC = 'i686-w64-mingw32-gcc')
     prefix = '--prefix=${PWD}/swig-scilab-bin'
 commons = dict(shell = True, stdout = sys.stdout, stderr = sys.stderr, env = env)
 subprocess.check_call('Tools/pcre-build.sh', **commons)
+print os.path.abspath(os.curdir)
 subprocess.check_call('./autogen.sh', **commons)
 subprocess.check_call('./configure --disable-ccache --with-scilab-inc=${SCILAB_HOME}/include --with-scilab=${SCILAB_HOME}/bin/scilab-cli'+' '+prefix, **commons)
 subprocess.check_call('make', **commons)
