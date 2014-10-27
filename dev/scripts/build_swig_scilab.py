@@ -12,18 +12,23 @@ if not glob.glob('pcre-*.tar.gz'):
         except:
             pass
 
-if '--windows' not 	in sys.argv:
-    env = {}
-    prefix = '--prefix=${PWD}/swig-scilab-win32-bin'
+prefix = '--prefix=${PWD}/swig-scilab-bin'
+if '--windows' in sys.argv:
+    compilers = "CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc "
+    prefix += 'LDFLAGS="-static-libgcc -static-libstdc++ -static"'
 else:
-    env = dict(CXX = 'i686-w64-mingw32-g++', CC = 'i686-w64-mingw32-gcc')
-    prefix = '--prefix=${PWD}/swig-scilab-bin'
-commons = dict(shell = True, stdout = sys.stdout, stderr = sys.stderr, env = env)
-subprocess.check_call('Tools/pcre-build.sh', **commons)
-print os.path.abspath(os.curdir)
-subprocess.check_call('./autogen.sh', **commons)
-subprocess.check_call('./configure --disable-ccache --with-scilab-inc=${SCILAB_HOME}/include --with-scilab=${SCILAB_HOME}/bin/scilab-cli'+' '+prefix, **commons)
-subprocess.check_call('make', **commons)
+    compilers = ''
+commons = dict(shell = True, stdout = sys.stdout, stderr = sys.stderr)
+
+subprocess.check_call(compilers+'Tools/pcre-build.sh', **commons)
+subprocess.check_call(compilers+'./autogen.sh', **commons)
+subprocess.check_call(compilers+'./configure --disable-ccache --with-scilab-inc=${SCILAB_HOME}/include --with-scilab=${SCILAB_HOME}/bin/scilab-cli'+' '+prefix, **commons)
+subprocess.check_call(compilers+'make', **commons)
 subprocess.check_call('make install', **commons)
-subprocess.check_call('cp swig swig3.0', cwd='swig-scilab-bin/bin', **commons)
-subprocess.check_call('cp swig swig2.0', cwd='swig-scilab-bin/bin', **commons)
+
+if '--windows' in sys.argv:
+    subprocess.check_call('copy swig.exe swig3.0.exe', cwd='swig-scilab-bin/bin', **commons)
+    subprocess.check_call('copy swig.exe swig2.0.exe', cwd='swig-scilab-bin/bin', **commons)
+else:
+    subprocess.check_call('cp swig swig3.0', cwd='swig-scilab-bin/bin', **commons)
+    subprocess.check_call('cp swig swig2.0', cwd='swig-scilab-bin/bin', **commons)
