@@ -25,7 +25,7 @@ if not glob.glob('pcre-*.tar.gz'):
 
 subprocess.check_call('Tools/pcre-build.sh'+compilers+host, **commons)
 subprocess.check_call(compilers+'./autogen.sh', **commons)
-subprocess.check_call('./configure --disable-ccache --with-matlab=/usr/local/MATLAB/R2014a --prefix=${PWD}/swig-matlab-bin' + extra + compilers, **commons)
+subprocess.check_call('./configure --disable-ccache --with-matlab=/usr/local/MATLAB/R2014a --prefix=${PWD}/swig-matlab-bin' + extra + compilers+host, **commons)
 subprocess.check_call(compilers+'make', **commons)
 subprocess.check_call(compilers+'make install', **commons)
 

@@ -24,7 +24,7 @@ commons = dict(shell = True, stdout = sys.stdout, stderr = sys.stderr)
 
 subprocess.check_call('Tools/pcre-build.sh'+compilers+host, **commons)
 subprocess.check_call(compilers+'./autogen.sh', **commons)
-subprocess.check_call('./configure --disable-ccache --with-scilab-inc=${SCILAB_HOME}/include --with-scilab=${SCILAB_HOME}/bin/scilab-cli'+' '+prefix+compilers, **commons)
+subprocess.check_call('./configure --disable-ccache --with-scilab-inc=${SCILAB_HOME}/include --with-scilab=${SCILAB_HOME}/bin/scilab-cli'+' '+prefix+compilers+host, **commons)
 subprocess.check_call(compilers+'make', **commons)
 subprocess.check_call(compilers+'make install', **commons)
 
