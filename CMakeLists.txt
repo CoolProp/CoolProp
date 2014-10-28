@@ -585,6 +585,8 @@ if (COOLPROP_SCILAB_SWIG_MODULE)
   SWIG_ADD_MODULE(CoolProp scilab ${I_FILE} ${APP_SOURCES})
 
   add_dependencies (CoolProp generate_headers)
+  
+  install (TARGETS ${app_name} DESTINATION "${CMAKE_INSTALL_PREFIX}/Scilab/${CMAKE_SYSTEM_NAME}_${BITNESS}bit")
 
 endif()
 
