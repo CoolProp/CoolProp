@@ -2,10 +2,12 @@ import subprocess, wget, os, shutil, sys, glob
 
 if '--windows' in sys.argv:
     compilers = " CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc "
+    host = " --host=x86_64-unknown-linux-gnu "
     extra = ' LDFLAGS="-static-libgcc -static-libstdc++ -static"'
 else:
     compilers = ''
     extra = ''
+    host = ''
 commons = dict(shell = True, stdout = sys.stdout, stderr = sys.stderr)
 
 if not os.path.exists('swig-matlab'):
@@ -21,9 +23,9 @@ if not glob.glob('pcre-*.tar.gz'):
         except:
             pass
 
-subprocess.check_call('Tools/pcre-build.sh'+compilers, **commons)
+subprocess.check_call('Tools/pcre-build.sh'+compilers+host, **commons)
 subprocess.check_call(compilers+'./autogen.sh', **commons)
-subprocess.check_call(compilers+'./configure --disable-ccache --with-matlab=/usr/local/MATLAB/R2014a --prefix=${PWD}/swig-matlab-bin' + extra, **commons)
+subprocess.check_call('./configure --disable-ccache --with-matlab=/usr/local/MATLAB/R2014a --prefix=${PWD}/swig-matlab-bin' + extra + compilers, **commons)
 subprocess.check_call(compilers+'make', **commons)
 subprocess.check_call(compilers+'make install', **commons)
 
