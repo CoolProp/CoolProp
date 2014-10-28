@@ -21,12 +21,13 @@ Target                                        Operating Systems            Notes
 :ref:`Modelica <Modelica>`                    linux, OSX, win
 :ref:`PHP <PHP>`                              linux, OSX, win              Mostly used on linux
 :ref:`Javascript <Javascript>`                cross-platform               Also works in all internet browsers
+:ref:`Labview <Labview>`                      windows only               
 :ref:`Maple <Maple>`                          linux, OSX, win                     
 :ref:`Mathematica <Mathematica>`
 :ref:`FORTRAN <FORTRAN>`                      linux, OSX, win
 :ref:`EES <EES>`                              windows only
 :ref:`Microsoft Excel <Excel>`                windows only
-:ref:`LibreOffice <LibreOffice>`              windows only
+:ref:`LibreOffice <LibreOffice>`              windows, linux
 =======================================       ===========================  =======================================
 
 .. _wrapper_common_prereqs:
@@ -89,6 +90,7 @@ OSX should come with a c++ compiler (clang), for git and cmake your best bet is 
     EES/index.rst
     Java/index.rst
     Javascript/index.rst
+    Labview/index.rst
     Python/index.rst
     LibreOffice/index.rst
     Excel/index.rst
