@@ -813,7 +813,7 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
         throw ValueError(format("reference state string is invalid: [%s]",reference_state.c_str()));
 	}
 }
-int set_reference_stateD(std::string Ref, double T, double rhomolar, double h0, double s0)
+void set_reference_stateD(std::string Ref, double T, double rhomolar, double h0, double s0)
 {
     shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;
     std::vector<std::string> _comps(1, Ref);

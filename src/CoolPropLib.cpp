@@ -80,14 +80,28 @@ EXPORT_CODE long CONVENTION redirect_stdout(const char* file){
 	freopen(file, "a+", stdout);
 	return 0;
 }
-//EXPORT_CODE int CONVENTION set_reference_stateS(const char *Ref, const char *reference_state)
-//{
-//	return set_reference_stateS(std::string(Ref), std::string(reference_state));
-//}
-//EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, double rho, double h0, double s0)
-//{
-//	return set_reference_stateD(std::string(Ref), T, rho, h0, s0);
-//}
+EXPORT_CODE int CONVENTION set_reference_stateS(const char *Ref, const char *reference_state)
+{
+    std::string _Ref = Ref, _reference_state = reference_state;
+    try{
+        CoolProp::set_reference_stateS(_Ref, _reference_state);
+        return true;
+    }
+    catch(std::exception &e){
+        return false;
+    }
+}
+EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, double rho, double h0, double s0)
+{
+    try{
+        CoolProp::set_reference_stateD(std::string(Ref), T, rho, h0, s0);
+        return true;
+    }
+    catch(std::exception &e){
+        return false;
+    }
+    
+}
 
 // All the function interfaces that point to the single-input Props function
 EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output){
