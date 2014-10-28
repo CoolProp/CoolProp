@@ -222,9 +222,6 @@ if __name__=='__main__':
     
     if USE_CYTHON:
         ext_modules = cythonize(ext_modules)
-    
-    # Add some dependencies
-    install_requires  = ['numpy','matplotlib']
         
     try:
         setup (name = 'CoolProp',
@@ -233,7 +230,6 @@ if __name__=='__main__':
                author_email='ian.h.bell@gmail.com',
                url='http://www.coolprop.org',
                description = """Open-source thermodynamic and transport properties database""",
-               install_requires = install_requires,
                packages = find_packages(),
                ext_modules = ext_modules,
                package_dir = {'CoolProp':'CoolProp',},
