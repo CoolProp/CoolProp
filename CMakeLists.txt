@@ -613,6 +613,11 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   
   add_definitions(/DMATLAB_MEX_FILE) #define matlab macros
   add_definitions(/DMX_COMPAT_32)
+  
+  add_custom_command(TARGET CoolPropMATLAB_wrap
+                     POST_BUILD
+                     COMMAND 7z a "+CoolProp.7z" "+CoolProp"
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
   if(WIN32) # 32-bit or 64-bit mex
     if (CMAKE_CL_64)
@@ -621,13 +626,23 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
         SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES SUFFIX .mexw32)
     endif()
   else()
-    if (CMAKE_SIZEOF_VOID_P MATCHES "8")
-        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
+    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+        if (${BITNESS} EQUAL "32")
+            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexmaci32 PREFIX "")
+        elseif((${BITNESS} EQUAL "64"))
+            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexmaci64 PREFIX "")
+        endif()
     else()
-        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
+        if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
+        else()
+            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
+        endif()
     endif()
   endif()
   add_dependencies (CoolPropMATLAB_wrap generate_headers)
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
+  install (TARGETS CoolPropMATLAB_wrap DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
 endif()
 
 if (COOLPROP_MATLAB_MODULE)
