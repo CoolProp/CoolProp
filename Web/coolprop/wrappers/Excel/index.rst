@@ -5,8 +5,8 @@
 Excel Wrapper
 *************
 
-Pre-compiled Binaries
-=====================
+Pre-compiled Binaries for windows
+=================================
 Pre-compiled release binaries can be downloaded from :sfdownloads:`MicrosoftExcel`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`MicrosoftExcel`.
 
 Download all the files. The basic protocol is:
@@ -24,6 +24,26 @@ Part 2:
 5. Browse to the file CoolProp.xlam you downloaded, select it
 6. Make sure the CoolProp Add-in is selected.
 7. Open the file TestExcel.xlsx and try to re-evaluate one of the cells - they should work now
+
+Pre-compiled Binaries for OSX
+=============================
+
+Part 1:
+^^^^^^^
+Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/32bit__cdecl_calling_convention/`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`shared_library/Darwin/32bit__cdecl_calling_convention/`. Place the downloaded file called libCoolProp.dylib in the ${HOME}/lib folder (make this folder if needed).
+
+Part 2:
+^^^^^^^
+Download the xlam from :sfdownloads:`MicrosoftExcel` or the development version from :bbbinaries:`MicrosoftExcel`.
+
+1. Open Excel 2011 for Mac
+2. Go to the menu Tools-->Add-Ins
+3. Click the "Select..." button
+4. Browse to the file CoolProp.xlam you downloaded, select it
+5. Make sure the CoolProp Add-in is selected.
+6. Add this code to a cell - it should work::
+
+    =PropsSI("T","P",101325,"Q",0,"Water")
 
 User-compiled Binaries
 ======================
