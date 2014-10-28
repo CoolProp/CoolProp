@@ -5,6 +5,11 @@
 Labview Wrapper
 ***************
 
+.. contents:: :depth: 2
+
+Pre-compiled Binaries
+=====================
+
 Shared library
 --------------
 
@@ -13,16 +18,21 @@ You will need to download the release shared library for windows from :sfdownloa
 Available libraries
 -------------------
 
-:downloads:`CoolProp.vi`: 
+:download:`CoolProp.vi` : 
 Basic Library to get the properties from CoolProp.dll
 
-:download:`CoolProp.llb`:
+:download:`CoolProp.llb` :
 More advanced library, allowing to compute thermodynamic diagrams, real-time calculation of properties,
 measurement processing, etc.  There is :download:`additional information <CoolProp & Labview.docx>` available for the use of the llb library
+
+User-Compiled Binaries
+======================
 
 *******
 VxWorks
 *******
+
+If you want to compile binaries for PowerPC architecture (like the VXWorks target), follow these instructions to set up a toolchain
 
 Use pre-built binaries from FirstForge
 --------------------------------------
