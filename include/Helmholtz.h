@@ -1048,7 +1048,7 @@ class IdealHelmholtzContainer
     
 public:
     IdealHelmholtzLead Lead;
-    IdealHelmholtzEnthalpyEntropyOffset EnthalpyEntropyOffset;
+    IdealHelmholtzEnthalpyEntropyOffset EnthalpyEntropyOffsetCore, EnthalpyEntropyOffset;
     IdealHelmholtzLogTau LogTau;
     IdealHelmholtzPower Power;
     IdealHelmholtzPlanckEinsteinGeneralized PlanckEinstein;
@@ -1059,6 +1059,7 @@ public:
     long double base(const long double &tau, const long double &delta)
     {
         return (Lead.base(tau, delta) + EnthalpyEntropyOffset.base(tau, delta)
+                + EnthalpyEntropyOffsetCore.base(tau, delta)
                 + LogTau.base(tau, delta) + Power.base(tau, delta) 
                 + PlanckEinstein.base(tau, delta)
                 + CP0Constant.base(tau, delta) + CP0PolyT.base(tau, delta)
@@ -1067,6 +1068,7 @@ public:
     long double dDelta(const long double &tau, const long double &delta)
     {
         return (Lead.dDelta(tau, delta) + EnthalpyEntropyOffset.dDelta(tau, delta)
+                + EnthalpyEntropyOffsetCore.dDelta(tau, delta)
                 + LogTau.dDelta(tau, delta) + Power.dDelta(tau, delta) 
                 + PlanckEinstein.dDelta(tau, delta)
                 + CP0Constant.dDelta(tau, delta) + CP0PolyT.dDelta(tau, delta)
@@ -1075,6 +1077,7 @@ public:
     long double dTau(const long double &tau, const long double &delta)
     {
         return (Lead.dTau(tau, delta) + EnthalpyEntropyOffset.dTau(tau, delta)
+                + EnthalpyEntropyOffsetCore.dTau(tau, delta)
                 + LogTau.dTau(tau, delta) + Power.dTau(tau, delta) 
                 + PlanckEinstein.dTau(tau, delta)
                 + CP0Constant.dTau(tau, delta) + CP0PolyT.dTau(tau, delta)
@@ -1083,6 +1086,7 @@ public:
     long double dDelta2(const long double &tau, const long double &delta)
     {
         return (Lead.dDelta2(tau, delta) + EnthalpyEntropyOffset.dDelta2(tau, delta)
+                + EnthalpyEntropyOffsetCore.dDelta2(tau, delta)
                 + LogTau.dDelta2(tau, delta) + Power.dDelta2(tau, delta) 
                 + PlanckEinstein.dDelta2(tau, delta)
                 + CP0Constant.dDelta2(tau, delta) + CP0PolyT.dDelta2(tau, delta)
@@ -1091,6 +1095,7 @@ public:
     long double dDelta_dTau(const long double &tau, const long double &delta)
     {
         return (Lead.dDelta_dTau(tau, delta) + EnthalpyEntropyOffset.dDelta_dTau(tau, delta)
+                + EnthalpyEntropyOffsetCore.dDelta_dTau(tau, delta)
                 + LogTau.dDelta_dTau(tau, delta) + Power.dDelta_dTau(tau, delta) 
                 + PlanckEinstein.dDelta_dTau(tau, delta)
                 + CP0Constant.dDelta_dTau(tau, delta) + CP0PolyT.dDelta_dTau(tau, delta)
@@ -1099,6 +1104,7 @@ public:
     long double dTau2(const long double &tau, const long double &delta)
     {
         return (Lead.dTau2(tau, delta) + EnthalpyEntropyOffset.dTau2(tau, delta)
+                + EnthalpyEntropyOffsetCore.dTau2(tau, delta)
                 + LogTau.dTau2(tau, delta) + Power.dTau2(tau, delta) 
                 + PlanckEinstein.dTau2(tau, delta)
                 + CP0Constant.dTau2(tau, delta) + CP0PolyT.dTau2(tau, delta)
@@ -1107,6 +1113,7 @@ public:
     long double dDelta3(const long double &tau, const long double &delta) 
     {
         return (Lead.dDelta3(tau, delta) + EnthalpyEntropyOffset.dDelta3(tau, delta)
+                + EnthalpyEntropyOffsetCore.dDelta3(tau, delta)
                 + LogTau.dDelta3(tau, delta) + Power.dDelta3(tau, delta) 
                 + PlanckEinstein.dDelta3(tau, delta)
                 + CP0Constant.dDelta3(tau, delta) + CP0PolyT.dDelta3(tau, delta)
@@ -1115,6 +1122,7 @@ public:
     long double dDelta2_dTau(const long double &tau, const long double &delta)
     {
         return (Lead.dDelta2_dTau(tau, delta) + EnthalpyEntropyOffset.dDelta2_dTau(tau, delta)
+                + EnthalpyEntropyOffsetCore.dDelta2_dTau(tau, delta)
                 + LogTau.dDelta2_dTau(tau, delta) + Power.dDelta2_dTau(tau, delta) 
                 + PlanckEinstein.dDelta2_dTau(tau, delta)
                 + CP0Constant.dDelta2_dTau(tau, delta) + CP0PolyT.dDelta2_dTau(tau, delta)
@@ -1123,6 +1131,7 @@ public:
     long double dDelta_dTau2(const long double &tau, const long double &delta)
     {
         return (Lead.dDelta_dTau2(tau, delta) + EnthalpyEntropyOffset.dDelta_dTau2(tau, delta)
+                + EnthalpyEntropyOffsetCore.dDelta_dTau2(tau, delta)
                 + LogTau.dDelta_dTau2(tau, delta) + Power.dDelta_dTau2(tau, delta) 
                 + PlanckEinstein.dDelta_dTau2(tau, delta)
                 + CP0Constant.dDelta_dTau2(tau, delta) + CP0PolyT.dDelta_dTau2(tau, delta)
@@ -1131,6 +1140,7 @@ public:
     long double dTau3(const long double &tau, const long double &delta)
     {
         return (Lead.dTau3(tau, delta) + EnthalpyEntropyOffset.dTau3(tau, delta)
+                + EnthalpyEntropyOffsetCore.dTau3(tau, delta)
                 + LogTau.dTau3(tau, delta) + Power.dTau3(tau, delta) 
                 + PlanckEinstein.dTau3(tau, delta)
                 + CP0Constant.dTau3(tau, delta) + CP0PolyT.dTau3(tau, delta)

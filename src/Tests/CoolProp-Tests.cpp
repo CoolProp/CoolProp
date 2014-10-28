@@ -1264,45 +1264,80 @@ TEST_CASE("Triple point checks", "[triple_point]")
     }
 }
 
-//TEST_CASE("Test that states agree with CoolProp", "[states]")
-//{
-//    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
-//    for (std::size_t i = 0; i < fluids.size(); ++i) 
-//    {
-//        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS",fluids[i]));
-//        
-//        CoolProp::SimpleState &triple_liquid = AS->get_state("triple_liquid");
-//        CoolProp::SimpleState &triple_vapor = AS->get_state("triple_vapor");
-//        
-//        // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
-//        std::ostringstream ss1;
-//        ss1 << "Check state for triple_liquid for " << fluids[i];
-//        SECTION(ss1.str(),"")
-//        {
-//            std::string note = "The enthalpy and entropy are hardcoded in the fluid JSON files.  They MUST agree with the values calculated by the EOS";
-//            AS->update(CoolProp::DmolarT_INPUTS, hs_anchor.rhomolar, hs_anchor.T);
-//            CAPTURE(hs_anchor.hmolar);
-//            CAPTURE(hs_anchor.smolar);
-//            double EOS_hmolar = AS->hmolar();
-//            double EOS_smolar = AS->smolar();
-//            CHECK( std::abs(EOS_hmolar - hs_anchor.hmolar) < 1e-3);
-//            CHECK( std::abs(EOS_smolar - hs_anchor.smolar) < 1e-3);
-//        }   
-//        
-//        // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
-//        std::ostringstream ss2;
-//        ss2 << "Check state for triple_vapor for " << fluids[i];
-//        SECTION(ss2.str(),"")
-//        {
-//            std::string note = "The enthalpy and entropy are hardcoded in the fluid JSON files.  They MUST agree with the values calculated by the EOS";
-//            AS->update(CoolProp::DmolarT_INPUTS, hs_anchor.rhomolar, hs_anchor.T);
-//            CAPTURE(hs_anchor.hmolar);
-//            CAPTURE(hs_anchor.smolar);
-//            double EOS_hmolar = AS->hmolar();
-//            double EOS_smolar = AS->smolar();
-//            CHECK( std::abs(EOS_hmolar - hs_anchor.hmolar) < 1e-3);
-//            CHECK( std::abs(EOS_smolar - hs_anchor.smolar) < 1e-3);
-//        }   
-//    }
-//}
+TEST_CASE("Test that states agree with CoolProp", "[reference_states]")
+{
+    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+    for (std::size_t i = 0; i < fluids.size(); ++i) 
+    {
+        std::vector<std::string> fl(1,fluids[i]);
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(fl));
+        std::string ref_state[3] = {"IIR","ASHRAE","NBP"};
+        for (std::size_t j = 0; j < 3; ++j){
+        
+            // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+            std::ostringstream ss1;
+            ss1 << "Check state for hs_anchor for " << fluids[i] << " for reference state " << ref_state[j];
+            SECTION(ss1.str(),"")
+            {
+                // First reset the reference state
+                set_reference_stateS(fluids[i], "RESET");
+                try{
+                    // Then try to set to the specified reference state
+                    set_reference_stateS(fluids[i], ref_state[j]);
+                }
+                catch(std::exception &e){
+                    // Then set the reference state back to the default
+                    set_reference_stateS(fluids[i],"RESET");
+                    break;
+                }
+                // Get the hs_anchor values
+                CoolProp::SimpleState hs_anchor = HEOS->calc_state("hs_anchor");
+                HEOS->update(CoolProp::DmolarT_INPUTS, hs_anchor.rhomolar, hs_anchor.T);
+                CAPTURE(hs_anchor.hmolar);
+                CAPTURE(hs_anchor.smolar);
+                CHECK(ValidNumber(hs_anchor.hmolar));
+                CHECK(ValidNumber(hs_anchor.smolar));
+                double EOS_hmolar = HEOS->hmolar();
+                double EOS_smolar = HEOS->smolar();
+                CHECK( std::abs(EOS_hmolar - hs_anchor.hmolar) < 1e-3);
+                CHECK( std::abs(EOS_smolar - hs_anchor.smolar) < 1e-3);
+                // Then set the reference state back to the default
+                set_reference_stateS(fluids[i],"RESET");
+            }
+            std::ostringstream ss2;
+            ss2 << "Check state for reducing for " << fluids[i] << " for reference state " << ref_state[j];
+            SECTION(ss2.str(),"")
+            {
+                // First reset the reference state
+                set_reference_stateS(fluids[i], "RESET");
+                try{
+                    // Then try to set to the specified reference state
+                    set_reference_stateS(fluids[i], ref_state[j]);
+                    if (!ValidNumber(HEOS->calc_state("reducing").hmolar)){
+                        throw ValueError("hmolar is not valid number");
+                    }
+                }
+                catch(std::exception &e){
+                    // Then set the reference state back to the default
+                    set_reference_stateS(fluids[i],"RESET");
+                    break;
+                }
+                // Get the reducing values
+                CoolProp::SimpleState reducing = HEOS->calc_state("reducing");
+                HEOS->update(CoolProp::DmolarT_INPUTS, reducing.rhomolar, reducing.T);
+                CHECK(ValidNumber(reducing.hmolar));
+                CHECK(ValidNumber(reducing.smolar));
+                CAPTURE(reducing.hmolar);
+                CAPTURE(reducing.smolar);
+                double EOS_hmolar = HEOS->hmolar();
+                double EOS_smolar = HEOS->smolar();
+                CHECK( std::abs(EOS_hmolar - reducing.hmolar) < 1e-3);
+                CHECK( std::abs(EOS_smolar - reducing.smolar) < 1e-3);
+                // Then set the reference state back to the default
+                set_reference_stateS(fluids[i],"RESET");
+            }   
+        }
+    }
+    
+}
 #endif

@@ -156,7 +156,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         
 		// Check limits
 		if (!is_in_closed_range(Tmin_sat, Tmax_sat, static_cast<long double>(HEOS._T))){
-			throw ValueError(format("Temperature to QT_flash [%6g K] must be in range [%8g K, %8g K]",HEOS._T, Tmin_sat, Tmax_sat));
+			throw ValueError(format("Temperature to QT_flash [%6g K] must be in range [%8Lg K, %8Lg K]",HEOS._T, Tmin_sat, Tmax_sat));
 		}
         
         // If exactly(ish) at the critical temperature, liquid and vapor have the critial density

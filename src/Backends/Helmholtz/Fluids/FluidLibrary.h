@@ -265,7 +265,7 @@ protected:
                 long double a1 = cpjson::get_double(contribution, "a1");
                 long double a2 = cpjson::get_double(contribution, "a2");
                 std::string reference = cpjson::get_string(contribution, "reference");
-                EOS.alpha0.EnthalpyEntropyOffset = IdealHelmholtzEnthalpyEntropyOffset(a1, a2, reference);
+                EOS.alpha0.EnthalpyEntropyOffsetCore = IdealHelmholtzEnthalpyEntropyOffset(a1, a2, reference);
             }
             else
             {

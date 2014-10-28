@@ -141,6 +141,11 @@ void HelmholtzEOSMixtureBackend::update_states(void)
     EOS.hs_anchor.hmolar = hmolar();
     EOS.hs_anchor.smolar = smolar();
     
+    // Calculate the new enthalpy and entropy values at the reducing state
+    update(DmolarT_INPUTS, EOS.reduce.rhomolar, EOS.reduce.T);
+    EOS.reduce.hmolar = hmolar();
+    EOS.reduce.smolar = smolar();
+    
     // Clear again just to be sure
     clear();
 }
@@ -156,6 +161,9 @@ const CoolProp::SimpleState & HelmholtzEOSMixtureBackend::calc_state(const std::
         }
         else if (!state.compare("max_sat_p")){
             return components[0]->pEOS->max_sat_p;
+        }
+        else if (!state.compare("reducing")){
+            return components[0]->pEOS->reduce;
         }
         else{
             throw ValueError(format("This state [%s] is invalid to calc_state",state.c_str()));
