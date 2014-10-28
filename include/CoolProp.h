@@ -135,13 +135,13 @@ You might want to start by looking at CoolProp.h
     */
 	void set_reference_stateS(std::string FluidName, std::string reference_state);
 
-	/// Set the reference state based on a thermodynamic state point
+	/// Set the reference state based on a thermodynamic state point specified by temperature and molar density
 	/// @param FluidName The name of the fluid
 	/// @param T Temperature at reference state [K]
-	/// @param rho Density at reference state [mol/m^3]
+	/// @param rhomolar Density at reference state [mol/m^3]
 	/// @param h0 Enthalpy at reference state [J/kg]
 	/// @param s0 Entropy at references state [J/kg/K]
-	//void set_reference_stateD(std::string FluidName, double T, double rho, double h0, double s0);
+	void set_reference_stateD(std::string FluidName, double T, double rhomolar, double h0, double s0);
     
     /// Return a string representation of the phase
 	/// @param Name1 The first state variable name, one of "T","D","H",etc.

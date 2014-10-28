@@ -813,27 +813,22 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
         throw ValueError(format("reference state string is invalid: [%s]",reference_state.c_str()));
 	}
 }
-//int set_reference_stateD(std::string Ref, double T, double rho, double h0, double s0)
-//{
-//	pFluid=Fluids.get_fluid(Ref);
-//	if (pFluid!=NULL)
-//	{
-//		CoolPropStateClassSI CPS(pFluid);
-//		CPS.update(iT,T,iD,rho);
-//		// Get current values for the enthalpy and entropy
-//		double h1 = CPS.h();
-//		double s1 = CPS.s();
-//		double deltah = h1-h0; // offset from given enthalpy in SI units
-//		double deltas = s1-s0; // offset from given enthalpy in SI units
-//		double delta_a1 = deltas/((8314.472));
-//		double delta_a2 = -deltah/((8314.472)*pFluid->reduce.T);
-//		pFluid->phi0list.push_back(new phi0_enthalpy_entropy_offset(delta_a1, delta_a2));
-//		return 0;
-//	}
-//	else{
-//		return -1;
-//	}
-//}
+int set_reference_stateD(std::string Ref, double T, double rhomolar, double h0, double s0)
+{
+    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;
+    std::vector<std::string> _comps(1, Ref);
+    HEOS.reset(new CoolProp::HelmholtzEOSMixtureBackend(_comps));
+    
+    HEOS->update(DmolarT_INPUTS, rhomolar, T);
+
+    // Get current values for the enthalpy and entropy
+    double deltah = HEOS->hmass() - h0; // offset from specified enthalpy in J/mol
+    double deltas = HEOS->smass() - s0; // offset from specified entropy in J/mol/K
+    double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
+    double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing_state().T);
+    HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "custom");
+    HEOS->update_states();
+}
 
 std::string get_BibTeXKey(std::string Ref, std::string key)
 {
