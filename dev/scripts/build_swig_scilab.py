@@ -14,15 +14,17 @@ if not glob.glob('pcre-*.tar.gz'):
 
 prefix = '--prefix=${PWD}/swig-scilab-bin'
 if '--windows' in sys.argv:
-    compilers = "CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc "
+    compilers = " CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc "
+    host = " --host=x86_64-unknown-linux-gnu "
     prefix += ' LDFLAGS="-static-libgcc -static-libstdc++ -static"'
 else:
     compilers = ''
+    host = ''
 commons = dict(shell = True, stdout = sys.stdout, stderr = sys.stderr)
 
-subprocess.check_call(compilers+'Tools/pcre-build.sh', **commons)
+subprocess.check_call('Tools/pcre-build.sh'+compilers+host, **commons)
 subprocess.check_call(compilers+'./autogen.sh', **commons)
-subprocess.check_call(compilers+'./configure --disable-ccache --with-scilab-inc=${SCILAB_HOME}/include --with-scilab=${SCILAB_HOME}/bin/scilab-cli'+' '+prefix, **commons)
+subprocess.check_call('./configure --disable-ccache --with-scilab-inc=${SCILAB_HOME}/include --with-scilab=${SCILAB_HOME}/bin/scilab-cli'+' '+prefix+compilers+host, **commons)
 subprocess.check_call(compilers+'make', **commons)
 subprocess.check_call(compilers+'make install', **commons)
 
