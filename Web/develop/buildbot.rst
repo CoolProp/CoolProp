@@ -71,10 +71,10 @@ steps on a Windows machine::
   conda install -n CoolProp34 cython pip pywin32
 
   activate CoolProp27
-  pip install wheel
+  pip install wheel twine
   deactivate
   activate CoolProp34
-  pip install wheel
+  pip install wheel twine
   deactivate
 
 Please repeat the steps above for both 32bit and 64bit Python environments. 
@@ -87,10 +87,10 @@ On a Linux system, things only change a little bit::
   conda install -n CoolProp34 cython pip
 
   source activate CoolProp27
-  pip install wheel
+  pip install wheel twine
   deactivate
   source activate CoolProp34
-  pip install wheel
+  pip install wheel twine
   deactivate
 
 Please make sure that the standard shell ``/bin/sh`` used by the builbot is
@@ -103,6 +103,22 @@ We have to find a new way to generate the configuration.
 Information on building the single wrappers can be found on 
 :ref:`this dedicated page<wrapper_common_prereqs>`.
 
+For uploading generated binary python files, you should create a file ``~\.pypirc`` with the contents::
+
+	[distutils]
+	index-servers=
+	    pypi
+	    test
+
+	[test]
+	repository = https://testpypi.python.org/pypi
+	username = user
+	password = XXXXXXXXXXXXXXXX
+
+	[pypi]
+	repository = https://pypi.python.org/pypi
+	username = user
+	password = XXXXXXXXXXXXXXXX
 
 Buildbot as a service (Windows)
 -------------------------------
