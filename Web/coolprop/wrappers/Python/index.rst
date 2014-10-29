@@ -7,25 +7,16 @@ Python Wrapper
 Automatic installation
 ======================
 
-NB: for the moment, these release are CoolProp version 4 and not the version 5 
-you are looking for. See the "Manual installation" section for informations 
-concerning version 5
+Using the ``pip`` installation program, you can install CoolProp v5 in binary form from the development release server using::
 
-Linux and MacOS X
------------------
+    pip install -i https://testpypi.python.org/pypi CoolProp
+    
+Or the official release can be obtained using::
 
-Depending on which you prefer, you can run either of the two commands::
+    pip install CoolProp
 
-   sudo easy_install CoolProp
-
-or::
-
-   sudo pip install CoolProp
-
-You may need to first install Cython::
-   
-   sudo easy_install Cython
-
+Manual installation
+===================
 
 Special MacOS X requirement
 ---------------------------
@@ -45,21 +36,6 @@ Windows
 -------
 
 To be explained...
-
-Manual installation
-===================
-
-Special MacOS X requirement
----------------------------
-
-Same advices as the one in the previous section apply: make sure you have 
-Xcode installed (see the description on the page 
-http://guide.macports.org/#installing.xcode) and make sure you've run the 
-command::
-
-   xcodebuild -license
-   
-and explicitly typing "agree" before closing. 
 
 Linux and MacOS X
 -----------------
