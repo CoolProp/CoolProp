@@ -287,11 +287,75 @@ bool is_valid_second_derivative(const std::string & name, parameters &iOf1, para
     return true;
 }
 
+struct phase_info
+{	
+    phases key;
+    std::string short_desc, long_desc;
+public:
+    phase_info(phases key, std::string short_desc, std::string long_desc): key(key), short_desc(short_desc), long_desc(long_desc){};
+};
+            
+phase_info phase_info_list[] = {
+    phase_info(iphase_liquid, "phase_liquid",""),
+    phase_info(iphase_gas, "phase_gas",""),
+    phase_info(iphase_twophase, "phase_twophase",""),
+    phase_info(iphase_supercritical, "phase_supercritical", ""),
+    phase_info(iphase_supercritical_gas, "phase_supercritical_gas", "p < pc, T > Tc"),
+    phase_info(iphase_supercritical_liquid, "phase_supercritical_liquid", "p > pc, T < Tc"),
+    phase_info(iphase_critical_point, "phase_critical_point", "p = pc, T = Tc"),
+    phase_info(iphase_unknown, "phase_unknown", ""),
+    phase_info(iphase_not_imposed, "phase_not_imposed", ""),
+};
+
+class PhaseInformation
+{
+public:
+	std::map<phases, std::string> short_desc_map, long_desc_map;
+    std::map<std::string, phases> index_map;
+    PhaseInformation()
+    {
+        int N = sizeof(phase_info_list)/sizeof(phase_info_list[0]);
+        for (int i = 0; i < N; ++i)
+        {
+            phase_info &el = phase_info_list[i];
+            short_desc_map.insert(std::pair<phases, std::string>(el.key, el.short_desc));
+            long_desc_map.insert(std::pair<phases, std::string>(el.key, el.long_desc));
+            index_map.insert(std::pair<std::string, phases>(el.short_desc, el.key));
+        }
+    }
+};
+static PhaseInformation phase_information;
+
+std::string get_phase_short_desc(phases phase)
+{
+    return phase_information.short_desc_map[phase];
+}
+bool is_valid_phase(const std::string &phase_name, phases &iOutput)
+{
+    std::map<std::string, phases>::iterator it;
+    
+    // Try to find it
+    it = phase_information.index_map.find(phase_name);
+    // If equal to end, not found
+    if (it != phase_information.index_map.end()){
+        // Found, return it
+        iOutput = static_cast<phases>(it->second);
+        return true;
+    }
+    else{
+        return false;
+    }
+}
+
 int get_parameter_index(const std::string &param_name)
 {
     parameters iOutput;
+    phases iPhase;
     if (is_valid_parameter(param_name, iOutput)){
         return iOutput;
+    }
+    else if (is_valid_phase(param_name, iPhase)){
+        return iPhase;
     }
     else{
         throw ValueError(format("Your input name [%s] is not valid in get_parameter_index (names are case sensitive)",param_name.c_str()));
@@ -390,6 +454,24 @@ TEST_CASE("Check that all parameters are descibed","")
                 CAPTURE(prior);
             }
             CHECK_NOTHROW(CoolProp::get_parameter_information(i,"short"));
+        }
+    }
+}
+
+TEST_CASE("Check that all phases are descibed","[phase_index]")
+{
+    for (int i = 0; i < CoolProp::iphase_not_imposed; ++i){
+        std::ostringstream ss;
+        ss << "Parameter index," << i << "last index:" << CoolProp::iundefined_parameter;
+        SECTION(ss.str(), "")
+        {   
+            std::string stringrepr;
+            int key;
+            CHECK_NOTHROW(stringrepr = CoolProp::get_phase_short_desc(static_cast<CoolProp::phases>(i)));
+            CAPTURE(stringrepr);
+            CHECK_NOTHROW(key = CoolProp::get_parameter_index(stringrepr));
+            CAPTURE(key);
+            CHECK(key == i);
         }
     }
 }
