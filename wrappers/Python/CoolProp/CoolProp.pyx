@@ -170,6 +170,14 @@ cpdef Props(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None):
     else:
         return val
 
+cpdef PhaseSI(in1, in2, in3, in4, in5):
+    """
+    A Python wrapper of C++ function :cpapi:`CoolProp::PhaseSI`
+    
+    Does not support vectorization of the inputs like PropsSI
+    """
+    return _PhaseSI(in1, in2, in3, in4, in5)
+
 cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = None):
     """
     A Python wrapper of C++ function :cpapi:`CoolProp::PropsSI` .
