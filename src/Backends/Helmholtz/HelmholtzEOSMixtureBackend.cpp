@@ -1095,7 +1095,6 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
     if (!ValidNumber(value)){
         throw ValueError(format("value to T_phase_determination_pure_or_pseudopure is invalid"));};
     
-    
     // T is known, another input P, T, H, S, U is given (all molar)
     if (_T < _crit.T && _p > _crit.p){
         _phase = iphase_supercritical_liquid;
@@ -1235,11 +1234,11 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
             case iDmolar:
                 Q = (1/value-1/HEOS.SatL->rhomolar())/(1/HEOS.SatV->rhomolar()-1/HEOS.SatL->rhomolar()); break;
             case iSmolar:
-                Q = (value - HEOS.SatL->smolar())/(HEOS.SatV->smolar() - HEOS.SatV->smolar()); break;
+                Q = (value - HEOS.SatL->smolar())/(HEOS.SatV->smolar() - HEOS.SatL->smolar()); break;
             case iHmolar:
-                Q = (value - HEOS.SatL->hmolar())/(HEOS.SatV->hmolar() - HEOS.SatV->hmolar()); break;
+                Q = (value - HEOS.SatL->hmolar())/(HEOS.SatV->hmolar() - HEOS.SatL->hmolar()); break;
             case iUmolar:
-                Q = (value - HEOS.SatL->umolar())/(HEOS.SatV->umolar() - HEOS.SatV->umolar()); break;
+                Q = (value - HEOS.SatL->umolar())/(HEOS.SatV->umolar() - HEOS.SatL->umolar()); break;
             default:
                 throw ValueError(format("bad input for other"));
         }
