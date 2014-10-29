@@ -32,6 +32,8 @@ PhaseSI function
 
 It can be useful to know what the phase of a given state point is.  A high-level function called ``PhaseSI`` has been implemented to allow for access to the phase.
 
+.. ipython::
+
     In [1]: import CoolProp
     
     In [5]: CoolProp.CoolProp.PhaseSI('Phase','P',101325,'Q',0,'Water')

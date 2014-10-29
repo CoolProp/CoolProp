@@ -15,12 +15,12 @@ Target                                        Operating Systems            Notes
 :ref:`Python <Python>`                        linux, OSX, win              Wrapper is Cython based
 :ref:`Octave <Octave>`                        linux, OSX, win              Wrapper is SWIG based
 :ref:`C# <Csharp>`                            linux, OSX, win              Wrapper is SWIG based
-:ref:`MATLAB <MATLAB>`                        linux, OSX, win              Wrapper is SWIG based (VERY experimental)
+:ref:`MATLAB <MATLAB>`                        linux, OSX, win              Wrapper is SWIG based
 :ref:`Java <Java>`                            linux, OSX, win              Wrapper is SWIG based
 :ref:`Scilab <Scilab>`                        linux, OSX, win              Wrapper is SWIG based (experimental)
 :ref:`Modelica <Modelica>`                    linux, OSX, win
 :ref:`PHP <PHP>`                              linux, OSX, win              Mostly used on linux
-:ref:`Javascript <Javascript>`                cross-platform               Also works in all internet browsers
+:ref:`Javascript <Javascript>`                cross-platform               Works in all internet browsers
 :ref:`Labview <Labview>`                      windows only               
 :ref:`Maple <Maple>`                          linux, OSX, win                     
 :ref:`Mathematica <Mathematica>`
@@ -28,7 +28,7 @@ Target                                        Operating Systems            Notes
 :ref:`EES <EES>`                              windows only
 :ref:`Microsoft Excel <Excel>`                windows only
 :ref:`LibreOffice <LibreOffice>`              windows, linux
-:ref:`Delphi/Lazarus <Delphi>`                linux, OSX, windows
+:ref:`Delphi/Lazarus <Delphi>`                linux, OSX, win
 =======================================       ===========================  =======================================
 
 .. _wrapper_common_prereqs:
