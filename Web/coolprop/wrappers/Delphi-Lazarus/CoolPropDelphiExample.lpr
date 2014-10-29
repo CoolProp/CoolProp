@@ -56,57 +56,6 @@ begin
     D := PropsSI('D', 'P', p, 'H', h, 'Propane');
     Writeln(Format('P,H -> T,D : %g, %g -> %g, %g' + sLineBreak, [p, h, T, D]));
 
-    Writeln('************ USING TTSE ***************' + sLineBreak);
-    enable_TTSE_LUT('Propane');
-    Writeln('TWO PHASE INPUTS (Pressure)');
-    System.Set8087CW($133F);
-    Writeln(Format('Density of saturated liquid Propane at 101325 Pa: %g kg/m^3', [PropsSI('D', 'P', 101325, 'Q', 0, 'Propane')]));
-    System.Set8087CW(Saved8087CW);
-    Writeln(Format('Density of saturated vapor R290 at 101325 Pa:     %g kg/m^3' + sLineBreak, [PropsSI('D', 'P', 101325, 'Q', 1, 'R290')]));
-    Writeln('TWO PHASE INPUTS (Temperature)');
-    Writeln(Format('Density of saturated liquid Propane at 300 K: %g kg/m^3', [PropsSI('D', 'T', 300, 'Q', 0, 'Propane')]));
-    Writeln(Format('Density of saturated vapor R290 at 300 K:     %g kg/m^3' + sLineBreak, [PropsSI('D', 'T', 300, 'Q', 1, 'R290')]));
-    Writeln('SINGLE PHASE CYCLE (Propane)');
-    p := PropsSI('P', 'T', 300, 'D', 1, 'Propane');
-    h := PropsSI('H', 'T', 300, 'D', 1, 'Propane');
-    Writeln(Format('T,D -> P,H : 300,1 -> %g,%g', [p, h]));
-    T := PropsSI('T', 'P', p, 'H', h, 'Propane');
-    D := PropsSI('D', 'P', p, 'H', h, 'Propane');
-    Writeln(Format('P,H -> T,D : %g, %g -> %g, %g' + sLineBreak, [p, h, T, D]));
-    disable_TTSE_LUT('Propane');
-
-    {
-    try
-      Writeln('************ USING REFPROP ***************');
-      get_fluid_param_string('Propane', 'REFPROPname', OutputArrayOfAnsiChar);
-      OutputString := string(OutputArrayOfAnsiChar);
-      RPName := PAnsichar(AnsiString('REFPROP-' + OutputString));
-      Writeln('TWO PHASE INPUTS (Pressure)');
-      Writeln(Format
-        ('Density of saturated liquid Propane at 101325 Pa: %g kg/m^3',
-        [PropsSI('D', 'P', 101325, 'Q', 0, RPName)]));
-      Writeln(Format
-        ('Density of saturated vapor R290 at 101325 Pa:     %g kg/m^3',
-        [PropsSI('D', 'P', 101325, 'Q', 1, RPName)]));
-      Writeln('TWO PHASE INPUTS (Temperature)');
-      Writeln(Format('Density of saturated liquid Propane at 300 K: %g kg/m^3',
-        [PropsSI('D', 'T', 300, 'Q', 0, RPName)]));
-      Writeln(Format('Density of saturated vapor R290 at 300 K:     %g kg/m^3',
-        [PropsSI('D', 'T', 300, 'Q', 1, RPName)]));
-      Writeln('SINGLE PHASE CYCLE (Propane)');
-      p := PropsSI('P', 'T', 300, 'D', 1, RPName);
-      h := PropsSI('H', 'T', 300, 'D', 1, RPName);
-      Writeln(Format('T,D -> P,H : 300,1 -> %g,%g', [p, h]));
-      T := PropsSI('T', 'P', p, 'H', h, RPName);
-      D := PropsSI('D', 'P', p, 'H', h, RPName);
-      Writeln(Format('P,H -> T,D : %g, %g -> %g, %g' + sLineBreak,
-        [p, h, T, D]));
-    except
-      on E: Exception do
-        Writeln('************ CANT USE REFPROP ************');
-    end;
-      }
-
     Writeln('************ BRINES AND SECONDARY WORKING FLUIDS *************' + sLineBreak);
     Writeln(Format ('Density of 50%% (mass) ethylene glycol/water at 300 K, 101325 Pa: %g kg/m^3', [PropsSI('D', 'T', 300, 'P', 101325, 'EG-50%')]));
     Writeln(Format('Viscosity of Therminol D12 at 350 K, 101325 Pa: %g Pa-s' + sLineBreak, [PropsSI('V', 'T', 350, 'P', 101325, 'TD12')]));
