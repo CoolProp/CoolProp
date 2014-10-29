@@ -9,7 +9,7 @@ Delphi Wrapper
 
 There is an open-source equivalent of Delphi called Lazarus, more information here: `information on Lazarus <http://www.lazarus.freepascal.org/>`
 
-A very simple example of linking Lazarus and Coolprop can be found obtained by downloading the following 3 files: 
+A very simple example of linking Lazarus and CoolProp can be found obtained by downloading the following 3 files: 
 
 * :download:`CoolPropDelphiExample.lpi`
 * :download:`CoolPropDelphiExample.lpr`
