@@ -1264,7 +1264,7 @@ TEST_CASE("Triple point checks", "[triple_point]")
     }
 }
 
-TEST_CASE("Test that states agree with CoolProp", "[reference_states]")
+TEST_CASE("Test that reference states are correct", "[reference_states]")
 {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
     for (std::size_t i = 0; i < fluids.size(); ++i) 
@@ -1338,6 +1338,40 @@ TEST_CASE("Test that states agree with CoolProp", "[reference_states]")
             }   
         }
     }
-    
 }
+
+TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
+{
+    std::vector<std::string> fluids; fluids.push_back("Propane"); fluids.push_back("D4"); fluids.push_back("Water"); 
+    for (std::size_t i = 0; i < fluids.size(); ++i)
+    {
+        std::vector<std::string> fl(1,fluids[i]);
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(fl));
+        for (double p = HEOS->p_triple()*10; p < HEOS->pmax(); p *= 10)
+        {
+            double Tmin = HEOS->Ttriple();
+            double Tmax = HEOS->Tmax();
+            for (double T = Tmin; T < Tmax; T += 100)
+            {
+                std::ostringstream ss;
+                ss << "Check HS for " << fluids[i] << " for T=" << T << ", p=" << p;
+                SECTION(ss.str(),"")
+                {
+                    CHECK_NOTHROW(HEOS->update(PT_INPUTS, p, T));
+                    std::ostringstream ss1;
+                    ss1 << "h=" << HEOS->hmolar() << ", s=" << HEOS->smolar();
+                    SECTION(ss1.str(),"")
+                    {
+                        CAPTURE(T);
+                        CAPTURE(p);
+                        CAPTURE(HEOS->hmolar());
+                        CAPTURE(HEOS->smolar());
+                        CHECK_NOTHROW(HEOS->update(HmolarSmolar_INPUTS, HEOS->hmolar(), HEOS->smolar()));
+                    }
+                }
+            }
+        }
+    }
+}
+
 #endif

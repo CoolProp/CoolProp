@@ -79,6 +79,10 @@ public:
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iP, iHmolar, iSmolar, iUmolar
     static void PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other);
+    
+    /// A flash routine for (H,S)
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    static void HS_flash(HelmholtzEOSMixtureBackend &HEOS);
 };
 
 

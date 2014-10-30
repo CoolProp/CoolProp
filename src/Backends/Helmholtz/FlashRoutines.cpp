@@ -1086,4 +1086,76 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
     }
 }
 
+void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
+{
+    if (HEOS.imposed_phase_index != iphase_not_imposed)
+    {
+        // Use the phase defined by the imposed phase
+        HEOS._phase = HEOS.imposed_phase_index;
+    }
+    else
+    {
+        CoolProp::SimpleState &crit = HEOS.components[0]->pEOS->reduce;
+        CoolProp::SimpleState &tripleL = HEOS.components[0]->triple_liquid,
+                              &tripleV = HEOS.components[0]->triple_vapor;
+        // Enthalpy at solid line
+        double hsolid = (tripleV.hmolar-tripleL.hmolar)/(tripleV.smolar-tripleL.smolar)*(HEOS.smolar()-tripleL.smolar) + tripleL.hmolar;
+        // Part A - first check if HS is below triple line formed by connecting the triple point states
+        // If so, it is solid, and not supported
+        if (HEOS.hmolar() < hsolid){
+            throw ValueError(format("Enthalpy [%g J/mol] is below solid enthalpy [%g J/mol]", HEOS.hmolar(), hsolid));
+        }
+        // Part B - Check lower limit
+        else if (HEOS.smolar() < tripleL.smolar){
+            // If fluid is other than water (which can have solutions below tripleL), cannot have any solution, fail
+            if (upper(HEOS.name()) != "Water"){
+                throw ValueError(format("Entropy [%g J/mol/K] is below triple point liquid entropy [%g J/mol/K]", HEOS.smolar(), tripleL.smolar));
+            }
+        }
+        // Part C - Check higher limit
+        else if (HEOS.smolar() > tripleV.smolar){
+            throw ValueError(format("Entropy [%g J/mol/K] is above triple point vapor entropy [%g J/mol/K]", HEOS.smolar(), tripleV.smolar));
+        }
+        // Part D - if s < sc, a few options are possible.  It could be two-phase, or liquid (more likely), or gas (less likely)
+        else if (HEOS.smolar() < crit.smolar){
+            // Do a saturation call for given s for liquid, first with ancillaries, then with full saturation call
+            // Check if above the saturation enthalpy each time
+            // D1: It is above hsat
+            // It is liquid, supercritical liquid, or out of range
+            // Come up with some guess values, maybe start at the saturation curve with under-relaxation?
+            // D2: It is below hsat
+            // Either two-phase, or vapor (for funky saturation curves like the siloxanes)
+            // Do a saturation_h call for given h on the vapor line to determine whether two-phase or vapor
+            // D2a: It is below ssat
+            // two-phase
+            // D2b: It is above ssat
+            // vapor
+            throw ValueError("partD");
+        }
+        // Part E - HEOS.smolar() > crit.hmolar > tripleV.smolar
+        else{
+            throw ValueError("partE");
+        }
+    }
+
+    /*if (HEOS.isHomogeneousPhase() && !ValidNumber(HEOS._p))
+    {
+        switch (other)
+        {
+            case iDmolar:
+                break;
+            case iHmolar:
+                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._hmolar, iHmolar); break;
+            case iSmolar:
+                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._smolar, iSmolar); break;
+            case iUmolar:
+                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._umolar, iUmolar); break;
+            default:
+                break;
+        }
+        HEOS.calc_pressure();
+        HEOS._Q = -1;
+    }*/
+}
+
 } /* namespace CoolProp */
