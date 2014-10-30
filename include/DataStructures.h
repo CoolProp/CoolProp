@@ -71,7 +71,7 @@ enum parameters{
     iGWP500, ///< The 500-year global warming potential
     iFH, ///< Fire hazard index
     iHH, ///< Health hazard index
-    iPH, ///< 
+    iPH, ///< Physical hazard index
     iODP, ///< Ozone depletion potential (R-11 = 1.0)
     iPhase, ///< The phase index of the given state
     iundefined_parameter ///< The last parameter, so we can check that all parameters are described in DataStructures.cpp
