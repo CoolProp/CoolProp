@@ -36,7 +36,7 @@ It can be useful to know what the phase of a given state point is.  A high-level
 
     In [1]: import CoolProp
     
-    In [5]: CoolProp.CoolProp.PhaseSI('Phase','P',101325,'Q',0,'Water')
+    In [5]: CoolProp.CoolProp.PhaseSI('P',101325,'Q',0,'Water')
 
 The phase index (as floating point number) can also be obtained using the PropsSI function. In python you would do:
 
