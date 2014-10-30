@@ -1,6 +1,50 @@
 {
   "ALIASES": [], 
   "ANCILLARIES": {
+    "hL": {
+      "A": [
+        -90751.87711255281, 
+        -882.7688707226558, 
+        16.90796578142739, 
+        -0.10654584144594297, 
+        0.00036169710502510663, 
+        -6.989650297101517e-07, 
+        7.242329065232665e-10, 
+        -3.1441810430639936e-13
+      ], 
+      "B": [
+        1, 
+        -0.0021970345052858553
+      ], 
+      "Tmax": 450.6, 
+      "Tmin": 200.0, 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol; value is enthalpy minus hs_anchor enthalpy", 
+      "max_abs_error": 236.4175681628749, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
+    "hLV": {
+      "A": [
+        -9445.113221227526, 
+        2078.936243268868, 
+        -27.139282619132647, 
+        0.16427399428114442, 
+        -0.0005602710431491984, 
+        1.106337285065809e-06, 
+        -1.1851887917786378e-09, 
+        5.355817218756505e-13
+      ], 
+      "B": [
+        1, 
+        -0.002196513707501151
+      ], 
+      "Tmax": 450.6, 
+      "Tmin": 200.0, 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol; value is enthalpy minus hs_anchor enthalpy", 
+      "max_abs_error": 604.0703510835851, 
+      "max_abs_error_units": "J/mol", 
+      "type": "rational_polynomial"
+    }, 
     "pL": {
       "T_r": 450.7, 
       "Tmax": 450.7, 
@@ -94,6 +138,50 @@
       ], 
       "type": "rhoV", 
       "using_tau_r": true
+    }, 
+    "sL": {
+      "A": [
+        -418.6587023459173, 
+        2.5211996561776844, 
+        -0.006137214640352245, 
+        -1.0719249147537204e-06, 
+        6.662750203687484e-08, 
+        -2.170867948430337e-10, 
+        3.00787731113147e-13, 
+        -1.605066614795231e-16
+      ], 
+      "B": [
+        1, 
+        -0.0021943265311199114
+      ], 
+      "Tmax": 450.6, 
+      "Tmin": 200.0, 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol/K; value is entropy minus hs_anchor entropy", 
+      "max_abs_error": 0.5864022060984269, 
+      "max_abs_error_units": "J/mol/K", 
+      "type": "rational_polynomial"
+    }, 
+    "sLV": {
+      "A": [
+        703.7621553322332, 
+        -10.053618610335299, 
+        0.07927638956468902, 
+        -0.000381106888737545, 
+        1.1093700389503594e-06, 
+        -1.9044150815065928e-09, 
+        1.7704383450993817e-12, 
+        -6.838249427423201e-16
+      ], 
+      "B": [
+        1, 
+        -0.002192843051112099
+      ], 
+      "Tmax": 450.6, 
+      "Tmin": 200.0, 
+      "_note": "coefficients are in increasing order; input in K, output in J/mol/K; value is entropy minus hs_anchor entropy", 
+      "max_abs_error": 1.497657380847202, 
+      "max_abs_error_units": "J/mol/K", 
+      "type": "rational_polynomial"
     }
   }, 
   "CAS": "SES36.ppf", 
