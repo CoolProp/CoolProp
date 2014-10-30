@@ -956,11 +956,15 @@ protected:
             fluid.triple_liquid.T = -1;
             fluid.triple_liquid.p = -1;
             fluid.triple_liquid.rhomolar = -1;
+            fluid.triple_liquid.hmolar = _HUGE;
+            fluid.triple_liquid.smolar = _HUGE;
         }
         else{
             fluid.triple_liquid.T = cpjson::get_double(triple_liquid, "T");
             fluid.triple_liquid.p = cpjson::get_double(triple_liquid, "p");
             fluid.triple_liquid.rhomolar = cpjson::get_double(triple_liquid, "rhomolar");
+            fluid.triple_liquid.hmolar = cpjson::get_double(triple_liquid, "hmolar");
+            fluid.triple_liquid.smolar = cpjson::get_double(triple_liquid, "smolar");
         }
 
         if (!states.HasMember("triple_vapor")){ throw ValueError(format("fluid[\"STATES\"] [%s] does not have \"triple_vapor\" member",fluid.name.c_str())); }
@@ -970,11 +974,15 @@ protected:
             fluid.triple_vapor.T = -1;
             fluid.triple_vapor.p = -1;
             fluid.triple_vapor.rhomolar = -1;
+            fluid.triple_vapor.hmolar = _HUGE;
+            fluid.triple_vapor.smolar = _HUGE;
         }
         else{
             fluid.triple_vapor.T = cpjson::get_double(triple_vapor, "T");
             fluid.triple_vapor.p = cpjson::get_double(triple_vapor, "p");
             fluid.triple_vapor.rhomolar = cpjson::get_double(triple_vapor, "rhomolar");
+            fluid.triple_vapor.hmolar = cpjson::get_double(triple_vapor, "hmolar");
+            fluid.triple_vapor.smolar = cpjson::get_double(triple_vapor, "smolar");
         }
     };
 
