@@ -28,7 +28,7 @@ Target                                        Operating Systems            Notes
 :ref:`EES <EES>`                              windows only
 :ref:`Microsoft Excel <Excel>`                windows only
 :ref:`LibreOffice <LibreOffice>`              windows, linux
-:ref:`Delphi/Lazarus <Delphi>`                linux, OSX, win
+:ref:`Delphi & Lazarus <Delphi>`              linux, OSX, win
 =======================================       ===========================  =======================================
 
 .. _wrapper_common_prereqs:
