@@ -1649,6 +1649,13 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
         {
             throw ValueError();
         }
+        // Update the state (T > Tc)
+        if (_p < p_critical()){
+            _phase = iphase_supercritical_gas;
+        }
+        else {
+            _phase = iphase_supercritical;
+        }
     }
     // Subcritical temperature liquid
     else if (_phase == iphase_liquid)
