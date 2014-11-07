@@ -36,6 +36,14 @@ public:
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void QT_flash(HelmholtzEOSMixtureBackend &HEOS);
     
+    /// Flash for given molar entropy and (molar) quality
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    static void QS_flash(HelmholtzEOSMixtureBackend &HEOS);
+    
+    /// Flash for given molar enthalpy and (molar) quality
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    static void HQ_flash(HelmholtzEOSMixtureBackend &HEOS);
+    
     /// Flash for mixture given temperature or pressure and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The parameter that is imposed, either iT or iP
@@ -83,6 +91,19 @@ public:
     /// A flash routine for (H,S)
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void HS_flash(HelmholtzEOSMixtureBackend &HEOS);
+    
+    /// Randomly generate a single phase set of inputs for T and p - searches entire single-phase region
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    /// @param T The temperature in K
+    /// @param p The pressure in Pa
+    static void HS_flash_generate_TP_singlephase_guess(HelmholtzEOSMixtureBackend &HEOS, double &T, double &p);
+    
+    struct HS_flash_singlephaseOptions
+    {
+        double omega;
+        HS_flash_singlephaseOptions(){omega = 1.0;}
+    };
+    static void HS_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, long double hmolar_spec, long double smolar_spec, HS_flash_singlephaseOptions &options);
 };
 
 

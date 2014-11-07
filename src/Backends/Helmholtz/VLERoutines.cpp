@@ -181,7 +181,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
 
-    long double T, rhoL, rhoV, pL, pV;
+    long double T, rhoL, rhoV, pL, pV, hL, sL, hV, sV;
     long double deltaL=0, deltaV=0, tau=0, error;
     int iter=0, specified_parameter;
 
@@ -199,6 +199,96 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
 			{
 				throw ValueError("Unable to invert ancillary equation");
 			}
+        }
+        else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_HL)
+        {
+            CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
+            // Ancillary is deltah = h - hs_anchor.h
+            try{ T = HEOS.get_components()[0]->ancillaries.hL.invert(specified_value - hs_anchor.hmolar); }
+			catch(std::exception &e){
+				throw ValueError("Unable to invert ancillary equation for hL");
+			}
+        }
+        else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_HV)
+        {
+            class Residual : public FuncWrapper1D
+            {
+                public:
+                CoolPropFluid *component;
+                double h;
+                Residual(CoolPropFluid &component, double h){
+                    this->component = &component;
+                    this->h = h;
+                }
+                double call(double T){
+                    long double h_liq = component->ancillaries.hL.evaluate(T) + component->pEOS->hs_anchor.hmolar;
+                    return h_liq + component->ancillaries.hLV.evaluate(T) - h;
+                };
+            };
+            Residual resid(*(HEOS.get_components()[0]), HEOS.hmolar());
+            
+            // Ancillary is deltah = h - hs_anchor.h
+            std::string errstr;
+            long double Tmin_satL, Tmin_satV;
+            HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
+            double Tmin = Tmin_satL;
+            double Tmax = HEOS.calc_Tmax_sat();
+            try{ T = Brent(resid, Tmin-3, Tmax + 1, DBL_EPSILON, 1e-10, 50, errstr); }
+			catch(std::exception &e){
+				throw ValueError(format("Unable to invert ancillary equation for hV: %s",e.what()));
+			}
+        }
+        else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SL)
+        {
+            CoolProp::SaturationAncillaryFunction &anc = HEOS.get_components()[0]->ancillaries.sL;
+            CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
+            // Ancillary is deltas = s - hs_anchor.s
+            try{ 
+                T = anc.invert(specified_value - hs_anchor.smolar); 
+            }
+			catch(std::exception &e){
+                double vmin = anc.evaluate(anc.get_Tmin());
+                double vmax = anc.evaluate(anc.get_Tmax());
+				throw ValueError(format("Unable to invert ancillary equation for sL for value %Lg with Tminval %g and Tmaxval %g ", specified_value - hs_anchor.smolar, vmin, vmax));
+			}
+        }
+        else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SV)
+        {
+            CoolPropFluid &component = *(HEOS.get_components()[0]);
+            CoolProp::SimpleState crit = HEOS.get_state("reducing");
+            class Residual : public FuncWrapper1D
+            {
+                public:
+                CoolPropFluid *component;
+                double s;
+                Residual(CoolPropFluid &component, double s){
+                    this->component = &component;
+                    this->s = s;
+                }
+                double call(double T){
+                    long double s_liq = component->ancillaries.sL.evaluate(T) + component->pEOS->hs_anchor.smolar;
+                    return s_liq + component->ancillaries.sLV.evaluate(T) - s;
+                };
+            };
+            Residual resid(component, HEOS.smolar());
+            
+            // If near the critical point, use a near critical guess value for T
+            if (std::abs(HEOS.smolar() - crit.smolar) < std::abs(component.ancillaries.sL.get_max_abs_error() + component.ancillaries.sLV.get_max_abs_error()))
+            {
+                T = std::max(0.99*crit.T, crit.T-0.1);
+            }
+            else{
+                // Ancillary is deltas = s - hs_anchor.s
+                std::string errstr;
+                long double Tmin_satL, Tmin_satV;
+                HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
+                double Tmin = Tmin_satL;
+                double Tmax = HEOS.calc_Tmax_sat();
+                try{ T = Brent(resid, Tmin-3, Tmax+1, DBL_EPSILON, 1e-10, 50, errstr); }
+                catch(std::exception &e){
+                    throw ValueError(format("Unable to invert ancillary equation for sV: %s",e.what()));
+                }
+            }
         }
         else
         {
@@ -237,7 +327,11 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         }*/
 
         pL = SatL->p();
+        hL = SatL->hmolar();
+        sL = SatL->smolar();
         pV = SatV->p();
+        hV = SatV->hmolar();
+        sV = SatV->smolar();
 
         // These derivatives are needed for both cases
         long double alpharL = SatL->alphar();
@@ -251,17 +345,29 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         long double d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
         long double d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
 
-        // -r_1
+        // -r_1 (equate the pressures)
         negativer[0] = -(deltaV*(1+deltaV*dalphar_ddeltaV)-deltaL*(1+deltaL*dalphar_ddeltaL));
-        // -r_2
+        // -r_2 (equate the gibbs energy)
         negativer[1] = -(deltaV*dalphar_ddeltaV+alpharV+log(deltaV)-deltaL*dalphar_ddeltaL-alpharL-log(deltaL));
         switch (options.specified_variable){
             case saturation_PHSU_pure_options::IMPOSED_PL:
-                // -r_3
+                // -r_3 (equate calculated pressure and specified liquid pressure)
                 negativer[2] = -(pL/specified_value - 1); break;
             case saturation_PHSU_pure_options::IMPOSED_PV:
-                // -r_3
+                // -r_3 (equate calculated pressure and specified vapor pressure)
                 negativer[2] = -(pV/specified_value - 1); break;
+            case saturation_PHSU_pure_options::IMPOSED_HL:
+                // -r_3 (equate calculated liquid enthalpy and specified liquid enthalpy)
+                negativer[2] = -(hL - specified_value); break;
+            case saturation_PHSU_pure_options::IMPOSED_HV:
+                // -r_3 (equate calculated vapor enthalpy and specified vapor enthalpy)
+                negativer[2] = -(hV - specified_value); break;
+            case saturation_PHSU_pure_options::IMPOSED_SL:
+                // -r_3 (equate calculated liquid entropy and specified liquid entropy)
+                negativer[2] = -(sL - specified_value); break;
+            case saturation_PHSU_pure_options::IMPOSED_SV:
+                // -r_3 (equate calculated vapor entropy and specified vapor entropy)
+                negativer[2] = -(sV - specified_value); break;
             default:
                 throw ValueError(format("options.specified_variable to saturation_PHSU_pure [%d] is invalid",options.specified_variable));
         }
@@ -329,6 +435,46 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                 }
 				specified_parameter = CoolProp::iP;
                 break;
+            case saturation_PHSU_pure_options::IMPOSED_HL:
+                // dr_3/dtau
+                J[2][0] = SatL->first_partial_deriv(iHmolar,iTau,iDelta);
+                // dr_3/ddelta'
+                J[2][1] = SatL->first_partial_deriv(iHmolar,iDelta,iTau);
+                if (options.use_logdelta){ J[2][1]*=deltaL;}
+                // dr_3/ddelta''
+                J[2][2] = 0; //(liquid enthalpy not a function of vapor density)
+				specified_parameter = CoolProp::iHmolar;
+                break;
+            case saturation_PHSU_pure_options::IMPOSED_HV:
+                // dr_3/dtau
+                J[2][0] = SatV->first_partial_deriv(iHmolar,iTau,iDelta);
+                // dr_3/ddelta'
+                J[2][1] = 0; //(vapor enthalpy not a function of liquid density)
+                // dr_3/ddelta''
+                J[2][2] = SatV->first_partial_deriv(iHmolar,iDelta,iTau);
+                if (options.use_logdelta){ J[2][2]*=deltaV;}
+				specified_parameter = CoolProp::iHmolar;
+                break;
+            case saturation_PHSU_pure_options::IMPOSED_SL:
+                // dr_3/dtau
+                J[2][0] = SatL->first_partial_deriv(iSmolar,iTau,iDelta);
+                // dr_3/ddelta'
+                J[2][1] = SatL->first_partial_deriv(iSmolar,iDelta,iTau);
+                if (options.use_logdelta){ J[2][1] *= deltaL; }
+                // dr_3/ddelta''
+                J[2][2] = 0; //(liquid entropy not a function of vapor density)
+				specified_parameter = CoolProp::iSmolar;
+                break;
+            case saturation_PHSU_pure_options::IMPOSED_SV:
+                // dr_3/dtau
+                J[2][0] = SatV->first_partial_deriv(iSmolar,iTau,iDelta);
+                // dr_3/ddelta'
+                J[2][1] = 0; //(vapor enthalpy not a function of liquid density)
+                // dr_3/ddelta''
+                J[2][2] = SatV->first_partial_deriv(iSmolar,iDelta,iTau);
+                if (options.use_logdelta){ J[2][2]*=deltaV;}
+				specified_parameter = CoolProp::iSmolar;
+                break;
             default:
                 throw ValueError(format("options.specified_variable to saturation_PHSU_pure [%d] is invalid",options.specified_variable));
         }
@@ -359,12 +505,12 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         {
             throw SolutionError(format("saturation_PHSU_pure solver T < 0"));
         }
-        if (iter > 25){
+        if (iter > 50){
             // Set values back into the options structure for use in next solver
             options.rhoL = rhoL; options.rhoV = rhoV; options.T = T;
             // Error out
 			std::string info = get_parameter_information(specified_parameter, "short");
-            throw SolutionError(format("saturation_PHSU_pure solver did not converge after 25 iterations for %s=%Lg current error is %Lg", info.c_str(), specified_value, error));
+            throw SolutionError(format("saturation_PHSU_pure solver did not converge after 50 iterations for %s=%Lg current error is %Lg", info.c_str(), specified_value, error));
         }
     }
     while (error > 1e-9);

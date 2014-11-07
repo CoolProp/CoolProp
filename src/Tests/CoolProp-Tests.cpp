@@ -1333,6 +1333,7 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
                 double EOS_smolar = HEOS->smolar();
                 CHECK( std::abs(EOS_hmolar - reducing.hmolar) < 1e-3);
                 CHECK( std::abs(EOS_smolar - reducing.smolar) < 1e-3);
+                CHECK(ValidNumber(reducing.hmolar));
                 // Then set the reference state back to the default
                 set_reference_stateS(fluids[i],"RESET");
             }   
@@ -1351,7 +1352,7 @@ TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
         {
             double Tmin = HEOS->Ttriple();
             double Tmax = HEOS->Tmax();
-            for (double T = Tmin; T < Tmax; T += 100)
+            for (double T = Tmin + 1; T < Tmax-1; T += 10)
             {
                 std::ostringstream ss;
                 ss << "Check HS for " << fluids[i] << " for T=" << T << ", p=" << p;
@@ -1367,6 +1368,9 @@ TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
                         CAPTURE(HEOS->hmolar());
                         CAPTURE(HEOS->smolar());
                         CHECK_NOTHROW(HEOS->update(HmolarSmolar_INPUTS, HEOS->hmolar(), HEOS->smolar()));
+                        double Terr = HEOS->T()- T;
+                        CAPTURE(Terr);
+                        CHECK(std::abs(Terr) < 1e-6);
                     }
                 }
             }

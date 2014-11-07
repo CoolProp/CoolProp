@@ -136,7 +136,62 @@ void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend &HEOS)
 	HEOS._rhomolar = HEOS.solver_rho_Tp(HEOS._T, HEOS._p);
 	HEOS._Q = -1;
 }
-
+void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend &HEOS)
+{
+    if (HEOS.is_pure_or_pseudopure){
+        if (std::abs(HEOS.Q()-1) > 1e-10){throw ValueError(format("non-unity quality not currently allowed for HQ_flash"));}
+        // Do a saturation call for given h for vapor, first with ancillaries, then with full saturation call
+        SaturationSolvers::saturation_PHSU_pure_options options;
+        options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_HV;
+        options.use_logdelta = false;
+        HEOS.specify_phase(iphase_twophase);
+        SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS.hmolar(), options);
+        HEOS._p = HEOS.SatV->p();
+        HEOS._T = HEOS.SatV->T();
+        HEOS._rhomolar = HEOS.SatV->rhomolar();
+        HEOS._phase = iphase_twophase;
+    }
+    else{
+        throw NotImplementedError("QS_flash not ready for mixtures");
+    }
+}
+void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend &HEOS)
+{
+    if (HEOS.is_pure_or_pseudopure){
+        
+        if (std::abs(HEOS.Q()) < 1e-10){
+            // Do a saturation call for given s for liquid, first with ancillaries, then with full saturation call
+            SaturationSolvers::saturation_PHSU_pure_options options;
+            options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_SL;
+            options.use_logdelta = false;
+            HEOS.specify_phase(iphase_twophase);
+            SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS.smolar(), options);
+            HEOS._p = HEOS.SatL->p();
+            HEOS._T = HEOS.SatL->T();
+            HEOS._rhomolar = HEOS.SatL->rhomolar();
+            HEOS._phase = iphase_twophase;
+        }
+        else if (std::abs(HEOS.Q()-1) < 1e-10)
+        {
+            // Do a saturation call for given s for vapor, first with ancillaries, then with full saturation call
+            SaturationSolvers::saturation_PHSU_pure_options options;
+            options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_SV;
+            options.use_logdelta = false;
+            HEOS.specify_phase(iphase_twophase);
+            SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS.smolar(), options);
+            HEOS._p = HEOS.SatV->p();
+            HEOS._T = HEOS.SatV->T();
+            HEOS._rhomolar = HEOS.SatV->rhomolar();
+            HEOS._phase = iphase_twophase;
+        }
+        else{
+            throw ValueError(format("non-zero or 1 quality not currently allowed for QS_flash"));
+        }
+    }
+    else{
+        throw NotImplementedError("QS_flash not ready for mixtures");
+    }
+}
 void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
     long double T = HEOS._T;
@@ -916,11 +971,13 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
         // Determine why you were out of range if you can
         // 
         long double eos0 = resid.eos0, eos1 = resid.eos1;
+        std::string name = get_parameter_information(other,"short");
+        std::string units = get_parameter_information(other,"units");
         if (eos1 > eos0 && value > eos1){
-            throw ValueError(format("HSU_P_flash_singlephase_Brent could not find a solution because %s is above the maximum value of %0.12Lg", get_parameter_information(other,"short").c_str(), eos1));
+            throw ValueError(format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is above the maximum value of %0.12Lg %s", name.c_str(), value, units.c_str(), eos1, units.c_str()));
         }
         if (eos1 > eos0 && value < eos0){
-            throw ValueError(format("HSU_P_flash_singlephase_Brent could not find a solution because %s is below the minimum value of %0.12Lg", get_parameter_information(other,"short").c_str(), eos0));
+            throw ValueError(format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is below the minimum value of %0.12Lg %s", name.c_str(), value, units.c_str(), eos0, units.c_str()));
         }
         throw;
     }
@@ -1086,6 +1143,66 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
     }
 }
 
+void FlashRoutines::HS_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, long double hmolar_spec, long double smolar_spec, HS_flash_singlephaseOptions &options)
+{
+    int iter = 0;
+    double resid = 9e30, resid_old = 9e30;
+    CoolProp::SimpleState reducing = HEOS.get_state("reducing");
+    do{
+        // Independent variables are T0 and rhomolar0, residuals are matching h and s
+        Eigen::Vector2d r;
+        Eigen::Matrix2d J;
+        r(0) = HEOS.hmolar() - hmolar_spec;
+        r(1) = HEOS.smolar() - smolar_spec;
+        J(0,0) = HEOS.first_partial_deriv(iHmolar, iTau, iDelta);
+        J(0,1) = HEOS.first_partial_deriv(iHmolar, iDelta, iTau);
+        J(1,0) = HEOS.first_partial_deriv(iSmolar, iTau, iDelta);
+        J(1,1) = HEOS.first_partial_deriv(iSmolar, iDelta, iTau);
+        // Step in v obtained from Jv = -r
+        Eigen::Vector2d v = J.colPivHouseholderQr().solve(-r);
+        bool good_solution = false;
+        double tau0 = HEOS.tau(), delta0 = HEOS.delta();
+        // Calculate the old residual after the last step
+        resid_old = sqrt(POW2(HEOS.hmolar() - hmolar_spec) + POW2(HEOS.smolar() - smolar_spec));
+        for (double frac = 1.0; frac > 0.001; frac /= 2)
+        {
+            try{
+                // Calculate new values
+                double tau_new = tau0 + options.omega*frac*v(0);
+                double delta_new = delta0 + options.omega*frac*v(1);
+                double T_new = reducing.T/tau_new;
+                double rhomolar_new = delta_new*reducing.rhomolar;
+                // Update state with step
+                HEOS.update(DmolarT_INPUTS, rhomolar_new, T_new);
+                resid = sqrt(POW2(HEOS.hmolar() - hmolar_spec) + POW2(HEOS.smolar() - smolar_spec));
+                if (resid > resid_old){
+                    throw ValueError(format("residual not decreasing; frac: %g, resid: %g, resid_old: %g", frac, resid, resid_old));
+                }
+                good_solution = true;
+                break;
+            }
+            catch(std::exception &e){
+                HEOS.clear();
+                continue;
+            }            
+        }
+        if (!good_solution){
+            throw ValueError(format("Not able to get a solution" ));
+        }
+        iter++;
+        if (iter > 50){
+            throw ValueError(format("HS_flash_singlephase took too many iterations; residual is %g; prior was %g", resid, resid_old));
+        }
+    }
+    while(std::abs(resid) > 1e-10);
+}
+void FlashRoutines::HS_flash_generate_TP_singlephase_guess(HelmholtzEOSMixtureBackend &HEOS, double &T, double &p)
+{
+    // Randomly obtain a starting value that is single-phase
+    double logp = ((double)rand()/(double)RAND_MAX)*(log(HEOS.pmax())-log(HEOS.p_triple()))+log(HEOS.p_triple());
+    T = ((double)rand()/(double)RAND_MAX)*(HEOS.Tmax()-HEOS.Ttriple())+HEOS.Ttriple();
+    p = exp(logp);
+}
 void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.imposed_phase_index != iphase_not_imposed)
@@ -1095,7 +1212,19 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
     }
     else
     {
-        CoolProp::SimpleState &crit = HEOS.components[0]->pEOS->reduce;
+        enum solution_type_enum{not_specified = 0, single_phase_solution, two_phase_solution};
+        solution_type_enum solution;
+        
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy(new CoolProp::HelmholtzEOSMixtureBackend(HEOS.components));
+        
+        // Find maxima states if needed
+        // Cache the maximum enthalpy saturation state;
+        //HEOS.calc_hsat_max();
+        // For weird fluids like the siloxanes, there can also be a maximum 
+        // entropy along the vapor saturation line. Try to find it if it has one
+        // HEOS.calc_ssat_max();
+        
+        CoolProp::SimpleState crit = HEOS.get_state("reducing");
         CoolProp::SimpleState &tripleL = HEOS.components[0]->triple_liquid,
                               &tripleV = HEOS.components[0]->triple_vapor;
         // Enthalpy at solid line
@@ -1105,57 +1234,99 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
         if (HEOS.hmolar() < hsolid){
             throw ValueError(format("Enthalpy [%g J/mol] is below solid enthalpy [%g J/mol]", HEOS.hmolar(), hsolid));
         }
-        // Part B - Check lower limit
+        /*// Part B - Check lower limit
         else if (HEOS.smolar() < tripleL.smolar){
             // If fluid is other than water (which can have solutions below tripleL), cannot have any solution, fail
             if (upper(HEOS.name()) != "Water"){
                 throw ValueError(format("Entropy [%g J/mol/K] is below triple point liquid entropy [%g J/mol/K]", HEOS.smolar(), tripleL.smolar));
             }
-        }
-        // Part C - Check higher limit
-        else if (HEOS.smolar() > tripleV.smolar){
-            throw ValueError(format("Entropy [%g J/mol/K] is above triple point vapor entropy [%g J/mol/K]", HEOS.smolar(), tripleV.smolar));
-        }
-        // Part D - if s < sc, a few options are possible.  It could be two-phase, or liquid (more likely), or gas (less likely)
+        }*/
+        // Part C - if s < sc, a few options are possible.  It could be two-phase, or liquid (more likely), or gas (less likely)
         else if (HEOS.smolar() < crit.smolar){
-            // Do a saturation call for given s for liquid, first with ancillaries, then with full saturation call
-            // Check if above the saturation enthalpy each time
-            // D1: It is above hsat
-            // It is liquid, supercritical liquid, or out of range
-            // Come up with some guess values, maybe start at the saturation curve with under-relaxation?
-            // D2: It is below hsat
-            // Either two-phase, or vapor (for funky saturation curves like the siloxanes)
-            // Do a saturation_h call for given h on the vapor line to determine whether two-phase or vapor
-            // D2a: It is below ssat
-            // two-phase
-            // D2b: It is above ssat
-            // vapor
-            throw ValueError("partD");
+            
+            // Update the temporary instance with saturated liquid entropy 
+            HEOS_copy->update(QS_INPUTS, 0, HEOS.smolar());
+            
+            // Check if above the saturation enthalpy for given entropy
+            if (HEOS.hmolar() > HEOS_copy->hmolar()){
+                solution = single_phase_solution;
+            }
+            else{
+                // C2: It is below hsatL(ssatL)
+                // Either two-phase, or vapor (for funky saturation curves like the siloxanes)
+                // Do a saturation_h call for given h on the vapor line to determine whether two-phase or vapor
+                // Update the temporary instance with saturated vapor enthalpy
+                HEOS_copy->update(HQ_INPUTS, HEOS.hmolar(), 1);
+                
+                if (HEOS.smolar() > HEOS_copy->smolar())
+                {
+                    solution = single_phase_solution;
+                }
+                else{
+                    // C2a: It is below ssatV(hsatV) --> two-phase
+                    solution = two_phase_solution;
+                }
+            }
+        }
+        // Part C - if tripleV.s > s > sc
+        else if (HEOS.smolar() > crit.smolar && HEOS.smolar() < tripleV.smolar){
+            // Do a saturation_s call for given s on the vapor line to determine whether two-phase or vapor
+            // Update the temporary instance with saturated vapor entropy
+            HEOS_copy->update(QS_INPUTS, 1, HEOS.smolar());
+            
+            double h1 = HEOS.hmolar(), h2 = HEOS_copy->hmolar();
+            if (HEOS.hmolar() > HEOS_copy->hmolar()){
+                // D2b: It is above hsatV(ssatV) --> gas
+                solution = single_phase_solution;
+            }
+            else{
+                // C2a: It is below ssatV(hsatV) --> two-phase
+                solution = two_phase_solution;
+            }
+        }
+        // Part D - Check higher limit
+        else if (HEOS.smolar() > tripleV.smolar){
+            solution = single_phase_solution;
+            HEOS_copy->update(PT_INPUTS, HEOS_copy->p_triple(), 0.5*HEOS_copy->Tmin() + 0.5*HEOS_copy->Tmax());
         }
         // Part E - HEOS.smolar() > crit.hmolar > tripleV.smolar
         else{
-            throw ValueError("partE");
+            // Now branch depending on the saturated vapor curve
+            // If maximum 
+            throw ValueError(format("partE HEOS.smolar() = %g tripleV.smolar = %g", HEOS.smolar(), tripleV.smolar));
+        }
+        
+        switch (solution){
+            case single_phase_solution:
+            {
+                // Fixing it to be gas is probably sufficient
+                HEOS_copy->specify_phase(iphase_gas);
+                HS_flash_singlephaseOptions options;
+                options.omega = 1.0;
+                try{
+                    // Do the flash calcs starting from the guess value
+                    HS_flash_singlephase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);
+                    // Copy the results
+                    HEOS.update(DmolarT_INPUTS, HEOS_copy->rhomolar(), HEOS_copy->T());
+                    break;
+                }
+                catch(std::exception &e){
+                    HEOS_copy->update(DmolarT_INPUTS, HEOS.rhomolar_critical()*1.3, HEOS.Tmax());
+                    // Do the flash calcs starting from the guess value
+                    HS_flash_singlephase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);
+                    // Copy the results
+                    HEOS.update(DmolarT_INPUTS, HEOS_copy->rhomolar(), HEOS_copy->T());
+                    break;
+                }
+            }
+            case two_phase_solution:
+            {
+                throw ValueError("HS two-phase not yet supported.");
+            }
+            default:
+                throw ValueError("solution not set");
         }
     }
-
-    /*if (HEOS.isHomogeneousPhase() && !ValidNumber(HEOS._p))
-    {
-        switch (other)
-        {
-            case iDmolar:
-                break;
-            case iHmolar:
-                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._hmolar, iHmolar); break;
-            case iSmolar:
-                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._smolar, iSmolar); break;
-            case iUmolar:
-                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._umolar, iUmolar); break;
-            default:
-                break;
-        }
-        HEOS.calc_pressure();
-        HEOS._Q = -1;
-    }*/
 }
 
 } /* namespace CoolProp */

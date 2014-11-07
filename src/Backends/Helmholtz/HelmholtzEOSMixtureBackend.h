@@ -41,12 +41,13 @@ public:
     shared_ptr<ReducingFunction> Reducing;
     ExcessTerm Excess;
     PhaseEnvelopeData PhaseEnvelope;
+    SimpleState ssat_max, hsat_max;
 
     friend class FlashRoutines; // Allows the static methods in the FlashRoutines class to have access to all the protected members and methods of this class
     friend class TransportRoutines; // Allows the static methods in the TransportRoutines class to have access to all the protected members and methods of this class
     friend class MixtureDerivatives; // Allows the static methods in the MixtureDerivatives class to have access to all the protected members and methods of this class
     friend class PhaseEnvelopeRoutines; // Allows the static methods in the PhaseEnvelopeRoutines class to have access to all the protected members and methods of this class
-    friend class MixtureParameters; //  Allows the static methods in the MixtureParameters class to have access to all the protected members and methods of this class
+    friend class MixtureParameters; // Allows the static methods in the MixtureParameters class to have access to all the protected members and methods of this class
 
     // Helmholtz EOS backend uses mole fractions
     bool using_mole_fractions(){return true;}
@@ -59,6 +60,8 @@ public:
     void calc_specify_phase(phases phase){ specify_phase(phase); }
     void calc_unspecify_phase(){ unspecify_phase(); }
     long double calc_saturation_ancillary(parameters param, int Q, parameters given, double value);
+    void calc_ssat_max(void);
+    void calc_hsat_max(void);
     
     const CoolProp::SimpleState &calc_state(const std::string &state);
 

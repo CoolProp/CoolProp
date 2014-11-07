@@ -313,6 +313,8 @@ protected:
         EOS.reduce.T = cpjson::get_double(reducing_state,"T");
         EOS.reduce.rhomolar = cpjson::get_double(reducing_state,"rhomolar");
         EOS.reduce.p = cpjson::get_double(reducing_state,"p");
+        EOS.reduce.hmolar = cpjson::get_double(reducing_state,"hmolar");
+        EOS.reduce.smolar = cpjson::get_double(reducing_state,"smolar");
 
         EOS.sat_min_liquid.T = cpjson::get_double(satminL_state, "T");
         EOS.sat_min_liquid.p = cpjson::get_double(satminL_state, "p");
@@ -947,7 +949,7 @@ protected:
         rapidjson::Value &crit = states["critical"];
         fluid.crit.T = cpjson::get_double(crit, "T");
         fluid.crit.p = cpjson::get_double(crit, "p");
-        fluid.crit.rhomolar = cpjson::get_double(crit, "rhomolar");
+        fluid.crit.rhomolar = cpjson::get_double(crit, "rhomolar");        
 
         if (!states.HasMember("triple_liquid")){ throw ValueError(format("fluid[\"STATES\"] [%s] does not have \"triple_liquid\" member",fluid.name.c_str())); }
         rapidjson::Value &triple_liquid = states["triple_liquid"];

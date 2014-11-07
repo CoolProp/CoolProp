@@ -784,6 +784,10 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
             _Q = value1; _T = value2; FlashRoutines::QT_flash(*this); break;
         case PQ_INPUTS:
             _p = value1; _Q = value2; FlashRoutines::PQ_flash(*this); break;
+        case QS_INPUTS:
+            _Q = value1; _smolar = value2; FlashRoutines::QS_flash(*this); break;
+        case HQ_INPUTS:
+            _hmolar = value1; _Q = value2; FlashRoutines::HQ_flash(*this); break;
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
     }
@@ -796,7 +800,8 @@ void HelmholtzEOSMixtureBackend::post_update()
 {
     // Check the values that must always be set
     //if (_p < 0){ throw ValueError("p is less than zero");}
-    if (!ValidNumber(_p)){ throw ValueError("p is not a valid number");}
+    if (!ValidNumber(_p)){ 
+        throw ValueError("p is not a valid number");}
     //if (_T < 0){ throw ValueError("T is less than zero");}
     if (!ValidNumber(_T)){ throw ValueError("T is not a valid number");}
     if (_rhomolar < 0){ throw ValueError("rhomolar is less than zero");}
@@ -1090,6 +1095,60 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
     }
     else{
         throw ValueError(format("The pressure [%g Pa] cannot be used in p_phase_determination",_p));
+    }
+}
+void HelmholtzEOSMixtureBackend::calc_ssat_max(void)
+{
+    class Residual : public FuncWrapper1D
+    {
+        public:
+        HelmholtzEOSMixtureBackend *HEOS;
+        Residual(HelmholtzEOSMixtureBackend &HEOS): HEOS(&HEOS){};
+        double call(double T){
+            HEOS->update(QT_INPUTS, 1, T);
+            // dTdp_along_sat
+            double dTdp_along_sat = HEOS->T()*(1/HEOS->SatV->rhomolar()-1/HEOS->SatL->rhomolar())/(HEOS->SatV->hmolar()-HEOS->SatL->hmolar());
+            // dsdT_along_sat;
+            return HEOS->SatV->first_partial_deriv(iSmolar,iT,iP)+HEOS->SatV->first_partial_deriv(iSmolar,iP,iT)/dTdp_along_sat;
+        }
+    };
+    if (!ssat_max.is_valid())
+    {
+        Residual resid(*this);
+        std::string errstr;
+        Secant(resid, T_critical() - 1, 0.1, 1e-8, 30, errstr);
+        ssat_max.T = resid.HEOS->T();
+        ssat_max.p = resid.HEOS->p();
+        ssat_max.rhomolar = resid.HEOS->rhomolar();
+        ssat_max.hmolar = resid.HEOS->hmolar();
+        ssat_max.smolar = resid.HEOS->smolar();
+    }
+}
+void HelmholtzEOSMixtureBackend::calc_hsat_max(void)
+{
+    class Residualhmax : public FuncWrapper1D
+    {
+        public:
+        HelmholtzEOSMixtureBackend *HEOS;
+        Residualhmax(HelmholtzEOSMixtureBackend &HEOS): HEOS(&HEOS){};
+        double call(double T){
+            HEOS->update(QT_INPUTS, 1, T);
+            // dTdp_along_sat
+            double dTdp_along_sat = HEOS->T()*(1/HEOS->SatV->rhomolar()-1/HEOS->SatL->rhomolar())/(HEOS->SatV->hmolar()-HEOS->SatL->hmolar());
+            // dhdT_along_sat;
+            return HEOS->SatV->first_partial_deriv(iHmolar,iT,iP)+HEOS->SatV->first_partial_deriv(iHmolar,iP,iT)/dTdp_along_sat;
+        }
+    };
+    if (!hsat_max.is_valid())
+    {
+        Residualhmax residhmax(*this);
+        std::string errstrhmax;
+        Secant(residhmax, T_critical() - 1, 0.1, 1e-8, 30, errstrhmax);
+        hsat_max.T = residhmax.HEOS->T();
+        hsat_max.p = residhmax.HEOS->p();
+        hsat_max.rhomolar = residhmax.HEOS->rhomolar();
+        hsat_max.hmolar = residhmax.HEOS->hmolar();
+        hsat_max.smolar = residhmax.HEOS->smolar();
     }
 }
 void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int other, long double value)
