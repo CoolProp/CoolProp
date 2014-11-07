@@ -58,7 +58,13 @@ Once the dependencies are installed, you can run the builder and tests using::
     make install
     # Run the integration tests
     ctest --extra-verbose
+    
+If you want to change the package that CoolProp resides in, you can do so by changing the cmake call to read::
 
+    cmake .. -DCOOLPROP_JAVA_MODULE=ON -DBUILD_TESTING=ON -DCOOLPROP_SWIG_OPTIONS="-package package.name"
+    
+where ``package.name`` is replaced with the desired name
+    
 Windows (32-bit and 64-bit)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
 
@@ -76,3 +82,9 @@ You need to just slightly modify the building procedure::
     make install
     # Run the integration tests
     ctest --extra-verbose
+
+If you want to change the package that CoolProp resides in, you can do so by changing the cmake call to read::
+
+    cmake .. -DCOOLPROP_JAVA_MODULE=ON -DBUILD_TESTING=ON -DCOOLPROP_SWIG_OPTIONS="-package package.name"
+    
+where ``package.name`` is replaced with the desired name
