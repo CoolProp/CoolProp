@@ -372,8 +372,12 @@ public:
 
 input_pair_info input_pair_list[] = {
     input_pair_info(QT_INPUTS,"QT_INPUTS","Molar quality, Temperature in K"),
+    input_pair_info(QS_INPUTS,"QS_INPUTS","Molar quality, Entropy in J/mol/K"),
+    input_pair_info(HQ_INPUTS,"HQ_INPUTS","Enthalpy in J/mol, Molar quality"),
     input_pair_info(PQ_INPUTS,"PQ_INPUTS","Pressure in Pa, Molar quality"),
+    
     input_pair_info(PT_INPUTS, "PT_INPUTS","Pressure in Pa, Temperature in K"),
+    
 
     input_pair_info(DmassT_INPUTS, "DmassT_INPUTS", "Mass density in kg/m^3, Temperature in K"),
     input_pair_info(DmolarT_INPUTS, "DmolarT_INPUTS", "Molar density in mol/m^3, Temperature in K"),
