@@ -98,4 +98,4 @@ OSX should come with a c++ compiler (clang), for git and cmake your best bet is 
     Maple/index.rst
     Scilab/index.rst
     StaticLibrary/index.rst
-    Delphi-Lazarus/index.rst
+    DelphiLazarus/index.rst
