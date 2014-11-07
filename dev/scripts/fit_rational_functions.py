@@ -129,13 +129,15 @@ if not os.path.exists('hsancillaries.json'):
         print i,fluid
         
         N = 10000
-        Tc = CP.Props(fluid,'Tcrit')
-        rhoc = CP.Props(fluid,'rhocrit')
-        MM = CP.Props(fluid,'molemass')
+        Tc = CP.PropsSI(fluid,'Tcrit')
+        rhoc = CP.PropsSI(fluid,'rhocrit')
         try:
-            T = np.r_[np.linspace(Tc-0.1, CP.Props(fluid,'Tmin'), N)]#, np.linspace(Tc-0.1, Tc-1e-1, N)]
-            hfg = (CP.PropsSI('H','T',T,'Q',1,fluid) - CP.PropsSI('H','T',T,'Q',0,fluid))*MM/1000
-            sfg = (CP.PropsSI('S','T',T,'Q',1,fluid) - CP.PropsSI('S','T',T,'Q',0,fluid))*MM/1000
+            T = np.r_[np.linspace(Tc-0.1, CP.PropsSI(fluid,'Tmin'), N)]#, np.linspace(Tc-0.1, Tc-1e-1, N)]
+            hfg = (np.array(CP.PropsSI('Hmolar','T',T,'Q',1,fluid)) - np.array(CP.PropsSI('Hmolar','T',T,'Q',0,fluid)))
+            sfg = (np.array(CP.PropsSI('Smolar','T',T,'Q',1,fluid)) - np.array(CP.PropsSI('Smolar','T',T,'Q',0,fluid)))
+            if np.any(np.isnan(hfg)):
+                raise ValueError('nan values in hfg')
+                continue
         except BaseException as E:
             print E
             continue
@@ -145,10 +147,10 @@ if not os.path.exists('hsancillaries.json'):
             rho = CP.PropsSI('D','T',T,'Q',0,fluid)
             Tanchor = 1.1*Tc
             rhoanchor = 0.9*rhoc
-            hanchor_molar = CP.PropsSI('H','T',Tanchor,'D',rhoanchor,fluid)*MM/1000
-            sanchor_molar = CP.PropsSI('S','T',Tanchor,'D',rhoanchor,fluid)*MM/1000
-            sL = CP.PropsSI('S','T',T,'Q',0,fluid)*MM/1000 - sanchor_molar
-            hL = CP.PropsSI('H','T',T,'Q',0,fluid)*MM/1000 - hanchor_molar
+            hanchor_molar = CP.PropsSI('Hmolar','T',Tanchor,'D',rhoanchor,fluid)
+            sanchor_molar = CP.PropsSI('Smolar','T',Tanchor,'D',rhoanchor,fluid)
+            sL = np.array(CP.PropsSI('Smolar','T',T,'Q',0,fluid)) - sanchor_molar
+            hL = np.array(CP.PropsSI('Hmolar','T',T,'Q',0,fluid)) - hanchor_molar
             
             x = T
             xfine = np.linspace(np.min(x),np.max(x),5000)
@@ -156,7 +158,7 @@ if not os.path.exists('hsancillaries.json'):
             n = 7
             d = 1
             
-            commons = dict(type = "rational_polynomial")
+            commons = dict(type = "rational_polynomial", Tmin = np.min(T), Tmax = np.max(T))
             
             rp = fit_rational_polynomial(x, hL, xfine, n, d)
             ax1.plot(x, hL)
@@ -164,6 +166,9 @@ if not os.path.exists('hsancillaries.json'):
             ax1.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
             ax1.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
             hLdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], _note = "coefficients are in increasing order; input in K, output in J/mol; value is enthalpy minus hs_anchor enthalpy", max_abs_error_units = 'J/mol', **commons)
+            if (np.any(np.isnan(hLdict['A']))):
+                print('bad A')
+                continue
             
             rp = fit_rational_polynomial(x, hfg, xfine, n, d)
             ax2.plot(x, hfg)
@@ -178,7 +183,10 @@ if not os.path.exists('hsancillaries.json'):
             ax3.plot(xfine, rp['yfitnonlin'] + rp['max_abs_error'], 'k--')
             ax3.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
             sLdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'],  _note = "coefficients are in increasing order; input in K, output in J/mol/K; value is entropy minus hs_anchor entropy", max_abs_error_units = 'J/mol/K', **commons)
-            
+            if (np.any(np.isnan(sLdict['A']))):
+                print('bad A')
+                continue
+                
             rp = fit_rational_polynomial(x, sfg, xfine, n, d)
             ax4.plot(x, sfg)
             ax4.plot(xfine, rp['yfitnonlin'],'r')
@@ -189,6 +197,7 @@ if not os.path.exists('hsancillaries.json'):
             jj[fluid] = dict(hL = hLdict, hLV = hLVdict, sL = sLdict, sLV = sLVdict)
             
         except BaseException as E:
+            continue
             print E
                 
         pp.savefig()
