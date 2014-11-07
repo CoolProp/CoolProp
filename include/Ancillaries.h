@@ -112,6 +112,14 @@ public:
 	/// @param value The value of the output
 	/// @returns T The temperature in K
     double invert(double value);
+    
+    /// Get the minimum temperature
+	/// @returns T The minimum temperature in K
+    double get_Tmin(void){return Tmin;};
+    
+    /// Get the maximum temperature
+	/// @returns T The maximum temperature in K
+    double get_Tmax(void){return Tmax;};
 	
 };
 
