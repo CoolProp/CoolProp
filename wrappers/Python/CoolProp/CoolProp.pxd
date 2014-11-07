@@ -36,6 +36,8 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     int _get_debug_level "CoolProp::get_debug_level"() except +
     void _set_debug_level "CoolProp::set_debug_level"(int level) except +
     string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName) except +
+    void _set_reference_stateS "CoolProp::set_reference_stateS"(string, string) except +
+    void _set_reference_stateD "CoolProp::set_reference_stateD"(string, double, double, double, double) except +
     
     # Convenience functions from v4
 #     long _get_parameter_index "CoolProp::get_parameter_index" (string param)

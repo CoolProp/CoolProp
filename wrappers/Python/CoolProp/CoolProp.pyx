@@ -44,53 +44,48 @@ cdef ndarray_or_iterable(object input):
 include "HumidAirProp.pyx"
 include "AbstractState.pyx"
     
-# def set_reference_state(string_like FluidName, *args):
-#     """
-#     Accepts one of two signatures:
-#     
-#     Type #1:
-#     
-#     set_reference_state(FluidName,reference_state)
-#     
-#     FluidName The name of the fluid
-#     param reference_state The reference state to use, one of 
-#     
-#     ==========   ===========================================
-#     ``IIR``      (h=200 kJ/kg, s=1 kJ/kg/K at 0C sat. liq.)
-#     ``ASHRAE``   (h=0,s=0 @ -40C sat liq)
-#     ``NBP``      (h=0,s=0 @ 1.0 bar sat liq.)
-#     ==========   ===========================================
-#     
-#     Type #2:
-#     
-#     set_reference_state(FluidName,T0,rho0,h0,s0)
-#     
-#     ``FluidName`` The name of the fluid
-#     
-#     ``T0`` The temperature at the reference point [K]
-#     
-#     ``rho0`` The density at the reference point [kg/m^3]
-#     
-#     ``h0`` The enthalpy at the reference point [J/kg]
-#     
-#     ``s0`` The entropy at the reference point [J/kg]
-#     """
-#     
-#     cdef bytes _param
-#     cdef int retval
-#     
-#     if len(args) == 1:
-#         _param = args[0].encode('ascii')
-#         retval = _set_reference_stateS(FluidName, _param)
-#     elif len(args) == 4:
-#         retval = _set_reference_stateD(FluidName, args[0], args[1], args[2], args[3])
-#     else:
-#         raise ValueError('Invalid number of inputs')
-#     
-#     if retval < 0:
-#         raise ValueError('Unable to set reference state')
-#         
-#     
+def set_reference_state(string FluidName, *args):
+    """
+    Accepts one of two signatures:
+    
+    Type #1 (A Python wrapper of :cpapi:`CoolProp::set_reference_stateS`):
+    
+    set_reference_state(FluidName,reference_state) 
+    
+    FluidName The name of the fluid
+    param reference_state The reference state to use, one of 
+    
+    ==========   ===========================================
+    ``IIR``      (h=200 kJ/kg, s=1 kJ/kg/K at 0C sat. liq.)
+    ``ASHRAE``   (h=0,s=0 @ -40C sat liq)
+    ``NBP``      (h=0,s=0 @ 1.0 bar sat liq.)
+    ==========   ===========================================
+    
+    Type #2 (A Python wrapper of :cpapi:`CoolProp::set_reference_stateD`):
+    
+    set_reference_state(FluidName,T0,rho0,h0,s0)
+    
+    ``FluidName`` The name of the fluid
+    
+    ``T0`` The temperature at the reference point [K]
+    
+    ``rho0`` The density at the reference point [kg/m^3]
+    
+    ``h0`` The enthalpy at the reference point [J/kg]
+    
+    ``s0`` The entropy at the reference point [J/kg]
+    """
+    
+    cdef bytes _param
+    cdef int retval
+    
+    if len(args) == 1:
+        _set_reference_stateS(FluidName, args[0])
+    elif len(args) == 4:
+        _set_reference_stateD(FluidName, args[0], args[1], args[2], args[3])
+    else:
+        raise ValueError('Invalid number of inputs')
+    
 # cpdef long get_Fluid_index(string_like Fluid):
 #     """
 #     Gets the integer index of the given CoolProp fluid (primarily for use in ``IProps`` function)
