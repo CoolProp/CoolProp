@@ -256,33 +256,37 @@
         "reducing": {
           "T": 154.581, 
           "T_units": "K", 
+          "hmolar": 1048.3889268748878, 
+          "hmolar_units": "J/mol", 
           "p": 5043000, 
           "p_units": "Pa", 
           "rhomolar": 13630, 
-          "rhomolar_units": "mol/m^3"
+          "rhomolar_units": "mol/m^3", 
+          "smolar": 137.6467740760952, 
+          "smolar_units": "J/mol/K"
         }, 
         "sat_min_liquid": {
           "T": 54.361000000000004, 
           "T_units": "K", 
-          "hmolar": -193295.16980068566, 
+          "hmolar": -6185.21347941818, 
           "hmolar_units": "J/mol", 
           "p": 146.27764856898415, 
           "p_units": "Pa", 
           "rhomolar": 40816.43081773842, 
           "rhomolar_units": "mol/m^3", 
-          "smolar": 2192.8479522574626, 
+          "smolar": 70.16850305469609, 
           "smolar_units": "J/mol/K"
         }, 
         "sat_min_vapor": {
           "T": 54.361000000000004, 
           "T_units": "K", 
-          "hmolar": 49426.713140341606, 
+          "hmolar": 1581.595508435163, 
           "hmolar_units": "J/mol", 
           "p": 146.27764704346407, 
           "p_units": "Pa", 
           "rhomolar": 0.3237031700886774, 
           "rhomolar_units": "mol/m^3", 
-          "smolar": 6657.848282294185, 
+          "smolar": 213.04315561547517, 
           "smolar_units": "J/mol/K"
         }
       }, 
@@ -510,25 +514,25 @@
     "triple_liquid": {
       "T": 54.361000000000004, 
       "T_units": "K", 
-      "hmolar": -193295.16980068566, 
+      "hmolar": -6185.21347941818, 
       "hmolar_units": "J/mol", 
       "p": 146.27764856898415, 
       "p_units": "Pa", 
       "rhomolar": 40816.43081773842, 
       "rhomolar_units": "mol/m^3", 
-      "smolar": 2192.8479522574626, 
+      "smolar": 70.16850305469609, 
       "smolar_units": "J/mol/K"
     }, 
     "triple_vapor": {
       "T": 54.361000000000004, 
       "T_units": "K", 
-      "hmolar": 49426.713140341606, 
+      "hmolar": 1581.595508435163, 
       "hmolar_units": "J/mol", 
       "p": 146.27764704346407, 
       "p_units": "Pa", 
       "rhomolar": 0.3237031700886774, 
       "rhomolar_units": "mol/m^3", 
-      "smolar": 6657.848282294185, 
+      "smolar": 213.04315561547517, 
       "smolar_units": "J/mol/K"
     }
   }, 
