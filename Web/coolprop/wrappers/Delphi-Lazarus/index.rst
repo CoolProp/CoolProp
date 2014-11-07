@@ -4,7 +4,7 @@
 Delphi Wrapper
 **************
 
-`Delphi <http://www.embarcadero.com/products/delphi>`_ is a programming environment based on the Pascal language.  It is used for doing GUI development and other general programming.  There is an open-source equivalent of Delphi called `Lazarus <http://www.lazarus.freepascal.org/>`_ .
+Delphi `(information) <http://www.embarcadero.com/products/delphi>`_ is a programming environment based on the Pascal language.  It is used for doing GUI development and other general programming.  There is an open-source equivalent of Delphi called `Lazarus <http://www.lazarus.freepascal.org/>`_ .
 
 A very simple example of linking Lazarus and CoolProp can be found obtained by downloading the following 3 files: 
 
