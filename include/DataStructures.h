@@ -19,6 +19,7 @@ struct SimpleState
     SimpleState(){rhomolar = _HUGE; T = _HUGE; p = _HUGE; 
                   hmolar = _HUGE; smolar = _HUGE, umolar = _HUGE;
                   Q = _HUGE;}
+    bool is_valid(){return ValidNumber(rhomolar) && ValidNumber(T) && ValidNumber(hmolar) && ValidNumber(p);}
 };
 
 /// --------------------------------------------------
@@ -31,39 +32,81 @@ struct SimpleState
 enum parameters{
 
     // General parameters
-    imolar_mass, irhomolar_reducing, irhomolar_critical, iT_reducing, iT_critical,
-	irhomass_reducing, irhomass_critical, iP_critical, iT_triple, iP_triple, iT_min, 
-	iT_max,iP_max, iP_min,
+    imolar_mass, 
+    irhomolar_reducing, 
+    irhomolar_critical, 
+    iT_reducing, 
+    iT_critical,
+	irhomass_reducing, 
+    irhomass_critical, 
+    iP_critical, 
+    iT_triple, 
+    iP_triple, 
+    iT_min, 
+	iT_max,
+    iP_max, 
+    iP_min,
 
     // Bulk properties
-    iT,  iP, iQ, iTau, iDelta,
+    iT,  
+    iP, 
+    iQ, 
+    iTau, 
+    iDelta,
 
     // Molar specific thermodynamic properties
-    iDmolar, iHmolar, iSmolar, iCpmolar, iCp0molar, iCvmolar, iUmolar, iGmolar,
+    iDmolar, 
+    iHmolar, 
+    iSmolar, 
+    iCpmolar, 
+    iCp0molar, 
+    iCvmolar, 
+    iUmolar, 
+    iGmolar,
 
     // Mass specific thermodynamic properties
-    iDmass, iHmass, iSmass, iCpmass, iCp0mass, iCvmass, iUmass, iGmass,
+    iDmass, 
+    iHmass, 
+    iSmass, 
+    iCpmass, 
+    iCp0mass, 
+    iCvmass, 
+    iUmass, 
+    iGmass,
 
     // Smoothing functions for density
     //idrhodh_constp_smoothed, idrhodp_consth_smoothed, irho_smoothed,
 
     // Transport properties
-    iviscosity, iconductivity, isurface_tension, iPrandtl,
+    iviscosity, 
+    iconductivity, 
+    isurface_tension, 
+    iPrandtl,
 
     // Derivative-based terms
-    ispeed_sound, iisothermal_compressibility, iisobaric_expansion_coefficient,
+    ispeed_sound, 
+    iisothermal_compressibility, 
+    iisobaric_expansion_coefficient,
 
     // Fundamental derivative of gas dynamics
     ifundamental_derivative_of_gas_dynamics,
 
     // Derivatives of the residual non-dimensionalized Helmholtz energy with respect to the EOS variables
-    ialphar, idalphar_dtau_constdelta, idalphar_ddelta_consttau,
+    ialphar, 
+    idalphar_dtau_constdelta, 
+    idalphar_ddelta_consttau,
 
     // Derivatives of the ideal-gas non-dimensionalized Helmholtz energy with respect to the EOS variables
-    ialpha0, idalpha0_dtau_constdelta, idalpha0_ddelta_consttau,
+    ialpha0, 
+    idalpha0_dtau_constdelta, 
+    idalpha0_ddelta_consttau,
 
     // Other functions and derivatives
-    iBvirial, iCvirial, idBvirial_dT, idCvirial_dT, iZ,
+    iBvirial, 
+    iCvirial, 
+    idBvirial_dT, 
+    idCvirial_dT, 
+    iZ,
 
     // Environmental parameters
     iGWP20, ///< The 20-year global warming potential
@@ -123,6 +166,8 @@ enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLU
 enum input_pairs{
     QT_INPUTS, ///< Molar quality, Temperature in K
     PQ_INPUTS, ///< Pressure in Pa, Molar quality
+    QS_INPUTS, ///< Molar quality, Entropy in J/mol/K
+    HQ_INPUTS, ///< Enthalpy in J/mol, Molar quality
 
     PT_INPUTS, ///< Pressure in Pa, Temperature in K
 
@@ -243,25 +288,26 @@ template<class T> CoolProp::input_pairs generate_update_pair(long key1, T value1
         else if (match_pair(key1, key2, iP, iUmolar, swap)){
             pair = PUmolar_INPUTS; // Pressure in Pa, Internal energy in J/mol
         }
+        else if (match_pair(key1, key2, iHmass, iSmass, swap)){
+            pair = HmassSmass_INPUTS; // Enthalpy in J/kg, Entropy in J/kg/K
+        }
+        else if (match_pair(key1, key2, iHmolar, iSmolar, swap)){
+            pair = HmolarSmolar_INPUTS; // Enthalpy in J/mol, Entropy in J/mol/K
+        }
+        else if (match_pair(key1, key2, iSmass, iUmass, swap)){
+            pair = SmassUmass_INPUTS; ///< Entropy in J/kg/K, Internal energy in J/kg
+        }
+        else if (match_pair(key1, key2, iSmolar, iUmolar, swap)){
+            pair = SmolarUmolar_INPUTS; ///< Entropy in J/mol/K, Internal energy in J/mol
+        }
         else
             throw ValueError("Invalid set of inputs to generate_update_pair");
 
-        /*
-        HmassSmass_INPUTS, ///< Enthalpy in J/kg, Entropy in J/kg/K
-        HmolarSmolar_INPUTS, ///< Enthalpy in J/mol, Entropy in J/mol/K
-        SmassUmass_INPUTS, ///< Entropy in J/kg/K, Internal energy in J/kg
-        SmolarUmolar_INPUTS, ///< Entropy in J/mol/K, Internal energy in J/mol
-        */
-
-        if (!swap)
-        {
-            out1 = value1;
-            out2 = value2;
+        if (!swap){
+            out1 = value1; out2 = value2;
         }
-        else
-        {
-            out1 = value2;
-            out2 = value1;
+        else{
+            out1 = value2; out2 = value1;
         }
         return pair;
     };
