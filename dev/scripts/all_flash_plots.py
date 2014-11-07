@@ -4,8 +4,8 @@ import itertools, numpy as np
 
 variables = ['T','P','H','S','U','D']
 
-for fluid in ['Water','CO2','n-Propane']:
-    T = np.linspace(CP.Props(fluid,'Tmin'),CP.Props(fluid,'Tcrit'),1000)
+for fluid in ['Water','CO2','n-Propane','MDM']:
+    T = np.linspace(CP.PropsSI(fluid,'Tmin'),CP.PropsSI(fluid,'T_critical')-1e-5,1000)
 
     fig = plt.figure(1, figsize=(10, 10), dpi=100)
     for i, types in enumerate(itertools.combinations(variables,2)):
@@ -16,12 +16,13 @@ for fluid in ['Water','CO2','n-Propane']:
         if types[0] in ['T','P'] and types != ['T','P']:
             types[0],types[1] = types[1],types[0]
         
-        xL = CP.Props(types[0],'T',T,'Q',0,fluid)
-        yL = CP.Props(types[1],'T',T,'Q',0,fluid)
-        xV = CP.Props(types[0],'T',T,'Q',1,fluid)
-        yV = CP.Props(types[1],'T',T,'Q',1,fluid)
-        xc = CP.Props(types[0],'T',CP.Props(fluid,'Tcrit'),'Q',1,fluid)
-        yc = CP.Props(types[1],'T',CP.Props(fluid,'Tcrit'),'Q',1,fluid)
+        xL = CP.PropsSI(types[0],'T',T,'Q',0,fluid)
+        yL = CP.PropsSI(types[1],'T',T,'Q',0,fluid)
+        xV = CP.PropsSI(types[0],'T',T,'Q',1,fluid)
+        yV = CP.PropsSI(types[1],'T',T,'Q',1,fluid)
+        Tc = CP.PropsSI(fluid, 'T_critical')
+        xc = CP.PropsSI(types[0],'T',Tc-1e-6,'Q',1,fluid)
+        yc = CP.PropsSI(types[1],'T',Tc-1e-6,'Q',1,fluid)
         
         ax.plot(xL,yL,'k')
         ax.plot(xV,yV,'k')
