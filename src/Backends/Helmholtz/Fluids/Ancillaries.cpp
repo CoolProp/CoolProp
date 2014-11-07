@@ -19,6 +19,15 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
 		num_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["A"]));
 		den_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["B"]));
 		max_abs_error = cpjson::get_double(json_code,"max_abs_error");
+        try{
+            Tmin = cpjson::get_double(json_code,"Tmin");
+            Tmax = cpjson::get_double(json_code,"Tmax");
+        }
+        catch (std::exception &e){
+            std::cout << "Missing Tmin, Tmax" << std::endl;
+            Tmin = _HUGE;
+            Tmax = _HUGE;
+        }
 	}
 	else
 	{
