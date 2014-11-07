@@ -1,3 +1,8 @@
+.. _Scilab:
+
+**************
+Scilab wrapper
+**************
 
 Using Scilab and CoolProp
 =========================
