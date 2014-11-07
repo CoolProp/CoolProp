@@ -96,5 +96,6 @@ OSX should come with a c++ compiler (clang), for git and cmake your best bet is 
     LibreOffice/index.rst
     Excel/index.rst
     Maple/index.rst
+    Scilab/index.rst
     StaticLibrary/index.rst
     Delphi-Lazarus/index.rst
