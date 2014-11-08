@@ -110,8 +110,10 @@ public:
 	
 	/// Invert this ancillary function, and calculate the temperature given the output the value of the function
 	/// @param value The value of the output
+    /// @param min_bound (optional) The minimum value for T; ignored if < 0
+    /// @param max_bound (optional) The maximum value for T; ignored if < 0
 	/// @returns T The temperature in K
-    double invert(double value);
+    double invert(double value, double min_bound = -1, double max_bound = -1);
     
     /// Get the minimum temperature
 	/// @returns T The minimum temperature in K
