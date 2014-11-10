@@ -64,11 +64,16 @@ Local installation
 ------------------
 
 If you prefer not to be sudoer when compiling coolprop on Linux/MacOS, you can 
-also install it locally provided that the `PYTHONPATH` variable is correctly 
-set to let Python look into the given directory (here `HOME/.local`). Don't 
+also install it locally provided that the ``$PYTHONPATH`` variable is correctly 
+set to let Python look into the given directory (here ``$HOME/.local``). Don't 
 worry if it's not the case, the error message should help you to properly set 
 your variable::
 
+    # Check out the sources for CoolProp
+    git clone https://github.com/CoolProp/CoolProp --recursive
+    # Move into the folder you just created
+    cd CoolProp/wrappers/Python
+    # Start the installation
     python setup.py install --prefix $HOME/.local
     
 For Pyzo users
