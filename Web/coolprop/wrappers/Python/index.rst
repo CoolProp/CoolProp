@@ -59,6 +59,17 @@ executable), simply use this version of python to execute the ``setup.py``
 script::
 
     sudo python2.7 setup.py install
+
+Local installation
+------------------
+
+If you prefer not to be sudoer when compiling coolprop on Linux/MacOS, you can 
+also install it locally provided that the `PYTHONPATH` variable is correctly 
+set to let Python look into the given directory (here `HOME/.local`). Don't 
+worry if it's not the case, the error message should help you to properly set 
+your variable::
+
+    python setup.py install --prefix $HOME/.local
     
 For Pyzo users
 --------------
