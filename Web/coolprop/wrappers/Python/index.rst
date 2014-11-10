@@ -51,14 +51,14 @@ Then, follow the commands::
     # Move into the folder you just created
     cd CoolProp/wrappers/Python
     # Start the installation
-    python setup.py install --prefix /home/$USER/.local 
+    sudo python setup.py install
 
 If you would like to install CoolProp just for a given version of Python (for 
 example if ``python`` links to ``python3.4`` and you also have a ``python2.7`` 
 executable), simply use this version of python to execute the ``setup.py`` 
 script::
 
-    python2.7 setup.py install --prefix /home/$USER/.local 
+    sudo python2.7 setup.py install
     
 For Pyzo users
 --------------
