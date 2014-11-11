@@ -59,6 +59,19 @@ executable), simply use this version of python to execute the ``setup.py``
 script::
 
     sudo python2.7 setup.py install
+
+Local installation
+------------------
+
+If you prefer not to be sudoer when compiling coolprop on Linux/MacOS, you can 
+also install it locally using the ``--user`` switch::
+
+    # Check out the sources for CoolProp
+    git clone https://github.com/CoolProp/CoolProp --recursive
+    # Move into the folder you just created
+    cd CoolProp/wrappers/Python
+    # Start the installation
+    python setup.py install --user
     
 For Pyzo users
 --------------
