@@ -224,18 +224,16 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         // Get a reference to keep the code a bit cleaner
         CriticalRegionSplines &splines = HEOS.components[0]->pEOS->critical_region_splines;
         
-		// Check limits
-		if (!is_in_closed_range(Tmin_sat, Tmax_sat, static_cast<long double>(HEOS._T))){
-			throw ValueError(format("Temperature to QT_flash [%6g K] must be in range [%8Lg K, %8Lg K]",HEOS._T, Tmin_sat, Tmax_sat));
-		}
-        
         // If exactly(ish) at the critical temperature, liquid and vapor have the critial density
-        if (std::abs(T-HEOS.T_critical())< 1e-14){
+        if (std::abs(T-Tmax_sat)< 1e-12){
              HEOS.SatL->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
              HEOS.SatV->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
              HEOS._rhomolar = HEOS.rhomolar_critical();
              HEOS._p = HEOS.SatL->p();
         }
+        else if (!is_in_closed_range(Tmin_sat, Tmax_sat, T)){
+			throw ValueError(format("Temperature to QT_flash [%0.8Lg K] must be in range [%0.8Lg K, %0.8Lg K]", T, Tmin_sat, Tmax_sat));
+		}
         else if (get_config_bool(CRITICAL_SPLINES_ENABLED) && splines.enabled && HEOS._T > splines.T_min){
             double rhoL = _HUGE, rhoV = _HUGE;
             // Use critical region spline if it has it and temperature is in its range
@@ -1081,7 +1079,12 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                     default:
                     { throw ValueError(format("Not a valid homogeneous state")); }
                 }
-				HSU_P_flash_singlephase_Brent(HEOS, other, value, Tmin, Tmax);
+                try{
+                    HSU_P_flash_singlephase_Brent(HEOS, other, value, Tmin, Tmax);
+                }
+                catch(std::exception &e){
+                    throw ValueError(format("unable to solve 1phase PY flash with Tmin=%Lg, Tmax=%Lg due to error: %s",Tmin, Tmax, e.what()));
+                }
 				HEOS._Q = -1;
 			}
         }
