@@ -379,6 +379,16 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             HEOS.calc_pmin_sat(pmin_satL, pmin_satV);
             pmin_sat = std::max(pmin_satL, pmin_satV);
             
+            // Check for being AT the critical point
+            if (!is_in_closed_range(pmax_sat*(1-1e-10), pmax_sat*(1+1e-10), static_cast<long double>(HEOS._p))){
+                // Load the outputs
+                HEOS._phase = iphase_critical_point;
+                HEOS._p = HEOS.p_critical();
+                HEOS._rhomolar = HEOS.rhomolar_critical();
+                HEOS._T = HEOS.T_critical();
+                return;
+            }
+            
             // Check limits
             if (!is_in_closed_range(pmin_sat*0.999999, pmax_sat*1.000001, static_cast<long double>(HEOS._p))){
                 throw ValueError(format("Pressure to PQ_flash [%6g Pa] must be in range [%8Lg Pa, %8Lg Pa]",HEOS._p, pmin_sat, pmax_sat));
