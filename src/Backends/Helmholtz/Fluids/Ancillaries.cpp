@@ -24,7 +24,6 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
             Tmax = cpjson::get_double(json_code,"Tmax");
         }
         catch (std::exception &e){
-            std::cout << "Missing Tmin, Tmax" << std::endl;
             Tmin = _HUGE;
             Tmax = _HUGE;
         }
