@@ -1648,7 +1648,7 @@ long double HelmholtzEOSMixtureBackend::calc_pressure_nocache(long double T, lon
 }
 long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long double T, long double value, int other)
 {
-    long double ymelt, yc, ymin, y;
+    long double yc, ymin, y;
 
     // Define the residual to be driven to zero
     class solver_resid : public FuncWrapper1D
@@ -1685,16 +1685,13 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
     // Supercritical temperature
     if (_T > _crit.T)
     {
-        long double rhomelt = components[0]->triple_liquid.rhomolar;
         long double rhoc = components[0]->crit.rhomolar;
         long double rhomin = 1e-10;
 
         switch(other)
         {
-
             case iSmolar:
             {
-                ymelt = calc_smolar_nocache(_T, rhomelt);
                 yc = calc_smolar_nocache(_T, rhoc);
                 ymin = calc_smolar_nocache(_T, rhomin);
                 y = _smolar;
@@ -1702,7 +1699,6 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
             }
             case iHmolar:
             {
-                ymelt = calc_hmolar_nocache(_T, rhomelt);
                 yc = calc_hmolar_nocache(_T, rhoc);
                 ymin = calc_hmolar_nocache(_T, rhomin);
                 y = _hmolar;
@@ -1710,7 +1706,6 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
             }
             case iUmolar:
             {
-                ymelt = calc_umolar_nocache(_T, rhomelt);
                 yc = calc_umolar_nocache(_T, rhoc);
                 ymin = calc_umolar_nocache(_T, rhomin);
                 y = _umolar;
@@ -1720,19 +1715,35 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
                 throw ValueError();
         }
 
-        if (is_in_closed_range(ymelt, yc, y))
-        {
-            long double rhomolar = Brent(resid, rhomelt, rhoc, LDBL_EPSILON, 1e-12, 100, errstring);
-            return rhomolar;
-        }
-        else if (is_in_closed_range(yc, ymin, y))
+        if (is_in_closed_range(yc, ymin, y))
         {
             long double rhomolar = Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-12, 100, errstring);
             return rhomolar;
         }
+        else if (y < yc){
+            // Increase rhomelt until it bounds the solution
+            int step_count = 0;
+            while(!is_in_closed_range(ymin, yc, y)){
+                rhoc *= 1.1; // Increase density by a few percent
+                switch(other) {
+                    case iSmolar:
+                        yc = calc_smolar_nocache(_T, rhoc); break;
+                    case iHmolar:
+                        yc = calc_hmolar_nocache(_T, rhoc); break;
+                    case iUmolar:
+                        yc = calc_umolar_nocache(_T, rhoc); break;
+                }
+                if (step_count > 30){
+                    throw ValueError(format("Even by increasing rhoc, not able to bound input; input %Lg is not in range %Lg,%Lg",y,yc,ymin));
+                }
+                step_count++;
+            }
+            long double rhomolar = Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-12, 100, errstring);
+            return rhomolar;
+        }
         else
         {
-            throw ValueError();
+            throw ValueError(format("input %Lg is not in range %Lg,%Lg,%Lg",y,yc,ymin));
         }
         // Update the state (T > Tc)
         if (_p < p_critical()){
