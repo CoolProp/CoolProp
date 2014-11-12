@@ -3,6 +3,7 @@ import matplotlib
 matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 import CoolProp as CP
 from CoolProp.CoolProp import PropsSI
@@ -93,7 +94,6 @@ class ConsistencyFigure(object):
             else:
                 ax.cross_out_axis()
         
-        
         self.fig.subplots_adjust(top=0.95)
         self.fig.suptitle('Consistency plots for '+self.fluid,size = 14)
     
@@ -105,7 +105,7 @@ class ConsistencyFigure(object):
         self.dictL, self.dictV = {}, {}
         for Q, dic in zip([0, 1], [self.dictL, self.dictV]):
             rhomolar,smolar,hmolar,T,p,umolar = [],[],[],[],[],[]
-            for _T in np.logspace(np.log10(HEOS.keyed_output(CP.iT_triple)), np.log10(HEOS.keyed_output(CP.iT_critical)-1e-10), 300):
+            for _T in np.logspace(np.log10(HEOS.keyed_output(CP.iT_triple)), np.log10(HEOS.keyed_output(CP.iT_critical)), 100):
                 try:
                     HEOS.update(CP.QT_INPUTS, Q, _T)
                     T.append(HEOS.T())
@@ -162,8 +162,8 @@ class ConsistencyFigure(object):
         
         # Melting line if it has it
         if state.has_melting_line():
-            pmelt_min = max(state.melting_line(CP.iP_min, -1, -1)*1.000001, state.keyed_output(CP.iP_triple))
-            pmelt_max = min(state.melting_line(CP.iP_max, -1, -1)*0.999999, state.keyed_output(CP.iP_max))
+            pmelt_min = max(state.melting_line(CP.iP_min, -1, -1), state.keyed_output(CP.iP_triple))*1.01
+            pmelt_max = min(state.melting_line(CP.iP_max, -1, -1), state.keyed_output(CP.iP_max))*0.99
             
             for _p in np.logspace(np.log10(pmelt_min), np.log10(pmelt_max), 100):
                 try:
@@ -247,7 +247,23 @@ class ConsistencyAxis(object):
             
     def consistency_check_singlephase(self):
         
+        tic = time.time()
         state = CP.AbstractState('HEOS', self.fluid)
+        
+        # Update the state given the desired set of inputs
+        param1, param2 = split_pair(self.pair)
+        key1 = getattr(CP, 'i'+param1)
+        key2 = getattr(CP, 'i'+param2)
+        pairkey = getattr(CP, self.pair+'_INPUTS')
+        
+        # Get the keys and indices and values for the inputs needed
+        xparam, yparam = split_pair_xy(self.pair)
+        xkey = getattr(CP, 'i' + xparam)
+        ykey = getattr(CP, 'i' + yparam)
+        
+        xgood, ygood = [], []
+        xbad, ybad = [], []
+        xexcep, yexcep = [], []
         
         for p in np.logspace(np.log10(state.keyed_output(CP.iP_min)*1.01), np.log10(state.keyed_output(CP.iP_max)), 40):
             
@@ -274,12 +290,6 @@ class ConsistencyAxis(object):
                 except ValueError as VE:
                     print('consistency',VE)
                     continue
-                    
-                # Update the state given the desired set of inputs
-                param1, param2 = split_pair(self.pair)
-                key1 = getattr(CP, 'i'+param1)
-                key2 = getattr(CP, 'i'+param2)
-                pairkey = getattr(CP, self.pair+'_INPUTS')
                 
                 _exception = False
                 try:
@@ -288,21 +298,26 @@ class ConsistencyAxis(object):
                     print(VE)
                     _exception = True
                     
-                # Get the keys and indices and values for the inputs needed
-                xparam, yparam = split_pair_xy(self.pair)
-                xkey = getattr(CP, 'i' + xparam)
-                ykey = getattr(CP, 'i' + yparam)
                 x = self.to_axis_units(xparam, state.keyed_output(xkey))
                 y = self.to_axis_units(yparam, state.keyed_output(ykey))
                 
                 if _exception:
-                    self.ax.plot(x, y, 'k+', ms = 3)
+                    xexcep.append(x)
+                    yexcep.append(y)
                 else:
                     # Check the error on the density
                     if abs(state_PT.rhomolar()/state.rhomolar()-1) < 1e-3 and abs(state_PT.p()/state.p()-1) < 1e-3 and abs(state_PT.T() - state.T()) < 1e-3:
-                        self.ax.plot(x, y, 'k.', ms = 1)
+                        xgood.append(x)
+                        ygood.append(y)
                     else:
-                        self.ax.plot(x, y, 'kx', ms = 3)
+                        xbad.append(x)
+                        ybad.append(y)
+
+        toc = time.time()
+        self.ax.plot(xbad, ybad, 'r+', ms = 3)
+        self.ax.plot(xgood, ygood, 'k.', ms = 1)
+        self.ax.plot(xexcep, yexcep, 'rx', ms = 3)
+        print('Took '+str(toc-tic)+' s for '+self.pair)
         
     def consistency_check_twophase(self):
         pass
@@ -323,7 +338,7 @@ class ConsistencyAxis(object):
 
 if __name__=='__main__':
     PVT = PdfPages('Consistency.pdf')
-    for fluid in CP.__fluids__:
+    for fluid in ['Water','Propane','MDM']:#CP.__fluids__:
         print('************************************************')
         print(fluid)
         print('************************************************')
