@@ -42,7 +42,8 @@ public:
     
     /// Flash for given molar enthalpy and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
-    static void HQ_flash(HelmholtzEOSMixtureBackend &HEOS);
+    /// @param Tguess (optional) The guess temperature in K to start from, ignored if < 0
+    static void HQ_flash(HelmholtzEOSMixtureBackend &HEOS, long double Tguess = -1);
     
     /// Flash for mixture given temperature or pressure and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used

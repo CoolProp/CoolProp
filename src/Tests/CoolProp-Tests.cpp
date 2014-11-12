@@ -1264,6 +1264,33 @@ TEST_CASE("Triple point checks", "[triple_point]")
     }
 }
 
+TEST_CASE("Test that saturation solvers solve all the way to T = Tc", "[sat_T_to_Tc]")
+{
+    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+    for (std::size_t i = 0; i < fluids.size(); ++i)
+    {
+        double Tc = Props1SI(fluids[i], "Tcrit");
+        std::ostringstream ss1;
+        ss1 << "Check sat_T at Tc for " << fluids[i];
+        SECTION(ss1.str(),"")
+        {
+            double pc = PropsSI("P","T",Tc,"Q",0,fluids[i]);
+            CAPTURE(pc);
+            CHECK(ValidNumber(pc));
+        }
+        for (double j = 0.1; j > 1e-10; j /= 10)
+        {
+            std::ostringstream ss2;
+            ss2 << "Check sat_T for " << fluids[i] << " for Tc - T = " << j << " K";
+            SECTION(ss2.str(),"")
+            {
+                CHECK(ValidNumber(PropsSI("D","T",Tc-j,"Q",0,fluids[i])));
+            }
+        }
+        
+    }
+}
+
 TEST_CASE("Test that reference states are correct", "[reference_states]")
 {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');

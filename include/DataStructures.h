@@ -22,6 +22,15 @@ struct SimpleState
     bool is_valid(){return ValidNumber(rhomolar) && ValidNumber(T) && ValidNumber(hmolar) && ValidNumber(p);}
 };
 
+/// A modified class for the state point at the maximum saturation entropy on the vapor curve
+struct SsatSimpleState : public SimpleState
+{
+    enum SsatSimpleStateEnum {SSAT_MAX_NOT_SET=0, SSAT_MAX_DOESNT_EXIST, SSAT_MAX_DOES_EXIST};
+    SsatSimpleStateEnum exists;
+    SsatSimpleState(){ SimpleState(); }
+};
+
+
 /// --------------------------------------------------
 /// Define some constants that will be used throughout
 /// --------------------------------------------------
@@ -166,8 +175,10 @@ enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLU
 enum input_pairs{
     QT_INPUTS, ///< Molar quality, Temperature in K
     PQ_INPUTS, ///< Pressure in Pa, Molar quality
-    QS_INPUTS, ///< Molar quality, Entropy in J/mol/K
-    HQ_INPUTS, ///< Enthalpy in J/mol, Molar quality
+    QSmolar_INPUTS, ///< Molar quality, Entropy in J/mol/K
+    QSmass_INPUTS, ///< Molar quality, Entropy in J/kg/K
+    HmolarQ_INPUTS, ///< Enthalpy in J/mol, Molar quality
+    HmassQ_INPUTS, ///< Enthalpy in J/kg, Molar quality
 
     PT_INPUTS, ///< Pressure in Pa, Temperature in K
 

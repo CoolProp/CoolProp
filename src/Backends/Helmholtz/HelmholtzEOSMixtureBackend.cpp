@@ -658,6 +658,20 @@ void HelmholtzEOSMixtureBackend::update_DmolarT_direct(long double rhomolar, lon
     post_update();
 }
 
+void HelmholtzEOSMixtureBackend::update_HmolarQ_with_guessT(long double hmolar, long double Q, long double Tguess)
+{
+    CoolProp::input_pairs pair = CoolProp::HmolarQ_INPUTS;
+    // Set up the state
+    pre_update(pair, hmolar, Q);
+    
+    _hmolar = hmolar;
+    _Q = Q;    
+    FlashRoutines::HQ_flash(*this, Tguess);
+    
+    // Cleanup
+    post_update();
+}
+
 void HelmholtzEOSMixtureBackend::update_TP_guessrho(long double T, long double p, long double rhomolar_guess)
 {
     CoolProp::input_pairs pair = PT_INPUTS;
@@ -784,9 +798,9 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
             _Q = value1; _T = value2; FlashRoutines::QT_flash(*this); break;
         case PQ_INPUTS:
             _p = value1; _Q = value2; FlashRoutines::PQ_flash(*this); break;
-        case QS_INPUTS:
+        case QSmolar_INPUTS:
             _Q = value1; _smolar = value2; FlashRoutines::QS_flash(*this); break;
-        case HQ_INPUTS:
+        case HmolarQ_INPUTS:
             _hmolar = value1; _Q = value2; FlashRoutines::HQ_flash(*this); break;
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
@@ -1112,16 +1126,27 @@ void HelmholtzEOSMixtureBackend::calc_ssat_max(void)
             return HEOS->SatV->first_partial_deriv(iSmolar,iT,iP)+HEOS->SatV->first_partial_deriv(iSmolar,iP,iT)/dTdp_along_sat;
         }
     };
-    if (!ssat_max.is_valid())
+    if (!ssat_max.is_valid() && ssat_max.exists != SsatSimpleState::SSAT_MAX_DOESNT_EXIST)
     {
-        Residual resid(*this);
-        std::string errstr;
-        Secant(resid, T_critical() - 1, 0.1, 1e-8, 30, errstr);
-        ssat_max.T = resid.HEOS->T();
-        ssat_max.p = resid.HEOS->p();
-        ssat_max.rhomolar = resid.HEOS->rhomolar();
-        ssat_max.hmolar = resid.HEOS->hmolar();
-        ssat_max.smolar = resid.HEOS->smolar();
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy(new CoolProp::HelmholtzEOSMixtureBackend(get_components()));
+        Residual resid(*HEOS_copy);
+        CoolProp::SimpleState &tripleV = HEOS_copy->get_components()[0]->triple_vapor;
+        double v1 = resid.call(hsat_max.T);
+        double v2 = resid.call(tripleV.T);
+        // If there is a sign change, there is a maxima, otherwise there is no local maxima/minima
+        if (v1*v2 < 0){
+            std::string errstr;
+            Brent(resid, hsat_max.T, tripleV.T, DBL_EPSILON, 1e-8, 30, errstr);
+            ssat_max.T = resid.HEOS->T();
+            ssat_max.p = resid.HEOS->p();
+            ssat_max.rhomolar = resid.HEOS->rhomolar();
+            ssat_max.hmolar = resid.HEOS->hmolar();
+            ssat_max.smolar = resid.HEOS->smolar();
+            ssat_max.exists = SsatSimpleState::SSAT_MAX_DOES_EXIST;
+        }
+        else{
+            ssat_max.exists = SsatSimpleState::SSAT_MAX_DOESNT_EXIST;
+        }
     }
 }
 void HelmholtzEOSMixtureBackend::calc_hsat_max(void)
@@ -1141,9 +1166,10 @@ void HelmholtzEOSMixtureBackend::calc_hsat_max(void)
     };
     if (!hsat_max.is_valid())
     {
-        Residualhmax residhmax(*this);
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy(new CoolProp::HelmholtzEOSMixtureBackend(get_components()));
+        Residualhmax residhmax(*HEOS_copy);
         std::string errstrhmax;
-        Secant(residhmax, T_critical() - 1, 0.1, 1e-8, 30, errstrhmax);
+        Brent(residhmax, T_critical() - 0.1, HEOS_copy->Ttriple() + 1, DBL_EPSILON, 1e-8, 30, errstrhmax);
         hsat_max.T = residhmax.HEOS->T();
         hsat_max.p = residhmax.HEOS->p();
         hsat_max.rhomolar = residhmax.HEOS->rhomolar();

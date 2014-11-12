@@ -136,15 +136,23 @@ void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend &HEOS)
 	HEOS._rhomolar = HEOS.solver_rho_Tp(HEOS._T, HEOS._p);
 	HEOS._Q = -1;
 }
-void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend &HEOS)
+void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend &HEOS, long double Tguess)
 {
+    SaturationSolvers::saturation_PHSU_pure_options options;
+    options.use_logdelta = false;
+    HEOS.specify_phase(iphase_twophase);
+    if (Tguess < 0){
+        options.use_guesses = true;
+        options.T = Tguess;
+        CoolProp::SaturationAncillaryFunction &rhoL = HEOS.get_components()[0]->ancillaries.rhoL;
+        CoolProp::SaturationAncillaryFunction &rhoV = HEOS.get_components()[0]->ancillaries.rhoV;
+        options.rhoL = rhoL.evaluate(Tguess);
+        options.rhoV = rhoV.evaluate(Tguess);
+    }
     if (HEOS.is_pure_or_pseudopure){
         if (std::abs(HEOS.Q()-1) > 1e-10){throw ValueError(format("non-unity quality not currently allowed for HQ_flash"));}
         // Do a saturation call for given h for vapor, first with ancillaries, then with full saturation call
-        SaturationSolvers::saturation_PHSU_pure_options options;
         options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_HV;
-        options.use_logdelta = false;
-        HEOS.specify_phase(iphase_twophase);
         SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS.hmolar(), options);
         HEOS._p = HEOS.SatV->p();
         HEOS._T = HEOS.SatV->T();
@@ -159,7 +167,14 @@ void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure){
         
-        if (std::abs(HEOS.Q()) < 1e-10){
+        if (std::abs(HEOS.smolar() - HEOS.get_state("reducing").smolar) < 0.001)
+        {
+            HEOS._p = HEOS.p_critical();
+            HEOS._T = HEOS.T_critical();
+            HEOS._rhomolar = HEOS.rhomolar_critical();
+            HEOS._phase = iphase_critical_point;
+        }
+        else if (std::abs(HEOS.Q()) < 1e-10){
             // Do a saturation call for given s for liquid, first with ancillaries, then with full saturation call
             SaturationSolvers::saturation_PHSU_pure_options options;
             options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_SL;
@@ -1141,6 +1156,8 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
         HEOS.calc_pressure();
         HEOS._Q = -1;
     }
+    // Update the state for conditions where the state was guessed
+    
 }
 
 void FlashRoutines::HS_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, long double hmolar_spec, long double smolar_spec, HS_flash_singlephaseOptions &options)
@@ -1194,7 +1211,7 @@ void FlashRoutines::HS_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, long 
             throw ValueError(format("HS_flash_singlephase took too many iterations; residual is %g; prior was %g", resid, resid_old));
         }
     }
-    while(std::abs(resid) > 1e-10);
+    while(std::abs(resid) > 1e-9);
 }
 void FlashRoutines::HS_flash_generate_TP_singlephase_guess(HelmholtzEOSMixtureBackend &HEOS, double &T, double &p)
 {
@@ -1219,69 +1236,77 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
         
         // Find maxima states if needed
         // Cache the maximum enthalpy saturation state;
-        //HEOS.calc_hsat_max();
+        HEOS.calc_hsat_max();
         // For weird fluids like the siloxanes, there can also be a maximum 
         // entropy along the vapor saturation line. Try to find it if it has one
-        // HEOS.calc_ssat_max();
+        HEOS.calc_ssat_max();
         
         CoolProp::SimpleState crit = HEOS.get_state("reducing");
         CoolProp::SimpleState &tripleL = HEOS.components[0]->triple_liquid,
                               &tripleV = HEOS.components[0]->triple_vapor;
-        // Enthalpy at solid line
+                              
+        double first_maxima_in_saturation_entropy;
+        if (HEOS.ssat_max.exists == SsatSimpleState::SSAT_MAX_DOES_EXIST){
+            first_maxima_in_saturation_entropy = HEOS.ssat_max.smolar;
+        }
+        else{
+            first_maxima_in_saturation_entropy = tripleV.smolar;
+        }
+        
+        double h1 = HEOS.hmolar(), s1 = HEOS.smolar();
+        // Enthalpy at solid line for given entropy
         double hsolid = (tripleV.hmolar-tripleL.hmolar)/(tripleV.smolar-tripleL.smolar)*(HEOS.smolar()-tripleL.smolar) + tripleL.hmolar;
         // Part A - first check if HS is below triple line formed by connecting the triple point states
         // If so, it is solid, and not supported
-        if (HEOS.hmolar() < hsolid){
-            throw ValueError(format("Enthalpy [%g J/mol] is below solid enthalpy [%g J/mol]", HEOS.hmolar(), hsolid));
+        if (HEOS.hmolar() < hsolid-0.1){ // -0.1 is for a buffer
+            throw ValueError(format("Enthalpy [%g J/mol] is below solid enthalpy [%g J/mol] for entropy [%g J/mol/K]", HEOS.hmolar(), hsolid-0.1, HEOS.smolar()));
         }
-        /*// Part B - Check lower limit
-        else if (HEOS.smolar() < tripleL.smolar){
-            // If fluid is other than water (which can have solutions below tripleL), cannot have any solution, fail
-            if (upper(HEOS.name()) != "Water"){
-                throw ValueError(format("Entropy [%g J/mol/K] is below triple point liquid entropy [%g J/mol/K]", HEOS.smolar(), tripleL.smolar));
+        /* Now check up to the first maxima in saturated vapor entropy.
+         * For nicely behaved fluids, this means all the way up to the triple point vapor
+         * For not-nicely behaved fluids with a local maxima on the saturated vapor entropy curve, 
+         * the entropy at the local maxima in entropy
+         * 
+         * In this section, there can only be one solution for the saturation temperature, which is why the solver
+         * is divided up in this way.
+         */
+        else if (HEOS.smolar() < first_maxima_in_saturation_entropy){
+            double Q;
+            if (HEOS.smolar() < crit.smolar){ 
+                Q = 0; // Liquid part
             }
-        }*/
-        // Part C - if s < sc, a few options are possible.  It could be two-phase, or liquid (more likely), or gas (less likely)
-        else if (HEOS.smolar() < crit.smolar){
+            else{
+                Q = 1; // Vapor part
+            }
             
-            // Update the temporary instance with saturated liquid entropy 
-            HEOS_copy->update(QS_INPUTS, 0, HEOS.smolar());
-            
+            // Update the temporary instance with saturated entropy 
+            HEOS_copy->update(QSmolar_INPUTS, Q, HEOS.smolar());
+                
             // Check if above the saturation enthalpy for given entropy
+            // If it is, the inputs are definitely single-phase.  We are done here
+            double h1 = HEOS.hmolar(), h2 = HEOS_copy->hmolar();
             if (HEOS.hmolar() > HEOS_copy->hmolar()){
                 solution = single_phase_solution;
             }
             else{
-                // C2: It is below hsatL(ssatL)
+                // C2: It is below hsat(ssat)
                 // Either two-phase, or vapor (for funky saturation curves like the siloxanes)
-                // Do a saturation_h call for given h on the vapor line to determine whether two-phase or vapor
-                // Update the temporary instance with saturated vapor enthalpy
-                HEOS_copy->update(HQ_INPUTS, HEOS.hmolar(), 1);
                 
-                if (HEOS.smolar() > HEOS_copy->smolar())
-                {
+                /* If enthalpy is between enthalpy at maxima in h and triple
+                 * point enthalpy, search in enthalpy to find possible solutions
+                 * that yield the correct enthalpy
+                 * 
+                 * There should only be one solution since we have already bypassed the local maxima in enthalpy
+                 */
+                
+                HEOS_copy->update_HmolarQ_with_guessT(HEOS.hmolar(), 1, HEOS.hsat_max.T);
+                
+                if (HEOS.smolar() > HEOS_copy->smolar()){
                     solution = single_phase_solution;
                 }
                 else{
                     // C2a: It is below ssatV(hsatV) --> two-phase
                     solution = two_phase_solution;
                 }
-            }
-        }
-        // Part C - if tripleV.s > s > sc
-        else if (HEOS.smolar() > crit.smolar && HEOS.smolar() < tripleV.smolar){
-            // Do a saturation_s call for given s on the vapor line to determine whether two-phase or vapor
-            // Update the temporary instance with saturated vapor entropy
-            HEOS_copy->update(QS_INPUTS, 1, HEOS.smolar());
-            
-            double h1 = HEOS.hmolar(), h2 = HEOS_copy->hmolar();
-            if (HEOS.hmolar() > HEOS_copy->hmolar()){
-                // D2b: It is above hsatV(ssatV) --> gas
-                solution = single_phase_solution;
-            }
-            else{
-                // C2a: It is below ssatV(hsatV) --> two-phase
-                solution = two_phase_solution;
             }
         }
         // Part D - Check higher limit
@@ -1311,12 +1336,22 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
                     break;
                 }
                 catch(std::exception &e){
-                    HEOS_copy->update(DmolarT_INPUTS, HEOS.rhomolar_critical()*1.3, HEOS.Tmax());
-                    // Do the flash calcs starting from the guess value
-                    HS_flash_singlephase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);
-                    // Copy the results
-                    HEOS.update(DmolarT_INPUTS, HEOS_copy->rhomolar(), HEOS_copy->T());
-                    break;
+                    try{
+                        // Trying again with another guessed value
+                        HEOS_copy->update(DmolarT_INPUTS, HEOS.rhomolar_critical()*1.3, HEOS.Tmax());
+                        HS_flash_singlephase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);
+                        // Copy the results
+                        HEOS.update(DmolarT_INPUTS, HEOS_copy->rhomolar(), HEOS_copy->T());
+                        break;
+                    }
+                    catch (std::exception &e){
+                        // Trying again with another guessed value
+                        HEOS_copy->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), 0.5*HEOS.Tmax() + 0.5*HEOS.T_critical());
+                        HS_flash_singlephase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);
+                        // Copy the results
+                        HEOS.update(DmolarT_INPUTS, HEOS_copy->rhomolar(), HEOS_copy->T());
+                        break;
+                    }
                 }
             }
             case two_phase_solution:

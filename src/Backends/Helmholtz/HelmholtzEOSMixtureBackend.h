@@ -41,7 +41,8 @@ public:
     shared_ptr<ReducingFunction> Reducing;
     ExcessTerm Excess;
     PhaseEnvelopeData PhaseEnvelope;
-    SimpleState ssat_max, hsat_max;
+    SimpleState hsat_max;
+    SsatSimpleState ssat_max;
 
     friend class FlashRoutines; // Allows the static methods in the FlashRoutines class to have access to all the protected members and methods of this class
     friend class TransportRoutines; // Allows the static methods in the TransportRoutines class to have access to all the protected members and methods of this class
@@ -77,10 +78,21 @@ public:
     void resize(unsigned int N);
     shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///<
 
+    /** \brief The standard update function
+     * @param input_pair The pair of inputs that will be provided
+     * @param value1 The first input value
+     * @param value2 The second input value
+     */
     void update(CoolProp::input_pairs input_pair, double value1, double value2);
 
+    /** \brief Update with TP and a guess for rho
+     * @param T Temperature in K
+     * @param p Pressure in Pa
+     * @param rho_guess Density in mol/m^3 guessed
+     */
     void update_TP_guessrho(long double T, long double p, long double rho_guess);
     void update_DmolarT_direct(long double rhomolar, long double T);
+    void update_HmolarQ_with_guessT(long double hmolar, long double Q, long double Tguess);
 
     /** \brief Set the components of the mixture
      * 

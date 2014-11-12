@@ -114,7 +114,7 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
 	try{
         // Safe to expand the domain a little bit to lower temperature, absolutely cannot exceed Tmax 
         // because then you get (negative number)^(double) which is undefined.
-		return Brent(resid,min_bound,max_bound,DBL_EPSILON,1e-12,100,errstring);
+		return Brent(resid,min_bound,max_bound,DBL_EPSILON,1e-10,100,errstring);
 	}
 	catch(std::exception &e){
 		return Secant(resid,max_bound, -0.01, 1e-12, 100, errstring);

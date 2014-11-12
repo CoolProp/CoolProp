@@ -178,6 +178,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
 
     HEOS.calc_reducing_state();
     const SimpleState & reduce = HEOS.get_reducing_state();
+    CoolProp::SimpleState crit = HEOS.get_state("reducing");
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
 
@@ -235,27 +236,53 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
             double Tmax = HEOS.calc_Tmax_sat();
             try{ T = Brent(resid, Tmin-3, Tmax + 1, DBL_EPSILON, 1e-10, 50, errstr); }
 			catch(std::exception &e){
-				throw ValueError(format("Unable to invert ancillary equation for hV: %s",e.what()));
+                shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
+                HEOS_copy->update(QT_INPUTS, 1, Tmin); double hTmin = HEOS_copy->hmolar();
+                HEOS_copy->update(QT_INPUTS, 1, Tmax); double hTmax = HEOS_copy->hmolar();
+                T = (Tmax-Tmin)/(hTmax-hTmin)*(HEOS.hmolar()-hTmin) + Tmin;
 			}
         }
         else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SL)
         {
-            CoolProp::SaturationAncillaryFunction &anc = HEOS.get_components()[0]->ancillaries.sL;
+            CoolPropFluid &component = *(HEOS.get_components()[0]);
+            CoolProp::SaturationAncillaryFunction &anc = component.ancillaries.sL;
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
-            // Ancillary is deltas = s - hs_anchor.s
-            try{ 
-                T = anc.invert(specified_value - hs_anchor.smolar); 
+            // If near the critical point, use a near critical guess value for T
+            if (std::abs(HEOS.smolar() - crit.smolar) < std::abs(component.ancillaries.sL.get_max_abs_error()))
+            {
+                T = std::max(0.99*crit.T, crit.T-0.1);
             }
-			catch(std::exception &e){
-                double vmin = anc.evaluate(anc.get_Tmin());
-                double vmax = anc.evaluate(anc.get_Tmax());
-				throw ValueError(format("Unable to invert ancillary equation for sL for value %Lg with Tminval %g and Tmaxval %g ", specified_value - hs_anchor.smolar, vmin, vmax));
-			}
+            else{
+                long double Tmin, Tmax, Tmin_satV;
+                HEOS.calc_Tmin_sat(Tmin, Tmin_satV);
+                Tmax = HEOS.calc_Tmax_sat();
+                // Ancillary is deltas = s - hs_anchor.s
+                // First try a conventional call
+                try{
+                    T = anc.invert(specified_value - hs_anchor.smolar, Tmin, Tmax);
+                }
+                catch(std::exception &e){
+                    try{ 
+                        T = anc.invert(specified_value - hs_anchor.smolar, Tmin - 3, Tmax + 3); 
+                    }
+                    catch(std::exception &e){
+                        double vmin = anc.evaluate(Tmin);
+                        double vmax = anc.evaluate(Tmax);
+                        if (std::abs(specified_value - hs_anchor.smolar) < std::abs(vmax)){
+                            T = Tmax - 0.1;
+                        }
+                        else{
+                            throw ValueError(format("Unable to invert ancillary equation for sL for value %Lg with Tminval %g and Tmaxval %g ", specified_value - hs_anchor.smolar, vmin, vmax));
+                        }
+                    }
+                }
+            }
         }
         else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SV)
         {
             CoolPropFluid &component = *(HEOS.get_components()[0]);
             CoolProp::SimpleState crit = HEOS.get_state("reducing");
+            CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             class Residual : public FuncWrapper1D
             {
                 public:
@@ -267,26 +294,33 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                 }
                 double call(double T){
                     long double s_liq = component->ancillaries.sL.evaluate(T) + component->pEOS->hs_anchor.smolar;
-                    return s_liq + component->ancillaries.sLV.evaluate(T) - s;
+                    long double resid = s_liq + component->ancillaries.sLV.evaluate(T) - s;
+                    
+                    return resid;
                 };
             };
             Residual resid(component, HEOS.smolar());
             
-            // If near the critical point, use a near critical guess value for T
-            if (std::abs(HEOS.smolar() - crit.smolar) < std::abs(component.ancillaries.sL.get_max_abs_error() + component.ancillaries.sLV.get_max_abs_error()))
-            {
-                T = std::max(0.99*crit.T, crit.T-0.1);
+            // Ancillary is deltas = s - hs_anchor.s
+            std::string errstr;
+            long double Tmin_satL, Tmin_satV;
+            HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
+            double Tmin = Tmin_satL;
+            double Tmax = HEOS.calc_Tmax_sat();
+            try{
+                T = Brent(resid, Tmin-3, Tmax, DBL_EPSILON, 1e-10, 50, errstr);
             }
-            else{
-                // Ancillary is deltas = s - hs_anchor.s
-                std::string errstr;
-                long double Tmin_satL, Tmin_satV;
-                HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
-                double Tmin = Tmin_satL;
-                double Tmax = HEOS.calc_Tmax_sat();
-                try{ T = Brent(resid, Tmin-3, Tmax+1, DBL_EPSILON, 1e-10, 50, errstr); }
-                catch(std::exception &e){
-                    throw ValueError(format("Unable to invert ancillary equation for sV: %s",e.what()));
+            catch(std::exception &e){
+                long double vmax = resid.call(Tmax);
+                // If near the critical point, use a near critical guess value for T
+                if (std::abs(specified_value - hs_anchor.smolar) < std::abs(vmax)){
+                    T = std::max(0.99*crit.T, crit.T-0.1);
+                }
+                else{
+                    shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
+                    HEOS_copy->update(QT_INPUTS, 1, Tmin); double sTmin = HEOS_copy->smolar();
+                    HEOS_copy->update(QT_INPUTS, 1, Tmax); double sTmax = HEOS_copy->smolar();
+                    T = (Tmax-Tmin)/(sTmax-sTmin)*(HEOS.smolar()-sTmin) + Tmin;
                 }
             }
         }
@@ -294,7 +328,9 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         {
             throw ValueError(format("options.specified_variable to saturation_PHSU_pure [%d] is invalid",options.specified_variable));
         }
-		if (T > HEOS.T_critical()-1){ T -= 1; }
+        // If T from the ancillaries is above the critical temp, this will cause failure 
+        // in ancillaries for rhoV and rhoL, decrease if needed
+        T = std::min(T, static_cast<long double>(HEOS.T_critical()-0.1));
 
         // Evaluate densities from the ancillary equations
         rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
@@ -306,7 +342,10 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         // be way off, and often times negative
         SatL->update(DmolarT_INPUTS, rhoL, T);
         SatV->update(DmolarT_INPUTS, rhoV, T);
-        rhoL += -(SatL->p()-SatV->p())/SatL->first_partial_deriv(iP, iDmolar, iT);
+        double rhoL_updated = rhoL -(SatL->p()-SatV->p())/SatL->first_partial_deriv(iP, iDmolar, iT);
+        
+        // Accept the update if the liquid density is greater than the vapor density
+        if (rhoL_updated > rhoV){ rhoL = rhoL_updated; }
         
         // Update the state again with the better guess for the liquid density
         SatL->update(DmolarT_INPUTS, rhoL, T);
@@ -480,16 +519,25 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         }
 
         v = linsolve(J, negativer);
-
-        tau += options.omega*v[0];
-
-        if (options.use_logdelta){
-            deltaL = exp(log(deltaL)+options.omega*v[1]);
-            deltaV = exp(log(deltaV)+options.omega*v[2]);
-        }
-        else{
-            deltaL += options.omega*v[1];
-            deltaV += options.omega*v[2];
+        
+        // Conditions for an acceptable step are:
+        // a) tau > 1
+        // b) rhoL > rhoV or deltaL > deltaV
+        double tau0 = tau, deltaL0 = deltaL, deltaV0 = deltaV;
+        for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1)
+        {
+            tau = tau0 + omega_local*options.omega*v[0];
+            if (options.use_logdelta){
+                deltaL = exp(log(deltaL0)+omega_local*options.omega*v[1]);
+                deltaV = exp(log(deltaV0)+omega_local*options.omega*v[2]);
+            }
+            else{
+                deltaL = deltaL0 + omega_local*options.omega*v[1];
+                deltaV = deltaV0 + omega_local*options.omega*v[2];
+            }
+            if (tau > 1 && deltaL > deltaV){
+                break;
+            }
         }
 
         rhoL = deltaL*reduce.rhomolar;
@@ -808,13 +856,21 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
         stepL = options.omega/DELTA*( (KV-KL)*dJV-(JV-JL)*dKV);
         stepV = options.omega/DELTA*( (KV-KL)*dJL-(JV-JL)*dKL);
 
-        if (deltaL+stepL > 1 && deltaV+stepV < 1 && deltaV+stepV > 0){
-            deltaL += stepL;  deltaV += stepV;
-            rhoL = deltaL*reduce.rhomolar; rhoV = deltaV*reduce.rhomolar;
+        long double deltaL0 = deltaL, deltaV0 = deltaV;
+        // Conditions for an acceptable step are:
+        // a) rhoL > rhoV or deltaL > deltaV
+        for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1)
+        {
+            deltaL = deltaL0 + omega_local*stepL;
+            deltaV = deltaV0 + omega_local*stepV;
+
+            if (deltaL > 1 && deltaV < 1 && deltaV > 0){
+                break;
+            }
         }
-        else{
-            throw ValueError(format("rhosatPure_Akasaka densities are crossed"));
-        }
+        
+        rhoL = deltaL*reduce.rhomolar;
+        rhoV = deltaV*reduce.rhomolar;
         iter++;
         if (iter > 100){
             throw SolutionError(format("Akasaka solver did not converge after 100 iterations"));
