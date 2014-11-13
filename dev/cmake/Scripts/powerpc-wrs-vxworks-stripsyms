@@ -1,0 +1,13 @@
+#!/bin/sh
+
+TMPDIR="/tmp"
+OBJCOPY_EXE="powerpc-wrs-vxworks-objcopy"
+NM_EXE="powerpc-wrs-vxworks-nm"
+OBJ=$1
+
+shift 1
+
+$NM_EXE "$@" | cut -d ' ' -f 3 | sed '/^$/d' > $TMPDIR/$$.syms
+$OBJCOPY_EXE --localize-symbols=$TMPDIR/$$.syms $OBJ
+
+rm $TMPDIR/$$.syms

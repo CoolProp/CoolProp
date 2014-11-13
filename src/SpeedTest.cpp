@@ -6,6 +6,11 @@
 
 #include <time.h>
 
+// A hack to make powerpc happy since sysClkRateGet not found
+#if defined(__powerpc__)
+  #define CLOCKS_PER_SEC 1000
+#endif
+
 namespace CoolProp{
 
 void compare_REFPROP_and_CoolProp(std::string fluid, CoolProp::input_pairs inputs, double val1, double val2, std::size_t N, double d1, double d2)
