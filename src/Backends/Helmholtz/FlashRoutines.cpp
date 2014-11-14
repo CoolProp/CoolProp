@@ -378,7 +378,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             pmin_sat = std::max(pmin_satL, pmin_satV);
             
             // Check for being AT the critical point
-            if (!is_in_closed_range(pmax_sat*(1-1e-10), pmax_sat*(1+1e-10), static_cast<long double>(HEOS._p))){
+            if (is_in_closed_range(pmax_sat*(1-1e-10), pmax_sat*(1+1e-10), static_cast<long double>(HEOS._p))){
                 // Load the outputs
                 HEOS._phase = iphase_critical_point;
                 HEOS._p = HEOS.p_critical();
