@@ -1,0 +1,11 @@
+#!/bin/bash
+TOOL_DIR="/usr/powerpc-wrs-vxworks"
+TCL_SCRIPT="$WIND_BASE/host/resource/hutils/tcl/munch.tcl"
+OUTPUT_FILE=$1
+NM_EXE="powerpc-wrs-vxworks-nm"
+
+shift 1
+
+#sed is in the pipeline here in order to allow LTO
+"$NM_EXE" "$@" | tclsh "$TCL_SCRIPT" -c ppc | sed 's/extern void\(.*\);/extern void \1 __attribute__((externally_visible));/' > "$OUTPUT_FILE"
+

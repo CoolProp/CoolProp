@@ -26,14 +26,17 @@ surface tension                 N/m
 */
 
 #include "CoolPropTools.h"
-#if defined(__ISWINDOWS__)
-    #include <windows.h>
-    HINSTANCE RefpropdllInstance=NULL;
-    char refpropPath[] = "";
+#if defined(__powerpc__)
+    void *RefpropdllInstance=NULL;
+    char refpropPath[] = "/opt/refprop";
 #elif defined(__ISLINUX__)
     #include <dlfcn.h>
     void *RefpropdllInstance=NULL;
     char refpropPath[] = "/opt/refprop";
+#elif defined(__ISWINDOWS__)
+    #include <windows.h>
+    HINSTANCE RefpropdllInstance=NULL;
+    char refpropPath[] = "";
 #elif defined(__ISAPPLE__)
     #include <dlfcn.h>
     void *RefpropdllInstance=NULL;

@@ -32,6 +32,13 @@ User-Compiled Binaries
 VxWorks
 *******
 
+Using the toolchain
+-------------------
+
+To compile::
+
+    cmake ../.. -DCOOLPROP_VXWORKS_LIBRARY_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=../../dev/cmake/Toolchains/powerpc-vxworks-crio.cmake -DCMAKE_CXX_FLAGS="-D__powerpc__"
+
 If you want to compile binaries for PowerPC architecture (like the VXWorks target), follow these instructions to set up a toolchain
 
 Use pre-built binaries from FirstForge

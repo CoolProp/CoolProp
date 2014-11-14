@@ -10,6 +10,8 @@
 #  define __ISAPPLE__
 #elif __linux || __unix || __posix
 #  define __ISLINUX__
+#elif __powerpc__
+#  define __ISPOWERPC__
 #else
 # pragma error
 #endif
