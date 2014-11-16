@@ -7,8 +7,8 @@ Labview Wrapper
 
 .. contents:: :depth: 2
 
-Pre-compiled Binaries
-=====================
+Pre-compiled Binaries for windows
+=================================
 
 Shared library
 --------------
@@ -27,6 +27,7 @@ measurement processing, etc.  There is :download:`additional information <CoolPr
 
 User-Compiled Binaries for windows
 ==================================
+
 
 
 User-Compiled Binaries for VxWorks (cRIO)

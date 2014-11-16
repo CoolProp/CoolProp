@@ -18,31 +18,11 @@ Or the official release can be obtained from the pypi server using::
 Manual installation
 ===================
 
-Special MacOS X requirement
----------------------------
+Compilation of the python wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
 
-If you never used any command-line installation before, chances are that you 
-do not have the compiling utilities needed. Thus you need to first install 
-Xcode: see the description on the page http://guide.macports.org/#installing.xcode
-After installing, you need to accept the licence by running the following 
-command in the Terminal::
+On all platforms, if it is not already there, you need Cython to be installed::
 
-   xcodebuild -license
-   
-and explicitly typing "agree" before closing. Then you can resume to the 
-former method.
-
-Windows
--------
-
-To be explained...
-
-Linux and MacOS X
------------------
-
-If not already there, you need Cython to be installed::
-
-    sudo easy_install Cython
+    sudo pip install Cython
 
 Then, follow the commands::
 
@@ -87,20 +67,6 @@ by following the same lines as above::
     # Start the installation (~/Desktop/pyzo2014a/ to be changed according to 
     # your effective installation)
     sudo ~/Desktop/pyzo2014a/bin/python setup.py install
-
-For VS2010:
------------
-
-http://stackoverflow.com/questions/8044385/64-bit-build-on-microsoft-visual-c-express-2010/8334985#8334985
-
-For VS2008
-----------
-
-For MinGW
----------
-
-Create a file called 
-
 
 Usage
 =====
