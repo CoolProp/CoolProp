@@ -25,24 +25,24 @@ Basic Library to get the properties from CoolProp.dll
 More advanced library, allowing to compute thermodynamic diagrams, real-time calculation of properties,
 measurement processing, etc.  There is :download:`additional information <CoolProp & Labview.docx>` available for the use of the llb library
 
-User-Compiled Binaries
-======================
+User-Compiled Binaries for windows
+==================================
 
-*******
-VxWorks
-*******
+
+
+User-Compiled Binaries for VxWorks (cRIO)
+=========================================
 
 Using the toolchain
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 To compile::
 
     cmake ../.. -DCOOLPROP_VXWORKS_LIBRARY_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=../../dev/cmake/Toolchains/powerpc-vxworks-crio.cmake -DCMAKE_CXX_FLAGS="-D__powerpc__"
 
-If you want to compile binaries for PowerPC architecture (like the VXWorks target), follow these instructions to set up a toolchain
 
 Use pre-built binaries from FirstForge
---------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Instructions from http://firstforge.wpi.edu/sf/wiki/do/viewPage/projects.c--11_toochain/wiki/BinaryInstall
 
@@ -58,15 +58,20 @@ Add this line to /etc/apt/sources.list to add the repository::
 
 Add the maintainer key for the repository::
 
-    sudo wget -O - http://debian.repo.frc.s3.amazonaws.com/rbmj.gpg.key | apt-key add -
+    sudo wget http://debian.repo.frc.s3.amazonaws.com/rbmj.gpg.key 
+    sudo apt-key add rbmj.gpg.key
 
 Run the following commands::
 
     sudo apt-get update
-    sudo apt-get install gcc-powerpc-wrs-vxwork
+    sudo apt-get install gcc-powerpc-wrs-vxworks
+    
+Set the WIND_BASE environmental variable (or add to ~/.profile)::
+
+    export WIND_BASE=/usr/powerpc-wrs-vxworks/wind_base
 
 Building your own version of GCC for VxWorks Target
----------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Instructions from http://firstforge.wpi.edu/sf/wiki/do/viewPage/projects.c--11_toochain/wiki/ManualInstall
 
