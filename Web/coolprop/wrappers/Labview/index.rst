@@ -29,17 +29,15 @@ User-Compiled Binaries for windows
 ==================================
 
 
-
 User-Compiled Binaries for VxWorks (cRIO)
 =========================================
 
-Using the toolchain
-^^^^^^^^^^^^^^^^^^^
+Once the toolchain is configured
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To compile::
 
     cmake ../.. -DCOOLPROP_VXWORKS_LIBRARY_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=../../dev/cmake/Toolchains/powerpc-vxworks-crio.cmake -DCMAKE_CXX_FLAGS="-D__powerpc__"
-
 
 Use pre-built binaries from FirstForge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

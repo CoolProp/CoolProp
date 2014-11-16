@@ -228,7 +228,6 @@ if (COOLPROP_VXWORKS_LIBRARY_MODULE OR COOLPROP_VXWORKS_LIBRARY)
     set_target_properties (${app_name} PROPERTIES SUFFIX ".out" COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC")
     add_dependencies (${app_name} generate_headers)
     install (TARGETS ${app_name} DESTINATION shared_library/VxWorks)
-    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
 
 if (COOLPROP_32BIT_SHARED_LIBRARY_LINUX_MODULE OR COOLPROP_32BIT_SHARED_LIBRARY_LINUX)
