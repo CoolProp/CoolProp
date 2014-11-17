@@ -29,19 +29,18 @@ User-Compiled Binaries for windows
 ==================================
 
 
-
 User-Compiled Binaries for VxWorks (cRIO)
 =========================================
 
 Once the toolchain is configured
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------
 
 To compile::
 
     cmake ../.. -DCOOLPROP_VXWORKS_LIBRARY_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=../../dev/cmake/Toolchains/powerpc-vxworks-crio.cmake -DCMAKE_CXX_FLAGS="-D__powerpc__"
 
 Use pre-built binaries from FirstForge
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------------
 
 Instructions from http://firstforge.wpi.edu/sf/wiki/do/viewPage/projects.c--11_toochain/wiki/BinaryInstall
 
@@ -70,7 +69,7 @@ Set the WIND_BASE environmental variable (or add to ~/.profile)::
     export WIND_BASE=/usr/powerpc-wrs-vxworks/wind_base
 
 Building your own version of GCC for VxWorks Target
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------------------------
 
 Instructions from http://firstforge.wpi.edu/sf/wiki/do/viewPage/projects.c--11_toochain/wiki/ManualInstall
 
