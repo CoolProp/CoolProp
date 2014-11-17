@@ -77,7 +77,7 @@ steps on a Windows machine::
   pip install wheel
   deactivate
 
-Please repeat the steps above for both 32bit and 64bit Python environments. 
+Please repeat the steps above for both 32bit and 64bit Python environments.
 
 On a Linux system, things only change a little bit::
 
@@ -100,7 +100,7 @@ POSIX specification.
 At the moment, it is not possible to use several slaves for the same build job.
 We have to find a new way to generate the configuration.
 
-Information on building the single wrappers can be found on 
+Information on building the single wrappers can be found on
 :ref:`this dedicated page<wrapper_common_prereqs>`.
 
 For uploading generated binary python files to PYPI, you should create a file ``~\.pypirc`` with the contents::
@@ -142,14 +142,14 @@ also use a service wrapper like `NSSM <http://nssm.cc/>`_ to start the script.
 Buildbot as a daemon (Linux)
 ----------------------------
 
-On linux, you can add the following lines to the end of your ``~/.profile`` file (similar
-ideas apply on other platforms) to autostart the slave when the user logs in::
+On Linux, you can add the following lines to the end of your ``~/.profile`` file (similar
+ideas apply on other platforms) to start the slave automatically at user log in::
 
     # Connect to the buildbot master
     buildslave start ~/slave
 
 ... or even better, you install a service that gets started and shutdown together with
-your computer. For Debian/Ubuntu, we recommend as script like::
+your computer. For Debian/Ubuntu, we recommend a script like::
 
     #! /bin/sh
     ### BEGIN INIT INFO
@@ -225,11 +225,11 @@ your computer. For Debian/Ubuntu, we recommend as script like::
     esac
     exit 0
 
-Which the can be added to the scheduler with ``update-rc.d buildslave defaults``.
+Which then can be added to the scheduler with ``update-rc.d buildslave defaults``.
 This should gracefully terminate the bot at shutdown and restart it again after reboot.
 To disable the service, run ``update-rc.d -f buildslave remove``. You can enable and
 disable the daemon by runnning ``update-rc.d buildslave enable|disable``. Note that the
-example above call a user-script that activates the virtual environment and starts
+example above calls a user-script that activates the virtual environment and starts
 the buildslave. Such a script could look like this::
 
     #! /bin/bash
