@@ -18,7 +18,7 @@ Fluid Information
 
 .. csv-table::
    :header-rows: 1
-   :widths: 30
+   :widths: 40, 60
    :file: {fluid:s}-info.csv
 """
 
