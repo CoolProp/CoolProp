@@ -6,6 +6,7 @@ import CoolProp
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
 root_dir = os.path.abspath(os.path.join(web_dir, '..')) 
 csvfile = os.path.join(web_dir,'fluid_properties','PurePseudoPure.csv')
+indexfile = os.path.join(web_dir,'fluid_properties','fluids', 'index.rst')
 
 class Dossier:
     def __init__(self):
@@ -72,3 +73,9 @@ with open(csvfile,'w') as fp:
     for index, row in df.iterrows():
         rowdata = [fluid_reference(row['name'])] + [build_citation(row[key]) for key in bibtex_keys]
         fp.write(','.join(rowdata)+'\n')
+        
+# Write the hidden table to make sphinx happy
+with open(indexfile,'w') as fp:
+    fp.write('.. toctree::\n    :hidden:\n\n')
+    for index, row in df.iterrows():
+        fp.write('    ' + row['name'] + '.rst\n')

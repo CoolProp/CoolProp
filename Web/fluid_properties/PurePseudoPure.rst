@@ -111,3 +111,9 @@ References
 .. bibliography:: ../../CoolPropBibTeXLibrary.bib
    :filter: docname in docnames
    :style: unsrt
+   
+   
+.. toctree::
+    :hidden:
+    
+    fluids/index
