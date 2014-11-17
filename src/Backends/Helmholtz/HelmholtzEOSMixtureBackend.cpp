@@ -649,6 +649,9 @@ void HelmholtzEOSMixtureBackend::update_DmolarT_direct(long double rhomolar, lon
     // Set up the state
     pre_update(pair, rhomolar, T);
     
+    // Save the current value of vapor quality
+    long double Q_old = _Q;
+    
     _rhomolar = rhomolar;
     _T = T;
     _p = calc_pressure();
@@ -656,6 +659,9 @@ void HelmholtzEOSMixtureBackend::update_DmolarT_direct(long double rhomolar, lon
     
     // Cleanup
     post_update();
+    
+    // Copy the value back
+    _Q = Q_old;
 }
 
 void HelmholtzEOSMixtureBackend::update_HmolarQ_with_guessT(long double hmolar, long double Q, long double Tguess)
