@@ -3,7 +3,7 @@
 Welcome to CoolProp
 *******************
 
-These pages help you to get started using CoolProp and provide detailed information for the 
+These pages help you to get started using CoolProp and provide detailed information for the
 returning user. Please feel free to browse the pages and use the menu on the left to navigate
 on this website.
 
@@ -39,9 +39,9 @@ High-Level Interface Example
 In most languages, the code to calculate density ``D`` of Nitrogen at a temperature ``T`` of 298 K and a pressure ``P`` of 101325 Pa is something like::
 
     rho = PropsSI('D', 'T', 298.15, 'P', 101325, 'Nitrogen')
-    
+
 See more examples of PropsSI usage at :ref:`High-Level API <high_level_api>` or :ref:`Examples <examples>`
-    
+
 
 Help
 ----
@@ -75,7 +75,7 @@ Supporters
    :height: 100px
    :alt: labothap
    :target: http://www.labothap.ulg.ac.be/
-   
+
 .. image:: _static/logo_ORCNext.jpg
    :height: 100px
    :alt: ORCNext
@@ -87,8 +87,15 @@ Supporters
    :height: 100px
    :alt: Herrick
    :target: https://engineering.purdue.edu/Herrick/index.html
-   
+
 .. image:: _static/maplesoft_logo.png
    :height: 100px
    :alt: Maple
    :target: http://www.maplesoft.com
+
+\
+
+.. image:: _static/dtu_mekanik.png
+   :height: 36px
+   :alt: DTU Mechanical Engineering - Section for Thermal Energy
+   :target: http://www.mek.dtu.dk/english/Sections/TES
