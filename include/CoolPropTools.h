@@ -340,7 +340,6 @@
                                                 x                                                                              \
                                             }                                                                                  \
                                             catch(const std::exception& e){                                                    \
-                                                std::cout << e.what() << std::endl;                                            \
                                                 return _HUGE;                                                                  \
                                             }                                                                                  \
                                             catch(...){                                                                        \
