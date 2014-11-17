@@ -91,4 +91,4 @@ Supporters
 .. image:: _static/maplesoft_logo.png
    :height: 100px
    :alt: Maple
-   :target: http://maplesoft.com/index.aspx
+   :target: http://www.maplesoft.com
