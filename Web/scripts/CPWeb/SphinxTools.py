@@ -24,7 +24,7 @@ Fluid Information
 
 table_template = """ Parameter, Value
 Molar mass [kg/mol],{mm:s}
-CAS, {CAS:s},,,
+CAS, {CAS:s}
 ASHRAE, {ASHRAE:s}
 Triple point temperature [K],{Tt:s}
 Triple point pressure [Pa], {pt:s}
