@@ -99,10 +99,11 @@ List of Fluids
 --------------
 
 .. note::
-   You can click on the fluid name to get more information about the fluid
+   You can click on the fluid name to get more information about the fluid, or click on a bracketed reference to be taken to the reference for the fluid
 
 .. csv-table:: All the fluids included in CoolProp
    :header-rows: 1
+   :widths: 40, 10, 10, 10, 10, 10
    :file: PurePseudoPure.csv
    
 References
@@ -112,8 +113,5 @@ References
    :filter: docname in docnames
    :style: unsrt
    
-   
-.. toctree::
-    :hidden:
-    
-    fluids/index
+
+.. include:: fluidstoc.rst
