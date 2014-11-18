@@ -4,6 +4,11 @@
 FORTRAN Wrapper
 ***************
 
+For FORTRAN, there are two fundamental choices.  Choose one option:
+
+* For FORTRAN 77 and newer, call a shared library of CoolProp using the instructions here: :ref:`F77 and newer <FORTRAN77>`
+* For FORTRAN 95 and newer, compile a static library of CoolProp and link it with FORTRAN code following the instructions here: :ref:`F95 and newer <FORTRAN95>`
+
 Common Requirements
 ===================
 Compilation of the Fortran wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
@@ -23,6 +28,7 @@ On windows, the most reliable mixed compilation seems to be using the mingw-prov
     gcc (GCC) 4.8.1
     Copyright (C) 2013 Free Software Foundation, Inc.
     
+.. _FORTRAN95:
 
 FORTRAN 95/2003 using ISO_C_BINDING
 ===================================
@@ -105,13 +111,15 @@ On windows, you can leave off the ``-ldl``.
 
     You MUST(!!!) put the -lstdc++ standard libary *after* libCoolProp.a.  Same thing if you compile the fortran to object file, static library must always be at the end.
 
+.. _FORTRAN77:
+
 FORTRAN77
 =========
 
 Pre-Compiled Binaries
 ---------------------
 
-* Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the development versions from the buildbot server at :bbbinaries:`shared_library`. Or you can built it yourself given the instructions at :ref:`shared_libraries`.
+* Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the development versions from the buildbot server at :bbbinaries:`shared_library`. Or you can built it yourself given the instructions at :ref:`shared_library`.
 
 Run
 ---

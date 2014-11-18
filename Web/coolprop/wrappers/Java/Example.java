@@ -15,7 +15,7 @@ public class Example {
         System.out.println("CoolProp fluids: " + CoolProp.get_global_param_string("FluidsList"));
 
         System.out.println(" ");
-        System.out.println("************ USING EOS *************");
+        System.out.println("************ PURE FLUID *************");
         System.out.println(" ");
         System.out.println("FLUID STATE INDEPENDENT INPUTS");
         //System.out.println("Critical Density Propane: " + CoolProp.Props1SI("Propane", "rhocrit") + "kg/m^3");
@@ -32,25 +32,6 @@ public class Example {
         T = CoolProp.PropsSI("T", "P", p, "H", h, "Propane");
         D = CoolProp.PropsSI("D", "P", p, "H", h, "Propane");
         System.out.println("P,H -> T,D " + p + "," + h + " --> " + T + "," + D);
-
-        //~ System.out.println(" ");
-        //~ System.out.println("************ USING TTSE ***************");
-        //~ System.out.println(" ");
-        //~ CoolProp.enable_TTSE_LUT("Propane");
-        //~ System.out.println("TWO PHASE INPUTS (Pressure)");
-        //~ System.out.println("Density of saturated liquid Propane at 101325 kPa: " + CoolProp.PropsSI("D", "P", 101325, "Q", 0, "Propane") + " kg/m^3");
-        //~ System.out.println("Density of saturated vapor R290 at 101325 kPa: " + CoolProp.PropsSI("D", "P", 101325, "Q", 1, "R290") + " kg/m^3");
-        //~ System.out.println("TWO PHASE INPUTS (Temperature)");
-        //~ System.out.println("Density of saturated liquid Propane at 300 K: " + CoolProp.PropsSI("D", "T", 300, "Q", 0, "Propane") + " kg/m^3");
-        //~ System.out.println("Density of saturated vapor R290 at 300 K: " + CoolProp.PropsSI("D", "T", 300, "Q", 1, "R290") + " kg/m^3");
-        //~ System.out.println("SINGLE PHASE CYCLE (propane)");
-        //~ p = CoolProp.PropsSI("P", "T", 300, "D", 1, "Propane");
-        //~ h = CoolProp.PropsSI("H", "T", 300, "D", 1, "Propane");
-        //~ System.out.println("T,D -> P,H " + 300 + ","+ 1+ " --> " + p + "," + h);
-        //~ T = CoolProp.PropsSI("T", "P", p, "H", h, "Propane");
-        //~ D = CoolProp.PropsSI("D", "P", p, "H", h, "Propane");
-        //~ System.out.println("P,H -> T,D " + p + "," + h + " --> " + T + "," + D);
-        //~ CoolProp.disable_TTSE_LUT("Propane");
 
         try
         {

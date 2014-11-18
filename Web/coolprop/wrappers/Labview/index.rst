@@ -13,7 +13,9 @@ Pre-compiled Binaries for windows
 Shared library
 --------------
 
-You will need to download the release shared library for windows from :sfdownloads:`sourceforge <shared_library/Windows>` or the development version of the shared library from :bbbinaries:`the buildbot server <shared_library/Windows>`.  If you are on 32-bit windows, download the __cdecl version.  For 64-bit, there is only one calling convention.
+You will need to download the release shared library for windows from :sfdownloads:`sourceforge <shared_library/Windows>` or the development version of the shared library from :bbbinaries:`the buildbot server <shared_library/Windows>`.  If you are on 32-bit windows, download the __cdecl version.  For 64-bit, there is only one calling convention.  
+
+Place the downloaded shared library next to your library
 
 Available libraries
 -------------------
@@ -28,6 +30,7 @@ measurement processing, etc.  There is :download:`additional information <CoolPr
 User-Compiled Binaries for windows
 ==================================
 
+Check out :ref:`the instructions to build your own shared library <shared_library>`.  It should be a __cdecl DLL for 32-bit windows.
 
 User-Compiled Binaries for VxWorks (cRIO)
 =========================================
@@ -39,8 +42,8 @@ To compile::
 
     cmake ../.. -DCOOLPROP_VXWORKS_LIBRARY_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=../../dev/cmake/Toolchains/powerpc-vxworks-crio.cmake -DCMAKE_CXX_FLAGS="-D__powerpc__"
 
-Use pre-built binaries from FirstForge
---------------------------------------
+Use pre-built toolchain from FirstForge
+---------------------------------------
 
 Instructions from http://firstforge.wpi.edu/sf/wiki/do/viewPage/projects.c--11_toochain/wiki/BinaryInstall
 
@@ -68,8 +71,8 @@ Set the WIND_BASE environmental variable (or add to ~/.profile)::
 
     export WIND_BASE=/usr/powerpc-wrs-vxworks/wind_base
 
-Building your own version of GCC for VxWorks Target
----------------------------------------------------
+Building your own toolchain for VxWorks Target
+----------------------------------------------
 
 Instructions from http://firstforge.wpi.edu/sf/wiki/do/viewPage/projects.c--11_toochain/wiki/ManualInstall
 
