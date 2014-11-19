@@ -585,7 +585,7 @@ def drawIsoLines(Ref, plot, which, iValues=[], num=0, show=False, axis=None):
         releases and replaced with :func:`CoolProps.Plots.IsoLines`
 
     Parameters
-    -----------
+    ----------
     Ref : str
         The given reference fluid
     plot : str
