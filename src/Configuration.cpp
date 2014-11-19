@@ -16,7 +16,7 @@ std::string config_key_to_string(configuration_keys keys)
     }
     // Back to a warning again
     #pragma GCC diagnostic warning "-Wswitch"
-    throw ValueError();
+    throw ValueError();// will never get here, just to make compiler happy
 }; 
 
 /// Go from string to enum key
@@ -44,21 +44,17 @@ double get_config_double(configuration_keys key){
 std::string get_config_string(configuration_keys key){ 
     return static_cast<std::string>(config.get_item(key)); 
 }
-rapidjson::Document get_config_as_json(){
-    // Init the rapidjson doc
-    rapidjson::Document doc;
-    doc.SetObject();
-    
+void get_config_as_json(rapidjson::Document &doc){
     // Get the items
     std::map<configuration_keys, ConfigurationItem> items = config.get_items();
     for (std::map<configuration_keys, ConfigurationItem>::iterator it = items.begin(); it != items.end(); ++it){
         it->second.add_to_json(doc, doc);
     }
-    // Convert to string
-    return doc;
 }
 std::string get_config_as_json_string(){
-    rapidjson::Document doc = get_config_as_json();
+    rapidjson::Document doc;
+    doc.SetObject();
+    get_config_as_json(doc);
     return cpjson::to_string(doc);
 }
 void set_config_as_json(rapidjson::Value &val){

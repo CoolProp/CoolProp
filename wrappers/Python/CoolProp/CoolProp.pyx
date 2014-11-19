@@ -117,6 +117,12 @@ def set_reference_state(string FluidName, *args):
 #     else:
 #         return val
 
+cpdef string get_config_as_json_string():
+    return _get_config_as_json_string()
+
+cpdef set_config_as_json_string(string s):
+    _set_config_as_json_string(s)
+    
 cpdef int get_parameter_index(string key):
     return _get_parameter_index(key)
 

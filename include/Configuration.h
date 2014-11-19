@@ -161,7 +161,7 @@ class Configuration
 /// Return the value of a boolean key from the configuration
 bool get_config_bool(configuration_keys key);
 double get_config_double(configuration_keys key);
-rapidjson::Document get_config_as_json();
+void get_config_as_json(rapidjson::Document &doc);
 /// Get values in the configuration based as json data in string format
 std::string get_config_as_json_string();
 
@@ -173,7 +173,7 @@ void set_config_bool(configuration_keys key, bool val);
 void set_config_double(configuration_keys key, double val);
 void set_config_string(configuration_keys key, std::string val);
 /// Set values in the configuration based on a json file
-void set_config_json(rapidjson::Document & doc);
+void set_config_json(rapidjson::Document &doc);
 void set_config_as_json_string(std::string &s);
 }
 
