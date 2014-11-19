@@ -53,6 +53,7 @@ namespace SaturationSolvers
     void saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long double rhomolar, saturation_D_pure_options &options);
     void saturation_T_pure(HelmholtzEOSMixtureBackend &HEOS, long double T, saturation_T_pure_options &options);
     void saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HEOS, long double T, saturation_T_pure_Akasaka_options &options);
+    void saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HEOS, long double T, saturation_T_pure_Akasaka_options &options);
     
     /**
     */
