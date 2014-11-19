@@ -147,9 +147,14 @@ EXPORT_CODE double CONVENTION PropsSI(const char *Output, const char *Name1, dou
 EXPORT_CODE long CONVENTION PhaseSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName, char *phase)
 {
     std::string _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;
-    std::string ph = CoolProp::PhaseSI(_Name1, Prop1, _Name2, Prop2, _FluidName);
-    if (ph.size() > strlen(phase)){ strcpy(phase, ph.c_str()); }
-    return 0;
+    std::string s = CoolProp::PhaseSI(_Name1, Prop1, _Name2, Prop2, _FluidName);
+    if (s.size() < strlen(Output)){
+        strcpy(phase, s.c_str());
+        return 1;
+    }
+    else{
+        return 0;
+    }
 }
 EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName, const double *z, int n)
 {
@@ -179,27 +184,44 @@ EXPORT_CODE long CONVENTION get_param_index(const char * param){
 }
 EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Output)
 {
-	strcpy(Output,CoolProp::get_global_param_string(param).c_str());
-	return 0;
+    std::string s = CoolProp::get_global_param_string(param).c_str();
+    if (s.size() < strlen(Output)){
+        strcpy(Output, s.c_str()); 
+        return 1;
+    }
+    else{
+        return 0;
+    }
 }
 EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, char * Output)
 {
     int key = CoolProp::get_parameter_index(param);
     if (key >= 0){
-        strcpy(Output, CoolProp::get_parameter_information(key, Output).c_str());
+        std::string s = CoolProp::get_parameter_information(key, Output);
+        if (s.size() < strlen(Output)){
+            strcpy(Output, s.c_str()); 
+            return 1;
+        }
+        else{
+            return 0;
+        }
     }
     else{
         strcpy(Output, format("parameter is invalid: %s", param).c_str());
+        return 0;
     }
-	return 0;
 }
-//EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char * Output)
-//{
-//	strcpy(Output, get_fluid_param_string(std::string(fluid), std::string(param)).c_str());
-//	return 0;
-//}
-
-
+EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char * Output)
+{
+	std::string s = CoolProp::get_fluid_param_string(std::string(fluid), std::string(param));
+    if (s.size() < strlen(Output)){
+        strcpy(Output, s.c_str()); 
+        return 1;
+    }
+    else{
+        return 0;
+    }
+}
 EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _Name3 = Name3;
