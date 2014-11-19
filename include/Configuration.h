@@ -5,7 +5,26 @@
 #include "CoolPropTools.h"
 #include "rapidjson/rapidjson_include.h"
 
-enum configuration_keys {NORMALIZE_GAS_CONSTANTS, CRITICAL_SPLINES_ENABLED};
+/* See http://stackoverflow.com/a/148610
+ * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
+ * This will be used to generate an enum like:
+ * enum configuration_keys {NORMALIZE_GAS_CONSTANTS, CRITICAL_SPLINES_ENABLED};
+ * 
+ * The values in this list are given by:
+ * enum, string representation of enum, default value
+ * 
+ * The type of the default value specifies the only type that will be accepted for this parameter
+ */
+#define CONFIGURATION_KEYS_ENUM \
+    X(NORMALIZE_GAS_CONSTANTS, "NORMALIZE_GAS_CONSTANTS", true) \
+    X(CRITICAL_SPLINES_ENABLED, "CRITICAL_SPLINES_ENABLED", true) 
+
+ // Use preprocessor to create the Enum
+ enum configuration_keys{
+  #define X(Enum, String, Default)       Enum,
+   CONFIGURATION_KEYS_ENUM
+  #undef X
+ };
 
 namespace CoolProp
 {
@@ -35,6 +54,10 @@ class ConfigurationItem
         // Initializer for bool
         ConfigurationItem(configuration_keys key, bool val){
             this->key = key; type = CONFIGURATION_BOOL_TYPE; v_bool = val;
+        };
+        // Initializer for integer
+        ConfigurationItem(configuration_keys key, int val){
+            this->key = key; type = CONFIGURATION_INTEGER_TYPE; v_integer = val;
         };
         // Initializer for double
         ConfigurationItem(configuration_keys key, double val){ 
@@ -149,8 +172,14 @@ class Configuration
         /// Set the default values in the configuration
         void set_defaults(void)
         {
-            add_item(ConfigurationItem(CRITICAL_SPLINES_ENABLED, true));
-            add_item(ConfigurationItem(NORMALIZE_GAS_CONSTANTS, true));
+            /* ***MAGIC WARNING**!!
+             * See http://stackoverflow.com/a/148610
+             * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
+             */
+            #define X(Enum, String, Default) \
+                add_item(ConfigurationItem(Enum, Default));
+                CONFIGURATION_KEYS_ENUM
+            #undef X
         };
 };
 

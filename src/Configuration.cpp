@@ -5,32 +5,33 @@ namespace CoolProp
     
 std::string config_key_to_string(configuration_keys keys)
 {
-    // Using this pragma, any missing keys will cause compilation error rather than warning
-    #pragma GCC diagnostic error "-Wswitch"
     switch (keys)
     {
-        case NORMALIZE_GAS_CONSTANTS:
-            return "NORMALIZE_GAS_CONSTANTS";
-        case CRITICAL_SPLINES_ENABLED:
-            return "CRITICAL_SPLINES_ENABLED";
+        /* ***MAGIC WARNING**!!
+         * See http://stackoverflow.com/a/148610
+         * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
+         */
+         #define X(Enum, String, Default) \
+            case Enum:  return String; break;
+            CONFIGURATION_KEYS_ENUM
+         #undef X
     }
-    // Back to a warning again
-    #pragma GCC diagnostic warning "-Wswitch"
-    throw ValueError();// will never get here, just to make compiler happy
+    return ""; // will never get here, just to make compiler happy
 }; 
 
 /// Go from string to enum key
 configuration_keys config_string_to_key(std::string &s)
 {
-    if (s == "NORMALIZE_GAS_CONSTANTS"){
-        return NORMALIZE_GAS_CONSTANTS;
-    }
-    else if (s == "CRITICAL_SPLINES_ENABLED"){
-        return CRITICAL_SPLINES_ENABLED;
-    }
-    else{
-        throw ValueError();
-    }
+    /* See http://stackoverflow.com/a/148610
+     * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
+     */
+    #define X(Enum, String, Default) \
+        if (s == String){ return Enum; }
+        CONFIGURATION_KEYS_ENUM
+    #undef X
+
+    // Nothing else has fired
+    throw ValueError();
 };
     
 static Configuration config;
