@@ -87,7 +87,7 @@ EXPORT_CODE int CONVENTION set_reference_stateS(const char *Ref, const char *ref
         CoolProp::set_reference_stateS(_Ref, _reference_state);
         return true;
     }
-    catch(std::exception &e){
+    catch(std::exception &){
         return false;
     }
 }
@@ -97,7 +97,7 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, doubl
         CoolProp::set_reference_stateD(std::string(Ref), T, rho, h0, s0);
         return true;
     }
-    catch(std::exception &e){
+    catch(std::exception &){
         return false;
     }
     
