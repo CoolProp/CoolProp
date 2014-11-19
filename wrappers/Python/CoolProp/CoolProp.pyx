@@ -117,14 +117,36 @@ def set_reference_state(string FluidName, *args):
 #     else:
 #         return val
 
+cpdef tuple generate_update_pair(constants_header.parameters key1, double value1, constants_header.parameters key2, double value2):
+    """
+    This function will generate an input pair to the update() function given the key, value pairs for both inputs
+    """
+    cdef constants_header.input_pairs pair
+    cdef double out1, out2
+    pair = _generate_update_pair(key1, value1, key2, value2, out1, out2)
+    return pair, out1, out2
+
 cpdef string get_config_as_json_string():
+    """
+    Obtain a json formulation of the internal configuration in CoolProp
+    
+    Values can be set by passing a modified json library (converted to string) to set_config_as_json_string
+    """
     return _get_config_as_json_string()
 
 cpdef set_config_as_json_string(string s):
+    """
+    Set the internal configuration in CoolProp from a json data string
+    
+    Current state can be obtained by calling get_config_as_json_string
+    """
     _set_config_as_json_string(s)
     
 cpdef int get_parameter_index(string key):
     return _get_parameter_index(key)
+    
+cpdef int get_phase_index(string key):
+    return _get_phase_index(key)
 
 cpdef string get_parameter_information(int key, string info):
     return _get_parameter_information(key, info)

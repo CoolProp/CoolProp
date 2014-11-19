@@ -384,8 +384,8 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
         return val;
     }
     
-    long iName1 = get_parameter_index(Name1);
-    long iName2 = get_parameter_index(Name2);
+    parameters iName1 = get_parameter_index(Name1);
+    parameters iName2 = get_parameter_index(Name2);
 
     if (State->using_mole_fractions()){
         State->set_mole_fractions(fractions);

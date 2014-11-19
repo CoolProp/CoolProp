@@ -131,13 +131,27 @@ enum parameters{
 };
 // !! If you add a parameter, update the map in the corresponding CPP file !!
 
+/// These are constants for the phases of the fluid
+enum phases{iphase_liquid, ///< Subcritical liquid 
+            iphase_supercritical, ///< Supercritical (p > pc, T > Tc)
+            iphase_supercritical_gas, ///< Supercritical gas (p < pc, T > Tc)
+            iphase_supercritical_liquid, ///< Supercritical liquid (p > pc, T < Tc)
+            iphase_critical_point, ///< At the critical point
+            iphase_gas, ///< Subcritical gas
+            iphase_twophase, ///< Twophase
+            iphase_unknown, ///< Unknown phase
+            iphase_not_imposed}; ///< Phase is not imposed
+
 /// Return information about the parameter
 /// @param key The key, one of iT, iP, etc.
 /// @param info The thing you want, one of "IO" ("IO" if input/output, "O" if output only), "short" (very short description), "long" (a longer description), "units"
 std::string get_parameter_information(int key, std::string info);
 
-/// Return the integer key corresponding to the parameter name ("Dmolar" for instance)
-int get_parameter_index(const std::string &param_name);
+/// Return the enum key corresponding to the parameter name ("Dmolar" for instance)
+parameters get_parameter_index(const std::string &param_name);
+
+/// Return the enum key corresponding to the phase name ("phase_liquid" for instance)
+phases get_phase_index(const std::string &param_name);
 
 /// Returns true if the input is trivial (constants, critical parameters, etc.)
 bool is_trivial_parameter(int key);
@@ -155,17 +169,6 @@ std::string get_csv_parameter_list();
 enum composition_types{IFRAC_MASS, IFRAC_MOLE, IFRAC_VOLUME, IFRAC_UNDEFINED, IFRAC_PURE};
 
 const long double R_u_CODATA = 8.3144621; ///< The value for the ideal gas constant in J/mol/K according to CODATA 2010.  This value is used to harmonize all the ideal gas constants.  This is especially important in the critical region.
-
-/// These are constants for the phases of the fluid
-enum phases{iphase_liquid, ///< Subcritical liquid 
-            iphase_supercritical, ///< Supercritical (p > pc, T > Tc)
-            iphase_supercritical_gas, ///< Supercritical gas (p < pc, T > Tc)
-            iphase_supercritical_liquid, ///< Supercritical liquid (p > pc, T < Tc)
-            iphase_critical_point, ///< At the critical point
-            iphase_gas, ///< Subcritical gas
-            iphase_twophase, ///< Twophase
-            iphase_unknown, ///< Unknown phase
-            iphase_not_imposed}; ///< Phase is not imposed
 
 /// These are unit types for the fluid
 enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLUID_TYPE_INCOMPRESSIBLE_LIQUID, FLUID_TYPE_INCOMPRESSIBLE_SOLUTION, FLUID_TYPE_UNDEFINED};
@@ -214,12 +217,12 @@ enum input_pairs{
 };
 // !! If you add or remove a parameter, update the map in the corresponding CPP file !!
 
-inline bool match_pair(long key1, long key2, long x1, long x2, bool &swap)
+inline bool match_pair(parameters key1, parameters key2, parameters x1, parameters x2, bool &swap)
 {
     swap = !(key1 == x1);
     return ((key1 == x1 && key2 == x2) || (key2 == x1 && key1 == x2));
 };
-template<class T> CoolProp::input_pairs generate_update_pair(long key1, T value1, long key2, T value2, T &out1, T&out2)
+template<class T> CoolProp::input_pairs generate_update_pair(parameters key1, T value1, parameters key2, T value2, T &out1, T &out2)
     {
         CoolProp::input_pairs pair;
         bool swap;

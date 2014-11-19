@@ -46,16 +46,16 @@ The phase index (as floating point number) can also be obtained using the PropsS
     
     In [5]: CoolProp.CoolProp.PropsSI('Phase','P',101325,'Q',0,'Water')
     
-where you can obtain the integer indices corresponding to the phase flags using the ``get_parameter_index`` function:
+where you can obtain the integer indices corresponding to the phase flags using the ``get_phase_index`` function:
 
 .. ipython::
 
     In [1]: import CoolProp
 
-    In [6]: CoolProp.CoolProp.get_parameter_index('phase_twophase')
+    In [6]: CoolProp.CoolProp.get_phase_index('phase_twophase')
     
     # Or for liquid
-    In [6]: CoolProp.CoolProp.get_parameter_index('phase_liquid')
+    In [6]: CoolProp.CoolProp.get_phase_index('phase_liquid')
     
 For a given fluid, the phase can be plotted in T-p coordinates:
 

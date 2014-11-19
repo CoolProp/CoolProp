@@ -256,8 +256,8 @@ public:
     }
     void set_pair(std::string &in1, double v1, std::string &in2, double v2){
         double o1, o2;
-        long iin1 = CoolProp::get_parameter_index(in1);
-        long iin2 = CoolProp::get_parameter_index(in2);
+        parameters iin1 = CoolProp::get_parameter_index(in1);
+        parameters iin2 = CoolProp::get_parameter_index(in2);
         CoolProp::input_pairs pair = CoolProp::generate_update_pair(iin1, v1, iin2, v2, o1, o2);
         pState->update(pair, o1, o2);
     }
