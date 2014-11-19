@@ -347,15 +347,21 @@ bool is_valid_phase(const std::string &phase_name, phases &iOutput)
     }
 }
 
-int get_parameter_index(const std::string &param_name)
+phases get_phase_index(const std::string &param_name)
+{
+    phases iPhase;
+    if (is_valid_phase(param_name, iPhase)){
+        return iPhase;
+    }
+    else{
+        throw ValueError(format("Your input name [%s] is not valid in get_phase_index (names are case sensitive)",param_name.c_str()));
+    }
+}
+parameters get_parameter_index(const std::string &param_name)
 {
     parameters iOutput;
-    phases iPhase;
     if (is_valid_parameter(param_name, iOutput)){
         return iOutput;
-    }
-    else if (is_valid_phase(param_name, iPhase)){
-        return iPhase;
     }
     else{
         throw ValueError(format("Your input name [%s] is not valid in get_parameter_index (names are case sensitive)",param_name.c_str()));
