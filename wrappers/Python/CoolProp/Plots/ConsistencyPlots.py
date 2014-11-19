@@ -338,7 +338,7 @@ class ConsistencyAxis(object):
 
 if __name__=='__main__':
     PVT = PdfPages('Consistency.pdf')
-    for fluid in ['Water','Propane','MDM']:#CP.__fluids__:
+    for fluid in CP.__fluids__:
         print('************************************************')
         print(fluid)
         print('************************************************')
