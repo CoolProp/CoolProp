@@ -1,9 +1,18 @@
 
-Source Code
-===========
+See the source files
+====================
 
-* The source code of CoolProp is stored in a github repository at https://github.com/CoolProp/CoolProp
+View/Edit sources on github
+---------------------------
 
-* To see nightly builds of the `doxygen <http://www.stack.nl/~dimitri/doxygen/>`_ formatted HTML outputs for the development code, go to http://www.coolprop.dreamhosters.com/doc/CoolProp5/
+The source code of CoolProp is stored in a github repository at https://github.com/CoolProp/CoolProp
 
-* Other documentation about the source code and developer notes can be found at :ref:`develop`.
+Doxygen formatted documentation of the source files
+---------------------------------------------------
+
+Real-time builds of the `doxygen <http://www.stack.nl/~dimitri/doxygen/>`_ formatted HTML outputs for the development code are at :bbsphinx:`the buildbot development server<_static/doxygen/html>`.
+
+More information
+----------------
+
+Other documentation about the source code and developer notes can be found at :ref:`develop`.
