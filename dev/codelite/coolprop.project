@@ -54,8 +54,6 @@
         <File Name="../../src/Backends/Helmholtz/PhaseEnvelopeRoutines.h"/>
         <File Name="../../src/Backends/Helmholtz/MixtureParameters.cpp"/>
         <File Name="../../src/Backends/Helmholtz/MixtureParameters.h"/>
-        <File Name="../../src/Backends/Helmholtz/Configuration.h"/>
-        <File Name="../../src/Backends/Helmholtz/Configuration.cpp"/>
       </VirtualDirectory>
       <VirtualDirectory Name="Incompressible">
         <File Name="../../src/Backends/Incompressible/IncompressibleBackend.cpp"/>
@@ -97,6 +95,7 @@
     <File Name="../../src/Solvers.cpp"/>
     <File Name="../../src/SpeedTest.cpp"/>
     <File Name="../../src/main.cxx"/>
+    <File Name="../../src/Configuration.cpp"/>
   </VirtualDirectory>
   <VirtualDirectory Name="include">
     <VirtualDirectory Name="rapidjson">
@@ -142,6 +141,7 @@
     <File Name="../../include/Tests.h"/>
     <File Name="../../include/Ancillaries.h"/>
     <File Name="../../include/PhaseEnvelope.h"/>
+    <File Name="../../include/Configuration.h"/>
   </VirtualDirectory>
   <Description/>
   <Dependencies/>

@@ -8,7 +8,7 @@
 
 #include <map>
 #include <algorithm>
-#include "../Configuration.h"
+#include "Configuration.h"
 
 namespace CoolProp{
 
