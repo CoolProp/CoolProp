@@ -18,17 +18,17 @@ typedef std::vector<std::vector<long double> > STLMatrix;
 class DepartureFunction
 {
 public:
-	DepartureFunction(){};
-	virtual ~DepartureFunction(){};
+    DepartureFunction(){};
+    virtual ~DepartureFunction(){};
 
-	/// The excess Helmholtz energy of the binary pair
-	/// Pure-virtual function (must be implemented in derived class
-	virtual double alphar(double tau, double delta) = 0;
-	virtual double dalphar_dDelta(double tau, double delta) = 0;
-	virtual double d2alphar_dDelta2(double tau, double delta) = 0;
-	virtual double d2alphar_dDelta_dTau(double tau, double delta) = 0;
-	virtual double dalphar_dTau(double tau, double delta) = 0;
-	virtual double d2alphar_dTau2(double tau, double delta) = 0;
+    /// The excess Helmholtz energy of the binary pair
+    /// Pure-virtual function (must be implemented in derived class
+    virtual double alphar(double tau, double delta) = 0;
+    virtual double dalphar_dDelta(double tau, double delta) = 0;
+    virtual double d2alphar_dDelta2(double tau, double delta) = 0;
+    virtual double d2alphar_dDelta_dTau(double tau, double delta) = 0;
+    virtual double dalphar_dTau(double tau, double delta) = 0;
+    virtual double d2alphar_dTau2(double tau, double delta) = 0;
 };
 
 /** \brief The departure function used by the GERG-2008 formulation
@@ -42,10 +42,10 @@ public:
 class GERG2008DepartureFunction : public DepartureFunction
 {
 protected:
-	bool using_gaussian;
-	ResidualHelmholtzGeneralizedExponential phi;
+    bool using_gaussian;
+    ResidualHelmholtzGeneralizedExponential phi;
 public:
-	GERG2008DepartureFunction(){};
+    GERG2008DepartureFunction(){};
     GERG2008DepartureFunction(const std::vector<double> &n,const std::vector<double> &d,const std::vector<double> &t,
                               const std::vector<double> &eta,const std::vector<double> &epsilon,const std::vector<double> &beta,
                               const std::vector<double> &gamma, std::size_t Npower)
@@ -75,14 +75,14 @@ public:
             phi.add_GERG2008Gaussian(_n, _d, _t, _eta, _epsilon, _beta, _gamma);
         }
     };
-	~GERG2008DepartureFunction(){};
+    ~GERG2008DepartureFunction(){};
 
     double alphar(double tau, double delta){return phi.base(tau, delta);};
-	double dalphar_dDelta(double tau, double delta){return phi.dDelta(tau, delta);};
-	double d2alphar_dDelta_dTau(double tau, double delta){return phi.dDelta_dTau(tau, delta);};
-	double dalphar_dTau(double tau, double delta){return phi.dTau(tau, delta);};
-	double d2alphar_dDelta2(double tau, double delta){return phi.dDelta2(tau, delta);};
-	double d2alphar_dTau2(double tau, double delta){return phi.dTau2(tau, delta);};
+    double dalphar_dDelta(double tau, double delta){return phi.dDelta(tau, delta);};
+    double d2alphar_dDelta_dTau(double tau, double delta){return phi.dDelta_dTau(tau, delta);};
+    double dalphar_dTau(double tau, double delta){return phi.dTau(tau, delta);};
+    double d2alphar_dDelta2(double tau, double delta){return phi.dDelta2(tau, delta);};
+    double d2alphar_dTau2(double tau, double delta){return phi.dTau2(tau, delta);};
 };
 
 /** \brief A polynomial/exponential departure function
@@ -96,9 +96,9 @@ public:
 class ExponentialDepartureFunction : public DepartureFunction
 {
 protected:
-	ResidualHelmholtzGeneralizedExponential phi;
+    ResidualHelmholtzGeneralizedExponential phi;
 public:
-	ExponentialDepartureFunction(){};
+    ExponentialDepartureFunction(){};
     ExponentialDepartureFunction(const std::vector<double> &n, const std::vector<double> &d,
                                  const std::vector<double> &t, const std::vector<double> &l)
                                  {
@@ -108,14 +108,14 @@ public:
                                      std::vector<long double> _l(l.begin(), l.begin()+l.size());
                                      phi.add_Power(_n, _d, _t, _l);
                                  };
-	~ExponentialDepartureFunction(){};
+    ~ExponentialDepartureFunction(){};
 
     double alphar(double tau, double delta){return phi.base(tau, delta);};
-	double dalphar_dDelta(double tau, double delta){return phi.dDelta(tau, delta);};
-	double d2alphar_dDelta_dTau(double tau, double delta){return phi.dDelta_dTau(tau, delta);};
-	double dalphar_dTau(double tau, double delta){return phi.dTau(tau, delta);};
-	double d2alphar_dDelta2(double tau, double delta){return phi.dDelta2(tau, delta);};
-	double d2alphar_dTau2(double tau, double delta){return phi.dTau2(tau, delta);};
+    double dalphar_dDelta(double tau, double delta){return phi.dDelta(tau, delta);};
+    double d2alphar_dDelta_dTau(double tau, double delta){return phi.dDelta_dTau(tau, delta);};
+    double dalphar_dTau(double tau, double delta){return phi.dTau(tau, delta);};
+    double d2alphar_dDelta2(double tau, double delta){return phi.dDelta2(tau, delta);};
+    double d2alphar_dTau2(double tau, double delta){return phi.dTau2(tau, delta);};
 };
 
 typedef shared_ptr<DepartureFunction> DepartureFunctionPointer;
@@ -123,12 +123,12 @@ typedef shared_ptr<DepartureFunction> DepartureFunctionPointer;
 class ExcessTerm
 {
 public:
-	std::size_t N;
-	std::vector<std::vector<DepartureFunctionPointer> > DepartureFunctionMatrix;
-	std::vector<std::vector<long double> > F;
+    std::size_t N;
+    std::vector<std::vector<DepartureFunctionPointer> > DepartureFunctionMatrix;
+    std::vector<std::vector<long double> > F;
 
     ExcessTerm(){};
-	~ExcessTerm(){};
+    ~ExcessTerm(){};
 
     /// Resize the parts of this term
     void resize(std::size_t N){
@@ -137,127 +137,127 @@ public:
         DepartureFunctionMatrix.resize(N);
         for (std::size_t i = 0; i < N; ++i){
             DepartureFunctionMatrix[i].resize(N);
-	    }
+        }
     };
 
-	double alphar(double tau, double delta, const std::vector<long double> &x)
-    {
-        double summer = 0;
-	    for (std::size_t i = 0; i < N-1; i++)
-	    {
-		    for (std::size_t j = i + 1; j < N; j++)
-		    {
-			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->alphar(tau,delta);
-		    }
-	    }
-	    return summer;
-    }
-	double dalphar_dDelta(double tau, double delta, const std::vector<long double> &x)
-    {
-        double summer = 0;
-	    for (std::size_t i = 0; i < N-1; i++)
-	    {
-		    for (std::size_t j = i + 1; j < N; j++)
-		    {
-			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dDelta(tau,delta);
-		    }
-	    }
-	    return summer;
-    }
-	double d2alphar_dDelta2(double tau, double delta, const std::vector<long double> &x)
+    double alphar(double tau, double delta, const std::vector<long double> &x)
     {
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
         {
-	        for (std::size_t j = i + 1; j < N; j++)
-	        {
-		        summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dDelta2(tau,delta);
-	        }
+            for (std::size_t j = i + 1; j < N; j++)
+            {
+                summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->alphar(tau,delta);
+            }
         }
         return summer;
-    };
-	double d2alphar_dDelta_dTau(double tau, double delta, const std::vector<long double> &x)
+    }
+    double dalphar_dDelta(double tau, double delta, const std::vector<long double> &x)
     {
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
         {
-	        for (std::size_t j = i + 1; j < N; j++)
-	        {
-		        summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dDelta_dTau(tau,delta);
-	        }
+            for (std::size_t j = i + 1; j < N; j++)
+            {
+                summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dDelta(tau,delta);
+            }
         }
         return summer;
     }
-	double dalphar_dTau(double tau, double delta, const std::vector<long double> &x)
+    double d2alphar_dDelta2(double tau, double delta, const std::vector<long double> &x)
     {
         double summer = 0;
-	    for (std::size_t i = 0; i < N-1; i++)
-	    {
-		    for (std::size_t j = i + 1; j < N; j++)
-		    {
-			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dTau(tau,delta);
-		    }
-	    }
-	    return summer;
+        for (std::size_t i = 0; i < N-1; i++)
+        {
+            for (std::size_t j = i + 1; j < N; j++)
+            {
+                summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dDelta2(tau,delta);
+            }
+        }
+        return summer;
     };
-	double d2alphar_dTau2(double tau, double delta, const std::vector<long double> &x)
+    double d2alphar_dDelta_dTau(double tau, double delta, const std::vector<long double> &x)
     {
         double summer = 0;
-	    for (std::size_t i = 0; i < N-1; i++)
-	    {
-		    for (std::size_t j = i + 1; j < N; j++)
-		    {
-			    summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dTau2(tau,delta);
-		    }
-	    }
-	    return summer;
+        for (std::size_t i = 0; i < N-1; i++)
+        {
+            for (std::size_t j = i + 1; j < N; j++)
+            {
+                summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dDelta_dTau(tau,delta);
+            }
+        }
+        return summer;
+    }
+    double dalphar_dTau(double tau, double delta, const std::vector<long double> &x)
+    {
+        double summer = 0;
+        for (std::size_t i = 0; i < N-1; i++)
+        {
+            for (std::size_t j = i + 1; j < N; j++)
+            {
+                summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dTau(tau,delta);
+            }
+        }
+        return summer;
     };
-	double dalphar_dxi(double tau, double delta, const std::vector<long double> &x, std::size_t i)
+    double d2alphar_dTau2(double tau, double delta, const std::vector<long double> &x)
     {
         double summer = 0;
-	    for (std::size_t k = 0; k < N; k++)
-	    {
-		    if (i != k)
-		    {
-			    summer += x[k]*F[i][k]*DepartureFunctionMatrix[i][k]->alphar(tau,delta);
-		    }
-	    }
-	    return summer;
+        for (std::size_t i = 0; i < N-1; i++)
+        {
+            for (std::size_t j = i + 1; j < N; j++)
+            {
+                summer += x[i]*x[j]*F[i][j]*DepartureFunctionMatrix[i][j]->d2alphar_dTau2(tau,delta);
+            }
+        }
+        return summer;
+    };
+    double dalphar_dxi(double tau, double delta, const std::vector<long double> &x, std::size_t i)
+    {
+        double summer = 0;
+        for (std::size_t k = 0; k < N; k++)
+        {
+            if (i != k)
+            {
+                summer += x[k]*F[i][k]*DepartureFunctionMatrix[i][k]->alphar(tau,delta);
+            }
+        }
+        return summer;
     };
     double d2alphardxidxj(double tau, double delta, const std::vector<long double> &x, std::size_t i, std::size_t j)
     {
         if (i != j)
-	    {
-		    return F[i][j]*DepartureFunctionMatrix[i][j]->alphar(tau,delta);
-	    }
-	    else
-	    {
-		    return 0;
-	    }
+        {
+            return F[i][j]*DepartureFunctionMatrix[i][j]->alphar(tau,delta);
+        }
+        else
+        {
+            return 0;
+        }
     };
-	double d2alphar_dxi_dTau(double tau, double delta, const std::vector<long double> &x, std::size_t i)
+    double d2alphar_dxi_dTau(double tau, double delta, const std::vector<long double> &x, std::size_t i)
     {
         double summer = 0;
-	    for (std::size_t k = 0; k < N; k++)
-	    {
-		    if (i != k)
-		    {
-			    summer += x[k]*F[i][k]*DepartureFunctionMatrix[i][k]->dalphar_dTau(tau,delta);
-		    }
-	    }
-	    return summer;
+        for (std::size_t k = 0; k < N; k++)
+        {
+            if (i != k)
+            {
+                summer += x[k]*F[i][k]*DepartureFunctionMatrix[i][k]->dalphar_dTau(tau,delta);
+            }
+        }
+        return summer;
     };
-	double d2alphar_dxi_dDelta(double tau, double delta, const std::vector<long double> &x, std::size_t i)
+    double d2alphar_dxi_dDelta(double tau, double delta, const std::vector<long double> &x, std::size_t i)
     {
         double summer = 0;
-	    for (std::size_t k = 0; k < N; k++)
-	    {
-		    if (i != k)
-		    {
-			    summer += x[k]*F[i][k]*DepartureFunctionMatrix[i][k]->dalphar_dDelta(tau,delta);
-		    }
-	    }
-	    return summer;
+        for (std::size_t k = 0; k < N; k++)
+        {
+            if (i != k)
+            {
+                summer += x[k]*F[i][k]*DepartureFunctionMatrix[i][k]->dalphar_dDelta(tau,delta);
+            }
+        }
+        return summer;
     };
 };
 

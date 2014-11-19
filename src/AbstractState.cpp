@@ -45,13 +45,13 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     }
     else if (!backend.compare("INCOMP"))
     {
-		return new IncompressibleBackend(fluid_string);
+        return new IncompressibleBackend(fluid_string);
     }
     else if (backend.find("TTSE&") == 0)
     {
         // Will throw if there is a problem with this backend
         shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_string));
-		return new TTSEBackend(*AS.get());
+        return new TTSEBackend(*AS.get());
     }
     else if (!backend.compare("TREND"))
     {
@@ -159,19 +159,19 @@ bool AbstractState::clear() {
 }
 double AbstractState::trivial_keyed_output(int key)
 {
-	if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
+    if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
     switch (key)
     {
-	case imolar_mass:
+    case imolar_mass:
         return molar_mass();
-	case iT_min:
+    case iT_min:
         return Tmin();
-	case iT_triple:
+    case iT_triple:
         return Ttriple();
-	case iT_max:
+    case iT_max:
         return Tmax();
-	case iP_max:
-		return pmax();
+    case iP_max:
+        return pmax();
     case iP_min:
     case iP_triple:
         return this->p_triple();
@@ -179,7 +179,7 @@ double AbstractState::trivial_keyed_output(int key)
         return get_reducing_state().T;
     case irhomolar_reducing:
         return get_reducing_state().rhomolar;
-	case iP_critical:
+    case iP_critical:
         return this->p_critical();
     case iT_critical:
         return this->T_critical();
@@ -188,13 +188,13 @@ double AbstractState::trivial_keyed_output(int key)
     case irhomass_critical:
         return this->rhomolar_critical()*molar_mass();
     
-	default:
-		throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));
-	}
+    default:
+        throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));
+    }
 }
 double AbstractState::keyed_output(int key)
 {
-	if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
+    if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
     // Handle trivial inputs
     if (is_trivial_parameter(key))
     {
@@ -366,25 +366,25 @@ void AbstractState::build_phase_envelope(const std::string &type)
     calc_phase_envelope(type);
 }
 double AbstractState::isothermal_compressibility(void){
-	return 1.0/_rhomolar*first_partial_deriv(iDmolar, iP, iT);
+    return 1.0/_rhomolar*first_partial_deriv(iDmolar, iP, iT);
 }
 double AbstractState::isobaric_expansion_coefficient(void){
-	return -1.0/pow(_rhomolar,2)*first_partial_deriv(iDmolar, iT, iP);
+    return -1.0/pow(_rhomolar,2)*first_partial_deriv(iDmolar, iT, iP);
 }
 double AbstractState::Bvirial(void){ return calc_Bvirial(); }
 double AbstractState::Cvirial(void){ return calc_Cvirial(); }
 double AbstractState::dBvirial_dT(void){ return calc_dBvirial_dT(); }
 double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 
-//	// ----------------------------------------
-//	// Smoothing functions for density
-//	// ----------------------------------------
-//	/// A smoothed version of the derivative using a spline curve in the region of x=0 to x=xend
-//	virtual double AbstractState::drhodh_constp_smoothed(double xend);
-//	/// A smoothed version of the derivative using a spline curve in the region of x=0 to x=xend
-//	virtual double AbstractState::drhodp_consth_smoothed(double xend);
-//	/// Density corresponding to the smoothed derivatives in the region of x=0 to x=xend
-//	virtual void AbstractState::rho_smoothed(double xend, double *rho_spline, double *dsplinedh, double *dsplinedp);
+//    // ----------------------------------------
+//    // Smoothing functions for density
+//    // ----------------------------------------
+//    /// A smoothed version of the derivative using a spline curve in the region of x=0 to x=xend
+//    virtual double AbstractState::drhodh_constp_smoothed(double xend);
+//    /// A smoothed version of the derivative using a spline curve in the region of x=0 to x=xend
+//    virtual double AbstractState::drhodp_consth_smoothed(double xend);
+//    /// Density corresponding to the smoothed derivatives in the region of x=0 to x=xend
+//    virtual void AbstractState::rho_smoothed(double xend, double *rho_spline, double *dsplinedh, double *dsplinedp);
 
 } /* namespace CoolProp */
 
@@ -399,19 +399,19 @@ TEST_CASE("Check AbstractState","[AbstractState]")
     {
         CHECK_THROWS(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("DEFINITELY_A_BAD_BACKEND", "Water")));
     }
-	SECTION("good backend - bad fluid")
+    SECTION("good backend - bad fluid")
     {
         CHECK_THROWS(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("HEOS", "DEFINITELY_A_BAD_FLUID")));
     }
-	SECTION("good backend - helmholtz")
+    SECTION("good backend - helmholtz")
     {
         CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("HEOS", "Water")));
     }
-	SECTION("good backend - incomp")
+    SECTION("good backend - incomp")
     {
         CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("INCOMP", "DEB")));
     }
-	SECTION("good backend - REFPROP")
+    SECTION("good backend - REFPROP")
     {
         CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("REFPROP", "Water")));
     }

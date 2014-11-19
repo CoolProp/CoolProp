@@ -37,15 +37,15 @@ namespace SaturationSolvers
     };
 
     /*! Returns the natural logarithm of K for component i using the method from Wilson as in
-	\f[
-	\ln K_i = \ln\left(\frac{p_{c,i}}{p}\right)+5.373(1+\omega_i)\left(1-\frac{T_{c,i}}{T}\right)
-	\f]
+    \f[
+    \ln K_i = \ln\left(\frac{p_{c,i}}{p}\right)+5.373(1+\omega_i)\left(1-\frac{T_{c,i}}{T}\right)
+    \f]
     @param HEOS The Helmholtz EOS mixture backend
-	@param T Temperature [K]
-	@param p Pressure [Pa]
-	@param i Index of component [-]
-	*/
-	static long double Wilson_lnK_factor(HelmholtzEOSMixtureBackend &HEOS, long double T, long double p, int i){ 
+    @param T Temperature [K]
+    @param p Pressure [Pa]
+    @param i Index of component [-]
+    */
+    static long double Wilson_lnK_factor(HelmholtzEOSMixtureBackend &HEOS, long double T, long double p, int i){ 
         EquationOfState *EOS = (HEOS.get_components())[i]->pEOS; 
         return log(EOS->reduce.p/p)+5.373*(1 + EOS->accentric)*(1-EOS->reduce.T/T);
     };
@@ -130,12 +130,12 @@ namespace SaturationSolvers
     {
     public:
         int input_type;
-	    double T, p, beta;
-	    const std::vector<long double> *z;
+        double T, p, beta;
+        const std::vector<long double> *z;
         std::vector<long double> *K;
-	    HelmholtzEOSMixtureBackend *HEOS;
+        HelmholtzEOSMixtureBackend *HEOS;
 
-	    WilsonK_resid(HelmholtzEOSMixtureBackend &HEOS, double beta, double imposed_value, int input_type, const std::vector<long double> &z, std::vector<long double> &K){ 
+        WilsonK_resid(HelmholtzEOSMixtureBackend &HEOS, double beta, double imposed_value, int input_type, const std::vector<long double> &z, std::vector<long double> &K){ 
             this->z = &z; this->K = &K; this->HEOS = &HEOS; this->beta = beta; this->input_type = input_type;
             if (input_type == imposed_T){
                 this->T = imposed_value;
@@ -143,35 +143,35 @@ namespace SaturationSolvers
             else{
                 this->p = imposed_value;
             }
-	    };
-	    double call(double input_value){
-		    double summer = 0;
+        };
+        double call(double input_value){
+            double summer = 0;
             if (input_type == imposed_T){
                 p = input_value; // Iterate on pressure
             }
             else{
                 T = input_value; // Iterate on temperature, pressure imposed
             }
-		    for (unsigned int i = 0; i< (*z).size(); i++) {
-			    (*K)[i] = exp(Wilson_lnK_factor(*HEOS,T,p,i));
-			    summer += (*z)[i]*((*K)[i]-1)/(1-beta+beta*(*K)[i]);
-		    }
-		    return summer;
-	    };
+            for (unsigned int i = 0; i< (*z).size(); i++) {
+                (*K)[i] = exp(Wilson_lnK_factor(*HEOS,T,p,i));
+                summer += (*z)[i]*((*K)[i]-1)/(1-beta+beta*(*K)[i]);
+            }
+            return summer;
+        };
     };
     inline double saturation_preconditioner(HelmholtzEOSMixtureBackend &HEOS, double input_value, int input_type, const std::vector<long double> &z)
     {
-	    double ptriple = 0, pcrit = 0, Ttriple = 0, Tcrit = 0;
-	    
-	    for (unsigned int i = 0; i < z.size(); i++)
-	    {
+        double ptriple = 0, pcrit = 0, Ttriple = 0, Tcrit = 0;
+        
+        for (unsigned int i = 0; i < z.size(); i++)
+        {
             EquationOfState *EOS = (HEOS.get_components())[i]->pEOS; 
 
-		    ptriple += EOS->sat_min_liquid.p*z[i];
+            ptriple += EOS->sat_min_liquid.p*z[i];
             pcrit += EOS->reduce.p*z[i];
-		    Ttriple += EOS->sat_min_liquid.T*z[i];
-		    Tcrit += EOS->reduce.T*z[i];
-	    }
+            Ttriple += EOS->sat_min_liquid.T*z[i];
+            Tcrit += EOS->reduce.T*z[i];
+        }
 
         if (input_type == imposed_T)
         {
@@ -185,16 +185,16 @@ namespace SaturationSolvers
     }
     inline double saturation_Wilson(HelmholtzEOSMixtureBackend &HEOS, double beta, double input_value, int input_type, const std::vector<long double> &z, double guess)
     {
-	    double T;
+        double T;
 
-	    std::string errstr;
+        std::string errstr;
 
-	    // Find first guess for T using Wilson K-factors
+        // Find first guess for T using Wilson K-factors
         WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS.get_K());
-	    T = Secant(Resid, guess, 0.001, 1e-10, 100, errstr);
-	
-	    if (!ValidNumber(T)){throw ValueError("saturation_p_Wilson failed to get good T");}
-	    return T;
+        T = Secant(Resid, guess, 0.001, 1e-10, 100, errstr);
+    
+        if (!ValidNumber(T)){throw ValueError("saturation_p_Wilson failed to get good T");}
+        return T;
     }
     struct SuccessiveSubstitutionStep
     {
@@ -245,41 +245,41 @@ namespace SaturationSolvers
     {
         public:
         newton_raphson_twophase_options::imposed_variable_options imposed_variable;
-	    long double error_rms, rhomolar_liq, rhomolar_vap, T, p, min_rel_change, beta;
-	    unsigned int N;
-	    bool logging;
-	    int Nsteps;
-	    STLMatrix J;
+        long double error_rms, rhomolar_liq, rhomolar_vap, T, p, min_rel_change, beta;
+        unsigned int N;
+        bool logging;
+        int Nsteps;
+        STLMatrix J;
         HelmholtzEOSMixtureBackend *HEOS;
-	    std::vector<long double> K, x, y, z, r, negative_r, err_rel;
-	    std::vector<SuccessiveSubstitutionStep> step_logger;
+        std::vector<long double> K, x, y, z, r, negative_r, err_rel;
+        std::vector<SuccessiveSubstitutionStep> step_logger;
 
-	    newton_raphson_twophase(){};
+        newton_raphson_twophase(){};
 
-	    void resize(unsigned int N);
-	
-	    // Reset the state of all the internal variables
-	    void pre_call()
-	    {
-		    K.clear(); x.clear(); y.clear();  step_logger.clear(); error_rms = 1e99; Nsteps = 0;
-		    rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
-	    };
+        void resize(unsigned int N);
+    
+        // Reset the state of all the internal variables
+        void pre_call()
+        {
+            K.clear(); x.clear(); y.clear();  step_logger.clear(); error_rms = 1e99; Nsteps = 0;
+            rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
+        };
 
-	    /** \brief Call the Newton-Raphson VLE Solver
+        /** \brief Call the Newton-Raphson VLE Solver
          *
-	     * This solver must be passed reasonable guess values for the mole fractions, 
-	     * densities, etc.  You may want to take a few steps of successive substitution
-	     * before you start with Newton Raphson.
+         * This solver must be passed reasonable guess values for the mole fractions, 
+         * densities, etc.  You may want to take a few steps of successive substitution
+         * before you start with Newton Raphson.
          * 
-	     * @param HEOS HelmholtzEOSMixtureBackend instance
+         * @param HEOS HelmholtzEOSMixtureBackend instance
          * @param IO The input/output data structure
-	     */
-	    void call(HelmholtzEOSMixtureBackend &HEOS, newton_raphson_twophase_options &IO);
+         */
+        void call(HelmholtzEOSMixtureBackend &HEOS, newton_raphson_twophase_options &IO);
 
-	    /* \brief Build the arrays for the Newton-Raphson solve
+        /* \brief Build the arrays for the Newton-Raphson solve
          * 
-	     */
-	    void build_arrays();
+         */
+        void build_arrays();
     };
     
 
@@ -325,48 +325,48 @@ namespace SaturationSolvers
     {
         public:
         newton_raphson_saturation_options::imposed_variable_options imposed_variable;
-	    long double error_rms, rhomolar_liq, rhomolar_vap, T, p, min_rel_change;
-	    unsigned int N;
-	    bool logging;
+        long double error_rms, rhomolar_liq, rhomolar_vap, T, p, min_rel_change;
+        unsigned int N;
+        bool logging;
         bool bubble_point;
-	    int Nsteps;
-	    STLMatrix J;
+        int Nsteps;
+        STLMatrix J;
         HelmholtzEOSMixtureBackend *HEOS;
         long double dTsat_dPsat, dPsat_dTsat;
-	    std::vector<long double> K, x, y, r, negative_r, err_rel;
-	    std::vector<SuccessiveSubstitutionStep> step_logger;
+        std::vector<long double> K, x, y, r, negative_r, err_rel;
+        std::vector<SuccessiveSubstitutionStep> step_logger;
 
-	    newton_raphson_saturation(){};
+        newton_raphson_saturation(){};
 
-	    void resize(unsigned int N);
-	
-	    // Reset the state of all the internal variables
-	    void pre_call()
-	    {
-		    K.clear(); x.clear(); y.clear();  
+        void resize(unsigned int N);
+    
+        // Reset the state of all the internal variables
+        void pre_call()
+        {
+            K.clear(); x.clear(); y.clear();  
             step_logger.clear(); error_rms = 1e99; Nsteps = 0;
-		    rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
-	    };
+            rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
+        };
 
-	    /** \brief Call the Newton-Raphson VLE Solver
+        /** \brief Call the Newton-Raphson VLE Solver
          *
-	     * This solver must be passed reasonable guess values for the mole fractions, 
-	     * densities, etc.  You may want to take a few steps of successive substitution
-	     * before you start with Newton Raphson.
+         * This solver must be passed reasonable guess values for the mole fractions, 
+         * densities, etc.  You may want to take a few steps of successive substitution
+         * before you start with Newton Raphson.
          * 
-	     * @param HEOS HelmholtzEOSMixtureBackend instance
-	     * @param z Bulk mole fractions [-]
-	     * @param z_incipient Initial guesses for the mole fractions of the incipient phase [-]
+         * @param HEOS HelmholtzEOSMixtureBackend instance
+         * @param z Bulk mole fractions [-]
+         * @param z_incipient Initial guesses for the mole fractions of the incipient phase [-]
          * @param IO The input/output data structure
-	     */
-	    void call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &z_incipient, newton_raphson_saturation_options &IO);
+         */
+        void call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &z_incipient, newton_raphson_saturation_options &IO);
 
-	    /** \brief Build the arrays for the Newton-Raphson solve
+        /** \brief Build the arrays for the Newton-Raphson solve
          * 
-	     * This method builds the Jacobian matrix, the sensitivity matrix, etc.
+         * This method builds the Jacobian matrix, the sensitivity matrix, etc.
          * 
-	     */
-	    void build_arrays();
+         */
+        void build_arrays();
 
         /** \brief Check the derivatives in the Jacobian using numerical derivatives.
          */

@@ -20,10 +20,10 @@ and exposes just the pure fluid interface.
 class REFPROPBackend : public REFPROPMixtureBackend  {
 public:
     
-	REFPROPBackend();
-	REFPROPBackend(const std::string &fluid_name);
-	
-	virtual ~REFPROPBackend();
+    REFPROPBackend();
+    REFPROPBackend(const std::string &fluid_name);
+    
+    virtual ~REFPROPBackend();
 };
 
 } /* namespace CoolProp */

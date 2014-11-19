@@ -149,8 +149,8 @@ struct ConductivityCriticalSimplifiedOlchowySengersData{
         // Universal constants - can still be adjusted if need be
         k = 1.3806488e-23; //[J/K]
         R0 = 1.03; //[-]
-		gamma = 1.239; //[-]
-		nu = 0.63; //[-]
+        gamma = 1.239; //[-]
+        nu = 0.63; //[-]
         // Suggested default values - can be over-written
         GAMMA = 0.0496; //[-]
         zeta0 = 1.94e-10; //[m]

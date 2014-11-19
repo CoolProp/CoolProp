@@ -54,10 +54,10 @@ public:
     bool using_mole_fractions(){return true;}
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
-	
-	bool has_melting_line(){ return is_pure_or_pseudopure && components[0]->ancillaries.melting_line.enabled();};
-	long double calc_melting_line(int param, int given, long double value);
-	phases calc_phase(void){return _phase;};
+    
+    bool has_melting_line(){ return is_pure_or_pseudopure && components[0]->ancillaries.melting_line.enabled();};
+    long double calc_melting_line(int param, int given, long double value);
+    phases calc_phase(void){return _phase;};
     void calc_specify_phase(phases phase){ specify_phase(phase); }
     void calc_unspecify_phase(){ unspecify_phase(); }
     long double calc_saturation_ancillary(parameters param, int Q, parameters given, double value);
@@ -145,11 +145,11 @@ public:
     long double calc_cpmolar_idealgas(void);
     long double calc_pressure_nocache(long double T, long double rhomolar);
     long double calc_smolar(void);
-	long double calc_smolar_nocache(long double T, long double rhomolar);
+    long double calc_smolar_nocache(long double T, long double rhomolar);
     
-	long double calc_hmolar(void);
-	long double calc_hmolar_nocache(long double T, long double rhomolar);
-	
+    long double calc_hmolar(void);
+    long double calc_hmolar_nocache(long double T, long double rhomolar);
+    
     long double calc_umolar_nocache(long double T, long double rhomolar);
     long double calc_umolar(void);
     long double calc_speed_sound(void);
@@ -191,13 +191,13 @@ public:
     long double calc_conductivity_background(void);
 
     long double calc_Tmin(void);
-	long double calc_Tmax(void);
+    long double calc_Tmax(void);
     long double calc_pmax(void);
     long double calc_Ttriple(void);
     long double calc_p_triple(void);
-	long double calc_pmax_sat(void);
-	long double calc_Tmax_sat(void);
-	void calc_Tmin_sat(long double &Tmin_satL, long double &Tmin_satV);
+    long double calc_pmax_sat(void);
+    long double calc_Tmax_sat(void);
+    void calc_Tmin_sat(long double &Tmin_satL, long double &Tmin_satV);
     void calc_pmin_sat(long double &pmin_satL, long double &pmin_satV);
 
     long double calc_T_critical(void);

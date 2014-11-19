@@ -278,9 +278,9 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
 
     STLMatrix beta_v, gamma_v, beta_T, gamma_T;
     beta_v.resize(N, std::vector<long double>(N, 0));
-	gamma_v.resize(N, std::vector<long double>(N, 0));
-	beta_T.resize(N, std::vector<long double>(N, 0));
-	gamma_T.resize(N, std::vector<long double>(N, 0));
+    gamma_v.resize(N, std::vector<long double>(N, 0));
+    beta_T.resize(N, std::vector<long double>(N, 0));
+    gamma_T.resize(N, std::vector<long double>(N, 0));
 
     HEOS.Excess.resize(N);
 

@@ -174,7 +174,7 @@ protected:
 
     /// Using this backend, calculate the maximum temperature in K
     virtual long double calc_Tmax(void){throw NotImplementedError("calc_Tmax is not implemented for this backend");};
-	/// Using this backend, calculate the minimum temperature in K
+    /// Using this backend, calculate the minimum temperature in K
     virtual long double calc_Tmin(void){throw NotImplementedError("calc_Tmin is not implemented for this backend");};
     /// Using this backend, calculate the maximum pressure in Pa
     virtual long double calc_pmax(void){throw NotImplementedError("calc_pmax is not implemented for this backend");};
@@ -242,17 +242,17 @@ protected:
     
     /// Update the states after having changed the reference state for enthalpy and entropy
     virtual void update_states(void){throw NotImplementedError("This backend does not implement update_states function");};
-	
-	virtual long double calc_melting_line(int param, int given, long double value){throw NotImplementedError("This backend does not implement calc_melting_line function");};
+    
+    virtual long double calc_melting_line(int param, int given, long double value){throw NotImplementedError("This backend does not implement calc_melting_line function");};
     
     /// @param param The key for the parameter to be returned
     /// @param Q The quality for the parameter that is given (0 = saturated liquid, 1 = saturated vapor)
     /// @param given The key for the parameter that is given
     /// @param value The value for the parameter that is given
     virtual long double calc_saturation_ancillary(parameters param, int Q, parameters given, double value){throw NotImplementedError("This backend does not implement calc_saturation_ancillary");};
-	
+    
     /// Using this backend, calculate the phase
-	virtual phases calc_phase(void){throw NotImplementedError("This backend does not implement calc_phase function");};
+    virtual phases calc_phase(void){throw NotImplementedError("This backend does not implement calc_phase function");};
     /// Using this backend, specify the phase to be used for all further calculations
     virtual void calc_specify_phase(phases phase){throw NotImplementedError("This backend does not implement calc_specify_phase function");};
     /// Using this backend, unspecify the phase
@@ -314,13 +314,13 @@ public:
     const CoolProp::SimpleState & get_state(const std::string &state){return calc_state(state);};
 
     // Limits
-	double Tmin(void);
+    double Tmin(void);
     double Tmax(void);
     double pmax(void);
     double Ttriple(void);
-	
+    
     /// Get the phase of the state
-	phases phase(void){return calc_phase();};
+    phases phase(void){return calc_phase();};
     /// Specify the phase for all further calculations with this state class
     void specify_phase(phases phase){calc_specify_phase(phase);};
     /// Unspecify the phase and go back to calculating it based on the inputs
@@ -357,7 +357,7 @@ public:
     /// Retrieve a value by key
     double keyed_output(int key);
     /// A trivial keyed output like molar mass that does not depend on the state
-	double trivial_keyed_output(int key);
+    double trivial_keyed_output(int key);
     
     /// Return the temperature in K
     double T(void)  {return _T;};
@@ -462,7 +462,7 @@ public:
     
     void build_phase_envelope(const std::string &type);
     const CoolProp::PhaseEnvelopeData &get_phase_envelope_data(){return calc_phase_envelope_data();};
-	
+    
     // ----------------------------------------
     //    Ancillary equations
     // ----------------------------------------
@@ -473,7 +473,7 @@ public:
     /// @param param The key for the parameter to be returned
     /// @param given The key for the parameter that is given
     /// @param value The value for the parameter that is given
-	double melting_line(int param, int given, double value);
+    double melting_line(int param, int given, double value);
     /// Return the value from a saturation ancillary curve (if the backend implements it)
     /// @param param The key for the parameter to be returned
     /// @param Q The quality for the parameter that is given (0 = saturated liquid, 1 = saturated vapor)

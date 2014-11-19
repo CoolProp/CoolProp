@@ -20,62 +20,62 @@ Includes an "=" assignment operator and casting to boolean
 so you can do something like::
 
 double CoolPropStateClassSI::d3phir_dTau3(double tau, double delta){
-	if (cache.d3phir_dTau3)	{
-		return cache.d3phir_dTau3;
-	} else {
-		cache.d3phir_dTau3 = pFluid->d3phir_dTau3(tau,delta);
-		return cache.d3phir_dTau3;
-	}
+    if (cache.d3phir_dTau3)    {
+        return cache.d3phir_dTau3;
+    } else {
+        cache.d3phir_dTau3 = pFluid->d3phir_dTau3(tau,delta);
+        return cache.d3phir_dTau3;
+    }
 };
 */
 
 class CachedElement {
 
 private:
-	bool is_cached;
-	long double value;
+    bool is_cached;
+    long double value;
 public:
-	/// Default constructor
-	CachedElement() {
-		this->clear();
-	};
+    /// Default constructor
+    CachedElement() {
+        this->clear();
+    };
 
-	/// Function to carry out the caching
-	void _do_cache(double value)
-	{
-		this->value = value;
-		this->is_cached = true;
-	}
+    /// Function to carry out the caching
+    void _do_cache(double value)
+    {
+        this->value = value;
+        this->is_cached = true;
+    }
 
-	/// Assignment operator - sets the value and sets the flag
-	void operator=(const double& value) {
-		_do_cache(value);
-	};
+    /// Assignment operator - sets the value and sets the flag
+    void operator=(const double& value) {
+        _do_cache(value);
+    };
 
-	/// Cast to boolean, for checking if cached
-	operator bool() {return is_cached;};
+    /// Cast to boolean, for checking if cached
+    operator bool() {return is_cached;};
 
-	/// Cast to double, for returning value
-	operator double() {
-		if (is_cached) {return static_cast<double>(value); }
-		else {
-			throw std::exception();
-		}
-	}
+    /// Cast to double, for returning value
+    operator double() {
+        if (is_cached) {return static_cast<double>(value); }
+        else {
+            throw std::exception();
+        }
+    }
     operator long double() {
-		if (is_cached) {return value; }
-		else {
-			throw std::exception();
-		}
-	}
-	/// Clear the flag and the value
-	void clear() {
-		is_cached = false;
-		this->value = _HUGE;
-	};
-	long double &pt(){
-		return this->value;
-	}
+        if (is_cached) {return value; }
+        else {
+            throw std::exception();
+        }
+    }
+    /// Clear the flag and the value
+    void clear() {
+        is_cached = false;
+        this->value = _HUGE;
+    };
+    long double &pt(){
+        return this->value;
+    }
 };
 
 } /* namespace CoolProp */

@@ -11,19 +11,19 @@ namespace CoolProp
 class FuncWrapper1D
 {
 public:
-	FuncWrapper1D(){};
-	virtual ~FuncWrapper1D(){};
-	virtual double call(double) = 0;
-	virtual double deriv(double){throw NotImplementedError("deriv function not implemented");};
+    FuncWrapper1D(){};
+    virtual ~FuncWrapper1D(){};
+    virtual double call(double) = 0;
+    virtual double deriv(double){throw NotImplementedError("deriv function not implemented");};
 };
 
 class FuncWrapperND
 {
 public:
-	FuncWrapperND(){};
-	virtual ~FuncWrapperND(){};
-	virtual std::vector<double> call(std::vector<double>) = 0;// must be provided
-	virtual std::vector<std::vector<double> > Jacobian(std::vector<double>){std::vector<std::vector<double> > J; return J;}; // optional
+    FuncWrapperND(){};
+    virtual ~FuncWrapperND(){};
+    virtual std::vector<double> call(std::vector<double>) = 0;// must be provided
+    virtual std::vector<std::vector<double> > Jacobian(std::vector<double>){std::vector<std::vector<double> > J; return J;}; // optional
 };
 
 // Single-Dimensional solvers, pointer versions

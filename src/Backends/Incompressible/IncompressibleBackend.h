@@ -36,8 +36,8 @@ public:
     /// @param fluid_name the string with the fluid name
     IncompressibleBackend(const std::string &fluid_name);
     /// The instantiator
-	/// @param component_names The vector of strings of the fluid components, without file ending
-	IncompressibleBackend(const std::vector<std::string> &component_names);
+    /// @param component_names The vector of strings of the fluid components, without file ending
+    IncompressibleBackend(const std::vector<std::string> &component_names);
 
     // Incompressible backend uses different compositions
     bool using_mole_fractions(void){return  this->fluid->getxid()==IFRAC_MOLE;};
@@ -117,8 +117,8 @@ public:
     long double calc_umass(void){return fluid->u(_T, _p, _fractions[0]);};
     long double calc_cpmass(void){return fluid->cp(_T, _p, _fractions[0]);};
     long double calc_cvmass(void){return fluid->cv(_T, _p, _fractions[0]);};
-	long double calc_Tmax(void){return fluid->getTmax();};
-	long double calc_Tmin(void){return fluid->getTmin();};
+    long double calc_Tmax(void){return fluid->getTmax();};
+    long double calc_Tmin(void){return fluid->getTmin();};
 };
 
 } /* namespace CoolProp */

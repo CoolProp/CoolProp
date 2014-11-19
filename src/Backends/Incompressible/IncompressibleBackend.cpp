@@ -24,17 +24,17 @@ IncompressibleBackend::IncompressibleBackend() {
 }
 
 IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) {
-	//this->_fractions_id = fluid->getxid();
+    //this->_fractions_id = fluid->getxid();
     this->fluid = fluid;
 }
 
 IncompressibleBackend::IncompressibleBackend(const std::string &fluid_name) {
-	this->fluid = &get_incompressible_fluid(fluid_name);
+    this->fluid = &get_incompressible_fluid(fluid_name);
     //this->_fractions_id = this->fluid->getxid();
 }
 
 IncompressibleBackend::IncompressibleBackend(const std::vector<std::string> &component_names) {
-	throw NotImplementedError("Mixture-style constructor is not implemented yet for incompressible fluids");
+    throw NotImplementedError("Mixture-style constructor is not implemented yet for incompressible fluids");
 }
 
 void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
@@ -42,62 +42,62 @@ void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double valu
     //    throw ValueError("mass fractions have not been set");
     //}
 
-	if (get_debug_level()>=10) {
-		//throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for the solver, %d is not valid. ",__FILE__,__LINE__,axis));
-		std::cout << format("Incompressible backend: Called update with %d and %f, %f ",input_pair, value1, value2) << std::endl;
-	}
+    if (get_debug_level()>=10) {
+        //throw ValueError(format("%s (%d): You have to provide a dimension, 0 or 1, for the solver, %d is not valid. ",__FILE__,__LINE__,axis));
+        std::cout << format("Incompressible backend: Called update with %d and %f, %f ",input_pair, value1, value2) << std::endl;
+    }
 
-	clear();
+    clear();
 
-	if (get_debug_level()>=50) std::cout << format("Incompressible backend: _fractions are %s ",vec_to_string(_fractions).c_str()) << std::endl;
-	if (fluid->is_pure()){
-		this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_LIQUID;
-		if (get_debug_level()>=50) std::cout << format("Incompressible backend: Fluid type is  %d ",this->_fluid_type) << std::endl;
-		if ((_fractions.size()!=1) || (_fractions[0]!=0.0)){
-			throw ValueError(format("%s is a pure fluid. The composition has to be set to a vector with one entry equal to 0.0 or nothing. %s is not valid.",this->name().c_str(),vec_to_string(_fractions).c_str()));
-		}
-	} else {
-		this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_SOLUTION;
-		if (get_debug_level()>=50) std::cout << format("Incompressible backend: Fluid type is  %d ",this->_fluid_type) << std::endl;
-		if (_fractions.size()!=1 || ((_fractions[0]<0.0) || (_fractions[0]>1.0)) ){
-			throw ValueError(format("%s is a solution or brine. Mass fractions must be set to a vector with one entry between 0 and 1. %s is not valid.",this->name().c_str(),vec_to_string(_fractions).c_str()));
-		}
-	}
+    if (get_debug_level()>=50) std::cout << format("Incompressible backend: _fractions are %s ",vec_to_string(_fractions).c_str()) << std::endl;
+    if (fluid->is_pure()){
+        this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_LIQUID;
+        if (get_debug_level()>=50) std::cout << format("Incompressible backend: Fluid type is  %d ",this->_fluid_type) << std::endl;
+        if ((_fractions.size()!=1) || (_fractions[0]!=0.0)){
+            throw ValueError(format("%s is a pure fluid. The composition has to be set to a vector with one entry equal to 0.0 or nothing. %s is not valid.",this->name().c_str(),vec_to_string(_fractions).c_str()));
+        }
+    } else {
+        this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_SOLUTION;
+        if (get_debug_level()>=50) std::cout << format("Incompressible backend: Fluid type is  %d ",this->_fluid_type) << std::endl;
+        if (_fractions.size()!=1 || ((_fractions[0]<0.0) || (_fractions[0]>1.0)) ){
+            throw ValueError(format("%s is a solution or brine. Mass fractions must be set to a vector with one entry between 0 and 1. %s is not valid.",this->name().c_str(),vec_to_string(_fractions).c_str()));
+        }
+    }
 
-	this->_phase = iphase_liquid;
-	if (get_debug_level()>=50) std::cout << format("Incompressible backend: Phase type is  %d ",this->_phase) << std::endl;
+    this->_phase = iphase_liquid;
+    if (get_debug_level()>=50) std::cout << format("Incompressible backend: Phase type is  %d ",this->_phase) << std::endl;
 
-	switch (input_pair)
-	{
+    switch (input_pair)
+    {
         case PT_INPUTS: {
             _p = value1;
             _T = value2;
             break;
         }
         case DmassP_INPUTS: {
-        	_p = value2;
-        	_T = this->DmassP_flash(value1,value2);
-        	break;
+            _p = value2;
+            _T = this->DmassP_flash(value1,value2);
+            break;
         }
         case PUmass_INPUTS: {
-        	_p = value1;
-        	_T = this->PUmass_flash(value1, value2);
+            _p = value1;
+            _T = this->PUmass_flash(value1, value2);
             break;
         }
         case PSmass_INPUTS: {
-        	_p = value1;
-        	_T = this->PSmass_flash(value1, value2);
+            _p = value1;
+            _T = this->PSmass_flash(value1, value2);
             break;
         }
         case HmassP_INPUTS: {
-        	_p = value2;
-        	_T = this->HmassP_flash(value1, value2);
+            _p = value2;
+            _T = this->HmassP_flash(value1, value2);
             break;
         }
         case QT_INPUTS: {
-        	if (value1!=0) {throw ValueError("Incompressible fluids can only handle saturated liquid, Q=0.");}
-        	_T = value2;
-        	_p = fluid->psat(value2, _fractions[0]);
+            if (value1!=0) {throw ValueError("Incompressible fluids can only handle saturated liquid, Q=0.");}
+            _T = value2;
+            _p = fluid->psat(value2, _fractions[0]);
             break;
         }
         default: {
@@ -105,8 +105,8 @@ void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double valu
                     format("This pair of inputs [%s] is not yet supported",
                             get_input_pair_short_desc(input_pair).c_str()));
         }
-	}
-	if (_p < 0){ throw ValueError("p is less than zero");}
+    }
+    if (_p < 0){ throw ValueError("p is less than zero");}
     if (!ValidNumber(_p)){ throw ValueError("p is not a valid number");}
     if (_T < 0){ throw ValueError("T is less than zero");}
     if (!ValidNumber(_T)){ throw ValueError("T is not a valid number");}
@@ -119,14 +119,14 @@ void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double valu
 @param fractions The vector of fractions of the components converted to the correct input
 */
 void IncompressibleBackend::set_fractions(const std::vector<long double> &fractions){
-	if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_fractions with %s ",vec_to_string(fractions).c_str()) << std::endl;
-	if (fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the fraction vector and not %d.",fractions.size()));
-	if ( ( this->_fractions.size()!=1 ) ||
-		 ( this->_fractions[0]!=fractions[0] ) ) { // Change it!
-		if (get_debug_level()>=20) std::cout << format("Incompressible backend: Updating the fractions triggered a change in reference state %s -> %s",vec_to_string(this->_fractions).c_str(),vec_to_string(fractions).c_str()) << std::endl;
-		this->_fractions = fractions;
-		fluid->set_reference_state(fluid->getTref(), fluid->getpref(), this->_fractions[0], fluid->gethref(), fluid->getsref());
-	}
+    if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_fractions with %s ",vec_to_string(fractions).c_str()) << std::endl;
+    if (fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the fraction vector and not %d.",fractions.size()));
+    if ( ( this->_fractions.size()!=1 ) ||
+         ( this->_fractions[0]!=fractions[0] ) ) { // Change it!
+        if (get_debug_level()>=20) std::cout << format("Incompressible backend: Updating the fractions triggered a change in reference state %s -> %s",vec_to_string(this->_fractions).c_str(),vec_to_string(fractions).c_str()) << std::endl;
+        this->_fractions = fractions;
+        fluid->set_reference_state(fluid->getTref(), fluid->getpref(), this->_fractions[0], fluid->gethref(), fluid->getsref());
+    }
 }
 
 /// Set the mole fractions
@@ -134,20 +134,20 @@ void IncompressibleBackend::set_fractions(const std::vector<long double> &fracti
 @param mole_fractions The vector of mole fractions of the components
 */
 void IncompressibleBackend::set_mole_fractions(const std::vector<long double> &mole_fractions){
-	if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_mole_fractions with %s ",vec_to_string(mole_fractions).c_str()) << std::endl;
-	if (mole_fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the mole fraction vector and not %d.",mole_fractions.size()));
-	if (fluid->getxid()==IFRAC_PURE) {
-		this->set_fractions(std::vector<long double>(1,0));
-		if (get_debug_level()>=20) std::cout << format("Incompressible backend: Overwriting fractions for pure fluid with %s -> %s",vec_to_string(mole_fractions).c_str(),vec_to_string(this->_fractions).c_str()) << std::endl;
-	} else if (fluid->getxid()==IFRAC_MOLE) {
-		this->set_fractions(mole_fractions);
-	} else {
-		std::vector<long double> tmp_fractions;
-		for (std::size_t i = 0; i < mole_fractions.size(); i++) {
-			tmp_fractions.push_back((long double) fluid->inputFromMole(0.0, mole_fractions[i]));
-	    }
-		this->set_fractions(tmp_fractions);
-	}
+    if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_mole_fractions with %s ",vec_to_string(mole_fractions).c_str()) << std::endl;
+    if (mole_fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the mole fraction vector and not %d.",mole_fractions.size()));
+    if (fluid->getxid()==IFRAC_PURE) {
+        this->set_fractions(std::vector<long double>(1,0));
+        if (get_debug_level()>=20) std::cout << format("Incompressible backend: Overwriting fractions for pure fluid with %s -> %s",vec_to_string(mole_fractions).c_str(),vec_to_string(this->_fractions).c_str()) << std::endl;
+    } else if (fluid->getxid()==IFRAC_MOLE) {
+        this->set_fractions(mole_fractions);
+    } else {
+        std::vector<long double> tmp_fractions;
+        for (std::size_t i = 0; i < mole_fractions.size(); i++) {
+            tmp_fractions.push_back((long double) fluid->inputFromMole(0.0, mole_fractions[i]));
+        }
+        this->set_fractions(tmp_fractions);
+    }
 }
 
 /// Set the mass fractions
@@ -155,20 +155,20 @@ void IncompressibleBackend::set_mole_fractions(const std::vector<long double> &m
 @param mass_fractions The vector of mass fractions of the components
 */
 void IncompressibleBackend::set_mass_fractions(const std::vector<long double> &mass_fractions){
-	if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_mass_fractions with %s ",vec_to_string(mass_fractions).c_str()) << std::endl;
-	if (mass_fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the mass fraction vector and not %d.",mass_fractions.size()));
-	if (fluid->getxid()==IFRAC_PURE) {
-		this->set_fractions(std::vector<long double>(1,0));
-		if (get_debug_level()>=20) std::cout << format("Incompressible backend: Overwriting fractions for pure fluid with %s -> %s",vec_to_string(mass_fractions).c_str(),vec_to_string(this->_fractions).c_str()) << std::endl;
-	} else if (fluid->getxid()==IFRAC_MASS) {
-		this->set_fractions(mass_fractions);
-	} else {
-		std::vector<long double> tmp_fractions;
-		for (std::size_t i = 0; i < mass_fractions.size(); i++) {
-			tmp_fractions.push_back((long double) fluid->inputFromMass(0.0, mass_fractions[i]));
-	    }
-		this->set_fractions(tmp_fractions);
-	}
+    if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_mass_fractions with %s ",vec_to_string(mass_fractions).c_str()) << std::endl;
+    if (mass_fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the mass fraction vector and not %d.",mass_fractions.size()));
+    if (fluid->getxid()==IFRAC_PURE) {
+        this->set_fractions(std::vector<long double>(1,0));
+        if (get_debug_level()>=20) std::cout << format("Incompressible backend: Overwriting fractions for pure fluid with %s -> %s",vec_to_string(mass_fractions).c_str(),vec_to_string(this->_fractions).c_str()) << std::endl;
+    } else if (fluid->getxid()==IFRAC_MASS) {
+        this->set_fractions(mass_fractions);
+    } else {
+        std::vector<long double> tmp_fractions;
+        for (std::size_t i = 0; i < mass_fractions.size(); i++) {
+            tmp_fractions.push_back((long double) fluid->inputFromMass(0.0, mass_fractions[i]));
+        }
+        this->set_fractions(tmp_fractions);
+    }
 }
 
 /// Set the volume fractions
@@ -176,25 +176,25 @@ void IncompressibleBackend::set_mass_fractions(const std::vector<long double> &m
 @param volu_fractions The vector of volume fractions of the components
 */
 void IncompressibleBackend::set_volu_fractions(const std::vector<long double> &volu_fractions){
-	if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_volu_fractions with %s ",vec_to_string(volu_fractions).c_str()) << std::endl;
-	if (volu_fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the volume fraction vector and not %d.",volu_fractions.size()));
-	if (fluid->getxid()==IFRAC_PURE) {
-		this->set_fractions(std::vector<long double>(1,0));
-		if (get_debug_level()>=20) std::cout << format("Incompressible backend: Overwriting fractions for pure fluid with %s -> %s",vec_to_string(volu_fractions).c_str(),vec_to_string(this->_fractions).c_str()) << std::endl;
-	} else if (fluid->getxid()==IFRAC_VOLUME) {
-		this->set_fractions(volu_fractions);
-	} else {
-		std::vector<long double> tmp_fractions;
-		for (std::size_t i = 0; i < volu_fractions.size(); i++) {
-			tmp_fractions.push_back((long double) fluid->inputFromVolume(0.0, volu_fractions[i]));
-	    }
-		this->set_fractions(tmp_fractions);
-	}
+    if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_volu_fractions with %s ",vec_to_string(volu_fractions).c_str()) << std::endl;
+    if (volu_fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the volume fraction vector and not %d.",volu_fractions.size()));
+    if (fluid->getxid()==IFRAC_PURE) {
+        this->set_fractions(std::vector<long double>(1,0));
+        if (get_debug_level()>=20) std::cout << format("Incompressible backend: Overwriting fractions for pure fluid with %s -> %s",vec_to_string(volu_fractions).c_str(),vec_to_string(this->_fractions).c_str()) << std::endl;
+    } else if (fluid->getxid()==IFRAC_VOLUME) {
+        this->set_fractions(volu_fractions);
+    } else {
+        std::vector<long double> tmp_fractions;
+        for (std::size_t i = 0; i < volu_fractions.size(); i++) {
+            tmp_fractions.push_back((long double) fluid->inputFromVolume(0.0, volu_fractions[i]));
+        }
+        this->set_fractions(tmp_fractions);
+    }
 }
 
 /// Check if the mole fractions have been set, etc.
 void IncompressibleBackend::check_status() {
-	throw NotImplementedError("Cannot check status for incompressible fluid");
+    throw NotImplementedError("Cannot check status for incompressible fluid");
 }
 
 /// Calculate T given pressure and density
@@ -204,7 +204,7 @@ void IncompressibleBackend::check_status() {
 @returns T The temperature in K
 */
 long double IncompressibleBackend::DmassP_flash(long double rhomass, long double p){
-	return fluid->T_rho(rhomass, p, _fractions[0]);
+    return fluid->T_rho(rhomass, p, _fractions[0]);
 }
 /// Calculate T given pressure and enthalpy
 /**
@@ -214,37 +214,37 @@ long double IncompressibleBackend::DmassP_flash(long double rhomass, long double
 */
 long double IncompressibleBackend::HmassP_flash(long double hmass, long double p){
 
-	class HmassP_residual : public FuncWrapper1D {
-	protected:
-		double p,x,h_in;
-		IncompressibleFluid* fluid;
-	protected:
+    class HmassP_residual : public FuncWrapper1D {
+    protected:
+        double p,x,h_in;
+        IncompressibleFluid* fluid;
+    protected:
         HmassP_residual(){};
-	public:
-		HmassP_residual(IncompressibleFluid* fluid, const double &p,  const double &x, const double &h_in){
-			this->p = p;
-			this->x = x;
-			this->h_in = h_in;
-			this->fluid = fluid;
-		}
-		virtual ~HmassP_residual(){};
-		double call(double target){
-			return fluid->h(target,p,x) - h_in; //fluid.u(target,p,x)+ p / fluid.rho(target,p,x) - h_in;
-		}
-		//double deriv(double target);
-	};
+    public:
+        HmassP_residual(IncompressibleFluid* fluid, const double &p,  const double &x, const double &h_in){
+            this->p = p;
+            this->x = x;
+            this->h_in = h_in;
+            this->fluid = fluid;
+        }
+        virtual ~HmassP_residual(){};
+        double call(double target){
+            return fluid->h(target,p,x) - h_in; //fluid.u(target,p,x)+ p / fluid.rho(target,p,x) - h_in;
+        }
+        //double deriv(double target);
+    };
 
-	//double T_tmp = this->PUmass_flash(p, hmass); // guess value from u=h
+    //double T_tmp = this->PUmass_flash(p, hmass); // guess value from u=h
 
-	HmassP_residual res = HmassP_residual(fluid, p, _fractions[0], hmass);
+    HmassP_residual res = HmassP_residual(fluid, p, _fractions[0], hmass);
 
-	std::string errstring;
-	double macheps = DBL_EPSILON;
-	double tol     = DBL_EPSILON*1e3;
-	int    maxiter = 10;
-	double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter, errstring);
-	//if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
-	return result;
+    std::string errstring;
+    double macheps = DBL_EPSILON;
+    double tol     = DBL_EPSILON*1e3;
+    int    maxiter = 10;
+    double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter, errstring);
+    //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
+    return result;
 }
 /// Calculate T given pressure and entropy
 /**
@@ -253,7 +253,7 @@ long double IncompressibleBackend::HmassP_flash(long double hmass, long double p
 @returns T The temperature in K
 */
 long double IncompressibleBackend::PSmass_flash(long double p, long double smass){
-	return fluid->T_s(smass, p, _fractions[0]);
+    return fluid->T_s(smass, p, _fractions[0]);
 }
 
 /// Calculate T given pressure and internal energy
@@ -263,7 +263,7 @@ long double IncompressibleBackend::PSmass_flash(long double p, long double smass
 @returns T The temperature in K
 */
 long double IncompressibleBackend::PUmass_flash(long double p, long double umass){
-	return fluid->T_u(umass, p, _fractions[0]);
+    return fluid->T_u(umass, p, _fractions[0]);
 }
 
 
@@ -284,428 +284,428 @@ long double IncompressibleBackend::PUmass_flash(long double p, long double umass
 
 TEST_CASE("Internal consistency checks and example use cases for the incompressible backend","[IncompressibleBackend]")
 {
-	CoolProp::IncompressibleFluid fluid = CoolPropTesting::incompressibleFluidObject();
-	CoolProp::IncompressibleBackend backend = CoolProp::IncompressibleBackend(&fluid);
+    CoolProp::IncompressibleFluid fluid = CoolPropTesting::incompressibleFluidObject();
+    CoolProp::IncompressibleBackend backend = CoolProp::IncompressibleBackend(&fluid);
 
-	SECTION("Test case for Methanol from SecCool") {
+    SECTION("Test case for Methanol from SecCool") {
 
-		// Some basic functions
-		// has to return false
-		CHECK( backend.using_mole_fractions()==false );
+        // Some basic functions
+        // has to return false
+        CHECK( backend.using_mole_fractions()==false );
 
-		//void update(long input_pair, double value1, double value2);
+        //void update(long input_pair, double value1, double value2);
 
-		std::vector<long double> fractions;
-		fractions.push_back(0.4);
-		CHECK_THROWS( backend.set_mole_fractions(fractions) );
-		CHECK_NOTHROW( backend.set_mass_fractions(fractions) );
-		fractions.push_back(0.4);
-		CHECK_THROWS( backend.set_mass_fractions(fractions) );
-		CHECK_THROWS( backend.check_status() );
-
-
-
-		// Prepare the results and compare them to the calculated values
-		double acc = 0.0001;
-		double T   = 273.15+10;
-		double p   = 10e5;
-		double x   = 0.25;
-		backend.set_mass_fractions(std::vector<long double>(1,x));
-		double val = 0;
-		double res = 0;
-
-		//CoolProp::set_debug_level(100);
-
-		// Compare density flash
-		val = fluid.rho(T,p,x);
-		res = backend.DmassP_flash(val, p);
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(T,res,acc) );
-		}
-
-		// Compare h
-		val = fluid.h(T, p, x);
-		res = backend.HmassP_flash(val, p);
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(T,res,acc) );
-		}
-
-		// Compare s
-		val = fluid.s(T, p, x);
-		res = backend.PSmass_flash(p, val);
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(T,res,acc) );
-		}
-
-		// Compare u
-		val = fluid.u(T, p, x);
-		res = backend.PUmass_flash(p, val);
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(T,res,acc) );
-		}
-
-		// call the update function to set internal variables,
-		// concentration has been set before.
-		CHECK_THROWS( backend.update( CoolProp::DmassT_INPUTS, val, T ) ); // First with wrong parameters
-		CHECK_NOTHROW( backend.update( CoolProp::PT_INPUTS, p, T ) ); // ... and then with the correct ones.
-
-		/// Get the viscosity [Pa-s]
-		val = fluid.visc(T, p, x);
-		res = backend.calc_viscosity();
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
-		}
-
-		/// Get the thermal conductivity [W/m/K] (based on the temperature and pressure in the state class)
-		val = fluid.cond(T, p, x);
-		res = backend.calc_conductivity();
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
-		}
-
-		val = fluid.rho(T, p, x);
-		res = backend.calc_rhomass();
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
-		}
-
-		val = fluid.h(T, p, x);
-		res = backend.calc_hmass();
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
-		}
-
-		val = fluid.s(T, p, x);
-		res = backend.calc_smass();
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
-		}
-
-		val = fluid.u(T, p, x);
-		res = backend.calc_umass();
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
-		}
-
-		val = fluid.c(T, p, x);
-		res = backend.calc_cpmass();
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
-		}
-
-		res = backend.calc_cvmass();
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
-		}
-
-
-		// Compare Tfreeze
-		val = fluid.Tfreeze(p, x);//-20.02+273.15;// 253.1293105454671;
-		res = -20.02+273.15;
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(val);
-		CAPTURE(res);
-		CHECK( check_abs(val,res,acc) );
-		}
-
-
-	}
-
-	SECTION("Tests for the full implementation using PropsSI") {
-
-		// Prepare the results and compare them to the calculated values
-		std::string fluid("INCOMP::ExampleMelinder");
-		double acc = 0.0001;
-		double T   = -5  + 273.15;
-		double p   = 10e5;
-		double x   = 0.3;
-		double expected = 0;
-		double actual = 0;
-
-		// Compare different inputs
-		// ... as vector
-		expected = 9.6212e+02;
-		actual = CoolProp::PropsSI("D","T",T,"P",p,fluid,std::vector<double>(1,x));
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(expected);
-		CAPTURE(actual);
-		CHECK( check_abs(expected,actual,acc) );
-		}
-		// ... as %
-		actual = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("-%f%s",x*100.0,"%"));
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(expected);
-		CAPTURE(actual);
-		std::string errmsg = CoolProp::get_global_param_string("errstring");
-		CAPTURE(errmsg);
-		CHECK( check_abs(expected,actual,acc) );
-		}
-		// ... as mass fraction
-		actual = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("[%f]",x));
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(expected);
-		CAPTURE(actual);
-		std::string name = fluid+format("[%f]",x);
-		CAPTURE(name);
-		std::string errmsg = CoolProp::get_global_param_string("errstring");
-		CAPTURE(errmsg);
-		CHECK( check_abs(expected,actual,acc) );
-		}
-
-
-		fluid = std::string("INCOMP::ExampleSecCool");
-		T   = -5  + 273.15;
-		p   = 10e5;
-		x   = 0.4;
-		std::vector<double> x_vec = std::vector<double>(1,x);
-
-		// Compare d
-		expected = 9.4844e+02;
-		actual = CoolProp::PropsSI("D","T",T,"P",p,fluid,x_vec);
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(expected);
-		CAPTURE(actual);
-		std::string errmsg = CoolProp::get_global_param_string("errstring");
-		CAPTURE(errmsg);
-		CHECK( check_abs(expected,actual,acc) );
-		}
-
-		// Compare cp
-		expected = 3.6304e+03;
-		actual = CoolProp::PropsSI("C","T",T,"P",p,fluid,x_vec);
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(expected);
-		CAPTURE(actual);
-		std::string errmsg = CoolProp::get_global_param_string("errstring");
-		CAPTURE(errmsg);
-		CHECK( check_abs(expected,actual,acc) );
-		}
-
-		fluid = std::string("INCOMP::ExamplePure");
-		T   = +55  + 273.15;
-		p   = 10e5;
-
-		// Compare d
-		expected = 7.3646e+02;
-		actual = CoolProp::PropsSI("D","T",T,"P",p,fluid);
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(expected);
-		CAPTURE(actual);
-		std::string errmsg = CoolProp::get_global_param_string("errstring");
-		CAPTURE(errmsg);
-		CHECK( check_abs(expected,actual,acc) );
-		}
-
-		// Compare cp
-		expected = 2.2580e+03;
-		actual = CoolProp::PropsSI("C","T",T,"P",p,fluid);
-		{
-		CAPTURE(T);
-		CAPTURE(p);
-		CAPTURE(x);
-		CAPTURE(expected);
-		CAPTURE(actual);
-		std::string errmsg = CoolProp::get_global_param_string("errstring");
-		CAPTURE(errmsg);
-		CHECK( check_abs(expected,actual,acc) );
-		}
-	}
-
-	//std::string name("INCOMP::TCO");
-	double T   =  50 + 273.15;
-	double p   = 10e5;
-	double x   = 0.3;
-
-//	std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::TCO",std::vector<double>(1,x)) << std::endl;
-//	std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::LiBr",std::vector<double>(1,x)) << std::endl;
-//	std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::NaK",std::vector<double>(1,x)) << std::endl;
+        std::vector<long double> fractions;
+        fractions.push_back(0.4);
+        CHECK_THROWS( backend.set_mole_fractions(fractions) );
+        CHECK_NOTHROW( backend.set_mass_fractions(fractions) );
+        fractions.push_back(0.4);
+        CHECK_THROWS( backend.set_mass_fractions(fractions) );
+        CHECK_THROWS( backend.check_status() );
 
 
 
-//	SECTION("Tests for the hardcoded fluids") {
+        // Prepare the results and compare them to the calculated values
+        double acc = 0.0001;
+        double T   = 273.15+10;
+        double p   = 10e5;
+        double x   = 0.25;
+        backend.set_mass_fractions(std::vector<long double>(1,x));
+        double val = 0;
+        double res = 0;
+
+        //CoolProp::set_debug_level(100);
+
+        // Compare density flash
+        val = fluid.rho(T,p,x);
+        res = backend.DmassP_flash(val, p);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(T,res,acc) );
+        }
+
+        // Compare h
+        val = fluid.h(T, p, x);
+        res = backend.HmassP_flash(val, p);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(T,res,acc) );
+        }
+
+        // Compare s
+        val = fluid.s(T, p, x);
+        res = backend.PSmass_flash(p, val);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(T,res,acc) );
+        }
+
+        // Compare u
+        val = fluid.u(T, p, x);
+        res = backend.PUmass_flash(p, val);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(T,res,acc) );
+        }
+
+        // call the update function to set internal variables,
+        // concentration has been set before.
+        CHECK_THROWS( backend.update( CoolProp::DmassT_INPUTS, val, T ) ); // First with wrong parameters
+        CHECK_NOTHROW( backend.update( CoolProp::PT_INPUTS, p, T ) ); // ... and then with the correct ones.
+
+        /// Get the viscosity [Pa-s]
+        val = fluid.visc(T, p, x);
+        res = backend.calc_viscosity();
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(val,res,acc) );
+        }
+
+        /// Get the thermal conductivity [W/m/K] (based on the temperature and pressure in the state class)
+        val = fluid.cond(T, p, x);
+        res = backend.calc_conductivity();
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(val,res,acc) );
+        }
+
+        val = fluid.rho(T, p, x);
+        res = backend.calc_rhomass();
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(val,res,acc) );
+        }
+
+        val = fluid.h(T, p, x);
+        res = backend.calc_hmass();
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(val,res,acc) );
+        }
+
+        val = fluid.s(T, p, x);
+        res = backend.calc_smass();
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(val,res,acc) );
+        }
+
+        val = fluid.u(T, p, x);
+        res = backend.calc_umass();
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(val,res,acc) );
+        }
+
+        val = fluid.c(T, p, x);
+        res = backend.calc_cpmass();
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(val,res,acc) );
+        }
+
+        res = backend.calc_cvmass();
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(val,res,acc) );
+        }
+
+
+        // Compare Tfreeze
+        val = fluid.Tfreeze(p, x);//-20.02+273.15;// 253.1293105454671;
+        res = -20.02+273.15;
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(val);
+        CAPTURE(res);
+        CHECK( check_abs(val,res,acc) );
+        }
+
+
+    }
+
+    SECTION("Tests for the full implementation using PropsSI") {
+
+        // Prepare the results and compare them to the calculated values
+        std::string fluid("INCOMP::ExampleMelinder");
+        double acc = 0.0001;
+        double T   = -5  + 273.15;
+        double p   = 10e5;
+        double x   = 0.3;
+        double expected = 0;
+        double actual = 0;
+
+        // Compare different inputs
+        // ... as vector
+        expected = 9.6212e+02;
+        actual = CoolProp::PropsSI("D","T",T,"P",p,fluid,std::vector<double>(1,x));
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(expected);
+        CAPTURE(actual);
+        CHECK( check_abs(expected,actual,acc) );
+        }
+        // ... as %
+        actual = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("-%f%s",x*100.0,"%"));
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(expected);
+        CAPTURE(actual);
+        std::string errmsg = CoolProp::get_global_param_string("errstring");
+        CAPTURE(errmsg);
+        CHECK( check_abs(expected,actual,acc) );
+        }
+        // ... as mass fraction
+        actual = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("[%f]",x));
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(expected);
+        CAPTURE(actual);
+        std::string name = fluid+format("[%f]",x);
+        CAPTURE(name);
+        std::string errmsg = CoolProp::get_global_param_string("errstring");
+        CAPTURE(errmsg);
+        CHECK( check_abs(expected,actual,acc) );
+        }
+
+
+        fluid = std::string("INCOMP::ExampleSecCool");
+        T   = -5  + 273.15;
+        p   = 10e5;
+        x   = 0.4;
+        std::vector<double> x_vec = std::vector<double>(1,x);
+
+        // Compare d
+        expected = 9.4844e+02;
+        actual = CoolProp::PropsSI("D","T",T,"P",p,fluid,x_vec);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(expected);
+        CAPTURE(actual);
+        std::string errmsg = CoolProp::get_global_param_string("errstring");
+        CAPTURE(errmsg);
+        CHECK( check_abs(expected,actual,acc) );
+        }
+
+        // Compare cp
+        expected = 3.6304e+03;
+        actual = CoolProp::PropsSI("C","T",T,"P",p,fluid,x_vec);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(expected);
+        CAPTURE(actual);
+        std::string errmsg = CoolProp::get_global_param_string("errstring");
+        CAPTURE(errmsg);
+        CHECK( check_abs(expected,actual,acc) );
+        }
+
+        fluid = std::string("INCOMP::ExamplePure");
+        T   = +55  + 273.15;
+        p   = 10e5;
+
+        // Compare d
+        expected = 7.3646e+02;
+        actual = CoolProp::PropsSI("D","T",T,"P",p,fluid);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(expected);
+        CAPTURE(actual);
+        std::string errmsg = CoolProp::get_global_param_string("errstring");
+        CAPTURE(errmsg);
+        CHECK( check_abs(expected,actual,acc) );
+        }
+
+        // Compare cp
+        expected = 2.2580e+03;
+        actual = CoolProp::PropsSI("C","T",T,"P",p,fluid);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(expected);
+        CAPTURE(actual);
+        std::string errmsg = CoolProp::get_global_param_string("errstring");
+        CAPTURE(errmsg);
+        CHECK( check_abs(expected,actual,acc) );
+        }
+    }
+
+    //std::string name("INCOMP::TCO");
+    double T   =  50 + 273.15;
+    double p   = 10e5;
+    double x   = 0.3;
+
+//    std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::TCO",std::vector<double>(1,x)) << std::endl;
+//    std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::LiBr",std::vector<double>(1,x)) << std::endl;
+//    std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::NaK",std::vector<double>(1,x)) << std::endl;
+
+
+
+//    SECTION("Tests for the hardcoded fluids") {
 //
-//		// Prepare the results and compare them to the calculated values
-//		std::string fluid("INCOMP::LiBr");
-//		double acc = 0.0001;
-//		double T   =  50 + 273.15;
-//		double p   = 10e5;
-//		double x   = 0.3;
-//		double val = 0;
-//		double res = 0;
+//        // Prepare the results and compare them to the calculated values
+//        std::string fluid("INCOMP::LiBr");
+//        double acc = 0.0001;
+//        double T   =  50 + 273.15;
+//        double p   = 10e5;
+//        double x   = 0.3;
+//        double val = 0;
+//        double res = 0;
 //
-//		// Compare different inputs
-//		// ... as vector
-//		val = 9.6212e+02;
-//		res = CoolProp::PropsSI("D","T",T,"P",p,fluid,std::vector<double>(1,x));
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//		// ... as %
-//		res = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("-%f%s",x*100.0,"%"));
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//		// ... as mass fraction
-//		res = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("[%f]",x));
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
+//        // Compare different inputs
+//        // ... as vector
+//        val = 9.6212e+02;
+//        res = CoolProp::PropsSI("D","T",T,"P",p,fluid,std::vector<double>(1,x));
+//        {
+//        CAPTURE(T);
+//        CAPTURE(p);
+//        CAPTURE(x);
+//        CAPTURE(val);
+//        CAPTURE(res);
+//        CHECK( check_abs(val,res,acc) );
+//        }
+//        // ... as %
+//        res = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("-%f%s",x*100.0,"%"));
+//        {
+//        CAPTURE(T);
+//        CAPTURE(p);
+//        CAPTURE(x);
+//        CAPTURE(val);
+//        CAPTURE(res);
+//        CHECK( check_abs(val,res,acc) );
+//        }
+//        // ... as mass fraction
+//        res = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("[%f]",x));
+//        {
+//        CAPTURE(T);
+//        CAPTURE(p);
+//        CAPTURE(x);
+//        CAPTURE(val);
+//        CAPTURE(res);
+//        CHECK( check_abs(val,res,acc) );
+//        }
 //
 //
-//		fluid = std::string("INCOMP::ExampleSecCool");
-//		T   = -5  + 273.15;
-//		p   = 10e5;
-//		x   = 0.4;
-//		std::vector<double> x_vec = std::vector<double>(1,x);
+//        fluid = std::string("INCOMP::ExampleSecCool");
+//        T   = -5  + 273.15;
+//        p   = 10e5;
+//        x   = 0.4;
+//        std::vector<double> x_vec = std::vector<double>(1,x);
 //
-//		// Compare d
-//		val = 9.4844e+02;
-//		res = CoolProp::PropsSI("D","T",T,"P",p,fluid,x_vec);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
+//        // Compare d
+//        val = 9.4844e+02;
+//        res = CoolProp::PropsSI("D","T",T,"P",p,fluid,x_vec);
+//        {
+//        CAPTURE(T);
+//        CAPTURE(p);
+//        CAPTURE(x);
+//        CAPTURE(val);
+//        CAPTURE(res);
+//        CHECK( check_abs(val,res,acc) );
+//        }
 //
-//		// Compare cp
-//		val = 3.6304e+03;
-//		res = CoolProp::PropsSI("C","T",T,"P",p,fluid,x_vec);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
+//        // Compare cp
+//        val = 3.6304e+03;
+//        res = CoolProp::PropsSI("C","T",T,"P",p,fluid,x_vec);
+//        {
+//        CAPTURE(T);
+//        CAPTURE(p);
+//        CAPTURE(x);
+//        CAPTURE(val);
+//        CAPTURE(res);
+//        CHECK( check_abs(val,res,acc) );
+//        }
 //
-//		fluid = std::string("INCOMP::ExamplePure");
-//		T   = +55  + 273.15;
-//		p   = 10e5;
+//        fluid = std::string("INCOMP::ExamplePure");
+//        T   = +55  + 273.15;
+//        p   = 10e5;
 //
-//		// Compare d
-//		val = 7.3646e+02;
-//		res = CoolProp::PropsSI("D","T",T,"P",p,fluid);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
+//        // Compare d
+//        val = 7.3646e+02;
+//        res = CoolProp::PropsSI("D","T",T,"P",p,fluid);
+//        {
+//        CAPTURE(T);
+//        CAPTURE(p);
+//        CAPTURE(x);
+//        CAPTURE(val);
+//        CAPTURE(res);
+//        CHECK( check_abs(val,res,acc) );
+//        }
 //
-//		// Compare cp
-//		val = 2.2580e+03;
-//		res = CoolProp::PropsSI("C","T",T,"P",p,fluid);
-//		{
-//		CAPTURE(T);
-//		CAPTURE(p);
-//		CAPTURE(x);
-//		CAPTURE(val);
-//		CAPTURE(res);
-//		CHECK( check_abs(val,res,acc) );
-//		}
-//	}
+//        // Compare cp
+//        val = 2.2580e+03;
+//        res = CoolProp::PropsSI("C","T",T,"P",p,fluid);
+//        {
+//        CAPTURE(T);
+//        CAPTURE(p);
+//        CAPTURE(x);
+//        CAPTURE(val);
+//        CAPTURE(res);
+//        CHECK( check_abs(val,res,acc) );
+//        }
+//    }
 }
 
 #endif /* ENABLE_CATCH */

@@ -193,22 +193,22 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         {
             // Invert liquid density ancillary to get temperature
             // TODO: fit inverse ancillaries too
-			try{
-				T = HEOS.get_components()[0]->ancillaries.pL.invert(specified_value);
-			}
-			catch(std::exception &e)
-			{
-				throw ValueError("Unable to invert ancillary equation");
-			}
+            try{
+                T = HEOS.get_components()[0]->ancillaries.pL.invert(specified_value);
+            }
+            catch(std::exception &e)
+            {
+                throw ValueError("Unable to invert ancillary equation");
+            }
         }
         else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_HL)
         {
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             // Ancillary is deltah = h - hs_anchor.h
             try{ T = HEOS.get_components()[0]->ancillaries.hL.invert(specified_value - hs_anchor.hmolar); }
-			catch(std::exception &e){
-				throw ValueError("Unable to invert ancillary equation for hL");
-			}
+            catch(std::exception &e){
+                throw ValueError("Unable to invert ancillary equation for hL");
+            }
         }
         else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_HV)
         {
@@ -235,12 +235,12 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
             double Tmin = Tmin_satL;
             double Tmax = HEOS.calc_Tmax_sat();
             try{ T = Brent(resid, Tmin-3, Tmax + 1, DBL_EPSILON, 1e-10, 50, errstr); }
-			catch(std::exception &e){
+            catch(std::exception &e){
                 shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
                 HEOS_copy->update(QT_INPUTS, 1, Tmin); double hTmin = HEOS_copy->hmolar();
                 HEOS_copy->update(QT_INPUTS, 1, Tmax); double hTmax = HEOS_copy->hmolar();
                 T = (Tmax-Tmin)/(hTmax-hTmin)*(HEOS.hmolar()-hTmin) + Tmin;
-			}
+            }
         }
         else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SL)
         {
@@ -457,7 +457,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                 }
                 // dr_3/ddelta'' (liquid pressure not a function of vapor density)
                 J[2][2] = 0;
-				specified_parameter = CoolProp::iP;
+                specified_parameter = CoolProp::iP;
                 break;
             case saturation_PHSU_pure_options::IMPOSED_PV:
                 // dr_3/dtau
@@ -472,7 +472,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                     // dr_3/ddelta''
                     J[2][2] = SatV->first_partial_deriv(iP,iDelta,iTau)/specified_value;
                 }
-				specified_parameter = CoolProp::iP;
+                specified_parameter = CoolProp::iP;
                 break;
             case saturation_PHSU_pure_options::IMPOSED_HL:
                 // dr_3/dtau
@@ -482,7 +482,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                 if (options.use_logdelta){ J[2][1]*=deltaL;}
                 // dr_3/ddelta''
                 J[2][2] = 0; //(liquid enthalpy not a function of vapor density)
-				specified_parameter = CoolProp::iHmolar;
+                specified_parameter = CoolProp::iHmolar;
                 break;
             case saturation_PHSU_pure_options::IMPOSED_HV:
                 // dr_3/dtau
@@ -492,7 +492,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                 // dr_3/ddelta''
                 J[2][2] = SatV->first_partial_deriv(iHmolar,iDelta,iTau);
                 if (options.use_logdelta){ J[2][2]*=deltaV;}
-				specified_parameter = CoolProp::iHmolar;
+                specified_parameter = CoolProp::iHmolar;
                 break;
             case saturation_PHSU_pure_options::IMPOSED_SL:
                 // dr_3/dtau
@@ -502,7 +502,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                 if (options.use_logdelta){ J[2][1] *= deltaL; }
                 // dr_3/ddelta''
                 J[2][2] = 0; //(liquid entropy not a function of vapor density)
-				specified_parameter = CoolProp::iSmolar;
+                specified_parameter = CoolProp::iSmolar;
                 break;
             case saturation_PHSU_pure_options::IMPOSED_SV:
                 // dr_3/dtau
@@ -512,7 +512,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                 // dr_3/ddelta''
                 J[2][2] = SatV->first_partial_deriv(iSmolar,iDelta,iTau);
                 if (options.use_logdelta){ J[2][2]*=deltaV;}
-				specified_parameter = CoolProp::iSmolar;
+                specified_parameter = CoolProp::iSmolar;
                 break;
             default:
                 throw ValueError(format("options.specified_variable to saturation_PHSU_pure [%d] is invalid",options.specified_variable));
@@ -557,7 +557,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
             // Set values back into the options structure for use in next solver
             options.rhoL = rhoL; options.rhoV = rhoV; options.T = T;
             // Error out
-			std::string info = get_parameter_information(specified_parameter, "short");
+            std::string info = get_parameter_information(specified_parameter, "short");
             throw SolutionError(format("saturation_PHSU_pure solver did not converge after 50 iterations for %s=%Lg current error is %Lg", info.c_str(), specified_value, error));
         }
     }
@@ -704,8 +704,8 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long
         rhoL = deltaL*reduce.rhomolar;
         rhoV = deltaV*reduce.rhomolar;
         T = reduce.T/tau;
-		
-		p_error = (pL-pV)/pL;
+        
+        p_error = (pL-pV)/pL;
 
         error = sqrt(pow(r[0], 2)+pow(r[1], 2));
         iter++;
@@ -718,10 +718,10 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long
         }
     }
     while (error > 1e-9);
-	long double p_error_limit = 1e-3;
-	if (std::abs(p_error) > p_error_limit){
-		throw SolutionError(format("saturation_D_pure solver abs error on p [%Lg] > limit [%Lg]", p_error, p_error_limit));
-	}
+    long double p_error_limit = 1e-3;
+    if (std::abs(p_error) > p_error_limit){
+        throw SolutionError(format("saturation_D_pure solver abs error on p [%Lg] > limit [%Lg]", p_error, p_error_limit));
+    }
 }
 void SaturationSolvers::saturation_T_pure(HelmholtzEOSMixtureBackend &HEOS, long double T, saturation_T_pure_options &options)
 {
@@ -783,8 +783,8 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
         }
         else
         {
-			// Use the density ancillary function as the starting point for the solver
-			
+            // Use the density ancillary function as the starting point for the solver
+            
             // If very close to the critical temp, evaluate the ancillaries for a slightly lower temperature
             if (T > 0.99*HEOS.get_reducing_state().T){
                 rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T-0.1);
@@ -793,13 +793,13 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
             else{
                 rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
                 rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
-				
-				// Apply a single step of Newton's method to improve guess value for liquid
-				// based on the error between the gas pressure (which is usually very close already)
-				// and the liquid pressure, which can sometimes (especially at low pressure),
-				// be way off, and often times negative
-				SatL->update(DmolarT_INPUTS, rhoL, T);
-				SatV->update(DmolarT_INPUTS, rhoV, T);
+                
+                // Apply a single step of Newton's method to improve guess value for liquid
+                // based on the error between the gas pressure (which is usually very close already)
+                // and the liquid pressure, which can sometimes (especially at low pressure),
+                // be way off, and often times negative
+                SatL->update(DmolarT_INPUTS, rhoL, T);
+                SatV->update(DmolarT_INPUTS, rhoV, T);
                 
                 // Update the guess for liquid density using density solver with vapor pressure 
                 // and liquid density guess from ancillaries
@@ -827,8 +827,8 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
         //tau = reduce.T/T;
     }
     //if (get_debug_level()>5){
-    //		std::cout << format("%s:%d: Akasaka guess values deltaL = %g deltaV = %g tau = %g\n",__FILE__,__LINE__,deltaL, deltaV, tau).c_str();
-    //	}
+    //        std::cout << format("%s:%d: Akasaka guess values deltaL = %g deltaV = %g tau = %g\n",__FILE__,__LINE__,deltaL, deltaV, tau).c_str();
+    //    }
 
     do{
         /*if (get_debug_level()>8){
@@ -888,16 +888,16 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
         }
     }
     while (error > 1e-10 && std::abs(stepL) > 10*DBL_EPSILON*std::abs(stepL) && std::abs(stepV) > 10*DBL_EPSILON*std::abs(stepV));
-	
-	long double p_error_limit = 1e-3;
-	long double p_error = (PL - PV)/PL;
-	if (std::abs(p_error) > p_error_limit){
+    
+    long double p_error_limit = 1e-3;
+    long double p_error = (PL - PV)/PL;
+    if (std::abs(p_error) > p_error_limit){
         options.pL = PL;
         options.pV = PV;
         options.rhoL = rhoL;
         options.rhoV = rhoV;
-		throw SolutionError(format("saturation_T_pure_Akasaka solver abs error on p [%g] > limit [%g]", std::abs(p_error), p_error_limit));
-	}
+        throw SolutionError(format("saturation_T_pure_Akasaka solver abs error on p [%g] > limit [%g]", std::abs(p_error), p_error_limit));
+    }
 }
 
 long double sign(long double x)
@@ -936,8 +936,8 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         }
         else
         {
-			// Use the density ancillary function as the starting point for the solver
-			
+            // Use the density ancillary function as the starting point for the solver
+            
             // If very close to the critical temp, evaluate the ancillaries for a slightly lower temperature
             if (T > 0.9999*HEOS.get_reducing_state().T){
                 rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T-0.1);
@@ -946,13 +946,13 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
             else{
                 rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
                 rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
-				
-				// Apply a single step of Newton's method to improve guess value for liquid
-				// based on the error between the gas pressure (which is usually very close already)
-				// and the liquid pressure, which can sometimes (especially at low pressure),
-				// be way off, and often times negative
-				SatL->update(DmolarT_INPUTS, rhoL, T);
-				SatV->update(DmolarT_INPUTS, rhoV, T);
+                
+                // Apply a single step of Newton's method to improve guess value for liquid
+                // based on the error between the gas pressure (which is usually very close already)
+                // and the liquid pressure, which can sometimes (especially at low pressure),
+                // be way off, and often times negative
+                SatL->update(DmolarT_INPUTS, rhoL, T);
+                SatV->update(DmolarT_INPUTS, rhoV, T);
                 
                 // Update the guess for liquid density using density solver with vapor pressure 
                 // and liquid density guess from ancillaries, but only if the pressures are not 

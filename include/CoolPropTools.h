@@ -4,7 +4,7 @@
     #define _CRT_SECURE_NO_WARNINGS
 
     #include "PlatformDetermination.h"
-	#include "Exceptions.h"
+    #include "Exceptions.h"
 
     #include <string>
     #include <vector>
@@ -28,113 +28,113 @@
         #endif
     #endif
 
-	#if defined(_MSC_VER)
-	// Microsoft version of math.h doesn't include acosh or asinh, so we just define them here.
-	// It was included from Visual Studio 2013
-	#if _MSC_VER < 1800
-	static double acosh(double x)
-	{
-		return log(x + sqrt(x*x - 1.0));
-	}
-	static double asinh(double value)
-	{
-		if(value>0){
-			return log(value + sqrt(value * value + 1));
-		}
-		else{
-			return -log(-value + sqrt(value * value + 1));
-		}
-	}
-	#endif
-	#endif
+    #if defined(_MSC_VER)
+    // Microsoft version of math.h doesn't include acosh or asinh, so we just define them here.
+    // It was included from Visual Studio 2013
+    #if _MSC_VER < 1800
+    static double acosh(double x)
+    {
+        return log(x + sqrt(x*x - 1.0));
+    }
+    static double asinh(double value)
+    {
+        if(value>0){
+            return log(value + sqrt(value * value + 1));
+        }
+        else{
+            return -log(-value + sqrt(value * value + 1));
+        }
+    }
+    #endif
+    #endif
 
-	#if defined(__powerpc__)
-	// PPC version of math.h doesn't include acosh or asinh, so we just define them here
-	static double acosh(double x)
-	{
- 		return log(x + sqrt(x*x - 1.0) );
-	}
-	static double asinh(double value)
-	{
-		if(value>0){
-			return log(value + sqrt(value * value + 1));
-		}
-		else{
-			return -log(-value + sqrt(value * value + 1));
-		}
-	}
-	#endif
+    #if defined(__powerpc__)
+    // PPC version of math.h doesn't include acosh or asinh, so we just define them here
+    static double acosh(double x)
+    {
+         return log(x + sqrt(x*x - 1.0) );
+    }
+    static double asinh(double value)
+    {
+        if(value>0){
+            return log(value + sqrt(value * value + 1));
+        }
+        else{
+            return -log(-value + sqrt(value * value + 1));
+        }
+    }
+    #endif
 
-	#if defined(__powerpc__)
-		#undef min
-		#undef max
-		#undef EOS
-	#endif
+    #if defined(__powerpc__)
+        #undef min
+        #undef max
+        #undef EOS
+    #endif
 
-	inline bool ValidNumber(double x)
-	{
-		// Idea from http://www.johndcook.com/IEEE_exceptions_in_cpp.html
-		return (x <= DBL_MAX && x >= -DBL_MAX);
-	};
+    inline bool ValidNumber(double x)
+    {
+        // Idea from http://www.johndcook.com/IEEE_exceptions_in_cpp.html
+        return (x <= DBL_MAX && x >= -DBL_MAX);
+    };
 
-	/// Define the deprecated macro to give compile-time warnings
-	#ifdef __GNUC__
-		#define DEPRECATED(func) func __attribute__ ((deprecated))
-	#elif defined(_MSC_VER)
-		#define DEPRECATED(func) __declspec(deprecated) func
-	#else
-		#pragma message("WARNING: You need to implement DEPRECATED for this compiler")
-		#define DEPRECATED(func) func
-	#endif
+    /// Define the deprecated macro to give compile-time warnings
+    #ifdef __GNUC__
+        #define DEPRECATED(func) func __attribute__ ((deprecated))
+    #elif defined(_MSC_VER)
+        #define DEPRECATED(func) __declspec(deprecated) func
+    #else
+        #pragma message("WARNING: You need to implement DEPRECATED for this compiler")
+        #define DEPRECATED(func) func
+    #endif
 
-	#include <algorithm>
-	#include <functional>
-	#include <cctype>
+    #include <algorithm>
+    #include <functional>
+    #include <cctype>
     #include <map>
-	#include <locale>
-	#include <fstream>
-	#include <cerrno>
-	#include <numeric>
+    #include <locale>
+    #include <fstream>
+    #include <cerrno>
+    #include <numeric>
 
-	/// The following code for the trim functions was taken from http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
-	// trim from start
-	inline std::string &strlstrip(std::string &s) {
-			s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
-			return s;
-	}
-	// trim from end
-	inline std::string &strrstrip(std::string &s) {
-			s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-			return s;
-	}
-	// trim from both ends
-	inline std::string &strstrip(std::string &s) {
-			return strlstrip(strrstrip(s));
-	}
+    /// The following code for the trim functions was taken from http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
+    // trim from start
+    inline std::string &strlstrip(std::string &s) {
+            s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+            return s;
+    }
+    // trim from end
+    inline std::string &strrstrip(std::string &s) {
+            s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+            return s;
+    }
+    // trim from both ends
+    inline std::string &strstrip(std::string &s) {
+            return strlstrip(strrstrip(s));
+    }
 
-	// Get all the contents of a file and dump into a STL string
-	// Thanks to http://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-	std::string get_file_contents(const char *filename);
+    // Get all the contents of a file and dump into a STL string
+    // Thanks to http://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+    std::string get_file_contents(const char *filename);
 
     // Missing string printf
     std::string format(const char* fmt, ...);
-	// Missing string split - like in Python
-	std::vector<std::string> strsplit(std::string s, char del);
+    // Missing string split - like in Python
+    std::vector<std::string> strsplit(std::string s, char del);
 
-	inline std::string upper(const std::string str_)
-	{
-		std::string str = str_;
-		std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-		return str;
-	}
+    inline std::string upper(const std::string str_)
+    {
+        std::string str = str_;
+        std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+        return str;
+    }
 
-	std::string strjoin(std::vector<std::string> strings, std::string delim);
+    std::string strjoin(std::vector<std::string> strings, std::string delim);
 
-	void MatInv_2(double A[2][2] , double B[2][2]);
+    void MatInv_2(double A[2][2] , double B[2][2]);
 
-	double root_sum_square(std::vector<double> x);
-	double interp1d(std::vector<double> *x, std::vector<double> *y, double x0);
-	double powInt(double x, int y);
+    double root_sum_square(std::vector<double> x);
+    double interp1d(std::vector<double> *x, std::vector<double> *y, double x0);
+    double powInt(double x, int y);
     
     #define POW2(x) ((x)*(x))
     #define POW3(x) ((x)*(x)*(x))
@@ -164,23 +164,23 @@
         L2=((x-x0)*(x-x1))/((x2-x0)*(x2-x1));
         return L0*f0+L1*f1+L2*f2;
     };
-	template<class T> T QuadInterp(std::vector<T> x, std::vector<T> y, std::size_t i0, std::size_t i1, std::size_t i2, T val)
+    template<class T> T QuadInterp(std::vector<T> x, std::vector<T> y, std::size_t i0, std::size_t i1, std::size_t i2, T val)
     {
         return QuadInterp(x[i0],x[i1],x[i2],y[i0],y[i1],y[i2],val);
     };
 
     template<class T> T CubicInterp( T x0, T x1, T x2, T x3, T f0, T f1, T f2, T f3, T x)
     {
-	    /*
-	    Lagrange cubic interpolation as from
-	    http://nd.edu/~jjwteach/441/PdfNotes/lecture6.pdf
-	    */
-	    T L0,L1,L2,L3;
-	    L0=((x-x1)*(x-x2)*(x-x3))/((x0-x1)*(x0-x2)*(x0-x3));
-	    L1=((x-x0)*(x-x2)*(x-x3))/((x1-x0)*(x1-x2)*(x1-x3));
-	    L2=((x-x0)*(x-x1)*(x-x3))/((x2-x0)*(x2-x1)*(x2-x3));
-	    L3=((x-x0)*(x-x1)*(x-x2))/((x3-x0)*(x3-x1)*(x3-x2));
-	    return L0*f0+L1*f1+L2*f2+L3*f3;
+        /*
+        Lagrange cubic interpolation as from
+        http://nd.edu/~jjwteach/441/PdfNotes/lecture6.pdf
+        */
+        T L0,L1,L2,L3;
+        L0=((x-x1)*(x-x2)*(x-x3))/((x0-x1)*(x0-x2)*(x0-x3));
+        L1=((x-x0)*(x-x2)*(x-x3))/((x1-x0)*(x1-x2)*(x1-x3));
+        L2=((x-x0)*(x-x1)*(x-x3))/((x2-x0)*(x2-x1)*(x2-x3));
+        L3=((x-x0)*(x-x1)*(x-x2))/((x3-x0)*(x3-x1)*(x3-x2));
+        return L0*f0+L1*f1+L2*f2+L3*f3;
     };
     template<class T> T CubicInterp(std::vector<T> x, std::vector<T> y, std::size_t i0, std::size_t i1, std::size_t i2, std::size_t i3, T val)
     {
@@ -189,7 +189,7 @@
 
     template<class T> T is_in_closed_range( T x1, T x2, T x)
     {
-	    return (x >= std::min(x1,x2) && x <= std::max(x1,x2));
+        return (x >= std::min(x1,x2) && x <= std::max(x1,x2));
     };
 
     /** \brief Solve a cubic with coefficients in decreasing order
@@ -205,12 +205,12 @@
      * @param x1 The second solution found
      * @param x2 The third solution found
      */
-	void solve_cubic(double a, double b, double c, double d, int &N, double &x0, double &x1, double &x2);
+    void solve_cubic(double a, double b, double c, double d, int &N, double &x0, double &x1, double &x2);
 
-	inline double min3(double x1, double x2, double x3){return std::min(std::min(x1, x2), x3);};
-	inline double max3(double x1, double x2, double x3){return std::max(std::max(x1, x2), x3);};
+    inline double min3(double x1, double x2, double x3){return std::min(std::min(x1, x2), x3);};
+    inline double max3(double x1, double x2, double x3){return std::max(std::max(x1, x2), x3);};
 
-	inline bool double_equal(double a, double b){return std::abs(a - b) <= 1 * DBL_EPSILON * std::max(std::abs(a), std::abs(b));};
+    inline bool double_equal(double a, double b){return std::abs(a - b) <= 1 * DBL_EPSILON * std::max(std::abs(a), std::abs(b));};
 
     template<class T> T max_abs_value(std::vector<T> x)
     {
@@ -236,7 +236,7 @@
         return min;
     }
 
-	inline int Kronecker_delta(int i, int j){if (i == j) {return 1;} else {return 0;}};
+    inline int Kronecker_delta(int i, int j){if (i == j) {return 1;} else {return 0;}};
 
     class Dictionary
     {
@@ -313,18 +313,18 @@
 
     /// Some functions related to testing and comparison of values
     bool inline check_abs(double A, double B, double D){
-    	double max = std::abs(A);
-    	double min = std::abs(B);
-    	if (min>max) {
-    		max = min;
-    		min = std::abs(A);
-    	}
-    	if (max>DBL_EPSILON*1e3) return ( ( 1.0-min/max*1e0 ) < D );
-    	else throw CoolProp::ValueError(format("Too small numbers: %f cannot be tested with an accepted error of %f for a machine precision of %f. ",max,D,DBL_EPSILON));
+        double max = std::abs(A);
+        double min = std::abs(B);
+        if (min>max) {
+            max = min;
+            min = std::abs(A);
+        }
+        if (max>DBL_EPSILON*1e3) return ( ( 1.0-min/max*1e0 ) < D );
+        else throw CoolProp::ValueError(format("Too small numbers: %f cannot be tested with an accepted error of %f for a machine precision of %f. ",max,D,DBL_EPSILON));
     };
     bool inline check_abs(double A, double B){
-		return check_abs(A,B,1e5*DBL_EPSILON);
-	};
+        return check_abs(A,B,1e5*DBL_EPSILON);
+    };
 
     template<class T> void normalize_vector(std::vector<T> &x)
     {

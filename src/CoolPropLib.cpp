@@ -13,72 +13,72 @@
 #include <string.h>
 double convert_from_kSI_to_SI(long iInput, double value)
 {
-	if (get_debug_level() > 8){
-		std::cout << format("%s:%d: convert_from_kSI_to_SI(i=%d,value=%g)\n",__FILE__,__LINE__,iInput,value).c_str();
-	}
+    if (get_debug_level() > 8){
+        std::cout << format("%s:%d: convert_from_kSI_to_SI(i=%d,value=%g)\n",__FILE__,__LINE__,iInput,value).c_str();
+    }
 
-	switch (iInput)
-	{
+    switch (iInput)
+    {
     case CoolProp::iP:
-	case CoolProp::iCpmass:
-	case CoolProp::iCp0mass:
-	case CoolProp::iSmass:
-	case CoolProp::iGmass:
-	case CoolProp::iCvmass:
-	case CoolProp::iHmass:
-	case CoolProp::iUmass:
-	case CoolProp::iconductivity:
+    case CoolProp::iCpmass:
+    case CoolProp::iCp0mass:
+    case CoolProp::iSmass:
+    case CoolProp::iGmass:
+    case CoolProp::iCvmass:
+    case CoolProp::iHmass:
+    case CoolProp::iUmass:
+    case CoolProp::iconductivity:
         return value*1000.0;
-	case CoolProp::iDmass:
-	case CoolProp::ispeed_sound:
-	case CoolProp::iQ:
-	case CoolProp::iviscosity:
-	case CoolProp::iT:
-	case CoolProp::iPrandtl:
-	case CoolProp::isurface_tension:
-		return value;
-	default:
-		throw CoolProp::ValueError(format("index [%d] is invalid in convert_from_kSI_to_SI",iInput).c_str());
-		break;
-	}
-	return _HUGE;
+    case CoolProp::iDmass:
+    case CoolProp::ispeed_sound:
+    case CoolProp::iQ:
+    case CoolProp::iviscosity:
+    case CoolProp::iT:
+    case CoolProp::iPrandtl:
+    case CoolProp::isurface_tension:
+        return value;
+    default:
+        throw CoolProp::ValueError(format("index [%d] is invalid in convert_from_kSI_to_SI",iInput).c_str());
+        break;
+    }
+    return _HUGE;
 }
 
 double convert_from_SI_to_kSI(long iInput, double value)
 {
-	if (get_debug_level() > 8){
-		std::cout << format("%s:%d: convert_from_SI_to_kSI(%d,%g)\n",__FILE__,__LINE__,iInput,value).c_str();
-	}
+    if (get_debug_level() > 8){
+        std::cout << format("%s:%d: convert_from_SI_to_kSI(%d,%g)\n",__FILE__,__LINE__,iInput,value).c_str();
+    }
 
-	switch (iInput)
-	{
+    switch (iInput)
+    {
     case CoolProp::iP:
-	case CoolProp::iCpmass:
-	case CoolProp::iCp0mass:
-	case CoolProp::iSmass:
-	case CoolProp::iGmass:
-	case CoolProp::iCvmass:
-	case CoolProp::iHmass:
-	case CoolProp::iUmass:
-	case CoolProp::iconductivity:
+    case CoolProp::iCpmass:
+    case CoolProp::iCp0mass:
+    case CoolProp::iSmass:
+    case CoolProp::iGmass:
+    case CoolProp::iCvmass:
+    case CoolProp::iHmass:
+    case CoolProp::iUmass:
+    case CoolProp::iconductivity:
         return value/1000.0;
-	case CoolProp::iDmass:
-	case CoolProp::iQ:
-	case CoolProp::ispeed_sound:
-	case CoolProp::iviscosity:
-	case CoolProp::iT:
-	case CoolProp::isurface_tension:
-		return value;
-	default:
-		throw CoolProp::ValueError(format("index [%d] is invalid in convert_from_SI_to_kSI", iInput).c_str());
-		break;
-	}
-	return _HUGE;
+    case CoolProp::iDmass:
+    case CoolProp::iQ:
+    case CoolProp::ispeed_sound:
+    case CoolProp::iviscosity:
+    case CoolProp::iT:
+    case CoolProp::isurface_tension:
+        return value;
+    default:
+        throw CoolProp::ValueError(format("index [%d] is invalid in convert_from_SI_to_kSI", iInput).c_str());
+        break;
+    }
+    return _HUGE;
 }
 
 EXPORT_CODE long CONVENTION redirect_stdout(const char* file){
-	freopen(file, "a+", stdout);
-	return 0;
+    freopen(file, "a+", stdout);
+    return 0;
 }
 EXPORT_CODE int CONVENTION set_reference_stateS(const char *Ref, const char *reference_state)
 {
@@ -108,8 +108,8 @@ EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output){
     return PropsS(Output, "", 0, "", 0, FluidName);
 }
 EXPORT_CODE double CONVENTION PropsS(const char *Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char * Ref){
-	double val = Props(Output,Name1[0],Prop1,Name2[0],Prop2,Ref);
-	return val;
+    double val = Props(Output,Name1[0],Prop1,Name2[0],Prop2,Ref);
+    return val;
 }
 EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double Prop1, const char Name2, double Prop2, const char * Ref)
 {
@@ -125,10 +125,10 @@ EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double
         Prop1 = convert_from_kSI_to_SI(iName1, Prop1);
         Prop2 = convert_from_kSI_to_SI(iName2, Prop2);
 
-	    // Call the SI function
+        // Call the SI function
         double val = PropsSI(Output, sName1.c_str(), Prop1, sName2.c_str(), Prop2, Ref);
 
-	    // Convert back to unit system
+        // Convert back to unit system
         return convert_from_SI_to_kSI(iOutput, val);
     }
     catch(std::exception &e){CoolProp::set_error_string(e.what()); return _HUGE;}
@@ -213,7 +213,7 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, 
 }
 EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char * Output)
 {
-	std::string s = CoolProp::get_fluid_param_string(std::string(fluid), std::string(param));
+    std::string s = CoolProp::get_fluid_param_string(std::string(fluid), std::string(param));
     if (s.size() < strlen(Output)){
         strcpy(Output, s.c_str()); 
         return 1;
@@ -225,19 +225,19 @@ EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char
 EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _Name3 = Name3;
-	return HumidAir::HAPropsSI(Output, _Name1, Prop1, _Name2, Prop2, _Name3, Prop3);
+    return HumidAir::HAPropsSI(Output, _Name1, Prop1, _Name2, Prop2, _Name3, Prop3);
 }
 EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Name3, double * Prop3, double *output)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _Name3 = Name3;
-	*output = HumidAir::HAPropsSI(_Output, _Name1, *Prop1, _Name2, *Prop2, _Name3, *Prop3);
+    *output = HumidAir::HAPropsSI(_Output, _Name1, *Prop1, _Name2, *Prop2, _Name3, *Prop3);
 }
 EXPORT_CODE double CONVENTION HAProps(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _Name3 = Name3;
-	return HumidAir::HAProps(Output, _Name1, Prop1, _Name2, Prop2, _Name3, Prop3);
+    return HumidAir::HAProps(Output, _Name1, Prop1, _Name2, Prop2, _Name3, Prop3);
 }
 EXPORT_CODE void CONVENTION haprops_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Name3, double * Prop3, double *output)
 {
-	*output = HAProps(Output, Name1, *Prop1, Name2, *Prop2, Name3, *Prop3);
+    *output = HAProps(Output, Name1, *Prop1, Name2, *Prop2, Name3, *Prop3);
 }

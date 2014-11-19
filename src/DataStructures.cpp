@@ -8,7 +8,7 @@
 namespace CoolProp{
 
 struct parameter_info
-{	
+{    
     int key;
     std::string short_desc, IO, units, description;
     bool trivial; ///< True if the input is trivial, and can be directly calculated (constants like critical properties, etc.)
@@ -55,15 +55,15 @@ parameter_info parameter_info_list[] = {
     parameter_info(irhomass_reducing, "rhomass_reducing","O","kg/m^3","Mass density at reducing point",true),
     parameter_info(irhomolar_reducing, "rhomolar_reducing","O","mol/m^3","Molar density at reducing point",true),
     parameter_info(irhomolar_critical, "rhomolar_critical","O","mol/m^3","Molar density at critical point",true),
-	parameter_info(irhomass_critical, "rhomass_critical","O","kg/m^3","Mass density at critical point",true),
+    parameter_info(irhomass_critical, "rhomass_critical","O","kg/m^3","Mass density at critical point",true),
     parameter_info(iT_reducing, "T_reducing","O","K","Temperature at the reducing point",true),
     parameter_info(iT_critical, "T_critical","O","K","Temperature at the critical point",true),
-	parameter_info(iT_triple, "T_triple","O","K","Temperature at the triple point",true),
-	parameter_info(iT_max, "T_max","O","K","Maximum temperature limit",true),
-	parameter_info(iT_min, "T_min","O","K","Minimum temperature limit",true),
-	parameter_info(iP_min, "P_min","O","Pa","Minimum pressure limit",true),
+    parameter_info(iT_triple, "T_triple","O","K","Temperature at the triple point",true),
+    parameter_info(iT_max, "T_max","O","K","Maximum temperature limit",true),
+    parameter_info(iT_min, "T_min","O","K","Minimum temperature limit",true),
+    parameter_info(iP_min, "P_min","O","Pa","Minimum pressure limit",true),
     parameter_info(iP_max, "P_max","O","Pa","Maximum pressure limit",true),
-	parameter_info(iP_critical, "p_critical","O","Pa","Pressure at the critical point",true),
+    parameter_info(iP_critical, "p_critical","O","Pa","Pressure at the critical point",true),
     parameter_info(iP_triple, "p_triple","O","Pa","Pressure at the triple point (pure only)",true),
     
     parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound",false),
@@ -93,7 +93,7 @@ class ParameterInformation
 {
 public:
     std::map<int, bool> trivial_map;
-	std::map<int, std::string> short_desc_map, description_map, IO_map, units_map;
+    std::map<int, std::string> short_desc_map, description_map, IO_map, units_map;
     std::map<std::string, int> index_map;
     ParameterInformation()
     {
@@ -106,7 +106,7 @@ public:
             units_map.insert(std::pair<int, std::string>(el.key, el.units));
             description_map.insert(std::pair<int, std::string>(el.key, el.description));
             index_map.insert(std::pair<std::string, int>(el.short_desc, el.key));
-			trivial_map.insert(std::pair<int, bool>(el.key, el.trivial));
+            trivial_map.insert(std::pair<int, bool>(el.key, el.trivial));
         }
         // Backward compatibility aliases
         index_map.insert(std::pair<std::string, int>("D", iDmass));
@@ -118,14 +118,14 @@ public:
         index_map.insert(std::pair<std::string, int>("O", iCvmass));
         index_map.insert(std::pair<std::string, int>("V", iviscosity));
         index_map.insert(std::pair<std::string, int>("L", iconductivity));
-		index_map.insert(std::pair<std::string, int>("pcrit", iP_critical));
-		index_map.insert(std::pair<std::string, int>("Tcrit", iT_critical));
-		index_map.insert(std::pair<std::string, int>("Ttriple", iT_triple));
+        index_map.insert(std::pair<std::string, int>("pcrit", iP_critical));
+        index_map.insert(std::pair<std::string, int>("Tcrit", iT_critical));
+        index_map.insert(std::pair<std::string, int>("Ttriple", iT_triple));
         index_map.insert(std::pair<std::string, int>("ptriple", iP_triple));
-		index_map.insert(std::pair<std::string, int>("rhocrit", irhomass_critical));
-		index_map.insert(std::pair<std::string, int>("Tmin", iT_min));
-		index_map.insert(std::pair<std::string, int>("Tmax", iT_max));
-		index_map.insert(std::pair<std::string, int>("pmax", iP_max));
+        index_map.insert(std::pair<std::string, int>("rhocrit", irhomass_critical));
+        index_map.insert(std::pair<std::string, int>("Tmin", iT_min));
+        index_map.insert(std::pair<std::string, int>("Tmax", iT_max));
+        index_map.insert(std::pair<std::string, int>("pmax", iP_max));
         index_map.insert(std::pair<std::string, int>("pmin", iP_min));
         index_map.insert(std::pair<std::string, int>("molemass", imolar_mass));
         index_map.insert(std::pair<std::string, int>("A", ispeed_sound));
@@ -288,7 +288,7 @@ bool is_valid_second_derivative(const std::string & name, parameters &iOf1, para
 }
 
 struct phase_info
-{	
+{    
     phases key;
     std::string short_desc, long_desc;
 public:
@@ -310,7 +310,7 @@ phase_info phase_info_list[] = {
 class PhaseInformation
 {
 public:
-	std::map<phases, std::string> short_desc_map, long_desc_map;
+    std::map<phases, std::string> short_desc_map, long_desc_map;
     std::map<std::string, phases> index_map;
     PhaseInformation()
     {

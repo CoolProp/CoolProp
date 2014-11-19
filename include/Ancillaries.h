@@ -86,9 +86,9 @@ private:
     bool using_tau_r;
     long double Tmax, Tmin, reducing_value, T_r, max_abs_error;
     enum ancillaryfunctiontypes{TYPE_NOT_SET = 0, 
-	                            TYPE_NOT_EXPONENTIAL, 
-								TYPE_EXPONENTIAL, 
-								TYPE_RATIONAL_POLYNOMIAL};
+                                TYPE_NOT_EXPONENTIAL, 
+                                TYPE_EXPONENTIAL, 
+                                TYPE_RATIONAL_POLYNOMIAL};
     ancillaryfunctiontypes type;
     std::size_t N;
 public:
@@ -100,29 +100,29 @@ public:
     bool enabled(void){return type != TYPE_NOT_SET;}
     
     /// Get the maximum absolute error for this fit
-	/// @returns max_abs_error the maximum absolute error for ancillaries that are characterized by maximum absolute error
+    /// @returns max_abs_error the maximum absolute error for ancillaries that are characterized by maximum absolute error
     long double get_max_abs_error(){return max_abs_error;};
     
-	/// Evaluate this ancillary function, yielding for instance the saturated liquid density
-	/// @param T The temperature in K
-	/// @returns y the value of the ancillary function at temperature T
+    /// Evaluate this ancillary function, yielding for instance the saturated liquid density
+    /// @param T The temperature in K
+    /// @returns y the value of the ancillary function at temperature T
     double evaluate(double T);
-	
-	/// Invert this ancillary function, and calculate the temperature given the output the value of the function
-	/// @param value The value of the output
+    
+    /// Invert this ancillary function, and calculate the temperature given the output the value of the function
+    /// @param value The value of the output
     /// @param min_bound (optional) The minimum value for T; ignored if < 0
     /// @param max_bound (optional) The maximum value for T; ignored if < 0
-	/// @returns T The temperature in K
+    /// @returns T The temperature in K
     double invert(double value, double min_bound = -1, double max_bound = -1);
     
     /// Get the minimum temperature
-	/// @returns T The minimum temperature in K
+    /// @returns T The minimum temperature in K
     double get_Tmin(void){return Tmin;};
     
     /// Get the maximum temperature
-	/// @returns T The maximum temperature in K
+    /// @returns T The maximum temperature in K
     double get_Tmax(void){return Tmax;};
-	
+    
 };
 
 struct MeltingLinePiecewiseSimonSegment
@@ -179,14 +179,14 @@ public:
         MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE,
         MELTING_LINE_NOT_SET
     };
-	long double Tmin, Tmax, pmin, pmax;
+    long double Tmin, Tmax, pmin, pmax;
     
-	long double evaluate(int OF, int GIVEN, long double value);
-	
-	/// Evaluate the melting line to calculate the limits of the curve (Tmin/Tmax and pmin/pmax)
-	void set_limits();
-	
-	bool enabled(){return type != MELTING_LINE_NOT_SET;};
+    long double evaluate(int OF, int GIVEN, long double value);
+    
+    /// Evaluate the melting line to calculate the limits of the curve (Tmin/Tmax and pmin/pmax)
+    void set_limits();
+    
+    bool enabled(){return type != MELTING_LINE_NOT_SET;};
     std::string BibTeX;
     long double T_m; ///< Melting temperature at 1 atmosphere
     MeltingLinePiecewiseSimonData simon;

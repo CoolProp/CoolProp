@@ -71,7 +71,7 @@ surface tension                 N/m
 #define filepathlength 255
 #define lengthofreference 3
 #define errormessagelength 255
-#define ncmax 20		// Note: ncmax is the max number of components
+#define ncmax 20        // Note: ncmax is the max number of components
 #define numparams 72
 #define maxcoefs 50
 
@@ -82,7 +82,7 @@ std::string LoadedREFPROPRef;
 #define filepathlength 255
 #define lengthofreference 3
 #define errormessagelength 255
-#define ncmax 20		// Note: ncmax is the max number of components
+#define ncmax 20        // Note: ncmax is the max number of components
 #define numparams 72
 #define maxcoefs 50
 
@@ -318,7 +318,7 @@ double setFunctionPointers()
     SETMODdll = (SETMODdll_POINTER) getFunctionPointer((char *)SETMODdll_NAME);
     SETREFdll = (SETREFdll_POINTER) getFunctionPointer((char *)SETREFdll_NAME);
     SETUPdll = (SETUPdll_POINTER) getFunctionPointer((char *)SETUPdll_NAME);
-//		SPECGRdll = (SPECGRdll_POINTER) getFunctionPointer((char *)SPECGRdll_NAME); // not in library
+//        SPECGRdll = (SPECGRdll_POINTER) getFunctionPointer((char *)SPECGRdll_NAME); // not in library
     SUBLPdll = (SUBLPdll_POINTER) getFunctionPointer((char *)SUBLPdll_NAME);
     SUBLTdll = (SUBLTdll_POINTER) getFunctionPointer((char *)SUBLTdll_NAME);
     SURFTdll = (SURFTdll_POINTER) getFunctionPointer((char *)SURFTdll_NAME);
@@ -595,81 +595,81 @@ void REFPROPMixtureBackend::check_status(void)
 
 void REFPROPMixtureBackend::limits(double &Tmin, double &Tmax, double &rhomolarmax, double &pmax)
 {
-	/*
-	 * 
-		  subroutine LIMITS (htyp,x,tmin,tmax,Dmax,pmax)
-	c
-	c  returns limits of a property model as a function of composition
-	c
-	c  Pure fluid limits are read in from the .fld files; for mixtures, a
-	c  simple mole fraction weighting in reduced variables is used.
-	c
-	c  inputs:
-	c     htyp--flag indicating which models are to be checked [character*3]
-	c           'EOS':  equation of state for thermodynamic properties
-	c           'ETA':  viscosity
-	c           'TCX':  thermal conductivity
-	c           'STN':  surface tension
-	c        x--composition array [mol frac]
-	c  outputs:
-	c     tmin--minimum temperature for model specified by htyp [K]
-	c     tmax--maximum temperature [K]
-	c     Dmax--maximum density [mol/L]
-	c     pmax--maximum pressure [kPa]
-	 * 
-	 */
-	double Dmax_mol_L,pmax_kPa;
+    /*
+     * 
+          subroutine LIMITS (htyp,x,tmin,tmax,Dmax,pmax)
+    c
+    c  returns limits of a property model as a function of composition
+    c
+    c  Pure fluid limits are read in from the .fld files; for mixtures, a
+    c  simple mole fraction weighting in reduced variables is used.
+    c
+    c  inputs:
+    c     htyp--flag indicating which models are to be checked [character*3]
+    c           'EOS':  equation of state for thermodynamic properties
+    c           'ETA':  viscosity
+    c           'TCX':  thermal conductivity
+    c           'STN':  surface tension
+    c        x--composition array [mol frac]
+    c  outputs:
+    c     tmin--minimum temperature for model specified by htyp [K]
+    c     tmax--maximum temperature [K]
+    c     Dmax--maximum density [mol/L]
+    c     pmax--maximum pressure [kPa]
+     * 
+     */
+    double Dmax_mol_L,pmax_kPa;
     char htyp[] = "EOS";
-	LIMITSdll(htyp, &(mole_fractions[0]), &Tmin, &Tmax, &Dmax_mol_L, &pmax_kPa, 3);
-	pmax = pmax_kPa*1000;
-	rhomolarmax = Dmax_mol_L*1000;
+    LIMITSdll(htyp, &(mole_fractions[0]), &Tmin, &Tmax, &Dmax_mol_L, &pmax_kPa, 3);
+    pmax = pmax_kPa*1000;
+    rhomolarmax = Dmax_mol_L*1000;
 }
 long double REFPROPMixtureBackend::calc_pmax(void){
-	double Tmin, Tmax, rhomolarmax, pmax;
-	limits(Tmin, Tmax, rhomolarmax, pmax);
-	return static_cast<long double>(pmax);
+    double Tmin, Tmax, rhomolarmax, pmax;
+    limits(Tmin, Tmax, rhomolarmax, pmax);
+    return static_cast<long double>(pmax);
 };
 long double REFPROPMixtureBackend::calc_Tmax(void){
-	double Tmin, Tmax, rhomolarmax, pmax;
-	limits(Tmin, Tmax, rhomolarmax, pmax);
-	return static_cast<long double>(Tmax);
+    double Tmin, Tmax, rhomolarmax, pmax;
+    limits(Tmin, Tmax, rhomolarmax, pmax);
+    return static_cast<long double>(Tmax);
 };
 long double REFPROPMixtureBackend::calc_T_critical(){
     long ierr;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
     CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-	return static_cast<long double>(Tcrit);
+    return static_cast<long double>(Tcrit);
 };
 long double REFPROPMixtureBackend::calc_p_critical(){
     long ierr;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
     CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-	return static_cast<long double>(pcrit_kPa*1000);
+    return static_cast<long double>(pcrit_kPa*1000);
 };
 long double REFPROPMixtureBackend::calc_rhomolar_critical(){
     long ierr;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
     CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-	return static_cast<long double>(dcrit_mol_L*1000);
+    return static_cast<long double>(dcrit_mol_L*1000);
 };
 long double REFPROPMixtureBackend::calc_Ttriple(){
     if (mole_fractions.size() != 1){throw ValueError("calc_Ttriple cannot be evaluated for mixtures");}
     long icomp = 0;
     double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
     INFOdll(&icomp, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
-	return static_cast<long double>(ttrp);
+    return static_cast<long double>(ttrp);
 };
 long double REFPROPMixtureBackend::calc_molar_mass(void)
 {
     double wmm_kg_kmol;
     WMOLdll(&(mole_fractions[0]), &wmm_kg_kmol); // returns mole mass in kg/kmol
     _molar_mass = wmm_kg_kmol/1000; // kg/mol
-	return static_cast<long double>(_molar_mass.pt());
+    return static_cast<long double>(_molar_mass.pt());
 };
-	
+    
 double REFPROPMixtureBackend::calc_melt_Tmax()
 {
     long ierr;
@@ -687,33 +687,33 @@ double REFPROPMixtureBackend::calc_melt_Tmax()
 }
 long double REFPROPMixtureBackend::calc_melting_line(int param, int given, long double value)
 {
-	long ierr;
+    long ierr;
     char herr[255];
 
-	if (param == iP && given == iT){
-		double _T = static_cast<double>(value), p_kPa;
-		MELTTdll(&_T, &(mole_fractions[0]),
+    if (param == iP && given == iT){
+        double _T = static_cast<double>(value), p_kPa;
+        MELTTdll(&_T, &(mole_fractions[0]),
              &p_kPa,
              &ierr,herr,errormessagelength);      // Error message
-	    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-		return p_kPa*1000;
-	}
-	else if (param == iT && given == iP){
-		double p_kPa = static_cast<double>(value), _T;
-		MELTPdll(&p_kPa, &(mole_fractions[0]),
+        if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+        return p_kPa*1000;
+    }
+    else if (param == iT && given == iP){
+        double p_kPa = static_cast<double>(value), _T;
+        MELTPdll(&p_kPa, &(mole_fractions[0]),
              &_T,
              &ierr,herr,errormessagelength);      // Error message
-	    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-		return p_kPa*1000;
-	}
-	else{
-		throw ValueError(format("calc_melting_line(%s,%s,%Lg) is an invalid set of inputs ",
-		                        get_parameter_information(param,"short").c_str(),
-								get_parameter_information(given,"short").c_str(),
-								value
-								)
-						);
-	}
+        if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+        return p_kPa*1000;
+    }
+    else{
+        throw ValueError(format("calc_melting_line(%s,%s,%Lg) is an invalid set of inputs ",
+                                get_parameter_information(param,"short").c_str(),
+                                get_parameter_information(given,"short").c_str(),
+                                value
+                                )
+                        );
+    }
 }
 
 
@@ -1294,13 +1294,13 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 
             // Use flash routine to find properties
             TQFLSHdll(&_T,&_Q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
-			     &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
+                 &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                 &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
             if (ierr > 0) { 
-				throw ValueError(format("TQ(%s): %s",LoadedREFPROPRef.c_str(), herr).c_str()); 
-				}// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());
+                throw ValueError(format("TQ(%s): %s",LoadedREFPROPRef.c_str(), herr).c_str()); 
+                }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa

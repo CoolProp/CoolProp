@@ -886,7 +886,7 @@ protected:
             if (!type.compare("Simon"))
             {
                 rapidjson::Value &parts = melting_line["parts"];
-				fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_SIMON_TYPE;
+                fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_SIMON_TYPE;
                 for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr)
                 {
                     MeltingLinePiecewiseSimonSegment data;
@@ -902,7 +902,7 @@ protected:
             else if (!type.compare("polynomial_in_Tr"))
             {
                 rapidjson::Value &parts = melting_line["parts"];
-				fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_TR_TYPE;
+                fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_TR_TYPE;
                 for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr)
                 {
                     MeltingLinePiecewisePolynomialInTrSegment data;
@@ -918,7 +918,7 @@ protected:
             else if (!type.compare("polynomial_in_Theta"))
             {
                 rapidjson::Value &parts = melting_line["parts"];
-				fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE;
+                fluid.ancillaries.melting_line.type = MeltingLineVariables::MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE;
                 for (rapidjson::Value::ValueIterator itr = parts.Begin(); itr != parts.End(); ++itr)
                 {
                     MeltingLinePiecewisePolynomialInThetaSegment data;
@@ -934,8 +934,8 @@ protected:
             else{
                 throw ValueError(format("melting line type [%s] is not understood for fluid %s", type.c_str(), fluid.name.c_str()));
             }
-			// Set the limits for the melting line curve
-			fluid.ancillaries.melting_line.set_limits();
+            // Set the limits for the melting line curve
+            fluid.ancillaries.melting_line.set_limits();
         }
         else{
             throw ValueError(format("melting line does not have \"type\" for fluid %s", fluid.name.c_str()));
@@ -1151,9 +1151,9 @@ public:
             for (std::size_t i = 0; i < fluid.aliases.size(); ++i)
             {
                 string_to_index_map[fluid.aliases[i]] = index;
-				
-				// Add uppercase alias for EES compatibility
-				string_to_index_map[upper(fluid.aliases[i])] = index;
+                
+                // Add uppercase alias for EES compatibility
+                string_to_index_map[upper(fluid.aliases[i])] = index;
             }
 
             if (get_debug_level() > 5){ std::cout << format("Loaded.\n"); }

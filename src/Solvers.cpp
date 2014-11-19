@@ -25,31 +25,31 @@ functions, each of which take the vector x. The data is managed using std::vecto
 */
 std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> x0, double tol, int maxiter, std::string *errstring)
 {
-	int iter=0;
-	*errstring=std::string("");
-	std::vector<double> f0,v,negative_f0;
-	std::vector<std::vector<double> > J;
-	double error = 999;
-	while (iter==0 || std::abs(error)>tol){
-		f0 = f->call(x0);
-		J = f->Jacobian(x0);
+    int iter=0;
+    *errstring=std::string("");
+    std::vector<double> f0,v,negative_f0;
+    std::vector<std::vector<double> > J;
+    double error = 999;
+    while (iter==0 || std::abs(error)>tol){
+        f0 = f->call(x0);
+        J = f->Jacobian(x0);
 
-		// Negate f0
-		negative_f0 = f0;
-		for (unsigned int i = 0; i<f0.size(); i++){ negative_f0[i] *= -1;}
-		// find v from J*v = -f
-		v = linsolve(J, negative_f0);
-		// Update the guess
-		x0[0] += v[0];
-		x0[1] += v[1];
-		error = root_sum_square(f0);
-		if (iter>maxiter){
-			*errstring=std::string("reached maximum number of iterations");
-			x0[0]=_HUGE;
-		}
-		iter++;
-	}
-	return x0;
+        // Negate f0
+        negative_f0 = f0;
+        for (unsigned int i = 0; i<f0.size(); i++){ negative_f0[i] *= -1;}
+        // find v from J*v = -f
+        v = linsolve(J, negative_f0);
+        // Update the guess
+        x0[0] += v[0];
+        x0[1] += v[1];
+        error = root_sum_square(f0);
+        if (iter>maxiter){
+            *errstring=std::string("reached maximum number of iterations");
+            x0[0]=_HUGE;
+        }
+        iter++;
+    }
+    return x0;
 }
 
 /**
@@ -64,31 +64,31 @@ In the newton function, a 1-D Newton-Raphson solver is implemented using exact s
 */
 double Newton(FuncWrapper1D* f, double x0, double ftol, int maxiter, std::string &errstring)
 {
-	double x, dx, fval=999;
+    double x, dx, fval=999;
     int iter=1;
     errstring.clear();
-	x = x0;
+    x = x0;
     while (iter < 2 || std::abs(fval) > ftol)
     {
-		fval = f->call(x);
-		dx = -fval/f->deriv(x);
+        fval = f->call(x);
+        dx = -fval/f->deriv(x);
 
-		if (!ValidNumber(fval)){
+        if (!ValidNumber(fval)){
             throw ValueError("Residual function in newton returned invalid number");
         };
 
         x += dx;
 
-		if (std::abs(dx/x) < 10*DBL_EPSILON)
-		{
-			return x;
-		}
+        if (std::abs(dx/x) < 10*DBL_EPSILON)
+        {
+            return x;
+        }
 
-		if (iter>maxiter)
-		{
-			errstring= "reached maximum number of iterations";
-			throw SolutionError(format("Newton reached maximum number of iterations"));
-		}
+        if (iter>maxiter)
+        {
+            errstring= "reached maximum number of iterations";
+            throw SolutionError(format("Newton reached maximum number of iterations"));
+        }
         iter=iter+1;
     }
     return x;
@@ -112,11 +112,11 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, s
     xlog.clear(); flog.clear();
     #endif
 
-	double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
+    double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
     int iter=1;
-	errstring = "";
+    errstring = "";
 
-	if (std::abs(dx)==0){ errstring="dx cannot be zero"; return _HUGE;}
+    if (std::abs(dx)==0){ errstring="dx cannot be zero"; return _HUGE;}
     while (iter<=2 || std::abs(fval)>tol)
     {
         if (iter==1){x1=x0; x=x1;}
@@ -136,28 +136,28 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, s
         if (iter==1){y1=fval;}
         if (iter>1)
         {
-			double deltax = x2-x1;
-			if (std::abs(deltax)<1e-14)
-			{
-				if (std::abs(fval) < tol*10)
-				{
-					return x;
-				}
-				else
-				{
-					throw ValueError("Step is small but not solved to tolerance");
-				}
-			}
+            double deltax = x2-x1;
+            if (std::abs(deltax)<1e-14)
+            {
+                if (std::abs(fval) < tol*10)
+                {
+                    return x;
+                }
+                else
+                {
+                    throw ValueError("Step is small but not solved to tolerance");
+                }
+            }
             y2=fval;
             x3=x2-y2/(y2-y1)*(x2-x1);
             y1=y2; x1=x2; x2=x3;
 
         }
-		if (iter>maxiter)
-		{
-			errstring=std::string("reached maximum number of iterations");
-			throw SolutionError(format("Secant reached maximum number of iterations"));
-		}
+        if (iter>maxiter)
+        {
+            errstring=std::string("reached maximum number of iterations");
+            throw SolutionError(format("Secant reached maximum number of iterations"));
+        }
         iter=iter+1;
     }
     return x3;
@@ -178,39 +178,39 @@ In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial 
 */
 double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, double dx, double tol, int maxiter, std::string &errstring)
 {
-	double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
+    double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
     int iter=1;
-	errstring = "";
+    errstring = "";
 
-	if (std::abs(dx)==0){ errstring = "dx cannot be zero"; return _HUGE;}
+    if (std::abs(dx)==0){ errstring = "dx cannot be zero"; return _HUGE;}
     while (iter<=3 || std::abs(fval)>tol)
     {
         if (iter==1){x1=x0; x=x1;}
         else if (iter==2){x2=x0+dx; x=x2;}
         else {x=x2;}
-			fval=f->call(x);
+            fval=f->call(x);
         if (iter==1){y1=fval;}
         else
         {
             y2=fval;
             x3=x2-y2/(y2-y1)*(x2-x1);
-			// Check bounds, go half the way to the limit if limit is exceeded
-			if (x3 < xmin)
-			{
-				x3 = (xmin + x2)/2;
-			}
-			if (x3 > xmax)
-			{
-				x3 = (xmax + x2)/2;
-			}
+            // Check bounds, go half the way to the limit if limit is exceeded
+            if (x3 < xmin)
+            {
+                x3 = (xmin + x2)/2;
+            }
+            if (x3 > xmax)
+            {
+                x3 = (xmax + x2)/2;
+            }
             y1=y2; x1=x2; x2=x3;
 
         }
-		if (iter>maxiter)
-		{
-			errstring = "reached maximum number of iterations";
-			throw SolutionError(format("BoundedSecant reached maximum number of iterations"));
-		}
+        if (iter>maxiter)
+        {
+            errstring = "reached maximum number of iterations";
+            throw SolutionError(format("BoundedSecant reached maximum number of iterations"));
+        }
         iter=iter+1;
     }
     return x3;
@@ -234,29 +234,29 @@ at least one solution in the interval [a,b].
 */
 double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int maxiter, std::string &errstr)
 {
-	int iter;
+    int iter;
     errstr.clear();
-	double fa,fb,c,fc,m,tol,d,e,p,q,s,r;
+    double fa,fb,c,fc,m,tol,d,e,p,q,s,r;
     fa = f->call(a);
     fb = f->call(b);
 
-	// If one of the boundaries is to within tolerance, just stop
-	if (std::abs(fb) < t) { return b;}
-	if (!ValidNumber(fb)){
-		throw ValueError(format("Brent's method f(b) is NAN for b = %g, other input was a = %g",b,a).c_str());
-	}
-	if (std::abs(fa) < t) { return a;}
-	if (!ValidNumber(fa)){
-		throw ValueError(format("Brent's method f(a) is NAN for a = %g, other input was b = %g",a,b).c_str());
-	}
-	if (fa*fb>0){
-		throw ValueError(format("Inputs in Brent [%f,%f] do not bracket the root.  Function values are [%f,%f]",a,b,fa,fb));
-	}
+    // If one of the boundaries is to within tolerance, just stop
+    if (std::abs(fb) < t) { return b;}
+    if (!ValidNumber(fb)){
+        throw ValueError(format("Brent's method f(b) is NAN for b = %g, other input was a = %g",b,a).c_str());
+    }
+    if (std::abs(fa) < t) { return a;}
+    if (!ValidNumber(fa)){
+        throw ValueError(format("Brent's method f(a) is NAN for a = %g, other input was b = %g",a,b).c_str());
+    }
+    if (fa*fb>0){
+        throw ValueError(format("Inputs in Brent [%f,%f] do not bracket the root.  Function values are [%f,%f]",a,b,fa,fb));
+    }
 
     c=a;
     fc=fa;
-	iter=1;
-	if (std::abs(fc)<std::abs(fb)){
+    iter=1;
+    if (std::abs(fc)<std::abs(fb)){
         // Goto ext: from Brent ALGOL code
         a=b;
         b=c;
@@ -264,74 +264,74 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
         fa=fb;
         fb=fc;
         fc=fa;
-	}
+    }
     d=b-a;
     e=b-a;
     m=0.5*(c-b);
     tol=2*macheps*std::abs(b)+t;
-	while (std::abs(m)>tol && fb!=0){
+    while (std::abs(m)>tol && fb!=0){
         // See if a bisection is forced
-		if (std::abs(e)<tol || std::abs(fa) <= std::abs(fb)){
+        if (std::abs(e)<tol || std::abs(fa) <= std::abs(fb)){
             m=0.5*(c-b);
             d=e=m;
-		}
-		else{
+        }
+        else{
             s=fb/fa;
-			if (a==c){
+            if (a==c){
                 //Linear interpolation
                 p=2*m*s;
                 q=1-s;
-			}
-			else{
+            }
+            else{
                 //Inverse quadratic interpolation
                 q=fa/fc;
                 r=fb/fc;
                 m=0.5*(c-b);
                 p=s*(2*m*q*(q-r)-(b-a)*(r-1));
                 q=(q-1)*(r-1)*(s-1);
-			}
-			if (p>0){
-				q=-q;
-			}
-			else{
-				p=-p;
-			}
+            }
+            if (p>0){
+                q=-q;
+            }
+            else{
+                p=-p;
+            }
             s=e;
             e=d;
             m=0.5*(c-b);
-			if (2*p<3*m*q-std::abs(tol*q) || p<std::abs(0.5*s*q)){
+            if (2*p<3*m*q-std::abs(tol*q) || p<std::abs(0.5*s*q)){
                 d=p/q;
-			}
-			else{
+            }
+            else{
                 m=0.5*(c-b);
                 d=e=m;
-			}
-		}
+            }
+        }
         a=b;
         fa=fb;
-		if (std::abs(d)>tol){
+        if (std::abs(d)>tol){
             b+=d;
-		}
+        }
         else if (m>0){
             b+=tol;
-		}
-		else{
+        }
+        else{
             b+=-tol;
-		}
-		fb=f->call(b);
-		if (!ValidNumber(fb)){
-			throw ValueError(format("Brent's method f(t) is NAN for t = %g",b).c_str());
-		}
+        }
+        fb=f->call(b);
+        if (!ValidNumber(fb)){
+            throw ValueError(format("Brent's method f(t) is NAN for t = %g",b).c_str());
+        }
         if (std::abs(fb) < macheps){
             return b;
         }
-		if (fb*fc>0){
+        if (fb*fc>0){
             // Goto int: from Brent ALGOL code
             c=a;
             fc=fa;
             d=e=b-a;
-		}
-		if (std::abs(fc)<std::abs(fb)){
+        }
+        if (std::abs(fc)<std::abs(fb)){
             // Goto ext: from Brent ALGOL code
             a=b;
             b=c;
@@ -339,37 +339,37 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
             fa=fb;
             fb=fc;
             fc=fa;
-		}
+        }
         m=0.5*(c-b);
         tol=2*macheps*std::abs(b)+t;
-		iter+=1;
-		if (!ValidNumber(a)){
-			throw ValueError(format("Brent's method a is NAN").c_str());}
-		if (!ValidNumber(b)){
-			throw ValueError(format("Brent's method b is NAN").c_str());}
-		if (!ValidNumber(c)){
-			throw ValueError(format("Brent's method c is NAN").c_str());}
-		if (iter>maxiter){
-			throw SolutionError(std::string("Brent's method reached maximum number of steps of %d ", maxiter));}
+        iter+=1;
+        if (!ValidNumber(a)){
+            throw ValueError(format("Brent's method a is NAN").c_str());}
+        if (!ValidNumber(b)){
+            throw ValueError(format("Brent's method b is NAN").c_str());}
+        if (!ValidNumber(c)){
+            throw ValueError(format("Brent's method c is NAN").c_str());}
+        if (iter>maxiter){
+            throw SolutionError(std::string("Brent's method reached maximum number of steps of %d ", maxiter));}
         if (std::abs(fb)< 2*macheps*std::abs(b)){
             return b;
         }
-	}
+    }
     return b;
 }
 
 // Single-Dimensional solvers
 double Brent(FuncWrapper1D &f, double a, double b, double macheps, double t, int maxiter, std::string &errstr){
-	return Brent(&f, a, b, macheps, t, maxiter, errstr);
+    return Brent(&f, a, b, macheps, t, maxiter, errstr);
 }
 double Secant(FuncWrapper1D &f, double x0, double dx, double ftol, int maxiter, std::string &errstring){
-	return Secant(&f, x0, dx, ftol, maxiter, errstring);
+    return Secant(&f, x0, dx, ftol, maxiter, errstring);
 }
 double BoundedSecant(FuncWrapper1D &f, double x0, double xmin, double xmax, double dx, double ftol, int maxiter, std::string &errstring){
-	return BoundedSecant(&f, x0, xmin, xmax, dx, ftol, maxiter, errstring);
+    return BoundedSecant(&f, x0, xmin, xmax, dx, ftol, maxiter, errstring);
 }
 double Newton(FuncWrapper1D &f, double x0, double ftol, int maxiter, std::string &errstring){
-	return Newton(&f, x0, ftol, maxiter, errstring);
+    return Newton(&f, x0, ftol, maxiter, errstring);
 }
 
 }; /* namespace CoolProp */
