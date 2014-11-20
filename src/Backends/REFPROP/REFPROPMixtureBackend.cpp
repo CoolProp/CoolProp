@@ -53,7 +53,7 @@ surface tension                 N/m
 #include <string>
 #include <stdio.h>
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 #include "crossplatform_shared_ptr.h"
 
 

@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <assert.h>
+#include <cassert>
 #include <iterator>
 #include "Eigen/Core"
 #include "PolyMath.h"

@@ -17,7 +17,7 @@ typedef unsigned int UINT32;
 #include "rapidjson/prettywriter.h"    // for stringify JSON
 #include "rapidjson/stringbuffer.h" // for string buffer
 
-#include <assert.h>
+#include <cassert>
 
 namespace cpjson
 {
