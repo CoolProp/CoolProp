@@ -310,7 +310,7 @@ public:
     void set_mass_fractions(const std::vector<double> &mass_fractions){set_mass_fractions(std::vector<long double>(mass_fractions.begin(), mass_fractions.end()));};
     void set_volu_fractions(const std::vector<double> &volu_fractions){set_volu_fractions(std::vector<long double>(volu_fractions.begin(), volu_fractions.end()));};
 
-    const CoolProp::SimpleState & get_reducing_state(){return _reducing;};
+    virtual const CoolProp::SimpleState & get_reducing_state(){return _reducing;};
     const CoolProp::SimpleState & get_state(const std::string &state){return calc_state(state);};
 
     // Limits

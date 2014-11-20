@@ -242,6 +242,8 @@ public:
     void calc_reducing_state(void);
     SimpleState calc_reducing_state_nocache(const std::vector<long double> & mole_fractions);
 
+    const CoolProp::SimpleState & get_reducing_state(){calc_reducing_state(); return _reducing;};
+    
     /**
     In a general way we can calculate any first partial derivative based on calculating derivatives with respect to the fundamental variables of the EOS, \f$\tau\f$ and \f$\delta\f$
     \f[
