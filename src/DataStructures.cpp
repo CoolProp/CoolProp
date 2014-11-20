@@ -40,13 +40,13 @@ parameter_info parameter_info_list[] = {
     parameter_info(iCvmass, "Cvmass","O","J/kg/K","Mass specific constant volume specific heat",false),
     parameter_info(iCp0molar, "Cp0molar","O","J/mol/K","Ideal gas molar specific constant presssure specific heat",false),
     parameter_info(iCp0mass, "Cp0mass","O","J/kg/K","Ideal gas mass specific constant presssure specific heat",false),
-    parameter_info(iGWP20, "GWP20","O","-","20-year gobal warming potential",false),
-    parameter_info(iGWP100, "GWP100","O","-","100-year gobal warming potential",false),
-    parameter_info(iGWP500, "GWP500","O","-","500-year gobal warming potential",false),
-    parameter_info(iFH, "FH","O","-","Flammability hazard",false),
-    parameter_info(iHH, "HH","O","-","Health hazard",false),
-    parameter_info(iPH, "PH","O","-","Physical hazard",false),
-    parameter_info(iODP, "ODP","O","-","Ozone depletion potential",false),
+    parameter_info(iGWP20, "GWP20","O","-","20-year gobal warming potential",true),
+    parameter_info(iGWP100, "GWP100","O","-","100-year gobal warming potential",true),
+    parameter_info(iGWP500, "GWP500","O","-","500-year gobal warming potential",true),
+    parameter_info(iFH, "FH","O","-","Flammability hazard",true),
+    parameter_info(iHH, "HH","O","-","Health hazard",true),
+    parameter_info(iPH, "PH","O","-","Physical hazard",true),
+    parameter_info(iODP, "ODP","O","-","Ozone depletion potential",true),
     parameter_info(iBvirial, "Bvirial","O","-","Second virial coefficient",false),
     parameter_info(iCvirial, "Cvirial","O","-","Third virial coefficient",false),
     parameter_info(idBvirial_dT, "dBvirial_dT","O","-","Derivative of second virial coefficient with respect to T",false),
@@ -119,6 +119,7 @@ public:
         index_map.insert(std::pair<std::string, int>("V", iviscosity));
         index_map.insert(std::pair<std::string, int>("L", iconductivity));
         index_map.insert(std::pair<std::string, int>("pcrit", iP_critical));
+        index_map.insert(std::pair<std::string, int>("Pcrit", iP_critical));
         index_map.insert(std::pair<std::string, int>("Tcrit", iT_critical));
         index_map.insert(std::pair<std::string, int>("Ttriple", iT_triple));
         index_map.insert(std::pair<std::string, int>("ptriple", iP_triple));

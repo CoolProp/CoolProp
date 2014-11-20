@@ -187,6 +187,14 @@ double AbstractState::trivial_keyed_output(int key)
         return this->rhomolar_critical();
     case irhomass_critical:
         return this->rhomolar_critical()*molar_mass();
+    case iODP:
+        return this->calc_ODP();
+    case iGWP100:
+        return this->calc_GWP100();
+    case iGWP20:
+        return this->calc_GWP20();
+    case iGWP500:
+        return this->calc_GWP500();
     
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));

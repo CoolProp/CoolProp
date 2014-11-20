@@ -526,6 +526,51 @@ std::string HelmholtzEOSMixtureBackend::calc_name(void)
         return components[0]->name;
     }
 }
+long double HelmholtzEOSMixtureBackend::calc_ODP(void)
+{
+    if (components.size() != 1){
+        throw ValueError(format("For now, calc_ODP is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+    }
+    else{
+        long double v = components[0]->environment.ODP;
+        if (!ValidNumber(v) || v < 0){ throw ValueError(format("ODP value is not specified or invalid")); }
+        return v;
+    }
+}
+long double HelmholtzEOSMixtureBackend::calc_GWP20(void)
+{
+    if (components.size() != 1){
+        throw ValueError(format("For now, calc_GWP20 is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+    }
+    else{
+        long double v = components[0]->environment.GWP20;
+        if (!ValidNumber(v) || v < 0){ throw ValueError(format("GWP20 value is not specified or invalid"));}
+        return v;
+    }
+}
+long double HelmholtzEOSMixtureBackend::calc_GWP100(void)
+{
+    if (components.size() != 1){
+        throw ValueError(format("For now, calc_GWP100 is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+    }
+    else{
+        long double v = components[0]->environment.GWP100;
+        if (!ValidNumber(v) || v < 0){ throw ValueError(format("GWP100 value is not specified or invalid")); }
+        return v;
+    }
+}
+long double HelmholtzEOSMixtureBackend::calc_GWP500(void)
+{
+    if (components.size() != 1){
+        throw ValueError(format("For now, calc_GWP500 is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+    }
+    else{
+        long double v = components[0]->environment.GWP500;
+        if (!ValidNumber(v) || v < 0){ throw ValueError(format("GWP500 value is not specified or invalid")); }
+        return v;
+    }
+}
+
 long double HelmholtzEOSMixtureBackend::calc_T_critical(void)
 {
     if (components.size() != 1){

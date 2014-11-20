@@ -63,6 +63,10 @@ public:
     long double calc_saturation_ancillary(parameters param, int Q, parameters given, double value);
     void calc_ssat_max(void);
     void calc_hsat_max(void);
+    long double calc_GWP20();
+    long double calc_GWP500();
+    long double calc_GWP100();
+    long double calc_ODP();
     
     const CoolProp::SimpleState &calc_state(const std::string &state);
 

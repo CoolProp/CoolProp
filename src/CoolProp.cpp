@@ -378,10 +378,15 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
     State.reset(AbstractState::factory(backend, fluid_string));
     
     // First check if it is a trivial input (critical/max parameters for instance)
-    if (is_valid_parameter(Output, iOutput) && is_trivial_parameter(iOutput))
+    if (is_valid_parameter(Output, iOutput))
     {
-        double val = State->trivial_keyed_output(iOutput);
-        return val;
+        if (is_trivial_parameter(iOutput)){
+            double val = State->trivial_keyed_output(iOutput);
+            return val;
+        }
+    }
+    else{
+        throw ValueError(format("Invalid output parameter [%s]",Output.c_str()));
     }
     
     parameters iName1 = get_parameter_index(Name1);
@@ -442,19 +447,31 @@ double PropsSI(const char *Output, const char *Name1, double Prop1, const char *
 }
 double Props1SI(const std::string &FluidName, const std::string &Output)
 {
-    std::string  _FluidName = FluidName, empty_string = "", _Output = Output;
-    double val1 = PropsSI(_FluidName, empty_string, 0, empty_string, 0, _Output);
-    if (!ValidNumber(val1)){
-        // flush the error
-        set_error_string("");
-        // Try with them flipped
-        val1 = PropsSI(_Output, empty_string, 0, empty_string, 0, _FluidName);
-    }
-    if (!ValidNumber(val1)){
-        set_error_string(format("Unable to use inputs %s,%s in Props1SI (order doesn't matter)"));
+    std::string _FluidName = FluidName, empty_string = "", _Output = Output;
+    bool valid_fluid1 = is_valid_fluid_string(_FluidName);
+    bool valid_fluid2 = is_valid_fluid_string(_Output);
+    if (valid_fluid1 && valid_fluid2){
+        set_error_string(format("Both inputs to Props1SI [%s,%s] are valid fluids", Output.c_str(), FluidName.c_str()));
         return _HUGE;
     }
-    return val1;
+    if (!valid_fluid1 && !valid_fluid2){
+        set_error_string(format("Neither input to Props1SI [%s,%s] is a valid fluid", Output.c_str(), FluidName.c_str()));
+        return _HUGE;
+    }
+    if (!valid_fluid1 && valid_fluid2){
+        // They are backwards, swap
+        std::swap(_Output, _FluidName);
+    }
+    
+    // First input is the fluid, second input is the input parameter
+    double val1 = PropsSI(_Output, "", 0, "", 0, _FluidName);
+    if (!ValidNumber(val1)){
+        set_error_string(format("Unable to use input parameter [%s] in Props1SI for fluid %s; error was %s", _Output.c_str(), _FluidName.c_str(), get_global_param_string("errstring").c_str()));
+        return _HUGE;
+    }
+    else{
+        return val1;
+    }
 }
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref)
 {
