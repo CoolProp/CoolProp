@@ -628,6 +628,11 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
 
   list (APPEND APP_SOURCES ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def) # To export mexFunction
 
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
+    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
+    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
+    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
+  ) 
   set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}")
   string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
