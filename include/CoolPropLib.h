@@ -82,7 +82,7 @@
      * 
      * \note This function returns the phase string in pre-allocated phase variable.  If buffer is not large enough, no copy is made
      */
-    EXPORT_CODE long CONVENTION PhaseSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref, char *phase);
+    EXPORT_CODE long CONVENTION PhaseSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref, char *phase, int n);
     
     /**
      *\overload
@@ -92,7 +92,7 @@
      * 
      * \note This function returns the output string in pre-allocated char buffer.  If buffer is not large enough, no copy is made
      */
-    EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char *Output);
+    EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char *Output, int n);
     /**
      * \overload
      * \sa \ref CoolProp::get_parameter_information_string
@@ -100,7 +100,7 @@
      * 
      * @returns error_code 1 = Ok 0 = error
      */
-    EXPORT_CODE long CONVENTION get_parameter_information_string(const char *key, char *Output);
+    EXPORT_CODE long CONVENTION get_parameter_information_string(const char *key, char *Output, int n);
     /**
      * \overload
      * \sa \ref CoolProp::get_mixture_binary_pair_data
@@ -112,7 +112,7 @@
      * 
      * @returns error_code 1 = Ok 0 = error
      */
-    EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char *Output);
+    EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char *Output, int n);
     /**
      * \overload
      * \sa \ref CoolProp::set_reference_stateS
