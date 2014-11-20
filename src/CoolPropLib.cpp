@@ -184,7 +184,7 @@ EXPORT_CODE long CONVENTION get_param_index(const char * param){
 }
 EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Output)
 {
-    std::string s = CoolProp::get_global_param_string(param).c_str();
+    std::string s = CoolProp::get_global_param_string(param);
     if (s.size() < strlen(Output)){
         strcpy(Output, s.c_str()); 
         return 1;
