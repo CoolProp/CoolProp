@@ -3,6 +3,8 @@
 DEBUG_MODE = 0
 
 ADDED_CFLAGS = -D__powerpc__ -DDISABLE_CATCH
+ADDED_INCLUDES = -I../../../include -I../../../externals/Eigen
+ADDED_LIBS = -lstdc++ -lgcc -lsupc++
 
 ifeq ($(DEBUG_MODE),1)
 OBJ_DIR := PPC603gnu_DEBUG
@@ -14,11 +16,15 @@ endif
 
 LINKFLAGS = $(CFLAGS) -v
 LIBPATH = 
+SRC_DIR = ../../../src/
 
 # List all the *compiled* object files here, under the OBJ_DIR
 # directory. Make will automatically locate the source file and
 # compile it.
-OBJECTS := $(subst ../../../CoolProp/,$(OBJ_DIR)/,$(subst .cpp,.o,$(wildcard ../../../CoolProp/*.cpp)))
+CPP_FILES = $(shell find $(SRC_DIR) -type f -name '*.cpp')
+OBJECTS := $(subst $(SRC_DIR),$(OBJ_DIR)/,$(subst .cpp,.o,$(CPP_FILES)))
+DIRECTORIES_SRC := $(addprefix $(OBJDIR),$(shell find $(SRC_DIR) -type d | tr '\n' ' '))
+DIRECTORIES_BIN := $(subst $(SRC_DIR),$(OBJ_DIR)/,$(DIRECTORIES_SRC))
 
 # This is the name of the output shared library.
 PROJECT_TARGETS := $(OBJ_DIR)/CoolProp.out
@@ -36,7 +42,7 @@ WIND_BASE := $(subst \,/,$(WIND_BASE))
 CPU = PPC603
 TOOL_FAMILY = gnu
 TOOL = gnu
-CC_ARCH_SPEC = -mcpu=603 -mstrict-align -mno-implicit-fp
+CC_ARCH_SPEC = -mcpu=603 -mstrict-align 
 
 IDE_INCLUDES = -I$(WIND_BASE)/target/h -I$(WIND_BASE)/target/h/wrn/coreip -I../../../CoolProp
 
@@ -45,19 +51,20 @@ IDE_INCLUDES = -I$(WIND_BASE)/target/h -I$(WIND_BASE)/target/h/wrn/coreip -I../.
 # C++ (.cpp, .cc, .C, .cxx) files. To enable support for those extensions,
 # copy this rule and modify its extension and compile flags for the
 # required source file type.
-$(OBJ_DIR)/%.o : ../../../CoolProp/%.c
-	ccppc $(CFLAGS) $(CC_ARCH_SPEC) -ansi  -Wall  -MD -MP $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
 
 # Adapted rule for .cpp files
-$(OBJ_DIR)/%.o : ../../../CoolProp/%.cpp
-	c++ppc $(CFLAGS) $(CC_ARCH_SPEC) -ansi  -Wall  -MD -MP $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
+$(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp
+	mkdir -p $(subst $(SRC_DIR),$(OBJ_DIR)/,$<)
+	powerpc-wrs-vxworks-g++ $(CFLAGS) $(CC_ARCH_SPEC) -ansi  -Wall  -MD -MP $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
 
+all:
+  @echo "Please execute next commands:"
 all : check_objectdir $(PROJECT_TARGETS) 
 
 $(PROJECT_TARGETS) : $(OBJECTS)
-	rm -f "$@" ctdt.c;nmppc $(OBJECTS) | tclsh $(WIND_BASE)/host/resource/hutils/tcl/munch.tcl -c ppc > ctdt.c
-	ccppc $(LINKFLAGS) $(CC_ARCH_SPEC) -fdollars-in-identifiers -Wall $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES)  -o ctdt.o -c ctdt.c
-	ccppc -r -nostdlib -Wl,-X -T $(WIND_BASE)/target/h/tool/gnu/ldscripts/link.OUT -o "$@" $(OBJECTS) $(LIBPATH) $(LIBS)  $(ADDED_LIBPATH) $(ADDED_LIBS) ctdt.o
+	rm -f "$@" ctdt.c;powerpc-wrs-vxworks-nm $(OBJECTS) | tclsh $(WIND_BASE)/host/resource/hutils/tcl/munch.tcl -c ppc > ctdt.c
+	powerpc-wrs-vxworks-g++ $(LINKFLAGS) $(CC_ARCH_SPEC) -fdollars-in-identifiers -Wall $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES)  -o ctdt.o -c ctdt.c
+	powerpc-wrs-vxworks-g++ -r -nostdlib -Wl,-X -T /usr/powerpc-wrs-vxworks/share/ldscripts/dkm.ld -o "$@" $(OBJECTS) $(LIBPATH) $(LIBS)  $(ADDED_LIBPATH) $(ADDED_LIBS) ctdt.o
 	rm -f ctdt.c ctdt.o
 
 
