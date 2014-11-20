@@ -106,6 +106,15 @@ You might want to start by looking at CoolProp.h
     @returns The string, or an error message if not valid input
     */
     std::string get_fluid_param_string(std::string FluidName, std::string ParamName);
+    
+    /** \brief Check if the fluid name is valid
+     * 
+     * @returns output Returns true if the fluid string is valid
+     * 
+     * \note "gfreilgregre" -> false; "HEOS::Water" -> true; "Water" -> true
+     *
+     */
+    bool is_valid_fluid_string(std::string &fluidstring);
 
     /// Returns the BibTeX key from the bibtex library of CoolProp corresponding to the item requested
     /// @param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"
@@ -131,7 +140,7 @@ You might want to start by looking at CoolProp.h
     \f[ 
     \displaystyle\frac{\Delta s}{R_u/M}+\frac{\Delta h}{(R_u/M)T}\tau 
     \f]
-    where \f$ \Delta s = s-_{spec} \f$ and \f$ \Delta h = h-_{spec} \f$
+    where \f$ \Delta s = s-s_{spec} \f$ and \f$ \Delta h = h-h_{spec} \f$
     */
     void set_reference_stateS(std::string FluidName, std::string reference_state);
 
@@ -139,8 +148,8 @@ You might want to start by looking at CoolProp.h
     /// @param FluidName The name of the fluid
     /// @param T Temperature at reference state [K]
     /// @param rhomolar Density at reference state [mol/m^3]
-    /// @param h0 Enthalpy at reference state [J/kg]
-    /// @param s0 Entropy at references state [J/kg/K]
+    /// @param h0 Enthalpy at reference state [J/mol]
+    /// @param s0 Entropy at references state [J/mol/K]
     void set_reference_stateD(std::string FluidName, double T, double rhomolar, double h0, double s0);
     
     /// Return a string representation of the phase

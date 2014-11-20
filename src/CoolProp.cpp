@@ -510,6 +510,22 @@ double Props1SI(std::string FluidName,std::string Output)
     return PropsSI(Output,"",0,"",0,FluidName);
 }
 
+bool is_valid_fluid_string(std::string &input_fluid_string)
+{
+    try{
+        std::string backend, fluid;
+        std::vector<double> fractions;
+        // First try to extract backend and fractions
+        extract_backend(input_fluid_string, backend, fluid);
+        std::string fluid_string = extract_fractions(fluid, fractions);
+        // We are going to let the factory function load the state
+        shared_ptr<AbstractState> State(AbstractState::factory(backend, fluid_string));
+        return true;
+    }
+    catch (std::exception &e){
+        return false;
+    }
+}
 
 //EXPORT_CODE double CONVENTION IProps(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid)
 //{
