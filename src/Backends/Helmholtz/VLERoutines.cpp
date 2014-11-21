@@ -1033,7 +1033,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
             throw SolutionError(format("Maxwell solver did not converge after 100 iterations"));
         }
     }
-    while (error > 1e-10 && std::abs(DeltavL) > 10*DBL_EPSILON*std::abs(DeltavL) && std::abs(DeltavV) > 10*DBL_EPSILON*std::abs(DeltavV));
+    while (error > 1e-10 && std::abs(DeltavL) > 10*DBL_EPSILON*std::abs(1/rhoL) && std::abs(DeltavV) > 10*DBL_EPSILON*std::abs(1/rhoV));
 }
 
 void SaturationSolvers::x_and_y_from_K(long double beta, const std::vector<long double> &K, const std::vector<long double> &z, std::vector<long double> &x, std::vector<long double> &y)
