@@ -674,8 +674,11 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (TARGETS CoolPropMATLAB_wrap DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   enable_testing()
+  add_custom_command(TARGET CoolPropMATLAB_wrap
+                     POST_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/test.m ${CMAKE_CURRENT_BINARY_DIR}/.)
   add_test(NAME MATLABtest
-           COMMAND $ENV{MATLAB_ROOT}/bin/matlab -r ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/test -nojvm -nodesktop -nosplash
+           COMMAND $ENV{MATLAB_ROOT}/bin/matlab -r test -nojvm -nodesktop -nosplash
            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
