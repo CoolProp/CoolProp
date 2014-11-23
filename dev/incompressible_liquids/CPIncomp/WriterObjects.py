@@ -1293,6 +1293,7 @@ class SolutionDataWriter(object):
         xmin = np.array([x.xmin for x in solObjs])
         xmax = np.array([x.xmax for x in solObjs])
 
+        # TODO: This is a dirty hack!
         if np.any(xmin>0.0) and np.any(xmax<1.0): use_x = True
         else: use_x = False
 
