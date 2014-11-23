@@ -158,23 +158,43 @@ if __name__ == '__main__':
             print("Conflict between {0} and {1}, aborting".format(curObj,nexObj))
             raise ValueError("Two elements have the same name, that does not work: {0}".format(curObj.name))
         else:
+            #print("Processing {0}: ".format(curObj.name), end="")
             if curObj.xid==SolutionData.ifrac_mass:
-                solMass    += [curObj]
+                solMass.append(curObj)
+                #print("added to mass-based fluids ({0})".format(curObj.xid))
             elif curObj.xid==SolutionData.ifrac_mole:
-                solMole    += [curObj]
+                solMole.append(curObj)
+                #print("added to mole-based fluids ({0})".format(curObj.xid))
             elif curObj.xid==SolutionData.ifrac_volume:
-                solVolu    += [curObj]
+                solVolu.append(curObj)
+                #print("added to volume-based fluids ({0})".format(curObj.xid))
             elif curObj.xid==SolutionData.ifrac_pure:
-                purefluids += [curObj]
+                purefluids.append(curObj)
+                #print("added to pure fluids ({0})".format(curObj.xid))
             else:
-                errors += [curObj]
+                errors.append(curObj)
+                #print("added to errors ({0})".format(curObj.xid))
+
+
+
+#         def printNames(lstObj,pre):
+#             print(pre,end="")
+#             for f in lstObj: print(f.name,end=", ")
+#             raw_input("Press Enter to continue...")
+#
+#         printNames(solMass,   "Mass-based  : ")
+#         printNames(solMole,   "Mole-based  : ")
+#         printNames(solVolu,   "Volume-based: ")
+#         printNames(purefluids,"Pure fluids : ")
+
+
 
     if len(errors)>0:
         raise ValueError("There was a problem processing the fluid(s): {0}".format([error.name for error in errors]))
 
-    solutions  = solMass
-    solutions += solMole
-    solutions += solVolu
+    #solutions  = solMass
+    #solutions += solMole
+    #solutions += solVolu
 
     if runFitting:
         print("All checks passed, going to write parameters to disk.")
@@ -214,7 +234,7 @@ if __name__ == '__main__':
         FLUID_INFO_MOLE_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_mole-based-fluids")
         FLUID_INFO_VOLU_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_volume-based-fluids")
         FLUID_INFO_PURE_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_pure-fluids")
-        
+
 
         # After all the list got populated, we can process the entries
         # and generate some tables
@@ -224,6 +244,9 @@ if __name__ == '__main__':
         filLists +=[FLUID_INFO_MOLE_LIST,FLUID_INFO_VOLU_LIST]
         #
         for i in range(len(objLists)):
+            #print("Processing fluid list: ", end="")
+            #for f in objLists[i]: print(f.name, end=", ")
+            #print("... done")
             writer.generateRstTable(objLists[i], filLists[i])
 
     print("All done, bye")
