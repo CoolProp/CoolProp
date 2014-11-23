@@ -923,8 +923,8 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
     CoolProp::SimpleState &crit = HEOS.get_components()[0]->crit;
-    long double rhoL = _HUGE, rhoV = _HUGE, error = 999, DeltavL, DeltavV, pL, pV;
-    int iter=0;
+    long double rhoL = _HUGE, rhoV = _HUGE, error = 999, DeltavL, DeltavV, pL, pV, p, rhoL0, rhoV0;
+    int iter=0, small_step_count = 0;
     
     try
     {
@@ -946,20 +946,60 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
             else{
                 rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
                 rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
+                p = HEOS.get_components()[0]->ancillaries.pV.evaluate(T);
+                rhoL0 = rhoL;
+                rhoV0 = rhoV;
                 
-                // Apply a single step of Newton's method to improve guess value for liquid
-                // based on the error between the gas pressure (which is usually very close already)
-                // and the liquid pressure, which can sometimes (especially at low pressure),
-                // be way off, and often times negative
-                SatL->update(DmolarT_INPUTS, rhoL, T);
-                SatV->update(DmolarT_INPUTS, rhoV, T);
+                CoolProp::SimpleState &crit = HEOS.get_components()[0]->crit;
+                CoolProp::SimpleState &tripleL = HEOS.get_components()[0]->triple_liquid;
+                CoolProp::SimpleState &tripleV = HEOS.get_components()[0]->triple_vapor;
+                
+                // If the guesses are terrible, apply a simple correction
+                if (rhoL < crit.rhomolar*0.8 || rhoL > tripleL.rhomolar*1.2 || 
+                    rhoV > crit.rhomolar*1.2 || rhoV < tripleV.rhomolar*0.8)
+                {
+                    // Lets assume that liquid density is more or less linear with T
+                    rhoL = (crit.rhomolar - tripleL.rhomolar)/(crit.T - tripleL.T)*(T-tripleL.T)+tripleL.rhomolar;
+                    // Then we calculate pressure from this density
+                    SatL->update(DmolarT_INPUTS, rhoL, T);
+                    // Then we assume vapor to be ideal gas
+                    rhoV = SatL->p()/(SatL->gas_constant()*T);
+                    // Update the vapor state
+                    SatV->update(DmolarT_INPUTS, rhoV, T);
+                }
+                else{
+                    SatL->update(DmolarT_INPUTS, rhoL, T);
+                    SatV->update(DmolarT_INPUTS, rhoV, T);
+                }
+                if (get_debug_level() > 0){ std::cout << format("[Maxwell] ancillaries T: %0.16Lg rhoL: %0.16Lg rhoV: %0.16Lg pL: %g pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
                 
                 // Update the guess for liquid density using density solver with vapor pressure 
                 // and liquid density guess from ancillaries, but only if the pressures are not 
                 // close to each other
-                if (std::abs((SatL->p()-SatV->p())/SatV->p()) > 0.1){
-                    HEOS.specify_phase(iphase_liquid);
-                    rhoL = SatL->solver_rho_Tp(T, SatV->p(), rhoL);
+                if (std::abs((SatL->p()-p)/p) > 0.1){
+                    for (int iii = 0; iii < 6; ++iii){
+                        // Use Halley's method to update the liquid density (http://en.wikipedia.org/wiki/Halley%27s_method)
+                        long double f = SatL->p()-SatV->p();
+                        long double dpdrho = SatL->first_partial_deriv(iP,iDmolar,iT);
+                        long double d2pdrho2 = SatL->second_partial_deriv(iP,iDmolar,iT,iDmolar,iT);
+                        long double deltarhoLHalley = -(2*f*dpdrho)/(2*POW2(dpdrho)-f*d2pdrho2);
+                        rhoL += deltarhoLHalley;
+                        if (std::abs(deltarhoLHalley/rhoL) < DBL_EPSILON){
+                            break;
+                        }
+                        SatL->update_DmolarT_direct(rhoL, T);
+                    }
+                }
+
+                SatL->update_DmolarT_direct(rhoL, T);
+                SatV->update_DmolarT_direct(rhoV, T);
+                    
+                // Update the guess for vapor density using density solver with vapor pressure 
+                // and density guess from ancillaries, but only if the pressures are not 
+                // close to each other
+                if (std::abs((SatV->p()-p)/p) > 0.1){
+                    HEOS.specify_phase(iphase_gas);
+                    rhoV = SatV->solver_rho_Tp(T, p, rhoV);
                     HEOS.unspecify_phase();
                 }
             }
@@ -975,10 +1015,10 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         rhoV = 0.99*crit.rhomolar;
     }
 
-    SatL->update(DmolarT_INPUTS, rhoL, T);
-    SatV->update(DmolarT_INPUTS, rhoV, T);
+    SatL->update_DmolarT_direct(rhoL, T);
+    SatV->update_DmolarT_direct(rhoV, T);
+    if (get_debug_level() > 0){ std::cout << format("[Maxwell] starting T: %0.16Lg rhoL: %Lg rhoV: %Lg pL: %Lg pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
     do{
-    
         pL = SatL->p(); pV = SatV->p();
         long double vL = 1/SatL->rhomolar(), vV = 1/SatV->rhomolar();
         long double gL = SatL->gibbsmolar(), gV = SatV->gibbsmolar();
@@ -1009,14 +1049,16 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
             DeltavL = -0.5*B/A + sign((alphaL - alphaV)/alphaV)*sqrt(sqrt_arg);
         }
         else{
-            DeltavL = -0.5*B/A + sign((alphaL - alphaV)/alphaV)*1e-10*sqrt(sqrt_arg*1e20);
+            // Scale the argument to sqrt() function to make it about 1.0, and divide by sqrt(factor) to yield a factor of 1
+            long double powerfactor = -log10(sqrt_arg);
+            DeltavL = -0.5*B/A + sign((alphaL - alphaV)/alphaV)*sqrt(sqrt_arg*powerfactor)/sqrt(powerfactor);
         }
         DeltavV = (pL - pV + alphaL*DeltavL)/alphaV;
         
         // Update the densities of liquid and vapor
         rhoL = 1/(vL + DeltavL);
         rhoV = 1/(vV + DeltavV);
-        if (B*B/(4*A*A)-C/A < 0){
+        if (B*B/(4*A*A)-C/A < -10*DBL_EPSILON){
             rhoL *= 1.01;
             rhoV /= 1.01;
         }
@@ -1027,13 +1069,22 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         
         // Calculate the error (here the relative error in pressure)
         error = std::abs((SatL->p() - SatV->p())/SatL->p());
+
+        if (get_debug_level() > 0){ std::cout << format("[Maxwell] rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %g dvV/vV: %g pL: %g pV: %g\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV);}
+
+        // If the step size is small, start a counter to allow the other density 
+        // to be corrected a few times
+        if (std::abs(DeltavL*rhoL) < 10*LDBL_EPSILON || std::abs(DeltavV*rhoV) < 10*LDBL_EPSILON){
+            small_step_count++;
+        }
         
         iter++;
         if (iter > 100){
             throw SolutionError(format("Maxwell solver did not converge after 100 iterations"));
         }
     }
-    while (error > 1e-10 && std::abs(DeltavL) > 10*DBL_EPSILON*std::abs(1/rhoL) && std::abs(DeltavV) > 10*DBL_EPSILON*std::abs(1/rhoV));
+    while ((SatL->p() < 0) || (error > 1e-8 && small_step_count < 4));
+    if (get_debug_level() > 0){ std::cout << format("[Maxwell] pL: %g pV: %g\n", SatL->p(), SatV->p());}
 }
 
 void SaturationSolvers::x_and_y_from_K(long double beta, const std::vector<long double> &K, const std::vector<long double> &z, std::vector<long double> &x, std::vector<long double> &y)
