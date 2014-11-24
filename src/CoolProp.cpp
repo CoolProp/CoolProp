@@ -474,6 +474,7 @@ std::string get_BibTeXKey(std::string Ref, std::string key)
     else if (!key.compare("ECS_VISCOSITY_FITS")){ throw NotImplementedError(); }
     else if (!key.compare("ECS_CONDUCTIVITY_FITS")){ throw NotImplementedError(); }
     else if (!key.compare("SURFACE_TENSION")){ return HEOS.get_components()[0]->ancillaries.surface_tension.BibTeX;}
+    else if (!key.compare("MELTING_LINE")){ return HEOS.get_components()[0]->ancillaries.melting_line.BibTeX;}
     else{ return "Bad key";}
 }
 std::string get_global_param_string(std::string ParamName)
@@ -596,6 +597,7 @@ std::string phase_lookup_string(phases Phase)
         case iphase_not_imposed:
             return "not_imposed";
     }
+    throw ValueError("I should never be thrown");
 }
 std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName)
 {
