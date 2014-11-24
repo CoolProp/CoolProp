@@ -69,7 +69,7 @@ class FluidInfoTableGenerator(object):
         rhoc_mass = CoolProp.CoolProp.PropsSI(self.name,'rhomass_critical')
         rhoc_molar = CoolProp.CoolProp.PropsSI(self.name,'rhomolar_critical')
         CAS = CoolProp.CoolProp.get_fluid_param_string(self.name, "CAS")
-        ASHRAE = CoolProp.CoolProp.get_fluid_param_string(self.name, "ASHRAE")
+        ASHRAE = CoolProp.CoolProp.get_fluid_param_string(self.name, "ASHRAE34")
             
         args = dict(mm = tos(molar_mass),
                     Tt = tos(Tt),
