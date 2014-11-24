@@ -516,8 +516,7 @@ std::vector<double> PropsSI(const std::string &Output, const std::string &Name1,
     std::vector<double> out(Prop1.size(), _HUGE);
     if (Prop1.size() != Prop2.size())
     {
-        std::cout << format("Sizes of Prop1 [%d] and Prop2 [%d] to PropsSI are not the same", Prop1.size(), Prop2.size()) << std::endl;
-        return out;
+        throw ValueError(format("Sizes of Prop1 [%d] and Prop2 [%d] to PropsSI are not the same", Prop1.size(), Prop2.size()));
     }
     for (std::size_t i = 0; i < Prop1.size(); ++i)
     {
