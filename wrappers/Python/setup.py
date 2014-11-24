@@ -48,7 +48,7 @@ if __name__=='__main__':
     USING_CMAKE = cmake_compiler or cmake_bitness
         
     cmake_config_args = []
-    cmake_build_args = ['--config','"Release"']
+    
     STATIC_LIBRARY_BUILT = False
     if USING_CMAKE:
         
@@ -61,33 +61,47 @@ if __name__=='__main__':
                 shutil.rmtree('cmake_build')
                 print('removed.')
             
+        cmake_config_args, cmake_build_args = [], []
         if cmake_compiler == 'vc9':
+            cmake_build_args = ['--config','"Release"']
             if cmake_bitness == '32':
-                generator = ['-G','"Visual Studio 9 2008"']
+                cmake_config_args = ['-G','"Visual Studio 9 2008"']
             elif cmake_bitness == '64':
-                generator = ['-G','"Visual Studio 9 2008 Win64"']
+                cmake_config_args = ['-G','"Visual Studio 9 2008 Win64"']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'vc10':
+            cmake_build_args = ['--config','"Release"']
             if cmake_bitness == '32':
-                generator = ['-G','"Visual Studio 10 2010"']
+                cmake_config_args = ['-G','"Visual Studio 10 2010"']
             elif cmake_bitness == '64':
-                generator = ['-G','"Visual Studio 10 2010 Win64"']
+                cmake_config_args = ['-G','"Visual Studio 10 2010 Win64"']
+            else:
+                raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
+        elif cmake_compiler == 'mingw':
+            cmake_config_args = ['-G','"MinGW Makefiles"']
+            if cmake_bitness == '32':
+                cmake_config_args += ['-DFORCE_BITNESS_32=ON']
+            elif cmake_bitness == '64':
+                cmake_config_args += ['-DFORCE_BITNESS_64=ON']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         else:
             raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
-            
+        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON']+cmake_config_args)
+        print('calling: ' + cmake_call_string)
+        
         cmake_build_dir = os.path.join('cmake_build', '{compiler}-{bitness}bit'.format(compiler=cmake_compiler, bitness=cmake_bitness))
         if not os.path.exists(cmake_build_dir):
             os.makedirs(cmake_build_dir)
-        subprocess.check_call(' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON']+generator+cmake_config_args), shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
+        
+        subprocess.check_call(cmake_call_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
         subprocess.check_call(' '.join(['cmake','--build', '.']+cmake_build_args), shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
         
         # Now find the static library that we just built
         if sys.platform == 'win32':
             static_libs = []
-            for search_suffix in ['Release/*.lib','Release/*.a', 'Debug/*.lib', 'Debug/*.a']:
+            for search_suffix in ['Release/*.lib','Release/*.a', 'Debug/*.lib', 'Debug/*.a','*.a']:
                 static_libs += glob.glob(os.path.join(cmake_build_dir,search_suffix))
         
         if len(static_libs) != 1:
