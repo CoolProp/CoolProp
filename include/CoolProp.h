@@ -79,6 +79,16 @@ You might want to start by looking at CoolProp.h
     /// An internal function to set the global warning string
     /// @param warning The string to set as the warning string
     void set_warning_string(std::string warning);
+    
+    /* \brief Extract a value from the saturation ancillary
+     * 
+     * @param fluid_name The name of the fluid to be used - HelmholtzEOS backend only
+     * @param output The desired output variable ("P" for instance for pressure)
+     * @param Q The quality, 0 or 1
+     * @param input The input variable ("T")
+     * @param value The input value
+     */
+    double saturation_ancillary(const std::string &fluid_name, const std::string &output, int Q, const std::string &input, double value);
 
     /// Get a globally-defined string
     /// @param ParamName A string, one of "version", "errstring", "warnstring", "gitrevision", "FluidsList", "fluids_list", "parameter_list"

@@ -100,7 +100,6 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, doubl
     catch(std::exception &){
         return false;
     }
-    
 }
 
 // All the function interfaces that point to the single-input Props function
@@ -134,6 +133,17 @@ EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double
     catch(std::exception &e){CoolProp::set_error_string(e.what()); return _HUGE;}
     catch(...){CoolProp::set_error_string("Undefined error"); return _HUGE;}
 }
+EXPORT_CODE double CONVENTION saturation_ancillary(const char *fluid_name, const char *output, int Q, const char *input, double value)
+{
+    try
+    {
+        std::string _output = output, _input = input;
+        double val = CoolProp::saturation_ancillary(fluid_name, _output, Q, _input, value);
+        return val;
+    }
+    catch(std::exception &e){CoolProp::set_error_string(e.what()); return _HUGE;}
+    catch(...){CoolProp::set_error_string("Undefined error"); return _HUGE;}
+}
 EXPORT_CODE double CONVENTION Props1SI(const char *FluidName, const char *Output)
 {
     std::string _Output = Output, _FluidName = FluidName;
@@ -148,7 +158,7 @@ EXPORT_CODE long CONVENTION PhaseSI(const char *Output, const char *Name1, doubl
 {
     std::string _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;
     std::string s = CoolProp::PhaseSI(_Name1, Prop1, _Name2, Prop2, _FluidName);
-    if (s.size() < n){
+    if (s.size() < static_cast<unsigned int>(n)){
         strcpy(phase, s.c_str());
         return 1;
     }
@@ -204,7 +214,7 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, 
     int key = CoolProp::get_parameter_index(param);
     if (key >= 0){
         std::string s = CoolProp::get_parameter_information(key, Output);
-        if (s.size() < n){
+        if (s.size() < static_cast<unsigned int>(n)){
             strcpy(Output, s.c_str()); 
             return 1;
         }
@@ -226,7 +236,7 @@ EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char
     catch(std::exception &){
         return 0;
     }
-    if (s.size() < n){
+    if (s.size() < static_cast<unsigned int>(n)){
         strcpy(Output, s.c_str()); 
         return 1;
     }

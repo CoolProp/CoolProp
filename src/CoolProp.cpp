@@ -793,6 +793,17 @@ bool is_valid_fluid_string(std::string &input_fluid_string)
 //        }
 //}
 //
+double saturation_ancillary(const std::string &fluid_name, const std::string &output, int Q, const std::string &input, double value){
+    
+    // Generate the state instance
+    std::vector<std::string> names(1, fluid_name);
+    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(names));
+    
+    parameters iInput = get_parameter_index(input);
+    parameters iOutput = get_parameter_index(output);
+    
+    return HEOS->saturation_ancillary(iOutput, Q, iInput, value);
+}
 void set_reference_stateS(std::string Ref, std::string reference_state)
 {
     shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;

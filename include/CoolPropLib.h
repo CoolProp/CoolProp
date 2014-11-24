@@ -163,6 +163,16 @@
     /// Set the debug level
     /// @param level The level of the verbosity for the debugging output (0-10) 0: no debgging output
     EXPORT_CODE void CONVENTION set_debug_level(int level);
+    
+    /* \brief Extract a value from the saturation ancillary
+     * 
+     * @param fluid_name The name of the fluid to be used - HelmholtzEOS backend only
+     * @param output The desired output variable ("P" for instance for pressure)
+     * @param Q The quality, 0 or 1
+     * @param input The input variable ("T")
+     * @param value The input value
+     */
+    EXPORT_CODE double CONVENTION saturation_ancillary(const char *fluid_name, const char *output, int Q, const char *input, double value);
 
     // ---------------------------------
     //        Humid Air Properties
@@ -199,6 +209,8 @@
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
     EXPORT_CODE void CONVENTION haprops_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char *Name3, double *Prop3, double *output);
+    
+    
 
 
     // *************************************************************************************
