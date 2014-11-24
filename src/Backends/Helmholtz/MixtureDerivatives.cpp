@@ -172,6 +172,7 @@ long double MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(HelmholtzEOSMixtur
 }
 long double MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
+    if (xN_flag == XN_INDEPENDENT){throw ValueError("dln_fugacity_dxj__constT_rho_xi only valid for xN_DEPENDENT for now");}
     long double rhor = HEOS.Reducing->rhormolar(HEOS.get_const_mole_fractions());
     long double Tr = HEOS.Reducing->Tr(HEOS.get_const_mole_fractions());
     long double dTrdxj = HEOS.Reducing->dTrdxi__constxj(HEOS.get_const_mole_fractions(),j,xN_flag);
@@ -185,15 +186,17 @@ long double MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixt
     const std::vector<long double> &x = HEOS.get_const_mole_fractions();
     std::size_t N = x.size();
     
-    // This is a term to which some more might be added depending on i and j
-    long double line3 = 1/rhor*HEOS.Reducing->drhormolardxi__constxj(x, j, xN_flag) + 1/Tr*HEOS.Reducing->dTrdxi__constxj(x, j, xN_flag);
+    long double line3 = 1/rhor*HEOS.Reducing->drhormolardxi__constxj(x, j, xN_flag) + 1/Tr*HEOS.Reducing->dTrdxi__constxj(x, j, xN_flag);;
     
+    // This is a term to which some more might be added depending on i and j
     if (i == N-1){
         line3 += -1/x[N-1];
     }
     else if (i == j){
         line3 += 1/x[j];
     }
+    else{}
+
     return line1 + line2 + line3 + line4;
 }
 
@@ -739,7 +742,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                         
                         // These derivatives depend on both the i and j indices
                         for (std::size_t j = 0; j < z.size(); ++j){
-                            
+                            if (xN_flag == XN_DEPENDENT && j == z.size()){ continue; }
                             shared_ptr<HelmholtzEOSMixtureBackend> HEOS, HEOS_pluszj, HEOS_minuszj;
                             HEOS_pluszj.reset(new HelmholtzEOSMixtureBackend(names));
                             HEOS_pluszj->specify_phase(iphase_gas); 
@@ -765,6 +768,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             ss1a << "dln_fugacity_dxj__constT_rho_xi, i=" << i << ", j=" << j;
                             SECTION(ss1a.str(), "")
                             {
+                                if (xN_flag == XN_INDEPENDENT){continue;}
                                 if (j == z.size()-1){break;}
                                 double analytic = MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rHEOS, i, j, xN_flag);
                                 double v1 = log(MixtureDerivatives::fugacity_i(rHEOS_pluszj, i, xN_flag));
