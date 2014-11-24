@@ -24,7 +24,9 @@ Fluid Information
 REFPROP Validation Data
 =======================
 
-.. note: You can download the script that generated the following figure here: :download:`(link to script)<REFPROPplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<REFPROPplots/{fluid:s}.pdf>`. 
+.. note::
+
+    You can download the script that generated the following figure here: :download:`(link to script)<REFPROPplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<REFPROPplots/{fluid:s}.pdf>`. 
 
 .. image:: REFPROPplots/{fluid:s}.png
 
