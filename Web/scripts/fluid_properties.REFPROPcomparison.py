@@ -1,5 +1,5 @@
-from CPWeb.BibtexTools import getCitationOrAlternative, getBibtexParser
-from CPWeb.SphinxTools import FluidGenerator
+from __future__ import print_function
+
 import os.path
 import CoolProp
 import subprocess
@@ -72,10 +72,10 @@ if not os.path.exists(plots_path):
     os.makedirs(plots_path)
     
 for fluid in CoolProp.__fluids__:
-    print 'fluid:', fluid
+    print('fluid:', fluid)
     file_string = template.format(fluid = fluid)
     file_path = os.path.join(plots_path, fluid + '.py')
-    print 'Writing to', file_path
+    print('Writing to', file_path)
     with open(file_path, 'w') as fp:
         fp.write(file_string)
     subprocess.check_call('python ' + file_path, cwd = plots_path, stdout = sys.stdout, stderr = sys.stderr)
