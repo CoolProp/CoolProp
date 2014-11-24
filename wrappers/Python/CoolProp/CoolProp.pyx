@@ -217,16 +217,18 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
     # Six parameter inputs
     elif in7 is None:
         if iterable(in3) and iterable(in5):
+            if len(in3) != len(in5):
+                raise TypeError("Sizes of Prop1 {n1:d} and Prop2 {n2:d} to PropsSI are not the same".format(n1 = len(in3), n2 = len(in5)))
             # This version takes iterables
-            return _PropsSII(in1, in2, in3, in4, in5, in6)
+            return ndarray_or_iterable(_PropsSII(in1, in2, in3, in4, in5, in6))
         elif iterable(in3) and not(iterable(in5)):
             i5 = [in5]*len(in3)
             # This version takes iterables
-            return _PropsSII(in1, in2, in3, in4, i5, in6)
+            return ndarray_or_iterable(_PropsSII(in1, in2, in3, in4, i5, in6))
         elif iterable(in5) and not(iterable(in3)):
             i3 = [in3]*len(in5)
             # This version takes iterables
-            return _PropsSII(in1, in2, i3, in4, in5, in6)
+            return ndarray_or_iterable(_PropsSII(in1, in2, i3, in4, in5, in6))
         else:
             # This version takes doubles
             val = _PropsSI(in1, in2, in3, in4, in5, in6)
