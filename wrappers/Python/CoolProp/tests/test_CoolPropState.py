@@ -1,7 +1,5 @@
 from __future__ import division, print_function
 import CoolProp.CoolProp as CP
-import CoolProp.unit_systems_constants
-from CoolProp import param_constants
 from CoolProp.State import State
 
 def first_derivative(S, func, iVal, Val, iConstant, Constant, epsilon = 1e-3):
