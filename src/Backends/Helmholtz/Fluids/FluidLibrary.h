@@ -1022,7 +1022,7 @@ protected:
         else{
             if (get_debug_level() > 0){ std::cout << "Missing sLV ancillary for fluid " << fluid.name; }
         }
-        if (!ValidNumber(fluid.ancillaries.sL.get_Tmin())){
+        if (!ValidNumber(fluid.ancillaries.sL.get_Tmin()) && get_debug_level()>0){
             std::cout << "Tmin invalid for sL for " << fluid.name << std::endl;
         }
         
