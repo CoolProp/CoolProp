@@ -163,7 +163,8 @@ class Configuration
         /// Add an item to the configuration
         void add_item(ConfigurationItem item)
         {
-            items.insert(std::make_pair<configuration_keys, ConfigurationItem>(item.get_key(), item));
+            std::pair<configuration_keys, ConfigurationItem> pair(item.get_key(), item);
+            items.insert(pair);
         };
         
         /// Return a reference to all of the items
