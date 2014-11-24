@@ -21,16 +21,18 @@ CP = CoolProp.CoolProp
 fluid = '{fluid:s}'
 
 fig, ax = plt.subplots()
+plt.ylim(10**-18, 10**2)
 
 if CP.get_fluid_param_string(fluid, "REFPROP_name") == 'N/A': 
+    ax.set_xlim(0,1)
     # Not in REFPROP
     xlims = ax.get_xlim()
     ylims = ax.get_ylim()
     ax.plot([xlims[0],xlims[1]],[ylims[0],ylims[1]],lw = 3,c = 'r')
     ax.plot([xlims[0],xlims[1]],[ylims[1],ylims[0]],lw = 3,c = 'r')
     
-    x = 0.5*xlims[0]+0.5*xlims[1]
-    y = 0.5*ylims[0]+0.5*ylims[1]
+    x = 0.5
+    y = (ylims[0]*ylims[1])**0.5
         
     ax.text(x,y,'Not\\nin\\nREFPROP',ha='center',va ='center',bbox = dict(fc = 'white'))
 else:
@@ -61,7 +63,7 @@ else:
     
 plt.xlabel(r'Reduced density [$\\rho/\\rho_c$]')
 plt.ylabel(r'Relative deviation $(y_{{CP}}/y_{{RP}}-1)\\times 100$ [%]')
-plt.ylim(10**-18, 10**2)
+
 ax.set_yscale('log')
 plt.savefig(fluid+'.png', dpi = 100)
 plt.savefig(fluid+'.pdf')
@@ -78,4 +80,4 @@ for fluid in CoolProp.__fluids__:
     print('Writing to', file_path)
     with open(file_path, 'w') as fp:
         fp.write(file_string)
-    subprocess.check_call('python ' + file_path, cwd = plots_path, stdout = sys.stdout, stderr = sys.stderr)
+    subprocess.check_call('python ' + fluid + '.py', cwd = plots_path, stdout = sys.stdout, stderr = sys.stderr)
