@@ -98,7 +98,7 @@ def run_script(path):
 
 # The normal tasks that are carried out each time the script runs
 normal_tasks = [ "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py"]
-expensive_tasks = [ "fluid_properties.Incompressibles.sh", "logo_2014.py"]
+expensive_tasks = [ "fluid_properties.Incompressibles.sh", "logo_2014.py", "fluid_properties.REFPROPcomparison.py"]
 #
 print "Executing the normal scripts for generating static files."
 for script in normal_tasks:
