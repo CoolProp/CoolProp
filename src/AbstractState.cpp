@@ -195,7 +195,10 @@ double AbstractState::trivial_keyed_output(int key)
         return this->calc_GWP20();
     case iGWP500:
         return this->calc_GWP500();
-    
+    case ifraction_min:
+        return this->calc_fraction_min();
+    case ifraction_max:
+        return this->calc_fraction_max();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));
     }

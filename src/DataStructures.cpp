@@ -65,6 +65,8 @@ parameter_info parameter_info_list[] = {
     parameter_info(iP_max, "P_max","O","Pa","Maximum pressure limit",true),
     parameter_info(iP_critical, "p_critical","O","Pa","Pressure at the critical point",true),
     parameter_info(iP_triple, "p_triple","O","Pa","Pressure at the triple point (pure only)",true),
+    parameter_info(ifraction_min, "fraction_min","O","-","Fraction (mole, mass, volume) minimum value for incompressible solutions",true),
+    parameter_info(ifraction_max, "fraction_max","O","-","Fraction (mole, mass, volume) maximum value for incompressible solutions",true),
     
     parameter_info(ispeed_sound, "speed_of_sound","O","m/s","Speed of sound",false),
     parameter_info(iviscosity, "viscosity","O","Pa-s","Viscosity",false),

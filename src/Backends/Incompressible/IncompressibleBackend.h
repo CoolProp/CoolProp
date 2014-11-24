@@ -119,6 +119,9 @@ public:
     long double calc_cvmass(void){return fluid->cv(_T, _p, _fractions[0]);};
     long double calc_Tmax(void){return fluid->getTmax();};
     long double calc_Tmin(void){return fluid->getTmin();};
+    
+    long double calc_fraction_min(void){return fluid->getxmin();};
+    long double calc_fraction_max(void){return fluid->getxmax();};
 };
 
 } /* namespace CoolProp */

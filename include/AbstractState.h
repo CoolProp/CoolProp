@@ -267,6 +267,10 @@ protected:
     virtual std::vector<long double> calc_mole_fractions_liquid(void){throw NotImplementedError("calc_mole_fractions_liquid is not implemented for this backend");};
     virtual std::vector<long double> calc_mole_fractions_vapor(void){throw NotImplementedError("calc_mole_fractions_vapor is not implemented for this backend");};
 
+    /// Get the minimum fraction (mole, mass, volume) for incompressible fluid
+    virtual long double calc_fraction_min(void){throw NotImplementedError("calc_fraction_min is not implemented for this backend");};
+    /// Get the maximum fraction (mole, mass, volume) for incompressible fluid
+    virtual long double calc_fraction_max(void){throw NotImplementedError("calc_fraction_max is not implemented for this backend");};
 public:
 
     AbstractState(){};

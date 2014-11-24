@@ -116,6 +116,10 @@ enum parameters{
     idBvirial_dT, 
     idCvirial_dT, 
     iZ,
+    
+    // Accessors for incompressibles
+    ifraction_min,
+    ifraction_max,
 
     // Environmental parameters
     iGWP20, ///< The 20-year global warming potential
