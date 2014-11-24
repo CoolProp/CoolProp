@@ -122,7 +122,7 @@ cpdef tuple generate_update_pair(constants_header.parameters key1, double value1
     This function will generate an input pair to the update() function given the key, value pairs for both inputs
     """
     cdef constants_header.input_pairs pair
-    cdef double out1, out2
+    cdef double out1 = -1000000000, out2 = -100000000000
     pair = _generate_update_pair(key1, value1, key2, value2, out1, out2)
     return pair, out1, out2
 
