@@ -184,8 +184,14 @@ EXPORT_CODE long CONVENTION get_param_index(const char * param){
 }
 EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Output, int n)
 {
-    std::string s = CoolProp::get_global_param_string(param);
-    if (s.size() < n){
+    std::string s;
+    try{
+        s = CoolProp::get_global_param_string(param);
+    }
+    catch(std::exception &){
+        return 0;
+    }
+    if (s.size() < static_cast<unsigned int>(n)){
         strcpy(Output, s.c_str()); 
         return 1;
     }
@@ -213,7 +219,13 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, 
 }
 EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char * Output, int n)
 {
-    std::string s = CoolProp::get_fluid_param_string(std::string(fluid), std::string(param));
+    std::string s;
+    try{
+        s = CoolProp::get_fluid_param_string(std::string(fluid), std::string(param));
+    }
+    catch(std::exception &){
+        return 0;
+    }
     if (s.size() < n){
         strcpy(Output, s.c_str()); 
         return 1;

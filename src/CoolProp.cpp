@@ -238,7 +238,8 @@ void extract_backend(const std::string &fluid_string, std::string &backend, std:
 {
     std::size_t i;
     std::string _fluid_string = fluid_string;
-    // For backwards compatibility reasons, if "REFPROP-" or "REFPROP-MIX:" start the fluid_string, replace them with "REFPROP::"
+    // For backwards compatibility reasons, if "REFPROP-" or "REFPROP-MIX:" start 
+    // the fluid_string, replace them with "REFPROP::"
     if (_fluid_string.find("REFPROP-MIX:") == 0)
     {
         _fluid_string.replace(0, 12, "REFPROP::");
@@ -882,9 +883,7 @@ std::string get_BibTeXKey(std::string Ref, std::string key)
 }
 std::string get_global_param_string(std::string ParamName)
 {
-    if (!ParamName.compare("version")){
-        return version;
-    }
+    if (!ParamName.compare("version")){ return version; }
     else if (!ParamName.compare("gitrevision")){
         return gitrevision;
     }
@@ -915,9 +914,10 @@ std::string get_global_param_string(std::string ParamName)
         return get_csv_parameter_list();
     }
     else{
-        return format("Input value [%s] is invalid",ParamName.c_str()).c_str();
+        throw ValueError(format("Input value [%s] is invalid",ParamName.c_str()));
     }
 };
+
 std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
 {
     try{
@@ -925,7 +925,7 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(comps));
 
         CoolProp::CoolPropFluid *fluid = HEOS->get_components()[0];
-
+                
         if (!ParamName.compare("aliases"))
         {
             return strjoin(fluid->aliases, ", ");
@@ -945,6 +945,7 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
         else if (ParamName.find("BibTeX") == 0) // Starts with "BibTeX"
         {
             std::vector<std::string> parts = strsplit(ParamName,'-');
+            if (parts.size() != 2){ throw ValueError(format("Unable to parse BibTeX string %s",ParamName.c_str()));}
             // 
             std::string item = parts[1];
             if (item == "EOS"){
@@ -966,20 +967,20 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
                 return fluid->transport.BibTeX_conductivity;
             }
             else{
-                return format("Could not match BibTeX item: %s", item.c_str());
+                throw ValueError(format("Could not match BibTeX item: %s", item.c_str()));
             }
         }
         else
         {
-            return format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str(),FluidName.c_str());
+            throw ValueError(format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str(),FluidName.c_str()));
         }
     }
     catch(std::exception &e)
     {
-        return(std::string("CoolProp error: ").append(e.what()));
+        throw ValueError(format("CoolProp error: %s", e.what()));
     }
     catch(...){
-        return(std::string("CoolProp error: Indeterminate error"));
+        throw ValueError("CoolProp error: Indeterminate error");
     }
 }
 std::string phase_lookup_string(phases Phase)
@@ -1023,3 +1024,35 @@ std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &N
 }
 
 } /* namespace CoolProp */
+
+#if defined(ENABLE_CATCH)
+#include "catch.hpp"
+TEST_CASE("Check inputs to get_global_param_string","[get_global_param_string]")
+{
+    const int num_good_inputs = 7;
+    std::string good_inputs[num_good_inputs] = {"version", "gitrevision", "fluids_list", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list","parameter_list"};
+    std::ostringstream ss3c;
+    for (int i = 0; i<num_good_inputs; ++i){
+        ss3c << "Test for" << good_inputs[i];
+        SECTION(ss3c.str(), ""){          
+            CHECK_NOTHROW(CoolProp::get_global_param_string(good_inputs[i]));  
+        };
+    }
+    CHECK_THROWS(CoolProp::get_global_param_string(""));
+};
+TEST_CASE("Check inputs to get_fluid_param_string", "[get_fluid_param_string]")
+{
+    const int num_good_inputs = 10;
+    std::string good_inputs[num_good_inputs] = {"aliases", "CAS", "ASHRAE34", "REFPROPName", "BibTeX-CONDUCTIVITY", "BibTeX-EOS", "BibTeX-CP0", "BibTeX-SURFACE_TENSION","BibTeX-MELTING_LINE","BibTeX-VISCOSITY"};
+    std::ostringstream ss3c;
+    for (int i = 0; i < num_good_inputs; ++i){
+        ss3c << "Test for" << good_inputs[i];
+        SECTION(ss3c.str(), ""){          
+            CHECK_NOTHROW(CoolProp::get_fluid_param_string("Water", good_inputs[i]));
+        };
+    }
+    CHECK_THROWS(CoolProp::get_fluid_param_string("","aliases"));
+    CHECK_THROWS(CoolProp::get_fluid_param_string("Water",""));
+    CHECK_THROWS(CoolProp::get_fluid_param_string("Water","BibTeX-"));
+};
+#endif
