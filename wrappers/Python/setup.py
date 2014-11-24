@@ -86,6 +86,14 @@ if __name__=='__main__':
                 cmake_config_args += ['-DFORCE_BITNESS_64=ON']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
+        elif cmake_compiler == 'default':
+            cmake_config_args = []
+            if cmake_bitness == '32':
+                cmake_config_args += ['-DFORCE_BITNESS_32=ON']
+            elif cmake_bitness == '64':
+                cmake_config_args += ['-DFORCE_BITNESS_64=ON']
+            else:
+                raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         else:
             raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
         cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON']+cmake_config_args)
@@ -99,10 +107,9 @@ if __name__=='__main__':
         subprocess.check_call(' '.join(['cmake','--build', '.']+cmake_build_args), shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
         
         # Now find the static library that we just built
-        if sys.platform == 'win32':
-            static_libs = []
-            for search_suffix in ['Release/*.lib','Release/*.a', 'Debug/*.lib', 'Debug/*.a','*.a']:
-                static_libs += glob.glob(os.path.join(cmake_build_dir,search_suffix))
+        static_libs = []
+        for search_suffix in ['Release/*.lib','Release/*.a', 'Debug/*.lib', 'Debug/*.a','*.a']:
+            static_libs += glob.glob(os.path.join(cmake_build_dir,search_suffix))
         
         if len(static_libs) != 1:
             raise ValueError("Found more than one static library using CMake build.  Found: "+str(static_libs))
