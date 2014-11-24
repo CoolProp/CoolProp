@@ -377,6 +377,17 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
     // We are going to let the factory function load the state
     State.reset(AbstractState::factory(backend, fluid_string));
     
+    // Set the fraction for the state
+    if (State->using_mole_fractions()){
+        State->set_mole_fractions(fractions);
+    } else if (State->using_mass_fractions()){
+        State->set_mass_fractions(fractions);
+    } else if (State->using_volu_fractions()){
+        State->set_volu_fractions(fractions);
+    } else {
+        if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
+    }
+    
     // First check if it is a trivial input (critical/max parameters for instance)
     if (is_valid_parameter(Output, iOutput))
     {
@@ -392,15 +403,7 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
     parameters iName1 = get_parameter_index(Name1);
     parameters iName2 = get_parameter_index(Name2);
 
-    if (State->using_mole_fractions()){
-        State->set_mole_fractions(fractions);
-    } else if (State->using_mass_fractions()){
-        State->set_mass_fractions(fractions);
-    } else if (State->using_volu_fractions()){
-        State->set_volu_fractions(fractions);
-    } else {
-        if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
-    }
+    
 
     // Obtain the input pair
     CoolProp::input_pairs pair = generate_update_pair(iName1, Prop1, iName2, Prop2, x1, x2);

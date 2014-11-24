@@ -120,6 +120,7 @@ enum parameters{
     // Accessors for incompressibles
     ifraction_min,
     ifraction_max,
+    iT_freeze,
 
     // Environmental parameters
     iGWP20, ///< The 20-year global warming potential

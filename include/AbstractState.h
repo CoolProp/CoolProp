@@ -271,6 +271,7 @@ protected:
     virtual long double calc_fraction_min(void){throw NotImplementedError("calc_fraction_min is not implemented for this backend");};
     /// Get the maximum fraction (mole, mass, volume) for incompressible fluid
     virtual long double calc_fraction_max(void){throw NotImplementedError("calc_fraction_max is not implemented for this backend");};
+    virtual long double calc_T_freeze(void){throw NotImplementedError("calc_T_freeze is not implemented for this backend");};
 public:
 
     AbstractState(){};
