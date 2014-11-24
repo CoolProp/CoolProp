@@ -760,7 +760,6 @@ long double TransportRoutines::conductivity_hardcoded_water(HelmholtzEOSMixtureB
 
     Tbar = HEOS.T()/Tstar;
     rhobar = HEOS.keyed_output(CoolProp::iDmass)/rhostar;
-    double rho = HEOS.keyed_output(CoolProp::iDmass);
 
     // Dilute gas contribution
     lambdabar_0 = sqrt(Tbar)/(2.443221e-3+1.323095e-2/Tbar+6.770357e-3/pow(Tbar,2)-3.454586e-3/pow(Tbar,3)+4.096266e-4/pow(Tbar,4));
@@ -933,6 +932,67 @@ long double TransportRoutines::conductivity_hardcoded_helium(HelmholtzEOSMixture
     return lambda_0+lambda_e+lambda_c;
 }
 
+void TransportRoutines::conformal_state_solver(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference, long double &T0, long double &rhomolar0)
+{
+    int iter = 0;
+    double resid = 9e30, resid_old = 9e30;
+    long double alphar = HEOS.alphar();
+    long double Z = HEOS.keyed_output(iZ);
+    
+    Eigen::Vector2d r;
+    Eigen::Matrix2d J;
+    // Update the reference fluid with the conformal state
+    HEOS_Reference.update(DmolarT_INPUTS, rhomolar0, T0);
+    do{
+        long double dtau_dT = -HEOS_Reference.T_critical()/(T0*T0);
+        long double ddelta_drho = 1/HEOS_Reference.rhomolar_critical();
+        // Independent variables are T0 and rhomolar0, residuals are matching alphar and Z
+        r(0) = HEOS_Reference.alphar() - alphar;
+        r(1) = HEOS_Reference.keyed_output(iZ) - Z;
+        J(0,0) = HEOS_Reference.dalphar_dTau()*dtau_dT;
+        J(0,1) = HEOS_Reference.dalphar_dDelta()*ddelta_drho;
+        // Z = 1+delta*dalphar_ddelta(tau,delta)
+        // dZ_dT
+        J(1,0) = HEOS_Reference.delta()*HEOS_Reference.d2alphar_dDelta_dTau()*dtau_dT;
+        // dZ_drho
+        J(1,1) = (HEOS_Reference.delta()*HEOS_Reference.d2alphar_dDelta2()+HEOS_Reference.dalphar_dDelta())*ddelta_drho;
+        // Step in v obtained from Jv = -r
+        Eigen::Vector2d v = J.colPivHouseholderQr().solve(-r);
+        bool good_solution = false;
+        double T0_init = HEOS_Reference.T(), rhomolar0_init = HEOS_Reference.rhomolar();
+        // Calculate the old residual after the last step
+        resid_old = sqrt(POW2(r(0)) + POW2(r(1)));
+        for (double frac = 1.0; frac > 0.001; frac /= 2)
+        {
+            try{
+                // Calculate new values
+                double T_new = T0_init + frac*v(0);
+                double rhomolar_new = rhomolar0_init + frac*v(1);
+                // Update state with step
+                HEOS_Reference.update(DmolarT_INPUTS, rhomolar_new, T_new);
+                resid = sqrt(POW2(HEOS_Reference.alphar() - alphar) + POW2(HEOS_Reference.keyed_output(iZ) - Z));
+                if (resid > resid_old){
+                    continue;
+                }
+                good_solution = true;
+                T0 = T_new; rhomolar0 = rhomolar_new;
+                break;
+            }
+            catch(std::exception &e){
+                continue;
+            }
+        }
+        if (!good_solution){
+            throw ValueError(format("Not able to get a solution" ));
+        }
+        iter++;
+        if (iter > 50){
+            throw ValueError(format("conformal_state_solver took too many iterations; residual is %g; prior was %g", resid, resid_old));
+        }
+    }
+    while(std::abs(resid) > 1e-9);
+}
+
 long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference)
 {
     // Collect some parameters
@@ -955,8 +1015,9 @@ long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
     // The dilute gas portion for the fluid of interest [Pa-s]
     long double eta_dilute = viscosity_dilute_kinetic_theory(HEOS);
 
-    /// \todo To be solved for...
-    // TODO: To be solved for...
+    // ************************************
+    // Start with a guess for theta and phi
+    // ************************************
     long double theta = 1;
     long double phi = 1;
 
@@ -967,10 +1028,20 @@ long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
     // To be solved for
     long double T0 = HEOS.T()/f;
     long double rhomolar0 = HEOS.rhomolar()*h;
+    
+    // **************************
+    // Solver for conformal state
+    // **************************
+    
+    conformal_state_solver(HEOS, HEOS_Reference, T0, rhomolar0);
 
     // Update the reference fluid with the conformal state
     HEOS_Reference.update(DmolarT_INPUTS, rhomolar0*psi, T0);
-
+    
+    // **********************
+    // Remaining calculations
+    // **********************
+    
     // The reference fluid's contribution to the viscosity [Pa-s]
     long double eta_resid = HEOS_Reference.calc_viscosity_background();
 
@@ -1024,8 +1095,10 @@ long double TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS
     // The dilute gas contribution to the thermal conductivity [W/m/K]
     long double lambda_dilute = 15.0e-3/4.0*R_kJkgK*eta_dilute;
 
-    /// \todo To be solved for...
-    // TODO: To be solved for...
+    // ************************************
+    // Start with a guess for theta and phi
+    // ************************************
+    
     long double theta = 1;
     long double phi = 1;
 
@@ -1033,9 +1106,15 @@ long double TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS
     long double f = Tc/Tc0*theta;
     long double h = rhocmolar0/rhocmolar*phi; // Must be the ratio of MOLAR densities!!
 
-    // To be solved for
+    // Initial values for the conformal state
     long double T0 = HEOS.T()/f;
     long double rhomolar0 = HEOS.rhomolar()*h;
+    
+    // **************************
+    // Solver for conformal state
+    // **************************
+    
+    conformal_state_solver(HEOS, HEOS_Reference, T0, rhomolar0);
 
     // Update the reference fluid with the conformal state
     HEOS_Reference.update(DmolarT_INPUTS, rhomolar0*psi, T0);

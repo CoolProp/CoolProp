@@ -212,6 +212,8 @@ protected:
     virtual long double calc_dBvirial_dT(void){throw NotImplementedError("calc_dBvirial_dT is not implemented for this backend");};
     /// Using this backend, calculate the derivative dC/dT
     virtual long double calc_dCvirial_dT(void){throw NotImplementedError("calc_dCvirial_dT is not implemented for this backend");};
+    /// Using this backend, calculate the compressibility factor Z \f$ Z = p/(\rho R T) \f$
+    virtual long double calc_compressibility_factor(void){throw NotImplementedError("calc_compressibility_factor is not implemented for this backend");};
 
     /// Using this backend, get the name of the fluid
     virtual std::string calc_name(void){throw NotImplementedError("calc_name is not implemented for this backend");};
@@ -386,7 +388,8 @@ public:
     double dBvirial_dT(void);
     double Cvirial(void);
     double dCvirial_dT(void);
-
+    /// Return the compressibility factor \f$ Z = p/(rho R T) \f$
+    double compressibility_factor(void);
     /// Return the molar enthalpy in J/mol
     double hmolar(void);
     /// Return the mass enthalpy in J/kg

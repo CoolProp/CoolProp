@@ -216,6 +216,10 @@ public:
 
     static long double conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference);
 
+    /* \brief Solver for the conformal state for ECS model
+     * 
+     */
+    static void conformal_state_solver(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference, long double &T0, long double &rhomolar0);
 
 }; /* class TransportRoutines */
 

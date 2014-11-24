@@ -279,6 +279,8 @@ double AbstractState::keyed_output(int key)
         return conductivity();
     case iPhase:
         return phase();
+    case iZ:
+        return compressibility_factor();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for keyed_output",key,get_parameter_information(key,"short").c_str()));
     }
@@ -388,6 +390,8 @@ double AbstractState::Bvirial(void){ return calc_Bvirial(); }
 double AbstractState::Cvirial(void){ return calc_Cvirial(); }
 double AbstractState::dBvirial_dT(void){ return calc_dBvirial_dT(); }
 double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
+double AbstractState::compressibility_factor(void){ return calc_compressibility_factor(); }
+
 
 //    // ----------------------------------------
 //    // Smoothing functions for density

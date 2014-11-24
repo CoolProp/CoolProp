@@ -256,6 +256,8 @@ public:
 
     void update_states();
     
+    long double calc_compressibility_factor(void){return 1+delta()*dalphar_dDelta();};
+    
     void calc_phase_envelope(const std::string &type);
     
     void mass_to_molar_inputs(CoolProp::input_pairs &input_pair, long double &value1, long double &value2);
