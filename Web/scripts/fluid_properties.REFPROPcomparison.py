@@ -80,4 +80,4 @@ for fluid in CoolProp.__fluids__:
     print('Writing to', file_path)
     with open(file_path, 'w') as fp:
         fp.write(file_string)
-    subprocess.check_call('python ' + fluid + '.py', cwd = plots_path, stdout = sys.stdout, stderr = sys.stderr)
+    subprocess.check_call('python ' + fluid + '.py', cwd = plots_path, stdout = sys.stdout, stderr = sys.stderr, shell = True)
