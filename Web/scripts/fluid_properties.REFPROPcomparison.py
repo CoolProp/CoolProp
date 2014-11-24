@@ -7,8 +7,6 @@ import sys
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 root_dir = os.path.abspath(os.path.join(web_dir, '..')) 
-csvfile = os.path.join(web_dir,'fluid_properties','PurePseudoPure.csv')
-indexfile = os.path.join(web_dir,'fluid_properties', 'fluidstoc.rst')
 fluids_path = os.path.join(web_dir,'fluid_properties','fluids')
 plots_path = os.path.join(web_dir,'fluid_properties','fluids','REFPROPplots')
 
@@ -59,7 +57,8 @@ else:
         CPdata = CP.PropsSI(key, 'T', T, 'Dmolar', rho, fluid) - CP.PropsSI(key, 'T', T, 'Dmolar', 1, fluid)
         plt.plot(rho/rhoc, np.abs(RPdata/CPdata-1)*100, label = key, dashes = [1, 1+1.5*i], lw = 1.5)
 
-ax.legend(loc='best', ncol = 2)
+    ax.legend(loc='best', ncol = 2)
+    
 plt.xlabel(r'Reduced density [$\\rho/\\rho_c$]')
 plt.ylabel(r'Relative deviation $(y_{{CP}}/y_{{RP}}-1)\\times 100$ [%]')
 plt.ylim(10**-18, 10**2)
@@ -73,9 +72,10 @@ if not os.path.exists(plots_path):
     os.makedirs(plots_path)
     
 for fluid in CoolProp.__fluids__:
-    print fluid
+    print 'fluid:', fluid
     file_string = template.format(fluid = fluid)
     file_path = os.path.join(plots_path, fluid + '.py')
+    print 'Writing to', file_path
     with open(file_path, 'w') as fp:
         fp.write(file_string)
     subprocess.check_call('python ' + file_path, cwd = plots_path, stdout = sys.stdout, stderr = sys.stderr)
