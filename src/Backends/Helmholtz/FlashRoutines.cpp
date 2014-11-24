@@ -246,37 +246,11 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         else if (!(HEOS.components[0]->pEOS->pseudo_pure))
         {
             // Set some imput options
-            SaturationSolvers::saturation_T_pure_options options;
+            SaturationSolvers::saturation_T_pure_Akasaka_options options;
             options.use_guesses = false;
-            double increment = 0.2;
-            try{
-                for (double omega = 1.0; omega > 0; omega -= increment){
-                    try{
-                        options.omega = omega;
-                        
-                        // Actually call the solver
-                        SaturationSolvers::saturation_T_pure(HEOS, HEOS._T, options);
-                        
-                        // If you get here, there was no error, all is well
-                        break;
-                    }
-                    catch(std::exception &){
-                        if (omega < 1.1*increment){
-                            throw;
-                        }
-                        // else we are going to try again with a smaller omega
-                    }
-                }
-            }
-            catch(std::exception &){
-                try{
-                    // We may need to polish the solution at low pressure
-                    SaturationSolvers::saturation_T_pure_1D_P(HEOS, T, options);
-                }
-                catch(std::exception &){
-                    throw;
-                }
-            }
+
+            // Actually call the solver
+            SaturationSolvers::saturation_T_pure_Maxwell(HEOS, HEOS._T, options);
             
             HEOS._p = HEOS._Q*HEOS.SatV->p() + (1- HEOS._Q)*HEOS.SatL->p();
             HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
