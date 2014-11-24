@@ -33,6 +33,10 @@
 #include "Backends/Helmholtz/MixtureParameters.h"
 #include "DataStructures.h"
 
+#if defined(ENABLE_CATCH)
+    #include "catch.hpp"
+#endif
+
 namespace CoolProp
 {
 
@@ -47,185 +51,12 @@ int get_debug_level(void){return debug_level;}
 #include "gitrevision.h" // Contents are like "std::string gitrevision = "aa121435436ggregrea4t43t433";"
 #include "cpversion.h" // Contents are like "char version [] = "2.5";"
 
-//int global_Phase = -1;
-
 void set_warning_string(std::string warning){
     warning_string = warning;
 }
 void set_error_string(std::string error){
     error_string = error;
 }
-//
-//static int IsCoolPropFluid(std::string FluidName)
-//{
-//    // Try to get the fluid from Fluids by name
-//    try
-//    {
-//        pFluid = Fluids.get_fluid(FluidName);
-//    }
-//    catch (NotImplementedError &)
-//    {
-//        return false;
-//    }
-//    // If NULL, didn't find it (or its alias)
-//    if (pFluid!=NULL)
-//    {
-//        return true;
-//    }
-//    else
-//        return false;
-//}
-//
-//static int IsBrine(const char* Ref)
-//{
-//    // First check whether it is one of the Brines that does
-//    // not have a pure-fluid equivalent in CoolProp
-//    if (
-//        strcmp(Ref,"HC-10")==0 ||
-//        strncmp(Ref,"PG-",3)==0 ||
-//        strncmp(Ref,"EG-",3)==0 ||
-//        strncmp(Ref,"EA-",3)==0 ||
-//        strncmp(Ref,"MA-",3)==0 ||
-//        strncmp(Ref,"Glycerol-",9)==0 ||
-//        strncmp(Ref,"K2CO3-",6)==0 ||
-//        strncmp(Ref,"CaCl2-",6)==0 ||
-//        strncmp(Ref,"MgCl2-",6)==0 ||
-//        strncmp(Ref,"NaCl-",5)==0 ||
-//        strncmp(Ref,"KAC-",4)==0 ||
-//        strncmp(Ref,"KFO-",4)==0 ||
-//        strncmp(Ref,"LiCl-",4)==0 ||
-//        strncmp(Ref,"NH3/H2O-",8)==0
-//       )
-//    {
-//        return 1;
-//    }
-//    // Then check for diluants that are also pure fluids in CoolProp
-//    else if ( (strncmp(Ref,"Methanol-",9)==0 && Ref[8] == '-') ||
-//              (strncmp(Ref,"Ethanol-",8)==0 && Ref[7] == '-') ||
-//              (strncmp(Ref,"NH3-",4)==0 && Ref[3] == '-')
-//        )
-//    {
-//        return 1;
-//    }
-//    else
-//    {
-//        return 0;
-//    }
-//}
-//
-//long getFluidType(std::string FluidName){
-//    if (IsREFPROP(FluidName)) { return FLUID_TYPE_REFPROP;}
-//    else if(IsIncompressibleLiquid(FluidName)){ return FLUID_TYPE_INCOMPRESSIBLE_LIQUID;}
-//    // TODO SOLUTION: Check if working
-//    else if(IsIncompressibleSolution(FluidName)){ return FLUID_TYPE_INCOMPRESSIBLE_SOLUTION; }
-//    else {
-//        // Try to get the index of the fluid
-//        long iFluid = get_Fluid_index(FluidName);
-//        // If iFluid is greater than -1, it is a CoolProp Fluid, otherwise not
-//        if (iFluid > -1) {
-//            // Get a pointer to the fluid object
-//            pFluid = get_fluid(iFluid);
-//            if (pFluid->pure())    { return FLUID_TYPE_PURE;}
-//            else { return FLUID_TYPE_PSEUDOPURE; }
-//        } else {
-//            throw ValueError(format("Bad Fluid name [%s] - not a CoolProp fluid",FluidName.c_str()));
-//        }
-//    }
-//    return -1;
-//}
-//
-//EXPORT_CODE int CONVENTION IsFluidType(const char *Ref, const char *Type)
-//{
-//    pFluid = Fluids.get_fluid(Ref);
-//
-//    if (IsBrine(Ref)){ // TODO Solution: Remove this part
-//        if (!strcmp(Type,"Brine")){
-//            return 1;
-//        }
-//        else{
-//            return 0;
-//        }
-//    }
-//    else if (IsIncompressibleSolution(Ref)){
-//        if (!strcmp(Type,"Solution")){
-//            return 1;
-//        }
-//        else{
-//            return 0;
-//        }
-//    }
-//    else if (IsIncompressibleLiquid(Ref)){
-//        if (!strcmp(Type,"Liquid")){
-//            return 1;
-//        }
-//        else{
-//            return 0;
-//        }
-//    }
-//    else if (IsREFPROP(Ref)){
-//        if (!strcmp(Type,"PureFluid")){
-//            return 1;
-//        }
-//        else{
-//            return 0;
-//        }
-//    }
-//    else if (!pFluid->pure()){
-//        if (!strcmp(Type,"PseudoPure") || !strcmp(Type,"PseudoPureFluid")){
-//            return 1;
-//        }
-//        else{
-//            return 0;
-//        }
-//    }
-//    else if (pFluid->pure()){
-//        if (!strcmp(Type,"PureFluid")){
-//            return 1;
-//        }
-//        else{
-//            return 0;
-//        }
-//    }
-//    else
-//    {
-//        return 0;
-//    }
-//}
-//
-//
-//std::string Phase_Trho(std::string Fluid, double T, double rho)
-//{
-//    try{
-//        // Try to load the CoolProp Fluid
-//        pFluid = Fluids.get_fluid(Fluid);
-//        double pL,pV,rhoL,rhoV;
-//        return pFluid->phase_Trho(T,rho, pL, pV, rhoL, rhoV);
-//    }
-//    catch(NotImplementedError &){
-//        return std::string("");
-//    }
-//    return std::string("");
-//}
-//
-//std::string Phase(std::string Fluid, double T, double p)
-//{
-//    try{
-//        // Try to load the CoolProp Fluid
-//        pFluid = Fluids.get_fluid(Fluid);
-//        double pL,pV,rhoL,rhoV;
-//        return pFluid->phase_Tp(T, p, pL, pV, rhoL, rhoV);
-//    }
-//    catch(NotImplementedError &){
-//        return std::string("");
-//    }
-//    return std::string("");
-//}
-//
-//std::string Phase_Tp(std::string Fluid, double T, double p)
-//{
-//    return Phase(Fluid,T,p);
-//}
-//
 
 // Return true if the string has "BACKEND::*" format where * signifies a wildcard
 bool has_backend_in_string(const std::string &fluid_string, std::size_t &i)
@@ -546,253 +377,6 @@ bool is_valid_fluid_string(std::string &input_fluid_string)
         return false;
     }
 }
-
-//EXPORT_CODE double CONVENTION IProps(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid)
-//{
-//    Prop1 = convert_from_unit_system_to_SI(iName1, Prop1, get_standard_unit_system());
-//    Prop2 = convert_from_unit_system_to_SI(iName2, Prop2, get_standard_unit_system());
-//    double out = IPropsSI(iOutput,iName1,Prop1,iName2,Prop2,iFluid);
-//    return convert_from_SI_to_unit_system(iOutput,out,get_standard_unit_system());
-//}
-//double _CoolProp_Fluid_PropsSI(long iOutput, long iName1, double Prop1, long iName2, double Prop2, Fluid *pFluid)
-//{
-//    double val = _HUGE, T = _HUGE;
-//    // This private method uses the indices directly for speed
-//
-//    if (get_debug_level()>3){
-//        std::cout << format("%s:%d: _CoolProp_Fluid_PropsSI(%d,%d,%g,%d,%g,%s)\n",__FILE__,__LINE__,iOutput,iName1, Prop1, iName2, Prop2, pFluid->get_name().c_str()).c_str();
-//    }
-//    if (iName1 == iT){
-//        T = Prop1;}
-//    else if (iName2 == iT){
-//        T = Prop2;}
-//
-//    // Generate a State instance wrapped around the Fluid instance
-//    CoolPropStateClassSI CPS(pFluid);
-//
-//    // Check if it is an output that doesn't require a state input
-//    // Deal with it and return
-//    switch (iOutput)
-//    {
-//        case iI:
-//            {
-//            if (!ValidNumber(T)){throw ValueError(format("T must be provided as an input to use this output").c_str());}
-//            return CPS.pFluid->surface_tension_T(T);
-//            }
-//        case iRhosatLanc:
-//            {
-//            if (!ValidNumber(T)){throw ValueError(format("T must be provided as an input to use this output").c_str());}
-//            return CPS.pFluid->rhosatL(T);
-//            }
-//        case iRhosatVanc:
-//            {
-//            if (!ValidNumber(T)){throw ValueError(format("T must be provided as an input to use this output").c_str());}
-//            return CPS.pFluid->rhosatV(T);
-//            }
-//        case iPsatLanc:
-//            {
-//            if (!ValidNumber(T)){throw ValueError(format("T must be provided as an input to use this output").c_str());}
-//            if (CPS.pFluid->pure()){
-//                return CPS.pFluid->psat(T);
-//            }
-//            else{
-//                return CPS.pFluid->psatL(T);
-//            }
-//            }
-//        case iPsatVanc:
-//            {
-//            if (!ValidNumber(T)){throw ValueError(format("T must be provided as an input to use this output").c_str());}
-//            if (CPS.pFluid->pure()){
-//                return CPS.pFluid->psat(T);
-//            }
-//            else{
-//                return CPS.pFluid->psatV(T);
-//            }
-//            }
-//        case iMM:
-//        case iPcrit:
-//        case iTcrit:
-//        case iTtriple:
-//        case iPtriple:
-//      case iPmax:
-//      case iTmax:
-//        case iRhocrit:
-//        case iTmin:
-//        case iAccentric:
-//        case iPHASE_LIQUID:
-//        case iPHASE_GAS:
-//        case iPHASE_SUPERCRITICAL:
-//        case iPHASE_TWOPHASE:
-//        case iGWP20:
-//        case iGWP100:
-//        case iGWP500:
-//        case iODP:
-//        case iCritSplineT:
-//        case iScrit:
-//        case iHcrit:
-//        case iTreduce:
-//        case iRhoreduce:
-//            return CPS.keyed_output(iOutput);
-//    }
-//
-//    // Update the class
-//    CPS.update(iName1,Prop1,iName2,Prop2);
-//
-//    // Debug
-//    if (get_debug_level()>9){std::cout << format("%s:%d: State update successful\n",__FILE__,__LINE__).c_str();}
-//
-//    // Get the output
-//    val = CPS.keyed_output(iOutput);
-//
-//    // Debug
-//    if (get_debug_level()>5){std::cout << format("%s:%d: _CoolProp_Fluid_PropsSI returns: %g\n",__FILE__,__LINE__,val).c_str();}
-//
-//    // Return the value
-//    return val;
-//}
-//EXPORT_CODE double CONVENTION IPropsSI(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid)
-//{
-//    pFluid = Fluids.get_fluid(iFluid);
-//    // Didn't work
-//    if (pFluid == NULL){
-//        err_string=std::string("CoolProp error: ").append(format("%d is an invalid fluid index to IProps",iFluid));
-//        return _HUGE;
-//    }
-//    else{
-//        // In this function the error catching happens;
-//        try{
-//            // This is already converted to the right units since we take in SI units
-//            return _CoolProp_Fluid_PropsSI(iOutput,iName1,Prop1,iName2,Prop2,pFluid);
-//        }
-//        catch(std::exception &e){
-//            err_string=std::string("CoolProp error: ").append(e.what());
-//            return _HUGE;
-//        }
-//        catch(...){
-//            err_string=std::string("CoolProp error: Indeterminate error");
-//            return _HUGE;
-//        }
-//    }
-//}
-
-///// Calculate some interesting derivatives
-//double _CoolProp_Deriv_Terms(long iTerm, double T, double rho, Fluid * pFluid)
-//{
-//    double val = _HUGE;
-//    // This private method uses the indices directly for speed
-//
-//    if (get_debug_level()>3){
-//        std::cout<<__FILE__<<" _CoolProp_Deriv_Terms return: "<<val<<std::endl;
-//    }
-//
-//    switch (iTerm) {
-//        case iDERdh_dp__rho:
-//        case iDERdh_dp__v:
-//        case iDERZ:
-//        case iDERdZ_dDelta:
-//        case iDERdZ_dTau:
-//        case iDERB:
-//        case iDERdB_dT:
-//        case iDERC:
-//        case iDERdC_dT:
-//        case iDERphir:
-//        case iDERdphir_dTau:
-//        case iDERdphir_dDelta:
-//        case iDERd2phir_dTau2:
-//        case iDERd2phir_dDelta2:
-//        case iDERd2phir_dDelta_dTau:
-//        case iDERd3phir_dDelta3:
-//        case iDERd3phir_dDelta2_dTau:
-//        case iDERd3phir_dDelta_dTau2:
-//        case iDERd3phir_dTau3:
-//        case iDERphi0:
-//        case iDERdphi0_dTau:
-//        case iDERd2phi0_dTau2:
-//        case iDERdphi0_dDelta:
-//        case iDERd2phi0_dDelta2:
-//        case iDERd2phi0_dDelta_dTau:
-//        case iDERd3phi0_dTau3:
-//            {
-//            // Generate a State instance wrapped around the Fluid instance
-//            CoolPropStateClass CPS(pFluid);
-//
-//            // Force the update to consider the inputs as single-phase inputs
-//            CPS.flag_SinglePhase =  true;
-//
-//            // Update the class
-//            CPS.update(iT,T,iD,rho);
-//
-//            // Get the output value
-//            val = CPS.keyed_output(iTerm);
-//            break;
-//            }
-//
-//        case iDERrho_smoothed:
-//        case iDERdrho_smoothed_dh:
-//        case iDERdrho_smoothed_dp:
-//        case iDERdrhodh_constp_smoothed:
-//        case iDERdrhodp_consth_smoothed:
-//        case iDERIsothermalCompressibility:
-//            {
-//            // Generate a State instance wrapped around the Fluid instance
-//            CoolPropStateClass CPS(pFluid);
-//
-//            // Update the class
-//            CPS.update(iT,T,iD,rho);
-//
-//            // Get the output value
-//            val = CPS.keyed_output(iTerm);
-//            break;
-//            }
-//
-//        default:
-//            throw ValueError(format("Sorry DerivTerms is a work in progress, your derivative term [%d] is not available!",iTerm));
-//    }
-//
-//    if (get_debug_level()>5){
-//        std::cout<<__FILE__<<" _CoolProp_Deriv_Terms return: "<<val<<std::endl;
-//    }
-//    // Return the value
-//    return val;
-//}
-//
-//// Define the functions from the header
-//double DerivTerms(long iTerm, double T, double rho, Fluid * pFluid){
-//    return _CoolProp_Deriv_Terms(iTerm,T,rho,pFluid);
-//}
-//double DerivTerms(std::string Term, double T, double rho, std::string Fluidname){
-//    if (get_debug_level()>5){
-//            std::cout<<__FILE__<<": "<<Term.c_str()<<",T="<<T<<",rho="<<rho<<","<<Fluidname.c_str()<<std::endl;
-//        }
-//        /*
-//        Derivatives are only supported for CoolProp fluids
-//        */
-//        if (IsCoolPropFluid(Fluidname))
-//        {
-//            pFluid = Fluids.get_fluid(Fluidname);
-//            // for compatibility, replace B and C with VB and VC
-//            if ((!Term.compare("B")) || (!Term.compare("C"))) {
-//                Term = std::string("V").append(Term);
-//            }
-//            // Convert all the parameters to integers
-//            long iOutput = get_param_index(Term);
-//            if (iOutput<0)
-//                throw ValueError(format("Your output key [%s] is not valid. (names are case sensitive)",Term.c_str()));
-//
-//            if (T<=0)
-//                throw ValueError(format("Your input temperature [%f] is not valid.",T));
-//
-//            if (rho<=0)
-//                throw ValueError(format("Your input density [%f] is not valid.",rho));
-//            // Call the internal method that uses the parameters converted to longs
-//            return _CoolProp_Deriv_Terms(iOutput,T,rho,pFluid);
-//        }
-//        else
-//        {
-//            throw ValueError(format("Your fluid name [%s] is not a CoolProp fluid.",Fluidname.c_str()));
-//        }
-//}
-//
 double saturation_ancillary(const std::string &fluid_name, const std::string &output, int Q, const std::string &input, double value){
     
     // Generate the state instance
@@ -899,14 +483,10 @@ std::string get_global_param_string(std::string ParamName)
         return gitrevision;
     }
     else if (!ParamName.compare("errstring")){
-        std::string temp = error_string;
-        error_string = "";
-        return temp;
+        std::string temp = error_string; error_string = ""; return temp;
     }
     else if (!ParamName.compare("warnstring")){
-        std::string temp = warning_string;
-        warning_string = "";
-        return temp;
+        std::string temp = warning_string; warning_string = ""; return temp;
     }
     else if (!ParamName.compare("FluidsList") || !ParamName.compare("fluids_list") || !ParamName.compare("fluidslist")){
         return get_fluid_list();
@@ -920,14 +500,28 @@ std::string get_global_param_string(std::string ParamName)
     else if (!ParamName.compare("mixture_binary_pairs_list")){
         return get_csv_mixture_binary_pairs();
     }
-    else if (!ParamName.compare("parameter_list") )
-    {
+    else if (!ParamName.compare("parameter_list") ){
         return get_csv_parameter_list();
     }
     else{
         throw ValueError(format("Input value [%s] is invalid",ParamName.c_str()));
     }
 };
+#if defined(ENABLE_CATCH)
+TEST_CASE("Check inputs to get_global_param_string","[get_global_param_string]")
+{
+    const int num_good_inputs = 7;
+    std::string good_inputs[num_good_inputs] = {"version", "gitrevision", "fluids_list", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list","parameter_list"};
+    std::ostringstream ss3c;
+    for (int i = 0; i<num_good_inputs; ++i){
+        ss3c << "Test for" << good_inputs[i];
+        SECTION(ss3c.str(), ""){          
+            CHECK_NOTHROW(CoolProp::get_global_param_string(good_inputs[i]));  
+        };
+    }
+    CHECK_THROWS(CoolProp::get_global_param_string(""));
+};
+#endif
 
 std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
 {
@@ -937,63 +531,48 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
 
         CoolProp::CoolPropFluid *fluid = HEOS->get_components()[0];
                 
-        if (!ParamName.compare("aliases"))
-        {
+        if (!ParamName.compare("aliases")){
             return strjoin(fluid->aliases, ", ");
         }
-        else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number"))
-        {
+        else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number")){
             return fluid->CAS;
         }
-        else if (!ParamName.compare("ASHRAE34"))
-        {
+        else if (!ParamName.compare("ASHRAE34")){
             return fluid->environment.ASHRAE34;
         }
-        else if (!ParamName.compare("REFPROPName") || !ParamName.compare("REFPROP_name") || !ParamName.compare("REFPROPname"))
-        {
+        else if (!ParamName.compare("REFPROPName") || !ParamName.compare("REFPROP_name") || !ParamName.compare("REFPROPname")){
             return fluid->REFPROPname;
         }
         else if (ParamName.find("BibTeX") == 0) // Starts with "BibTeX"
         {
             std::vector<std::string> parts = strsplit(ParamName,'-');
             if (parts.size() != 2){ throw ValueError(format("Unable to parse BibTeX string %s",ParamName.c_str()));}
-            // 
-            std::string item = parts[1];
-            if (item == "EOS"){
-                return fluid->pEOS->BibTeX_EOS;
-            }
-            else if (item == "CP0"){
-                return fluid->pEOS->BibTeX_CP0;
-            }
-            else if (item == "SURFACE_TENSION"){
-                return fluid->ancillaries.surface_tension.BibTeX;
-            }
-            else if (item == "MELTING_LINE"){
-                return fluid->ancillaries.melting_line.BibTeX;
-            }
-            else if (item == "VISCOSITY"){
-                return fluid->transport.BibTeX_viscosity;
-            }
-            else if (item == "CONDUCTIVITY"){
-                return fluid->transport.BibTeX_conductivity;
-            }
-            else{
-                throw ValueError(format("Could not match BibTeX item: %s", item.c_str()));
-            }
+            return get_BibTeXKey( FluidName, parts[1]);
         }
-        else
-        {
+        else{
             throw ValueError(format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str(),FluidName.c_str()));
         }
     }
-    catch(std::exception &e)
-    {
-        throw ValueError(format("CoolProp error: %s", e.what()));
-    }
-    catch(...){
-        throw ValueError("CoolProp error: Indeterminate error");
-    }
+    catch(std::exception &e){ throw ValueError(format("CoolProp error: %s", e.what())); }
+    catch(...){ throw ValueError("CoolProp error: Indeterminate error"); }
 }
+#if defined(ENABLE_CATCH)
+TEST_CASE("Check inputs to get_fluid_param_string", "[get_fluid_param_string]")
+{
+    const int num_good_inputs = 10;
+    std::string good_inputs[num_good_inputs] = {"aliases", "CAS", "ASHRAE34", "REFPROPName", "BibTeX-CONDUCTIVITY", "BibTeX-EOS", "BibTeX-CP0", "BibTeX-SURFACE_TENSION","BibTeX-MELTING_LINE","BibTeX-VISCOSITY"};
+    std::ostringstream ss3c;
+    for (int i = 0; i < num_good_inputs; ++i){
+        ss3c << "Test for" << good_inputs[i];
+        SECTION(ss3c.str(), ""){          
+            CHECK_NOTHROW(CoolProp::get_fluid_param_string("Water", good_inputs[i]));
+        };
+    }
+    CHECK_THROWS(CoolProp::get_fluid_param_string("","aliases"));
+    CHECK_THROWS(CoolProp::get_fluid_param_string("Water",""));
+    CHECK_THROWS(CoolProp::get_fluid_param_string("Water","BibTeX-"));
+};
+#endif
 std::string phase_lookup_string(phases Phase)
 {
     switch (Phase)
@@ -1035,35 +614,3 @@ std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &N
 }
 
 } /* namespace CoolProp */
-
-#if defined(ENABLE_CATCH)
-#include "catch.hpp"
-TEST_CASE("Check inputs to get_global_param_string","[get_global_param_string]")
-{
-    const int num_good_inputs = 7;
-    std::string good_inputs[num_good_inputs] = {"version", "gitrevision", "fluids_list", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list","parameter_list"};
-    std::ostringstream ss3c;
-    for (int i = 0; i<num_good_inputs; ++i){
-        ss3c << "Test for" << good_inputs[i];
-        SECTION(ss3c.str(), ""){          
-            CHECK_NOTHROW(CoolProp::get_global_param_string(good_inputs[i]));  
-        };
-    }
-    CHECK_THROWS(CoolProp::get_global_param_string(""));
-};
-TEST_CASE("Check inputs to get_fluid_param_string", "[get_fluid_param_string]")
-{
-    const int num_good_inputs = 10;
-    std::string good_inputs[num_good_inputs] = {"aliases", "CAS", "ASHRAE34", "REFPROPName", "BibTeX-CONDUCTIVITY", "BibTeX-EOS", "BibTeX-CP0", "BibTeX-SURFACE_TENSION","BibTeX-MELTING_LINE","BibTeX-VISCOSITY"};
-    std::ostringstream ss3c;
-    for (int i = 0; i < num_good_inputs; ++i){
-        ss3c << "Test for" << good_inputs[i];
-        SECTION(ss3c.str(), ""){          
-            CHECK_NOTHROW(CoolProp::get_fluid_param_string("Water", good_inputs[i]));
-        };
-    }
-    CHECK_THROWS(CoolProp::get_fluid_param_string("","aliases"));
-    CHECK_THROWS(CoolProp::get_fluid_param_string("Water",""));
-    CHECK_THROWS(CoolProp::get_fluid_param_string("Water","BibTeX-"));
-};
-#endif
