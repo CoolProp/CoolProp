@@ -246,10 +246,13 @@ if __name__=='__main__':
         ext_modules = cythonize(ext_modules)
 
     # Trying to change the standard library for C++
-    macVersion = platform.mac_ver()[0].split('.')
-    if int(macVersion[0]) >= 10 and int(macVersion[1]) > 8:
-        #os.environ["CC"] = "gcc-4.8"
-        os.environ["CXX"] = "g++"
+    try:
+        macVersion = platform.mac_ver()[0].split('.')
+        if int(macVersion[0]) >= 10 and int(macVersion[1]) > 8:
+            #os.environ["CC"] = "gcc-4.8"
+            os.environ["CXX"] = "g++"
+    except:
+        pass
 
     try:
         setup (name = 'CoolProp',
