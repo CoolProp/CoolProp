@@ -486,7 +486,7 @@ TEST_CASE("Check that all phases are descibed","[phase_index]")
             int key;
             CHECK_NOTHROW(stringrepr = CoolProp::get_phase_short_desc(static_cast<CoolProp::phases>(i)));
             CAPTURE(stringrepr);
-            CHECK_NOTHROW(key = CoolProp::get_parameter_index(stringrepr));
+            CHECK_NOTHROW(key = CoolProp::get_phase_index(stringrepr));
             CAPTURE(key);
             CHECK(key == i);
         }
