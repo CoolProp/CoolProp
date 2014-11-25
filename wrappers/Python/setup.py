@@ -249,8 +249,9 @@ if __name__=='__main__':
     try:
         macVersion = platform.mac_ver()[0].split('.')
         if int(macVersion[0]) >= 10 and int(macVersion[1]) > 8:
-            #os.environ["CC"] = "gcc-4.8"
+            os.environ["CC"] = "g++"
             os.environ["CXX"] = "g++"
+            print('switching compiler to g++ for OSX')
     except:
         pass
 
