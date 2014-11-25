@@ -4,15 +4,15 @@
 Available Wrappers
 ******************
 
-CoolProp at its core is a C++ library, but it can be of interest to use this code base from other programming environments.  For that reason, wrappers have been constructed for most of the programming languages of technical interest to allow users to seamlessly interface CoolProp and existing codebases.  
+CoolProp at its core is a C++ library, but it can be of interest to use this code base from other programming environments.  For that reason, wrappers have been constructed for most of the programming languages of technical interest to allow users to seamlessly interface CoolProp and existing codebases.
 
 Downloads and instructions for each wrapper are included in the page for the wrapper given in the table below.
 
 ==============================================  ===========================  =======================================
 Target                                          Operating Systems            Notes
 ==============================================  ===========================  =======================================
-:ref:`Static library <static_library>`          linux, OSX, win              
-:ref:`Shared library (DLL) <shared_libraries>`  linux, OSX, win              
+:ref:`Static library <static_library>`          linux, OSX, win
+:ref:`Shared library (DLL) <shared_libraries>`  linux, OSX, win
 :ref:`Python <Python>`                          linux, OSX, win              Wrapper is Cython based
 :ref:`Octave <Octave>`                          linux, OSX, win              Wrapper is SWIG based
 :ref:`C# <Csharp>`                              linux, OSX, win              Wrapper is SWIG based
@@ -22,8 +22,8 @@ Target                                          Operating Systems            Not
 :ref:`Modelica <Modelica>`                      linux, OSX, win
 :ref:`PHP <PHP>`                                linux, OSX, win              Mostly used on linux
 :ref:`Javascript <Javascript>`                  cross-platform               Works in all internet browsers
-:ref:`Labview <Labview>`                        windows only               
-:ref:`Maple <Maple>`                            linux, OSX, win                     
+:ref:`Labview <Labview>`                        windows only
+:ref:`Maple <Maple>`                            linux, OSX, win
 :ref:`Mathematica <Mathematica>`
 :ref:`FORTRAN <FORTRAN>`                        linux, OSX, win
 :ref:`EES <EES>`                                windows only
@@ -50,12 +50,12 @@ On Windows, download the newest binary installer for CMake from `CMake downloads
 
     C:\Users\XXXX>cmake -version
     cmake version 2.8.12.2
-    
+
 For git, your best best is the installer from http://msysgit.github.io/.  Check that at the command prompt you can do something like::
 
     C:\Users\XXXX>git --version
     git version 1.9.4.msysgit.0
-    
+
 For 7-zip, download the installer from http://www.7-zip.org/ .  Check that at the command prompt you can do something like::
 
     C:\Users\XXXX>7z
@@ -72,23 +72,23 @@ If you want to build 64-bit extensions, you MUST install professional versions o
 All three compilers should co-exist happily on the path, so you should be fine installing all three, but they are rather sizeable installs.
 
 Linux
------    
+-----
 On debian based linux distributions (ubuntu, etc.), you can simply do::
 
     sudo apt-get install cmake git g++ p7zip
-    
+
 although ``git`` is probably already packaged with your operating system; ``g++`` probably isn't
 
 OSX
 ---
 OSX should come with a c++ compiler (clang), for git and cmake your best bet is `Homebrew <http://brew.sh/>`_.  With Homebrew installed, you can just do::
 
-    sudo brew install cmake git p7zip
+    brew install cmake git p7zip
 
 If you have never done any command-line compilation before on OSX, chances are that you do not have the utilities needed. Thus you need to first install Xcode: see the description on the page http://guide.macports.org/#installing.xcode . After installing, you need to accept the license by running the following command in the Terminal::
 
-   xcodebuild -license
-   
+    xcodebuild -license
+
 and explicitly typing "agree" before closing. Then you can use the compiler from the command line.
 
 .. toctree::
