@@ -9,7 +9,7 @@ Automatic installation
 
 Using the ``pip`` installation program, you can install CoolProp v5 from the development server using::
 
-    pip install --find-links https://www.coolprop.dreamhosters.com:8010/binaries/Python/ -U --force-reinstall CoolProp
+    pip install --find-links http://www.coolprop.dreamhosters.com:8010/binaries/Python/ -U --force-reinstall CoolProp
     
 Or the official release can be obtained from the pypi server using::
 
