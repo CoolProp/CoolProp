@@ -58,40 +58,40 @@ master was at www.coolprop.dreamhosters.com.  The buildbot_private.py on the mas
 holds the required passwords.
 
 
-Python Slaves
+Python slaves
 -------------
 
 Based on the miniconda Python ecosystem, you can create your own virtual
 environments for building the Python wheels. This requires the following
 steps on a Windows machine::
 
-  conda create -n CoolProp27 python=2
-  conda create -n CoolProp34 python=3
-  conda install -n CoolProp27 cython pip pywin32
-  conda install -n CoolProp34 cython pip pywin32
+    conda create -n CoolProp27 python=2
+    conda create -n CoolProp34 python=3
+    conda install -n CoolProp27 cython pip pywin32
+    conda install -n CoolProp34 cython pip pywin32
 
-  activate CoolProp27
-  pip install wheel
-  deactivate
-  activate CoolProp34
-  pip install wheel
-  deactivate
+    activate CoolProp27
+    pip install wheel
+    deactivate
+    activate CoolProp34
+    pip install wheel
+    deactivate
 
 Please repeat the steps above for both 32bit and 64bit Python environments.
 
 On a Linux system, things only change a little bit::
 
-  conda create -n CoolProp27 python=2
-  conda create -n CoolProp34 python=3
-  conda install -n CoolProp27 cython pip
-  conda install -n CoolProp34 cython pip
+    conda create -n CoolProp27 python=2
+    conda create -n CoolProp34 python=3
+    conda install -n CoolProp27 cython pip
+    conda install -n CoolProp34 cython pip
 
-  source activate CoolProp27
-  pip install wheel
-  deactivate
-  source activate CoolProp34
-  pip install wheel
-  deactivate
+    source activate CoolProp27
+    pip install wheel
+    deactivate
+    source activate CoolProp34
+    pip install wheel
+    deactivate
 
 Please make sure that the standard shell ``/bin/sh`` used by the builbot is
 bash or zsh. We make use of the ``source`` command, which is not part of the
@@ -126,18 +126,91 @@ Buildbot as a service (Windows)
 On Windows, you create a batch script that activates your virtual environment
 and starts the buildslave::
 
-  @echo off
-  call "C:\Program Files (x86)\Miniconda32_27\Scripts\activate.bat" Buildbot
-  buildslave start "C:\CoolProp-slave"
+    @echo off
+    call "C:\Program Files (x86)\Miniconda32_27\Scripts\activate.bat" Buildbot
+    buildslave start "C:\CoolProp-slave"
 
 This script can then be added to the system services via::
 
-  sc create <serviceName> binpath= <pathToBatFile> DisplayName= "CoolProp Buildbot" start= auto
+    sc create <serviceName> binpath= <pathToBatFile> DisplayName= "CoolProp Buildbot" start= auto
 
 You might want to run ``services.msc`` to edit the user that runs the service. If
 you are tired of the error messages from the non-returning script, you could
 also use a service wrapper like `NSSM <http://nssm.cc/>`_ to start the script.
 
+Buildbot and launchd (Mac OS)
+-----------------------------
+As written in the `Buildbot Wiki <http://trac.buildbot.net/wiki/UsingLaunchd>`_,
+you can start your slaves automatically with a so called ``plist`` or property list.
+Place the example content below in a file called ``/Library/LaunchDaemons/org.coolprop.a-slave.plist``
+and make sure it is owned by the user ``root`` and the group ``wheel``::
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+        <key>StandardOutPath</key>
+        <string>org.coolprop.a-slave.log</string>
+        <key>StandardErrorPath</key>
+        <string>org.coolprop.a-slave-err.log</string>
+        <key>Label</key>
+        <string>org.coolprop.a-slave</string>
+        <key>Program</key>
+        <string>/Users/buildbot/bin/a-slave.command</string>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <dict>
+            <key>SuccessfulExit</key>
+            <false/>
+        </dict>
+        <key>GroupName</key>
+        <string>staff</string>
+        <key>UserName</key>
+        <string>buildbot</string>
+        <key>WorkingDirectory</key>
+        <string>/Users/buildbot/slave/logs</string>
+        <key>SessionCreate</key>
+        <true/>
+    </dict>
+    </plist>
+
+Please change the file above according to your needs and pay special attention
+to username and path definitions. The script ``a-slave.command`` that is called
+by ``launchd`` could look like this one::
+
+    #!/bin/bash
+    #
+    # Description: This file call the control script to start and
+    #              stop the buildbot slave. It stays open when being
+    #              called and waits for a signal to terminate running
+    #              and endless while-loop. After catching a signal
+    #              to terminate, it shuts down the build slave and
+    #              returns. It is a wrapper for another Bash script
+    #              allowing us to use launchd on MacOS.
+    #
+    # Author: Jorrit Wronski <jowr@mek.dtu.dk>
+    #
+    # Please remove the "Author" lines above and replace them
+    # with your own name if you copy and modify this script.
+    #
+    CTRLSCRI="/Users/username/a-slave.bsh"
+    #
+    trap "$CTRLSCRI stop; exit 0; " TERM SIGINT SIGTERM
+    #
+    $CTRLSCRI start & wait
+    # Just idle for one hour and keep the process alive
+    # waiting for SIGTERM.
+    while : ; do
+      sleep 3600 & wait
+    done
+    #
+    echo "The endless loop terminated, something is wrong here."
+    exit 1
+
+Note that this script calls another Bash script that does the actual work. We hope
+to simplify maintenance by using a common control script for Linux and MacOS as
+shown in :ref:`slavescript`.
 
 Buildbot as a daemon (Linux)
 ----------------------------
@@ -228,40 +301,58 @@ your computer. For Debian/Ubuntu, we recommend a script like::
 Which then can be added to the scheduler with ``update-rc.d buildslave defaults``.
 This should gracefully terminate the bot at shutdown and restart it again after reboot.
 To disable the service, run ``update-rc.d -f buildslave remove``. You can enable and
-disable the daemon by runnning ``update-rc.d buildslave enable|disable``. Note that the
-example above calls a user-script that activates the virtual environment and starts
-the buildslave. Such a script could look like this::
+disable the daemon by runnning ``update-rc.d buildslave enable|disable``.
 
-    #! /bin/bash
+.. _slavescript:
+
+Buildbot slave management (Mac OS and Linux)
+--------------------------------------------
+
+Note that the two examples above call a user-script to activate the virtual
+environment and start the buildslave. Such a script could look like this::
+
+    #!/bin/bash
     #
-    # Description:       This file activates the virtual environment and starts
-    #                    the buildbot slaves. It also shuts them down if the
-    #                    system is halted.
+    # Description: This file activates the virtual environment and starts
+    #              the buildbot slaves. It is also used to shut them down
+    #              during system shutdown.
     #
     # Author: Jorrit Wronski <jowr@mek.dtu.dk>
     #
     # Please remove the "Author" lines above and replace them
     # with your own name if you copy and modify this script.
     #
-    VIRTENV=/home/username/a-slave-sandbox
-    SLAVEDIR=/home/username/a-slave
+    VIRTENV="/home/username/a-slave-sandbox"
+    SLAVEDIR="/home/username/a-slave"
+    #
+    ## For virtualenv
+    #ACTICM="source $VIRTENV/bin/activate"
+    ##DEACCM="source $VIRTENV/bin/deactivate"
+    #
+    # For miniconda
+    MINICO="/home/username/miniconda/bin/activate"
+    ACTICM="source $MINICO $VIRTENV"
+    #DEACCM="source deactivate"
     #
     # Carry out specific functions when asked to by the system
     case "$1" in
       start)
         echo "Starting script buildbotslave "
-        source $VIRTENV/bin/activate
-        $VIRTENV/bin/buildslave start $SLAVEDIR
+        $ACTICM
+        buildslave start $SLAVEDIR
+        #$DEACCM
         ;;
       stop)
         echo "Stopping script buildbotslave"
-        $VIRTENV/bin/buildslave stop $SLAVEDIR
+        $ACTICM
+        buildslave stop $SLAVEDIR
+        #$DEACCM
         ;;
       restart)
         echo "Restarting script buildbotslave"
-        source $VIRTENV/bin/activate
-        $VIRTENV/bin/buildslave stop $SLAVEDIR
-        $VIRTENV/bin/buildslave start $SLAVEDIR
+        $ACTICM
+        buildslave restart $SLAVEDIR
+        #$DEACCM
         ;;
       *)
         echo "Usage: $0 {start|stop|restart}"
@@ -278,18 +369,18 @@ Setting MIME type handler
 
 To change the MIME types on the server so that unknown file types will map properly to ``application/octet-stream``, modify the ``buildbot.tac`` file to add the following block::
 
-  from twisted.web.static import File
+    from twisted.web.static import File
 
-  webdir = File("public_html")
-  webdir.contentTypes['.mexw32'] = 'application/octet-stream'
-  webdir.contentTypes['.mexw64'] = 'application/octet-stream'
-  webdir.contentTypes['.mexmaci64'] = 'application/octet-stream'
-  webdir.contentTypes['.jnilib'] = 'application/octet-stream'
-  webdir.contentTypes['.mexa64'] = 'application/octet-stream'
-  webdir.contentTypes['.oct'] = 'application/octet-stream'
-  webdir.contentTypes['.whl'] = 'application/octet-stream'
-  webdir.contentTypes['.dylib'] = 'application/octet-stream'
-  ...
+    webdir = File("public_html")
+    webdir.contentTypes['.mexw32'] = 'application/octet-stream'
+    webdir.contentTypes['.mexw64'] = 'application/octet-stream'
+    webdir.contentTypes['.mexmaci64'] = 'application/octet-stream'
+    webdir.contentTypes['.jnilib'] = 'application/octet-stream'
+    webdir.contentTypes['.mexa64'] = 'application/octet-stream'
+    webdir.contentTypes['.oct'] = 'application/octet-stream'
+    webdir.contentTypes['.whl'] = 'application/octet-stream'
+    webdir.contentTypes['.dylib'] = 'application/octet-stream'
+    ...
 
 and then do a ``buildbot restart master``
 
