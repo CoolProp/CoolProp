@@ -7,7 +7,9 @@ Documentation
 Build Sphinx documentation
 --------------------------
 
-0. On a Mac system, you should add the local string to your bash environment in ``/Users/username/.bash_profile``::
+0. On a Mac system, you need a working Latex distribution and some more command line tools that can be installed 
+   with ``brew install jpeg libpng libtiff libtool imagemagick``. Additonally, you should add the local string 
+   to your bash environment in ``/Users/username/.bash_profile``::
 
     export LC_ALL=en_US.UTF-8
     export LANG=en_US.UTF-8
