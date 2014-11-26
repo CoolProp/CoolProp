@@ -7,6 +7,12 @@ Documentation
 Build Sphinx documentation
 --------------------------
 
+0. On a Mac system, you should add the local string to your bash environment in ``/Users/username/.bash_profile``::
+
+    export LC_ALL=en_US.UTF-8
+    export LANG=en_US.UTF-8
+    
+
 1. Check out the sources in the CoolProp/Web folder::
 
     git clone https://github.com/CoolProp/CoolProp --recursive
