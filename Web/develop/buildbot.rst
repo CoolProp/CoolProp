@@ -194,6 +194,12 @@ by ``launchd`` could look like this one::
     # Please remove the "Author" lines above and replace them
     # with your own name if you copy and modify this script.
     #
+    # If you experience any problems with the PATH variable on OSX,
+    # this setting might be for you:
+    if [ -x /usr/libexec/path_helper ]; then
+      eval `/usr/libexec/path_helper -s`
+    fi
+    #
     CTRLSCRI="/Users/username/a-slave.bsh"
     #
     trap "$CTRLSCRI stop; exit 0; " TERM SIGINT SIGTERM
