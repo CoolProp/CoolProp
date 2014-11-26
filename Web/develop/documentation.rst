@@ -7,6 +7,14 @@ Documentation
 Build Sphinx documentation
 --------------------------
 
+0. On a Mac system, you need a working Latex distribution and some more command line tools that can be installed 
+   with ``brew install jpeg libpng libtiff libtool imagemagick``. Additonally, you should add the local string 
+   to your bash environment in ``/Users/username/.bash_profile``::
+
+    export LC_ALL=en_US.UTF-8
+    export LANG=en_US.UTF-8
+    
+
 1. Check out the sources in the CoolProp/Web folder::
 
     git clone https://github.com/CoolProp/CoolProp --recursive
@@ -21,6 +29,7 @@ Build Sphinx documentation
     pip install --upgrade setuptools cython
     pip install cython numpy scipy matplotlib python-dateutil pytz pandas
     pip install sphinx ipython sphinxcontrib-bibtex sphinxcontrib-doxylink sphinxcontrib-napoleon cloud-sptheme
+    pip install wxpython
 
 
 4. To build the documentation, go into the CoolProp/Web folder and run::
