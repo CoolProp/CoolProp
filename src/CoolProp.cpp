@@ -29,6 +29,7 @@
 #include "MatrixMath.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/Incompressible/IncompressibleLibrary.h"
+#include "Backends/Incompressible/IncompressibleBackend.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Helmholtz/MixtureParameters.h"
 #include "DataStructures.h"
@@ -526,10 +527,26 @@ TEST_CASE("Check inputs to get_global_param_string","[get_global_param_string]")
 
 std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
 {
+    std::string backend, fluid;
+    extract_backend(FluidName, backend, fluid);
+    if (backend == "INCOMP"){
+        try{
+            shared_ptr<CoolProp::IncompressibleBackend> INCOMP(new CoolProp::IncompressibleBackend(fluid));
+                    
+            if (!ParamName.compare("long_name")){
+                return INCOMP->calc_name();
+            }
+            else{
+                throw ValueError(format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str(),FluidName.c_str()));
+            }
+        }
+        catch(std::exception &e){ throw ValueError(format("CoolProp error: %s", e.what())); }
+        catch(...){ throw ValueError("CoolProp error: Indeterminate error"); }
+    }
+    
     try{
-        std::vector<std::string> comps(1,FluidName);
+        std::vector<std::string> comps(1, FluidName);
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(comps));
-
         CoolProp::CoolPropFluid *fluid = HEOS->get_components()[0];
                 
         if (!ParamName.compare("aliases")){
@@ -574,6 +591,7 @@ TEST_CASE("Check inputs to get_fluid_param_string", "[get_fluid_param_string]")
     CHECK_THROWS(CoolProp::get_fluid_param_string("Water","BibTeX-"));
 };
 #endif
+
 std::string phase_lookup_string(phases Phase)
 {
     switch (Phase)

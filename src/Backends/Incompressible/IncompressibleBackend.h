@@ -124,6 +124,8 @@ public:
     long double calc_fraction_max(void){return fluid->getxmax();};
     long double calc_T_freeze(void){
         return fluid->Tfreeze(_p, _fractions[0]);};
+        
+    std::string calc_name(void){return fluid->getDescription();};
 };
 
 } /* namespace CoolProp */
