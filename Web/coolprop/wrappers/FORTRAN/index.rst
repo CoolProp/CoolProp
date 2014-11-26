@@ -70,7 +70,7 @@ C) On OSX, cmake must use the true, real, gcc/g++ compiler (not clang).  Thus yo
 
     mkdir build && cd build
     mkdir gccstatic && cd gccstatic
-    cmake ../.. -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON -DCMAKE_C_COMPILER="gcc-4.9" -DCMAKE_CXX_COMPILER="g++-4.9" -DCMAKE_VERBOSE_MAKEFILE=ON
+    cmake ../.. -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON -DCMAKE_C_COMPILER="/usr/bin/gcc-4.9" -DCMAKE_CXX_COMPILER="/usr/bin/g++-4.9" -DCMAKE_VERBOSE_MAKEFILE=ON
     cmake --build .
     
 If you are using a different version of gcc, change the version number for g++ and gcc
