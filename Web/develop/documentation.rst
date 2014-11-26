@@ -21,6 +21,7 @@ Build Sphinx documentation
     pip install --upgrade setuptools cython
     pip install cython numpy scipy matplotlib python-dateutil pytz pandas
     pip install sphinx ipython sphinxcontrib-bibtex sphinxcontrib-doxylink sphinxcontrib-napoleon cloud-sptheme
+    pip install wxpython
 
 
 4. To build the documentation, go into the CoolProp/Web folder and run::
