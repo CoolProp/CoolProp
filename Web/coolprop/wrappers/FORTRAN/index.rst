@@ -28,27 +28,52 @@ On windows, the most reliable mixed compilation seems to be using the mingw-prov
     gcc (GCC) 4.8.1
     Copyright (C) 2013 Free Software Foundation, Inc.
     
+On OSX, the default compiler that comes with XCode is clang, gcc and g++ at the command prompt are just aliases to clang.  See for instance::
+
+    $ gcc --version
+    Configured with: --prefix=/Applications/Xcode.app/Contents/Developer/usr --with-gxx-include-dir=/usr/include/c++/4.2.1
+    Apple LLVM version 5.1 (clang-503.0.40) (based on LLVM 3.4svn)
+    Target: x86_64-apple-darwin13.3.0
+    Thread model: posix
+    
+The most reliable mixed compilation on linux seems to be with the true-gcc/g++ toolchain rather than clang+gfortran.  To install gcc/g++, install gcc/g++ using homebrew with something like::
+
+    brew install gcc-4.9
+    
+where you can change ``4.9`` to the most up to date version.  Search `http://braumeister.org/formula/gcc`_ for the most recipe for gcc.  Looks like ``gcc`` also works.
+    
 .. _FORTRAN95:
 
 FORTRAN 95/2003 using ISO_C_BINDING
 ===================================
 
-Build static library
---------------------
+Build static library of CoolProp
+--------------------------------
 
-On linux/OSX, start in root folder of recursively-cloned CoolProp repo and do::
+On all platforms, start in root folder of recursively-cloned CoolProp repo.
 
-    mkdir build && cd build
-    mkdir gccstatic && cd gccstatic
-    cmake ../.. -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON
-    cmake --build .
-
-On Windows, the call to CMake should be done using the MinGW generator, but otherwise the procedure is the same::
+A) On linux,  do::
 
     mkdir build && cd build
     mkdir gccstatic && cd gccstatic
-    cmake ../.. -G "MinGW Makefiles" -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON
+    cmake ../.. -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON -DCMAKE_VERBOSE_MAKEFILE=ON
     cmake --build .
+
+B) On Windows, the call to CMake should be done using the MinGW generator, but otherwise the procedure is the same::
+
+    mkdir build && cd build
+    mkdir gccstatic && cd gccstatic
+    cmake ../.. -G "MinGW Makefiles" -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON -DCMAKE_VERBOSE_MAKEFILE=ON
+    cmake --build .
+    
+C) On OSX, cmake must use the true, real, gcc/g++ compiler (not clang).  Thus you must so something like this to make sure that it finds the right (true) gcc/g++ (see above)::
+
+    mkdir build && cd build
+    mkdir gccstatic && cd gccstatic
+    cmake ../.. -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON -DCMAKE_C_COMPILER="gcc-4.9" -DCMAKE_CXX_COMPILER="g++-4.9" -DCMAKE_VERBOSE_MAKEFILE=ON
+    cmake --build .
+    
+If you are using a different version of gcc, change the version number for g++ and gcc
 
 This will generate the file libCoolProp.a which is a GCC static library that can be linked with GCC/GFORTRAN code.  Copy this .a file into the directory with the coolprop FORTRAN example ``cool_fortran_bind.f90``:
 
@@ -102,10 +127,14 @@ with the interface file ``cpinterface.f90``:
 In order to link all the files together, do::
 
     gfortran -c -Wall cpinterface.f90 cool_fortran_bind.f90
-    gfortran -o main *.o libCoolProp.a -lstdc++ -ldl
+    gcc -o main *.o libCoolProp.a -lstdc++ -ldl -lgfortran
     main
     
 On windows, you can leave off the ``-ldl``.
+
+On OSX, you must do the linking stage with true gcc so that it finds the right standard library.  Or alternatively, provide the full path to the libstdc++ static library and link with gfortran with something like::
+
+    gfortran -o main *.o libCoolProp.a /usr/lib/libstdc++.a -ldl
 
 .. warning::
 
@@ -163,3 +192,4 @@ On windows, the current folder is always searched for DLL, so you can just do::
     gfortran -g -o example example.for -L. -lCoolProp
     example
 
+On OSX
