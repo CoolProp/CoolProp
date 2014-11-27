@@ -1,5 +1,4 @@
 from __future__ import print_function
-
 import os.path
 import CoolProp
 import subprocess
@@ -12,6 +11,8 @@ plots_path = os.path.join(web_dir,'fluid_properties','fluids','REFPROPplots')
 
 template = """
 from __future__ import division, print_function
+import matplotlib
+matplotlib.use('Agg') #Force mpl to use a non-GUI backend
 
 import numpy as np, matplotlib.pyplot as plt
 
