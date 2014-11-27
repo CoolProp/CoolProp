@@ -731,6 +731,7 @@ void HelmholtzEOSMixtureBackend::update_internal(HelmholtzEOSMixtureBackend &HEO
     this->_p = HEOS.p();
     this->_rhomolar = HEOS.rhomolar();
     this->_Q = HEOS.Q();
+    this->_phase = HEOS.phase();
     
     // Copy the derivatives as well
 }

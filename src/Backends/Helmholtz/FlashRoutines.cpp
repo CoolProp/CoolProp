@@ -1177,8 +1177,7 @@ void FlashRoutines::HS_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, long dou
     HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
     Tmin_sat = std::max(Tmin_satL, Tmin_satV) - 1e-13;
         
-    double T = Brent(resid, Tmin_sat, Tmax_sat-0.01, DBL_EPSILON, 1e-12, 20, errstr);
-    int eretre = 3;
+    Brent(resid, Tmin_sat, Tmax_sat-0.01, DBL_EPSILON, 1e-12, 20, errstr);
 }
 void FlashRoutines::HS_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, long double hmolar_spec, long double smolar_spec, HS_flash_singlephaseOptions &options)
 {
@@ -1379,6 +1378,7 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
                 HS_flash_twophaseOptions options;
                 HS_flash_twophase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);
                 HEOS.update_internal(*HEOS_copy);
+                break;
             }
             default:
                 throw ValueError("solution not set");
