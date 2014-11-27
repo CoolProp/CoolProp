@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 
 import json
 import matplotlib
@@ -126,20 +126,24 @@ if not os.path.exists('hsancillaries.json'):
         fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2, 2)
         
         plt.suptitle(fluid)
-        print i,fluid
+        print(i,fluid)
         
         N = 10000
         Tc = CP.PropsSI(fluid,'Tcrit')
         rhoc = CP.PropsSI(fluid,'rhocrit')
         try:
-            T = np.r_[np.linspace(Tc-0.1, CP.PropsSI(fluid,'Tmin'), N)]#, np.linspace(Tc-0.1, Tc-1e-1, N)]
+            T = np.r_[np.linspace(Tc-0.1, CP.PropsSI(fluid,'Tmin'), N)]#, np.linspace(Tc-0.1, Tc-1e-8, N)]
             hfg = (np.array(CP.PropsSI('Hmolar','T',T,'Q',1,fluid)) - np.array(CP.PropsSI('Hmolar','T',T,'Q',0,fluid)))
             sfg = (np.array(CP.PropsSI('Smolar','T',T,'Q',1,fluid)) - np.array(CP.PropsSI('Smolar','T',T,'Q',0,fluid)))
             if np.any(np.isnan(hfg)):
-                raise ValueError('nan values in hfg')
-                continue
+                print('nan values in hfg')
+                good_values = np.isfinite(hfg)
+                T = T[good_values]
+                hfg = hfg[good_values]
+                sfg = sfg[good_values]
+                
         except BaseException as E:
-            print E
+            print(E)
             continue
         
         try:
@@ -167,7 +171,7 @@ if not os.path.exists('hsancillaries.json'):
             ax1.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
             hLdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'], _note = "coefficients are in increasing order; input in K, output in J/mol; value is enthalpy minus hs_anchor enthalpy", max_abs_error_units = 'J/mol', **commons)
             if (np.any(np.isnan(hLdict['A']))):
-                print('bad A')
+                print('bad A for hL')
                 continue
             
             rp = fit_rational_polynomial(x, hfg, xfine, n, d)
@@ -184,7 +188,7 @@ if not os.path.exists('hsancillaries.json'):
             ax3.plot(xfine, rp['yfitnonlin'] - rp['max_abs_error'], 'k--')
             sLdict = dict(A = rp['A'][::-1], B = rp['B'][::-1], max_abs_error = rp['max_abs_error'],  _note = "coefficients are in increasing order; input in K, output in J/mol/K; value is entropy minus hs_anchor entropy", max_abs_error_units = 'J/mol/K', **commons)
             if (np.any(np.isnan(sLdict['A']))):
-                print('bad A')
+                print('bad A for sL')
                 continue
                 
             rp = fit_rational_polynomial(x, sfg, xfine, n, d)
@@ -198,7 +202,7 @@ if not os.path.exists('hsancillaries.json'):
             
         except BaseException as E:
             continue
-            print E
+            print(E)
                 
         pp.savefig()
         plt.close()
@@ -223,11 +227,16 @@ else:
         j = json.load(fp)
         fp.close()
         
-        j['ANCILLARIES'].update(ancillaries[fluid])
+        j['ANCILLARIES']['sL'] = ancillaries[fluid]['sL']
+        j['ANCILLARIES']['hL'] = ancillaries[fluid]['hL']
+        j['ANCILLARIES']['sLV'] = ancillaries[fluid]['sLV']
+        j['ANCILLARIES']['hLV'] = ancillaries[fluid]['hLV']
         
         sys.path.append('..')
         from package_json import json_options
         fp = open(fluid_path, 'w')
         fp.write(json.dumps(j, **json_options))
         fp.close()
+        
+        print('writing '+ fluid)
         
