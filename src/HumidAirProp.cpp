@@ -850,8 +850,8 @@ double DewpointTemperature(double T, double p, double psi_w)
 
     p_w = psi_w*p;
 
-    // 0.61165... is the triple point pressure of water in kPa
-    if (p_w > 0.6116547241637944){
+    // 611.65... is the triple point pressure of water in Pa
+    if (p_w > 611.6547241637944){
         Water->update(CoolProp::PQ_INPUTS, p, 1.0);
         T0 = Water->keyed_output(CoolProp::iT);
     }
@@ -861,7 +861,7 @@ double DewpointTemperature(double T, double p, double psi_w)
     // A good guess for Tdp is that enhancement factor is unity, which yields
     // p_w_s = p_w, and get guess for T from saturation temperature
 
-    iter=1; eps=1e-8; resid=999;
+    iter=1; eps=1e-5; resid=999;
     while ((iter<=3 || std::abs(resid)>eps) && iter<100)
     {
         if (iter==1){x1 = T0; Tdp=x1;}
@@ -870,18 +870,18 @@ double DewpointTemperature(double T, double p, double psi_w)
 
             if (Tdp >= 273.16)
             {
-                // Saturation pressure at dewpoint [kPa]
+                // Saturation pressure at dewpoint [Pa]
                 Water->update(CoolProp::QT_INPUTS, 0.0, Tdp);
                 p_ws_dp = Water->keyed_output(CoolProp::iP);
             }
             else
             {
-                // Sublimation pressure at icepoint [kPa]
+                // Sublimation pressure at icepoint [Pa]
                 p_ws_dp=psub_Ice(Tdp);
             }
             // Enhancement Factor at dewpoint temperature [-]
             f_dp=f_factor(Tdp,p);
-            // Error between target and actual pressure [kPa]
+            // Error between target and actual pressure [Pa]
             resid=p_w-p_ws_dp*f_dp;
 
         if (iter==1){y1=resid;}
