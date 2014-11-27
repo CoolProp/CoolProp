@@ -2,7 +2,12 @@ import CoolProp as CoolProp
 import matplotlib.pyplot as plt
 import numpy as np, os, json
 
-
+# Turn off the critical splines using json
+jj = json.loads(CoolProp.CoolProp.get_config_as_json_string()) # Get the json values that are set already
+jj['CRITICAL_SPLINES_ENABLED'] = False
+CoolProp.CoolProp.set_config_as_json_string(json.dumps(jj)) # Set the values using json
+# Double check that it was set properly
+jj = json.loads(CoolProp.CoolProp.get_config_as_json_string()); print jj
 
 class LinearFitter(object):
     def __init__(self):
@@ -213,12 +218,13 @@ if not os.path.exists('sat_spline_json.json'):
         pc = CoolProp.CoolProp.PropsSI('pcrit',fluid)
         Tc = CoolProp.CoolProp.PropsSI('Tcrit',fluid)
         Tt = CoolProp.CoolProp.PropsSI('Ttriple',fluid)
+        print fluid, Tc, Tt
         try:
             
             good_T = Tc-dT
             rhomolar_crit = CoolProp.CoolProp.PropsSI('rhomolar_critical',fluid)
             ok = False # Start assuming not ok
-            for i in np.linspace(np.log10(2), 18, 100):
+            for i in np.linspace(np.log10(2), 6, 500):
                 dT = 10**(-i)
                 bad_T = Tc-dT
                 
@@ -236,7 +242,7 @@ if not os.path.exists('sat_spline_json.json'):
             
         except ValueError as V:
             pass
-            
+        
         if ok:
             
             rhomolar_endL = CoolProp.CoolProp.PropsSI('Dmolar', 'T', good_T, 'Q', 0, fluid)
@@ -310,7 +316,7 @@ if not os.path.exists('sat_spline_json.json'):
                 cL = CFL.c
                 cV = CFV.c
                 
-            elif dT < 1e-3 and dT > 1e-15:
+            elif dT < 1e-3 and dT > 1e-6:
                 # Linear fit
                 LFV = LinearFitter()
                 LFV.add_value_constraint(rhomolar_crit, Tc)
@@ -342,7 +348,8 @@ if not os.path.exists('sat_spline_json.json'):
             ax1.plot(rhomolar_crit, Tc, 'o')
             ax2.plot(rhomolar_crit, Tc, 'o', ms = 2)
             
-            TsL = np.linspace(Tt+1, good_T, 1000)
+            ax2.axhline(Tt+1, lw= 2)
+            TsL = np.linspace(Tt+1, good_T, 10000)
             ax2.plot(CoolProp.CoolProp.PropsSI('Dmolar', 'T', TsL, 'Q', [0]*len(TsL), fluid), TsL,'g')
             ax2.plot(CoolProp.CoolProp.PropsSI('Dmolar', 'T', TsL, 'Q', [1]*len(TsL), fluid), TsL,'g')
             
@@ -361,7 +368,9 @@ if not os.path.exists('sat_spline_json.json'):
                                    rhomolar_min = rhomolar_endV,
                                    rhomolar_max = rhomolar_endL
                                )
-            
+                print '\tgood_dT', good_dT
+            else:
+                print '\tperfect'
         else:
             print fluid, 'FAIL', V
             
@@ -389,7 +398,3 @@ else:
         fp = open(os.path.join('..', 'fluids', fluid + '.json'),'w')
         json.dump(fluid_json, fp)
         fp.close()
-        
-    
-    
-    
