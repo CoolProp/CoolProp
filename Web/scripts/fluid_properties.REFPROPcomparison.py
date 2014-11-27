@@ -65,6 +65,7 @@ plt.xlabel(r'Reduced density [$\\rho/\\rho_c$]')
 plt.ylabel(r'Relative deviation $(y_{{CP}}/y_{{RP}}-1)\\times 100$ [%]')
 
 ax.set_yscale('log')
+plt.title('Comparison of results between CoolProp and REFPROP along T = 1.1*Tc')
 plt.savefig(fluid+'.png', dpi = 100)
 plt.savefig(fluid+'.pdf')
 plt.close('all')
