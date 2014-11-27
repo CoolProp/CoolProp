@@ -1,6 +1,5 @@
 from __future__ import division, print_function
-import matplotlib
-matplotlib.use('TKAgg')
+
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -343,12 +342,13 @@ class ConsistencyAxis(object):
 
 if __name__=='__main__':
     PVT = PdfPages('Consistency.pdf')
-    for fluid in CP.__fluids__:
+    for fluid in ['Ethanol','Water']:#CP.__fluids__:
         print('************************************************')
         print(fluid)
         print('************************************************')
         ff = ConsistencyFigure(fluid)
         ff.add_to_pdf(PVT)
+        ff.savefig(fluid + '.png')
         plt.close()
         del ff
     PVT.close()
