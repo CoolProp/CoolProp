@@ -218,15 +218,15 @@
       "BibTeX_EOS": "Thol-UNPUBLISHED-2013-MM", 
       "STATES": {
         "hs_anchor": {
-          "T": 570.569969244, 
+          "T": 570.57, 
           "T_units": "K", 
-          "hmolar": 80348.89788317229, 
+          "hmolar": 185312.92994352715, 
           "hmolar_units": "J/mol", 
-          "p": 3526053.812709895, 
+          "p": 3360142.7652703803, 
           "p_units": "Pa", 
-          "rhomolar": 1687.203684, 
+          "rhomolar": 1487.7, 
           "rhomolar_units": "mol/m^3", 
-          "smolar": 168.02387397615578, 
+          "smolar": 899.9870031631419, 
           "smolar_units": "J/mol/K"
         }, 
         "reducing": {
