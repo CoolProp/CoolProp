@@ -1146,7 +1146,40 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
     // Update the state for conditions where the state was guessed
     
 }
-
+void FlashRoutines::HS_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, long double hmolar_spec, long double smolar_spec, HS_flash_twophaseOptions &options)
+{
+    class Residual : public FuncWrapper1D
+    {
+        
+    public:
+        HelmholtzEOSMixtureBackend &HEOS;
+        long double hmolar, smolar, Qs, Qh;
+        Residual(HelmholtzEOSMixtureBackend &HEOS, long double hmolar_spec, long double smolar_spec) : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec){};
+        double call(double T){
+            HEOS.update(QT_INPUTS, 0, T);
+            HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(),
+                                       &SatV = HEOS.get_SatV();
+            // Quality from entropy
+            Qs = (smolar-SatL.smolar())/(SatV.smolar()-SatL.smolar());
+            // Quality from enthalpy
+            Qh = (hmolar-SatL.hmolar())/(SatV.hmolar()-SatL.hmolar());
+            // Residual is the difference between the two
+            return Qh-Qs;
+        }
+    } resid(HEOS, hmolar_spec, smolar_spec);
+    
+    std::string errstr;
+    // Critical point for pure fluids, slightly different for pseudo-pure, very different for mixtures
+    long double Tmax_sat = HEOS.calc_Tmax_sat() - 1e-13;
+    
+    // Check what the minimum limits for the equation of state are
+    long double Tmin_satL, Tmin_satV, Tmin_sat;
+    HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
+    Tmin_sat = std::max(Tmin_satL, Tmin_satV) - 1e-13;
+        
+    double T = Brent(resid, Tmin_sat, Tmax_sat-0.01, DBL_EPSILON, 1e-12, 20, errstr);
+    int eretre = 3;
+}
 void FlashRoutines::HS_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, long double hmolar_spec, long double smolar_spec, HS_flash_singlephaseOptions &options)
 {
     int iter = 0;
@@ -1343,7 +1376,9 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
             }
             case two_phase_solution:
             {
-                throw ValueError("HS two-phase not yet supported.");
+                HS_flash_twophaseOptions options;
+                HS_flash_twophase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);
+                HEOS.update_internal(*HEOS_copy);
             }
             default:
                 throw ValueError("solution not set");

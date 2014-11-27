@@ -1070,17 +1070,17 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         // Calculate the error (here the relative error in pressure)
         error = std::abs((SatL->p() - SatV->p())/SatL->p());
 
-        if (get_debug_level() > 0){ std::cout << format("[Maxwell] rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %g dvV/vV: %g pL: %g pV: %g\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV);}
+        if (get_debug_level() > 0){ std::cout << format("[Maxwell] rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %Lg dvV/vV: %Lg pL: %Lg pV: %Lg\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV);}
 
         // If the step size is small, start a counter to allow the other density 
         // to be corrected a few times
-        if (std::abs(DeltavL*rhoL) < 10*LDBL_EPSILON || std::abs(DeltavV*rhoV) < 10*LDBL_EPSILON){
+        if (std::abs(DeltavL*rhoL) < 10*DBL_EPSILON || std::abs(DeltavV*rhoV) < 10*DBL_EPSILON){
             small_step_count++;
         }
         
         iter++;
         if (iter > 20){
-            throw SolutionError(format("Maxwell solver did not converge after 20 iterations;  rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %g dvV/vV: %g pL: %g pV: %g\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV));
+            throw SolutionError(format("Maxwell solver did not converge after 20 iterations;  rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %Lg dvV/vV: %Lg pL: %Lg pV: %Lg\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV));
         }
     }
     while ((SatL->p() < 0) || (error > 1e-5 && small_step_count < 4));

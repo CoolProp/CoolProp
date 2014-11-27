@@ -105,6 +105,13 @@ public:
         HS_flash_singlephaseOptions(){omega = 1.0;}
     };
     static void HS_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, long double hmolar_spec, long double smolar_spec, HS_flash_singlephaseOptions &options);
+    
+    struct HS_flash_twophaseOptions
+    {
+        double omega;
+        HS_flash_twophaseOptions(){omega = 1.0;}
+    };
+    static void HS_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, long double hmolar_spec, long double smolar_spec, HS_flash_twophaseOptions &options);
 };
 
 

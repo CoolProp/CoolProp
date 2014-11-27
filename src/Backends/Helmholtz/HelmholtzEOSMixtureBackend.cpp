@@ -722,7 +722,18 @@ void HelmholtzEOSMixtureBackend::update_HmolarQ_with_guessT(long double hmolar, 
     // Cleanup
     post_update();
 }
-
+void HelmholtzEOSMixtureBackend::update_internal(HelmholtzEOSMixtureBackend &HEOS)
+{
+    this->_hmolar = HEOS.hmolar();
+    this->_smolar = HEOS.smolar();
+    this->_T = HEOS.T();
+    this->_umolar = HEOS.umolar();
+    this->_p = HEOS.p();
+    this->_rhomolar = HEOS.rhomolar();
+    this->_Q = HEOS.Q();
+    
+    // Copy the derivatives as well
+}
 void HelmholtzEOSMixtureBackend::update_TP_guessrho(long double T, long double p, long double rhomolar_guess)
 {
     CoolProp::input_pairs pair = PT_INPUTS;

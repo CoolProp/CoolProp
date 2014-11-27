@@ -73,6 +73,8 @@ public:
     const std::vector<CoolPropFluid*> &get_components(){return components;};
     std::vector<long double> &get_K(){return K;};
     std::vector<long double> &get_lnK(){return lnK;};
+    HelmholtzEOSMixtureBackend &get_SatL(){return *SatL;};
+    HelmholtzEOSMixtureBackend &get_SatV(){return *SatV;};
     
     std::vector<long double> calc_mole_fractions_liquid(void){return SatL->get_mole_fractions();};
     std::vector<long double> calc_mole_fractions_vapor(void){return SatV->get_mole_fractions();};
@@ -88,6 +90,10 @@ public:
      * @param value2 The second input value
      */
     void update(CoolProp::input_pairs input_pair, double value1, double value2);
+    
+    /** \brief Update all the internal variables for a state by copying from another state
+     */
+    void update_internal(HelmholtzEOSMixtureBackend &HEOS);
 
     /** \brief Update with TP and a guess for rho
      * @param T Temperature in K
