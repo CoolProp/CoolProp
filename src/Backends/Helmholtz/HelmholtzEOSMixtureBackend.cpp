@@ -2344,9 +2344,11 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<l
         for (std::size_t i = 0; i < N; ++i){
             HelmholtzDerivatives derivs = components[i]->pEOS->alphar.all(tau, delta);
             long double xi = mole_fractions[i];
-            long double R_u_ratio = 1;
+            long double R_u_ratio;
             if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){
                 R_u_ratio = components[0]->pEOS->R_u/R_u_CODATA;
+            }else{
+                R_u_ratio = 1;
             }
             summer_base += xi*derivs.alphar;
             summer_dDelta += xi*derivs.dalphar_ddelta;

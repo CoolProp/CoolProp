@@ -67,7 +67,7 @@ void set_config_as_json(rapidjson::Value &val){
             std::string s = std::string(it->name.GetString());
             configuration_keys key = config_string_to_key(s);
             // Try to retrieve the item from the config for this key
-            ConfigurationItem & item = config.get_item(key);
+            config.get_item(key);
         }
         catch(std::exception &e)
         {
