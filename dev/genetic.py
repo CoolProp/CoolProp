@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 import CoolProp
 import CoolProp.CoolProp as CP
 
-#LIBRARY = [i/6.0 for i in range(1,151)]+[0.35+i/2000 for i in range(1,100)]+[0.05+0.001*i for i in range(1,100)]+[i+0.5 for i in range(10)]
-LIBRARY = [i/1000 for i in range(1,20000)]
+LIBRARY = [i/6.0 for i in range(1,151)]+[0.35+i/2000 for i in range(1,100)]+[0.05+0.001*i for i in range(1,100)]+[i+0.5 for i in range(10)]
+#LIBRARY = [i/1000 for i in range(1,20000)]
     
 class Sample(object):
     def __init__(self,v):
@@ -19,8 +19,8 @@ class Sample(object):
     
 class GeneticAncillaryFitter(object):
     def __init__(self,
-               num_samples = 100, # Have this many chromos in the sample group
-               num_selected = 20, # Have this many chromos in the selected group
+               num_samples = 600, # Have this many chromos in the sample group
+               num_selected = 60, # Have this many chromos in the selected group
                mutation_factor = 2, # Randomly mutate 1/n of the chromosomes
                num_powers = 5, # How many powers in the fit
                Ref = 'R407C',
@@ -58,10 +58,12 @@ class GeneticAncillaryFitter(object):
             self.pc = values['pcrit']
             self.rhoc = values['rhocrit']
             self.Tmin = values['Tmin']
-            self.T = values['T']
-            self.p = values['p']
-            self.rhoL = values['rhoL']
-            self.rhoV = values['rhoV']
+            self.T = np.array(values['T'])
+            self.p = np.array(values['p'])
+            self.pL = np.array(values['p'])
+            self.pV = np.array(values['p'])
+            self.rhoL = np.array(values['rhoL'])
+            self.rhoV = np.array(values['rhoV'])
         
         self.logpLpc = (np.log(self.pL)-np.log(self.pc))
         self.logpVpc = (np.log(self.pV)-np.log(self.pc))
@@ -106,12 +108,12 @@ class GeneticAncillaryFitter(object):
                 self.description = "rho'' = rhoc*exp(sum(n_i*theta^t_i))"
             else:
                 self.description = "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))"
-            self.reducing_value = self.rhoc/MM
+            self.reducing_value = self.rhoc
         elif self.value == 'rhoLnoexp':
             self.LHS = (self.rhoLrhoc-1).copy()
             self.EOS_value = self.rhoL
             self.description = "rho' = rhoc*(1+sum(n_i*theta^t_i))"
-            self.reducing_value = self.rhoc/MM
+            self.reducing_value = self.rhoc
         else:
             raise ValueError
             
