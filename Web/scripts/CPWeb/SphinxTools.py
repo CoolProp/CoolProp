@@ -33,6 +33,16 @@ REFPROP Validation Data
 Consistency Plots
 =================
 
+The following figure shows all the flash routines that are available for this fluid.  A red + is a failure of the flash routine, a black dot is a success.  Hopefully you will only see black dots
+
+The red curve is the maximum tempertature curve, and the blue curve is the melting line if one is available for the fluid.
+
+.. note::
+
+    You can download the script that generated the following figure here: :download:`(link to script)<Consistencyplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<Consistencyplots/{fluid:s}.pdf>`. 
+
+.. image:: Consistencyplots/{fluid:s}.png
+
 """
 
 table_template = """ Parameter, Value

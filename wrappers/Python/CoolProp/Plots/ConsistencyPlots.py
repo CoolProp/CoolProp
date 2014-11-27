@@ -9,6 +9,7 @@ import CoolProp as CP
 from CoolProp.CoolProp import PropsSI
 from CoolProp.Plots import PropsPlot
 
+CP.CoolProp.set_debug_level(00)
 from matplotlib.backends.backend_pdf import PdfPages
 
 all_solvers = ['PT', 'DmolarT', 'HmolarP', 'PSmolar', 'SmolarT', 'PUmolar', 'DmolarP', 'DmolarHmolar', 'DmolarSmolar', 'DmolarUmolar','HmolarSmolar','HmolarT','TUmolar','SmolarUmolar','HmolarUmolar']
@@ -105,9 +106,10 @@ class ConsistencyFigure(object):
         self.dictL, self.dictV = {}, {}
         for Q, dic in zip([0, 1], [self.dictL, self.dictV]):
             rhomolar,smolar,hmolar,T,p,umolar = [],[],[],[],[],[]
-            for _T in np.logspace(np.log10(HEOS.keyed_output(CP.iT_triple)), np.log10(HEOS.keyed_output(CP.iT_critical)), 100):
+            for _T in np.logspace(np.log10(HEOS.keyed_output(CP.iT_triple)), np.log10(HEOS.keyed_output(CP.iT_critical)), 500):
                 try:
                     HEOS.update(CP.QT_INPUTS, Q, _T)
+                    if (HEOS.p() < 0): raise ValueError('P is negative:'+str(HEOS.p()))
                     T.append(HEOS.T())
                     p.append(HEOS.p())
                     rhomolar.append(HEOS.rhomolar())
@@ -115,8 +117,8 @@ class ConsistencyFigure(object):
                     smolar.append(HEOS.smolar())
                     umolar.append(HEOS.umolar())
                 except ValueError as VE:
-                    print('sat error', VE)
-
+                    print('satT error:', VE, '; T:', '{T:0.16g}'.format(T=_T), 'T/Tc:', _T/HEOS.keyed_output(CP.iT_critical))
+            
             dic.update(dict(T = np.array(T), 
                             P = np.array(p), 
                             Dmolar = np.array(rhomolar), 
@@ -195,6 +197,9 @@ class ConsistencyFigure(object):
     def add_to_pdf(self, pdf):
         """ Add this figure to the pdf instance """
         pdf.savefig(self.fig)
+        
+    def savefig(self, fname, **kwargs):
+        self.fig.savefig(fname, **kwargs)
 
 class ConsistencyAxis(object):
     def __init__(self, axis, fig, pair, fluid):
