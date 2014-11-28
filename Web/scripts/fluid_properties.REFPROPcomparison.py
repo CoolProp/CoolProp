@@ -12,8 +12,6 @@ plots_path = os.path.join(web_dir,'fluid_properties','fluids','REFPROPplots')
 template = """
 from __future__ import division, print_function
 import matplotlib
-matplotlib.use('Agg') #Force mpl to use a non-GUI backend
-
 import numpy as np, matplotlib.pyplot as plt
 
 import CoolProp
@@ -72,8 +70,12 @@ plt.savefig(fluid+'.pdf')
 plt.close('all')
 
 """
+
 if not os.path.exists(plots_path):
     os.makedirs(plots_path)
+
+with open(os.path.join(plots_path, 'matplotlibrc'), 'w') as fp:
+        fp.write("backend : agg\n")
 
 for fluid in CoolProp.__fluids__:
     print('fluid:', fluid)
