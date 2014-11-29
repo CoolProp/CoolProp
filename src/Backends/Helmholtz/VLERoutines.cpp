@@ -1079,8 +1079,8 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         }
         
         iter++;
-        if (iter > 20){
-            throw SolutionError(format("Maxwell solver did not converge after 20 iterations;  rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %Lg dvV/vV: %Lg pL: %Lg pV: %Lg\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV));
+        if (iter > 30){
+            throw SolutionError(format("Maxwell solver did not converge after 30 iterations;  rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %Lg dvV/vV: %Lg pL: %Lg pV: %Lg\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV));
         }
     }
     while ((SatL->p() < 0) || (error > 1e-5 && small_step_count < 4));
