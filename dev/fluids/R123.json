@@ -249,13 +249,13 @@
         "sat_min_liquid": {
           "T": 166.0, 
           "T_units": "K", 
-          "hmolar": 15110.76180484642, 
+          "hmolar": 15110.761804821586, 
           "hmolar_units": "J/mol", 
-          "p": 4.202329164157417, 
+          "p": 4.202133802444641, 
           "p_units": "Pa", 
-          "rhomolar": 11580.116688509637, 
+          "rhomolar": 11580.116688509393, 
           "rhomolar_units": "mol/m^3", 
-          "smolar": 81.2191432708157, 
+          "smolar": 81.21914327078528, 
           "smolar_units": "J/mol/K"
         }, 
         "sat_min_vapor": {
@@ -263,11 +263,11 @@
           "T_units": "K", 
           "hmolar": 49319.712084141735, 
           "hmolar_units": "J/mol", 
-          "p": 4.202095713853474, 
+          "p": 4.202095713858328, 
           "p_units": "Pa", 
-          "rhomolar": 0.00304459047193867, 
+          "rhomolar": 0.003044590471942187, 
           "rhomolar_units": "mol/m^3", 
-          "smolar": 287.2971570016584, 
+          "smolar": 287.2971570016487, 
           "smolar_units": "J/mol/K"
         }
       }, 
@@ -676,13 +676,13 @@
     "triple_liquid": {
       "T": 166.0, 
       "T_units": "K", 
-      "hmolar": 15110.76180484642, 
+      "hmolar": 15110.761804821586, 
       "hmolar_units": "J/mol", 
-      "p": 4.202329164157417, 
+      "p": 4.202133802444641, 
       "p_units": "Pa", 
-      "rhomolar": 11580.116688509637, 
+      "rhomolar": 11580.116688509393, 
       "rhomolar_units": "mol/m^3", 
-      "smolar": 81.2191432708157, 
+      "smolar": 81.21914327078528, 
       "smolar_units": "J/mol/K"
     }, 
     "triple_vapor": {
@@ -690,11 +690,11 @@
       "T_units": "K", 
       "hmolar": 49319.712084141735, 
       "hmolar_units": "J/mol", 
-      "p": 4.202095713853474, 
+      "p": 4.202095713858328, 
       "p_units": "Pa", 
-      "rhomolar": 0.00304459047193867, 
+      "rhomolar": 0.003044590471942187, 
       "rhomolar_units": "mol/m^3", 
-      "smolar": 287.2971570016584, 
+      "smolar": 287.2971570016487, 
       "smolar_units": "J/mol/K"
     }
   }, 

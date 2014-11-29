@@ -241,13 +241,13 @@
         "sat_min_liquid": {
           "T": 260.0, 
           "T_units": "K", 
-          "hmolar": -257522.28126567934, 
+          "hmolar": -257522.28126567914, 
           "hmolar_units": "J/mol", 
-          "p": 1.0852408797234121e-07, 
+          "p": 7.39936963447781e-07, 
           "p_units": "Pa", 
           "rhomolar": 3162.072727020763, 
           "rhomolar_units": "mol/m^3", 
-          "smolar": -602.4772457918978, 
+          "smolar": -602.4772457918979, 
           "smolar_units": "J/mol/K"
         }, 
         "sat_min_vapor": {
@@ -255,11 +255,11 @@
           "T_units": "K", 
           "hmolar": -139328.19572701893, 
           "hmolar_units": "J/mol", 
-          "p": 4.2502803547791066e-07, 
+          "p": 4.250280354779047e-07, 
           "p_units": "Pa", 
-          "rhomolar": 1.966117888657087e-10, 
+          "rhomolar": 1.9661178886570593e-10, 
           "rhomolar_units": "mol/m^3", 
-          "smolar": -147.88460910474296, 
+          "smolar": -147.88460910474285, 
           "smolar_units": "J/mol/K"
         }
       }, 
@@ -443,13 +443,13 @@
     "triple_liquid": {
       "T": 260.0, 
       "T_units": "K", 
-      "hmolar": -257522.28126567934, 
+      "hmolar": -257522.28126567914, 
       "hmolar_units": "J/mol", 
-      "p": 1.0852408797234121e-07, 
+      "p": 7.39936963447781e-07, 
       "p_units": "Pa", 
       "rhomolar": 3162.072727020763, 
       "rhomolar_units": "mol/m^3", 
-      "smolar": -602.4772457918978, 
+      "smolar": -602.4772457918979, 
       "smolar_units": "J/mol/K"
     }, 
     "triple_vapor": {
@@ -457,11 +457,11 @@
       "T_units": "K", 
       "hmolar": -139328.19572701893, 
       "hmolar_units": "J/mol", 
-      "p": 4.2502803547791066e-07, 
+      "p": 4.250280354779047e-07, 
       "p_units": "Pa", 
-      "rhomolar": 1.966117888657087e-10, 
+      "rhomolar": 1.9661178886570593e-10, 
       "rhomolar_units": "mol/m^3", 
-      "smolar": -147.88460910474296, 
+      "smolar": -147.88460910474285, 
       "smolar_units": "J/mol/K"
     }
   }
