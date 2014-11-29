@@ -229,14 +229,9 @@ double _PropsSI(const std::string &Output, const std::string &Name1, double Prop
             return val;
         }
     }
-    else{
-        throw ValueError(format("Invalid output parameter [%s]",Output.c_str()));
-    }
     
     parameters iName1 = get_parameter_index(Name1);
     parameters iName2 = get_parameter_index(Name2);
-
-    
 
     // Obtain the input pair
     CoolProp::input_pairs pair = generate_update_pair(iName1, Prop1, iName2, Prop2, x1, x2);
