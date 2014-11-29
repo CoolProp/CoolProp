@@ -225,7 +225,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         CriticalRegionSplines &splines = HEOS.components[0]->pEOS->critical_region_splines;
         
         // If exactly(ish) at the critical temperature, liquid and vapor have the critial density
-        if (std::abs(T-Tmax_sat)< 1e-12){
+        if ((get_config_bool(CRITICAL_WITHIN_1UK) && std::abs(T-Tmax_sat)< 1e-6) || std::abs(T-Tmax_sat)< 1e-12){
              HEOS.SatL->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
              HEOS.SatV->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
              HEOS._rhomolar = HEOS.rhomolar_critical();
