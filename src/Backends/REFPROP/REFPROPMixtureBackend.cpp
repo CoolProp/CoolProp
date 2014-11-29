@@ -1437,12 +1437,25 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
 
 TEST_CASE("Check some inputs for REFPROP work","[REFPROP]")
 {
-    SECTION("Critical parameters","")
-    {
+    SECTION("PCRIT",""){
         CHECK(ValidNumber(CoolProp::PropsSI("PCRIT","P",0,"T",0,"REFPROP::R245FA")));
+        std::string err = CoolProp::get_global_param_string("errstring");
+        CAPTURE(err);
+    }
+    SECTION("TCRIT",""){
         CHECK(ValidNumber(CoolProp::PropsSI("TCRIT","P",0,"T",0,"REFPROP::R245FA")));
+        std::string err = CoolProp::get_global_param_string("errstring");
+        CAPTURE(err);
+    }
+    SECTION("RHOCRIT",""){
         CHECK(ValidNumber(CoolProp::PropsSI("RHOCRIT","P",0,"T",0,"REFPROP::R245FA")));
+        std::string err = CoolProp::get_global_param_string("errstring");
+        CAPTURE(err);
+    }
+    SECTION("MOLEMASS",""){
         CHECK(ValidNumber(CoolProp::PropsSI("MOLEMASS","P",0,"T",0,"REFPROP::R245FA")));
+        std::string err = CoolProp::get_global_param_string("errstring");
+        CAPTURE(err);
     }
 }
 
