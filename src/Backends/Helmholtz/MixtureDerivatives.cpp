@@ -737,7 +737,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             double err = std::abs((numeric-analytic)/analytic);
                             CAPTURE(numeric);
                             CAPTURE(analytic);
-                            CHECK(err < 1e-8);
+                            CHECK(err < 1e-7);
                         }
                         
                         // These derivatives depend on both the i and j indices
@@ -819,7 +819,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 double err = std::abs((numeric-analytic)/analytic);
                                 CAPTURE(numeric);
                                 CAPTURE(analytic);
-                                CHECK(err < 1e-8);
+                                CHECK(err < 1e-7);
                             }
                             std::ostringstream ss3a;
                             ss3a << "d2alphardxidxj, i=" << i << ", j=" << j;

@@ -1394,7 +1394,7 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
             CAPTURE(0.9*Tr);
 
             double Dcp = (cp_RP-cp_CP)/cp_RP;
-            CHECK(std::abs(Dcp) < 0.005);
+            CHECK(std::abs(Dcp) < 0.05);
         }
     }
     SECTION("Enthalpy and entropy reference state")
