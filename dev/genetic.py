@@ -43,7 +43,7 @@ class GeneticAncillaryFitter(object):
         if values is None:
             self.Tc = PropsSI(Ref,'Tcrit')
             self.pc = PropsSI(Ref,'pcrit')
-            self.rhoc = PropsSI(Ref,'rhocrit')
+            self.rhoc = PropsSI(Ref,'rhomolar_critical')
             self.Tmin = PropsSI(Ref,'Tmin')
             if Tlims is None:
                 self.T = np.append(np.linspace(self.Tmin+1e-14, self.Tc-1,150), np.logspace(np.log10(self.Tc-1), np.log10(self.Tc)-1e-15,40))
@@ -100,7 +100,7 @@ class GeneticAncillaryFitter(object):
                 self.description = "rho' = rhoc*exp(sum(n_i*theta^t_i))"
             else:
                 self.description = "rho' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))"
-            self.reducing_value = self.rhoc/MM
+            self.reducing_value = self.rhoc
         elif self.value == 'rhoV':
             self.LHS = self.logrhoVrhoc.copy()
             self.EOS_value = self.rhoV
