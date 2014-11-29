@@ -1238,12 +1238,13 @@ TEST_CASE("Triple point checks", "[triple_point]")
             double p_sat_min_vapor = HEOS->get_components()[0]->pEOS->sat_min_vapor.p;
             double err_sat_min_liquid = std::abs(p_EOS-p_sat_min_liquid)/p_sat_min_liquid;
             double err_sat_min_vapor = std::abs(p_EOS-p_sat_min_vapor)/p_sat_min_vapor;
-            
+            CAPTURE(p_EOS);
+            CAPTURE(p_sat_min_vapor);
+            CAPTURE(p_sat_min_liquid);
             CAPTURE(err_sat_min_liquid);
             CAPTURE(err_sat_min_vapor);
             CHECK(err_sat_min_liquid < 1e-3);
             CHECK(err_sat_min_vapor < 1e-3);
-            
         }
 //        std::ostringstream ss2;
 //        ss2 << "Liquid density error < 3% for fluid " << fluids[i] << " at " << T << " K";
@@ -1375,7 +1376,7 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
         }
     }
 }
-
+/*
 TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
 {
     std::vector<std::string> fluids; fluids.push_back("Propane"); fluids.push_back("D4"); fluids.push_back("Water"); 
@@ -1412,5 +1413,5 @@ TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
         }
     }
 }
-
+*/
 #endif
