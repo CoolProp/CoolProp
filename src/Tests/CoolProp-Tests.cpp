@@ -1149,11 +1149,19 @@ TEST_CASE("Backwards compatibility for REFPROP v4 fluid name convention", "[REFP
 {
     SECTION("REFPROP-", "")
     {
-        CHECK(ValidNumber(Props1SI("REFPROP-Water","Tcrit")));
+        double val = Props1SI("REFPROP-Water","Tcrit");
+        std::string err = get_global_param_string("errstring");
+        CAPTURE(val);
+        CAPTURE(err);
+        CHECK(ValidNumber(val));
     }
     SECTION("REFPROP-MIX:", "")
     {
-        CHECK(ValidNumber(PropsSI("T","P",101325,"Q",0,"REFPROP-MIX:Methane[0.5]&Ethane[0.5]")));
+        double val = PropsSI("T","P",101325,"Q",0,"REFPROP-MIX:Methane[0.5]&Ethane[0.5]");
+        std::string err = get_global_param_string("errstring");
+        CAPTURE(val);
+        CAPTURE(err);
+        CHECK(ValidNumber(val));
     }
 }
 TEST_CASE("Ancillary functions", "[ancillary]")
