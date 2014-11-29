@@ -951,8 +951,8 @@ TEST_CASE("Test first partial derivatives using PropsSI", "[derivatives]")
         CAPTURE(drhomolardp__T_PropsSI);
         double rel_err_exact = std::abs((drhomolardp__T_AbstractState-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI);
         double rel_err_approx = std::abs((drhomolardp__T_PropsSI_num-drhomolardp__T_PropsSI)/drhomolardp__T_PropsSI);
-        CHECK(rel_err_exact < 1e-6);
-        CHECK(rel_err_approx < 1e-6);
+        CHECK(rel_err_exact < 1e-4);
+        CHECK(rel_err_approx < 1e-4);
     }
     SECTION("Check dpdrho|T 3 ways for water","")
     {
@@ -1224,26 +1224,38 @@ TEST_CASE("Triple point checks", "[triple_point]")
 {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
     for (std::size_t i = 0; i < fluids.size(); ++i){
+        std::vector<std::string> names(1,fluids[i]);
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(names));
+        // Skip pseudo-pure
+        if (!HEOS->is_pure()){continue;}
         
         std::ostringstream ss1;
-        ss1 << "Triple point pressures matches for pure " << fluids[i];
+        ss1 << "Minimum saturation temperature state matches for liquid " << fluids[i];
         SECTION(ss1.str(), "")
-        {
-            std::vector<std::string> names(1,fluids[i]);
-            shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(names));
+        {            
             REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 0, HEOS->Ttriple()););
-            
             double p_EOS = HEOS->p();
             double p_sat_min_liquid = HEOS->get_components()[0]->pEOS->sat_min_liquid.p;
-            double p_sat_min_vapor = HEOS->get_components()[0]->pEOS->sat_min_vapor.p;
             double err_sat_min_liquid = std::abs(p_EOS-p_sat_min_liquid)/p_sat_min_liquid;
+            CAPTURE(p_EOS);
+            CAPTURE(p_sat_min_liquid);
+            CAPTURE(err_sat_min_liquid);
+            if (p_EOS < 1e-3){ continue; } // Skip very low pressure below 1 mPa
+            CHECK(err_sat_min_liquid < 1e-3);
+        }
+        std::ostringstream ss2;
+        ss2 << "Minimum saturation temperature state matches for vapor " << fluids[i];
+        SECTION(ss2.str(), "")
+        {            
+            REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 1, HEOS->Ttriple()););
+            
+            double p_EOS = HEOS->p();
+            double p_sat_min_vapor = HEOS->get_components()[0]->pEOS->sat_min_vapor.p;
             double err_sat_min_vapor = std::abs(p_EOS-p_sat_min_vapor)/p_sat_min_vapor;
             CAPTURE(p_EOS);
             CAPTURE(p_sat_min_vapor);
-            CAPTURE(p_sat_min_liquid);
-            CAPTURE(err_sat_min_liquid);
             CAPTURE(err_sat_min_vapor);
-            CHECK(err_sat_min_liquid < 1e-3);
+            if (p_EOS < 1e-3){ continue; } // Skip very low pressure below 1 mPa
             CHECK(err_sat_min_vapor < 1e-3);
         }
 //        std::ostringstream ss2;
