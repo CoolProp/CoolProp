@@ -35,7 +35,7 @@ Consistency Plots
 
 The following figure shows all the flash routines that are available for this fluid.  A red + is a failure of the flash routine, a black dot is a success.  Hopefully you will only see black dots
 
-The red curve is the maximum tempertature curve, and the blue curve is the melting line if one is available for the fluid.
+The red curve is the maximum temperature curve, and the blue curve is the melting line if one is available for the fluid.
 
 .. note::
 
