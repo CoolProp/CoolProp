@@ -306,8 +306,8 @@
           "type": "IdealGasHelmholtzPlanckEinstein"
         }, 
         {
-          "a1": -15.6234566904535, 
-          "a2": 13.6186846329006, 
+          "a1": 72.1107541562, 
+          "a2": -10.4314993483, 
           "reference": "NBP", 
           "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
