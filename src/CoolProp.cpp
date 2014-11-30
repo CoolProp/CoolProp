@@ -397,8 +397,8 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
         // Get current values for the enthalpy and entropy
         double deltah = HEOS->hmass() - 200000; // offset from 200000 J/kg enthalpy
         double deltas = HEOS->smass() - 1000; // offset from 1000 J/kg/K entropy
-        double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
-        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing_state().T);
+        double delta_a1 = deltas/(HEOS->gas_constant()/HEOS->molar_mass());
+        double delta_a2 = -deltah/(HEOS->gas_constant()/HEOS->molar_mass()*HEOS->get_reducing_state().T);
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "IIR");
         HEOS->update_states();
     }
@@ -409,8 +409,8 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
         // Get current values for the enthalpy and entropy
         double deltah = HEOS->hmass() - 0; // offset from 0 J/kg enthalpy
         double deltas = HEOS->smass() - 0; // offset from 0 J/kg/K entropy
-        double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
-        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing_state().T);
+        double delta_a1 = deltas/(HEOS->gas_constant()/HEOS->molar_mass());
+        double delta_a2 = -deltah/(HEOS->gas_constant()/HEOS->molar_mass()*HEOS->get_reducing_state().T);
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "ASHRAE");
         HEOS->update_states();
     }
@@ -421,19 +421,20 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
 
         double deltah = HEOS->hmass() - 0; // offset from 0 kJ/kg enthalpy
         double deltas = HEOS->smass() - 0; // offset from 0 kJ/kg/K entropy
-        double delta_a1 = deltas/(8.314472/HEOS->molar_mass());
-        double delta_a2 = -deltah/(8.314472/HEOS->molar_mass()*HEOS->get_reducing_state().T);
+        double delta_a1 = deltas/(HEOS->gas_constant()/HEOS->molar_mass());
+        double delta_a2 = -deltah/(HEOS->gas_constant()/HEOS->molar_mass()*HEOS->get_reducing_state().T);
+        if (get_debug_level() > 5){std::cout << format("[set_reference_stateD] delta_a1 %g delta_a2 %g\n",delta_a1, delta_a2);}
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "NBP");
         HEOS->update_states();
     }
     else if (!reference_state.compare("DEF"))
     {
-        //HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(0,0);
-        throw NotImplementedError("Default reference state has not been implemented yet");
+        HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(0,0,"");
     }
     else if (!reference_state.compare("RESET"))
     {
         HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(0, 0, "");
+        HEOS->get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffsetCore.set(0, 0, "");
     }
     else
     {
