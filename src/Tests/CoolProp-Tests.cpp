@@ -969,8 +969,8 @@ TEST_CASE("Test first partial derivatives using PropsSI", "[derivatives]")
         CAPTURE(dpdrhomolar__T_PropsSI);
         double rel_err_exact = std::abs((dpdrhomolar__T_AbstractState-dpdrhomolar__T_PropsSI)/dpdrhomolar__T_PropsSI);
         double rel_err_approx = std::abs((dpdrhomolar__T_PropsSI_num-dpdrhomolar__T_PropsSI)/dpdrhomolar__T_PropsSI);
-        CHECK(rel_err_exact < 1e-7);
-        CHECK(rel_err_approx < 1e-7);
+        CHECK(rel_err_exact < 1e-6);
+        CHECK(rel_err_approx < 1e-6);
     }
     SECTION("Check dpdrho|T 3 ways for water using mass based","")
     {

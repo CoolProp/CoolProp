@@ -1300,7 +1300,7 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
             CAPTURE(numerical);
             CAPTURE(analytic);
             CAPTURE(terms[i]);
-            CHECK(err(analytic, numerical) < 1e-6);
+            CHECK(err(analytic, numerical) < 1e-5);
         }
     }
 }
