@@ -42,6 +42,7 @@ cdef class AbstractState:
     cpdef double cp0mass(self) except *
     cpdef double cvmass(self) except *
     cpdef double speed_sound(self) except *
+    cpdef double gas_constant(self) except *
     
     cpdef double molar_mass(self) except *
     cpdef double keyed_output(self, constants_header.parameters) except *

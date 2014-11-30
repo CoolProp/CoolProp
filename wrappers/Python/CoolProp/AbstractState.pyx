@@ -99,6 +99,9 @@ cdef class AbstractState:
     cpdef double molar_mass(self) except *: 
         """ Get the molar mass in kg/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::molar_mass(void)` """
         return self.thisptr.molar_mass()
+    cpdef double gas_constant(self) except *: 
+        """ Get the gas constant in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::gas_constant(void)` """
+        return self.thisptr.gas_constant()
     
     cpdef mole_fractions_liquid(self):
         """ Get the mole fractions of the liquid phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_liquid(void)` """
