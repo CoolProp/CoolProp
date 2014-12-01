@@ -365,7 +365,7 @@ bool load_REFPROP()
         // Load it
         #if defined(__ISWINDOWS__)
             /* We need this logic on windows because if you use the bitness
-             * macros it requires that the build bitness and the target bitness 
+             * macros it requires that the build bitness and the target bitness
              * are the same which is in general not the case.  Therefore, checking
              * both is safe
              */
@@ -373,7 +373,7 @@ bool load_REFPROP()
             // 64-bit code here.
             TCHAR refpropdllstring[100] = TEXT("refprp64.dll");
             RefpropdllInstance = LoadLibrary(refpropdllstring);
-            
+
             if (RefpropdllInstance==NULL){
                 // That didn't work, let's try the 32-bit version
                 // 32-bit code here.
@@ -555,6 +555,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 mole_fractions.resize(N);
                 mole_fractions_liq.resize(N);
                 mole_fractions_vap.resize(N);
+                LoadedREFPROPRef = components_joined;
                 return;
             }
             else if (ierr > 0) // Error
@@ -596,7 +597,7 @@ void REFPROPMixtureBackend::check_status(void)
 void REFPROPMixtureBackend::limits(double &Tmin, double &Tmax, double &rhomolarmax, double &pmax)
 {
     /*
-     * 
+     *
           subroutine LIMITS (htyp,x,tmin,tmax,Dmax,pmax)
     c
     c  returns limits of a property model as a function of composition
@@ -616,7 +617,7 @@ void REFPROPMixtureBackend::limits(double &Tmin, double &Tmax, double &rhomolarm
     c     tmax--maximum temperature [K]
     c     Dmax--maximum density [mol/L]
     c     pmax--maximum pressure [kPa]
-     * 
+     *
      */
     double Dmax_mol_L,pmax_kPa;
     char htyp[] = "EOS";
@@ -669,7 +670,7 @@ long double REFPROPMixtureBackend::calc_molar_mass(void)
     _molar_mass = wmm_kg_kmol/1000; // kg/mol
     return static_cast<long double>(_molar_mass.pt());
 };
-    
+
 double REFPROPMixtureBackend::calc_melt_Tmax()
 {
     long ierr;
@@ -1298,8 +1299,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { 
-                throw ValueError(format("TQ(%s): %s",LoadedREFPROPRef.c_str(), herr).c_str()); 
+            if (ierr > 0) {
+                throw ValueError(format("TQ(%s): %s",LoadedREFPROPRef.c_str(), herr).c_str());
                 }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());
 
             // Set all cache values that can be set with unit conversion to SI
@@ -1428,7 +1429,7 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
             CAPTURE(s_RP);
             double DH = (S1->hmass()-S2->hmass());
             double DS = (S1->smass()-S2->smass());
-            
+
             CHECK(std::abs(DH/h_RP) < 0.01);
             CHECK(std::abs(DS/s_RP) < 0.01);
         }
