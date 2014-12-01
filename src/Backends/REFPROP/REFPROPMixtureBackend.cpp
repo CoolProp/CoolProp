@@ -1480,7 +1480,6 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
 
 TEST_CASE("Check some non-state-dependent inputs for REFPROP work","[REFPROPS]")
 {
-    CoolProp::set_debug_level(1000);
     const int num_inputs = 4;
     std::string inputs[num_inputs] = {"TCRIT", "PCRIT", "MOLEMASS", "RHOCRIT"};
     for (int i = 0; i < num_inputs; ++i){
@@ -1488,8 +1487,10 @@ TEST_CASE("Check some non-state-dependent inputs for REFPROP work","[REFPROPS]")
         ss << "Check " << inputs[i];
         SECTION(ss.str(),"")
         {
+            CoolProp::set_debug_level(1000);
             double val = CoolProp::PropsSI(inputs[i],"P",0,"T",0,"REFPROP::R245FA");
             std::string err = CoolProp::get_global_param_string("errstring");
+            CoolProp::set_debug_level(0);
             CAPTURE(err);
             CHECK(ValidNumber(val));
         }
