@@ -30,11 +30,11 @@ Release = tags.has('Release') or tags.has('Release')
 
 if Release:
     doxylink = {
-        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'www.coolprop.org/_static/doxygen/html')
+        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.org/_static/doxygen/html')
     }
 else:
     doxylink = {
-        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'www.coolprop.dreamhosters.com:8010/sphinx/_static/doxygen/html')
+        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.dreamhosters.com:8010/sphinx/_static/doxygen/html')
     }
 
 # -- General configuration -----------------------------------------------------
