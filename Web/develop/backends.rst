@@ -6,7 +6,7 @@ Backends in CoolProp
 
 AbstractState
 -------------
-The :cpapi:`AbstractState` defines an interface between CoolProp and the rest of the world.  The public methods like :cpapi:`rhomolar<CoolProp::AbstractState::rhomolar>` are meant to be called by other code, while the protected functions like :cpapi:`AbstractState::calc_rhomolar()` are meant to be implemented by the other backends.
+The :cpapi:`AbstractState` defines an interface between CoolProp and the rest of the world.  The public methods like :cpapi:`rhomolar<CoolProp::AbstractState::rhomolar>` are meant to be called by other code, while the protected functions like :cpapi:`AbstractState::calc_cpmass(void)` are meant to be implemented by the other backends.
 
 Derived Backends
 ----------------
