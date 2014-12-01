@@ -12,7 +12,7 @@ Downloads and instructions for each wrapper are included in the page for the wra
 Target                                          Operating Systems            Notes
 ==============================================  ===========================  =======================================
 :ref:`Static library <static_library>`          linux, OSX, win
-:ref:`Shared library (DLL) <shared_libraries>`  linux, OSX, win
+:ref:`Shared library (DLL) <shared_library>`    linux, OSX, win
 :ref:`Python <Python>`                          linux, OSX, win              Wrapper is Cython based
 :ref:`Octave <Octave>`                          linux, OSX, win              Wrapper is SWIG based
 :ref:`C# <Csharp>`                              linux, OSX, win              Wrapper is SWIG based
