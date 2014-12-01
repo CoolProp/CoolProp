@@ -55,9 +55,9 @@ public:
 
     /// Returns true if REFPROP is supported on this platform
     bool REFPROP_supported(void);
-    
+
     long double calc_cpmolar_idealgas(void);
-    
+
     long double calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
 
     /// Set the fluids in REFPROP DLL by calling the SETUPdll function
@@ -79,7 +79,7 @@ public:
     void set_mass_fractions(const std::vector<long double> &mass_fractions);
 
     void calc_phase_envelope(const std::string &type);
-    
+
     std::vector<long double> calc_mole_fractions_liquid(void){return std::vector<long double>(mole_fractions_liq.begin(), mole_fractions_liq.end());}
     std::vector<long double> calc_mole_fractions_vapor(void){return std::vector<long double>(mole_fractions_vap.begin(), mole_fractions_vap.end());}
 
@@ -101,7 +101,7 @@ public:
     long double calc_p_critical(void);
     long double calc_rhomolar_critical(void);
     long double calc_Ttriple(void);
-    
+
     /// A wrapper function to calculate the limits for the EOS
     void limits(double &Tmin, double &Tmax, double &rhomolarmax, double &pmax);
     /// Calculate the maximum pressure

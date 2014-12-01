@@ -104,7 +104,9 @@ std::string LoadedREFPROPRef;
   #endif
 #endif
 
-std::string endings[] = {"", ".fld", ".ppf"};
+static bool dbg_refprop = false;
+
+std::string endings[] = {"", ".FLD", ".PPF"};
 
 static char rel_path_HMC_BNC[] = "HMX.BNC";
 static char default_reference_state[] = "DEF";
@@ -365,7 +367,7 @@ bool load_REFPROP()
         // Load it
         #if defined(__ISWINDOWS__)
             /* We need this logic on windows because if you use the bitness
-             * macros it requires that the build bitness and the target bitness 
+             * macros it requires that the build bitness and the target bitness
              * are the same which is in general not the case.  Therefore, checking
              * both is safe
              */
@@ -373,7 +375,7 @@ bool load_REFPROP()
             // 64-bit code here.
             TCHAR refpropdllstring[100] = TEXT("refprp64.dll");
             RefpropdllInstance = LoadLibrary(refpropdllstring);
-            
+
             if (RefpropdllInstance==NULL){
                 // That didn't work, let's try the 32-bit version
                 // 32-bit code here.
@@ -382,9 +384,9 @@ bool load_REFPROP()
             }
 
         #elif defined(__ISLINUX__)
-            RefpropdllInstance = dlopen ("librefprop.so", RTLD_LAZY);
+            RefpropdllInstance = dlopen ("librefprop.so", RTLD_NOW);
         #elif defined(__ISAPPLE__)
-            RefpropdllInstance = dlopen ("librefprop.dylib", RTLD_LAZY);
+            RefpropdllInstance = dlopen ("librefprop.dylib", RTLD_NOW);
         #else
             throw CoolProp::NotImplementedError("We should not reach this point.");
             RefpropdllInstance = NULL;
@@ -450,7 +452,27 @@ REFPROPMixtureBackend::REFPROPMixtureBackend(const std::vector<std::string>& flu
 }
 
 REFPROPMixtureBackend::~REFPROPMixtureBackend() {
-    // TODO Auto-generated destructor stub
+    // TODO: Remove this automatic unloading as soon as the bugs are fixed
+    if (RefpropdllInstance!=NULL) {
+        // Unload it
+        #if defined(__ISWINDOWS__)
+            FreeLibrary(RefpropdllInstance);
+            //delete RefpropdllInstance;
+            RefpropdllInstance = NULL;
+        #elif defined(__ISLINUX__)
+            dlclose (RefpropdllInstance);
+            //delete RefpropdllInstance;
+            RefpropdllInstance = NULL;
+        #elif defined(__ISAPPLE__)
+            dlclose (RefpropdllInstance);
+            //delete RefpropdllInstance;
+            RefpropdllInstance = NULL;
+        #else
+            throw CoolProp::NotImplementedError("We should not reach this point.");
+            //delete RefpropdllInstance;
+            RefpropdllInstance = NULL;
+        #endif
+    }
 }
 
 bool REFPROPMixtureBackend::_REFPROP_supported = true; // initialise with true
@@ -464,6 +486,18 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
 
     // Abort check if Refprop has been loaded.
     if (RefpropdllInstance!=NULL) return true;
+// This unloading  does not make a difference
+//     // TODO: Remove this automatic unloading as soon as the bugs are fixed
+//     if (RefpropdllInstance!=NULL) {
+//         // Unload it on Linux and Mac, no problems on Windows
+//         #if defined(__ISLINUX__)
+//             dlclose (RefpropdllInstance);
+//             RefpropdllInstance = NULL;
+//         #elif defined(__ISAPPLE__)
+//             dlclose (RefpropdllInstance);
+//             RefpropdllInstance = NULL;
+//         #endif
+//     }
 
     // Store result of previous check.
     if (_REFPROP_supported) {
@@ -503,6 +537,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
     long ierr=0;
     char component_string[10000], herr[errormessagelength];
     std::string components_joined = strjoin(fluid_names,"|");
+    std::string components_joined_raw = strjoin(fluid_names,"|");
     std::string fdPath = get_REFPROP_fluid_path();
     long N = static_cast<long>(fluid_names.size());
 
@@ -529,12 +564,18 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         }
 
         // Load REFPROP if it isn't loaded yet
-        load_REFPROP();
+        //load_REFPROP(); // This should not be needed.
 
         // If the name of the refrigerant doesn't match
         // that of the currently loaded refrigerant
-        if (LoadedREFPROPRef.compare(components_joined))
+        if (!LoadedREFPROPRef.compare(components_joined_raw))
         {
+            if (dbg_refprop) std::cout << format("%s:%d: The current fluid can be reused %s and %s match \n",__FILE__,__LINE__,components_joined.c_str(),LoadedREFPROPRef.c_str());
+            return;
+        }
+        else
+        {
+            if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
             char path_HMX_BNC[refpropcharlength+1];
             strcpy(path_HMX_BNC, fdPath.c_str());
             strcat(path_HMX_BNC, rel_path_HMC_BNC);
@@ -551,10 +592,12 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
 
             if (ierr == 0) // Success
             {
-                Ncomp = N;
+                this->Ncomp = N;
                 mole_fractions.resize(N);
                 mole_fractions_liq.resize(N);
                 mole_fractions_vap.resize(N);
+                LoadedREFPROPRef = components_joined_raw;
+                if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
                 return;
             }
             else if (ierr > 0) // Error
@@ -573,9 +616,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
 }
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<long double> &mole_fractions)
 {
-    if (mole_fractions.size() != Ncomp)
+    if (mole_fractions.size() != this->Ncomp)
     {
-        throw ValueError(format("size of mole fraction vector [%d] does not equal that of component vector [%d]",mole_fractions.size(), Ncomp));
+        throw ValueError(format("size of mole fraction vector [%d] does not equal that of component vector [%d]",mole_fractions.size(), this->Ncomp));
     }
     this->mole_fractions.resize(mole_fractions.size());
     for (std::size_t i = 0; i < mole_fractions.size(); ++i)
@@ -596,7 +639,7 @@ void REFPROPMixtureBackend::check_status(void)
 void REFPROPMixtureBackend::limits(double &Tmin, double &Tmax, double &rhomolarmax, double &pmax)
 {
     /*
-     * 
+     *
           subroutine LIMITS (htyp,x,tmin,tmax,Dmax,pmax)
     c
     c  returns limits of a property model as a function of composition
@@ -616,7 +659,7 @@ void REFPROPMixtureBackend::limits(double &Tmin, double &Tmax, double &rhomolarm
     c     tmax--maximum temperature [K]
     c     Dmax--maximum density [mol/L]
     c     pmax--maximum pressure [kPa]
-     * 
+     *
      */
     double Dmax_mol_L,pmax_kPa;
     char htyp[] = "EOS";
@@ -669,7 +712,7 @@ long double REFPROPMixtureBackend::calc_molar_mass(void)
     _molar_mass = wmm_kg_kmol/1000; // kg/mol
     return static_cast<long double>(_molar_mass.pt());
 };
-    
+
 double REFPROPMixtureBackend::calc_melt_Tmax()
 {
     long ierr;
@@ -1298,8 +1341,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (ierr > 0) { 
-                throw ValueError(format("TQ(%s): %s",LoadedREFPROPRef.c_str(), herr).c_str()); 
+            if (ierr > 0) {
+                throw ValueError(format("TQ(%s): %s",LoadedREFPROPRef.c_str(), herr).c_str());
                 }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());
 
             // Set all cache values that can be set with unit conversion to SI
@@ -1428,17 +1471,18 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
             CAPTURE(s_RP);
             double DH = (S1->hmass()-S2->hmass());
             double DS = (S1->smass()-S2->smass());
-            
+
             CHECK(std::abs(DH/h_RP) < 0.01);
             CHECK(std::abs(DS/s_RP) < 0.01);
         }
     }
 }
 
-TEST_CASE("Check some non-state-dependent inputs for REFPROP work","[REFPROP]")
+TEST_CASE("Check some non-state-dependent inputs for REFPROP work","[REFPROPS]")
 {
+    CoolProp::set_debug_level(1000);
     const int num_inputs = 4;
-    std::string inputs[num_inputs] = {"PCRIT", "TCRIT", "MOLEMASS", "RHOCRIT"};
+    std::string inputs[num_inputs] = {"TCRIT", "PCRIT", "MOLEMASS", "RHOCRIT"};
     for (int i = 0; i < num_inputs; ++i){
         std::ostringstream ss;
         ss << "Check " << inputs[i];
