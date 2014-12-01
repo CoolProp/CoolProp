@@ -12,6 +12,7 @@ plots_path = os.path.join(web_dir,'fluid_properties','fluids','REFPROPplots')
 template = """
 from __future__ import division, print_function
 import matplotlib
+matplotlib.use('Agg') # Use a non-GUI backend
 import numpy as np, matplotlib.pyplot as plt
 
 import CoolProp
@@ -36,18 +37,19 @@ if CP.get_fluid_param_string(fluid, "REFPROP_name") == 'N/A':
     ax.text(x,y,'Not\\nin\\nREFPROP',ha='center',va ='center',bbox = dict(fc = 'white'))
 else:
     RPfluid = 'REFPROP::'  + CP.get_fluid_param_string(fluid, "REFPROP_name")
+    symbols = ["o", "v", "^", "<", ">","8", "s","p","*","h","H","+","x"]
 
     T = np.min([1.1*CP.PropsSI(fluid, 'Tcrit'),CP.PropsSI(fluid, 'Tmax')])
     rhoc = CP.PropsSI(fluid, 'rhomolar_critical')
 
     # Normal properties
     rho = np.linspace(1e-10, 2*rhoc)
-    keys = ['P','V','L','Cpmolar','Cvmolar']
+    normalkeys = ['P','V','L','Cpmolar','Cvmolar']
     data = dict()
-    for i, key in enumerate(keys):
+    for i, key in enumerate(normalkeys):
         RPdata = CP.PropsSI(key, 'T', T, 'Dmolar', rho, RPfluid)
         CPdata = CP.PropsSI(key, 'T', T, 'Dmolar', rho, fluid)
-        plt.plot(rho/rhoc, np.abs(RPdata/CPdata-1)*100, label = key, dashes = [1, 1+1.5*i], lw = 1.5)
+        plt.plot(rho/rhoc, np.abs(RPdata/CPdata-1)*100, lw = 0, label = key, marker = symbols[i%len(symbols)])
 
     # Special properties
     rho = np.linspace(1e-10, 2*rhoc)
@@ -56,7 +58,7 @@ else:
     for i,key in enumerate(keys):
         RPdata = CP.PropsSI(key, 'T', T, 'Dmolar', rho, RPfluid) - CP.PropsSI(key, 'T', T, 'Dmolar', 1, RPfluid)
         CPdata = CP.PropsSI(key, 'T', T, 'Dmolar', rho, fluid) - CP.PropsSI(key, 'T', T, 'Dmolar', 1, fluid)
-        plt.plot(rho/rhoc, np.abs(RPdata/CPdata-1)*100, label = key, dashes = [1, 1+1.5*i], lw = 1.5)
+        plt.plot(rho/rhoc, np.abs(RPdata/CPdata-1)*100, lw = 0, label = key, marker = symbols[(i+len(normalkeys))%len(symbols)])
 
     ax.legend(loc='best', ncol = 2)
 
