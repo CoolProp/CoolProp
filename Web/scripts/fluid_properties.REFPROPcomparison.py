@@ -39,7 +39,7 @@ else:
     RPfluid = 'REFPROP::'  + CP.get_fluid_param_string(fluid, "REFPROP_name")
     symbols = ["o", "v", "^", "<", ">","8", "s","p","*","h","H","+","x"]
 
-    T = np.min([1.1*CP.PropsSI(fluid, 'Tcrit'),CP.PropsSI(fluid, 'Tmax')])
+    T = np.min([1.01*CP.PropsSI(fluid, 'Tcrit'),CP.PropsSI(fluid, 'Tmax')])
     rhoc = CP.PropsSI(fluid, 'rhomolar_critical')
 
     # Normal properties
@@ -66,7 +66,7 @@ plt.xlabel(r'Reduced density [$\\rho/\\rho_c$]')
 plt.ylabel(r'Relative deviation $(y_{{CP}}/y_{{RP}}-1)\\times 100$ [%]')
 
 ax.set_yscale('log')
-plt.title('Comparison of results between CoolProp and REFPROP along T = 1.1*Tc')
+plt.title('Comparison of results between CoolProp and REFPROP along T = 1.01*Tc')
 plt.savefig(fluid+'.png', dpi = 100)
 plt.savefig(fluid+'.pdf')
 plt.close('all')
