@@ -472,6 +472,7 @@ REFPROPMixtureBackend::~REFPROPMixtureBackend() {
             //delete RefpropdllInstance;
             RefpropdllInstance = NULL;
         #endif
+		LoadedREFPROPRef = "";
     }
 }
 
@@ -541,77 +542,78 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
     std::string fdPath = get_REFPROP_fluid_path();
     long N = static_cast<long>(fluid_names.size());
 
-    assert(N < 20);
-
     // Check platform support
     if(!REFPROP_supported()){
         throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
     }
 
-    // Loop over the file names - first we try with nothing, then .fld, then .ppf - means you can't mix and match
+	// Load REFPROP if it isn't loaded yet
+	//load_REFPROP(); // This should not be needed.
 
-    for (unsigned int k = 0; k < 3; k++)
+	// If the name of the refrigerant doesn't match
+    // that of the currently loaded refrigerant
+    if (LoadedREFPROPRef == components_joined_raw)
     {
-        // Build the mixture string
-        for (unsigned int j = 0; j < (unsigned int)N; j++)
-        {
-            if (j == 0){
-                components_joined = fdPath + fluid_names[j]+endings[k];
-            }
-            else{
-                components_joined += "|" + fdPath + fluid_names[j]+endings[k];
-            }
-        }
+        if (dbg_refprop) std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
+		this->Ncomp = N;
+        mole_fractions.resize(N);
+        mole_fractions_liq.resize(N);
+        mole_fractions_vap.resize(N);
+        return;
+    }
+    else
+    {
+		// Loop over the file names - first we try with nothing, then .fld, then .ppf - means you can't mix and match
+		for (unsigned int k = 0; k < 3; k++)
+		{
+			// Build the mixture string
+			for (unsigned int j = 0; j < (unsigned int)N; j++)
+			{
+				if (j == 0){
+					components_joined = fdPath + fluid_names[j]+endings[k];
+				}
+				else{
+					components_joined += "|" + fdPath + fluid_names[j]+endings[k];
+				}
+        
+				if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
+				char path_HMX_BNC[refpropcharlength+1];
+				strcpy(path_HMX_BNC, fdPath.c_str());
+				strcat(path_HMX_BNC, rel_path_HMC_BNC);
+				strcpy(component_string, components_joined.c_str());
 
-        // Load REFPROP if it isn't loaded yet
-        //load_REFPROP(); // This should not be needed.
+				//...Call SETUP to initialize the program
+				SETUPdll(&N, component_string, path_HMX_BNC, default_reference_state,
+						 &ierr, herr,
+						 10000, // Length of component_string (see PASS_FTN.for from REFPROP)
+						 refpropcharlength, // Length of path_HMX_BNC
+						 lengthofreference, // Length of reference
+						 errormessagelength // Length of error message
+						 );
 
-        // If the name of the refrigerant doesn't match
-        // that of the currently loaded refrigerant
-        if (!LoadedREFPROPRef.compare(components_joined_raw))
-        {
-            if (dbg_refprop) std::cout << format("%s:%d: The current fluid can be reused %s and %s match \n",__FILE__,__LINE__,components_joined.c_str(),LoadedREFPROPRef.c_str());
-            return;
-        }
-        else
-        {
-            if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
-            char path_HMX_BNC[refpropcharlength+1];
-            strcpy(path_HMX_BNC, fdPath.c_str());
-            strcat(path_HMX_BNC, rel_path_HMC_BNC);
-            strcpy(component_string, components_joined.c_str());
-
-            //...Call SETUP to initialize the program
-            SETUPdll(&N, component_string, path_HMX_BNC, default_reference_state,
-                     &ierr, herr,
-                     10000, // Length of component_string (see PASS_FTN.for from REFPROP)
-                     refpropcharlength, // Length of path_HMX_BNC
-                     lengthofreference, // Length of reference
-                     errormessagelength // Length of error message
-                     );
-
-            if (ierr == 0) // Success
-            {
-                this->Ncomp = N;
-                mole_fractions.resize(N);
-                mole_fractions_liq.resize(N);
-                mole_fractions_vap.resize(N);
-                LoadedREFPROPRef = components_joined_raw;
-                if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
-                return;
-            }
-            else if (ierr > 0) // Error
-            {
-                if (k < 2)
-                    continue; // Allow us to use PPF if a pure fluid
-                else
-                    throw ValueError(format("%s", herr));
-            }
-            else // Warning
-            {
-                throw ValueError(format("%s", herr));
-            }
-        }
+				if (ierr == 0) // Success
+				{
+					this->Ncomp = N;
+					mole_fractions.resize(N);
+					mole_fractions_liq.resize(N);
+					mole_fractions_vap.resize(N);
+					LoadedREFPROPRef = components_joined_raw;
+					if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
+					return;
+				}
+				else if (ierr > 0) // Error
+				{
+					if (k < 2)
+						continue; // Allow us to use PPF if a pure fluid
+					else
+						throw ValueError(format("%s", herr));
+				}
+				else // Warning
+				{
+					throw ValueError(format("%s", herr));
+				}
+			}
+		}
     }
 }
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<long double> &mole_fractions)
