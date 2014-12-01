@@ -206,7 +206,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
     A Python wrapper of C++ function :cpapi:`CoolProp::PropsSI` .
     """ 
     cdef vector[string] vin1
-    cdef vector[double] fractions
+    cdef vector[double] fractions, vval1, vval2
     cdef double val
     cdef string backend, fluid, delimitedfluids
     cdef bool is_iterable1, is_iterable3, is_iterable5
@@ -229,6 +229,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
                 vin1.push_back(in1)
             else:
                 vin1 = in1
+
             # Resize state variable inputs
             if is_iterable3 and is_iterable5:
                 if len(in3) != len(in5):
@@ -238,10 +239,19 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
                     vval2 = in5
             elif is_iterable3 and not is_iterable5:
                 vval1 = in3
-                vval2 = [in5]*len(in3)
+                vval2.resize(len(in3))
+                templist = [in5]*len(in3)
+                vval2 = templist
             elif is_iterable5 and not is_iterable3:
-                vval1 = [in3]*len(in5)
+                vval1.resize(len(in5))
+                templist = [in3]*len(in5)
+                vval1 = templist
                 vval2 = in5
+            else:
+                vval.resize(1)
+                vval1[0] = in3
+                vval1.resize(1)
+                vval2[0] = in5
                 
             # Extract the backend and the fluid from the input string
             _extract_backend(in6, backend, fluid)
@@ -254,7 +264,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             fluids = delimitedfluids.split('&')
 
             # Call the function - this version takes iterables
-            outmat = _PropsSImulti(in1, in2, vval1, in4, vval2, backend, fluids, fractions)
+            outmat = _PropsSImulti(vin1, in2, vval1, in4, vval2, backend, fluids, fractions)
             
             # Check that we got some output
             if outmat.empty():
