@@ -486,6 +486,9 @@ bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, paramete
             throw ValueError("For now can't be inside");
         }
     }
+	else{
+		throw ValueError("You have a funny number of intersections in is_inside");
+	}
 }
 
 } /* namespace CoolProp */
