@@ -11,8 +11,13 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-
+    
 import sys, os
+
+#~ # If your extensions are in another directory, add it here. If the directory
+#~ # is relative to the documentation root, use os.path.abspath to make it
+#~ # absolute, like shown here.
+#~ sys.path.append(os.path.abspath('sphinxext'))
 
 sys.path.insert(0, os.path.abspath('_ext'))
 try:
@@ -20,16 +25,17 @@ try:
 except ImportError:
 
     print('Unable to import sphinxcontrib.doxylink; try to run "pip install sphinxcontrib-doxylink"')
+        
+Release = tags.has('Release') or tags.has('Release')
 
-
-#~ # If your extensions are in another directory, add it here. If the directory
-#~ # is relative to the documentation root, use os.path.abspath to make it
-#~ # absolute, like shown here.
-#~ sys.path.append(os.path.abspath('sphinxext'))
-
-doxylink = {
-    'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', '../_static/doxygen/html')
-}
+if Release:
+    doxylink = {
+        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'www.coolprop.org/_static/doxygen/html')
+    }
+else:
+    doxylink = {
+        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'www.coolprop.dreamhosters.com:8010/sphinx/_static/doxygen/html')
+    }
 
 # -- General configuration -----------------------------------------------------
 

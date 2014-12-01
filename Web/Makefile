@@ -38,6 +38,11 @@ html:
 	@echo
 	@echo "Build finished. The HTML pages are in _build/html."
 
+html_release: 
+	$(SPHINXBUILD) -j3 -b html -t Release $(ALLSPHINXOPTS)  _build/html
+	@echo
+	@echo "Build finished. The HTML pages are in _build/html."
+    
 dirhtml:
 	$(SPHINXBUILD) -b dirhtml $(ALLSPHINXOPTS) _build/dirhtml
 	@echo
