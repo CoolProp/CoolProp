@@ -10,7 +10,7 @@ General Information
 
 Shared libraries are compiled code that can be accessed by other programs.  On windows, they are DLL files, on other platforms .os (linux) or .dylib (OSX)
 
-There are a few things that need to be considered when determining what shared library you should build/use::
+There are a few things that need to be considered when determining what shared library you should build/use:
 
 * Calling convention (`http://en.wikipedia.org/wiki/Calling_convention <wikipedia>`_: ``__stdcall`` or ``__cdecl`` - only a consideration on 32-bit windows
 * Architecture: 32-bit or 64-bit
@@ -88,7 +88,9 @@ You can select the compiler in the call to cmake below.
         
 3. Do the build::
 
-    cmake --build .
+    cmake --build . --config Release
+    
+If you are using MinGW, you can leave off the ``--config Release``, the default build configuration is release
 
 Linux & OSX
 -----------
