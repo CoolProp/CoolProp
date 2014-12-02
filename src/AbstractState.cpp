@@ -179,6 +179,8 @@ double AbstractState::trivial_keyed_output(int key)
         return get_reducing_state().T;
     case irhomolar_reducing:
         return get_reducing_state().rhomolar;
+	case iP_reducing:
+		return get_reducing_state().p;
     case iP_critical:
         return this->p_critical();
     case iT_critical:

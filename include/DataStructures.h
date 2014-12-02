@@ -49,6 +49,7 @@ enum parameters{
     irhomass_reducing, 
     irhomass_critical, 
     iP_critical, 
+	iP_reducing,
     iT_triple, 
     iP_triple, 
     iT_min, 
