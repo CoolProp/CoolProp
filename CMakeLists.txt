@@ -672,6 +672,7 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   endif()
   add_dependencies (CoolPropMATLAB_wrap generate_headers)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/SwigRef.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (TARGETS CoolPropMATLAB_wrap DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   enable_testing()
   add_custom_command(TARGET CoolPropMATLAB_wrap
