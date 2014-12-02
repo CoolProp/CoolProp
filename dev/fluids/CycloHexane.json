@@ -51,8 +51,8 @@
     }, 
     "melting_line": {
       "BibTeX": "Penoncello-IJT-1995", 
-      "_note": "Modified coefficients to make minimum state agree with triple point",
       "T_m": 279.96, 
+      "_note": "Modified coefficients to make minimum state agree with triple point", 
       "parts": [
         {
           "T_0": 279.47, 
