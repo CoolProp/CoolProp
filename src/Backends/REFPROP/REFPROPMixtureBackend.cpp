@@ -604,13 +604,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
                 return;
             }
-            else if (ierr > 0) // Error
-            {
-                if (k < 2)
-                    continue; // Allow us to use PPF if a pure fluid
-                else
-                    throw ValueError(format("%s", herr));
-            }
+            else if (ierr > 0 && k < number_of_endings-1){ // Keep going
+				continue; 
+			}	
             else // Warning
             {
                 throw ValueError(format("%s", herr));
