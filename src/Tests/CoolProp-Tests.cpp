@@ -704,7 +704,7 @@ TEST_CASE("Tests for solvers in P,T flash using Water", "[flash],[PT]")
     }
     SECTION("Subcritical p slightly subcooled should be ok")
     {
-        double Ts, ps, rho, dT = 1e-8;
+        double Ts, ps, rho, dT = 1e-4;
         CHECK_NOTHROW(Ts = PropsSI("T","P",101325,"Q",0,"Water"));
         CAPTURE(Ts);
         CHECK(ValidNumber(Ts));
@@ -715,7 +715,7 @@ TEST_CASE("Tests for solvers in P,T flash using Water", "[flash],[PT]")
     }
     SECTION("Subcritical p slightly superheated should be ok")
     {
-        double Ts, ps, rho, dT = 1e-8;
+        double Ts, ps, rho, dT = 1e-4;
         CHECK_NOTHROW(Ts = PropsSI("T","P",101325,"Q",0,"Water"));
         CAPTURE(Ts);
         CHECK(ValidNumber(Ts));
@@ -755,7 +755,7 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
         ss2 << "Subcritical barely superheated P," << ykey;
         SECTION(ss2.str(), "")
         {
-            double dT = 1e-6;
+            double dT = 1e-3;
             CHECK_NOTHROW(Ts=PropsSI("T","P",101325,"Q",0,"Water"));
             CHECK(ValidNumber(Ts));
             CAPTURE(Ts);
@@ -789,7 +789,7 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
         ss4 << "Subcritical barely subcooled P," << ykey;
         SECTION(ss4.str(), "")
         {
-            double dT = -1e-6;
+            double dT = -1e-3;
             CHECK_NOTHROW(Ts=PropsSI("T","P",101325,"Q",0,"Water"));
             CHECK(ValidNumber(Ts));
             CAPTURE(Ts);
