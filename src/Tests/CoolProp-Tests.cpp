@@ -619,7 +619,7 @@ TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for Water using all v
             
         // Subcritical pressure liquid
         int inputsN = sizeof(inputs)/sizeof(inputs[0]);
-        for (double p = pState->p_triple()*1.01; p < pState->p_critical(); p *= 3)
+        for (double p = pState->p_triple()*1.1; p < pState->p_critical(); p *= 3)
         {
             double Ts = PropsSI("T","P",p,"Q",0,"Water");
             double Tmelt = pState->melting_line(CoolProp::iT, CoolProp::iP, p);
@@ -1305,10 +1305,13 @@ TEST_CASE("Test that saturation solvers solve all the way to T = Tc", "[sat_T_to
             ss2 << "Check sat_T for " << fluids[i] << " for Tc - T = " << j << " K";
             SECTION(ss2.str(),"")
             {
-                CHECK(ValidNumber(PropsSI("D","T",Tc-j,"Q",0,fluids[i])));
+				double val = PropsSI("D","T",Tc-j,"Q",0,fluids[i]);
+				std::string err = get_global_param_string("errstring");
+				CAPTURE(val);
+				CAPTURE(err);
+                CHECK(ValidNumber(val));
             }
         }
-        
     }
 }
 
