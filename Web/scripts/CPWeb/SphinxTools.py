@@ -46,16 +46,28 @@ The red curve is the maximum temperature curve, and the blue curve is the meltin
 """
 
 table_template = """ Parameter, Value
+**General**,
 Molar mass [kg/mol],{mm:s}
-CAS, {CAS:s}
-ASHRAE, {ASHRAE:s}
+CAS number, {CAS:s}
+ASHRAE class, {ASHRAE:s}
+**Limits**,
+Maximum temperature [K],{Tmax:s}
+Maximum pressure [Pa],{pmax:s}
+**Triple point**,
 Triple point temperature [K],{Tt:s}
 Triple point pressure [Pa], {pt:s}
+**Critical point**,
 Critical point temperature [K], {Tc:s}
-Critical point pressure [Pa], {pc:s}
 Critical point density [kg/m3], {rhoc_mass:s}
 Critical point density [mol/m3], {rhoc_molar:s}
+{reducing_string:s}
 """
+
+reducing_template = """**Reducing point**,
+Reducing point temperature [K], {Tr:s}
+Reducing point density [mol/m3], {rhor_molar:s}
+"""
+
 class FluidInfoTableGenerator(object):
     
     def __init__(self, name):
@@ -74,12 +86,23 @@ class FluidInfoTableGenerator(object):
         molar_mass = CoolProp.CoolProp.PropsSI(self.name,'molemass')
         Tt = CoolProp.CoolProp.PropsSI(self.name,'Ttriple')
         Tc = CoolProp.CoolProp.PropsSI(self.name,'Tcrit')
+        Tr = CoolProp.CoolProp.PropsSI(self.name,'T_reducing')
         pc = CoolProp.CoolProp.PropsSI(self.name,'pcrit')
         pt = CoolProp.CoolProp.PropsSI(self.name,'ptriple')
+        Tmax = CoolProp.CoolProp.PropsSI(self.name,'Tmax')
+        pmax = CoolProp.CoolProp.PropsSI(self.name,'pmax')
         rhoc_mass = CoolProp.CoolProp.PropsSI(self.name,'rhomass_critical')
         rhoc_molar = CoolProp.CoolProp.PropsSI(self.name,'rhomolar_critical')
+        rhor_molar = CoolProp.CoolProp.PropsSI(self.name,'rhomolar_reducing')
+        
         CAS = CoolProp.CoolProp.get_fluid_param_string(self.name, "CAS")
         ASHRAE = CoolProp.CoolProp.get_fluid_param_string(self.name, "ASHRAE34")
+        
+        # Generate (or not) the reducing data
+        reducing_data = ''
+        if abs(Tr - Tc) > 1e-3:
+            reducing_data = reducing_template.format(Tr = tos(Tr), 
+                                                     rhor_molar = tos(rhor_molar))
             
         args = dict(mm = tos(molar_mass),
                     Tt = tos(Tt),
@@ -89,7 +112,10 @@ class FluidInfoTableGenerator(object):
                     rhoc_molar = tos(rhoc_molar),
                     pc = tos(pc),
                     CAS = tos(CAS),
-                    ASHRAE = tos(ASHRAE))
+                    ASHRAE = tos(ASHRAE),
+                    Tmax = tos(Tmax),
+                    pmax = tos(pmax),
+                    reducing_string = reducing_data)
         out = table_template.format(**args)
         
         with open(os.path.join(path, self.name+'-info.csv'),'w') as fp:
