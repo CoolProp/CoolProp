@@ -607,7 +607,7 @@ public:
 
         // Make sure we end up back at the same temperature and pressure we started out with
         if(std::abs(T-State.T()) > 1e-2) throw CoolProp::ValueError(format("Error on T [%Lg K] is greater than 1e-2",std::abs(State.T()-T)));
-        if(std::abs(p-State.p())/p*100 > 1e-2)  throw CoolProp::ValueError(format("Error on p [%Lg %%] is greater than 1e-2 %%",std::abs(p-State.p())/p ));
+        if(std::abs(p-State.p())/p*100 > 1e-2)  throw CoolProp::ValueError(format("Error on p [%Lg %%] is greater than 1e-2 %%",std::abs(p-State.p())/p*100));
     }
 };
 
@@ -623,7 +623,7 @@ TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for Water using all v
         {
             double Ts = PropsSI("T","P",p,"Q",0,"Water");
             double Tmelt = pState->melting_line(CoolProp::iT, CoolProp::iP, p);
-            for (double T = Tmelt; T < Ts; T += 0.1)
+            for (double T = Tmelt; T < Ts-0.1; T += 0.1)
             {
                 CHECK_NOTHROW(set_TP(T, p));
 
@@ -638,10 +638,13 @@ TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for Water using all v
                     get_variables();
                     CAPTURE(x1);
                     CAPTURE(x2);
-                    double rho_RP = PropsSI("Dmolar","P",p,"T",T,"REFPROP::Water");
-                    if (ValidNumber(rho_RP)){
-                        CHECK_NOTHROW(single_phase_consistency_check());
-                        CHECK(std::abs((rho_RP-rhomolar)/rhomolar) < 1e-3);
+					CAPTURE(Ts);
+					CHECK_NOTHROW(single_phase_consistency_check());
+                    double rhomolar_RP = PropsSI("Dmolar","P",p,"T",T,"REFPROP::Water");
+                    if (ValidNumber(rhomolar_RP)){
+						CAPTURE(rhomolar_RP);
+						CAPTURE(rhomolar);
+                        CHECK(std::abs((rhomolar_RP-rhomolar)/rhomolar) < 1e-3);
                     }
                 }
             }

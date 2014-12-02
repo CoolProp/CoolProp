@@ -1295,12 +1295,12 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
         term = get(terms[i]);
         for (std::size_t j = 0; j < sizeof(derivs)/sizeof(derivs[0]); ++j)
         {
-            call(derivs[j], term, 1.3, 0.7, 1e-7);
+            call(derivs[j], term, 1.3, 0.7, 1e-6);
             CAPTURE(derivs[j]);
             CAPTURE(numerical);
             CAPTURE(analytic);
             CAPTURE(terms[i]);
-            CHECK(err(analytic, numerical) < 1e-5);
+            CHECK(err(analytic, numerical) < 1e-7);
         }
     }
 }
