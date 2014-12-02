@@ -106,7 +106,8 @@ std::string LoadedREFPROPRef;
 
 static bool dbg_refprop = false;
 
-std::string endings[] = {"", ".FLD", ".PPF"};
+static const unsigned int number_of_endings = 5;
+std::string endings[number_of_endings] = {"", ".FLD", ".fld", ".PPF", ".ppf"};
 
 static char rel_path_HMC_BNC[] = "HMX.BNC";
 static char default_reference_state[] = "DEF";
@@ -563,57 +564,57 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
     }
     else
     {
-		// Loop over the file names - first we try with nothing, then .fld, then .ppf - means you can't mix and match
-		for (unsigned int k = 0; k < 3; k++)
+		// Loop over the file names - first we try with nothing, then .fld, then .FLD, then .ppf - means you can't mix and match
+		for (unsigned int k = 0; k < number_of_endings; k++)
 		{
 			// Build the mixture string
 			for (unsigned int j = 0; j < (unsigned int)N; j++)
 			{
 				if (j == 0){
-					components_joined = fdPath + fluid_names[j]+endings[k];
+					components_joined = fdPath + upper(fluid_names[j])+endings[k];
 				}
 				else{
-					components_joined += "|" + fdPath + fluid_names[j]+endings[k];
+					components_joined += "|" + fdPath + upper(fluid_names[j])+endings[k];
 				}
+            }
         
-				if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
-				char path_HMX_BNC[refpropcharlength+1];
-				strcpy(path_HMX_BNC, fdPath.c_str());
-				strcat(path_HMX_BNC, rel_path_HMC_BNC);
-				strcpy(component_string, components_joined.c_str());
-               
-              ierr = 0;
-				//...Call SETUP to initialize the program
-				SETUPdll(&N, component_string, path_HMX_BNC, default_reference_state,
-						 &ierr, herr,
-						 10000, // Length of component_string (see PASS_FTN.for from REFPROP)
-						 refpropcharlength, // Length of path_HMX_BNC
-						 lengthofreference, // Length of reference
-						 errormessagelength // Length of error message
-						 );
+            if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
+            char path_HMX_BNC[refpropcharlength+1];
+            strcpy(path_HMX_BNC, fdPath.c_str());
+            strcat(path_HMX_BNC, rel_path_HMC_BNC);
+            strcpy(component_string, components_joined.c_str());
+           
+            ierr = 0;
+            //...Call SETUP to initialize the program
+            SETUPdll(&N, component_string, path_HMX_BNC, default_reference_state,
+                     &ierr, herr,
+                     10000, // Length of component_string (see PASS_FTN.for from REFPROP)
+                     refpropcharlength, // Length of path_HMX_BNC
+                     lengthofreference, // Length of reference
+                     errormessagelength // Length of error message
+                     );
 
-				if (ierr == 0) // Success
-				{
-					this->Ncomp = N;
-					mole_fractions.resize(N);
-					mole_fractions_liq.resize(N);
-					mole_fractions_vap.resize(N);
-					LoadedREFPROPRef = components_joined_raw;
-					if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
-					return;
-				}
-				else if (ierr > 0) // Error
-				{
-					if (k < 2)
-						continue; // Allow us to use PPF if a pure fluid
-					else
-						throw ValueError(format("%s", herr));
-				}
-				else // Warning
-				{
-					throw ValueError(format("%s", herr));
-				}
-			}
+            if (ierr == 0) // Success
+            {
+                this->Ncomp = N;
+                mole_fractions.resize(N);
+                mole_fractions_liq.resize(N);
+                mole_fractions_vap.resize(N);
+                LoadedREFPROPRef = components_joined_raw;
+                if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
+                return;
+            }
+            else if (ierr > 0) // Error
+            {
+                if (k < 2)
+                    continue; // Allow us to use PPF if a pure fluid
+                else
+                    throw ValueError(format("%s", herr));
+            }
+            else // Warning
+            {
+                throw ValueError(format("%s", herr));
+            }
 		}
     }
 }
