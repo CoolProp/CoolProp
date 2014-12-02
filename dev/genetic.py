@@ -51,8 +51,8 @@ class GeneticAncillaryFitter(object):
                 self.T = np.linspace(Tlims[0],Tlims[1])
             self.pL = np.array(PropsSI('P','T',self.T,'Q',[0]*len(self.T),Ref))
             self.pV = np.array(PropsSI('P','T',self.T,'Q',[1]*len(self.T),Ref))
-            self.rhoL = PropsSI('D','T',self.T,'Q',[0]*len(self.T),Ref)
-            self.rhoV = PropsSI('D','T',self.T,'Q',[1]*len(self.T),Ref)
+            self.rhoL = PropsSI('Dmolar','T',self.T,'Q',[0]*len(self.T),Ref)
+            self.rhoV = PropsSI('Dmolar','T',self.T,'Q',[1]*len(self.T),Ref)
         else:
             self.Tc = values['Tcrit']
             self.pc = values['pcrit']
@@ -289,7 +289,8 @@ class GeneticAncillaryFitter(object):
         
         print self.value
         print '// Max error is ',samples[0].max_abserror,'% between',np.min(self.T),'and',np.max(self.T),'K'
-#         print str(samples[0].v), samples[0].beta.tolist()
+        
+        self.fit_value = samples[0].fit_value
     
         j = dict()
         j['n'] = samples[0].beta.squeeze().tolist()
@@ -338,7 +339,7 @@ def build_all_ancillaries():
         
 if __name__ == "__main__":
     
-    fluid = 'R245fa'
+    fluid = 'Methanol'
     RPfluid = fluid
     build_ancillaries(RPfluid, Tlims = [CP.PropsSI(fluid,'Ttriple'), CP.PropsSI(fluid, 'Tcrit')-0.01])
     
