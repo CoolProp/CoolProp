@@ -407,10 +407,12 @@ TEST_CASE("Test that hs_anchor enthalpy/entropy agrees with EOS", "[ancillaries]
         {
             std::string note = "The enthalpy and entropy are hardcoded in the fluid JSON files.  They MUST agree with the values calculated by the EOS";
             AS->update(CoolProp::DmolarT_INPUTS, hs_anchor.rhomolar, hs_anchor.T);
-            CAPTURE(hs_anchor.hmolar);
-            CAPTURE(hs_anchor.smolar);
             double EOS_hmolar = AS->hmolar();
             double EOS_smolar = AS->smolar();
+            CAPTURE(hs_anchor.hmolar);
+            CAPTURE(hs_anchor.smolar);
+            CAPTURE(EOS_hmolar);
+            CAPTURE(EOS_smolar);
             CHECK( std::abs(EOS_hmolar - hs_anchor.hmolar) < 1e-3);
             CHECK( std::abs(EOS_smolar - hs_anchor.smolar) < 1e-3);
         }   
