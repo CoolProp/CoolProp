@@ -650,6 +650,11 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
   if(WIN32) # 32-bit or 64-bit mex
+  
+    # Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+    
     if (CMAKE_CL_64)
         SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexw64)
     else()
