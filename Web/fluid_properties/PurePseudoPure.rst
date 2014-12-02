@@ -114,4 +114,4 @@ References
    :style: unsrt
    
 
-.. include:: fluidstoc.rst
+.. include:: fluidstoc.rst.in
