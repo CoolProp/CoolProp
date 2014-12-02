@@ -6,18 +6,21 @@ MATLAB Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled binaries of the MATLAB wrapper can be downloaded from :sfdownloads:`MATLAB` for your architecture, or from the development buildbot server at :bbbinaries:`MATLAB`.
+Release versions of the MATLAB wrapper can be downloaded from :sfdownloads:`MATLAB` for your architecture, or from the development buildbot server at :bbbinaries:`MATLAB`.  Whichever one you pick, make sure all the files come from the same place.
 
-Download the +CoolProp.7z file and extract it to a folder called +CoolProp using the `7-zip <http://www.7-zip.org/download.html>`_ program.  Place the mex file that is appropriate to your architecture in the directory that contains the directory +CoolProp.
+Download the +CoolProp.7z file and extract it using the `7-zip <http://www.7-zip.org/download.html>`_ program.  Make sure that when you expand it, there are no +CoolProp intermediate folders generated.  Place the mex file that is appropriate to the version of MATLAB in the directory that contains the directory +CoolProp.  You can determine what version of matlab you have by running the command ``computer('arch')`` at the MATLAB command prompt.  Depending on the output, you will need to download one of the following mex files:
 
-* 32-bit windows: CoolPropMATLAB_wrap.mexw32
-* 64-bit windows: CoolPropMATLAB_wrap.mexw64
-* 64-bit linux: CoolPropMATLAB_wrap.mexa64
-* 64-bit OSX: CoolPropMATLAB_wrap.mexmaci64
+* ``computer('arch')`` yields ``win32``: CoolPropMATLAB_wrap.mexw32
+* ``computer('arch')`` yields ``win64``: CoolPropMATLAB_wrap.mexw64
+* ``computer('arch')`` yields ``glnxa64``: CoolPropMATLAB_wrap.mexa64
+* ``computer('arch')`` yields ``maci64``: CoolPropMATLAB_wrap.mexmaci64
 
-You should have a folder layout like::
+Also, download the ``SwigRef.m`` file.
+
+When you are finished, you should have a folder layout like::
 
     main
+     |- SwigRef.m
      |- CoolPropMATLAB_wrap.mexw64
      |- +CoolProp
         |- AbstractState.m
