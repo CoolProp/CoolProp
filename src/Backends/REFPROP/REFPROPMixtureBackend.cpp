@@ -548,7 +548,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
     }
 
 	// Load REFPROP if it isn't loaded yet
-	//load_REFPROP(); // This should not be needed.
+	load_REFPROP(); // This should not be needed.
 
 	// If the name of the refrigerant doesn't match
     // that of the currently loaded refrigerant
