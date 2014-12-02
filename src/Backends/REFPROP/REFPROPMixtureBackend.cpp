@@ -581,7 +581,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
 				strcpy(path_HMX_BNC, fdPath.c_str());
 				strcat(path_HMX_BNC, rel_path_HMC_BNC);
 				strcpy(component_string, components_joined.c_str());
-
+               
+              ierr = 0;
 				//...Call SETUP to initialize the program
 				SETUPdll(&N, component_string, path_HMX_BNC, default_reference_state,
 						 &ierr, herr,
@@ -680,21 +681,22 @@ long double REFPROPMixtureBackend::calc_Tmax(void){
     return static_cast<long double>(Tmax);
 };
 long double REFPROPMixtureBackend::calc_T_critical(){
-    long ierr;
+    long ierr = 0;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
-    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); 
+    if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<long double>(Tcrit);
 };
 long double REFPROPMixtureBackend::calc_p_critical(){
-    long ierr;
+    long ierr = 0;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
     CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<long double>(pcrit_kPa*1000);
 };
 long double REFPROPMixtureBackend::calc_rhomolar_critical(){
-    long ierr;
+    long ierr = 0;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
     CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
@@ -717,7 +719,7 @@ long double REFPROPMixtureBackend::calc_molar_mass(void)
 
 double REFPROPMixtureBackend::calc_melt_Tmax()
 {
-    long ierr;
+    long ierr = 0;
     char herr[255];
     double tmin,tmax,Dmax_mol_L,pmax_kPa, Tmax_melt;
     char htyp[] = "EOS";
@@ -732,7 +734,7 @@ double REFPROPMixtureBackend::calc_melt_Tmax()
 }
 long double REFPROPMixtureBackend::calc_melting_line(int param, int given, long double value)
 {
-    long ierr;
+    long ierr = 0;
     char herr[255];
 
     if (param == iP && given == iT){
@@ -765,7 +767,7 @@ long double REFPROPMixtureBackend::calc_melting_line(int param, int given, long 
 long double REFPROPMixtureBackend::calc_viscosity(void)
 {
     double eta, tcx, rhomol_L = 0.001*_rhomolar;
-    long ierr;
+    long ierr = 0;
     char herr[255];
     TRNPRPdll(&_T,&rhomol_L,&(mole_fractions[0]),  // Inputs
               &eta,&tcx,                           // Outputs
@@ -785,7 +787,7 @@ long double REFPROPMixtureBackend::calc_conductivity(void)
 long double REFPROPMixtureBackend::calc_surface_tension(void)
 {
     double sigma, rho_mol_L = 0.001*_rhomolar;
-    long ierr;
+    long ierr = 0;
     char herr[255];
     SURFTdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
              &sigma,                                 // Outputs
@@ -798,7 +800,7 @@ long double REFPROPMixtureBackend::calc_surface_tension(void)
 long double REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
 {
     double rho_mol_L = 0.001*_rhomolar;
-    long ierr;
+    long ierr = 0;
     std::vector<double> fug_cof;
     fug_cof.resize(mole_fractions.size());
     char herr[255];
@@ -812,7 +814,7 @@ long double REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
 
 void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
 {
-    long ierr;
+    long ierr = 0;
     char herr[255];
     SATSPLNdll(&(mole_fractions[0]),  // Inputs
                &ierr, herr, errormessagelength);       // Error message
