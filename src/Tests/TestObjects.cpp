@@ -64,7 +64,7 @@ Eigen::MatrixXd CoolPropTesting::makeMatrix(const std::vector<double> &coefficie
 }
 
 CoolProp::IncompressibleFluid CoolPropTesting::incompressibleFluidObject(){
-    bool PRINT = false;
+
     std::string tmpStr;
     std::vector<double> tmpVector;
     std::vector< std::vector<double> > tmpMatrix;
