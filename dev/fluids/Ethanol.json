@@ -51,6 +51,7 @@
     }, 
     "melting_line": {
       "BibTeX": "Sun-BBPC-1988", 
+      "_note": "Modified coefficients to make minimum state agree with triple point",
       "T_m": 158.8, 
       "parts": [
         {
@@ -59,7 +60,7 @@
           "T_min": 158.37, 
           "a": 436900000.0, 
           "c": 2.6432, 
-          "p_0": 0
+          "p_0": 0.0007350470774722485
         }
       ], 
       "type": "Simon"

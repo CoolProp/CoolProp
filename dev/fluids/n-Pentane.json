@@ -53,6 +53,7 @@
     }, 
     "melting_line": {
       "BibTeX": "Reeves-JCP-1964", 
+      "_note": "Modified coefficients to make minimum state agree with triple point",
       "T_m": 143.26, 
       "parts": [
         {
@@ -61,7 +62,7 @@
           "T_min": 143.47, 
           "a": 660000000.0, 
           "c": 1.649, 
-          "p_0": 0.0
+          "p_0": 0.07632208287718079
         }
       ], 
       "type": "Simon"
