@@ -6,8 +6,8 @@ FORTRAN Wrapper
 
 For FORTRAN, there are two fundamental choices.  Choose one option:
 
+* [Recommended] For FORTRAN 95 and newer, compile a static library of CoolProp and link it with FORTRAN code following the instructions here: :ref:`F95 and newer <FORTRAN95>`
 * For FORTRAN 77 and newer, call a shared library of CoolProp using the instructions here: :ref:`F77 and newer <FORTRAN77>`
-* For FORTRAN 95 and newer, compile a static library of CoolProp and link it with FORTRAN code following the instructions here: :ref:`F95 and newer <FORTRAN95>`
 
 Common Requirements
 ===================
@@ -40,7 +40,7 @@ The most reliable mixed compilation on linux seems to be with the true-gcc/g++ t
 
     brew install gcc-4.9
     
-where you can change ``4.9`` to the most up to date version.  Search `http://braumeister.org/formula/gcc`_ for the most recipe for gcc.  Looks like ``gcc`` also works.
+where you can change ``4.9`` to the most up to date version.  Search `braumeister <http://braumeister.org/formula/gcc>`_ for the most recipe for gcc.  Looks like ``gcc`` also works.
     
 .. _FORTRAN95:
 
@@ -191,5 +191,3 @@ On windows, the current folder is always searched for DLL, so you can just do::
 
     gfortran -g -o example example.for -L. -lCoolProp
     example
-
-On OSX
