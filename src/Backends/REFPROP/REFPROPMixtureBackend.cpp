@@ -1491,7 +1491,7 @@ TEST_CASE("Check some non-state-dependent inputs for REFPROP work","[REFPROPS]")
         ss << "Check " << inputs[i];
         SECTION(ss.str(),"")
         {
-            CoolProp::set_debug_level(1000);
+            CoolProp::set_debug_level(0);
             double val = CoolProp::PropsSI(inputs[i],"P",0,"T",0,"REFPROP::R245FA");
             std::string err = CoolProp::get_global_param_string("errstring");
             CoolProp::set_debug_level(0);
