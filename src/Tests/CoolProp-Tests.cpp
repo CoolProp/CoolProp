@@ -700,6 +700,7 @@ TEST_CASE("Tests for solvers in P,T flash using Water", "[flash],[PT]")
 		CHECK_NOTHROW(ps = PropsSI("P","T",Ts,"Q",0,"Water"));
         CHECK(ValidNumber(ps));
         CAPTURE(Ts);
+		CAPTURE(ps);
         CHECK_NOTHROW(rho = PropsSI("D","T",Ts,"P",ps,"Water"));
         CAPTURE(rho);
         CHECK(!ValidNumber(rho));
