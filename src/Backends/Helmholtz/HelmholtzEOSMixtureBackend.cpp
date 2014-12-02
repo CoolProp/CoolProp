@@ -1368,14 +1368,14 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
 
         if (other == iP)
         {
-            if (value > HEOS.SatL->p()*(1e-6 + 1)){
+            if (value > HEOS.SatL->p()*(1e-10 + 1)){
                 this->_phase = iphase_liquid; _Q = -1000; return;
             }
-            else if (value < HEOS.SatV->p()*(1 - 1e-6)){
+            else if (value < HEOS.SatV->p()*(1 - 1e-10)){
                 this->_phase = iphase_gas; _Q = 1000; return;
             }
             else{
-                throw ValueError(format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 1e-4 %% of given p [%Lg Pa]", HEOS.SatL->p(), _T, value));
+                throw ValueError(format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 1e-8 %% of given p [%Lg Pa]", HEOS.SatL->p(), _T, value));
             }
         }
 
