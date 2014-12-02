@@ -104,8 +104,8 @@ composition notation. Depending on your fluid, you have to supply either the
 :ref:`mass fraction<MassMix>` or the :ref:`volume fraction<VoluMix>` as additional
 parameter. This is done via the fluid name by appending a dash and the
 fraction of the substance other than water. The fraction notation can be in the
-form of percent, ``LiBr-23%``, or as a fraction, ``LiBr[0.23]``, which
-corresponds to the new mixture syntax in CoolProp5.
+form of percent, ``LiBr-23%``, or as a fraction between 0 and 1, ``LiBr[0.23]``, which
+corresponds to the new mixture syntax in CoolProp v5.
 
 ..  In addition to the properties available for the pure fluids (``D``, ``C``,
   ``U``, ``H``, ``S``, ``V``, ``L``,``Tmin`` and ``Tmax``, some mixtures also
@@ -118,14 +118,17 @@ corresponds to the new mixture syntax in CoolProp5.
 
     #Density of a lithium bromide solution at 300 K and 1 atm.
     In [1]: PropsSI('D','T',300,'P',101325,'INCOMP::LiBr[0.23]')
+    
+    #Density of a lithium bromide solution at 300 K and 1 atm.
+    In [1]: PropsSI('D','T',300,'P',101325,'INCOMP::LiBr-23%')
 
     #Specific heat capacity of a lithium bromide solution at 300 K and 1 atm
-    In [1]: PropsSI('C','T',300,'P',101325,'INCOMP::LiBr-0.23%')
+    In [1]: PropsSI('C','T',300,'P',101325,'INCOMP::LiBr-23%')
 
     #Specific enthalpy of a lithium bromide solution at 300 K and 1 atm
-    In [1]: PropsSI('H','T',300,'P',101325,'INCOMP::LiBr-0.23%')
+    In [1]: PropsSI('H','T',300,'P',101325,'INCOMP::LiBr-23%')
 
-    In [1]: PropsSI('T','H',28627,'P',101325,'INCOMP::LiBr-0.23%')
+    In [1]: PropsSI('T','H',28627,'P',101325,'INCOMP::LiBr-23%')
 
 
 .. warning::
