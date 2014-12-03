@@ -1,3 +1,4 @@
+from __future__ import print_function
 import CoolProp as CoolProp
 import matplotlib.pyplot as plt
 import numpy as np, os, json
@@ -7,7 +8,7 @@ jj = json.loads(CoolProp.CoolProp.get_config_as_json_string()) # Get the json va
 jj['CRITICAL_SPLINES_ENABLED'] = False
 CoolProp.CoolProp.set_config_as_json_string(json.dumps(jj)) # Set the values using json
 # Double check that it was set properly
-jj = json.loads(CoolProp.CoolProp.get_config_as_json_string()); print jj
+jj = json.loads(CoolProp.CoolProp.get_config_as_json_string()); print(jj)
 
 class LinearFitter(object):
     def __init__(self):
@@ -218,13 +219,13 @@ if not os.path.exists('sat_spline_json.json'):
         pc = CoolProp.CoolProp.PropsSI('pcrit',fluid)
         Tc = CoolProp.CoolProp.PropsSI('Tcrit',fluid)
         Tt = CoolProp.CoolProp.PropsSI('Ttriple',fluid)
-        print fluid, Tc, Tt
+        print(fluid, Tc, Tt)
         try:
             
             good_T = Tc-dT
             rhomolar_crit = CoolProp.CoolProp.PropsSI('rhomolar_critical',fluid)
             ok = False # Start assuming not ok
-            for i in np.linspace(np.log10(2), 6, 500):
+            for i in np.linspace(np.log10(2), 6, 5000):
                 dT = 10**(-i)
                 bad_T = Tc-dT
                 
@@ -263,8 +264,8 @@ if not os.path.exists('sat_spline_json.json'):
                 CFL.build()
                 
                 zeros = np.roots(np.polyder(CFL.a))
-                print zeros
                 monotonic_liq = not np.any(np.logical_and(zeros > 1.000000001*rhomolar_crit, zeros < 0.999999999*rhomolar_endL))
+                print('monotonic_liq', monotonic_liq)
                 
                 if not monotonic_liq:
                 
@@ -283,8 +284,8 @@ if not os.path.exists('sat_spline_json.json'):
                 CFV.build()
                 
                 zeros = np.roots(np.polyder(CFV.a))
-                print zeros, rhomolar_crit, rhomolar_endV
                 monotonic_vap = not np.any(np.logical_and(zeros < 0.999999999*rhomolar_crit, zeros > 1.000000001*rhomolar_endV))
+                print('monotonic_vap (cubic)',monotonic_vap)
                 
                 if not monotonic_vap:
                     
@@ -294,6 +295,9 @@ if not os.path.exists('sat_spline_json.json'):
                     CFV.add_value_constraint(rhomolar_endV, good_T)
                     ##CFV.add_second_derivative_constraint(rhomolar_endV, dT_drhoV)
                     CFV.build()
+                    zeros = np.roots(np.polyder(CFV.a))
+                    monotonic_vap = not np.any(np.logical_and(zeros < 0.999999999*rhomolar_crit, zeros > 1.000000001*rhomolar_endV))
+                    print('monotonic_vap', monotonic_vap)
                     
                 # Plot the cubic part on small axis
                 ax1.plot(np.linspace(rhomolar_endL, rhomolar_crit), CFL.evaluate(np.linspace(rhomolar_endL, rhomolar_crit)),'r')
@@ -311,7 +315,7 @@ if not os.path.exists('sat_spline_json.json'):
                 ax1.plot(rhomolar_endV, good_T, 'o')
                 ax1.text(rhomolar_crit, good_T, '{T:0.2f} K'.format(T=good_T), va='top',ha='center')
             
-                print fluid, ':::', dT, good_T, bad_T, CoolProp.CoolProp.PropsSI('P', 'T', good_T, 'Q', 0, fluid)
+                print(fluid, ':::', dT, good_T, bad_T, CoolProp.CoolProp.PropsSI('P', 'T', good_T, 'Q', 0, fluid))
                 
                 cL = CFL.c
                 cV = CFV.c
@@ -368,12 +372,12 @@ if not os.path.exists('sat_spline_json.json'):
                                    rhomolar_min = rhomolar_endV,
                                    rhomolar_max = rhomolar_endL
                                )
-                print '\tgood_dT', good_dT
+                print('\tgood_dT', good_dT)
             else:
-                print '\tperfect'
+                print('\tperfect')
         else:
-            print fluid, 'FAIL', V
-            
+            print(fluid, 'FAIL', V)
+    
     sat_crit_spline.close()
             
     plt.semilogy(np.array(e['Tc'])/np.array(e['Tt']), e['dT'],'o',mfc='none')
