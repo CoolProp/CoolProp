@@ -214,9 +214,9 @@ class ConsistencyAxis(object):
         self.ax.set_xlabel(param_labels[xparam])
         self.ax.set_ylabel(param_labels[yparam])
         
-        if xparam == 'P':
+        if xparam in ['P','Dmolar']:
             self.ax.set_xscale('log')
-        if yparam == 'P':
+        if yparam in ['P','Dmolar']:
             self.ax.set_yscale('log')
     
     def plot_saturation_curves(self):
