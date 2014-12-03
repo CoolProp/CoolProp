@@ -26,7 +26,7 @@ REFPROP Validation Data
 
 .. note::
 
-    This figure compares the results generated from CoolProp and those generated from REFPROP.  They are all results obtained in the form :math:`Y(T,\rho)`, where :math:`Y` is the parameter of interest and which for all EOS is a direct evaluation of the EOS
+    This figure compares the results generated from CoolProp and those generated from REFPROP.  They are all results obtained in the form :math:`Y(T,\\rho)`, where :math:`Y` is the parameter of interest and which for all EOS is a direct evaluation of the EOS
     
     You can download the script that generated the following figure here: :download:`(link to script)<REFPROPplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<REFPROPplots/{fluid:s}.pdf>`. 
 
@@ -44,7 +44,6 @@ In this figure, we start off with a state point given by T,P and then we calcula
     You can download the script that generated the following figure here: :download:`(link to script)<Consistencyplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<Consistencyplots/{fluid:s}.pdf>`. 
 
 .. image:: Consistencyplots/{fluid:s}.png
-   :target: :download:`as a PDF<Consistencyplots/{fluid:s}.pdf>`
 
 """
 
