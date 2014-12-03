@@ -1,14 +1,14 @@
 import CoolProp
 import os
 
+web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
+root_dir = os.path.abspath(os.path.join(web_dir, '..')) 
+
 fluid_template = """.. _fluid_{fluid:s}:
 
 {fluid_stars:s}
 {fluid:s}
 {fluid_stars:s}
-
-References
-==========
 
 {references:s}
 {aliases:s}
@@ -26,6 +26,8 @@ REFPROP Validation Data
 
 .. note::
 
+    This figure compares the results generated from CoolProp and those generated from REFPROP.  They are all results obtained in the form :math:`Y(T,\rho)`, where :math:`Y` is the parameter of interest and which for all EOS is a direct evaluation of the EOS
+    
     You can download the script that generated the following figure here: :download:`(link to script)<REFPROPplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<REFPROPplots/{fluid:s}.pdf>`. 
 
 .. image:: REFPROPplots/{fluid:s}.png
@@ -33,15 +35,16 @@ REFPROP Validation Data
 Consistency Plots
 =================
 
-The following figure shows all the flash routines that are available for this fluid.  A red + is a failure of the flash routine, a black dot is a success.  Hopefully you will only see black dots
+The following figure shows all the flash routines that are available for this fluid.  A red + is a failure of the flash routine, a black dot is a success.  Hopefully you will only see black dots.  The red curve is the maximum temperature curve, and the blue curve is the melting line if one is available for the fluid.
 
-The red curve is the maximum temperature curve, and the blue curve is the melting line if one is available for the fluid.
+In this figure, we start off with a state point given by T,P and then we calculate each of the other possible output pairs in turn, and then try to re-calculate T,P from the new input pair.  If we don't arrive back at the original T,P values, there is a problem in the flash routine in CoolProp.  For more information on how these figures were generated, see :py:mod:`CoolProp.Plots.ConsistencyPlots`
 
 .. note::
 
     You can download the script that generated the following figure here: :download:`(link to script)<Consistencyplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<Consistencyplots/{fluid:s}.pdf>`. 
 
 .. image:: Consistencyplots/{fluid:s}.png
+   :target: :download:`as a PDF<Consistencyplots/{fluid:s}.pdf>`
 
 """
 
@@ -67,6 +70,42 @@ reducing_template = """**Reducing point**,
 Reducing point temperature [K], {Tr:s}
 Reducing point density [mol/m3], {rhor_molar:s}
 """
+
+bibtex_keys = ['EOS','CP0','CONDUCTIVITY','VISCOSITY','MELTING_LINE']
+bibtex_map = {'EOS': 'Equation of state',
+              'CP0': 'Ideal gas specific heat',
+              'CONDUCTIVITY': 'Thermal conductivity',
+              'VISCOSITY': 'Viscosity',
+              'MELTING_LINE': 'Melting Line'}
+
+from pybtex.database.input import bibtex
+parser = bibtex.Parser()
+bibdata = parser.parse_file(os.path.join(root_dir,"CoolPropBibTeXLibrary.bib"))
+
+# See http://stackoverflow.com/questions/19751402/does-pybtex-support-accent-special-characters-in-bib-file/19754245#19754245
+import pybtex
+style = pybtex.plugin.find_plugin('pybtex.style.formatting', 'plain')()
+backend = pybtex.plugin.find_plugin('pybtex.backends', 'html')()
+parser = pybtex.database.input.bibtex.Parser()    
+
+def entry2html(entry):
+    for e in entry:
+        return e.text.render(backend).replace('{','').replace('}','').replace('\n', ' ')
+
+def generate_bibtex_string(fluid):
+    string = ''
+    for key in bibtex_keys:
+        try:
+            # get the item
+            bibtex_key = CoolProp.CoolProp.get_BibTeXKey(fluid,key).strip()
+            if bibtex_key.strip() in bibdata.entries.keys():
+                entry = style.format_entries([bibdata.entries[bibtex_key.strip()]])
+                html = entry2html(entry)
+                sect = bibtex_map[key]
+                string += sect+'\n'+'-'*len(sect)+'\n'+html+'\n\n'
+        except ValueError as E:
+            pass
+    return string
 
 class FluidInfoTableGenerator(object):
     
@@ -136,11 +175,15 @@ class FluidGenerator(object):
         if aliases:
             aliases = 'Aliases\n=======\n\n'+aliases + '\n'
         
+        references = generate_bibtex_string(self.fluid)
+        if references:
+            references = 'References\n==========\n'+references+'\n'
+
         # Write RST file for fluid
         out = fluid_template.format(aliases = aliases,
                                     fluid = self.fluid,
                                     fluid_stars = '*'*len(self.fluid),
-                                    references = ''
+                                    references = references
                                     )
         
         with open(os.path.join(path, self.fluid+'.rst'),'w') as fp:
