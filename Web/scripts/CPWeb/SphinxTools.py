@@ -72,9 +72,9 @@ Reducing point density [mol/m3], {rhor_molar:s}
 """
 
 bibtex_keys = ['EOS','CP0','CONDUCTIVITY','VISCOSITY','MELTING_LINE']
-bibtex_map = {'EOS': 'Equation of state',
+bibtex_map = {'EOS': 'Equation of State',
               'CP0': 'Ideal gas specific heat',
-              'CONDUCTIVITY': 'Thermal conductivity',
+              'CONDUCTIVITY': 'Thermal Conductivity',
               'VISCOSITY': 'Viscosity',
               'MELTING_LINE': 'Melting Line'}
 
@@ -102,7 +102,7 @@ def generate_bibtex_string(fluid):
                 entry = style.format_entries([bibdata.entries[bibtex_key.strip()]])
                 html = entry2html(entry)
                 sect = bibtex_map[key]
-                string += sect+'\n'+'-'*len(sect)+'\n'+html+'\n\n'
+                string += sect+'\n'+'-'*len(sect)+'\n\n.. raw:: html\n\n   '+html+'\n\n'
         except ValueError as E:
             pass
     return string
