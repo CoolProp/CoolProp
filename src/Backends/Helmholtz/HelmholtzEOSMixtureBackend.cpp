@@ -1397,11 +1397,11 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         this->SatL->update(DmolarT_INPUTS, HEOS.SatL->rhomolar(), HEOS.SatL->T());
         this->SatV->update(DmolarT_INPUTS, HEOS.SatV->rhomolar(), HEOS.SatV->T());
 
-        if (Q < -100*DBL_EPSILON){
-            this->_phase = iphase_liquid; _Q = -1000; return;
+        if (Q < 0){
+            this->_phase = iphase_liquid; _Q = -1; return;
         }
-        else if (Q > 1+100*DBL_EPSILON){
-            this->_phase = iphase_gas; _Q = 1000; return;
+        else if (Q > 1){
+            this->_phase = iphase_gas; _Q = 1; return;
         }
         else{
             this->_phase = iphase_twophase;

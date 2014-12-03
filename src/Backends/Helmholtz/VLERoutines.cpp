@@ -961,15 +961,15 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
                     // Lets assume that liquid density is more or less linear with T
                     rhoL = (crit.rhomolar - tripleL.rhomolar)/(crit.T - tripleL.T)*(T-tripleL.T)+tripleL.rhomolar;
                     // Then we calculate pressure from this density
-                    SatL->update(DmolarT_INPUTS, rhoL, T);
+                    SatL->update_DmolarT_direct(rhoL, T);
                     // Then we assume vapor to be ideal gas
                     rhoV = SatL->p()/(SatL->gas_constant()*T);
                     // Update the vapor state
-                    SatV->update(DmolarT_INPUTS, rhoV, T);
+                    SatV->update_DmolarT_direct(rhoV, T);
                 }
                 else{
-                    SatL->update(DmolarT_INPUTS, rhoL, T);
-                    SatV->update(DmolarT_INPUTS, rhoV, T);
+                    SatL->update_DmolarT_direct(rhoL, T);
+                    SatV->update_DmolarT_direct(rhoV, T);
                 }
                 if (get_debug_level() > 0){ std::cout << format("[Maxwell] ancillaries T: %0.16Lg rhoL: %0.16Lg rhoV: %0.16Lg pL: %g pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
                 
