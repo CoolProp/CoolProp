@@ -29,7 +29,7 @@ project(${project_name})
 # Project version
 set (COOLPROP_VERSION_MAJOR 5)
 set (COOLPROP_VERSION_MINOR 0)
-set (COOLPROP_VERSION_PATCH 0)
+set (COOLPROP_VERSION_PATCH 1)
 set (COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH})
 
 #######################################
