@@ -37,8 +37,8 @@ for i in range(len(N)):
 top_line = '='*N[0] + ' ' + '='*N[1] + ' ' + '='*N[2] + ' ' + '='*N[3]
 header = ' '.join([h.ljust(n) for h,n in zip(headers,N)])
 
-fp = open('parameter_table.rst.in', 'w')
-fp.write('.. constructed with the build_parameter_table.py script in this folder \n\n')
+fp = open('../coolprop/parameter_table.rst.in', 'w')
+fp.write('.. constructed with the coolprop.parameter_table.py script in the web/scripts folder \n\n')
 fp.write(top_line + '\n')
 fp.write(header + '\n')
 fp.write(top_line + '\n')
