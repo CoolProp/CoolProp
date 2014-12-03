@@ -1,6 +1,10 @@
 Changelog for CoolProp
 ======================
 
+5.0.1
+-----
+The first release with the automated release script. No major code changes.
+
 5.0.0
 -----
 **MAJOR** The new version of CoolProp implementing the new structure based on AbstractState

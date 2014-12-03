@@ -29,7 +29,6 @@ BibTeX citation::
         pages = {2498--2508},
         year = {2014},
         doi = {10.1021/ie4033999},
-
         URL = {http://pubs.acs.org/doi/abs/10.1021/ie4033999},
         eprint = {http://pubs.acs.org/doi/pdf/10.1021/ie4033999}
         }

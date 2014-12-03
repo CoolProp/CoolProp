@@ -577,13 +577,13 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
 					components_joined += "|" + fdPath + upper(fluid_names[j])+endings[k];
 				}
             }
-        
+
             if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
             char path_HMX_BNC[refpropcharlength+1];
             strcpy(path_HMX_BNC, fdPath.c_str());
             strcat(path_HMX_BNC, rel_path_HMC_BNC);
             strcpy(component_string, components_joined.c_str());
-           
+
             ierr = 0;
             //...Call SETUP to initialize the program
             SETUPdll(&N, component_string, path_HMX_BNC, default_reference_state,
@@ -605,8 +605,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 return;
             }
             else if (ierr > 0 && k < number_of_endings-1){ // Keep going
-				continue; 
-			}	
+				continue;
+			}
             else // Warning
             {
                 throw ValueError(format("%s", herr));
@@ -681,7 +681,7 @@ long double REFPROPMixtureBackend::calc_T_critical(){
     long ierr = 0;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
-    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); 
+    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255);
     if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<long double>(Tcrit);
 };
@@ -1488,10 +1488,8 @@ TEST_CASE("Check some non-state-dependent inputs for REFPROP work","[REFPROPS]")
         ss << "Check " << inputs[i];
         SECTION(ss.str(),"")
         {
-            CoolProp::set_debug_level(0);
             double val = CoolProp::PropsSI(inputs[i],"P",0,"T",0,"REFPROP::R245FA");
             std::string err = CoolProp::get_global_param_string("errstring");
-            CoolProp::set_debug_level(0);
             CAPTURE(err);
             CHECK(ValidNumber(val));
         }
