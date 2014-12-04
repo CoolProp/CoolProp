@@ -135,6 +135,7 @@ public:
         index_map.insert(std::pair<std::string, int>("molemass", imolar_mass));
         index_map.insert(std::pair<std::string, int>("molarmass", imolar_mass));
         index_map.insert(std::pair<std::string, int>("A", ispeed_sound));
+		index_map.insert(std::pair<std::string, int>("I", isurface_tension));
 
         std::map<std::string,int>::iterator it;
         for(it = index_map.begin(); it != index_map.end(); ++it )

@@ -271,6 +271,9 @@ long double HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters par
                     return components[0]->ancillaries.rhoV.invert(value);
             }
         }
+		else if (param == isurface_tension && given == iT){
+			return components[0]->ancillaries.surface_tension.evaluate(value);
+		}
         else{
             throw ValueError(format("calc of %s given %s is invalid in calc_saturation_ancillary", 
                                     get_parameter_information(param,"short").c_str(), 
@@ -294,6 +297,15 @@ long double HelmholtzEOSMixtureBackend::calc_melting_line(int param, int given, 
     else
     {
         throw NotImplementedError(format("calc_melting_line not implemented for mixtures"));
+    }
+}
+long double HelmholtzEOSMixtureBackend::calc_surface_tension(void)
+{
+    if (is_pure_or_pseudopure){
+		return components[0]->ancillaries.surface_tension.evaluate(T());
+    }
+    else{
+        throw NotImplementedError(format("surface tension not implemented for mixtures"));
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void)

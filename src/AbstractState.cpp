@@ -279,6 +279,8 @@ double AbstractState::keyed_output(int key)
         return viscosity();
     case iconductivity:
         return conductivity();
+	case isurface_tension:
+		return surface_tension();
     case iPhase:
         return phase();
     case iZ:

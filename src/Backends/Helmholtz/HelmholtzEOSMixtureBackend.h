@@ -195,13 +195,14 @@ public:
     long double calc_d3alpha0_dDelta_dTau2(void);
     long double calc_d3alpha0_dTau3(void);
 
-    //long double calc_surface_tension(void);
+    long double calc_surface_tension(void);
     long double calc_viscosity(void);
     long double calc_viscosity_dilute(void);
     long double calc_viscosity_background(void);
     long double calc_viscosity_background(long double eta_dilute);
     long double calc_conductivity(void);
     long double calc_conductivity_background(void);
+
 
     long double calc_Tmin(void);
     long double calc_Tmax(void);
