@@ -1,6 +1,7 @@
 #include "VLERoutines.h"
 #include "FlashRoutines.h"
 #include "HelmholtzEOSMixtureBackend.h"
+#include "HelmholtzEOSBackend.h"
 #include "PhaseEnvelopeRoutines.h"
 #include "Configuration.h"
 
@@ -1391,18 +1392,15 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
     }
 }
 
-/*
-#define ENABLE_CATCH
 #if defined(ENABLE_CATCH)
 
-TEST_SECTION("PD with T very large should yield error","")
+TEST_CASE("PD with T very large should yield error","[PDflash]")
 {
-	shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend("R134a"));
+	shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend("R134a"));
 	double Tc = HEOS->T_critical();
-	HEOS->update(DmassT, 1.1, 1.5*Tc);
-	CHECK_THROWS(
+	HEOS->update(DmassT_INPUTS, 1.1, 1.5*Tc);
+	CHECK_THROWS(HEOS->update(DmassP_INPUTS, 2, 0.5*HEOS->p()));
 }
 #endif
-*/
 
 } /* namespace CoolProp */
