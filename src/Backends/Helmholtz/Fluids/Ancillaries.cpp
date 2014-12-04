@@ -418,4 +418,23 @@ TEST_CASE("Test that hs_anchor enthalpy/entropy agrees with EOS", "[ancillaries]
         }   
     }
 }
+
+TEST_CASE("Surface tension", "[surface_tension]")
+{
+	SECTION("from PropsSI")
+	{
+		CHECK(ValidNumber(CoolProp::PropsSI("surface_tension","T",300,"Q",0,"Water")));
+	}
+	SECTION("from saturation_ancillary")
+	{
+		CHECK(ValidNumber(CoolProp::saturation_ancillary("Water","surface_tension",0,"T",300)));
+	}
+	SECTION("from AbstractState")
+	{
+		shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS","Water"));
+		AS->update(CoolProp::QT_INPUTS, 0, 300);
+		CHECK_NOTHROW(AS->surface_tension());
+	}
+    
+}
 #endif
