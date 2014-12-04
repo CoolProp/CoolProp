@@ -130,6 +130,14 @@ struct ResidualHelmholtzGeneralizedExponentialElement
         l_int = 0; m_int = 0;
     }
 };
+/** \brief A generalized residual helmholtz energy container that can deal with a wide range of terms which can be converted to this general form
+ * 
+ * \f$ \alpha^r=\sum_i n_i \delta^{d_i} \tau^{t_i}\exp(u_i) \f$
+ * 
+ * where \f$ u_i \f$ is given by
+ * 
+ * \f$ u_i = -c_i\delta^{l_i}-\omega_i\tau^{m_i}-\eta_{1,i}(\delta-\epsilon_{1,i})-\eta_{2,i}(\delta-\epsilon_{2,i})^2-\beta_{1,i}(\tau-\gamma_{1,i})-\beta_{2,i}(\tau-\gamma_{2,i})^2 \f$
+ */
 class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm{
     
 public:
@@ -137,10 +145,10 @@ public:
     std::vector<long double> s;
     std::size_t N;
     
-    /// These variables are for the exp(u) part
-    /// u is given by -c*delta^l_i-omega*tau^m_i-eta1*(delta-epsilon1)-eta2*(delta-epsilon2)^2-beta1*(tau-gamma1)-beta2*(tau-gamma2)^2
+    // These variables are for the exp(u) part
+    // u is given by -c*delta^l_i-omega*tau^m_i-eta1*(delta-epsilon1)-eta2*(delta-epsilon2)^2-beta1*(tau-gamma1)-beta2*(tau-gamma2)^2
     std::vector<double> n,d,t,c, l_double, omega, m_double, eta1, epsilon1, eta2, epsilon2, beta1, gamma1, beta2, gamma2;
-    /// If l_i or m_i are integers, we will store them as integers in order to call pow(double, int) rather than pow(double, double)
+    // If l_i or m_i are integers, we will store them as integers in order to call pow(double, int) rather than pow(double, double)
     std::vector<int> l_int, m_int;
     
     Eigen::ArrayXd uE, du_ddeltaE, du_dtauE, d2u_ddelta2E, d2u_dtau2E, d3u_ddelta3E, d3u_dtau3E;
@@ -156,7 +164,11 @@ public:
                                               beta2_in_u = false;
                                               finished = false;
                                               };
-    
+    /** \brief Add and convert an old-style power (polynomial) term to generalized form
+	 * 
+	 * Term of the format
+	 * \f$ \alpha^r=\left\lbrace\begin{array}{cc}\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} & l_i=0\\ \displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}) & l_i\neq 0\end{array}\right.\f$
+	 */
     void add_Power(const std::vector<long double> &n, const std::vector<long double> &d, 
                    const std::vector<long double> &t, const std::vector<long double> &l)
     {
@@ -176,6 +188,11 @@ public:
         }
         delta_li_in_u = true;
     };
+	/** \brief Add and convert an old-style exponential term to generalized form
+	 * 
+	 * Term of the format 
+	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-g_i\delta^{l_i}) \f$
+	 */
     void add_Exponential(const std::vector<long double> &n, const std::vector<long double> &d, 
                          const std::vector<long double> &t, const std::vector<long double> &g, 
                          const std::vector<long double> &l)
@@ -192,7 +209,12 @@ public:
             elements.push_back(el);
         }
         delta_li_in_u = true;
-    }   
+    }
+	/** \brief Add and convert an old-style Gaussian term to generalized form
+	 * 
+	 * Term of the format
+	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\eta_i(\delta-\epsilon_i)^2-\beta_i(\tau-\gamma_i)^2)\f$
+	 */
     void add_Gaussian(const std::vector<long double> &n, 
                       const std::vector<long double> &d, 
                       const std::vector<long double> &t, 
@@ -217,6 +239,11 @@ public:
         eta2_in_u = true;
         beta2_in_u = true;
     };
+	/** \brief Add and convert an old-style Gaussian term from GERG 2008 natural gas model to generalized form
+	 * 
+	 * Term of the format
+	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\eta_i(\delta-\epsilon_i)^2-\beta_i(\delta-\gamma_i))\f$
+	 */
     void add_GERG2008Gaussian(const std::vector<long double> &n, 
                               const std::vector<long double> &d, 
                               const std::vector<long double> &t, 
@@ -240,6 +267,11 @@ public:
         eta2_in_u = true;
         eta1_in_u = true;
     };
+	/** \brief Add and convert a term from Lemmon and Jacobsen (2005) used for R125
+	 * 
+	 * Term of the format
+	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}-\tau^{m_i})\f$
+	 */
     void add_Lemmon2005(const std::vector<long double> &n, 
                         const std::vector<long double> &d, 
                         const std::vector<long double> &t, 
