@@ -24,7 +24,6 @@ def generate(milestone):
     return rst
 
 if __name__=='__main__':
-    sys.argv += ['v5.0.2']
     if len(sys.argv) != 2:
         raise ValueError('This script should be called like this: python milestone2rst.py v5')
         
