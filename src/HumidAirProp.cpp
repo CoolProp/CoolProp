@@ -213,9 +213,9 @@ static double Secant_HAProps_W(const std::string &OutputName, const std::string 
     while ((iter<=3 || std::abs(f)>eps) && iter<100)
     {
         if (iter == 1){x1 = W_guess; W = x1;}
-        if (iter == 2){x2 = W_guess+0.001; W = x2;}
+        if (iter == 2){x2 = W_guess*1.001; W = x2;}
         if (iter > 2) {W = x2;}
-            f = HAPropsSI(OutputName,(char *)"W",W,Input1Name,Input1,Input2Name,Input2)-TargetVal;
+            f = HAPropsSI(OutputName,"W",W,Input1Name,Input1,Input2Name,Input2)-TargetVal;
         if (iter == 1){y1 = f;}
         if (iter > 1)
         {
