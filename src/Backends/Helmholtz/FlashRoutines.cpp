@@ -722,10 +722,11 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
                 if (value > Sat->keyed_output(other))
                 {
                     solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
-                    HEOS._phase = iphase_twophase;
                     HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax()+1, DBL_EPSILON, 1e-12, 100, errstring);
                     HEOS._Q = 10000;
                     HEOS.calc_pressure();
+					// Update the phase flag
+					HEOS.recalculate_singlephase_phase();
                 }
                 else
                 {

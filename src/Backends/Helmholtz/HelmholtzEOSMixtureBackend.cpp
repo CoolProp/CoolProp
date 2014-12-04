@@ -114,6 +114,31 @@ void HelmholtzEOSMixtureBackend::resize(unsigned int N)
     this->K.resize(N);
     this->lnK.resize(N);
 }
+void HelmholtzEOSMixtureBackend::recalculate_singlephase_phase()
+{
+	if (p() > p_critical()){
+		if (T() > T_critical()){
+			_phase = iphase_supercritical;
+		}
+		else{
+			_phase = iphase_supercritical_liquid;
+		}
+	}
+	else{
+		if (T() > T_critical()){
+			_phase = iphase_supercritical_gas;
+		}
+		else{
+			// Liquid or vapor
+			if (rhomolar() > rhomolar_critical()){
+				_phase = iphase_liquid;
+			}
+			else{
+				_phase = iphase_gas;
+			}
+		}
+	}
+}
 void HelmholtzEOSMixtureBackend::calc_phase_envelope(const std::string &type)
 {
     // Clear the phase envelope data
@@ -2082,6 +2107,7 @@ long double HelmholtzEOSMixtureBackend::calc_hmolar_nocache(long double T, long 
 }
 long double HelmholtzEOSMixtureBackend::calc_hmolar(void)
 {
+	if (get_debug_level()>=50) std::cout << format("HelmholtzEOSMixtureBackend::calc_hmolar: 2phase: %d T: %g rhomomolar: %g", isTwoPhase(), _T, _rhomolar) << std::endl;
     if (isTwoPhase())
     {
         _hmolar = _Q*SatV->hmolar() + (1 - _Q)*SatL->hmolar();
