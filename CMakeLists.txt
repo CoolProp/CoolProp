@@ -342,6 +342,8 @@ if (COOLPROP_OCTAVE_MODULE)
     list(APPEND OCTAVE_WRAP_INCLUDE_DIRS ${ITR})
   endforeach()
   include_directories(${OCTAVE_INCLUDE_DIRS})
+  
+  add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
 
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
 
@@ -411,6 +413,8 @@ if (COOLPROP_CSHARP_MODULE)
     #SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport CoolProp")
   endif()
   SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+  
+  add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
 
   if (WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -475,6 +479,8 @@ if (COOLPROP_JAVA_MODULE)
   string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
+  
+  add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
 
   SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/include/DataStructures.h
@@ -532,6 +538,8 @@ if (COOLPROP_PHP_MODULE)
 
   message(STATUS "php includes=${PHP_INCLUDES}")
   include_directories(${PHP_INCLUDES})
+  
+  add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
 
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
 
@@ -590,6 +598,8 @@ if (COOLPROP_SCILAB_SWIG_MODULE)
   set(SCILAB_INCLUDE_PATH "$ENV{SCILAB_ROOT}/include")
     	
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  
+  add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
 
   include_directories(${SCILAB_INCLUDE_PATH})  
   include_directories(${SCILAB_INCLUDE_PATH}/scilab)
@@ -623,6 +633,8 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   ELSE(MATLAB_FOUND)
       MESSAGE("MATLAB not found...nothing will be built.")
   ENDIF(MATLAB_FOUND)
+  
+  add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
   
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
 

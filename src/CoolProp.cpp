@@ -307,11 +307,9 @@ double Props1SI(const std::string &FluidName, const std::string &Output)
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref)
 {
     std::string backend, fluid;
-    #if !defined(PROPSSI_NO_ERROR_CATCH)
+    #if !defined(NO_ERROR_CATCHING)
     // In this function the error catching happens;
     try{
-    #else
-    std::cout << "macro is on; error checking disabled in PropsSI" << std::endl;
     #endif
         // BEGIN OF TRY
         // Here is the real code that is inside the try block
@@ -320,7 +318,7 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
         if (get_debug_level() > 1){ std::cout << format("_PropsSI will return %g",val) << std::endl; }
         return val;
         // END OF TRY
-    #if !defined(PROPSSI_NO_ERROR_CATCH)
+    #if !defined(NO_ERROR_CATCHING)
     }
     catch(const std::exception& e){
         set_error_string(e.what() + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")",Output.c_str(),Name1.c_str(), Prop1, Name2.c_str(), Prop2, Ref.c_str())); 
