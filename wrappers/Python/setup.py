@@ -97,15 +97,18 @@ if __name__=='__main__':
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         else:
             raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
-        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON']+cmake_config_args)
-        print('calling: ' + cmake_call_string)
-
+        
         cmake_build_dir = os.path.join('cmake_build', '{compiler}-{bitness}bit'.format(compiler=cmake_compiler, bitness=cmake_bitness))
         if not os.path.exists(cmake_build_dir):
             os.makedirs(cmake_build_dir)
-
+            
+        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON'] + cmake_config_args)
+        print('calling: ' + cmake_call_string)
         subprocess.check_call(cmake_call_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
-        subprocess.check_call(' '.join(['cmake','--build', '.']+cmake_build_args), shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
+        
+        cmake_build_string = ' '.join(['cmake','--build', '.'] + cmake_build_args)
+        print('calling: ' + cmake_build_string)
+        subprocess.check_call(cmake_build_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
 
         # Now find the static library that we just built
         static_libs = []
