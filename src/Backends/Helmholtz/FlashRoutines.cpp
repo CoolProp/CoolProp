@@ -4,6 +4,10 @@
 #include "PhaseEnvelopeRoutines.h"
 #include "Configuration.h"
 
+#if defined(ENABLE_CATCH)
+#include "catch.hpp"
+#endif
+
 namespace CoolProp{
 
 template<class T> T g_RachfordRice(const std::vector<T> &z, const std::vector<T> &lnK, T beta)
@@ -722,7 +726,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
                 if (value > Sat->keyed_output(other))
                 {
                     solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
-                    HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax()+1, DBL_EPSILON, 1e-12, 100, errstring);
+                    HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax()*1.5, DBL_EPSILON, 1e-12, 100, errstring);
                     HEOS._Q = 10000;
                     HEOS.calc_pressure();
 					// Update the phase flag
@@ -758,7 +762,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
                 {
                     solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
                     HEOS._phase = iphase_gas;
-                    HEOS._T = Brent(resid, TVtriple, HEOS.Tmax()+1, DBL_EPSILON, 1e-12, 100, errstring);
+                    HEOS._T = Brent(resid, TVtriple, HEOS.Tmax()*1.5, DBL_EPSILON, 1e-12, 100, errstring);
                     HEOS._Q = 10000;
                     HEOS.calc_pressure();
                 }
@@ -792,7 +796,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
                 {
                     solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
                     HEOS._phase = iphase_liquid;
-                    HEOS._T = Brent(resid, TLtriple, HEOS.Tmax()+1, DBL_EPSILON, 1e-12, 100, errstring);
+                    HEOS._T = Brent(resid, TLtriple, HEOS.Tmax()*1.5, DBL_EPSILON, 1e-12, 100, errstring);
                     HEOS._Q = 10000;
                     HEOS.calc_pressure();
                 }
@@ -1386,5 +1390,19 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
         }
     }
 }
+
+/*
+#define ENABLE_CATCH
+#if defined(ENABLE_CATCH)
+
+TEST_SECTION("PD with T very large should yield error","")
+{
+	shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend("R134a"));
+	double Tc = HEOS->T_critical();
+	HEOS->update(DmassT, 1.1, 1.5*Tc);
+	CHECK_THROWS(
+}
+#endif
+*/
 
 } /* namespace CoolProp */
