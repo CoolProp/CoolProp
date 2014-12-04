@@ -20,8 +20,11 @@ def generate(milestone):
         if issue['state'] != 'closed': raise ValueError('This issue is still open: ' + issue['title'])
         
     rst = '\n'.join(['`#{n:d}<http://github.com/CoolProp/CoolProp/issues/{n:d}>` : {t:s}'.format(n = issue['number'], t = issue['title']) for issue in issues])
+    
+    return rst
 
 if __name__=='__main__':
+    
     if len(sys.argv) != 2:
         raise ValueError('This script should be called like this: python milestone2rst.py v5')
         
