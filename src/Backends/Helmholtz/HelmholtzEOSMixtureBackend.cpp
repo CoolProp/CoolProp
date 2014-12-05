@@ -2662,5 +2662,30 @@ long double HelmholtzEOSMixtureBackend::calc_d3alpha0_dTau3(void)
     return calc_alpha0_deriv_nocache(nTau, nDelta, mole_fractions, _tau, _delta, _reducing.T, _reducing.rhomolar);
 }
 
+long double HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1)
+{
+	// Derivative of temperature w.r.t. pressure ALONG the saturation curve
+	long double dTdP_sat = T()*(1/SatV->rhomolar()-1/SatL->rhomolar())/(SatV->hmolar()-SatL->hmolar());
+	
+	// "Trivial" inputs
+	if (Of1 == iT && Wrt1 == iP){ return dTdP_sat;}
+	else if (Of1 == iP && Wrt1 == iT){ return 1/dTdP_sat;}
+	// Derivative taken with respect to T
+	else if (Wrt1 == iT){
+		return first_partial_deriv(Of1, iT, iP) + first_partial_deriv(Of1, iP, iT)/dTdP_sat;
+	}
+	// Derivative taken with respect to p
+	else if (Wrt1 == iP){
+		return first_partial_deriv(Of1, iP, iT) + first_partial_deriv(Of1, iT, iP)*dTdP_sat;
+	}
+	else{
+		throw ValueError(format("Not possible to take first saturation derivative with respect to %s", get_parameter_information(Wrt1,"short").c_str()));
+	}
+}
+long double HelmholtzEOSMixtureBackend::calc_second_saturation_deriv(parameters Of1, parameters Wrt1)
+{
+	throw NotImplementedError("calc_second_saturation_deriv is not yet implemented");
+}
 
 } /* namespace CoolProp */
+

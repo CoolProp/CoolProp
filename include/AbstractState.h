@@ -274,7 +274,9 @@ protected:
     /// Get the maximum fraction (mole, mass, volume) for incompressible fluid
     virtual long double calc_fraction_max(void){throw NotImplementedError("calc_fraction_max is not implemented for this backend");};
     virtual long double calc_T_freeze(void){throw NotImplementedError("calc_T_freeze is not implemented for this backend");};
-public:
+	
+	virtual long double calc_first_saturation_deriv(parameters Of1, parameters Wrt1){throw NotImplementedError("calc_first_saturation_deriv is not implemented for this backend");};
+	virtual long double calc_second_saturation_deriv(parameters Of1, parameters Wrt1){throw NotImplementedError("calc_second_saturation_deriv is not implemented for this backend");};public:
 
     AbstractState(){};
     virtual ~AbstractState(){};
@@ -463,6 +465,39 @@ public:
      */
     long double second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2){return calc_second_partial_deriv(Of1,Wrt1,Constant1,Of2,Constant2);};
     
+	/** \brief The first partial derivative along the saturation curve
+	 * 
+	 * Implementing the algorithms and ideas of:
+	 * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation", 
+	 * Environmental Earth Sciences, December 2013, Volume 70, Issue 8, pp 3497-3503
+	 * 
+	 * Basically the idea is that the p-T derivative is given by Clapeyron relations:
+	 * 
+	 * \f[ \left(\frac{\partial T}{\partial p}\right)_{\sigma} = T\left(\frac{v'' - v'}{h'' - h'}\right)_{\sigma} \f]
+	 * 
+	 * and then other derivatives can be obtained along the saturation curve from
+	 * 
+	 * \f[ \left(\frac{\partial y}{\partial p}\right)_{\sigma} = \left(\frac{\partial y}{\partial p}\right)+\left(\frac{\partial y}{\partial T}\right)\left(\frac{\partial T}{\partial p}\right)_{\sigma} \f]
+	 *
+	 * \f[ \left(\frac{\partial y}{\partial T}\right)_{\sigma} = \left(\frac{\partial y}{\partial T}\right)+\left(\frac{\partial y}{\partial p}\right)\left(\frac{\partial p}{\partial T}\right)_{\sigma} \f]
+	 * 
+	 * where derivatives without the \f$ \sigma \f$ are homogeneous (conventional) derivatives.
+	 * 
+	 * @param Of1 The parameter that the derivative is taken of
+	 * @param Wrt1 The parameter that the derivative is taken with respect to
+	 */
+	long double first_saturation_deriv(parameters Of1, parameters Wrt1){return calc_first_saturation_deriv(Of1,Wrt1);};
+	
+	/** \brief The second partial derivative along the saturation curve
+	 * 
+	 * Implementing the algorithms and ideas of:
+	 * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation", 
+	 * Environmental Earth Sciences, December 2013, Volume 70, Issue 8, pp 3497-3503
+	 * 
+	 * @param Of1 The parameter that the derivative is taken of
+	 * @param Wrt1 The parameter that the derivative is taken with respect to
+	 * */
+	long double second_saturation_deriv(parameters Of1, parameters Wrt1){return calc_second_saturation_deriv(Of1,Wrt1);};
     
     // ----------------------------------------
     //    Phase envelope for mixtures

@@ -1409,6 +1409,48 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
         }
     }
 }
+
+TEST_CASE("Check the first partial derivatives", "[first_saturation_partial_deriv]")
+{
+	const int number_of_pairs = 10;
+	struct pair {parameters p1, p2;};
+	pair pairs[number_of_pairs] = {{iP, iT}, {iDmolar, iT},{iHmolar, iT},{iSmolar, iT},{iUmolar, iT},
+	                               {iT, iP}, {iDmolar, iP},{iHmolar, iP},{iSmolar, iP},{iUmolar, iP}};
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
+	for (std::size_t i = 0; i < number_of_pairs; ++i)
+    {
+		// See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+		std::ostringstream ss1;
+		ss1 << "Check first partial derivative for d(" << get_parameter_information(pairs[i].p1,"short") << ")/d(" << get_parameter_information(pairs[i].p2,"short") << ")|sat";
+		SECTION(ss1.str(),"")
+		{
+			AS->update(QT_INPUTS, 1, 300);
+			long double p = AS->p();
+			long double analytical = AS->first_saturation_deriv(pairs[i].p1, pairs[i].p2);
+			CAPTURE(analytical);
+			long double numerical;
+			if (pairs[i].p2 == iT){
+				AS->update(QT_INPUTS, 1, 300+1e-5);
+				long double v1 = AS->keyed_output(pairs[i].p1);
+				AS->update(QT_INPUTS, 1, 300-1e-5);
+				long double v2 = AS->keyed_output(pairs[i].p1);
+				numerical = (v1-v2)/(2e-5);
+			}
+			else if (pairs[i].p2 == iP){
+				AS->update(PQ_INPUTS, p+1e-2, 1);
+				long double v1 = AS->keyed_output(pairs[i].p1);
+				AS->update(PQ_INPUTS, p-1e-2, 1);
+				long double v2 = AS->keyed_output(pairs[i].p1);
+				numerical = (v1-v2)/(2e-2);
+			}
+			else{
+				throw ValueError();
+			}
+			CAPTURE(numerical);
+			CHECK(std::abs(numerical/analytical-1) < 1e-4);
+		}
+	}
+}
 /*
 TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
 {

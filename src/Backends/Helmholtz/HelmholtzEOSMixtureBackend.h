@@ -67,6 +67,9 @@ public:
     long double calc_GWP500();
     long double calc_GWP100();
     long double calc_ODP();
+	
+	long double calc_first_saturation_deriv(parameters Of1, parameters Wrt1);
+	long double calc_second_saturation_deriv(parameters Of1, parameters Wrt1);
     
 	/// Calculate the phase once the state is fully calculated but you aren't sure if it is liquid or gas or ...
 	void recalculate_singlephase_phase();
