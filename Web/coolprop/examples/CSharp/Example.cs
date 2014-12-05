@@ -91,14 +91,14 @@ namespace ConsoleApplication1
             Console.Write(" " + "\n");
             Console.Write("************ BRINES AND SECONDARY WORKING FLUIDS *************" + "\n");
             Console.Write(" " + "\n");
-            Console.Write("Density of 50% (mass) ethylene glycol/water at 300 K, 101.325 kPa: " + CoolProp.Props("D", 'T', 300, 'P', 101.325, "INCOMP::EG-50%") + "kg/m^3" + "\n");
+            Console.Write("Density of 50% (mass) ethylene glycol/water at 300 K, 101.325 kPa: " + CoolProp.Props("D", 'T', 300, 'P', 101.325, "INCOMP::MEG-50%") + "kg/m^3" + "\n");
             Console.Write("Viscosity of Therminol D12 at 350 K, 101.325 kPa: " + CoolProp.Props("V", 'T', 350, 'P', 101.325, "INCOMP::TD12") + "Pa-s" + "\n");
 
             Console.Write(" " + "\n");
             Console.Write("************ HUMID AIR PROPERTIES *************" + "\n");
             Console.Write(" " + "\n");
-            Console.Write("Humidity ratio of 50% rel. hum. air at 300 K, 101.325 kPa: " + CoolProp.HAProps("W", "T", 300, "P", 101.325, "R", 0.5) + " kg_w/kg_da" + "\n");
-            Console.Write("Relative humidity from last calculation: " + CoolProp.HAProps("R", "T", 300, "P", 101.325, "W", CoolProp.HAPropsSI("W", "T", 300, "P", 101.325, "R", 0.5)) + "(fractional)" + "\n");
+            Console.Write("Humidity ratio of 50% rel. hum. air at 300 K, 101.325 kPa: " + CoolProp.HAPropsSI("W", "T", 300, "P", 101.325, "R", 0.5) + " kg_w/kg_da" + "\n");
+            Console.Write("Relative humidity from last calculation: " + CoolProp.HAPropsSI("R", "T", 300, "P", 101.325, "W", CoolProp.HAPropsSI("W", "T", 300, "P", 101.325, "R", 0.5)) + "(fractional)" + "\n");
 
             //Console.Write("Enter to quit");
             //Console.ReadLine();
