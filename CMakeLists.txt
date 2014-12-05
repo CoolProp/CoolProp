@@ -280,6 +280,23 @@ if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_STDCALL_SHARE
     install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
 
+if (COOLPROP_MATHCAD_MODULE)
+    if(!WIN32)
+      message(FATAL_ERROR "COOLPROP_MATHCAD_MODULE can only be used on windows host")
+    endif()
+    IF( "${COOLPROP_MATHCAD_ROOT}" STREQUAL "")
+        message(FATAL_ERROR "You must provide the path to MathCAD Root directory using something like -DCOOLPROP_MATHCAD_ROOT=\"C:/Program Files/PTC/Mathcad Prime 3.0\"")
+    endif()
+    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+    list(APPEND APP_SOURCES "wrappers/MathCAD/CoolPropMathcad.cpp")
+    add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
+    include_directories("${COOLPROP_MATHCAD_ROOT}/Custom Functions")
+    target_link_libraries(CoolPropMathcadWrapper "${COOLPROP_MATHCAD_ROOT}/Custom Functions/mcaduser.lib")
+    SET_TARGET_PROPERTIES(CoolPropMathcadWrapper PROPERTIES LINK_FLAGS "/ENTRY:\"DllEntryPoint\"")
+    add_dependencies (CoolPropMathcadWrapper generate_headers)
+    set_target_properties(CoolPropMathcadWrapper PROPERTIES SUFFIX ".dll" PREFIX "")
+endif()
+
 # EES is only compiled for windows
 if (COOLPROP_EES_MODULE)
   list (APPEND APP_SOURCES "wrappers/EES/main.cpp")
