@@ -91,7 +91,7 @@ You might want to start by looking at CoolProp.h
     double saturation_ancillary(const std::string &fluid_name, const std::string &output, int Q, const std::string &input, double value);
 
     /// Get a globally-defined string
-    /// @param ParamName A string, one of "version", "errstring", "warnstring", "gitrevision", "FluidsList", "fluids_list", "parameter_list"
+    /// @param ParamName A string, one of "version", "errstring", "warnstring", "gitrevision", "FluidsList", "fluids_list", "parameter_list","predefined_mixtures"
     /// @returns str The string, or an error message if not valid input
     std::string get_global_param_string(std::string ParamName);
 

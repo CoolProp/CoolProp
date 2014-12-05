@@ -1322,6 +1322,17 @@ TEST_CASE("Test that saturation solvers solve all the way to T = Tc", "[sat_T_to
     }
 }
 
+TEST_CASE("Predefined mixtures", "[predefined_mixtures]")
+{
+	SECTION("PropsSI"){
+		double val = PropsSI("Dmolar","P",101325,"T",300,"Air.mix");
+		std::string err = get_global_param_string("errstring");
+		CAPTURE(val);
+		CAPTURE(err);
+		CHECK(ValidNumber(val));
+	}
+}
+
 TEST_CASE("Test that reference states are correct", "[reference_states]")
 {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');

@@ -307,6 +307,7 @@ double Props1SI(const std::string &FluidName, const std::string &Output)
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref)
 {
     std::string backend, fluid;
+	std::vector<double> fractions;
     #if !defined(NO_ERROR_CATCHING)
     // In this function the error catching happens;
     try{
@@ -314,7 +315,12 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
         // BEGIN OF TRY
         // Here is the real code that is inside the try block
         extract_backend(Ref, backend, fluid);
-        double val = _PropsSI(Output, Name1, Prop1, Name2, Prop2, backend, fluid, std::vector<double>());
+		Dictionary dict;
+		if (is_predefined_mixture(fluid, dict)){
+			fractions = dict.get_double_vector("mole_fractions");
+			fluid = strjoin(dict.get_string_vector("fluids"),"&");
+		}
+        double val = _PropsSI(Output, Name1, Prop1, Name2, Prop2, backend, fluid, fractions);
         if (get_debug_level() > 1){ std::cout << format("_PropsSI will return %g",val) << std::endl; }
         return val;
         // END OF TRY
@@ -499,6 +505,9 @@ std::string get_global_param_string(std::string ParamName)
     else if (!ParamName.compare("parameter_list") ){
         return get_csv_parameter_list();
     }
+	else if (!ParamName.compare("predefined_mixtures") ){
+		return get_csv_predefined_mixtures();
+    }
     else{
         throw ValueError(format("Input value [%s] is invalid",ParamName.c_str()));
     }
@@ -506,8 +515,8 @@ std::string get_global_param_string(std::string ParamName)
 #if defined(ENABLE_CATCH)
 TEST_CASE("Check inputs to get_global_param_string","[get_global_param_string]")
 {
-    const int num_good_inputs = 7;
-    std::string good_inputs[num_good_inputs] = {"version", "gitrevision", "fluids_list", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list","parameter_list"};
+    const int num_good_inputs = 8;
+    std::string good_inputs[num_good_inputs] = {"version", "gitrevision", "fluids_list", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list","parameter_list","predefined_mixtures"};
     std::ostringstream ss3c;
     for (int i = 0; i<num_good_inputs; ++i){
         ss3c << "Test for" << good_inputs[i];

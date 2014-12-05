@@ -37,6 +37,16 @@ class PredefinedMixturesLibrary{
 };
 static PredefinedMixturesLibrary predefined_mixtures_library;
 
+std::string get_csv_predefined_mixtures()
+{
+    std::vector<std::string> out;
+    for (std::map< std::string, Dictionary >::iterator it = predefined_mixtures_library.predefined_mixture_map.begin(); it != predefined_mixtures_library.predefined_mixture_map.end(); ++it)
+    {
+        out.push_back(it->first);
+    }
+    return strjoin(out, ",");
+}
+
 bool is_predefined_mixture(const std::string name, Dictionary &dict){
     if (predefined_mixtures_library.predefined_mixture_map.find(name) != predefined_mixtures_library.predefined_mixture_map.end()){
         dict = predefined_mixtures_library.predefined_mixture_map[name];
