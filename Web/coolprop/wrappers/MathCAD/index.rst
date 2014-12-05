@@ -34,4 +34,4 @@ To build::
     # Make the static library
     cmake --build . --config Release
     
-The .dll will be in the Release folder, copy it to ``C:/Program Files/PTC/Mathcad Prime 3.0/Custom functions``.
+The .dll will be in the Release folder, copy it to ``C:/Program Files/PTC/Mathcad Prime 3.0/Custom Functions``.
