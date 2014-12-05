@@ -130,21 +130,36 @@ For a given fluid, the phase can be plotted in T-p coordinates:
     plt.xlabel('Temperature [K]')
     plt.tight_layout()
 
-Code
-----
+Predefined Mixtures
+-------------------
+
+A number of predefined mixtures are included in CoolProp.  You can retrieve the list of predefined mixtures by calling `get_global_param_string("predefined_mixtures")` which will return a comma-separated list of predefined mixtures.  In Python, to get the first 5 mixtures, you would do::
+
+.. ipython::
+
+    In [1]: import CoolProp as CP
+    
+    In [1]: CoolProp.CoolProp.get_global_param_string('predefined_mixtures').split(',')[0:6]
+    
+and then to calculate the density of air using the mixture model at 1 atmosphere (=101325 Pa) and 300 K, you could do
+
+.. ipython::
+
+    In [1]: import CoolProp as CP
+    
+    In [1]: CoolProp.CoolProp.PropsSI('D','P',101325,'T',300,'Air.mix')
+    
+Exactly the methodology can be used from other wrappers.
+
+C++ Sample Code
+---------------
 .. literalinclude:: snippets/propssi.cxx
    :language: c++
 
-Output
-------
+C++ Sample Code Output
+----------------------
 .. literalinclude:: snippets/propssi.cxx.output
 
-.. _parameter_table:
-
-Table of string inputs to PropsSI function
-------------------------------------------
-
-.. include:: parameter_table.rst.in
 
 .. _Props_Sample:
 
@@ -182,3 +197,10 @@ Sample Code
     
     # Check that the same as using pseudo-pure
     In [2]: PropsSI('D','T',300,'P',101325,'R410A')
+
+.. _parameter_table:
+
+Table of string inputs to PropsSI function
+------------------------------------------
+
+.. include:: parameter_table.rst.in
