@@ -475,5 +475,57 @@
       "smolar": 259.4924162881792, 
       "smolar_units": "J/mol/K"
     }
+  }, 
+  "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "McLinden-IJR-2000", 
+      "f_int": {
+        "T_reducing": 1.0, 
+        "T_reducing_units": "K", 
+        "a": [
+          0.001344
+        ], 
+        "t": [
+          0
+        ]
+      }, 
+      "psi": {
+        "a": [
+          0.991, 
+          0.0029509
+        ], 
+        "rhomolar_reducing": 4672.781255944357, 
+        "rhomolar_reducing_units": "mol/m^3", 
+        "t": [
+          0, 
+          1
+        ]
+      }, 
+      "q_D": 1999999999.9999998, 
+      "q_D_units": "m", 
+      "reference_fluid": "R134a", 
+      "type": "ECS"
+    }, 
+    "viscosity": {
+      "BibTeX": "Klein-IJR-1997", 
+      "epsilon_over_k": 297.24, 
+      "epsilon_over_k_units": "K", 
+      "psi": {
+        "a": [
+          1.087, 
+          -0.0379
+        ], 
+        "rhomolar_reducing": 4672.781255944357, 
+        "rhomolar_reducing_units": "mol/m^3", 
+        "t": [
+          0, 
+          1
+        ]
+      }, 
+      "reference_fluid": "R134a", 
+      "sigma_eta": 5.185999999999999e-10, 
+      "sigma_eta_units": "m", 
+      "type": "ECS"
+    }
   }
 }
