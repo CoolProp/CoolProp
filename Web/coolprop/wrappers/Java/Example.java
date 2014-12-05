@@ -60,7 +60,7 @@ public class Example {
         System.out.println(" ");
         System.out.println("************ BRINES AND SECONDARY WORKING FLUIDS *************");
         System.out.println(" ");
-        System.out.println("Density of 50% (mass) ethylene glycol/water at 300 K, 101325 kPa: " + CoolProp.PropsSI("D", "T", 300, "P", 101325, "EG-50%") + "kg/m^3");
+        System.out.println("Density of 50% (mass) ethylene glycol/water at 300 K, 101325 kPa: " + CoolProp.PropsSI("D", "T", 300, "P", 101325, "INCOMP::MEG-50%") + "kg/m^3");
         System.out.println("Viscosity of Therminol D12 at 350 K, 101325 kPa: " + CoolProp.PropsSI("V", "T", 350, "P", 101325, "TD12") + "Pa-s");
 
         //~ System.out.println(" ");

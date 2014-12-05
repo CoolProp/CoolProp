@@ -83,7 +83,7 @@ namespace ConsoleApplication1
             Console.Write(" " + "\n");
             Console.Write("************ BRINES AND SECONDARY WORKING FLUIDS *************" + "\n");
             Console.Write(" " + "\n");
-            Console.Write("Density of 50% (mass) ethylene glycol/water at 300 K, 101325 Pa: " + CoolProp.PropsSI("D", "T", 300, "P", 101325, "EG-50%") + " kg/m^3" + "\n");
+            Console.Write("Density of 50% (mass) ethylene glycol/water at 300 K, 101325 Pa: " + CoolProp.PropsSI("D", "T", 300, "P", 101325, "INCOMP::MEG-50%") + " kg/m^3" + "\n");
             Console.Write("Viscosity of Therminol D12 at 350 K, 101325 kPa: " + CoolProp.PropsSI("V", "T", 350, "P", 101325, "INCOMP::TD12") + " Pa-s" + "\n");
 
             Console.Write(" " + "\n");
