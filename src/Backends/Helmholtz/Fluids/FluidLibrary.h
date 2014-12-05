@@ -856,11 +856,13 @@ protected:
         // Parse viscosity
         if (transport.HasMember("viscosity")){
             parse_viscosity(transport["viscosity"],fluid);
+			fluid.transport.viscosity_model_provided = true;
         }
 
         // Parse thermal conductivity
         if (transport.HasMember("conductivity")){
             parse_thermal_conductivity(transport["conductivity"],fluid);
+			fluid.transport.conductivity_model_provided = true;
         }
     };
 

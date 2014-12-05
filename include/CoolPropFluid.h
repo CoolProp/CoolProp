@@ -293,6 +293,8 @@ public:
                 BibTeX_conductivity;  ///< The BibTeX key for the conductivity model
     bool viscosity_using_ECS; ///< A flag for whether to use extended corresponding states for viscosity.  False for no
     bool conductivity_using_ECS; ///< A flag for whether to use extended corresponding states for conductivity.  False for no
+	bool conductivity_model_provided; ///< A flag for whether thermal conductivity model is provided.  False for no
+	bool viscosity_model_provided; ///< A flag for whether viscosity model is provided.  False for no
     long double sigma_eta, ///< The Lennard-Jones 12-6 \f$ \sigma \f$ parameter
                 epsilon_over_k; ///< The Lennard-Jones 12-6 \f$ \varepsilon/k \f$ parameter
     ViscosityHardcodedEnum hardcoded_viscosity; ///< Hardcoded flags for the viscosity
@@ -301,6 +303,8 @@ public:
                             hardcoded_conductivity = CONDUCTIVITY_NOT_HARDCODED;
                             viscosity_using_ECS = false;
                             conductivity_using_ECS = false;
+							viscosity_model_provided = false;
+							conductivity_model_provided = false;
     };
 };
 

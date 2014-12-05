@@ -399,6 +399,10 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
     {
         // Get a reference for code cleanness
         CoolPropFluid &component = *(components[0]);
+		
+		if (!component.transport.viscosity_model_provided){
+			throw ValueError(format("Viscosity model is not available for this fluid"));
+		}
 
         // Check if using ECS
         if (component.transport.viscosity_using_ECS)
@@ -465,6 +469,10 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
     {
         // Get a reference for code cleanness
         CoolPropFluid &component = *(components[0]);
+		
+		if (!component.transport.conductivity_model_provided){
+			throw ValueError(format("Thermal conductivity model is not available for this fluid"));
+		}
 
         // Check if using ECS
         if (component.transport.conductivity_using_ECS)
