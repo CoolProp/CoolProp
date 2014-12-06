@@ -629,6 +629,41 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parame
         NR.call(HEOS, IO);
     }
 }
+void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, long double rhomolar_spec, parameters other, long double value)
+{
+    class Residual : public FuncWrapper1D
+    {
+        
+    public:
+        HelmholtzEOSMixtureBackend &HEOS;
+        long double rhomolar_spec, Qd, Qo;
+		parameters other;
+		long double value;
+        Residual(HelmholtzEOSMixtureBackend &HEOS, long double rhomolar_spec, parameters other, long double value) : HEOS(HEOS), rhomolar_spec(rhomolar_spec), other(other), value(value){};
+        double call(double T){
+            HEOS.update(QT_INPUTS, 0, T);
+            HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(),
+                                       &SatV = HEOS.get_SatV();
+            // Quality from density
+            Qd = (1/HEOS._rhomolar-1/SatL.rhomolar())/(1/SatV.rhomolar()-1/SatL.rhomolar());
+            // Quality from other parameter (H,S,U)
+            Qo = (value-SatL.keyed_output(other))/(SatV.keyed_output(other)-SatL.keyed_output(other));
+            // Residual is the difference between the two
+            return Qo-Qd;
+        }
+    } resid(HEOS, rhomolar_spec, other, value);
+    
+    std::string errstr;
+    // Critical point for pure fluids, slightly different for pseudo-pure, very different for mixtures
+    long double Tmax_sat = HEOS.calc_Tmax_sat() - 1e-13;
+    
+    // Check what the minimum limits for the equation of state are
+    long double Tmin_satL, Tmin_satV, Tmin_sat;
+    HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
+    Tmin_sat = std::max(Tmin_satL, Tmin_satV) - 1e-13;
+        
+    Brent(resid, Tmin_sat, Tmax_sat-0.01, DBL_EPSILON, 1e-12, 20, errstr);
+}
 // D given and one of P,H,S,U
 void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other)
 {
@@ -735,9 +770,31 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
                 }
                 else
                 {
-                    throw NotImplementedError("Two-phase for PHSU_D_flash not supported yet");
-                }
+					// Now we know that temperature is between Tsat(D) +- tolerance and the minimum temperature for the fluid
+					if (other == iP){
+						// Iterate to find T(p), its just a saturation call
+						
+						// Set some input options
+						SaturationSolvers::saturation_PHSU_pure_options options;
+						// Specified variable is pressure
+						options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_PL;
+						// Use logarithm of delta as independent variables
+						options.use_logdelta = false;
+                        
+                        // Actually call the solver
+                        SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS._p, options);
 
+						// Load the outputs
+						HEOS._phase = iphase_twophase;
+						HEOS._Q = (1/HEOS._rhomolar-1/HEOS.SatL->rhomolar())/(1/HEOS.SatV->rhomolar()-1/HEOS.SatL->rhomolar());
+						HEOS._T = HEOS.SatL->T();
+					}
+					else{
+						// Residual is difference in quality calculated from density and quality calculated from the other parameter
+						// Iterate to find T
+						HSU_D_flash_twophase(HEOS, HEOS._rhomolar, other, value);
+					}
+                }
             }
             // Check if vapor/solid region below triple point vapor density
             else if (HEOS._rhomolar < component->triple_vapor.rhomolar)

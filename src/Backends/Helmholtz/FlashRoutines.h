@@ -84,6 +84,11 @@ public:
     /// @param Tmax The higher temperature limit [K]
     static void HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HEOS, parameters other, long double value, long double Tmin, long double Tmax);
     
+	/// A generic flash routine for the pairs (D,H), (D,S), and (D,U) for twophase state.  Similar analysis is needed
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    /// @param other The index for the other input from CoolProp::parameters; allowed values are iP, iHmolar, iSmolar, iUmolar
+	static void HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, long double rhomolar_spec, parameters other, long double value);
+	
     /// A generic flash routine for the pairs (D,P), (D,H), (D,S), and (D,U).  Similar analysis is needed
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iP, iHmolar, iSmolar, iUmolar
