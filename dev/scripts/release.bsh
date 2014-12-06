@@ -1,0 +1,26 @@
+#!/bin/bash
+# Some basic settings to run this script
+read -e -p "CoolProp version (X.X.X): " -i "5.0.0" CPVERSION
+read -e -p "Sourceforge user name (ibell or jorritw): " -i "ibell" SFUSER
+BASEDIR=${HOME}/buildbot/server-master/public_html
+#set -x #echo on
+# Change the folder
+pushd ${BASEDIR}
+#echo "Fixing the permissions of directories and files" # This is not needed, just ignore the perms in rsync
+#find . -type d ! -perm 0775 -exec chmod 0775 {} \;
+#find . -type f ! -perm 0664 -exec chmod 0664 {} \;
+echo "Zipping up the docs and moving them into the binaries folder for staging"
+rm -f documentation.zip
+zip -rq documentation.zip sphinx/*
+mkdir -p binaries/docs
+cp documentation.zip binaries/docs
+echo "Uploading the python binaries to pypi"
+twine upload binaries/Python/*.whl binaries/Python/*.tar.gz
+echo "Copying the binaries to sourceforge, requires password for user $SFUSER"
+rsync -a --no-perms -z --stats binaries/ ${SFUSER},coolprop@frs.sf.net:/home/pfs/project/c/co/coolprop/CoolProp/${CPVERSION}
+echo "Publishing the docs on sourceforge, requires password for user $SFUSER"
+rsync -a --no-perms -z --stats sphinx/ ${SFUSER}@web.sourceforge.net:/home/project-web/coolprop/htdocs
+# Change back to where we came from
+popd
+echo "All done, goodbye."
+exit 0
