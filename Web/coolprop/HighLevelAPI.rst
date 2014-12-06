@@ -130,10 +130,12 @@ For a given fluid, the phase can be plotted in T-p coordinates:
     plt.xlabel('Temperature [K]')
     plt.tight_layout()
 
+.. _predefined_mixtures:
+
 Predefined Mixtures
 -------------------
 
-A number of predefined mixtures are included in CoolProp.  You can retrieve the list of predefined mixtures by calling `get_global_param_string("predefined_mixtures")` which will return a comma-separated list of predefined mixtures.  In Python, to get the first 5 mixtures, you would do::
+A number of predefined mixtures are included in CoolProp.  You can retrieve the list of predefined mixtures by calling ``get_global_param_string("predefined_mixtures")`` which will return a comma-separated list of predefined mixtures.  In Python, to get the first 5 mixtures, you would do
 
 .. ipython::
 
