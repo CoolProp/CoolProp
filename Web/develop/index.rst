@@ -17,22 +17,34 @@ Address Sanitizer
 
 Address sanitizer is a module of the clang compiler that can help to pinpoint several memory problems, like addressing memory that is out of range.  
 
-The instructions here explain how to get address sanitizer working for CoolProp for testing purposes.
+The instructions here explain how to get address sanitizer working for CoolProp for testing purposes.  
 
-1. You need Clang >3.6, build from source on linux following instructions
+The easiest solution is to use OSX and download the binaries for LLVM+clang from http://llvm.org/releases/download.html.  You will need to expand the file with something like::
 
-2. Check out CoolProp using git::
+    tar -xJf clang+llvm-3.5-x86_64-apple-darwin10.9.tar.xz
+
+1. Check out CoolProp using git::
 
     git clone https://github.com/CoolProp/CoolProp --recursive
 
-3. ``cd CoolProp``
+2. Move into folder::
 
-4. ``mkdir build/asan && cd build/asan``
+    cd CoolProp && mkdir -p build/asan && cd build/asan
+    
+3. Set environmental variable to the root of the clang installation::
 
-5. ``sudo ln -s /path/to/your/clang/bin/clang /usr/bin/clang36``
+    export CLANG_ROOT=/Users/Ian/Downloads/clang+llvm-3.5.0-macosx-apple-darwin
 
-6. ``CC=clang36 CXX=clang36 cmake ../.. -DCOOLPROP_CLANG_ADDRESS_SANITIZER``
+4. Run the cmake call with the special clang version with asan support::
 
-7. ``ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.5 ASAN_OPTIONS=verbosity=1 ./CatchTestRunner``
+    cmake ../.. -DCOOLPROP_CLANG_ADDRESS_SANITIZER=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_C_COMPILER=${CLANG_ROOT}/bin/clang -DCMAKE_CXX_COMPILER=${CLANG_ROOT}/bin/clang++
+
+5. Build:: 
+    
+    cmake --build .
+
+6. Execute::
+
+    DYLD_LIBRARY_PATH=${CLANG_ROOT}/lib/clang/3.5.0/lib/darwin/ ASAN_SYMBOLIZER_PATH=${CLANG_ROOT}/bin/llvm-symbolizer  ASAN_OPTIONS=verbosity=1 ./CatchTestRunner
 
 The ``verbosity=1`` is to make sure that ASAN is actually running
