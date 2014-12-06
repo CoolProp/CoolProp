@@ -645,7 +645,7 @@ void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, long 
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(),
                                        &SatV = HEOS.get_SatV();
             // Quality from density
-            Qd = (1/HEOS._rhomolar-1/SatL.rhomolar())/(1/SatV.rhomolar()-1/SatL.rhomolar());
+            Qd = (1/HEOS.rhomolar()-1/SatL.rhomolar())/(1/SatV.rhomolar()-1/SatL.rhomolar());
             // Quality from other parameter (H,S,U)
             Qo = (value-SatL.keyed_output(other))/(SatV.keyed_output(other)-SatL.keyed_output(other));
             // Residual is the difference between the two
