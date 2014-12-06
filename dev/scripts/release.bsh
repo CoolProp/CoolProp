@@ -1,7 +1,11 @@
 #!/bin/bash
-# Some basic settings to run this script
-read -e -p "CoolProp version (X.X.X): " -i "5.0.0" CPVERSION
-read -e -p "Sourceforge user name (ibell or jorritw): " -i "ibell" SFUSER
+DRYRUN=true # Change this to false to actually make a release
+# Make sure that only one argument is passed to this script - the version that will be released
+if [$# -neq 1]; then
+  echo "Only one argument should be passed to this script - the version that will be released; like release.bsh 5.0.0"
+fi
+CPVERSION=$1
+SFUSER=ibell
 BASEDIR=${HOME}/buildbot/server-master/public_html
 #set -x #echo on
 # Change the folder
@@ -14,12 +18,18 @@ rm -f documentation.zip
 zip -rq documentation.zip sphinx/*
 mkdir -p binaries/docs
 cp documentation.zip binaries/docs
-echo "Uploading the python binaries to pypi"
-twine upload binaries/Python/*.whl binaries/Python/*.tar.gz
+if ["$DRYRUN" = "true"]; then
+    echo "Dry run; skipping python upload"
+    RSYNC_DRY_RUN=--dry-run
+else
+    echo "Uploading the python binaries to pypi"
+    twine upload binaries/Python/*.whl binaries/Python/*.tar.gz
+    RSYNC_DRY_RUN=
+fi
 echo "Copying the binaries to sourceforge, requires password for user $SFUSER"
-rsync -a --no-perms -z --stats binaries/ ${SFUSER},coolprop@frs.sf.net:/home/pfs/project/c/co/coolprop/CoolProp/${CPVERSION}
+RSYNC_PASSWORD=`less ${HOME}/sfpass` rsync $RSYNC_DRY_RUN -a --no-perms -z --stats binaries/ ${SFUSER},coolprop@frs.sf.net:/home/pfs/project/c/co/coolprop/CoolProp/${CPVERSION}
 echo "Publishing the docs on sourceforge, requires password for user $SFUSER"
-rsync -a --no-perms -z --stats sphinx/ ${SFUSER}@web.sourceforge.net:/home/project-web/coolprop/htdocs
+RSYNC_PASSWORD=`less ${HOME}/sfpass` rsync $RSYNC_DRY_RUN -a --no-perms -z --stats sphinx/ ${SFUSER}@web.sourceforge.net:/home/project-web/coolprop/htdocs
 # Change back to where we came from
 popd
 echo "All done, goodbye."
