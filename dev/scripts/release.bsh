@@ -1,9 +1,11 @@
 #!/bin/bash
 DRYRUN=true # Change this to false to actually make a release
 # Make sure that only one argument is passed to this script - the version that will be released
-if [$# -neq 1]; then
+if [ $# != 1 ]; then
   echo "Only one argument should be passed to this script - the version that will be released; like release.bsh 5.0.0"
+  exit 1
 fi
+echo "DRYRUN=${DRYRUN}"
 CPVERSION=$1
 SFUSER=ibell
 BASEDIR=${HOME}/buildbot/server-master/public_html
@@ -18,7 +20,7 @@ rm -f documentation.zip
 zip -rq documentation.zip sphinx/*
 mkdir -p binaries/docs
 cp documentation.zip binaries/docs
-if ["$DRYRUN" = "true"]; then
+if [ "$DRYRUN" = "true" ]; then
     echo "Dry run; skipping python upload"
     RSYNC_DRY_RUN=--dry-run
 else
