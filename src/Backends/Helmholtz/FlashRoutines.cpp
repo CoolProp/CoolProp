@@ -1456,7 +1456,7 @@ TEST_CASE("PD with T very large should yield error","[PDflash]")
 	shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend("R134a"));
 	double Tc = HEOS->T_critical();
 	HEOS->update(DmassT_INPUTS, 1.1, 1.5*Tc);
-	CHECK_THROWS(HEOS->update(DmassP_INPUTS, 2, 0.5*HEOS->p()));
+	CHECK_THROWS(HEOS->update(DmassP_INPUTS, 2, 5*HEOS->p()));
 }
 #endif
 
