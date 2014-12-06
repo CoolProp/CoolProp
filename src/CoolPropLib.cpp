@@ -18,7 +18,7 @@
 // See also http://stackoverflow.com/questions/11685441/floating-point-error-when-calling-dll-function-from-vba/27336496#27336496
 void reset_fpu()
 {
-    #if defined(WIN32)
+    #if defined(_MSC_VER)
         _clearfp(); // For MSVC in excel, clear the floating point error flags
     #endif
 }
