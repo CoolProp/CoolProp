@@ -9,8 +9,19 @@
 #include "HumidAirProp.h"
 #include "DataStructures.h"
 #include "Exceptions.h"
+#include "float.h"
 
 #include <string.h>
+
+// In Microsoft Excel, they seem to check the FPU exception bits and error out because of it.  
+// By calling the _clearfp(), we can reset these bits, and not get the error
+// See also http://stackoverflow.com/questions/11685441/floating-point-error-when-calling-dll-function-from-vba/27336496#27336496
+void reset_fpu()
+{
+    #if defined(WIN32)
+        _clearfp(); // For MSVC in excel, clear the floating point error flags
+    #endif
+}
 double convert_from_kSI_to_SI(long iInput, double value)
 {
     if (get_debug_level() > 8){
@@ -78,6 +89,7 @@ double convert_from_SI_to_kSI(long iInput, double value)
 
 EXPORT_CODE long CONVENTION redirect_stdout(const char* file){
     freopen(file, "a+", stdout);
+    reset_fpu();
     return 0;
 }
 EXPORT_CODE int CONVENTION set_reference_stateS(const char *Ref, const char *reference_state)
@@ -85,9 +97,11 @@ EXPORT_CODE int CONVENTION set_reference_stateS(const char *Ref, const char *ref
     std::string _Ref = Ref, _reference_state = reference_state;
     try{
         CoolProp::set_reference_stateS(_Ref, _reference_state);
+        reset_fpu();
         return true;
     }
     catch(std::exception &){
+        reset_fpu();
         return false;
     }
 }
@@ -95,19 +109,24 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, doubl
 {
     try{
         CoolProp::set_reference_stateD(std::string(Ref), T, rho, h0, s0);
+        reset_fpu();
         return true;
     }
     catch(std::exception &){
+        reset_fpu();
         return false;
     }
 }
 
 // All the function interfaces that point to the single-input Props function
 EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output){
-    return PropsS(Output, "", 0, "", 0, FluidName);
+    double val = PropsS(Output, "", 0, "", 0, FluidName);
+    reset_fpu();
+    return val;
 }
 EXPORT_CODE double CONVENTION PropsS(const char *Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char * Ref){
     double val = Props(Output,Name1[0],Prop1,Name2[0],Prop2,Ref);
+    reset_fpu();
     return val;
 }
 EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double Prop1, const char Name2, double Prop2, const char * Ref)
@@ -127,6 +146,8 @@ EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double
         // Call the SI function
         double val = PropsSI(Output, sName1.c_str(), Prop1, sName2.c_str(), Prop2, Ref);
 
+        reset_fpu();
+
         // Convert back to unit system
         return convert_from_SI_to_kSI(iOutput, val);
     }
@@ -139,6 +160,7 @@ EXPORT_CODE double CONVENTION saturation_ancillary(const char *fluid_name, const
     {
         std::string _output = output, _input = input;
         double val = CoolProp::saturation_ancillary(fluid_name, _output, Q, _input, value);
+        reset_fpu();
         return val;
     }
     catch(std::exception &e){CoolProp::set_error_string(e.what()); return _HUGE;}
@@ -147,12 +169,16 @@ EXPORT_CODE double CONVENTION saturation_ancillary(const char *fluid_name, const
 EXPORT_CODE double CONVENTION Props1SI(const char *FluidName, const char *Output)
 {
     std::string _Output = Output, _FluidName = FluidName;
-    return CoolProp::Props1SI(_FluidName, _Output);
+    double val = CoolProp::Props1SI(_FluidName, _Output);
+    reset_fpu();
+    return val;
 }
 EXPORT_CODE double CONVENTION PropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;
-    return CoolProp::PropsSI(_Output, _Name1, Prop1, _Name2, Prop2, _FluidName);
+    double val = CoolProp::PropsSI(_Output, _Name1, Prop1, _Name2, Prop2, _FluidName);
+    reset_fpu();
+    return val;
 }
 EXPORT_CODE long CONVENTION PhaseSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName, char *phase, int n)
 {
@@ -160,21 +186,26 @@ EXPORT_CODE long CONVENTION PhaseSI(const char *Output, const char *Name1, doubl
     std::string s = CoolProp::PhaseSI(_Name1, Prop1, _Name2, Prop2, _FluidName);
     if (s.size() < static_cast<unsigned int>(n)){
         strcpy(phase, s.c_str());
+        reset_fpu();
         return 1;
     }
     else{
+        reset_fpu();
         return 0;
     }
 }
 EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName, const double *z, int n)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;
-    return CoolProp::PropsSI(_Output, _Name1, Prop1, _Name2, Prop2, _FluidName, std::vector<double>(z, z+n));
+    double val = CoolProp::PropsSI(_Output, _Name1, Prop1, _Name2, Prop2, _FluidName, std::vector<double>(z, z+n));
+    reset_fpu();
+    return val;
 }
 EXPORT_CODE void CONVENTION propssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * FluidName, double *output)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;
     *output = CoolProp::PropsSI(_Output, _Name1, *Prop1, _Name2, *Prop2, _FluidName);
+    reset_fpu();
 }
 
 EXPORT_CODE double CONVENTION K2F(double T){
@@ -247,19 +278,25 @@ EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char
 EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _Name3 = Name3;
-    return HumidAir::HAPropsSI(Output, _Name1, Prop1, _Name2, Prop2, _Name3, Prop3);
+    double val = HumidAir::HAPropsSI(Output, _Name1, Prop1, _Name2, Prop2, _Name3, Prop3);
+    reset_fpu();
+    return val;
 }
 EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Name3, double * Prop3, double *output)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _Name3 = Name3;
     *output = HumidAir::HAPropsSI(_Output, _Name1, *Prop1, _Name2, *Prop2, _Name3, *Prop3);
+    reset_fpu();
 }
 EXPORT_CODE double CONVENTION HAProps(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _Name3 = Name3;
-    return HumidAir::HAProps(Output, _Name1, Prop1, _Name2, Prop2, _Name3, Prop3);
+    double val = HumidAir::HAProps(Output, _Name1, Prop1, _Name2, Prop2, _Name3, Prop3);
+    reset_fpu();
+    return val;
 }
 EXPORT_CODE void CONVENTION haprops_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Name3, double * Prop3, double *output)
 {
     *output = HAProps(Output, Name1, *Prop1, Name2, *Prop2, Name3, *Prop3);
+    reset_fpu();
 }
