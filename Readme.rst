@@ -8,17 +8,17 @@ It was originally developed by Ian Bell, currently a post-doc at the University 
 
 * CoolProp has flexible licensing terms: Commercial - ok! Academic? - ok! |license|
 
-* You can get the development binaries for each platform at http://www.coolprop.dreamhosters.com:8010/binaries/.
+* For Python, you can get the latest stable version via ``pip install coolprop``. Currently |downloads| of |version|  
 
-* For Python, you can get latest stable version |version| via pip install coolprop |downloads| 
+* ... other binaries for the different platforms are available here: `latest release <http://sourceforge.net/projects/coolprop/files>`_ and `development version <http://www.coolprop.dreamhosters.com:8010/binaries>`_  
 
-* The development docs for the v5 release are at http://www.coolprop.dreamhosters.com:8010/sphinx/ 
-
-* Travis CI helps us to keep track of integration issues |travis| 
+* Documentation for the API, Python modules and C++ classes: `latest release <http://www.coolprop.org>`_ and `development version <http://www.coolprop.dreamhosters.com:8010/sphinx>`_  
 
 * Please, if there are any issues of any kind, file an issue at https://github.com/CoolProp/CoolProp/issues
 
 * Also, check out our FAQ: https://github.com/CoolProp/CoolProp/blob/master/FAQ.md
+
+
 
 .. |travis| image:: https://travis-ci.org/CoolProp/CoolProp.png?branch=master
     :target: https://travis-ci.org/CoolProp/CoolProp
