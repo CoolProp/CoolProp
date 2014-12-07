@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+#rsync -aP jorritw@frs.sourceforge.net:/home/frs/project/coolprop/ /home/jorrit/tmp/sourceforge/
+# Scan the tree and change the folder date to the date
+# of the oldest file in it
+#for DIR in /home/jorrit/tmp/sourceforge/CoolProp/*/; do 
+for DIR in ../coolprop/CoolProp/*/; do
+    NEWEST=$(find "$DIR" ! -type d -printf "%T@ %p\n" | sort -n | tail -n1)
+    FDATE=${NEWEST:0:10}
+    FNAME=${NEWEST:22}
+    echo "$DIR: $(date -d @$FDATE +%F) of $FNAME"
+    touch -r "$FNAME" "$DIR"*
+done
+# #
+# #rsync -a -f"+ */" -f"- *" /home/jorrit/tmp/sourceforge/ jorritw@frs.sourceforge.net:/home/frs/project/coolprop/
+# rsync -t /home/jorrit/tmp/sourceforge/ jorritw@frs.sourceforge.net:/home/frs/project/coolprop/
+#rsync -rtcv -f"+ */" -f"- *" /home/jorrit/tmp/sourceforge/ jorritw@frs.sourceforge.net:/home/frs/project/coolprop/
+exit 0
