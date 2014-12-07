@@ -11,7 +11,6 @@ Information for Developers
   cmake.rst
   buildbot.rst
   documentation.rst
-  release.rst
   
 Address Sanitizer
 -----------------
