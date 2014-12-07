@@ -3,20 +3,20 @@ Welcome to CoolProp
 ===================
 
 CoolProp is a thermophysical property database and wrappers for a selection of programming environments. 
-It offers similar functionality to REFPROP, but CoolProp is open-source and free,
+It offers similar functionality to REFPROP, but CoolProp is open-source and free. 
 It was originally developed by Ian Bell, currently a post-doc at the University of Liege, in Liege, Belgium.
 
 * CoolProp has flexible licensing terms: Commercial - ok! Academic? - ok! |license|
 
-* For Python, you can get the latest stable version via ``pip install coolprop``. Currently |downloads| of |version|  
+* For Python, you can get the latest release via ``pip install coolprop``. Currently |downloads| of |version|  
 
-* ... other binaries for the different platforms are available here: `latest release <http://sourceforge.net/projects/coolprop/files>`_ and `development version <http://www.coolprop.dreamhosters.com:8010/binaries>`_  
+* ... other binaries can be downloaded here: `latest release <http://sourceforge.net/projects/coolprop/files>`_ and `development version <http://www.coolprop.dreamhosters.com:8010/binaries>`_  
 
-* Documentation for the API, Python modules and C++ classes: `latest release <http://www.coolprop.org>`_ and `development version <http://www.coolprop.dreamhosters.com:8010/sphinx>`_  
+* The documentation is available for the `latest release <http://www.coolprop.org>`_ and the `development version <http://www.coolprop.dreamhosters.com:8010/sphinx>`_  
 
-* Please, if there are any issues of any kind, file an issue at https://github.com/CoolProp/CoolProp/issues
+* Please, if there are any issues of any kind, file an issue `here <https://github.com/CoolProp/CoolProp/issues>`_ 
 
-* Also, check out our FAQ: https://github.com/CoolProp/CoolProp/blob/master/FAQ.md
+* ... you might also find answers in our `FAQ <https://github.com/CoolProp/CoolProp/blob/master/FAQ.md>`_ 
 
 
 
