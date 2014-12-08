@@ -6,7 +6,7 @@ MATLAB Wrapper
 
 Pre-compiled Binaries
 =====================
-Release versions of the MATLAB wrapper can be downloaded from :sfdownloads:`MATLAB` for your architecture, or from the development buildbot server at :bbbinaries:`MATLAB`.  Whichever one you pick, make sure all the files come from the same place.
+Release versions of the MATLAB wrapper can be downloaded from :sfdownloads:`MATLAB` for your architecture, or from the development snapshots at :sfnightly:`MATLAB`.  Whichever one you pick, make sure all the files come from the same place.
 
 Download the +CoolProp.7z file and extract it using the `7-zip <http://www.7-zip.org/download.html>`_ program.  Make sure that when you expand it, there are no +CoolProp intermediate folders generated.  Place the mex file that is appropriate to the version of MATLAB in the directory that contains the directory +CoolProp.  You can determine what version of matlab you have by running the command ``computer('arch')`` at the MATLAB command prompt.  Depending on the output, you will need to download one of the following mex files:
 
@@ -26,7 +26,7 @@ When you are finished, you should have a folder layout like::
         |- AbstractState.m
         |- DmassHmass_INPUTS.m
         |- ...
-    
+
 Then you need to add the main that contains the +CoolProp folder to the path in MATLAB
 
 Example: adding the folder main that contains CoolProp files to the MATLAB path::
@@ -65,13 +65,13 @@ On linux and OSX, you can simply run the script dev/scripts/build_swig_matlab.py
 For windows, its pretty much the same story, except that swig has to be cross-compiled from a linux (debian-based OS are good) host.  Install all the mingw packages in Synaptic, and then run the build script like::
 
     python build_swig_matlab.py --windows
-    
+
 which should hopefully yield the binaries in dev/scripts/swig-matlab/swig-matlab-bin.
 
 Common Requirements
 -------------------
 Compilation of the MATLAB wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
-    
+
 Linux
 -----
 
@@ -112,7 +112,7 @@ Once the dependencies are installed, you can run the builder and tests using::
     SWIG_LIB=swig-matlab-bin/share/swig/3.0.3 make install
 
 Windows (32-bit and 64-bit)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You need to just slightly modify the building procedure::
 

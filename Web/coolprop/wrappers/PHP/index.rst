@@ -7,20 +7,20 @@ PHP Wrapper
 Pre-Compiled Binaries
 =====================
 
-* Download the shared library for your architecture from :sfdownloads:`PHP`, or from the development buildbot server at :bbbinaries:`PHP`.  Also download the CoolProp.php platform-independent file.  Or build it yourself (see below)
+* Download the shared library for your architecture from :sfdownloads:`PHP`, or from the development buildbot server at :sfnightly:`PHP`.  Also download the CoolProp.php platform-independent file.  Or build it yourself (see below)
 
 * Copy the libCoolProp.so file into the extension-dir for php::
 
     sudo cp libCoolProp.so `php-config --extension-dir`
-    
+
   This copies the shared library into a location that PHP can load.  sudo is needed to make the copy. Alternatively, in the following step you will need to use the full path to the extension, which is just a bit more annoying.
-  
+
   Put the CoolProp.php with the rest of your sources.  This is the interface file between your PHP code and the CoolProp module.
 
 * Modify the PHP.ini file that PHP will load to add::
 
-    extension = "CoolProp.so" 
-    
+    extension = "CoolProp.so"
+
   after ``[PHP]``. If you didn't copy libCoolProp.so into the folder given by ```php-config --extension-dir``` you will need to use the absolute path
 
 * You can determine the php.ini file that you should be modifying by creating a file on the server with the contents
@@ -30,7 +30,7 @@ Pre-Compiled Binaries
      <?php
        phpinfo();
      ?>
-     
+
   Modify the file given by ``Loaded Configuration File``.
 
 * To enable some useful debugging at runtime (turn off for deployment), you can add
@@ -46,10 +46,10 @@ Pre-Compiled Binaries
 * This stub file shows how to call the module
 
   .. code-block:: php
-     
+
      <?php
      require "CoolProp.php";
- 
+
      $p = 101325;
      $Q = 1.0;
      $T = PropsSI("T","P",$p,"Q",$Q,"Water");
@@ -75,11 +75,11 @@ Linux
 1. Check out coolprop::
 
     git clone https://github.com/CoolProp/CoolProp --recursive
-    
+
 2. Folder creating::
 
     mkdir -p CoolProp/build && cd CoolProp/build
-    
+
 3. Build the php module::
 
     cmake .. -DCOOLPROP_PHP_MODULE=ON
@@ -87,7 +87,7 @@ Linux
 4. Build (verbosely so we can see if there are any problems)::
 
     make VERBOSE=1
-    
+
   This will generate the file libCoolProp.so and the php module CoolProp.php
-    
+
 5. See the above instructions in the Pre-Compiled Binaries section for installation instructions

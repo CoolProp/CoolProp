@@ -6,7 +6,7 @@ C# Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled release binaries can be downloaded from :sfdownloads:`Csharp`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`Csharp`.
+Pre-compiled release binaries can be downloaded from :sfdownloads:`Csharp`.  Development binaries coming from the buildbot server can be found at :sfnightly:`Csharp`.
 
 To Use
 ------
@@ -24,7 +24,7 @@ At the command prompt, run::
 
 where you might need to update the path to visual studio depending on your version installed.  Use `-platform:x86` to tell C# that your DLL is 32-bit if you are on 32-bit, or `-platform:x64` if you are on 64-bit.
 
-Alternatively, you can add all the .cs files to a visual studio project.  
+Alternatively, you can add all the .cs files to a visual studio project.
 
 Linux/OSX
 ^^^^^^^^^

@@ -19,7 +19,7 @@ There are a few things that need to be considered when determining what shared l
 Pre-Compiled Binaries
 ======================
 
-Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the development versions from the buildbot server at :bbbinaries:`shared_library`.
+Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the development versions from the buildbot server at :sfnightly:`shared_library`.
 
 User-Compiled Binaries
 ======================
@@ -30,7 +30,7 @@ Compilation of a shared library requires a few :ref:`common wrapper pre-requisit
 
 Windows
 -------
-On windows, the greatest amount of complexity is experienced.  
+On windows, the greatest amount of complexity is experienced.
 
 Your compiler options are:
 
@@ -55,41 +55,41 @@ You can select the compiler in the call to cmake below.
     cd CoolProp
     # Make a build folder
     mkdir build && cd build
-    
-2. Generate the build file.  Here is where it gets complicated.  
+
+2. Generate the build file.  Here is where it gets complicated.
 
     A. If you use MinGW, these are your options:
 
     For 64-bit DLL::
 
         cmake .. -DCOOLPROP_64BIT_SHARED_LIBRARY=ON -G "MinGW Makefiles"
-        
+
     For 32-bit __stdcall DLL::
-    
+
         cmake .. -DCOOLPROP_32BIT_STDCALL_SHARED_LIBRARY=ON -G "MinGW Makefiles"
-        
+
     For 32-bit __cdecl DLL::
-    
+
         cmake .. -DCOOLPROP_32BIT_CDECL_SHARED_LIBRARY=ON -G "MinGW Makefiles"
-        
+
     B. If you use Visual Studio, you will need to replace the visual studio version with the version that you are using.  Running the command ``cmake`` at the command prompt will tell you what generators are supported
-    
+
     For 64-bit DLL (Watch out for the 64-bit flag with Win64)::
 
         cmake .. -DCOOLPROP_64BIT_SHARED_LIBRARY=ON -G "Visual Studio 10 2010 Win64"
-        
+
     For 32-bit __stdcall DLL::
-    
+
         cmake .. -DCOOLPROP_32BIT_STDCALL_SHARED_LIBRARY=ON -G "Visual Studio 10 2010"
-        
+
     For 32-bit __cdecl DLL::
-    
+
         cmake .. -DCOOLPROP_32BIT_CDECL_SHARED_LIBRARY=ON -G "Visual Studio 10 2010"
-        
+
 3. Do the build::
 
     cmake --build . --config Release
-    
+
 If you are using MinGW, you can leave off the ``--config Release``, the default build configuration is release
 
 Linux & OSX
@@ -109,7 +109,7 @@ For 32-bit compilation::
     cmake .. -DCOOLPROP_32BIT_STDCALL_SHARED_LIBRARY=ON
     # Build
     cmake --build .
-    
+
 For 64-bit compilation::
 
     # Check out the sources for CoolProp

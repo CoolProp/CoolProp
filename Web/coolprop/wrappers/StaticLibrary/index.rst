@@ -10,7 +10,7 @@ When writing your own C++ code, it is advised to compile CoolProp to a static li
 
 Pre-compiled Binaries
 =====================
-Pre-compiled release binaries can be downloaded from :sfdownloads:`static_library`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`static_library`.  These static libraries are only useful if the compiler used to make the static library agrees with the static library that will be used to build your other code.  So best to follow the below instructions to build your own static library.
+Pre-compiled release binaries can be downloaded from :sfdownloads:`static_library`.  Development binaries coming from the buildbot server can be found at :sfnightly:`static_library`.  These static libraries are only useful if the compiler used to make the static library agrees with the static library that will be used to build your other code.  So best to follow the below instructions to build your own static library.
 
 User-Compiled Binaries
 ======================
