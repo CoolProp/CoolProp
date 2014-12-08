@@ -51,9 +51,11 @@ if [ "$DRYRUN" != "false" ]; then
     RSYNC_DRY_RUN=--dry-run
 else
     if [ "$CPVERSION" = "nightly" ]; then
+        RSYNC_OPTS="-a --no-perms -z --stats --delete"
         rm -rf "$BINFOLDER/docs"
-        CPVERSION="$CPVERSION"/$(date +%F)
+        #CPVERSION="$CPVERSION"/$(date +%F)
     else
+        RSYNC_OPTS="-a --no-perms -z --stats"
         echo " "
         echo $SEPARATOR
         echo "Zipping up the docs and moving them into the $BINFOLDER folder for staging"
@@ -70,7 +72,6 @@ fi
 echo " "
 echo $SEPARATOR
 echo "Copying the binaries to SourceForge"
-RSYNC_OPTS="-a --no-perms -z --stats"
 rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$BINFOLDER/" frs.sf.net-$SFUSER:/home/frs/project/coolprop/CoolProp/$CPVERSION
 if [ ${CPVERSION:0:7} != "nightly" ]; then
     echo " "

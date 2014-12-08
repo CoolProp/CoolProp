@@ -7,13 +7,14 @@ Python Wrapper
 Automatic installation
 ======================
 
-Using the ``pip`` installation program, you can install CoolProp v5 from the development server using::
-
-    pip install --find-links http://www.coolprop.dreamhosters.com:8010/binaries/Python/ -U --force-reinstall CoolProp
-    
-Or the official release can be obtained from the pypi server using::
+Using the ``pip`` installation program, you can install the official release can be obtained from the pypi server using::
 
     pip install CoolProp
+
+or the latest version from the development server using::
+
+    pip install --find-links http://www.coolprop.dreamhosters.com:8010/binaries/Python/ -U --force-reinstall CoolProp
+
 
 Manual installation
 ===================
@@ -33,9 +34,9 @@ Then, follow the commands::
     # Start the installation
     sudo python setup.py install
 
-If you would like to install CoolProp just for a given version of Python (for 
-example if ``python`` links to ``python3.4`` and you also have a ``python2.7`` 
-executable), simply use this version of python to execute the ``setup.py`` 
+If you would like to install CoolProp just for a given version of Python (for
+example if ``python`` links to ``python3.4`` and you also have a ``python2.7``
+executable), simply use this version of python to execute the ``setup.py``
 script::
 
     sudo python2.7 setup.py install
@@ -43,7 +44,7 @@ script::
 Local installation
 ------------------
 
-If you prefer not to be sudoer when compiling coolprop on Linux/MacOS, you can 
+If you prefer not to be sudoer when compiling coolprop on Linux/MacOS, you can
 also install it locally using the ``--user`` switch::
 
     # Check out the sources for CoolProp
@@ -52,19 +53,19 @@ also install it locally using the ``--user`` switch::
     cd CoolProp/wrappers/Python
     # Start the installation
     python setup.py install --user
-    
+
 For Pyzo users
 --------------
 
-Suppose the directory containing pyzo is on your Desktop in 
-``~/Desktop/pyzo2014a/``. Then you can install CoolProp to be used within pyzo 
+Suppose the directory containing pyzo is on your Desktop in
+``~/Desktop/pyzo2014a/``. Then you can install CoolProp to be used within pyzo
 by following the same lines as above::
 
     # Check out the sources for CoolProp
     git clone https://github.com/CoolProp/CoolProp --recursive
     # Move into the folder you just created
     cd CoolProp/wrappers/Python
-    # Start the installation (~/Desktop/pyzo2014a/ to be changed according to 
+    # Start the installation (~/Desktop/pyzo2014a/ to be changed according to
     # your effective installation)
     sudo ~/Desktop/pyzo2014a/bin/python setup.py install
 
@@ -78,8 +79,8 @@ Once installed, you can use CoolProp for various things:
     import CoolProp.CoolProp as CP
     fluid = 'Water'
     pressure_at_critical_point = CP.PropsSI(fluid,'pcrit')
-    # Massic volume (in m^3/kg) is the inverse of density 
-    # (or volumic mass in kg/m^3). Let's compute the massic volume of liquid 
+    # Massic volume (in m^3/kg) is the inverse of density
+    # (or volumic mass in kg/m^3). Let's compute the massic volume of liquid
     # at 1bar (1e5 Pa) of pressure
     vL = 1/CP.PropsSI('D','P',1e5,'Q',0,fluid)
     # Same for saturated vapor
@@ -91,11 +92,11 @@ Once installed, you can use CoolProp for various things:
     ph_plot = CPP.PropsPlot('Water','Ph')
     ph_plot.savefig('enthalpy_pressure_graph_for_Water.png')
 
-* Solve `thermodynamics exercices`_ 
+* Solve `thermodynamics exercices`_
 
 * Make you own `more complex graphs`_ if you feel the graphing interface is lacking something
 
-* Make even more complex graphs using `3D stuff`_ 
+* Make even more complex graphs using `3D stuff`_
 
 .. _thermodynamics exercices: https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_resolution_cycle_diesel.py
 .. _more complex graphs: https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_diagramme_Ph_coolprop.py
