@@ -62,6 +62,7 @@ Triple point pressure [Pa], {pt:s}
 Critical point temperature [K], {Tc:s}
 Critical point density [kg/m3], {rhoc_mass:s}
 Critical point density [mol/m3], {rhoc_molar:s}
+Critical point pressure [Pa], {pc:s}
 {reducing_string:s}
 """
 
@@ -70,12 +71,13 @@ Reducing point temperature [K], {Tr:s}
 Reducing point density [mol/m3], {rhor_molar:s}
 """
 
-bibtex_keys = ['EOS','CP0','CONDUCTIVITY','VISCOSITY','MELTING_LINE']
+bibtex_keys = ['EOS','CP0','CONDUCTIVITY','VISCOSITY','MELTING_LINE','SURFACE_TENSION']
 bibtex_map = {'EOS': 'Equation of State',
               'CP0': 'Ideal gas specific heat',
               'CONDUCTIVITY': 'Thermal Conductivity',
               'VISCOSITY': 'Viscosity',
-              'MELTING_LINE': 'Melting Line'}
+              'MELTING_LINE': 'Melting Line',
+              'SURFACE_TENSION': 'Surface Tension'}
 
 from pybtex.database.input import bibtex
 parser = bibtex.Parser()
