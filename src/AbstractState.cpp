@@ -188,7 +188,7 @@ double AbstractState::trivial_keyed_output(int key)
     case irhomolar_critical:
         return this->rhomolar_critical();
     case irhomass_critical:
-        return this->rhomolar_critical()*molar_mass();
+        return this->rhomass_critical();
     case iODP:
         return this->calc_ODP();
     case iGWP100:
@@ -322,7 +322,9 @@ double AbstractState::p_triple(void){
 double AbstractState::rhomolar_critical(void){
     return calc_rhomolar_critical();
 }
-
+double AbstractState::rhomass_critical(void){
+    return calc_rhomolar_critical()*molar_mass();
+}
 double AbstractState::hmolar(void){
     if (!_hmolar) _hmolar = calc_hmolar();
     return _hmolar;

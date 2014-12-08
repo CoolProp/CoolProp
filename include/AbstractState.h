@@ -347,12 +347,19 @@ protected:
     For mixtures, it is the exact critical point pressure calculated by the methods of Michelsen( \todo fill in reference)
     */
     double p_critical(void);
-    /// Return the critical molar density in mol/m^3
-    /**
-    For pure fluids, this is the critical point molar density
-    For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
-    */
+    /// 
+    /** \brief Return the critical molar density in mol/m^3
+	 * 
+	 * For pure fluids, this is the critical point molar density
+     * For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
+     */
     double rhomolar_critical(void);
+	/** \brief Return the critical molar density in kg/m^3
+	 * 
+	 * For pure fluids, this is the critical point molar density
+     * For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
+     */
+    double rhomass_critical(void);
     
     /// Return the triple point pressure 
     double p_triple(void);
@@ -493,6 +500,13 @@ protected:
 	 * Implementing the algorithms and ideas of:
 	 * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation", 
 	 * Environmental Earth Sciences, December 2013, Volume 70, Issue 8, pp 3497-3503
+	 * 
+	 * Like with \ref first_saturation_deriv, we can express the derivative as
+	 * \f[ \left(\frac{\partial y}{\partial T}\right)_{\sigma} = \left(\frac{\partial y}{\partial T}\right)+\left(\frac{\partial y}{\partial p}\right)\left(\frac{\partial p}{\partial T}\right)_{\sigma} \f]
+	 *
+	 * where \f$ y \f$ is already a saturation derivative. So you might end up with something like 
+	 * 
+	 * \f[ \left(\frac{\partial \left(\frac{\partial T}{\partial p}\right)_{\sigma}}{\partial T}\right)_{\sigma} = \left(\frac{\partial \left(\frac{\partial T}{\partial p}\right)_{\sigma}}{\partial T}\right)+\left(\frac{\partial \left(\frac{\partial T}{\partial p}\right)_{\sigma}}{\partial p}\right)\left(\frac{\partial p}{\partial T}\right)_{\sigma} \f]
 	 * 
 	 * @param Of1 The parameter that the derivative is taken of
 	 * @param Wrt1 The parameter that the derivative is taken with respect to
