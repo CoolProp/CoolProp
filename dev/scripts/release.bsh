@@ -5,33 +5,55 @@ if [ $# != 1 ]; then
   echo "Only one argument should be passed to this script - the version that will be released; like release.bsh 5.0.0"
   exit 1
 fi
-echo "DRYRUN=${DRYRUN}"
-CPVERSION=$1
-SFUSER=ibell
-BASEDIR=${HOME}/buildbot/server-master/public_html
+echo "DRYRUN=$DRYRUN"
+CPVERSION="$1"
+BASEDIR="$HOME/buildbot/server-master/public_html"
+BINFOLDER="binaries"
+DOCFOLDER="sphinx"
+#
+#SFUSER="ibell"
+#SFPASS="$HOME/etc_opt/id_ibell"
+#
+SFUSER="jorritw"
+SFPASS="$HOME/etc_opt/id_jorritw"
+#
 #set -x #echo on
 # Change the folder
 pushd ${BASEDIR}
 #echo "Fixing the permissions of directories and files" # This is not needed, just ignore the perms in rsync
 #find . -type d ! -perm 0775 -exec chmod 0775 {} \;
 #find . -type f ! -perm 0664 -exec chmod 0664 {} \;
-echo "Zipping up the docs and moving them into the binaries folder for staging"
-rm -f documentation.zip
-zip -rq documentation.zip sphinx/*
-mkdir -p binaries/docs
-cp documentation.zip binaries/docs
+#
 if [ "$DRYRUN" = "true" ]; then
+    echo "Dry run; no zipping of the docs"
     echo "Dry run; skipping python upload"
+    echo "Dry run; skipping folder date"
     RSYNC_DRY_RUN=--dry-run
 else
+    echo "Zipping up the docs and moving them into the $BINFOLDER folder for staging"
+    rm -f documentation.zip
+    zip -rq documentation.zip $DOCFOLDER/*
+    mkdir -p "$BINFOLDER/docs"
+    cp documentation.zip "$BINFOLDER/docs"
     echo "Uploading the python binaries to pypi"
-    twine upload binaries/Python/*.whl binaries/Python/*.tar.gz
+    twine upload $BINFOLDER/Python/*.whl $BINFOLDER/Python/*.tar.gz
+    #
+    NEWEST=$(find "$BINFOLDER" ! -type d -printf "%T@ %p\n" | sort -n | tail -n1)
+    FDATE=${NEWEST:0:10}
+    FNAME=${NEWEST:22}
+    echo "Changing the folder date to the newest file date - $(date -d @$FDATE +%F)"
+    touch -r "$FNAME" "$BINFOLDER"
+    #
     RSYNC_DRY_RUN=
 fi
-echo "Copying the binaries to sourceforge, requires password for user $SFUSER"
-RSYNC_PASSWORD=`less ${HOME}/sfpass` rsync $RSYNC_DRY_RUN -a --no-perms -z --stats binaries/ ${SFUSER},coolprop@frs.sf.net:/home/pfs/project/c/co/coolprop/CoolProp/${CPVERSION}
-echo "Publishing the docs on sourceforge, requires password for user $SFUSER"
-RSYNC_PASSWORD=`less ${HOME}/sfpass` rsync $RSYNC_DRY_RUN -a --no-perms -z --stats sphinx/ ${SFUSER}@web.sourceforge.net:/home/project-web/coolprop/htdocs
+echo "Preparing the ssh key for SourceForge"
+eval $(ssh-agent) # Make sure ssh-agent is running
+ssh-add "$SFPASS"
+#
+echo "Copying the binaries to SourceForge"
+rsync $RSYNC_DRY_RUN -a --no-perms -z --stats "$BINFOLDER/" $SFUSER@frs.sourceforge.net:/home/frs/project/coolprop/CoolProp/$CPVERSION
+echo "Publishing the docs on SourceForge"
+rsync $RSYNC_DRY_RUN -a --no-perms -z --stats "$DOCFOLDER/" $SFUSER@web.sourceforge.net:/home/project-web/coolprop/htdocs
 # Change back to where we came from
 popd
 echo "All done, goodbye."

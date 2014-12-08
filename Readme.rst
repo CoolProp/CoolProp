@@ -3,22 +3,22 @@ Welcome to CoolProp
 ===================
 
 CoolProp is a thermophysical property database and wrappers for a selection of programming environments. 
-It offers similar functionality to REFPROP, but CoolProp is open-source and free,
+It offers similar functionality to REFPROP, but CoolProp is open-source and free. 
 It was originally developed by Ian Bell, currently a post-doc at the University of Liege, in Liege, Belgium.
 
 * CoolProp has flexible licensing terms: Commercial - ok! Academic? - ok! |license|
 
-* You can get the development binaries for each platform at http://www.coolprop.dreamhosters.com:8010/binaries/.
+* For Python, you can get the latest release via ``pip install coolprop``. Currently |downloads| of |version|  
 
-* For Python, you can get latest stable version |version| via pip install coolprop |downloads| 
+* ... other binaries can be downloaded here: `latest release <http://sourceforge.net/projects/coolprop/files>`_ and `development version <http://www.coolprop.dreamhosters.com:8010/binaries>`_  
 
-* The development docs for the v5 release are at http://www.coolprop.dreamhosters.com:8010/sphinx/ 
+* The documentation is available for the `latest release <http://www.coolprop.org>`_ and the `development version <http://www.coolprop.dreamhosters.com:8010/sphinx>`_  
 
-* Travis CI helps us to keep track of integration issues |travis| 
+* Please, if there are any issues of any kind, file an issue `here <https://github.com/CoolProp/CoolProp/issues>`_ 
 
-* Please, if there are any issues of any kind, file an issue at https://github.com/CoolProp/CoolProp/issues
+* ... you might also find answers in our `FAQ <https://github.com/CoolProp/CoolProp/blob/master/FAQ.md>`_ 
 
-* Also, check out our FAQ: https://github.com/CoolProp/CoolProp/blob/master/FAQ.md
+
 
 .. |travis| image:: https://travis-ci.org/CoolProp/CoolProp.png?branch=master
     :target: https://travis-ci.org/CoolProp/CoolProp
