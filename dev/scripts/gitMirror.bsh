@@ -1,5 +1,9 @@
 #!/bin/bash
 #
+# This script relys on a modified ~/.ssh/config to specify the 
+# correct identity files to be used with the host aliases
+# git.code.sf.net-ibell and git.code.sf.net-jorritw 
+#
 # Work around for Cron:
 USER=coolprop
 source /home/$USER/.bash_profile
@@ -13,14 +17,14 @@ if [ ! -d $FOLDER ]; then # repo does not exist, clone it
     REPOFOLDER=${FOLDER##*/}
     mkdir -p $BASEFOLDER
     pushd $BASEFOLDER
-    git clone --bare $ORIGIN $REPOFOLDER
+    git clone --mirror $ORIGIN $REPOFOLDER
     #pushd $REPOFOLDER
     #git remote add sfmirror $MIRROR
     #popd
     popd
 fi
 pushd $FOLDER
-git fetch $ORIGIN 
-git push --force --mirror $MIRROR
+git fetch --force $ORIGIN 
+git push  --force --mirror $MIRROR
 popd
 exit 0
