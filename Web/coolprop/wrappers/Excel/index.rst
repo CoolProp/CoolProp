@@ -7,7 +7,7 @@ Excel Wrapper
 
 Pre-compiled Binaries for windows
 =================================
-Pre-compiled release binaries can be downloaded from :sfdownloads:`MicrosoftExcel`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`MicrosoftExcel`.
+Pre-compiled release binaries can be downloaded from :sfdownloads:`MicrosoftExcel`.  Development binaries coming from the buildbot server can be found at :sfnightly:`MicrosoftExcel`.
 
 Download all the files. The basic protocol is:
 
@@ -30,11 +30,11 @@ Pre-compiled Binaries for OSX
 
 Part 1:
 -------
-Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/32bit__cdecl_calling_convention/`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`shared_library/Darwin/32bit__cdecl_calling_convention/`. Place the downloaded file called libCoolProp.dylib in the ${HOME}/lib folder (make this folder if needed).
+Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/32bit__cdecl_calling_convention/`.  Development binaries coming from the buildbot server can be found at :sfnightly:`shared_library/Darwin/32bit__cdecl_calling_convention/`. Place the downloaded file called libCoolProp.dylib in the ${HOME}/lib folder (make this folder if needed).
 
 Part 2:
 -------
-Download the xlam from :sfdownloads:`MicrosoftExcel` or the development version from :bbbinaries:`MicrosoftExcel`.
+Download the xlam from :sfdownloads:`MicrosoftExcel` or the development version from :sfnightly:`MicrosoftExcel`.
 
 1. Open Excel 2011 for Mac
 2. Go to the menu Tools-->Add-Ins

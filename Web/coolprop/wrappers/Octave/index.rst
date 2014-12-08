@@ -6,7 +6,7 @@ Octave Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled release binaries can be downloaded from :sfdownloads:`Octave`.  Development binaries coming from the buildbot server can be found at :bbbinaries:`Octave`.  Download the oct file appropriate to your system.
+Pre-compiled release binaries can be downloaded from :sfdownloads:`Octave`.  Development binaries coming from the buildbot server can be found at :sfnightly:`Octave`.  Download the oct file appropriate to your system.
 
 On Linux systems you can put the generated .oct file in
 ``/usr/share/octave/?octave.version.number?/m`` folder. You will need superuser
@@ -18,7 +18,7 @@ If you place .oct file somewhere outside octave path, you have to use
 Example: adding the folder that contains CoolProp.oct file to the Octave path::
 
     addpath('/home/?user_name?/Some_folder/CoolProp')
-    
+
 User-Compiled Binaries
 ======================
 
@@ -30,7 +30,7 @@ Octave Requirements
 -------------------
 * SWIG
 * Octave (and development headers)
-    
+
 Linux
 -----
 
@@ -75,7 +75,7 @@ Once the dependencies are installed, you can run the builder and tests using::
 On windows, you need to just slightly modify the building procedure::
 
     # The folder containing the folders bin, mingw, include, etc. (or set a system variable in your windows installation)
-    set OCTAVE_ROOT=c:\path\to\octave\root 
+    set OCTAVE_ROOT=c:\path\to\octave\root
     # Add the bin folder of your octave install to the system path
     set PATH=c:\path\to\octave\bin;%PATH%
     # Check out the sources for CoolProp

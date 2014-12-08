@@ -1,18 +1,34 @@
 #!/bin/bash
 #
-#rsync -aP jorritw@frs.sourceforge.net:/home/frs/project/coolprop/ /home/jorrit/tmp/sourceforge/
-# Scan the tree and change the folder date to the date
-# of the oldest file in it
-#for DIR in /home/jorrit/tmp/sourceforge/CoolProp/*/; do 
-for DIR in ../coolprop/CoolProp/*/; do
-    NEWEST=$(find "$DIR" ! -type d -printf "%T@ %p\n" | sort -n | tail -n1)
-    FDATE=${NEWEST:0:10}
-    FNAME=${NEWEST:22}
-    echo "$DIR: $(date -d @$FDATE +%F) of $FNAME"
-    touch -r "$FNAME" "$DIR"*
+# Process all directories in the same way
+function processDirectory {
+    local DIR="$1"
+    local EXT="$2"
+    mv "$DIR" "$DIR-$EXT"
+    mkdir "$DIR"
+    mv "$DIR-$EXT"/* "$DIR"
+    rm -r "$DIR-$EXT"
+    local NEWEST=$(find "$DIR" ! -type d -printf "%T@ %p\n" | sort -n | tail -n1)
+    local FDATE=${NEWEST:0:10}
+    local FNAME=${NEWEST:22}
+    echo "$DIR - $EXT: $(date -d @$FDATE +%F) of $FNAME"
+    touch -r "$FNAME" "$DIR"
+    return 0
+}
+#
+BASEDIR="/home/frs/project/coolprop/CoolProp"
+# Start with the nightly builds, they are to remain at the bottom
+DIRLIST=( "$BASEDIR/nightly/" )
+for DIR in $BASEDIR/[0-9]*/; do 
+    DIRLIST+=( "$DIR" )
 done
-# #
-# #rsync -a -f"+ */" -f"- *" /home/jorrit/tmp/sourceforge/ jorritw@frs.sourceforge.net:/home/frs/project/coolprop/
-# rsync -t /home/jorrit/tmp/sourceforge/ jorritw@frs.sourceforge.net:/home/frs/project/coolprop/
-#rsync -rtcv -f"+ */" -f"- *" /home/jorrit/tmp/sourceforge/ jorritw@frs.sourceforge.net:/home/frs/project/coolprop/
+#
+EXT=$(date +%F)
+#
+for DIR in "${DIRLIST[@]}"; do
+    sleep 1
+    DIR=${DIR:0:${#DIR}-1}
+    processDirectory "$DIR" "$EXT"
+done
+#
 exit 0

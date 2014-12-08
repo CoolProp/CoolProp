@@ -6,7 +6,7 @@ Java Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled binaries can be downloaded from :sfdownloads:`Java`, which come from  :bbbinaries:`the continuous development buildbot server <Java>`.
+Pre-compiled binaries can be downloaded from :sfdownloads:`Java`, which come from :sfnightly:`the nightly snapshots <Java>`.
 
 Usage
 -----
@@ -21,7 +21,7 @@ User-Compiled Binaries
 Common Requirements
 -------------------
 Compilation of the Java wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
-    
+
 Linux & OSX
 -----------
 
@@ -30,9 +30,9 @@ Linux & OSX
 2. Expand the zip file you downloaded
 
 3. Add the ``bin`` folder of the JDK that you installed.  For instance, add this::
-      
-    export /path/to/java/SDK/bin:$PATH 
-      
+
+    export /path/to/java/SDK/bin:$PATH
+
   to ``~/.profile`` where the path ``/path/to/java/SDK/bin`` points to the absolute path for the ``bin`` folder of your Java installation.
 
 Windows
@@ -58,15 +58,15 @@ Once the dependencies are installed, you can run the builder and tests using::
     make install
     # Run the integration tests
     ctest --extra-verbose
-    
+
 If you want to change the package that CoolProp resides in, you can do so by changing the cmake call to read::
 
     cmake .. -DCOOLPROP_JAVA_MODULE=ON -DBUILD_TESTING=ON -DCOOLPROP_SWIG_OPTIONS="-package package.name"
-    
+
 where ``package.name`` is replaced with the desired name
-    
+
 Windows (32-bit and 64-bit)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You need to just slightly modify the building procedure::
 
@@ -86,5 +86,5 @@ You need to just slightly modify the building procedure::
 If you want to change the package that CoolProp resides in, you can do so by changing the cmake call to read::
 
     cmake .. -DCOOLPROP_JAVA_MODULE=ON -DBUILD_TESTING=ON -DCOOLPROP_SWIG_OPTIONS="-package package.name"
-    
+
 where ``package.name`` is replaced with the desired name

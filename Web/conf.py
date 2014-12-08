@@ -11,8 +11,8 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-    
-import sys, os
+
+import sys, os, datetime
 
 #~ # If your extensions are in another directory, add it here. If the directory
 #~ # is relative to the documentation root, use os.path.abspath to make it
@@ -25,7 +25,7 @@ try:
 except ImportError:
 
     print('Unable to import sphinxcontrib.doxylink; try to run "pip install sphinxcontrib-doxylink"')
-        
+
 Release = tags.has('Release') or tags.has('Release')
 
 if Release:
@@ -90,8 +90,9 @@ source_encoding = 'utf-8'
 master_doc = 'contents'
 
 # General information about the project.
+d = datetime.datetime.today()
 project = u'CoolProp'
-copyright = u'2012, Ian Bell'
+copyright = u'2010-{0}, Ian H. Bell and the CoolProp Team'.format(d.year)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -105,6 +106,7 @@ version = ver.rsplit('.',1)[0]
 release = ver
 
 extlinks = {'sfdownloads': ('http://sourceforge.net/projects/coolprop/files/CoolProp/'+release+'/%s',''),
+            'sfnightly': ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s',''),
             'bbbinaries': ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
             'bbsphinx': ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')}
 

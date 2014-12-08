@@ -13,14 +13,14 @@ Pre-compiled Binaries for windows
 Shared library
 --------------
 
-You will need to download the release shared library for windows from :sfdownloads:`sourceforge <shared_library/Windows>` or the development version of the shared library from :bbbinaries:`the buildbot server <shared_library/Windows>`.  If you are on 32-bit windows, download the __cdecl version.  For 64-bit, there is only one calling convention.  
+You will need to download the release shared library for windows from :sfdownloads:`sourceforge <shared_library/Windows>` or the development version of the shared library from :sfnightly:`the buildbot server <shared_library/Windows>`.  If you are on 32-bit windows, download the __cdecl version.  For 64-bit, there is only one calling convention.
 
 Place the downloaded shared library next to your library
 
 Available libraries
 -------------------
 
-:download:`CoolProp.vi` : 
+:download:`CoolProp.vi` :
 Basic Library to get the properties from CoolProp.dll
 
 :download:`CoolProp.llb` :
@@ -59,14 +59,14 @@ Add this line to /etc/apt/sources.list to add the repository::
 
 Add the maintainer key for the repository::
 
-    sudo wget http://debian.repo.frc.s3.amazonaws.com/rbmj.gpg.key 
+    sudo wget http://debian.repo.frc.s3.amazonaws.com/rbmj.gpg.key
     sudo apt-key add rbmj.gpg.key
 
 Run the following commands::
 
     sudo apt-get update
     sudo apt-get install gcc-powerpc-wrs-vxworks
-    
+
 Set the WIND_BASE environmental variable (or add to ~/.profile)::
 
     export WIND_BASE=/usr/powerpc-wrs-vxworks/wind_base
@@ -143,6 +143,6 @@ These are the instructions to build from source manually. Note that some lines b
           --disable-symvers \
           CFLAGS_FOR_TARGET='-mstrict-align -mlongcall -g -O2' \
           CXXFLAGS_FOR_TARGET='-mstrict-align -mlongcall -g -O2'
-      
+
     $ make -j4
     # make install

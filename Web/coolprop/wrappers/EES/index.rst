@@ -11,7 +11,7 @@ Users
 
 Install
 -------
-Pre-compiled binaries can be downloaded from :sfdownloads:`EES` - follow the instructions there.  Of you can download an installer from the development server at :bbbinaries:`EES`.
+Pre-compiled binaries can be downloaded from :sfdownloads:`EES` - follow the instructions there.  Of you can download an installer from the development preview at :sfnightly:`EES`.
 
 Usage
 -----
