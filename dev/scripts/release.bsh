@@ -1,8 +1,8 @@
 #!/bin/bash
-DRYRUN=true # Change this to false to actually make a release
+#
 # Make sure that only one argument is passed to this script - the version that will be released
-if [ $# != 1 ]; then
-  echo "Only one argument should be passed to this script - the version that will be released; like \"release.bsh 5.0.0\" or \"release.bsh nightly\"."
+if [ $# != 2 ]; then
+  echo "Only two arguments should be passed to this script - the version that will be released and if you would like a dry run or a release; like \"release.bsh 5.0.0 dryrun\" or \"release.bsh nightly release\"."
   exit 1
 fi
 #
@@ -14,13 +14,35 @@ SEPARATOR="----------------------------------"
 #
 SFUSER="jorritw" # ibell or jorritw 
 #
+#
+echo " "
+echo $SEPARATOR
+echo "Processing the input variables: "
+#
+CPVERSION="$1"
+if [[ $CPVERSION == +([0-9]).+([0-9]).+([0-9]) ]]; then
+    echo "CPVERSION = $CPVERSION"
+elif [ "$CPVERSION" == "nightly" ]; then
+    echo "CPVERSION = $CPVERSION - which is a valid input"
+else
+    echo "CPVERSION = $CPVERSION - not valid!"
+    exit 1
+fi
+#
+if [ "$2" == "release" ]; then
+    DRYRUN=false
+else 
+    DRYRUN=true
+fi
+echo "DRYRUN = $DRYRUN"
+#
 # Change the folder
 pushd ${BASEDIR}
 #echo "Fixing the permissions of directories and files" # This is not needed, just ignore the perms in rsync
 #find . -type d ! -perm 0775 -exec chmod 0775 {} \;
 #find . -type f ! -perm 0664 -exec chmod 0664 {} \;
 #
-if [ "$DRYRUN" = "true" ]; then
+if [ "$DRYRUN" != "false" ]; then
     echo " "
     echo $SEPARATOR
     echo "Dry run; no zipping of the docs"
