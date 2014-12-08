@@ -1,115 +1,45 @@
 #include "CoolProp.h"
 #include "HumidAirProp.h"
-//#include "CPState.h"
+#include "AbstractState.h"
+#include "crossplatform_shared_ptr.h"
 #include <iostream>
 #include <stdlib.h>
-
-#pragma GCC diagnostic ignored "-Wwrite-strings" //Ignore char* warnings
 
 using namespace CoolProp; // For normal CoolProp calls
 using namespace HumidAir; // For HAPropsSI
 int main() {
     double T, h, p, D;
 
+    printf("\n************ Information *************\n");
     printf("CoolProp version:\t%s\n",     get_global_param_string("version").c_str());
     printf("CoolProp gitrevision:\t%s\n", get_global_param_string("gitrevision").c_str());
     printf("CoolProp fluids:\t%s\n",      get_global_param_string("FluidsList").c_str());
 
+    printf("\n************ USING HIGH LEVEL INTERFACE *************\n");
+    printf("Critical temperature of water: %f K\n", Props1SI("Water", "Tcrit"));
+    printf("Boiling temperature of water at 101325 Pa: %f K\n",   PropsSI("T", "P", 101325, "Q", 0, "Water"));
+    printf("Phase of water at 101325 Pa and 300 K: %s\n",  PhaseSI("P", 101325, "Q", 0, "Water").c_str());
+    printf("cp of water at 101325 Pa and 300 K: %g J/kg/K\n",  PropsSI("C", "P", 101325, "T", 300, "Water"));
+    printf("cp of water (using derivatives) at 101325 Pa and 300 K: %g J/kg/K\n", PropsSI("d(H)/d(T)|P", "P", 101325, "T", 300, "Water"));
 
-    printf("\n************ USING EOS *************\n");
-
-    printf("FLUID STATE INDEPENDENT INPUTS\n");
-    //printf("Critical Density Propane: %f kg/m^3\n", PropsSI1("Propane", "rhocrit"));
-
-    printf("\nTWO PHASE INPUTS (Pressure)\n");
-    printf("Density of saturated liquid Propane at 101.325 kPa: %f kg/m^3\n",   PropsSI("D", "P", 101.325, "Q", 0, "Propane"));
-    printf("Density of saturated vapor R290 at 101.325 kPa:     %f kg/m^3\n",   PropsSI("D", "P", 101.325, "Q", 1, "R290"));
-
-    printf("\nTWO PHASE INPUTS (Temperature)\n");
-    printf("Density of saturated liquid Propane at 300 K: %f kg/m^3\n", PropsSI("D", "T", 300, "Q", 0, "Propane"));
-    printf("Density of saturated vapor R290 at 300 K:     %f kg/m^3\n", PropsSI("D", "T", 300, "Q", 1, "R290"));
-
-    printf("\nSINGLE PHASE CYCLE (Propane)\n");
-    p = PropsSI("P", "T", 300, "D", 1, "Propane");
-    h = PropsSI("H", "T", 300, "D", 1, "Propane");
-    printf("T,D -> P,H : 300,1 -> %f,%f\n", p, h);
-
-    T = PropsSI("T", "P", p, "H", h, "Propane");
-    D = PropsSI("D", "P", p, "H", h, "Propane");
-    printf("P,H -> T,D : %f, %f -> %f, %f\n", p, h, T, D);
-
-    /* enable_TTSE_LUT not currently in V5
-    printf("\n************ USING TTSE ***************\n");
-    enable_TTSE_LUT("Propane");
-
-    printf("TWO PHASE INPUTS (Pressure)\n");
-    printf("Density of saturated liquid Propane at 101.325 kPa: %f kg/m^3\n", PropsSI("D", "P", 101.325, "Q", 0, "Propane"));
-    printf("Density of saturated vapor R290 at 101.325 kPa:     %f kg/m^3\n", PropsSI("D", "P", 101.325, "Q", 1, "R290"));
-
-    printf("\nTWO PHASE INPUTS (Temperature)");
-    printf("Density of saturated liquid Propane at 300 K: %f kg/m^3\n", PropsSI("D", "T", 300, "Q", 0, "Propane"));
-    printf("Density of saturated vapor R290 at 300 K:     %f kg/m^3\n", PropsSI("D", "T", 300, "Q", 1, "R290"));
-
-    printf("\nSINGLE PHASE CYCLE (propane)\n");
-    p = PropsSI("P", "T", 300, "D", 1, "Propane");
-    h = PropsSI("H", "T", 300, "D", 1, "Propane");
-    printf("T,D -> P,H : 300,1 -> %f,%f", p, h);
-
-    T = PropsSI("T", "P", p, "H", h, "Propane");
-    D = PropsSI("D", "P", p, "H", h, "Propane");
-    printf("P,H -> T,D : %f, %f -> %f, %f\n", p, h, T, D);
-
-    disable_TTSE_LUT("Propane");
-    */
-
-    /* get_fluid_param_string not currently in V5
-    try
-    {
-        printf("\n************ USING REFPROP ***************\n");
-        std::string RPName = std::string("REFPROP-")+get_fluid_param_string("Propane","REFPROPname");
-        printf("TWO PHASE INPUTS (Pressure)");
-        printf("Density of saturated liquid Propane at 101.325 kPa: %f kg/m^3\n", PropsSI("D", "P", 101.325, "Q", 0, RPName));
-        printf("Density of saturated vapor R290 at 101.325 kPa:     %f kg/m^3\n", PropsSI("D", "P", 101.325, "Q", 1, RPName));
-
-        printf("\nTWO PHASE INPUTS (Temperature)");
-        printf("Density of saturated liquid Propane at 300 K: %f kg/m^3\n", PropsSI("D", "T", 300, "Q", 0, RPName));
-        printf("Density of saturated vapor R290 at 300 K:     %f kg/m^3\n", PropsSI("D", "T", 300, "Q", 1, RPName));
-
-        printf("\nSINGLE PHASE CYCLE (propane)\n");
-        p = PropsSI("P", "T", 300, "D", 1, RPName);
-        h = PropsSI("H", "T", 300, "D", 1, RPName);
-        printf("T,D -> P,H : 300,1 -> %f,%f\n", p, h);
-
-        T = PropsSI("T", "P", p, "H", h, RPName);
-        D = PropsSI("D", "P", p, "H", h, RPName);
-        printf("P,H -> T,D : %f, %f -> %f, %f\n", p, h, T, D);
-    }
-    catch (std::exception &e)
-    {
-        printf("\n************ CANT USE REFPROP ************\n");
-    }
+    printf("\n************ HUMID AIR PROPERTIES *************\n");
+    printf("Humidity ratio of 50%% rel. hum. air at 300 K, 101325 Pa: %f kg_w/kg_da\n", HAPropsSI("W", "T", 300, "P", 101325, "R", 0.5));
+    printf("Relative humidity from last calculation: %f (fractional)\n",  HAPropsSI("R", "T", 300, "P", 101325, "W", HAPropsSI("W", "T", 300, "P", 101325, "R", 0.5)));
     
-    */
-
-    /* set_standard_unit_system not currently in V5
-    printf("\n************ CHANGE UNIT SYSTEM (default is kSI) *************\n");
-    set_standard_unit_system(UNIT_SYSTEM_SI);
-    printf("Vapor pressure of water at 373.15 K in SI units (Pa):   %f\n", PropsSI("P", "T", 373.15, "Q", 0, "Water"));
-
-    set_standard_unit_system(UNIT_SYSTEM_KSI);
-    printf("Vapor pressure of water at 373.15 K in kSI units (kPa): %f\n", PropsSI("P", "T", 373.15, "Q", 0, "Water"));
-    */
-
     printf("\n************ BRINES AND SECONDARY WORKING FLUIDS *************\n");
-    printf("Density of 50%% (mass) ethylene glycol/water at 300 K, 101.325 kPa: %f kg/m^3\n", PropsSI("D", "T", 300, "P", 101.325, "EG-50%"));
-    printf("Viscosity of Therminol D12 at 350 K, 101.325 kPa: %f Pa-s\n",  PropsSI("V", "T", 350, "P", 101.325, "TD12"));
+    printf("Density of 50%% (mass) ethylene glycol/water at 300 K, 101325 Pa: %f kg/m^3\n", PropsSI("D", "T", 300, "P", 101325, "INCOMP::MEG-50%"));
+    printf("Viscosity of Therminol D12 at 350 K, 101325 Pa: %f Pa-s\n",  PropsSI("V", "T", 350, "P", 101325, "INCOMP::TD12"));
 
-    // HAProps API broken in V5
-    //printf("\n************ HUMID AIR PROPERTIES *************\n");
-    //printf("Humidity ratio of 50%% rel. hum. air at 300 K, 101.325 kPa: %f kg_w/kg_da\n", HAPropsSI('W', 'T', 300, 'P', 101.325, 'R', 0.5));
-    //printf("Relative humidity from last calculation: %f (fractional)\n",   HAPropsSI('R', 'T', 300, 'P', 101.325, 'W', HAPropsSI('W', 'T', 300, 'P', 101.325, 'R', 0.5)));
-    
-    
-    return 0;
+	printf("\n************ LOW LEVEL INTERFACE *************\n");
+	shared_ptr<AbstractState> Water(AbstractState::factory("HEOS", "Water"));
+	printf("Critical temperature of water: %f K\n", Water->T_critical());
+	Water->update(PQ_INPUTS, 101325, 1);
+    printf("Boiling temperature of water at 101325 Pa: %f K\n", Water->T());
+    Water->update(PT_INPUTS, 101325, 300);
+	printf("Phase index of water at 101325 Pa and 300 K: %d\n", Water->phase());
+    printf("cp of water at 101325 Pa and 300 K: %g J/kg/K\n", Water->cpmass());
+	printf("cp of water (using derivatives) at 101325 Pa and 300 K: %g J/kg/K\n", Water->first_partial_deriv(iHmass, iT, iP));
+
+    return EXIT_SUCCESS;
 
 }
