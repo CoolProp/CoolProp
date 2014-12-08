@@ -1,31 +1,30 @@
 #!/bin/bash
 #
+# This script relys on a modified ~/.ssh/config to specify the 
+# correct identity files to be used with the host aliases
+# git.code.sf.net-ibell and git.code.sf.net-jorritw 
+#
 # Work around for Cron:
 USER=coolprop
 source /home/$USER/.bash_profile
 #
-SFPASS="/home/$USER/etc_opt/id_jorritw"
-#
 FOLDER="/home/$USER/src/CoolProp.git"
 ORIGIN="https://github.com/CoolProp/CoolProp.git"
-MIRROR="ssh://jorritw@git.code.sf.net/p/coolprop/git"
+MIRROR="ssh://git.code.sf.net-jorritw/p/coolprop/git"
 #
 if [ ! -d $FOLDER ]; then # repo does not exist, clone it
     BASEFOLDER=${FOLDER%/*}
     REPOFOLDER=${FOLDER##*/}
     mkdir -p $BASEFOLDER
     pushd $BASEFOLDER
-    git clone --bare $ORIGIN $REPOFOLDER
+    git clone --mirror $ORIGIN $REPOFOLDER
     #pushd $REPOFOLDER
     #git remote add sfmirror $MIRROR
     #popd
     popd
 fi
-echo "Preparing the ssh key for SourceForge"
-eval $(ssh-agent) # Make sure ssh-agent is running
-ssh-add "$SFPASS"
 pushd $FOLDER
-#git push --force --mirror
-git push --mirror $MIRROR
+git fetch --force $ORIGIN 
+git push  --force --mirror $MIRROR
 popd
 exit 0

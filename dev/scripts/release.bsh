@@ -46,14 +46,12 @@ else
     #
     RSYNC_DRY_RUN=
 fi
-echo "Preparing the ssh key for SourceForge"
-eval $(ssh-agent) # Make sure ssh-agent is running
-ssh-add "$SFPASS"
 #
+RSYNC_AUTH="-e \"ssh -i $SFPASS\""
 echo "Copying the binaries to SourceForge"
-rsync $RSYNC_DRY_RUN -a --no-perms -z --stats "$BINFOLDER/" $SFUSER@frs.sourceforge.net:/home/frs/project/coolprop/CoolProp/$CPVERSION
+rsync $RSYNC_AUTH $RSYNC_DRY_RUN -a --no-perms -z --stats "$BINFOLDER/" $SFUSER@frs.sourceforge.net:/home/frs/project/coolprop/CoolProp/$CPVERSION
 echo "Publishing the docs on SourceForge"
-rsync $RSYNC_DRY_RUN -a --no-perms -z --stats "$DOCFOLDER/" $SFUSER@web.sourceforge.net:/home/project-web/coolprop/htdocs
+rsync $RSYNC_AUTH $RSYNC_DRY_RUN -a --no-perms -z --stats "$DOCFOLDER/" $SFUSER@web.sourceforge.net:/home/project-web/coolprop/htdocs
 # Change back to where we came from
 popd
 echo "All done, goodbye."
