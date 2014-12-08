@@ -2,22 +2,18 @@
 DRYRUN=true # Change this to false to actually make a release
 # Make sure that only one argument is passed to this script - the version that will be released
 if [ $# != 1 ]; then
-  echo "Only one argument should be passed to this script - the version that will be released; like release.bsh 5.0.0"
+  echo "Only one argument should be passed to this script - the version that will be released; like \"release.bsh 5.0.0\" or \"release.bsh nightly\"."
   exit 1
 fi
-echo "DRYRUN=$DRYRUN"
+#
 CPVERSION="$1"
 BASEDIR="$HOME/buildbot/server-master/public_html"
 BINFOLDER="binaries"
 DOCFOLDER="sphinx"
+SEPARATOR="----------------------------------"
 #
-#SFUSER="ibell"
-#SFPASS="$HOME/etc_opt/id_ibell"
+SFUSER="jorritw" # ibell or jorritw 
 #
-SFUSER="jorritw"
-SFPASS="$HOME/etc_opt/id_jorritw"
-#
-#set -x #echo on
 # Change the folder
 pushd ${BASEDIR}
 #echo "Fixing the permissions of directories and files" # This is not needed, just ignore the perms in rsync
@@ -25,34 +21,43 @@ pushd ${BASEDIR}
 #find . -type f ! -perm 0664 -exec chmod 0664 {} \;
 #
 if [ "$DRYRUN" = "true" ]; then
+    echo " "
+    echo $SEPARATOR
     echo "Dry run; no zipping of the docs"
     echo "Dry run; skipping python upload"
     echo "Dry run; skipping folder date"
     RSYNC_DRY_RUN=--dry-run
 else
-    echo "Zipping up the docs and moving them into the $BINFOLDER folder for staging"
-    rm -f documentation.zip
-    zip -rq documentation.zip $DOCFOLDER/*
-    mkdir -p "$BINFOLDER/docs"
-    cp documentation.zip "$BINFOLDER/docs"
-    echo "Uploading the python binaries to pypi"
-    twine upload $BINFOLDER/Python/*.whl $BINFOLDER/Python/*.tar.gz
-    #
-    NEWEST=$(find "$BINFOLDER" ! -type d -printf "%T@ %p\n" | sort -n | tail -n1)
-    FDATE=${NEWEST:0:10}
-    FNAME=${NEWEST:22}
-    echo "Changing the folder date to the newest file date - $(date -d @$FDATE +%F)"
-    touch -r "$FNAME" "$BINFOLDER"
-    #
+    if [ "$CPVERSION" = "nightly" ]; then
+        rm -rf "$BINFOLDER/docs"
+        CPVERSION="$CPVERSION"/$(date +%F)
+    else
+        echo " "
+        echo $SEPARATOR
+        echo "Zipping up the docs and moving them into the $BINFOLDER folder for staging"
+        rm -f documentation.zip
+        zip -rq documentation.zip $DOCFOLDER/*
+        mkdir -p "$BINFOLDER/docs"
+        cp documentation.zip "$BINFOLDER/docs"
+        echo "Uploading the python binaries to pypi"
+        twine upload $BINFOLDER/Python/*.whl $BINFOLDER/Python/*.tar.gz
+    fi 
     RSYNC_DRY_RUN=
 fi
 #
-RSYNC_AUTH="-e \"ssh -i $SFPASS\""
+echo " "
+echo $SEPARATOR
 echo "Copying the binaries to SourceForge"
-rsync $RSYNC_AUTH $RSYNC_DRY_RUN -a --no-perms -z --stats "$BINFOLDER/" $SFUSER@frs.sourceforge.net:/home/frs/project/coolprop/CoolProp/$CPVERSION
-echo "Publishing the docs on SourceForge"
-rsync $RSYNC_AUTH $RSYNC_DRY_RUN -a --no-perms -z --stats "$DOCFOLDER/" $SFUSER@web.sourceforge.net:/home/project-web/coolprop/htdocs
+RSYNC_OPTS="-a --no-perms -z --stats"
+rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$BINFOLDER/" frs.sf.net-$SFUSER:/home/frs/project/coolprop/CoolProp/$CPVERSION
+if [ ${CPVERSION:0:7} != "nightly" ]; then
+    echo " "
+    echo $SEPARATOR
+    echo "Publishing the docs on SourceForge"
+    rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$DOCFOLDER/" frs.sf.net-$SFUSER:/home/project-web/coolprop/htdocs
+fi
 # Change back to where we came from
 popd
+echo " " 
 echo "All done, goodbye."
 exit 0
