@@ -1,6 +1,13 @@
 Changelog for CoolProp
 ======================
 
+5.0.4
+-----
+
+Issues Closed:
+
+* `#309 <http://github.com/CoolProp/CoolProp/issues/309>`_ : Heat capacity of Ethylene-Glycol mixture is off by a factor of 1e3
+
 5.0.3
 -----
 Bugfix, with some new functionality
