@@ -1,30 +1,41 @@
 #!/bin/bash
 #
-# This script relys on a modified ~/.ssh/config to specify the 
+# This script relys on a modified ~/.ssh/config to specify the
 # correct identity files to be used with the host aliases
-# git.code.sf.net-ibell and git.code.sf.net-jorritw 
+# git.code.sf.net-ibell and git.code.sf.net-jorritw
 #
 # Work around for Cron:
 USER=coolprop
 source /home/$USER/.bash_profile
 #
-FOLDER="/home/$USER/src/CoolProp.git"
 ORIGIN="https://github.com/CoolProp/CoolProp.git"
 MIRROR="ssh://git.code.sf.net-jorritw/p/coolprop/git"
 #
-if [ ! -d $FOLDER ]; then # repo does not exist, clone it
-    BASEFOLDER=${FOLDER%/*}
-    REPOFOLDER=${FOLDER##*/}
-    mkdir -p $BASEFOLDER
-    pushd $BASEFOLDER
-    git clone --mirror $ORIGIN $REPOFOLDER
-    #pushd $REPOFOLDER
-    #git remote add sfmirror $MIRROR
-    #popd
-    popd
-fi
-pushd $FOLDER
-git fetch --force $ORIGIN 
+function createRepo {
+    local GITOPT="$1"
+    local FOLDER="$2"
+    if [ ! -d $FOLDER ]; then # repo does not exist, clone it
+        local BASEFOLDER=${FOLDER%/*}
+        local REPOFOLDER=${FOLDER##*/}
+        mkdir -p $BASEFOLDER
+        pushd $BASEFOLDER
+        git clone $GITOPT $ORIGIN $REPOFOLDER
+        popd
+    fi
+    return 0
+}
+#
+CURFOLDER="/home/$USER/src/CoolProp.git"
+createRepo "--mirror" "$CURFOLDER"
+pushd $CURFOLDER
+git fetch --force --all # $ORIGIN
 git push  --force --mirror $MIRROR
 popd
+#
+CURFOLDER="/home/$USER/src/CoolPropFull.git"
+createRepo "--recursive" "$CURFOLDER"
+pushd $CURFOLDER
+git pull
+popd
+#
 exit 0
