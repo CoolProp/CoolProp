@@ -169,11 +169,14 @@ static char default_reference_state[] = "DEF";
  MELTTdll_POINTER MELTTdll;
  MLTH2Odll_POINTER MLTH2Odll;
  NAMEdll_POINTER NAMEdll;
+ PASSCMNdll_POINTER PASSCMNdll;
  PDFL1dll_POINTER PDFL1dll;
  PDFLSHdll_POINTER PDFLSHdll;
  PEFLSHdll_POINTER PEFLSHdll;
  PHFL1dll_POINTER PHFL1dll;
  PHFLSHdll_POINTER PHFLSHdll;
+ PHIXdll_POINTER PHIXdll;
+ PHI0dll_POINTER PHI0dll;
  PQFLSHdll_POINTER PQFLSHdll;
  PREOSdll_POINTER PREOSdll;
  PRESSdll_POINTER PRESSdll;
@@ -183,6 +186,7 @@ static char default_reference_state[] = "DEF";
  QMASSdll_POINTER QMASSdll;
  QMOLEdll_POINTER QMOLEdll;
  RESIDUALdll_POINTER RESIDUALdll;
+ RMIX2dll_POINTER RMIX2dll;
  SATDdll_POINTER SATDdll;
  SATEdll_POINTER SATEdll;
  SATHdll_POINTER SATHdll;
@@ -296,11 +300,14 @@ double setFunctionPointers()
     MELTTdll = (MELTTdll_POINTER) getFunctionPointer(MELTTdll_NAME);
     MLTH2Odll = (MLTH2Odll_POINTER) getFunctionPointer(MLTH2Odll_NAME);
     NAMEdll = (NAMEdll_POINTER) getFunctionPointer(NAMEdll_NAME);
-    PDFL1dll = (PDFL1dll_POINTER) getFunctionPointer(PDFL1dll_NAME);
+    PASSCMNdll = (PASSCMNdll_POINTER) getFunctionPointer(PASSCMNdll_NAME);
+	PDFL1dll = (PDFL1dll_POINTER) getFunctionPointer(PDFL1dll_NAME);
     PDFLSHdll = (PDFLSHdll_POINTER) getFunctionPointer(PDFLSHdll_NAME);
     PEFLSHdll = (PEFLSHdll_POINTER) getFunctionPointer(PEFLSHdll_NAME);
     PHFL1dll = (PHFL1dll_POINTER) getFunctionPointer(PHFL1dll_NAME);
     PHFLSHdll = (PHFLSHdll_POINTER) getFunctionPointer(PHFLSHdll_NAME);
+	PHIXdll = (PHIXdll_POINTER) getFunctionPointer(PHIXdll_NAME);
+	PHI0dll = (PHI0dll_POINTER) getFunctionPointer(PHI0dll_NAME);
     PQFLSHdll = (PQFLSHdll_POINTER) getFunctionPointer(PQFLSHdll_NAME);
     PREOSdll = (PREOSdll_POINTER) getFunctionPointer(PREOSdll_NAME);
     PRESSdll = (PRESSdll_POINTER) getFunctionPointer(PRESSdll_NAME);
@@ -308,6 +315,7 @@ double setFunctionPointers()
     PSFLSHdll = (PSFLSHdll_POINTER) getFunctionPointer(PSFLSHdll_NAME);
     PUREFLDdll = (PUREFLDdll_POINTER) getFunctionPointer(PUREFLDdll_NAME);
     RESIDUALdll = (RESIDUALdll_POINTER) getFunctionPointer(RESIDUALdll_NAME);
+	RMIX2dll = (RMIX2dll_POINTER) getFunctionPointer(RMIX2dll_NAME);
     QMASSdll = (QMASSdll_POINTER) getFunctionPointer(QMASSdll_NAME);
     QMOLEdll = (QMOLEdll_POINTER) getFunctionPointer(QMOLEdll_NAME);
     SATDdll = (SATDdll_POINTER) getFunctionPointer(SATDdll_NAME);
@@ -708,12 +716,37 @@ long double REFPROPMixtureBackend::calc_rhomolar_critical(){
     CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<long double>(dcrit_mol_L*1000);
 };
+long double REFPROPMixtureBackend::calc_T_reducing(){
+    if (mole_fractions.size() != 1){throw ValueError("calc_T_reducing only valid for one component");};
+	long ierr = 0, i, i1 = 0, i2 = 1, i3 = 0;
+    char herr[255], h[255], input[] = "tz";
+	double Tz;
+	std::vector<double> z(255);
+	PASSCMNdll(input, &i1, &i2, &i3, h,&i,&Tz,&(z[0]),&ierr,herr,255,255,255);
+	if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    return static_cast<long double>(Tz);
+};
+long double REFPROPMixtureBackend::calc_rhomolar_reducing(){
+    if (mole_fractions.size() != 1){throw ValueError("calc_rhomolar_reducing only valid for one component");};
+	long ierr = 0, i = 0, i1 = 0, i2 = 1, i3 = 0;
+    char herr[255] = "", h[255] = "", input[255] = "rhoz";
+	double rhored_mol_L;
+	std::vector<double> z(20);
+	PASSCMNdll(input, &i1, &i2, &i3, h, &i, &rhored_mol_L,&(z[0]),&ierr,herr,255,255,255);
+	if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+   return static_cast<long double>(rhored_mol_L*1000);
+};
 long double REFPROPMixtureBackend::calc_Ttriple(){
     if (mole_fractions.size() != 1){throw ValueError("calc_Ttriple cannot be evaluated for mixtures");}
     long icomp = 0;
     double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
     INFOdll(&icomp, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
     return static_cast<long double>(ttrp);
+};
+long double REFPROPMixtureBackend::calc_gas_constant(){
+    double Rmix = 0;
+    RMIX2dll(&(mole_fractions[0]), &Rmix);
+    return static_cast<long double>(Rmix);
 };
 long double REFPROPMixtureBackend::calc_molar_mass(void)
 {
@@ -832,19 +865,6 @@ long double REFPROPMixtureBackend::calc_cpmolar_idealgas(void)
     double p0, e0, h0, s0, cv0, cp0, w0, A0, G0;
     THERM0dll(&_T,&rho_mol_L,&(mole_fractions[0]),&p0,&e0,&h0,&s0,&cv0,&cp0,&w0,&A0,&G0);
     return static_cast<long double>(cp0);
-}
-long double REFPROPMixtureBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
-{
-    if (Of == iP && Wrt == iT && (Constant == iDmolar || Constant == iDmass))
-    {
-        double rho_mol_L = 0.001*_rhomolar;
-        double dpt;
-        DPDTdll(&_T, &rho_mol_L, &(mole_fractions[0]), &dpt);
-        return static_cast<long double>(dpt*1000);
-    }
-    else{
-        throw ValueError(format("These derivative terms are not supported"));
-    }
 }
 
 void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2)
@@ -1378,6 +1398,23 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     _cvmolar = cvmol;
     _cpmolar = cpmol;
     _speed_sound = w;
+	_tau = calc_T_critical()/_T;
+	_delta = _rhomolar/calc_rhomolar_critical();
+}
+long double REFPROPMixtureBackend::call_phixdll(long itau, long idel)
+{
+	double val = 0, tau = _tau, delta = _delta; 
+	if (PHIXdll == NULL){throw ValueError("PHIXdll function is not available in your version of REFPROP. Please upgrade");}
+	PHIXdll(&itau, &idel, &tau, &delta, &(mole_fractions[0]), &val);
+	return static_cast<long double>(val)/pow(static_cast<long double>(_delta),idel)/pow(static_cast<long double>(_tau),itau);
+}
+long double REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
+{
+	double val = 0, tau = _tau, delta = _delta, __T = T(), __rho = rhomolar()/1000;
+    double dT_dtau;
+	if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
+	PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
+    return static_cast<long double>(val)/pow(delta,idel)/pow(tau,itau);
 }
 
 } /* namespace CoolProp */

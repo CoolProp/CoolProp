@@ -1685,16 +1685,6 @@ void get_dT_drho_second_derivatives(HelmholtzEOSMixtureBackend *HEOS, int index,
         throw ValueError(format("input to get_dT_drho_second_derivatives[%s] is invalid", get_parameter_information(index,"short").c_str()));
     }
 }
-long double HelmholtzEOSMixtureBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
-{
-    long double dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
-
-    get_dT_drho(this, Of, dOf_dT, dOf_drho);
-    get_dT_drho(this, Wrt, dWrt_dT, dWrt_drho);
-    get_dT_drho(this, Constant, dConstant_dT, dConstant_drho);
-
-    return (dOf_dT*dConstant_drho-dOf_drho*dConstant_dT)/(dWrt_dT*dConstant_drho-dWrt_drho*dConstant_dT);
-}
 
 long double HelmholtzEOSMixtureBackend::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
 {
@@ -2610,6 +2600,26 @@ long double HelmholtzEOSMixtureBackend::calc_d2alphar_dDelta2(void)
 {
     calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
     return static_cast<long double>(_d2alphar_dDelta2);
+}
+long double HelmholtzEOSMixtureBackend::calc_d3alphar_dDelta3(void)
+{
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<long double>(_d3alphar_dDelta3);
+}
+long double HelmholtzEOSMixtureBackend::calc_d3alphar_dDelta2_dTau(void)
+{
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<long double>(_d3alphar_dDelta2_dTau);
+}
+long double HelmholtzEOSMixtureBackend::calc_d3alphar_dDelta_dTau2(void)
+{
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<long double>(_d3alphar_dDelta_dTau2);
+}
+long double HelmholtzEOSMixtureBackend::calc_d3alphar_dTau3(void)
+{
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<long double>(_d3alphar_dTau3);
 }
 long double HelmholtzEOSMixtureBackend::calc_alpha0(void)
 {

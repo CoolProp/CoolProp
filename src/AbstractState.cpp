@@ -313,6 +313,9 @@ double AbstractState::pmax(void){
 double AbstractState::T_critical(void){
     return calc_T_critical();
 }
+double AbstractState::T_reducing(void){
+    return calc_T_reducing();
+}
 double AbstractState::p_critical(void){
     return calc_p_critical();
 }
@@ -324,6 +327,12 @@ double AbstractState::rhomolar_critical(void){
 }
 double AbstractState::rhomass_critical(void){
     return calc_rhomolar_critical()*molar_mass();
+}
+double AbstractState::rhomolar_reducing(void){
+    return calc_rhomolar_reducing();
+}
+double AbstractState::rhomass_reducing(void){
+    return calc_rhomolar_reducing()*molar_mass();
 }
 double AbstractState::hmolar(void){
     if (!_hmolar) _hmolar = calc_hmolar();
@@ -398,7 +407,94 @@ double AbstractState::dBvirial_dT(void){ return calc_dBvirial_dT(); }
 double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 double AbstractState::compressibility_factor(void){ return calc_compressibility_factor(); }
 
+// Get the derivatives of the parameters in the partial derivative with respect to T and rho
+void get_dT_drho(AbstractState &AS, parameters index, long double &dT, long double &drho)
+{
+    long double T = AS.T(),
+                rho = AS.rhomolar(),
+                rhor = AS.rhomolar_reducing(),
+                Tr = AS.T_reducing(),
+                dT_dtau = -pow(T, 2)/Tr,
+                R = AS.gas_constant(),
+                delta = rho/rhor,
+                tau = Tr/T;
+    
+    switch (index)
+    {
+    case iT:
+        dT = 1; drho = 0; break;
+    case iDmolar:
+        dT = 0; drho = 1; break;
+    case iDmass:
+        dT = 0; drho = AS.molar_mass(); break;
+    case iP:
+    {
+        // dp/drho|T
+        drho = R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2());
+        // dp/dT|rho
+        dT = rho*R*(1+delta*AS.dalphar_dDelta() - tau*delta*AS.d2alphar_dDelta_dTau());
+        break;
+    }
+    case iHmass:
+    case iHmolar:
+    {
+        // dh/dT|rho
+        dT = R*(-pow(tau,2)*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()) + (1+delta*AS.dalphar_dDelta()-tau*delta*AS.d2alphar_dDelta_dTau()));
+        // dh/drhomolar|T
+        drho = T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2());
+        if (index == iHmass){
+            // dhmolar/drhomolar|T * dhmass/dhmolar where dhmass/dhmolar = 1/mole mass
+            drho /= AS.molar_mass();
+            dT /= AS.molar_mass();
+        }
+        break;
+    }
+    case iSmass:
+    case iSmolar:
+    {
+        // ds/dT|rho
+        dT = R/T*(-pow(tau,2)*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()));
+        // ds/drho|T
+        drho = R/rho*(-(1+delta*AS.dalphar_dDelta()-tau*delta*AS.d2alphar_dDelta_dTau()));
+        if (index == iSmass){
+            // ds/drho|T / drhomass/drhomolar where drhomass/drhomolar = mole mass
+            drho /= AS.molar_mass();
+            dT /= AS.molar_mass();
+        }
+        break;
+    }
+    case iUmass:
+    case iUmolar:
+    {
+        // du/dT|rho
+        dT = R*(-pow(tau,2)*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()));
+        // du/drho|T
+        drho = AS.T()*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau());
+        if (index == iUmass){
+            // du/drho|T / drhomass/drhomolar where drhomass/drhomolar = mole mass
+            drho /= AS.molar_mass();
+            dT /= AS.molar_mass();
+        }
+        break;
+    }
+    case iTau:
+        dT = 1/dT_dtau; drho = 0; break;
+    case iDelta:
+        dT = 0; drho = 1/rhor; break;
+    default:
+        throw ValueError(format("input to get_dT_drho[%s] is invalid",get_parameter_information(index,"short").c_str()));
+    }
+}
+long double AbstractState::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
+{
+	long double dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
 
+    get_dT_drho(*this, Of, dOf_dT, dOf_drho);
+    get_dT_drho(*this, Wrt, dWrt_dT, dWrt_drho);
+    get_dT_drho(*this, Constant, dConstant_dT, dConstant_drho);
+
+    return (dOf_dT*dConstant_drho-dOf_drho*dConstant_dT)/(dWrt_dT*dConstant_drho-dWrt_drho*dConstant_dT);
+}
 //    // ----------------------------------------
 //    // Smoothing functions for density
 //    // ----------------------------------------
