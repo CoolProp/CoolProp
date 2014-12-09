@@ -57,6 +57,7 @@ surface tension                 N/m
 #include "crossplatform_shared_ptr.h"
 
 
+
 #if defined(_MSC_VER)
 #define _CRTDBG_MAP_ALLOC
 #define _CRT_SECURE_NO_WARNINGS
@@ -105,7 +106,7 @@ std::string LoadedREFPROPRef;
 #endif
 
 static bool dbg_refprop = false;
-
+static std::string RPVersion_loaded = "";
 static const unsigned int number_of_endings = 5;
 std::string endings[number_of_endings] = {"", ".FLD", ".fld", ".PPF", ".ppf"};
 
@@ -428,13 +429,16 @@ bool load_REFPROP()
             }
         #endif
         #endif
-
+		
         if (setFunctionPointers()!=COOLPROP_OK)
         {
                           printf("There was an error setting the REFPROP function pointers, check types and names in header file.\n");
             throw CoolProp::AttributeError("There was an error setting the REFPROP function pointers, check types and names in header file.");
             return false;
         }
+		char rpv[255];
+		RPVersion(rpv);
+		RPVersion_loaded = rpv;
         return true;
     }
     return true;
