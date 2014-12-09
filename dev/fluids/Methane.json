@@ -2,7 +2,8 @@
   "ALIASES": [
     "CH4", 
     "methane", 
-    "METHANE"
+    "METHANE",
+    "R50"
   ], 
   "ANCILLARIES": {
     "hL": {

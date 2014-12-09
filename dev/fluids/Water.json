@@ -3,7 +3,8 @@
     "water", 
     "WATER", 
     "H2O", 
-    "h2o"
+    "h2o",
+    "R718"
   ], 
   "ANCILLARIES": {
     "hL": {
