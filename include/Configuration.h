@@ -65,6 +65,10 @@ class ConfigurationItem
         ConfigurationItem(configuration_keys key, double val){ 
             this->key = key; type = CONFIGURATION_DOUBLE_TYPE; v_double = val;
         };
+		// Initializer for const char *
+        ConfigurationItem(configuration_keys key, const char *val){
+            this->key = key; type = CONFIGURATION_STRING_TYPE; v_string = val;
+        };
         // Initializer for string
         ConfigurationItem(configuration_keys key, std::string val){
             this->key = key; type = CONFIGURATION_STRING_TYPE; v_string = val;
