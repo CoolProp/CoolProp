@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 2.8)
+# Build project using CMakeLists in base directory
+
+message(STATUS "Adding Wrappers")
+add_subdirectory(DEB)
+add_subdirectory(EES)
+add_subdirectory(Excel)
+add_subdirectory(Fluent)
+add_subdirectory(Fortran)
+add_subdirectory(Labview)
+add_subdirectory(MathCAD)
+add_subdirectory(Mathematica)
+add_subdirectory(MATLAB)
+add_subdirectory(Modelica)
+add_subdirectory(Octave)
+add_subdirectory(Python)
+add_subdirectory(VB.NET)
+message(STATUS "Wrappers Added")
