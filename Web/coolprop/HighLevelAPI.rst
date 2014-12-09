@@ -4,6 +4,8 @@
 High-Level Interface
 ********************
 
+.. contents:: :depth: 2
+
 PropsSI function
 ----------------
 
@@ -129,13 +131,52 @@ For a given fluid, the phase can be plotted in T-p coordinates:
     plt.ylabel('Pressure [Pa]')
     plt.xlabel('Temperature [K]')
     plt.tight_layout()
+    
+.. _partial_derivatives_high_level:
+    
+Partial Derivatives
+-------------------
+
+First Partial Derivatives
+^^^^^^^^^^^^^^^^^^^^^^^^^
+For some applications it can be useful to have access to partial derivatives of thermodynamic properties.  A generalized first partial derivative has been implemented into CoolProp, which can be obtained using the ``PropsSI`` function by encoding the desired derivative as a string.  The format of the string is ``d(OF)/d(WRT)|CONSTANT`` which is the same as 
+
+.. math::
+
+    \left. \frac{\partial OF}{\partial WRT}\right|_{CONSTANT}
+    
+At the low-level, the CoolProp code calls the function :cpapi:`AbstractState::first_partial_deriv`.  Refer to the function documentation to see how the generalized derivative works.
+
+.. warning::
+
+    This derivative formulation is currently only valid for homogeneous (single-phase) states.  Two phase derivatives are not defined, and are for many combinations, invalid.
+
+Here is an example of calculating the constant pressure specific heat, which is defined by the relation
+
+.. math::
+
+    c_p = \left.\frac{\partial h}{\partial T}\right|_{p}
+    
+and called through python
+
+.. ipython::
+
+    In [1]: import CoolProp
+    
+    # c_p using c_p
+    In [5]: CoolProp.CoolProp.PropsSI('C','P',101325,'T',300,'Water')
+    
+    # c_p using derivative
+    In [5]: CoolProp.CoolProp.PropsSI('d(Hmass)/d(T)|P','P',101325,'T',300,'Water')
+
+It is also possible to call the derivatives directly using the :ref:`low-level partial derivatives functionality <partial_derivatives_low_level>`.  The low-level routine is in general faster because it avoids the string parsing.
 
 .. _predefined_mixtures:
 
 Predefined Mixtures
 -------------------
 
-A number of predefined mixtures are included in CoolProp.  You can retrieve the list of predefined mixtures by calling ``get_global_param_string("predefined_mixtures")`` which will return a comma-separated list of predefined mixtures.  In Python, to get the first 5 mixtures, you would do
+A number of predefined mixtures are included in CoolProp.  You can retrieve the list of predefined mixtures by calling ``get_global_param_string("predefined_mixtures")`` which will return a comma-separated list of predefined mixtures.  In Python, to get the first 6 mixtures, you would do
 
 .. ipython::
 
@@ -151,7 +192,9 @@ and then to calculate the density of air using the mixture model at 1 atmosphere
     
     In [1]: CoolProp.CoolProp.PropsSI('D','P',101325,'T',300,'Air.mix')
     
-Exactly the methodology can be used from other wrappers.
+Exactly the same methodology can be used from other wrappers.
+
+
 
 C++ Sample Code
 ---------------
