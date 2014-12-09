@@ -803,9 +803,9 @@ void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(CoolProp::input_pairs &inp
     switch(input_pair)
     {
         case DmassT_INPUTS: ///< Mass density in kg/m^3, Temperature in K
-        case HmassT_INPUTS: ///< Enthalpy in J/kg, Temperature in K
+        //case HmassT_INPUTS: ///< Enthalpy in J/kg, Temperature in K (NOT CURRENTLY IMPLEMENTED)
         case SmassT_INPUTS: ///< Entropy in J/kg/K, Temperature in K
-        case TUmass_INPUTS: ///< Temperature in K, Internal energy in J/kg
+        //case TUmass_INPUTS: ///< Temperature in K, Internal energy in J/kg (NOT CURRENTLY IMPLEMENTED)
         case DmassP_INPUTS: ///< Mass density in kg/m^3, Pressure in Pa
         case HmassP_INPUTS: ///< Enthalpy in J/kg, Pressure in Pa
         case PSmass_INPUTS: ///< Pressure in Pa, Entropy in J/kg/K
@@ -825,9 +825,9 @@ void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(CoolProp::input_pairs &inp
             switch(input_pair)
             {
                 case DmassT_INPUTS: input_pair = DmolarT_INPUTS; value1 /= mm;  break;
-                case HmassT_INPUTS: input_pair = HmolarT_INPUTS; value1 *= mm;  break;
+                //case HmassT_INPUTS: input_pair = HmolarT_INPUTS; value1 *= mm;  break; (NOT CURRENTLY IMPLEMENTED)
                 case SmassT_INPUTS: input_pair = SmolarT_INPUTS; value1 *= mm;  break;
-                case TUmass_INPUTS: input_pair = TUmolar_INPUTS; value2 *= mm;  break;
+                //case TUmass_INPUTS: input_pair = TUmolar_INPUTS; value2 *= mm;  break; (NOT CURRENTLY IMPLEMENTED)
                 case DmassP_INPUTS: input_pair = DmolarP_INPUTS; value1 /= mm;  break;
                 case HmassP_INPUTS: input_pair = HmolarP_INPUTS; value1 *= mm;  break;
                 case PSmass_INPUTS: input_pair = PSmolar_INPUTS; value2 *= mm;  break;
@@ -882,10 +882,10 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
             _rhomolar = value1; _T = value2; FlashRoutines::DHSU_T_flash(*this, iDmolar); break;
         case SmolarT_INPUTS:
             _smolar = value1; _T = value2; FlashRoutines::DHSU_T_flash(*this, iSmolar); break;
-        case HmolarT_INPUTS:
-            _hmolar = value1; _T = value2; FlashRoutines::DHSU_T_flash(*this, iHmolar); break;
-        case TUmolar_INPUTS:
-            _T = value1; _umolar = value2; FlashRoutines::DHSU_T_flash(*this, iUmolar); break;
+        //case HmolarT_INPUTS:
+        //    _hmolar = value1; _T = value2; FlashRoutines::DHSU_T_flash(*this, iHmolar); break;
+        //case TUmolar_INPUTS:
+        //    _T = value1; _umolar = value2; FlashRoutines::DHSU_T_flash(*this, iUmolar); break;
         case DmolarP_INPUTS:
             _rhomolar = value1; _p = value2; FlashRoutines::PHSU_D_flash(*this, iP); break;
         case DmolarHmolar_INPUTS:
