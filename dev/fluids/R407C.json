@@ -186,6 +186,17 @@
       "max_abs_error": 1.1362542557756523, 
       "max_abs_error_units": "J/mol/K", 
       "type": "rational_polynomial"
+    }, 
+    "surface_tension": {
+      "BibTeX": "Okada-IJT-1999", 
+      "Tc": 359.23, 
+      "a": [
+        0.05877
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.229
+      ]
     }
   }, 
   "CAS": "R407C.PPF", 
