@@ -10,7 +10,7 @@ It was originally developed by Ian Bell, currently a post-doc at the University 
 
 * For Python, you can get the latest release via ``pip install coolprop``. Currently |downloads| of |version|  
 
-* ... other binaries can be downloaded here: `latest release <http://sourceforge.net/projects/coolprop/files>`_ and `development version <http://www.coolprop.dreamhosters.com:8010/binaries>`_  
+* ... other binaries can be downloaded here: `latest release <http://sourceforge.net/projects/coolprop/files>`_ and `development version <http://sourceforge.net/projects/coolprop/files/CoolProp/nightly>`_  
 
 * The documentation is available for the `latest release <http://www.coolprop.org>`_ and the `development version <http://www.coolprop.dreamhosters.com:8010/sphinx>`_  
 

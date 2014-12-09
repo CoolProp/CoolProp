@@ -58,10 +58,16 @@ else
     git pull
     python dev/scripts/git-archive-all $SRCFOLDER/CoolProp_sources.zip
     popd
+    rm -f "$BINFOLDER/README.rst.txt"
     if [ "$CPVERSION" = "nightly" ]; then
         RSYNC_OPTS="-a --no-perms -z --stats --delete"
         rm -rf "$BINFOLDER/docs"
         CPVERSION="$CPVERSION"/ #$(date +%F)
+        echo    "CoolProp nightly binaries"   > "$BINFOLDER/README.rst.txt"
+        echo    "-------------------------"   >> "$BINFOLDER/README.rst.txt"
+        echo -n "Development binaries of the" >> "$BINFOLDER/README.rst.txt"
+        echo -n " \`CoolProp project <http://coolprop.sourceforge.net>\`_ " >> "$BINFOLDER/README.rst.txt"
+        echo    "updated on $(date +%F) at $(date +%X) $(date +%Z)." >> "$BINFOLDER/README.rst.txt"
     else
         RSYNC_OPTS="-a --no-perms -z --stats"
         printMessage "Zipping up the docs and moving them into the $BINFOLDER folder for staging"
