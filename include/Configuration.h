@@ -18,7 +18,8 @@
 #define CONFIGURATION_KEYS_ENUM \
     X(NORMALIZE_GAS_CONSTANTS, "NORMALIZE_GAS_CONSTANTS", true) \
     X(CRITICAL_WITHIN_1UK, "CRITICAL_WITHIN_1UK", true) \
-    X(CRITICAL_SPLINES_ENABLED, "CRITICAL_SPLINES_ENABLED", true) 
+    X(CRITICAL_SPLINES_ENABLED, "CRITICAL_SPLINES_ENABLED", true) \
+	X(ALTERNATIVE_REFPROP_PATH, "ALTERNATIVE_REFPROP_PATH", "") 
 
  // Use preprocessor to create the Enum
  enum configuration_keys{
@@ -192,6 +193,7 @@ class Configuration
 /// Return the value of a boolean key from the configuration
 bool get_config_bool(configuration_keys key);
 double get_config_double(configuration_keys key);
+std::string get_config_string(configuration_keys key);
 void get_config_as_json(rapidjson::Document &doc);
 /// Get values in the configuration based as json data in string format
 std::string get_config_as_json_string();

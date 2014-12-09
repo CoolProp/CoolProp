@@ -48,6 +48,7 @@ surface tension                 N/m
 #include "REFPROP_lib.h"
 #include "REFPROPMixtureBackend.h"
 #include "Exceptions.h"
+#include "Configuration.h"
 
 #include <stdlib.h>
 #include <string>
@@ -350,6 +351,9 @@ double setFunctionPointers()
 std::string get_REFPROP_fluid_path()
 {
     std::string rpPath = refpropPath;
+	// Allow the user to specify an alternative REFPROP path by configuration value
+	std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
+	if (!alt_refprop_path.empty()){ rpPath = alt_refprop_path; }
     #if defined(__ISWINDOWS__)
         return rpPath;
     #elif defined(__ISLINUX__)
@@ -366,6 +370,7 @@ bool load_REFPROP()
     // If REFPROP is not loaded
     if (RefpropdllInstance==NULL)
     {
+		
         // Load it
         #if defined(__ISWINDOWS__)
             /* We need this logic on windows because if you use the bitness
