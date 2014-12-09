@@ -1361,31 +1361,14 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
             double T_min = 210;
             double T_max = 450;
 
-            T = -1;
-
-            // First try to use the secant solver to find T at a few different temperatures
-            for (T_guess = 210; T_guess < 450; T_guess += 60)
-            {
-                try{
-                    T = Secant_HAProps_T(SecondaryInputName,(char *)"P",p,MainInputName,MainInputValue,SecondaryInputValue,T_guess);
-                    double val = HAPropsSI(SecondaryInputName,(char *)"T",T,(char *)"P",p,MainInputName,MainInputValue);
-                    if (!ValidNumber(T) || !ValidNumber(val) || !(T_min < T && T < T_max) || std::abs(val-SecondaryInputValue)>1e-3)
-                    {
-                        throw CoolProp::ValueError();
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                catch (std::exception &){};
-            }
-
-            if (T < 0) // No solution found using secant
-            {
-                // Use the Brent's method solver to find T
-                T = Brent_HAProps_T(SecondaryInputName,(char *)"P",p,MainInputName,MainInputValue,SecondaryInputValue,T_min,T_max);
-            }
+			try{
+                // Use the Brent's method solver to find T.  Slow but reliable
+                T = Brent_HAProps_T(SecondaryInputName, "P", p, MainInputName, MainInputValue, SecondaryInputValue, T_min,T_max);
+			}
+			catch(std::exception &e){
+				CoolProp::set_error_string(e.what());
+				return _HUGE;
+			}
 
             // If you want the temperature, return it
             if (Name2Type(OutputName)==GIVEN_T)

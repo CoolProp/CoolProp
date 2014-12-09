@@ -1,23 +1,32 @@
 #!/bin/bash
 #
-# Make sure that only one argument is passed to this script - the version that will be released
+# Make sure that only two arguments are passed to this script - the version that
+# will be released and the dryrun vs. release option.
 if [ $# != 2 ]; then
-  echo "Only two arguments should be passed to this script - the version that will be released and if you would like a dry run or a release; like \"release.bsh 5.0.0 dryrun\" or \"release.bsh nightly release\"."
-  exit 1
+    echo "Only two arguments should be passed to this script: "
+    echo "The version that will be released and if you would like a dry run or a release."
+    echo "for example: \"release.bsh 5.0.0 dryrun\" or \"release.bsh nightly release\" "
+    exit 1
 fi
 #
 CPVERSION="$1"
 BASEDIR="$HOME/buildbot/server-master/public_html"
+REPODIR="$HOME/src/CoolPropFull.git"
 BINFOLDER="binaries"
 DOCFOLDER="sphinx"
+SRCFOLDER="$BASEDIR/$BINFOLDER/source"
 SEPARATOR="----------------------------------"
 #
-SFUSER="jorritw" # ibell or jorritw 
+SFUSER="jorritw" # ibell or jorritw
 #
+function printMessage {
+    echo " "
+    echo $SEPARATOR
+    echo "$1"
+    return 0
+}
 #
-echo " "
-echo $SEPARATOR
-echo "Processing the input variables: "
+printMessage "Processing the input variables: "
 #
 CPVERSION="$1"
 if [[ $CPVERSION == +([0-9]).+([0-9]).+([0-9]) ]]; then
@@ -31,56 +40,48 @@ fi
 #
 if [ "$2" == "release" ]; then
     DRYRUN=false
-else 
+else
     DRYRUN=true
 fi
 echo "DRYRUN = $DRYRUN"
-#
-# Change the folder
-pushd ${BASEDIR}
-#echo "Fixing the permissions of directories and files" # This is not needed, just ignore the perms in rsync
-#find . -type d ! -perm 0775 -exec chmod 0775 {} \;
-#find . -type f ! -perm 0664 -exec chmod 0664 {} \;
-#
+
+pushd ${BASEDIR} # Change the folder
 if [ "$DRYRUN" != "false" ]; then
-    echo " "
-    echo $SEPARATOR
+    printMessage "Dry run detected"
+    echo "Dry run; no zipping of the sources"
     echo "Dry run; no zipping of the docs"
     echo "Dry run; skipping python upload"
     echo "Dry run; skipping folder date"
     RSYNC_DRY_RUN=--dry-run
 else
+    pushd "$REPODIR"
+    git pull
+    python dev/scripts/git-archive-all $SRCFOLDER/CoolProp_sources.zip
+    popd
     if [ "$CPVERSION" = "nightly" ]; then
         RSYNC_OPTS="-a --no-perms -z --stats --delete"
         rm -rf "$BINFOLDER/docs"
         CPVERSION="$CPVERSION"/ #$(date +%F)
     else
         RSYNC_OPTS="-a --no-perms -z --stats"
-        echo " "
-        echo $SEPARATOR
-        echo "Zipping up the docs and moving them into the $BINFOLDER folder for staging"
+        printMessage "Zipping up the docs and moving them into the $BINFOLDER folder for staging"
         rm -f documentation.zip
         zip -rq documentation.zip $DOCFOLDER/*
         mkdir -p "$BINFOLDER/docs"
         cp documentation.zip "$BINFOLDER/docs"
         echo "Uploading the python binaries to pypi"
         twine upload $BINFOLDER/Python/*.whl $BINFOLDER/Python/*.tar.gz
-    fi 
+    fi
     RSYNC_DRY_RUN=
 fi
 #
-echo " "
-echo $SEPARATOR
-echo "Copying the binaries to SourceForge"
+printMessage "Copying the binaries to SourceForge"
 rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$BINFOLDER/" frs.sf.net-$SFUSER:/home/frs/project/coolprop/CoolProp/$CPVERSION
 if [ ${CPVERSION:0:7} != "nightly" ]; then
-    echo " "
-    echo $SEPARATOR
-    echo "Publishing the docs on SourceForge"
+    printMessage "Publishing the docs on SourceForge"
     rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$DOCFOLDER/" frs.sf.net-$SFUSER:/home/project-web/coolprop/htdocs
 fi
 # Change back to where we came from
 popd
-echo " " 
-echo "All done, goodbye."
+printMessage "All done, goodbye."
 exit 0
