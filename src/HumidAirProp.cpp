@@ -1360,6 +1360,10 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
 
             double T_min = 210;
             double T_max = 450;
+			
+			if (Name2Type(MainInputName) == GIVEN_RH){
+				T_max = CoolProp::PropsSI("T","P",p,"Q",0,"Water") - 1;
+			}
 
 			try{
                 // Use the Brent's method solver to find T.  Slow but reliable
