@@ -3,7 +3,8 @@
     "nButane", 
     "butane", 
     "BUTANE", 
-    "N-BUTANE"
+    "N-BUTANE",
+    "R600"
   ], 
   "ANCILLARIES": {
     "hL": {
