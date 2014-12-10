@@ -205,7 +205,7 @@ protected:
     /// Calculate the first partial derivative for the desired derivative
     virtual long double calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
     /// Calculate the second partial derivative using the given backend
-    virtual long double calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2){throw NotImplementedError("calc_second_partial_deriv is not implemented for this backend");};
+    virtual long double calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2);
 
     /// Using this backend, calculate the reduced density (rho/rhoc)
     virtual long double calc_reduced_density(void){throw NotImplementedError("calc_reduced_density is not implemented for this backend");};

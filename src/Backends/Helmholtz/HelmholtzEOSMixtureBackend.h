@@ -269,8 +269,6 @@ public:
     SimpleState calc_reducing_state_nocache(const std::vector<long double> & mole_fractions);
 
     const CoolProp::SimpleState & get_reducing_state(){calc_reducing_state(); return _reducing;};
-    
-    long double calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
 
     void update_states();
     
