@@ -240,6 +240,12 @@ vel("Benzene", "T", 300, "Dmass", 875, "V", 608.52e-6, 1e-4),
 vel("Benzene", "T", 400, "Dmass", 760, "V", 211.74e-6, 1e-4),
 vel("Benzene", "T", 550, "Dmass", 500, "V", 60.511e-6, 1e-4),
 
+// From Mylona, JPCRD, 2014
+vel("o-Xylene", "T", 635, "Dmass", 270, "V", 28.59e-6, 1e-4),
+vel("m-Xylene", "T", 616, "Dmass", 220, "V", 36.41e-6, 1e-4),
+vel("p-Xylene", "T", 620, "Dmass", 287, "V", 23.98e-6, 1e-4),
+vel("EthylBenzene", "T", 617, "Dmass", 316, "V", 33.22e-6, 1e-4),
+
 };
 
 class TransportValidationFixture
@@ -484,6 +490,21 @@ vel("R134a", "T", 240, "D", 1e-10, "L", 0.008698768 , 1e-4),
 vel("R134a", "T", 330, "D", 1e-10, "L", 0.015907606 , 1e-4),
 vel("R134a", "T", 330, "Q", 0, "L", 0.06746432253 , 1e-4),
 vel("R134a", "T", 240, "Q", 1, "L", 0.00873242359, 1e-4),
+
+// Mylona, JPCRD, 2014
+vel("o-Xylene", "T", 635, "D", 270, "L", 96.4e-3 , 1e-4),
+vel("m-Xylene", "T", 616, "D", 220, "L", 82.8e-3 , 1e-4),
+vel("p-Xylene", "T", 620, "D", 287, "L", 107.7e-3 , 1e-4),
+vel("EthylBenzene", "T", 617, "D", 316, "L", 140.2e-3, 1e-4),
+// dilute values
+vel("o-Xylene", "T", 300, "D", 1e-10, "L", 13.68e-3 , 1e-8),
+vel("o-Xylene", "T", 600, "D", 1e-10, "L", 4.16e-3 , 1e-8),
+vel("m-Xylene", "T", 300, "D", 1e-10, "L", 9.45e-3 , 1e-8),
+vel("m-Xylene", "T", 600, "D", 1e-10, "L", 40.6e-3 , 1e-8),
+vel("p-Xylene", "T", 300, "D", 1e-10, "L", 10.57e-3 , 1e-8),
+vel("p-Xylene", "T", 600, "D", 1e-10, "L", 41.73e-3 , 1e-8),
+vel("EthylBenzene", "T", 300, "D", 1e-10, "L", 9.71e-3, 1e-8),
+vel("EthylBenzene", "T", 600, "D", 1e-10, "L", 41.14e-3, 1e-8),
 
 };
 
