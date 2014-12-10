@@ -45,6 +45,8 @@ surface tension                 N/m
     #pragma error
 #endif
 
+enum DLLNameManglingStyle{ NO_NAME_MANGLING = 0, LOWERCASE_NAME_MANGLING, LOWERCASE_AND_UNDERSCORE_NAME_MANGLING };
+	
 #include "REFPROP_lib.h"
 #include "REFPROPMixtureBackend.h"
 #include "Exceptions.h"
@@ -125,14 +127,23 @@ static char default_reference_state[] = "DEF";
  LIST_OF_REFPROP_FUNCTION_NAMES
 #undef X
 
-void *getFunctionPointer(const char * name)
+void *getFunctionPointer(const char * name, DLLNameManglingStyle mangling_style = NO_NAME_MANGLING)
 {
+	std::string function_name;
+	switch(mangling_style){
+		case NO_NAME_MANGLING: 
+		    function_name = name; break;
+		case LOWERCASE_NAME_MANGLING: 
+		    function_name = lower(name); break;
+		case LOWERCASE_AND_UNDERSCORE_NAME_MANGLING: 
+		    function_name = lower(name) + "_"; break;
+	}
     #if defined(__ISWINDOWS__)
-        return (void *) GetProcAddress(RefpropdllInstance,name);
+        return (void *) GetProcAddress(RefpropdllInstance, function_name.c_str());
     #elif defined(__ISLINUX__)
-        return dlsym(RefpropdllInstance,name);
+        return dlsym(RefpropdllInstance, function_name.c_str());
     #elif defined(__ISAPPLE__)
-        return dlsym(RefpropdllInstance,name);
+        return dlsym(RefpropdllInstance, function_name.c_str());
     #else
         throw CoolProp::NotImplementedError("This function should not be called.");
         return NULL;
@@ -148,6 +159,30 @@ double setFunctionPointers()
         printf("REFPROP is not loaded, make sure you call this function after loading the library.\n");
         return -_HUGE;
     }
+	/* First determine the type of name mangling in use.
+	 * A) RPVersion -> RPVersion
+	 * B) RPVersion -> rpversion
+	 * C) RPVersion -> rpversion_
+	 */
+	 DLLNameManglingStyle mangling_style = NO_NAME_MANGLING; // defaults to no mangling
+	 
+	 SETUPdll = (SETUPdll_POINTER) getFunctionPointer("SETUPdll");
+	 if (SETUPdll == NULL){ // some mangling in use
+		 SETUPdll = (SETUPdll_POINTER) getFunctionPointer("setupdll");
+		 if (SETUPdll != NULL){
+			mangling_style = LOWERCASE_NAME_MANGLING;
+		 }
+		 else{
+			 SETUPdll = (SETUPdll_POINTER) getFunctionPointer("setupdll_");
+			 if (SETUPdll != NULL){
+				 mangling_style = LOWERCASE_AND_UNDERSCORE_NAME_MANGLING;
+			 }
+			 else{
+				 throw CoolProp::ValueError("Could not load the symbol SETUPdll or any of its mangled forms; REFPROP shared library broken");
+			 }
+		 }
+	 }
+	
     /* Set the pointers, platform independent
      * 
      * Example: RPVersion = (RPVersion_POINTER) getFunctionPointer(STRINGIFY(RPVersion));
@@ -156,7 +191,7 @@ double setFunctionPointers()
      * See http://stackoverflow.com/a/148610
      * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
      */
-    #define X(name)  name = (name ## _POINTER) getFunctionPointer(STRINGIFY(name));
+    #define X(name)  name = (name ## _POINTER) getFunctionPointer(STRINGIFY(name), mangling_style);
        LIST_OF_REFPROP_FUNCTION_NAMES
     #undef X
     

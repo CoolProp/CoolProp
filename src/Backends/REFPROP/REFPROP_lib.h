@@ -7,7 +7,7 @@
  * This will be used to generate function names, pointers, etc. below
  */
 #define LIST_OF_REFPROP_FUNCTION_NAMES \
-	X(RPVersion) \	
+	X(RPVersion) \
 	X(SETPATHdll) \
 	X(ABFL1dll) \
 	X(ABFL2dll) \
@@ -60,7 +60,7 @@
 	X(MELTTdll) \
 	X(MLTH2Odll) \
 	X(NAMEdll) \
-	X(PASSCMN) \
+	X(PASSCMNdll) \
 	X(PDFL1dll) \
 	X(PDFLSHdll) \
 	X(PEFLSHdll) \
