@@ -448,6 +448,89 @@
     }
   }, 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Mylona-JPCRD-2014-xylenes", 
+      "critical": {
+        "GAMMA": 0.058, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 1406469760.9001405, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 2.36e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.0008374880000000001, 
+          0.012785600000000001, 
+          -0.0371925, 
+          0.06395479999999999, 
+          -0.00443443
+        ], 
+        "B": [
+          0.262226, 
+          -0.490519, 
+          1
+        ], 
+        "T_reducing": 630.259, 
+        "T_reducing_units": "K", 
+        "m": [
+          0, 
+          1, 
+          2
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          -0.0346292, 
+          0.0455879, 
+          0.0757735, 
+          -0.0594473, 
+          -0.06743779999999999, 
+          0.0550012, 
+          0.027695, 
+          -0.0255522, 
+          -0.00374238, 
+          0.00418805
+        ], 
+        "T_reducing": 630.259, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          1, 
+          2, 
+          2, 
+          3, 
+          3, 
+          4, 
+          4, 
+          5, 
+          5
+        ], 
+        "rhomass_reducing": 285.0, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "Huber-RP912", 
       "epsilon_over_k": 500.48, 
