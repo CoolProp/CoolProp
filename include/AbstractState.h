@@ -259,7 +259,8 @@ protected:
     virtual void calc_specify_phase(phases phase){throw NotImplementedError("This backend does not implement calc_specify_phase function");};
     /// Using this backend, unspecify the phase
     virtual void calc_unspecify_phase(void){throw NotImplementedError("This backend does not implement calc_unspecify_phase function");};
-    
+    /// Using this backend get a vector of fluid names
+	virtual std::vector<std::string> calc_fluid_names(void){throw NotImplementedError("This backend does not implement fluid_names function");};
     /// Using this backend, calculate a phase given by the state string
     /// @param state A string that describes the state desired, one of "hs_anchor", "critical"/"crit", "reducing"
     virtual const CoolProp::SimpleState & calc_state(const std::string &state){throw NotImplementedError("calc_state is not implemented for this backend");};
@@ -311,6 +312,8 @@ protected:
     virtual void set_mole_fractions(const std::vector<long double> &mole_fractions) = 0;
     virtual void set_mass_fractions(const std::vector<long double> &mass_fractions) = 0;
     virtual void set_volu_fractions(const std::vector<long double> &mass_fractions){throw NotImplementedError("Volume composition has not been implemented.");}
+	
+	std::vector<std::string> fluid_names(void);
     
     /// Clear all the cached values
     bool clear();

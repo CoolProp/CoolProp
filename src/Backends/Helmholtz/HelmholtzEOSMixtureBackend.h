@@ -222,6 +222,7 @@ public:
     long double calc_rhomolar_critical(void);
 
     std::string calc_name(void);
+	std::vector<std::string> calc_fluid_names(void);
 
     void calc_all_alphar_deriv_cache(const std::vector<long double> &mole_fractions, const long double &tau, const long double &delta);
     long double calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<long double> & mole_fractions, const long double &tau, const long double &delta);

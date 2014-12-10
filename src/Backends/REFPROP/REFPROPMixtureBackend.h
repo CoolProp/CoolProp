@@ -22,6 +22,7 @@ protected:
     static bool _REFPROP_supported;
     std::vector<double> mole_fractions, mass_fractions;
     std::vector<double> mole_fractions_liq, mole_fractions_vap;
+	std::vector<std::string> fluid_names;
 public:
     REFPROPMixtureBackend(){};
 
@@ -29,6 +30,8 @@ public:
     /// @param fluid_names The vector of strings of the fluid components, without file ending
     REFPROPMixtureBackend(const std::vector<std::string>& fluid_names);
     virtual ~REFPROPMixtureBackend();
+	
+	std::vector<std::string> calc_fluid_names(){return fluid_names;};
 
     // REFPROP backend uses mole fractions
     bool using_mole_fractions(){return true;}

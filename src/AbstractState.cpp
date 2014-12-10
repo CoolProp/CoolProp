@@ -78,6 +78,10 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
         throw ValueError(format("Invalid backend name [%s] to factory function",backend.c_str()));
     }
 }
+std::vector<std::string> AbstractState::fluid_names(void)
+{
+    return calc_fluid_names();
+}
 
 bool AbstractState::clear() {
     // Reset all instances of CachedElement and overwrite

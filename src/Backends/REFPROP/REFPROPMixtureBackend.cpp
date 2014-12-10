@@ -537,6 +537,7 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
 void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &fluid_names)
 {
     long ierr=0;
+	this->fluid_names = fluid_names;
     char component_string[10000], herr[errormessagelength];
     std::string components_joined = strjoin(fluid_names,"|");
     std::string components_joined_raw = strjoin(fluid_names,"|");

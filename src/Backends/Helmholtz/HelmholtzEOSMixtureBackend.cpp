@@ -571,6 +571,15 @@ std::string HelmholtzEOSMixtureBackend::calc_name(void)
         return components[0]->name;
     }
 }
+std::vector<std::string> HelmholtzEOSMixtureBackend::calc_fluid_names(void)
+{
+	std::vector<std::string> out;
+	for (std::size_t i = 0; i < components.size(); ++i)
+	{
+        out.push_back(components[i]->name);
+    }
+	return out;
+}
 long double HelmholtzEOSMixtureBackend::calc_ODP(void)
 {
     if (components.size() != 1){
