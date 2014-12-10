@@ -73,6 +73,23 @@ class ConfigurationItem
         ConfigurationItem(configuration_keys key, std::string val){
             this->key = key; type = CONFIGURATION_STRING_TYPE; v_string = val;
         };
+		void set_bool(bool val){
+			check_data_type(CONFIGURATION_BOOL_TYPE);
+			v_bool = val;
+		}
+		void set_integer(int val){
+			check_data_type(CONFIGURATION_INTEGER_TYPE);
+			v_integer = val;
+		}
+		void set_double(double val){
+			check_data_type(CONFIGURATION_DOUBLE_TYPE);
+			v_double = val;
+		}
+		void set_string(std::string val){
+			check_data_type(CONFIGURATION_STRING_TYPE);
+			v_string = val;
+		}
+		
         configuration_keys get_key(void){
             return this->key;
         }
@@ -108,22 +125,10 @@ class ConfigurationItem
         }
         void set_from_json(rapidjson::Value &val){
             switch (type){
-                case CONFIGURATION_BOOL_TYPE:{
-                    if (!val.IsBool()){throw ValueError(format("Input is not boolean"));}
-                    v_bool = val.GetBool(); break;
-                }
-                case CONFIGURATION_INTEGER_TYPE:{
-                    if (!val.IsInt()){throw ValueError(format("Input is not integer"));}
-                    v_integer = val.GetInt(); break;
-                }
-                case CONFIGURATION_DOUBLE_TYPE:{
-                    if (!val.IsDouble()){throw ValueError(format("Input is not double"));}
-                    v_double = val.GetDouble(); break;
-                }
-                case CONFIGURATION_STRING_TYPE:{
-                    if (!val.IsString()){throw ValueError(format("Input is not string"));}
-                    v_string = val.GetString(); break;
-                }
+                case CONFIGURATION_BOOL_TYPE: if (!val.IsBool()){throw ValueError(format("Input is not boolean"));}; v_bool = val.GetBool(); break;
+                case CONFIGURATION_INTEGER_TYPE: if (!val.IsInt()){throw ValueError(format("Input is not integer"));}; v_integer = val.GetInt(); break;
+                case CONFIGURATION_DOUBLE_TYPE: if (!val.IsDouble()){throw ValueError(format("Input is not double"));}; v_double = val.GetDouble(); break;
+                case CONFIGURATION_STRING_TYPE: if (!val.IsString()){throw ValueError(format("Input is not string"));}; v_string = val.GetString(); break; 
                 case CONFIGURATION_ENDOFLIST_TYPE:
                 case CONFIGURATION_NOT_DEFINED_TYPE:
                     throw ValueError();
