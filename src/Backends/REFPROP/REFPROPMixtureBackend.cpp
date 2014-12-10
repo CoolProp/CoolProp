@@ -57,8 +57,6 @@ surface tension                 N/m
 #include <cassert>
 #include "crossplatform_shared_ptr.h"
 
-
-
 #if defined(_MSC_VER)
 #define _CRTDBG_MAP_ALLOC
 #define _CRT_SECURE_NO_WARNINGS
@@ -114,116 +112,18 @@ std::string endings[number_of_endings] = {"", ".FLD", ".fld", ".PPF", ".ppf"};
 static char rel_path_HMC_BNC[] = "HMX.BNC";
 static char default_reference_state[] = "DEF";
 
-// Define functions as pointers and initialise them to NULL
-// Declare the functions for direct access
- RPVersion_POINTER RPVersion;
- SETPATHdll_POINTER SETPATHdll;
- ABFL1dll_POINTER ABFL1dll;
- ABFL2dll_POINTER ABFL2dll;
- ACTVYdll_POINTER ACTVYdll;
- AGdll_POINTER AGdll;
- CCRITdll_POINTER CCRITdll;
- CP0dll_POINTER CP0dll;
- CRITPdll_POINTER CRITPdll;
- CSATKdll_POINTER CSATKdll;
- CV2PKdll_POINTER CV2PKdll;
- CVCPKdll_POINTER CVCPKdll;
- CVCPdll_POINTER CVCPdll;
- DBDTdll_POINTER DBDTdll;
- DBFL1dll_POINTER DBFL1dll;
- DBFL2dll_POINTER DBFL2dll;
- DDDPdll_POINTER DDDPdll;
- DDDTdll_POINTER DDDTdll;
- DEFLSHdll_POINTER DEFLSHdll;
- DHD1dll_POINTER DHD1dll;
- DHFLSHdll_POINTER DHFLSHdll;
- DHFL1dll_POINTER DHFL1dll;
- DHFL2dll_POINTER DHFL2dll;
- DIELECdll_POINTER DIELECdll;
- DOTFILLdll_POINTER DOTFILLdll;
- DPDD2dll_POINTER DPDD2dll;
- DPDDKdll_POINTER DPDDKdll;
- DPDDdll_POINTER DPDDdll;
- DPDTKdll_POINTER DPDTKdll;
- DPDTdll_POINTER DPDTdll;
- DPTSATKdll_POINTER DPTSATKdll;
- DSFLSHdll_POINTER DSFLSHdll;
- DSFL1dll_POINTER DSFL1dll;
- DSFL2dll_POINTER DSFL2dll;
- ENTHALdll_POINTER ENTHALdll;
- ENTROdll_POINTER ENTROdll;
- ESFLSHdll_POINTER ESFLSHdll;
- FGCTYdll_POINTER FGCTYdll;
- FPVdll_POINTER FPVdll;
- FUGCOFdll_POINTER FUGCOFdll;
- GERG04dll_POINTER GERG04dll;
- GETFIJdll_POINTER GETFIJdll;
- GETKTVdll_POINTER GETKTVdll;
- GIBBSdll_POINTER GIBBSdll;
- HSFLSHdll_POINTER HSFLSHdll;
- INFOdll_POINTER INFOdll;
- LIMITKdll_POINTER LIMITKdll;
- LIMITSdll_POINTER LIMITSdll;
- LIMITXdll_POINTER LIMITXdll;
- MELTPdll_POINTER MELTPdll;
- MELTTdll_POINTER MELTTdll;
- MLTH2Odll_POINTER MLTH2Odll;
- NAMEdll_POINTER NAMEdll;
- PASSCMNdll_POINTER PASSCMNdll;
- PDFL1dll_POINTER PDFL1dll;
- PDFLSHdll_POINTER PDFLSHdll;
- PEFLSHdll_POINTER PEFLSHdll;
- PHFL1dll_POINTER PHFL1dll;
- PHFLSHdll_POINTER PHFLSHdll;
- PHIXdll_POINTER PHIXdll;
- PHI0dll_POINTER PHI0dll;
- PQFLSHdll_POINTER PQFLSHdll;
- PREOSdll_POINTER PREOSdll;
- PRESSdll_POINTER PRESSdll;
- PSFL1dll_POINTER PSFL1dll;
- PSFLSHdll_POINTER PSFLSHdll;
- PUREFLDdll_POINTER PUREFLDdll;
- QMASSdll_POINTER QMASSdll;
- QMOLEdll_POINTER QMOLEdll;
- RESIDUALdll_POINTER RESIDUALdll;
- REDXdll_POINTER REDXdll;
- RMIX2dll_POINTER RMIX2dll;
- SATDdll_POINTER SATDdll;
- SATEdll_POINTER SATEdll;
- SATHdll_POINTER SATHdll;
- SATPdll_POINTER SATPdll;
- SATSdll_POINTER SATSdll;
- SATTdll_POINTER SATTdll;
- SATSPLNdll_POINTER SATSPLNdll;
- SETAGAdll_POINTER SETAGAdll;
- SETKTVdll_POINTER SETKTVdll;
- SETMIXdll_POINTER SETMIXdll;
- SETMODdll_POINTER SETMODdll;
- SETREFdll_POINTER SETREFdll;
- SETUPdll_POINTER SETUPdll;
-//  SPECGRdll_POINTER SPECGRdll; // not found in library
- SUBLPdll_POINTER SUBLPdll;
- SUBLTdll_POINTER SUBLTdll;
- SURFTdll_POINTER SURFTdll;
- SURTENdll_POINTER SURTENdll;
- TDFLSHdll_POINTER TDFLSHdll;
- TEFLSHdll_POINTER TEFLSHdll;
- THERM0dll_POINTER THERM0dll;
- THERM2dll_POINTER THERM2dll;
- THERM3dll_POINTER THERM3dll;
- THERMdll_POINTER THERMdll;
- THFLSHdll_POINTER THFLSHdll;
- TPFLSHdll_POINTER TPFLSHdll;
- TPFL2dll_POINTER TPFL2dll;
- TPRHOdll_POINTER TPRHOdll;
- TQFLSHdll_POINTER TQFLSHdll;
- TRNPRPdll_POINTER TRNPRPdll;
- TSFLSHdll_POINTER TSFLSHdll;
- VIRBdll_POINTER VIRBdll;
- VIRCdll_POINTER VIRCdll;
- WMOLdll_POINTER WMOLdll;
- XMASSdll_POINTER XMASSdll;
- XMOLEdll_POINTER XMOLEdll;
+/* Define functions as pointers and initialise them to NULL
+* Declare the functions for direct access
+* 
+* Example: SETPATHdll_POINTER SETPATHdll;
+* 
+* ***MAGIC WARNING**!! X Macros in use
+* See http://stackoverflow.com/a/148610
+* See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
+*/
+#define X(name)  name ## _POINTER name;
+ LIST_OF_REFPROP_FUNCTION_NAMES
+#undef X
 
 void *getFunctionPointer(const char * name)
 {
@@ -239,10 +139,6 @@ void *getFunctionPointer(const char * name)
     #endif
 }
 
-//#include <dlfcn.h>
-//void *RefpropdllInstance=NULL;
-//char refpropPath[] = "/opt/refprop";
-
 //Moved pointer handling to a function, helps to maintain
 //an overview and structures OS dependent parts
 double setFunctionPointers()
@@ -252,109 +148,18 @@ double setFunctionPointers()
         printf("REFPROP is not loaded, make sure you call this function after loading the library.\n");
         return -_HUGE;
     }
-    // set the pointers, platform independent
-    RPVersion = (RPVersion_POINTER) getFunctionPointer(STRINGIFY(RPVersion));
-    ABFL1dll = (ABFL1dll_POINTER) getFunctionPointer(STRINGIFY(ABFL1dll));
-    ABFL2dll = (ABFL2dll_POINTER) getFunctionPointer(STRINGIFY(ABFL2dll));
-    ACTVYdll = (ACTVYdll_POINTER) getFunctionPointer(STRINGIFY(ACTVYdll));
-    AGdll = (AGdll_POINTER) getFunctionPointer(STRINGIFY(AGdll));
-    CCRITdll = (CCRITdll_POINTER) getFunctionPointer(STRINGIFY(CCRITdll));
-    CP0dll = (CP0dll_POINTER) getFunctionPointer(STRINGIFY(CP0dll));
-    CRITPdll = (CRITPdll_POINTER) getFunctionPointer(STRINGIFY(CRITPdll));
-    CSATKdll = (CSATKdll_POINTER) getFunctionPointer(STRINGIFY(CSATKdll));
-    CV2PKdll = (CV2PKdll_POINTER) getFunctionPointer(STRINGIFY(CV2PKdll));
-    CVCPKdll = (CVCPKdll_POINTER) getFunctionPointer(STRINGIFY(CVCPKdll));
-    CVCPdll = (CVCPdll_POINTER) getFunctionPointer(STRINGIFY(CVCPdll));
-    DBDTdll = (DBDTdll_POINTER) getFunctionPointer(STRINGIFY(DBDTdll));
-    DBFL1dll = (DBFL1dll_POINTER) getFunctionPointer(STRINGIFY(DBFL1dll));
-    DBFL2dll = (DBFL2dll_POINTER) getFunctionPointer(STRINGIFY(DBFL2dll));
-    DDDPdll = (DDDPdll_POINTER) getFunctionPointer(STRINGIFY(DDDPdll));
-    DDDTdll = (DDDTdll_POINTER) getFunctionPointer(STRINGIFY(DDDTdll));
-    DEFLSHdll = (DEFLSHdll_POINTER) getFunctionPointer(STRINGIFY(DEFLSHdll));
-    DHD1dll = (DHD1dll_POINTER) getFunctionPointer(STRINGIFY(DHD1dll));
-    DHFLSHdll = (DHFLSHdll_POINTER) getFunctionPointer(STRINGIFY(DHFLSHdll));
-    DIELECdll = (DIELECdll_POINTER) getFunctionPointer(STRINGIFY(DIELECdll));
-    DOTFILLdll = (DOTFILLdll_POINTER) getFunctionPointer(STRINGIFY(DOTFILLdll));
-    DPDD2dll = (DPDD2dll_POINTER) getFunctionPointer(STRINGIFY(DPDD2dll));
-    DPDDKdll = (DPDDKdll_POINTER) getFunctionPointer(STRINGIFY(DPDDKdll));
-    DPDDdll = (DPDDdll_POINTER) getFunctionPointer(STRINGIFY(DPDDdll));
-    DPDTKdll = (DPDTKdll_POINTER) getFunctionPointer(STRINGIFY(DPDTKdll));
-    DPDTdll = (DPDTdll_POINTER) getFunctionPointer(STRINGIFY(DPDTdll));
-    DPTSATKdll = (DPTSATKdll_POINTER) getFunctionPointer(STRINGIFY(DPTSATKdll));
-    DSFLSHdll = (DSFLSHdll_POINTER) getFunctionPointer(STRINGIFY(DSFLSHdll));
-    ENTHALdll = (ENTHALdll_POINTER) getFunctionPointer(STRINGIFY(ENTHALdll));
-    ENTROdll = (ENTROdll_POINTER) getFunctionPointer(STRINGIFY(ENTROdll));
-    ESFLSHdll = (ESFLSHdll_POINTER) getFunctionPointer(STRINGIFY(ESFLSHdll));
-    FGCTYdll = (FGCTYdll_POINTER) getFunctionPointer(STRINGIFY(FGCTYdll));
-    FPVdll = (FPVdll_POINTER) getFunctionPointer(STRINGIFY(FPVdll));
-    FUGCOFdll = (FUGCOFdll_POINTER) getFunctionPointer(STRINGIFY(FUGCOFdll));
-    GERG04dll = (GERG04dll_POINTER) getFunctionPointer(STRINGIFY(GERG04dll));
-    GETFIJdll = (GETFIJdll_POINTER) getFunctionPointer(STRINGIFY(GETFIJdll));
-    GETKTVdll = (GETKTVdll_POINTER) getFunctionPointer(STRINGIFY(GETKTVdll));
-    GIBBSdll = (GIBBSdll_POINTER) getFunctionPointer(STRINGIFY(GIBBSdll));
-    HSFLSHdll = (HSFLSHdll_POINTER) getFunctionPointer(STRINGIFY(HSFLSHdll));
-    INFOdll = (INFOdll_POINTER) getFunctionPointer(STRINGIFY(INFOdll));
-    LIMITKdll = (LIMITKdll_POINTER) getFunctionPointer(STRINGIFY(LIMITKdll));
-    LIMITSdll = (LIMITSdll_POINTER) getFunctionPointer(STRINGIFY(LIMITSdll));
-    LIMITXdll = (LIMITXdll_POINTER) getFunctionPointer(STRINGIFY(LIMITXdll));
-    MELTPdll = (MELTPdll_POINTER) getFunctionPointer(STRINGIFY(MELTPdll));
-    MELTTdll = (MELTTdll_POINTER) getFunctionPointer(STRINGIFY(MELTTdll));
-    MLTH2Odll = (MLTH2Odll_POINTER) getFunctionPointer(STRINGIFY(MLTH2Odll));
-    NAMEdll = (NAMEdll_POINTER) getFunctionPointer(STRINGIFY(NAMEdll));
-    PASSCMNdll = (PASSCMNdll_POINTER) getFunctionPointer(STRINGIFY(PASSCMNdll));
-	PDFL1dll = (PDFL1dll_POINTER) getFunctionPointer(STRINGIFY(PDFL1dll));
-    PDFLSHdll = (PDFLSHdll_POINTER) getFunctionPointer(STRINGIFY(PDFLSHdll));
-    PEFLSHdll = (PEFLSHdll_POINTER) getFunctionPointer(STRINGIFY(PEFLSHdll));
-    PHFL1dll = (PHFL1dll_POINTER) getFunctionPointer(STRINGIFY(PHFL1dll));
-    PHFLSHdll = (PHFLSHdll_POINTER) getFunctionPointer(STRINGIFY(PHFLSHdll));
-	PHIXdll = (PHIXdll_POINTER) getFunctionPointer(STRINGIFY(PHIXdll));
-	PHI0dll = (PHI0dll_POINTER) getFunctionPointer(STRINGIFY(PHI0dll));
-    PQFLSHdll = (PQFLSHdll_POINTER) getFunctionPointer(STRINGIFY(PQFLSHdll));
-    PREOSdll = (PREOSdll_POINTER) getFunctionPointer(STRINGIFY(PREOSdll));
-    PRESSdll = (PRESSdll_POINTER) getFunctionPointer(STRINGIFY(PRESSdll));
-    PSFL1dll = (PSFL1dll_POINTER) getFunctionPointer(STRINGIFY(PSFL1dll));
-    PSFLSHdll = (PSFLSHdll_POINTER) getFunctionPointer(STRINGIFY(PSFLSHdll));
-    PUREFLDdll = (PUREFLDdll_POINTER) getFunctionPointer(STRINGIFY(PUREFLDdll));
-    RESIDUALdll = (RESIDUALdll_POINTER) getFunctionPointer(STRINGIFY(RESIDUALdll));
-	RMIX2dll = (RMIX2dll_POINTER) getFunctionPointer(STRINGIFY(RMIX2dll));
-	REDXdll = (REDXdll_POINTER) getFunctionPointer(STRINGIFY(REDXdll));
-    QMASSdll = (QMASSdll_POINTER) getFunctionPointer(STRINGIFY(QMASSdll));
-    QMOLEdll = (QMOLEdll_POINTER) getFunctionPointer(STRINGIFY(QMOLEdll));
-    SATDdll = (SATDdll_POINTER) getFunctionPointer(STRINGIFY(SATDdll));
-    SATEdll = (SATEdll_POINTER) getFunctionPointer(STRINGIFY(SATEdll));
-    SATHdll = (SATHdll_POINTER) getFunctionPointer(STRINGIFY(SATHdll));
-    SATPdll = (SATPdll_POINTER) getFunctionPointer(STRINGIFY(SATPdll));
-    SATSdll = (SATSdll_POINTER) getFunctionPointer(STRINGIFY(SATSdll));
-    SATTdll = (SATTdll_POINTER) getFunctionPointer(STRINGIFY(SATTdll));
-    SATSPLNdll = (SATSPLNdll_POINTER) getFunctionPointer(STRINGIFY(SATSPLNdll));
-    SETAGAdll = (SETAGAdll_POINTER) getFunctionPointer(STRINGIFY(SETAGAdll));
-    SETKTVdll = (SETKTVdll_POINTER) getFunctionPointer(STRINGIFY(SETKTVdll));
-    SETMIXdll = (SETMIXdll_POINTER) getFunctionPointer(STRINGIFY(SETMIXdll));
-    SETMODdll = (SETMODdll_POINTER) getFunctionPointer(STRINGIFY(SETMODdll));
-    SETREFdll = (SETREFdll_POINTER) getFunctionPointer(STRINGIFY(SETREFdll));
-    SETUPdll = (SETUPdll_POINTER) getFunctionPointer(STRINGIFY(SETUPdll));
-//        SPECGRdll = (SPECGRdll_POINTER) getFunctionPointer(STRINGIFY(SPECGRdll)); // not in library
-    SUBLPdll = (SUBLPdll_POINTER) getFunctionPointer(STRINGIFY(SUBLPdll));
-    SUBLTdll = (SUBLTdll_POINTER) getFunctionPointer(STRINGIFY(SUBLTdll));
-    SURFTdll = (SURFTdll_POINTER) getFunctionPointer(STRINGIFY(SURFTdll));
-    SURTENdll = (SURTENdll_POINTER) getFunctionPointer(STRINGIFY(SURTENdll));
-    TDFLSHdll = (TDFLSHdll_POINTER) getFunctionPointer(STRINGIFY(TDFLSHdll));
-    TEFLSHdll = (TEFLSHdll_POINTER) getFunctionPointer(STRINGIFY(TEFLSHdll));
-    THERM0dll = (THERM0dll_POINTER) getFunctionPointer(STRINGIFY(THERM0dll));
-    THERM2dll = (THERM2dll_POINTER) getFunctionPointer(STRINGIFY(THERM2dll));
-    THERM3dll = (THERM3dll_POINTER) getFunctionPointer(STRINGIFY(THERM3dll));
-    THERMdll = (THERMdll_POINTER) getFunctionPointer(STRINGIFY(THERMdll));
-    THFLSHdll = (THFLSHdll_POINTER) getFunctionPointer(STRINGIFY(THFLSHdll));
-    TPFLSHdll = (TPFLSHdll_POINTER) getFunctionPointer(STRINGIFY(TPFLSHdll));
-    TPRHOdll = (TPRHOdll_POINTER) getFunctionPointer(STRINGIFY(TPRHOdll));
-    TQFLSHdll = (TQFLSHdll_POINTER) getFunctionPointer(STRINGIFY(TQFLSHdll));
-    TRNPRPdll = (TRNPRPdll_POINTER) getFunctionPointer(STRINGIFY(TRNPRPdll));
-    TSFLSHdll = (TSFLSHdll_POINTER) getFunctionPointer(STRINGIFY(TSFLSHdll));
-    VIRBdll = (VIRBdll_POINTER) getFunctionPointer(STRINGIFY(VIRBdll));
-    VIRCdll = (VIRCdll_POINTER) getFunctionPointer(STRINGIFY(VIRCdll));
-    WMOLdll = (WMOLdll_POINTER) getFunctionPointer(STRINGIFY(WMOLdll));
-    XMASSdll = (XMASSdll_POINTER) getFunctionPointer(STRINGIFY(XMASSdll));
-    XMOLEdll = (XMOLEdll_POINTER) getFunctionPointer(STRINGIFY(XMOLEdll));
+    /* Set the pointers, platform independent
+     * 
+     * Example: RPVersion = (RPVersion_POINTER) getFunctionPointer(STRINGIFY(RPVersion));
+     * 
+     * ***MAGIC WARNING**!! X Macros in use
+     * See http://stackoverflow.com/a/148610
+     * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
+     */
+    #define X(name)  name = (name ## _POINTER) getFunctionPointer(STRINGIFY(name));
+       LIST_OF_REFPROP_FUNCTION_NAMES
+    #undef X
+    
     return COOLPROP_OK;
 }
 
@@ -507,18 +312,7 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
 
     // Abort check if Refprop has been loaded.
     if (RefpropdllInstance!=NULL) return true;
-// This unloading  does not make a difference
-//     // TODO: Remove this automatic unloading as soon as the bugs are fixed
-//     if (RefpropdllInstance!=NULL) {
-//         // Unload it on Linux and Mac, no problems on Windows
-//         #if defined(__ISLINUX__)
-//             dlclose (RefpropdllInstance);
-//             RefpropdllInstance = NULL;
-//         #elif defined(__ISAPPLE__)
-//             dlclose (RefpropdllInstance);
-//             RefpropdllInstance = NULL;
-//         #endif
-//     }
+
 
     // Store result of previous check.
     if (_REFPROP_supported) {
