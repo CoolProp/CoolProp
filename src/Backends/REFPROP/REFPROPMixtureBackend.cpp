@@ -1410,8 +1410,8 @@ long double REFPROPMixtureBackend::call_phixdll(long itau, long idel)
 }
 long double REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
 {
+    throw ValueError("Temporarily the PHI0dll function is not available for REFPROP");
 	double val = 0, tau = _tau, delta = _delta, __T = T(), __rho = rhomolar()/1000;
-    double dT_dtau;
 	if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
 	PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
     return static_cast<long double>(val)/pow(delta,idel)/pow(tau,itau);
