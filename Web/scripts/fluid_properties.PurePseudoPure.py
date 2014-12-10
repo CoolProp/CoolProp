@@ -28,8 +28,9 @@ bibtex_map = {'EOS': 'EOS',
               'CP0': ':math:`c_{p0}`',
               'CONDUCTIVITY': ':math:`\lambda`',
               'VISCOSITY': ':math:`\eta`',
-              'MELTING_LINE': 'melt'}
-bibtex_keys = ['EOS','CP0','CONDUCTIVITY','VISCOSITY','MELTING_LINE']
+              'MELTING_LINE': 'melt',
+              'SURFACE_TENSION': ':math:`\sigma`'}
+bibtex_keys = ['EOS','CP0','CONDUCTIVITY','VISCOSITY','MELTING_LINE','SURFACE_TENSION']
 
 fluids_path = os.path.join(web_dir,'fluid_properties','fluids')
 if not os.path.exists(fluids_path):
