@@ -1035,8 +1035,12 @@ long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
     
     conformal_state_solver(HEOS, HEOS_Reference, T0, rhomolar0);
 
-    // Update the reference fluid with the conformal state
+    // Update the reference fluid with the updated conformal state
     HEOS_Reference.update(DmolarT_INPUTS, rhomolar0*psi, T0);
+	
+	// Recalculate ESRR
+	f = HEOS.T()/T0;
+    h = rhomolar0/HEOS.rhomolar(); // Must be the ratio of MOLAR densities!!
     
     // **********************
     // Remaining calculations
@@ -1046,7 +1050,7 @@ long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
     long double eta_resid = HEOS_Reference.calc_viscosity_background();
 
     // The F factor
-    long double F_eta = sqrt(f)*pow(h, static_cast<long double>(-2.0/3.0))*sqrt(M/M0);
+    long double F_eta = sqrt(f)*pow(h, -2.0L/3.0L)*sqrt(M/M0);
 
     // The total viscosity considering the contributions of the fluid of interest and the reference fluid [Pa-s]
     long double eta = eta_dilute + eta_resid*F_eta;
@@ -1118,6 +1122,10 @@ long double TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS
 
     // Update the reference fluid with the conformal state
     HEOS_Reference.update(DmolarT_INPUTS, rhomolar0*psi, T0);
+	
+	// Recalculate ESRR
+	f = HEOS.T()/T0;
+    h = rhomolar0/HEOS.rhomolar(); // Must be the ratio of MOLAR densities!!
 
     // The reference fluid's contribution to the conductivity [W/m/K]
     long double lambda_resid = HEOS_Reference.calc_conductivity_background();
