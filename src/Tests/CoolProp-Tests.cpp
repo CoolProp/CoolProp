@@ -497,14 +497,14 @@ vel("m-Xylene", "T", 616, "D", 220, "L", 82.8e-3 , 1e-4),
 vel("p-Xylene", "T", 620, "D", 287, "L", 107.7e-3 , 1e-4),
 vel("EthylBenzene", "T", 617, "D", 316, "L", 140.2e-3, 1e-4),
 // dilute values
-vel("o-Xylene", "T", 300, "D", 1e-10, "L", 13.68e-3 , 1e-8),
-vel("o-Xylene", "T", 600, "D", 1e-10, "L", 4.16e-3 , 1e-8),
-vel("m-Xylene", "T", 300, "D", 1e-10, "L", 9.45e-3 , 1e-8),
-vel("m-Xylene", "T", 600, "D", 1e-10, "L", 40.6e-3 , 1e-8),
-vel("p-Xylene", "T", 300, "D", 1e-10, "L", 10.57e-3 , 1e-8),
-vel("p-Xylene", "T", 600, "D", 1e-10, "L", 41.73e-3 , 1e-8),
-vel("EthylBenzene", "T", 300, "D", 1e-10, "L", 9.71e-3, 1e-8),
-vel("EthylBenzene", "T", 600, "D", 1e-10, "L", 41.14e-3, 1e-8),
+vel("o-Xylene", "T", 300, "D", 1e-12, "L", 13.68e-3 , 1e-3),
+vel("o-Xylene", "T", 600, "D", 1e-12, "L", 41.6e-3 , 1e-3),
+vel("m-Xylene", "T", 300, "D", 1e-12, "L", 9.45e-3 , 1e-3),
+vel("m-Xylene", "T", 600, "D", 1e-12, "L", 40.6e-3 , 1e-3),
+vel("p-Xylene", "T", 300, "D", 1e-12, "L", 10.57e-3 , 1e-3),
+vel("p-Xylene", "T", 600, "D", 1e-12, "L", 41.73e-3 , 1e-3),
+vel("EthylBenzene", "T", 300, "D", 1e-12, "L", 9.71e-3, 1e-3),
+vel("EthylBenzene", "T", 600, "D", 1e-12, "L", 41.14e-3, 1e-3),
 
 };
 
