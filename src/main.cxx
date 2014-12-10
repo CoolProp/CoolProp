@@ -24,7 +24,7 @@ using namespace CoolProp;
 #include "crossplatform_shared_ptr.h"
 
 //#include <vld.h>
-
+/*
 void generate_melting_curve_data(const char* file_name, const char *fluid_name, double Tmin, double Tmax)
 {
 
@@ -56,7 +56,7 @@ struct element
     double d,t,ld;
     int l;
 };
-
+*/
 int main()
 {
 	#if 0
@@ -445,10 +445,53 @@ int main()
         int rr =0;
     }
     #endif
-    #if 1
+	#if 1
+	shared_ptr<CoolProp::AbstractState> CP(CoolProp::AbstractState::factory("HEOS", "Water"));
+	shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Water&Ethanol"));
+	std::vector<std::string> fluids = RP->fluid_names();
+	int rr = 3l;
+	#endif
+    #if 0
     { 
-        
+		//double B1 = HumidAir::HAPropsSI("B","T",283.73,"W",0,"P",101325);// = 283,73
+		//double B2 = HumidAir::HAPropsSI("B","T",193.92,"W",0,"P",101325);// = 193,92
+		//double B3 = HumidAir::HAPropsSI("B","T",194.21,"W",0,"P",101325);// = 193,92
+		shared_ptr<CoolProp::AbstractState> CP(CoolProp::AbstractState::factory("HEOS", "Water"));
+		shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Water"));
+		RP->update(PT_INPUTS, 101325, 300);
+		CP->update(PT_INPUTS, 101325, 300);
+
+		double are1 = RP->molar_mass();
+		double are14 = CP->molar_mass();
+		
+		
+		//double ar1 = RP->first_partial_deriv(iHmass,iT,iP);
+		//double ar2 = CP->first_partial_deriv(iHmass,iT,iP);
+		//double a01 = RP->cpmass();
+		//double a02 = CP->cpmass();
+		
+		std::cout << format("alphar %Lg %Lg\n", RP->alphar(),               CP->alphar());
+		std::cout << format("dalphar_dDelta %Lg %Lg\n", RP->dalphar_dDelta(),       CP->dalphar_dDelta());
+		std::cout << format("dalphar_dTau %Lg %Lg\n", RP->dalphar_dTau(),         CP->dalphar_dTau());
+		std::cout << format("d2alphar_dDelta2 %Lg %Lg\n", RP->d2alphar_dDelta2(),     CP->d2alphar_dDelta2());
+		std::cout << format("d2alphar_dDelta_dTau %Lg %Lg\n", RP->d2alphar_dDelta_dTau(), CP->d2alphar_dDelta_dTau());
+		std::cout << format("d2alphar_dTau2 %Lg %Lg\n", RP->d2alphar_dTau2(),       CP->d2alphar_dTau2());
+		
+		std::cout << format("alpha0 %Lg %Lg\n", RP->alpha0(),               CP->alpha0());
+		std::cout << format("dalpha0_dDelta %Lg %Lg\n", RP->dalpha0_dDelta(),       CP->dalpha0_dDelta());
+		std::cout << format("dalpha0_dTau %Lg %Lg\n", RP->dalpha0_dTau(),         CP->dalpha0_dTau());
+		std::cout << format("d2alpha0_dDelta2 %Lg %Lg\n", RP->d2alpha0_dDelta2(),     CP->d2alpha0_dDelta2());
+		std::cout << format("d2alpha0_dDelta_dTau %Lg %Lg\n", RP->d2alpha0_dDelta_dTau(), CP->d2alpha0_dDelta_dTau());
+		std::cout << format("d2alpha0_dTau2 %Lg %Lg\n", RP->d2alpha0_dTau2(),       CP->d2alpha0_dTau2());
+		
+		double T1 = HumidAir::HAPropsSI("T", "V", 0.83, "R", 1, "P", 101325);// = 283,73
+		double T32 = HumidAir::HAPropsSI("T","B",273.15,"W",0,"P",101325);// = 193,92
+		double T2 = HumidAir::HAPropsSI("T","B",273.16,"W",0,"P",101325);// = 193,92
+		double T3 = HumidAir::HAPropsSI("T","B",273.40,"W",0,"P",101325);// = 193,92
+		double dd8 = PropsSI("D","T",8.5525000000000006e+01,"Q",0,"REFPROP::Propane");
+		
         ::set_debug_level(0);
+		::set_debug_level(0);
         
         shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Methane&Ethane"));
         std::vector<long double> z(2, 0.8); z[1] = 1-z[0];
