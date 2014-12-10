@@ -186,6 +186,7 @@ static char default_reference_state[] = "DEF";
  QMASSdll_POINTER QMASSdll;
  QMOLEdll_POINTER QMOLEdll;
  RESIDUALdll_POINTER RESIDUALdll;
+ REDXdll_POINTER REDXdll;
  RMIX2dll_POINTER RMIX2dll;
  SATDdll_POINTER SATDdll;
  SATEdll_POINTER SATEdll;
@@ -316,6 +317,7 @@ double setFunctionPointers()
     PUREFLDdll = (PUREFLDdll_POINTER) getFunctionPointer(PUREFLDdll_NAME);
     RESIDUALdll = (RESIDUALdll_POINTER) getFunctionPointer(RESIDUALdll_NAME);
 	RMIX2dll = (RMIX2dll_POINTER) getFunctionPointer(RMIX2dll_NAME);
+	REDXdll = (REDXdll_POINTER) getFunctionPointer(REDXdll_NAME);
     QMASSdll = (QMASSdll_POINTER) getFunctionPointer(QMASSdll_NAME);
     QMOLEdll = (QMOLEdll_POINTER) getFunctionPointer(QMOLEdll_NAME);
     SATDdll = (SATDdll_POINTER) getFunctionPointer(SATDdll_NAME);
@@ -718,24 +720,14 @@ long double REFPROPMixtureBackend::calc_rhomolar_critical(){
     return static_cast<long double>(dcrit_mol_L*1000);
 };
 long double REFPROPMixtureBackend::calc_T_reducing(){
-    if (mole_fractions.size() != 1){throw ValueError("calc_T_reducing only valid for one component");};
-	long ierr = 0, i, i1 = 0, i2 = 1, i3 = 0;
-    char herr[255], h[255], input[] = "tz";
-	double Tz;
-	std::vector<double> z(255);
-	PASSCMNdll(input, &i1, &i2, &i3, h,&i,&Tz,&(z[0]),&ierr,herr,255,255,255);
-	if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-    return static_cast<long double>(Tz);
+    double rhored_mol_L = 0, Tr = 0;
+	REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
+    return static_cast<long double>(Tr);
 };
 long double REFPROPMixtureBackend::calc_rhomolar_reducing(){
-    if (mole_fractions.size() != 1){throw ValueError("calc_rhomolar_reducing only valid for one component");};
-	long ierr = 0, i = 0, i1 = 0, i2 = 1, i3 = 0;
-    char herr[255] = "", h[255] = "", input[255] = "rhoz";
-	double rhored_mol_L;
-	std::vector<double> z(20);
-	PASSCMNdll(input, &i1, &i2, &i3, h, &i, &rhored_mol_L,&(z[0]),&ierr,herr,255,255,255);
-	if (ierr > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-   return static_cast<long double>(rhored_mol_L*1000);
+	double rhored_mol_L = 0, Tr = 0;
+	REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
+    return static_cast<long double>(rhored_mol_L*1000);
 };
 long double REFPROPMixtureBackend::calc_Ttriple(){
     if (mole_fractions.size() != 1){throw ValueError("calc_Ttriple cannot be evaluated for mixtures");}

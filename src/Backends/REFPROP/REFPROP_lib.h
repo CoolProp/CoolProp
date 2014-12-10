@@ -92,6 +92,7 @@
 #  define QMASSdll QMASSdll
 #  define QMOLEdll QMOLEdll
 #  define RESIDUALdll RESIDUALdll
+#  define REDXdll REDXdll
 #  define RMIX2dll RMIX2dll
 #  define SATDdll SATDdll
 #  define SATEdll SATEdll
@@ -213,6 +214,7 @@
 #  define QMOLEdll qmoledll_
 #  define RESIDUALdll residualdll_
 #  define RMIX2dll rmix2dll_
+#  define REDXdll redxdll_
 #  define SATDdll satddll_
 #  define SATEdll satedll_
 #  define SATHdll sathdll_
@@ -323,6 +325,7 @@
 #  define QMASSdll qmassdll_
 #  define QMOLEdll qmoledll_
 #  define RESIDUALdll residualdll_
+#  define REDXdll redxdll_
 #  define RMIX2dll rmix2dll_
 #  define SATDdll satddll_
 #  define SATEdll satedll_
@@ -432,6 +435,7 @@
 #  define QMASSdll qmassdll
 #  define QMOLEdll qmoledll
 #  define RESIDUALdll residualdll
+#  define REDXdll redxdll
 #  define RMIX2dll rmix2dll
 #  define SATDdll satddll
 #  define SATEdll satedll
@@ -553,6 +557,7 @@
 #define QMASSdll_NAME FUNCTION_NAME(QMASSdll)
 #define QMOLEdll_NAME FUNCTION_NAME(QMOLEdll)
 #define RESIDUALdll_NAME FUNCTION_NAME(RESIDUALdll)
+#define REDXdll_NAME FUNCTION_NAME(REDXdll)
 #define RMIX2dll_NAME FUNCTION_NAME(RMIX2dll)
 #define SATDdll_NAME FUNCTION_NAME(SATDdll)
 #define SATEdll_NAME FUNCTION_NAME(SATEdll)
@@ -671,6 +676,7 @@ extern "C" {
   typedef void (CALLCONV QMASSdll_TYPE)(double *,double *,double *,double *,double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV QMOLEdll_TYPE)(double *,double *,double *,double *,double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV RESIDUALdll_TYPE)(double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *);
+  typedef void (CALLCONV REDXdll_TYPE)(double *,double *,double *);
   typedef void (CALLCONV RMIX2dll_TYPE)(double *,double *);
   typedef void (CALLCONV SATDdll_TYPE)(double *,double *,long *,long *,double *,double *,double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV SATEdll_TYPE)(double *,double *,long *,long *,long *,double *,double *,double *,long *,double *,double *,double *,long *,char*,long );
@@ -884,6 +890,7 @@ extern "C" {
   typedef QMASSdll_TYPE * QMASSdll_POINTER;
   typedef QMOLEdll_TYPE * QMOLEdll_POINTER;
   typedef RESIDUALdll_TYPE * RESIDUALdll_POINTER;
+  typedef REDXdll_TYPE * REDXdll_POINTER;
   typedef RMIX2dll_TYPE * RMIX2dll_POINTER;
   typedef SATDdll_TYPE * SATDdll_POINTER;
   typedef SATEdll_TYPE * SATEdll_POINTER;
