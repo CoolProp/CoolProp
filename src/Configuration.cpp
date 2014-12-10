@@ -36,6 +36,16 @@ configuration_keys config_string_to_key(std::string &s)
     
 static Configuration config;
 
+void set_config_bool(configuration_keys key, bool val){ 
+    config.get_item(key).set_bool(val);
+}
+void set_config_double(configuration_keys key, double val){ 
+	config.get_item(key).set_double(val); 
+}
+void set_config_string(configuration_keys key, std::string val){ 
+    config.get_item(key).set_string(val); 
+}
+
 bool get_config_bool(configuration_keys key){ 
     return static_cast<bool>(config.get_item(key)); 
 }

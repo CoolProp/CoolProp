@@ -96,6 +96,11 @@ list(REMOVE_DUPLICATES APP_INCLUDE_DIRS)
 
 include_directories(${APP_INCLUDE_DIRS})
 
+set(SWIG_DEPENDENCIES
+    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
+    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
+    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
+    ${CMAKE_SOURCE_DIR}/include/Configuration.h)
 
 #######################################
 #         REQUIRED MODULES            #
@@ -368,11 +373,7 @@ if (COOLPROP_OCTAVE_MODULE)
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   
-  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
-    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
-    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
-    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
-  ) 
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES}  ) 
   SWIG_ADD_MODULE(CoolProp octave ${I_FILE} ${APP_SOURCES})
   
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -418,11 +419,7 @@ if (COOLPROP_CSHARP_MODULE)
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
 	
-  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
-    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
-    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
-    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
-  )     
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   # Set properties before adding module
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   if (WIN32)
@@ -499,11 +496,7 @@ if (COOLPROP_JAVA_MODULE)
   
   add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
 
-  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
-    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
-    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
-    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
-  ) 
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   SWIG_ADD_MODULE(CoolProp java ${I_FILE} ${APP_SOURCES})
 
   if (WIN32)
@@ -565,11 +558,7 @@ if (COOLPROP_PHP_MODULE)
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
 
-  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
-    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
-    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
-    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
-  ) 
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   SWIG_ADD_MODULE(CoolProp php ${I_FILE} ${APP_SOURCES})
 
   if (WIN32)
@@ -607,11 +596,7 @@ if (COOLPROP_SCILAB_SWIG_MODULE)
   	MESSAGE(FATAL_ERROR "Quitting.")
   endif()
 
-  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
-    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
-    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
-    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
-  ) 
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   set(SCILAB_INCLUDE_PATH "$ENV{SCILAB_ROOT}/include")
     	
   set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
@@ -657,11 +642,7 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
 
   list (APPEND APP_SOURCES ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def) # To export mexFunction
 
-  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS
-    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
-    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
-    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
-  ) 
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS SWIG_DEPENDENCIES)
   set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}")
   string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
