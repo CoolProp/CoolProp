@@ -317,6 +317,9 @@ double AbstractState::pmax(void){
 double AbstractState::T_critical(void){
     return calc_T_critical();
 }
+double AbstractState::T_reducing(void){
+    return calc_T_reducing();
+}
 double AbstractState::p_critical(void){
     return calc_p_critical();
 }
@@ -328,6 +331,12 @@ double AbstractState::rhomolar_critical(void){
 }
 double AbstractState::rhomass_critical(void){
     return calc_rhomolar_critical()*molar_mass();
+}
+double AbstractState::rhomolar_reducing(void){
+    return calc_rhomolar_reducing();
+}
+double AbstractState::rhomass_reducing(void){
+    return calc_rhomolar_reducing()*molar_mass();
 }
 double AbstractState::hmolar(void){
     if (!_hmolar) _hmolar = calc_hmolar();
@@ -402,7 +411,227 @@ double AbstractState::dBvirial_dT(void){ return calc_dBvirial_dT(); }
 double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 double AbstractState::compressibility_factor(void){ return calc_compressibility_factor(); }
 
+// Get the derivatives of the parameters in the partial derivative with respect to T and rho
+void get_dT_drho(AbstractState &AS, parameters index, long double &dT, long double &drho)
+{
+    long double T = AS.T(),
+                rho = AS.rhomolar(),
+                rhor = AS.rhomolar_reducing(),
+                Tr = AS.T_reducing(),
+                dT_dtau = -pow(T, 2)/Tr,
+                R = AS.gas_constant(),
+                delta = rho/rhor,
+                tau = Tr/T;
+    
+    switch (index)
+    {
+    case iT:
+        dT = 1; drho = 0; break;
+    case iDmolar:
+        dT = 0; drho = 1; break;
+    case iDmass:
+        dT = 0; drho = AS.molar_mass(); break;
+    case iP:
+    {
+        // dp/drho|T
+        drho = R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2());
+        // dp/dT|rho
+        dT = rho*R*(1+delta*AS.dalphar_dDelta() - tau*delta*AS.d2alphar_dDelta_dTau());
+        break;
+    }
+    case iHmass:
+    case iHmolar:
+    {
+        // dh/dT|rho
+        dT = R*(-pow(tau,2)*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()) + (1+delta*AS.dalphar_dDelta()-tau*delta*AS.d2alphar_dDelta_dTau()));
+        // dh/drhomolar|T
+        drho = T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2());
+        if (index == iHmass){
+            // dhmolar/drhomolar|T * dhmass/dhmolar where dhmass/dhmolar = 1/mole mass
+            drho /= AS.molar_mass();
+            dT /= AS.molar_mass();
+        }
+        break;
+    }
+    case iSmass:
+    case iSmolar:
+    {
+        // ds/dT|rho
+        dT = R/T*(-pow(tau,2)*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()));
+        // ds/drho|T
+        drho = R/rho*(-(1+delta*AS.dalphar_dDelta()-tau*delta*AS.d2alphar_dDelta_dTau()));
+        if (index == iSmass){
+            // ds/drho|T / drhomass/drhomolar where drhomass/drhomolar = mole mass
+            drho /= AS.molar_mass();
+            dT /= AS.molar_mass();
+        }
+        break;
+    }
+    case iUmass:
+    case iUmolar:
+    {
+        // du/dT|rho
+        dT = R*(-pow(tau,2)*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()));
+        // du/drho|T
+        drho = AS.T()*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau());
+        if (index == iUmass){
+            // du/drho|T / drhomass/drhomolar where drhomass/drhomolar = mole mass
+            drho /= AS.molar_mass();
+            dT /= AS.molar_mass();
+        }
+        break;
+    }
+    case iTau:
+        dT = 1/dT_dtau; drho = 0; break;
+    case iDelta:
+        dT = 0; drho = 1/rhor; break;
+    default:
+        throw ValueError(format("input to get_dT_drho[%s] is invalid",get_parameter_information(index,"short").c_str()));
+    }
+}
+void get_dT_drho_second_derivatives(AbstractState &AS, int index, long double &dT2, long double &drho_dT, long double &drho2)
+{
+	long double T = AS.T(),
+                rho = AS.rhomolar(),
+                rhor = AS.rhomolar_reducing(),
+                Tr = AS.T_reducing(),
+                dT_dtau = -pow(T, 2)/Tr,
+                R = AS.gas_constant(),
+                delta = rho/rhor,
+                tau = Tr/T;
 
+    // Here we use T and rho as independent variables since derivations are already done by Thorade, 2013, 
+    // Partial derivatives of thermodynamic state propertiesfor dynamic simulation, DOI 10.1007/s12665-013-2394-z
+    
+    switch (index)
+    {
+    case iT:
+        dT2 = 0;  // d2T_dT2
+        drho_dT = 0; // d2T_drho_dT
+        drho2 = 0; 
+        break;
+    case iDmolar:
+        dT2 = 0; // d2rhomolar_dtau2
+        drho2 = 0;
+        drho_dT = 0;
+        break;
+    case iTau:
+        dT2 = 2*Tr/pow(T,3); drho_dT = 0; drho2 = 0; break;
+    case iDelta:
+        dT2 = 0; drho_dT = 0; drho2 = 0; break;
+    case iP:
+    {
+        drho2 = T*R/rho*(2*delta*AS.dalphar_dDelta()+4*pow(delta,2)*AS.d2alphar_dDelta2()+pow(delta,3)*AS.d3alphar_dDelta3());
+        dT2 = rho*R/T*(pow(tau,2)*delta*AS.d3alphar_dDelta_dTau2());
+        drho_dT = R*(1+2*delta*AS.dalphar_dDelta() +pow(delta,2)*AS.d2alphar_dDelta2() - 2*delta*tau*AS.d2alphar_dDelta_dTau() - tau*pow(delta, 2)*AS.d3alphar_dDelta2_dTau());
+        break;
+    }
+    case iHmass:
+    case iHmolar:
+    {
+        // d2h/drho2|T
+        drho2 = R*T*pow(delta/rho,2)*(tau*AS.d3alphar_dDelta2_dTau() + 2*AS.d2alphar_dDelta2() + delta*AS.d3alphar_dDelta3());
+        // d2h/dT2|rho
+        dT2 = R/T*pow(tau, 2)*(tau*(AS.d3alpha0_dTau3()+AS.d3alphar_dTau3()) + 2*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()) + delta*AS.d3alphar_dDelta_dTau2());
+        // d2h/drho/dT
+        drho_dT = R/rho*delta*(delta*AS.d2alphar_dDelta2() - pow(tau,2)*AS.d3alphar_dDelta_dTau2() + AS.dalphar_dDelta() - tau*delta*AS.d3alphar_dDelta2_dTau() - tau*AS.d2alphar_dDelta_dTau());
+        if (index == iHmass){
+            drho2 /= AS.molar_mass();
+            drho_dT /= AS.molar_mass();
+            dT2 /= AS.molar_mass();
+        }
+        break;
+    }
+    case iSmass:
+    case iSmolar:
+    {
+        // d2s/rho2|T
+        drho2 = R/pow(rho,2)*(1-pow(delta,2)*AS.d2alphar_dDelta2() + tau*pow(delta,2)*AS.d3alphar_dDelta2_dTau());
+        // d2s/dT2|rho
+        dT2 = R*pow(tau/T, 2)*(tau*(AS.d3alpha0_dTau3()+AS.d3alphar_dTau3())+3*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()));
+        // d2s/drho/dT
+        drho_dT = R/(T*rho)*(-pow(tau,2)*delta*AS.d3alphar_dDelta_dTau2());
+        if (index == iSmass){
+            drho2 /= AS.molar_mass();
+            drho_dT /= AS.molar_mass();
+            dT2 /= AS.molar_mass();
+        }
+        break;
+    }
+    case iUmass:
+    case iUmolar:
+    {
+        // d2u/rho2|T
+        drho2 = R*T*tau*pow(delta/rho,2)*AS.d3alphar_dDelta2_dTau();
+        // d2u/dT2|rho
+        dT2 = R/T*pow(tau, 2)*(tau*(AS.d3alpha0_dTau3()+AS.d3alphar_dTau3())+2*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()));
+        // d2u/drho/dT
+        drho_dT = R/rho*(-pow(tau,2)*delta*AS.d3alphar_dDelta_dTau2());
+        if (index == iUmass){
+            drho2 /= AS.molar_mass();
+            drho_dT /= AS.molar_mass();
+            dT2 /= AS.molar_mass();
+        }
+        break;
+    }
+    default:
+        throw ValueError(format("input to get_dT_drho_second_derivatives[%s] is invalid", get_parameter_information(index,"short").c_str()));
+    }
+}
+long double AbstractState::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
+{
+	long double dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
+
+    get_dT_drho(*this, Of, dOf_dT, dOf_drho);
+    get_dT_drho(*this, Wrt, dWrt_dT, dWrt_drho);
+    get_dT_drho(*this, Constant, dConstant_dT, dConstant_drho);
+
+    return (dOf_dT*dConstant_drho-dOf_drho*dConstant_dT)/(dWrt_dT*dConstant_drho-dWrt_drho*dConstant_dT);
+}
+long double AbstractState::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
+{
+    long double dOf1_dT, dOf1_drho, dWrt1_dT, dWrt1_drho, dConstant1_dT, dConstant1_drho, d2Of1_dT2, d2Of1_drhodT, 
+                d2Of1_drho2, d2Wrt1_dT2, d2Wrt1_drhodT, d2Wrt1_drho2, d2Constant1_dT2, d2Constant1_drhodT, d2Constant1_drho2,
+                dWrt2_dT, dWrt2_drho, dConstant2_dT, dConstant2_drho, N, D, dNdrho__T, dDdrho__T, dNdT__rho, dDdT__rho,
+                dderiv1_drho, dderiv1_dT, second;
+
+    // First and second partials needed for terms involved in first derivative
+    get_dT_drho(*this, Of1, dOf1_dT, dOf1_drho);
+    get_dT_drho(*this, Wrt1, dWrt1_dT, dWrt1_drho);
+    get_dT_drho(*this, Constant1, dConstant1_dT, dConstant1_drho);
+    get_dT_drho_second_derivatives(*this, Of1, d2Of1_dT2, d2Of1_drhodT, d2Of1_drho2);
+    get_dT_drho_second_derivatives(*this, Wrt1, d2Wrt1_dT2, d2Wrt1_drhodT, d2Wrt1_drho2);
+    get_dT_drho_second_derivatives(*this, Constant1, d2Constant1_dT2, d2Constant1_drhodT, d2Constant1_drho2);
+    
+    // First derivatives of terms involved in the second derivative
+    get_dT_drho(*this, Wrt2, dWrt2_dT, dWrt2_drho);
+    get_dT_drho(*this, Constant2, dConstant2_dT, dConstant2_drho);
+    
+    // Numerator and denominator of first partial derivative term
+    N = dOf1_dT*dConstant1_drho - dOf1_drho*dConstant1_dT;
+    D = dWrt1_dT*dConstant1_drho - dWrt1_drho*dConstant1_dT;
+    
+    // Derivatives of the numerator and denominator of the first partial derivative term with respect to rho, T held constant
+    // They are of similar form, with Of1 and Wrt1 swapped
+    dNdrho__T = dOf1_dT*d2Constant1_drho2 + d2Of1_drhodT*dConstant1_drho - dOf1_drho*d2Constant1_drhodT - d2Of1_drho2*dConstant1_dT;
+    dDdrho__T = dWrt1_dT*d2Constant1_drho2 + d2Wrt1_drhodT*dConstant1_drho - dWrt1_drho*d2Constant1_drhodT - d2Wrt1_drho2*dConstant1_dT;
+    
+    // Derivatives of the numerator and denominator of the first partial derivative term with respect to T, rho held constant
+    // They are of similar form, with Of1 and Wrt1 swapped
+    dNdT__rho = dOf1_dT*d2Constant1_drhodT + d2Of1_dT2*dConstant1_drho - dOf1_drho*d2Constant1_dT2 - d2Of1_drhodT*dConstant1_dT;
+    dDdT__rho = dWrt1_dT*d2Constant1_drhodT + d2Wrt1_dT2*dConstant1_drho - dWrt1_drho*d2Constant1_dT2 - d2Wrt1_drhodT*dConstant1_dT;
+    
+    // First partial of first derivative term with respect to T
+    dderiv1_drho = (D*dNdrho__T - N*dDdrho__T)/pow(D, 2);
+    
+    // First partial of first derivative term with respect to rho
+    dderiv1_dT = (D*dNdT__rho - N*dDdT__rho)/pow(D, 2);
+
+    // Complete second derivative
+    second = (dderiv1_dT*dConstant2_drho - dderiv1_drho*dConstant2_dT)/(dWrt2_dT*dConstant2_drho - dWrt2_drho*dConstant2_dT);
+    
+    return second;
+}
 //    // ----------------------------------------
 //    // Smoothing functions for density
 //    // ----------------------------------------

@@ -176,16 +176,26 @@ public:
     long double calc_fugacity_coefficient(int i);
     long double calc_phase_identification_parameter(void);
 
+	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
     long double calc_alphar(void);
-    long double calc_dalphar_dDelta(void);
-    long double calc_dalphar_dTau(void);
-    long double calc_d2alphar_dDelta2(void);
-    long double calc_d2alphar_dDelta_dTau(void);
-    long double calc_d2alphar_dTau2(void);    
-    long double calc_d3alphar_dDelta3(void);
-    long double calc_d3alphar_dDelta2_dTau(void);
-    long double calc_d3alphar_dDelta_dTau2(void);
-    long double calc_d3alphar_dTau3(void);
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta}\f$ (dimensionless)
+	long double calc_dalphar_dDelta(void);
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau}\f$ (dimensionless)
+	long double calc_dalphar_dTau(void);
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta}\f$ (dimensionless)
+	long double calc_d2alphar_dDelta2(void);
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau}\f$ (dimensionless)
+	long double calc_d2alphar_dDelta_dTau(void);
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau}\f$ (dimensionless)
+	long double calc_d2alphar_dTau2(void);    
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta}\f$ (dimensionless)
+	long double calc_d3alphar_dDelta3(void);
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau}\f$ (dimensionless)
+	long double calc_d3alphar_dDelta2_dTau(void);
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau}\f$ (dimensionless)
+	long double calc_d3alphar_dDelta_dTau2(void);
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau}\f$ (dimensionless)
+	long double calc_d3alphar_dTau3(void);
 
     long double calc_alpha0(void);
     long double calc_dalpha0_dDelta(void);
@@ -216,10 +226,13 @@ public:
     long double calc_Tmax_sat(void);
     void calc_Tmin_sat(long double &Tmin_satL, long double &Tmin_satV);
     void calc_pmin_sat(long double &pmin_satL, long double &pmin_satV);
-
+	
     long double calc_T_critical(void);
     long double calc_p_critical(void);
     long double calc_rhomolar_critical(void);
+	
+	long double calc_T_reducing(void){return get_reducing_state().T;};
+    long double calc_rhomolar_reducing(void){return get_reducing_state().rhomolar;};
 
     std::string calc_name(void);
 	std::vector<std::string> calc_fluid_names(void);
@@ -257,16 +270,6 @@ public:
     SimpleState calc_reducing_state_nocache(const std::vector<long double> & mole_fractions);
 
     const CoolProp::SimpleState & get_reducing_state(){calc_reducing_state(); return _reducing;};
-    
-    /**
-    In a general way we can calculate any first partial derivative based on calculating derivatives with respect to the fundamental variables of the EOS, \f$\tau\f$ and \f$\delta\f$
-    \f[
-    \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta}{\left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta}
-    \f]
-    */
-    long double calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
-    
-    long double calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
 
     void update_states();
     

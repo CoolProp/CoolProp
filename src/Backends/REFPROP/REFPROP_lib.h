@@ -75,11 +75,14 @@
 #  define MELTTdll MELTTdll
 #  define MLTH2Odll MLTH2Odll
 #  define NAMEdll NAMEdll
+#  define PASSCMNdll PASSCMN
 #  define PDFL1dll PDFL1dll
 #  define PDFLSHdll PDFLSHdll
 #  define PEFLSHdll PEFLSHdll
 #  define PHFL1dll PHFL1dll
 #  define PHFLSHdll PHFLSHdll
+#  define PHIXdll PHIXdll
+#  define PHI0dll PHI0dll
 #  define PQFLSHdll PQFLSHdll
 #  define PREOSdll PREOSdll
 #  define PRESSdll PRESSdll
@@ -89,6 +92,8 @@
 #  define QMASSdll QMASSdll
 #  define QMOLEdll QMOLEdll
 #  define RESIDUALdll RESIDUALdll
+#  define REDXdll REDXdll
+#  define RMIX2dll RMIX2dll
 #  define SATDdll SATDdll
 #  define SATEdll SATEdll
 #  define SATHdll SATHdll
@@ -191,11 +196,14 @@
 #  define MELTTdll melttdll_
 #  define MLTH2Odll mlth2odll_
 #  define NAMEdll namedll_
+#  define PASSCMNdll passcmn_
 #  define PDFL1dll pdfl1dll_
 #  define PDFLSHdll pdflshdll_
 #  define PEFLSHdll peflshdll_
 #  define PHFL1dll phfl1dll_
 #  define PHFLSHdll phflshdll_
+#  define PHIXdll phixdll_
+#  define PHI0dll phi0dll_
 #  define PQFLSHdll pqflshdll_
 #  define PREOSdll preosdll_
 #  define PRESSdll pressdll_
@@ -205,6 +213,8 @@
 #  define QMASSdll qmassdll_
 #  define QMOLEdll qmoledll_
 #  define RESIDUALdll residualdll_
+#  define RMIX2dll rmix2dll_
+#  define REDXdll redxdll_
 #  define SATDdll satddll_
 #  define SATEdll satedll_
 #  define SATHdll sathdll_
@@ -298,11 +308,14 @@
 #  define MELTTdll melttdll_
 #  define MLTH2Odll mlth2odll_
 #  define NAMEdll namedll_
+#  define PASSCMNdll passcmn_
 #  define PDFL1dll pdfl1dll_
 #  define PDFLSHdll pdflshdll_
 #  define PEFLSHdll peflshdll_
 #  define PHFL1dll phfl1dll_
 #  define PHFLSHdll phflshdll_
+#  define PHIXdll phixdll_
+#  define PHI0dll phi0dll_
 #  define PQFLSHdll pqflshdll_
 #  define PREOSdll preosdll_
 #  define PRESSdll pressdll_
@@ -312,6 +325,8 @@
 #  define QMASSdll qmassdll_
 #  define QMOLEdll qmoledll_
 #  define RESIDUALdll residualdll_
+#  define REDXdll redxdll_
+#  define RMIX2dll rmix2dll_
 #  define SATDdll satddll_
 #  define SATEdll satedll_
 #  define SATHdll sathdll_
@@ -403,11 +418,14 @@
 #  define MELTTdll melttdll
 #  define MLTH2Odll mlth2odll
 #  define NAMEdll namedll
+#  define PASSCMNdll passcmn
 #  define PDFL1dll pdfl1dll
 #  define PDFLSHdll pdflshdll
 #  define PEFLSHdll peflshdll
 #  define PHFL1dll phfl1dll
 #  define PHFLSHdll phflshdll
+#  define PHIXdll phixdll
+#  define PHI0dll phi0dll
 #  define PQFLSHdll pqflshdll
 #  define PREOSdll preosdll
 #  define PRESSdll pressdll
@@ -417,6 +435,8 @@
 #  define QMASSdll qmassdll
 #  define QMOLEdll qmoledll
 #  define RESIDUALdll residualdll
+#  define REDXdll redxdll
+#  define RMIX2dll rmix2dll
 #  define SATDdll satddll
 #  define SATEdll satedll
 #  define SATHdll sathdll
@@ -520,11 +540,14 @@
 #define MELTTdll_NAME FUNCTION_NAME(MELTTdll)
 #define MLTH2Odll_NAME FUNCTION_NAME(MLTH2Odll)
 #define NAMEdll_NAME FUNCTION_NAME(NAMEdll)
+#define PASSCMNdll_NAME FUNCTION_NAME(PASSCMNdll)
 #define PDFL1dll_NAME FUNCTION_NAME(PDFL1dll)
 #define PDFLSHdll_NAME FUNCTION_NAME(PDFLSHdll)
 #define PEFLSHdll_NAME FUNCTION_NAME(PEFLSHdll)
 #define PHFL1dll_NAME FUNCTION_NAME(PHFL1dll)
 #define PHFLSHdll_NAME FUNCTION_NAME(PHFLSHdll)
+#define PHIXdll_NAME FUNCTION_NAME(PHIXdll)
+#define PHI0dll_NAME FUNCTION_NAME(PHI0dll)
 #define PQFLSHdll_NAME FUNCTION_NAME(PQFLSHdll)
 #define PREOSdll_NAME FUNCTION_NAME(PREOSdll)
 #define PRESSdll_NAME FUNCTION_NAME(PRESSdll)
@@ -534,6 +557,8 @@
 #define QMASSdll_NAME FUNCTION_NAME(QMASSdll)
 #define QMOLEdll_NAME FUNCTION_NAME(QMOLEdll)
 #define RESIDUALdll_NAME FUNCTION_NAME(RESIDUALdll)
+#define REDXdll_NAME FUNCTION_NAME(REDXdll)
+#define RMIX2dll_NAME FUNCTION_NAME(RMIX2dll)
 #define SATDdll_NAME FUNCTION_NAME(SATDdll)
 #define SATEdll_NAME FUNCTION_NAME(SATEdll)
 #define SATHdll_NAME FUNCTION_NAME(SATHdll)
@@ -634,11 +659,14 @@ extern "C" {
   typedef void (CALLCONV MELTTdll_TYPE)(double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV MLTH2Odll_TYPE)(double *,double *,double *);
   typedef void (CALLCONV NAMEdll_TYPE)(long *,char*,char*,char*,long ,long ,long );
+  typedef void (CALLCONV PASSCMNdll_TYPE)(char *,long *,long *,long *,char *,long*,double *, double *, long*, char*, long, long, long);
   typedef void (CALLCONV PDFL1dll_TYPE)(double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV PDFLSHdll_TYPE)(double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV PEFLSHdll_TYPE)(double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV PHFL1dll_TYPE)(double *,double *,double *,long *,double *,double *,long *,char*,long );
   typedef void (CALLCONV PHFLSHdll_TYPE)(double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,long *,char*,long );
+  typedef void (CALLCONV PHIXdll_TYPE)(long *,long *,double *,double *,double *, double *);
+  typedef void (CALLCONV PHI0dll_TYPE)(long *,long *,double *,double *,double *, double *);
   typedef void (CALLCONV PQFLSHdll_TYPE)(double *,double *,double *,long *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV PREOSdll_TYPE)(long *);
   typedef void (CALLCONV PRESSdll_TYPE)(double *,double *,double *,double *);
@@ -648,6 +676,8 @@ extern "C" {
   typedef void (CALLCONV QMASSdll_TYPE)(double *,double *,double *,double *,double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV QMOLEdll_TYPE)(double *,double *,double *,double *,double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV RESIDUALdll_TYPE)(double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *);
+  typedef void (CALLCONV REDXdll_TYPE)(double *,double *,double *);
+  typedef void (CALLCONV RMIX2dll_TYPE)(double *,double *);
   typedef void (CALLCONV SATDdll_TYPE)(double *,double *,long *,long *,double *,double *,double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV SATEdll_TYPE)(double *,double *,long *,long *,long *,double *,double *,double *,long *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV SATHdll_TYPE)(double *,double *,long *,long *,long *,double *,double *,double *,long *,double *,double *,double *,long *,char*,long );
@@ -843,11 +873,14 @@ extern "C" {
   typedef MELTTdll_TYPE * MELTTdll_POINTER;
   typedef MLTH2Odll_TYPE * MLTH2Odll_POINTER;
   typedef NAMEdll_TYPE * NAMEdll_POINTER;
+  typedef PASSCMNdll_TYPE * PASSCMNdll_POINTER;
   typedef PDFL1dll_TYPE * PDFL1dll_POINTER;
   typedef PDFLSHdll_TYPE * PDFLSHdll_POINTER;
   typedef PEFLSHdll_TYPE * PEFLSHdll_POINTER;
   typedef PHFL1dll_TYPE * PHFL1dll_POINTER;
   typedef PHFLSHdll_TYPE * PHFLSHdll_POINTER;
+  typedef PHIXdll_TYPE * PHIXdll_POINTER;
+  typedef PHI0dll_TYPE * PHI0dll_POINTER;
   typedef PQFLSHdll_TYPE * PQFLSHdll_POINTER;
   typedef PREOSdll_TYPE * PREOSdll_POINTER;
   typedef PRESSdll_TYPE * PRESSdll_POINTER;
@@ -857,6 +890,8 @@ extern "C" {
   typedef QMASSdll_TYPE * QMASSdll_POINTER;
   typedef QMOLEdll_TYPE * QMOLEdll_POINTER;
   typedef RESIDUALdll_TYPE * RESIDUALdll_POINTER;
+  typedef REDXdll_TYPE * REDXdll_POINTER;
+  typedef RMIX2dll_TYPE * RMIX2dll_POINTER;
   typedef SATDdll_TYPE * SATDdll_POINTER;
   typedef SATEdll_TYPE * SATEdll_POINTER;
   typedef SATHdll_TYPE * SATHdll_POINTER;
