@@ -465,5 +465,117 @@
       "smolar": 78.13377271225741, 
       "smolar_units": "J/mol/K"
     }
+  }, 
+  "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Mylona-JPCRD-2014-xylenes", 
+      "critical": {
+        "GAMMA": 0.056, 
+        "R0": 1.03, 
+        "gamma": 1.239, 
+        "qD": 1408450704.225352, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 2.35e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.00388568, 
+          0.0294648, 
+          -0.0815299, 
+          0.07715340000000001, 
+          0.00755487, 
+          -0.0038897, 
+          0.00040689199999999995
+        ], 
+        "B": [
+          0.00404188, 
+          -0.424893, 
+          1
+        ], 
+        "T_reducing": 616.168, 
+        "T_reducing_units": "K", 
+        "m": [
+          0, 
+          1, 
+          2
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4, 
+          5, 
+          6
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          -0.101022, 
+          0.107531, 
+          0.224828, 
+          -0.205499, 
+          -0.1591, 
+          0.150348, 
+          0.049949, 
+          -0.0502584, 
+          -0.00562422, 
+          0.00644051
+        ], 
+        "T_reducing": 616.168, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          1, 
+          2, 
+          2, 
+          3, 
+          3, 
+          4, 
+          4, 
+          5, 
+          5
+        ], 
+        "rhomass_reducing": 286.0, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
+    "viscosity": {
+      "BibTeX": "Huber-RP912", 
+      "epsilon_over_k": 500.48, 
+      "epsilon_over_k_units": "K", 
+      "psi": {
+        "a": [
+          0.312445906, 
+          0.403396269, 
+          -0.0603026419
+        ], 
+        "rhomolar_reducing": 2693.92, 
+        "rhomolar_reducing_units": "mol/m^3", 
+        "t": [
+          0, 
+          1, 
+          2
+        ]
+      }, 
+      "reference_fluid": "Propane", 
+      "sigma_eta": 5.813e-10, 
+      "sigma_eta_units": "m", 
+      "type": "ECS"
+    }
   }
 }
