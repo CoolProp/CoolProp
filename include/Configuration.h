@@ -3,7 +3,10 @@
 
 #include "Exceptions.h"
 #include "CoolPropTools.h"
+
+#if !defined(SWIG) // Hide this for swig - Swig gets confused
 #include "rapidjson/rapidjson_include.h"
+#endif
 
 /* See http://stackoverflow.com/a/148610
  * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
@@ -203,7 +206,9 @@ class Configuration
 bool get_config_bool(configuration_keys key);
 double get_config_double(configuration_keys key);
 std::string get_config_string(configuration_keys key);
+#if !defined(SWIG) // Hide this for swig - Swig gets confused
 void get_config_as_json(rapidjson::Document &doc);
+#endif
 /// Get values in the configuration based as json data in string format
 std::string get_config_as_json_string();
 
@@ -215,7 +220,9 @@ void set_config_bool(configuration_keys key, bool val);
 void set_config_double(configuration_keys key, double val);
 void set_config_string(configuration_keys key, std::string val);
 /// Set values in the configuration based on a json file
+#if !defined(SWIG) // Hide this for swig - Swig gets confused
 void set_config_json(rapidjson::Document &doc);
+#endif
 void set_config_as_json_string(std::string &s);
 }
 
