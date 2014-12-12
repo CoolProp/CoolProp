@@ -443,7 +443,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                      errormessagelength // Length of error message
                      );
 
-            if (ierr == 0) // Success
+            if (ierr <= 0) // Success (or a warning, which is silently squelched for now)
             {
                 this->Ncomp = N;
                 mole_fractions.resize(N);
@@ -453,12 +453,12 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
                 return;
             }
-            else if (ierr > 0 && k < number_of_endings-1){ // Keep going
+            else if (k < number_of_endings-1){ // Keep going
 				continue;
 			}
-            else // Warning
+            else
             {
-                throw ValueError(format("%s", herr));
+                throw ValueError(format("Could not load these fluids: %s", components_joined_raw.c_str()));
             }
 		}
     }
