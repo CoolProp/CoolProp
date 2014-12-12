@@ -35,7 +35,9 @@ namespace std {
 #include "AbstractState.h"
 #include "CoolProp.h"
 #include "PhaseEnvelope.h"
+#define SWIG
 #include "Configuration.h"
+#undef SWIG
 %}
 
 %include "DataStructures.h"
