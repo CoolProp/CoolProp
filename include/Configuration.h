@@ -96,6 +96,7 @@ class ConfigurationItem
         configuration_keys get_key(void){
             return this->key;
         }
+		#if !defined(SWIG)
         /// Cast to rapidjson::Value
         void add_to_json(rapidjson::Value &val, rapidjson::Document &d){
             std::string name_string = config_key_to_string(key);
@@ -137,6 +138,7 @@ class ConfigurationItem
                     throw ValueError();
             }
         }
+		#endif // !defined(SWIG)
          
     protected:
         void check_data_type(ConfigurationDataTypes type){
