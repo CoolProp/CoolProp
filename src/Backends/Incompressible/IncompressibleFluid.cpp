@@ -4,6 +4,7 @@
 #include "math.h"
 #include "MatrixMath.h"
 #include "PolyMath.h"
+#include <Eigen/Core>
 
 namespace CoolProp {
 
@@ -21,12 +22,12 @@ void IncompressibleFluid::set_reference_state(double T0, double p0, double x0, d
     this->Tref = T0;
     this->rhoref = rho(T0,p0,x0);
     this->pref = p0;
-    this->uref = h0 - p0/rhoref;
-    this->uref = u(T0,p0,x0);
-    this->href = h0; // set new reference value
-    this->sref = s0; // set new reference value
-    this->href = h(T0,p0,x0); // adjust offset to fit to equations
-    this->sref = s(T0,p0,x0); // adjust offset to fit to equations
+    this->href = h0;
+    // Now we take care of the energy related values
+    this->uref = 0.0;
+    this->uref = u(T0,p0,x0) - h0; // (value without ref) - (desired ref)
+    this->sref = 0.0;
+    this->sref = s(T0,p0,x0) - s0; // (value without ref) - (desired ref)
 }
 
 void IncompressibleFluid::validate(){
@@ -648,7 +649,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
         //XLT.set_reference_state(25+273.15, 1.01325e5, 0.0, 0.0, 0.0);
         double Tref = 25+273.15;
-        double pref = 0.0;
+        double pref = 2e5;
         double xref = 0.0;
         double href = 127.0;
         double sref = 23.0;
@@ -656,23 +657,28 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
         /// A function to check coefficients and equation types.
         //XLT.validate();
+        double acc = 0.0001;
+        double val = 0;
+        double res = 0;
 
         // Compare reference state
 		{
-        CHECK( check_abs(href,XLT.h(Tref,pref,xref),acc) );
-		CHECK( check_abs(sref,XLT.s(Tref,pref,xref),acc) );
+        res = XLT.h(Tref,pref,xref);
+        CHECK( check_abs(href,res,acc) );
+        res = XLT.s(Tref,pref,xref);
+		CHECK( check_abs(sref,res,acc) );
 		}
 
-        href = 0;
-        sref = 0;
+        Tref = 25+273.15;
+        pref = 0.0;
+        xref = 0.0;
+        href = 0.0;
+        sref = 0.0;
 		XLT.set_reference_state(Tref, pref, xref, href, sref);
         // Prepare the results and compare them to the calculated values
-        double acc = 0.0001;
         double T = 273.15+50;
         double p = 10e5;
         double x = xref;
-        double val = 0;
-        double res = 0;
 
         // Compare density
         val = 824.4615702148608;
@@ -733,7 +739,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         }
 
         // Compare h
-        val = 46425.32011926845;
+        val = 46388.7;
         res = XLT.h(T,p,x);
         {
         CAPTURE(T);
@@ -867,7 +873,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         }
 
         // Compare h
-        expected = -59005.67386390795;
+        expected = -58999.1;
         actual = CH3OH.h(T,p,x);
         {
         CAPTURE(T);
