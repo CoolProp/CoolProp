@@ -2,7 +2,11 @@
 #define _CRTDBG_MAP_ALLOC
 #define _CRT_SECURE_NO_WARNINGS
 #include <crtdbg.h>
+#else
+#include <fenv.h>
 #endif
+
+
 
 #include "CoolPropLib.h"
 #include "CoolProp.h"
@@ -16,9 +20,12 @@
 // In Microsoft Excel, they seem to check the FPU exception bits and error out because of it.  
 // By calling the _clearfp(), we can reset these bits, and not get the error
 // See also http://stackoverflow.com/questions/11685441/floating-point-error-when-calling-dll-function-from-vba/27336496#27336496
+// See also http://stackoverflow.com/questions/16849009/in-linux-do-there-exist-functions-similar-to-clearfp-and-statusfp for linux and OSX
 void reset_fpu()
 {
-    #if defined(_MSC_VER)
+    #if defined(__STDC_IEC_559__)
+	feclearexcept(FE_ALL_EXCEPT);
+    #elif defined(_MSC_VER)
         _clearfp(); // For MSVC in excel, clear the floating point error flags
     #endif
 }
