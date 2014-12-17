@@ -216,17 +216,23 @@ this simplification violates the integrity of the implemented equations since th
 are changes in density as a function of temperature for all incompressible fluids.
 
 Employing :math:`h=u+pv`, we can derive the impact on enthalpy as well by
-rewriting the equation in terms of our state variables :math:`p` and :math:`T`.
+rewriting the equation in terms of our state variables :math:`p` and :math:`T`
+as shown by Skovrup :cite:`Skovrup1999`.
+
+.. dh &= \overbrace{ \left( \frac{\partial h}{\partial T} \right)_p}^{=c_p=c_v=c} dT + \left( \frac{\partial h}{\partial p} \right)_T dp \\
 
 .. math::
-    dh &= \overbrace{ \left( \frac{\partial h}{\partial T} \right)_p}^{=c_p=c_v=c} dT + \left( \frac{\partial h}{\partial p} \right)_T dp \\
-       &= du + \underbrace{p dv}_{\stackrel{!}{=} 0} + v dp \\
+    dh &= \overbrace{ \left( \frac{\partial h}{\partial T} \right)_p}^{=c_p=c_v=c} dT +              \left( \frac{\partial h}{\partial p} \right)_T         dp \\
+       &=             \left( \frac{\partial u}{\partial T} \right)_v dT               + \left( v - T \left( \frac{\partial v}{\partial T} \right)_p \right) dp \\
+       &= du + \underbrace{p dv}_{\stackrel{!}{=} 0} + v dp \quad \text{ with $v\stackrel{!}{=}v_0=$ const }  \\
 
 The two assumptions used above :math:`\left( \partial v / \partial T \right)_p \stackrel{!}{=} 0`
 and :math:`\left( \partial u / \partial T \right)_p \stackrel{!}{=} \left( \partial u / \partial T \right)_v`
 imply that :math:`v` is constant under all circumstances. Hence, we have to use
 the specific volume at reference conditions to calculate enthalpy from the
-integration in :math:`T` and :math:`p`.
+integration in :math:`T` and :math:`p`. Future work could provide a more accurate
+formulation of entropy and enthalpy by implementing the term
+:math:`\left( \partial v / \partial T \right)_p \neq 0`.
 
 Using only polynomials for the heat capacity functions, we can derive internal
 energy and entropy by integrating the specific heat capacity in temperature.
