@@ -103,3 +103,10 @@ Once installed, you can use CoolProp for various things:
 .. _3D stuff: https://github.com/CoolProp/CoolProp/blob/master/dev/TTSE/TTSE_ranges.py
 
 
+Module Documentation
+====================
+
+.. toctree::
+
+    ../../../apidoc/CoolProp.rst
+
