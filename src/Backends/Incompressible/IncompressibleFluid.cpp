@@ -9,9 +9,11 @@ namespace CoolProp {
 
 
 
-/// A thermophysical property provider for critical and reducing values as well as derivatives of Helmholtz energy
+/// A thermophysical property provider for all properties
 /**
-This fluid instance is populated using an entry from a JSON file
+This fluid instance is populated using an entry from a JSON file and uses
+simplified polynomial and exponential functions to calculate thermophysical
+and transport properties.
 */
 //IncompressibleFluid::IncompressibleFluid();
 
@@ -648,14 +650,22 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         double Tref = 25+273.15;
         double pref = 0.0;
         double xref = 0.0;
-        double href = 0.0;
-        double sref = 0.0;
+        double href = 127.0;
+        double sref = 23.0;
         XLT.set_reference_state(Tref, pref, xref, href, sref);
 
         /// A function to check coefficients and equation types.
         //XLT.validate();
 
+        // Compare reference state
+		{
+        CHECK( check_abs(href,XLT.h(Tref,pref,xref),acc) );
+		CHECK( check_abs(sref,XLT.s(Tref,pref,xref),acc) );
+		}
 
+        href = 0;
+        sref = 0;
+		XLT.set_reference_state(Tref, pref, xref, href, sref);
         // Prepare the results and compare them to the calculated values
         double acc = 0.0001;
         double T = 273.15+50;

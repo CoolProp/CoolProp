@@ -272,7 +272,7 @@ protected:
      *  pressure employing functions for internal energy and
      *  density. Provides consistent formulations. */
     double h_u(double T, double p, double x) {
-        return u(T,p,x)+p/rho(T,p,x)-href;
+        return u(T,p,x)+(p-pref)/rhoref;
     };
 
     /// Internal energy from h, p and rho.
@@ -280,7 +280,7 @@ protected:
      *  and pressure employing functions for enthalpy and
      *  density. Provides consistent formulations. */
     double u_h(double T, double p, double x) {
-        return h(T,p,x)-p/rho(T,p,x)+href;
+        return h(T,p,x)-(p-pref)/rhoref;
     };
 
 

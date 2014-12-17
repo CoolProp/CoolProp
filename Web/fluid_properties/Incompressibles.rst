@@ -222,9 +222,14 @@ rewriting the equation in terms of our state variables :math:`p` and :math:`T`.
     dh &= \overbrace{ \left( \frac{\partial h}{\partial T} \right)_p}^{=c_p=c_v=c} dT + \left( \frac{\partial h}{\partial p} \right)_T dp \\
        &= du + \underbrace{p dv}_{\stackrel{!}{=} 0} + v dp \\
 
+The two assumptions used above :math:`\left( \partial v / \partial T \right)_p \stackrel{!}{=} 0`
+and :math:`\left( \partial u / \partial T \right)_p \stackrel{!}{=} \left( \partial u / \partial T \right)_v`
+imply that :math:`v` is constant under all circumstances. Hence, we have to use
+the specific volume at reference conditions to calculate enthalpy from the
+integration in :math:`T` and :math:`p`.
+
 Using only polynomials for the heat capacity functions, we can derive internal
-energy and entropy by integrating the specific heat capacity in temperature, only
-enthalpy requires an integration in both :math:`T` and :math:`p`
+energy and entropy by integrating the specific heat capacity in temperature.
 
 .. _BaseValue:
 
@@ -239,9 +244,7 @@ enthalpy requires an integration in both :math:`T` and :math:`p`
                   C_{c}[i,0] \cdot \ln\left(\frac{T_{1}}{T_{0}}\right)
                   + \sum_{j=0}^{m-1} \frac{1}{j+1} \cdot C_{c}[i,j+1] \cdot \left( T_{1}^{j+1} - T_{0}^{j+1} \right)
                   \right) \\
-    h          &= u + v \cdot \left( p_{1} - p_{0} \right)
-
-
+    h          &= u + v_{0} \cdot \left( p_{1} - p_{0} \right)
 
 
 According to Melinder :cite:`Melinder2010` and Skovrup :cite:`Skovrup2013`,
