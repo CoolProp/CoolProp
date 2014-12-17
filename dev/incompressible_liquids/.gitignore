@@ -1,3 +1,5 @@
 /report/
 /.ipynb_checkpoints/
 /table/
+/tables/
+*.pdf
