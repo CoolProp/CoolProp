@@ -118,7 +118,7 @@ corresponds to the new mixture syntax in CoolProp v5.
 
     #Density of a lithium bromide solution at 300 K and 1 atm.
     In [1]: PropsSI('D','T',300,'P',101325,'INCOMP::LiBr[0.23]')
-    
+
     #Density of a lithium bromide solution at 300 K and 1 atm.
     In [1]: PropsSI('D','T',300,'P',101325,'INCOMP::LiBr-23%')
 
@@ -176,6 +176,103 @@ that typically lies in the middle of the allowed range. Dashed red lines indicat
 the limits in terms of concentration as well as the freezing temperature.
 
 
+.. _IncompThermo:
+
+Thermodynamics of Incompressible Fluids
+---------------------------------------
+
+For an incompressible fluid, the specific at constant volume and at constant
+pressure are the same allowing us to drop the subscripts, :math:`c_p=c_v=c`. Using
+temperature :math:`T` and pressure :math:`p` as state variables, we can simplify
+the normal thermodynamic relation as described below. working with brines and
+mixtures, the concentration :math:`x` has to be considered as well. Following
+the same approach as for the compressible fluids, we regard mixtures with different
+compositions as independent fluids. This should be kept in mind when comparing
+properties for different compositions. Setting the reference state for one
+composition will always affect all fluids consisting of the same components.
+
+The approach described in textbooks like Cengel and Boles :cite:`Cengel2007`
+is that the internal energy :math:`u` only depends on temperature and does not
+change with pressure.
+
+.. Alternatively, use cancel package with \cancelto{0}{x-d} command
+
+.. math::
+
+    du &= \overbrace{ \left( \frac{\partial u}{\partial T} \right)_p}^{=c_p=c_v=c} dT &+ \overbrace{\left( \frac{\partial u}{\partial p} \right)_T}^{\stackrel{!}{=}0} dp \\
+
+By using the fourth Maxwell relation, we can extend the simplifications to the
+entropy formulation
+
+.. math::
+
+    ds &= \left( \frac{\partial s}{\partial T} \right)_p dT &+              \left( \frac{\partial s}{\partial p} \right)_T  dp \\
+       &= \underbrace{ \left( \frac{\partial h}{\partial T} \right)_p}_{=c_p=c_v=c} T^{-1} dT &-\underbrace{\left( \frac{\partial v}{\partial T} \right)_p}_{\stackrel{!}{=} 0} dp \\
+
+As indicated by the braces above, the fluids implemented in CoolProp do also follow
+the second common assumption of a constant specific volume :math:`v` that does
+change neither with temperature nor with pressure. It should be highlighted, that
+this simplification violates the integrity of the implemented equations since there
+are changes in density as a function of temperature for all incompressible fluids.
+
+Employing :math:`h=u+pv`, we can derive the impact on enthalpy as well by
+rewriting the equation in terms of our state variables :math:`p` and :math:`T`.
+
+.. math::
+    dh &= \overbrace{ \left( \frac{\partial h}{\partial T} \right)_p}^{=c_p=c_v=c} dT + \left( \frac{\partial h}{\partial p} \right)_T dp \\
+       &= du + \underbrace{p dv}_{\stackrel{!}{=} 0} + v dp \\
+
+Using only polynomials for the heat capacity functions, we can derive internal
+energy and entropy by integrating the specific heat capacity in temperature, only
+enthalpy requires an integration in both :math:`T` and :math:`p`
+
+.. _BaseValue:
+
+.. math::
+
+    c          &= \sum_{i=0}^n x^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot T^j \text{ yielding } \\
+    u          &= \int_{0}^{1} c\left( x,T \right) dT
+                = \sum_{i=0}^n x^i \cdot \sum_{j=0}^m \frac{1}{j+1} \cdot C_{c}[i,j]
+                  \cdot \left( T_{1}^{j+1} - T_{0}^{j+1} \right) \text{ and } \\
+    s          &= \int_{0}^{1} \frac{c\left( x,T \right)}{T} dT
+                = \sum_{i=0}^n x^i \cdot \left(
+                  C_{c}[i,0] \cdot \ln\left(\frac{T_{1}}{T_{0}}\right)
+                  + \sum_{j=0}^{m-1} \frac{1}{j+1} \cdot C_{c}[i,j+1] \cdot \left( T_{1}^{j+1} - T_{0}^{j+1} \right)
+                  \right) \\
+    h          &= u + v \cdot \left( p_{1} - p_{0} \right)
+
+
+
+
+According to Melinder :cite:`Melinder2010` and Skovrup :cite:`Skovrup2013`,
+using a centred approach for the independent variables enhances the fit quality.
+Therefore, all solutions have a base temperature and concentration in the original
+works as well as in CoolProp: :math:`x_\text{in} = x - x_\text{base}`
+and :math:`T_\text{in} = T - T_\text{base}`, this technique does not affect the calculation
+of the derived quantity internal energy since the formula contains temperature differences.
+However, integrating :math:`c(x_\text{in},T_\text{in})T_\text{in}^{-1}dT_\text{in}` for the entropy requires some changes due to
+the logarithm.
+
+.. warning::
+   You must **not** use the base temperature :math:`T_\text{base}`
+   as reference temperature for your thermodynamic states. This will lead to an
+   error caused by a division by zero during the integration carried out to
+   obtain the entropy.
+
+To structure the problem, we introduce a variable :math:`f(j,T)`,
+which will be expressed by a third sum. As a first step for simplification, one
+has to expand the the binomial :math:`(T-T_{base})^n` to a series. Only
+containing :math:`j` and :math:`T`, :math:`f` is independent from :math:`x_\text{in}` and
+can be computed outside the loop for enhanced computational efficiency. An
+integration of the expanded binomial then yields the final factor :math:`F` to
+be multiplied with the other coefficients and the concentration.
+
+.. math::
+
+    s          &= \int_{0}^{1} \frac{c\left( x_\text{in},T_\text{in} \right)}{T_\text{in}} dT_\text{in} = \sum_{i=0}^n x_\text{in}^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot F(j,T_\text{in,0},T_\text{in,1}) \\
+    F          &= (-1)^j \cdot \ln \left( \frac{T_\text{in,1}}{T_\text{in,0}} \right) \cdot T_{base}^j + \sum_{k=0}^{j-1} \binom{j}{k} \cdot \frac{(-1)^k}{j-k} \cdot \left( T_\text{in,1}^{j-k} - T_\text{in,0}^{j-k} \right) \cdot T_{base}^k
+
+
 .. _Equations:
 
 Equations
@@ -220,52 +317,6 @@ accessible through SciPy :cite:`Jones2001`. For the extremely curious, the
 Python module `CPIncomp <https://github.com/CoolProp/CoolProp/tree/master/dev/incompressible_liquids/CPIncomp>`_
 contains the source code for the fits used in CoolProp as well as the code to
 generate the fitting reports. Feel free to browse the code.
-
-Using only polynomials for the heat capacity functions, we can derive internal
-energy and entropy by integrating the specific heat capacity
-
-.. _BaseValue:
-
-.. math::
-
-    c          &= \sum_{i=0}^n x^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot T^j \text{ yielding } \\
-    u          &= \int_{0}^{1} c\left( x,T \right) dT
-                = \sum_{i=0}^n x^i \cdot \sum_{j=0}^m \frac{1}{j+1} \cdot C_{c}[i,j]
-                  \cdot \left( T_{1}^{j+1} - T_{0}^{j+1} \right) \text{ and } \\
-    s          &= \int_{0}^{1} \frac{c\left( x,T \right)}{T} dT
-                = \sum_{i=0}^n x^i \cdot \left(
-                  C_{c}[i,0] \cdot \ln\left(\frac{T_{1}}{T_{0}}\right)
-                  + \sum_{j=0}^{m-1} \frac{1}{j+1} \cdot C_{c}[i,j+1] \cdot \left( T_{1}^{j+1} - T_{0}^{j+1} \right)
-                  \right) \\
-
-According to Melinder :cite:`Melinder2010` and Skovrup :cite:`Skovrup2013`,
-using a centred approach for the independent variables enhances the fit quality.
-Therefore, all solutions have a base temperature and concentration in the original
-works as well as in CoolProp: :math:`x_\text{in} = x - x_\text{base}`
-and :math:`T_\text{in} = T - T_\text{base}`, this technique does not affect the calculation
-of the derived quantity internal energy since the formula contains temperature differences.
-However, integrating :math:`c(x_\text{in},T_\text{in})T_\text{in}^{-1}dT_\text{in}` for the entropy requires some changes due to
-the logarithm.
-
-.. warning::
-   You must **not** use the base temperature :math:`T_\text{base}`
-   as reference temperature for your thermodynamic states. This will lead to an
-   error caused by a division by zero during the integration carried out to
-   obtain the entropy.
-
-To structure the problem, we introduce a variable :math:`f(j,T)`,
-which will be expressed by a third sum. As a first step for simplification, one
-has to expand the the binomial :math:`(T-T_{base})^n` to a series. Only
-containing :math:`j` and :math:`T`, :math:`f` is independent from :math:`x_\text{in}` and
-can be computed outside the loop for enhanced computational efficiency. An
-integration of the expanded binomial then yields the final factor :math:`F` to
-be multiplied with the other coefficients and the concentration.
-
-.. math::
-
-    s          &= \int_{0}^{1} \frac{c\left( x_\text{in},T_\text{in} \right)}{T_\text{in}} dT_\text{in} = \sum_{i=0}^n x_\text{in}^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot F(j,T_\text{in,0},T_\text{in,1}) \\
-    F          &= (-1)^j \cdot \ln \left( \frac{T_\text{in,1}}{T_\text{in,0}} \right) \cdot T_{base}^j + \sum_{k=0}^{j-1} \binom{j}{k} \cdot \frac{(-1)^k}{j-k} \cdot \left( T_\text{in,1}^{j-k} - T_\text{in,0}^{j-k} \right) \cdot T_{base}^k
-
 
 
 The Different Fluids
