@@ -127,6 +127,13 @@
         std::transform(str.begin(), str.end(), str.begin(), ::toupper);
         return str;
     }
+	
+	inline std::string lower(const std::string str_)
+    {
+        std::string str = str_;
+        std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+        return str;
+    }
 
     std::string strjoin(std::vector<std::string> strings, std::string delim);
 

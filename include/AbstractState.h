@@ -147,7 +147,15 @@ protected:
     virtual long double calc_d2alphar_dDelta_dTau(void){throw NotImplementedError("calc_d2alphar_dDelta_dTau is not implemented for this backend");};
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau}\f$ (dimensionless)
     virtual long double calc_d2alphar_dTau2(void){throw NotImplementedError("calc_d2alphar_dTau2 is not implemented for this backend");};
-
+	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta}\f$ (dimensionless)
+    virtual long double calc_d3alphar_dDelta3(void){throw NotImplementedError("calc_d3alpha0_dDelta3 is not implemented for this backend");};
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau}\f$ (dimensionless)
+    virtual long double calc_d3alphar_dDelta2_dTau(void){throw NotImplementedError("calc_d3alpha0_dDelta2_dTau is not implemented for this backend");};
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau}\f$ (dimensionless)
+    virtual long double calc_d3alphar_dDelta_dTau2(void){throw NotImplementedError("calc_d3alpha0_dDelta_dTau2 is not implemented for this backend");};
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau}\f$ (dimensionless)
+    virtual long double calc_d3alphar_dTau3(void){throw NotImplementedError("calc_d3alpha0_dTau3 is not implemented for this backend");};
+	
     // Derivatives of ideal-gas helmholtz energy
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0\f$ (dimensionless)
     virtual long double calc_alpha0(void){throw NotImplementedError("calc_alpha0 is not implemented for this backend");};
@@ -195,9 +203,9 @@ protected:
     virtual long double calc_physical_hazard(void){throw NotImplementedError("calc_physical_hazard is not implemented for this backend");};
 
     /// Calculate the first partial derivative for the desired derivative
-    virtual long double calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){throw NotImplementedError("calc_first_partial_deriv is not implemented for this backend");};
+    virtual long double calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
     /// Calculate the second partial derivative using the given backend
-    virtual long double calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2){throw NotImplementedError("calc_second_partial_deriv is not implemented for this backend");};
+    virtual long double calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2);
 
     /// Using this backend, calculate the reduced density (rho/rhoc)
     virtual long double calc_reduced_density(void){throw NotImplementedError("calc_reduced_density is not implemented for this backend");};
@@ -225,10 +233,14 @@ protected:
 
     /// Using this backend, get the critical point temperature in K
     virtual long double calc_T_critical(void){throw NotImplementedError("calc_T_critical is not implemented for this backend");};
+	/// Using this backend, get the reducing point temperature in K
+    virtual long double calc_T_reducing(void){throw NotImplementedError("calc_T_reducing is not implemented for this backend");};
     /// Using this backend, get the critical point pressure in Pa
     virtual long double calc_p_critical(void){throw NotImplementedError("calc_p_critical is not implemented for this backend");};
     /// Using this backend, get the critical point molar density in mol/m^3
     virtual long double calc_rhomolar_critical(void){throw NotImplementedError("calc_rhomolar_critical is not implemented for this backend");};
+	/// Using this backend, get the reducing point molar density in mol/m^3
+    virtual long double calc_rhomolar_reducing(void){throw NotImplementedError("calc_rhomolar_reducing is not implemented for this backend");};
 
     /// Using this backend, construct the phase envelope, the variable type describes the type of phase envelope to be built.
     virtual void calc_phase_envelope(const std::string &type){throw NotImplementedError("calc_phase_envelope is not implemented for this backend");};
@@ -259,7 +271,8 @@ protected:
     virtual void calc_specify_phase(phases phase){throw NotImplementedError("This backend does not implement calc_specify_phase function");};
     /// Using this backend, unspecify the phase
     virtual void calc_unspecify_phase(void){throw NotImplementedError("This backend does not implement calc_unspecify_phase function");};
-    
+    /// Using this backend get a vector of fluid names
+	virtual std::vector<std::string> calc_fluid_names(void){throw NotImplementedError("This backend does not implement fluid_names function");};
     /// Using this backend, calculate a phase given by the state string
     /// @param state A string that describes the state desired, one of "hs_anchor", "critical"/"crit", "reducing"
     virtual const CoolProp::SimpleState & calc_state(const std::string &state){throw NotImplementedError("calc_state is not implemented for this backend");};
@@ -311,6 +324,8 @@ protected:
     virtual void set_mole_fractions(const std::vector<long double> &mole_fractions) = 0;
     virtual void set_mass_fractions(const std::vector<long double> &mass_fractions) = 0;
     virtual void set_volu_fractions(const std::vector<long double> &mass_fractions){throw NotImplementedError("Volume composition has not been implemented.");}
+	
+	std::vector<std::string> fluid_names(void);
     
     /// Clear all the cached values
     bool clear();
@@ -341,6 +356,8 @@ protected:
     For mixtures, it is the exact critical point temperature calculated by the methods of Michelsen( \todo fill in reference)
     */
     double T_critical(void);
+	/// Return the reducing point temperature in K
+    double T_reducing(void);
     /// Return the critical pressure in Pa
     /**
     For pure fluids, this is the critical point pressure as defined by the author of the EOS
@@ -360,6 +377,18 @@ protected:
      * For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
      */
     double rhomass_critical(void);
+	/** \brief Return the molar density at the reducing point in mol/m^3
+	 * 
+	 * For pure fluids, this is the critical point molar density
+     * For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
+     */
+    double rhomolar_reducing(void);
+	/** \brief Return the mass density at the reducing point in kg/m^3
+	 * 
+	 * For pure fluids, this is the critical point molar density
+     * For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
+     */
+    double rhomass_reducing(void);
     
     /// Return the triple point pressure 
     double p_triple(void);
@@ -617,12 +646,25 @@ protected:
         if (!_d2alphar_dTau2) _d2alphar_dTau2 = calc_d2alphar_dTau2();
         return _d2alphar_dTau2;
     };
+	long double d3alphar_dDelta3(void){
+        if (!_d3alphar_dDelta3) _d3alphar_dDelta3 = calc_d3alphar_dDelta3();
+        return _d3alphar_dDelta3;
+    };
+	long double d3alphar_dDelta2_dTau(void){
+        if (!_d3alphar_dDelta2_dTau) _d3alphar_dDelta2_dTau = calc_d3alphar_dDelta2_dTau();
+        return _d3alphar_dDelta2_dTau;
+    };
+	long double d3alphar_dDelta_dTau2(void){
+        if (!_d3alphar_dDelta_dTau2) _d3alphar_dDelta_dTau2 = d3alphar_dDelta_dTau2();
+        return _d3alphar_dDelta_dTau2;
+    };
+	long double d3alphar_dTau3(void){
+        if (!_d3alphar_dTau3) _d3alphar_dTau3 = calc_d3alphar_dTau3();
+        return _d3alphar_dTau3;
+    };
+	
+	
     /*
-    virtual double d3alphar_dDelta3(void) = 0;
-    virtual double d3alphar_dDelta2_dTau(void) = 0;
-    virtual double d3alphar_dDelta_dTau2(void) = 0;
-    virtual double d3alphar_dTau3(void) = 0;
-
     virtual double dalphar_dDelta_lim(void) = 0;
     virtual double d2alphar_dDelta2_lim(void) = 0;
     virtual double d2alphar_dDelta_dTau_lim(void) = 0;

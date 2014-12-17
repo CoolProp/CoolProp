@@ -942,7 +942,7 @@ void TransportRoutines::conformal_state_solver(HelmholtzEOSMixtureBackend &HEOS,
     Eigen::Vector2d r;
     Eigen::Matrix2d J;
     // Update the reference fluid with the conformal state
-    HEOS_Reference.update(DmolarT_INPUTS, rhomolar0, T0);
+    HEOS_Reference.update_DmolarT_direct(rhomolar0, T0);
     do{
         long double dtau_dT = -HEOS_Reference.T_critical()/(T0*T0);
         long double ddelta_drho = 1/HEOS_Reference.rhomolar_critical();
@@ -969,7 +969,7 @@ void TransportRoutines::conformal_state_solver(HelmholtzEOSMixtureBackend &HEOS,
                 double T_new = T0_init + frac*v(0);
                 double rhomolar_new = rhomolar0_init + frac*v(1);
                 // Update state with step
-                HEOS_Reference.update(DmolarT_INPUTS, rhomolar_new, T_new);
+                HEOS_Reference.update_DmolarT_direct(rhomolar_new, T_new);
                 resid = sqrt(POW2(HEOS_Reference.alphar() - alphar) + POW2(HEOS_Reference.keyed_output(iZ) - Z));
                 if (resid > resid_old){
                     continue;
@@ -1033,10 +1033,17 @@ long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
     // Solver for conformal state
     // **************************
     
+	// 
+	HEOS_Reference.specify_phase(iphase_gas); // something homogeneous
+	
     conformal_state_solver(HEOS, HEOS_Reference, T0, rhomolar0);
-
-    // Update the reference fluid with the conformal state
-    HEOS_Reference.update(DmolarT_INPUTS, rhomolar0*psi, T0);
+	
+    // Update the reference fluid with the updated conformal state
+    HEOS_Reference.update_DmolarT_direct(rhomolar0*psi, T0);
+	
+	// Recalculate ESRR
+	f = HEOS.T()/T0;
+    h = rhomolar0/HEOS.rhomolar(); // Must be the ratio of MOLAR densities!!
     
     // **********************
     // Remaining calculations
@@ -1046,7 +1053,7 @@ long double TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
     long double eta_resid = HEOS_Reference.calc_viscosity_background();
 
     // The F factor
-    long double F_eta = sqrt(f)*pow(h, static_cast<long double>(-2.0/3.0))*sqrt(M/M0);
+    long double F_eta = sqrt(f)*pow(h, -2.0L/3.0L)*sqrt(M/M0);
 
     // The total viscosity considering the contributions of the fluid of interest and the reference fluid [Pa-s]
     long double eta = eta_dilute + eta_resid*F_eta;
@@ -1118,6 +1125,10 @@ long double TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS
 
     // Update the reference fluid with the conformal state
     HEOS_Reference.update(DmolarT_INPUTS, rhomolar0*psi, T0);
+	
+	// Recalculate ESRR
+	f = HEOS.T()/T0;
+    h = rhomolar0/HEOS.rhomolar(); // Must be the ratio of MOLAR densities!!
 
     // The reference fluid's contribution to the conductivity [W/m/K]
     long double lambda_resid = HEOS_Reference.calc_conductivity_background();
