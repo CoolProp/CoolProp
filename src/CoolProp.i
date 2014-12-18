@@ -5,6 +5,14 @@
 %ignore CoolProp::set_config_json(rapidjson::Document &);
 %ignore CoolProp::get_config_as_json(rapidjson::Document &);
 
+#ifdef SWIGMATLAB
+%ignore configuration_keys;
+%ignore CoolProp::ConfigurationItem::ConfigurationDataTypes;
+%ignore CoolProp::SsatSimpleState::SsatSimpleStateEnum;
+%ignore CoolProp::composition_types;
+%ignore CoolProp::fluid_types;
+#endif
+
 %include "std_string.i" // This %include allows the use of std::string natively
 %include "std_vector.i" // This allows for the use of STL vectors natively(ish)
 %include "exception.i" //
@@ -35,7 +43,9 @@ namespace std {
 #include "AbstractState.h"
 #include "CoolProp.h"
 #include "PhaseEnvelope.h"
+#define SWIG
 #include "Configuration.h"
+#undef SWIG
 %}
 
 %include "DataStructures.h"

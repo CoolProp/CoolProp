@@ -447,8 +447,9 @@ int main()
     #endif
 	#if 1
 	shared_ptr<CoolProp::AbstractState> CP(CoolProp::AbstractState::factory("HEOS", "Water"));
-	shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Water&Ethanol"));
+	shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Water"));
 	std::vector<std::string> fluids = RP->fluid_names();
+	double tt = RP->rhomolar_critical();
 	int rr = 3l;
 	#endif
     #if 0
