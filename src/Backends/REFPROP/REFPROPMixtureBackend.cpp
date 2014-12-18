@@ -46,7 +46,7 @@ surface tension                 N/m
 #endif
 
 enum DLLNameManglingStyle{ NO_NAME_MANGLING = 0, LOWERCASE_NAME_MANGLING, LOWERCASE_AND_UNDERSCORE_NAME_MANGLING };
-	
+    
 #include "REFPROP_lib.h"
 #include "REFPROPMixtureBackend.h"
 #include "Exceptions.h"
@@ -68,25 +68,7 @@ enum DLLNameManglingStyle{ NO_NAME_MANGLING = 0, LOWERCASE_NAME_MANGLING, LOWERC
 #include <sys/stat.h>
 #endif
 
-// Some constants for REFPROP... defined by macros for ease of use
-#define refpropcharlength 255
-#define filepathlength 255
-#define lengthofreference 3
-#define errormessagelength 255
-#define ncmax 20        // Note: ncmax is the max number of components
-#define numparams 72
-#define maxcoefs 50
-
 std::string LoadedREFPROPRef;
-
-// Some constants for REFPROP... defined by macros for ease of use
-#define refpropcharlength 255
-#define filepathlength 255
-#define lengthofreference 3
-#define errormessagelength 255
-#define ncmax 20        // Note: ncmax is the max number of components
-#define numparams 72
-#define maxcoefs 50
 
 // Check windows
 #if _WIN32 || _WIN64
@@ -129,15 +111,15 @@ static char default_reference_state[] = "DEF";
 
 void *getFunctionPointer(const char * name, DLLNameManglingStyle mangling_style = NO_NAME_MANGLING)
 {
-	std::string function_name;
-	switch(mangling_style){
-		case NO_NAME_MANGLING: 
-		    function_name = name; break;
-		case LOWERCASE_NAME_MANGLING: 
-		    function_name = lower(name); break;
-		case LOWERCASE_AND_UNDERSCORE_NAME_MANGLING: 
-		    function_name = lower(name) + "_"; break;
-	}
+    std::string function_name;
+    switch(mangling_style){
+        case NO_NAME_MANGLING: 
+            function_name = name; break;
+        case LOWERCASE_NAME_MANGLING: 
+            function_name = lower(name); break;
+        case LOWERCASE_AND_UNDERSCORE_NAME_MANGLING: 
+            function_name = lower(name) + "_"; break;
+    }
     #if defined(__ISWINDOWS__)
         return (void *) GetProcAddress(RefpropdllInstance, function_name.c_str());
     #elif defined(__ISLINUX__)
@@ -159,30 +141,30 @@ double setFunctionPointers()
         printf("REFPROP is not loaded, make sure you call this function after loading the library.\n");
         return -_HUGE;
     }
-	/* First determine the type of name mangling in use.
-	 * A) RPVersion -> RPVersion
-	 * B) RPVersion -> rpversion
-	 * C) RPVersion -> rpversion_
-	 */
-	 DLLNameManglingStyle mangling_style = NO_NAME_MANGLING; // defaults to no mangling
-	 
-	 SETUPdll = (SETUPdll_POINTER) getFunctionPointer("SETUPdll");
-	 if (SETUPdll == NULL){ // some mangling in use
-		 SETUPdll = (SETUPdll_POINTER) getFunctionPointer("setupdll");
-		 if (SETUPdll != NULL){
-			mangling_style = LOWERCASE_NAME_MANGLING;
-		 }
-		 else{
-			 SETUPdll = (SETUPdll_POINTER) getFunctionPointer("setupdll_");
-			 if (SETUPdll != NULL){
-				 mangling_style = LOWERCASE_AND_UNDERSCORE_NAME_MANGLING;
-			 }
-			 else{
-				 throw CoolProp::ValueError("Could not load the symbol SETUPdll or any of its mangled forms; REFPROP shared library broken");
-			 }
-		 }
-	 }
-	
+    /* First determine the type of name mangling in use.
+     * A) RPVersion -> RPVersion
+     * B) RPVersion -> rpversion
+     * C) RPVersion -> rpversion_
+     */
+     DLLNameManglingStyle mangling_style = NO_NAME_MANGLING; // defaults to no mangling
+     
+     SETUPdll = (SETUPdll_POINTER) getFunctionPointer("SETUPdll");
+     if (SETUPdll == NULL){ // some mangling in use
+         SETUPdll = (SETUPdll_POINTER) getFunctionPointer("setupdll");
+         if (SETUPdll != NULL){
+            mangling_style = LOWERCASE_NAME_MANGLING;
+         }
+         else{
+             SETUPdll = (SETUPdll_POINTER) getFunctionPointer("setupdll_");
+             if (SETUPdll != NULL){
+                 mangling_style = LOWERCASE_AND_UNDERSCORE_NAME_MANGLING;
+             }
+             else{
+                 throw CoolProp::ValueError("Could not load the symbol SETUPdll or any of its mangled forms; REFPROP shared library broken");
+             }
+         }
+     }
+    
     /* Set the pointers, platform independent
      * 
      * Example: RPVersion = (RPVersion_POINTER) getFunctionPointer(STRINGIFY(RPVersion));
@@ -201,9 +183,9 @@ double setFunctionPointers()
 std::string get_REFPROP_fluid_path()
 {
     std::string rpPath = refpropPath;
-	// Allow the user to specify an alternative REFPROP path by configuration value
-	std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
-	if (!alt_refprop_path.empty()){ rpPath = alt_refprop_path; }
+    // Allow the user to specify an alternative REFPROP path by configuration value
+    std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
+    if (!alt_refprop_path.empty()){ rpPath = alt_refprop_path; }
     #if defined(__ISWINDOWS__)
         return rpPath;
     #elif defined(__ISLINUX__)
@@ -220,7 +202,7 @@ bool load_REFPROP()
     // If REFPROP is not loaded
     if (RefpropdllInstance==NULL)
     {
-		
+        
         // Load it
         #if defined(__ISWINDOWS__)
             /* We need this logic on windows because if you use the bitness
@@ -284,16 +266,16 @@ bool load_REFPROP()
             }
         #endif
         #endif
-		
+        
         if (setFunctionPointers()!=COOLPROP_OK)
         {
                           printf("There was an error setting the REFPROP function pointers, check types and names in header file.\n");
             throw CoolProp::AttributeError("There was an error setting the REFPROP function pointers, check types and names in header file.");
             return false;
         }
-		char rpv[255];
-		RPVersion(rpv);
-		RPVersion_loaded = rpv;
+        char rpv[255];
+        RPVersion(rpv);
+        RPVersion_loaded = rpv;
         return true;
     }
     return true;
@@ -332,7 +314,7 @@ REFPROPMixtureBackend::~REFPROPMixtureBackend() {
             //delete RefpropdllInstance;
             RefpropdllInstance = NULL;
         #endif
-		LoadedREFPROPRef = "";
+        LoadedREFPROPRef = "";
     }
 }
 
@@ -385,7 +367,7 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
 void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &fluid_names)
 {
     long ierr=0;
-	this->fluid_names = fluid_names;
+    this->fluid_names = fluid_names;
     char component_string[10000], herr[errormessagelength];
     std::string components_joined = strjoin(fluid_names,"|");
     std::string components_joined_raw = strjoin(fluid_names,"|");
@@ -397,15 +379,15 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
     }
 
-	// Load REFPROP if it isn't loaded yet
-	load_REFPROP(); // This should not be needed.
+    // Load REFPROP if it isn't loaded yet
+    load_REFPROP(); // This should not be needed.
 
-	// If the name of the refrigerant doesn't match
+    // If the name of the refrigerant doesn't match
     // that of the currently loaded refrigerant
     if (LoadedREFPROPRef == components_joined_raw)
     {
         if (dbg_refprop) std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
-		this->Ncomp = N;
+        this->Ncomp = N;
         mole_fractions.resize(N);
         mole_fractions_liq.resize(N);
         mole_fractions_vap.resize(N);
@@ -413,18 +395,18 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
     }
     else
     {
-		// Loop over the file names - first we try with nothing, then .fld, then .FLD, then .ppf - means you can't mix and match
-		for (unsigned int k = 0; k < number_of_endings; k++)
-		{
-			// Build the mixture string
-			for (unsigned int j = 0; j < (unsigned int)N; j++)
-			{
-				if (j == 0){
-					components_joined = fdPath + upper(fluid_names[j])+endings[k];
-				}
-				else{
-					components_joined += "|" + fdPath + upper(fluid_names[j])+endings[k];
-				}
+        // Loop over the file names - first we try with nothing, then .fld, then .FLD, then .ppf - means you can't mix and match
+        for (unsigned int k = 0; k < number_of_endings; k++)
+        {
+            // Build the mixture string
+            for (unsigned int j = 0; j < (unsigned int)N; j++)
+            {
+                if (j == 0){
+                    components_joined = fdPath + upper(fluid_names[j])+endings[k];
+                }
+                else{
+                    components_joined += "|" + fdPath + upper(fluid_names[j])+endings[k];
+                }
             }
 
             if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
@@ -454,13 +436,13 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 return;
             }
             else if (k < number_of_endings-1){ // Keep going
-				continue;
-			}
+                continue;
+            }
             else
             {
                 throw ValueError(format("Could not load these fluids: %s", components_joined_raw.c_str()));
             }
-		}
+        }
     }
 }
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<long double> &mole_fractions)
@@ -550,12 +532,12 @@ long double REFPROPMixtureBackend::calc_rhomolar_critical(){
 };
 long double REFPROPMixtureBackend::calc_T_reducing(){
     double rhored_mol_L = 0, Tr = 0;
-	REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
+    REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
     return static_cast<long double>(Tr);
 };
 long double REFPROPMixtureBackend::calc_rhomolar_reducing(){
-	double rhored_mol_L = 0, Tr = 0;
-	REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
+    double rhored_mol_L = 0, Tr = 0;
+    REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
     return static_cast<long double>(rhored_mol_L*1000);
 };
 long double REFPROPMixtureBackend::calc_Ttriple(){
@@ -1220,22 +1202,22 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     _cvmolar = cvmol;
     _cpmolar = cpmol;
     _speed_sound = w;
-	_tau = calc_T_critical()/_T;
-	_delta = _rhomolar/calc_rhomolar_critical();
+    _tau = calc_T_critical()/_T;
+    _delta = _rhomolar/calc_rhomolar_critical();
 }
 long double REFPROPMixtureBackend::call_phixdll(long itau, long idel)
 {
-	double val = 0, tau = _tau, delta = _delta; 
-	if (PHIXdll == NULL){throw ValueError("PHIXdll function is not available in your version of REFPROP. Please upgrade");}
-	PHIXdll(&itau, &idel, &tau, &delta, &(mole_fractions[0]), &val);
-	return static_cast<long double>(val)/pow(static_cast<long double>(_delta),idel)/pow(static_cast<long double>(_tau),itau);
+    double val = 0, tau = _tau, delta = _delta; 
+    if (PHIXdll == NULL){throw ValueError("PHIXdll function is not available in your version of REFPROP. Please upgrade");}
+    PHIXdll(&itau, &idel, &tau, &delta, &(mole_fractions[0]), &val);
+    return static_cast<long double>(val)/pow(static_cast<long double>(_delta),idel)/pow(static_cast<long double>(_tau),itau);
 }
 long double REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
 {
     throw ValueError("Temporarily the PHI0dll function is not available for REFPROP");
-	double val = 0, tau = _tau, delta = _delta, __T = T(), __rho = rhomolar()/1000;
-	if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
-	PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
+    double val = 0, tau = _tau, delta = _delta, __T = T(), __rho = rhomolar()/1000;
+    if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
+    PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
     return static_cast<long double>(val)/pow(delta,idel)/pow(tau,itau);
 }
 
