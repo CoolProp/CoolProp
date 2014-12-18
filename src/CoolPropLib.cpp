@@ -6,8 +6,6 @@
 #include <fenv.h>
 #endif
 
-
-
 #include "CoolPropLib.h"
 #include "CoolProp.h"
 #include "HumidAirProp.h"
@@ -23,10 +21,10 @@
 // See also http://stackoverflow.com/questions/16849009/in-linux-do-there-exist-functions-similar-to-clearfp-and-statusfp for linux and OSX
 void reset_fpu()
 {
-    #if defined(__STDC_IEC_559__)
-	feclearexcept(FE_ALL_EXCEPT);
-    #elif defined(_MSC_VER)
-        _clearfp(); // For MSVC in excel, clear the floating point error flags
+    #if defined(_MSC_VER)
+        _clearfp(); // For MSVC, clear the floating point error flags
+    #else
+        feclearexcept(FE_ALL_EXCEPT);
     #endif
 }
 double convert_from_kSI_to_SI(long iInput, double value)
