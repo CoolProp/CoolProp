@@ -4,6 +4,8 @@
 %ignore CoolProp::AbstractState::set_mass_fractions(const std::vector< long double> &);
 %ignore CoolProp::set_config_json(rapidjson::Document &);
 %ignore CoolProp::get_config_as_json(rapidjson::Document &);
+%ignore configuration_keys;
+%ignore CoolProp::ConfigurationItem::ConfigurationDataTypes;
 
 %include "std_string.i" // This %include allows the use of std::string natively
 %include "std_vector.i" // This allows for the use of STL vectors natively(ish)
