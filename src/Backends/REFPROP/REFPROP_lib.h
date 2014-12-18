@@ -144,7 +144,7 @@ extern "C" {
 #endif
 
   // For C calling conventions, replaced all "double &" with "double *", and "long &" with "long *"
-  typedef void (CALLCONV RPVersion_TYPE)( char* );
+  typedef void (CALLCONV RPVersion_TYPE)( char* , long);
   typedef void (CALLCONV SETPATHdll_TYPE)( const char* );
   typedef void (CALLCONV ABFL1dll_TYPE)(double *,double *,double *,long *,double *,double *,double *,double *,double *,double *,long *,char*,long );
   typedef void (CALLCONV ABFL2dll_TYPE)(double *,double *,double *,long *,long *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,long *,char*,long );

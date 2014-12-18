@@ -291,8 +291,8 @@ bool load_REFPROP()
             throw CoolProp::AttributeError("There was an error setting the REFPROP function pointers, check types and names in header file.");
             return false;
         }
-		char rpv[255];
-		RPVersion(rpv);
+		char rpv[1000];
+		RPVersion(rpv, 1000);
 		RPVersion_loaded = rpv;
         return true;
     }
