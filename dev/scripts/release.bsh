@@ -12,6 +12,7 @@ fi
 CPVERSION="$1"
 BASEDIR="$HOME/buildbot/server-master/public_html"
 REPODIR="$HOME/src/CoolPropFull.git"
+TMPSDIR="$HOME/src/CoolProp.sources"
 BINFOLDER="binaries"
 DOCFOLDER="sphinx"
 SRCFOLDER="$BASEDIR/$BINFOLDER/source"
@@ -54,9 +55,21 @@ if [ "$DRYRUN" != "false" ]; then
     echo "Dry run; skipping folder date"
     RSYNC_DRY_RUN=--dry-run
 else
+    printMessage "Updating sources"
     pushd "$REPODIR"
     git pull
-    python dev/scripts/git-archive-all $SRCFOLDER/CoolProp_sources.zip
+    #python dev/scripts/git-archive-all $SRCFOLDER/CoolProp_sources.zip
+    popd
+    printMessage "Generating headers"
+    rsync -a --delete "$REPODIR/" "$TMPSDIR"
+    pushd "$TMPSDIR"
+    git reset --hard HEAD
+    python "dev/generate_headers.py"
+    rm -rf .git*
+    cd ..
+    rm $SRCFOLDER/CoolProp_sources.zip
+    zip -r $SRCFOLDER/CoolProp_sources.zip $(basename $TMPSDIR)
+    cd $(basename $TMPSDIR)
     popd
     rm -f "$BINFOLDER/README.rst.txt"
     if [ "$CPVERSION" = "nightly" ]; then
