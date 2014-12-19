@@ -346,16 +346,16 @@ protected:
         
         if (EOS_json["STATES"].HasMember("pressure_max_sat")){
             rapidjson::Value &s = EOS_json["STATES"]["pressure_max_sat"];
-            EOS.max_sat_T.T = cpjson::get_double(s, "T");
-            EOS.max_sat_T.p = cpjson::get_double(s, "p");
-            EOS.max_sat_T.rhomolar = cpjson::get_double(s, "rhomolar");
+            EOS.max_sat_p.T = cpjson::get_double(s, "T");
+            EOS.max_sat_p.p = cpjson::get_double(s, "p");
+            EOS.max_sat_p.rhomolar = cpjson::get_double(s, "rhomolar");
         }
         
         if (EOS_json["STATES"].HasMember("temperature_max_sat")){
             rapidjson::Value &s = EOS_json["STATES"]["temperature_max_sat"];
-            EOS.max_sat_p.T = cpjson::get_double(s, "T");
-            EOS.max_sat_p.p = cpjson::get_double(s, "p");
-            EOS.max_sat_p.rhomolar = cpjson::get_double(s, "rhomolar");
+            EOS.max_sat_T.T = cpjson::get_double(s, "T");
+            EOS.max_sat_T.p = cpjson::get_double(s, "p");
+            EOS.max_sat_T.rhomolar = cpjson::get_double(s, "rhomolar");
         }
         
         if (EOS_json.HasMember("critical_region_splines")){
