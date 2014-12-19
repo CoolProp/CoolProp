@@ -4,9 +4,48 @@ Changelog for CoolProp
 5.0.4
 -----
 
+BUGFIX: Lots of bugs squashed. 
+
+New features: 
+
+* Julia wrapper added
+* Derivatives along the saturation line for pure fluids implemented
+* Exposed the configuration getter/setter through SWIG (except for MATLAB)
+* Added transport properties for xylenes and Ethylbenzene
+* Surface tension for HFC pseudo-pures added
+
 Issues Closed:
 
-* `#309 <http://github.com/CoolProp/CoolProp/issues/309>`_ : Heat capacity of Ethylene-Glycol mixture is off by a factor of 1e3
+* `#355 <http://github.com/CoolProp/CoolProp/issues/355>`_ : In MSVC, too many symbols are exported in SWIG+MATLAB
+* `#354 <http://github.com/CoolProp/CoolProp/issues/354>`_ : REFPROP headers
+* `#353 <http://github.com/CoolProp/CoolProp/issues/353>`_ : Using HAPropsSI within circular reference on Mac Excel 2011 causes div/0 error!
+* `#350 <http://github.com/CoolProp/CoolProp/issues/350>`_ : Python module docs
+* `#347 <http://github.com/CoolProp/CoolProp/issues/347>`_ : Implement calc_melting_line for incompressibles
+* `#346 <http://github.com/CoolProp/CoolProp/issues/346>`_ : Memory sanitizer is reporting errors with RPVersion function call
+* `#344 <http://github.com/CoolProp/CoolProp/issues/344>`_ : skip typeerror in Excel to make 32-bit xlam work in 64-bit excel
+* `#342 <http://github.com/CoolProp/CoolProp/issues/342>`_ : Refprop mixture with 4 components error
+* `#339 <http://github.com/CoolProp/CoolProp/issues/339>`_ : Some SWIG tests fail due to the inclusion of rapidjson header
+* `#337 <http://github.com/CoolProp/CoolProp/issues/337>`_ : ECS not yielding the proper values for eta and lambda
+* `#332 <http://github.com/CoolProp/CoolProp/issues/332>`_ : Make the REFPROP wrapper code 1% more sane
+* `#331 <http://github.com/CoolProp/CoolProp/issues/331>`_ : Excel wapper shouts errors (in Excel 2013)
+* `#330 <http://github.com/CoolProp/CoolProp/issues/330>`_ : Implement ECS model for viscosity of xylenes and ethylbenzene
+* `#326 <http://github.com/CoolProp/CoolProp/issues/326>`_ : expose configuration through SWIG
+* `#325 <http://github.com/CoolProp/CoolProp/issues/325>`_ : Implement the generalized derivatives for REFPROP as well
+* `#324 <http://github.com/CoolProp/CoolProp/issues/324>`_ : SetPath for Refprop
+* `#322 <http://github.com/CoolProp/CoolProp/issues/322>`_ : Add method to AbstractState to return mixture component names
+* `#321 <http://github.com/CoolProp/CoolProp/issues/321>`_ : Add more R-number aliases
+* `#320 <http://github.com/CoolProp/CoolProp/issues/320>`_ : HAPropsSI("T", "V", 0.83, "R", 1, "P", 101325) & lead to infinite value
+* `#319 <http://github.com/CoolProp/CoolProp/issues/319>`_ : Error in entropy calculation with TH inputs
+* `#314 <http://github.com/CoolProp/CoolProp/issues/314>`_ : Add surface tension reference information to docs
+* `#312 <http://github.com/CoolProp/CoolProp/issues/312>`_ : Small examples of the use of derivatives should be in docs
+* `#309 <http://github.com/CoolProp/CoolProp/issues/309>`_ : MEG properties
+* `#308 <http://github.com/CoolProp/CoolProp/issues/308>`_ : Set maximum states for saturation curves for pseudo-pures properly
+* `#306 <http://github.com/CoolProp/CoolProp/issues/306>`_ : Surface Tension for HFC Pseudo-Pure is missing
+* `#304 <http://github.com/CoolProp/CoolProp/issues/304>`_ : Develop some docs about hooking up with Julia code
+* `#294 <http://github.com/CoolProp/CoolProp/issues/294>`_ : Add the clang sanitize tests to buildbot
+* `#247 <http://github.com/CoolProp/CoolProp/issues/247>`_ : Implement thermal conductivity for o-Xylene, m-Xylene, p-Xylene, and Ethylbenzene
+* `#238 <http://github.com/CoolProp/CoolProp/issues/238>`_ : add a function to retrieve derivatives along the saturation curve
+
 
 5.0.3
 -----
