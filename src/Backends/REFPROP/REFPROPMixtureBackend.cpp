@@ -274,7 +274,7 @@ bool load_REFPROP()
             return false;
         }
         char rpv[1000];
-        RPVersion(rpv);
+        RPVersion(rpv, 1000);
         RPVersion_loaded = rpv;
         return true;
     }
