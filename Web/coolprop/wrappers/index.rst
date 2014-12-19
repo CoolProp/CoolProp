@@ -19,6 +19,7 @@ Target                                          Operating Systems            Not
 :ref:`MATLAB <MATLAB>`                          linux, OSX, win              Wrapper is SWIG based
 :ref:`Java <Java>`                              linux, OSX, win              Wrapper is SWIG based
 :ref:`Scilab <Scilab>`                          linux, OSX, win              Wrapper is SWIG based (experimental)
+:ref:`Julia <Julia>`                            linux, OSX, win              
 :ref:`Modelica <Modelica>`                      linux, OSX, win
 :ref:`PHP <PHP>`                                linux, OSX, win              Mostly used on linux
 :ref:`Javascript <Javascript>`                  cross-platform               Works in all internet browsers
@@ -105,6 +106,7 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     EES/index.rst
     Java/index.rst
     Javascript/index.rst
+    Julia/index.rst
     Labview/index.rst
     Python/index.rst
     LibreOffice/index.rst
