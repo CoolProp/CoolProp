@@ -82,7 +82,7 @@
      * 
      * \note This function returns the phase string in pre-allocated phase variable.  If buffer is not large enough, no copy is made
      */
-    EXPORT_CODE long CONVENTION PhaseSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref, char *phase, int n);
+    EXPORT_CODE long CONVENTION PhaseSI(const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref, char *phase, int n);
     
     /**
      *\overload
