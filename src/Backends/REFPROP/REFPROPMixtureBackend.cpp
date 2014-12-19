@@ -46,7 +46,7 @@ surface tension                 N/m
 #endif
 
 enum DLLNameManglingStyle{ NO_NAME_MANGLING = 0, LOWERCASE_NAME_MANGLING, LOWERCASE_AND_UNDERSCORE_NAME_MANGLING };
-    
+
 #include "REFPROP_lib.h"
 #include "REFPROPMixtureBackend.h"
 #include "Exceptions.h"
@@ -98,9 +98,9 @@ static char default_reference_state[] = "DEF";
 
 /* Define functions as pointers and initialise them to NULL
 * Declare the functions for direct access
-* 
+*
 * Example: SETPATHdll_POINTER SETPATHdll;
-* 
+*
 * ***MAGIC WARNING**!! X Macros in use
 * See http://stackoverflow.com/a/148610
 * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
@@ -113,11 +113,11 @@ void *getFunctionPointer(const char * name, DLLNameManglingStyle mangling_style 
 {
     std::string function_name;
     switch(mangling_style){
-        case NO_NAME_MANGLING: 
+        case NO_NAME_MANGLING:
             function_name = name; break;
-        case LOWERCASE_NAME_MANGLING: 
+        case LOWERCASE_NAME_MANGLING:
             function_name = lower(name); break;
-        case LOWERCASE_AND_UNDERSCORE_NAME_MANGLING: 
+        case LOWERCASE_AND_UNDERSCORE_NAME_MANGLING:
             function_name = lower(name) + "_"; break;
     }
     #if defined(__ISWINDOWS__)
@@ -147,7 +147,7 @@ double setFunctionPointers()
      * C) RPVersion -> rpversion_
      */
      DLLNameManglingStyle mangling_style = NO_NAME_MANGLING; // defaults to no mangling
-     
+
      SETUPdll = (SETUPdll_POINTER) getFunctionPointer("SETUPdll");
      if (SETUPdll == NULL){ // some mangling in use
          SETUPdll = (SETUPdll_POINTER) getFunctionPointer("setupdll");
@@ -164,11 +164,11 @@ double setFunctionPointers()
              }
          }
      }
-    
+
     /* Set the pointers, platform independent
-     * 
+     *
      * Example: RPVersion = (RPVersion_POINTER) getFunctionPointer(STRINGIFY(RPVersion));
-     * 
+     *
      * ***MAGIC WARNING**!! X Macros in use
      * See http://stackoverflow.com/a/148610
      * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
@@ -176,7 +176,7 @@ double setFunctionPointers()
     #define X(name)  name = (name ## _POINTER) getFunctionPointer(STRINGIFY(name), mangling_style);
        LIST_OF_REFPROP_FUNCTION_NAMES
     #undef X
-    
+
     return COOLPROP_OK;
 }
 
@@ -202,7 +202,7 @@ bool load_REFPROP()
     // If REFPROP is not loaded
     if (RefpropdllInstance==NULL)
     {
-        
+
         // Load it
         #if defined(__ISWINDOWS__)
             /* We need this logic on windows because if you use the bitness
@@ -266,14 +266,14 @@ bool load_REFPROP()
             }
         #endif
         #endif
-        
+
         if (setFunctionPointers()!=COOLPROP_OK)
         {
                           printf("There was an error setting the REFPROP function pointers, check types and names in header file.\n");
             throw CoolProp::AttributeError("There was an error setting the REFPROP function pointers, check types and names in header file.");
             return false;
         }
-        char rpv[255];
+        char rpv[1000];
         RPVersion(rpv);
         RPVersion_loaded = rpv;
         return true;
@@ -1207,7 +1207,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 }
 long double REFPROPMixtureBackend::call_phixdll(long itau, long idel)
 {
-    double val = 0, tau = _tau, delta = _delta; 
+    double val = 0, tau = _tau, delta = _delta;
     if (PHIXdll == NULL){throw ValueError("PHIXdll function is not available in your version of REFPROP. Please upgrade");}
     PHIXdll(&itau, &idel, &tau, &delta, &(mole_fractions[0]), &val);
     return static_cast<long double>(val)/pow(static_cast<long double>(_delta),idel)/pow(static_cast<long double>(_tau),itau);
