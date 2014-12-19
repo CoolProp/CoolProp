@@ -1472,6 +1472,45 @@ TEST_CASE("Check the first partial derivatives", "[first_saturation_partial_deri
 		}
 	}
 }
+
+TEST_CASE("Check the second saturation derivatives", "[second_saturation_partial_deriv]")
+{
+	const int number_of_pairs = 5;
+	struct pair {parameters p1, p2, p3, p4;};
+	pair pairs[number_of_pairs] = {{iT, iP, iT, iP}, {iDmolar, iP, iDmolar, iP}, {iHmolar, iP, iHmolar, iP},
+	                              {iSmolar, iP, iSmolar, iP},{iUmolar, iP, iUmolar, iP}};
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
+	for (std::size_t i = 0; i < number_of_pairs; ++i)
+    {
+		// See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+		std::ostringstream ss1;
+		ss1 << "Check second saturation derivative for d2(" << get_parameter_information(pairs[i].p1,"short") << ")/d(" << get_parameter_information(pairs[i].p2,"short") << ")2|sat";
+		SECTION(ss1.str(),"")
+		{
+			AS->update(QT_INPUTS, 1, 300);
+			long double p = AS->p();
+			long double analytical = AS->second_saturation_deriv(pairs[i].p1, pairs[i].p2, pairs[i].p3, pairs[i].p4);
+			CAPTURE(analytical);
+			long double numerical;
+			if (pairs[i].p2 == iT){
+				throw NotImplementedError();
+			}
+			else if (pairs[i].p2 == iP){
+				AS->update(PQ_INPUTS, p+1e-2, 1);
+				long double v1 = AS->first_saturation_deriv(pairs[i].p1, pairs[i].p2);
+				AS->update(PQ_INPUTS, p-1e-2, 1);
+				long double v2 = AS->first_saturation_deriv(pairs[i].p1, pairs[i].p2);
+				numerical = (v1-v2)/(2e-2);
+			}
+			else{
+				throw ValueError();
+			}
+			CAPTURE(numerical);
+			CHECK(std::abs(numerical/analytical-1) < 1e-4);
+		}
+	}
+}
+
 /*
 TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
 {

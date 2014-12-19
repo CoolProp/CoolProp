@@ -289,7 +289,7 @@ protected:
     virtual long double calc_T_freeze(void){throw NotImplementedError("calc_T_freeze is not implemented for this backend");};
 	
 	virtual long double calc_first_saturation_deriv(parameters Of1, parameters Wrt1){throw NotImplementedError("calc_first_saturation_deriv is not implemented for this backend");};
-	virtual long double calc_second_saturation_deriv(parameters Of1, parameters Wrt1){throw NotImplementedError("calc_second_saturation_deriv is not implemented for this backend");};public:
+	virtual long double calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2){throw NotImplementedError("calc_second_saturation_deriv is not implemented for this backend");};public:
 
     AbstractState(){};
     virtual ~AbstractState(){};
@@ -537,10 +537,12 @@ protected:
 	 * 
 	 * \f[ \left(\frac{\partial \left(\frac{\partial T}{\partial p}\right)_{\sigma}}{\partial T}\right)_{\sigma} = \left(\frac{\partial \left(\frac{\partial T}{\partial p}\right)_{\sigma}}{\partial T}\right)+\left(\frac{\partial \left(\frac{\partial T}{\partial p}\right)_{\sigma}}{\partial p}\right)\left(\frac{\partial p}{\partial T}\right)_{\sigma} \f]
 	 * 
-	 * @param Of1 The parameter that the derivative is taken of
-	 * @param Wrt1 The parameter that the derivative is taken with respect to
+	 * @param Of1 The parameter that the first derivative is taken of
+	 * @param Wrt1 The parameter that the first derivative is taken with respect to
+	 * @param Of2 The parameter that the second derivative is taken of
+	 * @param Wrt2 The parameter that the second derivative is taken with respect to
 	 * */
-	long double second_saturation_deriv(parameters Of1, parameters Wrt1){return calc_second_saturation_deriv(Of1,Wrt1);};
+	long double second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2){return calc_second_saturation_deriv(Of1,Wrt1,Of2,Wrt2);};
     
     // ----------------------------------------
     //    Phase envelope for mixtures

@@ -2566,9 +2566,34 @@ long double HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters O
 		throw ValueError(format("Not possible to take first saturation derivative with respect to %s", get_parameter_information(Wrt1,"short").c_str()));
 	}
 }
-long double HelmholtzEOSMixtureBackend::calc_second_saturation_deriv(parameters Of1, parameters Wrt1)
+long double HelmholtzEOSMixtureBackend::calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2)
 {
-	throw NotImplementedError("calc_second_saturation_deriv is not yet implemented");
+	if (Wrt1 == iP && Wrt2 == iP){
+		if (Of1 != Of2){ throw ValueError(format("Currently, only possible to take second saturation derivative of y both times (d2ydx2)"));}
+		long double dydT_constp = this->first_partial_deriv(Of1, iT, iP);
+		long double d2ydTdp = this->second_partial_deriv(Of1, iT, iP, iP, iT);
+		long double d2ydp2_constT = this->second_partial_deriv(Of1, iP, iT, iP, iT);
+		long double d2ydT2_constp = this->second_partial_deriv(Of1, iT, iP, iT, iP);
+		
+		long double dTdp_along_sat = calc_first_saturation_deriv(iT, iP);
+		long double dvdrhoL = -1/POW2(SatL->rhomolar());
+		long double dvdrhoV = -1/POW2(SatV->rhomolar());
+		long double DELTAv = 1/SatV->rhomolar()-1/SatL->rhomolar();
+		long double dDELTAv_dT_constp = dvdrhoV*SatV->first_partial_deriv(iDmolar, iT, iP)-dvdrhoL*SatL->first_partial_deriv(iDmolar, iT, iP);
+		long double dDELTAv_dp_constT = dvdrhoV*SatV->first_partial_deriv(iDmolar, iP, iT)-dvdrhoL*SatL->first_partial_deriv(iDmolar, iP, iT);
+		long double DELTAh = SatV->hmolar()-SatL->hmolar();
+		long double dDELTAh_dT_constp = SatV->first_partial_deriv(iHmolar, iT, iP)-SatL->first_partial_deriv(iHmolar, iT, iP);
+		long double dDELTAh_dp_constT = SatV->first_partial_deriv(iHmolar, iP, iT)-SatL->first_partial_deriv(iHmolar, iP, iT);
+		long double ddT_dTdp_along_sat_constp = (DELTAh*(_T*dDELTAv_dT_constp+DELTAv)-_T*DELTAv*dDELTAh_dT_constp)/POW2(DELTAh);
+		long double ddp_dTdp_along_sat_constT = (DELTAh*(_T*dDELTAv_dp_constT)-_T*DELTAv*dDELTAh_dp_constT)/POW2(DELTAh);
+		
+		double ddp_dydpsigma = d2ydp2_constT + dydT_constp*ddp_dTdp_along_sat_constT + d2ydTdp*dTdp_along_sat;
+		double ddT_dydpsigma = d2ydTdp + dydT_constp*ddT_dTdp_along_sat_constp + d2ydT2_constp*dTdp_along_sat;
+		return ddp_dydpsigma + ddT_dydpsigma*dTdp_along_sat;
+	}
+	else{
+		throw ValueError(format("Currently, only possible to take second saturation derivative w.r.t. P (both times)"));
+	}
 }
 
 } /* namespace CoolProp */
