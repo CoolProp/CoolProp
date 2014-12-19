@@ -88,6 +88,7 @@ list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
 
 
 set (APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/Eigen")
+list (APPEND APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/REFPROP-headers")
 foreach (_headerFile ${APP_HEADERS})
     get_filename_component(_dir ${_headerFile} PATH)
     list (APPEND APP_INCLUDE_DIRS ${_dir})
