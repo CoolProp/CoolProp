@@ -124,6 +124,15 @@ public:
     long double calc_fraction_max(void){return fluid->getxmax();};
     long double calc_T_freeze(void){
         return fluid->Tfreeze(_p, _fractions[0]);};
+		
+	long double calc_melting_line(int param, int given, long double value){
+		if (param == iT && given == iP){
+			return fluid->Tfreeze(value, _fractions[0]);
+		}
+		else{
+			throw ValueError("For incompressibles, the only valid inputs to calc_melting_line are T(p)");
+		}
+	};
         
     std::string calc_name(void){return fluid->getDescription();};
 };
