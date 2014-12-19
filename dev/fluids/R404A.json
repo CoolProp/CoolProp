@@ -228,6 +228,14 @@
           "smolar": 153.46743148019652, 
           "smolar_units": "J/mol/K"
         }, 
+        "pressure_max_sat": {
+          "T": 345.2707352, 
+          "T_units": "K", 
+          "p": 3734900.064, 
+          "p_units": "Pa", 
+          "rhomolar": 4972.369784, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 345.27, 
           "T_units": "K", 
@@ -263,6 +271,14 @@
           "rhomolar_units": "mol/m^3", 
           "smolar": 165.11140069543768, 
           "smolar_units": "J/mol/K"
+        }, 
+        "temperature_max_sat": {
+          "T": 345.2714161, 
+          "T_units": "K", 
+          "p": 3734844.658, 
+          "p_units": "Pa", 
+          "rhomolar": 4929.111461, 
+          "rhomolar_units": "mol/m^3"
         }
       }, 
       "T_max": 450, 
@@ -423,22 +439,6 @@
       "p": 3734800.0, 
       "p_units": "Pa", 
       "rhomolar": 4939.999999999999, 
-      "rhomolar_units": "mol/m^3"
-    }, 
-    "pressure_max_sat": {
-      "T": 345.2707352, 
-      "T_units": "K", 
-      "p": 3734900.064, 
-      "p_units": "Pa", 
-      "rhomolar": 4972.369784, 
-      "rhomolar_units": "mol/m^3"
-    }, 
-    "temperature_max_sat": {
-      "T": 345.2714161, 
-      "T_units": "K", 
-      "p": 3734844.658, 
-      "p_units": "Pa", 
-      "rhomolar": 4929.111461, 
       "rhomolar_units": "mol/m^3"
     }, 
     "triple_liquid": {
