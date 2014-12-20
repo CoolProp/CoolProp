@@ -58,6 +58,7 @@ else
     printMessage "Updating sources"
     pushd "$REPODIR"
     git pull
+    git submodule update
     #python dev/scripts/git-archive-all $SRCFOLDER/CoolProp_sources.zip
     popd
     printMessage "Generating headers"
