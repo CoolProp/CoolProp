@@ -67,7 +67,7 @@ else
     git reset --hard HEAD
     python "dev/generate_headers.py"
     #rm -rf .git*
-    find . -iwholename "*/.git*" -exec rm -r {} \;
+    find . -iwholename "*/.git*" -exec rm -rf {} \;
     cd ..
     rm $SRCFOLDER/CoolProp_sources.zip
     zip -r $SRCFOLDER/CoolProp_sources.zip $(basename $TMPSDIR)
