@@ -168,6 +168,8 @@ double AbstractState::trivial_keyed_output(int key)
     {
     case imolar_mass:
         return molar_mass();
+	case igas_constant:
+		return gas_constant();
     case iT_min:
         return Tmin();
     case iT_triple:

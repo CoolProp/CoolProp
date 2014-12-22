@@ -41,6 +41,7 @@ struct SsatSimpleState : public SimpleState
 enum parameters{
 
     // General parameters
+	igas_constant,
     imolar_mass, 
     irhomolar_reducing, 
     irhomolar_critical, 
