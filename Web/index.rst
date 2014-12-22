@@ -50,13 +50,14 @@ Help
 - Email the `Google group <https://groups.google.com/d/forum/coolprop-users>`_
 
 
-Open-Source Projects Using CoolProp
+Projects Using CoolProp
 -----------------------------------
 
 - `Thermocycle <http://www.thermocycle.net/>`_
 - `PDSim <http://pdsim.sourceforge.net/>`_
 - `ACHP <http://achp.sourceforge.net/>`_
 - `DWSim <http://sourceforge.net/projects/dwsim/>`_
+- `StateCalc <https://itunes.apple.com/us/app/statecalc/id891848148?ls=1&mt=8>`_
 
 
 Main Developers
