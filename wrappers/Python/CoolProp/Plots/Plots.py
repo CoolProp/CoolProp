@@ -494,6 +494,56 @@ class PropsPlot(BasePlot):
                              axis=self.axis)
         iso_lines.draw_isolines(iso_range, num, rounding)
 
+    def draw_process(self, states, line_opts={'color' : 'r', 'lw' : 1.5}):
+        """ Draw process or cycle from list of State objects
+
+        Parameters
+        ----------
+        states : list
+            List of CoolProp.State.State objects
+        line_opts : dict
+            Line options (please see :func:`matplotlib.pyplot.plot`), Optional
+
+        """
+
+        # plot above other lines
+        line_opts['zorder'] = 10
+
+        for i, state in enumerate(states):
+            if state.Fluid != self.fluid_ref:
+                raise ValueError('Fluid [{0}] from State object does not match PropsPlot fluid [{1}].'.format(state.Fluid, self.fluid_ref))
+
+            if i == 0: continue
+
+            S2 = states[i]
+            S1 = states[i-1]
+            iso = False
+
+            y_name, x_name = self.graph_type.lower().replace('t', 'T')
+
+            x1 = getattr(S1, x_name)
+            x2 = getattr(S2, x_name)
+            y1 = getattr(S1, y_name)
+            y2 = getattr(S2, y_name)
+
+            # search for equal properties between states
+            for iso_type in ['p', 'T', 's', 'h', 'rho']:
+                if getattr(S1, iso_type) == getattr(S2, iso_type):
+                    axis_limits = [[x1, x2], [y1, y2]]
+                    self.draw_isolines(iso_type.upper(), [getattr(S1, iso_type)],
+                                       num=1, units='kSI', line_opts=line_opts,
+                                       axis_limits=axis_limits)
+                    iso = True
+                    break
+
+            # connect states with straight line
+            if not iso:
+                # convert values to SI for plotting
+                x_val = [CP.toSI(x_name.upper(), x1, 'kSI'),
+                         CP.toSI(x_name.upper(), x2, 'kSI')]
+                y_val = [CP.toSI(y_name.upper(), y1, 'kSI'),
+                         CP.toSI(y_name.upper(), y2, 'kSI')]
+                self.axis.plot(x_val, y_val, **line_opts)
 
 def Ts(Ref, Tmin=None, Tmax=None, show=False, axis=None, *args, **kwargs):
     """
