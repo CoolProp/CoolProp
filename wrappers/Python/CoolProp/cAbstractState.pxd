@@ -61,6 +61,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         
         long double first_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
         long double second_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
+        long double first_saturation_deriv(constants_header.parameters, constants_header.parameters) except+ValueError
+        long double second_saturation_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
         
         void set_mole_fractions(vector[double]) except+ValueError
         void set_mass_fractions(vector[double]) except+ValueError

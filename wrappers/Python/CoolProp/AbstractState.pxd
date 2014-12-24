@@ -49,6 +49,8 @@ cdef class AbstractState:
     
     cpdef long double first_partial_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
     cpdef long double second_partial_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
+    cpdef long double first_saturation_deriv(self, constants_header.parameters, constants_header.parameters) except *
+    cpdef long double second_saturation_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
     
     cpdef double melting_line(self, int, int, double) except *
     cpdef bool has_melting_line(self) except *

@@ -20,7 +20,7 @@ cdef class AbstractState:
         """ Specify the phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::specify_phase` """
         self.thisptr.specify_phase(phase)
     cpdef unspecify_phase(self):
-        """ Unspecify the phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::specify_phase` """
+        """ Unspecify the phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::unspecify_phase` """
         self.thisptr.unspecify_phase()
     
     cpdef update(self, constants_header.input_pairs ipair, double Value1, double Value2):
@@ -120,6 +120,12 @@ cdef class AbstractState:
     cpdef long double second_partial_deriv(self, constants_header.parameters OF , constants_header.parameters WRT1, constants_header.parameters CONSTANT1, constants_header.parameters WRT2, constants_header.parameters CONSTANT2) except *: 
         """ Get the second partial derivative - wrapper of c++ function :cpapi:`CoolProp::AbstractState::second_partial_deriv` """
         return self.thisptr.second_partial_deriv(OF, WRT1, CONSTANT1, WRT2, CONSTANT2)
+    cpdef long double first_saturation_deriv(self, constants_header.parameters OF , constants_header.parameters WRT) except *: 
+        """ Get the first derivative along the saturation curve - wrapper of c++ function :cpapi:`CoolProp::AbstractState::first_saturation_deriv` """
+        return self.thisptr.first_saturation_deriv(OF, WRT)
+    cpdef long double second_saturation_deriv(self, constants_header.parameters OF1 , constants_header.parameters WRT1, constants_header.parameters OF2, constants_header.parameters WRT2) except *: 
+        """ Get the second derivative along the saturation curve - wrapper of c++ function :cpapi:`CoolProp::AbstractState::second_saturation_deriv` """
+        return self.thisptr.second_saturation_deriv(OF1, WRT1, OF2, WRT2)
         
     ## ----------------------------------------	
     ##        Melting Line
