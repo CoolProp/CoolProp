@@ -20,7 +20,7 @@ def params_constants(enum_key):
     if not entries: raise ValueError('Unable to find '+enum_key)
         
     lines = entries.split('\n')
-    lines = filter(lambda line: not line.strip().startswith('//') and line, lines)
+    lines = filter(lambda line: not line.strip().startswith('//') and line, lines)[:]
     
     for i,line in enumerate(lines):
         if line.find('/'):
