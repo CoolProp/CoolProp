@@ -508,10 +508,7 @@ void get_dT_drho_second_derivatives(AbstractState &AS, int index, long double &d
     switch (index)
     {
     case iT:
-        dT2 = 0;  // d2T_dT2
-        drho_dT = 0; // d2T_drho_dT
-        drho2 = 0; 
-        break;
+	case iDmass:
     case iDmolar:
         dT2 = 0; // d2rhomolar_dtau2
         drho2 = 0;
