@@ -15,14 +15,12 @@ cdef extern from "Python.h":
 cdef extern from "CoolPropTools.h" namespace "CoolProp":
     bint _ValidNumber "ValidNumber"(double)
     
-cdef extern from "Backends/Helmholtz/MixtureParameters.h" namespace "CoolProp":
-    string _get_mixture_binary_pair_data "CoolProp::get_mixture_binary_pair_data"(const string CAS1, const string CAS2, const string key) except +
-    
 cdef extern from "Configuration.h" namespace "CoolProp":    
     string _get_config_as_json_string "CoolProp::get_config_as_json_string"() except +
     void _set_config_as_json_string "CoolProp::set_config_as_json_string"(string) except +
     
 cdef extern from "DataStructures.h" namespace "CoolProp":    
+    string _get_mixture_binary_pair_data "CoolProp::get_mixture_binary_pair_data"(const string CAS1, const string CAS2, const string key) except +
     string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
     int _get_parameter_index "CoolProp::get_parameter_index"(string) except +
     int _get_phase_index "CoolProp::get_phase_index"(string) except +

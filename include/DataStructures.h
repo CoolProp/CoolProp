@@ -339,5 +339,7 @@ std::string get_input_pair_short_desc(int pair);
 /// Return the long description of an input pair key ("Molar density in mol/m^3, Temperature in K" for instance)
 std::string get_input_pair_long_desc(int pair);
 
+extern std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param);
+
 } /* namespace CoolProp */
 #endif /* DATASTRUCTURES_H_ */
