@@ -234,7 +234,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
              HEOS.SatL->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
              HEOS.SatV->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
              HEOS._rhomolar = HEOS.rhomolar_critical();
-             HEOS._p = HEOS.SatL->p();
+             HEOS._p = 0.5*HEOS.SatV->p() + 0.5*HEOS.SatL->p();
         }
         else if (!is_in_closed_range(Tmin_sat, Tmax_sat, T)){
             throw ValueError(format("Temperature to QT_flash [%0.8Lg K] must be in range [%0.8Lg K, %0.8Lg K]", T, Tmin_sat, Tmax_sat));
@@ -245,7 +245,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
             splines.get_densities(T, splines.rhomolar_min, HEOS.rhomolar_critical(), splines.rhomolar_max, rhoL, rhoV);
             HEOS.SatL->update(DmolarT_INPUTS, rhoL, HEOS._T);
             HEOS.SatV->update(DmolarT_INPUTS, rhoV, HEOS._T);
-            HEOS._p = HEOS._Q*HEOS.SatV->p() + (1- HEOS._Q)*HEOS.SatL->p();
+            HEOS._p = 0.5*HEOS.SatV->p() + 0.5*HEOS.SatL->p();
             HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
         }
         else if (!(HEOS.components[0]->pEOS->pseudo_pure))
@@ -257,7 +257,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
             // Actually call the solver
             SaturationSolvers::saturation_T_pure_Maxwell(HEOS, HEOS._T, options);
             
-            HEOS._p = HEOS._Q*HEOS.SatV->p() + (1- HEOS._Q)*HEOS.SatL->p();
+            HEOS._p = 0.5*HEOS.SatV->p() + 0.5*HEOS.SatL->p();
             HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
         }
         else{
