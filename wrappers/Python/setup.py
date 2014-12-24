@@ -177,6 +177,10 @@ if __name__=='__main__':
             # Generate the headers - does nothing if up to date - but only if not pypi
             generate_headers.generate()
             del generate_headers
+            
+        import generate_constants_module
+        generate_constants_module.generate()
+        del generate_constants_module
 
     # Read the version from a bare string stored in file in root directory
     version = open(os.path.join(CProot,'.version'),'r').read().strip()
@@ -236,8 +240,8 @@ if __name__=='__main__':
         CoolProp_module = Extension('CoolProp.CoolProp',
                             [os.path.join('CoolProp','CoolProp.' + cy_ext)] + sources,
                             **common_args)
-    constants_module = Extension('CoolProp.constants',
-                        [os.path.join('CoolProp','constants.' + cy_ext)],
+    constants_module = Extension('CoolProp._constants',
+                        [os.path.join('CoolProp','_constants.' + cy_ext)],
                         **common_args)
 
     if not pypi:
