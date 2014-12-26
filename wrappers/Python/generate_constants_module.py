@@ -20,7 +20,7 @@ def params_constants(enum_key):
     if not entries: raise ValueError('Unable to find '+enum_key)
         
     lines = entries.split('\n')
-    lines = filter(lambda line: not line.strip().startswith('//') and line, lines)[:]
+    lines = [line for line in lines if not line.strip().startswith('//')]
     
     for i,line in enumerate(lines):
         if line.find('/'):
@@ -29,7 +29,7 @@ def params_constants(enum_key):
     # Chomp all the whitespace, split at commas
     keys = ''.join(lines).replace(' ','').split(',')
     
-    keys = filter(lambda k: k, keys)
+    keys = [k for k in keys if k]
         
     return keys
 
