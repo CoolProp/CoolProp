@@ -33,25 +33,6 @@ You might want to start by looking at CoolProp.h
     /// @param Prop2 The second state variable value
     /// @param FluidName The fluid name
     double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName);
-    /// Return a value that depends on the thermodynamic state
-    /// @param Output The output parameter, one of "T","D","H",etc.
-    /// @param Name1 The first state variable name, one of "T","D","H",etc.
-    /// @param Prop1 The first state variable value
-    /// @param Name2 The second state variable name, one of "T","D","H",etc.
-    /// @param Prop2 The second state variable value
-    /// @param FluidName The fluid name
-    /// @param z The mole or mass fractions depending on the requirements of the backend
-    double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z);
-    /// Return a value that depends on the thermodynamic state
-    /// @param Output The output parameter, one of "T","D","H",etc.
-    /// @param Name1 The first state variable name, one of "T","D","H",etc.
-    /// @param Prop1 The first state variable value
-    /// @param Name2 The second state variable name, one of "T","D","H",etc.
-    /// @param Prop2 The second state variable value
-    /// @param FluidName The fluid name, or names seperated by '&' if a mixture
-    /// @param z The mole or mass fractions depending on the requirements of the backend
-    std::vector<double> PropsSI(const std::string &Output, const std::string &Name1, const std::vector<double> &Prop1, const std::string &Name2, const std::vector<double> Prop2, const std::string &FluidName, const std::vector<double> &z);
-    
 
     /**
      * @brief Get a matrix of outputs for a given input.  Can handle both vector inputs as well as a vector of output strings
@@ -72,21 +53,6 @@ You might want to start by looking at CoolProp.h
                                                    const std::string &backend, 
                                                    const std::string &fluid, 
                                                    const std::vector<double> &fractions);
-                                               
-    /// Return a value that depends on the thermodynamic state
-    /// @param Output The output parameter, one of "T","D","H",etc.
-    /// @param Name1 The first state variable name, one of "T","D","H",etc.
-    /// @param Prop1 The first state variable value
-    /// @param Name2 The second state variable name, one of "T","D","H",etc.
-    /// @param Prop2 The second state variable value
-    /// @param FluidName The fluid name
-    std::vector<double> PropsSI(const std::string &Output, const std::string &Name1, const std::vector<double> &Prop1, const std::string &Name2, const std::vector<double> Prop2, const std::string &FluidName);
-
-    /**
-    \overload 
-    \sa PropsSI(std::string &Output, std::string &Name1, double Prop1, std::string &Name2, double Prop2, std::string &FluidName, const std::vector<double> &x);
-    */
-    double PropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *FluidName, const std::vector<double> &x);
 
     /// Get the debug level
     /// @returns level The level of the verbosity for the debugging output (0-10) 0: no debgging output

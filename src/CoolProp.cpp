@@ -352,38 +352,6 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
     #endif
     return std::vector<std::vector<double> >();
 }
-
-double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref, const std::vector<double> &z)
-{
-    #if !defined(NO_ERROR_CATCHING)
-    try{
-    #endif
-        // Fractions are already provided, we just need to parse the Ref string
-        std::string backend, fluid;
-        std::vector<double> fractions;
-        extract_backend(Ref, backend, fluid);
-        
-        std::vector<std::vector<double> > IO = PropsSImulti(strsplit(Output,'&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend, fluid, z);
-        if (IO.size()!= 1 || IO[0].size() != 1){ throw ValueError(format("output should be 1x1; error was %s", get_global_param_string("errstring").c_str())); }
-        
-        double val = IO[0][0];
-        return val;
-        
-    #if !defined(NO_ERROR_CATCHING)
-    }
-    catch(const std::exception& e){
-        set_error_string(e.what() + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")",Output.c_str(),Name1.c_str(), Prop1, Name2.c_str(), Prop2, Ref.c_str())); 
-        #if defined (PROPSSI_ERROR_STDOUT)
-        std::cout << e.what() << std::endl; 
-        #endif
-        if (get_debug_level() > 1){std::cout << e.what() << std::endl;}
-        return _HUGE; 
-    }
-    catch(...){
-        return _HUGE; 
-    }
-    #endif
-}
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref)
 {
     std::string backend, fluid; std::vector<double> fractions(1, 1.0);
@@ -424,25 +392,6 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
         return _HUGE; 
     }
     #endif
-}
-std::vector<double> PropsSI(const std::string &Output, const std::string &Name1, const std::vector<double> &Prop1, const std::string &Name2, const std::vector<double> Prop2, const std::string &FluidName)
-{
-    return PropsSI(Output, Name1, Prop1, Name2, Prop2, FluidName, std::vector<double>(1,1));
-}
-std::vector<double> PropsSI(const std::string &Output, const std::string &Name1, const std::vector<double> &Prop1, const std::string &Name2, const std::vector<double> Prop2, const std::string &Ref, const std::vector<double> &z)
-{
-    std::vector<double> out(Prop1.size(), _HUGE);
-    if (Prop1.size() != Prop2.size())
-    {
-        throw ValueError(format("Sizes of Prop1 [%d] and Prop2 [%d] to PropsSI are not the same", Prop1.size(), Prop2.size()));
-    }
-    // Do the setup
-    // Get the outputs
-    for (std::size_t i = 0; i < Prop1.size(); ++i)
-    {
-        out[i] = PropsSI(Output,Name1,Prop1[i],Name2,Prop2[i],Ref,z);
-    }
-    return out;
 }
 #if defined(ENABLE_CATCH)
 TEST_CASE("Check inputs to PropsSI","[PropsSI]")
@@ -522,11 +471,6 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
     };
 };
 #endif
-double PropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *FluidName, const std::vector<double> &x)
-{
-    std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;
-    return PropsSI(_Output,_Name1,Prop1,_Name2,Prop2,_FluidName, x);
-}
 
 /****************************************************
  *                  Props1SI                        *
