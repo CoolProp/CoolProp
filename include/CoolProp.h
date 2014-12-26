@@ -51,6 +51,28 @@ You might want to start by looking at CoolProp.h
     /// @param FluidName The fluid name, or names seperated by '&' if a mixture
     /// @param z The mole or mass fractions depending on the requirements of the backend
     std::vector<double> PropsSI(const std::string &Output, const std::string &Name1, const std::vector<double> &Prop1, const std::string &Name2, const std::vector<double> Prop2, const std::string &FluidName, const std::vector<double> &z);
+    
+
+    /**
+     * @brief Get a matrix of outputs for a given input.  Can handle both vector inputs as well as a vector of output strings
+     * @param Outputs A vector of strings for the output parameters
+     * @param Name1 The name of the first input variable
+     * @param Prop1 A vector of the first input values
+     * @param Name2 The name of the second input variable
+     * @param Prop2 A vector of the second input values
+     * @param backend The string representation of the backend (HEOS, REFPROP, INCOMP, etc.)
+     * @param fluid The fluid name
+     * @param fractions The fractions (molar, mass, volume, etc.) of the components
+     */
+    std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &Outputs, 
+                                                   const std::string &Name1, 
+                                                   const std::vector<double> &Prop1,
+                                                   const std::string &Name2, 
+                                                   const std::vector<double> &Prop2, 
+                                                   const std::string &backend, 
+                                                   const std::string &fluid, 
+                                                   const std::vector<double> &fractions);
+                                               
     /// Return a value that depends on the thermodynamic state
     /// @param Output The output parameter, one of "T","D","H",etc.
     /// @param Name1 The first state variable name, one of "T","D","H",etc.
