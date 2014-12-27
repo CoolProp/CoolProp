@@ -697,6 +697,17 @@ void HelmholtzEOSMixtureBackend::calc_Tmin_sat(long double &Tmin_satL, long doub
         throw ValueError("calc_Tmin_sat not yet defined for mixtures");
     }
 }
+long double HelmholtzEOSMixtureBackend::calc_saturated_state_keyed_output(HelmholtzEOSMixtureBackend HEOS, parameters key)
+{
+    switch (key){
+        case iDmolar: return HEOS.rhomolar();
+        case iDmass: return HEOS.rhomass();
+        case iHmolar: return HEOS.hmolar();
+        case iHmass: return HEOS.hmass();
+        case iviscosity: return HEOS.viscosity();
+        case iconductivity: return HEOS.conductivity();
+    }
+}
 
 void HelmholtzEOSMixtureBackend::calc_pmin_sat(long double &pmin_satL, long double &pmin_satV)
 {
