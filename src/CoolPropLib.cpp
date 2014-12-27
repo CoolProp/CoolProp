@@ -199,13 +199,15 @@ EXPORT_CODE long CONVENTION PhaseSI(const char *Name1, double Prop1, const char 
         return 0;
     }
 }
-EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName, const double *z, int n)
+/*
+ * EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName, const double *z, int n)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;
     double val = CoolProp::PropsSI(_Output, _Name1, Prop1, _Name2, Prop2, _FluidName, std::vector<double>(z, z+n));
     reset_fpu();
     return val;
 }
+ * */
 EXPORT_CODE void CONVENTION propssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * FluidName, double *output)
 {
     std::string _Output = Output, _Name1 = Name1, _Name2 = Name2, _FluidName = FluidName;

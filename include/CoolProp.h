@@ -166,7 +166,7 @@ You might want to start by looking at CoolProp.h
     /// @param FluidName The fluid name
     /// @param z The mole or mass fractions depending on the requirements of the backend
     /// \note Returns empty string if there was an error; use get_global_param_string("errstring") to retrieve the error
-    std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z);
+    //std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z);
     
     } /* namespace CoolProp */
 #endif

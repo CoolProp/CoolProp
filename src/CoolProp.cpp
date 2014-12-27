@@ -513,9 +513,6 @@ TEST_CASE("Check inputs to Props1SI","[Props1SI],[PropsSI]")
     SECTION("Good fluid, good parameter"){ 
         CHECK(ValidNumber(CoolProp::PropsSI("Tcrit","",0,"",0,"Water")));
     };
-    SECTION("Good fluid, good parameter"){ 
-        CHECK(ValidNumber(CoolProp::PropsSI("Tcrit","",0,"",0,"HEOS::Water",std::vector<double>(1,1))));
-    };
     SECTION("Good fluid, good parameter, inverted"){ 
         CHECK(ValidNumber(CoolProp::Props1SI("Water","Tcrit")));
     };
@@ -796,6 +793,7 @@ std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &N
     return phase_lookup_string(static_cast<phases>(Phase_int));
 }
     
+/*
 std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z)
 {
     double Phase_double = PropsSI("Phase",Name1,Prop1,Name2,Prop2,FluidName,z);
@@ -803,5 +801,5 @@ std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &N
     std::size_t Phase_int = static_cast<std::size_t>(Phase_double);
     return phase_lookup_string(static_cast<phases>(Phase_int));
 }
-
+*/
 } /* namespace CoolProp */
