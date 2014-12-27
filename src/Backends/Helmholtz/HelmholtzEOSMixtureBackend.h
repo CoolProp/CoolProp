@@ -216,9 +216,8 @@ public:
     long double calc_conductivity(void);
     long double calc_conductivity_background(void);
 
-    long double calc_saturated_state_keyed_output(HelmholtzEOSMixtureBackend HEOS, parameters key);
-    long double saturated_liquid_keyed_output(parameters key) { return calc_saturated_state_keyed_output(*SatL, key); }
-    long double saturated_vapor_keyed_output(parameters key) { return calc_saturated_state_keyed_output(*SatV, key); }
+    long double calc_saturated_liquid_keyed_output(parameters key) { return SatL->keyed_output(key); }
+    long double calc_saturated_vapor_keyed_output(parameters key) { return SatV->keyed_output(key); }
 
     long double calc_Tmin(void);
     long double calc_Tmax(void);
