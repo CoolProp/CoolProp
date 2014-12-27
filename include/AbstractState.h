@@ -587,6 +587,8 @@ public:
     double conductivity(void);
     /// Return the surface tension in N/m
     double surface_tension(void);
+    /// Return the Prandtl number (dimensionless)
+    double Prandtl(void){return cpmass()*viscosity()/conductivity();};
 
     // ----------------------------------------
     // Helmholtz energy and derivatives
