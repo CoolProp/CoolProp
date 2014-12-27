@@ -61,12 +61,11 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<doubl
 
         // Negate f0
         negative_f0 = f0;
-        for (unsigned int i = 0; i<f0.size(); i++){ negative_f0[i] *= -1;}
+        for (std::size_t i = 0; i<f0.size(); i++){ negative_f0[i] *= -1;}
         // find v from J*v = -f
         v = linsolve(J, negative_f0);
         // Update the guess
-        x0[0] += v[0];
-        x0[1] += v[1];
+        for (std::size_t i = 0; i<x0.size(); i++){ x0[i] *= v[i];}
         error = root_sum_square(f0);
         if (iter>maxiter){
             *errstring=std::string("reached maximum number of iterations");
