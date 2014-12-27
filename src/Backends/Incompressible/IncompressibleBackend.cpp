@@ -477,7 +477,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
     SECTION("Tests for the full implementation using PropsSI") {
 
         // Prepare the results and compare them to the calculated values
-        std::string fluid("INCOMP::ExampleMelinder");
+        std::string fluid("ExampleMelinder");
         double acc = 0.0001;
         double T   = -5  + 273.15;
         double p   = 10e5;
@@ -488,7 +488,8 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         // Compare different inputs
         // ... as vector
         expected = 9.6212e+02;
-        actual = CoolProp::PropsSI("D","T",T,"P",p,fluid,std::vector<double>(1,x));
+        std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(std::vector<std::string>(1,"D"),"T",std::vector<double>(1,T),"P",std::vector<double>(1,p),"INCOMP",fluid,std::vector<double>(1,x));
+        actual = IO[0][0];
         {
         CAPTURE(T);
         CAPTURE(p);
@@ -524,16 +525,20 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CHECK( check_abs(expected,actual,acc) );
         }
 
-
-        fluid = std::string("INCOMP::ExampleSecCool");
+        std::string backend = "INCOMP";
+        fluid = std::string("ExampleSecCool");
         T   = -5  + 273.15;
         p   = 10e5;
         x   = 0.4;
         std::vector<double> x_vec = std::vector<double>(1,x);
+        std::vector<double> T_vec = std::vector<double>(1,T);
+        std::vector<double> p_vec = std::vector<double>(1,p);
 
         // Compare d
         expected = 9.4844e+02;
-        actual = CoolProp::PropsSI("D","T",T,"P",p,fluid,x_vec);
+        
+        IO = CoolProp::PropsSImulti(std::vector<std::string>(1,"D"),"T",T_vec,"P",p_vec,backend,fluid,x_vec);
+        actual = IO[0][0];
         {
         CAPTURE(T);
         CAPTURE(p);
@@ -547,7 +552,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
         // Compare cp
         expected = 3.6304e+03;
-        actual = CoolProp::PropsSI("C","T",T,"P",p,fluid,x_vec);
+        actual = CoolProp::PropsSImulti(std::vector<std::string>(1,"C"),"T",T_vec,"P",p_vec,backend,fluid,x_vec)[0][0];
         {
         CAPTURE(T);
         CAPTURE(p);
