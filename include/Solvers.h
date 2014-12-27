@@ -23,7 +23,7 @@ public:
     FuncWrapperND(){};
     virtual ~FuncWrapperND(){};
     virtual std::vector<double> call(std::vector<double>) = 0;// must be provided
-    virtual std::vector<std::vector<double> > Jacobian(std::vector<double>){std::vector<std::vector<double> > J; return J;}; // optional
+    virtual std::vector<std::vector<double> > Jacobian(std::vector<double>);
 };
 
 // Single-Dimensional solvers, pointer versions

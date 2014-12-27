@@ -7,6 +7,31 @@
 
 namespace CoolProp{
 
+/** \brief Calculate the Jacobian using numerical differentiation by column
+ */
+std::vector<std::vector<double> > FuncWrapperND::Jacobian(std::vector<double> x)
+{
+    double epsilon;
+    std::size_t N = x.size();
+    std::vector<double> r, xp;
+    std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
+    std::vector<double> r0 = call(x);
+    // Build the Jacobian by column
+    for (std::size_t i = 0; i < N; ++i)
+    {
+        xp = x;
+        epsilon = 0.001*x[i];
+        xp[i] += epsilon;
+        r = call(xp);
+        
+        for(std::size_t j = 0; j < N; ++j)
+        {
+            J[j][i] = (r[j]-r0[j])/epsilon;
+        }
+    }
+    return J;
+}
+
 /**
 In this formulation of the Multi-Dimensional Newton-Raphson solver the Jacobian matrix is known.
 Therefore, the dx vector can be obtained from
