@@ -289,7 +289,12 @@ protected:
     virtual long double calc_T_freeze(void){throw NotImplementedError("calc_T_freeze is not implemented for this backend");};
 	
 	virtual long double calc_first_saturation_deriv(parameters Of1, parameters Wrt1){throw NotImplementedError("calc_first_saturation_deriv is not implemented for this backend");};
-	virtual long double calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2){throw NotImplementedError("calc_second_saturation_deriv is not implemented for this backend");};public:
+	virtual long double calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2){throw NotImplementedError("calc_second_saturation_deriv is not implemented for this backend");};
+    
+    virtual long double calc_saturated_liquid_keyed_output(parameters key){throw NotImplementedError("calc_saturated_liquid_keyed_output is not implemented for this backend");};
+    virtual long double calc_saturated_vapor_keyed_output(parameters key){throw NotImplementedError("calc_saturated_vapor_keyed_output is not implemented for this backend");};
+
+public:
 
     AbstractState(){};
     virtual ~AbstractState(){};
@@ -403,6 +408,10 @@ protected:
     double keyed_output(int key);
     /// A trivial keyed output like molar mass that does not depend on the state
     double trivial_keyed_output(int key);
+    /// Get an output from the saturated liquid state by key
+    double saturated_liquid_keyed_output(parameters key){return calc_saturated_liquid_keyed_output(key);};
+    /// Get an output from the saturated vapor state by key
+    double saturated_vapor_keyed_output(parameters key){return calc_saturated_vapor_keyed_output(key);};
     
     /// Return the temperature in K
     double T(void)  {return _T;};
@@ -578,6 +587,8 @@ protected:
     double conductivity(void);
     /// Return the surface tension in N/m
     double surface_tension(void);
+    /// Return the Prandtl number (dimensionless)
+    double Prandtl(void){return cpmass()*viscosity()/conductivity();};
 
     // ----------------------------------------
     // Helmholtz energy and derivatives
@@ -664,7 +675,6 @@ protected:
         if (!_d3alphar_dTau3) _d3alphar_dTau3 = calc_d3alphar_dTau3();
         return _d3alphar_dTau3;
     };
-	
 	
     /*
     virtual double dalphar_dDelta_lim(void) = 0;

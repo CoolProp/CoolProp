@@ -7,6 +7,31 @@
 
 namespace CoolProp{
 
+/** \brief Calculate the Jacobian using numerical differentiation by column
+ */
+std::vector<std::vector<double> > FuncWrapperND::Jacobian(std::vector<double> x)
+{
+    double epsilon;
+    std::size_t N = x.size();
+    std::vector<double> r, xp;
+    std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
+    std::vector<double> r0 = call(x);
+    // Build the Jacobian by column
+    for (std::size_t i = 0; i < N; ++i)
+    {
+        xp = x;
+        epsilon = 0.001*x[i];
+        xp[i] += epsilon;
+        r = call(xp);
+        
+        for(std::size_t j = 0; j < N; ++j)
+        {
+            J[j][i] = (r[j]-r0[j])/epsilon;
+        }
+    }
+    return J;
+}
+
 /**
 In this formulation of the Multi-Dimensional Newton-Raphson solver the Jacobian matrix is known.
 Therefore, the dx vector can be obtained from
@@ -36,12 +61,11 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<doubl
 
         // Negate f0
         negative_f0 = f0;
-        for (unsigned int i = 0; i<f0.size(); i++){ negative_f0[i] *= -1;}
+        for (std::size_t i = 0; i<f0.size(); i++){ negative_f0[i] *= -1;}
         // find v from J*v = -f
         v = linsolve(J, negative_f0);
         // Update the guess
-        x0[0] += v[0];
-        x0[1] += v[1];
+        for (std::size_t i = 0; i<x0.size(); i++){ x0[i] *= v[i];}
         error = root_sum_square(f0);
         if (iter>maxiter){
             *errstring=std::string("reached maximum number of iterations");
