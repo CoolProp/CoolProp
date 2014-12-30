@@ -5,10 +5,17 @@
 #define _CRTDBG_MAP_ALLOC
 #define _CRT_SECURE_NO_WARNINGS
 #include <crtdbg.h>
+
 #endif
 
 #if defined(__ISWINDOWS__)
 #include <windows.h>
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
 #else
 #ifndef DBL_EPSILON
     #include <limits>
