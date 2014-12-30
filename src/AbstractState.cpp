@@ -16,41 +16,37 @@
 
 namespace CoolProp {
 
-AbstractState * AbstractState::factory(const std::string &backend, const std::string &fluid_string)
+AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
 {
     static std::string HEOS_string = "HEOS";
     if (!backend.compare("HEOS"))
     {
-        if (fluid_string.find('&') == std::string::npos){
-            return new HelmholtzEOSBackend(fluid_string);
+        if (fluid_names.size() == 1){
+            return new HelmholtzEOSBackend(fluid_names[0]);
         }
         else{
-            // Split at the '&'
-            std::vector<std::string> components = strsplit(fluid_string,'&');
-
-            return new HelmholtzEOSMixtureBackend(components);
+            return new HelmholtzEOSMixtureBackend(fluid_names);
         }
     }
     else if (!backend.compare("REFPROP"))
     {
-        if (fluid_string.find('&') == std::string::npos){
-            return new REFPROPBackend(fluid_string);
+        if (fluid_names.size() == 1){
+            return new REFPROPBackend(fluid_names[0]);
         }
         else{
-            // Split at the '&'
-            std::vector<std::string> components = strsplit(fluid_string,'&');
-
-            return new REFPROPMixtureBackend(components);
+            return new REFPROPMixtureBackend(fluid_names);
         }
     }
     else if (!backend.compare("INCOMP"))
     {
-        return new IncompressibleBackend(fluid_string);
+        if (fluid_names.size() != 1){throw ValueError(format("For INCOMP backend, name vector must be one element long"));}
+        return new IncompressibleBackend(fluid_names[0]);
     }
     else if (backend.find("TTSE&") == 0)
     {
+        if (fluid_names.size() != 1){throw ValueError(format("For backend [%s], name vector must be one element long", backend.c_str()));}
         // Will throw if there is a problem with this backend
-        shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_string));
+        shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_names[0]));
         return new TTSEBackend(*AS.get());
     }
     else if (!backend.compare("TREND"))
@@ -59,19 +55,18 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::st
     }
     else if (!backend.compare("?"))
     {
-        std::size_t idel = fluid_string.find("::");
+        std::size_t idel = fluid_names[0].find("::");
         // Backend has not been specified, and we have to figure out what the backend is by parsing the string
         if (idel == std::string::npos) // No '::' found, no backend specified, try HEOS, otherwise a failure
         {
             // Figure out what backend to use
-            return factory(HEOS_string, fluid_string);
+            return factory(HEOS_string, fluid_names);
         }
         else
         {
             // Split string at the '::' into two std::string, call again
-            return factory(std::string(fluid_string.begin(), fluid_string.begin() + idel), std::string(fluid_string.begin()+idel+2, fluid_string.end()));
+            return factory(std::string(fluid_names[0].begin(), fluid_names[0].begin() + idel), std::string(fluid_names[0].begin()+idel+2, fluid_names[0].end()));
         }
-
     }
     else
     {
