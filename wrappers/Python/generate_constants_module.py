@@ -26,7 +26,7 @@ def params_constants(enum_key):
         if line.find('/'):
             lines[i] = line.split('/')[0]
         if '=' in lines[i]:
-            lines[i] = lines[i].split('=')[0]
+            lines[i] = lines[i].split('=')[0].strip() + ','
     
     # Chomp all the whitespace, split at commas
     keys = ''.join(lines).replace(' ','').split(',')
