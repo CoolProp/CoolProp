@@ -488,7 +488,8 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         // Compare different inputs
         // ... as vector
         expected = 9.6212e+02;
-        std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(std::vector<std::string>(1,"D"),"T",std::vector<double>(1,T),"P",std::vector<double>(1,p),"INCOMP",fluid,std::vector<double>(1,x));
+        std::vector<std::string> fluid_Melinder(1,fluid);
+        std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(std::vector<std::string>(1,"D"),"T",std::vector<double>(1,T),"P",std::vector<double>(1,p),"INCOMP",fluid_Melinder,std::vector<double>(1,x));
         actual = IO[0][0];
         {
         CAPTURE(T);
@@ -526,7 +527,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         }
 
         std::string backend = "INCOMP";
-        fluid = std::string("ExampleSecCool");
+        std::vector<std::string> fluids(1,"ExampleSecCool");
         T   = -5  + 273.15;
         p   = 10e5;
         x   = 0.4;
@@ -537,7 +538,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         // Compare d
         expected = 9.4844e+02;
         
-        IO = CoolProp::PropsSImulti(std::vector<std::string>(1,"D"),"T",T_vec,"P",p_vec,backend,fluid,x_vec);
+        IO = CoolProp::PropsSImulti(std::vector<std::string>(1,"D"),"T",T_vec,"P",p_vec,backend,fluids,x_vec);
         actual = IO[0][0];
         {
         CAPTURE(T);
@@ -552,7 +553,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
         // Compare cp
         expected = 3.6304e+03;
-        actual = CoolProp::PropsSImulti(std::vector<std::string>(1,"C"),"T",T_vec,"P",p_vec,backend,fluid,x_vec)[0][0];
+        actual = CoolProp::PropsSImulti(std::vector<std::string>(1,"C"),"T",T_vec,"P",p_vec,backend,fluids,x_vec)[0][0];
         {
         CAPTURE(T);
         CAPTURE(p);

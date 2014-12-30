@@ -42,7 +42,7 @@ You might want to start by looking at CoolProp.h
      * @param Name2 The name of the second input variable
      * @param Prop2 A vector of the second input values
      * @param backend The string representation of the backend (HEOS, REFPROP, INCOMP, etc.)
-     * @param fluid The fluid name
+     * @param fluids The fluid name(s)
      * @param fractions The fractions (molar, mass, volume, etc.) of the components
      */
     std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &Outputs, 
@@ -51,7 +51,7 @@ You might want to start by looking at CoolProp.h
                                                    const std::string &Name2, 
                                                    const std::vector<double> &Prop2, 
                                                    const std::string &backend, 
-                                                   const std::string &fluid, 
+                                                   const std::vector<std::string> &fluids, 
                                                    const std::vector<double> &fractions);
 
     /// Get the debug level

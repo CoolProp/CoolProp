@@ -176,40 +176,64 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
 }
 
 void _PropsSI_initialize(const std::string &backend, 
-                         const std::string &Ref, 
+                         const std::vector<std::string> &fluid_names, 
                          const std::vector<double> &z, 
                          shared_ptr<AbstractState> &State){
-	std::vector<double> fractions(1,1);
-	std::string fluid = Ref;
+                             
+    if (fluid_names.empty()){throw ValueError("fluid_names cannot be empty");}
+	
+    std::vector<std::string> fluids = fluids;
 	Dictionary dict;
     
-	// If a predefined mixture, set it up
-	if (is_predefined_mixture(fluid, dict)){
-		fractions = dict.get_double_vector("mole_fractions");
-		fluid = strjoin(dict.get_string_vector("fluids"),"&");
-	}
+	// If a predefined mixture, set it up.  Fractions and names are given
+	if (is_predefined_mixture(fluid_names[0], dict)){        
 		
-    if (!z.empty()){
-        // Make a copy of the provided fractions
-        fractions = z;
+        // Retrieve the information on the predefined mixture
+        std::vector<double> fractions = dict.get_double_vector("mole_fractions");
+		std::vector<std::string> fluid_names = dict.get_string_vector("fluids");
+        
+        // Reset the state
+        State.reset(AbstractState::factory(backend, fluid_names));
+        
+        // Set the fraction for the state
+        if (State->using_mole_fractions()){
+            State->set_mole_fractions(fractions);
+        } else if (State->using_mass_fractions()){
+            State->set_mass_fractions(fractions);
+        } else if (State->using_volu_fractions()){
+            State->set_volu_fractions(fractions);
+        } else {
+            if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
+        }
+	}
+    else{		
+        std::vector<double> fractions;
+        std::string fluid_string;
+        
+        if (!z.empty()){
+            // Make a copy of the provided fractions
+            fractions = z;
+        }
+        if (fluid_names.size() == 1){
+            // Extract fractions from the string if you can
+            fluid_string = extract_fractions(fluid_names[0], fractions);
+        }
+        
+        // Reset the state
+        State.reset(AbstractState::factory(backend, fluid_string));
+        
+        // Set the fraction for the state
+        if (State->using_mole_fractions()){
+            State->set_mole_fractions(fractions);
+        } else if (State->using_mass_fractions()){
+            State->set_mass_fractions(fractions);
+        } else if (State->using_volu_fractions()){
+            State->set_volu_fractions(fractions);
+        } else {
+            if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
+        }        
     }
- 
-	// Extract fractions from the string if you can
-    std::string fluid_string = extract_fractions(Ref, fractions);
 	
-	// Reset the state
-	State.reset(AbstractState::factory(backend, fluid_string));
-	
-	// Set the fraction for the state
-    if (State->using_mole_fractions()){
-        State->set_mole_fractions(fractions);
-    } else if (State->using_mass_fractions()){
-        State->set_mass_fractions(fractions);
-    } else if (State->using_volu_fractions()){
-        State->set_volu_fractions(fractions);
-    } else {
-        if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
-    }
 }
 
 struct output_parameter{
@@ -289,7 +313,7 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
                                                const std::string &Name2, 
                                                const std::vector<double> &Prop2, 
                                                const std::string &backend, 
-                                               const std::string &fluid, 
+                                               const std::vector<std::string> &fluids, 
                                                const std::vector<double> &fractions)
 {
     shared_ptr<AbstractState> State;
@@ -304,11 +328,11 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
         
         try{
             // Initialize the State class
-            _PropsSI_initialize(backend, fluid, fractions, State);
+            _PropsSI_initialize(backend, fluids, fractions, State);
         }
         catch(std::exception &e){
             // Initialization failed.  Stop.
-            throw ValueError(format("_PropsSI_initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"",backend.c_str(), fluid.c_str(), vec_to_string(fractions, "0.10f").c_str()) );
+            throw ValueError(format("_PropsSI_initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"",backend.c_str(), strjoin(fluids,"&").c_str(), vec_to_string(fractions, "0.10f").c_str()) );
         }
 
         try{
@@ -354,7 +378,7 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
 }
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref)
 {
-    std::string backend, fluid; std::vector<double> fractions(1, 1.0);
+    std::string backend, fluid; std::vector<double> fractions(1,1.0);
     #if !defined(NO_ERROR_CATCHING)
     try{
     #endif
@@ -370,7 +394,7 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
             extract_fractions(fluid, fractions);
         }
         
-        IO = PropsSImulti(strsplit(Output,'&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend, fluid, fractions);
+        IO = PropsSImulti(strsplit(Output,'&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend, std::vector<std::string>(1, fluid), fractions);
         if (IO.size()!= 1 || IO[0].size() != 1){ throw ValueError(format("output should be 1x1; error was %s", get_global_param_string("errstring").c_str())); }
         
         double val = IO[0][0];
@@ -399,45 +423,73 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
     SECTION("Single state, single output"){ 
         CHECK(ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"Water")));
     };
+    SECTION("Single state, single output, pure incompressible"){ 
+        CHECK(ValidNumber(CoolProp::PropsSI("D","P",101325,"T",300,"INCOMP::DowQ")));
+    };
+    SECTION("Single state, single output, 40% incompressible"){ 
+        CHECK(ValidNumber(CoolProp::PropsSI("D","P",101325,"T",300,"INCOMP::MEG[0.40]")));
+    };
+    SECTION("Single state, single output, predefined CoolProp mixture"){ 
+        CHECK(ValidNumber(CoolProp::PropsSI("T","Q",1,"P",3e6,"HEOS::R125[0.7]&R32[0.3]")));
+    };
+    SECTION("Single state, single output"){ 
+        CHECK(ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"HEOS::Water")));
+    };
+    SECTION("Single state, single output, predefined mixture"){ 
+        CHECK(ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"R410A.mix")));
+    };
+    SECTION("Predefined mixture"){
+        std::vector<double> p(1, 101325), Q(1, 1.0), z;
+        std::vector<std::string> outputs(1,"T"); outputs.push_back("Dmolar");
+        std::vector<std::vector<double> > IO;
+        std::vector<std::string> fluids(1, "R410A.mix");
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
+    };
     SECTION("Single state, two outputs"){
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::string> outputs(1,"T"); outputs.push_back("Dmolar");
-        CHECK_NOTHROW(std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS","Water",z););
+        std::vector<std::string> fluids(1, "Water");
+        CHECK_NOTHROW(std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
     };
     SECTION("Single state, two bad outputs"){
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"???????"); outputs.push_back("?????????");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS","Water",z););
+        std::vector<std::string> fluids(1, "Water");
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
         CHECK(IO.size() == 0);
     };
     SECTION("Two states, one output"){
         std::vector<double> p(2, 101325), Q(2, 1.0), z(1, 1.0);
         std::vector<std::string> outputs(1,"T");
-        CHECK_NOTHROW(std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS","Water",z););
+        std::vector<std::string> fluids(1, "Water");
+        CHECK_NOTHROW(std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
     };
     SECTION("Two states, two outputs"){
         std::vector<double> p(2, 101325), Q(2, 1.0), z(1, 1.0);
         std::vector<std::string> outputs(1,"T"); outputs.push_back("Dmolar");
-        CHECK_NOTHROW(std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS","Water",z););
+        std::vector<std::string> fluids(1, "Water");
+        CHECK_NOTHROW(std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
     };
     SECTION("cp and its derivative representation"){
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"Cpmolar"); outputs.push_back("d(Hmolar)/d(T)|P");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS","Water",z););
+        std::vector<std::string> fluids(1, "Water");
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
         REQUIRE(!IO.empty());
-        CHECK(IO[0][0]);
-        CHECK(IO[0][1]);
+        CAPTURE(IO[0][0]);
+        CAPTURE(IO[0][1]);
         CHECK(std::abs(IO[0][0] - IO[0][1]) < 1e-5);
     };
     SECTION("bad fluid"){
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"Cpmolar"); outputs.push_back("d(Hmolar)/d(T)|P");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS","????????????",z););
+        std::vector<std::string> fluids(1, "????????");
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
         REQUIRE(IO.empty());
@@ -446,7 +498,8 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
         std::vector<double> p(1, 101325), Q(1, 1.0), z(100, 1.0);
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"T");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS","Water",z););
+        std::vector<std::string> fluids(1, "Water");
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
         REQUIRE(IO.empty());
@@ -455,7 +508,8 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
         std::vector<double> p(1, 101325), Q(2, 1.0), z(100, 1.0);
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"Cpmolar"); outputs.push_back("d(Hmolar)/d(T)|P");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS","Water",z););
+        std::vector<std::string> fluids(1, "Water");
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
         REQUIRE(IO.empty());
@@ -464,7 +518,8 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
         std::vector<double> Q(2, 1.0), z(100, 1.0);
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"Cpmolar"); outputs.push_back("d(Hmolar)/d(T)|P");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"Q",Q,"Q",Q,"HEOS","Water",z););
+        std::vector<std::string> fluids(1, "Water");
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"Q",Q,"Q",Q,"HEOS",fluids,z););
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
         REQUIRE(IO.empty());
