@@ -339,7 +339,7 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
         }
         catch(std::exception &e){
             // Initialization failed.  Stop.
-            throw ValueError(format("_PropsSI_initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"",backend.c_str(), strjoin(fluids,"&").c_str(), vec_to_string(fractions, "0.10f").c_str()) );
+            throw ValueError(format("_PropsSI_initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"",backend.c_str(), strjoin(fluids,"&").c_str(), vec_to_string(fractions, "%0.10f").c_str()) );
         }
 
         try{
