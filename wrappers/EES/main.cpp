@@ -161,7 +161,7 @@ extern "C"
 					std::vector<double> val2(1,In2);
 					// Mole fractions are given, we use the advanced PropsSImulti function
 					std::vector<std::vector<double> > out = PropsSImulti(outputs, In1str, val1, In2str, val2, backend, fluids, z);
-					if (out.size() != 1 || out[0].size() != 1){throw ValueError(format("output must be 1x1"));}
+					if (out.size() != 1 || out[0].size() != 1){out = _HUGE;}
 				}
 				else{
 					// Mole fractions are not given
