@@ -25,7 +25,7 @@ if __name__=='__main__':
     
     subprocess.check_call('python generate_headers.py', shell = True, cwd = os.path.join('..','..','..','dev'), stdout = sys.stdout, stderr = sys.stderr)
     subprocess.check_call('python generate_constants_module.py', shell = True, cwd = '..', stdout = sys.stdout, stderr = sys.stderr)
-    for pyx in ['CoolProp.pyx','constants.pyx']:
+    for pyx in ['CoolProp.pyx','_constants.pyx']:
         subprocess.check_call('cython --cplus '+os.path.split(pyx)[1], shell = True, cwd = os.path.join('..','CoolProp'), stdout = sys.stdout, stderr = sys.stderr)
     name = 'CoolProp'
     
