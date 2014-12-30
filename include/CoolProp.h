@@ -168,6 +168,14 @@ You might want to start by looking at CoolProp.h
     /// \note Returns empty string if there was an error; use get_global_param_string("errstring") to retrieve the error
     //std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z);
     
+    /**
+     * @brief Extract the backend from a string - something like "HEOS::Water" would split to "HEOS" and "Water".  If no backend is specified, the backend will be set to "?"
+     * @param fluid_string The input string
+     * @param backend The output backend, if none found, "?"
+     * @param fluid The output fluid string (minus the backend string)
+     */
+    void extract_backend(const std::string &fluid_string, std::string &backend, std::string &fluid);
+    
     } /* namespace CoolProp */
 #endif
 

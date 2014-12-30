@@ -152,8 +152,16 @@ extern "C"
 		{
 			if (!Units.compare("SI")){
 				if (z.size() > 0){
-					// Mole fractions are given
-					out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr, z);
+					std::string backend, fluid;
+					extract_backend(Fluidstr, backend, fluid);
+					// Vectorize the inputs
+					std::vector<std::string> fluids = strsplit(fluid,'&');
+					std::vector<std::string> outputs(1,Outstr);
+					std::vector<double> val1(1,In1);
+					std::vector<double> val2(1,In2);
+					// Mole fractions are given, we use the advanced PropsSImulti function
+					std::vector<std::vector<double> > out = PropsSImulti(outputs, In1str, val1, In2str, val2, backend, fluids, z);
+					if (out.size() != 1 || out[0].size() != 1){throw ValueError(format("output must be 1x1"));}
 				}
 				else{
 					// Mole fractions are not given
