@@ -25,6 +25,8 @@ def params_constants(enum_key):
     for i,line in enumerate(lines):
         if line.find('/'):
             lines[i] = line.split('/')[0]
+        if '=' in lines[i]:
+            lines[i] = lines[i].split('=')[0]
     
     # Chomp all the whitespace, split at commas
     keys = ''.join(lines).replace(' ','').split(',')
@@ -69,3 +71,6 @@ def generate_cython(data):
 def generate():
     data = [(enum,params_constants(enum)) for enum in ['parameters', 'input_pairs', 'fluid_types', 'phases']]
     generate_cython(data)
+    
+if __name__=='__main__':
+    generate()
