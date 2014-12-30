@@ -500,7 +500,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CHECK( check_abs(expected,actual,acc) );
         }
         // ... as %
-        actual = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("-%f%s",x*100.0,"%"));
+        actual = CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::"+fluid+format("-%f%s",x*100.0,"%"));
         {
         CAPTURE(T);
         CAPTURE(p);
@@ -512,14 +512,14 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CHECK( check_abs(expected,actual,acc) );
         }
         // ... as mass fraction
-        actual = CoolProp::PropsSI("D","T",T,"P",p,fluid+format("[%f]",x));
+        actual = CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::"+fluid+format("[%f]",x));
         {
         CAPTURE(T);
         CAPTURE(p);
         CAPTURE(x);
         CAPTURE(expected);
         CAPTURE(actual);
-        std::string name = fluid+format("[%f]",x);
+        std::string name = "INCOMP::"+fluid+format("[%f]",x);
         CAPTURE(name);
         std::string errmsg = CoolProp::get_global_param_string("errstring");
         CAPTURE(errmsg);
