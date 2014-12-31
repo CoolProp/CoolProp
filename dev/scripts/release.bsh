@@ -34,6 +34,7 @@ printMessage "Processing the input variables: "
 CPVERSION="$1"
 if [[ $CPVERSION == +([0-9]).+([0-9]).+([0-9]) ]]; then
     echo "CPVERSION = $CPVERSION"
+    BINFOLDER=release
 elif [ "$CPVERSION" == "nightly" ]; then
     echo "CPVERSION = $CPVERSION - which is a valid input"
 else
