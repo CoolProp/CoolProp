@@ -46,7 +46,7 @@ class GriddedTableBackend : public AbstractState
     void update(CoolProp::input_pairs input_pair, double Value1, double Value2){};
     void set_mole_fractions(const std::vector<long double> &mole_fractions){};
     void set_mass_fractions(const std::vector<long double> &mass_fractions){};
-    
+    const std::vector<long double> & get_mole_fractions(){throw NotImplementedError("get_mole_fractions not implemented for TTSE");};
     void build_tables(tabular_types type);
     void load_tables(void);
     void bounding_curves(void);

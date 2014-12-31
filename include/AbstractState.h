@@ -345,7 +345,9 @@ public:
     virtual void set_mole_fractions(const std::vector<long double> &mole_fractions) = 0;
     virtual void set_mass_fractions(const std::vector<long double> &mass_fractions) = 0;
     virtual void set_volu_fractions(const std::vector<long double> &mass_fractions){throw NotImplementedError("Volume composition has not been implemented.");}
-	
+    /// Get the mole fractions of the components
+    virtual const std::vector<long double> & get_mole_fractions(void) = 0;
+    
 	std::vector<std::string> fluid_names(void);
     
     /// Clear all the cached values

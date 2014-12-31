@@ -456,6 +456,7 @@ void REFPROPMixtureBackend::set_mole_fractions(const std::vector<long double> &m
     {
         this->mole_fractions[i] = static_cast<double>(mole_fractions[i]);
     }
+    this->mole_fractions_long_double = mole_fractions;
     _mole_fractions_set = true;
 }
 void REFPROPMixtureBackend::set_mass_fractions(const std::vector<long double> &mole_fractions)

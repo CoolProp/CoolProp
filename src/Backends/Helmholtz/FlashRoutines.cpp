@@ -85,7 +85,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
         }
         
         // Use Rachford-Rice to check whether you are in a homogeneous phase
-        long double g_RR_0 = g_RachfordRice(HEOS.get_const_mole_fractions(), lnK, 0.0L);
+        long double g_RR_0 = g_RachfordRice(HEOS.get_mole_fractions(), lnK, 0.0L);
         if (g_RR_0 < 0){
             // Subcooled liquid - done
             long double rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_liquid);
@@ -95,7 +95,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
             return;
         }
         else{
-            long double g_RR_1 = g_RachfordRice(HEOS.get_const_mole_fractions(), lnK, 1.0L);
+            long double g_RR_1 = g_RachfordRice(HEOS.get_mole_fractions(), lnK, 1.0L);
             if (g_RR_1 > 0){
                 // Superheated vapor - done
                 long double rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_gas);

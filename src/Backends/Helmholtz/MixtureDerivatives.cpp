@@ -160,7 +160,7 @@ long double MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(HelmholtzEOSMixtur
 {
     // This is a term to which some more might be added depending on i and j
     long double val = dln_fugacity_coefficient_dxj__constT_p_xi(HEOS, i, j, xN_flag);
-    const std::vector<long double> &x = HEOS.get_const_mole_fractions();
+    const std::vector<long double> &x = HEOS.get_mole_fractions();
     std::size_t N = x.size();
     if (i == N-1){
         val += -1/x[N-1];
@@ -173,17 +173,17 @@ long double MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(HelmholtzEOSMixtur
 long double MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){throw ValueError("dln_fugacity_dxj__constT_rho_xi only valid for xN_DEPENDENT for now");}
-    long double rhor = HEOS.Reducing->rhormolar(HEOS.get_const_mole_fractions());
-    long double Tr = HEOS.Reducing->Tr(HEOS.get_const_mole_fractions());
-    long double dTrdxj = HEOS.Reducing->dTrdxi__constxj(HEOS.get_const_mole_fractions(),j,xN_flag);
-    long double drhordxj = HEOS.Reducing->drhormolardxi__constxj(HEOS.get_const_mole_fractions(),j,xN_flag);
+    long double rhor = HEOS.Reducing->rhormolar(HEOS.get_mole_fractions());
+    long double Tr = HEOS.Reducing->Tr(HEOS.get_mole_fractions());
+    long double dTrdxj = HEOS.Reducing->dTrdxi__constxj(HEOS.get_mole_fractions(),j,xN_flag);
+    long double drhordxj = HEOS.Reducing->drhormolardxi__constxj(HEOS.get_mole_fractions(),j,xN_flag);
     
     // These lines are all the same
     long double line1 = dln_fugacity_i_dtau__constdelta_x(HEOS, i, xN_flag)*1/HEOS.T()*dTrdxj;
     long double line2 = -dln_fugacity_i_ddelta__consttau_x(HEOS, i, xN_flag)*1/rhor*drhordxj;
     long double line4 = dalphar_dxi(HEOS, j, xN_flag) + d_ndalphardni_dxj__constdelta_tau_xi(HEOS, i, j, xN_flag);
     
-    const std::vector<long double> &x = HEOS.get_const_mole_fractions();
+    const std::vector<long double> &x = HEOS.get_mole_fractions();
     std::size_t N = x.size();
     
     long double line3 = 1/rhor*HEOS.Reducing->drhormolardxi__constxj(x, j, xN_flag) + 1/Tr*HEOS.Reducing->dTrdxi__constxj(x, j, xN_flag);;
@@ -675,9 +675,9 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                         SECTION(ss7.str(), "")
                         {
                             if (i == z.size()-1){break;}
-                            double analytic = rHEOS.Reducing->dTrdxi__constxj(rHEOS.get_const_mole_fractions(), i, xN_flag);
-                            double v1 = rHEOS_pluszi.Reducing->Tr(rHEOS_pluszi.get_const_mole_fractions());
-                            double v2 = rHEOS_minuszi.Reducing->Tr(rHEOS_minuszi.get_const_mole_fractions());
+                            double analytic = rHEOS.Reducing->dTrdxi__constxj(rHEOS.get_mole_fractions(), i, xN_flag);
+                            double v1 = rHEOS_pluszi.Reducing->Tr(rHEOS_pluszi.get_mole_fractions());
+                            double v2 = rHEOS_minuszi.Reducing->Tr(rHEOS_minuszi.get_mole_fractions());
                             double numeric = (v1 - v2)/(2*dz);
                             double err = std::abs((numeric-analytic)/analytic);
                             CAPTURE(numeric);
@@ -689,9 +689,9 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                         SECTION(ss8.str(), "")
                         {
                             if (i == z.size()-1){break;}
-                            double analytic = rHEOS.Reducing->drhormolardxi__constxj(rHEOS.get_const_mole_fractions(), i, xN_flag);
-                            double v1 = rHEOS_pluszi.Reducing->rhormolar(rHEOS_pluszi.get_const_mole_fractions());
-                            double v2 = rHEOS_minuszi.Reducing->rhormolar(rHEOS_minuszi.get_const_mole_fractions());
+                            double analytic = rHEOS.Reducing->drhormolardxi__constxj(rHEOS.get_mole_fractions(), i, xN_flag);
+                            double v1 = rHEOS_pluszi.Reducing->rhormolar(rHEOS_pluszi.get_mole_fractions());
+                            double v2 = rHEOS_minuszi.Reducing->rhormolar(rHEOS_minuszi.get_mole_fractions());
                             double numeric = (v1 - v2)/(2*dz);
                             double err = std::abs((numeric-analytic)/analytic);
                             CAPTURE(numeric);
@@ -704,8 +704,8 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                         {
                             if (i == z.size()-1){break;}
                             double analytic = rHEOS.Reducing->d2Trdxi2__constxj(z, i, xN_flag);
-                            double v1 = rHEOS_pluszi.Reducing->dTrdxi__constxj(rHEOS_pluszi.get_const_mole_fractions(), i, xN_flag);
-                            double v2 = rHEOS_minuszi.Reducing->dTrdxi__constxj(rHEOS_minuszi.get_const_mole_fractions(), i, xN_flag);
+                            double v1 = rHEOS_pluszi.Reducing->dTrdxi__constxj(rHEOS_pluszi.get_mole_fractions(), i, xN_flag);
+                            double v2 = rHEOS_minuszi.Reducing->dTrdxi__constxj(rHEOS_minuszi.get_mole_fractions(), i, xN_flag);
                             double numeric = (v1 - v2)/(2*dz);
                             double err = std::abs((numeric-analytic)/analytic);
                             CAPTURE(numeric);
@@ -784,9 +784,9 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             SECTION(ss2.str(), "")
                             {
                                 if (j == z.size()-1){break;}
-                                double analytic = rHEOS.Reducing->d_ndTrdni_dxj__constxi(rHEOS.get_const_mole_fractions(), i, j, xN_flag);
-                                double v1 = rHEOS_pluszj.Reducing->ndTrdni__constnj(rHEOS_pluszj.get_const_mole_fractions(), i, xN_flag);
-                                double v2 = rHEOS_minuszj.Reducing->ndTrdni__constnj(rHEOS_minuszj.get_const_mole_fractions(), i, xN_flag);
+                                double analytic = rHEOS.Reducing->d_ndTrdni_dxj__constxi(rHEOS.get_mole_fractions(), i, j, xN_flag);
+                                double v1 = rHEOS_pluszj.Reducing->ndTrdni__constnj(rHEOS_pluszj.get_mole_fractions(), i, xN_flag);
+                                double v2 = rHEOS_minuszj.Reducing->ndTrdni__constnj(rHEOS_minuszj.get_mole_fractions(), i, xN_flag);
                                 double numeric = (v1 - v2)/(2*dz);
                                 double err = std::abs((numeric-analytic)/analytic);
                                 CAPTURE(numeric);
@@ -798,9 +798,9 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             SECTION(ss4.str(), "")
                             {
                                 if (j == z.size()-1){break;}
-                                double analytic = rHEOS.Reducing->d_ndrhorbardni_dxj__constxi(rHEOS.get_const_mole_fractions(), i, j, xN_flag);
-                                double v1 = rHEOS_pluszj.Reducing->ndrhorbardni__constnj(rHEOS_pluszj.get_const_mole_fractions(), i, xN_flag);
-                                double v2 = rHEOS_minuszj.Reducing->ndrhorbardni__constnj(rHEOS_minuszj.get_const_mole_fractions(), i, xN_flag);
+                                double analytic = rHEOS.Reducing->d_ndrhorbardni_dxj__constxi(rHEOS.get_mole_fractions(), i, j, xN_flag);
+                                double v1 = rHEOS_pluszj.Reducing->ndrhorbardni__constnj(rHEOS_pluszj.get_mole_fractions(), i, xN_flag);
+                                double v2 = rHEOS_minuszj.Reducing->ndrhorbardni__constnj(rHEOS_minuszj.get_mole_fractions(), i, xN_flag);
                                 double numeric = (v1 - v2)/(2*dz);
                                 double err = std::abs((numeric-analytic)/analytic);
                                 CAPTURE(numeric);
@@ -855,8 +855,8 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             {
                                 if (j == z.size()-1 || i == j){break;}
                                 double analytic = rHEOS.Reducing->d2Trdxidxj(z, i, j, xN_flag);
-                                double v1 = rHEOS.Reducing->dTrdxi__constxj(rHEOS_pluszj.get_const_mole_fractions(), i, xN_flag);
-                                double v2 = rHEOS.Reducing->dTrdxi__constxj(rHEOS_minuszj.get_const_mole_fractions(), i, xN_flag);
+                                double v1 = rHEOS.Reducing->dTrdxi__constxj(rHEOS_pluszj.get_mole_fractions(), i, xN_flag);
+                                double v2 = rHEOS.Reducing->dTrdxi__constxj(rHEOS_minuszj.get_mole_fractions(), i, xN_flag);
                                 double numeric = (v1 - v2)/(2*dz);
                                 double err = std::abs((numeric-analytic)/analytic);
                                 if (std::abs(numeric) < DBL_EPSILON && std::abs(analytic) < DBL_EPSILON){break;}

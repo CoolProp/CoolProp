@@ -1106,7 +1106,7 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
     std::vector<long double> ln_phi_liq, ln_phi_vap;
     ln_phi_liq.resize(N); ln_phi_vap.resize(N);
 
-    std::vector<long double> &x = HEOS.SatL->get_mole_fractions(), &y = HEOS.SatV->get_mole_fractions();
+    std::vector<long double> &x = HEOS.SatL->get_mole_fractions_ref(), &y = HEOS.SatV->get_mole_fractions_ref();
     x_and_y_from_K(beta, K, z, x, y);
 
     HEOS.SatL->specify_phase(iphase_liquid);
@@ -1415,8 +1415,7 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
         rSatL.set_mole_fractions(x);
         rSatV.set_mole_fractions(y);
     }
-    std::vector<long double> &x = rSatL.get_mole_fractions();
-    std::vector<long double> &y = rSatV.get_mole_fractions();
+
     if (imposed_variable == newton_raphson_saturation_options::RHOV_IMPOSED){
         rSatL.update(DmolarT_INPUTS, rhomolar_liq, T);
         rSatV.update(DmolarT_INPUTS, rhomolar_vap, T);

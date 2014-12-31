@@ -20,6 +20,7 @@ protected:
     std::size_t Ncomp;
     bool _mole_fractions_set;
     static bool _REFPROP_supported;
+    std::vector<long double> mole_fractions_long_double; // read-only
     std::vector<double> mole_fractions, mass_fractions;
     std::vector<double> mole_fractions_liq, mole_fractions_vap;
 	std::vector<std::string> fluid_names;
@@ -85,6 +86,8 @@ public:
     @param mass_fractions The vector of mass fractions of the components
     */
     void set_mass_fractions(const std::vector<long double> &mass_fractions);
+    
+    const std::vector<long double> &get_mole_fractions(){return mole_fractions_long_double;};
 
     void calc_phase_envelope(const std::string &type);
 

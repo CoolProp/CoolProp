@@ -60,6 +60,7 @@ public:
     @param mole_fractions The vector of mole fractions of the components
     */
     void set_mole_fractions(const std::vector<long double> &mole_fractions);
+    const std::vector<long double> & get_mole_fractions(void){throw NotImplementedError("get_mole_fractions not implemented for this backend");};
 
     /// Set the mass fractions
     /**

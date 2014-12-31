@@ -137,8 +137,8 @@ public:
      */
     void set_mole_fractions(const std::vector<long double> &mole_fractions);
 
-    std::vector<long double> &get_mole_fractions(){return mole_fractions;};
-    const std::vector<long double> &get_const_mole_fractions(){return mole_fractions;};
+    const std::vector<long double> &get_mole_fractions(){return mole_fractions;};
+    std::vector<long double> &get_mole_fractions_ref(){return mole_fractions;};
 
     /** \brief Set the mass fractions
      * 
