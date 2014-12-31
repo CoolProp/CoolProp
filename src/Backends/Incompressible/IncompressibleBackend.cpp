@@ -470,8 +470,6 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CAPTURE(res);
         CHECK( check_abs(val,res,acc) );
         }
-
-
     }
 
     SECTION("Tests for the full implementation using PropsSI") {
@@ -490,6 +488,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         expected = 9.6212e+02;
         std::vector<std::string> fluid_Melinder(1,fluid);
         std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(std::vector<std::string>(1,"D"),"T",std::vector<double>(1,T),"P",std::vector<double>(1,p),"INCOMP",fluid_Melinder,std::vector<double>(1,x));
+        REQUIRE(!IO.empty());
         actual = IO[0][0];
         {
         CAPTURE(T);
@@ -500,7 +499,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CHECK( check_abs(expected,actual,acc) );
         }
         // ... as %
-        actual = CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::"+fluid+format("-%f%s",x*100.0,"%"));
+        actual = CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::"+fluid+format("-%f%%", x*100.0));
         {
         CAPTURE(T);
         CAPTURE(p);
@@ -525,89 +524,82 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CAPTURE(errmsg);
         CHECK( check_abs(expected,actual,acc) );
         }
-
+    }
+    SECTION("SecCool example")
+    {
+        double acc = 0.0001;
         std::string backend = "INCOMP";
         std::vector<std::string> fluids(1,"ExampleSecCool");
-        T   = -5  + 273.15;
-        p   = 10e5;
-        x   = 0.4;
+        double T   = -5  + 273.15;
+        double p   = 10e5;
+        double x   = 0.4;
         std::vector<double> x_vec = std::vector<double>(1,x);
         std::vector<double> T_vec = std::vector<double>(1,T);
         std::vector<double> p_vec = std::vector<double>(1,p);
 
         // Compare d
-        expected = 9.4844e+02;
-        
-        IO = CoolProp::PropsSImulti(std::vector<std::string>(1,"D"),"T",T_vec,"P",p_vec,backend,fluids,x_vec);
-        actual = IO[0][0];
+        double dexpected = 9.4844e+02;
+        std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(std::vector<std::string>(1,"D"),"T",T_vec,"P",p_vec,backend,fluids,x_vec);
+        REQUIRE(!IO.empty());
+        double dactual = IO[0][0];
         {
         CAPTURE(T);
         CAPTURE(p);
         CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
+        CAPTURE(dexpected);
+        CAPTURE(dactual);
         std::string errmsg = CoolProp::get_global_param_string("errstring");
         CAPTURE(errmsg);
-        CHECK( check_abs(expected,actual,acc) );
+        CHECK( check_abs(dexpected,dactual,acc) );
         }
 
         // Compare cp
-        expected = 3.6304e+03;
-        actual = CoolProp::PropsSImulti(std::vector<std::string>(1,"C"),"T",T_vec,"P",p_vec,backend,fluids,x_vec)[0][0];
+        double cpexpected = 3.6304e+03;
+        double cpactual = CoolProp::PropsSImulti(std::vector<std::string>(1,"C"),"T",T_vec,"P",p_vec,backend,fluids,x_vec)[0][0];
         {
         CAPTURE(T);
         CAPTURE(p);
         CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
+        CAPTURE(cpexpected);
+        CAPTURE(cpactual);
         std::string errmsg = CoolProp::get_global_param_string("errstring");
         CAPTURE(errmsg);
-        CHECK( check_abs(expected,actual,acc) );
-        }
-
-        fluid = std::string("INCOMP::ExamplePure");
-        T   = +55  + 273.15;
-        p   = 10e5;
-
-        // Compare d
-        expected = 7.3646e+02;
-        actual = CoolProp::PropsSI("D","T",T,"P",p,fluid);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        std::string errmsg = CoolProp::get_global_param_string("errstring");
-        CAPTURE(errmsg);
-        CHECK( check_abs(expected,actual,acc) );
-        }
-
-        // Compare cp
-        expected = 2.2580e+03;
-        actual = CoolProp::PropsSI("C","T",T,"P",p,fluid);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        std::string errmsg = CoolProp::get_global_param_string("errstring");
-        CAPTURE(errmsg);
-        CHECK( check_abs(expected,actual,acc) );
+        CHECK( check_abs(cpexpected,cpactual,acc) );
         }
     }
+    SECTION("INCOMP::ExamplePure")
+    {
+        double acc = 0.0001;
+        std::string fluid = std::string("INCOMP::ExamplePure");
+        double T   = +55  + 273.15;
+        double p   = 10e5;
 
-    //std::string name("INCOMP::TCO");
-    double T   =  50 + 273.15;
-    double p   = 10e5;
-    double x   = 0.3;
+        // Compare d
+        double dexpected = 7.3646e+02;
+        double dactual = CoolProp::PropsSI("D","T",T,"P",p,fluid);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(dexpected);
+        CAPTURE(dactual);
+        std::string errmsg = CoolProp::get_global_param_string("errstring");
+        CAPTURE(errmsg);
+        CHECK( check_abs(dexpected,dactual,acc) );
+        }
 
-//    std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::TCO",std::vector<double>(1,x)) << std::endl;
-//    std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::LiBr",std::vector<double>(1,x)) << std::endl;
-//    std::cout << CoolProp::PropsSI("D","T",T,"P",p,"INCOMP::NaK",std::vector<double>(1,x)) << std::endl;
-
-
+        // Compare cp
+        double cpexpected = 2.2580e+03;
+        double cpactual = CoolProp::PropsSI("C","T",T,"P",p,fluid);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(cpexpected);
+        CAPTURE(cpactual);
+        std::string errmsg = CoolProp::get_global_param_string("errstring");
+        CAPTURE(errmsg);
+        CHECK( check_abs(cpexpected,cpactual,acc) );
+        }
+    }
 
 //    SECTION("Tests for the hardcoded fluids") {
 //

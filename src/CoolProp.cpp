@@ -213,23 +213,36 @@ void _PropsSI_initialize(const std::string &backend,
         }
 	}
     else{		
-        std::vector<double> fractions(1, 1.0); // Default to one component, unity mole fraction
-        const std::vector<double> *fractions_ptr; // Pointer to the array to be used;
-        std::string fluid_string;
+        std::vector<double> fractions(1, 1.0); // Default to one component, unity fraction
+        const std::vector<double> *fractions_ptr = NULL; // Pointer to the array to be used;
         
-        if (fluid_names.size() == 1){
-            // Extract fractions from the string if you can (or need to)
-            fluid_string = extract_fractions(fluid_names[0], fractions);
-            // Reset the state
-            State.reset(AbstractState::factory(backend, fluid_string));
-            // Set the pointer - we are going to use the extracted fractions
-            fractions_ptr = &fractions;
-        }
-        else{
-            // Set the pointer - we are going to use the supplied fractions
+        if (fluid_names.size() > 1){
+            // Set the pointer - we are going to use the supplied fractions; they must be provided
             fractions_ptr = &z;
             // Reset the state
             State.reset(AbstractState::factory(backend, fluid_names));
+        }
+        else if (fluid_names.size() == 1){
+            if (has_fractions_in_string(fluid_names[0]) || has_solution_concentration(fluid_names[0])){
+                // Extract fractions from the string
+                std::string fluid_string = extract_fractions(fluid_names[0], fractions);
+                // Set the pointer - we are going to use the extracted fractions
+                fractions_ptr = &fractions;
+                // Reset the state
+                State.reset(AbstractState::factory(backend, fluid_string));
+            }
+            else{
+                if (z.empty()){
+                    // Set the pointer - we are going to use the default fractions
+                    fractions_ptr = &fractions;
+                }
+                else{
+                    // Set the pointer - we are going to use the provided fractions
+                    fractions_ptr = &z;
+                }
+                // Reset the state
+                State.reset(AbstractState::factory(backend, fluid_names));
+            }
         }
         
         // Set the fraction for the state
@@ -243,7 +256,6 @@ void _PropsSI_initialize(const std::string &backend,
             if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
         }        
     }
-	
 }
 
 struct output_parameter{
@@ -365,7 +377,7 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
         }
         catch (std::exception &e){
             // Input parameter parsing failed.  Stop
-            throw ValueError(format("Input pair parsing failed for Name1: \"%s\", Name2: \"%s\"; error: %s", Name1.c_str(), Name2.c_str(),e.what()));
+            throw ValueError(format("Input pair parsing failed for Name1: \"%s\", Name2: \"%s\"; err: %s", Name1.c_str(), Name2.c_str(), e.what()));                
         }
         
         try{
@@ -515,10 +527,10 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
         REQUIRE(IO.empty());
     };
     SECTION("bad mole fraction length"){
-        std::vector<double> p(1, 101325), Q(1, 1.0), z(100, 1.0);
+        std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"T");
-        std::vector<std::string> fluids(1, "Water");
+        std::vector<std::string> fluids(1, "Water&Ethanol");
         CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
@@ -535,7 +547,7 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
         REQUIRE(IO.empty());
     };
     SECTION("bad input pair"){
-        std::vector<double> Q(2, 1.0), z(100, 1.0);
+        std::vector<double> Q(2, 1.0), z(1, 1.0);
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"Cpmolar"); outputs.push_back("d(Hmolar)/d(T)|P");
         std::vector<std::string> fluids(1, "Water");
