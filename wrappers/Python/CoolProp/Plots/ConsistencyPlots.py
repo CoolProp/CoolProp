@@ -285,7 +285,7 @@ class ConsistencyAxis(object):
             else:
                 T0 = Tmin+1.1
                 
-            for T in np.linspace(T0, state.keyed_output(CP.iT_max), 40):
+            for T in np.linspace(T0+1e-5, state.keyed_output(CP.iT_max), 40):
                 state_PT = CP.AbstractState('HEOS', self.fluid)
                 
                 try:
