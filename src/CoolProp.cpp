@@ -317,6 +317,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
             }
         }
         catch(std::exception &){
+            if (one_input_one_output){IO.clear(); throw;} // Re-raise the exception since we want to bubble the error
             // All the outputs are filled with _HUGE; go to next input
             for (std::size_t j = 0; j < IO[i].size(); ++j){ IO[i][j] = _HUGE; }
             continue;
@@ -339,13 +340,64 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
                 // At least one has succeeded
                 success = true;
             }
-            catch(std::exception &){
+            catch(std::exception &e){
+                if (one_input_one_output){IO.clear(); throw;} // Re-raise the exception since we want to bubble the error
                 IO[i][j] = _HUGE;
             }
         }
 	}
-    if (success == false) {IO.empty(); throw ValueError(format("No outputs were able to be calculated")); }
+    if (success == false) { IO.clear(); throw ValueError(format("No outputs were able to be calculated"));}
 }
+
+void _PropsSImulti(const std::vector<std::string> &Outputs, 
+                   const std::string &Name1, 
+                   const std::vector<double> &Prop1,
+                   const std::string &Name2, 
+                   const std::vector<double> &Prop2, 
+                   const std::string &backend, 
+                   const std::vector<std::string> &fluids, 
+                   const std::vector<double> &fractions,
+                   std::vector<std::vector<double> > &IO)
+{
+    shared_ptr<AbstractState> State;
+    CoolProp::input_pairs input_pair;
+    std::vector<output_parameter> output_parameters;
+    std::vector<double> v1, v2;
+                                           
+    try{
+        // Initialize the State class
+        _PropsSI_initialize(backend, fluids, fractions, State);
+    }
+    catch(std::exception &e){
+        // Initialization failed.  Stop.
+        throw ValueError(format("Initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"; error: %s",backend.c_str(), strjoin(fluids,"&").c_str(), vec_to_string(fractions, "%0.10f").c_str(), e.what()) );
+    }
+
+    try{
+        // Get update pair
+        CoolProp::parameters key1;
+        is_valid_parameter(Name1, key1);
+        CoolProp::parameters key2;
+        is_valid_parameter(Name2, key2);
+        input_pair = generate_update_pair(key1, Prop1, key2, Prop2, v1, v2);
+    }
+    catch (std::exception &e){
+        // Input parameter parsing failed.  Stop
+        throw ValueError(format("Input pair parsing failed for Name1: \"%s\", Name2: \"%s\"; err: %s", Name1.c_str(), Name2.c_str(), e.what()));                
+    }
+    
+    try{
+        output_parameters = output_parameter::get_output_parameters(Outputs);
+    }
+    catch (std::exception &e){
+        // Output parameter parsing failed.  Stop.
+        throw ValueError(format("Output parameter parsing failed; error: %s", e.what()));
+    }
+
+    // Calculate the output(s).  In the case of a failure, all values will be filled with _HUGE
+    _PropsSI_outputs(State, output_parameters, input_pair, v1, v2, IO);
+}
+        
 std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &Outputs, 
                                                const std::string &Name1, 
                                                const std::vector<double> &Prop1,
@@ -355,48 +407,14 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
                                                const std::vector<std::string> &fluids, 
                                                const std::vector<double> &fractions)
 {
-    shared_ptr<AbstractState> State;
     std::vector<std::vector<double> > IO;
-    CoolProp::input_pairs input_pair;
-    std::vector<output_parameter> output_parameters;
-    std::vector<double> v1, v2;
     
     #if !defined(NO_ERROR_CATCHING)
     try{
     #endif
-        
-        try{
-            // Initialize the State class
-            _PropsSI_initialize(backend, fluids, fractions, State);
-        }
-        catch(std::exception &e){
-            // Initialization failed.  Stop.
-            throw ValueError(format("Initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"; error: %s",backend.c_str(), strjoin(fluids,"&").c_str(), vec_to_string(fractions, "%0.10f").c_str(), e.what()) );
-        }
-
-        try{
-            // Get update pair
-            CoolProp::parameters key1;
-            is_valid_parameter(Name1, key1);
-            CoolProp::parameters key2;
-            is_valid_parameter(Name2, key2);
-            input_pair = generate_update_pair(key1, Prop1, key2, Prop2, v1, v2);
-        }
-        catch (std::exception &e){
-            // Input parameter parsing failed.  Stop
-            throw ValueError(format("Input pair parsing failed for Name1: \"%s\", Name2: \"%s\"; err: %s", Name1.c_str(), Name2.c_str(), e.what()));                
-        }
-        
-        try{
-            output_parameters = output_parameter::get_output_parameters(Outputs);
-        }
-        catch (std::exception &e){
-            // Output parameter parsing failed.  Stop.
-            throw ValueError(format("Output parameter parsing failed; error: %s", e.what()));
-        }
     
-        // Calculate the output(s).  In the case of a failure, all values will be filled with _HUGE
-        _PropsSI_outputs(State, output_parameters, input_pair, v1, v2, IO);
+        // Call the subfunction that can bubble errors
+        _PropsSImulti(Outputs, Name1, Prop1, Name2, Prop2, backend, fluids, fractions, IO);
         
         // Return the value(s)
         return IO;
@@ -424,16 +442,16 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
     
         // BEGIN OF TRY
         // Here is the real code that is inside the try block
+    
         
-        shared_ptr<AbstractState> State;
-        std::vector<std::vector<double> > IO;
         
         extract_backend(Ref, backend, fluid);
         if (has_fractions_in_string(fluid)){
             extract_fractions(fluid, fractions);
         }
-        
-        IO = PropsSImulti(strsplit(Output,'&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend, std::vector<std::string>(1, fluid), fractions);
+        std::vector<std::vector<double> > IO;
+        _PropsSImulti(strsplit(Output,'&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend, std::vector<std::string>(1, fluid), fractions, IO);
+        if (IO.empty()){ throw ValueError(get_global_param_string("errstring").c_str()); }
         if (IO.size()!= 1 || IO[0].size() != 1){ throw ValueError(format("output should be 1x1; error was %s", get_global_param_string("errstring").c_str())); }
         
         double val = IO[0][0];
