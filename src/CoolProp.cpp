@@ -304,6 +304,9 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
     std::size_t N1 = std::max(static_cast<std::size_t>(1), in1.size());
     std::size_t N2 = std::max(static_cast<std::size_t>(1), output_parameters.size());
 	IO.resize(N1, std::vector<double>(N2, _HUGE));
+    
+    // Throw an error if at the end, there were no successes
+    bool success = false;
 	
 	// Iterate over the state variable inputs
 	for (std::size_t i = 0; i < IO.size(); ++i){
@@ -314,8 +317,9 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
             }
         }
         catch(std::exception &){
-            // All the outputs are filled with _HUGE
+            // All the outputs are filled with _HUGE; go to next input
             for (std::size_t j = 0; j < IO[i].size(); ++j){ IO[i][j] = _HUGE; }
+            continue;
         }
         
         for (std::size_t j = 0; j < IO[i].size(); ++j){
@@ -332,12 +336,15 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
                     default:
                         throw ValueError(format("")); break;
                 }
+                // At least one has succeeded
+                success = true;
             }
             catch(std::exception &){
                 IO[i][j] = _HUGE;
             }
         }
 	}
+    if (success == false) {IO.empty(); throw ValueError(format("No outputs were able to be calculated")); }
 }
 std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &Outputs, 
                                                const std::string &Name1, 
@@ -457,6 +464,9 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
     };
     SECTION("Single state, single output, pure incompressible"){ 
         CHECK(ValidNumber(CoolProp::PropsSI("D","P",101325,"T",300,"INCOMP::DowQ")));
+    };
+    SECTION("Bad input pair"){ 
+        CHECK(!ValidNumber(CoolProp::PropsSI("D","Q",0,"Q",0,"Water")));
     };
     SECTION("Single state, single output, 40% incompressible"){ 
         CHECK(ValidNumber(CoolProp::PropsSI("D","P",101325,"T",300,"INCOMP::MEG[0.40]")));
