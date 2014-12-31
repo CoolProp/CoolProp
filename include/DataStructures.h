@@ -39,7 +39,8 @@ struct SsatSimpleState : public SimpleState
 //
 // !! If you add a parameter, update the map in the corresponding CPP file !!
 enum parameters{
-
+    INVALID_PARAMETER = 0,
+    
     // General parameters
 	igas_constant,
     imolar_mass, 
@@ -183,6 +184,7 @@ enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLU
 // !! If you add a parameter, update the map in the corresponding CPP file !!
 /// These are input pairs that can be used (in each pair, input keys are sorted alphabetically)
 enum input_pairs{
+	INPUT_PAIR_INVALID = 0, // Default (invalid) value
     QT_INPUTS, ///< Molar quality, Temperature in K
     PQ_INPUTS, ///< Pressure in Pa, Molar quality
     QSmolar_INPUTS, ///< Molar quality, Entropy in J/mol/K
@@ -229,7 +231,20 @@ inline bool match_pair(parameters key1, parameters key2, parameters x1, paramete
     swap = !(key1 == x1);
     return ((key1 == x1 && key2 == x2) || (key2 == x1 && key1 == x2));
 };
-template<class T> CoolProp::input_pairs generate_update_pair(parameters key1, T value1, parameters key2, T value2, T &out1, T &out2)
+/** 
+ * @brief Generate an update pair from key, value pairs
+ * 
+ * If the input pair is valid, v1 and v2 will correspond to the returned output pair
+ * 
+ * @param key1 The first input key
+ * @param value1 The first input value
+ * @param key2 The second input key
+ * @param value2 The second input value
+ * @param out1 The first output value
+ * @param out2 The second output value
+ * @return pair, or INPUT_PAIR_INVALID if not valid
+ */
+template<class T> CoolProp::input_pairs generate_update_pair(parameters key1, T value1, parameters key2, T value2, T &out1, T &out2) throw()
     {
         CoolProp::input_pairs pair;
         bool swap;
@@ -321,8 +336,9 @@ template<class T> CoolProp::input_pairs generate_update_pair(parameters key1, T 
         else if (match_pair(key1, key2, iSmolar, iUmolar, swap)){
             pair = SmolarUmolar_INPUTS; ///< Entropy in J/mol/K, Internal energy in J/mol
         }
-        else
-            throw ValueError("Invalid set of inputs to generate_update_pair");
+        else{
+            pair = INPUT_PAIR_INVALID; return pair;
+        }
 
         if (!swap){
             out1 = value1; out2 = value2;

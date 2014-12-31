@@ -296,29 +296,45 @@ protected:
 
 public:
 
-    AbstractState(){};
+    AbstractState(){clear();};
     virtual ~AbstractState(){};
 
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
     /**
-    Very Important!! : Use a smart pointer to manage the pointer returned.  In older versions of C++, you can use std::tr1::smart_ptr. In C++2011 you can use std::shared_ptr
-
-    Several backends are possible:
-
-    1. "?" : The backend is unknown, we will parse the fluid string to determine the backend to be used.  Probably will use HEOS backend (see below)
-    2. "HEOS" : The Helmholtz Equation of State backend for use with pure and pseudo-pure fluids, and mixtures, all of which are based on multi-parameter Helmholtz Energy equations of state.  The fluid part of the string should then either be
-       1. A pure or pseudo-pure fluid name (eg. "PROPANE" or "R410A"), yielding a HelmholtzEOSBackend instance.
-       2. A string that encodes the components of the mixture with a "&" between them (e.g. "R32&R125"), yielding a HelmholtzEOSMixtureBackend instance.
-
-    3. "REFPROP" : The REFPROP backend will be used.  The fluid part of the string should then either be
-       1. A pure or pseudo-pure fluid name (eg. "PROPANE" or "R410A"), yielding a REFPROPBackend instance.
-       2. A string that encodes the components of the mixture with a "&" between them (e.g. "R32&R125"), yielding a REFPROPMixtureBackend instance.
-
-    4. "TTSE&XXXX": The TTSE backend will be used, and the tables will be generated using the XXXX backend where XXXX is one of the base backends("HEOS", "REFPROP", etc. )
-    5. "BICUBIC&XXXX": The Bicubic backend will be used, and the tables will be generated using the XXXX backend where XXXX is one of the base backends("HEOS", "REFPROP", etc. )
-    6. "INCOMP": The incompressible backend will be used
-    */
-    static AbstractState * factory(const std::string &backend, const std::string &fluid_string);
+     * @brief This is a convenience function to allow for the use of '&' delimited fluid names.  Slightly less computationally efficient than the 
+     * @param backend The backend in use, one of "HEOS", "REFPROP", etc.
+     * @param fluid_names Fluid names as a '&' delimited string
+     * @return 
+     */
+    static AbstractState * factory(const std::string &backend, const std::string &fluid_names)
+    {
+        return factory(backend, strsplit(fluid_names, '&'));
+    };
+    
+    /**
+     * @brief A factory function to return a pointer to a new-allocated instance of one of the backends.
+     * @param backend The backend in use, "HEOS", "REFPROP", etc.
+     * @param fluid_names A vector of strings of the fluid names
+     * @return A pointer to the instance generated
+     * 
+     * Several backends are possible:
+     * 
+     * 1. "?" : The backend is unknown, we will parse the fluid string to determine the backend to be used.  Probably will use HEOS backend (see below)
+     * 2. "HEOS" : The Helmholtz Equation of State backend for use with pure and pseudo-pure fluids, and mixtures, all of which are based on multi-parameter Helmholtz Energy equations of state.  The fluid part of the string should then either be
+     *    1. A pure or pseudo-pure fluid name (eg. "PROPANE" or "R410A"), yielding a HelmholtzEOSBackend instance.
+     *    2. A string that encodes the components of the mixture with a "&" between them (e.g. "R32&R125"), yielding a HelmholtzEOSMixtureBackend instance.
+     * 
+     * 3. "REFPROP" : The REFPROP backend will be used.  The fluid part of the string should then either be
+     *    1. A pure or pseudo-pure fluid name (eg. "PROPANE" or "R410A"), yielding a REFPROPBackend instance.
+     *    2. A string that encodes the components of the mixture with a "&" between them (e.g. "R32&R125"), yielding a REFPROPMixtureBackend instance.
+     * 
+     * 4. "INCOMP": The incompressible backend will be used
+     * 5. "TTSE&XXXX": The TTSE backend will be used, and the tables will be generated using the XXXX backend where XXXX is one of the base backends("HEOS", "REFPROP", etc. )
+     * 6. "BICUBIC&XXXX": The Bicubic backend will be used, and the tables will be generated using the XXXX backend where XXXX is one of the base backends("HEOS", "REFPROP", etc. )
+     * 
+     * Very Important!! : Use a smart pointer to manage the pointer returned.  In older versions of C++, you can use std::tr1::smart_ptr. In C++2011 you can use std::shared_ptr
+     */
+    static AbstractState * factory(const std::string &backend, const std::vector<std::string> &fluid_names);
 
     // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
     virtual bool using_mole_fractions(void) = 0;

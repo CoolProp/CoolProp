@@ -138,7 +138,7 @@
      * 
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
-    EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *FluidName, const double *z, int n);
+    //EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *FluidName, const double *z, int n);
 
     /// Convert from degrees Fahrenheit to Kelvin (useful primarily for testing)
     EXPORT_CODE double CONVENTION F2K(double T_F);

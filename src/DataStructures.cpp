@@ -463,13 +463,13 @@ std::string get_input_pair_long_desc(int pair)
 
 TEST_CASE("Check that all parameters are descibed","")
 {
-    for (int i = 0; i < CoolProp::iundefined_parameter; ++i){
+    for (int i = 1; i < CoolProp::iundefined_parameter; ++i){
         std::ostringstream ss;
         ss << "Parameter index," << i << "last index:" << CoolProp::iundefined_parameter;
         SECTION(ss.str(), "")
         {   
             std::string prior;
-            if (i > 0){
+            if (i > 1){
                 CHECK_NOTHROW(prior = CoolProp::get_parameter_information(i-1,"short"));
                 CAPTURE(prior);
             }

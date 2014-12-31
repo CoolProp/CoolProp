@@ -36,7 +36,7 @@ public:
     HelmholtzEOSMixtureBackend(){
         imposed_phase_index = iphase_not_imposed; _phase = iphase_unknown;};
     HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
-    HelmholtzEOSMixtureBackend(std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
+    HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
     virtual ~HelmholtzEOSMixtureBackend(){};
     shared_ptr<ReducingFunction> Reducing;
     ExcessTerm Excess;

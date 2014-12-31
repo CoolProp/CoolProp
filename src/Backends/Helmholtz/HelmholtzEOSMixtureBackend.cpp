@@ -35,7 +35,7 @@ static int deriv_counter = 0;
 
 namespace CoolProp {
 
-HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(std::vector<std::string> &component_names, bool generate_SatL_and_SatV) {
+HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV) {
     std::vector<CoolPropFluid*> components;
     components.resize(component_names.size());
 

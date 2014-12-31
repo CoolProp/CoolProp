@@ -205,7 +205,11 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
     """
     A Python wrapper of C++ function :cpapi:`CoolProp::PropsSI` .
     """ 
+    cdef vector[string] vin1
+    cdef vector[double] fractions
     cdef double val
+    cdef string backend, fluid, delimitedfluids
+    cdef bool is_iterable1, is_iterable3, is_iterable5
     
     # Two parameter inputs
     if in3 is None and in4 is None and in5 is None and in6 is None and in7 is None:
@@ -216,19 +220,47 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             return val
     # Six parameter inputs
     elif in7 is None:
-        if iterable(in3) and iterable(in5):
-            if len(in3) != len(in5):
-                raise TypeError("Sizes of Prop1 {n1:d} and Prop2 {n2:d} to PropsSI are not the same".format(n1 = len(in3), n2 = len(in5)))
-            # This version takes iterables
-            return ndarray_or_iterable(_PropsSII(in1, in2, in3, in4, in5, in6))
-        elif iterable(in3) and not(iterable(in5)):
-            i5 = [in5]*len(in3)
-            # This version takes iterables
-            return ndarray_or_iterable(_PropsSII(in1, in2, in3, in4, i5, in6))
-        elif iterable(in5) and not(iterable(in3)):
-            i3 = [in3]*len(in5)
-            # This version takes iterables
-            return ndarray_or_iterable(_PropsSII(in1, in2, i3, in4, in5, in6))
+        is_iterable1 = iterable(in1)
+        is_iterable3 = iterable(in3)
+        is_iterable5 = iterable(in5)
+        if is_iterable1 or is_iterable3 or is_iterable5:
+            # Prepare the output datatype
+            if not is_iterable1:
+                vin1.push_back(in1)
+            else:
+                vin1 = in1
+            # Resize state variable inputs
+            if is_iterable3 and is_iterable5:
+                if len(in3) != len(in5):
+                    raise TypeError("Sizes of Prop1 {n1:d} and Prop2 {n2:d} to PropsSI are not the same".format(n1 = len(in3), n2 = len(in5)))
+                else:
+                    vval1 = in3
+                    vval2 = in5
+            elif is_iterable3 and not is_iterable5:
+                vval1 = in3
+                vval2 = [in5]*len(in3)
+            elif is_iterable5 and not is_iterable3:
+                vval1 = [in3]*len(in5)
+                vval2 = in5
+                
+            # Extract the backend and the fluid from the input string
+            _extract_backend(in6, backend, fluid)
+            
+            # Extract the fractions
+            fractions.push_back(1.0)
+            delimitedfluids = _extract_fractions(fluid, fractions)
+            
+            # Extract the fluids
+            fluids = delimitedfluids.split('&')
+
+            # Call the function - this version takes iterables
+            outmat = _PropsSImulti(in1, in2, vval1, in4, vval2, backend, fluids, fractions)
+            
+            # Check that we got some output
+            if outmat.empty():
+                raise ValueError(_get_global_param_string('errstring'))
+            
+            return outmat
         else:
             # This version takes doubles
             val = _PropsSI(in1, in2, in3, in4, in5, in6)
@@ -236,8 +268,6 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
                 __Props_err2("PropsSI", in1, in2, in3, in4, in5, in6)
             else:
                 return val
-    else:
-        return _PropsSI(in1, in2, in3, in4, in5, in6, in7)
 
 cpdef list FluidsList():
     """
