@@ -285,7 +285,7 @@ class ConsistencyAxis(object):
             else:
                 T0 = Tmin+1.1
                 
-            for T in np.linspace(T0+1e-5, state.keyed_output(CP.iT_max), 40):
+            for T in np.linspace(T0, state.keyed_output(CP.iT_max), 40):
                 state_PT = CP.AbstractState('HEOS', self.fluid)
                 
                 try:
@@ -299,11 +299,11 @@ class ConsistencyAxis(object):
                 try:
                     state.update(pairkey, state_PT.keyed_output(key1), state_PT.keyed_output(key2))
                 except ValueError as VE:
-                    print(VE)
+                    print('update', VE)
                     _exception = True
                     
-                x = self.to_axis_units(xparam, state.keyed_output(xkey))
-                y = self.to_axis_units(yparam, state.keyed_output(ykey))
+                x = self.to_axis_units(xparam, state_PT.keyed_output(xkey))
+                y = self.to_axis_units(yparam, state_PT.keyed_output(ykey))
                 
                 if _exception:
                     xexcep.append(x)
