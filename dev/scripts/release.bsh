@@ -16,6 +16,8 @@ TMPSDIR="$HOME/src/CoolProp.sources"
 BINFOLDER="binaries"
 DOCFOLDER="sphinx"
 SRCFOLDER="$BASEDIR/$BINFOLDER/source"
+DOC4FILES="4.2.5/coolpropv425docs.zip"
+DOC4FOLDER="$DOCFOLDER/v4"
 SEPARATOR="----------------------------------"
 #
 SFUSER="jorritw" # ibell or jorritw
@@ -87,7 +89,7 @@ else
         RSYNC_OPTS="-a --no-perms -z --stats"
         printMessage "Zipping up the docs and moving them into the $BINFOLDER folder for staging"
         rm -f documentation.zip
-        zip -rq documentation.zip $DOCFOLDER/*
+        zip -rq documentation.zip $DOCFOLDER/* -x */$(basename $DOC4FOLDER)/*
         mkdir -p "$BINFOLDER/docs"
         cp documentation.zip "$BINFOLDER/docs"
         echo "Uploading the python binaries to pypi"
@@ -95,6 +97,11 @@ else
     fi
     RSYNC_DRY_RUN=
 fi
+#
+printMessage "Getting the latest v4 docs from SourceForge"
+rsync $RSYNC_DRY_RUN $RSYNC_OPTS "frs.sf.net-$SFUSER:/home/frs/project/coolprop/CoolProp/$DOC4FILES" "$(basename $DOC4FILES)"
+mkdir -p "$DOC4FOLDER"
+unzip -qo "$(basename $DOC4FILES)" -d "$DOC4FOLDER"
 #
 printMessage "Copying the binaries to SourceForge"
 rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$BINFOLDER/" frs.sf.net-$SFUSER:/home/frs/project/coolprop/CoolProp/$CPVERSION
