@@ -296,7 +296,7 @@ protected:
 
 public:
 
-    AbstractState(){};
+    AbstractState(){clear();};
     virtual ~AbstractState(){};
 
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
