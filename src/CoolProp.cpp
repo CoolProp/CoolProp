@@ -189,7 +189,6 @@ void _PropsSI_initialize(const std::string &backend,
                              
     if (fluid_names.empty()){throw ValueError("fluid_names cannot be empty");}
 	
-    std::vector<std::string> fluids = fluids;
 	Dictionary dict;
     
 	// If a predefined mixture, set it up.  Fractions and names are given
@@ -214,28 +213,32 @@ void _PropsSI_initialize(const std::string &backend,
         }
 	}
     else{		
-        std::vector<double> fractions;
+        std::vector<double> fractions(1, 1.0); // Default to one component, unity mole fraction
+        const std::vector<double> *fractions_ptr; // Pointer to the array to be used;
         std::string fluid_string;
         
-        if (!z.empty()){
-            // Make a copy of the provided fractions
-            fractions = z;
-        }
         if (fluid_names.size() == 1){
-            // Extract fractions from the string if you can
+            // Extract fractions from the string if you can (or need to)
             fluid_string = extract_fractions(fluid_names[0], fractions);
+            // Reset the state
+            State.reset(AbstractState::factory(backend, fluid_string));
+            // Set the pointer - we are going to use the extracted fractions
+            fractions_ptr = &fractions;
         }
-        
-        // Reset the state
-        State.reset(AbstractState::factory(backend, fluid_string));
+        else{
+            // Set the pointer - we are going to use the supplied fractions
+            fractions_ptr = &z;
+            // Reset the state
+            State.reset(AbstractState::factory(backend, fluid_names));
+        }
         
         // Set the fraction for the state
         if (State->using_mole_fractions()){
-            State->set_mole_fractions(fractions);
+            State->set_mole_fractions(*fractions_ptr);
         } else if (State->using_mass_fractions()){
-            State->set_mass_fractions(fractions);
+            State->set_mass_fractions(*fractions_ptr);
         } else if (State->using_volu_fractions()){
-            State->set_volu_fractions(fractions);
+            State->set_volu_fractions(*fractions_ptr);
         } else {
             if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
         }        
@@ -349,7 +352,7 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
         }
         catch(std::exception &e){
             // Initialization failed.  Stop.
-            throw ValueError(format("_PropsSI_initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"; error: %s",backend.c_str(), strjoin(fluids,"&").c_str(), vec_to_string(fractions, "%0.10f").c_str(), e.what()) );
+            throw ValueError(format("Initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"; error: %s",backend.c_str(), strjoin(fluids,"&").c_str(), vec_to_string(fractions, "%0.10f").c_str(), e.what()) );
         }
 
         try{
@@ -362,7 +365,7 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
         }
         catch (std::exception &e){
             // Input parameter parsing failed.  Stop
-            throw ValueError(format("_PropsSI input pair parsing failed for Name1: \"%s\", Name2: \"%s\"; error: %s", Name1.c_str(), Name2.c_str(),e.what()));
+            throw ValueError(format("Input pair parsing failed for Name1: \"%s\", Name2: \"%s\"; error: %s", Name1.c_str(), Name2.c_str(),e.what()));
         }
         
         try{
@@ -370,7 +373,7 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
         }
         catch (std::exception &e){
             // Output parameter parsing failed.  Stop.
-            throw ValueError(format("_PropsSI output parameter parsing failed; error: %s", e.what()));
+            throw ValueError(format("Output parameter parsing failed; error: %s", e.what()));
         }
     
         // Calculate the output(s).  In the case of a failure, all values will be filled with _HUGE
