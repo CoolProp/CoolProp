@@ -469,7 +469,7 @@ TEST_CASE("Check that all parameters are descibed","")
         SECTION(ss.str(), "")
         {   
             std::string prior;
-            if (i > 0){
+            if (i > 1){
                 CHECK_NOTHROW(prior = CoolProp::get_parameter_information(i-1,"short"));
                 CAPTURE(prior);
             }
