@@ -260,7 +260,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             if outmat.empty():
                 raise ValueError(_get_global_param_string('errstring'))
             
-            return outmat
+            return ndarray_or_iterable(outmat)
         else:
             # This version takes doubles
             val = _PropsSI(in1, in2, in3, in4, in5, in6)
