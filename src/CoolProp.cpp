@@ -292,26 +292,36 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
 	
 	// Iterate over the state variable inputs
 	for (std::size_t i = 0; i < IO.size(); ++i){
-		
-		if (input_pair != INPUT_PAIR_INVALID){
-			// Update the state since it is a valid set of inputs
-			State->update(input_pair, in1[i], in2[i]);
-		}
-	
-		for (std::size_t j = 0; j < IO[i].size(); ++j){
-			output_parameter &output = output_parameters[j];
-			switch (output.type){
-				case output_parameter::OUTPUT_TYPE_TRIVIAL:
-				case output_parameter::OUTPUT_TYPE_NORMAL:
-					IO[i][j] = State->keyed_output(output.Of1); break;
-				case output_parameter::OUTPUT_TYPE_FIRST_DERIVATIVE:
-					IO[i][j] = State->first_partial_deriv(output.Of1, output.Wrt1, output.Constant1); break;
-				case output_parameter::OUTPUT_TYPE_SECOND_DERIVATIVE:
-					IO[i][j] = State->second_partial_deriv(output.Of1, output.Wrt1, output.Constant1, output.Wrt2, output.Constant2); break;
-                default:
-                    throw ValueError(format("")); break;
-			}
-		}
+		try{
+            if (input_pair != INPUT_PAIR_INVALID){
+                // Update the state since it is a valid set of inputs
+                State->update(input_pair, in1[i], in2[i]);
+            }
+        }
+        catch(std::exception &){
+            // All the outputs are filled with _HUGE
+            for (std::size_t j = 0; j < IO[i].size(); ++j){ IO[i][j] = _HUGE; }
+        }
+        
+        for (std::size_t j = 0; j < IO[i].size(); ++j){
+            try{
+                output_parameter &output = output_parameters[j];
+                switch (output.type){
+                    case output_parameter::OUTPUT_TYPE_TRIVIAL:
+                    case output_parameter::OUTPUT_TYPE_NORMAL:
+                        IO[i][j] = State->keyed_output(output.Of1); break;
+                    case output_parameter::OUTPUT_TYPE_FIRST_DERIVATIVE:
+                        IO[i][j] = State->first_partial_deriv(output.Of1, output.Wrt1, output.Constant1); break;
+                    case output_parameter::OUTPUT_TYPE_SECOND_DERIVATIVE:
+                        IO[i][j] = State->second_partial_deriv(output.Of1, output.Wrt1, output.Constant1, output.Wrt2, output.Constant2); break;
+                    default:
+                        throw ValueError(format("")); break;
+                }
+            }
+            catch(std::exception &){
+                IO[i][j] = _HUGE;
+            }
+        }
 	}
 }
 std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &Outputs, 
@@ -339,7 +349,7 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
         }
         catch(std::exception &e){
             // Initialization failed.  Stop.
-            throw ValueError(format("_PropsSI_initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"",backend.c_str(), strjoin(fluids,"&").c_str(), vec_to_string(fractions, "%0.10f").c_str()) );
+            throw ValueError(format("_PropsSI_initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"; error: %s",backend.c_str(), strjoin(fluids,"&").c_str(), vec_to_string(fractions, "%0.10f").c_str(), e.what()) );
         }
 
         try{
@@ -350,17 +360,17 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
             is_valid_parameter(Name2, key2);
             input_pair = generate_update_pair(key1, Prop1, key2, Prop2, v1, v2);
         }
-        catch (std::exception &){
-            // Initialization failed.  Stop.
-            throw ValueError(format("_PropsSI input pair parsing failed for Name1: \"%s\", Name2: \"%s\"", Name1.c_str(), Name2.c_str()));
+        catch (std::exception &e){
+            // Input parameter parsing failed.  Stop
+            throw ValueError(format("_PropsSI input pair parsing failed for Name1: \"%s\", Name2: \"%s\"; error: %s", Name1.c_str(), Name2.c_str(),e.what()));
         }
         
         try{
             output_parameters = output_parameter::get_output_parameters(Outputs);
         }
-        catch (std::exception &){
-            // Initialization failed.  Stop.
-            throw ValueError(format("_PropsSI output parameter parsing failed"));
+        catch (std::exception &e){
+            // Output parameter parsing failed.  Stop.
+            throw ValueError(format("_PropsSI output parameter parsing failed; error: %s", e.what()));
         }
     
         // Calculate the output(s).  In the case of a failure, all values will be filled with _HUGE

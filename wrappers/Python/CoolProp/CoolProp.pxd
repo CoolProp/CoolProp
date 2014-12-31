@@ -33,12 +33,13 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     double _Props1SI "CoolProp::Props1SI"(string Ref, string Output)
     double _PropsSI "CoolProp::PropsSI"(string Output, string Name1, double Prop1, string Name2, double Prop2, string FluidName) 
     string _PhaseSI "CoolProp::PhaseSI"(string Name1, double Prop1, string Name2, double Prop2, string FluidName) 
-    vector[double] _PropsSI "CoolProp::PropsSI"(string Output, string Name1, vector[double] Prop1, string Name2, vector[double] Prop2, string FluidName, vector[double] fractions)
-    vector[double] _PropsSII "CoolProp::PropsSI"(string Output, string Name1, vector[double] Prop1, string Name2, vector[double] Prop2, string FluidName)
+    vector[vector[double]] _PropsSImulti "CoolProp::PropsSImulti"(vector[string] Outputs, string Name1, vector[double] Prop1, string Name2, vector[double] Prop2, string backend, vector[string] FluidName, vector[double] fractions)
     string _get_global_param_string "CoolProp::get_global_param_string"(string ParamName) except +
     int _get_debug_level "CoolProp::get_debug_level"() except +
     void _set_debug_level "CoolProp::set_debug_level"(int level) except +
     string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName) except +
+    void _extract_backend "CoolProp::extract_backend"(string input, string backend, string fluids) except +
+    string _extract_fractions "CoolProp::extract_fractions"(string input, vector[double] fractions) except +
     void _set_reference_stateS "CoolProp::set_reference_stateS"(string, string) except +
     void _set_reference_stateD "CoolProp::set_reference_stateD"(string, double, double, double, double) except +
     

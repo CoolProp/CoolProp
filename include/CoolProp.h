@@ -176,6 +176,14 @@ You might want to start by looking at CoolProp.h
      */
     void extract_backend(const std::string &fluid_string, std::string &backend, std::string &fluid);
     
+    /**
+     * @brief Extract fractions (molar, mass, etc.) encoded in the string if any
+     * @param fluid_string The input string
+     * @param fractions The fractions
+     * @return The fluids, as a '&' delimited string
+     */
+    std::string extract_fractions(const std::string &fluid_string, std::vector<double> &fractions);
+    
     } /* namespace CoolProp */
 #endif
 
