@@ -374,7 +374,7 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
         if (!ValidNumber(c)){
             throw ValueError(format("Brent's method c is NAN").c_str());}
         if (iter>maxiter){
-            throw SolutionError(std::string("Brent's method reached maximum number of steps of %d ", maxiter));}
+            throw SolutionError(format("Brent's method reached maximum number of steps of %d ", maxiter));}
         if (std::abs(fb)< 2*macheps*std::abs(b)){
             return b;
         }
