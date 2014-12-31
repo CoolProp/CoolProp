@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from . import constants
 if constants.__file__.rsplit('.', 1)[1] not in ['pyc','pyo','py']:
     print("constants shared library has been removed.  Please restart your python code")
+    import os
     os.remove(constants.__file__)
     quit()
 
