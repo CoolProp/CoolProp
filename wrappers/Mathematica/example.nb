@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       157,          7]
-NotebookDataLength[      3108,         95]
-NotebookOptionsPosition[      2636,         74]
-NotebookOutlinePosition[      2985,         89]
-CellTagsIndexPosition[      2942,         86]
+NotebookDataLength[      4066,        108]
+NotebookOptionsPosition[      3606,         87]
+NotebookOutlinePosition[      3952,        102]
+CellTagsIndexPosition[      3909,         99]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -22,59 +22,72 @@ Notebook[{
 Cell[CellGroupData[{
 Cell[BoxData[{
  RowBox[{
-  RowBox[{"Props", "=", " ", 
+  RowBox[{"PropsSI", "=", " ", 
    RowBox[{"LibraryFunctionLoad", "[", 
-    RowBox[{"\"\<CoolProp\>\"", ",", "\"\<Props\>\"", ",", 
+    RowBox[{"\"\<CoolProp\>\"", ",", "\"\<PropsSI\>\"", ",", 
      RowBox[{"{", 
       RowBox[{
       "UTF8String", ",", "UTF8String", ",", "Real", ",", "UTF8String", ",", 
        "Real", ",", "UTF8String"}], "}"}], ",", "Real"}], "]"}]}], 
   ";"}], "\[IndentingNewLine]", 
- RowBox[{"Props", "[", 
+ RowBox[{"PropsSI", "[", 
   RowBox[{
-  "\"\<T\>\"", ",", "\"\<P\>\"", ",", "300", ",", "\"\<Q\>\"", ",", "1", ",", 
-   "\"\<R134a\>\""}], "]"}], "\[IndentingNewLine]", 
- RowBox[{"LibraryFunctionUnload", "[", "Props", "]"}]}], "Input",
+  "\"\<T\>\"", ",", "\"\<P\>\"", ",", "101325", ",", "\"\<Q\>\"", ",", "1", 
+   ",", "\"\<Water\>\""}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{"LibraryFunctionUnload", "[", "PropsSI", "]"}]}], "Input",
  CellChangeTimes->{{3.5975962701305647`*^9, 3.597596273924782*^9}, {
    3.5975963268728104`*^9, 3.597596370765321*^9}, {3.597596413885787*^9, 
    3.597596447831729*^9}, {3.597596485780899*^9, 3.5975965035799174`*^9}, 
-   3.5975965729218836`*^9}],
+   3.5975965729218836`*^9, {3.629071287196377*^9, 3.629071314962002*^9}, {
+   3.629071375805752*^9, 3.629071391805752*^9}, {3.629071633071377*^9, 
+   3.629071633915127*^9}, {3.629072034399502*^9, 3.629072046962002*^9}, {
+   3.629072100196377*^9, 3.629072107680752*^9}, {3.629072359774502*^9, 
+   3.629072373243252*^9}, {3.629072404696377*^9, 3.629072437821377*^9}, {
+   3.629072744133877*^9, 3.629072744696377*^9}, {3.629073005590908*^9, 
+   3.629073025731533*^9}, {3.6290737478135643`*^9, 3.6290737487979393`*^9}}],
 
-Cell[BoxData["273.82206373780235`"], "Output",
+Cell[BoxData["373.1242958476879`"], "Output",
  CellChangeTimes->{{3.5975965638133626`*^9, 3.597596574246959*^9}, 
-   3.5975966820841274`*^9, 3.5979454740346136`*^9, 3.597945533625022*^9}]
+   3.5975966820841274`*^9, 3.5979454740346136`*^9, 3.597945533625022*^9, 
+   3.629071315774502*^9, 3.629072017149502*^9, 3.629072048399502*^9, 
+   3.629072107899502*^9, 3.629072361305752*^9, {3.629072420383877*^9, 
+   3.629072462899502*^9}, {3.629073007278408*^9, 3.629073026778408*^9}, {
+   3.6290737409541893`*^9, 3.6290737497510643`*^9}}]
 }, Open  ]],
 
 Cell[CellGroupData[{
 
 Cell[BoxData[{
  RowBox[{
-  RowBox[{"HumidAirProps", "=", " ", 
+  RowBox[{"HAPropsSI", "=", " ", 
    RowBox[{"LibraryFunctionLoad", "[", 
-    RowBox[{"\"\<CoolProp\>\"", ",", "\"\<HumidAirProps\>\"", ",", 
+    RowBox[{"\"\<CoolProp\>\"", ",", "\"\<HAPropsSI\>\"", ",", 
      RowBox[{"{", 
       RowBox[{
       "UTF8String", ",", "UTF8String", ",", "Real", ",", "UTF8String", ",", 
        "Real", ",", "UTF8String", ",", "Real"}], "}"}], ",", "Real"}], 
     "]"}]}], ";"}], "\[IndentingNewLine]", 
- RowBox[{"HumidAirProps", "[", 
+ RowBox[{"HAPropsSI", "[", 
   RowBox[{
-  "\"\<D\>\"", ",", "\"\<T\>\"", ",", "300", ",", "\"\<P\>\"", ",", "101.325",
-    ",", "\"\<R\>\"", ",", "0.5"}], "]"}], "\[IndentingNewLine]", 
- RowBox[{"LibraryFunctionUnload", "[", "HumidAirProps", "]"}]}], "Input",
+  "\"\<W\>\"", ",", "\"\<T\>\"", ",", "300", ",", "\"\<P\>\"", ",", "101325", 
+   ",", "\"\<R\>\"", ",", "0.5"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{"LibraryFunctionUnload", "[", "HAPropsSI", "]"}]}], "Input",
  CellChangeTimes->{{3.597945273818162*^9, 3.597945373524865*^9}, 
-   3.5979455508320065`*^9}],
+   3.5979455508320065`*^9, {3.629072044180752*^9, 3.629072083821377*^9}, {
+   3.629072119868252*^9, 3.629072144477627*^9}}],
 
-Cell[BoxData["288.71443135649594`"], "Output",
- CellChangeTimes->{{3.5979455418264914`*^9, 3.5979455523070908`*^9}}]
+Cell[BoxData["0.01109623184668821`"], "Output",
+ CellChangeTimes->{{3.5979455418264914`*^9, 3.5979455523070908`*^9}, {
+   3.629072050602627*^9, 3.629072084196377*^9}, {3.629072117633877*^9, 
+   3.629072145087002*^9}, 3.6290737526573143`*^9}]
 }, Open  ]],
 
 Cell[BoxData[""], "Input",
  CellChangeTimes->{{3.597945508477584*^9, 3.597945508482584*^9}}]
 },
-WindowSize->{1366, 746},
-WindowMargins->{{Automatic, -1374}, {-48, Automatic}},
-FrontEndVersion->"9.0 for Microsoft Windows (64-bit) (January 25, 2013)",
+WindowSize->{1280, 823},
+WindowMargins->{{-8, Automatic}, {Automatic, -8}},
+FrontEndVersion->"10.0 for Microsoft Windows (64-bit) (December 4, 2014)",
 StyleDefinitions->"Default.nb"
 ]
 (* End of Notebook Content *)
@@ -89,14 +102,14 @@ CellTagsIndex->{}
 (*NotebookFileOutline
 Notebook[{
 Cell[CellGroupData[{
-Cell[579, 22, 845, 18, 72, "Input"],
-Cell[1427, 42, 188, 2, 31, "Output"]
+Cell[579, 22, 1344, 24, 72, "Input"],
+Cell[1926, 48, 455, 6, 31, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[1652, 49, 754, 16, 72, "Input"],
-Cell[2409, 67, 116, 1, 31, "Output"]
+Cell[2418, 59, 833, 17, 72, "Input"],
+Cell[3254, 78, 241, 3, 64, "Output"]
 }, Open  ]],
-Cell[2540, 71, 92, 1, 31, InheritFromParent]
+Cell[3510, 84, 92, 1, 31, "Input"]
 }
 ]
 *)

@@ -824,14 +824,23 @@ if (COOLPROP_MATHEMATICA_MODULE)
       set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
     endif()
 
-  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/externals/FindMathematica/CMake/FindMathematica")
-  find_package(Mathematica REQUIRED)
-  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/externals/FindMathematica/CMake/Mathematica/")
+  find_package(Mathematica COMPONENTS WolframLibrary)
+  message(STATUS "Mathematica_WolframLibrary_FOUND=${Mathematica_WolframLibrary_FOUND}")
+  message(STATUS "Mathematica_WolframLibrary_INCLUDE_DIR=${Mathematica_WolframLibrary_INCLUDE_DIR}")
+  message(STATUS "Mathematica_USERBASE_DIR=${Mathematica_USERBASE_DIR}")
+
   list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/wrappers/Mathematica/CoolPropMathematica.cpp")
+  list(APPEND APP_INCLUDE_DIRS "${Mathematica_WolframLibrary_INCLUDE_DIR}")
   include_directories(${APP_INCLUDE_DIRS})
-  include_directories(Mathematica_INCLUDE_DIR)
   add_library(CoolProp SHARED ${APP_SOURCES})
   add_dependencies (CoolProp generate_headers)
+
+  if(MSVC)      
+	 add_custom_command(TARGET ${app_name}
+                         POST_BUILD
+                         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+  endif()
   
   install (FILES $<TARGET_FILE:CoolProp> DESTINATION Mathematica/${CMAKE_SYSTEM_NAME})
 endif()
