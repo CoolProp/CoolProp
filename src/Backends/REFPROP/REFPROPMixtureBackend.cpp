@@ -440,7 +440,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             }
             else
             {
-                throw ValueError(format("Could not load these fluids: %s", components_joined_raw.c_str()));
+                throw ValueError(format("Could not load these fluids: %s; error: %s", components_joined_raw.c_str(), herr));
             }
         }
     }
