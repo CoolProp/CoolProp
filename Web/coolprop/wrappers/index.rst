@@ -43,8 +43,9 @@ Common Wrapper Prerequisites
 On all platforms for which CoolProp is supported, the compilation of one of the wrappers requires a few common prerequisites, described here. They are:
 
 * git (to interface with the CoolProp repository at https://github.com/CoolProp/CoolProp)
+* python (to generate the header files and convert them to binary file)
 * CMake (platform-independent software to generate makefiles)
-* C++ compiler (see below)
+* C++ compiler
 * 7-zip
 
 Windows
@@ -68,6 +69,8 @@ For 7-zip, download the installer from http://www.7-zip.org/ .  Check that at th
     Usage: 7z <command> [<switches>...] <archive_name> [<file_names>...]
            [<@listfiles...>]
 
+For python, you should be using `Anaconda/Miniconda <https://store.continuum.io/cshop/anaconda/>`_ for your python installation.  Or, you can just install `Miniconda<http://conda.pydata.org/miniconda.html>`_, which is sufficient
+
 For the C++ compiler, the options are a bit more complicated.  There are multiple (binary incompatible) versions of Visual Studio, as well as G++ ports for windows (MinGW).  Unless you are compiling the python wrappers, you can compile with MinGW, so you should obtain the `MinGW installer <http://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download>`_ and run it.  You should install all the packages available, and you MUST(!!) install to a path without spaces. ``C:\MinGW`` is recommended as an installation path. Be sure to add the folder ``C:\MinGw`` to your PATH variable.
 
 If you want to build 64-bit extensions, you MUST install professional versions of visual studio, which can be obtained for free if you have a student ID card from Microsoft Dreamspark.  You will require Visual Studio 2008 Professional for python 2.x, and Visual Studio 2010 Professional for python 3.x.  Otherwise you can select Visual Studio version freely.
@@ -78,15 +81,17 @@ Linux
 -----
 On debian based linux distributions (ubuntu, etc.), you can simply do::
 
-    sudo apt-get install cmake git g++ p7zip
+    sudo apt-get install cmake git g++ p7zip libpython-dev
 
-although ``git`` is probably already packaged with your operating system; ``g++`` probably isn't
+although ``git`` is probably already packaged with your operating system; ``g++`` probably isn't.  Python is (probably) included in your distribution, but the headers aren't.
 
 OSX
 ---
 OSX should come with a c++ compiler (clang), for git and cmake your best bet is `Homebrew <http://brew.sh/>`_.  With Homebrew installed, you can just do::
 
     brew install cmake git p7zip
+    
+OSX includes a python version, but you should be using `Anaconda/Miniconda <https://store.continuum.io/cshop/anaconda/>`_ for your python installation.  Or, you can just install `Miniconda<http://conda.pydata.org/miniconda.html>`_, which is sufficient
 
 If you have never done any command-line compilation before on OSX, chances are that you do not have the utilities needed. Thus you need to first install Xcode: see the description on the page http://guide.macports.org/#installing.xcode . After installing, you need to accept the license by running the following command in the Terminal::
 
