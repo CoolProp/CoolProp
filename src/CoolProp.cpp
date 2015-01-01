@@ -188,73 +188,52 @@ void _PropsSI_initialize(const std::string &backend,
                          shared_ptr<AbstractState> &State){
                              
     if (fluid_names.empty()){throw ValueError("fluid_names cannot be empty");}
-	
-	Dictionary dict;
-    
-	// If a predefined mixture, set it up.  Fractions and names are given
-	if (is_predefined_mixture(fluid_names[0], dict)){        
 		
-        // Retrieve the information on the predefined mixture
-        std::vector<double> fractions = dict.get_double_vector("mole_fractions");
-		std::vector<std::string> fluid_names = dict.get_string_vector("fluids");
-        
+    std::vector<double> fractions(1, 1.0); // Default to one component, unity fraction
+    const std::vector<double> *fractions_ptr = NULL; // Pointer to the array to be used;
+    
+    if (fluid_names.size() > 1){
+        // Set the pointer - we are going to use the supplied fractions; they must be provided
+        fractions_ptr = &z;
         // Reset the state
         State.reset(AbstractState::factory(backend, fluid_names));
-        
-        // Set the fraction for the state
-        if (State->using_mole_fractions()){
-            State->set_mole_fractions(fractions);
-        } else if (State->using_mass_fractions()){
-            State->set_mass_fractions(fractions);
-        } else if (State->using_volu_fractions()){
-            State->set_volu_fractions(fractions);
-        } else {
-            if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
+    }
+    else if (fluid_names.size() == 1){
+        if (has_fractions_in_string(fluid_names[0]) || has_solution_concentration(fluid_names[0])){
+            // Extract fractions from the string
+            std::string fluid_string = extract_fractions(fluid_names[0], fractions);
+            // Set the pointer - we are going to use the extracted fractions
+            fractions_ptr = &fractions;
+            // Reset the state
+            State.reset(AbstractState::factory(backend, fluid_string));
         }
-	}
-    else{		
-        std::vector<double> fractions(1, 1.0); // Default to one component, unity fraction
-        const std::vector<double> *fractions_ptr = NULL; // Pointer to the array to be used;
-        
-        if (fluid_names.size() > 1){
-            // Set the pointer - we are going to use the supplied fractions; they must be provided
-            fractions_ptr = &z;
+        else{
+            if (z.empty()){
+                // Set the pointer - we are going to use the default fractions
+                fractions_ptr = &fractions;
+            }
+            else{
+                // Set the pointer - we are going to use the provided fractions
+                fractions_ptr = &z;
+            }
             // Reset the state
             State.reset(AbstractState::factory(backend, fluid_names));
         }
-        else if (fluid_names.size() == 1){
-            if (has_fractions_in_string(fluid_names[0]) || has_solution_concentration(fluid_names[0])){
-                // Extract fractions from the string
-                std::string fluid_string = extract_fractions(fluid_names[0], fractions);
-                // Set the pointer - we are going to use the extracted fractions
-                fractions_ptr = &fractions;
-                // Reset the state
-                State.reset(AbstractState::factory(backend, fluid_string));
-            }
-            else{
-                if (z.empty()){
-                    // Set the pointer - we are going to use the default fractions
-                    fractions_ptr = &fractions;
-                }
-                else{
-                    // Set the pointer - we are going to use the provided fractions
-                    fractions_ptr = &z;
-                }
-                // Reset the state
-                State.reset(AbstractState::factory(backend, fluid_names));
-            }
-        }
-        
-        // Set the fraction for the state
-        if (State->using_mole_fractions()){
+    }
+    
+    // Set the fraction for the state
+    if (State->using_mole_fractions()){
+        // If a predefined mixture or a pure fluid, the fractions will already be set
+        const std::vector<long double> &z = State->get_mole_fractions();
+        if (z.empty()){
             State->set_mole_fractions(*fractions_ptr);
-        } else if (State->using_mass_fractions()){
-            State->set_mass_fractions(*fractions_ptr);
-        } else if (State->using_volu_fractions()){
-            State->set_volu_fractions(*fractions_ptr);
-        } else {
-            if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
-        }        
+        }
+    } else if (State->using_mass_fractions()){
+        State->set_mass_fractions(*fractions_ptr);
+    } else if (State->using_volu_fractions()){
+        State->set_volu_fractions(*fractions_ptr);
+    } else {
+        if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
     }
 }
 
