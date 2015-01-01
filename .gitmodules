@@ -7,3 +7,6 @@
 [submodule "externals/REFPROP-headers"]
 	path = externals/REFPROP-headers
 	url = https://github.com/CoolProp/REFPROP-headers.git
+[submodule "externals/FindMathematica"]
+	path = externals/FindMathematica
+	url = https://github.com/sakra/FindMathematica
