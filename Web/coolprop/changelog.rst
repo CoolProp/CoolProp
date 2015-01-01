@@ -1,6 +1,35 @@
 Changelog for CoolProp
 ======================
 
+5.0.5
+-----
+
+New Features:
+
+* Added Mathematica wrapper
+* Added vectorized PropsSImulti function that can return a matrix of outputs for vectors of state inputs and desired outputs
+
+Removed Features:
+
+* All the PropsSI overloads.  For all other inputs, the PropsSI function is now used
+
+Issues Closed:
+
+* `#375 <http://github.com/CoolProp/CoolProp/issues/375>`_ : If one input and one output to PropsSI, bubble error cleanly
+* `#373 <http://github.com/CoolProp/CoolProp/issues/373>`_ : Move predefined mixture parsing to HelmholtzEOS initializer function
+* `#372 <http://github.com/CoolProp/CoolProp/issues/372>`_ : Prandtl number is missing from AbstractState
+* `#371 <http://github.com/CoolProp/CoolProp/issues/371>`_ : Parse inputs to PropsSI/PropsSI(vectorized) and turn into a vector of inputs
+* `#370 <http://github.com/CoolProp/CoolProp/issues/370>`_ : Docs are missing all the fluid files
+* `#368 <http://github.com/CoolProp/CoolProp/issues/368>`_ : CoolProp on iOS
+* `#367 <http://github.com/CoolProp/CoolProp/issues/367>`_ : Python module architecture
+* `#366 <http://github.com/CoolProp/CoolProp/issues/366>`_ : Get value of universal gas constant
+* `#365 <http://github.com/CoolProp/CoolProp/issues/365>`_ : REFPROP_lib.h is missed in 5.0.4 source code zip
+* `#364 <http://github.com/CoolProp/CoolProp/issues/364>`_ : Liquid and vapor saturation pressures are not the same for some fluids
+* `#363 <http://github.com/CoolProp/CoolProp/issues/363>`_ : Revision synchronisation
+* `#359 <http://github.com/CoolProp/CoolProp/issues/359>`_ : Add high-level function that allows for multiple outputs
+* `#357 <http://github.com/CoolProp/CoolProp/issues/357>`_ : Vector functions and state class
+* `#349 <http://github.com/CoolProp/CoolProp/issues/349>`_ : Host v4 docs
+
 5.0.4
 -----
 
