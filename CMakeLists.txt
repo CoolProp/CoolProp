@@ -816,19 +816,24 @@ if (COOLPROP_JAVASCRIPT_MODULE)
   install (TARGETS coolprop DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
 endif()
 
-# NOT WORKING!
 if (COOLPROP_MATHEMATICA_MODULE)
 
-  # copy "C:\Program Files\Wolfram Research\Mathematica\9.0\SystemFiles\IncludeFiles\C\WolframLibrary.h" .
-  # REM folder obtained from FileNameJoin[{$BaseDirectory, "SystemFiles", "LibraryResources", $SystemID}] in Mathematica
-  # copy CoolProp.dll "C:\ProgramData\Mathematica\SystemFiles\LibraryResources\Windows-x86-64\"
+    if (MSVC)
+      # Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
+      set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+    endif()
 
-  list (APPEND APP_SOURCES "wrappers/Mathematica/CoolPropMathematica.cpp")
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/externals/FindMathematica/CMake/FindMathematica")
+  find_package(Mathematica REQUIRED)
+  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/wrappers/Mathematica/CoolPropMathematica.cpp")
   include_directories(${APP_INCLUDE_DIRS})
-  add_library(COOLProp SHARED ${APP_SOURCES})
-  set_target_properties (COOLPROP_EES PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
-  add_dependencies (COOLPROP_EES generate_headers)
-  set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
+  include_directories(Mathematica_INCLUDE_DIR)
+  add_library(CoolProp SHARED ${APP_SOURCES})
+  add_dependencies (CoolProp generate_headers)
+  
+  install (FILES $<TARGET_FILE:CoolProp> DESTINATION Mathematica/${CMAKE_SYSTEM_NAME})
 endif()
 
 if (COOLPROP_MY_MAIN)
