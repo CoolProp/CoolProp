@@ -843,7 +843,7 @@ if (COOLPROP_MATHEMATICA_MODULE)
   endif()
   
   install (FILES $<TARGET_FILE:CoolProp> DESTINATION Mathematica/${CMAKE_SYSTEM_NAME})
-  install (FILES  "${CMAKE_SOURCE_DIR}/wrappers/Mathematica/example.nb" DESTINATION Mathematica/${CMAKE_SYSTEM_NAME})
+  install (FILES  "${CMAKE_SOURCE_DIR}/wrappers/Mathematica/example.nb" DESTINATION Mathematica)
 endif()
 
 if (COOLPROP_MY_MAIN)
