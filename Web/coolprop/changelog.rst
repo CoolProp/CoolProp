@@ -7,11 +7,12 @@ Changelog for CoolProp
 New Features:
 
 * Added Mathematica wrapper
-* Added vectorized PropsSImulti function that can return a matrix of outputs for vectors of state inputs and desired outputs
+* Added ``Prandtl()`` function to ``AbstractState``
+* Added vectorized ``PropsSImulti`` function that can return a matrix of outputs for vectors of state inputs and desired outputs
 
 Removed Features:
 
-* All the PropsSI overloads.  For all other inputs, the PropsSI function is now used
+* All the ``PropsSI`` overloads.  For all other types of inputs, the ``PropsSImulti`` function is now used
 
 Issues Closed:
 
