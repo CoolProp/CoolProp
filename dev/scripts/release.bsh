@@ -112,5 +112,7 @@ if [ ${CPVERSION:0:7} != "nightly" ]; then
 fi
 # Change back to where we came from
 popd
+printMessage "Removing release directory"
+rm -rf $BINFOLDER
 printMessage "All done, goodbye."
 exit 0
