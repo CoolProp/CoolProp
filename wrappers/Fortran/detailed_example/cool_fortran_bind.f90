@@ -6,7 +6,7 @@ program hello
     implicit none
 
     !Initialize the variables used in the example
-    double precision T
+    double precision T, Q
     character(LEN=32) fluid, out1, n1, n2
     double precision dens1, dens2
 
