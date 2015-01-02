@@ -15,7 +15,7 @@ program hello
     !---------------------
       
     T = 300                 ! Temperature [K]
-    Q = 0                   ! Quality [-]
+    Q = -1                  ! Quality [-]
 
     out1 = "D"//CHAR(0)      ! String with of the output Property
     n1  = "T"//CHAR(0)       ! String with of the input Property #1
