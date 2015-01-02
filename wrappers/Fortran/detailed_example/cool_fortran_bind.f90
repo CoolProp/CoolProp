@@ -6,7 +6,7 @@ program hello
     implicit none
 
     !Initialize the variables used in the example
-    double precision T, Q
+    double precision T
     character(LEN=32) fluid, out1, n1, n2
     double precision dens1, dens2
 
@@ -15,7 +15,7 @@ program hello
     !---------------------
       
     T = 300                 ! Temperature [K]
-    !Q = 0                   ! Quality [-]
+    Q = 0                   ! Quality [-]
 
     out1 = "D"//CHAR(0)      ! String with of the output Property
     n1  = "T"//CHAR(0)       ! String with of the input Property #1
