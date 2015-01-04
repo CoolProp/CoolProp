@@ -1551,6 +1551,24 @@ TEST_CASE("Check the first two-phase derivative", "[first_two_phase_deriv]")
 	}
 }
 
+TEST_CASE("Check the second two-phase derivative", "[second_two_phase_deriv]")
+{
+    SECTION("drho_dh_dp",""){
+        shared_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
+        AS->update(QT_INPUTS, 0.3, 300);
+        long double analytical = AS->second_two_phase_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
+        CAPTURE(analytical);
+        long double pplus = AS->p()*1.001, pminus = AS->p()*0.999, h = AS->hmolar();
+        AS->update(HmolarP_INPUTS, h, pplus);
+        long double v1 = AS->first_two_phase_deriv(iDmolar, iHmolar, iP);
+        AS->update(HmolarP_INPUTS, h, pminus);
+        long double v2 = AS->first_two_phase_deriv(iDmolar, iHmolar, iP);
+        long double numerical = (v1 - v2)/(pplus - pminus);
+        CAPTURE(numerical);
+        CHECK(std::abs(numerical/analytical-1) < 1e-40);
+    }
+}
+
 TEST_CASE("Check the first two-phase derivative using splines", "[first_two_phase_deriv]")
 {
 	const int number_of_pairs = 4;

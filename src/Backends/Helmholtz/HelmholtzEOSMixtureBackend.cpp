@@ -2617,7 +2617,7 @@ long double HelmholtzEOSMixtureBackend::calc_second_saturation_deriv(parameters 
 
 long double HelmholtzEOSMixtureBackend::calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
 {
-    if (Of == iDmolar && Wrt1 == iHmolar && Constant1 == iP && Wrt2 == iP && Constant2 == iHmolar){
+    if (Of == iDmolar && ((Wrt1 == iHmolar && Constant1 == iP && Wrt2 == iP && Constant2 == iHmolar) || (Wrt2 == iHmolar && Constant2 == iP && Wrt1 == iP && Constant1 == iHmolar))){
         parameters h_key = iHmolar, rho_key = iDmolar, p_key = iP;
         // taking the derivative of (drho/dv)*(dv/dh|p) with respect to p with h constant
         long double dv_dh_constp = calc_first_two_phase_deriv(rho_key,h_key,p_key)/(-POW2(rhomolar()));
@@ -2630,7 +2630,7 @@ long double HelmholtzEOSMixtureBackend::calc_second_two_phase_deriv(parameters O
         long double drhoV_dp_sat =  SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
         long double numerator = 1/SatV->keyed_output(rho_key) - 1/SatL->keyed_output(rho_key);
         long double denominator = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
-        long double dnumerator = -1/POW2(SatV->keyed_output(rho_key))*drhoV_dp_sat - 1/POW2(SatL->keyed_output(rho_key))*drhoL_dp_sat;
+        long double dnumerator = -1/POW2(SatV->keyed_output(rho_key))*drhoV_dp_sat + 1/POW2(SatL->keyed_output(rho_key))*drhoL_dp_sat;
         long double ddenominator = dhV_dp_sat - dhL_dp_sat;
         long double d_dvdh_dp__consth = (denominator*dnumerator - numerator*ddenominator)/POW2(denominator);
         return -POW2(rhomolar())*d_dvdh_dp__consth + dv_dh_constp*(-2*rhomolar())*drhomolar_dp__consth;

@@ -291,6 +291,7 @@ protected:
 	virtual long double calc_first_saturation_deriv(parameters Of1, parameters Wrt1){throw NotImplementedError("calc_first_saturation_deriv is not implemented for this backend");};
 	virtual long double calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2){throw NotImplementedError("calc_second_saturation_deriv is not implemented for this backend");};
     virtual long double calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant){throw NotImplementedError("calc_first_two_phase_deriv is not implemented for this backend");};
+    virtual long double calc_second_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant, parameters Wrt2, parameters Constant2){throw NotImplementedError("calc_second_two_phase_deriv is not implemented for this backend");};
     virtual long double calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, long double x_end){throw NotImplementedError("calc_first_two_phase_deriv_splined is not implemented for this backend");};
     
     virtual long double calc_saturated_liquid_keyed_output(parameters key){throw NotImplementedError("calc_saturated_liquid_keyed_output is not implemented for this backend");};
@@ -595,6 +596,10 @@ public:
      */
     double first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant){
         return calc_first_two_phase_deriv(Of, Wrt, Constant);
+    };
+    
+    double second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2){
+        return calc_second_two_phase_deriv(Of, Wrt1, Constant1, Wrt2, Constant2);
     };
     
     double first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, double x_end){
