@@ -1,0 +1,96 @@
+{
+  "T_freeze": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase": 3.731500e+02, 
+  "Tmax": 4.731500e+02, 
+  "Tmin": 2.731500e+02, 
+  "TminPsat": 2.782782e+02, 
+  "conductivity": {
+    "coeffs": [
+      [
+        5.602160e-01
+      ], 
+      [
+        1.470951e-05
+      ], 
+      [
+        -4.222652e-08
+      ], 
+      [
+        -9.630489e-10
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "coeffs": [
+      [
+        9.615327e+02
+      ], 
+      [
+        -7.059969e-01
+      ], 
+      [
+        -2.541021e-03
+      ], 
+      [
+        3.442833e-06
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Fit of the subcooled region of the full EOS from 0.5 bar to 100 bar and from 0 deg C to 200 deg C.", 
+  "mass2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "Water", 
+  "reference": "Wagner2002", 
+  "saturation_pressure": {
+    "coeffs": [
+      -3.863635e+03, 
+      -4.391760e+01, 
+      -2.326064e+01
+    ], 
+    "type": "exponential"
+  }, 
+  "specific_heat": {
+    "coeffs": [
+      [
+        4.199132e+03
+      ], 
+      [
+        1.116817e+00
+      ], 
+      [
+        1.238871e-02
+      ], 
+      [
+        2.770690e-05
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "coeffs": [
+      1.752794e+00, 
+      -9.603666e+00, 
+      6.336660e+00
+    ], 
+    "type": "exponential"
+  }, 
+  "volume2input": {
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase": 0.000000e+00, 
+  "xid": "pure", 
+  "xmax": 1.000000e+00, 
+  "xmin": 0.000000e+00
+}
