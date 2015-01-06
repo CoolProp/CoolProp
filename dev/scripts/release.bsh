@@ -13,9 +13,7 @@ CPVERSION="$1"
 BASEDIR="$HOME/buildbot/server-master/public_html"
 REPODIR="$HOME/src/CoolPropFull.git"
 TMPSDIR="$HOME/src/CoolProp.sources"
-BINFOLDER="binaries"
 DOCFOLDER="sphinx"
-SRCFOLDER="$BASEDIR/$BINFOLDER/source"
 DOC4FILES="4.2.5/coolpropv425docs.zip"
 DOC4FOLDER="$DOCFOLDER/v4"
 SEPARATOR="----------------------------------"
@@ -34,9 +32,12 @@ printMessage "Processing the input variables: "
 CPVERSION="$1"
 if [[ $CPVERSION == +([0-9]).+([0-9]).+([0-9]) ]]; then
     echo "CPVERSION = $CPVERSION"
-    BINFOLDER=release
+    BINFOLDER="release"
+    SRCFOLDER="$BASEDIR/$BINFOLDER/source"
 elif [ "$CPVERSION" == "nightly" ]; then
     echo "CPVERSION = $CPVERSION - which is a valid input"
+    BINFOLDER="binaries"
+    SRCFOLDER="$BASEDIR/$BINFOLDER/source"
 else
     echo "CPVERSION = $CPVERSION - not valid!"
     exit 1
@@ -72,8 +73,9 @@ else
     #rm -rf .git*
     find . -iwholename "*/.git*" -exec rm -rf {} \;
     cd ..
-    rm $SRCFOLDER/CoolProp_sources.zip
-    zip -r $SRCFOLDER/CoolProp_sources.zip $(basename $TMPSDIR)
+    mkdir -p $SRCFOLDER
+    rm -f $SRCFOLDER/CoolProp_sources.zip
+    zip -rq $SRCFOLDER/CoolProp_sources.zip $(basename $TMPSDIR)
     cd $(basename $TMPSDIR)
     popd
     rm -f "$BINFOLDER/README.rst.txt"
