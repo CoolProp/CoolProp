@@ -1,4 +1,23 @@
 #!/bin/bash
+##############################################
+# CoolProp release management
+##############################################
+#
+# Things to remember when you make a new release:
+#
+#  * Run the script and check the logs
+#  * Make a tag in your git software
+#  * Update the default download on sourceforge to point to the new sources
+#
+# In case you experience problems with permissions, login to
+# sourceforge by creating a new shell with
+# ssh -t username,coolprop@shell.sf.net create
+# and the run
+# find . -type d ! -perm 0775 -exec chmod 0775 {} \;
+# find . -type f ! -perm 0664 -exec chmod 0664 {} \;
+# in /home/project-web/coolprop/htdocs and /home/frs/project/coolprop/
+# to reset all permissions.
+#
 #
 # Make sure that only two arguments are passed to this script - the version that
 # will be released and the dryrun vs. release option.
