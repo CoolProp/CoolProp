@@ -106,7 +106,7 @@ For a given fluid, the phase can be plotted in T-p coordinates:
     # Saturation curve
     # ----------------
     Ts = np.linspace(273.16, Tc, 1000)
-    ps = CP.CoolProp.PropsSI('P','T',Ts,'Q',[0]*len(Ts),'Water',[1])
+    ps = CP.CoolProp.PropsSI('P','T',Ts,'Q',0,'Water')
 
     # ------
     # Labels

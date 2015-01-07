@@ -1,4 +1,23 @@
 #!/bin/bash
+##############################################
+# CoolProp release management
+##############################################
+#
+# Things to remember when you make a new release:
+#
+#  * Run the script and check the logs
+#  * Make a tag in your git software
+#  * Update the default download on sourceforge to point to the new sources
+#
+# In case you experience problems with permissions, login to
+# sourceforge by creating a new shell with
+# ssh -t username,coolprop@shell.sf.net create
+# and the run
+# find . -type d ! -perm 0775 -exec chmod 0775 {} \;
+# find . -type f ! -perm 0664 -exec chmod 0664 {} \;
+# in /home/project-web/coolprop/htdocs and /home/frs/project/coolprop/
+# to reset all permissions.
+#
 #
 # Make sure that only two arguments are passed to this script - the version that
 # will be released and the dryrun vs. release option.
@@ -9,38 +28,37 @@ if [ $# != 2 ]; then
     exit 1
 fi
 #
-CPVERSION="$1"
-BASEDIR="$HOME/buildbot/server-master/public_html"
-REPODIR="$HOME/src/CoolPropFull.git"
-TMPSDIR="$HOME/src/CoolProp.sources"
-BINFOLDER="binaries"
-DOCFOLDER="sphinx"
-SRCFOLDER="$BASEDIR/$BINFOLDER/source"
-DOC4FILES="4.2.5/coolpropv425docs.zip"
-DOC4FOLDER="$DOCFOLDER/v4"
+# Just a small function print messages
 SEPARATOR="----------------------------------"
-#
-SFUSER="jorritw" # ibell or jorritw
-#
 function printMessage {
     echo " "
     echo $SEPARATOR
     echo "$1"
     return 0
 }
-#
+# Now we use the function defined above
 printMessage "Processing the input variables: "
 #
+# Process the version number and set parameters accordingly
 CPVERSION="$1"
 if [[ $CPVERSION == +([0-9]).+([0-9]).+([0-9]) ]]; then
     echo "CPVERSION = $CPVERSION"
-    BINFOLDER=release
+    BINFOLDER="release"
 elif [ "$CPVERSION" == "nightly" ]; then
     echo "CPVERSION = $CPVERSION - which is a valid input"
+    BINFOLDER="binaries"
 else
     echo "CPVERSION = $CPVERSION - not valid!"
     exit 1
 fi
+#
+BASEDIR="$HOME/buildbot/server-master/public_html"
+REPODIR="$HOME/src/CoolPropFull.git"
+TMPSDIR="$HOME/src/CoolProp.sources"
+SRCFOLDER="$BASEDIR/$BINFOLDER/source"
+DOCFOLDER="sphinx"
+DOC4FILES="4.2.5/coolpropv425docs.zip"
+DOC4FOLDER="$DOCFOLDER/v4"
 #
 if [ "$2" == "release" ]; then
     DRYRUN=false
@@ -72,8 +90,9 @@ else
     #rm -rf .git*
     find . -iwholename "*/.git*" -exec rm -rf {} \;
     cd ..
-    rm $SRCFOLDER/CoolProp_sources.zip
-    zip -r $SRCFOLDER/CoolProp_sources.zip $(basename $TMPSDIR)
+    mkdir -p $SRCFOLDER
+    rm -f $SRCFOLDER/CoolProp_sources.zip
+    zip -rq $SRCFOLDER/CoolProp_sources.zip $(basename $TMPSDIR)
     cd $(basename $TMPSDIR)
     popd
     rm -f "$BINFOLDER/README.rst.txt"

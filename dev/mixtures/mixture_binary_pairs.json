@@ -112,7 +112,7 @@
     "Name2": "Argon", 
     "betaT": 1.027147, 
     "betaV": 0.968781, 
-    "function": "CarbonDioxide-Argon", 
+    "function": "Argon-CarbonDioxide", 
     "gammaT": 1.001378, 
     "gammaV": 1.02971
   }, 
