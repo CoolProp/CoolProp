@@ -10,16 +10,16 @@
   "conductivity": {
     "coeffs": [
       [
-        5.602160e-01
+        6.808850e-01
       ], 
       [
-        1.470951e-05
+        3.873815e-04
       ], 
       [
-        -4.222652e-08
+        -6.764932e-06
       ], 
       [
-        -9.630489e-10
+        1.304806e-08
       ]
     ], 
     "type": "polynomial"
@@ -41,7 +41,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Fit of the subcooled region of the full EOS from 0.5 bar to 100 bar and from 0 deg C to 200 deg C.", 
+  "description": "Fit of the subcooled region of the full EOS from 1 bar to 100 bar", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "Water", 
-  "reference": "Wagner2002", 
+  "reference": "Wagner2002, Transport properties from Huber et. al (2 papers)", 
   "saturation_pressure": {
     "coeffs": [
       -3.863635e+03, 
@@ -79,9 +79,9 @@
   }, 
   "viscosity": {
     "coeffs": [
-      1.752794e+00, 
-      -9.603666e+00, 
-      6.336660e+00
+      5.598818e+02, 
+      -1.411882e+02, 
+      1.058592e+01
     ], 
     "type": "exponential"
   }, 
