@@ -278,6 +278,8 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
                 __Props_err2("PropsSI", in1, in2, in3, in4, in5, in6)
             else:
                 return val
+    else:
+        throw ValueError('input #7 cannot be provided')
 
 cpdef list FluidsList():
     """
