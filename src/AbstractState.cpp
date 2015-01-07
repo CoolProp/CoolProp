@@ -121,7 +121,7 @@ bool AbstractState::clear() {
     this->_gibbsmolar.clear();
     this->_logp.clear();
     this->_logrhomolar.clear();
- 
+
     ///// Smoothing values
     //this->rhospline = -_HUGE;
     //this->dsplinedp = -_HUGE;
@@ -153,6 +153,11 @@ bool AbstractState::clear() {
     this->_d2alphar_dDelta2_lim.clear();
     this->_d2alphar_dDelta_dTau_lim.clear();
     this->_d3alphar_dDelta2_dTau_lim.clear();
+
+    /// Transport properties
+    this->_viscosity.clear();
+    this->_conductivity.clear();
+    this->_surface_tension.clear();
 
     return true;
 }
@@ -419,7 +424,7 @@ void get_dT_drho(AbstractState &AS, parameters index, long double &dT, long doub
                 R = AS.gas_constant(),
                 delta = rho/rhor,
                 tau = Tr/T;
-    
+
     switch (index)
     {
     case iT:
@@ -497,9 +502,9 @@ void get_dT_drho_second_derivatives(AbstractState &AS, int index, long double &d
                 delta = rho/rhor,
                 tau = Tr/T;
 
-    // Here we use T and rho as independent variables since derivations are already done by Thorade, 2013, 
+    // Here we use T and rho as independent variables since derivations are already done by Thorade, 2013,
     // Partial derivatives of thermodynamic state propertiesfor dynamic simulation, DOI 10.1007/s12665-013-2394-z
-    
+
     switch (index)
     {
     case iT:
@@ -584,7 +589,7 @@ long double AbstractState::calc_first_partial_deriv(parameters Of, parameters Wr
 }
 long double AbstractState::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
 {
-    long double dOf1_dT, dOf1_drho, dWrt1_dT, dWrt1_drho, dConstant1_dT, dConstant1_drho, d2Of1_dT2, d2Of1_drhodT, 
+    long double dOf1_dT, dOf1_drho, dWrt1_dT, dWrt1_drho, dConstant1_dT, dConstant1_drho, d2Of1_dT2, d2Of1_drhodT,
                 d2Of1_drho2, d2Wrt1_dT2, d2Wrt1_drhodT, d2Wrt1_drho2, d2Constant1_dT2, d2Constant1_drhodT, d2Constant1_drho2,
                 dWrt2_dT, dWrt2_drho, dConstant2_dT, dConstant2_drho, N, D, dNdrho__T, dDdrho__T, dNdT__rho, dDdT__rho,
                 dderiv1_drho, dderiv1_dT, second;
@@ -596,34 +601,34 @@ long double AbstractState::calc_second_partial_deriv(parameters Of1, parameters 
     get_dT_drho_second_derivatives(*this, Of1, d2Of1_dT2, d2Of1_drhodT, d2Of1_drho2);
     get_dT_drho_second_derivatives(*this, Wrt1, d2Wrt1_dT2, d2Wrt1_drhodT, d2Wrt1_drho2);
     get_dT_drho_second_derivatives(*this, Constant1, d2Constant1_dT2, d2Constant1_drhodT, d2Constant1_drho2);
-    
+
     // First derivatives of terms involved in the second derivative
     get_dT_drho(*this, Wrt2, dWrt2_dT, dWrt2_drho);
     get_dT_drho(*this, Constant2, dConstant2_dT, dConstant2_drho);
-    
+
     // Numerator and denominator of first partial derivative term
     N = dOf1_dT*dConstant1_drho - dOf1_drho*dConstant1_dT;
     D = dWrt1_dT*dConstant1_drho - dWrt1_drho*dConstant1_dT;
-    
+
     // Derivatives of the numerator and denominator of the first partial derivative term with respect to rho, T held constant
     // They are of similar form, with Of1 and Wrt1 swapped
     dNdrho__T = dOf1_dT*d2Constant1_drho2 + d2Of1_drhodT*dConstant1_drho - dOf1_drho*d2Constant1_drhodT - d2Of1_drho2*dConstant1_dT;
     dDdrho__T = dWrt1_dT*d2Constant1_drho2 + d2Wrt1_drhodT*dConstant1_drho - dWrt1_drho*d2Constant1_drhodT - d2Wrt1_drho2*dConstant1_dT;
-    
+
     // Derivatives of the numerator and denominator of the first partial derivative term with respect to T, rho held constant
     // They are of similar form, with Of1 and Wrt1 swapped
     dNdT__rho = dOf1_dT*d2Constant1_drhodT + d2Of1_dT2*dConstant1_drho - dOf1_drho*d2Constant1_dT2 - d2Of1_drhodT*dConstant1_dT;
     dDdT__rho = dWrt1_dT*d2Constant1_drhodT + d2Wrt1_dT2*dConstant1_drho - dWrt1_drho*d2Constant1_dT2 - d2Wrt1_drhodT*dConstant1_dT;
-    
+
     // First partial of first derivative term with respect to T
     dderiv1_drho = (D*dNdrho__T - N*dDdrho__T)/pow(D, 2);
-    
+
     // First partial of first derivative term with respect to rho
     dderiv1_dT = (D*dNdT__rho - N*dDdT__rho)/pow(D, 2);
 
     // Complete second derivative
     second = (dderiv1_dT*dConstant2_drho - dderiv1_drho*dConstant2_dT)/(dWrt2_dT*dConstant2_drho - dWrt2_drho*dConstant2_dT);
-    
+
     return second;
 }
 //    // ----------------------------------------
