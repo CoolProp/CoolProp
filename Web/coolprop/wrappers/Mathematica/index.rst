@@ -40,7 +40,7 @@ Once the dependencies are installed, you can run the builder and tests using::
 Windows
 ^^^^^^^
 
-You need to just slightly modify the building procedure::
+You need to just slightly modify the building procedure
 
 1. Checkout and preparation::
 
@@ -51,7 +51,7 @@ You need to just slightly modify the building procedure::
     # Make a build folder
     mkdir build && cd build
 
-2.  Pick a toolchain (A or B)
+2. Pick a toolchain (A or B)
 
     A: Building using Visual Studio::
 
@@ -65,7 +65,7 @@ You need to just slightly modify the building procedure::
         # Build the makefile using CMake
         cmake .. -DCOOLPROP_MATHEMATICA_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -G "MinGW Makefiles"
     
-3.  Actually do the build::
+3. Actually do the build::
     
     # Make the shared library
     cmake --build . --config Release

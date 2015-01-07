@@ -48,7 +48,7 @@ Windows
 -------
 For windows, the situation is ok, but not great.  Only the MinGW builds are supported, and not comfortably
 
-1. Download a MinGW build from `http://wiki.octave.org/Octave_for_Microsoft_Windows`_.
+1. Download a MinGW build from `Octave for windows <http://wiki.octave.org/Octave_for_Microsoft_Windows`_.
 
 2. Extract the zip file to somewhere on your computer without any spaces in the path (c:\\octave-x.x.x is a good choice)
 
