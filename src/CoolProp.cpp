@@ -77,7 +77,7 @@ void extract_backend(const std::string &fluid_string, std::string &backend, std:
 {
     std::size_t i;
     std::string _fluid_string = fluid_string;
-    // For backwards compatibility reasons, if "REFPROP-" or "REFPROP-MIX:" start 
+    // For backwards compatibility reasons, if "REFPROP-" or "REFPROP-MIX:" start
     // the fluid_string, replace them with "REFPROP::"
     if (_fluid_string.find("REFPROP-MIX:") == 0)
     {
@@ -177,21 +177,21 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
         return fluid_parts[0];
     }
     else
-    { 
+    {
         return fluid_string;
     }
 }
 
-void _PropsSI_initialize(const std::string &backend, 
-                         const std::vector<std::string> &fluid_names, 
-                         const std::vector<double> &z, 
+void _PropsSI_initialize(const std::string &backend,
+                         const std::vector<std::string> &fluid_names,
+                         const std::vector<double> &z,
                          shared_ptr<AbstractState> &State){
-                             
+
     if (fluid_names.empty()){throw ValueError("fluid_names cannot be empty");}
-		
+
     std::vector<double> fractions(1, 1.0); // Default to one component, unity fraction
     const std::vector<double> *fractions_ptr = NULL; // Pointer to the array to be used;
-    
+
     if (fluid_names.size() > 1){
         // Set the pointer - we are going to use the supplied fractions; they must be provided
         fractions_ptr = &z;
@@ -220,7 +220,7 @@ void _PropsSI_initialize(const std::string &backend,
             State.reset(AbstractState::factory(backend, fluid_names));
         }
     }
-    
+
     // Set the fraction for the state
     if (State->using_mole_fractions()){
         // If a predefined mixture or a pure fluid, the fractions will already be set
@@ -268,25 +268,36 @@ struct output_parameter{
     };
 };
 
-void _PropsSI_outputs(shared_ptr<AbstractState> &State, 
-	     			 std::vector<output_parameter> output_parameters, 
-		    		 CoolProp::input_pairs input_pair, 
-			    	 const std::vector<double> &in1, 
+void _PropsSI_outputs(shared_ptr<AbstractState> &State,
+	     			 std::vector<output_parameter> output_parameters,
+		    		 CoolProp::input_pairs input_pair,
+			    	 const std::vector<double> &in1,
 			    	 const std::vector<double> &in2,
 			    	 std::vector<std::vector<double> > &IO){
-					 
+
 	// Check the inputs
 	if (in1.size() != in2.size()){ throw ValueError(format("lengths of in1 [%d] and in2 [%d] are not the same", in1.size(), in2.size()));}
 	bool one_input_one_output = (in1.size() == 1 && in2.size() == 1 && output_parameters.size() == 1);
-	
+
+	if (get_debug_level() > 100)
+	{
+	   std::cout << format("%s (%d): input pair = %d ",__FILE__,__LINE__, input_pair)          << std::endl;
+	   std::cout << format("%s (%d): in1 = %s ",__FILE__,__LINE__, vec_to_string(in1).c_str()) << std::endl;
+	   std::cout << format("%s (%d): in2 = %s ",__FILE__,__LINE__, vec_to_string(in2).c_str()) << std::endl;
+	}
+
 	// Resize the output matrix
     std::size_t N1 = std::max(static_cast<std::size_t>(1), in1.size());
     std::size_t N2 = std::max(static_cast<std::size_t>(1), output_parameters.size());
 	IO.resize(N1, std::vector<double>(N2, _HUGE));
-    
+
     // Throw an error if at the end, there were no successes
     bool success = false;
-	
+
+    if (get_debug_level() > 100)
+    {
+        std::cout << format("%s (%d): Iterating over %d input value pairs.",__FILE__,__LINE__,IO.size()) << std::endl;
+    }
 	// Iterate over the state variable inputs
 	for (std::size_t i = 0; i < IO.size(); ++i){
 		try{
@@ -301,7 +312,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
             for (std::size_t j = 0; j < IO[i].size(); ++j){ IO[i][j] = _HUGE; }
             continue;
         }
-        
+
         for (std::size_t j = 0; j < IO[i].size(); ++j){
             try{
                 output_parameter &output = output_parameters[j];
@@ -328,13 +339,13 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
     if (success == false) { IO.clear(); throw ValueError(format("No outputs were able to be calculated"));}
 }
 
-void _PropsSImulti(const std::vector<std::string> &Outputs, 
-                   const std::string &Name1, 
+void _PropsSImulti(const std::vector<std::string> &Outputs,
+                   const std::string &Name1,
                    const std::vector<double> &Prop1,
-                   const std::string &Name2, 
-                   const std::vector<double> &Prop2, 
-                   const std::string &backend, 
-                   const std::vector<std::string> &fluids, 
+                   const std::string &Name2,
+                   const std::vector<double> &Prop2,
+                   const std::string &backend,
+                   const std::vector<std::string> &fluids,
                    const std::vector<double> &fractions,
                    std::vector<std::vector<double> > &IO)
 {
@@ -342,7 +353,7 @@ void _PropsSImulti(const std::vector<std::string> &Outputs,
     CoolProp::input_pairs input_pair;
     std::vector<output_parameter> output_parameters;
     std::vector<double> v1, v2;
-                                           
+
     try{
         // Initialize the State class
         _PropsSI_initialize(backend, fluids, fractions, State);
@@ -362,9 +373,9 @@ void _PropsSImulti(const std::vector<std::string> &Outputs,
     }
     catch (std::exception &e){
         // Input parameter parsing failed.  Stop
-        throw ValueError(format("Input pair parsing failed for Name1: \"%s\", Name2: \"%s\"; err: %s", Name1.c_str(), Name2.c_str(), e.what()));                
+        throw ValueError(format("Input pair parsing failed for Name1: \"%s\", Name2: \"%s\"; err: %s", Name1.c_str(), Name2.c_str(), e.what()));
     }
-    
+
     try{
         output_parameters = output_parameter::get_output_parameters(Outputs);
     }
@@ -376,34 +387,34 @@ void _PropsSImulti(const std::vector<std::string> &Outputs,
     // Calculate the output(s).  In the case of a failure, all values will be filled with _HUGE
     _PropsSI_outputs(State, output_parameters, input_pair, v1, v2, IO);
 }
-        
-std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &Outputs, 
-                                               const std::string &Name1, 
+
+std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &Outputs,
+                                               const std::string &Name1,
                                                const std::vector<double> &Prop1,
-                                               const std::string &Name2, 
-                                               const std::vector<double> &Prop2, 
-                                               const std::string &backend, 
-                                               const std::vector<std::string> &fluids, 
+                                               const std::string &Name2,
+                                               const std::vector<double> &Prop2,
+                                               const std::string &backend,
+                                               const std::vector<std::string> &fluids,
                                                const std::vector<double> &fractions)
 {
     std::vector<std::vector<double> > IO;
-    
+
     #if !defined(NO_ERROR_CATCHING)
     try{
     #endif
-    
+
         // Call the subfunction that can bubble errors
         _PropsSImulti(Outputs, Name1, Prop1, Name2, Prop2, backend, fluids, fractions, IO);
-        
+
         // Return the value(s)
         return IO;
-        
+
     #if !defined(NO_ERROR_CATCHING)
     }
     catch(const std::exception& e){
-        set_error_string(e.what()); 
+        set_error_string(e.what());
         #if defined (PROPSSI_ERROR_STDOUT)
-        std::cout << e.what() << std::endl; 
+        std::cout << e.what() << std::endl;
         #endif
         if (get_debug_level() > 1){std::cout << e.what() << std::endl;}
     }
@@ -418,10 +429,11 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
     #if !defined(NO_ERROR_CATCHING)
     try{
     #endif
-    
+
         // BEGIN OF TRY
         // Here is the real code that is inside the try block
     
+
         extract_backend(Ref, backend, fluid);
         std::string fluid_string = fluid;
         if (has_fractions_in_string(fluid) || has_solution_concentration(fluid)){
@@ -431,49 +443,49 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
         _PropsSImulti(strsplit(Output,'&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend, strsplit(fluid_string, '&'), fractions, IO);
         if (IO.empty()){ throw ValueError(get_global_param_string("errstring").c_str()); }
         if (IO.size()!= 1 || IO[0].size() != 1){ throw ValueError(format("output should be 1x1; error was %s", get_global_param_string("errstring").c_str())); }
-        
+
         double val = IO[0][0];
-        
+
         if (get_debug_level() > 1){ std::cout << format("_PropsSI will return %g",val) << std::endl; }
         return val;
         // END OF TRY
     #if !defined(NO_ERROR_CATCHING)
     }
     catch(const std::exception& e){
-        set_error_string(e.what() + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")",Output.c_str(),Name1.c_str(), Prop1, Name2.c_str(), Prop2, Ref.c_str())); 
+        set_error_string(e.what() + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")",Output.c_str(),Name1.c_str(), Prop1, Name2.c_str(), Prop2, Ref.c_str()));
         #if defined (PROPSSI_ERROR_STDOUT)
-        std::cout << e.what() << std::endl; 
+        std::cout << e.what() << std::endl;
         #endif
         if (get_debug_level() > 1){std::cout << e.what() << std::endl;}
-        return _HUGE; 
+        return _HUGE;
     }
     catch(...){
-        return _HUGE; 
+        return _HUGE;
     }
     #endif
 }
 #if defined(ENABLE_CATCH)
 TEST_CASE("Check inputs to PropsSI","[PropsSI]")
 {
-    SECTION("Single state, single output"){ 
+    SECTION("Single state, single output"){
         CHECK(ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"Water")));
     };
-    SECTION("Single state, single output, pure incompressible"){ 
+    SECTION("Single state, single output, pure incompressible"){
         CHECK(ValidNumber(CoolProp::PropsSI("D","P",101325,"T",300,"INCOMP::DowQ")));
     };
-    SECTION("Bad input pair"){ 
+    SECTION("Bad input pair"){
         CHECK(!ValidNumber(CoolProp::PropsSI("D","Q",0,"Q",0,"Water")));
     };
-    SECTION("Single state, single output, 40% incompressible"){ 
+    SECTION("Single state, single output, 40% incompressible"){
         CHECK(ValidNumber(CoolProp::PropsSI("D","P",101325,"T",300,"INCOMP::MEG[0.40]")));
     };
-    SECTION("Single state, single output, predefined CoolProp mixture"){ 
+    SECTION("Single state, single output, predefined CoolProp mixture"){
         CHECK(ValidNumber(CoolProp::PropsSI("T","Q",1,"P",3e6,"HEOS::R125[0.7]&R32[0.3]")));
     };
-    SECTION("Single state, single output"){ 
+    SECTION("Single state, single output"){
         CHECK(ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"HEOS::Water")));
     };
-    SECTION("Single state, single output, predefined mixture"){ 
+    SECTION("Single state, single output, predefined mixture"){
         CHECK(ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"R410A.mix")));
     };
     SECTION("Predefined mixture"){
@@ -586,7 +598,7 @@ double Props1SI(const std::string &FluidName, const std::string &Output)
         // They are backwards, swap
         std::swap(_Output, _FluidName);
     }
-    
+
     // First input is the fluid, second input is the input parameter
     double val1 = PropsSI(_Output, "", 0, "", 0, _FluidName);
     if (!ValidNumber(val1)){
@@ -600,19 +612,19 @@ double Props1SI(const std::string &FluidName, const std::string &Output)
 #if defined(ENABLE_CATCH)
 TEST_CASE("Check inputs to Props1SI","[Props1SI],[PropsSI]")
 {
-    SECTION("Good fluid, good parameter"){ 
+    SECTION("Good fluid, good parameter"){
         CHECK(ValidNumber(CoolProp::Props1SI("Tcrit","Water")));
     };
-    SECTION("Good fluid, good parameter"){ 
+    SECTION("Good fluid, good parameter"){
         CHECK(ValidNumber(CoolProp::PropsSI("Tcrit","",0,"",0,"Water")));
     };
-    SECTION("Good fluid, good parameter, inverted"){ 
+    SECTION("Good fluid, good parameter, inverted"){
         CHECK(ValidNumber(CoolProp::Props1SI("Water","Tcrit")));
     };
-    SECTION("Good fluid, bad parameter"){ 
+    SECTION("Good fluid, bad parameter"){
         CHECK(!ValidNumber(CoolProp::Props1SI("Water","????????????")));
     };
-    SECTION("Bad fluid, good parameter"){ 
+    SECTION("Bad fluid, good parameter"){
         CHECK(!ValidNumber(CoolProp::Props1SI("?????","Tcrit")));
     };
 };
@@ -636,14 +648,14 @@ bool is_valid_fluid_string(std::string &input_fluid_string)
     }
 }
 double saturation_ancillary(const std::string &fluid_name, const std::string &output, int Q, const std::string &input, double value){
-    
+
     // Generate the state instance
     std::vector<std::string> names(1, fluid_name);
     shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(names));
-    
+
     parameters iInput = get_parameter_index(input);
     parameters iOutput = get_parameter_index(output);
-    
+
     return HEOS->saturation_ancillary(iOutput, Q, iInput, value);
 }
 void set_reference_stateS(std::string Ref, std::string reference_state)
@@ -708,7 +720,7 @@ void set_reference_stateD(std::string Ref, double T, double rhomolar, double h0,
     shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;
     std::vector<std::string> _comps(1, Ref);
     HEOS.reset(new CoolProp::HelmholtzEOSMixtureBackend(_comps));
-    
+
     HEOS->update(DmolarT_INPUTS, rhomolar, T);
 
     // Get current values for the enthalpy and entropy
@@ -778,8 +790,8 @@ TEST_CASE("Check inputs to get_global_param_string","[get_global_param_string]")
     std::ostringstream ss3c;
     for (int i = 0; i<num_good_inputs; ++i){
         ss3c << "Test for" << good_inputs[i];
-        SECTION(ss3c.str(), ""){          
-            CHECK_NOTHROW(CoolProp::get_global_param_string(good_inputs[i]));  
+        SECTION(ss3c.str(), ""){
+            CHECK_NOTHROW(CoolProp::get_global_param_string(good_inputs[i]));
         };
     }
     CHECK_THROWS(CoolProp::get_global_param_string(""));
@@ -793,7 +805,7 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
     if (backend == "INCOMP"){
         try{
             shared_ptr<CoolProp::IncompressibleBackend> INCOMP(new CoolProp::IncompressibleBackend(fluid));
-                    
+
             if (!ParamName.compare("long_name")){
                 return INCOMP->calc_name();
             }
@@ -804,12 +816,12 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
         catch(std::exception &e){ throw ValueError(format("CoolProp error: %s", e.what())); }
         catch(...){ throw ValueError("CoolProp error: Indeterminate error"); }
     }
-    
+
     try{
         std::vector<std::string> comps(1, FluidName);
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(comps));
         CoolProp::CoolPropFluid *fluid = HEOS->get_components()[0];
-                
+
         if (!ParamName.compare("aliases")){
             return strjoin(fluid->aliases, ", ");
         }
@@ -843,7 +855,7 @@ TEST_CASE("Check inputs to get_fluid_param_string", "[get_fluid_param_string]")
     std::ostringstream ss3c;
     for (int i = 0; i < num_good_inputs; ++i){
         ss3c << "Test for" << good_inputs[i];
-        SECTION(ss3c.str(), ""){          
+        SECTION(ss3c.str(), ""){
             CHECK_NOTHROW(CoolProp::get_fluid_param_string("Water", good_inputs[i]));
         };
     }
@@ -885,7 +897,7 @@ std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &N
     std::size_t Phase_int = static_cast<std::size_t>(Phase_double);
     return phase_lookup_string(static_cast<phases>(Phase_int));
 }
-    
+
 /*
 std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z)
 {
