@@ -445,10 +445,10 @@ double f_factor(double T, double p)
     if (T>273.16)
     {
         // It is liquid water
-        p_ws=CoolProp::PropsSI("P","T",T,"Q",0,"Water");
-        beta_H = HenryConstant(T); //[1/Pa]
-        Water->update(CoolProp::PT_INPUTS, p, T);
+        Water->update(CoolProp::QT_INPUTS, 0, T);
+        p_ws = Water->p();
         vbar_ws = 1.0/Water->keyed_output(CoolProp::iDmolar); //[m^3/mol]
+        beta_H = HenryConstant(T); //[1/Pa]
     }
     else
     {
@@ -853,7 +853,7 @@ double DewpointTemperature(double T, double p, double psi_w)
     // 611.65... is the triple point pressure of water in Pa
     if (p_w > 611.6547241637944){
         Water->update(CoolProp::PQ_INPUTS, p, 1.0);
-        T0 = Water->keyed_output(CoolProp::iT);
+        T0 = Water->T()-1;
     }
     else{
         T0 = 268;
