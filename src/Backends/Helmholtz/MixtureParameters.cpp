@@ -365,6 +365,8 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
             // Get the dictionary itself
             Dictionary &dict_dep = mixturedeparturefunctionslibrary.departure_function_map[Name];
             
+            if (dict_dep.is_empty()){throw ValueError(format("Departure function name [%s] seems to be invalid",Name.c_str()));}
+            
             // These terms are common
             std::vector<double> n = dict_dep.get_double_vector("n");
             std::vector<double> d = dict_dep.get_double_vector("d");

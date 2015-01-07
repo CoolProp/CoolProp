@@ -422,14 +422,13 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
         // BEGIN OF TRY
         // Here is the real code that is inside the try block
     
-        
-        
         extract_backend(Ref, backend, fluid);
-        if (has_fractions_in_string(fluid)){
-            extract_fractions(fluid, fractions);
+        std::string fluid_string = fluid;
+        if (has_fractions_in_string(fluid) || has_solution_concentration(fluid)){
+            fluid_string = extract_fractions(fluid, fractions);
         }
         std::vector<std::vector<double> > IO;
-        _PropsSImulti(strsplit(Output,'&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend, std::vector<std::string>(1, fluid), fractions, IO);
+        _PropsSImulti(strsplit(Output,'&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend, strsplit(fluid_string, '&'), fractions, IO);
         if (IO.empty()){ throw ValueError(get_global_param_string("errstring").c_str()); }
         if (IO.size()!= 1 || IO[0].size() != 1){ throw ValueError(format("output should be 1x1; error was %s", get_global_param_string("errstring").c_str())); }
         

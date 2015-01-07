@@ -254,6 +254,7 @@
         std::map<std::string, std::vector<std::string> > string_vectors;
     public:
         Dictionary(){};
+        bool is_empty(void){return numbers.empty() && strings.empty() && double_vectors.empty() && string_vectors.empty();}
         void add_string(std::string s1, std::string s2){ strings.insert(std::pair<std::string, std::string>(s1, s2));}
         void add_number(std::string s1, double d){ numbers.insert(std::pair<std::string, double>(s1, d));}
         void add_double_vector(std::string s1, std::vector<double> d){ double_vectors.insert(std::pair<std::string, std::vector<double> >(s1, d));}
