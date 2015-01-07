@@ -278,6 +278,13 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
 	// Check the inputs
 	if (in1.size() != in2.size()){ throw ValueError(format("lengths of in1 [%d] and in2 [%d] are not the same", in1.size(), in2.size()));}
 	bool one_input_one_output = (in1.size() == 1 && in2.size() == 1 && output_parameters.size() == 1);
+    // If all trivial outputs, never do a state update
+    bool all_trivial_outputs = true;
+    for (std::size_t j = 0; j < output_parameters.size(); ++j){
+        if (output_parameters[j].type != output_parameter::OUTPUT_TYPE_TRIVIAL){
+            all_trivial_outputs = false;
+        }
+    }
 
 	if (get_debug_level() > 100)
 	{
@@ -301,7 +308,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
 	// Iterate over the state variable inputs
 	for (std::size_t i = 0; i < IO.size(); ++i){
 		try{
-            if (input_pair != INPUT_PAIR_INVALID){
+            if (input_pair != INPUT_PAIR_INVALID && !all_trivial_outputs){
                 // Update the state since it is a valid set of inputs
                 State->update(input_pair, in1[i], in2[i]);
             }
@@ -473,6 +480,10 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
     SECTION("Single state, single output, pure incompressible"){
         CHECK(ValidNumber(CoolProp::PropsSI("D","P",101325,"T",300,"INCOMP::DowQ")));
     };
+    SECTION("Single state, trivial output, pure incompressible"){
+        CHECK(ValidNumber(CoolProp::PropsSI("Tmin","P",0,"T",0,"INCOMP::DowQ")));
+    };
+    std::cout << get_global_param_string("errstring");
     SECTION("Bad input pair"){
         CHECK(!ValidNumber(CoolProp::PropsSI("D","Q",0,"Q",0,"Water")));
     };
