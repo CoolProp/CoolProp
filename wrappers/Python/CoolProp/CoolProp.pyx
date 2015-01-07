@@ -279,7 +279,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             else:
                 return val
     else:
-        throw ValueError('input #7 cannot be provided')
+        raise ValueError('input #7 cannot be provided')
 
 cpdef list FluidsList():
     """
