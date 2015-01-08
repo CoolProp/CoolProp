@@ -2635,6 +2635,25 @@ long double HelmholtzEOSMixtureBackend::calc_second_two_phase_deriv(parameters O
         long double d_dvdh_dp__consth = (denominator*dnumerator - numerator*ddenominator)/POW2(denominator);
         return -POW2(rhomolar())*d_dvdh_dp__consth + dv_dh_constp*(-2*rhomolar())*drhomolar_dp__consth;
     }
+    else if (Of == iDmass && ((Wrt1 == iHmass && Constant1 == iP && Wrt2 == iP && Constant2 == iHmass) || (Wrt2 == iHmass && Constant2 == iP && Wrt1 == iP && Constant1 == iHmass))){
+        parameters h_key = iHmass, rho_key = iDmass, p_key = iP;
+        long double rho = keyed_output(rho_key);
+        // taking the derivative of (drho/dv)*(dv/dh|p) with respect to p with h constant
+        long double dv_dh_constp = calc_first_two_phase_deriv(rho_key,h_key,p_key)/(-POW2(rho));
+        long double drho_dp__consth = first_two_phase_deriv(rho_key, p_key, h_key);
+        
+        // Calculate the derivative of dvdh|p with respect to p at constant h
+        long double dhL_dp_sat =  SatL->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
+        long double dhV_dp_sat =  SatV->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
+        long double drhoL_dp_sat =  SatL->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        long double drhoV_dp_sat =  SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        long double numerator = 1/SatV->keyed_output(rho_key) - 1/SatL->keyed_output(rho_key);
+        long double denominator = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
+        long double dnumerator = -1/POW2(SatV->keyed_output(rho_key))*drhoV_dp_sat + 1/POW2(SatL->keyed_output(rho_key))*drhoL_dp_sat;
+        long double ddenominator = dhV_dp_sat - dhL_dp_sat;
+        long double d_dvdh_dp__consth = (denominator*dnumerator - numerator*ddenominator)/POW2(denominator);
+        return -POW2(rho)*d_dvdh_dp__consth + dv_dh_constp*(-2*rho)*drho_dp__consth;
+    }
     else{
         throw ValueError();
     }
@@ -2704,13 +2723,16 @@ long double HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
         
         // Faking single-phase
         long double rho_liq = Liq->keyed_output(rho_key);
-        long double drho_dh_liq = Liq->first_partial_deriv(rho_key, h_key, p_key);
+        long double drho_dh_liq__constp = Liq->first_partial_deriv(rho_key, h_key, p_key);
         
-        // Spline coordinates
-        long double a = 1/POW3(Delta_end) * (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq + drho_dh_end));
-        long double b = 3/POW2(Delta_end) * (-rho_liq + rho_end) - 1/Delta_end * (drho_dh_end + 2 * drho_dh_liq);
-        long double c = drho_dh_liq;
+        // Spline coordinates a, b, c, d
+        long double Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
+        long double a = 1/POW3(Delta_end) * Abracket;
+        long double b = 3/POW2(Delta_end) * (-rho_liq + rho_end) - 1/Delta_end * (drho_dh_end + 2 * drho_dh_liq__constp);
+        long double c = drho_dh_liq__constp;
         long double d = rho_liq;
+        
+        std::cout <<format("%0.15Lg %0.15Lg %0.15g %g\n", a, Abracket, p(), keyed_output(h_key));
         
         // Either the spline value or drho/dh|p can be directly evaluated now
         long double rho_spline = a*POW3(Delta) + b*POW2(Delta) + c*Delta + d;
@@ -2725,31 +2747,54 @@ long double HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
         // Its drho/dp|h
         // ... calculate some more things
         
-        // Faking single-phase
-        long double drhodhdp_liq = Liq->second_partial_deriv(rho_key, h_key, p_key, p_key, h_key);
-        long double drho_dp_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
+        // At the saturated state
+        long double rhoL =  SatL->keyed_output(rho_key);
+        long double rhoV =  SatV->keyed_output(rho_key);
+        long double hL =  SatL->keyed_output(h_key);
+        long double hV =  SatV->keyed_output(h_key);
         
         // Derivatives *along* the saturation curve using the special internal method
         long double dhL_dp_sat =  SatL->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
         long double dhV_dp_sat =  SatV->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
-        long double drhoL_dp_sat =  SatL->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        long double drhoL_dp_sat = SatL->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        long double drhoV_dp_sat = SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        
+        long double drho_dp_end = POW2(End->keyed_output(rho_key))*(x_end/POW2(rhoV)*drhoV_dp_sat + (1-x_end)/POW2(rhoL)*drhoL_dp_sat);
+        
+        // Faking single-phase
+        long double drho_dp__consth_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
+        long double d2rhodhdp_liq = Liq->second_partial_deriv(rho_key, h_key, p_key, p_key, h_key); // ?
+        
+        //d2rhodhdp_liq = -5.88936E-08;
         
         // Derivatives at the end point
-        long double drho_dp_end = End->calc_first_two_phase_deriv(rho_key, p_key, h_key);
-        long double drhodhdp_end = End->calc_second_two_phase_deriv(rho_key, h_key, p_key, p_key, h_key);
+        long double drho_dp__consth_end = End->calc_first_two_phase_deriv(rho_key, p_key, h_key);
+        long double d2rhodhdp_end = End->calc_second_two_phase_deriv(rho_key, h_key, p_key, p_key, h_key);
         
-        long double dDelta_end_dp = x_end * (dhL_dp_sat - dhV_dp_sat);
-        long double dDelta_dp = -dhL_dp_sat;
+        // Reminder:
+        // Delta = Q()*(hV-hL) = h-hL
+        // Delta_end = x_end*(hV-hL);
+        long double d_Delta_dp__consth = -dhL_dp_sat;
+        long double d_Delta_end_dp__consth = x_end*(dhV_dp_sat - dhL_dp_sat);
         
-        // First pressure derivative at constant h of the coefficients
-        long double da_dp = (-6/POW4(Delta_end)) * dDelta_end_dp * (rho_liq - rho_end) + (2/POW3(Delta_end)) * (drho_dp_liq - drho_dp_end) + (1/POW2(Delta_end)) * (drhodhdp_liq + drhodhdp_end) - (2/POW3(Delta_end)) * (drho_dh_liq + drho_dh_end)*dDelta_end_dp;
-        long double db_dp = (-6/POW3(Delta_end)) * dDelta_end_dp * (-rho_liq + rho_end) + (3/POW2(Delta_end)) * (-drho_dp_liq + drho_dp_end) + (1/POW2(Delta_end)) * dDelta_end_dp * (drho_dh_end + 2 * drho_dh_liq) - (1/Delta_end) * (drhodhdp_end + 2*drhodhdp_liq);
-        long double dc_dp = drhodhdp_liq;
-        long double dd_dp = drho_dp_liq;
+        // First pressure derivative at constant h of the coefficients a,b,c,d
+        // long double Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
+        long double d_Abracket_dp_consth = (2*drhoL_dp_sat - 2*drho_dp__consth_end + Delta_end*(d2rhodhdp_liq + d2rhodhdp_end) + d_Delta_dp__consth*(drho_dh_liq__constp + drho_dh_end));
+        long double da_dp = 1/POW3(Delta_end)*d_Abracket_dp_consth + Abracket*(-3/POW4(Delta_end)*d_Delta_end_dp__consth);
+        long double db_dp = - 6/POW3(Delta_end)*d_Delta_end_dp__consth*(rho_end - rho_liq)
+                            + (3/POW2(Delta_end))*(drho_dp__consth_end - drhoL_dp_sat)
+                            + (1/POW2(Delta_end)*d_Delta_end_dp__consth) * (drho_dh_end + 2*drho_dh_liq__constp)
+                            - (1/Delta_end) * (d2rhodhdp_end + 2*d2rhodhdp_liq);
+        long double dc_dp = d2rhodhdp_liq;
+        long double dd_dp = drhoL_dp_sat;
         
-        long double d_rho_spline_dp__consth = (3*a*POW2(Delta) + 2*b*Delta + c)*dDelta_dp + POW3(Delta)*da_dp + POW2(Delta)*db_dp + Delta*dc_dp + dd_dp;
+        std::cout <<format("%0.15Lg %0.15Lg\n", da_dp, d_Abracket_dp_consth);
+        long double d_rho_spline_dp__consth = (3*a*POW2(Delta) + 2*b*Delta + c)*d_Delta_dp__consth + POW3(Delta)*da_dp + POW2(Delta)*db_dp + Delta*dc_dp + dd_dp;
     
         return d_rho_spline_dp__consth;
+    }
+    else{
+        throw ValueError("inputs to calc_first_two_phase_deriv_splined are currently invalid");
     }
 }
 
