@@ -91,6 +91,40 @@ class SolutionDataWriter(object):
         bibFile = os.path.join(os.path.dirname(__file__),'../../../Web/fluid_properties/Incompressibles.bib')
         self.bibtexer = BibTeXerClass(bibFile)
 
+        self.usebp = True
+        if self.usebp:
+            from jopy.dataPlotters import BasePlotter
+            self.bp = BasePlotter()
+            ccycle = self.bp.getColourCycle(length=3)
+            ccycle.next() # skip the first one
+            self.secondaryColour = ccycle.next()
+            self.primaryColour = ccycle.next()
+
+            self.errLabel  = r'rel. Error (\si{\percent})'
+            self.tempLabel = r'Temperature (\si{\celsius})'
+            self.densLabel = r'Density (\si{\kilo\gram\per\cubic\metre})'
+            self.heatLabel = r'Heat Capacity (\si{\joule\per\kilo\gram\per\kelvin})'
+            self.condLabel = r'Thermal Conductivity (\si{\watt\per\metre\per\kelvin})'
+            self.viscLabel = r'Dynamic Viscosity (\si{\pascal\second})'
+            self.satPLabel = r'Saturation Pressure (\si{\pascal})'
+            self.TfreLabel = r'Freezing Temperature (\si{\kelvin})'
+
+        else:
+            self.primaryColour = 'blue'
+            self.secondaryColour = 'red'
+
+            self.errLabel  = u'rel. Error (\%)'
+            self.tempLabel = ur'Temperature (\u00B0C)'
+            self.densLabel = ur'Density ($\mathdefault{kg/m^3\!}$)'
+            self.heatLabel = ur'Heat Capacity ($\mathdefault{J/kg/K}$)'
+            self.condLabel = ur'Thermal Conductivity ($\mathdefault{W/m/K}$)'
+            self.viscLabel = ur'Dynamic Viscosity ($\mathdefault{Pa\/s}$)'
+            self.satPLabel = ur'Saturation Pressure ($\mathdefault{Pa}$)'
+            self.TfreLabel = ur'Freezing Temperature ($\mathdefault{K}$)'
+
+
+
+
     def fitAll(self, fluidObject=SolutionData()):
 
         if fluidObject.Tbase is None:
@@ -562,7 +596,8 @@ class SolutionDataWriter(object):
         zError= None
 
         if dataObj.source==dataObj.SOURCE_DATA or dataObj.source==dataObj.SOURCE_EQUATION:
-            dataFormatter['color']  = 'blue'
+
+            dataFormatter['color']  = self.primaryColour
             dataFormatter['marker'] = 'o'
             dataFormatter['ls']     = 'none'
 
@@ -609,7 +644,7 @@ class SolutionDataWriter(object):
                 raise ValueError("You have to provide data and a fitted function.")
 
         elif dataObj.source==dataObj.SOURCE_COEFFS:
-            dataFormatter['color']  = 'blue'
+            dataFormatter['color']  = self.primaryColour
             #dataFormatter['marker'] = 'o'
             dataFormatter['ls']     = 'solid'
 
@@ -685,7 +720,7 @@ class SolutionDataWriter(object):
                     #zMiMa = np.hstack((zMiMa,temp.reshape((len(conc),1))))
 
         fitFormatter = {}
-        fitFormatter['color'] = 'red'
+        fitFormatter['color'] = self.secondaryColour
         fitFormatter['ls'] = 'solid'
 
         errorFormatter = {}
@@ -920,16 +955,12 @@ class SolutionDataWriter(object):
 #   print "File is more than two days old"
 
 
-
-
         gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.5,3,3,3])
         #gs.update(top=0.75, hspace=0.05)
-        div = 22
+        if self.usebp: div=25
+        else: div = 22
         fig = plt.figure(figsize=(210/div,297/div))
         table_axis         = plt.subplot(gs[0,:], frame_on=False)
-
-
-
 
         # Info text settings
         infoText = {}
@@ -938,16 +969,11 @@ class SolutionDataWriter(object):
         infoText['fontsize']   = 'smaller'
         infoText['xycoords']   =('axes fraction', 'axes fraction')
 
-        # Setting the labels
-        #errLabel  = ur'$\mathdefault{rel.\/Error\/[\u2030]}$'
-        errLabel  = r'$\mathdefault{rel.\/Error\/[\%]}$'
-        tempLabel = ur'$\mathdefault{Temperature\/(\u00B0C)}$'
-
         density_axis       = plt.subplot(gs[1,0])
         density_error      = density_axis.twinx()
-        density_axis.set_ylabel(r'Density [$\mathdefault{kg/m^3\!}$]')
-        density_axis.set_xlabel(tempLabel)
-        density_error.set_ylabel(errLabel)
+        density_axis.set_ylabel(self.densLabel)
+        density_axis.set_xlabel(self.tempLabel)
+        density_error.set_ylabel(self.errLabel)
         if solObj.density.source!=solObj.density.SOURCE_NOT_SET:
             self.plotValues(density_axis,density_error,solObj=solObj,dataObj=solObj.density,func=solObj.rho)
         else:
@@ -955,9 +981,9 @@ class SolutionDataWriter(object):
 
         capacity_axis      = plt.subplot(gs[1,1])
         capacity_error     = capacity_axis.twinx()
-        capacity_axis.set_ylabel(r'Heat Capacity [$\mathdefault{J/kg/K}$]')
-        capacity_axis.set_xlabel(tempLabel)
-        capacity_error.set_ylabel(errLabel)
+        capacity_axis.set_ylabel(self.heatLabel)
+        capacity_axis.set_xlabel(self.tempLabel)
+        capacity_error.set_ylabel(self.errLabel)
         if solObj.specific_heat.source!=solObj.specific_heat.SOURCE_NOT_SET:
             self.plotValues(capacity_axis,capacity_error,solObj=solObj,dataObj=solObj.specific_heat,func=solObj.c)
         else:
@@ -966,9 +992,9 @@ class SolutionDataWriter(object):
         # Optional plots, might not all be shown
         conductivity_axis  = plt.subplot(gs[2,0])#, sharex=density_axis)
         conductivity_error = conductivity_axis.twinx()
-        conductivity_axis.set_ylabel(r'Thermal Conductivity [$\mathdefault{W/m/K}$]')
-        conductivity_axis.set_xlabel(tempLabel)
-        conductivity_error.set_ylabel(errLabel)
+        conductivity_axis.set_ylabel(self.condLabel)
+        conductivity_axis.set_xlabel(self.tempLabel)
+        conductivity_error.set_ylabel(self.errLabel)
         if solObj.conductivity.source!=solObj.conductivity.SOURCE_NOT_SET:
             self.plotValues(conductivity_axis,conductivity_error,solObj=solObj,dataObj=solObj.conductivity,func=solObj.cond)
         else:
@@ -981,9 +1007,9 @@ class SolutionDataWriter(object):
         viscosity_axis     = plt.subplot(gs[2,1])#, sharex=capacity_axis)
         viscosity_error    = viscosity_axis.twinx()
         viscosity_axis.set_yscale('log')
-        viscosity_axis.set_ylabel(r'Dynamic Viscosity [$\mathdefault{Pa\/s}$]')
-        viscosity_axis.set_xlabel(tempLabel)
-        viscosity_error.set_ylabel(errLabel)
+        viscosity_axis.set_ylabel(self.viscLabel)
+        viscosity_axis.set_xlabel(self.tempLabel)
+        viscosity_error.set_ylabel(self.errLabel)
         if solObj.viscosity.source!=solObj.viscosity.SOURCE_NOT_SET:
             self.plotValues(viscosity_axis,viscosity_error,solObj=solObj,dataObj=solObj.viscosity,func=solObj.visc)
         else:
@@ -996,9 +1022,9 @@ class SolutionDataWriter(object):
         saturation_axis  = plt.subplot(gs[3,0])#, sharex=density_axis)
         saturation_error = saturation_axis.twinx()
         saturation_axis.set_yscale('log')
-        saturation_axis.set_ylabel(r'Saturation Pressure [$\mathdefault{Pa}$]')
-        saturation_axis.set_xlabel(tempLabel)
-        saturation_error.set_ylabel(errLabel)
+        saturation_axis.set_ylabel(self.satPLabel)
+        saturation_axis.set_xlabel(self.tempLabel)
+        saturation_error.set_ylabel(self.errLabel)
         if solObj.saturation_pressure.source != solObj.saturation_pressure.SOURCE_NOT_SET: # exists
             self.plotValues(saturation_axis,saturation_error,solObj=solObj,dataObj=solObj.saturation_pressure,func=solObj.psat)
         else:
@@ -1010,9 +1036,9 @@ class SolutionDataWriter(object):
 
         Tfreeze_axis     = plt.subplot(gs[3,1])#, sharex=capacity_axis)
         Tfreeze_error    = Tfreeze_axis.twinx()
-        Tfreeze_axis.set_ylabel(r'Freezing Temperature [$\mathdefault{K}$]')
+        Tfreeze_axis.set_ylabel(self.TfreLabel)
         Tfreeze_axis.set_xlabel("{0} fraction".format(solObj.xid.title()))
-        Tfreeze_error.set_ylabel(errLabel)
+        Tfreeze_error.set_ylabel(self.errLabel)
         if solObj.T_freeze.source != solObj.T_freeze.SOURCE_NOT_SET: # exists
             self.plotValues(Tfreeze_axis,Tfreeze_error,solObj=solObj,dataObj=solObj.T_freeze,func=solObj.Tfreeze)
         else:
@@ -1031,7 +1057,7 @@ class SolutionDataWriter(object):
         # Set a minimum error level and do some more formatting
         minAbsErrorScale = 0.05 # in per cent
         for a in fig.axes:
-            if a.get_ylabel()==errLabel:
+            if a.get_ylabel()==self.errLabel:
                 mi,ma = a.get_ylim()
                 if mi>-minAbsErrorScale: a.set_ylim(bottom=-minAbsErrorScale)
                 if ma< minAbsErrorScale: a.set_ylim(   top= minAbsErrorScale)
@@ -1078,6 +1104,11 @@ class SolutionDataWriter(object):
             if not quiet: print(" ({0})".format("w"), end="")
 
         if not pdfObj is None: pdfObj.savefig(fig)
+
+        if self.usebp:
+            self.bp.savepgf(report_path+".pgf", fig)
+        else:
+            plt.savefig(report_path+".pgf")
 
         plt.close()
         pass
@@ -1140,8 +1171,8 @@ class SolutionDataWriter(object):
         fig = plt.figure(figsize=rat*mul)
 
         ax = fig.add_subplot(121)
-        ax.set_xlabel(r'Temperature [$\mathdefault{K}$]')
-        ax.set_ylabel(r'Density [$\mathdefault{kg/m^3\!}$]')
+        ax.set_xlabel(self.tempLabel)
+        ax.set_ylabel(self.densLabel)
         fig.suptitle(r'Aqueous solutions with a concentration of 0.0',fontsize='x-large',fontweight='bold')
 
         #obj = water
@@ -1211,7 +1242,6 @@ class SolutionDataWriter(object):
         for i, max_col in enumerate(max_cols):
             r += row[i] + (max_col  - len(row[i]) + 1) * u" "
         return r + u"\n"
-
 
     def writeTextToFile(self, path,text):
         #print("Writing to file: {0}".format(path))
