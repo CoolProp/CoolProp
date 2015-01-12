@@ -134,11 +134,10 @@ if [ ${CPVERSION:0:7} != "nightly" ]; then
     rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$DOCFOLDER/" frs.sf.net-$SFUSER:/home/project-web/coolprop/htdocs
 fi
 #
-if [ "$BINFOLDER" == "release" ] && [ "$DRYRUN" != "false" ]; then
+if [[ ("$BINFOLDER" == "release") && ("$DRYRUN" == "false") ]]; then
     printMessage "Removing release directory"
-    rm -rf "$BINFOLDER/*"
-else
-    printMessage "Not removing directory with binaries, either nightly or dryrun activated."
+    rm -rf "$BINFOLDER"
+    mkdir -p "$BINFOLDER"
 fi
 # Change back to where we came from
 popd
