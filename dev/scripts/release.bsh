@@ -52,6 +52,8 @@ else
     exit 1
 fi
 #
+#
+SFUSER="jorritw" # ibell or jorritw
 BASEDIR="$HOME/buildbot/server-master/public_html"
 REPODIR="$HOME/src/CoolPropFull.git"
 TMPSDIR="$HOME/src/CoolProp.sources"
