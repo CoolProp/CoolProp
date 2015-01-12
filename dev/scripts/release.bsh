@@ -5,6 +5,7 @@
 #
 # Things to remember when you make a new release:
 #
+#  * Force a new build on all buildbots from the release branch
 #  * Run the script and check the logs
 #  * Make a tag in your git software
 #  * Update the default download on sourceforge to point to the new sources
@@ -58,18 +59,19 @@ BASEDIR="$HOME/buildbot/server-master/public_html"
 REPODIR="$HOME/src/CoolPropFull.git"
 TMPSDIR="$HOME/src/CoolProp.sources"
 SRCFOLDER="$BASEDIR/$BINFOLDER/source"
+DOCFOLDER="$BASEDIR/$BINFOLDER/sphinx"
+DOC4FILES="4.2.5/coolpropv425docs.zip"
+DOC4FOLDER="$DOCFOLDER/v4"
+#
 #
 if [ "$2" == "release" ]; then
     DRYRUN=false
 else
     DRYRUN=true
 fi
-DOCFOLDER="$BASEDIR/$BINFOLDER/sphinx"
-DOC4FILES="4.2.5/coolpropv425docs.zip"
-DOC4FOLDER="$DOCFOLDER/v4"
-
 echo "DRYRUN = $DRYRUN"
-
+#
+#
 pushd ${BASEDIR} # Change the folder
 if [ "$DRYRUN" != "false" ]; then
     printMessage "Dry run detected"
@@ -99,7 +101,7 @@ else
     cd $(basename $TMPSDIR)
     popd
     rm -f "$BINFOLDER/README.rst.txt"
-    if [ "$CPVERSION" = "nightly" ]; then
+    if [ "$CPVERSION" == "nightly" ]; then
         RSYNC_OPTS="-a --no-perms -z --stats --delete"
         rm -rf "$BINFOLDER/docs"
         CPVERSION="$CPVERSION"/ #$(date +%F)
@@ -131,9 +133,14 @@ if [ ${CPVERSION:0:7} != "nightly" ]; then
     printMessage "Publishing the docs on SourceForge"
     rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$DOCFOLDER/" frs.sf.net-$SFUSER:/home/project-web/coolprop/htdocs
 fi
+#
+if [ "$BINFOLDER" == "release" ] && [ "$DRYRUN" != "false" ]; then
+    printMessage "Removing release directory"
+    rm -rf "$BINFOLDER/*"
+else
+    printMessage "Not removing directory with binaries, either nightly or dryrun activated."
+fi
 # Change back to where we came from
 popd
-printMessage "Removing release directory"
-rm -rf $BINFOLDER
 printMessage "All done, goodbye."
 exit 0
