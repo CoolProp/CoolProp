@@ -585,7 +585,7 @@ class Water(PureData):
         self.TminPsat    = np.min(self.temperature.data[~np.isnan(self.saturation_pressure.data)])
         self.name        = "Water"
         self.description = "Fit of the subcooled region of the full EOS from 1 bar to 100 bar"
-        self.reference   = "Wagner2002, Transport properties from Huber et. al (2 papers)"
+        self.reference   = "Wagner2002, Huber2009"
         self.reshapeAll()
         # Specific heat needs special coefficiencts
         # self.specific_heat.coeffs = np.zeros((5,7))
