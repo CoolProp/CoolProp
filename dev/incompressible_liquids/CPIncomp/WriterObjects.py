@@ -91,7 +91,11 @@ class SolutionDataWriter(object):
         bibFile = os.path.join(os.path.dirname(__file__),'../../../Web/fluid_properties/Incompressibles.bib')
         self.bibtexer = BibTeXerClass(bibFile)
 
-        self.usebp = True
+
+        matplotlib.rcParams['axes.formatter.useoffset'] = False
+        matplotlib.rcParams['text.usetex'] = True
+
+        self.usebp  = False
         if self.usebp:
             from jopy.dataPlotters import BasePlotter
             self.bp = BasePlotter()
@@ -99,28 +103,64 @@ class SolutionDataWriter(object):
             ccycle.next() # skip the first one
             self.secondaryColour = ccycle.next()
             self.primaryColour = ccycle.next()
+        else:
+            self.primaryColour = 'blue'
+            self.secondaryColour = 'red'
 
-            self.errLabel  = r'rel. Error (\si{\percent})'
-            self.tempLabel = r'Temperature (\si{\celsius})'
+        self.usetex = matplotlib.rcParams['text.usetex']
+        self.ext = "pdf"
+        if self.ext=="pgf" or self.usetex:
+            matplotlib.rcParams['text.latex.preamble'] = list(matplotlib.rcParams['text.latex.preamble']) + [r'\usepackage{siunitx}']
+            matplotlib.rcParams["pgf.preamble"] = list(matplotlib.rcParams['pgf.preamble']) + [r'\usepackage{siunitx}']
+            self.percent   = r'\si{\percent}'
+            self.celsius   = r'\si{\celsius}'
+            self.errLabel  = r'rel. Error ('+self.percent+r')'
+            self.tempLabel = r'Temperature ('+self.celsius+r')'
             self.densLabel = r'Density (\si{\kilo\gram\per\cubic\metre})'
             self.heatLabel = r'Heat Capacity (\si{\joule\per\kilo\gram\per\kelvin})'
             self.condLabel = r'Thermal Conductivity (\si{\watt\per\metre\per\kelvin})'
             self.viscLabel = r'Dynamic Viscosity (\si{\pascal\second})'
             self.satPLabel = r'Saturation Pressure (\si{\pascal})'
             self.TfreLabel = r'Freezing Temperature (\si{\kelvin})'
-
         else:
-            self.primaryColour = 'blue'
-            self.secondaryColour = 'red'
-
-            self.errLabel  = u'rel. Error (\%)'
-            self.tempLabel = ur'Temperature (\u00B0C)'
+            self.percent   = ur'%'
+            self.celsius   = ur'\u00B0C'
+            self.errLabel  = ur'rel. Error ('+self.percent+ur')'
+            self.tempLabel = ur'Temperature ('+self.celsius+ur')'
             self.densLabel = ur'Density ($\mathdefault{kg/m^3\!}$)'
             self.heatLabel = ur'Heat Capacity ($\mathdefault{J/kg/K}$)'
             self.condLabel = ur'Thermal Conductivity ($\mathdefault{W/m/K}$)'
             self.viscLabel = ur'Dynamic Viscosity ($\mathdefault{Pa\/s}$)'
             self.satPLabel = ur'Saturation Pressure ($\mathdefault{Pa}$)'
             self.TfreLabel = ur'Freezing Temperature ($\mathdefault{K}$)'
+
+#         self.percent   = ur'pc'
+#         self.celsius   = ur'degC'
+#         self.errLabel  = ur'rel. Error ('+self.percent+ur')'
+#         self.tempLabel = ur'Temperature ('+self.celsius+ur')'
+#         self.densLabel = ur'Density (kg/m3)'
+#         self.heatLabel = ur'Heat Capacity (J/kg/K)'
+#         self.condLabel = ur'Thermal Conductivity (W/m/K)'
+#         self.viscLabel = ur'Dynamic Viscosity (Pa s)'
+#         self.satPLabel = ur'Saturation Pressure (Pa)'
+#         self.TfreLabel = ur'Freezing Temperature (K)'
+
+
+        ratio = 210.0/297.0 # A4 in mm
+        mm_to_inch = 3.93700787401575/100.0 # factor mm to inch
+
+        self.ispage = True # Do you want a page or a figure?
+        if self.ispage:
+            longSide  = 297.0 # Make A4
+            shortSide = longSide * ratio
+        else:
+            longSide  = 297.0 * 0.95 # Make smaller than A4
+            shortSide = longSide * ratio
+
+        self.isportrait = True
+        if self.isportrait: self.figsize=(shortSide*mm_to_inch,longSide*mm_to_inch)
+        else: self.figsize=(longSide*mm_to_inch,shortSide*mm_to_inch)
+
 
 
 
@@ -278,7 +318,7 @@ class SolutionDataWriter(object):
         return os.path.join("json","{0}.json".format(name))
 
     def get_report_file(self,name):
-        return os.path.join("report","{0}_fitreport.pdf".format(name))
+        return os.path.join("report","{0}_fitreport.{1}".format(name,self.ext))
 
 
     def toJSON(self,data,quiet=False):
@@ -751,9 +791,9 @@ class SolutionDataWriter(object):
         if not zFunc is None and not axVal is None:
             axVal.plot(pFunc, zFunc, label='function' , **fitFormatter)
             if solObj.xid!=solObj.ifrac_pure and not xFunction:
-                axVal.set_title("showing x={0:3.2f}".format(xFunc[0]))
+                axVal.set_title("showing x={0:3.2f}".format(xFunc[0]), fontsize='small')
             else:
-                axVal.set_title(" ")
+                axVal.set_title(" ", fontsize='small')
 
         if not zMiMa is None and not axVal is None:
             axVal.plot(pMiMa, zMiMa, alpha=0.25, ls=':', color=fitFormatter["color"])
@@ -800,26 +840,27 @@ class SolutionDataWriter(object):
         #annotateSettingsLabel['xycoords']=('figure fraction', 'figure fraction')
         annotateSettingsTitle['ha']         = 'center'
         annotateSettingsTitle['va']         = 'baseline'
-        annotateSettingsTitle['fontsize']   = 'xx-large'
+        annotateSettingsTitle['fontsize']   = 'large'
         annotateSettingsTitle['fontweight'] = 'bold'
 
         annotateSettingsLabel = {}
         #annotateSettingsLabel['xycoords']=('figure fraction', 'figure fraction')
         annotateSettingsLabel['ha']         = 'right'
         annotateSettingsLabel['va']         = 'baseline'
-        #annotateSettingsLabel['fontsize']   = 'large'
+        annotateSettingsLabel['fontsize']   = 'small'
         annotateSettingsLabel['fontweight'] = 'semibold'
 
         annotateSettingsText = {}
         #annotateSettingsText['xycoords']=('figure fraction', 'figure fraction')
         annotateSettingsText['ha']         = 'left'
         annotateSettingsText['va']         = 'baseline'
-        #annotateSettingsText['fontsize']   = 'large'
+        annotateSettingsText['fontsize']   = 'small'
         annotateSettingsText['fontweight'] = 'medium'
 
 
         #ax.set_title('Fitting Report for {0}'.format(solObj.name))
-        ax.text(0.5, 0.8, 'Fitting Report for {0}'.format(solObj.name), **annotateSettingsTitle)
+        if self.ispage:
+            ax.text(0.5, 0.8, 'Fitting Report for {0}'.format(solObj.name), **annotateSettingsTitle)
 
         def myAnnotate(label,text,x=0.0,y=0.0):
             dx = 0.005
@@ -858,13 +899,13 @@ class SolutionDataWriter(object):
 
         y -= 2*dy
         yRestart = y
-        myAnnotate('Temperature: ',u'{0} \u00B0C to {1} \u00B0C'.format(solObj.Tmin-273.15, solObj.Tmax-273.15),x=x,y=y); x += .0; y -= dy
+        myAnnotate('Temperature: ',u'{0} {2} to {1} {2}'.format(solObj.Tmin-273.15, solObj.Tmax-273.15, self.celsius),x=x,y=y); x += .0; y -= dy
         conc = False
         if solObj.xid==solObj.ifrac_mass: conc=True
         if solObj.xid==solObj.ifrac_volume: conc=True
         if solObj.xid==solObj.ifrac_mole: conc=True
         if conc==True:
-            myAnnotate('Composition: ',u'{0} % to {1} %, {2}'.format(solObj.xmin*100., solObj.xmax*100., solObj.xid),x=x,y=y)
+            myAnnotate('Composition: ',u'{0} {3} to {1} {3}, {2}'.format(solObj.xmin*100., solObj.xmax*100., solObj.xid, self.percent),x=x,y=y)
         else:
             myAnnotate('Composition: ','pure fluid',x=x,y=y)
         x += .0; y -= dy
@@ -944,22 +985,20 @@ class SolutionDataWriter(object):
             if not quiet: print(" ({0})".format("i"), end="")
             return 1
 
-#         from os import path
-# from time import ctime
-# from datetime import datetime, timedelta
-#
-# two_days_ago = datetime.now() - timedelta(days=2)
-# filetime = datetime.fromtimestamp(path.getctime(file))
-#
-# if filetime < two_days_ago:
-#   print "File is more than two days old"
-
+        # from os import path
+        # from time import ctime
+        # from datetime import datetime, timedelta
+        #
+        # two_days_ago = datetime.now() - timedelta(days=2)
+        # filetime = datetime.fromtimestamp(path.getctime(file))
+        #
+        # if filetime < two_days_ago:
+        #   print "File is more than two days old"
 
         gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.5,3,3,3])
         #gs.update(top=0.75, hspace=0.05)
-        if self.usebp: div=25
-        else: div = 22
-        fig = plt.figure(figsize=(210/div,297/div))
+        fig = plt.figure(figsize=self.figsize)
+
         table_axis         = plt.subplot(gs[0,:], frame_on=False)
 
         # Info text settings
@@ -1084,9 +1123,9 @@ class SolutionDataWriter(object):
 
         table_axis.legend(
           legVal, legKey,
-          bbox_to_anchor=(0.0, -0.03, 1., -0.03),
+          bbox_to_anchor=(0.0, -0.075, 1., -0.075),
           ncol=len(legKey), mode="expand", borderaxespad=0.,
-          numpoints=1)
+          numpoints=1, fontsize='small')
         #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)
 
         gs.tight_layout(fig)#, rect=[0, 0, 1, 0.75])
@@ -1100,15 +1139,15 @@ class SolutionDataWriter(object):
         else:
             if not os.path.exists(os.path.dirname(report_path)):
                 os.makedirs(os.path.dirname(report_path))
-            plt.savefig(report_path)
+
+            if self.usebp and self.ext=="pgf":
+                self.bp.savepgf(report_path, fig)
+            else:
+                plt.savefig(report_path)
+
             if not quiet: print(" ({0})".format("w"), end="")
 
         if not pdfObj is None: pdfObj.savefig(fig)
-
-        if self.usebp:
-            self.bp.savepgf(report_path+".pgf", fig)
-        else:
-            plt.savefig(report_path+".pgf")
 
         plt.close()
         pass
@@ -1275,7 +1314,7 @@ class SolutionDataWriter(object):
 
 
     def getReportLink(self, name):
-        reportFile = os.path.join("..","_static","fluid_properties","Incompressibles_reports","{0}_fitreport.pdf".format(name))
+        reportFile = os.path.join("..","_static","fluid_properties","Incompressibles_reports","{0}_fitreport.{1}".format(name,self.ext))
         return self.d(name,reportFile)
 
     def getCitation(self, keys):
