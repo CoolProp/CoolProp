@@ -3,6 +3,9 @@
 from __future__ import division, print_function
 import numpy as np
 
+import matplotlib
+matplotlib.use("agg")
+
 import hashlib, os, json, sys
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -12,7 +15,6 @@ from matplotlib.patches import Rectangle
 from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_pdf import PdfPages
 import itertools
-import matplotlib
 from CoolProp.BibtexParser import BibTeXerClass
 from warnings import warn
 
@@ -91,27 +93,22 @@ class SolutionDataWriter(object):
         bibFile = os.path.join(os.path.dirname(__file__),'../../../Web/fluid_properties/Incompressibles.bib')
         self.bibtexer = BibTeXerClass(bibFile)
 
-
         matplotlib.rcParams['axes.formatter.useoffset'] = False
         matplotlib.rcParams['text.usetex'] = True
 
-        self.usebp  = False
-        if self.usebp:
-            from jopy.dataPlotters import BasePlotter
-            self.bp = BasePlotter()
-            ccycle = self.bp.getColourCycle(length=3)
-            ccycle.next() # skip the first one
-            self.secondaryColour = ccycle.next()
-            self.primaryColour = ccycle.next()
-        else:
-            self.primaryColour = 'blue'
-            self.secondaryColour = 'red'
+        self.ext        = "pgf"
+        self.usebp      = True
+        self.ispage     = False # Do you want a page or a figure?
+        self.isportrait = True
+        self.resolveRef = False # Resolve references and print text
 
-        self.usetex = matplotlib.rcParams['text.usetex']
-        self.ext = "pdf"
-        if self.ext=="pgf" or self.usetex:
-            matplotlib.rcParams['text.latex.preamble'] = list(matplotlib.rcParams['text.latex.preamble']) + [r'\usepackage{siunitx}']
-            matplotlib.rcParams["pgf.preamble"] = list(matplotlib.rcParams['pgf.preamble']) + [r'\usepackage{siunitx}']
+
+        if self.ext=="pgf" or matplotlib.rcParams['text.usetex']:
+            self.usetex = True
+            matplotlib.rcParams['text.usetex'] = True
+            preamble = [r'\usepackage{hyperref}', r'\usepackage{siunitx}']
+            matplotlib.rcParams['text.latex.preamble'] = list(matplotlib.rcParams['text.latex.preamble']) + preamble
+            matplotlib.rcParams["pgf.preamble"] = list(matplotlib.rcParams['pgf.preamble']) + preamble
             self.percent   = r'\si{\percent}'
             self.celsius   = r'\si{\celsius}'
             self.errLabel  = r'rel. Error ('+self.percent+r')'
@@ -122,7 +119,10 @@ class SolutionDataWriter(object):
             self.viscLabel = r'Dynamic Viscosity (\si{\pascal\second})'
             self.satPLabel = r'Saturation Pressure (\si{\pascal})'
             self.TfreLabel = r'Freezing Temperature (\si{\kelvin})'
+            f = 0.85
         else:
+            self.usetex    = False
+            matplotlib.rcParams['text.usetex'] = False
             self.percent   = ur'%'
             self.celsius   = ur'\u00B0C'
             self.errLabel  = ur'rel. Error ('+self.percent+ur')'
@@ -133,6 +133,7 @@ class SolutionDataWriter(object):
             self.viscLabel = ur'Dynamic Viscosity ($\mathdefault{Pa\/s}$)'
             self.satPLabel = ur'Saturation Pressure ($\mathdefault{Pa}$)'
             self.TfreLabel = ur'Freezing Temperature ($\mathdefault{K}$)'
+            f = 1.00
 
 #         self.percent   = ur'pc'
 #         self.celsius   = ur'degC'
@@ -145,19 +146,30 @@ class SolutionDataWriter(object):
 #         self.satPLabel = ur'Saturation Pressure (Pa)'
 #         self.TfreLabel = ur'Freezing Temperature (K)'
 
+        if self.usebp:
+            from jopy.dataPlotters import BasePlotter
+            self.bp = BasePlotter()
+            ccycle = self.bp.getColourCycle(length=3)
+            ccycle.next() # skip the first one
+            self.secondaryColour = ccycle.next()
+            self.primaryColour = ccycle.next()
+        else:
+            self.primaryColour = 'blue'
+            self.secondaryColour = 'red'
 
-        ratio = 210.0/297.0 # A4 in mm
+
+        baseSize = 297.0 * f # A4 in mm
+        ratio = 210.0/297.0  # A4 in mm
         mm_to_inch = 3.93700787401575/100.0 # factor mm to inch
 
-        self.ispage = True # Do you want a page or a figure?
         if self.ispage:
-            longSide  = 297.0 # Make A4
+            longSide  = baseSize # Make A4
             shortSide = longSide * ratio
         else:
-            longSide  = 297.0 * 0.95 # Make smaller than A4
+            longSide  = baseSize #* 0.85 # Make smaller than A4
             shortSide = longSide * ratio
 
-        self.isportrait = True
+
         if self.isportrait: self.figsize=(shortSide*mm_to_inch,longSide*mm_to_inch)
         else: self.figsize=(longSide*mm_to_inch,shortSide*mm_to_inch)
 
@@ -499,6 +511,10 @@ class SolutionDataWriter(object):
     def writeReportList(self, fluidObjs, pdfFile=None):
         print("Writing fitting reports:", end="")
 
+        if self.usetex and pdfFile is not None:
+            warn("Unsetting PDF object, LaTeX output requested.")
+            pdfFile = None
+
         if not pdfFile is None:
             if not os.path.exists(os.path.dirname(pdfFile)):
                 os.makedirs(os.path.dirname(pdfFile))
@@ -517,13 +533,15 @@ class SolutionDataWriter(object):
             for obj in fluidObjs:
                 matplotlib.pyplot.close("all")
                 self.printStatusID(fluidObjs, obj)
-                try:
-                    self.makeFitReportPage(obj)
-                except (TypeError, ValueError) as e:
-                    print("An error occurred for fluid: {0}".format(obj.name))
-                    print(obj)
-                    print(e)
-                    pass
+                self.makeFitReportPage(obj)
+                # TODO: Fix Python errors
+                #try:
+                #    self.makeFitReportPage(obj)
+                #except (TypeError, ValueError) as e:
+                #    print("An error occurred for fluid: {0}".format(obj.name))
+                #    print(obj)
+                #    print(e)
+                #    pass
 
         print(" ... done")
         return
@@ -884,18 +902,37 @@ class SolutionDataWriter(object):
         maxLength = 75
         for i in range(len(refs)):
             refs[i] = refs[i].strip()
-            try:
-                refs[i] = self.bibtexer.getEntry(key=refs[i], fmt='plaintext').strip()
-            except Exception as e:
-                warn("Your string \"{0}\"was not a valid Bibtex key, I will use it directly: {1}".format(refs[i],e))
-                pass
-            if len(refs[i])>maxLength:
-                refs[i] = refs[i][0:maxLength-3]+u'...'
 
+            if self.resolveRef:
+                try:
+                    if self.usetex:
+                        refs[i] = self.bibtexer.getEntry(key=refs[i], fmt='latex').strip()
+                    else:
+                        refs[i] = self.bibtexer.getEntry(key=refs[i], fmt='plaintext').strip()
+                except Exception as e:
+                    warn("Your string \"{0}\" was not a valid Bibtex key, I will use it directly: {1}".format(refs[i],e))
+                    pass
+            else:
+                if self.usetex:
+                    refs[i] = r'\cite{'+str(refs[i])+r'}'
+                else:
+                    refs[i] = str(refs[i])
+
+            if len(refs[i])>maxLength and not self.usetex:
+                refs[i] = refs[i][0:maxLength-3]+u'...'
+            #elif self.usetex:
+            #    refs[i] = r'\truncate{'+str(maxLength)+r'pt}{'+str(refs[i])+r'}'
+            #elif i>0 and (len(refs[i])+len(refs[i-1]))<maxLength:
+            #    refs[i-1] = refs[i-1]+r", "+refs[i]
+            #    refs[i] = ""
+
+        for i in range(len(refs)):
             if i==0:
                 myAnnotate('Source: ',refs[i],x=x,y=y); x += .0 #; y -= 2*dy
             elif i==1:
                 myAnnotate(   '     ',refs[i],x=x,y=y-dy); x += .0 #; y -= 2*dy
+            else:
+                warn("Discarding all reference after the second line")
 
         y -= 2*dy
         yRestart = y
@@ -1118,15 +1155,21 @@ class SolutionDataWriter(object):
         legVal  = [Rectangle((0, 0), 1, 1, alpha=0.0)]
         legKey += legenddict.keys()
         legVal += legenddict.values()
-        legKey += [" "]
+        if self.usetex: legKey += ["~"]
+        else: legKey += [" "]
         legVal += [Rectangle((0, 0), 1, 1, alpha=0.0)]
 
-        table_axis.legend(
-          legVal, legKey,
-          bbox_to_anchor=(0.0, -0.075, 1., -0.075),
-          ncol=len(legKey), mode="expand", borderaxespad=0.,
-          numpoints=1, fontsize='small')
-        #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)
+        #TODO: Fix this problem: ValueError: Can only output finite numbers in PDF
+        if self.ext=="pdf" and self.usetex:
+            warn("This is a dangerous combination, be prepared to experience problems with the PDF backend. It might help manually change the number of columns.")
+        else:
+            table_axis.legend(
+              legVal, legKey,
+              bbox_to_anchor=(0.0, -0.075, 1., -0.075),
+              ncol=len(legVal),
+              mode="expand", borderaxespad=0.,
+              numpoints=1, fontsize='small')
+            #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)
 
         gs.tight_layout(fig)#, rect=[0, 0, 1, 0.75])
         # Fine-tune figure; make subplots close to each other
@@ -1141,15 +1184,15 @@ class SolutionDataWriter(object):
                 os.makedirs(os.path.dirname(report_path))
 
             if self.usebp and self.ext=="pgf":
-                self.bp.savepgf(report_path, fig)
+                self.bp.savepgf(report_path, fig=fig)
             else:
-                plt.savefig(report_path)
+                fig.savefig(report_path)
 
             if not quiet: print(" ({0})".format("w"), end="")
 
         if not pdfObj is None: pdfObj.savefig(fig)
 
-        plt.close()
+        plt.close(fig)
         pass
 
 
