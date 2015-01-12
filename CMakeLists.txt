@@ -29,7 +29,7 @@ project(${project_name})
 # Project version
 set (COOLPROP_VERSION_MAJOR 5)
 set (COOLPROP_VERSION_MINOR 0)
-set (COOLPROP_VERSION_PATCH 6dev)
+set (COOLPROP_VERSION_PATCH 6)
 set (COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH})
 
 #######################################
@@ -708,13 +708,13 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/SwigRef.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (TARGETS CoolPropMATLAB_wrap DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
-  enable_testing()
-  add_custom_command(TARGET CoolPropMATLAB_wrap
-                     POST_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/test.m ${CMAKE_CURRENT_BINARY_DIR}/.)
-  add_test(NAME MATLABtest
-           COMMAND $ENV{MATLAB_ROOT}/bin/matlab -r test -nojvm -nodesktop -nosplash
-           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  #enable_testing()
+  #add_custom_command(TARGET CoolPropMATLAB_wrap
+  #                   POST_BUILD
+  #                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/test.m ${CMAKE_CURRENT_BINARY_DIR}/.)
+  #add_test(NAME MATLABtest
+  #         COMMAND $ENV{MATLAB_ROOT}/bin/matlab -r test -nojvm -nodesktop -nosplash
+  #         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 if (COOLPROP_MATLAB_MODULE)
