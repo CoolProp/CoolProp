@@ -1212,7 +1212,8 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
         // Add a check to make sure that Air and Water fluid states have been properly instantiated
         check_fluid_instantiation();
 
-        int In1Type, In2Type, In3Type,iT,iW,iTdp,iRH,ip,Type1,Type2;
+        givens In1Type, In2Type, In3Type, Type1, Type2;
+        int iT,iW,iTdp,iRH,ip;
         double vals[3],p,T,RH,W,Tdp,psi_w,M_ha,v_bar,h_bar,s_bar,MainInputValue,SecondaryInputValue,T_guess;
         double Value1,Value2,W_guess;
         std::string MainInputName, SecondaryInputName, Name1, Name2;
