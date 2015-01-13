@@ -51,6 +51,7 @@ enum DLLNameManglingStyle{ NO_NAME_MANGLING = 0, LOWERCASE_NAME_MANGLING, LOWERC
 #include "REFPROPMixtureBackend.h"
 #include "Exceptions.h"
 #include "Configuration.h"
+#include "CoolProp.h"
 
 #include <stdlib.h>
 #include <string>
@@ -432,17 +433,17 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 mole_fractions_liq.resize(N);
                 mole_fractions_vap.resize(N);
                 LoadedREFPROPRef = components_joined_raw;
-                if (get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
+                if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
                 return;
             }
             else if (k < number_of_endings-1){ // Keep going
-                if (get_debug_level() > 5){std::cout << "REFPROP error/warning:" << herr << std::endl;}
+                if (CoolProp::get_debug_level() > 5){std::cout << "REFPROP error/warning:" << herr << std::endl;}
                 continue;
             }
             else
             {
-                throw ValueError(format("Could not load these fluids: %s; error: %s", components_joined_raw.c_str(), herr));
+                throw ValueError(format("Could not load these fluids: %s", components_joined_raw.c_str()));
             }
         }
     }
