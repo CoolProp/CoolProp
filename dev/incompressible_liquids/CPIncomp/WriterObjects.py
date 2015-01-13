@@ -102,13 +102,15 @@ class SolutionDataWriter(object):
         self.isportrait = True
         self.resolveRef = False # Resolve references and print text
 
-
         if self.ext=="pgf" or matplotlib.rcParams['text.usetex']:
             self.usetex = True
             matplotlib.rcParams['text.usetex'] = True
+            #preamble = [r'\usepackage{hyperref}', r'\usepackage{siunitx}']#, r'\usepackage[style=alphabetic,natbib=true,backend=biber]{biblatex}']
             preamble = [r'\usepackage{hyperref}', r'\usepackage{siunitx}']
-            matplotlib.rcParams['text.latex.preamble'] = list(matplotlib.rcParams['text.latex.preamble']) + preamble
-            matplotlib.rcParams["pgf.preamble"] = list(matplotlib.rcParams['pgf.preamble']) + preamble
+            #matplotlib.rcParams['text.latex.preamble'] = list(matplotlib.rcParams['text.latex.preamble']) + preamble
+            #matplotlib.rcParams["pgf.preamble"] = list(matplotlib.rcParams['pgf.preamble']) + preamble
+            matplotlib.rcParams['text.latex.preamble'] = preamble
+            matplotlib.rcParams["pgf.preamble"] = preamble
             self.percent   = r'\si{\percent}'
             self.celsius   = r'\si{\celsius}'
             self.errLabel  = r'rel. Error ('+self.percent+r')'
@@ -149,7 +151,8 @@ class SolutionDataWriter(object):
         if self.usebp:
             from jopy.dataPlotters import BasePlotter
             self.bp = BasePlotter()
-            ccycle = self.bp.getColourCycle(length=3)
+            ccycle = self.bp.getColourCycle(length=4)
+            ccycle.next() # skip the first one
             ccycle.next() # skip the first one
             self.secondaryColour = ccycle.next()
             self.primaryColour = ccycle.next()
@@ -166,8 +169,9 @@ class SolutionDataWriter(object):
             longSide  = baseSize # Make A4
             shortSide = longSide * ratio
         else:
+            offset    = (1 + 2.0/5.0 * 2.5/11.5)
             longSide  = baseSize #* 0.85 # Make smaller than A4
-            shortSide = longSide * ratio
+            shortSide = longSide * ratio * offset # TODO: connect to gridspec and ylim
 
 
         if self.isportrait: self.figsize=(shortSide*mm_to_inch,longSide*mm_to_inch)
@@ -785,7 +789,11 @@ class SolutionDataWriter(object):
         errorFormatter['color'] = dataFormatter['color']
         errorFormatter['marker'] = 'o'
         errorFormatter['ls'] = 'none'
-        errorFormatter['alpha'] = 0.25
+        errorFormatter['alpha'] = 0.5
+
+        boundsFormatter = fitFormatter.copy()
+        boundsFormatter['ls'] = ':'
+        boundsFormatter['alpha'] = 0.75
 
         pData = None
         pFree = None
@@ -814,10 +822,10 @@ class SolutionDataWriter(object):
                 axVal.set_title(" ", fontsize='small')
 
         if not zMiMa is None and not axVal is None:
-            axVal.plot(pMiMa, zMiMa, alpha=0.25, ls=':', color=fitFormatter["color"])
+            axVal.plot(pMiMa, zMiMa, label='bounds', **boundsFormatter)
 
         if not zFree is None and not axVal is None:
-            axVal.plot(pFree, zFree, alpha=0.25, ls=':', color=fitFormatter["color"])
+            axVal.plot(pFree, zFree, label='bounds', **boundsFormatter)
 
         if not zError is None and not axErr is None:
             #formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
@@ -986,8 +994,12 @@ class SolutionDataWriter(object):
         #x += dx; y = yStart
         #myAnnotate('Name: ',solObj.name,x=x,y=y); x += .0; y -= dy
 
-        ax.set_xlim((0,1))
-        ax.set_ylim((0,1))
+        if self.ispage:
+            ax.set_xlim((0,1))
+            ax.set_ylim((0,1))
+        else: # Reduce height by two fifth, TODO: connect to gridspec
+            ax.set_xlim((0,1))
+            ax.set_ylim((0,1*3/5))
 
 
     def printFitDetails(self):
@@ -1032,7 +1044,11 @@ class SolutionDataWriter(object):
         # if filetime < two_days_ago:
         #   print "File is more than two days old"
 
-        gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.5,3,3,3])
+        if self.ispage:
+            gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.5,3,3,3])
+        else: # Reduce height of upper graph by two fifth, TODO: connect to ylim
+            gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[1.5,3,3,3])
+
         #gs.update(top=0.75, hspace=0.05)
         fig = plt.figure(figsize=self.figsize)
 
