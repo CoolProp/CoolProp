@@ -30,62 +30,70 @@ if [ $# != 2 ]; then
 fi
 #
 # Just a small function print messages
-SEPARATOR="----------------------------------"
+SEPARATOR="---------------------------------------------------"
 function printMessage {
     echo " "
     echo $SEPARATOR
     echo "$1"
+    echo $SEPARATOR
     return 0
 }
-# Now we use the function defined above
-printMessage "Processing the input variables: "
-#
 # Process the version number and set parameters accordingly
 CPVERSION="$1"
 if [[ $CPVERSION == +([0-9]).+([0-9]).+([0-9]) ]]; then
-    echo "CPVERSION = $CPVERSION"
     BINFOLDER="release"
 elif [ "$CPVERSION" == "nightly" ]; then
-    echo "CPVERSION = $CPVERSION - which is a valid input"
     BINFOLDER="binaries"
 else
     echo "CPVERSION = $CPVERSION - not valid!"
     exit 1
 fi
-#
-#
-SFUSER="jorritw" # ibell or jorritw
-BASEDIR="$HOME/buildbot/server-master/public_html"
-REPODIR="$HOME/src/CoolPropFull.git"
-TMPSDIR="$HOME/src/CoolProp.sources"
-SRCFOLDER="$BASEDIR/$BINFOLDER/source"
-DOCFOLDER="$BASEDIR/$BINFOLDER/sphinx"
-DOC4FILES="4.2.5/coolpropv425docs.zip"
-DOC4FOLDER="$DOCFOLDER/v4"
-#
-#
+# Process the dryrun option
 if [ "$2" == "release" ]; then
     DRYRUN=false
 else
     DRYRUN=true
 fi
-echo "DRYRUN = $DRYRUN"
+#
+printMessage "Detected parameters"
+echo "CPVERSION = $CPVERSION - which is a valid input"
+echo "DRYRUN    = $DRYRUN"
+echo "BINFOLDER = $BINFOLDER"
 #
 #
-pushd ${BASEDIR} # Change the folder
+SFUSER="jorritw" # ibell or jorritw
+# Absolute (!) paths -> XXXXDIR
+BASEDIR="$HOME/buildbot/server-master/public_html"
+REPODIR="$HOME/src/CoolPropFull.git"
+TMPSDIR="$HOME/src/CoolProp.sources"
+SRCSDIR="$BASEDIR/$BINFOLDER/source"
+#
+# Relative (!) paths -> XXXFOLDER
+DOCFOLDER="$BINFOLDER/docs"
+SPHFOLDER="$BINFOLDER/sphinx"
+DOC4FILES="4.2.5/coolpropv425docs.zip"
+DOC4FOLDER="$SPHFOLDER/v4"
+RSYNC_EXCL="--exclude=sphinx"
+#
+DOCFILE="documentation.zip"
+#
+#
 if [ "$DRYRUN" != "false" ]; then
     printMessage "Dry run detected"
     echo "Dry run; no zipping of the sources"
     echo "Dry run; no zipping of the docs"
     echo "Dry run; skipping python upload"
-    echo "Dry run; skipping folder date"
     RSYNC_DRY_RUN=--dry-run
 else
+    RSYNC_DRY_RUN=
+    ######################################
+    # We start with the absolute paths ...
+    ######################################
+    mkdir -p "$TMPSDIR" "$SRCSDIR" # Generating directories
     printMessage "Updating sources"
     pushd "$REPODIR"
     git pull
     git submodule update
-    #python dev/scripts/git-archive-all $SRCFOLDER/CoolProp_sources.zip
     popd
     printMessage "Generating headers"
     rsync -a --delete "$REPODIR/" "$TMPSDIR"
@@ -95,43 +103,45 @@ else
     #rm -rf .git*
     find . -iwholename "*/.git*" -exec rm -rf {} \;
     cd ..
-    mkdir -p $SRCFOLDER
-    rm -f $SRCFOLDER/CoolProp_sources.zip
-    zip -rq $SRCFOLDER/CoolProp_sources.zip $(basename $TMPSDIR)
+    rm -f $SRCSDIR/CoolProp_sources.zip
+    zip -rq $SRCSDIR/CoolProp_sources.zip $(basename $TMPSDIR)
     cd $(basename $TMPSDIR)
     popd
-    rm -f "$BINFOLDER/README.rst.txt"
+    ######################################
+    # ... and now we use relative paths
+    ######################################
+    pushd ${BASEDIR}
+    mkdir -p "$DOCFOLDER" "$SPHFOLDER" "$DOC4FOLDER"
+    printMessage "Preparing the docs and moving them into the $BINFOLDER folder for staging"
+    rsync $RSYNC_DRY_RUN $RSYNC_OPTS "frs.sf.net-$SFUSER:/home/frs/project/coolprop/CoolProp/$DOC4FILES" "$(basename $DOC4FILES)"
+    unzip -qo "$(basename $DOC4FILES)" -d "$DOC4FOLDER"
+	zip -rq "$DOCFILE" $SPHFOLDER/* -x */$(basename $DOC4FOLDER)/*
+	mv "$DOCFILE" "$DOCFOLDER"
+    #
     if [ "$CPVERSION" == "nightly" ]; then
-        RSYNC_OPTS="-a --no-perms -z --stats --delete"
-        rm -rf "$BINFOLDER/docs"
-        CPVERSION="$CPVERSION"/ #$(date +%F)
-        echo    "CoolProp nightly binaries"   > "$BINFOLDER/README.rst.txt"
+        printMessage "Detected nightly release, updating README.rst.txt"
+        echo    "CoolProp nightly binaries"   >  "$BINFOLDER/README.rst.txt"
         echo    "-------------------------"   >> "$BINFOLDER/README.rst.txt"
         echo -n "Development binaries of the" >> "$BINFOLDER/README.rst.txt"
         echo -n " \`CoolProp project <http://coolprop.sourceforge.net>\`_ " >> "$BINFOLDER/README.rst.txt"
         echo    "updated on $(date +%F) at $(date +%X) $(date +%Z)." >> "$BINFOLDER/README.rst.txt"
+        RSYNC_OPTS="-a --no-perms -z --stats --delete"
     else
         RSYNC_OPTS="-a --no-perms -z --stats"
-        printMessage "Zipping up the docs and moving them into the $BINFOLDER folder for staging"
-        rm -f documentation.zip
-        zip -rq documentation.zip $DOCFOLDER/* -x */$(basename $DOC4FOLDER)/*
-        cp documentation.zip "$DOCFOLDER/sphinx"
-        echo "Uploading the python binaries to pypi"
+        echo "Detected full release, uploading the python binaries to pypi"
         twine upload $BINFOLDER/Python/*.whl $BINFOLDER/Python/*.tar.gz
     fi
-    RSYNC_DRY_RUN=
+    popd
 fi
-#
-printMessage "Getting the latest v4 docs from SourceForge"
-rsync $RSYNC_DRY_RUN $RSYNC_OPTS "frs.sf.net-$SFUSER:/home/frs/project/coolprop/CoolProp/$DOC4FILES" "$(basename $DOC4FILES)"
-mkdir -p "$DOC4FOLDER"
-unzip -qo "$(basename $DOC4FILES)" -d "$DOC4FOLDER"
-#
+######################################
+# ... we continue with relative paths
+######################################
+pushd ${BASEDIR}
 printMessage "Copying the binaries to SourceForge"
-rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$BINFOLDER/" frs.sf.net-$SFUSER:/home/frs/project/coolprop/CoolProp/$CPVERSION
+rsync $RSYNC_DRY_RUN $RSYNC_OPTS $RSYNC_EXCL "$BINFOLDER/" frs.sf.net-$SFUSER:/home/frs/project/coolprop/CoolProp/$CPVERSION
 if [ ${CPVERSION:0:7} != "nightly" ]; then
     printMessage "Publishing the docs on SourceForge"
-    rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$DOCFOLDER/" frs.sf.net-$SFUSER:/home/project-web/coolprop/htdocs
+    rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$SPHFOLDER/" frs.sf.net-$SFUSER:/home/project-web/coolprop/htdocs
 fi
 #
 if [[ ("$BINFOLDER" == "release") && ("$DRYRUN" == "false") ]]; then
@@ -139,7 +149,6 @@ if [[ ("$BINFOLDER" == "release") && ("$DRYRUN" == "false") ]]; then
     rm -rf "$BINFOLDER"
     mkdir -p "$BINFOLDER"
 fi
-# Change back to where we came from
 popd
 printMessage "All done, goodbye."
 exit 0
