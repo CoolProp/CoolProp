@@ -90,11 +90,10 @@ class SolutionDataWriter(object):
     information came from.
     """
     def __init__(self):
-        bibFile = os.path.join(os.path.dirname(__file__),'../../../Web/fluid_properties/Incompressibles.bib')
+        bibFile = os.path.join(os.path.dirname(__file__),'../../../CoolPropBibTeXLibrary.bib')
         self.bibtexer = BibTeXerClass(bibFile)
 
         matplotlib.rcParams['axes.formatter.useoffset'] = False
-        matplotlib.rcParams['text.usetex'] = True
 
         self.ext        = "pgf"
         self.usebp      = True
@@ -165,20 +164,17 @@ class SolutionDataWriter(object):
         ratio = 210.0/297.0  # A4 in mm
         mm_to_inch = 3.93700787401575/100.0 # factor mm to inch
 
+        self.deta = 0.7 # factor for table
         if self.ispage:
             longSide  = baseSize # Make A4
-            shortSide = longSide * ratio
+            shortSide = baseSize * ratio
         else:
-            offset    = (1 + 2.0/5.0 * 2.5/11.5)
-            longSide  = baseSize #* 0.85 # Make smaller than A4
-            shortSide = longSide * ratio * offset # TODO: connect to gridspec and ylim
-
+            lofa = 1.0 - self.deta * 2.5/11.5 # Half of the original table
+            longSide  = baseSize * lofa #* 0.85 # Make smaller than A4
+            shortSide = baseSize * ratio  # TODO: connect to gridspec and ylim
 
         if self.isportrait: self.figsize=(shortSide*mm_to_inch,longSide*mm_to_inch)
         else: self.figsize=(longSide*mm_to_inch,shortSide*mm_to_inch)
-
-
-
 
 
     def fitAll(self, fluidObject=SolutionData()):
@@ -885,8 +881,11 @@ class SolutionDataWriter(object):
 
 
         #ax.set_title('Fitting Report for {0}'.format(solObj.name))
+        yHead = 0.0
         if self.ispage:
-            ax.text(0.5, 0.8, 'Fitting Report for {0}'.format(solObj.name), **annotateSettingsTitle)
+            yHead = 0.8
+            ax.text(0.5, yHead, 'Fitting Report for {0}'.format(solObj.name), **annotateSettingsTitle)
+            yHead += 0.2
 
         def myAnnotate(label,text,x=0.0,y=0.0):
             dx = 0.005
@@ -994,13 +993,17 @@ class SolutionDataWriter(object):
         #x += dx; y = yStart
         #myAnnotate('Name: ',solObj.name,x=x,y=y); x += .0; y -= dy
 
-        if self.ispage:
-            ax.set_xlim((0,1))
-            ax.set_ylim((0,1))
-        else: # Reduce height by two fifth, TODO: connect to gridspec
-            ax.set_xlim((0,1))
-            ax.set_ylim((0,1*3/5))
+        xmin = 0
+        xmax = 1
 
+        ymin = y+2*dy
+        ymax = max(yStart,yHead)
+
+        ax.set_xlim((xmin,xmax))
+        ax.set_ylim((ymin,ymax))
+
+        #xpos,ypos = ax.transAxes.inverted().transform(ax.transData.transform((0,y)))
+        return [xmin,y+0.75*dy,xmax,y+0.75*dy]
 
     def printFitDetails(self):
         pass
@@ -1045,9 +1048,9 @@ class SolutionDataWriter(object):
         #   print "File is more than two days old"
 
         if self.ispage:
-            gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.5,3,3,3])
+            gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.50,3,3,3])
         else: # Reduce height of upper graph by two fifth, TODO: connect to ylim
-            gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[1.5,3,3,3])
+            gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.50*self.deta,3,3,3])
 
         #gs.update(top=0.75, hspace=0.05)
         fig = plt.figure(figsize=self.figsize)
@@ -1159,7 +1162,7 @@ class SolutionDataWriter(object):
 
 
         # print headlines etc.
-        self.printFluidInfo(table_axis, solObj)
+        lims = self.printFluidInfo(table_axis, solObj)
         # Prepare the legend
         legenddict = {}
         for a in fig.axes:
@@ -1181,8 +1184,9 @@ class SolutionDataWriter(object):
         else:
             table_axis.legend(
               legVal, legKey,
-              bbox_to_anchor=(0.0, -0.075, 1., -0.075),
-              ncol=len(legVal),
+              bbox_to_anchor=tuple(lims),
+              bbox_transform=table_axis.transData,
+              ncol=len(legVal), loc=9,
               mode="expand", borderaxespad=0.,
               numpoints=1, fontsize='small')
             #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)

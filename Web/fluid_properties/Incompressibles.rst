@@ -395,6 +395,6 @@ which was originally recorded at the Danish Technological Institute `(DTI) <http
 References
 ----------
 
-.. bibliography:: Incompressibles.bib
+.. bibliography:: ../../CoolPropBibTeXLibrary.bib
    :filter: docname in docnames
    :style: unsrt
