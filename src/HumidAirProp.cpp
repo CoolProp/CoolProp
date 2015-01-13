@@ -1212,8 +1212,7 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
         // Add a check to make sure that Air and Water fluid states have been properly instantiated
         check_fluid_instantiation();
 
-        givens In1Type, In2Type, In3Type, Type1, Type2;
-        int iT,iW,iTdp,iRH,ip;
+        int In1Type, In2Type, In3Type,iT,iW,iTdp,iRH,ip,Type1,Type2;
         double vals[3],p,T,RH,W,Tdp,psi_w,M_ha,v_bar,h_bar,s_bar,MainInputValue,SecondaryInputValue,T_guess;
         double Value1,Value2,W_guess;
         std::string MainInputName, SecondaryInputName, Name1, Name2;
@@ -1328,13 +1327,10 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
             // Get the integer type codes
             Type1=Name2Type(Name1);
             Type2=Name2Type(Name2);
-
-            // First, if one of the inputs is something that can potentially yield
-            // an explicit solution at a given iteration of the solver, use it
-            if (Type1==GIVEN_RH || Type1==GIVEN_HUMRAT || Type1==GIVEN_TDP)
+            
+            // First see if humidity ratio is provided, will be the fastest option
+            if (Type1 == GIVEN_HUMRAT)
             {
-                // First input variable is a "nice" one
-
                 // MainInput is the one that you are using in the call to HAProps
                 MainInputValue=Value1;
                 strcpy(MainInputName,Name1);
@@ -1342,21 +1338,33 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
                 SecondaryInputValue=Value2;
                 strcpy(SecondaryInputName,Name2);
             }
-            else if (Type2==GIVEN_RH || Type2==GIVEN_HUMRAT || Type2==GIVEN_TDP)
+            else if (Type2 == GIVEN_HUMRAT)
             {
-                // Second input variable is a "nice" one
-
-                // MainInput is the one that you are using in the call to HAProps
-                MainInputValue=Value2;
-                strcpy(MainInputName,Name2);
+                // MainInput is the one that you are using in the call to HAPropsSI
+                MainInputValue=Value2; strcpy(MainInputName, Name2);
                 // SecondaryInput is the one that you are trying to match
-                SecondaryInputValue=Value1;
-                strcpy(SecondaryInputName,Name1);
+                SecondaryInputValue=Value1; strcpy(SecondaryInputName, Name1);
+            }
+            // Next, if one of the inputs is something that can potentially yield
+            // an explicit solution at a given iteration of the solver, use it
+            else if (Type1 == GIVEN_RH || Type1 == GIVEN_TDP)
+            {
+                // MainInput is the one that you are using in the call to HAProps
+                MainInputValue = Value1; strcpy(MainInputName, Name1);
+                // SecondaryInput is the one that you are trying to match
+                SecondaryInputValue = Value2; strcpy(SecondaryInputName, Name2);
+            }
+            else if (Type2 == GIVEN_RH || Type2 == GIVEN_TDP)
+            {
+                // MainInput is the one that you are using in the call to HAProps
+                MainInputValue = Value2; strcpy(MainInputName, Name2);
+                // SecondaryInput is the one that you are trying to match
+                SecondaryInputValue=Value1; strcpy(SecondaryInputName, Name1);
             }
             else
             {
                 printf("Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now\n");
-                return -1000;
+                return _HUGE;
             }
 
             double T_min = 210;
