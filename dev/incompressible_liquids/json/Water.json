@@ -51,7 +51,7 @@
     "type": "notdefined"
   }, 
   "name": "Water", 
-  "reference": "Wagner2002, Transport properties from Huber et. al (2 papers)", 
+  "reference": "Wagner2002, Huber2009", 
   "saturation_pressure": {
     "coeffs": [
       -3.863635e+03, 

@@ -6,13 +6,24 @@ C# Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled release binaries can be downloaded from :sfdownloads:`Csharp`.  Development binaries coming from the buildbot server can be found at :sfnightly:`Csharp`.
 
 To Use
 ------
 
-Copy all the platform-independent .cs files to a folder on your computer you want, here we call it ``platform-independent``.  Copy the DLL for your system architecture to the same location.  Copy the Example.cs file to the same location.  You will need to have a copy of some version of C#.
+Pre-compiled binaries can be downloaded from :sfdownloads:`Csharp`.  Development binaries coming from the buildbot server can be found at :sfnightly:`Csharp`.
 
+Download the ``platform-independent.7z`` file and expand it to a folder called ``platform-independent`` using 7-zip.  Download the special C# shared library for your system architecture to the same location from either :sfdownloads:`Csharp` (release) or :sfnightly:`Csharp` (development).  Copy the Example.cs file to the same location.  You will need to have a copy of some version of C#.
+
+When you are finished, you should have a folder layout something like ::
+
+    main
+     |- CoolProp.dll
+     |- Example.cs
+     |- platform-independent
+        |- AbstractState.cs
+        |- Configuration.cs
+        |- ...
+        
 Windows
 ^^^^^^^
 
@@ -24,7 +35,7 @@ At the command prompt, run::
 
 where you might need to update the path to visual studio depending on your version installed.  Use `-platform:x86` to tell C# that your DLL is 32-bit if you are on 32-bit, or `-platform:x64` if you are on 64-bit.
 
-Alternatively, you can add all the .cs files to a visual studio project.
+Alternatively, you can add all the .cs files to a visual studio project.  If you do that, add the DLL to the project as well, right-click on the DLL, and select the option to copy it to the output directory.
 
 Linux/OSX
 ^^^^^^^^^
@@ -33,6 +44,8 @@ Same idea as windows, but command line is just a bit different::
 
     mcs Example.cs platform-independent/*.cs -platform:x64
     ./Example
+    
+Use `-platform:x86` to tell C# that your shared library is 32-bit if you are on 32-bit, or `-platform:x64` if you are on a 64-bit platform.
 
 User-Compiled Binaries
 ======================

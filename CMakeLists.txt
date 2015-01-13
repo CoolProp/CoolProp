@@ -29,7 +29,7 @@ project(${project_name})
 # Project version
 set (COOLPROP_VERSION_MAJOR 5)
 set (COOLPROP_VERSION_MINOR 0)
-set (COOLPROP_VERSION_PATCH 6)
+set (COOLPROP_VERSION_PATCH 7dev)
 set (COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH})
 
 #######################################
@@ -458,11 +458,6 @@ if (COOLPROP_CSHARP_MODULE)
                      COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" "${CMAKE_CURRENT_BINARY_DIR}/*.cs"
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   
-  # Install all the generated cs files
-  install(
-    CODE "file( GLOB _GeneratedCsharpSources \"${CMAKE_CURRENT_BINARY_DIR}/*.cs\" )"
-    CODE "file( INSTALL \${_GeneratedCsharpSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Csharp/platform-independent )"
-  )
   install (FILES ${CMAKE_SOURCE_DIR}/Web/coolprop/wrappers/Csharp/Example.cs DESTINATION Csharp)
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" DESTINATION ${CMAKE_INSTALL_PREFIX}/Csharp)
   install (TARGETS ${app_name} DESTINATION Csharp/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
@@ -472,7 +467,7 @@ if (COOLPROP_CSHARP_MODULE)
     # Copy the shared object to the folder with the executable - no idea like java.library.path in C#
     install (TARGETS ${app_name} DESTINATION ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
   endif()
-  file(TO_NATIVE_PATH ${CMAKE_INSTALL_PREFIX}/Csharp/platform-independent/*.cs cp_cs_path)
+  file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/*.cs cp_cs_path)
   file(TO_NATIVE_PATH ${CMAKE_INSTALL_PREFIX}/Csharp/Example.cs cp_example_path)
   if (${BITNESS} EQUAL "32")
     set(CSHARP_PLAT "-platform:x86")
@@ -708,13 +703,13 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/SwigRef.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (TARGETS CoolPropMATLAB_wrap DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
-  enable_testing()
-  add_custom_command(TARGET CoolPropMATLAB_wrap
-                     POST_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/test.m ${CMAKE_CURRENT_BINARY_DIR}/.)
-  add_test(NAME MATLABtest
-           COMMAND $ENV{MATLAB_ROOT}/bin/matlab -r test -nojvm -nodesktop -nosplash
-           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  #enable_testing()
+  #add_custom_command(TARGET CoolPropMATLAB_wrap
+  #                   POST_BUILD
+  #                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/test.m ${CMAKE_CURRENT_BINARY_DIR}/.)
+  #add_test(NAME MATLABtest
+  #         COMMAND $ENV{MATLAB_ROOT}/bin/matlab -r test -nojvm -nodesktop -nosplash
+  #         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 if (COOLPROP_MATLAB_MODULE)
