@@ -41,7 +41,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Fit of the subcooled region of the full EOS from 1 bar to 100 bar", 
+  "description": "Fit of EOS from 1 bar to 100 bar", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

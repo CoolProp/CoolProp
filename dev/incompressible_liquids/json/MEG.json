@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Ethylene Glycol", 
+  "description": "Ethylene Glycol - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

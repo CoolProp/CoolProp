@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Potassium Carbonate (K2CO3)", 
+  "description": "Potassium Carbonate (K2CO3) - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

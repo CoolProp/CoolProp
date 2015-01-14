@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Glycerol", 
+  "description": "Glycerol - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

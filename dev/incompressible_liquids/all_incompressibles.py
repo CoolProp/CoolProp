@@ -53,6 +53,9 @@ if __name__ == '__main__':
     #if args.fluid:     onlyFluid  = args.fluid
     #else:              onlyFluid  = None
 
+    #runReports = False
+    #runFitting = False
+
     print("")
     print("Processing the incompressible fluids for CoolProp")
     print("Legend: FluidName (w) | (i) -> (w)=written, (i)=ignored, unchanged coefficient or reports")
@@ -253,6 +256,7 @@ if __name__ == '__main__':
             #for f in objLists[i]: print(f.name, end=", ")
             #print("... done")
             writer.generateRstTable(objLists[i], filLists[i])
+            writer.generateTexTable(objLists[i], filLists[i])
 
     print("All done, bye")
     sys.exit(0)

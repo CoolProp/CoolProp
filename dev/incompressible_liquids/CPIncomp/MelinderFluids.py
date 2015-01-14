@@ -12,7 +12,7 @@ class DEBLiquidClass(CoefficientData,PureData):
         CoefficientData.__init__(self)
         PureData.__init__(self)
         self.name = "DEB"
-        self.description = "Diethylbenzene mixture - Dowtherm J Dow Chemical Co."
+        self.description = "Diethylbenzene mixture - Dowtherm J"
         self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
@@ -46,7 +46,7 @@ class HCMLiquidClass(CoefficientData,PureData):
         CoefficientData.__init__(self)
         PureData.__init__(self)
         self.name = "HCM"
-        self.description = "Hydrocarbon mixture (synthetic) - Therminol D12 (Gilotherm D12) Solutia"
+        self.description = "Hydrocarbon mixture - Gilotherm D12"
         self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
@@ -114,7 +114,7 @@ class PMS1LiquidClass(CoefficientData,PureData):
         CoefficientData.__init__(self)
         PureData.__init__(self)
         self.name = "PMS1"
-        self.description = "Polydimethylsiloxan 1. - Baysilone KT3"
+        self.description = "Polydimethylsiloxan 1 - Baysilone KT3"
         self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
@@ -148,7 +148,7 @@ class PMS2LiquidClass(CoefficientData,PureData):
         CoefficientData.__init__(self)
         PureData.__init__(self)
         self.name = "PMS2"
-        self.description = "Polydimethylsiloxan 2. - Syltherm XLT Dow Corning Co."
+        self.description = "Polydimethylsiloxan 2 - Syltherm XLT"
         self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
@@ -250,7 +250,7 @@ class TCOLiquidClass(CoefficientData,PureData):
         CoefficientData.__init__(self)
         PureData.__init__(self)
         self.name = "TCO"
-        self.description = "Terpene from citrus oils - d-Limonene"
+        self.description = "Citrus oil terpene - d-Limonene"
         self.reference = "Melinder2010"
 
         self.Tmin = -80.0 + 273.15
@@ -289,7 +289,7 @@ class EGSolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MEG"
-        self.description = "Ethylene Glycol"
+        self.description = "Ethylene Glycol - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
@@ -331,7 +331,7 @@ class PGSolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MPG"
-        self.description = "Propylene Glycol"
+        self.description = "Propylene Glycol - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
@@ -373,7 +373,7 @@ class EASolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MEA"
-        self.description = "Ethyl Alcohol (Ethanol)"
+        self.description = "Ethyl Alcohol (Ethanol) - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
@@ -415,7 +415,7 @@ class MASolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MMA"
-        self.description = "Methyl Alcohol (Methanol)"
+        self.description = "Methyl Alcohol (Methanol) - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
@@ -458,7 +458,7 @@ class GLSolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MGL"
-        self.description = "Glycerol"
+        self.description = "Glycerol - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
@@ -500,7 +500,7 @@ class AMSolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MAM"
-        self.description = "Ammonia (NH3)"
+        self.description = "Ammonia (NH3) - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
@@ -542,7 +542,7 @@ class KCSolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MKC"
-        self.description = "Potassium Carbonate (K2CO3)"
+        self.description = "Potassium Carbonate (K2CO3) - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100 + 273.15
@@ -584,7 +584,7 @@ class CASolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MCA"
-        self.description = "Calcium Chloride (CaCl2)"
+        self.description = "Calcium Chloride (CaCl2) - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15
@@ -626,7 +626,7 @@ class MGSolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MMG"
-        self.description = "(MgCl2)"
+        self.description = "MgCl2 - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15
@@ -668,7 +668,7 @@ class NASolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MNA"
-        self.description = "Sodium Chloride (NaCl)"
+        self.description = "Sodium Chloride (NaCl) - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15
@@ -710,7 +710,7 @@ class KASolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MKA"
-        self.description = "Potassium Acetate (CH3CO2K)"
+        self.description = "Potassium Acetate (CH3CO2K) - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15
@@ -752,7 +752,7 @@ class KFSolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MKF"
-        self.description = "Potassium Formate (CHKO2)"
+        self.description = "Potassium Formate (CHKO2) - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15
@@ -794,7 +794,7 @@ class LISolution(CoefficientData):
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "MLI"
-        self.description = "Lithium Chloride (LiCl)"
+        self.description = "Lithium Chloride (LiCl) - aq"
         self.reference = "Melinder2010"
 
         self.Tmin     =-100.0 + 273.15

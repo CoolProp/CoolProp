@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Methyl Alcohol (Methanol)", 
+  "description": "Methyl Alcohol (Methanol) - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

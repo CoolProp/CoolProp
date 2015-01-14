@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Ammonia (NH3)", 
+  "description": "Ammonia (NH3) - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

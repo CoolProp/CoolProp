@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Lithium Chloride (LiCl)", 
+  "description": "Lithium Chloride (LiCl) - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

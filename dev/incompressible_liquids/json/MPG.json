@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Propylene Glycol", 
+  "description": "Propylene Glycol - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Sodium Chloride (NaCl)", 
+  "description": "Sodium Chloride (NaCl) - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

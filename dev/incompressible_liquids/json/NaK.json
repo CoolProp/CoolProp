@@ -29,7 +29,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Nitrate salt, heat transfer fluid based on 60% NaNO3 and 40% KNO3", 
+  "description": "Nitrate salt, 0.6 NaNO3 and 0.4 KNO3", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

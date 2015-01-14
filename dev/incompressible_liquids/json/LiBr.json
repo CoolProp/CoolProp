@@ -85,7 +85,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Aqueous lithium-bromide solution ", 
+  "description": "Lithium-bromide solution - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"
@@ -124,7 +124,7 @@
       ], 
       [
         3.082839e-07, 
-        5.253051e-08, 
+        5.253052e-08, 
         2.549296e-07, 
         0.000000e+00, 
         0.000000e+00, 

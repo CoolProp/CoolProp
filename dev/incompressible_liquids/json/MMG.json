@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "(MgCl2)", 
+  "description": "MgCl2 - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

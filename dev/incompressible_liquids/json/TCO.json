@@ -29,7 +29,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Terpene from citrus oils - d-Limonene", 
+  "description": "Citrus oil terpene - d-Limonene", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Potassium Acetate (CH3CO2K)", 
+  "description": "Potassium Acetate (CH3CO2K) - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

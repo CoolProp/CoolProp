@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Ethyl Alcohol (Ethanol)", 
+  "description": "Ethyl Alcohol (Ethanol) - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

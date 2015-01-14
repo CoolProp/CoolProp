@@ -90,7 +90,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Calcium Chloride (CaCl2)", 
+  "description": "Calcium Chloride (CaCl2) - aq", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

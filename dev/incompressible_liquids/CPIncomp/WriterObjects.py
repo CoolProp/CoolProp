@@ -95,11 +95,11 @@ class SolutionDataWriter(object):
 
         matplotlib.rcParams['axes.formatter.useoffset'] = False
 
-        self.ext        = "pgf"
-        self.usebp      = True
-        self.ispage     = False # Do you want a page or a figure?
+        self.ext        = "pdf"
+        self.usebp      = False
+        self.ispage     = True # Do you want a page or a figure?
         self.isportrait = True
-        self.resolveRef = False # Resolve references and print text
+        self.resolveRef = True # Resolve references and print text
 
         if self.ext=="pgf" or matplotlib.rcParams['text.usetex']:
             self.usetex = True
@@ -164,13 +164,13 @@ class SolutionDataWriter(object):
         ratio = 210.0/297.0  # A4 in mm
         mm_to_inch = 3.93700787401575/100.0 # factor mm to inch
 
-        self.deta = 0.7 # factor for table
+        self.deta = 0.75 # factor for table
         if self.ispage:
             longSide  = baseSize # Make A4
             shortSide = baseSize * ratio
         else:
-            lofa = 1.0 - self.deta * 2.5/11.5 # Half of the original table
-            longSide  = baseSize * lofa #* 0.85 # Make smaller than A4
+            #lofa = 1.0 - self.deta * 2.5/11.5 # Half of the original table
+            longSide  = baseSize #* lofa #* 0.85 # Make smaller than A4
             shortSide = baseSize * ratio  # TODO: connect to gridspec and ylim
 
         if self.isportrait: self.figsize=(shortSide*mm_to_inch,longSide*mm_to_inch)
@@ -902,7 +902,12 @@ class SolutionDataWriter(object):
         yStart = 0.575; y = yStart
 
         #myAnnotate('Name: ',solObj.name,x=x,y=y); x += .0; y -= dy
-        myAnnotate('Description: ',solObj.description,x=x,y=y); x += .0; y -= dy
+        if self.usetex:
+            myAnnotate('Description: ',solObj.description.encode("latex"),x=x,y=y); x += .0; y -= dy
+        else:
+            myAnnotate('Description: ',solObj.description,x=x,y=y); x += .0; y -= dy
+
+
 
         # TODO: Debug bibtexer
         refs = solObj.reference.split(",")
@@ -1418,6 +1423,93 @@ class SolutionDataWriter(object):
         text = u"{0:3.2f}".format(self.checkForNumber(number))
         return text
 
+    def generateTexTable(self, solObjs=[SolutionData()], path="table"):
+
+        solObjs = sorted(solObjs, key=lambda x: x.name)
+        xmin = np.array([x.xmin for x in solObjs])
+        xmax = np.array([x.xmax for x in solObjs])
+
+        # TODO: This is a dirty hack!
+        if np.any(xmin>0.0) and np.any(xmax<1.0): use_x = True
+        else: use_x = False
+
+
+
+        header = [u'Name', u'Description', u'Reference', ur'{$T_\text{min}$ (\si{\celsius})}', ur'{$T_\text{max}$ (\si{\celsius})}', ur'{$T_\text{base}$ (\si{\kelvin})}']
+        if use_x: header.extend([ur'{$x_\text{min}$}', ur'{$x_\text{max}$}'])
+
+        testTable = []
+        testTable.append(header) # Headline
+
+        testSection = []
+
+        figPath = r"appendices/IncompressibleFluidsReports/"
+
+#         def getFigureText(fld):
+#             text  = "\\begin{pgffigure} \n"
+#             text += "\\fbox{\\resizebox{\\textwidth}{!}{ \n"
+#             text += "\\subimport{"+str(figPath)+"}{"+str(fld)+"_fitreport.pgf} \n"
+#             text += "}} \n"
+#             text += "\\end{pgffigure} \n"
+#             return text
+        def getFigureText(fld):
+            text  = "{\\centering"
+            text += "\\resizebox{\\textwidth}{!}{ \n"
+            text += "\\subimport{"+str(figPath)+"}{"+str(fld)+"_fitreport.pgf} \n"
+            text += "}} \\vfill \n"
+            return text
+
+        def getFigureLabel(fld):
+            return "subsec:fit"+str(fld)
+
+        for fluid in solObjs:
+            #\hyperref[label_name]{''link text''}
+            testTable.append([
+                fluid.name+", p.~\\pageref{"+getFigureLabel(fluid.name)+"}",
+                fluid.description.encode("latex"),
+                r'\cite{'+str(fluid.reference)+'}',
+                self.c(fluid.Tmin),
+                self.c(fluid.Tmax),
+                self.c(fluid.Tbase+273.15)
+            ])
+            if use_x: testTable[-1].extend([self.x(fluid.xmin), self.x(fluid.xmax)])
+
+            testSection.append([
+                "\\subsection{Fitted functions for "+str(fluid.name)+"}",
+                "\\label{"+getFigureLabel(fluid.name)+"}",
+                getFigureText(fluid.name)
+            ])
+
+        text = "\\cr \\topcrule \n"
+        i = -1
+        for row in testTable:
+            i += 1
+            if i < 1:
+                tmp   = r"\headcol "+" & ".join(row)
+            elif i % 2 == 0:
+                tmp   = r"\rowcol " +" & ".join(row)
+            else:
+                tmp   =              " & ".join(row)
+            text += tmp + " \\\\\n"
+            if i == 0: text += "\\midcrule \n"
+
+        if i % 2 == 0:
+            text += "\\bottomcrule \\cr \n"
+        else:
+            text += "\\bottomrule \\cr \n"
+
+        with open(path+".tex", 'w') as f:
+            f.write(text.encode('utf-8'))
+
+        text = "\n"
+        for i,row in enumerate(testSection):
+            tmp   = "\n".join(row)
+            text += tmp + " \n\n"
+
+        with open(path+"-section.tex", 'w') as f:
+            f.write(text.encode('utf-8'))
+
+        return True
 
     def generateRstTable(self, solObjs=[SolutionData()], path="table"):
 
