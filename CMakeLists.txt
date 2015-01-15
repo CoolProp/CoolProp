@@ -492,7 +492,10 @@ if (COOLPROP_VBDOTNET_MODULE)
   INCLUDE(${SWIG_USE_FILE})
   FIND_PACKAGE(Csharp REQUIRED)
   
-  file(COPY ${CMAKE_SOURCE_DIR}/wrappers/VB.NET/CoolPropVB/CoolPropVB DESTINATION VBdotNET)
+  # Make a src directory to deal with file permissions problem with MinGW makefile
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB)
+  
+  
 
   SET(MORE_SWIG_FLAGS -dllimport \"CoolProp\" -namespace CoolProp)
   SET(CMAKE_SWIG_OUTDIR CoolPropVB/CsharpClassLibrary)
@@ -518,6 +521,10 @@ if (COOLPROP_VBDOTNET_MODULE)
   
   add_dependencies (${app_name} generate_headers)
   
+  add_custom_command(TARGET CoolProp
+                     PRE_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/wrappers/VB.NET/CoolPropVB ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   add_custom_command(TARGET CoolProp
                      POST_BUILD
                      COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:CoolProp> ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB/CoolPropVB
