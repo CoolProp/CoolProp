@@ -28,6 +28,7 @@ Global
 		{DEC3B691-4510-4181-89EE-7A4A495936A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DEC3B691-4510-4181-89EE-7A4A495936A6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DEC3B691-4510-4181-89EE-7A4A495936A6}.Release|x64.ActiveCfg = Release|Any CPU
+		{DEC3B691-4510-4181-89EE-7A4A495936A6}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
