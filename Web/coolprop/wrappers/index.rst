@@ -16,6 +16,7 @@ Target                                          Operating Systems            Not
 :ref:`Python <Python>`                          linux, OSX, win              Wrapper is Cython based
 :ref:`Octave <Octave>`                          linux, OSX, win              Wrapper is SWIG based
 :ref:`C# <Csharp>`                              linux, OSX, win              Wrapper is SWIG based
+:ref:`VB.net <VBdotNet>`                        windows only                 Wrapper is SWIG based
 :ref:`MATLAB <MATLAB>`                          linux, OSX, win              Wrapper is SWIG based
 :ref:`Java <Java>`                              linux, OSX, win              Wrapper is SWIG based
 :ref:`Scilab <Scilab>`                          linux, OSX, win              Wrapper is SWIG based (experimental)
@@ -123,3 +124,4 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     StaticLibrary/index.rst
     SharedLibrary/index.rst
     DelphiLazarus/index.rst
+    VBdotNET/index.rst
