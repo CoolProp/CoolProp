@@ -547,7 +547,7 @@ long double REFPROPMixtureBackend::calc_rhomolar_reducing(){
 };
 long double REFPROPMixtureBackend::calc_Ttriple(){
     if (mole_fractions.size() != 1){throw ValueError("calc_Ttriple cannot be evaluated for mixtures");}
-    long icomp = 0;
+    long icomp = 1;
     double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
     INFOdll(&icomp, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
     return static_cast<long double>(ttrp);
