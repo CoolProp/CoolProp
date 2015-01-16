@@ -248,9 +248,9 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
                 vval1 = templist
                 vval2 = in5
             else:
-                vval.resize(1)
-                vval1[0] = in3
                 vval1.resize(1)
+                vval1[0] = in3
+                vval2.resize(1)
                 vval2[0] = in5
 
             # Extract the backend and the fluid from the input string

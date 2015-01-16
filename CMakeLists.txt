@@ -431,18 +431,21 @@ if (COOLPROP_CSHARP_MODULE)
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 
-  set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}")
-  string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
-  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
-  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
-	
-  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
-  # Set properties before adding module
-  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   if (WIN32)
-    SET(CMAKE_SWIG_FLAGS -dllimport \"CoolProp\")
-    #SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport CoolProp")
+    SET(MORE_SWIG_FLAGS -dllimport \"CoolProp\")
   endif()
+  
+  # Define which headers the CoolProp wrapper is dependent on
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
+  
+  set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}" "${MORE_SWIG_FLAGS}")
+  string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
+  message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
+  
+  # Set properties before adding module
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}" CPLUSPLUS ON)
+  
   SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
   
   add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
@@ -480,6 +483,63 @@ if (COOLPROP_CSHARP_MODULE)
   add_test(NAME Csharptestrun
            COMMAND ${CSHARP_INTERPRETER} Example.exe
            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+endif()
+
+if (COOLPROP_VBDOTNET_MODULE)
+
+  # Must have SWIG and C#
+  FIND_PACKAGE(SWIG REQUIRED)
+  INCLUDE(${SWIG_USE_FILE})
+  FIND_PACKAGE(Csharp REQUIRED)
+  
+  # Make a src directory to deal with file permissions problem with MinGW makefile
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB)
+  
+  
+
+  SET(MORE_SWIG_FLAGS -dllimport \"CoolProp\" -namespace CoolProp)
+  SET(CMAKE_SWIG_OUTDIR CoolPropVB/CsharpClassLibrary)
+  
+  # Define which headers the CoolProp wrapper is dependent on
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
+  
+  set(SWIG_OPTIONS "${MORE_SWIG_FLAGS}")
+  string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
+  message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
+  
+  # Set properties before adding module
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  SET_PROPERTY(SOURCE ${I_FILE} PROPERTY CPLUSPLUS ON)
+  SET_PROPERTY(SOURCE ${I_FILE} PROPERTY SWIG_FLAGS ${SWIG_OPTIONS})
+  SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+  
+  add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
+
+  if (WIN32)
+    set_target_properties(CoolProp PROPERTIES PREFIX "")
+  endif()
+  
+  add_dependencies (${app_name} generate_headers)
+  
+  add_custom_command(TARGET CoolProp
+                     PRE_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/wrappers/VB.NET/CoolPropVB ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  add_custom_command(TARGET CoolProp
+                     POST_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:CoolProp> ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB/CoolPropVB
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  add_custom_command(TARGET CoolProp
+                     POST_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB/CsharpClassLibrary/CoolPropCSHARP_wrap.cxx
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  add_custom_command(TARGET CoolProp
+                     POST_BUILD
+                     COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/VB.net_VS2012_example.7z" "${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB"
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  
+  install (FILES "${CMAKE_CURRENT_BINARY_DIR}/VB.net_VS2012_example.7z" DESTINATION ${CMAKE_INSTALL_PREFIX}/VB.NET)
+  
 endif()
 
 if (COOLPROP_JAVA_MODULE)

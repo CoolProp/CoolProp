@@ -2012,7 +2012,7 @@ TEST_CASE("Assorted tests","[HAPropsSI]")
 {
     CHECK(ValidNumber(HumidAir::HAPropsSI("T", "H", 267769, "P", 104300, "W", 0.0)));
     CHECK(ValidNumber(HumidAir::HAPropsSI("T", "B", 252.84, "W", 5.097e-4, "P", 101325)));
-    CHECK(ValidNumber(HumidAir::HAPropsSI("T", "B", 290, "R", 1, "P", 101325)));
+    CHECK(ValidNumber(HumidAir::HAPropsSI("T", "B",290, "R", 1, "P", 101325)));
 }
 
 #endif /* CATCH_ENABLED */
