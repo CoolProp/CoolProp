@@ -173,7 +173,72 @@ static double Brent_HAProps_T(const std::string &OutputName, const std::string &
     BrentSolverResids BSR = BrentSolverResids(OutputName, Input1Name, Input1, Input2Name, Input2, TargetVal);
 
     std::string errstr;
-    T = CoolProp::Brent(BSR,T_min,T_max,1e-7,1e-4,50,errstr);
+    // Now we need to check the bounds and make sure that they are ok (don't yield invalid output)
+    // and actually bound the solution
+    double r_min = BSR.call(T_min);
+    bool T_min_valid = ValidNumber(r_min);
+    double r_max = BSR.call(T_max);
+    bool T_max_valid = ValidNumber(r_max);
+    if (!T_min_valid && !T_max_valid){
+        throw CoolProp::ValueError(format("Both T_min [%g] and T_max [%g] yield invalid output values in Brent_HAProps_T",T_min,T_max).c_str());
+    }
+    else if (T_min_valid && !T_max_valid){
+        while (!T_max_valid){
+            // Reduce T_max until it works
+            T_max = 0.95*T_max + 0.05*T_min;
+            r_max = BSR.call(T_max);
+            T_max_valid = ValidNumber(r_max);
+        }
+    }
+    else if (!T_min_valid && T_max_valid){
+        while (!T_min_valid){
+            // Increase T_min until it works
+            T_min = 0.95*T_min + 0.05*T_max;
+            r_min = BSR.call(T_min);
+            T_min_valid = ValidNumber(r_min);
+        }
+    }
+    T = CoolProp::Brent(BSR, T_min, T_max, 1e-7, 1e-4, 50, errstr);
+
+    return T;
+}
+static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
+{
+    double T;
+    class BrentSolverResids : public CoolProp::FuncWrapper1D
+    {
+    private:
+        double pp_water, psi_w, p, r;
+    public:
+        BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) { pp_water = psi_w*p; };
+        ~BrentSolverResids(){};
+
+        double call(double T){
+            double p_ws;
+            if (T>=273.16)
+            {
+                // Saturation pressure [Pa]
+                Water->update(CoolProp::QT_INPUTS, 0, T);
+                p_ws= Water->keyed_output(CoolProp::iP);
+            }
+            else
+            {
+                // Sublimation pressure [Pa]
+                p_ws=psub_Ice(T);
+
+            }
+            double f = f_factor(T, p);
+            double pp_water_calc = f*p_ws;
+            double psi_w_calc = pp_water_calc/p;
+            r = (psi_w_calc - psi_w)/psi_w;
+            return r;
+        }
+    };
+
+    BrentSolverResids Resids(psi_w, p);
+
+    std::string errstr; 
+    T = CoolProp::Secant(Resids, 150, 100, 1e-7, 100, errstr);
 
     return T;
 }
@@ -1327,13 +1392,10 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
             // Get the integer type codes
             Type1=Name2Type(Name1);
             Type2=Name2Type(Name2);
-
-            // First, if one of the inputs is something that can potentially yield
-            // an explicit solution at a given iteration of the solver, use it
-            if (Type1==GIVEN_RH || Type1==GIVEN_HUMRAT || Type1==GIVEN_TDP)
+            
+            // First see if humidity ratio is provided, will be the fastest option
+            if (Type1 == GIVEN_HUMRAT)
             {
-                // First input variable is a "nice" one
-
                 // MainInput is the one that you are using in the call to HAProps
                 MainInputValue=Value1;
                 strcpy(MainInputName,Name1);
@@ -1341,29 +1403,61 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
                 SecondaryInputValue=Value2;
                 strcpy(SecondaryInputName,Name2);
             }
-            else if (Type2==GIVEN_RH || Type2==GIVEN_HUMRAT || Type2==GIVEN_TDP)
+            else if (Type2 == GIVEN_HUMRAT)
             {
-                // Second input variable is a "nice" one
-
-                // MainInput is the one that you are using in the call to HAProps
-                MainInputValue=Value2;
-                strcpy(MainInputName,Name2);
+                // MainInput is the one that you are using in the call to HAPropsSI
+                MainInputValue=Value2; strcpy(MainInputName, Name2);
                 // SecondaryInput is the one that you are trying to match
-                SecondaryInputValue=Value1;
-                strcpy(SecondaryInputName,Name1);
+                SecondaryInputValue=Value1; strcpy(SecondaryInputName, Name1);
+            }
+            // Next, if one of the inputs is something that can potentially yield
+            // an explicit solution at a given iteration of the solver, use it
+            else if (Type1 == GIVEN_RH || Type1 == GIVEN_TDP)
+            {
+                // MainInput is the one that you are using in the call to HAProps
+                MainInputValue = Value1; strcpy(MainInputName, Name1);
+                // SecondaryInput is the one that you are trying to match
+                SecondaryInputValue = Value2; strcpy(SecondaryInputName, Name2);
+            }
+            else if (Type2 == GIVEN_RH || Type2 == GIVEN_TDP)
+            {
+                // MainInput is the one that you are using in the call to HAProps
+                MainInputValue = Value2; strcpy(MainInputName, Name2);
+                // SecondaryInput is the one that you are trying to match
+                SecondaryInputValue=Value1; strcpy(SecondaryInputName, Name1);
             }
             else
             {
                 printf("Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now\n");
-                return -1000;
+                return _HUGE;
             }
 
             double T_min = 210;
             double T_max = 450;
 			
 			if (Name2Type(MainInputName) == GIVEN_RH){
-				T_max = CoolProp::PropsSI("T","P",p,"Q",0,"Water") - 1;
+                if (MainInputValue < 1e-10){
+                    T_max = 1000;
+                }
+				else{
+                    T_max = CoolProp::PropsSI("T","P",p,"Q",0,"Water") - 1;
+                }
 			}
+            // Minimum drybulb temperature is the drybulb temperature corresponding to saturated air for the humidity ratio
+            // if the humidity ratio is provided
+            else if (Name2Type(MainInputName) == GIVEN_HUMRAT){
+                if (MainInputValue < 1e-10){
+                    T_min = 135; // Around the critical point of dry air
+                    T_max = 1000;
+                }
+                else{
+                    // Calculate the saturated humid air water partial pressure;
+                    double psi_w_sat = MoleFractionWater(T_min, p, GIVEN_HUMRAT, MainInputValue);
+                    //double pp_water_sat = psi_w_sat*p; // partial pressure of water, which is equal to f*p_{w_s}
+                    // Iteratively solve for temperature that will give desired pp_water_sat
+                    T_min = Secant_Tdb_at_saturated_W(psi_w_sat, p, T_min);
+                }
+            }
 
 			try{
                 // Use the Brent's method solver to find T.  Slow but reliable
@@ -1912,7 +2006,14 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]")
             CHECK(std::abs(actual/expected-1) < 0.01);
         }
     }
-
 }
+
+TEST_CASE("Assorted tests","[HAPropsSI]")
+{
+    CHECK(ValidNumber(HumidAir::HAPropsSI("T", "H", 267769, "P", 104300, "W", 0.0)));
+    CHECK(ValidNumber(HumidAir::HAPropsSI("T", "B", 252.84, "W", 5.097e-4, "P", 101325)));
+    CHECK(ValidNumber(HumidAir::HAPropsSI("T", "B", 290, "R", 1, "P", 101325)));
+}
+
 #endif /* CATCH_ENABLED */
 
