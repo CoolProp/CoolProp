@@ -23,11 +23,12 @@ void IncompressibleFluid::set_reference_state(double T0, double p0, double x0, d
     this->rhoref = rho(T0,p0,x0);
     this->pref = p0;
     this->href = h0;
+    this->sref = s0;
     // Now we take care of the energy related values
     this->uref = 0.0;
     this->uref = u(T0,p0,x0) - h0; // (value without ref) - (desired ref)
-    this->sref = 0.0;
-    this->sref = s(T0,p0,x0) - s0; // (value without ref) - (desired ref)
+    //this->sref = 0.0;
+    //this->sref = s(T0,p0,x0) - s0; // (value without ref) - (desired ref)
 }
 
 void IncompressibleFluid::validate(){

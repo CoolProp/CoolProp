@@ -150,7 +150,7 @@ public:
     double getpref() const {return pref;}
     double getxref() const {return xref;}
     double gethref() const {return href;}
-    double getsref() {return s(Tref,pref,xref) - sref;}
+    double getsref() {return sref;}
     double getTbase() const {return Tbase;}
     double getxbase() const {return xbase;}
 
