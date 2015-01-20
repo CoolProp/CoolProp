@@ -223,6 +223,12 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
         is_iterable1 = iterable(in1)
         is_iterable3 = iterable(in3)
         is_iterable5 = iterable(in5)
+        
+        if _numpy_supported and is_iterable3 and isinstance(in3, np.ndarray) and (np.prod(in3.shape) != max(in3.shape)): 
+            raise ValueError("Input 3 is not one-dimensional")
+        if _numpy_supported and is_iterable5 and isinstance(in5, np.ndarray) and (np.prod(in5.shape) != max(in5.shape)): 
+            raise ValueError("Input 5 is not one-dimensional")
+        
         if is_iterable1 or is_iterable3 or is_iterable5:
             # Prepare the output datatype
             if not is_iterable1:
