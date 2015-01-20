@@ -95,6 +95,7 @@
     #include <fstream>
     #include <cerrno>
     #include <numeric>
+    #include <set>
 
     /// The following code for the trim functions was taken from http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
     // trim from start
@@ -319,30 +320,71 @@
         return x;
     }
 
-    /// Some functions related to testing and comparison of values
-    bool inline check_abs(double A, double B, double D){
-        double max = std::abs(A);
-        double min = std::abs(B);
-        if (min>max) {
-            max = min;
-            min = std::abs(A);
-        }
-        if (max>DBL_EPSILON*1e3) return ( ( 1.0-min/max*1e0 ) < D );
-        else throw CoolProp::ValueError(format("Too small numbers: %f cannot be tested with an accepted error of %f for a machine precision of %f. ",max,D,DBL_EPSILON));
-    };
-    bool inline check_abs(double A, double B){
-        return check_abs(A,B,1e5*DBL_EPSILON);
-    };
-
-    template<class T> void normalize_vector(std::vector<T> &x)
+// From http://rosettacode.org/wiki/Power_set#C.2B.2B
+inline std::size_t powerset_dereference(std::set<std::size_t>::const_iterator v) { return *v; };
+      
+// From http://rosettacode.org/wiki/Power_set#C.2B.2B
+inline std::set<std::set<std::size_t> > powerset(std::set<std::size_t> const& set)
+{
+  std::set<std::set<std::size_t> > result;
+  std::vector<std::set<std::size_t>::const_iterator> elements;
+  do
+  {
+    std::set<std::size_t> tmp;
+    std::transform(elements.begin(), elements.end(),
+                   std::inserter(tmp, tmp.end()),
+                   powerset_dereference);
+    result.insert(tmp);
+    if (!elements.empty() && ++elements.back() == set.end())
     {
-        // Sum up all the elements in the vector
-        T sumx = std::accumulate( x.begin(), x.end(), static_cast<T>(0) );
-        // Normalize the components by dividing each by the sum
-        for (std::size_t i = 0; i < x.size(); ++i){
-            x[i] /= sumx;
-        }
-    };
+      elements.pop_back();
+    }
+    else
+    {
+      std::set<std::size_t>::const_iterator iter;
+      if (elements.empty())
+      {
+        iter = set.begin();
+      }
+      else
+      {
+        iter = elements.back();
+        ++iter;
+      }
+      for (; iter != set.end(); ++iter)
+      {
+        elements.push_back(iter);
+      }
+    }
+  } while (!elements.empty());
+ 
+  return result;
+}
+
+/// Some functions related to testing and comparison of values
+bool inline check_abs(double A, double B, double D){
+    double max = std::abs(A);
+    double min = std::abs(B);
+    if (min>max) {
+        max = min;
+        min = std::abs(A);
+    }
+    if (max>DBL_EPSILON*1e3) return ( ( 1.0-min/max*1e0 ) < D );
+    else throw CoolProp::ValueError(format("Too small numbers: %f cannot be tested with an accepted error of %f for a machine precision of %f. ",max,D,DBL_EPSILON));
+};
+bool inline check_abs(double A, double B){
+    return check_abs(A,B,1e5*DBL_EPSILON);
+};
+
+template<class T> void normalize_vector(std::vector<T> &x)
+{
+    // Sum up all the elements in the vector
+    T sumx = std::accumulate( x.begin(), x.end(), static_cast<T>(0) );
+    // Normalize the components by dividing each by the sum
+    for (std::size_t i = 0; i < x.size(); ++i){
+        x[i] /= sumx;
+    }
+};
 
 #define CATCH_ALL_ERRORS_RETURN_HUGE(x)    try{                                                                                \
                                                 x                                                                              \
