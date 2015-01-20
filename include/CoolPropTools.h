@@ -87,6 +87,7 @@
         #define DEPRECATED(func) func
     #endif
 
+    #include <iterator>
     #include <algorithm>
     #include <functional>
     #include <cctype>
