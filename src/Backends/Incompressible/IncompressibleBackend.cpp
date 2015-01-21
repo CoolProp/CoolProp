@@ -26,11 +26,17 @@ IncompressibleBackend::IncompressibleBackend() {
 IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) {
     //this->_fractions_id = fluid->getxid();
     this->fluid = fluid;
+    if (this->fluid->is_pure()){
+    	this->set_fractions(std::vector<long double>(1,0));
+    }
 }
 
 IncompressibleBackend::IncompressibleBackend(const std::string &fluid_name) {
     this->fluid = &get_incompressible_fluid(fluid_name);
     //this->_fractions_id = this->fluid->getxid();
+    if (this->fluid->is_pure()){
+    	this->set_fractions(std::vector<long double>(1,0));
+    }
 }
 
 IncompressibleBackend::IncompressibleBackend(const std::vector<std::string> &component_names) {
@@ -49,17 +55,22 @@ void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double valu
 
     clear();
 
-    if (get_debug_level()>=50) std::cout << format("Incompressible backend: _fractions are %s ",vec_to_string(_fractions).c_str()) << std::endl;
+    if (get_debug_level()>=50) {
+        std::cout << format("Incompressible backend: _fractions are %s ",vec_to_string(_fractions).c_str()) << std::endl;
+    }
+    if (_fractions.size()!=1){
+        throw ValueError(format("%s is an incompressible fluid, mass fractions must be set to a vector with ONE entry, not %d.",this->name().c_str(),_fractions.size()));
+    }
     if (fluid->is_pure()){
         this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_LIQUID;
         if (get_debug_level()>=50) std::cout << format("Incompressible backend: Fluid type is  %d ",this->_fluid_type) << std::endl;
-        if ((_fractions.size()!=1) || (_fractions[0]!=0.0)){
+        if (_fractions[0]!=0.0){
             throw ValueError(format("%s is a pure fluid. The composition has to be set to a vector with one entry equal to 0.0 or nothing. %s is not valid.",this->name().c_str(),vec_to_string(_fractions).c_str()));
         }
     } else {
         this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_SOLUTION;
         if (get_debug_level()>=50) std::cout << format("Incompressible backend: Fluid type is  %d ",this->_fluid_type) << std::endl;
-        if (_fractions.size()!=1 || ((_fractions[0]<0.0) || (_fractions[0]>1.0)) ){
+        if ( (_fractions[0]<0.0) || (_fractions[0]>1.0) ){
             throw ValueError(format("%s is a solution or brine. Mass fractions must be set to a vector with one entry between 0 and 1. %s is not valid.",this->name().c_str(),vec_to_string(_fractions).c_str()));
         }
     }

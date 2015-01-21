@@ -664,8 +664,20 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         // Compare reference state
 		{
         res = XLT.h(Tref,pref,xref);
+        CAPTURE(Tref);
+        CAPTURE(pref);
+        CAPTURE(xref);
+        CAPTURE(href)
+        CAPTURE(res)
         CHECK( check_abs(href,res,acc) );
+        }
+        {
         res = XLT.s(Tref,pref,xref);
+        CAPTURE(Tref);
+        CAPTURE(pref);
+        CAPTURE(xref);
+        CAPTURE(sref)
+        CAPTURE(res)
 		CHECK( check_abs(sref,res,acc) );
 		}
 
