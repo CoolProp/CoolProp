@@ -27,7 +27,7 @@ void IncompressibleFluid::set_reference_state(double T0, double p0, double x0, d
     this->uref = 0.0;
     this->uref = u(T0,p0,x0) - h0; // (value without ref) - (desired ref)
     this->sref = 0.0;
-    this->sref = s(T0,p0,x0) - s0; // (value without ref) - (desired ref)
+    this->sref = s(T0,p0,x0);
 }
 
 void IncompressibleFluid::validate(){
