@@ -65,6 +65,10 @@ protected:
     double uref, rhoref;
     double xbase, Tbase;
 
+    double _xref, _Tref, _pref;
+    double _href, _sref;
+    double _uref, _rhoref;
+
     /// These are the objects that hold the coefficients
     /** Note that all polynomials require a 2-dimensional array
      *  of coefficients. This array may have only one row or
@@ -272,7 +276,7 @@ protected:
      *  pressure employing functions for internal energy and
      *  density. Provides consistent formulations. */
     double h_u(double T, double p, double x) {
-        return u(T,p,x)+(p-pref)/rhoref;
+        return u(T,p,x)+(p-_pref)/_rhoref;
     };
 
     /// Internal energy from h, p and rho.
@@ -280,7 +284,7 @@ protected:
      *  and pressure employing functions for enthalpy and
      *  density. Provides consistent formulations. */
     double u_h(double T, double p, double x) {
-        return h(T,p,x)-(p-pref)/rhoref;
+        return h(T,p,x)-(p-_pref)/_rhoref;
     };
 
 
