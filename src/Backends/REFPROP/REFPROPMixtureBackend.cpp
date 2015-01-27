@@ -251,23 +251,6 @@ bool load_REFPROP()
             return false;
         }
 
-        #if defined(__ISWINDOWS__)
-
-        // Get data associated with path using the windows libraries,
-        // and if you can (result == 0), the path exists
-        #ifdef __MINGW32__
-            struct stat buf;
-            if ( stat( "c:\\Program Files\\REFPROP\\fluids", &buf) != 0){
-                throw CoolProp::ValueError("REFPROP fluid files must be copied to c:\\Program Files\\REFPROP\\fluids");
-            }
-        #else
-            struct _stat buf;
-            if ( _stat( "c:\\Program Files\\REFPROP\\fluids", &buf) != 0){
-                throw CoolProp::ValueError("REFPROP fluid files must be copied to c:\\Program Files\\REFPROP\\fluids");
-            }
-        #endif
-        #endif
-
         if (setFunctionPointers()!=COOLPROP_OK)
         {
                           printf("There was an error setting the REFPROP function pointers, check types and names in header file.\n");
