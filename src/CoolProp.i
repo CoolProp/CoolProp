@@ -46,6 +46,7 @@ namespace std {
 #define SWIG
 #include "Configuration.h"
 #undef SWIG
+#include "HumidAirProp.h"
 %}
 
 %include "DataStructures.h"
@@ -53,3 +54,4 @@ namespace std {
 %include "CoolProp.h"
 %include "PhaseEnvelope.h"
 %include "Configuration.h"
+%include "HumidAirProp.h"
