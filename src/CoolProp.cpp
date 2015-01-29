@@ -499,6 +499,12 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
     SECTION("Single state, single output, predefined mixture"){
         CHECK(ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"R410A.mix")));
     };
+    SECTION("Single state, single output, predefined mixture from REFPROP"){
+        CHECK(ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"REFPROP::R410A.mix")));
+    };
+    SECTION("Single state, single output, bad predefined mixture from REFPROP"){
+        CHECK(!ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"REFPROP::RRRRRR.mix")));
+    };
     SECTION("Predefined mixture"){
         std::vector<double> p(1, 101325), Q(1, 1.0), z;
         std::vector<std::string> outputs(1,"T"); outputs.push_back("Dmolar");

@@ -379,6 +379,40 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
     }
     else
     {
+        if (N == 1 && upper(components_joined_raw).find(".MIX") == components_joined_raw.size() - 4){
+            // It's a predefined mixture
+            ierr = 0;
+            std::vector<double> x(ncmax);
+            char mix[255];
+            strcpy(mix, components_joined_raw.c_str());
+            SETMIXdll(mix, 
+                      "HMX.BNC", 
+                      "DEF", 
+                      &N, 
+                      component_string, 
+                      &(x[0]), 
+                      &ierr, 
+                      herr,
+                      255,
+                      255,
+                      3,
+                      10000,
+                      255);
+            if (static_cast<int>(ierr) <= 0){
+                this->Ncomp = N;
+                mole_fractions.resize(N);
+                mole_fractions_liq.resize(N);
+                mole_fractions_vap.resize(N);
+                LoadedREFPROPRef = components_joined_raw;
+                if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
+                if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
+                set_mole_fractions(std::vector<long double>(x.begin(), x.begin()+N));
+                return;
+            }
+            else{
+                throw ValueError(format("Unable to load mixture: %s",components_joined_raw.c_str()));
+            }
+        }
         // Loop over the file names - first we try with nothing, then .fld, then .FLD, then .ppf - means you can't mix and match
         for (unsigned int k = 0; k < number_of_endings; k++)
         {
