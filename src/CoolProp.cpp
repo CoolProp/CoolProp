@@ -483,7 +483,6 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
     SECTION("Single state, trivial output, pure incompressible"){
         CHECK(ValidNumber(CoolProp::PropsSI("Tmin","P",0,"T",0,"INCOMP::DowQ")));
     };
-    std::cout << get_global_param_string("errstring");
     SECTION("Bad input pair"){
         CHECK(!ValidNumber(CoolProp::PropsSI("D","Q",0,"Q",0,"Water")));
     };

@@ -379,7 +379,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
     }
     else
     {
-        if (N == 1 && upper(components_joined_raw).find(".MIX") == components_joined_raw.size() - 4){
+        if (N == 1 && upper(components_joined_raw).find(".MIX") != std::string::npos){
             // It's a predefined mixture
             ierr = 0;
             std::vector<double> x(ncmax);
