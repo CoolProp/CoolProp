@@ -869,6 +869,7 @@ if (COOLPROP_JAVASCRIPT_MODULE)
   add_dependencies (coolprop generate_headers)
   SET_TARGET_PROPERTIES(coolprop PROPERTIES PREFIX "" SUFFIX .js)
   install (TARGETS coolprop DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
+  install (FILES  "${CMAKE_SOURCE_DIR}/Web/coolprop/wrappers/Javascript/index.html" DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
 endif()
 
 if (COOLPROP_MATHEMATICA_MODULE)
