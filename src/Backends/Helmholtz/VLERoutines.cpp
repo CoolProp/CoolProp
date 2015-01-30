@@ -1180,8 +1180,8 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
     }
     while(std::abs(f) > 1e-12 && iter < options.Nstep_max);
 
-    HEOS.SatL->update_TP_guessrho(T, p, rhomolar_liq);
-    HEOS.SatV->update_TP_guessrho(T, p, rhomolar_vap);
+    HEOS.SatL->update_TP_guessrho(T, p, HEOS.SatL->rhomolar());
+    HEOS.SatV->update_TP_guessrho(T, p, HEOS.SatV->rhomolar());
 
     options.p = HEOS.SatL->p();
     options.T = HEOS.SatL->T();
