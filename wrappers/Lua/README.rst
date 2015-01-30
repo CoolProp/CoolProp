@@ -20,6 +20,10 @@ Installation
 
 This wrapper comes with a support for both LuaJIT FFI and PUC-Lua C-API.
 
+To build a shared library of CoolProp, follow the instructions listed here:
+http://www.coolprop.org/coolprop/wrappers/SharedLibrary/index.html
+
+
 **Installing with Make**
 
 1. Run ``make``

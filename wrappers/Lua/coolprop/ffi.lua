@@ -61,9 +61,9 @@ function coolprop.get_global_param_string(param)
     return nil
 end
 function coolprop.get_parameter_information_string(key)
-    local ok, value = pcall(lib.get_parameter_information_string, key, bub, 4096)
-    if ok and value == 1 then return ffi_str(bub) end
-    return nil
+    local value = lib.get_parameter_information_string(key, bub, 4096)
+    if value == 0 then return nil end
+    return ffi_str(bub)
 end
 function coolprop.get_mixture_binary_pair_data(cas1, cas2, key)
     return tonumber(lib.get_mixture_binary_pair_data(cas1, cas2, key))
@@ -87,9 +87,9 @@ function coolprop.K2F(k)
     return lib.K2F(k)
 end
 function coolprop.get_param_index(param)
-    local ok, value = pcall(lib.get_param_index, param)
-    if ok then return tonumber(value) end
-    return nil
+    local value = lib.get_param_index(param)
+    if value == -1 then return nil end
+    tonumber(value)
 end
 function coolprop.saturation_ancillary(fluid, output, q, input, value)
     local v = lib.saturation_ancillary(fluid, output, q, input, value)

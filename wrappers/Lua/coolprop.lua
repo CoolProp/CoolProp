@@ -32,7 +32,8 @@ function coolprop.get_global_param_string(param)
 end
 function coolprop.get_parameter_information_string(key)
     local e, s = lib.get_parameter_information_string(key)
-    return e == 1 and s or nil
+    if e == 0 then return nil end
+    return s
 end
 function coolprop.get_mixture_binary_pair_data(cas1, cas2, key)
     return tonumber(lib.get_mixture_binary_pair_data(cas1, cas2, key))
@@ -56,7 +57,9 @@ function coolprop.K2F(k)
     return lib.K2F(k)
 end
 function coolprop.get_param_index(param)
-    return lib.get_param_index(param)
+    local value = lib.get_param_index(param)
+    if value == -1 then return nil end
+    tonumber(value)
 end
 function coolprop.saturation_ancillary(fluid, output, q, input, value)
     local v = lib.saturation_ancillary(fluid, output, q, input, value)
@@ -83,5 +86,14 @@ function coolprop.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3)
 end
 function coolprop.error()
     return coolprop.get_global_param_string("errstring")
+end
+function coolprop.FluidsList()
+    return coolprop.get_global_param_string("FluidsList")
+end
+function coolprop.version()
+    return coolprop.get_global_param_string("version")
+end
+function coolprop.gitrevision()
+    return coolprop.get_global_param_string("gitrevision")
 end
 return coolprop
