@@ -12,7 +12,7 @@ Hello World with Lua Wrapper
 ::
 
   local cp = require "coolprop"
-  print(cp.Props1SI("Water", "D"))
+  print(cp.PropsSI("d(Hmass)/d(T)|P", "P", 101325, "T", 300, "Water"))
 
 
 Installation
@@ -92,7 +92,7 @@ Returns global parameter string. On error, returns ``nil``.
   print(cp.get_global_param_string("predefined_mixtures"))
 
 
-**``number coolprop.get_param_index(param)``**
+**number coolprop.get_param_index(param)**
 
 Returns parameter index.
 
@@ -152,7 +152,7 @@ Returns the version of the CoolLib library that is installed.
   print(cp.version())
 
 
-**string coolprop.gitrevision()``**
+**string coolprop.gitrevision()**
 
 Returns the Git revision of the CoolLib library that is installed.
 
@@ -162,7 +162,7 @@ Returns the Git revision of the CoolLib library that is installed.
   print(cp.gitrevision())
 
 
-**number coolprop.get_debug_level()``**
+**number coolprop.get_debug_level()**
 
 Returns the current debug level.
 
@@ -172,7 +172,7 @@ Returns the current debug level.
   print(cp.get_debug_level())
 
 
-**coolprop.set_debug_level(level)``**
+**coolprop.set_debug_level(level)**
 
 Sets the debug level.
 
@@ -182,7 +182,7 @@ Sets the debug level.
   cp.set_debug_level(0)
 
 
-**boolean coolprop.redirect_stdout(file)``**
+**boolean coolprop.redirect_stdout(file)**
 
 Sets the output to a file (to given path of the file).
 
