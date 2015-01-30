@@ -254,8 +254,9 @@ EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Ou
 }
 EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, char * Output, int n)
 {
+    int key;
     try{
-        int key = CoolProp::get_parameter_index(param);
+        key = CoolProp::get_parameter_index(param);
     }
     catch(std::exception &){
         return 0;
