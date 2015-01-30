@@ -228,7 +228,12 @@ EXPORT_CODE void CONVENTION set_debug_level(int level){
     CoolProp::set_debug_level(level);
 }
 EXPORT_CODE long CONVENTION get_param_index(const char * param){
-    return CoolProp::get_parameter_index(param);
+    try{
+        return CoolProp::get_parameter_index(param);
+    }
+    catch(std::exception &){
+        return -1;
+    }
 }
 EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Output, int n)
 {
@@ -249,7 +254,12 @@ EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Ou
 }
 EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, char * Output, int n)
 {
-    int key = CoolProp::get_parameter_index(param);
+    try{
+        int key = CoolProp::get_parameter_index(param);
+    }
+    catch(std::exception &){
+        return 0;
+    }
     if (key >= 0){
         std::string s = CoolProp::get_parameter_information(key, Output);
         if (s.size() < static_cast<unsigned int>(n)){
