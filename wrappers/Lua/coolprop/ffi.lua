@@ -4,6 +4,7 @@ local ffi_str    = ffi.string
 local ffi_load   = ffi.load
 local ffi_cdef   = ffi.cdef
 local ffi_typeof = ffi.typeof
+local pcall      = pcall
 local huge       = math.huge
 ffi_cdef[[
 double Props1SI(const char *FluidName, const char* Output);
@@ -32,21 +33,18 @@ local bub = ffi_new(but, 4096)
 local ok, lib = pcall(ffi_load, "CoolProp")
 if not ok then ok, lib = pcall(ffi_load, "coolprop") end
 assert(ok, "Unable to load CoolProp. Please check that the CoolProp shared library is in a default search path for dynamic libraries of your operating system.")
-local coolprop = newtab(0, 18)
-function coolprop.err()
-    return coolprop.get_global_param_string("errstring")
-end
+local coolprop = newtab(0, 21)
 function coolprop.Props1SI(fluidname, output)
     local v = lib.Props1SI(fluidname, output)
     if v == huge then
-        return nil, coolprop.err()
+        return nil, coolprop.error()
     end
     return v
 end
 function coolprop.PropsSI(output, name1, prop1, name2, prop2, ref)
     local v = lib.PropsSI(output, name1, prop1, name2, prop2, ref)
     if v == huge then
-        return nil, coolprop.err()
+        return nil, coolprop.error()
     end
     return v
 end
@@ -63,9 +61,8 @@ function coolprop.get_global_param_string(param)
     return nil
 end
 function coolprop.get_parameter_information_string(key)
-    if lib.get_parameter_information_string(key, bub, 4096) == 1 then
-        return ffi_str(bub)
-    end
+    local ok, value = pcall(lib.get_parameter_information_string, key, bub, 4096)
+    if ok and value == 1 then return ffi_str(bub) end
     return nil
 end
 function coolprop.get_mixture_binary_pair_data(cas1, cas2, key)
@@ -90,10 +87,16 @@ function coolprop.K2F(k)
     return lib.K2F(k)
 end
 function coolprop.get_param_index(param)
-    return tonumber(lib.get_param_index(param))
+    local ok, value = pcall(lib.get_param_index, param)
+    if ok then return tonumber(value) end
+    return nil
 end
 function coolprop.saturation_ancillary(fluid, output, q, input, value)
-    return lib.saturation_ancillary(fluid, output, q, input, value)
+    local v = lib.saturation_ancillary(fluid, output, q, input, value)
+    if v == huge then
+        return nil, coolprop.error()
+    end
+    return v
 end
 function coolprop.redirect_stdout(file)
     return lib.redirect_stdout(file) == 1
@@ -107,8 +110,20 @@ end
 function coolprop.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3)
     local v = lib.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3)
     if v == huge then
-        return nil, coolprop.err()
+        return nil, coolprop.error()
     end
     return v
+end
+function coolprop.error()
+    return coolprop.get_global_param_string("errstring")
+end
+function coolprop.FluidsList()
+    return coolprop.get_global_param_string("FluidsList")
+end
+function coolprop.version()
+    return coolprop.get_global_param_string("version")
+end
+function coolprop.gitrevision()
+    return coolprop.get_global_param_string("gitrevision")
 end
 return coolprop

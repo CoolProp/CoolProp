@@ -1,26 +1,21 @@
 if jit and jit.status() then
     return require "coolprop.ffi"
 end
-
 local huge = math.huge
-
 local ok, lib = pcall(require, "coolprop.capi")
-assert(ok, "Unable to load CoolProp. Please check that the CoolProp is available. Both the Lua C API wrapper, and the CoolProp shared library.")
+assert(ok, "Unable to load Lua CoolProp C API Wrapper.")
 local coolprop = {}
-function coolprop.err()
-    return coolprop.get_global_param_string("errstring")
-end
 function coolprop.Props1SI(fluidname, output)
     local v = lib.Props1SI(fluidname, output)
     if v == huge then
-        return nil, coolprop.err()
+        return nil, coolprop.error()
     end
     return v
 end
 function coolprop.PropsSI(output, name1, prop1, name2, prop2, ref)
     local v = lib.PropsSI(output, name1, prop1, name2, prop2, ref)
     if v == huge then
-        return nil, coolprop.err()
+        return nil, coolprop.error()
     end
     return v
 end
@@ -64,7 +59,11 @@ function coolprop.get_param_index(param)
     return lib.get_param_index(param)
 end
 function coolprop.saturation_ancillary(fluid, output, q, input, value)
-    return lib.saturation_ancillary(fluid, output, q, input, value)
+    local v = lib.saturation_ancillary(fluid, output, q, input, value)
+    if v == huge then
+        return nil, coolprop.error()
+    end
+    return v
 end
 function coolprop.redirect_stdout(file)
     return lib.redirect_stdout(file) == 1
@@ -78,8 +77,11 @@ end
 function coolprop.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3)
     local v = lib.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3)
     if v == huge then
-        return nil, coolprop.err()
+        return nil, coolprop.error()
     end
     return v
+end
+function coolprop.error()
+    return coolprop.get_global_param_string("errstring")
 end
 return coolprop
