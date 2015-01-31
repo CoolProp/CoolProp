@@ -115,8 +115,8 @@ else
     printMessage "Preparing the docs and moving them into the $BINFOLDER folder for staging"
     rsync $RSYNC_DRY_RUN $RSYNC_OPTS "frs.sf.net-$SFUSER:/home/frs/project/coolprop/CoolProp/$DOC4FILES" "$(basename $DOC4FILES)"
     unzip -qo "$(basename $DOC4FILES)" -d "$DOC4FOLDER"
-	zip -rq "$DOCFILE" $SPHFOLDER/* -x */$(basename $DOC4FOLDER)/*
-	mv "$DOCFILE" "$DOCFOLDER"
+    zip -rq "$DOCFILE" $SPHFOLDER/* -x */$(basename $DOC4FOLDER)/*
+    mv "$DOCFILE" "$DOCFOLDER"
     #
     if [ "$CPVERSION" == "nightly" ]; then
         printMessage "Detected nightly release, updating README.rst.txt"

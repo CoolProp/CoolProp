@@ -1,0 +1,29 @@
+#!/bin/bash
+# A little script to build the JavaScript repository on the
+# web directory. Can be run to regenerate the repo in case
+# it case it gets deleted accidentally. 
+#
+FILDIR="/home/frs/project/coolprop/CoolProp"
+WEBDIR="/home/project-web/coolprop/htdocs"
+#
+LATTMP="${FILDIR}/latest/dummy"
+TARGETDIR="${WEBDIR}"/jscript
+mkdir -p "${TARGETDIR}"
+#
+function parsePath {
+    local CURFILE="$1"
+    local CPVERSION=$(cut -d/ -f7 <<<"${CURFILE}")
+    local RES="${TARGETDIR}/coolprop-${CPVERSION}.js"
+    echo "${RES}"
+}
+#
+JSFILES="$(find ${FILDIR} -iname '*coolprop.js')"
+for CURFILE in $JSFILES; do 
+    TARGETFILE="$(parsePath $CURFILE)"
+    ln -s "${CURFILE}" "${TARGETFILE}"
+done
+#
+CURVER="${TARGETDIR}/$(ls ${TARGETDIR} | tail -n 2 | head -n 1)"
+LATVER="$(parsePath $LATTMP)"
+ln -s "${CURVER}" "${LATVER}"
+exit 0
