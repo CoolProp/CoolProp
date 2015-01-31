@@ -6,7 +6,6 @@
 FILDIR="/home/frs/project/coolprop/CoolProp"
 WEBDIR="/home/project-web/coolprop/htdocs"
 #
-LATTMP="${FILDIR}/latest/dummy"
 TARGETDIR="${WEBDIR}"/jscript
 mkdir -p "${TARGETDIR}"
 #
@@ -20,10 +19,12 @@ function parsePath {
 JSFILES="$(find ${FILDIR} -iname '*coolprop.js')"
 for CURFILE in $JSFILES; do 
     TARGETFILE="$(parsePath $CURFILE)"
-    ln -s "${CURFILE}" "${TARGETFILE}"
+    rsync "${CURFILE}" "${TARGETFILE}"
 done
 #
-CURVER="${TARGETDIR}/$(ls ${TARGETDIR} | tail -n 2 | head -n 1)"
-LATVER="$(parsePath $LATTMP)"
-ln -s "${CURVER}" "${LATVER}"
+pushd "${TARGETDIR}"
+CURVER="$(ls | tail -n 3 | head -n 1)"
+LATVER="coolprop-latest.js"
+ln -sf "${CURVER}" "${LATVER}"
+popd
 exit 0
