@@ -10,7 +10,9 @@ Pre-Compiled Binaries
 
 * Download the precompiled binaries from :sfdownloads:`Javascript`, or the development versions from the buildbot server at :sfnightly:`Javascript`
 
-* Load your js file into your website, following the structure of `the example here <https://github.com/CoolProp/CoolProp/blob/master/wrappers/Javascript/index.html>`_, which is also included at the above download link
+* Load your js file into your website, following the structure of `the example here <https://github.com/CoolProp/CoolProp/blob/master/Web/coolprop/wrappers/Javascript/index.html>`_, which is also included at the above download link
+
+* You can also build your website and include our hosted Javascript repository. You will never ever have to update your library by linking directly to ``<script src="http://www.coolprop.sourceforge.net/jscript/coolprop-latest.js"></script>`` in your HTML header. Until now, this file does not get updated automatically, so please file an issue on 
 
 User-Compiled Binaries
 ======================
