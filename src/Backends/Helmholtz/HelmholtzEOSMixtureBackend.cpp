@@ -20,6 +20,7 @@
 //#include "CoolProp.h"
 
 #include "HelmholtzEOSMixtureBackend.h"
+#include "HelmholtzEOSBackend.h"
 #include "Fluids/FluidLibrary.h"
 #include "Solvers.h"
 #include "MatrixMath.h"
@@ -445,7 +446,14 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
     }
     else
     {
-        throw NotImplementedError(format("viscosity not implemented for mixtures"));
+        set_warning_string("Mixture model for viscosity is highly approximate");
+        long double summer = 0;
+        for (std::size_t i = 0; i < mole_fractions.size(); ++i){
+            shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend(components[i]));
+            HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
+            summer += mole_fractions[i]*log(HEOS->viscosity());
+        }
+        return exp(summer);
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_conductivity_background(void)
@@ -543,7 +551,14 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
     }
     else
     {
-        throw NotImplementedError(format("viscosity not implemented for mixtures"));
+        set_warning_string("Mixture model for conductivity is highly approximate");
+        long double summer = 0;
+        for (std::size_t i = 0; i < mole_fractions.size(); ++i){
+            shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend(components[i]));
+            HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
+            summer += mole_fractions[i]*HEOS->conductivity();
+        }
+        return summer;
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_Ttriple(void)
