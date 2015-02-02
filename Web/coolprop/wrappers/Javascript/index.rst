@@ -53,7 +53,7 @@ We are following the instructions from `emscripten.org <http://kripken.github.io
 
 10. Build the Javascript module::
 
-     cmake .. -DCOOLPROP_JAVASCRIPT_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Platform/Emscripten.cmake
+     cmake .. -DCOOLPROP_JAVASCRIPT_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake
 
 Windows
 -------
@@ -85,4 +85,4 @@ Windows
 
 7. Build the Javascript module::
 
-    cmake ../.. -DCOOLPROP_JAVASCRIPT_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=%EMSCRIPTEN%/cmake/Platform/Emscripten.cmake
+    cmake ../.. -DCOOLPROP_JAVASCRIPT_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=%EMSCRIPTEN%/cmake/Modules/Platform/Emscripten.cmake
