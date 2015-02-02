@@ -47,10 +47,18 @@ cdef class AbstractState:
     cpdef double molar_mass(self) except *
     cpdef double keyed_output(self, constants_header.parameters) except *
     
+    ## ----------------------------------------	
+    ##        Derivatives
+    ## ----------------------------------------
+    
     cpdef long double first_partial_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
     cpdef long double second_partial_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
     cpdef long double first_saturation_deriv(self, constants_header.parameters, constants_header.parameters) except *
     cpdef long double second_saturation_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
+    
+    cpdef double first_two_phase_deriv(self, constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant) except *
+    cpdef double second_two_phase_deriv(self, constants_header.parameters Of, constants_header.parameters Wrt1, constants_header.parameters Constant1, constants_header.parameters Wrt2, constants_header.parameters Constant2) except *
+    cpdef double first_two_phase_deriv_splined(self ,constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant, double x_end) except *
     
     cpdef double melting_line(self, int, int, double) except *
     cpdef bool has_melting_line(self) except *
