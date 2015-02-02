@@ -2732,8 +2732,6 @@ long double HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
         long double c = drho_dh_liq__constp;
         long double d = rho_liq;
         
-        std::cout <<format("%0.15Lg %0.15Lg %0.15g %g\n", a, Abracket, p(), keyed_output(h_key));
-        
         // Either the spline value or drho/dh|p can be directly evaluated now
         long double rho_spline = a*POW3(Delta) + b*POW2(Delta) + c*Delta + d;
         long double d_rho_spline_dh__constp = 3*a*POW2(Delta) + 2*b*Delta + c;
@@ -2744,7 +2742,7 @@ long double HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
             return d_rho_spline_dh__constp;
         }
         
-        // Its drho/dp|h
+        // It's drho/dp|h
         // ... calculate some more things
         
         // At the saturated state
@@ -2764,8 +2762,6 @@ long double HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
         // Faking single-phase
         long double drho_dp__consth_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
         long double d2rhodhdp_liq = Liq->second_partial_deriv(rho_key, h_key, p_key, p_key, h_key); // ?
-        
-        //d2rhodhdp_liq = -5.88936E-08;
         
         // Derivatives at the end point
         long double drho_dp__consth_end = End->calc_first_two_phase_deriv(rho_key, p_key, h_key);
@@ -2788,7 +2784,6 @@ long double HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
         long double dc_dp = d2rhodhdp_liq;
         long double dd_dp = drhoL_dp_sat;
         
-        std::cout <<format("%0.15Lg %0.15Lg\n", da_dp, d_Abracket_dp_consth);
         long double d_rho_spline_dp__consth = (3*a*POW2(Delta) + 2*b*Delta + c)*d_Delta_dp__consth + POW3(Delta)*da_dp + POW2(Delta)*db_dp + Delta*dc_dp + dd_dp;
     
         return d_rho_spline_dp__consth;
