@@ -1628,6 +1628,35 @@ TEST_CASE("Check the first two-phase derivative using splines", "[first_two_phas
 	}
 }
 
+TEST_CASE("Check the phase flags", "[phase]")
+{
+    SECTION("subcooled liquid"){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(PT_INPUTS, 101325, 300);
+        CHECK(AS->phase() == iphase_liquid);
+    }
+    SECTION("superheated gas"){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(PT_INPUTS, 101325, 400);
+        CHECK(AS->phase() == iphase_gas);
+    }
+    SECTION("supercritical gas"){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(PT_INPUTS, 1e5, 800);
+        CHECK(AS->phase() == iphase_supercritical_gas);
+    }
+    SECTION("supercritical liquid"){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(PT_INPUTS, 1e8, 500);
+        CHECK(AS->phase() == iphase_supercritical_liquid);
+    }
+    SECTION("supercritical"){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(PT_INPUTS, 1e8, 800);
+        CHECK(AS->phase() == iphase_supercritical);
+    }
+}
+
 /*
 TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
 {
