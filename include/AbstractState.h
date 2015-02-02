@@ -290,6 +290,9 @@ protected:
 	
 	virtual long double calc_first_saturation_deriv(parameters Of1, parameters Wrt1){throw NotImplementedError("calc_first_saturation_deriv is not implemented for this backend");};
 	virtual long double calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2){throw NotImplementedError("calc_second_saturation_deriv is not implemented for this backend");};
+    virtual long double calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant){throw NotImplementedError("calc_first_two_phase_deriv is not implemented for this backend");};
+    virtual long double calc_second_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant, parameters Wrt2, parameters Constant2){throw NotImplementedError("calc_second_two_phase_deriv is not implemented for this backend");};
+    virtual long double calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, long double x_end){throw NotImplementedError("calc_first_two_phase_deriv_splined is not implemented for this backend");};
     
     virtual long double calc_saturated_liquid_keyed_output(parameters key){throw NotImplementedError("calc_saturated_liquid_keyed_output is not implemented for this backend");};
     virtual long double calc_saturated_vapor_keyed_output(parameters key){throw NotImplementedError("calc_saturated_vapor_keyed_output is not implemented for this backend");};
@@ -570,6 +573,38 @@ public:
 	 * @param Wrt2 The parameter that the second derivative is taken with respect to
 	 * */
 	long double second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2){return calc_second_saturation_deriv(Of1,Wrt1,Of2,Wrt2);};
+    
+    /**
+     * @brief Calculate the first "two-phase" derivative as described by Thorade and Sadaat, EAS, 2013
+     * 
+     * Implementing the algorithms and ideas of:
+	 * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation", 
+	 * Environmental Earth Sciences, December 2013, Volume 70, Issue 8, pp 3497-3503
+     * 
+     * Spline evaluation is as described in:
+     * S Quoilin, I Bell, A Desideri, P Dewallef, V Lemort,
+     * "Methods to increase the robustness of finite-volume flow models in thermodynamic systems",
+     * Energies 7 (3), 1621-1640
+     * 
+     * \note Not all derivatives are supported!
+     * 
+     * @param Of The parameter to be derived
+     * @param Wrt The parameter that the derivative is taken with respect to
+     * @param Constant The parameter that is held constant
+     * @param type_flag A flag describing how the derivative should be calculated, either normal or using splines
+     * @return 
+     */
+    double first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant){
+        return calc_first_two_phase_deriv(Of, Wrt, Constant);
+    };
+    
+    double second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2){
+        return calc_second_two_phase_deriv(Of, Wrt1, Constant1, Wrt2, Constant2);
+    };
+    
+    double first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, double x_end){
+        return calc_first_two_phase_deriv_splined(Of, Wrt, Constant, x_end);
+    };
     
     // ----------------------------------------
     //    Phase envelope for mixtures

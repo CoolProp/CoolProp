@@ -126,6 +126,15 @@ cdef class AbstractState:
     cpdef long double second_saturation_deriv(self, constants_header.parameters OF1 , constants_header.parameters WRT1, constants_header.parameters OF2, constants_header.parameters WRT2) except *: 
         """ Get the second derivative along the saturation curve - wrapper of c++ function :cpapi:`CoolProp::AbstractState::second_saturation_deriv` """
         return self.thisptr.second_saturation_deriv(OF1, WRT1, OF2, WRT2)
+    cpdef double first_two_phase_deriv(self, constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant) except *:
+        """ Get the first two-phase derivative - wrapper of C++ function :cpapi:`CoolProp::AbstractState::first_two_phase_deriv` """
+        return self.thisptr.first_two_phase_deriv(Of, Wrt, Constant)
+    cpdef double second_two_phase_deriv(self, constants_header.parameters Of1, constants_header.parameters Wrt1, constants_header.parameters Constant1, constants_header.parameters Wrt2, constants_header.parameters Constant2) except *:
+        """ Get the second two-phase derivative - wrapper of C++ function :cpapi:`CoolProp::AbstractState::second_two_phase_deriv` """
+        return self.thisptr.second_two_phase_deriv(Of1, Wrt1, Constant1, Wrt2, Constant2)
+    cpdef double first_two_phase_deriv_splined(self, constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant, double x_end) except *:
+        """ Get the first two-phase derivative using splines - wrapper of C++ function :cpapi:`CoolProp::AbstractState::first_two_phase_deriv_splined` """
+        return self.thisptr.first_two_phase_deriv_splined(Of, Wrt, Constant, x_end)
         
     ## ----------------------------------------	
     ##        Melting Line

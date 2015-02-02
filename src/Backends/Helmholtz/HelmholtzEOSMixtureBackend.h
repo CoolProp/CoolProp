@@ -69,7 +69,11 @@ public:
     long double calc_ODP();
 	
 	long double calc_first_saturation_deriv(parameters Of1, parameters Wrt1);
+    long double calc_first_saturation_deriv(parameters Of1, parameters Wrt1, HelmholtzEOSMixtureBackend &SatL, HelmholtzEOSMixtureBackend &SatV);
 	long double calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2);
+    long double calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
+    long double calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
+    long double calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, long double x_end);
     
 	/// Calculate the phase once the state is fully calculated but you aren't sure if it is liquid or gas or ...
 	void recalculate_singlephase_phase();
