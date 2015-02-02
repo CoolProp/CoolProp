@@ -146,7 +146,7 @@
     EXPORT_CODE double CONVENTION K2F(double T_K);
     /** \brief Get the index for a parameter "T", "P", etc.
      * 
-     * @returns index The index as a long
+     * @returns index The index as a long.  If input is invalid, returns -1
      */
     EXPORT_CODE long CONVENTION get_param_index(const char *param);
     /** \brief Redirect all output that would go to console (stdout) to a file

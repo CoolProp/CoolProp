@@ -11,6 +11,7 @@ namespace CoolProp{
 
 void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
 {
+    if (HEOS.get_mole_fractions_ref().size() < 2){throw ValueError("Cannot build phase envelope for pure fluid");}
     std::size_t failure_count = 0;
     // Set some imput options
     SaturationSolvers::mixture_VLE_IO io;

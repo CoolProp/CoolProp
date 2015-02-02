@@ -6,7 +6,20 @@ Java Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled binaries can be downloaded from :sfdownloads:`Java`, which come from :sfnightly:`the nightly snapshots <Java>`.
+
+Pre-compiled binaries can be downloaded from :sfdownloads:`Java`.  Development binaries coming from the buildbot server can be found at :sfnightly:`Java`.
+
+Download the ``platform-independent.7z`` file and expand it to a folder called ``platform-independent`` using 7-zip.  Download the special Java shared library for your system architecture to the same location from either :sfdownloads:`Java` (release) or :sfnightly:`Java` (development).  Copy the Example.java file to the same location.  You will need to have a copy of some version of java.
+
+When you are finished, you should have a folder layout something like ::
+
+    main
+     |- CoolProp.dll
+     |- Example.java
+     |- platform-independent
+        |- AbstractState.java
+        |- Configuration.java
+        |- ...
 
 Usage
 -----

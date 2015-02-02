@@ -160,6 +160,7 @@
         <IncludePath Value="."/>
         <IncludePath Value="../../include"/>
         <IncludePath Value="../../externals/Eigen"/>
+        <IncludePath Value="../../externals/REFPROP-headers"/>
         <Preprocessor Value="ENABLE_CATCH"/>
       </Compiler>
       <Linker Options="" Required="yes"/>
@@ -201,6 +202,7 @@
         <IncludePath Value="."/>
         <IncludePath Value="../../include"/>
         <IncludePath Value="../../externals/Eigen"/>
+        <IncludePath Value="../../externals/REFPROP-headers"/>
         <Preprocessor Value="NDEBUG"/>
         <Preprocessor Value="ENABLE_CATCH"/>
       </Compiler>

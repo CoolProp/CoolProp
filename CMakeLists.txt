@@ -29,7 +29,7 @@ project(${project_name})
 # Project version
 set (COOLPROP_VERSION_MAJOR 5)
 set (COOLPROP_VERSION_MINOR 0)
-set (COOLPROP_VERSION_PATCH 6dev)
+set (COOLPROP_VERSION_PATCH 7dev)
 set (COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH})
 
 #######################################
@@ -431,18 +431,21 @@ if (COOLPROP_CSHARP_MODULE)
   # Make a src directory to deal with file permissions problem with MinGW makefile
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 
-  set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}")
-  string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
-  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
-  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
-	
-  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
-  # Set properties before adding module
-  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
   if (WIN32)
-    SET(CMAKE_SWIG_FLAGS -dllimport \"CoolProp\")
-    #SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "-dllimport CoolProp")
+    SET(MORE_SWIG_FLAGS -dllimport \"CoolProp\")
   endif()
+  
+  # Define which headers the CoolProp wrapper is dependent on
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
+  
+  set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}" "${MORE_SWIG_FLAGS}")
+  string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
+  message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
+  
+  # Set properties before adding module
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}" CPLUSPLUS ON)
+  
   SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
   
   add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
@@ -458,11 +461,6 @@ if (COOLPROP_CSHARP_MODULE)
                      COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" "${CMAKE_CURRENT_BINARY_DIR}/*.cs"
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   
-  # Install all the generated cs files
-  install(
-    CODE "file( GLOB _GeneratedCsharpSources \"${CMAKE_CURRENT_BINARY_DIR}/*.cs\" )"
-    CODE "file( INSTALL \${_GeneratedCsharpSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Csharp/platform-independent )"
-  )
   install (FILES ${CMAKE_SOURCE_DIR}/Web/coolprop/wrappers/Csharp/Example.cs DESTINATION Csharp)
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" DESTINATION ${CMAKE_INSTALL_PREFIX}/Csharp)
   install (TARGETS ${app_name} DESTINATION Csharp/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
@@ -472,7 +470,7 @@ if (COOLPROP_CSHARP_MODULE)
     # Copy the shared object to the folder with the executable - no idea like java.library.path in C#
     install (TARGETS ${app_name} DESTINATION ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
   endif()
-  file(TO_NATIVE_PATH ${CMAKE_INSTALL_PREFIX}/Csharp/platform-independent/*.cs cp_cs_path)
+  file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/*.cs cp_cs_path)
   file(TO_NATIVE_PATH ${CMAKE_INSTALL_PREFIX}/Csharp/Example.cs cp_example_path)
   if (${BITNESS} EQUAL "32")
     set(CSHARP_PLAT "-platform:x86")
@@ -485,6 +483,63 @@ if (COOLPROP_CSHARP_MODULE)
   add_test(NAME Csharptestrun
            COMMAND ${CSHARP_INTERPRETER} Example.exe
            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+endif()
+
+if (COOLPROP_VBDOTNET_MODULE)
+
+  # Must have SWIG and C#
+  FIND_PACKAGE(SWIG REQUIRED)
+  INCLUDE(${SWIG_USE_FILE})
+  FIND_PACKAGE(Csharp REQUIRED)
+  
+  # Make a src directory to deal with file permissions problem with MinGW makefile
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB)
+  
+  
+
+  SET(MORE_SWIG_FLAGS -dllimport \"CoolProp\" -namespace CoolProp)
+  SET(CMAKE_SWIG_OUTDIR CoolPropVB/CsharpClassLibrary)
+  
+  # Define which headers the CoolProp wrapper is dependent on
+  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
+  
+  set(SWIG_OPTIONS "${MORE_SWIG_FLAGS}")
+  string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
+  message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
+  
+  # Set properties before adding module
+  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  SET_PROPERTY(SOURCE ${I_FILE} PROPERTY CPLUSPLUS ON)
+  SET_PROPERTY(SOURCE ${I_FILE} PROPERTY SWIG_FLAGS ${SWIG_OPTIONS})
+  SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
+  
+  add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
+
+  if (WIN32)
+    set_target_properties(CoolProp PROPERTIES PREFIX "")
+  endif()
+  
+  add_dependencies (${app_name} generate_headers)
+  
+  add_custom_command(TARGET CoolProp
+                     PRE_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/wrappers/VB.NET/CoolPropVB ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  add_custom_command(TARGET CoolProp
+                     POST_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:CoolProp> ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB/CoolPropVB
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  add_custom_command(TARGET CoolProp
+                     POST_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB/CsharpClassLibrary/CoolPropCSHARP_wrap.cxx
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  add_custom_command(TARGET CoolProp
+                     POST_BUILD
+                     COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/VB.net_VS2012_example.7z" "${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB"
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  
+  install (FILES "${CMAKE_CURRENT_BINARY_DIR}/VB.net_VS2012_example.7z" DESTINATION ${CMAKE_INSTALL_PREFIX}/VB.NET)
+  
 endif()
 
 if (COOLPROP_JAVA_MODULE)
@@ -708,13 +763,13 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/SwigRef.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (TARGETS CoolPropMATLAB_wrap DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
-  enable_testing()
-  add_custom_command(TARGET CoolPropMATLAB_wrap
-                     POST_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/test.m ${CMAKE_CURRENT_BINARY_DIR}/.)
-  add_test(NAME MATLABtest
-           COMMAND $ENV{MATLAB_ROOT}/bin/matlab -r test -nojvm -nodesktop -nosplash
-           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  #enable_testing()
+  #add_custom_command(TARGET CoolPropMATLAB_wrap
+  #                   POST_BUILD
+  #                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/test.m ${CMAKE_CURRENT_BINARY_DIR}/.)
+  #add_test(NAME MATLABtest
+  #         COMMAND $ENV{MATLAB_ROOT}/bin/matlab -r test -nojvm -nodesktop -nosplash
+  #         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 if (COOLPROP_MATLAB_MODULE)
@@ -805,7 +860,7 @@ if (COOLPROP_JAVASCRIPT_MODULE)
   add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
   add_definitions(-s ASSERTIONS=1)
   add_definitions(-DEXTERNC)
-  set(CMAKE_EXE_LINKER_FLAGS "-DEXTERNC -s EXPORTED_FUNCTIONS=\"['_main','_F2K','_Props1SI','_PropsSI','_get_global_param_string','_HAProps']\"")
+  set(CMAKE_EXE_LINKER_FLAGS "-DEXTERNC -s ASSERTIONS=1 -s EXPORTED_FUNCTIONS=\"['_main','_F2K','_Props1SI','_PropsSI','_get_global_param_string','_HAProps']\"")
   set(CMAKE_BUILD_TYPE Release)
   
   list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
@@ -814,6 +869,7 @@ if (COOLPROP_JAVASCRIPT_MODULE)
   add_dependencies (coolprop generate_headers)
   SET_TARGET_PROPERTIES(coolprop PROPERTIES PREFIX "" SUFFIX .js)
   install (TARGETS coolprop DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
+  install (FILES  "${CMAKE_SOURCE_DIR}/Web/coolprop/wrappers/Javascript/index.html" DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
 endif()
 
 if (COOLPROP_MATHEMATICA_MODULE)

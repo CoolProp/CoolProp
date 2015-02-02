@@ -1,6 +1,30 @@
 Changelog for CoolProp
 ======================
 
+5.0.6
+-----
+
+New Features:
+
+* Mathematica wrapper finished
+
+Issues Closed:
+
+* `#396 <http://github.com/CoolProp/CoolProp/issues/396>`_ : Initialize fail for HEOS in mixture with Argon and CarbonDioxide (in Matlab)
+* `#395 <http://github.com/CoolProp/CoolProp/issues/395>`_ : keyed_output and incompressibles
+* `#394 <http://github.com/CoolProp/CoolProp/issues/394>`_ : Python list inputs
+* `#391 <http://github.com/CoolProp/CoolProp/issues/391>`_ : release.bsh and source file
+* `#390 <http://github.com/CoolProp/CoolProp/issues/390>`_ : Transport properties of water
+* `#389 <http://github.com/CoolProp/CoolProp/issues/389>`_ : HAPropsSI("D", "T",273.15+20, "R", 0.8, "P", 101325) lead to an error
+* `#384 <http://github.com/CoolProp/CoolProp/issues/384>`_ : Put the example.nb Mathematica file in the main folder
+* `#383 <http://github.com/CoolProp/CoolProp/issues/383>`_ : When doing release, force a full build of the docs
+* `#382 <http://github.com/CoolProp/CoolProp/issues/382>`_ : Fix up the mathematica docs
+* `#379 <http://github.com/CoolProp/CoolProp/issues/379>`_ : After a release is done, delete the release folder
+* `#378 <http://github.com/CoolProp/CoolProp/issues/378>`_ : Also integrate the sphinx docs into the binaries/release/unstable folder output
+* `#377 <http://github.com/CoolProp/CoolProp/issues/377>`_ : Remove old mathematica files
+* `#376 <http://github.com/CoolProp/CoolProp/issues/376>`_ : Add python to list of prerequisites for self-compilation in the docs
+* `#329 <http://github.com/CoolProp/CoolProp/issues/329>`_ : Configure buildbot to send emails when we break things
+
 5.0.5
 -----
 

@@ -581,8 +581,9 @@ class CoefficientData(SolutionData):
         self.conductivity.coeffs = self.convertMelinderArray(coeffs[3])
 
         self.viscosity.source         = self.viscosity.SOURCE_COEFFS
-        self.viscosity.type = self.viscosity.INCOMPRESSIBLE_POLYNOMIAL
-        self.viscosity.coeffs = self.convertMelinderArray(coeffs[4])/1e3
+        self.viscosity.type = self.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
+        self.viscosity.coeffs = self.convertMelinderArray(coeffs[4])
+        self.viscosity.coeffs[0,0] -= math.log(1000) # Fixes the units mPa s -> Pa s
 
 
 

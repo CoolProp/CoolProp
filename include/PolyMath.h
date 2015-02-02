@@ -159,7 +159,7 @@ protected:
                double baseHorner(const std::vector<double> &coefficients, double x);
     DEPRECATED(double baseHorner(const std::vector<std::vector<double> > &coefficients, double x, double y));
 
-    bool do_debug(void){return get_debug_level()>=18;}
+    bool do_debug(void){return get_debug_level()>=500;}
 
 };
 
