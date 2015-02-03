@@ -1351,19 +1351,22 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
     }
 }
 
-TEST_CASE("Check some non-state-dependent inputs for REFPROP work","[REFPROPS]")
+TEST_CASE("Check trivial inputs for REFPROP work", "[REFPROP_trivial]")
 {
-    const int num_inputs = 4;
-    std::string inputs[num_inputs] = {"TCRIT", "PCRIT", "MOLEMASS", "RHOCRIT"};
+    const int num_inputs = 6;
+    std::string inputs[num_inputs] = {"T_triple", "T_critical", "p_critical", "molar_mass", "rhomolar_critical", "rhomass_critical"};
     for (int i = 0; i < num_inputs; ++i){
         std::ostringstream ss;
         ss << "Check " << inputs[i];
         SECTION(ss.str(),"")
         {
-            double val = CoolProp::PropsSI(inputs[i],"P",0,"T",0,"REFPROP::R245FA");
-            std::string err = CoolProp::get_global_param_string("errstring");
-            CAPTURE(err);
-            CHECK(ValidNumber(val));
+            double cp_val = CoolProp::PropsSI(inputs[i],"P",0,"T",0,"HEOS::Water");
+            double rp_val = CoolProp::PropsSI(inputs[i],"P",0,"T",0,"REFPROP::Water");
+            
+            std::string errstr = CoolProp::get_global_param_string("errstring");
+            CAPTURE(errstr);
+            double err = (cp_val - rp_val)/cp_val;
+            CHECK(err < 1e-3);
         }
     }
 }
