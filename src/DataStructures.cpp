@@ -451,8 +451,45 @@ std::string get_input_pair_long_desc(int pair)
 {
     return input_pair_information.long_desc_map[pair];
 }
-
-
+void split_input_pair(input_pairs pair, parameters &p1, parameters &p2)
+{
+    switch(pair){
+        case QT_INPUTS: p1 = iQ; p2 = iT; break;
+        case QSmolar_INPUTS: p1 = iQ; p2 = iSmolar; break;
+        case QSmass_INPUTS: p1 = iQ; p2 = iSmass; break;
+        case HmolarQ_INPUTS: p1 = iHmolar; p2 = iQ; break;
+        case HmassQ_INPUTS: p1 = iHmass; p2 = iQ; break;
+        case PQ_INPUTS: p1 = iP; p2 = iQ; break;
+        case PT_INPUTS: p1 = iP; p2 = iT; break;
+        case DmassT_INPUTS: p1 = iDmass; p2 = iT; break;
+        case DmolarT_INPUTS: p1 = iDmolar; p2 = iT; break;
+        case HmassT_INPUTS: p1 = iHmass; p2 = iT; break;
+        case HmolarT_INPUTS: p1 = iHmolar; p2 = iT; break;
+        case SmassT_INPUTS: p1 = iSmass; p2 = iT; break;
+        case SmolarT_INPUTS: p1 = iSmolar; p2 = iT; break;
+        case TUmass_INPUTS: p1 = iT; p2 = iUmass; break;
+        case TUmolar_INPUTS: p1 = iT; p2 = iUmolar; break;
+        case DmassP_INPUTS: p1 = iDmass; p2 = iP; break;
+        case DmolarP_INPUTS: p1 = iDmolar; p2 = iP; break;
+        case HmassP_INPUTS: p1 = iHmass; p2 = iP; break;
+        case HmolarP_INPUTS: p1 = iHmolar; p2 = iP; break;
+        case PSmass_INPUTS: p1 = iP; p2 = iSmass; break;
+        case PSmolar_INPUTS: p1 = iP; p2 = iSmolar; break;
+        case PUmass_INPUTS: p1 = iP; p2 = iUmass; break;
+        case PUmolar_INPUTS: p1 = iP; p2 = iUmolar; break;
+        case DmassHmass_INPUTS: p1 = iDmass; p2 = iHmass; break;
+        case DmolarHmolar_INPUTS: p1 = iDmolar; p2 = iHmolar; break;
+        case DmassSmass_INPUTS: p1 = iDmass; p2 = iSmass; break;
+        case DmolarSmolar_INPUTS: p1 = iDmolar; p2 = iSmolar; break;
+        case DmassUmass_INPUTS: p1 = iDmass; p2 = iUmass; break;
+        case DmolarUmolar_INPUTS: p1 = iDmolar; p2 = iUmolar; break;
+        case HmassSmass_INPUTS: p1 = iHmass; p2 = iSmass;break;
+        case HmolarSmolar_INPUTS: p1 = iHmolar; p2 = iSmolar; break;
+        case SmassUmass_INPUTS: p1 = iSmass; p2 = iUmass; break;
+        case SmolarUmolar_INPUTS: p1 = iSmolar; p2 = iUmolar; break;
+        default: throw ValueError(format("Invalid input pair"));
+    }
+}
 
 } /* namespace CoolProp */
 
