@@ -168,6 +168,8 @@ double AbstractState::trivial_keyed_output(int key)
     {
     case imolar_mass:
         return molar_mass();
+    case iacentric_factor:
+        return acentric_factor();
 	case igas_constant:
 		return gas_constant();
     case iT_min:
@@ -377,6 +379,9 @@ double AbstractState::conductivity(void){
 }
 double AbstractState::melting_line(int param, int given, double value){
     return calc_melting_line(param, given, value);
+}
+double AbstractState::acentric_factor(){
+    return calc_acentric_factor();
 }
 double AbstractState::saturation_ancillary(parameters param, int Q, parameters given, double value){
     return calc_saturation_ancillary(param, Q, given, value);

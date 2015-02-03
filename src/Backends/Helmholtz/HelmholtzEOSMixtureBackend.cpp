@@ -199,6 +199,15 @@ const CoolProp::SimpleState & HelmholtzEOSMixtureBackend::calc_state(const std::
         throw ValueError(format("calc_state not supported for mixtures"));
     }
 };
+long double HelmholtzEOSMixtureBackend::calc_acentric_factor(void)
+{
+    if (is_pure_or_pseudopure){
+        return components[0]->EOSVector[0].acentric;
+    }
+    else{
+        throw ValueError("acentric factor cannot be calculated for mixtures");
+    }
+}
 long double HelmholtzEOSMixtureBackend::calc_gas_constant(void)
 {
     if (is_pure_or_pseudopure){
@@ -1908,8 +1917,8 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(long double T, long do
 
     for (std::size_t i = 0; i < components.size(); ++i)
     {
-        long double Tci = components[i]->pEOS->reduce.T, pci = components[i]->pEOS->reduce.p, accentric_i = components[i]->pEOS->accentric;
-        long double m_i = 0.480+1.574*accentric_i-0.176*pow(accentric_i, 2);
+        long double Tci = components[i]->pEOS->reduce.T, pci = components[i]->pEOS->reduce.p, acentric_i = components[i]->pEOS->acentric;
+        long double m_i = 0.480+1.574*acentric_i-0.176*pow(acentric_i, 2);
         long double b_i = 0.08664*R_u*Tci/pci;
         b += mole_fractions[i]*b_i;
 
@@ -1917,8 +1926,8 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(long double T, long do
 
         for (std::size_t j = 0; j < components.size(); ++j)
         {
-            long double Tcj = components[j]->pEOS->reduce.T, pcj = components[j]->pEOS->reduce.p, accentric_j = components[j]->pEOS->accentric;
-            long double m_j = 0.480+1.574*accentric_j-0.176*pow(accentric_j, 2);
+            long double Tcj = components[j]->pEOS->reduce.T, pcj = components[j]->pEOS->reduce.p, acentric_j = components[j]->pEOS->acentric;
+            long double m_j = 0.480+1.574*acentric_j-0.176*pow(acentric_j, 2);
 
             long double a_j = 0.42747*pow(R_u*Tcj,2)/pcj*pow(1+m_j*(1-sqrt(T/Tcj)),2);
 

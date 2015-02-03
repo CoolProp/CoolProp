@@ -44,6 +44,7 @@ enum parameters{
     // General parameters
 	igas_constant,
     imolar_mass, 
+    iacentric_factor,
     irhomolar_reducing, 
     irhomolar_critical, 
     iT_reducing, 

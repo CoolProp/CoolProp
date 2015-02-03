@@ -53,6 +53,7 @@ parameter_info parameter_info_list[] = {
     parameter_info(idCvirial_dT, "dCvirial_dT","O","-","Derivative of third virial coefficient with respect to T",false),
     parameter_info(igas_constant, "gas_constant","O","J/mol/K","Molar gas constant",true),
 	parameter_info(imolar_mass, "molar_mass","O","kg/mol","Molar mass",true),
+    parameter_info(iacentric_factor, "acentric","O","-","Acentric factor",true),
     parameter_info(irhomass_reducing, "rhomass_reducing","O","kg/m^3","Mass density at reducing point",true),
     parameter_info(irhomolar_reducing, "rhomolar_reducing","O","mol/m^3","Molar density at reducing point",true),
     parameter_info(irhomolar_critical, "rhomolar_critical","O","mol/m^3","Molar density at critical point",true),

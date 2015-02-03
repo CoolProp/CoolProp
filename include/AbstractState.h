@@ -126,6 +126,8 @@ protected:
     virtual long double calc_surface_tension(void){throw NotImplementedError("calc_surface_tension is not implemented for this backend");};
     /// Using this backend, calculate the molar mass in kg/mol
     virtual long double calc_molar_mass(void){throw NotImplementedError("calc_molar_mass is not implemented for this backend");};
+    /// Using this backend, calculate the acentric factor
+    virtual long double calc_acentric_factor(void){throw NotImplementedError("calc_acentric_factor is not implemented for this backend");};   
     /// Using this backend, calculate the pressure in Pa
     virtual long double calc_pressure(void){throw NotImplementedError("calc_pressure is not implemented for this backend");};
     /// Using this backend, calculate the universal gas constant \f$R_u\f$ in J/mol/K
@@ -450,7 +452,9 @@ public:
     double delta(void);
     /// Return the molar mass in kg/mol
     double molar_mass(void);
+    double acentric_factor(void);
     /// Return the mole-fraction weighted gas constant in J/mol/K
+    
     double gas_constant(void);
     double Bvirial(void);
     double dBvirial_dT(void);

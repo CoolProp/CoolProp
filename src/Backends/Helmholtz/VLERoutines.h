@@ -47,7 +47,7 @@ namespace SaturationSolvers
     */
     static long double Wilson_lnK_factor(HelmholtzEOSMixtureBackend &HEOS, long double T, long double p, int i){ 
         EquationOfState *EOS = (HEOS.get_components())[i]->pEOS; 
-        return log(EOS->reduce.p/p)+5.373*(1 + EOS->accentric)*(1-EOS->reduce.T/T);
+        return log(EOS->reduce.p/p)+5.373*(1 + EOS->acentric)*(1-EOS->reduce.T/T);
     };
 
     void saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long double rhomolar, saturation_D_pure_options &options);
