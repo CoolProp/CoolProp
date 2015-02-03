@@ -285,19 +285,24 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
             all_trivial_outputs = false;
         }
     }
+    parameters p1, p2;
     // If all outputs are also inputs, never do a state update
     bool all_outputs_in_inputs = true;
-    // Split the input pair into parameters
-    parameters p1, p2;
-    split_input_pair(input_pair, p1, p2);
-    // See if each parameter is in the output vector and is a normal type input
-    for (std::size_t j = 0; j < output_parameters.size(); ++j){
-        if (output_parameters[j].type != output_parameter::OUTPUT_TYPE_NORMAL){
-            all_outputs_in_inputs = false; break;
+    if (input_pair != INPUT_PAIR_INVALID){
+        // Split the input pair into parameters
+        split_input_pair(input_pair, p1, p2);
+        // See if each parameter is in the output vector and is a normal type input
+        for (std::size_t j = 0; j < output_parameters.size(); ++j){
+            if (output_parameters[j].type != output_parameter::OUTPUT_TYPE_NORMAL){
+                all_outputs_in_inputs = false; break;
+            }
+            if (!(output_parameters[j].Of1 == p1 || output_parameters[j].Of1 == p2)){
+                all_outputs_in_inputs = false; break;
+            }
         }
-        if (!(output_parameters[j].Of1 == p1 || output_parameters[j].Of1 == p2)){
-            all_outputs_in_inputs = false; break;
-        }
+    }
+    else{
+        all_outputs_in_inputs = false;
     }
 
 	if (get_debug_level() > 100)
