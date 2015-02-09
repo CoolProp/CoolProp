@@ -285,6 +285,25 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
             all_trivial_outputs = false;
         }
     }
+    parameters p1, p2;
+    // If all outputs are also inputs, never do a state update
+    bool all_outputs_in_inputs = true;
+    if (input_pair != INPUT_PAIR_INVALID){
+        // Split the input pair into parameters
+        split_input_pair(input_pair, p1, p2);
+        // See if each parameter is in the output vector and is a normal type input
+        for (std::size_t j = 0; j < output_parameters.size(); ++j){
+            if (output_parameters[j].type != output_parameter::OUTPUT_TYPE_NORMAL){
+                all_outputs_in_inputs = false; break;
+            }
+            if (!(output_parameters[j].Of1 == p1 || output_parameters[j].Of1 == p2)){
+                all_outputs_in_inputs = false; break;
+            }
+        }
+    }
+    else{
+        all_outputs_in_inputs = false;
+    }
 
 	if (get_debug_level() > 100)
 	{
@@ -308,7 +327,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
 	// Iterate over the state variable inputs
 	for (std::size_t i = 0; i < IO.size(); ++i){
 		try{
-            if (input_pair != INPUT_PAIR_INVALID && !all_trivial_outputs){
+            if (input_pair != INPUT_PAIR_INVALID && !all_trivial_outputs && !all_outputs_in_inputs){
                 // Update the state since it is a valid set of inputs
                 State->update(input_pair, in1[i], in2[i]);
             }
@@ -321,6 +340,18 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
         }
 
         for (std::size_t j = 0; j < IO[i].size(); ++j){
+            // If all the outputs are inputs, there is no need for a state input
+            if (all_outputs_in_inputs){
+                if (p1 == output_parameters[j].Of1){
+                    IO[i][j] = in1[i]; success = true; continue;
+                }
+                else if (p2 == output_parameters[j].Of1){
+                    IO[i][j] = in2[i]; success = true; continue;
+                }
+                else{
+                    throw ValueError();
+                }
+            }
             try{
                 output_parameter &output = output_parameters[j];
                 switch (output.type){
@@ -357,6 +388,7 @@ void _PropsSImulti(const std::vector<std::string> &Outputs,
                    std::vector<std::vector<double> > &IO)
 {
     shared_ptr<AbstractState> State;
+    CoolProp::parameters key1, key2;
     CoolProp::input_pairs input_pair;
     std::vector<output_parameter> output_parameters;
     std::vector<double> v1, v2;
@@ -372,9 +404,7 @@ void _PropsSImulti(const std::vector<std::string> &Outputs,
 
     try{
         // Get update pair
-        CoolProp::parameters key1;
         is_valid_parameter(Name1, key1);
-        CoolProp::parameters key2;
         is_valid_parameter(Name2, key2);
         input_pair = generate_update_pair(key1, Prop1, key2, Prop2, v1, v2);
     }
@@ -483,7 +513,6 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
     SECTION("Single state, trivial output, pure incompressible"){
         CHECK(ValidNumber(CoolProp::PropsSI("Tmin","P",0,"T",0,"INCOMP::DowQ")));
     };
-    std::cout << get_global_param_string("errstring");
     SECTION("Bad input pair"){
         CHECK(!ValidNumber(CoolProp::PropsSI("D","Q",0,"Q",0,"Water")));
     };
@@ -498,6 +527,12 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
     };
     SECTION("Single state, single output, predefined mixture"){
         CHECK(ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"R410A.mix")));
+    };
+    SECTION("Single state, single output, predefined mixture from REFPROP"){
+        CHECK(ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"REFPROP::R410A.mix")));
+    };
+    SECTION("Single state, single output, bad predefined mixture from REFPROP"){
+        CHECK(!ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"REFPROP::RRRRRR.mix")));
     };
     SECTION("Predefined mixture"){
         std::vector<double> p(1, 101325), Q(1, 1.0), z;

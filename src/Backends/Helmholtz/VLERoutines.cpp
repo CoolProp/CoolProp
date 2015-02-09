@@ -923,7 +923,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
     CoolProp::SimpleState &crit = HEOS.get_components()[0]->crit;
-    long double rhoL = _HUGE, rhoV = _HUGE, error = 999, DeltavL, DeltavV, pL, pV, p, rhoL0, rhoV0;
+    long double rhoL = _HUGE, rhoV = _HUGE, error = 999, DeltavL, DeltavV, pL, pV, p;
     int iter=0, small_step_count = 0;
     
     try
@@ -947,8 +947,6 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
                 rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
                 rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
                 p = HEOS.get_components()[0]->ancillaries.pV.evaluate(T);
-                rhoL0 = rhoL;
-                rhoV0 = rhoV;
                 
                 CoolProp::SimpleState &crit = HEOS.get_components()[0]->crit;
                 CoolProp::SimpleState &tripleL = HEOS.get_components()[0]->triple_liquid;
@@ -1021,7 +1019,6 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
     do{
         pL = SatL->p(); pV = SatV->p();
         long double vL = 1/SatL->rhomolar(), vV = 1/SatV->rhomolar();
-        long double gL = SatL->gibbsmolar(), gV = SatV->gibbsmolar();
         // Get alpha, the pressure derivative with volume at constant T
         // Given by (dp/drho|T)*drhodv
         long double alphaL = SatL->first_partial_deriv(iP, iDmolar, iT)*(-POW2(SatL->rhomolar()));
@@ -1180,8 +1177,8 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
     }
     while(std::abs(f) > 1e-12 && iter < options.Nstep_max);
 
-    HEOS.SatL->update_TP_guessrho(T, p, rhomolar_liq);
-    HEOS.SatV->update_TP_guessrho(T, p, rhomolar_vap);
+    HEOS.SatL->update_TP_guessrho(T, p, HEOS.SatL->rhomolar());
+    HEOS.SatV->update_TP_guessrho(T, p, HEOS.SatV->rhomolar());
 
     options.p = HEOS.SatL->p();
     options.T = HEOS.SatL->T();

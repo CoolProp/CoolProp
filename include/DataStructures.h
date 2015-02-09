@@ -44,6 +44,7 @@ enum parameters{
     // General parameters
 	igas_constant,
     imolar_mass, 
+    iacentric_factor,
     irhomolar_reducing, 
     irhomolar_critical, 
     iT_reducing, 
@@ -354,6 +355,9 @@ std::string get_input_pair_short_desc(int pair);
 
 /// Return the long description of an input pair key ("Molar density in mol/m^3, Temperature in K" for instance)
 std::string get_input_pair_long_desc(int pair);
+
+/// Split an input pair into parameters for the two parts that form the pair
+void split_input_pair(input_pairs pair, parameters &p1, parameters &p2);
 
 extern std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param);
 

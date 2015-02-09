@@ -278,8 +278,8 @@
       "T_max_units": "K", 
       "Ttriple": 205.2, 
       "Ttriple_units": "K", 
-      "accentric": 0.668, 
-      "accentric_units": "-", 
+      "acentric": 0.668, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -7.756334333038524, 

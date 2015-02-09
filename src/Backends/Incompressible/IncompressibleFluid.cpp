@@ -19,15 +19,23 @@ and transport properties.
 //IncompressibleFluid::IncompressibleFluid();
 
 void IncompressibleFluid::set_reference_state(double T0, double p0, double x0, double h0, double s0){
-    this->Tref = T0;
-    this->rhoref = rho(T0,p0,x0);
-    this->pref = p0;
-    this->href = h0;
-    // Now we take care of the energy related values
-    this->uref = 0.0;
-    this->uref = u(T0,p0,x0) - h0; // (value without ref) - (desired ref)
-    this->sref = 0.0;
-    this->sref = s(T0,p0,x0) - s0; // (value without ref) - (desired ref)
+	this->_href   = h0;
+	this->_pref   = p0;
+    this->_Tref   = T0;
+    this->_xref   = x0;
+    this->_rhoref = rho(T0,p0,x0);
+    this->_uref   = h0; // Reset the old reference value
+    this->_uref   = u(T0,p0,x0); // uses _uref
+    this->_sref   = s0; // Reset the old reference value
+    this->_sref   = s(T0,p0,x0); // uses _sref
+    // Save the values for later calls at composition changes
+	this->href   = h0;
+	this->pref   = p0;
+    this->Tref   = T0;
+    this->xref   = x0;
+    this->rhoref = this->_rhoref;
+    this->uref   = this->_uref;
+    this->sref   = s0;
 }
 
 void IncompressibleFluid::validate(){
@@ -130,7 +138,7 @@ double IncompressibleFluid::s   (double T, double p, double x){
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             //throw NotImplementedError("Here you should implement the polynomial.");
-            return poly.integral(specific_heat.coeffs, T, x, 0, -1, 0, Tbase, xbase) - sref;
+            return poly.integral(specific_heat.coeffs, T, x, 0, -1, 0, Tbase, xbase) - _sref;
             break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
@@ -147,7 +155,7 @@ double IncompressibleFluid::u   (double T, double p, double x){
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             //throw NotImplementedError("Here you should implement the polynomial.");
-            return poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase) - uref;
+            return poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase) - _uref;
             break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
@@ -422,7 +430,7 @@ double IncompressibleFluid::T_c   (double Cmass, double p, double x){
 }
 /// Temperature as a function of entropy as a function of temperature, pressure and composition.
 double IncompressibleFluid::T_s   (double Smass, double p, double x){
-    double s_raw = Smass + sref;
+    double s_raw = Smass + _sref;
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.solve_limitsInt(specific_heat.coeffs, x, s_raw, Tmin, Tmax, 0, -1, 0, Tbase, xbase, 0);
@@ -438,7 +446,7 @@ double IncompressibleFluid::T_s   (double Smass, double p, double x){
 }
 /// Temperature as a function of internal energy as a function of temperature, pressure and composition.
 double IncompressibleFluid::T_u   (double Umass, double p, double x){
-    double u_raw = Umass + uref;
+    double u_raw = Umass + _uref;
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.solve_limitsInt(specific_heat.coeffs, x, u_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase, 0);
@@ -664,10 +672,38 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         // Compare reference state
 		{
         res = XLT.h(Tref,pref,xref);
+        CAPTURE(Tref);
+        CAPTURE(pref);
+        CAPTURE(xref);
+        CAPTURE(href);
+        CAPTURE(res);
         CHECK( check_abs(href,res,acc) );
+        }
+        {
         res = XLT.s(Tref,pref,xref);
+        CAPTURE(Tref);
+        CAPTURE(pref);
+        CAPTURE(xref);
+        CAPTURE(sref);
+        CAPTURE(res);
 		CHECK( check_abs(sref,res,acc) );
-		}
+		double res2 = XLT.s(Tref,pref,xref);
+        CAPTURE(Tref);
+        CAPTURE(pref);
+        CAPTURE(xref);
+        CAPTURE(res);
+        CAPTURE(res2);
+        CHECK( check_abs(res2,res,acc) );
+        res = XLT.s(Tref,pref,xref);
+        CAPTURE(Tref);
+        CAPTURE(pref);
+        CAPTURE(xref);
+        CAPTURE(res);
+        CAPTURE(res2);
+        CHECK( check_abs(res2,res,acc) );
+        }
+
+
 
         Tref = 25+273.15;
         pref = 0.0;
@@ -837,9 +873,27 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CAPTURE(actual);
         CHECK( check_abs(expected,actual,acc) );
         }
+        expected = CH3OH.s(T,p,x);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(expected);
+        CAPTURE(actual);
+        CHECK( check_abs(expected,actual,acc) );
+        }
 
         expected = 0.0;
         actual = CH3OH.s(Tref,pref,xref);
+        {
+        CAPTURE(T);
+        CAPTURE(p);
+        CAPTURE(x);
+        CAPTURE(expected);
+        CAPTURE(actual);
+        CHECK( expected==actual );
+        }
+        expected = CH3OH.s(Tref,pref,xref);
         {
         CAPTURE(T);
         CAPTURE(p);

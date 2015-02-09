@@ -7,7 +7,6 @@ These pages help you to get started using CoolProp and provide detailed informat
 returning user. Please feel free to browse the pages and use the menu on the left to navigate
 on this website.
 
-
 What is CoolProp?
 -----------------
 
@@ -17,7 +16,6 @@ CoolProp is a C++ library that implements:
 - :ref:`Mixture properties using high-accuracy Helmholtz energy formulations (or cubic EOS) <mixtures>`
 - :ref:`Correlations of properties of incompressible fluids and brines <Pure>`
 - :ref:`Highest accuracy psychrometric routines <Humid-Air>`
-
 
 Environments Supported
 ----------------------
@@ -48,6 +46,7 @@ Help
 
 - File a `Github issue <https://github.com/CoolProp/CoolProp/issues>`_
 - Email the `Google group <https://groups.google.com/d/forum/coolprop-users>`_
+- `Docs for v4 of CoolProp <http://www.coolprop.org/v4/>`_
 
 
 Projects Using CoolProp
