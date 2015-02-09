@@ -95,11 +95,19 @@ class SolutionDataWriter(object):
 
         matplotlib.rcParams['axes.formatter.useoffset'] = False
 
+        # For standard report generation
         self.ext        = "pdf"
         self.usebp      = False
         self.ispage     = True # Do you want a page or a figure?
         self.isportrait = True
         self.resolveRef = True # Resolve references and print text
+
+        # Latex document mode
+        #self.ext        = "pgf"
+        #self.usebp      = True
+        #self.ispage     = False # Do you want a page or a figure?
+        #self.isportrait = True
+        #self.resolveRef = False # Resolve references and print text
 
         if self.ext=="pgf" or matplotlib.rcParams['text.usetex']:
             self.usetex = True
@@ -150,9 +158,9 @@ class SolutionDataWriter(object):
         if self.usebp:
             from jopy.dataPlotters import BasePlotter
             self.bp = BasePlotter()
-            ccycle = self.bp.getColourCycle(length=4)
-            ccycle.next() # skip the first one
-            ccycle.next() # skip the first one
+            ccycle = self.bp.getColourCycle(length=2)
+            #ccycle.next() # skip the first one
+            #ccycle.next() # skip the first one
             self.secondaryColour = ccycle.next()
             self.primaryColour = ccycle.next()
         else:
