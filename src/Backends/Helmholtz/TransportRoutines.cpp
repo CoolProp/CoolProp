@@ -1120,8 +1120,13 @@ long double TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS
     // **************************
     // Solver for conformal state
     // **************************
-    
-    conformal_state_solver(HEOS, HEOS_Reference, T0, rhomolar0);
+
+    try{
+        conformal_state_solver(HEOS, HEOS_Reference, T0, rhomolar0);
+    }
+    catch(std::exception &e){
+        throw ValueError(format("Conformal state solver failed; error was %s",e.what()));
+    }
 
     // Update the reference fluid with the conformal state
     HEOS_Reference.update(DmolarT_INPUTS, rhomolar0*psi, T0);
