@@ -241,7 +241,7 @@ composition will always affect all fluids consisting of the same components.
 
 .. note::
    The internal routines for the incompressibles were updated 2015-02-10, the documentation is not fully updated. 
-   We are going to add the new equation as soon as possible, probably mid-March 2015.
+   We are going to add the new equation as soon as possible, probably mid-March 2015. Please be patient.
 
 .. .. math::
 .. 
