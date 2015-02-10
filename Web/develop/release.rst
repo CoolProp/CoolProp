@@ -10,6 +10,7 @@ Here is your new best friend, a checklist that helps you to keep track of all
 the small things that have to be done when releasing a new version of the CoolProp 
 library. 
 
+* **Version**: Edit CMakeLists.txt and remove all qualifiers (alpha, dev, ...) from the version number.
 * **Changelog**: Update the changelog and generate a list of closed GitHub issues: *HOW?*
 * **release branch**: Merge all code from *master* into *release* branch
 * **build bots**: Force all buildbots to run on the *release* branch, this will also change the upload folder from *binaries* to *release*.
@@ -18,7 +19,7 @@ library.
   - Tag the release branch in GitHub. It is a good idea to include the information on the closed issues here as well. 
   - Change the default download file on sourceforge to point to the new zipped sources.
   - Copy the new Javascript library to the homepage and make a symlink to ``coolprop-latest.js``. *I think I automated this one already* 
-  - Bump the version number in the header file and commit. 
+  - Bump the version number in the CMake file and commit. 
   - Announce the new features if you like...
   
 That's all folks.
