@@ -142,6 +142,11 @@ rsync $RSYNC_DRY_RUN $RSYNC_OPTS $RSYNC_EXCL "$BINFOLDER/" frs.sf.net-$SFUSER:/h
 if [ ${CPVERSION:0:7} != "nightly" ]; then
     printMessage "Publishing the docs on SourceForge"
     rsync $RSYNC_DRY_RUN $RSYNC_OPTS "$SPHFOLDER/" frs.sf.net-$SFUSER:/home/project-web/coolprop/htdocs
+    printMessage "Updating the default Javascript library on SourceForge"
+    pushd "$BINFOLDER/Javascript/"
+    cp "coolprop.js" "coolprop-${CPVERSION}.js"
+    ln -sf "coolprop-${CPVERSION}.js" "coolprop-latest.js"
+    rsync $RSYNC_DRY_RUN $RSYNC_OPTS "coolprop-${CPVERSION}.js" "coolprop-latest.js" frs.sf.net-$SFUSER:/home/project-web/coolprop/htdocs/jscript/
 fi
 #
 if [[ ("$BINFOLDER" == "release") && ("$DRYRUN" == "false") ]]; then
