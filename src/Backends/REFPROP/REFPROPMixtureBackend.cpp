@@ -274,34 +274,46 @@ REFPROPMixtureBackend::REFPROPMixtureBackend(const std::vector<std::string>& flu
     // Try to add this fluid to REFPROP - might want to think about making array of
     // components and setting mole fractions if they change a lot.
     this->set_REFPROP_fluids(fluid_names);
-
+    
+    // Bump the number of REFPROP backends that are in existence;
+    REFPROPMixtureBackend::instance_counter++;
 }
 
 REFPROPMixtureBackend::~REFPROPMixtureBackend() {
-    // TODO: Remove this automatic unloading as soon as the bugs are fixed
-    if (RefpropdllInstance!=NULL) {
-        // Unload it
-        #if defined(__ISWINDOWS__)
-            FreeLibrary(RefpropdllInstance);
-            //delete RefpropdllInstance;
-            RefpropdllInstance = NULL;
-        #elif defined(__ISLINUX__)
-            dlclose (RefpropdllInstance);
-            //delete RefpropdllInstance;
-            RefpropdllInstance = NULL;
-        #elif defined(__ISAPPLE__)
-            dlclose (RefpropdllInstance);
-            //delete RefpropdllInstance;
-            RefpropdllInstance = NULL;
-        #else
-            throw CoolProp::NotImplementedError("We should not reach this point.");
-            //delete RefpropdllInstance;
-            RefpropdllInstance = NULL;
-        #endif
-        LoadedREFPROPRef = "";
+    // Decrement the counter for the number of instances
+    REFPROPMixtureBackend::instance_counter--;
+    // Unload the shared library when the last instance is about to be destroyed
+    if (REFPROPMixtureBackend::instance_counter == 0){
+        if (RefpropdllInstance!=NULL) {
+            
+            // Unload it
+            #if defined(__ISWINDOWS__)
+                FreeLibrary(RefpropdllInstance);
+                //delete RefpropdllInstance;
+                RefpropdllInstance = NULL;
+            #elif defined(__ISLINUX__)
+                dlclose (RefpropdllInstance);
+                //delete RefpropdllInstance;
+                RefpropdllInstance = NULL;
+            #elif defined(__ISAPPLE__)
+                dlclose (RefpropdllInstance);
+                //delete RefpropdllInstance;
+                RefpropdllInstance = NULL;
+            #else
+                throw CoolProp::NotImplementedError("We should not reach this point.");
+                //delete RefpropdllInstance;
+                RefpropdllInstance = NULL;
+            #endif
+            LoadedREFPROPRef = "";
+        }
     }
 }
+void REFPROPMixtureBackend::check_loaded_fluid()
+{
+    this->set_REFPROP_fluids(this->fluid_names);
+}
 
+std::size_t REFPROPMixtureBackend::instance_counter = 0; // initialise with 0
 bool REFPROPMixtureBackend::_REFPROP_supported = true; // initialise with true
 bool REFPROPMixtureBackend::REFPROP_supported () {
     /*
@@ -350,27 +362,13 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
 
 void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &fluid_names)
 {
-    long ierr=0;
-    this->fluid_names = fluid_names;
-    char component_string[10000], herr[errormessagelength];
-    std::string components_joined = strjoin(fluid_names,"|");
-    std::string components_joined_raw = strjoin(fluid_names,"|");
-    std::string fdPath = get_REFPROP_fluid_path();
-    long N = static_cast<long>(fluid_names.size());
-
-    // Check platform support
-    if(!REFPROP_supported()){
-        throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
-    }
-
-    // Load REFPROP if it isn't loaded yet
-    load_REFPROP(); // This should not be needed.
-
     // If the name of the refrigerant doesn't match
-    // that of the currently loaded refrigerant
-    if (LoadedREFPROPRef == components_joined_raw)
+    // that of the currently loaded refrigerant, fluids must be loaded
+    if (!cached_component_string.empty() && LoadedREFPROPRef == cached_component_string)
     {
-        if (dbg_refprop) std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
+        if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,cached_component_string.c_str(),LoadedREFPROPRef.c_str()); }
+        if (dbg_refprop) std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,cached_component_string.c_str(),LoadedREFPROPRef.c_str());
+        long N = static_cast<long>(fluid_names.size());
         this->Ncomp = N;
         mole_fractions.resize(N);
         mole_fractions_liq.resize(N);
@@ -379,6 +377,17 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
     }
     else
     {
+        long ierr=0;
+        this->fluid_names = fluid_names;
+        char component_string[10000], herr[errormessagelength];
+        std::string components_joined = strjoin(fluid_names,"|");
+        std::string components_joined_raw = strjoin(fluid_names,"|");
+        std::string fdPath = get_REFPROP_fluid_path();
+        long N = static_cast<long>(fluid_names.size());
+
+        // Check platform support
+        if(!REFPROP_supported()){ throw NotImplementedError("You cannot use the REFPROPMixtureBackend."); }
+    
         if (N == 1 && upper(components_joined_raw).find(".MIX") != std::string::npos){
             // It's a predefined mixture
             ierr = 0;
@@ -403,7 +412,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 mole_fractions.resize(N);
                 mole_fractions_liq.resize(N);
                 mole_fractions_vap.resize(N);
-                LoadedREFPROPRef = components_joined_raw;
+                LoadedREFPROPRef = mix;
+                cached_component_string = mix;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
                 set_mole_fractions(std::vector<long double>(x.begin(), x.begin()+N));
@@ -449,7 +459,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 mole_fractions.resize(N);
                 mole_fractions_liq.resize(N);
                 mole_fractions_vap.resize(N);
-                LoadedREFPROPRef = components_joined_raw;
+                LoadedREFPROPRef = component_string;
+                cached_component_string = component_string;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
                 return;
@@ -514,6 +525,7 @@ void REFPROPMixtureBackend::limits(double &Tmin, double &Tmax, double &rhomolarm
     c     pmax--maximum pressure [kPa]
      *
      */
+    this->check_loaded_fluid();
     double Dmax_mol_L,pmax_kPa;
     char htyp[] = "EOS";
     LIMITSdll(htyp, &(mole_fractions[0]), &Tmin, &Tmax, &Dmax_mol_L, &pmax_kPa, 3);
@@ -531,6 +543,7 @@ long double REFPROPMixtureBackend::calc_Tmax(void){
     return static_cast<long double>(Tmax);
 };
 long double REFPROPMixtureBackend::calc_T_critical(){
+    this->check_loaded_fluid();
     long ierr = 0;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
@@ -539,6 +552,7 @@ long double REFPROPMixtureBackend::calc_T_critical(){
     return static_cast<long double>(Tcrit);
 };
 long double REFPROPMixtureBackend::calc_p_critical(){
+    this->check_loaded_fluid();
     long ierr = 0;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
@@ -553,16 +567,19 @@ long double REFPROPMixtureBackend::calc_rhomolar_critical(){
     return static_cast<long double>(dcrit_mol_L*1000);
 };
 long double REFPROPMixtureBackend::calc_T_reducing(){
+    this->check_loaded_fluid();
     double rhored_mol_L = 0, Tr = 0;
     REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
     return static_cast<long double>(Tr);
 };
 long double REFPROPMixtureBackend::calc_rhomolar_reducing(){
+    this->check_loaded_fluid();
     double rhored_mol_L = 0, Tr = 0;
     REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
     return static_cast<long double>(rhored_mol_L*1000);
 };
 long double REFPROPMixtureBackend::calc_Ttriple(){
+    this->check_loaded_fluid();
     if (mole_fractions.size() != 1){throw ValueError("calc_Ttriple cannot be evaluated for mixtures");}
     long icomp = 1;
     double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
@@ -570,12 +587,14 @@ long double REFPROPMixtureBackend::calc_Ttriple(){
     return static_cast<long double>(ttrp);
 };
 long double REFPROPMixtureBackend::calc_gas_constant(){
+    this->check_loaded_fluid();
     double Rmix = 0;
     RMIX2dll(&(mole_fractions[0]), &Rmix);
     return static_cast<long double>(Rmix);
 };
 long double REFPROPMixtureBackend::calc_molar_mass(void)
 {
+    this->check_loaded_fluid();
     double wmm_kg_kmol;
     WMOLdll(&(mole_fractions[0]), &wmm_kg_kmol); // returns mole mass in kg/kmol
     _molar_mass = wmm_kg_kmol/1000; // kg/mol
@@ -584,6 +603,7 @@ long double REFPROPMixtureBackend::calc_molar_mass(void)
 
 double REFPROPMixtureBackend::calc_melt_Tmax()
 {
+    this->check_loaded_fluid();
     long ierr = 0;
     char herr[255];
     double tmin,tmax,Dmax_mol_L,pmax_kPa, Tmax_melt;
@@ -599,6 +619,7 @@ double REFPROPMixtureBackend::calc_melt_Tmax()
 }
 long double REFPROPMixtureBackend::calc_melting_line(int param, int given, long double value)
 {
+    this->check_loaded_fluid();
     long ierr = 0;
     char herr[255];
 
@@ -631,6 +652,7 @@ long double REFPROPMixtureBackend::calc_melting_line(int param, int given, long 
 
 long double REFPROPMixtureBackend::calc_viscosity(void)
 {
+    this->check_loaded_fluid();
     double eta, tcx, rhomol_L = 0.001*_rhomolar;
     long ierr = 0;
     char herr[255];
@@ -651,6 +673,7 @@ long double REFPROPMixtureBackend::calc_conductivity(void)
 }
 long double REFPROPMixtureBackend::calc_surface_tension(void)
 {
+    this->check_loaded_fluid();
     double sigma, rho_mol_L = 0.001*_rhomolar;
     long ierr = 0;
     char herr[255];
@@ -664,6 +687,7 @@ long double REFPROPMixtureBackend::calc_surface_tension(void)
 }
 long double REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
 {
+    this->check_loaded_fluid();
     double rho_mol_L = 0.001*_rhomolar;
     long ierr = 0;
     std::vector<double> fug_cof;
@@ -679,6 +703,7 @@ long double REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
 
 void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
 {
+    this->check_loaded_fluid();
     long ierr = 0;
     char herr[255];
     SATSPLNdll(&(mole_fractions[0]),  // Inputs
@@ -687,6 +712,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
 }
 long double REFPROPMixtureBackend::calc_cpmolar_idealgas(void)
 {
+    this->check_loaded_fluid();
     double rho_mol_L = 0.001*_rhomolar;
     double p0, e0, h0, s0, cv0, cp0, w0, A0, G0;
     THERM0dll(&_T,&rho_mol_L,&(mole_fractions[0]),&p0,&e0,&h0,&s0,&cv0,&cp0,&w0,&A0,&G0);
@@ -695,6 +721,7 @@ long double REFPROPMixtureBackend::calc_cpmolar_idealgas(void)
 
 void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2)
 {
+    this->check_loaded_fluid();
     double rho_mol_L=_HUGE, rhoLmol_L=_HUGE, rhoVmol_L=_HUGE,
         hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,
         w=_HUGE,q=_HUGE, mm=_HUGE, p_kPa = _HUGE;
@@ -1229,6 +1256,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 }
 long double REFPROPMixtureBackend::call_phixdll(long itau, long idel)
 {
+    this->check_loaded_fluid();
     double val = 0, tau = _tau, delta = _delta;
     if (PHIXdll == NULL){throw ValueError("PHIXdll function is not available in your version of REFPROP. Please upgrade");}
     PHIXdll(&itau, &idel, &tau, &delta, &(mole_fractions[0]), &val);
@@ -1236,6 +1264,7 @@ long double REFPROPMixtureBackend::call_phixdll(long itau, long idel)
 }
 long double REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
 {
+    this->check_loaded_fluid();
     throw ValueError("Temporarily the PHI0dll function is not available for REFPROP");
     double val = 0, tau = _tau, delta = _delta, __T = T(), __rho = rhomolar()/1000;
     if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
