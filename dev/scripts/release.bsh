@@ -147,6 +147,7 @@ if [ ${CPVERSION:0:7} != "nightly" ]; then
     cp "coolprop.js" "coolprop-${CPVERSION}.js"
     ln -sf "coolprop-${CPVERSION}.js" "coolprop-latest.js"
     rsync $RSYNC_DRY_RUN $RSYNC_OPTS "coolprop-${CPVERSION}.js" "coolprop-latest.js" frs.sf.net-$SFUSER:/home/project-web/coolprop/htdocs/jscript/
+    popd
 fi
 #
 if [[ ("$BINFOLDER" == "release") && ("$DRYRUN" == "false") ]]; then
