@@ -163,7 +163,4 @@ Same idea for the volume
 
 References
 ----------
-
-.. bibliography:: ../../CoolPropBibTeXLibrary.bib
-   :filter: docname in docnames
-   :style: unsrt
+:ref:`Go to the bibliography <bibliography>`
