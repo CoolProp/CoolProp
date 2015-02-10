@@ -60,14 +60,8 @@ protected:
     composition_types xid;
 
     double TminPsat;
-    double xref, Tref, pref;
-    double href, sref;
-    double uref, rhoref;
+    double Tref, pref, xref, href, sref;
     double xbase, Tbase;
-
-    double _xref, _Tref, _pref;
-    double _href, _sref;
-    double _uref, _rhoref;
 
     /// These are the objects that hold the coefficients
     /** Note that all polynomials require a 2-dimensional array
@@ -201,6 +195,7 @@ protected:
     double basePolyOffset(IncompressibleData data, double y, double z=0.0);
 
 public:
+
     /* All functions need T and p as input. Might not
      * be necessary, but gives a clearer structure.
      */
@@ -225,6 +220,31 @@ public:
     /// Freezing temperature as a function of pressure and composition.
     double Tfreeze(       double p, double x);
 
+
+    /* Below are direct calculations of the derivatives. Nothing
+	 * special is going on, we simply use the polynomial class to
+	 * derive the different functions with respect to temperature.
+	 */
+	/// Partial derivative of density with respect to temperature at constant pressure and composition
+	double drhodTatPx (double T, double p, double x);
+	/// Partial derivative of entropy with respect to temperature at constant pressure and composition
+	double dsdTatPx   (double T, double p, double x){return c(T,p,x)/T;};
+	/// Partial derivative of internal energy with respect to temperature at constant pressure and composition
+	double dudTatPx   (double T, double p, double x){return c(T,p,x);};
+	/// Partial derivative of enthalpy with respect to temperature at constant pressure and composition
+	double dhdTatPx   (double T, double p, double x){return c(T,p,x);};
+
+
+	/* Other useful derivatives
+	 */
+	/// Partial derivative of enthalpy with respect to pressure at constant temperature and composition
+	//  \f[ \left( \frac{\partial h}{\partial p} \right)_T = v - T \left( \frac{\partial v}{\partial T} \right)_p = \rho^{-1} \left( 1 + T \rho^{-1} \left( \frac{\partial \rho}{\partial T} \right)_p \right) \f]
+	double dhdpatTx (double T, double p, double x);
+	/// Partial derivative of entropy with respect to pressure at constant temperature and composition
+	//  \f[ \left( \frac{\partial s}{\partial p} \right)_T = - \left( \frac{\partial v}{\partial T} \right)_p = \rho^{-2} \left( \frac{\partial \rho}{\partial T} \right)_p \right) \f]
+	double dsdpatTx (double T, double p, double x);
+
+
     /// Mass fraction conversion function
     /** If the fluid type is mass-based, it does not do anything. Otherwise,
      *  it converts the mass fraction to the required input. */
@@ -239,7 +259,6 @@ public:
     double inputFromMole (double T,     double x);
 
 
-
     /* Some functions can be inverted directly, those are listed
      * here. It is also possible to solve for other quantities, but
      * that involves some more sophisticated processing and is not
@@ -250,9 +269,9 @@ public:
     /// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
     double T_c   (double Cmass, double p, double x);
     /// Temperature as a function of entropy as a function of temperature, pressure and composition.
-    double T_s   (double Smass, double p, double x);
+    double T_s   (double Smass, double p, double x){throw NotImplementedError(format("%s (%d): T from entropy is not implemented in the fluid, use the backend.",__FILE__,__LINE__));}
     /// Temperature as a function of internal energy as a function of temperature, pressure and composition.
-    double T_u   (double Umass, double p, double x);
+    double T_u   (double Umass, double p, double x){throw NotImplementedError(format("%s (%d): T from internal energy is not implemented in the fluid, use the backend.",__FILE__,__LINE__));}
     /// Temperature as a function of enthalpy, pressure and composition.
     double T_h   (double Hmass, double p, double x){throw NotImplementedError(format("%s (%d): T from enthalpy is not implemented in the fluid, use the backend.",__FILE__,__LINE__));}
     /// Viscosity as a function of temperature, pressure and composition.
@@ -276,7 +295,7 @@ protected:
      *  pressure employing functions for internal energy and
      *  density. Provides consistent formulations. */
     double h_u(double T, double p, double x) {
-        return u(T,p,x)+(p-_pref)/_rhoref;
+        return u(T,p,x)+p/rho(T,p,x);
     };
 
     /// Internal energy from h, p and rho.
@@ -284,7 +303,7 @@ protected:
      *  and pressure employing functions for enthalpy and
      *  density. Provides consistent formulations. */
     double u_h(double T, double p, double x) {
-        return h(T,p,x)-(p-_pref)/_rhoref;
+        return h(T,p,x)-p/rho(T,p,x);
     };
 
 

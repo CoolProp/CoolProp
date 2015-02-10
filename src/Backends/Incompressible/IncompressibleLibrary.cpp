@@ -288,8 +288,6 @@ LiBrSolution::LiBrSolution():IncompressibleFluid(){
     pref   = 0.0;
     href   = 0.0;
     sref   = 0.0;
-    uref   = 0.0;
-    rhoref = 0.0;
     xbase  = 0.0;
     Tbase  = 0.0;
 
