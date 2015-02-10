@@ -285,11 +285,13 @@ static double Secant_HAProps_W(const std::string &OutputName, const std::string 
     // Use a secant solve in order to yield a target output value for HAProps by altering humidity ratio
     double x1=0,x2=0,x3=0,y1=0,y2=0,eps=1e-12,f=999,W=0.0001;
     int iter=1;
+    
+    if (OutputName == "B"){eps = 1e-7;}
 
     while ((iter<=3 || std::abs(f)>eps) && iter<100)
     {
         if (iter == 1){x1 = W_guess; W = x1;}
-        if (iter == 2){x2 = W_guess*1.001; W = x2;}
+        if (iter == 2){x2 = W_guess*1.1; W = x2;}
         if (iter > 2) {W = x2;}
             f = HAPropsSI(OutputName,"W",W,Input1Name,Input1,Input2Name,Input2)-TargetVal;
         if (iter == 1){y1 = f;}
