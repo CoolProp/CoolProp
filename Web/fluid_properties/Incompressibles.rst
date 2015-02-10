@@ -390,11 +390,3 @@ heat capacity includes the heat of fusion. It might be necessary to adjust the
 solid content during heat transfer. The implementation is based on the data
 available in `SecCool <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_,
 which was originally recorded at the Danish Technological Institute `(DTI) <http://www.dti.dk/>`_.
-
-
-References
-----------
-
-.. bibliography:: ../../CoolPropBibTeXLibrary.bib
-   :filter: docname in docnames
-   :style: unsrt
