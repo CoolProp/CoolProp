@@ -729,7 +729,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         }
 
         // Compare s
-        val = 145.59157247249246;
+        val = 144.08;
         res = XLT.s(T,p,x);
         {
         CAPTURE(T);
@@ -748,7 +748,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         }
 
         // Compare u
-        val = 45212.407309106304;
+        val = 44724.1;
         res = XLT.u(T,p,x);
         {
         CAPTURE(T);
@@ -767,7 +767,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         }
 
         // Compare h
-        val = 46388.7;
+        val = 45937;
         res = XLT.h(T,p,x);
         {
         CAPTURE(T);
@@ -855,7 +855,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         }
 
         // Compare s
-        expected = -206.62646783739274;
+        expected = -207.027;
         actual = CH3OH.s(T,p,x);
         {
         CAPTURE(T);
@@ -896,7 +896,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         }
 
         // Compare u
-        expected = -60043.78429641827;
+        expected = -60157.1;
         actual = CH3OH.u(T,p,x);
         {
         CAPTURE(T);
@@ -919,7 +919,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         }
 
         // Compare h
-        expected = -58999.1;
+        expected = -59119;
         actual = CH3OH.h(T,p,x);
         {
         CAPTURE(T);

@@ -191,67 +191,71 @@ compositions as independent fluids. This should be kept in mind when comparing
 properties for different compositions. Setting the reference state for one
 composition will always affect all fluids consisting of the same components.
 
-The approach described in textbooks like Cengel and Boles :cite:`Cengel2007`
-is that the internal energy :math:`u` only depends on temperature and does not
-change with pressure.
-
-.. Alternatively, use cancel package with \cancelto{0}{x-d} command
-
-.. math::
-
-    du &= \overbrace{ \left( \frac{\partial u}{\partial T} \right)_p}^{=c_p=c_v=c} dT &+ \overbrace{\left( \frac{\partial u}{\partial p} \right)_T}^{\stackrel{!}{=}0} dp \\
-
-By using the fourth Maxwell relation, we can extend the simplifications to the
-entropy formulation
-
-.. math::
-
-    ds &= \left( \frac{\partial s}{\partial T} \right)_p dT &+              \left( \frac{\partial s}{\partial p} \right)_T  dp \\
-       &= \underbrace{ \left( \frac{\partial h}{\partial T} \right)_p}_{=c_p=c_v=c} T^{-1} dT &-\underbrace{\left( \frac{\partial v}{\partial T} \right)_p}_{\stackrel{!}{=} 0} dp \\
-
-As indicated by the braces above, the fluids implemented in CoolProp do also follow
-the second common assumption of a constant specific volume :math:`v` that does
-change neither with temperature nor with pressure. It should be highlighted, that
-this simplification violates the integrity of the implemented equations since there
-are changes in density as a function of temperature for all incompressible fluids.
-
-Employing :math:`h=u+pv`, we can derive the impact on enthalpy as well by
-rewriting the equation in terms of our state variables :math:`p` and :math:`T`
-as shown by Skovrup :cite:`Skovrup1999`.
-
-.. dh &= \overbrace{ \left( \frac{\partial h}{\partial T} \right)_p}^{=c_p=c_v=c} dT + \left( \frac{\partial h}{\partial p} \right)_T dp \\
-
-.. math::
-    dh &= \overbrace{ \left( \frac{\partial h}{\partial T} \right)_p}^{=c_p=c_v=c} dT +              \left( \frac{\partial h}{\partial p} \right)_T         dp \\
-       &=             \left( \frac{\partial u}{\partial T} \right)_v dT               + \left( v - T \left( \frac{\partial v}{\partial T} \right)_p \right) dp \\
-       &= du + \underbrace{p dv}_{\stackrel{!}{=} 0} + v dp \quad \text{ with $v\stackrel{!}{=}v_0=$ const }  \\
-
-The two assumptions used above :math:`\left( \partial v / \partial T \right)_p \stackrel{!}{=} 0`
-and :math:`\left( \partial u / \partial T \right)_p \stackrel{!}{=} \left( \partial u / \partial T \right)_v`
-imply that :math:`v` is constant under all circumstances. Hence, we have to use
-the specific volume at reference conditions to calculate enthalpy from the
-integration in :math:`T` and :math:`p`. Future work could provide a more accurate
-formulation of entropy and enthalpy by implementing the term
-:math:`\left( \partial v / \partial T \right)_p \neq 0`.
-
-Using only polynomials for the heat capacity functions, we can derive internal
-energy and entropy by integrating the specific heat capacity in temperature.
+.. The approach described in textbooks like Cengel and Boles :cite:`Cengel2007`
+.. is that the internal energy :math:`u` only depends on temperature and does not
+.. change with pressure.
+.. 
+.. .. Alternatively, use cancel package with \cancelto{0}{x-d} command
+.. 
+.. .. math::
+.. 
+..     du &= \overbrace{ \left( \frac{\partial u}{\partial T} \right)_p}^{=c_p=c_v=c} dT &+ \overbrace{\left( \frac{\partial u}{\partial p} \right)_T}^{\stackrel{!}{=}0} dp \\
+.. 
+.. By using the fourth Maxwell relation, we can extend the simplifications to the
+.. entropy formulation
+.. 
+.. .. math::
+.. 
+..     ds &= \left( \frac{\partial s}{\partial T} \right)_p dT &+              \left( \frac{\partial s}{\partial p} \right)_T  dp \\
+..        &= \underbrace{ \left( \frac{\partial h}{\partial T} \right)_p}_{=c_p=c_v=c} T^{-1} dT &-\underbrace{\left( \frac{\partial v}{\partial T} \right)_p}_{\stackrel{!}{=} 0} dp \\
+.. 
+.. As indicated by the braces above, the fluids implemented in CoolProp do also follow
+.. the second common assumption of a constant specific volume :math:`v` that does
+.. change neither with temperature nor with pressure. It should be highlighted, that
+.. this simplification violates the integrity of the implemented equations since there
+.. are changes in density as a function of temperature for all incompressible fluids.
+.. 
+.. Employing :math:`h=u+pv`, we can derive the impact on enthalpy as well by
+.. rewriting the equation in terms of our state variables :math:`p` and :math:`T`
+.. as shown by Skovrup :cite:`Skovrup1999`.
+.. 
+.. .. dh &= \overbrace{ \left( \frac{\partial h}{\partial T} \right)_p}^{=c_p=c_v=c} dT + \left( \frac{\partial h}{\partial p} \right)_T dp \\
+.. 
+.. .. math::
+..     dh &= \overbrace{ \left( \frac{\partial h}{\partial T} \right)_p}^{=c_p=c_v=c} dT +              \left( \frac{\partial h}{\partial p} \right)_T         dp \\
+..        &=             \left( \frac{\partial u}{\partial T} \right)_v dT               + \left( v - T \left( \frac{\partial v}{\partial T} \right)_p \right) dp \\
+..        &= du + \underbrace{p dv}_{\stackrel{!}{=} 0} + v dp \quad \text{ with $v\stackrel{!}{=}v_0=$ const }  \\
+.. 
+.. The two assumptions used above :math:`\left( \partial v / \partial T \right)_p \stackrel{!}{=} 0`
+.. and :math:`\left( \partial u / \partial T \right)_p \stackrel{!}{=} \left( \partial u / \partial T \right)_v`
+.. imply that :math:`v` is constant under all circumstances. Hence, we have to use
+.. the specific volume at reference conditions to calculate enthalpy from the
+.. integration in :math:`T` and :math:`p`. Future work could provide a more accurate
+.. formulation of entropy and enthalpy by implementing the term
+.. :math:`\left( \partial v / \partial T \right)_p \neq 0`.
+.. 
+.. Using only polynomials for the heat capacity functions, we can derive internal
+.. energy and entropy by integrating the specific heat capacity in temperature.
 
 .. _BaseValue:
 
-.. math::
+.. note::
+   The internal routines for the incompressibles were updated 2015-02-10, the documentation is not fully updated. 
+   We are going to add the new equation as soon as possible, probably mid-March 2015.
 
-    c          &= \sum_{i=0}^n x^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot T^j \text{ yielding } \\
-    u          &= \int_{0}^{1} c\left( x,T \right) dT
-                = \sum_{i=0}^n x^i \cdot \sum_{j=0}^m \frac{1}{j+1} \cdot C_{c}[i,j]
-                  \cdot \left( T_{1}^{j+1} - T_{0}^{j+1} \right) \text{ and } \\
-    s          &= \int_{0}^{1} \frac{c\left( x,T \right)}{T} dT
-                = \sum_{i=0}^n x^i \cdot \left(
-                  C_{c}[i,0] \cdot \ln\left(\frac{T_{1}}{T_{0}}\right)
-                  + \sum_{j=0}^{m-1} \frac{1}{j+1} \cdot C_{c}[i,j+1] \cdot \left( T_{1}^{j+1} - T_{0}^{j+1} \right)
-                  \right) \\
-    h          &= u + v_{0} \cdot \left( p_{1} - p_{0} \right)
-
+.. .. math::
+.. 
+..     c          &= \sum_{i=0}^n x^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot T^j \text{ yielding } \\
+..     u          &= \int_{0}^{1} c\left( x,T \right) dT
+..                 = \sum_{i=0}^n x^i \cdot \sum_{j=0}^m \frac{1}{j+1} \cdot C_{c}[i,j]
+..                   \cdot \left( T_{1}^{j+1} - T_{0}^{j+1} \right) \text{ and } \\
+..     s          &= \int_{0}^{1} \frac{c\left( x,T \right)}{T} dT
+..                 = \sum_{i=0}^n x^i \cdot \left(
+..                   C_{c}[i,0] \cdot \ln\left(\frac{T_{1}}{T_{0}}\right)
+..                   + \sum_{j=0}^{m-1} \frac{1}{j+1} \cdot C_{c}[i,j+1] \cdot \left( T_{1}^{j+1} - T_{0}^{j+1} \right)
+..                   \right) \\
+..     h          &= u + v_{0} \cdot \left( p_{1} - p_{0} \right)
+.. 
 
 According to Melinder :cite:`Melinder2010` and Skovrup :cite:`Skovrup2013`,
 using a centred approach for the independent variables enhances the fit quality.
@@ -278,9 +282,8 @@ be multiplied with the other coefficients and the concentration.
 
 .. math::
 
-    s          &= \int_{0}^{1} \frac{c\left( x_\text{in},T_\text{in} \right)}{T_\text{in}} dT_\text{in} = \sum_{i=0}^n x_\text{in}^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot F(j,T_\text{in,0},T_\text{in,1}) \\
+    \int_{0}^{1} \left( \frac{\partial s}{\partial T} \right)_p dT          &= \int_{0}^{1} \frac{c\left( x_\text{in},T_\text{in} \right)}{T_\text{in}} dT_\text{in} = \sum_{i=0}^n x_\text{in}^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot F(j,T_\text{in,0},T_\text{in,1}) \\
     F          &= (-1)^j \cdot \ln \left( \frac{T_\text{in,1}}{T_\text{in,0}} \right) \cdot T_{base}^j + \sum_{k=0}^{j-1} \binom{j}{k} \cdot \frac{(-1)^k}{j-k} \cdot \left( T_\text{in,1}^{j-k} - T_\text{in,0}^{j-k} \right) \cdot T_{base}^k
-
 
 .. _Equations:
 
