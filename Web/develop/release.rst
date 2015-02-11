@@ -14,7 +14,7 @@ library.
 * **Changelog**: Update the changelog and generate a list of closed GitHub issues: 
 
     - Move into the ``dev/scripts`` folder and do ``python milestone2rst.py vX.X.X`` where ``vX.X.X`` is the version number of the milestone on github.
-    - Copy the generated text (goes to stdout) into the changelog file in ``Web/changelog.rst``
+    - Copy the generated text (goes to stdout) into the changelog file in ``Web/coolprop/changelog.rst``
     
 * **release branch**: Merge all code from *master* into *release* branch
 * **build bots**: Force all buildbots to run on the *release* branch, this will also change the upload folder from *binaries* to *release*.
