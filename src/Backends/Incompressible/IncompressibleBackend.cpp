@@ -130,9 +130,6 @@ void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double valu
 /// Clear all the cached values
 bool IncompressibleBackend::clear() {
 	AbstractState::clear(); // Call the base class
-	/// Reference values, no need to calculate them each time
-    this->_hmass_ref.clear();
-    this->_smass_ref.clear();
 	/// Additional cached elements used for the partial derivatives
     this->_cmass.clear();
     this->_hmass.clear();
@@ -146,6 +143,10 @@ bool IncompressibleBackend::clear() {
 /// Update the reference values and clear the state
 void IncompressibleBackend::set_reference_state(double T0, double p0, double x0, double h0, double s0){
 	this->clear();
+	/// Reference values, no need to calculate them each time
+	this->_hmass_ref.clear();
+	this->_smass_ref.clear();
+	//
 	this->_T_ref = T0;
 	this->_p_ref = p0;
 	this->_x_ref = x0;
