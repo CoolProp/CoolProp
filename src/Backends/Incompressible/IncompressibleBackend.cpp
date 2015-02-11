@@ -662,6 +662,77 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CAPTURE(res);
         CHECK( check_abs(val,res,acc) );
         }
+
+        // Testing the reference state function
+        double Tref = 20+273.15-20;
+        double pref = 101325*10;
+        double xref = x;
+        backend.set_reference_state(Tref,pref,xref,0.5,0.5);
+        backend.set_mass_fractions(std::vector<long double>(1,x));
+        backend.update(CoolProp::PT_INPUTS, pref, Tref);
+        val = 0.5;
+        res = backend.hmass();
+        {
+		CAPTURE(Tref);
+		CAPTURE(pref);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		val = 0.5;
+		res = backend.smass();
+		{
+		CAPTURE(Tref);
+		CAPTURE(pref);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		backend.set_reference_state(Tref,pref,xref,123,456);
+		backend.update(CoolProp::PT_INPUTS, pref, Tref);
+		val = 123;
+		res = backend.hmass();
+		{
+		CAPTURE(Tref);
+		CAPTURE(pref);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		val = 456;
+		res = backend.smass();
+		{
+		CAPTURE(Tref);
+		CAPTURE(pref);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		backend.set_reference_state(Tref,pref,xref,789,123);
+		backend.update(CoolProp::PT_INPUTS, pref, Tref);
+		val = 789;
+		res = backend.hmass();
+		{
+		CAPTURE(Tref);
+		CAPTURE(pref);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
+
+		val = 123;
+		res = backend.smass();
+		{
+		CAPTURE(Tref);
+		CAPTURE(pref);
+		CAPTURE(val);
+		CAPTURE(res);
+		CHECK( check_abs(val,res,acc) );
+		}
     }
 
     SECTION("Tests for the full implementation using PropsSI") {
