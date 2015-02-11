@@ -59,8 +59,8 @@ Pure Fluid Examples
 -------------------
 
 Incompressible fluids only allow  for a limited subset of input variables. The
-following input pairs are supported: :math:`f(p,T)`, :math:`f(p,h)`, :math:`f(p,\rho)`,
-:math:`f(p,u)` and :math:`f(p,s)`. Some fluids also provide saturation state
+following input pairs are supported: :math:`f(p,T)`, :math:`f(p,h)`, :math:`f(p,\rho)` 
+and :math:`f(p,s)`. Some fluids also provide saturation state
 information as :math:`f(Q,T)` with :math:`Q=0`. All functions iterate on :math:`f(p,T)` calls
 internally, which makes this combination by far the fastest. However, also the
 other inputs should be fast compared to the full Helmholtz-based EOS implemented
@@ -74,14 +74,30 @@ thermal conductivity. Hence, the available output keys are: ``T``, ``P``, ``D``,
 .. ipython::
 
     In [1]: from CoolProp.CoolProp import PropsSI
-
-    #Density of Downtherm Q at 500 K and 1 atm.
-    In [1]: PropsSI('D','T',500,'P',101325,'INCOMP::DowQ')
-
+    
     #Specific heat capacity of Downtherm Q at 500 K and 1 atm
     In [1]: PropsSI('C','T',500,'P',101325,'INCOMP::DowQ')
 
-    In [1]: PropsSI('C','D',809.0659,'P',101325,'INCOMP::DowQ')
+    #Density of Downtherm Q at 500 K and 1 atm.
+    In [1]: PropsSI('D','T',500,'P',101325,'INCOMP::DowQ')
+    
+    #Heat capacity from density and pressure
+    In [1]: PropsSI('C','D',D,'P',101325,'INCOMP::DowQ')
+    
+    #Round trip in thermodynamic properties
+    In [1]: T_init = 500.0
+    
+    In [2]: P_init = 101325
+    
+    In [3]: D_init = PropsSI('D','T',T_init,'P',P_init,'INCOMP::DowQ')
+    
+    In [4]: S_init = PropsSI('S','D',D_init,'P',P_init,'INCOMP::DowQ')
+    
+    In [5]: H_init = PropsSI('H','S',S_init,'P',P_init,'INCOMP::DowQ')
+    
+    In [6]: T_init = PropsSI('T','H',H_init,'P',P_init,'INCOMP::DowQ')
+    
+    In [7]: T_init
 
     #Saturation pressure of Downtherm Q at 500 K
     In [1]: PropsSI('P','T',500,'Q',0,'INCOMP::DowQ')
