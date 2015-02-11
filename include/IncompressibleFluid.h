@@ -60,7 +60,6 @@ protected:
     composition_types xid;
 
     double TminPsat;
-    double Tref, pref, xref, href, sref;
     double xbase, Tbase;
 
     /// These are the objects that hold the coefficients
@@ -144,11 +143,6 @@ public:
     double getxmin() const {return xmin;}
     composition_types getxid() const {return xid;}
     double getTminPsat() const {return TminPsat;}
-    double getTref() const {return Tref;}
-    double getpref() const {return pref;}
-    double getxref() const {return xref;}
-    double gethref() const {return href;}
-    double getsref() {return sref;}
     double getTbase() const {return Tbase;}
     double getxbase() const {return xbase;}
 
@@ -161,10 +155,6 @@ public:
     void setxmin(double xmin) {this->xmin = xmin;}
     void setxid(composition_types xid) {this->xid = xid;}
     void setTminPsat(double TminPsat) {this->TminPsat = TminPsat;}
-    //void setTref(double Tref) {this->Tref = Tref;}
-    //void setpref(double pref) {this->pref = pref;}
-    //void setxref(double xref) {this->xref = xref;}
-    void set_reference_state(double T0, double p0, double x0, double h0, double s0);
     void setTbase(double Tbase) {this->Tbase = Tbase;}
     void setxbase(double xbase) {this->xbase = xbase;}
 
@@ -203,14 +193,14 @@ public:
     double rho (double T, double p, double x);
     /// Heat capacities as a function of temperature, pressure and composition.
     double c   (double T, double p, double x);
-    double cp  (double T, double p, double x){return c(T,p,x);};
-    double cv  (double T, double p, double x){return c(T,p,x);};
+    double cp  (double T, double p, double x){throw ValueError(format("%s (%d): Please use the c-function instead.",__FILE__,__LINE__));}
+    double cv  (double T, double p, double x){throw ValueError(format("%s (%d): Please use the c-function instead.",__FILE__,__LINE__));}
     /// Entropy as a function of temperature, pressure and composition.
-    double s   (double T, double p, double x);
+    double s   (double T, double p, double x){throw ValueError(format("%s (%d): The internal calculations have changed, use the backend to calculate entropy from the partial derivatives.",__FILE__,__LINE__));}
     /// Internal energy as a function of temperature, pressure and composition.
-    double u   (double T, double p, double x);
+    double u   (double T, double p, double x){throw ValueError(format("%s (%d): The internal calculations have changed, use the backend to calculate internal energy from enthalpy.",__FILE__,__LINE__));}
     /// Enthalpy as a function of temperature, pressure and composition.
-    double h   (double T, double p, double x);
+    double h   (double T, double p, double x){throw ValueError(format("%s (%d): The internal calculations have changed, use the backend to calculate enthalpy from the partial derivatives.",__FILE__,__LINE__));}
     /// Viscosity as a function of temperature, pressure and composition.
     double visc(double T, double p, double x);
     /// Thermal conductivity as a function of temperature, pressure and composition.
@@ -220,29 +210,27 @@ public:
     /// Freezing temperature as a function of pressure and composition.
     double Tfreeze(       double p, double x);
 
-
     /* Below are direct calculations of the derivatives. Nothing
-	 * special is going on, we simply use the polynomial class to
-	 * derive the different functions with respect to temperature.
-	 */
-	/// Partial derivative of density with respect to temperature at constant pressure and composition
-	double drhodTatPx (double T, double p, double x);
-	/// Partial derivative of entropy with respect to temperature at constant pressure and composition
-	double dsdTatPx   (double T, double p, double x){return c(T,p,x)/T;};
-	/// Partial derivative of internal energy with respect to temperature at constant pressure and composition
-	double dudTatPx   (double T, double p, double x){return c(T,p,x);};
-	/// Partial derivative of enthalpy with respect to temperature at constant pressure and composition
-	double dhdTatPx   (double T, double p, double x){return c(T,p,x);};
-
-
-	/* Other useful derivatives
-	 */
-	/// Partial derivative of enthalpy with respect to pressure at constant temperature and composition
-	//  \f[ \left( \frac{\partial h}{\partial p} \right)_T = v - T \left( \frac{\partial v}{\partial T} \right)_p = \rho^{-1} \left( 1 + T \rho^{-1} \left( \frac{\partial \rho}{\partial T} \right)_p \right) \f]
-	double dhdpatTx (double T, double p, double x);
-	/// Partial derivative of entropy with respect to pressure at constant temperature and composition
-	//  \f[ \left( \frac{\partial s}{\partial p} \right)_T = - \left( \frac{\partial v}{\partial T} \right)_p = \rho^{-2} \left( \frac{\partial \rho}{\partial T} \right)_p \right) \f]
-	double dsdpatTx (double T, double p, double x);
+     * special is going on, we simply use the polynomial class to
+     * derive the different functions with respect to temperature.
+     */
+    /// Partial derivative of density
+	//  with respect to temperature at constant pressure and composition
+    double drhodTatPx(double T, double p, double x);
+    ///// Partial derivative of entropy
+	////  with respect to temperature at constant pressure and composition
+	//double dsdTatPx  (double T, double p, double x){return c(T,p,x)/T;};
+	///// Partial derivative of enthalpy
+	////  with respect to temperature at constant pressure and composition
+	//double dhdTatPx  (double T, double p, double x){return c(T,p,x);};
+    /// Partial derivative of entropy
+    //  with respect to temperature at constant pressure and composition
+    //  integrated in temperature
+	double dsdTatPxdT(double T, double p, double x);
+	/// Partial derivative of enthalpy
+	//  with respect to temperature at constant pressure and composition
+	//  integrated in temperature
+	double dhdTatPxdT(double T, double p, double x);
 
 
     /// Mass fraction conversion function

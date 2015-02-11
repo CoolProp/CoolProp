@@ -12,11 +12,21 @@
 namespace CoolProp {
 
 class IncompressibleBackend : public AbstractState  {
+
 protected:
-    //int Ncomp;
-    //static bool _REFPROP_supported;
-    //int _fractions_id;
-    std::vector<long double> _fractions;
+
+
+	/// Bulk values, state variables
+	//double _T, _p; // From AbstractState
+	std::vector<long double> _fractions;
+
+	/// Reference values, no need to calculate them each time
+	CachedElement _T_ref,_p_ref,_x_ref,_h_ref,_s_ref;
+	CachedElement _hmass_ref, _smass_ref;
+
+	/// Additional cached elements used for the partial derivatives
+	CachedElement  _cmass, _hmass, _rhomass, _smass, _umass;
+
     IncompressibleFluid *fluid;
 
     /// Set the fractions
@@ -55,6 +65,12 @@ public:
     */
     void update(CoolProp::input_pairs input_pair, double value1, double value2);
 
+    /// Clear all the cached values
+    bool clear();
+
+    /// Update the reference values and clear the state
+    void set_reference_state(double T0=20+273.15, double p0=101325, double x0=0.0, double h0=0.0, double s0=0.0);
+
     /// Set the mole fractions
     /**
     @param mole_fractions The vector of mole fractions of the components
@@ -77,6 +93,42 @@ public:
     /// Check if the mole fractions have been set, etc.
     void check_status();
 
+    /** We have to override some of the functions from the AbstractState.
+	 *  The incompressibles are only mass-based and do not support conversion
+	 *  from molar to specific quantities.
+	 *  We also have a few new chaced variables that we need.
+	 */
+	/// Return the mass density in kg/m^3
+	double rhomass(void);
+	/// Return the mass enthalpy in J/kg
+	double hmass(void);
+	/// Return the molar entropy in J/mol/K
+	double smass(void);
+	/// Return the molar internal energy in J/mol
+	double umass(void);
+	/// Return the mass constant pressure specific heat in J/kg/K
+	double cmass(void);
+
+	/// Return the temperature in K
+	double T_ref(void);
+	/// Return the pressure in Pa
+	double p_ref(void);
+	/// Return the composition
+	double x_ref(void);
+	/// Return the mass enthalpy in J/kg
+	double h_ref(void);
+	/// Return the molar entropy in J/mol/K
+	double s_ref(void);
+
+	/// Return the mass enthalpy in J/kg
+	double hmass_ref(void);
+	/// Return the molar entropy in J/mol/K
+	double smass_ref(void);
+
+
+    /** These functions should be protected, but that requires new tests.
+     *  I'll leave that as a TODO item for now.
+     */
     /// Calculate T given pressure and density
     /**
     @param rhomass The mass density in kg/m^3
@@ -99,42 +151,72 @@ public:
     */
     long double PSmass_flash(long double p, long double smass);
 
-    /// Calculate T given pressure and internal energy
-    /**
-    @param umass The mass internal energy in J/kg
-    @param p The pressure in Pa
-    @returns T The temperature in K
-    */
-    long double PUmass_flash(long double p, long double umass);
+//    /// Calculate T given pressure and internal energy
+//    /**
+//    @param umass The mass internal energy in J/kg
+//    @param p The pressure in Pa
+//    @returns T The temperature in K
+//    */
+//    long double PUmass_flash(long double p, long double umass);
 
-    /// Get the viscosity [Pa-s]
-    long double calc_viscosity(void){return fluid->visc(_T, _p, _fractions[0]);};
-    /// Get the thermal conductivity [W/m/K] (based on the temperature and pressure in the state class)
-    long double calc_conductivity(void){return fluid->cond(_T, _p, _fractions[0]);};
-
+    /// We start with the functions that do not need a reference state
     long double calc_rhomass(void){return fluid->rho(_T, _p, _fractions[0]);};
-    long double calc_hmass(void){return fluid->h(_T, _p, _fractions[0]);};
-    long double calc_smass(void){return fluid->s(_T, _p, _fractions[0]);};
-    long double calc_umass(void){return fluid->u(_T, _p, _fractions[0]);};
-    long double calc_cpmass(void){return fluid->cp(_T, _p, _fractions[0]);};
-    long double calc_cvmass(void){return fluid->cv(_T, _p, _fractions[0]);};
+    long double calc_cmass(void){return fluid->c(_T, _p, _fractions[0]);};
+    long double calc_cpmass(void){return cmass();};
+    long double calc_cvmass(void){return cmass();};
+    long double calc_viscosity(void){return fluid->visc(_T, _p, _fractions[0]);};
+    long double calc_conductivity(void){return fluid->cond(_T, _p, _fractions[0]);};
+    long double calc_T_freeze(void){return fluid->Tfreeze(_p, _fractions[0]);};
+    long double calc_melting_line(int param, int given, long double value);
+    long double calc_umass(void);
+
+    /// ... and continue with the ones that depend on reference conditions.
+    long double calc_hmass(void);
+    long double calc_smass(void);
+
+public:
+    /// Functions that can be used with the solver, they miss the reference values!
+    long double raw_calc_hmass(double T, double p, double x);
+    long double raw_calc_smass(double T, double p, double x);
+
+
+protected:
+    /* Below are direct calculations of the derivatives. Nothing
+	 * special is going on, we simply use the polynomial class to
+	 * derive the different functions with respect to temperature.
+	 */
+	/// Partial derivative of density with respect to temperature at constant pressure and composition
+	double calc_drhodTatPx(double T, double p, double x){return fluid->drhodTatPx(T,p,x);};
+	/// Partial derivative of entropy with respect to temperature at constant pressure and composition
+	double calc_dsdTatPx  (double T, double p, double x){return fluid->c(T,p,x)/T;};
+	/// Partial derivative of enthalpy with respect to temperature at constant pressure and composition
+	double calc_dhdTatPx  (double T, double p, double x){return fluid->c(T,p,x);};
+    /// Partial derivative of entropy
+    //  with respect to temperature at constant pressure and composition
+    //  integrated in temperature
+	double calc_dsdTatPxdT(double T, double p, double x){return fluid->dsdTatPxdT(T,p,x);};
+	/// Partial derivative of enthalpy
+	//  with respect to temperature at constant pressure and composition
+	//  integrated in temperature
+	double calc_dhdTatPxdT(double T, double p, double x){return fluid->dhdTatPxdT(T,p,x);};
+
+
+	/* Other useful derivatives
+	 */
+	/// Partial derivative of entropy with respect to pressure at constant temperature and composition
+	//  \f[ \left( \frac{\partial s}{\partial p} \right)_T = - \left( \frac{\partial v}{\partial T} \right)_p = \rho^{-2} \left( \frac{\partial \rho}{\partial T} \right)_p \right) \f]
+	double calc_dsdpatTx (double rho, double drhodTatPx);
+	/// Partial derivative of enthalpy with respect to pressure at constant temperature and composition
+	//  \f[ \left( \frac{\partial h}{\partial p} \right)_T = v - T \left( \frac{\partial v}{\partial T} \right)_p = \rho^{-1} \left( 1 + T \rho^{-1} \left( \frac{\partial \rho}{\partial T} \right)_p \right) \f]
+	double calc_dhdpatTx (double T, double rho, double drhodTatPx);
+
+
+public:
+	/// Constants from the fluid object
     long double calc_Tmax(void){return fluid->getTmax();};
     long double calc_Tmin(void){return fluid->getTmin();};
-    
     long double calc_fraction_min(void){return fluid->getxmin();};
     long double calc_fraction_max(void){return fluid->getxmax();};
-    long double calc_T_freeze(void){
-        return fluid->Tfreeze(_p, _fractions[0]);};
-		
-	long double calc_melting_line(int param, int given, long double value){
-		if (param == iT && given == iP){
-			return fluid->Tfreeze(value, _fractions[0]);
-		}
-		else{
-			throw ValueError("For incompressibles, the only valid inputs to calc_melting_line are T(p)");
-		}
-	};
-        
     std::string calc_name(void){return fluid->getDescription();};
 };
 
