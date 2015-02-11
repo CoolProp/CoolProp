@@ -234,6 +234,7 @@ long double GERG2008ReducingFunction::d2Yrdxi2__constxj(const std::vector<long d
 
 long double GERG2008ReducingFunction::d2Yrdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag)
 {
+    if (std::abs(x[i]) < 10*DBL_EPSILON && std::abs(x[j]) < 10*DBL_EPSILON){return 0;}
     if (xN_flag == XN_INDEPENDENT){
         if (i == j)
         {
@@ -276,11 +277,13 @@ long double GERG2008ReducingFunction::d2Yrdxidxj(const std::vector<long double> 
 long double GERG2008ReducingFunction::dfYkidxi__constxk(const std::vector<long double> &x, std::size_t k, std::size_t i, const STLMatrix &beta)
 {
     double xk = x[k], xi = x[i], beta_Y = beta[k][i];
+    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
     return xk*(xk+xi)/(beta_Y*beta_Y*xk+xi)+xk*xi/(beta_Y*beta_Y*xk+xi)*(1-(xk+xi)/(beta_Y*beta_Y*xk+xi));
 }
 long double GERG2008ReducingFunction::dfYikdxi__constxk(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta)
 {
     double xk = x[k], xi = x[i], beta_Y = beta[i][k];
+    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
     return xk*(xi+xk)/(beta_Y*beta_Y*xi+xk)+xi*xk/(beta_Y*beta_Y*xi+xk)*(1-beta_Y*beta_Y*(xi+xk)/(beta_Y*beta_Y*xi+xk));
 }
 long double GERG2008ReducingFunction::c_Y_ij(std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c)
@@ -290,21 +293,25 @@ long double GERG2008ReducingFunction::c_Y_ij(std::size_t i, std::size_t j, const
 long double GERG2008ReducingFunction::f_Y_ij(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta)
 {
     double xi = x[i], xj = x[j], beta_Y = beta[i][j];
+    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xj) < 10*DBL_EPSILON){return 0;}
     return xi*xj*(xi+xj)/(beta_Y*beta_Y*xi+xj);
 }
 long double GERG2008ReducingFunction::d2fYikdxi2__constxk(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta)
 {
     double xi = x[i], xk = x[k], beta_Y = beta[i][k];
+    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
     return 1/(beta_Y*beta_Y*xi+xk)*(1-beta_Y*beta_Y*(xi+xk)/(beta_Y*beta_Y*xi+xk))*(2*xk-xi*xk*2*beta_Y*beta_Y/(beta_Y*beta_Y*xi+xk));
 }
 long double GERG2008ReducingFunction::d2fYkidxi2__constxk(const std::vector<long double> &x, std::size_t k, std::size_t i, const STLMatrix &beta)
 {
     double xi = x[i], xk = x[k], beta_Y = beta[k][i];
+    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
     return 1/(beta_Y*beta_Y*xk+xi)*(1-(xk+xi)/(beta_Y*beta_Y*xk+xi))*(2*xk-xk*xi*2/(beta_Y*beta_Y*xk+xi));
 }
 long double GERG2008ReducingFunction::d2fYijdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta)
 {
     double xi = x[i], xj = x[j], beta_Y = beta[i][j], beta_Y2 = beta_Y*beta_Y;
+    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xj) < 10*DBL_EPSILON){return 0;}
     return (xi+xj)/(beta_Y2*xi+xj) + xj/(beta_Y2*xi+xj)*(1-(xi+xj)/(beta_Y2*xi+xj))
         +xi/(beta_Y2*xi+xj)*(1-beta_Y2*(xi+xj)/(beta_Y2*xi+xj))
         -xi*xj/pow(beta_Y2*xi+xj,2)*(1+beta_Y2-2*beta_Y2*(xi+xj)/(beta_Y2*xi+xj));

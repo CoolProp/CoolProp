@@ -177,6 +177,7 @@ class BibTeXerClass(object):
 
         if fmt=="latex":
             contents = contents.replace(u"\\newblock ","")
+            contents = codecs.encode(contents, "latex")
         elif fmt=="html":
             contents = contents.replace(u"<dd>","")
             contents = contents.replace(u"</dd>","")

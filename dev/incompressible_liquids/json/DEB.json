@@ -29,7 +29,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Diethylbenzene mixture - Dowtherm J Dow Chemical Co.", 
+  "description": "Diethylbenzene mixture - Dowtherm J", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

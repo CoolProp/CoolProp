@@ -1,6 +1,48 @@
 Changelog for CoolProp
 ======================
 
+
+5.0.7
+-----
+
+New Features:
+
+* Added a Lua wrapper
+
+Issues Closed:
+
+* `#460 <http://github.com/CoolProp/CoolProp/issues/460>`_ : PropsSI ("Q", "P", valueP, "H", valueH, "REFPROP-R410A") only return 0
+* `#459 <http://github.com/CoolProp/CoolProp/issues/459>`_ : PropsSI ("D", "P", valueP, "T", valueT, "R407C") return bad result in L+V Phasis
+* `#456 <http://github.com/CoolProp/CoolProp/issues/456>`_ : Slave alert
+* `#454 <http://github.com/CoolProp/CoolProp/issues/454>`_ : Add density dependency to entropy and enthalpy of incomprerssible fluids
+* `#452 <http://github.com/CoolProp/CoolProp/issues/452>`_ : Allow mixtures to have zero mole fractions
+* `#450 <http://github.com/CoolProp/CoolProp/issues/450>`_ : Calling PropsSI to get thermal conductivity throws an exception
+* `#448 <http://github.com/CoolProp/CoolProp/issues/448>`_ : Retrieving acentric factor through Props1SI fails
+* `#443 <http://github.com/CoolProp/CoolProp/issues/443>`_ : Javascript index.html is missing
+* `#437 <http://github.com/CoolProp/CoolProp/issues/437>`_ : REFPROP predefined mixtures no longer work
+* `#434 <http://github.com/CoolProp/CoolProp/issues/434>`_ : R404A Refprop value differs from Refprop Value in Excel
+* `#432 <http://github.com/CoolProp/CoolProp/issues/432>`_ : All the mixture interaction parameters of Gernert are wrong
+* `#431 <http://github.com/CoolProp/CoolProp/issues/431>`_ : REFPROP should not be reloaded after every call to PropsSI
+* `#430 <http://github.com/CoolProp/CoolProp/issues/430>`_ : HAPropsSI is missing from the SWIG wrapper
+* `#429 <http://github.com/CoolProp/CoolProp/issues/429>`_ : Entropy of Melinder fluids giving wrong results
+* `#428 <http://github.com/CoolProp/CoolProp/issues/428>`_ : On windows, do not error out if REFPROP fluid files are not found in c:\Program Files\REFPROP
+* `#427 <http://github.com/CoolProp/CoolProp/issues/427>`_ : HapropsSi("W","B", 279.15, "T", 293.15, "P", 101325) lead to a "-1.#IND" value
+* `#425 <http://github.com/CoolProp/CoolProp/issues/425>`_ : Incompressible viscosity
+* `#419 <http://github.com/CoolProp/CoolProp/issues/419>`_ : HapropSI ("T","B",273.15+37,"D",273.15+36.44,"P",101325) lead to an error ...
+* `#416 <http://github.com/CoolProp/CoolProp/issues/416>`_ : Sphinx docs
+* `#413 <http://github.com/CoolProp/CoolProp/issues/413>`_ : Incompressible entropy
+* `#410 <http://github.com/CoolProp/CoolProp/issues/410>`_ : Phase envelope segfaults for pure fluids
+* `#409 <http://github.com/CoolProp/CoolProp/issues/409>`_ : Trivial outputs
+* `#408 <http://github.com/CoolProp/CoolProp/issues/408>`_ : HapropsSI function issues
+* `#403 <http://github.com/CoolProp/CoolProp/issues/403>`_ : Error in new CoolProp version in the function HAPropsSI (variable combination 'PH' and 'W')
+* `#401 <http://github.com/CoolProp/CoolProp/issues/401>`_ : Linux/OSX error with refprop 9.1* and mixtures containing  R1234YF
+* `#400 <http://github.com/CoolProp/CoolProp/issues/400>`_ : HAPropsSI(Output, "B",valueB, "R", 1, "P", 101325) lead to an error
+* `#398 <http://github.com/CoolProp/CoolProp/issues/398>`_ : HAPropsSI(Output, "B",252.84, "D";250.85, "P", 101325) lead to an infinite value
+* `#387 <http://github.com/CoolProp/CoolProp/issues/387>`_ : Vectorised PropSI breaks plotting functions
+* `#386 <http://github.com/CoolProp/CoolProp/issues/386>`_ : Bibtex numbering
+* `#307 <http://github.com/CoolProp/CoolProp/issues/307>`_ : Transport Properties for Mixtures
+
+
 5.0.6
 -----
 

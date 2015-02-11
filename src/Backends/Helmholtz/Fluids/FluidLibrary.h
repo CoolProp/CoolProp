@@ -299,7 +299,7 @@ protected:
         // Universal gas constant [J/mol/K]
         EOS.R_u = cpjson::get_double(EOS_json,"gas_constant");
         EOS.molar_mass = cpjson::get_double(EOS_json,"molar_mass");
-        EOS.accentric = cpjson::get_double(EOS_json,"accentric");
+        EOS.acentric = cpjson::get_double(EOS_json,"acentric");
 
         EOS.pseudo_pure = cpjson::get_bool(EOS_json, "pseudo_pure");
         EOS.limits.Tmax = cpjson::get_double(EOS_json, "T_max");

@@ -53,6 +53,9 @@ if __name__ == '__main__':
     #if args.fluid:     onlyFluid  = args.fluid
     #else:              onlyFluid  = None
 
+    #runReports = False
+    #runFitting = False
+
     print("")
     print("Processing the incompressible fluids for CoolProp")
     print("Legend: FluidName (w) | (i) -> (w)=written, (i)=ignored, unchanged coefficient or reports")
@@ -90,7 +93,8 @@ if __name__ == '__main__':
     if runFitting: writer.writeFluidList(doneObjs)
     if runReports:
         # TODO: The new method for multipage PDFs produces larger files, why?
-        combined_name = os.path.join(os.path.abspath("report"),"all_examples.pdf")
+        if writer.usetex: combined_name=None
+        else: combined_name = os.path.join(os.path.abspath("report"),"all_examples.pdf")
         writer.writeReportList(doneObjs, pdfFile=combined_name)
         #singleNames = [writer.get_report_file(fl.name) for fl in doneObjs]
         #mergePdfIfNewer(singleNames, "all_examples.pdf")
@@ -201,15 +205,19 @@ if __name__ == '__main__':
         writer.writeFluidList(doneObjs)
 
     if runReports:
-        combined_name = "all_incompressibles.pdf"
-        print("Creating the fitting reports in {0}".format(combined_name))
+        if writer.usetex:
+            combined_name = None
+            combined_time = 0
+        else:
+            combined_name = "all_incompressibles.pdf"
+            combined_name = os.path.join(os.path.abspath("report"),combined_name)
+            combined_time = getTime(combined_name)
 
         singles_time = np.array([])
         for fl in doneObjs:
             singles_time = np.append(singles_time, [getTime(writer.get_json_file(fl.name))])
 
-        combined_name = os.path.join(os.path.abspath("report"),combined_name)
-        combined_time = getTime(combined_name)
+
         if np.any(singles_time>combined_time):
             print("Processing {0:2d} fluids - ".format(len(doneObjs)), end="")
             writer.writeReportList(doneObjs, pdfFile=combined_name)
@@ -248,6 +256,7 @@ if __name__ == '__main__':
             #for f in objLists[i]: print(f.name, end=", ")
             #print("... done")
             writer.generateRstTable(objLists[i], filLists[i])
+            writer.generateTexTable(objLists[i], filLists[i])
 
     print("All done, bye")
     sys.exit(0)

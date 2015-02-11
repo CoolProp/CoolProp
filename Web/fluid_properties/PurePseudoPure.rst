@@ -106,12 +106,4 @@ List of Fluids
    :widths: 40, 15, 15, 15, 15, 15, 15
    :file: PurePseudoPure.csv
    
-References
-----------
-
-.. bibliography:: ../../CoolPropBibTeXLibrary.bib
-   :filter: docname in docnames
-   :style: unsrt
-   
-
 .. include:: fluidstoc.rst.in

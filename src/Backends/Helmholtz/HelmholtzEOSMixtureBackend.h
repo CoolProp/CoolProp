@@ -54,7 +54,7 @@ public:
     bool using_mole_fractions(){return true;}
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
-    bool is_pure(){ return is_pure_or_pseudopure; }
+    bool is_pure(){ return components.size() == 1 && !components[0]->EOSVector[0].pseudo_pure; }
     bool has_melting_line(){ return is_pure_or_pseudopure && components[0]->ancillaries.melting_line.enabled();};
     long double calc_melting_line(int param, int given, long double value);
     phases calc_phase(void){return _phase;};
@@ -69,7 +69,11 @@ public:
     long double calc_ODP();
 	
 	long double calc_first_saturation_deriv(parameters Of1, parameters Wrt1);
+    long double calc_first_saturation_deriv(parameters Of1, parameters Wrt1, HelmholtzEOSMixtureBackend &SatL, HelmholtzEOSMixtureBackend &SatV);
 	long double calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2);
+    long double calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
+    long double calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
+    long double calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, long double x_end);
     
 	/// Calculate the phase once the state is fully calculated but you aren't sure if it is liquid or gas or ...
 	void recalculate_singlephase_phase();
@@ -148,6 +152,7 @@ public:
 
     long double calc_molar_mass(void);
     long double calc_gas_constant(void);
+    long double calc_acentric_factor(void);
 
     long double calc_Bvirial(void);
     long double calc_Cvirial(void);

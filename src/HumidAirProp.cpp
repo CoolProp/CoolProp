@@ -13,12 +13,14 @@
 #include "crossplatform_shared_ptr.h"
 #include "Exceptions.h"
 
+#include <algorithm>    // std::next_permutation
 #include <stdlib.h>
 #include "math.h"
 #include "time.h"
 #include "stdio.h"
 #include <string.h>
 #include <iostream>
+#include <list>
 
 /// This is a stub overload to help with all the strcmp calls below and avoid needing to rewrite all of them
 std::size_t strcmp(const std::string &s, const std::string e){
@@ -166,14 +168,88 @@ static double Brent_HAProps_T(const std::string &OutputName, const std::string &
         ~BrentSolverResids(){};
 
         double call(double T){
-            return HAPropsSI(OutputName,"T",T,Input1Name,Input1,Input2Name,Input2)-TargetVal;
+            double val = HAPropsSI(OutputName, "T", T, Input1Name, Input1, Input2Name, Input2);
+            return val - TargetVal;
         }
     };
 
     BrentSolverResids BSR = BrentSolverResids(OutputName, Input1Name, Input1, Input2Name, Input2, TargetVal);
 
     std::string errstr;
-    T = CoolProp::Brent(BSR,T_min,T_max,1e-7,1e-4,50,errstr);
+    // Now we need to check the bounds and make sure that they are ok (don't yield invalid output)
+    // and actually bound the solution
+    double r_min = BSR.call(T_min);
+    bool T_min_valid = ValidNumber(r_min);
+    double r_max = BSR.call(T_max);
+    bool T_max_valid = ValidNumber(r_max);
+    if (!T_min_valid && !T_max_valid){
+        throw CoolProp::ValueError(format("Both T_min [%g] and T_max [%g] yield invalid output values in Brent_HAProps_T",T_min,T_max).c_str());
+    }
+    else if (T_min_valid && !T_max_valid){
+        while (!T_max_valid){
+            // Reduce T_max until it works
+            T_max = 0.95*T_max + 0.05*T_min;
+            r_max = BSR.call(T_max);
+            T_max_valid = ValidNumber(r_max);
+        }
+    }
+    else if (!T_min_valid && T_max_valid){
+        while (!T_min_valid){
+            // Increase T_min until it works
+            T_min = 0.95*T_min + 0.05*T_max;
+            r_min = BSR.call(T_min);
+            T_min_valid = ValidNumber(r_min);
+        }
+    }
+    // We will do a secant call if the values at T_min and T_max have the same sign
+    if (r_min*r_max > 0){
+        if (std::abs(r_min) < std::abs(r_max)){
+            T = CoolProp::Secant(BSR, T_min, 0.01*T_min, 1e-7, 50, errstr);
+        }
+        else{
+            T = CoolProp::Secant(BSR, T_max, -0.01*T_max, 1e-7, 50, errstr);
+        }
+    }
+    else{
+        T = CoolProp::Brent(BSR, T_min, T_max, 1e-7, 1e-4, 50, errstr);
+    }
+    
+    return T;
+}
+static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
+{
+    double T;
+    class BrentSolverResids : public CoolProp::FuncWrapper1D
+    {
+    private:
+        double pp_water, psi_w, p, r;
+    public:
+        BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) { pp_water = psi_w*p; };
+        ~BrentSolverResids(){};
+
+        double call(double T){
+            double p_ws;
+            if (T>=273.16){
+                // Saturation pressure [Pa]
+                Water->update(CoolProp::QT_INPUTS, 0, T);
+                p_ws= Water->keyed_output(CoolProp::iP);
+            }
+            else{
+                // Sublimation pressure [Pa]
+                p_ws=psub_Ice(T);
+            }
+            double f = f_factor(T, p);
+            double pp_water_calc = f*p_ws;
+            double psi_w_calc = pp_water_calc/p;
+            r = (psi_w_calc - psi_w)/psi_w;
+            return r;
+        }
+    };
+
+    BrentSolverResids Resids(psi_w, p);
+
+    std::string errstr; 
+    T = CoolProp::Brent(Resids, 150, 350, 1e-16, 1e-7, 100, errstr);
 
     return T;
 }
@@ -207,13 +283,15 @@ static double Secant_HAProps_T(const std::string &OutputName, const std::string 
 static double Secant_HAProps_W(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, double TargetVal, double W_guess)
 {
     // Use a secant solve in order to yield a target output value for HAProps by altering humidity ratio
-    double x1=0,x2=0,x3=0,y1=0,y2=0,eps=1e-8,f=999,W=0.0001;
+    double x1=0,x2=0,x3=0,y1=0,y2=0,eps=1e-12,f=999,W=0.0001;
     int iter=1;
+    
+    if (OutputName == "B"){eps = 1e-7;}
 
     while ((iter<=3 || std::abs(f)>eps) && iter<100)
     {
         if (iter == 1){x1 = W_guess; W = x1;}
-        if (iter == 2){x2 = W_guess*1.001; W = x2;}
+        if (iter == 2){x2 = W_guess*1.1; W = x2;}
         if (iter > 2) {W = x2;}
             f = HAPropsSI(OutputName,"W",W,Input1Name,Input1,Input2Name,Input2)-TargetVal;
         if (iter == 1){y1 = f;}
@@ -1089,7 +1167,6 @@ double MoleFractionWater(double T, double p, int HumInput, double InVal)
         {
             // Sublimation pressure [Pa]
             p_ws=psub_Ice(T);
-
         }
         // Enhancement Factor [-]
         f=f_factor(T,p);
@@ -1211,8 +1288,8 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
     {
         // Add a check to make sure that Air and Water fluid states have been properly instantiated
         check_fluid_instantiation();
-
-        int In1Type, In2Type, In3Type,iT,iW,iTdp,iRH,ip,Type1,Type2;
+        int iT, iW, iTdp, iRH, ip;
+        givens In1Type, In2Type, In3Type, Type1, Type2, OutputType;
         double vals[3],p,T,RH,W,Tdp,psi_w,M_ha,v_bar,h_bar,s_bar,MainInputValue,SecondaryInputValue,T_guess;
         double Value1,Value2,W_guess;
         std::string MainInputName, SecondaryInputName, Name1, Name2;
@@ -1220,11 +1297,17 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
         vals[0]=Input1;
         vals[1]=Input2;
         vals[2]=Input3;
+        
+        OutputType=Name2Type(OutputName.c_str());
 
         // First figure out what kind of inputs you have, convert names to Macro expansions
         In1Type=Name2Type(Input1Name.c_str());
         In2Type=Name2Type(Input2Name.c_str());
         In3Type=Name2Type(Input3Name.c_str());
+        
+        if (OutputType == In1Type){return Input1;}
+        if (OutputType == In2Type){return Input2;}
+        if (OutputType == In3Type){return Input3;}
 
         // Pressure must be included
         ip=TypeMatch(GIVEN_P,Input1Name,Input2Name,Input3Name);
@@ -1266,17 +1349,17 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
                 // Temperature and pressure are known, figure out which variable holds the other value
                 if (In1Type!=GIVEN_T && In1Type!=GIVEN_P)
                 {
-                    strcpy(SecondaryInputName,Input1Name);
+                    strcpy(SecondaryInputName, Input1Name);
                     SecondaryInputValue=Input1;
                 }
                 else if (In2Type!=GIVEN_T && In2Type!=GIVEN_P)
                 {
-                    strcpy(SecondaryInputName,Input2Name);
+                    strcpy(SecondaryInputName, Input2Name);
                     SecondaryInputValue=Input2;
                 }
                 else if (In3Type!=GIVEN_T && In3Type!=GIVEN_P)
                 {
-                    strcpy(SecondaryInputName,Input3Name);
+                    strcpy(SecondaryInputName, Input3Name);
                     SecondaryInputValue=Input3;
                 }
                 else{
@@ -1327,43 +1410,70 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
             // Get the integer type codes
             Type1=Name2Type(Name1);
             Type2=Name2Type(Name2);
-
-            // First, if one of the inputs is something that can potentially yield
-            // an explicit solution at a given iteration of the solver, use it
-            if (Type1==GIVEN_RH || Type1==GIVEN_HUMRAT || Type1==GIVEN_TDP)
+            
+            // First see if humidity ratio is provided, will be the fastest option
+            if (Type1 == GIVEN_HUMRAT)
             {
-                // First input variable is a "nice" one
-
                 // MainInput is the one that you are using in the call to HAProps
-                MainInputValue=Value1;
-                strcpy(MainInputName,Name1);
+                MainInputValue=Value1; strcpy(MainInputName,Name1);
                 // SecondaryInput is the one that you are trying to match
-                SecondaryInputValue=Value2;
-                strcpy(SecondaryInputName,Name2);
+                SecondaryInputValue=Value2; strcpy(SecondaryInputName,Name2);
             }
-            else if (Type2==GIVEN_RH || Type2==GIVEN_HUMRAT || Type2==GIVEN_TDP)
+            else if (Type2 == GIVEN_HUMRAT)
             {
-                // Second input variable is a "nice" one
-
-                // MainInput is the one that you are using in the call to HAProps
-                MainInputValue=Value2;
-                strcpy(MainInputName,Name2);
+                // MainInput is the one that you are using in the call to HAPropsSI
+                MainInputValue=Value2; strcpy(MainInputName, Name2);
                 // SecondaryInput is the one that you are trying to match
-                SecondaryInputValue=Value1;
-                strcpy(SecondaryInputName,Name1);
+                SecondaryInputValue=Value1; strcpy(SecondaryInputName, Name1);
+            }
+            // Next, if one of the inputs is something that can potentially yield
+            // an explicit solution at a given iteration of the solver, use it
+            else if (Type1 == GIVEN_RH || Type1 == GIVEN_TDP)
+            {
+                // MainInput is the one that you are using in the call to HAProps
+                MainInputValue = Value1; strcpy(MainInputName, Name1);
+                // SecondaryInput is the one that you are trying to match
+                SecondaryInputValue = Value2; strcpy(SecondaryInputName, Name2);
+            }
+            else if (Type2 == GIVEN_RH || Type2 == GIVEN_TDP)
+            {
+                // MainInput is the one that you are using in the call to HAProps
+                MainInputValue = Value2; strcpy(MainInputName, Name2);
+                // SecondaryInput is the one that you are trying to match
+                SecondaryInputValue=Value1; strcpy(SecondaryInputName, Name1);
             }
             else
             {
-                printf("Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now\n");
-                return -1000;
+                CoolProp::ValueError("Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now\n");
+                return _HUGE;
             }
 
-            double T_min = 210;
+            double T_min = 200;
             double T_max = 450;
 			
 			if (Name2Type(MainInputName) == GIVEN_RH){
-				T_max = CoolProp::PropsSI("T","P",p,"Q",0,"Water") - 1;
+                if (MainInputValue < 1e-10){
+                    T_max = 1000;
+                }
+				else{
+                    T_max = CoolProp::PropsSI("T","P",p,"Q",0,"Water") - 1;
+                }
 			}
+            // Minimum drybulb temperature is the drybulb temperature corresponding to saturated air for the humidity ratio
+            // if the humidity ratio is provided
+            else if (Name2Type(MainInputName) == GIVEN_HUMRAT){
+                if (MainInputValue < 1e-10){
+                    T_min = 135; // Around the critical point of dry air
+                    T_max = 1000;
+                }
+                else{
+                    // Calculate the saturated humid air water partial pressure;
+                    double psi_w_sat = MoleFractionWater(T_min, p, GIVEN_HUMRAT, MainInputValue);
+                    //double pp_water_sat = psi_w_sat*p; // partial pressure of water, which is equal to f*p_{w_s}
+                    // Iteratively solve for temperature that will give desired pp_water_sat
+                    T_min = Secant_Tdb_at_saturated_W(psi_w_sat, p, T_min);
+                }
+            }
 
 			try{
                 // Use the Brent's method solver to find T.  Slow but reliable
@@ -1912,7 +2022,94 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]")
             CHECK(std::abs(actual/expected-1) < 0.01);
         }
     }
-
 }
+TEST_CASE("Assorted tests","[HAPropsSI]")
+{
+    CHECK(ValidNumber(HumidAir::HAPropsSI("T", "H", 267769, "P", 104300, "W", 0.0)));
+    CHECK(ValidNumber(HumidAir::HAPropsSI("T", "B", 252.84, "W", 5.097e-4, "P", 101325)));
+    CHECK(ValidNumber(HumidAir::HAPropsSI("T", "B",290, "R", 1, "P", 101325)));
+}
+// a predicate implemented as a function:
+bool is_not_a_pair (const std::set<std::size_t> &item) { return item.size() != 2; }
+
+const int number_of_inputs = 6;
+std::string inputs[number_of_inputs] = {"W","D","B","R","T","V"};//,"H","S"};
+
+class ConsistencyTestData
+{
+public:
+	bool is_built;
+	std::vector<Dictionary> data;
+	std::list<std::set<std::size_t> > inputs_list;
+	ConsistencyTestData(){
+		is_built = false;
+	};
+	void build(){
+		if (is_built){return;}
+		std::vector<std::size_t> indices(number_of_inputs);
+		for (std::size_t i = 0; i < number_of_inputs; ++i){ indices[i] = i;}
+		// Generate a powerset of all the permutations of all lengths of inputs
+		std::set<std::size_t> indices_set(indices.begin(), indices.end());
+		std::set<std::set<std::size_t> > inputs_powerset = powerset(indices_set);
+		inputs_list = std::list<std::set<std::size_t> >(inputs_powerset.begin(), inputs_powerset.end());
+		inputs_list.remove_if(is_not_a_pair);
+
+		const int NT = 10, NW = 5;
+		double p = 101325;
+		for (double T = 210; T < 350; T += (350-210)/(NT-1))
+		{
+			double Wsat = HumidAir::HAPropsSI("W", "T", T, "P", p, "R", 1.0);
+			for (double W = 1e-5; W < Wsat; W += (Wsat-1e-5)/(NW-1)){
+				Dictionary vals;
+				// Calculate all the values using T, W
+				for (int i = 0; i < number_of_inputs; ++i){
+					double v = HumidAir::HAPropsSI(inputs[i], "T", T, "P", p, "W", W);
+					vals.add_number(inputs[i], v);
+				}
+				data.push_back(vals);
+				std::cout << format("T %g W %g\n",T,W);
+			}
+		}
+		is_built = true;
+	};
+} consistency_data;
+
+/*
+ * This test is incredibly slow, which is why it is currently commented out.  Many of the tests also fail
+ * 
+TEST_CASE("HAPropsSI", "[HAPropsSI]")
+{
+	consistency_data.build();
+	double p = 101325;
+	for (std::size_t i = 0; i < consistency_data.data.size(); ++i)
+	{
+		for (std::list<std::set<std::size_t> >::iterator iter = consistency_data.inputs_list.begin(); iter != consistency_data.inputs_list.end(); ++iter)
+		{
+			std::vector<std::size_t> pair(iter->begin(), iter->end());
+			std::string i0 = inputs[pair[0]], i1 = inputs[pair[1]];
+			double v0 = consistency_data.data[i].get_double(i0), v1 = consistency_data.data[i].get_double(i1);
+            if ((i0 == "B" && i1 == "V") || (i1 == "B" && i0 == "V")){continue;}
+			std::ostringstream ss2;
+			ss2 << "Inputs: \"" << i0 << "\"," << v0 << ",\"" << i1 << "\"," << v1;
+			SECTION(ss2.str(), ""){
+
+				double T = consistency_data.data[i].get_double("T");
+				double W = consistency_data.data[i].get_double("W");
+				double Wcalc = HumidAir::HAPropsSI("W", i0, v0, i1, v1, "P", p);
+				double Tcalc = HumidAir::HAPropsSI("T", i0, v0, i1, v1, "P", p);
+				std::string err = CoolProp::get_global_param_string("errstring");
+				CAPTURE(T);
+				CAPTURE(W);
+				CAPTURE(Tcalc);
+				CAPTURE(Wcalc);
+				CAPTURE(err);
+				CHECK(std::abs(Tcalc - T) < 1e-1);
+				CHECK(std::abs((Wcalc - W)/W) < 1e-3);
+			}
+		}
+	}
+}
+ */
+
 #endif /* CATCH_ENABLED */
 

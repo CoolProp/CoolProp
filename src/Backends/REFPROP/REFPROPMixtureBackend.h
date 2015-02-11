@@ -16,9 +16,13 @@ namespace CoolProp {
 
 
 class REFPROPMixtureBackend : public AbstractState  {
+    private:
+    std::string cached_component_string;
 protected:
     std::size_t Ncomp;
     bool _mole_fractions_set;
+    
+    static std::size_t instance_counter;
     static bool _REFPROP_supported;
     std::vector<long double> mole_fractions_long_double; // read-only
     std::vector<double> mole_fractions, mass_fractions;
@@ -32,7 +36,7 @@ protected:
 	long double call_phi0dll(long itau, long idelta);
 	
 public:
-    REFPROPMixtureBackend(){};
+    REFPROPMixtureBackend(){cached_component_string = ""; instance_counter++;};
 
     /// The instantiator
     /// @param fluid_names The vector of strings of the fluid components, without file ending
@@ -63,6 +67,8 @@ public:
                 );
 
     long double calc_molar_mass(void);
+    
+    void check_loaded_fluid(void);
 
     /// Returns true if REFPROP is supported on this platform
     bool REFPROP_supported(void);

@@ -29,7 +29,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Polydimethylsiloxan 1. - Baysilone KT3", 
+  "description": "Polydimethylsiloxan 1 - Baysilone KT3", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

@@ -3,6 +3,7 @@
 #include "AbstractState.h"
 #include "DataStructures.h"
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
+#include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
 // ############################################
 //                      TESTS
 // ############################################
@@ -1509,6 +1510,151 @@ TEST_CASE("Check the second saturation derivatives", "[second_saturation_partial
 			CHECK(std::abs(numerical/analytical-1) < 1e-4);
 		}
 	}
+}
+
+TEST_CASE("Check the first two-phase derivative", "[first_two_phase_deriv]")
+{
+	const int number_of_pairs = 4;
+	struct pair {parameters p1, p2, p3;};
+	pair pairs[number_of_pairs] = {{iDmass, iP, iHmass}, {iDmolar, iP, iHmolar}, 
+                                   {iDmolar, iHmolar, iP}, {iDmass, iHmass, iP}};
+    shared_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
+	for (std::size_t i = 0; i < number_of_pairs; ++i)
+    {
+		// See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+		std::ostringstream ss1;
+		ss1 << "for (" << get_parameter_information(pairs[i].p1,"short") << ", " << get_parameter_information(pairs[i].p2,"short") << ", " << get_parameter_information(pairs[i].p3,"short") << ")";
+		SECTION(ss1.str(),"")
+		{
+			AS->update(QT_INPUTS, 0.3, 300);
+			long double numerical;
+            long double analytical = AS->first_two_phase_deriv(pairs[i].p1, pairs[i].p2, pairs[i].p3);
+			CAPTURE(analytical);
+            
+            long double out1, out2;
+            long double v2base, v3base;
+            v2base = AS->keyed_output(pairs[i].p2);
+            v3base = AS->keyed_output(pairs[i].p3);
+            long double v2plus = v2base*1.001;
+            long double v2minus = v2base*0.999;
+            CoolProp::input_pairs input_pair1 = generate_update_pair(pairs[i].p2, v2plus, pairs[i].p3, v3base, out1, out2);
+            AS->update(input_pair1, out1, out2);
+            long double v1 = AS->keyed_output(pairs[i].p1);
+            CoolProp::input_pairs input_pair2 = generate_update_pair(pairs[i].p2, v2minus, pairs[i].p3, v3base, out1, out2);
+            AS->update(input_pair2, out1, out2);
+            long double v2 = AS->keyed_output(pairs[i].p1);
+            
+            numerical = (v1 - v2)/(v2plus - v2minus);
+			CAPTURE(numerical);
+			CHECK(std::abs(numerical/analytical-1) < 1e-4);
+		}
+	}
+}
+
+TEST_CASE("Check the second two-phase derivative", "[second_two_phase_deriv]")
+{
+    SECTION("d2rhodhdp",""){
+        shared_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
+        AS->update(QT_INPUTS, 0.3, 300);
+        long double analytical = AS->second_two_phase_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
+        CAPTURE(analytical);
+        long double pplus = AS->p()*1.001, pminus = AS->p()*0.999, h = AS->hmolar();
+        AS->update(HmolarP_INPUTS, h, pplus);
+        long double v1 = AS->first_two_phase_deriv(iDmolar, iHmolar, iP);
+        AS->update(HmolarP_INPUTS, h, pminus);
+        long double v2 = AS->first_two_phase_deriv(iDmolar, iHmolar, iP);
+        long double numerical = (v1 - v2)/(pplus - pminus);
+        CAPTURE(numerical);
+        CHECK(std::abs(numerical/analytical-1) < 1e-6);
+    }
+    SECTION("d2rhodhdp using mass",""){
+        shared_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
+        AS->update(QT_INPUTS, 0.3, 300);
+        long double analytical = AS->second_two_phase_deriv(iDmass, iHmass, iP, iP, iHmass);
+        CAPTURE(analytical);
+        long double pplus = AS->p()*1.001, pminus = AS->p()*0.999, h = AS->hmass();
+        AS->update(HmassP_INPUTS, h, pplus);
+        long double v1 = AS->first_two_phase_deriv(iDmass, iHmass, iP);
+        AS->update(HmassP_INPUTS, h, pminus);
+        long double v2 = AS->first_two_phase_deriv(iDmass, iHmass, iP);
+        long double numerical = (v1 - v2)/(pplus - pminus);
+        CAPTURE(numerical);
+        CHECK(std::abs(numerical/analytical-1) < 1e-6);
+    }
+}
+
+TEST_CASE("Check the first two-phase derivative using splines", "[first_two_phase_deriv_splined]")
+{
+	const int number_of_pairs = 4;
+	struct pair {parameters p1, p2, p3;};
+	pair pairs[number_of_pairs] = {
+                                   {iDmass, iP, iHmass}, 
+                                   {iDmolar, iP, iHmolar}, 
+                                   {iDmolar, iHmolar, iP},
+                                   {iDmass, iHmass, iP}
+                                   };
+    shared_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
+	for (std::size_t i = 0; i < number_of_pairs; ++i)
+    {
+		// See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+		std::ostringstream ss1;
+		ss1 << "for (" << get_parameter_information(pairs[i].p1,"short") << ", " << get_parameter_information(pairs[i].p2,"short") << ", " << get_parameter_information(pairs[i].p3,"short") << ")";
+		SECTION(ss1.str(),"")
+		{
+			AS->update(QT_INPUTS, 0.2, 300);
+			long double numerical;
+            long double analytical = AS->first_two_phase_deriv_splined(pairs[i].p1, pairs[i].p2, pairs[i].p3, 0.3);
+			CAPTURE(analytical);
+            
+            long double out1, out2;
+            long double v2base, v3base;
+            v2base = AS->keyed_output(pairs[i].p2);
+            v3base = AS->keyed_output(pairs[i].p3);
+            long double v2plus = v2base*1.001;
+            long double v2minus = v2base*0.999;
+            
+            CoolProp::input_pairs input_pair1 = generate_update_pair(pairs[i].p2, v2plus, pairs[i].p3, v3base, out1, out2);
+            AS->update(input_pair1, out1, out2);
+            long double v1 = AS->first_two_phase_deriv_splined(pairs[i].p1, pairs[i].p1, pairs[i].p1, 0.3);
+            
+            CoolProp::input_pairs input_pair2 = generate_update_pair(pairs[i].p2, v2minus, pairs[i].p3, v3base, out1, out2);
+            AS->update(input_pair2, out1, out2);
+            long double v2 = AS->first_two_phase_deriv_splined(pairs[i].p1, pairs[i].p1, pairs[i].p1, 0.3);
+            
+            numerical = (v1 - v2)/(v2plus - v2minus);
+			CAPTURE(numerical);
+			CHECK(std::abs(numerical/analytical-1) < 1e-10);
+		}
+	}
+}
+
+TEST_CASE("Check the phase flags", "[phase]")
+{
+    SECTION("subcooled liquid"){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(PT_INPUTS, 101325, 300);
+        CHECK(AS->phase() == iphase_liquid);
+    }
+    SECTION("superheated gas"){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(PT_INPUTS, 101325, 400);
+        CHECK(AS->phase() == iphase_gas);
+    }
+    SECTION("supercritical gas"){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(PT_INPUTS, 1e5, 800);
+        CHECK(AS->phase() == iphase_supercritical_gas);
+    }
+    SECTION("supercritical liquid"){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(PT_INPUTS, 1e8, 500);
+        CHECK(AS->phase() == iphase_supercritical_liquid);
+    }
+    SECTION("supercritical"){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(PT_INPUTS, 1e8, 800);
+        CHECK(AS->phase() == iphase_supercritical);
+    }
 }
 
 /*

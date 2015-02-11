@@ -106,7 +106,7 @@ For 32-bit compilation::
     # Make a build folder
     mkdir build && cd build
     # Generate builder
-    cmake .. -DCOOLPROP_32BIT_STDCALL_SHARED_LIBRARY=ON
+    cmake .. -DCOOLPROP_32BIT_SHARED_LIBRARY_LINUX_MODULE=ON
     # Build
     cmake --build .
 
@@ -122,3 +122,12 @@ For 64-bit compilation::
     cmake .. -DCOOLPROP_64BIT_SHARED_LIBRARY=ON
     # Build
     cmake --build .
+
+On Linux, installation could be done by::
+
+    # Change "32" to match your system bitness
+    sudo cp libCoolProp.so /usr/local/lib/libCoolProp.so.32.:version: 
+    pushd /usr/local/lib
+    sudo ln -sf libCoolProp.so.32.:version: libCoolProp.so.5
+    sudo ln -sf libCoolProp.so.5 libCoolProp.so
+    popd

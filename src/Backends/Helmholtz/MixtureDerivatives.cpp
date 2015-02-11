@@ -382,7 +382,7 @@ long double MixtureDerivatives::d_ndalphardni_dTau(HelmholtzEOSMixtureBackend &H
 using namespace CoolProp;
 TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
 {
-    for (std::size_t Ncomp = 2; Ncomp <= 3; Ncomp++)
+    for (std::size_t Ncomp = 2; Ncomp <= 4; Ncomp++)
     {
         std::ostringstream ss00;
         ss00 << "Mixture with " << Ncomp << " components";
@@ -420,6 +420,11 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                     {
                         names[0] = "Ethane"; names[1] = "Propane"; names[2] = "Methane";
                         z[0] = 0.3; z[1] = 0.4; z[2] = 0.3;
+                    }
+                    else if (Ncomp == 4)
+                    {
+                        names[0] = "Ethane"; names[1] = "Propane"; names[2] = "Methane"; names[3] = "n-Butane";
+                        z[0] = 0.3; z[1] = 0.4; z[2] = 0.2; z[3] = 0.1;
                     }
                     double T1 = 300, rho1 = 300, dT = 1e-3, drho = 1e-3, dz = 1e-6;
                     

@@ -73,9 +73,9 @@
     "Name1": "CarbonDioxide", 
     "Name2": "Water", 
     "betaT": 1.030538, 
-    "betaV": 0.828472, 
+    "gammaT": 0.828472, 
     "function": "CarbonDioxide-Water", 
-    "gammaT": 1.021392, 
+    "betaV": 1.021392, 
     "gammaV": 0.895156
   }, 
   {
@@ -86,9 +86,9 @@
     "Name1": "CarbonDioxide", 
     "Name2": "Nitrogen", 
     "betaT": 0.994140013, 
-    "betaV": 1.107654104, 
+    "gammaT": 1.107654104, 
     "function": "Nitrogen-CarbonDioxide", 
-    "gammaT": 1.022709642, 
+    "betaV": 1.022709642, 
     "gammaV": 1.047578256
   }, 
   {
@@ -99,8 +99,8 @@
     "Name1": "CarbonDioxide", 
     "Name2": "Oxygen", 
     "betaT": 1.0, 
-    "betaV": 1.031986, 
-    "gammaT": 1.0, 
+    "gammaT": 1.031986, 
+    "betaV": 1.0, 
     "gammaV": 1.08446
   }, 
   {
@@ -111,9 +111,9 @@
     "Name1": "CarbonDioxide", 
     "Name2": "Argon", 
     "betaT": 1.027147, 
-    "betaV": 0.968781, 
+    "gammaT": 0.968781, 
     "function": "Argon-CarbonDioxide", 
-    "gammaT": 1.001378, 
+    "betaV": 1.001378, 
     "gammaV": 1.02971
   }, 
   {
@@ -124,8 +124,8 @@
     "Name1": "CarbonDioxide", 
     "Name2": "CarbonMonoxide", 
     "betaT": 0.993245, 
-    "betaV": 1.068392, 
-    "gammaT": 1.030855, 
+    "gammaT": 1.068392, 
+    "betaV": 1.030855, 
     "gammaV": 1.245499
   }, 
   {
@@ -136,9 +136,9 @@
     "Name1": "Water", 
     "Name2": "Nitrogen", 
     "betaT": 0.954149, 
-    "betaV": 0.805147, 
+    "gammaT": 0.805147, 
     "function": "GeneralizedAirWater", 
-    "gammaT": 1.079628, 
+    "betaV": 1.079628, 
     "gammaV": 0.733443
   }, 
   {
@@ -149,9 +149,9 @@
     "Name1": "Water", 
     "Name2": "Oxygen", 
     "betaT": 0.798046, 
-    "betaV": 0.807842, 
+    "gammaT": 0.807842, 
     "function": "GeneralizedAirWater", 
-    "gammaT": 0.972576, 
+    "betaV": 0.972576, 
     "gammaV": 0.87346
   }, 
   {
@@ -162,8 +162,8 @@
     "Name1": "Water", 
     "Name2": "Argon", 
     "betaT": 0.679104, 
-    "betaV": 0.921, 
-    "gammaT": 0.940398, 
+    "gammaT": 0.921, 
+    "betaV": 0.940398, 
     "gammaV": 1.050952
   }, 
   {
@@ -174,9 +174,9 @@
     "Name1": "Water", 
     "Name2": "CarbonMonoxide", 
     "betaT": 1.045927, 
-    "betaV": 0.823984, 
+    "gammaT": 0.823984, 
     "function": "GeneralizedAirWater", 
-    "gammaT": 1.063348, 
+    "betaV": 1.063348, 
     "gammaV": 0.766756
   }, 
   {
@@ -187,8 +187,8 @@
     "Name1": "Nitrogen", 
     "Name2": "Oxygen", 
     "betaT": 0.997190589, 
-    "betaV": 0.995157044, 
-    "gammaT": 0.99952177, 
+    "gammaT": 0.995157044, 
+    "betaV": 0.99952177, 
     "gammaV": 0.997082328
   }, 
   {
@@ -199,8 +199,8 @@
     "Name1": "Nitrogen", 
     "Name2": "Argon", 
     "betaT": 0.999442, 
-    "betaV": 0.989311, 
-    "gammaT": 1.006697, 
+    "gammaT": 0.989311, 
+    "betaV": 1.006697, 
     "gammaV": 1.001549
   }, 
   {
@@ -211,8 +211,8 @@
     "Name1": "Nitrogen", 
     "Name2": "CarbonMonoxide", 
     "betaT": 1.002409, 
-    "betaV": 0.9941, 
-    "gammaT": 1.0, 
+    "gammaT": 0.9941, 
+    "betaV": 1.0, 
     "gammaV": 1.001317
   }, 
   {
@@ -223,8 +223,8 @@
     "Name1": "Oxygen", 
     "Name2": "Argon", 
     "betaT": 0.999039, 
-    "betaV": 0.988822, 
-    "gammaT": 1.006502, 
+    "gammaT": 0.988822, 
+    "betaV": 1.006502, 
     "gammaV": 1.001341
   }, 
   {
@@ -235,8 +235,8 @@
     "Name1": "Oxygen", 
     "Name2": "CarbonMonoxide", 
     "betaT": 1.0, 
-    "betaV": 1.0, 
     "gammaT": 1.0, 
+    "betaV": 1.0, 
     "gammaV": 1.0
   }, 
   {
@@ -247,8 +247,8 @@
     "Name1": "CarbonMonoxide", 
     "Name2": "Argon", 
     "betaT": 1.0, 
-    "betaV": 0.954215746, 
-    "gammaT": 1.0, 
+    "gammaT": 0.954215746, 
+    "betaV": 1.0, 
     "gammaV": 1.159720623
   },
   {

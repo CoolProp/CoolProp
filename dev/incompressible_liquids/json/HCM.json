@@ -29,7 +29,7 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Hydrocarbon mixture (synthetic) - Therminol D12 (Gilotherm D12) Solutia", 
+  "description": "Hydrocarbon mixture - Gilotherm D12", 
   "mass2input": {
     "coeffs": "null", 
     "type": "notdefined"

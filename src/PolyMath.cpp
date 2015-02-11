@@ -596,7 +596,8 @@ double Polynomial2DFrac::derivative(const Eigen::MatrixXd &coefficients, const d
 /// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
 /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
 /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
-double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base){
+/// @param ax_val double value that represents the base value for the definite integral on the chosen axis.
+double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base, const double &y_base, const double &ax_val){
 
     Eigen::MatrixXd newCoefficients;
     int int_exp,other_exp;
@@ -628,6 +629,8 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd &coefficients, const dou
     }
 
     if (int_exp<-1) throw NotImplementedError(format("%s (%d): This function is only implemented for lowest exponents >= -1, int_exp=%d ",__FILE__,__LINE__,int_exp));
+    // TODO: Fix this and allow the direct calculation of integrals
+    if (std::abs(ax_val)>DBL_EPSILON) throw NotImplementedError(format("%s (%d): This function is only implemented for indefinite integrals, ax_val=%d ",__FILE__,__LINE__,ax_val));
 
     size_t r = newCoefficients.rows();
     size_t c = newCoefficients.cols();

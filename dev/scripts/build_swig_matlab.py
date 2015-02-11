@@ -11,7 +11,7 @@ else:
 commons = dict(shell = True, stdout = sys.stdout, stderr = sys.stderr)
 
 if not os.path.exists('swig-matlab'):
-	subprocess.call('git clone https://github.com/KrisThielemans/swig swig-matlab', **commons)
+	subprocess.call('git clone https://github.com/jaeandersson/swig swig-matlab', **commons)
 else:
 	subprocess.call('git pull', shell = True, cwd = 'swig-matlab', stdout = sys.stdout, stderr = sys.stderr)
 

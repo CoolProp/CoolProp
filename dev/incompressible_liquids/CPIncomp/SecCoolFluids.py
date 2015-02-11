@@ -307,7 +307,7 @@ class SecCoolSolutionData(DigitalData):
         print(", {0}".format(sec[-1].name), end="")
         sec += [SecCoolSolutionData(sFile='Glykosol N'              ,sFolder='xVolume',name='GKN',desc='Glykosol N, Ethylene Glycol'            ,ref='PKS2005,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Pekasol 2000'            ,sFolder='xVolume',name='PK2',desc='Pekasol 2000, Potassium acetate/formate',ref='PKS2005,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Pekasol 2000'            ,sFolder='xVolume',name='PK2',desc='Pekasol 2000, K acetate/formate'        ,ref='PKS2005,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
         sec += [SecCoolSolutionData(sFile='Pekasol L'               ,sFolder='xVolume',name='PKL',desc='Pekasol L, Propylene Glycol'            ,ref='PKS2005,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")

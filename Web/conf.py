@@ -26,7 +26,7 @@ except ImportError:
 
     print('Unable to import sphinxcontrib.doxylink; try to run "pip install sphinxcontrib-doxylink"')
 
-Release = tags.has('Release') or tags.has('Release')
+Release = tags.has('Release') or tags.has('release')
 
 if Release:
     doxylink = {
@@ -34,7 +34,7 @@ if Release:
     }
 else:
     doxylink = {
-        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.dreamhosters.com:8010/sphinx/_static/doxygen/html')
+        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.dreamhosters.com:8010/binaries/sphinx/_static/doxygen/html')
     }
 
 # -- General configuration -----------------------------------------------------

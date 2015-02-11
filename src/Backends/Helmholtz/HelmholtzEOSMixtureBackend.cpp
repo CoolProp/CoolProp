@@ -20,6 +20,7 @@
 //#include "CoolProp.h"
 
 #include "HelmholtzEOSMixtureBackend.h"
+#include "HelmholtzEOSBackend.h"
 #include "Fluids/FluidLibrary.h"
 #include "Solvers.h"
 #include "MatrixMath.h"
@@ -198,6 +199,15 @@ const CoolProp::SimpleState & HelmholtzEOSMixtureBackend::calc_state(const std::
         throw ValueError(format("calc_state not supported for mixtures"));
     }
 };
+long double HelmholtzEOSMixtureBackend::calc_acentric_factor(void)
+{
+    if (is_pure_or_pseudopure){
+        return components[0]->EOSVector[0].acentric;
+    }
+    else{
+        throw ValueError("acentric factor cannot be calculated for mixtures");
+    }
+}
 long double HelmholtzEOSMixtureBackend::calc_gas_constant(void)
 {
     if (is_pure_or_pseudopure){
@@ -445,7 +455,14 @@ long double HelmholtzEOSMixtureBackend::calc_viscosity(void)
     }
     else
     {
-        throw NotImplementedError(format("viscosity not implemented for mixtures"));
+        set_warning_string("Mixture model for viscosity is highly approximate");
+        long double summer = 0;
+        for (std::size_t i = 0; i < mole_fractions.size(); ++i){
+            shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend(components[i]));
+            HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
+            summer += mole_fractions[i]*log(HEOS->viscosity());
+        }
+        return exp(summer);
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_conductivity_background(void)
@@ -543,7 +560,14 @@ long double HelmholtzEOSMixtureBackend::calc_conductivity(void)
     }
     else
     {
-        throw NotImplementedError(format("viscosity not implemented for mixtures"));
+        set_warning_string("Mixture model for conductivity is highly approximate");
+        long double summer = 0;
+        for (std::size_t i = 0; i < mole_fractions.size(); ++i){
+            shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend(components[i]));
+            HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
+            summer += mole_fractions[i]*HEOS->conductivity();
+        }
+        return summer;
     }
 }
 long double HelmholtzEOSMixtureBackend::calc_Ttriple(void)
@@ -1341,6 +1365,9 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 else if (value > p_liq){
                     this->_phase = iphase_liquid; _Q = 1000; return;
                 }
+                else if (!is_pure() && value < static_cast<long double>(_pLanc) && value > static_cast<long double>(_pVanc)){
+                    throw ValueError("Two-phase inputs not supported for pseudo-pure for now");
+                }
                 break;
             }
             default:
@@ -1408,8 +1435,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
             }
         }
 
-        // Determine Q based on the input provided
-        if (!is_pure_or_pseudopure){throw ValueError("possibly two-phase inputs not supported for pseudo-pure for now");}
+        
 
         // Actually have to use saturation information sadly
         // For the given temperature, find the saturation state
@@ -1893,8 +1919,8 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(long double T, long do
 
     for (std::size_t i = 0; i < components.size(); ++i)
     {
-        long double Tci = components[i]->pEOS->reduce.T, pci = components[i]->pEOS->reduce.p, accentric_i = components[i]->pEOS->accentric;
-        long double m_i = 0.480+1.574*accentric_i-0.176*pow(accentric_i, 2);
+        long double Tci = components[i]->pEOS->reduce.T, pci = components[i]->pEOS->reduce.p, acentric_i = components[i]->pEOS->acentric;
+        long double m_i = 0.480+1.574*acentric_i-0.176*pow(acentric_i, 2);
         long double b_i = 0.08664*R_u*Tci/pci;
         b += mole_fractions[i]*b_i;
 
@@ -1902,8 +1928,8 @@ long double HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(long double T, long do
 
         for (std::size_t j = 0; j < components.size(); ++j)
         {
-            long double Tcj = components[j]->pEOS->reduce.T, pcj = components[j]->pEOS->reduce.p, accentric_j = components[j]->pEOS->accentric;
-            long double m_j = 0.480+1.574*accentric_j-0.176*pow(accentric_j, 2);
+            long double Tcj = components[j]->pEOS->reduce.T, pcj = components[j]->pEOS->reduce.p, acentric_j = components[j]->pEOS->acentric;
+            long double m_j = 0.480+1.574*acentric_j-0.176*pow(acentric_j, 2);
 
             long double a_j = 0.42747*pow(R_u*Tcj,2)/pcj*pow(1+m_j*(1-sqrt(T/Tcj)),2);
 
@@ -2545,7 +2571,26 @@ long double HelmholtzEOSMixtureBackend::calc_d3alpha0_dTau3(void)
     const int nTau = 3, nDelta = 0;
     return calc_alpha0_deriv_nocache(nTau, nDelta, mole_fractions, _tau, _delta, _reducing.T, _reducing.rhomolar);
 }
-
+long double HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1, HelmholtzEOSMixtureBackend &SatL, HelmholtzEOSMixtureBackend &SatV)
+{
+	// Derivative of temperature w.r.t. pressure ALONG the saturation curve
+	long double dTdP_sat = T()*(1/SatV.rhomolar()-1/SatL.rhomolar())/(SatV.hmolar()-SatL.hmolar());
+	
+	// "Trivial" inputs
+	if (Of1 == iT && Wrt1 == iP){ return dTdP_sat;}
+	else if (Of1 == iP && Wrt1 == iT){ return 1/dTdP_sat;}
+	// Derivative taken with respect to T
+	else if (Wrt1 == iT){
+		return first_partial_deriv(Of1, iT, iP) + first_partial_deriv(Of1, iP, iT)/dTdP_sat;
+	}
+	// Derivative taken with respect to p
+	else if (Wrt1 == iP){
+		return first_partial_deriv(Of1, iP, iT) + first_partial_deriv(Of1, iT, iP)*dTdP_sat;
+	}
+	else{
+		throw ValueError(format("Not possible to take first saturation derivative with respect to %s", get_parameter_information(Wrt1,"short").c_str()));
+	}
+}
 long double HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1)
 {
 	// Derivative of temperature w.r.t. pressure ALONG the saturation curve
@@ -2594,6 +2639,184 @@ long double HelmholtzEOSMixtureBackend::calc_second_saturation_deriv(parameters 
 	else{
 		throw ValueError(format("Currently, only possible to take second saturation derivative w.r.t. P (both times)"));
 	}
+}
+
+long double HelmholtzEOSMixtureBackend::calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
+{
+    if (Of == iDmolar && ((Wrt1 == iHmolar && Constant1 == iP && Wrt2 == iP && Constant2 == iHmolar) || (Wrt2 == iHmolar && Constant2 == iP && Wrt1 == iP && Constant1 == iHmolar))){
+        parameters h_key = iHmolar, rho_key = iDmolar, p_key = iP;
+        // taking the derivative of (drho/dv)*(dv/dh|p) with respect to p with h constant
+        long double dv_dh_constp = calc_first_two_phase_deriv(rho_key,h_key,p_key)/(-POW2(rhomolar()));
+        long double drhomolar_dp__consth = first_two_phase_deriv(rho_key, p_key, h_key);
+        
+        // Calculate the derivative of dvdh|p with respect to p at constant h
+        long double dhL_dp_sat =  SatL->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
+        long double dhV_dp_sat =  SatV->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
+        long double drhoL_dp_sat =  SatL->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        long double drhoV_dp_sat =  SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        long double numerator = 1/SatV->keyed_output(rho_key) - 1/SatL->keyed_output(rho_key);
+        long double denominator = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
+        long double dnumerator = -1/POW2(SatV->keyed_output(rho_key))*drhoV_dp_sat + 1/POW2(SatL->keyed_output(rho_key))*drhoL_dp_sat;
+        long double ddenominator = dhV_dp_sat - dhL_dp_sat;
+        long double d_dvdh_dp__consth = (denominator*dnumerator - numerator*ddenominator)/POW2(denominator);
+        return -POW2(rhomolar())*d_dvdh_dp__consth + dv_dh_constp*(-2*rhomolar())*drhomolar_dp__consth;
+    }
+    else if (Of == iDmass && ((Wrt1 == iHmass && Constant1 == iP && Wrt2 == iP && Constant2 == iHmass) || (Wrt2 == iHmass && Constant2 == iP && Wrt1 == iP && Constant1 == iHmass))){
+        parameters h_key = iHmass, rho_key = iDmass, p_key = iP;
+        long double rho = keyed_output(rho_key);
+        // taking the derivative of (drho/dv)*(dv/dh|p) with respect to p with h constant
+        long double dv_dh_constp = calc_first_two_phase_deriv(rho_key,h_key,p_key)/(-POW2(rho));
+        long double drho_dp__consth = first_two_phase_deriv(rho_key, p_key, h_key);
+        
+        // Calculate the derivative of dvdh|p with respect to p at constant h
+        long double dhL_dp_sat =  SatL->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
+        long double dhV_dp_sat =  SatV->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
+        long double drhoL_dp_sat =  SatL->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        long double drhoV_dp_sat =  SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        long double numerator = 1/SatV->keyed_output(rho_key) - 1/SatL->keyed_output(rho_key);
+        long double denominator = SatV->keyed_output(h_key) - SatL->keyed_output(h_key);
+        long double dnumerator = -1/POW2(SatV->keyed_output(rho_key))*drhoV_dp_sat + 1/POW2(SatL->keyed_output(rho_key))*drhoL_dp_sat;
+        long double ddenominator = dhV_dp_sat - dhL_dp_sat;
+        long double d_dvdh_dp__consth = (denominator*dnumerator - numerator*ddenominator)/POW2(denominator);
+        return -POW2(rho)*d_dvdh_dp__consth + dv_dh_constp*(-2*rho)*drho_dp__consth;
+    }
+    else{
+        throw ValueError();
+    }
+}
+long double HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant)
+{
+    if (Of == iDmolar && Wrt == iHmolar && Constant == iP){
+        return -POW2(rhomolar())*(1/SatV->rhomolar() - 1/SatL->rhomolar())/(SatV->hmolar() - SatL->hmolar());
+    }
+    else if (Of == iDmass && Wrt == iHmass && Constant == iP){
+        return -POW2(rhomass())*(1/SatV->rhomass() - 1/SatL->rhomass())/(SatV->hmass() - SatL->hmass());
+    }
+    else if (Of == iDmolar && Wrt == iP && Constant == iHmolar){
+        // v = 1/rho; dvdrho = -rho^2; dvdrho = -1/rho^2
+        long double dvdrhoL = -1/POW2(SatL->rhomolar());
+        long double dvdrhoV = -1/POW2(SatV->rhomolar());
+        long double dvL_dp = dvdrhoL*SatL->calc_first_saturation_deriv(iDmolar, iP, *SatL, *SatV);
+        long double dvV_dp = dvdrhoV*SatV->calc_first_saturation_deriv(iDmolar, iP, *SatL, *SatV); 
+        long double dhL_dp = SatL->calc_first_saturation_deriv(iHmolar, iP, *SatL, *SatV);
+        long double dhV_dp = SatV->calc_first_saturation_deriv(iHmolar, iP, *SatL, *SatV);
+        long double dxdp_h = (Q()*dhV_dp + (1 - Q())*dhL_dp)/(SatL->hmolar() - SatV->hmolar());
+        long double dvdp_h = dvL_dp + dxdp_h*(1/SatV->rhomolar() - 1/SatL->rhomolar()) + Q()*(dvV_dp - dvL_dp);
+        return -POW2(rhomolar())*dvdp_h;
+    }
+    else if (Of == iDmass && Wrt == iP && Constant == iHmass){
+        // v = 1/rho; dvdrho = -rho^2; dvdrho = -1/rho^2
+        long double dvdrhoL = -1/POW2(SatL->rhomass());
+        long double dvdrhoV = -1/POW2(SatV->rhomass());
+        long double dvL_dp = dvdrhoL*SatL->calc_first_saturation_deriv(iDmass, iP, *SatL, *SatV);
+        long double dvV_dp = dvdrhoV*SatV->calc_first_saturation_deriv(iDmass, iP, *SatL, *SatV); 
+        long double dhL_dp = SatL->calc_first_saturation_deriv(iHmass, iP, *SatL, *SatV);
+        long double dhV_dp = SatV->calc_first_saturation_deriv(iHmass, iP, *SatL, *SatV);
+        long double dxdp_h = (Q()*dhV_dp + (1 - Q())*dhL_dp)/(SatL->hmass() - SatV->hmass());
+        long double dvdp_h = dvL_dp + dxdp_h*(1/SatV->rhomass() - 1/SatL->rhomass()) + Q()*(dvV_dp - dvL_dp);
+        return -POW2(rhomass())*dvdp_h;
+    }
+    else{
+        throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+    }
+}
+long double HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, long double x_end)
+{
+    shared_ptr<HelmholtzEOSMixtureBackend> Liq(new HelmholtzEOSMixtureBackend(this->get_components())), 
+                                           End(new HelmholtzEOSMixtureBackend(this->get_components()));
+    Liq->specify_phase(iphase_liquid);
+    Liq->update(DmolarT_INPUTS, SatL->rhomolar(), SatL->T());
+    End->update(QT_INPUTS, x_end, SatL->T());
+    
+    bool mass_based_inputs = ((Of == iDmass) && ((Wrt == iHmass && Constant == iP) || (Wrt == iP && Constant == iHmass) || (Wrt == iDmass && Constant == iDmass)));
+    bool mole_based_inputs = ((Of == iDmolar) && ((Wrt == iHmolar && Constant == iP) || (Wrt == iP && Constant == iHmolar) || (Wrt == iDmolar && Constant == iDmolar)));
+    if (mass_based_inputs || mole_based_inputs)
+    {
+        parameters p_key, h_key, rho_key;
+        if (mass_based_inputs){ 
+            rho_key = iDmass; h_key = iHmass; p_key = iP;
+        }
+        else{
+            rho_key = iDmolar; h_key = iHmolar; p_key = iP;
+        }
+        
+        long double Delta = Q()*(SatV->keyed_output(h_key) - SatL->keyed_output(h_key));
+        long double Delta_end = End->keyed_output(h_key) - SatL->keyed_output(h_key);
+        
+        // At the end of the zone to which spline is applied
+        long double drho_dh_end = End->calc_first_two_phase_deriv(rho_key, h_key, p_key);
+        long double rho_end = End->keyed_output(rho_key);
+        
+        // Faking single-phase
+        long double rho_liq = Liq->keyed_output(rho_key);
+        long double drho_dh_liq__constp = Liq->first_partial_deriv(rho_key, h_key, p_key);
+        
+        // Spline coordinates a, b, c, d
+        long double Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
+        long double a = 1/POW3(Delta_end) * Abracket;
+        long double b = 3/POW2(Delta_end) * (-rho_liq + rho_end) - 1/Delta_end * (drho_dh_end + 2 * drho_dh_liq__constp);
+        long double c = drho_dh_liq__constp;
+        long double d = rho_liq;
+        
+        // Either the spline value or drho/dh|p can be directly evaluated now
+        long double rho_spline = a*POW3(Delta) + b*POW2(Delta) + c*Delta + d;
+        long double d_rho_spline_dh__constp = 3*a*POW2(Delta) + 2*b*Delta + c;
+        if ((Wrt == iDmass || Wrt == iDmolar) && (Constant == iDmass || Constant == iDmolar)){
+            return rho_spline;
+        }
+        if ((Wrt == iHmass || Wrt == iHmolar) && Constant == iP){
+            return d_rho_spline_dh__constp;
+        }
+        
+        // It's drho/dp|h
+        // ... calculate some more things
+        
+        // At the saturated state
+        long double rhoL =  SatL->keyed_output(rho_key);
+        long double rhoV =  SatV->keyed_output(rho_key);
+        long double hL =  SatL->keyed_output(h_key);
+        long double hV =  SatV->keyed_output(h_key);
+        
+        // Derivatives *along* the saturation curve using the special internal method
+        long double dhL_dp_sat =  SatL->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
+        long double dhV_dp_sat =  SatV->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
+        long double drhoL_dp_sat = SatL->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        long double drhoV_dp_sat = SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        
+        long double drho_dp_end = POW2(End->keyed_output(rho_key))*(x_end/POW2(rhoV)*drhoV_dp_sat + (1-x_end)/POW2(rhoL)*drhoL_dp_sat);
+        
+        // Faking single-phase
+        long double drho_dp__consth_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
+        long double d2rhodhdp_liq = Liq->second_partial_deriv(rho_key, h_key, p_key, p_key, h_key); // ?
+        
+        // Derivatives at the end point
+        long double drho_dp__consth_end = End->calc_first_two_phase_deriv(rho_key, p_key, h_key);
+        long double d2rhodhdp_end = End->calc_second_two_phase_deriv(rho_key, h_key, p_key, p_key, h_key);
+        
+        // Reminder:
+        // Delta = Q()*(hV-hL) = h-hL
+        // Delta_end = x_end*(hV-hL);
+        long double d_Delta_dp__consth = -dhL_dp_sat;
+        long double d_Delta_end_dp__consth = x_end*(dhV_dp_sat - dhL_dp_sat);
+        
+        // First pressure derivative at constant h of the coefficients a,b,c,d
+        // long double Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
+        long double d_Abracket_dp_consth = (2*drhoL_dp_sat - 2*drho_dp__consth_end + Delta_end*(d2rhodhdp_liq + d2rhodhdp_end) + d_Delta_dp__consth*(drho_dh_liq__constp + drho_dh_end));
+        long double da_dp = 1/POW3(Delta_end)*d_Abracket_dp_consth + Abracket*(-3/POW4(Delta_end)*d_Delta_end_dp__consth);
+        long double db_dp = - 6/POW3(Delta_end)*d_Delta_end_dp__consth*(rho_end - rho_liq)
+                            + (3/POW2(Delta_end))*(drho_dp__consth_end - drhoL_dp_sat)
+                            + (1/POW2(Delta_end)*d_Delta_end_dp__consth) * (drho_dh_end + 2*drho_dh_liq__constp)
+                            - (1/Delta_end) * (d2rhodhdp_end + 2*d2rhodhdp_liq);
+        long double dc_dp = d2rhodhdp_liq;
+        long double dd_dp = drhoL_dp_sat;
+        
+        long double d_rho_spline_dp__consth = (3*a*POW2(Delta) + 2*b*Delta + c)*d_Delta_dp__consth + POW3(Delta)*da_dp + POW2(Delta)*db_dp + Delta*dc_dp + dd_dp;
+    
+        return d_rho_spline_dp__consth;
+    }
+    else{
+        throw ValueError("inputs to calc_first_two_phase_deriv_splined are currently invalid");
+    }
 }
 
 } /* namespace CoolProp */
