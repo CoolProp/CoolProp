@@ -81,9 +81,6 @@ thermal conductivity. Hence, the available output keys are: ``T``, ``P``, ``D``,
     #Density of Downtherm Q at 500 K and 1 atm.
     In [1]: PropsSI('D','T',500,'P',101325,'INCOMP::DowQ')
     
-    #Heat capacity from density and pressure
-    In [1]: PropsSI('C','D',D,'P',101325,'INCOMP::DowQ')
-    
     #Round trip in thermodynamic properties
     In [1]: T_init = 500.0
     

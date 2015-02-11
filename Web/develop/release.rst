@@ -18,7 +18,7 @@ library.
     
 * **release branch**: Merge all code from *master* into *release* branch
 * **build bots**: Force all buildbots to run on the *release* branch, this will also change the upload folder from *binaries* to *release*.
-* **script**: Wait for all bots to finish and run the release script by launching the ``release version`` bot with dry run disabled and the correct version number. This uploads binaries to pypi and sourceforge. 
+* **script**: Wait for all bots to finish and run the release script by launching the ``release version`` bot with dry run disabled and the correct version number. This uploads binaries to pypi and sourceforge. Ignore the warning ``failed to set times on "/home/project-web/coolprop/htdocs/jscript/coolprop-latest.js"``, it is a symlink and will be overwritten... 
 * **clean up**: If everything went well, you can proceed: 
 
     - Tag the release branch in your git software. It is a good idea to make and annotated tag and include the information on the closed issues here as well. 
