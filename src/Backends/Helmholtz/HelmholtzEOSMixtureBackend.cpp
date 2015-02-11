@@ -1365,6 +1365,9 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 else if (value > p_liq){
                     this->_phase = iphase_liquid; _Q = 1000; return;
                 }
+                else if (!is_pure() && value < static_cast<long double>(_pLanc) && value > static_cast<long double>(_pVanc)){
+                    throw ValueError("Two-phase inputs not supported for pseudo-pure for now");
+                }
                 break;
             }
             default:
@@ -1432,8 +1435,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
             }
         }
 
-        // Determine Q based on the input provided
-        if (!is_pure_or_pseudopure){throw ValueError("possibly two-phase inputs not supported for pseudo-pure for now");}
+        
 
         // Actually have to use saturation information sadly
         // For the given temperature, find the saturation state
