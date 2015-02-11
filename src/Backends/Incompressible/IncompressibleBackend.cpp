@@ -90,11 +90,11 @@ void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double valu
             _T = this->DmassP_flash(value1,value2);
             break;
         }
-        case PUmass_INPUTS: {
-            _p = value1;
-            _T = this->PUmass_flash(value1, value2);
-            break;
-        }
+//        case PUmass_INPUTS: {
+//            _p = value1;
+//            _T = this->PUmass_flash(value1, value2);
+//            break;
+//        }
         case PSmass_INPUTS: {
             _p = value1;
             _T = this->PSmass_flash(value1, value2);
@@ -264,7 +264,35 @@ long double IncompressibleBackend::HmassP_flash(long double hmass, long double p
 @returns T The temperature in K
 */
 long double IncompressibleBackend::PSmass_flash(long double p, long double smass){
-    return fluid->T_s(smass, p, _fractions[0]);
+
+    class PSmass_residual : public FuncWrapper1D {
+    protected:
+        double p,x,s_in;
+        IncompressibleFluid* fluid;
+    protected:
+        PSmass_residual(){};
+    public:
+        PSmass_residual(IncompressibleFluid* fluid, const double &p,  const double &x, const double &s_in){
+            this->p = p;
+            this->x = x;
+            this->s_in = s_in;
+            this->fluid = fluid;
+        }
+        virtual ~PSmass_residual(){};
+        double call(double target){
+            return fluid->s(target,p,x) - s_in;
+        }
+    };
+
+    PSmass_residual res = PSmass_residual(fluid, p, _fractions[0], smass);
+
+    std::string errstring;
+    double macheps = DBL_EPSILON;
+    double tol     = DBL_EPSILON*1e3;
+    int    maxiter = 10;
+    double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter, errstring);
+    //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
+    return result;
 }
 
 /// Calculate T given pressure and internal energy
@@ -274,7 +302,35 @@ long double IncompressibleBackend::PSmass_flash(long double p, long double smass
 @returns T The temperature in K
 */
 long double IncompressibleBackend::PUmass_flash(long double p, long double umass){
-    return fluid->T_u(umass, p, _fractions[0]);
+
+	class PUmass_residual : public FuncWrapper1D {
+	protected:
+		double p,x,u_in;
+		IncompressibleFluid* fluid;
+	protected:
+		PUmass_residual(){};
+	public:
+		PUmass_residual(IncompressibleFluid* fluid, const double &p,  const double &x, const double &u_in){
+			this->p = p;
+			this->x = x;
+			this->u_in = u_in;
+			this->fluid = fluid;
+		}
+		virtual ~PUmass_residual(){};
+		double call(double target){
+			return fluid->u(target,p,x) - u_in;
+		}
+	};
+
+	PUmass_residual res = PUmass_residual(fluid, p, _fractions[0], umass);
+
+	std::string errstring;
+	double macheps = DBL_EPSILON;
+	double tol     = DBL_EPSILON*1e3;
+	int    maxiter = 10;
+	double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter, errstring);
+	//if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
+	return result;
 }
 
 
@@ -436,7 +492,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CAPTURE(res);
         CHECK( check_abs(val,res,acc) );
         }
-        // Make sure the ruslt does not change -> reference state...
+        // Make sure the result does not change -> reference state...
         val = backend.calc_smass();
         backend.update( CoolProp::PT_INPUTS, p, T );
         res = backend.calc_smass();

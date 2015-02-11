@@ -288,7 +288,8 @@ public:
     /// @param y_exp integer value that represents the lowest exponent of the polynomial in the 2nd dimension
     /// @param x_base double value that represents the base value for a centred fit in the 1st dimension
     /// @param y_base double value that represents the base value for a centred fit in the 2nd dimension
-    double integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base=0.0, const double &y_base=0.0);
+    /// @param ax_val double value that represents the base value for the definite integral on the chosen axis.
+    double integral(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in, const int &axis, const int &x_exp, const int &y_exp, const double &x_base=0.0, const double &y_base=0.0, const double &ax_val=0.0);
 
 public:
     /// Returns a vector with ALL the real roots of p(x_in,y_in)-z_in
