@@ -11,15 +11,20 @@ the small things that have to be done when releasing a new version of the CoolPr
 library. 
 
 * **Version**: Edit CMakeLists.txt and remove all qualifiers (alpha, dev, ...) from the version number.
-* **Changelog**: Update the changelog and generate a list of closed GitHub issues: *HOW?*
+* **Changelog**: Update the changelog and generate a list of closed GitHub issues: 
+
+    - Move into the ``dev/scripts`` folder and do ``python milestone2rst.py vX.X.X`` where ``vX.X.X`` is the version number of the milestone on github.
+    - Copy the generated text (goes to stdout) into the changelog file in ``Web/changelog.rst``
+    
 * **release branch**: Merge all code from *master* into *release* branch
 * **build bots**: Force all buildbots to run on the *release* branch, this will also change the upload folder from *binaries* to *release*.
 * **script**: Wait for all bots to finish and run the release script by launching the ``release version`` bot with dry run disabled and the correct version number. This uploads binaries to pypi and sourceforge. 
 * **clean up**: If everything went well, you can proceed: 
-  - Tag the release branch in GitHub. It is a good idea to include the information on the closed issues here as well. 
-  - Change the default download file on sourceforge to point to the new zipped sources.
-  - Copy the new Javascript library to the homepage and make a symlink to ``coolprop-latest.js``. *I think I automated this one already* 
-  - Bump the version number in the CMake file and commit. 
-  - Announce the new features if you like...
+
+    - Tag the release branch in GitHub. It is a good idea to include the information on the closed issues here as well. 
+    - Change the default download file on sourceforge to point to the new zipped sources.
+    - Copy the new Javascript library to the homepage and make a symlink to ``coolprop-latest.js``. *I think I automated this one already* 
+    - Bump the version number in the CMake file and commit. 
+    - Announce the new features if you like...
   
 That's all folks.
