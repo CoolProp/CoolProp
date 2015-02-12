@@ -21,6 +21,7 @@ print(cp.PropsSI("d(Hmass)/d(T)|P", "P", 101325, "T", 300, "Water"))
 print(cp.PropsSI("D", "P", 101325, "T", 300, "Air.mix"))
 print(cp.PhaseSI("P", 101325, "Q", 0, "Water"))
 print(cp.get_global_param_string("predefined_mixtures"))
+print(cp.get_fluid_param_string("Water", "aliases"))
 print(cp.get_param_index("T"))
 print(cp.HAPropsSI('H','T',298.15,'P',101325,'R',0.5))
 print(10, "Fahrenheits is", cp.F2K(10) , "Kelvins")
@@ -38,4 +39,5 @@ print(cp.get_parameter_information_string("Error"))            -- What are the c
 print(cp.saturation_ancillary("Water", "C", 10, "Error", 300)) -- What are the correct inputs for this?
 print(cp.HAPropsSI('Error','T',298.15,'P',101325,'R',0.5))
 print(cp.get_param_index("Error"))
+print(cp.get_fluid_param_string("Water", "wrong"))
 print()
