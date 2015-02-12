@@ -124,4 +124,4 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     StaticLibrary/index.rst
     SharedLibrary/index.rst
     DelphiLazarus/index.rst
-    VBdotNET/index.rst
+    VB.net/index.rst
