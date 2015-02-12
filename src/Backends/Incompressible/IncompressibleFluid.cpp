@@ -18,14 +18,6 @@ and transport properties.
 */
 //IncompressibleFluid::IncompressibleFluid();
 
-void IncompressibleFluid::set_reference_state(double T0, double p0, double x0, double h0, double s0){
-	this->Tref = T0;
-	this->pref = p0;
-	this->xref = x0;
-	this->href = h0;
-    this->sref = s0;
-}
-
 void IncompressibleFluid::validate(){
     return;
     // TODO: Implement validation function
@@ -121,52 +113,6 @@ double IncompressibleFluid::c   (double T, double p, double x){
     }
     return _HUGE;
 }
-
-/// Entropy as a function of temperature, pressure and composition.
-double IncompressibleFluid::s   (double T, double p, double x){
-	double dsdTatp = _HUGE;
-	double dsdpatT = _HUGE;
-    switch (specific_heat.type) {
-        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-        	//TODO: Optimise this, add a cached value or direct calculation of definite integral
-        	dsdTatp = poly.integral(specific_heat.coeffs, T, x, 0, -1, 0, Tbase, xbase) - poly.integral(specific_heat.coeffs, Tref, xref, 0, -1, 0, Tbase, xbase);
-        	dsdpatT = this->rho(T,p,x);
-        	dsdpatT = this->drhodTatPx(T,p,x)/dsdpatT/dsdpatT * (p-pref);
-            return sref + dsdTatp + dsdpatT;
-            break;
-        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
-            break;
-        default:
-            throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.",__FILE__,__LINE__,specific_heat.type));
-            break;
-    }
-    return _HUGE;
-}
-
-/// Internal energy as a function of temperature, pressure and composition.
-double IncompressibleFluid::u   (double T, double p, double x){return u_h(T,p,x);};
-
-/// Enthalpy as a function of temperature, pressure and composition.
-double IncompressibleFluid::h   (double T, double p, double x){
-	double dhdTatP = _HUGE;
-	double dhdpatT = _HUGE;
-	switch (specific_heat.type) {
-		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-			//TODO: Optimise this, add a cached value or direct calculation of definite integral
-			dhdTatP = poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase) - poly.integral(specific_heat.coeffs, Tref, xref, 0, 0, 0, Tbase, xbase);
-			dhdpatT = this->dhdpatTx(T, p, x) * (p-pref);
-			return href + dhdTatP + dhdpatT;
-			break;
-		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
-			break;
-		default:
-			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for internal energy.",__FILE__,__LINE__,specific_heat.type));
-			break;
-	}
-	return _HUGE;
-	}
 
 /// Viscosity as a function of temperature, pressure and composition.
 double IncompressibleFluid::visc(double T, double p, double x){
@@ -298,21 +244,42 @@ double IncompressibleFluid::drhodTatPx (double T, double p, double x){
     }
     return _HUGE;
 }
+/// Partial derivative of entropy
+//  with respect to temperature at constant pressure and composition
+//  integrated in temperature
+double IncompressibleFluid::dsdTatPxdT(double T, double p, double x){
+	switch (specific_heat.type) {
+		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+			return poly.integral(specific_heat.coeffs, T, x, 0, -1, 0, Tbase, xbase);
+			break;
+		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
+			break;
+		default:
+			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.",__FILE__,__LINE__,specific_heat.type));
+			break;
+	}
+	return _HUGE;
+}
+/// Partial derivative of enthalpy
+//  with respect to temperature at constant pressure and composition
+//  integrated in temperature
+double IncompressibleFluid::dhdTatPxdT(double T, double p, double x){
+	switch (specific_heat.type) {
+		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+			return poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+			break;
+		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
+			break;
+		default:
+			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.",__FILE__,__LINE__,specific_heat.type));
+			break;
+	}
+	return _HUGE;
+}
 
-/* Other useful derivatives
- */
-/// Partial derivative of enthalpy with respect to temperature at constant pressure and composition
-double IncompressibleFluid::dhdpatTx (double T, double p, double x){
-	double rho = 0;
-	rho = this->rho(T,p,x);
-	return 1/rho * ( 1 + T/rho * this->drhodTatPx(T,p,x));
-}
-/// Partial derivative of entropy with respect to temperature at constant pressure and composition
-double IncompressibleFluid::dsdpatTx (double T, double p, double x){
-	double rho = 0;
-	rho = this->rho(T,p,x);
-	return 1/rho/rho * this->drhodTatPx(T,p,x);
-}
+
 
 
 /// Mass fraction conversion function
@@ -647,66 +614,16 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         //XLT.setVolToMass(parse_coefficients(fluid_json, "volume2mass", false));
         //XLT.setMassToMole(parse_coefficients(fluid_json, "mass2mole", false));
 
-        //XLT.set_reference_state(25+273.15, 1.01325e5, 0.0, 0.0, 0.0);
-        double Tref = 25+273.15;
-        double pref = 2e5;
-        double xref = 0.0;
-        double href = 127.0;
-        double sref = 23.0;
-        XLT.set_reference_state(Tref, pref, xref, href, sref);
-
         /// A function to check coefficients and equation types.
         //XLT.validate();
         double acc = 0.0001;
         double val = 0;
         double res = 0;
 
-        // Compare reference state
-		{
-        res = XLT.h(Tref,pref,xref);
-        CAPTURE(Tref);
-        CAPTURE(pref);
-        CAPTURE(xref);
-        CAPTURE(href);
-        CAPTURE(res);
-        CHECK( check_abs(href,res,acc) );
-        }
-        {
-        res = XLT.s(Tref,pref,xref);
-        CAPTURE(Tref);
-        CAPTURE(pref);
-        CAPTURE(xref);
-        CAPTURE(sref);
-        CAPTURE(res);
-		CHECK( check_abs(sref,res,acc) );
-		double res2 = XLT.s(Tref,pref,xref);
-        CAPTURE(Tref);
-        CAPTURE(pref);
-        CAPTURE(xref);
-        CAPTURE(res);
-        CAPTURE(res2);
-        CHECK( check_abs(res2,res,acc) );
-        res = XLT.s(Tref,pref,xref);
-        CAPTURE(Tref);
-        CAPTURE(pref);
-        CAPTURE(xref);
-        CAPTURE(res);
-        CAPTURE(res2);
-        CHECK( check_abs(res2,res,acc) );
-        }
-
-
-
-        Tref = 25+273.15;
-        pref = 0.0;
-        xref = 0.0;
-        href = 0.0;
-        sref = 0.0;
-		XLT.set_reference_state(Tref, pref, xref, href, sref);
         // Prepare the results and compare them to the calculated values
         double T = 273.15+50;
         double p = 10e5;
-        double x = xref;
+        double x = 0.0;
 
         // Compare density
         val = 824.4615702148608;
@@ -728,62 +645,10 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CHECK( check_abs(val,res,acc) );
         }
 
-        // Compare s
-        val = 144.08;
-        res = XLT.s(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( check_abs(val,res,acc) );
-        }
-
-        val = 0.0;
-        res = XLT.s(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( val==res );
-        }
-
-        // Compare u
-        val = 44724.1;
-        res = XLT.u(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( check_abs(val,res,acc) );
-        }
-
-        val = href - pref/XLT.rho(Tref,pref,xref);
-        res = XLT.u(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( val==res );
-        }
-
-        // Compare h
-        val = 45937;
-        res = XLT.h(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( check_abs(val,res,acc) );
-        }
-
-        val = 0.0;
-        res = XLT.h(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( val==res );
-        }
+        // Check property functions
+        CHECK_THROWS(XLT.s(T,p,x));
+        CHECK_THROWS(XLT.h(T,p,x));
+        CHECK_THROWS(XLT.u(T,p,x));
 
         // Compare v
         val = 0.0008931435169681835;
@@ -810,17 +675,6 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
     SECTION("Test case for Methanol from SecCool") {
 
         CoolProp::IncompressibleFluid CH3OH = CoolPropTesting::incompressibleFluidObject();
-
-        //XLT.set_reference_state(25+273.15, 1.01325e5, 0.0, 0.0, 0.0);
-        double Tref = 25+273.15;
-        double pref = 0.0;
-        double xref = 0.25;
-        double href = 0.0;
-        double sref = 0.0;
-        CH3OH.set_reference_state(Tref, pref, xref, href, sref);
-
-        /// A function to check coefficients and equation types.
-        //CH3OH.validate();
 
         // Prepare the results and compare them to the calculated values
         double acc = 0.0001;
@@ -854,94 +708,10 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CHECK( check_abs(expected,actual,acc) );
         }
 
-        // Compare s
-        expected = -207.027;
-        actual = CH3OH.s(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( check_abs(expected,actual,acc) );
-        }
-        expected = CH3OH.s(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( check_abs(expected,actual,acc) );
-        }
-
-        expected = 0.0;
-        actual = CH3OH.s(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( expected==actual );
-        }
-        expected = CH3OH.s(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( expected==actual );
-        }
-
-        // Compare u
-        expected = -60157.1;
-        actual = CH3OH.u(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( check_abs(expected,actual,acc) );
-        }
-
-        expected = href - pref/CH3OH.rho(Tref,pref,xref);
-        actual = CH3OH.u(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( expected==actual );
-        }
-
-        // Compare h
-        expected = -59119;
-        actual = CH3OH.h(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( check_abs(expected,actual,acc) );
-        }
-
-        expected = 0.0;
-        actual = CH3OH.h(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        std::string errmsg = CoolProp::get_global_param_string("errstring");
-        CAPTURE(errmsg);
-        CHECK( expected==actual );
-        }
+        // Check property functions
+        CHECK_THROWS(CH3OH.s(T,p,x));
+        CHECK_THROWS(CH3OH.h(T,p,x));
+        CHECK_THROWS(CH3OH.u(T,p,x));
 
         // Compare v
         expected = 0.0023970245009602097;
