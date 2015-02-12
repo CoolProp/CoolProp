@@ -1,5 +1,12 @@
+
+-- Try the FFI-enabled binding if running LuaJIT
 if jit and jit.status() then
-    return require "coolprop.ffi"
+    local ok, mod = pcall(require, "coolprop.ffi")
+    if ok then
+        return mod
+    end
+    -- If loading via FFI fails, try Lua/C API,
+    -- which might contain a statically-linked CoolProp.
 end
 local huge = math.huge
 local ok, lib = pcall(require, "coolprop.capi")
