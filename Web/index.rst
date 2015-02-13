@@ -57,7 +57,7 @@ Projects Using CoolProp
 - `ACHP <http://achp.sourceforge.net/>`_
 - `DWSim <http://sourceforge.net/projects/dwsim/>`_
 - `StateCalc <https://itunes.apple.com/us/app/statecalc/id891848148?ls=1&mt=8>`_
-
+- `SmoWeb <http://platform.sysmoltd.com>`_
 
 Main Developers
 ---------------
