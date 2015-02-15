@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.531500e+02, 
   "TminPsat": 3.231500e+02, 
   "conductivity": {
+    "NRMS": 1.087061e-02, 
     "coeffs": [
       [
         5.181167e-01
@@ -25,6 +27,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         1.202200e+03
@@ -37,16 +40,19 @@
   }, 
   "description": "HYCOOL 20, Potassium formate", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "HY20", 
   "reference": "Hydro2000", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": [
       -5.000000e+03, 
       6.000000e+01, 
@@ -55,6 +61,7 @@
     "type": "exponential"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.955000e+03
@@ -66,6 +73,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 6.774619e-03, 
     "coeffs": [
       6.428043e+02, 
       -1.172885e+02, 
@@ -74,6 +82,7 @@
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

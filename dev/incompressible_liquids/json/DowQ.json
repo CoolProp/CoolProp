@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.381500e+02, 
   "TminPsat": 3.931500e+02, 
   "conductivity": {
+    "NRMS": 6.550281e-04, 
     "coeffs": [
       [
         1.024267e-01
@@ -25,6 +27,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 1.937877e-03, 
     "coeffs": [
       [
         8.575028e+02
@@ -43,16 +46,19 @@
   }, 
   "description": "DowthermQ", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "DowQ", 
   "reference": "Dow1997", 
   "saturation_pressure": {
+    "NRMS": 7.520851e-03, 
     "coeffs": [
       -3.242462e+02, 
       -4.472192e+00, 
@@ -61,6 +67,7 @@
     "type": "logexponential"
   }, 
   "specific_heat": {
+    "NRMS": 2.969464e-04, 
     "coeffs": [
       [
         2.095464e+03
@@ -78,6 +85,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 7.974999e-03, 
     "coeffs": [
       8.286090e+02, 
       -1.232876e+02, 
@@ -86,6 +94,7 @@
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

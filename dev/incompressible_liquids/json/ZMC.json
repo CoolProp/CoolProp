@@ -1,10 +1,13 @@
 {
   "T_freeze": {
+    "NRMS": 3.815716e-15, 
     "coeffs": [
       [
-        5.464012e+00, 
-        -5.189883e-01, 
-        -5.295193e-01
+        5.464044e+00, 
+        -5.105012e-01, 
+        -5.363333e-01, 
+        -2.496230e-01, 
+        1.538631e-01
       ]
     ], 
     "type": "exppolynomial"
@@ -14,11 +17,12 @@
   "Tmin": 2.231500e+02, 
   "TminPsat": 3.831500e+02, 
   "conductivity": {
+    "NRMS": 3.565525e-03, 
     "coeffs": [
       [
         4.137041e-01, 
         -2.828833e-01, 
-        2.073991e-03, 
+        2.073990e-03, 
         -3.173044e-01, 
         4.202929e+00
       ], 
@@ -37,8 +41,8 @@
         0.000000e+00
       ], 
       [
-        7.704097e-11, 
-        -2.547468e-10, 
+        7.704094e-11, 
+        -2.547467e-10, 
         0.000000e+00, 
         0.000000e+00, 
         0.000000e+00
@@ -47,6 +51,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 4.084457e-04, 
     "coeffs": [
       [
         1.062722e+03, 
@@ -70,7 +75,7 @@
         0.000000e+00
       ], 
       [
-        5.814751e-09, 
+        5.814772e-09, 
         -2.691843e-07, 
         0.000000e+00, 
         0.000000e+00, 
@@ -81,6 +86,7 @@
   }, 
   "description": "Zitrec MC, Ethylene Glycol", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 
@@ -118,16 +124,19 @@
     "type": "polynomial"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "ZMC", 
   "reference": "Arteco2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 3.557918e-03, 
     "coeffs": [
       [
         3.371054e+03, 
@@ -161,6 +170,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 4.727952e-03, 
     "coeffs": [
       [
         -8.027525e+00, 
@@ -194,6 +204,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

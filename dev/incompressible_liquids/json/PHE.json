@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.731500e+02, 
   "TminPsat": 5.591500e+02, 
   "conductivity": {
+    "NRMS": 1.103062e-02, 
     "coeffs": [
       [
         1.208766e-01
@@ -25,6 +27,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 1.368657e-03, 
     "coeffs": [
       [
         7.697189e+02
@@ -43,16 +46,19 @@
   }, 
   "description": "Paratherm HE", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "PHE", 
   "reference": "Paratherm2013", 
   "saturation_pressure": {
+    "NRMS": 4.287878e-02, 
     "coeffs": [
       [
         3.490217e+01
@@ -70,6 +76,7 @@
     "type": "exppolynomial"
   }, 
   "specific_heat": {
+    "NRMS": 2.403879e-02, 
     "coeffs": [
       [
         2.401998e+03
@@ -87,6 +94,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 4.974645e-03, 
     "coeffs": [
       9.416352e+02, 
       -1.670752e+02, 
@@ -95,6 +103,7 @@
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": [
       2.775556e-01, 
       2.501768e+02, 
@@ -14,6 +15,7 @@
   "Tmin": 2.231500e+02, 
   "TminPsat": 2.931500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         4.082067e-01, 
@@ -51,6 +53,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         9.602467e+02, 
@@ -89,20 +92,24 @@
   }, 
   "description": "Methanol solution", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "ExampleSecCool", 
   "reference": "SecCool software", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         3.822971e+03, 
@@ -140,6 +147,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": null, 
     "coeffs": [
       [
         1.472553e+00, 
@@ -177,6 +185,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

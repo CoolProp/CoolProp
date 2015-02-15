@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": [
       7.000000e+02, 
       -6.000000e+01, 
@@ -12,6 +13,7 @@
   "Tmin": 2.730000e+02, 
   "TminPsat": 2.730000e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 
@@ -49,6 +51,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 5.753183e-04, 
     "coeffs": [
       [
         1.300435e+03, 
@@ -87,16 +90,19 @@
   }, 
   "description": "Lithium-bromide solution - aq", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "LiBr", 
   "reference": "Patek2006", 
   "saturation_pressure": {
+    "NRMS": 2.129276e-03, 
     "coeffs": [
       [
         1.152444e+01, 
@@ -134,6 +140,7 @@
     "type": "exppolynomial"
   }, 
   "specific_heat": {
+    "NRMS": 5.463120e-03, 
     "coeffs": [
       [
         2.641343e+03, 
@@ -171,6 +178,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 
@@ -208,6 +216,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

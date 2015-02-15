@@ -40,6 +40,7 @@ class IncompressibleData(object):
         self.xData  = None # In case you need a customised first data set (temperature?)
         self.yData  = None # In case you need a customised second data set (concentration?)
         self.sErr   = None # Coefficient of determination
+        self.NRMS   = None # Normalised RMS: (square root of the mean of the squares of the deviations)/(max-min)
         self.DEBUG  = False
 
     @staticmethod
@@ -178,12 +179,19 @@ class IncompressibleData(object):
             self.coeffs = bestCoeffs
             self.type   = bestType
             self.sErr   = bestsErr
+            if self.type == IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL:
+                self.NRMS = bestRMS/(np.nanmax(self.data)-np.nanmin(self.data))
+            elif self.type == IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL or \
+              self.type == IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL or \
+              self.type == IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL:
+                self.NRMS = bestRMS/(np.log(np.nanmax(self.data))-np.log(np.nanmin(self.data)))
+            else:
+                raise ValueError("Unknown function.")
 
             #if self.DEBUG: print("Fitting statistics:")
             #SSE = np.square(self.sErr).sum() # Sum of squares due to error
             #SST = ((zData-zData.mean())**2).sum()
             #R2  = 1-(ssErr/ssTot )
-
 
     def setxData(self, xData):
         if self.xData is None:
@@ -210,6 +218,11 @@ class IncompressibleData(object):
         except:
             j['coeffs'] = 'null'
 
+        try:
+            j['NRMS'] = self.NRMS
+        except:
+            j['NRMS'] = 'null'
+
         j['type']   = self.type
         return j
 
@@ -220,7 +233,10 @@ class IncompressibleData(object):
         except:
             self.coeffs = None
             self.type   = IncompressibleData.INCOMPRESSIBLE_NOT_SET
-
+        try:
+            self.NRMS   = j['NRMS']
+        except:
+            self.NRMS = None
         return
 
 

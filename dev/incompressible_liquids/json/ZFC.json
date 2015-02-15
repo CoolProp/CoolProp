@@ -1,10 +1,12 @@
 {
   "T_freeze": {
+    "NRMS": 6.475891e-15, 
     "coeffs": [
       [
         5.498963e+00, 
-        -5.976712e-01, 
-        -1.434348e+00
+        -5.247910e-01, 
+        -1.434348e+00, 
+        -3.555129e+00
       ]
     ], 
     "type": "exppolynomial"
@@ -14,6 +16,7 @@
   "Tmin": 2.331500e+02, 
   "TminPsat": 3.731500e+02, 
   "conductivity": {
+    "NRMS": 2.742722e-03, 
     "coeffs": [
       [
         3.990549e-01, 
@@ -43,6 +46,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 7.620134e-03, 
     "coeffs": [
       [
         1.036776e+03, 
@@ -73,6 +77,7 @@
   }, 
   "description": "Zitrec FC, Propylene Glycol", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 
@@ -110,16 +115,19 @@
     "type": "polynomial"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "ZFC", 
   "reference": "Arteco2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 5.795117e-03, 
     "coeffs": [
       [
         3.673274e+03, 
@@ -140,7 +148,7 @@
         0.000000e+00
       ], 
       [
-        4.820628e-08, 
+        4.820640e-08, 
         0.000000e+00, 
         0.000000e+00, 
         0.000000e+00
@@ -149,6 +157,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 5.396088e-03, 
     "coeffs": [
       [
         -1.023226e+01, 
@@ -178,6 +187,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

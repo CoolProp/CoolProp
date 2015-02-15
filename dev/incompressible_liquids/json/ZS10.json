@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.651500e+02, 
   "TminPsat": 3.631500e+02, 
   "conductivity": {
+    "NRMS": 2.228681e-05, 
     "coeffs": [
       [
         5.643895e-01
@@ -25,6 +27,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 6.354667e-09, 
     "coeffs": [
       [
         1.079692e+03
@@ -33,30 +36,34 @@
         -4.643114e-01
       ], 
       [
-        -1.246081e-11
+        -1.246092e-11
       ], 
       [
-        -2.086672e-13
+        -2.086949e-13
       ]
     ], 
     "type": "polynomial"
   }, 
   "description": "Zitrec S10, Potassium formate/Sodium propionate", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "ZS10", 
   "reference": "Arteco2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 1.735172e-06, 
     "coeffs": [
       [
         3.645713e+03
@@ -68,12 +75,13 @@
         -9.290489e-03
       ], 
       [
-        -4.913537e-10
+        -4.913533e-10
       ]
     ], 
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 2.868780e-03, 
     "coeffs": [
       5.160185e+02, 
       -1.540033e+02, 
@@ -82,6 +90,7 @@
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

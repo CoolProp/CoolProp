@@ -61,7 +61,7 @@ class SecCoolSolutionData(DigitalData):
                 self.specific_heat.data *= 10.0
             self.specific_heat.source = self.specific_heat.SOURCE_DATA
         except:
-            if self.density.DEBUG: print("Could not load {}".format(self.getFile("Cp")))
+            if self.specific_heat.DEBUG: print("Could not load {}".format(self.getFile("Cp")))
             pass
 
         try:
@@ -70,7 +70,7 @@ class SecCoolSolutionData(DigitalData):
                 self.conductivity.data *=  0.1
             self.conductivity.source = self.conductivity.SOURCE_DATA
         except:
-            if self.density.DEBUG: print("Could not load {}".format(self.getFile("Cond")))
+            if self.conductivity.DEBUG: print("Could not load {}".format(self.getFile("Cond")))
             pass
 
         try:
@@ -79,7 +79,7 @@ class SecCoolSolutionData(DigitalData):
                 self.viscosity.data *=  0.1
             self.viscosity.source = self.viscosity.SOURCE_DATA
         except:
-            if self.density.DEBUG: print("Could not load {}".format(self.getFile("Mu")))
+            if self.viscosity.DEBUG: print("Could not load {}".format(self.getFile("Mu")))
             pass
 
 
@@ -192,16 +192,17 @@ class SecCoolSolutionData(DigitalData):
                 self.T_freeze.data = z.T
                 try:
                     self.T_freeze.source = self.T_freeze.SOURCE_DATA
-                    self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_EXPONENTIAL
-                    self.T_freeze.coeffs = np.array([+7e+6, +6e+4, +1e+1])
-                    self.T_freeze.fitCoeffs(self.Tbase,self.xbase)
+                    #self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_EXPONENTIAL
+                    #self.T_freeze.coeffs = np.array([+7e+6, +6e+4, +1e+1])
+                    self.T_freeze.coeffs = np.zeros(std_coeffs.shape)
+                    self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_EXPPOLYNOMIAL
                     #if np.isfinite(self.T_freeze.data).sum()<10:
                     #    self.T_freeze.coeffs = np.array([+7e+6, +6e+4, +1e+1])
                     #    self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_EXPONENTIAL
                     #else:
                     #    self.T_freeze.coeffs = np.zeros(np.round(np.array(std_coeffs.shape) * 2))
                     #    self.T_freeze.type   = self.T_freeze.INCOMPRESSIBLE_EXPPOLYNOMIAL
-                    #self.T_freeze.fitCoeffs(self.Tbase,self.xbase)
+                    self.T_freeze.fitCoeffs(self.Tbase,self.xbase)
                 except errList as ve:
                     if self.T_freeze.DEBUG: print("{0}: Could not fit {1} coefficients: {2}".format(self.name,"T_freeze",ve))
                     pass

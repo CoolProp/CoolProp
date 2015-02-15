@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.331500e+02, 
   "TminPsat": 4.531500e+02, 
   "conductivity": {
+    "NRMS": 1.796592e-02, 
     "coeffs": [
       [
         1.438018e-01
@@ -25,6 +27,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 1.401113e-13, 
     "coeffs": [
       [
         7.423000e+02
@@ -33,30 +36,34 @@
         -7.100000e-01
       ], 
       [
-        -1.110223e-16
+        0.000000e+00
       ], 
       [
-        -1.056114e-17
+        6.928052e-17
       ]
     ], 
     "type": "polynomial"
   }, 
   "description": "Paracryol, Aliphatic Hydrocarbon", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "PCL", 
   "reference": "Sulzer1999,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 2.922756e-04, 
     "coeffs": [
       [
         2.190680e+03
@@ -74,6 +81,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 7.385037e-03, 
     "coeffs": [
       7.976255e+02, 
       -9.239176e+01, 
@@ -82,6 +90,7 @@
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

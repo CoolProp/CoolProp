@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": [
       7.000000e+02, 
       -6.000000e+01, 
@@ -12,6 +13,7 @@
   "Tmin": 2.281500e+02, 
   "TminPsat": 2.631500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 
@@ -49,6 +51,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 1.292165e-03, 
     "coeffs": [
       [
         1.026081e+03, 
@@ -87,16 +90,19 @@
   }, 
   "description": "Ethanol ice slurry", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "ExampleSolution", 
   "reference": "SecCool software,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 
@@ -134,6 +140,7 @@
     "type": "exppolynomial"
   }, 
   "specific_heat": {
+    "NRMS": 1.292165e-03, 
     "coeffs": [
       [
         1.026081e+03, 
@@ -171,6 +178,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 
@@ -208,6 +216,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
