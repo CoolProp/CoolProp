@@ -1600,6 +1600,9 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
 double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
 {
     // This function provides some things that are not usually needed, but could be interesting for debug purposes.
+    
+    // Add a check to make sure that Air and Water fluid states have been properly instantiated
+    check_fluid_instantiation();
 
     // Requires W since it is nice and fast and always defined.  Put a dummy value if you want something that doesn't use humidity
 
