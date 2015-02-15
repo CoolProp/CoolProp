@@ -48,7 +48,7 @@ void check_fluid_instantiation()
     }
 };
 
-enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_HUMRAT,GIVEN_V,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTROPY,GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND};
+enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_HUMRAT,GIVEN_V,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTROPY,GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA};
 
 static double epsilon=0.621945,R_bar=8.314472;
 static int FlagUseVirialCorrelations=0,FlagUseIsothermCompressCorrelation=0,FlagUseIdealGasEnthalpyCorrelations=0;
@@ -1131,6 +1131,10 @@ static givens Name2Type(const std::string &Name)
         return GIVEN_VISC;
     else if (!strcmp(Name,"k") || !strcmp(Name,"Conductivity") || !strcmp(Name,"K"))
         return GIVEN_COND;
+    else if (!strcmp(Name,"C") || !strcmp(Name,"cp"))
+        return GIVEN_CP;
+    else if (!strcmp(Name,"Cha") || !strcmp(Name,"cp_ha"))
+        return GIVEN_CPHA;
     else
         throw CoolProp::ValueError(format("Sorry, your input [%s] was not understood to Name2Type. Acceptable values are T,P,R,W,D,B,H,S,M,K and aliases thereof\n",Name.c_str()));
 }
