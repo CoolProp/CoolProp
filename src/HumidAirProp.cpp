@@ -48,7 +48,7 @@ void check_fluid_instantiation()
     }
 };
 
-enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_HUMRAT,GIVEN_V,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTROPY,GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA};
+enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA};
 
 static double epsilon=0.621945,R_bar=8.314472;
 static int FlagUseVirialCorrelations=0,FlagUseIsothermCompressCorrelation=0,FlagUseIdealGasEnthalpyCorrelations=0;
@@ -1111,6 +1111,8 @@ static givens Name2Type(const std::string &Name)
 {
     if (!strcmp(Name,"Omega") || !strcmp(Name,"HumRat") || !strcmp(Name,"W"))
         return GIVEN_HUMRAT;
+    else if (!strcmp(Name,"psi_w") || !strcmp(Name, "Y"))
+        return GIVEN_PSIW;
     else if (!strcmp(Name,"Tdp") || !strcmp(Name,"T_dp") || !strcmp(Name,"DewPoint") || !strcmp(Name,"D"))
         return GIVEN_TDP;
     else if (!strcmp(Name,"Twb") || !strcmp(Name,"T_wb") || !strcmp(Name,"WetBulb") || !strcmp(Name,"B"))
@@ -1126,7 +1128,9 @@ static givens Name2Type(const std::string &Name)
     else if (!strcmp(Name,"P"))
         return GIVEN_P;
     else if (!strcmp(Name,"V") || !strcmp(Name,"Vda"))
-        return GIVEN_V;
+        return GIVEN_VDA;
+    else if (!strcmp(Name,"Vha"))
+        return GIVEN_VHA;
     else if (!strcmp(Name,"mu") || !strcmp(Name,"Visc") || !strcmp(Name,"M"))
         return GIVEN_VISC;
     else if (!strcmp(Name,"k") || !strcmp(Name,"Conductivity") || !strcmp(Name,"K"))
@@ -1237,16 +1241,22 @@ void convert_to_SI(const std::string &Name, double &val)
     {
         case GIVEN_COND:
         case GIVEN_ENTHALPY:
+        case GIVEN_ENTHALPY_HA:
         case GIVEN_ENTROPY:
+        case GIVEN_ENTROPY_HA:
+        case GIVEN_CP:
+        case GIVEN_CPHA:
         case GIVEN_P:
             val *= 1000; return;
         case GIVEN_T:
         case GIVEN_TDP:
         case GIVEN_TWB:
         case GIVEN_RH:
-        case GIVEN_V:
+        case GIVEN_VDA:
+        case GIVEN_VHA:
         case GIVEN_HUMRAT:
         case GIVEN_VISC:
+        case GIVEN_PSIW:
             return;
         case GIVEN_INVALID:
             throw CoolProp::ValueError(format("invalid input to convert_to_SI"));
@@ -1258,16 +1268,22 @@ void convert_from_SI(const std::string &Name, double &val)
     {
         case GIVEN_COND:
         case GIVEN_ENTHALPY:
+        case GIVEN_ENTHALPY_HA:
         case GIVEN_ENTROPY:
+        case GIVEN_ENTROPY_HA:
+        case GIVEN_CP:
+        case GIVEN_CPHA:
         case GIVEN_P:
             val /= 1000; return;
         case GIVEN_T:
         case GIVEN_TDP:
         case GIVEN_TWB:
         case GIVEN_RH:
-        case GIVEN_V:
+        case GIVEN_VDA:
+        case GIVEN_VHA:
         case GIVEN_HUMRAT:
         case GIVEN_VISC:
+        case GIVEN_PSIW:
             return;
         case GIVEN_INVALID:
             throw CoolProp::ValueError(format("invalid input to convert_to_SI"));
@@ -1292,9 +1308,10 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
     {
         // Add a check to make sure that Air and Water fluid states have been properly instantiated
         check_fluid_instantiation();
+        
         int iT, iW, iTdp, iRH, ip;
         givens In1Type, In2Type, In3Type, Type1, Type2, OutputType;
-        double vals[3],p,T,RH,W,Tdp,psi_w,M_ha,v_bar,h_bar,s_bar,MainInputValue,SecondaryInputValue,T_guess;
+        double vals[3],p,T,RH,W,Tdp,psi_w,M_ha,v_bar,h_bar,s_bar,MainInputValue,SecondaryInputValue;
         double Value1,Value2,W_guess;
         std::string MainInputName, SecondaryInputName, Name1, Name2;
 
@@ -1503,87 +1520,79 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
         // -----------------------------------------------------------------
         // Calculate and return the desired value for known set of T,p,psi_w
         // -----------------------------------------------------------------
-        if (!strcmp(OutputName,"Vda") || !strcmp(OutputName,"V"))
-        {
-            v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
-            W = HumidityRatio(psi_w); //[kg_w/kg_a]
-            return v_bar*(1+W)/M_ha; //[m^3/kg_da]
-        }
-        else if (!strcmp(OutputName,"Vha"))
-        {
-            v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
-            return v_bar/M_ha; //[m^3/kg_ha]
-        }
-        else if (!strcmp(OutputName,"Y"))
-        {
-            return psi_w; //[mol_w/mol]
-        }
-        else if (!strcmp(OutputName,"Hda") || !strcmp(OutputName,"H"))
-        {
-            return MassEnthalpy(T,p,psi_w);
-        }
-        else if (!strcmp(OutputName,"Hha"))
-        {
-            v_bar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
-            h_bar = MolarEnthalpy(T, p, psi_w,v_bar); //[J/mol_ha]
-            return h_bar/M_ha; //[kJ/kg_ha]
-        }
-        else if (!strcmp(OutputName,"S") || !strcmp(OutputName,"Entropy"))
-        {
-            v_bar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
-            s_bar = MolarEntropy(T, p, psi_w, v_bar); //[kJ/kmol_ha]
-            W = HumidityRatio(psi_w); //[kg_w/kg_da]
-            return s_bar*(1+W)/M_ha; //[kJ/kg_da]
-        }
-        else if (!strcmp(OutputName,"C") || !strcmp(OutputName,"cp"))
-        {
-            double v_bar1,v_bar2,h_bar1,h_bar2, cp_bar, dT = 1e-3;
-            v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
-            h_bar1=MolarEnthalpy(T-dT,p,psi_w,v_bar1); //[kJ/kmol_ha]
-            v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
-            h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
-            W=HumidityRatio(psi_w); //[kg_w/kg_da]
-            cp_bar = (h_bar2-h_bar1)/(2*dT);
-            return cp_bar*(1+W)/M_ha; //[kJ/kg_da]
-        }
-        else if (!strcmp(OutputName,"Cha") || !strcmp(OutputName,"cp_ha"))
-        {
-            double v_bar1,v_bar2,h_bar1,h_bar2, cp_bar, dT = 1e-3;
-            v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
-            h_bar1=MolarEnthalpy(T-dT,p,psi_w,v_bar1); //[kJ/kmol_ha]
-            v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
-            h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
-            W=HumidityRatio(psi_w); //[kg_w/kg_da]
-            cp_bar = (h_bar2-h_bar1)/(2*dT);
-            return cp_bar/M_ha; //[kJ/kg_da]
-        }
-        else if (!strcmp(OutputName,"Tdp") || !strcmp(OutputName,"D"))
-        {
-            return DewpointTemperature(T,p,psi_w); //[K]
-        }
-        else if (!strcmp(OutputName,"Twb") || !strcmp(OutputName,"T_wb") || !strcmp(OutputName,"WetBulb") || !strcmp(OutputName,"B"))
-        {
-            return WetbulbTemperature(T,p,psi_w); //[K]
-        }
-        else if (!strcmp(OutputName,"Omega") || !strcmp(OutputName,"HumRat") || !strcmp(OutputName,"W"))
-        {
-            return HumidityRatio(psi_w);
-        }
-        else if (!strcmp(OutputName,"RH") || !strcmp(OutputName,"RelHum") || !strcmp(OutputName,"R"))
-        {
-            return RelativeHumidity(T,p,psi_w);
-        }
-        else if (!strcmp(OutputName,"mu") || !strcmp(OutputName,"Visc") || !strcmp(OutputName,"M"))
-        {
-            return Viscosity(T,p,psi_w);
-        }
-        else if (!strcmp(OutputName,"k") || !strcmp(OutputName,"Conductivity") || !strcmp(OutputName,"K"))
-        {
-            return Conductivity(T,p,psi_w);
-        }
-        else
-        {
-            return -1000;
+        switch (OutputType){
+            case GIVEN_VDA:
+            {
+                v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
+                W = HumidityRatio(psi_w); //[kg_w/kg_a]
+                return v_bar*(1+W)/M_ha; //[m^3/kg_da]
+            }
+            case GIVEN_VHA:
+            {
+                v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
+                return v_bar/M_ha; //[m^3/kg_ha]
+            }
+            case GIVEN_PSIW:
+            {
+                return psi_w; //[mol_w/mol]
+            }
+            case GIVEN_ENTHALPY:
+            {
+                return MassEnthalpy(T,p,psi_w); //[J/kg_da]
+            }
+            case GIVEN_ENTHALPY_HA:
+            {
+                v_bar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
+                h_bar = MolarEnthalpy(T, p, psi_w,v_bar); //[J/mol_ha]
+                return h_bar/M_ha; //[J/kg_ha]
+            }
+            case GIVEN_ENTROPY_HA:
+            {
+                v_bar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
+                s_bar = MolarEntropy(T, p, psi_w, v_bar); //[J/mol_da/K]
+                W = HumidityRatio(psi_w); //[kg_w/kg_da]
+                return s_bar*(1+W)/M_ha; //[kJ/kg_ha/K]
+            }
+            case GIVEN_TDP:{
+                return DewpointTemperature(T,p,psi_w); //[K]
+            }
+            case GIVEN_TWB:{
+                return WetbulbTemperature(T,p,psi_w); //[K]
+            }
+            case GIVEN_HUMRAT:{
+                return HumidityRatio(psi_w);
+            }
+            case GIVEN_RH:{
+                return RelativeHumidity(T,p,psi_w);
+            }
+            case GIVEN_VISC:{
+                return Viscosity(T,p,psi_w);
+            }
+            case GIVEN_COND:{
+                return Conductivity(T,p,psi_w);
+            }
+            case GIVEN_CPHA:{
+                double v_bar1,v_bar2,h_bar1,h_bar2, cp_bar, dT = 1e-3;
+                v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
+                h_bar1=MolarEnthalpy(T-dT,p,psi_w,v_bar1); //[kJ/kmol_ha]
+                v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
+                h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
+                W=HumidityRatio(psi_w); //[kg_w/kg_da]
+                cp_bar = (h_bar2-h_bar1)/(2*dT); //[J/mol_da/K]
+                return cp_bar*(1+W)/M_ha; //[J/kg_ha/K]
+            }
+            case GIVEN_CP:{
+                double v_bar1,v_bar2,h_bar1,h_bar2, cp_bar, dT = 1e-3;
+                v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
+                h_bar1=MolarEnthalpy(T-dT,p,psi_w,v_bar1); //[kJ/kmol_ha]
+                v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
+                h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
+                W=HumidityRatio(psi_w); //[kg_w/kg_da]
+                cp_bar = (h_bar2-h_bar1)/(2*dT); //[J/mol_da/K]
+                return cp_bar/M_ha; //[J/kg_da/K]
+            }
+            default:
+                return _HUGE;
         }
     }
     catch (std::exception &e)
