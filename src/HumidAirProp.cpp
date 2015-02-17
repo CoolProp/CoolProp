@@ -1117,8 +1117,10 @@ static givens Name2Type(const std::string &Name)
         return GIVEN_TDP;
     else if (!strcmp(Name,"Twb") || !strcmp(Name,"T_wb") || !strcmp(Name,"WetBulb") || !strcmp(Name,"B"))
         return GIVEN_TWB;
-    else if (!strcmp(Name,"Enthalpy") || !strcmp(Name,"H"))
+    else if (!strcmp(Name,"Enthalpy") || !strcmp(Name,"H") || !strcmp(Name,"Hda"))
         return GIVEN_ENTHALPY;
+    else if (!strcmp(Name,"Hha"))
+        return GIVEN_ENTHALPY_HA;
     else if (!strcmp(Name,"Entropy") || !strcmp(Name,"S"))
         return GIVEN_ENTROPY;        
     else if (!strcmp(Name,"RH") || !strcmp(Name,"RelHum") || !strcmp(Name,"R"))
