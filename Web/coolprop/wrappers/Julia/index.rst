@@ -14,7 +14,7 @@ Option A: Calling shared library directly
 
 .. warning::
 
-    For now, only 64-bit architectures are supported, and you need Julia version >= 0.4
+    For now, only 64-bit architectures are supported.
     
 Download a precompiled shared library appropriate to the computer you are using from :sfdownloads:`sourceforge <shared_library>` or the development version from :sfnightly:`the nightly snapshots <shared_library>`.  
 
