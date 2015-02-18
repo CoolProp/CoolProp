@@ -29,7 +29,7 @@ project(${project_name})
 # Project version
 set (COOLPROP_VERSION_MAJOR 5)
 set (COOLPROP_VERSION_MINOR 0)
-set (COOLPROP_VERSION_PATCH 7)
+set (COOLPROP_VERSION_PATCH 8dev)
 set (COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH})
 
 #######################################
@@ -860,7 +860,7 @@ if (COOLPROP_JAVASCRIPT_MODULE)
   add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
   add_definitions(-s ASSERTIONS=1)
   add_definitions(-DEXTERNC)
-  set(CMAKE_EXE_LINKER_FLAGS "-DEXTERNC -s ASSERTIONS=1 -s EXPORTED_FUNCTIONS=\"['_main','_F2K','_Props1SI','_PropsSI','_get_global_param_string','_HAProps']\"")
+  set(CMAKE_EXE_LINKER_FLAGS "-DEXTERNC --memory-init-file 0 -s ASSERTIONS=1 -s EXPORTED_FUNCTIONS=\"['_main','_F2K','_Props1SI','_PropsSI','_get_global_param_string','_HAProps']\"")
   set(CMAKE_BUILD_TYPE Release)
   
   list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
@@ -869,7 +869,8 @@ if (COOLPROP_JAVASCRIPT_MODULE)
   add_dependencies (coolprop generate_headers)
   SET_TARGET_PROPERTIES(coolprop PROPERTIES PREFIX "" SUFFIX .js)
   install (TARGETS coolprop DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
-  install (FILES  "${CMAKE_SOURCE_DIR}/Web/coolprop/wrappers/Javascript/index.html" DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
+  install (FILES "${CMAKE_CURRENT_BINARY_DIR}/coolprop.js.mem" DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript OPTIONAL)
+  install (FILES  "${CMAKE_SOURCE_DIR}/Web/coolprop/wrappers/Javascript/index.html" DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript )
 endif()
 
 if (COOLPROP_MATHEMATICA_MODULE)

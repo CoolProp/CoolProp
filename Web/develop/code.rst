@@ -11,7 +11,7 @@ Doxygen formatted documentation of the source files
 ---------------------------------------------------
 
 Builds of the `doxygen <http://www.stack.nl/~dimitri/doxygen/>`_ formatted HTML outputs for the 
-current version are integrated this page, :cpapi:`CoolProp`.
+current version are , :cpapi:`CoolProp`.
 
 More information
 ----------------

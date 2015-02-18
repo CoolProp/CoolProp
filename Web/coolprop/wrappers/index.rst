@@ -34,6 +34,7 @@ Target                                          Operating Systems            Not
 :ref:`Microsoft Excel <Excel>`                  windows only
 :ref:`LibreOffice <LibreOffice>`                windows, linux
 :ref:`Delphi & Lazarus <Delphi>`                linux, OSX, win
+:ref:`iOS (iPhone) <ios>`                       
 ==============================================  ===========================  =======================================
 
 .. _wrapper_common_prereqs:
@@ -110,6 +111,7 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     FORTRAN/index.rst
     PHP/index.rst
     EES/index.rst
+    iOS/index.rst
     Java/index.rst
     Javascript/index.rst
     Julia/index.rst
@@ -124,4 +126,4 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     StaticLibrary/index.rst
     SharedLibrary/index.rst
     DelphiLazarus/index.rst
-    VBdotNET/index.rst
+    VB.net/index.rst
