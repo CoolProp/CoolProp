@@ -158,7 +158,8 @@ namespace coolprop_wrapper
         "Enthalpy", "H", "Hda",         // Mixture enthalpy [J/kg dry air]
         "Hha");                         // [J/kg humid air]
       AddUnits(ref dic, J_kg_K,
-        "Entropy", "S",                 // Mixture entropy [J/kg dry air/K] (Sda ???)
+        "Entropy", "S", "Sda",          // Mixture entropy [J/kg dry air/K]
+        "Sha",                          // [J/kg humid air/K]
         "C", "cp",                      // Mixture specific heat [J/kg dry air/K]
         "Cha", "cp_ha");                // [J/kg humid air/K]
       AddUnits(ref dic, Pa,
