@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CodeLite_Project Name="coolprop" InternalType="Console">
+  <VirtualDirectory Name="externals">
+    <VirtualDirectory Name="REFPROP-headers">
+      <File Name="../../externals/REFPROP-headers/REFPROP_lib.h"/>
+    </VirtualDirectory>
+  </VirtualDirectory>
   <Plugins>
     <Plugin Name="qmake">
       <![CDATA[00020001N0005Debug0000000000000001N0007Release000000000000]]>
@@ -67,7 +72,6 @@
         <File Name="../../src/Backends/REFPROP/REFPROPBackend.h"/>
         <File Name="../../src/Backends/REFPROP/REFPROPMixtureBackend.cpp"/>
         <File Name="../../src/Backends/REFPROP/REFPROPMixtureBackend.h"/>
-        <File Name="../../src/Backends/REFPROP/REFPROP_lib.h"/>
       </VirtualDirectory>
       <VirtualDirectory Name="Tabular">
         <File Name="../../src/Backends/Tabular/TabularBackends.cpp"/>
