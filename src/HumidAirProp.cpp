@@ -1121,8 +1121,10 @@ static givens Name2Type(const std::string &Name)
         return GIVEN_ENTHALPY;
     else if (!strcmp(Name,"Hha"))
         return GIVEN_ENTHALPY_HA;
-    else if (!strcmp(Name,"Entropy") || !strcmp(Name,"S"))
+    else if (!strcmp(Name,"Entropy") || !strcmp(Name,"S") || !strcmp(Name,"Sda"))
         return GIVEN_ENTROPY;        
+    else if (!strcmp(Name,"Sha"))
+        return GIVEN_ENTROPY_HA;        
     else if (!strcmp(Name,"RH") || !strcmp(Name,"RelHum") || !strcmp(Name,"R"))
         return GIVEN_RH;
     else if (!strcmp(Name,"Tdb") || !strcmp(Name,"T_db") || !strcmp(Name,"T"))
@@ -1548,12 +1550,17 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
                 h_bar = MolarEnthalpy(T, p, psi_w,v_bar); //[J/mol_ha]
                 return h_bar/M_ha; //[J/kg_ha]
             }
+            case GIVEN_ENTROPY:
+            {
+                v_bar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
+                return MolarEntropy(T, p, psi_w, v_bar)/M_ha; //[J/kg_da/K]
+            }
             case GIVEN_ENTROPY_HA:
             {
                 v_bar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
                 s_bar = MolarEntropy(T, p, psi_w, v_bar); //[J/mol_da/K]
                 W = HumidityRatio(psi_w); //[kg_w/kg_da]
-                return s_bar*(1+W)/M_ha; //[kJ/kg_ha/K]
+                return s_bar*(1+W)/M_ha; //[J/kg_ha/K]
             }
             case GIVEN_TDP:{
                 return DewpointTemperature(T,p,psi_w); //[K]

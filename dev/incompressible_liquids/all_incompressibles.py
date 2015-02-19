@@ -34,6 +34,7 @@ if __name__ == '__main__':
     parser.add_argument("-nr","--noreports", action='store_true', help="Do not write the fitting reports")
     parser.add_argument("-ns","--nosummary", action='store_true', help="Do not generate the summary figures")
     parser.add_argument("-nt","--notables", action='store_true', help="Do not write the fluid tables")
+    parser.add_argument("-nst","--nostats", action='store_true', help="Do not process statistical parameters")
     #parser.add_argument("-f","--fluid", help="Only process the fluid FLUID")
 
     args = parser.parse_args()
@@ -50,6 +51,8 @@ if __name__ == '__main__':
     else:              runSummary = True
     if args.notables:  runTables  = False
     else:              runTables  = True
+    if args.nostats:   runStats   = False
+    else:              runStats   = True
     #if args.fluid:     onlyFluid  = args.fluid
     #else:              onlyFluid  = None
 
@@ -257,6 +260,17 @@ if __name__ == '__main__':
             #print("... done")
             writer.generateRstTable(objLists[i], filLists[i])
             writer.generateTexTable(objLists[i], filLists[i])
+
+    if runStats:
+        lists  = [purefluids, solMass, solVolu]#, solMole, errors]
+        labels = ["Pure", "Mass", "Volume"]#, "Mole", "Error"]
+
+        fits   = ["rho", "cp", "visc", "cond", "psat", "Tfreeze"]
+
+        writer.generateStatsTable(lists, labels)
+
+
+
 
     print("All done, bye")
     sys.exit(0)

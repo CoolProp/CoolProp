@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": 7.651756e-05, 
     "coeffs": [
       [
         5.577778e+00, 
@@ -17,6 +18,7 @@
   "Tmin": 2.381500e+02, 
   "TminPsat": 3.031500e+02, 
   "conductivity": {
+    "NRMS": 2.006272e-09, 
     "coeffs": [
       [
         5.427225e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 6.419413e-10, 
     "coeffs": [
       [
         1.192423e+03, 
@@ -92,20 +95,24 @@
   }, 
   "description": "Melinder, Potassium Carbonate", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MKC2", 
   "reference": "Melinder2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 1.824107e-10, 
     "coeffs": [
       [
         3.298666e+03, 
@@ -143,6 +150,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 3.742548e-11, 
     "coeffs": [
       [
         -5.818014e+00, 
@@ -180,6 +188,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 

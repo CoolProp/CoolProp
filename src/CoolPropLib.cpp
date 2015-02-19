@@ -15,6 +15,15 @@
 
 #include <string.h>
 
+bool str2buf(const std::string& str, char * buf, int n)
+{
+  if (str.size() < static_cast<unsigned int>(n)) {
+    strcpy(buf, str.c_str());
+    return true;
+  }
+  return false;
+}
+
 // In Microsoft Excel, they seem to check the FPU exception bits and error out because of it.  
 // By calling the _clearfp(), we can reset these bits, and not get the error
 // See also http://stackoverflow.com/questions/11685441/floating-point-error-when-calling-dll-function-from-vba/27336496#27336496
@@ -263,16 +272,10 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, 
     }
     if (key >= 0){
         std::string s = CoolProp::get_parameter_information(key, Output);
-        if (s.size() < static_cast<unsigned int>(n)){
-            strcpy(Output, s.c_str()); 
-            return 1;
-        }
-        else{
-            return 0;
-        }
+        return str2buf(s, Output, n) ? 1 : 0;
     }
     else{
-        strcpy(Output, format("parameter is invalid: %s", param).c_str());
+        str2buf(format("parameter is invalid: %s", param), Output, n);
         return 0;
     }
 }

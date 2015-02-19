@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,13 +9,14 @@
   "Tmin": 2.550000e+02, 
   "TminPsat": 2.700000e+02, 
   "conductivity": {
+    "NRMS": 5.129255e-05, 
     "coeffs": [
       [
         7.598080e-01, 
         1.235272e+00, 
         5.741071e-01, 
         2.444444e-01, 
-        -8.492104e-14, 
+        3.411933e-13, 
         6.666667e-01
       ], 
       [
@@ -45,6 +47,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 1.343692e-04, 
     "coeffs": [
       [
         1.070914e+03, 
@@ -83,20 +86,24 @@
   }, 
   "description": "Ice slurry with NaCl", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "IceNA", 
   "reference": "Kauffeld2001,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 9.150695e-07, 
     "coeffs": [
       [
         7.290671e+04, 
@@ -134,6 +141,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 5.260894e-05, 
     "coeffs": [
       [
         -5.111147e+00, 
@@ -171,6 +179,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

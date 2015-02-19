@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": 1.149018e-04, 
     "coeffs": [
       [
         5.512301e+00, 
@@ -17,6 +18,7 @@
   "Tmin": 2.291500e+02, 
   "TminPsat": 2.931500e+02, 
   "conductivity": {
+    "NRMS": 1.080590e-09, 
     "coeffs": [
       [
         3.659957e-01, 
@@ -35,7 +37,7 @@
         0.000000e+00
       ], 
       [
-        -4.279157e-09, 
+        -4.279154e-09, 
         -1.966452e-06, 
         1.310795e-05, 
         -1.438998e-05, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 3.066165e-10, 
     "coeffs": [
       [
         9.639157e+02, 
@@ -92,20 +95,24 @@
   }, 
   "description": "Melinder, Ethanol", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MEA2", 
   "reference": "Melinder2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 2.158727e-10, 
     "coeffs": [
       [
         3.996428e+03, 
@@ -132,7 +139,7 @@
         0.000000e+00
       ], 
       [
-        3.312447e-06, 
+        3.312446e-06, 
         2.777430e-04, 
         3.365996e-04, 
         0.000000e+00, 
@@ -143,6 +150,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 3.001182e-11, 
     "coeffs": [
       [
         -4.268143e+00, 
@@ -180,6 +188,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 

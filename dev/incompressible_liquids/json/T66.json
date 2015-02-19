@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.731500e+02, 
   "TminPsat": 3.431500e+02, 
   "conductivity": {
+    "NRMS": 9.200426e-03, 
     "coeffs": [
       [
         1.065831e-01
@@ -25,6 +27,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 5.632313e-04, 
     "coeffs": [
       [
         8.924651e+02
@@ -43,24 +46,28 @@
   }, 
   "description": "Therminol66", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "T66", 
   "reference": "Therminol2014", 
   "saturation_pressure": {
+    "NRMS": 2.309993e-03, 
     "coeffs": [
       -9.020703e+03, 
-      6.550191e+01, 
+      6.550192e+01, 
       -2.445722e+01
     ], 
     "type": "exponential"
   }, 
   "specific_heat": {
+    "NRMS": 3.462753e-04, 
     "coeffs": [
       [
         2.157819e+03
@@ -78,6 +85,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 5.477640e-03, 
     "coeffs": [
       6.538723e+02, 
       -2.060943e+02, 
@@ -86,6 +94,7 @@
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

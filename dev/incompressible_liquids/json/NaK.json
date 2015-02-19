@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 5.731500e+02, 
   "TminPsat": 8.731500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         4.430000e-01
@@ -19,6 +21,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.090000e+03
@@ -31,20 +34,24 @@
   }, 
   "description": "Nitrate salt, 0.6 NaNO3 and 0.4 KNO3", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "NaK", 
   "reference": "Zavoico2001", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         1.443000e+03
@@ -56,6 +63,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.271400e-02
@@ -73,6 +81,7 @@
     "type": "polynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

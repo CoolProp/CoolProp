@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.579000e+02, 
@@ -17,6 +18,7 @@
   "Tmin": 1.731500e+02, 
   "TminPsat": 3.731500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         4.720000e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         1.034000e+03, 
@@ -92,20 +95,24 @@
   }, 
   "description": "Ethylene Glycol - aq", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MEG", 
   "reference": "Melinder2010", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         3.737000e+03, 
@@ -143,6 +150,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": null, 
     "coeffs": [
       [
         -6.437255e+00, 
@@ -180,6 +188,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.800000e+02, 
   "TminPsat": 2.800000e+02, 
   "conductivity": {
+    "NRMS": 4.700863e-03, 
     "coeffs": [
       [
         1.054674e+00
@@ -25,6 +27,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 3.017280e-04, 
     "coeffs": [
       [
         1.192776e+03
@@ -43,16 +46,19 @@
   }, 
   "description": "water at 100 bar", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "ExampleDigitalPure", 
   "reference": "none", 
   "saturation_pressure": {
+    "NRMS": 2.485303e-04, 
     "coeffs": [
       -3.854484e+03, 
       -4.425504e+01, 
@@ -61,6 +67,7 @@
     "type": "exponential"
   }, 
   "specific_heat": {
+    "NRMS": 1.382824e-01, 
     "coeffs": [
       [
         3.688015e+03
@@ -78,6 +85,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 4.275252e-03, 
     "coeffs": [
       3.655034e+02, 
       -1.736257e+02, 
@@ -86,6 +94,7 @@
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

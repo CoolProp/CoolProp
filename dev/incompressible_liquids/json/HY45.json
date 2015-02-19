@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.281500e+02, 
   "TminPsat": 2.931500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         4.750000e-01
@@ -19,6 +21,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         1.328700e+03
@@ -31,16 +34,19 @@
   }, 
   "description": "HyCool 45, Potassium formate", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "HY45", 
   "reference": "Hydro2000", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": [
       -5.000000e+03, 
       6.000000e+01, 
@@ -49,6 +55,7 @@
     "type": "exponential"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.578000e+03
@@ -60,14 +67,16 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 3.355311e-06, 
     "coeffs": [
-      4.790609e+02, 
-      -1.466029e+02, 
-      2.408912e+00
+      4.790631e+02, 
+      -1.466026e+02, 
+      2.408922e+00
     ], 
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

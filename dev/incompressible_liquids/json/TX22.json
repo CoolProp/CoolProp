@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.731500e+02, 
   "TminPsat": 3.131500e+02, 
   "conductivity": {
+    "NRMS": 1.062583e-02, 
     "coeffs": [
       [
         1.227789e-01
@@ -25,6 +27,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 4.761243e-03, 
     "coeffs": [
       [
         7.593228e+02
@@ -43,16 +46,19 @@
   }, 
   "description": "Texatherm22", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "TX22", 
   "reference": "Chevron2004", 
   "saturation_pressure": {
+    "NRMS": 4.789468e-02, 
     "coeffs": [
       [
         2.412773e+00
@@ -70,6 +76,7 @@
     "type": "exppolynomial"
   }, 
   "specific_heat": {
+    "NRMS": 2.029765e-03, 
     "coeffs": [
       [
         2.449690e+03
@@ -87,6 +94,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 5.020758e-03, 
     "coeffs": [
       8.829595e+02, 
       -1.726102e+02, 
@@ -95,6 +103,7 @@
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

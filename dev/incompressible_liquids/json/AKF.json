@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": 6.279916e-04, 
     "coeffs": [
       [
         5.491549e+00, 
@@ -17,6 +18,7 @@
   "Tmin": 2.331500e+02, 
   "TminPsat": 3.231500e+02, 
   "conductivity": {
+    "NRMS": 1.732572e-03, 
     "coeffs": [
       [
         5.030335e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 1.195609e-03, 
     "coeffs": [
       [
         1.263793e+03, 
@@ -92,6 +95,7 @@
   }, 
   "description": "Antifrogen KF, Potassium Formate", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 
@@ -129,16 +133,19 @@
     "type": "polynomial"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "AKF", 
   "reference": "Clariant2000,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 4.090011e-03, 
     "coeffs": [
       [
         2.866685e+03, 
@@ -165,7 +172,7 @@
         0.000000e+00
       ], 
       [
-        5.920685e-06, 
+        5.920686e-06, 
         -3.288615e-05, 
         2.921777e-04, 
         0.000000e+00, 
@@ -176,6 +183,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 1.088590e-02, 
     "coeffs": [
       [
         -5.822490e+00, 
@@ -213,6 +221,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

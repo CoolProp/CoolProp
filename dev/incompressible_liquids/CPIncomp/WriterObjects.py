@@ -4,6 +4,7 @@ from __future__ import division, print_function
 import numpy as np
 
 import matplotlib
+import copy
 matplotlib.use("agg")
 
 import hashlib, os, json, sys
@@ -102,12 +103,12 @@ class SolutionDataWriter(object):
         self.isportrait = True
         self.resolveRef = True # Resolve references and print text
 
-        # Latex document mode
-        #self.ext        = "pgf"
-        #self.usebp      = True
-        #self.ispage     = False # Do you want a page or a figure?
-        #self.isportrait = True
-        #self.resolveRef = False # Resolve references and print text
+#         # Latex document mode
+#         self.ext        = "pgf"
+#         self.usebp      = True
+#         self.ispage     = False # Do you want a page or a figure?
+#         self.isportrait = True
+#         self.resolveRef = False # Resolve references and print text
 
         if self.ext=="pgf" or matplotlib.rcParams['text.usetex']:
             self.usetex = True
@@ -1518,6 +1519,213 @@ class SolutionDataWriter(object):
             f.write(text.encode('utf-8'))
 
         return True
+
+    def generateStatsTable(self, objLists=[[SolutionData()]], labelList=[]):
+
+        if len(objLists)!=len(labelList):
+            raise ValueError("Wrong length")
+
+
+        header = [u'Property']
+        header.extend(labelList)
+
+        testTable = []
+        testTable.append(header) # Headline
+
+        def getEntries(solObj):
+            data = {}
+            data["name"] = dict(type=solObj.name,nrms=solObj.name)
+
+            kt = [("density",solObj.density),
+              ("specific_heat",solObj.specific_heat),
+              ("conductivity",solObj.conductivity),
+              ("viscosity",solObj.viscosity),
+              ("saturation_pressure",solObj.saturation_pressure),
+              ("T_freeze",solObj.T_freeze)]
+
+            for k,_ in kt: data[k]={}
+
+            for k,t in kt:
+                try:
+                    data[k]["type"] = t.type
+                except:
+                    data[k]["type"] = None
+                try:
+                    data[k]["nrms"] = t.NRMS
+                except:
+                    data[k]["nrms"] = None
+
+            return data
+
+        errcolumns = []
+        typcolumns = []
+        for group in objLists:
+            errcolumn = {}
+            typcolumn = {}
+            for obj in group:
+                dat = getEntries(obj)
+                for k in dat:
+                    ent = errcolumn.get(k,[])
+                    ent.append(dat[k]["nrms"])
+                    errcolumn[k] = ent
+                    ent = typcolumn.get(k,[])
+                    ent.append(dat[k]["type"])
+                    typcolumn[k] = ent
+            for k in errcolumn:
+                if k!="name":
+                    for i,_ in enumerate(errcolumn[k]):
+                        try:
+                            errcolumn[k][i] = float(errcolumn[k][i])
+                        except:
+                            errcolumn[k][i] = np.NAN
+                        #try:
+                        #    typcolumn[k][i] = float(typcolumn[k][i])
+                        #except:
+                        #    typcolumn[k][i] = np.NAN
+
+            errcolumns.append(errcolumn)
+            typcolumns.append(typcolumn)
+
+        keys = errcolumns[0].keys()
+
+        errTable = copy.copy(testTable)
+        typTable = copy.copy(testTable)
+
+        for k in keys:
+            if k != "name":
+                # Error lines
+                maxLine = []
+                avgLine = []
+                minLine = []
+
+                minLine.append("{0:25s}".format(k))
+                avgLine.append("{0:25s}".format(""))
+                maxLine.append("{0:25s}".format(""))
+
+                # Function type lines
+                polyLine = []
+                expoLine = []
+                logeLine = []
+                expPLine = []
+
+                polyLine.append("{0:25s}".format(k))
+                expoLine.append("{0:25s}".format("exp"))
+                logeLine.append("{0:25s}".format("logexp"))
+                expPLine.append("{0:25s}".format("exppoly"))
+
+                #print(k+": ", end="")
+                for e,t in zip(errcolumns,typcolumns):
+                    try: mi = np.nanargmin(e[k])
+                    except: mi = 0
+                    try: ma = np.nanargmax(e[k])
+                    except: ma = 0
+                    try: av = np.nanmean(e[k])
+                    except: av = 0.0
+                    #print("min: {0}({1}), avg: {2}, max: {3}({4})".format(c[k][mi],c["name"][mi],av,c[k][ma],c["name"][ma]),end="")
+                    minLine.append("{0:5.3f} ({1:5s})".format(e[k][mi]*100.0,e["name"][mi]))
+                    avgLine.append("{0:5.3f}  {1:5s} ".format(      av*100.0,""))
+                    maxLine.append("{0:5.3f} ({1:5s})".format(e[k][ma]*100.0,e["name"][ma]))
+
+                    polyLine.append("{0:3d}".format(t[k].count(IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL)))
+                    expoLine.append("{0:3d}".format(t[k].count(IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL)))
+                    logeLine.append("{0:3d}".format(t[k].count(IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL)))
+                    expPLine.append("{0:3d}".format(t[k].count(IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL)))
+                    print(t[k])
+
+                #print(" ")
+                errTable.append(minLine)
+                errTable.append(avgLine)
+                errTable.append(maxLine)
+                errTable.append([r"\midrule"])
+
+                typTable.append(polyLine)
+                typTable.append(expoLine)
+                typTable.append(logeLine)
+                typTable.append(expPLine)
+                typTable.append([r"\midrule"])
+
+
+        errString = ""
+        for lin in errTable:
+            errString += " & ".join(lin) + "\\\\ \n"
+        print(errString)
+
+        typString = ""
+        for lin in typTable:
+            typString += " & ".join(lin) + "\\\\ \n"
+        print(typString)
+
+        return True
+#
+#
+#
+#         figPath = r"appendices/IncompressibleFluidsReports/"
+#
+# #         def getFigureText(fld):
+# #             text  = "\\begin{pgffigure} \n"
+# #             text += "\\fbox{\\resizebox{\\textwidth}{!}{ \n"
+# #             text += "\\subimport{"+str(figPath)+"}{"+str(fld)+"_fitreport.pgf} \n"
+# #             text += "}} \n"
+# #             text += "\\end{pgffigure} \n"
+# #             return text
+#         def getFigureText(fld):
+#             text  = "{\\centering"
+#             text += "\\resizebox{\\textwidth}{!}{ \n"
+#             text += "\\subimport{"+str(figPath)+"}{"+str(fld)+"_fitreport.pgf} \n"
+#             text += "}} \\vfill \n"
+#             return text
+#
+#         def getFigureLabel(fld):
+#             return "subsec:fit"+str(fld)
+#
+#         for fluid in solObjs:
+#             #\hyperref[label_name]{''link text''}
+#             testTable.append([
+#                 fluid.name+", p.~\\pageref{"+getFigureLabel(fluid.name)+"}",
+#                 fluid.description.encode("latex"),
+#                 r'\cite{'+str(fluid.reference)+'}',
+#                 self.c(fluid.Tmin),
+#                 self.c(fluid.Tmax),
+#                 self.c(fluid.Tbase+273.15)
+#             ])
+#             if use_x: testTable[-1].extend([self.x(fluid.xmin), self.x(fluid.xmax)])
+#
+#             testSection.append([
+#                 "\\subsection{Fitted functions for "+str(fluid.name)+"}",
+#                 "\\label{"+getFigureLabel(fluid.name)+"}",
+#                 getFigureText(fluid.name)
+#             ])
+#
+#         text = "\\cr \\topcrule \n"
+#         i = -1
+#         for row in testTable:
+#             i += 1
+#             if i < 1:
+#                 tmp   = r"\headcol "+" & ".join(row)
+#             elif i % 2 == 0:
+#                 tmp   = r"\rowcol " +" & ".join(row)
+#             else:
+#                 tmp   =              " & ".join(row)
+#             text += tmp + " \\\\\n"
+#             if i == 0: text += "\\midcrule \n"
+#
+#         if i % 2 == 0:
+#             text += "\\bottomcrule \\cr \n"
+#         else:
+#             text += "\\bottomrule \\cr \n"
+#
+#         with open(path+".tex", 'w') as f:
+#             f.write(text.encode('utf-8'))
+#
+#         text = "\n"
+#         for i,row in enumerate(testSection):
+#             tmp   = "\n".join(row)
+#             text += tmp + " \n\n"
+#
+#         with open(path+"-section.tex", 'w') as f:
+#             f.write(text.encode('utf-8'))
+#
+#         return True
 
     def generateRstTable(self, solObjs=[SolutionData()], path="table"):
 

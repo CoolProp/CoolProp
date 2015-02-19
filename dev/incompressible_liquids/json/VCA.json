@@ -1,10 +1,13 @@
 {
   "T_freeze": {
+    "NRMS": 3.658713e-14, 
     "coeffs": [
       [
-        5.531116e+00, 
-        -1.158160e+00, 
-        -8.579530e+00
+        5.524550e+00, 
+        -9.061412e-01, 
+        -1.052365e+00, 
+        -5.586585e+01, 
+        -1.195919e+03
       ]
     ], 
     "type": "exppolynomial"
@@ -14,6 +17,7 @@
   "Tmin": 2.181500e+02, 
   "TminPsat": 2.931500e+02, 
   "conductivity": {
+    "NRMS": 3.536164e-03, 
     "coeffs": [
       [
         5.153470e-01, 
@@ -47,6 +51,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 4.211403e-03, 
     "coeffs": [
       [
         1.218193e+03, 
@@ -81,20 +86,24 @@
   }, 
   "description": "VDI, Calcium Cloride", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "VCA", 
   "reference": "Preisegger2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 8.927531e-03, 
     "coeffs": [
       [
         2.934834e+03, 
@@ -128,6 +137,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 6.962018e-03, 
     "coeffs": [
       [
         -4.891126e+00, 
@@ -161,6 +171,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 
