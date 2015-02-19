@@ -908,11 +908,18 @@ if (COOLPROP_SMATH_MODULE)
     set(COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}.0)
     CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs.template"
                    "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
+    message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
     CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini.template"
                    "${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini")
+    message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini")
     CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat.template"
                    "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+    message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+    CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat.template"
+                   "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
+    message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
     FILE(WRITE "${CMAKE_SOURCE_DIR}/wrappers/SMath/build.bat" "${CMAKE_MAKE_PROGRAM} coolprop_wrapper.sln /p:Configuration=Release")
+    message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/build.bat")
     
 endif()
 
