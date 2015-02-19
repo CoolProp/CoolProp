@@ -912,6 +912,7 @@ if (COOLPROP_SMATH_MODULE)
                    "${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini")
     CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat.template"
                    "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+    FILE(WRITE "${CMAKE_SOURCE_DIR}/wrappers/SMath/build.bat" "${CMAKE_MAKE_PROGRAM} coolprop_wrapper.sln /p:Configuration=Release")
     
 endif()
 
