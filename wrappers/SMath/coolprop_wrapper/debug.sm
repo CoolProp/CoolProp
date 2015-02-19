@@ -1,0 +1,652 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?application progid="SMath Studio Desktop" version="0.97.5346.24640"?>
+<regions>
+  <settings>
+    <identity>
+      <id>4a35301a-4a4d-4f4c-8963-6e6d56d24ef4</id>
+      <revision>52</revision>
+    </identity>
+    <calculation>
+      <precision>4</precision>
+      <exponentialThreshold>5</exponentialThreshold>
+      <fractions>decimal</fractions>
+    </calculation>
+    <pageModel active="true" printAreas="true" simpleEqualsOnly="false" printBackgroundImages="true">
+      <paper id="1" orientation="Portrait" width="850" height="1100" />
+      <margins left="39" right="39" top="39" bottom="39" />
+      <header alignment="Center" color="#a9a9a9">&amp;[DATE] &amp;[TIME] - &amp;[FILENAME]</header>
+      <footer alignment="Center" color="#a9a9a9">&amp;[PAGENUM] / &amp;[COUNT]</footer>
+      <backgrounds />
+    </pageModel>
+    <dependences>
+      <assembly name="SMath Studio Desktop" version="0.97.5346.24640" guid="a37cba83-b69c-4c71-9992-55ff666763bd" />
+      <assembly name="coolprop_wrapper" version="1.0.5526.20489" guid="2be8d14b-ba62-4002-a959-9e5dad905310" />
+      <assembly name="Math Region" version="0.97.5346.24640" guid="02f1ab51-215b-466e-a74d-5d8b1cf85e8d" />
+      <assembly name="Special Functions" version="1.11.5346.31403" guid="2814e667-4e12-48b1-8d51-194e480eabc5" />
+      <assembly name="Text Region" version="1.10.5346.31409" guid="485d28c5-349a-48b6-93be-12a35a1c1e39" />
+      <assembly name="Plot Region" version="1.9.5346.32570" guid="c451c2b5-798b-4f08-b9ec-b90963d1ddaa" />
+    </dependences>
+  </settings>
+  <region id="0" left="0" top="0" width="445" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">version</e>
+        <e type="function" preserve="true" args="1">CoolProp_get_global_param_string</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">5.0.7</e>
+      </result>
+    </math>
+  </region>
+  <region id="1" left="0" top="27" width="456" height="28" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">version</e>
+        <e type="function" preserve="true" args="1">CoolProp_get_global_param_string</e>
+        <e type="function" preserve="true" args="1">strlen</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">5</e>
+      </result>
+    </math>
+  </region>
+  <region id="2" left="0" top="72" width="428" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">water</e>
+        <e type="operand" style="string">RESET</e>
+        <e type="function" preserve="true" args="2">CoolProp_set_reference_stateS</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">1</e>
+      </result>
+    </math>
+  </region>
+  <region id="3" left="0" top="126" width="488" height="28" color="#000000" bgColor="#ff8080" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">P</e>
+        <e type="operand">1</e>
+        <e type="operand" style="unit">atm</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">5</e>
+        <e type="operator" args="1">-</e>
+        <e type="bracket">(</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="5">CoolProp_Phase</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">liquid</e>
+      </result>
+    </math>
+  </region>
+  <region id="4" left="495" top="126" width="143" height="24" color="#ff0000" bgColor="#ffffff" fontSize="10">
+    <text lang="eng">
+      <p>Liquid? At -5°C?</p>
+    </text>
+  </region>
+  <region id="5" left="0" top="171" width="377" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">water</e>
+        <e type="operand" style="string">Tcrit</e>
+        <e type="function" preserve="true" args="2">CoolProp_Props1</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">647.096</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="6" left="0" top="198" width="373" height="26" color="#000000" bgColor="#80ff80" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">water</e>
+        <e type="operand" style="string">Tcrit</e>
+        <e type="function" preserve="true" args="2">CoolProp_Props1</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">°C</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">373.946</e>
+      </result>
+    </math>
+  </region>
+  <region id="7" left="0" top="243" width="411" height="34" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">water</e>
+        <e type="operand" style="string">Pcrit</e>
+        <e type="function" preserve="true" args="2">CoolProp_Props1</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">2.2064</e>
+        <e type="operand">10</e>
+        <e type="operand">7</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="8" left="0" top="279" width="365" height="26" color="#000000" bgColor="#ffff80" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">water</e>
+        <e type="operand" style="string">Pcrit</e>
+        <e type="function" preserve="true" args="2">CoolProp_Props1</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">kPa</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">22064</e>
+      </result>
+    </math>
+  </region>
+  <region id="9" left="0" top="333" width="603" height="34" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">H</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">373.15</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">2.6756</e>
+        <e type="operand">10</e>
+        <e type="operand">6</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="unit">Gy</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="10" left="0" top="369" width="612" height="41" color="#000000" bgColor="#ffff80" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">H</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101.325</e>
+        <e type="operand" style="unit">kPa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">373.15</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">kJ</e>
+        <e type="operand" style="unit">kg</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">2675.5828</e>
+      </result>
+    </math>
+  </region>
+  <region id="11" left="0" top="414" width="644" height="239" color="#000000" bgColor="#ffffff" fontSize="10">
+    <plot type="2d" render="lines" scale_x="0.00375710212613637" scale_y="0.135085171767299" scale_z="0.00375710212613637" rotate_x="0" rotate_y="0" rotate_z="0" transpose_x="-250" transpose_y="-86" transpose_z="0">
+      <input>
+        <e type="operand" style="string">H</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">1</e>
+        <e type="operand" style="unit">atm</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">x</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operand">10</e>
+        <e type="operand">3</e>
+        <e type="operator" args="1">-</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+      </input>
+    </plot>
+  </region>
+  <region id="12" left="648" top="486" width="565" height="43" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">Q</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">H</e>
+        <e type="operand">2000</e>
+        <e type="operand" style="unit">kJ</e>
+        <e type="operand" style="unit">kg</e>
+        <e type="operator" args="2">/</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">0.7366</e>
+      </result>
+    </math>
+  </region>
+  <region id="13" left="648" top="531" width="519" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">Phase</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">0</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">0</e>
+      </result>
+    </math>
+  </region>
+  <region id="14" left="648" top="558" width="544" height="28" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math error="43">
+      <input>
+        <e type="operand" style="string">Phase</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">10</e>
+        <e type="operator" args="1">-</e>
+        <e type="bracket">(</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">#</e>
+      </result>
+    </math>
+  </region>
+  <region id="15" left="648" top="585" width="536" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">Phase</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">100</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">5</e>
+      </result>
+    </math>
+  </region>
+  <region id="16" left="0" top="684" width="655" height="41" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="15">
+      <input>
+        <e type="operand" style="string">W</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">10</e>
+        <e type="operator" args="1">-</e>
+        <e type="bracket">(</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">R</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="7">CoolProp_HAProps</e>
+        <e type="operand">1</e>
+        <e type="operator" args="2">*</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">g</e>
+        <e type="operand" style="unit">kg</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">1.606200912602</e>
+      </result>
+    </math>
+  </region>
+  <region id="17" left="0" top="729" width="630" height="41" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="15">
+      <input>
+        <e type="operand" style="string">W</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">10</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">R</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="7">CoolProp_HAProps</e>
+        <e type="operand">1</e>
+        <e type="operator" args="2">*</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">g</e>
+        <e type="operand" style="unit">kg</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">7.66274517334</e>
+      </result>
+    </math>
+  </region>
+  <region id="18" left="0" top="774" width="642" height="43" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="15">
+      <input>
+        <e type="operand" style="string">W</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">10</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">R</e>
+        <e type="operand">1</e>
+        <e type="operand">2</e>
+        <e type="operator" args="2">/</e>
+        <e type="function" preserve="true" args="7">CoolProp_HAProps</e>
+        <e type="operand">2</e>
+        <e type="operator" args="2">*</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">g</e>
+        <e type="operand" style="unit">kg</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">7.615829321156</e>
+      </result>
+    </math>
+  </region>
+  <region id="19" left="0" top="819" width="644" height="239" color="#000000" bgColor="#ffffff" fontSize="10">
+    <plot type="2d" render="lines" scale_x="0.170043645322544" scale_y="0.75106238530508" scale_z="0.170043645322544" rotate_x="0" rotate_y="0" rotate_z="0" transpose_x="-250" transpose_y="-86" transpose_z="0">
+      <input>
+        <e type="operand" style="string">W</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">x</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">R</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="7">CoolProp_HAProps</e>
+        <e type="operand">10</e>
+        <e type="operand">3</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+      </input>
+    </plot>
+  </region>
+  <region id="20" left="0" top="1107" width="411" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">water</e>
+        <e type="operand" style="string">NBP</e>
+        <e type="function" preserve="true" args="2">CoolProp_set_reference_stateS</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">1</e>
+      </result>
+    </math>
+  </region>
+  <region id="21" left="0" top="1134" width="686" height="34" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="15">
+      <input>
+        <e type="operand" style="string">H</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">373.15</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">2.33771983066259</e>
+        <e type="operand">10</e>
+        <e type="operand">6</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="unit">Gy</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="22" left="0" top="1170" width="411" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">water</e>
+        <e type="operand" style="string">DEF</e>
+        <e type="function" preserve="true" args="2">CoolProp_set_reference_stateS</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">1</e>
+      </result>
+    </math>
+  </region>
+  <region id="23" left="0" top="1197" width="686" height="34" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="15">
+      <input>
+        <e type="operand" style="string">H</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">373.15</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">2.67558278695418</e>
+        <e type="operand">10</e>
+        <e type="operand">6</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="unit">Gy</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="24" left="0" top="1233" width="428" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">water</e>
+        <e type="operand" style="string">RESET</e>
+        <e type="function" preserve="true" args="2">CoolProp_set_reference_stateS</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">1</e>
+      </result>
+    </math>
+  </region>
+  <region id="25" left="0" top="1260" width="686" height="34" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="15">
+      <input>
+        <e type="operand" style="string">H</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">373.15</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">2.67558278695418</e>
+        <e type="operand">10</e>
+        <e type="operand">6</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="unit">Gy</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="26" left="0" top="1296" width="531" height="52" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">water</e>
+        <e type="operand">10</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand">33</e>
+        <e type="operand" style="unit">mol</e>
+        <e type="operand" style="unit">m</e>
+        <e type="operand">3</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">/</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand">0</e>
+        <e type="operand">0</e>
+        <e type="function" preserve="true" args="5">CoolProp_set_reference_stateD</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">1</e>
+      </result>
+    </math>
+  </region>
+  <region id="27" left="0" top="1350" width="686" height="34" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="15">
+      <input>
+        <e type="operand" style="string">H</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">373.15</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">2.59438801015181</e>
+        <e type="operand">10</e>
+        <e type="operand">6</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="unit">Gy</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="28" left="0" top="1413" width="897" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">n-Propane</e>
+        <e type="operand" style="string">aliases</e>
+        <e type="function" preserve="true" args="2">CoolProp_get_fluid_param_string</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">Propane, propane, R290, C3H8, PROPANE, N-PROPANE</e>
+      </result>
+    </math>
+  </region>
+  <region id="29" left="0" top="1440" width="8423" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">FluidsList</e>
+        <e type="function" preserve="true" args="1">CoolProp_get_global_param_string</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">1-Butene,Acetone,Air,Ammonia,Argon,Benzene,CarbonDioxide,CarbonMonoxide,CarbonylSulfide,cis-2-Butene,CycloHexane,Cyclopentane,CycloPropane,D4,D5,D6,Deuterium,DimethylCarbonate,DimethylEther,Ethane,Ethanol,EthylBenzene,Ethylene,Fluorine,Helium,HFE143m,Hydrogen,HydrogenSulfide,IsoButane,IsoButene,Isohexane,Isopentane,Krypton,m-Xylene,MD2M,MD3M,MD4M,MDM,Methane,Methanol,MethylLinoleate,MethylLinolenate,MethylOleate,MethylPalmitate,MethylStearate,MM,n-Butane,n-Decane,n-Dodecane,n-Heptane,n-Hexane,n-Nonane,n-Octane,n-Pentane,n-Propane,n-Undecane,Neon,Neopentane,Nitrogen,NitrousOxide,o-Xylene,OrthoDeuterium,OrthoHydrogen,Oxygen,p-Xylene,ParaDeuterium,ParaHydrogen,Propylene,Propyne,R11,R113,R114,R116,R12,R123,R1233zd(E),R1234yf,R1234ze(E),R1234ze(Z),R124,R125,R13,R134a,R14,R141b,R142b,R143a,R152A,R161,R21,R218,R22,R227EA,R23,R236EA,R236FA,R245fa,R32,R365MFC,R404A,R407C,R41,R410A,R507A,RC318,SES36,SulfurDioxide,SulfurHexafluoride,Toluene,trans-2-Butene,Water,Xenon</e>
+      </result>
+    </math>
+  </region>
+  <region id="30" left="0" top="1467" width="288" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">H</e>
+        <e type="function" preserve="true" args="1">CoolProp_get_param_index</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">32</e>
+      </result>
+    </math>
+  </region>
+  <region id="31" left="0" top="1494" width="535" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">H</e>
+        <e type="operand" style="string">units</e>
+        <e type="function" preserve="true" args="2">CoolProp_get_parameter_information_string</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">J/kg</e>
+      </result>
+    </math>
+  </region>
+  <region id="32" left="0" top="1521" width="621" height="34" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">water</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">0</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">100</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="function" preserve="true" args="5">CoolProp_saturation_ancillary</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">1.0141</e>
+        <e type="operand">10</e>
+        <e type="operand">5</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="33" left="0" top="1566" width="354" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand" style="string">n-Propane</e>
+        <e type="operand" style="string">GWP100</e>
+        <e type="function" preserve="true" args="2">CoolProp_Props1</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">3</e>
+      </result>
+    </math>
+  </region>
+</regions>

@@ -29,8 +29,9 @@ project(${project_name})
 # Project version
 set (COOLPROP_VERSION_MAJOR 5)
 set (COOLPROP_VERSION_MINOR 0)
-set (COOLPROP_VERSION_PATCH 8dev)
-set (COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH})
+set (COOLPROP_VERSION_PATCH 8)
+set (COOLPROP_VERSION_REVISION dev)
+set (COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION})
 
 #######################################
 #           BUILD OPTIONS             #
@@ -901,6 +902,17 @@ if (COOLPROP_MATHEMATICA_MODULE)
   
   install (FILES $<TARGET_FILE:CoolProp> DESTINATION Mathematica/${CMAKE_SYSTEM_NAME})
   install (FILES  "${CMAKE_SOURCE_DIR}/wrappers/Mathematica/example.nb" DESTINATION Mathematica)
+endif()
+
+if (COOLPROP_SMATH_MODULE)
+    set(COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}.0)
+    CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs.template"
+                   "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
+    CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini.template"
+                   "${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini")
+    CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat.template"
+                   "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+    
 endif()
 
 if (COOLPROP_MY_MAIN)
