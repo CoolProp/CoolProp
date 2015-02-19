@@ -1,0 +1,15 @@
+
+set VERSION=${COOLPROP_VERSION}
+
+REM Remove temporary directory if needed
+rmdir %VERSION% /s /q
+
+REM Add directory if needed
+mkdir %VERSION%
+
+xcopy bin\Release %VERSION%\
+
+7z a coolprop_wrapper.7z %VERSION% ..\config.ini install.bat
+
+REM Remove temporary directory if needed
+rmdir %VERSION% /s /q

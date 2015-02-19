@@ -1,17 +1,4 @@
 
 set VERSION=${COOLPROP_VERSION}
-
-REM Remove temporary directory if needed
-rmdir %VERSION% /s /q
-
-REM Add directory if needed
-mkdir %VERSION%
-
-xcopy bin\Release %VERSION%\
-
 xcopy %VERSION% %AppData%\SMath\extensions\plugins\2be8d14b-ba62-4002-a959-9e5dad905310\%VERSION%\ /S
-
-xcopy ..\config.ini %AppData%\SMath\extensions\plugins\2be8d14b-ba62-4002-a959-9e5dad905310\config.ini
-
-REM Remove temporary directory if needed
-rmdir %VERSION% /s /q
+xcopy config.ini %AppData%\SMath\extensions\plugins\2be8d14b-ba62-4002-a959-9e5dad905310\config.ini
