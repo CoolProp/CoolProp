@@ -32,7 +32,7 @@ Native Wrapper
 
     mkdir build
 
-2. In the ``build`` directory, run the command 
+2. In the ``build`` directory, run the command::
 
     cmake .. -DCOOLPROP_SMATH_MODULE=ON
     
@@ -42,9 +42,11 @@ Native Wrapper
 
 4. Make sure the mode is set to Release (not Debug).  Build the project, the generated and copied files will be in ``bin/Release``.
 
-5. From the :sfdownloads:`download page <shared_library>`, download the 64-bit DLL ``CoolProp.dll`` file from ``Windows/64bit`` folder and rename to ``CoolProp.x64.dll`` and place with the files in ``bin/Release``.  Download the 32-bit XXXXXXX DLL ``CoolProp.dll`` from ``Windows/32bit__stdcall_calling_convention`` and rename to ``CoolProp.x86.dll`` and place with the files in ``bin/Release``.
+5. From the :sfdownloads:`download page <shared_library>`, download the 64-bit DLL ``CoolProp.dll`` file from ``Windows/64bit`` folder and rename to ``CoolProp.x64.dll`` and place with the files in ``bin/Release``.  Download the 32-bit ``__stdcall`` DLL ``CoolProp.dll`` from ``Windows/32bit__stdcall_calling_convention`` and rename to ``CoolProp.x86.dll`` and place with the files in ``bin/Release``.
 
-6. Run the ``install.bat`` file that is in the ``wrappers/SMath`` folder.  It will copy the files to the right place.
+6. Run the ``build_zip.bat`` file that is in the ``wrappers/SMath`` folder.  It will create a zip file with the needed files. 
+
+7. To install, unzip the ``coolprop_wrapper.7z`` zip file and run the ``install.bat`` script that was in the zip file
 
 Old Method
 ==========
