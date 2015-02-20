@@ -648,8 +648,8 @@ double Viscosity(double T, double p, double psi_w)
     // Viscosity of dry air at dry-bulb temp and total pressure
     Air->update(CoolProp::PT_INPUTS,p,T);
     mu_a=Air->keyed_output(CoolProp::iviscosity);
-    // Viscosity of pure saturated water at dry-bulb temperature
-    Water->update(CoolProp::PQ_INPUTS,p,1);
+    // Viscosity of pure water at dry-bulb temp and total pressure
+    Water->update(CoolProp::PT_INPUTS,p,T);
     mu_w=Water->keyed_output(CoolProp::iviscosity);
     Phi_av=sqrt(2.0)/4.0*pow(1+Ma/Mw,-0.5)*pow(1+sqrt(mu_a/mu_w)*pow(Mw/Ma,0.25),2); //[-]
     Phi_va=sqrt(2.0)/4.0*pow(1+Mw/Ma,-0.5)*pow(1+sqrt(mu_w/mu_a)*pow(Ma/Mw,0.25),2); //[-]
@@ -672,8 +672,8 @@ double Conductivity(double T, double p, double psi_w)
     Air->update(CoolProp::PT_INPUTS,p,T);
     mu_a=Air->keyed_output(CoolProp::iviscosity);
     k_a=Air->keyed_output(CoolProp::iconductivity);
-    // Viscosity of pure saturated water at dry-bulb temperature
-    Water->update(CoolProp::PQ_INPUTS,p,1);
+    // Viscosity of pure water at dry-bulb temp and total pressure
+    Water->update(CoolProp::PT_INPUTS,p,T);
     mu_w=Water->keyed_output(CoolProp::iviscosity);
     k_w=Water->keyed_output(CoolProp::iconductivity);
     Phi_av=sqrt(2.0)/4.0*pow(1+Ma/Mw,-0.5)*pow(1+sqrt(mu_a/mu_w)*pow(Mw/Ma,0.25),2); //[-]
