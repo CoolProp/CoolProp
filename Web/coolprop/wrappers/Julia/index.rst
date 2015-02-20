@@ -20,7 +20,8 @@ Download a precompiled shared library appropriate to the computer you are using 
 
 NB: For Linux users, the file libCoolProp.so must be renamed into CoolProp.so and copied into Julia's library folder (e.g. /usr/lib/x86_64-linux-gnu/julia/)
 
-Download the module ``CoolProp.jl`` from :sfdownloads:`sourceforge <Julia>` or the development version from :sfnightly:`the nightly snapshots <Julia>` and place in the same folder as the shared library
+Download the module ``CoolProp.jl`` from :sfdownloads:`sourceforge <Julia>` or the development version from :sfnightly:`the nightly snapshots <Julia>` and place in the same folder as the shared library.
+The wrapper should be valid for Julia 0.4 and upper. For Julia 0.3 and lower, use the one in the 0.3 folder.
 
 Usage
 -----
