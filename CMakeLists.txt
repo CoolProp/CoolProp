@@ -909,7 +909,7 @@ if (COOLPROP_SMATH_MODULE)
     CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs.template"
                    "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
     message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
-    FILE(WRITE "${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini" "${CMAKE_VERSION}")
+    FILE(WRITE "${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini" "${COOLPROP_VERSION}")
     message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini")
     CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat.template"
                    "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
