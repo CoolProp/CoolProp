@@ -7,7 +7,9 @@ rmdir %VERSION% /s /q
 REM Add directory if needed
 mkdir %VERSION%
 
-xcopy bin\Release %VERSION%\
+xcopy bin\Release\CoolProp.x64.dll %VERSION%
+xcopy bin\Release\CoolProp.x86.dll %VERSION%
+xcopy bin\Release\coolprop_wrapper.dll %VERSION%\
 
 7z a coolprop_wrapper.7z %VERSION% ..\config.ini install.bat
 
