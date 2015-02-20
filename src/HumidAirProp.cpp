@@ -1235,7 +1235,7 @@ double RelativeHumidity(double T, double p, double psi_w)
     p_s = f*p_ws;
     
     // Calculate the relative humidity
-    return return psi_w*p/p_s;
+    return psi_w*p/p_s;
 }
 
 void convert_to_SI(const std::string &Name, double &val)
