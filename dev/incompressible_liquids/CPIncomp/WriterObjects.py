@@ -96,19 +96,19 @@ class SolutionDataWriter(object):
 
         matplotlib.rcParams['axes.formatter.useoffset'] = False
 
-        # For standard report generation
-        self.ext        = "pdf"
-        self.usebp      = False
-        self.ispage     = True # Do you want a page or a figure?
-        self.isportrait = True
-        self.resolveRef = True # Resolve references and print text
-
-#         # Latex document mode
-#         self.ext        = "pgf"
-#         self.usebp      = True
-#         self.ispage     = False # Do you want a page or a figure?
+#         # For standard report generation
+#         self.ext        = "pdf"
+#         self.usebp      = False
+#         self.ispage     = True # Do you want a page or a figure?
 #         self.isportrait = True
-#         self.resolveRef = False # Resolve references and print text
+#         self.resolveRef = True # Resolve references and print text
+
+        # Latex document mode
+        self.ext        = "pgf"
+        self.usebp      = True
+        self.ispage     = False # Do you want a page or a figure?
+        self.isportrait = True
+        self.resolveRef = False # Resolve references and print text
 
         if self.ext=="pgf" or matplotlib.rcParams['text.usetex']:
             self.usetex = True
@@ -888,6 +888,14 @@ class SolutionDataWriter(object):
         annotateSettingsText['fontsize']   = 'small'
         annotateSettingsText['fontweight'] = 'medium'
 
+
+        #ax.set_title('Fitting Report for {0}'.format(solObj.name))
+        yHead = 0.0
+        if self.ispage:
+            yHead = 0.8
+            ax.text(0.5, yHead, 'Fitting Report for {0}'.format(solObj.name), **annotateSettingsTitle)
+            yHead += 0.2
+
         def myAnnotate(label,text,x=0.0,y=0.0):
             dx = 0.005
             ax.text(x-dx,y, label, **annotateSettingsLabel)
@@ -896,19 +904,8 @@ class SolutionDataWriter(object):
         #ax.annotate(r'Enthalpy [$\mathdefault{10^5\!J/kg}$]', xy=(0.25, 0.03), **annotateSettings)
         #ax.annotate(r'Enthalpy [$\mathdefault{10^5\!J/kg}$]', xy=(0.25, 0.03), **annotateSettings)
 
-
-        #ax.set_title('Fitting Report for {0}'.format(solObj.name))
-
-        if self.ispage:
-            yHead = 0.8
-            ax.text(0.5, yHead, 'Fitting Report for {0}'.format(solObj.name), **annotateSettingsTitle)
-            yHead += 0.2
-            dx = 0.50
-            dy = 0.10
-        else:
-            yHead = 0.0
-            dx = 0.50
-            dy = 0.075
+        dx = 0.50
+        dy = 0.10
 
         xStart = 0.175 ; x = xStart
         yStart = 0.575; y = yStart
@@ -918,6 +915,8 @@ class SolutionDataWriter(object):
             myAnnotate('Description: ',solObj.description.encode("latex"),x=x,y=y); x += .0; y -= dy
         else:
             myAnnotate('Description: ',solObj.description,x=x,y=y); x += .0; y -= dy
+
+
 
         # TODO: Debug bibtexer
         refs = solObj.reference.split(",")
@@ -1011,14 +1010,14 @@ class SolutionDataWriter(object):
         xmin = 0
         xmax = 1
 
-        ymin = y+2*dy
+        ymin = y+1*dy
         ymax = max(yStart,yHead)
 
         ax.set_xlim((xmin,xmax))
         ax.set_ylim((ymin,ymax))
 
         #xpos,ypos = ax.transAxes.inverted().transform(ax.transData.transform((0,y)))
-        return [xmin,y+0.75*dy,xmax,y+0.75*dy]
+        return [xmin,y+0.5*dy,xmax,y+0.5*dy]
 
     def printFitDetails(self):
         pass
@@ -1195,13 +1194,13 @@ class SolutionDataWriter(object):
 
         #TODO: Fix this problem: ValueError: Can only output finite numbers in PDF
         if self.ext=="pdf" and self.usetex:
-            warn("This is a dangerous combination, be prepared to experience problems with the PDF backend. It might help to manually change the number of columns.")
+            warn("This is a dangerous combination, be prepared to experience problems with the PDF backend. It might help manually change the number of columns.")
         else:
             table_axis.legend(
               legVal, legKey,
               bbox_to_anchor=tuple(lims),
               bbox_transform=table_axis.transData,
-              ncol=len(legVal), loc=10,
+              ncol=len(legVal), loc=9,
               mode="expand", borderaxespad=0.,
               numpoints=1, fontsize='small')
             #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)
