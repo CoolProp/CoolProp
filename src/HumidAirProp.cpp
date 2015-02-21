@@ -1218,7 +1218,7 @@ double MoleFractionWater(double T, double p, int HumInput, double InVal)
 
 double RelativeHumidity(double T, double p, double psi_w)
 {
-    double p_ws, f, p_s, W;
+    double p_ws, f, p_s;
     if (T >= 273.16){
         // Saturation pressure [Pa]
         Water->update(CoolProp::QT_INPUTS, 0, T);
