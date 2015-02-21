@@ -96,19 +96,19 @@ class SolutionDataWriter(object):
 
         matplotlib.rcParams['axes.formatter.useoffset'] = False
 
-#         # For standard report generation
-#         self.ext        = "pdf"
-#         self.usebp      = False
-#         self.ispage     = True # Do you want a page or a figure?
-#         self.isportrait = True
-#         self.resolveRef = True # Resolve references and print text
+        # For standard report generation
+        self.ext        = "pdf"
+        self.usebp      = False
+        self.ispage     = True # Do you want a page or a figure?
+        self.isportrait = True
+        self.resolveRef = True # Resolve references and print text
 
         # Latex document mode
-        self.ext        = "pgf"
-        self.usebp      = True
-        self.ispage     = False # Do you want a page or a figure?
-        self.isportrait = True
-        self.resolveRef = False # Resolve references and print text
+#         self.ext        = "pgf"
+#         self.usebp      = True
+#         self.ispage     = False # Do you want a page or a figure?
+#         self.isportrait = True
+#         self.resolveRef = False # Resolve references and print text
 
         if self.ext=="pgf" or matplotlib.rcParams['text.usetex']:
             self.usetex = True
