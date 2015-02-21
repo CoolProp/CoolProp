@@ -248,4 +248,8 @@ Sample Code
 Table of string inputs to PropsSI function
 ------------------------------------------
 
+.. note::
+   
+   Please note that any parameter that is indicated as a trivial parameter can be obtained from the ``Props1SI`` function
+   
 .. include:: parameter_table.rst.in

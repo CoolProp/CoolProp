@@ -24,6 +24,7 @@ cdef extern from "DataStructures.h" namespace "CoolProp":
     string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
     int _get_parameter_index "CoolProp::get_parameter_index"(string) except +
     int _get_phase_index "CoolProp::get_phase_index"(string) except +
+    bint _is_trivial_parameter "CoolProp::is_trivial_parameter"(int) except +
     constants_header.input_pairs _generate_update_pair "CoolProp::generate_update_pair"(constants_header.parameters key1, double value1, constants_header.parameters key2, double value2, double &out1, double &out2) except +
     
 cdef extern from "CoolPropLib.h":
