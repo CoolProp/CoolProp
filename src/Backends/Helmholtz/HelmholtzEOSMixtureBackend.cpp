@@ -109,7 +109,7 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<long doubl
         this->SatV->resize(N);
     }
 };
-void HelmholtzEOSMixtureBackend::resize(unsigned int N)
+void HelmholtzEOSMixtureBackend::resize(std::size_t N)
 {
     this->mole_fractions.resize(N);
     this->K.resize(N);

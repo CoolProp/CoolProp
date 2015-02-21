@@ -60,7 +60,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
                 }
                 HEOS.update_DmolarT_direct(rhomolar, HEOS._T);
             }
-            catch(std::exception &e){
+            catch(std::exception &){
                 // If that fails, try a bounded solver
                 long double rhomolar = Brent(resid, closest_state.rhomolar, 1e-10, DBL_EPSILON, 1e-10, 100, errstr);
                 // Make sure the solution is within the bounds
@@ -394,7 +394,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
                         // If you get here, there was no error, all is well
                         break;
                     }
-                    catch(std::exception &e){
+                    catch(std::exception &){
                         if (omega < 1.1*increment){
                             throw;
                         }
@@ -1024,7 +1024,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
         // Un-specify the phase of the fluid
         HEOS.unspecify_phase();
     }
-    catch(std::exception &e){
+    catch(std::exception &){
         // Un-specify the phase of the fluid
         HEOS.unspecify_phase();
         
@@ -1280,7 +1280,7 @@ void FlashRoutines::HS_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, long 
                 good_solution = true;
                 break;
             }
-            catch(std::exception &e){
+            catch(std::exception &){
                 HEOS.clear();
                 continue;
             }            
@@ -1417,7 +1417,7 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
                     HEOS.update(DmolarT_INPUTS, HEOS_copy->rhomolar(), HEOS_copy->T());
                     break;
                 }
-                catch(std::exception &e){
+                catch(std::exception &){
                     try{
                         // Trying again with another guessed value
                         HEOS_copy->update(DmolarT_INPUTS, HEOS.rhomolar_critical()*1.3, HEOS.Tmax());
@@ -1426,7 +1426,7 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
                         HEOS.update(DmolarT_INPUTS, HEOS_copy->rhomolar(), HEOS_copy->T());
                         break;
                     }
-                    catch (std::exception &e){
+                    catch (std::exception &){
                         // Trying again with another guessed value
                         HEOS_copy->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), 0.5*HEOS.Tmax() + 0.5*HEOS.T_critical());
                         HS_flash_singlephase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);

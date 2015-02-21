@@ -196,7 +196,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
             try{
                 T = HEOS.get_components()[0]->ancillaries.pL.invert(specified_value);
             }
-            catch(std::exception &e)
+            catch(std::exception &)
             {
                 throw ValueError("Unable to invert ancillary equation");
             }
@@ -206,7 +206,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             // Ancillary is deltah = h - hs_anchor.h
             try{ T = HEOS.get_components()[0]->ancillaries.hL.invert(specified_value - hs_anchor.hmolar); }
-            catch(std::exception &e){
+            catch(std::exception &){
                 throw ValueError("Unable to invert ancillary equation for hL");
             }
         }
@@ -235,7 +235,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
             double Tmin = Tmin_satL;
             double Tmax = HEOS.calc_Tmax_sat();
             try{ T = Brent(resid, Tmin-3, Tmax + 1, DBL_EPSILON, 1e-10, 50, errstr); }
-            catch(std::exception &e){
+            catch(std::exception &){
                 shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
                 HEOS_copy->update(QT_INPUTS, 1, Tmin); double hTmin = HEOS_copy->hmolar();
                 HEOS_copy->update(QT_INPUTS, 1, Tmax); double hTmax = HEOS_copy->hmolar();
@@ -261,11 +261,11 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                 try{
                     T = anc.invert(specified_value - hs_anchor.smolar, Tmin, Tmax);
                 }
-                catch(std::exception &e){
+                catch(std::exception &){
                     try{ 
                         T = anc.invert(specified_value - hs_anchor.smolar, Tmin - 3, Tmax + 3); 
                     }
-                    catch(std::exception &e){
+                    catch(std::exception &){
                         double vmin = anc.evaluate(Tmin);
                         double vmax = anc.evaluate(Tmax);
                         if (std::abs(specified_value - hs_anchor.smolar) < std::abs(vmax)){
@@ -310,7 +310,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
             try{
                 T = Brent(resid, Tmin-3, Tmax, DBL_EPSILON, 1e-10, 50, errstr);
             }
-            catch(std::exception &e){
+            catch(std::exception &){
                 long double vmax = resid.call(Tmax);
                 // If near the critical point, use a near critical guess value for T
                 if (std::abs(specified_value - hs_anchor.smolar) < std::abs(vmax)){
@@ -1187,7 +1187,7 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
     options.x = x;
     options.y = y;
 }
-void SaturationSolvers::newton_raphson_saturation::resize(unsigned int N)
+void SaturationSolvers::newton_raphson_saturation::resize(std::size_t N)
 {
     this->N = N;
     x.resize(N);

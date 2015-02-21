@@ -167,7 +167,7 @@ double Polynomial2D::evaluate(const Eigen::MatrixXd &coefficients, const double 
 double Polynomial2D::evaluate(const Eigen::MatrixXd &coefficients, const double &x_in, const double &y_in){
     size_t r = coefficients.rows();
     double result = evaluate(coefficients.row(r-1), y_in);
-    for(int i=r-2; i>=0; i--) {
+    for(int i=static_cast<int>(r)-2; i>=0; i--) {
         result *= x_in;
         result += evaluate(coefficients.row(i), y_in);
     }
@@ -304,7 +304,7 @@ double Polynomial2D::simplePolynomial(std::vector<std::vector<double> > const& c
  */
 double Polynomial2D::baseHorner(std::vector<double> const& coefficients, double x){
     double result = 0;
-    for(int i=coefficients.size()-1; i>=0; i--) {
+    for(int i=static_cast<int>(coefficients.size())-1; i>=0; i--) {
         result *= x;
         result += coefficients[i];
     }
@@ -314,7 +314,7 @@ double Polynomial2D::baseHorner(std::vector<double> const& coefficients, double 
 
 double Polynomial2D::baseHorner(std::vector< std::vector<double> > const& coefficients, double x, double y){
     double result = 0;
-    for(int i=coefficients.size()-1; i>=0; i--) {
+	for (int i = static_cast<int>(coefficients.size() - 1); i >= 0; i--) {
         result *= x;
         result += baseHorner(coefficients[i], y);
     }
@@ -533,7 +533,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const dou
 
     //r = tmpCoeffs.rows();
     if (r>0) posExp += evaluate(tmpCoeffs.row(r-1), y_in, y_exp, y_base);
-    for(int i=r-2; i>=0; i--) {
+	for (int i = static_cast<int>(r) - 2; i >= 0; i--) {
         posExp *= x_in-x_base;
         posExp += evaluate(tmpCoeffs.row(i), y_in, y_exp, y_base);
     }
@@ -712,7 +712,7 @@ Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd &coefficients, con
         tmpCoefficients.block(solve_exp,0,r,1) = newCoefficients.block(0,0,r,1);
         tmpCoefficients(0,0) -= z_in;
     } else {// check if vector reaches to zero exponent
-        int diff = 1 - r - solve_exp; // How many entries have to be added
+		int diff = 1 - static_cast<int>(r) - solve_exp; // How many entries have to be added
         tmpCoefficients = Eigen::VectorXd::Zero(r+std::max(diff,0));
         tmpCoefficients.block(0,0,r,1) = newCoefficients.block(0,0,r,1);
         tmpCoefficients(r+diff-1,0) -= z_in;
@@ -846,7 +846,7 @@ double Polynomial2DFrac::fracIntCentral(const Eigen::MatrixXd &coefficients, con
     if (coefficients.rows() != 1) {
         throw ValueError(format("%s (%d): You have a 2D coefficient matrix (%d,%d), please use the 2D functions. ",__FILE__,__LINE__,coefficients.rows(),coefficients.cols()));
     }
-    int m = coefficients.cols();
+	int m = static_cast<int>(coefficients.cols());
     Eigen::MatrixXd D = fracIntCentralDvector(m, x_in, x_base);
     double result = 0;
     for(int j=0; j<m; j++) {

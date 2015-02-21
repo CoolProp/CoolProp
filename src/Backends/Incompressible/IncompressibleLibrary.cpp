@@ -502,7 +502,7 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
     }
     catch(std::exception &e)
     {
-        std::cout << format("Unable to load fluid: %s\n", fluid.getName().c_str());
+		std::cout << format("Unable to load fluid: %s; error was %s\n", fluid.getName().c_str(), e.what());
         throw;
     }
 

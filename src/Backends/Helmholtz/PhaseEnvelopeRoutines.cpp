@@ -145,7 +145,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
                 throw ValueError("Invalid number");
             }
         }
-        catch(std::exception &e){
+        catch(std::exception &){
             //std::cout << e.what() << std::endl;
             //std::cout << IO.T << " " << IO.p << std::endl;
             // Try again, but with a smaller step
@@ -258,7 +258,7 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
                                      IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y, i+1);
                 std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p  << " hl " << IO.hmolar_liq  << " hv " << IO.hmolar_vap  << " sl " << IO.smolar_liq  << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")  << " Ns " << IO.Nsteps << std::endl;
             }
-            catch(std::exception &e){
+            catch(std::exception &){
                 continue;
             }
             i++;

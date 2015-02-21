@@ -226,6 +226,7 @@ void _PropsSI_initialize(const std::string &backend,
         // If a predefined mixture or a pure fluid, the fractions will already be set
         const std::vector<long double> &z = State->get_mole_fractions();
         if (z.empty()){
+			if (fractions_ptr == NULL){ throw ValueError("fractions_ptr is NULL"); }
             State->set_mole_fractions(*fractions_ptr);
         }
     } else if (State->using_mass_fractions()){
@@ -370,7 +371,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
                 // At least one has succeeded
                 success = true;
             }
-            catch(std::exception &e){
+            catch(std::exception &){
                 if (one_input_one_output){IO.clear(); throw;} // Re-raise the exception since we want to bubble the error
                 IO[i][j] = _HUGE;
             }
@@ -691,7 +692,7 @@ bool is_valid_fluid_string(std::string &input_fluid_string)
         shared_ptr<AbstractState> State(AbstractState::factory(backend, fluid_string));
         return true;
     }
-    catch (std::exception &e){
+    catch (std::exception &){
         return false;
     }
 }

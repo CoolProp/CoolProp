@@ -628,7 +628,7 @@ template<typename T> std::vector<std::vector<T> > linsolve_Gauss_Jordan(std::vec
     }
     for (std::size_t col = NcolA - 1; col > 0; col--)
     {
-        for (int row = col - 1; row >=0; row--)
+        for (int row = static_cast<int>(col) - 1; row >=0; row--)
         {
             subtract_row_multiple(&AB,row,AB[row][col],col);
         }

@@ -176,7 +176,7 @@ std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::str
             else if (key == "betaV"){ return format("%0.16g", v[0].get_double("betaV")); }
             else{ }
         }
-        catch(std::exception &e){ }
+        catch(std::exception &){ }
         throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(), CAS1.c_str(), CAS2.c_str()));
     }
     else{

@@ -91,7 +91,7 @@ public:
     
     const CoolProp::PhaseEnvelopeData &calc_phase_envelope_data(){return PhaseEnvelope;};
 
-    void resize(unsigned int N);
+    void resize(std::size_t N);
     shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///<
 
     /** \brief The standard update function

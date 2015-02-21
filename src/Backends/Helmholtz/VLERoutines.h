@@ -45,7 +45,7 @@ namespace SaturationSolvers
     @param p Pressure [Pa]
     @param i Index of component [-]
     */
-    static long double Wilson_lnK_factor(HelmholtzEOSMixtureBackend &HEOS, long double T, long double p, int i){ 
+    static long double Wilson_lnK_factor(HelmholtzEOSMixtureBackend &HEOS, long double T, long double p, std::size_t i){ 
         EquationOfState *EOS = (HEOS.get_components())[i]->pEOS; 
         return log(EOS->reduce.p/p)+5.373*(1 + EOS->acentric)*(1-EOS->reduce.T/T);
     };
@@ -246,7 +246,7 @@ namespace SaturationSolvers
         public:
         newton_raphson_twophase_options::imposed_variable_options imposed_variable;
         long double error_rms, rhomolar_liq, rhomolar_vap, T, p, min_rel_change, beta;
-        unsigned int N;
+        std::size_t N;
         bool logging;
         int Nsteps;
         STLMatrix J;
@@ -326,7 +326,7 @@ namespace SaturationSolvers
         public:
         newton_raphson_saturation_options::imposed_variable_options imposed_variable;
         long double error_rms, rhomolar_liq, rhomolar_vap, T, p, min_rel_change;
-        unsigned int N;
+        std::size_t N;
         bool logging;
         bool bubble_point;
         int Nsteps;
@@ -338,7 +338,7 @@ namespace SaturationSolvers
 
         newton_raphson_saturation(){};
 
-        void resize(unsigned int N);
+        void resize(std::size_t N);
     
         // Reset the state of all the internal variables
         void pre_call()
