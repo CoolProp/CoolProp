@@ -839,19 +839,25 @@ double MolarEnthalpy(double T, double p, double psi_w, double vmolar)
     hbar = hbar_0+(1-psi_w)*hbar_a+psi_w*hbar_w+R_bar*T*((B_m(T,psi_w)-T*dB_m_dT(T,psi_w))/vmolar+(C_m(T,psi_w)-T/2.0*dC_m_dT(T,psi_w))/(vmolar*vmolar));
     return hbar; //[J/mol]
 }
-double MassEnthalpy(double T, double p, double psi_w)
+double MassEnthalpy_per_kgha(double T, double p, double psi_w)
 {
     double vmolar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
     double h_bar = MolarEnthalpy(T, p, psi_w, vmolar); //[J/mol_ha]
-    double W = HumidityRatio(psi_w); //[kg_w/kg_da]
     double M_ha = MM_Water()*psi_w+(1-psi_w)*0.028966; // [kg_ha/mol_ha]
-    // (1+W) is kg_ha/kg_da
+    return h_bar/M_ha; //[J/kg_ha]
+}
+double MassEnthalpy_per_kgda(double T, double p, double psi_w)
+{
+    double vmolar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
+    double h_bar = MolarEnthalpy(T, p, psi_w, vmolar); //[J/mol_ha]
+    double W = HumidityRatio(psi_w); //[kg_w/kg_da] // (1+W) is kg_ha/kg_da
+    double M_ha = MM_Water()*psi_w+(1-psi_w)*0.028966; // [kg_ha/mol_ha]
     return h_bar*(1+W)/M_ha; //[J/kg_da]
 }
 
 double MolarEntropy(double T, double p, double psi_w, double v_bar)
 {
-    // In units of J/mol/K
+    // In units of J/mol_da/K
 
     // Serious typo in RP-1485 - should use total pressure rather than
     // reference pressure in density calculation for water vapor molar entropy
@@ -906,6 +912,22 @@ double MolarEntropy(double T, double p, double psi_w, double v_bar)
         sbar = sbar_0+sbar_a;
     }
     return sbar; //[kJ/kmol/K]
+}
+
+double MassEntropy_per_kgha(double T, double p, double psi_w)
+{
+    double vmolar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
+    double s_bar = MolarEntropy(T, p, psi_w, vmolar); //[J/mol_ha/K]
+    double M_ha = MM_Water()*psi_w+(1-psi_w)*0.028966; // [kg_ha/mol_ha]
+    return s_bar/M_ha; //[J/kg_ha/K]
+}
+double MassEntropy_per_kgda(double T, double p, double psi_w)
+{
+    double vmolar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
+    double s_bar = MolarEntropy(T, p, psi_w, vmolar); //[J/mol_ha/K]
+    double M_ha = MM_Water()*psi_w+(1-psi_w)*0.028966; // [kg_ha/mol_ha]
+    double W = HumidityRatio(psi_w); //[kg_w/kg_da] // (1+W) is kg_ha/kg_da
+    return s_bar*(1+W)/M_ha; //[J/kg_da/K]
 }
 
 double DewpointTemperature(double T, double p, double psi_w)
@@ -1092,7 +1114,7 @@ double WetbulbTemperature(double T, double p, double psi_w)
         // is the saturated air temperature which yields the enthalpy of dry air at dry bulb temperature
 
         try{
-            double hair_dry = MassEnthalpy(T,p,0);
+            double hair_dry = MassEnthalpy_per_kgda(T,p,0); // both /kg_ha and /kg_da are the same here since dry air
 
             // Directly solve for the saturated temperature that yields the enthalpy desired
             WetBulbTminSolver WBTS(p,hair_dry);
@@ -1304,173 +1326,112 @@ double HAProps(const std::string &OutputName, const std::string &Input1Name, dou
     
     return out;
 }
-
+long get_input_key(std::vector<long> input_keys, givens key)
+{
+    if (input_keys.size() != 2){throw CoolProp::ValueError("input_keys is not 2-element vector");}
+    
+    if (input_keys[0] == key){ return 0; }
+    else if (input_keys[1] == key){ return 1; }
+    else{ return -1; }
+}
+bool match_input_key(std::vector<long> input_keys, givens key)
+{
+    return get_input_key(input_keys, key) >= 0;
+}
 double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, const std::string &Input3Name, double Input3)
 {
     try
     {
+        std::vector<std::string> input_names(2);
+        std::vector<long> input_keys(2);
+        std::vector<double> input_vals(2);
         // Add a check to make sure that Air and Water fluid states have been properly instantiated
         check_fluid_instantiation();
         
-        int iT, iW, iTdp, iRH, ip;
-        givens In1Type, In2Type, In3Type, Type1, Type2, OutputType;
-        double vals[3],p,T,RH,W,Tdp,psi_w,M_ha,v_bar,h_bar,s_bar,MainInputValue,SecondaryInputValue;
-        double Value1,Value2,W_guess;
+        givens In1Type, In2Type, In3Type, OutputType;
+        double p,T,W,psi_w,M_ha,v_bar,MainInputValue,SecondaryInputValue;
+        double W_guess;
         std::string MainInputName, SecondaryInputName, Name1, Name2;
 
-        vals[0]=Input1;
-        vals[1]=Input2;
-        vals[2]=Input3;
+        // First figure out what kind of inputs you have, convert names to enum values
+        In1Type = Name2Type(Input1Name.c_str());
+        In2Type = Name2Type(Input2Name.c_str());
+        In3Type = Name2Type(Input3Name.c_str());
         
-        OutputType=Name2Type(OutputName.c_str());
-
-        // First figure out what kind of inputs you have, convert names to Macro expansions
-        In1Type=Name2Type(Input1Name.c_str());
-        In2Type=Name2Type(Input2Name.c_str());
-        In3Type=Name2Type(Input3Name.c_str());
+        // Output type
+        OutputType = Name2Type(OutputName.c_str());
         
+        // Check for trivial inputs
         if (OutputType == In1Type){return Input1;}
         if (OutputType == In2Type){return Input2;}
         if (OutputType == In3Type){return Input3;}
+        
+        // Check that pressure is provided; load input vectors
+        if (In1Type == GIVEN_P){ 
+            p = Input1; 
+            input_keys[0] = In2Type; input_keys[1] = In3Type; 
+            input_vals[0] = Input2; input_vals[1] = Input3;
+            input_names[0] = Input2Name; input_names[1] = Input3Name;
+        }
+        else if (In2Type == GIVEN_P){ 
+            p = Input2; 
+            input_keys[0] = In1Type; input_keys[1] = In3Type; 
+            input_vals[0] = Input1; input_vals[1] = Input3;
+            input_names[0] = Input1Name; input_names[1] = Input3Name;
+        }
+        else if (In3Type == GIVEN_P){ 
+            p = Input3;
+            input_keys[0] = In1Type; input_keys[1] = In2Type; 
+            input_vals[0] = Input1; input_vals[1] = Input2;
+            input_names[0] = Input1Name; input_names[1] = Input2Name;
+        }
+        else{
+            throw CoolProp::ValueError("Pressure must be one of the inputs to HAPropsSI");
+        }
+        
+        if (input_keys[0] == input_keys[1]){
+            throw CoolProp::ValueError("Other two inputs to HAPropsSI cannot be the same");
+        }
 
-        // Pressure must be included
-        ip=TypeMatch(GIVEN_P,Input1Name,Input2Name,Input3Name);
-        if (ip>0)
-            p=vals[ip-1];
-        else
-            return -1000;
-
-        // -----------------------------------------------------------------------------------------------------
-        // Check whether the remaining values give explicit solution for mole fraction of water - nice and fast
-        // -----------------------------------------------------------------------------------------------------
-
-        // Find the codes if they are there
-        iT=   TypeMatch(GIVEN_T,Input1Name,Input2Name,Input3Name);
-        iRH=  TypeMatch(GIVEN_RH,Input1Name,Input2Name,Input3Name);
-        iW=   TypeMatch(GIVEN_HUMRAT,Input1Name,Input2Name,Input3Name);
-        iTdp= TypeMatch(GIVEN_TDP,Input1Name,Input2Name,Input3Name);
-
-        if (iT>0) // Found T (or alias) as an input
+        if (match_input_key(input_keys, GIVEN_T)) // Found T (or alias) as an input
         {
-            T=vals[iT-1];
-            if (iRH>0) //Relative Humidity is provided
-            {
-                RH=vals[iRH-1];
-                psi_w=MoleFractionWater(T,p,GIVEN_RH,RH);
-            }
-            else if (iW>0)
-            {
-                W=vals[iW-1];
-                psi_w=MoleFractionWater(T,p,GIVEN_HUMRAT,W);
-            }
-            else if (iTdp>0)
-            {
-                Tdp=vals[iTdp-1];
-                psi_w=MoleFractionWater(T,p,GIVEN_TDP,Tdp);
-            }
-            else
-            {
-                // Temperature and pressure are known, figure out which variable holds the other value
-                if (In1Type!=GIVEN_T && In1Type!=GIVEN_P)
+            long key = get_input_key(input_keys, GIVEN_T);
+            long other = 1 - key; // 2 element vector
+            T = input_vals[key];
+            switch(input_keys[other]){
+                case GIVEN_RH:
+                    psi_w = MoleFractionWater(T, p, GIVEN_RH, input_vals[other]); break;
+                case GIVEN_HUMRAT:
+                    psi_w = MoleFractionWater(T, p, GIVEN_HUMRAT, input_vals[other]); break;
+                case GIVEN_TDP:
+                    psi_w = MoleFractionWater(T, p, GIVEN_TDP, input_vals[other]); break;
+                default:
                 {
-                    strcpy(SecondaryInputName, Input1Name);
-                    SecondaryInputValue=Input1;
+                    // Find the value for W
+                    W_guess = 0.0001;
+                    W = Secant_HAProps_W(input_names[other],"P",p,"T",T,input_vals[other],W_guess);
+                    // Mole fraction of water
+                    psi_w = MoleFractionWater(T,p,GIVEN_HUMRAT,W);
+                    // And on to output...
                 }
-                else if (In2Type!=GIVEN_T && In2Type!=GIVEN_P)
-                {
-                    strcpy(SecondaryInputName, Input2Name);
-                    SecondaryInputValue=Input2;
-                }
-                else if (In3Type!=GIVEN_T && In3Type!=GIVEN_P)
-                {
-                    strcpy(SecondaryInputName, Input3Name);
-                    SecondaryInputValue=Input3;
-                }
-                else{
-                    return _HUGE;
-                }
-                // Find the value for W
-                W_guess=0.0001;
-                W=Secant_HAProps_W(SecondaryInputName,"P",p,"T",T,SecondaryInputValue,W_guess);
-                // Mole fraction of water
-                psi_w=MoleFractionWater(T,p,GIVEN_HUMRAT,W);
-                // And on to output...
             }
         }
         else
         {
             // Need to iterate to find dry bulb temperature since temperature is not provided
-
-            // Pick one input, and alter T to match the other input
-
-            // Get the variables and their values that are NOT pressure for simplicity
-            // because you know you need pressure as an input and you already have
-            // its value in variable p
-            if (ip==1) // Pressure is in slot 1
-            {
-                strcpy(Name1,Input2Name);
-                Value1=Input2;
-                strcpy(Name2,Input3Name);
-                Value2=Input3;
-            }
-            else if (ip==2) // Pressure is in slot 2
-            {
-                strcpy(Name1,Input1Name);
-                Value1=Input1;
-                strcpy(Name2,Input3Name);
-                Value2=Input3;
-            }
-            else if (ip==3) // Pressure is in slot 3
-            {
-                strcpy(Name1,Input1Name);
-                Value1=Input1;
-                strcpy(Name2,Input2Name);
-                Value2=Input2;
-            }
+            long key, other;
+            if ((key = get_input_key(input_keys, GIVEN_HUMRAT)) && key >= 0){} // Humidity ratio is given
+            else if ((key = get_input_key(input_keys, GIVEN_RH)) && key >= 0){} // Relative humidity is given
+            else if ((key = get_input_key(input_keys, GIVEN_TDP)) && key >= 0){} // Dewpoint temperature is given
             else{
-            return _HUGE;
-            }
-
-            // Get the integer type codes
-            Type1=Name2Type(Name1);
-            Type2=Name2Type(Name2);
-            
-            // First see if humidity ratio is provided, will be the fastest option
-            if (Type1 == GIVEN_HUMRAT)
-            {
-                // MainInput is the one that you are using in the call to HAProps
-                MainInputValue=Value1; strcpy(MainInputName,Name1);
-                // SecondaryInput is the one that you are trying to match
-                SecondaryInputValue=Value2; strcpy(SecondaryInputName,Name2);
-            }
-            else if (Type2 == GIVEN_HUMRAT)
-            {
-                // MainInput is the one that you are using in the call to HAPropsSI
-                MainInputValue=Value2; strcpy(MainInputName, Name2);
-                // SecondaryInput is the one that you are trying to match
-                SecondaryInputValue=Value1; strcpy(SecondaryInputName, Name1);
-            }
-            // Next, if one of the inputs is something that can potentially yield
-            // an explicit solution at a given iteration of the solver, use it
-            else if (Type1 == GIVEN_RH || Type1 == GIVEN_TDP)
-            {
-                // MainInput is the one that you are using in the call to HAProps
-                MainInputValue = Value1; strcpy(MainInputName, Name1);
-                // SecondaryInput is the one that you are trying to match
-                SecondaryInputValue = Value2; strcpy(SecondaryInputName, Name2);
-            }
-            else if (Type2 == GIVEN_RH || Type2 == GIVEN_TDP)
-            {
-                // MainInput is the one that you are using in the call to HAProps
-                MainInputValue = Value2; strcpy(MainInputName, Name2);
-                // SecondaryInput is the one that you are trying to match
-                SecondaryInputValue=Value1; strcpy(SecondaryInputName, Name1);
-            }
-            else
-            {
                 CoolProp::ValueError("Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now\n");
-                return _HUGE;
             }
+            // 2-element vector
+            other = 1 - key;
+            // MainInput is the one that you are using in the call to HAPropsSI
+            MainInputValue = input_vals[key]; strcpy(MainInputName, input_names[key]);
+            // SecondaryInput is the one that you are trying to match
+            SecondaryInputValue = input_vals[other]; strcpy(SecondaryInputName, input_names[other]);
 
             double T_min = 200;
             double T_max = 450;
@@ -1509,12 +1470,12 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
 			}
 
             // If you want the temperature, return it
-            if (Name2Type(OutputName)==GIVEN_T)
+            if (OutputType == GIVEN_T)
                 return T;
             else
             {
                 // Otherwise, find psi_w for further calculations in the following section
-                W=HAPropsSI((char *)"W",(char *)"T",T,(char *)"P",p,MainInputName,MainInputValue);
+                W=HAPropsSI("W","T",T,"P",p,MainInputName,MainInputValue);
                 psi_w=MoleFractionWater(T,p,GIVEN_HUMRAT,W);
             }
         }
@@ -1524,42 +1485,29 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
         // Calculate and return the desired value for known set of T,p,psi_w
         // -----------------------------------------------------------------
         switch (OutputType){
-            case GIVEN_VDA:
-            {
+            case GIVEN_VDA:{
                 v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
                 W = HumidityRatio(psi_w); //[kg_w/kg_a]
                 return v_bar*(1+W)/M_ha; //[m^3/kg_da]
             }
-            case GIVEN_VHA:
-            {
+            case GIVEN_VHA:{
                 v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
                 return v_bar/M_ha; //[m^3/kg_ha]
             }
-            case GIVEN_PSIW:
-            {
+            case GIVEN_PSIW:{
                 return psi_w; //[mol_w/mol]
             }
-            case GIVEN_ENTHALPY:
-            {
-                return MassEnthalpy(T,p,psi_w); //[J/kg_da]
+            case GIVEN_ENTHALPY:{
+                return MassEnthalpy_per_kgda(T,p,psi_w); //[J/kg_da]
             }
-            case GIVEN_ENTHALPY_HA:
-            {
-                v_bar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
-                h_bar = MolarEnthalpy(T, p, psi_w,v_bar); //[J/mol_ha]
-                return h_bar/M_ha; //[J/kg_ha]
+            case GIVEN_ENTHALPY_HA:{
+                return MassEnthalpy_per_kgha(T,p,psi_w); //[J/kg_ha]
             }
-            case GIVEN_ENTROPY:
-            {
-                v_bar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
-                return MolarEntropy(T, p, psi_w, v_bar)/M_ha; //[J/kg_da/K]
+            case GIVEN_ENTROPY:{
+                return MassEntropy_per_kgda(T,p,psi_w); //[J/kg_da/J]
             }
-            case GIVEN_ENTROPY_HA:
-            {
-                v_bar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
-                s_bar = MolarEntropy(T, p, psi_w, v_bar); //[J/mol_da/K]
-                W = HumidityRatio(psi_w); //[kg_w/kg_da]
-                return s_bar*(1+W)/M_ha; //[J/kg_ha/K]
+            case GIVEN_ENTROPY_HA:{
+                return MassEntropy_per_kgha(T,p,psi_w); //[J/kg_ha/J]
             }
             case GIVEN_TDP:{
                 return DewpointTemperature(T,p,psi_w); //[K]
@@ -1595,7 +1543,6 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
                 h_bar1=MolarEnthalpy(T-dT,p,psi_w,v_bar1); //[kJ/kmol_ha]
                 v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
                 h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
-                W=HumidityRatio(psi_w); //[kg_w/kg_da]
                 cp_bar = (h_bar2-h_bar1)/(2*dT); //[J/mol_da/K]
                 return cp_bar/M_ha; //[J/kg_da/K]
             }
