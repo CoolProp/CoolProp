@@ -442,7 +442,7 @@ bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, paramete
             case iP: y = &(env.p); break;
             case iHmolar: y = &(env.hmolar_vap); break; 
             case iSmolar: y = &(env.smolar_vap); break;
-            default: break;
+            default: throw ValueError("Pointer to vector y is unset in is_inside");
         }
         
         other_values[0] = (*y)[other_indices[0]]; other_values[1] = (*y)[other_indices[1]];
