@@ -6,19 +6,19 @@
 namespace CoolProp{
 
 /** \brief A library of predefined mixtures
- * 
+ *
  * Each entry in the predefined mixture library contains the names and mole fractions for the binary pairs
  */
 class PredefinedMixturesLibrary{
     public:
     std::map<std::string, Dictionary> predefined_mixture_map;
-    
+
     PredefinedMixturesLibrary(){
         rapidjson::Document doc;
 
         doc.Parse<0>(predefined_mixtures_JSON.c_str());
         if (doc.HasParseError()){throw ValueError();}
-        
+
         // Iterate over the papers in the listing
         for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr)
         {
@@ -28,9 +28,9 @@ class PredefinedMixturesLibrary{
             std::string name = cpjson::get_string(*itr, "name")+".mix";
             // Get the fluid names
             dict.add_string_vector("fluids", cpjson::get_string_array(*itr, "fluids"));
-            // Get the mole fractions            
+            // Get the mole fractions
             dict.add_double_vector("mole_fractions", cpjson::get_double_array(*itr,"mole_fractions"));
-            
+
             predefined_mixture_map.insert(std::pair<std::string, Dictionary >(name, dict));
         }
     }
@@ -48,27 +48,25 @@ std::string get_csv_predefined_mixtures()
 }
 
 bool is_predefined_mixture(const std::string name, Dictionary &dict){
-    if (predefined_mixtures_library.predefined_mixture_map.find(name) != predefined_mixtures_library.predefined_mixture_map.end()){
-        dict = predefined_mixtures_library.predefined_mixture_map[name];
+    std::map<std::string, Dictionary>::iterator iter = predefined_mixtures_library.predefined_mixture_map.find(name);
+    if (iter != predefined_mixtures_library.predefined_mixture_map.end()){
+        dict = iter->second;
         return true;
-    }
-    else{
-        return false;
-    }
+    } else { return false; }
 }
-    
+
 /** \brief A library of binary pair parameters for the mixture
- * 
- * Each entry in the binary pair library includes reducing parameters as well as the name of the reducing function to be used and 
+ *
+ * Each entry in the binary pair library includes reducing parameters as well as the name of the reducing function to be used and
  */
 class MixtureBinaryPairLibrary{
 public:
     /// Map from sorted pair of CAS numbers to reducing parameter map.  The reducing parameter map is a map from key (string) to value (double)
     std::map< std::vector<std::string>, std::vector<Dictionary> > binary_pair_map;
-    
+
     /** \brief Construct the binary pair library including all the binary pairs that are possible
-     * 
-     * The data structure also includes space for a string that gives the pointer to the departure function to be used for this binary pair.     * 
+     *
+     * The data structure also includes space for a string that gives the pointer to the departure function to be used for this binary pair.     *
      */
     MixtureBinaryPairLibrary()
     {
@@ -82,22 +80,22 @@ public:
         {
             // Get the empty dictionary to be filled by the appropriate reducing parameter filling function
             Dictionary dict;
-            
+
             // Get the vector of CAS numbers
             std::vector<std::string> CAS;
             CAS.push_back(cpjson::get_string(*itr, "CAS1"));
             CAS.push_back(cpjson::get_string(*itr, "CAS2"));
             std::string name1 = cpjson::get_string(*itr, "Name1");
             std::string name2 = cpjson::get_string(*itr, "Name2");
-            
+
             // Sort the CAS number vector
             std::sort(CAS.begin(), CAS.end());
 
             // A sort was carried out, names/CAS were swapped
             bool swapped = CAS[0].compare(cpjson::get_string(*itr, "CAS1")) != 0;
-            
+
             if (swapped){ std::swap(name1, name2); }
-            
+
             // Populate the dictionary with common terms
             dict.add_string("name1", name1);
             dict.add_string("name2", name2);
@@ -106,7 +104,7 @@ public:
             if (std::abs(dict.get_number("F")) > DBL_EPSILON){
                 dict.add_string("function", cpjson::get_string(*itr, "function"));
             }
-            
+
             if (itr->HasMember("xi") && itr->HasMember("zeta")){
                 dict.add_string("type","Lemmon-xi-zeta");
                 // Air and HFC mixtures from Lemmon - we could also directly do the conversion
@@ -117,7 +115,7 @@ public:
                 dict.add_string("type","GERG-2008");
                 dict.add_number("gammaV", cpjson::get_double(*itr, "gammaV"));
                 dict.add_number("gammaT", cpjson::get_double(*itr, "gammaT"));
-            
+
                 double betaV = cpjson::get_double(*itr, "betaV");
                 double betaT = cpjson::get_double(*itr, "betaT");
                 if (swapped){
@@ -130,7 +128,7 @@ public:
                 }
             }
             else{ throw ValueError(); }
-            
+
             if (binary_pair_map.find(CAS) == binary_pair_map.end()){
                 // Add to binary pair map by creating one-element vector
                 binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
@@ -139,7 +137,7 @@ public:
             {
                 binary_pair_map[CAS].push_back(dict);
             }
-        } 
+        }
     }
 };
 static MixtureBinaryPairLibrary mixturebinarypairlibrary;
@@ -160,7 +158,7 @@ std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::str
     std::vector<std::string> CAS;
     CAS.push_back(CAS1);
     CAS.push_back(CAS2);
-    
+
     if (mixturebinarypairlibrary.binary_pair_map.find(CAS) != mixturebinarypairlibrary.binary_pair_map.end()){
         std::vector<Dictionary> &v = mixturebinarypairlibrary.binary_pair_map[CAS];
         try{
@@ -191,10 +189,10 @@ std::string get_reducing_function_name(std::string CAS1, std::string CAS2)
     std::vector<std::string> CAS;
     CAS.push_back(CAS1);
     CAS.push_back(CAS2);
-    
+
     // Sort the CAS number vector - map is based on sorted CAS codes
     std::sort(CAS.begin(), CAS.end());
-    
+
     if (mixturebinarypairlibrary.binary_pair_map.find(CAS) != mixturebinarypairlibrary.binary_pair_map.end()){
         return mixturebinarypairlibrary.binary_pair_map[CAS][0].get_string("function");
     }
@@ -209,7 +207,7 @@ class MixtureDepartureFunctionsLibrary{
 public:
     /// Map from sorted pair of CAS numbers to departure term dictionary.
     std::map<std::string, Dictionary> departure_function_map;
-    
+
     MixtureDepartureFunctionsLibrary()
     {
         rapidjson::Document doc;
@@ -226,7 +224,7 @@ public:
         {
             // Get the empty dictionary to be filled in
             Dictionary dict;
-            
+
             // Populate the dictionary with common terms
             std::string Name = cpjson::get_string(*itr, "Name");
             std::string type = cpjson::get_string(*itr, "type");
@@ -234,12 +232,12 @@ public:
             dict.add_string("BibTeX", cpjson::get_string(*itr, "BibTeX"));
             dict.add_string_vector("aliases", cpjson::get_string_array(*itr, "aliases"));
             dict.add_string("type", type);
-            
+
             // Terms for the power (common to both types)
             dict.add_double_vector("n", cpjson::get_double_array(*itr, "n"));
             dict.add_double_vector("d", cpjson::get_double_array(*itr, "d"));
             dict.add_double_vector("t", cpjson::get_double_array(*itr, "t"));
-                
+
             // Now we need to load additional terms
             if (!type.compare("GERG-2008")){
                 // Number of terms that are power terms
@@ -263,7 +261,7 @@ public:
                 // Not in map, add new entry to map with dictionary as value and Name as key
                 departure_function_map.insert(std::pair<std::string, Dictionary>(Name, dict));
             }
-            else 
+            else
             {
                 // Error if already in map!
                 //
@@ -283,7 +281,7 @@ static MixtureDepartureFunctionsLibrary mixturedeparturefunctionslibrary;
 void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
 {
     std::vector<CoolPropFluid*> components = HEOS.get_components();
-    
+
     std::size_t N = components.size();
 
     STLMatrix beta_v, gamma_v, beta_T, gamma_T;
@@ -308,11 +306,11 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
 
             // The variable swapped is true if a swap occured.
             bool swapped = (CAS1.compare(CAS[0]) != 0);
-            
+
             // ***************************************************
             //         Reducing parameters for binary pair
             // ***************************************************
-            
+
             if (mixturebinarypairlibrary.binary_pair_map.find(CAS) == mixturebinarypairlibrary.binary_pair_map.end())
             {
                 throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.", CAS[0].c_str(), CAS[1].c_str()));
@@ -320,10 +318,10 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
 
             // Get a reference to the first matching binary pair in the dictionary
             Dictionary &dict_red = mixturebinarypairlibrary.binary_pair_map[CAS][0];
-            
+
             // Get the name of the type being used, one of GERG-2008, Lemmon-xi-zeta, etc.
             std::string type_red = dict_red.get_string("type");
-            
+
             if (!type_red.compare("GERG-2008")){
                 if (swapped){
                     beta_v[i][j] = 1/dict_red.get_number("betaV");
@@ -340,40 +338,40 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
                 LemmonAirHFCReducingFunction::convert_to_GERG(components,i,j,dict_red,beta_T[i][j],beta_v[i][j],gamma_T[i][j],gamma_v[i][j]);
             }
             else{
-                throw ValueError(format("type [%s] for reducing function for pair [%s, %s] is invalid", type_red.c_str(), 
-                                                                                                        dict_red.get_string("Name1").c_str(), 
+                throw ValueError(format("type [%s] for reducing function for pair [%s, %s] is invalid", type_red.c_str(),
+                                                                                                        dict_red.get_string("Name1").c_str(),
                                                                                                         dict_red.get_string("Name2").c_str()   ));
             }
-            
+
             // ***************************************************
             //     Departure functions used in excess term
             // ***************************************************
-            
+
             // Set the scaling factor F for the excess term
             HEOS.Excess.F[i][j] = dict_red.get_number("F");
-            
+
             if (std::abs(HEOS.Excess.F[i][j]) < DBL_EPSILON){
                 // Empty departure function that will just return 0
                 std::vector<double> n(1,0), d(1,1), t(1,1), l(1,0);
                 HEOS.Excess.DepartureFunctionMatrix[i][j].reset(new ExponentialDepartureFunction(n,d,t,l));
                 continue;
             }
-            
+
             // Get the name of the departure function to be used for this binary pair
             std::string Name = CoolProp::get_reducing_function_name(components[i]->CAS, components[j]->CAS);
-            
+
             // Get the dictionary itself
             Dictionary &dict_dep = mixturedeparturefunctionslibrary.departure_function_map[Name];
-            
+
             if (dict_dep.is_empty()){throw ValueError(format("Departure function name [%s] seems to be invalid",Name.c_str()));}
-            
+
             // These terms are common
             std::vector<double> n = dict_dep.get_double_vector("n");
             std::vector<double> d = dict_dep.get_double_vector("d");
             std::vector<double> t = dict_dep.get_double_vector("t");
-            
+
             std::string type_dep = dict_dep.get_string("type");
-            
+
             if (!type_dep.compare("GERG-2008")){
                 // Number of power terms needed
                 int Npower = static_cast<int>(dict_dep.get_number("Npower"));
