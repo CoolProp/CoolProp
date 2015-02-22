@@ -848,10 +848,10 @@ TEST_CASE("Check inputs to get_global_param_string","[get_global_param_string]")
 
 std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
 {
-    std::string backend, fluid;
-    extract_backend(FluidName, backend, fluid);
-    if (backend == "INCOMP"){
-        try{
+    try {
+        std::string backend, fluid;
+        extract_backend(FluidName, backend, fluid);
+        if (backend == "INCOMP"){
             shared_ptr<CoolProp::IncompressibleBackend> INCOMP(new CoolProp::IncompressibleBackend(fluid));
 
             if (!ParamName.compare("long_name")){
@@ -861,11 +861,7 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
                 throw ValueError(format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str(),FluidName.c_str()));
             }
         }
-        catch(std::exception &e){ throw ValueError(format("CoolProp error: %s", e.what())); }
-        catch(...){ throw ValueError("CoolProp error: Indeterminate error"); }
-    }
 
-    try{
         std::vector<std::string> comps(1, FluidName);
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(comps));
         CoolProp::CoolPropFluid *cpfluid = HEOS->get_components()[0];
