@@ -215,7 +215,7 @@ if __name__=='__main__':
 
     # Set variables for C++ sources and include directories
     sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp')
-    include_dirs  = [os.path.join(CProot, 'include'), os.path.join(CProot, 'src'), os.path.join(CProot, 'externals', 'Eigen'), os.path.join(CProot, 'externals', 'REFPROP-headers')]
+    include_dirs  = [os.path.join(CProot, 'include'), os.path.join(CProot, 'src'), os.path.join(CProot, 'externals', 'Eigen'), os.path.join(CProot, 'externals', 'REFPROP-headers'), os.path.join(CProot, 'externals', 'msgpack-c', 'include')]
 
     ## If the file is run directly without any parameters, clean, build and install
     if len(sys.argv)==1:
