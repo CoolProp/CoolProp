@@ -2,33 +2,40 @@
 #define TABULAR_BACKENDS_H
 
 #include "AbstractState.h"
+#include "msgpack.hpp"
+#include <msgpack/fbuffer.hpp>
+
+/**
+ * ***MAGIC WARNING**!! X Macros in use
+ * See http://stackoverflow.com/a/148610
+ * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
+ */
+#define LIST_OF_MATRICES X(T) X(p) X(rhomolar) X(hmolar) X(smolar) X(dTdx) X(dTdy) X(dpdx) X(dpdy) X(drhomolardx) X(drhomolardy) X(dhmolardx) X(dhmolardy) X(dsmolardx) X(dsmolardy) X(d2Tdx2) X(d2Tdxdy) X(d2Tdy2) X(d2pdx2) X(d2pdxdy) X(d2pdy2) X(d2rhomolardx2) X(d2rhomolardxdy) X(d2rhomolardy2) X(d2hmolardx2) X(d2hmolardxdy) X(d2hmolardy2) X(d2smolardx2) X(d2smolardxdy) X(d2smolardy2)
 
 namespace CoolProp{
 
 struct SinglePhaseGriddedTableData{
     CoolProp::parameters xkey, ykey;
-    std::vector< std::vector<double> > T, p, rhomolar, hmolar, smolar;
-    std::vector< std::vector<double> > dTdx, dTdy, dpdx, dpdy, drhomolardx, drhomolardy, dhmolardx, dhmolardy, dsmolardx, dsmolardy;
     
+    /* Use X macros to auto-generate the variables; each will look something like: std::vector< std::vector<double> > T; */
+    #define X(name) std::vector< std::vector<double> > name;
+    LIST_OF_MATRICES
+    #undef X
+    int revision;
+    std::map<std::string, std::vector<std::vector<double> > > matrices;
+    
+    MSGPACK_DEFINE(revision, matrices); // write the member variables that you want to pack
     void resize(std::size_t Nx, std::size_t Ny){
-        // State variables
-        T.resize(Nx, std::vector<double>(Ny, _HUGE));
-        p.resize(Nx, std::vector<double>(Ny, _HUGE));
-        rhomolar.resize(Nx, std::vector<double>(Ny, _HUGE));
-        hmolar.resize(Nx, std::vector<double>(Ny, _HUGE));
-        smolar.resize(Nx, std::vector<double>(Ny, _HUGE));
-        
-        // First derivatives of state variables
-        dTdx.resize(Nx, std::vector<double>(Ny, _HUGE));
-        dpdx.resize(Nx, std::vector<double>(Ny, _HUGE));
-        drhomolardx.resize(Nx, std::vector<double>(Ny, _HUGE));
-        dhmolardx.resize(Nx, std::vector<double>(Ny, _HUGE));
-        dsmolardx.resize(Nx, std::vector<double>(Ny, _HUGE));
-        dTdy.resize(Nx, std::vector<double>(Ny, _HUGE));
-        dpdy.resize(Nx, std::vector<double>(Ny, _HUGE));
-        drhomolardy.resize(Nx, std::vector<double>(Ny, _HUGE));
-        dhmolardy.resize(Nx, std::vector<double>(Ny, _HUGE));
-        dsmolardy.resize(Nx, std::vector<double>(Ny, _HUGE));
+        /* Use X macros to auto-generate the variables; each will look something like: T.resize(Nx, std::vector<double>(Ny, _HUGE)); */
+        #define X(name) name.resize(Nx, std::vector<double>(Ny, _HUGE));
+        LIST_OF_MATRICES
+        #undef X
+    };
+    void pack_matrices(){
+        /* Use X macros to auto-generate the packing code; each will look something like: matrices.insert(std::pair<std::vector<std::vector<double> > >("T", T)); */
+        #define X(name) matrices.insert(std::pair<std::string, std::vector<std::vector<double> > >(#name, name));
+        LIST_OF_MATRICES
+        #undef X
     };
 };
 class GriddedTableBackend : public AbstractState
@@ -48,15 +55,26 @@ class GriddedTableBackend : public AbstractState
     void set_mass_fractions(const std::vector<long double> &mass_fractions){};
     const std::vector<long double> & get_mole_fractions(){throw NotImplementedError("get_mole_fractions not implemented for TTSE");};
     void build_tables(tabular_types type);
-    void load_tables(void);
+    void write_tables(std::string &directory);
+    void load_tables(std::string &directory);
     void bounding_curves(void);
+    
 };
     
 class TTSEBackend : public GriddedTableBackend
 {
 public:
     TTSEBackend(AbstractState &AS){
-        this->AS = &AS; build_tables(GriddedTableBackend::LOGPH_TABLE);};
+        // Hold a pointer to the abstract state
+        this->AS = &AS; 
+        build_tables(GriddedTableBackend::LOGPH_TABLE);
+        
+        std::string path = "here";
+        single_phase.pack_matrices();
+        write_tables(path);
+        load_tables(path);
+        int rrgregregstrs = 4;
+    };
 };
 
 } /* namespace CoolProp*/

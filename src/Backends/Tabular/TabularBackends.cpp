@@ -1,14 +1,17 @@
 
+
 #include "TabularBackends.h"
 #include "CoolProp.h"
+#include <sstream>
 
 namespace CoolProp{
     
 void GriddedTableBackend::build_tables(tabular_types type)
 {
-    std::size_t Nx = 20, Ny = 20;
+    std::size_t Nx = 200, Ny = 200;
     long double xmin, xmax, ymin, ymax, x, y;
     bool logy, logx;
+    const bool debug = get_debug_level() > 5 || false;
     
     parameters xkey, ykey;
     single_phase.resize(Nx, Ny);
@@ -46,7 +49,7 @@ void GriddedTableBackend::build_tables(tabular_types type)
             throw ValueError(format(""));
         }
     }
-    if (get_debug_level() > 5){
+    if (debug){
         std::cout << format("***********************************************\n");
         std::cout << format(" Single-Phase Table (%s) \n", AS->name().c_str());
         std::cout << format("***********************************************\n");
@@ -77,7 +80,7 @@ void GriddedTableBackend::build_tables(tabular_types type)
                 y = ymin + (ymax - ymin)/(Ny-1)*j;
             }
             
-            if (get_debug_level() > 5){std::cout << "x: " << x << " y: " << y;}
+            if (debug){std::cout << "x: " << x << " y: " << y;}
             
             if (xkey == iHmolar && ykey == iP)
             {
@@ -89,46 +92,83 @@ void GriddedTableBackend::build_tables(tabular_types type)
                 }
                 catch(std::exception &e){
                     // That failed for some reason, go to the next pair
-                    if (get_debug_level() > 5){std::cout << " " << e.what() << std::endl;}
+                    if (debug){std::cout << " " << e.what() << std::endl;}
                     continue;
                 }
-                    
-                // Skip two-phase states - they will remain as _HUGE holes in the table
-                if (AS->phase() == iphase_twophase){ 
-                    if (get_debug_level() > 5){std::cout << " 2Phase" << std::endl;}
-                    continue;
-                };
                 
-                // --------------------
-                //   State variables
-                // --------------------
-                single_phase.T[i][j] = AS->T();
-                single_phase.p[i][j] = AS->p();
-                single_phase.rhomolar[i][j] = AS->rhomolar();
-                single_phase.hmolar[i][j] = AS->hmolar();
-                single_phase.smolar[i][j] = AS->smolar();
-                
-                // ----------------------------------------
-                //   First derivatives of state variables
-                // ----------------------------------------
-                single_phase.dTdx[i][j] = AS->first_partial_deriv(iT, xkey, ykey);
-                single_phase.dTdy[i][j] = AS->first_partial_deriv(iT, ykey, xkey);
-                single_phase.dpdx[i][j] = AS->first_partial_deriv(iP, xkey, ykey);
-                single_phase.dpdy[i][j] = AS->first_partial_deriv(iP, ykey, xkey);
-                single_phase.drhomolardx[i][j] = AS->first_partial_deriv(iDmolar, xkey, ykey);
-                single_phase.drhomolardy[i][j] = AS->first_partial_deriv(iDmolar, ykey, xkey);
-                single_phase.dhmolardx[i][j] = AS->first_partial_deriv(iHmolar, xkey, ykey);
-                single_phase.dhmolardy[i][j] = AS->first_partial_deriv(iHmolar, ykey, xkey);
-                single_phase.dsmolardx[i][j] = AS->first_partial_deriv(iSmolar, xkey, ykey);
-                single_phase.dsmolardy[i][j] = AS->first_partial_deriv(iSmolar, ykey, xkey);
-                
-                if (get_debug_level() > 5){std::cout << " OK" << std::endl;}
+                if (debug){std::cout << " OK" << std::endl;}
             }
             else{
                 throw ValueError("Cannot construct this type of table (yet)");
             }
+            
+            // Skip two-phase states - they will remain as _HUGE holes in the table
+            if (AS->phase() == iphase_twophase){ 
+                if (debug){std::cout << " 2Phase" << std::endl;}
+                continue;
+            };
+            
+            // --------------------
+            //   State variables
+            // --------------------
+            single_phase.T[i][j] = AS->T();
+            single_phase.p[i][j] = AS->p();
+            single_phase.rhomolar[i][j] = AS->rhomolar();
+            single_phase.hmolar[i][j] = AS->hmolar();
+            single_phase.smolar[i][j] = AS->smolar();
+            
+            // ----------------------------------------
+            //   First derivatives of state variables
+            // ----------------------------------------
+            single_phase.dTdx[i][j] = AS->first_partial_deriv(iT, xkey, ykey);
+            single_phase.dTdy[i][j] = AS->first_partial_deriv(iT, ykey, xkey);
+            single_phase.dpdx[i][j] = AS->first_partial_deriv(iP, xkey, ykey);
+            single_phase.dpdy[i][j] = AS->first_partial_deriv(iP, ykey, xkey);
+            single_phase.drhomolardx[i][j] = AS->first_partial_deriv(iDmolar, xkey, ykey);
+            single_phase.drhomolardy[i][j] = AS->first_partial_deriv(iDmolar, ykey, xkey);
+            single_phase.dhmolardx[i][j] = AS->first_partial_deriv(iHmolar, xkey, ykey);
+            single_phase.dhmolardy[i][j] = AS->first_partial_deriv(iHmolar, ykey, xkey);
+            single_phase.dsmolardx[i][j] = AS->first_partial_deriv(iSmolar, xkey, ykey);
+            single_phase.dsmolardy[i][j] = AS->first_partial_deriv(iSmolar, ykey, xkey);
+            
+            // ----------------------------------------
+            //   Second derivatives of state variables
+            // ----------------------------------------
+            single_phase.d2Tdx2[i][j] = AS->second_partial_deriv(iT, xkey, ykey, xkey, ykey);
+            single_phase.d2Tdxdy[i][j] = AS->second_partial_deriv(iT, xkey, ykey, ykey, xkey);
+            single_phase.d2Tdy2[i][j] = AS->second_partial_deriv(iT, ykey, xkey, ykey, xkey);
+            single_phase.d2pdx2[i][j] = AS->second_partial_deriv(iP, xkey, ykey, xkey, ykey);
+            single_phase.d2pdxdy[i][j] = AS->second_partial_deriv(iP, xkey, ykey, ykey, xkey);
+            single_phase.d2pdy2[i][j] = AS->second_partial_deriv(iP, ykey, xkey, ykey, xkey);
+            single_phase.d2rhomolardx2[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, xkey, ykey);
+            single_phase.d2rhomolardxdy[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, ykey, xkey);
+            single_phase.d2rhomolardy2[i][j] = AS->second_partial_deriv(iDmolar, ykey, xkey, ykey, xkey);
+            single_phase.d2hmolardx2[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, xkey, ykey);
+            single_phase.d2hmolardxdy[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, ykey, xkey);
+            single_phase.d2hmolardy2[i][j] = AS->second_partial_deriv(iHmolar, ykey, xkey, ykey, xkey);
+            single_phase.d2smolardx2[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, xkey, ykey);
+            single_phase.d2smolardxdy[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, ykey, xkey);
+            single_phase.d2smolardy2[i][j] = AS->second_partial_deriv(iSmolar, ykey, xkey, ykey, xkey);
         }
     }
+}
+
+void GriddedTableBackend::write_tables(std::string &directory){
+    std::ofstream ofs("single_phase.bin", std::ofstream::binary);
+    msgpack::pack(ofs, single_phase);
+    ofs.close();
+}
+void GriddedTableBackend::load_tables(std::string &directory){
+    
+    std::ifstream ifs("single_phase.bin", std::ifstream::binary);
+    std::stringstream buffer;
+    buffer << ifs.rdbuf();
+    msgpack::unpacked upd;
+    std::string sbuffer = buffer.str();
+    std::size_t N = sbuffer.size();
+    msgpack::unpack(upd, sbuffer.c_str(), N);
+    msgpack::object deserialized = upd.get();
+    deserialized.convert(&single_phase);
 }
     
 } /* namespace CoolProp */
