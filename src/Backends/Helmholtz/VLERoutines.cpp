@@ -947,7 +947,6 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
                 rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
                 p = HEOS.get_components()[0]->ancillaries.pV.evaluate(T);
                 
-                CoolProp::SimpleState &crit = HEOS.get_components()[0]->crit;
                 CoolProp::SimpleState &tripleL = HEOS.get_components()[0]->triple_liquid;
                 CoolProp::SimpleState &tripleV = HEOS.get_components()[0]->triple_vapor;
                 
