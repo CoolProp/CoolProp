@@ -740,20 +740,20 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
                 if (value < y_solid){ throw ValueError(format("Other input [%d:%g] is solid", other, value));}
 
                 // Check if other is above the saturation value.
-                SaturationSolvers::saturation_D_pure_options options;
-                options.omega = 1;
-                options.use_logdelta = false;
+                SaturationSolvers::saturation_D_pure_options optionsD;
+                optionsD.omega = 1;
+                optionsD.use_logdelta = false;
                 if (HEOS._rhomolar > HEOS._crit.rhomolar)
                 {
-                    options.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOL;
-                    SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, options);
+                    optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOL;
+                    SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
                     // SatL and SatV have the saturation values
                     Sat = HEOS.SatL;
                 }
                 else
                 {
-                    options.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOV;
-                    SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, options);
+                    optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOV;
+                    SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
                     // SatL and SatV have the saturation values
                     Sat = HEOS.SatV;
                 }
@@ -775,14 +775,14 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
 						// Iterate to find T(p), its just a saturation call
 						
 						// Set some input options
-						SaturationSolvers::saturation_PHSU_pure_options options;
+						SaturationSolvers::saturation_PHSU_pure_options optionsPHSU;
 						// Specified variable is pressure
-						options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_PL;
+						optionsPHSU.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_PL;
 						// Use logarithm of delta as independent variables
-						options.use_logdelta = false;
+						optionsPHSU.use_logdelta = false;
                         
                         // Actually call the solver
-                        SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS._p, options);
+                        SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS._p, optionsPHSU);
 
 						// Load the outputs
 						HEOS._phase = iphase_twophase;
@@ -1335,7 +1335,6 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
             first_maxima_in_saturation_entropy = tripleV.smolar;
         }
         
-        double h1 = HEOS.hmolar(), s1 = HEOS.smolar();
         // Enthalpy at solid line for given entropy
         double hsolid = (tripleV.hmolar-tripleL.hmolar)/(tripleV.smolar-tripleL.smolar)*(HEOS.smolar()-tripleL.smolar) + tripleL.hmolar;
         // Part A - first check if HS is below triple line formed by connecting the triple point states
@@ -1365,7 +1364,6 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
                 
             // Check if above the saturation enthalpy for given entropy
             // If it is, the inputs are definitely single-phase.  We are done here
-            double h1 = HEOS.hmolar(), h2 = HEOS_copy->hmolar();
             if (HEOS.hmolar() > HEOS_copy->hmolar()){
                 solution = single_phase_solution;
             }

@@ -464,7 +464,7 @@ bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, paramete
             // Index of minimum distance in the other_values vector
             std::size_t idist = std::distance(d.begin(), std::min_element(d.begin(), d.end()));
             // Index of closest point in the phase envelope
-            std::size_t iclosest = other_indices[idist];
+            iclosest = other_indices[idist];
             
             // Get the state for the point which is closest to the desired value - this
             // can be used as a bounding value in the outer single-phase flash routine

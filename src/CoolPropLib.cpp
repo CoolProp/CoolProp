@@ -104,7 +104,7 @@ double convert_from_SI_to_kSI(long iInput, double value)
 EXPORT_CODE long CONVENTION redirect_stdout(const char* file){
     FILE *fp = freopen(file, "a+", stdout);
     reset_fpu();
-    return 0;
+    return (fp) ? 1 : 0; // 0 = failure if redirection could not be done; original stdout is already closed
 }
 EXPORT_CODE int CONVENTION set_reference_stateS(const char *Ref, const char *reference_state)
 {

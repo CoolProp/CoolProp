@@ -281,7 +281,6 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SV)
         {
             CoolPropFluid &component = *(HEOS.get_components()[0]);
-            CoolProp::SimpleState crit = HEOS.get_state("reducing");
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             class Residual : public FuncWrapper1D
             {
@@ -948,7 +947,6 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
                 rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
                 p = HEOS.get_components()[0]->ancillaries.pV.evaluate(T);
                 
-                CoolProp::SimpleState &crit = HEOS.get_components()[0]->crit;
                 CoolProp::SimpleState &tripleL = HEOS.get_components()[0]->triple_liquid;
                 CoolProp::SimpleState &tripleV = HEOS.get_components()[0]->triple_vapor;
                 

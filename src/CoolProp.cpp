@@ -220,20 +220,19 @@ void _PropsSI_initialize(const std::string &backend,
             State.reset(AbstractState::factory(backend, fluid_names));
         }
     }
+    else { // The only path where fractions_ptr stays NULL
+      throw ValueError("fractions_ptr is NULL");
+    }
 
     // Set the fraction for the state
     if (State->using_mole_fractions()){
         // If a predefined mixture or a pure fluid, the fractions will already be set
-        const std::vector<long double> &z = State->get_mole_fractions();
-        if (z.empty()){
-			if (fractions_ptr == NULL){ throw ValueError("fractions_ptr is NULL"); }
+        if (State->get_mole_fractions().empty()){
             State->set_mole_fractions(*fractions_ptr);
         }
     } else if (State->using_mass_fractions()){
-        if (fractions_ptr == NULL){ throw ValueError("fractions_ptr is NULL");}
         State->set_mass_fractions(*fractions_ptr);
     } else if (State->using_volu_fractions()){
-        if (fractions_ptr == NULL){ throw ValueError("fractions_ptr is NULL");}
         State->set_volu_fractions(*fractions_ptr);
     } else {
         if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
@@ -849,10 +848,10 @@ TEST_CASE("Check inputs to get_global_param_string","[get_global_param_string]")
 
 std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
 {
-    std::string backend, fluid;
-    extract_backend(FluidName, backend, fluid);
-    if (backend == "INCOMP"){
-        try{
+    try {
+        std::string backend, fluid;
+        extract_backend(FluidName, backend, fluid);
+        if (backend == "INCOMP"){
             shared_ptr<CoolProp::IncompressibleBackend> INCOMP(new CoolProp::IncompressibleBackend(fluid));
 
             if (!ParamName.compare("long_name")){
@@ -862,26 +861,22 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
                 throw ValueError(format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str(),FluidName.c_str()));
             }
         }
-        catch(std::exception &e){ throw ValueError(format("CoolProp error: %s", e.what())); }
-        catch(...){ throw ValueError("CoolProp error: Indeterminate error"); }
-    }
 
-    try{
         std::vector<std::string> comps(1, FluidName);
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(comps));
-        CoolProp::CoolPropFluid *fluid = HEOS->get_components()[0];
+        CoolProp::CoolPropFluid *cpfluid = HEOS->get_components()[0];
 
         if (!ParamName.compare("aliases")){
-            return strjoin(fluid->aliases, ", ");
+            return strjoin(cpfluid->aliases, ", ");
         }
         else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number")){
-            return fluid->CAS;
+            return cpfluid->CAS;
         }
         else if (!ParamName.compare("ASHRAE34")){
-            return fluid->environment.ASHRAE34;
+            return cpfluid->environment.ASHRAE34;
         }
         else if (!ParamName.compare("REFPROPName") || !ParamName.compare("REFPROP_name") || !ParamName.compare("REFPROPname")){
-            return fluid->REFPROPname;
+            return cpfluid->REFPROPname;
         }
         else if (ParamName.find("BibTeX") == 0) // Starts with "BibTeX"
         {
