@@ -220,20 +220,20 @@ void _PropsSI_initialize(const std::string &backend,
             State.reset(AbstractState::factory(backend, fluid_names));
         }
     }
+    else { // The only path where fractions_ptr stays NULL
+      throw ValueError("fractions_ptr is NULL");
+    }
 
     // Set the fraction for the state
     if (State->using_mole_fractions()){
         // If a predefined mixture or a pure fluid, the fractions will already be set
         const std::vector<long double> &z = State->get_mole_fractions();
         if (z.empty()){
-			if (fractions_ptr == NULL){ throw ValueError("fractions_ptr is NULL"); }
             State->set_mole_fractions(*fractions_ptr);
         }
     } else if (State->using_mass_fractions()){
-        if (fractions_ptr == NULL){ throw ValueError("fractions_ptr is NULL");}
         State->set_mass_fractions(*fractions_ptr);
     } else if (State->using_volu_fractions()){
-        if (fractions_ptr == NULL){ throw ValueError("fractions_ptr is NULL");}
         State->set_volu_fractions(*fractions_ptr);
     } else {
         if (get_debug_level()>50) std::cout << format("%s:%d: _PropsSI, could not set composition to %s, defaulting to mole fraction.\n",__FILE__,__LINE__, vec_to_string(z).c_str()).c_str();
