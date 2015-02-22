@@ -227,8 +227,7 @@ void _PropsSI_initialize(const std::string &backend,
     // Set the fraction for the state
     if (State->using_mole_fractions()){
         // If a predefined mixture or a pure fluid, the fractions will already be set
-        const std::vector<long double> &z = State->get_mole_fractions();
-        if (z.empty()){
+        if (State->get_mole_fractions().empty()){
             State->set_mole_fractions(*fractions_ptr);
         }
     } else if (State->using_mass_fractions()){
@@ -869,19 +868,19 @@ std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
     try{
         std::vector<std::string> comps(1, FluidName);
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(comps));
-        CoolProp::CoolPropFluid *fluid = HEOS->get_components()[0];
+        CoolProp::CoolPropFluid *cpfluid = HEOS->get_components()[0];
 
         if (!ParamName.compare("aliases")){
-            return strjoin(fluid->aliases, ", ");
+            return strjoin(cpfluid->aliases, ", ");
         }
         else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number")){
-            return fluid->CAS;
+            return cpfluid->CAS;
         }
         else if (!ParamName.compare("ASHRAE34")){
-            return fluid->environment.ASHRAE34;
+            return cpfluid->environment.ASHRAE34;
         }
         else if (!ParamName.compare("REFPROPName") || !ParamName.compare("REFPROP_name") || !ParamName.compare("REFPROPname")){
-            return fluid->REFPROPname;
+            return cpfluid->REFPROPname;
         }
         else if (ParamName.find("BibTeX") == 0) // Starts with "BibTeX"
         {

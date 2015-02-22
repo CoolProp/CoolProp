@@ -1646,8 +1646,6 @@ long double HelmholtzEOSMixtureBackend::calc_pressure_nocache(long double T, lon
 }
 long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long double T, long double value, int other)
 {
-    long double yc, ymin, y;
-
     // Define the residual to be driven to zero
     class solver_resid : public FuncWrapper1D
     {
@@ -1683,6 +1681,7 @@ long double HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(long do
     // Supercritical temperature
     if (_T > _crit.T)
     {
+        long double yc, ymin, y;
         long double rhoc = components[0]->crit.rhomolar;
         long double rhomin = 1e-10;
 

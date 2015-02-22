@@ -256,15 +256,15 @@ void ResidualHelmholtzNonAnalytic::to_json(rapidjson::Value &el, rapidjson::Docu
                      _C(rapidjson::kArrayType), _D(rapidjson::kArrayType);
     for (unsigned int i=0; i<=N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
-        _n.PushBack((double)el.n, doc.GetAllocator());
-        _a.PushBack((double)el.a, doc.GetAllocator());
-        _b.PushBack((double)el.b, doc.GetAllocator());
-        _beta.PushBack((double)el.beta, doc.GetAllocator());
-        _A.PushBack((double)el.A, doc.GetAllocator());
-        _B.PushBack((double)el.B, doc.GetAllocator());
-        _C.PushBack((double)el.C, doc.GetAllocator());
-        _D.PushBack((double)el.D, doc.GetAllocator());
+        ResidualHelmholtzNonAnalyticElement &elem = elements[i];
+        _n.PushBack((double)elem.n, doc.GetAllocator());
+        _a.PushBack((double)elem.a, doc.GetAllocator());
+        _b.PushBack((double)elem.b, doc.GetAllocator());
+        _beta.PushBack((double)elem.beta, doc.GetAllocator());
+        _A.PushBack((double)elem.A, doc.GetAllocator());
+        _B.PushBack((double)elem.B, doc.GetAllocator());
+        _C.PushBack((double)elem.C, doc.GetAllocator());
+        _D.PushBack((double)elem.D, doc.GetAllocator());
     }
     el.AddMember("n",_n,doc.GetAllocator());
     el.AddMember("a",_a,doc.GetAllocator());
