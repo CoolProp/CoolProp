@@ -52,7 +52,7 @@ You might want to start by looking at CoolProp.h
                                                    const std::vector<double> &Prop2, 
                                                    const std::string &backend, 
                                                    const std::vector<std::string> &fluids, 
-                                                   const std::vector<double> &fractions);
+                                                   const std::vector<long double> &fractions);
 
     /// Get the debug level
     /// @returns level The level of the verbosity for the debugging output (0-10) 0: no debgging output
@@ -182,7 +182,7 @@ You might want to start by looking at CoolProp.h
      * @param fractions The fractions
      * @return The fluids, as a '&' delimited string
      */
-    std::string extract_fractions(const std::string &fluid_string, std::vector<double> &fractions);
+    std::string extract_fractions(const std::string &fluid_string, std::vector<long double> &fractions);
     
     } /* namespace CoolProp */
 #endif

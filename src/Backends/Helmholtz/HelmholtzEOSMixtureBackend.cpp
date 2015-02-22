@@ -51,7 +51,7 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::st
     // Set the phase to default unknown value
     _phase = iphase_unknown;
 }
-HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV) {
+HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid*> &components, bool generate_SatL_and_SatV) {
 
     // Set the components and associated flags
     set_components(components, generate_SatL_and_SatV);
@@ -59,7 +59,7 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid
     // Set the phase to default unknown value
     _phase = iphase_unknown;
 }
-void HelmholtzEOSMixtureBackend::set_components(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV) {
+void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid*> &components, bool generate_SatL_and_SatV) {
 
     // Copy the components
     this->components = components;
@@ -99,8 +99,8 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<long doubl
         throw ValueError(format("size of mole fraction vector [%d] does not equal that of component vector [%d]",mole_fractions.size(), N));
     }
     // Copy values without reallocating memory
-    this->resize(N);
-    std::copy( mole_fractions.begin(), mole_fractions.end(), this->mole_fractions.begin() );
+    this->mole_fractions = mole_fractions; // Most effective copy
+    this->resize(N); // This way no reallocation of this->mole_fractions happens
     // Resize the vectors for the liquid and vapor,  but only if they are in use
     if (this->SatL.get() != NULL){
         this->SatL->resize(N);

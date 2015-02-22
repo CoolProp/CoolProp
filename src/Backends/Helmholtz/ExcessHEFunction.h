@@ -46,9 +46,9 @@ protected:
     ResidualHelmholtzGeneralizedExponential phi;
 public:
     GERG2008DepartureFunction(){};
-    GERG2008DepartureFunction(const std::vector<double> &n,const std::vector<double> &d,const std::vector<double> &t,
-                              const std::vector<double> &eta,const std::vector<double> &epsilon,const std::vector<double> &beta,
-                              const std::vector<double> &gamma, std::size_t Npower)
+    GERG2008DepartureFunction(const std::vector<long double> &n,const std::vector<long double> &d,const std::vector<long double> &t,
+                              const std::vector<long double> &eta,const std::vector<long double> &epsilon,const std::vector<long double> &beta,
+                              const std::vector<long double> &gamma, std::size_t Npower)
     {
         /// Break up into power and gaussian terms
         {
@@ -99,8 +99,8 @@ protected:
     ResidualHelmholtzGeneralizedExponential phi;
 public:
     ExponentialDepartureFunction(){};
-    ExponentialDepartureFunction(const std::vector<double> &n, const std::vector<double> &d,
-                                 const std::vector<double> &t, const std::vector<double> &l)
+    ExponentialDepartureFunction(const std::vector<long double> &n, const std::vector<long double> &d,
+                                 const std::vector<long double> &t, const std::vector<long double> &l)
                                  {
                                      std::vector<long double> _n(n.begin(), n.begin()+n.size());
                                      std::vector<long double> _d(d.begin(), d.begin()+d.size());
