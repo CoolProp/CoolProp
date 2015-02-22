@@ -341,6 +341,8 @@ public:
      */
     static AbstractState * factory(const std::string &backend, const std::vector<std::string> &fluid_names);
 
+    /// Get a string representation of the backend
+    virtual std::string backend_name(void) = 0;
     // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
     virtual bool using_mole_fractions(void) = 0;
     virtual bool using_mass_fractions(void) = 0;
@@ -452,9 +454,9 @@ public:
     double delta(void);
     /// Return the molar mass in kg/mol
     double molar_mass(void);
+    /// Return the acentric factor
     double acentric_factor(void);
     /// Return the mole-fraction weighted gas constant in J/mol/K
-    
     double gas_constant(void);
     double Bvirial(void);
     double dBvirial_dT(void);

@@ -42,6 +42,7 @@ public:
         set_mole_fractions(std::vector<long double>(mole_fractions.begin(), mole_fractions.end()));
     };
     virtual ~HelmholtzEOSBackend(){};
+    std::string backend_name(void){return "HelmholtzEOSBackend";}
 };
 
 } /* namespace CoolProp */

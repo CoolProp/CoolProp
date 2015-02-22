@@ -6,49 +6,14 @@
 
 namespace CoolProp{
     
-void GriddedTableBackend::build_tables(tabular_types type)
+void SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)
 {
-    std::size_t Nx = 200, Ny = 200;
-    long double xmin, xmax, ymin, ymax, x, y;
-    bool logy, logx;
-    const bool debug = get_debug_level() > 5 || false;
     
-    parameters xkey, ykey;
-    single_phase.resize(Nx, Ny);
+    long double x, y;
+    const bool debug = get_debug_level() > 5 || true;
+
+    resize(Nx, Ny);
     
-    switch(type){
-        case LOGPH_TABLE:
-        {
-            xkey = iHmolar;
-            ykey = iP;
-            logy = true;
-            logx = false;
-            
-            // ---------------------------------
-            // Calculate the limits of the table
-            // ---------------------------------
-            
-            // Minimum enthalpy is the saturated liquid enthalpy
-            AS->update(QT_INPUTS, 0, AS->Ttriple());
-            xmin = AS->hmolar();
-            ymin = AS->p();
-            
-            // Check both the enthalpies at the Tmax isotherm to see whether to use low or high pressure
-            AS->update(PT_INPUTS, 1e-10, AS->Tmax());
-            long double xmax1 = AS->hmolar();
-            AS->update(PT_INPUTS, AS->pmax(), AS->Tmax());
-            long double xmax2 = AS->hmolar();
-            xmax = std::min(xmax1, xmax2);
-            
-            ymax = AS->pmax();
-            
-            break;
-        }
-        default:
-        {
-            throw ValueError(format(""));
-        }
-    }
     if (debug){
         std::cout << format("***********************************************\n");
         std::cout << format(" Single-Phase Table (%s) \n", AS->name().c_str());
@@ -68,6 +33,7 @@ void GriddedTableBackend::build_tables(tabular_types type)
             // Linearly spaced
             x = xmin + (xmax - xmin)/(Nx-1)*i;
         }
+        xvec[i] = x;
         for (std::size_t j = 0; j < Ny; ++j)
         {
             // Calculate the x value
@@ -79,6 +45,7 @@ void GriddedTableBackend::build_tables(tabular_types type)
                 // Linearly spaced
                 y = ymin + (ymax - ymin)/(Ny-1)*j;
             }
+            yvec[j] = y;
             
             if (debug){std::cout << "x: " << x << " y: " << y;}
             
@@ -111,64 +78,104 @@ void GriddedTableBackend::build_tables(tabular_types type)
             // --------------------
             //   State variables
             // --------------------
-            single_phase.T[i][j] = AS->T();
-            single_phase.p[i][j] = AS->p();
-            single_phase.rhomolar[i][j] = AS->rhomolar();
-            single_phase.hmolar[i][j] = AS->hmolar();
-            single_phase.smolar[i][j] = AS->smolar();
+            T[i][j] = AS->T();
+            p[i][j] = AS->p();
+            rhomolar[i][j] = AS->rhomolar();
+            hmolar[i][j] = AS->hmolar();
+            smolar[i][j] = AS->smolar();
             
             // ----------------------------------------
             //   First derivatives of state variables
             // ----------------------------------------
-            single_phase.dTdx[i][j] = AS->first_partial_deriv(iT, xkey, ykey);
-            single_phase.dTdy[i][j] = AS->first_partial_deriv(iT, ykey, xkey);
-            single_phase.dpdx[i][j] = AS->first_partial_deriv(iP, xkey, ykey);
-            single_phase.dpdy[i][j] = AS->first_partial_deriv(iP, ykey, xkey);
-            single_phase.drhomolardx[i][j] = AS->first_partial_deriv(iDmolar, xkey, ykey);
-            single_phase.drhomolardy[i][j] = AS->first_partial_deriv(iDmolar, ykey, xkey);
-            single_phase.dhmolardx[i][j] = AS->first_partial_deriv(iHmolar, xkey, ykey);
-            single_phase.dhmolardy[i][j] = AS->first_partial_deriv(iHmolar, ykey, xkey);
-            single_phase.dsmolardx[i][j] = AS->first_partial_deriv(iSmolar, xkey, ykey);
-            single_phase.dsmolardy[i][j] = AS->first_partial_deriv(iSmolar, ykey, xkey);
+            dTdx[i][j] = AS->first_partial_deriv(iT, xkey, ykey);
+            dTdy[i][j] = AS->first_partial_deriv(iT, ykey, xkey);
+            dpdx[i][j] = AS->first_partial_deriv(iP, xkey, ykey);
+            dpdy[i][j] = AS->first_partial_deriv(iP, ykey, xkey);
+            drhomolardx[i][j] = AS->first_partial_deriv(iDmolar, xkey, ykey);
+            drhomolardy[i][j] = AS->first_partial_deriv(iDmolar, ykey, xkey);
+            dhmolardx[i][j] = AS->first_partial_deriv(iHmolar, xkey, ykey);
+            dhmolardy[i][j] = AS->first_partial_deriv(iHmolar, ykey, xkey);
+            dsmolardx[i][j] = AS->first_partial_deriv(iSmolar, xkey, ykey);
+            dsmolardy[i][j] = AS->first_partial_deriv(iSmolar, ykey, xkey);
             
             // ----------------------------------------
             //   Second derivatives of state variables
             // ----------------------------------------
-            single_phase.d2Tdx2[i][j] = AS->second_partial_deriv(iT, xkey, ykey, xkey, ykey);
-            single_phase.d2Tdxdy[i][j] = AS->second_partial_deriv(iT, xkey, ykey, ykey, xkey);
-            single_phase.d2Tdy2[i][j] = AS->second_partial_deriv(iT, ykey, xkey, ykey, xkey);
-            single_phase.d2pdx2[i][j] = AS->second_partial_deriv(iP, xkey, ykey, xkey, ykey);
-            single_phase.d2pdxdy[i][j] = AS->second_partial_deriv(iP, xkey, ykey, ykey, xkey);
-            single_phase.d2pdy2[i][j] = AS->second_partial_deriv(iP, ykey, xkey, ykey, xkey);
-            single_phase.d2rhomolardx2[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, xkey, ykey);
-            single_phase.d2rhomolardxdy[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, ykey, xkey);
-            single_phase.d2rhomolardy2[i][j] = AS->second_partial_deriv(iDmolar, ykey, xkey, ykey, xkey);
-            single_phase.d2hmolardx2[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, xkey, ykey);
-            single_phase.d2hmolardxdy[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, ykey, xkey);
-            single_phase.d2hmolardy2[i][j] = AS->second_partial_deriv(iHmolar, ykey, xkey, ykey, xkey);
-            single_phase.d2smolardx2[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, xkey, ykey);
-            single_phase.d2smolardxdy[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, ykey, xkey);
-            single_phase.d2smolardy2[i][j] = AS->second_partial_deriv(iSmolar, ykey, xkey, ykey, xkey);
+            d2Tdx2[i][j] = AS->second_partial_deriv(iT, xkey, ykey, xkey, ykey);
+            d2Tdxdy[i][j] = AS->second_partial_deriv(iT, xkey, ykey, ykey, xkey);
+            d2Tdy2[i][j] = AS->second_partial_deriv(iT, ykey, xkey, ykey, xkey);
+            d2pdx2[i][j] = AS->second_partial_deriv(iP, xkey, ykey, xkey, ykey);
+            d2pdxdy[i][j] = AS->second_partial_deriv(iP, xkey, ykey, ykey, xkey);
+            d2pdy2[i][j] = AS->second_partial_deriv(iP, ykey, xkey, ykey, xkey);
+            d2rhomolardx2[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, xkey, ykey);
+            d2rhomolardxdy[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, ykey, xkey);
+            d2rhomolardy2[i][j] = AS->second_partial_deriv(iDmolar, ykey, xkey, ykey, xkey);
+            d2hmolardx2[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, xkey, ykey);
+            d2hmolardxdy[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, ykey, xkey);
+            d2hmolardy2[i][j] = AS->second_partial_deriv(iHmolar, ykey, xkey, ykey, xkey);
+            d2smolardx2[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, xkey, ykey);
+            d2smolardxdy[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, ykey, xkey);
+            d2smolardy2[i][j] = AS->second_partial_deriv(iSmolar, ykey, xkey, ykey, xkey);
         }
     }
 }
-
-void GriddedTableBackend::write_tables(std::string &directory){
-    std::ofstream ofs("single_phase.bin", std::ofstream::binary);
-    msgpack::pack(ofs, single_phase);
-    ofs.close();
+std::string TabularBackend::path_to_tables(void){
+    std::vector<std::string> fluids = AS->fluid_names();
+    return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(AS->fluid_names(),"&") + ")";
 }
-void GriddedTableBackend::load_tables(std::string &directory){
+void TabularBackend::write_tables(){
+    std::string path = path_to_tables();
+    make_dirs(path);
+    {
+        std::ofstream ofs(std::string(path + "/single_phase_logph.bin").c_str(), std::ofstream::binary);
+        msgpack::pack(ofs, single_phase_logph);
+    }
+    {
+        std::ofstream ofs(std::string(path + "/single_phase_logpT.bin").c_str(), std::ofstream::binary);
+        msgpack::pack(ofs, single_phase_logpT);
+    }
+}
+void TabularBackend::load_tables(){
+    std::string path_to_logph = path_to_tables() + "/single_phase_logph.bin";
+    std::ifstream ifs(path_to_logph.c_str(), std::ifstream::binary);
     
-    std::ifstream ifs("single_phase.bin", std::ifstream::binary);
+    if ( (ifs.rdstate() & std::ifstream::failbit ) != 0 ){
+        if (get_debug_level() > 0){std::cout << format("Error loading table %s", path_to_logph.c_str()) << std::endl;}
+        throw UnableToLoadException(format("Error loading table %s", path_to_logph.c_str()));
+    }
+    
     std::stringstream buffer;
     buffer << ifs.rdbuf();
     msgpack::unpacked upd;
     std::string sbuffer = buffer.str();
     std::size_t N = sbuffer.size();
-    msgpack::unpack(upd, sbuffer.c_str(), N);
-    msgpack::object deserialized = upd.get();
-    deserialized.convert(&single_phase);
+    if ( N == 0 ){
+        if (get_debug_level() > 0){std::cout << format("No data was read from table %s", path_to_logph.c_str()) << std::endl;}
+        throw UnableToLoadException(format("No data was read from table %s", path_to_logph.c_str()));
+    }
+    try{
+        msgpack::unpack(upd, sbuffer.c_str(), N);
+        msgpack::object deserialized = upd.get();
+        LogPHTable temp_single_phase_logph;
+        deserialized.convert(&temp_single_phase_logph);
+        temp_single_phase_logph.unpack_matrices();
+        if (single_phase_logph.Nx != temp_single_phase_logph.Nx || single_phase_logph.Ny != temp_single_phase_logph.Ny)
+        {
+            throw ValueError(format("old [%dx%d] and new [%dx%d] dimensions don't agree",temp_single_phase_logph.Nx, temp_single_phase_logph.Ny, single_phase_logph.Nx, single_phase_logph.Ny));
+        }
+        else if (single_phase_logph.revision > temp_single_phase_logph.revision)
+        {
+            throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp_single_phase_logph.revision, single_phase_logph.revision));
+        }
+        single_phase_logph = temp_single_phase_logph; // Copy
+        
+        if (get_debug_level() > 0){std::cout << format("Loaded table: %s", path_to_logph.c_str()) << std::endl;}
+    }
+    catch(std::exception &){
+        std::string err = format("Unable to deserialize %s", path_to_logph.c_str());
+        if (get_debug_level() > 0){std::cout << err << std::endl;}
+        throw UnableToLoadException(err);
+    }
 }
     
 } /* namespace CoolProp */

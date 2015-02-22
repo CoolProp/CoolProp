@@ -40,31 +40,21 @@ std::string format(const char* fmt, ...)
     return ret;
 }
 
-std::vector<std::string> strsplit(std::string s, char del)
-{
-    std::size_t iL = 0, iR = 0, N = s.size();
-    std::vector<std::string> v;
-    // Find the first instance of the delimiter
-    iR = s.find_first_of(del);
-    // Delimiter not found, return the same string again
-    if (iR == std::string::npos){
-        v.push_back(s);
-        return v;
+// See http://stackoverflow.com/a/236803/1360263 (http://stackoverflow.com/questions/236129/split-a-string-in-c)
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
     }
-    while (iR != N-1)
-    {
-        v.push_back(s.substr(iL,iR-iL));
-        iL = iR;
-        iR = s.find_first_of(del,iR+1);
-        // Move the iL to the right to avoid the delimiter
-        iL += 1;
-        if (iR == std::string::npos)
-        {
-            v.push_back(s.substr(iL,N-iL));
-            break;
-        }
-    }
-    return v;
+    return elems;
+}
+
+// See http://stackoverflow.com/a/236803/1360263 (http://stackoverflow.com/questions/236129/split-a-string-in-c)
+std::vector<std::string> strsplit(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    split(s, delim, elems);
+    return elems;
 }
     
 double interp1d(std::vector<double> *x, std::vector<double> *y, double x0)
