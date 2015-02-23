@@ -1,7 +1,7 @@
 #ifndef COOLPROPTOOLS_H
 #define COOLPROPTOOLS_H
 
-    #define _CRT_SECURE_NO_WARNINGS
+	#define _CRT_SECURE_NO_WARNINGS
 
     #include "PlatformDetermination.h"
     #include "Exceptions.h"
@@ -12,12 +12,11 @@
     #include "float.h"
 
     #if defined(__ISWINDOWS__)
-        #if defined(__MINGW32__)
-            #include <sys/types.h>
-            #include <sys/stat.h>
-        #else
-        #endif    
+		#include <sys/types.h>
+        #include <sys/stat.h>
         #include <windows.h> // for the CreateDirectory function
+		#undef min
+		#undef max
     #else
         #include <unistd.h>
         #include <sys/types.h>
@@ -229,8 +228,10 @@
      */
     void solve_cubic(double a, double b, double c, double d, int &N, double &x0, double &x1, double &x2);
 
-    inline double min3(double x1, double x2, double x3){return std::min(std::min(x1, x2), x3);};
-    inline double max3(double x1, double x2, double x3){return std::max(std::max(x1, x2), x3);};
+    template<class T> inline double min3(T x1, T x2, T x3){return std::min(std::min(x1, x2), x3);};
+    template<class T> inline double max3(T x1, T x2, T x3){return std::max(std::max(x1, x2), x3);};
+    template<class T> inline double min4(T x1, T x2, T x3, T x4){return std::min(std::min(std::min(x1, x2), x3), x4);};
+    template<class T> inline double max4(T x1, T x2, T x3, T x4){return std::max(std::max(std::max(x1, x2), x3), x4);};
 
     inline bool double_equal(double a, double b){return std::abs(a - b) <= 1 * DBL_EPSILON * std::max(std::abs(a), std::abs(b));};
 
@@ -325,7 +326,7 @@
     }
 
 /// Make a linearly spaced vector of points
-template <typename T> std::vector<T> linspace(T xmin, T xmax, int n) {
+template <typename T> std::vector<T> linspace(T xmin, T xmax, std::size_t n) {
     std::vector<T> x(n, 0.0);
     
     for ( std::size_t i = 0;  i < n; ++i) {
@@ -334,7 +335,7 @@ template <typename T> std::vector<T> linspace(T xmin, T xmax, int n) {
     return x;
 }
 /// Make a base-10 logarithmically spaced vector of points
-template <typename T> std::vector<T> log10space(T xmin, T xmax, int n) {
+template <typename T> std::vector<T> log10space(T xmin, T xmax, std::size_t n) {
     std::vector<T> x(n, 0.0);
     T logxmin = log10(xmin), logxmax = log10(xmax);
     
@@ -344,7 +345,7 @@ template <typename T> std::vector<T> log10space(T xmin, T xmax, int n) {
     return x;
 }
 /// Make a base-e logarithmically spaced vector of points
-template <typename T> std::vector<T> logspace(T xmin, T xmax, int n) {
+template <typename T> std::vector<T> logspace(T xmin, T xmax, std::size_t n) {
     std::vector<T> x(n, 0.0);
     T logxmin = log(xmin), logxmax = log(xmax);
     
@@ -354,9 +355,9 @@ template <typename T> std::vector<T> logspace(T xmin, T xmax, int n) {
     return x;
 }
 
-template <typename T> void bisect_vector(const std::vector<double> &vec, T val, std::size_t &i)
+template <typename T> void bisect_vector(const std::vector<T> &vec, T val, std::size_t &i)
 {
-    double rL, rM, rR;
+    T rL, rM, rR;
     std::size_t N = vec.size(), L = 0, R = N-1, M = (L+R)/2;
     rL = vec[L] - val; rR = vec[R] - val;
     while (R - L > 1){
@@ -491,6 +492,7 @@ template<class T> void normalize_vector(std::vector<T> &x)
             } 
             return std::string(home);
         #elif defined(__ISWINDOWS__)
+			
             char * pUSERPROFILE = getenv("USERPROFILE");
             if (pUSERPROFILE != NULL) {
                 return std::string(pUSERPROFILE);
@@ -552,11 +554,11 @@ template<class T> void normalize_vector(std::vector<T> &x)
                 {
                     #if defined(__ISWINDOWS__) // Defined for 32-bit and 64-bit windows
                         #if defined(_UNICODE)
-                            bool errcode = CreateDirectoryA((LPCSTR)path.c_str(),NULL);
+                            int errcode = CreateDirectoryA((LPCSTR)path.c_str(),NULL);
                         #else
-                            bool errcode = CreateDirectory((LPCSTR)path.c_str(),NULL);
+                            int errcode = CreateDirectory((LPCSTR)path.c_str(),NULL);
                         #endif
-                        if (!errcode){
+                        if (errcode == 0){
                             switch(GetLastError()){
                                 case ERROR_ALREADY_EXISTS:
                                     break;

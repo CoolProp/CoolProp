@@ -5,6 +5,8 @@
  *      Author: jowr
  */
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdlib.h>
 #include "math.h"
 #include "AbstractState.h"
@@ -504,7 +506,6 @@ void get_dT_drho_second_derivatives(AbstractState &AS, int index, long double &d
                 rho = AS.rhomolar(),
                 rhor = AS.rhomolar_reducing(),
                 Tr = AS.T_reducing(),
-                dT_dtau = -pow(T, 2)/Tr,
                 R = AS.gas_constant(),
                 delta = rho/rhor,
                 tau = Tr/T;

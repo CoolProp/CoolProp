@@ -3,12 +3,58 @@
 #include "TabularBackends.h"
 #include "CoolProp.h"
 #include <sstream>
-
-namespace CoolProp{
+#include "time.h"
+void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::AbstractState> &AS){
+    const bool debug = get_debug_level() > 5 || true;
+    if (debug){
+        std::cout << format("***********************************************\n");
+        std::cout << format(" Saturation Table (%s) \n", AS->name().c_str());
+        std::cout << format("***********************************************\n");
+    }
+    resize(N);
+    // ------------------------
+    // Actually build the table
+    // ------------------------
+    double p, pmin = AS->p_triple()*1.001, pmax = 0.9999999*AS->p_critical();
+    for (std::size_t i = 0; i < N-1; ++i)
+    {
+        // Log spaced
+        p = exp(log(pmin) + (log(pmax) - log(pmin))/(N-1)*i);
+        
+        // Saturated liquid
+        try{
+            AS->update(PQ_INPUTS, p, 0);
+            pL[i] = p; TL[i] = AS->T();  rhomolarL[i] = AS->rhomolar(); 
+            hmolarL[i] = AS->hmolar(); smolarL[i] = AS->smolar(); umolarL[i] = AS->umolar();
+        }
+        catch(std::exception &e){
+            // That failed for some reason, go to the next pair
+            if (debug){std::cout << " " << e.what() << std::endl;}
+            continue;
+        }
+        // Saturated vapor
+        try{
+            AS->update(PQ_INPUTS, p, 1);
+            pV[i] = p; TV[i] = AS->T(); rhomolarV[i] = AS->rhomolar();
+            hmolarV[i] = AS->hmolar(); smolarV[i] = AS->smolar(); umolarV[i] = AS->umolar();
+        }
+        catch(std::exception &e){
+            // That failed for some reason, go to the next pair
+            if (debug){std::cout << " " << e.what() << std::endl;}
+            continue;
+        }
+    }
+    // Last point is at the critical point
+    AS->update(PQ_INPUTS, AS->p_critical(), 1);
+    std::size_t i = N-1;
+    pV[i] = p; TV[i] = AS->T(); rhomolarV[i] = AS->rhomolar();
+    hmolarV[i] = AS->hmolar(); smolarV[i] = AS->smolar(); umolarV[i] = AS->umolar();
+    pL[i] = p; TL[i] = AS->T();  rhomolarL[i] = AS->rhomolar(); 
+    hmolarL[i] = AS->hmolar(); smolarL[i] = AS->smolar(); umolarL[i] = AS->umolar();
+}
     
-void SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)
+void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)
 {
-    
     long double x, y;
     const bool debug = get_debug_level() > 5 || true;
 
@@ -56,6 +102,22 @@ void SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)
                 // --------------------
                 try{
                     AS->update(HmolarP_INPUTS, x, y);
+                }
+                catch(std::exception &e){
+                    // That failed for some reason, go to the next pair
+                    if (debug){std::cout << " " << e.what() << std::endl;}
+                    continue;
+                }
+                
+                if (debug){std::cout << " OK" << std::endl;}
+            }
+            else if (xkey == iT && ykey == iP)
+            {
+                // --------------------
+                //   Update the state
+                // --------------------
+                try{
+                    AS->update(PT_INPUTS, y, x);
                 }
                 catch(std::exception &e){
                     // That failed for some reason, go to the next pair
@@ -119,11 +181,11 @@ void SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)
         }
     }
 }
-std::string TabularBackend::path_to_tables(void){
+std::string CoolProp::TabularBackend::path_to_tables(void){
     std::vector<std::string> fluids = AS->fluid_names();
     return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(AS->fluid_names(),"&") + ")";
 }
-void TabularBackend::write_tables(){
+void CoolProp::TabularBackend::write_tables(){
     std::string path = path_to_tables();
     make_dirs(path);
     {
@@ -134,48 +196,14 @@ void TabularBackend::write_tables(){
         std::ofstream ofs(std::string(path + "/single_phase_logpT.bin").c_str(), std::ofstream::binary);
         msgpack::pack(ofs, single_phase_logpT);
     }
-}
-void TabularBackend::load_tables(){
-    std::string path_to_logph = path_to_tables() + "/single_phase_logph.bin";
-    std::ifstream ifs(path_to_logph.c_str(), std::ifstream::binary);
-    
-    if ( (ifs.rdstate() & std::ifstream::failbit ) != 0 ){
-        if (get_debug_level() > 0){std::cout << format("Error loading table %s", path_to_logph.c_str()) << std::endl;}
-        throw UnableToLoadException(format("Error loading table %s", path_to_logph.c_str()));
-    }
-    
-    std::stringstream buffer;
-    buffer << ifs.rdbuf();
-    msgpack::unpacked upd;
-    std::string sbuffer = buffer.str();
-    std::size_t N = sbuffer.size();
-    if ( N == 0 ){
-        if (get_debug_level() > 0){std::cout << format("No data was read from table %s", path_to_logph.c_str()) << std::endl;}
-        throw UnableToLoadException(format("No data was read from table %s", path_to_logph.c_str()));
-    }
-    try{
-        msgpack::unpack(upd, sbuffer.c_str(), N);
-        msgpack::object deserialized = upd.get();
-        LogPHTable temp_single_phase_logph;
-        deserialized.convert(&temp_single_phase_logph);
-        temp_single_phase_logph.unpack_matrices();
-        if (single_phase_logph.Nx != temp_single_phase_logph.Nx || single_phase_logph.Ny != temp_single_phase_logph.Ny)
-        {
-            throw ValueError(format("old [%dx%d] and new [%dx%d] dimensions don't agree",temp_single_phase_logph.Nx, temp_single_phase_logph.Ny, single_phase_logph.Nx, single_phase_logph.Ny));
-        }
-        else if (single_phase_logph.revision > temp_single_phase_logph.revision)
-        {
-            throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp_single_phase_logph.revision, single_phase_logph.revision));
-        }
-        single_phase_logph = temp_single_phase_logph; // Copy
-        
-        if (get_debug_level() > 0){std::cout << format("Loaded table: %s", path_to_logph.c_str()) << std::endl;}
-    }
-    catch(std::exception &){
-        std::string err = format("Unable to deserialize %s", path_to_logph.c_str());
-        if (get_debug_level() > 0){std::cout << err << std::endl;}
-        throw UnableToLoadException(err);
+    {
+        std::ofstream ofs(std::string(path + "/pure_saturation.bin").c_str(), std::ofstream::binary);
+        msgpack::pack(ofs, pure_saturation);
     }
 }
-    
-} /* namespace CoolProp */
+void CoolProp::TabularBackend::load_tables(){
+    std::string path_to_tables = this->path_to_tables();
+    load_table(single_phase_logph, path_to_tables, "single_phase_logph.bin");
+    load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin");
+    load_table(pure_saturation, path_to_tables, "pure_saturation.bin");
+}
