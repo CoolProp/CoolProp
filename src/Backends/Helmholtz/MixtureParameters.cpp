@@ -29,7 +29,7 @@ class PredefinedMixturesLibrary{
             // Get the fluid names
             dict.add_string_vector("fluids", cpjson::get_string_array(*itr, "fluids"));
             // Get the mole fractions
-            dict.add_double_vector("mole_fractions", cpjson::get_long_double_array(*itr,"mole_fractions"));
+            dict.add_double_vector("mole_fractions", cpjson::get_double_array(*itr,"mole_fractions"));
 
             predefined_mixture_map.insert(std::pair<std::string, Dictionary >(name, dict));
         }
@@ -47,7 +47,7 @@ std::string get_csv_predefined_mixtures()
     return strjoin(out, ",");
 }
 
-bool is_predefined_mixture(const std::string &name, Dictionary &dict){
+bool is_predefined_mixture(const std::string name, Dictionary &dict){
     std::map<std::string, Dictionary>::iterator iter = predefined_mixtures_library.predefined_mixture_map.find(name);
     if (iter != predefined_mixtures_library.predefined_mixture_map.end()){
         dict = iter->second;
@@ -234,22 +234,22 @@ public:
             dict.add_string("type", type);
 
             // Terms for the power (common to both types)
-            dict.add_double_vector("n", cpjson::get_long_double_array(*itr, "n"));
-            dict.add_double_vector("d", cpjson::get_long_double_array(*itr, "d"));
-            dict.add_double_vector("t", cpjson::get_long_double_array(*itr, "t"));
+            dict.add_double_vector("n", cpjson::get_double_array(*itr, "n"));
+            dict.add_double_vector("d", cpjson::get_double_array(*itr, "d"));
+            dict.add_double_vector("t", cpjson::get_double_array(*itr, "t"));
 
             // Now we need to load additional terms
             if (!type.compare("GERG-2008")){
                 // Number of terms that are power terms
                 dict.add_number("Npower", cpjson::get_double(*itr, "Npower"));
                 // Terms for the gaussian
-                dict.add_double_vector("eta", cpjson::get_long_double_array(*itr, "eta"));
-                dict.add_double_vector("epsilon", cpjson::get_long_double_array(*itr, "epsilon"));
-                dict.add_double_vector("beta", cpjson::get_long_double_array(*itr, "beta"));
-                dict.add_double_vector("gamma", cpjson::get_long_double_array(*itr, "gamma"));
+                dict.add_double_vector("eta", cpjson::get_double_array(*itr, "eta"));
+                dict.add_double_vector("epsilon", cpjson::get_double_array(*itr, "epsilon"));
+                dict.add_double_vector("beta", cpjson::get_double_array(*itr, "beta"));
+                dict.add_double_vector("gamma", cpjson::get_double_array(*itr, "gamma"));
             }
             else if (!type.compare("Exponential")){
-                dict.add_double_vector("l", cpjson::get_long_double_array(*itr, "l"));
+                dict.add_double_vector("l", cpjson::get_double_array(*itr, "l"));
             }
             else{
                 throw ValueError(format("It was not possible to parse departure function with type [%s]", type.c_str()));
@@ -352,7 +352,7 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
 
             if (std::abs(HEOS.Excess.F[i][j]) < DBL_EPSILON){
                 // Empty departure function that will just return 0
-                std::vector<long double> n(1,0), d(1,1), t(1,1), l(1,0);
+                std::vector<double> n(1,0), d(1,1), t(1,1), l(1,0);
                 HEOS.Excess.DepartureFunctionMatrix[i][j].reset(new ExponentialDepartureFunction(n,d,t,l));
                 continue;
             }
@@ -366,9 +366,9 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
             if (dict_dep.is_empty()){throw ValueError(format("Departure function name [%s] seems to be invalid",Name.c_str()));}
 
             // These terms are common
-            std::vector<long double> n = dict_dep.get_double_vector("n");
-            std::vector<long double> d = dict_dep.get_double_vector("d");
-            std::vector<long double> t = dict_dep.get_double_vector("t");
+            std::vector<double> n = dict_dep.get_double_vector("n");
+            std::vector<double> d = dict_dep.get_double_vector("d");
+            std::vector<double> t = dict_dep.get_double_vector("t");
 
             std::string type_dep = dict_dep.get_string("type");
 
@@ -376,16 +376,16 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
                 // Number of power terms needed
                 int Npower = static_cast<int>(dict_dep.get_number("Npower"));
                 // Terms for the gaussian
-                std::vector<long double> eta = dict_dep.get_double_vector("eta");
-                std::vector<long double> epsilon = dict_dep.get_double_vector("epsilon");
-                std::vector<long double> beta = dict_dep.get_double_vector("beta");
-                std::vector<long double> gamma = dict_dep.get_double_vector("gamma");
+                std::vector<double> eta = dict_dep.get_double_vector("eta");
+                std::vector<double> epsilon = dict_dep.get_double_vector("epsilon");
+                std::vector<double> beta = dict_dep.get_double_vector("beta");
+                std::vector<double> gamma = dict_dep.get_double_vector("gamma");
                 HEOS.Excess.DepartureFunctionMatrix[i][j].reset(new GERG2008DepartureFunction(n,d,t,eta,epsilon,beta,gamma,Npower));
             }
             else if (!type_dep.compare("Exponential"))
             {
                 // Powers of the exponents inside the exponential term
-                std::vector<long double> l = dict_dep.get_double_vector("l");
+                std::vector<double> l = dict_dep.get_double_vector("l");
                 HEOS.Excess.DepartureFunctionMatrix[i][j].reset(new ExponentialDepartureFunction(n,d,t,l));
             }
             else

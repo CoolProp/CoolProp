@@ -358,9 +358,9 @@ public:
     /// Clear all the cached values
     bool clear();
 
-//    void set_mole_fractions(const std::vector<double> &mole_fractions){set_mole_fractions(std::vector<long double>(mole_fractions.begin(), mole_fractions.end()));};
-//    void set_mass_fractions(const std::vector<double> &mass_fractions){set_mass_fractions(std::vector<long double>(mass_fractions.begin(), mass_fractions.end()));};
-//    void set_volu_fractions(const std::vector<double> &volu_fractions){set_volu_fractions(std::vector<long double>(volu_fractions.begin(), volu_fractions.end()));};
+    void set_mole_fractions(const std::vector<double> &mole_fractions){set_mole_fractions(std::vector<long double>(mole_fractions.begin(), mole_fractions.end()));};
+    void set_mass_fractions(const std::vector<double> &mass_fractions){set_mass_fractions(std::vector<long double>(mass_fractions.begin(), mass_fractions.end()));};
+    void set_volu_fractions(const std::vector<double> &volu_fractions){set_volu_fractions(std::vector<long double>(volu_fractions.begin(), volu_fractions.end()));};
 
     virtual const CoolProp::SimpleState & get_reducing_state(){return _reducing;};
     const CoolProp::SimpleState & get_state(const std::string &state){return calc_state(state);};

@@ -12,7 +12,7 @@
 #include "MatrixMath.h"
 #include "Exceptions.h"
 
-double root_sum_square(const std::vector<double> &x)
+double root_sum_square(std::vector<double> x)
 {
     double sum = 0;
     for (unsigned int i=0; i<x.size(); i++)
@@ -67,7 +67,7 @@ std::vector<std::string> strsplit(std::string s, char del)
     return v;
 }
     
-double interp1d(const std::vector<double> *x, const std::vector<double> *y, double x0)
+double interp1d(std::vector<double> *x, std::vector<double> *y, double x0)
 {
     std::size_t i,L,R,M;
     L=0;

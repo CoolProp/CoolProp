@@ -141,8 +141,8 @@
 
     void MatInv_2(double A[2][2] , double B[2][2]);
 
-    double root_sum_square(const std::vector<double> &x);
-    double interp1d(const std::vector<double> *x, const std::vector<double> *y, double x0);
+    double root_sum_square(std::vector<double> x);
+    double interp1d(std::vector<double> *x, std::vector<double> *y, double x0);
     double powInt(double x, int y);
     
     #define POW2(x) ((x)*(x))
@@ -252,14 +252,14 @@
     private:
         std::map<std::string, double> numbers;
         std::map<std::string, std::string> strings;
-        std::map<std::string, std::vector<long double> > double_vectors;
+        std::map<std::string, std::vector<double> > double_vectors;
         std::map<std::string, std::vector<std::string> > string_vectors;
     public:
         Dictionary(){};
         bool is_empty(void){return numbers.empty() && strings.empty() && double_vectors.empty() && string_vectors.empty();}
         void add_string(std::string s1, std::string s2){ strings.insert(std::pair<std::string, std::string>(s1, s2));}
         void add_number(std::string s1, double d){ numbers.insert(std::pair<std::string, double>(s1, d));}
-        void add_double_vector(std::string s1, std::vector<long double> d){ double_vectors.insert(std::pair<std::string, std::vector<long double> >(s1, d));}
+        void add_double_vector(std::string s1, std::vector<double> d){ double_vectors.insert(std::pair<std::string, std::vector<double> >(s1, d));}
         void add_string_vector(std::string s1, std::vector<std::string> d){ string_vectors.insert(std::pair<std::string, std::vector<std::string> >(s1, d));}
         std::string get_string(std::string s)
         {
@@ -283,7 +283,7 @@
         {
             return get_double(s);
         };
-        const std::vector<long double>& get_double_vector(std::string s)
+        std::vector<double> get_double_vector(std::string s)
         {
             if (double_vectors.find(s) != double_vectors.end()){ 
                 return double_vectors[s]; 
@@ -292,7 +292,7 @@
                 throw CoolProp::ValueError(format("%s could not be matched in get_double_vector",s.c_str()));
             }
         };
-        const std::vector<std::string>& get_string_vector(std::string s)
+        std::vector<std::string> get_string_vector(std::string s)
         {
             if (string_vectors.find(s) != string_vectors.end()){ 
                 return string_vectors[s]; 

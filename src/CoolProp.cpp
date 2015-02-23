@@ -113,7 +113,7 @@ bool has_solution_concentration(const std::string &fluid_string)
     return (fluid_string.find('-') != std::string::npos && fluid_string.find('%') != std::string::npos);
 }
 
-std::string extract_fractions(const std::string &fluid_string, std::vector<long double> &fractions)
+std::string extract_fractions(const std::string &fluid_string, std::vector<double> &fractions)
 {
     if (has_fractions_in_string(fluid_string))
     {
@@ -184,13 +184,13 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<long 
 
 void _PropsSI_initialize(const std::string &backend,
                          const std::vector<std::string> &fluid_names,
-                         const std::vector<long double> &z,
+                         const std::vector<double> &z,
                          shared_ptr<AbstractState> &State){
 
     if (fluid_names.empty()){throw ValueError("fluid_names cannot be empty");}
 
-    std::vector<long double> fractions(1, 1.0); // Default to one component, unity fraction
-    const std::vector<long double> *fractions_ptr = NULL; // Pointer to the array to be used;
+    std::vector<double> fractions(1, 1.0); // Default to one component, unity fraction
+    const std::vector<double> *fractions_ptr = NULL; // Pointer to the array to be used;
 
     if (fluid_names.size() > 1){
         // Set the pointer - we are going to use the supplied fractions; they must be provided
@@ -386,7 +386,7 @@ void _PropsSImulti(const std::vector<std::string> &Outputs,
                    const std::vector<double> &Prop2,
                    const std::string &backend,
                    const std::vector<std::string> &fluids,
-                   const std::vector<long double> &fractions,
+                   const std::vector<double> &fractions,
                    std::vector<std::vector<double> > &IO)
 {
     shared_ptr<AbstractState> State;
@@ -434,7 +434,7 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
                                                const std::vector<double> &Prop2,
                                                const std::string &backend,
                                                const std::vector<std::string> &fluids,
-                                               const std::vector<long double> &fractions)
+                                               const std::vector<double> &fractions)
 {
     std::vector<std::vector<double> > IO;
 
@@ -464,7 +464,7 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
 }
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref)
 {
-    std::string backend, fluid; std::vector<long double> fractions(1,1.0);
+    std::string backend, fluid; std::vector<double> fractions(1,1.0);
     #if !defined(NO_ERROR_CATCHING)
     try{
     #endif
@@ -683,7 +683,7 @@ bool is_valid_fluid_string(std::string &input_fluid_string)
 {
     try{
         std::string backend, fluid;
-        std::vector<long double> fractions;
+        std::vector<double> fractions;
         // First try to extract backend and fractions
         extract_backend(input_fluid_string, backend, fluid);
         std::string fluid_string = extract_fractions(fluid, fractions);

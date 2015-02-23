@@ -1169,7 +1169,7 @@ public:
     /**
     @param key Either a CAS number or the name (CAS number should be preferred)
     */
-    CoolPropFluid& get(const std::string &key)
+    CoolPropFluid& get(std::string key)
     {
         std::map<std::string, std::size_t>::iterator it;
         // Try to find it

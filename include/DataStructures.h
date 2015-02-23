@@ -16,7 +16,9 @@ namespace CoolProp {
 struct SimpleState
 {
     double rhomolar, T, p, hmolar, smolar, umolar, Q;
-    SimpleState() : rhomolar(_HUGE), T(_HUGE), p(_HUGE), hmolar(_HUGE), smolar(_HUGE), umolar(_HUGE), Q(_HUGE) {}
+    SimpleState(){rhomolar = _HUGE; T = _HUGE; p = _HUGE; 
+                  hmolar = _HUGE; smolar = _HUGE, umolar = _HUGE;
+                  Q = _HUGE;}
     bool is_valid(){return ValidNumber(rhomolar) && ValidNumber(T) && ValidNumber(hmolar) && ValidNumber(p);}
 };
 
@@ -25,7 +27,7 @@ struct SsatSimpleState : public SimpleState
 {
     enum SsatSimpleStateEnum {SSAT_MAX_NOT_SET=0, SSAT_MAX_DOESNT_EXIST, SSAT_MAX_DOES_EXIST};
     SsatSimpleStateEnum exists;
-    SsatSimpleState() : SimpleState() {}
+    SsatSimpleState(){ SimpleState(); }
 };
 
 
@@ -40,7 +42,7 @@ enum parameters{
     INVALID_PARAMETER = 0,
     
     // General parameters
-    igas_constant,
+	igas_constant,
     imolar_mass, 
     iacentric_factor,
     irhomolar_reducing, 
@@ -50,7 +52,7 @@ enum parameters{
     irhomass_reducing, 
     irhomass_critical, 
     iP_critical, 
-    iP_reducing,
+	iP_reducing,
     iT_triple, 
     iP_triple, 
     iT_min, 
@@ -183,7 +185,7 @@ enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLU
 // !! If you add a parameter, update the map in the corresponding CPP file !!
 /// These are input pairs that can be used (in each pair, input keys are sorted alphabetically)
 enum input_pairs{
-    INPUT_PAIR_INVALID = 0, // Default (invalid) value
+	INPUT_PAIR_INVALID = 0, // Default (invalid) value
     QT_INPUTS, ///< Molar quality, Temperature in K
     PQ_INPUTS, ///< Pressure in Pa, Molar quality
     QSmolar_INPUTS, ///< Molar quality, Entropy in J/mol/K
