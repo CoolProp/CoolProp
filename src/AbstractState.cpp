@@ -184,11 +184,11 @@ double AbstractState::trivial_keyed_output(int key)
     case iP_triple:
         return this->p_triple();
     case iT_reducing:
-        return get_reducing_state().T;
+        return calc_T_reducing();
     case irhomolar_reducing:
-        return get_reducing_state().rhomolar;
+        return calc_rhomolar_reducing();
 	case iP_reducing:
-		return get_reducing_state().p;
+		return calc_p_reducing();
     case iP_critical:
         return this->p_critical();
     case iT_critical:
