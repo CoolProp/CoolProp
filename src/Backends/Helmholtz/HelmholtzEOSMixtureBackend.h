@@ -240,6 +240,7 @@ public:
 	
 	long double calc_T_reducing(void){return get_reducing_state().T;};
     long double calc_rhomolar_reducing(void){return get_reducing_state().rhomolar;};
+    long double calc_p_reducing(void){return get_reducing_state().p;};
 
     std::string calc_name(void);
 	std::vector<std::string> calc_fluid_names(void);

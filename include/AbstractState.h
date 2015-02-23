@@ -239,14 +239,14 @@ protected:
     virtual long double calc_T_reducing(void){throw NotImplementedError("calc_T_reducing is not implemented for this backend");};
     /// Using this backend, get the critical point pressure in Pa
     virtual long double calc_p_critical(void){throw NotImplementedError("calc_p_critical is not implemented for this backend");};
+    /// Using this backend, get the reducing point pressure in Pa
+    virtual long double calc_p_reducing(void){throw NotImplementedError("calc_p_reducing is not implemented for this backend");};
     /// Using this backend, get the critical point molar density in mol/m^3
     virtual long double calc_rhomolar_critical(void){throw NotImplementedError("calc_rhomolar_critical is not implemented for this backend");};
 	/// Using this backend, get the reducing point molar density in mol/m^3
     virtual long double calc_rhomolar_reducing(void){throw NotImplementedError("calc_rhomolar_reducing is not implemented for this backend");};
-
     /// Using this backend, construct the phase envelope, the variable type describes the type of phase envelope to be built.
     virtual void calc_phase_envelope(const std::string &type){throw NotImplementedError("calc_phase_envelope is not implemented for this backend");};
-    
     /// 
     virtual long double calc_rhomass(void){return _rhomolar*molar_mass();}
     virtual long double calc_hmass(void){return hmolar()/molar_mass();}
@@ -274,7 +274,7 @@ protected:
     /// Using this backend, unspecify the phase
     virtual void calc_unspecify_phase(void){throw NotImplementedError("This backend does not implement calc_unspecify_phase function");};
     /// Using this backend get a vector of fluid names
-	virtual std::vector<std::string> calc_fluid_names(void){throw NotImplementedError("This backend does not implement fluid_names function");};
+	virtual std::vector<std::string> calc_fluid_names(void){throw NotImplementedError("This backend does not implement calc_fluid_names function");};
     /// Using this backend, calculate a phase given by the state string
     /// @param state A string that describes the state desired, one of "hs_anchor", "critical"/"crit", "reducing"
     virtual const CoolProp::SimpleState & calc_state(const std::string &state){throw NotImplementedError("calc_state is not implemented for this backend");};
