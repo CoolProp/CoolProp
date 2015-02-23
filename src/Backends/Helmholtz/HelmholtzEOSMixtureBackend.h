@@ -35,7 +35,7 @@ protected:
 public:
     HelmholtzEOSMixtureBackend(){
         imposed_phase_index = iphase_not_imposed; _phase = iphase_unknown;};
-    HelmholtzEOSMixtureBackend(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
+    HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid*> &components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
     virtual ~HelmholtzEOSMixtureBackend(){};
     shared_ptr<ReducingFunction> Reducing;
@@ -119,7 +119,7 @@ public:
      * @param components The components that are to be used in this mixture
      * @param generate_SatL_and_SatV true if SatL and SatV classes should be added, false otherwise.  Added so that saturation classes can be added without infinite recursion of adding saturation classes
      */
-    void set_components(std::vector<CoolPropFluid*> components, bool generate_SatL_and_SatV = true);
+    void set_components(const std::vector<CoolPropFluid*> &components, bool generate_SatL_and_SatV = true);
 
     /** \brief Specify the phase - this phase will always be used in calculations
      * 
