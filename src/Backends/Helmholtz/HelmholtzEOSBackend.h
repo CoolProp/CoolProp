@@ -33,8 +33,8 @@ public:
             }
         }
         else{
-            components = std::vector<CoolPropFluid*>(1,&(get_library().get(name)));
-            mole_fractions = std::vector<double>(1,1);
+            components.push_back(&(get_library().get(name))); // Until now it's empty
+            mole_fractions.push_back(1.);
         }
         // Set the components
         set_components(components);
