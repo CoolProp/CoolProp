@@ -32,30 +32,22 @@ scalarMap = cmx.ScalarMappable(norm = cNorm, cmap = plt.get_cmap('jet'))
 
 for a_useless_counter in range(40000):
         
-    h = random.uniform(250000*MM,590000*MM)
+    h = random.uniform(150000*MM,590000*MM)
     p = 10**random.uniform(np.log10(100000),np.log10(7000000))
     CP.set_debug_level(0)
     try:
         
         EOS.update(CoolProp.HmolarP_INPUTS, h, p)
-        rhoEOS = EOS.rhomolar()
-        TEOS = EOS.T()
+        rhoEOS = EOS.rhomolar(); TEOS = EOS.T()
         
         TTSE.update(CoolProp.HmolarP_INPUTS, h, p)
-        rhoTTSE = TTSE.rhomolar()
-        TTTSE = TTSE.T()
-        
-        #print h, p, rhoTTSE, TTTSE
+        rhoTTSE = TTSE.rhomolar(); TTTSE = TTSE.T()
         
         errorTTSE = abs(rhoTTSE/rhoEOS-1)*100
 
         HHH1.append(h)
         PPP1.append(p)
         EEE1.append(errorTTSE)
-        
-        #~ HHH2.append(h)
-        #~ PPP2.append(p)
-        #~ EEE2.append(errorBICUBIC)
         
     except ValueError as VE:
         print 'ERROR', VE
@@ -81,15 +73,15 @@ for ax in [ax1, ax2]:
     ax.set_yticklabels(labels)
     ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
     
-    #ticks = [250000*MM,350000*MM,450000*MM,550000*MM]
-    #labels = [str(tick) for tick in ticks]
-    #ax.set_xticks(ticks)
-    #ax.set_xticklabels(labels)
+    ticks = [150000*MM, 250000*MM,350000*MM,450000*MM,550000*MM]
+    labels = [str(tick) for tick in ticks]
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(labels)
 
     ax.tick_params(axis='y',which='minor', left='off')
 
-    ax.set_xticklabels(ax.get_xticks()/10**3)
-    ax.set_xlabel('Enthalpy [kJ/mol]')
+    ax.set_xticklabels(ax.get_xticks()/MM/1e3)
+    ax.set_xlabel('Enthalpy [kJ/kg]')
     ax.set_yticklabels(ax.get_yticks()/10**3)
     ax.set_ylabel('Pressure [kPa]')
 
