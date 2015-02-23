@@ -47,7 +47,7 @@ std::string get_csv_predefined_mixtures()
     return strjoin(out, ",");
 }
 
-bool is_predefined_mixture(const std::string name, Dictionary &dict){
+bool is_predefined_mixture(const std::string &name, Dictionary &dict){
     std::map<std::string, Dictionary>::iterator iter = predefined_mixtures_library.predefined_mixture_map.find(name);
     if (iter != predefined_mixtures_library.predefined_mixture_map.end()){
         dict = iter->second;

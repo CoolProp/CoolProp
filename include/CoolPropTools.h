@@ -141,8 +141,8 @@
 
     void MatInv_2(double A[2][2] , double B[2][2]);
 
-    double root_sum_square(std::vector<double> x);
-    double interp1d(std::vector<double> *x, std::vector<double> *y, double x0);
+    double root_sum_square(const std::vector<double> &x);
+    double interp1d(const std::vector<double> *x, const std::vector<double> *y, double x0);
     double powInt(double x, int y);
     
     #define POW2(x) ((x)*(x))
@@ -283,7 +283,7 @@
         {
             return get_double(s);
         };
-        std::vector<double> get_double_vector(std::string s)
+        const std::vector<double>& get_double_vector(std::string s)
         {
             if (double_vectors.find(s) != double_vectors.end()){ 
                 return double_vectors[s]; 
@@ -292,7 +292,7 @@
                 throw CoolProp::ValueError(format("%s could not be matched in get_double_vector",s.c_str()));
             }
         };
-        std::vector<std::string> get_string_vector(std::string s)
+        const std::vector<std::string>& get_string_vector(std::string s)
         {
             if (string_vectors.find(s) != string_vectors.end()){ 
                 return string_vectors[s]; 
