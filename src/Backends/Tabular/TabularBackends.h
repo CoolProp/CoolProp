@@ -45,7 +45,7 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
         msgpack::unpack(upd, sbuffer.c_str(), N);
         msgpack::object deserialized = upd.get();
         
-        // Call the class' deserialize function;  if is is an invalid table, it will cause an exception to be thrown
+        // Call the class' deserialize function;  if it is an invalid table, it will cause an exception to be thrown
         table.deserialize(deserialized);
         double toc = clock();
         if (get_debug_level() > 0){std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc-tic)/CLOCKS_PER_SEC) << std::endl;}
@@ -294,7 +294,7 @@ class LogPHTable : public SinglePhaseGriddedTableData
             long double xmax1 = AS->hmolar();
             AS->update(PT_INPUTS, AS->pmax(), AS->Tmax());
             long double xmax2 = AS->hmolar();
-            xmax = std::min(xmax1, xmax2);
+            xmax = std::max(xmax1, xmax2);
             
             ymax = AS->pmax();
             
