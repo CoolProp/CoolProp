@@ -175,7 +175,7 @@ std::string get_csv_parameter_list();
 /// These are constants for the compositions
 enum composition_types{IFRAC_MASS, IFRAC_MOLE, IFRAC_VOLUME, IFRAC_UNDEFINED, IFRAC_PURE};
 
-const long double R_u_CODATA = 8.3144621; ///< The value for the ideal gas constant in J/mol/K according to CODATA 2010.  This value is used to harmonize all the ideal gas constants.  This is especially important in the critical region.
+const CoolPropDbl R_u_CODATA = 8.3144621; ///< The value for the ideal gas constant in J/mol/K according to CODATA 2010.  This value is used to harmonize all the ideal gas constants.  This is especially important in the critical region.
 
 /// These are unit types for the fluid
 enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLUID_TYPE_INCOMPRESSIBLE_LIQUID, FLUID_TYPE_INCOMPRESSIBLE_SOLUTION, FLUID_TYPE_UNDEFINED};

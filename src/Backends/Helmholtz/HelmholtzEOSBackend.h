@@ -39,7 +39,7 @@ public:
         // Set the components
         set_components(components);
         // Set the mole fractions
-        set_mole_fractions(std::vector<long double>(mole_fractions.begin(), mole_fractions.end()));
+        set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end()));
     };
     virtual ~HelmholtzEOSBackend(){};
 };

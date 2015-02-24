@@ -33,7 +33,7 @@ REFPROPBackend::REFPROPBackend(const std::string & fluid_name) {
     // Set the mole fraction to 1 in the base class (we can't set the mole fraction in this class, 
     // otherwise a NotImplementedError will be returned)
     if (get_mole_fractions().empty()){
-        std::vector<long double> x(1, 1.0); // (one element with value of 1.0)
+        std::vector<CoolPropDbl> x(1, 1.0); // (one element with value of 1.0)
         REFPROPMixtureBackend::set_mole_fractions(x);
     }
 }

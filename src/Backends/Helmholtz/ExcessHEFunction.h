@@ -8,7 +8,7 @@
 
 namespace CoolProp{
 
-typedef std::vector<std::vector<long double> > STLMatrix;
+typedef std::vector<std::vector<CoolPropDbl> > STLMatrix;
 
 /** \brief The abstract base class for departure functions used in the excess part of the Helmholtz energy
  * 
@@ -52,10 +52,10 @@ public:
     {
         /// Break up into power and gaussian terms
         {
-            std::vector<long double> _n(n.begin(), n.begin()+Npower);
-            std::vector<long double> _d(d.begin(), d.begin()+Npower);
-            std::vector<long double> _t(t.begin(), t.begin()+Npower);
-            std::vector<long double> _l(Npower, 0.0);
+            std::vector<CoolPropDbl> _n(n.begin(), n.begin()+Npower);
+            std::vector<CoolPropDbl> _d(d.begin(), d.begin()+Npower);
+            std::vector<CoolPropDbl> _t(t.begin(), t.begin()+Npower);
+            std::vector<CoolPropDbl> _l(Npower, 0.0);
             phi.add_Power(_n, _d, _t, _l);
         }
         if (n.size() == Npower)
@@ -65,13 +65,13 @@ public:
         else
         {
             using_gaussian = true;
-            std::vector<long double> _n(n.begin()+Npower,                   n.end());
-            std::vector<long double> _d(d.begin()+Npower,                   d.end());
-            std::vector<long double> _t(t.begin()+Npower,                   t.end());
-            std::vector<long double> _eta(eta.begin()+Npower,             eta.end());
-            std::vector<long double> _epsilon(epsilon.begin()+Npower, epsilon.end());
-            std::vector<long double> _beta(beta.begin()+Npower,          beta.end());
-            std::vector<long double> _gamma(gamma.begin()+Npower,       gamma.end());
+            std::vector<CoolPropDbl> _n(n.begin()+Npower,                   n.end());
+            std::vector<CoolPropDbl> _d(d.begin()+Npower,                   d.end());
+            std::vector<CoolPropDbl> _t(t.begin()+Npower,                   t.end());
+            std::vector<CoolPropDbl> _eta(eta.begin()+Npower,             eta.end());
+            std::vector<CoolPropDbl> _epsilon(epsilon.begin()+Npower, epsilon.end());
+            std::vector<CoolPropDbl> _beta(beta.begin()+Npower,          beta.end());
+            std::vector<CoolPropDbl> _gamma(gamma.begin()+Npower,       gamma.end());
             phi.add_GERG2008Gaussian(_n, _d, _t, _eta, _epsilon, _beta, _gamma);
         }
     };
@@ -102,10 +102,10 @@ public:
     ExponentialDepartureFunction(const std::vector<double> &n, const std::vector<double> &d,
                                  const std::vector<double> &t, const std::vector<double> &l)
                                  {
-                                     std::vector<long double> _n(n.begin(), n.begin()+n.size());
-                                     std::vector<long double> _d(d.begin(), d.begin()+d.size());
-                                     std::vector<long double> _t(t.begin(), t.begin()+t.size());
-                                     std::vector<long double> _l(l.begin(), l.begin()+l.size());
+                                     std::vector<CoolPropDbl> _n(n.begin(), n.begin()+n.size());
+                                     std::vector<CoolPropDbl> _d(d.begin(), d.begin()+d.size());
+                                     std::vector<CoolPropDbl> _t(t.begin(), t.begin()+t.size());
+                                     std::vector<CoolPropDbl> _l(l.begin(), l.begin()+l.size());
                                      phi.add_Power(_n, _d, _t, _l);
                                  };
     ~ExponentialDepartureFunction(){};
@@ -125,7 +125,7 @@ class ExcessTerm
 public:
     std::size_t N;
     std::vector<std::vector<DepartureFunctionPointer> > DepartureFunctionMatrix;
-    std::vector<std::vector<long double> > F;
+    std::vector<std::vector<CoolPropDbl> > F;
 
     ExcessTerm(){};
     ~ExcessTerm(){};
@@ -133,14 +133,14 @@ public:
     /// Resize the parts of this term
     void resize(std::size_t N){
         this->N = N;
-        F.resize(N, std::vector<long double>(N, 0));
+        F.resize(N, std::vector<CoolPropDbl>(N, 0));
         DepartureFunctionMatrix.resize(N);
         for (std::size_t i = 0; i < N; ++i){
             DepartureFunctionMatrix[i].resize(N);
         }
     };
 
-    double alphar(double tau, double delta, const std::vector<long double> &x)
+    double alphar(double tau, double delta, const std::vector<CoolPropDbl> &x)
     {
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
@@ -152,7 +152,7 @@ public:
         }
         return summer;
     }
-    double dalphar_dDelta(double tau, double delta, const std::vector<long double> &x)
+    double dalphar_dDelta(double tau, double delta, const std::vector<CoolPropDbl> &x)
     {
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
@@ -164,7 +164,7 @@ public:
         }
         return summer;
     }
-    double d2alphar_dDelta2(double tau, double delta, const std::vector<long double> &x)
+    double d2alphar_dDelta2(double tau, double delta, const std::vector<CoolPropDbl> &x)
     {
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
@@ -176,7 +176,7 @@ public:
         }
         return summer;
     };
-    double d2alphar_dDelta_dTau(double tau, double delta, const std::vector<long double> &x)
+    double d2alphar_dDelta_dTau(double tau, double delta, const std::vector<CoolPropDbl> &x)
     {
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
@@ -188,7 +188,7 @@ public:
         }
         return summer;
     }
-    double dalphar_dTau(double tau, double delta, const std::vector<long double> &x)
+    double dalphar_dTau(double tau, double delta, const std::vector<CoolPropDbl> &x)
     {
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
@@ -200,7 +200,7 @@ public:
         }
         return summer;
     };
-    double d2alphar_dTau2(double tau, double delta, const std::vector<long double> &x)
+    double d2alphar_dTau2(double tau, double delta, const std::vector<CoolPropDbl> &x)
     {
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
@@ -212,7 +212,7 @@ public:
         }
         return summer;
     };
-    double dalphar_dxi(double tau, double delta, const std::vector<long double> &x, std::size_t i)
+    double dalphar_dxi(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i)
     {
         double summer = 0;
         for (std::size_t k = 0; k < N; k++)
@@ -224,7 +224,7 @@ public:
         }
         return summer;
     };
-    double d2alphardxidxj(double tau, double delta, const std::vector<long double> &x, std::size_t i, std::size_t j)
+    double d2alphardxidxj(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j)
     {
         if (i != j)
         {
@@ -235,7 +235,7 @@ public:
             return 0;
         }
     };
-    double d2alphar_dxi_dTau(double tau, double delta, const std::vector<long double> &x, std::size_t i)
+    double d2alphar_dxi_dTau(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i)
     {
         double summer = 0;
         for (std::size_t k = 0; k < N; k++)
@@ -247,7 +247,7 @@ public:
         }
         return summer;
     };
-    double d2alphar_dxi_dDelta(double tau, double delta, const std::vector<long double> &x, std::size_t i)
+    double d2alphar_dxi_dDelta(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i)
     {
         double summer = 0;
         for (std::size_t k = 0; k < N; k++)

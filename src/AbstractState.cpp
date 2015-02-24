@@ -421,9 +421,9 @@ double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 double AbstractState::compressibility_factor(void){ return calc_compressibility_factor(); }
 
 // Get the derivatives of the parameters in the partial derivative with respect to T and rho
-void get_dT_drho(AbstractState &AS, parameters index, long double &dT, long double &drho)
+void get_dT_drho(AbstractState &AS, parameters index, CoolPropDbl &dT, CoolPropDbl &drho)
 {
-    long double T = AS.T(),
+    CoolPropDbl T = AS.T(),
                 rho = AS.rhomolar(),
                 rhor = AS.rhomolar_reducing(),
                 Tr = AS.T_reducing(),
@@ -498,9 +498,9 @@ void get_dT_drho(AbstractState &AS, parameters index, long double &dT, long doub
         throw ValueError(format("input to get_dT_drho[%s] is invalid",get_parameter_information(index,"short").c_str()));
     }
 }
-void get_dT_drho_second_derivatives(AbstractState &AS, int index, long double &dT2, long double &drho_dT, long double &drho2)
+void get_dT_drho_second_derivatives(AbstractState &AS, int index, CoolPropDbl &dT2, CoolPropDbl &drho_dT, CoolPropDbl &drho2)
 {
-	long double T = AS.T(),
+	CoolPropDbl T = AS.T(),
                 rho = AS.rhomolar(),
                 rhor = AS.rhomolar_reducing(),
                 Tr = AS.T_reducing(),
@@ -584,9 +584,9 @@ void get_dT_drho_second_derivatives(AbstractState &AS, int index, long double &d
         throw ValueError(format("input to get_dT_drho_second_derivatives[%s] is invalid", get_parameter_information(index,"short").c_str()));
     }
 }
-long double AbstractState::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
+CoolPropDbl AbstractState::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
 {
-	long double dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
+	CoolPropDbl dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
 
     get_dT_drho(*this, Of, dOf_dT, dOf_drho);
     get_dT_drho(*this, Wrt, dWrt_dT, dWrt_drho);
@@ -594,9 +594,9 @@ long double AbstractState::calc_first_partial_deriv(parameters Of, parameters Wr
 
     return (dOf_dT*dConstant_drho-dOf_drho*dConstant_dT)/(dWrt_dT*dConstant_drho-dWrt_drho*dConstant_dT);
 }
-long double AbstractState::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
+CoolPropDbl AbstractState::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
 {
-    long double dOf1_dT, dOf1_drho, dWrt1_dT, dWrt1_drho, dConstant1_dT, dConstant1_drho, d2Of1_dT2, d2Of1_drhodT,
+    CoolPropDbl dOf1_dT, dOf1_drho, dWrt1_dT, dWrt1_drho, dConstant1_dT, dConstant1_drho, d2Of1_dT2, d2Of1_drhodT,
                 d2Of1_drho2, d2Wrt1_dT2, d2Wrt1_drhodT, d2Wrt1_drho2, d2Constant1_dT2, d2Constant1_drhodT, d2Constant1_drho2,
                 dWrt2_dT, dWrt2_drho, dConstant2_dT, dConstant2_drho, N, D, dNdrho__T, dDdrho__T, dNdT__rho, dDdT__rho,
                 dderiv1_drho, dderiv1_dT, second;
