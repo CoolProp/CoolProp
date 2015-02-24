@@ -5,11 +5,24 @@
 
     #include "PlatformDetermination.h"
     #include "Exceptions.h"
-
     #include <string>
     #include <vector>
     #include <cmath>
     #include "float.h"
+    #include <iterator>
+    #include <algorithm>
+    #include <functional>
+    #include <cctype>
+    #include <map>
+    #include <locale>
+    #include <fstream>
+    #include <cerrno>
+    #include <numeric>
+    #include <set>
+    
+    // Always undef these stupid macros
+    #undef min
+    #undef max
 
     #ifndef M_PI
     #  define M_PI 3.14159265358979323846
@@ -29,8 +42,6 @@
     #endif
 
     #if defined(_MSC_VER)
-    #undef min
-    #undef max
     // Microsoft version of math.h doesn't include acosh or asinh, so we just define them here.
     // It was included from Visual Studio 2013
     #if _MSC_VER < 1800
@@ -68,8 +79,6 @@
     #endif
 
     #if defined(__powerpc__)
-        #undef min
-        #undef max
         #undef EOS
     #endif
 
@@ -88,17 +97,8 @@
         #pragma message("WARNING: You need to implement DEPRECATED for this compiler")
         #define DEPRECATED(func) func
     #endif
-
-    #include <iterator>
-    #include <algorithm>
-    #include <functional>
-    #include <cctype>
-    #include <map>
-    #include <locale>
-    #include <fstream>
-    #include <cerrno>
-    #include <numeric>
-    #include <set>
+    
+    
     
     /// Copy string to wstring
     /// Dangerous if the string has non-ASCII characters; from http://stackoverflow.com/a/8969776/1360263 
