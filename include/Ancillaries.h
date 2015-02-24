@@ -24,8 +24,8 @@ surface tension is in N/m
 class SurfaceTensionCorrelation
 {
 public:
-    std::vector<long double> a, n, s;
-    long double Tc;
+    std::vector<CoolPropDbl> a, n, s;
+    CoolPropDbl Tc;
 
     std::size_t N;
 
@@ -42,10 +42,10 @@ public:
         this->N = n.size();
         s = n;
     };
-    long double evaluate(long double T)
+    CoolPropDbl evaluate(CoolPropDbl T)
     {
         if (a.empty()){ throw NotImplementedError(format("surface tension curve not provided"));}
-        long double THETA = 1-T/Tc;
+        CoolPropDbl THETA = 1-T/Tc;
         for (std::size_t i = 0; i < N; ++i)
         {
             s[i] = a[i]*pow(THETA, n[i]);
@@ -84,7 +84,7 @@ private:
                     den_coeffs; ///< Coefficients for denominator in rational polynomial
     std::vector<double> n, t, s;
     bool using_tau_r;
-    long double Tmax, Tmin, reducing_value, T_r, max_abs_error;
+    CoolPropDbl Tmax, Tmin, reducing_value, T_r, max_abs_error;
     enum ancillaryfunctiontypes{TYPE_NOT_SET = 0, 
                                 TYPE_NOT_EXPONENTIAL, 
                                 TYPE_EXPONENTIAL, 
@@ -101,7 +101,7 @@ public:
     
     /// Get the maximum absolute error for this fit
     /// @returns max_abs_error the maximum absolute error for ancillaries that are characterized by maximum absolute error
-    long double get_max_abs_error(){return max_abs_error;};
+    CoolPropDbl get_max_abs_error(){return max_abs_error;};
     
     /// Evaluate this ancillary function, yielding for instance the saturated liquid density
     /// @param T The temperature in K
@@ -127,7 +127,7 @@ public:
 
 struct MeltingLinePiecewiseSimonSegment
 {
-    long double T_0, a, c, p_0, T_max, T_min, p_min, p_max;
+    CoolPropDbl T_0, a, c, p_0, T_max, T_min, p_min, p_max;
 };
 struct MeltingLinePiecewiseSimonData
 {
@@ -136,11 +136,11 @@ struct MeltingLinePiecewiseSimonData
 class MeltingLinePiecewisePolynomialInTrSegment
 {
 public:
-    std::vector<long double> a, t;
-    long double T_0, p_0, T_max, T_min, p_min, p_max;
-    long double evaluate(long double T)
+    std::vector<CoolPropDbl> a, t;
+    CoolPropDbl T_0, p_0, T_max, T_min, p_min, p_max;
+    CoolPropDbl evaluate(CoolPropDbl T)
     {
-        long double summer = 0;
+        CoolPropDbl summer = 0;
         for (std::size_t i =0; i < a.size(); ++i){
             summer += a[i]*(pow(T/T_0,t[i])-1);
         }
@@ -154,12 +154,12 @@ struct MeltingLinePiecewisePolynomialInTrData
 class MeltingLinePiecewisePolynomialInThetaSegment
 {
 public:
-    std::vector<long double> a, t;
-    long double T_0, p_0, T_max, T_min, p_min, p_max;
+    std::vector<CoolPropDbl> a, t;
+    CoolPropDbl T_0, p_0, T_max, T_min, p_min, p_max;
     
-    long double evaluate(long double T)
+    CoolPropDbl evaluate(CoolPropDbl T)
     {
-        long double summer = 0;
+        CoolPropDbl summer = 0;
         for (std::size_t i =0; i < a.size(); ++i){
             summer += a[i]*pow(T/T_0-1,t[i]);
         }
@@ -179,16 +179,16 @@ public:
         MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE,
         MELTING_LINE_NOT_SET
     };
-    long double Tmin, Tmax, pmin, pmax;
+    CoolPropDbl Tmin, Tmax, pmin, pmax;
     
-    long double evaluate(int OF, int GIVEN, long double value);
+    CoolPropDbl evaluate(int OF, int GIVEN, CoolPropDbl value);
     
     /// Evaluate the melting line to calculate the limits of the curve (Tmin/Tmax and pmin/pmax)
     void set_limits();
     
     bool enabled(){return type != MELTING_LINE_NOT_SET;};
     std::string BibTeX;
-    long double T_m; ///< Melting temperature at 1 atmosphere
+    CoolPropDbl T_m; ///< Melting temperature at 1 atmosphere
     MeltingLinePiecewiseSimonData simon;
     MeltingLinePiecewisePolynomialInTrData polynomial_in_Tr;
     MeltingLinePiecewisePolynomialInThetaData polynomial_in_Theta;
