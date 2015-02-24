@@ -29,6 +29,8 @@
     #endif
 
     #if defined(_MSC_VER)
+    #undef min
+    #undef max
     // Microsoft version of math.h doesn't include acosh or asinh, so we just define them here.
     // It was included from Visual Studio 2013
     #if _MSC_VER < 1800
