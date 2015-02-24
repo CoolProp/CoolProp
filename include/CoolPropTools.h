@@ -115,6 +115,9 @@
         return (path == L"." || path == L"..");
     }
     /// Get the size of a directory in bytes; from http://stackoverflow.com/a/17827724/1360263
+    inline unsigned long long CalculateDirSize(const std::string &path){
+        return CalculateDirSize(std::wstring(path.begin(), path.end()));
+    }
     inline unsigned long long CalculateDirSize(const std::wstring &path, std::vector<std::wstring> *errVect = NULL, unsigned long long size = 0)
     {
         WIN32_FIND_DATA data;
@@ -152,6 +155,7 @@
     #else
     /// Get the size of a directory in bytes
     unsigned long long CalculateDirSize(const std::wstring &path);
+    unsigned long long CalculateDirSize(const std::string &path);
     #endif
 
     /// The following code for the trim functions was taken from http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring

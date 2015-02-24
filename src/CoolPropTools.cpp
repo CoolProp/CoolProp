@@ -23,10 +23,12 @@ int ftw_function(const char *fpath, const struct stat *sb, int tflag, struct FTW
    return 0;           /* To tell nftw() to continue */
 }
 unsigned long long CalculateDirSize(const std::wstring &path){
-    std::string _path(path.begin(), path.end());
+    return CalculateDirSize(std::string(path.begin(), path.end()))
+}
+unsigned long long CalculateDirSize(const std::string &path){
     ftw_summer = 0;
     int flags = 0 | FTW_DEPTH | FTW_PHYS;
-    nftw(_path.c_str(), function, 20, flags);
+    nftw(path.c_str(), ftw_function, 20, flags);
     double temp = ftw_summer;
     ftw_summer = 0;
     return temp;
