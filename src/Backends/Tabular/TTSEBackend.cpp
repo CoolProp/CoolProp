@@ -32,6 +32,18 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
             }
             break;
         }
+        case DmolarP_INPUTS:
+        case PUmolar_INPUTS:
+        case PSmolar_INPUTS:
+        case DmolarHmolar_INPUTS:
+        case HmolarUmolar_INPUTS:
+        case HmolarSmolar_INPUTS:
+            throw ValueError("To be implemented as a 1-D iteration using PH table");
+        case PT_INPUTS:
+            throw ValueError("To be implemented using PT table");
+        case SmolarT_INPUTS:
+        case DmolarT_INPUTS:
+            throw ValueError("To be implemented as a 1-D iteration using PT table");
         default:
             throw ValueError();
     }
