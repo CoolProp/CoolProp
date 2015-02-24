@@ -20,6 +20,10 @@
     #include <numeric>
     #include <set>
     
+    #if defined(__ISWINDOWS__)
+    #include "Windows.h"
+    #endif
+    
     // Always undef these stupid macros
     #undef min
     #undef max
@@ -98,8 +102,6 @@
         #define DEPRECATED(func) func
     #endif
     
-    
-    
     /// Copy string to wstring
     /// Dangerous if the string has non-ASCII characters; from http://stackoverflow.com/a/8969776/1360263 
     inline void StringToWString(const std::string &s, std::wstring &ws)
@@ -108,9 +110,6 @@
     }
 
     #if defined(__ISWINDOWS__)
-    
-    #include "Windows.h"
-    #include <sys/stat.h>
     /// From http://stackoverflow.com/a/17827724/1360263
     inline bool IsBrowsePath(const std::wstring& path)
     {
