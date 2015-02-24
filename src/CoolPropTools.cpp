@@ -23,7 +23,8 @@ int ftw_function(const char *fpath, const struct stat *sb, int tflag, struct FTW
    return 0;           /* To tell nftw() to continue */
 }
 unsigned long long CalculateDirSize(const std::wstring &path){
-    return CalculateDirSize(std::string(path.begin(), path.end()))
+    std::string path(path.begin(), path.end());
+    return CalculateDirSize(path);
 }
 unsigned long long CalculateDirSize(const std::string &path){
     ftw_summer = 0;
