@@ -9,7 +9,7 @@ namespace CoolProp{
 void GriddedTableBackend::build_tables(tabular_types type)
 {
     std::size_t Nx = 200, Ny = 200;
-    long double xmin, xmax, ymin, ymax, x, y;
+    CoolPropDbl xmin, xmax, ymin, ymax, x, y;
     bool logy, logx;
     const bool debug = get_debug_level() > 5 || false;
     
@@ -35,9 +35,9 @@ void GriddedTableBackend::build_tables(tabular_types type)
             
             // Check both the enthalpies at the Tmax isotherm to see whether to use low or high pressure
             AS->update(PT_INPUTS, 1e-10, AS->Tmax());
-            long double xmax1 = AS->hmolar();
+            CoolPropDbl xmax1 = AS->hmolar();
             AS->update(PT_INPUTS, AS->pmax(), AS->Tmax());
-            long double xmax2 = AS->hmolar();
+            CoolPropDbl xmax2 = AS->hmolar();
             xmax = std::min(xmax1, xmax2);
             
             ymax = AS->pmax();
