@@ -12,6 +12,27 @@
 #include "MatrixMath.h"
 #include "Exceptions.h"
 
+#if !defined(__ISWINDOWS__)
+#include <ftw.h>
+#include <stdint.h>
+#include <iostream>
+
+static double ftw_summer; // An evil global variable for the ftw function
+int ftw_function(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf){
+   ftw_summer += sb->st_size;
+   return 0;           /* To tell nftw() to continue */
+}
+unsigned long long CalculateDirSize(const std::wstring &path){
+    std::string _path(path.begin(), path.end());
+    ftw_summer = 0;
+    int flags = 0 | FTW_DEPTH | FTW_PHYS;
+    nftw(_path.c_str(), function, 20, flags);
+    double temp = ftw_summer;
+    ftw_summer = 0;
+    return temp;
+}
+#endif
+
 double root_sum_square(const std::vector<double> &x)
 {
     double sum = 0;
