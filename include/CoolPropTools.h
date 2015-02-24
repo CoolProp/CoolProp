@@ -139,7 +139,7 @@
                     size = CalculateDirSize(path + L"\\" + data.cFileName, NULL, size);
                 else
                     // otherwise get object size and add it to directory size
-                    size += (uint64_t) (data.nFileSizeHigh * (MAXDWORD ) + data.nFileSizeLow);
+                    size += (unsigned long long) (data.nFileSizeHigh * (MAXDWORD ) + data.nFileSizeLow);
             }
 
         } while (FindNextFile(sh, &data)); // do
