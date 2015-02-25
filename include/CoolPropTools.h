@@ -19,14 +19,22 @@
     #include <cerrno>
     #include <numeric>
     #include <set>
-    
-    #if defined(__ISWINDOWS__)
-    #include "Windows.h"
+    #include <sys/types.h>
+    #include <sys/stat.h>    
+
+    // This will kill the horrible min and max macros 
+    #ifndef NOMINMAX
+        #define NOMINMAX
     #endif
     
-    // Always undef these stupid macros
-    #undef min
-    #undef max
+    #if defined(__ISWINDOWS__)
+        #define UNICODE
+        #define _UNICODE
+        #include "Windows.h"
+        #include <windows.h> // for the CreateDirectory function
+    #else
+        #include <unistd.h>
+    #endif
 
     typedef long double CoolPropDbl;
 
@@ -180,7 +188,7 @@
     // Missing string printf
     std::string format(const char* fmt, ...);
     // Missing string split - like in Python
-    std::vector<std::string> strsplit(std::string s, char del);
+    std::vector<std::string> strsplit(const std::string &s, char del);
 
     inline std::string upper(const std::string str_)
     {
@@ -275,8 +283,10 @@
      */
     void solve_cubic(double a, double b, double c, double d, int &N, double &x0, double &x1, double &x2);
 
-    inline double min3(double x1, double x2, double x3){return std::min(std::min(x1, x2), x3);};
-    inline double max3(double x1, double x2, double x3){return std::max(std::max(x1, x2), x3);};
+    template<class T> inline double min3(T x1, T x2, T x3){return std::min(std::min(x1, x2), x3);};
+    template<class T> inline double max3(T x1, T x2, T x3){return std::max(std::max(x1, x2), x3);};
+    template<class T> inline double min4(T x1, T x2, T x3, T x4){return std::min(std::min(std::min(x1, x2), x3), x4);};
+    template<class T> inline double max4(T x1, T x2, T x3, T x4){return std::max(std::max(std::max(x1, x2), x3), x4);};
 
     inline bool double_equal(double a, double b){return std::abs(a - b) <= 1 * DBL_EPSILON * std::max(std::abs(a), std::abs(b));};
 
@@ -370,15 +380,55 @@
         amap.clear();
     }
 
-    /// Make a linearly spaced vector of points
-    template <typename T> std::vector<T> linspace(T xmin, T xmax, int n) {
-        std::vector<T> x(n, 0.0);
-        
-        for ( std::size_t i = 0;  i < n; ++i) {
-            x[i] = (xmax-xmin)/(n-1)*i+xmin;
-        }
-        return x;
+/// Make a linearly spaced vector of points
+template <typename T> std::vector<T> linspace(T xmin, T xmax, std::size_t n) {
+    std::vector<T> x(n, 0.0);
+    
+    for ( std::size_t i = 0;  i < n; ++i) {
+        x[i] = (xmax-xmin)/(n-1)*i+xmin;
     }
+    return x;
+}
+/// Make a base-10 logarithmically spaced vector of points
+template <typename T> std::vector<T> log10space(T xmin, T xmax, std::size_t n) {
+    std::vector<T> x(n, 0.0);
+    T logxmin = log10(xmin), logxmax = log10(xmax);
+    
+    for ( std::size_t i = 0;  i < n; ++i) {
+        x[i] = exp((logxmax-logxmin)/(n-1)*i+logxmin);
+    }
+    return x;
+}
+/// Make a base-e logarithmically spaced vector of points
+template <typename T> std::vector<T> logspace(T xmin, T xmax, std::size_t n) {
+    std::vector<T> x(n, 0.0);
+    T logxmin = log(xmin), logxmax = log(xmax);
+    
+    for ( std::size_t i = 0;  i < n; ++i) {
+        x[i] = exp((logxmax-logxmin)/(n-1)*i+logxmin);
+    }
+    return x;
+}
+
+template <typename T> void bisect_vector(const std::vector<T> &vec, T val, std::size_t &i)
+{
+    T rL, rM, rR;
+    std::size_t N = vec.size(), L = 0, R = N-1, M = (L+R)/2;
+    rL = vec[L] - val; rR = vec[R] - val;
+    while (R - L > 1){
+        rM = vec[M] - val;
+        if (rR*rM > 0 && rL*rM < 0){
+            // solution is between L and M
+            R = M; rR = vec[R] - val;
+        }
+        else{
+            // solution is between R and M
+            L = M; rL = vec[L] - val;
+        }
+        M = (L+R)/2;
+    }
+    i = L;
+}
 
 // From http://rosettacode.org/wiki/Power_set#C.2B.2B
 inline std::size_t powerset_dereference(std::set<std::size_t>::const_iterator v) { return *v; };
@@ -473,5 +523,121 @@ template<class T> void normalize_vector(std::vector<T> &x)
         void add_4value_constraints(double x1, double x2, double x3, double x4, double y1, double y2, double y3, double y4);
         bool add_derivative_constraint(double x, double dydx);
         double evaluate(double x);
+    };
+   
+       /// Get the user's home directory;  It is believed that is is always a place that files can be written
+    inline std::string get_home_dir(void)
+    {
+        // See http://stackoverflow.com/questions/2552416/how-can-i-find-the-users-home-dir-in-a-cross-platform-manner-using-c
+        #if defined(__ISLINUX__)
+            char *home = NULL;
+            home = getenv("HOME");
+            return std::string(home);
+        #elif defined(__ISAPPLE__)
+            char *home = NULL;
+            home = getenv("HOME");
+            if (home==NULL) {
+              struct passwd* pwd = getpwuid(getuid());
+              if (pwd) {
+                home = pwd->pw_dir;
+              }
+            }
+            if (home==NULL) {
+              throw NotImplementedError("Could not detect home directory.");
+            } 
+            return std::string(home);
+        #elif defined(__ISWINDOWS__)
+			
+            char * pUSERPROFILE = getenv("USERPROFILE");
+            if (pUSERPROFILE != NULL) {
+                return std::string(pUSERPROFILE);
+            } else {
+                char * pHOMEDRIVE = getenv("HOMEDRIVE");
+                char * pHOMEPATH = getenv("HOMEPATH");
+                if (pHOMEDRIVE != NULL && pHOMEPATH != NULL) {
+                    return std::string(pHOMEDRIVE) + std::string(pHOMEPATH);
+                } else {
+                    return std::string("");
+                }
+            }
+        #else
+            throw NotImplementedError("This function is not defined for your platform.");
+        #endif
+    };
+    
+    inline bool path_exists(std::string path)
+    {
+        #if defined(__ISWINDOWS__) // Defined for 32-bit and 64-bit windows
+            struct _stat buf;
+            // Get data associated with path using the windows libraries, 
+            // and if you can (result == 0), the path exists
+            if ( _stat( path.c_str(), &buf) == 0)
+                return true;
+            else
+                return false;
+        #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
+            struct stat st;
+            if(lstat(path.c_str(),&st) == 0) {
+                if(S_ISDIR(st.st_mode)) return true;
+                if(S_ISREG(st.st_mode)) return true;
+                return false;
+            } else {
+                return false;
+            }
+        #else
+            throw NotImplementedError("This function is not defined for your platform.");
+        #endif
+    };
+
+    inline void make_dirs(std::string file_path)
+    {
+        std::replace( file_path.begin(), file_path.end(), '\\', '/'); // replace all '\' with '/'
+        
+        #if defined(__ISWINDOWS__)
+        char sep = '\\';
+        #else
+        char sep = '/';
+        #endif
+        
+        std::vector<std::string> pathsplit = strsplit(file_path,'/');
+        std::string path = pathsplit[0];
+        if (pathsplit.size()>0)
+        {
+            for (unsigned int i = 0; i < pathsplit.size(); i++)
+            {
+                if (!path_exists(path))
+                {
+                    #if defined(__ISWINDOWS__) // Defined for 32-bit and 64-bit windows
+                        #if defined(_UNICODE)
+                            int errcode = CreateDirectoryA((LPCSTR)path.c_str(),NULL);
+                        #else
+                            int errcode = CreateDirectory((LPCSTR)path.c_str(),NULL);
+                        #endif
+                        if (errcode == 0){
+                            switch(GetLastError()){
+                                case ERROR_ALREADY_EXISTS:
+                                    break;
+                                case ERROR_PATH_NOT_FOUND:
+                                    throw CoolProp::ValueError(format("Unable to make the directory %s",path.c_str()));
+                                default:
+                                    break;
+                            }
+                            
+                        }
+                    #else 
+                        #if defined(__powerpc__)
+                        #else
+                            mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                        #endif
+                    #endif
+                }
+                if (i < pathsplit.size()-1)
+                    path += format("%c%s", sep, pathsplit[i+1].c_str());
+            }
+        }
+        else
+        {
+            throw CoolProp::ValueError(format("Could not make path [%s]",file_path.c_str()));
+        }
     };
 #endif
