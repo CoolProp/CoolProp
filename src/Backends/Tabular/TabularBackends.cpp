@@ -61,7 +61,6 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
     const bool debug = get_debug_level() > 5 || false;
 
     resize(Nx, Ny);
-
     
     if (debug){
         std::cout << format("***********************************************\n");
@@ -98,40 +97,19 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             
             if (debug){std::cout << "x: " << x << " y: " << y;}
             
-            if (xkey == iHmolar && ykey == iP)
-            {
-                // --------------------
-                //   Update the state
-                // --------------------
-                try{
-                    AS->update(HmolarP_INPUTS, x, y);
-                }
-                catch(std::exception &e){
-                    // That failed for some reason, go to the next pair
-                    if (debug){std::cout << " " << e.what() << std::endl;}
-                    continue;
-                }
-                
-                if (debug){std::cout << " OK" << std::endl;}
+            CoolPropDbl v1, v2;
+            input_pairs input_pair = generate_update_pair(xkey, x, ykey, y, v1, v2);
+            
+            // --------------------
+            //   Update the state
+            // --------------------
+            try{
+                AS->update(input_pair, v1, v2);
             }
-            else if (xkey == iT && ykey == iP)
-            {
-                // --------------------
-                //   Update the state
-                // --------------------
-                try{
-                    AS->update(PT_INPUTS, y, x);
-                }
-                catch(std::exception &e){
-                    // That failed for some reason, go to the next pair
-                    if (debug){std::cout << " " << e.what() << std::endl;}
-                    continue;
-                }
-                
-                if (debug){std::cout << " OK" << std::endl;}
-            }
-            else{
-                throw ValueError("Cannot construct this type of table (yet)");
+            catch(std::exception &e){
+                // That failed for some reason, go to the next pair
+                if (debug){std::cout << " " << e.what() << std::endl;}
+                continue;
             }
             
             // Skip two-phase states - they will remain as _HUGE holes in the table
