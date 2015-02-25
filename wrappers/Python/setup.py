@@ -222,8 +222,7 @@ if __name__=='__main__':
        sys.argv += ['clean', 'install']
 
     common_args = dict(include_dirs = include_dirs,
-                       language='c++',
-                       extra_compile_args=['-DUNICODE','-D_UNICODE'])
+                       language='c++')
 
     if USE_CYTHON:
         common_args.update(dict(cython_c_in_temp = True,

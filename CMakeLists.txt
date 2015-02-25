@@ -66,9 +66,6 @@ option (FORCE_BITNESS_32
 option (FORCE_BITNESS_64
        "Force a 64bit build regardless of the host"
        OFF)
-
-add_definitions(-D_UNICODE)
-add_definitions(-DUNICODE)
         
 #######################################
 #         FIND ALL SOURCES            #
