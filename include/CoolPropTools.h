@@ -561,7 +561,7 @@ template<class T> void normalize_vector(std::vector<T> &x)
                 }
             }
         #else
-            throw NotImplementedError("This function is not defined for your platform.");
+            throw CoolProp::NotImplementedError("This function is not defined for your platform.");
         #endif
     };
     
@@ -585,7 +585,7 @@ template<class T> void normalize_vector(std::vector<T> &x)
                 return false;
             }
         #else
-            throw NotImplementedError("This function is not defined for your platform.");
+            throw CoolProp::NotImplementedError("This function is not defined for your platform.");
         #endif
     };
 
