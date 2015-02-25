@@ -19,14 +19,22 @@
     #include <cerrno>
     #include <numeric>
     #include <set>
-    
-    #if defined(__ISWINDOWS__)
-    #include "Windows.h"
+    #include <sys/types.h>
+    #include <sys/stat.h>    
+
+    // This will kill the horrible min and max macros 
+    #ifndef NOMINMAX
+        #define NOMINMAX
     #endif
     
-    // Always undef these stupid macros
-    #undef min
-    #undef max
+    #if defined(__ISWINDOWS__)
+        #define UNICODE
+        #define _UNICODE
+        #include "Windows.h"
+        #include <windows.h> // for the CreateDirectory function
+    #else
+        #include <unistd.h>
+    #endif
 
     typedef long double CoolPropDbl;
 
@@ -129,11 +137,12 @@
     {
         return (path == L"." || path == L"..");
     }
-    inline unsigned long long CalculateDirSize(const std::wstring &path, std::vector<std::wstring> *errVect = NULL, unsigned long long size = 0)
+    inline unsigned long long CalculateDirSize(const std::wstring &path, std::vector<std::wstring> *errVect = NULL)
     {
-        WIN32_FIND_DATA data;
+        unsigned long long size = 0;
+        WIN32_FIND_DATAW data;
         HANDLE sh = NULL;
-        sh = FindFirstFile((path + L"\\*").c_str(), &data);
+        sh = FindFirstFileW((path + L"\\*").c_str(), &data);
 
         if (sh == INVALID_HANDLE_VALUE )
         {
@@ -149,15 +158,15 @@
             if (!IsBrowsePath(data.cFileName))
             {
                 // if found object is ...
-                if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY)
+                if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
                     // directory, then search it recursievly
-                    size = CalculateDirSize(path + L"\\" + data.cFileName, NULL, size);
+                    size += CalculateDirSize(path + L"\\" + data.cFileName, NULL);
                 else
                     // otherwise get object size and add it to directory size
-                    size += (unsigned long long) (data.nFileSizeHigh * (MAXDWORD ) + data.nFileSizeLow);
+                    size += data.nFileSizeHigh * (unsigned long long)(MAXDWORD) + data.nFileSizeLow;
             }
 
-        } while (FindNextFile(sh, &data)); // do
+        } while (FindNextFileW(sh, &data)); // do
 
         FindClose(sh);
 
