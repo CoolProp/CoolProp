@@ -94,9 +94,9 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
     public:
         int other;
         SaturationAncillaryFunction *anc;
-        long double T, value, r, current_value;
+        CoolPropDbl T, value, r, current_value;
 
-        solver_resid(SaturationAncillaryFunction *anc, long double value) : anc(anc), value(value){};
+        solver_resid(SaturationAncillaryFunction *anc, CoolPropDbl value) : anc(anc), value(value){};
 
         double call(double T){
             this->T = T;
@@ -164,7 +164,7 @@ void MeltingLineVariables::set_limits(void)
     }
 }
 
-long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
+CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
 {
     if (type == MELTING_LINE_NOT_SET){throw ValueError("Melting line curve not set");}
     if (OF == iP_max){ return pmax;}
@@ -172,7 +172,7 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
     else if (OF == iT_max){ return Tmax;}
     else if (OF == iT_min){ return Tmin;}
     else if (OF == iP && GIVEN == iT){
-        long double T = value;
+        CoolPropDbl T = value;
         if (type == MELTING_LINE_SIMON_TYPE){
             // Need to find the right segment
             for (std::size_t i = 0; i < simon.parts.size(); ++i){
@@ -213,7 +213,7 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
             for (std::size_t i = 0; i < simon.parts.size(); ++i){
                 MeltingLinePiecewiseSimonSegment &part = simon.parts[i];
                 //  p = part.p_0 + part.a*(pow(T/part.T_0,part.c)-1);
-                long double T = pow((value-part.p_0)/part.a+1,1/part.c)*part.T_0;
+                CoolPropDbl T = pow((value-part.p_0)/part.a+1,1/part.c)*part.T_0;
                 if (T >= part.T_0 && T <= part.T_max){
                     return T;
                 }
@@ -226,8 +226,8 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
             {
             public:
                 MeltingLinePiecewisePolynomialInTrSegment *part;
-                long double r, given_p, calc_p, T;
-                solver_resid(MeltingLinePiecewisePolynomialInTrSegment *part, long double p) : part(part), given_p(p){};
+                CoolPropDbl r, given_p, calc_p, T;
+                solver_resid(MeltingLinePiecewisePolynomialInTrSegment *part, CoolPropDbl p) : part(part), given_p(p){};
                 double call(double T){
 
                     this->T = T;
@@ -260,8 +260,8 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
             {
             public:
                 MeltingLinePiecewisePolynomialInThetaSegment *part;
-                long double r, given_p, calc_p, T;
-                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment *part, long double p) : part(part), given_p(p){};
+                CoolPropDbl r, given_p, calc_p, T;
+                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment *part, CoolPropDbl p) : part(part), given_p(p){};
                 double call(double T){
 
                     this->T = T;

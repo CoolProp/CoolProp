@@ -67,6 +67,7 @@ The primary developers are:
 - `Ian Bell <mailto:ian.h.bell@gmail.com>`_, `Sylvain Quoilin <mailto:squoilin@ulg.ac.be>`_, `Vincent Lemort <mailto:vincent.lemort@ulg.ac.be>`_, University of Liege, Liege, Belgium
 - `Jorrit Wronski <mailto:jowr@mek.dtu.dk>`_, Technical University of Denmark, Kgs. Lyngby, Denmark
 
+Please be so kind and cite our work in your publication: :ref:`Citation information <citation>`.
 
 Supporters
 ----------

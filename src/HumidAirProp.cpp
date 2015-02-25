@@ -1350,23 +1350,21 @@ bool match_input_key(std::vector<givens> input_keys, givens key)
 /// Calculate T (dry bulb temp) and psi_w (water mole fraction) given the pair of inputs
 double _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w)
 {
-    if (match_input_key(input_keys, GIVEN_T)) // Found T (or alias) as an input
+    long key = get_input_key(input_keys, GIVEN_T);
+    if (key >= 0) // Found T (or alias) as an input
     {
-        long key = get_input_key(input_keys, GIVEN_T);
         long other = 1 - key; // 2 element vector
         T = input_vals[key];
-        switch(input_keys[other]){
+        switch(givens othergiven = input_keys[other]){
             case GIVEN_RH:
-                psi_w = MoleFractionWater(T, p, GIVEN_RH, input_vals[other]); break;
             case GIVEN_HUMRAT:
-                psi_w = MoleFractionWater(T, p, GIVEN_HUMRAT, input_vals[other]); break;
             case GIVEN_TDP:
-                psi_w = MoleFractionWater(T, p, GIVEN_TDP, input_vals[other]); break;
+                psi_w = MoleFractionWater(T, p, othergiven, input_vals[other]); break;
             default:
             {
                 // Find the value for W
                 double W_guess = 0.0001;
-                double W = Secant_HAProps_W(p,T,input_keys[other],input_vals[other],W_guess);
+                double W = Secant_HAProps_W(p, T, othergiven, input_vals[other], W_guess);
                 // Mole fraction of water
                 psi_w = MoleFractionWater(T, p, GIVEN_HUMRAT, W);
             }
@@ -1375,15 +1373,14 @@ double _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const 
     else
     {
         // Need to iterate to find dry bulb temperature since temperature is not provided
-        long key, other;
-        if ((key = get_input_key(input_keys, GIVEN_HUMRAT)) && key >= 0){} // Humidity ratio is given
-        else if ((key = get_input_key(input_keys, GIVEN_RH)) && key >= 0){} // Relative humidity is given
-        else if ((key = get_input_key(input_keys, GIVEN_TDP)) && key >= 0){} // Dewpoint temperature is given
+        if ((key = get_input_key(input_keys, GIVEN_HUMRAT)) >= 0){} // Humidity ratio is given
+        else if ((key = get_input_key(input_keys, GIVEN_RH)) >= 0){} // Relative humidity is given
+        else if ((key = get_input_key(input_keys, GIVEN_TDP)) >= 0){} // Dewpoint temperature is given
         else{
-            CoolProp::ValueError("Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now\n");
+            throw CoolProp::ValueError("Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now\n");
         }
         // 2-element vector
-        other = 1 - key;
+        long other = 1 - key;
         
         // Main input is the one that you are using in the call to HAPropsSI
         double MainInputValue = input_vals[key]; 

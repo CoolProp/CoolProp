@@ -91,17 +91,17 @@ struct EOSLimits
 
 struct ConductivityECSVariables{
     std::string reference_fluid;
-    long double psi_rhomolar_reducing, f_int_T_reducing;
-    std::vector<long double> psi_a, psi_t, f_int_a, f_int_t;
+    CoolPropDbl psi_rhomolar_reducing, f_int_T_reducing;
+    std::vector<CoolPropDbl> psi_a, psi_t, f_int_a, f_int_t;
 };
 
 struct ConductivityDiluteEta0AndPolyData{
-    std::vector<long double> A, t;
+    std::vector<CoolPropDbl> A, t;
 };
 
 struct ConductivityDiluteRatioPolynomialsData{
-    long double T_reducing, p_reducing;
-    std::vector<long double> A, B, n, m;
+    CoolPropDbl T_reducing, p_reducing;
+    std::vector<CoolPropDbl> A, B, n, m;
 };
 struct ConductivityDiluteVariables
 {
@@ -120,13 +120,13 @@ struct ConductivityDiluteVariables
 };
 
 struct ConductivityResidualPolynomialAndExponentialData{
-    long double T_reducing, rhomass_reducing;
-    std::vector<long double> A, t, d, gamma, l;
+    CoolPropDbl T_reducing, rhomass_reducing;
+    std::vector<CoolPropDbl> A, t, d, gamma, l;
 };
 
 struct ConductivityResidualPolynomialData{
-    long double T_reducing, rhomass_reducing;
-    std::vector<long double> B, t, d;
+    CoolPropDbl T_reducing, rhomass_reducing;
+    std::vector<CoolPropDbl> B, t, d;
 };
 struct ConductivityResidualVariables
 {
@@ -144,7 +144,7 @@ struct ConductivityResidualVariables
 };
 
 struct ConductivityCriticalSimplifiedOlchowySengersData{
-    long double T_reducing, p_reducing, k, R0, gamma, nu, qD, zeta0, GAMMA, T_ref;
+    CoolPropDbl T_reducing, p_reducing, k, R0, gamma, nu, qD, zeta0, GAMMA, T_ref;
     ConductivityCriticalSimplifiedOlchowySengersData(){
         // Universal constants - can still be adjusted if need be
         k = 1.3806488e-23; //[J/K]
@@ -179,18 +179,18 @@ struct ConductivityCriticalVariables
 /// Variables for the dilute gas part
 struct ViscosityDiluteGasCollisionIntegralData
 {
-    long double molar_mass, C;
-    std::vector<long double> a, t;
+    CoolPropDbl molar_mass, C;
+    std::vector<CoolPropDbl> a, t;
 };
 struct ViscosityDiluteCollisionIntegralPowersOfTstarData
 {
-    long double T_reducing, ///< Reducing temperature [K[
+    CoolPropDbl T_reducing, ///< Reducing temperature [K[
                 C;          ///< Leading constant
-    std::vector<long double> a, t;
+    std::vector<CoolPropDbl> a, t;
 };
 struct ViscosityDiluteGasPowersOfT
 {
-    std::vector<long double> a, t;
+    std::vector<CoolPropDbl> a, t;
 };
 struct ViscosityDiluteVariables
 {
@@ -211,12 +211,12 @@ struct ViscosityDiluteVariables
 
 struct ViscosityRainWaterFriendData
 {
-    std::vector<long double> b, t;
+    std::vector<CoolPropDbl> b, t;
 };
 struct ViscosityInitialDensityEmpiricalData
 {
-    std::vector<long double> n, d, t;
-    long double T_reducing, rhomolar_reducing;
+    std::vector<CoolPropDbl> n, d, t;
+    CoolPropDbl T_reducing, rhomolar_reducing;
 };
 
 struct ViscosityInitialDensityVariables
@@ -233,14 +233,14 @@ struct ViscosityInitialDensityVariables
 
 struct ViscosityModifiedBatschinskiHildebrandData
 {
-    std::vector<long double> a,d1,d2,t1,t2,f,g,h,p,q,gamma, l;
-    long double T_reduce, rhomolar_reduce;
+    std::vector<CoolPropDbl> a,d1,d2,t1,t2,f,g,h,p,q,gamma, l;
+    CoolPropDbl T_reduce, rhomolar_reduce;
 };
 struct ViscosityFrictionTheoryData
 {
-    std::vector<long double> Aa, Aaa, Aaaa, Ar, Arr, Adrdr, Arrr, Ai, Aii, AdrAdr;
+    std::vector<CoolPropDbl> Aa, Aaa, Aaaa, Ar, Arr, Adrdr, Arrr, Ai, Aii, AdrAdr;
     int Na, Naa, Naaa, Nr, Nrr, Nrrr, Nii;
-    long double c1, c2, T_reduce, rhomolar_reduce;
+    CoolPropDbl c1, c2, T_reduce, rhomolar_reduce;
 };
 struct ViscosityHigherOrderVariables
 {
@@ -261,8 +261,8 @@ struct ViscosityHigherOrderVariables
 
 struct ViscosityECSVariables{
     std::string reference_fluid;
-    long double psi_rhomolar_reducing;
-    std::vector<long double> psi_a, psi_t;
+    CoolPropDbl psi_rhomolar_reducing;
+    std::vector<CoolPropDbl> psi_a, psi_t;
 };
 
 class TransportPropertyData
@@ -295,7 +295,7 @@ public:
     bool conductivity_using_ECS; ///< A flag for whether to use extended corresponding states for conductivity.  False for no
 	bool conductivity_model_provided; ///< A flag for whether thermal conductivity model is provided.  False for no
 	bool viscosity_model_provided; ///< A flag for whether viscosity model is provided.  False for no
-    long double sigma_eta, ///< The Lennard-Jones 12-6 \f$ \sigma \f$ parameter
+    CoolPropDbl sigma_eta, ///< The Lennard-Jones 12-6 \f$ \sigma \f$ parameter
                 epsilon_over_k; ///< The Lennard-Jones 12-6 \f$ \varepsilon/k \f$ parameter
     ViscosityHardcodedEnum hardcoded_viscosity; ///< Hardcoded flags for the viscosity
     ConductivityHardcodedEnum hardcoded_conductivity; ///< Hardcoded flags for the conductivity
@@ -352,90 +352,90 @@ public:
         assert(R_u < 9 && R_u > 8);
         assert(molar_mass > 0.001 && molar_mass < 1);
     };
-    long double baser(const long double &tau, const long double &delta) throw()
+    CoolPropDbl baser(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.base(tau, delta);
     };
     // First partials
-    long double dalphar_dDelta(const long double &tau, const long double &delta) throw()
+    CoolPropDbl dalphar_dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta(tau, delta);
     };
-    long double dalphar_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl dalphar_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dTau(tau, delta);
     };
     // Second partials
-    long double d2alphar_dDelta2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alphar_dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta2(tau, delta);
     };
-    long double d2alphar_dDelta_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alphar_dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta_dTau(tau, delta);
     };
-    long double d2alphar_dTau2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alphar_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dTau2(tau, delta);
     };
     // Third partials
-    long double d3alphar_dDelta3(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alphar_dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta3(tau, delta);
     };
-    long double d3alphar_dDelta2_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alphar_dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta2_dTau(tau, delta);
     };
-    long double d3alphar_dDelta_dTau2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alphar_dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta_dTau2(tau, delta);
     };
-    long double d3alphar_dTau3(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alphar_dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dTau3(tau, delta);
     };
 
-    long double base0(const long double &tau, const long double &delta) throw()
+    CoolPropDbl base0(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.base(tau, delta);
     };
     // First partials
-    long double dalpha0_dDelta(const long double &tau, const long double &delta) throw()
+    CoolPropDbl dalpha0_dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta(tau, delta);
     };
-    long double dalpha0_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl dalpha0_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dTau(tau, delta);
     };
     // Second partials
-    long double d2alpha0_dDelta2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alpha0_dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta2(tau, delta);
     };
-    long double d2alpha0_dDelta_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alpha0_dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta_dTau(tau, delta);
     };
-    long double d2alpha0_dTau2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alpha0_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dTau2(tau, delta);
     };
     // Third partials
-    long double d3alpha0_dDelta3(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alpha0_dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta3(tau, delta);
     };
-    long double d3alpha0_dDelta2_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alpha0_dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta2_dTau(tau, delta);
     };
-    long double d3alpha0_dDelta_dTau2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alpha0_dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta_dTau2(tau, delta);
     };
-    long double d3alpha0_dTau3(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alpha0_dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dTau3(tau, delta);
     };

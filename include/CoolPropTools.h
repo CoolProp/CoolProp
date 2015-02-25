@@ -5,11 +5,30 @@
 
     #include "PlatformDetermination.h"
     #include "Exceptions.h"
-
     #include <string>
     #include <vector>
     #include <cmath>
     #include "float.h"
+    #include <iterator>
+    #include <algorithm>
+    #include <functional>
+    #include <cctype>
+    #include <map>
+    #include <locale>
+    #include <fstream>
+    #include <cerrno>
+    #include <numeric>
+    #include <set>
+    
+    #if defined(__ISWINDOWS__)
+    #include "Windows.h"
+    #endif
+    
+    // Always undef these stupid macros
+    #undef min
+    #undef max
+
+    typedef long double CoolPropDbl;
 
     #if defined(__ISWINDOWS__)
 		#include <sys/types.h>
@@ -78,8 +97,6 @@
     #endif
 
     #if defined(__powerpc__)
-        #undef min
-        #undef max
         #undef EOS
     #endif
 
@@ -98,17 +115,58 @@
         #pragma message("WARNING: You need to implement DEPRECATED for this compiler")
         #define DEPRECATED(func) func
     #endif
+    
+    /// Copy string to wstring
+    /// Dangerous if the string has non-ASCII characters; from http://stackoverflow.com/a/8969776/1360263 
+    inline void StringToWString(const std::string &s, std::wstring &ws)
+    {
+        ws = std::wstring(s.begin(), s.end());
+    }
 
-    #include <iterator>
-    #include <algorithm>
-    #include <functional>
-    #include <cctype>
-    #include <map>
-    #include <locale>
-    #include <fstream>
-    #include <cerrno>
-    #include <numeric>
-    #include <set>
+    #if defined(__ISWINDOWS__)
+    /// From http://stackoverflow.com/a/17827724/1360263
+    inline bool IsBrowsePath(const std::wstring& path)
+    {
+        return (path == L"." || path == L"..");
+    }
+    inline unsigned long long CalculateDirSize(const std::wstring &path, std::vector<std::wstring> *errVect = NULL, unsigned long long size = 0)
+    {
+        WIN32_FIND_DATA data;
+        HANDLE sh = NULL;
+        sh = FindFirstFile((path + L"\\*").c_str(), &data);
+
+        if (sh == INVALID_HANDLE_VALUE )
+        {
+            //if we want, store all happened error  
+            if (errVect != NULL)
+                errVect ->push_back(path);
+            return size;
+        }
+
+        do
+        {
+            // skip current and parent
+            if (!IsBrowsePath(data.cFileName))
+            {
+                // if found object is ...
+                if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY)
+                    // directory, then search it recursievly
+                    size = CalculateDirSize(path + L"\\" + data.cFileName, NULL, size);
+                else
+                    // otherwise get object size and add it to directory size
+                    size += (unsigned long long) (data.nFileSizeHigh * (MAXDWORD ) + data.nFileSizeLow);
+            }
+
+        } while (FindNextFile(sh, &data)); // do
+
+        FindClose(sh);
+
+        return size;
+    } 
+    #else
+    /// Get the size of a directory in bytes
+    unsigned long long CalculateDirSize(const std::string &path);
+    #endif
 
     /// The following code for the trim functions was taken from http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
     // trim from start
@@ -153,8 +211,8 @@
 
     void MatInv_2(double A[2][2] , double B[2][2]);
 
-    double root_sum_square(std::vector<double> x);
-    double interp1d(std::vector<double> *x, std::vector<double> *y, double x0);
+    double root_sum_square(const std::vector<double> &x);
+    double interp1d(const std::vector<double> *x, const std::vector<double> *y, double x0);
     double powInt(double x, int y);
     
     #define POW2(x) ((x)*(x))
@@ -297,7 +355,7 @@
         {
             return get_double(s);
         };
-        std::vector<double> get_double_vector(std::string s)
+        const std::vector<double>& get_double_vector(std::string s)
         {
             if (double_vectors.find(s) != double_vectors.end()){ 
                 return double_vectors[s]; 
@@ -306,7 +364,7 @@
                 throw CoolProp::ValueError(format("%s could not be matched in get_double_vector",s.c_str()));
             }
         };
-        std::vector<std::string> get_string_vector(std::string s)
+        const std::vector<std::string>& get_string_vector(std::string s)
         {
             if (string_vectors.find(s) != string_vectors.end()){ 
                 return string_vectors[s]; 

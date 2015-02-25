@@ -19,7 +19,7 @@ public:
     \f]
     with \f$T^* = \frac{T}{\varepsilon/k}\f$ and \f$\sigma\f$ in nm, M is in kg/kmol. Yields viscosity in Pa-s.
     */
-    static long double viscosity_dilute_kinetic_theory(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_dilute_kinetic_theory(HelmholtzEOSMixtureBackend &HEOS);
 
     /**
     \brief The dilute gas viscosity term that is based on collision integral or effective cross section
@@ -32,7 +32,7 @@ public:
     \f]
     with \f$T^* = \frac{T}{\varepsilon/k}\f$ and \f$\sigma\f$ in nm, M is in kg/kmol. Yields viscosity in Pa-s.
     */
-    static long double viscosity_dilute_collision_integral(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_dilute_collision_integral(HelmholtzEOSMixtureBackend &HEOS);
 
     /**
     \brief A dilute gas viscosity term formed of summation of power terms
@@ -42,9 +42,9 @@ public:
     \f]
     with T in K, \f$\eta^0\f$ in Pa-s
     */
-    static long double viscosity_dilute_powers_of_T(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_dilute_powers_of_T(HelmholtzEOSMixtureBackend &HEOS);
 
-    static long double viscosity_dilute_collision_integral_powers_of_T(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_dilute_collision_integral_powers_of_T(HelmholtzEOSMixtureBackend &HEOS);
 
     /**
     \brief The initial density dependence term \f$B_{\eta}\f$ from Rainwater-Friend theory
@@ -66,7 +66,7 @@ public:
 
     IMPORTANT: This function returns \f$B_{\eta}\f$, not \f$\eta_{RF}\f$
     */
-    static long double viscosity_initial_density_dependence_Rainwater_Friend(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_initial_density_dependence_Rainwater_Friend(HelmholtzEOSMixtureBackend &HEOS);
     
     /**
      * \brief An empirical form for the initial density dependence 
@@ -77,7 +77,7 @@ public:
      * \f]
      * where the output is in Pa-s
      */
-    static long double viscosity_initial_density_dependence_empirical(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_initial_density_dependence_empirical(HelmholtzEOSMixtureBackend &HEOS);
 
     /**
     \brief The modified Batschinski-Hildebrand contribution to the viscosity
@@ -91,27 +91,27 @@ public:
     \f]
     The more general form of \f$\delta_0(\tau)\f$ is selected in order to be able to handle all the forms in the literature
     */
-    static long double viscosity_higher_order_modified_Batschinski_Hildebrand(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_higher_order_modified_Batschinski_Hildebrand(HelmholtzEOSMixtureBackend &HEOS);
 
-    static long double viscosity_dilute_ethane(HelmholtzEOSMixtureBackend &HEOS);
-    static long double viscosity_dilute_cyclohexane(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_dilute_ethane(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_dilute_cyclohexane(HelmholtzEOSMixtureBackend &HEOS);
 
     /** \brief Viscosity hardcoded for Methanol
      * 
      * From Xiang et al., A New Reference Correlation for the Viscosity of Methanol, J. Phys. Chem. Ref. Data, Vol. 35, No. 4, 2006
      */
-    static long double viscosity_methanol_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_methanol_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
 
-    static long double viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
-    static long double viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
-    static long double viscosity_R23_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_R23_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
 
-    static long double viscosity_ethane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
-    static long double viscosity_hydrogen_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
-    static long double viscosity_benzene_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
-    static long double viscosity_hexane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
-    static long double viscosity_heptane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
-    static long double viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_ethane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_hydrogen_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_benzene_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_hexane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_heptane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend &HEOS);
 
     /**
     \brief The general dilute gas conductivity term formed of a ratio of polynomial like terms
@@ -121,7 +121,7 @@ public:
     \f]
     with \f$\lambda^0\f$ in W/m/K, T_r is the reduced temperature \f$T_{r} = T/T_{red}\f$
     */
-    static long double conductivity_dilute_ratio_polynomials(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_dilute_ratio_polynomials(HelmholtzEOSMixtureBackend &HEOS);
 
     /**
 
@@ -136,7 +136,7 @@ public:
     \f]
     which can be easily converted by noting that \f$\tau=Tc/T\f$ and \f$\delta=\rho/\rho_c\f$
     */
-    static long double conductivity_residual_polynomial(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_residual_polynomial(HelmholtzEOSMixtureBackend &HEOS);
 
     /**
     \brief The simplified critical conductivity term of Olchowy and Sengers
@@ -179,21 +179,21 @@ public:
     Effective cutoff | \f$q_d\f$    | 2 \f$\times\f$ 10\f$^{9}\f$ m
 
     */
-    static long double conductivity_critical_simplified_Olchowy_Sengers(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_critical_simplified_Olchowy_Sengers(HelmholtzEOSMixtureBackend &HEOS);
 
-    static long double conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(HelmholtzEOSMixtureBackend &HEOS);
-    static long double conductivity_critical_hardcoded_R123(HelmholtzEOSMixtureBackend &HEOS);
-    static long double conductivity_dilute_hardcoded_CO2(HelmholtzEOSMixtureBackend &HEOS);
-    static long double conductivity_dilute_hardcoded_ethane(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_critical_hardcoded_R123(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_dilute_hardcoded_CO2(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_dilute_hardcoded_ethane(HelmholtzEOSMixtureBackend &HEOS);
 
-    static long double conductivity_dilute_eta0_and_poly(HelmholtzEOSMixtureBackend &HEOS);
-    static long double conductivity_residual_polynomial_and_exponential(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_dilute_eta0_and_poly(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_residual_polynomial_and_exponential(HelmholtzEOSMixtureBackend &HEOS);
 
-    static long double conductivity_hardcoded_water(HelmholtzEOSMixtureBackend &HEOS);
-    static long double conductivity_hardcoded_R23(HelmholtzEOSMixtureBackend &HEOS);
-    static long double conductivity_hardcoded_helium(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_hardcoded_water(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_hardcoded_R23(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_hardcoded_helium(HelmholtzEOSMixtureBackend &HEOS);
 
-    static long double conductivity_critical_hardcoded_ammonia(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_critical_hardcoded_ammonia(HelmholtzEOSMixtureBackend &HEOS);
 
     /**
     \brief Calculate the viscosity using the extended corresponding states method
@@ -212,14 +212,14 @@ public:
 
 
     */
-    static long double viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference);
+    static CoolPropDbl viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference);
 
-    static long double conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference);
+    static CoolPropDbl conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference);
 
     /* \brief Solver for the conformal state for ECS model
      * 
      */
-    static void conformal_state_solver(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference, long double &T0, long double &rhomolar0);
+    static void conformal_state_solver(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference, CoolPropDbl &T0, CoolPropDbl &rhomolar0);
 
 }; /* class TransportRoutines */
 

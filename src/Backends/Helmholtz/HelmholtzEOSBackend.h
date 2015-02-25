@@ -33,13 +33,13 @@ public:
             }
         }
         else{
-            components = std::vector<CoolPropFluid*>(1,&(get_library().get(name)));
-            mole_fractions = std::vector<double>(1,1);
+            components.push_back(&(get_library().get(name))); // Until now it's empty
+            mole_fractions.push_back(1.);
         }
         // Set the components
         set_components(components);
         // Set the mole fractions
-        set_mole_fractions(std::vector<long double>(mole_fractions.begin(), mole_fractions.end()));
+        set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end()));
     };
     virtual ~HelmholtzEOSBackend(){};
     std::string backend_name(void){return "HelmholtzEOSBackend";}

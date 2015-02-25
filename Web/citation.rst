@@ -1,3 +1,5 @@
+.. _citation:
+
 *********************
 Citation for CoolProp
 *********************

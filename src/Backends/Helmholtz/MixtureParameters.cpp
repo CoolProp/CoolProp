@@ -47,7 +47,7 @@ std::string get_csv_predefined_mixtures()
     return strjoin(out, ",");
 }
 
-bool is_predefined_mixture(const std::string name, Dictionary &dict){
+bool is_predefined_mixture(const std::string &name, Dictionary &dict){
     std::map<std::string, Dictionary>::iterator iter = predefined_mixtures_library.predefined_mixture_map.find(name);
     if (iter != predefined_mixtures_library.predefined_mixture_map.end()){
         dict = iter->second;
@@ -285,10 +285,10 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
     std::size_t N = components.size();
 
     STLMatrix beta_v, gamma_v, beta_T, gamma_T;
-    beta_v.resize(N, std::vector<long double>(N, 0));
-    gamma_v.resize(N, std::vector<long double>(N, 0));
-    beta_T.resize(N, std::vector<long double>(N, 0));
-    gamma_T.resize(N, std::vector<long double>(N, 0));
+    beta_v.resize(N, std::vector<CoolPropDbl>(N, 0));
+    gamma_v.resize(N, std::vector<CoolPropDbl>(N, 0));
+    beta_T.resize(N, std::vector<CoolPropDbl>(N, 0));
+    gamma_T.resize(N, std::vector<CoolPropDbl>(N, 0));
 
     HEOS.Excess.resize(N);
 

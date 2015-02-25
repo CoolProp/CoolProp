@@ -9,7 +9,7 @@ else()
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
 endif()
 
-set(CMAKE_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX} CACHE PATH "default install path" FORCE)  
+set(CMAKE_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX} CACHE PATH "default install path" FORCE)
   
 #######################################
 #         PROJECT INFORMATION         #
@@ -66,6 +66,9 @@ option (FORCE_BITNESS_32
 option (FORCE_BITNESS_64
        "Force a 64bit build regardless of the host"
        OFF)
+
+add_definitions(-D_UNICODE)
+add_definitions(-DUNICODE)
         
 #######################################
 #         FIND ALL SOURCES            #

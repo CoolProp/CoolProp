@@ -28,7 +28,7 @@ IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) {
     this->fluid = fluid;
     this->set_reference_state();
     if (this->fluid->is_pure()){
-    	this->set_fractions(std::vector<long double>(1,0.0));
+    	this->set_fractions(std::vector<CoolPropDbl>(1,0.0));
     }
 }
 
@@ -36,7 +36,7 @@ IncompressibleBackend::IncompressibleBackend(const std::string &fluid_name) {
     this->fluid = &get_incompressible_fluid(fluid_name);
     this->set_reference_state();
     if (this->fluid->is_pure()){
-    	this->set_fractions(std::vector<long double>(1,0.0));
+    	this->set_fractions(std::vector<CoolPropDbl>(1,0.0));
     }
 }
 
@@ -158,7 +158,7 @@ void IncompressibleBackend::set_reference_state(double T0, double p0, double x0,
 /**
 @param fractions The vector of fractions of the components converted to the correct input
 */
-void IncompressibleBackend::set_fractions(const std::vector<long double> &fractions){
+void IncompressibleBackend::set_fractions(const std::vector<CoolPropDbl> &fractions){
     if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_fractions with %s ",vec_to_string(fractions).c_str()) << std::endl;
     if (fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the fraction vector and not %d.",fractions.size()));
     if ( ( this->_fractions.size()!=1 ) ||
@@ -173,18 +173,18 @@ void IncompressibleBackend::set_fractions(const std::vector<long double> &fracti
 /**
 @param mole_fractions The vector of mole fractions of the components
 */
-void IncompressibleBackend::set_mole_fractions(const std::vector<long double> &mole_fractions){
+void IncompressibleBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){
     if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_mole_fractions with %s ",vec_to_string(mole_fractions).c_str()) << std::endl;
     if (mole_fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the mole fraction vector and not %d.",mole_fractions.size()));
     if ((fluid->getxid()==IFRAC_PURE) && true ){//( this->_fractions[0]!=1.0 )){
-        this->set_fractions(std::vector<long double>(1,1.0));
+        this->set_fractions(std::vector<CoolPropDbl>(1,1.0));
         if (get_debug_level()>=20) std::cout << format("Incompressible backend: Overwriting fractions for pure fluid with %s -> %s",vec_to_string(mole_fractions).c_str(),vec_to_string(this->_fractions).c_str()) << std::endl;
     } else if (fluid->getxid()==IFRAC_MOLE) {
         this->set_fractions(mole_fractions);
     } else {
-        std::vector<long double> tmp_fractions;
+        std::vector<CoolPropDbl> tmp_fractions;
         for (std::size_t i = 0; i < mole_fractions.size(); i++) {
-            tmp_fractions.push_back((long double) fluid->inputFromMole(0.0, mole_fractions[i]));
+            tmp_fractions.push_back((CoolPropDbl) fluid->inputFromMole(0.0, mole_fractions[i]));
         }
         this->set_fractions(tmp_fractions);
     }
@@ -194,18 +194,18 @@ void IncompressibleBackend::set_mole_fractions(const std::vector<long double> &m
 /**
 @param mass_fractions The vector of mass fractions of the components
 */
-void IncompressibleBackend::set_mass_fractions(const std::vector<long double> &mass_fractions){
+void IncompressibleBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){
     if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_mass_fractions with %s ",vec_to_string(mass_fractions).c_str()) << std::endl;
     if (mass_fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the mass fraction vector and not %d.",mass_fractions.size()));
     if ((fluid->getxid()==IFRAC_PURE) && true ){// ( this->_fractions[0]!=1.0 )) {
-        this->set_fractions(std::vector<long double>(1,1.0));
+        this->set_fractions(std::vector<CoolPropDbl>(1,1.0));
         if (get_debug_level()>=20) std::cout << format("Incompressible backend: Overwriting fractions for pure fluid with %s -> %s",vec_to_string(mass_fractions).c_str(),vec_to_string(this->_fractions).c_str()) << std::endl;
     } else if (fluid->getxid()==IFRAC_MASS) {
         this->set_fractions(mass_fractions);
     } else {
-        std::vector<long double> tmp_fractions;
+        std::vector<CoolPropDbl> tmp_fractions;
         for (std::size_t i = 0; i < mass_fractions.size(); i++) {
-            tmp_fractions.push_back((long double) fluid->inputFromMass(0.0, mass_fractions[i]));
+            tmp_fractions.push_back((CoolPropDbl) fluid->inputFromMass(0.0, mass_fractions[i]));
         }
         this->set_fractions(tmp_fractions);
     }
@@ -215,18 +215,18 @@ void IncompressibleBackend::set_mass_fractions(const std::vector<long double> &m
 /**
 @param volu_fractions The vector of volume fractions of the components
 */
-void IncompressibleBackend::set_volu_fractions(const std::vector<long double> &volu_fractions){
+void IncompressibleBackend::set_volu_fractions(const std::vector<CoolPropDbl> &volu_fractions){
     if (get_debug_level()>=10) std::cout << format("Incompressible backend: Called set_volu_fractions with %s ",vec_to_string(volu_fractions).c_str()) << std::endl;
     if (volu_fractions.size()!=1) throw ValueError(format("The incompressible backend only supports one entry in the volume fraction vector and not %d.",volu_fractions.size()));
     if ((fluid->getxid()==IFRAC_PURE) && true ){// ( this->_fractions[0]!=1.0 )) {
-        this->set_fractions(std::vector<long double>(1,1.0));
+        this->set_fractions(std::vector<CoolPropDbl>(1,1.0));
         if (get_debug_level()>=20) std::cout << format("Incompressible backend: Overwriting fractions for pure fluid with %s -> %s",vec_to_string(volu_fractions).c_str(),vec_to_string(this->_fractions).c_str()) << std::endl;
     } else if (fluid->getxid()==IFRAC_VOLUME) {
         this->set_fractions(volu_fractions);
     } else {
-        std::vector<long double> tmp_fractions;
+        std::vector<CoolPropDbl> tmp_fractions;
         for (std::size_t i = 0; i < volu_fractions.size(); i++) {
-            tmp_fractions.push_back((long double) fluid->inputFromVolume(0.0, volu_fractions[i]));
+            tmp_fractions.push_back((CoolPropDbl) fluid->inputFromVolume(0.0, volu_fractions[i]));
         }
         this->set_fractions(tmp_fractions);
     }
@@ -311,7 +311,7 @@ double IncompressibleBackend::smass_ref(void){
 @param p The pressure in Pa
 @returns T The temperature in K
 */
-long double IncompressibleBackend::DmassP_flash(long double rhomass, long double p){
+CoolPropDbl IncompressibleBackend::DmassP_flash(CoolPropDbl rhomass, CoolPropDbl p){
     return fluid->T_rho(rhomass, p, _fractions[0]);
 }
 /// Calculate T given pressure and enthalpy
@@ -320,7 +320,7 @@ long double IncompressibleBackend::DmassP_flash(long double rhomass, long double
 @param p The pressure in Pa
 @returns T The temperature in K
 */
-long double IncompressibleBackend::HmassP_flash(long double hmass, long double p){
+CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p){
 
     class HmassP_residual : public FuncWrapper1D {
     protected:
@@ -358,7 +358,7 @@ long double IncompressibleBackend::HmassP_flash(long double hmass, long double p
 @param p The pressure in Pa
 @returns T The temperature in K
 */
-long double IncompressibleBackend::PSmass_flash(long double p, long double smass){
+CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass){
 
     class PSmass_residual : public FuncWrapper1D {
     protected:
@@ -396,7 +396,7 @@ long double IncompressibleBackend::PSmass_flash(long double p, long double smass
 //@param p The pressure in Pa
 //@returns T The temperature in K
 //*/
-//long double IncompressibleBackend::PUmass_flash(long double p, long double umass){
+//CoolPropDbl IncompressibleBackend::PUmass_flash(CoolPropDbl p, CoolPropDbl umass){
 //
 //	class PUmass_residual : public FuncWrapper1D {
 //	protected:
@@ -429,31 +429,31 @@ long double IncompressibleBackend::PSmass_flash(long double p, long double smass
 //}
 
 /// We start with the functions that do not need a reference state
-long double IncompressibleBackend::calc_melting_line(int param, int given, long double value){
+CoolPropDbl IncompressibleBackend::calc_melting_line(int param, int given, CoolPropDbl value){
 	if (param == iT && given == iP){
 		return fluid->Tfreeze(value, _fractions[0]);
 	} else {
 		throw ValueError("For incompressibles, the only valid inputs to calc_melting_line are T(p)");
 	}
 };
-long double IncompressibleBackend::calc_umass(void){
+CoolPropDbl IncompressibleBackend::calc_umass(void){
 	return hmass()-_p/rhomass();
 };
 
 /// ... and continue with the ones that depend on reference conditions.
-long double IncompressibleBackend::calc_hmass(void){
+CoolPropDbl IncompressibleBackend::calc_hmass(void){
 	return h_ref() + raw_calc_hmass(_T,_p,_fractions[0]) - hmass_ref();
 };
-long double IncompressibleBackend::calc_smass(void){
+CoolPropDbl IncompressibleBackend::calc_smass(void){
 	return s_ref() + raw_calc_smass(_T,_p,_fractions[0]) - smass_ref();
 };
 
 
 /// Functions that can be used with the solver, they miss the reference values!
-long double IncompressibleBackend::raw_calc_hmass(double T, double p, double x){
+CoolPropDbl IncompressibleBackend::raw_calc_hmass(double T, double p, double x){
 	return calc_dhdTatPxdT(T,p,x) + p * calc_dhdpatTx(T,fluid->rho(T, p, x),calc_drhodTatPx(T,p,x));
 };
-long double IncompressibleBackend::raw_calc_smass(double T, double p, double x){
+CoolPropDbl IncompressibleBackend::raw_calc_smass(double T, double p, double x){
 	return calc_dsdTatPxdT(T,p,x) + p * calc_dsdpatTx(  fluid->rho(T, p, x),calc_drhodTatPx(T,p,x));
 };
 
@@ -499,7 +499,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
         //void update(long input_pair, double value1, double value2);
 
-        std::vector<long double> fractions;
+        std::vector<CoolPropDbl> fractions;
         fractions.push_back(0.4);
         CHECK_THROWS( backend.set_mole_fractions(fractions) );
         CHECK_NOTHROW( backend.set_mass_fractions(fractions) );
@@ -514,7 +514,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         double T   = 273.15+10;
         double p   = 10e5;
         double x   = 0.25;
-        backend.set_mass_fractions(std::vector<long double>(1,x));
+        backend.set_mass_fractions(std::vector<CoolPropDbl>(1,x));
         double val = 0;
         double res = 0;
 
@@ -668,7 +668,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         double pref = 101325*10;
         double xref = x;
         backend.set_reference_state(Tref,pref,xref,0.5,0.5);
-        backend.set_mass_fractions(std::vector<long double>(1,x));
+        backend.set_mass_fractions(std::vector<CoolPropDbl>(1,x));
         backend.update(CoolProp::PT_INPUTS, pref, Tref);
         val = 0.5;
         res = backend.hmass();
