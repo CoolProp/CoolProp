@@ -6,7 +6,7 @@ int main()
 {
     // Ethane/Propane mixture, 25/75 molar
     std::vector<std::string> components(2,"Ethane"); components[1] = "Propane";
-    std::vector<long double> z(2,0.25); z[1] = 0.75;
+    std::vector<CoolPropDbl> z(2,0.25); z[1] = 0.75;
     
     shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(components));
 	HelmholtzEOSMixtureBackend &rHEOS = *(HEOS.get());
