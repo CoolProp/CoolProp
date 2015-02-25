@@ -60,7 +60,7 @@ std::string format(const char* fmt, ...)
     return ret;
 }
 
-std::vector<std::string> strsplit(std::string s, char del)
+std::vector<std::string> strsplit(const std::string &s, char del)
 {
     std::size_t iL = 0, iR = 0, N = s.size();
     std::vector<std::string> v;
