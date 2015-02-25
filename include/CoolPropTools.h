@@ -544,7 +544,7 @@ template<class T> void normalize_vector(std::vector<T> &x)
               }
             }
             if (home==NULL) {
-              throw NotImplementedError("Could not detect home directory.");
+              throw CoolProp::NotImplementedError("Could not detect home directory.");
             } 
             return std::string(home);
         #elif defined(__ISWINDOWS__)
