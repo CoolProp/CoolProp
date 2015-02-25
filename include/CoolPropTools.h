@@ -34,6 +34,7 @@
         #include <windows.h> // for the CreateDirectory function
     #else
         #include <unistd.h>
+        #include <pwd.h>
     #endif
 
     typedef long double CoolPropDbl;
