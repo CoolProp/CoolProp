@@ -17,7 +17,7 @@
 #include <stdint.h>
 #include <iostream>
 
-static unsigned long long ftw_summer; // An evil global variable for the ftw function
+static thread_local unsigned long long ftw_summer; // An evil global variable for the ftw function
 int ftw_function(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf){
    ftw_summer += sb->st_size;
    return 0;           /* To tell nftw() to continue */
