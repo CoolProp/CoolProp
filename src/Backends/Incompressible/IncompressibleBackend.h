@@ -18,7 +18,7 @@ protected:
 
 	/// Bulk values, state variables
 	//double _T, _p; // From AbstractState
-	std::vector<long double> _fractions;
+	std::vector<CoolPropDbl> _fractions;
 
 	/// Reference values, no need to calculate them each time
 	CachedElement _T_ref,_p_ref,_x_ref,_h_ref,_s_ref;
@@ -33,7 +33,7 @@ protected:
     /**
     @param fractions The vector of fractions of the components converted to the correct input
     */
-    void set_fractions(const std::vector<long double> &fractions);
+    void set_fractions(const std::vector<CoolPropDbl> &fractions);
 
 public:
     IncompressibleBackend();
@@ -75,20 +75,20 @@ public:
     /**
     @param mole_fractions The vector of mole fractions of the components
     */
-    void set_mole_fractions(const std::vector<long double> &mole_fractions);
-    const std::vector<long double> & get_mole_fractions(void){throw NotImplementedError("get_mole_fractions not implemented for this backend");};
+    void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions);
+    const std::vector<CoolPropDbl> & get_mole_fractions(void){throw NotImplementedError("get_mole_fractions not implemented for this backend");};
 
     /// Set the mass fractions
     /**
     @param mass_fractions The vector of mass fractions of the components
     */
-    void set_mass_fractions(const std::vector<long double> &mass_fractions);
+    void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions);
 
     /// Set the volume fractions
     /**
     @param volu_fractions The vector of volume fractions of the components
     */
-    void set_volu_fractions(const std::vector<long double> &volu_fractions);
+    void set_volu_fractions(const std::vector<CoolPropDbl> &volu_fractions);
 
     /// Check if the mole fractions have been set, etc.
     void check_status();
@@ -135,21 +135,21 @@ public:
     @param p The pressure in Pa
     @returns T The temperature in K
     */
-    long double DmassP_flash(long double rhomass, long double p);
+    CoolPropDbl DmassP_flash(CoolPropDbl rhomass, CoolPropDbl p);
     /// Calculate T given pressure and enthalpy
     /**
     @param hmass The mass enthalpy in J/kg
     @param p The pressure in Pa
     @returns T The temperature in K
     */
-    long double HmassP_flash(long double hmass, long double p);
+    CoolPropDbl HmassP_flash(CoolPropDbl hmass, CoolPropDbl p);
     /// Calculate T given pressure and entropy
     /**
     @param smass The mass entropy in J/kg/K
     @param p The pressure in Pa
     @returns T The temperature in K
     */
-    long double PSmass_flash(long double p, long double smass);
+    CoolPropDbl PSmass_flash(CoolPropDbl p, CoolPropDbl smass);
 
 //    /// Calculate T given pressure and internal energy
 //    /**
@@ -157,27 +157,27 @@ public:
 //    @param p The pressure in Pa
 //    @returns T The temperature in K
 //    */
-//    long double PUmass_flash(long double p, long double umass);
+//    CoolPropDbl PUmass_flash(CoolPropDbl p, CoolPropDbl umass);
 
     /// We start with the functions that do not need a reference state
-    long double calc_rhomass(void){return fluid->rho(_T, _p, _fractions[0]);};
-    long double calc_cmass(void){return fluid->c(_T, _p, _fractions[0]);};
-    long double calc_cpmass(void){return cmass();};
-    long double calc_cvmass(void){return cmass();};
-    long double calc_viscosity(void){return fluid->visc(_T, _p, _fractions[0]);};
-    long double calc_conductivity(void){return fluid->cond(_T, _p, _fractions[0]);};
-    long double calc_T_freeze(void){return fluid->Tfreeze(_p, _fractions[0]);};
-    long double calc_melting_line(int param, int given, long double value);
-    long double calc_umass(void);
+    CoolPropDbl calc_rhomass(void){return fluid->rho(_T, _p, _fractions[0]);};
+    CoolPropDbl calc_cmass(void){return fluid->c(_T, _p, _fractions[0]);};
+    CoolPropDbl calc_cpmass(void){return cmass();};
+    CoolPropDbl calc_cvmass(void){return cmass();};
+    CoolPropDbl calc_viscosity(void){return fluid->visc(_T, _p, _fractions[0]);};
+    CoolPropDbl calc_conductivity(void){return fluid->cond(_T, _p, _fractions[0]);};
+    CoolPropDbl calc_T_freeze(void){return fluid->Tfreeze(_p, _fractions[0]);};
+    CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
+    CoolPropDbl calc_umass(void);
 
     /// ... and continue with the ones that depend on reference conditions.
-    long double calc_hmass(void);
-    long double calc_smass(void);
+    CoolPropDbl calc_hmass(void);
+    CoolPropDbl calc_smass(void);
 
 public:
     /// Functions that can be used with the solver, they miss the reference values!
-    long double raw_calc_hmass(double T, double p, double x);
-    long double raw_calc_smass(double T, double p, double x);
+    CoolPropDbl raw_calc_hmass(double T, double p, double x);
+    CoolPropDbl raw_calc_smass(double T, double p, double x);
 
 
 protected:
@@ -213,10 +213,10 @@ protected:
 
 public:
 	/// Constants from the fluid object
-    long double calc_Tmax(void){return fluid->getTmax();};
-    long double calc_Tmin(void){return fluid->getTmin();};
-    long double calc_fraction_min(void){return fluid->getxmin();};
-    long double calc_fraction_max(void){return fluid->getxmax();};
+    CoolPropDbl calc_Tmax(void){return fluid->getTmax();};
+    CoolPropDbl calc_Tmin(void){return fluid->getTmin();};
+    CoolPropDbl calc_fraction_min(void){return fluid->getxmin();};
+    CoolPropDbl calc_fraction_max(void){return fluid->getxmax();};
     std::string calc_name(void){return fluid->getDescription();};
 };
 

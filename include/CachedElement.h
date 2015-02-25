@@ -33,7 +33,7 @@ class CachedElement {
 
 private:
     bool is_cached;
-    long double value;
+    CoolPropDbl value;
 public:
     /// Default constructor
     CachedElement() {
@@ -62,7 +62,7 @@ public:
             throw std::exception();
         }
     }
-    operator long double() {
+    operator CoolPropDbl() {
         if (is_cached) {return value; }
         else {
             throw std::exception();
@@ -73,7 +73,7 @@ public:
         is_cached = false;
         this->value = _HUGE;
     };
-    long double &pt(){
+    CoolPropDbl &pt(){
         return this->value;
     }
 };
