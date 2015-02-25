@@ -394,9 +394,14 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             std::vector<double> x(ncmax);
             char mix[255];
             strcpy(mix, components_joined_raw.c_str());
+            char hmx_bnc[255] = "HMX.BNC", reference_state[4] = "DEF";
+            std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
+            if (!alt_hmx_bnc_path.empty()){
+                strcpy(hmx_bnc, alt_hmx_bnc_path.c_str());
+            }
             SETMIXdll(mix, 
-                      "HMX.BNC", 
-                      "DEF", 
+                      hmx_bnc, 
+                      reference_state, 
                       &N, 
                       component_string, 
                       &(x[0]), 
@@ -441,6 +446,10 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             char path_HMX_BNC[refpropcharlength+1];
             strcpy(path_HMX_BNC, fdPath.c_str());
             strcat(path_HMX_BNC, rel_path_HMC_BNC);
+            std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
+            if (!alt_hmx_bnc_path.empty()){
+                strcpy(path_HMX_BNC, alt_hmx_bnc_path.c_str());
+            }
             strcpy(component_string, components_joined.c_str());
 
             ierr = 0;
