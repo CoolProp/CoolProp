@@ -15,7 +15,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
     // ------------------------
     // Actually build the table
     // ------------------------
-    double p, pmin = AS->p_triple()*1.001, pmax = 0.9999999*AS->p_critical();
+    CoolPropDbl p, pmin = AS->p_triple()*1.001, pmax = 0.9999999*AS->p_critical();
     for (std::size_t i = 0; i < N-1; ++i)
     {
         // Log spaced
@@ -97,6 +97,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             
             if (debug){std::cout << "x: " << x << " y: " << y;}
             
+            // Generate the input pair
             CoolPropDbl v1, v2;
             input_pairs input_pair = generate_update_pair(xkey, x, ykey, y, v1, v2);
             

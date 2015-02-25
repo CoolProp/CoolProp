@@ -19,9 +19,46 @@ class TTSEBackend : public TabularBackend
         std::string backend_name(void){return "TTSEBackend";}
         TTSEBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS) {}
         void update(CoolProp::input_pairs input_pair, double val1, double val2);
-        double evaluate_hmolarp(parameters output, std::size_t i, std::size_t j);
-        long double calc_T(void){return evaluate_hmolarp(iT, cached_i, cached_j);};
-        long double calc_rhomolar(void){return evaluate_hmolarp(iDmolar, cached_i, cached_j);};
+        double evaluate_single_phase_hmolarp(parameters output, std::size_t i, std::size_t j);
+        double evaluate_saturation(parameters output)
+        {
+            std::size_t iL = cached_saturation_iL, iV = cached_saturation_iV;
+            switch(output){
+                case iT:
+                {
+                    double TV = CubicInterp(pure_saturation.pV, pure_saturation.TV, iV-2, iV-1, iV, iV+1, _p);
+                    double TL = CubicInterp(pure_saturation.pL, pure_saturation.TL, iL-2, iL-1, iL, iL+1, _p);
+                    return _Q*TV + (1-_Q)*TL;
+                }
+                case iDmolar:
+                {
+                    double rhoV = CubicInterp(pure_saturation.pV, pure_saturation.rhomolarV, iV-2, iV-1, iV, iV+1, _p);
+                    double rhoL = CubicInterp(pure_saturation.pL, pure_saturation.rhomolarL, iL-2, iL-1, iL, iL+1, _p);
+                    if (!ValidNumber(rhoV)){throw ValueError("rhoV is invalid");}
+                    if (!ValidNumber(rhoL)){throw ValueError("rhoL is invalid");}
+                    std::cout << _Q << " " << rhoL << " "  << rhoV << std::endl;
+                    return 1/(_Q/rhoV + (1-_Q)/rhoL);
+                }
+                default:
+                    throw ValueError("can't be something other than T or rho");
+            }
+        }
+        long double calc_T(void){
+            if (using_single_phase_table){
+                return evaluate_single_phase_hmolarp(iT, cached_single_phase_i, cached_single_phase_j);
+            }
+            else{
+                return evaluate_saturation(iT);
+            }
+        }
+        long double calc_rhomolar(void){
+            if (using_single_phase_table){
+                return evaluate_single_phase_hmolarp(iDmolar, cached_single_phase_i, cached_single_phase_j);
+            }
+            else{
+                return evaluate_saturation(iDmolar);
+            }
+        }
 };
 
 } // namespace CoolProp

@@ -4,30 +4,35 @@
 void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
 {
     // Flush the cached indices
-    cached_i = -1; cached_j = -1;
+    cached_single_phase_i = -1; cached_single_phase_j = -1;
     
     switch(input_pair){
         case HmolarP_INPUTS:{
             _hmolar = val1; _p = val2;
             if (!single_phase_logph.native_inputs_are_in_range(_hmolar, _p)){
                 // Use the AbstractState instance
-                using_table = false;
+                using_single_phase_table = false;
                 if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
-                throw ValueError("inputs are not in range");
-                //this->AS->update(input_pair, val1, val2);
+                throw ValueError(format("inputs are not in range, hmolar=%Lg, p=%Lg", static_cast<CoolPropDbl>(_hmolar), _p));
             }
             else{
-                using_table = true; // Use the table !
-                std::size_t i = 0, j = 0;
-                if (pure_saturation.is_inside(_p, iHmolar, _hmolar)){
-                    throw ValueError("two-phase invalid for now");
+                using_single_phase_table = true; // Use the table !
+                std::size_t i = 0, j = 0, iL, iV;
+                if (pure_saturation.is_inside(_p, iHmolar, _hmolar, iL, iV)){
+                    using_single_phase_table = false;
+                    double hV = CubicInterp(pure_saturation.pV, pure_saturation.hmolarV, iV-2, iV-1, iV, iV+1, _p);
+                    double hL = CubicInterp(pure_saturation.pL, pure_saturation.hmolarL, iL-2, iL-1, iL, iL+1, _p);
+                    _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
+                    if( is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
+                        throw ValueError("vapor quality is not in (0,1)");
+                    }
                 }
                 else{
                     single_phase_logph.find_native_nearest_neighbor(_hmolar, _p, i, j);
+                    // Cache the indices i, j
+                    cached_single_phase_i = static_cast<int>(i); 
+                    cached_single_phase_j = static_cast<int>(j);
                 }
-                
-                // Cache the indices i, j
-                cached_i = static_cast<int>(i); cached_j = static_cast<int>(j);
                 // Make pointer to the table in use
             }
             break;
@@ -49,7 +54,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
 }
 
 /// Use the hmolar-log(p) table to evaluate an output
-double CoolProp::TTSEBackend::evaluate_hmolarp(parameters output, std::size_t i, std::size_t j)
+double CoolProp::TTSEBackend::evaluate_single_phase_hmolarp(parameters output, std::size_t i, std::size_t j)
 {
     // Define pointers for the matrices to be used; 
     std::vector<std::vector<double> > *y, *dydh, *dydp, *d2ydhdp, *d2ydp2, *d2ydh2;

@@ -98,7 +98,7 @@ class PureFluidSaturationTableData{
     
 		MSGPACK_DEFINE(revision, vectors); // write the member variables that you want to pack
 
-        bool is_inside(double p, parameters other, double val){
+        bool is_inside(double p, parameters other, double val, std::size_t &iL, std::size_t &iV){
             // Trivial checks
             // If p is outside the range (ptriple, pcrit), considered to not be inside
             double pmax = this->pV[pV.size()-1], pmin = this->pV[0];
@@ -112,7 +112,7 @@ class PureFluidSaturationTableData{
                 default: throw ValueError("invalid input for other in is_inside");
             }
             // Now check based on a rough analysis using bounding pressure
-            std::size_t iV = 0, iL = 0, iLplus, iVplus;
+            std::size_t iLplus, iVplus;
             // Find the indices (iL,iL+1) & (iV,iV+1) that bound the given pressure
             // In general iV and iL will be the same, but if pseudo-pure, they might
             // be different
@@ -124,9 +124,19 @@ class PureFluidSaturationTableData{
             double ymin = min4((*yL)[iL],(*yL)[iLplus],(*yV)[iV],(*yV)[iVplus]);
             double ymax = max4((*yL)[iL],(*yL)[iLplus],(*yV)[iV],(*yV)[iVplus]);
             if (val < ymin || val > ymax){ return false;}
-            // Actually do "saturation" call
-            // Now we go into the full analysis
-            return true;
+            // Actually do "saturation" call using cubic interpolation
+            iVplus = std::min(iVplus, static_cast<std::size_t>(3));
+            iLplus = std::min(iLplus, static_cast<std::size_t>(3));
+            double yVval = CubicInterp(pV, *yV, iVplus-3, iVplus-2, iVplus-1, iVplus, p);
+            double yLval = CubicInterp(pL, *yL, iLplus-3, iLplus-2, iLplus-1, iLplus, p);
+            if (!is_in_closed_range(yVval, yLval, val)){ 
+                return false;
+            }
+            else{
+                return true;
+            }
+            iL = iLplus-1;
+            iV = iVplus-1;
         }
 		/// Resize all the vectors
 		void resize(std::size_t N){
@@ -291,9 +301,9 @@ class LogPHTable : public SinglePhaseGriddedTableData
             
             // Check both the enthalpies at the Tmax isotherm to see whether to use low or high pressure
             AS->update(PT_INPUTS, 1e-10, AS->Tmax());
-            long double xmax1 = AS->hmolar();
+            CoolPropDbl xmax1 = AS->hmolar();
             AS->update(PT_INPUTS, AS->pmax(), AS->Tmax());
-            long double xmax2 = AS->hmolar();
+            CoolPropDbl xmax2 = AS->hmolar();
             xmax = std::max(xmax1, xmax2);
             
             ymax = AS->pmax();
@@ -360,8 +370,9 @@ class TabularBackend : public AbstractState
 {
     protected:
         shared_ptr<CoolProp::AbstractState> AS;
-        bool using_table;
-        int cached_i, cached_j;
+        bool using_single_phase_table;
+        std::size_t cached_single_phase_i, cached_single_phase_j;
+        std::size_t cached_saturation_iL, cached_saturation_iV;
     public:
         
         LogPHTable single_phase_logph;
@@ -396,7 +407,7 @@ class TabularBackend : public AbstractState
         void write_tables();
         
         TabularBackend(shared_ptr<CoolProp::AbstractState> AS){
-			using_table = false;
+			using_single_phase_table = false;
 
             // Grab onto the pointer to the class
             this->AS = AS;
