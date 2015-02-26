@@ -226,7 +226,7 @@
         return str;
     }
 
-    std::string strjoin(std::vector<std::string> strings, std::string delim);
+    std::string strjoin(const std::vector<std::string> &strings, const std::string &delim);
 
     void MatInv_2(double A[2][2] , double B[2][2]);
 
@@ -245,7 +245,7 @@
     {
         return (y1-y0)/(x1-x0)*(x-x0)+y0;
     };
-    template<class T> T LinearInterp(std::vector<T> x, std::vector<T> y, std::size_t i0, std::size_t i1, T val)
+    template<class T> T LinearInterp(const std::vector<T> &x, const std::vector<T> &y, std::size_t i0, std::size_t i1, T val)
     {
         return LinearInterp(x[i0],x[i1],y[i0],y[i1],val);
     };
@@ -262,7 +262,7 @@
         L2=((x-x0)*(x-x1))/((x2-x0)*(x2-x1));
         return L0*f0+L1*f1+L2*f2;
     };
-    template<class T> T QuadInterp(std::vector<T> x, std::vector<T> y, std::size_t i0, std::size_t i1, std::size_t i2, T val)
+    template<class T> T QuadInterp(const std::vector<T> &x, const std::vector<T> &y, std::size_t i0, std::size_t i1, std::size_t i2, T val)
     {
         return QuadInterp(x[i0],x[i1],x[i2],y[i0],y[i1],y[i2],val);
     };
@@ -280,7 +280,7 @@
         L3=((x-x0)*(x-x1)*(x-x2))/((x3-x0)*(x3-x1)*(x3-x2));
         return L0*f0+L1*f1+L2*f2+L3*f3;
     };
-    template<class T> T CubicInterp(std::vector<T> x, std::vector<T> y, std::size_t i0, std::size_t i1, std::size_t i2, std::size_t i3, T val)
+    template<class T> T CubicInterp(const std::vector<T> &x, const std::vector<T> &y, std::size_t i0, std::size_t i1, std::size_t i2, std::size_t i3, T val)
     {
         return CubicInterp(x[i0],x[i1],x[i2],x[i3],y[i0],y[i1],y[i2],y[i3],val);
     };
@@ -312,7 +312,7 @@
 
     inline bool double_equal(double a, double b){return std::abs(a - b) <= 1 * DBL_EPSILON * std::max(std::abs(a), std::abs(b));};
 
-    template<class T> T max_abs_value(std::vector<T> x)
+    template<class T> T max_abs_value(const std::vector<T> &x)
     {
         T max = 0;
         std::size_t N = x.size();
@@ -324,7 +324,7 @@
         return max;
     }
     
-    template<class T> T min_abs_value(std::vector<T> x)
+    template<class T> T min_abs_value(const std::vector<T> &x)
     {
         T min = 1e40;
         std::size_t N = x.size();
@@ -341,54 +341,62 @@
     class Dictionary
     {
     private:
-        std::map<std::string, double> numbers;
-        std::map<std::string, std::string> strings;
-        std::map<std::string, std::vector<double> > double_vectors;
-        std::map<std::string, std::vector<std::string> > string_vectors;
+        typedef std::map<std::string, double> numbers_map;
+        numbers_map numbers;
+        typedef std::map<std::string, std::string> strings_map;
+        strings_map strings;
+        typedef std::map<std::string, std::vector<double> > double_vectors_map;
+        double_vectors_map double_vectors;
+        typedef std::map<std::string, std::vector<std::string> > string_vectors_map;
+        string_vectors_map string_vectors;
     public:
         Dictionary(){};
-        bool is_empty(void){return numbers.empty() && strings.empty() && double_vectors.empty() && string_vectors.empty();}
-        void add_string(std::string s1, std::string s2){ strings.insert(std::pair<std::string, std::string>(s1, s2));}
-        void add_number(std::string s1, double d){ numbers.insert(std::pair<std::string, double>(s1, d));}
-        void add_double_vector(std::string s1, std::vector<double> d){ double_vectors.insert(std::pair<std::string, std::vector<double> >(s1, d));}
-        void add_string_vector(std::string s1, std::vector<std::string> d){ string_vectors.insert(std::pair<std::string, std::vector<std::string> >(s1, d));}
-        std::string get_string(std::string s)
+        bool is_empty(void) const {return numbers.empty() && strings.empty() && double_vectors.empty() && string_vectors.empty();}
+        void add_string(const std::string &s1, const std::string &s2){ strings.insert(std::pair<std::string, std::string>(s1, s2));}
+        void add_number(const std::string &s1, double d){ numbers.insert(std::pair<std::string, double>(s1, d));}
+        void add_double_vector(const std::string &s1, const std::vector<double> &d){ double_vectors.insert(std::pair<std::string, std::vector<double> >(s1, d));}
+        void add_string_vector(const std::string &s1, const std::vector<std::string> &d){ string_vectors.insert(std::pair<std::string, std::vector<std::string> >(s1, d));}
+        std::string get_string(const std::string &s) const
         {
-            if (strings.find(s) != strings.end()){ 
-                return strings[s]; 
-            } 
-            else{ 
-                throw CoolProp::ValueError(format("%s could not be matched in get_string",s.c_str())); 
+            strings_map::const_iterator i = strings.find(s);
+            if (i != strings.end()){
+                return i->second;
+            }
+            else{
+                throw CoolProp::ValueError(format("%s could not be matched in get_string",s.c_str()));
             }
         };
-        double get_double(std::string s)
+        double get_double(const std::string &s) const
         {
-            if (numbers.find(s) != numbers.end()){ 
-                return numbers[s]; 
-            } 
-            else{ 
-                throw CoolProp::ValueError(format("%s could not be matched in get_number",s.c_str())); 
+            numbers_map::const_iterator i = numbers.find(s);
+            if (i != numbers.end()){
+                return i->second;
+            }
+            else{
+                throw CoolProp::ValueError(format("%s could not be matched in get_number",s.c_str()));
             }
         };
-        double get_number(std::string s)
+        double get_number(const std::string &s) const
         {
             return get_double(s);
         };
-        const std::vector<double>& get_double_vector(std::string s)
+        const std::vector<double>& get_double_vector(const std::string &s) const
         {
-            if (double_vectors.find(s) != double_vectors.end()){ 
-                return double_vectors[s]; 
-            } 
-            else{ 
+            double_vectors_map::const_iterator i = double_vectors.find(s);
+            if (i != double_vectors.end()){
+                return i->second;
+            }
+            else{
                 throw CoolProp::ValueError(format("%s could not be matched in get_double_vector",s.c_str()));
             }
         };
-        const std::vector<std::string>& get_string_vector(std::string s)
+        const std::vector<std::string>& get_string_vector(const std::string &s) const
         {
-            if (string_vectors.find(s) != string_vectors.end()){ 
-                return string_vectors[s]; 
-            } 
-            else{ 
+            string_vectors_map::const_iterator i = string_vectors.find(s);
+            if (i != string_vectors.end()){
+                return i->second;
+            }
+            else{
                 throw CoolProp::ValueError(format("%s could not be matched in get_string_vector",s.c_str()));
             }
         };
@@ -587,7 +595,7 @@ template<class T> void normalize_vector(std::vector<T> &x)
         #endif
     };
     
-    inline bool path_exists(std::string path)
+    inline bool path_exists(const std::string &path)
     {
         #if defined(__ISWINDOWS__) // Defined for 32-bit and 64-bit windows
             struct _stat buf;
@@ -616,50 +624,39 @@ template<class T> void normalize_vector(std::vector<T> &x)
         std::replace( file_path.begin(), file_path.end(), '\\', '/'); // replace all '\' with '/'
         
         #if defined(__ISWINDOWS__)
-        char sep = '\\';
+        const char sep = '\\'; // well, Windows (and DOS) allows forward slash "/", too :)
         #else
-        char sep = '/';
+        const char sep = '/';
         #endif
         
         std::vector<std::string> pathsplit = strsplit(file_path,'/');
-        std::string path = pathsplit[0];
-        if (pathsplit.size()>0)
+        std::string path = pathsplit[0]; // will throw if pathsplit.size() == 0
+        for (std::size_t i = 0, sz = pathsplit.size(); i < sz; i++)
         {
-            for (unsigned int i = 0; i < pathsplit.size(); i++)
+            if (!path_exists(path))
             {
-                if (!path_exists(path))
-                {
-                    #if defined(__ISWINDOWS__) // Defined for 32-bit and 64-bit windows
-                        #if defined(_UNICODE)
-                            int errcode = CreateDirectoryA((LPCSTR)path.c_str(),NULL);
-                        #else
-                            int errcode = CreateDirectory((LPCSTR)path.c_str(),NULL);
-                        #endif
-                        if (errcode == 0){
-                            switch(GetLastError()){
-                                case ERROR_ALREADY_EXISTS:
-                                    break;
-                                case ERROR_PATH_NOT_FOUND:
-                                    throw CoolProp::ValueError(format("Unable to make the directory %s",path.c_str()));
-                                default:
-                                    break;
-                            }
-                            
+                #if defined(__ISWINDOWS__) // Defined for 32-bit and 64-bit windows
+                    int errcode = CreateDirectoryA((LPCSTR)path.c_str(),NULL);
+                    if (errcode == 0){
+                        switch(GetLastError()){
+                            case ERROR_ALREADY_EXISTS:
+                                break;
+                            case ERROR_PATH_NOT_FOUND:
+                                throw CoolProp::ValueError(format("Unable to make the directory %s",path.c_str()));
+                            default:
+                                break;
                         }
-                    #else 
-                        #if defined(__powerpc__)
-                        #else
-                            mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-                        #endif
+                        
+                    }
+                #else
+                    #if defined(__powerpc__)
+                    #else
+                        mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
                     #endif
-                }
-                if (i < pathsplit.size()-1)
-                    path += format("%c%s", sep, pathsplit[i+1].c_str());
+                #endif
             }
-        }
-        else
-        {
-            throw CoolProp::ValueError(format("Could not make path [%s]",file_path.c_str()));
+            if (i < (sz-1))
+                path += format("%c%s", sep, pathsplit[i+1].c_str());
         }
     };
 #endif

@@ -19,7 +19,7 @@ enum x_N_dependency_flag{XN_INDEPENDENT, ///< x_N is an independent variable, an
                          XN_DEPENDENT ///< x_N is an dependent variable, calculated by \f$ x_N = 1-\sum_i x_i\f$
                          };
                  
-std::string get_reducing_function_name(std::string CAS1, std::string CAS2);
+std::string get_reducing_function_name(const std::string &CAS1, const std::string &CAS2);
 
 /** \brief Abstract base class for reducing function
  * An abstract base class for the reducing function to allow for
@@ -35,7 +35,7 @@ public:
     virtual ~ReducingFunction(){};
 
     /// A factory function to generate the requiredreducing function
-    static shared_ptr<ReducingFunction> factory(const std::vector<CoolPropFluid*> &components, std::vector< std::vector< CoolPropDbl> > &F);
+    static shared_ptr<ReducingFunction> factory(const std::vector<CoolPropFluid*> &components, STLMatrix &F);
 
     /// The reduced temperature
     virtual CoolPropDbl Tr(const std::vector<CoolPropDbl> &x) = 0;
@@ -103,7 +103,7 @@ protected:
     std::vector<CoolPropFluid *> pFluids; ///< List of pointer to fluids
 
 public:
-    GERG2008ReducingFunction(std::vector<CoolPropFluid *> pFluids, STLMatrix beta_v, STLMatrix gamma_v, STLMatrix beta_T, STLMatrix gamma_T)
+    GERG2008ReducingFunction(const std::vector<CoolPropFluid *> &pFluids, const STLMatrix &beta_v, const STLMatrix &gamma_v, STLMatrix beta_T, const STLMatrix &gamma_T)
     {
         this->pFluids = pFluids;
         this->beta_v = beta_v;
@@ -324,7 +324,14 @@ protected:
     LemmonAirHFCReducingFunction(const LemmonAirHFCReducingFunction &);
 public:
     /// Set the coefficients based on reducing parameters loaded from JSON
-    static void convert_to_GERG(const std::vector<CoolPropFluid*> &pFluids, std::size_t i, std::size_t j, Dictionary d, CoolPropDbl &beta_T, CoolPropDbl &beta_v, CoolPropDbl &gamma_T, CoolPropDbl &gamma_v)
+    static void convert_to_GERG(const std::vector<CoolPropFluid*> &pFluids,
+                                std::size_t i,
+                                std::size_t j,
+                                const Dictionary &d,
+                                CoolPropDbl &beta_T,
+                                CoolPropDbl &beta_v,
+                                CoolPropDbl &gamma_T,
+                                CoolPropDbl &gamma_v)
     {
         CoolPropDbl xi_ij = d.get_number("xi");
         CoolPropDbl zeta_ij = d.get_number("zeta");

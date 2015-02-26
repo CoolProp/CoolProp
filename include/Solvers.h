@@ -22,8 +22,8 @@ class FuncWrapperND
 public:
     FuncWrapperND(){};
     virtual ~FuncWrapperND(){};
-    virtual std::vector<double> call(std::vector<double>) = 0;// must be provided
-    virtual std::vector<std::vector<double> > Jacobian(std::vector<double>);
+    virtual std::vector<double> call(const std::vector<double>&) = 0;// must be provided
+    virtual std::vector<std::vector<double> > Jacobian(const std::vector<double>&);
 };
 
 // Single-Dimensional solvers, pointer versions
@@ -40,7 +40,7 @@ double Newton(FuncWrapper1D &f, double x0, double ftol, int maxiter, std::string
 
 
 // Multi-Dimensional solvers
-std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> x0, double tol, int maxiter, std::string *errstring);
+std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, const std::vector<double> &x0, double tol, int maxiter, std::string *errstring);
 
 }; /*namespace CoolProp*/
 #endif
