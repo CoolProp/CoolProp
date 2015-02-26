@@ -183,6 +183,40 @@ class PureFluidSaturationTableData{
             std::swap(*this, temp); // Swap
             this->AS = temp.AS; // Reconnect the AbstractState pointer
         };
+        double evaluate(parameters output, double p, double Q, std::size_t iL, std::size_t iV)
+        {
+            double logp = log(p);
+            switch(output){
+                case iT:
+                {
+                    double TV = CubicInterp(logpV, this->TV, iV-2, iV-1, iV, iV+1, logp);
+                    double TL = CubicInterp(logpL, this->TL, iL-2, iL-1, iL, iL+1, logp);
+                    return Q*TV + (1-Q)*TL;
+                }
+                case iSmolar:
+                {
+                    double sV = CubicInterp(logpV, smolarV, iV-2, iV-1, iV, iV+1, logp);
+                    double sL = CubicInterp(logpL, smolarL, iL-2, iL-1, iL, iL+1, logp);
+                    return Q*sV + (1-Q)*sL;
+                }
+                case iHmolar:
+                {
+                    double hV = CubicInterp(logpV, hmolarV, iV-2, iV-1, iV, iV+1, logp);
+                    double hL = CubicInterp(logpL, hmolarL, iL-2, iL-1, iL, iL+1, logp);
+                    return Q*hV + (1-Q)*hL;
+                }
+                case iDmolar:
+                {
+                    double rhoV = exp(CubicInterp(logpV, logrhomolarV, iV-2, iV-1, iV, iV+1, logp));
+                    double rhoL = exp(CubicInterp(logpL, logrhomolarL, iL-2, iL-1, iL, iL+1, logp));
+                    if (!ValidNumber(rhoV)){throw ValueError("rhoV is invalid");}
+                    if (!ValidNumber(rhoL)){throw ValueError("rhoL is invalid");}
+                    return 1/(Q/rhoV + (1-Q)/rhoL);
+                }
+                default:
+                    throw ValueError("can't be something other than T or rho");
+            }
+        }
 };
 
 /** \brief This class holds the data for a single-phase interpolation table that is regularly spaced
