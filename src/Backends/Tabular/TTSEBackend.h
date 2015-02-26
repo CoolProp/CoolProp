@@ -5,13 +5,6 @@
 
 namespace CoolProp
 {
-    
-class BicubicBackend : public TabularBackend
-{
-    public:
-        std::string backend_name(void){return "BicubicBackend";}
-        BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS) {}
-};
 
 class TTSEBackend : public TabularBackend
 {
