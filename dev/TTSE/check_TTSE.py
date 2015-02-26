@@ -44,6 +44,8 @@ for a_useless_counter in range(40000):
         rhoTTSE = TTSE.rhomolar(); TTTSE = TTSE.T()
         
         errorTTSE = abs(rhoTTSE/rhoEOS-1)*100
+        if errorTTSE > 100 or errorTTSE < 1e-12:
+            print h, p, errorTTSE
 
         HHH1.append(h)
         PPP1.append(p)
@@ -51,6 +53,9 @@ for a_useless_counter in range(40000):
         
     except ValueError as VE:
         print 'ERROR', VE
+        HHH1.append(h)
+        PPP1.append(p)
+        EEE1.append(0)
         pass
     
 print 'done'

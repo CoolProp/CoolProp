@@ -17,25 +17,33 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
             }
             else{
                 using_single_phase_table = true; // Use the table !
-                std::size_t i = 0, j = 0, iL, iV;
-                if (pure_saturation.is_inside(_p, iHmolar, _hmolar, iL, iV)){
+                std::size_t iL, iV;
+                CoolPropDbl hL = 0, hV = 0;
+                if (pure_saturation.is_inside(_p, iHmolar, _hmolar, iL, iV, hL, hV)){
                     using_single_phase_table = false;
-                    double hV = CubicInterp(pure_saturation.pV, pure_saturation.hmolarV, iV-2, iV-1, iV, iV+1, _p);
-                    double hL = CubicInterp(pure_saturation.pL, pure_saturation.hmolarL, iL-2, iL-1, iL, iL+1, _p);
                     _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
-                    if( is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
+                    if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
                         throw ValueError("vapor quality is not in (0,1)");
+                    }
+                    else{
+                        cached_saturation_iL = iL;
+                        cached_saturation_iV = iV;
                     }
                 }
                 else{
-                    single_phase_logph.find_native_nearest_neighbor(_hmolar, _p, i, j);
-                    // Cache the indices i, j
-                    cached_single_phase_i = static_cast<int>(i); 
-                    cached_single_phase_j = static_cast<int>(j);
+                    // Find and cache the indices i, j
+                    single_phase_logph.find_native_nearest_neighbor(_hmolar, _p, cached_single_phase_i, cached_single_phase_j);
                 }
                 // Make pointer to the table in use
             }
             break;
+        }
+        case HmassP_INPUTS:
+        {
+            // Call again, but this time with molar units
+            // H: [J/kg] * [kg/mol] -> [J/mol]
+            update(HmolarP_INPUTS, val1 * AS->molar_mass(), val2);
+            return;
         }
         case DmolarP_INPUTS:
         case PUmolar_INPUTS:
@@ -81,7 +89,7 @@ double CoolProp::TTSEBackend::evaluate_single_phase_hmolarp(parameters output, s
     // Distances from the node
 	double deltah = static_cast<double>(_hmolar) - single_phase_logph.xvec[i];
     double deltap = static_cast<double>(_p) - single_phase_logph.yvec[j];
-	
+    
     // Calculate the output value desired
     double val = (*y)[i][j]+deltah*(*dydh)[i][j]+deltap*(*dydp)[i][j]+0.5*deltah*deltah*(*d2ydh2)[i][j]+0.5*deltap*deltap*(*d2ydp2)[i][j]+deltap*deltah*(*d2ydhdp)[i][j];
     

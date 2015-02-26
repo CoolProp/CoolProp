@@ -70,7 +70,7 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
  * See http://stackoverflow.com/a/148610
  * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
  */
-#define LIST_OF_SATURATION_VECTORS X(TL) X(pL) X(hmolarL) X(smolarL) X(umolarL) X(rhomolarL) X(TV) X(pV) X(hmolarV) X(smolarV) X(umolarV) X(rhomolarV)
+#define LIST_OF_SATURATION_VECTORS X(TL) X(pL) X(logpL) X(hmolarL) X(smolarL) X(umolarL) X(rhomolarL) X(logrhomolarL) X(TV) X(pV) X(logpV) X(hmolarV) X(smolarV) X(umolarV) X(rhomolarV) X(logrhomolarV)
 
 namespace CoolProp{
 
@@ -83,7 +83,7 @@ class PureFluidSaturationTableData{
 		std::size_t N;
 		shared_ptr<CoolProp::AbstractState> AS;
     
-		PureFluidSaturationTableData(){N = 200; revision = 0;}
+		PureFluidSaturationTableData(){N = 1000; revision = 0;}
         
         /// Build this table
         void build(shared_ptr<CoolProp::AbstractState> &AS);
@@ -98,17 +98,17 @@ class PureFluidSaturationTableData{
     
 		MSGPACK_DEFINE(revision, vectors); // write the member variables that you want to pack
 
-        bool is_inside(double p, parameters other, double val, std::size_t &iL, std::size_t &iV){
+        bool is_inside(double p, parameters other, double val, std::size_t &iL, std::size_t &iV, CoolPropDbl &yL, CoolPropDbl &yV){
             // Trivial checks
             // If p is outside the range (ptriple, pcrit), considered to not be inside
             double pmax = this->pV[pV.size()-1], pmin = this->pV[0];
             if (p > pmax || p < pmin){return false;}
-            std::vector<double> *yL = NULL, *yV = NULL;
+            std::vector<double> *yvecL = NULL, *yvecV = NULL;
             switch(other){
-                case iT: yL = &TL; yV = &TV; break;
-                case iHmolar: yL = &hmolarL; yV = &hmolarV; break;
-                //case iT: yL = &TL; yV = &TV; break;
-                //case iT: yL = &TL; yV = &TV; break;
+                case iT: yvecL = &TL; yvecV = &TV; break;
+                case iHmolar: yvecL = &hmolarL; yvecV = &hmolarV; break;
+                //case iT: yvecL = &TL; yvecV = &TV; break;
+                //case iT: yvecL = &TL; yvecV = &TV; break;
                 default: throw ValueError("invalid input for other in is_inside");
             }
             // Now check based on a rough analysis using bounding pressure
@@ -121,22 +121,23 @@ class PureFluidSaturationTableData{
             iVplus = std::min(iV+1, N-1);
             iLplus = std::min(iL+1, N-1);
             // Find the bounding values for the other variable
-            double ymin = min4((*yL)[iL],(*yL)[iLplus],(*yV)[iV],(*yV)[iVplus]);
-            double ymax = max4((*yL)[iL],(*yL)[iLplus],(*yV)[iV],(*yV)[iVplus]);
+            double ymin = min4((*yvecL)[iL],(*yvecL)[iLplus],(*yvecV)[iV],(*yvecV)[iVplus]);
+            double ymax = max4((*yvecL)[iL],(*yvecL)[iLplus],(*yvecV)[iV],(*yvecV)[iVplus]);
             if (val < ymin || val > ymax){ return false;}
             // Actually do "saturation" call using cubic interpolation
-            iVplus = std::min(iVplus, static_cast<std::size_t>(3));
-            iLplus = std::min(iLplus, static_cast<std::size_t>(3));
-            double yVval = CubicInterp(pV, *yV, iVplus-3, iVplus-2, iVplus-1, iVplus, p);
-            double yLval = CubicInterp(pL, *yL, iLplus-3, iLplus-2, iLplus-1, iLplus, p);
-            if (!is_in_closed_range(yVval, yLval, val)){ 
+            if (iVplus < 3){ iVplus = 3;}
+            if (iLplus < 3){ iLplus = 3;}
+            double logp = log(p);
+            yV = CubicInterp(logpV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, logp);
+            yL = CubicInterp(logpL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, logp);
+            if (!is_in_closed_range(yV, yL, static_cast<CoolPropDbl>(val))){ 
                 return false;
             }
             else{
+                iL = iLplus-1;
+                iV = iVplus-1;
                 return true;
             }
-            iL = iLplus-1;
-            iV = iVplus-1;
         }
 		/// Resize all the vectors
 		void resize(std::size_t N){
@@ -152,10 +153,17 @@ class PureFluidSaturationTableData{
 			LIST_OF_SATURATION_VECTORS
 			#undef X
 		};
+        std::map<std::string, std::vector<double> >::iterator get_vector_iterator(const std::string &name){
+            std::map<std::string, std::vector<double> >::iterator it = vectors.find(name);
+            if (it == vectors.end()){
+                throw UnableToLoadException(format("could not find vector %s",name.c_str()));
+            }
+            return it;
+        }
 		/// Take all the vectors that are in the class and unpack them from the vectors map
 		void unpack(){
-			/* Use X macros to auto-generate the unpacking code; each will look something like: T = *(vectors.find("T")).second */
-			#define X(name) name = (vectors.find(#name))->second;
+			/* Use X macros to auto-generate the unpacking code; each will look something like: T = get_vector_iterator("T")->second */
+			#define X(name) name = get_vector_iterator(#name)->second;
 			LIST_OF_SATURATION_VECTORS
 			#undef X
 			N = TL.size();
@@ -233,10 +241,17 @@ class SinglePhaseGriddedTableData{
 			LIST_OF_MATRICES
 			#undef X
 		};
+        std::map<std::string, std::vector<std::vector<double> > >::iterator get_matrices_iterator(const std::string &name){
+            std::map<std::string, std::vector<std::vector<double> > >::iterator it = matrices.find(name);
+            if (it == matrices.end()){
+                throw UnableToLoadException(format("could not find matrix %s",name.c_str()));
+            }
+            return it;
+        }
 		/// Take all the matrices that are in the class and pack them into the matrices map for easy unpacking using msgpack
 		void unpack(){
 			/* Use X macros to auto-generate the unpacking code; each will look something like: T = *(matrices.find("T")).second */
-			#define X(name) name = (matrices.find(#name))->second;
+			#define X(name) name = get_matrices_iterator(#name)->second;
 			LIST_OF_MATRICES
 			#undef X
 			Nx = T.size(); Ny = T[0].size();

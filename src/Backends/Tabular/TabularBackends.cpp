@@ -5,7 +5,7 @@
 #include <sstream>
 #include "time.h"
 void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::AbstractState> &AS){
-    const bool debug = get_debug_level() > 5 || true;
+    const bool debug = get_debug_level() > 5 || false;
     if (debug){
         std::cout << format("***********************************************\n");
         std::cout << format(" Saturation Table (%s) \n", AS->name().c_str());
@@ -26,6 +26,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
             AS->update(PQ_INPUTS, p, 0);
             pL[i] = p; TL[i] = AS->T();  rhomolarL[i] = AS->rhomolar(); 
             hmolarL[i] = AS->hmolar(); smolarL[i] = AS->smolar(); umolarL[i] = AS->umolar();
+            logpL[i] = log(p); logrhomolarL[i] = log(rhomolarL[i]);
         }
         catch(std::exception &e){
             // That failed for some reason, go to the next pair
@@ -37,6 +38,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
             AS->update(PQ_INPUTS, p, 1);
             pV[i] = p; TV[i] = AS->T(); rhomolarV[i] = AS->rhomolar();
             hmolarV[i] = AS->hmolar(); smolarV[i] = AS->smolar(); umolarV[i] = AS->umolar();
+            logpV[i] = log(p); logrhomolarV[i] = log(rhomolarV[i]);
         }
         catch(std::exception &e){
             // That failed for some reason, go to the next pair
@@ -55,10 +57,8 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
     
 void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)
 {
-    std::size_t Nx = 200, Ny = 200;
-    CoolPropDbl xmin, xmax, ymin, ymax, x, y;
-    bool logy, logx;
-    const bool debug = get_debug_level() > 5 || false;
+    CoolPropDbl x, y;
+    const bool debug = get_debug_level() > 5 || true;
 
     resize(Nx, Ny);
     
@@ -95,7 +95,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             }
             yvec[j] = y;
             
-            if (debug){std::cout << "x: " << x << " y: " << y;}
+            if (debug){std::cout << "x: " << x << " y: " << y << std::endl;}
             
             // Generate the input pair
             CoolPropDbl v1, v2;
@@ -106,6 +106,9 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             // --------------------
             try{
                 AS->update(input_pair, v1, v2);
+                if (!ValidNumber(AS->rhomolar())){
+                    throw ValueError("rhomolar is invalid");
+                }
             }
             catch(std::exception &e){
                 // That failed for some reason, go to the next pair

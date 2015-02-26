@@ -23,20 +23,20 @@ class TTSEBackend : public TabularBackend
         double evaluate_saturation(parameters output)
         {
             std::size_t iL = cached_saturation_iL, iV = cached_saturation_iV;
+            double logp = log(_p);
             switch(output){
                 case iT:
                 {
-                    double TV = CubicInterp(pure_saturation.pV, pure_saturation.TV, iV-2, iV-1, iV, iV+1, _p);
-                    double TL = CubicInterp(pure_saturation.pL, pure_saturation.TL, iL-2, iL-1, iL, iL+1, _p);
+                    double TV = CubicInterp(pure_saturation.logpV, pure_saturation.TV, iV-2, iV-1, iV, iV+1, logp);
+                    double TL = CubicInterp(pure_saturation.logpL, pure_saturation.TL, iL-2, iL-1, iL, iL+1, logp);
                     return _Q*TV + (1-_Q)*TL;
                 }
                 case iDmolar:
                 {
-                    double rhoV = CubicInterp(pure_saturation.pV, pure_saturation.rhomolarV, iV-2, iV-1, iV, iV+1, _p);
-                    double rhoL = CubicInterp(pure_saturation.pL, pure_saturation.rhomolarL, iL-2, iL-1, iL, iL+1, _p);
+                    double rhoV = exp(CubicInterp(pure_saturation.logpV, pure_saturation.logrhomolarV, iV-2, iV-1, iV, iV+1, logp));
+                    double rhoL = exp(CubicInterp(pure_saturation.logpL, pure_saturation.logrhomolarL, iL-2, iL-1, iL, iL+1, logp));
                     if (!ValidNumber(rhoV)){throw ValueError("rhoV is invalid");}
                     if (!ValidNumber(rhoL)){throw ValueError("rhoL is invalid");}
-                    std::cout << _Q << " " << rhoL << " "  << rhoV << std::endl;
                     return 1/(_Q/rhoV + (1-_Q)/rhoL);
                 }
                 default:
