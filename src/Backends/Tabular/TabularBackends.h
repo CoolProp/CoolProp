@@ -418,6 +418,8 @@ class LogPTTable : public SinglePhaseGriddedTableData
 class TabularBackend : public AbstractState
 {
     protected:
+        enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE};
+        selected_table_options selected_table;
         shared_ptr<CoolProp::AbstractState> AS;
         bool using_single_phase_table;
         std::size_t cached_single_phase_i, cached_single_phase_j;
@@ -428,7 +430,6 @@ class TabularBackend : public AbstractState
         LogPTTable single_phase_logpT;
         PureFluidSaturationTableData pure_saturation; // This will ultimately be split into pure and mixture backends which derive from this backend
         
-        std::string get_backend_name(void){return "TabularBackend";};
         bool using_mole_fractions(void){return true;}
         bool using_mass_fractions(void){return false;}
         bool using_volu_fractions(void){return false;}
@@ -436,6 +437,9 @@ class TabularBackend : public AbstractState
         void set_mole_fractions(const std::vector<long double> &mole_fractions){};
         void set_mass_fractions(const std::vector<long double> &mass_fractions){};
         const std::vector<long double> & get_mole_fractions(){throw NotImplementedError("get_mole_fractions not implemented for TTSE");};
+        
+        virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
         
         /// Returns the path to the tables that shall be written
         std::string path_to_tables(void);
@@ -454,6 +458,59 @@ class TabularBackend : public AbstractState
         }
         /// Write the tables to file
         void write_tables();
+        
+        CoolPropDbl calc_T(void){
+            if (using_single_phase_table){
+                switch(selected_table){
+                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iT, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_PT_TABLE: return _T;
+                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
+                }
+                return _HUGE; // not needed, will never be hit, just to make compiler happy
+            }
+            else{
+                return pure_saturation.evaluate(iT, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            }
+        }
+        CoolPropDbl calc_rhomolar(void){
+            if (using_single_phase_table){
+                switch(selected_table){
+                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iDmolar, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
+                }
+                return _HUGE; // not needed, will never be hit, just to make compiler happy
+            }
+            else{
+                return pure_saturation.evaluate(iDmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            }
+        }
+        CoolPropDbl calc_hmolar(void){
+            if (using_single_phase_table){
+                switch(selected_table){
+                    case SELECTED_PH_TABLE: return _hmolar;
+                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iHmolar, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
+                }
+                return _HUGE; // not needed, will never be hit, just to make compiler happy
+            }
+            else{
+                return pure_saturation.evaluate(iHmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            }
+        }
+        CoolPropDbl calc_smolar(void){
+            if (using_single_phase_table){
+                switch(selected_table){
+                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iSmolar, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iSmolar, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
+                }
+                return _HUGE; // not needed, will never be hit, just to make compiler happy
+            }
+            else{
+                return pure_saturation.evaluate(iHmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            }
+        }
         
         TabularBackend(shared_ptr<CoolProp::AbstractState> AS){
 			using_single_phase_table = false;
