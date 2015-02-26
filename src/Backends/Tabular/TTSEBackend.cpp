@@ -26,30 +26,23 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                         throw ValueError("vapor quality is not in (0,1)");
                     }
                     else{
-                        cached_saturation_iL = iL;
-                        cached_saturation_iV = iV;
+                        cached_saturation_iL = iL; cached_saturation_iV = iV;
                     }
                 }
                 else{
                     // Find and cache the indices i, j
                     single_phase_logph.find_native_nearest_neighbor(_hmolar, _p, cached_single_phase_i, cached_single_phase_j);
                 }
-                // Make pointer to the table in use
             }
             break;
         }
-        case HmassP_INPUTS:
-        {
-            // Call again, but this time with molar units
-            // H: [J/kg] * [kg/mol] -> [J/mol]
-            update(HmolarP_INPUTS, val1 * AS->molar_mass(), val2);
+        case HmassP_INPUTS:{
+            update(HmolarP_INPUTS, val1 * AS->molar_mass(), val2); // H: [J/kg] * [kg/mol] -> [J/mol]
             return;
         }
         case DmolarP_INPUTS:
         case PUmolar_INPUTS:
         case PSmolar_INPUTS:
-        case DmolarHmolar_INPUTS:
-        case HmolarSmolar_INPUTS:
             throw ValueError("To be implemented as a 1-D iteration using PH table");
         case PT_INPUTS:
             throw ValueError("To be implemented using PT table");
