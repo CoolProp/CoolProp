@@ -2,6 +2,8 @@
 from __future__ import print_function,division
 
 import CoolProp
+#from CoolProp.CoolProp import PropsSI
+
 import timeit
 
 
@@ -45,7 +47,8 @@ if int(CoolProp.__version__[0])>4:
 else:
     loaded = 4
     print("Loaded CoolProp version 4")
-    from CoolProp.CoolProp import set_debug_level,set_standard_unit_system,enable_TTSE_LUT,disable_TTSE_LUT
+    #from CoolProp.CoolProp import set_debug_level,set_standard_unit_system,enable_TTSE_LUT,disable_TTSE_LUT
+    CoolProp.CoolProp.set_standard_unit_system(CoolProp.UNIT_SYSTEM_SI)
     state = CoolProp.State.State(fluid,{"H":H_TP*2,"P":P_TP})
     def two_phase_HP():
         state.update({"H":H_TP,"P":P_TP})
