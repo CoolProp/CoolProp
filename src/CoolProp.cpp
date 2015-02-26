@@ -58,10 +58,10 @@ int get_debug_level(void){return debug_level;}
 #include "gitrevision.h" // Contents are like "std::string gitrevision = "aa121435436ggregrea4t43t433";"
 #include "cpversion.h" // Contents are like "char version [] = "2.5";"
 
-void set_warning_string(std::string warning){
+void set_warning_string(const std::string &warning){
     warning_string = warning;
 }
-void set_error_string(std::string error){
+void set_error_string(const std::string &error){
     error_string = error;
 }
 
@@ -270,7 +270,7 @@ struct output_parameter{
 };
 
 void _PropsSI_outputs(shared_ptr<AbstractState> &State,
-	     			 std::vector<output_parameter> output_parameters,
+	     			 const std::vector<output_parameter> &output_parameters,
 		    		 CoolProp::input_pairs input_pair,
 			    	 const std::vector<double> &in1,
 			    	 const std::vector<double> &in2,
@@ -354,7 +354,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
                 }
             }
             try{
-                output_parameter &output = output_parameters[j];
+                const output_parameter &output = output_parameters[j];
                 switch (output.type){
                     case output_parameter::OUTPUT_TYPE_TRIVIAL:
                     case output_parameter::OUTPUT_TYPE_NORMAL:
@@ -678,7 +678,7 @@ TEST_CASE("Check inputs to Props1SI","[Props1SI],[PropsSI]")
 #endif
 
 
-bool is_valid_fluid_string(std::string &input_fluid_string)
+bool is_valid_fluid_string(const std::string &input_fluid_string)
 {
     try{
         std::string backend, fluid;
@@ -705,7 +705,7 @@ double saturation_ancillary(const std::string &fluid_name, const std::string &ou
 
     return HEOS->saturation_ancillary(iOutput, Q, iInput, value);
 }
-void set_reference_stateS(std::string Ref, std::string reference_state)
+void set_reference_stateS(const std::string &Ref, const std::string &reference_state)
 {
     shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;
     std::vector<std::string> _comps(1, Ref);
@@ -762,7 +762,7 @@ void set_reference_stateS(std::string Ref, std::string reference_state)
         throw ValueError(format("reference state string is invalid: [%s]",reference_state.c_str()));
     }
 }
-void set_reference_stateD(std::string Ref, double T, double rhomolar, double h0, double s0)
+void set_reference_stateD(const std::string &Ref, double T, double rhomolar, double h0, double s0)
 {
     shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS;
     std::vector<std::string> _comps(1, Ref);
@@ -779,7 +779,7 @@ void set_reference_stateD(std::string Ref, double T, double rhomolar, double h0,
     HEOS->update_states();
 }
 
-std::string get_BibTeXKey(std::string Ref, std::string key)
+std::string get_BibTeXKey(const std::string &Ref, const std::string &key)
 {
     std::vector<std::string> names(1, Ref);
     HelmholtzEOSMixtureBackend HEOS(names);
@@ -795,7 +795,7 @@ std::string get_BibTeXKey(std::string Ref, std::string key)
     else if (!key.compare("MELTING_LINE")){ return HEOS.get_components()[0]->ancillaries.melting_line.BibTeX;}
     else{ return "Bad key";}
 }
-std::string get_global_param_string(std::string ParamName)
+std::string get_global_param_string(const std::string &ParamName)
 {
     if (!ParamName.compare("version")){ return version; }
     else if (!ParamName.compare("gitrevision")){
@@ -845,7 +845,7 @@ TEST_CASE("Check inputs to get_global_param_string","[get_global_param_string]")
 };
 #endif
 
-std::string get_fluid_param_string(std::string FluidName, std::string ParamName)
+std::string get_fluid_param_string(const std::string &FluidName, const std::string &ParamName)
 {
     try {
         std::string backend, fluid;

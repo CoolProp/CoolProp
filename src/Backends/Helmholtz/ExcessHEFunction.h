@@ -125,7 +125,7 @@ class ExcessTerm
 public:
     std::size_t N;
     std::vector<std::vector<DepartureFunctionPointer> > DepartureFunctionMatrix;
-    std::vector<std::vector<CoolPropDbl> > F;
+    STLMatrix F;
 
     ExcessTerm(){};
     ~ExcessTerm(){};

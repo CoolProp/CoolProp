@@ -184,7 +184,7 @@ std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::str
     }
 }
 
-std::string get_reducing_function_name(std::string CAS1, std::string CAS2)
+std::string get_reducing_function_name(const std::string &CAS1, const std::string &CAS2)
 {
     std::vector<std::string> CAS;
     CAS.push_back(CAS1);
