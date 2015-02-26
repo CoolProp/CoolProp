@@ -240,7 +240,7 @@ void solve_cubic(double a, double b, double c, double d, int &N, double &x0, dou
     }
 }
 
-std::string strjoin(std::vector<std::string> strings, std::string delim)
+std::string strjoin(const std::vector<std::string> &strings, const std::string &delim)
 {
     // Empty input vector
     if (strings.empty()){return "";}

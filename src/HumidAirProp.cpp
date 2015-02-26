@@ -1334,7 +1334,7 @@ double HAProps(const std::string &OutputName, const std::string &Input1Name, dou
     
     return out;
 }
-long get_input_key(std::vector<givens> input_keys, givens key)
+long get_input_key(const std::vector<givens> &input_keys, givens key)
 {
     if (input_keys.size() != 2){throw CoolProp::ValueError("input_keys is not 2-element vector");}
     
@@ -1342,7 +1342,7 @@ long get_input_key(std::vector<givens> input_keys, givens key)
     else if (input_keys[1] == key){ return 1; }
     else{ return -1; }
 }
-bool match_input_key(std::vector<givens> input_keys, givens key)
+bool match_input_key(const std::vector<givens> &input_keys, givens key)
 {
     return get_input_key(input_keys, key) >= 0;
 }

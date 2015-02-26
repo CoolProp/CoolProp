@@ -783,7 +783,7 @@ private:
 public:
     IdealHelmholtzPlanckEinsteinGeneralized(){N = 0; enabled = false;}
     // Constructor with std::vector instances
-    IdealHelmholtzPlanckEinsteinGeneralized(std::vector<CoolPropDbl> n, std::vector<CoolPropDbl> theta, std::vector<CoolPropDbl> c, std::vector<CoolPropDbl> d)
+    IdealHelmholtzPlanckEinsteinGeneralized(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &theta, const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &d)
     :n(n), theta(theta), c(c), d(d)
     {
         N = n.size();
@@ -794,7 +794,7 @@ public:
     ~IdealHelmholtzPlanckEinsteinGeneralized(){};
 
     // Extend the vectors to allow for multiple instances feeding values to this function
-    void extend(std::vector<CoolPropDbl> n, std::vector<CoolPropDbl> theta, std::vector<CoolPropDbl> c, std::vector<CoolPropDbl> d)
+    void extend(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &theta, const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &d)
     {
         this->n.insert(this->n.end(), n.begin(), n.end());
         this->theta.insert(this->theta.end(), theta.begin(), theta.end());
@@ -992,7 +992,7 @@ public:
     IdealHelmholtzCP0AlyLee(){enabled = false;};
 
     /// Constructor with std::vectors
-    IdealHelmholtzCP0AlyLee(std::vector<CoolPropDbl> c, double Tc, double T0)
+    IdealHelmholtzCP0AlyLee(const std::vector<CoolPropDbl> &c, double Tc, double T0)
     :c(c), Tc(Tc), T0(T0)
     {
         tau0=Tc/T0;

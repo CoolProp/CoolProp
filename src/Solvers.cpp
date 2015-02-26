@@ -9,7 +9,7 @@ namespace CoolProp{
 
 /** \brief Calculate the Jacobian using numerical differentiation by column
  */
-std::vector<std::vector<double> > FuncWrapperND::Jacobian(std::vector<double> x)
+std::vector<std::vector<double> > FuncWrapperND::Jacobian(const std::vector<double> &x)
 {
     double epsilon;
     std::size_t N = x.size();

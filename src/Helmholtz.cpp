@@ -3,7 +3,7 @@
 
 namespace CoolProp{
 
-CoolPropDbl kahanSum(std::vector<CoolPropDbl> &x)
+CoolPropDbl kahanSum(const std::vector<CoolPropDbl> &x)
 {
     CoolPropDbl sum = x[0], y, t;
     CoolPropDbl c = 0.0;          //A running compensation for lost low-order bits.
