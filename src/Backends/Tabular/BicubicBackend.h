@@ -105,10 +105,13 @@ class BicubicBackend : public TabularBackend
         std::vector<std::vector<CellCoeffs> > coeffs_ph, coeffs_pT;
     public:
         /// Instantiator; base class loads or makes tables
-        BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS){build_coeffs_ph();};
+		BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS){
+			build_coeffs(single_phase_logph, coeffs_ph);
+			build_coeffs(single_phase_logpT, coeffs_pT);
+		};
         std::string backend_name(void){return "BicubicBackend";}
         /// Build the \f$a_{i,j}\f$ coefficients for bicubic interpolation
-        void build_coeffs_ph();
+        void build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs);
         void update(CoolProp::input_pairs input_pair, double val1, double val2);
 		double evaluate_single_phase(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j);
 		double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j){

@@ -22,21 +22,18 @@ static const double Ainv_data[16*16] = {
 	 4, -4, -4,  4,  2,  2, -2, -2,  2, -2,  2, -2,  1,  1,  1,  1};
 static Eigen::Matrix<double, 16, 16> Ainv(Ainv_data);     
 
-void CoolProp::BicubicBackend::build_coeffs_ph()
+void CoolProp::BicubicBackend::build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs)
 {
 	const bool debug = get_debug_level() > 5 || true;
     const int param_count = 5;
     parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP}; //iUmolar
     std::vector<std::vector<double> > *f = NULL, *fx = NULL, *fy = NULL, *fxy = NULL;
     
-	// To be passed as argument
-	SinglePhaseGriddedTableData &table = single_phase_logph;
-	std::vector<std::vector<CellCoeffs> > &coeffs = coeffs_ph;
-    
 	clock_t t1 = clock();
 
     // Resize the coefficient structures
-    coeffs_ph.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
+    coeffs.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
+
     int valid_cell_count = 0;
     for (std::size_t k = 0; k < param_count; ++k){
         parameters param = param_list[k];
@@ -147,6 +144,30 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
         case HmassP_INPUTS:{
             update(HmolarP_INPUTS, val1 * AS->molar_mass(), val2); // H: [J/kg] * [kg/mol] -> [J/mol]
             return;
+        }
+		case PT_INPUTS:{
+            _p = val1; _T = val2;
+            if (!single_phase_logpT.native_inputs_are_in_range(_T, _p)){
+                // Use the AbstractState instance
+                using_single_phase_table = false;
+                if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
+                throw ValueError(format("inputs are not in range, p=%Lg, T=%Lg", _p, _T));
+            }
+            else{
+                using_single_phase_table = true; // Use the table !
+                std::size_t iL = 0, iV = 0;
+                CoolPropDbl TL = 0, TV = 0;
+                if (pure_saturation.is_inside(_p, iT, _T, iL, iV, TL, TV)){
+                    using_single_phase_table = false;
+                    throw ValueError(format("P,T with TTSE cannot be two-phase for now"));
+                }
+                else{
+                    // Find and cache the indices i, j
+                    selected_table = SELECTED_PT_TABLE;
+					single_phase_logpT.find_native_nearest_good_cell(_T, _p, cached_single_phase_i, cached_single_phase_j);
+                }
+            }
+            break;
         }
 	}
 }

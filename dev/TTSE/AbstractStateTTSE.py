@@ -92,7 +92,7 @@ elif loaded==5:
     single_phase_pt_ttse = min(timeit.Timer(single_phase_pT_TTSE).repeat(repeat=repeat, number=number))/number
     two_phase_hp_bicubic    = min(timeit.Timer(two_phase_BICUBIC).repeat(repeat=repeat, number=number))/number
     single_phase_hp_bicubic = min(timeit.Timer(single_phase_BICUBIC).repeat(repeat=repeat, number=number))/number
-    single_phase_pt_bicubic = 300 #min(timeit.Timer(single_phase_pT_BICUBIC).repeat(repeat=repeat, number=number))/number
+    single_phase_pt_bicubic = min(timeit.Timer(single_phase_pT_BICUBIC).repeat(repeat=repeat, number=number))/number
 else:
     raise ValueError("Unknown CoolProp version.")
 
