@@ -2,6 +2,7 @@
 #include "MatrixMath.h"
 
 /// The inverse of the A matrix for the bicubic interpolation (http://en.wikipedia.org/wiki/Bicubic_interpolation)
+/// NOTE: The matrix is transposed below
 static const double Ainv_data[16*16] = {
      1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
 	 0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -19,18 +20,16 @@ static const double Ainv_data[16*16] = {
 	 0,  0,  0,  0,  2,  0, -2,  0,  0,  0,  0,  0,  1,  0,  1,  0,
 	-6,  6,  6, -6, -4, -2,  4,  2, -3,  3, -3,  3, -2, -1, -2, -1,
 	 4, -4, -4,  4,  2,  2, -2, -2,  2, -2,  2, -2,  1,  1,  1,  1};
-static Eigen::Matrix<double, 16, 16> Ainv(Ainv_data);
-     
-void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
-{
-}
+static Eigen::Matrix<double, 16, 16> Ainv(Ainv_data);     
+
 void CoolProp::BicubicBackend::build_coeffs_ph()
 {
 	const bool debug = get_debug_level() > 5 || true;
     const int param_count = 5;
-    parameters param_list[param_count] = {iT, iDmolar, iSmolar, iHmolar, iP}; //iUmolar
+    parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP}; //iUmolar
     std::vector<std::vector<double> > *f = NULL, *fx = NULL, *fy = NULL, *fxy = NULL;
     
+	// To be passed as argument
 	SinglePhaseGriddedTableData &table = single_phase_logph;
 	std::vector<std::vector<CellCoeffs> > &coeffs = coeffs_ph;
     
@@ -51,13 +50,13 @@ void CoolProp::BicubicBackend::build_coeffs_ph()
                 f = &(table.p); fx = &(table.dpdx); fy = &(table.dpdy); fxy = &(table.d2pdxdy);
                 break;
             case iDmolar:
-                f = &(table.rhomolar); fx = &(table.drhomolardx); *fy = (table.drhomolardy); fxy = &(table.d2rhomolardxdy);
+                f = &(table.rhomolar); fx = &(table.drhomolardx); fy = &(table.drhomolardy); fxy = &(table.d2rhomolardxdy);
                 break;
 			case iSmolar:
-                f = &(table.smolar); fx = &(table.dsmolardx); *fy = (table.dsmolardy); fxy = &(table.d2smolardxdy);
+                f = &(table.smolar); fx = &(table.dsmolardx); fy = &(table.dsmolardy); fxy = &(table.d2smolardxdy);
                 break;
 			case iHmolar:
-                f = &(table.hmolar); fx = &(table.dhmolardx); *fy = (table.dhmolardy); fxy = &(table.d2hmolardxdy);
+                f = &(table.hmolar); fx = &(table.dhmolardx); fy = &(table.dhmolardy); fxy = &(table.d2hmolardxdy);
                 break;
             default:
                 throw ValueError();
@@ -88,7 +87,7 @@ void CoolProp::BicubicBackend::build_coeffs_ph()
                     F(12) = (*fxy)[i][j]*dy_dyhat*dx_dxhat; F(13) = (*fxy)[i+1][j]*dy_dyhat*dx_dxhat; 
                     F(14) = (*fxy)[i][j+1]*dy_dyhat*dx_dxhat; F(15) = (*fxy)[i+1][j+1]*dy_dyhat*dx_dxhat; 
 					// Calculate the alpha coefficients
-                    Eigen::MatrixXd alpha = Ainv*F; // 16x1
+					Eigen::MatrixXd alpha = Ainv.transpose()*F; // 16x1; Watch out for the transpose!
 					std::vector<double> valpha = eigen_to_vec1D(alpha);
                     coeffs[i][j].set(param, valpha);
                     coeffs[i][j].set_valid();
@@ -104,4 +103,85 @@ void CoolProp::BicubicBackend::build_coeffs_ph()
 	if (debug){
 		std::cout << format("Calculated bicubic coefficients for %d good cells in %g sec.", valid_cell_count, elapsed);
 	}
+}
+
+void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
+{
+	// Flush the cached indices (set to large number)
+    cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 
+    cached_single_phase_j = std::numeric_limits<std::size_t>::max();
+    cached_saturation_iL = std::numeric_limits<std::size_t>::max(); 
+    cached_saturation_iV = std::numeric_limits<std::size_t>::max();
+    
+    switch(input_pair){
+        case HmolarP_INPUTS:{
+            _hmolar = val1; _p = val2;
+            if (!single_phase_logph.native_inputs_are_in_range(_hmolar, _p)){
+                // Use the AbstractState instance
+                using_single_phase_table = false;
+                if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
+                throw ValueError(format("inputs are not in range, hmolar=%Lg, p=%Lg", static_cast<CoolPropDbl>(_hmolar), _p));
+            }
+            else{
+                using_single_phase_table = true; // Use the table !
+                std::size_t iL, iV;
+                CoolPropDbl hL = 0, hV = 0;
+                if (pure_saturation.is_inside(_p, iHmolar, _hmolar, iL, iV, hL, hV)){
+                    using_single_phase_table = false;
+                    _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
+                    if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
+                        throw ValueError("vapor quality is not in (0,1)");
+                    }
+                    else{
+                        cached_saturation_iL = iL; cached_saturation_iV = iV;
+                    }
+                }
+                else{
+                    // Find and cache the indices i, j
+                    selected_table = SELECTED_PH_TABLE;
+					single_phase_logph.find_native_nearest_good_cell(_hmolar, _p, cached_single_phase_i, cached_single_phase_j);
+                }
+            }
+            break;
+        }
+        case HmassP_INPUTS:{
+            update(HmolarP_INPUTS, val1 * AS->molar_mass(), val2); // H: [J/kg] * [kg/mol] -> [J/mol]
+            return;
+        }
+	}
+}
+
+/// Use the single_phase table to evaluate an output
+double CoolProp::BicubicBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j)
+{
+	CellCoeffs &cell = coeffs[i][j];
+	
+	if (!cell.valid()){throw ValueError("Cell is invalid");}
+    
+	// Get the alpha coefficients
+    const std::vector<double> &alpha = cell.get(output);
+    
+    // Normalized value in the range (0, 1)
+	double xhat = (x - table.xvec[i])/(table.xvec[i+1] - table.xvec[i]);
+    double yhat = (y - table.yvec[j])/(table.yvec[j+1] - table.yvec[j]);
+    
+    // Calculate the output value desired
+	double val = 0;
+	for (std::size_t l = 0; l < 4; ++l)
+	{
+		for(std::size_t m = 0; m < 4; ++m)
+		{
+			val += alpha[m*4+l]*pow(xhat, static_cast<int>(l))*pow(yhat, static_cast<int>(m));
+		}
+	}
+    
+    // Cache the output value calculated
+    switch(output){
+        case iT:  _T = val; break;
+        case iDmolar: _rhomolar = val; break;
+        case iSmolar: _smolar = val; break;
+        //case iUmolar:
+        default: throw ValueError();
+    }
+    return val;
 }

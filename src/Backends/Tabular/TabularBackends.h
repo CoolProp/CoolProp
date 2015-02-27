@@ -331,6 +331,8 @@ class SinglePhaseGriddedTableData{
 		/// Find the nearest cell with lower left coordinate (i,j) where (i,j) is a good node, and so are (i+1,j), (i,j+1), (i+1,j+1)
 		/// This is needed for bicubic interpolation
 		void find_native_nearest_good_cell(double x, double y, std::size_t &i, std::size_t &j){
+			bisect_vector(xvec, x, i);
+			bisect_vector(yvec, y, j);
 		}
 };
 
