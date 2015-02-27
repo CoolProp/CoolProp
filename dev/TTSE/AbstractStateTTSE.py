@@ -99,4 +99,4 @@ else:
 print("{0:15s}: {1:6d} calls, {2:2d} repetitions, CoolProp version {3:1d}".format(fluid,number,repeat,loaded))
 print("{0:15s}: 2P HEOS: {1:6.2f} us,  1P HEOS: {2:6.2f} us, PT HEOS: {3:6.2f} us".format(fluid,two_phase_hp_heos*1e6,single_phase_hp_heos*1e6,single_phase_pt_heos*1e6))
 print("{0:15s}: 2P TTSE: {1:6.2f} us,  1P TTSE: {2:6.2f} us, PT TTSE: {3:6.2f} us".format(fluid,two_phase_hp_ttse*1e6,single_phase_hp_ttse*1e6,single_phase_pt_ttse*1e6))
-print("{0:15s}: 2P BICUBIC: {1:6.2f} us,  1P BICUBIC: {2:6.2f} us, PT BICUBIC: {3:6.2f} us".format(fluid,two_phase_hp_bicubic*1e6,single_phase_hp_bicubic*1e6,single_phase_pt_bicubic*1e6))
+print("{0:15s}: 2P BICU: {1:6.2f} us,  1P BICU: {2:6.2f} us, PT BICU: {3:6.2f} us".format(fluid,two_phase_hp_bicubic*1e6,single_phase_hp_bicubic*1e6,single_phase_pt_bicubic*1e6))

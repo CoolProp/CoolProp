@@ -24,7 +24,7 @@ static Eigen::Matrix<double, 16, 16> Ainv(Ainv_data);
 
 void CoolProp::BicubicBackend::build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs)
 {
-	const bool debug = get_debug_level() > 5 || true;
+	const bool debug = get_debug_level() > 5 || false;
     const int param_count = 5;
     parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP}; //iUmolar
     std::vector<std::vector<double> > *f = NULL, *fx = NULL, *fy = NULL, *fxy = NULL;
@@ -169,6 +169,8 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             }
             break;
         }
+		default:
+			throw ValueError("input pair is not currently supported");
 	}
 }
 
@@ -201,6 +203,7 @@ double CoolProp::BicubicBackend::evaluate_single_phase(SinglePhaseGriddedTableDa
         case iT:  _T = val; break;
         case iDmolar: _rhomolar = val; break;
         case iSmolar: _smolar = val; break;
+		case iHmolar: _hmolar = val; break;
         //case iUmolar:
         default: throw ValueError();
     }
