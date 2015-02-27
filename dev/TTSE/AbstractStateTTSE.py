@@ -25,6 +25,7 @@ if int(CoolProp.__version__[0])>4:
     print("Loaded CoolProp version 5")
     from CoolProp.CoolProp import generate_update_pair,get_parameter_index,set_debug_level
     TTSE = CoolProp.AbstractState('TTSE&HEOS',fluid)
+    BICUBIC = CoolProp.AbstractState('BICUBIC&HEOS',fluid)
     HEOS = CoolProp.AbstractState('HEOS',fluid)
     def two_phase_TTSE():
         TTSE.update(CoolProp.HmassP_INPUTS, H_TP, P_TP)
@@ -32,6 +33,20 @@ if int(CoolProp.__version__[0])>4:
     def single_phase_TTSE():
         TTSE.update(CoolProp.HmassP_INPUTS, H_SP, P_SP)
         TTSE.rhomolar()
+    def single_phase_pT_TTSE():
+        TTSE.update(CoolProp.PT_INPUTS, P_PT, T_PT)
+        TTSE.rhomolar()
+        
+    def two_phase_BICUBIC():
+        BICUBIC.update(CoolProp.HmassP_INPUTS, H_TP, P_TP)
+        BICUBIC.rhomolar()
+    def single_phase_BICUBIC():
+        BICUBIC.update(CoolProp.HmassP_INPUTS, H_SP, P_SP)
+        BICUBIC.rhomolar()
+    def single_phase_pT_BICUBIC():
+        BICUBIC.update(CoolProp.PT_INPUTS, P_PT, T_PT)
+        BICUBIC.rhomolar()
+        
     def two_phase_HEOS():
         HEOS.update(CoolProp.HmassP_INPUTS, H_TP, P_TP)
         HEOS.rhomolar()
@@ -41,9 +56,7 @@ if int(CoolProp.__version__[0])>4:
     def single_phase_pT_HEOS():
         HEOS.update(CoolProp.PT_INPUTS, P_PT, T_PT)
         HEOS.rhomolar()
-    def single_phase_pT_TTSE():
-        TTSE.update(CoolProp.PT_INPUTS, P_PT, T_PT)
-        TTSE.rhomolar()
+    
 else:
     loaded = 4
     print("Loaded CoolProp version 4")
@@ -77,9 +90,13 @@ elif loaded==5:
     two_phase_hp_ttse    = min(timeit.Timer(two_phase_TTSE).repeat(repeat=repeat, number=number))/number
     single_phase_hp_ttse = min(timeit.Timer(single_phase_TTSE).repeat(repeat=repeat, number=number))/number
     single_phase_pt_ttse = min(timeit.Timer(single_phase_pT_TTSE).repeat(repeat=repeat, number=number))/number
+    two_phase_hp_bicubic    = min(timeit.Timer(two_phase_BICUBIC).repeat(repeat=repeat, number=number))/number
+    single_phase_hp_bicubic = min(timeit.Timer(single_phase_BICUBIC).repeat(repeat=repeat, number=number))/number
+    single_phase_pt_bicubic = 300 #min(timeit.Timer(single_phase_pT_BICUBIC).repeat(repeat=repeat, number=number))/number
 else:
     raise ValueError("Unknown CoolProp version.")
 
 print("{0:15s}: {1:6d} calls, {2:2d} repetitions, CoolProp version {3:1d}".format(fluid,number,repeat,loaded))
 print("{0:15s}: 2P HEOS: {1:6.2f} us,  1P HEOS: {2:6.2f} us, PT HEOS: {3:6.2f} us".format(fluid,two_phase_hp_heos*1e6,single_phase_hp_heos*1e6,single_phase_pt_heos*1e6))
 print("{0:15s}: 2P TTSE: {1:6.2f} us,  1P TTSE: {2:6.2f} us, PT TTSE: {3:6.2f} us".format(fluid,two_phase_hp_ttse*1e6,single_phase_hp_ttse*1e6,single_phase_pt_ttse*1e6))
+print("{0:15s}: 2P BICUBIC: {1:6.2f} us,  1P BICUBIC: {2:6.2f} us, PT BICUBIC: {3:6.2f} us".format(fluid,two_phase_hp_bicubic*1e6,single_phase_hp_bicubic*1e6,single_phase_pt_bicubic*1e6))

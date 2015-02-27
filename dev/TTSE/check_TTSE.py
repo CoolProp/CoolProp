@@ -14,6 +14,7 @@ ax2 = fig.add_axes((0.50,0.1,0.32,0.83))
 
 Ref = 'R245fa'
 
+BICUBIC = CoolProp.AbstractState('BICUBIC&HEOS',Ref)
 TTSE = CoolProp.AbstractState('TTSE&HEOS',Ref)
 EOS = CoolProp.AbstractState('HEOS',Ref)
 MM = EOS.molar_mass()
@@ -43,7 +44,11 @@ for a_useless_counter in range(40000):
         TTSE.update(CoolProp.HmolarP_INPUTS, h, p)
         rhoTTSE = TTSE.rhomolar(); TTTSE = TTSE.T()
         
+        BICUBIC.update(CoolProp.HmolarP_INPUTS, h, p)
+        rhoBICUBIC = BICUBIC.rhomolar(); TBICUBIC = BICUBIC.T()
+        
         errorTTSE = abs(rhoTTSE/rhoEOS-1)*100
+        errorBICUBIC = abs(rhoBICUBIC/rhoEOS-1)*100
         if errorTTSE > 100 or errorTTSE < 1e-12:
             print h, p, errorTTSE
 
@@ -51,16 +56,17 @@ for a_useless_counter in range(40000):
         PPP1.append(p)
         EEE1.append(errorTTSE)
         
+        HHH2.append(h)
+        PPP2.append(p)
+        EEE2.append(errorBICUBIC)
+        
     except ValueError as VE:
         print 'ERROR', VE
-        HHH1.append(h)
-        PPP1.append(p)
-        EEE1.append(0)
         pass
     
 print 'done'
 SC1 = ax1.scatter(HHH1, PPP1, s = 8, c = EEE1, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
-#~ SC2 = ax2.scatter(HHH2, PPP2, s = 8, c = EEE2, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
+SC2 = ax2.scatter(HHH2, PPP2, s = 8, c = EEE2, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
 
 ax1.set_title('Error in Density from TTSE')
 ax2.set_title('Error in Density from Bicubic')
