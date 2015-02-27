@@ -46,6 +46,15 @@ public:
     virtual const char* what() const throw(){ return err.c_str(); }
 };
 
+class KeyError: public CoolPropBaseError
+{
+public:
+    KeyError() throw() {};
+    KeyError(std::string errstring) throw() {err=errstring;};
+    ~KeyError() throw() {};
+    virtual const char* what() const throw(){ return err.c_str(); }
+};
+
 class AttributeError: public CoolPropBaseError
 {
 public:
