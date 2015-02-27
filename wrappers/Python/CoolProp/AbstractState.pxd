@@ -25,16 +25,16 @@ cdef class AbstractState:
     ##        Fluid property accessors
     ## ----------------------------------------
     
-    cpdef double T(self)
-    cpdef double p(self)
-    cpdef double rhomolar(self)
-    cpdef double hmolar(self)
-    cpdef double smolar(self)
-    cpdef double umolar(self)
-    cpdef double cpmolar(self)
-    cpdef double cp0molar(self)
-    cpdef double cvmolar(self)
-    cpdef double rhomass(self)
+    cpdef double T(self) except *
+    cpdef double p(self) except *
+    cpdef double rhomolar(self) except *
+    cpdef double hmolar(self) except *
+    cpdef double smolar(self) except *
+    cpdef double umolar(self) except *
+    cpdef double cpmolar(self) except *
+    cpdef double cp0molar(self) except *
+    cpdef double cvmolar(self) except *
+    cpdef double rhomass(self) except *
     cpdef double hmass(self) except *
     cpdef double smass(self) except *
     cpdef double umass(self) except *
