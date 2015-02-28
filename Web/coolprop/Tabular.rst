@@ -1,4 +1,4 @@
-.. _low_level_api:
+.. _tabular_interpolation:
 
 **********************
 Tabular Interpolation
@@ -8,7 +8,7 @@ Especially when evaluating inputs as a function of pressure and enthalpy (common
 
 As of version 5.1 of CoolProp, the tabular interpolation methods of CoolProp v4 have been brought back from the dead, and significantly improved.  They are approximately 4 times faster than the equivalent methods in v4 of CoolProp due to a more optimized structure.  In order to make the most effective use of the tabular interpolation methods, you must be using the :ref:`low-level interface <low_level_api>`, otherwise significant overhead and slowdown will be experienced.  Thus, this method is best suited to C++, python, and the SWIG wrappers.
 
-There are two backends implemented for tabular interpolation, ``BICUBIC`` and ``TTSE``.  Both consume the same gridded tabular data that is stored to your user home directory in the folder ``HOME/.CoolProp/Tables``.  If you want to find the directory that CoolProp is using as your home directory, you can do something like
+There are two backends implemented for tabular interpolation, ``BICUBIC`` and ``TTSE``.  Both consume the same gridded tabular data that is stored to your user home directory in the folder ``HOME/.CoolProp/Tables``.  If you want to find the directory that CoolProp is using as your home directory (``HOME``), you can do something like 
 
 .. ipython::
 
@@ -42,19 +42,17 @@ It is critical that you try to only initialize one AbstractState instance and th
 TTSE Interpolation
 ------------------
 
+The basic concept behind Tabular Taylor Series Extrapolation (TTSE) extrapolation is that you cache the value and its derivatives with respect to a set of two variables over a regularly (linearly or logarithmically) spaced grid.  It is therefore easy to look up the index of the independent variables ``x`` and ``y`` by interval bisection.  Once the coordinates of the given grid point :math:`i,j` are known, you can used the cached derivatives of the desired variable :math:`z` to obtain it in terms of the given independent variables :math:`x` and :math:`y`:
+
 .. math::
 
-    T = T_{i,j}+\Delta h\left(\frac{\partial T}{\partial h}\right)_{p}+\Delta p\left(\frac{\partial T}{\partial p}\right)_{h}+\frac{1}{2}\Delta h^2\left(\frac{\partial^2 T}{\partial h^2}\right)_{p}+\frac{1}{2}\Delta p^2\left(\frac{\partial^2T}{\partial p^2}\right)_{h}+\Delta h\Delta p\left(\frac{\partial^2T}{\partial p\partial h}\right)
-    
-    s = s_{i,j}+\Delta h\left(\frac{\partial s}{\partial h}\right)_{p}+\Delta p\left(\frac{\partial s}{\partial p}\right)_{h}+\frac{1}{2}\Delta h^2\left(\frac{\partial^2 s}{\partial h^2}\right)_{p}+\frac{1}{2}\Delta p^2\left(\frac{\partial^2s}{\partial p^2}\right)_{h}+\Delta h\Delta p\left(\frac{\partial^2s}{\partial p\partial h}\right)
-    
-    \rho = s_{i,j}+\Delta h\left(\frac{\partial \rho}{\partial h}\right)_{p}+\Delta p\left(\frac{\partial \rho}{\partial p}\right)_{h}+\frac{1}{2}\Delta h^2\left(\frac{\partial^2 \rho}{\partial h^2}\right)_{p}+\frac{1}{2}\Delta p^2\left(\frac{\partial^2\rho}{\partial p^2}\right)_{h}+\Delta h\Delta p\left(\frac{\partial^2\rho}{\partial p\partial h}\right)
+    z = z_{i,j}+\Delta x\left(\frac{\partial z}{\partial x}\right)_{y}+\Delta y\left(\frac{\partial z}{\partial y}\right)_{x}+\frac{1}{2}\Delta x^2\left(\frac{\partial^2 z}{\partial x^2}\right)_{y}+\frac{1}{2}\Delta y^2\left(\frac{\partial^2z}{\partial y^2}\right)_{y}+\Delta x\Delta y\left(\frac{\partial^2z}{\partial y\partial x}\right)
        
 .. math::
 
-    \Delta h = h-h_i
+    \Delta x = x-x_i
     
-    \Delta p = p-p_i
+    \Delta x = y-y_j
     
 See the `IAPWS TTSE report <http://www.iapws.org/relguide/TTSE.pdf>`_ for a description of the method.  Analytic derivatives are used to build the tables
 
@@ -106,8 +104,8 @@ A more complete comparison of the accuracy of these methods can be obtained by s
 
     T = np.linspace(CP.PropsSI(Ref,'Tmin')+0.1, CP.PropsSI(Ref,'Tcrit')-0.01, 300)
     pV = CP.PropsSI('P','T',T,'Q',1,Ref)
-    hL = CP.PropsSI('Hmolar','T',T,'Q',0,Ref)
-    hV = CP.PropsSI('Hmolar','T',T,'Q',1,Ref)
+    hL = CP.PropsSI('Hmass','T',T,'Q',0,Ref)
+    hV = CP.PropsSI('Hmass','T',T,'Q',1,Ref)
 
     HHH1, PPP1, EEE1 = [], [], []
     HHH2, PPP2, EEE2 = [], [], []
@@ -156,7 +154,7 @@ A more complete comparison of the accuracy of these methods can be obtained by s
 
     for ax in [ax1, ax2]:
         
-        ax.set_xlim(250000*MM, 550000*MM)
+        ax.set_xlim(250000, 550000)
         ax.set_ylim(100000, 7000000)
 
         ax.set_yscale('log')
@@ -167,14 +165,14 @@ A more complete comparison of the accuracy of these methods can be obtained by s
         ax.set_yticklabels(labels)
         ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
         
-        ticks = [150000*MM, 250000*MM,350000*MM,450000*MM,550000*MM]
+        ticks = [150000, 250000,350000,450000,550000]
         labels = [str(tick) for tick in ticks]
         ax.set_xticks(ticks)
         ax.set_xticklabels(labels)
 
         ax.tick_params(axis='y',which='minor', left='off')
 
-        ax.set_xticklabels(ax.get_xticks()/MM/1e3)
+        ax.set_xticklabels(ax.get_xticks()/1e3)
         ax.set_xlabel('Enthalpy [kJ/kg]')
         ax.set_yticklabels(ax.get_yticks()/10**3)
         ax.set_ylabel('Pressure [kPa]')
@@ -189,19 +187,14 @@ A more complete comparison of the accuracy of these methods can be obtained by s
 Speed comparison
 ----------------
 
-The primary motivation for the use of tabular interpolation is the improvement in computational speed.  Thus a small summary could be useful.  This tabular data was obtained by the python script :download:` (link to script) <speed_script.py>`.  
+The primary motivation for the use of tabular interpolation is the improvement in computational speed.  Thus a small summary could be useful.  This tabular data was obtained by the python script :download:` (link to script) <speed_script.py>`.
+
+.. include :: tabular_data.rst.in
 
 More Information
 ----------------
 
-The tables are stored in a zipped format using the msgpack package and zlib.  They can be read back into python (or other high-level languages) using something roughly like::
-
-    with open(r'/path/to/home/.CoolProp/Tables/HelmholtzEOSBackend(R245fa)/single_phase_logph.bin','rb') as fp:
-        values = msgpack.load(fp)
-        revision, matrices = values[0:2]
-        T,h,p,rho = np.array(matrices['T']), np.array(matrices['hmolar']), np.array(matrices['p']), np.array(matrices['rhomolar'])
-        
-To save space, the uncompressed binary tables are not stored, but if you want them to be stored as well as the compressed tables, you can do something like:
+The tables are stored in a zipped format using the msgpack package and zlib.  To save space, the uncompressed binary tables are not stored, but if you want them to be stored as well as the compressed tables, you can do something like:
 
 .. ipython::
 
@@ -218,3 +211,13 @@ before you run your code to debug the tables.  This can be useful for debugging 
 .. warning::
 
     Make sure you delete the tables that are already there, otherwise it will entirely just load the zipped tables
+    
+The uncompressed tabled can be read back into python (or other high-level languages) using something roughly like::
+
+    with open(r'/path/to/home/.CoolProp/Tables/HelmholtzEOSBackend(R245fa)/single_phase_logph.bin','rb') as fp:
+        values = msgpack.load(fp)
+        revision, matrices = values[0:2]
+        T,h,p,rho = np.array(matrices['T']), np.array(matrices['hmolar']), np.array(matrices['p']), np.array(matrices['rhomolar'])
+        
+You'll need msgpack wrapper for your target language.
+        

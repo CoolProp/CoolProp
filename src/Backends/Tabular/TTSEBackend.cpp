@@ -81,7 +81,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
 }
 
 /// Use the single-phase table to evaluate an output
-double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, std::size_t i, std::size_t j)
+double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)
 {
     // Define pointers for the matrices to be used; 
     std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdxdy, *d2zdy2, *d2zdx2;
@@ -122,7 +122,7 @@ double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData 
     }
     
     // Calculate the output value desired
-    double val = (*z)[i][j]+deltax*(*dzdx)[i][j]+deltay*(*dzdy)[i][j]+0.5*deltax*deltax*(*d2ydx2)[i][j]+0.5*deltay*deltay*(*d2zdy2)[i][j]+deltay*deltax*(*d2zdxdy)[i][j];
+    double val = (*z)[i][j]+deltax*(*dzdx)[i][j]+deltay*(*dzdy)[i][j]+0.5*deltax*deltax*(*d2zdx2)[i][j]+0.5*deltay*deltay*(*d2zdy2)[i][j]+deltay*deltax*(*d2zdxdy)[i][j];
     
     // Cache the output value calculated
     switch(output){

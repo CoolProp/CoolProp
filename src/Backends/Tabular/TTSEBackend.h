@@ -13,12 +13,12 @@ class TTSEBackend : public TabularBackend
         /// Instantiator; base class loads or makes tables
         TTSEBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS) {}
         void update(CoolProp::input_pairs input_pair, double val1, double val2);
-        double evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, std::size_t i, std::size_t j);
+        double evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
         double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j){
-            return evaluate_single_phase(single_phase_logph, output, i, j);
+            return evaluate_single_phase(single_phase_logph, output, _hmolar, _p, i, j);
         }
         double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j){
-            return evaluate_single_phase(single_phase_logpT, output, i, j);
+            return evaluate_single_phase(single_phase_logpT, output, _T, _p, i, j);
         }
 };
 
