@@ -826,6 +826,9 @@ std::string get_global_param_string(const std::string &ParamName)
 	else if (!ParamName.compare("predefined_mixtures") ){
 		return get_csv_predefined_mixtures();
     }
+    else if (!ParamName.compare("HOME")){
+        return get_home_dir();
+    }
     else{
         throw ValueError(format("Input value [%s] is invalid",ParamName.c_str()));
     }
