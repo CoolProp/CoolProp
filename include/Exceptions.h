@@ -12,7 +12,7 @@ namespace CoolProp
 class CoolPropBaseError: public std::exception
 {
 public:
-    enum ErrCode : int { eNotImplemented, eSolution, eAttribute, eOutOfRange, eValue, eWrongFluid, eComposition, eInput, eNotAvailable };
+    enum ErrCode { eNotImplemented, eSolution, eAttribute, eOutOfRange, eValue, eWrongFluid, eComposition, eInput, eNotAvailable };
     CoolPropBaseError(const std::string &err, ErrCode code) throw() : m_code(code), m_err(err) {}
     virtual const char* what() const throw() { return m_err.c_str(); }
     ErrCode code() { return m_code; }
