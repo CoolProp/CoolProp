@@ -80,86 +80,57 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
     }
 }
 
-/// Use the log(p)-hmolar table to evaluate an output
-double CoolProp::TTSEBackend::evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j)
+/// Use the single-phase table to evaluate an output
+double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, std::size_t i, std::size_t j)
 {
     // Define pointers for the matrices to be used; 
-    std::vector<std::vector<double> > *y, *dydh, *dydp, *d2ydhdp, *d2ydp2, *d2ydh2;
+    std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdxdy, *d2zdy2, *d2zdx2;
     
     // Connect the pointers based on the output variable desired
     switch(output){
         case iT:
-            y = &single_phase_logph.T; dydh = &single_phase_logph.dTdx; dydp = &single_phase_logph.dTdy;
-            d2ydhdp = &single_phase_logph.d2Tdxdy; d2ydh2 = &single_phase_logph.d2Tdx2; d2ydp2 = &single_phase_logph.d2Tdy2;
+            z = &table.T; dzdx = &table.dTdx; dzdy = &table.dTdy;
+            d2zdxdy = &table.d2Tdxdy; d2zdx2 = &table.d2Tdx2; d2zdy2 = &table.d2Tdy2;
             break;
         case iDmolar:
-            y = &single_phase_logph.rhomolar; dydh = &single_phase_logph.drhomolardx; dydp = &single_phase_logph.drhomolardy;
-            d2ydhdp = &single_phase_logph.d2rhomolardxdy; d2ydh2 = &single_phase_logph.d2rhomolardx2; d2ydp2 = &single_phase_logph.d2rhomolardy2;
+            z = &table.rhomolar; dzdx = &table.drhomolardx; dzdy = &table.drhomolardy;
+            d2zdxdy = &table.d2rhomolardxdy; d2zdx2 = &table.d2rhomolardx2; d2zdy2 = &table.d2rhomolardy2;
             break;
         case iSmolar:
-            y = &single_phase_logph.smolar; dydh = &single_phase_logph.dsmolardx; dydp = &single_phase_logph.dsmolardy;
-            d2ydhdp = &single_phase_logph.d2smolardxdy; d2ydh2 = &single_phase_logph.d2smolardx2; d2ydp2 = &single_phase_logph.d2smolardy2;
+            z = &table.smolar; dzdx = &table.dsmolardx; dzdy = &table.dsmolardy;
+            d2zdxdy = &table.d2smolardxdy; d2zdx2 = &table.d2smolardx2; d2zdy2 = &table.d2smolardy2;
+            break;
+        case iHmolar:
+            z = &table.hmolar; dzdx = &table.dhmolardx; dzdy = &table.dhmolardy;
+            d2zdxdy = &table.d2hmolardxdy; d2zdx2 = &table.d2hmolardx2; d2zdy2 = &table.d2hmolardy2;
             break;
         //case iUmolar:
+        case iviscosity:
+            z = &table.visc; break;
+        case iconductivity:
+            z = &table.cond; break;
         default:
             throw ValueError();
     }
     
     // Distances from the node
-	double deltah = static_cast<double>(_hmolar) - single_phase_logph.xvec[i];
-    double deltap = static_cast<double>(_p) - single_phase_logph.yvec[j];
+	double deltax = x - table.xvec[i];
+    double deltay = y - table.yvec[j];
+    
+    if (output == iconductivity || output == iviscosity){
+        // Linear interpolation
+    }
     
     // Calculate the output value desired
-    double val = (*y)[i][j]+deltah*(*dydh)[i][j]+deltap*(*dydp)[i][j]+0.5*deltah*deltah*(*d2ydh2)[i][j]+0.5*deltap*deltap*(*d2ydp2)[i][j]+deltap*deltah*(*d2ydhdp)[i][j];
+    double val = (*z)[i][j]+deltax*(*dzdx)[i][j]+deltay*(*dzdy)[i][j]+0.5*deltax*deltax*(*d2ydx2)[i][j]+0.5*deltay*deltay*(*d2zdy2)[i][j]+deltay*deltax*(*d2zdxdy)[i][j];
     
     // Cache the output value calculated
     switch(output){
         case iT:  _T = val; break;
         case iDmolar: _rhomolar = val; break;
         case iSmolar: _smolar = val; break;
-        //case iUmolar:
-        default: throw ValueError();
-    }
-    return val;
-}
-
-/// Use the log(p)-T table to evaluate an output
-double CoolProp::TTSEBackend::evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j)
-{
-    // Define pointers for the matrices to be used; 
-    std::vector<std::vector<double> > *y, *dydT, *dydp, *d2ydTdp, *d2ydp2, *d2ydT2;
-    
-    // Connect the pointers based on the output variable desired
-    switch(output){
-        case iHmolar:
-            y = &single_phase_logpT.hmolar; dydT = &single_phase_logpT.dhmolardx; dydp = &single_phase_logpT.dhmolardy;
-            d2ydTdp = &single_phase_logpT.d2hmolardxdy; d2ydT2 = &single_phase_logpT.d2hmolardx2; d2ydp2 = &single_phase_logpT.d2hmolardy2;
-            break;
-        case iDmolar:
-            y = &single_phase_logpT.rhomolar; dydT = &single_phase_logpT.drhomolardx; dydp = &single_phase_logpT.drhomolardy;
-            d2ydTdp = &single_phase_logpT.d2rhomolardxdy; d2ydT2 = &single_phase_logpT.d2rhomolardx2; d2ydp2 = &single_phase_logpT.d2rhomolardy2;
-            break;
-        case iSmolar:
-            y = &single_phase_logpT.smolar; dydT = &single_phase_logpT.dsmolardx; dydp = &single_phase_logpT.dsmolardy;
-            d2ydTdp = &single_phase_logpT.d2smolardxdy; d2ydT2 = &single_phase_logpT.d2smolardx2; d2ydp2 = &single_phase_logpT.d2smolardy2;
-            break;
-        //case iUmolar:
-        default:
-            throw ValueError();
-    }
-    
-    // Distances from the node
-	double deltaT = static_cast<double>(_T) - single_phase_logpT.xvec[i];
-    double deltap = static_cast<double>(_p) - single_phase_logpT.yvec[j];
-    
-    // Calculate the output value desired
-    double val = (*y)[i][j]+deltaT*(*dydT)[i][j]+deltap*(*dydp)[i][j]+0.5*deltaT*deltaT*(*d2ydT2)[i][j]+0.5*deltap*deltap*(*d2ydp2)[i][j]+deltap*deltaT*(*d2ydTdp)[i][j];
-    
-    // Cache the output value calculated
-    switch(output){
-        case iDmolar: _rhomolar = val; break;
-        case iSmolar: _smolar = val; break;
         case iHmolar: _hmolar = val; break;
+        //case iUmolar:
         default: throw ValueError();
     }
     return val;

@@ -131,6 +131,12 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             hmolar[i][j] = AS->hmolar();
             smolar[i][j] = AS->smolar();
             
+            // -------------------------
+            //   Transport properties
+            // -------------------------
+            visc[i][j] = AS->viscosity();
+            cond[i][j] = AS->conductivity();
+            
             // ----------------------------------------
             //   First derivatives of state variables
             // ----------------------------------------
