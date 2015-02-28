@@ -18,15 +18,25 @@ cdef class AbstractState:
     cpdef set_mass_fractions(self, vector[double] z)
     cpdef set_volu_fractions(self, vector[double] z)
     
+    cpdef name(self)
+    
+    cpdef constants_header.phases phase(self) except *  
     cpdef specify_phase(self, constants_header.phases phase)
     cpdef unspecify_phase(self)
     
+    ## Limits
+    cpdef double Tmin(self)
+    cpdef double Tmax(self)
+    cpdef double pmax(self)
+    cpdef double Ttriple(self)
+        
     ## ---------------------------------------- 
     ##        Fluid property accessors
     ## ----------------------------------------
     
     cpdef double T(self) except *
     cpdef double p(self) except *
+    cpdef double Q(self) except *
     cpdef double rhomolar(self) except *
     cpdef double hmolar(self) except *
     cpdef double smolar(self) except *
@@ -43,9 +53,19 @@ cdef class AbstractState:
     cpdef double cvmass(self) except *
     cpdef double speed_sound(self) except *
     cpdef double gas_constant(self) except *
+    cpdef double tau(self) except *
+    cpdef double delta(self) except *
+    cpdef double viscosity(self) except *
+    cpdef double conductivity(self) except *
+    cpdef double surface_tension(self) except *
+    cpdef double Prandtl(self) except *
     
     cpdef double molar_mass(self) except *
+    cpdef double acentric_factor(self) except*
     cpdef double keyed_output(self, constants_header.parameters) except *
+    cpdef double trivial_keyed_output(self, constants_header.parameters) except *
+    cpdef double saturated_liquid_keyed_output(self, constants_header.parameters) except *
+    cpdef double saturated_vapor_keyed_output(self, constants_header.parameters) except *
     
     ## ----------------------------------------	
     ##        Derivatives
@@ -62,7 +82,8 @@ cdef class AbstractState:
     
     cpdef double melting_line(self, int, int, double) except *
     cpdef bool has_melting_line(self) except *
-    
+    cpdef double saturation_ancillary(self, constants_header.parameters, int, constants_header.parameters, double) except *
+        
     cpdef build_phase_envelope(self, string)
     cpdef PyPhaseEnvelopeData get_phase_envelope_data(self)
     
