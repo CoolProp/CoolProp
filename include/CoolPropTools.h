@@ -37,6 +37,10 @@
         #include <pwd.h>
     #endif
 
+    #ifndef __has_feature         // Optional of course.
+        #define __has_feature(x) 0  // Compatibility with non-clang compilers.
+    #endif  
+    
     // see http://stackoverflow.com/questions/18298280/how-to-declare-a-variable-as-thread-local-portably
     #ifndef thread_local
         #if __STDC_VERSION__ >= 201112 && !defined __STDC_NO_THREADS__
