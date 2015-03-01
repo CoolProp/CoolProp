@@ -978,7 +978,7 @@ void TransportRoutines::conformal_state_solver(HelmholtzEOSMixtureBackend &HEOS,
                 T0 = T_new; rhomolar0 = rhomolar_new;
                 break;
             }
-            catch(std::exception &){
+            catch(...){
                 continue;
             }
         }

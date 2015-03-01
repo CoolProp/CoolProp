@@ -344,7 +344,7 @@ JSONIncompressibleLibrary::~JSONIncompressibleLibrary(){
 };
 
 /// A general function to parse the json files that hold the coefficient matrices
-IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Value &obj, std::string id, bool vital){
+IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Value &obj, const std::string &id, bool vital){
     IncompressibleData fluidData;
     if (obj.HasMember(id.c_str())) {
         //rapidjson::Value value = obj[id.c_str()];
@@ -400,7 +400,7 @@ IncompressibleData JSONIncompressibleLibrary::parse_coefficients(rapidjson::Valu
 }
 
 /// Get a double from the JSON storage if it is defined, otherwise return def
-double JSONIncompressibleLibrary::parse_value(rapidjson::Value &obj, std::string id, bool vital, double def=0.0){
+double JSONIncompressibleLibrary::parse_value(rapidjson::Value &obj, const std::string &id, bool vital, double def = 0.0){
     if (obj.HasMember(id.c_str())) {
         return cpjson::get_double(obj, id);
     }
@@ -415,7 +415,7 @@ double JSONIncompressibleLibrary::parse_value(rapidjson::Value &obj, std::string
 }
 
 /// Get an integer from the JSON storage to identify the composition
-composition_types JSONIncompressibleLibrary::parse_ifrac(rapidjson::Value &obj, std::string id){
+composition_types JSONIncompressibleLibrary::parse_ifrac(rapidjson::Value &obj, const std::string &id){
     std::string res = cpjson::get_string(obj, id);
     if (!res.compare("mass")) return IFRAC_MASS;
     if (!res.compare("mole")) return IFRAC_MOLE;
@@ -508,7 +508,7 @@ void JSONIncompressibleLibrary::add_one(rapidjson::Value &fluid_json) {
 
 };
 
-void JSONIncompressibleLibrary::add_obj(IncompressibleFluid fluid_obj) {
+void JSONIncompressibleLibrary::add_obj(const IncompressibleFluid &fluid_obj) {
     _is_empty = false;
 
     // Get the next index for this fluid
@@ -528,10 +528,9 @@ void JSONIncompressibleLibrary::add_obj(IncompressibleFluid fluid_obj) {
 }
 
 // Get an IncompressibleFluid instance stored in this library
-IncompressibleFluid& JSONIncompressibleLibrary::get(std::string key) {
-    std::map<std::string, std::size_t>::iterator it;
+IncompressibleFluid& JSONIncompressibleLibrary::get(const std::string &key) {
     // Try to find it
-    it = string_to_index_map.find(key);
+    std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(key);
     // If it is found
     if (it != string_to_index_map.end()) {
         return get(it->second);
@@ -550,9 +549,8 @@ IncompressibleFluid& JSONIncompressibleLibrary::get(std::string key) {
  @param key The index of the fluid in the map
  */
 IncompressibleFluid& JSONIncompressibleLibrary::get(std::size_t key) {
-    std::map<std::size_t, IncompressibleFluid>::iterator it;
     // Try to find it
-    it = fluid_map.find(key);
+    std::map<std::size_t, IncompressibleFluid>::iterator it = fluid_map.find(key);
     // If it is found
     if (it != fluid_map.end()) {
         return it->second;
@@ -607,7 +605,7 @@ JSONIncompressibleLibrary & get_incompressible_library(void){
     return library;
 }
 
-IncompressibleFluid& get_incompressible_fluid(std::string fluid_string){
+IncompressibleFluid& get_incompressible_fluid(const std::string &fluid_string){
     if (library.is_empty()){ load_incompressible_library(); }
     return library.get(fluid_string);
 }

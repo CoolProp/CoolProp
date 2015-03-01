@@ -1171,9 +1171,8 @@ public:
     */
     CoolPropFluid& get(const std::string &key)
     {
-        std::map<std::string, std::size_t>::iterator it;
         // Try to find it
-        it = string_to_index_map.find(key);
+        std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(key);
         // If it is found
         if (it != string_to_index_map.end()){
             return get(it->second);
@@ -1188,9 +1187,8 @@ public:
     */
     CoolPropFluid& get(std::size_t key)
     {
-        std::map<std::size_t,CoolPropFluid>::iterator it;
         // Try to find it
-        it = fluid_map.find(key);
+        std::map<std::size_t, CoolPropFluid>::iterator it = fluid_map.find(key);
         // If it is found
         if (it != fluid_map.end()){
             return it->second;
@@ -1213,7 +1211,7 @@ JSONFluidLibrary & get_library(void);
 std::string get_fluid_list(void);
 
 /// Get the fluid structure returned as a reference
-CoolPropFluid& get_fluid(std::string fluid_string);
+CoolPropFluid& get_fluid(const std::string &fluid_string);
 
 } /* namespace CoolProp */
 #endif

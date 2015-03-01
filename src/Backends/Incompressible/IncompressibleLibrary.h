@@ -153,9 +153,9 @@ class JSONIncompressibleLibrary
 
 protected:
     /// A general function to parse the json files that hold the coefficient matrices
-    IncompressibleData parse_coefficients(rapidjson::Value &obj, std::string id, bool vital);
-    double parse_value(rapidjson::Value &obj, std::string id, bool vital, double def);
-    composition_types parse_ifrac(rapidjson::Value &obj, std::string id);
+    IncompressibleData parse_coefficients(rapidjson::Value &obj, const std::string &id, bool vital);
+    double parse_value(rapidjson::Value &obj, const std::string &id, bool vital, double def);
+    composition_types parse_ifrac(rapidjson::Value &obj, const std::string &id);
 
 public:
     // Default constructor;
@@ -167,13 +167,13 @@ public:
     /// Add all the fluid entries in the rapidjson::Value instance passed in
     void add_many(rapidjson::Value &listing);
     void add_one(rapidjson::Value &fluid_json);
-    void add_obj(IncompressibleFluid fluid_obj);
+    void add_obj(const IncompressibleFluid &fluid_obj);
 
     /** \brief Get an IncompressibleFluid instance stored in this library
      *
      * @param name Name of the fluid
      */
-    IncompressibleFluid& get(std::string name);
+    IncompressibleFluid& get(const std::string &name);
 
     /** \brief Get a CoolPropFluid instance stored in this library
      *
@@ -197,7 +197,7 @@ std::string get_incompressible_list_pure(void);
 std::string get_incompressible_list_solution(void);
 
 /// Get the fluid structure returned as a reference
-IncompressibleFluid& get_incompressible_fluid(std::string fluid_string);
+IncompressibleFluid& get_incompressible_fluid(const std::string &fluid_string);
 
 } /* namespace CoolProp */
 #endif

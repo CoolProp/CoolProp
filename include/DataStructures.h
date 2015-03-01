@@ -152,7 +152,7 @@ enum phases{iphase_liquid, ///< Subcritical liquid
 /// Return information about the parameter
 /// @param key The key, one of iT, iP, etc.
 /// @param info The thing you want, one of "IO" ("IO" if input/output, "O" if output only), "short" (very short description), "long" (a longer description), "units"
-std::string get_parameter_information(int key, std::string info);
+std::string get_parameter_information(int key, const std::string &info);
 
 /// Return the enum key corresponding to the parameter name ("Dmolar" for instance)
 parameters get_parameter_index(const std::string &param_name);
@@ -349,10 +349,10 @@ template<class T> CoolProp::input_pairs generate_update_pair(parameters key1, T 
     };
 
 /// Return the short description of an input pair key ("DmolarT_INPUTS" for instance)
-std::string get_input_pair_short_desc(int pair);
+const std::string& get_input_pair_short_desc(int pair);
 
 /// Return the long description of an input pair key ("Molar density in mol/m^3, Temperature in K" for instance)
-std::string get_input_pair_long_desc(int pair);
+const std::string& get_input_pair_long_desc(int pair);
 
 /// Split an input pair into parameters for the two parts that form the pair
 void split_input_pair(input_pairs pair, parameters &p1, parameters &p2);

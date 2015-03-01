@@ -18,8 +18,8 @@ namespace CoolProp {
 
 AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
 {
-    static std::string HEOS_string = "HEOS";
-    if (!backend.compare("HEOS"))
+    static const std::string HEOS_string = "HEOS";
+    if (!backend.compare(HEOS_string))
     {
         if (fluid_names.size() == 1){
             return new HelmholtzEOSBackend(fluid_names[0]);
@@ -65,7 +65,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
         else
         {
             // Split string at the '::' into two std::string, call again
-            return factory(std::string(fluid_names[0].begin(), fluid_names[0].begin() + idel), std::string(fluid_names[0].begin()+idel+2, fluid_names[0].end()));
+            return factory(std::string(fluid_names[0].begin(), fluid_names[0].begin() + idel), std::string(fluid_names[0].begin()+(idel+2), fluid_names[0].end()));
         }
     }
     else

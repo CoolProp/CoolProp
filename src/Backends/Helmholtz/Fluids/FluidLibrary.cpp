@@ -23,7 +23,7 @@ JSONFluidLibrary & get_library(void){
     return library;
 }
 
-CoolPropFluid& get_fluid(std::string fluid_string){
+CoolPropFluid& get_fluid(const std::string &fluid_string){
     if (library.is_empty()){ load(); }
     return library.get(fluid_string);
 }

@@ -1791,7 +1791,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
             CoolPropDbl rhomolar = Brent(resid, rhomin, rhoV, LDBL_EPSILON, 1e-12, 100, errstring);
             return rhomolar;
         }
-        catch(std::exception &)
+        catch(...)
         {
             throw ValueError();
         }
@@ -1887,7 +1887,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         }
         return rhomolar;
     }
-    catch(std::exception &)
+    catch(...)
     {
         try{
             // Next we try with Secant method shooting off from the guess value
@@ -1896,7 +1896,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             return rhomolar;
             
         }
-        catch(std::exception &)
+        catch(...)
         {
             try{
                 // Next we try with a Brent method bounded solver since the function is 1-1

@@ -23,7 +23,7 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
             Tmin = cpjson::get_double(json_code,"Tmin");
             Tmax = cpjson::get_double(json_code,"Tmax");
         }
-        catch (std::exception &){
+        catch (...){
             Tmin = _HUGE;
             Tmax = _HUGE;
         }
@@ -115,7 +115,7 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
         // because then you get (negative number)^(double) which is undefined.
         return Brent(resid,min_bound,max_bound,DBL_EPSILON,1e-10,100,errstring);
     }
-    catch(std::exception &){
+    catch(...){
         return Secant(resid,max_bound, -0.01, 1e-12, 100, errstring);
     }
 }

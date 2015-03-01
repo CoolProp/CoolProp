@@ -23,12 +23,18 @@
 #include <list>
 
 /// This is a stub overload to help with all the strcmp calls below and avoid needing to rewrite all of them
-std::size_t strcmp(const std::string &s, const std::string e){
+std::size_t strcmp(const std::string &s, const std::string &e){
     return s.compare(e);
+}
+std::size_t strcmp(const std::string &s, const char *e){ // To avoid unnecessary constructors
+    return s.compare(e);
+}
+std::size_t strcmp(const char *e, const std::string &s){
+    return -s.compare(e);
 }
 
 // This is a lazy stub function to avoid recoding all the strcpy calls below
-void strcpy(std::string &s, const std::string e){
+void strcpy(std::string &s, const std::string &e){
     s = e;
 }
 
@@ -38,7 +44,7 @@ namespace HumidAir
 {
     enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA, GIVEN_COMPRESSIBILITY_FACTOR};
     
-    double _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w);
+    void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w);
     double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
 
 void check_fluid_instantiation()
@@ -178,7 +184,6 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
 
     BrentSolverResids BSR = BrentSolverResids(OutputKey, p, In1Name, Input1, TargetVal);
 
-    std::string errstr;
     // Now we need to check the bounds and make sure that they are ok (don't yield invalid output)
     // and actually bound the solution
     double r_min = BSR.call(T_min);
@@ -204,6 +209,7 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
             T_min_valid = ValidNumber(r_min);
         }
     }
+    std::string errstr;
     // We will do a secant call if the values at T_min and T_max have the same sign
     if (r_min*r_max > 0){
         if (std::abs(r_min) < std::abs(r_max)){
@@ -1116,7 +1122,7 @@ double WetbulbTemperature(double T, double p, double psi_w)
         // Solution obtained is out of range (T>Tmax)
         if (return_val > Tmax + 1) {throw CoolProp::ValueError();}
     }
-    catch(std::exception &)
+    catch(...)
     {
         // The lowest wetbulb temperature that is possible for a given dry bulb temperature
         // is the saturated air temperature which yields the enthalpy of dry air at dry bulb temperature
@@ -1130,7 +1136,7 @@ double WetbulbTemperature(double T, double p, double psi_w)
 
             return_val = Brent(WBS,Tmin-30,Tmax-1,1e-12,1e-12,50,errstr);
         }
-        catch(std::exception)
+        catch(...)
         {
             return_val = _HUGE;
         }
@@ -1352,7 +1358,7 @@ bool match_input_key(const std::vector<givens> &input_keys, givens key)
 }
 
 /// Calculate T (dry bulb temp) and psi_w (water mole fraction) given the pair of inputs
-double _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w)
+void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w)
 {
     long key = get_input_key(input_keys, GIVEN_T);
     if (key >= 0) // Found T (or alias) as an input
@@ -1426,7 +1432,7 @@ double _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const 
         }
         catch(std::exception &e){
             CoolProp::set_error_string(e.what());
-            return _HUGE;
+            return;
         }
         
         // Otherwise, find psi_w for further calculations in the following section
@@ -1598,185 +1604,182 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
     double psi_w,B_aa,C_aaa,B_ww,C_www,B_aw,C_aaw,C_aww,v_bar;
 
     try{
-    if (!strcmp(Name,"Baa"))
-    {
-        B_aa=B_Air(T); // [m^3/mol]
-        strcpy(units,"m^3/mol");
-        return B_aa;
-    }
-    else if (!strcmp(Name,"Caaa"))
-    {
-        C_aaa=C_Air(T); // [m^6/mol^2]
-        strcpy(units,"m^6/mol^2");
-        return C_aaa;
-    }
-    else if (!strcmp(Name,"Bww"))
-    {
-        B_ww=B_Water(T); // [m^3/mol]
-        strcpy(units,"m^3/mol");
-        return B_ww;
-    }
-    else if (!strcmp(Name,"Cwww"))
-    {
-        C_www=C_Water(T); // [m^6/mol^2]
-        strcpy(units,"m^6/mol^2");
-        return C_www;
-    }
-    else if (!strcmp(Name,"dBaa"))
-    {
-        B_aa=dBdT_Air(T); // [m^3/mol]
-        strcpy(units,"m^3/mol");
-        return B_aa;
-    }
-    else if (!strcmp(Name,"dCaaa"))
-    {
-        C_aaa=dCdT_Air(T); // [m^6/mol^2]
-        strcpy(units,"m^6/mol^2");
-        return C_aaa;
-    }
-    else if (!strcmp(Name,"dBww"))
-    {
-        B_ww=dBdT_Water(T); // [m^3/mol]
-        strcpy(units,"m^3/mol");
-        return B_ww;
-    }
-    else if (!strcmp(Name,"dCwww"))
-    {
-        C_www=dCdT_Water(T); // [m^6/mol^2]
-        strcpy(units,"m^6/mol^2");
-        return C_www;
-    }
-    else if (!strcmp(Name,"Baw"))
-    {
-        B_aw=_B_aw(T); // [m^3/mol]
-        strcpy(units,"m^3/mol");
-        return B_aw;
-    }
-    else if (!strcmp(Name,"Caww"))
-    {
-        C_aww=_C_aww(T); // [m^6/mol^2]
-        strcpy(units,"m^6/mol^2");
-        return C_aww;
-    }
-    else if (!strcmp(Name,"Caaw"))
-    {
-        C_aaw=_C_aaw(T); // [m^6/mol^2]
-        strcpy(units,"m^6/mol^2");
-        return C_aaw;
-    }
-    else if (!strcmp(Name,"dBaw"))
-    {
-        double dB_aw=_dB_aw_dT(T); // [m^3/mol]
-        strcpy(units,"m^3/mol");
-        return dB_aw;
-    }
-    else if (!strcmp(Name,"dCaww"))
-    {
-        double dC_aww=_dC_aww_dT(T); // [m^6/mol^2]
-        strcpy(units,"m^6/mol^2");
-        return dC_aww;
-    }
-    else if (!strcmp(Name,"dCaaw"))
-    {
-        double dC_aaw=_dC_aaw_dT(T); // [m^6/mol^2]
-        strcpy(units,"m^6/mol^2");
-        return dC_aaw;
-    }
-    else if (!strcmp(Name,"beta_H"))
-    {
-        strcpy(units,"1/Pa");
-        return HenryConstant(T);
-    }
-    else if (!strcmp(Name,"kT"))
-    {
-        strcpy(units,"1/Pa");
-        if (T>273.16)
+        if (!strcmp(Name,"Baa"))
         {
-            Water->update(CoolProp::PT_INPUTS, p, T);
-            return Water->keyed_output(CoolProp::iisothermal_compressibility);
+            B_aa=B_Air(T); // [m^3/mol]
+            strcpy(units,"m^3/mol");
+            return B_aa;
+        }
+        else if (!strcmp(Name,"Caaa"))
+        {
+            C_aaa=C_Air(T); // [m^6/mol^2]
+            strcpy(units,"m^6/mol^2");
+            return C_aaa;
+        }
+        else if (!strcmp(Name,"Bww"))
+        {
+            B_ww=B_Water(T); // [m^3/mol]
+            strcpy(units,"m^3/mol");
+            return B_ww;
+        }
+        else if (!strcmp(Name,"Cwww"))
+        {
+            C_www=C_Water(T); // [m^6/mol^2]
+            strcpy(units,"m^6/mol^2");
+            return C_www;
+        }
+        else if (!strcmp(Name,"dBaa"))
+        {
+            B_aa=dBdT_Air(T); // [m^3/mol]
+            strcpy(units,"m^3/mol");
+            return B_aa;
+        }
+        else if (!strcmp(Name,"dCaaa"))
+        {
+            C_aaa=dCdT_Air(T); // [m^6/mol^2]
+            strcpy(units,"m^6/mol^2");
+            return C_aaa;
+        }
+        else if (!strcmp(Name,"dBww"))
+        {
+            B_ww=dBdT_Water(T); // [m^3/mol]
+            strcpy(units,"m^3/mol");
+            return B_ww;
+        }
+        else if (!strcmp(Name,"dCwww"))
+        {
+            C_www=dCdT_Water(T); // [m^6/mol^2]
+            strcpy(units,"m^6/mol^2");
+            return C_www;
+        }
+        else if (!strcmp(Name,"Baw"))
+        {
+            B_aw=_B_aw(T); // [m^3/mol]
+            strcpy(units,"m^3/mol");
+            return B_aw;
+        }
+        else if (!strcmp(Name,"Caww"))
+        {
+            C_aww=_C_aww(T); // [m^6/mol^2]
+            strcpy(units,"m^6/mol^2");
+            return C_aww;
+        }
+        else if (!strcmp(Name,"Caaw"))
+        {
+            C_aaw=_C_aaw(T); // [m^6/mol^2]
+            strcpy(units,"m^6/mol^2");
+            return C_aaw;
+        }
+        else if (!strcmp(Name,"dBaw"))
+        {
+            double dB_aw=_dB_aw_dT(T); // [m^3/mol]
+            strcpy(units,"m^3/mol");
+            return dB_aw;
+        }
+        else if (!strcmp(Name,"dCaww"))
+        {
+            double dC_aww=_dC_aww_dT(T); // [m^6/mol^2]
+            strcpy(units,"m^6/mol^2");
+            return dC_aww;
+        }
+        else if (!strcmp(Name,"dCaaw"))
+        {
+            double dC_aaw=_dC_aaw_dT(T); // [m^6/mol^2]
+            strcpy(units,"m^6/mol^2");
+            return dC_aaw;
+        }
+        else if (!strcmp(Name,"beta_H"))
+        {
+            strcpy(units,"1/Pa");
+            return HenryConstant(T);
+        }
+        else if (!strcmp(Name,"kT"))
+        {
+            strcpy(units,"1/Pa");
+            if (T>273.16)
+            {
+                Water->update(CoolProp::PT_INPUTS, p, T);
+                return Water->keyed_output(CoolProp::iisothermal_compressibility);
+            }
+            else
+                return IsothermCompress_Ice(T,p); //[1/Pa]
+        }
+        else if (!strcmp(Name,"p_ws"))
+        {
+            strcpy(units,"Pa");
+            if (T>273.16)
+            {
+                Water->update(CoolProp::QT_INPUTS, 0, T);
+                return Water->keyed_output(CoolProp::iP);
+            }
+            else
+                return psub_Ice(T);
+        }
+        else if (!strcmp(Name,"vbar_ws"))
+        {
+            strcpy(units,"m^3/mol");
+            if (T>273.16)
+            {
+                Water->update(CoolProp::QT_INPUTS, 0, T);
+                return 1.0/Water->keyed_output(CoolProp::iDmolar);
+            }
+            else
+            {
+                // It is ice
+                return dg_dp_Ice(T,p)*MM_Water()/1000/1000; //[m^3/mol]
+            }
+        }
+        else if (!strcmp(Name,"f"))
+        {
+            strcpy(units,"-");
+            return f_factor(T,p);
+        }
+        // Get psi_w since everything else wants it
+        psi_w=MoleFractionWater(T,p,GIVEN_HUMRAT,W);
+        if (!strcmp(Name,"Bm"))
+        {
+            strcpy(units,"m^3/mol");
+            return B_m(T,psi_w);
+        }
+        else if (!strcmp(Name,"Cm"))
+        {
+            strcpy(units,"m^6/mol^2");
+            return C_m(T,psi_w);
+        }
+        else if (!strcmp(Name,"hvirial"))
+        {
+            v_bar=MolarVolume(T,p,psi_w);
+            return 8.3145*T*((B_m(T,psi_w)-T*dB_m_dT(T,psi_w))/v_bar+(C_m(T,psi_w)-T/2.0*dC_m_dT(T,psi_w))/(v_bar*v_bar));
+        }
+        //else if (!strcmp(Name,"ha"))
+        //{
+        //    delta=1.1/322; tau=132/T;
+        //    return 1+tau*DerivTerms("dphi0_dTau",tau,delta,"Water");
+        //}
+        //else if (!strcmp(Name,"hw"))
+        //{
+        //    //~ return Props('D','T',T,'P',p,"Water")/322; tau=647/T;
+        //    delta=1000/322; tau=647/T;
+        //    //~ delta=rho_Water(T,p,TYPE_TP);tau=647/T;
+        //    return 1+tau*DerivTerms("dphi0_dTau",tau,delta,"Water");
+        //}
+        else if (!strcmp(Name,"hbaro_w"))
+        {
+            v_bar=MolarVolume(T,p,psi_w);
+            return IdealGasMolarEnthalpy_Water(T,v_bar);
+        }
+        else if (!strcmp(Name,"hbaro_a"))
+        {
+            v_bar=MolarVolume(T,p,psi_w);
+            return IdealGasMolarEnthalpy_Air(T,v_bar);
         }
         else
-            return IsothermCompress_Ice(T,p); //[1/Pa]
-    }
-    else if (!strcmp(Name,"p_ws"))
-    {
-        strcpy(units,"Pa");
-        if (T>273.16)
         {
-            Water->update(CoolProp::QT_INPUTS, 0, T);
-            return Water->keyed_output(CoolProp::iP);
-        }
-        else
-            return psub_Ice(T);
-    }
-    else if (!strcmp(Name,"vbar_ws"))
-    {
-        strcpy(units,"m^3/mol");
-        if (T>273.16)
-        {
-            Water->update(CoolProp::QT_INPUTS, 0, T);
-            return 1.0/Water->keyed_output(CoolProp::iDmolar);
-        }
-        else
-        {
-            // It is ice
-            return dg_dp_Ice(T,p)*MM_Water()/1000/1000; //[m^3/mol]
+            printf("Sorry I didn't understand your input [%s] to HAProps_Aux\n",Name);
+            return -1;
         }
     }
-    else if (!strcmp(Name,"f"))
-    {
-        strcpy(units,"-");
-        return f_factor(T,p);
-    }
-    // Get psi_w since everything else wants it
-    psi_w=MoleFractionWater(T,p,GIVEN_HUMRAT,W);
-    if (!strcmp(Name,"Bm"))
-    {
-        strcpy(units,"m^3/mol");
-        return B_m(T,psi_w);
-    }
-    else if (!strcmp(Name,"Cm"))
-    {
-        strcpy(units,"m^6/mol^2");
-        return C_m(T,psi_w);
-    }
-    else if (!strcmp(Name,"hvirial"))
-    {
-        v_bar=MolarVolume(T,p,psi_w);
-        return 8.3145*T*((B_m(T,psi_w)-T*dB_m_dT(T,psi_w))/v_bar+(C_m(T,psi_w)-T/2.0*dC_m_dT(T,psi_w))/(v_bar*v_bar));
-    }
-    //else if (!strcmp(Name,"ha"))
-    //{
-    //    delta=1.1/322; tau=132/T;
-    //    return 1+tau*DerivTerms("dphi0_dTau",tau,delta,"Water");
-    //}
-    //else if (!strcmp(Name,"hw"))
-    //{
-    //    //~ return Props('D','T',T,'P',p,"Water")/322; tau=647/T;
-    //    delta=1000/322; tau=647/T;
-    //    //~ delta=rho_Water(T,p,TYPE_TP);tau=647/T;
-    //    return 1+tau*DerivTerms("dphi0_dTau",tau,delta,"Water");
-    //}
-    else if (!strcmp(Name,"hbaro_w"))
-    {
-        v_bar=MolarVolume(T,p,psi_w);
-        return IdealGasMolarEnthalpy_Water(T,v_bar);
-    }
-    else if (!strcmp(Name,"hbaro_a"))
-    {
-        v_bar=MolarVolume(T,p,psi_w);
-        return IdealGasMolarEnthalpy_Air(T,v_bar);
-    }
-    else
-    {
-        printf("Sorry I didn't understand your input [%s] to HAProps_Aux\n",Name);
-        return -1;
-    }
-    }
-    catch(std::exception &)
-    {
-        return _HUGE;
-    }
+    catch(...){}
     return _HUGE;
 }
 double cair_sat(double T)
