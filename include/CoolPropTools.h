@@ -581,7 +581,8 @@ template<class T> void normalize_vector(std::vector<T> &x)
             } 
             return std::string(home);
         #elif defined(__ISWINDOWS__)
-			
+            #pragma warning (push)
+            #pragma warning (disable : 4996)
             char * pUSERPROFILE = getenv("USERPROFILE");
             if (pUSERPROFILE != NULL) {
                 return std::string(pUSERPROFILE);
@@ -594,6 +595,7 @@ template<class T> void normalize_vector(std::vector<T> &x)
                     return std::string("");
                 }
             }
+            #pragma warning (pop)
         #else
             throw CoolProp::NotImplementedError("This function is not defined for your platform.");
         #endif
