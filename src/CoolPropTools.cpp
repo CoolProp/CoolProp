@@ -4,7 +4,6 @@
 #include <cstdio>
 #include <cstdarg>
 #include <stdlib.h>
-#include <memory>
 #include "math.h"
 #include "stdio.h"
 #include "float.h"
@@ -46,7 +45,7 @@ double root_sum_square(const std::vector<double> &x)
 std::string format(const char* fmt, ...)
 {
     const int size = 512;
-    struct deleter{ static void delarray(void* p) { delete[] p; } }; // to use delete[]
+    struct deleter{ static void delarray(char* p) { delete[] p; } }; // to use delete[]
     shared_ptr<char> buffer(new char[size], deleter::delarray); // I'd prefer unique_ptr, but it's only available since c++11
     va_list vl;
     va_start(vl,fmt);
