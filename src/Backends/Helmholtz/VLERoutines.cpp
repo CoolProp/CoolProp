@@ -114,7 +114,7 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS,
     try{
         Secant(resid, options.p, options.p*1.1, 1e-10, 100, errstr);
     }
-    catch(std::exception &){
+    catch(...){
         CoolPropDbl pmax = std::min(options.p*1.03, static_cast<CoolPropDbl>(HEOS.p_critical()+1e-6));
         CoolPropDbl pmin = std::max(options.p*0.97, static_cast<CoolPropDbl>(HEOS.p_triple()-1e-6));
         Brent(resid, pmin, pmax, LDBL_EPSILON, 1e-8, 100, errstr);
@@ -196,7 +196,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
             try{
                 T = HEOS.get_components()[0]->ancillaries.pL.invert(specified_value);
             }
-            catch(std::exception &)
+            catch(...)
             {
                 throw ValueError("Unable to invert ancillary equation");
             }
@@ -206,7 +206,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             // Ancillary is deltah = h - hs_anchor.h
             try{ T = HEOS.get_components()[0]->ancillaries.hL.invert(specified_value - hs_anchor.hmolar); }
-            catch(std::exception &){
+            catch(...){
                 throw ValueError("Unable to invert ancillary equation for hL");
             }
         }
@@ -235,7 +235,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
             double Tmin = Tmin_satL;
             double Tmax = HEOS.calc_Tmax_sat();
             try{ T = Brent(resid, Tmin-3, Tmax + 1, DBL_EPSILON, 1e-10, 50, errstr); }
-            catch(std::exception &){
+            catch(...){
                 shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
                 HEOS_copy->update(QT_INPUTS, 1, Tmin); double hTmin = HEOS_copy->hmolar();
                 HEOS_copy->update(QT_INPUTS, 1, Tmax); double hTmax = HEOS_copy->hmolar();
@@ -261,11 +261,11 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
                 try{
                     T = anc.invert(specified_value - hs_anchor.smolar, Tmin, Tmax);
                 }
-                catch(std::exception &){
+                catch(...){
                     try{ 
                         T = anc.invert(specified_value - hs_anchor.smolar, Tmin - 3, Tmax + 3); 
                     }
-                    catch(std::exception &){
+                    catch(...){
                         double vmin = anc.evaluate(Tmin);
                         double vmax = anc.evaluate(Tmax);
                         if (std::abs(specified_value - hs_anchor.smolar) < std::abs(vmax)){
@@ -309,7 +309,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
             try{
                 T = Brent(resid, Tmin-3, Tmax, DBL_EPSILON, 1e-10, 50, errstr);
             }
-            catch(std::exception &){
+            catch(...){
                 CoolPropDbl vmax = resid.call(Tmax);
                 // If near the critical point, use a near critical guess value for T
                 if (std::abs(specified_value - hs_anchor.smolar) < std::abs(vmax)){
@@ -356,7 +356,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
     }
     catch(NotImplementedError &)
     {
-        throw;
+        throw; // ??? What is this try...catch for?
     }
 
     do{
@@ -613,9 +613,9 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, Cool
         deltaV = rhoV/reduce.rhomolar;
         tau = reduce.T/T;
     }
-    catch(NotImplementedError &e)
+    catch(NotImplementedError &)
     {
-        throw e;
+        throw; // ??? What is this try...catch for?
     }
 
     do{
@@ -732,12 +732,12 @@ void SaturationSolvers::saturation_T_pure(HelmholtzEOSMixtureBackend &HEOS, Cool
         // Actually call the solver
         SaturationSolvers::saturation_T_pure_Maxwell(HEOS, T, _options);
     }
-    catch(std::exception &){
+    catch(...){
         try{
             // Actually call the solver
             SaturationSolvers::saturation_T_pure_Akasaka(HEOS, T, _options);
         }
-        catch(std::exception &){
+        catch(...){
             // If there was an error, store values for use in later solvers
             options.pL = _options.pL;
             options.pV = _options.pV;

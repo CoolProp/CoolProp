@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstdarg>
 #include <stdlib.h>
+#include <memory>
 #include "math.h"
 #include "stdio.h"
 #include "float.h"
@@ -43,46 +44,30 @@ double root_sum_square(const std::vector<double> &x)
 }
 std::string format(const char* fmt, ...)
 {
-    int size = 512;
-    char* buffer = 0;
-    buffer = new char[size];
+    const int size = 512;
+    struct deleter{ static void delarray(void* p) { delete[] p; } }; // to use delete[]
+    std::shared_ptr<char> buffer(new char[size], deleter::delarray); // I'd prefer unique_ptr, but it's only available since c++11
     va_list vl;
     va_start(vl,fmt);
-    int nsize = vsnprintf(buffer,size,fmt,vl);
+    int nsize = vsnprintf(buffer.get(),size,fmt,vl);
     if(size<=nsize){//fail delete buffer and try again
-        delete[] buffer; buffer = 0;
-        buffer = new char[nsize+1];//+1 for /0
-        nsize = vsnprintf(buffer,size,fmt,vl);
+        buffer.reset(new char[++nsize], deleter::delarray);//+1 for /0
+        nsize = vsnprintf(buffer.get(),nsize,fmt,vl);
     }
-    std::string ret(buffer);
     va_end(vl);
-    delete[] buffer;
-    return ret;
+    return buffer.get();
 }
 
 std::vector<std::string> strsplit(const std::string &s, char del)
 {
-    std::size_t iL = 0, iR = 0, N = s.size();
     std::vector<std::string> v;
-    // Find the first instance of the delimiter
-    iR = s.find_first_of(del);
-    // Delimiter not found, return the same string again
-    if (iR == std::string::npos){
-        v.push_back(s);
-        return v;
-    }
-    while (iR != N-1)
-    {
-        v.push_back(s.substr(iL,iR-iL));
-        iL = iR;
-        iR = s.find_first_of(del,iR+1);
-        // Move the iL to the right to avoid the delimiter
-        iL += 1;
-        if (iR == std::string::npos)
-        {
-            v.push_back(s.substr(iL,N-iL));
+    std::string::const_iterator i1 = s.begin(), i2;
+    while (true){
+        i2 = std::find(i1, s.end(), del);
+        v.push_back(std::string(i1, i2));
+        if (i2 == s.end())
             break;
-        }
+        i1 = i2+1;
     }
     return v;
 }

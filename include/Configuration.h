@@ -53,11 +53,11 @@ class ConfigurationItem
         ConfigurationDataTypes type;
         
         /// Cast to boolean
-        operator bool() { check_data_type(CONFIGURATION_BOOL_TYPE);  return v_bool; };
+        operator bool() const { check_data_type(CONFIGURATION_BOOL_TYPE);  return v_bool; };
         /// Cast to double
-        operator double() { check_data_type(CONFIGURATION_DOUBLE_TYPE);  return v_double; };
+        operator double() const { check_data_type(CONFIGURATION_DOUBLE_TYPE);  return v_double; };
         /// Cast to string
-        operator std::string() { check_data_type(CONFIGURATION_STRING_TYPE);  return v_string; };
+        operator std::string() const { check_data_type(CONFIGURATION_STRING_TYPE);  return v_string; };
         // Initializer for bool
         ConfigurationItem(configuration_keys key, bool val){
             this->key = key; type = CONFIGURATION_BOOL_TYPE; v_bool = val;
@@ -75,7 +75,7 @@ class ConfigurationItem
             this->key = key; type = CONFIGURATION_STRING_TYPE; v_string = val;
         };
         // Initializer for string
-        ConfigurationItem(configuration_keys key, std::string val){
+        ConfigurationItem(configuration_keys key, const std::string &val){
             this->key = key; type = CONFIGURATION_STRING_TYPE; v_string = val;
         };
 		void set_bool(bool val){
@@ -90,17 +90,17 @@ class ConfigurationItem
 			check_data_type(CONFIGURATION_DOUBLE_TYPE);
 			v_double = val;
 		}
-		void set_string(std::string val){
+		void set_string(const std::string &val){
 			check_data_type(CONFIGURATION_STRING_TYPE);
 			v_string = val;
 		}
 		
-        configuration_keys get_key(void){
+        configuration_keys get_key(void) const {
             return this->key;
         }
 		#if !defined(SWIG)
         /// Cast to rapidjson::Value
-        void add_to_json(rapidjson::Value &val, rapidjson::Document &d){
+        void add_to_json(rapidjson::Value &val, rapidjson::Document &d) const {
             std::string name_string = config_key_to_string(key);
             rapidjson::Value name(name_string.c_str(), d.GetAllocator());
             switch (type){
@@ -143,7 +143,7 @@ class ConfigurationItem
 		#endif // !defined(SWIG)
          
     protected:
-        void check_data_type(ConfigurationDataTypes type){
+        void check_data_type(ConfigurationDataTypes type) const {
             if (type != this->type){
                 throw ValueError(format("type does not match"));
             }
@@ -166,9 +166,8 @@ class Configuration
         
         /// Get an item from the configuration
         ConfigurationItem &get_item(configuration_keys key){
-            std::map<configuration_keys,ConfigurationItem>::iterator it;
             // Try to find it
-            it = items.find(key);
+            std::map<configuration_keys,ConfigurationItem>::iterator it = items.find(key);
             // If equal to end, not found
             if (it != items.end()){
                 // Found, return it
@@ -222,12 +221,12 @@ std::string get_config_as_json_string();
 
 void set_config_bool(configuration_keys key, bool val);
 void set_config_double(configuration_keys key, double val);
-void set_config_string(configuration_keys key, std::string val);
+void set_config_string(configuration_keys key, const std::string &val);
 /// Set values in the configuration based on a json file
 #if !defined(SWIG) // Hide this for swig - Swig gets confused
 void set_config_json(rapidjson::Document &doc);
 #endif
-void set_config_as_json_string(std::string &s);
+void set_config_as_json_string(const std::string &s);
 }
 
 #endif // COOLPROP_CONFIGURATION

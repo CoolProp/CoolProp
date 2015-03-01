@@ -40,7 +40,7 @@ static PredefinedMixturesLibrary predefined_mixtures_library;
 std::string get_csv_predefined_mixtures()
 {
     std::vector<std::string> out;
-    for (std::map< std::string, Dictionary >::iterator it = predefined_mixtures_library.predefined_mixture_map.begin(); it != predefined_mixtures_library.predefined_mixture_map.end(); ++it)
+    for (std::map< std::string, Dictionary >::const_iterator it = predefined_mixtures_library.predefined_mixture_map.begin(); it != predefined_mixtures_library.predefined_mixture_map.end(); ++it)
     {
         out.push_back(it->first);
     }
@@ -48,7 +48,7 @@ std::string get_csv_predefined_mixtures()
 }
 
 bool is_predefined_mixture(const std::string &name, Dictionary &dict){
-    std::map<std::string, Dictionary>::iterator iter = predefined_mixtures_library.predefined_mixture_map.find(name);
+    std::map<std::string, Dictionary>::const_iterator iter = predefined_mixtures_library.predefined_mixture_map.find(name);
     if (iter != predefined_mixtures_library.predefined_mixture_map.end()){
         dict = iter->second;
         return true;
@@ -145,7 +145,7 @@ static MixtureBinaryPairLibrary mixturebinarypairlibrary;
 std::string get_csv_mixture_binary_pairs()
 {
     std::vector<std::string> out;
-    for (std::map< std::vector<std::string>, std::vector<Dictionary> >::iterator it = mixturebinarypairlibrary.binary_pair_map.begin(); it != mixturebinarypairlibrary.binary_pair_map.end(); ++it)
+    for (std::map< std::vector<std::string>, std::vector<Dictionary> >::const_iterator it = mixturebinarypairlibrary.binary_pair_map.begin(); it != mixturebinarypairlibrary.binary_pair_map.end(); ++it)
     {
         out.push_back(strjoin(it->first, "&"));
     }
@@ -176,7 +176,7 @@ std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::str
             else if (key == "betaV"){ return format("%0.16g", v[0].get_double("betaV")); }
             else{ }
         }
-        catch(std::exception &){ }
+        catch(...){ }
         throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(), CAS1.c_str(), CAS2.c_str()));
     }
     else{
@@ -267,7 +267,7 @@ public:
                 //
                 // Collect all the current names for departure functions for a nicer error message
                 std::vector<std::string> names;
-                for (std::map<std::string, Dictionary>::iterator it = departure_function_map.begin(); it != departure_function_map.end(); ++it)
+                for (std::map<std::string, Dictionary>::const_iterator it = departure_function_map.begin(); it != departure_function_map.end(); ++it)
                 {
                     names.push_back(it->first);
                 }

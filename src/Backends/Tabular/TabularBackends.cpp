@@ -153,12 +153,12 @@ void GriddedTableBackend::build_tables(tabular_types type)
     }
 }
 
-void GriddedTableBackend::write_tables(std::string &directory){
+void GriddedTableBackend::write_tables(const std::string &directory){
     std::ofstream ofs("single_phase.bin", std::ofstream::binary);
     msgpack::pack(ofs, single_phase);
     ofs.close();
 }
-void GriddedTableBackend::load_tables(std::string &directory){
+void GriddedTableBackend::load_tables(const std::string &directory){
     
     std::ifstream ifs("single_phase.bin", std::ifstream::binary);
     std::stringstream buffer;

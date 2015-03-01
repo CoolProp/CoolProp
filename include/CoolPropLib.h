@@ -131,7 +131,7 @@
      * 
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
-    EXPORT_CODE void CONVENTION propssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char * Ref, double *output);
+    EXPORT_CODE void CONVENTION propssi_(const char *Output, const char *Name1, const double *Prop1, const char *Name2, const double *Prop2, const char * Ref, double *output);
     /** \brief An overload of \ref CoolProp::PropsSI with the mole fractions passed as an array of doubles and the number of 
      * \overload
      * \sa \ref CoolProp::PropsSIZ
@@ -190,7 +190,7 @@
      * 
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
-    EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char *Name3, double *Prop3, double *output);
+    EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, const double *Prop1, const char *Name2, const double *Prop2, const char *Name3, const double *Prop3, double *output);
     
     /** \brief DLL wrapper of the HAProps function
      * 
@@ -208,7 +208,7 @@
      * 
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
-    EXPORT_CODE void CONVENTION haprops_(const char *Output, const char *Name1, double *Prop1, const char *Name2, double *Prop2, const char *Name3, double *Prop3, double *output);
+    EXPORT_CODE void CONVENTION haprops_(const char *Output, const char *Name1, const double *Prop1, const char *Name2, const double *Prop2, const char *Name3, const double *Prop3, double *output);
     
     
 

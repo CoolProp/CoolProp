@@ -24,7 +24,7 @@ You might want to start by looking at CoolProp.h
     /// Return a value that does not depend on the thermodynamic state - this is a convenience function that does the call PropsSI(Output, "", 0, "", 0, FluidName)
     /// @param FluidName The fluid name
     /// @param Output The output parameter, one of "Tcrit","D","H",etc.
-    double Props1SI(const std::string &FluidName, const std::string &Output);
+    double Props1SI(std::string FluidName, std::string Output);
     /// Return a value that depends on the thermodynamic state
     /// @param Output The output parameter, one of "T","D","H",etc.
     /// @param Name1 The first state variable name, one of "T","D","H",etc.
@@ -174,7 +174,7 @@ You might want to start by looking at CoolProp.h
      * @param backend The output backend, if none found, "?"
      * @param fluid The output fluid string (minus the backend string)
      */
-    void extract_backend(const std::string &fluid_string, std::string &backend, std::string &fluid);
+    void extract_backend(std::string fluid_string, std::string &backend, std::string &fluid);
     
     /**
      * @brief Extract fractions (molar, mass, etc.) encoded in the string if any

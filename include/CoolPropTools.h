@@ -212,16 +212,14 @@
     // Missing string split - like in Python
     std::vector<std::string> strsplit(const std::string &s, char del);
 
-    inline std::string upper(const std::string str_)
+    inline std::string upper(std::string str)
     {
-        std::string str = str_;
         std::transform(str.begin(), str.end(), str.begin(), ::toupper);
         return str;
     }
 	
-	inline std::string lower(const std::string str_)
+	inline std::string lower(std::string str)
     {
-        std::string str = str_;
         std::transform(str.begin(), str.end(), str.begin(), ::tolower);
         return str;
     }
