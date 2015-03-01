@@ -47,6 +47,8 @@
               defined __DMC__ || \
               defined __BORLANDC__ )
             #define thread_local __declspec(thread) 
+        #elif defined(__ISAPPLE__) && (defined(__llvm__) || defined(__clang__)) && !__has_feature(cxx_thread_local)
+            #define thread_local 
         /* note that ICC (linux) and Clang are covered by __GNUC__ */
         #elif defined __GNUC__ || \
               defined __SUNPRO_C || \
