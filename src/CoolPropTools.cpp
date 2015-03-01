@@ -4,7 +4,6 @@
 #include <cstdio>
 #include <cstdarg>
 #include <stdlib.h>
-#include <memory>
 #include "math.h"
 #include "stdio.h"
 #include "float.h"
