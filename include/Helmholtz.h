@@ -575,8 +575,8 @@ public:
 class IdealHelmholtzEnthalpyEntropyOffset : public BaseHelmholtzTerm{
 private:
     CoolPropDbl a1,a2; // Use these variables internally
-    bool enabled;
     std::string reference;
+    bool enabled;
 public:
     IdealHelmholtzEnthalpyEntropyOffset():enabled(false){}
 
