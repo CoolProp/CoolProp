@@ -46,7 +46,7 @@ std::string format(const char* fmt, ...)
 {
     const int size = 512;
     struct deleter{ static void delarray(void* p) { delete[] p; } }; // to use delete[]
-    std::shared_ptr<char> buffer(new char[size], deleter::delarray); // I'd prefer unique_ptr, but it's only available since c++11
+    shared_ptr<char> buffer(new char[size], deleter::delarray); // I'd prefer unique_ptr, but it's only available since c++11
     va_list vl;
     va_start(vl,fmt);
     int nsize = vsnprintf(buffer.get(),size,fmt,vl);
