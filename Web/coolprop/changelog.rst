@@ -1,6 +1,47 @@
 Changelog for CoolProp
 ======================
 
+5.0.8
+-----
+
+New features:
+
+* Added a Smath Studio native wrapper (thanks to Mike Kaganski for all his help)
+* Lots of little cleanups to the code (thanks to Mike Kaganski)
+
+Issues Closed:
+
+* `#510 <http://github.com/CoolProp/CoolProp/issues/510>`_ : const, ref and iterator optimization
+* `#509 <http://github.com/CoolProp/CoolProp/issues/509>`_ : Exceptions restructured
+* `#505 <http://github.com/CoolProp/CoolProp/issues/505>`_ : AbstractState in python should implement phase() function
+* `#504 <http://github.com/CoolProp/CoolProp/issues/504>`_ : More ref args
+* `#503 <http://github.com/CoolProp/CoolProp/issues/503>`_ : Add compressibility factor for humid air
+* `#502 <http://github.com/CoolProp/CoolProp/issues/502>`_ : thread_local broken on OSX
+* `#501 <http://github.com/CoolProp/CoolProp/issues/501>`_ : thread_local: one more (hopefully portable) attempt
+* `#500 <http://github.com/CoolProp/CoolProp/issues/500>`_ : Fix directory size calculations
+* `#499 <http://github.com/CoolProp/CoolProp/issues/499>`_ : Longdouble remap
+* `#498 <http://github.com/CoolProp/CoolProp/issues/498>`_ : HAProp - Conductivity & Viscosity
+* `#496 <http://github.com/CoolProp/CoolProp/issues/496>`_ : Implement checking of directory size
+* `#495 <http://github.com/CoolProp/CoolProp/issues/495>`_ : CoolPropDbl
+* `#493 <http://github.com/CoolProp/CoolProp/issues/493>`_ : Avoid copying of parameters; some fixes for _HAPropsSI_inputs
+* `#492 <http://github.com/CoolProp/CoolProp/issues/492>`_ : Add docs for Low-Level Interface
+* `#488 <http://github.com/CoolProp/CoolProp/issues/488>`_ : Some more static analyser warning fixes
+* `#487 <http://github.com/CoolProp/CoolProp/issues/487>`_ : Cannot use REFPROP to get reducing state variables
+* `#485 <http://github.com/CoolProp/CoolProp/issues/485>`_ : Rewrite HAPropsSI to call _HAPropsSI
+* `#484 <http://github.com/CoolProp/CoolProp/issues/484>`_ : Kill off all warnings in 64-bit compilation
+* `#483 <http://github.com/CoolProp/CoolProp/issues/483>`_ : Problems noted by VS2013 static analysis
+* `#479 <http://github.com/CoolProp/CoolProp/issues/479>`_ : RelativeHumidity simplification
+* `#478 <http://github.com/CoolProp/CoolProp/issues/478>`_ : Julia 0.3 wrapper
+* `#476 <http://github.com/CoolProp/CoolProp/issues/476>`_ : buildbot failure messages don't have the correct URL
+* `#473 <http://github.com/CoolProp/CoolProp/issues/473>`_ : Wrapper for Julia 0.3
+* `#472 <http://github.com/CoolProp/CoolProp/issues/472>`_ : Fix potential buffer overflow with get_parameter_information_string
+* `#471 <http://github.com/CoolProp/CoolProp/issues/471>`_ : Document which inputs are possible in Props1SI
+* `#470 <http://github.com/CoolProp/CoolProp/issues/470>`_ : Consider evaluating water at Tdb,p for transport properties in humid air
+* `#469 <http://github.com/CoolProp/CoolProp/issues/469>`_ : Initialize fluids in HAProps_Aux
+* `#468 <http://github.com/CoolProp/CoolProp/issues/468>`_ : Sanitize internal code in HAPropsSI
+* `#467 <http://github.com/CoolProp/CoolProp/issues/467>`_ : Cp in HAPropsSI cannot be calculated in 5.0.7
+* `#466 <http://github.com/CoolProp/CoolProp/issues/466>`_ : Prandtl number cannot be returned directly
+
 
 5.0.7
 -----
