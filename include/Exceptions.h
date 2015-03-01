@@ -12,7 +12,7 @@ namespace CoolProp
 class CoolPropBaseError: public std::exception
 {
 public:
-    enum ErrCode { eNotImplemented, eSolution, eAttribute, eOutOfRange, eValue, eWrongFluid, eComposition, eInput, eNotAvailable };
+    enum ErrCode { eNotImplemented, eSolution, eAttribute, eOutOfRange, eValue, eWrongFluid, eComposition, eInput, eNotAvailable, eHandle};
     CoolPropBaseError(const std::string &err, ErrCode code) throw() : m_code(code), m_err(err) {}
     ~CoolPropBaseError() throw() {};
     virtual const char* what() const throw() { return m_err.c_str(); }
@@ -33,6 +33,7 @@ typedef CoolPropError<CoolPropBaseError::eSolution> SolutionError;
 typedef CoolPropError<CoolPropBaseError::eAttribute> AttributeError;
 typedef CoolPropError<CoolPropBaseError::eOutOfRange> OutOfRangeError;
 typedef CoolPropError<CoolPropBaseError::eValue> ValueError;
+typedef CoolPropError<CoolPropBaseError::eHandle> HandleError;
 
 // ValueError specializations
 template <CoolPropBaseError::ErrCode errcode>

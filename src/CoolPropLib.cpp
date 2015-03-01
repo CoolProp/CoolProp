@@ -12,6 +12,9 @@
 #include "DataStructures.h"
 #include "Exceptions.h"
 #include "float.h"
+#include "crossplatform_shared_ptr.h"
+#include "AbstractState.h"
+#include "Exceptions.h"
 
 #include <string.h>
 
@@ -230,6 +233,14 @@ EXPORT_CODE long CONVENTION get_param_index(const char * param){
         return -1;
     }
 }
+EXPORT_CODE long CONVENTION get_input_pair_index(const char * pair){
+    try{
+        return CoolProp::get_input_pair_index(pair);
+    }
+    catch(...){
+        return -1;
+    }
+}
 EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Output, int n)
 {
     try{
@@ -284,4 +295,144 @@ EXPORT_CODE double CONVENTION HAProps(const char *Output, const char *Name1, dou
 EXPORT_CODE void CONVENTION haprops_(const char *Output, const char *Name1, const double *Prop1, const char *Name2, const double *Prop2, const char * Name3, const double * Prop3, double *output)
 {
     *output = HAProps(Output, Name1, *Prop1, Name2, *Prop2, Name3, *Prop3);
+}
+class AbstractStateLibrary{
+private:
+    std::map<std::size_t, shared_ptr<CoolProp::AbstractState> > ASlibrary;
+    long next_handle;
+public:
+    AbstractStateLibrary(): next_handle(0){};
+    long add(shared_ptr<CoolProp::AbstractState> AS){
+        ASlibrary.insert(std::pair<std::size_t, shared_ptr<CoolProp::AbstractState> >(this->next_handle,  AS));
+        this->next_handle++;
+        return next_handle-1;
+    }
+    void remove(long handle){
+        std::size_t count_removed = ASlibrary.erase(handle);
+        if (count_removed != 1){
+            throw CoolProp::HandleError("could not free handle");
+        }
+    }
+    shared_ptr<CoolProp::AbstractState> & get(long handle){
+        std::map<std::size_t, shared_ptr<CoolProp::AbstractState> >::iterator it = ASlibrary.find(handle);
+        if (it != ASlibrary.end()){
+            return it->second;
+        }
+        else{
+            throw CoolProp::HandleError("could not get handle");
+        }
+    }
+};
+static AbstractStateLibrary handle_manager;
+
+EXPORT_CODE long CONVENTION AbstractState_factory(const char* backend, const char* fluids, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+    try{
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluids));
+        return handle_manager.add(AS);
+    }
+    catch(std::exception &e){
+        std::string errmsg = e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    return -1;
+}
+EXPORT_CODE void CONVENTION AbstractState_free(const long handle, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+    try{
+        handle_manager.remove(handle);
+    }
+    catch(CoolProp::HandleError &e){
+        std::string errmsg = e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    catch(...){
+        *errcode = 3;
+    }
+}
+EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const double *fractions, const long N, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+    std::vector<double> _fractions(fractions, fractions + N);
+    try{
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        if (AS->using_mole_fractions()){
+            AS->set_mole_fractions(_fractions);
+        }
+        else if (AS->using_mass_fractions()){
+            AS->set_mass_fractions(_fractions);
+        }
+        else if (AS->using_volu_fractions()){
+            AS->set_volu_fractions(_fractions);
+        }
+    }
+    catch(CoolProp::HandleError &e){
+        std::string errmsg = e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    catch(...){
+        *errcode = 3;
+    }
+}
+EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long input_pair, const double value1, const double value2, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+    try{
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        AS->update(static_cast<CoolProp::input_pairs>(input_pair), value1, value2);
+    }
+    catch(std::exception &e){
+        std::string errmsg = e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    catch(...){
+        *errcode = 3;
+    }
+}
+EXPORT_CODE double CONVENTION AbstractState_keyed_output(const long handle, const long param, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+    try{
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        return AS->keyed_output(static_cast<CoolProp::parameters>(param));
+    }
+    catch(std::exception &e){
+        std::string errmsg = e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    catch(...){
+        *errcode = 3;
+    }
 }

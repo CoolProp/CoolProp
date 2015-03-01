@@ -411,25 +411,38 @@ const input_pair_info input_pair_list[] = {
 class InputPairInformation
 {
 public:
-    std::map<int, std::string> short_desc_map, long_desc_map;
+    std::map<input_pairs, std::string> short_desc_map, long_desc_map;
+    std::map<std::string, input_pairs> index_map;
     InputPairInformation()
     {
         const input_pair_info* const end = input_pair_list + sizeof(input_pair_list) / sizeof(input_pair_list[0]);
         for (const input_pair_info* el = input_pair_list; el != end; ++el)
         {
-            short_desc_map.insert(std::pair<int, std::string>(el->key, el->short_desc));
-            long_desc_map.insert(std::pair<int, std::string>(el->key, el->long_desc));
+            short_desc_map.insert(std::pair<input_pairs, std::string>(el->key, el->short_desc));
+            long_desc_map.insert(std::pair<input_pairs, std::string>(el->key, el->long_desc));
+            index_map.insert(std::pair<std::string,input_pairs >(el->short_desc, el->key));
         }
     }
 };
 
 static InputPairInformation input_pair_information;
 
-const std::string& get_input_pair_short_desc(int pair)
+input_pairs get_input_pair_index(const std::string &input_pair_name)
+{
+    std::map<std::string, input_pairs>::iterator it = input_pair_information.index_map.find(input_pair_name);
+    if (it != input_pair_information.index_map.end()){
+        return it->second;
+    }
+    else{
+        throw ValueError(format("Your input name [%s] is not valid in get_input_pair_index (names are case sensitive)",input_pair_name.c_str()));
+    }
+}
+
+const std::string& get_input_pair_short_desc(input_pairs pair)
 {
     return input_pair_information.short_desc_map[pair];
 }
-const std::string& get_input_pair_long_desc(int pair)
+const std::string& get_input_pair_long_desc(input_pairs pair)
 {
     return input_pair_information.long_desc_map[pair];
 }
