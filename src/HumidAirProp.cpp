@@ -36,7 +36,7 @@ shared_ptr<CoolProp::HelmholtzEOSBackend> Water, Air;
 
 namespace HumidAir
 {
-    enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA};
+    enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA, GIVEN_COMPRESSIBILITY_FACTOR};
     
     double _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w);
     double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
@@ -1173,6 +1173,8 @@ static givens Name2Type(const std::string &Name)
         return GIVEN_CP;
     else if (!strcmp(Name,"Cha") || !strcmp(Name,"cp_ha"))
         return GIVEN_CPHA;
+    else if (!strcmp(Name,"Z"))
+        return GIVEN_COMPRESSIBILITY_FACTOR;
     else
         throw CoolProp::ValueError(format("Sorry, your input [%s] was not understood to Name2Type. Acceptable values are T,P,R,W,D,B,H,S,M,K and aliases thereof\n",Name.c_str()));
 }
@@ -1290,6 +1292,7 @@ void convert_to_SI(const std::string &Name, double &val)
         case GIVEN_HUMRAT:
         case GIVEN_VISC:
         case GIVEN_PSIW:
+        case GIVEN_COMPRESSIBILITY_FACTOR:
             return;
         case GIVEN_INVALID:
             throw CoolProp::ValueError(format("invalid input to convert_to_SI"));
@@ -1317,6 +1320,7 @@ void convert_from_SI(const std::string &Name, double &val)
         case GIVEN_HUMRAT:
         case GIVEN_VISC:
         case GIVEN_PSIW:
+        case GIVEN_COMPRESSIBILITY_FACTOR:
             return;
         case GIVEN_INVALID:
             throw CoolProp::ValueError(format("invalid input to convert_to_SI"));
@@ -1502,6 +1506,11 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
             h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
             cp_bar = (h_bar2-h_bar1)/(2*dT); //[J/mol_da/K]
             return cp_bar/M_ha; //[J/kg_da/K]
+        }
+        case GIVEN_COMPRESSIBILITY_FACTOR:{
+            double v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
+            double R_u_molar = 8.314472; // J/mol/K
+            return p*v_bar/(R_u_molar*T);
         }
         default:
             return _HUGE;
