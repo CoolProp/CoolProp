@@ -12,6 +12,7 @@
 #include "CoolPropTools.h"
 #include "MatrixMath.h"
 #include "Exceptions.h"
+#include "crossplatform_shared_ptr.h"
 
 #if !defined(__ISWINDOWS__)
 #include <ftw.h>
