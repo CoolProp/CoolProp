@@ -9,12 +9,6 @@
 #include "Coolprop.h"
 #include <sstream>
 
-class UnableToLoadException : public CoolProp::CoolPropBaseError{
-    public:
-        UnableToLoadException(std::string e){err = e;}
-        virtual const char* what() const throw(){ return err.c_str(); }
-};
-
 namespace CoolProp{
 /**
  * @brief 
@@ -29,7 +23,7 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
     
     if ( (ifs.rdstate() & std::ifstream::failbit ) != 0 ){
         if (get_debug_level() > 0){std::cout << format("Error loading table %s", path_to_table.c_str()) << std::endl;}
-        throw UnableToLoadException(format("Error loading table %s", path_to_table.c_str()));
+        throw UnableToLoadError(format("Error loading table %s", path_to_table.c_str()));
     }
     
     std::stringstream buffer;
@@ -39,7 +33,7 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
     std::size_t N = sbuffer.size();
     if ( N == 0 ){
         if (get_debug_level() > 0){std::cout << format("No data was read from table %s", path_to_table.c_str()) << std::endl;}
-        throw UnableToLoadException(format("No data was read from table %s", path_to_table.c_str()));
+        throw UnableToLoadError(format("No data was read from table %s", path_to_table.c_str()));
     }
     try{
         msgpack::unpack(upd, sbuffer.c_str(), N);
@@ -53,7 +47,7 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
     catch(std::exception &){
         std::string err = format("Unable to deserialize %s", path_to_table.c_str());
         if (get_debug_level() > 0){std::cout << err << std::endl;}
-        throw UnableToLoadException(err);
+        throw UnableToLoadError(err);
     }
 }
 
@@ -156,7 +150,7 @@ class PureFluidSaturationTableData{
         std::map<std::string, std::vector<double> >::iterator get_vector_iterator(const std::string &name){
             std::map<std::string, std::vector<double> >::iterator it = vectors.find(name);
             if (it == vectors.end()){
-                throw UnableToLoadException(format("could not find vector %s",name.c_str()));
+                throw UnableToLoadError(format("could not find vector %s",name.c_str()));
             }
             return it;
         }
@@ -278,7 +272,7 @@ class SinglePhaseGriddedTableData{
         std::map<std::string, std::vector<std::vector<double> > >::iterator get_matrices_iterator(const std::string &name){
             std::map<std::string, std::vector<std::vector<double> > >::iterator it = matrices.find(name);
             if (it == matrices.end()){
-                throw UnableToLoadException(format("could not find matrix %s",name.c_str()));
+                throw UnableToLoadError(format("could not find matrix %s",name.c_str()));
             }
             return it;
         }
@@ -524,7 +518,7 @@ class TabularBackend : public AbstractState
                 /// Try to load the tables if you can.
                 load_tables();
             }
-            catch(UnableToLoadException &){
+            catch(CoolProp::UnableToLoadError &){
                 /// If you cannot load the tables, build them and then write them to file
                 build_tables();
                 pack_matrices();

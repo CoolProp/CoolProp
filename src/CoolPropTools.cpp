@@ -71,13 +71,6 @@ std::vector<std::string> strsplit(const std::string &s, char del)
     }
     return v;
 }
-
-// See http://stackoverflow.com/a/236803/1360263 (http://stackoverflow.com/questions/236129/split-a-string-in-c)
-std::vector<std::string> strsplit(const std::string &s, char delim) {
-    std::vector<std::string> elems;
-    split(s, delim, elems);
-    return elems;
-}
     
 double interp1d(const std::vector<double> *x, const std::vector<double> *y, double x0)
 {
