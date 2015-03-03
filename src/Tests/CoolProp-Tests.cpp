@@ -1376,7 +1376,7 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
                     // Then try to set to the specified reference state
                     set_reference_stateS(fluids[i], ref_state[j]);
                 }
-                catch(std::exception &e){
+                catch(...){
                     // Then set the reference state back to the default
                     set_reference_stateS(fluids[i],"RESET");
                     break;
@@ -1408,7 +1408,7 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
                         throw ValueError("hmolar is not valid number");
                     }
                 }
-                catch(std::exception &e){
+                catch(...){
                     // Then set the reference state back to the default
                     set_reference_stateS(fluids[i],"RESET");
                     break;

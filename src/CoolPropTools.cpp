@@ -11,6 +11,7 @@
 #include "CoolPropTools.h"
 #include "MatrixMath.h"
 #include "Exceptions.h"
+#include "crossplatform_shared_ptr.h"
 
 #if !defined(__ISWINDOWS__)
 #include <ftw.h>
@@ -43,31 +44,32 @@ double root_sum_square(const std::vector<double> &x)
 }
 std::string format(const char* fmt, ...)
 {
-    int size = 512;
-    char* buffer = 0;
-    buffer = new char[size];
+    const int size = 512;
+    struct deleter{ static void delarray(char* p) { delete[] p; } }; // to use delete[]
+    shared_ptr<char> buffer(new char[size], deleter::delarray); // I'd prefer unique_ptr, but it's only available since c++11
     va_list vl;
     va_start(vl,fmt);
-    int nsize = vsnprintf(buffer,size,fmt,vl);
+    int nsize = vsnprintf(buffer.get(),size,fmt,vl);
     if(size<=nsize){//fail delete buffer and try again
-        delete[] buffer; buffer = 0;
-        buffer = new char[nsize+1];//+1 for /0
-        nsize = vsnprintf(buffer,size,fmt,vl);
+        buffer.reset(new char[++nsize], deleter::delarray);//+1 for /0
+        nsize = vsnprintf(buffer.get(),nsize,fmt,vl);
     }
-    std::string ret(buffer);
     va_end(vl);
-    delete[] buffer;
-    return ret;
+    return buffer.get();
 }
 
-// See http://stackoverflow.com/a/236803/1360263 (http://stackoverflow.com/questions/236129/split-a-string-in-c)
-std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
-    std::stringstream ss(s);
-    std::string item;
-    while (std::getline(ss, item, delim)) {
-        elems.push_back(item);
+std::vector<std::string> strsplit(const std::string &s, char del)
+{
+    std::vector<std::string> v;
+    std::string::const_iterator i1 = s.begin(), i2;
+    while (true){
+        i2 = std::find(i1, s.end(), del);
+        v.push_back(std::string(i1, i2));
+        if (i2 == s.end())
+            break;
+        i1 = i2+1;
     }
-    return elems;
+    return v;
 }
 
 // See http://stackoverflow.com/a/236803/1360263 (http://stackoverflow.com/questions/236129/split-a-string-in-c)

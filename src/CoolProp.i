@@ -1,7 +1,7 @@
 %module CoolProp
 
-%ignore CoolProp::AbstractState::set_mole_fractions(const std::vector< long double> &);
-%ignore CoolProp::AbstractState::set_mass_fractions(const std::vector< long double> &);
+%ignore CoolProp::AbstractState::set_mole_fractions(const std::vector<CoolPropDbl> &);
+%ignore CoolProp::AbstractState::set_mass_fractions(const std::vector<CoolPropDbl> &);
 %ignore CoolProp::set_config_json(rapidjson::Document &);
 %ignore CoolProp::get_config_as_json(rapidjson::Document &);
 

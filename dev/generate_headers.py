@@ -124,12 +124,14 @@ def version_to_file(root_dir):
     MAJOR_line = [line for line in lines if ('VERSION_MAJOR' in line and 'MINOR' not in line)]
     MINOR_line = [line for line in lines if ('VERSION_MINOR' in line and 'MAJOR' not in line)]
     PATCH_line = [line for line in lines if ('VERSION_PATCH' in line and 'MINOR' not in line)]
+    REVISION_line = [line for line in lines if ('VERSION_REVISION' in line and 'MINOR' not in line)]
     # String processing
     MAJOR = MAJOR_line[0].strip().split('VERSION_MAJOR')[1].split(')')[0].strip()
     MINOR = MINOR_line[0].strip().split('VERSION_MINOR')[1].split(')')[0].strip()
     PATCH = PATCH_line[0].strip().split('VERSION_PATCH')[1].split(')')[0].strip()
+    REVISION = REVISION_line[0].strip().split('VERSION_REVISION')[1].split(')')[0].strip()
     # Generate the strings
-    version = '.'.join([MAJOR,MINOR,PATCH])
+    version = '.'.join([MAJOR,MINOR,PATCH]) + REVISION
      
     # Get the hash of the version
     if 'version' not in hashes or ('version' in hashes and hashes['version'] != get_hash(version.encode('ascii'))):

@@ -37,6 +37,10 @@
         #include <pwd.h>
     #endif
 
+    #ifndef __has_feature         // Optional of course.
+        #define __has_feature(x) 0  // Compatibility with non-clang compilers.
+    #endif  
+    
     // see http://stackoverflow.com/questions/18298280/how-to-declare-a-variable-as-thread-local-portably
     #ifndef thread_local
         #if __STDC_VERSION__ >= 201112 && !defined __STDC_NO_THREADS__
@@ -47,6 +51,8 @@
               defined __DMC__ || \
               defined __BORLANDC__ )
             #define thread_local __declspec(thread) 
+        #elif defined(__ISAPPLE__) && (defined(__llvm__) || defined(__clang__)) && !__has_feature(cxx_thread_local)
+            #define thread_local 
         /* note that ICC (linux) and Clang are covered by __GNUC__ */
         #elif defined __GNUC__ || \
               defined __SUNPRO_C || \
@@ -224,16 +230,14 @@
     // Missing string split - like in Python
     std::vector<std::string> strsplit(const std::string &s, char del);
 
-    inline std::string upper(const std::string str_)
+    inline std::string upper(std::string str)
     {
-        std::string str = str_;
         std::transform(str.begin(), str.end(), str.begin(), ::toupper);
         return str;
     }
 	
-	inline std::string lower(const std::string str_)
+	inline std::string lower(std::string str)
     {
-        std::string str = str_;
         std::transform(str.begin(), str.end(), str.begin(), ::tolower);
         return str;
     }
@@ -589,7 +593,10 @@ template<class T> void normalize_vector(std::vector<T> &x)
             } 
             return std::string(home);
         #elif defined(__ISWINDOWS__)
-			
+            #if defined(_MSC_VER)
+                #pragma warning (push)
+                #pragma warning (disable : 4996)
+            #endif
             char * pUSERPROFILE = getenv("USERPROFILE");
             if (pUSERPROFILE != NULL) {
                 return std::string(pUSERPROFILE);
@@ -602,6 +609,9 @@ template<class T> void normalize_vector(std::vector<T> &x)
                     return std::string("");
                 }
             }
+            #if defined(_MSC_VER)
+                #pragma warning (pop)
+            #endif
         #else
             throw CoolProp::NotImplementedError("This function is not defined for your platform.");
         #endif
