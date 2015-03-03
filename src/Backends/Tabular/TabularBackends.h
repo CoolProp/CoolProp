@@ -522,7 +522,11 @@ class TabularBackend : public AbstractState
             catch(CoolProp::UnableToLoadError &){
                 /// Check directory size
                 std::string table_path = get_home_dir() + "/.CoolProp/Tables/";
-                double directory_size_in_GB = CalculateDirSize(std::wstring(table_path.begin(), table_path.end()))/POW3(1024.0);
+                #if defined(__ISWINDOWS__)
+                    double directory_size_in_GB = CalculateDirSize(std::wstring(table_path.begin(), table_path.end()))/POW3(1024.0);
+                #else
+                    double directory_size_in_GB = CalculateDirSize(table_path)/POW3(1024.0);
+                #endif
                 double allowed_size_in_GB = get_config_double(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB);
                 if (get_debug_level() > 0){std::cout << "Tabular directory size is " << directory_size_in_GB << " GB\n";}
                 if (directory_size_in_GB > 1.5*allowed_size_in_GB){
