@@ -187,7 +187,7 @@ A more complete comparison of the accuracy of these methods can be obtained by s
 Speed comparison
 ----------------
 
-The primary motivation for the use of tabular interpolation is the improvement in computational speed.  Thus a small summary could be useful.  This tabular data was obtained by the python script :download:` (link to script) <speed_script.py>`.
+The primary motivation for the use of tabular interpolation is the improvement in computational speed.  Thus a small summary could be useful.  This tabular data was obtained by this python script : :download:`(link to script) <speed_script.py>`.
 
 .. include :: tabular_data.rst.in
 

@@ -18,7 +18,7 @@ def get_speed_data():
     T_PT = 300
 
     fluid = 'R245fa'
-    number = 10000
+    number = 50000
     repeat = 3
     version = CoolProp.__version__
     
@@ -77,32 +77,48 @@ def get_speed_data():
 
     if loaded==4:
         CoolProp.CoolProp.disable_TTSE_LUT(fluid)
-        two_phase_hp_heos    = min(timeit.Timer(two_phase_HP).repeat(repeat=repeat, number=number))/number
-        single_phase_hp_heos = min(timeit.Timer(single_phase_HP).repeat(repeat=repeat, number=number))/number
-        single_phase_pt_heos = min(timeit.Timer(single_phase_PT).repeat(repeat=repeat, number=number))/number
+        two_phase_hp_heos    = min(timeit.Timer(two_phase_HP).repeat(repeat=repeat, number=number))/number*1e6
+        single_phase_hp_heos = min(timeit.Timer(single_phase_HP).repeat(repeat=repeat, number=number))/number*1e6
+        single_phase_pt_heos = min(timeit.Timer(single_phase_PT).repeat(repeat=repeat, number=number))/number*1e6
         CoolProp.CoolProp.enable_TTSE_LUT(fluid)
-        two_phase_hp_ttse    = min(timeit.Timer(two_phase_HP).repeat(repeat=repeat, number=number))/number
-        single_phase_hp_ttse = min(timeit.Timer(single_phase_HP).repeat(repeat=repeat, number=number))/number
-        single_phase_pt_ttse = min(timeit.Timer(single_phase_PT).repeat(repeat=repeat, number=number))/number
+        two_phase_hp_ttse    = min(timeit.Timer(two_phase_HP).repeat(repeat=repeat, number=number))/number*1e6
+        single_phase_hp_ttse = min(timeit.Timer(single_phase_HP).repeat(repeat=repeat, number=number))/number*1e6
+        single_phase_pt_ttse = min(timeit.Timer(single_phase_PT).repeat(repeat=repeat, number=number))/number*1e6
         CoolProp.CoolProp.disable_TTSE_LUT(fluid)
     elif loaded==5:
-        two_phase_hp_heos    = min(timeit.Timer(two_phase_HEOS).repeat(repeat=repeat, number=number))/number
-        single_phase_hp_heos = min(timeit.Timer(single_phase_HEOS).repeat(repeat=repeat, number=number))/number
-        single_phase_pt_heos = min(timeit.Timer(single_phase_pT_HEOS).repeat(repeat=repeat, number=number))/number
-        two_phase_hp_ttse    = min(timeit.Timer(two_phase_TTSE).repeat(repeat=repeat, number=number))/number
-        single_phase_hp_ttse = min(timeit.Timer(single_phase_TTSE).repeat(repeat=repeat, number=number))/number
-        single_phase_pt_ttse = min(timeit.Timer(single_phase_pT_TTSE).repeat(repeat=repeat, number=number))/number
-        two_phase_hp_bicubic    = min(timeit.Timer(two_phase_BICUBIC).repeat(repeat=repeat, number=number))/number
-        single_phase_hp_bicubic = min(timeit.Timer(single_phase_BICUBIC).repeat(repeat=repeat, number=number))/number
-        single_phase_pt_bicubic = min(timeit.Timer(single_phase_pT_BICUBIC).repeat(repeat=repeat, number=number))/number
+        two_phase_hp_heos    = min(timeit.Timer(two_phase_HEOS).repeat(repeat=repeat, number=number))/number*1e6
+        single_phase_hp_heos = min(timeit.Timer(single_phase_HEOS).repeat(repeat=repeat, number=number))/number*1e6
+        single_phase_pt_heos = min(timeit.Timer(single_phase_pT_HEOS).repeat(repeat=repeat, number=number))/number*1e6
+        two_phase_hp_ttse    = min(timeit.Timer(two_phase_TTSE).repeat(repeat=repeat, number=number))/number*1e6
+        single_phase_hp_ttse = min(timeit.Timer(single_phase_TTSE).repeat(repeat=repeat, number=number))/number*1e6
+        single_phase_pt_ttse = min(timeit.Timer(single_phase_pT_TTSE).repeat(repeat=repeat, number=number))/number*1e6
+        two_phase_hp_bicubic    = min(timeit.Timer(two_phase_BICUBIC).repeat(repeat=repeat, number=number))/number*1e6
+        single_phase_hp_bicubic = min(timeit.Timer(single_phase_BICUBIC).repeat(repeat=repeat, number=number))/number*1e6
+        single_phase_pt_bicubic = min(timeit.Timer(single_phase_pT_BICUBIC).repeat(repeat=repeat, number=number))/number*1e6
     else:
         raise ValueError("Unknown CoolProp version.")
         
     return locals()
     
-if __name__ == '__main__':
+table = """.. csv-table:: Execution speed in :math:`\mu` s/call
+   :header: Backend, 2-Phase p-h inputs, 1-phase p-h inputs, 1-phase p-T inputs
+   :widths: 30, 30, 30, 40
 
-    print("{0:15s}: {1:6d} calls, {2:2d} repetitions, CoolProp version {3:1d}".format(fluid,number,repeat,loaded))
-    print("{0:15s}: 2P HEOS: {1:6.2f} us,  1P HEOS: {2:6.2f} us, PT HEOS: {3:6.2f} us".format(fluid,two_phase_hp_heos*1e6,single_phase_hp_heos*1e6,single_phase_pt_heos*1e6))
-    print("{0:15s}: 2P TTSE: {1:6.2f} us,  1P TTSE: {2:6.2f} us, PT TTSE: {3:6.2f} us".format(fluid,two_phase_hp_ttse*1e6,single_phase_hp_ttse*1e6,single_phase_pt_ttse*1e6))
-    print("{0:15s}: 2P BICU: {1:6.2f} us,  1P BICU: {2:6.2f} us, PT BICU: {3:6.2f} us".format(fluid,two_phase_hp_bicubic*1e6,single_phase_hp_bicubic*1e6,single_phase_pt_bicubic*1e6))
+   ``HEOS``, {two_phase_hp_heos:6.2f}, {single_phase_hp_heos:6.2f}, {single_phase_pt_heos:6.2f}
+   ``TTSE&HEOS``, {two_phase_hp_ttse:6.2f}, {single_phase_hp_ttse:6.2f}, {single_phase_pt_ttse:6.2f}
+   ``BICUBIC&HEOS``, {two_phase_hp_bicubic:6.2f},{single_phase_hp_bicubic:6.2f},{single_phase_pt_bicubic:6.2f}
+"""
+
+def generate_rst():
+    d = get_speed_data()
+    s = "{fluid:s} : {number:6d} calls, best of {repeat:2d} repetitions\n\n".format(**d)
+    s += table.format(**d)
+    return s
+    
+if __name__ == '__main__':
+    print(generate_rst())
+    d = get_speed_data()
+    print("{0:15s}: {1:6d} calls, {2:2d} repetitions, CoolProp version {3:1d}".format(d['fluid'],d['number'],d['repeat'],d['loaded']))
+    print("{0:15s}: 2P HEOS: {1:6.2f} us,  1P HEOS: {2:6.2f} us, PT HEOS: {3:6.2f} us".format(d['fluid'],d['two_phase_hp_heos'],d['single_phase_hp_heos'],d['single_phase_pt_heos']))
+    print("{0:15s}: 2P TTSE: {1:6.2f} us,  1P TTSE: {2:6.2f} us, PT TTSE: {3:6.2f} us".format(d['fluid'],d['two_phase_hp_ttse'],d['single_phase_hp_ttse'],d['single_phase_pt_ttse']))
+    print("{0:15s}: 2P BICU: {1:6.2f} us,  1P BICU: {2:6.2f} us, PT BICU: {3:6.2f} us".format(d['fluid'],d['two_phase_hp_bicubic'],d['single_phase_hp_bicubic'],d['single_phase_pt_bicubic']))
