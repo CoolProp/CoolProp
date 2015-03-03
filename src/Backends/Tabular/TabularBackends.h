@@ -6,8 +6,9 @@
 #include <msgpack/fbuffer.hpp>
 #include "crossplatform_shared_ptr.h"
 #include "Exceptions.h"
-#include "Coolprop.h"
+#include "CoolProp.h"
 #include <sstream>
+#include "Configuration.h"
 
 namespace CoolProp{
 /**
@@ -519,6 +520,17 @@ class TabularBackend : public AbstractState
                 load_tables();
             }
             catch(CoolProp::UnableToLoadError &){
+                /// Check directory size
+                std::string table_path = get_home_dir() + "/.CoolProp/Tables/";
+                double directory_size_in_GB = CalculateDirSize(std::wstring(table_path.begin(), table_path.end()))/POW3(1024.0);
+                double allowed_size_in_GB = get_config_double(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB);
+                if (get_debug_level() > 0){std::cout << "Tabular directory size is " << directory_size_in_GB << " GB\n";}
+                if (directory_size_in_GB > 1.5*allowed_size_in_GB){
+                    throw DirectorySizeError(format("Maximum allowed tabular directory size is %g GB, you have exceeded 1.5 times this limit", allowed_size_in_GB));
+                }
+                else if (directory_size_in_GB > allowed_size_in_GB){
+                    set_warning_string(format("Maximum allowed tabular directory size is %g GB, you have exceeded this limit", allowed_size_in_GB));
+                }
                 /// If you cannot load the tables, build them and then write them to file
                 build_tables();
                 pack_matrices();
