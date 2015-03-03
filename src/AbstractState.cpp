@@ -14,9 +14,11 @@
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
-#include "Backends/Tabular/TTSEBackend.h"
-#include "Backends/Tabular/BicubicBackend.h"
 
+#if !defined(NO_TABULAR_BACKENDS)
+    #include "Backends/Tabular/TTSEBackend.h"
+    #include "Backends/Tabular/BicubicBackend.h"
+#endif
 namespace CoolProp {
 
 AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
@@ -45,20 +47,22 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
         if (fluid_names.size() != 1){throw ValueError(format("For INCOMP backend, name vector must be one element long"));}
         return new IncompressibleBackend(fluid_names[0]);
     }
-    else if (backend.find("TTSE&") == 0)
-    {
-        if (fluid_names.size() != 1){throw ValueError(format("For backend [%s], name vector must be one element long", backend.c_str()));}
-        // Will throw if there is a problem with this backend
-        shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_names[0]));
-        return new TTSEBackend(AS);
-    }
-    else if (backend.find("BICUBIC&") == 0)
-    {
-        if (fluid_names.size() != 1){throw ValueError(format("For backend [%s], name vector must be one element long", backend.c_str()));}
-        // Will throw if there is a problem with this backend
-        shared_ptr<AbstractState> AS(factory(backend.substr(8), fluid_names[0]));
-        return new BicubicBackend(AS);
-    }
+    #if !defined(NO_TABULAR_BACKENDS)
+        else if (backend.find("TTSE&") == 0)
+        {
+            if (fluid_names.size() != 1){throw ValueError(format("For backend [%s], name vector must be one element long", backend.c_str()));}
+            // Will throw if there is a problem with this backend
+            shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_names[0]));
+            return new TTSEBackend(AS);
+        }
+        else if (backend.find("BICUBIC&") == 0)
+        {
+            if (fluid_names.size() != 1){throw ValueError(format("For backend [%s], name vector must be one element long", backend.c_str()));}
+            // Will throw if there is a problem with this backend
+            shared_ptr<AbstractState> AS(factory(backend.substr(8), fluid_names[0]));
+            return new BicubicBackend(AS);
+        }
+    #endif
     else if (!backend.compare("TREND"))
     {
         throw ValueError("TREND backend not yet implemented");

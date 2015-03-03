@@ -1,4 +1,5 @@
 
+#if !defined(NO_TABULAR_BACKENDS)
 
 #include "TabularBackends.h"
 #include "CoolProp.h"
@@ -201,3 +202,5 @@ void CoolProp::TabularBackend::load_tables(){
     load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin");
     load_table(pure_saturation, path_to_tables, "pure_saturation.bin");
 }
+
+#endif // !defined(NO_TABULAR_BACKENDS)

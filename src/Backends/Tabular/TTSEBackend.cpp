@@ -1,3 +1,6 @@
+#if !defined(NO_TABULAR_BACKENDS)
+
+
 #include "TTSEBackend.h"
 #include "CoolProp.h"
 
@@ -135,3 +138,5 @@ double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData 
     }
     return val;
 }
+
+#endif // !defined(NO_TABULAR_BACKENDS)

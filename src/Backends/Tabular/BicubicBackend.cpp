@@ -1,3 +1,5 @@
+#if !defined(NO_TABULAR_BACKENDS)
+
 #include "BicubicBackend.h"
 #include "MatrixMath.h"
 
@@ -209,3 +211,5 @@ double CoolProp::BicubicBackend::evaluate_single_phase(SinglePhaseGriddedTableDa
     }
     return val;
 }
+
+#endif // !defined(NO_TABULAR_BACKENDS)
