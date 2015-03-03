@@ -297,6 +297,8 @@ double AbstractState::keyed_output(int key)
         return dCvirial_dT();
     case iisothermal_compressibility:
         return isothermal_compressibility();
+    case iisobaric_expansion_coefficient:
+        return isobaric_expansion_coefficient();
     case iviscosity:
         return viscosity();
     case iconductivity:
