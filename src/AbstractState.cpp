@@ -5,6 +5,8 @@
  *      Author: jowr
  */
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdlib.h>
 #include "math.h"
 #include "AbstractState.h"
@@ -12,7 +14,8 @@
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
-#include "Backends/Tabular/TabularBackends.h"
+#include "Backends/Tabular/TTSEBackend.h"
+#include "Backends/Tabular/BicubicBackend.h"
 
 namespace CoolProp {
 
@@ -47,7 +50,14 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
         if (fluid_names.size() != 1){throw ValueError(format("For backend [%s], name vector must be one element long", backend.c_str()));}
         // Will throw if there is a problem with this backend
         shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_names[0]));
-        return new TTSEBackend(*AS.get());
+        return new TTSEBackend(AS);
+    }
+    else if (backend.find("BICUBIC&") == 0)
+    {
+        if (fluid_names.size() != 1){throw ValueError(format("For backend [%s], name vector must be one element long", backend.c_str()));}
+        // Will throw if there is a problem with this backend
+        shared_ptr<AbstractState> AS(factory(backend.substr(8), fluid_names[0]));
+        return new BicubicBackend(AS);
     }
     else if (!backend.compare("TREND"))
     {
@@ -504,7 +514,6 @@ void get_dT_drho_second_derivatives(AbstractState &AS, int index, CoolPropDbl &d
                 rho = AS.rhomolar(),
                 rhor = AS.rhomolar_reducing(),
                 Tr = AS.T_reducing(),
-                dT_dtau = -pow(T, 2)/Tr,
                 R = AS.gas_constant(),
                 delta = rho/rhor,
                 tau = Tr/T;

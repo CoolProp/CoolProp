@@ -41,6 +41,7 @@ public:
     /// The instantiator
     /// @param fluid_names The vector of strings of the fluid components, without file ending
     REFPROPMixtureBackend(const std::vector<std::string>& fluid_names);
+    std::string backend_name(void){return "REFPROPMixtureBackend";}
     virtual ~REFPROPMixtureBackend();
 	
 	std::vector<std::string> calc_fluid_names(){return fluid_names;};

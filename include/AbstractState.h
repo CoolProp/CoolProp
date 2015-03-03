@@ -273,7 +273,7 @@ protected:
     virtual void calc_specify_phase(phases phase){throw NotImplementedError("This backend does not implement calc_specify_phase function");};
     /// Using this backend, unspecify the phase
     virtual void calc_unspecify_phase(void){throw NotImplementedError("This backend does not implement calc_unspecify_phase function");};
-    /// Using this backend get a vector of fluid names
+    /// Using this backend, get a vector of fluid names
 	virtual std::vector<std::string> calc_fluid_names(void){throw NotImplementedError("This backend does not implement calc_fluid_names function");};
     /// Using this backend, calculate a phase given by the state string
     /// @param state A string that describes the state desired, one of "hs_anchor", "critical"/"crit", "reducing"
@@ -298,6 +298,11 @@ protected:
     
     virtual CoolPropDbl calc_saturated_liquid_keyed_output(parameters key){throw NotImplementedError("calc_saturated_liquid_keyed_output is not implemented for this backend");};
     virtual CoolPropDbl calc_saturated_vapor_keyed_output(parameters key){throw NotImplementedError("calc_saturated_vapor_keyed_output is not implemented for this backend");};
+    
+    /// Using this backend, get the temperature
+    virtual long double calc_T(void){return _T;}
+    /// Using this backend, get the molar density in mol/m^3
+    virtual long double calc_rhomolar(void){return _rhomolar;}
 
 public:
 
@@ -341,6 +346,8 @@ public:
      */
     static AbstractState * factory(const std::string &backend, const std::vector<std::string> &fluid_names);
 
+    /// Get a string representation of the backend
+    virtual std::string backend_name(void) = 0;
     // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
     virtual bool using_mole_fractions(void) = 0;
     virtual bool using_mass_fractions(void) = 0;
@@ -437,9 +444,9 @@ public:
     double saturated_vapor_keyed_output(parameters key){return calc_saturated_vapor_keyed_output(key);};
     
     /// Return the temperature in K
-    double T(void)  {return _T;};
+    double T(void)  {return calc_T();};
     /// Return the molar density in mol/m^3
-    double rhomolar(void){return _rhomolar;};
+    double rhomolar(void){return calc_rhomolar();};
     /// Return the mass density in kg/m^3
     double rhomass(void){return calc_rhomass();};
     /// Return the pressure in Pa
@@ -452,9 +459,9 @@ public:
     double delta(void);
     /// Return the molar mass in kg/mol
     double molar_mass(void);
+    /// Return the acentric factor
     double acentric_factor(void);
     /// Return the mole-fraction weighted gas constant in J/mol/K
-    
     double gas_constant(void);
     double Bvirial(void);
     double dBvirial_dT(void);

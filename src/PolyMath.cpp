@@ -26,8 +26,8 @@ namespace CoolProp{
 /// @param rows unsigned integer value that represents the desired degree of the polynomial in the 1st dimension
 /// @param columns unsigned integer value that represents the desired degree of the polynomial in the 2nd dimension
 bool Polynomial2D::checkCoefficients(const Eigen::MatrixXd &coefficients, const unsigned int rows, const unsigned int columns){
-    if (coefficients.rows() == rows) {
-        if (coefficients.cols() == columns) {
+    if (static_cast<size_t>(coefficients.rows()) == rows) {
+        if (static_cast<size_t>(coefficients.cols()) == columns) {
             return true;
         } else {
             throw ValueError(format("%s (%d): The number of columns %d does not match with %d. ",__FILE__,__LINE__,coefficients.cols(),columns));

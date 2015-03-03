@@ -5,7 +5,6 @@
 #define _CRTDBG_MAP_ALLOC
 #define _CRT_SECURE_NO_WARNINGS
 #include <crtdbg.h>
-
 #endif
 
 #if defined(__ISWINDOWS__)

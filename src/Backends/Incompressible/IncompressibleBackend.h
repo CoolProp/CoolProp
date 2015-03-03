@@ -38,6 +38,7 @@ protected:
 public:
     IncompressibleBackend();
     virtual ~IncompressibleBackend(){};
+    std::string backend_name(void){return "IncompressibleBackend";}
 
     /// The instantiator
     /// @param fluid object, mostly for testing purposes

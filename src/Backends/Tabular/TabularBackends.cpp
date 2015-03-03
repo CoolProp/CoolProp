@@ -3,52 +3,65 @@
 #include "TabularBackends.h"
 #include "CoolProp.h"
 #include <sstream>
-
-namespace CoolProp{
-    
-void GriddedTableBackend::build_tables(tabular_types type)
-{
-    std::size_t Nx = 200, Ny = 200;
-    CoolPropDbl xmin, xmax, ymin, ymax, x, y;
-    bool logy, logx;
+#include "time.h"
+void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::AbstractState> &AS){
     const bool debug = get_debug_level() > 5 || false;
-    
-    parameters xkey, ykey;
-    single_phase.resize(Nx, Ny);
-    
-    switch(type){
-        case LOGPH_TABLE:
-        {
-            xkey = iHmolar;
-            ykey = iP;
-            logy = true;
-            logx = false;
-            
-            // ---------------------------------
-            // Calculate the limits of the table
-            // ---------------------------------
-            
-            // Minimum enthalpy is the saturated liquid enthalpy
-            AS->update(QT_INPUTS, 0, AS->Ttriple());
-            xmin = AS->hmolar();
-            ymin = AS->p();
-            
-            // Check both the enthalpies at the Tmax isotherm to see whether to use low or high pressure
-            AS->update(PT_INPUTS, 1e-10, AS->Tmax());
-            CoolPropDbl xmax1 = AS->hmolar();
-            AS->update(PT_INPUTS, AS->pmax(), AS->Tmax());
-            CoolPropDbl xmax2 = AS->hmolar();
-            xmax = std::min(xmax1, xmax2);
-            
-            ymax = AS->pmax();
-            
-            break;
+    if (debug){
+        std::cout << format("***********************************************\n");
+        std::cout << format(" Saturation Table (%s) \n", AS->name().c_str());
+        std::cout << format("***********************************************\n");
+    }
+    resize(N);
+    // ------------------------
+    // Actually build the table
+    // ------------------------
+    CoolPropDbl p, pmin = AS->p_triple()*1.001, pmax = 0.9999999*AS->p_critical();
+    for (std::size_t i = 0; i < N-1; ++i)
+    {
+        // Log spaced
+        p = exp(log(pmin) + (log(pmax) - log(pmin))/(N-1)*i);
+        
+        // Saturated liquid
+        try{
+            AS->update(PQ_INPUTS, p, 0);
+            pL[i] = p; TL[i] = AS->T();  rhomolarL[i] = AS->rhomolar(); 
+            hmolarL[i] = AS->hmolar(); smolarL[i] = AS->smolar(); umolarL[i] = AS->umolar();
+            logpL[i] = log(p); logrhomolarL[i] = log(rhomolarL[i]);
         }
-        default:
-        {
-            throw ValueError(format(""));
+        catch(std::exception &e){
+            // That failed for some reason, go to the next pair
+            if (debug){std::cout << " " << e.what() << std::endl;}
+            continue;
+        }
+        // Saturated vapor
+        try{
+            AS->update(PQ_INPUTS, p, 1);
+            pV[i] = p; TV[i] = AS->T(); rhomolarV[i] = AS->rhomolar();
+            hmolarV[i] = AS->hmolar(); smolarV[i] = AS->smolar(); umolarV[i] = AS->umolar();
+            logpV[i] = log(p); logrhomolarV[i] = log(rhomolarV[i]);
+        }
+        catch(std::exception &e){
+            // That failed for some reason, go to the next pair
+            if (debug){std::cout << " " << e.what() << std::endl;}
+            continue;
         }
     }
+    // Last point is at the critical point
+    AS->update(PQ_INPUTS, AS->p_critical(), 1);
+    std::size_t i = N-1;
+    pV[i] = p; TV[i] = AS->T(); rhomolarV[i] = AS->rhomolar();
+    hmolarV[i] = AS->hmolar(); smolarV[i] = AS->smolar(); umolarV[i] = AS->umolar();
+    pL[i] = p; TL[i] = AS->T();  rhomolarL[i] = AS->rhomolar(); 
+    hmolarL[i] = AS->hmolar(); smolarL[i] = AS->smolar(); umolarL[i] = AS->umolar();
+}
+    
+void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)
+{
+    CoolPropDbl x, y;
+    const bool debug = get_debug_level() > 5 || true;
+
+    resize(Nx, Ny);
+    
     if (debug){
         std::cout << format("***********************************************\n");
         std::cout << format(" Single-Phase Table (%s) \n", AS->name().c_str());
@@ -68,6 +81,7 @@ void GriddedTableBackend::build_tables(tabular_types type)
             // Linearly spaced
             x = xmin + (xmax - xmin)/(Nx-1)*i;
         }
+        xvec[i] = x;
         for (std::size_t j = 0; j < Ny; ++j)
         {
             // Calculate the x value
@@ -79,27 +93,27 @@ void GriddedTableBackend::build_tables(tabular_types type)
                 // Linearly spaced
                 y = ymin + (ymax - ymin)/(Ny-1)*j;
             }
+            yvec[j] = y;
             
-            if (debug){std::cout << "x: " << x << " y: " << y;}
+            if (debug){std::cout << "x: " << x << " y: " << y << std::endl;}
             
-            if (xkey == iHmolar && ykey == iP)
-            {
-                // --------------------
-                //   Update the state
-                // --------------------
-                try{
-                    AS->update(HmolarP_INPUTS, x, y);
+            // Generate the input pair
+            CoolPropDbl v1, v2;
+            input_pairs input_pair = generate_update_pair(xkey, x, ykey, y, v1, v2);
+            
+            // --------------------
+            //   Update the state
+            // --------------------
+            try{
+                AS->update(input_pair, v1, v2);
+                if (!ValidNumber(AS->rhomolar())){
+                    throw ValueError("rhomolar is invalid");
                 }
-                catch(std::exception &e){
-                    // That failed for some reason, go to the next pair
-                    if (debug){std::cout << " " << e.what() << std::endl;}
-                    continue;
-                }
-                
-                if (debug){std::cout << " OK" << std::endl;}
             }
-            else{
-                throw ValueError("Cannot construct this type of table (yet)");
+            catch(std::exception &e){
+                // That failed for some reason, go to the next pair
+                if (debug){std::cout << " " << e.what() << std::endl;}
+                continue;
             }
             
             // Skip two-phase states - they will remain as _HUGE holes in the table
@@ -111,64 +125,79 @@ void GriddedTableBackend::build_tables(tabular_types type)
             // --------------------
             //   State variables
             // --------------------
-            single_phase.T[i][j] = AS->T();
-            single_phase.p[i][j] = AS->p();
-            single_phase.rhomolar[i][j] = AS->rhomolar();
-            single_phase.hmolar[i][j] = AS->hmolar();
-            single_phase.smolar[i][j] = AS->smolar();
+            T[i][j] = AS->T();
+            p[i][j] = AS->p();
+            rhomolar[i][j] = AS->rhomolar();
+            hmolar[i][j] = AS->hmolar();
+            smolar[i][j] = AS->smolar();
+            
+            // -------------------------
+            //   Transport properties
+            // -------------------------
+            try{
+                visc[i][j] = AS->viscosity();
+                cond[i][j] = AS->conductivity();
+            }
+            catch(std::exception &){}
             
             // ----------------------------------------
             //   First derivatives of state variables
             // ----------------------------------------
-            single_phase.dTdx[i][j] = AS->first_partial_deriv(iT, xkey, ykey);
-            single_phase.dTdy[i][j] = AS->first_partial_deriv(iT, ykey, xkey);
-            single_phase.dpdx[i][j] = AS->first_partial_deriv(iP, xkey, ykey);
-            single_phase.dpdy[i][j] = AS->first_partial_deriv(iP, ykey, xkey);
-            single_phase.drhomolardx[i][j] = AS->first_partial_deriv(iDmolar, xkey, ykey);
-            single_phase.drhomolardy[i][j] = AS->first_partial_deriv(iDmolar, ykey, xkey);
-            single_phase.dhmolardx[i][j] = AS->first_partial_deriv(iHmolar, xkey, ykey);
-            single_phase.dhmolardy[i][j] = AS->first_partial_deriv(iHmolar, ykey, xkey);
-            single_phase.dsmolardx[i][j] = AS->first_partial_deriv(iSmolar, xkey, ykey);
-            single_phase.dsmolardy[i][j] = AS->first_partial_deriv(iSmolar, ykey, xkey);
+            dTdx[i][j] = AS->first_partial_deriv(iT, xkey, ykey);
+            dTdy[i][j] = AS->first_partial_deriv(iT, ykey, xkey);
+            dpdx[i][j] = AS->first_partial_deriv(iP, xkey, ykey);
+            dpdy[i][j] = AS->first_partial_deriv(iP, ykey, xkey);
+            drhomolardx[i][j] = AS->first_partial_deriv(iDmolar, xkey, ykey);
+            drhomolardy[i][j] = AS->first_partial_deriv(iDmolar, ykey, xkey);
+            dhmolardx[i][j] = AS->first_partial_deriv(iHmolar, xkey, ykey);
+            dhmolardy[i][j] = AS->first_partial_deriv(iHmolar, ykey, xkey);
+            dsmolardx[i][j] = AS->first_partial_deriv(iSmolar, xkey, ykey);
+            dsmolardy[i][j] = AS->first_partial_deriv(iSmolar, ykey, xkey);
             
             // ----------------------------------------
             //   Second derivatives of state variables
             // ----------------------------------------
-            single_phase.d2Tdx2[i][j] = AS->second_partial_deriv(iT, xkey, ykey, xkey, ykey);
-            single_phase.d2Tdxdy[i][j] = AS->second_partial_deriv(iT, xkey, ykey, ykey, xkey);
-            single_phase.d2Tdy2[i][j] = AS->second_partial_deriv(iT, ykey, xkey, ykey, xkey);
-            single_phase.d2pdx2[i][j] = AS->second_partial_deriv(iP, xkey, ykey, xkey, ykey);
-            single_phase.d2pdxdy[i][j] = AS->second_partial_deriv(iP, xkey, ykey, ykey, xkey);
-            single_phase.d2pdy2[i][j] = AS->second_partial_deriv(iP, ykey, xkey, ykey, xkey);
-            single_phase.d2rhomolardx2[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, xkey, ykey);
-            single_phase.d2rhomolardxdy[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, ykey, xkey);
-            single_phase.d2rhomolardy2[i][j] = AS->second_partial_deriv(iDmolar, ykey, xkey, ykey, xkey);
-            single_phase.d2hmolardx2[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, xkey, ykey);
-            single_phase.d2hmolardxdy[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, ykey, xkey);
-            single_phase.d2hmolardy2[i][j] = AS->second_partial_deriv(iHmolar, ykey, xkey, ykey, xkey);
-            single_phase.d2smolardx2[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, xkey, ykey);
-            single_phase.d2smolardxdy[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, ykey, xkey);
-            single_phase.d2smolardy2[i][j] = AS->second_partial_deriv(iSmolar, ykey, xkey, ykey, xkey);
+            d2Tdx2[i][j] = AS->second_partial_deriv(iT, xkey, ykey, xkey, ykey);
+            d2Tdxdy[i][j] = AS->second_partial_deriv(iT, xkey, ykey, ykey, xkey);
+            d2Tdy2[i][j] = AS->second_partial_deriv(iT, ykey, xkey, ykey, xkey);
+            d2pdx2[i][j] = AS->second_partial_deriv(iP, xkey, ykey, xkey, ykey);
+            d2pdxdy[i][j] = AS->second_partial_deriv(iP, xkey, ykey, ykey, xkey);
+            d2pdy2[i][j] = AS->second_partial_deriv(iP, ykey, xkey, ykey, xkey);
+            d2rhomolardx2[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, xkey, ykey);
+            d2rhomolardxdy[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, ykey, xkey);
+            d2rhomolardy2[i][j] = AS->second_partial_deriv(iDmolar, ykey, xkey, ykey, xkey);
+            d2hmolardx2[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, xkey, ykey);
+            d2hmolardxdy[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, ykey, xkey);
+            d2hmolardy2[i][j] = AS->second_partial_deriv(iHmolar, ykey, xkey, ykey, xkey);
+            d2smolardx2[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, xkey, ykey);
+            d2smolardxdy[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, ykey, xkey);
+            d2smolardy2[i][j] = AS->second_partial_deriv(iSmolar, ykey, xkey, ykey, xkey);
         }
     }
 }
-
-void GriddedTableBackend::write_tables(const std::string &directory){
-    std::ofstream ofs("single_phase.bin", std::ofstream::binary);
-    msgpack::pack(ofs, single_phase);
-    ofs.close();
+std::string CoolProp::TabularBackend::path_to_tables(void){
+    std::vector<std::string> fluids = AS->fluid_names();
+    return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(AS->fluid_names(),"&") + ")";
 }
-void GriddedTableBackend::load_tables(const std::string &directory){
-    
-    std::ifstream ifs("single_phase.bin", std::ifstream::binary);
-    std::stringstream buffer;
-    buffer << ifs.rdbuf();
-    msgpack::unpacked upd;
-    std::string sbuffer = buffer.str();
-    std::size_t N = sbuffer.size();
-    msgpack::unpack(upd, sbuffer.c_str(), N);
-    msgpack::object deserialized = upd.get();
-    deserialized.convert(&single_phase);
+void CoolProp::TabularBackend::write_tables(){
+    std::string path = path_to_tables();
+    make_dirs(path);
+    {
+        std::ofstream ofs(std::string(path + "/single_phase_logph.bin").c_str(), std::ofstream::binary);
+        msgpack::pack(ofs, single_phase_logph);
+    }
+    {
+        std::ofstream ofs(std::string(path + "/single_phase_logpT.bin").c_str(), std::ofstream::binary);
+        msgpack::pack(ofs, single_phase_logpT);
+    }
+    {
+        std::ofstream ofs(std::string(path + "/pure_saturation.bin").c_str(), std::ofstream::binary);
+        msgpack::pack(ofs, pure_saturation);
+    }
 }
-    
-} /* namespace CoolProp */
+void CoolProp::TabularBackend::load_tables(){
+    std::string path_to_tables = this->path_to_tables();
+    load_table(single_phase_logph, path_to_tables, "single_phase_logph.bin");
+    load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin");
+    load_table(pure_saturation, path_to_tables, "pure_saturation.bin");
+}

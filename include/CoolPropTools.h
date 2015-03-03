@@ -1,7 +1,7 @@
 #ifndef COOLPROPTOOLS_H
 #define COOLPROPTOOLS_H
 
-    #define _CRT_SECURE_NO_WARNINGS
+	#define _CRT_SECURE_NO_WARNINGS
 
     #include "PlatformDetermination.h"
     #include "Exceptions.h"
@@ -65,6 +65,18 @@
     #endif
 
     typedef long double CoolPropDbl;
+
+    #if defined(__ISWINDOWS__)
+		#include <sys/types.h>
+        #include <sys/stat.h>
+        #include <windows.h> // for the CreateDirectory function
+		#undef min
+		#undef max
+    #else
+        #include <unistd.h>
+        #include <sys/types.h>
+        #include <sys/stat.h>
+    #endif
 
     #ifndef M_PI
     #  define M_PI 3.14159265358979323846

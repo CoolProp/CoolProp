@@ -22,8 +22,9 @@
     X(NORMALIZE_GAS_CONSTANTS, "NORMALIZE_GAS_CONSTANTS", true) \
     X(CRITICAL_WITHIN_1UK, "CRITICAL_WITHIN_1UK", true) \
     X(CRITICAL_SPLINES_ENABLED, "CRITICAL_SPLINES_ENABLED", true) \
-	X(ALTERNATIVE_REFPROP_PATH, "ALTERNATIVE_REFPROP_PATH", "") \
+    X(ALTERNATIVE_REFPROP_PATH, "ALTERNATIVE_REFPROP_PATH", "") \
     X(ALTERNATIVE_REFPROP_HMX_BNC_PATH, "ALTERNATIVE_REFPROP_HMX_BNC_PATH", "") \
+    X(REMOVE_RAW_TABLES, "REMOVE_RAW_TABLES", true) \
     X(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB, "MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB", 1.0) \
 
  // Use preprocessor to create the Enum
@@ -116,7 +117,7 @@ class ConfigurationItem
                 }
                 case CONFIGURATION_DOUBLE_TYPE:
                 {
-                    rapidjson::Value v(v_double);
+                    rapidjson::Value v(v_double); // Try to upcast
                     val.AddMember(name, v, d.GetAllocator()); break;
                 }
                 case CONFIGURATION_STRING_TYPE:
@@ -133,7 +134,12 @@ class ConfigurationItem
             switch (type){
                 case CONFIGURATION_BOOL_TYPE: if (!val.IsBool()){throw ValueError(format("Input is not boolean"));}; v_bool = val.GetBool(); break;
                 case CONFIGURATION_INTEGER_TYPE: if (!val.IsInt()){throw ValueError(format("Input is not integer"));}; v_integer = val.GetInt(); break;
-                case CONFIGURATION_DOUBLE_TYPE: if (!val.IsDouble()){throw ValueError(format("Input is not double"));}; v_double = val.GetDouble(); break;
+                case CONFIGURATION_DOUBLE_TYPE: {
+                    if (!val.IsDouble() && !val.IsInt()){throw ValueError(format("Input [%s] is not double (or something that can be cast to double)",cpjson::to_string(val).c_str()));};
+                    if (val.IsDouble()){ v_double = val.GetDouble(); }
+                    else{ v_double = static_cast<double>(val.GetInt()); }
+                    break;
+                }
                 case CONFIGURATION_STRING_TYPE: if (!val.IsString()){throw ValueError(format("Input is not string"));}; v_string = val.GetString(); break; 
                 case CONFIGURATION_ENDOFLIST_TYPE:
                 case CONFIGURATION_NOT_DEFINED_TYPE:

@@ -76,6 +76,10 @@
       <VirtualDirectory Name="Tabular">
         <File Name="../../src/Backends/Tabular/TabularBackends.cpp"/>
         <File Name="../../src/Backends/Tabular/TabularBackends.h"/>
+        <File Name="../../src/Backends/Tabular/TTSEBackend.cpp"/>
+        <File Name="../../src/Backends/Tabular/TTSEBackend.h"/>
+        <File Name="../../src/Backends/Tabular/BicubicBackend.h"/>
+        <File Name="../../src/Backends/Tabular/BicubicBackend.cpp"/>
       </VirtualDirectory>
     </VirtualDirectory>
     <VirtualDirectory Name="l10n">

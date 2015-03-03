@@ -38,6 +38,7 @@ public:
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid*> &components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
     virtual ~HelmholtzEOSMixtureBackend(){};
+    std::string backend_name(void){return "HelmholtzEOSMixtureBackend";}
     shared_ptr<ReducingFunction> Reducing;
     ExcessTerm Excess;
     PhaseEnvelopeData PhaseEnvelope;

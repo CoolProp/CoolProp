@@ -967,7 +967,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
                     SatL->update_DmolarT_direct(rhoL, T);
                     SatV->update_DmolarT_direct(rhoV, T);
                 }
-                if (get_debug_level() > 0){ std::cout << format("[Maxwell] ancillaries T: %0.16Lg rhoL: %0.16Lg rhoV: %0.16Lg pL: %g pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
+                if (get_debug_level() > 5){ std::cout << format("[Maxwell] ancillaries T: %0.16Lg rhoL: %0.16Lg rhoV: %0.16Lg pL: %g pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
                 
                 // Update the guess for liquid density using density solver with vapor pressure 
                 // and liquid density guess from ancillaries, but only if the pressures are not 
@@ -1013,7 +1013,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
 
     SatL->update_DmolarT_direct(rhoL, T);
     SatV->update_DmolarT_direct(rhoV, T);
-    if (get_debug_level() > 0){ std::cout << format("[Maxwell] starting T: %0.16Lg rhoL: %Lg rhoV: %Lg pL: %Lg pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
+    if (get_debug_level() > 5){ std::cout << format("[Maxwell] starting T: %0.16Lg rhoL: %Lg rhoV: %Lg pL: %Lg pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
     do{
         pL = SatL->p(); pV = SatV->p();
         CoolPropDbl vL = 1/SatL->rhomolar(), vV = 1/SatV->rhomolar();
@@ -1065,7 +1065,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         // Calculate the error (here the relative error in pressure)
         error = std::abs((SatL->p() - SatV->p())/SatL->p());
 
-        if (get_debug_level() > 0){ std::cout << format("[Maxwell] rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %Lg dvV/vV: %Lg pL: %Lg pV: %Lg\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV);}
+        if (get_debug_level() > 5){ std::cout << format("[Maxwell] rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %Lg dvV/vV: %Lg pL: %Lg pV: %Lg\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV);}
 
         // If the step size is small, start a counter to allow the other density 
         // to be corrected a few times
@@ -1079,7 +1079,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         }
     }
     while ((SatL->p() < 0) || (error > 1e-5 && small_step_count < 4));
-    if (get_debug_level() > 0){ std::cout << format("[Maxwell] pL: %g pV: %g\n", SatL->p(), SatV->p());}
+    if (get_debug_level() > 5){ std::cout << format("[Maxwell] pL: %g pV: %g\n", SatL->p(), SatV->p());}
 }
 
 void SaturationSolvers::x_and_y_from_K(CoolPropDbl beta, const std::vector<CoolPropDbl> &K, const std::vector<CoolPropDbl> &z, std::vector<CoolPropDbl> &x, std::vector<CoolPropDbl> &y)

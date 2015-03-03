@@ -495,9 +495,9 @@ int main()
 		::set_debug_level(0);
         
         shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Methane&Ethane"));
-        std::vector<CoolPropDbl> z(2, 0.8); z[1] = 1-z[0];
+        std::vector<long double> z(2, 0.8); z[1] = 1-z[0];
         //shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS","Methane&Propane&Ethane&n-Butane"));
-        //std::vector<CoolPropDbl> z(4, 0.1); z[1] = 0.35; z[2] = 0.35, z[3] = 0.2;
+        //std::vector<long double> z(4, 0.1); z[1] = 0.35; z[2] = 0.35, z[3] = 0.2;
         HEOS->set_mole_fractions(z);
         
         time_t t1, t2;
@@ -510,12 +510,12 @@ int main()
         }
         t2 = clock();
         HEOS->update(PSmolar_INPUTS, 4e6, 79.1048486373);
-        CoolPropDbl TT = HEOS->T();
+        long double TT = HEOS->T();
         HEOS->update(PQ_INPUTS, 1.3e5, 1);
         double ssat = HEOS->smolar();
         double hsat = HEOS->hmolar();
         double dsat = HEOS->rhomolar();
-        for (CoolPropDbl s = ssat + 60; s > ssat; s -= 5){
+        for (long double s = ssat + 60; s > ssat; s -= 5){
             HEOS->update(PSmolar_INPUTS, 1.3e5, s);
             std::cout << s << " " << HEOS->rhomolar() << " " << dsat << std::endl;
         }
@@ -600,7 +600,7 @@ int main()
         std::vector<std::string> names(1,"Propane");
         
         shared_ptr<HelmholtzEOSMixtureBackend> Water(new HelmholtzEOSMixtureBackend(names));
-        Water->set_mole_fractions(std::vector<CoolPropDbl>(1,1));
+        Water->set_mole_fractions(std::vector<long double>(1,1));
         ResidualHelmholtzGeneralizedExponential GenExp = Water->get_components()[0]->pEOS->alphar.GenExp;
         
         HelmholtzDerivatives derivs1, derivs2;
@@ -642,7 +642,7 @@ int main()
         ss = 0;
         {
             shared_ptr<REFPROPMixtureBackend> Water(new REFPROPMixtureBackend(names));
-            Water->set_mole_fractions(std::vector<CoolPropDbl>(1,1));
+            Water->set_mole_fractions(std::vector<long double>(1,1));
             
             t1 = clock();
             for (long i = 0; i < N; ++i){
@@ -658,7 +658,7 @@ int main()
     {
         std::vector<std::string> names(1,"Water");
         shared_ptr<HelmholtzEOSMixtureBackend> Water(new HelmholtzEOSMixtureBackend(names));
-        Water->set_mole_fractions(std::vector<CoolPropDbl>(1,1));
+        Water->set_mole_fractions(std::vector<long double>(1,1));
         Water->update(PQ_INPUTS, 101325, 0);
         
         HelmholtzDerivatives derivs;
@@ -670,7 +670,7 @@ int main()
         ResidualHelmholtzGeneralizedExponential GenExp = components[0]->pEOS->alphar.GenExp;
         ResidualHelmholtzNonAnalytic NonAnal = components[0]->pEOS->alphar.NonAnalytic;
         
-        CoolPropDbl tau = 0.8, delta = 2.2;
+        long double tau = 0.8, delta = 2.2;
         derivs.reset();
         GenExp.all(tau, delta, derivs);
         
@@ -686,16 +686,16 @@ int main()
         tau = 0.99; delta = 1.01;
         derivs.reset();
         NonAnal.all(tau, delta, derivs);
-        CoolPropDbl a00 = NonAnal.base(tau, delta);
-        CoolPropDbl a10 = NonAnal.dDelta(tau, delta);
-        CoolPropDbl a01 = NonAnal.dTau(tau, delta);
-        CoolPropDbl a20 = NonAnal.dDelta2(tau, delta);
-        CoolPropDbl a11 = NonAnal.dDelta_dTau(tau, delta);
-        CoolPropDbl a02 = NonAnal.dTau2(tau, delta);
-        CoolPropDbl a03 = NonAnal.dTau3(tau, delta);
-        CoolPropDbl a12 = NonAnal.dDelta_dTau2(tau, delta);
-        CoolPropDbl a21 = NonAnal.dDelta2_dTau(tau, delta);
-        CoolPropDbl a30 = NonAnal.dDelta3(tau, delta);
+        long double a00 = NonAnal.base(tau, delta);
+        long double a10 = NonAnal.dDelta(tau, delta);
+        long double a01 = NonAnal.dTau(tau, delta);
+        long double a20 = NonAnal.dDelta2(tau, delta);
+        long double a11 = NonAnal.dDelta_dTau(tau, delta);
+        long double a02 = NonAnal.dTau2(tau, delta);
+        long double a03 = NonAnal.dTau3(tau, delta);
+        long double a12 = NonAnal.dDelta_dTau2(tau, delta);
+        long double a21 = NonAnal.dDelta2_dTau(tau, delta);
+        long double a30 = NonAnal.dDelta3(tau, delta);
         
         exit(0);
     }
@@ -834,11 +834,11 @@ int main()
     {
         shared_ptr<AbstractState> MixRP(AbstractState::factory(std::string("REFPROP"),std::string("propane")));
         MixRP->update(QT_INPUTS, 0, 330);
-        CoolPropDbl s1 = MixRP->surface_tension();
+        long double s1 = MixRP->surface_tension();
 
         shared_ptr<AbstractState> Mix(AbstractState::factory(std::string("HEOS"), std::string("propane")));
         Mix->update(QT_INPUTS, 0, 330);
-        CoolPropDbl s2 = Mix->surface_tension();
+        long double s2 = Mix->surface_tension();
     }
 	#endif
     #if 0
@@ -888,7 +888,7 @@ int main()
     #if 0
     {
         int N = 2;
-        std::vector<CoolPropDbl> z(N, 1.0/N);
+        std::vector<long double> z(N, 1.0/N);
         double Q = 1, T = 250, p = 300000;
 
         int inputs = PQ_INPUTS; double val1 = p, val2 = Q;
@@ -924,7 +924,7 @@ int main()
     #if 0
     {
         int N = 2;
-        std::vector<CoolPropDbl> z(N, 1.0/N);
+        std::vector<long double> z(N, 1.0/N);
         double Q = 0, T = 250, p = 300000;
 
         shared_ptr<AbstractState> Mix(AbstractState::factory(std::string("HEOS"), std::string("Ethane,n-Propane")));
@@ -973,7 +973,7 @@ int main()
     {
         shared_ptr<AbstractState> State(AbstractState::factory(std::string("REFPROP"), std::string("Methane|Ethane")));
 
-        std::vector<CoolPropDbl> x(2,0.5);
+        std::vector<long double> x(2,0.5);
         State->set_mole_fractions(x);
         State->update(DmassT_INPUTS,1,250);
         double hh = State->hmolar();
