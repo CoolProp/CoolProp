@@ -214,7 +214,7 @@ The primary motivation for the use of tabular interpolation is the improvement i
 More Information
 ----------------
 
-The tables are stored in a zipped format using the msgpack package and zlib.  To save space, the uncompressed binary tables are not stored, but if you want them to be stored as well as the compressed tables, you can do something like:
+The tables are stored in a zipped format using the msgpack package and miniz.  To save space, the uncompressed binary tables are not stored, but if you want them to be stored as well as the compressed tables, you can do something like:
 
 .. ipython::
 
@@ -222,7 +222,7 @@ The tables are stored in a zipped format using the msgpack package and zlib.  To
     
     In [1]: jj = json.loads(CP.get_config_as_json_string())
     
-    In [2]: jj['REMOVE_RAW_TABLES'] = False
+    In [2]: jj['SAVE_RAW_TABLES'] = True
     
     In [3]: CP.set_config_as_json_string(json.dumps(jj))
     

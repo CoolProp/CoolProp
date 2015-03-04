@@ -224,6 +224,22 @@
     // Get all the contents of a file and dump into a STL string
     // Thanks to http://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
     std::string get_file_contents(const char *filename);
+    
+    inline std::vector<char> get_binary_file_contents(const char *filename)
+    {
+        std::ifstream in(filename, std::ios::in | std::ios::binary);
+        if (in)
+        {
+            std::vector<char> contents;
+            in.seekg(0, std::ios::end);
+            contents.resize((unsigned int) in.tellg());
+            in.seekg(0, std::ios::beg);
+            in.read(&contents[0], contents.size());
+            in.close();
+            return(contents);
+        }
+        throw(errno);
+    }
 
     // Missing string printf
     std::string format(const char* fmt, ...);
@@ -681,4 +697,7 @@ template<class T> void normalize_vector(std::vector<T> &x)
                 path += format("%c%s", sep, pathsplit[i+1].c_str());
         }
     };
+    
+    enum miniz_mode{MINIZ_COMPRESS, MINIZ_DECOMPRESS};
+    void miniz(const std::string &inFile, const std::string &outFile, miniz_mode mode);
 #endif

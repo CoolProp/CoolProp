@@ -10,50 +10,6 @@
 #include <sstream>
 #include "Configuration.h"
 
-namespace CoolProp{
-/**
- * @brief 
- * @param table
- * @param path_to_tables
- * @param filename
- */
-template <typename T> void load_table(T &table, const std::string &path_to_tables, const std::string &filename){
-    double tic = clock();
-    std::string path_to_table = path_to_tables + "/" + filename;
-    std::ifstream ifs(path_to_table.c_str(), std::ifstream::binary);
-    
-    if ( (ifs.rdstate() & std::ifstream::failbit ) != 0 ){
-        if (get_debug_level() > 0){std::cout << format("Error loading table %s", path_to_table.c_str()) << std::endl;}
-        throw UnableToLoadError(format("Error loading table %s", path_to_table.c_str()));
-    }
-    
-    std::stringstream buffer;
-    buffer << ifs.rdbuf();
-    msgpack::unpacked upd;
-    std::string sbuffer = buffer.str();
-    std::size_t N = sbuffer.size();
-    if ( N == 0 ){
-        if (get_debug_level() > 0){std::cout << format("No data was read from table %s", path_to_table.c_str()) << std::endl;}
-        throw UnableToLoadError(format("No data was read from table %s", path_to_table.c_str()));
-    }
-    try{
-        msgpack::unpack(upd, sbuffer.c_str(), N);
-        msgpack::object deserialized = upd.get();
-        
-        // Call the class' deserialize function;  if it is an invalid table, it will cause an exception to be thrown
-        table.deserialize(deserialized);
-        double toc = clock();
-        if (get_debug_level() > 0){std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc-tic)/CLOCKS_PER_SEC) << std::endl;}
-    }
-    catch(std::exception &){
-        std::string err = format("Unable to deserialize %s", path_to_table.c_str());
-        if (get_debug_level() > 0){std::cout << err << std::endl;}
-        throw UnableToLoadError(err);
-    }
-}
-
-} // namespace CoolProp
-
 
 /** ***MAGIC WARNING***!! X Macros in use
  * See http://stackoverflow.com/a/148610
@@ -454,7 +410,7 @@ class TabularBackend : public AbstractState
             pure_saturation.pack();
         }
         /// Write the tables to file
-        void write_tables();
+        void write_tables();        
         
         CoolPropDbl calc_T(void){
             if (using_single_phase_table){

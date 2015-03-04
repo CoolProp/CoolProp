@@ -5,6 +5,83 @@
 #include "CoolProp.h"
 #include <sstream>
 #include "time.h"
+#include "miniz.h"
+
+namespace CoolProp{
+/**
+ * @brief 
+ * @param table
+ * @param path_to_tables
+ * @param filename
+ */
+template <typename T> void load_table(T &table, const std::string &path_to_tables, const std::string &filename){
+    
+    double tic = clock();
+    std::string path_to_table = path_to_tables + "/" + filename;
+    if (get_debug_level() > -1){std::cout << format("Loading table: %s", path_to_table.c_str()) << std::endl;}
+    std::vector<char> raw;
+    try{
+         raw = get_binary_file_contents(path_to_table.c_str());
+    }catch(...){
+        std::string err = format("Unable to load file %s", path_to_table.c_str());
+        if (get_debug_level() > 0){std::cout << err << std::endl;}
+        throw UnableToLoadError(err);
+    }
+    std::vector<char> newBuffer(raw.size()*5);
+    uLong newBufferSize = newBuffer.size();
+    int code;
+    do{
+        code = uncompress((unsigned char *)(&(newBuffer[0])), &newBufferSize, 
+                          (unsigned char *)(&(raw[0])), raw.size());
+        if (code == Z_BUF_ERROR){ 
+            // Output buffer is too small, make it bigger and try again
+            newBuffer.resize(newBuffer.size()*5);
+            newBufferSize = newBuffer.size();
+        }
+        else if (code != 0){ // Something else, a big problem
+            std::string err = format("Unable to uncompress file %s with miniz code %d", path_to_table.c_str(), code);
+            if (get_debug_level() > 0){std::cout << err << std::endl;}
+            throw UnableToLoadError(err);
+        }
+    }while(code != 0);
+
+    try{
+        msgpack::unpacked msg;
+        msgpack::unpack(&msg, &(newBuffer[0]), newBufferSize);
+        msgpack::object deserialized = msg.get();
+        
+        // Call the class' deserialize function;  if it is an invalid table, it will cause an exception to be thrown
+        table.deserialize(deserialized);
+        double toc = clock();
+        if (get_debug_level() > -1){std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc-tic)/CLOCKS_PER_SEC) << std::endl;}
+    }
+    catch(std::exception &){
+        std::string err = format("Unable to deserialize %s", path_to_table.c_str());
+        if (get_debug_level() > 0){std::cout << err << std::endl;}
+        throw UnableToLoadError(err);
+    }
+}
+template <typename T> void write_table(const T &table, const std::string &path_to_tables, const std::string &name)
+{
+    msgpack::sbuffer sbuf;
+    msgpack::pack(sbuf, table);
+    std::string tabPath = std::string(path_to_tables + "/" + name + ".bin");
+    std::string zPath = tabPath + ".z";
+    std::vector<char> buffer(sbuf.size());
+    uLong outSize = buffer.size();
+    compress((unsigned char *)(&(buffer[0])), &outSize, 
+             (unsigned char*)(sbuf.data()), sbuf.size());
+    std::ofstream ofs2(zPath.c_str(), std::ofstream::binary);
+    ofs2.write(&buffer[0], outSize);
+    
+    if (CoolProp::get_config_bool(SAVE_RAW_TABLES)){
+        std::ofstream ofs(tabPath.c_str(), std::ofstream::binary);
+        ofs.write(sbuf.data(), sbuf.size());
+    }
+}
+
+} // namespace CoolProp
+
 void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::AbstractState> &AS){
     const bool debug = get_debug_level() > 5 || false;
     if (debug){
@@ -180,27 +257,19 @@ std::string CoolProp::TabularBackend::path_to_tables(void){
     std::vector<std::string> fluids = AS->fluid_names();
     return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(AS->fluid_names(),"&") + ")";
 }
+
 void CoolProp::TabularBackend::write_tables(){
-    std::string path = path_to_tables();
-    make_dirs(path);
-    {
-        std::ofstream ofs(std::string(path + "/single_phase_logph.bin").c_str(), std::ofstream::binary);
-        msgpack::pack(ofs, single_phase_logph);
-    }
-    {
-        std::ofstream ofs(std::string(path + "/single_phase_logpT.bin").c_str(), std::ofstream::binary);
-        msgpack::pack(ofs, single_phase_logpT);
-    }
-    {
-        std::ofstream ofs(std::string(path + "/pure_saturation.bin").c_str(), std::ofstream::binary);
-        msgpack::pack(ofs, pure_saturation);
-    }
+    std::string path_to_tables = this->path_to_tables();
+    make_dirs(path_to_tables);
+    write_table(single_phase_logph, path_to_tables, "single_phase_logph");
+    write_table(single_phase_logpT, path_to_tables, "single_phase_logpT");
+    write_table(pure_saturation, path_to_tables, "pure_saturation");
 }
 void CoolProp::TabularBackend::load_tables(){
     std::string path_to_tables = this->path_to_tables();
-    load_table(single_phase_logph, path_to_tables, "single_phase_logph.bin");
-    load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin");
-    load_table(pure_saturation, path_to_tables, "pure_saturation.bin");
+    load_table(single_phase_logph, path_to_tables, "single_phase_logph.bin.z");
+    load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin.z");
+    load_table(pure_saturation, path_to_tables, "pure_saturation.bin.z");
 }
 
 #endif // !defined(NO_TABULAR_BACKENDS)
