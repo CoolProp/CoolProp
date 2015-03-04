@@ -59,6 +59,26 @@ See the `IAPWS TTSE report <http://www.iapws.org/relguide/TTSE.pdf>`_ for a desc
 Bicubic Interpolation
 ---------------------
 
+In bicubic interpolation, the values of the output parameter as well as its derivatives are evaluated at the corners of a unit square, and these values are used to fit a bicubic surface over the unit square. `Wikipedia <http://en.wikipedia.org/wiki/Bicubic_interpolation>`_ has excellent coverage of bicubic interpolation, and the method implemented in CoolProp is exactly this method.
+
+Normalized cell values are generated from
+
+.. math::
+
+    \hat x = \frac{x-x_i}{x_{i+1}-x_{i}}
+    
+    \hat y = \frac{y-y_j}{y_{j+1}-y_{j}}
+    
+And derivatives must be scaled to be in terms of unit cell values, or 
+
+.. math::
+
+    \frac{\partial z}{\partial \hat x} = \frac{\partial z}{\partial x}\frac{\partial x}{\partial \hat x}
+    
+    \frac{\partial z}{\partial \hat y} = \frac{\partial z}{\partial y}\frac{\partial y}{\partial \hat y}
+    
+In CoolProp, after loading the tabular data, the coefficients for all cells are calculated in one shot.
+
 Accuracy comparison
 -------------------
 
