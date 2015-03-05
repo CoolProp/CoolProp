@@ -13,11 +13,11 @@ namespace CoolProp
 /// and can be obtained by the get() function.  
 class CellCoeffs{
     private:
-        bool _valid;
+        std::size_t alt_i, alt_j;
+        bool _valid, _has_valid_neighbor;
     public:
-		
         double dx_dxhat, dy_dyhat;    
-        CellCoeffs(){_valid = false;}
+        CellCoeffs(){_valid = false; _has_valid_neighbor = false;} 
         std::vector<double> T, rhomolar, hmolar, p, smolar, umolar;
         /// Return a const reference to the desired matrix
         const std::vector<double> & get(parameters params){
@@ -47,6 +47,21 @@ class CellCoeffs{
         void set_valid(){_valid = true;};
         /// Call this function to set the valid flag to false
         void set_invalid(){_valid = false;};
+        /// Set the neighboring (alternate) cell to be used if the cell is invalid
+        void set_alternate(std::size_t i, std::size_t j){alt_i = i; alt_j = j; _has_valid_neighbor = true;}
+        /// Get neighboring(alternate) cell to be used if this cell is invalid
+        void get_alternate(std::size_t &i, std::size_t &j){
+            if (_has_valid_neighbor){
+                i = alt_i; j = alt_j;
+            }
+            else{
+                throw ValueError("No valid neighbor");
+            }
+        }
+        /// Returns true if cell is invalid and it has valid neighbor
+        bool has_valid_neighbor(){
+            return _has_valid_neighbor;
+        }
 };
 
 /** \brief This class implements bicubic interpolation, as very clearly laid out by

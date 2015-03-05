@@ -97,11 +97,40 @@ void CoolProp::BicubicBackend::build_coeffs(SinglePhaseGriddedTableData &table, 
                 }
             }
         }
+        double elapsed = (clock() - t1)/((double)CLOCKS_PER_SEC);
+        if (debug){
+            std::cout << format("Calculated bicubic coefficients for %d good cells in %g sec.\n", valid_cell_count, elapsed);
+        }
+        std::size_t remap_count = 0;
+        // Now find invalid cells and give them pointers to a neighboring cell that works
+        for (std::size_t i = 0; i < table.Nx-1; ++i) // -1 since we have one fewer cells than nodes
+        {
+            for (std::size_t j = 0; j < table.Ny-1; ++j) // -1 since we have one fewer cells than nodes
+            {
+                // Not a valid cell
+                if (!coeffs[i][j].valid()){
+                    // Offsets that we are going to try in order (left, right, top, bottom, diagonals)
+                    int xoffsets[] = {-1,1,0,0,-1,1,1,-1};
+                    int yoffsets[] = {0,0,1,-1,-1,-1,1,1};
+                    // Length of offset
+                    std::size_t N = sizeof(xoffsets)/sizeof(xoffsets[0]);
+                    for (std::size_t k = 0; k < N; ++k){
+                        std::size_t iplus = i + xoffsets[k];
+                        std::size_t jplus = j + yoffsets[k];
+                        if (0 < iplus && iplus < table.Nx-1 && 0 < jplus && jplus < table.Ny-1 && coeffs[iplus][jplus].valid()){
+                            coeffs[i][j].set_alternate(iplus, jplus);
+                            remap_count++;
+                            if (debug){std::cout << format("Mapping %d,%d to %d,%d\n",i,j,iplus,jplus);}
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if (debug){
+            std::cout << format("Remapped %d cells\n", remap_count);
+        }
     }
-	double elapsed = (clock() - t1)/((double)CLOCKS_PER_SEC);
-	if (debug){
-		std::cout << format("Calculated bicubic coefficients for %d good cells in %g sec.", valid_cell_count, elapsed);
-	}
 }
 
 void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
@@ -139,6 +168,16 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     // Find and cache the indices i, j
                     selected_table = SELECTED_PH_TABLE;
 					single_phase_logph.find_native_nearest_good_cell(_hmolar, _p, cached_single_phase_i, cached_single_phase_j);
+                    CellCoeffs &cell = coeffs_ph[cached_single_phase_i][cached_single_phase_j];
+                    if (!cell.valid()){
+                        if (cell.has_valid_neighbor()){
+                            // Get new good neighbor
+                            cell.get_alternate(cached_single_phase_i, cached_single_phase_j);
+                        }
+                        else{
+                            if (!cell.valid()){throw ValueError(format("Cell is invalid and has no good neighbors for hmolar = %g, p= %g",val1,val2));}
+                        }
+                    }
                 }
             }
             break;
@@ -179,9 +218,8 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
 /// Use the single_phase table to evaluate an output
 double CoolProp::BicubicBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j)
 {
-	CellCoeffs &cell = coeffs[i][j];
-	
-	if (!cell.valid()){throw ValueError("Cell is invalid");}
+    // Get the cell
+    CellCoeffs &cell = coeffs[i][j];
     
 	// Get the alpha coefficients
     const std::vector<double> &alpha = cell.get(output);
