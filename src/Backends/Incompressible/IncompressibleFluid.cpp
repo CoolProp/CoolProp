@@ -247,15 +247,11 @@ double IncompressibleFluid::dhdTatPxdT(double T, double p, double x){
 	switch (specific_heat.type) {
 		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
 			return poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase);
-			break;
 		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
 			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
-			break;
 		default:
 			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.",__FILE__,__LINE__,specific_heat.type));
-			break;
 	}
-	return _HUGE;
 }
 
 
