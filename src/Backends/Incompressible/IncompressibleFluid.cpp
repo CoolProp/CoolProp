@@ -65,7 +65,6 @@ double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, do
         return poly.evaluate(coeffs, in, 0, offset);
     }
     throw ValueError(format("%s (%d): You have to provide a vector (1D matrix) of coefficients, not  (%d,%d).",__FILE__,__LINE__,r,c));
-    return _HUGE;
 }
 
 
