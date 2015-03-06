@@ -251,8 +251,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         else if (!(HEOS.components[0].EOS().pseudo_pure))
         {
             // Set some imput options
-            SaturationSolvers::saturation_T_pure_Akasaka_options options;
-            options.use_guesses = false;
+            SaturationSolvers::saturation_T_pure_Akasaka_options options(false);
 
             // Actually call the solver
             SaturationSolvers::saturation_T_pure_Maxwell(HEOS, HEOS._T, options);
