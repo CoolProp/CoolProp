@@ -676,12 +676,12 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
     public:
 
         HelmholtzEOSMixtureBackend *HEOS;
-        CoolPropDbl r, eos, rhomolar, value, T;
+        CoolPropDbl rhomolar, value;
         int other;
 
         solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl rhomolar, CoolPropDbl value, int other) : HEOS(HEOS), rhomolar(rhomolar), value(value), other(other){};
         double call(double T){
-            this->T = T;
+            CoolPropDbl eos;
             switch(other)
             {
             case iP:
@@ -696,8 +696,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
                 throw ValueError(format("Input not supported"));
             }
 
-            r = eos - value;
-            return r;
+            return eos - value;
         };
     };
 
