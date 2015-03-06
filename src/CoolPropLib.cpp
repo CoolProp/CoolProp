@@ -67,9 +67,7 @@ double convert_from_kSI_to_SI(long iInput, double value)
         return value;
     default:
         throw CoolProp::ValueError(format("index [%d] is invalid in convert_from_kSI_to_SI",iInput).c_str());
-        break;
     }
-    return _HUGE;
 }
 
 double convert_from_SI_to_kSI(long iInput, double value)
