@@ -17,6 +17,16 @@
 
 namespace CoolProp {
 
+class GuessesStructure{
+public:
+	CoolPropDbl T, p, rhomolar, hmolar, smolar;
+	CoolPropDbl rhomolar_liq, rhomolar_vap;
+	std::vector<CoolPropDbl> x,
+		                y;
+	GuessesStructure() : T(_HUGE), p(_HUGE), rhomolar(_HUGE), hmolar(_HUGE), smolar(_HUGE), 
+		                 rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), x(), y(){};
+};
+
 //! The mother of all state classes
 /*!
 This class provides the basic properties based on interrelations of the
@@ -353,7 +363,13 @@ public:
     virtual bool using_mass_fractions(void) = 0;
     virtual bool using_volu_fractions(void) = 0;
 
+	/// Update the state using two state variables 
     virtual void update(CoolProp::input_pairs input_pair, double Value1, double Value2) = 0;
+
+	/// Update the state using two state variables and providing guess values
+	/// Some or all of the guesses will be used
+	virtual void update_with_guesses(CoolProp::input_pairs input_pair, double Value1, double Value2, const GuessesStructure &guesses){throw NotImplementedError("update_with_guesses is not implemented for this backend");};
+
     virtual void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions) = 0;
     virtual void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions) = 0;
     virtual void set_volu_fractions(const std::vector<CoolPropDbl> &mass_fractions){throw NotImplementedError("Volume composition has not been implemented.");}

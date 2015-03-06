@@ -385,7 +385,7 @@
         Dictionary(){};
         bool is_empty(void) const {return numbers.empty() && strings.empty() && double_vectors.empty() && string_vectors.empty();}
         void add_string(const std::string &s1, const std::string &s2){ strings.insert(std::pair<std::string, std::string>(s1, s2));}
-        void add_number(const std::string &s1, double d){ numbers.insert(std::pair<std::string, double>(s1, d));}
+        void add_number(const std::string &s1, double d){ numbers.erase(s1); numbers.insert(std::pair<std::string, double>(s1, d));}
         void add_double_vector(const std::string &s1, const std::vector<double> &d){ double_vectors.insert(std::pair<std::string, std::vector<double> >(s1, d));}
         void add_string_vector(const std::string &s1, const std::vector<std::string> &d){ string_vectors.insert(std::pair<std::string, std::vector<std::string> >(s1, d));}
         std::string get_string(const std::string &s) const

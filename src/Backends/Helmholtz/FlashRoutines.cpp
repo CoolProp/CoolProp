@@ -443,6 +443,27 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
     }
 }
 
+void FlashRoutines::PQ_flash_with_guesses(HelmholtzEOSMixtureBackend &HEOS, const GuessesStructure &guess)
+{
+	SaturationSolvers::newton_raphson_saturation NR;
+    SaturationSolvers::newton_raphson_saturation_options IO;
+	IO.rhomolar_liq = guess.rhomolar_liq;
+	IO.rhomolar_vap = guess.rhomolar_vap;
+	IO.x = std::vector<CoolPropDbl>(guess.x.begin(), guess.x.end());
+	IO.y = std::vector<CoolPropDbl>(guess.y.begin(), guess.y.end());
+	IO.T = guess.T;
+	IO.p = guess.p;
+	IO.bubble_point = false;
+	IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
+	
+	NR.call(HEOS, IO.y, IO.x, IO);
+
+	// Load the other outputs
+    HEOS._phase = iphase_twophase;
+	HEOS._rhomolar = 1/(HEOS._Q/IO.rhomolar_vap + (1 - HEOS._Q)/IO.rhomolar_liq);
+    HEOS._T = IO.T;
+}
+
 void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parameters other, CoolPropDbl value)
 {
     

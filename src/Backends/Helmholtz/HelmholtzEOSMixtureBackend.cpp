@@ -942,6 +942,27 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
     
 }
 
+void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair, double value1, double value2, const GuessesStructure &guesses)
+{
+	if (get_debug_level() > 10){std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)",__FILE__,__LINE__, input_pair, get_input_pair_short_desc(input_pair).c_str(), value1, value2) << std::endl;}
+    
+    CoolPropDbl ld_value1 = value1, ld_value2 = value2;
+    pre_update(input_pair, ld_value1, ld_value2);
+    value1 = ld_value1; value2 = ld_value2;
+
+    switch(input_pair)
+    {
+        case PQ_INPUTS:
+            _p = value1; _Q = value2; FlashRoutines::PQ_flash_with_guesses(*this, guesses); break;
+        default:
+            throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
+    }
+
+
+    
+    post_update();
+}
+
 void HelmholtzEOSMixtureBackend::post_update()
 {
     // Check the values that must always be set

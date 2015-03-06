@@ -194,9 +194,15 @@ void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CA
         std::vector<Dictionary> &v = mixturebinarypairlibrary.binary_pair_map[CAS];
         try{
             v[0].add_number(key, value);
+            double got = v[0].get_double(key);
+            if (std::abs(got-value) > 1e-10){
+                throw ValueError("Did not set value properly");
+            }
         }
-        catch(...){ }
-        throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(), CAS1.c_str(), CAS2.c_str()));
+        catch(std::exception &e){ 
+            throw ValueError(format("Could not set the parameter [%s] for the binary pair [%s,%s] - for now this is an error; error: %s", 
+                                    key.c_str(), CAS1.c_str(), CAS2.c_str(), e.what()));
+        }
     }
     else{
         throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.",CAS1.c_str(), CAS2.c_str()));
@@ -361,6 +367,12 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
                                                                                                         dict_red.get_string("Name1").c_str(),
                                                                                                         dict_red.get_string("Name2").c_str()   ));
             }
+            /*
+            if (i == 0){
+                std::cout << format("betaT %10.9Lg gammaT %10.9Lg betaV %10.9Lg gammaV %10.9Lg %s",  
+                                    beta_T[i][j], gamma_T[i][j], beta_v[i][j], gamma_v[i][j], get_mixture_binary_pair_data(CAS[0],CAS[1],"gammaT").c_str()) << std::endl;
+            }
+            */
 
             // ***************************************************
             //     Departure functions used in excess term

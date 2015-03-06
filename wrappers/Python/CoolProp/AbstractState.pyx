@@ -4,6 +4,9 @@ cimport constants_header
         
 cdef class PyPhaseEnvelopeData:
     pass
+
+cdef class PyGuessesStructure:
+    pass
     
 cdef class AbstractState:
     """
@@ -34,6 +37,16 @@ cdef class AbstractState:
     cpdef update(self, constants_header.input_pairs ipair, double Value1, double Value2):
         """ Update function - wrapper of c++ function :cpapi:`CoolProp::AbstractState::update` """
         self.thisptr.update(ipair, Value1, Value2)
+    cpdef update_with_guesses(self, constants_header.input_pairs ipair, double Value1, double Value2, PyGuessesStructure guesses):
+        """ Update function - wrapper of c++ function :cpapi:`CoolProp::AbstractState::update` """
+        cdef cAbstractState.GuessesStructure _guesses
+        _guesses.T = guesses.T
+        _guesses.p = guesses.p
+        _guesses.rhomolar_liq = guesses.rhomolar_liq
+        _guesses.rhomolar_vap = guesses.rhomolar_vap
+        _guesses.x = guesses.x
+        _guesses.y = guesses.y
+        self.thisptr.update_with_guesses(ipair, Value1, Value2, _guesses)
     
     cpdef set_mole_fractions(self, vector[double] z): 
         """ Set the mole fractions - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_mole_fractions` """

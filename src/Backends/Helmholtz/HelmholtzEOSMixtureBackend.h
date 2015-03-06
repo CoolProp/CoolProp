@@ -101,6 +101,11 @@ public:
      * @param value2 The second input value
      */
     void update(CoolProp::input_pairs input_pair, double value1, double value2);
+
+	/** \brief Update the state using guess values
+	 * 
+	 */
+	void update_with_guesses(CoolProp::input_pairs input_pair, double Value1, double Value2, const GuessesStructure &guesses);
     
     /** \brief Update all the internal variables for a state by copying from another state
      */

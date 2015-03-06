@@ -11,6 +11,13 @@ cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
         vector[long double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
     
 cdef extern from "AbstractState.h" namespace "CoolProp":
+
+    cdef cppclass GuessesStructure:
+        long double T, p, rhomolar, hmolar, smolar
+        long double rhomolar_liq, rhomolar_vap
+        double _rhomolar_liq, _rhomolar_vap
+        vector[long double] x, y
+        
     cdef cppclass AbstractState:
         
         ## Nullary Constructor
@@ -43,6 +50,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         ## Property updater
         ## Uses the indices in CoolProp for the input parameters
         void update(constants_header.input_pairs iInput1, double Value1, double Value2) except +ValueError
+        ## Uses the indices in CoolProp for the input parameters
+        void update_with_guesses(constants_header.input_pairs iInput1, double Value1, double Value2, GuessesStructure) except +ValueError
 
         ## Bulk properties accessors - temperature, pressure and density are directly calculated every time
         ## All other parameters are calculated on an as-needed basis

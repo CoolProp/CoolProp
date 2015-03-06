@@ -10,10 +10,16 @@ cdef class PyPhaseEnvelopeData:
     cpdef public bool TypeI
     cpdef public size_t iTsat_max, ipsat_max, icrit
     cpdef public list T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
+    
+cdef class PyGuessesStructure:
+    cpdef public long double T, p, rhomolar, hmolar, smolar
+    cpdef public long double rhomolar_liq, rhomolar_vap
+    cpdef public vector[long double] x, y
 
 cdef class AbstractState:
     cdef cAbstractState.AbstractState *thisptr     # hold a C++ instance which we're wrapping
     cpdef update(self, constants_header.input_pairs iInput1, double Value1, double Value2)
+    cpdef update_with_guesses(self, constants_header.input_pairs iInput1, double Value1, double Value2, PyGuessesStructure guesses)
     cpdef set_mole_fractions(self, vector[double] z)
     cpdef set_mass_fractions(self, vector[double] z)
     cpdef set_volu_fractions(self, vector[double] z)

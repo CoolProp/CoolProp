@@ -1156,10 +1156,7 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
         
         double omega = 1.0;
         if (options.sstype == imposed_p){
-            if (std::abs(change) > 0.05*T){
-                omega = 0.1;
-            }
-            T += omega*change;
+			T += change;
         }
         else if (options.sstype == imposed_T){
             if (std::abs(change) > 0.05*p){
@@ -1308,8 +1305,9 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
 void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &z, std::vector<CoolPropDbl> &z_incipient, newton_raphson_saturation_options &IO)
 {
     int iter = 0;
+	bool debug = get_debug_level() > 9 || false;
     
-    if (get_debug_level() > 9){std::cout << " NRsat::call:  p" << IO.p << " T" << IO.T << " dl" << IO.rhomolar_liq << " dv" << IO.rhomolar_vap << std::endl;}
+    if (debug){std::cout << " NRsat::call:  p " << IO.p << " T " << IO.T << " dl " << IO.rhomolar_liq << " dv " << IO.rhomolar_vap << std::endl;}
     
     // Reset all the variables and resize
     pre_call();
@@ -1375,7 +1373,9 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
         else{
             throw ValueError("invalid imposed_variable");
         }
-        //std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
+        if(debug){
+			std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
+		}
         
         min_rel_change = min_abs_value(err_rel);
         iter++;
