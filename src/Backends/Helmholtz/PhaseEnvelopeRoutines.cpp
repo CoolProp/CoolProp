@@ -11,7 +11,7 @@ namespace CoolProp{
 
 void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
 {
-    bool debug = get_debug_level() > 0 || false;
+    bool debug = get_debug_level() > 0 || true;
     if (HEOS.get_mole_fractions_ref().size() < 2){throw ValueError("Cannot build phase envelope for pure fluid");}
     std::size_t failure_count = 0;
     // Set some imput options
@@ -203,9 +203,14 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         factor = std::max(factor, static_cast<CoolPropDbl>(1.01));
         
         // Stop if the pressure is below the starting pressure
-        if (iter > 4 && IO.p < env.p[0]){ 
+        // or if the composition of one of the phases becomes almost pure
+        CoolPropDbl max_fraction = *std::max_element(IO.x.begin(), IO.x.end());
+        if (iter > 4 && (IO.p < env.p[0] || std::abs(1.0-max_fraction) < 1e-9 )){ 
             env.built = true; 
-            std::cout << format("envelope built.\n"); 
+            if (debug){
+                std::cout << format("envelope built.\n"); 
+                std::cout << format("closest fraction to 1.0: distance %g", 1-max_fraction);
+            }
             
             // Now we refine the phase envelope to add some points in places that are still pretty rough
             refine(HEOS);
@@ -220,6 +225,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
 
 void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
 {
+    bool debug = (get_debug_level() > 0 || false);
     PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
     SaturationSolvers::newton_raphson_saturation NR;
     SaturationSolvers::newton_raphson_saturation_options IO;
@@ -259,7 +265,9 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
                 NR.call(HEOS, IO.y, IO.x, IO);
                 env.insert_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, 
                                      IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y, i+1);
-                std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p  << " hl " << IO.hmolar_liq  << " hv " << IO.hmolar_vap  << " sl " << IO.smolar_liq  << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")  << " Ns " << IO.Nsteps << std::endl;
+                if (debug){
+                    std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p  << " hl " << IO.hmolar_liq  << " hv " << IO.hmolar_vap  << " sl " << IO.smolar_liq  << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")  << " Ns " << IO.Nsteps << std::endl;
+                }
             }
             catch(...){
                 continue;
