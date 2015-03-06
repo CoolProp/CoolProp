@@ -153,6 +153,9 @@ cpdef string get_parameter_information(int key, string info):
 
 cpdef string get_mixture_binary_pair_data(CAS1, CAS2, key) except *:
     return _get_mixture_binary_pair_data(CAS1, CAS2, key)
+    
+cpdef set_mixture_binary_pair_data(CAS1, CAS2, key, val):
+    _set_mixture_binary_pair_data(CAS1, CAS2, key, val)
 
 cpdef get_global_param_string(string param):
     return _get_global_param_string(param)

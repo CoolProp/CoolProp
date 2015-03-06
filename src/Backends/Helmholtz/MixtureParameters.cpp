@@ -183,6 +183,25 @@ std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::str
         throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.",CAS1.c_str(), CAS2.c_str()));
     }
 }
+void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &key, const double value)
+{
+    // Find pair
+    std::vector<std::string> CAS;
+    CAS.push_back(CAS1);
+    CAS.push_back(CAS2);
+
+    if (mixturebinarypairlibrary.binary_pair_map.find(CAS) != mixturebinarypairlibrary.binary_pair_map.end()){
+        std::vector<Dictionary> &v = mixturebinarypairlibrary.binary_pair_map[CAS];
+        try{
+            v[0].add_number(key, value);
+        }
+        catch(...){ }
+        throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(), CAS1.c_str(), CAS2.c_str()));
+    }
+    else{
+        throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.",CAS1.c_str(), CAS2.c_str()));
+    }
+}
 
 std::string get_reducing_function_name(const std::string &CAS1, const std::string &CAS2)
 {

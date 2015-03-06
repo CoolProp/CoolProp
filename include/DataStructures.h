@@ -361,6 +361,7 @@ const std::string& get_input_pair_long_desc(input_pairs pair);
 void split_input_pair(input_pairs pair, parameters &p1, parameters &p2);
 
 extern std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param);
+extern void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param, const double val);
 
 } /* namespace CoolProp */
 #endif /* DATASTRUCTURES_H_ */
