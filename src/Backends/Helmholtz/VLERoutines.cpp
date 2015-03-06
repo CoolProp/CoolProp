@@ -194,7 +194,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
             // Invert liquid density ancillary to get temperature
             // TODO: fit inverse ancillaries too
             try{
-                T = HEOS.get_components()[0]->ancillaries.pL.invert(specified_value);
+                T = HEOS.get_components()[0].ancillaries.pL.invert(specified_value);
             }
             catch(...)
             {
@@ -205,7 +205,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
         {
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             // Ancillary is deltah = h - hs_anchor.h
-            try{ T = HEOS.get_components()[0]->ancillaries.hL.invert(specified_value - hs_anchor.hmolar); }
+            try{ T = HEOS.get_components()[0].ancillaries.hL.invert(specified_value - hs_anchor.hmolar); }
             catch(...){
                 throw ValueError("Unable to invert ancillary equation for hL");
             }
@@ -222,11 +222,11 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
                     this->h = h;
                 }
                 double call(double T){
-                    CoolPropDbl h_liq = component->ancillaries.hL.evaluate(T) + component->pEOS->hs_anchor.hmolar;
+                    CoolPropDbl h_liq = component->ancillaries.hL.evaluate(T) + component->EOS().hs_anchor.hmolar;
                     return h_liq + component->ancillaries.hLV.evaluate(T) - h;
                 };
             };
-            Residual resid(*(HEOS.get_components()[0]), HEOS.hmolar());
+            Residual resid(HEOS.get_components()[0], HEOS.hmolar());
             
             // Ancillary is deltah = h - hs_anchor.h
             std::string errstr;
@@ -244,7 +244,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
         }
         else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SL)
         {
-            CoolPropFluid &component = *(HEOS.get_components()[0]);
+            CoolPropFluid &component = HEOS.get_components()[0];
             CoolProp::SaturationAncillaryFunction &anc = component.ancillaries.sL;
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             // If near the critical point, use a near critical guess value for T
@@ -280,7 +280,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
         }
         else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SV)
         {
-            CoolPropFluid &component = *(HEOS.get_components()[0]);
+            CoolPropFluid &component = HEOS.get_components()[0];
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             class Residual : public FuncWrapper1D
             {
@@ -292,7 +292,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
                     this->s = s;
                 }
                 double call(double T){
-                    CoolPropDbl s_liq = component->ancillaries.sL.evaluate(T) + component->pEOS->hs_anchor.smolar;
+                    CoolPropDbl s_liq = component->ancillaries.sL.evaluate(T) + component->EOS().hs_anchor.smolar;
                     CoolPropDbl resid = s_liq + component->ancillaries.sLV.evaluate(T) - s;
                     
                     return resid;
@@ -332,8 +332,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
         T = std::min(T, static_cast<CoolPropDbl>(HEOS.T_critical()-0.1));
 
         // Evaluate densities from the ancillary equations
-        rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
-        rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
+        rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T);
+        rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T);
 
         // Apply a single step of Newton's method to improve guess value for liquid
         // based on the error between the gas pressure (which is usually very close already)
@@ -592,16 +592,16 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, Cool
         {
             // Invert liquid density ancillary to get temperature
             // TODO: fit inverse ancillaries too
-            T = HEOS.get_components()[0]->ancillaries.rhoL.invert(rhomolar);
-            rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
+            T = HEOS.get_components()[0].ancillaries.rhoL.invert(rhomolar);
+            rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T);
             rhoL = rhomolar;
         }
         else if (options.imposed_rho == saturation_D_pure_options::IMPOSED_RHOV)
         {
             // Invert vapor density ancillary to get temperature
             // TODO: fit inverse ancillaries too
-            T = HEOS.get_components()[0]->ancillaries.rhoV.invert(rhomolar);
-            rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
+            T = HEOS.get_components()[0].ancillaries.rhoV.invert(rhomolar);
+            rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T);
             rhoV = rhomolar;
         }
         else
@@ -786,12 +786,12 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
             
             // If very close to the critical temp, evaluate the ancillaries for a slightly lower temperature
             if (T > 0.99*HEOS.get_reducing_state().T){
-                rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T-0.1);
-                rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T-0.1);
+                rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T-0.1);
+                rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T-0.1);
             }
             else{
-                rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
-                rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
+                rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T);
+                rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T);
                 
                 // Apply a single step of Newton's method to improve guess value for liquid
                 // based on the error between the gas pressure (which is usually very close already)
@@ -921,7 +921,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
     HEOS.calc_reducing_state();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
-    CoolProp::SimpleState &crit = HEOS.get_components()[0]->crit;
+    CoolProp::SimpleState &crit = HEOS.get_components()[0].crit;
     CoolPropDbl rhoL = _HUGE, rhoV = _HUGE, error = 999, DeltavL, DeltavV, pL, pV, p;
     int iter=0, small_step_count = 0;
     
@@ -939,16 +939,16 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
             
             // If very close to the critical temp, evaluate the ancillaries for a slightly lower temperature
             if (T > 0.9999*HEOS.get_reducing_state().T){
-                rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T-0.1);
-                rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T-0.1);
+                rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T-0.1);
+                rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T-0.1);
             }
             else{
-                rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
-                rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
-                p = HEOS.get_components()[0]->ancillaries.pV.evaluate(T);
+                rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T);
+                rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T);
+                p = HEOS.get_components()[0].ancillaries.pV.evaluate(T);
                 
-                CoolProp::SimpleState &tripleL = HEOS.get_components()[0]->triple_liquid;
-                CoolProp::SimpleState &tripleV = HEOS.get_components()[0]->triple_vapor;
+                CoolProp::SimpleState &tripleL = HEOS.get_components()[0].triple_liquid;
+                CoolProp::SimpleState &tripleV = HEOS.get_components()[0].triple_vapor;
                 
                 // If the guesses are terrible, apply a simple correction
                 if (rhoL < crit.rhomolar*0.8 || rhoL > tripleL.rhomolar*1.2 || 

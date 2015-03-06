@@ -37,12 +37,12 @@ static int deriv_counter = 0;
 namespace CoolProp {
 
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV) {
-    std::vector<CoolPropFluid*> components;
+    std::vector<CoolPropFluid> components;
     components.resize(component_names.size());
 
     for (unsigned int i = 0; i < components.size(); ++i)
     {
-        components[i] = &(get_library().get(component_names[i]));
+        components[i] = get_library().get(component_names[i]);
     }
 
     // Set the components and associated flags
@@ -51,7 +51,7 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::st
     // Set the phase to default unknown value
     _phase = iphase_unknown;
 }
-HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid*> &components, bool generate_SatL_and_SatV) {
+HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV) {
 
     // Set the components and associated flags
     set_components(components, generate_SatL_and_SatV);
@@ -59,7 +59,7 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPro
     // Set the phase to default unknown value
     _phase = iphase_unknown;
 }
-void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid*> &components, bool generate_SatL_and_SatV) {
+void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV) {
 
     // Copy the components
     this->components = components;
@@ -156,7 +156,7 @@ void HelmholtzEOSMixtureBackend::set_mixture_parameters()
 }
 void HelmholtzEOSMixtureBackend::update_states(void)
 {
-    CoolPropFluid &component = *(components[0]);
+    CoolPropFluid &component = components[0];
     EquationOfState &EOS = component.EOSVector[0];
     
     // Clear the state class
@@ -180,16 +180,16 @@ const CoolProp::SimpleState & HelmholtzEOSMixtureBackend::calc_state(const std::
     if (is_pure_or_pseudopure)
     {
         if (!state.compare("hs_anchor")){
-            return components[0]->pEOS->hs_anchor;
+            return components[0].EOS().hs_anchor;
         }
         else if (!state.compare("max_sat_T")){
-            return components[0]->pEOS->max_sat_T;
+            return components[0].EOS().max_sat_T;
         }
         else if (!state.compare("max_sat_p")){
-            return components[0]->pEOS->max_sat_p;
+            return components[0].EOS().max_sat_p;
         }
         else if (!state.compare("reducing")){
-            return components[0]->pEOS->reduce;
+            return components[0].EOS().reduce;
         }
         else{
             throw ValueError(format("This state [%s] is invalid to calc_state",state.c_str()));
@@ -202,7 +202,7 @@ const CoolProp::SimpleState & HelmholtzEOSMixtureBackend::calc_state(const std::
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_acentric_factor(void)
 {
     if (is_pure_or_pseudopure){
-        return components[0]->EOSVector[0].acentric;
+        return components[0].EOS().acentric;
     }
     else{
         throw ValueError("acentric factor cannot be calculated for mixtures");
@@ -211,7 +211,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_acentric_factor(void)
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_gas_constant(void)
 {
     if (is_pure_or_pseudopure){
-        return components[0]->gas_constant();
+        return components[0].gas_constant();
     }
     else{
         if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){
@@ -222,7 +222,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_gas_constant(void)
             double summer = 0;
             for (unsigned int i = 0; i < components.size(); ++i)
             {
-                summer += mole_fractions[i]*components[i]->gas_constant();
+                summer += mole_fractions[i]*components[i].gas_constant();
             }
             return summer;
         }
@@ -233,7 +233,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_molar_mass(void)
     double summer = 0;
     for (unsigned int i = 0; i < components.size(); ++i)
     {
-        summer += mole_fractions[i]*components[i]->molar_mass();
+        summer += mole_fractions[i]*components[i].molar_mass();
     }
     return summer;
 }
@@ -246,9 +246,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters par
             switch (Q)
             {
                 case 0:
-                    return components[0]->ancillaries.pL.evaluate(value);
+                    return components[0].ancillaries.pL.evaluate(value);
                 case 1:
-                    return components[0]->ancillaries.pV.evaluate(value);
+                    return components[0].ancillaries.pV.evaluate(value);
             }
         }
         else if (param == iT && given == iP){
@@ -256,9 +256,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters par
             switch (Q)
             {
                 case 0:
-                    return components[0]->ancillaries.pL.invert(value);
+                    return components[0].ancillaries.pL.invert(value);
                 case 1:
-                    return components[0]->ancillaries.pV.invert(value);
+                    return components[0].ancillaries.pV.invert(value);
             }
         }
         else if (param == iDmolar && given == iT){
@@ -266,9 +266,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters par
             switch (Q)
             {
                 case 0:
-                    return components[0]->ancillaries.rhoL.evaluate(value);
+                    return components[0].ancillaries.rhoL.evaluate(value);
                 case 1:
-                    return components[0]->ancillaries.rhoV.evaluate(value);
+                    return components[0].ancillaries.rhoV.evaluate(value);
             }
         }
         else if (param == iT && given == iDmolar){
@@ -276,13 +276,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters par
             switch (Q)
             {
                 case 0:
-                    return components[0]->ancillaries.rhoL.invert(value);
+                    return components[0].ancillaries.rhoL.invert(value);
                 case 1:
-                    return components[0]->ancillaries.rhoV.invert(value);
+                    return components[0].ancillaries.rhoV.invert(value);
             }
         }
 		else if (param == isurface_tension && given == iT){
-			return components[0]->ancillaries.surface_tension.evaluate(value);
+			return components[0].ancillaries.surface_tension.evaluate(value);
 		}
         else{
             throw ValueError(format("calc of %s given %s is invalid in calc_saturation_ancillary", 
@@ -302,7 +302,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_melting_line(int param, int given, 
 {
     if (is_pure_or_pseudopure)
     {
-        return components[0]->ancillaries.melting_line.evaluate(param, given, value);
+        return components[0].ancillaries.melting_line.evaluate(param, given, value);
     }
     else
     {
@@ -312,7 +312,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_melting_line(int param, int given, 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_surface_tension(void)
 {
     if (is_pure_or_pseudopure){
-		return components[0]->ancillaries.surface_tension.evaluate(T());
+		return components[0].ancillaries.surface_tension.evaluate(T());
     }
     else{
         throw NotImplementedError(format("surface tension not implemented for mixtures"));
@@ -323,7 +323,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void)
     if (is_pure_or_pseudopure)
     {
         CoolPropDbl eta_dilute;
-        switch(components[0]->transport.viscosity_dilute.type)
+        switch(components[0].transport.viscosity_dilute.type)
         {
         case ViscosityDiluteVariables::VISCOSITY_DILUTE_KINETIC_THEORY:
             eta_dilute = TransportRoutines::viscosity_dilute_kinetic_theory(*this); break;
@@ -338,7 +338,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void)
         case ViscosityDiluteVariables::VISCOSITY_DILUTE_CYCLOHEXANE:
             eta_dilute = TransportRoutines::viscosity_dilute_cyclohexane(*this); break;
         default:
-            throw ValueError(format("dilute viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
+            throw ValueError(format("dilute viscosity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
         }
         return eta_dilute;
     }
@@ -357,7 +357,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
 {
     CoolPropDbl initial_part = 0.0;
     
-    switch(components[0]->transport.viscosity_initial.type){        
+    switch(components[0].transport.viscosity_initial.type){        
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND:
         {
             CoolPropDbl B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
@@ -378,7 +378,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
 
     // Higher order terms
     CoolPropDbl delta_eta_h = 0.0;
-    switch(components[0]->transport.viscosity_higher_order.type)
+    switch(components[0].transport.viscosity_higher_order.type)
     {
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND:
         delta_eta_h = TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(*this); break;
@@ -395,7 +395,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BENZENE:
         delta_eta_h = TransportRoutines::viscosity_benzene_higher_order_hardcoded(*this); break;
     default:
-        throw ValueError(format("higher order viscosity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
+        throw ValueError(format("higher order viscosity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
     }
 
     CoolPropDbl eta_residual = initial_part + delta_eta_h;
@@ -408,7 +408,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity(void)
     if (is_pure_or_pseudopure)
     {
         // Get a reference for code cleanness
-        CoolPropFluid &component = *(components[0]);
+        CoolPropFluid &component = components[0];
 		
 		if (!component.transport.viscosity_model_provided){
 			throw ValueError(format("Viscosity model is not available for this fluid"));
@@ -469,14 +469,14 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity_background(void)
 {
     // Residual part
     CoolPropDbl lambda_residual = _HUGE;
-    switch(components[0]->transport.conductivity_residual.type)
+    switch(components[0].transport.conductivity_residual.type)
     {
     case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL:
         lambda_residual = TransportRoutines::conductivity_residual_polynomial(*this); break;
     case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL_AND_EXPONENTIAL:
         lambda_residual = TransportRoutines::conductivity_residual_polynomial_and_exponential(*this); break;
     default:
-        throw ValueError(format("residual conductivity type [%d] is invalid for fluid %s", components[0]->transport.conductivity_residual.type, name().c_str()));
+        throw ValueError(format("residual conductivity type [%d] is invalid for fluid %s", components[0].transport.conductivity_residual.type, name().c_str()));
     }
     return lambda_residual;
 }
@@ -485,7 +485,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void)
     if (is_pure_or_pseudopure)
     {
         // Get a reference for code cleanness
-        CoolPropFluid &component = *(components[0]);
+        CoolPropFluid &component = components[0];
 		
 		if (!component.transport.conductivity_model_provided){
 			throw ValueError(format("Thermal conductivity model is not available for this fluid"));
@@ -514,7 +514,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void)
             case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HELIUM:
                 return TransportRoutines::conductivity_hardcoded_helium(*this);
             default:
-                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0]->transport.hardcoded_conductivity, name().c_str()));
+                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0].transport.hardcoded_conductivity, name().c_str()));
             }
         }
 
@@ -533,7 +533,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void)
         case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_NONE:
             lambda_dilute = 0.0; break;
         default:
-            throw ValueError(format("dilute conductivity type [%d] is invalid for fluid %s", components[0]->transport.conductivity_dilute.type, name().c_str()));
+            throw ValueError(format("dilute conductivity type [%d] is invalid for fluid %s", components[0].transport.conductivity_dilute.type, name().c_str()));
         }
 
         CoolPropDbl lambda_residual = calc_conductivity_background();
@@ -553,7 +553,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void)
         case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_CARBONDIOXIDE_SCALABRIN_JPCRD_2006:
             lambda_critical = TransportRoutines::conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(*this); break;
         default:
-            throw ValueError(format("critical conductivity type [%d] is invalid for fluid %s", components[0]->transport.viscosity_dilute.type, name().c_str()));
+            throw ValueError(format("critical conductivity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
         }
 
         return lambda_dilute + lambda_residual + lambda_critical;
@@ -574,7 +574,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_Ttriple(void)
 {
     double summer = 0;
     for (unsigned int i = 0; i < components.size(); ++i){
-        summer += mole_fractions[i]*components[i]->pEOS->Ttriple;
+        summer += mole_fractions[i]*components[i].EOS().Ttriple;
     }
     return summer;
 }
@@ -582,7 +582,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_triple(void)
 {
     double summer = 0;
     for (unsigned int i = 0; i < components.size(); ++i){
-        summer += mole_fractions[i]*components[i]->pEOS->ptriple;
+        summer += mole_fractions[i]*components[i].EOS().ptriple;
     }
     return summer;
 }
@@ -592,7 +592,7 @@ std::string HelmholtzEOSMixtureBackend::calc_name(void)
         throw ValueError(format("calc_name is only valid for pure and pseudo-pure fluids, %d components", components.size()));
     }
     else{
-        return components[0]->name;
+        return components[0].name;
     }
 }
 std::vector<std::string> HelmholtzEOSMixtureBackend::calc_fluid_names(void)
@@ -600,7 +600,7 @@ std::vector<std::string> HelmholtzEOSMixtureBackend::calc_fluid_names(void)
 	std::vector<std::string> out;
 	for (std::size_t i = 0; i < components.size(); ++i)
 	{
-        out.push_back(components[i]->name);
+        out.push_back(components[i].name);
     }
 	return out;
 }
@@ -610,7 +610,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_ODP(void)
         throw ValueError(format("For now, calc_ODP is only valid for pure and pseudo-pure fluids, %d components", components.size()));
     }
     else{
-        CoolPropDbl v = components[0]->environment.ODP;
+        CoolPropDbl v = components[0].environment.ODP;
         if (!ValidNumber(v) || v < 0){ throw ValueError(format("ODP value is not specified or invalid")); }
         return v;
     }
@@ -621,7 +621,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP20(void)
         throw ValueError(format("For now, calc_GWP20 is only valid for pure and pseudo-pure fluids, %d components", components.size()));
     }
     else{
-        CoolPropDbl v = components[0]->environment.GWP20;
+        CoolPropDbl v = components[0].environment.GWP20;
         if (!ValidNumber(v) || v < 0){ throw ValueError(format("GWP20 value is not specified or invalid"));}
         return v;
     }
@@ -632,7 +632,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP100(void)
         throw ValueError(format("For now, calc_GWP100 is only valid for pure and pseudo-pure fluids, %d components", components.size()));
     }
     else{
-        CoolPropDbl v = components[0]->environment.GWP100;
+        CoolPropDbl v = components[0].environment.GWP100;
         if (!ValidNumber(v) || v < 0){ throw ValueError(format("GWP100 value is not specified or invalid")); }
         return v;
     }
@@ -643,7 +643,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP500(void)
         throw ValueError(format("For now, calc_GWP500 is only valid for pure and pseudo-pure fluids, %d components", components.size()));
     }
     else{
-        CoolPropDbl v = components[0]->environment.GWP500;
+        CoolPropDbl v = components[0].environment.GWP500;
         if (!ValidNumber(v) || v < 0){ throw ValueError(format("GWP500 value is not specified or invalid")); }
         return v;
     }
@@ -655,7 +655,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void)
         throw ValueError(format("For now, calc_T_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
     }
     else{
-        return components[0]->crit.T;
+        return components[0].crit.T;
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void)
@@ -664,7 +664,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void)
         throw ValueError(format("For now, calc_p_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
     }
     else{
-        return components[0]->crit.p;
+        return components[0].crit.p;
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void)
@@ -673,16 +673,16 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void)
         throw ValueError(format("For now, calc_rhomolar_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
     }
     else{
-        return components[0]->crit.rhomolar;
+        return components[0].crit.rhomolar;
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_pmax_sat(void)
 {
     if (is_pure_or_pseudopure)
     {
-        if (components[0]->pEOS->pseudo_pure)
+        if (components[0].EOS().pseudo_pure)
         {
-            return components[0]->pEOS->max_sat_p.p;
+            return components[0].EOS().max_sat_p.p;
         }
         else{
             return p_critical();
@@ -696,9 +696,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_Tmax_sat(void)
 {
     if (is_pure_or_pseudopure)
     {
-        if (components[0]->pEOS->pseudo_pure)
+        if (components[0].EOS().pseudo_pure)
         {
-            return components[0]->pEOS->max_sat_T.T;
+            return components[0].EOS().max_sat_T.T;
         }
         else{
             return T_critical();
@@ -713,8 +713,8 @@ void HelmholtzEOSMixtureBackend::calc_Tmin_sat(CoolPropDbl &Tmin_satL, CoolPropD
 {
     if (is_pure_or_pseudopure)
     {
-        Tmin_satL = components[0]->pEOS->sat_min_liquid.T;
-        Tmin_satV = components[0]->pEOS->sat_min_vapor.T;
+        Tmin_satL = components[0].EOS().sat_min_liquid.T;
+        Tmin_satV = components[0].EOS().sat_min_vapor.T;
         return;
     }
     else{
@@ -726,8 +726,8 @@ void HelmholtzEOSMixtureBackend::calc_pmin_sat(CoolPropDbl &pmin_satL, CoolPropD
 {
     if (is_pure_or_pseudopure)
     {
-        pmin_satL = components[0]->pEOS->sat_min_liquid.p;
-        pmin_satV = components[0]->pEOS->sat_min_vapor.p;
+        pmin_satL = components[0].EOS().sat_min_liquid.p;
+        pmin_satV = components[0].EOS().sat_min_vapor.p;
         return;
     }
     else{
@@ -743,7 +743,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_Tmax(void)
     double summer = 0;
     for (unsigned int i = 0; i < components.size(); ++i)
     {
-        summer += mole_fractions[i]*components[i]->pEOS->limits.Tmax;
+        summer += mole_fractions[i]*components[i].EOS().limits.Tmax;
     }
     return summer;
 }
@@ -752,7 +752,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_Tmin(void)
     double summer = 0;
     for (unsigned int i = 0; i < components.size(); ++i)
     {
-        summer += mole_fractions[i]*components[i]->pEOS->limits.Tmin;
+        summer += mole_fractions[i]*components[i].EOS().limits.Tmin;
     }
     return summer;
 }
@@ -761,7 +761,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_pmax(void)
     double summer = 0;
     for (unsigned int i = 0; i < components.size(); ++i)
     {
-        summer += mole_fractions[i]*components[i]->pEOS->limits.pmax;
+        summer += mole_fractions[i]*components[i].EOS().limits.pmax;
     }
     return summer;
 }
@@ -997,7 +997,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
     saturation_called = false;
     
     // Reference declaration to save indexing
-    CoolPropFluid &component = *(components[0]);
+    CoolPropFluid &component = components[0];
     
     // Check supercritical pressure
     if (_p > _crit.p)
@@ -1057,13 +1057,13 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         }
     }
     // Check between triple point pressure and psat_max
-    else if (_p >= components[0]->pEOS->ptriple*0.9999 && _p <= _crit.p)
+    else if (_p >= components[0].EOS().ptriple*0.9999 && _p <= _crit.p)
     {
         // First try the ancillaries, use them to determine the state if you can
         
         // Calculate dew and bubble temps from the ancillaries (everything needs them)
-        _TLanc = components[0]->ancillaries.pL.invert(_p);
-        _TVanc = components[0]->ancillaries.pV.invert(_p);
+        _TLanc = components[0].ancillaries.pL.invert(_p);
+        _TVanc = components[0].ancillaries.pV.invert(_p);
         
         bool definitely_two_phase = false;
         
@@ -1087,7 +1087,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             {
                 if (!component.ancillaries.hL.enabled()){break;}
                 // Ancillaries are h-h_anchor, so add back h_anchor
-                CoolPropDbl h_liq = component.ancillaries.hL.evaluate(_TLanc) + component.pEOS->hs_anchor.hmolar;
+                CoolPropDbl h_liq = component.ancillaries.hL.evaluate(_TLanc) + component.EOS().hs_anchor.hmolar;
                 CoolPropDbl h_liq_error_band = component.ancillaries.hL.get_max_abs_error();
                 CoolPropDbl h_vap = h_liq + component.ancillaries.hLV.evaluate(_TLanc);
                 CoolPropDbl h_vap_error_band = h_liq_error_band + component.ancillaries.hLV.get_max_abs_error();
@@ -1112,7 +1112,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             {
                 if (!component.ancillaries.sL.enabled()){break;}
                 // Ancillaries are s-s_anchor, so add back s_anchor
-                CoolPropDbl s_anchor = component.EOSVector[0].hs_anchor.smolar;
+                CoolPropDbl s_anchor = component.EOS().hs_anchor.smolar;
                 CoolPropDbl s_liq = component.ancillaries.sL.evaluate(_TLanc) + s_anchor;
                 CoolPropDbl s_liq_error_band = component.ancillaries.sL.get_max_abs_error();
                 CoolPropDbl s_vap = s_liq + component.ancillaries.sLV.evaluate(_TVanc);
@@ -1134,7 +1134,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 // u = h-p/rho
                 
                 // Ancillaries are h-h_anchor, so add back h_anchor
-                CoolPropDbl h_liq = component.ancillaries.hL.evaluate(_TLanc) + component.EOSVector[0].hs_anchor.hmolar;
+                CoolPropDbl h_liq = component.ancillaries.hL.evaluate(_TLanc) + component.EOS().hs_anchor.hmolar;
                 CoolPropDbl h_liq_error_band = component.ancillaries.hL.get_max_abs_error();
                 CoolPropDbl h_vap = h_liq + component.ancillaries.hLV.evaluate(_TLanc);
                 CoolPropDbl h_vap_error_band = h_liq_error_band + component.ancillaries.hLV.get_max_abs_error();
@@ -1244,9 +1244,9 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         _rhomolar = 1/(_Q/HEOS.SatV->rhomolar() + (1-_Q)/HEOS.SatL->rhomolar());
         return;
     }
-    else if (_p < components[0]->pEOS->ptriple*0.9999)
+    else if (_p < components[0].EOS().ptriple*0.9999)
     {
-        throw NotImplementedError(format("for now, we don't support p [%g Pa] below ptriple [%g Pa]",_p, components[0]->pEOS->ptriple));
+        throw NotImplementedError(format("for now, we don't support p [%g Pa] below ptriple [%g Pa]",_p, components[0].EOS().ptriple));
     }
     else{
         throw ValueError(format("The pressure [%g Pa] cannot be used in p_phase_determination",_p));
@@ -1271,7 +1271,7 @@ void HelmholtzEOSMixtureBackend::calc_ssat_max(void)
     {
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy(new CoolProp::HelmholtzEOSMixtureBackend(get_components()));
         Residual resid(*HEOS_copy);
-        CoolProp::SimpleState &tripleV = HEOS_copy->get_components()[0]->triple_vapor;
+        const CoolProp::SimpleState &tripleV = HEOS_copy->get_components()[0].triple_vapor;
         double v1 = resid.call(hsat_max.T);
         double v2 = resid.call(tripleV.T);
         // If there is a sign change, there is a maxima, otherwise there is no local maxima/minima
@@ -1354,8 +1354,8 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         {
             case iP:
             {
-                _pLanc = components[0]->ancillaries.pL.evaluate(_T);
-                _pVanc = components[0]->ancillaries.pV.evaluate(_T);
+                _pLanc = components[0].ancillaries.pL.evaluate(_T);
+                _pVanc = components[0].ancillaries.pV.evaluate(_T);
                 CoolPropDbl p_vap = 0.98*static_cast<double>(_pVanc);
                 CoolPropDbl p_liq = 1.02*static_cast<double>(_pLanc);
 
@@ -1373,8 +1373,8 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
             default:
             {
                 // Always calculate the densities using the ancillaries
-                _rhoVanc = components[0]->ancillaries.rhoV.evaluate(_T);
-                _rhoLanc = components[0]->ancillaries.rhoL.evaluate(_T);
+                _rhoVanc = components[0].ancillaries.rhoV.evaluate(_T);
+                _rhoLanc = components[0].ancillaries.rhoL.evaluate(_T);
                 CoolPropDbl rho_vap = 0.95*static_cast<double>(_rhoVanc);
                 CoolPropDbl rho_liq = 1.05*static_cast<double>(_rhoLanc);
                 switch (other)
@@ -1492,7 +1492,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         _rhomolar = 1/(_Q/HEOS.SatV->rhomolar() + (1-_Q)/HEOS.SatL->rhomolar());
         return;
     }
-    else if (_T > _crit.T && _T > components[0]->pEOS->Ttriple)
+    else if (_T > _crit.T && _T > components[0].EOS().Ttriple)
     {
         _Q = 1e9;
         switch (other)
@@ -1550,7 +1550,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
     }
     else
     {
-        throw ValueError(format("For now, we don't support T [%g K] below Ttriple [%g K]", _T, components[0]->pEOS->Ttriple));
+        throw ValueError(format("For now, we don't support T [%g K] below Ttriple [%g K]", _T, components[0].EOS().Ttriple));
     }
 }
 void get_dT_drho(HelmholtzEOSMixtureBackend *HEOS, parameters index, CoolPropDbl &dT, CoolPropDbl &drho)
@@ -1682,7 +1682,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
     if (_T > _crit.T)
     {
         CoolPropDbl yc, ymin, y;
-        CoolPropDbl rhoc = components[0]->crit.rhomolar;
+        CoolPropDbl rhoc = components[0].crit.rhomolar;
         CoolPropDbl rhomin = 1e-10;
 
         switch(other)
@@ -1754,7 +1754,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
     else if (_phase == iphase_liquid)
     {
         CoolPropDbl ymelt, yL, y;
-        CoolPropDbl rhomelt = components[0]->triple_liquid.rhomolar;
+        CoolPropDbl rhomelt = components[0].triple_liquid.rhomolar;
         CoolPropDbl rhoL = static_cast<double>(_rhoLanc);
 
         switch(other)
@@ -1855,7 +1855,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         // It's liquid at subcritical pressure, we can use ancillaries as a backup
         else if (phase == iphase_liquid)
         {
-            CoolPropDbl _rhoLancval = static_cast<CoolPropDbl>(components[0]->ancillaries.rhoL.evaluate(T));
+            CoolPropDbl _rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
             // Next we try with a Brent method bounded solver since the function is 1-1
             double rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100,errstring);
             if (!ValidNumber(rhomolar)){throw ValueError();}
@@ -1863,7 +1863,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         }
         else if (phase == iphase_supercritical_liquid){
             
-            CoolPropDbl rhoLancval = static_cast<CoolPropDbl>(components[0]->ancillaries.rhoL.evaluate(T));
+            CoolPropDbl rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
             
             // Next we try with a Brent method bounded solver since the function is 1-1
             double rhomolar = Brent(resid, rhoLancval*0.99, rhomolar_critical()*4, DBL_EPSILON,1e-8,100,errstring);
@@ -1918,7 +1918,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPro
 
     for (std::size_t i = 0; i < components.size(); ++i)
     {
-        CoolPropDbl Tci = components[i]->pEOS->reduce.T, pci = components[i]->pEOS->reduce.p, acentric_i = components[i]->pEOS->acentric;
+        CoolPropDbl Tci = components[i].EOS().reduce.T, pci = components[i].EOS().reduce.p, acentric_i = components[i].EOS().acentric;
         CoolPropDbl m_i = 0.480+1.574*acentric_i-0.176*pow(acentric_i, 2);
         CoolPropDbl b_i = 0.08664*R_u*Tci/pci;
         b += mole_fractions[i]*b_i;
@@ -1927,7 +1927,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPro
 
         for (std::size_t j = 0; j < components.size(); ++j)
         {
-            CoolPropDbl Tcj = components[j]->pEOS->reduce.T, pcj = components[j]->pEOS->reduce.p, acentric_j = components[j]->pEOS->acentric;
+            CoolPropDbl Tcj = components[j].EOS().reduce.T, pcj = components[j].EOS().reduce.p, acentric_j = components[j].EOS().acentric;
             CoolPropDbl m_j = 0.480+1.574*acentric_j-0.176*pow(acentric_j, 2);
 
             CoolPropDbl a_j = 0.42747*pow(R_u*Tcj,2)/pcj*pow(1+m_j*(1-sqrt(T/Tcj)),2);
@@ -2240,7 +2240,7 @@ SimpleState HelmholtzEOSMixtureBackend::calc_reducing_state_nocache(const std::v
 {
     SimpleState reducing;
     if (is_pure_or_pseudopure){
-        reducing = components[0]->pEOS->reduce;
+        reducing = components[0].EOS().reduce;
 
     }
     else{
@@ -2260,7 +2260,7 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
     deriv_counter++;
     //std::cout << ".";
     if (is_pure_or_pseudopure){
-        HelmholtzDerivatives derivs = components[0]->pEOS->alphar.all(tau, delta);
+        HelmholtzDerivatives derivs = components[0].EOS().alphar.all(tau, delta);
         _alphar = derivs.alphar;
         _dalphar_dDelta = derivs.dalphar_ddelta;
         _dalphar_dTau = derivs.dalphar_dtau;
@@ -2277,7 +2277,7 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
         CoolPropDbl summer_base = 0, summer_dTau = 0, summer_dDelta = 0, 
                     summer_dTau2 = 0, summer_dDelta2 = 0, summer_dDelta_dTau = 0;
         for (std::size_t i = 0; i < N; ++i){
-            HelmholtzDerivatives derivs = components[i]->pEOS->alphar.all(tau, delta);
+            HelmholtzDerivatives derivs = components[i].EOS().alphar.all(tau, delta);
             CoolPropDbl xi = mole_fractions[i];
             
             summer_base += xi*derivs.alphar;
@@ -2301,34 +2301,34 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau
     if (is_pure_or_pseudopure)
     {
         if (nTau == 0 && nDelta == 0){
-            return components[0]->pEOS->baser(tau, delta);
+            return components[0].EOS().baser(tau, delta);
         }
         else if (nTau == 0 && nDelta == 1){
-            return components[0]->pEOS->dalphar_dDelta(tau, delta);
+            return components[0].EOS().dalphar_dDelta(tau, delta);
         }
         else if (nTau == 1 && nDelta == 0){
-            return components[0]->pEOS->dalphar_dTau(tau, delta);
+            return components[0].EOS().dalphar_dTau(tau, delta);
         }
         else if (nTau == 0 && nDelta == 2){
-            return components[0]->pEOS->d2alphar_dDelta2(tau, delta);
+            return components[0].EOS().d2alphar_dDelta2(tau, delta);
         }
         else if (nTau == 1 && nDelta == 1){
-            return components[0]->pEOS->d2alphar_dDelta_dTau(tau, delta);
+            return components[0].EOS().d2alphar_dDelta_dTau(tau, delta);
         }
         else if (nTau == 2 && nDelta == 0){
-            return components[0]->pEOS->d2alphar_dTau2(tau, delta);
+            return components[0].EOS().d2alphar_dTau2(tau, delta);
         }
         else if (nTau == 0 && nDelta == 3){
-            return components[0]->pEOS->d3alphar_dDelta3(tau, delta);
+            return components[0].EOS().d3alphar_dDelta3(tau, delta);
         }
         else if (nTau == 1 && nDelta == 2){
-            return components[0]->pEOS->d3alphar_dDelta2_dTau(tau, delta);
+            return components[0].EOS().d3alphar_dDelta2_dTau(tau, delta);
         }
         else if (nTau == 2 && nDelta == 1){
-            return components[0]->pEOS->d3alphar_dDelta_dTau2(tau, delta);
+            return components[0].EOS().d3alphar_dDelta_dTau2(tau, delta);
         }
         else if (nTau == 3 && nDelta == 0){
-            return components[0]->pEOS->d3alphar_dTau3(tau, delta);
+            return components[0].EOS().d3alphar_dTau3(tau, delta);
         }
         else
         {
@@ -2340,43 +2340,43 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau
         std::size_t N = mole_fractions.size();
         CoolPropDbl summer = 0;
         if (nTau == 0 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i]->pEOS->baser(tau, delta); }
+            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().baser(tau, delta); }
             return summer + Excess.alphar(tau, delta, mole_fractions);
         }
         else if (nTau == 0 && nDelta == 1){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i]->pEOS->dalphar_dDelta(tau, delta); }
+            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().dalphar_dDelta(tau, delta); }
             return summer + Excess.dalphar_dDelta(tau, delta, mole_fractions);
         }
         else if (nTau == 1 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i]->pEOS->dalphar_dTau(tau, delta); }
+            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().dalphar_dTau(tau, delta); }
             return summer + Excess.dalphar_dTau(tau, delta, mole_fractions);
         }
         else if (nTau == 0 && nDelta == 2){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i]->pEOS->d2alphar_dDelta2(tau, delta); }
+            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dDelta2(tau, delta); }
             return summer + Excess.d2alphar_dDelta2(tau, delta, mole_fractions);
         }
         else if (nTau == 1 && nDelta == 1){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i]->pEOS->d2alphar_dDelta_dTau(tau, delta); }
+            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dDelta_dTau(tau, delta); }
             return summer + Excess.d2alphar_dDelta_dTau(tau, delta, mole_fractions);
         }
         else if (nTau == 2 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i]->pEOS->d2alphar_dTau2(tau, delta); }
+            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dTau2(tau, delta); }
             return summer + Excess.d2alphar_dTau2(tau, delta, mole_fractions);
         }
         /*else if (nTau == 0 && nDelta == 3){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i]->pEOS->d3alphar_dDelta3(tau, delta); }
+            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dDelta3(tau, delta); }
             return summer + pExcess.d3alphar_dDelta3(tau, delta);
         }
         else if (nTau == 1 && nDelta == 2){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i]->pEOS->d3alphar_dDelta2_dTau(tau, delta); }
+            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dDelta2_dTau(tau, delta); }
             return summer + pExcess.d3alphar_dDelta2_dTau(tau, delta);
         }
         else if (nTau == 2 && nDelta == 1){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i]->pEOS->d3alphar_dDelta_dTau2(tau, delta); }
+            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dDelta_dTau2(tau, delta); }
             return summer + pExcess.d3alphar_dDelta_dTau2(tau, delta);
         }
         else if (nTau == 3 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i]->pEOS->d3alphar_dTau3(tau, delta); }
+            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dTau3(tau, delta); }
             return summer + pExcess.d3alphar_dTau3(tau, delta);
         }*/
         else
@@ -2392,34 +2392,34 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
     if (is_pure_or_pseudopure)
     {
         if (nTau == 0 && nDelta == 0){
-            val = components[0]->pEOS->base0(tau, delta);
+			val = components[0].EOS().base0(tau, delta);
         }
         else if (nTau == 0 && nDelta == 1){
-            val = components[0]->pEOS->dalpha0_dDelta(tau, delta);
+            val = components[0].EOS().dalpha0_dDelta(tau, delta);
         }
         else if (nTau == 1 && nDelta == 0){
-            val = components[0]->pEOS->dalpha0_dTau(tau, delta);
+            val = components[0].EOS().dalpha0_dTau(tau, delta);
         }
         else if (nTau == 0 && nDelta == 2){
-            val = components[0]->pEOS->d2alpha0_dDelta2(tau, delta);
+            val = components[0].EOS().d2alpha0_dDelta2(tau, delta);
         }
         else if (nTau == 1 && nDelta == 1){
-            val = components[0]->pEOS->d2alpha0_dDelta_dTau(tau, delta);
+            val = components[0].EOS().d2alpha0_dDelta_dTau(tau, delta);
         }
         else if (nTau == 2 && nDelta == 0){
-            val = components[0]->pEOS->d2alpha0_dTau2(tau, delta);
+            val = components[0].EOS().d2alpha0_dTau2(tau, delta);
         }
         else if (nTau == 0 && nDelta == 3){
-            val = components[0]->pEOS->d3alpha0_dDelta3(tau, delta);
+            val = components[0].EOS().d3alpha0_dDelta3(tau, delta);
         }
         else if (nTau == 1 && nDelta == 2){
-            val = components[0]->pEOS->d3alpha0_dDelta2_dTau(tau, delta);
+            val = components[0].EOS().d3alpha0_dDelta2_dTau(tau, delta);
         }
         else if (nTau == 2 && nDelta == 1){
-            val = components[0]->pEOS->d3alpha0_dDelta_dTau2(tau, delta);
+            val = components[0].EOS().d3alpha0_dDelta_dTau2(tau, delta);
         }
         else if (nTau == 3 && nDelta == 0){
-            val = components[0]->pEOS->d3alpha0_dTau3(tau, delta);
+            val = components[0].EOS().d3alpha0_dTau3(tau, delta);
         }
         else
         {
@@ -2439,28 +2439,28 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         CoolPropDbl summer = 0;
         CoolPropDbl tau_i, delta_i, rho_ci, T_ci;
         for (unsigned int i = 0; i < N; ++i){
-            rho_ci = components[i]->pEOS->reduce.rhomolar;
-            T_ci = components[i]->pEOS->reduce.T;
+            rho_ci = components[i].EOS().reduce.rhomolar;
+            T_ci = components[i].EOS().reduce.T;
             tau_i = T_ci*tau/Tr;
             delta_i = delta*rhor/rho_ci;
 
             if (nTau == 0 && nDelta == 0){
-                summer += mole_fractions[i]*(components[i]->pEOS->base0(tau_i, delta_i)+log(mole_fractions[i]));
+                summer += mole_fractions[i]*(components[i].EOS().base0(tau_i, delta_i)+log(mole_fractions[i]));
             }
             else if (nTau == 0 && nDelta == 1){
-                summer += mole_fractions[i]*rhor/rho_ci*components[i]->pEOS->dalpha0_dDelta(tau_i, delta_i);
+                summer += mole_fractions[i]*rhor/rho_ci*components[i].EOS().dalpha0_dDelta(tau_i, delta_i);
             }
             else if (nTau == 1 && nDelta == 0){
-                summer += mole_fractions[i]*T_ci/Tr*components[i]->pEOS->dalpha0_dTau(tau_i, delta_i);
+                summer += mole_fractions[i]*T_ci/Tr*components[i].EOS().dalpha0_dTau(tau_i, delta_i);
             }
             else if (nTau == 0 && nDelta == 2){
-                summer += mole_fractions[i]*pow(rhor/rho_ci,2)*components[i]->pEOS->d2alpha0_dDelta2(tau_i, delta_i);
+                summer += mole_fractions[i]*pow(rhor/rho_ci,2)*components[i].EOS().d2alpha0_dDelta2(tau_i, delta_i);
             }
             else if (nTau == 1 && nDelta == 1){
-                summer += mole_fractions[i]*rhor/rho_ci*T_ci/Tr*components[i]->pEOS->d2alpha0_dDelta_dTau(tau_i, delta_i);
+                summer += mole_fractions[i]*rhor/rho_ci*T_ci/Tr*components[i].EOS().d2alpha0_dDelta_dTau(tau_i, delta_i);
             }
             else if (nTau == 2 && nDelta == 0){
-                summer += mole_fractions[i]*pow(T_ci/Tr,2)*components[i]->pEOS->d2alpha0_dTau2(tau_i, delta_i);
+                summer += mole_fractions[i]*pow(T_ci/Tr,2)*components[i].EOS().d2alpha0_dTau2(tau_i, delta_i);
             }
             else
             {

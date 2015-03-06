@@ -21,7 +21,7 @@ private:
     void pre_update(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2 );
     void post_update();
 protected:
-    std::vector<CoolPropFluid*> components; ///< The components that are in use
+    std::vector<CoolPropFluid> components; ///< The components that are in use
 
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
     std::vector<CoolPropDbl> mole_fractions; ///< The bulk mole fractions of the mixture
@@ -35,7 +35,7 @@ protected:
 public:
     HelmholtzEOSMixtureBackend(){
         imposed_phase_index = iphase_not_imposed; _phase = iphase_unknown;};
-    HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid*> &components, bool generate_SatL_and_SatV = true);
+    HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
     virtual ~HelmholtzEOSMixtureBackend(){};
     std::string backend_name(void){return "HelmholtzEOSMixtureBackend";}
@@ -55,8 +55,8 @@ public:
     bool using_mole_fractions(){return true;}
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
-    bool is_pure(){ return components.size() == 1 && !components[0]->EOSVector[0].pseudo_pure; }
-    bool has_melting_line(){ return is_pure_or_pseudopure && components[0]->ancillaries.melting_line.enabled();};
+    bool is_pure(){ return components.size() == 1 && !components[0].EOS().pseudo_pure; }
+    bool has_melting_line(){ return is_pure_or_pseudopure && components[0].ancillaries.melting_line.enabled();};
     CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
     phases calc_phase(void){return _phase;};
     void calc_specify_phase(phases phase){ specify_phase(phase); }
@@ -81,7 +81,7 @@ public:
 
     const CoolProp::SimpleState &calc_state(const std::string &state);
 
-    const std::vector<CoolPropFluid*> &get_components(){return components;};
+    std::vector<CoolPropFluid> &get_components(){return components;};
     std::vector<CoolPropDbl> &get_K(){return K;};
     std::vector<CoolPropDbl> &get_lnK(){return lnK;};
     HelmholtzEOSMixtureBackend &get_SatL(){return *SatL;};
@@ -120,7 +120,7 @@ public:
      * @param components The components that are to be used in this mixture
      * @param generate_SatL_and_SatV true if SatL and SatV classes should be added, false otherwise.  Added so that saturation classes can be added without infinite recursion of adding saturation classes
      */
-    void set_components(const std::vector<CoolPropFluid*> &components, bool generate_SatL_and_SatV = true);
+    void set_components(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
 
     /** \brief Specify the phase - this phase will always be used in calculations
      * 

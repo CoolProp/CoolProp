@@ -149,8 +149,8 @@ void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl Tgues
     if (Tguess < 0){
         options.use_guesses = true;
         options.T = Tguess;
-        CoolProp::SaturationAncillaryFunction &rhoL = HEOS.get_components()[0]->ancillaries.rhoL;
-        CoolProp::SaturationAncillaryFunction &rhoV = HEOS.get_components()[0]->ancillaries.rhoV;
+        CoolProp::SaturationAncillaryFunction &rhoL = HEOS.get_components()[0].ancillaries.rhoL;
+        CoolProp::SaturationAncillaryFunction &rhoV = HEOS.get_components()[0].ancillaries.rhoV;
         options.rhoL = rhoL.evaluate(Tguess);
         options.rhoV = rhoV.evaluate(Tguess);
     }
@@ -227,7 +227,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         Tmin_sat = std::max(Tmin_satL, Tmin_satV) - 1e-13;
         
         // Get a reference to keep the code a bit cleaner
-        CriticalRegionSplines &splines = HEOS.components[0]->pEOS->critical_region_splines;
+        const CriticalRegionSplines &splines = HEOS.components[0].EOS().critical_region_splines;
         
         // If exactly(ish) at the critical temperature, liquid and vapor have the critial density
         if ((get_config_bool(CRITICAL_WITHIN_1UK) && std::abs(T-Tmax_sat)< 1e-6) || std::abs(T-Tmax_sat)< 1e-12){
@@ -248,7 +248,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
             HEOS._p = 0.5*HEOS.SatV->p() + 0.5*HEOS.SatL->p();
             HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
         }
-        else if (!(HEOS.components[0]->pEOS->pseudo_pure))
+        else if (!(HEOS.components[0].EOS().pseudo_pure))
         {
             // Set some imput options
             SaturationSolvers::saturation_T_pure_Akasaka_options options;
@@ -263,11 +263,11 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         else{
             // Pseudo-pure fluid
             CoolPropDbl rhoLanc = _HUGE, rhoVanc = _HUGE, rhoLsat = _HUGE, rhoVsat = _HUGE;
-            CoolPropDbl psatLanc = HEOS.components[0]->ancillaries.pL.evaluate(HEOS._T); // These ancillaries are used explicitly
-            CoolPropDbl psatVanc = HEOS.components[0]->ancillaries.pV.evaluate(HEOS._T); // These ancillaries are used explicitly
+            CoolPropDbl psatLanc = HEOS.components[0].ancillaries.pL.evaluate(HEOS._T); // These ancillaries are used explicitly
+            CoolPropDbl psatVanc = HEOS.components[0].ancillaries.pV.evaluate(HEOS._T); // These ancillaries are used explicitly
             try{
-                rhoLanc = HEOS.components[0]->ancillaries.rhoL.evaluate(HEOS._T);
-                rhoVanc = HEOS.components[0]->ancillaries.rhoV.evaluate(HEOS._T);
+                rhoLanc = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._T);
+                rhoVanc = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._T);
 
                 if (!ValidNumber(rhoLanc) || !ValidNumber(rhoVanc))
                 {
@@ -329,14 +329,14 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure)
     {
-        if (HEOS.components[0]->pEOS->pseudo_pure){
+        if (HEOS.components[0].EOS().pseudo_pure){
             // It is a pseudo-pure mixture
             
-            HEOS._TLanc = HEOS.components[0]->ancillaries.pL.invert(HEOS._p);
-            HEOS._TVanc = HEOS.components[0]->ancillaries.pV.invert(HEOS._p);
+            HEOS._TLanc = HEOS.components[0].ancillaries.pL.invert(HEOS._p);
+            HEOS._TVanc = HEOS.components[0].ancillaries.pV.invert(HEOS._p);
             // Get guesses for the ancillaries for density
-            CoolPropDbl rhoL = HEOS.components[0]->ancillaries.rhoL.evaluate(HEOS._TLanc);
-            CoolPropDbl rhoV = HEOS.components[0]->ancillaries.rhoV.evaluate(HEOS._TVanc);
+            CoolPropDbl rhoL = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._TLanc);
+            CoolPropDbl rhoV = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._TVanc);
             // Solve for the density
             HEOS.SatL->update_TP_guessrho(HEOS._TLanc, HEOS._p, rhoL);
             HEOS.SatV->update_TP_guessrho(HEOS._TVanc, HEOS._p, rhoV);
@@ -709,17 +709,17 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
     {
         if (HEOS.is_pure_or_pseudopure)
         {
-            CoolPropFluid * component = HEOS.components[0];
+            CoolPropFluid &component = HEOS.components[0];
 
             shared_ptr<HelmholtzEOSMixtureBackend> Sat;
-            CoolPropDbl rhoLtriple = component->triple_liquid.rhomolar;
-            CoolPropDbl rhoVtriple = component->triple_vapor.rhomolar;
+            CoolPropDbl rhoLtriple = component.triple_liquid.rhomolar;
+            CoolPropDbl rhoVtriple = component.triple_vapor.rhomolar;
             // Check if in the "normal" region
             if (HEOS._rhomolar >= rhoVtriple && HEOS._rhomolar <= rhoLtriple)
             {
                 CoolPropDbl yL, yV, value, y_solid;
-                CoolPropDbl TLtriple = component->triple_liquid.T; ///TODO: separate TL and TV for ppure
-                CoolPropDbl TVtriple = component->triple_vapor.T;
+                CoolPropDbl TLtriple = component.triple_liquid.T; ///TODO: separate TL and TV for ppure
+                CoolPropDbl TVtriple = component.triple_vapor.T;
 
                 // First check if solid (below the line connecting the triple point values) - this is an error for now
                 switch (other)
@@ -797,10 +797,10 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
                 }
             }
             // Check if vapor/solid region below triple point vapor density
-            else if (HEOS._rhomolar < component->triple_vapor.rhomolar)
+            else if (HEOS._rhomolar < component.triple_vapor.rhomolar)
             {
                 CoolPropDbl y, value;
-                CoolPropDbl TVtriple = component->triple_vapor.T; //TODO: separate TL and TV for ppure
+                CoolPropDbl TVtriple = component.triple_vapor.T; //TODO: separate TL and TV for ppure
 
                 // If value is above the value calculated from X(Ttriple, _rhomolar), it is vapor
                 switch (other)
@@ -834,7 +834,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
             else
             {
                 CoolPropDbl y, value;
-                CoolPropDbl TLtriple = component->pEOS->Ttriple;
+                CoolPropDbl TLtriple = component.EOS().Ttriple;
 
                 // If value is above the value calculated from X(Ttriple, _rhomolar), it is vapor
                 switch (other)
@@ -1324,8 +1324,8 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
         HEOS.calc_ssat_max();
         
         CoolProp::SimpleState crit = HEOS.get_state("reducing");
-        CoolProp::SimpleState &tripleL = HEOS.components[0]->triple_liquid,
-                              &tripleV = HEOS.components[0]->triple_vapor;
+        CoolProp::SimpleState &tripleL = HEOS.components[0].triple_liquid,
+                              &tripleV = HEOS.components[0].triple_vapor;
                               
         double first_maxima_in_saturation_entropy;
         if (HEOS.ssat_max.exists == SsatSimpleState::SSAT_MAX_DOES_EXIST){

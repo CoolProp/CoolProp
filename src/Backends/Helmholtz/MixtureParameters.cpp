@@ -280,7 +280,7 @@ static MixtureDepartureFunctionsLibrary mixturedeparturefunctionslibrary;
 
 void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
 {
-    std::vector<CoolPropFluid*> components = HEOS.get_components();
+    std::vector<CoolPropFluid> components = HEOS.get_components();
 
     std::size_t N = components.size();
 
@@ -298,10 +298,10 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
         {
             if (i == j){ continue; }
 
-            std::string CAS1 = components[i]->CAS;
+            std::string CAS1 = components[i].CAS;
             std::vector<std::string> CAS(2,"");
-            CAS[0] = components[i]->CAS;
-            CAS[1] = components[j]->CAS;
+            CAS[0] = components[i].CAS;
+            CAS[1] = components[j].CAS;
             std::sort(CAS.begin(), CAS.end());
 
             // The variable swapped is true if a swap occured.
@@ -358,7 +358,7 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
             }
 
             // Get the name of the departure function to be used for this binary pair
-            std::string Name = CoolProp::get_reducing_function_name(components[i]->CAS, components[j]->CAS);
+            std::string Name = CoolProp::get_reducing_function_name(components[i].CAS, components[j].CAS);
 
             // Get the dictionary itself
             Dictionary &dict_dep = mixturedeparturefunctionslibrary.departure_function_map[Name];

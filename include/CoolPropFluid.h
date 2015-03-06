@@ -45,7 +45,8 @@ struct CriticalRegionSplines{
     std::vector<double> cL, cV;
     bool enabled;
     CriticalRegionSplines(){enabled = false;};
-    void get_densities(double T, double rho_min, double rho_crit, double rho_max, double &rhoL, double &rhoV){
+    const void get_densities(double T, double rho_min, double rho_crit, double rho_max, double &rhoL, double &rhoV)  const
+	{
         int Nsoln = -1, Ngood = 0;
         double rho1 =0, rho2 = 0, rho3 = 0;
         
@@ -453,7 +454,7 @@ class CoolPropFluid {
     public:
         CoolPropFluid(){};
         ~CoolPropFluid(){};
-        EquationOfState *pEOS; ///< A pointer to the currently used EOS
+		EquationOfState &EOS() {return EOSVector[0];}; ///< Get a reference to the equation of state
         std::vector<EquationOfState> EOSVector; ///< The equations of state that could be used for this fluid
 
         std::string name; ///< The name of the fluid
@@ -469,8 +470,8 @@ class CoolPropFluid {
                     triple_liquid, ///< The saturated liquid state at the triple point temperature
                     triple_vapor; ///< The saturated vapor state at the triple point temperature
 
-        double gas_constant(){ return pEOS->R_u; };
-        double molar_mass(){ return pEOS->molar_mass; };
+        double gas_constant(){ return EOS().R_u; };
+        double molar_mass(){ return EOS().molar_mass; };
 };
 
 

@@ -8,8 +8,8 @@ CoolPropDbl TransportRoutines::viscosity_dilute_kinetic_theory(HelmholtzEOSMixtu
 {
     if (HEOS.is_pure_or_pseudopure)
     {
-        CoolPropDbl Tstar = HEOS.T()/HEOS.components[0]->transport.epsilon_over_k;
-        CoolPropDbl sigma_nm = HEOS.components[0]->transport.sigma_eta*1e9; // 1e9 to convert from m to nm
+        CoolPropDbl Tstar = HEOS.T()/HEOS.components[0].transport.epsilon_over_k;
+        CoolPropDbl sigma_nm = HEOS.components[0].transport.sigma_eta*1e9; // 1e9 to convert from m to nm
         CoolPropDbl molar_mass_kgkmol = HEOS.molar_mass()*1000; // 1000 to convert from kg/mol to kg/kmol
 
         // The nondimensional empirical collision integral from Neufeld
@@ -30,14 +30,14 @@ CoolPropDbl TransportRoutines::viscosity_dilute_collision_integral(HelmholtzEOSM
     if (HEOS.is_pure_or_pseudopure)
     {
         // Retrieve values from the state class
-        CoolProp::ViscosityDiluteGasCollisionIntegralData &data = HEOS.components[0]->transport.viscosity_dilute.collision_integral;
+        CoolProp::ViscosityDiluteGasCollisionIntegralData &data = HEOS.components[0].transport.viscosity_dilute.collision_integral;
         const std::vector<CoolPropDbl> &a = data.a, &t = data.t;
         const CoolPropDbl C = data.C, molar_mass = data.molar_mass;
 
         CoolPropDbl S;
         // Unit conversions and variable definitions
-        const CoolPropDbl Tstar = HEOS.T()/HEOS.components[0]->transport.epsilon_over_k;
-        const CoolPropDbl sigma_nm = HEOS.components[0]->transport.sigma_eta*1e9; // 1e9 to convert from m to nm
+        const CoolPropDbl Tstar = HEOS.T()/HEOS.components[0].transport.epsilon_over_k;
+        const CoolPropDbl sigma_nm = HEOS.components[0].transport.sigma_eta*1e9; // 1e9 to convert from m to nm
         const CoolPropDbl molar_mass_kgkmol = molar_mass*1000; // 1000 to convert from kg/mol to kg/kmol
 
         /// Both the collision integral \f$\mathfrak{S}^*\f$ and effective cross section \f$\Omega^{(2,2)}\f$ have the same form,
@@ -63,7 +63,7 @@ CoolPropDbl TransportRoutines::viscosity_dilute_powers_of_T(HelmholtzEOSMixtureB
     if (HEOS.is_pure_or_pseudopure)
     {
         // Retrieve values from the state class
-        CoolProp::ViscosityDiluteGasPowersOfT &data = HEOS.components[0]->transport.viscosity_dilute.powers_of_T;
+        CoolProp::ViscosityDiluteGasPowersOfT &data = HEOS.components[0].transport.viscosity_dilute.powers_of_T;
         const std::vector<CoolPropDbl> &a = data.a, &t = data.t;
 
         CoolPropDbl summer = 0, T = HEOS.T();
@@ -83,7 +83,7 @@ CoolPropDbl TransportRoutines::viscosity_dilute_collision_integral_powers_of_T(H
     if (HEOS.is_pure_or_pseudopure)
     {
         // Retrieve values from the state class
-        CoolProp::ViscosityDiluteCollisionIntegralPowersOfTstarData &data = HEOS.components[0]->transport.viscosity_dilute.collision_integral_powers_of_Tstar;
+        CoolProp::ViscosityDiluteCollisionIntegralPowersOfTstarData &data = HEOS.components[0].transport.viscosity_dilute.collision_integral_powers_of_Tstar;
         const std::vector<CoolPropDbl> &a = data.a, &t = data.t;
 
         CoolPropDbl summer = 0, Tstar = HEOS.T()/data.T_reducing;
@@ -102,7 +102,7 @@ CoolPropDbl TransportRoutines::viscosity_higher_order_modified_Batschinski_Hilde
 {
     if (HEOS.is_pure_or_pseudopure)
     {
-        CoolProp::ViscosityModifiedBatschinskiHildebrandData &HO = HEOS.components[0]->transport.viscosity_higher_order.modified_Batschinski_Hildebrand;
+        CoolProp::ViscosityModifiedBatschinskiHildebrandData &HO = HEOS.components[0].transport.viscosity_higher_order.modified_Batschinski_Hildebrand;
 
         CoolPropDbl delta = HEOS.rhomolar()/HO.rhomolar_reduce, tau = HO.T_reduce/HEOS.T();
 
@@ -142,12 +142,12 @@ CoolPropDbl TransportRoutines::viscosity_initial_density_dependence_Rainwater_Fr
     if (HEOS.is_pure_or_pseudopure)
     {
         // Retrieve values from the state class
-        CoolProp::ViscosityRainWaterFriendData &data = HEOS.components[0]->transport.viscosity_initial.rainwater_friend;
+        CoolProp::ViscosityRainWaterFriendData &data = HEOS.components[0].transport.viscosity_initial.rainwater_friend;
         const std::vector<CoolPropDbl> &b = data.b, &t = data.t;
 
         CoolPropDbl B_eta, B_eta_star;
-        CoolPropDbl Tstar = HEOS.T()/HEOS.components[0]->transport.epsilon_over_k; // [no units]
-        CoolPropDbl sigma = HEOS.components[0]->transport.sigma_eta; // [m]
+        CoolPropDbl Tstar = HEOS.T()/HEOS.components[0].transport.epsilon_over_k; // [no units]
+        CoolPropDbl sigma = HEOS.components[0].transport.sigma_eta; // [m]
 
         CoolPropDbl summer = 0;
         for (unsigned int i = 0; i < b.size(); ++i){
@@ -168,7 +168,7 @@ CoolPropDbl TransportRoutines::viscosity_initial_density_dependence_empirical(He
     if (HEOS.is_pure_or_pseudopure)
     {
         // Retrieve values from the state class
-        CoolProp::ViscosityInitialDensityEmpiricalData &data = HEOS.components[0]->transport.viscosity_initial.empirical;
+        CoolProp::ViscosityInitialDensityEmpiricalData &data = HEOS.components[0].transport.viscosity_initial.empirical;
         const std::vector<CoolPropDbl> &n = data.n, &d = data.d, &t = data.t;
 
         CoolPropDbl tau = data.T_reducing/HEOS.T(); // [no units]
@@ -331,7 +331,7 @@ CoolPropDbl TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzE
 {
     if (HEOS.is_pure_or_pseudopure)
     {
-        CoolProp::ViscosityFrictionTheoryData &F = HEOS.components[0]->transport.viscosity_higher_order.friction_theory;
+        CoolProp::ViscosityFrictionTheoryData &F = HEOS.components[0].transport.viscosity_higher_order.friction_theory;
 
         CoolPropDbl tau = F.T_reduce/HEOS.T(), kii, krrr, kaaa, krr, kdrdr;
 
@@ -552,7 +552,7 @@ CoolPropDbl TransportRoutines::conductivity_dilute_ratio_polynomials(HelmholtzEO
     if (HEOS.is_pure_or_pseudopure)
     {
         // Retrieve values from the state class
-        CoolProp::ConductivityDiluteRatioPolynomialsData &data = HEOS.components[0]->transport.conductivity_dilute.ratio_polynomials;
+        CoolProp::ConductivityDiluteRatioPolynomialsData &data = HEOS.components[0].transport.conductivity_dilute.ratio_polynomials;
 
         CoolPropDbl summer1 = 0, summer2 = 0, Tr = HEOS.T()/data.T_reducing;
         for (std::size_t i = 0; i < data.A.size(); ++i)
@@ -575,7 +575,7 @@ CoolPropDbl TransportRoutines::conductivity_residual_polynomial(HelmholtzEOSMixt
     if (HEOS.is_pure_or_pseudopure)
     {
         // Retrieve values from the state class
-        CoolProp::ConductivityResidualPolynomialData &data = HEOS.components[0]->transport.conductivity_residual.polynomials;
+        CoolProp::ConductivityResidualPolynomialData &data = HEOS.components[0].transport.conductivity_residual.polynomials;
 
         CoolPropDbl summer = 0, tau = data.T_reducing/HEOS.T(), delta = HEOS.keyed_output(CoolProp::iDmass)/data.rhomass_reducing;
         for (std::size_t i = 0; i < data.B.size(); ++i)
@@ -593,7 +593,7 @@ CoolPropDbl TransportRoutines::conductivity_residual_polynomial_and_exponential(
     if (HEOS.is_pure_or_pseudopure)
     {
         // Retrieve values from the state class
-        CoolProp::ConductivityResidualPolynomialAndExponentialData &data = HEOS.components[0]->transport.conductivity_residual.polynomial_and_exponential;
+        CoolProp::ConductivityResidualPolynomialAndExponentialData &data = HEOS.components[0].transport.conductivity_residual.polynomial_and_exponential;
 
         CoolPropDbl summer = 0, tau = HEOS.tau(), delta = HEOS.delta();
         for (std::size_t i = 0; i < data.A.size(); ++i)
@@ -613,7 +613,7 @@ CoolPropDbl TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(
         // Olchowy and Sengers cross-over term
 
         // Retrieve values from the state class
-        CoolProp::ConductivityCriticalSimplifiedOlchowySengersData &data = HEOS.components[0]->transport.conductivity_critical.Olchowy_Sengers;
+        CoolProp::ConductivityCriticalSimplifiedOlchowySengersData &data = HEOS.components[0].transport.conductivity_critical.Olchowy_Sengers;
 
         double  k = data.k,
                 R0 = data.R0,
@@ -731,7 +731,7 @@ CoolPropDbl TransportRoutines::conductivity_dilute_eta0_and_poly(HelmholtzEOSMix
 
     if (HEOS.is_pure_or_pseudopure)
     {
-        CoolProp::ConductivityDiluteEta0AndPolyData &E = HEOS.components[0]->transport.conductivity_dilute.eta0_and_poly;
+        CoolProp::ConductivityDiluteEta0AndPolyData &E = HEOS.components[0].transport.conductivity_dilute.eta0_and_poly;
 
         double eta0_uPas = HEOS.calc_viscosity_dilute()*1e6; // [uPa-s]
         double summer = E.A[0]*eta0_uPas;
@@ -1004,7 +1004,7 @@ CoolPropDbl TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
                 rhocmolar0 = HEOS_Reference.rhomolar_critical();
 
     // Get a reference to the ECS data
-    CoolProp::ViscosityECSVariables &ECS = HEOS.components[0]->transport.viscosity_ecs;
+    CoolProp::ViscosityECSVariables &ECS = HEOS.components[0].transport.viscosity_ecs;
 
     // The correction polynomial psi_eta
     double psi = 0;
@@ -1076,7 +1076,7 @@ CoolPropDbl TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS
                 R_kJkgK = R_u/M_kmol;
 
     // Get a reference to the ECS data
-    CoolProp::ConductivityECSVariables &ECS = HEOS.components[0]->transport.conductivity_ecs;
+    CoolProp::ConductivityECSVariables &ECS = HEOS.components[0].transport.conductivity_ecs;
 
     // The correction polynomial psi_eta in rho/rho_red
     double psi = 0;

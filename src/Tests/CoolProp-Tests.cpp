@@ -1264,7 +1264,7 @@ TEST_CASE("Triple point checks", "[triple_point]")
         {            
             REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 0, HEOS->Ttriple()););
             double p_EOS = HEOS->p();
-            double p_sat_min_liquid = HEOS->get_components()[0]->pEOS->sat_min_liquid.p;
+            double p_sat_min_liquid = HEOS->get_components()[0].EOS().sat_min_liquid.p;
             double err_sat_min_liquid = std::abs(p_EOS-p_sat_min_liquid)/p_sat_min_liquid;
             CAPTURE(p_EOS);
             CAPTURE(p_sat_min_liquid);
@@ -1279,7 +1279,7 @@ TEST_CASE("Triple point checks", "[triple_point]")
             REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 1, HEOS->Ttriple()););
             
             double p_EOS = HEOS->p();
-            double p_sat_min_vapor = HEOS->get_components()[0]->pEOS->sat_min_vapor.p;
+            double p_sat_min_vapor = HEOS->get_components()[0].EOS().sat_min_vapor.p;
             double err_sat_min_vapor = std::abs(p_EOS-p_sat_min_vapor)/p_sat_min_vapor;
             CAPTURE(p_EOS);
             CAPTURE(p_sat_min_vapor);
@@ -1354,8 +1354,92 @@ TEST_CASE("Predefined mixtures", "[predefined_mixtures]")
 		CHECK(ValidNumber(val));
 	}
 }
-
-TEST_CASE("Test that reference states are correct", "[reference_states]")
+TEST_CASE("Test that reference states yield proper values using high-level interface", "[reference_states]")
+{
+    struct ref_entry{
+        std::string name;
+        double hmass, smass;
+        std::string in1; double val1; std::string in2; double val2;
+    };
+    std::string fluids[] ={"n-Propane", "R134a", "R124"};
+    ref_entry entries[3] = {{"IIR",200000,1000,"T",273.15,"Q",0},{"ASHRAE",0,0,"T",233.15,"Q",0},{"NBP",0,0,"P",101325,"Q",0}};
+    for (std::size_t i = 0; i < 3; ++i){
+        for (std::size_t j = 0; j < 3; ++j){
+            std::ostringstream ss1;
+            ss1 << "Check state for " << fluids[i] << " for "+ entries[j].name + " reference state ";
+            SECTION(ss1.str(),"")
+            {
+                // First reset the reference state
+                set_reference_stateS(fluids[i], "DEF");
+                // Then set to desired reference state
+                set_reference_stateS(fluids[i], entries[j].name);
+                // Calculate the values
+                double hmass = PropsSI("Hmass",entries[j].in1,entries[j].val1,entries[j].in2,entries[j].val2,fluids[i]);
+                double smass = PropsSI("Smass",entries[j].in1,entries[j].val1,entries[j].in2,entries[j].val2,fluids[i]);
+                CHECK(std::abs(hmass-entries[j].hmass) < 1e-8);
+                CHECK(std::abs(smass-entries[j].smass) < 1e-8);
+                // Then reset the reference state
+                set_reference_stateS(fluids[i], "DEF");
+            }
+        }
+    }
+}
+TEST_CASE("Test that reference states yield proper values using low-level interface", "[reference_states]")
+{
+    struct ref_entry{
+        std::string name;
+        double hmass, smass;
+        parameters in1; double val1; parameters in2; double val2;
+    };
+    std::string fluids[] ={"n-Propane", "R134a", "R124"};
+    ref_entry entries[3] = {{"IIR",200000,1000,iT,273.15,iQ,0},{"ASHRAE",0,0,iT,233.15,iQ,0},{"NBP",0,0,iP,101325,iQ,0}};
+    for (std::size_t i = 0; i < 3; ++i){
+        for (std::size_t j = 0; j < 3; ++j){
+            std::ostringstream ss1;
+            ss1 << "Check state for " << fluids[i] << " for "+ entries[j].name + " reference state ";
+            SECTION(ss1.str(),"")
+            {
+                double val1, val2;
+                input_pairs pair = generate_update_pair(entries[j].in1,entries[j].val1,entries[j].in2,entries[j].val2,val1, val2);
+                // Generate a state instance
+                shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS",fluids[i]));
+                AS->update(pair, val1, val2);
+                double hmass0 = AS->hmass();
+                double smass0 = AS->smass();
+                // First reset the reference state
+                set_reference_stateS(fluids[i], "DEF");
+                AS->update(pair, val1, val2);
+                double hmass00 = AS->hmass();
+                double smass00 = AS->smass();
+                CHECK(std::abs(hmass00 - hmass0) < 1e-10);
+                CHECK(std::abs(smass00 - smass0) < 1e-10);
+                
+                // Then set to desired reference state
+                set_reference_stateS(fluids[i], entries[j].name);
+                
+                // Should not change existing instance
+                AS->clear();
+				AS->update(pair, val1, val2);
+                double hmass1 = AS->hmass();
+                double smass1 = AS->smass();
+                CHECK(std::abs(hmass1 - hmass0) < 1e-10);
+                CHECK(std::abs(smass1 - smass0) < 1e-10);
+                
+                // New instance - should get updated reference state
+                shared_ptr<CoolProp::AbstractState> AS2(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+                AS2->update(pair, val1, val2);
+                double hmass2 = AS2->hmass();
+                double smass2 = AS2->smass();
+                CHECK(std::abs(hmass2-entries[j].hmass) < 1e-8);
+                CHECK(std::abs(smass2-entries[j].smass) < 1e-8);
+                
+                // Then reset the reference state
+                set_reference_stateS(fluids[i], "DEF");
+            }
+        }
+    }
+}
+TEST_CASE("Test that reference states are correct", "[reference_states_states]")
 {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
     for (std::size_t i = 0; i < fluids.size(); ++i) 
@@ -1371,14 +1455,14 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
             SECTION(ss1.str(),"")
             {
                 // First reset the reference state
-                set_reference_stateS(fluids[i], "RESET");
+                set_reference_stateS(fluids[i], "DEF");
                 try{
                     // Then try to set to the specified reference state
                     set_reference_stateS(fluids[i], ref_state[j]);
                 }
                 catch(...){
                     // Then set the reference state back to the default
-                    set_reference_stateS(fluids[i],"RESET");
+                    set_reference_stateS(fluids[i],"DEF");
                     break;
                 }
                 // Get the hs_anchor values
@@ -1393,14 +1477,14 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
                 CHECK( std::abs(EOS_hmolar - hs_anchor.hmolar) < 1e-3);
                 CHECK( std::abs(EOS_smolar - hs_anchor.smolar) < 1e-3);
                 // Then set the reference state back to the default
-                set_reference_stateS(fluids[i],"RESET");
+                set_reference_stateS(fluids[i],"DEF");
             }
             std::ostringstream ss2;
             ss2 << "Check state for reducing for " << fluids[i] << " for reference state " << ref_state[j];
             SECTION(ss2.str(),"")
             {
                 // First reset the reference state
-                set_reference_stateS(fluids[i], "RESET");
+                set_reference_stateS(fluids[i], "DEF");
                 try{
                     // Then try to set to the specified reference state
                     set_reference_stateS(fluids[i], ref_state[j]);
@@ -1410,7 +1494,7 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
                 }
                 catch(...){
                     // Then set the reference state back to the default
-                    set_reference_stateS(fluids[i],"RESET");
+                    set_reference_stateS(fluids[i],"DEF");
                     break;
                 }
                 // Get the reducing values

@@ -380,9 +380,6 @@ protected:
         {
             parse_EOS(*itr,fluid);
         }
-
-        // Set the EOS pointer to the first EOS
-        fluid.pEOS = &(fluid.EOSVector[0]);
     };
 
     /// Parse the transport properties
@@ -871,8 +868,8 @@ protected:
         // Use the method of Chung to approximate the values for epsilon_over_k and sigma_eta
         // Chung, T.-H.; Ajlan, M.; Lee, L. L.; Starling, K. E. Generalized Multiparameter Correlation for Nonpolar and Polar Fluid Transport Properties. Ind. Eng. Chem. Res. 1988, 27, 671-679.
         // rhoc needs to be in mol/L to yield a sigma in nm,
-        CoolPropDbl rho_crit_molar = fluid.pEOS->reduce.rhomolar/1000.0;// [mol/m3 to mol/L]
-        CoolPropDbl Tc = fluid.pEOS->reduce.T;
+        CoolPropDbl rho_crit_molar = fluid.EOS().reduce.rhomolar/1000.0;// [mol/m3 to mol/L]
+        CoolPropDbl Tc = fluid.EOS().reduce.T;
         fluid.transport.sigma_eta = 0.809/pow(rho_crit_molar, static_cast<CoolPropDbl>(1.0/3.0))/1e9; // 1e9 is to convert from nm to m
         fluid.transport.epsilon_over_k = Tc/1.3593; // [K]
     }
@@ -1169,7 +1166,7 @@ public:
     /**
     @param key Either a CAS number or the name (CAS number should be preferred)
     */
-    CoolPropFluid& get(const std::string &key)
+    CoolPropFluid get(const std::string &key)
     {
         // Try to find it
         std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(key);
@@ -1185,7 +1182,7 @@ public:
     /**
     @param key The index of the fluid in the map
     */
-    CoolPropFluid& get(std::size_t key)
+    CoolPropFluid get(std::size_t key)
     {
         // Try to find it
         std::map<std::size_t, CoolPropFluid>::iterator it = fluid_map.find(key);
@@ -1197,6 +1194,20 @@ public:
             throw ValueError(format("key [%d] was not found in JSONFluidLibrary",key));
         }
     };
+    void set_fluid_enthalpy_entropy_offset(const std::string &fluid, double delta_a1, double delta_a2, const std::string &ref){
+        // Try to find it
+        std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(fluid);
+        if (it != string_to_index_map.end()){
+            std::map<std::size_t, CoolPropFluid>::iterator it2 = fluid_map.find(it->second);
+            // If it is found
+            if (it2 != fluid_map.end()){
+                it2->second.EOSVector[0].alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
+            }
+            else{
+                throw ValueError(format("fluid [%s] was not found in JSONFluidLibrary",fluid.c_str()));
+            }
+        }
+    }
     /// Return a comma-separated list of fluid names
     std::string get_fluid_list(void)
     {
@@ -1210,8 +1221,11 @@ JSONFluidLibrary & get_library(void);
 /// Get a comma-separated-list of fluids that are included
 std::string get_fluid_list(void);
 
-/// Get the fluid structure returned as a reference
-CoolPropFluid& get_fluid(const std::string &fluid_string);
+/// Get the fluid structure
+CoolPropFluid get_fluid(const std::string &fluid_string);
+
+/// Set the internal enthalpy and entropy offset variables
+void set_fluid_enthalpy_entropy_offset(const std::string &fluid, double delta_a1, double delta_a2, const std::string &ref);
 
 } /* namespace CoolProp */
 #endif

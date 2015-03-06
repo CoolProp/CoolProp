@@ -716,7 +716,8 @@ void set_reference_stateS(const std::string &Ref, const std::string &reference_s
         double deltas = HEOS.smass() - 1000; // offset from 1000 J/kg/K entropy
         double delta_a1 = deltas/(HEOS.gas_constant()/HEOS.molar_mass());
         double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
-        HEOS.get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "IIR");
+        // Change the value in the library for the given fluid
+        set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "IIR");
         HEOS.update_states();
     }
     else if (!reference_state.compare("ASHRAE"))
@@ -728,8 +729,8 @@ void set_reference_stateS(const std::string &Ref, const std::string &reference_s
         double deltas = HEOS.smass() - 0; // offset from 0 J/kg/K entropy
         double delta_a1 = deltas/(HEOS.gas_constant()/HEOS.molar_mass());
         double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
-        HEOS.get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "ASHRAE");
-        HEOS.update_states();
+        // Change the value in the library for the given fluid
+        set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "ASHRAE");
     }
     else if (!reference_state.compare("NBP"))
     {
@@ -741,17 +742,17 @@ void set_reference_stateS(const std::string &Ref, const std::string &reference_s
         double delta_a1 = deltas/(HEOS.gas_constant()/HEOS.molar_mass());
         double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
         if (get_debug_level() > 5){std::cout << format("[set_reference_stateD] delta_a1 %g delta_a2 %g\n",delta_a1, delta_a2);}
-        HEOS.get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "NBP");
-        HEOS.update_states();
+        // Change the value in the library for the given fluid
+        set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "NBP");
     }
     else if (!reference_state.compare("DEF"))
     {
-        HEOS.get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(0,0,"");
+        set_fluid_enthalpy_entropy_offset(Ref, 0, 0, "");
     }
     else if (!reference_state.compare("RESET"))
     {
-        HEOS.get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(0, 0, "");
-        HEOS.get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffsetCore.set(0, 0, "");
+        HEOS.get_components()[0].EOS().alpha0.EnthalpyEntropyOffset.set(0, 0, "");
+        HEOS.get_components()[0].EOS().alpha0.EnthalpyEntropyOffsetCore.set(0, 0, "");
     }
     else
     {
@@ -770,7 +771,7 @@ void set_reference_stateD(const std::string &Ref, double T, double rhomolar, dou
     double deltas = HEOS.smass() - s0; // offset from specified entropy in J/mol/K
     double delta_a1 = deltas/(8.314472/HEOS.molar_mass());
     double delta_a2 = -deltah/(8.314472/HEOS.molar_mass()*HEOS.get_reducing_state().T);
-    HEOS.get_components()[0]->pEOS->alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "custom");
+    HEOS.get_components()[0].EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "custom");
     HEOS.update_states();
 }
 
@@ -779,15 +780,15 @@ std::string get_BibTeXKey(const std::string &Ref, const std::string &key)
     std::vector<std::string> names(1, Ref);
     HelmholtzEOSMixtureBackend HEOS(names);
 
-    if (!key.compare("EOS")){ return HEOS.get_components()[0]->pEOS->BibTeX_EOS; }
-    else if (!key.compare("CP0")){ return HEOS.get_components()[0]->pEOS->BibTeX_CP0; }
-    else if (!key.compare("VISCOSITY")){ return HEOS.get_components()[0]->transport.BibTeX_viscosity; }
-    else if (!key.compare("CONDUCTIVITY")){ return HEOS.get_components()[0]->transport.BibTeX_conductivity; }
+    if (!key.compare("EOS")){ return HEOS.get_components()[0].EOS().BibTeX_EOS; }
+    else if (!key.compare("CP0")){ return HEOS.get_components()[0].EOS().BibTeX_CP0; }
+    else if (!key.compare("VISCOSITY")){ return HEOS.get_components()[0].transport.BibTeX_viscosity; }
+    else if (!key.compare("CONDUCTIVITY")){ return HEOS.get_components()[0].transport.BibTeX_conductivity; }
     else if (!key.compare("ECS_LENNARD_JONES")){ throw NotImplementedError(); }
     else if (!key.compare("ECS_VISCOSITY_FITS")){ throw NotImplementedError(); }
     else if (!key.compare("ECS_CONDUCTIVITY_FITS")){ throw NotImplementedError(); }
-    else if (!key.compare("SURFACE_TENSION")){ return HEOS.get_components()[0]->ancillaries.surface_tension.BibTeX;}
-    else if (!key.compare("MELTING_LINE")){ return HEOS.get_components()[0]->ancillaries.melting_line.BibTeX;}
+    else if (!key.compare("SURFACE_TENSION")){ return HEOS.get_components()[0].ancillaries.surface_tension.BibTeX;}
+    else if (!key.compare("MELTING_LINE")){ return HEOS.get_components()[0].ancillaries.melting_line.BibTeX;}
     else{ return "Bad key";}
 }
 std::string get_global_param_string(const std::string &ParamName)
@@ -861,19 +862,19 @@ std::string get_fluid_param_string(const std::string &FluidName, const std::stri
 
         std::vector<std::string> comps(1, FluidName);
         CoolProp::HelmholtzEOSMixtureBackend HEOS(comps);
-        CoolProp::CoolPropFluid *cpfluid = HEOS.get_components()[0];
+        CoolProp::CoolPropFluid cpfluid = HEOS.get_components()[0];
 
         if (!ParamName.compare("aliases")){
-            return strjoin(cpfluid->aliases, ", ");
+            return strjoin(cpfluid.aliases, ", ");
         }
         else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number")){
-            return cpfluid->CAS;
+            return cpfluid.CAS;
         }
         else if (!ParamName.compare("ASHRAE34")){
-            return cpfluid->environment.ASHRAE34;
+            return cpfluid.environment.ASHRAE34;
         }
         else if (!ParamName.compare("REFPROPName") || !ParamName.compare("REFPROP_name") || !ParamName.compare("REFPROPname")){
-            return cpfluid->REFPROPname;
+            return cpfluid.REFPROPname;
         }
         else if (ParamName.find("BibTeX") == 0) // Starts with "BibTeX"
         {

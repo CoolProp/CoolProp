@@ -46,8 +46,8 @@ namespace SaturationSolvers
     @param i Index of component [-]
     */
     static CoolPropDbl Wilson_lnK_factor(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl p, std::size_t i){ 
-        EquationOfState *EOS = (HEOS.get_components())[i]->pEOS; 
-        return log(EOS->reduce.p/p)+5.373*(1 + EOS->acentric)*(1-EOS->reduce.T/T);
+        const EquationOfState &EOS = HEOS.get_components()[i].EOS(); 
+        return log(EOS.reduce.p/p)+5.373*(1 + EOS.acentric)*(1-EOS.reduce.T/T);
     };
 
     void saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl rhomolar, saturation_D_pure_options &options);
@@ -165,12 +165,12 @@ namespace SaturationSolvers
         
         for (unsigned int i = 0; i < z.size(); i++)
         {
-            EquationOfState *EOS = (HEOS.get_components())[i]->pEOS; 
+            const EquationOfState &EOS = HEOS.get_components()[i].EOS(); 
 
-            ptriple += EOS->sat_min_liquid.p*z[i];
-            pcrit += EOS->reduce.p*z[i];
-            Ttriple += EOS->sat_min_liquid.T*z[i];
-            Tcrit += EOS->reduce.T*z[i];
+            ptriple += EOS.sat_min_liquid.p*z[i];
+            pcrit += EOS.reduce.p*z[i];
+            Ttriple += EOS.sat_min_liquid.T*z[i];
+            Tcrit += EOS.reduce.T*z[i];
         }
 
         if (input_type == imposed_T)

@@ -23,7 +23,7 @@ JSONFluidLibrary & get_library(void){
     return library;
 }
 
-CoolPropFluid& get_fluid(const std::string &fluid_string){
+CoolPropFluid get_fluid(const std::string &fluid_string){
     if (library.is_empty()){ load(); }
     return library.get(fluid_string);
 }
@@ -32,5 +32,10 @@ std::string get_fluid_list(void){
     if (library.is_empty()){ load(); }
     return library.get_fluid_list();
 };
+
+void set_fluid_enthalpy_entropy_offset(const std::string &fluid, double delta_a1, double delta_a2, const std::string &ref){
+    if (library.is_empty()){ load(); }
+    library.set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, ref);
+}
 
 } /* namespace CoolProp */

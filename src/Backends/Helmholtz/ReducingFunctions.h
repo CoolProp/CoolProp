@@ -100,10 +100,10 @@ protected:
     STLMatrix gamma_T; ///< \f$ \gamma_{T,ij} \f$ from GERG-2008
     std::vector<CoolPropDbl> Yc_T; ///< Vector of critical temperatures for all components
     std::vector<CoolPropDbl> Yc_v; ///< Vector of critical molar volumes for all components
-    std::vector<CoolPropFluid *> pFluids; ///< List of pointer to fluids
+    std::vector<CoolPropFluid> pFluids; ///< List of fluids
 
 public:
-    GERG2008ReducingFunction(const std::vector<CoolPropFluid *> &pFluids, const STLMatrix &beta_v, const STLMatrix &gamma_v, STLMatrix beta_T, const STLMatrix &gamma_T)
+    GERG2008ReducingFunction(std::vector<CoolPropFluid> &pFluids, const STLMatrix &beta_v, const STLMatrix &gamma_v, STLMatrix beta_T, const STLMatrix &gamma_T)
     {
         this->pFluids = pFluids;
         this->beta_v = beta_v;
@@ -119,11 +119,11 @@ public:
         {
             for (std::size_t j = 0; j < N; j++)
             {
-                T_c[i][j] = sqrt(pFluids[i]->pEOS->reduce.T*pFluids[j]->pEOS->reduce.T);
-                v_c[i][j] = 1.0/8.0*pow(pow(pFluids[i]->pEOS->reduce.rhomolar, -1.0/3.0)+pow(pFluids[j]->pEOS->reduce.rhomolar, -1.0/3.0),3);
+                T_c[i][j] = sqrt(pFluids[i].EOS().reduce.T*pFluids[j].EOS().reduce.T);
+                v_c[i][j] = 1.0/8.0*pow(pow(pFluids[i].EOS().reduce.rhomolar, -1.0/3.0)+pow(pFluids[j].EOS().reduce.rhomolar, -1.0/3.0),3);
             }
-            Yc_T[i] = pFluids[i]->pEOS->reduce.T;
-            Yc_v[i] = 1/pFluids[i]->pEOS->reduce.rhomolar;
+            Yc_T[i] = pFluids[i].EOS().reduce.T;
+            Yc_v[i] = 1/pFluids[i].EOS().reduce.rhomolar;
         }
     };
 
@@ -324,7 +324,7 @@ protected:
     LemmonAirHFCReducingFunction(const LemmonAirHFCReducingFunction &);
 public:
     /// Set the coefficients based on reducing parameters loaded from JSON
-    static void convert_to_GERG(const std::vector<CoolPropFluid*> &pFluids,
+    static void convert_to_GERG(std::vector<CoolPropFluid> &pFluids,
                                 std::size_t i,
                                 std::size_t j,
                                 const Dictionary &d,
@@ -337,9 +337,9 @@ public:
         CoolPropDbl zeta_ij = d.get_number("zeta");
         beta_T = 1;
         beta_v = 1;
-        gamma_T = (pFluids[i]->pEOS->reduce.T + pFluids[j]->pEOS->reduce.T + xi_ij)/(2*sqrt(pFluids[i]->pEOS->reduce.T*pFluids[j]->pEOS->reduce.T));
-        CoolPropDbl v_i = 1/pFluids[i]->pEOS->reduce.rhomolar;
-        CoolPropDbl v_j = 1/pFluids[j]->pEOS->reduce.rhomolar;
+        gamma_T = (pFluids[i].EOS().reduce.T + pFluids[j].EOS().reduce.T + xi_ij)/(2*sqrt(pFluids[i].EOS().reduce.T*pFluids[j].EOS().reduce.T));
+        CoolPropDbl v_i = 1/pFluids[i].EOS().reduce.rhomolar;
+        CoolPropDbl v_j = 1/pFluids[j].EOS().reduce.rhomolar;
         CoolPropDbl one_third = 1.0/3.0;
         gamma_v = (v_i + v_j + zeta_ij)/(0.25*pow(pow(v_i, one_third)+pow(v_j, one_third),3));
     };
