@@ -306,7 +306,7 @@ protected:
 
 public:
 
-    AbstractState(){clear();};
+    AbstractState():_fluid_type(FLUID_TYPE_UNDEFINED),_phase(iphase_unknown),_rhospline(-_HUGE),_dsplinedp(-_HUGE),_dsplinedh(-_HUGE){clear();}
     virtual ~AbstractState(){};
 
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
