@@ -188,27 +188,19 @@ double IncompressibleFluid::Tfreeze(       double p, double x){
     switch (T_freeze.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.evaluate(T_freeze.coeffs, p, x, 0, 0, 0.0, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(T_freeze, x, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(T_freeze, x, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
             return exp(poly.evaluate(T_freeze.coeffs, p, x, 0, 0, 0.0, xbase));
-            break;
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(T_freeze, p, x);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,T_freeze.type));
-            break;
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,T_freeze.type));
-            break;
     }
-    return _HUGE;
 }
 
 
