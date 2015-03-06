@@ -37,11 +37,8 @@ static int deriv_counter = 0;
 namespace CoolProp {
 
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV) {
-    std::vector<CoolPropFluid> components;
-    components.resize(component_names.size());
-
-    for (unsigned int i = 0; i < components.size(); ++i)
-    {
+    std::vector<CoolPropFluid> components(component_names.size());
+    for (unsigned int i = 0; i < components.size(); ++i){
         components[i] = get_library().get(component_names[i]);
     }
 
@@ -64,18 +61,12 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
     // Copy the components
     this->components = components;
     this->N = components.size();
-
-    if (components.size() == 1){
-        is_pure_or_pseudopure = true;
+    
+    is_pure_or_pseudopure = (components.size() == 1);
+    if (is_pure_or_pseudopure){
         mole_fractions = std::vector<CoolPropDbl>(1, 1);
     }
     else{
-        is_pure_or_pseudopure = false;
-    }
-
-    // Set the excess Helmholtz energy if a mixture
-    if (!is_pure_or_pseudopure)
-    {
         // Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
         set_mixture_parameters();
     }

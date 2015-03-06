@@ -584,7 +584,7 @@ public:
     IdealHelmholtzEnthalpyEntropyOffset(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref):a1(a1),a2(a2),reference(ref),enabled(true) {}
 
     // Set the values in the class
-    void set(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref){this->a1 = a1; this->a2 = a2; this->reference = ref; enabled = true;}
+    void set(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref){this->a1 += a1; this->a2 += a2; this->reference = ref; enabled = true;}
 
     //Destructor
     ~IdealHelmholtzEnthalpyEntropyOffset(){};

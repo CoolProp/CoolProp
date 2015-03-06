@@ -1439,7 +1439,7 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
         }
     }
 }
-TEST_CASE("Test that reference states are correct", "[reference_states_states]")
+TEST_CASE("Test that reference states are correct", "[reference_states]")
 {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
     for (std::size_t i = 0; i < fluids.size(); ++i) 

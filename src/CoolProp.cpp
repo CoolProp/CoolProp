@@ -704,9 +704,7 @@ double saturation_ancillary(const std::string &fluid_name, const std::string &ou
 }
 void set_reference_stateS(const std::string &Ref, const std::string &reference_state)
 {
-    std::vector<std::string> _comps(1, Ref);
-    CoolProp::HelmholtzEOSMixtureBackend HEOS(_comps);
-
+    CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,Ref));
     if (!reference_state.compare("IIR"))
     {
         HEOS.update(QT_INPUTS, 0, 273.15);
@@ -741,7 +739,6 @@ void set_reference_stateS(const std::string &Ref, const std::string &reference_s
         double deltas = HEOS.smass() - 0; // offset from 0 kJ/kg/K entropy
         double delta_a1 = deltas/(HEOS.gas_constant()/HEOS.molar_mass());
         double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
-        if (get_debug_level() > 5){std::cout << format("[set_reference_stateD] delta_a1 %g delta_a2 %g\n",delta_a1, delta_a2);}
         // Change the value in the library for the given fluid
         set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "NBP");
     }
