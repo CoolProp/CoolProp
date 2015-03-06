@@ -174,27 +174,19 @@ double IncompressibleFluid::psat(double T,           double x){
     switch (p_sat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(p_sat, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(p_sat, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
             return exp(poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase));
-            break;
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(p_sat, T, x);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,p_sat.type));
-            break;
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,p_sat.type));
-            break;
     }
-    return _HUGE;
 }
 /// Freezing temperature as a function of pressure and composition.
 double IncompressibleFluid::Tfreeze(       double p, double x){
