@@ -721,7 +721,7 @@ void set_reference_stateS(const std::string &Ref, const std::string &reference_s
     }
     else if (!reference_state.compare("ASHRAE"))
     {
-        HEOS.update(QT_INPUTS, 0, 243.15);
+        HEOS.update(QT_INPUTS, 0, 233.15);
 
         // Get current values for the enthalpy and entropy
         double deltah = HEOS.hmass() - 0; // offset from 0 J/kg enthalpy
