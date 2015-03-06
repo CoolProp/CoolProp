@@ -45,13 +45,6 @@ std::string config_key_to_string(configuration_keys keys);
 class ConfigurationItem
 {
     public:
-        enum ConfigurationDataTypes {CONFIGURATION_NOT_DEFINED_TYPE = 0, 
-                                     CONFIGURATION_BOOL_TYPE, 
-                                     CONFIGURATION_DOUBLE_TYPE, 
-                                     CONFIGURATION_INTEGER_TYPE, 
-                                     CONFIGURATION_STRING_TYPE,
-                                     CONFIGURATION_ENDOFLIST_TYPE};
-        ConfigurationDataTypes type;
         
         /// Cast to boolean
         operator bool() const { check_data_type(CONFIGURATION_BOOL_TYPE);  return v_bool; };
@@ -149,14 +142,26 @@ class ConfigurationItem
 		#endif // !defined(SWIG)
          
     protected:
+        enum ConfigurationDataTypes {
+            CONFIGURATION_NOT_DEFINED_TYPE = 0,
+            CONFIGURATION_BOOL_TYPE,
+            CONFIGURATION_DOUBLE_TYPE,
+            CONFIGURATION_INTEGER_TYPE,
+            CONFIGURATION_STRING_TYPE,
+            CONFIGURATION_ENDOFLIST_TYPE
+        };
         void check_data_type(ConfigurationDataTypes type) const {
             if (type != this->type){
                 throw ValueError(format("type does not match"));
             }
         };
-        double v_double;
-        bool v_bool;
-        int v_integer;
+        ConfigurationDataTypes type;
+        union {
+            double v_double;
+            bool v_bool;
+            int v_integer;
+
+        };
         std::string v_string;
         configuration_keys key;
 };
