@@ -1151,14 +1151,21 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
             double dfdK = K[i]*z[i]/pow(1-beta+beta*K[i],(int)2);
             df += dfdK*(deriv_liq-deriv_vap);
         }
-
+        
         change = -f/df;
-
+        
+        double omega = 1.0;
         if (options.sstype == imposed_p){
-            T += change;
+            if (std::abs(change) > 0.05*T){
+                omega = 0.1;
+            }
+            T += omega*change;
         }
         else if (options.sstype == imposed_T){
-            p += change;
+            if (std::abs(change) > 0.05*p){
+                omega = 0.1;
+            }
+            p += omega*change;
         }
 
         x_and_y_from_K(beta, K, z, x, y);
