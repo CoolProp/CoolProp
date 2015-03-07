@@ -197,15 +197,11 @@ double IncompressibleFluid::drhodTatPx (double T, double p, double x){
     switch (density.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
         	return poly.derivative(density.coeffs, T, x, 0, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,density.type));
-            break;
         default:
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for density.",__FILE__,__LINE__,density.type));
-            break;
     }
-    return _HUGE;
 }
 /// Partial derivative of entropy
 //  with respect to temperature at constant pressure and composition
