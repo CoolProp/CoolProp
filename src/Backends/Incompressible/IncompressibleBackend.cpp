@@ -326,16 +326,9 @@ CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p
     protected:
         double p,x,h_in;
         IncompressibleBackend* backend;
-    protected:
-        HmassP_residual(){};
     public:
-        HmassP_residual(IncompressibleBackend* backend, const double &p,  const double &x, const double &h_in){
-        	this->p=p;
-        	this->x=x;
-            this->h_in = h_in;
-            this->backend=backend;
-        }
-        virtual ~HmassP_residual(){};
+        HmassP_residual(IncompressibleBackend* backend, const double &p,  const double &x, const double &h_in)
+        : p(p),x(x),h_in(h_in),backend(backend){}
         double call(double target){
             return backend->raw_calc_hmass(target,p,x) - h_in; //fluid.u(target,p,x)+ p / fluid.rho(target,p,x) - h_in;
         }
