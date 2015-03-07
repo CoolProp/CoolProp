@@ -16,6 +16,7 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
     std::string type = cpjson::get_string(json_code,"type");
     if (!type.compare("rational_polynomial"))
     {
+        this->type = TYPE_RATIONAL_POLYNOMIAL;
         num_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["A"]));
         den_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["B"]));
         max_abs_error = cpjson::get_double(json_code,"max_abs_error");
@@ -30,7 +31,13 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
     }
     else
     {
+        if (!type.compare("rhoLnoexp"))
+            this->type = TYPE_NOT_EXPONENTIAL;
+        else
+            this->type = TYPE_EXPONENTIAL;
         n = cpjson::get_double_array(json_code["n"]);
+        N = n.size();
+        s = n;
         t = cpjson::get_double_array(json_code["t"]);
         Tmin = cpjson::get_double(json_code,"Tmin");
         Tmax = cpjson::get_double(json_code,"Tmax");
@@ -39,14 +46,6 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
         T_r = cpjson::get_double(json_code,"T_r");    
     }   
     
-    if (!type.compare("rational_polynomial"))
-        this->type = TYPE_RATIONAL_POLYNOMIAL;
-    else if (!type.compare("rhoLnoexp"))
-        this->type = TYPE_NOT_EXPONENTIAL;
-    else
-        this->type = TYPE_EXPONENTIAL;
-    this->N = n.size();
-    s = n;
 };
     
 double SaturationAncillaryFunction::evaluate(double T)

@@ -82,15 +82,21 @@ class SaturationAncillaryFunction
 private:
     Eigen::MatrixXd num_coeffs, ///< Coefficients for numerator in rational polynomial 
                     den_coeffs; ///< Coefficients for denominator in rational polynomial
-    std::vector<double> n, t, s;
-    bool using_tau_r;
-    CoolPropDbl Tmax, Tmin, reducing_value, T_r, max_abs_error;
+    std::vector<double> n, t, s; // For TYPE_NOT_EXPONENTIAL & TYPE_EXPONENTIAL
+    union{
+        CoolPropDbl max_abs_error; // For TYPE_RATIONAL_POLYNOMIAL
+        struct{                    // For TYPE_NOT_EXPONENTIAL & TYPE_EXPONENTIAL
+            bool using_tau_r;
+            CoolPropDbl reducing_value, T_r;
+            std::size_t N;
+        };
+    };
+    CoolPropDbl Tmax, Tmin;
     enum ancillaryfunctiontypes{TYPE_NOT_SET = 0, 
                                 TYPE_NOT_EXPONENTIAL, 
                                 TYPE_EXPONENTIAL, 
                                 TYPE_RATIONAL_POLYNOMIAL};
     ancillaryfunctiontypes type;
-    std::size_t N;
 public:
 
     SaturationAncillaryFunction(){type = TYPE_NOT_SET;};
