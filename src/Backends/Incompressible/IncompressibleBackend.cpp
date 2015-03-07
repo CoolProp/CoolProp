@@ -357,16 +357,9 @@ CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass
     protected:
         double p,x,s_in;
         IncompressibleBackend* backend;
-    protected:
-        PSmass_residual(){};
     public:
-        PSmass_residual(IncompressibleBackend* backend, const double &p,  const double &x, const double &s_in){
-            this->p = p;
-            this->x = x;
-            this->s_in = s_in;
-            this->backend = backend;
-        }
-        virtual ~PSmass_residual(){};
+        PSmass_residual(IncompressibleBackend* backend, const double &p,  const double &x, const double &s_in)
+        : p(p),x(x),s_in(s_in),backend(backend){}
         double call(double target){
             return backend->raw_calc_smass(target,p,x) - s_in;
         }
