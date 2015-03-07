@@ -256,18 +256,14 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             {
             public:
                 MeltingLinePiecewisePolynomialInThetaSegment *part;
-                CoolPropDbl r, given_p, calc_p, T;
+                CoolPropDbl given_p;
                 solver_resid(MeltingLinePiecewisePolynomialInThetaSegment *part, CoolPropDbl p) : part(part), given_p(p){};
                 double call(double T){
 
-                    this->T = T;
-
-                    calc_p = part->evaluate(T);
+                    CoolPropDbl calc_p = part->evaluate(T);
 
                     // Difference between the two is to be driven to zero
-                    r = given_p - calc_p;
-
-                    return r;
+                    return given_p - calc_p;
                 };
             };
             
