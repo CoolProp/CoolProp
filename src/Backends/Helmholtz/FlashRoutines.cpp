@@ -1217,16 +1217,16 @@ void FlashRoutines::HS_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolProp
         
     public:
         HelmholtzEOSMixtureBackend &HEOS;
-        CoolPropDbl hmolar, smolar, Qs, Qh;
+        CoolPropDbl hmolar, smolar;
         Residual(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec) : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec){};
         double call(double T){
             HEOS.update(QT_INPUTS, 0, T);
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(),
                                        &SatV = HEOS.get_SatV();
             // Quality from entropy
-            Qs = (smolar-SatL.smolar())/(SatV.smolar()-SatL.smolar());
+            CoolPropDbl Qs = (smolar-SatL.smolar())/(SatV.smolar()-SatL.smolar());
             // Quality from enthalpy
-            Qh = (hmolar-SatL.hmolar())/(SatV.hmolar()-SatL.hmolar());
+            CoolPropDbl Qh = (hmolar-SatL.hmolar())/(SatV.hmolar()-SatL.hmolar());
             // Residual is the difference between the two
             return Qh-Qs;
         }
