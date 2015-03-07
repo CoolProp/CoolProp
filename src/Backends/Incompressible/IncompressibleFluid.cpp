@@ -133,27 +133,19 @@ double IncompressibleFluid::cond(double T, double p, double x){
     switch (conductivity.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.evaluate(conductivity.coeffs, T, x, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(conductivity, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(conductivity, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
             return exp(poly.evaluate(conductivity.coeffs, T, x, 0, 0, Tbase, xbase));
-            break;
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(conductivity, T, x);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,conductivity.type));
-            break;
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,conductivity.type));
-            break;
     }
-    return _HUGE;
 }
 /// Saturation pressure as a function of temperature and composition.
 double IncompressibleFluid::psat(double T,           double x){
