@@ -1642,14 +1642,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
     {
     public:
         int other;
-        CoolPropDbl T, value, r, eos, rhomolar;
+        CoolPropDbl T, value;
         HelmholtzEOSMixtureBackend *HEOS;
 
-        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl value, int other){
-            this->HEOS = HEOS; this->T = T; this->value = value; this->other = other;
-        };
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl value, int other)
+        : HEOS(HEOS),T(T),value(value),other(other){}
         double call(double rhomolar){
-            this->rhomolar = rhomolar;
+            CoolPropDbl eos;
             switch(other)
             {
             case iSmolar:
@@ -1662,8 +1661,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
                 throw ValueError(format("Input not supported"));
             }
 
-            r = eos-value;
-            return r;
+            return eos-value;
         };
     };
     solver_resid resid(this, T, value, other);
