@@ -73,27 +73,19 @@ double IncompressibleFluid::rho (double T, double p, double x){
     switch (density.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(density, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(density, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
             return exp(poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase));
-            break;
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(density, T, x);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,density.type));
-            break;
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,density.type));
-            break;
     }
-    return _HUGE;
 }
 
 /// Heat capacities as a function of temperature, pressure and composition.
