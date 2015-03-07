@@ -347,15 +347,11 @@ double IncompressibleFluid::T_rho (double Dmass, double p, double x){
     switch (density.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.solve_limits(density.coeffs, x, d_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
-            break;
         default:
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse density.",__FILE__,__LINE__,specific_heat.type));
-            break;
     }
-    return _HUGE;
 }
 /// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
 double IncompressibleFluid::T_c   (double Cmass, double p, double x){
