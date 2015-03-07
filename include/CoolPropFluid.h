@@ -300,13 +300,13 @@ public:
                 epsilon_over_k; ///< The Lennard-Jones 12-6 \f$ \varepsilon/k \f$ parameter
     ViscosityHardcodedEnum hardcoded_viscosity; ///< Hardcoded flags for the viscosity
     ConductivityHardcodedEnum hardcoded_conductivity; ///< Hardcoded flags for the conductivity
-    TransportPropertyData(){hardcoded_viscosity = VISCOSITY_NOT_HARDCODED;
-                            hardcoded_conductivity = CONDUCTIVITY_NOT_HARDCODED;
-                            viscosity_using_ECS = false;
-                            conductivity_using_ECS = false;
-							viscosity_model_provided = false;
-							conductivity_model_provided = false;
-    };
+    TransportPropertyData():hardcoded_viscosity(VISCOSITY_NOT_HARDCODED),
+                            hardcoded_conductivity(CONDUCTIVITY_NOT_HARDCODED),
+                            viscosity_using_ECS(false),
+                            conductivity_using_ECS(false),
+                            viscosity_model_provided(false),
+                            conductivity_model_provided(false),
+                            sigma_eta(_HUGE),epsilon_over_k(_HUGE){}
 };
 
 struct Ancillaries
