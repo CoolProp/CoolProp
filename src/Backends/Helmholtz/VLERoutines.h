@@ -14,9 +14,8 @@ namespace SaturationSolvers
         saturation_T_pure_Akasaka_options(bool use_guesses=false):use_guesses(use_guesses),omega(_HUGE),rhoV(_HUGE),rhoL(_HUGE),pV(_HUGE),pL(_HUGE){}
     };
     struct saturation_T_pure_options{
-        bool use_guesses; ///< true to start off at the values specified by rhoL, rhoV
         CoolPropDbl omega, rhoL, rhoV, pL, pV, p, T;
-        saturation_T_pure_options(){omega = _HUGE; rhoV = _HUGE; rhoL = _HUGE; rhoL = _HUGE; pV = _HUGE, pL = _HUGE; T = _HUGE;}
+        saturation_T_pure_options():omega(_HUGE),rhoV(_HUGE),rhoL(_HUGE),pV(_HUGE),pL(_HUGE),p(_HUGE),T(_HUGE){}
     };
     
     struct saturation_D_pure_options{
