@@ -454,7 +454,8 @@ class CoolPropFluid {
     public:
         CoolPropFluid():ECS_qd(-_HUGE){};
         ~CoolPropFluid(){};
-		EquationOfState &EOS() {return EOSVector[0];}; ///< Get a reference to the equation of state
+		const EquationOfState &EOS() const {return EOSVector[0];} ///< Get a reference to the equation of state
+		EquationOfState &EOS() {return EOSVector[0];} ///< Get a reference to the equation of state
         std::vector<EquationOfState> EOSVector; ///< The equations of state that could be used for this fluid
 
         std::string name; ///< The name of the fluid
