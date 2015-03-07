@@ -579,7 +579,7 @@ template<class T> void normalize_vector(std::vector<T> &x)
         std::vector<double> B;
     public:
         double a,b,c,d;
-        SplineClass();
+        SplineClass():Nconstraints(0),A(4, std::vector<double>(4, 0)),B(4,0),a(_HUGE),b(_HUGE),c(_HUGE),d(_HUGE){}
         bool build(void);
         bool add_value_constraint(double x, double y);
         void add_4value_constraints(double x1, double x2, double x3, double x4, double y1, double y2, double y3, double y4);
