@@ -36,7 +36,7 @@ protected:
 	CoolPropDbl call_phi0dll(long itau, long idelta);
 	
 public:
-    REFPROPMixtureBackend(){cached_component_string = ""; instance_counter++;};
+    REFPROPMixtureBackend():Ncomp(0),_mole_fractions_set(false) {instance_counter++;}
 
     /// The instantiator
     /// @param fluid_names The vector of strings of the fluid components, without file ending
