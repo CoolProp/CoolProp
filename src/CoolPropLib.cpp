@@ -97,9 +97,7 @@ double convert_from_SI_to_kSI(long iInput, double value)
         return value;
     default:
         throw CoolProp::ValueError(format("index [%d] is invalid in convert_from_SI_to_kSI", iInput).c_str());
-        break;
     }
-    return _HUGE;
 }
 
 EXPORT_CODE long CONVENTION redirect_stdout(const char* file){
