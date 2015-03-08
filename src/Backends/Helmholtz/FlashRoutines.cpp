@@ -484,7 +484,11 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parame
             
             // Shift the solution if needed to ensure that imax+2 and imax-1 are both in range
             if (imax+2 >= env.T.size()){ imax--; }
-            else if (imax-1 < 0){ imax++; }
+            else if (imax == 0){ imax++; }
+            // Here imax+2 or imax-1 is still possibly out of range:
+            // 1. If imax initially is 1, and env.T.size() <= 3, then imax will become 0.
+            // 2. If imax initially is 0, and env.T.size() <= 2, then imax will become MAX_UINT.
+            // 3. If imax+2 initially is more than env.T.size(), then single decrement will not bring it to range
             
             SaturationSolvers::newton_raphson_saturation NR;
             SaturationSolvers::newton_raphson_saturation_options IO;
