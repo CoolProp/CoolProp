@@ -972,45 +972,42 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
     public:
 
         HelmholtzEOSMixtureBackend *HEOS;
-        CoolPropDbl r, eos, p, value, T, rhomolar;
+        CoolPropDbl p, value;
         int other;
         int iter;
-        CoolPropDbl r0, r1, T1, T0, eos0, eos1, pp;
+        CoolPropDbl eos0, eos1;
         solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl p, CoolPropDbl value, int other) : 
-                HEOS(HEOS), p(p), value(value), other(other)
+                HEOS(HEOS), p(p), value(value), other(other), iter(0), eos0(-_HUGE), eos1(-_HUGE)
                 {
-                    iter = 0;
                     // Specify the state to avoid saturation calls, but only if phase is subcritical
-                    if (HEOS->phase() == iphase_liquid || HEOS->phase() == iphase_gas ){
-                        HEOS->specify_phase(HEOS->phase());
+                    switch (CoolProp::phases phase = HEOS->phase()) {
+                    case iphase_liquid: case iphase_gas:
+                        HEOS->specify_phase(phase);
                     }
-                };
+                }
         double call(double T){
-
-            this->T = T;
 
             // Run the solver with T,P as inputs;
             HEOS->update(PT_INPUTS, p, T);
             
-            rhomolar = HEOS->rhomolar();
+            CoolPropDbl rhomolar = HEOS->rhomolar();
             HEOS->update(DmolarT_INPUTS, rhomolar, T);
             // Get the value of the desired variable
-            eos = HEOS->keyed_output(other);
-            pp = HEOS->p();
+            CoolPropDbl eos = HEOS->keyed_output(other);
 
             // Difference between the two is to be driven to zero
-            r = eos - value;
-            
+            CoolPropDbl r = eos - value;
+
             // Store values for later use if there are errors
             if (iter == 0){ 
-                r0 = r; T0 = T; eos0 = eos;
+                eos0 = eos;
             }
             else if (iter == 1){
-                r1 = r; T1 = T; eos1 = eos; 
+                eos1 = eos; 
             }
             else{
-                r0 = r1; T0 = T1; eos0 = eos1;
-                r1 = r;  T1 = T; eos1 = eos;
+                eos0 = eos1;
+                eos1 = eos;
             }
 
             iter++;
