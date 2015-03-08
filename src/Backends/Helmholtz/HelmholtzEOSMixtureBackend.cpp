@@ -1407,6 +1407,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                                 else if (value < SatL->calc_hmolar()){
                                     this->_phase = iphase_liquid; return;
                                 }
+                                break;
                             }
                             case iUmolar:
                             {
