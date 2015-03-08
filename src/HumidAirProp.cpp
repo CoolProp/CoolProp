@@ -909,7 +909,6 @@ double MolarEntropy(double T, double p, double psi_w, double v_bar)
             y1=y2; x1=x2; x2=x3;
         }
         iter=iter+1;
-        if (iter>100){ return _HUGE; }
     }
 
     if (FlagUseIdealGasEnthalpyCorrelations){
