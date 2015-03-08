@@ -30,7 +30,7 @@ public:
     std::size_t N;
 
     std::string BibTeX;
-    SurfaceTensionCorrelation(){};
+    SurfaceTensionCorrelation():Tc(_HUGE),N(0){}
     SurfaceTensionCorrelation(rapidjson::Value &json_code)
     {
         a = cpjson::get_long_double_array(json_code["a"]);
