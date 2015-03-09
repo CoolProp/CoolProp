@@ -1428,6 +1428,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                                 else if (value < SatL->calc_hmolar()){
                                     this->_phase = iphase_liquid; return;
                                 }
+                                break;
                             }
                             case iUmolar:
                             {
@@ -1663,14 +1664,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
     {
     public:
         int other;
-        CoolPropDbl T, value, r, eos, rhomolar;
+        CoolPropDbl T, value;
         HelmholtzEOSMixtureBackend *HEOS;
 
-        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl value, int other){
-            this->HEOS = HEOS; this->T = T; this->value = value; this->other = other;
-        };
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl value, int other)
+        : HEOS(HEOS),T(T),value(value),other(other){}
         double call(double rhomolar){
-            this->rhomolar = rhomolar;
+            CoolPropDbl eos;
             switch(other)
             {
             case iSmolar:
@@ -1683,8 +1683,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
                 throw ValueError(format("Input not supported"));
             }
 
-            r = eos-value;
-            return r;
+            return eos-value;
         };
     };
     solver_resid resid(this, T, value, other);
@@ -1817,23 +1816,20 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     phases phase;
 
     // Define the residual to be driven to zero
-    class solver_TP_resid : public FuncWrapper1D
+    class solver_TP_resid : public FuncWrapper1DWithDeriv
     {
     public:
-        CoolPropDbl T, p, r, peos, rhomolar, rhor, tau, R_u, delta, dalphar_dDelta;
+        CoolPropDbl T, p, rhor, tau, R_u, delta;
         HelmholtzEOSMixtureBackend *HEOS;
 
-        solver_TP_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl p){
-            this->HEOS = HEOS; this->T = T; this->p = p; this->rhor = HEOS->get_reducing_state().rhomolar;
-            this->tau = HEOS->get_reducing_state().T/T; this->R_u = HEOS->gas_constant();
-        };
+        solver_TP_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl p)
+        : HEOS(HEOS),T(T),p(p),delta(_HUGE),rhor(HEOS->get_reducing_state().rhomolar),
+          tau(HEOS->get_reducing_state().T/T),R_u(HEOS->gas_constant()){}
         double call(double rhomolar){
-            this->rhomolar = rhomolar;
             delta = rhomolar/rhor; // needed for derivative
             HEOS->update_DmolarT_direct(rhomolar, T);
-            peos = HEOS->p();
-            r = (peos-p)/p;
-            return r;
+            CoolPropDbl peos = HEOS->p();
+            return (peos-p)/p;
         };
         double deriv(double rhomolar){
             // dp/drho|T / pspecified
@@ -1920,7 +1916,6 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
                 
                 throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%10Lg, p=%10Lg, with guess value %10Lg",T,p,rhomolar_guess));
             }
-            return _HUGE;
         }
     }
 }

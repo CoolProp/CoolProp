@@ -16,6 +16,7 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
     std::string type = cpjson::get_string(json_code,"type");
     if (!type.compare("rational_polynomial"))
     {
+        this->type = TYPE_RATIONAL_POLYNOMIAL;
         num_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["A"]));
         den_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["B"]));
         max_abs_error = cpjson::get_double(json_code,"max_abs_error");
@@ -30,7 +31,13 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
     }
     else
     {
+        if (!type.compare("rhoLnoexp"))
+            this->type = TYPE_NOT_EXPONENTIAL;
+        else
+            this->type = TYPE_EXPONENTIAL;
         n = cpjson::get_double_array(json_code["n"]);
+        N = n.size();
+        s = n;
         t = cpjson::get_double_array(json_code["t"]);
         Tmin = cpjson::get_double(json_code,"Tmin");
         Tmax = cpjson::get_double(json_code,"Tmax");
@@ -39,14 +46,6 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
         T_r = cpjson::get_double(json_code,"T_r");    
     }   
     
-    if (!type.compare("rational_polynomial"))
-        this->type = TYPE_RATIONAL_POLYNOMIAL;
-    else if (!type.compare("rhoLnoexp"))
-        this->type = TYPE_NOT_EXPONENTIAL;
-    else
-        this->type = TYPE_EXPONENTIAL;
-    this->N = n.size();
-    s = n;
 };
     
 double SaturationAncillaryFunction::evaluate(double T)
@@ -226,18 +225,14 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             {
             public:
                 MeltingLinePiecewisePolynomialInTrSegment *part;
-                CoolPropDbl r, given_p, calc_p, T;
+                CoolPropDbl given_p;
                 solver_resid(MeltingLinePiecewisePolynomialInTrSegment *part, CoolPropDbl p) : part(part), given_p(p){};
                 double call(double T){
 
-                    this->T = T;
-
-                    calc_p = part->evaluate(T);
+                    CoolPropDbl calc_p = part->evaluate(T);
 
                     // Difference between the two is to be driven to zero
-                    r = given_p - calc_p;
-
-                    return r;
+                    return given_p - calc_p;
                 };
             };
             
@@ -260,18 +255,14 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             {
             public:
                 MeltingLinePiecewisePolynomialInThetaSegment *part;
-                CoolPropDbl r, given_p, calc_p, T;
+                CoolPropDbl given_p;
                 solver_resid(MeltingLinePiecewisePolynomialInThetaSegment *part, CoolPropDbl p) : part(part), given_p(p){};
                 double call(double T){
 
-                    this->T = T;
-
-                    calc_p = part->evaluate(T);
+                    CoolPropDbl calc_p = part->evaluate(T);
 
                     // Difference between the two is to be driven to zero
-                    r = given_p - calc_p;
-
-                    return r;
+                    return given_p - calc_p;
                 };
             };
             

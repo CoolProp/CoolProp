@@ -31,7 +31,7 @@ class ReducingFunction
 protected:
     std::size_t N;
 public:
-    ReducingFunction(){};
+    ReducingFunction():N(0){};
     virtual ~ReducingFunction(){};
 
     /// A factory function to generate the requiredreducing function

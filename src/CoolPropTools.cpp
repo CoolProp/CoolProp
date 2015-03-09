@@ -239,12 +239,6 @@ std::string strjoin(const std::vector<std::string> &strings, const std::string &
 }
 
 
-SplineClass::SplineClass()
-{
-    Nconstraints = 0;
-    A.resize(4, std::vector<double>(4, 0));
-    B.resize(4,0);
-}
 bool SplineClass::build()
 {
     if (Nconstraints == 4)

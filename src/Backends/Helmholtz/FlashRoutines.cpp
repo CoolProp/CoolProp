@@ -251,8 +251,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         else if (!(HEOS.components[0].EOS().pseudo_pure))
         {
             // Set some imput options
-            SaturationSolvers::saturation_T_pure_Akasaka_options options;
-            options.use_guesses = false;
+            SaturationSolvers::saturation_T_pure_Akasaka_options options(false);
 
             // Actually call the solver
             SaturationSolvers::saturation_T_pure_Maxwell(HEOS, HEOS._T, options);
@@ -506,7 +505,11 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parame
             
             // Shift the solution if needed to ensure that imax+2 and imax-1 are both in range
             if (imax+2 >= env.T.size()){ imax--; }
-            else if (imax-1 < 0){ imax++; }
+            else if (imax == 0){ imax++; }
+            // Here imax+2 or imax-1 is still possibly out of range:
+            // 1. If imax initially is 1, and env.T.size() <= 3, then imax will become 0.
+            // 2. If imax initially is 0, and env.T.size() <= 2, then imax will become MAX_UINT.
+            // 3. If imax+2 initially is more than env.T.size(), then single decrement will not bring it to range
             
             SaturationSolvers::newton_raphson_saturation NR;
             SaturationSolvers::newton_raphson_saturation_options IO;
@@ -524,6 +527,9 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parame
                 // T -> rhomolar_vap
                 IO.rhomolar_vap = CubicInterp(env.T, env.rhomolar_vap, imax-1, imax, imax+1, imax+2, static_cast<CoolPropDbl>(IO.T));
                 IO.p = CubicInterp(env.rhomolar_vap, env.p, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
+            }
+            else{
+                throw ValueError();
             }
             IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
             
@@ -657,7 +663,7 @@ void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolP
         
     public:
         HelmholtzEOSMixtureBackend &HEOS;
-        CoolPropDbl rhomolar_spec, Qd, Qo;
+        CoolPropDbl rhomolar_spec;
 		parameters other;
 		CoolPropDbl value;
         Residual(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl rhomolar_spec, parameters other, CoolPropDbl value) : HEOS(HEOS), rhomolar_spec(rhomolar_spec), other(other), value(value){};
@@ -666,9 +672,9 @@ void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolP
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(),
                                        &SatV = HEOS.get_SatV();
             // Quality from density
-            Qd = (1/HEOS.rhomolar()-1/SatL.rhomolar())/(1/SatV.rhomolar()-1/SatL.rhomolar());
+            CoolPropDbl Qd = (1 / HEOS.rhomolar() - 1 / SatL.rhomolar()) / (1 / SatV.rhomolar() - 1 / SatL.rhomolar());
             // Quality from other parameter (H,S,U)
-            Qo = (value-SatL.keyed_output(other))/(SatV.keyed_output(other)-SatL.keyed_output(other));
+            CoolPropDbl Qo = (value - SatL.keyed_output(other)) / (SatV.keyed_output(other) - SatL.keyed_output(other));
             // Residual is the difference between the two
             return Qo-Qd;
         }
@@ -694,12 +700,12 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
     public:
 
         HelmholtzEOSMixtureBackend *HEOS;
-        CoolPropDbl r, eos, rhomolar, value, T;
+        CoolPropDbl rhomolar, value;
         int other;
 
         solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl rhomolar, CoolPropDbl value, int other) : HEOS(HEOS), rhomolar(rhomolar), value(value), other(other){};
         double call(double T){
-            this->T = T;
+            CoolPropDbl eos;
             switch(other)
             {
             case iP:
@@ -714,8 +720,7 @@ void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
                 throw ValueError(format("Input not supported"));
             }
 
-            r = eos - value;
-            return r;
+            return eos - value;
         };
     };
 
@@ -992,45 +997,42 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
     public:
 
         HelmholtzEOSMixtureBackend *HEOS;
-        CoolPropDbl r, eos, p, value, T, rhomolar;
+        CoolPropDbl p, value;
         int other;
         int iter;
-        CoolPropDbl r0, r1, T1, T0, eos0, eos1, pp;
+        CoolPropDbl eos0, eos1;
         solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl p, CoolPropDbl value, int other) : 
-                HEOS(HEOS), p(p), value(value), other(other)
+                HEOS(HEOS), p(p), value(value), other(other), iter(0), eos0(-_HUGE), eos1(-_HUGE)
                 {
-                    iter = 0;
                     // Specify the state to avoid saturation calls, but only if phase is subcritical
-                    if (HEOS->phase() == iphase_liquid || HEOS->phase() == iphase_gas ){
-                        HEOS->specify_phase(HEOS->phase());
+                    switch (CoolProp::phases phase = HEOS->phase()) {
+                    case iphase_liquid: case iphase_gas:
+                        HEOS->specify_phase(phase);
                     }
-                };
+                }
         double call(double T){
-
-            this->T = T;
 
             // Run the solver with T,P as inputs;
             HEOS->update(PT_INPUTS, p, T);
             
-            rhomolar = HEOS->rhomolar();
+            CoolPropDbl rhomolar = HEOS->rhomolar();
             HEOS->update(DmolarT_INPUTS, rhomolar, T);
             // Get the value of the desired variable
-            eos = HEOS->keyed_output(other);
-            pp = HEOS->p();
+            CoolPropDbl eos = HEOS->keyed_output(other);
 
             // Difference between the two is to be driven to zero
-            r = eos - value;
-            
+            CoolPropDbl r = eos - value;
+
             // Store values for later use if there are errors
             if (iter == 0){ 
-                r0 = r; T0 = T; eos0 = eos;
+                eos0 = eos;
             }
             else if (iter == 1){
-                r1 = r; T1 = T; eos1 = eos; 
+                eos1 = eos; 
             }
             else{
-                r0 = r1; T0 = T1; eos0 = eos1;
-                r1 = r;  T1 = T; eos1 = eos;
+                eos0 = eos1;
+                eos1 = eos;
             }
 
             iter++;
@@ -1237,16 +1239,16 @@ void FlashRoutines::HS_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolProp
         
     public:
         HelmholtzEOSMixtureBackend &HEOS;
-        CoolPropDbl hmolar, smolar, Qs, Qh;
+        CoolPropDbl hmolar, smolar;
         Residual(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec) : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec){};
         double call(double T){
             HEOS.update(QT_INPUTS, 0, T);
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(),
                                        &SatV = HEOS.get_SatV();
             // Quality from entropy
-            Qs = (smolar-SatL.smolar())/(SatV.smolar()-SatL.smolar());
+            CoolPropDbl Qs = (smolar-SatL.smolar())/(SatV.smolar()-SatL.smolar());
             // Quality from enthalpy
-            Qh = (hmolar-SatL.hmolar())/(SatV.hmolar()-SatL.hmolar());
+            CoolPropDbl Qh = (hmolar-SatL.hmolar())/(SatV.hmolar()-SatL.hmolar());
             // Residual is the difference between the two
             return Qh-Qs;
         }

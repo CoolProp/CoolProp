@@ -81,8 +81,9 @@ public:
 
     const CoolProp::SimpleState &calc_state(const std::string &state);
 
-    std::vector<CoolPropFluid> &get_components(){return components;};
-    std::vector<CoolPropDbl> &get_K(){return K;};
+    const std::vector<CoolPropFluid> &get_components() const {return components;}
+    std::vector<CoolPropFluid> &get_components(){return components;}
+    std::vector<CoolPropDbl> &get_K(){ return K; };
     std::vector<CoolPropDbl> &get_lnK(){return lnK;};
     HelmholtzEOSMixtureBackend &get_SatL(){return *SatL;};
     HelmholtzEOSMixtureBackend &get_SatV(){return *SatV;};

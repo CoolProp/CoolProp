@@ -231,7 +231,7 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
     class BrentSolverResids : public CoolProp::FuncWrapper1D
     {
     private:
-        double pp_water, psi_w, p, r;
+        double pp_water, psi_w, p;
     public:
         BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) { pp_water = psi_w*p; };
         ~BrentSolverResids(){};
@@ -250,8 +250,7 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
             double f = f_factor(T, p);
             double pp_water_calc = f*p_ws;
             double psi_w_calc = pp_water_calc/p;
-            r = (psi_w_calc - psi_w)/psi_w;
-            return r;
+            return (psi_w_calc - psi_w)/psi_w;
         }
     };
 
@@ -909,7 +908,6 @@ double MolarEntropy(double T, double p, double psi_w, double v_bar)
             y1=y2; x1=x2; x2=x3;
         }
         iter=iter+1;
-        if (iter>100){ return _HUGE; }
     }
 
     if (FlagUseIdealGasEnthalpyCorrelations){
@@ -1013,19 +1011,16 @@ double DewpointTemperature(double T, double p, double psi_w)
 class WetBulbSolver : public CoolProp::FuncWrapper1D
 {
 private:
-    double _T,_p,_W,LHS,RHS,v_bar_w,M_ha;
+    double _p,_W,LHS;
 public:
-    WetBulbSolver(double T, double p, double psi_w){
-        _T = T;
-        _p = p;
-        _W = epsilon*psi_w/(1-psi_w);
-
+    WetBulbSolver(double T, double p, double psi_w)
+    : _p(p),_W(epsilon*psi_w/(1-psi_w))
+    {
         //These things are all not a function of Twb
-        v_bar_w = MolarVolume(T,p,psi_w);
-        M_ha = MM_Water()*psi_w+(1-psi_w)*0.028966;
+        double v_bar_w = MolarVolume(T,p,psi_w),
+               M_ha = MM_Water()*psi_w+(1-psi_w)*0.028966;
         LHS = MolarEnthalpy(T,p,psi_w,v_bar_w)*(1+_W)/M_ha;
-    };
-    ~WetBulbSolver(){};
+    }
     double call(double Twb)
     {
         double epsilon=0.621945;
@@ -1066,7 +1061,7 @@ public:
 
         M_ha_wb = MM_Water()*psi_wb+(1-psi_wb)*0.028966;
         v_bar_wb=MolarVolume(Twb,_p,psi_wb);
-        RHS = (MolarEnthalpy(Twb,_p,psi_wb,v_bar_wb)*(1+W_s_wb)/M_ha_wb+(_W-W_s_wb)*h_w);
+        double RHS = (MolarEnthalpy(Twb,_p,psi_wb,v_bar_wb)*(1+W_s_wb)/M_ha_wb+(_W-W_s_wb)*h_w);
         if (!ValidNumber(LHS-RHS)){throw CoolProp::ValueError();}
         return LHS - RHS;
     }

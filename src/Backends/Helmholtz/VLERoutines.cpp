@@ -11,14 +11,13 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, pa
     class inner_resid : public FuncWrapper1D{
         public:
         HelmholtzEOSMixtureBackend *HEOS;
-        CoolPropDbl T, desired_p, rhomolar_liq, calc_p, rhomolar_crit;
+        CoolPropDbl T, desired_p;
         
         inner_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl desired_p)
             : HEOS(HEOS), T(T), desired_p(desired_p){};
         double call(double rhomolar_liq){
-            this->rhomolar_liq = rhomolar_liq;
             HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
-            calc_p = HEOS->SatL->p();
+            CoolPropDbl calc_p = HEOS->SatL->p();
             std::cout << format("inner p: %0.16Lg; res: %0.16Lg", calc_p, calc_p - desired_p) << std::endl;
             return calc_p - desired_p;
         }
@@ -725,9 +724,8 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, Cool
 void SaturationSolvers::saturation_T_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, saturation_T_pure_options &options)
 {
     // Set some imput options
-    SaturationSolvers::saturation_T_pure_Akasaka_options _options;
+    SaturationSolvers::saturation_T_pure_Akasaka_options _options(false);
     _options.omega = 1.0;
-    _options.use_guesses = false;
     try{
         // Actually call the solver
         SaturationSolvers::saturation_T_pure_Maxwell(HEOS, T, _options);

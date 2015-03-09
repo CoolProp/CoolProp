@@ -11,12 +11,11 @@ namespace SaturationSolvers
     struct saturation_T_pure_Akasaka_options{
         bool use_guesses; ///< true to start off at the values specified by rhoL, rhoV
         CoolPropDbl omega, rhoL, rhoV, pL, pV;
-        saturation_T_pure_Akasaka_options(){omega = _HUGE; rhoV = _HUGE; rhoL = _HUGE; pV = _HUGE, pL = _HUGE;}
+        saturation_T_pure_Akasaka_options(bool use_guesses=false):use_guesses(use_guesses),omega(_HUGE),rhoV(_HUGE),rhoL(_HUGE),pV(_HUGE),pL(_HUGE){}
     };
     struct saturation_T_pure_options{
-        bool use_guesses; ///< true to start off at the values specified by rhoL, rhoV
         CoolPropDbl omega, rhoL, rhoV, pL, pV, p, T;
-        saturation_T_pure_options(){omega = _HUGE; rhoV = _HUGE; rhoL = _HUGE; rhoL = _HUGE; pV = _HUGE, pL = _HUGE; T = _HUGE;}
+        saturation_T_pure_options():omega(_HUGE),rhoV(_HUGE),rhoL(_HUGE),pV(_HUGE),pL(_HUGE),p(_HUGE),T(_HUGE){}
     };
     
     struct saturation_D_pure_options{
@@ -45,7 +44,7 @@ namespace SaturationSolvers
     @param p Pressure [Pa]
     @param i Index of component [-]
     */
-    static CoolPropDbl Wilson_lnK_factor(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl p, std::size_t i){ 
+    static CoolPropDbl Wilson_lnK_factor(const HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl p, std::size_t i){ 
         const EquationOfState &EOS = HEOS.get_components()[i].EOS(); 
         return log(EOS.reduce.p/p)+5.373*(1 + EOS.acentric)*(1-EOS.reduce.T/T);
     };
@@ -131,19 +130,13 @@ namespace SaturationSolvers
     public:
         int input_type;
         double T, p, beta;
-        const std::vector<CoolPropDbl> *z;
-        std::vector<CoolPropDbl> *K;
-        HelmholtzEOSMixtureBackend *HEOS;
+        const std::vector<CoolPropDbl> &z;
+        std::vector<CoolPropDbl> &K;
+        const HelmholtzEOSMixtureBackend &HEOS;
 
-        WilsonK_resid(HelmholtzEOSMixtureBackend &HEOS, double beta, double imposed_value, int input_type, const std::vector<CoolPropDbl> &z, std::vector<CoolPropDbl> &K){ 
-            this->z = &z; this->K = &K; this->HEOS = &HEOS; this->beta = beta; this->input_type = input_type;
-            if (input_type == imposed_T){
-                this->T = imposed_value;
-            }
-            else{
-                this->p = imposed_value;
-            }
-        };
+        WilsonK_resid(const HelmholtzEOSMixtureBackend &HEOS, double beta, double imposed_value, int input_type, const std::vector<CoolPropDbl> &z, std::vector<CoolPropDbl> &K)
+            : z(z), K(K), HEOS(HEOS), beta(beta), input_type(input_type),
+              T(imposed_value), p(imposed_value){} // if input_type == imposed_T -> use T, else use p; init both
         double call(double input_value){
             double summer = 0;
             if (input_type == imposed_T){
@@ -152,12 +145,12 @@ namespace SaturationSolvers
             else{
                 T = input_value; // Iterate on temperature, pressure imposed
             }
-            for (unsigned int i = 0; i< (*z).size(); i++) {
-                (*K)[i] = exp(Wilson_lnK_factor(*HEOS,T,p,i));
-                summer += (*z)[i]*((*K)[i]-1)/(1-beta+beta*(*K)[i]);
+            for (unsigned int i = 0; i< z.size(); i++) {
+                K[i] = exp(Wilson_lnK_factor(HEOS,T,p,i));
+                summer += z[i]*(K[i]-1)/(1-beta+beta*K[i]);
             }
             return summer;
-        };
+        }
     };
     inline double saturation_preconditioner(HelmholtzEOSMixtureBackend &HEOS, double input_value, int input_type, const std::vector<CoolPropDbl> &z)
     {
