@@ -33,8 +33,11 @@ protected:
     std::size_t N; ///< Number of components
     
 public:
-    HelmholtzEOSMixtureBackend(){
-        imposed_phase_index = iphase_not_imposed; _phase = iphase_unknown;};
+    HelmholtzEOSMixtureBackend()
+        : imposed_phase_index(iphase_not_imposed), is_pure_or_pseudopure(false), N(0)
+    {
+        _phase = iphase_unknown;
+    }
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
     virtual ~HelmholtzEOSMixtureBackend(){};

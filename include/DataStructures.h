@@ -25,7 +25,7 @@ struct SsatSimpleState : public SimpleState
 {
     enum SsatSimpleStateEnum {SSAT_MAX_NOT_SET=0, SSAT_MAX_DOESNT_EXIST, SSAT_MAX_DOES_EXIST};
     SsatSimpleStateEnum exists;
-    SsatSimpleState() : SimpleState() {}
+    SsatSimpleState() : exists(SSAT_MAX_NOT_SET) {}
 };
 
 

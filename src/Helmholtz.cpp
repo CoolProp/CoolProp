@@ -355,7 +355,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::base(const CoolPropDbl &tau, const Coo
     if (N==0){return 0.0;}
     for (unsigned int i=0; i<N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        const ResidualHelmholtzNonAnalyticElement &el = elements[i];
         CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
         CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
         CoolPropDbl theta=(1.0-tau)+Ai*pow(pow(delta-1.0,2),1.0/(2.0*betai));
@@ -371,7 +371,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dDelta(const CoolPropDbl &tau, const C
     if (N==0){return 0.0;}
     for (unsigned int i=0; i<N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        const ResidualHelmholtzNonAnalyticElement &el = elements[i];
         CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
         CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
         CoolPropDbl dDELTAbi_dDelta;
@@ -398,7 +398,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dTau(const CoolPropDbl &tau, const Coo
     if (N==0){return 0.0;}
     for (unsigned int i=0; i<N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        const ResidualHelmholtzNonAnalyticElement &el = elements[i];
         CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
         CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
         CoolPropDbl theta=(1.0-tau)+Ai*pow(pow(delta-1.0,2),1.0/(2.0*betai));
@@ -418,7 +418,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dDelta2(const CoolPropDbl &tau, const 
     if (N==0){return 0.0;}
     for (unsigned int i=0; i<N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        const ResidualHelmholtzNonAnalyticElement &el = elements[i];
         CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
         CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
         CoolPropDbl dDELTAbi_dDelta;
@@ -459,7 +459,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dDelta_dTau(const CoolPropDbl &tau, co
     if (N==0){return 0.0;}
     for (unsigned int i=0; i<N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        const ResidualHelmholtzNonAnalyticElement &el = elements[i];
         CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
         CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
         CoolPropDbl dDELTAbi_dDelta;
@@ -493,7 +493,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dTau2(const CoolPropDbl &tau, const Co
     if (N==0){return 0.0;}
     for (unsigned int i=0; i<N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        const ResidualHelmholtzNonAnalyticElement &el = elements[i];
         CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
         CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
 
@@ -515,7 +515,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dDelta3(const CoolPropDbl &tau, const 
     if (N==0){return 0.0;}
     for (unsigned int i=0; i<N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        const ResidualHelmholtzNonAnalyticElement &el = elements[i];
         CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
         CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
         CoolPropDbl dDELTAbi_dDelta;
@@ -554,7 +554,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dDelta_dTau2(const CoolPropDbl &tau, c
     if (N==0){return 0.0;}
     for (unsigned int i=0; i<N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        const ResidualHelmholtzNonAnalyticElement &el = elements[i];
         CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
         CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
 
@@ -598,7 +598,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dDelta2_dTau(const CoolPropDbl &tau, c
     if (N==0){return 0.0;}
     for (unsigned int i=0; i<N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        const ResidualHelmholtzNonAnalyticElement &el = elements[i];
         CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
         CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
 
@@ -651,7 +651,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dTau3(const CoolPropDbl &tau, const Co
     if (N==0){return 0.0;}
     for (unsigned int i=0; i<N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        const ResidualHelmholtzNonAnalyticElement &el = elements[i];
         CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
         CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
         CoolPropDbl theta=(1.0-tau)+Ai*pow(pow(delta-1.0,2),1.0/(2.0*betai));
@@ -678,73 +678,73 @@ void ResidualHelmholtzSAFTAssociating::to_json(rapidjson::Value &el, rapidjson::
     el.AddMember("vbarn",vbarn,doc.GetAllocator());
     el.AddMember("kappabar",kappabar,doc.GetAllocator());
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::Deltabar(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::Deltabar(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     return this->g(this->eta(delta))*(exp(this->epsilonbar*tau)-1)*this->kappabar;
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::dDeltabar_ddelta__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::dDeltabar_ddelta__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     return this->dg_deta(this->eta(delta))*(exp(this->epsilonbar*tau)-1)*this->kappabar*this->vbarn;
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d2Deltabar_ddelta2__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d2Deltabar_ddelta2__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     return this->d2g_deta2(this->eta(delta))*(exp(this->epsilonbar*tau)-1)*this->kappabar*pow(this->vbarn,(int)2);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::dDeltabar_dtau__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::dDeltabar_dtau__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     return this->g(this->eta(delta))*this->kappabar*exp(this->epsilonbar*tau)*this->epsilonbar;
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d2Deltabar_dtau2__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d2Deltabar_dtau2__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     return this->g(this->eta(delta))*this->kappabar*exp(this->epsilonbar*tau)*pow(this->epsilonbar,(int)2);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d2Deltabar_ddelta_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d2Deltabar_ddelta_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     return this->dg_deta(this->eta(delta))*exp(this->epsilonbar*tau)*this->epsilonbar*this->kappabar*this->vbarn;
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d3Deltabar_dtau3__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d3Deltabar_dtau3__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     return this->g(this->eta(delta))*this->kappabar*exp(this->epsilonbar*tau)*pow(this->epsilonbar,(int)3);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d3Deltabar_ddelta_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d3Deltabar_ddelta_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     return this->dg_deta(this->eta(delta))*this->kappabar*exp(this->epsilonbar*tau)*pow(this->epsilonbar,(int)2)*this->vbarn;
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d3Deltabar_ddelta2_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d3Deltabar_ddelta2_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     return this->d2g_deta2(this->eta(delta))*exp(this->epsilonbar*tau)*this->epsilonbar*this->kappabar*pow(this->vbarn,(int)2);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d3Deltabar_ddelta3__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d3Deltabar_ddelta3__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     return this->d3g_deta3(this->eta(delta))*(exp(this->epsilonbar*tau)-1)*this->kappabar*pow(this->vbarn,(int)3);
 }
 
-CoolPropDbl ResidualHelmholtzSAFTAssociating::X(const CoolPropDbl &delta, const CoolPropDbl &Deltabar)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::X(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const
 {
     return 2/(sqrt(1+4*Deltabar*delta)+1);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::dX_dDeltabar__constdelta(const CoolPropDbl &delta, const CoolPropDbl &Deltabar)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::dX_dDeltabar__constdelta(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const
 {
     CoolPropDbl X = this->X(delta,Deltabar);
     return -delta*X*X/(2*Deltabar*delta*X+1);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::dX_ddelta__constDeltabar(const CoolPropDbl &delta, const CoolPropDbl &Deltabar)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::dX_ddelta__constDeltabar(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const
 {
     CoolPropDbl X = this->X(delta,Deltabar);
     return -Deltabar*X*X/(2*Deltabar*delta*X+1);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::dX_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::dX_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     CoolPropDbl Deltabar = this->Deltabar(tau, delta);
     return this->dX_dDeltabar__constdelta(delta, Deltabar)*this->dDeltabar_dtau__constdelta(tau, delta);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::dX_ddelta(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::dX_ddelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     CoolPropDbl Deltabar = this->Deltabar(tau, delta);
     return (this->dX_ddelta__constDeltabar(delta, Deltabar)
            + this->dX_dDeltabar__constdelta(delta, Deltabar)*this->dDeltabar_ddelta__consttau(tau, delta));
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d2X_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d2X_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     CoolPropDbl Deltabar = this->Deltabar(tau, delta);
     CoolPropDbl X = this->X(delta, Deltabar);
@@ -756,7 +756,7 @@ CoolPropDbl ResidualHelmholtzSAFTAssociating::d2X_dtau2(const CoolPropDbl &tau, 
     CoolPropDbl dX_dDeltabar = this->dX_dDeltabar__constdelta(delta, Deltabar);
     return d_dXdtau_dX*dX_dDeltabar*beta+d_dXdtau_dDeltabar*beta+d_dXdtau_dbeta*dbeta_dtau;
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d2X_ddeltadtau(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d2X_ddeltadtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     CoolPropDbl Deltabar = this->Deltabar(tau, delta);
     CoolPropDbl X = this->X(delta, Deltabar);
@@ -769,7 +769,7 @@ CoolPropDbl ResidualHelmholtzSAFTAssociating::d2X_ddeltadtau(const CoolPropDbl &
     CoolPropDbl dX_dDeltabar = this->dX_dDeltabar__constdelta(delta, Deltabar);
     return d_dXddelta_dX*dX_dDeltabar*beta+d_dXddelta_dDeltabar*beta+d_dXddelta_dalpha*dalpha_dtau;
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d2X_ddelta2(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d2X_ddelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     CoolPropDbl Deltabar = this->Deltabar(tau, delta);
     CoolPropDbl X = this->X(delta, Deltabar);
@@ -791,7 +791,7 @@ CoolPropDbl ResidualHelmholtzSAFTAssociating::d2X_ddelta2(const CoolPropDbl &tau
             + d_dXddelta_dalpha*dalpha_ddelta);
     return val;
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d3X_dtau3(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d3X_dtau3(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     CoolPropDbl Delta = this->Deltabar(tau, delta);
     CoolPropDbl X = this->X(delta, Delta);
@@ -805,7 +805,7 @@ CoolPropDbl ResidualHelmholtzSAFTAssociating::d3X_dtau3(const CoolPropDbl &tau, 
     CoolPropDbl dXtt_dDelta_tt = -pow(X, 2)*delta/(2*Delta*X*delta + 1);
     return dXtt_dX*dX_dDelta*Delta_t+dXtt_dDelta*Delta_t + dXtt_dDelta_t*Delta_tt + dXtt_dDelta_tt*Delta_ttt;
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d3X_ddeltadtau2(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d3X_ddeltadtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     CoolPropDbl Delta = this->Deltabar(tau, delta);
     CoolPropDbl X = this->X(delta, Delta);
@@ -824,7 +824,7 @@ CoolPropDbl ResidualHelmholtzSAFTAssociating::d3X_ddeltadtau2(const CoolPropDbl 
     return dXtt_ddelta + dXtt_dX*dX_ddelta + dXtt_dX*dX_dDelta*Delta_d + dXtt_dDelta*Delta_d + dXtt_dDelta_t*Delta_dt + dXtt_dDelta_tt*Delta_dtt;
 }
 
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d3X_ddelta2dtau(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d3X_ddelta2dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     CoolPropDbl Delta = this->Deltabar(tau, delta);
     CoolPropDbl X = this->X(delta, Delta);
@@ -847,7 +847,7 @@ double Xdd(double X, double delta, double Delta, double Delta_d, double Delta_dd
     return Delta*pow(X, 2)*(2*Delta + 2*Delta_d*delta)*(Delta*pow(X, 2)*delta + X)/pow(2*Delta*X*delta + 1, 3) + Delta_d*pow(X, 2)*delta*(2*Delta + 2*Delta_d*delta)*(Delta*pow(X, 2)*delta + X)/pow(2*Delta*X*delta + 1, 3) + Delta_d*pow(X, 2)*(2*Delta_d*X*pow(delta, 2) - 1)/pow(2*Delta*X*delta + 1, 2) - Delta_dd*pow(X, 2)*delta/(2*Delta*X*delta + 1) + pow(X, 2)*(2*pow(Delta, 2)*X - Delta_d)/pow(2*Delta*X*delta + 1, 2);
 }
 
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d3X_ddelta3(const CoolPropDbl &tau, const CoolPropDbl &delta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d3X_ddelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) const
 {
     CoolPropDbl Delta = this->Deltabar(tau, delta);
     CoolPropDbl X = this->X(delta, Delta);
@@ -865,27 +865,27 @@ CoolPropDbl ResidualHelmholtzSAFTAssociating::d3X_ddelta3(const CoolPropDbl &tau
 
     return dXdd_ddelta + dXdd_dX*(dX_ddelta + dX_dDelta*Delta_d) + dXdd_dDelta*Delta_d + dXdd_dDelta_d*Delta_dd + dXdd_dDelta_dd*Delta_ddd;
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::g(const CoolPropDbl &eta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::g(const CoolPropDbl &eta) const
 {
     return 0.5*(2-eta)/pow(1-eta,(int)3);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::dg_deta(const CoolPropDbl &eta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::dg_deta(const CoolPropDbl &eta) const
 {
     return 0.5*(5-2*eta)/pow(1-eta,(int)4);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d2g_deta2(const CoolPropDbl &eta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d2g_deta2(const CoolPropDbl &eta) const
 {
     return 3*(3-eta)/pow(1-eta,(int)5);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::d3g_deta3(const CoolPropDbl &eta)
+CoolPropDbl ResidualHelmholtzSAFTAssociating::d3g_deta3(const CoolPropDbl &eta) const
 {
     return 6*(7-2*eta)/pow(1-eta,(int)6);
 }
-CoolPropDbl ResidualHelmholtzSAFTAssociating::eta(const CoolPropDbl &delta){
+CoolPropDbl ResidualHelmholtzSAFTAssociating::eta(const CoolPropDbl &delta) const {
     return this->vbarn*delta;
 }
 
-void ResidualHelmholtzSAFTAssociating::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &deriv) throw()
+void ResidualHelmholtzSAFTAssociating::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &deriv) const throw()
 {
     if (disabled){return;}
     CoolPropDbl X = this->X(delta, this->Deltabar(tau, delta));

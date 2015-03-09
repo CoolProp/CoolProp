@@ -155,15 +155,9 @@ public:
         
     std::vector<ResidualHelmholtzGeneralizedExponentialElement> elements;
     // Default Constructor
-    ResidualHelmholtzGeneralizedExponential(){N = 0; 
-                                              delta_li_in_u = false; 
-                                              tau_mi_in_u = false;
-                                              eta1_in_u = false;
-                                              eta2_in_u = false;
-                                              beta1_in_u = false;
-                                              beta2_in_u = false;
-                                              finished = false;
-                                              };
+    ResidualHelmholtzGeneralizedExponential()
+        : N(0),delta_li_in_u(false),tau_mi_in_u(false),eta1_in_u(false),
+          eta2_in_u(false),beta1_in_u(false),beta2_in_u(false),finished(false) {};
     /** \brief Add and convert an old-style power (polynomial) term to generalized form
 	 * 
 	 * Term of the format
@@ -326,9 +320,6 @@ public:
         finished = true;
     };
 
-    ///< Destructor for the class.  No implementation
-    ~ResidualHelmholtzGeneralizedExponential(){};
-
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
     
     CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.alphar;};
@@ -409,36 +400,36 @@ class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm{
 protected:
     double a, m,epsilonbar, vbarn, kappabar;
 
-    CoolPropDbl Deltabar(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl dDeltabar_ddelta__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2Deltabar_ddelta2__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl dDeltabar_dtau__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2Deltabar_dtau2__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2Deltabar_ddelta_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3Deltabar_dtau3__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3Deltabar_ddelta_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3Deltabar_ddelta3__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3Deltabar_ddelta2_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta);
+    CoolPropDbl Deltabar(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl dDeltabar_ddelta__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2Deltabar_ddelta2__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl dDeltabar_dtau__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2Deltabar_dtau2__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2Deltabar_ddelta_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_dtau3__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_ddelta_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_ddelta3__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_ddelta2_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
 
-    CoolPropDbl X(const CoolPropDbl &delta, const CoolPropDbl &Deltabar);
-    CoolPropDbl dX_dDeltabar__constdelta(const CoolPropDbl &delta, const CoolPropDbl &Deltabar);
-    CoolPropDbl dX_ddelta__constDeltabar(const CoolPropDbl &delta, const CoolPropDbl &Deltabar);
-    CoolPropDbl dX_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl dX_ddelta(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2X_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2X_ddeltadtau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2X_ddelta2(const CoolPropDbl &tau, const CoolPropDbl &delta);
+    CoolPropDbl X(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const;
+    CoolPropDbl dX_dDeltabar__constdelta(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const;
+    CoolPropDbl dX_ddelta__constDeltabar(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const;
+    CoolPropDbl dX_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl dX_ddelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2X_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2X_ddeltadtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2X_ddelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
 
-    CoolPropDbl d3X_dtau3(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3X_ddelta3(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3X_ddeltadtau2(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3X_ddelta2dtau(const CoolPropDbl &tau, const CoolPropDbl &delta);
+    CoolPropDbl d3X_dtau3(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3X_ddelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3X_ddeltadtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3X_ddelta2dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
 
-    CoolPropDbl g(const CoolPropDbl &eta);
-    CoolPropDbl dg_deta(const CoolPropDbl &eta);
-    CoolPropDbl d2g_deta2(const CoolPropDbl &eta);
-    CoolPropDbl d3g_deta3(const CoolPropDbl &eta);
-    CoolPropDbl eta(const CoolPropDbl &delta);
+    CoolPropDbl g(const CoolPropDbl &eta) const;
+    CoolPropDbl dg_deta(const CoolPropDbl &eta) const;
+    CoolPropDbl d2g_deta2(const CoolPropDbl &eta) const;
+    CoolPropDbl d3g_deta3(const CoolPropDbl &eta) const;
+    CoolPropDbl eta(const CoolPropDbl &delta) const;
 
 public:
     /// Default constructor
@@ -468,7 +459,7 @@ public:
     CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta_dtau2;};
     CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_dtau3;};
     
-    void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &deriv) throw();
+    void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &deriv) const throw();
 };
 
 class ResidualHelmholtzContainer
@@ -520,17 +511,13 @@ private:
     bool enabled;
 public:
     // Default constructor
-    IdealHelmholtzLead(){enabled = false;};
+    IdealHelmholtzLead() :a1(_HUGE), a2(_HUGE), enabled(false) {}
 
     // Constructor
-    IdealHelmholtzLead(const CoolPropDbl a1, const CoolPropDbl a2)
-    :a1(a1), a2(a2)
-    {enabled = true;};
+    IdealHelmholtzLead(CoolPropDbl a1, CoolPropDbl a2)
+    :a1(a1), a2(a2), enabled(true) {}
 
-    //Destructor
-    ~IdealHelmholtzLead(){};
-
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;}
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc){
         el.AddMember("type","IdealHelmholtzLead",doc.GetAllocator());
@@ -578,7 +565,7 @@ private:
     std::string reference;
     bool enabled;
 public:
-    IdealHelmholtzEnthalpyEntropyOffset():enabled(false){}
+    IdealHelmholtzEnthalpyEntropyOffset():a1(_HUGE),a2(_HUGE),enabled(false){}
 
     // Constructor
     IdealHelmholtzEnthalpyEntropyOffset(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref):a1(a1),a2(a2),reference(ref),enabled(true) {}
@@ -586,10 +573,7 @@ public:
     // Set the values in the class
     void set(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref){this->a1 += a1; this->a2 += a2; this->reference = ref; enabled = true;}
 
-    //Destructor
-    ~IdealHelmholtzEnthalpyEntropyOffset(){};
-
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc){
         el.AddMember("type","IdealHelmholtzEnthalpyEntropyOffset",doc.GetAllocator());
@@ -599,13 +583,11 @@ public:
 
     // Term and its derivatives
     CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
-        if (!enabled){return 0.0;}
-        return a1+a2*tau;
+        return enabled ? a1+a2*tau : 0.0;
     };
     CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
     CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
-        if (!enabled){return 0.0;}
-        return a2;
+        return enabled ? a2 : 0.0;
     };
     CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
     CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
@@ -630,15 +612,12 @@ private:
 public:
 
     /// Default constructor
-    IdealHelmholtzLogTau(){enabled = false;};
+    IdealHelmholtzLogTau():a1(_HUGE),enabled(false){}
 
     // Constructor
-    IdealHelmholtzLogTau(CoolPropDbl a1){this->a1=a1; enabled = true;};
+    IdealHelmholtzLogTau(CoolPropDbl a1):a1(a1),enabled(true){}
 
-    bool is_enabled(){return enabled;};
-
-    //Destructor
-    ~IdealHelmholtzLogTau(){};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc){
         el.AddMember("type", "IdealHelmholtzLogTau", doc.GetAllocator());
@@ -682,19 +661,12 @@ private:
     std::size_t N;
     bool enabled;
 public:
-    IdealHelmholtzPower(){enabled = false;};
+    IdealHelmholtzPower():N(0),enabled(false){};
     // Constructor
     IdealHelmholtzPower(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &t)
-    :n(n), t(t)
-    {
-        this->N = n.size();
-        enabled = true;
-    };
+    :n(n), t(t), N(n.size()), enabled(true) {};
 
-    //Destructor
-    ~IdealHelmholtzPower(){};
-
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc)
     {
@@ -781,17 +753,10 @@ private:
     std::size_t N;
     bool enabled;
 public:
-    IdealHelmholtzPlanckEinsteinGeneralized(){N = 0; enabled = false;}
+    IdealHelmholtzPlanckEinsteinGeneralized():N(0),enabled(false){}
     // Constructor with std::vector instances
     IdealHelmholtzPlanckEinsteinGeneralized(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &theta, const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &d)
-    :n(n), theta(theta), c(c), d(d)
-    {
-        N = n.size();
-        enabled = true;
-    };
-
-    // Destructor
-    ~IdealHelmholtzPlanckEinsteinGeneralized(){};
+    :n(n), theta(theta), c(c), d(d), N(n.size()), enabled(true) {}
 
     // Extend the vectors to allow for multiple instances feeding values to this function
     void extend(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &theta, const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &d)
@@ -803,7 +768,7 @@ public:
         N += n.size();
     }
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
   
     void to_json(rapidjson::Value &el, rapidjson::Document &doc)
     {
@@ -860,7 +825,7 @@ public:
     /// Destructor
     ~IdealHelmholtzCP0Constant(){};
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc)
     {
@@ -902,18 +867,13 @@ private:
     std::size_t N;
     bool enabled;
 public:
-    /// Destructor
-    IdealHelmholtzCP0PolyT(){N = 0; enabled = false;};
+    IdealHelmholtzCP0PolyT()
+    : Tc(_HUGE), T0(_HUGE), tau0(_HUGE), N(0), enabled(false) {}
 
     /// Constructor with std::vectors
     IdealHelmholtzCP0PolyT(const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &t, double Tc, double T0) 
-    : c(c), t(t), Tc(Tc), T0(T0)
-    { 
-        assert(c.size() == t.size());
-        tau0 = Tc/T0;
-        enabled = true;
-        N = c.size();
-    };
+    : c(c), t(t), Tc(Tc), T0(T0), tau0(Tc/T0), N(c.size()), enabled(true)
+    { assert(c.size() == t.size()); }
 
     void extend(const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &t)
     {
@@ -922,10 +882,7 @@ public:
         N += c.size();
     }
 
-    /// Destructor
-    ~IdealHelmholtzCP0PolyT(){};
-
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
 
@@ -1002,7 +959,7 @@ public:
     /// Destructor
     ~IdealHelmholtzCP0AlyLee(){};
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
 

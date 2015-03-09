@@ -91,18 +91,15 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
     class solver_resid : public FuncWrapper1D
     {
     public:
-        int other;
         SaturationAncillaryFunction *anc;
-        CoolPropDbl T, value, r, current_value;
+        CoolPropDbl value;
 
-        solver_resid(SaturationAncillaryFunction *anc, CoolPropDbl value) : anc(anc), value(value){};
+        solver_resid(SaturationAncillaryFunction *anc, CoolPropDbl value) : anc(anc), value(value){}
 
         double call(double T){
-            this->T = T;
-            current_value = anc->evaluate(T);
-            r = current_value - value;
-            return r;
-        };
+            CoolPropDbl current_value = anc->evaluate(T);
+            return current_value - value;
+        }
     };
     solver_resid resid(this, value);
     std::string errstring;

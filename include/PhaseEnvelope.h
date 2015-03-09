@@ -20,7 +20,7 @@ public:
     std::vector< std::vector<CoolPropDbl> > K, lnK, x, y;
     std::vector<CoolPropDbl> T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q;
     
-    PhaseEnvelopeData(){ built = false; TypeI = false; };
+    PhaseEnvelopeData() : iTsat_max(-1), ipsat_max(-1), icrit(-1), built(false), TypeI(false) {}
     
     void resize(std::size_t N)
     {

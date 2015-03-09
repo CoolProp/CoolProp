@@ -32,37 +32,38 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, pa
         HelmholtzEOSMixtureBackend *HEOS;
         parameters ykey;
         CoolPropDbl y;
-        CoolPropDbl r, T, rhomolar_liq, rhomolar_vap, value, p, gL, gV, rhomolar_crit;
-        int other;
+        CoolPropDbl rhomolar_crit;
 
         outer_resid(HelmholtzEOSMixtureBackend &HEOS, CoolProp::parameters ykey, CoolPropDbl y) 
-            : HEOS(&HEOS), ykey(ykey), y(y){
-                rhomolar_crit = HEOS.rhomolar_critical();
-            };
+            : HEOS(&HEOS), ykey(ykey), y(y), rhomolar_crit(HEOS.rhomolar_critical()) {};
         double call(double rhomolar_vap){
-            this->y = y;
-            
             // Calculate the other variable (T->p or p->T) for given vapor density
-            if (ykey == iT){
+            CoolPropDbl T, p, rhomolar_liq;
+            switch (ykey){
+            case iT: {
                 T = y;
                 HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, y);
-                this->p = HEOS->SatV->p();
-                std::cout << format("outer p: %0.16Lg",this->p) << std::endl;
+                p = HEOS->SatV->p();
+                std::cout << format("outer p: %0.16Lg", p) << std::endl;
                 inner_resid inner(HEOS, T, p);
                 std::string errstr2;
-                rhomolar_liq = Brent(inner, rhomolar_crit*1.5, rhomolar_crit*(1+1e-8), LDBL_EPSILON, 1e-10, 100, errstr2);
+                rhomolar_liq = Brent(inner, rhomolar_crit*1.5, rhomolar_crit*(1 + 1e-8), LDBL_EPSILON, 1e-10, 100, errstr2);
+                break;
+            }
+            default:
+                throw ValueError("Wrong input for outer_resid");
             }
             HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
             HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, T);
             
             // Calculate the Gibbs functions for liquid and vapor
-            gL = HEOS->SatL->gibbsmolar();
-            gV = HEOS->SatV->gibbsmolar();
+            CoolPropDbl gL = HEOS->SatL->gibbsmolar();
+            CoolPropDbl gV = HEOS->SatV->gibbsmolar();
             
             // Residual is difference in Gibbs function
-            r = gL - gV;
+//            r = gL - gV;
             
-            return this->p;
+            return p;
         };
     };
     outer_resid resid(HEOS, iT, y);
@@ -82,25 +83,21 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS,
     public:
 
         HelmholtzEOSMixtureBackend *HEOS;
-        CoolPropDbl r, T, rhomolar_liq, rhomolar_vap, value, p, gL, gV;
-        int other;
+        CoolPropDbl T, rhomolar_liq, rhomolar_vap;
 
         solver_resid(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess) 
             : HEOS(&HEOS), T(T), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
         double call(double p){
-            this->p = p;
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
             HEOS->SatV->update_TP_guessrho(T, p, rhomolar_vap);
             
             // Calculate the Gibbs functions for liquid and vapor
-            gL = HEOS->SatL->gibbsmolar();
-            gV = HEOS->SatV->gibbsmolar();
+            CoolPropDbl gL = HEOS->SatL->gibbsmolar();
+            CoolPropDbl gV = HEOS->SatV->gibbsmolar();
             
             // Residual is difference in Gibbs function
-            r = gL - gV;
-            
-            return r;
+            return gL - gV;
         };
     };
     solver_resid resid(HEOS, T, options.rhoL, options.rhoV);
@@ -128,25 +125,21 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend &HEOS,
     public:
 
         HelmholtzEOSMixtureBackend *HEOS;
-        CoolPropDbl r, p, rhomolar_liq, rhomolar_vap, value, T, gL, gV;
-        int other;
+        CoolPropDbl p, rhomolar_liq, rhomolar_vap;
 
         solver_resid(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl p, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess) 
             : HEOS(&HEOS), p(p), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
         double call(double T){
-            this->T = T;
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
             HEOS->SatV->update_TP_guessrho(T, p, rhomolar_vap);
             
             // Calculate the Gibbs functions for liquid and vapor
-            gL = HEOS->SatL->gibbsmolar();
-            gV = HEOS->SatV->gibbsmolar();
+            CoolPropDbl gL = HEOS->SatL->gibbsmolar();
+            CoolPropDbl gV = HEOS->SatV->gibbsmolar();
             
             // Residual is difference in Gibbs function
-            r = gL - gV;
-            
-            return r;
+            return gL - gV;
         };
     };
     solver_resid resid(HEOS, p, options.rhoL, options.rhoV);

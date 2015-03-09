@@ -199,7 +199,7 @@ public:
     MeltingLinePiecewisePolynomialInTrData polynomial_in_Tr;
     MeltingLinePiecewisePolynomialInThetaData polynomial_in_Theta;
     int type;
-    MeltingLineVariables(){type = MELTING_LINE_NOT_SET;};
+    MeltingLineVariables():Tmin(_HUGE),Tmax(_HUGE),pmin(_HUGE),pmax(_HUGE),T_m(_HUGE),type(MELTING_LINE_NOT_SET){};
 };
 
 } /* namespace CoolProp */
