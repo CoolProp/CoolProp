@@ -1795,7 +1795,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     phases phase;
 
     // Define the residual to be driven to zero
-    class solver_TP_resid : public FuncWrapper1D
+    class solver_TP_resid : public FuncWrapper1DWithDeriv
     {
     public:
         CoolPropDbl T, p, rhor, tau, R_u, delta;

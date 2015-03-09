@@ -122,7 +122,7 @@ public:
 
 /** A residual function for the rho(T,P) solver
  */
-class solver_TP_resid : public FuncWrapper1D
+class solver_TP_resid : public FuncWrapper1DWithDeriv
 {
 public:
     CoolPropDbl T, p, rhor, tau, R_u, delta;
