@@ -902,18 +902,13 @@ private:
     std::size_t N;
     bool enabled;
 public:
-    /// Destructor
-    IdealHelmholtzCP0PolyT(){N = 0; enabled = false;};
+    IdealHelmholtzCP0PolyT()
+    : Tc(_HUGE), T0(_HUGE), tau0(_HUGE), N(0), enabled(false) {}
 
     /// Constructor with std::vectors
     IdealHelmholtzCP0PolyT(const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &t, double Tc, double T0) 
-    : c(c), t(t), Tc(Tc), T0(T0)
-    { 
-        assert(c.size() == t.size());
-        tau0 = Tc/T0;
-        enabled = true;
-        N = c.size();
-    };
+    : c(c), t(t), Tc(Tc), T0(T0), tau0(Tc/T0), N(c.size()), enabled(true)
+    { assert(c.size() == t.size()); }
 
     void extend(const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &t)
     {
@@ -921,9 +916,6 @@ public:
         this->t.insert(this->t.end(), t.begin(), t.end());
         N += c.size();
     }
-
-    /// Destructor
-    ~IdealHelmholtzCP0PolyT(){};
 
     bool is_enabled(){return enabled;};
 
