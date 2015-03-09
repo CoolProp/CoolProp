@@ -127,8 +127,7 @@ public:
     std::vector<std::vector<DepartureFunctionPointer> > DepartureFunctionMatrix;
     STLMatrix F;
 
-    ExcessTerm(){};
-    ~ExcessTerm(){};
+    ExcessTerm():N(0){};
 
     /// Resize the parts of this term
     void resize(std::size_t N){
