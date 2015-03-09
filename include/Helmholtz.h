@@ -409,36 +409,36 @@ class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm{
 protected:
     double a, m,epsilonbar, vbarn, kappabar;
 
-    CoolPropDbl Deltabar(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl dDeltabar_ddelta__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2Deltabar_ddelta2__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl dDeltabar_dtau__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2Deltabar_dtau2__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2Deltabar_ddelta_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3Deltabar_dtau3__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3Deltabar_ddelta_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3Deltabar_ddelta3__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3Deltabar_ddelta2_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta);
+    CoolPropDbl Deltabar(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl dDeltabar_ddelta__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2Deltabar_ddelta2__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl dDeltabar_dtau__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2Deltabar_dtau2__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2Deltabar_ddelta_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_dtau3__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_ddelta_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_ddelta3__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_ddelta2_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
 
-    CoolPropDbl X(const CoolPropDbl &delta, const CoolPropDbl &Deltabar);
-    CoolPropDbl dX_dDeltabar__constdelta(const CoolPropDbl &delta, const CoolPropDbl &Deltabar);
-    CoolPropDbl dX_ddelta__constDeltabar(const CoolPropDbl &delta, const CoolPropDbl &Deltabar);
-    CoolPropDbl dX_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl dX_ddelta(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2X_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2X_ddeltadtau(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d2X_ddelta2(const CoolPropDbl &tau, const CoolPropDbl &delta);
+    CoolPropDbl X(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const;
+    CoolPropDbl dX_dDeltabar__constdelta(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const;
+    CoolPropDbl dX_ddelta__constDeltabar(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const;
+    CoolPropDbl dX_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl dX_ddelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2X_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2X_ddeltadtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2X_ddelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
 
-    CoolPropDbl d3X_dtau3(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3X_ddelta3(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3X_ddeltadtau2(const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl d3X_ddelta2dtau(const CoolPropDbl &tau, const CoolPropDbl &delta);
+    CoolPropDbl d3X_dtau3(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3X_ddelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3X_ddeltadtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3X_ddelta2dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
 
-    CoolPropDbl g(const CoolPropDbl &eta);
-    CoolPropDbl dg_deta(const CoolPropDbl &eta);
-    CoolPropDbl d2g_deta2(const CoolPropDbl &eta);
-    CoolPropDbl d3g_deta3(const CoolPropDbl &eta);
-    CoolPropDbl eta(const CoolPropDbl &delta);
+    CoolPropDbl g(const CoolPropDbl &eta) const;
+    CoolPropDbl dg_deta(const CoolPropDbl &eta) const;
+    CoolPropDbl d2g_deta2(const CoolPropDbl &eta) const;
+    CoolPropDbl d3g_deta3(const CoolPropDbl &eta) const;
+    CoolPropDbl eta(const CoolPropDbl &delta) const;
 
 public:
     /// Default constructor
@@ -468,7 +468,7 @@ public:
     CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta_dtau2;};
     CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_dtau3;};
     
-    void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &deriv) throw();
+    void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &deriv) const throw();
 };
 
 class ResidualHelmholtzContainer
@@ -578,16 +578,13 @@ private:
     std::string reference;
     bool enabled;
 public:
-    IdealHelmholtzEnthalpyEntropyOffset():enabled(false){}
+    IdealHelmholtzEnthalpyEntropyOffset():a1(_HUGE),a2(_HUGE),enabled(false){}
 
     // Constructor
     IdealHelmholtzEnthalpyEntropyOffset(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref):a1(a1),a2(a2),reference(ref),enabled(true) {}
 
     // Set the values in the class
     void set(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref){this->a1 += a1; this->a2 += a2; this->reference = ref; enabled = true;}
-
-    //Destructor
-    ~IdealHelmholtzEnthalpyEntropyOffset(){};
 
     bool is_enabled(){return enabled;};
 
@@ -599,13 +596,11 @@ public:
 
     // Term and its derivatives
     CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
-        if (!enabled){return 0.0;}
-        return a1+a2*tau;
+        return enabled ? a1+a2*tau : 0.0;
     };
     CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
     CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
-        if (!enabled){return 0.0;}
-        return a2;
+        return enabled ? a2 : 0.0;
     };
     CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
     CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
