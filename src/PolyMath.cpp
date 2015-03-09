@@ -472,22 +472,21 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd &coefficients, const dou
     double posExp = 0;// then the positive exponents
 
     for(int i=0; i>firstExponent; i--) { // only for firstExponent<0
-        c=tmpCoeffs.cols();
         if (c>0) {
           negExp += tmpCoeffs(0,0);
           removeColumn(tmpCoeffs, 0);
         }
         negExp /= x_in-x_base;
+        c=tmpCoeffs.cols();
     }
 
     for(int i=0; i<firstExponent; i++) { // only for firstExponent>0
-        c = tmpCoeffs.cols();
         newCoeffs = Eigen::MatrixXd::Zero(r,c+1);
         newCoeffs.block(0,1,r,c) = tmpCoeffs.block(0,0,r,c);
         tmpCoeffs = Eigen::MatrixXd(newCoeffs);
+        c = tmpCoeffs.cols();
     }
 
-    c = tmpCoeffs.cols();
     if (c>0) posExp += Eigen::poly_eval( Eigen::RowVectorXd(tmpCoeffs), x_in-x_base );
     return negExp+posExp;
 }
