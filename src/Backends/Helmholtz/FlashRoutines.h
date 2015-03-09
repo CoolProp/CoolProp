@@ -125,22 +125,25 @@ public:
 class solver_TP_resid : public FuncWrapper1D
 {
 public:
-    CoolPropDbl T, p, rhor, tau, R_u;
+    CoolPropDbl T, p, r, peos, rhomolar, rhor, tau, R_u, delta, dalphar_dDelta;
     HelmholtzEOSMixtureBackend *HEOS;
 
-    solver_TP_resid(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl p):
-        HEOS(&HEOS),T(T),p(p),rhor(HEOS.get_reducing_state().rhomolar),
-        tau(HEOS.get_reducing_state().T/T),R_u(HEOS.gas_constant()) {}
-    double call(double rhomolar){
-//        CoolPropDbl delta = rhomolar/rhor; // needed for derivative
-        HEOS->update_DmolarT_direct(rhomolar, T);
-        CoolPropDbl peos = HEOS->p();
-        return (peos-p)/p;
+    solver_TP_resid(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl p){
+        this->HEOS = &HEOS; this->T = T; this->p = p; this->rhor = HEOS.get_reducing_state().rhomolar;
+        this->tau = HEOS.get_reducing_state().T/T; this->R_u = HEOS.gas_constant();
     };
-/*    double deriv(double rhomolar){
+    double call(double rhomolar){
+        this->rhomolar = rhomolar;
+        delta = rhomolar/rhor; // needed for derivative
+        HEOS->update_DmolarT_direct(rhomolar, T);
+        peos = HEOS->p();
+        r = (peos-p)/p;
+        return r;
+    };
+    double deriv(double rhomolar){
         // dp/drho|T / pspecified
         return R_u*T*(1+2*delta*HEOS->dalphar_dDelta()+pow(delta, 2)*HEOS->d2alphar_dDelta2())/p;
-    };*/
+    };
 };
 
 /** A residual function for the f(P, Y) solver
