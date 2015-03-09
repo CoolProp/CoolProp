@@ -231,7 +231,7 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
     class BrentSolverResids : public CoolProp::FuncWrapper1D
     {
     private:
-        double pp_water, psi_w, p, r;
+        double pp_water, psi_w, p;
     public:
         BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) { pp_water = psi_w*p; };
         ~BrentSolverResids(){};
@@ -250,8 +250,7 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
             double f = f_factor(T, p);
             double pp_water_calc = f*p_ws;
             double psi_w_calc = pp_water_calc/p;
-            r = (psi_w_calc - psi_w)/psi_w;
-            return r;
+            return (psi_w_calc - psi_w)/psi_w;
         }
     };
 
