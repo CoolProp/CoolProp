@@ -159,12 +159,11 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
     double T;
     class BrentSolverResids : public CoolProp::FuncWrapper1D
     {
-        private:
+    private:
         givens OutputKey;
         double p;
         givens In1Key;
         double Input1, TargetVal;
-        double T, psi_w;
         std::vector<givens> input_keys;
         std::vector<double> input_vals;
     public:
@@ -173,10 +172,10 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
             input_keys.resize(2); input_keys[0] = In1Key; input_keys[1] = GIVEN_T;
             input_vals.resize(2); input_vals[0] = Input1;
         };
-        ~BrentSolverResids(){};
 
         double call(double T){
             input_vals[1] = T;
+            double psi_w;
             _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
             return _HAPropsSI_outputs(OutputKey, p, T, psi_w) - TargetVal;
         }
