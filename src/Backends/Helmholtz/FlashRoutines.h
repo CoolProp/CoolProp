@@ -152,14 +152,10 @@ public:
     HelmholtzEOSMixtureBackend *HEOS;
     CoolPropDbl p;
     parameters other;
-    CoolPropDbl r, eos, value, T, rhomolar;
-    
-    int iter;
-    CoolPropDbl r0, r1, T1, T0, eos0, eos1, pp;
+    CoolPropDbl value;
     PY_singlephase_flash_resid(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl p, parameters other, CoolPropDbl value) : 
             HEOS(&HEOS), p(p), other(other), value(value)
             {
-                iter = 0;
                 // Specify the state to avoid saturation calls, but only if phase is subcritical
                 if (HEOS.phase() == iphase_liquid || HEOS.phase() == iphase_gas ){
                     HEOS.specify_phase(HEOS.phase());
@@ -167,34 +163,16 @@ public:
             };
     double call(double T){
 
-        this->T = T;
-
         // Run the solver with T,P as inputs;
         HEOS->update(PT_INPUTS, p, T);
         
-        rhomolar = HEOS->rhomolar();
+        CoolPropDbl rhomolar = HEOS->rhomolar();
         HEOS->update(DmolarT_INPUTS, rhomolar, T);
         // Get the value of the desired variable
-        eos = HEOS->keyed_output(other);
-        pp = HEOS->p();
+        CoolPropDbl eos = HEOS->keyed_output(other);
 
         // Difference between the two is to be driven to zero
-        r = eos - value;
-        
-        // Store values for later use if there are errors
-        if (iter == 0){ 
-            r0 = r; T0 = T; eos0 = eos;
-        }
-        else if (iter == 1){
-            r1 = r; T1 = T; eos1 = eos; 
-        }
-        else{
-            r0 = r1; T0 = T1; eos0 = eos1;
-            r1 = r;  T1 = T; eos1 = eos;
-        }
-
-        iter++;
-        return r;
+        return eos - value;
     };
 };
 
