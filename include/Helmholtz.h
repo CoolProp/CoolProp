@@ -155,15 +155,9 @@ public:
         
     std::vector<ResidualHelmholtzGeneralizedExponentialElement> elements;
     // Default Constructor
-    ResidualHelmholtzGeneralizedExponential(){N = 0; 
-                                              delta_li_in_u = false; 
-                                              tau_mi_in_u = false;
-                                              eta1_in_u = false;
-                                              eta2_in_u = false;
-                                              beta1_in_u = false;
-                                              beta2_in_u = false;
-                                              finished = false;
-                                              };
+    ResidualHelmholtzGeneralizedExponential()
+        : N(0),delta_li_in_u(false),tau_mi_in_u(false),eta1_in_u(false),
+          eta2_in_u(false),beta1_in_u(false),beta2_in_u(false),finished(false) {};
     /** \brief Add and convert an old-style power (polynomial) term to generalized form
 	 * 
 	 * Term of the format
@@ -325,9 +319,6 @@ public:
         
         finished = true;
     };
-
-    ///< Destructor for the class.  No implementation
-    ~ResidualHelmholtzGeneralizedExponential(){};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
     
@@ -670,17 +661,10 @@ private:
     std::size_t N;
     bool enabled;
 public:
-    IdealHelmholtzPower(){enabled = false;};
+    IdealHelmholtzPower():N(0),enabled(false){};
     // Constructor
     IdealHelmholtzPower(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &t)
-    :n(n), t(t)
-    {
-        this->N = n.size();
-        enabled = true;
-    };
-
-    //Destructor
-    ~IdealHelmholtzPower(){};
+    :n(n), t(t), N(n.size()), enabled(true) {};
 
     bool is_enabled() const {return enabled;};
 
