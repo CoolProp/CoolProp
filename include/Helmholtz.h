@@ -520,17 +520,13 @@ private:
     bool enabled;
 public:
     // Default constructor
-    IdealHelmholtzLead(){enabled = false;};
+    IdealHelmholtzLead() :a1(_HUGE), a2(_HUGE), enabled(false) {}
 
     // Constructor
-    IdealHelmholtzLead(const CoolPropDbl a1, const CoolPropDbl a2)
-    :a1(a1), a2(a2)
-    {enabled = true;};
+    IdealHelmholtzLead(CoolPropDbl a1, CoolPropDbl a2)
+    :a1(a1), a2(a2), enabled(true) {}
 
-    //Destructor
-    ~IdealHelmholtzLead(){};
-
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;}
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc){
         el.AddMember("type","IdealHelmholtzLead",doc.GetAllocator());
@@ -586,7 +582,7 @@ public:
     // Set the values in the class
     void set(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref){this->a1 += a1; this->a2 += a2; this->reference = ref; enabled = true;}
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc){
         el.AddMember("type","IdealHelmholtzEnthalpyEntropyOffset",doc.GetAllocator());
@@ -630,7 +626,7 @@ public:
     // Constructor
     IdealHelmholtzLogTau(CoolPropDbl a1){this->a1=a1; enabled = true;};
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     //Destructor
     ~IdealHelmholtzLogTau(){};
@@ -689,7 +685,7 @@ public:
     //Destructor
     ~IdealHelmholtzPower(){};
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc)
     {
@@ -776,17 +772,10 @@ private:
     std::size_t N;
     bool enabled;
 public:
-    IdealHelmholtzPlanckEinsteinGeneralized(){N = 0; enabled = false;}
+    IdealHelmholtzPlanckEinsteinGeneralized():N(0),enabled(false){}
     // Constructor with std::vector instances
     IdealHelmholtzPlanckEinsteinGeneralized(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &theta, const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &d)
-    :n(n), theta(theta), c(c), d(d)
-    {
-        N = n.size();
-        enabled = true;
-    };
-
-    // Destructor
-    ~IdealHelmholtzPlanckEinsteinGeneralized(){};
+    :n(n), theta(theta), c(c), d(d), N(n.size()), enabled(true) {}
 
     // Extend the vectors to allow for multiple instances feeding values to this function
     void extend(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &theta, const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &d)
@@ -798,7 +787,7 @@ public:
         N += n.size();
     }
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
   
     void to_json(rapidjson::Value &el, rapidjson::Document &doc)
     {
@@ -855,7 +844,7 @@ public:
     /// Destructor
     ~IdealHelmholtzCP0Constant(){};
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc)
     {
@@ -912,7 +901,7 @@ public:
         N += c.size();
     }
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
 
@@ -989,7 +978,7 @@ public:
     /// Destructor
     ~IdealHelmholtzCP0AlyLee(){};
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
 
