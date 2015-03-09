@@ -621,15 +621,12 @@ private:
 public:
 
     /// Default constructor
-    IdealHelmholtzLogTau(){enabled = false;};
+    IdealHelmholtzLogTau():a1(_HUGE),enabled(false){}
 
     // Constructor
-    IdealHelmholtzLogTau(CoolPropDbl a1){this->a1=a1; enabled = true;};
+    IdealHelmholtzLogTau(CoolPropDbl a1):a1(a1),enabled(true){}
 
     bool is_enabled() const {return enabled;};
-
-    //Destructor
-    ~IdealHelmholtzLogTau(){};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc){
         el.AddMember("type", "IdealHelmholtzLogTau", doc.GetAllocator());
