@@ -431,4 +431,5 @@ EXPORT_CODE double CONVENTION AbstractState_keyed_output(const long handle, cons
     catch(...){
         *errcode = 3;
     }
+    return _HUGE;
 }
