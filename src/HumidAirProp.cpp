@@ -1070,18 +1070,13 @@ public:
 class WetBulbTminSolver : public CoolProp::FuncWrapper1D
 {
 public:
-    double p,hair_dry,r, RHS;
-    WetBulbTminSolver(double p, double hair_dry){
-        this->p = p;
-        this->hair_dry = hair_dry;
-    };
-    ~WetBulbTminSolver(){};
+    double p,hair_dry;
+    WetBulbTminSolver(double p, double hair_dry):p(p),hair_dry(hair_dry){}
     double call(double Ts)
     {
-        RHS = HAPropsSI("H","T",Ts,"P",p,"R",1);
+        double RHS = HAPropsSI("H","T",Ts,"P",p,"R",1);
         if (!ValidNumber(RHS)){throw CoolProp::ValueError();}
-        r = RHS - this->hair_dry;
-        return r;
+        return RHS - this->hair_dry;
     }
 };
 
