@@ -146,21 +146,19 @@ struct ConductivityResidualVariables
 
 struct ConductivityCriticalSimplifiedOlchowySengersData{
     CoolPropDbl T_reducing, p_reducing, k, R0, gamma, nu, qD, zeta0, GAMMA, T_ref;
-    ConductivityCriticalSimplifiedOlchowySengersData(){
-        // Universal constants - can still be adjusted if need be
-        k = 1.3806488e-23; //[J/K]
-        R0 = 1.03; //[-]
-        gamma = 1.239; //[-]
-        nu = 0.63; //[-]
-        // Suggested default values - can be over-written
-        GAMMA = 0.0496; //[-]
-        zeta0 = 1.94e-10; //[m]
-        qD = 2e9; //[m]
-
-        // Set to invalid number, can be provided in the JSON file
-        // Default is 1.5*Tc
-        T_ref = _HUGE;
-    }
+    ConductivityCriticalSimplifiedOlchowySengersData():
+      // Universal constants - can still be adjusted if need be
+      k(1.3806488e-23), //[J/K]
+      R0(1.03), //[-]
+      gamma(1.239), //[-]
+      nu(0.63), //[-]
+      // Suggested default values - can be over-written
+      GAMMA(0.0496), //[-]
+      zeta0(1.94e-10), //[m]
+      qD(2e9), //[m]
+      // Set to invalid number, can be provided in the JSON file
+      // T_ref default is 1.5*Tc
+      T_reducing(_HUGE),p_reducing(_HUGE),T_ref(_HUGE){}
 };
 struct ConductivityCriticalVariables
 {
