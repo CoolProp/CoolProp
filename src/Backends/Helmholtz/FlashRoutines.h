@@ -130,7 +130,7 @@ public:
 
     solver_TP_resid(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl p):
         HEOS(&HEOS),T(T),p(p),rhor(HEOS.get_reducing_state().rhomolar),
-        tau(HEOS.get_reducing_state().T/T),R_u(HEOS.gas_constant()) {}
+        tau(HEOS.get_reducing_state().T/T),R_u(HEOS.gas_constant()),delta(-_HUGE) {}
     double call(double rhomolar){
         delta = rhomolar/rhor; // needed for derivative
         HEOS->update_DmolarT_direct(rhomolar, T);
