@@ -26,6 +26,14 @@ function PropsSI(Output::String, Name1::String, Value1::Number, Name2::String, V
   return val
 end
 
+function PropsSI(FluidName::String, Output::String)
+  val = ccall( (:Props1SI, "CoolProp"), Cdouble, (Ptr{Uint8},Ptr{Uint8}), FluidName,Output)
+  if val == Inf
+    error("CoolProp:", get_global_param_string("errstring"))
+  end
+  return val
+end
+
 function PhaseSI(Name1::String, Value1::Number, Name2::String, Value2::Number, Fluid::String)
   outstring = Array(Uint8, 255)
   val = ccall( (:PhaseSI, "CoolProp"), Int32, (Ptr{Uint8},Float64,Ptr{Uint8},Float64,Ptr{Uint8}, Ptr{Uint8}, Int), Name1,Value1,Name2,Value2,Fluid,outstring,length(outstring))
