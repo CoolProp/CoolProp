@@ -571,7 +571,22 @@ public:
     IdealHelmholtzEnthalpyEntropyOffset(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref):a1(a1),a2(a2),reference(ref),enabled(true) {}
 
     // Set the values in the class
-    void set(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref){this->a1 += a1; this->a2 += a2; this->reference = ref; enabled = true;}
+    void set(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref){
+        // If it doesn't already exist, just set the values
+        if (enabled == false){
+            this->a1 = a1; this->a2 = a2;
+            enabled = true;
+        }
+        else if(ref == "DEF"){
+            this->a1 = 0.0; this->a2 = 0.0; enabled = false;
+        }
+        else{
+            // Otherwise, increment the values
+            this->a1 += a1; this->a2 += a2;
+            enabled = true;
+        }
+        this->reference = ref; 
+    }
 
     bool is_enabled() const {return enabled;};
 
@@ -1046,7 +1061,7 @@ public:
     IdealHelmholtzCP0PolyT CP0PolyT;
 
     CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta)
-    {
+    {    
         return (Lead.base(tau, delta) + EnthalpyEntropyOffset.base(tau, delta)
                 + EnthalpyEntropyOffsetCore.base(tau, delta)
                 + LogTau.base(tau, delta) + Power.base(tau, delta) 

@@ -1204,7 +1204,7 @@ public:
                 if (!ValidNumber(delta_a1) || !ValidNumber(delta_a2) ){
                     throw ValueError(format("Not possible to set reference state for fluid %s because offset values are NAN",fluid.c_str()));
                 }
-                it2->second.EOSVector[0].alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
+                it2->second.EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
             }
             else{
                 throw ValueError(format("fluid [%s] was not found in JSONFluidLibrary",fluid.c_str()));

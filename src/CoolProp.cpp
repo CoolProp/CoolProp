@@ -716,7 +716,9 @@ void set_reference_stateS(const std::string &Ref, const std::string &reference_s
         double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
         // Change the value in the library for the given fluid
         set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "IIR");
-        HEOS.update_states();
+        if (get_debug_level() > 0){
+            std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+        }
     }
     else if (!reference_state.compare("ASHRAE"))
     {
@@ -729,6 +731,9 @@ void set_reference_stateS(const std::string &Ref, const std::string &reference_s
         double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
         // Change the value in the library for the given fluid
         set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "ASHRAE");
+        if (get_debug_level() > 0){
+            std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+        }
     }
     else if (!reference_state.compare("NBP"))
     {
@@ -741,15 +746,17 @@ void set_reference_stateS(const std::string &Ref, const std::string &reference_s
         double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
         // Change the value in the library for the given fluid
         set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "NBP");
+        if (get_debug_level() > 0){
+            std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+        }
     }
     else if (!reference_state.compare("DEF"))
     {
-        set_fluid_enthalpy_entropy_offset(Ref, 0, 0, "");
+        set_fluid_enthalpy_entropy_offset(Ref, 0, 0, "DEF");
     }
     else if (!reference_state.compare("RESET"))
     {
-        HEOS.get_components()[0].EOS().alpha0.EnthalpyEntropyOffset.set(0, 0, "");
-        HEOS.get_components()[0].EOS().alpha0.EnthalpyEntropyOffsetCore.set(0, 0, "");
+        set_fluid_enthalpy_entropy_offset(Ref, 0, 0, "RESET");
     }
     else
     {
