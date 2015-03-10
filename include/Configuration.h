@@ -141,7 +141,7 @@ class ConfigurationItem
         }
 		#endif // !defined(SWIG)
          
-    protected:
+    private:
         enum ConfigurationDataTypes {
             CONFIGURATION_NOT_DEFINED_TYPE = 0,
             CONFIGURATION_BOOL_TYPE,
