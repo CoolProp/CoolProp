@@ -142,6 +142,8 @@ class ConfigurationItem
 		#endif // !defined(SWIG)
          
     private:
+        // Evidently SWIG+MATLAB cannot properly wrap private or protected enums
+        #if !defined(SWIGMATLAB) 
         enum ConfigurationDataTypes {
             CONFIGURATION_NOT_DEFINED_TYPE = 0,
             CONFIGURATION_BOOL_TYPE,
@@ -150,6 +152,7 @@ class ConfigurationItem
             CONFIGURATION_STRING_TYPE,
             CONFIGURATION_ENDOFLIST_TYPE
         };
+        #endif
         void check_data_type(ConfigurationDataTypes type) const {
             if (type != this->type){
                 throw ValueError(format("type does not match"));
