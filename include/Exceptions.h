@@ -11,94 +11,44 @@ namespace CoolProp
 
 class CoolPropBaseError: public std::exception
 {
-protected:
-    std::string err; // Can be accessed by subclasses since it is protected
 public:
-    CoolPropBaseError() throw() {};
+    enum ErrCode { eNotImplemented, eSolution, eAttribute, eOutOfRange, eValue, eWrongFluid, eComposition, eInput, eNotAvailable, eHandle, eKey, eUnableToLoad,eDirectorySize};
+    CoolPropBaseError(const std::string &err, ErrCode code) throw() : m_code(code), m_err(err) {}
     ~CoolPropBaseError() throw() {};
-    virtual const char* what() const throw(){ return err.c_str(); }
+    virtual const char* what() const throw() { return m_err.c_str(); }
+    ErrCode code() { return m_code; }
+private:
+    ErrCode m_code;
+    std::string m_err;
 };
 
-class NotImplementedError: public CoolPropBaseError
-{
+template <CoolPropBaseError::ErrCode errcode>
+class CoolPropError : public CoolPropBaseError {
 public:
-    NotImplementedError() throw() {};
-    NotImplementedError(std::string errstring) throw(){err=errstring;};
-    ~NotImplementedError() throw() {};
-    virtual const char* what() const throw(){ return err.c_str(); }
+    CoolPropError(const std::string &err = "", ErrCode ecode = errcode) throw() : CoolPropBaseError(err, ecode) {}
 };
 
-class SolutionError: public CoolPropBaseError
-{
+typedef CoolPropError<CoolPropBaseError::eNotImplemented> NotImplementedError;
+typedef CoolPropError<CoolPropBaseError::eSolution> SolutionError;
+typedef CoolPropError<CoolPropBaseError::eAttribute> AttributeError;
+typedef CoolPropError<CoolPropBaseError::eOutOfRange> OutOfRangeError;
+typedef CoolPropError<CoolPropBaseError::eValue> ValueError;
+typedef CoolPropError<CoolPropBaseError::eKey> KeyError;
+typedef CoolPropError<CoolPropBaseError::eHandle> HandleError;
+typedef CoolPropError<CoolPropBaseError::eUnableToLoad> UnableToLoadError;
+typedef CoolPropError<CoolPropBaseError::eDirectorySize> DirectorySizeError;
+
+// ValueError specializations
+template <CoolPropBaseError::ErrCode errcode>
+class ValueErrorSpec : public ValueError {
 public:
-    SolutionError()throw() {};
-    SolutionError(std::string errstring) throw(){err=errstring;};
-    ~SolutionError() throw() {};
-    virtual const char* what() const throw(){ return err.c_str(); }
+    ValueErrorSpec(const std::string &err = "", ErrCode ecode = errcode) throw() : ValueError(err, ecode) {}
 };
 
-class ValueError: public CoolPropBaseError
-{
-public:
-    ValueError() throw() {};
-    ValueError(std::string errstring) throw(){err=errstring;};
-    ~ValueError() throw() {};
-    virtual const char* what() const throw(){ return err.c_str(); }
-};
-
-class AttributeError: public CoolPropBaseError
-{
-public:
-    AttributeError() throw() {};
-    AttributeError(std::string errstring) throw() {err=errstring;};
-    ~AttributeError() throw() {};
-    virtual const char* what() const throw(){ return err.c_str(); }
-};
-
-class OutOfRangeError: public ValueError
-{
-public:
-    OutOfRangeError() throw() {};
-    OutOfRangeError(std::string errstring) throw() {err=errstring;};
-    ~OutOfRangeError() throw() {};
-    virtual const char* what() const throw(){ return err.c_str(); }
-};
-
-class WrongFluidError: public ValueError
-{
-public:
-    WrongFluidError() throw() {};
-    WrongFluidError(std::string errstring) throw() {err=errstring;};
-    ~WrongFluidError() throw() {};
-    virtual const char* what() const throw(){ return err.c_str(); }
-};
-
-class CompositionError: public ValueError
-{
-public:
-    CompositionError() throw() {};
-    CompositionError(std::string errstring) throw() {err=errstring;};
-    ~CompositionError() throw() {};
-    virtual const char* what() const throw(){ return err.c_str(); }
-};
-
-class InputError: public ValueError
-{
-public:
-    InputError() throw() {};
-    InputError(std::string errstring) throw() {err=errstring;};
-    ~InputError() throw() {};
-    virtual const char* what() const throw(){ return err.c_str(); }
-};
-
-class NotAvailableError: public ValueError
-{
-public:
-    NotAvailableError() throw() {};
-    NotAvailableError(std::string errstring) throw() {err=errstring;};
-    ~NotAvailableError() throw() {};
-    virtual const char* what() const throw(){ return err.c_str(); }
-};
+typedef ValueErrorSpec<CoolPropBaseError::eWrongFluid> WrongFluidError;
+typedef ValueErrorSpec<CoolPropBaseError::eComposition> CompositionError;
+typedef ValueErrorSpec<CoolPropBaseError::eInput> InputError;
+typedef ValueErrorSpec<CoolPropBaseError::eNotAvailable> NotAvailableError;
 
 }; /* namespace CoolProp */
 #endif

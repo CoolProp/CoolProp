@@ -44,52 +44,52 @@ public:
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual long double base(const long double &tau, const long double &delta) throw() = 0;
+    virtual CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw() = 0;
     /// Returns the first partial derivative of Helmholtz energy term with respect to tau [-]
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual long double dTau(const long double &tau, const long double &delta) throw() = 0;
+    virtual CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw() = 0;
     /// Returns the second partial derivative of Helmholtz energy term with respect to tau [-]
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */ 
-    virtual long double dTau2(const long double &tau, const long double &delta) throw() = 0;
+    virtual CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw() = 0;
     /// Returns the second mixed partial derivative (delta1,dtau1) of Helmholtz energy term with respect to delta and tau [-]
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual long double dDelta_dTau(const long double &tau, const long double &delta) throw() = 0;
+    virtual CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw() = 0;
     /// Returns the first partial derivative of Helmholtz energy term with respect to delta [-]
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual long double dDelta(const long double &tau, const long double &delta) throw() = 0;
+    virtual CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw() = 0;
     /// Returns the second partial derivative of Helmholtz energy term with respect to delta [-]
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual long double dDelta2(const long double &tau, const long double &delta) throw() = 0;
+    virtual CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw() = 0;
     /// Returns the third mixed partial derivative (delta2,dtau1) of Helmholtz energy term with respect to delta and tau [-]
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual long double dDelta2_dTau(const long double &tau, const long double &delta) throw() = 0;
+    virtual CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw() = 0;
     /// Returns the third mixed partial derivative (delta1,dtau2) of Helmholtz energy term with respect to delta and tau [-]
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual long double dDelta_dTau2(const long double &tau, const long double &delta) throw() = 0;
+    virtual CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw() = 0;
     /// Returns the third partial derivative of Helmholtz energy term with respect to tau [-]
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual long double dTau3(const long double &tau, const long double &delta) throw() = 0;
+    virtual CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw() = 0;
     /// Returns the third partial derivative of Helmholtz energy term with respect to delta [-]
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual long double dDelta3(const long double &tau, const long double &delta) throw() = 0;
+    virtual CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw() = 0;
     
 };
 
@@ -114,10 +114,10 @@ struct HelmholtzDerivatives
 struct ResidualHelmholtzGeneralizedExponentialElement
 {
     /// These variables are for the n*delta^d_i*tau^t_i part
-    long double n,d,t;
+    CoolPropDbl n,d,t;
     /// These variables are for the exp(u) part
     /// u is given by -c*delta^l_i-omega*tau^m_i-eta1*(delta-epsilon1)-eta2*(delta-epsilon2)^2-beta1*(tau-gamma1)-beta2*(tau-gamma2)^2
-    long double c, l_double, omega, m_double, eta1, epsilon1, eta2, epsilon2, beta1, gamma1, beta2, gamma2;
+    CoolPropDbl c, l_double, omega, m_double, eta1, epsilon1, eta2, epsilon2, beta1, gamma1, beta2, gamma2;
     /// If l_i or m_i are integers, we will store them as integers in order to call pow(double, int) rather than pow(double, double)
     int l_int, m_int;
     
@@ -142,7 +142,7 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm{
     
 public:
     bool delta_li_in_u, tau_mi_in_u, eta1_in_u, eta2_in_u, beta1_in_u, beta2_in_u, finished;
-    std::vector<long double> s;
+    std::vector<CoolPropDbl> s;
     std::size_t N;
     
     // These variables are for the exp(u) part
@@ -155,22 +155,16 @@ public:
         
     std::vector<ResidualHelmholtzGeneralizedExponentialElement> elements;
     // Default Constructor
-    ResidualHelmholtzGeneralizedExponential(){N = 0; 
-                                              delta_li_in_u = false; 
-                                              tau_mi_in_u = false;
-                                              eta1_in_u = false;
-                                              eta2_in_u = false;
-                                              beta1_in_u = false;
-                                              beta2_in_u = false;
-                                              finished = false;
-                                              };
+    ResidualHelmholtzGeneralizedExponential()
+        : delta_li_in_u(false),tau_mi_in_u(false),eta1_in_u(false),
+          eta2_in_u(false),beta1_in_u(false),beta2_in_u(false),finished(false), N(0) {};
     /** \brief Add and convert an old-style power (polynomial) term to generalized form
 	 * 
 	 * Term of the format
 	 * \f$ \alpha^r=\left\lbrace\begin{array}{cc}\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} & l_i=0\\ \displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}) & l_i\neq 0\end{array}\right.\f$
 	 */
-    void add_Power(const std::vector<long double> &n, const std::vector<long double> &d, 
-                   const std::vector<long double> &t, const std::vector<long double> &l)
+    void add_Power(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &d, 
+                   const std::vector<CoolPropDbl> &t, const std::vector<CoolPropDbl> &l)
     {
         for (std::size_t i = 0; i < n.size(); ++i)
         {
@@ -193,9 +187,9 @@ public:
 	 * Term of the format 
 	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-g_i\delta^{l_i}) \f$
 	 */
-    void add_Exponential(const std::vector<long double> &n, const std::vector<long double> &d, 
-                         const std::vector<long double> &t, const std::vector<long double> &g, 
-                         const std::vector<long double> &l)
+    void add_Exponential(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &d, 
+                         const std::vector<CoolPropDbl> &t, const std::vector<CoolPropDbl> &g, 
+                         const std::vector<CoolPropDbl> &l)
     {
         for (std::size_t i = 0; i < n.size(); ++i)
         {
@@ -215,13 +209,13 @@ public:
 	 * Term of the format
 	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\eta_i(\delta-\epsilon_i)^2-\beta_i(\tau-\gamma_i)^2)\f$
 	 */
-    void add_Gaussian(const std::vector<long double> &n, 
-                      const std::vector<long double> &d, 
-                      const std::vector<long double> &t, 
-                      const std::vector<long double> &eta, 
-                      const std::vector<long double> &epsilon,
-                      const std::vector<long double> &beta,
-                      const std::vector<long double> &gamma
+    void add_Gaussian(const std::vector<CoolPropDbl> &n, 
+                      const std::vector<CoolPropDbl> &d, 
+                      const std::vector<CoolPropDbl> &t, 
+                      const std::vector<CoolPropDbl> &eta, 
+                      const std::vector<CoolPropDbl> &epsilon,
+                      const std::vector<CoolPropDbl> &beta,
+                      const std::vector<CoolPropDbl> &gamma
                       )
     { 
         for (std::size_t i = 0; i < n.size(); ++i)
@@ -244,13 +238,13 @@ public:
 	 * Term of the format
 	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\eta_i(\delta-\epsilon_i)^2-\beta_i(\delta-\gamma_i))\f$
 	 */
-    void add_GERG2008Gaussian(const std::vector<long double> &n, 
-                              const std::vector<long double> &d, 
-                              const std::vector<long double> &t, 
-                              const std::vector<long double> &eta, 
-                              const std::vector<long double> &epsilon,
-                              const std::vector<long double> &beta,
-                              const std::vector<long double> &gamma)
+    void add_GERG2008Gaussian(const std::vector<CoolPropDbl> &n, 
+                              const std::vector<CoolPropDbl> &d, 
+                              const std::vector<CoolPropDbl> &t, 
+                              const std::vector<CoolPropDbl> &eta, 
+                              const std::vector<CoolPropDbl> &epsilon,
+                              const std::vector<CoolPropDbl> &beta,
+                              const std::vector<CoolPropDbl> &gamma)
     { 
         for (std::size_t i = 0; i < n.size(); ++i)
         {
@@ -272,11 +266,11 @@ public:
 	 * Term of the format
 	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}-\tau^{m_i})\f$
 	 */
-    void add_Lemmon2005(const std::vector<long double> &n, 
-                        const std::vector<long double> &d, 
-                        const std::vector<long double> &t, 
-                        const std::vector<long double> &l, 
-                        const std::vector<long double> &m)
+    void add_Lemmon2005(const std::vector<CoolPropDbl> &n, 
+                        const std::vector<CoolPropDbl> &d, 
+                        const std::vector<CoolPropDbl> &t, 
+                        const std::vector<CoolPropDbl> &l, 
+                        const std::vector<CoolPropDbl> &m)
     {
         for (std::size_t i = 0; i < n.size(); ++i)
         {
@@ -326,49 +320,46 @@ public:
         finished = true;
     };
 
-    ///< Destructor for the class.  No implementation
-    ~ResidualHelmholtzGeneralizedExponential(){};
-
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
     
-    long double base(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.alphar;};
-    long double dDelta(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.dalphar_ddelta;};
-    long double dTau(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.dalphar_dtau;};
-    long double dDelta2(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta2;};
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta_dtau;};
-    long double dTau2(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_dtau2;};
-    long double dDelta3(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta3;};
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta2_dtau;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta_dtau2;};
-    long double dTau3(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_dtau3;};
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.alphar;};
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.dalphar_ddelta;};
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.dalphar_dtau;};
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta2;};
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta_dtau;};
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_dtau2;};
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta3;};
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta2_dtau;};
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta_dtau2;};
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_dtau3;};
     
-    void all(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
-    //void allEigen(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
+    void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
+    //void allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 };
 
 struct ResidualHelmholtzNonAnalyticElement
 {
-    long double n, a, b, beta, A, B, C, D;
+    CoolPropDbl n, a, b, beta, A, B, C, D;
 };
 class ResidualHelmholtzNonAnalytic : public BaseHelmholtzTerm{
 
 public:
     std::size_t N;
-    std::vector<long double> s;
+    std::vector<CoolPropDbl> s;
     std::vector<ResidualHelmholtzNonAnalyticElement> elements;
     /// Default Constructor
     ResidualHelmholtzNonAnalytic(){N = 0;};
     /// Destructor. No implementation
     ~ResidualHelmholtzNonAnalytic(){};
     /// Constructor
-    ResidualHelmholtzNonAnalytic(const std::vector<long double> &n, 
-                                 const std::vector<long double> &a, 
-                                 const std::vector<long double> &b, 
-                                 const std::vector<long double> &beta, 
-                                 const std::vector<long double> &A,
-                                 const std::vector<long double> &B,
-                                 const std::vector<long double> &C,
-                                 const std::vector<long double> &D
+    ResidualHelmholtzNonAnalytic(const std::vector<CoolPropDbl> &n, 
+                                 const std::vector<CoolPropDbl> &a, 
+                                 const std::vector<CoolPropDbl> &b, 
+                                 const std::vector<CoolPropDbl> &beta, 
+                                 const std::vector<CoolPropDbl> &A,
+                                 const std::vector<CoolPropDbl> &B,
+                                 const std::vector<CoolPropDbl> &C,
+                                 const std::vector<CoolPropDbl> &D
                                  )
     {
         N = n.size(); 
@@ -390,18 +381,18 @@ public:
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
 
-    long double base(const long double &tau, const long double &delta) throw();
-    long double dDelta(const long double &tau, const long double &delta) throw();
-    long double dTau(const long double &tau, const long double &delta) throw();
-    long double dDelta2(const long double &tau, const long double &delta) throw();
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw();
-    long double dTau2(const long double &tau, const long double &delta) throw();
-    long double dDelta3(const long double &tau, const long double &delta) throw();
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw();
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw();
-    long double dTau3(const long double &tau, const long double &delta) throw();
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
     
-    void all(const long double &tau, const long double &delta, HelmholtzDerivatives &derivs) throw();
+    void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 };
 
 class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm{
@@ -409,36 +400,36 @@ class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm{
 protected:
     double a, m,epsilonbar, vbarn, kappabar;
 
-    long double Deltabar(const long double &tau, const long double &delta);
-    long double dDeltabar_ddelta__consttau(const long double &tau, const long double &delta);
-    long double d2Deltabar_ddelta2__consttau(const long double &tau, const long double &delta);
-    long double dDeltabar_dtau__constdelta(const long double &tau, const long double &delta);
-    long double d2Deltabar_dtau2__constdelta(const long double &tau, const long double &delta);
-    long double d2Deltabar_ddelta_dtau(const long double &tau, const long double &delta);
-    long double d3Deltabar_dtau3__constdelta(const long double &tau, const long double &delta);
-    long double d3Deltabar_ddelta_dtau2(const long double &tau, const long double &delta);
-    long double d3Deltabar_ddelta3__consttau(const long double &tau, const long double &delta);
-    long double d3Deltabar_ddelta2_dtau(const long double &tau, const long double &delta);
+    CoolPropDbl Deltabar(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl dDeltabar_ddelta__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2Deltabar_ddelta2__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl dDeltabar_dtau__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2Deltabar_dtau2__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2Deltabar_ddelta_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_dtau3__constdelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_ddelta_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_ddelta3__consttau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3Deltabar_ddelta2_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
 
-    long double X(const long double &delta, const long double &Deltabar);
-    long double dX_dDeltabar__constdelta(const long double &delta, const long double &Deltabar);
-    long double dX_ddelta__constDeltabar(const long double &delta, const long double &Deltabar);
-    long double dX_dtau(const long double &tau, const long double &delta);
-    long double dX_ddelta(const long double &tau, const long double &delta);
-    long double d2X_dtau2(const long double &tau, const long double &delta);
-    long double d2X_ddeltadtau(const long double &tau, const long double &delta);
-    long double d2X_ddelta2(const long double &tau, const long double &delta);
+    CoolPropDbl X(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const;
+    CoolPropDbl dX_dDeltabar__constdelta(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const;
+    CoolPropDbl dX_ddelta__constDeltabar(const CoolPropDbl &delta, const CoolPropDbl &Deltabar) const;
+    CoolPropDbl dX_dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl dX_ddelta(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2X_dtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2X_ddeltadtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d2X_ddelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
 
-    long double d3X_dtau3(const long double &tau, const long double &delta);
-    long double d3X_ddelta3(const long double &tau, const long double &delta);
-    long double d3X_ddeltadtau2(const long double &tau, const long double &delta);
-    long double d3X_ddelta2dtau(const long double &tau, const long double &delta);
+    CoolPropDbl d3X_dtau3(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3X_ddelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3X_ddeltadtau2(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
+    CoolPropDbl d3X_ddelta2dtau(const CoolPropDbl &tau, const CoolPropDbl &delta) const;
 
-    long double g(const long double &eta);
-    long double dg_deta(const long double &eta);
-    long double d2g_deta2(const long double &eta);
-    long double d3g_deta3(const long double &eta);
-    long double eta(const long double &delta);
+    CoolPropDbl g(const CoolPropDbl &eta) const;
+    CoolPropDbl dg_deta(const CoolPropDbl &eta) const;
+    CoolPropDbl d2g_deta2(const CoolPropDbl &eta) const;
+    CoolPropDbl d3g_deta3(const CoolPropDbl &eta) const;
+    CoolPropDbl eta(const CoolPropDbl &delta) const;
 
 public:
     /// Default constructor
@@ -457,18 +448,18 @@ public:
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
 
-    long double base(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.alphar;};
-    long double dDelta(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.dalphar_ddelta;};
-    long double dTau(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.dalphar_dtau;};
-    long double dDelta2(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta2;};
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta_dtau;};
-    long double dTau2(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_dtau2;};
-    long double dDelta3(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta3;};
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta2_dtau;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta_dtau2;};
-    long double dTau3(const long double &tau, const long double &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_dtau3;};
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.alphar;};
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.dalphar_ddelta;};
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.dalphar_dtau;};
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta2;};
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_ddelta_dtau;};
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d2alphar_dtau2;};
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta3;};
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta2_dtau;};
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_ddelta_dtau2;};
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){HelmholtzDerivatives deriv; all(tau,delta,deriv); return deriv.d3alphar_dtau3;};
     
-    void all(const long double &tau, const long double &delta, HelmholtzDerivatives &deriv) throw();
+    void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &deriv) const throw();
 };
 
 class ResidualHelmholtzContainer
@@ -479,7 +470,7 @@ public:
     ResidualHelmholtzSAFTAssociating SAFT;
     ResidualHelmholtzGeneralizedExponential GenExp; 
 
-    HelmholtzDerivatives all(const long double tau, const long double delta)
+    HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta)
     {
         HelmholtzDerivatives derivs; // zeros out the elements
         GenExp.all(tau, delta, derivs);
@@ -487,16 +478,16 @@ public:
         SAFT.all(tau, delta, derivs);
         return derivs;
     };
-    long double base(long double tau, long double delta) { return all(tau,delta).alphar; };
-    long double dDelta(long double tau, long double delta) { return all(tau,delta).dalphar_ddelta; };
-    long double dTau(long double tau, long double delta) { return all(tau, delta).dalphar_dtau; };
-    long double dDelta2(long double tau, long double delta) {  return all(tau, delta).d2alphar_ddelta2; };
-    long double dDelta_dTau(long double tau, long double delta) { return all(tau, delta).d2alphar_ddelta_dtau; };
-    long double dTau2(long double tau, long double delta) { return all(tau, delta).d2alphar_dtau2; };
-    long double dDelta3(long double tau, long double delta) { return all(tau, delta).d3alphar_ddelta3; };
-    long double dDelta2_dTau(long double tau, long double delta) { return all(tau, delta).d3alphar_ddelta2_dtau; };
-    long double dDelta_dTau2(long double tau, long double delta) { return all(tau, delta).d3alphar_ddelta_dtau2; };
-    long double dTau3(long double tau, long double delta) { return all(tau, delta).d3alphar_dtau3; };
+    CoolPropDbl base(CoolPropDbl tau, CoolPropDbl delta) { return all(tau,delta).alphar; };
+    CoolPropDbl dDelta(CoolPropDbl tau, CoolPropDbl delta) { return all(tau,delta).dalphar_ddelta; };
+    CoolPropDbl dTau(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).dalphar_dtau; };
+    CoolPropDbl dDelta2(CoolPropDbl tau, CoolPropDbl delta) {  return all(tau, delta).d2alphar_ddelta2; };
+    CoolPropDbl dDelta_dTau(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d2alphar_ddelta_dtau; };
+    CoolPropDbl dTau2(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d2alphar_dtau2; };
+    CoolPropDbl dDelta3(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d3alphar_ddelta3; };
+    CoolPropDbl dDelta2_dTau(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d3alphar_ddelta2_dtau; };
+    CoolPropDbl dDelta_dTau2(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d3alphar_ddelta_dtau2; };
+    CoolPropDbl dTau3(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d3alphar_dtau3; };
 };
 
 // #############################################################################
@@ -516,21 +507,17 @@ public:
 class IdealHelmholtzLead : public BaseHelmholtzTerm{
 
 private:
-    long double a1, a2;
+    CoolPropDbl a1, a2;
     bool enabled;
 public:
     // Default constructor
-    IdealHelmholtzLead(){enabled = false;};
+    IdealHelmholtzLead() :a1(_HUGE), a2(_HUGE), enabled(false) {}
 
     // Constructor
-    IdealHelmholtzLead(const long double a1, const long double a2)
-    :a1(a1), a2(a2)
-    {enabled = true;};
+    IdealHelmholtzLead(CoolPropDbl a1, CoolPropDbl a2)
+    :a1(a1), a2(a2), enabled(true) {}
 
-    //Destructor
-    ~IdealHelmholtzLead(){};
-
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;}
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc){
         el.AddMember("type","IdealHelmholtzLead",doc.GetAllocator());
@@ -539,31 +526,31 @@ public:
     };
 
     // Term and its derivatives
-    long double base(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return log(delta)+a1+a2*tau;
     };
-    long double dDelta(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return 1.0/delta;
     };
-    long double dTau(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return a2;
     };
-    long double dDelta2(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return -1.0/delta/delta;
     };
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dTau2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta3(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return 2/delta/delta/delta;
     };
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dTau3(const long double &tau, const long double &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
 };
 
 /// The term in the EOS used to shift the reference state of the fluid
@@ -574,22 +561,34 @@ public:
 */
 class IdealHelmholtzEnthalpyEntropyOffset : public BaseHelmholtzTerm{
 private:
-    long double a1,a2; // Use these variables internally
-    bool enabled;
+    CoolPropDbl a1,a2; // Use these variables internally
     std::string reference;
+    bool enabled;
 public:
-    IdealHelmholtzEnthalpyEntropyOffset(){enabled = false;};
+    IdealHelmholtzEnthalpyEntropyOffset():a1(_HUGE),a2(_HUGE),enabled(false){}
 
     // Constructor
-    IdealHelmholtzEnthalpyEntropyOffset(long double a1, long double a2, std::string reference):a1(a1), a2(a2){this->reference = reference; enabled = true;};
+    IdealHelmholtzEnthalpyEntropyOffset(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref):a1(a1),a2(a2),reference(ref),enabled(true) {}
 
     // Set the values in the class
-    void set(long double a1, long double a2, std::string reference){this->a1 = a1; this->a2 = a2; this->reference = reference; enabled = true;}
+    void set(CoolPropDbl a1, CoolPropDbl a2, const std::string &ref){
+        // If it doesn't already exist, just set the values
+        if (enabled == false){
+            this->a1 = a1; this->a2 = a2;
+            enabled = true;
+        }
+        else if(ref == "DEF"){
+            this->a1 = 0.0; this->a2 = 0.0; enabled = false;
+        }
+        else{
+            // Otherwise, increment the values
+            this->a1 += a1; this->a2 += a2;
+            enabled = true;
+        }
+        this->reference = ref; 
+    }
 
-    //Destructor
-    ~IdealHelmholtzEnthalpyEntropyOffset(){};
-
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc){
         el.AddMember("type","IdealHelmholtzEnthalpyEntropyOffset",doc.GetAllocator());
@@ -598,22 +597,20 @@ public:
     };
 
     // Term and its derivatives
-    long double base(const long double &tau, const long double &delta) throw(){
-        if (!enabled){return 0.0;}
-        return a1+a2*tau;
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
+        return enabled ? a1+a2*tau : 0.0;
     };
-    long double dDelta(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dTau(const long double &tau, const long double &delta) throw(){
-        if (!enabled){return 0.0;}
-        return a2;
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
+        return enabled ? a2 : 0.0;
     };
-    long double dDelta2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dTau2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta3(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dTau3(const long double &tau, const long double &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
 };
 
 
@@ -625,20 +622,17 @@ public:
 class IdealHelmholtzLogTau : public BaseHelmholtzTerm
 {
 private:
-    long double a1;
+    CoolPropDbl a1;
     bool enabled;
 public:
 
     /// Default constructor
-    IdealHelmholtzLogTau(){enabled = false;};
+    IdealHelmholtzLogTau():a1(_HUGE),enabled(false){}
 
     // Constructor
-    IdealHelmholtzLogTau(long double a1){this->a1=a1; enabled = true;};
+    IdealHelmholtzLogTau(CoolPropDbl a1):a1(a1),enabled(true){}
 
-    bool is_enabled(){return enabled;};
-
-    //Destructor
-    ~IdealHelmholtzLogTau(){};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc){
         el.AddMember("type", "IdealHelmholtzLogTau", doc.GetAllocator());
@@ -646,28 +640,28 @@ public:
     };
 
     // Term and its derivatives
-    long double base(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return a1*log(tau);
     };
-    long double dTau(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return a1/tau;
     };
-    long double dTau2(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return -a1/tau/tau;
     };
-    long double dTau3(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return 2*a1/tau/tau/tau;
     };
-    long double dDelta(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta3(const long double &tau, const long double &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
 };
 
 /**
@@ -678,23 +672,16 @@ public:
 class IdealHelmholtzPower : public BaseHelmholtzTerm{
     
 private:
-    std::vector<long double> n, t; // Use these variables internally
+    std::vector<CoolPropDbl> n, t; // Use these variables internally
     std::size_t N;
     bool enabled;
 public:
-    IdealHelmholtzPower(){enabled = false;};
+    IdealHelmholtzPower():N(0),enabled(false){};
     // Constructor
-    IdealHelmholtzPower(const std::vector<long double> &n, const std::vector<long double> &t)
-    :n(n), t(t)
-    {
-        this->N = n.size();
-        enabled = true;
-    };
+    IdealHelmholtzPower(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &t)
+    :n(n), t(t), N(n.size()), enabled(true) {};
 
-    //Destructor
-    ~IdealHelmholtzPower(){};
-
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc)
     {
@@ -704,28 +691,28 @@ public:
     };
 
     // Term and its derivatives
-    long double base(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*pow(tau, t[i]);} return s;
+        CoolPropDbl s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*pow(tau, t[i]);} return s;
     };
-    long double dTau(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*t[i]*pow(tau, t[i]-1);} return s;
+        CoolPropDbl s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*t[i]*pow(tau, t[i]-1);} return s;
     };
-    long double dTau2(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*t[i]*(t[i]-1)*pow(tau, t[i]-2);} return s;
+        CoolPropDbl s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*t[i]*(t[i]-1)*pow(tau, t[i]-2);} return s;
     };
-    long double dTau3(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*t[i]*(t[i]-1)*(t[i]-2)*pow(tau, t[i]-3);} return s;
+        CoolPropDbl s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*t[i]*(t[i]-1)*(t[i]-2)*pow(tau, t[i]-3);} return s;
     };
-    long double dDelta(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta3(const long double &tau, const long double &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
 };
 
 /**
@@ -777,24 +764,17 @@ where
 class IdealHelmholtzPlanckEinsteinGeneralized : public BaseHelmholtzTerm{
     
 private:
-    std::vector<long double> n,theta,c,d; // Use these variables internally
+    std::vector<CoolPropDbl> n,theta,c,d; // Use these variables internally
     std::size_t N;
     bool enabled;
 public:
-    IdealHelmholtzPlanckEinsteinGeneralized(){N = 0; enabled = false;}
+    IdealHelmholtzPlanckEinsteinGeneralized():N(0),enabled(false){}
     // Constructor with std::vector instances
-    IdealHelmholtzPlanckEinsteinGeneralized(std::vector<long double> n, std::vector<long double> theta, std::vector<long double> c, std::vector<long double> d)
-    :n(n), theta(theta), c(c), d(d)
-    {
-        N = n.size();
-        enabled = true;
-    };
-
-    // Destructor
-    ~IdealHelmholtzPlanckEinsteinGeneralized(){};
+    IdealHelmholtzPlanckEinsteinGeneralized(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &theta, const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &d)
+    :n(n), theta(theta), c(c), d(d), N(n.size()), enabled(true) {}
 
     // Extend the vectors to allow for multiple instances feeding values to this function
-    void extend(std::vector<long double> n, std::vector<long double> theta, std::vector<long double> c, std::vector<long double> d)
+    void extend(const std::vector<CoolPropDbl> &n, const std::vector<CoolPropDbl> &theta, const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &d)
     {
         this->n.insert(this->n.end(), n.begin(), n.end());
         this->theta.insert(this->theta.end(), theta.begin(), theta.end());
@@ -803,7 +783,7 @@ public:
         N += n.size();
     }
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
   
     void to_json(rapidjson::Value &el, rapidjson::Document &doc)
     {
@@ -813,32 +793,32 @@ public:
     };
 
     // Term and its derivatives
-    long double base(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){
+        CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){
             s += n[i]*log(c[i]+d[i]*exp(theta[i]*tau));
         } 
         return s;
     };
-    long double dTau(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*theta[i]*d[i]*exp(theta[i]*tau)/(c[i]+d[i]*exp(theta[i]*tau));} 
+        CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*theta[i]*d[i]*exp(theta[i]*tau)/(c[i]+d[i]*exp(theta[i]*tau));} 
         return s;
     };
-    long double dTau2(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],2)*c[i]*d[i]*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),2);} return s;
+        CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],2)*c[i]*d[i]*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),2);} return s;
     };
-    long double dTau3(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
-        long double s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],3)*c[i]*d[i]*(c[i]-d[i]*exp(theta[i]*tau))*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),3);} return s;
+        CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],3)*c[i]*d[i]*(c[i]-d[i]*exp(theta[i]*tau))*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),3);} return s;
     };
-    long double dDelta(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta3(const long double &tau, const long double &delta) throw(){return 0;};
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0;};
 };
 
 class IdealHelmholtzCP0Constant : public BaseHelmholtzTerm{
@@ -851,7 +831,7 @@ public:
     IdealHelmholtzCP0Constant(){enabled = false;};
 
     /// Constructor with just a single double value
-    IdealHelmholtzCP0Constant(long double cp_over_R, long double Tc, long double T0) 
+    IdealHelmholtzCP0Constant(CoolPropDbl cp_over_R, CoolPropDbl Tc, CoolPropDbl T0) 
     : cp_over_R(cp_over_R), Tc(Tc), T0(T0)
     { 
         enabled = true; tau0 = Tc/T0;
@@ -860,7 +840,7 @@ public:
     /// Destructor
     ~IdealHelmholtzCP0Constant(){};
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc)
     {
@@ -871,75 +851,67 @@ public:
     };
 
     // Term and its derivatives
-    long double base(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return cp_over_R-cp_over_R*tau/tau0+cp_over_R*log(tau/tau0);
     };
-    long double dTau(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return cp_over_R/tau-cp_over_R/tau0;
     };
-    long double dTau2(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return -cp_over_R/(tau*tau);
     };
-    long double dTau3(const long double &tau, const long double &delta) throw(){
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
         if (!enabled){return 0.0;}
         return 2*cp_over_R/(tau*tau*tau);
     };
-    long double dDelta(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta3(const long double &tau, const long double &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
 };
 
 class IdealHelmholtzCP0PolyT : public BaseHelmholtzTerm{
 private:
-    std::vector<long double> c, t;
-    long double Tc, T0, tau0; // Use these variables internally
+    std::vector<CoolPropDbl> c, t;
+    CoolPropDbl Tc, T0, tau0; // Use these variables internally
     std::size_t N;
     bool enabled;
 public:
-    /// Destructor
-    IdealHelmholtzCP0PolyT(){N = 0; enabled = false;};
+    IdealHelmholtzCP0PolyT()
+    : Tc(_HUGE), T0(_HUGE), tau0(_HUGE), N(0), enabled(false) {}
 
     /// Constructor with std::vectors
-    IdealHelmholtzCP0PolyT(const std::vector<long double> &c, const std::vector<long double> &t, double Tc, double T0) 
-    : c(c), t(t), Tc(Tc), T0(T0)
-    { 
-        assert(c.size() == t.size());
-        tau0 = Tc/T0;
-        enabled = true;
-        N = c.size();
-    };
+    IdealHelmholtzCP0PolyT(const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &t, double Tc, double T0) 
+    : c(c), t(t), Tc(Tc), T0(T0), tau0(Tc/T0), N(c.size()), enabled(true)
+    { assert(c.size() == t.size()); }
 
-    void extend(const std::vector<long double> &c, const std::vector<long double> &t)
+    void extend(const std::vector<CoolPropDbl> &c, const std::vector<CoolPropDbl> &t)
     {
         this->c.insert(this->c.end(), c.begin(), c.end());
         this->t.insert(this->t.end(), t.begin(), t.end());
         N += c.size();
     }
 
-    /// Destructor
-    ~IdealHelmholtzCP0PolyT(){};
-
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
 
     // Term and its derivatives
-    long double base(const long double &tau, const long double &delta) throw();
-    long double dDelta(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dTau(const long double &tau, const long double &delta) throw();
-    long double dDelta2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dTau2(const long double &tau, const long double &delta) throw();
-    long double dDelta3(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dTau3(const long double &tau, const long double &delta) throw();
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
     
 };
 
@@ -985,14 +957,14 @@ see also Jaeschke and Schley, 1995, (http://link.springer.com/article/10.1007%2F
 */
 class IdealHelmholtzCP0AlyLee : public BaseHelmholtzTerm{
 private:
-    std::vector<long double> c;
-    long double Tc, tau0, T0; // Use these variables internally
+    std::vector<CoolPropDbl> c;
+    CoolPropDbl Tc, tau0, T0; // Use these variables internally
     bool enabled;
 public:
     IdealHelmholtzCP0AlyLee(){enabled = false;};
 
     /// Constructor with std::vectors
-    IdealHelmholtzCP0AlyLee(std::vector<long double> c, double Tc, double T0)
+    IdealHelmholtzCP0AlyLee(const std::vector<CoolPropDbl> &c, double Tc, double T0)
     :c(c), Tc(Tc), T0(T0)
     {
         tau0=Tc/T0;
@@ -1002,7 +974,7 @@ public:
     /// Destructor
     ~IdealHelmholtzCP0AlyLee(){};
 
-    bool is_enabled(){return enabled;};
+    bool is_enabled() const {return enabled;};
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
 
@@ -1024,7 +996,7 @@ public:
     \displaystyle\int \frac{1}{\tau^2}\frac{c_p^0}{R_u}d\tau = -\frac{a_0}{\tau}+\frac{2a_1a_2}{T_c\left[\exp\left(-\frac{2a_2\tau}{T_c}\right)-1\right]}+\frac{2a_3a_4}{T_c\left[\exp\left(-\frac{2a_4\tau}{T_c}\right)+1\right]}
     \f]
     */
-    long double anti_deriv_cp0_tau2(const long double &tau);
+    CoolPropDbl anti_deriv_cp0_tau2(const CoolPropDbl &tau);
 
     /// The antiderivative given by \f$ \displaystyle\int \frac{1}{\tau}\frac{c_p^0}{R_u}d\tau \f$
     /**
@@ -1059,18 +1031,18 @@ public:
     \displaystyle\int \frac{a_1a_2^2}{T_c^2}\frac{\tau}{\cosh\left(\displaystyle\frac{a_2\tau}{T_c}\right)^2} d\tau = - \frac{a_{3}}{Tc \left(e^{\frac{2 a_{4}}{Tc} \tau} + 1\right)} \left(Tc e^{\frac{2 a_{4}}{Tc} \tau} \log{\left (e^{\frac{2 a_{4}}{Tc} \tau} + 1 \right )} + Tc \log{\left (e^{\frac{2 a_{4}}{Tc} \tau} + 1 \right )} - 2 a_{4} \tau e^{\frac{2 a_{4}}{Tc} \tau}\right)
     \f]
     */
-    long double anti_deriv_cp0_tau(const long double &tau);
+    CoolPropDbl anti_deriv_cp0_tau(const CoolPropDbl &tau);
 
-    long double base(const long double &tau, const long double &delta) throw();
-    long double dDelta(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dTau(const long double &tau, const long double &delta) throw();
-    long double dDelta2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dTau2(const long double &tau, const long double &delta) throw();
-    long double dDelta3(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta2_dTau(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dDelta_dTau2(const long double &tau, const long double &delta) throw(){return 0.0;};
-    long double dTau3(const long double &tau, const long double &delta) throw();
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
     
 };
 
@@ -1088,8 +1060,8 @@ public:
     IdealHelmholtzCP0Constant CP0Constant;
     IdealHelmholtzCP0PolyT CP0PolyT;
 
-    long double base(const long double &tau, const long double &delta)
-    {
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta)
+    {    
         return (Lead.base(tau, delta) + EnthalpyEntropyOffset.base(tau, delta)
                 + EnthalpyEntropyOffsetCore.base(tau, delta)
                 + LogTau.base(tau, delta) + Power.base(tau, delta) 
@@ -1097,7 +1069,7 @@ public:
                 + CP0Constant.base(tau, delta) + CP0PolyT.base(tau, delta)
                 );
     };
-    long double dDelta(const long double &tau, const long double &delta)
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return (Lead.dDelta(tau, delta) + EnthalpyEntropyOffset.dDelta(tau, delta)
                 + EnthalpyEntropyOffsetCore.dDelta(tau, delta)
@@ -1106,7 +1078,7 @@ public:
                 + CP0Constant.dDelta(tau, delta) + CP0PolyT.dDelta(tau, delta)
                 );
     };
-    long double dTau(const long double &tau, const long double &delta)
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return (Lead.dTau(tau, delta) + EnthalpyEntropyOffset.dTau(tau, delta)
                 + EnthalpyEntropyOffsetCore.dTau(tau, delta)
@@ -1115,7 +1087,7 @@ public:
                 + CP0Constant.dTau(tau, delta) + CP0PolyT.dTau(tau, delta)
                 );
     };
-    long double dDelta2(const long double &tau, const long double &delta)
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return (Lead.dDelta2(tau, delta) + EnthalpyEntropyOffset.dDelta2(tau, delta)
                 + EnthalpyEntropyOffsetCore.dDelta2(tau, delta)
@@ -1124,7 +1096,7 @@ public:
                 + CP0Constant.dDelta2(tau, delta) + CP0PolyT.dDelta2(tau, delta)
                 );
     };
-    long double dDelta_dTau(const long double &tau, const long double &delta)
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return (Lead.dDelta_dTau(tau, delta) + EnthalpyEntropyOffset.dDelta_dTau(tau, delta)
                 + EnthalpyEntropyOffsetCore.dDelta_dTau(tau, delta)
@@ -1133,7 +1105,7 @@ public:
                 + CP0Constant.dDelta_dTau(tau, delta) + CP0PolyT.dDelta_dTau(tau, delta)
                 );
     };
-    long double dTau2(const long double &tau, const long double &delta)
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return (Lead.dTau2(tau, delta) + EnthalpyEntropyOffset.dTau2(tau, delta)
                 + EnthalpyEntropyOffsetCore.dTau2(tau, delta)
@@ -1142,7 +1114,7 @@ public:
                 + CP0Constant.dTau2(tau, delta) + CP0PolyT.dTau2(tau, delta)
                 );
     };
-    long double dDelta3(const long double &tau, const long double &delta) 
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) 
     {
         return (Lead.dDelta3(tau, delta) + EnthalpyEntropyOffset.dDelta3(tau, delta)
                 + EnthalpyEntropyOffsetCore.dDelta3(tau, delta)
@@ -1151,7 +1123,7 @@ public:
                 + CP0Constant.dDelta3(tau, delta) + CP0PolyT.dDelta3(tau, delta)
                 );
     };
-    long double dDelta2_dTau(const long double &tau, const long double &delta)
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return (Lead.dDelta2_dTau(tau, delta) + EnthalpyEntropyOffset.dDelta2_dTau(tau, delta)
                 + EnthalpyEntropyOffsetCore.dDelta2_dTau(tau, delta)
@@ -1160,7 +1132,7 @@ public:
                 + CP0Constant.dDelta2_dTau(tau, delta) + CP0PolyT.dDelta2_dTau(tau, delta)
                 );
     };
-    long double dDelta_dTau2(const long double &tau, const long double &delta)
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return (Lead.dDelta_dTau2(tau, delta) + EnthalpyEntropyOffset.dDelta_dTau2(tau, delta)
                 + EnthalpyEntropyOffsetCore.dDelta_dTau2(tau, delta)
@@ -1169,7 +1141,7 @@ public:
                 + CP0Constant.dDelta_dTau2(tau, delta) + CP0PolyT.dDelta_dTau2(tau, delta)
                 );
     };
-    long double dTau3(const long double &tau, const long double &delta)
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return (Lead.dTau3(tau, delta) + EnthalpyEntropyOffset.dTau3(tau, delta)
                 + EnthalpyEntropyOffsetCore.dTau3(tau, delta)

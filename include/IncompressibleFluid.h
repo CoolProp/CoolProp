@@ -146,9 +146,9 @@ public:
     double getTbase() const {return Tbase;}
     double getxbase() const {return xbase;}
 
-    void setName(std::string name) {this->name = name;}
-    void setDescription(std::string description) {this->description = description;}
-    void setReference(std::string reference) {this->reference = reference;}
+    void setName(const std::string &name) {this->name = name;}
+    void setDescription(const std::string &description) {this->description = description;}
+    void setReference(const std::string &reference) {this->reference = reference;}
     void setTmax(double Tmax) {this->Tmax = Tmax;}
     void setTmin(double Tmin) {this->Tmin = Tmin;}
     void setxmax(double xmax) {this->xmax = xmax;}

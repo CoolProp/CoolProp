@@ -10,4 +10,5 @@ This section includes information about the CoolProp software, listings of input
     wrappers/index.rst
     HighLevelAPI.rst
     LowLevelAPI.rst
+    Tabular.rst
     changelog.rst

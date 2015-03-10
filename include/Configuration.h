@@ -22,7 +22,10 @@
     X(NORMALIZE_GAS_CONSTANTS, "NORMALIZE_GAS_CONSTANTS", true) \
     X(CRITICAL_WITHIN_1UK, "CRITICAL_WITHIN_1UK", true) \
     X(CRITICAL_SPLINES_ENABLED, "CRITICAL_SPLINES_ENABLED", true) \
-	X(ALTERNATIVE_REFPROP_PATH, "ALTERNATIVE_REFPROP_PATH", "") 
+    X(ALTERNATIVE_REFPROP_PATH, "ALTERNATIVE_REFPROP_PATH", "") \
+    X(ALTERNATIVE_REFPROP_HMX_BNC_PATH, "ALTERNATIVE_REFPROP_HMX_BNC_PATH", "") \
+    X(SAVE_RAW_TABLES, "SAVE_RAW_TABLES", false) \
+    X(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB, "MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB", 1.0) \
 
  // Use preprocessor to create the Enum
  enum configuration_keys{
@@ -42,20 +45,13 @@ std::string config_key_to_string(configuration_keys keys);
 class ConfigurationItem
 {
     public:
-        enum ConfigurationDataTypes {CONFIGURATION_NOT_DEFINED_TYPE = 0, 
-                                     CONFIGURATION_BOOL_TYPE, 
-                                     CONFIGURATION_DOUBLE_TYPE, 
-                                     CONFIGURATION_INTEGER_TYPE, 
-                                     CONFIGURATION_STRING_TYPE,
-                                     CONFIGURATION_ENDOFLIST_TYPE};
-        ConfigurationDataTypes type;
         
         /// Cast to boolean
-        operator bool() { check_data_type(CONFIGURATION_BOOL_TYPE);  return v_bool; };
+        operator bool() const { check_data_type(CONFIGURATION_BOOL_TYPE);  return v_bool; };
         /// Cast to double
-        operator double() { check_data_type(CONFIGURATION_DOUBLE_TYPE);  return v_double; };
+        operator double() const { check_data_type(CONFIGURATION_DOUBLE_TYPE);  return v_double; };
         /// Cast to string
-        operator std::string() { check_data_type(CONFIGURATION_STRING_TYPE);  return v_string; };
+        operator std::string() const { check_data_type(CONFIGURATION_STRING_TYPE);  return v_string; };
         // Initializer for bool
         ConfigurationItem(configuration_keys key, bool val){
             this->key = key; type = CONFIGURATION_BOOL_TYPE; v_bool = val;
@@ -73,7 +69,7 @@ class ConfigurationItem
             this->key = key; type = CONFIGURATION_STRING_TYPE; v_string = val;
         };
         // Initializer for string
-        ConfigurationItem(configuration_keys key, std::string val){
+        ConfigurationItem(configuration_keys key, const std::string &val){
             this->key = key; type = CONFIGURATION_STRING_TYPE; v_string = val;
         };
 		void set_bool(bool val){
@@ -88,17 +84,17 @@ class ConfigurationItem
 			check_data_type(CONFIGURATION_DOUBLE_TYPE);
 			v_double = val;
 		}
-		void set_string(std::string val){
+		void set_string(const std::string &val){
 			check_data_type(CONFIGURATION_STRING_TYPE);
 			v_string = val;
 		}
 		
-        configuration_keys get_key(void){
+        configuration_keys get_key(void) const {
             return this->key;
         }
 		#if !defined(SWIG)
         /// Cast to rapidjson::Value
-        void add_to_json(rapidjson::Value &val, rapidjson::Document &d){
+        void add_to_json(rapidjson::Value &val, rapidjson::Document &d) const {
             std::string name_string = config_key_to_string(key);
             rapidjson::Value name(name_string.c_str(), d.GetAllocator());
             switch (type){
@@ -114,7 +110,7 @@ class ConfigurationItem
                 }
                 case CONFIGURATION_DOUBLE_TYPE:
                 {
-                    rapidjson::Value v(v_double);
+                    rapidjson::Value v(v_double); // Try to upcast
                     val.AddMember(name, v, d.GetAllocator()); break;
                 }
                 case CONFIGURATION_STRING_TYPE:
@@ -131,7 +127,12 @@ class ConfigurationItem
             switch (type){
                 case CONFIGURATION_BOOL_TYPE: if (!val.IsBool()){throw ValueError(format("Input is not boolean"));}; v_bool = val.GetBool(); break;
                 case CONFIGURATION_INTEGER_TYPE: if (!val.IsInt()){throw ValueError(format("Input is not integer"));}; v_integer = val.GetInt(); break;
-                case CONFIGURATION_DOUBLE_TYPE: if (!val.IsDouble()){throw ValueError(format("Input is not double"));}; v_double = val.GetDouble(); break;
+                case CONFIGURATION_DOUBLE_TYPE: {
+                    if (!val.IsDouble() && !val.IsInt()){throw ValueError(format("Input [%s] is not double (or something that can be cast to double)",cpjson::to_string(val).c_str()));};
+                    if (val.IsDouble()){ v_double = val.GetDouble(); }
+                    else{ v_double = static_cast<double>(val.GetInt()); }
+                    break;
+                }
                 case CONFIGURATION_STRING_TYPE: if (!val.IsString()){throw ValueError(format("Input is not string"));}; v_string = val.GetString(); break; 
                 case CONFIGURATION_ENDOFLIST_TYPE:
                 case CONFIGURATION_NOT_DEFINED_TYPE:
@@ -140,15 +141,30 @@ class ConfigurationItem
         }
 		#endif // !defined(SWIG)
          
-    protected:
-        void check_data_type(ConfigurationDataTypes type){
+    private:
+        // Evidently SWIG+MATLAB cannot properly wrap private or protected enums
+        #if !defined(SWIGMATLAB) 
+        enum ConfigurationDataTypes {
+            CONFIGURATION_NOT_DEFINED_TYPE = 0,
+            CONFIGURATION_BOOL_TYPE,
+            CONFIGURATION_DOUBLE_TYPE,
+            CONFIGURATION_INTEGER_TYPE,
+            CONFIGURATION_STRING_TYPE,
+            CONFIGURATION_ENDOFLIST_TYPE
+        };
+        #endif
+        void check_data_type(ConfigurationDataTypes type) const {
             if (type != this->type){
                 throw ValueError(format("type does not match"));
             }
         };
-        double v_double;
-        bool v_bool;
-        int v_integer;
+        ConfigurationDataTypes type;
+        union {
+            double v_double;
+            bool v_bool;
+            int v_integer;
+
+        };
         std::string v_string;
         configuration_keys key;
 };
@@ -164,9 +180,8 @@ class Configuration
         
         /// Get an item from the configuration
         ConfigurationItem &get_item(configuration_keys key){
-            std::map<configuration_keys,ConfigurationItem>::iterator it;
             // Try to find it
-            it = items.find(key);
+            std::map<configuration_keys,ConfigurationItem>::iterator it = items.find(key);
             // If equal to end, not found
             if (it != items.end()){
                 // Found, return it
@@ -220,12 +235,12 @@ std::string get_config_as_json_string();
 
 void set_config_bool(configuration_keys key, bool val);
 void set_config_double(configuration_keys key, double val);
-void set_config_string(configuration_keys key, std::string val);
+void set_config_string(configuration_keys key, const std::string &val);
 /// Set values in the configuration based on a json file
 #if !defined(SWIG) // Hide this for swig - Swig gets confused
 void set_config_json(rapidjson::Document &doc);
 #endif
-void set_config_as_json_string(std::string &s);
+void set_config_as_json_string(const std::string &s);
 }
 
 #endif // COOLPROP_CONFIGURATION

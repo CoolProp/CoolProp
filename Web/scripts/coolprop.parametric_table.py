@@ -10,8 +10,9 @@ for parameter in CoolProp.get('parameter_list').split(','):
     IO = CoolProp.CoolProp.get_parameter_information(index, 'IO')
     long = CoolProp.CoolProp.get_parameter_information(index, 'long')
     short = CoolProp.CoolProp.get_parameter_information(index, 'short')
+    trivial = str(CoolProp.CoolProp.is_trivial_parameter(index))
     
-    RHS = (units, IO, long)
+    RHS = (units, IO, trivial, long)
     if RHS not in grouping:
         grouping[RHS] = [parameter]
     else:
@@ -20,7 +21,7 @@ for parameter in CoolProp.get('parameter_list').split(','):
 for k, v in grouping.iteritems():
     grouping2.append([', '.join(['``'+_+'``' for _ in v])] + list(k))
     
-headers = ['Parameter','Units','Input/Output','Description']
+headers = ['Parameter','Units','Input/Output','Trivial','Description']
 
 df3 = pandas.DataFrame(grouping2, columns = headers)
 df4 = df3.sort_index(by = ['Input/Output', 'Parameter'])
@@ -34,7 +35,7 @@ for i in range(len(N)):
     if N[i] < len(headers[i]):
         N[i] = len(headers[i])
         
-top_line = '='*N[0] + ' ' + '='*N[1] + ' ' + '='*N[2] + ' ' + '='*N[3]
+top_line = '='*N[0] + ' ' + '='*N[1] + ' ' + '='*N[2] + ' ' + '='*N[3] + ' ' + '='*N[4]
 header = ' '.join([h.ljust(n) for h,n in zip(headers,N)])
 
 fp = open('../coolprop/parameter_table.rst.in', 'w')

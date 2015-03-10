@@ -20,7 +20,7 @@ std::string config_key_to_string(configuration_keys keys)
 }; 
 
 /// Go from string to enum key
-configuration_keys config_string_to_key(std::string &s)
+configuration_keys config_string_to_key(const std::string &s)
 {
     /* See http://stackoverflow.com/a/148610
      * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
@@ -42,7 +42,7 @@ void set_config_bool(configuration_keys key, bool val){
 void set_config_double(configuration_keys key, double val){ 
 	config.get_item(key).set_double(val); 
 }
-void set_config_string(configuration_keys key, std::string val){ 
+void set_config_string(configuration_keys key, const std::string &val){ 
     config.get_item(key).set_string(val); 
 }
 
@@ -58,7 +58,7 @@ std::string get_config_string(configuration_keys key){
 void get_config_as_json(rapidjson::Document &doc){
     // Get the items
     std::map<configuration_keys, ConfigurationItem> items = config.get_items();
-    for (std::map<configuration_keys, ConfigurationItem>::iterator it = items.begin(); it != items.end(); ++it){
+    for (std::map<configuration_keys, ConfigurationItem>::const_iterator it = items.begin(); it != items.end(); ++it){
         it->second.add_to_json(doc, doc);
     }
 }
@@ -102,7 +102,7 @@ void set_config_as_json(rapidjson::Value &val){
         }
     }
 }
-void set_config_as_json_string(std::string &s){
+void set_config_as_json_string(const std::string &s){
     // Init the rapidjson doc
     rapidjson::Document doc;
     doc.Parse<0>(s.c_str());

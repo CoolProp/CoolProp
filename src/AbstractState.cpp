@@ -5,6 +5,8 @@
  *      Author: jowr
  */
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdlib.h>
 #include "math.h"
 #include "AbstractState.h"
@@ -12,14 +14,17 @@
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
-#include "Backends/Tabular/TabularBackends.h"
 
+#if !defined(NO_TABULAR_BACKENDS)
+    #include "Backends/Tabular/TTSEBackend.h"
+    #include "Backends/Tabular/BicubicBackend.h"
+#endif
 namespace CoolProp {
 
 AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
 {
-    static std::string HEOS_string = "HEOS";
-    if (!backend.compare("HEOS"))
+    static const std::string HEOS_string = "HEOS";
+    if (!backend.compare(HEOS_string))
     {
         if (fluid_names.size() == 1){
             return new HelmholtzEOSBackend(fluid_names[0]);
@@ -42,13 +47,22 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
         if (fluid_names.size() != 1){throw ValueError(format("For INCOMP backend, name vector must be one element long"));}
         return new IncompressibleBackend(fluid_names[0]);
     }
-    else if (backend.find("TTSE&") == 0)
-    {
-        if (fluid_names.size() != 1){throw ValueError(format("For backend [%s], name vector must be one element long", backend.c_str()));}
-        // Will throw if there is a problem with this backend
-        shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_names[0]));
-        return new TTSEBackend(*AS.get());
-    }
+    #if !defined(NO_TABULAR_BACKENDS)
+        else if (backend.find("TTSE&") == 0)
+        {
+            if (fluid_names.size() != 1){throw ValueError(format("For backend [%s], name vector must be one element long", backend.c_str()));}
+            // Will throw if there is a problem with this backend
+            shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_names[0]));
+            return new TTSEBackend(AS);
+        }
+        else if (backend.find("BICUBIC&") == 0)
+        {
+            if (fluid_names.size() != 1){throw ValueError(format("For backend [%s], name vector must be one element long", backend.c_str()));}
+            // Will throw if there is a problem with this backend
+            shared_ptr<AbstractState> AS(factory(backend.substr(8), fluid_names[0]));
+            return new BicubicBackend(AS);
+        }
+    #endif
     else if (!backend.compare("TREND"))
     {
         throw ValueError("TREND backend not yet implemented");
@@ -65,7 +79,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
         else
         {
             // Split string at the '::' into two std::string, call again
-            return factory(std::string(fluid_names[0].begin(), fluid_names[0].begin() + idel), std::string(fluid_names[0].begin()+idel+2, fluid_names[0].end()));
+            return factory(std::string(fluid_names[0].begin(), fluid_names[0].begin() + idel), std::string(fluid_names[0].begin()+(idel+2), fluid_names[0].end()));
         }
     }
     else
@@ -184,11 +198,11 @@ double AbstractState::trivial_keyed_output(int key)
     case iP_triple:
         return this->p_triple();
     case iT_reducing:
-        return get_reducing_state().T;
+        return calc_T_reducing();
     case irhomolar_reducing:
-        return get_reducing_state().rhomolar;
+        return calc_rhomolar_reducing();
 	case iP_reducing:
-		return get_reducing_state().p;
+		return calc_p_reducing();
     case iP_critical:
         return this->p_critical();
     case iT_critical:
@@ -283,6 +297,8 @@ double AbstractState::keyed_output(int key)
         return dCvirial_dT();
     case iisothermal_compressibility:
         return isothermal_compressibility();
+    case iisobaric_expansion_coefficient:
+        return isobaric_expansion_coefficient();
     case iviscosity:
         return viscosity();
     case iconductivity:
@@ -421,9 +437,9 @@ double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 double AbstractState::compressibility_factor(void){ return calc_compressibility_factor(); }
 
 // Get the derivatives of the parameters in the partial derivative with respect to T and rho
-void get_dT_drho(AbstractState &AS, parameters index, long double &dT, long double &drho)
+void get_dT_drho(AbstractState &AS, parameters index, CoolPropDbl &dT, CoolPropDbl &drho)
 {
-    long double T = AS.T(),
+    CoolPropDbl T = AS.T(),
                 rho = AS.rhomolar(),
                 rhor = AS.rhomolar_reducing(),
                 Tr = AS.T_reducing(),
@@ -498,13 +514,12 @@ void get_dT_drho(AbstractState &AS, parameters index, long double &dT, long doub
         throw ValueError(format("input to get_dT_drho[%s] is invalid",get_parameter_information(index,"short").c_str()));
     }
 }
-void get_dT_drho_second_derivatives(AbstractState &AS, int index, long double &dT2, long double &drho_dT, long double &drho2)
+void get_dT_drho_second_derivatives(AbstractState &AS, int index, CoolPropDbl &dT2, CoolPropDbl &drho_dT, CoolPropDbl &drho2)
 {
-	long double T = AS.T(),
+	CoolPropDbl T = AS.T(),
                 rho = AS.rhomolar(),
                 rhor = AS.rhomolar_reducing(),
                 Tr = AS.T_reducing(),
-                dT_dtau = -pow(T, 2)/Tr,
                 R = AS.gas_constant(),
                 delta = rho/rhor,
                 tau = Tr/T;
@@ -584,9 +599,9 @@ void get_dT_drho_second_derivatives(AbstractState &AS, int index, long double &d
         throw ValueError(format("input to get_dT_drho_second_derivatives[%s] is invalid", get_parameter_information(index,"short").c_str()));
     }
 }
-long double AbstractState::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
+CoolPropDbl AbstractState::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
 {
-	long double dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
+	CoolPropDbl dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
 
     get_dT_drho(*this, Of, dOf_dT, dOf_drho);
     get_dT_drho(*this, Wrt, dWrt_dT, dWrt_drho);
@@ -594,9 +609,9 @@ long double AbstractState::calc_first_partial_deriv(parameters Of, parameters Wr
 
     return (dOf_dT*dConstant_drho-dOf_drho*dConstant_dT)/(dWrt_dT*dConstant_drho-dWrt_drho*dConstant_dT);
 }
-long double AbstractState::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
+CoolPropDbl AbstractState::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
 {
-    long double dOf1_dT, dOf1_drho, dWrt1_dT, dWrt1_drho, dConstant1_dT, dConstant1_drho, d2Of1_dT2, d2Of1_drhodT,
+    CoolPropDbl dOf1_dT, dOf1_drho, dWrt1_dT, dWrt1_drho, dConstant1_dT, dConstant1_drho, d2Of1_dT2, d2Of1_drhodT,
                 d2Of1_drho2, d2Wrt1_dT2, d2Wrt1_drhodT, d2Wrt1_drho2, d2Constant1_dT2, d2Constant1_drhodT, d2Constant1_drho2,
                 dWrt2_dT, dWrt2_drho, dConstant2_dT, dConstant2_drho, N, D, dNdrho__T, dDdrho__T, dNdT__rho, dDdT__rho,
                 dderiv1_drho, dderiv1_dT, second;

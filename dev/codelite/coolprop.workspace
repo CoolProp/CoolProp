@@ -5,7 +5,7 @@
     <WorkspaceConfiguration Name="Debug" Selected="yes">
       <Project Name="coolprop" ConfigName="Debug"/>
     </WorkspaceConfiguration>
-    <WorkspaceConfiguration Name="Release" Selected="yes">
+    <WorkspaceConfiguration Name="Release" Selected="no">
       <Project Name="coolprop" ConfigName="Release"/>
     </WorkspaceConfiguration>
   </BuildMatrix>

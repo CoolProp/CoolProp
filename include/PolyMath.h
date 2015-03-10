@@ -164,7 +164,7 @@ protected:
 };
 
 
-class Poly2DResidual : public FuncWrapper1D {
+class Poly2DResidual : public FuncWrapper1DWithDeriv {
 protected:
     enum dims {iX, iY};
     Eigen::MatrixXd coefficients;

@@ -9,7 +9,7 @@ else()
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
 endif()
 
-set(CMAKE_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX} CACHE PATH "default install path" FORCE)  
+set(CMAKE_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX} CACHE PATH "default install path" FORCE)
   
 #######################################
 #         PROJECT INFORMATION         #
@@ -28,10 +28,11 @@ project(${project_name})
 
 # Project version
 set (COOLPROP_VERSION_MAJOR 5)
-set (COOLPROP_VERSION_MINOR 0)
-set (COOLPROP_VERSION_PATCH 8)
+set (COOLPROP_VERSION_MINOR 1)
+set (COOLPROP_VERSION_PATCH 0)
 set (COOLPROP_VERSION_REVISION dev)
-set (COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION})
+set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
+message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
 
 #######################################
 #           BUILD OPTIONS             #
@@ -90,6 +91,7 @@ list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
 
 set (APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/Eigen")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/REFPROP-headers")
+list (APPEND APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/msgpack-c/include")
 foreach (_headerFile ${APP_HEADERS})
     get_filename_component(_dir ${_headerFile} PATH)
     list (APPEND APP_INCLUDE_DIRS ${_dir})
@@ -909,7 +911,7 @@ if (COOLPROP_SMATH_MODULE)
     CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs.template"
                    "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
     message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
-    FILE(WRITE "${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini" "${CMAKE_VERSION}")
+    FILE(WRITE "${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini" "${COOLPROP_VERSION}")
     message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini")
     CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat.template"
                    "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")

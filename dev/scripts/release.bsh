@@ -93,6 +93,7 @@ else
     printMessage "Updating sources"
     pushd "$REPODIR"
     git pull
+    git submodule init
     git submodule update
     popd
     printMessage "Generating headers"

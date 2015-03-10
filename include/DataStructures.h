@@ -16,9 +16,7 @@ namespace CoolProp {
 struct SimpleState
 {
     double rhomolar, T, p, hmolar, smolar, umolar, Q;
-    SimpleState(){rhomolar = _HUGE; T = _HUGE; p = _HUGE; 
-                  hmolar = _HUGE; smolar = _HUGE, umolar = _HUGE;
-                  Q = _HUGE;}
+    SimpleState() : rhomolar(_HUGE), T(_HUGE), p(_HUGE), hmolar(_HUGE), smolar(_HUGE), umolar(_HUGE), Q(_HUGE) {}
     bool is_valid(){return ValidNumber(rhomolar) && ValidNumber(T) && ValidNumber(hmolar) && ValidNumber(p);}
 };
 
@@ -27,7 +25,7 @@ struct SsatSimpleState : public SimpleState
 {
     enum SsatSimpleStateEnum {SSAT_MAX_NOT_SET=0, SSAT_MAX_DOESNT_EXIST, SSAT_MAX_DOES_EXIST};
     SsatSimpleStateEnum exists;
-    SsatSimpleState(){ SimpleState(); }
+    SsatSimpleState() : exists(SSAT_MAX_NOT_SET) {}
 };
 
 
@@ -42,7 +40,7 @@ enum parameters{
     INVALID_PARAMETER = 0,
     
     // General parameters
-	igas_constant,
+    igas_constant,
     imolar_mass, 
     iacentric_factor,
     irhomolar_reducing, 
@@ -52,7 +50,7 @@ enum parameters{
     irhomass_reducing, 
     irhomass_critical, 
     iP_critical, 
-	iP_reducing,
+    iP_reducing,
     iT_triple, 
     iP_triple, 
     iT_min, 
@@ -154,7 +152,7 @@ enum phases{iphase_liquid, ///< Subcritical liquid
 /// Return information about the parameter
 /// @param key The key, one of iT, iP, etc.
 /// @param info The thing you want, one of "IO" ("IO" if input/output, "O" if output only), "short" (very short description), "long" (a longer description), "units"
-std::string get_parameter_information(int key, std::string info);
+std::string get_parameter_information(int key, const std::string &info);
 
 /// Return the enum key corresponding to the parameter name ("Dmolar" for instance)
 parameters get_parameter_index(const std::string &param_name);
@@ -177,7 +175,7 @@ std::string get_csv_parameter_list();
 /// These are constants for the compositions
 enum composition_types{IFRAC_MASS, IFRAC_MOLE, IFRAC_VOLUME, IFRAC_UNDEFINED, IFRAC_PURE};
 
-const long double R_u_CODATA = 8.3144621; ///< The value for the ideal gas constant in J/mol/K according to CODATA 2010.  This value is used to harmonize all the ideal gas constants.  This is especially important in the critical region.
+const CoolPropDbl R_u_CODATA = 8.3144621; ///< The value for the ideal gas constant in J/mol/K according to CODATA 2010.  This value is used to harmonize all the ideal gas constants.  This is especially important in the critical region.
 
 /// These are unit types for the fluid
 enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLUID_TYPE_INCOMPRESSIBLE_LIQUID, FLUID_TYPE_INCOMPRESSIBLE_SOLUTION, FLUID_TYPE_UNDEFINED};
@@ -185,7 +183,7 @@ enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLU
 // !! If you add a parameter, update the map in the corresponding CPP file !!
 /// These are input pairs that can be used (in each pair, input keys are sorted alphabetically)
 enum input_pairs{
-	INPUT_PAIR_INVALID = 0, // Default (invalid) value
+    INPUT_PAIR_INVALID = 0, // Default (invalid) value
     QT_INPUTS, ///< Molar quality, Temperature in K
     PQ_INPUTS, ///< Pressure in Pa, Molar quality
     QSmolar_INPUTS, ///< Molar quality, Entropy in J/mol/K
@@ -350,16 +348,20 @@ template<class T> CoolProp::input_pairs generate_update_pair(parameters key1, T 
         return pair;
     };
 
+/// Get the input pair index associated with its string representation
+input_pairs get_input_pair_index(const std::string &input_pair_name);
+
 /// Return the short description of an input pair key ("DmolarT_INPUTS" for instance)
-std::string get_input_pair_short_desc(int pair);
+const std::string& get_input_pair_short_desc(input_pairs pair);
 
 /// Return the long description of an input pair key ("Molar density in mol/m^3, Temperature in K" for instance)
-std::string get_input_pair_long_desc(int pair);
+const std::string& get_input_pair_long_desc(input_pairs pair);
 
 /// Split an input pair into parameters for the two parts that form the pair
 void split_input_pair(input_pairs pair, parameters &p1, parameters &p2);
 
 extern std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param);
+extern void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param, const double val);
 
 } /* namespace CoolProp */
 #endif /* DATASTRUCTURES_H_ */

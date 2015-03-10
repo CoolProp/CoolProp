@@ -6,19 +6,18 @@
 
 namespace CoolProp {
     
-void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, parameters ykey, long double y){
+void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, parameters ykey, CoolPropDbl y){
     
     class inner_resid : public FuncWrapper1D{
         public:
         HelmholtzEOSMixtureBackend *HEOS;
-        long double T, desired_p, rhomolar_liq, calc_p, rhomolar_crit;
+        CoolPropDbl T, desired_p;
         
-        inner_resid(HelmholtzEOSMixtureBackend *HEOS, long double T, long double desired_p)
+        inner_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl desired_p)
             : HEOS(HEOS), T(T), desired_p(desired_p){};
         double call(double rhomolar_liq){
-            this->rhomolar_liq = rhomolar_liq;
             HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
-            calc_p = HEOS->SatL->p();
+            CoolPropDbl calc_p = HEOS->SatL->p();
             std::cout << format("inner p: %0.16Lg; res: %0.16Lg", calc_p, calc_p - desired_p) << std::endl;
             return calc_p - desired_p;
         }
@@ -32,38 +31,39 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, pa
 
         HelmholtzEOSMixtureBackend *HEOS;
         parameters ykey;
-        long double y;
-        long double r, T, rhomolar_liq, rhomolar_vap, value, p, gL, gV, rhomolar_crit;
-        int other;
+        CoolPropDbl y;
+        CoolPropDbl rhomolar_crit;
 
-        outer_resid(HelmholtzEOSMixtureBackend &HEOS, CoolProp::parameters ykey, long double y) 
-            : HEOS(&HEOS), ykey(ykey), y(y){
-                rhomolar_crit = HEOS.rhomolar_critical();
-            };
+        outer_resid(HelmholtzEOSMixtureBackend &HEOS, CoolProp::parameters ykey, CoolPropDbl y) 
+            : HEOS(&HEOS), ykey(ykey), y(y), rhomolar_crit(HEOS.rhomolar_critical()) {};
         double call(double rhomolar_vap){
-            this->y = y;
-            
             // Calculate the other variable (T->p or p->T) for given vapor density
-            if (ykey == iT){
+            CoolPropDbl T, p, rhomolar_liq;
+            switch (ykey){
+            case iT: {
                 T = y;
                 HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, y);
-                this->p = HEOS->SatV->p();
-                std::cout << format("outer p: %0.16Lg",this->p) << std::endl;
+                p = HEOS->SatV->p();
+                std::cout << format("outer p: %0.16Lg", p) << std::endl;
                 inner_resid inner(HEOS, T, p);
                 std::string errstr2;
-                rhomolar_liq = Brent(inner, rhomolar_crit*1.5, rhomolar_crit*(1+1e-8), LDBL_EPSILON, 1e-10, 100, errstr2);
+                rhomolar_liq = Brent(inner, rhomolar_crit*1.5, rhomolar_crit*(1 + 1e-8), LDBL_EPSILON, 1e-10, 100, errstr2);
+                break;
+            }
+            default:
+                throw ValueError("Wrong input for outer_resid");
             }
             HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
             HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, T);
             
             // Calculate the Gibbs functions for liquid and vapor
-            gL = HEOS->SatL->gibbsmolar();
-            gV = HEOS->SatV->gibbsmolar();
+            CoolPropDbl gL = HEOS->SatL->gibbsmolar();
+            CoolPropDbl gV = HEOS->SatV->gibbsmolar();
             
             // Residual is difference in Gibbs function
-            r = gL - gV;
+//            r = gL - gV;
             
-            return this->p;
+            return p;
         };
     };
     outer_resid resid(HEOS, iT, y);
@@ -74,7 +74,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, pa
     Brent(&resid, rhomolar_crit*(1-1e-8), rhomolar_crit*0.5, DBL_EPSILON, 1e-9, 20, errstr);
 }
 
-void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS, long double T, saturation_T_pure_options &options)
+void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, saturation_T_pure_options &options)
 {
     
     // Define the residual to be driven to zero
@@ -83,25 +83,21 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS,
     public:
 
         HelmholtzEOSMixtureBackend *HEOS;
-        long double r, T, rhomolar_liq, rhomolar_vap, value, p, gL, gV;
-        int other;
+        CoolPropDbl T, rhomolar_liq, rhomolar_vap;
 
-        solver_resid(HelmholtzEOSMixtureBackend &HEOS, long double T, long double rhomolar_liq_guess, long double rhomolar_vap_guess) 
+        solver_resid(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess) 
             : HEOS(&HEOS), T(T), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
         double call(double p){
-            this->p = p;
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
             HEOS->SatV->update_TP_guessrho(T, p, rhomolar_vap);
             
             // Calculate the Gibbs functions for liquid and vapor
-            gL = HEOS->SatL->gibbsmolar();
-            gV = HEOS->SatV->gibbsmolar();
+            CoolPropDbl gL = HEOS->SatL->gibbsmolar();
+            CoolPropDbl gV = HEOS->SatV->gibbsmolar();
             
             // Residual is difference in Gibbs function
-            r = gL - gV;
-            
-            return r;
+            return gL - gV;
         };
     };
     solver_resid resid(HEOS, T, options.rhoL, options.rhoV);
@@ -114,14 +110,14 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS,
     try{
         Secant(resid, options.p, options.p*1.1, 1e-10, 100, errstr);
     }
-    catch(std::exception &){
-        long double pmax = std::min(options.p*1.03, static_cast<long double>(HEOS.p_critical()+1e-6));
-        long double pmin = std::max(options.p*0.97, static_cast<long double>(HEOS.p_triple()-1e-6));
+    catch(...){
+        CoolPropDbl pmax = std::min(options.p*1.03, static_cast<CoolPropDbl>(HEOS.p_critical()+1e-6));
+        CoolPropDbl pmin = std::max(options.p*0.97, static_cast<CoolPropDbl>(HEOS.p_triple()-1e-6));
         Brent(resid, pmin, pmax, LDBL_EPSILON, 1e-8, 100, errstr);
     }
 }
 
-void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend &HEOS, long double p, saturation_PHSU_pure_options &options){
+void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl p, saturation_PHSU_pure_options &options){
     
     // Define the residual to be driven to zero
     class solver_resid : public FuncWrapper1D
@@ -129,25 +125,21 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend &HEOS,
     public:
 
         HelmholtzEOSMixtureBackend *HEOS;
-        long double r, p, rhomolar_liq, rhomolar_vap, value, T, gL, gV;
-        int other;
+        CoolPropDbl p, rhomolar_liq, rhomolar_vap;
 
-        solver_resid(HelmholtzEOSMixtureBackend &HEOS, long double p, long double rhomolar_liq_guess, long double rhomolar_vap_guess) 
+        solver_resid(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl p, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess) 
             : HEOS(&HEOS), p(p), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
         double call(double T){
-            this->T = T;
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
             HEOS->SatV->update_TP_guessrho(T, p, rhomolar_vap);
             
             // Calculate the Gibbs functions for liquid and vapor
-            gL = HEOS->SatL->gibbsmolar();
-            gV = HEOS->SatV->gibbsmolar();
+            CoolPropDbl gL = HEOS->SatL->gibbsmolar();
+            CoolPropDbl gV = HEOS->SatV->gibbsmolar();
             
             // Residual is difference in Gibbs function
-            r = gL - gV;
-            
-            return r;
+            return gL - gV;
         };
     };
     solver_resid resid(HEOS, p, options.rhoL, options.rhoV);
@@ -157,12 +149,12 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend &HEOS,
     if (!ValidNumber(options.rhoV)){throw ValueError("options.rhoV is not valid in saturation_P_pure_1D_T");};
     
     std::string errstr;
-    long double Tmax = std::min(options.T + 2, static_cast<long double>(HEOS.T_critical()-1e-6));
-    long double Tmin = std::max(options.T - 2, static_cast<long double>(HEOS.Ttriple()+1e-6));
+    CoolPropDbl Tmax = std::min(options.T + 2, static_cast<CoolPropDbl>(HEOS.T_critical()-1e-6));
+    CoolPropDbl Tmin = std::max(options.T - 2, static_cast<CoolPropDbl>(HEOS.Ttriple()+1e-6));
     Brent(resid, Tmin, Tmax, LDBL_EPSILON, 1e-11, 100, errstr);
 }
     
-void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, long double specified_value, saturation_PHSU_pure_options &options)
+void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl specified_value, saturation_PHSU_pure_options &options)
 {
     /*
     This function is inspired by the method of Akasaka:
@@ -173,8 +165,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
 
     Ancillary equations are used to get a sensible starting point
     */
-    std::vector<long double> negativer(3,_HUGE), v;
-    std::vector<std::vector<long double> > J(3, std::vector<long double>(3,_HUGE));
+    std::vector<CoolPropDbl> negativer(3,_HUGE), v;
+    std::vector<std::vector<CoolPropDbl> > J(3, std::vector<CoolPropDbl>(3,_HUGE));
 
     HEOS.calc_reducing_state();
     const SimpleState & reduce = HEOS.get_reducing_state();
@@ -182,8 +174,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
 
-    long double T, rhoL, rhoV, pL, pV, hL, sL, hV, sV;
-    long double deltaL=0, deltaV=0, tau=0, error;
+    CoolPropDbl T, rhoL, rhoV, pL, pV, hL, sL, hV, sV;
+    CoolPropDbl deltaL=0, deltaV=0, tau=0, error;
     int iter=0, specified_parameter;
 
     // Use the density ancillary function as the starting point for the solver
@@ -194,9 +186,9 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
             // Invert liquid density ancillary to get temperature
             // TODO: fit inverse ancillaries too
             try{
-                T = HEOS.get_components()[0]->ancillaries.pL.invert(specified_value);
+                T = HEOS.get_components()[0].ancillaries.pL.invert(specified_value);
             }
-            catch(std::exception &e)
+            catch(...)
             {
                 throw ValueError("Unable to invert ancillary equation");
             }
@@ -205,8 +197,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         {
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             // Ancillary is deltah = h - hs_anchor.h
-            try{ T = HEOS.get_components()[0]->ancillaries.hL.invert(specified_value - hs_anchor.hmolar); }
-            catch(std::exception &e){
+            try{ T = HEOS.get_components()[0].ancillaries.hL.invert(specified_value - hs_anchor.hmolar); }
+            catch(...){
                 throw ValueError("Unable to invert ancillary equation for hL");
             }
         }
@@ -222,20 +214,20 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                     this->h = h;
                 }
                 double call(double T){
-                    long double h_liq = component->ancillaries.hL.evaluate(T) + component->pEOS->hs_anchor.hmolar;
+                    CoolPropDbl h_liq = component->ancillaries.hL.evaluate(T) + component->EOS().hs_anchor.hmolar;
                     return h_liq + component->ancillaries.hLV.evaluate(T) - h;
                 };
             };
-            Residual resid(*(HEOS.get_components()[0]), HEOS.hmolar());
+            Residual resid(HEOS.get_components()[0], HEOS.hmolar());
             
             // Ancillary is deltah = h - hs_anchor.h
             std::string errstr;
-            long double Tmin_satL, Tmin_satV;
+            CoolPropDbl Tmin_satL, Tmin_satV;
             HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
             double Tmin = Tmin_satL;
             double Tmax = HEOS.calc_Tmax_sat();
             try{ T = Brent(resid, Tmin-3, Tmax + 1, DBL_EPSILON, 1e-10, 50, errstr); }
-            catch(std::exception &e){
+            catch(...){
                 shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
                 HEOS_copy->update(QT_INPUTS, 1, Tmin); double hTmin = HEOS_copy->hmolar();
                 HEOS_copy->update(QT_INPUTS, 1, Tmax); double hTmax = HEOS_copy->hmolar();
@@ -244,7 +236,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         }
         else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SL)
         {
-            CoolPropFluid &component = *(HEOS.get_components()[0]);
+            CoolPropFluid &component = HEOS.get_components()[0];
             CoolProp::SaturationAncillaryFunction &anc = component.ancillaries.sL;
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             // If near the critical point, use a near critical guess value for T
@@ -253,7 +245,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                 T = std::max(0.99*crit.T, crit.T-0.1);
             }
             else{
-                long double Tmin, Tmax, Tmin_satV;
+                CoolPropDbl Tmin, Tmax, Tmin_satV;
                 HEOS.calc_Tmin_sat(Tmin, Tmin_satV);
                 Tmax = HEOS.calc_Tmax_sat();
                 // Ancillary is deltas = s - hs_anchor.s
@@ -261,11 +253,11 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                 try{
                     T = anc.invert(specified_value - hs_anchor.smolar, Tmin, Tmax);
                 }
-                catch(std::exception &e){
+                catch(...){
                     try{ 
                         T = anc.invert(specified_value - hs_anchor.smolar, Tmin - 3, Tmax + 3); 
                     }
-                    catch(std::exception &e){
+                    catch(...){
                         double vmin = anc.evaluate(Tmin);
                         double vmax = anc.evaluate(Tmax);
                         if (std::abs(specified_value - hs_anchor.smolar) < std::abs(vmax)){
@@ -280,8 +272,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         }
         else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SV)
         {
-            CoolPropFluid &component = *(HEOS.get_components()[0]);
-            CoolProp::SimpleState crit = HEOS.get_state("reducing");
+            CoolPropFluid &component = HEOS.get_components()[0];
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             class Residual : public FuncWrapper1D
             {
@@ -293,8 +284,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
                     this->s = s;
                 }
                 double call(double T){
-                    long double s_liq = component->ancillaries.sL.evaluate(T) + component->pEOS->hs_anchor.smolar;
-                    long double resid = s_liq + component->ancillaries.sLV.evaluate(T) - s;
+                    CoolPropDbl s_liq = component->ancillaries.sL.evaluate(T) + component->EOS().hs_anchor.smolar;
+                    CoolPropDbl resid = s_liq + component->ancillaries.sLV.evaluate(T) - s;
                     
                     return resid;
                 };
@@ -303,15 +294,15 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
             
             // Ancillary is deltas = s - hs_anchor.s
             std::string errstr;
-            long double Tmin_satL, Tmin_satV;
+            CoolPropDbl Tmin_satL, Tmin_satV;
             HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
             double Tmin = Tmin_satL;
             double Tmax = HEOS.calc_Tmax_sat();
             try{
                 T = Brent(resid, Tmin-3, Tmax, DBL_EPSILON, 1e-10, 50, errstr);
             }
-            catch(std::exception &e){
-                long double vmax = resid.call(Tmax);
+            catch(...){
+                CoolPropDbl vmax = resid.call(Tmax);
                 // If near the critical point, use a near critical guess value for T
                 if (std::abs(specified_value - hs_anchor.smolar) < std::abs(vmax)){
                     T = std::max(0.99*crit.T, crit.T-0.1);
@@ -330,11 +321,11 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         }
         // If T from the ancillaries is above the critical temp, this will cause failure 
         // in ancillaries for rhoV and rhoL, decrease if needed
-        T = std::min(T, static_cast<long double>(HEOS.T_critical()-0.1));
+        T = std::min(T, static_cast<CoolPropDbl>(HEOS.T_critical()-0.1));
 
         // Evaluate densities from the ancillary equations
-        rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
-        rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
+        rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T);
+        rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T);
 
         // Apply a single step of Newton's method to improve guess value for liquid
         // based on the error between the gas pressure (which is usually very close already)
@@ -357,7 +348,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
     }
     catch(NotImplementedError &)
     {
-        throw;
+        throw; // ??? What is this try...catch for?
     }
 
     do{
@@ -373,16 +364,16 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
         sV = SatV->smolar();
 
         // These derivatives are needed for both cases
-        long double alpharL = SatL->alphar();
-        long double alpharV = SatV->alphar();
-        long double dalphar_dtauL = SatL->dalphar_dTau();
-        long double dalphar_dtauV = SatV->dalphar_dTau();
-        long double d2alphar_ddelta_dtauL = SatL->d2alphar_dDelta_dTau();
-        long double d2alphar_ddelta_dtauV = SatV->d2alphar_dDelta_dTau();
-        long double dalphar_ddeltaL = SatL->dalphar_dDelta();
-        long double dalphar_ddeltaV = SatV->dalphar_dDelta();
-        long double d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
-        long double d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
+        CoolPropDbl alpharL = SatL->alphar();
+        CoolPropDbl alpharV = SatV->alphar();
+        CoolPropDbl dalphar_dtauL = SatL->dalphar_dTau();
+        CoolPropDbl dalphar_dtauV = SatV->dalphar_dTau();
+        CoolPropDbl d2alphar_ddelta_dtauL = SatL->d2alphar_dDelta_dTau();
+        CoolPropDbl d2alphar_ddelta_dtauV = SatV->d2alphar_dDelta_dTau();
+        CoolPropDbl dalphar_ddeltaL = SatL->dalphar_dDelta();
+        CoolPropDbl dalphar_ddeltaV = SatV->dalphar_dDelta();
+        CoolPropDbl d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
+        CoolPropDbl d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
 
         // -r_1 (equate the pressures)
         negativer[0] = -(deltaV*(1+deltaV*dalphar_ddeltaV)-deltaL*(1+deltaL*dalphar_ddeltaL));
@@ -563,7 +554,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, l
     }
     while (error > 1e-9);
 }
-void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long double rhomolar, saturation_D_pure_options &options)
+void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl rhomolar, saturation_D_pure_options &options)
 {
     /*
     This function is inspired by the method of Akasaka:
@@ -574,16 +565,16 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long
 
     Ancillary equations are used to get a sensible starting point
     */
-    std::vector<long double> r(2,_HUGE), v;
-    std::vector<std::vector<long double> > J(2, std::vector<long double>(2,_HUGE));
+    std::vector<CoolPropDbl> r(2,_HUGE), v;
+    std::vector<std::vector<CoolPropDbl> > J(2, std::vector<CoolPropDbl>(2,_HUGE));
 
     HEOS.calc_reducing_state();
     const SimpleState & reduce = HEOS.get_reducing_state();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
 
-    long double T, rhoL,rhoV;
-    long double deltaL=0, deltaV=0, tau=0, error, p_error;
+    CoolPropDbl T, rhoL,rhoV;
+    CoolPropDbl deltaL=0, deltaV=0, tau=0, error, p_error;
     int iter=0;
 
     // Use the density ancillary function as the starting point for the solver
@@ -593,16 +584,16 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long
         {
             // Invert liquid density ancillary to get temperature
             // TODO: fit inverse ancillaries too
-            T = HEOS.get_components()[0]->ancillaries.rhoL.invert(rhomolar);
-            rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
+            T = HEOS.get_components()[0].ancillaries.rhoL.invert(rhomolar);
+            rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T);
             rhoL = rhomolar;
         }
         else if (options.imposed_rho == saturation_D_pure_options::IMPOSED_RHOV)
         {
             // Invert vapor density ancillary to get temperature
             // TODO: fit inverse ancillaries too
-            T = HEOS.get_components()[0]->ancillaries.rhoV.invert(rhomolar);
-            rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
+            T = HEOS.get_components()[0].ancillaries.rhoV.invert(rhomolar);
+            rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T);
             rhoV = rhomolar;
         }
         else
@@ -614,9 +605,9 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long
         deltaV = rhoV/reduce.rhomolar;
         tau = reduce.T/T;
     }
-    catch(NotImplementedError &e)
+    catch(NotImplementedError &)
     {
-        throw e;
+        throw; // ??? What is this try...catch for?
     }
 
     do{
@@ -628,18 +619,18 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long
         SatL->update(DmolarT_INPUTS, rhoL, T);
         SatV->update(DmolarT_INPUTS, rhoV, T);
 
-        long double pL = SatL->p();
-        long double pV = SatV->p();
+        CoolPropDbl pL = SatL->p();
+        CoolPropDbl pV = SatV->p();
 
         // These derivatives are needed for both cases
-        long double dalphar_dtauL = SatL->dalphar_dTau();
-        long double dalphar_dtauV = SatV->dalphar_dTau();
-        long double d2alphar_ddelta_dtauL = SatL->d2alphar_dDelta_dTau();
-        long double d2alphar_ddelta_dtauV = SatV->d2alphar_dDelta_dTau();
-        long double alpharL = SatL->alphar();
-        long double alpharV = SatV->alphar();
-        long double dalphar_ddeltaL = SatL->dalphar_dDelta();
-        long double dalphar_ddeltaV = SatV->dalphar_dDelta();
+        CoolPropDbl dalphar_dtauL = SatL->dalphar_dTau();
+        CoolPropDbl dalphar_dtauV = SatV->dalphar_dTau();
+        CoolPropDbl d2alphar_ddelta_dtauL = SatL->d2alphar_dDelta_dTau();
+        CoolPropDbl d2alphar_ddelta_dtauV = SatV->d2alphar_dDelta_dTau();
+        CoolPropDbl alpharL = SatL->alphar();
+        CoolPropDbl alpharV = SatV->alphar();
+        CoolPropDbl dalphar_ddeltaL = SatL->dalphar_dDelta();
+        CoolPropDbl dalphar_ddeltaV = SatV->dalphar_dDelta();
 
         // -r_1
         r[0] = -(deltaV*(1+deltaV*dalphar_ddeltaV)-deltaL*(1+deltaL*dalphar_ddeltaL));
@@ -653,7 +644,7 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long
 
         if (options.imposed_rho == saturation_D_pure_options::IMPOSED_RHOL)
         {
-            long double d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
+            CoolPropDbl d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
             if (options.use_logdelta)
             {
                 J[0][1] = deltaV+2*pow(deltaV,2)*dalphar_ddeltaV+pow(deltaV,3)*d2alphar_ddelta2V;
@@ -667,7 +658,7 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long
         }
         else if (options.imposed_rho == saturation_D_pure_options::IMPOSED_RHOV)
         {
-            long double d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
+            CoolPropDbl d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
             if (options.use_logdelta)
             {
                 J[0][1] = -deltaL-2*pow(deltaL,2)*dalphar_ddeltaL-pow(deltaL,3)*d2alphar_ddelta2L;
@@ -718,27 +709,26 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, long
         }
     }
     while (error > 1e-9);
-    long double p_error_limit = 1e-3;
+    CoolPropDbl p_error_limit = 1e-3;
     if (std::abs(p_error) > p_error_limit){
         throw SolutionError(format("saturation_D_pure solver abs error on p [%Lg] > limit [%Lg]", p_error, p_error_limit));
     }
 }
-void SaturationSolvers::saturation_T_pure(HelmholtzEOSMixtureBackend &HEOS, long double T, saturation_T_pure_options &options)
+void SaturationSolvers::saturation_T_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, saturation_T_pure_options &options)
 {
     // Set some imput options
-    SaturationSolvers::saturation_T_pure_Akasaka_options _options;
+    SaturationSolvers::saturation_T_pure_Akasaka_options _options(false);
     _options.omega = 1.0;
-    _options.use_guesses = false;
     try{
         // Actually call the solver
         SaturationSolvers::saturation_T_pure_Maxwell(HEOS, T, _options);
     }
-    catch(std::exception &){
+    catch(...){
         try{
             // Actually call the solver
             SaturationSolvers::saturation_T_pure_Akasaka(HEOS, T, _options);
         }
-        catch(std::exception &){
+        catch(...){
             // If there was an error, store values for use in later solvers
             options.pL = _options.pL;
             options.pV = _options.pV;
@@ -749,7 +739,7 @@ void SaturationSolvers::saturation_T_pure(HelmholtzEOSMixtureBackend &HEOS, long
         }
     }
 }
-void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HEOS, long double T, saturation_T_pure_Akasaka_options &options)
+void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, saturation_T_pure_Akasaka_options &options)
 {
     // Start with the method of Akasaka
 
@@ -765,12 +755,12 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
 
     HEOS.calc_reducing_state();
     const SimpleState & reduce = HEOS.get_reducing_state();
-    long double R_u = HEOS.gas_constant();
+    CoolPropDbl R_u = HEOS.gas_constant();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
 
-    long double rhoL = _HUGE, rhoV = _HUGE,JL,JV,KL,KV,dJL,dJV,dKL,dKV;
-    long double DELTA, deltaL=0, deltaV=0, error, PL, PV, stepL, stepV;
+    CoolPropDbl rhoL = _HUGE, rhoV = _HUGE,JL,JV,KL,KV,dJL,dJV,dKL,dKV;
+    CoolPropDbl DELTA, deltaL=0, deltaV=0, error, PL, PV, stepL, stepV;
     int iter=0;
     
     try
@@ -787,12 +777,12 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
             
             // If very close to the critical temp, evaluate the ancillaries for a slightly lower temperature
             if (T > 0.99*HEOS.get_reducing_state().T){
-                rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T-0.1);
-                rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T-0.1);
+                rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T-0.1);
+                rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T-0.1);
             }
             else{
-                rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
-                rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
+                rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T);
+                rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T);
                 
                 // Apply a single step of Newton's method to improve guess value for liquid
                 // based on the error between the gas pressure (which is usually very close already)
@@ -838,12 +828,12 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
         // Calculate once to save on calls to EOS
         SatL->update(DmolarT_INPUTS, rhoL, T);
         SatV->update(DmolarT_INPUTS, rhoV, T);
-        long double alpharL = SatL->alphar();
-        long double alpharV = SatV->alphar();
-        long double dalphar_ddeltaL = SatL->dalphar_dDelta();
-        long double dalphar_ddeltaV = SatV->dalphar_dDelta();
-        long double d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
-        long double d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
+        CoolPropDbl alpharL = SatL->alphar();
+        CoolPropDbl alpharV = SatV->alphar();
+        CoolPropDbl dalphar_ddeltaL = SatL->dalphar_dDelta();
+        CoolPropDbl dalphar_ddeltaV = SatV->dalphar_dDelta();
+        CoolPropDbl d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
+        CoolPropDbl d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
 
         JL = deltaL * (1 + deltaL*dalphar_ddeltaL);
         JV = deltaV * (1 + deltaV*dalphar_ddeltaV);
@@ -867,7 +857,7 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
         stepL = options.omega/DELTA*( (KV-KL)*dJV-(JV-JL)*dKV);
         stepV = options.omega/DELTA*( (KV-KL)*dJL-(JV-JL)*dKL);
 
-        long double deltaL0 = deltaL, deltaV0 = deltaV;
+        CoolPropDbl deltaL0 = deltaL, deltaV0 = deltaV;
         // Conditions for an acceptable step are:
         // a) rhoL > rhoV or deltaL > deltaV
         for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1)
@@ -889,8 +879,8 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
     }
     while (error > 1e-10 && std::abs(stepL) > 10*DBL_EPSILON*std::abs(stepL) && std::abs(stepV) > 10*DBL_EPSILON*std::abs(stepV));
     
-    long double p_error_limit = 1e-3;
-    long double p_error = (PL - PV)/PL;
+    CoolPropDbl p_error_limit = 1e-3;
+    CoolPropDbl p_error = (PL - PV)/PL;
     if (std::abs(p_error) > p_error_limit){
         options.pL = PL;
         options.pV = PV;
@@ -900,7 +890,7 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
     }
 }
 
-long double sign(long double x)
+CoolPropDbl sign(CoolPropDbl x)
 {
     if (x > 0){
         return 1;
@@ -910,7 +900,7 @@ long double sign(long double x)
     }
 }
 
-void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HEOS, long double T, saturation_T_pure_Akasaka_options &options)
+void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, saturation_T_pure_Akasaka_options &options)
 {
 
     /*
@@ -922,8 +912,8 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
     HEOS.calc_reducing_state();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
-    CoolProp::SimpleState &crit = HEOS.get_components()[0]->crit;
-    long double rhoL = _HUGE, rhoV = _HUGE, error = 999, DeltavL, DeltavV, pL, pV, p;
+    CoolProp::SimpleState &crit = HEOS.get_components()[0].crit;
+    CoolPropDbl rhoL = _HUGE, rhoV = _HUGE, error = 999, DeltavL, DeltavV, pL, pV, p;
     int iter=0, small_step_count = 0;
     
     try
@@ -940,17 +930,16 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
             
             // If very close to the critical temp, evaluate the ancillaries for a slightly lower temperature
             if (T > 0.9999*HEOS.get_reducing_state().T){
-                rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T-0.1);
-                rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T-0.1);
+                rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T-0.1);
+                rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T-0.1);
             }
             else{
-                rhoL = HEOS.get_components()[0]->ancillaries.rhoL.evaluate(T);
-                rhoV = HEOS.get_components()[0]->ancillaries.rhoV.evaluate(T);
-                p = HEOS.get_components()[0]->ancillaries.pV.evaluate(T);
+                rhoL = HEOS.get_components()[0].ancillaries.rhoL.evaluate(T);
+                rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T);
+                p = HEOS.get_components()[0].ancillaries.pV.evaluate(T);
                 
-                CoolProp::SimpleState &crit = HEOS.get_components()[0]->crit;
-                CoolProp::SimpleState &tripleL = HEOS.get_components()[0]->triple_liquid;
-                CoolProp::SimpleState &tripleV = HEOS.get_components()[0]->triple_vapor;
+                CoolProp::SimpleState &tripleL = HEOS.get_components()[0].triple_liquid;
+                CoolProp::SimpleState &tripleV = HEOS.get_components()[0].triple_vapor;
                 
                 // If the guesses are terrible, apply a simple correction
                 if (rhoL < crit.rhomolar*0.8 || rhoL > tripleL.rhomolar*1.2 || 
@@ -969,7 +958,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
                     SatL->update_DmolarT_direct(rhoL, T);
                     SatV->update_DmolarT_direct(rhoV, T);
                 }
-                if (get_debug_level() > 0){ std::cout << format("[Maxwell] ancillaries T: %0.16Lg rhoL: %0.16Lg rhoV: %0.16Lg pL: %g pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
+                if (get_debug_level() > 5){ std::cout << format("[Maxwell] ancillaries T: %0.16Lg rhoL: %0.16Lg rhoV: %0.16Lg pL: %g pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
                 
                 // Update the guess for liquid density using density solver with vapor pressure 
                 // and liquid density guess from ancillaries, but only if the pressures are not 
@@ -977,10 +966,10 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
                 if (std::abs((SatL->p()-p)/p) > 0.1){
                     for (int iii = 0; iii < 6; ++iii){
                         // Use Halley's method to update the liquid density (http://en.wikipedia.org/wiki/Halley%27s_method)
-                        long double f = SatL->p()-SatV->p();
-                        long double dpdrho = SatL->first_partial_deriv(iP,iDmolar,iT);
-                        long double d2pdrho2 = SatL->second_partial_deriv(iP,iDmolar,iT,iDmolar,iT);
-                        long double deltarhoLHalley = -(2*f*dpdrho)/(2*POW2(dpdrho)-f*d2pdrho2);
+                        CoolPropDbl f = SatL->p()-SatV->p();
+                        CoolPropDbl dpdrho = SatL->first_partial_deriv(iP,iDmolar,iT);
+                        CoolPropDbl d2pdrho2 = SatL->second_partial_deriv(iP,iDmolar,iT,iDmolar,iT);
+                        CoolPropDbl deltarhoLHalley = -(2*f*dpdrho)/(2*POW2(dpdrho)-f*d2pdrho2);
                         rhoL += deltarhoLHalley;
                         if (std::abs(deltarhoLHalley/rhoL) < DBL_EPSILON){
                             break;
@@ -1015,30 +1004,30 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
 
     SatL->update_DmolarT_direct(rhoL, T);
     SatV->update_DmolarT_direct(rhoV, T);
-    if (get_debug_level() > 0){ std::cout << format("[Maxwell] starting T: %0.16Lg rhoL: %Lg rhoV: %Lg pL: %Lg pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
+    if (get_debug_level() > 5){ std::cout << format("[Maxwell] starting T: %0.16Lg rhoL: %Lg rhoV: %Lg pL: %Lg pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
     do{
         pL = SatL->p(); pV = SatV->p();
-        long double vL = 1/SatL->rhomolar(), vV = 1/SatV->rhomolar();
+        CoolPropDbl vL = 1/SatL->rhomolar(), vV = 1/SatV->rhomolar();
         // Get alpha, the pressure derivative with volume at constant T
         // Given by (dp/drho|T)*drhodv
-        long double alphaL = SatL->first_partial_deriv(iP, iDmolar, iT)*(-POW2(SatL->rhomolar()));
-        long double alphaV = SatV->first_partial_deriv(iP, iDmolar, iT)*(-POW2(SatV->rhomolar()));
+        CoolPropDbl alphaL = SatL->first_partial_deriv(iP, iDmolar, iT)*(-POW2(SatL->rhomolar()));
+        CoolPropDbl alphaV = SatV->first_partial_deriv(iP, iDmolar, iT)*(-POW2(SatV->rhomolar()));
         
         // Total helmholtz energy for liquid and vapor
-        long double RT = SatL->gas_constant()*T;
-        long double helmholtzL = (SatL->calc_alpha0() + SatL->calc_alphar())*RT;
-        long double helmholtzV = (SatV->calc_alpha0() + SatV->calc_alphar())*RT;
+        CoolPropDbl RT = SatL->gas_constant()*T;
+        CoolPropDbl helmholtzL = (SatL->calc_alpha0() + SatL->calc_alphar())*RT;
+        CoolPropDbl helmholtzV = (SatV->calc_alpha0() + SatV->calc_alphar())*RT;
         
         // Calculate the mean pressure
-        long double pM = (helmholtzL - helmholtzV)/(vV - vL);
+        CoolPropDbl pM = (helmholtzL - helmholtzV)/(vV - vL);
         
         // Coefficients for the quadratic in the step
-        long double A = 0.5*alphaL*(alphaL - alphaV);
-        long double B = alphaL*(pL - pV - alphaV*(vL - vV));
-        long double C = alphaV*(vL - vV)*(pM - pL) + 0.5*POW2(pL - pV);
+        CoolPropDbl A = 0.5*alphaL*(alphaL - alphaV);
+        CoolPropDbl B = alphaL*(pL - pV - alphaV*(vL - vV));
+        CoolPropDbl C = alphaV*(vL - vV)*(pM - pL) + 0.5*POW2(pL - pV);
         
         // Argument to square root
-        long double sqrt_arg = std::abs(B*B/(4*A*A)-C/A);
+        CoolPropDbl sqrt_arg = std::abs(B*B/(4*A*A)-C/A);
         
         // If the argument to sqrt is very small, we multiply it by a large factor to make it 
         // larger, and then also divide the sqrt by the sqrt of the factor
@@ -1047,7 +1036,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         }
         else{
             // Scale the argument to sqrt() function to make it about 1.0, and divide by sqrt(factor) to yield a factor of 1
-            long double powerfactor = -log10(sqrt_arg);
+            CoolPropDbl powerfactor = -log10(sqrt_arg);
             DeltavL = -0.5*B/A + sign((alphaL - alphaV)/alphaV)*sqrt(sqrt_arg*powerfactor)/sqrt(powerfactor);
         }
         DeltavV = (pL - pV + alphaL*DeltavL)/alphaV;
@@ -1067,7 +1056,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         // Calculate the error (here the relative error in pressure)
         error = std::abs((SatL->p() - SatV->p())/SatL->p());
 
-        if (get_debug_level() > 0){ std::cout << format("[Maxwell] rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %Lg dvV/vV: %Lg pL: %Lg pV: %Lg\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV);}
+        if (get_debug_level() > 5){ std::cout << format("[Maxwell] rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %Lg dvV/vV: %Lg pL: %Lg pV: %Lg\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV);}
 
         // If the step size is small, start a counter to allow the other density 
         // to be corrected a few times
@@ -1081,10 +1070,10 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         }
     }
     while ((SatL->p() < 0) || (error > 1e-5 && small_step_count < 4));
-    if (get_debug_level() > 0){ std::cout << format("[Maxwell] pL: %g pV: %g\n", SatL->p(), SatV->p());}
+    if (get_debug_level() > 5){ std::cout << format("[Maxwell] pL: %g pV: %g\n", SatL->p(), SatV->p());}
 }
 
-void SaturationSolvers::x_and_y_from_K(long double beta, const std::vector<long double> &K, const std::vector<long double> &z, std::vector<long double> &x, std::vector<long double> &y)
+void SaturationSolvers::x_and_y_from_K(CoolPropDbl beta, const std::vector<CoolPropDbl> &K, const std::vector<CoolPropDbl> &z, std::vector<CoolPropDbl> &x, std::vector<CoolPropDbl> &y)
 {
     for (unsigned int i=0; i < K.size(); i++)
     {
@@ -1094,16 +1083,16 @@ void SaturationSolvers::x_and_y_from_K(long double beta, const std::vector<long 
     }
 }
 
-void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS, const long double beta, long double T, long double p, const std::vector<long double> &z,
-                                                       std::vector<long double> &K, mixture_VLE_IO &options)
+void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS, const CoolPropDbl beta, CoolPropDbl T, CoolPropDbl p, const std::vector<CoolPropDbl> &z,
+                                                       std::vector<CoolPropDbl> &K, mixture_VLE_IO &options)
 {
     int iter = 1;
-    long double change, f, df, deriv_liq, deriv_vap;
+    CoolPropDbl change, f, df, deriv_liq, deriv_vap;
     std::size_t N = z.size();
-    std::vector<long double> ln_phi_liq, ln_phi_vap;
+    std::vector<CoolPropDbl> ln_phi_liq, ln_phi_vap;
     ln_phi_liq.resize(N); ln_phi_vap.resize(N);
 
-    std::vector<long double> &x = HEOS.SatL->get_mole_fractions_ref(), &y = HEOS.SatV->get_mole_fractions_ref();
+    std::vector<CoolPropDbl> &x = HEOS.SatL->get_mole_fractions_ref(), &y = HEOS.SatV->get_mole_fractions_ref();
     x_and_y_from_K(beta, K, z, x, y);
 
     HEOS.SatL->specify_phase(iphase_liquid);
@@ -1116,8 +1105,8 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
     HEOS.SatV->set_mole_fractions(y);
     HEOS.SatL->calc_reducing_state();
     HEOS.SatV->calc_reducing_state();
-    long double rhomolar_liq = HEOS.SatL->solver_rho_Tp_SRK(T, p, iphase_liquid); // [mol/m^3]
-    long double rhomolar_vap = HEOS.SatV->solver_rho_Tp_SRK(T, p, iphase_gas); // [mol/m^3]
+    CoolPropDbl rhomolar_liq = HEOS.SatL->solver_rho_Tp_SRK(T, p, iphase_liquid); // [mol/m^3]
+    CoolPropDbl rhomolar_vap = HEOS.SatV->solver_rho_Tp_SRK(T, p, iphase_gas); // [mol/m^3]
 
     HEOS.SatL->update_TP_guessrho(T, p, rhomolar_liq*1.5);
     HEOS.SatV->update_TP_guessrho(T, p, rhomolar_vap);
@@ -1153,14 +1142,18 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
             double dfdK = K[i]*z[i]/pow(1-beta+beta*K[i],(int)2);
             df += dfdK*(deriv_liq-deriv_vap);
         }
-
+        
         change = -f/df;
-
+        
+        double omega = 1.0;
         if (options.sstype == imposed_p){
-            T += change;
+			T += change;
         }
         else if (options.sstype == imposed_T){
-            p += change;
+            if (std::abs(change) > 0.05*p){
+                omega = 0.1;
+            }
+            p += omega*change;
         }
 
         x_and_y_from_K(beta, K, z, x, y);
@@ -1187,7 +1180,7 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
     options.x = x;
     options.y = y;
 }
-void SaturationSolvers::newton_raphson_saturation::resize(unsigned int N)
+void SaturationSolvers::newton_raphson_saturation::resize(std::size_t N)
 {
     this->N = N;
     x.resize(N);
@@ -1205,7 +1198,7 @@ void SaturationSolvers::newton_raphson_saturation::resize(unsigned int N)
     else if (imposed_variable == newton_raphson_saturation_options::P_IMPOSED || imposed_variable == newton_raphson_saturation_options::T_IMPOSED){
         r.resize(N);
         negative_r.resize(N);
-        J.resize(N, std::vector<long double>(N, 0));
+        J.resize(N, std::vector<CoolPropDbl>(N, 0));
         err_rel.resize(N);
     }
     else{
@@ -1221,11 +1214,11 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
     build_arrays();
 
     // Make copies of the base
-    long double T0 = T;
-    std::vector<long double> r0 = r, x0 = x;
+    CoolPropDbl T0 = T;
+    std::vector<CoolPropDbl> r0 = r, x0 = x;
     STLMatrix J0 = J;
-    long double rhomolar_liq0 = rSatL.rhomolar();
-    long double rhomolar_vap0 = rSatV.rhomolar();
+    CoolPropDbl rhomolar_liq0 = rSatL.rhomolar();
+    CoolPropDbl rhomolar_vap0 = rSatV.rhomolar();
     
     {
         // Derivatives with respect to T
@@ -1234,14 +1227,14 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
         this->rhomolar_liq = rhomolar_liq0;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays();
-        std::vector<long double> r1 = r;
+        std::vector<CoolPropDbl> r1 = r;
         this->T = T2;
         this->rhomolar_liq = rhomolar_liq0;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays();
-        std::vector<long double> r2 = r;
+        std::vector<CoolPropDbl> r2 = r;
         
-        std::vector<long double> diffn(N+1, _HUGE);
+        std::vector<CoolPropDbl> diffn(N+1, _HUGE);
         for (std::size_t i = 0; i < N+1; ++i){
             diffn[i] = (r1[i]-r2[i])/(2*dT);
         }
@@ -1256,14 +1249,14 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
         this->rhomolar_liq = rhomolar_liq0+drho;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays();
-        std::vector<long double> rr1 = r;
+        std::vector<CoolPropDbl> rr1 = r;
         this->T = T0;
         this->rhomolar_liq = rhomolar_liq0-drho;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays();
-        std::vector<long double> rr2 = r;
+        std::vector<CoolPropDbl> rr2 = r;
         
-        std::vector<long double> difffn(N+1, _HUGE);
+        std::vector<CoolPropDbl> difffn(N+1, _HUGE);
         for (std::size_t i = 0; i < N+1; ++i){
             difffn[i] = (rr1[i]-rr2[i])/(2*drho);
         }
@@ -1281,7 +1274,7 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
         this->rhomolar_liq = rhomolar_liq0;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays(); 
-        std::vector<long double> r1 = this->r;
+        std::vector<CoolPropDbl> r1 = this->r;
     
         this->x = x0; 
         this->x[i] -= dx; this->x[x.size()-1] += dx;
@@ -1289,9 +1282,9 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
         this->rhomolar_liq = rhomolar_liq0;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays(); 
-        std::vector<long double> r2 = this->r;
+        std::vector<CoolPropDbl> r2 = this->r;
     
-        std::vector<long double> diffn(N+1, _HUGE);
+        std::vector<CoolPropDbl> diffn(N+1, _HUGE);
         for (std::size_t j = 0; j < N+1; ++j){
             diffn[j] = (r1[j]-r2[j])/(2*dx);
         }
@@ -1300,11 +1293,12 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
         std::cout << "analytic: " << vec_to_string(get_col(J0, i), "%0.11Lg") << std::endl;
     }
 }
-void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<long double> &z, std::vector<long double> &z_incipient, newton_raphson_saturation_options &IO)
+void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &z, std::vector<CoolPropDbl> &z_incipient, newton_raphson_saturation_options &IO)
 {
     int iter = 0;
+	bool debug = get_debug_level() > 9 || false;
     
-    if (get_debug_level() > 9){std::cout << " NRsat::call:  p" << IO.p << " T" << IO.T << " dl" << IO.rhomolar_liq << " dv" << IO.rhomolar_vap << std::endl;}
+    if (debug){std::cout << " NRsat::call:  p " << IO.p << " T " << IO.T << " dl " << IO.rhomolar_liq << " dv " << IO.rhomolar_vap << std::endl;}
     
     // Reset all the variables and resize
     pre_call();
@@ -1341,7 +1335,7 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
 
         // Solve for the step; v is the step with the contents
         // [delta(x_0), delta(x_1), ..., delta(x_{N-2}), delta(spec)]
-        std::vector<long double> v = linsolve(J, negative_r);
+        std::vector<CoolPropDbl> v = linsolve(J, negative_r);
         
         if (bubble_point){
             for (unsigned int i = 0; i < N-1; ++i){
@@ -1370,7 +1364,9 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
         else{
             throw ValueError("invalid imposed_variable");
         }
-        //std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
+        if(debug){
+			std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
+		}
         
         min_rel_change = min_abs_value(err_rel);
         iter++;
@@ -1426,8 +1422,8 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
     }
     
     // For diagnostic purposes calculate the pressures (no derivatives are evaluated)
-    long double p_liq = rSatL.p();
-    long double p_vap = rSatV.p();
+    CoolPropDbl p_liq = rSatL.p();
+    CoolPropDbl p_vap = rSatV.p();
     p = 0.5*(p_liq + p_vap);
     
     // Step 2:
@@ -1441,8 +1437,8 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
         for (std::size_t i = 0; i < N; ++i)
         {
             // Equate the liquid and vapor fugacities
-            long double ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
-            long double ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
+            CoolPropDbl ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
+            CoolPropDbl ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
             r[i] = ln_f_liq - ln_f_vap;
             
             for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
@@ -1474,8 +1470,8 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
         for (std::size_t i = 0; i < N; ++i)
         {
             // Equate the liquid and vapor fugacities
-            long double ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
-            long double ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
+            CoolPropDbl ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
+            CoolPropDbl ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
             r[i] = ln_f_liq - ln_f_vap;
             
             for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
@@ -1496,8 +1492,8 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
         for (std::size_t i = 0; i < N; ++i)
         {
             // Equate the liquid and vapor fugacities
-            long double ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
-            long double ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
+            CoolPropDbl ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
+            CoolPropDbl ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
             r[i] = ln_f_liq - ln_f_vap;
             
             for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
@@ -1527,7 +1523,7 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
     
     // Calculate derivatives along phase boundary;
     // Gernert thesis 3.96 and 3.97
-    long double dQ_dPsat = 0, dQ_dTsat = 0;
+    CoolPropDbl dQ_dPsat = 0, dQ_dTsat = 0;
     for (std::size_t i = 0; i < N; ++i)
     {
         dQ_dPsat += x[i]*(MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(rSatV, i, xN_flag));
@@ -1561,7 +1557,7 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
     y.resize(N);
     r.resize(2*N-1);
     negative_r.resize(2*N-1);
-    J.resize(2*N-1, std::vector<long double>(2*N-1, 0));
+    J.resize(2*N-1, std::vector<CoolPropDbl>(2*N-1, 0));
     err_rel.resize(2*N-1);
     
     // Hold a pointer to the backend
@@ -1579,7 +1575,7 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
         // std::cout << vec_to_string(J, "%0.12Lg") << std::endl;
         // std::cout << vec_to_string(negative_r, "%0.12Lg") << std::endl;
         
-        std::vector<long double> v = linsolve(J, negative_r);
+        std::vector<CoolPropDbl> v = linsolve(J, negative_r);
         for (unsigned int i = 0; i < N-1; ++i){
             err_rel[i] = v[i]/x[i];
             x[i] += v[i];
@@ -1633,15 +1629,15 @@ void SaturationSolvers::newton_raphson_twophase::build_arrays()
     rSatL.set_mole_fractions(x);
     rSatV.set_mole_fractions(y);
 
-    //std::vector<long double> &x = rSatL.get_mole_fractions();
-    //std::vector<long double> &y = rSatV.get_mole_fractions();
+    //std::vector<CoolPropDbl> &x = rSatL.get_mole_fractions();
+    //std::vector<CoolPropDbl> &y = rSatV.get_mole_fractions();
 
     rSatL.update_TP_guessrho(T, p, rhomolar_liq); rhomolar_liq = rSatL.rhomolar();
     rSatV.update_TP_guessrho(T, p, rhomolar_vap); rhomolar_vap = rSatV.rhomolar();
     
     // For diagnostic purposes calculate the pressures (no derivatives are evaluated)
-    long double p_liq = rSatL.p();
-    long double p_vap = rSatV.p();
+    CoolPropDbl p_liq = rSatL.p();
+    CoolPropDbl p_vap = rSatV.p();
     p = 0.5*(p_liq + p_vap);
     
     // Step 2:
@@ -1654,8 +1650,8 @@ void SaturationSolvers::newton_raphson_twophase::build_arrays()
     for (std::size_t i = 0; i < N; ++i)
     {
         // Equate the liquid and vapor fugacities
-        long double ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
-        long double ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
+        CoolPropDbl ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
+        CoolPropDbl ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
         r[i] = ln_f_liq - ln_f_vap; // N of these
     
         if (i != N-1){

@@ -31,7 +31,11 @@ public:
     /// Flash for given pressure and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void PQ_flash(HelmholtzEOSMixtureBackend &HEOS);
-    
+
+	/// Flash for given pressure and (molar) quality with guess values provided
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+	static void PQ_flash_with_guesses(HelmholtzEOSMixtureBackend &HEOS, const GuessesStructure &guess);
+
     /// Flash for given temperature and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void QT_flash(HelmholtzEOSMixtureBackend &HEOS);
@@ -43,13 +47,13 @@ public:
     /// Flash for given molar enthalpy and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param Tguess (optional) The guess temperature in K to start from, ignored if < 0
-    static void HQ_flash(HelmholtzEOSMixtureBackend &HEOS, long double Tguess = -1);
+    static void HQ_flash(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl Tguess = -1);
     
     /// Flash for mixture given temperature or pressure and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The parameter that is imposed, either iT or iP
     /// @param value The value for the imposed parameter
-    static void PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parameters other, long double value);
+    static void PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parameters other, CoolPropDbl value);
     
     /// Flash for given pressure and temperature
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
@@ -74,7 +78,7 @@ public:
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iHmolar, iSmolar, iUmolar
     /// @param T0 The initial guess value for the temperature [K]
     /// @param rhomolar0 The initial guess value for the density [mol/m^3]
-    static void HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &HEOS, parameters other, long double T0, long double rhomolar0);
+    static void HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &HEOS, parameters other, CoolPropDbl T0, CoolPropDbl rhomolar0);
     
     /// The single-phase flash routine for the pairs (P,H), (P,S), and (P,U).  Similar analysis is needed
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
@@ -82,12 +86,12 @@ public:
     /// @param value The value of the other input
     /// @param Tmin The lower temperature limit [K]
     /// @param Tmax The higher temperature limit [K]
-    static void HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HEOS, parameters other, long double value, long double Tmin, long double Tmax);
+    static void HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HEOS, parameters other, CoolPropDbl value, CoolPropDbl Tmin, CoolPropDbl Tmax);
     
 	/// A generic flash routine for the pairs (D,H), (D,S), and (D,U) for twophase state.  Similar analysis is needed
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iP, iHmolar, iSmolar, iUmolar
-	static void HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, long double rhomolar_spec, parameters other, long double value);
+	static void HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl rhomolar_spec, parameters other, CoolPropDbl value);
 	
     /// A generic flash routine for the pairs (D,P), (D,H), (D,S), and (D,U).  Similar analysis is needed
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
@@ -109,36 +113,33 @@ public:
         double omega;
         HS_flash_singlephaseOptions(){omega = 1.0;}
     };
-    static void HS_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, long double hmolar_spec, long double smolar_spec, HS_flash_singlephaseOptions &options);
+    static void HS_flash_singlephase(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec, HS_flash_singlephaseOptions &options);
     
     struct HS_flash_twophaseOptions
     {
         double omega;
         HS_flash_twophaseOptions(){omega = 1.0;}
     };
-    static void HS_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, long double hmolar_spec, long double smolar_spec, HS_flash_twophaseOptions &options);
+    static void HS_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec, HS_flash_twophaseOptions &options);
 };
 
 
 /** A residual function for the rho(T,P) solver
  */
-class solver_TP_resid : public FuncWrapper1D
+class solver_TP_resid : public FuncWrapper1DWithDeriv
 {
 public:
-    long double T, p, r, peos, rhomolar, rhor, tau, R_u, delta, dalphar_dDelta;
     HelmholtzEOSMixtureBackend *HEOS;
+    CoolPropDbl T, p, rhor, tau, R_u, delta;
 
-    solver_TP_resid(HelmholtzEOSMixtureBackend &HEOS, long double T, long double p){
-        this->HEOS = &HEOS; this->T = T; this->p = p; this->rhor = HEOS.get_reducing_state().rhomolar;
-        this->tau = HEOS.get_reducing_state().T/T; this->R_u = HEOS.gas_constant();
-    };
+    solver_TP_resid(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl p):
+        HEOS(&HEOS),T(T),p(p),rhor(HEOS.get_reducing_state().rhomolar),
+        tau(HEOS.get_reducing_state().T/T),R_u(HEOS.gas_constant()),delta(-_HUGE) {}
     double call(double rhomolar){
-        this->rhomolar = rhomolar;
         delta = rhomolar/rhor; // needed for derivative
         HEOS->update_DmolarT_direct(rhomolar, T);
-        peos = HEOS->p();
-        r = (peos-p)/p;
-        return r;
+        CoolPropDbl peos = HEOS->p();
+        return (peos-p)/p;
     };
     double deriv(double rhomolar){
         // dp/drho|T / pspecified
@@ -153,16 +154,12 @@ class PY_singlephase_flash_resid : public FuncWrapper1D
 public:
 
     HelmholtzEOSMixtureBackend *HEOS;
-    long double p;
+    CoolPropDbl p;
     parameters other;
-    long double r, eos, value, T, rhomolar;
-    
-    int iter;
-    long double r0, r1, T1, T0, eos0, eos1, pp;
-    PY_singlephase_flash_resid(HelmholtzEOSMixtureBackend &HEOS, long double p, parameters other, long double value) : 
+    CoolPropDbl value;
+    PY_singlephase_flash_resid(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl p, parameters other, CoolPropDbl value) : 
             HEOS(&HEOS), p(p), other(other), value(value)
             {
-                iter = 0;
                 // Specify the state to avoid saturation calls, but only if phase is subcritical
                 if (HEOS.phase() == iphase_liquid || HEOS.phase() == iphase_gas ){
                     HEOS.specify_phase(HEOS.phase());
@@ -170,34 +167,16 @@ public:
             };
     double call(double T){
 
-        this->T = T;
-
         // Run the solver with T,P as inputs;
         HEOS->update(PT_INPUTS, p, T);
         
-        rhomolar = HEOS->rhomolar();
+        CoolPropDbl rhomolar = HEOS->rhomolar();
         HEOS->update(DmolarT_INPUTS, rhomolar, T);
         // Get the value of the desired variable
-        eos = HEOS->keyed_output(other);
-        pp = HEOS->p();
+        CoolPropDbl eos = HEOS->keyed_output(other);
 
         // Difference between the two is to be driven to zero
-        r = eos - value;
-        
-        // Store values for later use if there are errors
-        if (iter == 0){ 
-            r0 = r; T0 = T; eos0 = eos;
-        }
-        else if (iter == 1){
-            r1 = r; T1 = T; eos1 = eos; 
-        }
-        else{
-            r0 = r1; T0 = T1; eos0 = eos1;
-            r1 = r;  T1 = T; eos1 = eos;
-        }
-
-        iter++;
-        return r;
+        return eos - value;
     };
 };
 

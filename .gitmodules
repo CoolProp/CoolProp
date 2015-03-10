@@ -10,3 +10,6 @@
 [submodule "externals/FindMathematica"]
 	path = externals/FindMathematica
 	url = https://github.com/sakra/FindMathematica
+[submodule "externals/msgpack-c"]
+	path = externals/msgpack-c
+	url = https://github.com/msgpack/msgpack-c

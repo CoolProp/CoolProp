@@ -4,6 +4,9 @@ cimport constants_header
         
 cdef class PyPhaseEnvelopeData:
     pass
+
+cdef class PyGuessesStructure:
+    pass
     
 cdef class AbstractState:
     """
@@ -16,6 +19,14 @@ cdef class AbstractState:
     def __dealloc__(self):
         del self.thisptr
         
+    cpdef name(self):
+        """ Get the backend name - wrapper of c++ function :cpapi:`CoolProp::AbstractState::name` """
+        return self.thisptr.name()
+        
+    cpdef constants_header.phases phase(self):
+        """ Get the phase as key value- wrapper of c++ function :cpapi:`CoolProp::AbstractState::phase` """
+        return self.thisptr.phase()
+        
     cpdef specify_phase(self, constants_header.phases phase):
         """ Specify the phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::specify_phase` """
         self.thisptr.specify_phase(phase)
@@ -26,6 +37,16 @@ cdef class AbstractState:
     cpdef update(self, constants_header.input_pairs ipair, double Value1, double Value2):
         """ Update function - wrapper of c++ function :cpapi:`CoolProp::AbstractState::update` """
         self.thisptr.update(ipair, Value1, Value2)
+    cpdef update_with_guesses(self, constants_header.input_pairs ipair, double Value1, double Value2, PyGuessesStructure guesses):
+        """ Update function - wrapper of c++ function :cpapi:`CoolProp::AbstractState::update` """
+        cdef cAbstractState.GuessesStructure _guesses
+        _guesses.T = guesses.T
+        _guesses.p = guesses.p
+        _guesses.rhomolar_liq = guesses.rhomolar_liq
+        _guesses.rhomolar_vap = guesses.rhomolar_vap
+        _guesses.x = guesses.x
+        _guesses.y = guesses.y
+        self.thisptr.update_with_guesses(ipair, Value1, Value2, _guesses)
     
     cpdef set_mole_fractions(self, vector[double] z): 
         """ Set the mole fractions - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_mole_fractions` """
@@ -36,7 +57,23 @@ cdef class AbstractState:
     cpdef set_volu_fractions(self, vector[double] z): 
         """ Set the volume fractions - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_volu_fractions` """
         self.thisptr.set_volu_fractions(z)
-        
+    
+    ## ----------------------------------------	
+    ##        Limits
+    ## ----------------------------------------
+    cpdef double Tmin(self):
+        """ Set the minimum temperature in K- wrapper of c++ function :cpapi:`CoolProp::AbstractState::Tmin` """
+        return self.thisptr.Tmin()
+    cpdef double Tmax(self):
+        """ Set the maximum temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Tmax` """
+        return self.thisptr.Tmax()
+    cpdef double pmax(self):
+        """ Set the maximum pressure in Pa - wrapper of c++ function :cpapi:`CoolProp::AbstractState::pmax` """
+        return self.thisptr.pmax()
+    cpdef double Ttriple(self):
+        """ Set the triple point temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Ttriple` """
+        return self.thisptr.Ttriple()
+
     ## ----------------------------------------	
     ##        Fluid property accessors
     ## ----------------------------------------
@@ -44,6 +81,15 @@ cdef class AbstractState:
     cpdef double keyed_output(self, parameters iOutput) except *: 
         """ Update :cpapi:`CoolProp::AbstractState::keyed_output(parameters key)` """
         return self.thisptr.keyed_output(iOutput)
+    cpdef double trivial_keyed_output(self, parameters iOutput) except *: 
+        """ Update :cpapi:`CoolProp::AbstractState::trivial_keyed_output(parameters key)` """
+        return self.thisptr.trivial_keyed_output(iOutput)
+    cpdef double saturated_liquid_keyed_output(self, parameters iOutput) except *: 
+        """ Update :cpapi:`CoolProp::AbstractState::saturated_liquid_keyed_output(parameters key)` """
+        return self.thisptr.saturated_liquid_keyed_output(iOutput)
+    cpdef double saturated_vapor_keyed_output(self, parameters iOutput) except *: 
+        """ Update :cpapi:`CoolProp::AbstractState::saturated_vapor_keyed_output(parameters key)` """
+        return self.thisptr.saturated_vapor_keyed_output(iOutput)
     
     cpdef double T(self) except *: 
         """ Get the temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::T(void)` """
@@ -51,6 +97,9 @@ cdef class AbstractState:
     cpdef double p(self) except *: 
         """ Get the pressure in Pa - wrapper of c++ function :cpapi:`CoolProp::AbstractState::p(void)` """
         return self.thisptr.p()
+    cpdef double Q(self) except *: 
+        """ Get the vapor quality in mol/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Q(void)` """
+        return self.thisptr.Q()
     cpdef double rhomolar(self) except *: 
         """ Get the density in mol/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomolar(void)` """
         return self.thisptr.rhomolar()
@@ -93,15 +142,36 @@ cdef class AbstractState:
     cpdef double cvmass(self) except *: 
         """ Get the constant volume specific heat in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cvmass(void)` """
         return self.thisptr.cvmass()
+    cpdef double tau(self) except *: 
+        """ Get the reciprocal reduced temperature - wrapper of c++ function :cpapi:`CoolProp::AbstractState::tau(void)` """
+        return self.thisptr.tau()
+    cpdef double delta(self) except *: 
+        """ Get the reduced density - wrapper of c++ function :cpapi:`CoolProp::AbstractState::delta(void)` """
+        return self.thisptr.delta()
     cpdef double speed_sound(self) except *: 
         """ Get the speed of sound in m/s - wrapper of c++ function :cpapi:`CoolProp::AbstractState::speed_sound(void)` """
         return self.thisptr.speed_sound()
     cpdef double molar_mass(self) except *: 
         """ Get the molar mass in kg/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::molar_mass(void)` """
         return self.thisptr.molar_mass()
+    cpdef double acentric_factor(self) except *: 
+        """ Get the acentric factor - wrapper of c++ function :cpapi:`CoolProp::AbstractState::acentric_factor(void)` """
+        return self.thisptr.molar_mass()
     cpdef double gas_constant(self) except *: 
         """ Get the gas constant in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::gas_constant(void)` """
         return self.thisptr.gas_constant()
+    cpdef double viscosity(self) except *: 
+        """ Get the viscosity in Pa-s - wrapper of c++ function :cpapi:`CoolProp::AbstractState::viscosity(void)` """
+        return self.thisptr.viscosity()
+    cpdef double conductivity(self) except *: 
+        """ Get the thermal conductivity in W/m/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::conductivity(void)` """
+        return self.thisptr.conductivity()
+    cpdef double surface_tension(self) except *: 
+        """ Get the surface tension N/m - wrapper of c++ function :cpapi:`CoolProp::AbstractState::surface_tension(void)` """
+        return self.thisptr.surface_tension()
+    cpdef double Prandtl(self) except *: 
+        """ Get the Prandtl number - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Prandtl(void)` """
+        return self.thisptr.Prandtl()
     
     cpdef mole_fractions_liquid(self):
         """ Get the mole fractions of the liquid phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_liquid(void)` """
@@ -137,7 +207,7 @@ cdef class AbstractState:
         return self.thisptr.first_two_phase_deriv_splined(Of, Wrt, Constant, x_end)
         
     ## ----------------------------------------	
-    ##        Melting Line
+    ##        Ancillary curves
     ## ----------------------------------------
     
     cpdef bint has_melting_line(self) except *: 
@@ -146,7 +216,9 @@ cdef class AbstractState:
     cpdef double melting_line(self, int param, int given, double value) except *: 
         """ Get values from the melting line - wrapper of c++ function :cpapi:`CoolProp::AbstractState::melting_line` """
         return self.thisptr.melting_line(param, given, value)
-    
+    cpdef double saturation_ancillary(self, constants_header.parameters param, int Q, constants_header.parameters given, double value) except *:
+        """ Get values from the saturation_ancillary - wrapper of c++ function :cpapi:`CoolProp::AbstractState::saturation_ancillary` """
+        return self.thisptr.saturation_ancillary(param, Q, given, value)
     
     ## ----------------------------------------	
     ##        Phase envelope

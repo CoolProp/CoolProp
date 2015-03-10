@@ -11,6 +11,7 @@ namespace CoolProp{
 
 void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
 {
+    bool debug = get_debug_level() > 0 || true;
     if (HEOS.get_mole_fractions_ref().size() < 2){throw ValueError("Cannot build phase envelope for pure fluid");}
     std::size_t failure_count = 0;
     // Set some imput options
@@ -23,7 +24,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
     HEOS._Q = 1;
     
     // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
-    long double Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
+    CoolPropDbl Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
 
     // Use Wilson iteration to obtain updated guess for temperature
     Tguess = SaturationSolvers::saturation_Wilson(HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
@@ -70,7 +71,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
 
     std::size_t iter = 0, //< The iteration counter
                 iter0 = 0; //< A reference point for the counter, can be increased to go back to linear interpolation
-    long double factor = 1.05;
+    CoolPropDbl factor = 1.05;
     for (;;)
     {
         top_of_loop: ; // A goto label so that nested loops can break out to the top of this loop
@@ -111,7 +112,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
             IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, iter-4, iter-3, iter-2, iter-1, IO.rhomolar_vap);
             
             // Check if there is a large deviation from linear interpolation - this suggests a step size that is so large that a minima or maxima of the interpolation function is crossed
-            long double T_linear = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, IO.rhomolar_vap);
+            CoolPropDbl T_linear = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, IO.rhomolar_vap);
             if (std::abs((T_linear-IO.T)/IO.T) > 0.1){
                 // Try again, but with a smaller step
                 IO.rhomolar_vap /= factor;
@@ -145,7 +146,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
                 throw ValueError("Invalid number");
             }
         }
-        catch(std::exception &e){
+        catch(...){
             //std::cout << e.what() << std::endl;
             //std::cout << IO.T << " " << IO.p << std::endl;
             // Try again, but with a smaller step
@@ -156,18 +157,20 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
             continue;
         }
         
-        std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p  << " hl " << IO.hmolar_liq  << " hv " << IO.hmolar_vap  << " sl " << IO.smolar_liq  << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")  << " Ns " << IO.Nsteps << std::endl;
+        if (debug){
+            std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p  << " hl " << IO.hmolar_liq  << " hv " << IO.hmolar_vap  << " sl " << IO.smolar_liq  << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")  << " Ns " << IO.Nsteps << std::endl;
+        }
         env.store_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y);
         
         iter ++;
 
-        long double abs_rho_difference = std::abs((IO.rhomolar_liq - IO.rhomolar_vap)/IO.rhomolar_liq);
+        CoolPropDbl abs_rho_difference = std::abs((IO.rhomolar_liq - IO.rhomolar_vap)/IO.rhomolar_liq);
         
         // Critical point jump
         if (abs_rho_difference < 0.01 && IO.rhomolar_liq  > IO.rhomolar_vap){
             //std::cout << "dv" << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
-            long double rhoc_approx = 0.5*IO.rhomolar_liq + 0.5*IO.rhomolar_vap;
-            long double rho_vap_new = 2*rhoc_approx - IO.rhomolar_vap;
+            CoolPropDbl rhoc_approx = 0.5*IO.rhomolar_liq + 0.5*IO.rhomolar_vap;
+            CoolPropDbl rho_vap_new = 2*rhoc_approx - IO.rhomolar_vap;
             // Linearly interpolate to get new guess for T
             IO.T = LinearInterp(env.rhomolar_vap,env.T,iter-2,iter-1,rho_vap_new);
             IO.rhomolar_liq = 2*rhoc_approx - IO.rhomolar_liq;
@@ -197,12 +200,17 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
             factor = 1 + (factor-1)*2;
         }
         // Min step is 1.01
-        factor = std::max(factor, static_cast<long double>(1.01));
+        factor = std::max(factor, static_cast<CoolPropDbl>(1.01));
         
         // Stop if the pressure is below the starting pressure
-        if (iter > 4 && IO.p < env.p[0]){ 
+        // or if the composition of one of the phases becomes almost pure
+        CoolPropDbl max_fraction = *std::max_element(IO.x.begin(), IO.x.end());
+        if (iter > 4 && (IO.p < env.p[0] || std::abs(1.0-max_fraction) < 1e-9 )){ 
             env.built = true; 
-            std::cout << format("envelope built.\n"); 
+            if (debug){
+                std::cout << format("envelope built.\n"); 
+                std::cout << format("closest fraction to 1.0: distance %g", 1-max_fraction);
+            }
             
             // Now we refine the phase envelope to add some points in places that are still pretty rough
             refine(HEOS);
@@ -217,6 +225,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
 
 void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
 {
+    bool debug = (get_debug_level() > 0 || false);
     PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
     SaturationSolvers::newton_raphson_saturation NR;
     SaturationSolvers::newton_raphson_saturation_options IO;
@@ -256,9 +265,11 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
                 NR.call(HEOS, IO.y, IO.x, IO);
                 env.insert_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, 
                                      IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y, i+1);
-                std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p  << " hl " << IO.hmolar_liq  << " hv " << IO.hmolar_vap  << " sl " << IO.smolar_liq  << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")  << " Ns " << IO.Nsteps << std::endl;
+                if (debug){
+                    std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p  << " hl " << IO.hmolar_liq  << " hv " << IO.hmolar_vap  << " sl " << IO.smolar_liq  << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")  << " Ns " << IO.Nsteps << std::endl;
+                }
             }
-            catch(std::exception &e){
+            catch(...){
                 continue;
             }
             i++;
@@ -323,8 +334,8 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
                 IO.rhomolar_vap = rho0;
             }
             else if (Nsoln == 2){
-                if (is_in_closed_range(env.rhomolar_vap[imax-1], env.rhomolar_vap[imax+1], (long double)rho0)){ IO.rhomolar_vap = rho0; }
-                if (is_in_closed_range(env.rhomolar_vap[imax-1], env.rhomolar_vap[imax+1], (long double)rho1)){ IO.rhomolar_vap = rho1; }
+                if (is_in_closed_range(env.rhomolar_vap[imax-1], env.rhomolar_vap[imax+1], (CoolPropDbl)rho0)){ IO.rhomolar_vap = rho0; }
+                if (is_in_closed_range(env.rhomolar_vap[imax-1], env.rhomolar_vap[imax+1], (CoolPropDbl)rho1)){ IO.rhomolar_vap = rho1; }
             }
             else{
                 throw ValueError("More than 2 solutions found");
@@ -386,7 +397,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
     env.ipsat_max = std::distance(env.p.begin(), std::max_element(env.p.begin(), env.p.end()));
 }
 
-std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_intersections(HelmholtzEOSMixtureBackend &HEOS, parameters iInput, long double value)
+std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_intersections(HelmholtzEOSMixtureBackend &HEOS, parameters iInput, CoolPropDbl value)
 {
     std::vector<std::pair<std::size_t, std::size_t> > intersections;
     
@@ -412,7 +423,7 @@ std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_in
     }
     return intersections;
 }
-bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, parameters iInput1, long double value1, parameters iInput2, long double value2, std::size_t &iclosest, SimpleState &closest_state)
+bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, parameters iInput1, CoolPropDbl value1, parameters iInput2, CoolPropDbl value2, std::size_t &iclosest, SimpleState &closest_state)
 {
     PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
     // Find the indices that bound the solution(s)
@@ -432,8 +443,8 @@ bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, paramete
     if (intersections.size()%2 == 0){
         if (intersections.size() != 2){throw ValueError("for now only even value accepted is 2"); }
         std::vector<std::size_t> other_indices(4, 0);
-        std::vector<long double> *y;
-        std::vector<long double> other_values(4, 0);
+        std::vector<CoolPropDbl> *y;
+        std::vector<CoolPropDbl> other_values(4, 0);
         other_indices[0] = intersections[0].first; other_indices[1] = intersections[0].second;
         other_indices[2] = intersections[1].first; other_indices[3] = intersections[1].second;
         
@@ -442,14 +453,14 @@ bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, paramete
             case iP: y = &(env.p); break;
             case iHmolar: y = &(env.hmolar_vap); break; 
             case iSmolar: y = &(env.smolar_vap); break;
-            default: break;
+            default: throw ValueError("Pointer to vector y is unset in is_inside");
         }
         
         other_values[0] = (*y)[other_indices[0]]; other_values[1] = (*y)[other_indices[1]];
         other_values[2] = (*y)[other_indices[2]]; other_values[3] = (*y)[other_indices[3]];
         
-        long double min_other = *(std::min_element(other_values.begin(), other_values.end()));
-        long double max_other = *(std::max_element(other_values.begin(), other_values.end()));
+        CoolPropDbl min_other = *(std::min_element(other_values.begin(), other_values.end()));
+        CoolPropDbl max_other = *(std::max_element(other_values.begin(), other_values.end()));
         
         std::cout << format("min: %Lg max: %Lg val: %Lg\n", min_other, max_other, value2);
         
@@ -457,14 +468,14 @@ bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, paramete
         // then the value is definitely not inside the phase envelope and we don't need to 
         // do any more analysis.
         if (!is_in_closed_range(min_other, max_other, value2)){
-            std::vector<long double> d(4, 0);
+            std::vector<CoolPropDbl> d(4, 0);
             d[0] = std::abs(other_values[0]-value2); d[1] = std::abs(other_values[1]-value2);
             d[2] = std::abs(other_values[2]-value2); d[3] = std::abs(other_values[3]-value2);
             
             // Index of minimum distance in the other_values vector
             std::size_t idist = std::distance(d.begin(), std::min_element(d.begin(), d.end()));
             // Index of closest point in the phase envelope
-            std::size_t iclosest = other_indices[idist];
+            iclosest = other_indices[idist];
             
             // Get the state for the point which is closest to the desired value - this
             // can be used as a bounding value in the outer single-phase flash routine

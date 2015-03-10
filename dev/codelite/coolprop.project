@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CodeLite_Project Name="coolprop" InternalType="Console">
-  <VirtualDirectory Name="externals">
-    <VirtualDirectory Name="REFPROP-headers">
-      <File Name="../../externals/REFPROP-headers/REFPROP_lib.h"/>
-    </VirtualDirectory>
-  </VirtualDirectory>
   <Plugins>
     <Plugin Name="qmake">
       <![CDATA[00020001N0005Debug0000000000000001N0007Release000000000000]]>
@@ -32,6 +27,11 @@
  }]]]>
     </Plugin>
   </Plugins>
+  <VirtualDirectory Name="externals">
+    <VirtualDirectory Name="REFPROP-headers">
+      <File Name="../../externals/REFPROP-headers/REFPROP_lib.h"/>
+    </VirtualDirectory>
+  </VirtualDirectory>
   <VirtualDirectory Name="src">
     <VirtualDirectory Name="Backends">
       <VirtualDirectory Name="Helmholtz">
@@ -76,6 +76,10 @@
       <VirtualDirectory Name="Tabular">
         <File Name="../../src/Backends/Tabular/TabularBackends.cpp"/>
         <File Name="../../src/Backends/Tabular/TabularBackends.h"/>
+        <File Name="../../src/Backends/Tabular/TTSEBackend.cpp"/>
+        <File Name="../../src/Backends/Tabular/TTSEBackend.h"/>
+        <File Name="../../src/Backends/Tabular/BicubicBackend.h"/>
+        <File Name="../../src/Backends/Tabular/BicubicBackend.cpp"/>
       </VirtualDirectory>
     </VirtualDirectory>
     <VirtualDirectory Name="l10n">
@@ -165,6 +169,7 @@
         <IncludePath Value="../../include"/>
         <IncludePath Value="../../externals/Eigen"/>
         <IncludePath Value="../../externals/REFPROP-headers"/>
+        <IncludePath Value="../../externals/msgpack-c/include"/>
         <Preprocessor Value="ENABLE_CATCH"/>
       </Compiler>
       <Linker Options="" Required="yes"/>
@@ -207,8 +212,8 @@
         <IncludePath Value="../../include"/>
         <IncludePath Value="../../externals/Eigen"/>
         <IncludePath Value="../../externals/REFPROP-headers"/>
+        <IncludePath Value="../../externals/msgpack-c/include"/>
         <Preprocessor Value="NDEBUG"/>
-        <Preprocessor Value="ENABLE_CATCH"/>
       </Compiler>
       <Linker Options="" Required="yes"/>
       <ResourceCompiler Options="" Required="no"/>

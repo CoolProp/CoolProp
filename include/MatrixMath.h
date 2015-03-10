@@ -296,7 +296,7 @@ template <class T> void removeColumn(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynam
 static const char* stdFmt = "%8.3f";
 
 ///Templates for turning vectors (1D-matrices) into strings
-template<class T> std::string vec_to_string(const             std::vector<T>   &a, const char *fmt) {
+template<class T> std::string vec_to_string(const std::vector<T> &a, const char *fmt) {
     if (a.size()<1) return std::string("");
     std::stringstream out;
     out << "[ " << format(fmt,a[0]);
@@ -306,17 +306,17 @@ template<class T> std::string vec_to_string(const             std::vector<T>   &
     out << " ]";
     return out.str();
 };
-template<class T> std::string vec_to_string(const             std::vector<T>   &a) {
+template<class T> std::string vec_to_string(const std::vector<T> &a) {
     return vec_to_string(std::vector<double>(a.begin(), a.end()), stdFmt);
 };
 
 /// Templates for turning numbers (0D-matrices) into strings
-template<class T> std::string vec_to_string(const                         T    &a, const char *fmt) {
+template<class T> std::string vec_to_string(const T &a, const char *fmt) {
     std::vector<T> vec;
     vec.push_back(a);
     return vec_to_string(vec, fmt);
 };
-template<class T> std::string vec_to_string(const                         T    &a) {
+template<class T> std::string vec_to_string(const T &a) {
     return vec_to_string((double) a, stdFmt);
 };
 
@@ -628,7 +628,7 @@ template<typename T> std::vector<std::vector<T> > linsolve_Gauss_Jordan(std::vec
     }
     for (std::size_t col = NcolA - 1; col > 0; col--)
     {
-        for (int row = col - 1; row >=0; row--)
+        for (int row = static_cast<int>(col) - 1; row >=0; row--)
         {
             subtract_row_multiple(&AB,row,AB[row][col],col);
         }

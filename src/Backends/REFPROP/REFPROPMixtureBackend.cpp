@@ -394,9 +394,14 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             std::vector<double> x(ncmax);
             char mix[255];
             strcpy(mix, components_joined_raw.c_str());
+            char hmx_bnc[255] = "HMX.BNC", reference_state[4] = "DEF";
+            std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
+            if (!alt_hmx_bnc_path.empty()){
+                strcpy(hmx_bnc, alt_hmx_bnc_path.c_str());
+            }
             SETMIXdll(mix, 
-                      "HMX.BNC", 
-                      "DEF", 
+                      hmx_bnc, 
+                      reference_state, 
                       &N, 
                       component_string, 
                       &(x[0]), 
@@ -416,7 +421,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 cached_component_string = mix;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
-                set_mole_fractions(std::vector<long double>(x.begin(), x.begin()+N));
+                set_mole_fractions(std::vector<CoolPropDbl>(x.begin(), x.begin()+N));
                 return;
             }
             else{
@@ -441,6 +446,10 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             char path_HMX_BNC[refpropcharlength+1];
             strcpy(path_HMX_BNC, fdPath.c_str());
             strcat(path_HMX_BNC, rel_path_HMC_BNC);
+            std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
+            if (!alt_hmx_bnc_path.empty()){
+                strcpy(path_HMX_BNC, alt_hmx_bnc_path.c_str());
+            }
             strcpy(component_string, components_joined.c_str());
 
             ierr = 0;
@@ -477,7 +486,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         }
     }
 }
-void REFPROPMixtureBackend::set_mole_fractions(const std::vector<long double> &mole_fractions)
+void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
 {
     if (mole_fractions.size() != this->Ncomp)
     {
@@ -491,7 +500,7 @@ void REFPROPMixtureBackend::set_mole_fractions(const std::vector<long double> &m
     this->mole_fractions_long_double = mole_fractions;
     _mole_fractions_set = true;
 }
-void REFPROPMixtureBackend::set_mass_fractions(const std::vector<long double> &mole_fractions)
+void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mole_fractions)
 {
     throw NotImplementedError("Mass fractions not currently supported");
 }
@@ -532,73 +541,73 @@ void REFPROPMixtureBackend::limits(double &Tmin, double &Tmax, double &rhomolarm
     pmax = pmax_kPa*1000;
     rhomolarmax = Dmax_mol_L*1000;
 }
-long double REFPROPMixtureBackend::calc_pmax(void){
+CoolPropDbl REFPROPMixtureBackend::calc_pmax(void){
     double Tmin, Tmax, rhomolarmax, pmax;
     limits(Tmin, Tmax, rhomolarmax, pmax);
-    return static_cast<long double>(pmax);
+    return static_cast<CoolPropDbl>(pmax);
 };
-long double REFPROPMixtureBackend::calc_Tmax(void){
+CoolPropDbl REFPROPMixtureBackend::calc_Tmax(void){
     double Tmin, Tmax, rhomolarmax, pmax;
     limits(Tmin, Tmax, rhomolarmax, pmax);
-    return static_cast<long double>(Tmax);
+    return static_cast<CoolPropDbl>(Tmax);
 };
-long double REFPROPMixtureBackend::calc_T_critical(){
+CoolPropDbl REFPROPMixtureBackend::calc_T_critical(){
     this->check_loaded_fluid();
     long ierr = 0;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
     CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255);
     if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-    return static_cast<long double>(Tcrit);
+    return static_cast<CoolPropDbl>(Tcrit);
 };
-long double REFPROPMixtureBackend::calc_p_critical(){
+CoolPropDbl REFPROPMixtureBackend::calc_p_critical(){
     this->check_loaded_fluid();
     long ierr = 0;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
     CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-    return static_cast<long double>(pcrit_kPa*1000);
+    return static_cast<CoolPropDbl>(pcrit_kPa*1000);
 };
-long double REFPROPMixtureBackend::calc_rhomolar_critical(){
+CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_critical(){
     long ierr = 0;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
     CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-    return static_cast<long double>(dcrit_mol_L*1000);
+    return static_cast<CoolPropDbl>(dcrit_mol_L*1000);
 };
-long double REFPROPMixtureBackend::calc_T_reducing(){
+CoolPropDbl REFPROPMixtureBackend::calc_T_reducing(){
     this->check_loaded_fluid();
     double rhored_mol_L = 0, Tr = 0;
     REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
-    return static_cast<long double>(Tr);
+    return static_cast<CoolPropDbl>(Tr);
 };
-long double REFPROPMixtureBackend::calc_rhomolar_reducing(){
+CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_reducing(){
     this->check_loaded_fluid();
     double rhored_mol_L = 0, Tr = 0;
     REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
-    return static_cast<long double>(rhored_mol_L*1000);
+    return static_cast<CoolPropDbl>(rhored_mol_L*1000);
 };
-long double REFPROPMixtureBackend::calc_Ttriple(){
+CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
     this->check_loaded_fluid();
     if (mole_fractions.size() != 1){throw ValueError("calc_Ttriple cannot be evaluated for mixtures");}
     long icomp = 1;
     double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
     INFOdll(&icomp, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
-    return static_cast<long double>(ttrp);
+    return static_cast<CoolPropDbl>(ttrp);
 };
-long double REFPROPMixtureBackend::calc_gas_constant(){
+CoolPropDbl REFPROPMixtureBackend::calc_gas_constant(){
     this->check_loaded_fluid();
     double Rmix = 0;
     RMIX2dll(&(mole_fractions[0]), &Rmix);
-    return static_cast<long double>(Rmix);
+    return static_cast<CoolPropDbl>(Rmix);
 };
-long double REFPROPMixtureBackend::calc_molar_mass(void)
+CoolPropDbl REFPROPMixtureBackend::calc_molar_mass(void)
 {
     this->check_loaded_fluid();
     double wmm_kg_kmol;
     WMOLdll(&(mole_fractions[0]), &wmm_kg_kmol); // returns mole mass in kg/kmol
     _molar_mass = wmm_kg_kmol/1000; // kg/mol
-    return static_cast<long double>(_molar_mass.pt());
+    return static_cast<CoolPropDbl>(_molar_mass.pt());
 };
 
 double REFPROPMixtureBackend::calc_melt_Tmax()
@@ -617,7 +626,7 @@ double REFPROPMixtureBackend::calc_melt_Tmax()
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return Tmax_melt;
 }
-long double REFPROPMixtureBackend::calc_melting_line(int param, int given, long double value)
+CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolPropDbl value)
 {
     this->check_loaded_fluid();
     long ierr = 0;
@@ -650,7 +659,7 @@ long double REFPROPMixtureBackend::calc_melting_line(int param, int given, long 
 }
 
 
-long double REFPROPMixtureBackend::calc_viscosity(void)
+CoolPropDbl REFPROPMixtureBackend::calc_viscosity(void)
 {
     this->check_loaded_fluid();
     double eta, tcx, rhomol_L = 0.001*_rhomolar;
@@ -665,13 +674,13 @@ long double REFPROPMixtureBackend::calc_viscosity(void)
     _conductivity = tcx;
     return static_cast<double>(_viscosity);
 }
-long double REFPROPMixtureBackend::calc_conductivity(void)
+CoolPropDbl REFPROPMixtureBackend::calc_conductivity(void)
 {
     // Calling viscosity also caches conductivity, use that to save calls
     calc_viscosity();
     return static_cast<double>(_conductivity);
 }
-long double REFPROPMixtureBackend::calc_surface_tension(void)
+CoolPropDbl REFPROPMixtureBackend::calc_surface_tension(void)
 {
     this->check_loaded_fluid();
     double sigma, rho_mol_L = 0.001*_rhomolar;
@@ -685,7 +694,7 @@ long double REFPROPMixtureBackend::calc_surface_tension(void)
     _surface_tension = sigma;
     return static_cast<double>(_surface_tension);
 }
-long double REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
+CoolPropDbl REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
 {
     this->check_loaded_fluid();
     double rho_mol_L = 0.001*_rhomolar;
@@ -698,7 +707,7 @@ long double REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
              &ierr, herr, errormessagelength);       // Error message
     if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-    return static_cast<long double>(fug_cof[i]);
+    return static_cast<CoolPropDbl>(fug_cof[i]);
 }
 
 void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
@@ -710,13 +719,13 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
                &ierr, herr, errormessagelength);       // Error message
     if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
 }
-long double REFPROPMixtureBackend::calc_cpmolar_idealgas(void)
+CoolPropDbl REFPROPMixtureBackend::calc_cpmolar_idealgas(void)
 {
     this->check_loaded_fluid();
     double rho_mol_L = 0.001*_rhomolar;
     double p0, e0, h0, s0, cv0, cp0, w0, A0, G0;
     THERM0dll(&_T,&rho_mol_L,&(mole_fractions[0]),&p0,&e0,&h0,&s0,&cv0,&cp0,&w0,&A0,&G0);
-    return static_cast<long double>(cp0);
+    return static_cast<CoolPropDbl>(cp0);
 }
 
 void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2)
@@ -1255,22 +1264,22 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     _delta = _rhomolar/calc_rhomolar_critical();
     _Q = q;
 }
-long double REFPROPMixtureBackend::call_phixdll(long itau, long idel)
+CoolPropDbl REFPROPMixtureBackend::call_phixdll(long itau, long idel)
 {
     this->check_loaded_fluid();
     double val = 0, tau = _tau, delta = _delta;
     if (PHIXdll == NULL){throw ValueError("PHIXdll function is not available in your version of REFPROP. Please upgrade");}
     PHIXdll(&itau, &idel, &tau, &delta, &(mole_fractions[0]), &val);
-    return static_cast<long double>(val)/pow(static_cast<long double>(_delta),idel)/pow(static_cast<long double>(_tau),itau);
+    return static_cast<CoolPropDbl>(val)/pow(static_cast<CoolPropDbl>(_delta),idel)/pow(static_cast<CoolPropDbl>(_tau),itau);
 }
-long double REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
+CoolPropDbl REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
 {
     this->check_loaded_fluid();
     throw ValueError("Temporarily the PHI0dll function is not available for REFPROP");
     double val = 0, tau = _tau, delta = _delta, __T = T(), __rho = rhomolar()/1000;
     if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
-    return static_cast<long double>(val)/pow(delta,idel)/pow(tau,itau);
+    return static_cast<CoolPropDbl>(val)/pow(delta,idel)/pow(tau,itau);
 }
 
 } /* namespace CoolProp */

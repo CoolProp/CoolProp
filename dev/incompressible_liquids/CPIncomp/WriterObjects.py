@@ -103,7 +103,7 @@ class SolutionDataWriter(object):
         self.isportrait = True
         self.resolveRef = True # Resolve references and print text
 
-#         # Latex document mode
+        # Latex document mode
 #         self.ext        = "pgf"
 #         self.usebp      = True
 #         self.ispage     = False # Do you want a page or a figure?
@@ -1010,14 +1010,14 @@ class SolutionDataWriter(object):
         xmin = 0
         xmax = 1
 
-        ymin = y+2*dy
+        ymin = y+1*dy
         ymax = max(yStart,yHead)
 
         ax.set_xlim((xmin,xmax))
         ax.set_ylim((ymin,ymax))
 
         #xpos,ypos = ax.transAxes.inverted().transform(ax.transData.transform((0,y)))
-        return [xmin,y+0.75*dy,xmax,y+0.75*dy]
+        return [xmin,y+0.5*dy,xmax,y+0.5*dy]
 
     def printFitDetails(self):
         pass

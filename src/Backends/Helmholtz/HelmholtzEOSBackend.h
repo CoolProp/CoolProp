@@ -18,30 +18,31 @@ namespace CoolProp {
 class HelmholtzEOSBackend : public HelmholtzEOSMixtureBackend  {
 public:
     HelmholtzEOSBackend();
-    HelmholtzEOSBackend(CoolPropFluid *pFluid){set_components(std::vector<CoolPropFluid*>(1,pFluid));};
+    HelmholtzEOSBackend(CoolPropFluid Fluid){set_components(std::vector<CoolPropFluid>(1,Fluid));};
     HelmholtzEOSBackend(const std::string &name){
         Dictionary dict;
         std::vector<double> mole_fractions;
-        std::vector<CoolPropFluid*> components;
+        std::vector<CoolPropFluid> components;
         if (is_predefined_mixture(name, dict)){
             std::vector<std::string> fluids = dict.get_string_vector("fluids");
             mole_fractions = dict.get_double_vector("mole_fractions");
             
             components.resize(fluids.size());
             for (unsigned int i = 0; i < components.size(); ++i){
-                components[i] = &(get_library().get(fluids[i]));
+                components[i] = get_library().get(fluids[i]);
             }
         }
         else{
-            components = std::vector<CoolPropFluid*>(1,&(get_library().get(name)));
-            mole_fractions = std::vector<double>(1,1);
+            components.push_back(get_library().get(name)); // Until now it's empty
+            mole_fractions.push_back(1.);
         }
         // Set the components
         set_components(components);
         // Set the mole fractions
-        set_mole_fractions(std::vector<long double>(mole_fractions.begin(), mole_fractions.end()));
+        set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end()));
     };
     virtual ~HelmholtzEOSBackend(){};
+    std::string backend_name(void){return "HelmholtzEOSBackend";}
 };
 
 } /* namespace CoolProp */

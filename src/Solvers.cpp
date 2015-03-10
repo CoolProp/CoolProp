@@ -9,7 +9,7 @@ namespace CoolProp{
 
 /** \brief Calculate the Jacobian using numerical differentiation by column
  */
-std::vector<std::vector<double> > FuncWrapperND::Jacobian(std::vector<double> x)
+std::vector<std::vector<double> > FuncWrapperND::Jacobian(const std::vector<double> &x)
 {
     double epsilon;
     std::size_t N = x.size();
@@ -86,7 +86,7 @@ In the newton function, a 1-D Newton-Raphson solver is implemented using exact s
 @param errstring A pointer to the std::string that returns the error from Secant.  Length is zero if no errors are found
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double Newton(FuncWrapper1D* f, double x0, double ftol, int maxiter, std::string &errstring)
+double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter, std::string &errstring)
 {
     double x, dx, fval=999;
     int iter=1;
@@ -380,20 +380,6 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
         }
     }
     return b;
-}
-
-// Single-Dimensional solvers
-double Brent(FuncWrapper1D &f, double a, double b, double macheps, double t, int maxiter, std::string &errstr){
-    return Brent(&f, a, b, macheps, t, maxiter, errstr);
-}
-double Secant(FuncWrapper1D &f, double x0, double dx, double ftol, int maxiter, std::string &errstring){
-    return Secant(&f, x0, dx, ftol, maxiter, errstring);
-}
-double BoundedSecant(FuncWrapper1D &f, double x0, double xmin, double xmax, double dx, double ftol, int maxiter, std::string &errstring){
-    return BoundedSecant(&f, x0, xmin, xmax, dx, ftol, maxiter, errstring);
-}
-double Newton(FuncWrapper1D &f, double x0, double ftol, int maxiter, std::string &errstring){
-    return Newton(&f, x0, ftol, maxiter, errstring);
 }
 
 }; /* namespace CoolProp */

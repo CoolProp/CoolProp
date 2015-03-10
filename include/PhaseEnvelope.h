@@ -17,10 +17,10 @@ public:
                 ipsat_max, ///< The index of the point corresponding to the maximum pressure for Type-I mixtures
                 icrit; ///< The index of the point corresponding to the critical point
                 
-    std::vector< std::vector<long double> > K, lnK, x, y;
-    std::vector<long double> T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q;
+    std::vector< std::vector<CoolPropDbl> > K, lnK, x, y;
+    std::vector<CoolPropDbl> T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q;
     
-    PhaseEnvelopeData(){ built = false; TypeI = false; };
+    PhaseEnvelopeData() : TypeI(false), built(false), iTsat_max(-1), ipsat_max(-1), icrit(-1)  {}
     
     void resize(std::size_t N)
     {
@@ -34,16 +34,16 @@ public:
         lnrhomolar_liq.clear(); lnrhomolar_vap.clear(); hmolar_liq.clear(); hmolar_vap.clear(); smolar_liq.clear(); smolar_vap.clear();
         K.clear(); lnK.clear(); x.clear(); y.clear(); Q.clear();
     }
-    void insert_variables(const long double T, 
-                          const long double p, 
-                          const long double rhomolar_liq, 
-                          const long double rhomolar_vap,
-                          const long double hmolar_liq, 
-                          const long double hmolar_vap,
-                          const long double smolar_liq, 
-                          const long double smolar_vap,
-                          const std::vector<long double> & x, 
-                          const std::vector<long double> & y,
+    void insert_variables(const CoolPropDbl T, 
+                          const CoolPropDbl p, 
+                          const CoolPropDbl rhomolar_liq, 
+                          const CoolPropDbl rhomolar_vap,
+                          const CoolPropDbl hmolar_liq, 
+                          const CoolPropDbl hmolar_vap,
+                          const CoolPropDbl smolar_liq, 
+                          const CoolPropDbl smolar_vap,
+                          const std::vector<CoolPropDbl> & x, 
+                          const std::vector<CoolPropDbl> & y,
                           std::size_t i)
     {
         std::size_t N = K.size();
@@ -74,16 +74,16 @@ public:
             this->Q.insert(this->Q.begin(), 0);
         }
     };
-    void store_variables(const long double T, 
-                         const long double p, 
-                         const long double rhomolar_liq, 
-                         const long double rhomolar_vap,
-                         const long double hmolar_liq, 
-                         const long double hmolar_vap,
-                         const long double smolar_liq, 
-                         const long double smolar_vap,
-                         const std::vector<long double> & x, 
-                         const std::vector<long double> & y)
+    void store_variables(const CoolPropDbl T, 
+                         const CoolPropDbl p, 
+                         const CoolPropDbl rhomolar_liq, 
+                         const CoolPropDbl rhomolar_vap,
+                         const CoolPropDbl hmolar_liq, 
+                         const CoolPropDbl hmolar_vap,
+                         const CoolPropDbl smolar_liq, 
+                         const CoolPropDbl smolar_vap,
+                         const std::vector<CoolPropDbl> & x, 
+                         const std::vector<CoolPropDbl> & y)
     {
         std::size_t N = K.size();
         if (N==0){throw CoolProp::ValueError("Cannot store variables in phase envelope since resize() function has not been called");}
