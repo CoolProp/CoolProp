@@ -1663,9 +1663,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
     class solver_resid : public FuncWrapper1D
     {
     public:
-        int other;
-        CoolPropDbl T, value;
         HelmholtzEOSMixtureBackend *HEOS;
+        CoolPropDbl T, value;
+        int other;
 
         solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl value, int other)
         : HEOS(HEOS),T(T),value(value),other(other){}
@@ -1819,8 +1819,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     class solver_TP_resid : public FuncWrapper1DWithDeriv
     {
     public:
-        CoolPropDbl T, p, rhor, tau, R_u, delta;
         HelmholtzEOSMixtureBackend *HEOS;
+        CoolPropDbl T, p, delta, rhor, tau, R_u;
 
         solver_TP_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl p)
         : HEOS(HEOS),T(T),p(p),delta(_HUGE),rhor(HEOS->get_reducing_state().rhomolar),

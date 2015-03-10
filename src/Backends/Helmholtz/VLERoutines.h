@@ -11,11 +11,11 @@ namespace SaturationSolvers
     struct saturation_T_pure_Akasaka_options{
         bool use_guesses; ///< true to start off at the values specified by rhoL, rhoV
         CoolPropDbl omega, rhoL, rhoV, pL, pV;
-        saturation_T_pure_Akasaka_options(bool use_guesses=false):use_guesses(use_guesses),omega(_HUGE),rhoV(_HUGE),rhoL(_HUGE),pV(_HUGE),pL(_HUGE){}
+        saturation_T_pure_Akasaka_options(bool use_guesses=false):use_guesses(use_guesses),omega(_HUGE),rhoL(_HUGE),rhoV(_HUGE),pL(_HUGE),pV(_HUGE){}
     };
     struct saturation_T_pure_options{
         CoolPropDbl omega, rhoL, rhoV, pL, pV, p, T;
-        saturation_T_pure_options():omega(_HUGE),rhoV(_HUGE),rhoL(_HUGE),pV(_HUGE),pL(_HUGE),p(_HUGE),T(_HUGE){}
+        saturation_T_pure_options():omega(_HUGE),rhoL(_HUGE),rhoV(_HUGE),pL(_HUGE),pV(_HUGE),p(_HUGE),T(_HUGE){}
     };
     
     struct saturation_D_pure_options{
@@ -135,8 +135,8 @@ namespace SaturationSolvers
         const HelmholtzEOSMixtureBackend &HEOS;
 
         WilsonK_resid(const HelmholtzEOSMixtureBackend &HEOS, double beta, double imposed_value, int input_type, const std::vector<CoolPropDbl> &z, std::vector<CoolPropDbl> &K)
-            : z(z), K(K), HEOS(HEOS), beta(beta), input_type(input_type),
-              T(imposed_value), p(imposed_value){} // if input_type == imposed_T -> use T, else use p; init both
+            : input_type(input_type), T(imposed_value), p(imposed_value), beta(beta), 
+            z(z), K(K), HEOS(HEOS){} // if input_type == imposed_T -> use T, else use p; init both
         double call(double input_value){
             double summer = 0;
             if (input_type == imposed_T){

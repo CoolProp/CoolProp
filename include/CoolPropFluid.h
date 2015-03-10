@@ -145,7 +145,7 @@ struct ConductivityResidualVariables
 };
 
 struct ConductivityCriticalSimplifiedOlchowySengersData{
-    CoolPropDbl T_reducing, p_reducing, k, R0, gamma, nu, qD, zeta0, GAMMA, T_ref;
+    CoolPropDbl k, R0, gamma, nu, GAMMA, zeta0, qD, T_reducing, p_reducing, T_ref;
     ConductivityCriticalSimplifiedOlchowySengersData():
       // Universal constants - can still be adjusted if need be
       k(1.3806488e-23), //[J/K]
@@ -292,19 +292,19 @@ public:
                 BibTeX_conductivity;  ///< The BibTeX key for the conductivity model
     bool viscosity_using_ECS; ///< A flag for whether to use extended corresponding states for viscosity.  False for no
     bool conductivity_using_ECS; ///< A flag for whether to use extended corresponding states for conductivity.  False for no
-	bool conductivity_model_provided; ///< A flag for whether thermal conductivity model is provided.  False for no
 	bool viscosity_model_provided; ///< A flag for whether viscosity model is provided.  False for no
+    bool conductivity_model_provided; ///< A flag for whether thermal conductivity model is provided.  False for no
     CoolPropDbl sigma_eta, ///< The Lennard-Jones 12-6 \f$ \sigma \f$ parameter
                 epsilon_over_k; ///< The Lennard-Jones 12-6 \f$ \varepsilon/k \f$ parameter
     ViscosityHardcodedEnum hardcoded_viscosity; ///< Hardcoded flags for the viscosity
     ConductivityHardcodedEnum hardcoded_conductivity; ///< Hardcoded flags for the conductivity
-    TransportPropertyData():hardcoded_viscosity(VISCOSITY_NOT_HARDCODED),
-                            hardcoded_conductivity(CONDUCTIVITY_NOT_HARDCODED),
-                            viscosity_using_ECS(false),
+    TransportPropertyData():viscosity_using_ECS(false),
                             conductivity_using_ECS(false),
                             viscosity_model_provided(false),
                             conductivity_model_provided(false),
-                            sigma_eta(_HUGE),epsilon_over_k(_HUGE){}
+                            sigma_eta(_HUGE),epsilon_over_k(_HUGE),
+                            hardcoded_viscosity(VISCOSITY_NOT_HARDCODED),
+                            hardcoded_conductivity(CONDUCTIVITY_NOT_HARDCODED){}
 };
 
 struct Ancillaries

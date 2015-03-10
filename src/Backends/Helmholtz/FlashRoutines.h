@@ -129,8 +129,8 @@ public:
 class solver_TP_resid : public FuncWrapper1DWithDeriv
 {
 public:
-    CoolPropDbl T, p, rhor, tau, R_u, delta;
     HelmholtzEOSMixtureBackend *HEOS;
+    CoolPropDbl T, p, rhor, tau, R_u, delta;
 
     solver_TP_resid(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl p):
         HEOS(&HEOS),T(T),p(p),rhor(HEOS.get_reducing_state().rhomolar),

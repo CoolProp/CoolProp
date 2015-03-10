@@ -22,14 +22,14 @@ private:
     void post_update();
 protected:
     std::vector<CoolPropFluid> components; ///< The components that are in use
-
+    phases imposed_phase_index;
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
     std::vector<CoolPropDbl> mole_fractions; ///< The bulk mole fractions of the mixture
     std::vector<CoolPropDbl> K, ///< The K factors for the components
                              lnK; ///< The natural logarithms of the K factors of the components
 
     SimpleState _crit;
-    phases imposed_phase_index;
+    
     std::size_t N; ///< Number of components
     
 public:

@@ -156,8 +156,8 @@ public:
     std::vector<ResidualHelmholtzGeneralizedExponentialElement> elements;
     // Default Constructor
     ResidualHelmholtzGeneralizedExponential()
-        : N(0),delta_li_in_u(false),tau_mi_in_u(false),eta1_in_u(false),
-          eta2_in_u(false),beta1_in_u(false),beta2_in_u(false),finished(false) {};
+        : delta_li_in_u(false),tau_mi_in_u(false),eta1_in_u(false),
+          eta2_in_u(false),beta1_in_u(false),beta2_in_u(false),finished(false), N(0) {};
     /** \brief Add and convert an old-style power (polynomial) term to generalized form
 	 * 
 	 * Term of the format
