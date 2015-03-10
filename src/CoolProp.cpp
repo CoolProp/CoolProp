@@ -786,7 +786,7 @@ std::string get_BibTeXKey(const std::string &Ref, const std::string &key)
     else if (!key.compare("ECS_CONDUCTIVITY_FITS")){ throw NotImplementedError(); }
     else if (!key.compare("SURFACE_TENSION")){ return HEOS.get_components()[0].ancillaries.surface_tension.BibTeX;}
     else if (!key.compare("MELTING_LINE")){ return HEOS.get_components()[0].ancillaries.melting_line.BibTeX;}
-    else{ return "Bad key";}
+    else{ throw CoolProp::KeyError(format("Bad key to get_BibTeXKey [%s]", key.c_str()));}
 }
 std::string get_global_param_string(const std::string &ParamName)
 {
