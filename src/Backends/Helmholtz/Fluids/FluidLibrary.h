@@ -1201,6 +1201,9 @@ public:
             std::map<std::size_t, CoolPropFluid>::iterator it2 = fluid_map.find(it->second);
             // If it is found
             if (it2 != fluid_map.end()){
+                if (!ValidNumber(delta_a1) || !ValidNumber(delta_a2) ){
+                    throw ValueError(format("Not possible to set reference state for fluid %s because offset values are NAN",fluid.c_str()));
+                }
                 it2->second.EOSVector[0].alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
             }
             else{
