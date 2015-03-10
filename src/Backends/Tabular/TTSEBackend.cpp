@@ -87,7 +87,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
 double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)
 {
     // Define pointers for the matrices to be used; 
-    std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdxdy, *d2zdy2, *d2zdx2;
+    std::vector<std::vector<double> > *z = NULL, *dzdx = NULL, *dzdy = NULL, *d2zdxdy = NULL, *d2zdy2 = NULL, *d2zdx2 = NULL;
     
     // Connect the pointers based on the output variable desired
     switch(output){
