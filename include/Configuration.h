@@ -33,6 +33,16 @@
    CONFIGURATION_KEYS_ENUM
   #undef X
  };
+ 
+// Evidently SWIG+MATLAB cannot properly wrap enums within classes
+enum ConfigurationDataTypes {
+    CONFIGURATION_NOT_DEFINED_TYPE = 0,
+    CONFIGURATION_BOOL_TYPE,
+    CONFIGURATION_DOUBLE_TYPE,
+    CONFIGURATION_INTEGER_TYPE,
+    CONFIGURATION_STRING_TYPE,
+    CONFIGURATION_ENDOFLIST_TYPE
+};
 
 namespace CoolProp
 {
@@ -142,17 +152,6 @@ class ConfigurationItem
 		#endif // !defined(SWIG)
          
     private:
-        // Evidently SWIG+MATLAB cannot properly wrap private or protected enums
-        #if !defined(SWIGMATLAB) 
-        enum ConfigurationDataTypes {
-            CONFIGURATION_NOT_DEFINED_TYPE = 0,
-            CONFIGURATION_BOOL_TYPE,
-            CONFIGURATION_DOUBLE_TYPE,
-            CONFIGURATION_INTEGER_TYPE,
-            CONFIGURATION_STRING_TYPE,
-            CONFIGURATION_ENDOFLIST_TYPE
-        };
-        #endif
         void check_data_type(ConfigurationDataTypes type) const {
             if (type != this->type){
                 throw ValueError(format("type does not match"));
