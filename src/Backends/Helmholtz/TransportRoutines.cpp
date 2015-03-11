@@ -941,6 +941,7 @@ void TransportRoutines::conformal_state_solver(HelmholtzEOSMixtureBackend &HEOS,
     
     Eigen::Vector2d r;
     Eigen::Matrix2d J;
+    HEOS_Reference.specify_phase(iphase_gas); // Something homogeneous, not checked
     // Update the reference fluid with the conformal state
     HEOS_Reference.update_DmolarT_direct(rhomolar0, T0);
     do{
