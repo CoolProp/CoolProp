@@ -5,6 +5,7 @@
 #include "CoolPropFluid.h"
 
 #include "rapidjson/rapidjson_include.h"
+#include "crossplatform_shared_ptr.h"
 
 #include <map>
 #include <algorithm>
@@ -1194,23 +1195,7 @@ public:
             throw ValueError(format("key [%d] was not found in JSONFluidLibrary",key));
         }
     };
-    void set_fluid_enthalpy_entropy_offset(const std::string &fluid, double delta_a1, double delta_a2, const std::string &ref){
-        // Try to find it
-        std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(fluid);
-        if (it != string_to_index_map.end()){
-            std::map<std::size_t, CoolPropFluid>::iterator it2 = fluid_map.find(it->second);
-            // If it is found
-            if (it2 != fluid_map.end()){
-                if (!ValidNumber(delta_a1) || !ValidNumber(delta_a2) ){
-                    throw ValueError(format("Not possible to set reference state for fluid %s because offset values are NAN",fluid.c_str()));
-                }
-                it2->second.EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
-            }
-            else{
-                throw ValueError(format("fluid [%s] was not found in JSONFluidLibrary",fluid.c_str()));
-            }
-        }
-    }
+    void set_fluid_enthalpy_entropy_offset(const std::string &fluid, double delta_a1, double delta_a2, const std::string &ref);
     /// Return a comma-separated list of fluid names
     std::string get_fluid_list(void)
     {

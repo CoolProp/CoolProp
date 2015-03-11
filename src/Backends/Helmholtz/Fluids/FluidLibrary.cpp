@@ -1,6 +1,7 @@
 
 #include "FluidLibrary.h"
 #include "all_fluids_JSON.h" // Makes a std::string variable called all_fluids_JSON
+#include "../HelmholtzEOSBackend.h"
 
 namespace CoolProp{
 
@@ -17,6 +18,38 @@ void load()
         try{library.add_many(dd);}catch(std::exception &e){std::cout << e.what() << std::endl;}
     }
 }
+
+void JSONFluidLibrary::set_fluid_enthalpy_entropy_offset(const std::string &fluid, double delta_a1, double delta_a2, const std::string &ref)
+{
+    // Try to find it
+    std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(fluid);
+    if (it != string_to_index_map.end()){
+        std::map<std::size_t, CoolPropFluid>::iterator it2 = fluid_map.find(it->second);
+        // If it is found
+        if (it2 != fluid_map.end()){
+            if (!ValidNumber(delta_a1) || !ValidNumber(delta_a2) ){
+                throw ValueError(format("Not possible to set reference state for fluid %s because offset values are NAN",fluid.c_str()));
+            }
+            it2->second.EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
+            
+            shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS(new CoolProp::HelmholtzEOSBackend(it2->second));
+
+            // Calculate the new enthalpy and entropy values
+            HEOS->update(DmolarT_INPUTS, it2->second.EOS().hs_anchor.rhomolar, it2->second.EOS().hs_anchor.T);
+            it2->second.EOS().hs_anchor.hmolar = HEOS->hmolar();
+            it2->second.EOS().hs_anchor.smolar = HEOS->smolar();
+            
+            // Calculate the new enthalpy and entropy values at the reducing stat
+            HEOS->update(DmolarT_INPUTS, it2->second.EOS().reduce.rhomolar, it2->second.EOS().reduce.T);
+            it2->second.EOS().reduce.hmolar = HEOS->hmolar();
+            it2->second.EOS().reduce.smolar = HEOS->smolar();
+        }
+        else{
+            throw ValueError(format("fluid [%s] was not found in JSONFluidLibrary",fluid.c_str()));
+        }
+    }
+}
+    
 
 JSONFluidLibrary & get_library(void){
     if (library.is_empty()){ load(); }

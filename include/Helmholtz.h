@@ -1061,7 +1061,7 @@ public:
     IdealHelmholtzCP0PolyT CP0PolyT;
 
     CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta)
-    {    
+    {
         return (Lead.base(tau, delta) + EnthalpyEntropyOffset.base(tau, delta)
                 + EnthalpyEntropyOffsetCore.base(tau, delta)
                 + LogTau.base(tau, delta) + Power.base(tau, delta) 
