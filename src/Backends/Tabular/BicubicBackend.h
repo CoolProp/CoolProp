@@ -129,12 +129,19 @@ class BicubicBackend : public TabularBackend
         void build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs);
         void update(CoolProp::input_pairs input_pair, double val1, double val2);
 		double evaluate_single_phase(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j);
+        double evaluate_single_phase_transport(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
 		double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j){
 			return evaluate_single_phase(single_phase_logph, coeffs_ph, output, _hmolar, _p, i, j);
 		};
         double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j){
 			return evaluate_single_phase(single_phase_logpT, coeffs_pT, output, _T, _p, i, j);
 		};
+        double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j){
+            return evaluate_single_phase_transport(single_phase_logpT, output, _T, _p, i, j);
+        }
+        double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j){
+            return evaluate_single_phase_transport(single_phase_logph, output, _T, _p, i, j);
+        }
 };
 
 double do_one();

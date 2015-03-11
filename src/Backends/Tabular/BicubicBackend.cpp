@@ -215,6 +215,40 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
 	}
 }
 
+/** Use the single_phase table to evaluate an output for a transport property
+ * 
+ * Here we use linear interpolation because we don't have any information about the derivatives with respect to the 
+ * independent variables and it is too computationally expensive to build the derivatives numerically
+ * 
+ * See also http://en.wikipedia.org/wiki/Bilinear_interpolation#Nonlinear
+ */
+double CoolProp::BicubicBackend::evaluate_single_phase_transport(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)
+{
+    // By definition i,i+1,j,j+1 are all in range and valid
+    std::vector<std::vector<double> > *f = NULL;
+    switch(output){
+        case iconductivity:
+            f = &table.cond; break;
+        case iviscosity:
+            f = &table.visc; break;
+        default:
+            throw ValueError(format("invalid output variable to BicubicBackend::evaluate_single_phase_transport"));
+    }
+    double x1 = table.xvec[i], x2 = table.xvec[i+1], y1 = table.yvec[j], y2 = table.yvec[j+1];
+    double f11 = (*f)[i][j], f12 = (*f)[i][j+1], f21 = (*f)[i+1][j], f22 = (*f)[i+1][j+1];
+    double val = 1/((x2-x1)*(y2-y1))*( f11*(x2- x1)*(y2 - y)
+                                      +f21*(x - x1)*(y2 - y)
+                                      +f12*(x2 - x)*(y - y1)
+                                      +f22*(x - x1)*(y - y1));
+    
+    // Cache the output value calculated
+    switch(output){
+        case iconductivity: _conductivity = val; break;
+        case iviscosity: _viscosity = val; break;
+        default: throw ValueError();
+    }
+    return val;
+}
 /// Use the single_phase table to evaluate an output
 double CoolProp::BicubicBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j)
 {

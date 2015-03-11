@@ -216,7 +216,9 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
                 visc[i][j] = AS->viscosity();
                 cond[i][j] = AS->conductivity();
             }
-            catch(std::exception &){}
+            catch(std::exception &){
+                // Failures will remain as holes in table
+            }
             
             // ----------------------------------------
             //   First derivatives of state variables

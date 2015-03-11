@@ -82,7 +82,47 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
             throw ValueError();
     }
 }
-
+/** Use the single_phase table to evaluate an output for a transport property
+ * 
+ * Here we use bilinear interpolation because we don't have any information about the derivatives with respect to the 
+ * independent variables and it is too computationally expensive to build the derivatives numerically
+ * 
+ * See also http://en.wikipedia.org/wiki/Bilinear_interpolation#Nonlinear
+ */
+double CoolProp::TTSEBackend::evaluate_single_phase_transport(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)
+{
+    bool in_bounds = (i >=0 && i < table.xvec.size()-1 && j >=0 && j < table.yvec.size()-1);
+    if (!in_bounds){
+        throw ValueError("Cell to TTSEBackend::evaluate_single_phase_transport is not valid");
+    }
+    bool is_valid = (ValidNumber(table.smolar[i][j]) && ValidNumber(table.smolar[i+1][j]) && ValidNumber(table.smolar[i][j+1]) && ValidNumber(table.smolar[i+1][j+1]));
+    if (!is_valid){
+        throw ValueError("Cell to TTSEBackend::evaluate_single_phase_transport must have four valid corners for now");
+    }
+    std::vector<std::vector<double> > *f = NULL;
+    switch(output){
+        case iconductivity:
+            f = &table.cond; break;
+        case iviscosity:
+            f = &table.visc; break;
+        default:
+            throw ValueError(format("bad output type"));
+    }
+    double x1 = table.xvec[i], x2 = table.xvec[i+1], y1 = table.yvec[j], y2 = table.yvec[j+1];
+    double f11 = (*f)[i][j], f12 = (*f)[i][j+1], f21 = (*f)[i+1][j], f22 = (*f)[i+1][j+1];
+    double val = 1/((x2-x1)*(y2-y1))*( f11*(x2- x1)*(y2 - y)
+                                      +f21*(x - x1)*(y2 - y)
+                                      +f12*(x2 - x)*(y - y1)
+                                      +f22*(x - x1)*(y - y1));
+    
+    // Cache the output value calculated
+    switch(output){
+        case iconductivity: _conductivity = val; break;
+        case iviscosity: _viscosity = val; break;
+        default: throw ValueError();
+    }
+    return val;
+}
 /// Use the single-phase table to evaluate an output
 double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)
 {

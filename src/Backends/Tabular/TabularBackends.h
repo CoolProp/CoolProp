@@ -393,6 +393,8 @@ class TabularBackend : public AbstractState
         
         virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
         
         /// Returns the path to the tables that shall be written
         std::string path_to_tables(void);
@@ -462,6 +464,33 @@ class TabularBackend : public AbstractState
             }
             else{
                 return pure_saturation.evaluate(iHmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            }
+        }
+        
+        CoolPropDbl calc_viscosity(void){
+            if (using_single_phase_table){
+                switch(selected_table){
+                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
+                }
+                return _HUGE; // not needed, will never be hit, just to make compiler happy
+            }
+            else{
+                return pure_saturation.evaluate(iviscosity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            }
+        }
+        CoolPropDbl calc_conductivity(void){
+            if (using_single_phase_table){
+                switch(selected_table){
+                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar_transport(iconductivity, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT_transport(iconductivity, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
+                }
+                return _HUGE; // not needed, will never be hit, just to make compiler happy
+            }
+            else{
+                return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
             }
         }
         
