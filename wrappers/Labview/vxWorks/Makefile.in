@@ -3,7 +3,7 @@
 DEBUG_MODE = 0
 
 ADDED_CFLAGS = -D__powerpc__ -DDISABLE_CATCH
-ADDED_INCLUDES = -I../../../include -I../../../externals/Eigen
+ADDED_INCLUDES = ${INCLUDE_DIRECTORIES}
 ADDED_LIBS = -lstdc++ -lgcc -lsupc++
 
 ifeq ($(DEBUG_MODE),1)
@@ -16,15 +16,12 @@ endif
 
 LINKFLAGS = $(CFLAGS) -v
 LIBPATH = 
-SRC_DIR = ../../../src/
+SRC_DIR = ${SRC_DIR}
 
 # List all the *compiled* object files here, under the OBJ_DIR
 # directory. Make will automatically locate the source file and
 # compile it.
-CPP_FILES = $(shell find $(SRC_DIR) -type f -name '*.cpp')
-OBJECTS := $(subst $(SRC_DIR),$(OBJ_DIR)/,$(subst .cpp,.o,$(CPP_FILES)))
-DIRECTORIES_SRC := $(addprefix $(OBJDIR),$(shell find $(SRC_DIR) -type d | tr '\n' ' '))
-DIRECTORIES_BIN := $(subst $(SRC_DIR),$(OBJ_DIR)/,$(DIRECTORIES_SRC))
+OBJECTS := ${OBJECTS}
 
 # This is the name of the output shared library.
 PROJECT_TARGETS := $(OBJ_DIR)/CoolProp.out
@@ -44,7 +41,7 @@ TOOL_FAMILY = gnu
 TOOL = gnu
 CC_ARCH_SPEC = -mcpu=603 -mstrict-align 
 
-IDE_INCLUDES = -I$(WIND_BASE)/target/h -I$(WIND_BASE)/target/h/wrn/coreip -I../../../CoolProp
+IDE_INCLUDES = -I$(WIND_BASE)/target/h -I$(WIND_BASE)/target/h/wrn/coreip ${APP_INCLUDE_DIRS}
 
 # This basic rule compiles a .c file into a .o file. It can be adapted to
 # all other source files that gcc can compile, including assembly (.s) and
