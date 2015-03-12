@@ -57,6 +57,23 @@ If the master is somewhere else, just change the IP address.  As of Sept, 2014, 
 master was at www.coolprop.dreamhosters.com.  The buildbot_private.py on the master
 holds the required passwords.
 
+OSX Virtualbox host
+-------------------
+
+Thanks to http://stackoverflow.com/questions/1261975/addressing-localhost-from-a-virtualbox-virtual-machine and the comment of spsaucier you basically need to do the following, copied verbatim:
+
+To enable this on OSX I had to do the following:
+
+1. Shut your virtual machine down.
+2. Go to ``VirtualBox Preferences -> Network -> Host-only Networks ->`` click the "+" icon. Click OK.
+3.Select your box and click the "Settings" icon -> Network -> Adapter 2 -> On the "Attached to:" dropdown, select "Host-only Adapter" and your network (vboxnet0) should show up below by default. Click OK.
+4. Once you start your box up again, you should be able to access localhost at http://10.0.2.2/
+
+You can refer to it by localhost and access other localhosted sites by adding their references to the hosts file (C:\windows\system32\drivers\etc\hosts) like the following::
+
+	10.0.2.2    localhost
+	10.0.2.2    subdomain.localhost
+    
 
 Python slaves
 -------------
