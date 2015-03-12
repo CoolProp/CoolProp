@@ -25,12 +25,26 @@ The wrapper should be valid for Julia 0.4 and above. For Julia 0.3 and lower, us
 
 Usage
 -----
-At the console, do something like this in the folder that contains CoolProp.jl and the shared library::
+At the console, do something like this in the folder that contains CoolProp.jl and the shared library:
+
+High level interface::
 
     julia> import CoolProp
     
     julia> CoolProp.PropsSI("T","P",101325.0,"Q",0.0,"Water")
     373.1242958476879
+
+Low level interface::
+
+    julia> handle = CoolProp.AbstractState_factory("HEOS", "Water")
+    0
+    
+    julia> CoolProp.AbstractState_update(handle,CoolProp.get_input_pair_index("PT_INPUTS"),101325, 300)
+    
+    julia> CoolProp.AbstractState_keyed_output(handle,CoolProp.get_param_index("C"))
+    4180.635776569655
+
+    julia> CoolProp.AbstractState_free(handle)
     
 Option B: Using PyCall package in Julia
 =======================================
