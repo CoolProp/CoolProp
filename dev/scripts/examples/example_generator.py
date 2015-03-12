@@ -279,7 +279,12 @@ body_template = """
                 "type": "function",
                 "function": "update",
                 "arguments": [
-                    "input_pairs.PQ_INPUTS", "101325", "1"
+                    {
+                        "type": "enum",
+                        "enum": "input_pairs",
+                        "key": "PQ_INPUTS"
+                    },
+                    "101325", "1"
                 ]
             },
         "EOL":true
@@ -340,6 +345,7 @@ class Python(BaseParser):
                                  factory = 'AbstractState')
     type_name_mapping = {'vector': None,
                          'AbstractState': None}
+    enum_name_mapping = {'input_pairs': "CoolProp"}
     indentation = ''
 
     def parse_arguments(self, arguments):
@@ -379,7 +385,7 @@ class Python(BaseParser):
                           'from CoolProp import AbstractState',
                           'from CoolProp.CoolProp import PhaseSI, PropsSI, get_global_param_string',
                           'from CoolProp.HumidAirProp import HAPropsSI',
-                          'from math import sin'])
+                          'from math import sin\n'])
                           
 class Octave(BaseParser):
 
@@ -391,6 +397,7 @@ class Octave(BaseParser):
                                  factory = 'AbstractState.factory')
     type_name_mapping = {'vector': None,
                          'AbstractState': None}
+    enum_name_mapping = {'input_pairs': "CoolProp"}
     indentation = ''
 
     def parse_arguments(self, arguments):
@@ -418,13 +425,22 @@ class Octave(BaseParser):
             l = '[' + ', '.join(args) + ']'
         elif d['type'] == 'class_dereference':
             l = d['name'] + '.' + self.dict2string(d['RHS'])
+        elif d['type'] == 'enum':
+            l = self.enum_name_mapping[d['enum']] + '.' + d['key']
         elif d['type'] == 'custom_assignment':
             type_name = self.type_name_mapping[d['variable_type']]
             if type_name:
                 LHS = type_name + ' ' + d['variable_name']
             else:
                 LHS = d['variable_name']
-            l = ' '.join([LHS, '=', self.dict2string(d['RHS'])])
+            
+            if d['RHS']['type'] != 'vector':
+                RHS = self.dict2string(d['RHS'])
+            else: # Custom processing for vector assignment
+                pushes = [d['variable_name']+'.push_back(' + arg +');' for arg in d['RHS']['arguments']]
+                RHS = 'DoubleVector(); ' + ' '.join(pushes)
+                
+            l = ' '.join([LHS, '=', RHS])
         else:
             l = '??????????????????????????????'
             
@@ -470,6 +486,8 @@ class MATLAB(BaseParser):
         elif d['type'] == 'vector':
             args = self.parse_arguments(d['arguments'])
             l = '[' + ', '.join(args) + ']'
+        elif d['type'] == 'enum':
+            l = self.enum_name_mapping[d['enum']] + '.' + self.enum_name_mapping[d['key']]
         elif d['type'] == 'class_dereference':
             l = d['name'] + '.' + self.dict2string(d['RHS'])
         elif d['type'] == 'custom_assignment':
@@ -478,7 +496,14 @@ class MATLAB(BaseParser):
                 LHS = type_name + ' ' + d['variable_name']
             else:
                 LHS = d['variable_name']
-            l = ' '.join([LHS, '=', self.dict2string(d['RHS'])])
+            # Custom processing for vector assignment
+            if d['RHS']['type'] != 'vector':
+                RHS = self.dict2string(d['RHS'])
+            else: #vector
+                pushes = [d['variable_name']+'.push_back(' + arg +');' for arg in d['RHS']['arguments']]
+                RHS = 'DoubleVector(); ' + ' '.join(pushes)
+                
+            l = ' '.join([LHS, '=', RHS])
         else:
             l = '??????????????????????????????'
             
@@ -499,6 +524,7 @@ class Java(BaseParser):
                                  factory = 'AbstractState.factory')
     type_name_mapping = {'vector': None,
                          'AbstractState': 'AbstractState'}   
+    enum_name_mapping = {'input_pairs': "input_pairs"}
     indentation = '        '                         
 
     def parse_arguments(self, arguments):
@@ -520,7 +546,9 @@ class Java(BaseParser):
         elif d['type'] == 'function':
             l = self.map_function(d['function']) + '(' + ', '.join(self.parse_arguments(d['arguments'])) + ')'
         elif d['type'] == 'vector':
-            l = '[' + ', '.join(self.parse_arguments(d['arguments'])) + ']'            
+            l = '[' + ', '.join(self.parse_arguments(d['arguments'])) + ']'
+        elif d['type'] == 'enum':
+            l = self.enum_name_mapping[d['enum']] + '.' + d['key']
         elif d['type'] == 'class_dereference':
             l = d['name'] + '.' + self.dict2string(d['RHS'])
         elif d['type'] == 'custom_assignment':
@@ -554,8 +582,8 @@ class Csharp(BaseParser):
                                  factory = 'AbstractState.factory')
     type_name_mapping = {'vector': "DoubleVector",
                          'AbstractState': 'AbstractState'} 
+    enum_name_mapping = {'input_pairs': "input_pairs"}
     indentation = '        '
-                         
 
     def parse_arguments(self, arguments):
         out = []
@@ -577,6 +605,8 @@ class Csharp(BaseParser):
             l = self.map_function(d['function']) + '(' + ', '.join(self.parse_arguments(d['arguments'])) + ')'
         elif d['type'] == 'vector':
             l = 'new DoubleVector(new double[]{' + ', '.join(self.parse_arguments(d['arguments'])) + '})'
+        elif d['type'] == 'enum':
+            l = self.enum_name_mapping[d['enum']] + '.' + d['key']
         elif d['type'] == 'class_dereference':
             l = d['name'] + '.' + self.dict2string(d['RHS'])
         elif d['type'] == 'custom_assignment':
@@ -602,24 +632,24 @@ class Csharp(BaseParser):
 
 if __name__=='__main__':
 
-    #~ P = Python()
-    #~ code = P.parse()
-    #~ P.write('Python/code.py', code)
+    P = Python()
+    code = P.parse()
+    P.write('Example.py', code)
     J = Java()
     code = J.parse()
     J.write('Example.java', code)
-    #~ C = Csharp()
-    #~ code = C.parse()
-    #~ C.write('Csharp/Example.cs', code)
+    C = Csharp()
+    code = C.parse()
+    C.write('Example.cs', code)
     O = Octave()
     code = O.parse()
-    O.write('Octave/code.m', code)
+    O.write('Octave\Example.m', code)
     import subprocess, os
-    subprocess.call(r'c:\octave-3.8.2\bin\octave code.m', stderr = sys.stderr, stdout = sys.stdout, cwd = 'Octave')
-    M = MATLAB()
-    code = M.parse()
-    M.write('MATLAB/code.m', code)
-    import requests
-    requests.get('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/MATLAB/CoolPropMATLAB_wrap.mexw64')
+    subprocess.call(r'c:\octave-3.8.2\bin\octave Example.m', stderr = sys.stderr, stdout = sys.stdout, cwd = 'Octave')
+    #~ M = MATLAB()
+    #~ code = M.parse()
+    #~ M.write('Example.m', code)
+    #~ import requests
+    #~ requests.get('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/MATLAB/CoolPropMATLAB_wrap.mexw64')
 
     # C++
