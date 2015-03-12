@@ -328,7 +328,17 @@ EXPORT_CODE long CONVENTION AbstractState_factory(const char* backend, const cha
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluids));
         return handle_manager.add(AS);
     }
-    catch(std::exception &e){
+    catch(CoolProp::HandleError &e){
+        std::string errmsg = "HandleError: " + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    catch(CoolProp::CoolPropBaseError &e){
         std::string errmsg = e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
@@ -337,6 +347,9 @@ EXPORT_CODE long CONVENTION AbstractState_factory(const char* backend, const cha
         else{
             *errcode = 2;
         }
+    }
+    catch(...){
+        *errcode = 3;
     }
     return -1;
 }
@@ -347,7 +360,17 @@ EXPORT_CODE void CONVENTION AbstractState_free(const long handle, long *errcode,
         handle_manager.remove(handle);
     }
     catch(CoolProp::HandleError &e){
-        std::string errmsg = e.what();
+        std::string errmsg = "HandleError: " + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    catch(CoolProp::CoolPropBaseError &e){
+        std::string errmsg = "Error: " + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -377,7 +400,17 @@ EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const
         }
     }
     catch(CoolProp::HandleError &e){
-        std::string errmsg = e.what();
+        std::string errmsg = "HandleError: " + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    catch(CoolProp::CoolPropBaseError &e){
+        std::string errmsg = "Error: " + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -397,8 +430,18 @@ EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long i
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         AS->update(static_cast<CoolProp::input_pairs>(input_pair), value1, value2);
     }
-    catch(std::exception &e){
-        std::string errmsg = e.what();
+    catch(CoolProp::HandleError &e){
+        std::string errmsg = "HandleError: " + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    catch(CoolProp::CoolPropBaseError &e){
+        std::string errmsg = "Error: " + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -418,8 +461,18 @@ EXPORT_CODE double CONVENTION AbstractState_keyed_output(const long handle, cons
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         return AS->keyed_output(static_cast<CoolProp::parameters>(param));
     }
-    catch(std::exception &e){
-        std::string errmsg = e.what();
+    catch(CoolProp::HandleError &e){
+        std::string errmsg = "HandleError: " + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    catch(CoolProp::CoolPropBaseError &e){
+        std::string errmsg = "Error: " + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
