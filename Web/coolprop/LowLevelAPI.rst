@@ -67,10 +67,12 @@ Here is an example of the shared library usage with Julia wrapper::
 
 Alternatively, the :cpapi:`AbstractState::keyed_output` function can be called with the appropriate key from :cpapi:`CoolProp::parameters`.  There should be essentially no difference in speed between these two methods.
 
+A list of possible input pairs can be found directly in the source documentation at :cpapi:`CoolProp::input_pairs`.
+
 Similar methodology is used in the other wrappers of the low-level interface to (mostly) generate 1-to-1 wrappers of the low-level functions to the target language.  Refer to the examples for each language to see how to call the low-level interface, generate an AbstractState instance, etc.
 
 .. _partial_derivatives_low_level:
-    
+
 Partial Derivatives
 -------------------
 
@@ -79,11 +81,11 @@ It is possible to get the partial derivatives in a very computationally efficien
 .. ipython::
 
     In [1]: import CoolProp
-    
+
     In [2]: HEOS = CoolProp.AbstractState("HEOS", "Water")
-    
+
     In [3]: HEOS.update(CoolProp.PT_INPUTS, 101325, 300)
-    
+
     In [4]: HEOS.cpmass()
-    
+
     In [4]: HEOS.first_partial_deriv(CoolProp.iHmass, CoolProp.iT, CoolProp.iP)
