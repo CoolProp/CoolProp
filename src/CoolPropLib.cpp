@@ -329,7 +329,7 @@ EXPORT_CODE long CONVENTION AbstractState_factory(const char* backend, const cha
         return handle_manager.add(AS);
     }
     catch(CoolProp::HandleError &e){
-        std::string errmsg = "HandleError: " + e.what();
+        std::string errmsg = std::string("HandleError: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -339,7 +339,7 @@ EXPORT_CODE long CONVENTION AbstractState_factory(const char* backend, const cha
         }
     }
     catch(CoolProp::CoolPropBaseError &e){
-        std::string errmsg = e.what();
+        std::string errmsg = std::string("Error: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -360,7 +360,7 @@ EXPORT_CODE void CONVENTION AbstractState_free(const long handle, long *errcode,
         handle_manager.remove(handle);
     }
     catch(CoolProp::HandleError &e){
-        std::string errmsg = "HandleError: " + e.what();
+        std::string errmsg = std::string("HandleError: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -370,7 +370,7 @@ EXPORT_CODE void CONVENTION AbstractState_free(const long handle, long *errcode,
         }
     }
     catch(CoolProp::CoolPropBaseError &e){
-        std::string errmsg = "Error: " + e.what();
+        std::string errmsg = std::string("Error: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -400,7 +400,7 @@ EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const
         }
     }
     catch(CoolProp::HandleError &e){
-        std::string errmsg = "HandleError: " + e.what();
+        std::string errmsg = std::string("HandleError: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -410,7 +410,7 @@ EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const
         }
     }
     catch(CoolProp::CoolPropBaseError &e){
-        std::string errmsg = "Error: " + e.what();
+        std::string errmsg = std::string("Error: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -431,7 +431,7 @@ EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long i
         AS->update(static_cast<CoolProp::input_pairs>(input_pair), value1, value2);
     }
     catch(CoolProp::HandleError &e){
-        std::string errmsg = "HandleError: " + e.what();
+        std::string errmsg = std::string("HandleError: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -441,7 +441,7 @@ EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long i
         }
     }
     catch(CoolProp::CoolPropBaseError &e){
-        std::string errmsg = "Error: " + e.what();
+        std::string errmsg = std::string("Error: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -462,7 +462,7 @@ EXPORT_CODE double CONVENTION AbstractState_keyed_output(const long handle, cons
         return AS->keyed_output(static_cast<CoolProp::parameters>(param));
     }
     catch(CoolProp::HandleError &e){
-        std::string errmsg = "HandleError: " + e.what();
+        std::string errmsg = std::string("HandleError: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
@@ -472,7 +472,7 @@ EXPORT_CODE double CONVENTION AbstractState_keyed_output(const long handle, cons
         }
     }
     catch(CoolProp::CoolPropBaseError &e){
-        std::string errmsg = "Error: " + e.what();
+        std::string errmsg = std::string("Error: ") + e.what();
         if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
             *errcode = 1;
             strcpy(message_buffer, errmsg.c_str());
