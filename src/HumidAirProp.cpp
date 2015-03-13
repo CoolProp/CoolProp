@@ -42,7 +42,7 @@ shared_ptr<CoolProp::HelmholtzEOSBackend> Water, Air;
 
 namespace HumidAir
 {
-    enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA, GIVEN_COMPRESSIBILITY_FACTOR};
+    enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA, GIVEN_COMPRESSIBILITY_FACTOR, GIVEN_PARTIAL_PRESSURE_WATER};
     
     void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w);
     double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
@@ -1168,6 +1168,8 @@ static givens Name2Type(const std::string &Name)
         return GIVEN_CP;
     else if (!strcmp(Name,"Cha") || !strcmp(Name,"cp_ha"))
         return GIVEN_CPHA;
+    else if (!strcmp(Name,"P_w"))
+        return GIVEN_PARTIAL_PRESSURE_WATER;
     else if (!strcmp(Name,"Z"))
         return GIVEN_COMPRESSIBILITY_FACTOR;
     else
@@ -1452,6 +1454,9 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
         }
         case GIVEN_PSIW:{
             return psi_w; //[mol_w/mol]
+        }
+        case GIVEN_PARTIAL_PRESSURE_WATER:{
+            return psi_w*p; //[Pa]
         }
         case GIVEN_ENTHALPY:{
             return MassEnthalpy_per_kgda(T,p,psi_w); //[J/kg_da]
