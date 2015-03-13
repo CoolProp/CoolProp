@@ -25,12 +25,54 @@ which yields the output:
 
 .. literalinclude:: snippets/AbstractState1.cxx.output
 
+Here is an example of the shared library usage with Julia wrapper::
+
+    julia> import CoolProp
+
+    julia> PT_INPUTS = CoolProp.get_input_pair_index("PT_INPUTS")
+    7
+
+    julia> cpmass = CoolProp.get_param_index("C")
+    34
+
+    julia> handle = CoolProp.AbstractState_factory("HEOS", "Water")
+    0
+
+    julia> CoolProp.AbstractState_update(handle,PT_INPUTS,101325, 300)
+
+    julia> CoolProp.AbstractState_keyed_output(handle,cpmass)
+    4180.635776569655
+
+    julia> CoolProp.AbstractState_free(handle)
+
+    julia> handle = CoolProp.AbstractState_factory("HEOS", "Water&Ethanol")
+    1
+
+    julia> PQ_INPUTS = CoolProp.get_input_pair_index("PQ_INPUTS")
+    2
+
+    julia> T = CoolProp.get_param_index("T")
+    18
+
+    julia> CoolProp.AbstractState_set_fractions(handle, [0.4, 0.6])
+
+    julia> CoolProp.AbstractState_update(handle,PQ_INPUTS,101325, 0)
+
+    julia> CoolProp.AbstractState_keyed_output(handle,T)
+    352.3522142890429
+
+    julia> CoolProp.AbstractState_free(handle)
+
+    julia>
+
 Alternatively, the :cpapi:`AbstractState::keyed_output` function can be called with the appropriate key from :cpapi:`CoolProp::parameters`.  There should be essentially no difference in speed between these two methods.
+
+A list of possible input pairs can be found directly in the source documentation at :cpapi:`CoolProp::input_pairs`.
 
 Similar methodology is used in the other wrappers of the low-level interface to (mostly) generate 1-to-1 wrappers of the low-level functions to the target language.  Refer to the examples for each language to see how to call the low-level interface, generate an AbstractState instance, etc.
 
 .. _partial_derivatives_low_level:
-    
+
 Partial Derivatives
 -------------------
 
@@ -39,11 +81,11 @@ It is possible to get the partial derivatives in a very computationally efficien
 .. ipython::
 
     In [1]: import CoolProp
-    
+
     In [2]: HEOS = CoolProp.AbstractState("HEOS", "Water")
-    
+
     In [3]: HEOS.update(CoolProp.PT_INPUTS, 101325, 300)
-    
+
     In [4]: HEOS.cpmass()
-    
+
     In [4]: HEOS.first_partial_deriv(CoolProp.iHmass, CoolProp.iT, CoolProp.iP)
