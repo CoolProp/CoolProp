@@ -462,6 +462,7 @@ class MATLAB(BaseParser):
                                  HAPropsSI = 'CoolProp.HAPropsSI',
                                  get_global_param_string = 'CoolProp.get_global_param_string',
                                  factory = 'AbstractState.factory')
+    enum_name_mapping = {'input_pairs': "CoolProp"}
     type_name_mapping = {'vector': None,
                          'AbstractState': None}
     indentation = ''
@@ -490,7 +491,7 @@ class MATLAB(BaseParser):
             args = self.parse_arguments(d['arguments'])
             l = '[' + ', '.join(args) + ']'
         elif d['type'] == 'enum':
-            l = self.enum_name_mapping[d['enum']] + '.' + self.enum_name_mapping[d['key']]
+            l = self.enum_name_mapping[d['enum']] + '.' + d['key']
         elif d['type'] == 'class_dereference':
             l = d['name'] + '.' + self.dict2string(d['RHS'])
         elif d['type'] == 'custom_assignment':
@@ -525,7 +526,7 @@ class Java(BaseParser):
                                  HAPropsSI = 'CoolProp.HAPropsSI',
                                  get_global_param_string = 'CoolProp.get_global_param_string',
                                  factory = 'AbstractState.factory')
-    type_name_mapping = {'vector': None,
+    type_name_mapping = {'vector': 'DoubleVector',
                          'AbstractState': 'AbstractState'}   
     enum_name_mapping = {'input_pairs': "input_pairs"}
     indentation = '        '                         
@@ -549,7 +550,7 @@ class Java(BaseParser):
         elif d['type'] == 'function':
             l = self.map_function(d['function']) + '(' + ', '.join(self.parse_arguments(d['arguments'])) + ')'
         elif d['type'] == 'vector':
-            l = '[' + ', '.join(self.parse_arguments(d['arguments'])) + ']'
+            l = '{' + ', '.join(self.parse_arguments(d['arguments'])) + '}'
         elif d['type'] == 'enum':
             l = self.enum_name_mapping[d['enum']] + '.' + d['key']
         elif d['type'] == 'class_dereference':
@@ -560,7 +561,14 @@ class Java(BaseParser):
                 LHS = type_name + ' ' + d['variable_name']
             else:
                 LHS = d['variable_name']
-            return ' '.join([LHS, '=', self.dict2string(d['RHS'])])
+            
+            if d['RHS']['type'] != 'vector':
+                RHS = self.dict2string(d['RHS'])
+            else: # Custom processing for vector assignment
+                pushes = [d['variable_name']+'.add(' + arg +');' for arg in d['RHS']['arguments']]
+                RHS = 'new DoubleVector(); ' + ' '.join(pushes)
+                
+            l = ' '.join([LHS, '=', RHS])
         else:
             raise ValueError
 
