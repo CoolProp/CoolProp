@@ -367,7 +367,9 @@ class Python(BaseParser):
         elif d['type'] == 'print':
             return 'print(' + ', '.join(self.parse_arguments(d['arguments'])) + ')'
         elif d['type'] == 'vector':
-            return '[' + ', '.join(self.parse_arguments(d['arguments'])) + ']'            
+            return '[' + ', '.join(self.parse_arguments(d['arguments'])) + ']'
+        elif d['type'] == 'enum':
+            return self.enum_name_mapping[d['enum']] + '.' + d['key']
         elif d['type'] == 'class_dereference':
             return d['name'] + '.' + self.dict2string(d['RHS'])
         elif d['type'] == 'custom_assignment':
@@ -384,6 +386,7 @@ class Python(BaseParser):
         return '\n'.join(['from __future__ import print_function',
                           'from CoolProp import AbstractState',
                           'from CoolProp.CoolProp import PhaseSI, PropsSI, get_global_param_string',
+                          'import CoolProp.CoolProp as CoolProp',
                           'from CoolProp.HumidAirProp import HAPropsSI',
                           'from math import sin\n'])
                           
@@ -629,27 +632,3 @@ class Csharp(BaseParser):
 
     def footer(self):
         return '\n        }\n    }\n}'
-
-if __name__=='__main__':
-
-    P = Python()
-    code = P.parse()
-    P.write('Example.py', code)
-    J = Java()
-    code = J.parse()
-    J.write('Example.java', code)
-    C = Csharp()
-    code = C.parse()
-    C.write('Example.cs', code)
-    O = Octave()
-    code = O.parse()
-    O.write('Octave\Example.m', code)
-    import subprocess, os
-    subprocess.call(r'c:\octave-3.8.2\bin\octave Example.m', stderr = sys.stderr, stdout = sys.stdout, cwd = 'Octave')
-    #~ M = MATLAB()
-    #~ code = M.parse()
-    #~ M.write('Example.m', code)
-    #~ import requests
-    #~ requests.get('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/MATLAB/CoolPropMATLAB_wrap.mexw64')
-
-    # C++
