@@ -34,7 +34,9 @@
         #include <windows.h> // for the CreateDirectory function
     #else
         #include <unistd.h>
-        #include <pwd.h>
+        #if !defined(__powerpc__)
+          #include <pwd.h>
+        #endif
     #endif
 
     #ifndef __has_feature         // Optional of course.
