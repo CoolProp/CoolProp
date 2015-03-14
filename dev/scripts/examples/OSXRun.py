@@ -40,7 +40,7 @@ if __name__=='__main__':
     subprocess.check_call('cmake ../../../.. -DCOOLPROP_OCTAVE_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON', **kwargs)
     subprocess.check_call('cmake --build .', **kwargs)
     with open('Octave/Example.out','w') as fp:
-        tee_call(r'octave Example', fp, shell = True, cwd = 'Octave')
+        tee_call(r'octave Example.m', fp, shell = True, cwd = 'Octave')
     copyfiles('Octave','m')
     
     if not os.path.exists('Java'): os.mkdir('Java')
