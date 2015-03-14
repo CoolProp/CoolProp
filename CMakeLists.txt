@@ -505,14 +505,13 @@ if (COOLPROP_CSHARP_MODULE)
     install (TARGETS ${app_name} DESTINATION ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
   endif()
   file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/*.cs cp_cs_path)
-  file(TO_NATIVE_PATH ${CMAKE_INSTALL_PREFIX}/Csharp/Example.cs cp_example_path)
   if (${BITNESS} EQUAL "32")
     set(CSHARP_PLAT "-platform:x86")
   elseif((${BITNESS} EQUAL "64"))
     set(CSHARP_PLAT "-platform:x64")
   endif()
   add_test(NAME Csharptestbuild
-           COMMAND ${CSHARP_COMPILER} -out:Example.exe ${CSHARP_PLAT} ${cp_cs_path} ${cp_example_path}
+           COMMAND ${CSHARP_COMPILER} -out:Example.exe ${CSHARP_PLAT} ${cp_cs_path}
            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
   add_test(NAME Csharptestrun
            COMMAND ${CSHARP_INTERPRETER} Example.exe
