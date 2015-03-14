@@ -769,6 +769,10 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
                      POST_BUILD
                      COMMAND 7z a "+CoolProp.7z" "+CoolProp"
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  add_custom_command(TARGET CoolPropMATLAB_wrap
+                     POST_BUILD
+                     COMMAND python example_generator.py MATLAB "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
+                     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/dev/scripts/examples")
 
   if(WIN32) # 32-bit or 64-bit mex
   
@@ -800,13 +804,10 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/SwigRef.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (TARGETS CoolPropMATLAB_wrap DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
-  #enable_testing()
-  #add_custom_command(TARGET CoolPropMATLAB_wrap
-  #                   POST_BUILD
-  #                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/test.m ${CMAKE_CURRENT_BINARY_DIR}/.)
-  #add_test(NAME MATLABtest
-  #         COMMAND $ENV{MATLAB_ROOT}/bin/matlab -r test -nojvm -nodesktop -nosplash
-  #         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  enable_testing()
+  add_test(NAME MATLABtest
+           COMMAND $ENV{MATLAB_ROOT}/bin/matlab -nodesktop -nosplash -nojvm -nodisplay -wait -r "result = runtests('Example'); exit(result.Failed)" -logfile Example.out
+           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 if (COOLPROP_MATLAB_MODULE)
