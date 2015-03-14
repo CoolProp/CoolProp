@@ -4,6 +4,8 @@
 C# Wrapper
 **********
 
+.. contents:: :depth: 2
+
 Pre-compiled Binaries
 =====================
 
@@ -24,6 +26,8 @@ When you are finished, you should have a folder layout something like ::
         |- Configuration.cs
         |- ...
         
+There is example code :ref:`at the end of this page <csharp_example>`
+
 Windows
 ^^^^^^^
 
@@ -87,3 +91,16 @@ Once mono c# is installed, you can run the builder and tests using::
     make install
     # Run the integration tests
     ctest --extra-verbose
+    
+.. _csharp_example:
+
+Example Code
+============
+
+.. literalinclude:: Example.cs
+   :language: C#
+
+Example Code Output
+===================
+
+.. literalinclude:: Example.out

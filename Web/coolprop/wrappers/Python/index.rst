@@ -4,6 +4,8 @@
 Python Wrapper
 **************
 
+.. contents:: :depth: 2
+
 Automatic installation
 ======================
 
@@ -72,6 +74,8 @@ by following the same lines as above::
 Usage
 =====
 
+There is example code :ref:`at the end of this page <python_example>`
+
 Once installed, you can use CoolProp for various things:
 
 * Compute special values in SI units::
@@ -101,6 +105,19 @@ Once installed, you can use CoolProp for various things:
 .. _thermodynamics exercices: https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_resolution_cycle_diesel.py
 .. _more complex graphs: https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_diagramme_Ph_coolprop.py
 .. _3D stuff: https://github.com/CoolProp/CoolProp/blob/master/dev/TTSE/TTSE_ranges.py
+
+.. _python_example:
+
+Example Code
+============
+
+.. literalinclude:: Example.py
+   :language: python
+
+Example Code Output
+===================
+
+.. literalinclude:: Example.out
 
 
 Module Documentation

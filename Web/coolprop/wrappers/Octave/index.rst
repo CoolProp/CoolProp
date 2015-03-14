@@ -4,6 +4,8 @@
 Octave Wrapper
 **************
 
+.. contents:: :depth: 2
+
 Pre-compiled Binaries
 =====================
 Pre-compiled release binaries can be downloaded from :sfdownloads:`Octave`.  Development binaries coming from the buildbot server can be found at :sfnightly:`Octave`.  Download the oct file appropriate to your system.
@@ -18,6 +20,8 @@ If you place .oct file somewhere outside octave path, you have to use
 Example: adding the folder that contains CoolProp.oct file to the Octave path::
 
     addpath('/home/?user_name?/Some_folder/CoolProp')
+    
+There is example code :ref:`at the end of this page <octave_example>`
 
 User-Compiled Binaries
 ======================
@@ -93,3 +97,15 @@ On windows, you need to just slightly modify the building procedure::
     # Run the integration tests
     ctest --extra-verbose
 
+.. _octave_example:
+
+Example Code
+============
+
+.. literalinclude:: Example.m
+   :language: octave
+
+Example Code Output
+===================
+
+.. literalinclude:: Example.m

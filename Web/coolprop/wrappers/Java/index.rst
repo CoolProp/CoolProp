@@ -4,6 +4,8 @@
 Java Wrapper
 ************
 
+.. contents:: :depth: 2
+
 Pre-compiled Binaries
 =====================
 
@@ -27,6 +29,8 @@ At the console, run::
 
     javac *.java
     java Example
+    
+There is example code :ref:`at the end of this page <java_example>`
 
 User-Compiled Binaries
 ======================
@@ -101,3 +105,16 @@ If you want to change the package that CoolProp resides in, you can do so by cha
     cmake .. -DCOOLPROP_JAVA_MODULE=ON -DBUILD_TESTING=ON -DCOOLPROP_SWIG_OPTIONS="-package package.name"
 
 where ``package.name`` is replaced with the desired name
+
+.. _java_example:
+
+Example Code
+============
+
+.. literalinclude:: Example.java
+   :language: java
+
+Example Code Output
+===================
+
+.. literalinclude:: Example.out
