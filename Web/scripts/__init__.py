@@ -97,13 +97,13 @@ def run_script(path):
         print "Could not find the file {0}".format(path)
 
 # The normal tasks that are carried out each time the script runs
-normal_tasks = ["coolprop.tabular.speed.py", "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py","coolprop.parametric_table.py"]
+normal_tasks = ["../../dev/scripts/examples/OSXRun.py","coolprop.tabular.speed.py", "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py","coolprop.parametric_table.py"]
 # The expensive tasks that are fired when full_rebuild is True
 expensive_tasks = ["fluid_properties.Consistency.py", "fluid_properties.Incompressibles.sh", "logo_2014.py", "fluid_properties.REFPROPcomparison.py"]
 print "Executing the normal scripts for generating static files."
 for script in normal_tasks:
     print "Executing {0}".format(script)
-    run_script(os.path.join(script_dir,script))
+    run_script(os.path.normpath(os.path.join(script_dir,script)))
 #
 if full_rebuild:
     print "Executing the computationally expensive scripts for generating the static files."
