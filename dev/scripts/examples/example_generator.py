@@ -640,3 +640,15 @@ class Csharp(BaseParser):
 
     def footer(self):
         return '\n        }\n    }\n}'
+        
+        
+if __name__=='__main__':
+    
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("language", help="The target language (Python, Java, Csharp, etc.)")
+    parser.add_argument("destination", help="The path to the output file")
+    args = parser.parse_args()
+    writer = locals()[args.language]()
+    writer.write(args.destination, writer.parse())
+    print 'written to', args.destination
