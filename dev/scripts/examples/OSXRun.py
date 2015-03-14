@@ -65,13 +65,11 @@ if __name__=='__main__':
         tee_call(r'mono Example', fp, shell = True, cwd = 'Csharp')
     copyfiles('Csharp','cs')
     
-    """
     if not os.path.exists('MATLAB'): os.mkdir('MATLAB')
-    #M = MATLAB()
-    #M.write('MATLAB/Example.m', M.parse())
+    M = MATLAB()
+    M.write('MATLAB/Example.m', M.parse())
     kwargs = dict(stdout = sys.stdout, stderr = sys.stderr, shell = True, cwd = 'MATLAB')
     subprocess.check_call('PATH=${HOME}/swig-matlab/bin:$PATH cmake ../../../.. -DCOOLPROP_MATLAB_SWIG_MODULE=ON -DSWIG_DIR=${HOME}/swig-matlab/bin -DCMAKE_VERBOSE_MAKEFILE=ON', **kwargs)
     subprocess.check_call('PATH=${HOME}/swig-matlab/bin:$PATH cmake --build .', **kwargs)
     retcode = subprocess.call('matlab -nosplash -nojvm -nodesktop -nodisplay -r "result = runtests(\'Example\'); exit(result.Failed)" -logfile Example.out', shell = True, cwd = 'MATLAB')
     copyfiles('MATLAB','m')
-    """
