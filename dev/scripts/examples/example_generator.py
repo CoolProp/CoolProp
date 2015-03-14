@@ -461,7 +461,7 @@ class MATLAB(BaseParser):
                                  PhaseSI = 'CoolProp.PhaseSI',
                                  HAPropsSI = 'CoolProp.HAPropsSI',
                                  get_global_param_string = 'CoolProp.get_global_param_string',
-                                 factory = 'AbstractState.factory')
+                                 factory = 'CoolProp.AbstractState.factory')
     enum_name_mapping = {'input_pairs': "CoolProp"}
     type_name_mapping = {'vector': None,
                          'AbstractState': None}
@@ -505,7 +505,7 @@ class MATLAB(BaseParser):
                 RHS = self.dict2string(d['RHS'])
             else: #vector
                 pushes = [d['variable_name']+'.push_back(' + arg +');' for arg in d['RHS']['arguments']]
-                RHS = 'DoubleVector(); ' + ' '.join(pushes)
+                RHS = 'CoolProp.DoubleVector(); ' + ' '.join(pushes)
                 
             l = ' '.join([LHS, '=', RHS])
         else:
@@ -516,7 +516,7 @@ class MATLAB(BaseParser):
         return l
 
     def header(self):
-        return '\n'.join(['CoolProp\n'])
+        return '\n'
 
 class Java(BaseParser):
 
