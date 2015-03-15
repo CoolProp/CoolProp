@@ -6,6 +6,8 @@
 
 void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
 {
+    // Clear cached variables
+    clear();
     // Flush the cached indices (set to large number)
     cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 
     cached_single_phase_j = std::numeric_limits<std::size_t>::max();
