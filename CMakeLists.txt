@@ -806,7 +806,7 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   install (TARGETS CoolPropMATLAB_wrap DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   enable_testing()
   set(MATLAB_WAIT -wait)
-  if(UNIX
+  if(UNIX)
     set(MATLAB_WAIT)
   endif()
   add_test(NAME MATLABtest
