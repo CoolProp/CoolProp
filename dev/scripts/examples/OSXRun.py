@@ -1,3 +1,4 @@
+from __future__ import print_function
 import subprocess, os
 from example_generator import *
 import shutil
@@ -8,9 +9,9 @@ def tee_call(call, file, **kwargs):
                            stderr = subprocess.PIPE,
                            **kwargs)
     stdout, stderr = callee.communicate()
-    print stdout, stderr
-    file.write(stdout)
-    file.write(stderr)
+    print(stdout, stderr)
+    file.write(stdout.decode('ascii'))
+    file.write(stderr.decode('ascii'))
     if callee.poll() != 0:
         raise ValueError('Return code is non-zero')
             
