@@ -21,7 +21,7 @@
  * See http://stackoverflow.com/a/148610
  * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
  */
-#define LIST_OF_SATURATION_VECTORS X(TL) X(pL) X(logpL) X(hmolarL) X(smolarL) X(umolarL) X(rhomolarL) X(logrhomolarL) X(TV) X(pV) X(logpV) X(hmolarV) X(smolarV) X(umolarV) X(rhomolarV) X(logrhomolarV)
+#define LIST_OF_SATURATION_VECTORS X(TL) X(pL) X(logpL) X(hmolarL) X(smolarL) X(umolarL) X(rhomolarL) X(logrhomolarL) X(viscL) X(condL) X(logviscL) X(TV) X(pV) X(logpV) X(hmolarV) X(smolarV) X(umolarV) X(rhomolarV) X(logrhomolarV) X(viscV) X(condV) X(logviscV)
 
 namespace CoolProp{
 
@@ -58,7 +58,7 @@ class PureFluidSaturationTableData{
             switch(other){
                 case iT: yvecL = &TL; yvecV = &TV; break;
                 case iHmolar: yvecL = &hmolarL; yvecV = &hmolarV; break;
-                //case iT: yvecL = &TL; yvecV = &TV; break;
+                case iQ: yvecL = &TL; yvecV = &TV; break;
                 //case iT: yvecL = &TL; yvecV = &TV; break;
                 default: throw ValueError("invalid input for other in is_inside");
             }
@@ -69,6 +69,7 @@ class PureFluidSaturationTableData{
             // be different
             bisect_vector(pV, p, iV);
             bisect_vector(pL, p, iL);
+			if (other == iQ){return true;}
             iVplus = std::min(iV+1, N-1);
             iLplus = std::min(iL+1, N-1);
             // Find the bounding values for the other variable
@@ -164,6 +165,23 @@ class PureFluidSaturationTableData{
                     if (!ValidNumber(rhoL)){throw ValueError("rhoL is invalid");}
                     return 1/(Q/rhoV + (1-Q)/rhoL);
                 }
+				case iconductivity:
+                {
+                    double kV = CubicInterp(logpV, condV, iV-2, iV-1, iV, iV+1, logp);
+                    double kL = CubicInterp(logpL, condL, iL-2, iL-1, iL, iL+1, logp);
+                    if (!ValidNumber(kV)){throw ValueError("kV is invalid");}
+                    if (!ValidNumber(kL)){throw ValueError("kL is invalid");}
+                    return Q*kV + (1-Q)*kL;
+                }
+				case iviscosity:
+                {
+                    double muV = exp(CubicInterp(logpV, logviscV, iV-2, iV-1, iV, iV+1, logp));
+                    double muL = exp(CubicInterp(logpL, logviscL, iL-2, iL-1, iL, iL+1, logp));
+                    if (!ValidNumber(muV)){throw ValueError("muV is invalid");}
+                    if (!ValidNumber(muL)){throw ValueError("muL is invalid");}
+                    return 1/(Q/muV + (1-Q)/muL);
+                }
+
                 default:
                     throw ValueError("can't be something other than T or rho");
             }

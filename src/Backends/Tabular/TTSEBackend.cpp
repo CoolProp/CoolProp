@@ -112,7 +112,7 @@ double CoolProp::TTSEBackend::evaluate_single_phase_transport(SinglePhaseGridded
     }
     double x1 = table.xvec[i], x2 = table.xvec[i+1], y1 = table.yvec[j], y2 = table.yvec[j+1];
     double f11 = (*f)[i][j], f12 = (*f)[i][j+1], f21 = (*f)[i+1][j], f22 = (*f)[i+1][j+1];
-    double val = 1/((x2-x1)*(y2-y1))*( f11*(x2- x1)*(y2 - y)
+    double val = 1/((x2-x1)*(y2-y1))*( f11*(x2 - x)*(y2 - y)
                                       +f21*(x - x1)*(y2 - y)
                                       +f12*(x2 - x)*(y - y1)
                                       +f22*(x - x1)*(y - y1));

@@ -105,6 +105,8 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
             pL[i] = p; TL[i] = AS->T();  rhomolarL[i] = AS->rhomolar(); 
             hmolarL[i] = AS->hmolar(); smolarL[i] = AS->smolar(); umolarL[i] = AS->umolar();
             logpL[i] = log(p); logrhomolarL[i] = log(rhomolarL[i]);
+            viscL[i] = AS->viscosity(); condL[i] = AS->conductivity();
+            logviscL[i] = log(viscL[i]);
         }
         catch(std::exception &e){
             // That failed for some reason, go to the next pair
@@ -117,6 +119,8 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
             pV[i] = p; TV[i] = AS->T(); rhomolarV[i] = AS->rhomolar();
             hmolarV[i] = AS->hmolar(); smolarV[i] = AS->smolar(); umolarV[i] = AS->umolar();
             logpV[i] = log(p); logrhomolarV[i] = log(rhomolarV[i]);
+            viscV[i] = AS->viscosity(); condV[i] = AS->conductivity();
+            logviscV[i] = log(viscV[i]);
         }
         catch(std::exception &e){
             // That failed for some reason, go to the next pair

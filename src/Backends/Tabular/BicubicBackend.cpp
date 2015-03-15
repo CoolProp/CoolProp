@@ -213,6 +213,20 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             }
             break;
         }
+		case PQ_INPUTS:{
+			std::size_t iL = 0, iV = 0;
+			CoolPropDbl hL = 0, hV = 0;
+			_p = val1; _Q = val2;
+			pure_saturation.is_inside(_p, iQ, _Q, iL, iV, hL, hV);
+            using_single_phase_table = false;
+            if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
+                throw ValueError("vapor quality is not in (0,1)");
+            }
+            else{
+                cached_saturation_iL = iL; cached_saturation_iV = iV;
+            }
+			break;
+		}
 		default:
 			throw ValueError("input pair is not currently supported");
 	}
