@@ -1279,6 +1279,7 @@ void convert_to_SI(const std::string &Name, double &val)
         case GIVEN_CP:
         case GIVEN_CPHA:
         case GIVEN_P:
+        case GIVEN_PARTIAL_PRESSURE_WATER:
             val *= 1000; return;
         case GIVEN_T:
         case GIVEN_TDP:
@@ -1307,6 +1308,7 @@ void convert_from_SI(const std::string &Name, double &val)
         case GIVEN_CP:
         case GIVEN_CPHA:
         case GIVEN_P:
+        case GIVEN_PARTIAL_PRESSURE_WATER:
             val /= 1000; return;
         case GIVEN_T:
         case GIVEN_TDP:
