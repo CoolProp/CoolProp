@@ -23,7 +23,7 @@ cdef class AbstractState:
         """ Get the backend name - wrapper of c++ function :cpapi:`CoolProp::AbstractState::name` """
         return self.thisptr.name()
         
-    cpdef constants_header.phases phase(self):
+    cpdef constants_header.phases phase(self) except *:
         """ Get the phase as key value- wrapper of c++ function :cpapi:`CoolProp::AbstractState::phase` """
         return self.thisptr.phase()
         
