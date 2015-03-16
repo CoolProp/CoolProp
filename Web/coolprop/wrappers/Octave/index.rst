@@ -108,4 +108,4 @@ Example Code
 Example Code Output
 ===================
 
-.. literalinclude:: Example.m
+.. literalinclude:: Example.out
