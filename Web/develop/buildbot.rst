@@ -235,6 +235,35 @@ Note that this script calls another Bash script that does the actual work. We ho
 to simplify maintenance by using a common control script for Linux and MacOS as
 shown in :ref:`slavescript`.
 
+Or alternatively, you can just launch buildslave directly if you do not use conda environment::
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+        <key>KeepAlive</key>
+        <true/>
+        <key>Label</key>
+        <string>com.start.buildbot</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>/Users/Ian/anaconda/bin/buildslave</string>
+            <string>restart</string>
+            <string>slave</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>StandardErrorPath</key>
+        <string>/Users/Ian/.buildbot_stderr</string>
+        <key>StandardOutPath</key>
+        <string>/Users/Ian/.buildbot_stdout</string>
+        <key>UserName</key>
+        <string>Ian</string>
+        <key>WorkingDirectory</key>
+        <string>/Users/Ian</string>
+    </dict>
+    </plist>
+
 Buildbot as a daemon (Linux)
 ----------------------------
 
@@ -408,6 +437,39 @@ To change the MIME types on the server so that unknown file types will map prope
 and then do a ``buildbot restart master``
 
 
+Starting virtualbox images at boot
+==================================
+
+Create a daemon entry in Libray/LaunchDaemons.  Make sure you use full paths to VBoxManage::
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+        <key>GroupName</key>
+        <string>staff</string>
+        <key>InitGroups</key>
+        <true/>
+        <key>KeepAlive</key>
+        <false/>
+        <key>Label</key>
+        <string>com.start.windows.vm</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>/usr/bin/Vboxmanage</string>
+            <string>startvm</string>
+            <string>xp</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>StandardErrorPath</key>
+        <string>/Users/Ian/.virtualbox_window_stderr</string>
+        <key>StandardOutPath</key>
+        <string>/Users/Ian/.virtualbox_windows_stdout</string>
+        <key>UserName</key>
+        <string>Ian</string>
+    </dict>
+    </plist>
 
 
 Documentation Builds
