@@ -258,7 +258,7 @@ protected:
     /// Using this backend, construct the phase envelope, the variable type describes the type of phase envelope to be built.
     virtual void calc_phase_envelope(const std::string &type){throw NotImplementedError("calc_phase_envelope is not implemented for this backend");};
     /// 
-    virtual CoolPropDbl calc_rhomass(void){return _rhomolar*molar_mass();}
+    virtual CoolPropDbl calc_rhomass(void){return rhomolar()*molar_mass();}
     virtual CoolPropDbl calc_hmass(void){return hmolar()/molar_mass();}
     virtual CoolPropDbl calc_smass(void){return smolar()/molar_mass();}
     virtual CoolPropDbl calc_cpmass(void){return cpmolar()/molar_mass();}
