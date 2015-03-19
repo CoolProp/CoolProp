@@ -316,7 +316,7 @@ class LogPHTable : public SinglePhaseGriddedTableData
             xkey = iHmolar; ykey = iP; logy = true; logx = false;
         };
         void set_limits(){
-            if (this->AS == NULL){
+            if (this->AS.get() == NULL){
                 throw ValueError("AS is not yet set");
             }
             // Minimum enthalpy is the saturated liquid enthalpy
@@ -362,9 +362,10 @@ class LogPTTable : public SinglePhaseGriddedTableData
             xkey = iT; ykey = iP; logy = true; logx = false;
         };
         void set_limits(){
-            if (this->AS == NULL){
+            if (this->AS.get() == NULL){
                 throw ValueError("AS is not yet set");
-            }            xmin = AS->Ttriple(); ymin = AS->p_triple();
+            }            
+            xmin = AS->Ttriple(); ymin = AS->p_triple();
             xmax = AS->Tmax(); ymax = AS->pmax();
         }
         void deserialize(msgpack::object &deserialized){   
