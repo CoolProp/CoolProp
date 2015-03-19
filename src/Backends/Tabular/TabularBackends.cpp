@@ -273,6 +273,10 @@ void CoolProp::TabularBackend::write_tables(){
 }
 void CoolProp::TabularBackend::load_tables(){
     std::string path_to_tables = this->path_to_tables();
+    single_phase_logph.AS = this->AS;
+    single_phase_logpT.AS = this->AS;
+    single_phase_logph.set_limits();
+    single_phase_logpT.set_limits();
     load_table(single_phase_logph, path_to_tables, "single_phase_logph.bin.z");
     load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin.z");
     load_table(pure_saturation, path_to_tables, "pure_saturation.bin.z");

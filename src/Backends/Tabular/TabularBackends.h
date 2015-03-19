@@ -193,9 +193,7 @@ class PureFluidSaturationTableData{
  * It contains very few members or methods, mostly it just holds the data
  */
 class SinglePhaseGriddedTableData{
-	protected:
-        /// Build this table; it is protected to remind derived classes to set the necessary variables
-        void build(shared_ptr<CoolProp::AbstractState> &AS);
+        
 	public:
 		std::size_t Nx, Ny;
 		CoolProp::parameters xkey, ykey;
@@ -203,6 +201,9 @@ class SinglePhaseGriddedTableData{
 		std::vector<double> xvec, yvec;
 		bool logx, logy;
 		double xmin, ymin, xmax, ymax;
+        
+        virtual void set_limits() = 0;
+    
     
 		SinglePhaseGriddedTableData(){Nx = 200; Ny = 200; revision = 0;}
     
@@ -212,6 +213,8 @@ class SinglePhaseGriddedTableData{
 		#undef X
 		int revision;
 		std::map<std::string, std::vector<std::vector<double> > > matrices;
+        /// Build this table
+        void build(shared_ptr<CoolProp::AbstractState> &AS);
     
 		MSGPACK_DEFINE(revision, matrices, xmin, xmax, ymin, ymax); // write the member variables that you want to pack
 		/// Resize all the matrices
@@ -312,9 +315,10 @@ class LogPHTable : public SinglePhaseGriddedTableData
         LogPHTable(){
             xkey = iHmolar; ykey = iP; logy = true; logx = false;
         };
-        /// Calculate the limits of the table
-        void build(shared_ptr<CoolProp::AbstractState> &AS){
-            
+        void set_limits(){
+            if (this->AS == NULL){
+                throw ValueError("AS is not yet set");
+            }
             // Minimum enthalpy is the saturated liquid enthalpy
             AS->update(QT_INPUTS, 0, AS->Ttriple());
             xmin = AS->hmolar(); ymin = AS->p();
@@ -327,10 +331,7 @@ class LogPHTable : public SinglePhaseGriddedTableData
             xmax = std::max(xmax1, xmax2);
             
             ymax = AS->pmax();
-            
-            // Call the base-class build function since we have set the necessary variables
-            SinglePhaseGriddedTableData::build(AS);
-        };
+        }
         void deserialize(msgpack::object &deserialized){       
             LogPHTable temp;
             deserialized.convert(&temp);
@@ -343,6 +344,12 @@ class LogPHTable : public SinglePhaseGriddedTableData
             {
                 throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
             }
+            else if ((std::abs(xmin) > 1e-10 && std::abs(xmax) > 1e-10) && (std::abs(temp.xmin - xmin)/xmin > 1e-6 || std::abs(temp.xmax - xmax)/xmax > 1e-6)){
+                throw ValueError(format("Current limits for x [%g,%g] do not agree with loaded limits [%g,%g]", xmin, xmax, temp.xmin, temp.xmax));
+            }
+            else if ((std::abs(ymin) > 1e-10 && std::abs(ymax) > 1e-10) && (std::abs(temp.ymin - ymin)/ymin > 1e-6 || std::abs(temp.ymax - ymax)/ymax > 1e-6)){
+                throw ValueError(format("Current limits for y [%g,%g] do not agree with loaded limits [%g,%g]", ymin, ymax, temp.ymin, temp.ymax));
+            }
             std::swap(*this, temp); // Swap
             this->AS = temp.AS; // Reconnect the AbstractState pointer
         };
@@ -354,15 +361,12 @@ class LogPTTable : public SinglePhaseGriddedTableData
         LogPTTable(){
             xkey = iT; ykey = iP; logy = true; logx = false;
         };
-        /// Calculate the limits of the table
-        void build(shared_ptr<CoolProp::AbstractState> &AS){
-            
-            xmin = AS->Ttriple(); ymin = AS->p_triple();
+        void set_limits(){
+            if (this->AS == NULL){
+                throw ValueError("AS is not yet set");
+            }            xmin = AS->Ttriple(); ymin = AS->p_triple();
             xmax = AS->Tmax(); ymax = AS->pmax();
-            
-            // Call the base-class build function since we have set the necessary variables
-            SinglePhaseGriddedTableData::build(AS);
-        };
+        }
         void deserialize(msgpack::object &deserialized){   
             LogPTTable temp;
             deserialized.convert(&temp);
@@ -374,6 +378,12 @@ class LogPTTable : public SinglePhaseGriddedTableData
             else if (revision > temp.revision)
             {
                 throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
+            }
+            else if ((std::abs(xmin) > 1e-10 && std::abs(xmax) > 1e-10) && (std::abs(temp.xmin - xmin)/xmin > 1e-6 || std::abs(temp.xmax - xmax)/xmax > 1e-6)){
+                throw ValueError(format("Current limits for x [%g,%g] do not agree with loaded limits [%g,%g]", xmin, xmax, temp.xmin, temp.xmax));
+            }
+            else if ((std::abs(ymin) > 1e-10 && std::abs(ymax) > 1e-10) && (std::abs(temp.ymin - ymin)/ymin > 1e-6 || std::abs(temp.ymax - ymax)/ymax > 1e-6)){
+                throw ValueError(format("Current limits for y [%g,%g] do not agree with loaded limits [%g,%g]", ymin, ymax, temp.ymin, temp.ymax));
             }
             std::swap(*this, temp); // Swap
             this->AS = temp.AS; // Reconnect the AbstractState pointer
