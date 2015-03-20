@@ -154,6 +154,25 @@
         #define DEPRECATED(func) func
     #endif
     
+    /// from http://stackoverflow.com/a/5721830/1360263
+    template<class T> T factorial(T n) 
+    {
+        if (n == 0)
+           return 1;
+        return n * factorial(n - 1);
+    }
+    /// see https://proofwiki.org/wiki/Nth_Derivative_of_Mth_Power
+    /// and https://proofwiki.org/wiki/Definition:Falling_Factorial
+    template<class T1, class T2> T1 nth_derivative_of_x_to_m(T1 x, T2 n, T2 m)
+    {
+        if (n > m){
+            return 0;
+        }
+        else{
+            return factorial(m)/factorial(m-n)*pow(x, m-n);
+        }
+    }
+    
     /// Copy string to wstring
     /// Dangerous if the string has non-ASCII characters; from http://stackoverflow.com/a/8969776/1360263 
     inline void StringToWString(const std::string &s, std::wstring &ws)
