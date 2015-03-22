@@ -18,12 +18,19 @@ Option A: Calling shared library directly
     
 Download a precompiled shared library appropriate to the computer you are using from :sfdownloads:`sourceforge <shared_library>` or the development version from :sfnightly:`the nightly snapshots <shared_library>`.  
 
-NB: For Linux users, the file libCoolProp.so must be renamed into CoolProp.so and copied into Julia's library folder (e.g. /usr/lib/x86_64-linux-gnu/julia/), or you can set the system shared library search path to the current directory::
+NB: For Linux users, the file libCoolProp.so must be renamed into CoolProp.so and copied into Julia's library folder (e.g. /usr/lib/x86_64-linux-gnu/julia/).
+If you compile/download the library often, you may prefer to place a symbolic link::
+
+    sudo ln -s libCoolProp.so /usr/lib/x86_64-linux-gnu/julia/CoolProp.so
+If you want to use the library in an other dirrectory, once renamed (or placed a `CoolProp.so` symbolic link) you can set the system shared library search path to the current directory before running Julia::
 
     export LD_LIBRARY_PATH=${PWD}
+Or directly ask Julia to search in the current dirrectory::
 
-Download the module ``CoolProp.jl`` from :sfdownloads:`sourceforge <Julia>` or the development version from :sfnightly:`the nightly snapshots <Julia>` and place in the same folder as the shared library.
-The wrapper should be valid for Julia 0.4 and above. For Julia 0.3 and lower, use the one in the 0.3 folder.
+    push!(DL_LOAD_PATH,".")
+Note that you can replace `${PWD}` (print working directory) by any path you want, and similarly for the `.` of the `"."` in Julia.
+
+Download the module ``CoolProp.jl`` from :sfdownloads:`sourceforge <Julia>` or the development version from :sfnightly:`the nightly snapshots <Julia>` and place in the same folder as the shared library (in `~/.julia/$version/CoolProp/src/` for Linux users).
 
 Usage
 -----
