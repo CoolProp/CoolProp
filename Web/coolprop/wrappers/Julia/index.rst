@@ -30,7 +30,7 @@ Or directly ask Julia to search in the current dirrectory::
     push!(DL_LOAD_PATH,".")
 Note that you can replace `${PWD}` (print working directory) by any path you want, and similarly for the `.` of the `"."` in Julia.
 
-Download the module ``CoolProp.jl`` from :sfdownloads:`sourceforge <Julia>` or the development version from :sfnightly:`the nightly snapshots <Julia>` and place in the same folder as the shared library (in `~/.julia/$version/CoolProp/src` for Linux users).
+Download the module ``CoolProp.jl`` from :sfdownloads:`sourceforge <Julia>` or the development version from :sfnightly:`the nightly snapshots <Julia>` and place in the same folder as the shared library (in `~/.julia/$version/CoolProp/src/` for Linux users).
 
 Usage
 -----
