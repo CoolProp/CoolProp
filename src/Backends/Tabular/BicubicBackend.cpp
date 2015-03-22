@@ -3,12 +3,6 @@
 #include "BicubicBackend.h"
 #include "MatrixMath.h"
 
-CoolPropDbl pow(CoolPropDbl x, std::size_t n){
-	return pow(x, static_cast<int>(n));
-}
-double pow(double x, std::size_t n){
-	return pow(x, static_cast<int>(n));
-}
 /// The inverse of the A matrix for the bicubic interpolation (http://en.wikipedia.org/wiki/Bicubic_interpolation)
 /// NOTE: The matrix is transposed below
 static const double Ainv_data[16*16] = {
@@ -334,7 +328,7 @@ double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGri
         {
             for(std::size_t m = 0; m < 4; ++m)
             {
-                val += alpha[m*4+l]*l*pow(xhat, l-1)*pow(yhat, m);
+                val += alpha[m*4+l]*l*pow(xhat, static_cast<int>(l-1))*pow(yhat, static_cast<int>(m));
             }
         }
         // val is now dz/dxhat|yhat
@@ -347,7 +341,7 @@ double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGri
         {
             for(std::size_t m = 1; m < 4; ++m)
             {
-                val += alpha[m*4+l]*pow(xhat, l)*m*pow(yhat, m-1);
+                val += alpha[m*4+l]*pow(xhat, static_cast<int>(l))*m*pow(yhat, static_cast<int>(m-1));
             }
         }
         // val is now dz/dyhat|xhat
