@@ -513,6 +513,135 @@ template <typename T> void bisect_vector(const std::vector<T> &vec, T val, std::
     i = L;
 }
 
+/**
+ * @brief Use bisection to find the inputs that bisect the value you want, the trick
+ * here is that this function is allowed to have "holes" where parts of the the array are 
+ * also filled with invalid numbers for which ValidNumber(x) is false
+ * @param vec The vector to be bisected
+ * @param val The value to be found
+ * @param i The index to the left of the final point; i and i+1 bound the value
+ */
+template <typename T> void bisect_segmented_vector(const std::vector<T> &vec, T val, std::size_t &i)
+{
+    T rL, rM, rR;
+    std::size_t N = vec.size(), L = 0, R = N-1, M = (L+R)/2;
+    rL = vec[L] - val; rR = vec[R] - val;
+    // Move the right limits in until they are good
+    while (!ValidNumber(vec[R])){
+        R--;
+    }
+    // Move the left limits in until they are good
+    while (!ValidNumber(vec[L])){
+        L++;
+    }
+    while (R - L > 1){
+        if (!ValidNumber(vec[M])){
+            std::size_t MR = M, ML = M;
+            // Move middle-right to the right until it is ok
+            while (!ValidNumber(vec[MR])){
+                MR++;
+            }
+            // Move middle-left to the left until it is ok
+            while (!ValidNumber(vec[ML])){
+                ML--;
+            }
+            T rML = vec[ML] - val; 
+            T rMR = vec[MR] - val;
+            // Figure out which chunk is the good part
+            if (rR*rML > 0 && rL*rML < 0){
+                // solution is between L and ML
+                R = ML; rR = vec[ML] - val;
+            }
+            else if (rR*rMR < 0 && rL*rMR > 0){
+                // solution is between R and MR
+                L = MR; rL = vec[MR] - val;
+            }
+            else{
+                throw CoolProp::ValueError("Unable to bisect segmented vector; neither chunk contains the solution");
+            }
+            M = (L+R)/2;
+        }
+        else{
+            rM = vec[M] - val;
+            if (rR*rM > 0 && rL*rM < 0){
+                // solution is between L and M
+                R = M; rR = vec[R] - val;
+            }
+            else{
+                // solution is between R and M
+                L = M; rL = vec[L] - val;
+            }
+            M = (L+R)/2;
+        }
+    }
+    i = L;
+}
+
+/**
+ * @brief Use bisection to find the inputs that bisect the value you want, the trick
+ * here is that this function is allowed to have "holes" where parts of the the array are 
+ * also filled with invalid numbers for which ValidNumber(x) is false
+ * @param matrix The vector to be bisected
+ * @param j The index of the matric in the off-grain dimension
+ * @param val The value to be found
+ * @param i The index to the left of the final point; i and i+1 bound the value
+ */
+template <typename T> void bisect_segmented_vector_slice(const std::vector<std::vector<T> > &mat, std::size_t j, T val, std::size_t &i)
+{
+    T rL, rM, rR;
+    std::size_t N = mat[j].size(), L = 0, R = N-1, M = (L+R)/2;
+    rL = mat[L][j] - val; rR = mat[R][j] - val;
+    // Move the right limits in until they are good
+    while (!ValidNumber(mat[R][j])){
+        R--;
+    }
+    // Move the left limits in until they are good
+    while (!ValidNumber(mat[L][j])){
+        L++;
+    }
+    while (R - L > 1){
+        if (!ValidNumber(mat[M][j])){
+            std::size_t MR = M, ML = M;
+            // Move middle-right to the right until it is ok
+            while (!ValidNumber(mat[MR][j])){
+                MR++;
+            }
+            // Move middle-left to the left until it is ok
+            while (!ValidNumber(mat[ML][j])){
+                ML--;
+            }
+            T rML = mat[ML][j] - val; 
+            T rMR = mat[MR][j] - val;
+            // Figure out which chunk is the good part
+            if (rR*rML > 0 && rL*rML < 0){
+                // solution is between L and ML
+                R = ML; rR = mat[ML][j] - val;
+            }
+            else if (rR*rMR < 0 && rL*rMR > 0){
+                // solution is between R and MR
+                L = MR; rL = mat[MR][j] - val;
+            }
+            else{
+                throw CoolProp::ValueError("Unable to bisect segmented vector; neither chunk contains the solution");
+            }
+            M = (L+R)/2;
+        }
+        else{
+            rM = mat[M][j] - val;
+            if (rR*rM > 0 && rL*rM < 0){
+                // solution is between L and M
+                R = M; rR = mat[R][j] - val;
+            }
+            else{
+                // solution is between R and M
+                L = M; rL = mat[L][j] - val;
+            }
+            M = (L+R)/2;
+        }
+    }
+    i = L;
+}
+
 // From http://rosettacode.org/wiki/Power_set#C.2B.2B
 inline std::size_t powerset_dereference(std::set<std::size_t>::const_iterator v) { return *v; };
       

@@ -8,6 +8,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
 {
     // Clear cached variables
     clear();
+    
     // Flush the cached indices (set to large number)
     cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 
     cached_single_phase_j = std::numeric_limits<std::size_t>::max();
@@ -49,10 +50,57 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
             update(HmolarP_INPUTS, val1 * AS->molar_mass(), val2); // H: [J/kg] * [kg/mol] -> [J/mol]
             return;
         }
-        case DmolarP_INPUTS:
         case PUmolar_INPUTS:
         case PSmolar_INPUTS:
-            throw ValueError("To be implemented as a 1-D iteration using PH table");
+        case DmolarP_INPUTS:{
+            CoolPropDbl otherval; parameters otherkey;
+            switch(input_pair){
+                case PUmolar_INPUTS: _p = val1; _umolar = val2; otherval = val2; otherkey = iUmolar; break;
+                case PSmolar_INPUTS: _p = val1; _smolar = val2; otherval = val2; otherkey = iSmolar; break;
+                case DmolarP_INPUTS: _rhomolar = val1; _p = val2; otherval = val1; otherkey = iDmolar; break;
+                default: throw ValueError("Bad (impossible) pair");
+            }
+            
+            using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
+            std::size_t iL, iV;
+            CoolPropDbl zL = 0, zV = 0;
+            if (pure_saturation.is_inside(_p, otherkey, otherval, iL, iV, zL, zV)){
+                using_single_phase_table = false;
+                if (otherkey == iDmolar){
+                    _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
+                }
+                else{
+                    _Q = (otherval - zL)/(zV - zL);
+                }
+                if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+                    throw ValueError("vapor quality is not in (0,1)");
+                }
+                else{
+                    cached_saturation_iL = iL; cached_saturation_iV = iV;
+                }
+            }
+            else{
+                // Find and cache the indices i, j
+                selected_table = SELECTED_PH_TABLE;
+                single_phase_logph.find_nearest_neighbor(iP, _p, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+            }
+            break;
+        }
+        case DmassP_INPUTS:{
+            // Call again, but this time with molar units; D: [kg/m^3] / [kg/mol] -> [mol/m^3]
+            update(DmassP_INPUTS, val1 / AS->molar_mass(), val2); 
+            return;
+        }
+        case PUmass_INPUTS:{
+            // Call again, but this time with molar units; U: [J/kg] * [kg/mol] -> [J/mol]
+            update(PUmolar_INPUTS, val1, val2*AS->molar_mass());
+            return;
+        }
+        case PSmass_INPUTS:{
+            // Call again, but this time with molar units; S: [J/kg/K] * [kg/mol] -> [J/mol/K]
+            update(PSmolar_INPUTS, val1, val2*AS->molar_mass());
+            return;
+        }
         case PT_INPUTS:{
             _p = val1; _T = val2;
             if (!single_phase_logpT.native_inputs_are_in_range(_T, _p)){
@@ -81,7 +129,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
         case DmolarT_INPUTS:
             throw ValueError("To be implemented as a 1-D iteration using PT table");
         default:
-            throw ValueError();
+            throw ValueError("Sorry, but this set of inputs is not supported for TTSE backend");
     }
 }
 /** Use the single_phase table to evaluate an output for a transport property
@@ -101,17 +149,10 @@ double CoolProp::TTSEBackend::evaluate_single_phase_transport(SinglePhaseGridded
     if (!is_valid){
         throw ValueError("Cell to TTSEBackend::evaluate_single_phase_transport must have four valid corners for now");
     }
-    std::vector<std::vector<double> > *f = NULL;
-    switch(output){
-        case iconductivity:
-            f = &table.cond; break;
-        case iviscosity:
-            f = &table.visc; break;
-        default:
-            throw ValueError(format("bad output type"));
-    }
+    const std::vector<std::vector<double> > &f = table.get(output);
+
     double x1 = table.xvec[i], x2 = table.xvec[i+1], y1 = table.yvec[j], y2 = table.yvec[j+1];
-    double f11 = (*f)[i][j], f12 = (*f)[i][j+1], f21 = (*f)[i+1][j], f22 = (*f)[i+1][j+1];
+    double f11 = f[i][j], f12 = f[i][j+1], f21 = f[i+1][j], f22 = f[i+1][j+1];
     double val = 1/((x2-x1)*(y2-y1))*( f11*(x2 - x)*(y2 - y)
                                       +f21*(x - x1)*(y2 - y)
                                       +f12*(x2 - x)*(y - y1)
@@ -174,7 +215,7 @@ double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData 
         case iDmolar: _rhomolar = val; break;
         case iSmolar: _smolar = val; break;
         case iHmolar: _hmolar = val; break;
-        //case iUmolar:
+        case iUmolar: _umolar = val; break;
         default: throw ValueError();
     }
     return val;
@@ -193,28 +234,28 @@ double CoolProp::TTSEBackend::evaluate_single_phase_derivative(SinglePhaseGridde
 	}
 
     // Define pointers for the matrices to be used; 
-    std::vector<std::vector<double> > *z = NULL, *dzdx = NULL, *dzdy = NULL, *d2zdxdy = NULL, *d2zdy2 = NULL, *d2zdx2 = NULL;
+    std::vector<std::vector<double> > *dzdx = NULL, *dzdy = NULL, *d2zdxdy = NULL, *d2zdy2 = NULL, *d2zdx2 = NULL;
     
     // Connect the pointers based on the output variable desired
     switch(output){
         case iT:
-            z = &table.T; dzdx = &table.dTdx; dzdy = &table.dTdy;
+            dzdx = &table.dTdx; dzdy = &table.dTdy;
             d2zdxdy = &table.d2Tdxdy; d2zdx2 = &table.d2Tdx2; d2zdy2 = &table.d2Tdy2;
             break;
         case iDmolar:
-            z = &table.rhomolar; dzdx = &table.drhomolardx; dzdy = &table.drhomolardy;
+            dzdx = &table.drhomolardx; dzdy = &table.drhomolardy;
             d2zdxdy = &table.d2rhomolardxdy; d2zdx2 = &table.d2rhomolardx2; d2zdy2 = &table.d2rhomolardy2;
             break;
         case iSmolar:
-            z = &table.smolar; dzdx = &table.dsmolardx; dzdy = &table.dsmolardy;
+            dzdx = &table.dsmolardx; dzdy = &table.dsmolardy;
             d2zdxdy = &table.d2smolardxdy; d2zdx2 = &table.d2smolardx2; d2zdy2 = &table.d2smolardy2;
             break;
         case iHmolar:
-            z = &table.hmolar; dzdx = &table.dhmolardx; dzdy = &table.dhmolardy;
+            dzdx = &table.dhmolardx; dzdy = &table.dhmolardy;
             d2zdxdy = &table.d2hmolardxdy; d2zdx2 = &table.d2hmolardx2; d2zdy2 = &table.d2hmolardy2;
             break;
 		case iUmolar:
-            z = &table.umolar; dzdx = &table.dumolardx; dzdy = &table.dumolardy;
+            dzdx = &table.dumolardx; dzdy = &table.dumolardy;
             d2zdxdy = &table.d2umolardxdy; d2zdx2 = &table.d2umolardx2; d2zdy2 = &table.d2umolardy2;
             break;
         default:

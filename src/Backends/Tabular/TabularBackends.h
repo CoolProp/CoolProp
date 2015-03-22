@@ -296,6 +296,21 @@ class SinglePhaseGriddedTableData{
 				}
 			}
 		}
+        /// @brief Find the nearest neighbor for one (given) variable native, one variable non-native
+		void find_nearest_neighbor(parameters givenkey, double givenval, parameters otherkey, double otherval, std::size_t &i, std::size_t &j){
+			if (givenkey == ykey){
+                bisect_vector(yvec, givenval, j);
+                // This one is problematic because we need to make a slice against the grain in the "matrix"
+                // which requires a slightly different algorithm
+                bisect_segmented_vector_slice(get(otherkey), j, otherval, i);
+            }
+            else if (givenkey == xkey){
+                std::size_t j;
+                bisect_vector(xvec, givenval, i);
+                // This one is fine because we now end up with a vector<double> in the other variable
+                bisect_segmented_vector(get(otherkey)[i], otherval, j);
+            }
+		}
 		/// Find the nearest good neighbor node for inputs that are the same as the grid inputs
 		/// If the straightforward node (i,j) obtained by bisection is no good, find its nearest good node
 		void find_native_nearest_good_neighbor(double x, double y, std::size_t &i, std::size_t &j){
@@ -312,6 +327,17 @@ class SinglePhaseGriddedTableData{
 			bisect_vector(xvec, x, i);
 			bisect_vector(yvec, y, j);
 		}
+        const std::vector<std::vector<double> > get(parameters key){
+            switch(key){
+                case iDmolar: return rhomolar;
+                case iT: return T;
+                case iUmolar: return umolar;
+                case iHmolar: return hmolar;
+                case iSmolar: return smolar;
+                case iP: return p;
+                default: throw KeyError(format("invalid key"));
+            }
+        }
 };
 
 /// This class holds the single-phase data for a log(p)-h gridded table
