@@ -300,5 +300,48 @@ double CoolProp::BicubicBackend::evaluate_single_phase(SinglePhaseGriddedTableDa
     }
     return val;
 }
+/// Use the single_phase table to evaluate an output
+double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny)
+{
+    // Get the cell
+    CellCoeffs &cell = coeffs[i][j];
+    
+	// Get the alpha coefficients
+    const std::vector<double> &alpha = cell.get(output);
+    
+    // Normalized value in the range (0, 1)
+	double xhat = (x - table.xvec[i])/(table.xvec[i+1] - table.xvec[i]);
+    double yhat = (y - table.yvec[j])/(table.yvec[j+1] - table.yvec[j]);
+    double dxhatdx = 1/(table.xvec[i+1] - table.xvec[i]);
+    double dyhatdy = 1/(table.yvec[j+1] - table.yvec[j]);
+    
+    // Calculate the output value desired
+	double val = 0;
+    if (Nx == 1 && Ny == 0){
+        for (std::size_t l = 1; l < 4; ++l)
+        {
+            for(std::size_t m = 0; m < 4; ++m)
+            {
+                val += alpha[m*4+l]*l*pow(xhat, l-1)*pow(yhat, m);
+            }
+        }
+        // val is now dz/dxhat|yhat
+        return val*dxhatdx;
+    }
+    else if (Ny == 1 && Nx == 0){
+        for (std::size_t l = 0; l < 4; ++l)
+        {
+            for(std::size_t m = 1; m < 4; ++m)
+            {
+                val += alpha[m*4+l]*pow(xhat, l)*m*pow(yhat, m-1);
+            }
+        }
+        // val is now dz/dyhat|xhat
+        return val*dyhatdy;
+    }
+    else{
+        throw ValueError("Invalid input");
+    }
+}
 
 #endif // !defined(NO_TABULAR_BACKENDS)

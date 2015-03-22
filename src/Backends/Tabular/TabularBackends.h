@@ -424,6 +424,8 @@ class TabularBackend : public AbstractState
         virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
+        virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
         
         /// Returns the path to the tables that shall be written
         std::string path_to_tables(void);
@@ -495,6 +497,14 @@ class TabularBackend : public AbstractState
                 return pure_saturation.evaluate(iHmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
             }
         }
+        CoolPropDbl calc_cpmolar(void){
+            if (using_single_phase_table){
+                return calc_first_partial_deriv(iHmolar, iT, iP);
+            }
+            else{
+                throw ValueError("table not selected");
+            }
+        }
         
         CoolPropDbl calc_viscosity(void){
             if (using_single_phase_table){
@@ -522,6 +532,28 @@ class TabularBackend : public AbstractState
                 return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
             }
         }
+        CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){
+            if (using_single_phase_table){
+                switch(selected_table){
+                    case SELECTED_PH_TABLE: {
+                        if (Of == iHmolar && Wrt == iT && Constant == iP){
+                            double val = 1/(evaluate_single_phase_phmolar_derivative(iT,cached_single_phase_i, cached_single_phase_j,1,0));
+                            return val;
+                        }
+                        else{
+                            throw ValueError("This derivative output not yet supported");
+                        }
+                    }
+                    case SELECTED_PT_TABLE: throw ValueError("No P-T derivatives yet");
+                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
+                }
+                return _HUGE; // not needed, will never be hit, just to make compiler happy
+            }
+            else{
+                return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            }
+            
+        };
         
         TabularBackend(shared_ptr<CoolProp::AbstractState> AS){
 			using_single_phase_table = false;

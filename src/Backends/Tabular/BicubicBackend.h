@@ -127,15 +127,60 @@ class BicubicBackend : public TabularBackend
         std::string backend_name(void){return "BicubicBackend";}
         /// Build the \f$a_{i,j}\f$ coefficients for bicubic interpolation
         void build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs);
+        /** Update the state
+         */
         void update(CoolProp::input_pairs input_pair, double val1, double val2);
+        
+        /**
+         * @brief Evaluate a derivative in terms of the native inputs of the table
+         * @param table A reference to the table to be used
+         * @param coeffs A reference to the matrix of the coefficients
+         * @param output The output variable
+         * @param x The 
+         * @param y
+         * @param i
+         * @param j
+         * @param Nx The number of derivatives with respect to x with y held constant
+         * @param Ny The number of derivatives with respect to y with x held constant
+         * @return 
+         */
+        double evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny);
+		double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
+            return evaluate_single_phase_derivative(single_phase_logph, coeffs_ph, output, _hmolar, _p, i, j, Nx, Ny);
+        };
+        double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
+            return evaluate_single_phase_derivative(single_phase_logpT, coeffs_pT, output, _T, _p, i, j, Nx, Ny);
+        };
+        
+        /**
+         * @brief 
+         * @param table A reference to the table that is to be used
+         * @param coeffs A reference to the matrix of bicubic coefficients
+         * @param output What output is desired
+         * @param x The x value for the native inputs
+         * @param y
+         * @param i
+         * @param j
+         * @return 
+         */
 		double evaluate_single_phase(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j);
-        double evaluate_single_phase_transport(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
-		double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j){
+        double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j){
 			return evaluate_single_phase(single_phase_logph, coeffs_ph, output, _hmolar, _p, i, j);
 		};
         double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j){
 			return evaluate_single_phase(single_phase_logpT, coeffs_pT, output, _T, _p, i, j);
 		};
+        
+        /**
+         * @brief Evaluate the single-phase transport properties using linear interpolation.  Works well except for near the critical point
+         * @param table A reference to the table to be used
+         * @param output The output parameter, viscosity or conductivity
+         * @param x The 
+         * @param y
+         * @return 
+         */
+        double evaluate_single_phase_transport(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
+        
         double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j){
             return evaluate_single_phase_transport(single_phase_logph, output, _hmolar, _p, i, j);
         };
@@ -144,7 +189,6 @@ class BicubicBackend : public TabularBackend
         };
 };
 
-double do_one();
 }
 
 #endif // BICUBICBACKEND_H
