@@ -27,6 +27,7 @@ class CellCoeffs{
                 case iDmolar: return rhomolar;
                 case iHmolar: return hmolar;
                 case iSmolar: return smolar;
+				case iUmolar: return umolar;
                 default: throw KeyError(format("Invalid key to get() function of CellCoeffs"));
             }
         };
@@ -38,6 +39,7 @@ class CellCoeffs{
                 case iDmolar: rhomolar = mat; break;
                 case iHmolar: hmolar = mat; break;
                 case iSmolar: smolar = mat; break;
+				case iUmolar: umolar = mat; break;
                 default: throw KeyError(format("Invalid key to set() function of CellCoeffs"));
             }
         };

@@ -15,7 +15,7 @@
  * See http://stackoverflow.com/a/148610
  * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
  */
-#define LIST_OF_MATRICES X(T) X(p) X(rhomolar) X(hmolar) X(smolar) X(dTdx) X(dTdy) X(dpdx) X(dpdy) X(drhomolardx) X(drhomolardy) X(dhmolardx) X(dhmolardy) X(dsmolardx) X(dsmolardy) X(d2Tdx2) X(d2Tdxdy) X(d2Tdy2) X(d2pdx2) X(d2pdxdy) X(d2pdy2) X(d2rhomolardx2) X(d2rhomolardxdy) X(d2rhomolardy2) X(d2hmolardx2) X(d2hmolardxdy) X(d2hmolardy2) X(d2smolardx2) X(d2smolardxdy) X(d2smolardy2) X(visc) X(cond)
+#define LIST_OF_MATRICES X(T) X(p) X(rhomolar) X(hmolar) X(smolar) X(umolar) X(dTdx) X(dTdy) X(dpdx) X(dpdy) X(drhomolardx) X(drhomolardy) X(dhmolardx) X(dhmolardy) X(dsmolardx) X(dsmolardy) X(dumolardx) X(dumolardy) X(d2Tdx2) X(d2Tdxdy) X(d2Tdy2) X(d2pdx2) X(d2pdxdy) X(d2pdy2) X(d2rhomolardx2) X(d2rhomolardxdy) X(d2rhomolardy2) X(d2hmolardx2) X(d2hmolardxdy) X(d2hmolardy2) X(d2smolardx2) X(d2smolardxdy) X(d2smolardy2) X(d2umolardx2) X(d2umolardxdy) X(d2umolardy2) X(visc) X(cond)
 
 /** ***MAGIC WARNING***!! X Macros in use
  * See http://stackoverflow.com/a/148610
@@ -156,6 +156,12 @@ class PureFluidSaturationTableData{
                     double hV = CubicInterp(logpV, hmolarV, iV-2, iV-1, iV, iV+1, logp);
                     double hL = CubicInterp(logpL, hmolarL, iL-2, iL-1, iL, iL+1, logp);
                     return Q*hV + (1-Q)*hL;
+                }
+				case iUmolar:
+                {
+                    double uV = CubicInterp(logpV, umolarV, iV-2, iV-1, iV, iV+1, logp);
+                    double uL = CubicInterp(logpL, umolarL, iL-2, iL-1, iL, iL+1, logp);
+                    return Q*uV + (1-Q)*uL;
                 }
                 case iDmolar:
                 {
@@ -502,7 +508,15 @@ class TabularBackend : public AbstractState
                 return calc_first_partial_deriv(iHmolar, iT, iP);
             }
             else{
-                throw ValueError("table not selected");
+                throw ValueError("Two-phase not possible for cpmolar currently");
+            }
+        }
+		CoolPropDbl calc_cvmolar(void){
+            if (using_single_phase_table){
+                return calc_first_partial_deriv(iUmolar, iT, iDmolar);
+            }
+            else{
+                throw ValueError("Two-phase not possible for cvmolar currently");
             }
         }
         
@@ -534,20 +548,34 @@ class TabularBackend : public AbstractState
         }
         CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){
             if (using_single_phase_table){
+                CoolPropDbl dOf_dx, dOf_dy, dWrt_dx, dWrt_dy, dConstant_dx, dConstant_dy;
+                
                 switch(selected_table){
                     case SELECTED_PH_TABLE: {
-                        if (Of == iHmolar && Wrt == iT && Constant == iP){
-                            double val = 1/(evaluate_single_phase_phmolar_derivative(iT,cached_single_phase_i, cached_single_phase_j,1,0));
-                            return val;
-                        }
-                        else{
-                            throw ValueError("This derivative output not yet supported");
-                        }
+                        dOf_dx = evaluate_single_phase_phmolar_derivative(Of, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dOf_dy = evaluate_single_phase_phmolar_derivative(Of, cached_single_phase_i, cached_single_phase_j,0,1);
+                        dWrt_dx = evaluate_single_phase_phmolar_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dWrt_dy = evaluate_single_phase_phmolar_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,0,1);
+                        dConstant_dx = evaluate_single_phase_phmolar_derivative(Constant, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dConstant_dy = evaluate_single_phase_phmolar_derivative(Constant, cached_single_phase_i, cached_single_phase_j,0,1);
+						break;
                     }
-                    case SELECTED_PT_TABLE: throw ValueError("No P-T derivatives yet");
+                    case SELECTED_PT_TABLE:{
+                        dOf_dx = evaluate_single_phase_pT_derivative(Of, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dOf_dy = evaluate_single_phase_pT_derivative(Of, cached_single_phase_i, cached_single_phase_j,0,1);
+                        dWrt_dx = evaluate_single_phase_pT_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dWrt_dy = evaluate_single_phase_pT_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,0,1);
+                        dConstant_dx = evaluate_single_phase_pT_derivative(Constant, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dConstant_dy = evaluate_single_phase_pT_derivative(Constant, cached_single_phase_i, cached_single_phase_j,0,1);
+						break;
+                    }
                     case SELECTED_NO_TABLE: throw ValueError("table not selected");
                 }
-                return _HUGE; // not needed, will never be hit, just to make compiler happy
+                
+                
+                return (dOf_dx*dConstant_dy-dOf_dy*dConstant_dx)/(dWrt_dx*dConstant_dy-dWrt_dy*dConstant_dx);
+                    
+                //return 1/(evaluate_single_phase_phmolar_derivative(iT,cached_single_phase_i, cached_single_phase_j,1,0));
             }
             else{
                 return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);

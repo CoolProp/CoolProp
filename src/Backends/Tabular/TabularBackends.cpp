@@ -212,6 +212,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             rhomolar[i][j] = AS->rhomolar();
             hmolar[i][j] = AS->hmolar();
             smolar[i][j] = AS->smolar();
+			umolar[i][j] = AS->umolar();
             
             // -------------------------
             //   Transport properties
@@ -237,6 +238,8 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             dhmolardy[i][j] = AS->first_partial_deriv(iHmolar, ykey, xkey);
             dsmolardx[i][j] = AS->first_partial_deriv(iSmolar, xkey, ykey);
             dsmolardy[i][j] = AS->first_partial_deriv(iSmolar, ykey, xkey);
+			dumolardx[i][j] = AS->first_partial_deriv(iUmolar, xkey, ykey);
+            dumolardy[i][j] = AS->first_partial_deriv(iUmolar, ykey, xkey);
             
             // ----------------------------------------
             //   Second derivatives of state variables
@@ -256,6 +259,9 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             d2smolardx2[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, xkey, ykey);
             d2smolardxdy[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, ykey, xkey);
             d2smolardy2[i][j] = AS->second_partial_deriv(iSmolar, ykey, xkey, ykey, xkey);
+			d2umolardx2[i][j] = AS->second_partial_deriv(iUmolar, xkey, ykey, xkey, ykey);
+            d2umolardxdy[i][j] = AS->second_partial_deriv(iUmolar, xkey, ykey, ykey, xkey);
+            d2umolardy2[i][j] = AS->second_partial_deriv(iUmolar, ykey, xkey, ykey, xkey);
         }
     }
 }

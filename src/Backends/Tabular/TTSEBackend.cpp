@@ -149,7 +149,10 @@ double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData 
             z = &table.hmolar; dzdx = &table.dhmolardx; dzdy = &table.dhmolardy;
             d2zdxdy = &table.d2hmolardxdy; d2zdx2 = &table.d2hmolardx2; d2zdy2 = &table.d2hmolardy2;
             break;
-        //case iUmolar:
+        case iUmolar:
+            z = &table.umolar; dzdx = &table.dumolardx; dzdy = &table.dumolardy;
+            d2zdxdy = &table.d2umolardxdy; d2zdx2 = &table.d2umolardx2; d2zdy2 = &table.d2umolardy2;
+            break;
         case iviscosity:
             z = &table.visc; break;
         case iconductivity:
@@ -161,10 +164,6 @@ double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData 
     // Distances from the node
 	double deltax = x - table.xvec[i];
     double deltay = y - table.yvec[j];
-    
-    if (output == iconductivity || output == iviscosity){
-        // Linear interpolation
-    }
     
     // Calculate the output value desired
     double val = (*z)[i][j]+deltax*(*dzdx)[i][j]+deltay*(*dzdy)[i][j]+0.5*deltax*deltax*(*d2zdx2)[i][j]+0.5*deltay*deltay*(*d2zdy2)[i][j]+deltay*deltax*(*d2zdxdy)[i][j];
@@ -178,6 +177,68 @@ double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData 
         //case iUmolar:
         default: throw ValueError();
     }
+    return val;
+}
+
+/// Use the single-phase table to evaluate an output
+double CoolProp::TTSEBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny)
+{
+	if (Nx == 1 && Ny == 0){
+		if (output == table.xkey) { return 1.0; }
+		if (output == table.ykey) { return 0.0; }
+	}
+	else if (Ny == 1 && Nx == 0){
+		if (output == table.ykey) { return 1.0; }
+		if (output == table.xkey) { return 0.0; }
+	}
+
+    // Define pointers for the matrices to be used; 
+    std::vector<std::vector<double> > *z = NULL, *dzdx = NULL, *dzdy = NULL, *d2zdxdy = NULL, *d2zdy2 = NULL, *d2zdx2 = NULL;
+    
+    // Connect the pointers based on the output variable desired
+    switch(output){
+        case iT:
+            z = &table.T; dzdx = &table.dTdx; dzdy = &table.dTdy;
+            d2zdxdy = &table.d2Tdxdy; d2zdx2 = &table.d2Tdx2; d2zdy2 = &table.d2Tdy2;
+            break;
+        case iDmolar:
+            z = &table.rhomolar; dzdx = &table.drhomolardx; dzdy = &table.drhomolardy;
+            d2zdxdy = &table.d2rhomolardxdy; d2zdx2 = &table.d2rhomolardx2; d2zdy2 = &table.d2rhomolardy2;
+            break;
+        case iSmolar:
+            z = &table.smolar; dzdx = &table.dsmolardx; dzdy = &table.dsmolardy;
+            d2zdxdy = &table.d2smolardxdy; d2zdx2 = &table.d2smolardx2; d2zdy2 = &table.d2smolardy2;
+            break;
+        case iHmolar:
+            z = &table.hmolar; dzdx = &table.dhmolardx; dzdy = &table.dhmolardy;
+            d2zdxdy = &table.d2hmolardxdy; d2zdx2 = &table.d2hmolardx2; d2zdy2 = &table.d2hmolardy2;
+            break;
+		case iUmolar:
+            z = &table.umolar; dzdx = &table.dumolardx; dzdy = &table.dumolardy;
+            d2zdxdy = &table.d2umolardxdy; d2zdx2 = &table.d2umolardx2; d2zdy2 = &table.d2umolardy2;
+            break;
+        default:
+            throw ValueError();
+    }
+    
+    // Distances from the node
+	double deltax = x - table.xvec[i];
+    double deltay = y - table.yvec[j];
+    double val;
+    // Calculate the output value desired
+    if (Nx == 1 && Ny == 0){
+		if (output == table.xkey) { return 1.0; }
+		if (output == table.ykey) { return 0.0; }
+		val = (*dzdx)[i][j] + deltax*(*d2zdx2)[i][j] + deltay*(*d2zdxdy)[i][j];
+	}
+	else if (Ny == 1 && Nx == 0){
+		if (output == table.ykey) { return 1.0; }
+		if (output == table.xkey) { return 0.0; }
+		val = (*dzdy)[i][j] + deltay*(*d2zdy2)[i][j] + deltax*(*d2zdxdy)[i][j];
+	}
+	else{
+		throw NotImplementedError("only first derivatives currently supported");
+	}
     return val;
 }
 

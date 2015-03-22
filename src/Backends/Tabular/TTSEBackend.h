@@ -41,9 +41,7 @@ class TTSEBackend : public TabularBackend
          * @param Ny The number of derivatives with respect to y with x held constant
          * @return 
          */
-        double evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
-            throw NotImplementedError("Not yet implemented");
-        }
+        double evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny);
         double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
             return evaluate_single_phase_derivative(single_phase_logph, output, _hmolar, _p, i, j, Nx, Ny);
         };

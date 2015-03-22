@@ -3,6 +3,12 @@
 #include "BicubicBackend.h"
 #include "MatrixMath.h"
 
+CoolPropDbl pow(CoolPropDbl x, std::size_t n){
+	return pow(x, static_cast<int>(n));
+}
+double pow(double x, std::size_t n){
+	return pow(x, static_cast<int>(n));
+}
 /// The inverse of the A matrix for the bicubic interpolation (http://en.wikipedia.org/wiki/Bicubic_interpolation)
 /// NOTE: The matrix is transposed below
 static const double Ainv_data[16*16] = {
@@ -27,8 +33,8 @@ static Eigen::Matrix<double, 16, 16> Ainv(Ainv_data);
 void CoolProp::BicubicBackend::build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs)
 {
 	const bool debug = get_debug_level() > 5 || false;
-    const int param_count = 5;
-    parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP}; //iUmolar
+    const int param_count = 6;
+    parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP, iUmolar};
     std::vector<std::vector<double> > *f = NULL, *fx = NULL, *fy = NULL, *fxy = NULL;
     
 	clock_t t1 = clock();
@@ -56,6 +62,9 @@ void CoolProp::BicubicBackend::build_coeffs(SinglePhaseGriddedTableData &table, 
                 break;
 			case iHmolar:
                 f = &(table.hmolar); fx = &(table.dhmolardx); fy = &(table.dhmolardy); fxy = &(table.d2hmolardxdy);
+                break;
+			case iUmolar:
+				f = &(table.umolar); fx = &(table.dumolardx); fy = &(table.dumolardy); fxy = &(table.d2umolardxdy);
                 break;
             default:
                 throw ValueError();
@@ -303,6 +312,7 @@ double CoolProp::BicubicBackend::evaluate_single_phase(SinglePhaseGriddedTableDa
 /// Use the single_phase table to evaluate an output
 double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny)
 {
+
     // Get the cell
     CellCoeffs &cell = coeffs[i][j];
     
@@ -318,6 +328,8 @@ double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGri
     // Calculate the output value desired
 	double val = 0;
     if (Nx == 1 && Ny == 0){
+		if (output == table.xkey) { return 1.0; }
+		if (output == table.ykey) { return 0.0; }
         for (std::size_t l = 1; l < 4; ++l)
         {
             for(std::size_t m = 0; m < 4; ++m)
@@ -329,6 +341,8 @@ double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGri
         return val*dxhatdx;
     }
     else if (Ny == 1 && Nx == 0){
+		if (output == table.ykey) { return 1.0; }
+		if (output == table.xkey) { return 0.0; }
         for (std::size_t l = 0; l < 4; ++l)
         {
             for(std::size_t m = 1; m < 4; ++m)
