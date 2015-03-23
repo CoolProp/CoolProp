@@ -27,6 +27,7 @@ class TTSEBackend : public TabularBackend
         double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j){
             return evaluate_single_phase_transport(single_phase_logpT, output, _T, _p, i, j);
         }
+        double invert_single_phase_x(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
         
         /**
          * @brief Evaluate a derivative in terms of the native inputs of the table

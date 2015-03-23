@@ -59,7 +59,8 @@ class PureFluidSaturationTableData{
                 case iT: yvecL = &TL; yvecV = &TV; break;
                 case iHmolar: yvecL = &hmolarL; yvecV = &hmolarV; break;
                 case iQ: yvecL = &TL; yvecV = &TV; break;
-                //case iT: yvecL = &TL; yvecV = &TV; break;
+                case iSmolar: yvecL = &smolarL; yvecV = &smolarV; break;
+                case iUmolar: yvecL = &umolarL; yvecV = &umolarV; break;
                 default: throw ValueError("invalid input for other in is_inside");
             }
             // Now check based on a rough analysis using bounding pressure
@@ -438,8 +439,40 @@ class TabularBackend : public AbstractState
         bool using_single_phase_table;
         std::size_t cached_single_phase_i, cached_single_phase_j;
         std::size_t cached_saturation_iL, cached_saturation_iV;
+        std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdx2, *d2zdxdy, *d2zdy2;
     public:
-        
+        void connect_pointers(parameters output, SinglePhaseGriddedTableData &table)
+		{
+			// Connect the pointers based on the output variable desired
+			switch(output){
+				case iT:
+					z = &table.T; dzdx = &table.dTdx; dzdy = &table.dTdy;
+					d2zdxdy = &table.d2Tdxdy; d2zdx2 = &table.d2Tdx2; d2zdy2 = &table.d2Tdy2;
+					break;
+				case iDmolar:
+					z = &table.rhomolar; dzdx = &table.drhomolardx; dzdy = &table.drhomolardy;
+					d2zdxdy = &table.d2rhomolardxdy; d2zdx2 = &table.d2rhomolardx2; d2zdy2 = &table.d2rhomolardy2;
+					break;
+				case iSmolar:
+                    z = &table.smolar; dzdx = &table.dsmolardx; dzdy = &table.dsmolardy;
+					d2zdxdy = &table.d2smolardxdy; d2zdx2 = &table.d2smolardx2; d2zdy2 = &table.d2smolardy2;
+					break;
+				case iHmolar:
+					z = &table.hmolar; dzdx = &table.dhmolardx; dzdy = &table.dhmolardy;
+					d2zdxdy = &table.d2hmolardxdy; d2zdx2 = &table.d2hmolardx2; d2zdy2 = &table.d2hmolardy2;
+					break;
+				case iUmolar:
+					z = &table.umolar; dzdx = &table.dumolardx; dzdy = &table.dumolardy;
+					d2zdxdy = &table.d2umolardxdy; d2zdx2 = &table.d2umolardx2; d2zdy2 = &table.d2umolardy2;
+					break;
+				case iviscosity:
+					z = &table.visc; break;
+				case iconductivity:
+					z = &table.cond; break;
+				default:
+					throw ValueError();
+			}
+		}
         LogPHTable single_phase_logph;
         LogPTTable single_phase_logpT;
         PureFluidSaturationTableData pure_saturation; // This will ultimately be split into pure and mixture backends which derive from this backend

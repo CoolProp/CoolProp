@@ -83,23 +83,22 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                 // Find and cache the indices i, j
                 selected_table = SELECTED_PH_TABLE;
                 single_phase_logph.find_nearest_neighbor(iP, _p, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+				// Now find hmolar
+                invert_single_phase_x(single_phase_logph, otherkey, otherval, _p, cached_single_phase_i, cached_single_phase_j);
             }
             break;
         }
         case DmassP_INPUTS:{
             // Call again, but this time with molar units; D: [kg/m^3] / [kg/mol] -> [mol/m^3]
-            update(DmassP_INPUTS, val1 / AS->molar_mass(), val2); 
-            return;
+            update(DmassP_INPUTS, val1 / AS->molar_mass(), val2); return;
         }
         case PUmass_INPUTS:{
             // Call again, but this time with molar units; U: [J/kg] * [kg/mol] -> [J/mol]
-            update(PUmolar_INPUTS, val1, val2*AS->molar_mass());
-            return;
+            update(PUmolar_INPUTS, val1, val2*AS->molar_mass()); return;
         }
         case PSmass_INPUTS:{
             // Call again, but this time with molar units; S: [J/kg/K] * [kg/mol] -> [J/mol/K]
-            update(PSmolar_INPUTS, val1, val2*AS->molar_mass());
-            return;
+            update(PSmolar_INPUTS, val1, val2*AS->molar_mass()); return;
         }
         case PT_INPUTS:{
             _p = val1; _T = val2;
@@ -166,42 +165,46 @@ double CoolProp::TTSEBackend::evaluate_single_phase_transport(SinglePhaseGridded
     }
     return val;
 }
+/// Solve for deltax
+double CoolProp::TTSEBackend::invert_single_phase_x(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)
+{   
+    connect_pointers(output, table);
+    
+    // Distances from the node
+    double deltay = y - table.yvec[j];
+    
+    // Calculate the output value desired
+    double a = 0.5*(*d2zdx2)[i][j]; // Term multiplying deltax**2
+    double b = (*dzdx)[i][j] + deltay*(*d2zdxdy)[i][j]; // Term multiplying deltax
+    double c = (*z)[i][j] - x + deltay*(*dzdy)[i][j] + 0.5*deltay*deltay*(*d2zdy2)[i][j];
+
+    double deltax1 = (-b + sqrt(b*b - 4*a*c))/(2*a);
+    double deltax2 = (-b - sqrt(b*b - 4*a*c))/(2*a);
+
+    // If only one is less than a multiple of x spacing, thats your solution
+    double xspacing = table.xvec[1] - table.xvec[0], val;
+	if (std::abs(deltax1) < xspacing && !(std::abs(deltax2) < xspacing) ){
+		val = deltax1 + table.xvec[i];
+    }
+    else if (std::abs(deltax2) < xspacing && !(std::abs(deltax1) < xspacing) ){
+		val = deltax2 + table.xvec[i];
+    }
+    else{
+        throw ValueError("Cannot find the x solution");
+    }
+
+    // Cache the output value calculated
+    switch(table.xkey){
+        case iHmolar: _hmolar = val; break;
+        case iT: _T = val; break;
+        default: throw ValueError();
+    }
+}
 /// Use the single-phase table to evaluate an output
 double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)
 {
-    // Define pointers for the matrices to be used; 
-    std::vector<std::vector<double> > *z = NULL, *dzdx = NULL, *dzdy = NULL, *d2zdxdy = NULL, *d2zdy2 = NULL, *d2zdx2 = NULL;
-    
-    // Connect the pointers based on the output variable desired
-    switch(output){
-        case iT:
-            z = &table.T; dzdx = &table.dTdx; dzdy = &table.dTdy;
-            d2zdxdy = &table.d2Tdxdy; d2zdx2 = &table.d2Tdx2; d2zdy2 = &table.d2Tdy2;
-            break;
-        case iDmolar:
-            z = &table.rhomolar; dzdx = &table.drhomolardx; dzdy = &table.drhomolardy;
-            d2zdxdy = &table.d2rhomolardxdy; d2zdx2 = &table.d2rhomolardx2; d2zdy2 = &table.d2rhomolardy2;
-            break;
-        case iSmolar:
-            z = &table.smolar; dzdx = &table.dsmolardx; dzdy = &table.dsmolardy;
-            d2zdxdy = &table.d2smolardxdy; d2zdx2 = &table.d2smolardx2; d2zdy2 = &table.d2smolardy2;
-            break;
-        case iHmolar:
-            z = &table.hmolar; dzdx = &table.dhmolardx; dzdy = &table.dhmolardy;
-            d2zdxdy = &table.d2hmolardxdy; d2zdx2 = &table.d2hmolardx2; d2zdy2 = &table.d2hmolardy2;
-            break;
-        case iUmolar:
-            z = &table.umolar; dzdx = &table.dumolardx; dzdy = &table.dumolardy;
-            d2zdxdy = &table.d2umolardxdy; d2zdx2 = &table.d2umolardx2; d2zdy2 = &table.d2umolardy2;
-            break;
-        case iviscosity:
-            z = &table.visc; break;
-        case iconductivity:
-            z = &table.cond; break;
-        default:
-            throw ValueError();
-    }
-    
+	connect_pointers(output, table);
+
     // Distances from the node
 	double deltax = x - table.xvec[i];
     double deltay = y - table.yvec[j];
@@ -220,7 +223,6 @@ double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData 
     }
     return val;
 }
-
 /// Use the single-phase table to evaluate an output
 double CoolProp::TTSEBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny)
 {
@@ -232,35 +234,8 @@ double CoolProp::TTSEBackend::evaluate_single_phase_derivative(SinglePhaseGridde
 		if (output == table.ykey) { return 1.0; }
 		if (output == table.xkey) { return 0.0; }
 	}
-
-    // Define pointers for the matrices to be used; 
-    std::vector<std::vector<double> > *dzdx = NULL, *dzdy = NULL, *d2zdxdy = NULL, *d2zdy2 = NULL, *d2zdx2 = NULL;
     
-    // Connect the pointers based on the output variable desired
-    switch(output){
-        case iT:
-            dzdx = &table.dTdx; dzdy = &table.dTdy;
-            d2zdxdy = &table.d2Tdxdy; d2zdx2 = &table.d2Tdx2; d2zdy2 = &table.d2Tdy2;
-            break;
-        case iDmolar:
-            dzdx = &table.drhomolardx; dzdy = &table.drhomolardy;
-            d2zdxdy = &table.d2rhomolardxdy; d2zdx2 = &table.d2rhomolardx2; d2zdy2 = &table.d2rhomolardy2;
-            break;
-        case iSmolar:
-            dzdx = &table.dsmolardx; dzdy = &table.dsmolardy;
-            d2zdxdy = &table.d2smolardxdy; d2zdx2 = &table.d2smolardx2; d2zdy2 = &table.d2smolardy2;
-            break;
-        case iHmolar:
-            dzdx = &table.dhmolardx; dzdy = &table.dhmolardy;
-            d2zdxdy = &table.d2hmolardxdy; d2zdx2 = &table.d2hmolardx2; d2zdy2 = &table.d2hmolardy2;
-            break;
-		case iUmolar:
-            dzdx = &table.dumolardx; dzdy = &table.dumolardy;
-            d2zdxdy = &table.d2umolardxdy; d2zdx2 = &table.d2umolardx2; d2zdy2 = &table.d2umolardy2;
-            break;
-        default:
-            throw ValueError();
-    }
+    connect_pointers(output, table);
     
     // Distances from the node
 	double deltax = x - table.xvec[i];
