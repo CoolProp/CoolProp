@@ -528,12 +528,12 @@ template <typename T> void bisect_segmented_vector(const std::vector<T> &vec, T 
     rL = vec[L] - val; rR = vec[R] - val;
     // Move the right limits in until they are good
     while (!ValidNumber(vec[R])){
-        if (R == 1){ throw ValueError("All the values in bisection vector are invalid"); }
+        if (R == 1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
         R--;
     }
     // Move the left limits in until they are good
     while (!ValidNumber(vec[L])){
-        if (L == mat.size()-1){ throw ValueError("All the values in bisection vector are invalid"); }
+        if (L == mat.size()-1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
         L++;
     }
     while (R - L > 1){
@@ -541,12 +541,12 @@ template <typename T> void bisect_segmented_vector(const std::vector<T> &vec, T 
             std::size_t MR = M, ML = M;
             // Move middle-right to the right until it is ok
             while (!ValidNumber(vec[MR])){
-                if (MR == mat.size()-1){ throw ValueError("All the values in bisection vector are invalid"); }
+                if (MR == mat.size()-1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
                 MR++;
             }
             // Move middle-left to the left until it is ok
             while (!ValidNumber(vec[ML])){
-                if (ML == 1){ throw ValueError("All the values in bisection vector are invalid"); }
+                if (ML == 1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
                 ML--;
             }
             T rML = vec[ML] - val; 
@@ -597,12 +597,12 @@ template <typename T> void bisect_segmented_vector_slice(const std::vector<std::
     rL = mat[L][j] - val; rR = mat[R][j] - val;
     // Move the right limits in until they are good
     while (!ValidNumber(mat[R][j])){
-        if (R == 1){ throw ValueError("All the values in bisection vector are invalid"); }
+        if (R == 1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
         R--;
     }
     // Move the left limits in until they are good
     while (!ValidNumber(mat[L][j])){
-        if (L == mat.size()-1){ throw ValueError("All the values in bisection vector are invalid"); }
+        if (L == mat.size()-1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
         L++;
     }
     while (R - L > 1){
@@ -610,12 +610,12 @@ template <typename T> void bisect_segmented_vector_slice(const std::vector<std::
             std::size_t MR = M, ML = M;
             // Move middle-right to the right until it is ok
             while (!ValidNumber(mat[MR][j])){
-                if (MR == mat.size()-1){ throw ValueError("All the values in bisection vector are invalid"); }
+                if (MR == mat.size()-1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
                 MR++;
             }
             // Move middle-left to the left until it is ok
             while (!ValidNumber(mat[ML][j])){
-                if (ML == 1){ throw ValueError("All the values in bisection vector are invalid"); }
+                if (ML == 1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
                 ML--;
             }
             T rML = mat[ML][j] - val; 
