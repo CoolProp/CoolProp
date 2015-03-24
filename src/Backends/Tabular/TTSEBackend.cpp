@@ -28,7 +28,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                 using_single_phase_table = true; // Use the table !
                 std::size_t iL, iV;
                 CoolPropDbl hL = 0, hV = 0;
-                if (pure_saturation.is_inside(_p, iHmolar, _hmolar, iL, iV, hL, hV)){
+                if (pure_saturation.is_inside(iP, _p, iHmolar, _hmolar, iL, iV, hL, hV)){
                     using_single_phase_table = false;
                     _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
                     if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
@@ -64,7 +64,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
             using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
             std::size_t iL, iV;
             CoolPropDbl zL = 0, zV = 0;
-            if (pure_saturation.is_inside(_p, otherkey, otherval, iL, iV, zL, zV)){
+            if (pure_saturation.is_inside(iP, _p, otherkey, otherval, iL, iV, zL, zV)){
                 using_single_phase_table = false;
                 if (otherkey == iDmolar){
                     _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
@@ -112,7 +112,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                 using_single_phase_table = true; // Use the table !
                 std::size_t iL = 0, iV = 0;
                 CoolPropDbl TL = 0, TV = 0;
-                if (pure_saturation.is_inside(_p, iT, _T, iL, iV, TL, TV)){
+                if (pure_saturation.is_inside(iP, _p, iT, _T, iL, iV, TL, TV)){
                     using_single_phase_table = false;
                     throw ValueError(format("P,T with TTSE cannot be two-phase for now"));
                 }
@@ -125,8 +125,41 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
             break;
         }
         case SmolarT_INPUTS:
-        case DmolarT_INPUTS:
-            throw ValueError("To be implemented as a 1-D iteration using PT table");
+        case DmolarT_INPUTS:{
+            CoolPropDbl otherval; parameters otherkey;
+            switch(input_pair){
+                case SmolarT_INPUTS: _smolar = val1; _T = val2; otherval = val1; otherkey = iSmolar; break;
+                case DmolarT_INPUTS: _rhomolar = val1; _T = val2; otherval = val1; otherkey = iDmolar; break;
+                default: throw ValueError("Bad (impossible) pair");
+            }
+            
+            using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
+            std::size_t iL, iV;
+            CoolPropDbl zL = 0, zV = 0;
+            if (pure_saturation.is_inside(iT, _T, otherkey, otherval, iL, iV, zL, zV)){
+                using_single_phase_table = false;
+                if (otherkey == iDmolar){
+                    _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
+                }
+                else{
+                    _Q = (otherval - zL)/(zV - zL);
+                }
+                if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+                    throw ValueError("vapor quality is not in (0,1)");
+                }
+                else{
+                    cached_saturation_iL = iL; cached_saturation_iV = iV;
+                }
+            }
+            else{
+                // Find and cache the indices i, j
+                selected_table = SELECTED_PT_TABLE;
+                single_phase_logpT.find_nearest_neighbor(iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+				// Now find hmolar
+                invert_single_phase_y(single_phase_logpT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
+            }
+            break;
+        }
         default:
             throw ValueError("Sorry, but this set of inputs is not supported for TTSE backend");
     }
@@ -182,7 +215,12 @@ double CoolProp::TTSEBackend::invert_single_phase_x(SinglePhaseGriddedTableData 
     double deltax2 = (-b - sqrt(b*b - 4*a*c))/(2*a);
 
     // If only one is less than a multiple of x spacing, thats your solution
-    double xspacing = table.xvec[1] - table.xvec[0], val;
+    double xspacing, val;
+    if (!table.logx){
+        xspacing = table.xvec[1] - table.xvec[0];
+    }else{
+        xspacing = table.xvec[i+1] - table.xvec[i];
+    }
 	if (std::abs(deltax1) < xspacing && !(std::abs(deltax2) < xspacing) ){
 		val = deltax1 + table.xvec[i];
     }
@@ -200,6 +238,66 @@ double CoolProp::TTSEBackend::invert_single_phase_x(SinglePhaseGriddedTableData 
     switch(table.xkey){
         case iHmolar: _hmolar = val; break;
         case iT: _T = val; break;
+        default: throw ValueError();
+    }
+    return val;
+}
+/// Solve for deltay
+double CoolProp::TTSEBackend::invert_single_phase_y(SinglePhaseGriddedTableData &table, parameters output, double y, double x, std::size_t i, std::size_t j)
+{   
+    connect_pointers(output, table);
+    
+    // Distances from the node
+    double deltax = x - table.xvec[i];
+
+    // Calculate the output value desired
+    double a = 0.5*(*d2zdy2)[i][j]; // Term multiplying deltay**2
+    double b = (*dzdy)[i][j] + deltax*(*d2zdxdy)[i][j]; // Term multiplying deltay
+    double c = (*z)[i][j] - y + deltax*(*dzdx)[i][j] + 0.5*deltax*deltax*(*d2zdx2)[i][j];
+
+    double deltay1 = (-b + sqrt(b*b - 4*a*c))/(2*a);
+    double deltay2 = (-b - sqrt(b*b - 4*a*c))/(2*a);
+
+    // If only one is less than a multiple of x spacing, thats your solution
+    double yspacing, yratio, val;
+    if (!table.logy){
+        yspacing = table.yvec[1] - table.yvec[0];
+        if (std::abs(deltay1) < yspacing && !(std::abs(deltay2) < yspacing) ){
+		    val = deltay1 + table.yvec[j];
+        }
+        else if (std::abs(deltay2) < yspacing && !(std::abs(deltay1) < yspacing) ){
+		    val = deltay2 + table.yvec[j];
+        }
+        else if (std::abs(deltay1) < std::abs(deltay2) && std::abs(deltay1) < 10*yspacing){
+            val = deltay1 + table.yvec[j];
+        }
+        else{
+            throw ValueError(format("Cannot find the y solution; yspacing: %g dy1: %g dy2: %g", yspacing, deltay1, deltay2));
+        }
+    }else{
+        yratio = table.yvec[1]/table.yvec[0];
+        double yj = table.yvec[j];
+        double yratio1 = (yj+deltay1)/yj;
+        double yratio2 = (yj+deltay2)/yj;
+        if (yratio1 < yratio && yratio1 > 1/yratio ){
+		    val = deltay1 + table.yvec[j];
+        }
+        else if (yratio2 < yratio && yratio2 > 1/yratio ){
+		    val = deltay2 + table.yvec[j];
+        }
+        else if (yratio1 < yratio*5 && yratio1 > 1/yratio/5 ){
+		    val = deltay1 + table.yvec[j];
+        }
+        else{
+            throw ValueError(format("Cannot find the y solution; yspacing: %g dy1: %g dy2: %g", yspacing, deltay1, deltay2));
+        }
+    }
+
+    // Cache the output value calculated
+    switch(table.ykey){
+        case iHmolar: _hmolar = val; break;
+        case iT: _T = val; break;
+        case iP: _p = val; break;
         default: throw ValueError();
     }
     return val;

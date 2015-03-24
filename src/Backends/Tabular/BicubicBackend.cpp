@@ -160,7 +160,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 using_single_phase_table = true; // Use the table !
                 std::size_t iL, iV;
                 CoolPropDbl hL = 0, hV = 0;
-                if (pure_saturation.is_inside(_p, iHmolar, _hmolar, iL, iV, hL, hV)){
+                if (pure_saturation.is_inside(iP, _p, iHmolar, _hmolar, iL, iV, hL, hV)){
                     using_single_phase_table = false;
                     _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
                     if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
@@ -204,7 +204,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 using_single_phase_table = true; // Use the table !
                 std::size_t iL = 0, iV = 0;
                 CoolPropDbl TL = 0, TV = 0;
-                if (pure_saturation.is_inside(_p, iT, _T, iL, iV, TL, TV)){
+                if (pure_saturation.is_inside(iP, _p, iT, _T, iL, iV, TL, TV)){
                     using_single_phase_table = false;
                     throw ValueError(format("P,T with TTSE cannot be two-phase for now"));
                 }
@@ -220,7 +220,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
 			std::size_t iL = 0, iV = 0;
 			CoolPropDbl hL = 0, hV = 0;
 			_p = val1; _Q = val2;
-			pure_saturation.is_inside(_p, iQ, _Q, iL, iV, hL, hV);
+			pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, hL, hV);
             using_single_phase_table = false;
             if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
                 throw ValueError("vapor quality is not in (0,1)");

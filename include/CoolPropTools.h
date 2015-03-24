@@ -525,7 +525,6 @@ template <typename T> void bisect_segmented_vector(const std::vector<T> &vec, T 
 {
     T rL, rM, rR;
     std::size_t N = vec.size(), L = 0, R = N-1, M = (L+R)/2;
-    rL = vec[L] - val; rR = vec[R] - val;
     // Move the right limits in until they are good
     while (!ValidNumber(vec[R])){
         if (R == 1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
@@ -536,6 +535,7 @@ template <typename T> void bisect_segmented_vector(const std::vector<T> &vec, T 
         if (L == vec.size()-1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
         L++;
     }
+    rL = vec[L] - val; rR = vec[R] - val;
     while (R - L > 1){
         if (!ValidNumber(vec[M])){
             std::size_t MR = M, ML = M;

@@ -49,11 +49,7 @@ class PureFluidSaturationTableData{
     
 		MSGPACK_DEFINE(revision, vectors); // write the member variables that you want to pack
 
-        bool is_inside(double p, parameters other, double val, std::size_t &iL, std::size_t &iV, CoolPropDbl &yL, CoolPropDbl &yV){
-            // Trivial checks
-            // If p is outside the range (ptriple, pcrit), considered to not be inside
-            double pmax = this->pV[pV.size()-1], pmin = this->pV[0];
-            if (p > pmax || p < pmin){return false;}
+        bool is_inside(parameters main, double mainval, parameters other, double val, std::size_t &iL, std::size_t &iV, CoolPropDbl &yL, CoolPropDbl &yV){
             std::vector<double> *yvecL = NULL, *yvecV = NULL;
             switch(other){
                 case iT: yvecL = &TL; yvecV = &TV; break;
@@ -61,15 +57,38 @@ class PureFluidSaturationTableData{
                 case iQ: yvecL = &TL; yvecV = &TV; break;
                 case iSmolar: yvecL = &smolarL; yvecV = &smolarV; break;
                 case iUmolar: yvecL = &umolarL; yvecV = &umolarV; break;
+                case iDmolar: yvecL = &rhomolarL; yvecV = &rhomolarV; break;
                 default: throw ValueError("invalid input for other in is_inside");
             }
+            
+            // Trivial checks
+            if (main == iP){
+                // If p is outside the range (ptriple, pcrit), considered to not be inside
+                double pmax = this->pV[pV.size()-1], pmin = this->pV[0];
+                if (mainval > pmax || mainval < pmin){return false;}
+            }
+            else if (main == iT){
+                // If p is outside the range (ptriple, pcrit), considered to not be inside
+                double Tmax = this->TV[TV.size()-1], Tmin = this->TV[0];
+                if (mainval > Tmax || mainval < Tmin){return false;}
+            }
+            else{
+                throw ValueError("invalid input for other in is_inside");
+            }
+            
             // Now check based on a rough analysis using bounding pressure
             std::size_t iLplus, iVplus;
             // Find the indices (iL,iL+1) & (iV,iV+1) that bound the given pressure
             // In general iV and iL will be the same, but if pseudo-pure, they might
             // be different
-            bisect_vector(pV, p, iV);
-            bisect_vector(pL, p, iL);
+            if (main ==iP){
+                bisect_vector(pV, mainval, iV);
+                bisect_vector(pL, mainval, iL);
+            }
+            else if (main == iT){
+                bisect_vector(TV, mainval, iV);
+                bisect_vector(TL, mainval, iL);
+            }
 			if (other == iQ){return true;}
             iVplus = std::min(iV+1, N-1);
             iLplus = std::min(iL+1, N-1);
@@ -80,9 +99,16 @@ class PureFluidSaturationTableData{
             // Actually do "saturation" call using cubic interpolation
             if (iVplus < 3){ iVplus = 3;}
             if (iLplus < 3){ iLplus = 3;}
-            double logp = log(p);
-            yV = CubicInterp(logpV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, logp);
-            yL = CubicInterp(logpL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, logp);
+            if (main==iP){
+                double logp = log(mainval);
+                yV = CubicInterp(logpV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, logp);
+                yL = CubicInterp(logpL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, logp);
+            }
+            else if (main == iT){
+                yV = CubicInterp(TV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval);
+                yL = CubicInterp(TL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
+            }
+
             if (!is_in_closed_range(yV, yL, static_cast<CoolPropDbl>(val))){ 
                 return false;
             }
@@ -306,7 +332,6 @@ class SinglePhaseGriddedTableData{
                 bisect_segmented_vector_slice(get(otherkey), j, otherval, i);
             }
             else if (givenkey == xkey){
-                std::size_t j;
                 bisect_vector(xvec, givenval, i);
                 // This one is fine because we now end up with a vector<double> in the other variable
                 bisect_segmented_vector(get(otherkey)[i], otherval, j);
