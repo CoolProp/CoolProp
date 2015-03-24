@@ -189,8 +189,11 @@ double CoolProp::TTSEBackend::invert_single_phase_x(SinglePhaseGriddedTableData 
     else if (std::abs(deltax2) < xspacing && !(std::abs(deltax1) < xspacing) ){
 		val = deltax2 + table.xvec[i];
     }
+    else if (std::abs(deltax1) < std::abs(deltax2) && std::abs(deltax1) < 10*xspacing){
+        val = deltax1 + table.xvec[i];
+    }
     else{
-        throw ValueError("Cannot find the x solution");
+        throw ValueError(format("Cannot find the x solution; xspacing: %g dx1: %g dx2: %g", xspacing, deltax1, deltax2));
     }
 
     // Cache the output value calculated
@@ -199,6 +202,7 @@ double CoolProp::TTSEBackend::invert_single_phase_x(SinglePhaseGriddedTableData 
         case iT: _T = val; break;
         default: throw ValueError();
     }
+    return val;
 }
 /// Use the single-phase table to evaluate an output
 double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)

@@ -561,7 +561,7 @@ template <typename T> void bisect_segmented_vector(const std::vector<T> &vec, T 
                 L = MR; rL = vec[MR] - val;
             }
             else{
-                throw CoolProp::ValueError("Unable to bisect segmented vector; neither chunk contains the solution");
+                throw CoolProp::ValueError(format("Unable to bisect segmented vector; neither chunk contains the solution %g %g %g %g", rL, rML, rMR, rR));
             }
             M = (L+R)/2;
         }
@@ -594,17 +594,18 @@ template <typename T> void bisect_segmented_vector_slice(const std::vector<std::
 {
     T rL, rM, rR;
     std::size_t N = mat[j].size(), L = 0, R = N-1, M = (L+R)/2;
-    rL = mat[L][j] - val; rR = mat[R][j] - val;
     // Move the right limits in until they are good
     while (!ValidNumber(mat[R][j])){
         if (R == 1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
         R--;
     }
+    rR = mat[R][j] - val;
     // Move the left limits in until they are good
     while (!ValidNumber(mat[L][j])){
         if (L == mat.size()-1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
         L++;
     }
+    rL = mat[L][j] - val;
     while (R - L > 1){
         if (!ValidNumber(mat[M][j])){
             std::size_t MR = M, ML = M;
@@ -621,16 +622,16 @@ template <typename T> void bisect_segmented_vector_slice(const std::vector<std::
             T rML = mat[ML][j] - val; 
             T rMR = mat[MR][j] - val;
             // Figure out which chunk is the good part
-            if (rR*rML > 0 && rL*rML < 0){
+            if (rR*rMR > 0 && rL*rML < 0){
                 // solution is between L and ML
                 R = ML; rR = mat[ML][j] - val;
             }
-            else if (rR*rMR < 0 && rL*rMR > 0){
+            else if (rR*rMR < 0 && rL*rML > 0){
                 // solution is between R and MR
                 L = MR; rL = mat[MR][j] - val;
             }
             else{
-                throw CoolProp::ValueError("Unable to bisect segmented vector; neither chunk contains the solution");
+                throw CoolProp::ValueError(format("Unable to bisect segmented vector slice; neither chunk contains the solution %g %g %g %g", rL,rML,rMR,rR));
             }
             M = (L+R)/2;
         }
