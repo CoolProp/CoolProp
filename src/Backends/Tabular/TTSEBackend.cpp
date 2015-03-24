@@ -215,23 +215,38 @@ double CoolProp::TTSEBackend::invert_single_phase_x(SinglePhaseGriddedTableData 
     double deltax2 = (-b - sqrt(b*b - 4*a*c))/(2*a);
 
     // If only one is less than a multiple of x spacing, thats your solution
-    double xspacing, val;
+    double xspacing, xratio, val;
     if (!table.logx){
         xspacing = table.xvec[1] - table.xvec[0];
+        if (std::abs(deltax1) < xspacing && !(std::abs(deltax2) < xspacing) ){
+		    val = deltax1 + table.xvec[i];
+        }
+        else if (std::abs(deltax2) < xspacing && !(std::abs(deltax1) < xspacing) ){
+		    val = deltax2 + table.xvec[i];
+        }
+        else if (std::abs(deltax1) < std::abs(deltax2) && std::abs(deltax1) < 10*xspacing){
+            val = deltax1 + table.xvec[i];
+        }
+        else{
+            throw ValueError(format("Cannot find the x solution; xspacing: %g dx1: %g dx2: %g", xspacing, deltax1, deltax2));
+        }
     }else{
-        xspacing = table.xvec[i+1] - table.xvec[i];
-    }
-	if (std::abs(deltax1) < xspacing && !(std::abs(deltax2) < xspacing) ){
-		val = deltax1 + table.xvec[i];
-    }
-    else if (std::abs(deltax2) < xspacing && !(std::abs(deltax1) < xspacing) ){
-		val = deltax2 + table.xvec[i];
-    }
-    else if (std::abs(deltax1) < std::abs(deltax2) && std::abs(deltax1) < 10*xspacing){
-        val = deltax1 + table.xvec[i];
-    }
-    else{
-        throw ValueError(format("Cannot find the x solution; xspacing: %g dx1: %g dx2: %g", xspacing, deltax1, deltax2));
+        xratio = table.xvec[1]/table.xvec[0];
+        double xj = table.xvec[j];
+        double xratio1 = (xj+deltax1)/xj;
+        double xratio2 = (xj+deltax2)/xj;
+        if (xratio1 < xratio && xratio1 > 1/xratio ){
+		    val = deltax1 + table.xvec[i];
+        }
+        else if (xratio2 < xratio && xratio2 > 1/xratio ){
+		    val = deltax2 + table.xvec[i];
+        }
+        else if (xratio1 < xratio*5 && xratio1 > 1/xratio/5 ){
+		    val = deltax1 + table.xvec[i];
+        }
+        else{
+            throw ValueError(format("Cannot find the x solution; xj: %g xratio: %g xratio1: %g xratio2: %g a: %g b^2-4*a*c %g", xj, xratio, xratio1, xratio2, a, b*b-4*a*c));
+        }
     }
 
     // Cache the output value calculated
@@ -279,18 +294,23 @@ double CoolProp::TTSEBackend::invert_single_phase_y(SinglePhaseGriddedTableData 
         double yj = table.yvec[j];
         double yratio1 = (yj+deltay1)/yj;
         double yratio2 = (yj+deltay2)/yj;
+        //std::cout << format("Cannot find the y solution; yj: %g yratio: %g yratio1: %g yratio2: %g a: %g b: %g b^2-4ac: %g %d %d\n", yj, yratio, yratio1, yratio2, a, b, b*b-4*a*c, i, j);
         if (yratio1 < yratio && yratio1 > 1/yratio ){
 		    val = deltay1 + table.yvec[j];
         }
         else if (yratio2 < yratio && yratio2 > 1/yratio ){
 		    val = deltay2 + table.yvec[j];
         }
-        else if (yratio1 < yratio*5 && yratio1 > 1/yratio/5 ){
+        else if (std::abs(yratio1-1) < std::abs(yratio2-1)){
 		    val = deltay1 + table.yvec[j];
         }
-        else{
-            throw ValueError(format("Cannot find the y solution; yspacing: %g dy1: %g dy2: %g", yspacing, deltay1, deltay2));
+        else if (std::abs(yratio2-1) < std::abs(yratio1-1)){
+		    val = deltay2 + table.yvec[j];
         }
+        else{
+            throw ValueError(format("Cannot find the y solution; yj: %g yratio: %g yratio1: %g yratio2: %g a: %g b: %g b^2-4ac: %g %d %d", yj, yratio, yratio1, yratio2, a, b, b*b-4*a*c, i, j));
+        }
+        
     }
 
     // Cache the output value calculated

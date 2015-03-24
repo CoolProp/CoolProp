@@ -493,26 +493,6 @@ template <typename T> std::vector<T> logspace(T xmin, T xmax, std::size_t n) {
     return x;
 }
 
-template <typename T> void bisect_vector(const std::vector<T> &vec, T val, std::size_t &i)
-{
-    T rL, rM, rR;
-    std::size_t N = vec.size(), L = 0, R = N-1, M = (L+R)/2;
-    rL = vec[L] - val; rR = vec[R] - val;
-    while (R - L > 1){
-        rM = vec[M] - val;
-        if (rR*rM > 0 && rL*rM < 0){
-            // solution is between L and M
-            R = M; rR = vec[R] - val;
-        }
-        else{
-            // solution is between R and M
-            L = M; rL = vec[L] - val;
-        }
-        M = (L+R)/2;
-    }
-    i = L;
-}
-
 /**
  * @brief Use bisection to find the inputs that bisect the value you want, the trick
  * here is that this function is allowed to have "holes" where parts of the the array are 
@@ -521,7 +501,7 @@ template <typename T> void bisect_vector(const std::vector<T> &vec, T val, std::
  * @param val The value to be found
  * @param i The index to the left of the final point; i and i+1 bound the value
  */
-template <typename T> void bisect_segmented_vector(const std::vector<T> &vec, T val, std::size_t &i)
+template <typename T> void bisect_vector(const std::vector<T> &vec, T val, std::size_t &i)
 {
     T rL, rM, rR;
     std::size_t N = vec.size(), L = 0, R = N-1, M = (L+R)/2;

@@ -334,7 +334,11 @@ class SinglePhaseGriddedTableData{
             else if (givenkey == xkey){
                 bisect_vector(xvec, givenval, i);
                 // This one is fine because we now end up with a vector<double> in the other variable
-                bisect_segmented_vector(get(otherkey)[i], otherval, j);
+                const std::vector<std::vector<double> > & v = get(otherkey);
+                bisect_vector(v[i], otherval, j);
+                if (j < v[i].size()-1 && std::abs(v[i][j+1] - otherval) < std::abs(v[i][j] - otherval)){
+                    j++;
+                }
             }
 		}
 		/// Find the nearest good neighbor node for inputs that are the same as the grid inputs
