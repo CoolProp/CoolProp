@@ -173,12 +173,14 @@
         }
     }
     
+#if !defined(__powerpc__)
     /// Copy string to wstring
     /// Dangerous if the string has non-ASCII characters; from http://stackoverflow.com/a/8969776/1360263 
     inline void StringToWString(const std::string &s, std::wstring &ws)
     {
         ws = std::wstring(s.begin(), s.end());
     }
+#endif
 
     #if defined(__ISWINDOWS__)
     /// From http://stackoverflow.com/a/17827724/1360263
@@ -222,8 +224,10 @@
         return size;
     } 
     #else
+    # if !defined(__powerpc__)
     /// Get the size of a directory in bytes
     unsigned long long CalculateDirSize(const std::string &path);
+    #endif
     #endif
 
     /// The following code for the trim functions was taken from http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
