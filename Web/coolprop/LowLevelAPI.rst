@@ -93,7 +93,7 @@ It is possible to get the partial derivatives in a very computationally efficien
 Reference States
 ----------------
 
-To begin with, you should read the high-level docs about the reference state: :ref:`high_level_set_reference_state`.  Those docs are also applicable to the low-level interface.  
+To begin with, you should read :ref:`the high-level docs about the reference state <high_level_set_reference_state>`.  Those docs are also applicable to the low-level interface.  
 
 .. warning::
 
@@ -119,7 +119,7 @@ Here is an example showing how to change the reference state and demonstrating t
     
     In [1]: AS2.update(CoolProp.QT_INPUTS, 0, 233.15); 
     
-    # Note how the first class has its default value (change in reference state is not seen)
+    # Note how the AS1 has its default value (change in reference state is not seen)
     # and AS2 does see the new reference state
     In [1]: print AS1.hmass(), AS2.hmass()
     
