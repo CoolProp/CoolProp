@@ -194,6 +194,8 @@ and then to calculate the density of air using the mixture model at 1 atmosphere
     
 Exactly the same methodology can be used from other wrappers.
 
+.. _high_level_set_reference_state:
+
 Reference States
 ----------------
 
