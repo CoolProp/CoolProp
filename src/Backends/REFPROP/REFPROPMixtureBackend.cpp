@@ -589,11 +589,12 @@ CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_reducing(){
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
     this->check_loaded_fluid();
-    if (mole_fractions.size() != 1){throw ValueError("calc_Ttriple cannot be evaluated for mixtures");}
-    long icomp = 1;
-    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
-    INFOdll(&icomp, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
-    return static_cast<CoolPropDbl>(ttrp);
+    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas, summer = 0;
+    for (long i = 0; i < mole_fractions.size(); ++i){
+        INFOdll(&i, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
+        summer += ttrp*mole_fractions[i];
+    }
+    return static_cast<CoolPropDbl>(summer);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_gas_constant(){
     this->check_loaded_fluid();
