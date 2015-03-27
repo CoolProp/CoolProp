@@ -748,7 +748,7 @@ public:
         return _d3alphar_dDelta2_dTau;
     };
 	CoolPropDbl d3alphar_dDelta_dTau2(void){
-        if (!_d3alphar_dDelta_dTau2) _d3alphar_dDelta_dTau2 = d3alphar_dDelta_dTau2();
+        if (!_d3alphar_dDelta_dTau2) _d3alphar_dDelta_dTau2 = calc_d3alphar_dDelta_dTau2();
         return _d3alphar_dDelta_dTau2;
     };
 	CoolPropDbl d3alphar_dTau3(void){

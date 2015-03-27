@@ -1331,7 +1331,6 @@ CoolPropDbl REFPROPMixtureBackend::call_phixdll(long itau, long idel)
 CoolPropDbl REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
 {
     this->check_loaded_fluid();
-    throw ValueError("Temporarily the PHI0dll function is not available for REFPROP");
     double val = 0, tau = _tau, delta = _delta, __T = T(), __rho = rhomolar()/1000;
     if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
