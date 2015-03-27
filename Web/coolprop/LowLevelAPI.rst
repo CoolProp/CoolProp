@@ -89,3 +89,40 @@ It is possible to get the partial derivatives in a very computationally efficien
     In [4]: HEOS.cpmass()
 
     In [4]: HEOS.first_partial_deriv(CoolProp.iHmass, CoolProp.iT, CoolProp.iP)
+    
+Reference States
+----------------
+
+To begin with, you should read the high-level docs about the reference state: :ref:`high_level_set_reference_state`.  Those docs are also applicable to the low-level interface.  
+
+.. warning::
+
+    As with the high-level interface, calling ``set_reference_stateS`` (or ``set_reference_state`` in python) should be called right at the beginning of your code, and not changed again later on.
+    
+    Importantly, once an ``AbstractState``-derived instance has been generated from the factory function, it **DOES NOT** pick up the change in the reference state.  This is intentional, but you should watch out for this behavior.
+    
+Here is an example showing how to change the reference state and demonstrating the potential issues
+
+.. ipython::
+
+    In [1]: import CoolProp as CP
+    
+    # This one doesn't see the change in reference state
+    In [1]: AS1 = CoolProp.AbstractState('HEOS','n-Propane'); 
+    
+    In [1]: AS1.update(CoolProp.QT_INPUTS, 0, 233.15); 
+    
+    In [1]: CoolProp.CoolProp.set_reference_state('n-Propane','ASHRAE')
+    
+    # This one gets the update in the reference state
+    In [1]: AS2 = CoolProp.AbstractState('HEOS','n-Propane'); 
+    
+    In [1]: AS2.update(CoolProp.QT_INPUTS, 0, 233.15); 
+    
+    # Note how the first class has its default value (change in reference state is not seen)
+    # and AS2 does see the new reference state
+    In [1]: print AS1.hmass(), AS2.hmass()
+    
+    # Back to the original value
+    In [1]: CoolProp.CoolProp.set_reference_state('n-Propane','DEF')
+    

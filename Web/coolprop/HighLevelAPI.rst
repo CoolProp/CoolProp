@@ -194,7 +194,38 @@ and then to calculate the density of air using the mixture model at 1 atmosphere
     
 Exactly the same methodology can be used from other wrappers.
 
+Reference States
+----------------
 
+Enthalpy and entropy are *relative* properties!  You should always be comparing *differences* in enthalpy rather than absolute values of the enthalpy or entropy.  That said, if can be useful to set the reference state values for enthalpy and entropy to one of a few standard values.  This is done by the use of the ``set_reference_state`` function in python, or the ``set_reference_stateS`` function most everywhere else.  For documentation of the underlying C++ function, see :cpapi:`CoolProp::set_reference_stateS`.
+
+.. warning:: 
+
+    The changing of the reference state should be part of the initialization of your program, and it is not recommended to change the reference state during the course of making calculations
+
+A number of reference states can be used: 
+
+* ``IIR``: h = 200 kJ/kg, s=1 kJ/kg/K at 0C saturated liquid
+* ``ASHRAE``: h = 0, s = 0 @ -40C saturated liquid
+* ``NBP``: h=0, s=0 for saturated liquid at 1 atmosphere
+* ``DEF``: Go back to the default reference state for the fluid
+
+which can be used like
+
+.. ipython::
+
+    In [1]: import CoolProp as CP
+    
+    In [1]: CoolProp.CoolProp.set_reference_state('n-Propane','ASHRAE')
+    
+    # Should be zero (or very close to it)
+    In [1]: CoolProp.CoolProp.PropsSI('H', 'T', 233.15, 'Q', 0, 'n-Propane')
+    
+    # Back to the original value
+    In [1]: CoolProp.CoolProp.set_reference_state('n-Propane','DEF')
+    
+    # Should not be zero
+    In [1]: CoolProp.CoolProp.PropsSI('H', 'T', 233.15, 'Q', 0, 'n-Propane')
 
 C++ Sample Code
 ---------------
