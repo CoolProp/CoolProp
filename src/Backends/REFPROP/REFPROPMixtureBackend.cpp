@@ -1183,24 +1183,64 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             update(TUmolar_INPUTS, value1, value2 * (double)_molar_mass);
             return;
         }
-        case PQ_INPUTS:
+		case PQ_INPUTS:
         {
-            /* From REFPROP:
-            additional input--only for TQFLSH and PQFLSH
-                 kq--flag specifying units for input quality
-                     kq = 1 quality on MOLAR basis [moles vapor/total moles]
-                     kq = 2 quality on MASS basis [mass vapor/total mass]
-            */
+            // From REFPROP:
+            //additional input--only for TQFLSH and PQFLSH
+            //     kq--flag specifying units for input quality
+            //         kq = 1 quality on MOLAR basis [moles vapor/total moles]
+            //         kq = 2 quality on MASS basis [mass vapor/total mass]
             long kq = 1;
+            
+            // c  Estimate temperature, pressure, and compositions to be used
+            // c  as initial guesses to SATTP
+            // c
+            // c  inputs:
+            // c   iFlsh--Phase flag:    0 - Flash calculation (T and P known)
+            // c                         1 - T and xliq known, P and xvap returned
+            // c                         2 - T and xvap known, P and xliq returned
+            // c                         3 - P and xliq known, T and xvap returned
+            // c                         4 - P and xvap known, T and xliq returned
+            // c                         if this value is negative, the retrograde point will be returned
+            // c        t--temperature [K] (input or output)
+            // c        p--pressure [MPa] (input or output)
+            // c        x--composition [array of mol frac]
+            // c   iGuess--if set to 1, all inputs are used as initial guesses for the calculation
+            // c  outputs:
+            // c        d--overall molar density [mol/L]
+            // c       Dl--molar density [mol/L] of saturated liquid
+            // c       Dv--molar density [mol/L] of saturated vapor
+            // c     xliq--liquid phase composition [array of mol frac]
+            // c     xvap--vapor phase composition [array of mol frac]
+            // c        q--quality
+            // c     ierr--error flag:   0 = successful
+            // c                         1 = unsuccessful
+            // c     herr--error string (character*255 variable if ierr<>0)
 
             // Unit conversion for REFPROP
             p_kPa = 0.001*value1; _Q = value2; // Want p in [kPa] in REFPROP
-
-            // Use flash routine to find properties
-            PQFLSHdll(&p_kPa,&_Q,&(mole_fractions[0]),&kq,&_T,&rho_mol_L,
-                &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
-                &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
-                &ierr,herr,errormessagelength); // Error terms
+            
+            long iFlsh = 0, iGuess = 0;
+            if (std::abs(value2) < 1e-10){ 
+                iFlsh = 3; // bubble point
+            }
+            else if (std::abs(value2-1) < 1e-10){
+                iFlsh = 4; // dew point
+            }
+            if (iFlsh != 0){
+                // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
+                SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess,
+                      &rho_mol_L, &rhoLmol_L,&rhoVmol_L, 
+                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q, 
+                      &ierr,herr,errormessagelength);
+            }
+            else{
+                // Use flash routine to find properties
+                PQFLSHdll(&p_kPa,&_Q,&(mole_fractions[0]),&kq,&_T,&rho_mol_L,
+                    &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
+                    &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
+                    &ierr,herr,errormessagelength); // Error terms
+            }
 
             if (static_cast<int>(ierr) > 0) { throw ValueError(format("PQ: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
@@ -1228,10 +1268,26 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             _Q = value1; _T = value2;
 
             // Use flash routine to find properties
-            TQFLSHdll(&_T,&_Q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
-                 &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
-                &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
-                &ierr,herr,errormessagelength); // Error terms
+			long iFlsh = 0, iGuess = 0;
+            if (std::abs(value2) < 1e-10){ 
+                iFlsh = 1; // bubble point with T given
+            }
+            else if (std::abs(value2-1) < 1e-10){
+                iFlsh = 2; // dew point with T given
+            }
+            if (iFlsh != 0){
+                // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
+                SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess,
+                      &rho_mol_L, &rhoLmol_L,&rhoVmol_L, 
+                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q, 
+                      &ierr,herr,errormessagelength);
+            }
+			else{
+				TQFLSHdll(&_T,&_Q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
+					 &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
+					&emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
+					&ierr,herr,errormessagelength); // Error terms
+			}
 
             if (static_cast<int>(ierr) > 0) {
                 throw ValueError(format("TQ(%s): %s",LoadedREFPROPRef.c_str(), herr).c_str());
