@@ -15,7 +15,7 @@
  * See http://stackoverflow.com/a/148610
  * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
  */
-#define LIST_OF_MATRICES X(T) X(p) X(rhomolar) X(hmolar) X(smolar) X(dTdx) X(dTdy) X(dpdx) X(dpdy) X(drhomolardx) X(drhomolardy) X(dhmolardx) X(dhmolardy) X(dsmolardx) X(dsmolardy) X(d2Tdx2) X(d2Tdxdy) X(d2Tdy2) X(d2pdx2) X(d2pdxdy) X(d2pdy2) X(d2rhomolardx2) X(d2rhomolardxdy) X(d2rhomolardy2) X(d2hmolardx2) X(d2hmolardxdy) X(d2hmolardy2) X(d2smolardx2) X(d2smolardxdy) X(d2smolardy2) X(visc) X(cond)
+#define LIST_OF_MATRICES X(T) X(p) X(rhomolar) X(hmolar) X(smolar) X(umolar) X(dTdx) X(dTdy) X(dpdx) X(dpdy) X(drhomolardx) X(drhomolardy) X(dhmolardx) X(dhmolardy) X(dsmolardx) X(dsmolardy) X(dumolardx) X(dumolardy) X(d2Tdx2) X(d2Tdxdy) X(d2Tdy2) X(d2pdx2) X(d2pdxdy) X(d2pdy2) X(d2rhomolardx2) X(d2rhomolardxdy) X(d2rhomolardy2) X(d2hmolardx2) X(d2hmolardxdy) X(d2hmolardy2) X(d2smolardx2) X(d2smolardxdy) X(d2smolardy2) X(d2umolardx2) X(d2umolardxdy) X(d2umolardy2) X(visc) X(cond)
 
 /** ***MAGIC WARNING***!! X Macros in use
  * See http://stackoverflow.com/a/148610
@@ -49,26 +49,46 @@ class PureFluidSaturationTableData{
     
 		MSGPACK_DEFINE(revision, vectors); // write the member variables that you want to pack
 
-        bool is_inside(double p, parameters other, double val, std::size_t &iL, std::size_t &iV, CoolPropDbl &yL, CoolPropDbl &yV){
-            // Trivial checks
-            // If p is outside the range (ptriple, pcrit), considered to not be inside
-            double pmax = this->pV[pV.size()-1], pmin = this->pV[0];
-            if (p > pmax || p < pmin){return false;}
+        bool is_inside(parameters main, double mainval, parameters other, double val, std::size_t &iL, std::size_t &iV, CoolPropDbl &yL, CoolPropDbl &yV){
             std::vector<double> *yvecL = NULL, *yvecV = NULL;
             switch(other){
                 case iT: yvecL = &TL; yvecV = &TV; break;
                 case iHmolar: yvecL = &hmolarL; yvecV = &hmolarV; break;
                 case iQ: yvecL = &TL; yvecV = &TV; break;
-                //case iT: yvecL = &TL; yvecV = &TV; break;
+                case iSmolar: yvecL = &smolarL; yvecV = &smolarV; break;
+                case iUmolar: yvecL = &umolarL; yvecV = &umolarV; break;
+                case iDmolar: yvecL = &rhomolarL; yvecV = &rhomolarV; break;
                 default: throw ValueError("invalid input for other in is_inside");
             }
+            
+            // Trivial checks
+            if (main == iP){
+                // If p is outside the range (ptriple, pcrit), considered to not be inside
+                double pmax = this->pV[pV.size()-1], pmin = this->pV[0];
+                if (mainval > pmax || mainval < pmin){return false;}
+            }
+            else if (main == iT){
+                // If p is outside the range (ptriple, pcrit), considered to not be inside
+                double Tmax = this->TV[TV.size()-1], Tmin = this->TV[0];
+                if (mainval > Tmax || mainval < Tmin){return false;}
+            }
+            else{
+                throw ValueError("invalid input for other in is_inside");
+            }
+            
             // Now check based on a rough analysis using bounding pressure
             std::size_t iLplus, iVplus;
             // Find the indices (iL,iL+1) & (iV,iV+1) that bound the given pressure
             // In general iV and iL will be the same, but if pseudo-pure, they might
             // be different
-            bisect_vector(pV, p, iV);
-            bisect_vector(pL, p, iL);
+            if (main ==iP){
+                bisect_vector(pV, mainval, iV);
+                bisect_vector(pL, mainval, iL);
+            }
+            else if (main == iT){
+                bisect_vector(TV, mainval, iV);
+                bisect_vector(TL, mainval, iL);
+            }
 			if (other == iQ){return true;}
             iVplus = std::min(iV+1, N-1);
             iLplus = std::min(iL+1, N-1);
@@ -79,9 +99,16 @@ class PureFluidSaturationTableData{
             // Actually do "saturation" call using cubic interpolation
             if (iVplus < 3){ iVplus = 3;}
             if (iLplus < 3){ iLplus = 3;}
-            double logp = log(p);
-            yV = CubicInterp(logpV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, logp);
-            yL = CubicInterp(logpL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, logp);
+            if (main==iP){
+                double logp = log(mainval);
+                yV = CubicInterp(logpV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, logp);
+                yL = CubicInterp(logpL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, logp);
+            }
+            else if (main == iT){
+                yV = CubicInterp(TV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval);
+                yL = CubicInterp(TL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
+            }
+
             if (!is_in_closed_range(yV, yL, static_cast<CoolPropDbl>(val))){ 
                 return false;
             }
@@ -156,6 +183,12 @@ class PureFluidSaturationTableData{
                     double hV = CubicInterp(logpV, hmolarV, iV-2, iV-1, iV, iV+1, logp);
                     double hL = CubicInterp(logpL, hmolarL, iL-2, iL-1, iL, iL+1, logp);
                     return Q*hV + (1-Q)*hL;
+                }
+				case iUmolar:
+                {
+                    double uV = CubicInterp(logpV, umolarV, iV-2, iV-1, iV, iV+1, logp);
+                    double uL = CubicInterp(logpL, umolarL, iL-2, iL-1, iL, iL+1, logp);
+                    return Q*uV + (1-Q)*uL;
                 }
                 case iDmolar:
                 {
@@ -290,6 +323,24 @@ class SinglePhaseGriddedTableData{
 				}
 			}
 		}
+        /// @brief Find the nearest neighbor for one (given) variable native, one variable non-native
+		void find_nearest_neighbor(parameters givenkey, double givenval, parameters otherkey, double otherval, std::size_t &i, std::size_t &j){
+			if (givenkey == ykey){
+                bisect_vector(yvec, givenval, j);
+                // This one is problematic because we need to make a slice against the grain in the "matrix"
+                // which requires a slightly different algorithm
+                bisect_segmented_vector_slice(get(otherkey), j, otherval, i);
+            }
+            else if (givenkey == xkey){
+                bisect_vector(xvec, givenval, i);
+                // This one is fine because we now end up with a vector<double> in the other variable
+                const std::vector<std::vector<double> > & v = get(otherkey);
+                bisect_vector(v[i], otherval, j);
+                if (j < v[i].size()-1 && std::abs(v[i][j+1] - otherval) < std::abs(v[i][j] - otherval)){
+                    j++;
+                }
+            }
+		}
 		/// Find the nearest good neighbor node for inputs that are the same as the grid inputs
 		/// If the straightforward node (i,j) obtained by bisection is no good, find its nearest good node
 		void find_native_nearest_good_neighbor(double x, double y, std::size_t &i, std::size_t &j){
@@ -306,6 +357,17 @@ class SinglePhaseGriddedTableData{
 			bisect_vector(xvec, x, i);
 			bisect_vector(yvec, y, j);
 		}
+        const std::vector<std::vector<double> > get(parameters key){
+            switch(key){
+                case iDmolar: return rhomolar;
+                case iT: return T;
+                case iUmolar: return umolar;
+                case iHmolar: return hmolar;
+                case iSmolar: return smolar;
+                case iP: return p;
+                default: throw KeyError(format("invalid key"));
+            }
+        }
 };
 
 /// This class holds the single-phase data for a log(p)-h gridded table
@@ -406,8 +468,40 @@ class TabularBackend : public AbstractState
         bool using_single_phase_table;
         std::size_t cached_single_phase_i, cached_single_phase_j;
         std::size_t cached_saturation_iL, cached_saturation_iV;
+        std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdx2, *d2zdxdy, *d2zdy2;
     public:
-        
+        void connect_pointers(parameters output, SinglePhaseGriddedTableData &table)
+		{
+			// Connect the pointers based on the output variable desired
+			switch(output){
+				case iT:
+					z = &table.T; dzdx = &table.dTdx; dzdy = &table.dTdy;
+					d2zdxdy = &table.d2Tdxdy; d2zdx2 = &table.d2Tdx2; d2zdy2 = &table.d2Tdy2;
+					break;
+				case iDmolar:
+					z = &table.rhomolar; dzdx = &table.drhomolardx; dzdy = &table.drhomolardy;
+					d2zdxdy = &table.d2rhomolardxdy; d2zdx2 = &table.d2rhomolardx2; d2zdy2 = &table.d2rhomolardy2;
+					break;
+				case iSmolar:
+                    z = &table.smolar; dzdx = &table.dsmolardx; dzdy = &table.dsmolardy;
+					d2zdxdy = &table.d2smolardxdy; d2zdx2 = &table.d2smolardx2; d2zdy2 = &table.d2smolardy2;
+					break;
+				case iHmolar:
+					z = &table.hmolar; dzdx = &table.dhmolardx; dzdy = &table.dhmolardy;
+					d2zdxdy = &table.d2hmolardxdy; d2zdx2 = &table.d2hmolardx2; d2zdy2 = &table.d2hmolardy2;
+					break;
+				case iUmolar:
+					z = &table.umolar; dzdx = &table.dumolardx; dzdy = &table.dumolardy;
+					d2zdxdy = &table.d2umolardxdy; d2zdx2 = &table.d2umolardx2; d2zdy2 = &table.d2umolardy2;
+					break;
+				case iviscosity:
+					z = &table.visc; break;
+				case iconductivity:
+					z = &table.cond; break;
+				default:
+					throw ValueError();
+			}
+		}
         LogPHTable single_phase_logph;
         LogPTTable single_phase_logpT;
         PureFluidSaturationTableData pure_saturation; // This will ultimately be split into pure and mixture backends which derive from this backend
@@ -424,6 +518,8 @@ class TabularBackend : public AbstractState
         virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
+        virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
         
         /// Returns the path to the tables that shall be written
         std::string path_to_tables(void);
@@ -495,6 +591,22 @@ class TabularBackend : public AbstractState
                 return pure_saturation.evaluate(iHmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
             }
         }
+        CoolPropDbl calc_cpmolar(void){
+            if (using_single_phase_table){
+                return calc_first_partial_deriv(iHmolar, iT, iP);
+            }
+            else{
+                throw ValueError("Two-phase not possible for cpmolar currently");
+            }
+        }
+		CoolPropDbl calc_cvmolar(void){
+            if (using_single_phase_table){
+                return calc_first_partial_deriv(iUmolar, iT, iDmolar);
+            }
+            else{
+                throw ValueError("Two-phase not possible for cvmolar currently");
+            }
+        }
         
         CoolPropDbl calc_viscosity(void){
             if (using_single_phase_table){
@@ -522,6 +634,42 @@ class TabularBackend : public AbstractState
                 return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
             }
         }
+        CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){
+            if (using_single_phase_table){
+                CoolPropDbl dOf_dx, dOf_dy, dWrt_dx, dWrt_dy, dConstant_dx, dConstant_dy;
+                
+                switch(selected_table){
+                    case SELECTED_PH_TABLE: {
+                        dOf_dx = evaluate_single_phase_phmolar_derivative(Of, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dOf_dy = evaluate_single_phase_phmolar_derivative(Of, cached_single_phase_i, cached_single_phase_j,0,1);
+                        dWrt_dx = evaluate_single_phase_phmolar_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dWrt_dy = evaluate_single_phase_phmolar_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,0,1);
+                        dConstant_dx = evaluate_single_phase_phmolar_derivative(Constant, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dConstant_dy = evaluate_single_phase_phmolar_derivative(Constant, cached_single_phase_i, cached_single_phase_j,0,1);
+						break;
+                    }
+                    case SELECTED_PT_TABLE:{
+                        dOf_dx = evaluate_single_phase_pT_derivative(Of, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dOf_dy = evaluate_single_phase_pT_derivative(Of, cached_single_phase_i, cached_single_phase_j,0,1);
+                        dWrt_dx = evaluate_single_phase_pT_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dWrt_dy = evaluate_single_phase_pT_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,0,1);
+                        dConstant_dx = evaluate_single_phase_pT_derivative(Constant, cached_single_phase_i, cached_single_phase_j,1,0);
+                        dConstant_dy = evaluate_single_phase_pT_derivative(Constant, cached_single_phase_i, cached_single_phase_j,0,1);
+						break;
+                    }
+                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
+                }
+                
+                
+                return (dOf_dx*dConstant_dy-dOf_dy*dConstant_dx)/(dWrt_dx*dConstant_dy-dWrt_dy*dConstant_dx);
+                    
+                //return 1/(evaluate_single_phase_phmolar_derivative(iT,cached_single_phase_i, cached_single_phase_j,1,0));
+            }
+            else{
+                return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            }
+            
+        };
         
         TabularBackend(shared_ptr<CoolProp::AbstractState> AS){
 			using_single_phase_table = false;

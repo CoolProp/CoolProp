@@ -13,7 +13,7 @@
 #include "Exceptions.h"
 #include "crossplatform_shared_ptr.h"
 
-#if !defined(__ISWINDOWS__)
+#if !defined(__ISWINDOWS__) && !defined(__powerpc__)
 #include <ftw.h>
 #include <stdint.h>
 #include <iostream>

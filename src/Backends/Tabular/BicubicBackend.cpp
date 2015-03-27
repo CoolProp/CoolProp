@@ -27,8 +27,8 @@ static Eigen::Matrix<double, 16, 16> Ainv(Ainv_data);
 void CoolProp::BicubicBackend::build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs)
 {
 	const bool debug = get_debug_level() > 5 || false;
-    const int param_count = 5;
-    parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP}; //iUmolar
+    const int param_count = 6;
+    parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP, iUmolar};
     std::vector<std::vector<double> > *f = NULL, *fx = NULL, *fy = NULL, *fxy = NULL;
     
 	clock_t t1 = clock();
@@ -56,6 +56,9 @@ void CoolProp::BicubicBackend::build_coeffs(SinglePhaseGriddedTableData &table, 
                 break;
 			case iHmolar:
                 f = &(table.hmolar); fx = &(table.dhmolardx); fy = &(table.dhmolardy); fxy = &(table.d2hmolardxdy);
+                break;
+			case iUmolar:
+				f = &(table.umolar); fx = &(table.dumolardx); fy = &(table.dumolardy); fxy = &(table.d2umolardxdy);
                 break;
             default:
                 throw ValueError();
@@ -157,7 +160,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 using_single_phase_table = true; // Use the table !
                 std::size_t iL, iV;
                 CoolPropDbl hL = 0, hV = 0;
-                if (pure_saturation.is_inside(_p, iHmolar, _hmolar, iL, iV, hL, hV)){
+                if (pure_saturation.is_inside(iP, _p, iHmolar, _hmolar, iL, iV, hL, hV)){
                     using_single_phase_table = false;
                     _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
                     if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
@@ -201,7 +204,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 using_single_phase_table = true; // Use the table !
                 std::size_t iL = 0, iV = 0;
                 CoolPropDbl TL = 0, TV = 0;
-                if (pure_saturation.is_inside(_p, iT, _T, iL, iV, TL, TV)){
+                if (pure_saturation.is_inside(iP, _p, iT, _T, iL, iV, TL, TV)){
                     using_single_phase_table = false;
                     throw ValueError(format("P,T with TTSE cannot be two-phase for now"));
                 }
@@ -217,7 +220,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
 			std::size_t iL = 0, iV = 0;
 			CoolPropDbl hL = 0, hV = 0;
 			_p = val1; _Q = val2;
-			pure_saturation.is_inside(_p, iQ, _Q, iL, iV, hL, hV);
+			pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, hL, hV);
             using_single_phase_table = false;
             if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
                 throw ValueError("vapor quality is not in (0,1)");
@@ -299,6 +302,54 @@ double CoolProp::BicubicBackend::evaluate_single_phase(SinglePhaseGriddedTableDa
         default: throw ValueError();
     }
     return val;
+}
+/// Use the single_phase table to evaluate an output
+double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny)
+{
+
+    // Get the cell
+    CellCoeffs &cell = coeffs[i][j];
+    
+	// Get the alpha coefficients
+    const std::vector<double> &alpha = cell.get(output);
+    
+    // Normalized value in the range (0, 1)
+	double xhat = (x - table.xvec[i])/(table.xvec[i+1] - table.xvec[i]);
+    double yhat = (y - table.yvec[j])/(table.yvec[j+1] - table.yvec[j]);
+    double dxhatdx = 1/(table.xvec[i+1] - table.xvec[i]);
+    double dyhatdy = 1/(table.yvec[j+1] - table.yvec[j]);
+    
+    // Calculate the output value desired
+	double val = 0;
+    if (Nx == 1 && Ny == 0){
+		if (output == table.xkey) { return 1.0; }
+		if (output == table.ykey) { return 0.0; }
+        for (std::size_t l = 1; l < 4; ++l)
+        {
+            for(std::size_t m = 0; m < 4; ++m)
+            {
+                val += alpha[m*4+l]*l*pow(xhat, static_cast<int>(l-1))*pow(yhat, static_cast<int>(m));
+            }
+        }
+        // val is now dz/dxhat|yhat
+        return val*dxhatdx;
+    }
+    else if (Ny == 1 && Nx == 0){
+		if (output == table.ykey) { return 1.0; }
+		if (output == table.xkey) { return 0.0; }
+        for (std::size_t l = 0; l < 4; ++l)
+        {
+            for(std::size_t m = 1; m < 4; ++m)
+            {
+                val += alpha[m*4+l]*pow(xhat, static_cast<int>(l))*m*pow(yhat, static_cast<int>(m-1));
+            }
+        }
+        // val is now dz/dyhat|xhat
+        return val*dyhatdy;
+    }
+    else{
+        throw ValueError("Invalid input");
+    }
 }
 
 #endif // !defined(NO_TABULAR_BACKENDS)

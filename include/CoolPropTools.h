@@ -154,12 +154,33 @@
         #define DEPRECATED(func) func
     #endif
     
+    /// from http://stackoverflow.com/a/5721830/1360263
+    template<class T> T factorial(T n) 
+    {
+        if (n == 0)
+           return 1;
+        return n * factorial(n - 1);
+    }
+    /// see https://proofwiki.org/wiki/Nth_Derivative_of_Mth_Power
+    /// and https://proofwiki.org/wiki/Definition:Falling_Factorial
+    template<class T1, class T2> T1 nth_derivative_of_x_to_m(T1 x, T2 n, T2 m)
+    {
+        if (n > m){
+            return 0;
+        }
+        else{
+            return factorial(m)/factorial(m-n)*pow(x, m-n);
+        }
+    }
+    
+#if !defined(__powerpc__)
     /// Copy string to wstring
     /// Dangerous if the string has non-ASCII characters; from http://stackoverflow.com/a/8969776/1360263 
     inline void StringToWString(const std::string &s, std::wstring &ws)
     {
         ws = std::wstring(s.begin(), s.end());
     }
+#endif
 
     #if defined(__ISWINDOWS__)
     /// From http://stackoverflow.com/a/17827724/1360263
@@ -203,8 +224,10 @@
         return size;
     } 
     #else
+    # if !defined(__powerpc__)
     /// Get the size of a directory in bytes
     unsigned long long CalculateDirSize(const std::string &path);
+    #endif
     #endif
 
     /// The following code for the trim functions was taken from http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
@@ -474,22 +497,140 @@ template <typename T> std::vector<T> logspace(T xmin, T xmax, std::size_t n) {
     return x;
 }
 
+/**
+ * @brief Use bisection to find the inputs that bisect the value you want, the trick
+ * here is that this function is allowed to have "holes" where parts of the the array are 
+ * also filled with invalid numbers for which ValidNumber(x) is false
+ * @param vec The vector to be bisected
+ * @param val The value to be found
+ * @param i The index to the left of the final point; i and i+1 bound the value
+ */
 template <typename T> void bisect_vector(const std::vector<T> &vec, T val, std::size_t &i)
 {
     T rL, rM, rR;
     std::size_t N = vec.size(), L = 0, R = N-1, M = (L+R)/2;
+    // Move the right limits in until they are good
+    while (!ValidNumber(vec[R])){
+        if (R == 1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
+        R--;
+    }
+    // Move the left limits in until they are good
+    while (!ValidNumber(vec[L])){
+        if (L == vec.size()-1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
+        L++;
+    }
     rL = vec[L] - val; rR = vec[R] - val;
     while (R - L > 1){
-        rM = vec[M] - val;
-        if (rR*rM > 0 && rL*rM < 0){
-            // solution is between L and M
-            R = M; rR = vec[R] - val;
+        if (!ValidNumber(vec[M])){
+            std::size_t MR = M, ML = M;
+            // Move middle-right to the right until it is ok
+            while (!ValidNumber(vec[MR])){
+                if (MR == vec.size()-1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
+                MR++;
+            }
+            // Move middle-left to the left until it is ok
+            while (!ValidNumber(vec[ML])){
+                if (ML == 1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
+                ML--;
+            }
+            T rML = vec[ML] - val; 
+            T rMR = vec[MR] - val;
+            // Figure out which chunk is the good part
+            if (rR*rML > 0 && rL*rML < 0){
+                // solution is between L and ML
+                R = ML; rR = vec[ML] - val;
+            }
+            else if (rR*rMR < 0 && rL*rMR > 0){
+                // solution is between R and MR
+                L = MR; rL = vec[MR] - val;
+            }
+            else{
+                throw CoolProp::ValueError(format("Unable to bisect segmented vector; neither chunk contains the solution %g %g %g %g", rL, rML, rMR, rR));
+            }
+            M = (L+R)/2;
         }
         else{
-            // solution is between R and M
-            L = M; rL = vec[L] - val;
+            rM = vec[M] - val;
+            if (rR*rM > 0 && rL*rM < 0){
+                // solution is between L and M
+                R = M; rR = vec[R] - val;
+            }
+            else{
+                // solution is between R and M
+                L = M; rL = vec[L] - val;
+            }
+            M = (L+R)/2;
         }
-        M = (L+R)/2;
+    }
+    i = L;
+}
+
+/**
+ * @brief Use bisection to find the inputs that bisect the value you want, the trick
+ * here is that this function is allowed to have "holes" where parts of the the array are 
+ * also filled with invalid numbers for which ValidNumber(x) is false
+ * @param matrix The vector to be bisected
+ * @param j The index of the matric in the off-grain dimension
+ * @param val The value to be found
+ * @param i The index to the left of the final point; i and i+1 bound the value
+ */
+template <typename T> void bisect_segmented_vector_slice(const std::vector<std::vector<T> > &mat, std::size_t j, T val, std::size_t &i)
+{
+    T rL, rM, rR;
+    std::size_t N = mat[j].size(), L = 0, R = N-1, M = (L+R)/2;
+    // Move the right limits in until they are good
+    while (!ValidNumber(mat[R][j])){
+        if (R == 1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
+        R--;
+    }
+    rR = mat[R][j] - val;
+    // Move the left limits in until they are good
+    while (!ValidNumber(mat[L][j])){
+        if (L == mat.size()-1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
+        L++;
+    }
+    rL = mat[L][j] - val;
+    while (R - L > 1){
+        if (!ValidNumber(mat[M][j])){
+            std::size_t MR = M, ML = M;
+            // Move middle-right to the right until it is ok
+            while (!ValidNumber(mat[MR][j])){
+                if (MR == mat.size()-1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
+                MR++;
+            }
+            // Move middle-left to the left until it is ok
+            while (!ValidNumber(mat[ML][j])){
+                if (ML == 1){ throw CoolProp::ValueError("All the values in bisection vector are invalid"); }
+                ML--;
+            }
+            T rML = mat[ML][j] - val; 
+            T rMR = mat[MR][j] - val;
+            // Figure out which chunk is the good part
+            if (rR*rMR > 0 && rL*rML < 0){
+                // solution is between L and ML
+                R = ML; rR = mat[ML][j] - val;
+            }
+            else if (rR*rMR < 0 && rL*rML > 0){
+                // solution is between R and MR
+                L = MR; rL = mat[MR][j] - val;
+            }
+            else{
+                throw CoolProp::ValueError(format("Unable to bisect segmented vector slice; neither chunk contains the solution %g %g %g %g", rL,rML,rMR,rR));
+            }
+            M = (L+R)/2;
+        }
+        else{
+            rM = mat[M][j] - val;
+            if (rR*rM > 0 && rL*rM < 0){
+                // solution is between L and M
+                R = M; rR = mat[R][j] - val;
+            }
+            else{
+                // solution is between R and M
+                L = M; rL = mat[L][j] - val;
+            }
+            M = (L+R)/2;
+        }
     }
     i = L;
 }
