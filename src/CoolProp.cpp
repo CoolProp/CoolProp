@@ -887,7 +887,7 @@ std::string get_fluid_param_string(const std::string &FluidName, const std::stri
             return get_BibTeXKey( FluidName, parts[1]);
         }
         else if (ParamName.find("pure") == 0){
-            if (HEOS->is_pure()){
+            if (HEOS.is_pure()){
                 return "true";
             }
             else{
