@@ -1,7 +1,7 @@
 {
   "ALIASES": [
     "air", 
-    "AIR",
+    "AIR", 
     "R729"
   ], 
   "ANCILLARIES": {
@@ -227,6 +227,14 @@
           "smolar": 46.07210504148642, 
           "smolar_units": "J/mol/K"
         }, 
+        "pressure_max_sat": {
+          "T": 132.6035, 
+          "T_units": "K", 
+          "p": 3789100.0, 
+          "p_units": "Pa", 
+          "rhomolar": 11094.8, 
+          "rhomolar_units": "mol/m^3"
+        }, 
         "reducing": {
           "T": 132.6312, 
           "T_units": "K", 
@@ -262,6 +270,14 @@
           "rhomolar_units": "mol/m^3", 
           "smolar": 99.08947144176817, 
           "smolar_units": "J/mol/K"
+        }, 
+        "temperature_max_sat": {
+          "T": 132.6312, 
+          "T_units": "K", 
+          "p": 3785020.0, 
+          "p_units": "Pa", 
+          "rhomolar": 10447.7, 
+          "rhomolar_units": "mol/m^3"
         }
       }, 
       "T_max": 2000, 
