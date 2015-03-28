@@ -886,6 +886,14 @@ std::string get_fluid_param_string(const std::string &FluidName, const std::stri
             if (parts.size() != 2){ throw ValueError(format("Unable to parse BibTeX string %s",ParamName.c_str()));}
             return get_BibTeXKey( FluidName, parts[1]);
         }
+        else if (ParamName.find("pure") == 0){
+            if (HEOS->is_pure()){
+                return "true";
+            }
+            else{
+                return "false";
+            }
+        }
         else{
             throw ValueError(format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str(),FluidName.c_str()));
         }
@@ -908,6 +916,8 @@ TEST_CASE("Check inputs to get_fluid_param_string", "[get_fluid_param_string]")
     CHECK_THROWS(CoolProp::get_fluid_param_string("","aliases"));
     CHECK_THROWS(CoolProp::get_fluid_param_string("Water",""));
     CHECK_THROWS(CoolProp::get_fluid_param_string("Water","BibTeX-"));
+    CHECK(CoolProp::get_fluid_param_string("Water","pure") == "true");
+    CHECK(CoolProp::get_fluid_param_string("R410A","pure") == "false");
 };
 #endif
 

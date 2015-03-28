@@ -100,6 +100,8 @@ You might want to start by looking at CoolProp.h
     "CAS", "CAS_number"          | The CAS number
     "ASHRAE34"                   | The ASHRAE standard 34 safety rating
     "REFPROPName","REFPROP_name" | The name of the fluid used in REFPROP
+    "Bibtex-XXX"                 | A BibTeX key, where XXX is one of the bibtex keys used in get_BibTeXKey
+    "pure"                       | "true" if the fluid is pure, "false" otherwise
     
     @returns The string, or an error message if not valid input
     */
