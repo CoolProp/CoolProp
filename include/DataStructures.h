@@ -40,67 +40,64 @@ enum parameters{
     INVALID_PARAMETER = 0,
     
     // General parameters
-    igas_constant,
-    imolar_mass, 
-    iacentric_factor,
-    irhomolar_reducing, 
-    irhomolar_critical, 
-    iT_reducing, 
-    iT_critical,
-    irhomass_reducing, 
-    irhomass_critical, 
-    iP_critical, 
-    iP_reducing,
-    iT_triple, 
-    iP_triple, 
-    iT_min, 
-    iT_max,
-    iP_max, 
-    iP_min,
+    igas_constant, ///< Ideal-gas constant
+    imolar_mass, ///< Molar mass
+    iacentric_factor, ///< Acentric factor
+    irhomolar_reducing, ///< Molar density used for the reducing state
+    irhomolar_critical, ///< Molar density used for the critical point
+    iT_reducing, ///< Temperature at the reducing state
+    iT_critical, ///< Temperature at the critical point
+    irhomass_reducing, ///< Mass density at the reducing state
+    irhomass_critical, ///< Mass density at the critical point
+    iP_critical, ///< Pressure at the critical point
+    iP_reducing, ///< Pressure at the reducing point
+    iT_triple, ///< Triple point temperature
+    iP_triple, ///< Triple point pressure
+    iT_min, ///< Minimum temperature
+    iT_max, ///< Maximum temperature
+    iP_max, ///< Maximum pressure
+    iP_min, ///< Minimum pressure
 
     // Bulk properties
-    iT,  
-    iP, 
-    iQ, 
-    iTau, 
-    iDelta,
+    iT,  ///< Temperature
+    iP, ///< Pressure
+    iQ, ///< Vapor quality
+    iTau, ///< Reciprocal reduced temperature
+    iDelta, ///< Reduced density
 
     // Molar specific thermodynamic properties
-    iDmolar, 
-    iHmolar, 
-    iSmolar, 
-    iCpmolar, 
-    iCp0molar, 
-    iCvmolar, 
-    iUmolar, 
-    iGmolar,
+    iDmolar, ///< Mole-based density
+    iHmolar, ///< Mole-based enthalpy
+    iSmolar, ///< Mole-based entropy
+    iCpmolar, ///< Mole-based constant-pressure specific heat
+    iCp0molar, ///< Mole-based ideal-gas constant-pressure specific heat
+    iCvmolar, ///< Mole-based constant-volume specific heat
+    iUmolar, ///< Mole-based internal energy
+    iGmolar, ///< Mole-based Gibbs energy
 
     // Mass specific thermodynamic properties
-    iDmass, 
-    iHmass, 
-    iSmass, 
-    iCpmass, 
-    iCp0mass, 
-    iCvmass, 
-    iUmass, 
-    iGmass,
-
-    // Smoothing functions for density
-    //idrhodh_constp_smoothed, idrhodp_consth_smoothed, irho_smoothed,
+    iDmass, ///< Mass-based density
+    iHmass, ///< Mass-based enthalpy
+    iSmass, ///< Mass-based entropy
+    iCpmass, ///< Mass-based constant-pressure specific heat
+    iCp0mass, ///< Mass-based ideal-gas specific heat
+    iCvmass, ///< Mass-based constant-volume specific heat
+    iUmass, ///< Mass-based internal energy
+    iGmass, ///< Mass-based Gibbs energy
 
     // Transport properties
-    iviscosity, 
-    iconductivity, 
-    isurface_tension, 
-    iPrandtl,
+    iviscosity, ///< Viscosity
+    iconductivity, ///< Thermal conductivity
+    isurface_tension, ///< Surface tension
+    iPrandtl, ///< The Prandtl number
 
     // Derivative-based terms
-    ispeed_sound, 
-    iisothermal_compressibility, 
-    iisobaric_expansion_coefficient,
+    ispeed_sound, ///< Speed of sound
+    iisothermal_compressibility, ///< Isothermal compressibility
+    iisobaric_expansion_coefficient, ///< Isobaric expansion coefficient
 
     // Fundamental derivative of gas dynamics
-    ifundamental_derivative_of_gas_dynamics,
+    ifundamental_derivative_of_gas_dynamics, ///< The fundamental derivative of gas dynamics
 
     // Derivatives of the residual non-dimensionalized Helmholtz energy with respect to the EOS variables
     ialphar, 
@@ -113,16 +110,16 @@ enum parameters{
     idalpha0_ddelta_consttau,
 
     // Other functions and derivatives
-    iBvirial, 
-    iCvirial, 
-    idBvirial_dT, 
-    idCvirial_dT, 
-    iZ,
+    iBvirial, ///< Second virial coefficient
+    iCvirial, ///< Third virial coefficient
+    idBvirial_dT, ///< Derivative of second virial coefficient with temperature
+    idCvirial_dT, ///< Derivative of third virial coefficient with temperature
+    iZ, ///< The compressibility factor Z = p*v/(R*T)
     
     // Accessors for incompressibles
-    ifraction_min,
-    ifraction_max,
-    iT_freeze,
+    ifraction_min, ///< The minimum fraction (mole, mass, volume) for incompressibles
+    ifraction_max, ///< The maximum fraction (mole,mass,volume) for incompressibles
+    iT_freeze, ///< The freezing temperature for incompressibles
 
     // Environmental parameters
     iGWP20, ///< The 20-year global warming potential
@@ -166,10 +163,17 @@ bool is_trivial_parameter(int key);
 /// Returns true if a valid parameter, and sets value in the variable iOutput
 bool is_valid_parameter(const std::string & name, parameters & iOutput);
 
+/// Returns true if the string corresponds to a valid first derivative
+///
+/// If it is a value derivative, the variables are set to the parts of the derivative
 bool is_valid_first_derivative(const std::string & name, parameters &iOf, parameters &iWrt, parameters &iConstant);
 
+/// Returns true if the string corresponds to a valid second derivative
+///
+/// If it is a value derivative, the variables are set to the parts of the derivative
 bool is_valid_second_derivative(const std::string & name, parameters &iOf1, parameters &iWrt1, parameters &iConstant1, parameters &iWrt2, parameters &iConstant2);
 
+/// Get a comma separated list of parameters
 std::string get_csv_parameter_list();
 
 /// These are constants for the compositions
@@ -181,7 +185,7 @@ const CoolPropDbl R_u_CODATA = 8.3144621; ///< The value for the ideal gas const
 enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLUID_TYPE_INCOMPRESSIBLE_LIQUID, FLUID_TYPE_INCOMPRESSIBLE_SOLUTION, FLUID_TYPE_UNDEFINED};
 
 // !! If you add a parameter, update the map in the corresponding CPP file !!
-/// These are input pairs that can be used (in each pair, input keys are sorted alphabetically)
+/// These are input pairs that can be used for the update function (in each pair, input keys are sorted alphabetically)
 enum input_pairs{
     INPUT_PAIR_INVALID = 0, // Default (invalid) value
     QT_INPUTS, ///< Molar quality, Temperature in K
