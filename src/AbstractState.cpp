@@ -14,11 +14,13 @@
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "Backends/IF97/IF97Backend.h"
 
 #if !defined(NO_TABULAR_BACKENDS)
     #include "Backends/Tabular/TTSEBackend.h"
     #include "Backends/Tabular/BicubicBackend.h"
 #endif
+
 namespace CoolProp {
 
 AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
@@ -46,6 +48,10 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
     {
         if (fluid_names.size() != 1){throw ValueError(format("For INCOMP backend, name vector must be one element long"));}
         return new IncompressibleBackend(fluid_names[0]);
+    }
+    else if (!backend.compare("IF97"))
+    {
+        return new IF97Backend();
     }
     #if !defined(NO_TABULAR_BACKENDS)
     else if (backend.find("TTSE&") == 0)
