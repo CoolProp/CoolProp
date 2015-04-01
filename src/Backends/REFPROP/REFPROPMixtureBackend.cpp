@@ -714,11 +714,62 @@ CoolPropDbl REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
 void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
 {
     this->check_loaded_fluid();
+    double rhoymin, rhoymax, c = 0;
     long ierr = 0;
     char herr[255];
     SATSPLNdll(&(mole_fractions[0]),  // Inputs
                &ierr, herr, errormessagelength);       // Error message
     if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
+    
+    // Clear the phase envelope data
+    PhaseEnvelope = PhaseEnvelopeData();
+    /*
+    subroutine SPLNVAL (isp,iderv,a,f,ierr,herr)
+    c
+    c  calculates the function value of a spline
+    c
+    c  inputs:
+    c      isp--indicator for which spline to use (1-nc: composition,
+    c           nc+1: temperature, nc+2: pressure, nc+3: density,
+    c           nc+4: enthalpy, nc+5: entropy)
+    c    iderv--values of -1 and -2 return lower and upper root values,
+    c           value of 0 returns spline function, value of 1 returns
+    c           derivative of spline function with respect to density
+    c        a--root value
+    c  outputs:
+    c        f--value of spline function at input root
+    c     ierr--error flag:   0 = successful
+    c     herr--error string (character*255)
+    */
+    long N = 500;
+    long isp = 0, iderv = -1;
+    SPLNVALdll(&isp, &iderv, &c, &rhoymin, &ierr, herr, errormessagelength);
+    iderv = -2;
+    SPLNVALdll(&isp, &iderv, &c, &rhoymax, &ierr, herr, errormessagelength);
+    long nc = mole_fractions.size();
+    double ratio = pow(rhoymax/rhoymin,1/double(N));
+    for (double rho_molL = rhoymin; rho_molL < rhoymax; rho_molL *= ratio)
+    {
+        double y; iderv = 0;
+        PhaseEnvelope.rhomolar_vap.push_back(rho_molL*1000);
+        isp = nc + 1;
+        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        PhaseEnvelope.T.push_back(y);
+        isp = nc + 2;
+        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        PhaseEnvelope.p.push_back(y*1000);
+        isp = nc + 3;
+        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        PhaseEnvelope.rhomolar_vap.push_back(y*1000);
+        isp = nc + 4;
+        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        PhaseEnvelope.hmolar_vap.push_back(y*1000);
+        isp = nc + 5;
+        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        PhaseEnvelope.smolar_vap.push_back(y*1000);
+    }
+
+    double rr = 0;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_cpmolar_idealgas(void)
 {

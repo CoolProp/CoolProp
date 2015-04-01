@@ -45,6 +45,7 @@ public:
     virtual ~REFPROPMixtureBackend();
 	
 	std::vector<std::string> calc_fluid_names(){return fluid_names;};
+    PhaseEnvelopeData PhaseEnvelope;
 
     // REFPROP backend uses mole fractions
     bool using_mole_fractions(){return true;}
@@ -97,6 +98,8 @@ public:
     const std::vector<CoolPropDbl> &get_mole_fractions(){return mole_fractions_long_double;};
 
     void calc_phase_envelope(const std::string &type);
+
+    const CoolProp::PhaseEnvelopeData &calc_phase_envelope_data(){return PhaseEnvelope;};
 
     std::vector<CoolPropDbl> calc_mole_fractions_liquid(void){return std::vector<CoolPropDbl>(mole_fractions_liq.begin(), mole_fractions_liq.end());}
     std::vector<CoolPropDbl> calc_mole_fractions_vapor(void){return std::vector<CoolPropDbl>(mole_fractions_vap.begin(), mole_fractions_vap.end());}
