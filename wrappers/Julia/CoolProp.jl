@@ -1,6 +1,6 @@
 module CoolProp
 
-export F2K, K2F, HAPropsSI, PropsSI, PhaseSI, get_global_param_string, get_param_index, get_input_pair_index, AbstractState_factory, AbstractState_free, AbstractState_update, AbstractState_keyed_output
+export F2K, K2F, HAPropsSI, PropsSI, PhaseSI, get_global_param_string, get_param_index, get_input_pair_index, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_keyed_output
 
 # Check the current Julia version to make this Julia 0.4 code compatible with older version
 if VERSION <= VersionNumber(0,4)
