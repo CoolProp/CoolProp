@@ -41,6 +41,9 @@ class SecCoolSolutionData(DigitalData):
             self.xid  = self.ifrac_mass
         elif self.sFolder=='xPure':
             self.xid  = self.ifrac_pure
+            self.xbase = 0.0 # Disables the reset of xmax and xmin
+            self.xmax = 1.0
+            self.xmin = 0.0
         else:
             raise ValueError("Unknown folder type specified.")
         self.TminPsat = self.Tmax

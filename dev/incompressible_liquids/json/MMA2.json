@@ -18,7 +18,7 @@
   "Tmin": 2.231500e+02, 
   "TminPsat": 2.931500e+02, 
   "conductivity": {
-    "NRMS": 1.306064e-09, 
+    "NRMS": 1.306074e-09, 
     "coeffs": [
       [
         4.159515e-01, 
@@ -56,7 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
-    "NRMS": 4.326123e-10, 
+    "NRMS": 4.325853e-10, 
     "coeffs": [
       [
         9.683060e+02, 
@@ -112,7 +112,7 @@
     "type": "notdefined"
   }, 
   "specific_heat": {
-    "NRMS": 2.554682e-10, 
+    "NRMS": 2.555755e-10, 
     "coeffs": [
       [
         3.898713e+03, 
@@ -150,7 +150,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
-    "NRMS": 3.404978e-11, 
+    "NRMS": 3.405004e-11, 
     "coeffs": [
       [
         -4.979901e+00, 
