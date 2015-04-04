@@ -1011,8 +1011,11 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
     // Reference declaration to save indexing
     CoolPropFluid &component = components[0];
     
+    // Maximum saturation temperature - Equal to critical pressure for pure fluids
+    CoolPropDbl psat_max = calc_pmax_sat();
+
     // Check supercritical pressure
-    if (_p > _crit.p)
+    if (_p > psat_max)
     {
         _Q = 1e9;
         switch (other)
@@ -1069,7 +1072,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         }
     }
     // Check between triple point pressure and psat_max
-    else if (_p >= components[0].EOS().ptriple*0.9999 && _p <= _crit.p)
+    else if (_p >= components[0].EOS().ptriple*0.9999 && _p <= psat_max)
     {
         // First try the ancillaries, use them to determine the state if you can
         
