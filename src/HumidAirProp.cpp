@@ -21,6 +21,7 @@
 #include <string.h>
 #include <iostream>
 #include <list>
+#include "IF97.h"
 
 /// This is a stub overload to help with all the strcmp calls below and avoid needing to rewrite all of them
 std::size_t strcmp(const std::string &s, const std::string &e){
@@ -238,9 +239,8 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
         double call(double T){
             double p_ws;
             if (T>=273.16){
-                // Saturation pressure [Pa]
-                Water->update(CoolProp::QT_INPUTS, 0, T);
-                p_ws= Water->keyed_output(CoolProp::iP);
+                // Saturation pressure [Pa] using IF97 formulation
+                p_ws= IF97::psat97(T);
             }
             else{
                 // Sublimation pressure [Pa]
@@ -963,8 +963,7 @@ double DewpointTemperature(double T, double p, double psi_w)
 
     // 611.65... is the triple point pressure of water in Pa
     if (p_w > 611.6547241637944){
-        Water->update(CoolProp::PQ_INPUTS, p, 1.0);
-        T0 = Water->T()-1;
+        T0 = IF97::Tsat97(p) - 1;
     }
     else{
         T0 = 268;
@@ -982,8 +981,7 @@ double DewpointTemperature(double T, double p, double psi_w)
             if (Tdp >= 273.16)
             {
                 // Saturation pressure at dewpoint [Pa]
-                Water->update(CoolProp::QT_INPUTS, 0.0, Tdp);
-                p_ws_dp = Water->keyed_output(CoolProp::iP);
+                p_ws_dp = IF97::psat97(Tdp);
             }
             else
             {
@@ -1030,8 +1028,7 @@ public:
         if (Twb > 273.16)
         {
             // Saturation pressure at wetbulb temperature [Pa]
-            Water->update(CoolProp::QT_INPUTS,0,Twb);
-            p_ws_wb= Water->keyed_output(CoolProp::iP);
+            p_ws_wb= IF97::psat97(Twb);
         }
         else
         {
@@ -1092,8 +1089,7 @@ double WetbulbTemperature(double T, double p, double psi_w)
     // If the temperature is above the saturation temperature corresponding to the atmospheric pressure,
     // then the maximum value for the wetbulb temperature is the saturation temperature
     double Tmax = T;
-    Water->update(CoolProp::PQ_INPUTS,p,1.0);
-    double Tsat = Water->keyed_output(CoolProp::iT);
+    double Tsat = IF97::Tsat97(p);
     if (T >= Tsat)
     {
         Tmax = Tsat;
@@ -1201,8 +1197,7 @@ double MoleFractionWater(double T, double p, int HumInput, double InVal)
         if (T>=273.16)
         {
             // Saturation pressure [Pa]
-            Water->update(CoolProp::QT_INPUTS,0,T);
-            p_ws= Water->keyed_output(CoolProp::iP);;
+            p_ws= IF97::psat97(T);
         }
         else
         {
@@ -1222,10 +1217,8 @@ double MoleFractionWater(double T, double p, int HumInput, double InVal)
     {
         Tdp=InVal;
         // Saturation pressure at dewpoint [Pa]
-        if (Tdp>=273.16)
-        {
-            Water->update(CoolProp::QT_INPUTS,0,Tdp);
-            p_ws_dp = Water->keyed_output(CoolProp::iP); //[Pa]
+        if (Tdp>=273.16){
+            p_ws_dp = IF97::psat97(Tdp);
         }
         else{
             // Sublimation pressure [Pa]
@@ -1250,8 +1243,7 @@ double RelativeHumidity(double T, double p, double psi_w)
     double p_ws, f, p_s;
     if (T >= 273.16){
         // Saturation pressure [Pa]
-        Water->update(CoolProp::QT_INPUTS, 0, T);
-        p_ws = Water->keyed_output(CoolProp::iP); //[Pa]
+        p_ws = IF97::psat97(T);
     }
     else{
         // sublimation pressure [Pa]
@@ -1703,10 +1695,8 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
         else if (!strcmp(Name,"p_ws"))
         {
             strcpy(units,"Pa");
-            if (T>273.16)
-            {
-                Water->update(CoolProp::QT_INPUTS, 0, T);
-                return Water->keyed_output(CoolProp::iP);
+            if (T>273.16){
+                return IF97::psat97(T);
             }
             else
                 return psub_Ice(T);
