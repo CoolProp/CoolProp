@@ -554,7 +554,7 @@ class Java(BaseParser):
 
     def dict2string(self, d):
         if d['type'] == 'comment':
-            l = '# ' + d['comment']
+            l = '// ' + d['comment']
         elif d['type'] == 'print':
             l = 'System.out.println(' + ' + " " + '.join(self.parse_arguments(d['arguments'])) + ')'
         elif d['type'] == 'function':
@@ -619,7 +619,7 @@ class Csharp(BaseParser):
 
     def dict2string(self, d):
         if d['type'] == 'comment':
-            l = '# ' + d['comment']
+            l = '// ' + d['comment']
         elif d['type'] == 'print':
             l = 'Console.Write(' + ' + " " + '.join(self.parse_arguments(d['arguments'])) + ' + "\\n")'
         elif d['type'] == 'function':
