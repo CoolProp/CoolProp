@@ -155,6 +155,75 @@ void UseIdealGasEnthalpyCorrelations(int flag)
         printf("UseIdealGasEnthalpyCorrelations takes an integer, either 0 (no) or 1 (yes)\n");
     }
 }
+static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double Input1, double TargetVal, double W_min, double W_max)
+{
+    double W;
+    class BrentSolverResids : public CoolProp::FuncWrapper1D
+    {
+    private:
+        givens OutputKey;
+        double p;
+        givens In1Key;
+        double Input1, TargetVal;
+        std::vector<givens> input_keys;
+        std::vector<double> input_vals;
+    public:
+        BrentSolverResids(givens OutputKey, double p, givens In1Key, double Input1, double TargetVal) : OutputKey(OutputKey), p(p), In1Key(In1Key), Input1(Input1), TargetVal(TargetVal)
+        {
+            input_keys.resize(2); input_keys[0] = In1Key; input_keys[1] = GIVEN_T;
+            input_vals.resize(2); input_vals[0] = Input1;
+        };
+
+        double call(double T){
+            input_vals[1] = T;
+            double psi_w;
+            _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
+            return _HAPropsSI_outputs(OutputKey, p, T, psi_w) - TargetVal;
+        }
+    };
+
+    BrentSolverResids BSR = BrentSolverResids(OutputKey, p, In1Name, Input1, TargetVal);
+
+    // Now we need to check the bounds and make sure that they are ok (don't yield invalid output)
+    // and actually bound the solution
+    double r_min = BSR.call(W_min);
+    bool W_min_valid = ValidNumber(r_min);
+    double r_max = BSR.call(W_max);
+    bool W_max_valid = ValidNumber(r_max);
+    if (!W_min_valid && !W_max_valid){
+        throw CoolProp::ValueError(format("Both W_min [%g] and W_max [%g] yield invalid output values in Brent_HAProps_W",W_min,W_max).c_str());
+    }
+    else if (W_min_valid && !W_max_valid){
+        while (!W_max_valid){
+            // Reduce W_max until it works
+            W_max = 0.95*W_max + 0.05*W_min;
+            r_max = BSR.call(W_max);
+            W_max_valid = ValidNumber(r_max);
+        }
+    }
+    else if (!W_min_valid && W_max_valid){
+        while (!W_min_valid){
+            // Increase W_min until it works
+            W_min = 0.95*W_min + 0.05*W_max;
+            r_min = BSR.call(W_min);
+            W_min_valid = ValidNumber(r_min);
+        }
+    }
+    std::string errstr;
+    // We will do a secant call if the values at W_min and W_max have the same sign
+    if (r_min*r_max > 0){
+        if (std::abs(r_min) < std::abs(r_max)){
+            W = CoolProp::Secant(BSR, W_min, 0.01*W_min, 1e-7, 50, errstr);
+        }
+        else{
+            W = CoolProp::Secant(BSR, W_max, -0.01*W_max, 1e-7, 50, errstr);
+        }
+    }
+    else{
+        W = CoolProp::Brent(BSR, W_min, W_max, 1e-7, 1e-4, 50, errstr);
+    }
+    return W;
+}
 static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double Input1, double TargetVal, double T_min, double T_max)
 {
     double T;
@@ -222,7 +291,6 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
     else{
         T = CoolProp::Brent(BSR, T_min, T_max, 1e-7, 1e-4, 50, errstr);
     }
-    
     return T;
 }
 static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
@@ -310,7 +378,7 @@ static double Secant_HAProps_W( double p, double T, givens OutputType, double Ta
         if (iter > 1)
         {
             y2=f;
-            x3=x2-y2/(y2-y1)*(x2-x1);
+            x3=x2-0.5*y2/(y2-y1)*(x2-x1);
             y1=y2; x1=x2; x2=x3;
         }
         iter=iter+1;
@@ -1355,9 +1423,22 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
                 psi_w = MoleFractionWater(T, p, othergiven, input_vals[other]); break;
             default:
             {
-                // Find the value for W
-                double W_guess = 0.0001;
-                double W = Secant_HAProps_W(p, T, othergiven, input_vals[other], W_guess);
+                double W;
+                try{
+                    // Find the value for W
+                    double W_guess = 0.0001;
+                    W = Secant_HAProps_W(p, T, othergiven, input_vals[other], W_guess);
+                }
+                catch(...){
+                    // Use the Brent's method solver to find W.  Slow but reliable
+                    double W_min = 0.001, W_max = 1;
+                    givens MainInputKey = GIVEN_T;
+                    double MainInputValue = T; 
+                    // Secondary input is the one that you are trying to match
+                    double SecondaryInputValue = input_vals[other]; 
+                    givens SecondaryInputKey = input_keys[other];
+                    W = Brent_HAProps_W(SecondaryInputKey, p, MainInputKey, MainInputValue, SecondaryInputValue, W_min, W_max);
+                }
                 // Mole fraction of water
                 psi_w = MoleFractionWater(T, p, GIVEN_HUMRAT, W);
             }
