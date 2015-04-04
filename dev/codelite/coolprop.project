@@ -170,6 +170,7 @@
         <IncludePath Value="../../externals/Eigen"/>
         <IncludePath Value="../../externals/REFPROP-headers"/>
         <IncludePath Value="../../externals/msgpack-c/include"/>
+        <IncludePath Value="../../externals/IF97"/>
         <Preprocessor Value="ENABLE_CATCH"/>
       </Compiler>
       <Linker Options="" Required="yes"/>
