@@ -423,7 +423,7 @@ class Octave(BaseParser):
 
     def dict2string(self, d):
         if d['type'] == 'comment':
-            l = '# ' + d['comment']
+            l = '% ' + d['comment']
         elif d['type'] == 'function':
             l = self.map_function(d['function'])  + '(' + ', '.join(self.parse_arguments(d['arguments'])) + ')'
         elif d['type'] == 'print':
@@ -490,7 +490,7 @@ class MATLAB(BaseParser):
 
     def dict2string(self, d):
         if d['type'] == 'comment':
-            l = '# ' + d['comment']
+            l = '% ' + d['comment']
         elif d['type'] == 'function':
             l = self.map_function(d['function'])  + '(' + ', '.join(self.parse_arguments(d['arguments'])) + ')'
         elif d['type'] == 'print':
