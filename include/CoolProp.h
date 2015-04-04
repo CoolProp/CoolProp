@@ -125,7 +125,7 @@ You might want to start by looking at CoolProp.h
     /** 
     \brief Set the reference state based on a string representation
     
-    @param FluidName The name of the fluid
+    @param FluidName The name of the fluid (Backend can be provided like "REFPROP::Water", or if no backend is provided, "HEOS" is the assumed backend)
     @param reference_state The reference state to use, one of 
     
     Reference State | Description

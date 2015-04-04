@@ -166,5 +166,8 @@ public:
     CoolPropDbl calc_d3alpha0_dTau3(void){ return call_phi0dll(3,0); };
 };
 
+bool load_REFPROP();
+void REFPROP_SETREF(char hrf[3], long ixflag, double x0[1], double &h0, double &s0, double &T0, double &p0, long &ierr, char herr[255], long l1, long l2);
+
 } /* namespace CoolProp */
 #endif /* REFPROPMIXTUREBACKEND_H_ */

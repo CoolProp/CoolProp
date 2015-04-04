@@ -39,6 +39,7 @@
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Helmholtz/MixtureParameters.h"
 #include "DataStructures.h"
+#include "Backends/REFPROP/REFPROPMixtureBackend.h"
 
 #if defined(ENABLE_CATCH)
     #include "catch.hpp"
@@ -702,65 +703,88 @@ double saturation_ancillary(const std::string &fluid_name, const std::string &ou
 
     return HEOS.saturation_ancillary(iOutput, Q, iInput, value);
 }
-void set_reference_stateS(const std::string &Ref, const std::string &reference_state)
+void set_reference_stateS(const std::string &fluid_string, const std::string &reference_state)
 {
-    CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1,Ref));
-    if (!reference_state.compare("IIR"))
-    {
-        HEOS.update(QT_INPUTS, 0, 273.15);
-
-        // Get current values for the enthalpy and entropy
-        double deltah = HEOS.hmass() - 200000; // offset from 200000 J/kg enthalpy
-        double deltas = HEOS.smass() - 1000; // offset from 1000 J/kg/K entropy
-        double delta_a1 = deltas/(HEOS.gas_constant()/HEOS.molar_mass());
-        double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
-        // Change the value in the library for the given fluid
-        set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "IIR");
-        if (get_debug_level() > 0){
-            std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+    std::string backend, fluid;
+    extract_backend(fluid_string, backend, fluid);
+    if (backend == "REFPROP"){
+        
+        long ierr = 0, ixflag = 1;
+        double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
+        char herr[255], hrf[4];
+        double x0[1] = {1};
+        if (reference_state.size() > 3){
+            if (reference_state == "ASHRAE"){
+                strcpy(hrf, "ASH");
+            }
+            else{
+                throw ValueError(format("Reference state string [%s] is more than 3 characters long", reference_state.c_str()));
+            }
         }
-    }
-    else if (!reference_state.compare("ASHRAE"))
-    {
-        HEOS.update(QT_INPUTS, 0, 233.15);
-
-        // Get current values for the enthalpy and entropy
-        double deltah = HEOS.hmass() - 0; // offset from 0 J/kg enthalpy
-        double deltas = HEOS.smass() - 0; // offset from 0 J/kg/K entropy
-        double delta_a1 = deltas/(HEOS.gas_constant()/HEOS.molar_mass());
-        double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
-        // Change the value in the library for the given fluid
-        set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "ASHRAE");
-        if (get_debug_level() > 0){
-            std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+        else{
+            strcpy(hrf, reference_state.c_str());
         }
+        REFPROP_SETREF(hrf, ixflag, x0, h0, s0, t0, p0, ierr, herr, 3, 255);
     }
-    else if (!reference_state.compare("NBP"))
-    {
-        // Saturated liquid boiling point at 1 atmosphere
-        HEOS.update(PQ_INPUTS, 101325, 0);
+    else if (backend == "HEOS" || backend == "?"){
+        CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, fluid));
+        if (!reference_state.compare("IIR"))
+        {
+            HEOS.update(QT_INPUTS, 0, 273.15);
 
-        double deltah = HEOS.hmass() - 0; // offset from 0 kJ/kg enthalpy
-        double deltas = HEOS.smass() - 0; // offset from 0 kJ/kg/K entropy
-        double delta_a1 = deltas/(HEOS.gas_constant()/HEOS.molar_mass());
-        double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
-        // Change the value in the library for the given fluid
-        set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "NBP");
-        if (get_debug_level() > 0){
-            std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+            // Get current values for the enthalpy and entropy
+            double deltah = HEOS.hmass() - 200000; // offset from 200000 J/kg enthalpy
+            double deltas = HEOS.smass() - 1000; // offset from 1000 J/kg/K entropy
+            double delta_a1 = deltas/(HEOS.gas_constant()/HEOS.molar_mass());
+            double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
+            // Change the value in the library for the given fluid
+            set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, "IIR");
+            if (get_debug_level() > 0){
+                std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+            }
         }
-    }
-    else if (!reference_state.compare("DEF"))
-    {
-        set_fluid_enthalpy_entropy_offset(Ref, 0, 0, "DEF");
-    }
-    else if (!reference_state.compare("RESET"))
-    {
-        set_fluid_enthalpy_entropy_offset(Ref, 0, 0, "RESET");
-    }
-    else
-    {
-        throw ValueError(format("reference state string is invalid: [%s]",reference_state.c_str()));
+        else if (!reference_state.compare("ASHRAE"))
+        {
+            HEOS.update(QT_INPUTS, 0, 233.15);
+
+            // Get current values for the enthalpy and entropy
+            double deltah = HEOS.hmass() - 0; // offset from 0 J/kg enthalpy
+            double deltas = HEOS.smass() - 0; // offset from 0 J/kg/K entropy
+            double delta_a1 = deltas/(HEOS.gas_constant()/HEOS.molar_mass());
+            double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
+            // Change the value in the library for the given fluid
+            set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, "ASHRAE");
+            if (get_debug_level() > 0){
+                std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+            }
+        }
+        else if (!reference_state.compare("NBP"))
+        {
+            // Saturated liquid boiling point at 1 atmosphere
+            HEOS.update(PQ_INPUTS, 101325, 0);
+
+            double deltah = HEOS.hmass() - 0; // offset from 0 kJ/kg enthalpy
+            double deltas = HEOS.smass() - 0; // offset from 0 kJ/kg/K entropy
+            double delta_a1 = deltas/(HEOS.gas_constant()/HEOS.molar_mass());
+            double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
+            // Change the value in the library for the given fluid
+            set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, "NBP");
+            if (get_debug_level() > 0){
+                std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+            }
+        }
+        else if (!reference_state.compare("DEF"))
+        {
+            set_fluid_enthalpy_entropy_offset(fluid, 0, 0, "DEF");
+        }
+        else if (!reference_state.compare("RESET"))
+        {
+            set_fluid_enthalpy_entropy_offset(fluid, 0, 0, "RESET");
+        }
+        else
+        {
+            throw ValueError(format("reference state string is invalid: [%s]",reference_state.c_str()));
+        }
     }
 }
 void set_reference_stateD(const std::string &Ref, double T, double rhomolar, double h0, double s0)

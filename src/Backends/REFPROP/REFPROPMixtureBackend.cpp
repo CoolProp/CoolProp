@@ -334,7 +334,7 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
         if (rpv.compare("NOTAVAILABLE")!=0) {
             // Function names were defined in "REFPROP_lib.h",
             // This platform theoretically supports Refprop.
-            if (load_REFPROP()) {
+            if (::load_REFPROP()) {
                 return true;
             }
             else {
@@ -589,12 +589,10 @@ CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_reducing(){
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
     this->check_loaded_fluid();
-    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas, summer = 0;
-    for (long i = 0; i < mole_fractions.size(); ++i){
-        INFOdll(&i, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
-        summer += ttrp*mole_fractions[i];
-    }
-    return static_cast<CoolPropDbl>(summer);
+    double tmin, tmax, Dmax, pmax;
+    char htyp[3] = {'E','O','S'};
+    LIMITSdll(htyp, &(mole_fractions[0]), &tmin, &tmax, &Dmax, &pmax, 3);
+    return static_cast<CoolPropDbl>(tmin);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_gas_constant(){
     this->check_loaded_fluid();
@@ -1387,6 +1385,11 @@ CoolPropDbl REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
     if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
     return static_cast<CoolPropDbl>(val)/pow(delta,idel)/pow(tau,itau);
+}
+
+void REFPROP_SETREF(char hrf[3], long ixflag, double x0[1], double &h0, double &s0, double &T0, double &p0, long &ierr, char herr[255], long l1, long l2){
+    ::load_REFPROP();
+    SETREFdll(hrf, &ixflag, x0, &h0, &s0, &T0, &p0, &ierr, herr, l1, l2);
 }
 
 } /* namespace CoolProp */
