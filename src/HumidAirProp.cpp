@@ -602,7 +602,8 @@ double f_factor(double T, double p)
     if (T>273.16)
     {
         // It is liquid water
-        p_ws = IF97::psat97(T);
+        Water->update(CoolProp::QT_INPUTS, 0, T);
+        p_ws = Water->p();
         vbar_ws = 1.0/Water->keyed_output(CoolProp::iDmolar); //[m^3/mol]
         beta_H = HenryConstant(T); //[1/Pa]
     }
