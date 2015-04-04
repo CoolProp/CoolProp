@@ -67,6 +67,7 @@ high_level_interface = [
         "EOL":True
     },
     "",
+    "See http://www.coolprop.org/coolprop/HighLevelAPI.html#table-of-string-inputs-to-propssi-function for a list of inputs to high-level interface",
     {
         "type": "print",
         "arguments": [
