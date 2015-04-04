@@ -141,6 +141,9 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
 	// Clear cached values
 	clear();
 
+    // Check the tables and build if necessary
+    check_tables();
+
 	// Flush the cached indices (set to large number)
     cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 
     cached_single_phase_j = std::numeric_limits<std::size_t>::max();

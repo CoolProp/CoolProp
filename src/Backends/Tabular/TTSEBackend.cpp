@@ -8,6 +8,9 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
 {
     // Clear cached variables
     clear();
+
+    // Check the tables, build if neccessary
+    check_tables();
     
     // Flush the cached indices (set to large number)
     cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 
@@ -294,7 +297,6 @@ double CoolProp::TTSEBackend::invert_single_phase_y(SinglePhaseGriddedTableData 
         double yj = table.yvec[j];
         double yratio1 = (yj+deltay1)/yj;
         double yratio2 = (yj+deltay2)/yj;
-        //std::cout << format("Cannot find the y solution; yj: %g yratio: %g yratio1: %g yratio2: %g a: %g b: %g b^2-4ac: %g %d %d\n", yj, yratio, yratio1, yratio2, a, b, b*b-4*a*c, i, j);
         if (yratio1 < yratio && yratio1 > 1/yratio ){
 		    val = deltay1 + table.yvec[j];
         }
@@ -310,7 +312,6 @@ double CoolProp::TTSEBackend::invert_single_phase_y(SinglePhaseGriddedTableData 
         else{
             throw ValueError(format("Cannot find the y solution; yj: %g yratio: %g yratio1: %g yratio2: %g a: %g b: %g b^2-4ac: %g %d %d", yj, yratio, yratio1, yratio2, a, b, b*b-4*a*c, i, j));
         }
-        
     }
 
     // Cache the output value calculated

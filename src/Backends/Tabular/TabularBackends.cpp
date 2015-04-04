@@ -93,7 +93,11 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
     // ------------------------
     // Actually build the table
     // ------------------------
-    CoolPropDbl p, pmin = AS->p_triple()*1.001, pmax = 0.9999999*AS->p_critical();
+    AS->update(QT_INPUTS, 0, AS->Ttriple());
+    CoolPropDbl p_triple = AS->p();
+    CoolPropDbl p_max = AS->p_critical();
+
+    CoolPropDbl p, pmin = p_triple*1.001, pmax = 0.9999999*AS->p_critical();
     for (std::size_t i = 0; i < N-1; ++i)
     {
         // Log spaced
@@ -267,7 +271,12 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
 }
 std::string CoolProp::TabularBackend::path_to_tables(void){
     std::vector<std::string> fluids = AS->fluid_names();
-    return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(AS->fluid_names(),"&") + ")";
+    std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();
+    std::vector<std::string> components;
+    for (std::size_t i = 0; i < fluids.size(); ++i){
+        components.push_back(format("%s[%0.10f]", fluids[i].c_str(), fractions[i]));
+    }
+    return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(components, "&") + ")";
 }
 
 void CoolProp::TabularBackend::write_tables(){

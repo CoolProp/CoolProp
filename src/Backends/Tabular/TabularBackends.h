@@ -427,7 +427,10 @@ class LogPTTable : public SinglePhaseGriddedTableData
             if (this->AS.get() == NULL){
                 throw ValueError("AS is not yet set");
             }            
-            xmin = AS->Ttriple(); ymin = AS->p_triple();
+            xmin = AS->Ttriple();
+            AS->update(QT_INPUTS, 0, AS->Ttriple());
+            ymin = AS->p();
+            
             xmax = AS->Tmax(); ymax = AS->pmax();
         }
         void deserialize(msgpack::object &deserialized){   
@@ -465,11 +468,15 @@ class TabularBackend : public AbstractState
         enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE};
         selected_table_options selected_table;
         shared_ptr<CoolProp::AbstractState> AS;
-        bool using_single_phase_table;
+        bool using_single_phase_table, tables_loaded;
         std::size_t cached_single_phase_i, cached_single_phase_j;
         std::size_t cached_saturation_iL, cached_saturation_iV;
         std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdx2, *d2zdxdy, *d2zdy2;
+        std::vector<CoolPropDbl> mole_fractions;
     public:
+
+        TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), AS(AS) {};
+
         void connect_pointers(parameters output, SinglePhaseGriddedTableData &table)
 		{
 			// Connect the pointers based on the output variable desired
@@ -510,8 +517,8 @@ class TabularBackend : public AbstractState
         bool using_mass_fractions(void){return false;}
         bool using_volu_fractions(void){return false;}
         void update(CoolProp::input_pairs input_pair, double Value1, double Value2){};
-        void set_mole_fractions(const std::vector<long double> &mole_fractions){};
-        void set_mass_fractions(const std::vector<long double> &mass_fractions){};
+        void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){this->AS->set_mole_fractions(mole_fractions);};
+        void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){};
         const std::vector<long double> & get_mole_fractions(){throw NotImplementedError("get_mole_fractions not implemented for TTSE");};
         CoolPropDbl calc_molar_mass(void){return AS->molar_mass();};
         virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
@@ -671,38 +678,37 @@ class TabularBackend : public AbstractState
             
         };
         
-        TabularBackend(shared_ptr<CoolProp::AbstractState> AS){
-			using_single_phase_table = false;
+        
 
-            // Grab onto the pointer to the class
-            this->AS = AS;
-            
-            try{
-                /// Try to load the tables if you can.
-                load_tables();
-            }
-            catch(CoolProp::UnableToLoadError &){
-                /// Check directory size
-                std::string table_path = get_home_dir() + "/.CoolProp/Tables/";
-                #if defined(__ISWINDOWS__)
-                    double directory_size_in_GB = CalculateDirSize(std::wstring(table_path.begin(), table_path.end()))/POW3(1024.0);
-                #else
-                    double directory_size_in_GB = CalculateDirSize(table_path)/POW3(1024.0);
-                #endif
-                double allowed_size_in_GB = get_config_double(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB);
-                if (get_debug_level() > 0){std::cout << "Tabular directory size is " << directory_size_in_GB << " GB\n";}
-                if (directory_size_in_GB > 1.5*allowed_size_in_GB){
-                    throw DirectorySizeError(format("Maximum allowed tabular directory size is %g GB, you have exceeded 1.5 times this limit", allowed_size_in_GB));
+        void check_tables(){
+            if (!tables_loaded){
+                try{
+                    /// Try to load the tables if you can.
+                    load_tables();
                 }
-                else if (directory_size_in_GB > allowed_size_in_GB){
-                    set_warning_string(format("Maximum allowed tabular directory size is %g GB, you have exceeded this limit", allowed_size_in_GB));
+                catch(CoolProp::UnableToLoadError &){
+                    /// Check directory size
+                    std::string table_path = get_home_dir() + "/.CoolProp/Tables/";
+                    #if defined(__ISWINDOWS__)
+                        double directory_size_in_GB = CalculateDirSize(std::wstring(table_path.begin(), table_path.end()))/POW3(1024.0);
+                    #else
+                        double directory_size_in_GB = CalculateDirSize(table_path)/POW3(1024.0);
+                    #endif
+                    double allowed_size_in_GB = get_config_double(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB);
+                    if (get_debug_level() > 0){std::cout << "Tabular directory size is " << directory_size_in_GB << " GB\n";}
+                    if (directory_size_in_GB > 1.5*allowed_size_in_GB){
+                        throw DirectorySizeError(format("Maximum allowed tabular directory size is %g GB, you have exceeded 1.5 times this limit", allowed_size_in_GB));
+                    }
+                    else if (directory_size_in_GB > allowed_size_in_GB){
+                        set_warning_string(format("Maximum allowed tabular directory size is %g GB, you have exceeded this limit", allowed_size_in_GB));
+                    }
+                    /// If you cannot load the tables, build them and then write them to file
+                    build_tables();
+                    pack_matrices();
+                    write_tables();
+                    /// Load the tables back into memory as a consistency check
+                    load_tables();
                 }
-                /// If you cannot load the tables, build them and then write them to file
-                build_tables();
-                pack_matrices();
-                write_tables();
-                /// Load the tables back into memory as a consistency check
-                load_tables();
             }
         }
 };
