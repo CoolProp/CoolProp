@@ -311,11 +311,17 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
             SplineClass spline;
             if (maxima == TMAX_SAT){
                 imax = iTmax;
+                if (iTmax > env.T.size() - 3){
+                    iTmax -= 2;
+                }
                 spline.add_4value_constraints(env.rhomolar_vap[iTmax-1], env.rhomolar_vap[iTmax], env.rhomolar_vap[iTmax+1], env.rhomolar_vap[iTmax+2],
                                               env.T[iTmax-1], env.T[iTmax], env.T[iTmax+1], env.T[iTmax+2] );
             }
             else{
                 imax = ipmax;
+                if (ipmax > env.p.size() - 3){
+                    ipmax -= 2;
+                }
                 spline.add_4value_constraints(env.rhomolar_vap[ipmax-1], env.rhomolar_vap[ipmax], env.rhomolar_vap[ipmax+1], env.rhomolar_vap[ipmax+2],
                                               env.p[ipmax-1], env.p[ipmax], env.p[ipmax+1], env.p[ipmax+2] );
             }
@@ -360,6 +366,9 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
                     IO.rhomolar_vap = rhomolar_vap;
                     IO.y = HEOS->get_mole_fractions();
                     IO.x = IO.y; // Just to give it good size
+                    if (imax >= env.T.size()-2){
+                        imax -= 2;
+                    }
                     IO.T = CubicInterp(env.rhomolar_vap, env.T, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
                     IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, imax-1, imax, imax+1, imax+2, IO.rhomolar_vap);
                     for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
@@ -379,14 +388,19 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
             
             solver_resid resid(HEOS, imax, maxima);
             std::string errstr;
-            double rho = Brent(resid, IO.rhomolar_vap*0.95, IO.rhomolar_vap*1.05, DBL_EPSILON, 1e-12, 100, errstr);
+            try{
+                double rho = Brent(resid, IO.rhomolar_vap*0.95, IO.rhomolar_vap*1.05, DBL_EPSILON, 1e-12, 100, errstr);
+
+                // If maxima point is greater than density at point from the phase envelope, increase index by 1 so that the 
+                // insertion will happen *after* the point in the envelope since density is monotonically increasing.
+                if (rho > env.rhomolar_vap[imax]){ imax++; }
             
-            // If maxima point is greater than density at point from the phase envelope, increase index by 1 so that the 
-            // insertion will happen *after* the point in the envelope since density is monotonically increasing.
-            if (rho > env.rhomolar_vap[imax]){ imax++; }
-            
-            env.insert_variables(resid.IO.T, resid.IO.p, resid.IO.rhomolar_liq, resid.IO.rhomolar_vap, resid.IO.hmolar_liq, 
-                                 resid.IO.hmolar_vap, resid.IO.smolar_liq, resid.IO.smolar_vap, resid.IO.x, resid.IO.y, imax);
+                env.insert_variables(resid.IO.T, resid.IO.p, resid.IO.rhomolar_liq, resid.IO.rhomolar_vap, resid.IO.hmolar_liq, 
+                                        resid.IO.hmolar_vap, resid.IO.smolar_liq, resid.IO.smolar_vap, resid.IO.x, resid.IO.y, imax);
+            }
+            catch(...){
+                // Don't do the insertion
+            }
         }
     }
     
