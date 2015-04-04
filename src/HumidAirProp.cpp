@@ -491,8 +491,7 @@ static double HenryConstant(double T)
     double p_ws,beta_N2,beta_O2,beta_Ar,beta_a,tau,Tr,Tc=647.096;
     Tr=T/Tc;
     tau=1-Tr;
-    Water->update(CoolProp::QT_INPUTS, 1.0, T);
-    p_ws = Water->keyed_output(CoolProp::iP); //[Pa]
+    p_ws = IF97::psat97(T); //[Pa]
     beta_N2=p_ws*exp(-9.67578/Tr+4.72162*pow(tau,0.355)/Tr+11.70585*pow(Tr,-0.41)*exp(tau));
     beta_O2=p_ws*exp(-9.44833/Tr+4.43822*pow(tau,0.355)/Tr+11.42005*pow(Tr,-0.41)*exp(tau));
     beta_Ar=p_ws*exp(-8.40954/Tr+4.29587*pow(tau,0.355)/Tr+10.52779*pow(Tr,-0.41)*exp(tau));
@@ -535,8 +534,7 @@ double f_factor(double T, double p)
     if (T>273.16)
     {
         // It is liquid water
-        Water->update(CoolProp::QT_INPUTS, 0, T);
-        p_ws = Water->p();
+        p_ws = IF97::psat97(T);
         vbar_ws = 1.0/Water->keyed_output(CoolProp::iDmolar); //[m^3/mol]
         beta_H = HenryConstant(T); //[1/Pa]
     }
