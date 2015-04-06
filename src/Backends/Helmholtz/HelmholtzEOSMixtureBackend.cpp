@@ -322,6 +322,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void)
             eta_dilute = TransportRoutines::viscosity_dilute_collision_integral(*this); break;
         case ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_T:
             eta_dilute = TransportRoutines::viscosity_dilute_powers_of_T(*this); break;
+        case ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_TR:
+            eta_dilute = TransportRoutines::viscosity_dilute_powers_of_Tr(*this); break;
         case ViscosityDiluteVariables::VISCOSITY_DILUTE_COLLISION_INTEGRAL_POWERS_OF_TSTAR:
             eta_dilute = TransportRoutines::viscosity_dilute_collision_integral_powers_of_T(*this); break;
         case ViscosityDiluteVariables::VISCOSITY_DILUTE_ETHANE:

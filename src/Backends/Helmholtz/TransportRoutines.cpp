@@ -77,6 +77,23 @@ CoolPropDbl TransportRoutines::viscosity_dilute_powers_of_T(HelmholtzEOSMixtureB
         throw NotImplementedError("TransportRoutines::viscosity_dilute_powers_of_T is only for pure and pseudo-pure");
     }
 }
+CoolPropDbl TransportRoutines::viscosity_dilute_powers_of_Tr(HelmholtzEOSMixtureBackend &HEOS)
+{
+    if (HEOS.is_pure_or_pseudopure)
+    {
+        // Retrieve values from the state class
+        CoolProp::ViscosityDiluteGasPowersOfTr &data = HEOS.components[0].transport.viscosity_dilute.powers_of_Tr;
+        const std::vector<CoolPropDbl> &a = data.a, &t = data.t;
+        CoolPropDbl summer = 0, Tr = HEOS.T()/data.T_reducing;
+        for (std::size_t i = 0; i < a.size(); ++i){
+            summer += a[i]*pow(Tr, t[i]);
+        }
+        return summer;
+    }
+    else{
+        throw NotImplementedError("TransportRoutines::viscosity_dilute_powers_of_Tr is only for pure and pseudo-pure");
+    }
+}
 
 CoolPropDbl TransportRoutines::viscosity_dilute_collision_integral_powers_of_T(HelmholtzEOSMixtureBackend &HEOS)
 {
@@ -333,7 +350,7 @@ CoolPropDbl TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzE
     {
         CoolProp::ViscosityFrictionTheoryData &F = HEOS.components[0].transport.viscosity_higher_order.friction_theory;
 
-        CoolPropDbl tau = F.T_reduce/HEOS.T(), kii, krrr, kaaa, krr, kdrdr;
+        CoolPropDbl tau = F.T_reduce/HEOS.T(), kii = 0, krrr = 0, kaaa = 0, krr, kdrdr;
 
         double psi1 = exp(tau)-F.c1;
         double psi2 = exp(pow(tau,2))-F.c2;
@@ -351,16 +368,12 @@ CoolPropDbl TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzE
             krr = (F.Arr[0] + F.Arr[1]*psi1 + F.Arr[2]*psi2)*pow(tau, F.Nrr);
             kdrdr = 0;
         }
-
-        if (!F.Aii.empty() && !F.Arrr.empty() && !F.Aaaa.empty()){
+        if (!F.Aii.empty()){
             kii = (F.Aii[0] + F.Aii[1]*psi1 + F.Aii[2]*psi2)*pow(tau, F.Nii);
+        }
+        if (!F.Arrr.empty() && !F.Aaaa.empty()){
             krrr = (F.Arrr[0] + F.Arrr[1]*psi1 + F.Arrr[2]*psi2)*pow(tau, F.Nrrr);
             kaaa = (F.Aaaa[0] + F.Aaaa[1]*psi1 + F.Aaaa[2]*psi2)*pow(tau, F.Naaa);
-        }
-        else{
-            kii = 0;
-            krrr = 0;
-            kaaa = 0;
         }
 
         double p = HEOS.p()/1e5; // [bar]; 1e5 for conversion from Pa -> bar

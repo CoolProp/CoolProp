@@ -43,6 +43,16 @@ public:
     with T in K, \f$\eta^0\f$ in Pa-s
     */
     static CoolPropDbl viscosity_dilute_powers_of_T(HelmholtzEOSMixtureBackend &HEOS);
+    
+    /**
+    \brief A dilute gas viscosity term formed of summation of power terms of the reduced temperature
+
+    \f[
+    \eta^0 = \displaystyle\sum_ia_i(T/T_c)^{t_i}
+    \f]
+    with T in K, \f$\eta^0\f$ in Pa-s
+    */
+    static CoolPropDbl viscosity_dilute_powers_of_Tr(HelmholtzEOSMixtureBackend &HEOS);
 
     static CoolPropDbl viscosity_dilute_collision_integral_powers_of_T(HelmholtzEOSMixtureBackend &HEOS);
 
@@ -111,6 +121,34 @@ public:
     static CoolPropDbl viscosity_benzene_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl viscosity_hexane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl viscosity_heptane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    
+    /**
+     * @brief Higher-order viscosity term from friction theory of Sergio Quinones-Cisneros
+     * 
+     * Several functional forms have been proposed and this function attempts to handle all of them
+     * \f$ \eta_{HO} = \kappa_ap_a + \kappa_r\Delta p_r + \kappa_i p_{id}+\kappa_{aa}p_a^2 + \kappa_{drdr}\Delta p_r^2 + \kappa_{rr}p_{r}^2 + \kappa_{ii}p_{id}^2 +\kappa_{rrr}p_r^3 + \kappa_{aaa}p_a^3
+     * 
+     * Watch out that sometimes it is \f$\Delta p_r\f$ and other times it is \f$p_r\f$!
+     * 
+     * \f$ p_r = T \frac{\partial p}{\partial T}\right|_{\rho}/1e5; \f$ // [bar/K]; 1e5 for conversion from Pa -> bar
+     * \f$ p_a = p - p_r; \f$ //[bar]
+     * \f$ p_{id} = \rho R T \f$ / 1e5; // [bar]; 1e5 for conversion from Pa -> bar
+     * \Delta p_r = p_r - p_{id};
+     * \f$ \psi_1 = \exp(\tau)-c_1 \f$ 
+     * \f$ \psi_2 = \exp(\tau^2)-c_2 \f$
+     * \f$ \kappa_i = (A_{i,0} + A_{i,1}\psi_1 + A_{i,2}\psi_2)\tau \f$
+     * \f$ \kappa_a = (A_{a,0} + A_{a,1}\psi_1 + A_{a,2}\psi_2)\tau^{N_a} \f$
+     * \f$ \kappa_{aa} = (A_{aa,0} + A_{aa,1}\psi_1 + A_{aa,2}\psi_2)\tau^{N_{aa}} \f$
+     * \f$ \kappa_r = (A_{r,0} + A_{r,1}\psi_1 + A_{r,2}\psi_2)\tau^{N_r} \f$
+     * \f$ \kappa_{rr} = (A_{rr,0} + A_{rr,1}\psi_1 + A_{rr,2}\psi_2)\tau^{N_{rr}} \f$
+     * \f$ \kappa_{drdr} = (A_{drdr,0} + A_{drdr,1}\psi_1 + A_{drdr,2}\psi_2)\tau^{N_{drdr}} \f$
+     * \f$ \kappa_{aa} = (A_{aa,0} + F_{Aaa,1}\psi_1 + F.Aaa[2]\psi_2)\tau^{N_{aa}} \f$
+     * \f$ \kappa_{rrr} = (A_{rrr,0} + A_{rrr,1}\psi_1 + A_{rrr,2}\psi_2)\tau^{N_{rrr}} \f$
+     * \f$ \kappa_{aaa} = (A_{aaa,0} + A_{aaa,1}\psi_1 + A_{aaa,2}\psi_2)\tau^{N_{aaa}} \f$
+     * 
+     * @param HEOS The instance to use
+     * @return 
+     */
     static CoolPropDbl viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend &HEOS);
 
     /**

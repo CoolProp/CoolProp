@@ -425,6 +425,15 @@ protected:
 
             fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_T;
         }
+        else if (!type.compare("powers_of_Tr")){
+            // Get a reference to the entry in the fluid instance
+            CoolProp::ViscosityDiluteGasPowersOfTr &CI = fluid.transport.viscosity_dilute.powers_of_Tr;
+            // Load up the values
+            CI.a = cpjson::get_long_double_array(dilute["a"]);
+            CI.t = cpjson::get_long_double_array(dilute["t"]);
+            CI.T_reducing = cpjson::get_double(dilute, "T_reducing");
+            fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_POWERS_OF_TR;
+        }
         else if (!type.compare("collision_integral_powers_of_Tstar")){
             // Get a reference to the entry in the fluid instance
             CoolProp::ViscosityDiluteCollisionIntegralPowersOfTstarData &CI = fluid.transport.viscosity_dilute.collision_integral_powers_of_Tstar;
@@ -570,14 +579,15 @@ protected:
             else{
                 throw ValueError(format("can only provide one of Arr or Adrdr for fluid %s",fluid.name.c_str()));
             }
-
-            if (higher.HasMember("Aaaa") && higher.HasMember("Arrr") && higher.HasMember("Aii")){
+            if (higher.HasMember("Aii")){
+                F.Aii = cpjson::get_long_double_array(higher["Aii"]);
+                F.Nii = cpjson::get_integer(higher,"Nii");
+            }
+            if (higher.HasMember("Aaaa") && higher.HasMember("Arrr")){
                 F.Aaaa = cpjson::get_long_double_array(higher["Aaaa"]);
                 F.Arrr = cpjson::get_long_double_array(higher["Arrr"]);
-                F.Aii = cpjson::get_long_double_array(higher["Aii"]);
                 F.Naaa = cpjson::get_integer(higher,"Naaa");
                 F.Nrrr = cpjson::get_integer(higher,"Nrrr");
-                F.Nii = cpjson::get_integer(higher,"Nii");
             }
 
         }
