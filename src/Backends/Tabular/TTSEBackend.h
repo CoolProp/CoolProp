@@ -11,7 +11,12 @@ class TTSEBackend : public TabularBackend
     public:
         std::string backend_name(void){return "TTSEBackend";}
         /// Instantiator; base class loads or makes tables
-        TTSEBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS) {};
+        TTSEBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS) {
+            // If a pure fluid, don't need to set fractions, go ahead and build
+            if (this->AS->get_mole_fractions().size() == 1){
+                check_tables();
+            }
+        }
         void update(CoolProp::input_pairs input_pair, double val1, double val2);
         double evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
         double evaluate_single_phase_transport(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);

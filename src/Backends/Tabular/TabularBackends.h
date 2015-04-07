@@ -465,10 +465,10 @@ class LogPTTable : public SinglePhaseGriddedTableData
 class TabularBackend : public AbstractState
 {
     protected:
+        bool tables_loaded, using_single_phase_table;
+        shared_ptr<CoolProp::AbstractState> AS;
         enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE};
         selected_table_options selected_table;
-        shared_ptr<CoolProp::AbstractState> AS;
-        bool using_single_phase_table, tables_loaded;
         std::size_t cached_single_phase_i, cached_single_phase_j;
         std::size_t cached_saturation_iL, cached_saturation_iV;
         std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdx2, *d2zdxdy, *d2zdy2;
@@ -708,6 +708,8 @@ class TabularBackend : public AbstractState
                     write_tables();
                     /// Load the tables back into memory as a consistency check
                     load_tables();
+                    // Set the flag saying tables have been successfully loaded
+                    tables_loaded = true;
                 }
             }
         }

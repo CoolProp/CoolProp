@@ -95,8 +95,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
     // ------------------------
     AS->update(QT_INPUTS, 0, AS->Ttriple());
     CoolPropDbl p_triple = AS->p();
-    CoolPropDbl p_max = AS->p_critical();
-
+    // If a mixture, maximum pressure in the phase envelope can be greater than critical pressure
     CoolPropDbl p, pmin = p_triple*1.001, pmax = 0.9999999*AS->p_critical();
     for (std::size_t i = 0; i < N-1; ++i)
     {

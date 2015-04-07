@@ -123,8 +123,12 @@ class BicubicBackend : public TabularBackend
     public:
         /// Instantiator; base class loads or makes tables
 		BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS){
-			build_coeffs(single_phase_logph, coeffs_ph);
-			build_coeffs(single_phase_logpT, coeffs_pT);
+            // If a pure fluid, don't need to set fractions, go ahead and build
+            if (this->AS->get_mole_fractions().size() == 1){
+                check_tables();
+			    build_coeffs(single_phase_logph, coeffs_ph);
+			    build_coeffs(single_phase_logpT, coeffs_pT);
+            }
 		};
         std::string backend_name(void){return "BicubicBackend";}
         /// Build the \f$a_{i,j}\f$ coefficients for bicubic interpolation
