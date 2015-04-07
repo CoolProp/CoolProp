@@ -4,7 +4,7 @@ import os
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
 root_dir = os.path.abspath(os.path.join(web_dir, '..')) 
 
-fluid_template = """.. _fluid_{fluid:s}:
+fluid_template = u""".. _fluid_{fluid:s}:
 
 {fluid_stars:s}
 {fluid:s}
@@ -83,6 +83,9 @@ from pybtex.database.input import bibtex
 parser = bibtex.Parser()
 bibdata = parser.parse_file(os.path.join(root_dir,"CoolPropBibTeXLibrary.bib"))
 
+from CoolProp.BibtexParser import BibTeXerClass
+BTC = BibTeXerClass(os.path.join(root_dir,"CoolPropBibTeXLibrary.bib"))
+
 # See http://stackoverflow.com/questions/19751402/does-pybtex-support-accent-special-characters-in-bib-file/19754245#19754245
 import pybtex
 style = pybtex.plugin.find_plugin('pybtex.style.formatting', 'plain')()
@@ -100,8 +103,7 @@ def generate_bibtex_string(fluid):
             # get the item
             bibtex_key = CoolProp.CoolProp.get_BibTeXKey(fluid,key).strip()
             if bibtex_key.strip() in bibdata.entries.keys():
-                entry = style.format_entries([bibdata.entries[bibtex_key.strip()]])
-                html = entry2html(entry)
+                html = BTC.getEntry(key=bibtex_key, fmt='html')
                 sect = bibtex_map[key]
                 string += sect+'\n'+'-'*len(sect)+'\n\n.. raw:: html\n\n   '+html+'\n\n'
         except ValueError as E:
@@ -187,6 +189,6 @@ class FluidGenerator(object):
                                     references = references
                                     )
         
-        with open(os.path.join(path, self.fluid+'.rst'),'w') as fp:
+        with open(os.path.join(path, self.fluid+'.rst'), 'w') as fp:
             print 'writing', os.path.join(path, self.fluid+'.rst')
-            fp.write(out)
+            fp.write(out.encode('utf8'))
