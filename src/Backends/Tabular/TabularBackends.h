@@ -677,14 +677,14 @@ class TabularBackend : public AbstractState
             }
             
         };
-        
-        
 
         void check_tables(){
             if (!tables_loaded){
                 try{
                     /// Try to load the tables if you can.
                     load_tables();
+                    // Set the flag saying tables have been successfully loaded
+                    tables_loaded = true;
                 }
                 catch(CoolProp::UnableToLoadError &){
                     /// Check directory size
