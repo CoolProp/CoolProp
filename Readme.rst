@@ -35,3 +35,8 @@ It was originally developed by Ian Bell, currently a post-doc at the University 
 .. |license| image:: https://pypip.in/license/CoolProp/badge.png
     :target: http://pypi.python.org/pypi/CoolProp/
     :alt: license
+
+
+.. image:: https://badges.gitter.im/Join%20Chat.svg
+   :alt: Join the chat at https://gitter.im/CoolProp/CoolProp
+   :target: https://gitter.im/CoolProp/CoolProp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
