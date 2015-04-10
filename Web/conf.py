@@ -197,7 +197,8 @@ html_theme_path = [csp.get_theme_dir()]
 # [optional] set some of the options listed above...
 html_theme_options = { "roottarget": "index",
                        "max_width" : "13in",
-                       "logotarget": "index"
+                       "logotarget": "index",
+                       "googleanalytics_id": "UA-53205480-2"
                        }
 
 edit_on_github_project = 'CoolProp/CoolProp'
