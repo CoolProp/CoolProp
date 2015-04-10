@@ -273,7 +273,7 @@ std::string CoolProp::TabularBackend::path_to_tables(void){
     std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();
     std::vector<std::string> components;
     for (std::size_t i = 0; i < fluids.size(); ++i){
-        components.push_back(format("%s[%0.10f]", fluids[i].c_str(), fractions[i]));
+        components.push_back(format("%s[%0.10Lf]", fluids[i].c_str(), fractions[i]));
     }
     return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(components, "&") + ")";
 }

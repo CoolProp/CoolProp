@@ -519,7 +519,7 @@ class TabularBackend : public AbstractState
         void update(CoolProp::input_pairs input_pair, double Value1, double Value2){};
         void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){this->AS->set_mole_fractions(mole_fractions);};
         void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){};
-        const std::vector<long double> & get_mole_fractions(){throw NotImplementedError("get_mole_fractions not implemented for TTSE");};
+        const std::vector<long double> & get_mole_fractions(){return AS->get_mole_fractions();};
         CoolPropDbl calc_molar_mass(void){return AS->molar_mass();};
         virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
