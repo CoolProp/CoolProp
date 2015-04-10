@@ -12,214 +12,292 @@ namespace CoolProp{
 void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
 {
     bool debug = get_debug_level() > 0 || true;
-    if (HEOS.get_mole_fractions_ref().size() < 2){throw ValueError("Cannot build phase envelope for pure fluid");}
-    std::size_t failure_count = 0;
-    // Set some imput options
-    SaturationSolvers::mixture_VLE_IO io;
-    io.sstype = SaturationSolvers::imposed_p;
-    io.Nstep_max = 20;
-    
-    // Set the pressure to a low pressure 
-    HEOS._p = 100000;
-    HEOS._Q = 1;
-    
-    // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
-    CoolPropDbl Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
-
-    // Use Wilson iteration to obtain updated guess for temperature
-    Tguess = SaturationSolvers::saturation_Wilson(HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
-    
-    // Actually call the successive substitution solver
-    io.beta = 1;
-    SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
+    if (HEOS.get_mole_fractions_ref().size() == 1){
+        PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
+        env.resize(HEOS.mole_fractions.size());
         
-    // Use the residual function based on x_i, T and rho' as independent variables.  rho'' is specified
-    SaturationSolvers::newton_raphson_saturation NR;
-    SaturationSolvers::newton_raphson_saturation_options IO;
-    
-    IO.bubble_point = false; // Do a "dewpoint" calculation all the way around
-    IO.x = io.x;
-    IO.y = HEOS.mole_fractions;
-    IO.rhomolar_liq = io.rhomolar_liq;
-    IO.rhomolar_vap = io.rhomolar_vap;
-    IO.T = io.T;
-    IO.p = io.p;
-    IO.Nstep_max = 30;
-    
-    /*
-    IO.p = 1e5;
-    IO.rhomolar_liq = 17257.17130;
-    IO.rhomolar_vap = 56.80022884;
-    IO.T = 219.5200523;
-    IO.x[0] = 0.6689704673;
-    IO.x[1] = 0.3310295327;
-    */
-    
-    //IO.rhomolar_liq *= 1.2;
-    
-    IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
-
-    NR.call(HEOS, IO.y, IO.x, IO);
-    
-    // Switch to density imposed
-    IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::RHOV_IMPOSED;
-    
-    bool dont_extrapolate = false;
-    
-    PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
-    env.resize(HEOS.mole_fractions.size());
-
-    std::size_t iter = 0, //< The iteration counter
-                iter0 = 0; //< A reference point for the counter, can be increased to go back to linear interpolation
-    CoolPropDbl factor = 1.05;
-    for (;;)
-    {
-        top_of_loop: ; // A goto label so that nested loops can break out to the top of this loop
+        // Breakpoints in the phase envelope
+        std::vector<CoolPropDbl> Tbp, Qbp;
+        std::vector<std::size_t> Nbp;
+        // Triple point vapor up to Tmax_sat
+        Tbp.push_back(HEOS.Ttriple());
+        Qbp.push_back(1.0);
+        Nbp.push_back(40);
         
-        if (failure_count > 5){
-            // Stop since we are stuck at a bad point
-            //throw SolutionError("stuck");
-            return;
+        if (HEOS.is_pure()){
+            // Up to critical point, back to triple point on the liquid side
+            Tbp.push_back(HEOS.T_critical()-1e-3);
+            Qbp.push_back(0.0);
+            Tbp.push_back(HEOS.Ttriple());
+            Nbp.push_back(40);
         }
-        
-        if (iter - iter0 > 0){ IO.rhomolar_vap *= factor;}
-        if (dont_extrapolate)
-        {
-            // Reset the step to a reasonably small size
-            factor = 1.0001;
-        }
-        else if (iter - iter0 == 2)
-        {
-            IO.T = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, IO.rhomolar_vap);
-            IO.rhomolar_liq = LinearInterp(env.rhomolar_vap, env.rhomolar_liq, iter-2, iter-1, IO.rhomolar_vap);
-            for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
-            {            
-                IO.x[i] = LinearInterp(env.rhomolar_vap, env.x[i], iter-2, iter-1, IO.rhomolar_vap);
+        else{
+            SimpleState max_sat_T = HEOS.get_state("max_sat_T"), max_sat_p = HEOS.get_state("max_sat_p"), crit = HEOS.get_state("critical");
+            if (max_sat_T.rhomolar < crit.rhomolar && max_sat_T.rhomolar < max_sat_p.rhomolar){
+                Tbp.push_back(HEOS.calc_Tmax_sat());
+                if (max_sat_p.rhomolar < crit.rhomolar){
+                    // psat_max density less than critical density
+                    Qbp.push_back(1.0);
+                    Qbp.push_back(1.0);
+                    Tbp.push_back(max_sat_p.T);
+                    Tbp.push_back(crit.T);
+                }
+                else{
+                    // Vapor line density less than critical density
+                    Qbp.push_back(1.0);
+                    Qbp.push_back(0.0);
+                    Nbp.push_back(10);
+                    Tbp.push_back(crit.T);
+                    Tbp.push_back(max_sat_p.T);
+                }
+                Nbp.push_back(10);
+                Nbp.push_back(10);
+                Qbp.push_back(0.0);
+                Nbp.push_back(40);
+                Tbp.push_back(HEOS.Ttriple());
+            }
+            else{
+                throw ValueError(format(""));
             }
         }
-        else if (iter - iter0 == 3)
-        {
-            IO.T = QuadInterp(env.rhomolar_vap, env.T, iter-3, iter-2, iter-1, IO.rhomolar_vap);
-            IO.rhomolar_liq = QuadInterp(env.rhomolar_vap, env.rhomolar_liq, iter-3, iter-2, iter-1, IO.rhomolar_vap);
-            for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
-            {
-                IO.x[i] = QuadInterp(env.rhomolar_vap, env.x[i], iter-3, iter-2, iter-1, IO.rhomolar_vap);
+        
+        for (std::size_t i = 0; i < Tbp.size()-1; ++i){
+            CoolPropDbl Tmin = Tbp[i], Tmax = Tbp[i+1]; 
+            std::size_t N = Nbp[i];
+            for (CoolPropDbl T = Tmin; is_in_closed_range(Tmin, Tmax, T); T += (Tmax-Tmin)/(N-1)){
+                try{
+                    HEOS.update(QT_INPUTS, Qbp[i], T);
+                }
+                catch(...){
+                    continue;
+                }
+                if (Qbp[i] > 0.5){
+                    env.store_variables(HEOS.T(), HEOS.p(),
+                                    HEOS.saturated_liquid_keyed_output(iDmolar), HEOS.saturated_vapor_keyed_output(iDmolar),
+                                    HEOS.saturated_liquid_keyed_output(iHmolar), HEOS.saturated_vapor_keyed_output(iHmolar),
+                                    HEOS.saturated_liquid_keyed_output(iSmolar), HEOS.saturated_vapor_keyed_output(iSmolar),
+                                    std::vector<CoolPropDbl>(1,1.0),std::vector<CoolPropDbl>(1,1.0));
+                }
+                else{
+                    env.store_variables(HEOS.T(), HEOS.p(),
+                                    HEOS.saturated_vapor_keyed_output(iDmolar), HEOS.saturated_liquid_keyed_output(iDmolar),
+                                    HEOS.saturated_vapor_keyed_output(iHmolar), HEOS.saturated_liquid_keyed_output(iHmolar),
+                                    HEOS.saturated_vapor_keyed_output(iSmolar), HEOS.saturated_liquid_keyed_output(iSmolar),
+                                    std::vector<CoolPropDbl>(1,1.0),std::vector<CoolPropDbl>(1,1.0));
+                }
             }
         }
-        else if (iter - iter0 > 3)
-        {
-            IO.T = CubicInterp(env.rhomolar_vap, env.T, iter-4, iter-3, iter-2, iter-1, IO.rhomolar_vap);
-            IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, iter-4, iter-3, iter-2, iter-1, IO.rhomolar_vap);
+    }
+    else{ // It's a mixture
+    
+        std::size_t failure_count = 0;
+        // Set some imput options
+        SaturationSolvers::mixture_VLE_IO io;
+        io.sstype = SaturationSolvers::imposed_p;
+        io.Nstep_max = 20;
+        
+        // Set the pressure to a low pressure 
+        HEOS._p = 100000;
+        HEOS._Q = 1;
+        
+        // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
+        CoolPropDbl Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
+
+        // Use Wilson iteration to obtain updated guess for temperature
+        Tguess = SaturationSolvers::saturation_Wilson(HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
+        
+        // Actually call the successive substitution solver
+        io.beta = 1;
+        SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
             
-            // Check if there is a large deviation from linear interpolation - this suggests a step size that is so large that a minima or maxima of the interpolation function is crossed
-            CoolPropDbl T_linear = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, IO.rhomolar_vap);
-            if (std::abs((T_linear-IO.T)/IO.T) > 0.1){
-                // Try again, but with a smaller step
-                IO.rhomolar_vap /= factor;
-                factor = 1 + (factor-1)/2;
-                failure_count++;
-                continue;
+        // Use the residual function based on x_i, T and rho' as independent variables.  rho'' is specified
+        SaturationSolvers::newton_raphson_saturation NR;
+        SaturationSolvers::newton_raphson_saturation_options IO;
+        
+        IO.bubble_point = false; // Do a "dewpoint" calculation all the way around
+        IO.x = io.x;
+        IO.y = HEOS.mole_fractions;
+        IO.rhomolar_liq = io.rhomolar_liq;
+        IO.rhomolar_vap = io.rhomolar_vap;
+        IO.T = io.T;
+        IO.p = io.p;
+        IO.Nstep_max = 30;
+        
+        /*
+        IO.p = 1e5;
+        IO.rhomolar_liq = 17257.17130;
+        IO.rhomolar_vap = 56.80022884;
+        IO.T = 219.5200523;
+        IO.x[0] = 0.6689704673;
+        IO.x[1] = 0.3310295327;
+        */
+        
+        //IO.rhomolar_liq *= 1.2;
+        
+        IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
+
+        NR.call(HEOS, IO.y, IO.x, IO);
+        
+        // Switch to density imposed
+        IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::RHOV_IMPOSED;
+        
+        bool dont_extrapolate = false;
+        
+        PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
+        env.resize(HEOS.mole_fractions.size());
+
+        std::size_t iter = 0, //< The iteration counter
+                    iter0 = 0; //< A reference point for the counter, can be increased to go back to linear interpolation
+        CoolPropDbl factor = 1.05;
+        for (;;)
+        {
+            top_of_loop: ; // A goto label so that nested loops can break out to the top of this loop
+            
+            if (failure_count > 5){
+                // Stop since we are stuck at a bad point
+                //throw SolutionError("stuck");
+                return;
             }
-            for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
+            
+            if (iter - iter0 > 0){ IO.rhomolar_vap *= factor;}
+            if (dont_extrapolate)
             {
-                IO.x[i] = CubicInterp(env.rhomolar_vap, env.x[i], iter-4, iter-3, iter-2, iter-1, IO.rhomolar_vap);
-                if (IO.x[i] < 0 || IO.x[i] > 1){
+                // Reset the step to a reasonably small size
+                factor = 1.0001;
+            }
+            else if (iter - iter0 == 2)
+            {
+                IO.T = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, IO.rhomolar_vap);
+                IO.rhomolar_liq = LinearInterp(env.rhomolar_vap, env.rhomolar_liq, iter-2, iter-1, IO.rhomolar_vap);
+                for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
+                {            
+                    IO.x[i] = LinearInterp(env.rhomolar_vap, env.x[i], iter-2, iter-1, IO.rhomolar_vap);
+                }
+            }
+            else if (iter - iter0 == 3)
+            {
+                IO.T = QuadInterp(env.rhomolar_vap, env.T, iter-3, iter-2, iter-1, IO.rhomolar_vap);
+                IO.rhomolar_liq = QuadInterp(env.rhomolar_vap, env.rhomolar_liq, iter-3, iter-2, iter-1, IO.rhomolar_vap);
+                for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
+                {
+                    IO.x[i] = QuadInterp(env.rhomolar_vap, env.x[i], iter-3, iter-2, iter-1, IO.rhomolar_vap);
+                }
+            }
+            else if (iter - iter0 > 3)
+            {
+                IO.T = CubicInterp(env.rhomolar_vap, env.T, iter-4, iter-3, iter-2, iter-1, IO.rhomolar_vap);
+                IO.rhomolar_liq = CubicInterp(env.rhomolar_vap, env.rhomolar_liq, iter-4, iter-3, iter-2, iter-1, IO.rhomolar_vap);
+                
+                // Check if there is a large deviation from linear interpolation - this suggests a step size that is so large that a minima or maxima of the interpolation function is crossed
+                CoolPropDbl T_linear = LinearInterp(env.rhomolar_vap, env.T, iter-2, iter-1, IO.rhomolar_vap);
+                if (std::abs((T_linear-IO.T)/IO.T) > 0.1){
                     // Try again, but with a smaller step
                     IO.rhomolar_vap /= factor;
                     factor = 1 + (factor-1)/2;
                     failure_count++;
-                    goto top_of_loop;
+                    continue;
+                }
+                for (std::size_t i = 0; i < IO.x.size()-1; ++i) // First N-1 elements
+                {
+                    IO.x[i] = CubicInterp(env.rhomolar_vap, env.x[i], iter-4, iter-3, iter-2, iter-1, IO.rhomolar_vap);
+                    if (IO.x[i] < 0 || IO.x[i] > 1){
+                        // Try again, but with a smaller step
+                        IO.rhomolar_vap /= factor;
+                        factor = 1 + (factor-1)/2;
+                        failure_count++;
+                        goto top_of_loop;
+                    }
                 }
             }
-        }
-    
-        // The last mole fraction is sum of N-1 first elements
-        IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
         
-        // Uncomment to check guess values for Newton-Raphson
-        //std::cout << "\t\tdv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " x " << vec_to_string(IO.x, "%0.10Lg") << std::endl;
-        
-        // Dewpoint calculation, liquid (x) is incipient phase
-        try{
-            NR.call(HEOS, IO.y, IO.x, IO);
-            if (!ValidNumber(IO.rhomolar_liq) || !ValidNumber(IO.p) || !ValidNumber(IO.T)){
-                throw ValueError("Invalid number");
-            }
-        }
-        catch(...){
-            //std::cout << e.what() << std::endl;
-            //std::cout << IO.T << " " << IO.p << std::endl;
-            // Try again, but with a smaller step
-            IO.rhomolar_vap /= factor;
-            factor = 1 + (factor-1)/2;
-            failure_count++;
-            
-            continue;
-        }
-        
-        if (debug){
-            std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p  << " hl " << IO.hmolar_liq  << " hv " << IO.hmolar_vap  << " sl " << IO.smolar_liq  << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")  << " Ns " << IO.Nsteps << std::endl;
-        }
-        env.store_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y);
-        
-        iter ++;
-
-        CoolPropDbl abs_rho_difference = std::abs((IO.rhomolar_liq - IO.rhomolar_vap)/IO.rhomolar_liq);
-        
-        // Critical point jump
-        if (abs_rho_difference < 0.01 && IO.rhomolar_liq  > IO.rhomolar_vap){
-            //std::cout << "dv" << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
-            CoolPropDbl rhoc_approx = 0.5*IO.rhomolar_liq + 0.5*IO.rhomolar_vap;
-            CoolPropDbl rho_vap_new = 2*rhoc_approx - IO.rhomolar_vap;
-            // Linearly interpolate to get new guess for T
-            IO.T = LinearInterp(env.rhomolar_vap,env.T,iter-2,iter-1,rho_vap_new);
-            IO.rhomolar_liq = 2*rhoc_approx - IO.rhomolar_liq;
-            for (std::size_t i = 0; i < IO.x.size()-1; ++i){
-                IO.x[i] = 2*IO.y[i] - IO.x[i];
-            }
+            // The last mole fraction is sum of N-1 first elements
             IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
-            factor = rho_vap_new/IO.rhomolar_vap;
-            dont_extrapolate = true; // So that we use the mole fractions we calculated here instead of the extrapolated values
-            //std::cout << "dv " << rho_vap_new << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
-            iter0 = iter - 1; // Back to linear interpolation again
-            continue;
-        }
-        
-        dont_extrapolate = false;
-        if (iter < 5){continue;}
-        if (IO.Nsteps > 10)
-        {
-            factor = 1 + (factor-1)/10;
-        }
-        else if (IO.Nsteps > 5)
-        {
-            factor = 1 + (factor-1)/3;
-        }
-        else if (IO.Nsteps <= 4)
-        {
-            factor = 1 + (factor-1)*2;
-        }
-        // Min step is 1.01
-        factor = std::max(factor, static_cast<CoolPropDbl>(1.01));
-        
-        // Stop if the pressure is below the starting pressure
-        // or if the composition of one of the phases becomes almost pure
-        CoolPropDbl max_fraction = *std::max_element(IO.x.begin(), IO.x.end());
-        if (iter > 4 && (IO.p < env.p[0] || std::abs(1.0-max_fraction) < 1e-9 )){ 
-            env.built = true; 
-            if (debug){
-                std::cout << format("envelope built.\n"); 
-                std::cout << format("closest fraction to 1.0: distance %g", 1-max_fraction);
+            
+            // Uncomment to check guess values for Newton-Raphson
+            //std::cout << "\t\tdv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " x " << vec_to_string(IO.x, "%0.10Lg") << std::endl;
+            
+            // Dewpoint calculation, liquid (x) is incipient phase
+            try{
+                NR.call(HEOS, IO.y, IO.x, IO);
+                if (!ValidNumber(IO.rhomolar_liq) || !ValidNumber(IO.p) || !ValidNumber(IO.T)){
+                    throw ValueError("Invalid number");
+                }
+            }
+            catch(...){
+                //std::cout << e.what() << std::endl;
+                //std::cout << IO.T << " " << IO.p << std::endl;
+                // Try again, but with a smaller step
+                IO.rhomolar_vap /= factor;
+                factor = 1 + (factor-1)/2;
+                failure_count++;
+                
+                continue;
             }
             
-            // Now we refine the phase envelope to add some points in places that are still pretty rough
-            refine(HEOS);
+            if (debug){
+                std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p  << " hl " << IO.hmolar_liq  << " hv " << IO.hmolar_vap  << " sl " << IO.smolar_liq  << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")  << " Ns " << IO.Nsteps << std::endl;
+            }
+            env.store_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y);
             
-            return; 
+            iter ++;
+
+            CoolPropDbl abs_rho_difference = std::abs((IO.rhomolar_liq - IO.rhomolar_vap)/IO.rhomolar_liq);
+            
+            // Critical point jump
+            if (abs_rho_difference < 0.01 && IO.rhomolar_liq  > IO.rhomolar_vap){
+                //std::cout << "dv" << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
+                CoolPropDbl rhoc_approx = 0.5*IO.rhomolar_liq + 0.5*IO.rhomolar_vap;
+                CoolPropDbl rho_vap_new = 2*rhoc_approx - IO.rhomolar_vap;
+                // Linearly interpolate to get new guess for T
+                IO.T = LinearInterp(env.rhomolar_vap,env.T,iter-2,iter-1,rho_vap_new);
+                IO.rhomolar_liq = 2*rhoc_approx - IO.rhomolar_liq;
+                for (std::size_t i = 0; i < IO.x.size()-1; ++i){
+                    IO.x[i] = 2*IO.y[i] - IO.x[i];
+                }
+                IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
+                factor = rho_vap_new/IO.rhomolar_vap;
+                dont_extrapolate = true; // So that we use the mole fractions we calculated here instead of the extrapolated values
+                //std::cout << "dv " << rho_vap_new << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
+                iter0 = iter - 1; // Back to linear interpolation again
+                continue;
+            }
+            
+            dont_extrapolate = false;
+            if (iter < 5){continue;}
+            if (IO.Nsteps > 10)
+            {
+                factor = 1 + (factor-1)/10;
+            }
+            else if (IO.Nsteps > 5)
+            {
+                factor = 1 + (factor-1)/3;
+            }
+            else if (IO.Nsteps <= 4)
+            {
+                factor = 1 + (factor-1)*2;
+            }
+            // Min step is 1.01
+            factor = std::max(factor, static_cast<CoolPropDbl>(1.01));
+            
+            // Stop if the pressure is below the starting pressure
+            // or if the composition of one of the phases becomes almost pure
+            CoolPropDbl max_fraction = *std::max_element(IO.x.begin(), IO.x.end());
+            if (iter > 4 && (IO.p < env.p[0] || std::abs(1.0-max_fraction) < 1e-9 )){ 
+                env.built = true; 
+                if (debug){
+                    std::cout << format("envelope built.\n"); 
+                    std::cout << format("closest fraction to 1.0: distance %g", 1-max_fraction);
+                }
+                
+                // Now we refine the phase envelope to add some points in places that are still pretty rough
+                refine(HEOS);
+                
+                return; 
+            }
+            
+            // Reset the failure counter
+            failure_count = 0;
         }
-        
-        // Reset the failure counter
-        failure_count = 0;
     }
 }
 
@@ -279,6 +357,9 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
 }
 void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
 {
+    // No finalization for pure or pseudo-pure fluids
+    if (HEOS.get_mole_fractions_ref().size() == 1){return;}
+    
     enum maxima_points {PMAX_SAT = 0, TMAX_SAT = 1};
     std::size_t imax; // Index of the maximal temperature or pressure
     
