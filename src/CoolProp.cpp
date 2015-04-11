@@ -898,6 +898,9 @@ std::string get_fluid_param_string(const std::string &FluidName, const std::stri
         else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number")){
             return cpfluid.CAS;
         }
+        else if (!ParamName.compare("formula")){
+            return cpfluid.formula;
+        }
         else if (!ParamName.compare("ASHRAE34")){
             return cpfluid.environment.ASHRAE34;
         }

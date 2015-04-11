@@ -102,6 +102,7 @@ You might want to start by looking at CoolProp.h
     "REFPROPName","REFPROP_name" | The name of the fluid used in REFPROP
     "Bibtex-XXX"                 | A BibTeX key, where XXX is one of the bibtex keys used in get_BibTeXKey
     "pure"                       | "true" if the fluid is pure, "false" otherwise
+    "formula"                    | The chemical formula of the fluid in LaTeX form if available, "" otherwise
     
     @returns The string, or an error message if not valid input
     */
