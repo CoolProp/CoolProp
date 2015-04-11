@@ -1596,6 +1596,8 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
     {
         // Add a check to make sure that Air and Water fluid states have been properly instantiated
         check_fluid_instantiation();
+        Water->clear();
+        Air->clear();
         
         std::vector<givens> input_keys(2);
         std::vector<double> input_vals(2);
