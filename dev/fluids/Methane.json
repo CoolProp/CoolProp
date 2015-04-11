@@ -600,5 +600,71 @@
       "smolar": 84.8847254570935, 
       "smolar_units": "J/mol/K"
     }
+  },
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "QuinonesCisneros-JPCB-2006", 
+      "dilute": {
+        "a": [
+          0.00000260536,
+          -0.0000185247,
+          0.0000234216, 
+          0.0
+        ], 
+        "t": [
+          0, 
+          0.25, 
+          0.5, 
+          0.75
+        ], 
+        "T_reducing": 190.564,
+        "type": "powers_of_Tr"
+      }, 
+      "epsilon_over_k": 148.6, 
+      "epsilon_over_k_units": "K", 
+      "higher_order": {
+        "Aa": [
+          -3.12118e-8,
+          1.99422e-10,
+          0
+        ], 
+        "Aaa": [
+          -8.52992e-13,
+          -3.58009e-13,
+          0.0
+        ], 
+        "Adrdr": [
+          1.60099e-11,
+          8.50221e-13,
+          0.0
+        ], 
+        "Ai": [
+          3.49668e-8,
+          -1.73176e-8,
+          0.0
+        ], 
+        "Aii": [
+          -3.55631e-10,
+          2.80326e-10,
+          0.0
+        ], 
+        "Ar": [
+          5.98858e-8,
+          -4.91143e-8,
+          0.0
+        ], 
+        "Na": 1, 
+        "Naa": 3, 
+        "Nii": 3, 
+        "Nr": 1, 
+        "Nrr": 3, 
+        "T_reduce": 190.564, 
+        "c1": 1, 
+        "c2": 1, 
+        "type": "friction_theory"
+      }, 
+      "sigma_eta": 3.758e-10, 
+      "sigma_eta_units": "m"
+    }
   }
 }
