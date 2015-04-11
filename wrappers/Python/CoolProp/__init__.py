@@ -13,16 +13,6 @@ if constants.__file__.rsplit('.', 1)[1] not in ['pyc','pyo','py']:
         print("Unable to remove" + constants.__file__ + ". Please manually remove it")
     quit()
 
-try:
-    import matplotlib
-except ImportError:
-    raise ImportError('It was not possible to import the required package matplotlib.  Please install it using your package manager')
-
-try:
-    import numpy
-except ImportError:
-    raise ImportError('It was not possible to import the required package numpy.  Please install it using your package manager')
-
 from .CoolProp import AbstractState
 from . import CoolProp
 from . import HumidAirProp
