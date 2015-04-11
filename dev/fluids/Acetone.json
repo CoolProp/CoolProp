@@ -399,6 +399,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{3}H_{6}O_{1}", 
   "NAME": "Acetone", 
   "REFPROP_NAME": "ACETONE", 
   "STATES": {

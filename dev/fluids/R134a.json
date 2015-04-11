@@ -426,6 +426,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}F_{4}H_{2}", 
   "NAME": "R134a", 
   "REFPROP_NAME": "R134A", 
   "STATES": {

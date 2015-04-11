@@ -397,6 +397,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{10}H_{22}", 
   "NAME": "n-Decane", 
   "REFPROP_NAME": "DECANE", 
   "STATES": {

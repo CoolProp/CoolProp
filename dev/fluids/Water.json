@@ -3,7 +3,7 @@
     "water", 
     "WATER", 
     "H2O", 
-    "h2o",
+    "h2o", 
     "R718"
   ], 
   "ANCILLARIES": {
@@ -690,6 +690,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "H_{2}O_{1}", 
   "NAME": "Water", 
   "REFPROP_NAME": "WATER", 
   "STATES": {

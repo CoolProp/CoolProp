@@ -1,7 +1,7 @@
 {
   "ALIASES": [
     "neon", 
-    "NEON",
+    "NEON", 
     "R720"
   ], 
   "ANCILLARIES": {
@@ -474,6 +474,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "Ne_{1}", 
   "NAME": "Neon", 
   "REFPROP_NAME": "NEON", 
   "STATES": {

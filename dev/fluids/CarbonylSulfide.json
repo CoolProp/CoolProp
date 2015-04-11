@@ -376,6 +376,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}O_{1}S_{1}", 
   "NAME": "CarbonylSulfide", 
   "REFPROP_NAME": "COS", 
   "STATES": {

@@ -2,7 +2,7 @@
   "ALIASES": [
     "propylene", 
     "PROPYLENE", 
-    "PROPYLEN",
+    "PROPYLEN", 
     "R1270"
   ], 
   "ANCILLARIES": {
@@ -507,6 +507,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{3}H_{6}", 
   "NAME": "Propylene", 
   "REFPROP_NAME": "PROPYLEN", 
   "STATES": {

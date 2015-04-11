@@ -432,6 +432,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{8}H_{10}", 
   "NAME": "m-Xylene", 
   "REFPROP_NAME": "MXYLENE", 
   "STATES": {

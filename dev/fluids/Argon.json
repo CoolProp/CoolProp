@@ -1,7 +1,7 @@
 {
   "ALIASES": [
     "argon", 
-    "ARGON",
+    "ARGON", 
     "R740"
   ], 
   "ANCILLARIES": {
@@ -553,6 +553,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "Ar_{1}", 
   "NAME": "Argon", 
   "REFPROP_NAME": "ARGON", 
   "STATES": {

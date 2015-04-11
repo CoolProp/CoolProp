@@ -537,6 +537,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "F_{6}S_{1}", 
   "NAME": "SulfurHexafluoride", 
   "REFPROP_NAME": "SF6", 
   "STATES": {

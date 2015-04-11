@@ -466,6 +466,7 @@ class CoolPropFluid {
         std::string name; ///< The name of the fluid
         std::string REFPROPname; ///< The REFPROP-compliant name if REFPROP-"name" is not a compatible fluid name.  If not included, "name" is assumed to be a valid name for REFPROP
         std::string CAS; ///< The CAS number of the fluid
+        std::string formula; ///< The chemical formula, in LaTeX form
         std::vector <std::string> aliases; ///< A vector of aliases of names for the fluid
 
         BibTeXKeysStruct BibTeXKeys; ///< The BibTeX keys associated 

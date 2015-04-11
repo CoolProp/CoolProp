@@ -434,6 +434,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{5}H_{10}", 
   "NAME": "Cyclopentane", 
   "REFPROP_NAME": "CYCLOPEN", 
   "STATES": {

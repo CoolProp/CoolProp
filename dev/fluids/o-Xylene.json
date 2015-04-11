@@ -411,6 +411,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{8}H_{10}", 
   "NAME": "o-Xylene", 
   "REFPROP_NAME": "OXYLENE", 
   "STATES": {

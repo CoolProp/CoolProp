@@ -448,6 +448,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}H_{4}O_{1}", 
   "NAME": "Methanol", 
   "REFPROP_NAME": "METHANOL", 
   "STATES": {

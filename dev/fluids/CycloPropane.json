@@ -428,6 +428,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{3}H_{6}", 
   "NAME": "CycloPropane", 
   "REFPROP_NAME": "CYCLOPRO", 
   "STATES": {

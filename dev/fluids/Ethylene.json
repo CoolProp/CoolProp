@@ -1,7 +1,7 @@
 {
   "ALIASES": [
     "ethylene", 
-    "ETHYLENE",
+    "ETHYLENE", 
     "R1150"
   ], 
   "ANCILLARIES": {
@@ -557,6 +557,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}H_{4}", 
   "NAME": "Ethylene", 
   "REFPROP_NAME": "ETHYLENE", 
   "STATES": {

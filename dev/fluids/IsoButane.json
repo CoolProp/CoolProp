@@ -501,6 +501,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{4}H_{10}", 
   "NAME": "IsoButane", 
   "REFPROP_NAME": "ISOBUTAN", 
   "STATES": {

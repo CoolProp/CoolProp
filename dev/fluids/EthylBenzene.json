@@ -428,6 +428,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{8}H_{10}", 
   "NAME": "EthylBenzene", 
   "REFPROP_NAME": "EBENZENE", 
   "STATES": {

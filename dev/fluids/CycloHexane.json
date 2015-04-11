@@ -491,6 +491,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{6}H_{12}", 
   "NAME": "CycloHexane", 
   "REFPROP_NAME": "CYCLOHEX", 
   "STATES": {

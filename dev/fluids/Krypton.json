@@ -395,6 +395,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "Kr_{1}", 
   "NAME": "Krypton", 
   "REFPROP_NAME": "KRYPTON", 
   "STATES": {

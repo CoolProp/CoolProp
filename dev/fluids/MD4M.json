@@ -371,6 +371,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{14}H_{42}O_{5}Si_{6}", 
   "NAME": "MD4M", 
   "REFPROP_NAME": "MD4M", 
   "STATES": {

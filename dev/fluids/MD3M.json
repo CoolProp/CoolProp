@@ -398,6 +398,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{12}H_{36}O_{4}Si_{5}", 
   "NAME": "MD3M", 
   "REFPROP_NAME": "MD3M", 
   "STATES": {

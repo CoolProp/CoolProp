@@ -478,6 +478,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{3}H_{8}", 
   "NAME": "n-Propane", 
   "REFPROP_NAME": "PROPANE", 
   "STATES": {

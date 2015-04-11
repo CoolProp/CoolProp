@@ -442,6 +442,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{17}H_{34}O_{2}", 
   "NAME": "MethylPalmitate", 
   "REFPROP_NAME": "MPALMITA", 
   "STATES": {

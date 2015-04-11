@@ -379,6 +379,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{4}H_{8}", 
   "NAME": "trans-2-Butene", 
   "REFPROP_NAME": "T2BUTENE", 
   "STATES": {

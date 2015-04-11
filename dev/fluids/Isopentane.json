@@ -412,6 +412,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{5}H_{12}", 
   "NAME": "Isopentane", 
   "REFPROP_NAME": "IPENTANE", 
   "STATES": {

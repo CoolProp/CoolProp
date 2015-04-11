@@ -442,6 +442,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{19}H_{38}O_{2}", 
   "NAME": "MethylStearate", 
   "REFPROP_NAME": "MSTEARAT", 
   "STATES": {

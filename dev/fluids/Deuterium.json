@@ -486,6 +486,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "H_{2}", 
   "NAME": "Deuterium", 
   "REFPROP_NAME": "D2", 
   "STATES": {

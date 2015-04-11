@@ -376,6 +376,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{6}H_{14}", 
   "NAME": "Isohexane", 
   "REFPROP_NAME": "IHEXANE", 
   "STATES": {

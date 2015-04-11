@@ -430,6 +430,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{8}H_{10}", 
   "NAME": "p-Xylene", 
   "REFPROP_NAME": "PXYLENE", 
   "STATES": {

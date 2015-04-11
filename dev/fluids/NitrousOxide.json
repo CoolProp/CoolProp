@@ -374,6 +374,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "N_{2}O_{1}", 
   "NAME": "NitrousOxide", 
   "REFPROP_NAME": "N2O", 
   "STATES": {

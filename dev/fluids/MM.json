@@ -632,6 +632,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{6}H_{18}O_{1}Si_{2}", 
   "NAME": "MM", 
   "REFPROP_NAME": "MM", 
   "STATES": {

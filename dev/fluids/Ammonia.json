@@ -420,6 +420,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "H_{3}N_{1}", 
   "NAME": "Ammonia", 
   "REFPROP_NAME": "AMMONIA", 
   "STATES": {

@@ -440,6 +440,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{6}H_{6}", 
   "NAME": "Benzene", 
   "REFPROP_NAME": "BENZENE", 
   "STATES": {

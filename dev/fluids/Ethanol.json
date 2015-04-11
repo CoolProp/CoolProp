@@ -514,6 +514,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}H_{6}O_{1}", 
   "NAME": "Ethanol", 
   "REFPROP_NAME": "ETHANOL", 
   "STATES": {

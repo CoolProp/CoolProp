@@ -387,6 +387,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{11}H_{24}", 
   "NAME": "n-Undecane", 
   "REFPROP_NAME": "C11", 
   "STATES": {

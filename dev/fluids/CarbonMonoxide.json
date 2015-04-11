@@ -413,6 +413,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}O_{1}", 
   "NAME": "CarbonMonoxide", 
   "REFPROP_NAME": "CO", 
   "STATES": {

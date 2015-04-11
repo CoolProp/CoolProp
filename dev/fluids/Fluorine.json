@@ -525,6 +525,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "F_{2}", 
   "NAME": "Fluorine", 
   "REFPROP_NAME": "FLUORINE", 
   "STATES": {

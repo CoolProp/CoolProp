@@ -2,7 +2,7 @@
   "ALIASES": [
     "oxygen", 
     "OXYGEN", 
-    "O2",
+    "O2", 
     "R732"
   ], 
   "ANCILLARIES": {
@@ -481,6 +481,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "O_{2}", 
   "NAME": "Oxygen", 
   "REFPROP_NAME": "OXYGEN", 
   "STATES": {

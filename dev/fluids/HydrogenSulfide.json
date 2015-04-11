@@ -381,6 +381,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "H_{2}S_{1}", 
   "NAME": "HydrogenSulfide", 
   "REFPROP_NAME": "H2S", 
   "STATES": {

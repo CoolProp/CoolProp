@@ -2,7 +2,7 @@
   "ALIASES": [
     "nitrogen", 
     "NITROGEN", 
-    "N2",
+    "N2", 
     "R728"
   ], 
   "ANCILLARIES": {
@@ -548,6 +548,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "N_{2}", 
   "NAME": "Nitrogen", 
   "REFPROP_NAME": "NITROGEN", 
   "STATES": {

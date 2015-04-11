@@ -397,6 +397,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{7}H_{8}", 
   "NAME": "Toluene", 
   "REFPROP_NAME": "TOLUENE", 
   "STATES": {

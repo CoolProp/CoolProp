@@ -591,6 +591,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}O_{2}", 
   "NAME": "CarbonDioxide", 
   "REFPROP_NAME": "CO2", 
   "STATES": {

@@ -383,6 +383,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "Xe_{1}", 
   "NAME": "Xenon", 
   "REFPROP_NAME": "XENON", 
   "STATES": {

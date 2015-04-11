@@ -458,6 +458,7 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "H_{1}", 
   "NAME": "Hydrogen", 
   "REFPROP_NAME": "HYDROGEN", 
   "STATES": {

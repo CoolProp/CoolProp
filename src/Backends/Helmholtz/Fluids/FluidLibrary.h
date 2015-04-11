@@ -1093,6 +1093,10 @@ public:
             // Critical state
             if (!fluid_json.HasMember("STATES")){ throw ValueError(format("fluid [%s] does not have \"STATES\" member",fluid.name.c_str())); }
             parse_states(fluid_json["STATES"], fluid);
+            if (fluid_json.HasMember("FORMULA")){    
+                fluid.formula = cpjson::get_string(fluid_json, "FORMULA");
+            }
+            parse_states(fluid_json["STATES"], fluid);
 
             if (get_debug_level() > 5){
                 std::cout << format("Loading fluid %s with CAS %s; %d fluids loaded\n", fluid.name.c_str(), fluid.CAS.c_str(), index);
