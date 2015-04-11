@@ -157,6 +157,7 @@ void UseIdealGasEnthalpyCorrelations(int flag)
 }
 static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double Input1, double TargetVal, double W_min, double W_max)
 {
+    // Iterating for W, 
     double W;
     class BrentSolverResids : public CoolProp::FuncWrapper1D
     {
@@ -170,13 +171,13 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
     public:
         BrentSolverResids(givens OutputKey, double p, givens In1Key, double Input1, double TargetVal) : OutputKey(OutputKey), p(p), In1Key(In1Key), Input1(Input1), TargetVal(TargetVal)
         {
-            input_keys.resize(2); input_keys[0] = In1Key; input_keys[1] = GIVEN_T;
+            input_keys.resize(2); input_keys[0] = In1Key; input_keys[1] = GIVEN_HUMRAT;
             input_vals.resize(2); input_vals[0] = Input1;
         };
 
-        double call(double T){
-            input_vals[1] = T;
-            double psi_w;
+        double call(double W){
+            input_vals[1] = W;
+            double T, psi_w;
             _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
             return _HAPropsSI_outputs(OutputKey, p, T, psi_w) - TargetVal;
         }
