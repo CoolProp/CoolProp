@@ -52,6 +52,7 @@ table_template = """ Parameter, Value
 Molar mass [kg/mol],{mm:s}
 CAS number, {CAS:s}
 ASHRAE class, {ASHRAE:s}
+Formula, {formula:s}
 **Limits**,
 Maximum temperature [K],{Tmax:s}
 Maximum pressure [Pa],{pmax:s}
@@ -139,6 +140,7 @@ class FluidInfoTableGenerator(object):
         
         CAS = CoolProp.CoolProp.get_fluid_param_string(self.name, "CAS")
         ASHRAE = CoolProp.CoolProp.get_fluid_param_string(self.name, "ASHRAE34")
+        formula = ':math:`' + CoolProp.CoolProp.get_fluid_param_string(self.name, "formula") + '`'
         
         # Generate (or not) the reducing data
         reducing_data = ''
@@ -157,7 +159,8 @@ class FluidInfoTableGenerator(object):
                     ASHRAE = tos(ASHRAE),
                     Tmax = tos(Tmax),
                     pmax = tos(pmax),
-                    reducing_string = reducing_data)
+                    reducing_string = reducing_data,
+                    formula = formula)
         out = table_template.format(**args)
         
         with open(os.path.join(path, self.name+'-info.csv'),'w') as fp:
