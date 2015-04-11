@@ -182,6 +182,9 @@ const CoolProp::SimpleState & HelmholtzEOSMixtureBackend::calc_state(const std::
         else if (!state.compare("reducing")){
             return components[0].EOS().reduce;
         }
+        else if (!state.compare("critical")){
+            return components[0].crit;
+        }
         else{
             throw ValueError(format("This state [%s] is invalid to calc_state",state.c_str()));
         }

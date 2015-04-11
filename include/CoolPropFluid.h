@@ -191,6 +191,11 @@ struct ViscosityDiluteGasPowersOfT
 {
     std::vector<CoolPropDbl> a, t;
 };
+struct ViscosityDiluteGasPowersOfTr
+{
+    std::vector<CoolPropDbl> a, t;
+    CoolPropDbl T_reducing;
+};
 struct ViscosityDiluteVariables
 {
     enum ViscosityDiluteType {VISCOSITY_DILUTE_COLLISION_INTEGRAL, ///< Use \ref TransportRoutines::viscosity_dilute_collision_integral
@@ -199,12 +204,14 @@ struct ViscosityDiluteVariables
                               VISCOSITY_DILUTE_ETHANE,  ///< Use \ref TransportRoutines::viscosity_dilute_ethane
                               VISCOSITY_DILUTE_CYCLOHEXANE,  ///< Use \ref TransportRoutines::viscosity_dilute_cyclohexane
                               VISCOSITY_DILUTE_POWERS_OF_T, ///< Use \ref TransportRoutines::viscosity_dilute_powers_of_T
+                              VISCOSITY_DILUTE_POWERS_OF_TR, ///< Use \ref TransportRoutines::viscosity_dilute_powers_of_Tr
                               VISCOSITY_DILUTE_NOT_SET
                               };
     ViscosityDiluteType type;
     ViscosityDiluteGasCollisionIntegralData collision_integral; ///< Data for \ref TransportRoutines::viscosity_dilute_collision_integral
     ViscosityDiluteCollisionIntegralPowersOfTstarData collision_integral_powers_of_Tstar; ///< Data for \ref TransportRoutines::viscosity_dilute_collision_integral_powers_of_T
     ViscosityDiluteGasPowersOfT powers_of_T; ///< Data for \ref TransportRoutines::viscosity_dilute_powers_of_T
+    ViscosityDiluteGasPowersOfTr powers_of_Tr; ///< Data for \ref TransportRoutines::viscosity_dilute_powers_of_Tr
     ViscosityDiluteVariables(){type = VISCOSITY_DILUTE_NOT_SET;}
 };
 

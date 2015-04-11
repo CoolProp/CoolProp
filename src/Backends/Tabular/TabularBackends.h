@@ -465,10 +465,10 @@ class LogPTTable : public SinglePhaseGriddedTableData
 class TabularBackend : public AbstractState
 {
     protected:
+        bool tables_loaded, using_single_phase_table;
+        shared_ptr<CoolProp::AbstractState> AS;
         enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE};
         selected_table_options selected_table;
-        shared_ptr<CoolProp::AbstractState> AS;
-        bool using_single_phase_table, tables_loaded;
         std::size_t cached_single_phase_i, cached_single_phase_j;
         std::size_t cached_saturation_iL, cached_saturation_iV;
         std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdx2, *d2zdxdy, *d2zdy2;
@@ -519,7 +519,7 @@ class TabularBackend : public AbstractState
         void update(CoolProp::input_pairs input_pair, double Value1, double Value2){};
         void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){this->AS->set_mole_fractions(mole_fractions);};
         void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){};
-        const std::vector<long double> & get_mole_fractions(){throw NotImplementedError("get_mole_fractions not implemented for TTSE");};
+        const std::vector<long double> & get_mole_fractions(){return AS->get_mole_fractions();};
         CoolPropDbl calc_molar_mass(void){return AS->molar_mass();};
         virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
@@ -677,14 +677,14 @@ class TabularBackend : public AbstractState
             }
             
         };
-        
-        
 
         void check_tables(){
             if (!tables_loaded){
                 try{
                     /// Try to load the tables if you can.
                     load_tables();
+                    // Set the flag saying tables have been successfully loaded
+                    tables_loaded = true;
                 }
                 catch(CoolProp::UnableToLoadError &){
                     /// Check directory size
@@ -708,6 +708,8 @@ class TabularBackend : public AbstractState
                     write_tables();
                     /// Load the tables back into memory as a consistency check
                     load_tables();
+                    // Set the flag saying tables have been successfully loaded
+                    tables_loaded = true;
                 }
             }
         }
