@@ -281,33 +281,54 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
     if (N==0){return;}
     for (unsigned int i=0; i<N; ++i)
     {
-        ResidualHelmholtzNonAnalyticElement &el = elements[i];
-        CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
-        CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
-        CoolPropDbl theta = (1.0-tau)+Ai*pow(pow(delta-1.0,2),1.0/(2.0*betai));
-        CoolPropDbl dtheta_dDelta = Ai/(2*betai)*pow(pow(delta-1,2),1/(2*betai)-1)*2*(delta-1);
+        const ResidualHelmholtzNonAnalyticElement &el = elements[i];
+        const CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
+        const CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
+
+        // Derivatives of theta (all others are zero)
+        const CoolPropDbl theta = (1.0-tau)+Ai*pow(POW2(delta-1.0,2),1.0/(2.0*betai));
+        const CoolPropDbl dtheta_dTau = -1;
+        const CoolPropDbl dtheta_dDelta = Ai/(betai)*pow(POW2(delta-1), 1/(2*betai)-1)*(delta-1);
+        const CoolPropDbl d2theta_dDelta2 = (1/betai-1)/(delta-1)*dtheta_dDelta;
+        const CoolPropDbl d3theta_dDelta3 = (1/betai-2)/(delta-1)*d2theta_dDelta2;
+        const CoolPropDbl d4theta_dDelta4 = (1/betai-3)/(delta-1)*d3theta_dDelta3;
         
-        CoolPropDbl PSI = exp(-Ci*pow(delta-1.0,2)-Di*pow(tau-1.0,2));
-        CoolPropDbl dPSI_dDelta = -2.0*Ci*(delta-1.0)*PSI;
-        CoolPropDbl dPSI_dTau = -2.0*Di*(tau-1.0)*PSI;
-        CoolPropDbl dPSI2_dDelta2 = (2.0*Ci*pow(delta-1.0,2)-1.0)*2.0*Ci*PSI;
-        CoolPropDbl dPSI2_dDelta_dTau = 4.0*Ci*Di*(delta-1.0)*(tau-1.0)*PSI;
-        CoolPropDbl dPSI2_dTau2 = (2.0*Di*pow(tau-1.0,2)-1.0)*2.0*Di*PSI;
-        CoolPropDbl dPSI3_dDelta3 = 2.0*Ci*PSI*(-4*Ci*Ci*pow(delta-1.0,3)+6*Ci*(delta-1));
-        CoolPropDbl dPSI3_dDelta2_dTau = (2.0*Ci*pow(delta-1.0,2)-1.0)*2.0*Ci*dPSI_dTau;
-        CoolPropDbl dPSI3_dDelta_dTau2 = 2*Di*(2*Di*pow(tau-1,2)-1)*dPSI_dDelta;
-        CoolPropDbl dPSI3_dTau3 = 2.0*Di*PSI*(-4*Di*Di*pow(tau-1,3)+6*Di*(tau-1));
+        // Derivatives of PSI
+        const CoolPropDbl PSI = exp(-Ci*POW2(delta-1.0)-Di*POW2(tau-1.0));
+        const CoolPropDbl dPSI_dDelta = -2.0*Ci*(delta-1.0)*PSI;
+        const CoolPropDbl dPSI_dTau = -2.0*Di*(tau-1.0)*PSI;
+        const CoolPropDbl d2PSI_dDelta2 = (2.0*Ci*POW2(delta-1.0)-1.0)*2.0*Ci*PSI;
+        const CoolPropDbl d3PSI_dDelta3 = 2.0*Ci*PSI*(-4*Ci*Ci*POW3(delta-1.0)+6*Ci*(delta-1));
+        const CoolPropDbl d2PSI_dTau2 = (2.0*Di*POW2(tau-1.0)-1.0)*2.0*Di*PSI;
+        const CoolPropDbl d3PSI_dTau3 = 2.0*Di*PSI*(-4*Di*Di*POW3(tau-1) + 6*Di*(tau-1));
+        const CoolPropDbl d4PSI_dTau4 = 4*Di*Di*PSI*(4*Di*Di*POW4(tau-1) - 12*Di*POW2(tau-1) + 3);
+        const CoolPropDbl d2PSI_dDelta_dTau = dPSI_dDelta*dPSI_dTau/PSI;
+        const CoolPropDbl d3PSI_dDelta2_dTau = d2PSI_dDelta2*dPSI_dTau/PSI;
+        const CoolPropDbl d3PSI_dDelta_dTau2 = dPSI_dDelta*d2PSI_dTau2/PSI;
+        const CoolPropDbl d4PSI_dDelta_dTau3 = dPSI_dDelta*d3PSI_dTau3/PSI;
+        const CoolPropDbl d4PSI_dDelta2_dTau2 = d2PSI_dDelta2*d2PSI_dTau2/PSI;
+        const CoolPropDbl d4PSI_dDelta3_dTau = d3PSI_dDelta3*dPSI_dTau/PSI;
         
-        CoolPropDbl DELTA = pow(theta,2)+Bi*pow(pow(delta-1.0,2),ai);
-        CoolPropDbl dDELTA_dTau = -2*theta;
-        CoolPropDbl dDELTA2_dDelta_dTau = 2.0*Ai/(betai)*pow(pow(delta-1,2),1.0/(2.0*betai)-0.5);
-        CoolPropDbl dDELTA_dDelta = (delta-1.0)*(Ai*theta*2.0/betai*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)+2.0*Bi*ai*pow(pow(delta-1.0,2),ai-1.0));
-        CoolPropDbl dDELTA3_dDelta2_dTau = 2.0*Ai*(betai-1)/(betai*betai)*pow(pow(delta-1,2),1/(2*betai)-1.0);
+        // Derivatives of DELTA
+        const CoolPropDbl DELTA = POW2(theta)+Bi*pow(POW2(delta-1.0),ai);
+        const CoolPropDbl dDELTA_dTau = 2*theta*dtheta_dTau;
+        const CoolPropDbl dDELTA_dDelta = 2*theta*dtheta_dDelta + 2*Bi*ai*pow(POW2(delta-1.0), ai-1.0)*(delta - 1);
+        const CoolPropDbl d2DELTA_dTau2 = 2; // d2theta_dTau2 is zero and (dtheta_dtau)^2 = 1
+        const CoolPropDbl d2DELTA_dDelta_dTau = 2*dtheta_dTau*dtheta_dDelta; // d2theta_dDelta2 is zero
+        const CoolPropDbl d2DELTA_dDelta2 = 2*(theta*d2theta_dDelta2 + POW2(dtheta_dDelta) + Bi*(2*ai*ai-ai)*pow(POW2(delta-1.0), ai-1.0));
+        const CoolPropDbl d3DELTA_dTau3 = 0;
+        const CoolPropDbl d3DELTA_dDelta_dTau2 = 0;
+        const CoolPropDbl d3DELTA_dDelta2_dTau = 2*dtheta_dTau*d2theta_dDelta2;
+        const CoolPropDbl d3DELTA_dDelta3 = 2*(theta*d3theta_dDelta3 + 3*dtheta_dDelta*d2theta_dDelta2 + 2*Bi*ai*(2*ai*ai - 3*ai + 1)*pow(POW2(delta-1.0), ai-1.0)/(delta-1));
+        const CoolPropDbl d4DELTA_dTau4 = 0;
+        const CoolPropDbl d4DELTA_dDelta_dTau3 = 0;
+        const CoolPropDbl d4DELTA_dDelta2_dTau2 = 0;
+        const CoolPropDbl d4DELTA_dDelta3_dTau = 2*dtheta_dTau*d3theta_dDelta3;
+        const CoolPropDbl d4DELTA_dDelta4 = 2*(theta*d4theta_dDelta4 + 4*dtheta_dDelta*d3theta_dDelta3 + 3*POW2(d2theta_dDelta2) + 2*Bi*ai*(4*ai*ai*ai - 12*ai*ai + 11*ai-3)*pow(POW2(delta-1.0), ai-2.0));
         
         CoolPropDbl dDELTAbi_dDelta, dDELTA2_dDelta2, dDELTAbi2_dDelta2, dDELTAbi3_dDelta3, dDELTA3_dDelta3;
         if (std::abs(delta-1) < 10*DBL_EPSILON){
             dDELTAbi_dDelta = 0;
-            dDELTA2_dDelta2 = 0;
             dDELTA3_dDelta3 = 0;
             dDELTAbi2_dDelta2 = 0;
             dDELTAbi3_dDelta3 = 0;
@@ -324,32 +345,57 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
         }
         
         CoolPropDbl dDELTAbi_dTau = -2.0*theta*bi*pow(DELTA,bi-1.0);
-        
         CoolPropDbl dDELTAbi2_dDelta_dTau=-Ai*bi*2.0/betai*pow(DELTA,bi-1.0)*(delta-1.0)*pow(pow(delta-1.0,2),1.0/(2.0*betai)-1.0)-2.0*theta*bi*(bi-1.0)*pow(DELTA,bi-2.0)*dDELTA_dDelta;
         CoolPropDbl dDELTAbi2_dTau2 = 2.0*bi*pow(DELTA,bi-1.0)+4.0*pow(theta,2)*bi*(bi-1.0)*pow(DELTA,bi-2.0);
         CoolPropDbl dDELTAbi3_dTau3 = -12.0*theta*bi*(bi-1.0)*pow(DELTA,bi-2)-8*pow(theta,3)*bi*(bi-1)*(bi-2)*pow(DELTA,bi-3);
         CoolPropDbl dDELTAbi3_dDelta_dTau2 = 2*bi*(bi-1)*pow(DELTA,bi-2)*dDELTA_dDelta+4*pow(theta,2)*bi*(bi-1)*(bi-2)*pow(DELTA,bi-3)*dDELTA_dDelta+8*theta*bi*(bi-1)*pow(DELTA,bi-2)*dtheta_dDelta;
-        CoolPropDbl dDELTAbi3_dDelta2_dTau = bi*((bi-1)*pow(DELTA,bi-2)*dDELTA_dTau*dDELTA2_dDelta2 + pow(DELTA,bi-1)*dDELTA3_dDelta2_dTau+(bi-1)*((bi-2)*pow(DELTA,bi-3)*dDELTA_dTau*pow(dDELTA_dDelta,2)+pow(DELTA,bi-2)*2*dDELTA_dDelta*dDELTA2_dDelta_dTau));
+        CoolPropDbl dDELTAbi3_dDelta2_dTau = bi*((bi-1)*pow(DELTA,bi-2)*dDELTA_dTau*d2DELTA_dDelta2 + pow(DELTA,bi-1)*d3DELTA_dDelta2_dTau+(bi-1)*((bi-2)*pow(DELTA,bi-3)*dDELTA_dTau*pow(dDELTA_dDelta,2)+pow(DELTA,bi-2)*2*dDELTA_dDelta*d2DELTA_dDelta_dTau));
         
-        derivs.alphar += ni*pow(DELTA, bi)*delta*PSI;
+        CoolPropDbl DELTA_bi = pow(DELTA, bi);
+        derivs.alphar += delta*ni*DELTA_bi*PSI;
         
-        derivs.dalphar_ddelta += ni*(pow(DELTA,bi)*(PSI+delta*dPSI_dDelta)+dDELTAbi_dDelta*delta*PSI);
-        derivs.dalphar_dtau += ni*delta*(dDELTAbi_dTau*PSI+pow(DELTA,bi)*dPSI_dTau);
+        // First partials
+        derivs.dalphar_dtau += ni*delta*(DELTA_bi*dPSI_dTau + dDELTAbi_dTau*PSI);
+        derivs.dalphar_ddelta += ni*(DELTA_bi*(PSI+delta*dPSI_dDelta) + dDELTAbi_dDelta*delta*PSI);
         
-        derivs.d2alphar_ddelta2 += ni*(pow(DELTA,bi)*(2.0*dPSI_dDelta+delta*dPSI2_dDelta2)+2.0*dDELTAbi_dDelta*(PSI+delta*dPSI_dDelta)+dDELTAbi2_dDelta2*delta*PSI);
-        derivs.d2alphar_ddelta_dtau += ni*(pow(DELTA,bi)*(dPSI_dTau+delta*dPSI2_dDelta_dTau)+delta*dDELTAbi_dDelta*dPSI_dTau+ dDELTAbi_dTau*(PSI+delta*dPSI_dDelta)+dDELTAbi2_dDelta_dTau*delta*PSI);
-        derivs.d2alphar_dtau2 += ni*delta*(dDELTAbi2_dTau2*PSI+2.0*dDELTAbi_dTau*dPSI_dTau+pow(DELTA,bi)*dPSI2_dTau2);
+        // Second partials
+        derivs.d2alphar_dtau2 += ni*delta*(dDELTAbi2_dTau2*PSI + 2*dDELTAbi_dTau*dPSI_dTau + DELTA_bi*d2PSI_dTau2);
+        derivs.d2alphar_ddelta_dtau += ni*(DELTA_bi*(dPSI_dTau+delta*d2PSI_dDelta_dTau)+delta*dDELTAbi_dDelta*dPSI_dTau+ dDELTAbi_dTau*(PSI+delta*dPSI_dDelta)+dDELTAbi2_dDelta_dTau*delta*PSI);
+        derivs.d2alphar_ddelta2 += ni*(DELTA_bi*(2.0*dPSI_dDelta + delta*d2PSI_dDelta2) + 2.0*dDELTAbi_dDelta*(PSI+delta*dPSI_dDelta) + dDELTAbi2_dDelta2*delta*PSI);
         
-        derivs.d3alphar_ddelta3 += ni*(pow(DELTA,bi)*(3.0*dPSI2_dDelta2+delta*dPSI3_dDelta3)+3.0*dDELTAbi_dDelta*(2*dPSI_dDelta+delta*dPSI2_dDelta2)+3*dDELTAbi2_dDelta2*(PSI+delta*dPSI_dDelta)+dDELTAbi3_dDelta3*PSI*delta);
-        CoolPropDbl Line1 = pow(DELTA,bi)*(2*dPSI2_dDelta_dTau+delta*dPSI3_dDelta2_dTau)+dDELTAbi_dTau*(2*dPSI_dDelta+delta*dPSI2_dDelta2);
-        CoolPropDbl Line2 = 2*dDELTAbi_dDelta*(dPSI_dTau+delta*dPSI2_dDelta_dTau)+2*dDELTAbi2_dDelta_dTau*(PSI+delta*dPSI_dDelta);
+        // Third partials
+        derivs.d3alphar_dtau3 += ni*delta*(dDELTAbi3_dTau3*PSI + 3*dDELTAbi2_dTau2*dPSI_dTau + 3*dDELTAbi_dTau*d2PSI_dTau2 + DELTA_bi*d3PSI_dTau3);
+        derivs.d3alphar_ddelta_dtau2 += ni*delta*(dDELTAbi2_dTau2*dPSI_dDelta + dDELTAbi3_dDelta_dTau2*PSI + 2*dDELTAbi_dTau*d2PSI_dDelta_dTau + 
+                                                  2.0*dDELTAbi2_dDelta_dTau*dPSI_dTau + DELTA_bi*d3PSI_dDelta_dTau2+dDELTAbi_dDelta*d2PSI_dTau2) + 
+                                                  ni*(dDELTAbi2_dTau2*PSI + 2.0*dDELTAbi_dTau*dPSI_dTau + DELTA_bi*d2PSI_dTau2);
+        derivs.d3alphar_ddelta3 += ni*(DELTA_bi*(3*d2PSI_dDelta2 + delta*d3PSI_dDelta3)
+                                       + 3*dDELTAbi_dDelta*(2*dPSI_dDelta + delta*d2PSI_dDelta2)
+                                       + 3*dDELTAbi2_dDelta2*(PSI + delta*dPSI_dDelta) + dDELTAbi3_dDelta3*PSI*delta);
+        CoolPropDbl Line1 = DELTA_bi*(2*d2PSI_dDelta_dTau + delta*d3PSI_dDelta2_dTau) + dDELTAbi_dTau*(2*dPSI_dDelta+delta*d2PSI_dDelta2);
+        CoolPropDbl Line2 = 2*dDELTAbi_dDelta*(dPSI_dTau+delta*d2PSI_dDelta_dTau) + 2*dDELTAbi2_dDelta_dTau*(PSI+delta*dPSI_dDelta);
         CoolPropDbl Line3 = dDELTAbi2_dDelta2*delta*dPSI_dTau + dDELTAbi3_dDelta2_dTau*delta*PSI;
-        derivs.d3alphar_ddelta2_dtau += ni*(Line1+Line2+Line3);
-        derivs.d3alphar_ddelta_dtau2 += ni*delta*(dDELTAbi2_dTau2*dPSI_dDelta+dDELTAbi3_dDelta_dTau2*PSI+2*dDELTAbi_dTau*dPSI2_dDelta_dTau+2.0*dDELTAbi2_dDelta_dTau*dPSI_dTau+pow(DELTA,bi)*dPSI3_dDelta_dTau2+dDELTAbi_dDelta*dPSI2_dTau2)+ni*(dDELTAbi2_dTau2*PSI+2.0*dDELTAbi_dTau*dPSI_dTau+pow(DELTA,bi)*dPSI2_dTau2);
-        derivs.d3alphar_dtau3 += ni*delta*(dDELTAbi3_dTau3*PSI+(3.0*dDELTAbi2_dTau2)*dPSI_dTau+(3*dDELTAbi_dTau)*dPSI2_dTau2+pow(DELTA,bi)*dPSI3_dTau3);
+        derivs.d3alphar_ddelta2_dtau += ni*(Line1 + Line2 + Line3);
+
+        // Fourth partials
+        const CoolPropDbl d4DELTAbi_dTau4 = bi*DELTA_bi/DELTA*((POW3(bi) - 6*POW2(bi) + 11*bi - 6)*POW4(dDELTA_dTau)/POW3(DELTA)
+                                                               + 6*(bi*bi - 3*bi + 2)*POW2(dDELTA_dTau/DELTA)*d2DELTA_dTau2
+                                                               + 4*(bi - 1)*dDELTA_dTau/DELTA*d3DELTA_dTau3
+                                                               + 3*(bi - 1)*POW2(dDELTA_dTau)/DELTA + d4DELTA_dTau4); 
+        const CoolPropDbl d2DELTAbi_dTau2 = dDELTAbi2_dDelta2;
+        derivs.d4alphar_dtau4 += ni*delta*(DELTA_bi*d4PSI_dTau4 + 4*dDELTAbi_dTau*d3PSI_dTau3 + 6*d2DELTAbi_dTau2*d2PSI_dTau2 + 4*dDELTAbi3_dTau3*dPSI_dTau + PSI*d4DELTAbi_dTau4);
+        //derivs.d4alphar_ddelta_dtau4 += ni*delta*(dDELTAbi2_dTau2*dPSI_dDelta + dDELTAbi3_dDelta_dTau2*PSI + 2*dDELTAbi_dTau*dPSI2_dDelta_dTau + 
+        //                                          2.0*dDELTAbi2_dDelta_dTau*dPSI_dTau + DELTA_bi*dPSI3_dDelta_dTau2+dDELTAbi_dDelta*dPSI2_dTau2) + 
+        //                                          ni*(dDELTAbi2_dTau2*PSI + 2.0*dDELTAbi_dTau*dPSI_dTau + DELTA_bi*dPSI2_dTau2);
+        //derivs.d3alphar_ddelta3 += ni*(DELTA_bi*(3*dPSI2_dDelta2 + delta*dPSI3_dDelta3)
+        //                               + 3*dDELTAbi_dDelta*(2*dPSI_dDelta + delta*dPSI2_dDelta2)
+        //                               + 3*dDELTAbi2_dDelta2*(PSI + delta*dPSI_dDelta) + dDELTAbi3_dDelta3*PSI*delta);
+        //CoolPropDbl Line1 = DELTA_bi*(2*dPSI2_dDelta_dTau + delta*dPSI3_dDelta2_dTau) + dDELTAbi_dTau*(2*dPSI_dDelta+delta*dPSI2_dDelta2);
+        //CoolPropDbl Line2 = 2*dDELTAbi_dDelta*(dPSI_dTau+delta*dPSI2_dDelta_dTau) + 2*dDELTAbi2_dDelta_dTau*(PSI+delta*dPSI_dDelta);
+        //CoolPropDbl Line3 = dDELTAbi2_dDelta2*delta*dPSI_dTau + dDELTAbi3_dDelta2_dTau*delta*PSI;
+        //derivs.d3alphar_ddelta2_dtau += ni*(Line1 + Line2 + Line3);
     }
 }
-
+/*
 CoolPropDbl ResidualHelmholtzNonAnalytic::base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
 {
     if (N==0){return 0.0;}
@@ -488,6 +534,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dDelta_dTau(const CoolPropDbl &tau, co
     }
     return std::accumulate(s.begin(), s.end(), 0.0);
 }
+/*
 CoolPropDbl ResidualHelmholtzNonAnalytic::dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
 {
     if (N==0){return 0.0;}
@@ -646,6 +693,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dDelta2_dTau(const CoolPropDbl &tau, c
     }
     return std::accumulate(s.begin(), s.end(), 0.0);
 }
+
 CoolPropDbl ResidualHelmholtzNonAnalytic::dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
 {
     if (N==0){return 0.0;}
@@ -668,6 +716,7 @@ CoolPropDbl ResidualHelmholtzNonAnalytic::dTau3(const CoolPropDbl &tau, const Co
     }
     return std::accumulate(s.begin(), s.end(), 0.0);
 }
+*/
 
 void ResidualHelmholtzSAFTAssociating::to_json(rapidjson::Value &el, rapidjson::Document &doc)
 {
@@ -1186,6 +1235,7 @@ public:
               if (!d.compare("dTau")){return dTau(term,tau,delta,ddelta);}
         else if (!d.compare("dTau2")){return dTau2(term,tau,delta,ddelta);}
         else if (!d.compare("dTau3")){return dTau3(term,tau,delta,ddelta);}
+        else if (!d.compare("dTau4")){return dTau4(term,tau,delta,ddelta);}
         else if (!d.compare("dDelta")){ return dDelta(term,tau,delta,ddelta);}
         else if (!d.compare("dDelta2")){return dDelta2(term,tau,delta,ddelta);}
         else if (!d.compare("dDelta3")){return dDelta3(term,tau,delta,ddelta);}
@@ -1233,6 +1283,12 @@ public:
         CoolPropDbl term_minus = term->dTau2(tau - dtau, delta);
         numerical = (term_plus - term_minus)/(2*dtau);
         analytic = term->dTau3(tau, delta);
+    };
+    void dTau4(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl dtau){
+        CoolPropDbl term_plus = term->dTau3(tau + dtau, delta);
+        CoolPropDbl term_minus = term->dTau3(tau - dtau, delta);
+        numerical = (term_plus - term_minus)/(2*dtau);
+        analytic = term->dTau4(tau, delta);
     };
     void dDelta(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, CoolPropDbl ddelta){
         CoolPropDbl term_plus = term->base(tau, delta + ddelta);
@@ -1284,7 +1340,7 @@ public:
 std::string terms[] = {"Lead","LogTau","IGPower","PlanckEinstein","CP0Constant","CP0PolyT",
                        "Gaussian","Lemmon2005","Power","SAFT","NonAnalytic","Exponential",
                        "GERG2008"};
-std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDelta_dTau","dDelta_dTau2","dDelta2_dTau"};
+std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDelta_dTau","dDelta_dTau2","dDelta2_dTau","dTau4"};
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]")
 {
@@ -1295,12 +1351,12 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
         term = get(terms[i]);
         for (std::size_t j = 0; j < sizeof(derivs)/sizeof(derivs[0]); ++j)
         {
-            call(derivs[j], term, 1.3, 0.7, 1e-6);
+            call(derivs[j], term, 1.3, 0.9, 1e-6);
             CAPTURE(derivs[j]);
             CAPTURE(numerical);
             CAPTURE(analytic);
             CAPTURE(terms[i]);
-            CHECK(err(analytic, numerical) < 1e-7);
+            CHECK(err(analytic, numerical) < 1e-8);
         }
     }
 }
