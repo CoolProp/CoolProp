@@ -880,17 +880,24 @@ public:
         if (!enabled){return 0.0;}
         CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],3)*c[i]*d[i]*(c[i]-d[i]*exp(theta[i]*tau))*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),3);} return s;
     };
+    CoolPropDbl dTau4(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){
+        if (!enabled){return 0.0;}
+        CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){
+            const CoolPropDbl para = c[i]+d[i]*exp(theta[i]*tau);
+            const CoolPropDbl bracket = 6*POW3(d[i])*exp(3*tau*theta[i]) - 12*d[i]*d[i]*para*exp(2*tau*theta[i]) + 7*d[i]*POW2(para)*exp(tau*theta[i]) - POW3(para);
+            s += -n[i]*d[i]*pow(theta[i],4)*bracket*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),4);
+        } return s;
+    };
     CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
     CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
     CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
     CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
     CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
     CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0;};
-    CoolPropDbl dTau4(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 1e99;};
-    CoolPropDbl dDelta_dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 1e99;};
-    CoolPropDbl dDelta2_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 1e99;};
-    CoolPropDbl dDelta3_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 1e99;};
-    CoolPropDbl dDelta4(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 1e99;};
+    CoolPropDbl dDelta_dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta2_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta3_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
+    CoolPropDbl dDelta4(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
 };
 
 class IdealHelmholtzCP0Constant : public BaseHelmholtzTerm{

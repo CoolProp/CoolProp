@@ -981,7 +981,7 @@ public:
         else if (!d.compare("dDelta_dTau2")){ return dDelta_dTau2(term,tau,delta,ddelta);}
         else if (!d.compare("dDelta2_dTau")){ return dDelta2_dTau(term,tau,delta,ddelta);}
         else if (!d.compare("dDelta3_dTau")){ return dDelta3_dTau(term,tau,delta,ddelta);}
-        else if (!d.compare("dDelta2_dTau3")){ return dDelta2_dTau(term,tau,delta,ddelta);}
+        else if (!d.compare("dDelta2_dTau2")){ return dDelta2_dTau2(term,tau,delta,ddelta);}
         else if (!d.compare("dDelta_dTau3")){ return dDelta_dTau3(term,tau,delta,ddelta);}
         else{
             throw CoolProp::ValueError("don't understand deriv type");
@@ -1105,7 +1105,7 @@ public:
 std::string terms[] = {"Lead","LogTau","IGPower","PlanckEinstein","CP0Constant","CP0PolyT",
                        "Gaussian","Lemmon2005","Power","SAFT","NonAnalytic","Exponential",
                        "GERG2008"};
-std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDelta_dTau","dDelta_dTau2","dDelta2_dTau","dTau4","dDelta4"};
+std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDelta_dTau","dDelta_dTau2","dDelta2_dTau","dTau4","dDelta_dTau3","dDelta2_dTau2","dDelta3_dTau","dDelta4"};
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]")
 {
