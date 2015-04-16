@@ -12,7 +12,7 @@ It was originally developed by Ian Bell, currently a post-doc at the University 
 
 * ... other binaries can be downloaded here: `latest release <http://sourceforge.net/projects/coolprop/files>`_ and `development version <http://sourceforge.net/projects/coolprop/files/CoolProp/nightly>`_  
 
-* The documentation is available for the `latest release <http://www.coolprop.org>`_ and the `development version <http://www.coolprop.dreamhosters.com:8010/sphinx>`_  
+* The documentation is available for the `latest release <http://www.coolprop.org>`_ and the `development version <http://www.coolprop.org/dev>`_  
 
 * Please, if there are any issues of any kind, file an issue `here <https://github.com/CoolProp/CoolProp/issues>`_ 
 
