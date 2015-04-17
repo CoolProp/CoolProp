@@ -814,6 +814,13 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
         endif()
     endif()
   endif()
+   
+  # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -DEXTERNC -DCONVENTION= -m32")
+    set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -m32") 
+  endif()
+  
   add_dependencies (CoolPropMATLAB_wrap generate_headers)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/SwigRef.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
