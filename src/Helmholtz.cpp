@@ -392,6 +392,11 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
                                                                  + 6*(bi*bi - 3*bi + 2)*POW2(dDELTA_dDelta/DELTA)*d2DELTA_dDelta2
                                                                  + 4*(bi - 1)*dDELTA_dDelta/DELTA*d3DELTA_dDelta3
                                                                  + 3*(bi - 1)*POW2(d2DELTA_dDelta2)/DELTA + d4DELTA_dDelta4);
+        const CoolPropDbl d4DELTAbi_dDelta_dTau3 = bi*(bi-1)*DELTA_bi/POW2(DELTA)*dDELTA_dDelta*((bi-1)*(bi-2)*POW3(dDELTA_dTau)/POW2(DELTA)+3*(bi-1)*dDELTA_dTau/DELTA*d2DELTA_dTau2 + d3DELTA_dTau3)
+                                                    + bi*DELTA_bi/DELTA*((bi-1)*(bi-2)*(3*POW2(dDELTA_dTau)/POW2(DELTA)*d2DELTA_dDelta_dTau -2*POW3(dDELTA_dTau)/POW3(DELTA)*dDELTA_dDelta)
+                                                                          + 3*(bi-1)*(dDELTA_dTau/DELTA*d3DELTA_dDelta_dTau2 + d2DELTA_dTau2/DELTA*d2DELTA_dDelta_dTau - dDELTA_dDelta/POW2(DELTA)*dDELTA_dTau*d2DELTA_dTau2)
+                                                                          + d4DELTA_dDelta_dTau3
+                                                                          );
         
         derivs.alphar += delta*ni*DELTA_bi*PSI;
         
