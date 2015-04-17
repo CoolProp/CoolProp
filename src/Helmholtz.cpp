@@ -397,6 +397,21 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
                                                                           + 3*(bi-1)*(dDELTA_dTau/DELTA*d3DELTA_dDelta_dTau2 + d2DELTA_dTau2/DELTA*d2DELTA_dDelta_dTau - dDELTA_dDelta/POW2(DELTA)*dDELTA_dTau*d2DELTA_dTau2)
                                                                           + d4DELTA_dDelta_dTau3
                                                                           );
+        const CoolPropDbl d4DELTAbi_dDelta3_dTau = bi*(bi-1)*DELTA_bi/POW2(DELTA)*dDELTA_dTau*((bi-1)*(bi-2)*POW3(dDELTA_dDelta)/POW2(DELTA)+3*(bi-1)*dDELTA_dDelta/DELTA*d2DELTA_dDelta2 + d3DELTA_dDelta3)
+                                                    + bi*DELTA_bi/DELTA*((bi-1)*(bi-2)*(3*POW2(dDELTA_dDelta)/POW2(DELTA)*d2DELTA_dDelta_dTau -2*POW3(dDELTA_dDelta)/POW3(DELTA)*dDELTA_dTau)
+                                                                          + 3*(bi-1)*(dDELTA_dDelta/DELTA*d3DELTA_dDelta2_dTau + d2DELTA_dDelta2/DELTA*d2DELTA_dDelta_dTau - dDELTA_dTau/POW2(DELTA)*dDELTA_dDelta*d2DELTA_dDelta2)
+                                                                          + d4DELTA_dDelta3_dTau
+                                                                          );
+        const CoolPropDbl d4DELTAbi_dDelta2_dTau2 = 
+            bi*DELTA_bi/POW4(DELTA)*((POW3(bi)-6*bi*bi +11*bi -6)*POW2(dDELTA_dDelta)*POW2(dDELTA_dTau) // Yellow
+                               +(bi-1)*(bi-2)*DELTA*POW2(dDELTA_dDelta)*d2DELTA_dTau2 // Orange
+                               +(bi-1)*(bi-2)*DELTA*POW2(dDELTA_dTau)*d2DELTA_dDelta2 // Pink
+                               +4*(bi-1)*(bi-2)*DELTA*dDELTA_dDelta*dDELTA_dTau*d2DELTA_dDelta_dTau // Green
+                               +2*(bi-1)*POW2(DELTA*d2DELTA_dDelta_dTau) // Blue hi
+                               +2*(bi-1)*POW2(DELTA)*dDELTA_dTau*d3DELTA_dDelta2_dTau // Blue sharp
+                               +2*(bi-1)*POW2(DELTA)*dDELTA_dDelta*d3DELTA_dDelta_dTau2 // Red sharp
+                               +(bi-1)*POW2(DELTA)*d2DELTA_dDelta2*d2DELTA_dTau2 // black sharp
+                               +POW3(DELTA)*d4DELTA_dDelta2_dTau2);
         
         derivs.alphar += delta*ni*DELTA_bi*PSI;
         
@@ -429,16 +444,20 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
                                        + 4*DELTA_bi*d3PSI_dDelta3 + 4*PSI*d3DELTAbi_dDelta3 + 12*dDELTAbi_dDelta*d2PSI_dDelta2
                                        + 12*dPSI_dDelta*d2DELTAbi_dDelta2);
         
-        //derivs.d4alphar_ddelta_dtau4 += ni*delta*(dDELTAbi2_dTau2*dPSI_dDelta + dDELTAbi3_dDelta_dTau2*PSI + 2*dDELTAbi_dTau*dPSI2_dDelta_dTau + 
-        //                                          2.0*dDELTAbi2_dDelta_dTau*dPSI_dTau + DELTA_bi*dPSI3_dDelta_dTau2+dDELTAbi_dDelta*dPSI2_dTau2) + 
-        //                                          ni*(dDELTAbi2_dTau2*PSI + 2.0*dDELTAbi_dTau*dPSI_dTau + DELTA_bi*dPSI2_dTau2);
-        //derivs.d3alphar_ddelta3 += ni*(DELTA_bi*(3*dPSI2_dDelta2 + delta*dPSI3_dDelta3)
-        //                               + 3*dDELTAbi_dDelta*(2*dPSI_dDelta + delta*dPSI2_dDelta2)
-        //                               + 3*dDELTAbi2_dDelta2*(PSI + delta*dPSI_dDelta) + dDELTAbi3_dDelta3*PSI*delta);
-        //CoolPropDbl Line1 = DELTA_bi*(2*dPSI2_dDelta_dTau + delta*dPSI3_dDelta2_dTau) + dDELTAbi_dTau*(2*dPSI_dDelta+delta*dPSI2_dDelta2);
-        //CoolPropDbl Line2 = 2*dDELTAbi_dDelta*(dPSI_dTau+delta*dPSI2_dDelta_dTau) + 2*dDELTAbi2_dDelta_dTau*(PSI+delta*dPSI_dDelta);
-        //CoolPropDbl Line3 = dDELTAbi2_dDelta2*delta*dPSI_dTau + dDELTAbi3_dDelta2_dTau*delta*PSI;
-        //derivs.d3alphar_ddelta2_dtau += ni*(Line1 + Line2 + Line3);
+        derivs.d4alphar_ddelta_dtau3 += ni*(delta*DELTA_bi*d4PSI_dDelta_dTau3 + delta*PSI*d4DELTAbi_dDelta_dTau3 + delta*dDELTAbi_dDelta*d3PSI_dTau3
+                                            + 3*delta*dDELTAbi_dTau*d3PSI_dDelta_dTau2 + delta*dPSI_dDelta*d3DELTAbi_dTau3 + 3*delta*dPSI_dTau*d3DELTAbi_dDelta_dTau2 
+                                            + 3*delta*d2DELTAbi_dDelta_dTau*d2PSI_dTau2 + 3*delta*d2DELTAbi_dTau2*d2PSI_dDelta_dTau+DELTA_bi*d3PSI_dTau3
+                                            + PSI*d3DELTAbi_dTau3 + 3*dDELTAbi_dTau*d2PSI_dTau2 + 3*dPSI_dTau*d2DELTAbi_dTau2);
+        derivs.d4alphar_ddelta3_dtau += ni*(delta*DELTA_bi*d4PSI_dDelta3_dTau + delta*PSI*d4DELTAbi_dDelta3_dTau + 3*delta*dDELTAbi_dDelta*d3PSI_dDelta2_dTau
+                                            + delta*dDELTAbi_dTau*d3PSI_dDelta3 + 3*delta*dPSI_dDelta*d3DELTAbi_dDelta2_dTau + delta*dPSI_dTau*d3DELTAbi_dDelta3
+                                            + 3*delta*d2DELTAbi_dDelta2*d2PSI_dDelta_dTau + 3*delta*d2DELTAbi_dDelta_dTau*d2PSI_dDelta2 + 3*DELTA_bi*d3PSI_dDelta2_dTau
+                                            + 3*PSI*d3DELTAbi_dDelta2_dTau + 6*dDELTAbi_dDelta*d2PSI_dDelta_dTau + 3*dDELTAbi_dTau*d2PSI_dDelta2
+                                            + 6*dPSI_dDelta*d2DELTAbi_dDelta_dTau + 3*dPSI_dTau*d2DELTAbi_dDelta2);
+        derivs.d4alphar_ddelta2_dtau2 += ni*(delta*DELTA_bi*d4PSI_dDelta2_dTau2 + delta*PSI*d4DELTAbi_dDelta2_dTau2 + 2*delta*dDELTAbi_dDelta*d3PSI_dDelta_dTau2
+                                             + 2*delta*dDELTAbi_dTau*d3PSI_dDelta2_dTau + 2*delta*dPSI_dDelta*d3DELTAbi_dDelta_dTau2 + 2*delta*dPSI_dTau*d3DELTAbi_dDelta2_dTau
+                                             + delta*d2DELTAbi_dDelta2*d2PSI_dTau2 + 4*delta*d2DELTAbi_dDelta_dTau*d2PSI_dDelta_dTau + delta*d2DELTAbi_dTau2*d2PSI_dDelta2
+                                             + 2*DELTA_bi*d3PSI_dDelta_dTau2 + 2*PSI*d3DELTAbi_dDelta_dTau2 + 2*dDELTAbi_dDelta*d2PSI_dTau2
+                                             + 4*dDELTAbi_dTau*d2PSI_dDelta_dTau + 2*dPSI_dDelta*d2DELTAbi_dTau2 + 4*dPSI_dTau*d2DELTAbi_dDelta_dTau);
     }
 }
 
