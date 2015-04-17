@@ -336,20 +336,23 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
         
         // Derivatives of PSI (OK - checked)
         const CoolPropDbl PSI = exp(-Ci*POW2(delta-1.0)-Di*POW2(tau-1.0));
-        const CoolPropDbl dPSI_dDelta = -2.0*Ci*(delta-1.0)*PSI;
-        const CoolPropDbl dPSI_dTau = -2.0*Di*(tau-1.0)*PSI;
-        const CoolPropDbl d2PSI_dDelta2 = (2.0*Ci*POW2(delta-1.0)-1.0)*2.0*Ci*PSI;
+        const CoolPropDbl dPSI_dDelta_over_PSI = -2.0*Ci*(delta-1.0);
+        const CoolPropDbl dPSI_dDelta = dPSI_dDelta_over_PSI*PSI;
+        const CoolPropDbl dPSI_dTau_over_PSI = -2.0*Di*(tau-1.0);
+        const CoolPropDbl dPSI_dTau = dPSI_dTau_over_PSI*PSI;
+        const CoolPropDbl d2PSI_dDelta2_over_PSI = (2.0*Ci*POW2(delta-1.0)-1.0)*2.0*Ci;
+        const CoolPropDbl d2PSI_dDelta2 = d2PSI_dDelta2_over_PSI*PSI;
         const CoolPropDbl d3PSI_dDelta3 = 2*Ci*PSI*(-4*Ci*Ci*POW3(delta-1)+6*Ci*(delta-1));
         const CoolPropDbl d4PSI_dDelta4 = 4*Ci*Ci*PSI*(4*Ci*Ci*POW4(delta-1) - 12*Ci*POW2(delta-1) + 3);
         const CoolPropDbl d2PSI_dTau2 = (2.0*Di*POW2(tau-1.0)-1.0)*2.0*Di*PSI;
         const CoolPropDbl d3PSI_dTau3 = 2.0*Di*PSI*(-4*Di*Di*POW3(tau-1) + 6*Di*(tau-1));
         const CoolPropDbl d4PSI_dTau4 = 4*Di*Di*PSI*(4*Di*Di*POW4(tau-1) - 12*Di*POW2(tau-1) + 3);
-        const CoolPropDbl d2PSI_dDelta_dTau = dPSI_dDelta*dPSI_dTau/PSI;
-        const CoolPropDbl d3PSI_dDelta2_dTau = d2PSI_dDelta2*dPSI_dTau/PSI;
-        const CoolPropDbl d3PSI_dDelta_dTau2 = dPSI_dDelta*d2PSI_dTau2/PSI;
-        const CoolPropDbl d4PSI_dDelta_dTau3 = dPSI_dDelta*d3PSI_dTau3/PSI;
-        const CoolPropDbl d4PSI_dDelta2_dTau2 = d2PSI_dDelta2*d2PSI_dTau2/PSI;
-        const CoolPropDbl d4PSI_dDelta3_dTau = d3PSI_dDelta3*dPSI_dTau/PSI;
+        const CoolPropDbl d2PSI_dDelta_dTau = dPSI_dDelta*dPSI_dTau_over_PSI;
+        const CoolPropDbl d3PSI_dDelta2_dTau = d2PSI_dDelta2*dPSI_dTau_over_PSI;
+        const CoolPropDbl d3PSI_dDelta_dTau2 = d2PSI_dTau2*dPSI_dDelta_over_PSI;
+        const CoolPropDbl d4PSI_dDelta_dTau3 = d3PSI_dTau3*dPSI_dDelta_over_PSI;
+        const CoolPropDbl d4PSI_dDelta2_dTau2 = d2PSI_dTau2*d2PSI_dDelta2_over_PSI;
+        const CoolPropDbl d4PSI_dDelta3_dTau = d3PSI_dDelta3*dPSI_dTau_over_PSI;
         
         // Derivatives of DELTA (OK - Checked)
         const CoolPropDbl DELTA = POW2(theta)+Bi*pow(POW2(delta-1.0),ai);
