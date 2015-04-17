@@ -814,48 +814,48 @@ CoolPropDbl IdealHelmholtzCP0PolyT::dTau4(const CoolPropDbl &tau, const CoolProp
     return sum;
 }
 
-void IdealHelmholtzCP0AlyLee::to_json(rapidjson::Value &el, rapidjson::Document &doc){
-    el.AddMember("type","IdealGasHelmholtzCP0AlyLee",doc.GetAllocator());
-    rapidjson::Value _n(rapidjson::kArrayType);
-    for (std::size_t i=0; i<=4; ++i)
-    {
-        _n.PushBack(static_cast<double>(c[i]),doc.GetAllocator());
-    }
-    el.AddMember("c",_n,doc.GetAllocator());
-    el.AddMember("Tc",static_cast<double>(Tc),doc.GetAllocator());
-    el.AddMember("T0",static_cast<double>(T0),doc.GetAllocator());
-}
-CoolPropDbl IdealHelmholtzCP0AlyLee::base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
-{
-    if (!enabled){ return 0.0;}
-    return -tau*(anti_deriv_cp0_tau2(tau)-anti_deriv_cp0_tau2(tau0))+(anti_deriv_cp0_tau(tau)-anti_deriv_cp0_tau(tau0));
-}
-CoolPropDbl IdealHelmholtzCP0AlyLee::dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
-{
-    if (!enabled){ return 0.0;}
-    return -(anti_deriv_cp0_tau2(tau) - anti_deriv_cp0_tau2(tau0));
-}
-CoolPropDbl IdealHelmholtzCP0AlyLee::anti_deriv_cp0_tau2(const CoolPropDbl &tau)
-{
-    return -c[0]/tau + 2*c[1]*c[2]/Tc/(exp(-2*c[2]*tau/Tc)-1) - 2*c[3]*c[4]/Tc*(exp(2*c[4]*tau/Tc)+1);
-}
-CoolPropDbl IdealHelmholtzCP0AlyLee::anti_deriv_cp0_tau(const CoolPropDbl &tau)
-{
-    CoolPropDbl term1 = c[0]*log(tau);
-    CoolPropDbl term2 = 2*c[1]*c[2]*tau/(-Tc + Tc*exp(-2*c[2]*tau/Tc)) + c[1]*log(-1 + exp(-2*c[2]*tau/Tc)) + 2*c[1]*c[2]*tau/Tc;
-    CoolPropDbl term3 = -c[3]*(Tc*exp(2*c[4]*tau/Tc)*log(exp(2*c[4]*tau/Tc) + 1) + Tc*log(exp(2*c[4]*tau/Tc) + 1) - 2*c[4]*tau*exp(2*c[4]*tau/Tc))/(Tc*(exp(2*c[4]*tau/Tc) + 1));
-    return term1 + term2 + term3;
-}
-CoolPropDbl IdealHelmholtzCP0AlyLee::dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
-{
-    if (!enabled){ return 0.0;}
-    return -c[0]/pow(tau,2) - c[1]*pow(c[2]/Tc/sinh(c[2]*tau/Tc),2) - c[3]*pow(c[4]/Tc/cosh(c[4]*tau/Tc),2);
-}
-CoolPropDbl IdealHelmholtzCP0AlyLee::dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
-{
-    if (!enabled){ return 0.0;}
-    return 2*c[0]/pow(tau,3) + 2*c[1]*pow(c[2]/Tc,3)*cosh(c[2]*tau/Tc)/pow(sinh(c[2]*tau/Tc),3) + 2*c[3]*pow(c[4]/Tc,3)*sinh(c[4]*tau/Tc)/pow(cosh(c[4]*tau/Tc),3);
-}
+//void IdealHelmholtzCP0AlyLee::to_json(rapidjson::Value &el, rapidjson::Document &doc){
+//    el.AddMember("type","IdealGasHelmholtzCP0AlyLee",doc.GetAllocator());
+//    rapidjson::Value _n(rapidjson::kArrayType);
+//    for (std::size_t i=0; i<=4; ++i)
+//    {
+//        _n.PushBack(static_cast<double>(c[i]),doc.GetAllocator());
+//    }
+//    el.AddMember("c",_n,doc.GetAllocator());
+//    el.AddMember("Tc",static_cast<double>(Tc),doc.GetAllocator());
+//    el.AddMember("T0",static_cast<double>(T0),doc.GetAllocator());
+//}
+//CoolPropDbl IdealHelmholtzCP0AlyLee::base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+//{
+//    if (!enabled){ return 0.0;}
+//    return -tau*(anti_deriv_cp0_tau2(tau)-anti_deriv_cp0_tau2(tau0))+(anti_deriv_cp0_tau(tau)-anti_deriv_cp0_tau(tau0));
+//}
+//CoolPropDbl IdealHelmholtzCP0AlyLee::dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+//{
+//    if (!enabled){ return 0.0;}
+//    return -(anti_deriv_cp0_tau2(tau) - anti_deriv_cp0_tau2(tau0));
+//}
+//CoolPropDbl IdealHelmholtzCP0AlyLee::anti_deriv_cp0_tau2(const CoolPropDbl &tau)
+//{
+//    return -c[0]/tau + 2*c[1]*c[2]/Tc/(exp(-2*c[2]*tau/Tc)-1) - 2*c[3]*c[4]/Tc*(exp(2*c[4]*tau/Tc)+1);
+//}
+//CoolPropDbl IdealHelmholtzCP0AlyLee::anti_deriv_cp0_tau(const CoolPropDbl &tau)
+//{
+//    CoolPropDbl term1 = c[0]*log(tau);
+//    CoolPropDbl term2 = 2*c[1]*c[2]*tau/(-Tc + Tc*exp(-2*c[2]*tau/Tc)) + c[1]*log(-1 + exp(-2*c[2]*tau/Tc)) + 2*c[1]*c[2]*tau/Tc;
+//    CoolPropDbl term3 = -c[3]*(Tc*exp(2*c[4]*tau/Tc)*log(exp(2*c[4]*tau/Tc) + 1) + Tc*log(exp(2*c[4]*tau/Tc) + 1) - 2*c[4]*tau*exp(2*c[4]*tau/Tc))/(Tc*(exp(2*c[4]*tau/Tc) + 1));
+//    return term1 + term2 + term3;
+//}
+//CoolPropDbl IdealHelmholtzCP0AlyLee::dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+//{
+//    if (!enabled){ return 0.0;}
+//    return -c[0]/pow(tau,2) - c[1]*pow(c[2]/Tc/sinh(c[2]*tau/Tc),2) - c[3]*pow(c[4]/Tc/cosh(c[4]*tau/Tc),2);
+//}
+//CoolPropDbl IdealHelmholtzCP0AlyLee::dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+//{
+//    if (!enabled){ return 0.0;}
+//    return 2*c[0]/pow(tau,3) + 2*c[1]*pow(c[2]/Tc,3)*cosh(c[2]*tau/Tc)/pow(sinh(c[2]*tau/Tc),3) + 2*c[3]*pow(c[4]/Tc,3)*sinh(c[4]*tau/Tc)/pow(cosh(c[4]*tau/Tc),3);
+//}
 
 }; /* namespace CoolProp */
 
