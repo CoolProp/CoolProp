@@ -787,7 +787,12 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
                      POST_BUILD
                      COMMAND python example_generator.py MATLAB "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
                      WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/dev/scripts/examples")
-
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    add_custom_command(TARGET CoolPropMATLAB_wrap
+                       POST_BUILD
+                       COMMAND otool -L CoolPropMATLAB_wrap.mexmac*
+                       WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  endif()
   if(WIN32) # 32-bit or 64-bit mex
   
     # Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
@@ -817,8 +822,8 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
    
   # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -DEXTERNC -DCONVENTION= -m32")
-    set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -m32") 
+    #set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -DEXTERNC -DCONVENTION= -m32")
+    #set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -m32") 
   endif()
   
   add_dependencies (CoolPropMATLAB_wrap generate_headers)
