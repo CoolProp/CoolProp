@@ -214,28 +214,13 @@ The primary motivation for the use of tabular interpolation is the improvement i
 More Information
 ----------------
 
-The tables are stored in a zipped format using the msgpack package and miniz.  To save space, the uncompressed binary tables are not stored, but if you want them to be stored as well as the compressed tables, you can do something like:
+The tables are stored in a zipped format using the msgpack package and miniz.  If you want to see what data is serialized in the tabular data, you can unzip and unpack into python (or other high-level languages) using something roughly like::
 
-.. ipython::
-
-    In [0]: import CoolProp.CoolProp as CP, json
+    import msgpack, zlib, StringIO
     
-    In [1]: jj = json.loads(CP.get_config_as_json_string())
-    
-    In [2]: jj['SAVE_RAW_TABLES'] = True
-    
-    In [3]: CP.set_config_as_json_string(json.dumps(jj))
-    
-before you run your code to debug the tables.  This can be useful for debugging of the data stored in the tables.
-
-.. warning::
-
-    Make sure you delete the tables that are already there, otherwise it will entirely just load the zipped tables
-    
-The uncompressed tabled can be read back into python (or other high-level languages) using something roughly like::
-
-    with open(r'/path/to/home/.CoolProp/Tables/HelmholtzEOSBackend(R245fa)/single_phase_logph.bin','rb') as fp:
-        values = msgpack.load(fp)
+    with open(r'/path/to/home/.CoolProp/Tables/HelmholtzEOSBackend(R245fa)/single_phase_logph.bin.z','rb') as fp:
+        ph = zlib.decompress(fp.read())
+        values = msgpack.load(StringIO.StringIO(ph))
         revision, matrices = values[0:2]
         T,h,p,rho = np.array(matrices['T']), np.array(matrices['hmolar']), np.array(matrices['p']), np.array(matrices['rhomolar'])
         
