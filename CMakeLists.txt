@@ -297,7 +297,7 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
     SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
   ENDIF()
   # For Mac systems
-  IF ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+  IF (("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin") AND (COOLPROP_SHARED_LIBRARY))
     # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
     SET_TARGET_PROPERTIES(${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -stdlib=libstdc++ -mmacosx-version-min=10.6")
     SET_TARGET_PROPERTIES(${app_name} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "${LINK_FLAGS} -stdlib=libstdc++ -mmacosx-version-min=10.6") 
