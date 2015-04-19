@@ -512,6 +512,7 @@ class TabularBackend : public AbstractState
         LogPHTable single_phase_logph;
         LogPTTable single_phase_logpT;
         PureFluidSaturationTableData pure_saturation; // This will ultimately be split into pure and mixture backends which derive from this backend
+        PhaseEnvelopeData phase_envelope;
         
         bool using_mole_fractions(void){return true;}
         bool using_mass_fractions(void){return false;}
@@ -534,7 +535,16 @@ class TabularBackend : public AbstractState
         void load_tables();
         /// Build the tables
         void build_tables(){
-            pure_saturation.build(AS);
+            // Pure or pseudo-pure fluid
+            if (AS->get_mole_fractions().size() == 1){
+                pure_saturation.build(AS);
+            }
+            else{
+                // Call function to actually construct the phase envelope
+                AS->build_phase_envelope("");
+                // Copy constructed phase envelope into this class
+                phase_envelope = AS->get_phase_envelope_data();
+            }
             single_phase_logph.build(AS); 
             single_phase_logpT.build(AS);
         }
@@ -542,6 +552,7 @@ class TabularBackend : public AbstractState
             single_phase_logph.pack();
             single_phase_logpT.pack();
             pure_saturation.pack();
+            //phase_envelope.pack();
         }
         /// Write the tables to file
         void write_tables();        

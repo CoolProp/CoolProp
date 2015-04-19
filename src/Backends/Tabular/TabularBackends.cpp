@@ -296,4 +296,5 @@ void CoolProp::TabularBackend::load_tables(){
     load_table(pure_saturation, path_to_tables, "pure_saturation.bin.z");
 }
 
+
 #endif // !defined(NO_TABULAR_BACKENDS)
