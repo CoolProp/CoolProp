@@ -158,77 +158,167 @@ ELSEIF(FORCE_BITNESS_64)
   SET(BITNESS "64")
 ENDIF()
 
-if (!MSVC)
-  #set_target_properties(${app_name} PROPERTIES COMPILE_FLAGS "-m${BITNESS}" LINK_FLAGS "-m${BITNESS}")
-  #set_target_properties(${app_name} PROPERTIES                        COMPILE_FLAGS "-m${BITNESS}" LINK_FLAGS "-m${BITNESS}")
-  set_target_properties(${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-m${BITNESS}")
-  set_target_properties(${app_name} PROPERTIES APPEND_STRING PROPERTY    LINK_FLAGS "-m${BITNESS}") 
-endif()
-
 #######################################
 #         MAKE ARTIFACTS              #
 #-------------------------------------#
 # In this section we define the       #
-# artifacts (exes, libs) that will be #
-# made for coolprop, these include    #
-# customisation from earier options.  #
+# artefacts (exes, libs) that will be #
+# made for CoolProp, these include    #
+# customisation from earlier options. #
 #######################################
 
 ###     FLUIDS, MIXTURES JSON       ###
 add_custom_target(generate_headers
                   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/dev/generate_headers.py")
-                  
-###      COOLPROP LIB or DLL        ###
-if (COOLPROP_SHARED_LIBRARY)
-    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+
+###      Library options            ###
+# We already know the bitness from the earlier
+# settings. Let us rely on that and only handle 
+# calling conventions and shared/static issues.
+
+option (COOLPROP_STDCALL_LIBRARY
+        "Build CoolProp as a 32bit shared library with stdcall"
+        OFF)
+
+option (COOLPROP_CDECL_LIBRARY
+        "Build CoolProp as a 32bit shared library with cdecl"
+        OFF)
+
+option (COOLPROP_EXTERNC_LIBRARY
+        "Build CoolProp as a static library with without name mangling"
+        OFF)
+
+# Overwrite some settings based on the old flags
+IF (COOLPROP_STATIC_LIBRARY_MODULE OR COOLPROP_STATIC_LIBRARY)
+  SET (COOLPROP_STATIC_LIBRARY ON)
+  SET (COOLPROP_SHARED_LIBRARY OFF)
+ENDIF()
+
+IF (COOLPROP_EXTERNC_STATIC_LIBRARY)
+  SET (COOLPROP_STATIC_LIBRARY ON)
+  SET (COOLPROP_EXTERNC_LIBRARY ON)
+  SET (COOLPROP_SHARED_LIBRARY OFF)
+ENDIF()
+
+IF (COOLPROP_32BIT_CDECL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_CDECL_SHARED_LIBRARY)
+  SET (COOLPROP_STATIC_LIBRARY OFF)
+  SET (COOLPROP_SHARED_LIBRARY ON)
+  SET (COOLPROP_CDECL_LIBRARY ON)
+  SET (COOLPROP_STDCALL_LIBRARY OFF)
+ENDIF()
+
+IF (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_STDCALL_SHARED_LIBRARY)
+  SET (COOLPROP_STATIC_LIBRARY OFF)
+  SET (COOLPROP_SHARED_LIBRARY ON)
+  SET (COOLPROP_CDECL_LIBRARY OFF)
+  SET (COOLPROP_STDCALL_LIBRARY ON)
+ENDIF()
+
+IF (COOLPROP_64BIT_SHARED_LIBRARY_MODULE OR COOLPROP_64BIT_SHARED_LIBRARY)
+  SET (COOLPROP_STATIC_LIBRARY OFF)
+  SET (COOLPROP_SHARED_LIBRARY ON)
+ENDIF()
+
+if (COOLPROP_32BIT_SHARED_LIBRARY_LINUX_MODULE OR COOLPROP_32BIT_SHARED_LIBRARY_LINUX)
+  SET (COOLPROP_STATIC_LIBRARY OFF)
+  SET (COOLPROP_SHARED_LIBRARY ON)
 endif()
 
-if (COOLPROP_STATIC_LIBRARY_MODULE OR COOLPROP_STATIC_LIBRARY OR COOLPROP_EXTERNC_STATIC_LIBRARY)
-    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
-    add_library(${app_name} STATIC ${APP_SOURCES})
-    add_dependencies (${app_name} generate_headers)
-    install (TARGETS ${app_name} DESTINATION static_library/${CMAKE_SYSTEM_NAME})
-endif()
+# Rule out cases that do not make sense
+IF ("${BITNESS}" STREQUAL "32")
+  IF (COOLPROP_CDECL_LIBRARY)
+    SET(CONVENTION "__cdecl")
+  ELSEIF (COOLPROP_STDCALL_LIBRARY)
+    SET(CONVENTION "__stdcall")
+  ELSE() 
+    SET(CONVENTION "")
+  ENDIF()
+ELSEIF ("${BITNESS}" STREQUAL "64")
+  IF (COOLPROP_CDECL_LIBRARY)
+    MESSAGE(WARNING "You cannot use cdecl conventions in a 64-bit library.")
+  ELSEIF (COOLPROP_STDCALL_LIBRARY)
+    MESSAGE(WARNING "You cannot use stdcall conventions in a 64-bit library.")
+  ENDIF()
+  SET(CONVENTION "")
+ELSE()
+  MESSAGE(FATAL_ERROR "Bitness is not defined. Set it and run cmake again.")  
+ENDIF()
 
-###      Process some more options  ###
 
-if (COOLPROP_EXTERNC_STATIC_LIBRARY)
-  set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC")
-endif()
+IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
+  #
+  LIST(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+  # Static or shared? 
+  IF (COOLPROP_STATIC_LIBRARY)
+    ADD_LIBRARY(${app_name} STATIC ${APP_SOURCES})
+    INSTALL(TARGETS ${app_name} DESTINATION static_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION} )
+    INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION static_library)
+  ELSEIF (COOLPROP_SHARED_LIBRARY)
+    ADD_LIBRARY(${app_name} SHARED ${APP_SOURCES})
+    INSTALL(TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION} )
+    INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
+    IF (MSVC)
+      ADD_CUSTOM_COMMAND(TARGET ${app_name} POST_BUILD 
+        COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+      INSTALL (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt 
+        DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION})
+    ENDIF()
+    IF ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+      SET_TARGET_PROPERTIES (${app_name} PROPERTIES VERSION ${COOLPROP_VERSION} SOVERSION ${COOLPROP_VERSION_MAJOR})
+    ENDIF()
+  ELSE()
+    MESSAGE(FATAL_ERROR "You have to build a static or shared library.")
+  ENDIF()
+  #
+  ### All options are set, we are building a library ###
+  ADD_DEPENDENCIES(${app_name} generate_headers)
+  SET_TARGET_PROPERTIES (${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
+  #
+  # Set the bitness
+  IF (!MSVC)
+    SET_TARGET_PROPERTIES(${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -m${BITNESS}")
+    SET_TARGET_PROPERTIES(${app_name} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "${LINK_FLAGS} -m${BITNESS}")
+  ENDIF()
+  #
+  # Name mangling settings
+  IF (COOLPROP_EXTERNC_LIBRARY)
+    SET_TARGET_PROPERTIES (${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC")
+  ENDIF()
+  #
+  # calling conventions
+  SET_TARGET_PROPERTIES (${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -DCONVENTION=${CONVENTION}")
+  # 
+  # Now all the compiler specific settings for Visual Studio
+  IF (MSVC)
+    # No lib prefix for the shared library
+    SET_TARGET_PROPERTIES(${app_name} PROPERTIES PREFIX "")
+    #  Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
+    SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+    SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+  ENDIF()
+  # For Mac systems
+  IF ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+    # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
+    SET_TARGET_PROPERTIES(${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -stdlib=libstdc++ -mmacosx-version-min=10.6")
+    SET_TARGET_PROPERTIES(${app_name} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "${LINK_FLAGS} -stdlib=libstdc++ -mmacosx-version-min=10.6") 
+  ENDIF()
+  #
+  MESSAGE(STATUS "Library compilation detected:")
+  MESSAGE(STATUS "BITNESS: ${BITNESS}")
+  MESSAGE(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
+  MESSAGE(STATUS "COOLPROP_STATIC_LIBRARY: ${COOLPROP_STATIC_LIBRARY}")
+  MESSAGE(STATUS "COOLPROP_SHARED_LIBRARY: ${COOLPROP_SHARED_LIBRARY}")
+  MESSAGE(STATUS "CONVENTION: ${CONVENTION}")
+  MESSAGE(STATUS "COOLPROP_CDECL_LIBRARY: ${COOLPROP_CDECL_LIBRARY}")
+  MESSAGE(STATUS "COOLPROP_STDCALL_LIBRARY: ${COOLPROP_STDCALL_LIBRARY}")
+  MESSAGE(STATUS "COOLPROP_EXTERNC_LIBRARY: ${COOLPROP_EXTERNC_LIBRARY}")
+  MESSAGE(STATUS "COMPILE_FLAGS: ${COMPILE_FLAGS}")
+  MESSAGE(STATUS "LINK_FLAGS: ${LINK_FLAGS}")
+  #
+ENDIF()
 
 
-if (COOLPROP_64BIT_SHARED_LIBRARY_MODULE OR COOLPROP_64BIT_SHARED_LIBRARY)
-    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
-    add_library(${app_name} SHARED ${APP_SOURCES})
-    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
-    if (!MSVC)
-      set_target_properties(${app_name} PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
-    endif()
-    add_dependencies (${app_name} generate_headers)
-    
-    if (MSVC)
-    
-      # Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
-      set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-      
-      # No lib prefix for the shared library
-      set_target_properties(${app_name} PROPERTIES PREFIX "")
-      add_custom_command(TARGET ${app_name}
-                         POST_BUILD
-                         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
-      install (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/64bit)
-    else()
-      # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
-      if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -stdlib=libstdc++ -mmacosx-version-min=10.6")
-        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -stdlib=libstdc++ -mmacosx-version-min=10.6")
-      endif()
-    endif()
 
-    install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/64bit)
-    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
-endif()
 
 if (COOLPROP_DEBIAN_PACKAGE)
     if(!UNIX)
@@ -273,74 +363,6 @@ if (COOLPROP_VXWORKS_LIBRARY_MODULE OR COOLPROP_VXWORKS_LIBRARY)
     set_target_properties (${app_name} PROPERTIES SUFFIX ".out" COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC")
     add_dependencies (${app_name} generate_headers)
     install (TARGETS ${app_name} DESTINATION "${COOLPROP_INSTALL_PREFIX}/shared_library/VxWorks")
-endif()
-
-if (COOLPROP_32BIT_SHARED_LIBRARY_LINUX_MODULE OR COOLPROP_32BIT_SHARED_LIBRARY_LINUX)
-    if(!UNIX)
-      message(FATAL_ERROR "COOLPROP_32BIT_SHARED_LIBRARY_LINUX_MODULE can only be used on linux host")
-    endif()
-    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
-    add_library(${app_name} SHARED ${APP_SOURCES})
-    set_target_properties (${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC -DCONVENTION= -m32" LINK_FLAGS "-m32")
-    add_dependencies (${app_name} generate_headers)
-    if (MSVC)
-      #  Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
-      set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-    else()
-      # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
-      if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-        set_target_properties(${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -DEXTERNC -DCONVENTION= -m32")
-        set_target_properties(${app_name} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -m32") 
-      endif()
-    endif()
-    install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
-    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
-endif()
-
-if (COOLPROP_32BIT_CDECL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_CDECL_SHARED_LIBRARY)
-    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
-    add_library(${app_name} SHARED ${APP_SOURCES})
-    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
-    if (!MSVC)
-      set_target_properties(${app_name} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
-    endif()
-    add_dependencies (${app_name} generate_headers)
-    set_target_properties(${app_name} PROPERTIES PREFIX "")
-    if (MSVC)
-      # Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
-      set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-      
-      add_custom_command(TARGET ${app_name}
-                         POST_BUILD
-                         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
-      install (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
-    endif()
-    install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__cdecl_calling_convention)
-    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
-endif()
-
-if (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_STDCALL_SHARED_LIBRARY)
-    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
-    add_library(${app_name} SHARED ${APP_SOURCES})
-    set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__stdcall")
-    if (!MSVC)
-      set_target_properties(${app_name} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
-    endif()
-    add_dependencies (${app_name} generate_headers)
-    set_target_properties(${app_name} PROPERTIES PREFIX "")
-    if (MSVC)
-      # Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
-      set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-      add_custom_command(TARGET ${app_name}
-                         POST_BUILD
-                         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
-      install (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__stdcall_calling_convention)
-    endif()
-    install (TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/32bit__stdcall_calling_convention)
-    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
 endif()
 
 if (COOLPROP_MATHCAD_MODULE)
