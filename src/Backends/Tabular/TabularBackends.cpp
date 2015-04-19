@@ -55,8 +55,8 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
         double toc = clock();
         if (get_debug_level() > -1){std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc-tic)/CLOCKS_PER_SEC) << std::endl;}
     }
-    catch(std::exception &){
-        std::string err = format("Unable to deserialize %s", path_to_table.c_str());
+    catch(std::exception &e){
+        std::string err = format("Unable to deserialize %s; err: %s", path_to_table.c_str(), e.what());
         if (get_debug_level() > 0){std::cout << err << std::endl;}
         throw UnableToLoadError(err);
     }
@@ -149,7 +149,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
     
     if (debug){
         std::cout << format("***********************************************\n");
-        std::cout << format(" Single-Phase Table (%s) \n", AS->name().c_str());
+        std::cout << format(" Single-Phase Table (%s) \n", strjoin(AS->fluid_names(), "&").c_str());
         std::cout << format("***********************************************\n");
     }
     // ------------------------
@@ -202,7 +202,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             }
             
             // Skip two-phase states - they will remain as _HUGE holes in the table
-            if (AS->phase() == iphase_twophase){ 
+            if (is_in_closed_range(0.0, 1.0, AS->Q())){ 
                 if (debug){std::cout << " 2Phase" << std::endl;}
                 continue;
             };
@@ -284,6 +284,7 @@ void CoolProp::TabularBackend::write_tables(){
     write_table(single_phase_logph, path_to_tables, "single_phase_logph");
     write_table(single_phase_logpT, path_to_tables, "single_phase_logpT");
     write_table(pure_saturation, path_to_tables, "pure_saturation");
+    write_table(phase_envelope, path_to_tables, "phase_envelope");
 }
 void CoolProp::TabularBackend::load_tables(){
     std::string path_to_tables = this->path_to_tables();
@@ -294,6 +295,7 @@ void CoolProp::TabularBackend::load_tables(){
     load_table(single_phase_logph, path_to_tables, "single_phase_logph.bin.z");
     load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin.z");
     load_table(pure_saturation, path_to_tables, "pure_saturation.bin.z");
+    load_table(phase_envelope, path_to_tables, "phase_envelope.bin.z");
 }
 
 

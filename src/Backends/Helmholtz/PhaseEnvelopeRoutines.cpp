@@ -421,8 +421,8 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
                 IO.rhomolar_vap = rho0;
             }
             else if (Nsoln == 2){
-                if (is_in_closed_range(env.rhomolar_vap[imax-1], env.rhomolar_vap[imax+1], (CoolPropDbl)rho0)){ IO.rhomolar_vap = rho0; }
-                if (is_in_closed_range(env.rhomolar_vap[imax-1], env.rhomolar_vap[imax+1], (CoolPropDbl)rho1)){ IO.rhomolar_vap = rho1; }
+                if (is_in_closed_range(env.rhomolar_vap[imax-1], env.rhomolar_vap[imax+1], rho0)){ IO.rhomolar_vap = rho0; }
+                if (is_in_closed_range(env.rhomolar_vap[imax-1], env.rhomolar_vap[imax+1], rho1)){ IO.rhomolar_vap = rho1; }
             }
             else{
                 throw ValueError("More than 2 solutions found");
@@ -492,7 +492,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
     env.ipsat_max = std::distance(env.p.begin(), std::max_element(env.p.begin(), env.p.end()));
 }
 
-std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_intersections(HelmholtzEOSMixtureBackend &HEOS, parameters iInput, CoolPropDbl value)
+std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_intersections(HelmholtzEOSMixtureBackend &HEOS, parameters iInput, double value)
 {
     std::vector<std::pair<std::size_t, std::size_t> > intersections;
     
@@ -538,8 +538,8 @@ bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, paramete
     if (intersections.size()%2 == 0){
         if (intersections.size() != 2){throw ValueError("for now only even value accepted is 2"); }
         std::vector<std::size_t> other_indices(4, 0);
-        std::vector<CoolPropDbl> *y;
-        std::vector<CoolPropDbl> other_values(4, 0);
+        std::vector<double> *y;
+        std::vector<double> other_values(4, 0);
         other_indices[0] = intersections[0].first; other_indices[1] = intersections[0].second;
         other_indices[2] = intersections[1].first; other_indices[3] = intersections[1].second;
         

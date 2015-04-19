@@ -544,6 +544,8 @@ class TabularBackend : public AbstractState
                 AS->build_phase_envelope("");
                 // Copy constructed phase envelope into this class
                 phase_envelope = AS->get_phase_envelope_data();
+                // Resize so that it will load properly
+                pure_saturation.resize(pure_saturation.N);
             }
             single_phase_logph.build(AS); 
             single_phase_logpT.build(AS);
@@ -552,7 +554,7 @@ class TabularBackend : public AbstractState
             single_phase_logph.pack();
             single_phase_logpT.pack();
             pure_saturation.pack();
-            //phase_envelope.pack();
+            phase_envelope.pack();
         }
         /// Write the tables to file
         void write_tables();        

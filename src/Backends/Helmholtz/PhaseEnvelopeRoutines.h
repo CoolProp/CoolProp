@@ -33,7 +33,7 @@ class PhaseEnvelopeRoutines{
      * @param iInput The key for the variable type that is to be checked
      * @param value The value associated with iInput
      */
-    static std::vector<std::pair<std::size_t, std::size_t> > find_intersections(HelmholtzEOSMixtureBackend &HEOS, parameters iInput, CoolPropDbl value);
+    static std::vector<std::pair<std::size_t, std::size_t> > find_intersections(HelmholtzEOSMixtureBackend &HEOS, parameters iInput, double value);
     
     /** \brief Determine whether a pair of inputs is inside or outside the phase envelope
      * 

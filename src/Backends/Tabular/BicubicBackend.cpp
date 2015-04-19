@@ -144,6 +144,11 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
     // Check the tables and build if necessary
     check_tables();
 
+    // For mixtures, the construction of the coefficients is delayed until this 
+    // function so that the set_mole_fractions function can be called
+    build_coeffs(single_phase_logph, coeffs_ph);
+	build_coeffs(single_phase_logpT, coeffs_pT);
+
 	// Flush the cached indices (set to large number)
     cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 
     cached_single_phase_j = std::numeric_limits<std::size_t>::max();
