@@ -302,9 +302,9 @@
     {
         return (y1-y0)/(x1-x0)*(x-x0)+y0;
     };
-    template<class T> T LinearInterp(const std::vector<T> &x, const std::vector<T> &y, std::size_t i0, std::size_t i1, T val)
+    template<class T1, class T2> T2 LinearInterp(const std::vector<T1> &x, const std::vector<T1> &y, std::size_t i0, std::size_t i1, T2 val)
     {
-        return LinearInterp(x[i0],x[i1],y[i0],y[i1],val);
+        return LinearInterp(x[i0],x[i1],y[i0],y[i1], static_cast<T1>(val));
     };
 
     template<class T> T QuadInterp(T x0, T x1, T x2, T f0, T f1, T f2, T x)
@@ -319,9 +319,9 @@
         L2=((x-x0)*(x-x1))/((x2-x0)*(x2-x1));
         return L0*f0+L1*f1+L2*f2;
     };
-    template<class T> T QuadInterp(const std::vector<T> &x, const std::vector<T> &y, std::size_t i0, std::size_t i1, std::size_t i2, T val)
+    template<class T1, class T2> T2 QuadInterp(const std::vector<T1> &x, const std::vector<T1> &y, std::size_t i0, std::size_t i1, std::size_t i2, T2 val)
     {
-        return QuadInterp(x[i0],x[i1],x[i2],y[i0],y[i1],y[i2],val);
+        return QuadInterp(x[i0],x[i1],x[i2],y[i0],y[i1],y[i2],static_cast<T1>(val));
     };
 
     template<class T> T CubicInterp( T x0, T x1, T x2, T x3, T f0, T f1, T f2, T f3, T x)
@@ -337,9 +337,9 @@
         L3=((x-x0)*(x-x1)*(x-x2))/((x3-x0)*(x3-x1)*(x3-x2));
         return L0*f0+L1*f1+L2*f2+L3*f3;
     };
-    template<class T> T CubicInterp(const std::vector<T> &x, const std::vector<T> &y, std::size_t i0, std::size_t i1, std::size_t i2, std::size_t i3, T val)
+    template<class T1, class T2> T2 CubicInterp(const std::vector<T1> &x, const std::vector<T1> &y, std::size_t i0, std::size_t i1, std::size_t i2, std::size_t i3, T2 val)
     {
-        return CubicInterp(x[i0],x[i1],x[i2],x[i3],y[i0],y[i1],y[i2],y[i3],val);
+        return CubicInterp(x[i0],x[i1],x[i2],x[i3],y[i0],y[i1],y[i2],y[i3],static_cast<T1>(val));
     };
 
     template<class T> T is_in_closed_range( T x1, T x2, T x)
