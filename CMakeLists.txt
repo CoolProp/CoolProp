@@ -257,14 +257,27 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
     ADD_LIBRARY(${app_name} SHARED ${APP_SOURCES})
     INSTALL(TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION} )
     INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
+    # Now all the compiler specific settings for Visual Studio
     IF (MSVC)
+      # No lib prefix for the shared library
+      SET_TARGET_PROPERTIES(${app_name} PROPERTIES PREFIX "")
+      #  Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
+      SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+      SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
       ADD_CUSTOM_COMMAND(TARGET ${app_name} POST_BUILD 
         COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
       INSTALL (FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt 
         DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION})
     ENDIF()
+    # For Linux
     IF ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
       SET_TARGET_PROPERTIES (${app_name} PROPERTIES VERSION ${COOLPROP_VERSION} SOVERSION ${COOLPROP_VERSION_MAJOR})
+    ENDIF()
+    # For Mac systems
+    IF ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+      # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
+      SET_TARGET_PROPERTIES(${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -stdlib=libstdc++ -mmacosx-version-min=10.6")
+      SET_TARGET_PROPERTIES(${app_name} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "${LINK_FLAGS} -stdlib=libstdc++ -mmacosx-version-min=10.6") 
     ENDIF()
   ELSE()
     MESSAGE(FATAL_ERROR "You have to build a static or shared library.")
@@ -287,21 +300,6 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   #
   # calling conventions
   SET_TARGET_PROPERTIES (${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -DCONVENTION=${CONVENTION}")
-  # 
-  # Now all the compiler specific settings for Visual Studio
-  IF (MSVC)
-    # No lib prefix for the shared library
-    SET_TARGET_PROPERTIES(${app_name} PROPERTIES PREFIX "")
-    #  Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
-    SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-    SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-  ENDIF()
-  # For Mac systems
-  IF (("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin") AND (COOLPROP_SHARED_LIBRARY))
-    # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
-    SET_TARGET_PROPERTIES(${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -stdlib=libstdc++ -mmacosx-version-min=10.6")
-    SET_TARGET_PROPERTIES(${app_name} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "${LINK_FLAGS} -stdlib=libstdc++ -mmacosx-version-min=10.6") 
-  ENDIF()
   #
   MESSAGE(STATUS "Library compilation detected:")
   MESSAGE(STATUS "BITNESS: ${BITNESS}")
