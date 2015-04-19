@@ -243,8 +243,6 @@ ENDIF()
 IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   #
   LIST(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
-  # Name mangling settings
-  SET_TARGET_PROPERTIES (${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC")
   # Static or shared? 
   IF (COOLPROP_STATIC_LIBRARY)
     ADD_LIBRARY(${app_name} STATIC ${APP_SOURCES})
@@ -279,6 +277,8 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   ELSE()
     MESSAGE(FATAL_ERROR "You have to build a static or shared library.")
   ENDIF()
+  # Name mangling settings
+  SET_TARGET_PROPERTIES (${app_name} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC")
   #
   ### All options are set, we are building a library ###
   ADD_DEPENDENCIES(${app_name} generate_headers)
