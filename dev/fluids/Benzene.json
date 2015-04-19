@@ -479,7 +479,7 @@
   }, 
   "TRANSPORT": {
     "conductivity": {
-      "BibTeX": "Assael-JPCRD-2013-Hexane", 
+      "BibTeX": "Assael-JPCRD-2012-Benzene", 
       "critical": {
         "GAMMA": 0.0569, 
         "R0": 1.02, 
