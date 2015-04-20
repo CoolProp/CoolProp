@@ -2,7 +2,7 @@
 
 #include "BicubicBackend.h"
 #include "MatrixMath.h"
-#include "PhaseEnvelopeRoutines.h"
+#include "../Helmholtz/PhaseEnvelopeRoutines.h"
 
 /// The inverse of the A matrix for the bicubic interpolation (http://en.wikipedia.org/wiki/Bicubic_interpolation)
 /// NOTE: The matrix is transposed below
