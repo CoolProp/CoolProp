@@ -1371,8 +1371,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     _cvmolar = cvmol;
     _cpmolar = cpmol;
     _speed_sound = w;
-    _tau = calc_T_critical()/_T;
-    _delta = _rhomolar/calc_rhomolar_critical();
+    _tau = calc_T_reducing()/_T;
+    _delta = _rhomolar/calc_rhomolar_reducing();
     _Q = q;
 }
 CoolPropDbl REFPROPMixtureBackend::call_phixdll(long itau, long idel)
@@ -1389,7 +1389,7 @@ CoolPropDbl REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
     double val = 0, tau = _tau, delta = _delta, __T = T(), __rho = rhomolar()/1000;
     if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
-    return static_cast<CoolPropDbl>(val)/pow(delta,idel)/pow(tau,itau);
+    return static_cast<CoolPropDbl>(val)/pow(tau,itau); // Not multplied by delta^idel
 }
 
 void REFPROP_SETREF(char hrf[3], long ixflag, double x0[1], double &h0, double &s0, double &T0, double &p0, long &ierr, char herr[255], long l1, long l2){
