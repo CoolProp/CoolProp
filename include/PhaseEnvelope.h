@@ -131,10 +131,10 @@ public:
             this->y[j].insert(this->y[j].begin() + i, y[j]);
         }
         if (rhomolar_liq > rhomolar_vap){
-            this->Q.insert(this->Q.begin(), 1);
+            this->Q.insert(this->Q.begin() + i, 1);
         }
         else{
-            this->Q.insert(this->Q.begin(), 0);
+            this->Q.insert(this->Q.begin() + i, 0);
         }
     };
     void store_variables(const CoolPropDbl T, 

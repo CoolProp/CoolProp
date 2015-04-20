@@ -492,11 +492,10 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
     env.ipsat_max = std::distance(env.p.begin(), std::max_element(env.p.begin(), env.p.end()));
 }
 
-std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_intersections(HelmholtzEOSMixtureBackend &HEOS, parameters iInput, double value)
+std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_intersections(const PhaseEnvelopeData &env, parameters iInput, double value)
 {
     std::vector<std::pair<std::size_t, std::size_t> > intersections;
     
-    PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
     for (std::size_t i = 0; i < env.p.size()-1; ++i){
         bool matched = false;
         switch(iInput){
@@ -518,11 +517,10 @@ std::vector<std::pair<std::size_t, std::size_t> > PhaseEnvelopeRoutines::find_in
     }
     return intersections;
 }
-bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, parameters iInput1, CoolPropDbl value1, parameters iInput2, CoolPropDbl value2, std::size_t &iclosest, SimpleState &closest_state)
+bool PhaseEnvelopeRoutines::is_inside(const PhaseEnvelopeData &env, parameters iInput1, CoolPropDbl value1, parameters iInput2, CoolPropDbl value2, std::size_t &iclosest, SimpleState &closest_state)
 {
-    PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
     // Find the indices that bound the solution(s)
-    std::vector<std::pair<std::size_t, std::size_t> > intersections = find_intersections(HEOS, iInput1, value1);
+    std::vector<std::pair<std::size_t, std::size_t> > intersections = find_intersections(env, iInput1, value1);
     
     // For now, first input must be p
     if (iInput1 != iP){throw ValueError("For now, first input must be p in is_inside");}
@@ -538,7 +536,7 @@ bool PhaseEnvelopeRoutines::is_inside(HelmholtzEOSMixtureBackend &HEOS, paramete
     if (intersections.size()%2 == 0){
         if (intersections.size() != 2){throw ValueError("for now only even value accepted is 2"); }
         std::vector<std::size_t> other_indices(4, 0);
-        std::vector<double> *y;
+        std::vector<double> const *y;
         std::vector<double> other_values(4, 0);
         other_indices[0] = intersections[0].first; other_indices[1] = intersections[0].second;
         other_indices[2] = intersections[1].first; other_indices[3] = intersections[1].second;

@@ -2,6 +2,7 @@
 
 #include "BicubicBackend.h"
 #include "MatrixMath.h"
+#include "PhaseEnvelopeRoutines.h"
 
 /// The inverse of the A matrix for the bicubic interpolation (http://en.wikipedia.org/wiki/Bicubic_interpolation)
 /// NOTE: The matrix is transposed below
@@ -144,10 +145,14 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
     // Check the tables and build if necessary
     check_tables();
 
-    // For mixtures, the construction of the coefficients is delayed until this 
-    // function so that the set_mole_fractions function can be called
-    build_coeffs(single_phase_logph, coeffs_ph);
-	build_coeffs(single_phase_logpT, coeffs_pT);
+    bool is_mixture = (this->AS->get_mole_fractions().size() >= 2);
+
+    if (is_mixture){
+        // For mixtures, the construction of the coefficients is delayed until this 
+        // function so that the set_mole_fractions function can be called
+        build_coeffs(single_phase_logph, coeffs_ph);
+        build_coeffs(single_phase_logpT, coeffs_pT);
+    }
 
 	// Flush the cached indices (set to large number)
     cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 
@@ -166,9 +171,15 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             }
             else{
                 using_single_phase_table = true; // Use the table !
-                std::size_t iL, iV;
+                std::size_t iL, iV, iclosest = 0;
                 CoolPropDbl hL = 0, hV = 0;
-                if (pure_saturation.is_inside(iP, _p, iHmolar, _hmolar, iL, iV, hL, hV)){
+                SimpleState closest_state;
+                if (
+                    (is_mixture && PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, iHmolar, _hmolar, iclosest, closest_state))
+                    ||
+                    (!is_mixture && pure_saturation.is_inside(iP, _p, iHmolar, _hmolar, iL, iV, hL, hV))
+                    )
+                {
                     using_single_phase_table = false;
                     _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
                     if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
@@ -210,9 +221,15 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             }
             else{
                 using_single_phase_table = true; // Use the table !
-                std::size_t iL = 0, iV = 0;
+                std::size_t iL = 0, iV = 0, iclosest = 0;
                 CoolPropDbl TL = 0, TV = 0;
-                if (pure_saturation.is_inside(iP, _p, iT, _T, iL, iV, TL, TV)){
+                SimpleState closest_state;
+                if (
+                    (is_mixture && PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, iT, _T, iclosest, closest_state))
+                    ||
+                    (!is_mixture && pure_saturation.is_inside(iP, _p, iT, _T, iL, iV, TL, TV))
+                    )
+                {
                     using_single_phase_table = false;
                     throw ValueError(format("P,T with TTSE cannot be two-phase for now"));
                 }

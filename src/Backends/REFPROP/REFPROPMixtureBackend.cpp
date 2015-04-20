@@ -750,15 +750,20 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
     {
         double y; iderv = 0;
         PhaseEnvelope.rhomolar_vap.push_back(rho_molL*1000);
+        PhaseEnvelope.lnrhomolar_vap.push_back(log(rho_molL*1000));
         isp = nc + 1;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
         PhaseEnvelope.T.push_back(y);
+        PhaseEnvelope.lnT.push_back(log(y));
         isp = nc + 2;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
         PhaseEnvelope.p.push_back(y*1000);
+        PhaseEnvelope.lnp.push_back(log(y*1000));
         isp = nc + 3;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
         PhaseEnvelope.rhomolar_liq.push_back(y*1000);
+        PhaseEnvelope.lnrhomolar_liq.push_back(log(y*1000));
+        PhaseEnvelope.Q.push_back(static_cast<double>(y > rho_molL));
         isp = nc + 4;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
         PhaseEnvelope.hmolar_vap.push_back(y*1000);
