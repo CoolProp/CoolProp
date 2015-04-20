@@ -66,17 +66,19 @@ if __name__=='__main__':
         if cmake_compiler == 'vc9':
             cmake_build_args = ['--config','"Release"']
             if cmake_bitness == '32':
-                cmake_config_args = ['-G','"Visual Studio 9 2008"']
+                cmake_config_args += ['-G','"Visual Studio 9 2008"']
+                cmake_config_args += ['-COOLPROP_CDECL_LIBRARY']
             elif cmake_bitness == '64':
-                cmake_config_args = ['-G','"Visual Studio 9 2008 Win64"']
+                cmake_config_args += ['-G','"Visual Studio 9 2008 Win64"']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'vc10':
             cmake_build_args = ['--config','"Release"']
             if cmake_bitness == '32':
-                cmake_config_args = ['-G','"Visual Studio 10 2010"']
+                cmake_config_args += ['-G','"Visual Studio 10 2010"']
+                cmake_config_args += ['-COOLPROP_CDECL_LIBRARY']
             elif cmake_bitness == '64':
-                cmake_config_args = ['-G','"Visual Studio 10 2010 Win64"']
+                cmake_config_args += ['-G','"Visual Studio 10 2010 Win64"']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'mingw':

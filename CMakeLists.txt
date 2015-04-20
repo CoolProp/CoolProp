@@ -288,6 +288,7 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   ELSE()
     MESSAGE(FATAL_ERROR "You have to build a static or shared library.")
   ENDIF()
+  # TODO: Check this, should it really be unconditional
   # Name mangling settings
   SET_PROPERTY (TARGET ${app_name} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEXTERNC")
   #
