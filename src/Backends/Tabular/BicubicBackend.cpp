@@ -27,6 +27,7 @@ static Eigen::Matrix<double, 16, 16> Ainv(Ainv_data);
 
 void CoolProp::BicubicBackend::build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs)
 {
+    if (!coeffs.empty()){ return; }
 	const bool debug = get_debug_level() > 5 || false;
     const int param_count = 6;
     parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP, iUmolar};
