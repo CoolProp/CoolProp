@@ -67,7 +67,6 @@ if __name__=='__main__':
             cmake_build_args = ['--config','"Release"']
             if cmake_bitness == '32':
                 cmake_config_args += ['-G','"Visual Studio 9 2008"']
-                cmake_config_args += ['-DCOOLPROP_CDECL_LIBRARY=ON']
             elif cmake_bitness == '64':
                 cmake_config_args += ['-G','"Visual Studio 9 2008 Win64"']
             else:
@@ -76,7 +75,6 @@ if __name__=='__main__':
             cmake_build_args = ['--config','"Release"']
             if cmake_bitness == '32':
                 cmake_config_args += ['-G','"Visual Studio 10 2010"']
-                cmake_config_args += ['-DCOOLPROP_CDECL_LIBRARY=ON']
             elif cmake_bitness == '64':
                 cmake_config_args += ['-G','"Visual Studio 10 2010 Win64"']
             else:
@@ -104,7 +102,7 @@ if __name__=='__main__':
         if not os.path.exists(cmake_build_dir):
             os.makedirs(cmake_build_dir)
             
-        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCOOLPROP_EXTERNC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON'] + cmake_config_args)
+        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON'] + cmake_config_args)
         print('calling: ' + cmake_call_string)
         subprocess.check_call(cmake_call_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
         
@@ -217,7 +215,12 @@ if __name__=='__main__':
 
     # Set variables for C++ sources and include directories
     sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp')
-    include_dirs  = [os.path.join(CProot, 'include'), os.path.join(CProot, 'src'), os.path.join(CProot, 'externals', 'Eigen'), os.path.join(CProot, 'externals', 'REFPROP-headers'), os.path.join(CProot, 'externals', 'msgpack-c', 'include'), os.path.join(CProot, 'externals', 'IF97')]
+    include_dirs  = [
+        os.path.join(CProot, 'include'), os.path.join(CProot, 'src'), 
+        os.path.join(CProot, 'externals', 'Eigen'), 
+        os.path.join(CProot, 'externals', 'REFPROP-headers'), 
+        os.path.join(CProot, 'externals', 'msgpack-c', 'include'), 
+        os.path.join(CProot, 'externals', 'IF97')]
 
     ## If the file is run directly without any parameters, clean, build and install
     if len(sys.argv)==1:

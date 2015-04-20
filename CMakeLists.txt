@@ -260,12 +260,13 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   # Static or shared? 
   IF (COOLPROP_STATIC_LIBRARY)
     ADD_LIBRARY(${app_name} STATIC ${APP_SOURCES})
-    INSTALL(TARGETS ${app_name} DESTINATION static_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION} )
+    INSTALL(TARGETS ${app_name} DESTINATION static_library/${CMAKE_SYSTEM_NAME} )#TODO: /${BITNESS}bit${CONVENTION} )
     INSTALL(FILES ${CMAKE_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER} DESTINATION static_library)
   ELSEIF (COOLPROP_SHARED_LIBRARY)
     ADD_LIBRARY(${app_name} SHARED ${APP_SOURCES})
     INSTALL(TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION} )
     INSTALL(FILES ${CMAKE_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER} DESTINATION shared_library)
+    SET_PROPERTY (TARGET ${app_name} APPEND_STRING PROPERTY COMPILE_FLAGS " -DCOOLPROP_LIB")
     # Now all the compiler specific settings for Visual Studio
     IF (MSVC)
       # No lib prefix for the shared library
@@ -299,7 +300,6 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   ENDIF()
   ### All options are set, we are building a library ###
   ADD_DEPENDENCIES(${app_name} generate_headers)
-  SET_PROPERTY (TARGET ${app_name} APPEND_STRING PROPERTY COMPILE_FLAGS " -DCOOLPROP_LIB")
   #
   # Set the bitness
   IF (!MSVC)
@@ -308,7 +308,11 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   ENDIF()
   #
   # calling conventions
-  SET_PROPERTY (TARGET ${app_name} APPEND_STRING PROPERTY COMPILE_FLAGS " -DCONVENTION=${CONVENTION}")
+  IF ( ("${CONVENTION}" STREQUAL "NULL") OR ("${CONVENTION}" STREQUAL "") )
+    #MESSAGE(STATUS "Skipping unknown calling convention.")
+  ELSE()
+    SET_PROPERTY (TARGET ${app_name} APPEND_STRING PROPERTY COMPILE_FLAGS " -DCONVENTION=${CONVENTION}")
+  ENDIF()
   #
   #set_property(SOURCE MyFile.cpp APPEND_STRING PROPERTY COMPILE_FLAGS " -msse4.1 ")
   MESSAGE(STATUS "Library compilation detected:")
