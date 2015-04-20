@@ -105,7 +105,8 @@ set(SWIG_DEPENDENCIES
     ${CMAKE_SOURCE_DIR}/include/DataStructures.h
     ${CMAKE_SOURCE_DIR}/include/CoolProp.h
     ${CMAKE_SOURCE_DIR}/include/AbstractState.h
-    ${CMAKE_SOURCE_DIR}/include/Configuration.h)
+    ${CMAKE_SOURCE_DIR}/include/Configuration.h
+    ${CMAKE_SOURCE_DIR}/include/PhaseEnvelope.h)
 
 #######################################
 #         REQUIRED MODULES            #
