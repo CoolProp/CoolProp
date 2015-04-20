@@ -185,6 +185,10 @@ option (COOLPROP_CDECL_LIBRARY
         "Build CoolProp as a 32bit shared library with cdecl"
         OFF)
 
+option (COOLPROP_EXTERNC_LIBRARY
+        "Overwrite the export settings to force extern C"
+        OFF)
+
 SET (COOLPROP_LIBRARY_SOURCE
         "src/CoolPropLib.cpp"
         CACHE STRING
@@ -288,10 +292,11 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   ELSE()
     MESSAGE(FATAL_ERROR "You have to build a static or shared library.")
   ENDIF()
-  # TODO: Check this, should it really be unconditional
-  # Name mangling settings
-  SET_PROPERTY (TARGET ${app_name} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEXTERNC")
   #
+  # Name mangling settings
+  IF(COOLPROP_EXTERNC_LIBRARY)
+    SET_PROPERTY (TARGET ${app_name} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEXTERNC")
+  ENDIF()
   ### All options are set, we are building a library ###
   ADD_DEPENDENCIES(${app_name} generate_headers)
   SET_PROPERTY (TARGET ${app_name} APPEND_STRING PROPERTY COMPILE_FLAGS " -DCOOLPROP_LIB")

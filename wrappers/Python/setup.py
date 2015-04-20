@@ -67,7 +67,7 @@ if __name__=='__main__':
             cmake_build_args = ['--config','"Release"']
             if cmake_bitness == '32':
                 cmake_config_args += ['-G','"Visual Studio 9 2008"']
-                cmake_config_args += ['-DCOOLPROP_CDECL_LIBRARY']
+                cmake_config_args += ['-DCOOLPROP_CDECL_LIBRARY=ON']
             elif cmake_bitness == '64':
                 cmake_config_args += ['-G','"Visual Studio 9 2008 Win64"']
             else:
@@ -76,7 +76,7 @@ if __name__=='__main__':
             cmake_build_args = ['--config','"Release"']
             if cmake_bitness == '32':
                 cmake_config_args += ['-G','"Visual Studio 10 2010"']
-                cmake_config_args += ['-DCOOLPROP_CDECL_LIBRARY']
+                cmake_config_args += ['-DCOOLPROP_CDECL_LIBRARY=ON']
             elif cmake_bitness == '64':
                 cmake_config_args += ['-G','"Visual Studio 10 2010 Win64"']
             else:
