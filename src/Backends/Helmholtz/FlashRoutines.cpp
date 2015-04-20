@@ -41,7 +41,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
         // Determine whether you are inside (two-phase) or outside (single-phase)
         SimpleState closest_state;
         std::size_t i;
-        bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS, iP, HEOS._p, iT, HEOS._T, i, closest_state);
+        bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS.PhaseEnvelope, iP, HEOS._p, iT, HEOS._T, i, closest_state);
         if (!twophase && HEOS._T > closest_state.T){
             // Gas solution - bounded between phase envelope temperature and very high temperature
             //
@@ -467,7 +467,7 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parame
 {
     
     // Find the intersections in the phase envelope
-    std::vector< std::pair<std::size_t, std::size_t> > intersections = PhaseEnvelopeRoutines::find_intersections(HEOS, other, value);
+    std::vector< std::pair<std::size_t, std::size_t> > intersections = PhaseEnvelopeRoutines::find_intersections(HEOS.get_phase_envelope_data(), other, value);
     
     PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
     
@@ -1156,7 +1156,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                 SimpleState closest_state;
                 std::size_t iclosest;
                 std::cout << format("pre is inside\n");
-                bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS, iP, HEOS._p, other, value, iclosest, closest_state);
+                bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS.PhaseEnvelope, iP, HEOS._p, other, value, iclosest, closest_state);
                 std::cout << format("post is inside\n");
                 
                 std::string errstr;

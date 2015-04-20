@@ -8,7 +8,7 @@ cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
     cdef cppclass PhaseEnvelopeData:
         bool TypeI
         size_t iTsat_max, ipsat_max, icrit
-        vector[long double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
+        vector[double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
     
 cdef extern from "AbstractState.h" namespace "CoolProp":
 
@@ -105,6 +105,28 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double build_phase_envelope() except+ValueError        
         void build_phase_envelope(string) except+ValueError
         PhaseEnvelopeData get_phase_envelope_data() except+ValueError
+        
+        long double alpha0() except+ValueError
+        long double dalpha0_dDelta() except+ValueError
+        long double dalpha0_dTau() except+ValueError
+        long double d2alpha0_dDelta2() except+ValueError
+        long double d2alpha0_dDelta_dTau() except+ValueError
+        long double d2alpha0_dTau2() except+ValueError
+        long double d3alpha0_dTau3() except+ValueError
+        long double d3alpha0_dDelta_dTau2() except+ValueError
+        long double d3alpha0_dDelta2_dTau() except+ValueError
+        long double d3alpha0_dDelta3() except+ValueError
+
+        long double alphar() except+ValueError
+        long double dalphar_dDelta() except+ValueError
+        long double dalphar_dTau() except+ValueError
+        long double d2alphar_dDelta2() except+ValueError
+        long double d2alphar_dDelta_dTau() except+ValueError
+        long double d2alphar_dTau2() except+ValueError
+        long double d3alphar_dDelta3() except+ValueError
+        long double d3alphar_dDelta2_dTau() except+ValueError
+        long double d3alphar_dDelta_dTau2() except+ValueError
+        long double d3alphar_dTau3() except+ValueError
 
 # The static factory method for the AbstractState
 cdef extern from "AbstractState.h" namespace "CoolProp::AbstractState":

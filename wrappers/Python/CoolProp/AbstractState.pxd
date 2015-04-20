@@ -95,3 +95,25 @@ cdef class AbstractState:
     
     cpdef mole_fractions_liquid(self)
     cpdef mole_fractions_vapor(self)
+    
+    cpdef long double alpha0(self) except *
+    cpdef long double dalpha0_dDelta(self) except *
+    cpdef long double dalpha0_dTau(v) except *
+    cpdef long double d2alpha0_dDelta2(self) except *
+    cpdef long double d2alpha0_dDelta_dTau(self) except *
+    cpdef long double d2alpha0_dTau2(self) except *
+    cpdef long double d3alpha0_dTau3(self) except *
+    cpdef long double d3alpha0_dDelta_dTau2(self) except *
+    cpdef long double d3alpha0_dDelta2_dTau(self) except *
+    cpdef long double d3alpha0_dDelta3(self) except *
+
+    cpdef long double alphar(self) except *
+    cpdef long double dalphar_dDelta(self) except *
+    cpdef long double dalphar_dTau(self) except *
+    cpdef long double d2alphar_dDelta2(self) except *
+    cpdef long double d2alphar_dDelta_dTau(self) except *
+    cpdef long double d2alphar_dTau2(self) except *
+    cpdef long double d3alphar_dDelta3(self) except *
+    cpdef long double d3alphar_dDelta2_dTau(self) except *
+    cpdef long double d3alphar_dDelta_dTau2(self) except *
+    cpdef long double d3alphar_dTau3(self) except *

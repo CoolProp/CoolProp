@@ -750,15 +750,20 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
     {
         double y; iderv = 0;
         PhaseEnvelope.rhomolar_vap.push_back(rho_molL*1000);
+        PhaseEnvelope.lnrhomolar_vap.push_back(log(rho_molL*1000));
         isp = nc + 1;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
         PhaseEnvelope.T.push_back(y);
+        PhaseEnvelope.lnT.push_back(log(y));
         isp = nc + 2;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
         PhaseEnvelope.p.push_back(y*1000);
+        PhaseEnvelope.lnp.push_back(log(y*1000));
         isp = nc + 3;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
         PhaseEnvelope.rhomolar_liq.push_back(y*1000);
+        PhaseEnvelope.lnrhomolar_liq.push_back(log(y*1000));
+        PhaseEnvelope.Q.push_back(static_cast<double>(y > rho_molL));
         isp = nc + 4;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
         PhaseEnvelope.hmolar_vap.push_back(y*1000);
@@ -1366,8 +1371,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     _cvmolar = cvmol;
     _cpmolar = cpmol;
     _speed_sound = w;
-    _tau = calc_T_critical()/_T;
-    _delta = _rhomolar/calc_rhomolar_critical();
+    _tau = calc_T_reducing()/_T;
+    _delta = _rhomolar/calc_rhomolar_reducing();
     _Q = q;
 }
 CoolPropDbl REFPROPMixtureBackend::call_phixdll(long itau, long idel)
@@ -1384,7 +1389,7 @@ CoolPropDbl REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
     double val = 0, tau = _tau, delta = _delta, __T = T(), __rho = rhomolar()/1000;
     if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
-    return static_cast<CoolPropDbl>(val)/pow(delta,idel)/pow(tau,itau);
+    return static_cast<CoolPropDbl>(val)/pow(tau,itau); // Not multplied by delta^idel
 }
 
 void REFPROP_SETREF(char hrf[3], long ixflag, double x0[1], double &h0, double &s0, double &T0, double &p0, long &ierr, char herr[255], long l1, long l2){

@@ -245,3 +245,68 @@ cdef class AbstractState:
         pe_out.TypeI = pe_data.TypeI
         return pe_out
         
+    ## -----------------------------------------
+    ##   Helmholtz energy derivatives
+    ## -----------------------------------------
+    
+    cpdef long double alpha0(self) except *:
+        """ Get the ideal-gas reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::alpha0` """
+        return self.thisptr.alpha0()
+    cpdef long double dalpha0_dDelta(self) except *:
+        """ Get the ideal-gas reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::dalpha0_dDelta` """
+        return self.thisptr.dalpha0_dDelta()
+    cpdef long double dalpha0_dTau(self) except *:
+        """ Get the ideal-gas reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::dalpha0_dTau` """
+        return self.thisptr.dalpha0_dTau()
+    cpdef long double d2alpha0_dDelta2(self) except *:
+        """ Get the ideal-gas reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d2alpha0_dDelta2` """
+        return self.thisptr.d2alpha0_dDelta2()
+    cpdef long double d2alpha0_dDelta_dTau(self) except *:
+        """ Get the ideal-gas reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d2alpha0_dDelta_dTau` """
+        return self.thisptr.d2alpha0_dDelta_dTau()
+    cpdef long double d2alpha0_dTau2(self) except *:
+        """ Get the ideal-gas reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d2alpha0_dTau2` """
+        return self.thisptr.d2alpha0_dTau2()
+    cpdef long double d3alpha0_dTau3(self) except *:
+        """ Get the ideal-gas reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d3alpha0_dTau3` """
+        return self.thisptr.d3alpha0_dTau3()
+    cpdef long double d3alpha0_dDelta_dTau2(self) except *:
+        """ Get the ideal-gas reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d3alpha0_dDelta_dTau2` """
+        return self.thisptr.d3alpha0_dDelta_dTau2()
+    cpdef long double d3alpha0_dDelta2_dTau(self) except *:
+        """ Get the ideal-gas reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d3alpha0_dDelta2_dTau` """
+        return self.thisptr.d3alpha0_dDelta2_dTau()
+    cpdef long double d3alpha0_dDelta3(self) except *:
+        """ Get the ideal-gas reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d3alpha0_dDelta3` """
+        return self.thisptr.d3alpha0_dDelta3()
+        
+    cpdef long double alphar(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::alphar` """
+        return self.thisptr.alphar()
+    cpdef long double dalphar_dDelta(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::dalphar_dDelta` """
+        return self.thisptr.dalphar_dDelta()
+    cpdef long double dalphar_dTau(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::dalphar_dTau` """
+        return self.thisptr.dalphar_dTau()
+    cpdef long double d2alphar_dDelta2(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d2alphar_dDelta2` """
+        return self.thisptr.d2alphar_dDelta2()
+    cpdef long double d2alphar_dDelta_dTau(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d2alphar_dDelta_dTau` """
+        return self.thisptr.d2alphar_dDelta_dTau()
+    cpdef long double d2alphar_dTau2(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d2alphar_dTau2` """
+        return self.thisptr.d2alphar_dTau2()
+    cpdef long double d3alphar_dTau3(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d3alphar_dTau3` """
+        return self.thisptr.d3alphar_dTau3()
+    cpdef long double d3alphar_dDelta_dTau2(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d3alphar_dDelta_dTau2` """
+        return self.thisptr.d3alphar_dDelta_dTau2()
+    cpdef long double d3alphar_dDelta2_dTau(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d3alphar_dDelta2_dTau` """
+        return self.thisptr.d3alphar_dDelta2_dTau()
+    cpdef long double d3alphar_dDelta3(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d3alphar_dDelta3` """
+        return self.thisptr.d3alphar_dDelta3()
