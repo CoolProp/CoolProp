@@ -185,6 +185,16 @@ option (COOLPROP_CDECL_LIBRARY
         "Build CoolProp as a 32bit shared library with cdecl"
         OFF)
 
+SET (COOLPROP_LIBRARY_SOURCE
+        "src/CoolPropLib.cpp"
+        CACHE STRING
+        "The file that contains the exported functions")
+
+SET (COOLPROP_LIBRARY_HEADER
+        "include/CoolPropLib.h"
+        CACHE STRING
+        "The file that contains the export header")
+
 # Overwrite some settings based on the old flags
 IF (COOLPROP_STATIC_LIBRARY_MODULE OR COOLPROP_STATIC_LIBRARY)
   SET (COOLPROP_STATIC_LIBRARY ON)
@@ -240,19 +250,18 @@ ELSE()
   MESSAGE(FATAL_ERROR "Bitness is not defined. Set it and run cmake again.")  
 ENDIF()
 
-
 IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   #
-  LIST(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+  LIST(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
   # Static or shared? 
   IF (COOLPROP_STATIC_LIBRARY)
     ADD_LIBRARY(${app_name} STATIC ${APP_SOURCES})
     INSTALL(TARGETS ${app_name} DESTINATION static_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION} )
-    INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION static_library)
+    INSTALL(FILES ${CMAKE_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER} DESTINATION static_library)
   ELSEIF (COOLPROP_SHARED_LIBRARY)
     ADD_LIBRARY(${app_name} SHARED ${APP_SOURCES})
     INSTALL(TARGETS ${app_name} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION} )
-    INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION shared_library)
+    INSTALL(FILES ${CMAKE_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER} DESTINATION shared_library)
     # Now all the compiler specific settings for Visual Studio
     IF (MSVC)
       # No lib prefix for the shared library
