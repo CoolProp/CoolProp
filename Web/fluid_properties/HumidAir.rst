@@ -205,7 +205,7 @@ Table of Inputs/Outputs to HAPropsSI
     ``Hha``; J/kg humid air; Input/Output; Mixture enthalpy per humid air 
     ``K``, ``k``, ``Conductivity``; W/m/K; Output; Mixture thermal conductivity
     ``M``,``Visc``,``mu``;Pa-s;Output;Mixture viscosity
-    ``psi_w``,``Y``; mol water/mol humid air; - ; Water mole fraction
+    ``psi_w``,``Y``; mol water/mol humid air; Input/Output; Water mole fraction
     ``P``;Pa;Input;Pressure
     ``P_w``;Pa;Input;Partial pressure of water vapor
     ``R``, ``RH``, ``RelHum``; -; Input/Output; Relative humidity in [0, 1]
