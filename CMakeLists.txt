@@ -67,6 +67,23 @@ option (FORCE_BITNESS_64
        "Force a 64bit build regardless of the host"
        OFF)
 
+option (COOLPROP_RELEASE
+       "Optimize the builds with the release specs"
+       OFF)
+option (COOLPROP_DEBUG
+       "Make a debug build"
+       OFF)
+
+#IF ("${COOLPROP_VERSION_REVISION}" STREQUAL "dev")
+IF ( COOLPROP_RELEASE AND COOLPROP_DEBUG )
+  MESSAGE(FATAL_ERROR "You can only make a release OR and debug build.")
+ENDIF()
+IF (COOLPROP_RELEASE)
+  SET(${CMAKE_BUILD_TYPE} RELEASE)
+ELSEIF(COOLPROP_DEBUG)
+  SET(${CMAKE_BUILD_TYPE} DEBUG)
+ENDIF ()
+
 #######################################
 #         FIND ALL SOURCES            #
 #-------------------------------------#
