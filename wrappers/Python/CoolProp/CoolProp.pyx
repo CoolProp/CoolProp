@@ -731,10 +731,10 @@ cdef class State:
 
         Returns ``None`` if pressure is not within the two-phase pressure range
         """
-        if self.p_ > _Props('pcrit','T',0,'P',0,self.Fluid) or self.p_ < _Props('ptriple','T',0,'P',0, self.Fluid):
+        if self.p_ > 0.001*_PropsSI('pcrit','T',0,'P',0,self.Fluid) or self.p_ < 0.001*_PropsSI('ptriple','T',0,'P',0, self.Fluid):
             return None
         else:
-            return _Props('T', 'P', self.p_, 'Q', Q, self.Fluid)
+            return 0.001*_PropsSI('T', 'P', self.p_*1000, 'Q', Q, self.Fluid)
     property Tsat:
         """ The saturation temperature (dew) for the given pressure, in [K]"""
         def __get__(self):
