@@ -50,11 +50,11 @@ option (COOLPROP_STATIC_LIBRARY
 option (COOLPROP_SHARED_LIBRARY
         "Build CoolProp as a shared library (.dll, .so)"
         OFF)
-        
+
 option (COOLPROP_EES_MODULE
         "Build the EES module"
         OFF)
-        
+
 option (BUILD_TESTING 
         "Enable testing for this given builder" 
         OFF)
@@ -66,7 +66,7 @@ option (FORCE_BITNESS_32
 option (FORCE_BITNESS_64
        "Force a 64bit build regardless of the host"
        OFF)
-        
+
 #######################################
 #         FIND ALL SOURCES            #
 #-------------------------------------#
@@ -160,7 +160,7 @@ ELSEIF(FORCE_BITNESS_64)
 ENDIF()
 
 #######################################
-#         MAKE ARTIFACTS              #
+#         MAKE ARTEFACTS              #
 #-------------------------------------#
 # In this section we define the       #
 # artefacts (exes, libs) that will be #
@@ -198,41 +198,6 @@ SET (COOLPROP_LIBRARY_HEADER
         "include/CoolPropLib.h"
         CACHE STRING
         "The file that contains the export header")
-
-# Overwrite some settings based on the old flags
-IF (COOLPROP_STATIC_LIBRARY_MODULE OR COOLPROP_STATIC_LIBRARY)
-  SET (COOLPROP_STATIC_LIBRARY ON)
-  SET (COOLPROP_SHARED_LIBRARY OFF)
-ENDIF()
-
-IF (COOLPROP_EXTERNC_STATIC_LIBRARY)
-  SET (COOLPROP_STATIC_LIBRARY ON)
-  SET (COOLPROP_SHARED_LIBRARY OFF)
-ENDIF()
-
-IF (COOLPROP_32BIT_CDECL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_CDECL_SHARED_LIBRARY)
-  SET (COOLPROP_STATIC_LIBRARY OFF)
-  SET (COOLPROP_SHARED_LIBRARY ON)
-  SET (COOLPROP_CDECL_LIBRARY ON)
-  SET (COOLPROP_STDCALL_LIBRARY OFF)
-ENDIF()
-
-IF (COOLPROP_32BIT_STDCALL_SHARED_LIBRARY_MODULE OR COOLPROP_32BIT_STDCALL_SHARED_LIBRARY)
-  SET (COOLPROP_STATIC_LIBRARY OFF)
-  SET (COOLPROP_SHARED_LIBRARY ON)
-  SET (COOLPROP_CDECL_LIBRARY OFF)
-  SET (COOLPROP_STDCALL_LIBRARY ON)
-ENDIF()
-
-IF (COOLPROP_64BIT_SHARED_LIBRARY_MODULE OR COOLPROP_64BIT_SHARED_LIBRARY)
-  SET (COOLPROP_STATIC_LIBRARY OFF)
-  SET (COOLPROP_SHARED_LIBRARY ON)
-ENDIF()
-
-if (COOLPROP_32BIT_SHARED_LIBRARY_LINUX_MODULE OR COOLPROP_32BIT_SHARED_LIBRARY_LINUX)
-  SET (COOLPROP_STATIC_LIBRARY OFF)
-  SET (COOLPROP_SHARED_LIBRARY ON)
-endif()
 
 # Rule out cases that do not make sense
 IF ("${BITNESS}" STREQUAL "32")
@@ -330,9 +295,6 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   MESSAGE(STATUS "LINK_FLAGS: ${tmpVar}")
   #
 ENDIF()
-
-
-
 
 if (COOLPROP_DEBIAN_PACKAGE)
     if(!UNIX)
