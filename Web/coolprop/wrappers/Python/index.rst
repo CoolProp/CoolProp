@@ -15,7 +15,7 @@ Using the ``pip`` installation program, you can install the official release can
 
 or the latest version from the development server using::
 
-    pip install --find-links http://www.coolprop.dreamhosters.com:8010/binaries/Python/ -U --force-reinstall CoolProp
+    pip install --pre --find-links http://www.coolprop.dreamhosters.com:8010/binaries/Python/ -U --force-reinstall CoolProp
 
 
 Manual installation
