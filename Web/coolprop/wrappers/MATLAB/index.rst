@@ -56,7 +56,7 @@ The code below assumes that the swig-matlab-bin folder sits in the build directo
 
 Precompiled
 ^^^^^^^^^^^
-You can download the pre-compiled versions from `the buildbot slave <http://www.coolprop.dreamhosters.com:8010/nightly/>`_
+You can download the pre-compiled nightly versions from :sfnightly:`MATLAB`. 
 
 Do-it-yourself (masochistic)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

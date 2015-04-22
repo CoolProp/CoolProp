@@ -44,7 +44,7 @@ if isRelease:
                 }
 else:
     extlinks = {'sfdownloads': ('http://sourceforge.net/projects/coolprop/files/CoolProp/'+release+'/%s',''),
-                'sfnightly'  : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
+                'sfnightly'  : ('http://www.coolprop.dreamhosters.com/binaries/%s',''),
                 #'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
                 #'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
                 }
@@ -69,7 +69,7 @@ if isRelease:
     }
 else:
     doxylink = {
-        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.dreamhosters.com:8010/binaries/sphinx/_static/doxygen/html')
+        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.dreamhosters.com/binaries/sphinx/_static/doxygen/html')
     }
 
 # -- General configuration -----------------------------------------------------
