@@ -211,6 +211,16 @@ public:
 	CoolPropDbl calc_d3alphar_dDelta_dTau2(void);
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau}\f$ (dimensionless)
 	CoolPropDbl calc_d3alphar_dTau3(void);
+	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta\delta}\f$ (dimensionless)
+    CoolPropDbl calc_d4alphar_dDelta4(void);
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta\tau}\f$ (dimensionless)
+    CoolPropDbl calc_d4alphar_dDelta3_dTau(void);
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau\tau}\f$ (dimensionless)
+    CoolPropDbl calc_d4alphar_dDelta2_dTau2(void);
+	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau\tau}\f$ (dimensionless)
+    CoolPropDbl calc_d4alphar_dDelta_dTau3(void);
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau\tau}\f$ (dimensionless)
+    CoolPropDbl calc_d4alphar_dTau4(void);
 
     CoolPropDbl calc_alpha0(void);
     CoolPropDbl calc_dalpha0_dDelta(void);

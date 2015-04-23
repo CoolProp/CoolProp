@@ -96,7 +96,8 @@ protected:
             _d2alpha0_dDelta2, _d3alpha0_dTau3, _d3alpha0_dDelta_dTau2, _d3alpha0_dDelta2_dTau,
             _d3alpha0_dDelta3, _alphar, _dalphar_dTau, _dalphar_dDelta, _d2alphar_dTau2, _d2alphar_dDelta_dTau,
             _d2alphar_dDelta2, _d3alphar_dTau3, _d3alphar_dDelta_dTau2, _d3alphar_dDelta2_dTau,
-            _d3alphar_dDelta3;
+            _d3alphar_dDelta3, _d4alphar_dTau4, _d4alphar_dDelta_dTau3, _d4alphar_dDelta2_dTau2,
+            _d4alphar_dDelta3_dTau, _d4alphar_dDelta4;
 
     CachedElement _dalphar_dDelta_lim, _d2alphar_dDelta2_lim,
             _d2alphar_dDelta_dTau_lim, _d3alphar_dDelta2_dTau_lim;
@@ -160,13 +161,24 @@ protected:
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau}\f$ (dimensionless)
     virtual CoolPropDbl calc_d2alphar_dTau2(void){throw NotImplementedError("calc_d2alphar_dTau2 is not implemented for this backend");};
 	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alphar_dDelta3(void){throw NotImplementedError("calc_d3alpha0_dDelta3 is not implemented for this backend");};
+    virtual CoolPropDbl calc_d3alphar_dDelta3(void){throw NotImplementedError("calc_d3alphar_dDelta3 is not implemented for this backend");};
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alphar_dDelta2_dTau(void){throw NotImplementedError("calc_d3alpha0_dDelta2_dTau is not implemented for this backend");};
+    virtual CoolPropDbl calc_d3alphar_dDelta2_dTau(void){throw NotImplementedError("calc_d3alphar_dDelta2_dTau is not implemented for this backend");};
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alphar_dDelta_dTau2(void){throw NotImplementedError("calc_d3alpha0_dDelta_dTau2 is not implemented for this backend");};
+    virtual CoolPropDbl calc_d3alphar_dDelta_dTau2(void){throw NotImplementedError("calc_d3alphar_dDelta_dTau2 is not implemented for this backend");};
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alphar_dTau3(void){throw NotImplementedError("calc_d3alpha0_dTau3 is not implemented for this backend");};
+    virtual CoolPropDbl calc_d3alphar_dTau3(void){throw NotImplementedError("calc_d3alphar_dTau3 is not implemented for this backend");};
+
+	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta\delta}\f$ (dimensionless)
+    virtual CoolPropDbl calc_d4alphar_dDelta4(void){throw NotImplementedError("calc_d4alphar_dDelta4 is not implemented for this backend");};
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta\tau}\f$ (dimensionless)
+    virtual CoolPropDbl calc_d4alphar_dDelta3_dTau(void){throw NotImplementedError("calc_d4alphar_dDelta3_dTau is not implemented for this backend");};
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau\tau}\f$ (dimensionless)
+    virtual CoolPropDbl calc_d4alphar_dDelta2_dTau2(void){throw NotImplementedError("calc_d4alphar_dDelta2_dTau2 is not implemented for this backend");};
+	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau\tau}\f$ (dimensionless)
+    virtual CoolPropDbl calc_d4alphar_dDelta_dTau3(void){throw NotImplementedError("calc_d4alphar_dDelta_dTau3 is not implemented for this backend");};
+    /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau\tau}\f$ (dimensionless)
+    virtual CoolPropDbl calc_d4alphar_dTau4(void){throw NotImplementedError("calc_d4alphar_dTau4 is not implemented for this backend");};
 	
     // Derivatives of ideal-gas helmholtz energy
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0\f$ (dimensionless)
@@ -754,6 +766,26 @@ public:
 	CoolPropDbl d3alphar_dTau3(void){
         if (!_d3alphar_dTau3) _d3alphar_dTau3 = calc_d3alphar_dTau3();
         return _d3alphar_dTau3;
+    };
+	CoolPropDbl d4alphar_dDelta4(void){
+        if (!_d4alphar_dDelta4) _d4alphar_dDelta4 = calc_d4alphar_dDelta4();
+        return _d4alphar_dDelta4;
+    };
+	CoolPropDbl d4alphar_dDelta3_dTau(void){
+        if (!_d4alphar_dDelta3_dTau) _d4alphar_dDelta3_dTau = calc_d4alphar_dDelta3_dTau();
+        return _d4alphar_dDelta3_dTau;
+    };
+	CoolPropDbl d4alphar_dDelta2_dTau2(void){
+        if (!_d4alphar_dDelta2_dTau2) _d4alphar_dDelta2_dTau2 = calc_d4alphar_dDelta2_dTau2();
+        return _d4alphar_dDelta2_dTau2;
+    };
+	CoolPropDbl d4alphar_dDelta_dTau3(void){
+        if (!_d4alphar_dDelta_dTau3) _d4alphar_dDelta_dTau3 = calc_d4alphar_dDelta_dTau3();
+        return _d4alphar_dDelta_dTau3;
+    };
+	CoolPropDbl d4alphar_dTau4(void){
+        if (!_d4alphar_dTau4) _d4alphar_dTau4 = calc_d4alphar_dTau4();
+        return _d4alphar_dTau4;
     };
 	
     /*

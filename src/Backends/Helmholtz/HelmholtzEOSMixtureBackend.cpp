@@ -2286,6 +2286,11 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
         _d3alphar_dDelta2_dTau = derivs.d3alphar_ddelta2_dtau;
         _d3alphar_dDelta_dTau2 = derivs.d3alphar_ddelta_dtau2;
         _d3alphar_dTau3 = derivs.d3alphar_dtau3;
+		_d4alphar_dDelta4 = derivs.d4alphar_ddelta4;
+        _d4alphar_dDelta3_dTau = derivs.d4alphar_ddelta3_dtau;
+		_d4alphar_dDelta2_dTau2 = derivs.d4alphar_ddelta2_dtau2;
+        _d4alphar_dDelta_dTau3 = derivs.d4alphar_ddelta_dtau3;
+        _d4alphar_dTau4 = derivs.d4alphar_dtau4;
     }
     else{
         std::size_t N = mole_fractions.size();
@@ -2535,6 +2540,33 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_d3alphar_dTau3(void)
     calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
     return static_cast<CoolPropDbl>(_d3alphar_dTau3);
 }
+
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_d4alphar_dDelta4(void)
+{
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<CoolPropDbl>(_d4alphar_dDelta4);
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_d4alphar_dDelta3_dTau(void)
+{
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<CoolPropDbl>(_d4alphar_dDelta3_dTau);
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_d4alphar_dDelta2_dTau2(void)
+{
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<CoolPropDbl>(_d4alphar_dDelta2_dTau2);
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_d4alphar_dDelta_dTau3(void)
+{
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<CoolPropDbl>(_d4alphar_dDelta_dTau3);
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_d4alphar_dTau4(void)
+{
+    calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
+    return static_cast<CoolPropDbl>(_d4alphar_dTau4);
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0(void)
 {
     const int nTau = 0, nDelta = 0;
