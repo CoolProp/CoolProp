@@ -1,0 +1,32 @@
+LIBRARY     CoolProp.dll
+DESCRIPTION "CoolProp fluid property library"
+EXPORTS
+  AbstractState_factory = _AbstractState_factory@20
+  AbstractState_free = _AbstractState_free@16
+  AbstractState_keyed_output = _AbstractState_keyed_output@20
+  AbstractState_set_fractions = _AbstractState_set_fractions@24
+  AbstractState_update = _AbstractState_update@36
+  F2K = _F2K@8
+  HAProps = _HAProps@40
+  HAPropsSI = _HAPropsSI@40
+  K2F = _K2F@8
+  PhaseSI = _PhaseSI@36
+  Props1 = _Props1@8
+  Props1SI = _Props1SI@8
+  Props = _Props@32
+  PropsS = _PropsS@32
+  PropsSI = _PropsSI@32
+  get_debug_level = _get_debug_level@0
+  get_fluid_param_string = _get_fluid_param_string@16
+  get_global_param_string = _get_global_param_string@12
+  get_input_pair_index = _get_input_pair_index@4
+  get_param_index = _get_param_index@4
+  get_parameter_information_string = _get_parameter_information_string@12
+  haprops_ = _haprops_@32
+  hapropssi_ = _hapropssi_@32
+  propssi_ = _propssi_@28
+  redirect_stdout = _redirect_stdout@4
+  saturation_ancillary = _saturation_ancillary@24
+  set_debug_level = _set_debug_level@4
+  set_reference_stateD = _set_reference_stateD@36
+  set_reference_stateS = _set_reference_stateS@8

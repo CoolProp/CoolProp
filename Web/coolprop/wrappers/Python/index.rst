@@ -9,13 +9,14 @@ Python Wrapper
 Automatic installation
 ======================
 
-Using the ``pip`` installation program, you can install the official release can be obtained from the pypi server using::
+Using the ``pip`` installation program, you can install the official release from the pypi server using::
 
     pip install CoolProp
 
-or the latest version from the development server using::
+If you dare, you can also try the latest nightly release from :sfnightly:`Python` 
+or get it directly from the development server using::
 
-    pip install --find-links http://www.coolprop.dreamhosters.com:8010/binaries/Python/ -U --force-reinstall CoolProp
+    pip install --pre --find-links http://www.coolprop.dreamhosters.com/binaries/Python/ -U --force-reinstall CoolProp
 
 
 Manual installation

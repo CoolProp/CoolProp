@@ -201,11 +201,11 @@ Table of Inputs/Outputs to HAPropsSI
     ``C``, ``cp``; J/kg dry air/K; Output; Mixture specific heat per unit dry air
     ``Cha``, ``cp_ha``; J/kg humid air/K; Output; Mixture specific heat per unit humid air
     ``D``,``Tdp``,``DewPoint``,``T_dp``; K; Input/Output;	Dew-Point Temperature
-    ``H``, ``Hda``, ``Enthalpy``;	J/kg dry air; Mixture enthalpy per dry air
+    ``H``, ``Hda``, ``Enthalpy``;	J/kg dry air; Input/Output; Mixture enthalpy per dry air
     ``Hha``; J/kg humid air; Input/Output; Mixture enthalpy per humid air 
     ``K``, ``k``, ``Conductivity``; W/m/K; Output; Mixture thermal conductivity
     ``M``,``Visc``,``mu``;Pa-s;Output;Mixture viscosity
-    ``psi_w``,``Y``; mol water/mol humid air; - ; Water mole fraction
+    ``psi_w``,``Y``; mol water/mol humid air; Input/Output; Water mole fraction
     ``P``;Pa;Input;Pressure
     ``P_w``;Pa;Input;Partial pressure of water vapor
     ``R``, ``RH``, ``RelHum``; -; Input/Output; Relative humidity in [0, 1]

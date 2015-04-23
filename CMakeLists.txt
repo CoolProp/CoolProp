@@ -291,6 +291,14 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   ELSE()
     MESSAGE(FATAL_ERROR "You have to build a static or shared library.")
   ENDIF()
+  
+  # For windows systems
+  
+  # Bug workaround for Eigen
+  IF (MSVC90)
+  MESSAGE(STATUS "EIGEN WORKAROUND ACTIVE!!")
+  SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEIGEN_DONT_VECTORIZE")
+  ENDIF()
   #
   # Name mangling settings
   IF(COOLPROP_EXTERNC_LIBRARY)

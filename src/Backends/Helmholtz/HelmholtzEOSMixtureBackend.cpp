@@ -2768,8 +2768,10 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv(parameters Of
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end)
 {
+    if (_Q > x_end){throw ValueError(format("Q [%g] is greater than x_end [%Lg]", _Q, x_end).c_str());}
     shared_ptr<HelmholtzEOSMixtureBackend> Liq(new HelmholtzEOSMixtureBackend(this->get_components())), 
                                            End(new HelmholtzEOSMixtureBackend(this->get_components()));
+    
     Liq->specify_phase(iphase_liquid);
     Liq->update(DmolarT_INPUTS, SatL->rhomolar(), SatL->T());
     End->update(QT_INPUTS, x_end, SatL->T());
