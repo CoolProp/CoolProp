@@ -1037,10 +1037,20 @@ if(UNIX)
   endif()
 endif()
 
+
+
 if (COOLPROP_MAIN_MODULE)
+  # Allow you to independently add back the testing CPP files
+  if(COOLPROP_TEST)
+    list(APPEND  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
+    list(APPEND  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+  endif()
   list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cxx")
   add_executable        (Main ${APP_SOURCES})
   add_dependencies      (Main generate_headers)
+  if(COOLPROP_TEST)
+     set_target_properties (Main PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
+  endif()
 if(UNIX)
     target_link_libraries (Main ${CMAKE_DL_LIBS})
   endif()
@@ -1139,6 +1149,8 @@ if (COOLPROP_PROFILE)
     SET(CMAKE_C_FLAGS "-g -O2")
   endif()
 endif()
+
+
 
 
 if (COOLPROP_COVERAGE)
