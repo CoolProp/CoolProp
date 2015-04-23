@@ -1067,11 +1067,11 @@ if (COOLPROP_CPP_EXAMPLE_TEST)
 endif()
 
 if (COOLPROP_SNIPPETS)
-
+  LIST(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
   # Make the static library with which the snippets will be linked
   add_library(${app_name} STATIC ${APP_SOURCES})
   add_dependencies (${app_name} generate_headers)
-  set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
+  SET_PROPERTY(TARGET ${app_name} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEXTERNC")
   
   # Collect all the snippets
   file(GLOB_RECURSE snippets "${CMAKE_SOURCE_DIR}/Web/coolprop/snippets/*.cxx")
