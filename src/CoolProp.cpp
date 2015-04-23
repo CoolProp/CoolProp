@@ -1,11 +1,11 @@
-#include "CoolProp.h"
-#include "AbstractState.h"
-
 #if defined(_MSC_VER)
 #define _CRTDBG_MAP_ALLOC
 #define _CRT_SECURE_NO_WARNINGS
 #include <crtdbg.h>
 #endif
+
+#include "CoolProp.h"
+#include "AbstractState.h"
 
 #if defined(__ISWINDOWS__)
 #include <windows.h>
