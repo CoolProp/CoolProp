@@ -56,21 +56,21 @@ A) On linux,  do::
 
     mkdir build && cd build
     mkdir gccstatic && cd gccstatic
-    cmake ../.. -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON -DCMAKE_VERBOSE_MAKEFILE=ON
+    cmake ../..  -DCOOLPROP_STATIC_LIBRARY=ON -DCOOLPROP_EXTERNC_LIBRARY=ON -DCMAKE_VERBOSE_MAKEFILE=ON
     cmake --build .
 
 B) On Windows, the call to CMake should be done using the MinGW generator, but otherwise the procedure is the same::
 
     mkdir build && cd build
     mkdir gccstatic && cd gccstatic
-    cmake ../.. -G "MinGW Makefiles" -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON -DCMAKE_VERBOSE_MAKEFILE=ON
+    cmake ../.. -G "MinGW Makefiles" -DCOOLPROP_STATIC_LIBRARY=ON -DCOOLPROP_EXTERNC_LIBRARY=ON -DCMAKE_VERBOSE_MAKEFILE=ON
     cmake --build .
 
-C) On OSX, cmake must use the true, real, gcc/g++ compiler (not clang).  Thus you must so something like this to make sure that it finds the right (true) gcc/g++ (see above)::
+C) On OSX, cmake must use the true, real, gcc/g++ compiler (not clang).  Thus you must do something like this to make sure that it finds the right (true) gcc/g++ (see above)::
 
     mkdir build && cd build
     mkdir gccstatic && cd gccstatic
-    cmake ../.. -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON -DCMAKE_C_COMPILER="/usr/local/bin/gcc-4.9" -DCMAKE_CXX_COMPILER="/usr/local/bin/g++-4.9" -DCMAKE_VERBOSE_MAKEFILE=ON
+    cmake ../.. -DCOOLPROP_STATIC_LIBRARY=ON -DCOOLPROP_EXTERNC_LIBRARY=ON -DCMAKE_C_COMPILER="/usr/local/bin/gcc-4.9" -DCMAKE_CXX_COMPILER="/usr/local/bin/g++-4.9" -DCMAKE_VERBOSE_MAKEFILE=ON
     cmake --build .
 
 If you are using a different version of gcc, change the version number for g++ and gcc
