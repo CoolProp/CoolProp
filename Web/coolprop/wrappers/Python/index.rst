@@ -9,7 +9,7 @@ Python Wrapper
 Automatic installation
 ======================
 
-Using the ``pip`` installation program, you can install the official release can be obtained from the pypi server using::
+Using the ``pip`` installation program, you can install the official release from the pypi server using::
 
     pip install CoolProp
 
