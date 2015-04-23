@@ -304,7 +304,9 @@ public:
     void finish(){
         n.resize(elements.size()); d.resize(elements.size());
         t.resize(elements.size()); c.resize(elements.size());
+		omega.resize(elements.size());
         l_double.resize(elements.size()); l_int.resize(elements.size());
+		m_double.resize(elements.size()); m_int.resize(elements.size());
         epsilon2.resize(elements.size()); eta2.resize(elements.size());
         gamma2.resize(elements.size()); beta2.resize(elements.size());
         
@@ -313,8 +315,11 @@ public:
             d[i] = elements[i].d;
             t[i] = elements[i].t;
             c[i] = elements[i].c;
+			omega[i] = elements[i].omega;
             l_double[i] = elements[i].l_double;
             l_int[i] = elements[i].l_int;
+			m_double[i] = elements[i].m_double;
+            m_int[i] = elements[i].m_int;
             epsilon2[i] = elements[i].epsilon2;
             eta2[i] = elements[i].eta2;
             gamma2[i] = elements[i].gamma2;
