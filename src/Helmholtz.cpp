@@ -214,38 +214,29 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl &tau, const 
             }
         }
         
-        ndteu = ni*exp(ti*log_tau+di*log_delta+u);
-        
-        const CoolPropDbl B_delta = (delta*du_ddelta + di);
-        const CoolPropDbl B_tau = (tau*du_dtau + ti);
-        //CoolPropDbl B_delta2 = (POW2(delta)*(d2u_ddelta2 + POW2(du_ddelta)) + 2*di*delta*du_ddelta + di*(di-1));
-        //CoolPropDbl B_tau2 = (POW2(tau)*(d2u_dtau2 + POW2(du_dtau)) + 2*ti*tau*du_dtau + ti*(ti-1));
-        //CoolPropDbl B_delta3 = POW3(delta)*d3u_ddelta3 + 3*di*POW2(delta)*d2u_ddelta2+3*POW3(delta)*d2u_ddelta2*du_ddelta+3*di*POW2(delta*du_ddelta)+3*di*(di-1)*delta*du_ddelta+di*(di-1)*(di-2)+POW3(delta*du_ddelta);
-        //CoolPropDbl B_tau3 = POW3(tau)*d3u_dtau3 + 3*ti*POW2(tau)*d2u_dtau2+3*POW3(tau)*d2u_dtau2*du_dtau+3*ti*POW2(tau*du_dtau)+3*ti*(ti-1)*tau*du_dtau+ti*(ti-1)*(ti-2)+POW3(tau*du_dtau);
+        ndteu = ni*exp(ti*log_tau + di*log_delta + u);
         
         const CoolPropDbl dB_delta_ddelta = delta*d2u_ddelta2 + du_ddelta;
         const CoolPropDbl d2B_delta_ddelta2 = delta*d3u_ddelta3 + 2*d2u_ddelta2;
         const CoolPropDbl d3B_delta_ddelta3 = delta*d4u_ddelta4 + 3*d3u_ddelta3;
-        const CoolPropDbl B_delta2 = delta*dB_delta_ddelta + ((di-1)+delta*du_ddelta)*B_delta;
-        const CoolPropDbl dB_delta2_ddelta = delta*d2B_delta_ddelta2 + (di+delta*du_ddelta)*dB_delta_ddelta + (delta*d2u_ddelta2 + du_ddelta)*B_delta;
-        const CoolPropDbl d2B_delta2_ddelta2 = delta*d3B_delta_ddelta3 + d2B_delta_ddelta2 
-                                       + (di+delta*du_ddelta)*d2B_delta_ddelta2 + (delta*d2u_ddelta2 + du_ddelta)*dB_delta_ddelta 
-                                       + (delta*d2u_ddelta2 + du_ddelta)*dB_delta_ddelta + (delta*d3u_ddelta3 + 2*d2u_ddelta2)*B_delta;
-        const CoolPropDbl B_delta3 = delta*dB_delta2_ddelta + ((di-1-1)+delta*du_ddelta)*B_delta2;
-        const CoolPropDbl dB_delta3_ddelta = delta*d2B_delta2_ddelta2 + ((di-1)+delta*du_ddelta)*dB_delta2_ddelta + (delta*d2u_ddelta2 + du_ddelta)*B_delta2;
-        const CoolPropDbl B_delta4 = delta*dB_delta3_ddelta + ((di-1-2)+delta*du_ddelta)*B_delta3;
-
-        const CoolPropDbl dB_tau_dtau = tau*d2u_dtau2 + du_dtau;
+		
+		const CoolPropDbl B_delta = (delta*du_ddelta + di);
+        const CoolPropDbl B_delta2 = delta*dB_delta_ddelta + (B_delta - 1)*B_delta;
+        const CoolPropDbl dB_delta2_ddelta = delta*d2B_delta_ddelta2 + 2*B_delta*dB_delta_ddelta;
+        const CoolPropDbl B_delta3 = delta*dB_delta2_ddelta + (B_delta -  2)*B_delta2;
+        const CoolPropDbl dB_delta3_ddelta = delta*delta*d3B_delta_ddelta3 + 3*delta*B_delta*d2B_delta_ddelta2 + 3*delta*POW2(dB_delta_ddelta)+3*B_delta*(B_delta-1)*dB_delta_ddelta;
+        const CoolPropDbl B_delta4 = delta*dB_delta3_ddelta + (B_delta -  3)*B_delta3;
+        
+		const CoolPropDbl dB_tau_dtau = tau*d2u_dtau2 + du_dtau;
         const CoolPropDbl d2B_tau_dtau2 = tau*d3u_dtau3 + 2*d2u_dtau2;
         const CoolPropDbl d3B_tau_dtau3 = tau*d4u_dtau4 + 3*d3u_dtau3;
-        const CoolPropDbl B_tau2 = tau*dB_tau_dtau + ((ti-1)+tau*du_dtau)*B_tau;
-        const CoolPropDbl dB_tau2_dtau = tau*d2B_tau_dtau2 + (ti+tau*du_dtau)*dB_tau_dtau + (tau*d2u_dtau2 + du_dtau)*B_tau;
-        const CoolPropDbl d2B_tau2_dtau2 = tau*d3B_tau_dtau3 + d2B_tau_dtau2 
-                                       + (ti+tau*du_dtau)*d2B_tau_dtau2 + (tau*d2u_dtau2 + du_dtau)*dB_tau_dtau 
-                                       + (tau*d2u_dtau2 + du_dtau)*dB_tau_dtau + (tau*d3u_dtau3 + 2*d2u_dtau2)*B_tau;
-        const CoolPropDbl B_tau3 = tau*dB_tau2_dtau + ((ti-1-1)+tau*du_dtau)*B_tau2;
-        const CoolPropDbl dB_tau3_dtau = tau*d2B_tau2_dtau2 + ((ti-1)+tau*du_dtau)*dB_tau2_dtau + (tau*d2u_dtau2 + du_dtau)*B_tau2;
-        const CoolPropDbl B_tau4 = tau*dB_tau3_dtau + ((ti-1-2)+tau*du_dtau)*B_tau3;
+        
+		const CoolPropDbl B_tau = (tau*du_dtau + ti);
+		const CoolPropDbl B_tau2 = tau*dB_tau_dtau + (B_tau - 1)*B_tau;
+        const CoolPropDbl dB_tau2_dtau = tau*d2B_tau_dtau2 + 2*B_tau*dB_tau_dtau;
+        const CoolPropDbl B_tau3 = tau*dB_tau2_dtau + (B_tau -  2)*B_tau2;
+        const CoolPropDbl dB_tau3_dtau = tau*tau*d3B_tau_dtau3 + 3*tau*B_tau*d2B_tau_dtau2 + 3*tau*POW2(dB_tau_dtau)+3*B_tau*(B_tau-1)*dB_tau_dtau;
+        const CoolPropDbl B_tau4 = tau*dB_tau3_dtau + (B_tau -  3)*B_tau3;
 
         derivs.alphar += ndteu;
         
