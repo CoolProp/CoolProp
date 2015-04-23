@@ -31,7 +31,7 @@ On windows, the most reliable mixed compilation seems to be using the mingw-prov
 .. warning::
     MinGW has problems with the latest version of CoolProp.  This seems to be a GCC-related 
     issue and using a more up-to-date version of GCC helps.  Unfortunately, MinGW is stuck 
-    at GCC 4.8.  You could try the `http://tdm-gcc.tdragon.net <TDM-GCC distribution>`_ 
+    at GCC 4.8.  You could try the `TDM-GCC distribution <http://tdm-gcc.tdragon.net>`_ 
     that comes with the latest GCC. This version seems to work fine.
 
 On OSX, the default compiler that comes with XCode is clang, gcc and g++ at the command prompt are just aliases to clang.  See for instance::
