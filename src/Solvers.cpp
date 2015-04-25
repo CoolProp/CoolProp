@@ -162,7 +162,7 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
 
         if (iter>maxiter){
             errstring= "reached maximum number of iterations";
-            throw SolutionError(format("Newton reached maximum number of iterations"));
+            throw SolutionError(format("Halley reached maximum number of iterations"));
         }
         iter=iter+1;
     }
