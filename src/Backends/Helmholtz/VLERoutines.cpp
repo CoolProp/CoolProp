@@ -1067,7 +1067,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         }
         // If you are not continuing to march towards the solution, after a couple of times, stop
         // This is especially a problem for water
-        if (error > last_error){
+        if (std::abs(error) > std::abs(last_error)){
             backwards_step_count++;
         }
         
