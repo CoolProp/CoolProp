@@ -21,6 +21,12 @@ public:
     virtual double deriv(double) = 0;
 };
 
+class FuncWrapper1DWithTwoDerivs : public FuncWrapper1DWithDeriv
+{
+public:
+    virtual double second_deriv(double) = 0;
+};
+
 class FuncWrapperND
 {
 public:
@@ -35,6 +41,7 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
 double Secant(FuncWrapper1D* f, double x0, double dx, double ftol, int maxiter, std::string &errstring);
 double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, double dx, double ftol, int maxiter, std::string &errstring);
 double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter, std::string &errstring);
+double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter, std::string &errstring);
 
 // Single-Dimensional solvers
 inline double Brent(FuncWrapper1D &f, double a, double b, double macheps, double t, int maxiter, std::string &errstr){
@@ -48,6 +55,9 @@ inline double BoundedSecant(FuncWrapper1D &f, double x0, double xmin, double xma
 }
 inline double Newton(FuncWrapper1DWithDeriv &f, double x0, double ftol, int maxiter, std::string &errstring){
     return Newton(&f, x0, ftol, maxiter, errstring);
+}
+inline double Halley(FuncWrapper1DWithTwoDerivs &f, double x0, double ftol, int maxiter, std::string &errstring){
+    return Halley(&f, x0, ftol, maxiter, errstring);
 }
 
 // Multi-Dimensional solvers

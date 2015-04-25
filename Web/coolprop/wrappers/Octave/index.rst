@@ -58,6 +58,12 @@ For windows, the situation is ok, but not great.  Only the MinGW builds are supp
 
 3. Rename the sh.exe in the bin folder of your installation to _sh.exe
 
+.. warning::
+    MinGW has problems with the latest version of CoolProp.  This seems to be a GCC-related 
+    issue and using a more up-to-date version of GCC helps.  Unfortunately, MinGW is stuck 
+    at GCC 4.8.  You could try the `TDM-GCC distribution <http://tdm-gcc.tdragon.net>`_ 
+    that comes with the latest GCC. This version seems to work fine.
+
 Build
 -----
 

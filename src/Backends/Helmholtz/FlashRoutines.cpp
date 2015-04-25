@@ -262,34 +262,34 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         else{
             // Pseudo-pure fluid
             CoolPropDbl rhoLanc = _HUGE, rhoVanc = _HUGE, rhoLsat = _HUGE, rhoVsat = _HUGE;
-            CoolPropDbl psatLanc = HEOS.components[0].ancillaries.pL.evaluate(HEOS._T); // These ancillaries are used explicitly
-            CoolPropDbl psatVanc = HEOS.components[0].ancillaries.pV.evaluate(HEOS._T); // These ancillaries are used explicitly
-            try{
+            if (std::abs(HEOS._Q) < DBL_EPSILON){
+                HEOS._p = HEOS.components[0].ancillaries.pL.evaluate(HEOS._T); // These ancillaries are used explicitly
                 rhoLanc = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._T);
+                HEOS.SatL->update_TP_guessrho(HEOS._T, HEOS._p, rhoLanc);
+                HEOS._rhomolar = HEOS.SatL->rhomolar();
+            }
+            else if (std::abs(HEOS._Q - 1) < DBL_EPSILON){
+                HEOS._p = HEOS.components[0].ancillaries.pV.evaluate(HEOS._T); // These ancillaries are used explicitly
                 rhoVanc = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._T);
+                HEOS.SatV->update_TP_guessrho(HEOS._T, HEOS._p, rhoVanc);
+                HEOS._rhomolar = HEOS.SatV->rhomolar();
+            }
+            else{
+                CoolPropDbl psatLanc = HEOS.components[0].ancillaries.pL.evaluate(HEOS._T); // These ancillaries are used explicitly
+                CoolPropDbl psatVanc = HEOS.components[0].ancillaries.pV.evaluate(HEOS._T); // These ancillaries are used explicitly
+                HEOS._p = HEOS._Q*psatVanc + (1-HEOS._Q)*psatLanc;
+                HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
+                HEOS.SatL->update(DmolarT_INPUTS, rhoLsat, HEOS._T);
+                HEOS.SatV->update(DmolarT_INPUTS, rhoVsat, HEOS._T);
+            }
 
-                if (!ValidNumber(rhoLanc) || !ValidNumber(rhoVanc))
-                {
-                    throw ValueError("pseudo-pure failed");
-                }
-
-                HEOS.SatL->update_TP_guessrho(HEOS._T, psatLanc, rhoLanc);
-                HEOS.SatV->update_TP_guessrho(HEOS._T, psatVanc, rhoVanc);
-                if (!ValidNumber(rhoLsat) || !ValidNumber(rhoVsat) ||
-                     std::abs(rhoLsat/rhoLanc-1) > 0.5 || std::abs(rhoVanc/rhoVsat-1) > 0.5)
-                {
-                    throw ValueError("pseudo-pure failed");
-                }
+            try{                
             }
             catch (...){
                 // Near the critical point, the behavior is not very nice, so we will just use the ancillary
                 rhoLsat = rhoLanc;
                 rhoVsat = rhoVanc;
             }
-            HEOS._p = HEOS._Q*psatVanc + (1-HEOS._Q)*psatLanc;
-            HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
-            HEOS.SatL->update(DmolarT_INPUTS, rhoLsat, HEOS._T);
-            HEOS.SatV->update(DmolarT_INPUTS, rhoVsat, HEOS._T);
         }
         // Load the outputs
         HEOS._phase = iphase_twophase;

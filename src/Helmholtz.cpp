@@ -362,7 +362,7 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
         const CoolPropDbl d4DELTA_dDelta3_dTau = 2*dtheta_dTau*d3theta_dDelta3;
         const CoolPropDbl d4DELTA_dDelta4 = 2*(theta*d4theta_dDelta4 + 4*dtheta_dDelta*d3theta_dDelta3 + 3*POW2(d2theta_dDelta2) + 2*Bi*ai*(4*ai*ai*ai - 12*ai*ai + 11*ai-3)*pow(POW2(delta-1.0), ai-2.0));
         
-        if (std::abs(delta-1) < 10*DBL_EPSILON){
+        if (std::abs(DELTA-1) < 10*DBL_EPSILON){
             derivs.reset(_HUGE); return;
         }
  
@@ -1134,6 +1134,7 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
         term = get(terms[i]);
         for (std::size_t j = 0; j < sizeof(derivs)/sizeof(derivs[0]); ++j)
         {
+            if (terms[i] == "SAFT" && (derivs[j] == "dTau4" || derivs[j] == "dDelta_dTau3" || derivs[j] == "dDelta2_dTau2" || derivs[j] == "dDelta3_dTau" || derivs[j] == "dDelta4")){ continue; }
             call(derivs[j], term, 1.3, 0.9, 1e-6);
             CAPTURE(derivs[j]);
             CAPTURE(numerical);

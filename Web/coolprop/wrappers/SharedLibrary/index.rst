@@ -12,7 +12,7 @@ Shared libraries are compiled code that can be accessed by other programs.  On w
 
 There are a few things that need to be considered when determining what shared library you should build/use:
 
-* Calling convention (`http://en.wikipedia.org/wiki/Calling_convention <wikipedia>`_: ``__stdcall`` or ``__cdecl`` - only a consideration on 32-bit windows
+* `Calling convention <http://en.wikipedia.org/wiki/Calling_convention>`_: ``__stdcall`` or ``__cdecl`` - only a consideration on 32-bit windows
 * Architecture: 32-bit or 64-bit
 * Compiler: Visual Studio, Mingw, GCC, clang
 
@@ -39,11 +39,17 @@ Your compiler options are:
 
 By default, cmake will use your most up to date version of visual studio it finds.
 
+.. warning::
+    MinGW has problems with the latest version of CoolProp.  This seems to be a GCC-related 
+    issue and using a more up-to-date version of GCC helps.  Unfortunately, MinGW is stuck 
+    at GCC 4.8.  You could try the `TDM-GCC distribution <http://tdm-gcc.tdragon.net>`_ 
+    that comes with the latest GCC. This version seems to work fine.
+
 Your calling convention options are:
 
-* 32-bit __stdcall (``-DCOOLPROP_32BIT_STDCALL_SHARED_LIBRARY=ON``)
-* 32-bit __cdecl (``-DCOOLPROP_32BIT_CDECL_SHARED_LIBRARY=ON``)
-* 64-bit (``-DCOOLPROP_64BIT_SHARED_LIBRARY=ON``)
+* 32-bit __stdcall (``-DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_STDCALL_LIBRARY=ON``)
+* 32-bit __cdecl (``-DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_CDECL_LIBRARY=ON``)
+* 64-bit (``-DCOOLPROP_SHARED_LIBRARY=ON``)
 
 You can select the compiler in the call to cmake below.
 
@@ -62,29 +68,33 @@ You can select the compiler in the call to cmake below.
 
     For 64-bit DLL::
 
-        cmake .. -DCOOLPROP_64BIT_SHARED_LIBRARY=ON -G "MinGW Makefiles"
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -G "MinGW Makefiles"
 
     For 32-bit __stdcall DLL::
 
-        cmake .. -DCOOLPROP_32BIT_STDCALL_SHARED_LIBRARY=ON -G "MinGW Makefiles"
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_STDCALL_LIBRARY=ON -G "MinGW Makefiles"
 
     For 32-bit __cdecl DLL::
 
-        cmake .. -DCOOLPROP_32BIT_CDECL_SHARED_LIBRARY=ON -G "MinGW Makefiles"
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_CDECL_LIBRARY=ON -G "MinGW Makefiles"
+        
+    You can cross-compile by forcing a non-native bitness by using the additional flags ``-DFORCE_BITNESS_32=ON`` and ``-DFORCE_BITNESS_64=ON``.
 
     B. If you use Visual Studio, you will need to replace the visual studio version with the version that you are using.  Running the command ``cmake`` at the command prompt will tell you what generators are supported
 
     For 64-bit DLL (Watch out for the 64-bit flag with Win64)::
 
-        cmake .. -DCOOLPROP_64BIT_SHARED_LIBRARY=ON -G "Visual Studio 10 2010 Win64"
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -G "Visual Studio 10 2010 Win64"
 
     For 32-bit __stdcall DLL::
 
-        cmake .. -DCOOLPROP_32BIT_STDCALL_SHARED_LIBRARY=ON -G "Visual Studio 10 2010"
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_STDCALL_LIBRARY=ON -G "Visual Studio 10 2010"
 
     For 32-bit __cdecl DLL::
 
-        cmake .. -DCOOLPROP_32BIT_CDECL_SHARED_LIBRARY=ON -G "Visual Studio 10 2010"
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_CDECL_LIBRARY=ON -G "Visual Studio 10 2010"
+        
+    Since you already selected the bitness via the Visual Studio version, passing an additional flag to force a certain bitness will cause a n error and make the process terminate prematurely. 
 
 3. Do the build::
 
@@ -95,7 +105,7 @@ If you are using MinGW, you can leave off the ``--config Release``, the default 
 Linux & OSX
 -----------
 
-On linux and OSX there is no calling convention to worry about, only options are 32-bit and 64-bit compilation.  If you give one of the 32-bit flags, the calling convention will be ignored, so just do that.
+On linux and OSX there is no calling convention to worry about, only options are 32-bit and 64-bit compilation. Also here you can force cross-compilation using ``-DFORCE_BITNESS_32=ON`` and ``-DFORCE_BITNESS_64=ON``.
 
 For 32-bit compilation::
 
@@ -106,7 +116,7 @@ For 32-bit compilation::
     # Make a build folder
     mkdir build && cd build
     # Generate builder
-    cmake .. -DCOOLPROP_32BIT_SHARED_LIBRARY_LINUX_MODULE=ON
+    cmake .. -DCOOLPROP_SHARED_LIBRARY=ON
     # Build
     cmake --build .
 
@@ -119,7 +129,7 @@ For 64-bit compilation::
     # Make a build folder
     mkdir build && cd build
     # Generate builder
-    cmake .. -DCOOLPROP_64BIT_SHARED_LIBRARY=ON
+    cmake .. -DCOOLPROP_SHARED_LIBRARY=ON
     # Build
     cmake --build .
 

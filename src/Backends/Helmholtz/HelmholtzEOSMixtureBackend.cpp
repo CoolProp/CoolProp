@@ -962,9 +962,6 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
     }
-
-
-    
     post_update();
 }
 
@@ -1407,6 +1404,19 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                         else if (value > rho_liq){
                             this->_phase = iphase_liquid; return;
                         }
+                        else{
+                            _phase = iphase_liquid;
+                            _Q = -1000;
+                            update_DmolarT_direct(value, _T);
+                            CoolPropDbl pL = components[0].ancillaries.pL.evaluate(_T);
+                            if (_p > pL*1.05){
+                                this->_phase = iphase_liquid; _Q = -1000; return;
+                            }
+                            else{
+                                _phase = iphase_unknown;
+                                _p = _HUGE;
+                            }
+                        }
                         break;
                     }
                     default:
@@ -1824,7 +1834,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     phases phase;
 
     // Define the residual to be driven to zero
-    class solver_TP_resid : public FuncWrapper1DWithDeriv
+    class solver_TP_resid : public FuncWrapper1DWithTwoDerivs
     {
     public:
         HelmholtzEOSMixtureBackend *HEOS;
@@ -1842,6 +1852,10 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         double deriv(double rhomolar){
             // dp/drho|T / pspecified
             return R_u*T*(1+2*delta*HEOS->dalphar_dDelta()+pow(delta, 2)*HEOS->d2alphar_dDelta2())/p;
+        };
+        double second_deriv(double rhomolar){
+            // d2p/drho2|T / pspecified
+            return R_u*T/rhomolar*(2*delta*HEOS->dalphar_dDelta() + 4*pow(delta, 2)*HEOS->d2alphar_dDelta2() + pow(delta, 3)*HEOS->calc_d3alphar_dDelta3())/p;
         };
     };
     solver_TP_resid resid(this,T,p);
@@ -1871,10 +1885,17 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         // It's liquid at subcritical pressure, we can use ancillaries as a backup
         else if (phase == iphase_liquid)
         {
+            double rhomolar;
             CoolPropDbl _rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
-            // Next we try with a Brent method bounded solver since the function is 1-1
-            double rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100,errstring);
-            if (!ValidNumber(rhomolar)){throw ValueError();}
+            try{
+                // First we try with Halley's method starting at saturated liquid
+                rhomolar = Halley(resid, _rhoLancval, 1e-16, 100, errstring);
+            }
+            catch(std::exception &){
+                // Next we try with a Brent method bounded solver since the function is 1-1
+                rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100,errstring);
+                if (!ValidNumber(rhomolar)){throw ValueError();}
+            }
             return rhomolar;
         }
         else if (phase == iphase_supercritical_liquid){
@@ -2034,7 +2055,15 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_hmolar(void)
 	if (get_debug_level()>=50) std::cout << format("HelmholtzEOSMixtureBackend::calc_hmolar: 2phase: %d T: %g rhomomolar: %g", isTwoPhase(), _T, _rhomolar) << std::endl;
     if (isTwoPhase())
     {
-        _hmolar = _Q*SatV->hmolar() + (1 - _Q)*SatL->hmolar();
+        if (std::abs(_Q) < DBL_EPSILON){
+            _hmolar = SatL->hmolar();
+        }
+        else if (std::abs(_Q-1) < DBL_EPSILON){
+            _hmolar = SatV->hmolar();
+        }
+        else{
+            _hmolar = _Q*SatV->hmolar() + (1 - _Q)*SatL->hmolar();
+        }
         return static_cast<CoolPropDbl>(_hmolar);
     }
     else if (isHomogeneousPhase())
@@ -2079,7 +2108,15 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_smolar(void)
 {
     if (isTwoPhase())
     {
-        _smolar = _Q*SatV->smolar() + (1 - _Q)*SatL->smolar();
+        if (std::abs(_Q) < DBL_EPSILON){
+            _smolar = SatL->smolar();
+        }
+        else if (std::abs(_Q-1) < DBL_EPSILON){
+            _smolar = SatV->smolar();
+        }
+        else{
+            _smolar = _Q*SatV->smolar() + (1 - _Q)*SatL->smolar();
+        }
         return static_cast<CoolPropDbl>(_smolar);
     }
     else if (isHomogeneousPhase())
@@ -2122,7 +2159,15 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_umolar(void)
 {
     if (isTwoPhase())
     {
-        _umolar = _Q*SatV->umolar() + (1 - _Q)*SatL->umolar();
+        if (std::abs(_Q) < DBL_EPSILON){
+            _umolar = SatL->umolar();
+        }
+        else if (std::abs(_Q-1) < DBL_EPSILON){
+            _umolar = SatV->umolar();
+        }
+        else{
+            _umolar = _Q*SatV->umolar() + (1 - _Q)*SatL->umolar();
+        }
         return static_cast<CoolPropDbl>(_umolar);
     }
     else if (isHomogeneousPhase())

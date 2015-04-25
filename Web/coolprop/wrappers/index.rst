@@ -8,34 +8,34 @@ CoolProp at its core is a C++ library, but it can be of interest to use this cod
 
 Downloads and instructions for each wrapper are included in the page for the wrapper given in the table below.
 
-==============================================  ===========================  =======================================
-Target                                          Operating Systems            Notes
-==============================================  ===========================  =======================================
-:ref:`Static library <static_library>`          linux, OSX, win
-:ref:`Shared library (DLL) <shared_library>`    linux, OSX, win
-:ref:`Python <Python>`                          linux, OSX, win              Wrapper is Cython based
-:ref:`Octave <Octave>`                          linux, OSX, win              Wrapper is SWIG based
-:ref:`C# <Csharp>`                              linux, OSX, win              Wrapper is SWIG based
-:ref:`VB.net <VBdotNet>`                        windows only                 Wrapper is SWIG based
-:ref:`MATLAB <MATLAB>`                          linux, OSX, win              Wrapper is SWIG based
-:ref:`Java <Java>`                              linux, OSX, win              Wrapper is SWIG based
-:ref:`Scilab <Scilab>`                          linux, OSX, win              Wrapper is SWIG based (experimental)
-:ref:`Julia <Julia>`                            linux, OSX, win              
-:ref:`Modelica <Modelica>`                      linux, OSX, win
-:ref:`PHP <PHP>`                                linux, OSX, win              Mostly used on linux
-:ref:`Javascript <Javascript>`                  cross-platform               Works in all internet browsers
-:ref:`Labview <Labview>`                        windows only
-:ref:`Maple <Maple>`                            linux, OSX, win
-:ref:`MathCAD <MathCAD>`                        windows only
-:ref:`SMath Studio <SMath>`                     linux, OSX, win
+======================================================= ===========================  =======================================
+Target                                                  Operating Systems            Notes
+======================================================= ===========================  =======================================
+:ref:`Static library <static_library>`                  linux, OSX, win
+:ref:`Shared library (DLL) <shared_library>`            linux, OSX, win
+:ref:`Python <Python>`                                  linux, OSX, win              Wrapper is Cython based
+:ref:`Octave <Octave>`                                  linux, OSX, win              Wrapper is SWIG based
+:ref:`C# <Csharp>`                                      linux, OSX, win              Wrapper is SWIG based
+:ref:`VB.net <VBdotNet>`                                windows only                 Wrapper is SWIG based
+:ref:`MATLAB <MATLAB>`                                  linux, OSX, win              Wrapper is SWIG based
+:ref:`Java <Java>`                                      linux, OSX, win              Wrapper is SWIG based
+:ref:`Scilab <Scilab>`                                  linux, OSX, win              Wrapper is SWIG based (experimental)
+:ref:`Julia <Julia>`                                    linux, OSX, win              
+`Modelica <https://github.com/modelica/ExternalMedia>`_ linux, OSX, win
+:ref:`PHP <PHP>`                                        linux, OSX, win              Mostly used on linux
+:ref:`Javascript <Javascript>`                          cross-platform               Works in all internet browsers
+:ref:`Labview <Labview>`                                windows only
+:ref:`Maple <Maple>`                                    linux, OSX, win
+:ref:`MathCAD <MathCAD>`                                windows only
+:ref:`SMath Studio <SMath>`                             linux, OSX, win
 :ref:`Mathematica <Mathematica>`
-:ref:`FORTRAN <FORTRAN>`                        linux, OSX, win
-:ref:`EES <EES>`                                windows only
-:ref:`Microsoft Excel <Excel>`                  windows only
-:ref:`LibreOffice <LibreOffice>`                windows, linux
-:ref:`Delphi & Lazarus <Delphi>`                linux, OSX, win
+:ref:`FORTRAN <FORTRAN>`                                linux, OSX, win
+:ref:`EES <EES>`                                        windows only
+:ref:`Microsoft Excel <Excel>`                          windows only
+:ref:`LibreOffice <LibreOffice>`                        windows, linux
+:ref:`Delphi & Lazarus <Delphi>`                        linux, OSX, win
 :ref:`iOS (iPhone) <ios>`                       
-==============================================  ===========================  =======================================
+======================================================= ===========================  =======================================
 
 .. _wrapper_common_prereqs:
 
