@@ -365,6 +365,8 @@ class SinglePhaseGriddedTableData{
                 case iHmolar: return hmolar;
                 case iSmolar: return smolar;
                 case iP: return p;
+                case iviscosity: return visc;
+                case iconductivity: return cond;
                 default: throw KeyError(format("invalid key"));
             }
         }
