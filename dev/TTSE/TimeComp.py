@@ -20,13 +20,43 @@ import matplotlib.patches as mpatches
 import copy
 from itertools import cycle
 from matplotlib import gridspec, ticker
-from jopy.dataPlotters import roundList, range_brace
+#from jopy.dataPlotters import roundList, range_brace
 
-try:
-    from jopy.dataPlotters import BasePlotter
-    bp = BasePlotter()
-except:
-    bp = None
+def range_brace(x_min, x_max, mid=0.5,
+                beta1=50.0, beta2=100.0, height=1,
+                initial_divisions=11, resolution_factor=1.5):
+    """
+    http://stackoverflow.com/questions/1289681/drawing-braces-with-pyx
+    x,y = range_brace(0, 100)
+    ax.plot(x, y,'-')
+    ax.plot(y, x,'-')
+    """
+    # determine x0 adaptively values using second derivitive
+    # could be replaced with less snazzy:
+    #   x0 = NP.arange(0, 0.5, .001)
+    x0 = np.array(())
+    tmpx = np.linspace(0, 0.5, initial_divisions)
+    tmp = beta1**2 * (np.exp(beta1*tmpx)) * (1-np.exp(beta1*tmpx)) / np.power((1+np.exp(beta1*tmpx)),3)
+    tmp += beta2**2 * (np.exp(beta2*(tmpx-0.5))) * (1-np.exp(beta2*(tmpx-0.5))) / np.power((1+np.exp(beta2*(tmpx-0.5))),3)
+    for i in range(0, len(tmpx)-1):
+        t = int(np.ceil(resolution_factor*max(np.abs(tmp[i:i+2]))/float(initial_divisions)))
+        x0 = np.append(x0, np.linspace(tmpx[i],tmpx[i+1],t))
+    x0 = np.sort(np.unique(x0)) # sort and remove dups
+    # half brace using sum of two logistic functions
+    y0 = mid*2*((1/(1.+np.exp(-1*beta1*x0)))-0.5)
+    y0 += (1-mid)*2*(1/(1.+np.exp(-1*beta2*(x0-0.5))))
+    # concat and scale x
+    x = np.concatenate((x0, 1-x0[::-1])) * float((x_max-x_min)) + x_min
+    y = np.concatenate((y0, y0[::-1])) * float(height)
+    return (x,y)
+
+#try:
+    #from jopy.dataPlotters import BasePlotter
+    #bp = BasePlotter()
+#except:
+    #bp = None
+    
+bp = None
 
 
 # The basic settings for he plots
@@ -34,16 +64,17 @@ xypoints = 1000
 loops    = 1
 repeat   = 1
 runs     = 0
-maxruns  = 100
+maxruns  = 50
 plot     = True
-calc     = False
-check    = False
-folder   = "dataDESKTOP"
-figures  = "figures"
+calc     = True
+check    = True
+folder   = "dataTTSE"
+figures  = "figuresTTSE"
 #np.random.seed(1984)
 
 
-fluids  = ["CO2","Pentane","R134a","Water","Air","LiBr-0%"]
+#fluids  = ["CO2","Pentane","R134a","Water","Air","LiBr-0%"]
+fluids  = ["CO2","Pentane","R134a","Air"]
 #glskeys = [r"\glsentryshort{co2}",r"\glsentryshort{pentane}",r"\glsentryshort{r134a}",r"\glsentryshort{water}",r"\glsentryshort{air}",r"\glsentryshort{libr} \SI{0}{\percent}"]
 #glskeys = [r"\ce{CO2}",r"n-Ppentane",r"R134a",r"Water",r"Air",r"\glsentryshort{libr} \SI{0}{\percent}"]
 repList = []
@@ -51,7 +82,8 @@ repList = []
 #    repList.append(fluids[i])
 #    repList.append(glskeys[i])
 
-backends = ["INCOMP","HEOS","REFPROP"]
+#backends = ["INCOMP","HEOS","REFPROP"]
+backends = ["HEOS","REFPROP"]
 #repList.append("HEOS")
 #repList.append(r"\glsentryshort{cp}")
 #repList.append("REFPROP")
@@ -283,7 +315,10 @@ def getStateObj(propsfluid):
     #if backend=="INCOMP":
     #    state.set_mass_fractions([0.0])
     if conc is not None:
-        state.set_mass_fractions([conc])
+        try:
+            state.set_mass_fractions([conc])
+        except:
+            pass 
     return state
 
 def getSpeedMeas(out,in1,in2,in3,in4,propsfluid,vector=False):
@@ -769,7 +804,7 @@ for fluidstr in fluids[:-1]:
     labExp = []
     outImp = []
     labImp = []
-    DEBUG=False
+    DEBUG=True
     for backend in backendsLst:
         # Backend exists in fluid data?
         try:
@@ -862,7 +897,7 @@ for fluidstr in fluids[:-1]:
 #                         rects3.extend(ax2.bar(ids[b], np.mean(outImp[j]), width, color=col3, hatch=hatchLst[b]))#, yerr=np.std(curList[i]), ecolor='k'))
 #                     else:
 #                         raise ValueError("Do not go here!")
-    DEBUG=False
+    DEBUG=True
 
     entries = 2
     for o in range(entries):
@@ -897,7 +932,7 @@ for fluidstr in fluids[:-1]:
                 pass
 
     x_newaxis = np.max(ids)+1.5*width
-    plt.axvline(x_newaxis, color=bp._black, linestyle='dashed')
+    plt.axvline(x_newaxis, color='k', linestyle='dashed')
 
     offset += entries*step
     entries = 4
@@ -956,7 +991,7 @@ for fluidstr in fluids[:-1]:
     x,y = range_brace(x_min, x_max)
     dy  = np.ceil(y_max_c/10.0)*10.0
     y   = dy+y*ratio*(x[-1]-x[0])
-    ax1.plot(x, y, ls='-',color=bp._black)
+    ax1.plot(x, y, ls='-',color='k')
     ax1.text(np.mean(x), np.max(y), "const.", rotation=0, ha='center', va='bottom', fontsize='medium')
 
     x_min = rects2[ 0].get_x()
@@ -964,7 +999,7 @@ for fluidstr in fluids[:-1]:
     x,y = range_brace(x_min, x_max)
     dy  = np.ceil(y_max_e/10.0)*10.0
     y   = dy+y*ratio*(x[-1]-x[0])
-    ax1.plot(x, y, ls='-',color=bp._black)
+    ax1.plot(x, y, ls='-',color='k')
     ax1.text(np.mean(x), np.max(y), "explicit", rotation=0, ha='center', va='bottom', fontsize='medium')
 
     x_min = rects3[ 0].get_x()
@@ -972,7 +1007,7 @@ for fluidstr in fluids[:-1]:
     x,y = range_brace(x_min, x_max)
     dy  = np.ceil(y_max_i/100.0)*10
     y   = dy+y*ratio*(x[-1]-x[0])
-    ax1.plot(x, y, ls='-',color=bp._black)
+    ax1.plot(x, y, ls='-',color='k')
     ax1.text(np.mean(x), np.max(y), "implicit", rotation=0, ha='center', va='bottom', fontsize='medium')
 
     #ax1.text(x_newaxis*0.9, y_max*0.9, "<- left axis", rotation=0, ha='right', va='bottom', fontsize='medium')
@@ -1554,11 +1589,11 @@ for fluidstr in fluids:
 
                 for I in [TP,ML]:
                     if I is not None:
-                        ax1.plot(I["H"]/1e6,I["P"]/1e5,lw=1.5,c=bp._black)
+                        ax1.plot(I["H"]/1e6,I["P"]/1e5,lw=1.5,c='k')
 
                 for I in [IP,IT,ID,IS,IH]:
                     if I is not None:
-                        ax1.plot(I["H"]/1e6,I["P"]/1e5,lw=1.0,c=bp._black,alpha=1)
+                        ax1.plot(I["H"]/1e6,I["P"]/1e5,lw=1.0,c='k',alpha=1)
 
 
                 #ax1.set_xlim([0e+0,6e1])
@@ -1577,9 +1612,9 @@ for fluidstr in fluids:
                 formatter = ticker.ScalarFormatter()
                 CB  = fg.colorbar(SC, cax=cax,format=formatter)
                 CB.set_alpha(1)
-                #CB.locator = ticker.MaxNLocator(nbins=7)
-                ticks = roundList(np.logspace(np.log10(minHP), np.log10(maxHP), 5))
-                CB.locator = ticker.FixedLocator(ticks)
+                CB.locator = ticker.MaxNLocator(nbins=7)
+                #ticks = roundList(np.logspace(np.log10(minHP), np.log10(maxHP), 5))
+                #CB.locator = ticker.FixedLocator(ticks)
                 CB.update_ticks()
                 CB.draw_all()
 
@@ -1590,11 +1625,11 @@ for fluidstr in fluids:
                 fg.tight_layout()
                 fg.savefig(path.join(getFigureFolder(),"TimeComp-"+inp+"-"+backend.lower()+"-"+fld.lower()+".pdf"))
 
-                CB.set_label(r'Execution time per call (\si{\us})')
-                ax1.set_xlabel(r'Specific enthalpy (\si{\mega\J\per\kg})')
-                ax1.set_ylabel(r'Pressure (\si{\bar})')
-                fg.tight_layout()
-                bp.savepgf(path.join(getFigureFolder(),"TimeComp-"+inp+"-"+backend.lower()+"-"+fld.lower()+".pgf"),fg,repList)
+                #CB.set_label(r'Execution time per call (\si{\us})')
+                #ax1.set_xlabel(r'Specific enthalpy (\si{\mega\J\per\kg})')
+                #ax1.set_ylabel(r'Pressure (\si{\bar})')
+                #fg.tight_layout()
+                #bp.savepgf(path.join(getFigureFolder(),"TimeComp-"+inp+"-"+backend.lower()+"-"+fld.lower()+".pgf"),fg,repList)
                 plt.close()
 
     except Exception as e:
