@@ -146,6 +146,9 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
     // Check the tables and build if necessary
     check_tables();
 
+    // To start, set quality to value that is for single-phase
+    _Q = -1000;
+
     bool is_mixture = (this->AS->get_mole_fractions().size() >= 2);
 
     if (is_mixture){

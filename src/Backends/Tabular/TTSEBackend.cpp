@@ -17,6 +17,9 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
     cached_single_phase_j = std::numeric_limits<std::size_t>::max();
     cached_saturation_iL = std::numeric_limits<std::size_t>::max(); 
     cached_saturation_iV = std::numeric_limits<std::size_t>::max();
+
+    // To start, set quality to value that is impossible
+    _Q = -1000;
     
     switch(input_pair){
         case HmolarP_INPUTS:{
