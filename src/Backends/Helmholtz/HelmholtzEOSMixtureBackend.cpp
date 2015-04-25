@@ -962,9 +962,6 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
     }
-
-
-    
     post_update();
 }
 
@@ -1406,6 +1403,19 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                         }
                         else if (value > rho_liq){
                             this->_phase = iphase_liquid; return;
+                        }
+                        else{
+                            _phase = iphase_liquid;
+                            _Q = -1000;
+                            update_DmolarT_direct(value, _T);
+                            CoolPropDbl pL = components[0].ancillaries.pL.evaluate(_T);
+                            if (_p > pL*1.05){
+                                this->_phase = iphase_liquid; _Q = -1000; return;
+                            }
+                            else{
+                                _phase = iphase_unknown;
+                                _p = _HUGE;
+                            }
                         }
                         break;
                     }
