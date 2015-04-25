@@ -1134,7 +1134,7 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
         term = get(terms[i]);
         for (std::size_t j = 0; j < sizeof(derivs)/sizeof(derivs[0]); ++j)
         {
-            if (terms[i] == "SAFT" && (derivs[j] == "dTau4" || derivs[j] == "dDelta_dTau3" || derivs[j] == "dDelta2_dTau2" || derivs[j] == "dDelta_dTau3" || derivs[j] == "dDelta4")){ continue; }
+            if (terms[i] == "SAFT" && (derivs[j] == "dTau4" || derivs[j] == "dDelta_dTau3" || derivs[j] == "dDelta2_dTau2" || derivs[j] == "dDelta3_dTau" || derivs[j] == "dDelta4")){ continue; }
             call(derivs[j], term, 1.3, 0.9, 1e-6);
             CAPTURE(derivs[j]);
             CAPTURE(numerical);
