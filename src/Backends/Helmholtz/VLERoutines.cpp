@@ -913,8 +913,10 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
     CoolProp::SimpleState &crit = HEOS.get_components()[0].crit;
-    CoolPropDbl rhoL = _HUGE, rhoV = _HUGE, error = 999, DeltavL, DeltavV, pL, pV, p;
-    int iter=0, small_step_count = 0;
+    CoolPropDbl rhoL = _HUGE, rhoV = _HUGE, error = 999, DeltavL, DeltavV, pL, pV, p, last_error;
+    int iter = 0, 
+        small_step_count = 0, 
+        backwards_step_count = 0; // Counter for the number of times you have taken a step that increases error
     
     try
     {
@@ -1001,7 +1003,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
     if (rhoV > crit.rhomolar){
         rhoV = 0.99*crit.rhomolar;
     }
-
+    last_error = _HUGE;
     SatL->update_DmolarT_direct(rhoL, T);
     SatV->update_DmolarT_direct(rhoV, T);
     if (get_debug_level() > 5){ std::cout << format("[Maxwell] starting T: %0.16Lg rhoL: %Lg rhoV: %Lg pL: %Lg pV: %g\n", T, rhoL, rhoV, SatL->p(), SatV->p());}
@@ -1063,13 +1065,19 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         if (std::abs(DeltavL*rhoL) < 10*DBL_EPSILON || std::abs(DeltavV*rhoV) < 10*DBL_EPSILON){
             small_step_count++;
         }
+        // If you are not continuing to march towards the solution, after a couple of times, stop
+        // This is especially a problem for water
+        if (error > last_error){
+            backwards_step_count++;
+        }
         
         iter++;
+        last_error = error;
         if (iter > 30){
             throw SolutionError(format("Maxwell solver did not converge after 30 iterations;  rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %Lg dvV/vV: %Lg pL: %Lg pV: %Lg\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV));
         }
     }
-    while ((SatL->p() < 0) || (error > 1e-5 && small_step_count < 4));
+    while ((SatL->p() < 0) || (error > 1e-10 && small_step_count < 4 && backwards_step_count < 6));
     if (get_debug_level() > 5){ std::cout << format("[Maxwell] pL: %g pV: %g\n", SatL->p(), SatV->p());}
 }
 
