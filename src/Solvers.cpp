@@ -117,6 +117,57 @@ double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter, st
     }
     return x;
 }
+/**
+In the Halley's method solver, two derivatives of the input variable are needed, it yields the following method:
+
+\f[
+x_{n+1} = x_n - \frac {2 f(x_n) f'(x_n)} {2 {[f'(x_n)]}^2 - f(x_n) f''(x_n)}
+\f]
+
+http://en.wikipedia.org/wiki/Halley%27s_method
+
+@param f A pointer to an instance of the FuncWrapper1DWithTwoDerivs class that implements the call() and two derivatives
+@param x0 The inital guess for the solution
+@param ftol The absolute value of the tolerance accepted for the objective function
+@param maxiter Maximum number of iterations
+@param errstring A pointer to the std::string that returns the error from Secant.  Length is zero if no errors are found
+@returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
+*/
+double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter, std::string &errstring)
+{
+    double x, dx, fval=999, dfdx, d2fdx2;
+    int iter=1;
+    errstring.clear();
+    x = x0;
+    while (iter < 2 || std::abs(fval) > ftol)
+    {
+        fval = f->call(x);
+        dfdx = f->deriv(x);
+        d2fdx2 = f->second_deriv(x);
+
+        dx = -(2*fval*dfdx)/(2*POW2(dfdx)-fval*d2fdx2);
+
+        if (!ValidNumber(fval)){
+            throw ValueError("Residual function in Halley returned invalid number");
+        };
+        if (!ValidNumber(dfdx)){
+            throw ValueError("Derivative function in Halley returned invalid number");
+        };
+
+        x += dx;
+
+        if (std::abs(dx/x) < 10*DBL_EPSILON){
+            return x;
+        }
+
+        if (iter>maxiter){
+            errstring= "reached maximum number of iterations";
+            throw SolutionError(format("Newton reached maximum number of iterations"));
+        }
+        iter=iter+1;
+    }
+    return x;
+}
 
 /**
 In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial guess for the solution is provided.
