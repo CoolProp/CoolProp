@@ -362,7 +362,7 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
         const CoolPropDbl d4DELTA_dDelta3_dTau = 2*dtheta_dTau*d3theta_dDelta3;
         const CoolPropDbl d4DELTA_dDelta4 = 2*(theta*d4theta_dDelta4 + 4*dtheta_dDelta*d3theta_dDelta3 + 3*POW2(d2theta_dDelta2) + 2*Bi*ai*(4*ai*ai*ai - 12*ai*ai + 11*ai-3)*pow(POW2(delta-1.0), ai-2.0));
         
-        if (std::abs(delta-1) < 10*DBL_EPSILON){
+        if (std::abs(DELTA-1) < 10*DBL_EPSILON){
             derivs.reset(_HUGE); return;
         }
  
