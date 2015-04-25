@@ -200,22 +200,22 @@ Table of Inputs/Outputs to HAPropsSI
     ``B``, ``Twb``, ``T_wb``, ``WetBulb``; K; Input/Output; Wet-Bulb Temperature
     ``C``, ``cp``; J/kg dry air/K; Output; Mixture specific heat per unit dry air
     ``Cha``, ``cp_ha``; J/kg humid air/K; Output; Mixture specific heat per unit humid air
-    ``D``,``Tdp``,``DewPoint``,``T_dp``; K; Input/Output;	Dew-Point Temperature
+    ``D``, ``Tdp``, ``DewPoint``, ``T_dp``; K; Input/Output;	Dew-Point Temperature
     ``H``, ``Hda``, ``Enthalpy``;	J/kg dry air; Input/Output; Mixture enthalpy per dry air
     ``Hha``; J/kg humid air; Input/Output; Mixture enthalpy per humid air 
     ``K``, ``k``, ``Conductivity``; W/m/K; Output; Mixture thermal conductivity
-    ``M``,``Visc``,``mu``;Pa-s;Output;Mixture viscosity
-    ``psi_w``,``Y``; mol water/mol humid air; Input/Output; Water mole fraction
+    ``M``, ``Visc``, ``mu``;Pa-s;Output;Mixture viscosity
+    ``psi_w``, ``Y``; mol water/mol humid air; Input/Output; Water mole fraction
     ``P``;Pa;Input;Pressure
     ``P_w``;Pa;Input;Partial pressure of water vapor
-    ``R``, ``RH``, ``RelHum``; -; Input/Output; Relative humidity in [0, 1]
+    ``R``, ``RH``, ``RelHum``; ; Input/Output; Relative humidity in [0, 1]
     ``S``, ``Sda``, ``Entropy``; J/kg dry air/K; Input/Output; Mixture entropy per unit dry air
     ``Sha``; J/kg humid air/K; Input/Output; Mixture entropy per unit humid air 
     ``T``, ``Tdb``, ```T_db``; K; Input/Output; Dry-Bulb Temperature
-    ``V``, ``Vda``; m:math:`^3`/kg dry air; Input/Output;  Mixture volume per unit dry air
-    ``Vha``; m:math:`^3`/kg humid air; Input/Output;  Mixture volume per unit humid air
+    ``V``, ``Vda``; m :math:`^3` /kg dry air; Input/Output;  Mixture volume per unit dry air
+    ``Vha``; m :math:`^3` /kg humid air; Input/Output;  Mixture volume per unit humid air
     ``W``, ``Omega``, ``HumRat``; kg water/kg dry air; Input/Output; Humidity Ratio
-    ``Z``; -; Output; Compressibility factor (:math:`Z = pv/(RT)`)
+    ``Z``; ; Output; Compressibility factor (:math:`Z = pv/(RT)`)
     
 .. _HA-Validation:
 
