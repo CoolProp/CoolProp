@@ -2034,7 +2034,15 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_hmolar(void)
 	if (get_debug_level()>=50) std::cout << format("HelmholtzEOSMixtureBackend::calc_hmolar: 2phase: %d T: %g rhomomolar: %g", isTwoPhase(), _T, _rhomolar) << std::endl;
     if (isTwoPhase())
     {
-        _hmolar = _Q*SatV->hmolar() + (1 - _Q)*SatL->hmolar();
+        if (std::abs(_Q) < DBL_EPSILON){
+            _hmolar = SatL->hmolar();
+        }
+        else if (std::abs(_Q-1) < DBL_EPSILON){
+            _hmolar = SatV->hmolar();
+        }
+        else{
+            _hmolar = _Q*SatV->hmolar() + (1 - _Q)*SatL->hmolar();
+        }
         return static_cast<CoolPropDbl>(_hmolar);
     }
     else if (isHomogeneousPhase())
@@ -2079,7 +2087,15 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_smolar(void)
 {
     if (isTwoPhase())
     {
-        _smolar = _Q*SatV->smolar() + (1 - _Q)*SatL->smolar();
+        if (std::abs(_Q) < DBL_EPSILON){
+            _smolar = SatL->smolar();
+        }
+        else if (std::abs(_Q-1) < DBL_EPSILON){
+            _smolar = SatV->smolar();
+        }
+        else{
+            _smolar = _Q*SatV->smolar() + (1 - _Q)*SatL->smolar();
+        }
         return static_cast<CoolPropDbl>(_smolar);
     }
     else if (isHomogeneousPhase())
@@ -2122,7 +2138,15 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_umolar(void)
 {
     if (isTwoPhase())
     {
-        _umolar = _Q*SatV->umolar() + (1 - _Q)*SatL->umolar();
+        if (std::abs(_Q) < DBL_EPSILON){
+            _umolar = SatL->umolar();
+        }
+        else if (std::abs(_Q-1) < DBL_EPSILON){
+            _umolar = SatV->umolar();
+        }
+        else{
+            _umolar = _Q*SatV->umolar() + (1 - _Q)*SatL->umolar();
+        }
         return static_cast<CoolPropDbl>(_umolar);
     }
     else if (isHomogeneousPhase())
