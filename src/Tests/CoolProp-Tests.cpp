@@ -1458,8 +1458,8 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
             SECTION(ss1.str(),"")
             {
                 // Skip impossible reference states
+                if (fluids[i] == "CarbonDioxide"){ continue; }
                 if (fluids[i] == "Water" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
-                if (fluids[i] == "CO2" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
                 if (fluids[i] == "HeavyWater" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
 
                 // First reset the reference state
