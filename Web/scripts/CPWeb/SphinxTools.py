@@ -140,7 +140,11 @@ class FluidInfoTableGenerator(object):
         
         CAS = CoolProp.CoolProp.get_fluid_param_string(self.name, "CAS")
         ASHRAE = CoolProp.CoolProp.get_fluid_param_string(self.name, "ASHRAE34")
-        formula = ':math:`' + CoolProp.CoolProp.get_fluid_param_string(self.name, "formula") + '`'
+        formula = CoolProp.CoolProp.get_fluid_param_string(self.name, "formula")
+        if formula:
+            formula = ':math:`' + formula + '`'
+        else:
+            formulat = 'Not applicable'
         
         # Generate (or not) the reducing data
         reducing_data = ''
