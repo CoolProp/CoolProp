@@ -13,7 +13,7 @@ def generate(milestone):
     number = title_to_number_map[milestone]
 
     # Get the issues associated with the milestone
-    issues = json.loads(urllib.urlopen('https://api.github.com/repos/CoolProp/CoolProp/issues?state=all&milestone='+str(number)).read())
+    issues = json.loads(urllib.urlopen('https://api.github.com/repos/CoolProp/CoolProp/issues?state=all&per_page=100&milestone='+str(number)).read())
 
     # Make sure all issues are closed in this milestone
     for issue in issues:
