@@ -1457,6 +1457,11 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
             ss1 << "Check state for hs_anchor for " << fluids[i] << " for reference state " << ref_state[j];
             SECTION(ss1.str(),"")
             {
+                // Skip impossible reference states
+                if (fluids[i] == "Water" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
+                if (fluids[i] == "CO2" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
+                if (fluids[i] == "HeavyWater" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
+
                 // First reset the reference state
                 set_reference_stateS(fluids[i], "DEF");
                 try{
