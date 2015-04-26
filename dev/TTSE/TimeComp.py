@@ -60,11 +60,11 @@ bp = None
 
 
 # The basic settings for he plots
-xypoints = 500
+xypoints = 250
 loops    = 1
 repeat   = 1
 runs     = 0
-maxruns  = 100
+maxruns  = 10
 plot     = True
 calc     = True
 check    = True
