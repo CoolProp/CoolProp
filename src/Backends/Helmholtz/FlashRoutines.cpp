@@ -663,16 +663,17 @@ void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolP
         
     public:
         HelmholtzEOSMixtureBackend &HEOS;
-        CoolPropDbl rhomolar_spec;
-		parameters other;
-		CoolPropDbl value;
+        CoolPropDbl rhomolar_spec; // Specified value for density
+        parameters other; // Key for other value
+        CoolPropDbl value; // value for S,H,U
+        CoolPropDbl Qd; // Quality from density
         Residual(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl rhomolar_spec, parameters other, CoolPropDbl value) : HEOS(HEOS), rhomolar_spec(rhomolar_spec), other(other), value(value){};
         double call(double T){
             HEOS.update(QT_INPUTS, 0, T);
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(),
                                        &SatV = HEOS.get_SatV();
             // Quality from density
-            CoolPropDbl Qd = (1 / HEOS.rhomolar() - 1 / SatL.rhomolar()) / (1 / SatV.rhomolar() - 1 / SatL.rhomolar());
+            Qd = (1 / rhomolar_spec - 1 / SatL.rhomolar()) / (1 / SatV.rhomolar() - 1 / SatL.rhomolar());
             // Quality from other parameter (H,S,U)
             CoolPropDbl Qo = (value - SatL.keyed_output(other)) / (SatV.keyed_output(other) - SatL.keyed_output(other));
             // Residual is the difference between the two
@@ -690,6 +691,8 @@ void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolP
     Tmin_sat = std::max(Tmin_satL, Tmin_satV) - 1e-13;
         
     Brent(resid, Tmin_sat, Tmax_sat-0.01, DBL_EPSILON, 1e-12, 20, errstr);
+    // Solve once more with the final vapor quality
+    HEOS.update(QT_INPUTS, resid.Qd, HEOS.T());
 }
 // D given and one of P,H,S,U
 void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other)
