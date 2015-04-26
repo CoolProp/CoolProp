@@ -60,11 +60,11 @@ bp = None
 
 
 # The basic settings for he plots
-xypoints = 100
+xypoints = 500
 loops    = 1
 repeat   = 1
 runs     = 0
-maxruns  = 500
+maxruns  = 100
 plot     = True
 calc     = True
 check    = True
@@ -1539,7 +1539,7 @@ for fluidstr in fluids:
                 y_data = getSingleData(fld, backend, "P", fluidData)
 
                 gs  = gridspec.GridSpec(1, 2, wspace=None, hspace=None, width_ratios=[10,1])
-                ax1 = fg.add_subplot(gs[0,0])
+                ax1 = fg.add_subplot(gs[0,0], axisbg='magenta')
                 ax1.set_yscale('log')
                 #ax2 = ax1.twinx()
 
@@ -1588,7 +1588,7 @@ for fluidstr in fluids:
                 #cNorm  = mpl.colors.LogNorm(vmin=ceil(minHP/1e1)*1e1, vmax=floor(maxHP/1e2)*1e2)
                 #cNorm  = mpl.colors.Normalize(vmin=round(minHP,-2), vmax=round(maxHP,-2))
                 colourSettings  = dict(c=t_data, edgecolors='none', cmap=cx1, norm=cNorm)
-                pointSettings   = dict(s=4)
+                pointSettings   = dict(s=6)
                 scatterSettings = dict(rasterized=True, alpha=0.5)
                 #scatterSettings = dict(rasterized=False, alpha=0.5)
                 scatterSettings.update(colourSettings)
@@ -1626,8 +1626,8 @@ for fluidstr in fluids:
                 CB.update_ticks()
                 CB.draw_all()
 
-
-                CB.set_label(r'Execution time per call (us)')
+                #fg.suptitle("f("+inp+")-"+backend.lower()+"-"+fld.lower())
+                CB.set_label(backend.upper()+"::"+fld+', execution time per f('+inp[0]+","+inp[1]+') call (us)')
                 ax1.set_xlabel(r'Specific enthalpy (MJ/kg)')
                 ax1.set_ylabel(r'Pressure (bar)')
                 fg.tight_layout()
