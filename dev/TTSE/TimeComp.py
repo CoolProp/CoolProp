@@ -60,11 +60,11 @@ bp = None
 
 
 # The basic settings for he plots
-xypoints = 1000
+xypoints = 100
 loops    = 1
 repeat   = 1
 runs     = 0
-maxruns  = 50
+maxruns  = 500
 plot     = True
 calc     = True
 check    = True
@@ -220,20 +220,28 @@ def getPTRanges(propsfluid):
     backend,_,_ = splitFluid(propsfluid)
     # Setting the limits for enthalpy and pressure
     if backend == "REFPROP":
-        T_min = PropsSI('Ttriple',"T",0,"D",0,propsfluid)
-        T_max = PropsSI(   'Tmax',"T",0,"D",0,propsfluid)
-        p_min = PropsSI(  'P',"T",T_min,"Q",0,propsfluid)
-        p_max = PropsSI(   'pmax',"T",0,"D",0,propsfluid)
+        T_min = PropsSI('Ttriple',"T",0,"D",0,propsfluid)+1
+        T_max = PropsSI(   'Tmax',"T",0,"D",0,propsfluid)-1
+        p_min = PropsSI(  'P',"T",T_min,"Q",0,propsfluid)+1
+        p_max = PropsSI(   'pmax',"T",0,"D",0,propsfluid)-1
     elif backend == "INCOMP":
-        T_min = PropsSI('Tmin',"T",0,"D",0,propsfluid)
-        T_max = PropsSI('Tmax',"T",0,"D",0,propsfluid)
+        T_min = PropsSI('Tmin',"T",0,"D",0,propsfluid)+1
+        T_max = PropsSI('Tmax',"T",0,"D",0,propsfluid)-1
         p_min =   1.5*1e5
         p_max = 200.0*1e5
     else:
         p_min = PropsSI('ptriple',"T",0,"D",0,propsfluid)
-        p_max = PropsSI(   'pmax',"T",0,"D",0,propsfluid)
+        p_min = max(p_min,PropsSI('pmin',"T",0,"D",0,propsfluid))+1
+        p_max = PropsSI(   'pmax',"T",0,"D",0,propsfluid)-1
         T_min = PropsSI('Ttriple',"T",0,"D",0,propsfluid)
-        T_max = PropsSI(   'Tmax',"T",0,"D",0,propsfluid)
+        T_min = max(T_min,PropsSI('Tmin',"T",0,"D",0,propsfluid))+1
+        T_max = PropsSI(   'Tmax',"T",0,"D",0,propsfluid)-1
+        
+    # One more check to debug things:
+    #p_min = max(p_min,0.01e5)
+    #T_min = max(T_min,200)
+    #p_max = min(p_max,200e5)
+    #T_max = min(T_max,1750)
 
     p_range  = np.logspace(np.log10(p_min),np.log10(p_max),xypoints)
     T_range  = np.linspace(T_min,T_max,xypoints)
@@ -545,7 +553,7 @@ def getSingleData(fld,backend,key,fluidData):
             if "P" in fluidData[fld][backend][dkey]:
                 # TODO: Fix this, do we need the mask?
                 #mask = fluidData[fld][backend][dkey]["P"]>0.3e5
-                mask = fluidData[fld][backend][dkey]["P"]>0.3e5
+                mask = fluidData[fld][backend][dkey]["P"]>0.0e5
                 try:
                     values.append( fluidData[fld][backend][dkey][key][mask] )
                 except Exception as e:
@@ -1398,8 +1406,8 @@ for fluidstr in fluids:
 
             if backend!="INCOMP":
                 TP = {}
-                points = int(xypoints/2)
-                T_range_TP = np.linspace(PropsSI('Ttriple',"T",0,"D",0,propsfluid),PropsSI(  'Tcrit',"T",0,"D",0,propsfluid),points)
+                points = max(int(xypoints/2),250)
+                T_range_TP = np.linspace(PropsSI('Ttriple',"T",0,"D",0,propsfluid)+1,PropsSI(  'Tcrit',"T",0,"D",0,propsfluid)-0.1,points)
                 T_TP = np.append(T_range_TP,T_range_TP[::-1])
                 Q_TP = np.zeros_like(T_TP)
                 Q_TP[points:] = 1
@@ -1427,7 +1435,7 @@ for fluidstr in fluids:
                 TP = None
 
             state = getStateObj(propsfluid)
-            if backend=="HEOS" and state.has_melting_line():
+            if False and backend=="HEOS" and state.has_melting_line():
                 p_melt = np.logspace(np.log10(state.melting_line(CoolProp.constants.iP_min, CoolProp.constants.iT, 0)),np.log10(state.melting_line(CoolProp.constants.iP_max, CoolProp.constants.iT, 0)),xypoints)
                 #p_melt = p_range
                 ML = dict(T=[],D=[],H=[],S=[],P=p_melt)
