@@ -1386,9 +1386,6 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
         }
     }
     while(!good_pmax);
-    //for (double pp = pmin; pmin < pmax; pp *= 1.05){
-    //    std::cout << format("%g %g\n", pp, resid.call(log(pp)));
-    //}
     double p = Brent(resid, log(pmin), log(pmax), DBL_EPSILON, 1e-10, 100, errstr);
     int rr = 0;
 }
