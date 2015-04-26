@@ -350,24 +350,12 @@ class ConsistencyAxis(object):
         for q in np.linspace(0, 1, 20):
 
             Tmin = state.keyed_output(CP.iT_triple)+1
-            if state.has_melting_line():
-                try:
-                    pmelt_min = state.melting_line(CP.iP_min, -1, -1)
-                    if p < pmelt_min:
-                        T0 = Tmin
-                    else:
-                        T0 = state.melting_line(CP.iT, CP.iP, p)
-                except Exception as E:
-                    T0 = Tmin + 1.1
-                    print('MeltingLine:', E)
-            else:
-                T0 = Tmin+1.1
 
-            for T in np.linspace(T0, state.keyed_output(CP.iT_critical)-0.5, 20):
+            for T in np.linspace(Tmin, state.keyed_output(CP.iT_critical)-0.5, 20):
                 state_QT = CP.AbstractState('HEOS', self.fluid)
 
                 try:
-                    # Update the state using PT inputs in order to calculate all the remaining inputs
+                    # Update the state using QT inputs in order to calculate all the remaining inputs
                     state_QT.update(CP.QT_INPUTS, q, T)
                 except ValueError as VE:
                     print('consistency',VE)
@@ -377,7 +365,7 @@ class ConsistencyAxis(object):
                 try:
                     state.update(pairkey, state_QT.keyed_output(key1), state_QT.keyed_output(key2))
                 except ValueError as VE:
-                    print('update', VE)
+                    print('update', state_QT.keyed_output(key1), state_QT.keyed_output(key2), VE)
                     _exception = True
 
                 x = self.to_axis_units(xparam, state_QT.keyed_output(xkey))
