@@ -60,21 +60,22 @@ bp = None
 
 
 # The basic settings for he plots
-xypoints = 250
+xypoints = 1000
 loops    = 1
 repeat   = 1
 runs     = 0
-maxruns  = 10
+maxruns  = 50
 plot     = True
 calc     = True
-check    = True
+check    = True 
 folder   = "dataTTSE"
 figures  = "figuresTTSE"
 #np.random.seed(1984)
 
 
 #fluids  = ["CO2","Pentane","R134a","Water","Air","LiBr-0%"]
-fluids  = ["CO2","Pentane","R134a","Air"]
+fluids  = ["CO2","Pentane","R134a"]
+
 #glskeys = [r"\glsentryshort{co2}",r"\glsentryshort{pentane}",r"\glsentryshort{r134a}",r"\glsentryshort{water}",r"\glsentryshort{air}",r"\glsentryshort{libr} \SI{0}{\percent}"]
 #glskeys = [r"\ce{CO2}",r"n-Ppentane",r"R134a",r"Water",r"Air",r"\glsentryshort{libr} \SI{0}{\percent}"]
 repList = []
@@ -1435,7 +1436,7 @@ for fluidstr in fluids:
                 TP = None
 
             state = getStateObj(propsfluid)
-            if False and backend=="HEOS" and state.has_melting_line():
+            if backend=="HEOS" and state.has_melting_line():
                 p_melt = np.logspace(np.log10(state.melting_line(CoolProp.constants.iP_min, CoolProp.constants.iT, 0)),np.log10(state.melting_line(CoolProp.constants.iP_max, CoolProp.constants.iT, 0)),xypoints)
                 #p_melt = p_range
                 ML = dict(T=[],D=[],H=[],S=[],P=p_melt)
@@ -1539,7 +1540,7 @@ for fluidstr in fluids:
                 y_data = getSingleData(fld, backend, "P", fluidData)
 
                 gs  = gridspec.GridSpec(1, 2, wspace=None, hspace=None, width_ratios=[10,1])
-                ax1 = fg.add_subplot(gs[0,0], axisbg='magenta')
+                ax1 = fg.add_subplot(gs[0,0], axisbg='Tan')
                 ax1.set_yscale('log')
                 #ax2 = ax1.twinx()
 
