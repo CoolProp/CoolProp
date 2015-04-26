@@ -39,8 +39,8 @@ void JSONFluidLibrary::set_fluid_enthalpy_entropy_offset(const std::string &flui
             it2->second.EOS().hs_anchor.hmolar = HEOS->hmolar();
             it2->second.EOS().hs_anchor.smolar = HEOS->smolar();
             
-            // Calculate the new enthalpy and entropy values at the reducing stat
-            HEOS->update(DmolarT_INPUTS, it2->second.EOS().reduce.rhomolar, it2->second.EOS().reduce.T);
+            // Calculate the new enthalpy and entropy values at the reducing state
+            HEOS->update(DmolarT_INPUTS, it2->second.EOS().reduce.rhomolar+1e-12, it2->second.EOS().reduce.T+1e-12);
             it2->second.EOS().reduce.hmolar = HEOS->hmolar();
             it2->second.EOS().reduce.smolar = HEOS->smolar();
         }
