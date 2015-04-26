@@ -349,7 +349,7 @@ class ConsistencyAxis(object):
 
         for q in np.linspace(0, 1, 20):
 
-            Tmin = state.keyed_output(CP.iT_triple)
+            Tmin = state.keyed_output(CP.iT_triple)+1
             if state.has_melting_line():
                 try:
                     pmelt_min = state.melting_line(CP.iP_min, -1, -1)
