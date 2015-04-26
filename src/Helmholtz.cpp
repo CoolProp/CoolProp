@@ -322,10 +322,17 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
         const CoolPropDbl theta = (1.0-tau)+Ai*pow(POW2(delta-1.0), 1.0/(2.0*betai));
         const CoolPropDbl dtheta_dTau = -1;
         const CoolPropDbl dtheta_dDelta = Ai/(betai)*pow(POW2(delta-1), 1/(2*betai)-1)*(delta-1);
-        const CoolPropDbl d2theta_dDelta2 = Ai/betai*(1/betai-1)*pow(POW2(delta-1), 1/(2*betai)-1);
-        const CoolPropDbl d3theta_dDelta3 = Ai/betai*(2-3/betai+1/POW2(betai))*pow(POW2(delta-1), 1/(2*betai)-1.5);
-        const CoolPropDbl d4theta_dDelta4 = Ai/betai*(-6+11/betai-6/POW2(betai)+1/POW3(betai))*pow(POW2(delta-1), 1/(2*betai)-2);
         
+        const CoolPropDbl d2theta_dDelta2 = Ai/betai*(1/betai-1)*pow(POW2(delta-1), 1/(2*betai)-1);
+        CoolPropDbl d3theta_dDelta3;
+        if (std::abs(delta-1) < DBL_EPSILON){
+            d3theta_dDelta3 = Ai/betai*(2-3/betai+1/POW2(betai))*pow(POW2(delta-1), 1/(2*betai)-1.5);
+        }
+        else{
+            d3theta_dDelta3 = Ai/betai*(2-3/betai+1/POW2(betai))*pow(POW2(delta-1), 1/(2*betai))/POW3(delta-1);
+        }
+        const CoolPropDbl d4theta_dDelta4 = Ai/betai*(-6+11/betai-6/POW2(betai)+1/POW3(betai))*pow(POW2(delta-1), 1/(2*betai)-2);
+
         // Derivatives of PSI (OK - checked)
         const CoolPropDbl PSI = exp(-Ci*POW2(delta-1.0)-Di*POW2(tau-1.0));
         const CoolPropDbl dPSI_dDelta_over_PSI = -2.0*Ci*(delta-1.0);
@@ -358,7 +365,13 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
         const CoolPropDbl d3DELTA_dTau3 = 0;
         const CoolPropDbl d3DELTA_dDelta_dTau2 = 0;
         const CoolPropDbl d3DELTA_dDelta2_dTau = 2*dtheta_dTau*d2theta_dDelta2;
-        const CoolPropDbl d3DELTA_dDelta3 = 2*(theta*d3theta_dDelta3 + 3*dtheta_dDelta*d2theta_dDelta2 + 2*Bi*ai*(2*ai*ai - 3*ai + 1)*pow(POW2(delta-1.0), ai -1.0 -0.5));
+        CoolPropDbl d3DELTA_dDelta3;
+        if (std::abs(delta-1) < DBL_EPSILON){
+            d3DELTA_dDelta3 = 2*(theta*d3theta_dDelta3 + 3*dtheta_dDelta*d2theta_dDelta2 + 2*Bi*ai*(2*ai*ai - 3*ai + 1)*pow(POW2(delta-1.0), ai -1.0 - 0.5));
+        }
+        else{
+            d3DELTA_dDelta3 = 2*(theta*d3theta_dDelta3 + 3*dtheta_dDelta*d2theta_dDelta2 + 2*Bi*ai*(2*ai*ai - 3*ai + 1)*pow(POW2(delta-1.0), ai-1.0)/(delta-1));
+        }
         const CoolPropDbl d4DELTA_dTau4 = 0;
         const CoolPropDbl d4DELTA_dDelta_dTau3 = 0;
         const CoolPropDbl d4DELTA_dDelta2_dTau2 = 0;
