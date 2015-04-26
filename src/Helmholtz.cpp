@@ -318,12 +318,13 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
         const CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
 
         // Derivatives of theta (all others are zero) (OK - checked)
+        // Do not factor because then when delta = 1 you are dividing by 0
         const CoolPropDbl theta = (1.0-tau)+Ai*pow(POW2(delta-1.0), 1.0/(2.0*betai));
         const CoolPropDbl dtheta_dTau = -1;
         const CoolPropDbl dtheta_dDelta = Ai/(betai)*pow(POW2(delta-1), 1/(2*betai)-1)*(delta-1);
-        const CoolPropDbl d2theta_dDelta2 = (1/betai-1)/(delta-1)*dtheta_dDelta;
-        const CoolPropDbl d3theta_dDelta3 = (1/betai-2)/(delta-1)*d2theta_dDelta2;
-        const CoolPropDbl d4theta_dDelta4 = (1/betai-3)/(delta-1)*d3theta_dDelta3;
+        const CoolPropDbl d2theta_dDelta2 = Ai/betai*(1/betai-1)*pow(POW2(delta-1), 1/(2*betai)-1);
+        const CoolPropDbl d3theta_dDelta3 = Ai/betai*(2-3/betai+1/POW2(betai))*pow(POW2(delta-1), 1/(2*betai)-1.5);
+        const CoolPropDbl d4theta_dDelta4 = Ai/betai*(-6+11/betai-6/POW2(betai)+1/POW3(betai))*pow(POW2(delta-1), 1/(2*betai)-2);
         
         // Derivatives of PSI (OK - checked)
         const CoolPropDbl PSI = exp(-Ci*POW2(delta-1.0)-Di*POW2(tau-1.0));
@@ -345,6 +346,8 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
         const CoolPropDbl d4PSI_dDelta2_dTau2 = d2PSI_dTau2*d2PSI_dDelta2_over_PSI;
         const CoolPropDbl d4PSI_dDelta3_dTau = d3PSI_dDelta3*dPSI_dTau_over_PSI;
         
+        
+
         // Derivatives of DELTA (OK - Checked)
         const CoolPropDbl DELTA = POW2(theta)+Bi*pow(POW2(delta-1.0),ai);
         const CoolPropDbl dDELTA_dTau = 2*theta*dtheta_dTau;
@@ -355,7 +358,7 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
         const CoolPropDbl d3DELTA_dTau3 = 0;
         const CoolPropDbl d3DELTA_dDelta_dTau2 = 0;
         const CoolPropDbl d3DELTA_dDelta2_dTau = 2*dtheta_dTau*d2theta_dDelta2;
-        const CoolPropDbl d3DELTA_dDelta3 = 2*(theta*d3theta_dDelta3 + 3*dtheta_dDelta*d2theta_dDelta2 + 2*Bi*ai*(2*ai*ai - 3*ai + 1)*pow(POW2(delta-1.0), ai-1.0)/(delta-1));
+        const CoolPropDbl d3DELTA_dDelta3 = 2*(theta*d3theta_dDelta3 + 3*dtheta_dDelta*d2theta_dDelta2 + 2*Bi*ai*(2*ai*ai - 3*ai + 1)*pow(POW2(delta-1.0), ai -1.0 -0.5));
         const CoolPropDbl d4DELTA_dTau4 = 0;
         const CoolPropDbl d4DELTA_dDelta_dTau3 = 0;
         const CoolPropDbl d4DELTA_dDelta2_dTau2 = 0;
