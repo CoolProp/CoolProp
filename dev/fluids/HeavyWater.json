@@ -193,6 +193,18 @@
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Herrig-2015", 
       "STATES": {
+        "hs_anchor": {
+          "T": 708.2317, 
+          "T_units": "K", 
+          "hmolar": 1347440762.9027348, 
+          "hmolar_units": "J/mol", 
+          "p": 868573187971672.2, 
+          "p_units": "Pa", 
+          "rhomolar": 15997.994999999999, 
+          "rhomolar_units": "mol/m^3", 
+          "smolar": -33287.806522940875, 
+          "smolar_units": "J/mol/K"
+        }, 
         "reducing": {
           "T": 643.847, 
           "T_units": "K", 
