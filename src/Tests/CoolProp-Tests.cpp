@@ -1449,7 +1449,7 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
     {
         std::vector<std::string> fl(1,fluids[i]);
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(fl));
-        std::string ref_state[3] = {"IIR","ASHRAE","NBP"};
+        std::string ref_state[4] = {"IIR","ASHRAE","NBP","DEF"};
         for (std::size_t j = 0; j < 3; ++j){
         
             // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
@@ -1458,7 +1458,7 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
             SECTION(ss1.str(),"")
             {
                 // Skip impossible reference states
-                if (fluids[i] == "CarbonDioxide"){ continue; }
+                if (fluids[i] == "CarbonDioxide" && ref_state[j] != "DEF"){ continue; }
                 if (fluids[i] == "Water" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
                 if (fluids[i] == "HeavyWater" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
 
@@ -1491,6 +1491,10 @@ TEST_CASE("Test that reference states are correct", "[reference_states]")
             ss2 << "Check state for reducing for " << fluids[i] << " for reference state " << ref_state[j];
             SECTION(ss2.str(),"")
             {
+                // Skip impossible reference states
+                if (fluids[i] == "CarbonDioxide" && ref_state[j] != "DEF"){ continue; }
+                if (fluids[i] == "Water" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
+                if (fluids[i] == "HeavyWater" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
                 // First reset the reference state
                 set_reference_stateS(fluids[i], "DEF");
                 try{
