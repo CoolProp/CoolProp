@@ -730,7 +730,7 @@ TEST_CASE("Tests for solvers in P,T flash using Water", "[flash],[PT]")
     }
     SECTION("Subcritical p slightly subcooled should be ok")
     {
-        double Ts, ps, rho, dT = 1e-4;
+        double Ts, rho, dT = 1e-4;
         CHECK_NOTHROW(Ts = PropsSI("T","P",101325,"Q",0,"Water"));
         CAPTURE(Ts);
         CHECK(ValidNumber(Ts));
@@ -741,7 +741,7 @@ TEST_CASE("Tests for solvers in P,T flash using Water", "[flash],[PT]")
     }
     SECTION("Subcritical p slightly superheated should be ok")
     {
-        double Ts, ps, rho, dT = 1e-4;
+        double Ts, rho, dT = 1e-4;
         CHECK_NOTHROW(Ts = PropsSI("T","P",101325,"Q",0,"Water"));
         CAPTURE(Ts);
         CHECK(ValidNumber(Ts));
@@ -947,7 +947,7 @@ TEST_CASE("Multiple calls to state class are consistent", "[flashdups],[flash],[
 
 TEST_CASE("Test first partial derivatives using PropsSI", "[derivatives]")
 {
-    double hmolar, hmass, T = 300;
+    double T = 300;
     SECTION("Check drhodp|T 3 ways","")
     {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
@@ -1034,7 +1034,7 @@ TEST_CASE("Test first partial derivatives using PropsSI", "[derivatives]")
 
 TEST_CASE("Test second partial derivatives", "[derivatives]")
 {
-    double hmolar, hmass, T = 300;
+    double T = 300;
     SECTION("Check d2pdrho2|T 3 ways","")
     {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));

@@ -782,7 +782,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 double err = std::abs((numeric-analytic)/analytic);
                                 CAPTURE(numeric);
                                 CAPTURE(analytic);
-                                CHECK(err < 1e-8);
+                                CHECK(err < 1e-7);
                             }
                             std::ostringstream ss2;
                             ss2 << "d_ndTrdni_dxj, i=" << i << ", j=" << j;
@@ -848,8 +848,15 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 minus->update(DmolarT_INPUTS, red.rhomolar*rHEOS.delta(), red.T/rHEOS.tau());
                                 double v2 = MixtureDerivatives::dalphar_dxi(*(minus.get()), i, xN_flag);
                                 double numeric = (v1 - v2)/(2*dz);
-                                double err = std::abs((numeric-analytic)/analytic);
                                 if (std::abs(numeric) < DBL_EPSILON && std::abs(analytic) < DBL_EPSILON){break;}
+                                double err;
+                                if (std::abs(analytic) > DBL_EPSILON){
+                                    err = std::abs((numeric-analytic)/analytic);
+                                }
+                                else{
+                                    err = numeric-analytic;
+                                }
+                                
                                 CAPTURE(numeric);
                                 CAPTURE(analytic);
                                 CHECK(err < 1e-8);
