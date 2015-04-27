@@ -392,7 +392,7 @@ class UI_Psychrometry(QDialog):
     def plot(self):
         """Plot chart"""
         Preferences = ConfigParser()
-        Preferences.read("psyrc")
+        Preferences.read("psyrc.py")
 
         self.diagrama2D.axes2D.clear()
         self.diagrama2D.config()
