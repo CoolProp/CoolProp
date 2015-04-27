@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 2.8)
 
 
 if (DEFINED COOLPROP_INSTALL_PREFIX)
-    #set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
+    #set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
 else()
-    set(COOLPROP_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install_root)
+    set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
 endif()
 
@@ -97,21 +97,21 @@ ENDIF ()
 # headers and corresponding dirs.     #
 #######################################
 
-file(GLOB_RECURSE APP_SOURCES "src/*.cpp")
-file(GLOB_RECURSE APP_HEADERS "include/*.h" "src/*.h")
+file(GLOB_RECURSE APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+file(GLOB_RECURSE APP_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
 
 ## You can exclude this file, in case you want to run your own tests or use Catch
-list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
-list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/Tests.cpp")
+list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
 
 ## This file is only needed for the library, normal builds do not need it.
-list(REMOVE_ITEM  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
 
 
-set (APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/Eigen")
-list (APPEND APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/REFPROP-headers")
-list (APPEND APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/msgpack-c/include")
-list (APPEND APP_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/externals/IF97")
+set (APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
+list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/REFPROP-headers")
+list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/msgpack-c/include")
+list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/IF97")
 foreach (_headerFile ${APP_HEADERS})
     get_filename_component(_dir ${_headerFile} PATH)
     list (APPEND APP_INCLUDE_DIRS ${_dir})
@@ -121,11 +121,11 @@ list(REMOVE_DUPLICATES APP_INCLUDE_DIRS)
 include_directories(${APP_INCLUDE_DIRS})
 
 set(SWIG_DEPENDENCIES
-    ${CMAKE_SOURCE_DIR}/include/DataStructures.h
-    ${CMAKE_SOURCE_DIR}/include/CoolProp.h
-    ${CMAKE_SOURCE_DIR}/include/AbstractState.h
-    ${CMAKE_SOURCE_DIR}/include/Configuration.h
-    ${CMAKE_SOURCE_DIR}/include/PhaseEnvelope.h)
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/DataStructures.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/AbstractState.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/Configuration.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/PhaseEnvelope.h)
 
 
 #######################################
@@ -135,7 +135,7 @@ set(SWIG_DEPENDENCIES
 # features, these include:            #
 # DL (CMAKE_DL_LIBS) for REFPROP      #
 #######################################
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/dev/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/Modules/")
 
 set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
 find_package (PythonInterp 2.7 REQUIRED)
@@ -190,7 +190,7 @@ ENDIF()
 
 ###     FLUIDS, MIXTURES JSON       ###
 add_custom_target(generate_headers
-                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/dev/generate_headers.py")
+                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
 
 ###      Library options            ###
 # We already know the bitness from the earlier
@@ -254,16 +254,16 @@ IF ( COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRARY )
   # Project name
   SET (LIB_NAME ${COOLPROP_LIBRARY_NAME})
   #
-  LIST(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
+  LIST(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
   # Static or shared? 
   IF (COOLPROP_STATIC_LIBRARY)
     ADD_LIBRARY(${LIB_NAME} STATIC ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
     INSTALL(TARGETS ${LIB_NAME} DESTINATION static_library/${CMAKE_SYSTEM_NAME} )#TODO: /${BITNESS}bit${CONVENTION} )
-    INSTALL(FILES ${CMAKE_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER} DESTINATION static_library)
+    INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER} DESTINATION static_library)
   ELSEIF (COOLPROP_SHARED_LIBRARY)
     ADD_LIBRARY(${LIB_NAME} SHARED ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
     INSTALL(TARGETS ${LIB_NAME} DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION} )
-    INSTALL(FILES ${CMAKE_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER} DESTINATION shared_library)
+    INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER} DESTINATION shared_library)
     SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -DCOOLPROP_LIB")
     # Now all the compiler specific settings for Visual Studio
     IF (MSVC)
@@ -341,23 +341,23 @@ if (COOLPROP_DEBIAN_PACKAGE)
     if(!UNIX)
       message(FATAL_ERROR "COOLPROP_DEBIAN_PACKAGE can only be used on linux host")
     endif()
-    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+    list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
     add_library(${app_name} SHARED ${APP_SOURCES})
     set_target_properties (${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
     set_target_properties (${app_name} PROPERTIES VERSION ${COOLPROP_VERSION} SOVERSION ${COOLPROP_VERSION_MAJOR})
     add_dependencies (${app_name} generate_headers)
     install (TARGETS ${app_name} DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/lib")
-    install (FILES ${CMAKE_SOURCE_DIR}/include/CoolPropLib.h DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include")
+    install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolPropLib.h DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include")
 endif()
 
 #~ if (COOLPROP_VXWORKS_LIBRARY_MODULE OR COOLPROP_VXWORKS_LIBRARY)
     #~ # strip off the path up to the src directory
     
-    #~ set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
+    #~ set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
     
     #~ set(OBJECTS)
     #~ foreach (_srcFile ${APP_SOURCES})
-        #~ string(REPLACE "${CMAKE_SOURCE_DIR}/src/" "$(OBJ_DIR)/" _el ${_srcFile})
+        #~ string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/src/" "$(OBJ_DIR)/" _el ${_srcFile})
         #~ string(REPLACE ".cpp" ".o" _el ${_el})
         #~ list (APPEND OBJECTS ${_el})
     #~ endforeach()
@@ -371,11 +371,11 @@ endif()
     #~ endforeach()
     #~ string(REPLACE ";" " " INCLUDE_DIRECTORIES "${INCLUDE_DIRECTORIES}")
     
-    #~ CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/Labview/VxWorks/Makefile.in" "Makefile")
+    #~ CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Labview/VxWorks/Makefile.in" "Makefile")
 #~ endif()
 
 if (COOLPROP_VXWORKS_LIBRARY_MODULE OR COOLPROP_VXWORKS_LIBRARY)
-    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+    list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
     add_executable(${app_name} ${APP_SOURCES})
     set_target_properties (${app_name} PROPERTIES SUFFIX ".out" COMPILE_FLAGS "${COMPILE_FLAGS} -DEXTERNC")
     add_dependencies (${app_name} generate_headers)
@@ -389,7 +389,7 @@ if (COOLPROP_MATHCAD_MODULE)
     IF( "${COOLPROP_MATHCAD_ROOT}" STREQUAL "")
         message(FATAL_ERROR "You must provide the path to MathCAD Root directory using something like -DCOOLPROP_MATHCAD_ROOT=\"C:/Program Files/PTC/Mathcad Prime 3.0\"")
     endif()
-    list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+    list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
     list(APPEND APP_SOURCES "wrappers/MathCAD/CoolPropMathcad.cpp")
     add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
     include_directories("${COOLPROP_MATHCAD_ROOT}/Custom Functions")
@@ -402,7 +402,7 @@ endif()
 # EES is only compiled for windows
 if (COOLPROP_EES_MODULE)
   list (APPEND APP_SOURCES "wrappers/EES/main.cpp")
-  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
   include_directories(${APP_INCLUDE_DIRS})
   add_library(COOLPROP_EES SHARED ${APP_SOURCES})
   set_target_properties (COOLPROP_EES PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
@@ -410,7 +410,7 @@ if (COOLPROP_EES_MODULE)
   set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
   message(STATUS "Injecting the version COOLPROP_VERSION=${COOLPROP_VERSION}")
   # Put the version into the InnoInstaller setup file
-  CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/EES/BuildInnoInstaller.iss.in" "${CMAKE_CURRENT_BINARY_DIR}/BuildInnoInstaller.iss")
+  CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/BuildInnoInstaller.iss.in" "${CMAKE_CURRENT_BINARY_DIR}/BuildInnoInstaller.iss")
   if (!MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
@@ -431,7 +431,7 @@ if (COOLPROP_EES_MODULE)
     foreach (_FILE ${REQUIRED_FILES})
         add_custom_command(TARGET COOLPROP_EES
                            PRE_BUILD
-                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/wrappers/EES/${_FILE} ${CMAKE_CURRENT_BINARY_DIR}/.)
+                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/${_FILE} ${CMAKE_CURRENT_BINARY_DIR}/.)
     endforeach()
   
   # Run InnoSetup to make the installer (must be on your path)
@@ -464,7 +464,7 @@ if (COOLPROP_OCTAVE_MODULE)
   
   add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
 
-  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
 
   set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}")
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
@@ -500,7 +500,7 @@ if (COOLPROP_OCTAVE_MODULE)
   add_custom_command(TARGET CoolProp
                      POST_BUILD
                      COMMAND python example_generator.py Octave "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
-                     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/dev/scripts/examples")
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.m" DESTINATION Octave)
   install (TARGETS ${app_name} DESTINATION Octave/Octave${OCTAVE_VERSION}_${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
 endif()
@@ -527,7 +527,7 @@ if (COOLPROP_CSHARP_MODULE)
   message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
   
   # Set properties before adding module
-  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
   SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}" CPLUSPLUS ON)
   
   SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
@@ -547,15 +547,15 @@ if (COOLPROP_CSHARP_MODULE)
   add_custom_command(TARGET CoolProp
                      POST_BUILD
                      COMMAND python example_generator.py Csharp "${CMAKE_CURRENT_BINARY_DIR}/Example.cs"
-                     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/dev/scripts/examples")
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.cs" DESTINATION Csharp)
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" DESTINATION ${CMAKE_INSTALL_PREFIX}/Csharp)
   install (TARGETS ${app_name} DESTINATION Csharp/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
   if (DEFINED BUILD_TESTING)
-    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/testing_root/Csharp${BITNESS})
     # Copy the shared object to the folder with the executable - no idea like java.library.path in C#
-    install (TARGETS ${app_name} DESTINATION ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+    install (TARGETS ${app_name} DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/testing_root/Csharp${BITNESS})
   endif()
   file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/*.cs cp_cs_path)
   if (${BITNESS} EQUAL "32")
@@ -565,10 +565,10 @@ if (COOLPROP_CSHARP_MODULE)
   endif()
   add_test(NAME Csharptestbuild
            COMMAND ${CSHARP_COMPILER} -out:Example.exe ${CSHARP_PLAT} ${cp_cs_path}
-           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/testing_root/Csharp${BITNESS})
   add_test(NAME Csharptestrun
            COMMAND ${CSHARP_INTERPRETER} Example.exe
-           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Csharp${BITNESS})
+           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/testing_root/Csharp${BITNESS})
 endif()
 
 if (COOLPROP_VBDOTNET_MODULE)
@@ -594,7 +594,7 @@ if (COOLPROP_VBDOTNET_MODULE)
   message(STATUS "options passed to swig: ${SWIG_OPTIONS}")
   
   # Set properties before adding module
-  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
   SET_PROPERTY(SOURCE ${I_FILE} PROPERTY CPLUSPLUS ON)
   SET_PROPERTY(SOURCE ${I_FILE} PROPERTY SWIG_FLAGS ${SWIG_OPTIONS})
   SWIG_ADD_MODULE(CoolProp csharp ${I_FILE} ${APP_SOURCES})
@@ -609,7 +609,7 @@ if (COOLPROP_VBDOTNET_MODULE)
   
   add_custom_command(TARGET CoolProp
                      PRE_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/wrappers/VB.NET/CoolPropVB ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB
+                     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/VB.NET/CoolPropVB ${CMAKE_CURRENT_BINARY_DIR}/CoolPropVB
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   add_custom_command(TARGET CoolProp
                      POST_BUILD
@@ -645,7 +645,7 @@ if (COOLPROP_JAVA_MODULE)
   include_directories(${JAVA_INCLUDE_PATH}/win32)
   include_directories(${JAVA_INCLUDE_PATH}/linux)
 
-  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
 
   set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}")
   string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
@@ -673,7 +673,7 @@ if (COOLPROP_JAVA_MODULE)
   add_custom_command(TARGET CoolProp
                      POST_BUILD
                      COMMAND python example_generator.py Java "${CMAKE_CURRENT_BINARY_DIR}/Example.java"
-                     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/dev/scripts/examples")
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
   
   # Install all the generated java files
   install(
@@ -684,13 +684,13 @@ if (COOLPROP_JAVA_MODULE)
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
   install (TARGETS ${app_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
-  execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
+  execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/testing_root/Java${BITNESS})
   add_test(NAME Javatestbuild
            COMMAND javac -d . ${CMAKE_INSTALL_PREFIX}/Java/Example.java -cp ${CMAKE_INSTALL_PREFIX}/Java/platform-independent
-           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
+           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/testing_root/Java${BITNESS})
   add_test(NAME Javatestrun
            COMMAND ${Java_JAVA_EXECUTABLE} -Djava.library.path=${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit Example
-           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing_root/Java${BITNESS})
+           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/testing_root/Java${BITNESS})
 endif()
 
 if (COOLPROP_PHP_MODULE)
@@ -713,7 +713,7 @@ if (COOLPROP_PHP_MODULE)
   
   add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
 
-  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
 
   set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}")
   string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
@@ -761,7 +761,7 @@ if (COOLPROP_SCILAB_SWIG_MODULE)
   SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
   set(SCILAB_INCLUDE_PATH "$ENV{SCILAB_ROOT}/include")
     	
-  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
   
   add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
 
@@ -800,9 +800,9 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   
   add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
   
-  set(I_FILE "${CMAKE_SOURCE_DIR}/src/CoolProp.i")
+  set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
 
-  list (APPEND APP_SOURCES ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def) # To export mexFunction
+  list (APPEND APP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def) # To export mexFunction
 
   SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES}  ) 
 
@@ -825,7 +825,7 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   add_custom_command(TARGET CoolPropMATLAB_wrap
                      POST_BUILD
                      COMMAND python example_generator.py MATLAB "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
-                     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/dev/scripts/examples")
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     add_custom_command(TARGET CoolPropMATLAB_wrap
                        POST_BUILD
@@ -894,8 +894,8 @@ if (COOLPROP_MATLAB_MODULE)
 
   # set up matlab libraries
   INCLUDE_DIRECTORIES(${MATLAB_INCLUDE_DIR})
-  add_library(PropsSI SHARED ${APP_SOURCES} ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/PropsSI.cpp)
-  add_library(HAPropsSI SHARED ${APP_SOURCES} ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def ${CMAKE_SOURCE_DIR}/wrappers/MATLAB/HAProps.cpp)
+  add_library(PropsSI SHARED ${APP_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/PropsSI.cpp)
+  add_library(HAPropsSI SHARED ${APP_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/HAProps.cpp)
   target_link_libraries(PropsSI ${MATLAB_LIBRARIES})
   target_link_libraries(HAPropsSI ${MATLAB_LIBRARIES})
  
@@ -944,7 +944,7 @@ if (COOLPROP_PYTHON_BINARIES)
   
   add_custom_target(CoolProp
                     COMMAND python setup.py ${COOLPROP_PYTHON_BINARY_VERSIONS} 
-                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Python
                     )
   
 endif()
@@ -953,7 +953,7 @@ if (COOLPROP_PYTHON_PYPI)
     
   add_custom_target(CoolProp
                     COMMAND python prepare_pypi.py --dist-dir=${CMAKE_INSTALL_PREFIX}/Python
-                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/wrappers/Python/pypi
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Python/pypi
                     )
 endif()
 
@@ -970,14 +970,14 @@ if (COOLPROP_JAVASCRIPT_MODULE)
   set(CMAKE_EXE_LINKER_FLAGS "-DEXTERNC --memory-init-file 0 -s ASSERTIONS=1 -s EXPORTED_FUNCTIONS=\"['_main','_F2K','_Props1SI','_PropsSI','_get_global_param_string','_HAProps']\"")
   set(CMAKE_BUILD_TYPE Release)
   
-  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/CoolPropLib.cpp")
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
   include_directories(${APP_INCLUDE_DIRS})
   add_executable(coolprop ${APP_SOURCES})
   add_dependencies (coolprop generate_headers)
   SET_TARGET_PROPERTIES(coolprop PROPERTIES PREFIX "" SUFFIX .js)
   install (TARGETS coolprop DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/coolprop.js.mem" DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript OPTIONAL)
-  install (FILES  "${CMAKE_SOURCE_DIR}/Web/coolprop/wrappers/Javascript/index.html" DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript )
+  install (FILES  "${CMAKE_CURRENT_SOURCE_DIR}/Web/coolprop/wrappers/Javascript/index.html" DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript )
 endif()
 
 if (COOLPROP_MATHEMATICA_MODULE)
@@ -988,13 +988,13 @@ if (COOLPROP_MATHEMATICA_MODULE)
       set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
     endif()
 
-  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/externals/FindMathematica/CMake/Mathematica/")
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/externals/FindMathematica/CMake/Mathematica/")
   find_package(Mathematica COMPONENTS WolframLibrary)
   message(STATUS "Mathematica_WolframLibrary_FOUND=${Mathematica_WolframLibrary_FOUND}")
   message(STATUS "Mathematica_WolframLibrary_INCLUDE_DIR=${Mathematica_WolframLibrary_INCLUDE_DIR}")
   message(STATUS "Mathematica_USERBASE_DIR=${Mathematica_USERBASE_DIR}")
 
-  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/wrappers/Mathematica/CoolPropMathematica.cpp")
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Mathematica/CoolPropMathematica.cpp")
   list(APPEND APP_INCLUDE_DIRS "${Mathematica_WolframLibrary_INCLUDE_DIR}")
   include_directories(${APP_INCLUDE_DIRS})
   add_library(CoolProp SHARED ${APP_SOURCES})
@@ -1007,24 +1007,24 @@ if (COOLPROP_MATHEMATICA_MODULE)
   endif()
   
   install (FILES $<TARGET_FILE:CoolProp> DESTINATION Mathematica/${CMAKE_SYSTEM_NAME})
-  install (FILES  "${CMAKE_SOURCE_DIR}/wrappers/Mathematica/example.nb" DESTINATION Mathematica)
+  install (FILES  "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Mathematica/example.nb" DESTINATION Mathematica)
 endif()
 
 if (COOLPROP_SMATH_MODULE)
     set(COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}.0)
-    CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs.template"
-                   "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
-    message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
-    FILE(WRITE "${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini" "${COOLPROP_VERSION}")
-    message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/config.ini")
-    CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat.template"
-                   "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
-    message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
-    CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat.template"
-                   "${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
-    message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
-    FILE(WRITE "${CMAKE_SOURCE_DIR}/wrappers/SMath/build.bat" "${CMAKE_MAKE_PROGRAM} coolprop_wrapper.sln /p:Configuration=Release")
-    message(STATUS "Generated ${CMAKE_SOURCE_DIR}/wrappers/SMath/build.bat")
+    CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs.template"
+                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
+    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
+    FILE(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/config.ini" "${COOLPROP_VERSION}")
+    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/config.ini")
+    CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat.template"
+                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+    CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat.template"
+                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
+    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
+    FILE(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/build.bat" "${CMAKE_MAKE_PROGRAM} coolprop_wrapper.sln /p:Configuration=Release")
+    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/build.bat")
     
 endif()
 
@@ -1042,10 +1042,10 @@ endif()
 if (COOLPROP_MAIN_MODULE)
   # Allow you to independently add back the testing CPP files
   if(COOLPROP_TEST)
-    list(APPEND  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/Tests.cpp")
-    list(APPEND  APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+    list(APPEND  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/Tests.cpp")
+    list(APPEND  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
   endif()
-  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cxx")
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cxx")
   add_executable        (Main ${APP_SOURCES})
   add_dependencies      (Main generate_headers)
   if(COOLPROP_TEST)
@@ -1060,8 +1060,8 @@ endif()
 if (COOLPROP_CATCH_MODULE)
   enable_testing()
 
-  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/test_main.cxx")
-  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_main.cxx")
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
   
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable        (CatchTestRunner ${APP_SOURCES})
@@ -1085,14 +1085,14 @@ if (COOLPROP_CPP_EXAMPLE_TEST)
 endif()
 
 if (COOLPROP_SNIPPETS)
-  LIST(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
+  LIST(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
   # Make the static library with which the snippets will be linked
   add_library(${app_name} STATIC ${APP_SOURCES})
   add_dependencies (${app_name} generate_headers)
   SET_PROPERTY(TARGET ${app_name} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEXTERNC")
   
   # Collect all the snippets
-  file(GLOB_RECURSE snippets "${CMAKE_SOURCE_DIR}/Web/coolprop/snippets/*.cxx")
+  file(GLOB_RECURSE snippets "${CMAKE_CURRENT_SOURCE_DIR}/Web/coolprop/snippets/*.cxx")
   
   message(STATUS "snippets found = ${snippets}")
   foreach (snippet ${snippets})
@@ -1118,7 +1118,7 @@ if (COOLPROP_SNIPPETS)
     
     add_custom_command(TARGET ${snippet_name}
                        POST_BUILD
-                       COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_SOURCE_DIR}/Web/coolprop/snippets/${snippet_name}.output)
+                       COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_CURRENT_SOURCE_DIR}/Web/coolprop/snippets/${snippet_name}.output)
   
   endforeach()
   
@@ -1127,7 +1127,7 @@ endif()
 if (COOLPROP_CLANG_ADDRESS_SANITIZER)
 
   SET(CMAKE_CXX_FLAGS "-fsanitize=address -g")
-  list(APPEND APP_SOURCES "${CMAKE_SOURCE_DIR}/src/Tests/test_main.cxx")
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_main.cxx")
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable        (CatchTestRunner ${APP_SOURCES})
   add_dependencies      (CatchTestRunner generate_headers)
