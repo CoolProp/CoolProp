@@ -76,24 +76,28 @@ static double MM_Water(void)
 static double B_Air(double T)
 {
     check_fluid_instantiation();
+    Air->specify_phase(CoolProp::iphase_gas);
     Air->update(CoolProp::DmolarT_INPUTS,1e-12,T);
     return Air->keyed_output(CoolProp::iBvirial);
 }
 static double dBdT_Air(double T)
 {
     check_fluid_instantiation();
+    Air->specify_phase(CoolProp::iphase_gas);
     Air->update(CoolProp::DmolarT_INPUTS,1e-12,T);
     return Air->keyed_output(CoolProp::idBvirial_dT);
 }
 static double B_Water(double T)
 {
     check_fluid_instantiation();
+    Water->specify_phase(CoolProp::iphase_gas);
     Water->update(CoolProp::DmolarT_INPUTS,1e-12,T);
     return Water->keyed_output(CoolProp::iBvirial);
 }
 static double dBdT_Water(double T)
 {
     check_fluid_instantiation();
+    Water->specify_phase(CoolProp::iphase_gas);
     Water->update(CoolProp::DmolarT_INPUTS,1e-12,T);
     return Water->keyed_output(CoolProp::idBvirial_dT);
 }
