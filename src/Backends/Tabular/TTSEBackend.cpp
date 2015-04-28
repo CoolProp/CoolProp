@@ -47,7 +47,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                 else{
                     // Find and cache the indices i, j
                     selected_table = SELECTED_PH_TABLE;
-                    single_phase_logph.find_native_nearest_neighbor(_hmolar, _p, cached_single_phase_i, cached_single_phase_j);
+                    single_phase_logph.find_native_nearest_good_neighbor(_hmolar, _p, cached_single_phase_i, cached_single_phase_j);
                 }
             }
             break;

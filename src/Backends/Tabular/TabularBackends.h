@@ -232,11 +232,11 @@ class SinglePhaseGriddedTableData{
 		CoolProp::parameters xkey, ykey;
 		shared_ptr<CoolProp::AbstractState> AS;
 		std::vector<double> xvec, yvec;
+        std::vector<std::vector<std::size_t> > nearest_neighbor_i, nearest_neighbor_j;
 		bool logx, logy;
 		double xmin, ymin, xmax, ymax;
         
         virtual void set_limits() = 0;
-    
     
 		SinglePhaseGriddedTableData(){Nx = 200; Ny = 200; revision = 0;}
     
@@ -273,6 +273,32 @@ class SinglePhaseGriddedTableData{
 				yvec = linspace(ymin, ymax, Ny);
 			}
 		};
+        /// Make matrices of good neighbors if the current value for i,j corresponds to a bad node
+		void make_good_neighbors(void){
+            nearest_neighbor_i.resize(Nx, std::vector<std::size_t>(Ny, std::numeric_limits<std::size_t>::max()));
+            nearest_neighbor_j.resize(Nx, std::vector<std::size_t>(Ny, std::numeric_limits<std::size_t>::max()));
+            for (std::size_t i = 0; i < xvec.size(); ++i){
+                for (std::size_t j = 0; j < yvec.size(); ++j){
+                    nearest_neighbor_i[i][j] = i;
+                    nearest_neighbor_j[i][j] = j;
+                    if (!ValidNumber(T[i][j])){
+                        int xoffsets[] = {-1,1,0,0,-1,1,1,-1};
+                        int yoffsets[] = {0,0,1,-1,-1,-1,1,1};
+                        // Length of offset
+                        std::size_t N = sizeof(xoffsets)/sizeof(xoffsets[0]);
+                        for (std::size_t k = 0; k < N; ++k){
+                            std::size_t iplus = i + xoffsets[k];
+                            std::size_t jplus = j + yoffsets[k];
+                            if (0 < iplus && iplus < Nx-1 && 0 < jplus && jplus < Ny-1 && ValidNumber(T[iplus][jplus])){
+                                nearest_neighbor_i[i][j] = iplus;
+                                nearest_neighbor_j[i][j] = jplus;
+                                 break;
+                            }
+                        }
+                    }
+                }
+            }
+		};
 		/// Take all the matrices that are in the class and pack them into the matrices map for easy unpacking using msgpack
 		void pack(){
 			/* Use X macros to auto-generate the packing code; each will look something like: matrices.insert(std::pair<std::vector<std::vector<double> > >("T", T)); */
@@ -295,6 +321,7 @@ class SinglePhaseGriddedTableData{
 			#undef X
 			Nx = T.size(); Ny = T[0].size();
 			make_axis_vectors();
+            make_good_neighbors();
 		};
 		/// Check that the native inputs (the inputs the table is based on) are in range
 		bool native_inputs_are_in_range(double x, double y){
@@ -348,7 +375,11 @@ class SinglePhaseGriddedTableData{
 			find_native_nearest_neighbor(x,y,i,j);
 			// Check whether found node is good
 			if (!ValidNumber(T[i][j])){
-				// If not, find its nearest good neighbor (nearest good neighbors are precalculated and cached)
+				// If not, find its nearest good neighbor 
+                // (nearest good neighbors are precalculated and cached)
+                std::size_t inew = nearest_neighbor_i[i][j];
+                std::size_t jnew = nearest_neighbor_j[i][j];
+                i = inew; j = jnew;
 			}
 		}
 		/// Find the nearest cell with lower left coordinate (i,j) where (i,j) is a good node, and so are (i+1,j), (i,j+1), (i+1,j+1)
