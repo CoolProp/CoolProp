@@ -230,6 +230,7 @@ public:
     static CoolPropDbl conductivity_hardcoded_water(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl conductivity_hardcoded_R23(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl conductivity_hardcoded_helium(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl conductivity_hardcoded_methane(HelmholtzEOSMixtureBackend &HEOS);
 
     static CoolPropDbl conductivity_critical_hardcoded_ammonia(HelmholtzEOSMixtureBackend &HEOS);
 

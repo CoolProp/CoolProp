@@ -832,6 +832,9 @@ protected:
             if (!target.compare("Water")){
                 fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER; return;
             }
+            else if (!target.compare("Methane")){
+                fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_METHANE; return;
+            }
             else if (!target.compare("R23")){
                 fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23; return;
             }

@@ -284,6 +284,7 @@ public:
                                  CONDUCTIVITY_HARDCODED_WATER, ///< Use \ref TransportRoutines::conductivity_hardcoded_water
                                  CONDUCTIVITY_HARDCODED_R23, ///< Use \ref TransportRoutines::conductivity_hardcoded_R23
                                  CONDUCTIVITY_HARDCODED_HELIUM, ///< Use \ref TransportRoutines::conductivity_hardcoded_helium
+                                 CONDUCTIVITY_HARDCODED_METHANE, ///< Use \ref TransportRoutines::conductivity_hardcoded_methane
                                  CONDUCTIVITY_NOT_HARDCODED
                                  };
     ViscosityDiluteVariables viscosity_dilute;

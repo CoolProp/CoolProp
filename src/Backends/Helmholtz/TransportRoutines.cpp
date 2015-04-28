@@ -944,6 +944,58 @@ CoolPropDbl TransportRoutines::conductivity_hardcoded_helium(HelmholtzEOSMixture
     }
     return lambda_0+lambda_e+lambda_c;
 }
+CoolPropDbl TransportRoutines::conductivity_hardcoded_methane(HelmholtzEOSMixtureBackend &HEOS){
+    
+    double delta = HEOS.rhomolar()/10139.0, tau = 190.55/HEOS.T();
+    double lambda_dilute, lambda_residual, lambda_critical;
+
+    // Viscosity formulation from Friend, JPCRD, 1989
+    // Dilute
+    double C[] = {0, -3.0328138281, 16.918880086, -37.189364917, 41.288861858, -24.615921140, 8.9488430959, -1.8739245042, 0.20966101390, -9.6570437074e-3};
+    double OMEGA22_summer = 0;
+    double t = HEOS.T()/174.0, sigma = 0.36652e-9;
+    for (int i = 1; i <= 9; ++i){
+        OMEGA22_summer += C[i]*pow(t, (i-1.0)/3.0-1.0);
+    }
+    double eta_dilute = 10.50*sqrt(t)*OMEGA22_summer;
+    double re[] = {0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 1, 1};
+    double se[] = {0, 0, 1, 0, 1, 1.5, 0, 2, 0, 1, 0, 1};
+    double ge[] = {0, 0.41250137, -0.14390912, 0.10366993, 0.40287464, -0.24903524, -0.12953131, 0.06575776, 0.02566628, -0.03716526, -0.38798341, 0.03533815};
+    double summer1  = 0, summer2 = 0;
+    for (int i = 1; i <= 9; ++i){
+        summer1 += ge[i]*pow(delta, re[i])*pow(tau, se[i]);
+    }
+    for (int i = 10; i <= 11; ++i){
+        summer2 += ge[i]*pow(delta, re[i])*pow(tau, se[i]);
+    }
+    double eta_residual = 12.149*summer1/(1+summer2);
+    double eta = eta_residual + eta_dilute;
+
+    // Dilute
+    double f_int = 1.458850 - 0.4377162/t;
+    lambda_dilute = 0.51828*eta_dilute*(3.75 - f_int*(POW2(HEOS.tau())*HEOS.d2alpha0_dTau2() + 1.5)); // [mW/m/K]
+    // Residual
+    double rl[] = {0, 1, 3, 4, 4, 5, 5, 2};
+    double sl[] = {0, 0, 0, 0, 1, 0, 1, 0};
+    double jl[] = {0, 2.4149207, 0.55166331, -0.52837734, 0.073809553, 0.24465507, -0.047613626, 1.5554612};
+    double summer = 0;
+    for (int i = 1; i <= 6; ++i){
+        summer += jl[i]*pow(delta, rl[i])*pow(tau, sl[i]);
+    }
+    double delta_sigma_star = 1.0;
+    if (HEOS.T() < HEOS.T_critical() && HEOS.rhomolar() < HEOS.rhomolar_critical()){ 
+        delta_sigma_star = HEOS.saturation_ancillary(iDmolar, 1, iT, HEOS.T())/HEOS.keyed_output(CoolProp::irhomolar_critical);
+    }
+    lambda_residual = 6.29638*(summer + jl[7]*POW2(delta)/delta_sigma_star); // [mW/m/K]
+    // Critical region
+    double Tstar = 1-1/tau;
+    double rhostar = 1-delta;
+    double F_T = 2.646, F_rho = 2.678, F_A = -0.637;
+    double F = exp(-F_T*sqrt(std::abs(Tstar)) - F_rho*POW2(rhostar) - F_A*rhostar);
+    double CHI_T_star = 0.28631*delta*tau/(1+2*delta*HEOS.dalphar_dDelta() + POW2(delta)*HEOS.d2alphar_dDelta2());
+    lambda_critical = 91.855/(eta*POW2(tau))*POW2(1+delta*HEOS.dalphar_dDelta() - delta*tau*HEOS.d2alphar_dDelta_dTau())*pow(CHI_T_star, 0.4681)*F ; //[mW/m/K]
+    return (lambda_dilute + lambda_residual + lambda_critical)*0.001;
+}
 
 void TransportRoutines::conformal_state_solver(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference, CoolPropDbl &T0, CoolPropDbl &rhomolar0)
 {

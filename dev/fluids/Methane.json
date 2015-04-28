@@ -603,6 +603,10 @@
     }
   }, 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Friend-JPCRD-1989", 
+      "hardcoded": "Methane"
+    }, 
     "viscosity": {
       "BibTeX": "QuinonesCisneros-JPCB-2006", 
       "dilute": {

@@ -509,6 +509,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void)
                 return TransportRoutines::conductivity_hardcoded_R23(*this);
             case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HELIUM:
                 return TransportRoutines::conductivity_hardcoded_helium(*this);
+            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_METHANE:
+                return TransportRoutines::conductivity_hardcoded_methane(*this);
             default:
                 throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0].transport.hardcoded_conductivity, name().c_str()));
             }
