@@ -236,8 +236,8 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
              HEOS._rhomolar = HEOS.rhomolar_critical();
              HEOS._p = 0.5*HEOS.SatV->p() + 0.5*HEOS.SatL->p();
         }
-        else if (!is_in_closed_range(Tmin_sat, Tmax_sat, T)){
-            throw ValueError(format("Temperature to QT_flash [%0.8Lg K] must be in range [%0.8Lg K, %0.8Lg K]", T, Tmin_sat, Tmax_sat));
+        else if (!is_in_closed_range(Tmin_sat-0.1, Tmax_sat, T)){
+            throw ValueError(format("Temperature to QT_flash [%0.8Lg K] must be in range [%0.8Lg K, %0.8Lg K]", T, Tmin_sat-0.1, Tmax_sat));
         }
         else if (get_config_bool(CRITICAL_SPLINES_ENABLED) && splines.enabled && HEOS._T > splines.T_min){
             double rhoL = _HUGE, rhoV = _HUGE;
