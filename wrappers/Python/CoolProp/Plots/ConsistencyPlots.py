@@ -347,7 +347,7 @@ class ConsistencyAxis(object):
         xbad, ybad = [], []
         xexcep, yexcep = [], []
 
-        for q in np.linspace(0, 1, 50):
+        for q in np.linspace(0, 1, 20):
 
             Tmin = state.keyed_output(CP.iT_triple)+1
 
