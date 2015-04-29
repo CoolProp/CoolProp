@@ -8,7 +8,7 @@ It was originally developed by Ian Bell, currently a post-doc at the University 
 
 * CoolProp has flexible licensing terms: Commercial - ok! Academic? - ok! |ghlicense|
 
-* For Python, get the latest release via ``pip install coolprop`` from `Python.org <http://pypi.python.org/pypi/CoolProp>`_ |pypidownloads| |pypiversion| 
+* For Python, get the latest release via ``pip install coolprop`` |pypidownloads| |pypiversion| 
 
 * ... other binaries are available from `SourceForge <http://sourceforge.net/projects/coolprop/files>`_  |sfdownloads| |ghversion|
 
@@ -20,7 +20,7 @@ It was originally developed by Ian Bell, currently a post-doc at the University 
 
 * ... you might also find answers in our `FAQ <https://github.com/CoolProp/CoolProp/blob/master/FAQ.md>`_ 
 
-* Accelerate development of things you really need implemented by posting at `Bountysource <https://www.bountysource.com/teams/coolprop>`_  |bounties| 
+* Accelerate development of things you really need implemented by posting at `Bountysource <https://www.bountysource.com/teams/coolprop>`_ 
 
 
 .. 
@@ -35,20 +35,20 @@ It was originally developed by Ian Bell, currently a post-doc at the University 
 
 
 
-.. |ghversion| image:: https://img.shields.io/github/release/CoolProp/CoolProp.svg
+.. |ghversion| image:: https://img.shields.io/github/release/CoolProp/CoolProp.svg?label=SF-binaries
     :alt: CoolProp version tag
 
-.. |sfdownloads| image:: https://img.shields.io/sourceforge/dm/CoolProp.svg
+.. |sfdownloads| image:: https://img.shields.io/sourceforge/dm/CoolProp.svg?label=SF-downloads
     :target: http://sourceforge.net/projects/coolprop/files
     :alt: sourceforge downloads
 
-.. |pypidownloads| image:: https://img.shields.io/pypi/dm/CoolProp.svg
+.. |pypidownloads| image:: https://img.shields.io/pypi/dm/CoolProp.svg?label=PyPI-downloads
     :target: http://pypi.python.org/pypi/CoolProp/
-    :alt: downloads
+    :alt: PyPI downloads
 
-.. |pypiversion| image:: https://img.shields.io/pypi/v/coolprop.svg
+.. |pypiversion| image:: https://img.shields.io/pypi/v/coolprop.svg?label=PyPI-binaries
     :target: http://pypi.python.org/pypi/CoolProp/
-    :alt: latest stable version
+    :alt: PyPI version
 
 .. |ghlicense| image:: https://img.shields.io/github/license/CoolProp/CoolProp.svg
     :target: https://github.com/CoolProp/CoolProp/blob/master/LICENSE
