@@ -40,6 +40,7 @@ void strcpy(std::string &s, const std::string &e){
 }
 
 shared_ptr<CoolProp::HelmholtzEOSBackend> Water, Air;
+shared_ptr<CoolProp::AbstractState> WaterIF97;
 
 namespace HumidAir
 {
@@ -52,6 +53,9 @@ void check_fluid_instantiation()
 {
     if (!Water.get()){
         Water.reset(new CoolProp::HelmholtzEOSBackend("Water"));
+    }
+    if (!WaterIF97.get()){
+        WaterIF97.reset(CoolProp::AbstractState::factory("IF97","Water"));
     }
     if (!Air.get()){
         Air.reset(new CoolProp::HelmholtzEOSBackend("Air"));
@@ -584,7 +588,9 @@ double isothermal_compressibility(double T, double p)
         }
         else
         {
-            Water->update(CoolProp::PT_INPUTS, p, T);
+            // Use IF97 to do the P,T call
+            WaterIF97->update(CoolProp::PT_INPUTS, p, T);
+            Water->update(CoolProp::DmassT_INPUTS, WaterIF97->rhomass(), T);
             k_T = Water->keyed_output(CoolProp::iisothermal_compressibility);
         }
     }
@@ -1116,8 +1122,10 @@ public:
         psi_wb = W_s_wb/(epsilon+W_s_wb);
         if (Twb > 273.16)
         {
+            // Use IF97 to do the flash
+            WaterIF97->update(CoolProp::PT_INPUTS, _p, Twb);
             // Enthalpy of water [J/kg_water]
-            Water->update(CoolProp::PT_INPUTS, _p, Twb);
+            Water->update(CoolProp::DmassT_INPUTS, WaterIF97->rhomass(), Twb);
             h_w = Water->keyed_output(CoolProp::iHmass); //[J/kg_water]
         }
         else
@@ -1773,7 +1781,9 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
             strcpy(units,"1/Pa");
             if (T>273.16)
             {
-                Water->update(CoolProp::PT_INPUTS, p, T);
+                // Use IF97 to do the flash
+                WaterIF97->update(CoolProp::PT_INPUTS, p, T);
+                Water->update(CoolProp::PT_INPUTS, WaterIF97->rhomass(), T);
                 return Water->keyed_output(CoolProp::iisothermal_compressibility);
             }
             else
