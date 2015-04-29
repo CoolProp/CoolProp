@@ -982,7 +982,7 @@ CoolPropDbl TransportRoutines::conductivity_hardcoded_methane(HelmholtzEOSMixtur
     for (int i = 1; i <= 6; ++i){
         summer += jl[i]*pow(delta, rl[i])*pow(tau, sl[i]);
     }
-    double delta_sigma_star = 1.0;
+    double delta_sigma_star = 1.0; // Looks like a typo in Friend - should be 1 instead of 11
     if (HEOS.T() < HEOS.T_critical() && HEOS.rhomolar() < HEOS.rhomolar_critical()){ 
         delta_sigma_star = HEOS.saturation_ancillary(iDmolar, 1, iT, HEOS.T())/HEOS.keyed_output(CoolProp::irhomolar_critical);
     }
@@ -992,7 +992,33 @@ CoolPropDbl TransportRoutines::conductivity_hardcoded_methane(HelmholtzEOSMixtur
     double rhostar = 1-delta;
     double F_T = 2.646, F_rho = 2.678, F_A = -0.637;
     double F = exp(-F_T*sqrt(std::abs(Tstar)) - F_rho*POW2(rhostar) - F_A*rhostar);
-    double CHI_T_star = 0.28631*delta*tau/(1+2*delta*HEOS.dalphar_dDelta() + POW2(delta)*HEOS.d2alphar_dDelta2());
+    double CHI_T_star;
+    if (std::abs(Tstar) < 0.03){
+        if (std::abs(rhostar) < 1e-16){
+            // Equation 26
+            const double LAMBDA = 0.0801, gamma = 1.190;
+            CHI_T_star = LAMBDA*pow(std::abs(Tstar), -gamma);
+        }
+        else if (std::abs(rhostar) < 0.03){
+            // Equation 23
+            const double beta = 0.355, W = -1.401,S = -6.098, E = 0.287, a = 3.352, b = 0.732, R = 0.535, Q = 0.1133;
+            double OMEGA = W*Tstar*pow(std::abs(rhostar), -1/beta);
+            double theta = 1;
+            if (Tstar < -pow(std::abs(rhostar), -1/beta)/S){
+                theta = 1+E*pow(1+S*Tstar*pow(std::abs(rhostar), -1/beta), 2*beta);
+            }
+            CHI_T_star = Q*pow(std::abs(rhostar),-a)*pow(theta, b)/(theta + OMEGA*(theta + R));
+        }
+        else{
+            // Equation 19a
+            CHI_T_star = 0.28631*delta*tau/(1+2*delta*HEOS.dalphar_dDelta() + POW2(delta)*HEOS.d2alphar_dDelta2());
+        }
+    }
+    else{
+        // Equation 19a
+        CHI_T_star = 0.28631*delta*tau/(1+2*delta*HEOS.dalphar_dDelta() + POW2(delta)*HEOS.d2alphar_dDelta2());
+    }
+    
     lambda_critical = 91.855/(eta*POW2(tau))*POW2(1+delta*HEOS.dalphar_dDelta() - delta*tau*HEOS.d2alphar_dDelta_dTau())*pow(CHI_T_star, 0.4681)*F ; //[mW/m/K]
     return (lambda_dilute + lambda_residual + lambda_critical)*0.001;
 }

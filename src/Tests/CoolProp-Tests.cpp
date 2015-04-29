@@ -507,6 +507,12 @@ vel("p-Xylene", "T", 600, "D", 1e-12, "L", 41.73e-3 , 1e-3),
 vel("EthylBenzene", "T", 300, "D", 1e-12, "L", 9.71e-3, 1e-3),
 vel("EthylBenzene", "T", 600, "D", 1e-12, "L", 41.14e-3, 1e-3),
 
+// Friend, JPCRD, 1989
+vel("Methane", "T", 100, "D", 1e-12, "L", 9.83e-3, 1e-3),
+vel("Methane", "T", 400, "D", 1e-12, "L", 49.96e-3, 1e-3),
+vel("Methane", "T", 182, "Q", 0, "L", 82.5e-3, 5e-3),
+vel("Methane", "T", 100, "Dmolar", 28.8e3, "L", 234e-3, 1e-2),
+
 };
 
 TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity],[transport]")
