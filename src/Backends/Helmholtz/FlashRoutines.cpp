@@ -275,12 +275,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 HEOS._rhomolar = HEOS.SatV->rhomolar();
             }
             else{
-                CoolPropDbl psatLanc = HEOS.components[0].ancillaries.pL.evaluate(HEOS._T); // These ancillaries are used explicitly
-                CoolPropDbl psatVanc = HEOS.components[0].ancillaries.pV.evaluate(HEOS._T); // These ancillaries are used explicitly
-                HEOS._p = HEOS._Q*psatVanc + (1-HEOS._Q)*psatLanc;
-                HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
-                HEOS.SatL->update(DmolarT_INPUTS, rhoLsat, HEOS._T);
-                HEOS.SatV->update(DmolarT_INPUTS, rhoVsat, HEOS._T);
+                throw CoolProp::ValueError(format("For pseudo-pure fluid, quality must be equal to 0 or 1.  Two-phase quality is not defined"));
             }
 
             try{                
