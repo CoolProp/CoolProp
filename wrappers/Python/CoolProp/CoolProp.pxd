@@ -44,6 +44,7 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     string _extract_fractions "CoolProp::extract_fractions"(string input, vector[double] fractions) except +
     void _set_reference_stateS "CoolProp::set_reference_stateS"(string, string) except +
     void _set_reference_stateD "CoolProp::set_reference_stateD"(string, double, double, double, double) except +
+    double _saturation_ancillary "CoolProp::saturation_ancillary"(string, string, int, string, double) except +
     
     # Convenience functions from v4
 #     long _get_parameter_index "CoolProp::get_parameter_index" (string param)

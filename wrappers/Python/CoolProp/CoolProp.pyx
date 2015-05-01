@@ -165,6 +165,12 @@ cpdef is_trivial_parameter(int key):
 
 cpdef get_fluid_param_string(string fluid, string param):
     return _get_fluid_param_string(fluid, param)
+    
+cpdef double saturation_ancillary(string name, string output, int Q, string input, double value):
+    """
+    Return a value from the saturation ancillary equations; python wrapper of :cpapi:`CoolProp::saturation_ancillary`
+    """
+    return _saturation_ancillary(name, output, Q, input, value)
 
 cpdef __Props_err1(fcn, in1,in2):
     errstr = _get_global_param_string('errstring')
