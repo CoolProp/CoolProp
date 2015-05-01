@@ -274,7 +274,7 @@ REFPROPMixtureBackend::REFPROPMixtureBackend(const std::vector<std::string>& flu
     // Try to add this fluid to REFPROP - might want to think about making array of
     // components and setting mole fractions if they change a lot.
     this->set_REFPROP_fluids(fluid_names);
-    
+
     // Bump the number of REFPROP backends that are in existence;
     REFPROPMixtureBackend::instance_counter++;
 }
@@ -285,7 +285,7 @@ REFPROPMixtureBackend::~REFPROPMixtureBackend() {
     // Unload the shared library when the last instance is about to be destroyed
     if (REFPROPMixtureBackend::instance_counter == 0){
         if (RefpropdllInstance!=NULL) {
-            
+
             // Unload it
             #if defined(__ISWINDOWS__)
                 FreeLibrary(RefpropdllInstance);
@@ -387,7 +387,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
 
         // Check platform support
         if(!REFPROP_supported()){ throw NotImplementedError("You cannot use the REFPROPMixtureBackend."); }
-    
+
         if (N == 1 && upper(components_joined_raw).find(".MIX") != std::string::npos){
             // It's a predefined mixture
             ierr = 0;
@@ -399,13 +399,13 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             if (!alt_hmx_bnc_path.empty()){
                 strcpy(hmx_bnc, alt_hmx_bnc_path.c_str());
             }
-            SETMIXdll(mix, 
-                      hmx_bnc, 
-                      reference_state, 
-                      &N, 
-                      component_string, 
-                      &(x[0]), 
-                      &ierr, 
+            SETMIXdll(mix,
+                      hmx_bnc,
+                      reference_state,
+                      &N,
+                      component_string,
+                      &(x[0]),
+                      &ierr,
                       herr,
                       255,
                       255,
@@ -593,7 +593,6 @@ CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_reducing(){
     return static_cast<CoolPropDbl>(rhored_mol_L*1000);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
-    // TODO: Always returns the first component triple point
 //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas)
 //     c
 //     c  provides fluid constants for specified component
@@ -613,9 +612,21 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
 //     c     Rgas--gas constant [J/mol-K]
     this->check_loaded_fluid();
     double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
-    long comp = 1L;
-    INFOdll(&comp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
-    return static_cast<CoolPropDbl>(ttrp);
+    double summer = 0;
+    long icomp = 1L;
+    // Get value for first component
+    INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
+    // Check if more than one
+    std::size_t size = mole_fractions.size();
+    if (size <= 1) return static_cast<CoolPropDbl>(ttrp);
+    else summer += mole_fractions[0]*ttrp;
+    throw NotImplementedError("REFPROP does not provide triple points for mixtures.");
+    for (std::size_t i = 1; i < size; ++i){
+    	icomp = static_cast<long>(i+1);
+    	INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
+        summer += mole_fractions[i]*ttrp;
+    }
+    return static_cast<CoolPropDbl>(summer);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_gas_constant(){
     this->check_loaded_fluid();
@@ -741,7 +752,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
     SATSPLNdll(&(mole_fractions[0]),  // Inputs
                &ierr, herr, errormessagelength);       // Error message
     if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
-    
+
     // Clear the phase envelope data
     PhaseEnvelope = PhaseEnvelopeData();
     /*
@@ -1269,7 +1280,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             //         kq = 1 quality on MOLAR basis [moles vapor/total moles]
             //         kq = 2 quality on MASS basis [mass vapor/total mass]
             long kq = 1;
-            
+
             // c  Estimate temperature, pressure, and compositions to be used
             // c  as initial guesses to SATTP
             // c
@@ -1297,9 +1308,9 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 
             // Unit conversion for REFPROP
             p_kPa = 0.001*value1; _Q = value2; // Want p in [kPa] in REFPROP
-            
+
             long iFlsh = 0, iGuess = 0;
-            if (std::abs(value2) < 1e-10){ 
+            if (std::abs(value2) < 1e-10){
                 iFlsh = 3; // bubble point
             }
             else if (std::abs(value2-1) < 1e-10){
@@ -1308,8 +1319,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (iFlsh != 0){
                 // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
                 SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess,
-                      &rho_mol_L, &rhoLmol_L,&rhoVmol_L, 
-                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q, 
+                      &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
+                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
                       &ierr,herr,errormessagelength);
             }
             else{
@@ -1347,7 +1358,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 
             // Use flash routine to find properties
 			long iFlsh = 0, iGuess = 0;
-            if (std::abs(value2) < 1e-10){ 
+            if (std::abs(value2) < 1e-10){
                 iFlsh = 1; // bubble point with T given
             }
             else if (std::abs(value2-1) < 1e-10){
@@ -1356,8 +1367,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (iFlsh != 0){
                 // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
                 SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess,
-                      &rho_mol_L, &rhoLmol_L,&rhoVmol_L, 
-                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q, 
+                      &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
+                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
                       &ierr,herr,errormessagelength);
             }
 			else{
@@ -1539,7 +1550,7 @@ TEST_CASE("Check trivial inputs for REFPROP work", "[REFPROP_trivial]")
         {
             double cp_val = CoolProp::PropsSI(inputs[i],"P",0,"T",0,"HEOS::Water");
             double rp_val = CoolProp::PropsSI(inputs[i],"P",0,"T",0,"REFPROP::Water");
-            
+
             std::string errstr = CoolProp::get_global_param_string("errstring");
             CAPTURE(errstr);
             double err = (cp_val - rp_val)/cp_val;
