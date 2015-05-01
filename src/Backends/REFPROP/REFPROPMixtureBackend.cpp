@@ -551,6 +551,11 @@ CoolPropDbl REFPROPMixtureBackend::calc_Tmax(void){
     limits(Tmin, Tmax, rhomolarmax, pmax);
     return static_cast<CoolPropDbl>(Tmax);
 };
+CoolPropDbl REFPROPMixtureBackend::calc_Tmin(void){
+  double Tmin, Tmax, rhomolarmax, pmax;
+  limits(Tmin, Tmax, rhomolarmax, pmax);
+  return static_cast<CoolPropDbl>(Tmin);
+};
 CoolPropDbl REFPROPMixtureBackend::calc_T_critical(){
     this->check_loaded_fluid();
     long ierr = 0;
@@ -588,11 +593,29 @@ CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_reducing(){
     return static_cast<CoolPropDbl>(rhored_mol_L*1000);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
+    // TODO: Always returns the first component triple point
+//     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas)
+//     c
+//     c  provides fluid constants for specified component
+//     c
+//     c  input:
+//     c    icomp--component number in mixture; 1 for pure fluid
+//     c  outputs:
+//     c      wmm--molecular weight [g/mol]
+//     c     ttrp--triple point temperature [K]
+//     c    tnbpt--normal boiling point temperature [K]
+//     c       tc--critical temperature [K]
+//     c       pc--critical pressure [kPa]
+//     c       Dc--critical density [mol/L]
+//     c       Zc--compressibility at critical point [pc/(Rgas*Tc*Dc)]
+//     c      acf--acentric factor [-]
+//     c      dip--dipole moment [debye]
+//     c     Rgas--gas constant [J/mol-K]
     this->check_loaded_fluid();
-    double tmin, tmax, Dmax, pmax;
-    char htyp[3] = {'E','O','S'};
-    LIMITSdll(htyp, &(mole_fractions[0]), &tmin, &tmax, &Dmax, &pmax, 3);
-    return static_cast<CoolPropDbl>(tmin);
+    double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
+    long comp = 1L;
+    INFOdll(&comp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
+    return static_cast<CoolPropDbl>(ttrp);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_gas_constant(){
     this->check_loaded_fluid();
