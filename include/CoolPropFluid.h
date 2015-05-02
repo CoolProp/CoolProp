@@ -275,6 +275,7 @@ class TransportPropertyData
 {
 public:
     enum ViscosityHardcodedEnum {VISCOSITY_HARDCODED_WATER, ///< Use \ref TransportRoutines::viscosity_water_hardcoded
+                                 VISCOSITY_HARDCODED_HEAVYWATER, ///< Use \ref TransportRoutines::viscosity_heavywater_hardcoded
                               VISCOSITY_HARDCODED_HELIUM, ///< Use \ref TransportRoutines::viscosity_helium_hardcoded
                               VISCOSITY_HARDCODED_R23, ///< Use \ref TransportRoutines::viscosity_R23_hardcoded
                               VISCOSITY_HARDCODED_METHANOL, ///< Use \ref TransportRoutines::viscosity_methanol_hardcoded
@@ -282,6 +283,7 @@ public:
                               };
     enum ConductivityHardcodedEnum {
                                  CONDUCTIVITY_HARDCODED_WATER, ///< Use \ref TransportRoutines::conductivity_hardcoded_water
+                                 CONDUCTIVITY_HARDCODED_HEAVYWATER, ///< Use \ref TransportRoutines::conductivity_hardcoded_heavywater
                                  CONDUCTIVITY_HARDCODED_R23, ///< Use \ref TransportRoutines::conductivity_hardcoded_R23
                                  CONDUCTIVITY_HARDCODED_HELIUM, ///< Use \ref TransportRoutines::conductivity_hardcoded_helium
                                  CONDUCTIVITY_HARDCODED_METHANE, ///< Use \ref TransportRoutines::conductivity_hardcoded_methane

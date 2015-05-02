@@ -112,6 +112,7 @@ public:
      */
     static CoolPropDbl viscosity_methanol_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
 
+    static CoolPropDbl viscosity_heavywater_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl viscosity_R23_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
@@ -227,6 +228,7 @@ public:
     static CoolPropDbl conductivity_dilute_eta0_and_poly(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl conductivity_residual_polynomial_and_exponential(HelmholtzEOSMixtureBackend &HEOS);
 
+    static CoolPropDbl conductivity_hardcoded_heavywater(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl conductivity_hardcoded_water(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl conductivity_hardcoded_R23(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl conductivity_hardcoded_helium(HelmholtzEOSMixtureBackend &HEOS);

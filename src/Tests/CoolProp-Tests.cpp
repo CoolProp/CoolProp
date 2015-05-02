@@ -247,6 +247,10 @@ vel("m-Xylene", "T", 616, "Dmass", 220, "V", 41.6424e-6, 1e-2), // CoolProp is c
 vel("p-Xylene", "T", 620, "Dmass", 287, "V", 23.98e-6, 1e-2),
 vel("EthylBenzene", "T", 617, "Dmass", 316, "V", 33.22e-6, 1e-2),
 
+// Heavy Water, IAPWS formulation
+vel("HeavyWater", "T", 0.5000*643.847, "Dmass", 3.07*358, "V", 12.0604912273*55.2651e-6, 1e-5),
+vel("HeavyWater", "T", 0.9000*643.847, "Dmass", 2.16*358, "V", 1.6561616211*55.2651e-6, 1e-5),
+vel("HeavyWater", "T", 1.2000*643.847, "Dmass", 0.8*358, "V", 0.7651099154*55.2651e-6, 1e-5),
 };
 
 class TransportValidationFixture
@@ -512,6 +516,11 @@ vel("Methane", "T", 100, "D", 1e-12, "L", 9.83e-3, 1e-3),
 vel("Methane", "T", 400, "D", 1e-12, "L", 49.96e-3, 1e-3),
 vel("Methane", "T", 182, "Q", 0, "L", 82.5e-3, 5e-3),
 vel("Methane", "T", 100, "Dmolar", 28.8e3, "L", 234e-3, 1e-2),
+
+// Heavy Water, IAPWS formulation
+vel("HeavyWater", "T", 0.5000*643.847, "Dmass", 3.07*358, "V", 835.786416818*0.742128e-3, 1e-5),
+vel("HeavyWater", "T", 0.9000*643.847, "Dmass", 2.16*358, "V", 627.777590127*0.742128e-3, 1e-5),
+vel("HeavyWater", "T", 1.2000*643.847, "Dmass", 0.8*358, "V", 259.605241187*0.742128e-3, 1e-5),
 
 };
 

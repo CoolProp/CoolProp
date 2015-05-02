@@ -649,6 +649,9 @@ protected:
             if (!target.compare("Water")){
                 fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER; return;
             }
+            else if (!target.compare("HeavyWater")){
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER; return;
+            }
             else if (!target.compare("Helium")){
                 fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM; return;
             }
@@ -831,6 +834,9 @@ protected:
             std::string target = cpjson::get_string(conductivity, "hardcoded");
             if (!target.compare("Water")){
                 fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER; return;
+            }
+            else if (!target.compare("HeavyWater")){
+                fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER; return;
             }
             else if (!target.compare("Methane")){
                 fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_METHANE; return;

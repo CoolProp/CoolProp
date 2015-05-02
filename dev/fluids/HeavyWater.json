@@ -476,5 +476,15 @@
       "smolar": 164.93862020846, 
       "smolar_units": "J/mol/K"
     }
+  }, 
+  "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "IAPWS-D2O-2007-Transport", 
+      "hardcoded": "HeavyWater"
+    }, 
+    "viscosity": {
+      "BibTeX": "IAPWS-D2O-2007-Transport", 
+      "hardcoded": "HeavyWater"
+    }
   }
 }

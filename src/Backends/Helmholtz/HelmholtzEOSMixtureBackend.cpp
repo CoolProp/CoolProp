@@ -428,6 +428,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity(void)
             {
             case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER:
                 return TransportRoutines::viscosity_water_hardcoded(*this);
+            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER:
+                return TransportRoutines::viscosity_heavywater_hardcoded(*this);
             case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM:
                 return TransportRoutines::viscosity_helium_hardcoded(*this);
             case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_R23:
@@ -505,6 +507,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void)
             {
             case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER:
                 return TransportRoutines::conductivity_hardcoded_water(*this);
+            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER:
+                return TransportRoutines::conductivity_hardcoded_heavywater(*this);
             case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23:
                 return TransportRoutines::conductivity_hardcoded_R23(*this);
             case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HELIUM:

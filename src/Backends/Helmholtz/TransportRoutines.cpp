@@ -260,6 +260,21 @@ static void visc_Helper(double Tbar, double rhobar, double *mubar_0, double *mub
     }
     *mubar_1=exp(rhobar*sum);
 }
+CoolPropDbl TransportRoutines::viscosity_heavywater_hardcoded(HelmholtzEOSMixtureBackend &HEOS){
+    double Tbar = HEOS.T()/643.847, rhobar = HEOS.rhomass()/358;
+    double A[] = {1.000000, 0.940695, 0.578377, -0.202044};
+    int I[] = {0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 0, 1, 2, 5, 0, 1, 2, 3, 0, 1, 3, 5, 0, 1, 5, 3};
+    int J[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6};
+    double Bij[] = {0.4864192, -0.2448372, -0.8702035, 0.8716056, -1.051126, 0.3458395, 0.3509007, 1.315436, 1.297752, 1.353448, -0.2847572, -1.037026, -1.287846, -0.02148229, 0.07013759, 0.4660127, 0.2292075, -0.4857462, 0.01641220, -0.02884911, 0.1607171, -0.009603846, -0.01163815, -0.008239587, 0.004559914, -0.003886659};
+    double mu0 = sqrt(Tbar)/(A[0] + A[1]/Tbar + A[2]/POW2(Tbar) + A[3]/POW3(Tbar));
+    double summer = 0;
+    for(int i = 0; i < 26; ++i){
+        summer += Bij[i]*pow(1/Tbar-1, I[i])*pow(rhobar-1, J[i]);
+    }
+    double mu1 = exp(rhobar*summer);
+    double mubar = mu0*mu1;
+    return 55.2651e-6*mubar;
+}
 CoolPropDbl TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
 {
     double x_mu=0.068,qc=1/1.9,qd=1/1.1,nu=0.630,gamma=1.239,zeta_0=0.13,LAMBDA_0=0.06,Tbar_R=1.5, pstar, Tstar, rhostar;
@@ -755,6 +770,23 @@ CoolPropDbl TransportRoutines::conductivity_dilute_eta0_and_poly(HelmholtzEOSMix
     else{
         throw NotImplementedError("TransportRoutines::conductivity_dilute_eta0_and_poly is only for pure and pseudo-pure");
     }
+}
+
+CoolPropDbl TransportRoutines::conductivity_hardcoded_heavywater(HelmholtzEOSMixtureBackend &HEOS){
+    double Tbar = HEOS.T()/643.847, rhobar = HEOS.rhomass()/358;
+    double A[] = {1.00000, 37.3223, 22.5485, 13.0465, 0, -2.60735};
+    double lambda0 = A[0] + A[1]*Tbar + A[2]*POW2(Tbar) + A[3]*POW3(Tbar) + A[4]*POW4(Tbar) + A[5]*POW5(Tbar);
+    double Be = -2.506, B[] = {-167.310, 483.656, -191.039, 73.0358, -7.57467};
+    double DELTAlambda = B[0]*(1-exp(Be*rhobar)) + B[1]*rhobar + B[2]*POW2(rhobar) + B[3]*POW3(rhobar) + B[4]*POW4(rhobar);
+    double f_1 = exp(0.144847*Tbar + -5.64493*POW2(Tbar));
+    double f_2 = exp(-2.80000*POW2(rhobar-1))-0.080738543*exp(-17.9430*POW2(rhobar-0.125698));
+    double tau = Tbar/(std::abs(Tbar-1.1) + 1.1);
+    double f_3 = 1 + exp(60*(tau-1) + 20);
+    double f_4 = 1 + exp(100*(tau-1) + 15);
+    double DELTAlambda_c = 35429.6*f_1*f_2*(1 + POW2(f_2)*(5000.0e6*POW4(f_1)/f_3 + 3.5*f_2/f_4));
+    double DELTAlambda_L = -741.112*pow(f_1, 1.2)*(1-exp(-pow(rhobar/2.5, 10)));
+    double lambdabar = lambda0 + DELTAlambda + DELTAlambda_c + DELTAlambda_L;
+    return lambdabar*0.742128e-3;
 }
 
 CoolPropDbl TransportRoutines::conductivity_hardcoded_water(HelmholtzEOSMixtureBackend &HEOS){
