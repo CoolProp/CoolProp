@@ -55,7 +55,7 @@ def range_brace(x_min, x_max, mid=0.5,
     #bp = BasePlotter()
 #except:
     #bp = None
-    
+
 bp = None
 
 
@@ -64,17 +64,18 @@ xypoints = 1000
 loops    = 1
 repeat   = 1
 runs     = 0
-maxruns  = 50
+maxruns  = 5
 plot     = True
 calc     = True
-check    = True 
+check    = True
 folder   = "dataTTSE"
 figures  = "figuresTTSE"
 #np.random.seed(1984)
 
 
-#fluids  = ["CO2","Pentane","R134a","Water","Air","LiBr-0%"]
-fluids  = ["CO2","Pentane","R134a"]
+fluids  = ["CO2","Pentane","R134a","Water","Air","LiBr-0%"]
+fluids  = ["CO2","Pentane","R134a","Water"]
+fluids  = ["Air"]
 
 #glskeys = [r"\glsentryshort{co2}",r"\glsentryshort{pentane}",r"\glsentryshort{r134a}",r"\glsentryshort{water}",r"\glsentryshort{air}",r"\glsentryshort{libr} \SI{0}{\percent}"]
 #glskeys = [r"\ce{CO2}",r"n-Ppentane",r"R134a",r"Water",r"Air",r"\glsentryshort{libr} \SI{0}{\percent}"]
@@ -85,6 +86,8 @@ repList = []
 
 #backends = ["INCOMP","HEOS","REFPROP"]
 backends = ["HEOS","REFPROP"]
+backends = ["HEOS"]
+
 #repList.append("HEOS")
 #repList.append(r"\glsentryshort{cp}")
 #repList.append("REFPROP")
@@ -220,24 +223,22 @@ def getCriticalProps(propsfluid):
 def getPTRanges(propsfluid):
     backend,_,_ = splitFluid(propsfluid)
     # Setting the limits for enthalpy and pressure
+    T_min = PropsSI('Tmin',"T",0,"D",0,propsfluid)+1
+    T_max = PropsSI('Tmax',"T",0,"D",0,propsfluid)-1
+
     if backend == "REFPROP":
-        T_min = PropsSI('Ttriple',"T",0,"D",0,propsfluid)+1
-        T_max = PropsSI(   'Tmax',"T",0,"D",0,propsfluid)-1
+        T_min = max(T_min,PropsSI('Ttriple',"T",0,"D",0,propsfluid))+1
         p_min = PropsSI(  'P',"T",T_min,"Q",0,propsfluid)+1
         p_max = PropsSI(   'pmax',"T",0,"D",0,propsfluid)-1
     elif backend == "INCOMP":
-        T_min = PropsSI('Tmin',"T",0,"D",0,propsfluid)+1
-        T_max = PropsSI('Tmax',"T",0,"D",0,propsfluid)-1
         p_min =   1.5*1e5
         p_max = 200.0*1e5
     else:
+        T_min = max(T_min,PropsSI('Ttriple',"T",0,"D",0,propsfluid))+1
         p_min = PropsSI('ptriple',"T",0,"D",0,propsfluid)
         p_min = max(p_min,PropsSI('pmin',"T",0,"D",0,propsfluid))+1
         p_max = PropsSI(   'pmax',"T",0,"D",0,propsfluid)-1
-        T_min = PropsSI('Ttriple',"T",0,"D",0,propsfluid)
-        T_min = max(T_min,PropsSI('Tmin',"T",0,"D",0,propsfluid))+1
-        T_max = PropsSI(   'Tmax',"T",0,"D",0,propsfluid)-1
-        
+
     # One more check to debug things:
     #p_min = max(p_min,0.01e5)
     #T_min = max(T_min,200)
@@ -327,7 +328,7 @@ def getStateObj(propsfluid):
         try:
             state.set_mass_fractions([conc])
         except:
-            pass 
+            pass
     return state
 
 def getSpeedMeas(out,in1,in2,in3,in4,propsfluid,vector=False):

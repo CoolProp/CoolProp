@@ -132,6 +132,8 @@ public:
     CoolPropDbl calc_pmax(void);
     /// Calculate the maximum temperature
     CoolPropDbl calc_Tmax(void);
+    /// Calculate the minimum temperature
+    CoolPropDbl calc_Tmin(void);
 	
 	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
 	CoolPropDbl calc_alphar(void){return call_phixdll(0,0);};
