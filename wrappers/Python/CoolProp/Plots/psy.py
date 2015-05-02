@@ -15,7 +15,7 @@ from PyQt4.QtGui import (QDialog, QGridLayout, QProgressBar, QLabel,
                          QDialogButtonBox, QPushButton, QFileDialog, QApplication)
 
 Preferences = ConfigParser()
-Preferences.read("psyrc.py")
+Preferences.read("psyrc")
 P = Preferences.getfloat("General", "P")
 
 
@@ -392,7 +392,7 @@ class UI_Psychrometry(QDialog):
     def plot(self):
         """Plot chart"""
         Preferences = ConfigParser()
-        Preferences.read("psyrc.py")
+        Preferences.read("psyrc")
 
         self.diagrama2D.axes2D.clear()
         self.diagrama2D.config()

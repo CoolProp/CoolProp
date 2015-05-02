@@ -282,7 +282,8 @@ if __name__=='__main__':
                                            'include/*.h',
                                            'include/rapidjson/*.h',
                                            'include/rapidjson/rapidjson/*.h',
-                                           'include/rapidjson/rapidjson/internal/*.h']},
+                                           'include/rapidjson/rapidjson/internal/*.h',
+                                           'Plots/psyrc']},
                classifiers = [
                 "Programming Language :: Python",
                 "Development Status :: 4 - Beta",
