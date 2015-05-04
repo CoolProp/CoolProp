@@ -166,6 +166,20 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
             }
             break;
         }
+        case PQ_INPUTS:{
+			std::size_t iL = 0, iV = 0;
+			CoolPropDbl dummyL = 0, dummyV = 0;
+			_p = val1; _Q = val2;
+			pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, dummyL, dummyV);
+            using_single_phase_table = false;
+            if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+                throw ValueError("vapor quality is not in (0,1)");
+            }
+            else{
+                cached_saturation_iL = iL; cached_saturation_iV = iV;
+            }
+			break;
+		}
         default:
             throw ValueError("Sorry, but this set of inputs is not supported for TTSE backend");
     }
