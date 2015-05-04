@@ -335,7 +335,22 @@
         L1=((x-x0)*(x-x2)*(x-x3))/((x1-x0)*(x1-x2)*(x1-x3));
         L2=((x-x0)*(x-x1)*(x-x3))/((x2-x0)*(x2-x1)*(x2-x3));
         L3=((x-x0)*(x-x1)*(x-x2))/((x3-x0)*(x3-x1)*(x3-x2));
-        return L0*f0+L1*f1+L2*f2+L3*f3;
+        return L0*f0 + L1*f1 + L2*f2 + L3*f3;
+    };
+    /** /brief Calculate the first derivative of the function using a cubic interpolation form
+     */
+    template<class T> T CubicInterpFirstDeriv( T x0, T x1, T x2, T x3, T f0, T f1, T f2, T f3, T x)
+    {
+        // Based on http://math.stackexchange.com/a/809946/66405
+        T L0=((x-x1)*(x-x2)*(x-x3))/((x0-x1)*(x0-x2)*(x0-x3));
+        T dL0_dx = (1/(x-x1) + 1/(x-x2) + 1/(x-x3) )*L0;
+        T L1=((x-x0)*(x-x2)*(x-x3))/((x1-x0)*(x1-x2)*(x1-x3));
+        T dL1_dx = (1/(x-x0) + 1/(x-x2) + 1/(x-x3) )*L1;
+        T L2=((x-x0)*(x-x1)*(x-x3))/((x2-x0)*(x2-x1)*(x2-x3));
+        T dL2_dx = (1/(x-x0) + 1/(x-x1) + 1/(x-x3) )*L2;
+        T L3=((x-x0)*(x-x1)*(x-x2))/((x3-x0)*(x3-x1)*(x3-x2));
+        T dL3_dx = (1/(x-x0) + 1/(x-x1) + 1/(x-x2) )*L3;
+        return dL0_dx*f0 + dL1_dx*f1 + dL2_dx*f2 + dL3_dx*f3;
     };
     template<class T1, class T2> T2 CubicInterp(const std::vector<T1> &x, const std::vector<T1> &y, std::size_t i0, std::size_t i1, std::size_t i2, std::size_t i3, T2 val)
     {

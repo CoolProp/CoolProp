@@ -218,7 +218,39 @@ class PureFluidSaturationTableData{
                 default:
                     throw ValueError("can't be something other than T or rho");
             }
-        }
+        };
+        /**
+         *  @brief Calculate the first derivative ALONG a saturation curve
+         * @param Of1 The parameter that the derivative is to be taken of
+         * @param Wrt1 The parameter that the derivative is to be taken with respect to
+         * @param Q The vapor quality, 0 or 1
+         * @param val The value of the WRT parameter
+         * @param i The index in the vectors to be used; must be > 2 and < len-2
+         */
+        double first_saturation_deriv(parameters Of1, parameters Wrt1, int Q, double val, std::size_t i)
+        {
+            if (i < 2 || i > TL.size() - 2){throw ValueError("Invalid index to calc_first_saturation_deriv in TabularBackends");}
+            std::vector<double> *x, *y;
+            // Connect pointers for each vector
+            switch(Wrt1){
+                case iT: x = (Q == 0) ? &TL : &TV; break;
+                case iP: x = (Q == 0) ? &pL : &pV; break;
+                default: throw ValueError(format("Key for Wrt1 is invalid in calc_first_saturation_deriv"));
+            }
+            switch(Of1){
+                case iT: y = (Q == 0) ? &TL : &TV; break;
+                case iP: y = (Q == 0) ? &pL : &pV; break;
+                case iDmolar: y = (Q == 0) ? &rhomolarL : &rhomolarV; break;
+                case iHmolar: y = (Q == 0) ? &hmolarL : &hmolarV; break;
+                case iSmolar: y = (Q == 0) ? &smolarL : &smolarV; break;
+                case iUmolar: y = (Q == 0) ? &umolarL : &umolarV; break;
+                default: throw ValueError(format("Key for Of1 is invalid in calc_first_saturation_deriv"));
+            }
+            return CubicInterpFirstDeriv((*x)[i-2], (*x)[i-1], (*x)[i], (*x)[i+1],
+                                         (*y)[i-2], (*y)[i-1], (*y)[i], (*y)[i+1],
+                                         val);
+        };
+        //calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
 };
 
 /** \brief This class holds the data for a single-phase interpolation table that is regularly spaced
@@ -757,6 +789,20 @@ class TabularBackend : public AbstractState
                     // Set the flag saying tables have been successfully loaded
                     tables_loaded = true;
                 }
+            }
+        };
+        /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
+         */
+        CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1){
+            if (AS->get_mole_fractions().size() > 1){throw ValueError("calc_first_saturation_deriv not available for mixtures");}
+            if (std::abs(_Q) < 1e-6){
+                return pure_saturation.first_saturation_deriv(Of1, Wrt1, 0, keyed_output(Wrt1), cached_saturation_iL);
+            }
+            else if (std::abs(_Q-1) < 1e-6){
+                return pure_saturation.first_saturation_deriv(Of1, Wrt1, 1, keyed_output(Wrt1), cached_saturation_iV);
+            }
+            else{
+                throw ValueError(format("Quality [%Lg] must be either 0 or 1 to within 1 ppm", _Q));
             }
         }
 };

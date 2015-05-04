@@ -313,4 +313,41 @@ void CoolProp::TabularBackend::load_tables(){
 }
 
 
+#if defined(ENABLE_CATCH)
+#include "catch.hpp"
+TEST_CASE("Do some simple tests with tabular backends", "[Tabular]")
+{
+    shared_ptr<CoolProp::AbstractState> ASHEOS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("TTSE&HEOS", "Water"));
+
+    SECTION("first_saturation_deriv dp/dT"){
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl expected = ASHEOS->first_saturation_deriv(CoolProp::iP, CoolProp::iT);
+        
+        AS->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual = AS->first_saturation_deriv(CoolProp::iP, CoolProp::iT);
+
+        CAPTURE(expected);
+        CAPTURE(actual);
+        CHECK(std::abs((expected-actual)/actual) < 1e-16);
+    }
+    SECTION("first_saturation_deriv invalid quality"){
+        AS->update(CoolProp::PQ_INPUTS, 101325, 0.5);
+        CHECK_THROWS(AS->first_saturation_deriv(CoolProp::iP, CoolProp::iT));
+    }
+    SECTION("first_saturation_deriv dp/dT"){
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl expected = ASHEOS->first_saturation_deriv(CoolProp::iDmolar, CoolProp::iP);
+        
+        AS->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual = AS->first_saturation_deriv(CoolProp::iDmolar, CoolProp::iP);
+
+        CAPTURE(expected);
+        CAPTURE(actual);
+        CHECK(std::abs((expected-actual)/actual) < 1e-16);
+    }
+    
+}
+#endif // ENABLE_CATCH
+
 #endif // !defined(NO_TABULAR_BACKENDS)
