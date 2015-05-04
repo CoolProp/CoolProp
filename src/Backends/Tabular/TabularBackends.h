@@ -805,6 +805,41 @@ class TabularBackend : public AbstractState
                 throw ValueError(format("Quality [%Lg] must be either 0 or 1 to within 1 ppm", _Q));
             }
         }
+        CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant)
+        {
+            if (Of == iDmolar && Wrt == iHmolar && Constant == iP){
+                CoolPropDbl rhoL = pure_saturation.evaluate(iDmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
+                CoolPropDbl rhoV = pure_saturation.evaluate(iDmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
+                CoolPropDbl hL = pure_saturation.evaluate(iHmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
+                CoolPropDbl hV = pure_saturation.evaluate(iHmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
+                return -POW2(rhomolar())*(1/rhoV - 1/rhoL)/(hV - hL);
+            }
+            else if (Of == iDmass && Wrt == iHmass && Constant == iP){
+                return first_two_phase_deriv(iDmolar, iHmolar, iP)*POW2(molar_mass());
+            }
+            else if (Of == iDmolar && Wrt == iP && Constant == iHmolar){
+                // v = 1/rho; dvdrho = -rho^2; dvdrho = -1/rho^2
+                CoolPropDbl rhoL = pure_saturation.evaluate(iDmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
+                CoolPropDbl rhoV = pure_saturation.evaluate(iDmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
+                CoolPropDbl hL = pure_saturation.evaluate(iHmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
+                CoolPropDbl hV = pure_saturation.evaluate(iHmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
+                CoolPropDbl dvdrhoL = -1/POW2(rhoL);
+                CoolPropDbl dvdrhoV = -1/POW2(rhoV);
+                CoolPropDbl dvL_dp = dvdrhoL*pure_saturation.first_saturation_deriv(iDmolar, iP, 0, _p, cached_saturation_iL);
+                CoolPropDbl dvV_dp = dvdrhoV*pure_saturation.first_saturation_deriv(iDmolar, iP, 1, _p, cached_saturation_iV);
+                CoolPropDbl dhL_dp = pure_saturation.first_saturation_deriv(iHmolar, iP, 0, _p, cached_saturation_iL);
+                CoolPropDbl dhV_dp = pure_saturation.first_saturation_deriv(iHmolar, iP, 1, _p, cached_saturation_iV);
+                CoolPropDbl dxdp_h = (Q()*dhV_dp + (1 - Q())*dhL_dp)/(hL - hV);
+                CoolPropDbl dvdp_h = dvL_dp + dxdp_h*(1/rhoV - 1/rhoL) + Q()*(dvV_dp - dvL_dp);
+                return -POW2(rhomolar())*dvdp_h;
+            }
+            else if (Of == iDmass && Wrt == iP && Constant == iHmass){
+                return first_two_phase_deriv(iDmolar, iP, iHmolar)*molar_mass();
+            }
+            else{
+                throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+            }
+        }
 };
 
 } /* namespace CoolProp*/

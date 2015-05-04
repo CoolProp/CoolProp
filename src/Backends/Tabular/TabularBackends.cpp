@@ -312,39 +312,102 @@ void CoolProp::TabularBackend::load_tables(){
     load_table(phase_envelope, path_to_tables, "phase_envelope.bin.z");
 }
 
-
 #if defined(ENABLE_CATCH)
 #include "catch.hpp"
-TEST_CASE("Do some simple tests with tabular backends", "[Tabular]")
+
+// Defined global so we only load once
+static shared_ptr<CoolProp::AbstractState> ASHEOS, ASTTSE, ASBICUBIC;
+
+/* Use a fixture so that loading of the tables from memory only happens once in the initializer */
+class TabularFixture
 {
-    shared_ptr<CoolProp::AbstractState> ASHEOS(CoolProp::AbstractState::factory("HEOS", "Water"));
-    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("TTSE&HEOS", "Water"));
-
-    SECTION("first_saturation_deriv dp/dT"){
-        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 1);
-        CoolPropDbl expected = ASHEOS->first_saturation_deriv(CoolProp::iP, CoolProp::iT);
-        
-        AS->update(CoolProp::PQ_INPUTS, 101325, 1);
-        CoolPropDbl actual = AS->first_saturation_deriv(CoolProp::iP, CoolProp::iT);
-
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK(std::abs((expected-actual)/actual) < 1e-16);
+public:
+    TabularFixture(){}
+    void setup(){
+        if (ASHEOS.get() == NULL){ ASHEOS.reset(CoolProp::AbstractState::factory("HEOS", "Water")); }
+        if (ASTTSE.get() == NULL){ ASTTSE.reset(CoolProp::AbstractState::factory("TTSE&HEOS", "Water")); }
+        if (ASBICUBIC.get() == NULL){ ASBICUBIC.reset(CoolProp::AbstractState::factory("BICUBIC&HEOS", "Water")); }
     }
+};
+TEST_CASE_METHOD(TabularFixture, "Tests for tabular backends with water", "[Tabular]")
+{
     SECTION("first_saturation_deriv invalid quality"){
-        AS->update(CoolProp::PQ_INPUTS, 101325, 0.5);
-        CHECK_THROWS(AS->first_saturation_deriv(CoolProp::iP, CoolProp::iT));
+        setup();
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 0.5);
+        CHECK_THROWS(ASBICUBIC->first_saturation_deriv(CoolProp::iP, CoolProp::iT));
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 0.5);
+        CHECK_THROWS(ASTTSE->first_saturation_deriv(CoolProp::iP, CoolProp::iT));
     }
+
     SECTION("first_saturation_deriv dp/dT"){
+        setup();
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl expected = ASHEOS->first_saturation_deriv(CoolProp::iP, CoolProp::iT);        
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_saturation_deriv(CoolProp::iP, CoolProp::iT);
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_BICUBIC = ASTTSE->first_saturation_deriv(CoolProp::iP, CoolProp::iT);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
+    SECTION("first_saturation_deriv dDmolar/dP"){
+        setup();
         ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 1);
         CoolPropDbl expected = ASHEOS->first_saturation_deriv(CoolProp::iDmolar, CoolProp::iP);
-        
-        AS->update(CoolProp::PQ_INPUTS, 101325, 1);
-        CoolPropDbl actual = AS->first_saturation_deriv(CoolProp::iDmolar, CoolProp::iP);
-
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_saturation_deriv(CoolProp::iDmolar, CoolProp::iP);
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_BICUBIC = ASBICUBIC->first_saturation_deriv(CoolProp::iDmolar, CoolProp::iP);
         CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK(std::abs((expected-actual)/actual) < 1e-16);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
+    SECTION("first_two_phase_deriv dDmolar/dP|Hmolar"){
+        setup();
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl expected = ASHEOS->first_two_phase_deriv(CoolProp::iDmolar, CoolProp::iP, CoolProp::iHmolar);
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_two_phase_deriv(CoolProp::iDmolar, CoolProp::iP, CoolProp::iHmolar);
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_BICUBIC = ASBICUBIC->first_two_phase_deriv(CoolProp::iDmolar, CoolProp::iP, CoolProp::iHmolar);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
+    SECTION("first_two_phase_deriv dDmass/dP|Hmass"){
+        setup();
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl expected = ASHEOS->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iP, CoolProp::iHmass);
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iP, CoolProp::iHmass);
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_BICUBIC = ASBICUBIC->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iP, CoolProp::iHmass);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
+    SECTION("first_two_phase_deriv dDmass/dHmass|P"){
+        setup();
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl expected = ASHEOS->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iHmass, CoolProp::iP);
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iHmass, CoolProp::iP);
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_BICUBIC = ASBICUBIC->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iHmass, CoolProp::iP);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
     }
     
 }
