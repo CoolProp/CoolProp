@@ -14,7 +14,7 @@ In order to make most effective use of the low-level interface, you should insta
 
 .. warning::
 
-    While the warning about the computational overhead when generating AbstractState instances is more a recommendation, it is *required* that you allocate as few AbstractState instances as possible when using the :ref:`low-level interface <tabular_interpolation>`.
+    While the warning about the computational overhead when generating AbstractState instances is more a recommendation, it is *required* that you allocate as few AbstractState instances as possible when using the :ref:`tabular backends (TTSE & Bicubic) <tabular_interpolation>`.
 
 .. warning::
 
@@ -60,7 +60,7 @@ A simple example of this would be
 Keyed output versus acccessor functions
 ---------------------------------------
 
-The simple output functions like :cpapi:`AbstractState::rhomolar`` that are mapped to keys in :cpapi:`CoolProp::parameters` can be either obtained using the accessor function or by calling :cpapi:`AbstractState::keyed_output`.  The advantage of the ``keyed_output`` function is that you could in principle iterate over several keys, rather than having to hard-code calls to several accessor functions.  For instance:
+The simple output functions like :cpapi:`AbstractState::rhomolar` that are mapped to keys in :cpapi:`CoolProp::parameters` can be either obtained using the accessor function or by calling :cpapi:`AbstractState::keyed_output`.  The advantage of the ``keyed_output`` function is that you could in principle iterate over several keys, rather than having to hard-code calls to several accessor functions.  For instance:
 
 .. ipython::
 
@@ -70,9 +70,9 @@ The simple output functions like :cpapi:`AbstractState::rhomolar`` that are mapp
     
     In [0]: HEOS.update(CoolProp.DmolarT_INPUTS, 1e-6, 300)
     
-    In [0]: HEOS.rhomolar()
+    In [0]: HEOS.p()
     
-    In [0]: HEOS.keyed_output(CoolProp.iDmolar)
+    In [0]: [HEOS.keyed_output(k) for k in [CoolProp.iP, CoolProp.iHmass, CoolProp.iHmolar]]
     
 Things only in the low-level interface
 --------------------------------------
@@ -92,7 +92,7 @@ You might reasonably ask at this point why we would want to use the low-level in
     # more direct evaluation of the equation of state without checking the saturation boundary
     In [0]: HEOS.specify_phase(CoolProp.iphase_gas)
     
-    # We try it again, see how much faster?
+    # We try it again - a bit faster
     In [0]: %timeit HEOS.update(CoolProp.DmolarT_INPUTS, 1e-6, 300)
     
     # Reset the specification of phase
@@ -141,6 +141,7 @@ It is possible to get the partial derivatives in a very computationally efficien
     
     In [4]: %timeit HEOS.first_partial_deriv(CoolProp.iHmass, CoolProp.iT, CoolProp.iP)
     
+    # See how much faster this is?
     In [4]: %timeit CoolProp.CoolProp.PropsSI('d(Hmass)/d(T)|P', 'P', 101325, 'T', 300, 'Water')
     
 Reference States
