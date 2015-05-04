@@ -53,7 +53,7 @@ A simple example of this would be
 
     In [0]: import CoolProp
     
-    In [0]: CoolProp.generate_update_pair(CoolProp.iT, 300, CoolProp.iDmolar, 1e-6)
+    In [0]: CoolProp.CoolProp.generate_update_pair(CoolProp.iT, 300, CoolProp.iDmolar, 1e-6)
     
     In [0]: CoolProp.DmolarT_INPUTS
 
