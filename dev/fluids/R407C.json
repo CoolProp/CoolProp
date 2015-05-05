@@ -277,15 +277,15 @@
           "smolar_units": "J/mol/K"
         }, 
         "temperature_max_sat": {
-          "T": 359.3438976, 
+          "T": 359.345, 
           "T_units": "K", 
-          "hmolar": 33042.7, 
+          "hmolar": 33029.43242214206, 
           "hmolar_units": "J/mol", 
-          "p": 4630980.714, 
+          "p": 4631700, 
           "p_units": "Pa", 
-          "rhomolar": 5244.554217, 
+          "rhomolar": 5260.000046401775, 
           "rhomolar_units": "mol/m^3", 
-          "smolar": 133.773, 
+          "smolar": 133.7341100287679, 
           "smolar_units": "J/mol/K"
         }
       }, 
