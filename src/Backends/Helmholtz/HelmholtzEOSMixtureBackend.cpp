@@ -185,6 +185,12 @@ const CoolProp::SimpleState & HelmholtzEOSMixtureBackend::calc_state(const std::
         else if (!state.compare("critical")){
             return components[0].crit;
         }
+        else if (!state.compare("triple_liquid")){
+            return components[0].triple_liquid;
+        }
+        else if (!state.compare("triple_vapor")){
+            return components[0].triple_vapor;
+        }
         else{
             throw ValueError(format("This state [%s] is invalid to calc_state",state.c_str()));
         }

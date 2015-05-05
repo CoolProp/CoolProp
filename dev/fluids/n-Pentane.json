@@ -438,12 +438,16 @@
   "REFPROP_NAME": "PENTANE", 
   "STATES": {
     "critical": {
-      "T": 469.7, 
+      "T": 469.70000000000005, 
       "T_units": "K", 
+      "hmolar": 37552.05857176028, 
+      "hmolar_units": "J/mol", 
       "p": 3370000.0, 
       "p_units": "Pa", 
       "rhomolar": 3215.5775884221466, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 93.54796099697326, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 143.47, 

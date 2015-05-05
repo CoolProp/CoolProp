@@ -401,12 +401,16 @@
   "REFPROP_NAME": "IBUTENE", 
   "STATES": {
     "critical": {
-      "T": 418.09, 
+      "T": 418.09000000000003, 
       "T_units": "K", 
+      "hmolar": 26722.104559210096, 
+      "hmolar_units": "J/mol", 
       "p": 4009800.0, 
       "p_units": "Pa", 
       "rhomolar": 4170.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 75.10430252394673, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 132.4, 

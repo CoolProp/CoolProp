@@ -560,10 +560,14 @@
     "critical": {
       "T": 150.687, 
       "T_units": "K", 
+      "hmolar": -173.03680277437988, 
+      "hmolar_units": "J/mol", 
       "p": 4863000.0, 
       "p_units": "Pa", 
       "rhomolar": 13407.429658556124, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 89.78858803923292, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 83.806, 

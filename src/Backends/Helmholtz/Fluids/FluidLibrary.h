@@ -350,6 +350,10 @@ protected:
             EOS.max_sat_p.T = cpjson::get_double(s, "T");
             EOS.max_sat_p.p = cpjson::get_double(s, "p");
             EOS.max_sat_p.rhomolar = cpjson::get_double(s, "rhomolar");
+            if (s.HasMember("hmolar")){
+                EOS.max_sat_p.hmolar = cpjson::get_double(s, "hmolar");
+                EOS.max_sat_p.smolar = cpjson::get_double(s, "smolar");
+            }
         }
         
         if (EOS_json["STATES"].HasMember("temperature_max_sat")){
@@ -357,6 +361,10 @@ protected:
             EOS.max_sat_T.T = cpjson::get_double(s, "T");
             EOS.max_sat_T.p = cpjson::get_double(s, "p");
             EOS.max_sat_T.rhomolar = cpjson::get_double(s, "rhomolar");
+            if (s.HasMember("hmolar")){
+                EOS.max_sat_T.hmolar = cpjson::get_double(s, "hmolar");
+                EOS.max_sat_T.smolar = cpjson::get_double(s, "smolar");
+            }
         }
         
         if (EOS_json.HasMember("critical_region_splines")){
@@ -968,7 +976,9 @@ protected:
         rapidjson::Value &crit = states["critical"];
         fluid.crit.T = cpjson::get_double(crit, "T");
         fluid.crit.p = cpjson::get_double(crit, "p");
-        fluid.crit.rhomolar = cpjson::get_double(crit, "rhomolar");        
+        fluid.crit.rhomolar = cpjson::get_double(crit, "rhomolar");
+        fluid.crit.hmolar = cpjson::get_double(crit, "hmolar");
+        fluid.crit.smolar = cpjson::get_double(crit, "smolar");
 
         if (!states.HasMember("triple_liquid")){ throw ValueError(format("fluid[\"STATES\"] [%s] does not have \"triple_liquid\" member",fluid.name.c_str())); }
         rapidjson::Value &triple_liquid = states["triple_liquid"];

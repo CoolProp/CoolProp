@@ -381,12 +381,16 @@
   "REFPROP_NAME": "IHEXANE", 
   "STATES": {
     "critical": {
-      "T": 497.7, 
+      "T": 497.70000000000005, 
       "T_units": "K", 
+      "hmolar": 45934.12333357634, 
+      "hmolar_units": "J/mol", 
       "p": 3040000.0, 
       "p_units": "Pa", 
       "rhomolar": 2715.0000000000005, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 107.71028249282628, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 119.6, 

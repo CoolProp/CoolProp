@@ -530,12 +530,16 @@
   "REFPROP_NAME": "FLUORINE", 
   "STATES": {
     "critical": {
-      "T": 144.414, 
+      "T": 144.41400000000002, 
       "T_units": "K", 
+      "hmolar": 5058.435477099933, 
+      "hmolar_units": "J/mol", 
       "p": 5172400.0, 
       "p_units": "Pa", 
       "rhomolar": 15603.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 41.15965610116656, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 53.48110000000001, 

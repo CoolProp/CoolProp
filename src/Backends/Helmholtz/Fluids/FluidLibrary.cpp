@@ -33,16 +33,44 @@ void JSONFluidLibrary::set_fluid_enthalpy_entropy_offset(const std::string &flui
             it2->second.EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
             
             shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS(new CoolProp::HelmholtzEOSBackend(it2->second));
-
+            HEOS->specify_phase(iphase_gas); // Something homogeneous;
             // Calculate the new enthalpy and entropy values
             HEOS->update(DmolarT_INPUTS, it2->second.EOS().hs_anchor.rhomolar, it2->second.EOS().hs_anchor.T);
             it2->second.EOS().hs_anchor.hmolar = HEOS->hmolar();
             it2->second.EOS().hs_anchor.smolar = HEOS->smolar();
             
+            double f = (HEOS->name() == "Water" || HEOS->name() == "CarbonDioxide") ? 1.00001 : 1.0;
+
             // Calculate the new enthalpy and entropy values at the reducing state
-            HEOS->update(DmolarT_INPUTS, it2->second.EOS().reduce.rhomolar+1e-12, it2->second.EOS().reduce.T+1e-12);
+            HEOS->update(DmolarT_INPUTS, it2->second.EOS().reduce.rhomolar*f, it2->second.EOS().reduce.T*f);
             it2->second.EOS().reduce.hmolar = HEOS->hmolar();
             it2->second.EOS().reduce.smolar = HEOS->smolar();
+
+            // Calculate the new enthalpy and entropy values at the critical state
+            HEOS->update(DmolarT_INPUTS, it2->second.crit.rhomolar*f, it2->second.crit.T*f);
+            it2->second.crit.hmolar = HEOS->hmolar();
+            it2->second.crit.smolar = HEOS->smolar();
+
+            // Calculate the new enthalpy and entropy values
+            HEOS->update(DmolarT_INPUTS, it2->second.triple_liquid.rhomolar, it2->second.triple_liquid.T);
+            it2->second.triple_liquid.hmolar = HEOS->hmolar();
+            it2->second.triple_liquid.smolar = HEOS->smolar();
+
+            // Calculate the new enthalpy and entropy values
+            HEOS->update(DmolarT_INPUTS, it2->second.triple_vapor.rhomolar, it2->second.triple_vapor.T);
+            it2->second.triple_vapor.hmolar = HEOS->hmolar();
+            it2->second.triple_vapor.smolar = HEOS->smolar();
+
+            if (!HEOS->is_pure()){
+                // Calculate the new enthalpy and entropy values
+                HEOS->update(DmolarT_INPUTS, it2->second.EOS().max_sat_T.rhomolar, it2->second.EOS().max_sat_T.T);
+                it2->second.EOS().max_sat_T.hmolar = HEOS->hmolar();
+                it2->second.EOS().max_sat_T.smolar = HEOS->smolar();
+                // Calculate the new enthalpy and entropy values
+                HEOS->update(DmolarT_INPUTS, it2->second.EOS().max_sat_p.rhomolar, it2->second.EOS().max_sat_p.T);
+                it2->second.EOS().max_sat_p.hmolar = HEOS->hmolar();
+                it2->second.EOS().max_sat_p.smolar = HEOS->smolar();
+            }
         }
         else{
             throw ValueError(format("fluid [%s] was not found in JSONFluidLibrary",fluid.c_str()));

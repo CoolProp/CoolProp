@@ -1457,88 +1457,74 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
         }
     }
 }
-TEST_CASE("Test that reference states are correct", "[reference_states]")
+TEST_CASE("Test that enthalpies and entropies are correct for fixed states", "[fixed_states]")
 {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
-    for (std::size_t i = 0; i < fluids.size(); ++i) 
+    for (std::size_t i = 0; i < fluids.size(); ++i)
     {
-        std::vector<std::string> fl(1,fluids[i]);
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(fl));
-        std::string ref_state[4] = {"IIR","ASHRAE","NBP","DEF"};
-        for (std::size_t j = 0; j < 3; ++j){
-        
-            // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
-            std::ostringstream ss1;
-            ss1 << "Check state for hs_anchor for " << fluids[i] << " for reference state " << ref_state[j];
-            SECTION(ss1.str(),"")
+        std::string ref_state[4] = {"DEF", "IIR", "ASHRAE", "NBP"};
+        for (std::size_t j = 0; j < 4; ++j)
+        {
+            std::string states[] = {"hs_anchor","reducing","critical","max_sat_T","max_sat_p","triple_liquid","triple_vapor"};
+            for (std::size_t k = 0; k < 7; ++k)
             {
-                // Skip impossible reference states
-                if (fluids[i] == "CarbonDioxide" && ref_state[j] != "DEF"){ continue; }
-                if (fluids[i] == "Water" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
-                if (fluids[i] == "HeavyWater" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
 
-                // First reset the reference state
-                set_reference_stateS(fluids[i], "DEF");
-                try{
-                    // Then try to set to the specified reference state
-                    set_reference_stateS(fluids[i], ref_state[j]);
-                }
-                catch(...){
-                    // Then set the reference state back to the default
-                    set_reference_stateS(fluids[i],"DEF");
-                    break;
-                }
-                // Get the hs_anchor values
-                CoolProp::SimpleState hs_anchor = HEOS->calc_state("hs_anchor");
-                HEOS->update(CoolProp::DmolarT_INPUTS, hs_anchor.rhomolar, hs_anchor.T);
-                CAPTURE(hs_anchor.hmolar);
-                CAPTURE(hs_anchor.smolar);
-                CHECK(ValidNumber(hs_anchor.hmolar));
-                CHECK(ValidNumber(hs_anchor.smolar));
-                double EOS_hmolar = HEOS->hmolar();
-                double EOS_smolar = HEOS->smolar();
-                CHECK( std::abs(EOS_hmolar - hs_anchor.hmolar) < 1e-3);
-                CHECK( std::abs(EOS_smolar - hs_anchor.smolar) < 1e-3);
-                // Then set the reference state back to the default
-                set_reference_stateS(fluids[i],"DEF");
-            }
-            std::ostringstream ss2;
-            ss2 << "Check state for reducing for " << fluids[i] << " for reference state " << ref_state[j];
-            SECTION(ss2.str(),"")
-            {
-                // Skip impossible reference states
-                if (fluids[i] == "CarbonDioxide" && ref_state[j] != "DEF"){ continue; }
-                if (fluids[i] == "Water" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
-                if (fluids[i] == "HeavyWater" && (ref_state[j] == "IIR" || ref_state[j] == "ASHRAE")){ continue; }
-                // First reset the reference state
-                set_reference_stateS(fluids[i], "DEF");
-                try{
-                    // Then try to set to the specified reference state
-                    set_reference_stateS(fluids[i], ref_state[j]);
-                    if (!ValidNumber(HEOS->calc_state("reducing").hmolar)){
-                        throw ValueError("hmolar is not valid number");
+                // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+                std::ostringstream ss1;
+                ss1 << "Check state for " << states[k] << " for " << fluids[i] << " for reference state " << ref_state[j];
+                SECTION(ss1.str(),"")
+                {
+                    // Skip impossible reference states
+                    if (Props1SI("Ttriple", fluids[i]) > 233.15 && ref_state[j] == "ASHRAE"){ continue; }
+                    if (Props1SI("Tcrit", fluids[i]) < 233.15 && ref_state[j] == "ASHRAE"){ continue; }
+                    if (Props1SI("Tcrit", fluids[i]) < 273.15 && ref_state[j] == "IIR"){ continue; }
+                    if (Props1SI("Ttriple", fluids[i]) > 273.15 && ref_state[j] == "IIR"){ continue; }
+                    if (Props1SI("ptriple", fluids[i]) > 101325 && ref_state[j] == "NBP"){ continue; }
+
+                    // First reset the reference state
+                    if (ref_state[j] != "DEF"){
+                        set_reference_stateS(fluids[i], "DEF");
+                        try{
+                            // Then try to set to the specified reference state
+                            set_reference_stateS(fluids[i], ref_state[j]);
+                        }
+                        catch(std::exception &e){
+                            // Then set the reference state back to the default
+                            set_reference_stateS(fluids[i],"DEF");
+                            CAPTURE(e.what());
+                            REQUIRE(false);
+                        }
                     }
-                }
-                catch(...){
+
+                    std::vector<std::string> fl(1, fluids[i]);
+                    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(fl));
+
+                    // Skip the saturation maxima states for pure fluids
+                    if (HEOS->is_pure() && (states[k] == "max_sat_T" || states[k] == "max_sat_p")){ continue; }
+                    
+                    // Get the state
+                    CoolProp::SimpleState state = HEOS->calc_state(states[k]);
+                    HEOS->specify_phase(iphase_gas); // something homogenous
+                    // Bump a tiny bit for EOS with non-analytic parts
+                    double f = 1.0;
+                    if ((fluids[i] == "Water" || fluids[i] == "CarbonDioxide") && (states[k] == "reducing" || states[k] == "critical")){
+                        f = 1.00001;
+                    }
+                    HEOS->update(CoolProp::DmolarT_INPUTS, state.rhomolar*f, state.T*f);
+                    CAPTURE(state.hmolar);
+                    CAPTURE(state.smolar);
+                    CHECK(ValidNumber(state.hmolar));
+                    CHECK(ValidNumber(state.smolar));
+                    double EOS_hmolar = HEOS->hmolar();
+                    double EOS_smolar = HEOS->smolar();
+                    CAPTURE(EOS_hmolar);
+                    CAPTURE(EOS_smolar);
+                    CHECK( std::abs(EOS_hmolar - state.hmolar) < 1e-2);
+                    CHECK( std::abs(EOS_smolar - state.smolar) < 1e-2);
                     // Then set the reference state back to the default
                     set_reference_stateS(fluids[i],"DEF");
-                    break;
                 }
-                // Get the reducing values
-                CoolProp::SimpleState reducing = HEOS->calc_state("reducing");
-                HEOS->update(CoolProp::DmolarT_INPUTS, reducing.rhomolar, reducing.T);
-                CHECK(ValidNumber(reducing.hmolar));
-                CHECK(ValidNumber(reducing.smolar));
-                CAPTURE(reducing.hmolar);
-                CAPTURE(reducing.smolar);
-                double EOS_hmolar = HEOS->hmolar();
-                double EOS_smolar = HEOS->smolar();
-                CHECK( std::abs(EOS_hmolar - reducing.hmolar) < 1e-3);
-                CHECK( std::abs(EOS_smolar - reducing.smolar) < 1e-3);
-                CHECK(ValidNumber(reducing.hmolar));
-                // Then set the reference state back to the default
-                set_reference_stateS(fluids[i],"RESET");
-            }   
+            }
         }
     }
 }

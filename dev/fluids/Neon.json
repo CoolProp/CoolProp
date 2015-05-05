@@ -479,12 +479,16 @@
   "REFPROP_NAME": "NEON", 
   "STATES": {
     "critical": {
-      "T": 44.4918, 
+      "T": 44.491800000000005, 
       "T_units": "K", 
+      "hmolar": 1199.8644745353827, 
+      "hmolar_units": "J/mol", 
       "p": 2680000.0, 
       "p_units": "Pa", 
       "rhomolar": 23882.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 30.313089790078298, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 24.560000000000002, 

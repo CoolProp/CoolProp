@@ -397,12 +397,16 @@
   "REFPROP_NAME": "R116", 
   "STATES": {
     "critical": {
-      "T": 293.03, 
+      "T": 293.03000000000003, 
       "T_units": "K", 
+      "hmolar": 33714.91511882169, 
+      "hmolar_units": "J/mol", 
       "p": 3048000.0, 
       "p_units": "Pa", 
       "rhomolar": 4444.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 158.7935261402344, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 173.10000000000002, 

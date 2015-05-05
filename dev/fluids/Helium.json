@@ -473,12 +473,16 @@
   "REFPROP_NAME": "HELIUM", 
   "STATES": {
     "critical": {
-      "T": 5.1953, 
+      "T": 5.1953000000000005, 
       "T_units": "K", 
+      "hmolar": 42.7834170604475, 
+      "hmolar_units": "J/mol", 
       "p": 227600.0, 
       "p_units": "Pa", 
       "rhomolar": 18130.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 7.807911622805713, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 2.1768, 

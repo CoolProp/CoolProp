@@ -400,12 +400,16 @@
   "REFPROP_NAME": "KRYPTON", 
   "STATES": {
     "critical": {
-      "T": 209.48, 
+      "T": 209.48000000000002, 
       "T_units": "K", 
+      "hmolar": 6391.985066117634, 
+      "hmolar_units": "J/mol", 
       "p": 5525000.0, 
       "p_units": "Pa", 
       "rhomolar": 10850.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 35.567990683867926, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 115.77, 

@@ -486,12 +486,16 @@
   "REFPROP_NAME": "OXYGEN", 
   "STATES": {
     "critical": {
-      "T": 154.581, 
+      "T": 154.58100000000002, 
       "T_units": "K", 
+      "hmolar": 1037.4920406423485, 
+      "hmolar_units": "J/mol", 
       "p": 5043000.0, 
       "p_units": "Pa", 
       "rhomolar": 13630.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 134.421419814919, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 54.361000000000004, 
