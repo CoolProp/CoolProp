@@ -1524,6 +1524,11 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
             double h_RP = S2->hmass();
             double s_RP = S2->smass();
 
+            double delta_a1 = (s_CP-s_RP)/(S1->gas_constant()/S1->molar_mass());
+            double delta_a2 = -(h_CP - h_RP)/(S1->gas_constant()/S1->molar_mass()*S1->get_reducing_state().T);
+            CAPTURE(delta_a1);
+            CAPTURE(delta_a2);
+
             CAPTURE(Name);
             CAPTURE(RPName);
             CAPTURE(h_CP);
