@@ -1457,7 +1457,7 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
         }
     }
 }
-TEST_CASE("Test that enthalpies and entropies are correct for fixed states", "[fixed_states]")
+TEST_CASE("Test that enthalpies and entropies are correct for fixed states for all reference states", "[fixed_states]")
 {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
     for (std::size_t i = 0; i < fluids.size(); ++i)
@@ -1707,8 +1707,8 @@ TEST_CASE("Check the first two-phase derivative using splines", "[first_two_phas
             CoolPropDbl v2base, v3base;
             v2base = AS->keyed_output(pairs[i].p2);
             v3base = AS->keyed_output(pairs[i].p3);
-            CoolPropDbl v2plus = v2base*1.001;
-            CoolPropDbl v2minus = v2base*0.999;
+            CoolPropDbl v2plus = v2base*1.00001;
+            CoolPropDbl v2minus = v2base*0.99999;
             
             CoolProp::input_pairs input_pair1 = generate_update_pair(pairs[i].p2, v2plus, pairs[i].p3, v3base, out1, out2);
             AS->update(input_pair1, out1, out2);
@@ -1720,7 +1720,7 @@ TEST_CASE("Check the first two-phase derivative using splines", "[first_two_phas
             
             numerical = (v1 - v2)/(v2plus - v2minus);
 			CAPTURE(numerical);
-			CHECK(std::abs(numerical/analytical-1) < 1e-10);
+			CHECK(std::abs(numerical/analytical-1) < 1e-8);
 		}
 	}
 }
