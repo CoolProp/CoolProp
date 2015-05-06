@@ -1,9 +1,3 @@
-/*
- * AbstractBackend.cpp
- *
- *  Created on: 20 Dec 2013
- *      Author: jowr
- */
 
 /*!
 From REFPROP:
@@ -25,29 +19,13 @@ dipole moment                   debye
 surface tension                 N/m
 */
 
-#include "CoolPropTools.h"
-#if defined(__powerpc__)
-    void *RefpropdllInstance=NULL;
-    char refpropPath[] = "/opt/refprop";
-#elif defined(__ISLINUX__)
-    #include <dlfcn.h>
-    void *RefpropdllInstance=NULL;
-    char refpropPath[] = "/opt/refprop";
-#elif defined(__ISWINDOWS__)
-    #include <windows.h>
-    HINSTANCE RefpropdllInstance=NULL;
-    char refpropPath[] = "";
-#elif defined(__ISAPPLE__)
-    #include <dlfcn.h>
-    void *RefpropdllInstance=NULL;
-    char refpropPath[] = "/opt/refprop";
-#else
-    #pragma error
-#endif
+#define _CRT_SECURE_NO_WARNINGS
 
-enum DLLNameManglingStyle{ NO_NAME_MANGLING = 0, LOWERCASE_NAME_MANGLING, LOWERCASE_AND_UNDERSCORE_NAME_MANGLING };
-
+#define REFPROP_IMPLEMENTATION
 #include "REFPROP_lib.h"
+#undef REFPROP_IMPLEMENTATION
+
+#include "CoolPropTools.h"
 #include "REFPROPMixtureBackend.h"
 #include "Exceptions.h"
 #include "Configuration.h"
@@ -71,119 +49,16 @@ enum DLLNameManglingStyle{ NO_NAME_MANGLING = 0, LOWERCASE_NAME_MANGLING, LOWERC
 
 std::string LoadedREFPROPRef;
 
-// Check windows
-#if _WIN32 || _WIN64
-   #if _WIN64
-     #define ENV64BIT
-  #else
-    #define ENV32BIT
-  #endif
-#endif
-
-// Check GCC
-#if __GNUC__
-  #if __x86_64__ || __ppc64__
-    #define ENV64BIT
-  #else
-    #define ENV32BIT
-  #endif
-#endif
-
 static bool dbg_refprop = false;
-static std::string RPVersion_loaded = "";
 static const unsigned int number_of_endings = 5;
 std::string endings[number_of_endings] = {"", ".FLD", ".fld", ".PPF", ".ppf"};
 
 static char rel_path_HMC_BNC[] = "HMX.BNC";
 static char default_reference_state[] = "DEF";
 
-/* Define functions as pointers and initialise them to NULL
-* Declare the functions for direct access
-*
-* Example: SETPATHdll_POINTER SETPATHdll;
-*
-* ***MAGIC WARNING**!! X Macros in use
-* See http://stackoverflow.com/a/148610
-* See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
-*/
-#define X(name)  name ## _POINTER name;
- LIST_OF_REFPROP_FUNCTION_NAMES
-#undef X
-
-void *getFunctionPointer(const char * name, DLLNameManglingStyle mangling_style = NO_NAME_MANGLING)
-{
-    std::string function_name;
-    switch(mangling_style){
-        case NO_NAME_MANGLING:
-            function_name = name; break;
-        case LOWERCASE_NAME_MANGLING:
-            function_name = lower(name); break;
-        case LOWERCASE_AND_UNDERSCORE_NAME_MANGLING:
-            function_name = lower(name) + "_"; break;
-    }
-    #if defined(__ISWINDOWS__)
-        return (void *) GetProcAddress(RefpropdllInstance, function_name.c_str());
-    #elif defined(__ISLINUX__)
-        return dlsym(RefpropdllInstance, function_name.c_str());
-    #elif defined(__ISAPPLE__)
-        return dlsym(RefpropdllInstance, function_name.c_str());
-    #else
-        throw CoolProp::NotImplementedError("This function should not be called.");
-        return NULL;
-    #endif
-}
-
-//Moved pointer handling to a function, helps to maintain
-//an overview and structures OS dependent parts
-double setFunctionPointers()
-{
-    if (RefpropdllInstance==NULL)
-    {
-        printf("REFPROP is not loaded, make sure you call this function after loading the library.\n");
-        return -_HUGE;
-    }
-    /* First determine the type of name mangling in use.
-     * A) RPVersion -> RPVersion
-     * B) RPVersion -> rpversion
-     * C) RPVersion -> rpversion_
-     */
-     DLLNameManglingStyle mangling_style = NO_NAME_MANGLING; // defaults to no mangling
-
-     SETUPdll = (SETUPdll_POINTER) getFunctionPointer("SETUPdll");
-     if (SETUPdll == NULL){ // some mangling in use
-         SETUPdll = (SETUPdll_POINTER) getFunctionPointer("setupdll");
-         if (SETUPdll != NULL){
-            mangling_style = LOWERCASE_NAME_MANGLING;
-         }
-         else{
-             SETUPdll = (SETUPdll_POINTER) getFunctionPointer("setupdll_");
-             if (SETUPdll != NULL){
-                 mangling_style = LOWERCASE_AND_UNDERSCORE_NAME_MANGLING;
-             }
-             else{
-                 throw CoolProp::ValueError("Could not load the symbol SETUPdll or any of its mangled forms; REFPROP shared library broken");
-             }
-         }
-     }
-
-    /* Set the pointers, platform independent
-     *
-     * Example: RPVersion = (RPVersion_POINTER) getFunctionPointer(STRINGIFY(RPVersion));
-     *
-     * ***MAGIC WARNING**!! X Macros in use
-     * See http://stackoverflow.com/a/148610
-     * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
-     */
-    #define X(name)  name = (name ## _POINTER) getFunctionPointer(STRINGIFY(name), mangling_style);
-       LIST_OF_REFPROP_FUNCTION_NAMES
-    #undef X
-
-    return COOLPROP_OK;
-}
-
 std::string get_REFPROP_fluid_path()
 {
-    std::string rpPath = refpropPath;
+    std::string rpPath = "";
     // Allow the user to specify an alternative REFPROP path by configuration value
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
     if (!alt_refprop_path.empty()){ rpPath = alt_refprop_path; }
@@ -197,72 +72,6 @@ std::string get_REFPROP_fluid_path()
         throw CoolProp::NotImplementedError("This function should not be called.");
         return rpPath;
     #endif
-}
-bool load_REFPROP()
-{
-    // If REFPROP is not loaded
-    if (RefpropdllInstance==NULL)
-    {
-
-        // Load it
-        #if defined(__ISWINDOWS__)
-            /* We need this logic on windows because if you use the bitness
-             * macros it requires that the build bitness and the target bitness
-             * are the same which is in general not the case.  Therefore, checking
-             * both is safe
-             */
-            // First try to load the 64-bit version
-            // 64-bit code here.
-            TCHAR refpropdllstring[100] = TEXT("refprp64.dll");
-            RefpropdllInstance = LoadLibrary(refpropdllstring);
-
-            if (RefpropdllInstance==NULL){
-                // That didn't work, let's try the 32-bit version
-                // 32-bit code here.
-                TCHAR refpropdllstring32[100] = TEXT("refprop.dll");
-                RefpropdllInstance = LoadLibrary(refpropdllstring32);
-            }
-
-        #elif defined(__ISLINUX__)
-            RefpropdllInstance = dlopen ("librefprop.so", RTLD_NOW);
-        #elif defined(__ISAPPLE__)
-            RefpropdllInstance = dlopen ("librefprop.dylib", RTLD_NOW);
-        #else
-            throw CoolProp::NotImplementedError("We should not reach this point.");
-            RefpropdllInstance = NULL;
-        #endif
-
-        if (RefpropdllInstance==NULL)
-        {
-            #if defined(__ISWINDOWS__)
-                              printf("Could not load refprop.dll \n\n");
-                throw CoolProp::AttributeError("Could not load refprop.dll, make sure it is in your system search path. In case you run 64bit and you have a REFPROP license, try installing the 64bit DLL from NIST.");
-            #elif defined(__ISLINUX__)
-                fputs (dlerror(), stderr);
-                              printf("Could not load librefprop.so \n\n");
-                throw CoolProp::AttributeError("Could not load librefprop.so, make sure it is in your system search path.");
-            #elif defined(__ISAPPLE__)
-                fputs (dlerror(), stderr);
-                              printf("Could not load librefprop.dylib \n\n");
-                throw CoolProp::AttributeError("Could not load librefprop.dylib, make sure it is in your system search path.");
-            #else
-                throw CoolProp::NotImplementedError("Something is wrong with the platform definition, you should not end up here.");
-            #endif
-            return false;
-        }
-
-        if (setFunctionPointers()!=COOLPROP_OK)
-        {
-                          printf("There was an error setting the REFPROP function pointers, check types and names in header file.\n");
-            throw CoolProp::AttributeError("There was an error setting the REFPROP function pointers, check types and names in header file.");
-            return false;
-        }
-        char rpv[1000];
-        RPVersion(rpv, 1000);
-        RPVersion_loaded = rpv;
-        return true;
-    }
-    return true;
 }
 
 namespace CoolProp {
@@ -334,7 +143,9 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
         if (rpv.compare("NOTAVAILABLE")!=0) {
             // Function names were defined in "REFPROP_lib.h",
             // This platform theoretically supports Refprop.
-            if (::load_REFPROP()) {
+            std::string err;
+            bool loaded_REFPROP = ::load_REFPROP(err);
+            if (loaded_REFPROP) {
                 return true;
             }
             else {
@@ -1438,7 +1249,11 @@ CoolPropDbl REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
 }
 
 void REFPROP_SETREF(char hrf[3], long ixflag, double x0[1], double &h0, double &s0, double &T0, double &p0, long &ierr, char herr[255], long l1, long l2){
-    ::load_REFPROP();
+    std::string err;
+    bool loaded_REFPROP = ::load_REFPROP(err);
+    if (!loaded_REFPROP){
+        throw ValueError(format("Not able to load REFPROP; err is: %s",err.c_str()));
+    }
     SETREFdll(hrf, &ixflag, x0, &h0, &s0, &T0, &p0, &ierr, herr, l1, l2);
 }
 
