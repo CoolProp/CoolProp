@@ -642,7 +642,18 @@ CoolPropDbl REFPROPMixtureBackend::calc_molar_mass(void)
     _molar_mass = wmm_kg_kmol/1000; // kg/mol
     return static_cast<CoolPropDbl>(_molar_mass.pt());
 };
-
+CoolPropDbl REFPROPMixtureBackend::calc_Bvirial(void)
+{
+    double b;
+    VIRBdll(&_T, &(mole_fractions[0]), &b);
+    return b*0.001; // 0.001 to convert from l/mol to m^3/mol
+}
+CoolPropDbl REFPROPMixtureBackend::calc_Cvirial(void)
+{
+    double c;
+    VIRCdll(&_T, &(mole_fractions[0]), &c);
+    return c*1e-6; // 1e-6 to convert from (l/mol)^2 to (m^3/mol)^2
+}
 double REFPROPMixtureBackend::calc_melt_Tmax()
 {
     this->check_loaded_fluid();

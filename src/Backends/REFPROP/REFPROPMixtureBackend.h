@@ -113,6 +113,10 @@ public:
     CoolPropDbl calc_conductivity(void);
     /// Get the surface tension [N/m] (based on the temperature in the state class).  Invalid for temperatures above critical point or below triple point temperature
     CoolPropDbl calc_surface_tension(void);
+    /// Calc the B virial coefficient
+    CoolPropDbl calc_Bvirial(void);
+    /// Calc the C virial coefficient
+    CoolPropDbl calc_Cvirial(void);
 
     CoolPropDbl calc_fugacity_coefficient(int i);
     CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
