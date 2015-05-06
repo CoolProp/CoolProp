@@ -409,7 +409,34 @@ TEST_CASE_METHOD(TabularFixture, "Tests for tabular backends with water", "[Tabu
         CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
         CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
     }
-    
+    SECTION("first_partial_deriv dHmass/dT|P"){
+        setup();
+        ASHEOS->update(CoolProp::PT_INPUTS, 101325, 300);
+        double expected = ASHEOS->cpmass();
+        ASTTSE->update(CoolProp::PT_INPUTS, 101325, 300);
+        double dhdT_TTSE = ASTTSE->first_partial_deriv(CoolProp::iHmass, CoolProp::iT, CoolProp::iP);
+        ASBICUBIC->update(CoolProp::PT_INPUTS, 101325, 300);
+        double dhdT_BICUBIC = ASBICUBIC->first_partial_deriv(CoolProp::iHmass, CoolProp::iT, CoolProp::iP);
+        CAPTURE(expected);
+        CAPTURE(dhdT_TTSE);
+        CAPTURE(dhdT_BICUBIC);
+        CHECK(std::abs((expected-dhdT_TTSE)/expected) < 1e-4);
+        CHECK(std::abs((expected-dhdT_BICUBIC)/expected) < 1e-4);
+    }
+    SECTION("first_partial_deriv dHmolar/dT|P"){
+        setup();
+        ASHEOS->update(CoolProp::PT_INPUTS, 101325, 300);
+        double expected = ASHEOS->cpmolar();
+        ASTTSE->update(CoolProp::PT_INPUTS, 101325, 300);
+        double dhdT_TTSE = ASTTSE->first_partial_deriv(CoolProp::iHmolar, CoolProp::iT, CoolProp::iP);
+        ASBICUBIC->update(CoolProp::PT_INPUTS, 101325, 300);
+        double dhdT_BICUBIC = ASBICUBIC->first_partial_deriv(CoolProp::iHmolar, CoolProp::iT, CoolProp::iP);
+        CAPTURE(expected);
+        CAPTURE(dhdT_TTSE);
+        CAPTURE(dhdT_BICUBIC);
+        CHECK(std::abs((expected-dhdT_TTSE)/expected) < 1e-4);
+        CHECK(std::abs((expected-dhdT_BICUBIC)/expected) < 1e-4);
+    }
 }
 #endif // ENABLE_CATCH
 

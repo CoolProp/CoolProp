@@ -25,6 +25,25 @@
 
 namespace CoolProp{
 
+/// Get a conversion factor from mass to molar if needed
+inline void mass_to_molar(parameters &param, double &conversion_factor, double molar_mass){
+    switch(param){
+        case iDmass: conversion_factor = molar_mass; param = iDmolar; break;
+        case iHmass: conversion_factor = 1/molar_mass; param = iHmolar; break;
+        case iSmass: conversion_factor = 1/molar_mass; param = iSmolar; break;
+        case iUmass: conversion_factor = 1/molar_mass; param = iUmolar; break;
+        case iDmolar:
+        case iHmolar:
+        case iSmolar:
+        case iUmolar:
+        case iT:
+        case iP:
+            return;
+        default:
+            throw ValueError("I don't know how to convert this parameter");
+    }
+}
+
 /** \brief This class holds the data for a two-phase table that is log spaced in p
  * 
  * It contains very few members or methods, mostly it just holds the data
@@ -722,6 +741,12 @@ class TabularBackend : public AbstractState
         CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){
             if (using_single_phase_table){
                 CoolPropDbl dOf_dx, dOf_dy, dWrt_dx, dWrt_dy, dConstant_dx, dConstant_dy;
+
+                // If a mass-based parameter is provided, get a conversion factor and change the key to the molar-based key
+                double Of_conversion_factor = 1.0, Wrt_conversion_factor = 1.0, Constant_conversion_factor = 1.0;
+                mass_to_molar(Of, Of_conversion_factor, AS->molar_mass());
+                mass_to_molar(Wrt, Wrt_conversion_factor, AS->molar_mass());
+                mass_to_molar(Constant, Constant_conversion_factor, AS->molar_mass());
                 
                 switch(selected_table){
                     case SELECTED_PH_TABLE: {
@@ -744,11 +769,8 @@ class TabularBackend : public AbstractState
                     }
                     case SELECTED_NO_TABLE: throw ValueError("table not selected");
                 }
-                
-                
-                return (dOf_dx*dConstant_dy-dOf_dy*dConstant_dx)/(dWrt_dx*dConstant_dy-dWrt_dy*dConstant_dx);
-                    
-                //return 1/(evaluate_single_phase_phmolar_derivative(iT,cached_single_phase_i, cached_single_phase_j,1,0));
+                double val = (dOf_dx*dConstant_dy-dOf_dy*dConstant_dx)/(dWrt_dx*dConstant_dy-dWrt_dy*dConstant_dx);
+                return val*Of_conversion_factor/Wrt_conversion_factor;
             }
             else{
                 return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
