@@ -56,9 +56,17 @@ std::string endings[number_of_endings] = {"", ".FLD", ".fld", ".PPF", ".ppf"};
 static char rel_path_HMC_BNC[] = "HMX.BNC";
 static char default_reference_state[] = "DEF";
 
+#if defined(__powerpc__) || defined(__ISLINUX__) || defined(__ISAPPLE__)
+    char refpropPath[] = "/opt/refprop";
+#elif defined(__ISWINDOWS__)
+    char refpropPath[] = "";
+#else
+    #pragma error
+#endif
+
 std::string get_REFPROP_fluid_path()
 {
-    std::string rpPath = "";
+    std::string rpPath = refpropPath;
     // Allow the user to specify an alternative REFPROP path by configuration value
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
     if (!alt_refprop_path.empty()){ rpPath = alt_refprop_path; }
