@@ -224,3 +224,12 @@ Here is an example of the shared library usage with Julia wrapper::
     julia> CoolProp.AbstractState_free(handle)
     
 The call to ``AbstractState_free`` is not strictly needed as all managed AbstractState instances will auto-deallocate.  But if you are generating thousands or millions of AbstractState instances in this fashion, you might want to tidy up periodically. 
+
+Here is a further example in C++:
+
+.. literalinclude:: snippets/HighLevelLowLevel.cxx
+   :language: c++
+
+which yields the output:
+
+.. literalinclude:: snippets/HighLevelLowLevel.cxx.output
