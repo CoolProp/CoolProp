@@ -172,6 +172,12 @@ cdef class AbstractState:
     cpdef double Prandtl(self) except *: 
         """ Get the Prandtl number - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Prandtl(void)` """
         return self.thisptr.Prandtl()
+    cpdef double Bvirial(self) except *: 
+        """ Get the B virial coefficient - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Bvirial(void)` """
+        return self.thisptr.Bvirial()
+    cpdef double Cvirial(self) except *: 
+        """ Get the C virial coefficient - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Cvirial(void)` """
+        return self.thisptr.Cvirial()
     
     cpdef mole_fractions_liquid(self):
         """ Get the mole fractions of the liquid phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_liquid(void)` """
