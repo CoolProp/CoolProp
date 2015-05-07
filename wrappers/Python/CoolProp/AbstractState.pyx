@@ -178,6 +178,9 @@ cdef class AbstractState:
     cpdef double Cvirial(self) except *: 
         """ Get the C virial coefficient - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Cvirial(void)` """
         return self.thisptr.Cvirial()
+    cpdef double PIP(self) except *: 
+        """ Get the phase identification parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::PIP(void)` """
+        return self.thisptr.PIP()
     
     cpdef mole_fractions_liquid(self):
         """ Get the mole fractions of the liquid phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_liquid(void)` """

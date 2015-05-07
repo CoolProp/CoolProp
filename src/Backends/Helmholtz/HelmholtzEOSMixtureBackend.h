@@ -262,6 +262,9 @@ public:
     CoolPropDbl calc_rhomolar_reducing(void){return get_reducing_state().rhomolar;};
     CoolPropDbl calc_p_reducing(void){return get_reducing_state().p;};
 
+    // Calculate the phase identification parameter of Venkatarathnam et al, Fluid Phase Equilibria
+    CoolPropDbl calc_PIP(void){return 2-rhomolar()*(second_partial_deriv(iP,iDmolar, iT, iT, iDmolar)/first_partial_deriv(iP, iT, iDmolar)-second_partial_deriv(iP, iDmolar, iT, iDmolar, iT)/first_partial_deriv(iP, iDmolar, iT));};
+
     std::string calc_name(void);
 	std::vector<std::string> calc_fluid_names(void);
 

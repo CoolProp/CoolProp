@@ -82,6 +82,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double Prandtl() except +ValueError
         double Bvirial() except +ValueError
         double Cvirial() except +ValueError
+        double PIP() except +ValueError
         
         double keyed_output(constants_header.parameters) except+ValueError
         double trivial_keyed_output(constants_header.parameters) except+ValueError

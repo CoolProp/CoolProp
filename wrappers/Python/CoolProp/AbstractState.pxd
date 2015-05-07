@@ -67,6 +67,7 @@ cdef class AbstractState:
     cpdef double Prandtl(self) except *
     cpdef double Bvirial(self) except *
     cpdef double Cvirial(self) except *
+    cpdef double PIP(self) except *
     
     cpdef double molar_mass(self) except *
     cpdef double acentric_factor(self) except*

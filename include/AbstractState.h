@@ -145,7 +145,8 @@ protected:
     virtual CoolPropDbl calc_gas_constant(void){throw NotImplementedError("calc_gas_constant is not implemented for this backend");};
     /// Using this backend, calculate the fugacity coefficient (dimensionless)
     virtual CoolPropDbl calc_fugacity_coefficient(int i){throw NotImplementedError("calc_fugacity_coefficient is not implemented for this backend");};
-
+    /// Using this backend, calculate the phase identification parameter (PIP)
+    virtual CoolPropDbl calc_PIP(void){throw NotImplementedError("calc_PIP is not implemented for this backend");};
 
     // Derivatives of residual helmholtz energy
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
@@ -326,6 +327,7 @@ protected:
     /// Using this backend, get the molar density in mol/m^3
     virtual long double calc_rhomolar(void){return _rhomolar;}
 
+
 public:
 
     AbstractState():_fluid_type(FLUID_TYPE_UNDEFINED),_phase(iphase_unknown),_rhospline(-_HUGE),_dsplinedp(-_HUGE),_dsplinedh(-_HUGE){clear();}
@@ -491,9 +493,13 @@ public:
     double acentric_factor(void);
     /// Return the mole-fraction weighted gas constant in J/mol/K
     double gas_constant(void);
+    /// Return the B virial coefficient
     double Bvirial(void);
+    /// Return the derivative of the B virial coefficient with respect to temperature
     double dBvirial_dT(void);
+    /// Return the C virial coefficient
     double Cvirial(void);
+    /// Return the derivative of the C virial coefficient with respect to temperature
     double dCvirial_dT(void);
     /// Return the compressibility factor \f$ Z = p/(rho R T) \f$
     double compressibility_factor(void);
@@ -530,7 +536,10 @@ public:
     /// Return the isobaric expansion coefficient \f$ \beta = \frac{1}{v}\left.\frac{\partial v}{\partial T}\right|_p = -\frac{1}{\rho}\left.\frac{\partial \rho}{\partial T}\right|_p\f$  in 1/K
     double isobaric_expansion_coefficient(void);
     double fugacity_coefficient(int i);
-    //double fundamental_derivative_of_gas_dynamics(void);
+    /// Return the fundamental derivative of gas dynamics
+    //double fundamental_derivative_of_gas_dynamics(void){return this->second_partial_deriv(iP, iDmolar, iSmolar, iDmolar, iSmolar)/pow(speed_sound(), 2)/2/pow(this->rhomolar(),3);};
+    /// Return the phase identification parameter (PIP) of G. Venkatarathnam and L.R. Oellrich, "Identification of the phase of a fluid using partial derivatives of pressure, volume, and temperature without reference to saturation properties: Applications in phase equilibria calculations"
+    double PIP(){return calc_PIP();};
     
     std::vector<CoolPropDbl> mole_fractions_liquid(void){return calc_mole_fractions_liquid();};
     std::vector<CoolPropDbl> mole_fractions_vapor(void){return calc_mole_fractions_vapor();};
