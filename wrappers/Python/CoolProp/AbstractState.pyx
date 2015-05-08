@@ -188,6 +188,12 @@ cdef class AbstractState:
     cpdef mole_fractions_vapor(self):
         """ Get the mole fractions of the vapor phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_vapor(void)` """
         return self.thisptr.mole_fractions_vapor()
+    
+    cpdef tuple true_critical_point(self):
+        """ Get the "true" critical point where dp/drho|T = 0 & d2p/drho^2|T = 0 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::true_critical_point(void)` """
+        cdef double T = 1e99, rho = 1e99
+        self.thisptr.true_critical_point(T, rho)
+        return T, rho
         
     ## ----------------------------------------	
     ##        Derivatives

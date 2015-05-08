@@ -61,7 +61,7 @@ inline double Halley(FuncWrapper1DWithTwoDerivs &f, double x0, double ftol, int 
 }
 
 // Multi-Dimensional solvers
-std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, const std::vector<double> &x0, double tol, int maxiter, std::string *errstring);
+std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> &x0, double tol, int maxiter, std::string *errstring);
 
 }; /*namespace CoolProp*/
 #endif

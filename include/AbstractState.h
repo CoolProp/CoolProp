@@ -327,6 +327,9 @@ protected:
     /// Using this backend, get the molar density in mol/m^3
     virtual long double calc_rhomolar(void){return _rhomolar;}
 
+    /// Using this backend, return true critical point where dp/drho|T = 0 and d2p/drho^2|T = 0
+    virtual void calc_true_critical_point(double &T, double &rho){throw NotImplementedError("calc_true_critical_point is not implemented for this backend");};
+
 
 public:
 
@@ -540,6 +543,9 @@ public:
     //double fundamental_derivative_of_gas_dynamics(void){return this->second_partial_deriv(iP, iDmolar, iSmolar, iDmolar, iSmolar)/pow(speed_sound(), 2)/2/pow(this->rhomolar(),3);};
     /// Return the phase identification parameter (PIP) of G. Venkatarathnam and L.R. Oellrich, "Identification of the phase of a fluid using partial derivatives of pressure, volume, and temperature without reference to saturation properties: Applications in phase equilibria calculations"
     double PIP(){return calc_PIP();};
+
+    /// Find the "true" critical point where dpdrho|T and d2p/drho2|T are equal to zero
+    void true_critical_point(double &T, double &rho){ calc_true_critical_point(T, rho); }
     
     std::vector<CoolPropDbl> mole_fractions_liquid(void){return calc_mole_fractions_liquid();};
     std::vector<CoolPropDbl> mole_fractions_vapor(void){return calc_mole_fractions_vapor();};

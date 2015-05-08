@@ -30,6 +30,7 @@ surface tension                 N/m
 #include "Exceptions.h"
 #include "Configuration.h"
 #include "CoolProp.h"
+#include "Solvers.h"
 
 #include <stdlib.h>
 #include <string>
@@ -1263,6 +1264,34 @@ void REFPROP_SETREF(char hrf[3], long ixflag, double x0[1], double &h0, double &
         throw ValueError(format("Not able to load REFPROP; err is: %s",err.c_str()));
     }
     SETREFdll(hrf, &ixflag, x0, &h0, &s0, &T0, &p0, &ierr, herr, l1, l2);
+}
+
+void REFPROPMixtureBackend::calc_true_critical_point(double &T, double &rho)
+{
+
+    class wrapper : public FuncWrapperND
+    {
+    public:
+        const std::vector<double> z;
+        wrapper(const std::vector<double> &z) : z(z) {};
+        std::vector<double> call(const std::vector<double>& x){
+            std::vector<double> r(2);
+            double dpdrho__constT = _HUGE, d2pdrho2__constT = _HUGE;
+            DPDDdll(const_cast<double *>(&(x[0])), const_cast<double *>(&(x[1])), const_cast<double *>(&(z[0])), &dpdrho__constT);
+            DPDD2dll(const_cast<double *>(&(x[0])), const_cast<double *>(&(x[1])), const_cast<double *>(&(z[0])), &d2pdrho2__constT);
+            r[0] = dpdrho__constT;
+            r[1] = d2pdrho2__constT;
+            return r;
+        };
+    };
+    wrapper resid(mole_fractions);
+
+    T = calc_T_critical();
+    double rho_moldm3 = calc_rhomolar_critical()/1000.0;
+    std::vector<double> x(2,T); x[1] = rho_moldm3;
+    std::string errstr;
+    std::vector<double> xfinal = NDNewtonRaphson_Jacobian(&resid, x, 1e-9, 30, &errstr);
+    T = xfinal[0]; rho = xfinal[1]*1000.0;
 }
 
 } /* namespace CoolProp */

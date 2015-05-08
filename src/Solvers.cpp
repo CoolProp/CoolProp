@@ -4,6 +4,7 @@
 #include "MatrixMath.h"
 #include <iostream>
 #include "CoolPropTools.h"
+#include <Eigen/Dense>
 
 namespace CoolProp{
 
@@ -48,24 +49,32 @@ functions, each of which take the vector x. The data is managed using std::vecto
 @param errstring  A string with the returned error.  If the length of errstring is zero, no errors were found
 @returns If no errors are found, the solution.  Otherwise, _HUGE, the value for infinity
 */
-std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> x0, double tol, int maxiter, std::string *errstring)
+std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> &x0, double tol, int maxiter, std::string *errstring)
 {
     int iter=0;
     *errstring=std::string("");
-    std::vector<double> f0,v,negative_f0;
-    std::vector<std::vector<double> > J;
+    std::vector<double> f0,v;
+    std::vector<std::vector<double> > JJ;
+    Eigen::VectorXd r(x0.size());
+    Eigen::Matrix2d J(x0.size(), x0.size());
     double error = 999;
     while (iter==0 || std::abs(error)>tol){
         f0 = f->call(x0);
-        J = f->Jacobian(x0);
+        JJ = f->Jacobian(x0);
+        
+        for (std::size_t i = 0; i < x0.size(); ++i)
+        {
+            r(i) = f0[i];
+            for (std::size_t j = 0; j < x0.size(); ++j)
+            {
+                J(i,j) = JJ[i][j];
+            }
+        }
 
-        // Negate f0
-        negative_f0 = f0;
-        for (std::size_t i = 0; i<f0.size(); i++){ negative_f0[i] *= -1;}
-        // find v from J*v = -f
-        v = linsolve(J, negative_f0);
+        Eigen::Vector2d v = J.colPivHouseholderQr().solve(-r);
+
         // Update the guess
-        for (std::size_t i = 0; i<x0.size(); i++){ x0[i] *= v[i];}
+        for (std::size_t i = 0; i<x0.size(); i++){ x0[i] += v(i);}
         error = root_sum_square(f0);
         if (iter>maxiter){
             *errstring=std::string("reached maximum number of iterations");
