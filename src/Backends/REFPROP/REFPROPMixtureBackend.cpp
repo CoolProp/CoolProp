@@ -1240,6 +1240,58 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     _delta = _rhomolar/calc_rhomolar_reducing();
     _Q = q;
 }
+
+void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair,
+                         double value1,
+                         double value2,
+                         const GuessesStructure &guesses)
+{
+    this->check_loaded_fluid();
+    double rho_mol_L=_HUGE, rhoLmol_L=_HUGE, rhoVmol_L=_HUGE,
+        hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,
+        w=_HUGE,q=_HUGE, mm=_HUGE, p_kPa = _HUGE, hjt = _HUGE;
+    long ierr = 0;
+    char herr[errormessagelength+1];
+
+    clear();
+
+    // Check that mole fractions have been set, etc.
+    check_status();
+
+    switch(input_pair)
+    {
+        case PT_INPUTS:{
+            // Unit conversion for REFPROP
+            p_kPa = 0.001*value1; _T = value2; // Want p in [kPa] in REFPROP
+
+            //THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+            long kguess = 1; // guess provided
+            long kph = (guesses.rhomolar > calc_rhomolar_critical()) ? 1 : 2; // liquid  if density > rhoc, vapor otherwise - though we are passing the guess density
+            rho_mol_L = guesses.rhomolar/1000.0;
+            TPRHOdll(&_T, &p_kPa, &(mole_fractions[0]), &kph, &kguess, &rho_mol_L, &ierr, herr, errormessagelength);
+            if (static_cast<int>(ierr) > 0) { throw ValueError(format("PT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+
+            // Set all cache values that can be set with unit conversion to SI
+            _p = value1;
+            _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
+        }
+    }
+
+    // Calculate everything else
+    THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+
+    // Set these common variables that are used in every flash calculation
+    _hmolar = hmol;
+    _smolar = smol;
+    _umolar = emol;
+    _cvmolar = cvmol;
+    _cpmolar = cpmol;
+    _speed_sound = w;
+    _tau = calc_T_reducing()/_T;
+    _delta = _rhomolar/calc_rhomolar_reducing();
+    _Q = q;
+
+}
 CoolPropDbl REFPROPMixtureBackend::call_phixdll(long itau, long idel)
 {
     this->check_loaded_fluid();

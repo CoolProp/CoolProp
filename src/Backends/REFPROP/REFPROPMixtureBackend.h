@@ -68,6 +68,14 @@ public:
                 double value2
                 );
 
+    /**
+     * @brief Update the state, while providing guess values
+     */
+    void update_with_guesses(CoolProp::input_pairs,
+                double value1,
+                double value2,
+                const GuessesStructure &guesses);
+
     CoolPropDbl calc_molar_mass(void);
     
     void check_loaded_fluid(void);
