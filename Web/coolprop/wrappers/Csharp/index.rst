@@ -98,7 +98,7 @@ Example Code
 ============
 
 .. literalinclude:: Example.cs
-   :language: C#
+   :language: csharp
 
 Example Code Output
 ===================
