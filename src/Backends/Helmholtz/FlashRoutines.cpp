@@ -1327,8 +1327,8 @@ void FlashRoutines::HS_flash_generate_TP_singlephase_guess(HelmholtzEOSMixtureBa
 }
 void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
-    // Use PH flash and iterate on pressure (known to be between pmin and pmax) 
-    // in order to find S
+    // Use TS flash and iterate on T (known to be between Tmin and Tmax) 
+    // in order to find H
     double hmolar = HEOS.hmolar(), smolar = HEOS.smolar();
     class Residual : public FuncWrapper1D
     {
@@ -1336,199 +1336,49 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
         HelmholtzEOSMixtureBackend &HEOS;
         CoolPropDbl hmolar, smolar, Qs;
         Residual(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec) : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec){};
-        double call(double logp){
-            double p = exp(logp);
-            HEOS.update(HmolarP_INPUTS, hmolar, p);
-            double r = HEOS.smolar() - smolar;
+        double call(double T){
+            HEOS.update(SmolarT_INPUTS, smolar, T);
+            double r = HEOS.hmolar() - hmolar;
             return r;
         }
     } resid(HEOS, hmolar, smolar);
     std::string errstr;
-    // Find minimum pressure
-    bool good_pmin = false;
-    double pmin = HEOS.p_triple();
+    // Find minimum temperature
+    bool good_Tmin = false;
+    double Tmin = HEOS.Ttriple();
     double rmin;
     do{
         try{
-            HEOS.update(HmolarP_INPUTS, hmolar, pmin);
-            rmin = HEOS.smolar() - smolar;
-            good_pmin = true;
+            rmin = resid.call(Tmin); good_Tmin = true;
         }
         catch(...){
-            pmin *= 1.01;
+            Tmin += 0.5;
         }
-        if (pmin > HEOS.pmax()){
-            throw ValueError("Cannot find good pmin");
+        if (Tmin > HEOS.Tmax()){
+            throw ValueError("Cannot find good Tmin");
         }
     }
-    while(!good_pmin);
+    while(!good_Tmin);
 
-    // Find maximum pressure
-    bool good_pmax = false;
-    double pmax = HEOS.pmax()*1.01; // Just a little above, so if we use pmax as input, it should still work
+    // Find maximum temperature
+    bool good_Tmax = false;
+    double Tmax = HEOS.Tmax()*1.01; // Just a little above, so if we use Tmax as input, it should still work
     double rmax;
     do{
         try{
-            HEOS.update(HmolarP_INPUTS, hmolar, pmax);
-            rmax = HEOS.smolar() - smolar;
-            good_pmax = true;
+            rmax = resid.call(Tmax); good_Tmax = true;
         }
         catch(...){
-            pmax *= 0.95;
+            Tmax -= 0.1;
         }
-        if (pmax < HEOS.p_triple()){
-            throw ValueError("Cannot find good pmax");
+        if (Tmax < Tmin){
+            throw ValueError("Cannot find good Tmax");
         }
     }
-    while(!good_pmax);
-    double p = Brent(resid, log(pmin), log(pmax), DBL_EPSILON, 1e-10, 100, errstr);
+    while(!good_Tmax);
+    double p = Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100, errstr);
     int rr = 0;
 }
-
-//void FlashRoutines::HS_flash_old(HelmholtzEOSMixtureBackend &HEOS)
-//{
-//    if (HEOS.imposed_phase_index != iphase_not_imposed)
-//    {
-//        // Use the phase defined by the imposed phase
-//        HEOS._phase = HEOS.imposed_phase_index;
-//    }
-//    else
-//    {
-//        enum solution_type_enum{not_specified = 0, single_phase_solution, two_phase_solution};
-//        solution_type_enum solution;
-//        
-//        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy(new CoolProp::HelmholtzEOSMixtureBackend(HEOS.components));
-//        
-//        // Find maxima states if needed
-//        // Cache the maximum enthalpy saturation state;
-//        HEOS.calc_hsat_max();
-//        // For weird fluids like the siloxanes, there can also be a maximum 
-//        // entropy along the vapor saturation line. Try to find it if it has one
-//        HEOS.calc_ssat_max();
-//        
-//        CoolProp::SimpleState crit = HEOS.get_state("reducing");
-//        CoolProp::SimpleState &tripleL = HEOS.components[0].triple_liquid,
-//                              &tripleV = HEOS.components[0].triple_vapor;
-//                              
-//        double first_maxima_in_saturation_entropy;
-//        if (HEOS.ssat_max.exists == SsatSimpleState::SSAT_MAX_DOES_EXIST){
-//            first_maxima_in_saturation_entropy = HEOS.ssat_max.smolar;
-//        }
-//        else{
-//            first_maxima_in_saturation_entropy = tripleV.smolar;
-//        }
-//        
-//        // Enthalpy at solid line for given entropy
-//        double hsolid = (tripleV.hmolar-tripleL.hmolar)/(tripleV.smolar-tripleL.smolar)*(HEOS.smolar()-tripleL.smolar) + tripleL.hmolar;
-//        // Part A - first check if HS is below triple line formed by connecting the triple point states
-//        // If so, it is solid, and not supported
-//        if (HEOS.hmolar() < hsolid-0.1){ // -0.1 is for a buffer
-//            throw ValueError(format("Enthalpy [%g J/mol] is below solid enthalpy [%g J/mol] for entropy [%g J/mol/K]", HEOS.hmolar(), hsolid-0.1, HEOS.smolar()));
-//        }
-//        /* Now check up to the first maxima in saturated vapor entropy.
-//         * For nicely behaved fluids, this means all the way up to the triple point vapor
-//         * For not-nicely behaved fluids with a local maxima on the saturated vapor entropy curve, 
-//         * the entropy at the local maxima in entropy
-//         * 
-//         * In this section, there can only be one solution for the saturation temperature, which is why the solver
-//         * is divided up in this way.
-//         */
-//        else if (HEOS.smolar() < first_maxima_in_saturation_entropy){
-//            double Q;
-//            if (HEOS.smolar() < crit.smolar){ 
-//                Q = 0; // Liquid part
-//            }
-//            else{
-//                Q = 1; // Vapor part
-//            }
-//            
-//            // Update the temporary instance with saturated entropy 
-//            HEOS_copy->update(QSmolar_INPUTS, Q, HEOS.smolar());
-//                
-//            // Check if above the saturation enthalpy for given entropy
-//            // If it is, the inputs are definitely single-phase.  We are done here
-//            if (HEOS.hmolar() > HEOS_copy->hmolar()){
-//                solution = single_phase_solution;
-//            }
-//            else{
-//                // C2: It is below hsat(ssat)
-//                // Either two-phase, or vapor (for funky saturation curves like the siloxanes)
-//                
-//                /* If enthalpy is between enthalpy at maxima in h and triple
-//                 * point enthalpy, search in enthalpy to find possible solutions
-//                 * that yield the correct enthalpy
-//                 * 
-//                 * There should only be one solution since we have already bypassed the local maxima in enthalpy
-//                 */
-//                
-//                HEOS_copy->update_HmolarQ_with_guessT(HEOS.hmolar(), 1, HEOS.hsat_max.T);
-//                
-//                if (HEOS.smolar() > HEOS_copy->smolar()){
-//                    solution = single_phase_solution;
-//                }
-//                else{
-//                    // C2a: It is below ssatV(hsatV) --> two-phase
-//                    solution = two_phase_solution;
-//                }
-//            }
-//        }
-//        // Part D - Check higher limit
-//        else if (HEOS.smolar() > tripleV.smolar){
-//            solution = single_phase_solution;
-//            HEOS_copy->update(PT_INPUTS, HEOS_copy->p_triple(), 0.5*HEOS_copy->Tmin() + 0.5*HEOS_copy->Tmax());
-//        }
-//        // Part E - HEOS.smolar() > crit.hmolar > tripleV.smolar
-//        else{
-//            // Now branch depending on the saturated vapor curve
-//            // If maximum 
-//            throw ValueError(format("partE HEOS.smolar() = %g tripleV.smolar = %g", HEOS.smolar(), tripleV.smolar));
-//        }
-//        
-//        switch (solution){
-//            case single_phase_solution:
-//            {
-//                // Fixing it to be gas is probably sufficient
-//                HEOS_copy->specify_phase(iphase_gas);
-//                HS_flash_singlephaseOptions options;
-//                options.omega = 1.0;
-//                try{
-//                    // Do the flash calcs starting from the guess value
-//                    HS_flash_singlephase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);
-//                    // Copy the results
-//                    HEOS.update(DmolarT_INPUTS, HEOS_copy->rhomolar(), HEOS_copy->T());
-//                    break;
-//                }
-//                catch(...){
-//                    try{
-//                        // Trying again with another guessed value
-//                        HEOS_copy->update(DmolarT_INPUTS, HEOS.rhomolar_critical()*1.3, HEOS.Tmax());
-//                        HS_flash_singlephase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);
-//                        // Copy the results
-//                        HEOS.update(DmolarT_INPUTS, HEOS_copy->rhomolar(), HEOS_copy->T());
-//                        break;
-//                    }
-//                    catch (...){
-//                        // Trying again with another guessed value
-//                        HEOS_copy->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), 0.5*HEOS.Tmax() + 0.5*HEOS.T_critical());
-//                        HS_flash_singlephase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);
-//                        // Copy the results
-//                        HEOS.update(DmolarT_INPUTS, HEOS_copy->rhomolar(), HEOS_copy->T());
-//                        break;
-//                    }
-//                }
-//            }
-//            case two_phase_solution:
-//            {
-//                HS_flash_twophaseOptions options;
-//                HS_flash_twophase(*HEOS_copy, HEOS.hmolar(), HEOS.smolar(), options);
-//                HEOS.update_internal(*HEOS_copy);
-//                break;
-//            }
-//            default:
-//                throw ValueError("solution not set");
-//        }
-//    }
-//}
 
 #if defined(ENABLE_CATCH)
 
