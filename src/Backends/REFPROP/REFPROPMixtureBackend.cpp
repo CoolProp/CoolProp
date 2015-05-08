@@ -522,6 +522,21 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
     }
 }
 
+CoolPropDbl REFPROPMixtureBackend::calc_PIP(void)
+{
+    // Calculate the PIP factor of Venkatharathnam and Oellrich, "Identification of the phase of a fluid using 
+    // partial derivatives of pressure, volume,and temperature without reference to saturation properties: 
+    // Applications in phase equilibria calculations"
+    double t = _T, rho = _rhomolar/1000.0, // mol/dm^3
+        x = 0,p = 0,e = 0,h = 0,s = 0,cv = 0,cp = 0,w = 0,Z = 0,hjt = 0,A = 0,G = 0,
+        xkappa = 0,beta = 0,dPdrho = 0,d2PdD2 = 0,dPT = 0,drhodT = 0,drhodP = 0,
+        d2PT2 = 0,d2PdTD = 0,spare3 = 0,spare4 = 0;
+    //subroutine THERM2 (t,rho,x,p,e,h,s,cv,cp,w,Z,hjt,A,G,
+    // &                   xkappa,beta,dPdrho,d2PdD2,dPT,drhodT,drhodP,
+    // &                   d2PT2,d2PdTD,spare3,spare4);
+    THERM2dll(&t,&rho,&(mole_fractions[0]),&p,&e,&h,&s,&cv,&cp,&w,&Z,&hjt,&A,&G, &xkappa,&beta,&dPdrho,&d2PdD2,&dPT,&drhodT,&drhodP,&d2PT2,&d2PdTD,&spare3,&spare4);
+    return 2-rho*(d2PdTD/dPT- d2PdD2/dPdrho);
+};
 
 CoolPropDbl REFPROPMixtureBackend::calc_viscosity(void)
 {

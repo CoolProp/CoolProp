@@ -83,6 +83,8 @@ public:
     /// Returns true if REFPROP is supported on this platform
     bool REFPROP_supported(void);
 
+    CoolPropDbl calc_PIP(void);
+
     CoolPropDbl calc_cpmolar_idealgas(void);
 
     /// Set the fluids in REFPROP DLL by calling the SETUPdll function
