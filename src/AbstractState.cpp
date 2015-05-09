@@ -179,7 +179,7 @@ bool AbstractState::clear() {
 
     return true;
 }
-double AbstractState::trivial_keyed_output(int key)
+double AbstractState::trivial_keyed_output(parameters key)
 {
     if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
     switch (key)
@@ -233,7 +233,7 @@ double AbstractState::trivial_keyed_output(int key)
         throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));
     }
 }
-double AbstractState::keyed_output(int key)
+double AbstractState::keyed_output(parameters key)
 {
     if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
     // Handle trivial inputs

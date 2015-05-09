@@ -996,10 +996,10 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
 
         HelmholtzEOSMixtureBackend *HEOS;
         CoolPropDbl p, value;
-        int other;
+        parameters other;
         int iter;
         CoolPropDbl eos0, eos1;
-        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl p, CoolPropDbl value, int other) : 
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl p, CoolPropDbl value, parameters other) : 
                 HEOS(HEOS), p(p), value(value), other(other), iter(0), eos0(-_HUGE), eos1(-_HUGE)
                 {
                     // Specify the state to avoid saturation calls, but only if phase is subcritical

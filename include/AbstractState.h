@@ -468,9 +468,9 @@ public:
     // All other parameters are calculated on an as-needed basis
     // ----------------------------------------
     /// Retrieve a value by key
-    double keyed_output(int key);
+    double keyed_output(parameters key);
     /// A trivial keyed output like molar mass that does not depend on the state
-    double trivial_keyed_output(int key);
+    double trivial_keyed_output(parameters key);
     /// Get an output from the saturated liquid state by key
     double saturated_liquid_keyed_output(parameters key){return calc_saturated_liquid_keyed_output(key);};
     /// Get an output from the saturated vapor state by key

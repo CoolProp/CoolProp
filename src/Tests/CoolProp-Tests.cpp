@@ -272,7 +272,7 @@ public:
         CoolProp::input_pairs pair = CoolProp::generate_update_pair(iin1, v1, iin2, v2, o1, o2);
         pState->update(pair, o1, o2);
     }
-    void get_value(long key)
+    void get_value(parameters key)
     {
         actual = pState->keyed_output(key);
     }
