@@ -561,6 +561,9 @@ class TabularBackend : public AbstractState
 
         TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), AS(AS) {};
 
+        // None of the tabular methods are available from the high-level interface
+        bool available_in_high_level(void){return false;}
+
         void connect_pointers(parameters output, SinglePhaseGriddedTableData &table)
 		{
 			// Connect the pointers based on the output variable desired

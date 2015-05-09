@@ -392,6 +392,11 @@ public:
     virtual void set_volu_fractions(const std::vector<CoolPropDbl> &mass_fractions){throw NotImplementedError("Volume composition has not been implemented.");}
     /// Get the mole fractions of the components
     virtual const std::vector<CoolPropDbl> & get_mole_fractions(void) = 0;
+
+    /// A function that says whether the backend instance can be instantiated in the high-level interface
+    /// In general this should be true, except for some other backends (especially the tabular backend)
+    /// Should be overloaded in derived classes to make this not possible by returning false
+    virtual bool available_in_high_level(void){return true;}
     
 	std::vector<std::string> fluid_names(void);
     

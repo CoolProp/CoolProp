@@ -222,6 +222,9 @@ void _PropsSI_initialize(const std::string &backend,
     else { // The only path where fractions_ptr stays NULL
       throw ValueError("fractions_ptr is NULL");
     }
+    if (!State->available_in_high_level()){
+        throw ValueError("This AbstractState derived class cannot be used in the high-level interface; see www.coolprop.org/dev/coolprop/LowLevelAPI.html");
+    }
 
     // Set the fraction for the state
     if (State->using_mole_fractions()){
