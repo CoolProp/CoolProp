@@ -180,6 +180,21 @@ Here is an example showing how to change the reference state and demonstrating t
     # Back to the original value
     In [1]: CoolProp.CoolProp.set_reference_state('n-Propane','DEF')
     
+Low-level interface using REFPROP
+---------------------------------
+
+If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP`` as the backend instead of ``HEOS``. For instance, as in python:
+
+In [0]: import CoolProp
+
+    In [0]: REFPROP = CoolProp.AbstractState("REFPROP", "Water")
+    
+    In [0]: REFPROP.update(CoolProp.DmolarT_INPUTS, 1e-6, 300)
+    
+    In [0]: REFPROP.p(), REFPROP.hmass(), REFPROP.hmolar()
+    
+    In [0]: [REFPROP.keyed_output(k) for k in [CoolProp.iP, CoolProp.iHmass, CoolProp.iHmolar]]
+    
 Access from High-Level Interface
 --------------------------------
 

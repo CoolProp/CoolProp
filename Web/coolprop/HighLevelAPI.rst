@@ -228,6 +228,22 @@ which can be used like
     
     # Should not be zero
     In [1]: CoolProp.CoolProp.PropsSI('H', 'T', 233.15, 'Q', 0, 'n-Propane')
+    
+Calling REFPROP
+---------------
+
+If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP::`` preceding the fluid name. For instance, as in python:
+
+.. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+    
+    # Using properties from CoolProp to get R410A density
+    In [2]: PropsSI('C','T',300,'P',101325,'HEOS::R32[0.697615]&R125[0.302385]')
+    
+    # Using properties from REFPROP to get R410A density
+    In [2]: PropsSI('C','T',300,'P',101325,'REFPROP::R32[0.697615]&R125[0.302385]')
+    
 
 C++ Sample Code
 ---------------
