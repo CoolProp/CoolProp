@@ -444,7 +444,7 @@ low_level_interface = [
             {
                 
                 "type": "class_dereference",
-                "name": "AS",
+                "name": "AS2",
                 "RHS": {
                     "type": "function",
                     "function": "keyed_output",
