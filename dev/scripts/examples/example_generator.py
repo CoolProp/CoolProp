@@ -232,6 +232,63 @@ high_level_interface = [
             "'Pa-s'"
         ],
         "EOL":True
+    },
+    "",
+    {
+        "type": "comment",
+        "comment": "If you don't have REFPROP installed, disable the following lines",
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [ "'*********** REFPROP *****************'" ],
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
+            "'Critical temperature of water:'",
+            {
+                "type": "function",
+                "function": "Props1SI",
+                "arguments": [
+                    "'REFPROP::Water'",
+                    "'Tcrit'"
+                ]
+            },
+            "'K'"
+        ],
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
+            "'Boiling temperature of water at 101325 Pa:'",
+            {
+                "type": "function",
+                "function": "PropsSI",
+                "arguments": [
+                    "'T'", "'P'", "101325", "'Q'", "0", "'REFPROP::Water'"
+                ]
+            },
+            "'K'"
+        ],
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
+            "'c_p of water at 101325 Pa and 300 K:'",
+            {
+                "type": "function",
+                "function": "PropsSI",
+                "arguments": [
+                    "'C'", "'P'", "101325", "'T'", "300", "'REFPROP::Water'"
+                ]
+            },
+            "'J/kg/K'"
+        ],
+        "EOL":True
     }
 ]
 low_level_interface = [
@@ -311,6 +368,96 @@ low_level_interface = [
                 }
             },
             "'K'"
+        ],
+        "EOL":True
+    },
+    "",
+    {
+        "type": "comment",
+        "comment": "If you don't have REFPROP installed, disable the following block",
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [ "'*********** LOW-LEVEL INTERFACE (REFPROP) *****************'" ],
+        "EOL":True
+    },
+    {
+        "type": "custom_assignment",
+        "variable_type": "AbstractState",
+        "variable_name": "AS",
+        "RHS": {
+                "type": "function",
+                "function": "factory",
+                "arguments": [
+                    "'REFPROP'", "'Methane&Ethane'"
+                ]
+            },
+        "EOL":True
+    },
+    {
+        "type": "custom_assignment",
+        "variable_name": "z2",
+        "variable_type": "vector",
+        "RHS":{
+            "type": "vector",
+            "arguments": [
+                "0.2",
+                "0.8"
+            ]
+        },
+        "EOL":True
+    },
+    {
+        "type": "class_dereference",
+        "name": "AS",
+        "RHS": {
+                "type": "function",
+                "function": "set_mole_fractions",
+                "arguments": [
+                    "z2"
+                ]
+            },
+        "EOL":True
+    },
+    {
+        "type": "class_dereference",
+        "name": "AS",
+        "RHS": {
+                "type": "function",
+                "function": "update",
+                "arguments": [
+                    {
+                        "type": "enum",
+                        "enum": "input_pairs",
+                        "key": "QT_INPUTS"
+                    },
+                    "1", "120"
+                ]
+            },
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
+            "'Vapor molar density:'",
+            {
+                
+                "type": "class_dereference",
+                "name": "AS",
+                "RHS": {
+                    "type": "function",
+                    "function": "keyed_output",
+                    "arguments": [
+                        {
+                            "type": "enum",
+                            "enum": "parameters",
+                            "key": "iDmolar"
+                        }
+                    ]
+                }
+            },
+            "'mol/m^3'"
         ],
         "EOL":True
     },
@@ -405,7 +552,7 @@ class Python(BaseParser):
                                  factory = 'AbstractState')
     type_name_mapping = {'vector': None,
                          'AbstractState': None}
-    enum_name_mapping = {'input_pairs': "CoolProp"}
+    enum_name_mapping = {'input_pairs': "CoolProp", 'parameters': "CoolProp"}
     indentation = ''
 
     def parse_arguments(self, arguments):
@@ -460,7 +607,7 @@ class Octave(BaseParser):
                                  factory = 'AbstractState.factory')
     type_name_mapping = {'vector': None,
                          'AbstractState': None}
-    enum_name_mapping = {'input_pairs': "CoolProp"}
+    enum_name_mapping = {'input_pairs': "CoolProp", 'parameters': "CoolProp"}
     indentation = ' '*0
 
     def parse_arguments(self, arguments):
@@ -522,7 +669,7 @@ class MATLAB(BaseParser):
                                  HAPropsSI = 'CoolProp.HAPropsSI',
                                  get_global_param_string = 'CoolProp.get_global_param_string',
                                  factory = 'CoolProp.AbstractState.factory')
-    enum_name_mapping = {'input_pairs': "CoolProp"}
+    enum_name_mapping = {'input_pairs': "CoolProp", 'parameters': "CoolProp"}
     type_name_mapping = {'vector': None,
                          'AbstractState': None}
     indentation = ''
@@ -591,7 +738,7 @@ class Java(BaseParser):
                                  factory = 'AbstractState.factory')
     type_name_mapping = {'vector': 'DoubleVector',
                          'AbstractState': 'AbstractState'}   
-    enum_name_mapping = {'input_pairs': "input_pairs"}
+    enum_name_mapping = {'input_pairs': "input_pairs", 'parameters': "parameters"}
     indentation = ' '*8
 
     def parse_arguments(self, arguments):
@@ -656,7 +803,7 @@ class Csharp(BaseParser):
                                  factory = 'AbstractState.factory')
     type_name_mapping = {'vector': "DoubleVector",
                          'AbstractState': 'AbstractState'} 
-    enum_name_mapping = {'input_pairs': "input_pairs"}
+    enum_name_mapping = {'input_pairs': "input_pairs", 'parameters': "parameters"}
     indentation = ' '*12
 
     def parse_arguments(self, arguments):
