@@ -385,7 +385,7 @@ low_level_interface = [
     {
         "type": "custom_assignment",
         "variable_type": "AbstractState",
-        "variable_name": "AS",
+        "variable_name": "AS2",
         "RHS": {
                 "type": "function",
                 "function": "factory",
@@ -410,7 +410,7 @@ low_level_interface = [
     },
     {
         "type": "class_dereference",
-        "name": "AS",
+        "name": "AS2",
         "RHS": {
                 "type": "function",
                 "function": "set_mole_fractions",
@@ -422,7 +422,7 @@ low_level_interface = [
     },
     {
         "type": "class_dereference",
-        "name": "AS",
+        "name": "AS2",
         "RHS": {
                 "type": "function",
                 "function": "update",
