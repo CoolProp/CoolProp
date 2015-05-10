@@ -42,6 +42,7 @@ cdef class AbstractState:
         cdef cAbstractState.GuessesStructure _guesses
         _guesses.T = guesses.T
         _guesses.p = guesses.p
+        _guesses.rhomolar = guesses.rhomolar
         _guesses.rhomolar_liq = guesses.rhomolar_liq
         _guesses.rhomolar_vap = guesses.rhomolar_vap
         _guesses.x = guesses.x
