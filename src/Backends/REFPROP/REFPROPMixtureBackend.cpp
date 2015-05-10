@@ -239,6 +239,13 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 mole_fractions_vap.resize(N);
                 LoadedREFPROPRef = mix;
                 cached_component_string = mix;
+                this->fluid_names.clear();
+                for (long i = 1; i < N+1; ++i){
+                    char hnam[12], hn80[80], hcasn[12];
+                    NAMEdll(&i, hnam, hn80, hcasn, 12, 80, 12);
+                    std::string name = upper(strrstrip(std::string(hnam, hnam + 12)));
+                    this->fluid_names.push_back(name);
+                }
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
                 set_mole_fractions(std::vector<CoolPropDbl>(x.begin(), x.begin()+N));
@@ -434,19 +441,19 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
     double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
     double summer = 0;
     long icomp = 1L;
-    // Get value for first component
-    INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
     // Check if more than one
     std::size_t size = mole_fractions.size();
-    if (size <= 1) return static_cast<CoolPropDbl>(ttrp);
-    else summer += mole_fractions[0]*ttrp;
-    throw NotImplementedError("REFPROP does not provide triple points for mixtures.");
-    for (std::size_t i = 1; i < size; ++i){
-    	icomp = static_cast<long>(i+1);
-    	INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
-        summer += mole_fractions[i]*ttrp;
+    if (size == 1)
+    {
+        // Get value for first component
+        INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
+        return static_cast<CoolPropDbl>(ttrp);
     }
-    return static_cast<CoolPropDbl>(summer);
+    else{
+        double Tmin, Tmax, rhomolarmax, pmax;
+        limits(Tmin, Tmax, rhomolarmax, pmax);
+        return static_cast<CoolPropDbl>(Tmin);
+    }
 };
 CoolPropDbl REFPROPMixtureBackend::calc_gas_constant(){
     this->check_loaded_fluid();
@@ -690,10 +697,12 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 
             // Use flash routine to find properties
             TPFLSHdll(&_T,&p_kPa,&(mole_fractions[0]),&rho_mol_L,
-                      &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions[0]), // Saturation terms
+                      &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
                       &ierr,herr,errormessagelength); //
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("PT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > 0) { 
+                throw ValueError(format("PT: %s",herr).c_str()); 
+            }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
