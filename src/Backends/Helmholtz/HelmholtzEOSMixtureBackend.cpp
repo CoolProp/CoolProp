@@ -971,6 +971,8 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
     {
         case PQ_INPUTS:
             _p = value1; _Q = value2; FlashRoutines::PQ_flash_with_guesses(*this, guesses); break;
+        case PT_INPUTS:
+            _p = value1; _T = value2; FlashRoutines::PT_flash_with_guesses(*this, guesses); break;
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
     }

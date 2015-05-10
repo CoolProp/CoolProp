@@ -34,7 +34,13 @@ public:
 
 	/// Flash for given pressure and (molar) quality with guess values provided
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
-	static void PQ_flash_with_guesses(HelmholtzEOSMixtureBackend &HEOS, const GuessesStructure &guess);
+	/// @param guess The GuessesStructure to be used
+    static void PQ_flash_with_guesses(HelmholtzEOSMixtureBackend &HEOS, const GuessesStructure &guess);
+
+    /// Flash for given pressure and temperature with guess values provided for molar density
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    /// @param guess The GuessesStructure to be used
+	static void PT_flash_with_guesses(HelmholtzEOSMixtureBackend &HEOS, const GuessesStructure &guess);
 
     /// Flash for given temperature and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used

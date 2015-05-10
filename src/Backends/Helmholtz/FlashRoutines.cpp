@@ -458,6 +458,14 @@ void FlashRoutines::PQ_flash_with_guesses(HelmholtzEOSMixtureBackend &HEOS, cons
     HEOS._T = IO.T;
 }
 
+void FlashRoutines::PT_flash_with_guesses(HelmholtzEOSMixtureBackend &HEOS, const GuessesStructure &guess)
+{
+    HEOS.solver_rho_Tp(HEOS.T(), HEOS.p(), guess.rhomolar);
+	// Load the other outputs
+    HEOS._phase = iphase_gas; // TODO: fix me once you know the state
+    HEOS._Q = -1;
+}
+
 void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parameters other, CoolPropDbl value)
 {
     
