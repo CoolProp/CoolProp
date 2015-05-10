@@ -115,6 +115,7 @@ enum parameters{
     idBvirial_dT, ///< Derivative of second virial coefficient with temperature
     idCvirial_dT, ///< Derivative of third virial coefficient with temperature
     iZ, ///< The compressibility factor Z = p*v/(R*T)
+    iPIP, ///< The phase identification parameter of Venkatarathnam and Oellrich
     
     // Accessors for incompressibles
     ifraction_min, ///< The minimum fraction (mole, mass, volume) for incompressibles

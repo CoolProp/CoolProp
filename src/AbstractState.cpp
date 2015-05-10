@@ -315,6 +315,8 @@ double AbstractState::keyed_output(parameters key)
         return phase();
     case iZ:
         return compressibility_factor();
+    case iPIP:
+        return PIP();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for keyed_output",key,get_parameter_information(key,"short").c_str()));
     }

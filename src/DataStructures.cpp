@@ -80,6 +80,7 @@ const parameter_info parameter_info_list[] = {
     {iisobaric_expansion_coefficient,         "isobaric_expansion_coefficient",         "O", "1/K",  "Isobaric expansion coefficient",false},
     {iZ,                                      "Z",                                      "O", "-",    "Compressibility factor",false},
     {ifundamental_derivative_of_gas_dynamics, "fundamental_derivative_of_gas_dynamics", "O", "-",    "Fundamental derivative of gas dynamics",false},
+    {iPIP,                                    "PIP",                                    "O", "-",    "Phase identification parameter", false},
     
     {ialphar,                  "alphar",                  "O", "-", "Residual Helmholtz energy", false},
     {idalphar_dtau_constdelta, "dalphar_dtau_constdelta", "O", "-", "Derivative of residual Helmholtz energy with tau",false},
