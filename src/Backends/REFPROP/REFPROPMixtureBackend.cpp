@@ -243,7 +243,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 for (long i = 1; i < N+1; ++i){
                     char hnam[12], hn80[80], hcasn[12];
                     NAMEdll(&i, hnam, hn80, hcasn, 12, 80, 12);
-                    std::string name = upper(strrstrip(std::string(hnam, hnam + 12)));
+                    std::string as_string = std::string(hnam, hnam + 12);
+                    std::string name = upper(strrstrip(as_string));
                     this->fluid_names.push_back(name);
                 }
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
