@@ -23,7 +23,7 @@ void IncompressibleFluid::validate(){
     // TODO: Implement validation function
 
     // u and s have to be of the polynomial type!
-    throw NotImplementedError("TODO");
+    //throw NotImplementedError("TODO");
 }
 
 bool IncompressibleFluid::is_pure() {
@@ -235,30 +235,30 @@ double IncompressibleFluid::inputFromMass (double T,     double x){
         return x;
     } else {
         throw NotImplementedError("Mass composition conversion has not been implemented.");
-        switch (mass2input.type) {
-            case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-                return poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase are defined in the correct way
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-                return baseExponential(mass2input, x, 0.0);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
-                return baseLogexponential(mass2input, x, 0.0);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-                return exp(poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase are defined in the correct way
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
-                return basePolyOffset(mass2input, T, x);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-                throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,mass2input.type));
-                break;
-            default:
-                throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,mass2input.type));
-                break;
-        }
-        return _HUGE;
+        //switch (mass2input.type) {
+        //    case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+        //        return poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase are defined in the correct way
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
+        //        return baseExponential(mass2input, x, 0.0);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+        //        return baseLogexponential(mass2input, x, 0.0);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
+        //        return exp(poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase are defined in the correct way
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
+        //        return basePolyOffset(mass2input, T, x);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+        //        throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,mass2input.type));
+        //        break;
+        //    default:
+        //        throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,mass2input.type));
+        //        break;
+        //}
+        //return _HUGE;
     }
 }
 
@@ -272,30 +272,30 @@ double IncompressibleFluid::inputFromVolume (double T,   double x){
         return x;
     } else {
         throw NotImplementedError("Volume composition conversion has not been implemented.");
-        switch (volume2input.type) {
-            case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-                return poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase are defined in the correct way
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-                return baseExponential(volume2input, x, 0.0);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
-                return baseLogexponential(volume2input, x, 0.0);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-                return exp(poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase are defined in the correct way
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
-                return basePolyOffset(volume2input, T, x);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-                throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,volume2input.type));
-                break;
-            default:
-                throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,volume2input.type));
-                break;
-        }
-        return _HUGE;
+        //switch (volume2input.type) {
+        //    case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+        //        return poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase are defined in the correct way
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
+        //        return baseExponential(volume2input, x, 0.0);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+        //        return baseLogexponential(volume2input, x, 0.0);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
+        //        return exp(poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase are defined in the correct way
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
+        //        return basePolyOffset(volume2input, T, x);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+        //        throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,volume2input.type));
+        //        break;
+        //    default:
+        //        throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,volume2input.type));
+        //        break;
+        //}
+        //return _HUGE;
     }
 }
 

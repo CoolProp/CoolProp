@@ -193,7 +193,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
  */
 double CoolProp::TTSEBackend::evaluate_single_phase_transport(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)
 {
-    bool in_bounds = (i >=0 && i < table.xvec.size()-1 && j >=0 && j < table.yvec.size()-1);
+    bool in_bounds = (i < table.xvec.size()-1 && j < table.yvec.size()-1);
     if (!in_bounds){
         throw ValueError("Cell to TTSEBackend::evaluate_single_phase_transport is not valid");
     }

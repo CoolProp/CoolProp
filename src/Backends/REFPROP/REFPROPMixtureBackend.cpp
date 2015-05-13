@@ -276,7 +276,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             strcat(path_HMX_BNC, rel_path_HMC_BNC);
             std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
             if (!alt_hmx_bnc_path.empty()){
-                strcpy(path_HMX_BNC, alt_hmx_bnc_path.c_str());
+                const char * HMX_path = alt_hmx_bnc_path.c_str();
+                if (strlen(HMX_path) > refpropcharlength){ throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", HMX_path)); }
+                strcpy(path_HMX_BNC, HMX_path);
             }
             strcpy(component_string, components_joined.c_str());
 

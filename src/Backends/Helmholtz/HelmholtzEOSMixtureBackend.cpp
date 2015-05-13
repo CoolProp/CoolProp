@@ -706,7 +706,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_Tmax_sat(void)
     {
         if (components[0].EOS().pseudo_pure)
         {
-            return components[0].EOS().max_sat_T.T;
+            double Tmax_sat = components[0].EOS().max_sat_T.T;
+            if (!ValidNumber(Tmax_sat)){
+                return T_critical();
+            }
+            else{ 
+                return Tmax_sat;
+            }
         }
         else{
             return T_critical();
@@ -1735,6 +1741,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
         CoolPropDbl rhoc = components[0].crit.rhomolar;
         CoolPropDbl rhomin = 1e-10;
 
+        // Determine limits for the other variable
         switch(other)
         {
             case iSmolar:
@@ -1761,11 +1768,10 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
             default:
                 throw ValueError();
         }
-
+        CoolPropDbl rhomolar;
         if (is_in_closed_range(yc, ymin, y))
         {
-            CoolPropDbl rhomolar = Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-12, 100, errstring);
-            return rhomolar;
+            rhomolar = Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-12, 100, errstring);
         }
         else if (y < yc){
             // Increase rhomelt until it bounds the solution
@@ -1785,8 +1791,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
                 }
                 step_count++;
             }
-            CoolPropDbl rhomolar = Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-12, 100, errstring);
-            return rhomolar;
+            rhomolar = Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-12, 100, errstring);
         }
         else
         {
@@ -1799,6 +1804,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPro
         else {
             _phase = iphase_supercritical;
         }
+        return rhomolar;
     }
     // Subcritical temperature liquid
     else if (_phase == iphase_liquid)
@@ -1989,12 +1995,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPro
 
             CoolPropDbl a_j = 0.42747*pow(R_u*Tcj,2)/pcj*pow(1+m_j*(1-sqrt(T/Tcj)),2);
 
-            if (i == j){
-                k_ij = 0;
-            }
-            else{
-                k_ij = 0;
-            }
+            k_ij = 0;
+            //if (i == j){
+            //    k_ij = 0;
+            //}
+            //else{
+            //    k_ij = 0;
+            //}
 
             a += mole_fractions[i]*mole_fractions[j]*sqrt(a_i*a_j)*(1-k_ij);
         }
