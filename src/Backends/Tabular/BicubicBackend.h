@@ -17,7 +17,11 @@ class CellCoeffs{
         bool _valid, _has_valid_neighbor;
     public:
         double dx_dxhat, dy_dyhat;    
-        CellCoeffs(){_valid = false; _has_valid_neighbor = false;} 
+        CellCoeffs(){
+            _valid = false; _has_valid_neighbor = false;
+            dx_dxhat= _HUGE; dy_dyhat = _HUGE;
+            alt_i = 9999999; alt_j = 9999999;
+        } 
         std::vector<double> T, rhomolar, hmolar, p, smolar, umolar;
         /// Return a const reference to the desired matrix
         const std::vector<double> & get(parameters params){

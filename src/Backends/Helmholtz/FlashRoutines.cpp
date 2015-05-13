@@ -670,7 +670,7 @@ void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolP
 		parameters other; // Key for other value
 		CoolPropDbl value; // value for S,H,U
         CoolPropDbl Qd; // Quality from density
-        Residual(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl rhomolar_spec, parameters other, CoolPropDbl value) : HEOS(HEOS), rhomolar_spec(rhomolar_spec), other(other), value(value){};
+        Residual(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl rhomolar_spec, parameters other, CoolPropDbl value) : HEOS(HEOS), rhomolar_spec(rhomolar_spec), other(other), value(value){ Qd = _HUGE; };
         double call(double T){
             HEOS.update(QT_INPUTS, 0, T);
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(),
@@ -1342,7 +1342,7 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
     {
     public:
         HelmholtzEOSMixtureBackend &HEOS;
-        CoolPropDbl hmolar, smolar, Qs;
+        CoolPropDbl hmolar, smolar;
         Residual(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec) : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec){};
         double call(double T){
             HEOS.update(SmolarT_INPUTS, smolar, T);

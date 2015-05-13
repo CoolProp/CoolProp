@@ -42,7 +42,6 @@ IncompressibleBackend::IncompressibleBackend(const std::string &fluid_name) {
 
 IncompressibleBackend::IncompressibleBackend(const std::vector<std::string> &component_names) {
     throw NotImplementedError("Mixture-style constructor is not implemented yet for incompressible fluids");
-    this->fluid = NULL;
 }
 
 void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {

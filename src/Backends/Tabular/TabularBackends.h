@@ -289,7 +289,12 @@ class SinglePhaseGriddedTableData{
         
         virtual void set_limits() = 0;
     
-		SinglePhaseGriddedTableData(){Nx = 200; Ny = 200; revision = 0;}
+		SinglePhaseGriddedTableData(){
+            Nx = 200; Ny = 200; revision = 0; 
+            xkey = INVALID_PARAMETER; ykey = INVALID_PARAMETER; 
+            logx = false; logy = false;
+            xmin = _HUGE; xmax = _HUGE; ymin = _HUGE; ymax = _HUGE;
+        }
     
 		/* Use X macros to auto-generate the variables; each will look something like: std::vector< std::vector<double> > T; */
 		#define X(name) std::vector< std::vector<double> > name;
@@ -559,7 +564,15 @@ class TabularBackend : public AbstractState
         std::vector<CoolPropDbl> mole_fractions;
     public:
 
-        TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), AS(AS) {};
+        TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), AS(AS) {
+            selected_table = SELECTED_NO_TABLE;
+            // Flush the cached indices (set to large number)
+            cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 
+            cached_single_phase_j = std::numeric_limits<std::size_t>::max();
+            cached_saturation_iL = std::numeric_limits<std::size_t>::max(); 
+            cached_saturation_iV = std::numeric_limits<std::size_t>::max();
+            z = NULL; dzdx, dzdy = NULL; d2zdx2 = NULL; d2zdxdy = NULL; d2zdy2 = NULL;
+        };
 
         // None of the tabular methods are available from the high-level interface
         bool available_in_high_level(void){return false;}

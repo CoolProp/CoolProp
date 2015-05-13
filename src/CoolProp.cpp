@@ -716,7 +716,8 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
         double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
         char herr[255], hrf[4];
         double x0[1] = {1};
-        if (reference_state.size() > 3){
+        const char * refstate = reference_state.c_str();
+        if (strlen(refstate) > 3){
             if (reference_state == "ASHRAE"){
                 strcpy(hrf, "ASH");
             }
@@ -725,7 +726,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
             }
         }
         else{
-            strcpy(hrf, reference_state.c_str());
+            strcpy(hrf, refstate);
         }
         REFPROP_SETREF(hrf, ixflag, x0, h0, s0, t0, p0, ierr, herr, 3, 255);
     }
