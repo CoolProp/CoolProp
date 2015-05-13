@@ -1165,7 +1165,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Unit conversion for REFPROP
             p_kPa = 0.001*value1; _Q = value2; // Want p in [kPa] in REFPROP
 
-            long iFlsh = 0, iGuess = 0;
+            long iFlsh = 0, iGuess = 0, ierr = 0;
             if (std::abs(value2) < 1e-10){
                 iFlsh = 3; // bubble point
             }
@@ -1179,7 +1179,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
                       &ierr,herr,errormessagelength);
             }
-            else{
+            if (static_cast<int>(ierr) > 0 || iFlsh == 0){
+                ierr = 0;
                 // Use flash routine to find properties
                 PQFLSHdll(&p_kPa,&_Q,&(mole_fractions[0]),&kq,&_T,&rho_mol_L,
                     &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
@@ -1227,7 +1228,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
                       &ierr,herr,errormessagelength);
             }
-			else{
+			if (static_cast<int>(ierr) > 0 || iFlsh == 0){
+				ierr = 0;
 				TQFLSHdll(&_T,&_Q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
 					 &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
 					&emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
