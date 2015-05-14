@@ -291,7 +291,7 @@ high_level_interface = [
         "EOL":True
     }
 ]
-low_level_interface = [
+low_level_interface_with_mixtures = [
     "",
     {
         "type": "print",
@@ -516,10 +516,131 @@ low_level_interface = [
     }
 ]
 
+low_level_interface = [
+    "",
+    {
+        "type": "print",
+        "arguments": [ "'*********** TABULAR BACKENDS *****************'" ],
+        "EOL":True
+    },
+    {
+        "type": "custom_assignment",
+        "variable_type": "AbstractState",
+        "variable_name": "TAB",
+        "RHS": {
+                "type": "function",
+                "function": "factory",
+                "arguments": [
+                    "'BICUBIC&HEOS'", "'R245fa'"
+                ]
+            },
+        "EOL":True
+    },
+    {
+        "type": "class_dereference",
+        "name": "TAB",
+        "RHS": {
+                "type": "function",
+                "function": "update",
+                "arguments": [
+                    {
+                        "type": "enum",
+                        "enum": "input_pairs",
+                        "key": "PT_INPUTS"
+                    },
+                    "101325", "300"
+                ]
+            },
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
+            "'Mass density of refrigerant R245fa at 300 K, 101325 Pa:'",
+            {
+                
+                "type": "class_dereference",
+                "name": "TAB",
+                "RHS": {
+                    "type": "function",
+                    "function": "rhomass",
+                    "arguments": []
+                }
+            },
+            "'kg/m^3'"
+        ],
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [ "'*********** SATURATION DERIVATIVES (LOW-LEVEL INTERFACE) ***************'" ],
+        "EOL":True
+    },
+    {
+        "type": "custom_assignment",
+        "variable_type": "AbstractState",
+        "variable_name": "AS_SAT",
+        "RHS": {
+                "type": "function",
+                "function": "factory",
+                "arguments": [
+                    "'HEOS'", "'R245fa'"
+                ]
+            },
+        "EOL":True
+    },
+    {
+        "type": "class_dereference",
+        "name": "AS_SAT",
+        "RHS": {
+                "type": "function",
+                "function": "update",
+                "arguments": [
+                    {
+                        "type": "enum",
+                        "enum": "input_pairs",
+                        "key": "PQ_INPUTS"
+                    },
+                    "101325", "0"
+                ]
+            },
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
+            "'First saturation derivative:'",
+            {
+                
+                "type": "class_dereference",
+                "name": "AS_SAT",
+                "RHS": {
+                    "type": "function",
+                    "function": "first_saturation_deriv",
+                    "arguments": [
+                        {
+                            "type": "enum",
+                            "enum": "parameters",
+                            "key": "iP"
+                        },
+                        {
+                            "type": "enum",
+                            "enum": "parameters",
+                            "key": "iT"
+                        }
+                    ]
+                }
+            },
+            "'Pa/K'"
+        ],
+        "EOL":True
+    }
+]
+
 class BaseParser(object):
     
     def __init__(self):
-        self.pieces = high_level_interface + low_level_interface
+        self.pieces = high_level_interface + low_level_interface + low_level_interface_with_mixtures
 
     def footer(self):
         return ''
@@ -675,7 +796,7 @@ class MATLAB(BaseParser):
     indentation = ''
     
     def __init__(self):
-        self.pieces = high_level_interface
+        self.pieces = high_level_interface + low_level_interface
 
     def parse_arguments(self, arguments):
         out = []
