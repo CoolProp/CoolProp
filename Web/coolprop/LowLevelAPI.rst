@@ -144,6 +144,85 @@ It is possible to get the partial derivatives in a very computationally efficien
     # See how much faster this is?
     In [4]: %timeit CoolProp.CoolProp.PropsSI('d(Hmass)/d(T)|P', 'P', 101325, 'T', 300, 'Water')
     
+Two-Phase and Saturation Derivatives
+------------------------------------
+
+The two-phase derivatives of Thorade :cite:`Thorade-EES-2013` are implemented in the :cpapi:`CoolProp::AbstractState::first_two_phase_deriv` function, and derivatives along the saturation curve in the functions :cpapi:`CoolProp::AbstractState::first_saturation_deriv` and :cpapi:`CoolProp::AbstractState::second_saturation_deriv`.  Here are some examples of using these functions:
+    
+.. ipython::
+
+    In [0]: import CoolProp
+
+    In [0]: HEOS = CoolProp.AbstractState("HEOS", "Water")
+    
+    In [0]: HEOS.update(CoolProp.QT_INPUTS, 0, 300)
+
+    # First saturation derivative calculated analytically
+    In [0]: HEOS.first_saturation_deriv(CoolProp.iP, CoolProp.iT)
+    
+    In [0]: HEOS.update(CoolProp.QT_INPUTS, 0, 300 + 0.001); p2= HEOS.p()
+    
+    In [0]: HEOS.update(CoolProp.QT_INPUTS, 0, 300 - 0.001); p1= HEOS.p()
+    
+    # First saturation derivative calculated numerically
+    In [0]: (p2-p1)/(2*0.001)
+     
+    In [0]: HEOS.update(CoolProp.QT_INPUTS, 0.1, 300)
+    
+    # The d(Dmass)/d(Hmass)|P two-phase derivative
+    In [0]: HEOS.first_two_phase_deriv(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP)
+    
+    # The d(Dmass)/d(Hmass)|P two-phase derivative using splines
+    In [0]: HEOS.first_two_phase_deriv_splined(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP, 0.3)
+    
+An example of plotting these derivatives is here:
+
+.. plot::
+
+    import numpy as np
+    import CoolProp
+    import matplotlib.pyplot as plt
+
+    AS = CoolProp.AbstractState('HEOS','Water')
+
+    # Saturated liquid
+    AS.update(CoolProp.PQ_INPUTS, 101325, 0)
+    Ts = AS.T()
+    h_fg = AS.saturated_vapor_keyed_output(CoolProp.iHmass) - AS.saturated_liquid_keyed_output(CoolProp.iHmass)
+    cl = AS.cpmass()
+
+    # Subcooled liquid
+    x, y = [], []
+    for T in np.linspace(Ts - 30, Ts - 0.1, 1000):
+        AS.update(CoolProp.PT_INPUTS, 101325, T)
+        x.append(-cl*(Ts-T)/h_fg)
+        y.append(AS.first_partial_deriv(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP))
+    plt.plot(x, y, label = 'Subcooled')
+
+    # Two-phase derivatives (normal and splined)
+    x, y1 = [], []
+    for Q in np.linspace(0, 0.3, 1000):
+        AS.update(CoolProp.PQ_INPUTS, 101325, Q)
+        x.append(AS.Q())
+        y1.append(AS.first_two_phase_deriv_splined(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP, 0.3))
+    plt.plot(x, y1, label = 'Two-phase (splined)')
+
+    # Two-phase derivatives (normal and splined)
+    x, y1 = [], []
+    for Q in np.linspace(0.0, 0.6, 1000):
+        AS.update(CoolProp.PQ_INPUTS, 101325, Q)
+        x.append(AS.Q())
+        y1.append(AS.first_two_phase_deriv(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP))
+    plt.plot(x, y1, label = 'Two-phase')
+
+    plt.title(r'$d\rho/dh|p$')
+    plt.xlabel('vapor quality (-)')
+    plt.ylabel(r'$d\rho/dh|p$')
+    plt.ylim(-0.005, 0.005)
+    plt.legend(loc='best')
+
+
+    
 Reference States
 ----------------
 
@@ -185,7 +264,9 @@ Low-level interface using REFPROP
 
 If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP`` as the backend instead of ``HEOS``. For instance, as in python:
 
-In [0]: import CoolProp
+.. ipython::
+
+    In [0]: import CoolProp
 
     In [0]: REFPROP = CoolProp.AbstractState("REFPROP", "Water")
     
