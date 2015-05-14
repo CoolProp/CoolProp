@@ -475,7 +475,7 @@ class LogPHTable : public SinglePhaseGriddedTableData
             xmin = AS->hmolar(); ymin = AS->p();
             
             // Check both the enthalpies at the Tmax isotherm to see whether to use low or high pressure
-            AS->update(PT_INPUTS, 1e-10, AS->Tmax());
+            AS->update(DmolarT_INPUTS, 1e-10, AS->Tmax());
             CoolPropDbl xmax1 = AS->hmolar();
             AS->update(PT_INPUTS, AS->pmax(), AS->Tmax());
             CoolPropDbl xmax2 = AS->hmolar();
@@ -571,7 +571,7 @@ class TabularBackend : public AbstractState
             cached_single_phase_j = std::numeric_limits<std::size_t>::max();
             cached_saturation_iL = std::numeric_limits<std::size_t>::max(); 
             cached_saturation_iV = std::numeric_limits<std::size_t>::max();
-            z = NULL; dzdx, dzdy = NULL; d2zdx2 = NULL; d2zdxdy = NULL; d2zdy2 = NULL;
+            z = NULL; dzdx = NULL; dzdy = NULL; d2zdx2 = NULL; d2zdxdy = NULL; d2zdy2 = NULL;
         };
 
         // None of the tabular methods are available from the high-level interface
@@ -708,7 +708,7 @@ class TabularBackend : public AbstractState
                 return _HUGE; // not needed, will never be hit, just to make compiler happy
             }
             else{
-                return pure_saturation.evaluate(iHmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+                return pure_saturation.evaluate(iSmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
             }
         }
         CoolPropDbl calc_cpmolar(void){
