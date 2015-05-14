@@ -460,59 +460,6 @@ low_level_interface_with_mixtures = [
             "'mol/m^3'"
         ],
         "EOL":True
-    },
-    {
-        "type": "print",
-        "arguments": [ "'*********** TABULAR BACKENDS *****************'" ],
-        "EOL":True
-    },
-    {
-        "type": "custom_assignment",
-        "variable_type": "AbstractState",
-        "variable_name": "TAB",
-        "RHS": {
-                "type": "function",
-                "function": "factory",
-                "arguments": [
-                    "'BICUBIC&HEOS'", "'R245fa'"
-                ]
-            },
-        "EOL":True
-    },
-    {
-        "type": "class_dereference",
-        "name": "TAB",
-        "RHS": {
-                "type": "function",
-                "function": "update",
-                "arguments": [
-                    {
-                        "type": "enum",
-                        "enum": "input_pairs",
-                        "key": "PT_INPUTS"
-                    },
-                    "101325", "300"
-                ]
-            },
-        "EOL":True
-    },
-    {
-        "type": "print",
-        "arguments": [
-            "'Mass density of refrigerant R245fa at 300 K, 101325 Pa:'",
-            {
-                
-                "type": "class_dereference",
-                "name": "TAB",
-                "RHS": {
-                    "type": "function",
-                    "function": "rhomass",
-                    "arguments": []
-                }
-            },
-            "'kg/m^3'"
-        ],
-        "EOL":True
     }
 ]
 
