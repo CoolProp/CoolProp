@@ -462,7 +462,29 @@ void FlashRoutines::PT_flash_with_guesses(HelmholtzEOSMixtureBackend &HEOS, cons
 {
     HEOS.solver_rho_Tp(HEOS.T(), HEOS.p(), guess.rhomolar);
 	// Load the other outputs
-    HEOS._phase = iphase_gas; // TODO: fix me once you know the state
+    HEOS._phase = iphase_gas;  // Guessed for mixtures
+    if (HEOS.is_pure_or_pseudopure){
+        if (HEOS._p > HEOS.p_critical()){
+            if (HEOS._T > HEOS.T_critical()){
+                HEOS._phase = iphase_supercritical;
+            }
+            else{
+                HEOS._phase = iphase_supercritical_liquid;
+            }
+        }
+        else{
+            if (HEOS._T > HEOS.T_critical()){
+                HEOS._phase = iphase_supercritical_gas;
+            }
+            else if (HEOS._rhomolar > HEOS.rhomolar_critical()){
+                HEOS._phase = iphase_liquid;
+            }
+            else{
+                HEOS._phase = iphase_gas;
+            }
+        }
+    }
+    
     HEOS._Q = -1;
 }
 
