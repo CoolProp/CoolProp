@@ -256,6 +256,7 @@ class PureFluidSaturationTableData{
                 case iP: x = (Q == 0) ? &pL : &pV; break;
                 default: throw ValueError(format("Key for Wrt1 is invalid in calc_first_saturation_deriv"));
             }
+            CoolPropDbl factor = 1.0;
             switch(Of1){
                 case iT: y = (Q == 0) ? &TL : &TV; break;
                 case iP: y = (Q == 0) ? &pL : &pV; break;
@@ -263,11 +264,15 @@ class PureFluidSaturationTableData{
                 case iHmolar: y = (Q == 0) ? &hmolarL : &hmolarV; break;
                 case iSmolar: y = (Q == 0) ? &smolarL : &smolarV; break;
                 case iUmolar: y = (Q == 0) ? &umolarL : &umolarV; break;
+                case iDmass: y = (Q == 0) ? &rhomolarL : &rhomolarV; factor = AS->molar_mass(); break;
+                case iHmass: y = (Q == 0) ? &hmolarL : &hmolarV; factor = 1/AS->molar_mass(); break;
+                case iSmass: y = (Q == 0) ? &smolarL : &smolarV; factor = 1/AS->molar_mass(); break;
+                case iUmass: y = (Q == 0) ? &umolarL : &umolarV; factor = 1/AS->molar_mass(); break;
                 default: throw ValueError(format("Key for Of1 is invalid in calc_first_saturation_deriv"));
             }
             return CubicInterpFirstDeriv((*x)[i-2], (*x)[i-1], (*x)[i], (*x)[i+1],
                                          (*y)[i-2], (*y)[i-1], (*y)[i], (*y)[i+1],
-                                         val);
+                                         val)*factor;
         };
         //calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
 };
