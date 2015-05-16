@@ -249,7 +249,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 selected_table = SELECTED_PH_TABLE;
                 single_phase_logph.find_nearest_neighbor(iP, _p, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
 				// Now find hmolar given P, X for X in Hmolar, Smolar, Umolar
-                _hmolar = invert_single_phase_x(single_phase_logph, coeffs_ph, otherkey, otherval, _p,  cached_single_phase_i, cached_single_phase_j);
+                invert_single_phase_x(single_phase_logph, coeffs_ph, otherkey, otherval, _p, cached_single_phase_i, cached_single_phase_j);
             }
             break;
         }
@@ -312,6 +312,42 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                         }
                     }   
                 }
+            }
+            break;
+        }
+        case SmolarT_INPUTS:
+        case DmolarT_INPUTS:{
+            CoolPropDbl otherval; parameters otherkey;
+            switch(input_pair){
+                case SmolarT_INPUTS: _smolar = val1; _T = val2; otherval = val1; otherkey = iSmolar; break;
+                case DmolarT_INPUTS: _rhomolar = val1; _T = val2; otherval = val1; otherkey = iDmolar; break;
+                default: throw ValueError("Bad (impossible) pair");
+            }
+            
+            using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
+            std::size_t iL, iV;
+            CoolPropDbl zL = 0, zV = 0;
+            if (pure_saturation.is_inside(iT, _T, otherkey, otherval, iL, iV, zL, zV)){
+                using_single_phase_table = false;
+                if (otherkey == iDmolar){
+                    _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
+                }
+                else{
+                    _Q = (otherval - zL)/(zV - zL);
+                }
+                if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+                    throw ValueError("vapor quality is not in (0,1)");
+                }
+                else{
+                    cached_saturation_iL = iL; cached_saturation_iV = iV;
+                }
+            }
+            else{
+                // Find and cache the indices i, j
+                selected_table = SELECTED_PT_TABLE;
+                single_phase_logpT.find_nearest_neighbor(iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+				// Now find the y variable (Dmolar in this case)
+                invert_single_phase_y(single_phase_logpT, coeffs_pT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
             }
             break;
         }
@@ -467,8 +503,8 @@ double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGri
     }
 }
 
-/// Use the single_phase table to evaluate an output
-double CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters other_key, double other, double y, std::size_t i, std::size_t j)
+/// Use the single_phase table to invert for x given a y
+void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters other_key, double other, double y, std::size_t i, std::size_t j)
 {
     // Get the cell
     const CellCoeffs &cell = coeffs[i][j];
@@ -483,9 +519,9 @@ double CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedT
 
     double y_0 = 1, y_1 = yhat, y_2 = yhat*yhat, y_3 = yhat*yhat*yhat;
 
-    double a = alpha[3+0*4]*y_0+alpha[3+1*4]*y_1+alpha[3+2*4]*y_2+alpha[3+3*4]*y_3; // factors of x^3
-    double b = alpha[2+0*4]*y_0+alpha[2+1*4]*y_1+alpha[2+2*4]*y_2+alpha[2+3*4]*y_3; // factors of x^2
-    double c = alpha[1+0*4]*y_0+alpha[1+1*4]*y_1+alpha[1+2*4]*y_2+alpha[1+3*4]*y_3; // factors of x
+    double a = alpha[3+0*4]*y_0+alpha[3+1*4]*y_1+alpha[3+2*4]*y_2+alpha[3+3*4]*y_3; // factors of xhat^3
+    double b = alpha[2+0*4]*y_0+alpha[2+1*4]*y_1+alpha[2+2*4]*y_2+alpha[2+3*4]*y_3; // factors of xhar^2
+    double c = alpha[1+0*4]*y_0+alpha[1+1*4]*y_1+alpha[1+2*4]*y_2+alpha[1+3*4]*y_3; // factors of xhat
     double d = alpha[0+0*4]*y_0+alpha[0+1*4]*y_1+alpha[0+2*4]*y_2+alpha[0+3*4]*y_3 - other; // constant factors
     int N = 0;
     double xhat0, xhat1, xhat2, val, xhat;
@@ -504,7 +540,7 @@ double CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedT
     }
 
     // Unpack xhat into actual value
-    // xhat = (x-x_{j})/(x_{j+1}-x_{j})
+    // xhat = (x-x_{i})/(x_{i+1}-x_{i})
     val = xhat*(table.xvec[i+1] - table.xvec[i]) + table.xvec[i];
     
     // Cache the output value calculated
@@ -513,7 +549,53 @@ double CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedT
         case iT: _T = val; break;
         default: throw ValueError();
     }
+}
 
+/// Use the single_phase table to solve for y given an x
+void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters other_key, double other, double x, std::size_t i, std::size_t j)
+{
+    // Get the cell
+    const CellCoeffs &cell = coeffs[i][j];
+    
+	// Get the alpha coefficients
+    const std::vector<double> &alpha = cell.get(other_key);
+
+    std::size_t NNN = alpha.size();
+    
+    // Normalized value in the range (0, 1)
+    double xhat = (x - table.xvec[i])/(table.xvec[i+1] - table.xvec[i]);
+
+    double x_0 = 1, x_1 = xhat, x_2 = xhat*xhat, x_3 = xhat*xhat*xhat;
+
+    double a = alpha[0+3*4]*x_0 + alpha[1+3*4]*x_1 + alpha[2+3*4]*x_2 + alpha[3+3*4]*x_3; // factors of yhat^3 (m= 3)
+    double b = alpha[0+2*4]*x_0 + alpha[1+2*4]*x_1 + alpha[2+2*4]*x_2 + alpha[3+2*4]*x_3; // factors of yhat^2
+    double c = alpha[0+1*4]*x_0 + alpha[1+1*4]*x_1 + alpha[2+1*4]*x_2 + alpha[3+1*4]*x_3; // factors of yhat
+    double d = alpha[0+0*4]*x_0 + alpha[1+0*4]*x_1 + alpha[2+0*4]*x_2 + alpha[3+0*4]*x_3 - other; // constant factors
+    int N = 0;
+    double yhat0, yhat1, yhat2, val, yhat;
+    solve_cubic(a, b, c, d, N, yhat0, yhat1, yhat2);
+    if (N == 1){
+        yhat = yhat0;
+    }
+    else if (N == 2){
+        yhat = std::min(yhat0, yhat1);
+    }
+    else if (N == 3){
+        yhat = min3(yhat0, yhat1, yhat2);
+    }
+    else if (N == 0){
+        throw ValueError("Could not find a solution in invert_single_phase_x");
+    }
+
+    // Unpack xhat into actual value
+    // yhat = (y-y_{j})/(y_{j+1}-y_{j})
+    val = yhat*(table.yvec[j+1] - table.yvec[j]) + table.yvec[j];
+    
+    // Cache the output value calculated
+    switch(table.ykey){
+        case iP: _p = val; break;
+        default: throw ValueError();
+    }
 }
 
 #endif // !defined(NO_TABULAR_BACKENDS)

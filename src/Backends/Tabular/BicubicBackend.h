@@ -208,8 +208,8 @@ class BicubicBackend : public TabularBackend
          * @param i The x-coordinate of the cell
          * @param j The y-coordinate of the cell
          */
-        double invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters other_key, double other, double y, std::size_t i, std::size_t j);
-        //double invert_single_phase_y(const SinglePhaseGriddedTableData &table, parameters output, double y, double x, std::size_t i, std::size_t j);
+        void invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters other_key, double other, double y, std::size_t i, std::size_t j);
+        void invert_single_phase_y(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters other_key, double other, double x, std::size_t i, std::size_t j);
 };
 
 }
