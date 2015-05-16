@@ -181,14 +181,20 @@ class PureFluidSaturationTableData{
             std::swap(*this, temp); // Swap
             this->AS = temp.AS; // Reconnect the AbstractState pointer
         };
-        double evaluate(parameters output, double p, double Q, std::size_t iL, std::size_t iV)
+        double evaluate(parameters output, double p_or_T, double Q, std::size_t iL, std::size_t iV)
         {
             if (iL <= 2){ iL = 2; }
             else if (iL+1 == N){ iL = N-2; }
             if (iV <= 2){ iV = 2; }
             else if (iV+1 == N){ iV = N-2; }
-            double logp = log(p);
+            double logp = log(p_or_T);
             switch(output){
+                case iP:
+                {
+                    double _logpV = CubicInterp(this->TV, logpV, iV-2, iV-1, iV, iV+1, p_or_T);
+                    double _logpL = CubicInterp(this->TL, logpL, iL-2, iL-1, iL, iL+1, p_or_T);
+                    return Q*exp(_logpV) + (1-Q)*exp(_logpL);
+                }
                 case iT:
                 {
                     double TV = CubicInterp(logpV, this->TV, iV-2, iV-1, iV, iV+1, logp);
@@ -237,9 +243,8 @@ class PureFluidSaturationTableData{
                     if (!ValidNumber(muL)){throw ValueError("muL is invalid");}
                     return 1/(Q/muV + (1-Q)/muL);
                 }
-
                 default:
-                    throw ValueError("can't be something other than T or rho");
+                    throw ValueError("Output variable for evaluatre is invalid");
             }
         };
         /**
