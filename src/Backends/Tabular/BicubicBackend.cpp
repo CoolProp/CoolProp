@@ -241,6 +241,24 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     // Find and cache the indices i, j
                     selected_table = SELECTED_PT_TABLE;
 					single_phase_logpT.find_native_nearest_good_cell(_T, _p, cached_single_phase_i, cached_single_phase_j);
+                    // If p < pc, you might be getting a liquid solution when you want a vapor solution or vice versa
+                    // if you are very close to the saturation curve, so we figure out what the saturation temperature
+                    // is for the given pressure
+                    if (_p < this->AS->p_critical())
+                    {
+                        double Ts = pure_saturation.evaluate(iT, _p, _Q, iL, iV);
+                        double TL = single_phase_logpT.T[cached_single_phase_i][cached_single_phase_j];
+                        double TR = single_phase_logpT.T[cached_single_phase_i+1][cached_single_phase_j];
+                        if (TL < Ts && Ts < TR){
+                            if (_T < Ts){
+                                // It's liquid, move the cell to the left
+                                cached_single_phase_i--;
+                            }else{
+                                // It's vapor, move to the right
+                                cached_single_phase_i++;
+                            }
+                        }
+                    }   
                 }
             }
             break;
