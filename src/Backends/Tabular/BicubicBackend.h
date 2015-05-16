@@ -24,7 +24,8 @@ class CellCoeffs{
         } 
         std::vector<double> T, rhomolar, hmolar, p, smolar, umolar;
         /// Return a const reference to the desired matrix
-        const std::vector<double> & get(parameters params){
+        const std::vector<double> & get(const parameters params) const
+        {
             switch(params){
                 case iT: return T;
                 case iP: return p;
@@ -173,7 +174,7 @@ class BicubicBackend : public TabularBackend
          * @param j
          * @return 
          */
-		double evaluate_single_phase(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j);
+		double evaluate_single_phase(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, const parameters output, const double x, const double y, const std::size_t i, const std::size_t j);
         double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j){
 			return evaluate_single_phase(single_phase_logph, coeffs_ph, output, _hmolar, _p, i, j);
 		};
@@ -197,6 +198,18 @@ class BicubicBackend : public TabularBackend
 		double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j){
             return evaluate_single_phase_transport(single_phase_logpT, output, _T, _p, i, j);
         };
+
+        /**
+         * @brief Use the table to solve for the x variable of the table given the y coordinate of the table and a variable that can yield a unique solution for x
+         * @param table The table to be used
+         * @param coeffs The matrix of coefficients to be used
+         * @param other_key The x variable 
+         * @param other The value of the x-ish variable to be used to find d
+         * @param i The x-coordinate of the cell
+         * @param j The y-coordinate of the cell
+         */
+        double invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters other_key, double other, double y, std::size_t i, std::size_t j);
+        //double invert_single_phase_y(const SinglePhaseGriddedTableData &table, parameters output, double y, double x, std::size_t i, std::size_t j);
 };
 
 }

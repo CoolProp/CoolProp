@@ -467,6 +467,26 @@ TEST_CASE_METHOD(TabularFixture, "Tests for tabular backends with water", "[Tabu
         CHECK(std::abs((expected-dhdT_TTSE)/expected) < 1e-4);
         CHECK(std::abs((expected-dhdT_BICUBIC)/expected) < 1e-4);
     }
+    SECTION("check isentropic process"){
+        setup();
+        double T0 = 300;
+        double p0 = 1e5;
+        double p1 = 1e6;
+        ASHEOS->update(CoolProp::PT_INPUTS, p0, 300);
+        double s0 = ASHEOS->smolar();
+        ASHEOS->update(CoolProp::PSmolar_INPUTS, p1, s0);
+        double expected = ASHEOS->T();
+        double T1s = ASHEOS->T();
+        ASTTSE->update(CoolProp::PSmolar_INPUTS, p1, s0);
+        double actual_TTSE = ASTTSE->T();
+        ASBICUBIC->update(CoolProp::PSmolar_INPUTS, p1, s0);
+        double actual_BICUBIC = ASBICUBIC->T();
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
 }
 #endif // ENABLE_CATCH
 
