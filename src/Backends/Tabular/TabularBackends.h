@@ -183,6 +183,10 @@ class PureFluidSaturationTableData{
         };
         double evaluate(parameters output, double p, double Q, std::size_t iL, std::size_t iV)
         {
+            if (iL <= 2){ iL = 2; }
+            else if (iL+1 == N){ iL = N-2; }
+            if (iV <= 2){ iV = 2; }
+            else if (iV+1 == N){ iV = N-2; }
             double logp = log(p);
             switch(output){
                 case iT:

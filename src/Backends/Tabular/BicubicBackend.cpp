@@ -251,9 +251,11 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                         double TR = single_phase_logpT.T[cached_single_phase_i+1][cached_single_phase_j];
                         if (TL < Ts && Ts < TR){
                             if (_T < Ts){
+                                if (cached_single_phase_i == 0){throw ValueError(format("P, T are near saturation, but cannot move the cell to the left")); }
                                 // It's liquid, move the cell to the left
                                 cached_single_phase_i--;
                             }else{
+                                if (cached_single_phase_i > single_phase_logpT.Nx-2){ throw ValueError(format("P,T are near saturation, but cannot move the cell to the right")); }
                                 // It's vapor, move to the right
                                 cached_single_phase_i++;
                             }
@@ -267,6 +269,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
 			std::size_t iL = 0, iV = 0;
 			CoolPropDbl hL = 0, hV = 0;
 			_p = val1; _Q = val2;
+            if (_p < pure_saturation.pL[0]){throw ValueError(format("p (%g) Pa below minimum pressure", static_cast<double>(_p)));}
 			pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, hL, hV);
             using_single_phase_table = false;
             if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
