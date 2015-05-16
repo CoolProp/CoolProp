@@ -160,9 +160,9 @@ The two-phase derivatives of Thorade :cite:`Thorade-EES-2013` are implemented in
     # First saturation derivative calculated analytically
     In [0]: HEOS.first_saturation_deriv(CoolProp.iP, CoolProp.iT)
     
-    In [0]: HEOS.update(CoolProp.QT_INPUTS, 0, 300 + 0.001); p2= HEOS.p()
+    In [0]: HEOS.update(CoolProp.QT_INPUTS, 0, 300 + 0.001); p2 = HEOS.p()
     
-    In [0]: HEOS.update(CoolProp.QT_INPUTS, 0, 300 - 0.001); p1= HEOS.p()
+    In [0]: HEOS.update(CoolProp.QT_INPUTS, 0, 300 - 0.001); p1 = HEOS.p()
     
     # First saturation derivative calculated numerically
     In [0]: (p2-p1)/(2*0.001)
@@ -220,8 +220,6 @@ An example of plotting these derivatives is here:
     plt.ylabel(r'$d\rho/dh|p$')
     plt.ylim(-0.005, 0.005)
     plt.legend(loc='best')
-
-
     
 Reference States
 ----------------
