@@ -49,7 +49,7 @@ class CellCoeffs{
             }
         };
         /// Returns true if the cell coefficients seem to have been calculated properly
-        bool valid(){return _valid;};
+        bool valid() const {return _valid;};
         /// Call this function to set the valid flag to true
         void set_valid(){_valid = true;};
         /// Call this function to set the valid flag to false
@@ -57,7 +57,7 @@ class CellCoeffs{
         /// Set the neighboring (alternate) cell to be used if the cell is invalid
         void set_alternate(std::size_t i, std::size_t j){alt_i = i; alt_j = j; _has_valid_neighbor = true;}
         /// Get neighboring(alternate) cell to be used if this cell is invalid
-        void get_alternate(std::size_t &i, std::size_t &j){
+        void get_alternate(std::size_t &i, std::size_t &j) const {
             if (_has_valid_neighbor){
                 i = alt_i; j = alt_j;
             }
@@ -66,7 +66,7 @@ class CellCoeffs{
             }
         }
         /// Returns true if cell is invalid and it has valid neighbor
-        bool has_valid_neighbor(){
+        bool has_valid_neighbor() const{
             return _has_valid_neighbor;
         }
 };

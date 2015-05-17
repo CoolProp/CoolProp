@@ -395,7 +395,8 @@ class SinglePhaseGriddedTableData{
 		};
 		/// Check that the native inputs (the inputs the table is based on) are in range
 		bool native_inputs_are_in_range(double x, double y){
-			return x >= xmin && x <= xmax && y >= ymin && y <= ymax;
+            double e = 10*DBL_EPSILON;
+			return x >= xmin-e && x <= xmax+e && y >= ymin-e && y <= ymax+e;
 		}
 		/// @brief Find the nearest neighbor for native inputs (the inputs the table is based on)
 		/// Does not check whether this corresponds to a valid node or not
@@ -433,9 +434,6 @@ class SinglePhaseGriddedTableData{
                 // This one is fine because we now end up with a vector<double> in the other variable
                 const std::vector<std::vector<double> > & v = get(otherkey);
                 bisect_vector(v[i], otherval, j);
-                if (j < v[i].size()-1 && std::abs(v[i][j+1] - otherval) < std::abs(v[i][j] - otherval)){
-                    j++;
-                }
             }
 		}
 		/// Find the nearest good neighbor node for inputs that are the same as the grid inputs
@@ -627,7 +625,11 @@ class TabularBackend : public AbstractState
         LogPTTable single_phase_logpT;
         PureFluidSaturationTableData pure_saturation; // This will ultimately be split into pure and mixture backends which derive from this backend
         PhaseEnvelopeData phase_envelope;
-        
+        CoolPropDbl calc_T_critical(void){return this->AS->T_critical();};
+        CoolPropDbl calc_Ttriple(void){return this->AS->Ttriple();};
+        CoolPropDbl calc_p_triple(void){return this->AS->p_triple();};
+        CoolPropDbl calc_pmax(void){return this->AS->pmax();};
+        CoolPropDbl calc_Tmax(void){return this->AS->Tmax();};
         bool using_mole_fractions(void){return true;}
         bool using_mass_fractions(void){return false;}
         bool using_volu_fractions(void){return false;}
@@ -723,6 +725,19 @@ class TabularBackend : public AbstractState
             }
             else{
                 return pure_saturation.evaluate(iSmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            }
+        }
+        CoolPropDbl calc_umolar(void){
+            if (using_single_phase_table){
+                switch(selected_table){
+                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iUmolar, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iUmolar, cached_single_phase_i, cached_single_phase_j);
+                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
+                }
+                return _HUGE; // not needed, will never be hit, just to make compiler happy
+            }
+            else{
+                return pure_saturation.evaluate(iUmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
             }
         }
         CoolPropDbl calc_cpmolar(void){

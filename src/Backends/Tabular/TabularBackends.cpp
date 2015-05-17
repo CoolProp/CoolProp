@@ -28,15 +28,15 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
         throw UnableToLoadError(err);
     }
     std::vector<char> newBuffer(raw.size()*5);
-    uLong newBufferSize = newBuffer.size();
+    uLong newBufferSize = static_cast<uLong>(newBuffer.size());
     int code;
     do{
         code = uncompress((unsigned char *)(&(newBuffer[0])), &newBufferSize, 
-                          (unsigned char *)(&(raw[0])), raw.size());
+                          (unsigned char *)(&(raw[0])), static_cast<mz_ulong>(raw.size()));
         if (code == Z_BUF_ERROR){ 
             // Output buffer is too small, make it bigger and try again
             newBuffer.resize(newBuffer.size()*5);
-            newBufferSize = newBuffer.size();
+            newBufferSize = static_cast<uLong>(newBuffer.size());
         }
         else if (code != 0){ // Something else, a big problem
             std::string err = format("Unable to uncompress file %s with miniz code %d", path_to_table.c_str(), code);
@@ -68,9 +68,9 @@ template <typename T> void write_table(const T &table, const std::string &path_t
     std::string tabPath = std::string(path_to_tables + "/" + name + ".bin");
     std::string zPath = tabPath + ".z";
     std::vector<char> buffer(sbuf.size());
-    uLong outSize = buffer.size();
+    uLong outSize = static_cast<uLong>(buffer.size());
     compress((unsigned char *)(&(buffer[0])), &outSize, 
-             (unsigned char*)(sbuf.data()), sbuf.size());
+             (unsigned char*)(sbuf.data()), static_cast<mz_ulong>(sbuf.size()));
     std::ofstream ofs2(zPath.c_str(), std::ofstream::binary);
     ofs2.write(&buffer[0], outSize);
     

@@ -63,7 +63,7 @@ void CoolProp::BicubicBackend::build_coeffs(SinglePhaseGriddedTableData &table, 
 				f = &(table.umolar); fx = &(table.dumolardx); fy = &(table.dumolardy); fxy = &(table.d2umolardxdy);
                 break;
             default:
-                throw ValueError();
+                throw ValueError("Invalid variable type to build_coeffs");
 		}
         for (std::size_t i = 0; i < table.Nx-1; ++i) // -1 since we have one fewer cells than nodes
         {
@@ -248,6 +248,16 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 // Find and cache the indices i, j
                 selected_table = SELECTED_PH_TABLE;
                 single_phase_logph.find_nearest_neighbor(iP, _p, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+                CellCoeffs &cell = coeffs_ph[cached_single_phase_i][cached_single_phase_j];
+                if (!cell.valid()){
+                    if (cell.has_valid_neighbor()){
+                        // Get new good neighbor
+                        cell.get_alternate(cached_single_phase_i, cached_single_phase_j);
+                    }
+                    else{
+                        if (!cell.valid()){throw ValueError(format("Cell is invalid and has no good neighbors for p = %g Pa, T= %g K",val1,val2));}
+                    }
+                }
 				// Now find hmolar given P, X for X in Hmolar, Smolar, Umolar
                 invert_single_phase_x(single_phase_logph, coeffs_ph, otherkey, otherval, _p, cached_single_phase_i, cached_single_phase_j);
             }
@@ -291,6 +301,17 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     // Find and cache the indices i, j
                     selected_table = SELECTED_PT_TABLE;
 					single_phase_logpT.find_native_nearest_good_cell(_T, _p, cached_single_phase_i, cached_single_phase_j);
+                    CellCoeffs &cell = coeffs_pT[cached_single_phase_i][cached_single_phase_j];
+                    if (!cell.valid()){
+                        if (cell.has_valid_neighbor()){
+                            // Get new good neighbor
+                            cell.get_alternate(cached_single_phase_i, cached_single_phase_j);
+                        }
+                        else{
+                            if (!cell.valid()){throw ValueError(format("Cell is invalid and has no good neighbors for p = %g Pa, T= %g K",val1,val2));}
+                        }
+                    }
+
                     // If p < pc, you might be getting a liquid solution when you want a vapor solution or vice versa
                     // if you are very close to the saturation curve, so we figure out what the saturation temperature
                     // is for the given pressure
@@ -341,12 +362,23 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 else{
                     cached_saturation_iL = iL; cached_saturation_iV = iV;
                 }
+                _p = pure_saturation.evaluate(iP, _T, _Q, iL, iV);
             }
             else{
                 // Find and cache the indices i, j
                 selected_table = SELECTED_PT_TABLE;
                 single_phase_logpT.find_nearest_neighbor(iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
-				// Now find the y variable (Dmolar in this case)
+                CellCoeffs &cell = coeffs_pT[cached_single_phase_i][cached_single_phase_j];
+                if (!cell.valid()){
+                    if (cell.has_valid_neighbor()){
+                        // Get new good neighbor
+                        cell.get_alternate(cached_single_phase_i, cached_single_phase_j);
+                    }
+                    else{
+                        if (!cell.valid()){throw ValueError(format("Cell is invalid and has no good neighbors for p = %g Pa, T= %g K",val1,val2));}
+                    }
+                }
+				// Now find the y variable (Dmolar or Smolar in this case)
                 invert_single_phase_y(single_phase_logpT, coeffs_pT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
             }
             break;
@@ -416,7 +448,7 @@ double CoolProp::BicubicBackend::evaluate_single_phase_transport(SinglePhaseGrid
     switch(output){
         case iconductivity: _conductivity = val; break;
         case iviscosity: _viscosity = val; break;
-        default: throw ValueError();
+        default: throw ValueError("Invalid output variable in evaluate_single_phase_transport");
     }
     return val;
 }
@@ -449,8 +481,8 @@ double CoolProp::BicubicBackend::evaluate_single_phase(const SinglePhaseGriddedT
         case iDmolar: _rhomolar = val; break;
         case iSmolar: _smolar = val; break;
 		case iHmolar: _hmolar = val; break;
-        //case iUmolar:
-        default: throw ValueError();
+        case iUmolar: _umolar = val; break;
+        default: throw ValueError("Invalid output variable in evaluate_single_phase");
     }
     return val;
 }
@@ -530,10 +562,19 @@ void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTab
         xhat = xhat0;
     }
     else if (N == 2){
-        xhat = std::min(xhat0, xhat1);
+        xhat = std::abs(xhat0) < std::abs(xhat1) ? xhat0 : xhat1;
     }
     else if (N == 3){
-        xhat = min3(xhat0, xhat1, xhat2);
+        if (std::abs(xhat0) < std::abs(xhat1) && std::abs(xhat0) < std::abs(xhat2)){
+            xhat = xhat0;
+        }
+        // Already know that xhat1 < xhat0 (xhat0 is not the minimum)
+        else if (std::abs(xhat1) < std::abs(xhat2)){
+            xhat = xhat1;
+        }
+        else{
+            xhat = xhat2;
+        }
     }
     else if (N == 0){
         throw ValueError("Could not find a solution in invert_single_phase_x");
@@ -547,7 +588,7 @@ void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTab
     switch(table.xkey){
         case iHmolar: _hmolar = val; break;
         case iT: _T = val; break;
-        default: throw ValueError();
+        default: throw ValueError("Invalid output variable in invert_single_phase_x");
     }
 }
 
@@ -578,10 +619,19 @@ void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTab
         yhat = yhat0;
     }
     else if (N == 2){
-        yhat = std::min(yhat0, yhat1);
+        yhat = std::abs(yhat0) < std::abs(yhat1) ? yhat0 : yhat1;
     }
     else if (N == 3){
-        yhat = min3(yhat0, yhat1, yhat2);
+        if (std::abs(yhat0) < std::abs(yhat1) && std::abs(yhat0) < std::abs(yhat2)){
+            yhat = yhat0;
+        }
+        // Already know that yhat1 < yhat0 (yhat0 is not the minimum)
+        else if (std::abs(yhat1) < std::abs(yhat2)){
+            yhat = yhat1;
+        }
+        else{
+            yhat = yhat2;
+        }
     }
     else if (N == 0){
         throw ValueError("Could not find a solution in invert_single_phase_x");
@@ -594,7 +644,7 @@ void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTab
     // Cache the output value calculated
     switch(table.ykey){
         case iP: _p = val; break;
-        default: throw ValueError();
+        default: throw ValueError("Invalid output variable in invert_single_phase_x");
     }
 }
 
