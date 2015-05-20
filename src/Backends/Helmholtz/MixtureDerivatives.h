@@ -147,13 +147,13 @@ class MixtureDerivatives{
      * 
      * The derivative term
      * \f[
-     * n\left(\frac{\partial \phi^r}{\partial n_i} \right)_{T,V,n_j}
+     * n\left(\frac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j}
      * \f]
      * which is equal to
      * \f{eqnarray*}{
-     * n\left(\frac{\partial \phi^r}{\partial n_i} \right)_{T,V,n_j} &=& \delta \phi^r_{\delta}\left[ 1-\frac{1}{\rho_r}\left[\left(\frac{\partial \rho_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial \rho_r}{\partial x_k}\right)_{x_j}  \right]\right]\\
-     * && +\tau \phi^r_{\tau}\frac{1}{T_r}\left[\left(\frac{\partial T_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial T_r}{\partial x_k}\right)_{x_j}  \right]\\
-     * && +\phi^r_{x_i}-\sum_{k=1}^{N}x_k\phi^r_{x_k}
+     * n\left(\frac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j} &=& \delta \alpha^r_{\delta}\left[ 1-\frac{1}{\rho_r}\left[\left(\frac{\partial \rho_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial \rho_r}{\partial x_k}\right)_{x_j}  \right]\right]\\
+     * && +\tau \alpha^r_{\tau}\frac{1}{T_r}\left[\left(\frac{\partial T_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial T_r}{\partial x_k}\right)_{x_j}  \right]\\
+     * && +\alpha^r_{x_i}-\sum_{k=1}^{N}x_k\alpha^r_{x_k}
      * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
      * @param i The index of interest
@@ -271,9 +271,9 @@ class MixtureDerivatives{
      * 
      * The derivative term
      * \f{eqnarray*}{
-     * \frac{\partial }{\partial \tau} \left( n\left(\frac{\partial \phi^r}{\partial n_i} \right)_{T,V,n_j} \right) &=& \delta \phi^r_{\delta\tau}\left[ 1-\frac{1}{\rho_r}\left[\left(\frac{\partial \rho_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial \rho_r}{\partial x_k}\right)_{x_j}  \right]\right]\\
-     * && +(\tau \phi^r_{\tau\tau}+\phi^r_{\tau})\frac{1}{T_r}\left[\left(\frac{\partial T_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial T_r}{\partial x_k}\right)_{x_j}  \right]\\
-     * && +\phi^r_{x_i\tau}-\sum_{k=1}^{N}x_k\phi^r_{x_k\tau}
+     * \frac{\partial }{\partial \tau} \left( n\left(\frac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j} \right) &=& \delta \alpha^r_{\delta\tau}\left[ 1-\frac{1}{\rho_r}\left[\left(\frac{\partial \rho_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial \rho_r}{\partial x_k}\right)_{x_j}  \right]\right]\\
+     * && +(\tau \alpha^r_{\tau\tau}+\alpha^r_{\tau})\frac{1}{T_r}\left[\left(\frac{\partial T_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial T_r}{\partial x_k}\right)_{x_j}  \right]\\
+     * && +\alpha^r_{x_i\tau}-\sum_{k=1}^{N}x_k\alpha^r_{x_k\tau}
      * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
      * @param i The index of interest
@@ -285,9 +285,9 @@ class MixtureDerivatives{
      * 
      * The derivative term
      * \f{eqnarray*}{
-     * \left(\frac{\partial }{\partial \delta} \left( n\left(\frac{\partial \phi^r}{\partial n_i} \right)_{T,V,n_j} \right)\right)_{\tau,\bar x} &=& (\alpha_{\delta}^r+\delta\alpha_{\delta\delta}^r)\left[1-\frac{1}{\rho_r}\cdot n\left(\frac{\partial \rho_r}{\partial n_i}\right)_{n_j} \right] \\
+     * \left(\frac{\partial }{\partial \delta} \left( n\left(\frac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j} \right)\right)_{\tau,\bar x} &=& (\alpha_{\delta}^r+\delta\alpha_{\delta\delta}^r)\left[1-\frac{1}{\rho_r}\cdot n\left(\frac{\partial \rho_r}{\partial n_i}\right)_{n_j} \right] \\
      * &+&\tau\alpha^r_{\delta\tau}\frac{1}{T_r}\cdot n\left(\frac{\partial T_r}{\partial n_i}\right)_{n_j}\\
-     * &+&\phi^r_{\delta x_i}-\sum_{k=1}^{N}x_k\phi^r_{\delta x_k}
+     * &+&\alpha^r_{\delta x_i}-\sum_{k=1}^{N}x_k\alpha^r_{\delta x_k}
      * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
      * @param i The index of interest
