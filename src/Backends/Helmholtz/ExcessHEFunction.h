@@ -29,6 +29,10 @@ public:
     virtual double d2alphar_dDelta_dTau(double tau, double delta) = 0;
     virtual double dalphar_dTau(double tau, double delta) = 0;
     virtual double d2alphar_dTau2(double tau, double delta) = 0;
+	virtual double d3alphar_dTau3(double tau, double delta) = 0;
+	virtual double d3alphar_dDelta_dTau2(double tau, double delta) = 0;
+	virtual double d3alphar_dDelta2_dTau(double tau, double delta) = 0;
+	virtual double d3alphar_dDelta3(double tau, double delta) = 0;
 };
 
 /** \brief The departure function used by the GERG-2008 formulation
@@ -83,6 +87,10 @@ public:
     double dalphar_dTau(double tau, double delta){return phi.dTau(tau, delta);};
     double d2alphar_dDelta2(double tau, double delta){return phi.dDelta2(tau, delta);};
     double d2alphar_dTau2(double tau, double delta){return phi.dTau2(tau, delta);};
+	double d3alphar_dTau3(double tau, double delta){ return phi.dTau3(tau, delta); };
+	double d3alphar_dDelta_dTau2(double tau, double delta){ return phi.dDelta_dTau2(tau, delta); };
+	double d3alphar_dDelta2_dTau(double tau, double delta){ return phi.dDelta2_dTau(tau, delta); };
+	double d3alphar_dDelta3(double tau, double delta){ return phi.dDelta3(tau, delta); };
 };
 
 /** \brief A polynomial/exponential departure function
@@ -116,6 +124,12 @@ public:
     double dalphar_dTau(double tau, double delta){return phi.dTau(tau, delta);};
     double d2alphar_dDelta2(double tau, double delta){return phi.dDelta2(tau, delta);};
     double d2alphar_dTau2(double tau, double delta){return phi.dTau2(tau, delta);};
+
+	double d3alphar_dTau3(double tau, double delta){ return phi.dTau3(tau, delta); };
+	double d3alphar_dDelta_dTau2(double tau, double delta){ return phi.dDelta_dTau2(tau, delta); }; 
+	double d3alphar_dDelta2_dTau(double tau, double delta){ return phi.dDelta2_dTau(tau, delta); }; 
+	double d3alphar_dDelta3(double tau, double delta){ return phi.dDelta3(tau, delta); };
+
 };
 
 typedef shared_ptr<DepartureFunction> DepartureFunctionPointer;
@@ -211,6 +225,55 @@ public:
         }
         return summer;
     };
+	double d3alphar_dTau3(double tau, double delta, const std::vector<CoolPropDbl> &x)
+	{
+		double summer = 0;
+		for (std::size_t i = 0; i < N - 1; i++)
+		{
+			for (std::size_t j = i + 1; j < N; j++)
+			{
+				summer += x[i] * x[j] * F[i][j] * DepartureFunctionMatrix[i][j]->d3alphar_dTau3(tau, delta);
+			}
+		}
+		return summer;
+	};
+	double d3alphar_dDelta_dTau2(double tau, double delta, const std::vector<CoolPropDbl> &x)
+	{
+		double summer = 0;
+		for (std::size_t i = 0; i < N - 1; i++)
+		{
+			for (std::size_t j = i + 1; j < N; j++)
+			{
+				summer += x[i] * x[j] * F[i][j] * DepartureFunctionMatrix[i][j]->d3alphar_dDelta_dTau2(tau, delta);
+			}
+		}
+		return summer;
+	};
+	double d3alphar_dDelta2_dTau(double tau, double delta, const std::vector<CoolPropDbl> &x)
+	{
+		double summer = 0;
+		for (std::size_t i = 0; i < N - 1; i++)
+		{
+			for (std::size_t j = i + 1; j < N; j++)
+			{
+				summer += x[i] * x[j] * F[i][j] * DepartureFunctionMatrix[i][j]->d3alphar_dDelta2_dTau(tau, delta);
+			}
+		}
+		return summer;
+	};
+	double d3alphar_dDelta3(double tau, double delta, const std::vector<CoolPropDbl> &x)
+	{
+		double summer = 0;
+		for (std::size_t i = 0; i < N - 1; i++)
+		{
+			for (std::size_t j = i + 1; j < N; j++)
+			{
+				summer += x[i] * x[j] * F[i][j] * DepartureFunctionMatrix[i][j]->d3alphar_dDelta3(tau, delta);
+			}
+		}
+		return summer;
+	};
+
     double dalphar_dxi(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i)
     {
         double summer = 0;
@@ -258,6 +321,42 @@ public:
         }
         return summer;
     };
+	double d3alphar_dxi_dDelta2(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i)
+	{
+		double summer = 0;
+		for (std::size_t k = 0; k < N; k++)
+		{
+			if (i != k)
+			{
+				summer += x[k] * F[i][k] * DepartureFunctionMatrix[i][k]->d2alphar_dDelta2(tau, delta);
+			}
+		}
+		return summer;
+	};
+	double d3alphar_dxi_dTau2(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i)
+	{
+		double summer = 0;
+		for (std::size_t k = 0; k < N; k++)
+		{
+			if (i != k)
+			{
+				summer += x[k] * F[i][k] * DepartureFunctionMatrix[i][k]->d2alphar_dTau2(tau, delta);
+			}
+		}
+		return summer;
+	};
+	double d3alphar_dxi_dDelta_dTau(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i)
+	{
+		double summer = 0;
+		for (std::size_t k = 0; k < N; k++)
+		{
+			if (i != k)
+			{
+				summer += x[k] * F[i][k] * DepartureFunctionMatrix[i][k]->d2alphar_dDelta_dTau(tau, delta);
+			}
+		}
+		return summer;
+	};
 };
 
 } /* namespace CoolProp */
