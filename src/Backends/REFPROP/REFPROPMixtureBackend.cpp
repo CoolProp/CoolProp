@@ -678,7 +678,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     this->check_loaded_fluid();
     double rho_mol_L=_HUGE, rhoLmol_L=_HUGE, rhoVmol_L=_HUGE,
         hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,
-        w=_HUGE,q=_HUGE, mm=_HUGE, p_kPa = _HUGE;
+        w=_HUGE,q=_HUGE, mm=_HUGE, p_kPa = _HUGE, hjt = _HUGE;
     long ierr = 0;
     char herr[errormessagelength+1];
 
@@ -1180,6 +1180,10 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
                       &ierr,herr,errormessagelength);
+				if (static_cast<int>(ierr) == 0){
+					// Calculate everything else
+					THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+				}
             }
             if (static_cast<int>(ierr) > 0 || iFlsh == 0){
                 ierr = 0;
@@ -1229,6 +1233,10 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
                       &ierr,herr,errormessagelength);
+				if (static_cast<int>(ierr) == 0){
+					// Calculate everything else
+					THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+				}
             }
 			if (static_cast<int>(ierr) > 0 || iFlsh == 0){
 				ierr = 0;
