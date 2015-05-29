@@ -31,6 +31,7 @@
 #include "PhaseEnvelopeRoutines.h"
 #include "ReducingFunctions.h"
 #include "MixtureParameters.h"
+#include "IdealCurves.h"
 
 static int deriv_counter = 0;
 
@@ -600,9 +601,16 @@ std::string HelmholtzEOSMixtureBackend::calc_name(void)
         throw ValueError(format("calc_name is only valid for pure and pseudo-pure fluids, %d components", components.size()));
     }
     else{
-        return components[0].name;
+        return components[0].name; 
     }
 }
+void HelmholtzEOSMixtureBackend::calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p){
+	shared_ptr<AbstractState> AS(this);
+	if (type == "Joule-Thomson"){
+		JouleThomsonCurveTracer JTCT(AS, 1e5, 800);
+		JTCT.trace(T, p);
+	}
+};
 std::vector<std::string> HelmholtzEOSMixtureBackend::calc_fluid_names(void)
 {
 	std::vector<std::string> out;

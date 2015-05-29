@@ -160,6 +160,8 @@ public:
      */
     void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){throw std::exception();};
 
+	void calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p);
+
     CoolPropDbl calc_molar_mass(void);
     CoolPropDbl calc_gas_constant(void);
     CoolPropDbl calc_acentric_factor(void);
