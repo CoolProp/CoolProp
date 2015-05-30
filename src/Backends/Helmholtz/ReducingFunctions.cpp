@@ -126,7 +126,7 @@ CoolPropDbl ReducingFunction::d2_PSI_rho_dxj_dxk(const std::vector<CoolPropDbl> 
 	double line1 = d2_ndrhorbardni_dxj_dxk__constxi(x, i, j, k, xN_flag);
 	double line2 = -1/rhormolar(x)*drhormolardxi__constxj(x, k, xN_flag)*d_ndrhorbardni_dxj__constxi(x, i, j, xN_flag);
 	double line3 = drhormolardxi__constxj(x, j, xN_flag)*d_PSI_rho_dxj(x, i, k, xN_flag);
-	double line4 = -(d2rhormolardxidxj(x, j, k, xN_flag)+1/rhormolar(x)*drhormolardxi__constxj(x, k, xN_flag)*drhormolardxi__constxj(x, j, xN_flag))*(1-PSI_rho(x, i, xN_flag));
+	double line4 = -(d2rhormolardxidxj(x, j, k, xN_flag)-1/rhormolar(x)*drhormolardxi__constxj(x, k, xN_flag)*drhormolardxi__constxj(x, j, xN_flag))*(1-PSI_rho(x, i, xN_flag));
 	return -1/rhormolar(x)*(line1 + line2 + line3 + line4);
 }
 CoolPropDbl ReducingFunction::PSI_T(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
@@ -141,8 +141,8 @@ CoolPropDbl ReducingFunction::d2_PSI_T_dxj_dxk(const std::vector<CoolPropDbl> &x
 {
 	double line1 = d2_ndTrdni_dxj_dxk__constxi(x, i, j, k, xN_flag);
 	double line2 = -1/Tr(x)*dTrdxi__constxj(x, k, xN_flag)*d_ndTrdni_dxj__constxi(x, i, j, xN_flag);
-	double line3 = dTrdxi__constxj(x, j, xN_flag)*d_PSI_T_dxj(x, i, k, xN_flag);
-	double line4 = -(d2Trdxidxj(x, j, k, xN_flag)-1/Tr(x)*dTrdxi__constxj(x, k, xN_flag), dTrdxi__constxj(x, j, xN_flag))*PSI_T(x, i, xN_flag);
+	double line3 = -dTrdxi__constxj(x, j, xN_flag)*d_PSI_T_dxj(x, i, k, xN_flag);
+	double line4 = -(d2Trdxidxj(x, j, k, xN_flag)-1/Tr(x)*dTrdxi__constxj(x, k, xN_flag)*dTrdxi__constxj(x, j, xN_flag))*PSI_T(x, i, xN_flag);
 	return 1/Tr(x)*(line1 + line2 + line3 + line4);
 }
 
@@ -387,7 +387,7 @@ CoolPropDbl GERG2008ReducingFunction::d3Yrdxidxjdxk(const std::vector<CoolPropDb
 		}
 	}
 	else if (xN_flag == XN_DEPENDENT){
-		throw ValueError("Not implemented yet");
+		throw ValueError("d3Yrdxidxjdxk not implemented yet");
 		// Table S1 from Gernert, 2014, supplemental information
 		if (j == N - 1 || i == N - 1){ return 0.0; }
 		if (i == j){ return d2Yrdxi2__constxj(x, i, beta, gamma, Y_c_ij, Yc, xN_flag); }

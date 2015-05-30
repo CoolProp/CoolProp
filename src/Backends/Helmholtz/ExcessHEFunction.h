@@ -297,6 +297,32 @@ public:
             return 0;
         }
     };
+    double d3alphar_dxi_dxj_dDelta(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j)
+    {
+        if (i != j)
+        {
+            return F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dDelta(tau, delta);
+        }
+        else
+        {
+            return 0;
+        }
+    };
+    double d3alphar_dxi_dxj_dTau(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j)
+    {
+        if (i != j)
+        {
+            return F[i][j]*DepartureFunctionMatrix[i][j]->dalphar_dTau(tau, delta);
+        }
+        else
+        {
+            return 0;
+        }
+    };
+    double d3alphardxidxjdxk(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k)
+    {
+        return 0;
+    };
     double d2alphar_dxi_dTau(double tau, double delta, const std::vector<CoolPropDbl> &x, std::size_t i)
     {
         double summer = 0;

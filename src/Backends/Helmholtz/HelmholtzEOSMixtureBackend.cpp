@@ -2376,7 +2376,8 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
     else{
         std::size_t N = mole_fractions.size();
         CoolPropDbl summer_base = 0, summer_dTau = 0, summer_dDelta = 0, 
-                    summer_dTau2 = 0, summer_dDelta2 = 0, summer_dDelta_dTau = 0;
+                    summer_dTau2 = 0, summer_dDelta2 = 0, summer_dDelta_dTau = 0,
+                    summer_dTau3 = 0, summer_dDelta3 = 0, summer_dDelta2_dTau = 0, summer_dDelta_dTau2 = 0;
         for (std::size_t i = 0; i < N; ++i){
             HelmholtzDerivatives derivs = components[i].EOS().alphar.all(tau, delta);
             CoolPropDbl xi = mole_fractions[i];
@@ -2387,6 +2388,11 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
             summer_dDelta2 += xi*derivs.d2alphar_ddelta2;
             summer_dDelta_dTau += xi*derivs.d2alphar_ddelta_dtau;
             summer_dTau2 += xi*derivs.d2alphar_dtau2;
+
+            summer_dDelta3 += xi*derivs.d3alphar_ddelta3;
+            summer_dDelta2_dTau += xi*derivs.d3alphar_ddelta2_dtau;
+            summer_dDelta_dTau2 += xi*derivs.d3alphar_ddelta_dtau2;
+            summer_dTau3 += xi*derivs.d3alphar_dtau3;
         }
         _alphar = summer_base + Excess.alphar(tau, delta, mole_fractions);
         _dalphar_dDelta = summer_dDelta + Excess.dalphar_dDelta(tau, delta, mole_fractions);
@@ -2394,6 +2400,16 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
         _d2alphar_dDelta2 = summer_dDelta2 + Excess.d2alphar_dDelta2(tau, delta, mole_fractions);
         _d2alphar_dDelta_dTau = summer_dDelta_dTau + Excess.d2alphar_dDelta_dTau(tau, delta, mole_fractions);
         _d2alphar_dTau2 = summer_dTau2 + Excess.d2alphar_dTau2(tau, delta, mole_fractions);
+
+        _d3alphar_dDelta3 = summer_dDelta3 + Excess.d3alphar_dDelta3(tau, delta, mole_fractions);
+        _d3alphar_dDelta2_dTau = summer_dDelta2_dTau + Excess.d3alphar_dDelta2_dTau(tau, delta, mole_fractions);
+        _d3alphar_dDelta_dTau2 = summer_dDelta_dTau2 + Excess.d3alphar_dDelta_dTau2(tau, delta, mole_fractions);
+        _d3alphar_dTau3 = summer_dTau3 + Excess.d3alphar_dTau3(tau, delta, mole_fractions);
+        //_d4alphar_dDelta4 = derivs.d4alphar_ddelta4;
+        //_d4alphar_dDelta3_dTau = derivs.d4alphar_ddelta3_dtau;
+        //_d4alphar_dDelta2_dTau2 = derivs.d4alphar_ddelta2_dtau2;
+        //_d4alphar_dDelta_dTau3 = derivs.d4alphar_ddelta_dtau3;
+        //_d4alphar_dTau4 = derivs.d4alphar_dtau4;
     }
 }
 
