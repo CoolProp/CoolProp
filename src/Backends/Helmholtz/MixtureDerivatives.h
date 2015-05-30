@@ -417,10 +417,15 @@ class MixtureDerivatives{
      */
     static CoolPropDbl d_nd_ndalphardni_dnj_dTau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
-    /* \brief \f$\tau\f$ derivative of GERG 2004 7.47
+    /* \brief \f$\delta\f$ derivative of GERG 2004 7.47
      *
      */
     static CoolPropDbl d_nd_ndalphardni_dnj_dDelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
+    /* \brief \f$x_k\f$ derivative of GERG 2004 7.47
+    *
+    */
+    static CoolPropDbl d_nd_ndalphardni_dnj_dxk__consttau_delta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph equation 7.48
      * 
@@ -436,6 +441,8 @@ class MixtureDerivatives{
 
     static CoolPropDbl d_nddeltadni_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
+    static CoolPropDbl d_nddeltadni_dxj__constdelta_tau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
     /** \brief GERG 2004 Monograph equation 7.49
      * 
      * The derivative term
@@ -449,6 +456,8 @@ class MixtureDerivatives{
     static CoolPropDbl ndtaudni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     static CoolPropDbl d_ndtaudni_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    
+    static CoolPropDbl d_ndtaudni_dxj__constdelta_tau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph equation 7.52
      * 
@@ -467,6 +476,9 @@ class MixtureDerivatives{
      */
     static CoolPropDbl d_ndalphardni_dxj__constdelta_tau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
+    /* \brief \f$x_k\f$ derivative of GERG 2004 7.52
+    *
+    */
     static CoolPropDbl d2_ndalphardni_dxj_dxk__constdelta_tau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
 
 }; /* class MixtureDerivatives */
