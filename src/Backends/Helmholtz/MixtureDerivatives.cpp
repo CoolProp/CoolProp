@@ -462,8 +462,8 @@ CoolPropDbl MixtureDerivatives::d_ndalphardni_dxj__constdelta_tau_xi(HelmholtzEO
 
 CoolPropDbl MixtureDerivatives::nd2nalphardnidnj__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
-    return ndalphar_dni__constT_V_nj(HEOS, j, xN_flag); // First term from 7.46
-    +nd_ndalphardni_dnj__constT_V; // 7.47
+    return ndalphar_dni__constT_V_nj(HEOS, j, xN_flag) // First term from 7.46
+    + nd_ndalphardni_dnj__constT_V(HEOS, i, j, xN_flag); // 7.47
 }
 
 CoolPropDbl MixtureDerivatives::nd_ndalphardni_dnj__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
