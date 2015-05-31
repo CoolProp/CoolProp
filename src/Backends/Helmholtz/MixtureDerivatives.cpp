@@ -328,6 +328,31 @@ CoolPropDbl MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixt
     return line1 + line2 + line3 + line4;
 }
 
+CoolPropDbl MixtureDerivatives::ndln_fugacity_i_dnj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){
+    return Kronecker_delta(i, j)/HEOS.mole_fractions[i]+nd2nalphardnidnj__constT_V(HEOS, i, j, xN_flag);
+}
+CoolPropDbl MixtureDerivatives::d_ndln_fugacity_i_dnj_dtau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){
+    return d_ndalphardni_dTau(HEOS, j, xN_flag) + d_nd_ndalphardni_dnj_dTau__constdelta_x(HEOS, i, j, xN_flag);
+}
+CoolPropDbl MixtureDerivatives::d_ndln_fugacity_i_dnj_ddelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){
+    return d_ndalphardni_dDelta(HEOS, j, xN_flag) + d_nd_ndalphardni_dnj_dDelta__consttau_x(HEOS, i, j, xN_flag);
+}
+CoolPropDbl MixtureDerivatives::d_ndln_fugacity_i_dnj_ddxk__consttau_delta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
+    return d_ndalphardni_dxj__constdelta_tau_xi(HEOS, i, j, xN_flag) + d_nd_ndalphardni_dnj_dxk__consttau_delta(HEOS, i, j, k, xN_flag);
+}
+CoolPropDbl MixtureDerivatives::nd_ndln_fugacity_i_dnj_dnk__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
+    double sum = d_ndln_fugacity_i_dnj_dtau__constdelta_x(HEOS, i, j, xN_flag)*ndtaudni__constT_V_nj(HEOS, k, xN_flag)
+        + d_ndln_fugacity_i_dnj_ddelta__consttau_x(HEOS, i, j, xN_flag)*nddeltadni__constT_V_nj(HEOS, k, xN_flag)
+        + d_ndln_fugacity_i_dnj_ddxk__consttau_delta(HEOS, i, j, k, xN_flag);
+    std::size_t mmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ mmax--; }
+    for (unsigned int m = 0; m < mmax; ++m)
+    {
+        sum -= HEOS.mole_fractions[m]*d_ndln_fugacity_i_dnj_ddxk__consttau_delta(HEOS, i, j, m, xN_flag);
+    }
+    return sum;
+}
+
 CoolPropDbl MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
     // Gernert 3.115
@@ -525,10 +550,10 @@ CoolPropDbl MixtureDerivatives::d_nd_ndalphardni_dnj_dDelta__consttau_x(Helmholt
 
 CoolPropDbl MixtureDerivatives::d_nd_ndalphardni_dnj_dxk__consttau_delta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
 {
-    double line1 = d_ndalphardni_dDelta(HEOS, i, xN_flag)*d_nddeltadni_dxj__constdelta_tau(HEOS, i, k, xN_flag)
+    double line1 = d_ndalphardni_dDelta(HEOS, i, xN_flag)*d_nddeltadni_dxj__constdelta_tau(HEOS, j, k, xN_flag)
                 + d2_ndalphardni_dxj_dDelta__consttau_xi(HEOS, i, k, xN_flag)*nddeltadni__constT_V_nj(HEOS, j, xN_flag);
     
-    double line2 = d_ndalphardni_dTau(HEOS, i, xN_flag)*d_ndtaudni_dxj__constdelta_tau(HEOS, i, k, xN_flag)
+    double line2 = d_ndalphardni_dTau(HEOS, i, xN_flag)*d_ndtaudni_dxj__constdelta_tau(HEOS, j, k, xN_flag)
                 + d2_ndalphardni_dxj_dTau__constdelta_xi(HEOS, i, k, xN_flag)*ndtaudni__constT_V_nj(HEOS, j, xN_flag);
 
     double line3 = d2_ndalphardni_dxj_dxk__constdelta_tau_xi(HEOS, i, j, k, xN_flag) - d_ndalphardni_dxj__constdelta_tau_xi(HEOS, i, k, xN_flag);
@@ -808,7 +833,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
         SECTION(ss00.str(),"")
         {
             x_N_dependency_flag xN_flag;
-            for (std::size_t xNxN = 0; xNxN <=1; xNxN++){
+            for (std::size_t xNxN = 1; xNxN > 0; xNxN--){
                 std::ostringstream ss000;
                 std::string xN_string;
                 if (xNxN == 0){
@@ -1404,7 +1429,6 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             
                             // These derivatives depend on i,j, and k indices
                             for (std::size_t k = 0; k < Ncomp; ++k){
-                                if (xN_flag == XN_DEPENDENT && k == Ncomp-1){ continue; }
                                 HelmholtzEOSMixtureBackend & rHEOS_pluszk = (xN_flag == XN_INDEPENDENT) ? *(HEOS_plusz_xNindep[Ncomp][k].get()) : *(HEOS_plusz_xNdep[Ncomp][k].get());
                                 HelmholtzEOSMixtureBackend & rHEOS_minuszk = (xN_flag == XN_INDEPENDENT) ? *(HEOS_minusz_xNindep[Ncomp][k].get()) : *(HEOS_minusz_xNdep[Ncomp][k].get());
 
@@ -1414,13 +1438,13 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 std::ostringstream ss1;    ss1 << "d3Trdxidxjdxk, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss1.str(), "")
                                 {
-                                    if (xN_flag == XN_INDEPENDENT){ continue; }
-                                    if (j == Ncomp-1){ break; }
+                                    if ((xN_flag == XN_DEPENDENT) && (i == Ncomp-1 || j == Ncomp-1 || k == Ncomp-1)){ break; }
                                     double analytic = rHEOS.Reducing->d3Trdxidxjdxk(rHEOS.get_mole_fractions(), i, j, k, xN_flag);
                                     double v1 = rHEOS.Reducing->d2Trdxidxj(rHEOS_pluszk.get_mole_fractions(), i, j, xN_flag);
                                     double v2 = rHEOS.Reducing->d2Trdxidxj(rHEOS_minuszk.get_mole_fractions(), i, j, xN_flag);
                                     double numeric = (v1 - v2)/(2*dz);
                                     double err = std::abs((numeric-analytic)/analytic);
+                                    if (std::abs(numeric) < DBL_EPSILON && std::abs(analytic) < DBL_EPSILON){ err = 0; }
                                     CAPTURE(numeric);
                                     CAPTURE(analytic);
                                     CHECK(err < 1e-7);
@@ -1428,8 +1452,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 std::ostringstream ss2;    ss2 << "d3rhormolardxidxjdxk, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss2.str(), "")
                                 {
-                                    if (xN_flag == XN_INDEPENDENT){ continue; }
-                                    if (j == Ncomp-1){ break; }
+                                    if ((xN_flag == XN_DEPENDENT) && (i == Ncomp-1 || j == Ncomp-1 || k == Ncomp-1)){ break; }
                                     double analytic = rHEOS.Reducing->d3rhormolardxidxjdxk(rHEOS.get_mole_fractions(), i, j, k, xN_flag);
                                     double v1 = rHEOS.Reducing->d2rhormolardxidxj(rHEOS_pluszk.get_mole_fractions(), i, j, xN_flag);
                                     double v2 = rHEOS.Reducing->d2rhormolardxidxj(rHEOS_minuszk.get_mole_fractions(), i, j, xN_flag);
@@ -1442,8 +1465,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 std::ostringstream ss3; ss3 << "d2_ndTrdni_dxj_dxk__constxi, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss3.str(), "")
                                 {
-                                    if (xN_flag == XN_INDEPENDENT){ continue; }
-                                    if (j == Ncomp-1){ break; }
+                                    if ((xN_flag == XN_DEPENDENT) && (j == Ncomp-1 || k == Ncomp-1)){ break; }
                                     double analytic = rHEOS.Reducing->d2_ndTrdni_dxj_dxk__constxi(rHEOS.get_mole_fractions(), i, j, k, xN_flag);
                                     double v1 = rHEOS.Reducing->d_ndTrdni_dxj__constxi(rHEOS_pluszk.get_mole_fractions(), i, j, xN_flag);
                                     double v2 = rHEOS.Reducing->d_ndTrdni_dxj__constxi(rHEOS_minuszk.get_mole_fractions(), i, j, xN_flag);
@@ -1456,8 +1478,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 std::ostringstream ss4; ss4 << "d2_ndrhorbardni_dxj_dxk__constxi, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss4.str(), "")
                                 {
-                                    if (xN_flag == XN_INDEPENDENT){ continue; }
-                                    if (j == Ncomp-1){ break; }
+                                    if ((xN_flag == XN_DEPENDENT) && (j == Ncomp-1 || k == Ncomp-1)){ break; }
                                     double analytic = rHEOS.Reducing->d2_ndrhorbardni_dxj_dxk__constxi(rHEOS.get_mole_fractions(), i, j, k, xN_flag);
                                     double v1 = rHEOS.Reducing->d_ndrhorbardni_dxj__constxi(rHEOS_pluszk.get_mole_fractions(), i, j, xN_flag);
                                     double v2 = rHEOS.Reducing->d_ndrhorbardni_dxj__constxi(rHEOS_minuszk.get_mole_fractions(), i, j, xN_flag);
@@ -1470,7 +1491,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 std::ostringstream ss5; ss5 << "d2_PSI_T_dxj_dxk, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss5.str(), "")
                                 {
-                                    if (j == Ncomp-1){ break; }
+                                    if ((xN_flag == XN_DEPENDENT) && (i == Ncomp-1 || j == Ncomp-1 || k == Ncomp-1)){ break; }
                                     double analytic = rHEOS.Reducing->d2_PSI_T_dxj_dxk(rHEOS.get_mole_fractions(), i, j, k, xN_flag);
                                     double v1 = rHEOS.Reducing->d_PSI_T_dxj(rHEOS_pluszk.get_mole_fractions(), i, j, xN_flag);
                                     double v2 = rHEOS.Reducing->d_PSI_T_dxj(rHEOS_minuszk.get_mole_fractions(), i, j, xN_flag);
@@ -1483,7 +1504,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 std::ostringstream ss6; ss6 << "d2_PSI_rho_dxj_dxk, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss6.str(), "")
                                 {
-                                    if (j == Ncomp-1){ break; }
+                                    if ((xN_flag == XN_DEPENDENT) && (i == Ncomp-1 || j == Ncomp-1 || k == Ncomp-1)){ break; }
                                     double analytic = rHEOS.Reducing->d2_PSI_rho_dxj_dxk(rHEOS.get_mole_fractions(), i, j, k, xN_flag);
                                     double v1 = rHEOS.Reducing->d_PSI_rho_dxj(rHEOS_pluszk.get_mole_fractions(), i, j, xN_flag);
                                     double v2 = rHEOS.Reducing->d_PSI_rho_dxj(rHEOS_minuszk.get_mole_fractions(), i, j, xN_flag);

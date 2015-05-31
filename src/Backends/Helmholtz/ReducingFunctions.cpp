@@ -337,19 +337,11 @@ CoolPropDbl GERG2008ReducingFunction::d2Yrdxidxj(const std::vector<CoolPropDbl> 
         CoolPropDbl d2Yr_dxidxj = 2*Yc[N-1];
         d2Yr_dxidxj += c_Y_ij(i, j, beta, gamma, Y_c_ij)*d2fYijdxidxj(x,i,j,beta);
         
-        for (std::size_t k = 0; k < N-1; k++)
-        {
-            CoolPropDbl beta_Y_kN = beta[k][N-1];
-            d2Yr_dxidxj += 2*c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*x[k]*x[k]*(1-beta_Y_kN*beta_Y_kN)/pow(beta_Y_kN*beta_Y_kN*x[k]+xN,2)*(xN/(beta_Y_kN*beta_Y_kN*x[k]+xN)-1);
+        for (std::size_t k = 0; k < N-1; k++){
+            d2Yr_dxidxj += c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*d2fYkidxi2__constxk(x, k, N-1, beta);
         }
-        {
-            CoolPropDbl beta_Y_iN = beta[i][N-1];
-            d2Yr_dxidxj +=  c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*((1-beta_Y_iN*beta_Y_iN)*(2*x[i]*xN*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 3)-x[i]*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 2)) - (x[i]+xN)/(beta_Y_iN*beta_Y_iN*x[i]+xN));
-        }
-        {
-            CoolPropDbl beta_Y_jN = beta[j][N-1];
-            d2Yr_dxidxj += -c_Y_ij(j, N-1, beta, gamma, Y_c_ij)*((1-beta_Y_jN*beta_Y_jN)*(2*x[j]*x[j]*xN*beta_Y_jN*beta_Y_jN/pow(beta_Y_jN*beta_Y_jN*x[j]+xN, 3)-x[j]*xN/pow(beta_Y_jN*beta_Y_jN*x[j]+xN, 2)) + (x[j]+xN)/(beta_Y_jN*beta_Y_jN*x[j]+xN));
-        }
+        d2Yr_dxidxj -= c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*d2fYijdxidxj(x, i, N-1, beta);
+        d2Yr_dxidxj -= c_Y_ij(j, N-1, beta, gamma, Y_c_ij)*d2fYijdxidxj(x, j, N-1, beta);
         return d2Yr_dxidxj;
     }
     else{
@@ -387,28 +379,44 @@ CoolPropDbl GERG2008ReducingFunction::d3Yrdxidxjdxk(const std::vector<CoolPropDb
 		}
 	}
 	else if (xN_flag == XN_DEPENDENT){
-		throw ValueError("d3Yrdxidxjdxk not implemented yet");
-		// Table S1 from Gernert, 2014, supplemental information
-		if (j == N - 1 || i == N - 1){ return 0.0; }
-		if (i == j){ return d2Yrdxi2__constxj(x, i, beta, gamma, Y_c_ij, Yc, xN_flag); }
-		CoolPropDbl xN = x[N - 1];
-		CoolPropDbl d2Yr_dxidxj = 2 * Yc[N - 1];
-		d2Yr_dxidxj += c_Y_ij(i, j, beta, gamma, Y_c_ij)*d2fYijdxidxj(x, i, j, beta);
-
-		for (std::size_t k = 0; k < N - 1; k++)
-		{
-			CoolPropDbl beta_Y_kN = beta[k][N - 1];
-			d2Yr_dxidxj += 2 * c_Y_ij(k, N - 1, beta, gamma, Y_c_ij)*x[k] * x[k] * (1 - beta_Y_kN*beta_Y_kN) / pow(beta_Y_kN*beta_Y_kN*x[k] + xN, 2)*(xN / (beta_Y_kN*beta_Y_kN*x[k] + xN) - 1);
-		}
-		{
-			CoolPropDbl beta_Y_iN = beta[i][N - 1];
-			d2Yr_dxidxj += c_Y_ij(i, N - 1, beta, gamma, Y_c_ij)*((1 - beta_Y_iN*beta_Y_iN)*(2 * x[i] * xN*xN / pow(beta_Y_iN*beta_Y_iN*x[i] + xN, 3) - x[i] * xN / pow(beta_Y_iN*beta_Y_iN*x[i] + xN, 2)) - (x[i] + xN) / (beta_Y_iN*beta_Y_iN*x[i] + xN));
-		}
-		{
-			CoolPropDbl beta_Y_jN = beta[j][N - 1];
-			d2Yr_dxidxj += -c_Y_ij(j, N - 1, beta, gamma, Y_c_ij)*((1 - beta_Y_jN*beta_Y_jN)*(2 * x[j] * x[j] * xN*beta_Y_jN*beta_Y_jN / pow(beta_Y_jN*beta_Y_jN*x[j] + xN, 3) - x[j] * xN / pow(beta_Y_jN*beta_Y_jN*x[j] + xN, 2)) + (x[j] + xN) / (beta_Y_jN*beta_Y_jN*x[j] + xN));
-		}
-		return d2Yr_dxidxj;
+        CoolPropDbl xN = x[N - 1];
+        CoolPropDbl summer = 0;
+        // Needed for all third partials
+        for (std::size_t m = 0; m < N-1; m++)
+        {
+            summer -= c_Y_ij(m, N-1, beta, gamma, Y_c_ij)*d3fYkidxi3__constxk(x, m, N-1, beta);
+        }
+        double summer0 = summer;
+        if (i != j && j != k && k != i){
+            summer += c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*d3fYijdxidxj2(x, i, N-1, beta);
+            summer += c_Y_ij(j, N-1, beta, gamma, Y_c_ij)*d3fYijdxidxj2(x, j, N-1, beta);
+            summer += c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*d3fYijdxidxj2(x, k, N-1, beta);
+        }
+        else if (k == i && i != j){ // two i, one j
+            summer += c_Y_ij(i, j, beta, gamma, Y_c_ij)*d3fYijdxi2dxj(x, i, j, beta);
+            summer += c_Y_ij(j, N-1, beta, gamma, Y_c_ij)*d3fYijdxidxj2(x, j, N-1, beta);
+            summer += c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*(2*d3fYijdxidxj2(x, i, N-1, beta) - d3fYijdxi2dxj(x, i, N-1, beta));
+        }
+        else if (k == j && i != j){ // two j, one i
+            summer += c_Y_ij(i, j, beta, gamma, Y_c_ij)*d3fYijdxidxj2(x, i, j, beta);
+            summer += c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*d3fYijdxidxj2(x, i, N-1, beta);
+            summer += c_Y_ij(j, N-1, beta, gamma, Y_c_ij)*(2*d3fYijdxidxj2(x, j, N-1, beta) - d3fYijdxi2dxj(x, j, N-1, beta));
+        }
+        else if (i == j && i != k){ // two i, one k 
+            summer += c_Y_ij(i, k, beta, gamma, Y_c_ij)*d3fYijdxi2dxj(x, i, k, beta);
+            summer += c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*d3fYijdxidxj2(x, k, N-1, beta);
+            summer += c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*(2*d3fYijdxidxj2(x, i, N-1, beta) - d3fYijdxi2dxj(x, i, N-1, beta));
+        }
+        else{
+            for (std::size_t m = 0; m < i; m++){
+                summer += c_Y_ij(m, i, beta, gamma, Y_c_ij)*d3fYkidxi3__constxk(x, m, i, beta);
+            }
+            for (std::size_t m = i + 1; m < N-1; m++){
+                summer += c_Y_ij(i, m, beta, gamma, Y_c_ij)*d3fYikdxi3__constxk(x, i, m, beta);
+            }
+            summer += c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*(3*d3fYijdxidxj2(x, i, N-1, beta)-3*d3fYijdxi2dxj(x, i, N-1, beta)+d3fYikdxi3__constxk(x, i, N-1, beta));
+        }
+        return summer;
 	}
 	else{
 		throw ValueError(format("xN dependency flag invalid"));

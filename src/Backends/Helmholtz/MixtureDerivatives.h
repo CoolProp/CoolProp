@@ -149,6 +149,42 @@ class MixtureDerivatives{
     static CoolPropDbl dln_fugacity_i_dtau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
     static CoolPropDbl dln_fugacity_i_ddelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
     static CoolPropDbl dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
+    static CoolPropDbl ndln_fugacity_i_dnj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d_ndln_fugacity_i_dnj_dtau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d_ndln_fugacity_i_dnj_ddelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d_ndln_fugacity_i_dnj_ddxk__consttau_delta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
+
+    static CoolPropDbl nd_ndln_fugacity_i_dnj_dnk__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
+    
+    static CoolPropDbl nAij(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){
+        CoolPropDbl RT = HEOS.gas_constant()*HEOS.T();
+        return 1/RT*ndln_fugacity_i_dnj__constT_V_xi(HEOS, i, j, xN_flag);
+    }
+    static CoolPropDbl n2Aijk(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
+        CoolPropDbl RT = HEOS.gas_constant()*HEOS.T();
+        return 1/RT*nd_ndln_fugacity_i_dnj_dnk__constT_V_xi(HEOS, i, j, k, xN_flag);
+    }
+    static CoolPropDbl L1_star(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
+        Eigen::Matrix2d L1;
+        CoolPropDbl RT = HEOS.gas_constant()*HEOS.T();
+        L1(0, 0) = nAij(HEOS, 0, 0, xN_flag);
+        L1(1, 0) = nAij(HEOS, 1, 0, xN_flag);
+        L1(0, 1) = L1(1,0);
+        L1(1, 1) = nAij(HEOS, 1, 1, xN_flag);
+        return L1.determinant();
+    }
+    static CoolPropDbl M1_star(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
+        Eigen::Matrix2d M1;
+        CoolPropDbl RT = HEOS.gas_constant()*HEOS.T();
+        M1(0, 0) = nAij(HEOS, 0, 0, xN_flag);
+        M1(0, 1) = nAij(HEOS, 0, 1, xN_flag);
+        double dL1_dn0 = nAij(HEOS, 0, 0, xN_flag)*n2Aijk(HEOS, 0, 1, 1, xN_flag) + nAij(HEOS, 1, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 0, xN_flag) - 2*nAij(HEOS, 0, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 1, xN_flag);
+        double dL1_dn1 = nAij(HEOS, 0, 0, xN_flag)*n2Aijk(HEOS, 1, 1, 1, xN_flag) + nAij(HEOS, 1, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 1, xN_flag) - 2*nAij(HEOS, 0, 1, xN_flag)*n2Aijk(HEOS, 0, 1, 1, xN_flag);
+        M1(1, 0) = dL1_dn0;
+        M1(1, 1) = dL1_dn1;
+        return M1.determinant();
+    }
     
     /** \brief Table B4, Kunz, JCED, 2012 for the original term and the subsequent substitutions
      * 
