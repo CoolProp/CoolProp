@@ -197,7 +197,12 @@ const CoolProp::SimpleState & HelmholtzEOSMixtureBackend::calc_state(const std::
         }
     }
     else{
-        throw ValueError(format("calc_state not supported for mixtures"));
+        if (!state.compare("critical")){
+            return _crit;
+        }
+        else{
+            throw ValueError(format("calc_state not supported for mixtures"));
+        }
     }
 };
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_acentric_factor(void)
@@ -2964,6 +2969,52 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
     else{
         throw ValueError("inputs to calc_first_two_phase_deriv_splined are currently invalid");
     }
+}
+
+void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
+{
+    class Resid : public FuncWrapperND{
+    public:
+        double L1, M1;
+        HelmholtzEOSMixtureBackend &HEOS;
+        Resid(HelmholtzEOSMixtureBackend &HEOS) : HEOS(HEOS){};
+        std::vector<double> call(const std::vector<double> &x){
+            HEOS.update(DmolarT_INPUTS, x[0], x[1]);
+            L1 = MixtureDerivatives::L1_star(HEOS, XN_INDEPENDENT),
+            M1 = MixtureDerivatives::M1_star(HEOS, XN_INDEPENDENT);
+            std::vector<double> o(2);
+            o[0] = L1; o[1] = M1;
+            return o;
+        };
+        std::vector<std::vector<double> > Jacobian(const std::vector<double> &x)
+        {
+            double epsilon;
+            std::size_t N = x.size();
+            std::vector<double> r, xp;
+            std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
+            std::vector<double> r0 = call(x);
+            // Build the Jacobian by column
+            for (std::size_t i = 0; i < N; ++i)
+            {
+                xp = x;
+                epsilon = 0.0001;
+                xp[i] += epsilon;
+                r = call(xp);
+
+                for (std::size_t j = 0; j < N; ++j)
+                {
+                    J[j][i] = (r[j]-r0[j])/epsilon;
+                }
+            }
+            return J;
+        };
+    };
+    Resid resid(*this);
+    std::vector<double> x, x0(2); x0[0] = rho0; x0[1] = T0;
+    std::string errstr;
+    x = NDNewtonRaphson_Jacobian(&resid, x0, 1e-14, 100, &errstr);
+    _crit.rhomolar = x[0];
+    _crit.T = x[1];
 }
 
 } /* namespace CoolProp */
