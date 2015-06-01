@@ -338,7 +338,8 @@ CoolPropDbl MixtureDerivatives::d_ndln_fugacity_i_dnj_ddelta__consttau_x(Helmhol
     return d_ndalphardni_dDelta(HEOS, j, xN_flag) + d_nd_ndalphardni_dnj_dDelta__consttau_x(HEOS, i, j, xN_flag);
 }
 CoolPropDbl MixtureDerivatives::d_ndln_fugacity_i_dnj_ddxk__consttau_delta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
-    return d_ndalphardni_dxj__constdelta_tau_xi(HEOS, i, j, xN_flag) + d_nd_ndalphardni_dnj_dxk__consttau_delta(HEOS, i, j, k, xN_flag);
+    CoolPropDbl s = -Kronecker_delta(i, j)*Kronecker_delta(i, k)/pow(HEOS.mole_fractions[i], 2);
+    return s + d_ndalphardni_dxj__constdelta_tau_xi(HEOS, j, k, xN_flag) + d_nd_ndalphardni_dnj_dxk__consttau_delta(HEOS, i, j, k, xN_flag);
 }
 CoolPropDbl MixtureDerivatives::nd_ndln_fugacity_i_dnj_dnk__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
     double sum = d_ndln_fugacity_i_dnj_dtau__constdelta_x(HEOS, i, j, xN_flag)*ndtaudni__constT_V_nj(HEOS, k, xN_flag)
@@ -1387,6 +1388,33 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 CAPTURE(analytic);
                                 CHECK(err < 1e-7);
                             }
+                            std::ostringstream ss3o1; ss3o1 << "d_ndln_fugacity_i_dnj_ddelta__consttau_x, i=" << i;
+                            SECTION(ss3o1.str(), "")
+                            {
+                                if (i == Ncomp-1){ break; }
+                                double analytic = MixtureDerivatives::d_ndln_fugacity_i_dnj_ddelta__consttau_x(rHEOS, i, j, xN_flag);
+                                double v1 = MixtureDerivatives::ndln_fugacity_i_dnj__constT_V_xi(rHEOS_plusrho_constT, i, j, xN_flag), delta1 = rHEOS_plusrho_constT.delta();
+                                double v2 = MixtureDerivatives::ndln_fugacity_i_dnj__constT_V_xi(rHEOS_minusrho_constT, i, j, xN_flag), delta2 = rHEOS_minusrho_constT.delta();
+                                double numeric = (v1 - v2)/(delta1 - delta2);
+                                double err = std::abs((numeric-analytic)/analytic);
+                                CAPTURE(numeric);
+                                CAPTURE(analytic);
+                                CHECK(err < 1e-7);
+                            }
+                            std::ostringstream ss3o2; ss3o2 << "d_ndln_fugacity_i_dnj_dtau__constdelta_x, i=" << i;
+                            SECTION(ss3o2.str(), "")
+                            {
+                                if (i == Ncomp-1){ break; }
+                                double analytic = MixtureDerivatives::d_ndln_fugacity_i_dnj_dtau__constdelta_x(rHEOS, i, j, xN_flag);
+                                double v1 = MixtureDerivatives::ndln_fugacity_i_dnj__constT_V_xi(rHEOS_plusT_constrho, i, j, xN_flag), tau1 = rHEOS_plusT_constrho.tau();
+                                double v2 = MixtureDerivatives::ndln_fugacity_i_dnj__constT_V_xi(rHEOS_minusT_constrho, i, j, xN_flag), tau2 = rHEOS_minusT_constrho.tau();
+                                double numeric = (v1 - v2)/(tau1 - tau2);
+                                double err = std::abs((numeric-analytic)/analytic);
+                                CAPTURE(numeric);
+                                CAPTURE(analytic);
+                                CHECK(err < 1e-7);
+                            }
+
                             std::ostringstream ss3p; ss3p << "d_nd_ndalphardni_dnj_dTau__constdelta_x, i=" << i;
                             SECTION(ss3p.str(), "")
                             {
@@ -1517,7 +1545,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 std::ostringstream ss7; ss7 << "d2_ndalphardni_dxj_dxk__constdelta_tau_xi, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss7.str(), "")
                                 {
-                                    if (i == Ncomp-1){ break; }
+                                    if ((xN_flag == XN_DEPENDENT) && (i == Ncomp-1 || j == Ncomp-1 || k == Ncomp-1)){ break; }
                                     double analytic = MixtureDerivatives::d2_ndalphardni_dxj_dxk__constdelta_tau_xi(rHEOS, i, j, k, xN_flag);
                                     double v1 = MixtureDerivatives::d_ndalphardni_dxj__constdelta_tau_xi(rHEOS_pluszk_consttaudelta, i, j, xN_flag);
                                     double v2 = MixtureDerivatives::d_ndalphardni_dxj__constdelta_tau_xi(rHEOS_minuszk_consttaudelta, i, j, xN_flag);
@@ -1530,7 +1558,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 std::ostringstream ss8; ss8 << "d3alphardxidxjdxk, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss8.str(), "")
                                 {
-                                    if (j == Ncomp-1){ break; }
+                                    if ((xN_flag == XN_DEPENDENT) && (i == Ncomp-1 || j == Ncomp-1 || k == Ncomp-1)){ break; }
                                     double analytic = MixtureDerivatives::d3alphardxidxjdxk(rHEOS, i, j, k, xN_flag);
                                     double v1 = MixtureDerivatives::d2alphardxidxj(rHEOS_pluszk_consttaudelta, i, j, xN_flag);
                                     double v2 = MixtureDerivatives::d2alphardxidxj(rHEOS_minuszk_consttaudelta, i, j, xN_flag);
@@ -1552,10 +1580,31 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 std::ostringstream ss9; ss9 << "d_nd_ndalphardni_dnj_dxk__consttau_delta, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss9.str(), "")
                                 {
-                                    if (j == Ncomp-1){ break; }
+                                    if ((xN_flag == XN_DEPENDENT) && (i == Ncomp-1 || j == Ncomp-1 || k == Ncomp-1)){ break; }
                                     double analytic = MixtureDerivatives::d_nd_ndalphardni_dnj_dxk__consttau_delta(rHEOS, i, j, k, xN_flag);
                                     double v1 = MixtureDerivatives::nd_ndalphardni_dnj__constT_V(rHEOS_pluszk_consttaudelta, i, j, xN_flag);
                                     double v2 = MixtureDerivatives::nd_ndalphardni_dnj__constT_V(rHEOS_minuszk_consttaudelta, i, j, xN_flag);
+                                    double numeric = (v1 - v2)/(2*dz);
+                                    if (std::abs(numeric) < DBL_EPSILON && std::abs(analytic) < DBL_EPSILON){ break; }
+                                    double err;
+                                    if (std::abs(analytic) > DBL_EPSILON){
+                                        err = std::abs((numeric-analytic)/analytic);
+                                    }
+                                    else{
+                                        err = numeric-analytic;
+                                    }
+
+                                    CAPTURE(numeric);
+                                    CAPTURE(analytic);
+                                    CHECK(err < 1e-8);
+                                }
+                                std::ostringstream ss10; ss10 << "d_ndln_fugacity_i_dnj_ddxk__consttau_delta, i=" << i << ", j=" << j << ", k=" << k;
+                                SECTION(ss10.str(), "")
+                                {
+                                    if ((xN_flag == XN_DEPENDENT) && (i == Ncomp-1 || j == Ncomp-1 || k == Ncomp-1)){ break; }
+                                    double analytic = MixtureDerivatives::d_ndln_fugacity_i_dnj_ddxk__consttau_delta(rHEOS, i, j, k, xN_flag);
+                                    double v1 = MixtureDerivatives::ndln_fugacity_i_dnj__constT_V_xi(rHEOS_pluszk_consttaudelta, i, j, xN_flag);
+                                    double v2 = MixtureDerivatives::ndln_fugacity_i_dnj__constT_V_xi(rHEOS_minuszk_consttaudelta, i, j, xN_flag);
                                     double numeric = (v1 - v2)/(2*dz);
                                     if (std::abs(numeric) < DBL_EPSILON && std::abs(analytic) < DBL_EPSILON){ break; }
                                     double err;

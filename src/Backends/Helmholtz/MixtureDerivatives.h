@@ -163,26 +163,23 @@ class MixtureDerivatives{
     }
     static CoolPropDbl n2Aijk(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
         CoolPropDbl RT = HEOS.gas_constant()*HEOS.T();
-        return 1/RT*nd_ndln_fugacity_i_dnj_dnk__constT_V_xi(HEOS, i, j, k, xN_flag);
+        return 1/RT*nd_ndln_fugacity_i_dnj_dnk__constT_V_xi(HEOS, i, j, k, xN_flag) - nAij(HEOS, i, j, xN_flag);
     }
     static CoolPropDbl L1_star(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
         Eigen::Matrix2d L1;
         CoolPropDbl RT = HEOS.gas_constant()*HEOS.T();
         L1(0, 0) = nAij(HEOS, 0, 0, xN_flag);
-        L1(1, 0) = nAij(HEOS, 1, 0, xN_flag);
-        L1(0, 1) = L1(1,0);
+        L1(0, 1) = nAij(HEOS, 0, 1, xN_flag);
+        L1(1, 0) = L1(0, 1);
         L1(1, 1) = nAij(HEOS, 1, 1, xN_flag);
         return L1.determinant();
     }
     static CoolPropDbl M1_star(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
         Eigen::Matrix2d M1;
-        CoolPropDbl RT = HEOS.gas_constant()*HEOS.T();
         M1(0, 0) = nAij(HEOS, 0, 0, xN_flag);
         M1(0, 1) = nAij(HEOS, 0, 1, xN_flag);
-        double dL1_dn0 = nAij(HEOS, 0, 0, xN_flag)*n2Aijk(HEOS, 0, 1, 1, xN_flag) + nAij(HEOS, 1, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 0, xN_flag) - 2*nAij(HEOS, 0, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 1, xN_flag);
-        double dL1_dn1 = nAij(HEOS, 0, 0, xN_flag)*n2Aijk(HEOS, 1, 1, 1, xN_flag) + nAij(HEOS, 1, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 1, xN_flag) - 2*nAij(HEOS, 0, 1, xN_flag)*n2Aijk(HEOS, 0, 1, 1, xN_flag);
-        M1(1, 0) = dL1_dn0;
-        M1(1, 1) = dL1_dn1;
+        M1(1, 0) = nAij(HEOS, 0, 0, xN_flag)*n2Aijk(HEOS, 0, 1, 1, xN_flag) + nAij(HEOS, 1, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 0, xN_flag) - 2*nAij(HEOS, 0, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 1, xN_flag);;
+        M1(1, 1) = nAij(HEOS, 0, 0, xN_flag)*n2Aijk(HEOS, 1, 1, 1, xN_flag) + nAij(HEOS, 1, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 1, xN_flag) - 2*nAij(HEOS, 0, 1, xN_flag)*n2Aijk(HEOS, 0, 1, 1, xN_flag);
         return M1.determinant();
     }
     
