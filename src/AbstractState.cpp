@@ -229,6 +229,12 @@ double AbstractState::trivial_keyed_output(parameters key)
         return this->calc_fraction_max();
     case iT_freeze:
         return this->calc_T_freeze();
+    case iFH:
+        return this->calc_flame_hazard();
+    case iHH:
+        return this->calc_health_hazard();
+    case iPH:
+        return this->calc_physical_hazard();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));
     }

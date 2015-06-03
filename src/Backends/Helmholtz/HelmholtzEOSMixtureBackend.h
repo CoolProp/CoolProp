@@ -195,6 +195,13 @@ public:
     CoolPropDbl calc_fugacity_coefficient(int i);
     CoolPropDbl calc_phase_identification_parameter(void);
 
+    /// Using this backend, calculate the flame hazard
+    CoolPropDbl calc_flame_hazard(void){ return components[0].environment.FH;};
+    /// Using this backend, calculate the health hazard
+    CoolPropDbl calc_health_hazard(void){ return components[0].environment.HH; };
+    /// Using this backend, calculate the physical hazard
+    CoolPropDbl calc_physical_hazard(void){ return components[0].environment.PH; };
+
 	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
     CoolPropDbl calc_alphar(void);
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta}\f$ (dimensionless)
