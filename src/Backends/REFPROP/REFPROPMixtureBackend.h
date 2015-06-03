@@ -109,6 +109,8 @@ public:
 
     void calc_phase_envelope(const std::string &type);
 
+    CoolPropDbl calc_compressibility_factor(void){ return _p/(_rhomolar*gas_constant()*_T); };
+
     const CoolProp::PhaseEnvelopeData &calc_phase_envelope_data(){return PhaseEnvelope;};
 
     std::vector<CoolPropDbl> calc_mole_fractions_liquid(void){return std::vector<CoolPropDbl>(mole_fractions_liq.begin(), mole_fractions_liq.end());}
@@ -142,6 +144,9 @@ public:
 
     /// Calculate the "true" critical point where dp/drho|T and d2p/drho2|T are zero
     void calc_true_critical_point(double &T, double &rho);
+
+    /// Calculate an ideal curve
+    void calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p);
 
     /// A wrapper function to calculate the limits for the EOS
     void limits(double &Tmin, double &Tmax, double &rhomolarmax, double &pmax);

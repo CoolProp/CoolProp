@@ -610,11 +610,25 @@ std::string HelmholtzEOSMixtureBackend::calc_name(void)
     }
 }
 void HelmholtzEOSMixtureBackend::calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p){
-	shared_ptr<AbstractState> AS(this);
 	if (type == "Joule-Thomson"){
-		JouleThomsonCurveTracer JTCT(AS, 1e5, 800);
+		JouleThomsonCurveTracer JTCT(this, 1e5, 800);
 		JTCT.trace(T, p);
 	}
+    else if (type == "Joule-Inversion"){
+        JouleInversionCurveTracer JICT(this, 1e5, 800);
+		JICT.trace(T, p);
+	}
+    else if (type == "Ideal"){
+        IdealCurveTracer ICT(this, 1e5, 800);
+		ICT.trace(T, p);
+	}
+    else if (type == "Boyle"){
+        BoyleCurveTracer BCT(this, 1e5, 800);
+		BCT.trace(T, p);
+	}
+    else{
+        throw ValueError(format("Invalid ideal curve type: %s", type.c_str()));
+    }
 };
 std::vector<std::string> HelmholtzEOSMixtureBackend::calc_fluid_names(void)
 {

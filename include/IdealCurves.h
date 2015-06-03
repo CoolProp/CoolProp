@@ -10,11 +10,11 @@ namespace CoolProp{
 	{
 	public:
 		double p0, T0, lnT, lnp, rho_guess;
-		shared_ptr<AbstractState> &AS;
+		AbstractState *AS;
 		std::vector<double> T, p;
 		enum OBJECTIVE_TYPE { OBJECTIVE_CIRCLE, OBJECTIVE_T };
 		OBJECTIVE_TYPE obj;
-		CurveTracer(shared_ptr<AbstractState> &AS, double p0, double T0) : AS(AS), p0(p0), T0(T0)
+		CurveTracer(AbstractState *AS, double p0, double T0) : AS(AS), p0(p0), T0(T0)
 		{
 			this->p.push_back(p0);			
 		};
@@ -86,14 +86,14 @@ namespace CoolProp{
 
 	class IdealCurveTracer : public CurveTracer{
 	public:
-		IdealCurveTracer(shared_ptr<AbstractState> &AS, double p0, double T0) : CurveTracer(AS, p0, T0) { init(); };
+		IdealCurveTracer(AbstractState *AS, double p0, double T0) : CurveTracer(AS, p0, T0) { init(); };
 		/// Z = 1
 		double objective(void){ return this->AS->keyed_output(iZ) - 1; };
 	};
 
 	class BoyleCurveTracer : public CurveTracer{
 	public:
-		BoyleCurveTracer(shared_ptr<AbstractState> &AS, double p0, double T0) : CurveTracer(AS, p0, T0) { init(); };
+		BoyleCurveTracer(AbstractState *AS, double p0, double T0) : CurveTracer(AS, p0, T0) { init(); };
 		/// dZ/dv|T = 0
 		double objective(void){
 			double r = (this->AS->p() - this->AS->rhomolar()*this->AS->first_partial_deriv(iP, iDmolar, iT)) / (this->AS->gas_constant()*this->AS->T());
@@ -102,7 +102,7 @@ namespace CoolProp{
 	};
 	class JouleInversionCurveTracer : public CurveTracer{
 	public:
-		JouleInversionCurveTracer(shared_ptr<AbstractState> &AS, double p0, double T0) : CurveTracer(AS, p0, T0) { init(); };
+		JouleInversionCurveTracer(AbstractState *AS, double p0, double T0) : CurveTracer(AS, p0, T0) { init(); };
 		/// dZ/dT|v = 0
 		double objective(void){
 			double r = (this->AS->gas_constant()*this->AS->T() * 1 / this->AS->rhomolar()*this->AS->first_partial_deriv(iP, iT, iDmolar) - this->AS->p()*this->AS->gas_constant() / this->AS->rhomolar()) / POW2(this->AS->gas_constant()*this->AS->T());
@@ -111,7 +111,7 @@ namespace CoolProp{
 	};
 	class JouleThomsonCurveTracer : public CurveTracer{
 	public:
-		JouleThomsonCurveTracer(shared_ptr<AbstractState> &AS, double p0, double T0) : CurveTracer(AS, p0, T0) { init(); };
+		JouleThomsonCurveTracer(AbstractState *AS, double p0, double T0) : CurveTracer(AS, p0, T0) { init(); };
 		/// dZ/dT|p = 0
 		double objective(void){
 			double dvdT__constp = -this->AS->first_partial_deriv(iDmolar, iT, iP) / POW2(this->AS->rhomolar());

@@ -262,6 +262,16 @@ cdef class AbstractState:
         return pe_out
         
     ## -----------------------------------------
+    ##   Ideal curves
+    ## -----------------------------------------
+    
+    cpdef tuple ideal_curve(self, string type):
+        """ Get an ideal curve - wrapper of c++ function :cpapi:`CoolProp::AbstractState::ideal_curve` """
+        cdef vector[double] T, p
+        self.thisptr.ideal_curve(type, T, p)
+        return T, p
+        
+    ## -----------------------------------------
     ##   Helmholtz energy derivatives
     ## -----------------------------------------
     

@@ -46,6 +46,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double Tmax()
         double pmax()
         double Ttriple()
+        
+        void ideal_curve(const string &, vector[double] &T, vector[double] &p) except +ValueError
 
         ## Property updater
         ## Uses the indices in CoolProp for the input parameters

@@ -77,6 +77,8 @@ cdef class AbstractState:
     cpdef double saturated_liquid_keyed_output(self, constants_header.parameters) except *
     cpdef double saturated_vapor_keyed_output(self, constants_header.parameters) except *
     
+    cpdef tuple ideal_curve(self, string)
+    
     ## ----------------------------------------	
     ##        Derivatives
     ## ----------------------------------------

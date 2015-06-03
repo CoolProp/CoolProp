@@ -31,6 +31,7 @@ surface tension                 N/m
 #include "Configuration.h"
 #include "CoolProp.h"
 #include "Solvers.h"
+#include "IdealCurves.h"
 
 #include <stdlib.h>
 #include <string>
@@ -1382,6 +1383,28 @@ void REFPROPMixtureBackend::calc_true_critical_point(double &T, double &rho)
     std::vector<double> xfinal = NDNewtonRaphson_Jacobian(&resid, x, 1e-9, 30, &errstr);
     T = xfinal[0]; rho = xfinal[1]*1000.0;
 }
+
+void REFPROPMixtureBackend::calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p){
+	if (type == "Joule-Thomson"){
+		JouleThomsonCurveTracer JTCT(this, 1e5, 800);
+		JTCT.trace(T, p);
+	}
+    else if (type == "Joule-Inversion"){
+        JouleInversionCurveTracer JICT(this, 1e5, 800);
+		JICT.trace(T, p);
+	}
+    else if (type == "Ideal"){
+        IdealCurveTracer ICT(this, 1e5, 800);
+		ICT.trace(T, p);
+	}
+    else if (type == "Boyle"){
+        BoyleCurveTracer BCT(this, 1e5, 800);
+		BCT.trace(T, p);
+	}
+    else{
+        throw ValueError(format("Invalid ideal curve type: %s", type.c_str()));
+    }
+};
 
 } /* namespace CoolProp */
 
