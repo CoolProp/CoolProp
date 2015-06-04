@@ -166,7 +166,7 @@ class MixtureDerivatives{
         CoolPropDbl RT = HEOS.gas_constant()*HEOS.T();
         return 1/RT*nd_ndln_fugacity_i_dnj_dnk__constT_V_xi(HEOS, i, j, k, xN_flag) - nAij(HEOS, i, j, xN_flag);
     }
-    static CoolPropDbl L1_star(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
+    static Eigen::MatrixXd Lstar(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
         std::size_t N = HEOS.mole_fractions.size();
         Eigen::MatrixXd L;
         L.resize(N, N);
@@ -181,26 +181,39 @@ class MixtureDerivatives{
                 L(i, j) = L(j, i);
             }
         }
-        return L.determinant();
+        return L;
     }
-    static CoolPropDbl M1_star(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
+    static Eigen::MatrixXd dLstar_dX(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag, parameters WRT){
 
         std::size_t N = HEOS.mole_fractions.size();
-        Eigen::MatrixXd L;
-        L.resize(N, N);
+        Eigen::MatrixXd L = Lstar(HEOS, xN_flag), M = L;
+        Eigen::MatrixXd dLstar_dX(N, N);
         for (std::size_t i = 0; i < N; ++i){
             for (std::size_t j = i; j < N; ++j){
-                L(i, j) = nAij(HEOS, i, j, xN_flag);
+                if (WRT == iTau){
+                    dLstar_dX(i, j) = 1/(HEOS.gas_constant()*HEOS.T_reducing())*MixtureDerivatives::ndln_fugacity_i_dnj__constT_V_xi(HEOS, i, j, xN_flag)
+                                    + 1/(HEOS.gas_constant()*HEOS.T())*MixtureDerivatives::d_ndln_fugacity_i_dnj_dtau__constdelta_x(HEOS, i, j, xN_flag);
+                }
+                else if (WRT == iDelta){
+                    dLstar_dX(i, j) = 1/(HEOS.gas_constant()*HEOS.T())*MixtureDerivatives::d_ndln_fugacity_i_dnj_ddelta__consttau_x(HEOS, i, j, xN_flag);
+                }
+                else{
+                    throw ValueError(format("dLstar_dX invalid WRT"));
+                }
             }
         }
         // Fill in the symmetric elements
         for (std::size_t i = 0; i < N; ++i){
             for (std::size_t j = 0; j < i; ++j){
-                L(i, j) = L(j, i);
+                dLstar_dX(i, j) = dLstar_dX(j, i);
             }
         }
+        return dLstar_dX;
+    }
+    static Eigen::MatrixXd Mstar(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
 
-        Eigen::MatrixXd M = L;
+        std::size_t N = HEOS.mole_fractions.size();
+        Eigen::MatrixXd L = Lstar(HEOS, xN_flag), M = L;
 
         // Last row
         for (std::size_t i = 0; i < N; ++i){
@@ -218,7 +231,7 @@ class MixtureDerivatives{
             }
             M(N-1, i) = (adjugate(L, N)*n2dLdni).trace();
         }
-        return M.determinant();
+        return M;
     }
     
     /** \brief Table B4, Kunz, JCED, 2012 for the original term and the subsequent substitutions

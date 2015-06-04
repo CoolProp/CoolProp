@@ -2994,8 +2994,8 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
         Resid(HelmholtzEOSMixtureBackend &HEOS) : HEOS(HEOS){};
         std::vector<double> call(const std::vector<double> &x){
             HEOS.update(DmolarT_INPUTS, x[0], x[1]);
-            L1 = MixtureDerivatives::L1_star(HEOS, XN_INDEPENDENT),
-            M1 = MixtureDerivatives::M1_star(HEOS, XN_INDEPENDENT);
+            L1 = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant(),
+            M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
             std::vector<double> o(2);
             o[0] = L1; o[1] = M1;
             return o;
@@ -3006,6 +3006,9 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
             std::size_t N = x.size();
             std::vector<double> r, xp;
             std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
+            Eigen::MatrixXd J0(N, N), adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N);
+            J0(0,0) = (adjL*MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau)).trace();
+            J0(0,1) = (adjL*MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta)).trace();
             std::vector<double> r0 = call(x);
             // Build the Jacobian by column
             for (std::size_t i = 0; i < N; ++i)
@@ -3020,6 +3023,7 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
                     J[j][i] = (r[j]-r0[j])/epsilon;
                 }
             }
+            std::cout << J0 << std::endl;
             return J;
         };
     };
