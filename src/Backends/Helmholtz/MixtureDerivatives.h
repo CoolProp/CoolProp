@@ -14,6 +14,7 @@
 #ifndef MIXTURE_DERIVATIVES_H
 #define MIXTURE_DERIVATIVES_H
 
+#include <Eigen/Core>
 #include "HelmholtzEOSMixtureBackend.h"
 
 namespace CoolProp{
@@ -177,18 +178,47 @@ class MixtureDerivatives{
         // Fill in the symmetric elements
         for (std::size_t i = 0; i < N; ++i){
             for (std::size_t j = 0; j < i; ++j){
-                L(i, j) = nAij(HEOS, i, j, xN_flag);
+                L(i, j) = L(j, i);
             }
         }
         return L.determinant();
     }
     static CoolPropDbl M1_star(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
-        Eigen::Matrix2d M1;
-        M1(0, 0) = nAij(HEOS, 0, 0, xN_flag);
-        M1(0, 1) = nAij(HEOS, 0, 1, xN_flag);
-        M1(1, 0) = nAij(HEOS, 0, 0, xN_flag)*n2Aijk(HEOS, 0, 1, 1, xN_flag) + nAij(HEOS, 1, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 0, xN_flag) - 2*nAij(HEOS, 0, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 1, xN_flag);;
-        M1(1, 1) = nAij(HEOS, 0, 0, xN_flag)*n2Aijk(HEOS, 1, 1, 1, xN_flag) + nAij(HEOS, 1, 1, xN_flag)*n2Aijk(HEOS, 0, 0, 1, xN_flag) - 2*nAij(HEOS, 0, 1, xN_flag)*n2Aijk(HEOS, 0, 1, 1, xN_flag);
-        return M1.determinant();
+
+        std::size_t N = HEOS.mole_fractions.size();
+        Eigen::MatrixXd L;
+        L.resize(N, N);
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = i; j < N; ++j){
+                L(i, j) = nAij(HEOS, i, j, xN_flag);
+            }
+        }
+        // Fill in the symmetric elements
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = 0; j < i; ++j){
+                L(i, j) = L(j, i);
+            }
+        }
+
+        Eigen::MatrixXd M = L;
+
+        // Last row
+        for (std::size_t i = 0; i < N; ++i){
+            Eigen::MatrixXd n2dLdni(N, N);
+            for (std::size_t j = 0; j < N; ++j){
+                for (std::size_t k = j; k < N; ++k){
+                    n2dLdni(j, k) = n2Aijk(HEOS, j, k, i, xN_flag);
+                }
+            }
+            // Fill in the symmetric elements
+            for (std::size_t j = 0; j < N; ++j){
+                for (std::size_t k = 0; k < j; ++k){
+                    n2dLdni(j, k) = n2dLdni(k, j);
+                }
+            }
+            M(N-1, i) = (adjugate(L, N)*n2dLdni).trace();
+        }
+        return M.determinant();
     }
     
     /** \brief Table B4, Kunz, JCED, 2012 for the original term and the subsequent substitutions
