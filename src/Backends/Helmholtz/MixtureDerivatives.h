@@ -166,13 +166,21 @@ class MixtureDerivatives{
         return 1/RT*nd_ndln_fugacity_i_dnj_dnk__constT_V_xi(HEOS, i, j, k, xN_flag) - nAij(HEOS, i, j, xN_flag);
     }
     static CoolPropDbl L1_star(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
-        Eigen::Matrix2d L1;
-        CoolPropDbl RT = HEOS.gas_constant()*HEOS.T();
-        L1(0, 0) = nAij(HEOS, 0, 0, xN_flag);
-        L1(0, 1) = nAij(HEOS, 0, 1, xN_flag);
-        L1(1, 0) = L1(0, 1);
-        L1(1, 1) = nAij(HEOS, 1, 1, xN_flag);
-        return L1.determinant();
+        std::size_t N = HEOS.mole_fractions.size();
+        Eigen::MatrixXd L;
+        L.resize(N, N);
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = i; j < N; ++j){
+                L(i, j) = nAij(HEOS, i, j, xN_flag);
+            }
+        }
+        // Fill in the symmetric elements
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = 0; j < i; ++j){
+                L(i, j) = nAij(HEOS, i, j, xN_flag);
+            }
+        }
+        return L.determinant();
     }
     static CoolPropDbl M1_star(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
         Eigen::Matrix2d M1;
