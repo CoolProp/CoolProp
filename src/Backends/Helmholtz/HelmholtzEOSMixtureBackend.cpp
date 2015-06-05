@@ -1429,7 +1429,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 else if (value > p_liq){
                     this->_phase = iphase_liquid; _Q = 1000; return;
                 }
-                else if (!is_pure() && value < static_cast<CoolPropDbl>(_pLanc) && value > static_cast<CoolPropDbl>(_pVanc)){
+                else if (!is_pure() && value < static_cast<CoolPropDbl>(_pLanc)*(1+1.0e-6) && value > static_cast<CoolPropDbl>(_pVanc)*(1-1.0e-6)){
                     throw ValueError("Two-phase inputs not supported for pseudo-pure for now");
                 }
                 break;
@@ -3008,9 +3008,14 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
             std::size_t N = x.size();
             std::vector<double> r, xp;
             std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
-            //Eigen::MatrixXd J0(N, N), adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N);
-            //J0(0,0) = (adjL*MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau)).trace();
-            //J0(0,1) = (adjL*MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta)).trace();
+            Eigen::MatrixXd J0(N, N), adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N), 
+                                      dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
+                                      dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta),
+                                      adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT), N),
+                                      dMdTau = dLdTau, dMdDelta = dLdDelta;
+
+            J0(0,0) = (adjL*dLdTau).trace();
+            J0(0,1) = (adjL*dLdDelta).trace();
             //std::cout << J0 << std::endl;
             std::vector<double> r0 = call(x);
             // Build the Jacobian by column
