@@ -198,7 +198,7 @@ const CoolProp::SimpleState & HelmholtzEOSMixtureBackend::calc_state(const std::
     }
     else{
         if (!state.compare("critical")){
-            return _crit;
+            return _critical;
         }
         else{
             throw ValueError(format("calc_state not supported for mixtures"));
@@ -2993,7 +2993,9 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
         HelmholtzEOSMixtureBackend &HEOS;
         Resid(HelmholtzEOSMixtureBackend &HEOS) : HEOS(HEOS){};
         std::vector<double> call(const std::vector<double> &tau_delta){
-            HEOS.update(DmolarT_INPUTS, tau_delta[1]*HEOS.rhomolar_reducing(), HEOS.T_reducing()/tau_delta[0]);
+            double rhomolar = tau_delta[1]*HEOS.rhomolar_reducing();
+            double T = HEOS.T_reducing()/tau_delta[0];
+            HEOS.update(DmolarT_INPUTS, rhomolar, T);
             L1 = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant(),
             M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
             std::vector<double> o(2);
@@ -3006,9 +3008,10 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
             std::size_t N = x.size();
             std::vector<double> r, xp;
             std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
-            Eigen::MatrixXd J0(N, N), adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N);
-            J0(0,0) = (adjL*MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau)).trace();
-            J0(0,1) = (adjL*MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta)).trace();
+            //Eigen::MatrixXd J0(N, N), adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N);
+            //J0(0,0) = (adjL*MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau)).trace();
+            //J0(0,1) = (adjL*MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta)).trace();
+            //std::cout << J0 << std::endl;
             std::vector<double> r0 = call(x);
             // Build the Jacobian by column
             for (std::size_t i = 0; i < N; ++i)
@@ -3023,16 +3026,17 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
                     J[j][i] = (r[j]-r0[j])/epsilon;
                 }
             }
-            std::cout << J0 << std::endl;
+            
             return J;
         };
     };
     Resid resid(*this);
-    std::vector<double> x, x0(2); x0[0] = T_reducing()/T0; x0[1] = rho0/rhomolar_reducing(); 
+    std::vector<double> x, tau_delta(2); tau_delta[0] = T_reducing()/T0; tau_delta[1] = rho0/rhomolar_reducing(); 
+    std::vector<double> td2 = tau_delta;
     std::string errstr;
-    x = NDNewtonRaphson_Jacobian(&resid, x0, 1e-14, 100, &errstr);
-    _crit.T = T_reducing()/x[0];
-    _crit.rhomolar = x[1]*rhomolar_reducing();
+    x = NDNewtonRaphson_Jacobian(&resid, tau_delta, 1e-14, 100, &errstr);
+    _critical.T = T_reducing()/x[0];
+    _critical.rhomolar = x[1]*rhomolar_reducing();
 }
 
 } /* namespace CoolProp */
