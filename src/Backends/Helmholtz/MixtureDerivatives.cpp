@@ -5,19 +5,19 @@ namespace CoolProp{
 CoolPropDbl MixtureDerivatives::dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){
-        return HEOS.components[i].EOS().baser(HEOS._tau, HEOS._delta) + HEOS.Excess.dalphar_dxi(HEOS._tau, HEOS._delta, HEOS.mole_fractions, i);
+        return HEOS.components[i].EOS().baser(HEOS.tau(), HEOS.delta()) + HEOS.Excess.dalphar_dxi(HEOS.mole_fractions, i);
     }
     else if(xN_flag == XN_DEPENDENT){
         std::vector<CoolPropDbl> &x = HEOS.mole_fractions;
         std::size_t N = x.size();
         if (i == N-1) return 0;
-        double dar_dxi = HEOS.components[i].EOS().baser(HEOS._tau, HEOS._delta) - HEOS.components[N-1].EOS().baser(HEOS._tau, HEOS._delta);
-        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->alphar(HEOS._tau, HEOS._delta);
+        double dar_dxi = HEOS.components[i].EOS().baser(HEOS.tau(), HEOS.delta()) - HEOS.components[N-1].EOS().baser(HEOS.tau(), HEOS.delta());
+        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->alphar();
         dar_dxi += (1-2*x[i])*FiNariN;
         for (std::size_t k = 0; k < N-1; ++k){
             if (i == k) continue;
-            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->alphar(HEOS._tau, HEOS._delta);
-            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->alphar(HEOS._tau, HEOS._delta);
+            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->alphar();
+            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->alphar();
             dar_dxi += x[k]*(Fikarik - FiNariN - FkNarkN);
         }
         return dar_dxi;
@@ -29,19 +29,19 @@ CoolPropDbl MixtureDerivatives::dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, st
 CoolPropDbl MixtureDerivatives::d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){
-        return HEOS.components[i].EOS().dalphar_dTau(HEOS._tau, HEOS._delta) + HEOS.Excess.d2alphar_dxi_dTau(HEOS._tau, HEOS._delta, HEOS.mole_fractions, i);
+        return HEOS.components[i].EOS().dalphar_dTau(HEOS._tau, HEOS._delta) + HEOS.Excess.d2alphar_dxi_dTau(HEOS.mole_fractions, i);
     }
     else if(xN_flag == XN_DEPENDENT){
         std::vector<CoolPropDbl> &x = HEOS.mole_fractions;
         std::size_t N = x.size();
         if (i==N-1) return 0;
         double d2ar_dxi_dTau = HEOS.components[i].EOS().dalphar_dTau(HEOS._tau, HEOS._delta) - HEOS.components[N-1].EOS().dalphar_dTau(HEOS._tau, HEOS._delta);
-        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->dalphar_dTau(HEOS._tau, HEOS._delta);
+        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->dalphar_dTau();
         d2ar_dxi_dTau += (1-2*x[i])*FiNariN;
         for (std::size_t k = 0; k < N-1; ++k){
             if (i==k) continue;
-            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->dalphar_dTau(HEOS._tau, HEOS._delta);
-            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->dalphar_dTau(HEOS._tau, HEOS._delta);
+            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->dalphar_dTau();
+            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->dalphar_dTau();
             d2ar_dxi_dTau += x[k]*(Fikarik - FiNariN - FkNarkN);
         }
         return d2ar_dxi_dTau;
@@ -54,19 +54,19 @@ CoolPropDbl MixtureDerivatives::d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend &HE
 CoolPropDbl MixtureDerivatives::d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){
-        return HEOS.components[i].EOS().dalphar_dDelta(HEOS._tau, HEOS._delta) + HEOS.Excess.d2alphar_dxi_dDelta(HEOS._tau, HEOS._delta, HEOS.mole_fractions, i);
+        return HEOS.components[i].EOS().dalphar_dDelta(HEOS.tau(), HEOS.delta()) + HEOS.Excess.d2alphar_dxi_dDelta(HEOS.mole_fractions, i);
         }
     else if(xN_flag == XN_DEPENDENT){
         std::vector<CoolPropDbl> &x = HEOS.mole_fractions;
         std::size_t N = x.size();
         if (i==N-1) return 0;
-        double d2ar_dxi_dDelta = HEOS.components[i].EOS().dalphar_dDelta(HEOS._tau, HEOS._delta) - HEOS.components[N-1].EOS().dalphar_dDelta(HEOS._tau, HEOS._delta);
-        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->dalphar_dDelta(HEOS._tau, HEOS._delta);
+        double d2ar_dxi_dDelta = HEOS.components[i].EOS().dalphar_dDelta(HEOS.tau(), HEOS.delta()) - HEOS.components[N-1].EOS().dalphar_dDelta(HEOS._tau, HEOS._delta);
+        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->dalphar_dDelta();
         d2ar_dxi_dDelta += (1-2*x[i])*FiNariN;
         for (std::size_t k = 0; k < N-1; ++k){
             if (i==k) continue;
-            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->dalphar_dDelta(HEOS._tau, HEOS._delta);
-            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->dalphar_dDelta(HEOS._tau, HEOS._delta);
+            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->dalphar_dDelta();
+            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->dalphar_dDelta();
             d2ar_dxi_dDelta += x[k]*(Fikarik - FiNariN - FkNarkN);
         }
         return d2ar_dxi_dDelta;
@@ -78,19 +78,19 @@ CoolPropDbl MixtureDerivatives::d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend &
 CoolPropDbl MixtureDerivatives::d3alphar_dxi_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){
-        return HEOS.components[i].EOS().d2alphar_dDelta2(HEOS._tau, HEOS._delta) + HEOS.Excess.d3alphar_dxi_dDelta2(HEOS._tau, HEOS._delta, HEOS.mole_fractions, i);
+        return HEOS.components[i].EOS().d2alphar_dDelta2(HEOS.tau(), HEOS.delta()) + HEOS.Excess.d3alphar_dxi_dDelta2(HEOS.mole_fractions, i);
     }
     else if (xN_flag == XN_DEPENDENT){
         std::vector<CoolPropDbl> &x = HEOS.mole_fractions;
         std::size_t N = x.size();
         if (i==N-1) return 0;
-        double d3ar_dxi_dDelta2 = HEOS.components[i].EOS().d2alphar_dDelta2(HEOS._tau, HEOS._delta) - HEOS.components[N-1].EOS().d2alphar_dDelta2(HEOS._tau, HEOS._delta);
-        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->d2alphar_dDelta2(HEOS._tau, HEOS._delta);
+        double d3ar_dxi_dDelta2 = HEOS.components[i].EOS().d2alphar_dDelta2(HEOS.tau(), HEOS.delta()) - HEOS.components[N-1].EOS().d2alphar_dDelta2(HEOS.tau(), HEOS.delta());
+        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->d2alphar_dDelta2();
         d3ar_dxi_dDelta2 += (1-2*x[i])*FiNariN;
         for (std::size_t k = 0; k < N-1; ++k){
             if (i==k) continue;
-            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->d2alphar_dDelta2(HEOS._tau, HEOS._delta);
-            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->d2alphar_dDelta2(HEOS._tau, HEOS._delta);
+            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->d2alphar_dDelta2();
+            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->d2alphar_dDelta2();
             d3ar_dxi_dDelta2 += x[k]*(Fikarik - FiNariN - FkNarkN);
         }
         return d3ar_dxi_dDelta2;
@@ -102,19 +102,19 @@ CoolPropDbl MixtureDerivatives::d3alphar_dxi_dDelta2(HelmholtzEOSMixtureBackend 
 CoolPropDbl MixtureDerivatives::d3alphar_dxi_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){
-        return HEOS.components[i].EOS().d2alphar_dTau2(HEOS._tau, HEOS._delta) + HEOS.Excess.d3alphar_dxi_dTau2(HEOS._tau, HEOS._delta, HEOS.mole_fractions, i);
+        return HEOS.components[i].EOS().d2alphar_dTau2(HEOS.tau(), HEOS.delta()) + HEOS.Excess.d3alphar_dxi_dTau2(HEOS.mole_fractions, i);
     }
     else if (xN_flag == XN_DEPENDENT){
         std::vector<CoolPropDbl> &x = HEOS.mole_fractions;
         std::size_t N = x.size();
         if (i==N-1) return 0;
-        double d3ar_dxi_dTau2 = HEOS.components[i].EOS().d2alphar_dTau2(HEOS._tau, HEOS._delta) - HEOS.components[N-1].EOS().d2alphar_dTau2(HEOS._tau, HEOS._delta);
-        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->d2alphar_dTau2(HEOS._tau, HEOS._delta);
+        double d3ar_dxi_dTau2 = HEOS.components[i].EOS().d2alphar_dTau2(HEOS.tau(), HEOS.delta()) - HEOS.components[N-1].EOS().d2alphar_dTau2(HEOS.tau(), HEOS.delta());
+        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->d2alphar_dTau2();
         d3ar_dxi_dTau2 += (1-2*x[i])*FiNariN;
         for (std::size_t k = 0; k < N-1; ++k){
             if (i==k) continue;
-            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->d2alphar_dTau2(HEOS._tau, HEOS._delta);
-            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->d2alphar_dTau2(HEOS._tau, HEOS._delta);
+            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->d2alphar_dTau2();
+            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->d2alphar_dTau2();
             d3ar_dxi_dTau2 += x[k]*(Fikarik - FiNariN - FkNarkN);
         }
         return d3ar_dxi_dTau2;
@@ -126,19 +126,19 @@ CoolPropDbl MixtureDerivatives::d3alphar_dxi_dTau2(HelmholtzEOSMixtureBackend &H
 CoolPropDbl MixtureDerivatives::d3alphar_dxi_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){
-        return HEOS.components[i].EOS().d2alphar_dDelta_dTau(HEOS._tau, HEOS._delta) + HEOS.Excess.d3alphar_dxi_dDelta_dTau(HEOS._tau, HEOS._delta, HEOS.mole_fractions, i);
+        return HEOS.components[i].EOS().d2alphar_dDelta_dTau(HEOS.tau(), HEOS.delta()) + HEOS.Excess.d3alphar_dxi_dDelta_dTau(HEOS.mole_fractions, i);
     }
     else if (xN_flag == XN_DEPENDENT){
         std::vector<CoolPropDbl> &x = HEOS.mole_fractions;
         std::size_t N = x.size();
         if (i==N-1) return 0;
-        double d3ar_dxi_dDelta_dTau = HEOS.components[i].EOS().d2alphar_dDelta_dTau(HEOS._tau, HEOS._delta) - HEOS.components[N-1].EOS().d2alphar_dDelta_dTau(HEOS._tau, HEOS._delta);
-        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->d2alphar_dDelta_dTau(HEOS._tau, HEOS._delta);
+        double d3ar_dxi_dDelta_dTau = HEOS.components[i].EOS().d2alphar_dDelta_dTau(HEOS.tau(), HEOS.delta()) - HEOS.components[N-1].EOS().d2alphar_dDelta_dTau(HEOS.tau(), HEOS.delta());
+        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->d2alphar_dDelta_dTau();
         d3ar_dxi_dDelta_dTau += (1-2*x[i])*FiNariN;
         for (std::size_t k = 0; k < N-1; ++k){
             if (i==k) continue;
-            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->d2alphar_dDelta_dTau(HEOS._tau, HEOS._delta);
-            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->d2alphar_dDelta_dTau(HEOS._tau, HEOS._delta);
+            double Fikarik = HEOS.Excess.F[i][k]*HEOS.Excess.DepartureFunctionMatrix[i][k]->d2alphar_dDelta_dTau();
+            double FkNarkN = HEOS.Excess.F[k][N-1]*HEOS.Excess.DepartureFunctionMatrix[k][N-1]->d2alphar_dDelta_dTau();
             d3ar_dxi_dDelta_dTau += x[k]*(Fikarik - FiNariN - FkNarkN);
         }
         return d3ar_dxi_dDelta_dTau;
@@ -151,16 +151,16 @@ CoolPropDbl MixtureDerivatives::d3alphar_dxi_dDelta_dTau(HelmholtzEOSMixtureBack
 CoolPropDbl MixtureDerivatives::d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){
-            return 0                           + HEOS.Excess.d2alphardxidxj(HEOS._tau, HEOS._delta, HEOS.mole_fractions, i, j);
+            return 0                           + HEOS.Excess.d2alphardxidxj(HEOS.mole_fractions, i, j);
     }
     else if(xN_flag == XN_DEPENDENT){
         std::size_t N = HEOS.mole_fractions.size();
         if (i == N-1 || j == N-1){ return 0;}
-        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->alphar(HEOS._tau, HEOS._delta);
+        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->alphar();
         if (i == j) { return -2*FiNariN; }
         
-        double Fijarij = HEOS.Excess.F[i][j]*HEOS.Excess.DepartureFunctionMatrix[i][j]->alphar(HEOS._tau, HEOS._delta);
-        double FjNarjN = HEOS.Excess.F[j][N-1]*HEOS.Excess.DepartureFunctionMatrix[j][N-1]->alphar(HEOS._tau, HEOS._delta);
+        double Fijarij = HEOS.Excess.F[i][j]*HEOS.Excess.DepartureFunctionMatrix[i][j]->alphar();
+        double FjNarjN = HEOS.Excess.F[j][N-1]*HEOS.Excess.DepartureFunctionMatrix[j][N-1]->alphar();
         return Fijarij - FiNariN - FjNarjN;
     }
     else{
@@ -170,15 +170,15 @@ CoolPropDbl MixtureDerivatives::d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS,
 CoolPropDbl MixtureDerivatives::d3alphar_dxi_dxj_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){
-        return 0                           + HEOS.Excess.d3alphar_dxi_dxj_dDelta(HEOS._tau, HEOS._delta, HEOS.mole_fractions, i, j);
+        return 0                           + HEOS.Excess.d3alphar_dxi_dxj_dDelta(HEOS.mole_fractions, i, j);
     }
     else if (xN_flag == XN_DEPENDENT){
         std::size_t N = HEOS.mole_fractions.size();
         if (i == N-1 || j == N-1){ return 0; }
-        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->dalphar_dDelta(HEOS._tau, HEOS._delta);
+        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->dalphar_dDelta();
         if (i == j) { return -2*FiNariN; }
-        double Fijarij = HEOS.Excess.F[i][j]*HEOS.Excess.DepartureFunctionMatrix[i][j]->dalphar_dDelta(HEOS._tau, HEOS._delta);
-        double FjNarjN = HEOS.Excess.F[j][N-1]*HEOS.Excess.DepartureFunctionMatrix[j][N-1]->dalphar_dDelta(HEOS._tau, HEOS._delta);
+        double Fijarij = HEOS.Excess.F[i][j]*HEOS.Excess.DepartureFunctionMatrix[i][j]->dalphar_dDelta();
+        double FjNarjN = HEOS.Excess.F[j][N-1]*HEOS.Excess.DepartureFunctionMatrix[j][N-1]->dalphar_dDelta();
         return Fijarij - FiNariN - FjNarjN;
     }
     else{
@@ -188,15 +188,15 @@ CoolPropDbl MixtureDerivatives::d3alphar_dxi_dxj_dDelta(HelmholtzEOSMixtureBacke
 CoolPropDbl MixtureDerivatives::d3alphar_dxi_dxj_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){
-        return 0                           + HEOS.Excess.d3alphar_dxi_dxj_dTau(HEOS._tau, HEOS._delta, HEOS.mole_fractions, i, j);
+        return 0                           + HEOS.Excess.d3alphar_dxi_dxj_dTau(HEOS.mole_fractions, i, j);
     }
     else if (xN_flag == XN_DEPENDENT){
         std::size_t N = HEOS.mole_fractions.size();
         if (i == N-1 || j == N-1){ return 0; }
-        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->dalphar_dTau(HEOS._tau, HEOS._delta);
+        double FiNariN = HEOS.Excess.F[i][N-1]*HEOS.Excess.DepartureFunctionMatrix[i][N-1]->dalphar_dTau();
         if (i == j) { return -2*FiNariN; }
-        double Fijarij = HEOS.Excess.F[i][j]*HEOS.Excess.DepartureFunctionMatrix[i][j]->dalphar_dTau(HEOS._tau, HEOS._delta);
-        double FjNarjN = HEOS.Excess.F[j][N-1]*HEOS.Excess.DepartureFunctionMatrix[j][N-1]->dalphar_dTau(HEOS._tau, HEOS._delta);
+        double Fijarij = HEOS.Excess.F[i][j]*HEOS.Excess.DepartureFunctionMatrix[i][j]->dalphar_dTau();
+        double FjNarjN = HEOS.Excess.F[j][N-1]*HEOS.Excess.DepartureFunctionMatrix[j][N-1]->dalphar_dTau();
         return Fijarij - FiNariN - FjNarjN;
     }
     else{
@@ -206,7 +206,7 @@ CoolPropDbl MixtureDerivatives::d3alphar_dxi_dxj_dTau(HelmholtzEOSMixtureBackend
 CoolPropDbl MixtureDerivatives::d3alphardxidxjdxk(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){
-        return 0                           + HEOS.Excess.d3alphardxidxjdxk(HEOS._tau, HEOS._delta, HEOS.mole_fractions, i, j, k);
+        return 0                           + HEOS.Excess.d3alphardxidxjdxk(HEOS.mole_fractions, i, j, k);
     }
     else if (xN_flag == XN_DEPENDENT){
         return 0;

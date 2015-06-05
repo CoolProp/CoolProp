@@ -943,7 +943,7 @@ void HelmholtzEOSMixtureBackend::pre_update(CoolProp::input_pairs &input_pair, C
 void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2 )
 {
     if (get_debug_level() > 10){std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)",__FILE__,__LINE__, input_pair, get_input_pair_short_desc(input_pair).c_str(), value1, value2) << std::endl;}
-    
+
     CoolPropDbl ld_value1 = value1, ld_value2 = value2;
     pre_update(input_pair, ld_value1, ld_value2);
     value1 = ld_value1; value2 = ld_value2;
@@ -2413,17 +2413,18 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
             summer_dDelta_dTau2 += xi*derivs.d3alphar_ddelta_dtau2;
             summer_dTau3 += xi*derivs.d3alphar_dtau3;
         }
-        _alphar = summer_base + Excess.alphar(tau, delta, mole_fractions);
-        _dalphar_dDelta = summer_dDelta + Excess.dalphar_dDelta(tau, delta, mole_fractions);
-        _dalphar_dTau = summer_dTau + Excess.dalphar_dTau(tau, delta, mole_fractions);
-        _d2alphar_dDelta2 = summer_dDelta2 + Excess.d2alphar_dDelta2(tau, delta, mole_fractions);
-        _d2alphar_dDelta_dTau = summer_dDelta_dTau + Excess.d2alphar_dDelta_dTau(tau, delta, mole_fractions);
-        _d2alphar_dTau2 = summer_dTau2 + Excess.d2alphar_dTau2(tau, delta, mole_fractions);
+        Excess.update(tau, delta);
+        _alphar = summer_base + Excess.alphar(mole_fractions);
+        _dalphar_dDelta = summer_dDelta + Excess.dalphar_dDelta(mole_fractions);
+        _dalphar_dTau = summer_dTau + Excess.dalphar_dTau(mole_fractions);
+        _d2alphar_dDelta2 = summer_dDelta2 + Excess.d2alphar_dDelta2(mole_fractions);
+        _d2alphar_dDelta_dTau = summer_dDelta_dTau + Excess.d2alphar_dDelta_dTau(mole_fractions);
+        _d2alphar_dTau2 = summer_dTau2 + Excess.d2alphar_dTau2(mole_fractions);
 
-        _d3alphar_dDelta3 = summer_dDelta3 + Excess.d3alphar_dDelta3(tau, delta, mole_fractions);
-        _d3alphar_dDelta2_dTau = summer_dDelta2_dTau + Excess.d3alphar_dDelta2_dTau(tau, delta, mole_fractions);
-        _d3alphar_dDelta_dTau2 = summer_dDelta_dTau2 + Excess.d3alphar_dDelta_dTau2(tau, delta, mole_fractions);
-        _d3alphar_dTau3 = summer_dTau3 + Excess.d3alphar_dTau3(tau, delta, mole_fractions);
+        _d3alphar_dDelta3 = summer_dDelta3 + Excess.d3alphar_dDelta3(mole_fractions);
+        _d3alphar_dDelta2_dTau = summer_dDelta2_dTau + Excess.d3alphar_dDelta2_dTau(mole_fractions);
+        _d3alphar_dDelta_dTau2 = summer_dDelta_dTau2 + Excess.d3alphar_dDelta_dTau2(mole_fractions);
+        _d3alphar_dTau3 = summer_dTau3 + Excess.d3alphar_dTau3(mole_fractions);
         //_d4alphar_dDelta4 = derivs.d4alphar_ddelta4;
         //_d4alphar_dDelta3_dTau = derivs.d4alphar_ddelta3_dtau;
         //_d4alphar_dDelta2_dTau2 = derivs.d4alphar_ddelta2_dtau2;
@@ -2477,27 +2478,27 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau
         CoolPropDbl summer = 0;
         if (nTau == 0 && nDelta == 0){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().baser(tau, delta); }
-            return summer + Excess.alphar(tau, delta, mole_fractions);
+            return summer + Excess.alphar(mole_fractions);
         }
         else if (nTau == 0 && nDelta == 1){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().dalphar_dDelta(tau, delta); }
-            return summer + Excess.dalphar_dDelta(tau, delta, mole_fractions);
+            return summer + Excess.dalphar_dDelta(mole_fractions);
         }
         else if (nTau == 1 && nDelta == 0){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().dalphar_dTau(tau, delta); }
-            return summer + Excess.dalphar_dTau(tau, delta, mole_fractions);
+            return summer + Excess.dalphar_dTau(mole_fractions);
         }
         else if (nTau == 0 && nDelta == 2){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dDelta2(tau, delta); }
-            return summer + Excess.d2alphar_dDelta2(tau, delta, mole_fractions);
+            return summer + Excess.d2alphar_dDelta2(mole_fractions);
         }
         else if (nTau == 1 && nDelta == 1){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dDelta_dTau(tau, delta); }
-            return summer + Excess.d2alphar_dDelta_dTau(tau, delta, mole_fractions);
+            return summer + Excess.d2alphar_dDelta_dTau(mole_fractions);
         }
         else if (nTau == 2 && nDelta == 0){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dTau2(tau, delta); }
-            return summer + Excess.d2alphar_dTau2(tau, delta, mole_fractions);
+            return summer + Excess.d2alphar_dTau2(mole_fractions);
         }
         /*else if (nTau == 0 && nDelta == 3){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dDelta3(tau, delta); }
@@ -3000,6 +3001,7 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
             M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
             std::vector<double> o(2);
             o[0] = L1; o[1] = M1;
+            double p = HEOS.p();
             return o;
         };
         std::vector<std::vector<double> > Jacobian(const std::vector<double> &x)
@@ -3016,13 +3018,13 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
 
             J0(0,0) = (adjL*dLdTau).trace();
             J0(0,1) = (adjL*dLdDelta).trace();
-            //std::cout << J0 << std::endl;
+            std::cout << J0 << std::endl;
             std::vector<double> r0 = call(x);
             // Build the Jacobian by column
             for (std::size_t i = 0; i < N; ++i)
             {
                 xp = x;
-                epsilon = 0.0001;
+                epsilon = 0.00001;
                 xp[i] += epsilon;
                 r = call(xp);
 
@@ -3036,6 +3038,7 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
         };
     };
     Resid resid(*this);
+    CoolPropDbl Tr = T_reducing();
     std::vector<double> x, tau_delta(2); tau_delta[0] = T_reducing()/T0; tau_delta[1] = rho0/rhomolar_reducing(); 
     std::vector<double> td2 = tau_delta;
     std::string errstr;
