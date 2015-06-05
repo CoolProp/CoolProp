@@ -2992,8 +2992,8 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
         double L1, M1;
         HelmholtzEOSMixtureBackend &HEOS;
         Resid(HelmholtzEOSMixtureBackend &HEOS) : HEOS(HEOS){};
-        std::vector<double> call(const std::vector<double> &x){
-            HEOS.update(DmolarT_INPUTS, x[0], x[1]);
+        std::vector<double> call(const std::vector<double> &tau_delta){
+            HEOS.update(DmolarT_INPUTS, tau_delta[1]*HEOS.rhomolar_reducing(), HEOS.T_reducing()/tau_delta[0]);
             L1 = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant(),
             M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
             std::vector<double> o(2);
@@ -3028,11 +3028,11 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
         };
     };
     Resid resid(*this);
-    std::vector<double> x, x0(2); x0[0] = rho0; x0[1] = T0;
+    std::vector<double> x, x0(2); x0[0] = T_reducing()/T0; x0[1] = rho0/rhomolar_reducing(); 
     std::string errstr;
     x = NDNewtonRaphson_Jacobian(&resid, x0, 1e-14, 100, &errstr);
-    _crit.rhomolar = x[0];
-    _crit.T = x[1];
+    _crit.T = T_reducing()/x[0];
+    _crit.rhomolar = x[1]*rhomolar_reducing();
 }
 
 } /* namespace CoolProp */
