@@ -266,20 +266,22 @@
         }
         throw(errno);
     }
+
     inline void removeRow(Eigen::MatrixXd& matrix, unsigned int rowToRemove)
     {
-        unsigned int numRows = matrix.rows()-1;
-        unsigned int numCols = matrix.cols();
+        unsigned int numRows = static_cast<unsigned int>(matrix.rows())- 1;
+        unsigned int numCols = static_cast<unsigned int>(matrix.cols());
 
         if( rowToRemove < numRows )
             matrix.block(rowToRemove,0,numRows-rowToRemove,numCols) = matrix.block(rowToRemove+1,0,numRows-rowToRemove,numCols);
 
         matrix.conservativeResize(numRows,numCols);
     };
+
     inline void removeColumn(Eigen::MatrixXd& matrix, unsigned int colToRemove)
     {
-        unsigned int numRows = matrix.rows();
-        unsigned int numCols = matrix.cols()-1;
+        unsigned int numRows = static_cast<unsigned int>(matrix.rows());
+        unsigned int numCols = static_cast<unsigned int>(matrix.cols())-1;
 
         if( colToRemove < numCols )
             matrix.block(0,colToRemove,numRows,numCols-colToRemove) = matrix.block(0,colToRemove+1,numRows,numCols-colToRemove);
@@ -290,8 +292,8 @@
     inline Eigen::MatrixXd minor_matrix(const Eigen::MatrixBase<Derived>& A, std::size_t i, std::size_t j)
     {
         Eigen::MatrixXd Am = A;
-        removeRow(Am, i);
-        removeColumn(Am, j);
+        removeRow(Am, static_cast<unsigned int>(i));
+        removeColumn(Am, static_cast<unsigned int>(j));
         return Am;
     };
 
@@ -301,7 +303,8 @@
         Eigen::MatrixXd Aadj(A.rows(), A.cols());
         for (std::size_t i = 0; i < N; ++i){
             for (std::size_t j = 0; j < N; ++j){
-                Aadj(i,j) = pow(-1, i+j)*minor_matrix(A, i, j).determinant();
+                int negative_1_to_the_i_plus_j = ((i+j)%2==0) ? 1 : -1;
+                Aadj(i, j) = negative_1_to_the_i_plus_j*minor_matrix(A, i, j).determinant();
             }
         }
         return Aadj;
@@ -449,7 +452,22 @@
         return min;
     }
 
-    inline int Kronecker_delta(int i, int j){if (i == j) {return 1;} else {return 0;}};
+    inline int Kronecker_delta(std::size_t i, std::size_t j){ 
+        if (i == j) { 
+            return static_cast<int>(1); 
+        } 
+        else { 
+            return static_cast<int>(0);
+        } 
+    };
+    inline int Kronecker_delta(int i, int j){
+        if (i == j) {
+            return 1;
+        }
+        else {
+            return 0;
+        }
+    };
 
     class Dictionary
     {
