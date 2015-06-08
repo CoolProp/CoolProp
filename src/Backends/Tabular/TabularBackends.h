@@ -675,6 +675,9 @@ class TabularBackend : public AbstractState
         /// Write the tables to file
         void write_tables();        
         
+        CoolPropDbl calc_cpmolar_idealgas(void){
+            return this->AS->cp0molar();
+        }
         CoolPropDbl calc_T(void){
             if (using_single_phase_table){
                 switch(selected_table){
