@@ -24,7 +24,7 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
          raw = get_binary_file_contents(path_to_table.c_str());
     }catch(...){
         std::string err = format("Unable to load file %s", path_to_table.c_str());
-        if (get_debug_level() > 0){std::cout << err << std::endl;}
+        if (get_debug_level() > 0){std::cout << "err:" << err << std::endl;}
         throw UnableToLoadError(err);
     }
     std::vector<char> newBuffer(raw.size()*5);
@@ -40,7 +40,7 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
         }
         else if (code != 0){ // Something else, a big problem
             std::string err = format("Unable to uncompress file %s with miniz code %d", path_to_table.c_str(), code);
-            if (get_debug_level() > 0){std::cout << err << std::endl;}
+            if (get_debug_level() > 0){ std::cout << "uncompress err:" << err << std::endl; }
             throw UnableToLoadError(err);
         }
     }while(code != 0);
@@ -56,8 +56,8 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
         if (get_debug_level() > -1){std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc-tic)/CLOCKS_PER_SEC) << std::endl;}
     }
     catch(std::exception &e){
-        std::string err = format("Unable to deserialize %s; err: %s", path_to_table.c_str(), e.what());
-        if (get_debug_level() > 0){std::cout << err << std::endl;}
+        std::string err = format("Unable to msgpack deserialize %s; err: %s", path_to_table.c_str(), e.what());
+        if (get_debug_level() > 0){std::cout << "err: " << err << std::endl;}
         throw UnableToLoadError(err);
     }
 }
@@ -95,8 +95,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
     // ------------------------
     AS->update(QT_INPUTS, 0, AS->Ttriple());
     CoolPropDbl p_triple = AS->p();
-    // If a mixture, maximum pressure in the phase envelope can be greater than critical pressure
-    CoolPropDbl p, pmin = p_triple*1.001, pmax = 0.9999999*AS->p_critical();
+    CoolPropDbl p, pmin = p_triple*1.001, pmax = 0.9999*AS->p_critical();
     for (std::size_t i = 0; i < N-1; ++i)
     {
         // Log spaced
@@ -311,7 +310,7 @@ void CoolProp::TabularBackend::load_tables(){
     load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin.z");
     load_table(pure_saturation, path_to_tables, "pure_saturation.bin.z");
     load_table(phase_envelope, path_to_tables, "phase_envelope.bin.z");
-    
+    if (get_debug_level() > 0){ std::cout << "Tables loaded" << std::endl; }
 }
 
 #if defined(ENABLE_CATCH)
