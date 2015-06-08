@@ -309,6 +309,17 @@ template<class T> std::string vec_to_string(const std::vector<T> &a, const char 
 template<class T> std::string vec_to_string(const std::vector<T> &a) {
     return vec_to_string(std::vector<double>(a.begin(), a.end()), stdFmt);
 };
+///Templates for turning vectors (1D-matrices) into strings
+inline std::string stringvec_to_string(const std::vector<std::string> &a) {
+    if (a.size()<1) return std::string("");
+    std::stringstream out;
+    out << "[ " << format("%s", a[0].c_str());
+    for (size_t j = 1; j < a.size(); j++) {
+        out << ", " << format("%s", a[j].c_str());
+    }
+    out << " ]";
+    return out.str();
+};
 
 /// Templates for turning numbers (0D-matrices) into strings
 template<class T> std::string vec_to_string(const T &a, const char *fmt) {

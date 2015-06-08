@@ -25,6 +25,9 @@ namespace CoolProp {
 
 AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
 {
+    if (get_debug_level() > 0){
+        std::cout << "AbstractState::factory(" << backend << "," << stringvec_to_string(fluid_names) << ")" << std::endl;
+    }
     static const std::string HEOS_string = "HEOS";
     if (!backend.compare(HEOS_string))
     {
