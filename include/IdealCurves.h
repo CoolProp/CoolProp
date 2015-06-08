@@ -75,7 +75,7 @@ namespace CoolProp{
 						break;
 					}
 				}
-				catch (std::exception &e){
+				catch (std::exception &){
 					break;
 				}
 			}
