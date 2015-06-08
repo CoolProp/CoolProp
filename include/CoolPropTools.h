@@ -21,7 +21,6 @@
     #include <set>
     #include <sys/types.h>
     #include <sys/stat.h>   
-    #include <Eigen/Core>
 
     // This will kill the horrible min and max macros 
     #ifndef NOMINMAX
