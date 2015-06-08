@@ -3018,7 +3018,7 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
 
             J0(0,0) = (adjL*dLdTau).trace();
             J0(0,1) = (adjL*dLdDelta).trace();
-            std::cout << J0 << std::endl;
+            //std::cout << J0 << std::endl;
             std::vector<double> r0 = call(x);
             // Build the Jacobian by column
             for (std::size_t i = 0; i < N; ++i)
