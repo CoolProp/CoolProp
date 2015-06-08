@@ -423,7 +423,7 @@ cdef toSI(constants_header.parameters key, double val):
     """
     Convert a value in kSI system to SI system (supports a limited subset of variables)
     """
-    if key in [iT, iDmass]:
+    if key in [iT, iDmass, iQ]:
         return val
     elif key in [iP, iHmass, iSmass, iUmass]:
         return val*1000
@@ -541,6 +541,7 @@ cdef class State:
             _Fluid = '&'.join(new_fluid)
         else:
             fracs = [1]
+        
         self.pAS = AbstractState(_backend, _Fluid)
         self.pAS.set_mole_fractions(fracs)
 
@@ -581,7 +582,6 @@ cdef class State:
             A dictionary of terms to be updated, with keys equal to single-char inputs to the Props function,
             for instance ``dict(T=298, P = 101.325)`` would be one standard atmosphere
         """
-
         # Convert to integer_pair input
 
         cdef double p, val1, val2, o1 = 0, o2 = 0
@@ -598,6 +598,7 @@ cdef class State:
         val2 = toSI(key2, items[1][1])
 
         input_pair = _generate_update_pair(key1, val1, key2, val2, o1, o2)
+        
         self.pAS.update(input_pair, o1, o2);
 
         self.T_ = self.pAS.T()

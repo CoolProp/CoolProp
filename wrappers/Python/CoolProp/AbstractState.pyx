@@ -62,16 +62,16 @@ cdef class AbstractState:
     ## ----------------------------------------	
     ##        Limits
     ## ----------------------------------------
-    cpdef double Tmin(self):
+    cpdef double Tmin(self) except *:
         """ Set the minimum temperature in K- wrapper of c++ function :cpapi:`CoolProp::AbstractState::Tmin` """
         return self.thisptr.Tmin()
-    cpdef double Tmax(self):
+    cpdef double Tmax(self) except *:
         """ Set the maximum temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Tmax` """
         return self.thisptr.Tmax()
-    cpdef double pmax(self):
+    cpdef double pmax(self) except *:
         """ Set the maximum pressure in Pa - wrapper of c++ function :cpapi:`CoolProp::AbstractState::pmax` """
         return self.thisptr.pmax()
-    cpdef double Ttriple(self):
+    cpdef double Ttriple(self) except *:
         """ Set the triple point temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Ttriple` """
         return self.thisptr.Ttriple()
 

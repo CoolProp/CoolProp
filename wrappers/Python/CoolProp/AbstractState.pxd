@@ -31,10 +31,10 @@ cdef class AbstractState:
     cpdef unspecify_phase(self)
     
     ## Limits
-    cpdef double Tmin(self)
-    cpdef double Tmax(self)
-    cpdef double pmax(self)
-    cpdef double Ttriple(self)
+    cpdef double Tmin(self) except *
+    cpdef double Tmax(self) except *
+    cpdef double pmax(self) except *
+    cpdef double Ttriple(self) except *
         
     ## ---------------------------------------- 
     ##        Fluid property accessors
