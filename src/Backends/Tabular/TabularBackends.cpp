@@ -18,7 +18,7 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
     
     double tic = clock();
     std::string path_to_table = path_to_tables + "/" + filename;
-    if (get_debug_level() > -1){std::cout << format("Loading table: %s", path_to_table.c_str()) << std::endl;}
+    if (get_debug_level() > 0){std::cout << format("Loading table: %s", path_to_table.c_str()) << std::endl;}
     std::vector<char> raw;
     try{
          raw = get_binary_file_contents(path_to_table.c_str());
@@ -53,7 +53,7 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
         // Call the class' deserialize function;  if it is an invalid table, it will cause an exception to be thrown
         table.deserialize(deserialized);
         double toc = clock();
-        if (get_debug_level() > -1){std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc-tic)/CLOCKS_PER_SEC) << std::endl;}
+        if (get_debug_level() > 0){std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc-tic)/CLOCKS_PER_SEC) << std::endl;}
     }
     catch(std::exception &e){
         std::string err = format("Unable to msgpack deserialize %s; err: %s", path_to_table.c_str(), e.what());

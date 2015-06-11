@@ -173,7 +173,8 @@ CoolPropDbl GERG2008ReducingFunction::rhormolar(const std::vector<CoolPropDbl> &
 }
 CoolPropDbl GERG2008ReducingFunction::drhormolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
 {
-    return -pow(rhormolar(x),2)*dvrmolardxi__constxj(x, i, xN_flag);
+    CoolPropDbl rhor = rhormolar(x);
+    return -rhor*rhor*dvrmolardxi__constxj(x, i, xN_flag);
 }
 CoolPropDbl GERG2008ReducingFunction::dvrmolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
 {

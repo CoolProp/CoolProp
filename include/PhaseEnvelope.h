@@ -90,6 +90,10 @@ public:
         #define X(name) name = get_matrix_iterator(#name)->second;
         PHASE_ENVELOPE_MATRICES
         #undef X
+        // Find the index of the point with the highest temperature
+        iTsat_max = std::distance(T.begin(), std::max_element(T.begin(), T.end()));
+        // Find the index of the point with the highest pressure
+        ipsat_max = std::distance(p.begin(), std::max_element(p.begin(), p.end()));
     };
     void deserialize(msgpack::object &deserialized){       
         PhaseEnvelopeData temp;

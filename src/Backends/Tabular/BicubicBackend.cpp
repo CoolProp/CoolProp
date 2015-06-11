@@ -143,20 +143,8 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
 	// Clear cached values
 	clear();
 
-    // Check the tables and build if necessary
-    check_tables();
-
     // To start, set quality to value that is for single-phase
     _Q = -1000;
-
-    bool is_mixture = (this->AS->get_mole_fractions().size() >= 2);
-
-    if (is_mixture){
-        // For mixtures, the construction of the coefficients is delayed until this 
-        // function so that the set_mole_fractions function can be called
-        build_coeffs(single_phase_logph, coeffs_ph);
-        build_coeffs(single_phase_logpT, coeffs_pT);
-    }
 
 	// Flush the cached indices (set to large number)
     cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 
@@ -229,7 +217,13 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
             std::size_t iL, iV;
             CoolPropDbl zL = 0, zV = 0;
-            if (pure_saturation.is_inside(iP, _p, otherkey, otherval, iL, iV, zL, zV)){
+            std::size_t iclosest = 0;
+            SimpleState closest_state;
+            if (
+                (is_mixture && PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, otherkey, otherval, iclosest, closest_state))
+                ||
+                (!is_mixture && pure_saturation.is_inside(iP, _p, otherkey, otherval, iL, iV, zL, zV))
+                ){
                 using_single_phase_table = false;
                 if (otherkey == iDmolar){
                     _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
@@ -356,7 +350,14 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
             std::size_t iL, iV;
             CoolPropDbl zL = 0, zV = 0;
-            if (pure_saturation.is_inside(iT, _T, otherkey, otherval, iL, iV, zL, zV)){
+            std::size_t iclosest = 0;
+            SimpleState closest_state;
+            if (
+                (is_mixture && PhaseEnvelopeRoutines::is_inside(phase_envelope, iT, _T, otherkey, otherval, iclosest, closest_state))
+                ||
+                (!is_mixture && pure_saturation.is_inside(iT, _T, otherkey, otherval, iL, iV, zL, zV))
+                )
+            {
                 using_single_phase_table = false;
                 if (otherkey == iDmolar){
                     _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
@@ -410,13 +411,22 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
 			std::size_t iL = 0, iV = 0;
 			CoolPropDbl dummyL = 0, dummyV = 0;
 			_Q = val1; _T = val2;
-			pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, dummyL, dummyV);
+            
             using_single_phase_table = false;
             if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
                 throw ValueError("vapor quality is not in (0,1)");
             }
             else{
-                _p = pure_saturation.evaluate(iP, _T, _Q, iL, iV);
+                if (is_mixture){
+                    std::vector<std::pair<std::size_t,std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
+                    iV = intersect[0].first; iL = intersect[1].first;
+                    double pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
+                    double pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
+                    _p = _Q*pV + (1-_Q)*pL;
+                }
+                else{
+                    _p = pure_saturation.evaluate(iP, _T, _Q, iL, iV);
+                }
                 cached_saturation_iL = iL; cached_saturation_iV = iV;
             }
 			break;

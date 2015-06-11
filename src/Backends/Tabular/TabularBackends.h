@@ -9,6 +9,7 @@
 #include "CoolProp.h"
 #include <sstream>
 #include "Configuration.h"
+#include "PhaseEnvelopeRoutines.h"
 
 
 /** ***MAGIC WARNING***!! X Macros in use
@@ -566,7 +567,7 @@ class LogPTTable : public SinglePhaseGriddedTableData
 class TabularBackend : public AbstractState
 {
     protected:
-        bool tables_loaded, using_single_phase_table;
+        bool tables_loaded, using_single_phase_table, is_mixture;
         shared_ptr<CoolProp::AbstractState> AS;
         enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE};
         selected_table_options selected_table;
@@ -576,7 +577,7 @@ class TabularBackend : public AbstractState
         std::vector<CoolPropDbl> mole_fractions;
     public:
 
-        TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), AS(AS) {
+        TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), AS(AS), is_mixture(false) {
             selected_table = SELECTED_NO_TABLE;
             // Flush the cached indices (set to large number)
             cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 
@@ -635,7 +636,7 @@ class TabularBackend : public AbstractState
         bool using_volu_fractions(void){return false;}
         void update(CoolProp::input_pairs input_pair, double Value1, double Value2){};
         void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){this->AS->set_mole_fractions(mole_fractions);};
-        void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){};
+        void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){ throw NotImplementedError("set_mass_fractions not implemented for Tabular backends"); };
         const std::vector<long double> & get_mole_fractions(){return AS->get_mole_fractions();};
         CoolPropDbl calc_molar_mass(void){return AS->molar_mass();};
         virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
@@ -675,6 +676,11 @@ class TabularBackend : public AbstractState
         /// Write the tables to file
         void write_tables();        
         
+        CoolPropDbl phase_envelope_sat(const PhaseEnvelopeData &env, parameters output, parameters iInput1, double value1){
+            CoolPropDbl yL = PhaseEnvelopeRoutines::evaluate(phase_envelope, output, iInput1, value1, cached_saturation_iL);
+            CoolPropDbl yV = PhaseEnvelopeRoutines::evaluate(phase_envelope, output, iInput1, value1, cached_saturation_iV);
+            return _Q*yV + (1-_Q)*yL;
+        }
         CoolPropDbl calc_cpmolar_idealgas(void){
             return this->AS->cp0molar();
         }
@@ -701,7 +707,12 @@ class TabularBackend : public AbstractState
                 return _HUGE; // not needed, will never be hit, just to make compiler happy
             }
             else{
-                return pure_saturation.evaluate(iDmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+                if (is_mixture){
+                    return phase_envelope_sat(phase_envelope, iDmolar, iP, _p);
+                }
+                else{
+                    return pure_saturation.evaluate(iDmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+                }
             }
         }
         CoolPropDbl calc_hmolar(void){
@@ -714,7 +725,12 @@ class TabularBackend : public AbstractState
                 return _HUGE; // not needed, will never be hit, just to make compiler happy
             }
             else{
-                return pure_saturation.evaluate(iHmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+                if (is_mixture){
+                    return phase_envelope_sat(phase_envelope, iHmolar, iP, _p);
+                }
+                else{
+                    return pure_saturation.evaluate(iHmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+                }
             }
         }
         CoolPropDbl calc_smolar(void){
@@ -727,7 +743,12 @@ class TabularBackend : public AbstractState
                 return _HUGE; // not needed, will never be hit, just to make compiler happy
             }
             else{
-                return pure_saturation.evaluate(iSmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+                if (is_mixture){
+                    return phase_envelope_sat(phase_envelope, iSmolar, iP, _p);
+                }
+                else{
+                    return pure_saturation.evaluate(iSmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+                }
             }
         }
         CoolPropDbl calc_umolar(void){
@@ -740,7 +761,12 @@ class TabularBackend : public AbstractState
                 return _HUGE; // not needed, will never be hit, just to make compiler happy
             }
             else{
-                return pure_saturation.evaluate(iUmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+                if (is_mixture){
+                    return phase_envelope_sat(phase_envelope, iUmolar, iP, _p);
+                }
+                else{
+                    return pure_saturation.evaluate(iUmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+                }
             }
         }
         CoolPropDbl calc_cpmolar(void){

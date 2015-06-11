@@ -133,8 +133,19 @@ class BicubicBackend : public TabularBackend
                 check_tables();
 			    build_coeffs(single_phase_logph, coeffs_ph);
 			    build_coeffs(single_phase_logpT, coeffs_pT);
+                is_mixture = false;
             }
 		};
+        void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){ 
+            this->AS->set_mole_fractions(mole_fractions); 
+            is_mixture = true;
+            // Check the tables and build if necessary
+            check_tables();
+            // For mixtures, the construction of the coefficients is delayed until this 
+            // function so that the set_mole_fractions function can be called
+            build_coeffs(single_phase_logph, coeffs_ph);
+            build_coeffs(single_phase_logpT, coeffs_pT);
+        };
         std::string backend_name(void){return "BicubicBackend";}
         /// Build the \f$a_{i,j}\f$ coefficients for bicubic interpolation
         void build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs);

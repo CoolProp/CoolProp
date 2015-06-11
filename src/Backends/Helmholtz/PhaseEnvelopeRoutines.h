@@ -1,3 +1,6 @@
+#ifndef PHASE_ENVELOPE_ROUTINES_H
+#define PHASE_ENVELOPE_ROUTINES_H
+
 #include "HelmholtzEOSMixtureBackend.h"
 
 namespace CoolProp{
@@ -46,6 +49,10 @@ class PhaseEnvelopeRoutines{
      * @param closest_state A SimpleState corresponding to the closest point found on the phase envelope
      */
     static bool is_inside(const PhaseEnvelopeData &env, parameters iInput1, CoolPropDbl value1, parameters iInput2, CoolPropDbl value2, std::size_t &iclosest, SimpleState &closest_state);
+
+    static double evaluate(const PhaseEnvelopeData &env, parameters output, parameters iInput1, double value1, std::size_t &i);
 };
     
 } /* namespace CoolProp */
+
+#endif
