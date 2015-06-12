@@ -230,7 +230,7 @@ protected:
     /// Calculate the first partial derivative for the desired derivative
     virtual CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
     /// Calculate the second partial derivative using the given backend
-    virtual CoolPropDbl calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2);
+    virtual CoolPropDbl calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
 
     /// Using this backend, calculate the reduced density (rho/rhoc)
     virtual CoolPropDbl calc_reduced_density(void){ throw NotImplementedError("calc_reduced_density is not implemented for this backend"); };
@@ -589,7 +589,7 @@ public:
      * 
      * The terms \f$ N \f$ and \f$ D \f$ are the numerator and denominator from \ref CoolProp::AbstractState::first_partial_deriv respectively
      */
-    CoolPropDbl second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Of2, parameters Constant2){return calc_second_partial_deriv(Of1,Wrt1,Constant1,Of2,Constant2);};
+    CoolPropDbl second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2){return calc_second_partial_deriv(Of1,Wrt1,Constant1,Wrt2,Constant2);};
     
     /** \brief The first partial derivative along the saturation curve
      * 
