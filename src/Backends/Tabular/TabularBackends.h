@@ -9,7 +9,7 @@
 #include "CoolProp.h"
 #include <sstream>
 #include "Configuration.h"
-#include "PhaseEnvelopeRoutines.h"
+#include "../Helmholtz/PhaseEnvelopeRoutines.h"
 
 
 /** ***MAGIC WARNING***!! X Macros in use
