@@ -457,7 +457,7 @@ class SinglePhaseGriddedTableData{
 			bisect_vector(xvec, x, i);
 			bisect_vector(yvec, y, j);
 		}
-        const std::vector<std::vector<double> > get(parameters key){
+        const std::vector<std::vector<double> > & get(parameters key){
             switch(key){
                 case iDmolar: return rhomolar;
                 case iT: return T;
