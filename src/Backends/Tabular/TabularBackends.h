@@ -488,9 +488,9 @@ class LogPHTable : public SinglePhaseGriddedTableData
             xmin = AS->hmolar(); ymin = AS->p();
             
             // Check both the enthalpies at the Tmax isotherm to see whether to use low or high pressure
-            AS->update(DmolarT_INPUTS, 1e-10, AS->Tmax());
+            AS->update(DmolarT_INPUTS, 1e-10, 1.499*AS->Tmax());
             CoolPropDbl xmax1 = AS->hmolar();
-            AS->update(PT_INPUTS, AS->pmax(), AS->Tmax());
+            AS->update(PT_INPUTS, AS->pmax(), 1.499*AS->Tmax());
             CoolPropDbl xmax2 = AS->hmolar();
             xmax = std::max(xmax1, xmax2);
             
@@ -533,7 +533,7 @@ class LogPTTable : public SinglePhaseGriddedTableData
             AS->update(QT_INPUTS, 0, AS->Ttriple());
             ymin = AS->p();
             
-            xmax = AS->Tmax(); ymax = AS->pmax();
+            xmax = AS->Tmax()*1.499; ymax = AS->pmax();
         }
         void deserialize(msgpack::object &deserialized){   
             LogPTTable temp;
