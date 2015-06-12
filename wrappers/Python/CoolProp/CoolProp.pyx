@@ -530,6 +530,7 @@ cdef class State:
 
         cdef object _Fluid = Fluid
         cdef object _backend = backend
+        cdef bint set_fractions = False
         new_fluid = []
         fracs = []
         if '[' in _Fluid and ']' in _Fluid:
@@ -539,11 +540,11 @@ cdef class State:
                 new_fluid.append(fluid)
                 fracs.append(float(frac.strip(']')))
             _Fluid = '&'.join(new_fluid)
-        else:
-            fracs = [1]
+            set_fractions = True
         
         self.pAS = AbstractState(_backend, _Fluid)
-        self.pAS.set_mole_fractions(fracs)
+        if set_fractions:
+            self.pAS.set_mole_fractions(fracs)
 
     cpdef update_ph(self, double p, double h):
         """
