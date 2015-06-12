@@ -734,6 +734,9 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
         CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, fluid));
         if (!reference_state.compare("IIR"))
         {
+            if (HEOS.Ttriple() > 273.15){
+                throw ValueError(format("Cannot use IIR reference state; Ttriple [%Lg] is greater than 273.15 K",HEOS.Ttriple())); 
+            }
             HEOS.update(QT_INPUTS, 0, 273.15);
 
             // Get current values for the enthalpy and entropy
@@ -749,6 +752,9 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
         }
         else if (!reference_state.compare("ASHRAE"))
         {
+            if (HEOS.Ttriple() > 233.15){
+                throw ValueError(format("Cannot use ASHRAE reference state; Ttriple [%Lg] is greater than than 233.15 K", HEOS.Ttriple()));
+            }
             HEOS.update(QT_INPUTS, 0, 233.15);
 
             // Get current values for the enthalpy and entropy
@@ -764,6 +770,9 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
         }
         else if (!reference_state.compare("NBP"))
         {
+            if (HEOS.p_triple() > 101325){
+                throw ValueError(format("Cannot use NBP reference state; p_triple [%Lg Pa] is greater than than 101325 Pa",HEOS.p_triple()));
+            }
             // Saturated liquid boiling point at 1 atmosphere
             HEOS.update(PQ_INPUTS, 101325, 0);
 
