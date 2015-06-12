@@ -127,6 +127,8 @@ Partial Derivatives
 
 It is possible to get the partial derivatives in a very computationally efficient manner using the low-level interface, using something like (python here):
 
+For more information, see the docs: :cpapi:`CoolProp::AbstractState::first_partial_deriv` and :cpapi:`CoolProp::AbstractState::second_partial_deriv`
+
 .. ipython::
 
     In [1]: import CoolProp
@@ -143,6 +145,12 @@ It is possible to get the partial derivatives in a very computationally efficien
     
     # See how much faster this is?
     In [4]: %timeit CoolProp.CoolProp.PropsSI('d(Hmass)/d(T)|P', 'P', 101325, 'T', 300, 'Water')
+    
+    In [4]: HEOS.first_partial_deriv(CoolProp.iSmass, CoolProp.iT, CoolProp.iDmass)
+
+    # In the same way you can do second partial derivatives
+    # This is the second mixed partial of entropy with respect to density and temperature
+    In [4]: HEOS.second_partial_deriv(CoolProp.iSmass, CoolProp.iT, CoolProp.iDmass, CoolProp.iT, CoolProp.iDmass)
     
 Two-Phase and Saturation Derivatives
 ------------------------------------
