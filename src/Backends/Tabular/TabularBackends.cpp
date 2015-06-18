@@ -27,12 +27,13 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
         if (get_debug_level() > 0){std::cout << "err:" << err << std::endl;}
         throw UnableToLoadError(err);
     }
-    std::vector<char> newBuffer(raw.size()*5);
+    std::vector<unsigned char> newBuffer(raw.size()*5);
     uLong newBufferSize = static_cast<uLong>(newBuffer.size());
+    mz_ulong rawBufferSize = static_cast<mz_ulong>(raw.size());
     int code;
     do{
         code = uncompress((unsigned char *)(&(newBuffer[0])), &newBufferSize, 
-                          (unsigned char *)(&(raw[0])), static_cast<mz_ulong>(raw.size()));
+                          (unsigned char *)(&(raw[0])), rawBufferSize);
         if (code == Z_BUF_ERROR){ 
             // Output buffer is too small, make it bigger and try again
             newBuffer.resize(newBuffer.size()*5);
@@ -44,10 +45,11 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
             throw UnableToLoadError(err);
         }
     }while(code != 0);
-
+    // Copy the buffer from unsigned char to char (yuck)
+    std::vector<char> charbuffer(newBuffer.begin(), newBuffer.begin() + newBufferSize);
     try{
         msgpack::unpacked msg;
-        msgpack::unpack(&msg, &(newBuffer[0]), newBufferSize);
+        msgpack::unpack(&msg, &(charbuffer[0]), charbuffer.size());
         msgpack::object deserialized = msg.get();
         
         // Call the class' deserialize function;  if it is an invalid table, it will cause an exception to be thrown
@@ -73,6 +75,7 @@ template <typename T> void write_table(const T &table, const std::string &path_t
              (unsigned char*)(sbuf.data()), static_cast<mz_ulong>(sbuf.size()));
     std::ofstream ofs2(zPath.c_str(), std::ofstream::binary);
     ofs2.write(&buffer[0], outSize);
+    ofs2.close();
     
     if (CoolProp::get_config_bool(SAVE_RAW_TABLES)){
         std::ofstream ofs(tabPath.c_str(), std::ofstream::binary);
