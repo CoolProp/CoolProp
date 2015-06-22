@@ -4,6 +4,8 @@
 MATLAB Wrapper
 **************
 
+.. contents:: :depth: 2
+
 Pre-compiled Binaries
 =====================
 Release versions of the MATLAB wrapper can be downloaded from :sfdownloads:`MATLAB` for your architecture, or from the development snapshots at :sfnightly:`MATLAB`.  Whichever one you pick, make sure all the files come from the same place.
@@ -56,7 +58,7 @@ The code below assumes that the swig-matlab-bin folder sits in the build directo
 
 Precompiled
 ^^^^^^^^^^^
-You can download the pre-compiled versions from `the buildbot slave <http://www.coolprop.dreamhosters.com:8010/nightly/>`_
+You can download the pre-compiled nightly versions from :sfnightly:`MATLAB`. 
 
 Do-it-yourself (masochistic)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -131,3 +133,14 @@ You need to just slightly modify the building procedure::
     # Make the MEX files (by default files will be generated in folder install_root/MATLAB relative to CMakeLists.txt file)
     # Setting the SWIG_LIB explictly is dangerous, but for now it doesn't seem there is a better solution
     set "SWIG_LIB=swig-matlab-bin\share\swig\3.0.3" && make install
+    
+Example Code
+============
+
+.. literalinclude:: Example.m
+   :language: matlab
+
+Example Code Output
+===================
+
+.. literalinclude:: Example.out

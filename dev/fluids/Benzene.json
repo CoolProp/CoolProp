@@ -282,8 +282,8 @@
       "T_max_units": "K", 
       "Ttriple": 278.674, 
       "Ttriple_units": "K", 
-      "accentric": 0.2108369732700151, 
-      "accentric_units": "-", 
+      "acentric": 0.2108369732700151, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -0.6740687105, 
@@ -440,16 +440,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{6}H_{6}", 
   "NAME": "Benzene", 
   "REFPROP_NAME": "BENZENE", 
   "STATES": {
     "critical": {
       "T": 562.02, 
       "T_units": "K", 
+      "hmolar": 43026.04238399574, 
+      "hmolar_units": "J/mol", 
       "p": 4894000.0, 
       "p_units": "Pa", 
       "rhomolar": 3902.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 91.10592163092089, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 278.674, 
@@ -478,7 +483,7 @@
   }, 
   "TRANSPORT": {
     "conductivity": {
-      "BibTeX": "Assael-JPCRD-2013-Hexane", 
+      "BibTeX": "Assael-JPCRD-2012-Benzene", 
       "critical": {
         "GAMMA": 0.0569, 
         "R0": 1.02, 

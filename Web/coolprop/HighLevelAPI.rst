@@ -106,7 +106,7 @@ For a given fluid, the phase can be plotted in T-p coordinates:
     # Saturation curve
     # ----------------
     Ts = np.linspace(273.16, Tc, 1000)
-    ps = CP.CoolProp.PropsSI('P','T',Ts,'Q',[0]*len(Ts),'Water',[1])
+    ps = CP.CoolProp.PropsSI('P','T',Ts,'Q',0,'Water')
 
     # ------
     # Labels
@@ -194,7 +194,56 @@ and then to calculate the density of air using the mixture model at 1 atmosphere
     
 Exactly the same methodology can be used from other wrappers.
 
+.. _high_level_set_reference_state:
 
+Reference States
+----------------
+
+Enthalpy and entropy are *relative* properties!  You should always be comparing *differences* in enthalpy rather than absolute values of the enthalpy or entropy.  That said, if can be useful to set the reference state values for enthalpy and entropy to one of a few standard values.  This is done by the use of the ``set_reference_state`` function in python, or the ``set_reference_stateS`` function most everywhere else.  For documentation of the underlying C++ function, see :cpapi:`CoolProp::set_reference_stateS`.
+
+.. warning:: 
+
+    The changing of the reference state should be part of the initialization of your program, and it is not recommended to change the reference state during the course of making calculations
+
+A number of reference states can be used: 
+
+* ``IIR``: h = 200 kJ/kg, s=1 kJ/kg/K at 0C saturated liquid
+* ``ASHRAE``: h = 0, s = 0 @ -40C saturated liquid
+* ``NBP``: h=0, s=0 for saturated liquid at 1 atmosphere
+* ``DEF``: Go back to the default reference state for the fluid
+
+which can be used like
+
+.. ipython::
+
+    In [1]: import CoolProp as CP
+    
+    In [1]: CoolProp.CoolProp.set_reference_state('n-Propane','ASHRAE')
+    
+    # Should be zero (or very close to it)
+    In [1]: CoolProp.CoolProp.PropsSI('H', 'T', 233.15, 'Q', 0, 'n-Propane')
+    
+    # Back to the original value
+    In [1]: CoolProp.CoolProp.set_reference_state('n-Propane','DEF')
+    
+    # Should not be zero
+    In [1]: CoolProp.CoolProp.PropsSI('H', 'T', 233.15, 'Q', 0, 'n-Propane')
+    
+Calling REFPROP
+---------------
+
+If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP::`` preceding the fluid name. For instance, as in python:
+
+.. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+    
+    # Using properties from CoolProp to get R410A density
+    In [2]: PropsSI('C','T',300,'P',101325,'HEOS::R32[0.697615]&R125[0.302385]')
+    
+    # Using properties from REFPROP to get R410A density
+    In [2]: PropsSI('C','T',300,'P',101325,'REFPROP::R32[0.697615]&R125[0.302385]')
+    
 
 C++ Sample Code
 ---------------
@@ -248,4 +297,8 @@ Sample Code
 Table of string inputs to PropsSI function
 ------------------------------------------
 
+.. note::
+   
+   Please note that any parameter that is indicated as a trivial parameter can be obtained from the ``Props1SI`` function
+   
 .. include:: parameter_table.rst.in

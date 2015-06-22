@@ -301,8 +301,8 @@
       "T_max_units": "K", 
       "Ttriple": 143.47, 
       "Ttriple_units": "K", 
-      "accentric": 0.251, 
-      "accentric_units": "-", 
+      "acentric": 0.251, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -1.548185641277708, 
@@ -433,16 +433,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{5}H_{12}", 
   "NAME": "n-Pentane", 
   "REFPROP_NAME": "PENTANE", 
   "STATES": {
     "critical": {
-      "T": 469.7, 
+      "T": 469.70000000000005, 
       "T_units": "K", 
+      "hmolar": 37552.05857176028, 
+      "hmolar_units": "J/mol", 
       "p": 3370000.0, 
       "p_units": "Pa", 
       "rhomolar": 3215.5775884221466, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 93.54796099697326, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 143.47, 
@@ -467,6 +472,73 @@
       "rhomolar_units": "mol/m^3", 
       "smolar": 126.48342412292618, 
       "smolar_units": "J/mol/K"
+    }
+  }, 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "QuinonesCisneros-JPCB-2006", 
+      "dilute": {
+        "T_reducing": 469.7, 
+        "a": [
+          1.76805e-05, 
+          -5.56942e-05, 
+          4.87177e-05, 
+          0.0
+        ], 
+        "t": [
+          0, 
+          0.25, 
+          0.5, 
+          0.75
+        ], 
+        "type": "powers_of_Tr"
+      }, 
+      "epsilon_over_k": 341.1, 
+      "epsilon_over_k_units": "K", 
+      "higher_order": {
+        "Aa": [
+          1.08193e-08, 
+          -4.71699e-08, 
+          0
+        ], 
+        "Aaa": [
+          -2.10025e-13, 
+          -1.56583e-12, 
+          0.0
+        ], 
+        "Adrdr": [
+          1.98521e-11, 
+          2.05972e-12, 
+          0.0
+        ], 
+        "Ai": [
+          -5.08307e-08, 
+          -1.07e-08, 
+          0.0
+        ], 
+        "Aii": [
+          -1.18487e-10, 
+          1.69571e-10, 
+          0.0
+        ], 
+        "Ar": [
+          1.21502e-07, 
+          -9.84766e-08, 
+          0.0
+        ], 
+        "Na": 1, 
+        "Naa": 3, 
+        "Nii": 3, 
+        "Nr": 1, 
+        "Nrr": 3, 
+        "T_reduce": 469.7, 
+        "_note": "Typo in paper for Aa[1], taking the value from REFPROP 9.1 fluid file.  Also, sign of Ai[0] seems backwards, using value from REFPROP 9.1", 
+        "c1": 1, 
+        "c2": 1, 
+        "type": "friction_theory"
+      }, 
+      "sigma_eta": 5.784e-10, 
+      "sigma_eta_units": "m"
     }
   }
 }

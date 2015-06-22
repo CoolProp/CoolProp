@@ -1,7 +1,7 @@
 {
   "ALIASES": [
     "air", 
-    "AIR",
+    "AIR", 
     "R729"
   ], 
   "ANCILLARIES": {
@@ -50,53 +50,50 @@
       "type": "rational_polynomial"
     }, 
     "pL": {
-      "T_r": 132.5306, 
-      "Tmax": 132.53059999999968, 
+      "T_r": 132.6312, 
+      "Tmax": 132.6312, 
       "Tmin": 59.75000000000001, 
       "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
-      "max_abserror_percentage": 0.06102501865761223, 
+      "max_abserror_percentage": 1, 
       "n": [
-        0.003531827919765819, 
-        -10.734886961617821, 
-        10.405219819890338, 
-        -4.835531578778206, 
-        -5.583509922169023, 
-        4.309143693912335
+        0.2260724, 
+        -7.080499, 
+        5.700283, 
+        -12.44017, 
+        17.81926, 
+        -10.81364
       ], 
-      "reducing_value": 3786000.0, 
+      "reducing_value": 3785020.0, 
       "t": [
-        0.106, 
-        1.124, 
-        1.466, 
-        1.724, 
-        5.497, 
-        6.121
+        0.5, 
+        1.0, 
+        1.5, 
+        2.0, 
+        2.5, 
+        3.0
       ], 
       "type": "pL", 
       "using_tau_r": true
     }, 
     "pV": {
-      "T_r": 132.5306, 
-      "Tmax": 132.53059999999968, 
-      "Tmin": 59.75000000000001, 
+      "T_r": 132.6312, 
+      "Tmax": 132.6312, 
+      "Tmin": 59.75, 
+      "_note": "Based on the paper of Lemmon, JPCRD, 2000", 
       "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
-      "max_abserror_percentage": 0.11512750952304973, 
+      "max_abserror_percentage": 1, 
       "n": [
-        -0.10395756133911474, 
-        0.09371835837432017, 
-        -5.4508814466401105, 
-        -7.290108160645587, 
-        45.79793382740606, 
-        -43.51381453529352
+        -0.1567266, 
+        -5.539635, 
+        0.7567212, 
+        -3.514322
       ], 
-      "reducing_value": 3786000.0, 
+      "reducing_value": 3785020.0, 
       "t": [
-        0.019, 
-        0.021, 
-        0.961, 
-        4.602, 
-        6.03, 
-        6.276
+        0.5, 
+        1.0, 
+        1.5, 
+        2.0
       ], 
       "type": "pV", 
       "using_tau_r": true
@@ -128,30 +125,26 @@
       "using_tau_r": false
     }, 
     "rhoV": {
-      "T_r": 132.5306, 
-      "Tmax": 132.5206, 
+      "T_r": 132.6312, 
+      "Tmax": 132.6312, 
       "Tmin": 59.75, 
-      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
-      "max_abserror_percentage": 0.019315852110590725, 
+      "description": "rho'' = rhoj*exp(sum(n_i*theta^t_i))", 
+      "max_abserror_percentage": 1, 
       "n": [
-        -22.489954107214984, 
-        24.17308634695757, 
-        -4.414066220496473, 
-        -1.6207220029962917, 
-        -1.3111383914604124, 
-        -3.8541939703932497
+        -2.0466, 
+        -4.752, 
+        -13.259, 
+        -47.652
       ], 
-      "reducing_value": 11830.800000000001, 
+      "reducing_value": 10447.7, 
       "t": [
-        0.111, 
-        0.12000000000000001, 
-        0.3525, 
-        0.8333333333333334, 
-        2.6666666666666665, 
-        5.5
+        0.41, 
+        1.0, 
+        2.8, 
+        6.5
       ], 
       "type": "rhoV", 
-      "using_tau_r": true
+      "using_tau_r": false
     }, 
     "sL": {
       "A": [
@@ -227,6 +220,18 @@
           "smolar": 46.07210504148642, 
           "smolar_units": "J/mol/K"
         }, 
+        "pressure_max_sat": {
+          "T": 132.6035, 
+          "T_units": "K", 
+          "hmolar": 4645.31, 
+          "hmolar_units": "J/mol", 
+          "p": 3789100.0, 
+          "p_units": "Pa", 
+          "rhomolar": 11094.8, 
+          "rhomolar_units": "mol/m^3", 
+          "smolar": 40.7157, 
+          "smolar_units": "J/mol/K"
+        }, 
         "reducing": {
           "T": 132.6312, 
           "T_units": "K", 
@@ -262,14 +267,26 @@
           "rhomolar_units": "mol/m^3", 
           "smolar": 99.08947144176817, 
           "smolar_units": "J/mol/K"
+        }, 
+        "temperature_max_sat": {
+          "T": 132.6312, 
+          "T_units": "K", 
+          "hmolar": 4762.73, 
+          "hmolar_units": "J/mol", 
+          "p": 3785020.0, 
+          "p_units": "Pa", 
+          "rhomolar": 10447.7, 
+          "rhomolar_units": "mol/m^3", 
+          "smolar": 41.6035, 
+          "smolar_units": "J/mol/K"
         }
       }, 
       "T_max": 2000, 
       "T_max_units": "K", 
       "Ttriple": 59.75, 
       "Ttriple_units": "K", 
-      "accentric": 0.0816749632704, 
-      "accentric_units": "-", 
+      "acentric": 0.0816749632704, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -436,10 +453,14 @@
     "critical": {
       "T": 132.5306, 
       "T_units": "K", 
+      "hmolar": 4517.075003210526, 
+      "hmolar_units": "J/mol", 
       "p": 3786000.0, 
       "p_units": "Pa", 
-      "rhomolar": 11830.8, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 11830.800000000001, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 39.75090162485092, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 59.75, 

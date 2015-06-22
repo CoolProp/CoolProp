@@ -275,8 +275,8 @@
       "T_max_units": "K", 
       "Ttriple": 162.68, 
       "Ttriple_units": "K", 
-      "accentric": 0.1887506482528083, 
-      "accentric_units": "-", 
+      "acentric": 0.1887506482528083, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -519,8 +519,8 @@
       "T_max_units": "K", 
       "Ttriple": 162.68, 
       "Ttriple_units": "K", 
-      "accentric": 0.1887506482528083, 
-      "accentric_units": "-", 
+      "acentric": 0.1887506482528083, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -644,16 +644,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}Cl_{3}F_{1}", 
   "NAME": "R11", 
   "REFPROP_NAME": "R11", 
   "STATES": {
     "critical": {
       "T": 471.06, 
       "T_units": "K", 
+      "hmolar": 58726.18234222236, 
+      "hmolar_units": "J/mol", 
       "p": 4394000.0, 
       "p_units": "Pa", 
       "rhomolar": 4113.0394269407725, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 218.53673209367506, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 162.68, 

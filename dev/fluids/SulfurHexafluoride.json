@@ -280,8 +280,8 @@
       "T_max_units": "K", 
       "Ttriple": 223.555, 
       "Ttriple_units": "K", 
-      "accentric": 0.21, 
-      "accentric_units": "-", 
+      "acentric": 0.21, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 11.638611086, 
@@ -537,16 +537,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "F_{6}S_{1}", 
   "NAME": "SulfurHexafluoride", 
   "REFPROP_NAME": "SF6", 
   "STATES": {
     "critical": {
       "T": 318.7232, 
       "T_units": "K", 
+      "hmolar": 39368.72694127884, 
+      "hmolar_units": "J/mol", 
       "p": 3754983.0, 
       "p_units": "Pa", 
       "rhomolar": 5082.317411198119, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 178.89902636233637, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 223.555, 

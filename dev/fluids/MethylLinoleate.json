@@ -278,8 +278,8 @@
       "T_max_units": "K", 
       "Ttriple": 238.1, 
       "Ttriple_units": "K", 
-      "accentric": 0.8054063870556485, 
-      "accentric_units": "-", 
+      "acentric": 0.8054063870556485, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -1, 
@@ -417,16 +417,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{19}H_{34}O_{2}", 
   "NAME": "MethylLinoleate", 
   "REFPROP_NAME": "MLINOLEA", 
   "STATES": {
     "critical": {
       "T": 799.0, 
       "T_units": "K", 
+      "hmolar": 171305.21368748957, 
+      "hmolar_units": "J/mol", 
       "p": 1341000.0, 
       "p_units": "Pa", 
-      "rhomolar": 808.4, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 808.4000000000001, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 237.55905077612306, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 260.0, 

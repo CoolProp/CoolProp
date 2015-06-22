@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.580300e+02, 
@@ -17,6 +18,7 @@
   "Tmin": 1.731500e+02, 
   "TminPsat": 3.131500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         5.461000e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         1.124000e+03, 
@@ -90,22 +93,26 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "(MgCl2)", 
+  "description": "MgCl2 - aq", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MMG", 
   "reference": "Melinder2010", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         3.365000e+03, 
@@ -143,43 +150,45 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": null, 
     "coeffs": [
       [
-        9.573000e-04, 
-        4.968000e-03, 
-        -2.722000e-02, 
-        9.351000e-02, 
-        7.364000e+00, 
-        3.717000e+01
+        -5.950455e+00, 
+        4.968000e+00, 
+        -2.722000e+01, 
+        9.351000e+01, 
+        7.364000e+03, 
+        3.717000e+04
       ], 
       [
-        -3.065000e-05, 
-        1.559000e-05, 
-        -1.753000e-04, 
-        -8.353000e-03, 
-        -4.014000e-02, 
+        -3.065000e-02, 
+        1.559000e-02, 
+        -1.753000e-01, 
+        -8.353000e+00, 
+        -4.014000e+01, 
         0.000000e+00
       ], 
       [
-        1.115000e-07, 
-        -1.796000e-06, 
-        2.021000e-05, 
-        1.901000e-04, 
+        1.115000e-04, 
+        -1.796000e-03, 
+        2.021000e-02, 
+        1.901000e-01, 
         0.000000e+00, 
         0.000000e+00
       ], 
       [
-        -2.923000e-09, 
-        3.051000e-08, 
-        2.614000e-07, 
+        -2.923000e-06, 
+        3.051000e-05, 
+        2.614000e-04, 
         0.000000e+00, 
         0.000000e+00, 
         0.000000e+00
       ]
     ], 
-    "type": "polynomial"
+    "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

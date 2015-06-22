@@ -268,8 +268,8 @@
       "T_max_units": "K", 
       "Ttriple": 286.4, 
       "Ttriple_units": "K", 
-      "accentric": 0.324, 
-      "accentric_units": "-", 
+      "acentric": 0.324, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 5.9815241, 
@@ -430,16 +430,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{8}H_{10}", 
   "NAME": "p-Xylene", 
   "REFPROP_NAME": "PXYLENE", 
   "STATES": {
     "critical": {
       "T": 616.168, 
       "T_units": "K", 
+      "hmolar": 60950.0992383199, 
+      "hmolar_units": "J/mol", 
       "p": 3531500.0, 
       "p_units": "Pa", 
       "rhomolar": 2693.92, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 115.93691839044982, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 286.40000000000003, 

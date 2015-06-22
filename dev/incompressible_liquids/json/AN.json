@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": 5.700698e-04, 
     "coeffs": [
       [
         5.531086e+00, 
@@ -17,6 +18,7 @@
   "Tmin": 2.331500e+02, 
   "TminPsat": 3.531500e+02, 
   "conductivity": {
+    "NRMS": 1.178725e-03, 
     "coeffs": [
       [
         4.577828e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 2.175709e-03, 
     "coeffs": [
       [
         1.057935e+03, 
@@ -92,6 +95,7 @@
   }, 
   "description": "Antifrogen N, Ethylene Glycol", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 
@@ -129,16 +133,19 @@
     "type": "polynomial"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "AN", 
   "reference": "Clariant2000,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 2.419356e-03, 
     "coeffs": [
       [
         3.629767e+03, 
@@ -176,6 +183,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 4.973080e-03, 
     "coeffs": [
       [
         -8.174832e+00, 
@@ -213,6 +221,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

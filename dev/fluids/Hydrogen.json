@@ -299,8 +299,8 @@
       "T_max_units": "K", 
       "Ttriple": 13.957, 
       "Ttriple_units": "K", 
-      "accentric": -0.219, 
-      "accentric_units": "-", 
+      "acentric": -0.219, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -1.4579856475, 
@@ -458,16 +458,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "H_{1}", 
   "NAME": "Hydrogen", 
   "REFPROP_NAME": "HYDROGEN", 
   "STATES": {
     "critical": {
       "T": 33.145, 
       "T_units": "K", 
+      "hmolar": 601.0565562608032, 
+      "hmolar_units": "J/mol", 
       "p": 1296400.0, 
       "p_units": "Pa", 
       "rhomolar": 15508.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 19.44159905328063, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 13.957, 

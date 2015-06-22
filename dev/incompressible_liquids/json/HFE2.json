@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 1.928200e+02, 
   "TminPsat": 3.374200e+02, 
   "conductivity": {
+    "NRMS": 1.045884e-08, 
     "coeffs": [
       [
         7.528370e-02
@@ -16,15 +18,16 @@
         -1.954800e-04
       ], 
       [
-        -2.465230e-14
+        -2.465229e-14
       ], 
       [
-        6.920682e-16
+        6.920572e-16
       ]
     ], 
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 4.824347e-14, 
     "coeffs": [
       [
         1.556520e+03
@@ -33,30 +36,34 @@
         -2.269000e+00
       ], 
       [
-        5.221518e-16
+        6.290541e-16
       ], 
       [
-        2.402592e-16
+        -1.691355e-16
       ]
     ], 
     "type": "polynomial"
   }, 
   "description": "HFE-7100, Hydrofluoroether", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "HFE2", 
   "reference": "3M2007,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 5.186502e-14, 
     "coeffs": [
       [
         1.116940e+03
@@ -65,15 +72,16 @@
         2.000000e+00
       ], 
       [
-        -6.642229e-16
+        -6.045240e-16
       ], 
       [
-        -3.339343e-16
+        6.722053e-18
       ]
     ], 
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 7.870470e-03, 
     "coeffs": [
       4.475374e+02, 
       -9.321610e+01, 
@@ -82,11 +90,12 @@
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "xbase": 0.000000e+00, 
   "xid": "pure", 
-  "xmax": 0.000000e+00, 
+  "xmax": 1.000000e+00, 
   "xmin": 0.000000e+00
 }

@@ -305,8 +305,8 @@
       "T_max_units": "K", 
       "Ttriple": 175.61, 
       "Ttriple_units": "K", 
-      "accentric": 0.5720322, 
-      "accentric_units": "-", 
+      "acentric": 0.5720322, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 13.9864114647, 
@@ -448,16 +448,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}H_{4}O_{1}", 
   "NAME": "Methanol", 
   "REFPROP_NAME": "METHANOL", 
   "STATES": {
     "critical": {
       "T": 512.5, 
       "T_units": "K", 
+      "hmolar": 26867.755751397774, 
+      "hmolar_units": "J/mol", 
       "p": 8215850.0, 
       "p_units": "Pa", 
       "rhomolar": 8520.024867237415, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 59.9002104719036, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 175.61, 

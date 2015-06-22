@@ -277,8 +277,8 @@
       "T_max_units": "K", 
       "Ttriple": 169.85, 
       "Ttriple_units": "K", 
-      "accentric": 0.32684, 
-      "accentric_units": "-", 
+      "acentric": 0.32684, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -1.019535, 
@@ -426,16 +426,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}F_{4}H_{2}", 
   "NAME": "R134a", 
   "REFPROP_NAME": "R134A", 
   "STATES": {
     "critical": {
       "T": 374.21, 
       "T_units": "K", 
+      "hmolar": 39755.632820665705, 
+      "hmolar_units": "J/mol", 
       "p": 4059280.0, 
       "p_units": "Pa", 
       "rhomolar": 5017.053, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 159.38409617782034, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 169.85, 

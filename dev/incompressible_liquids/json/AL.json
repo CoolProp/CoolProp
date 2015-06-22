@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": 5.592130e-04, 
     "coeffs": [
       [
         5.543667e+00, 
@@ -17,6 +18,7 @@
   "Tmin": 2.331500e+02, 
   "TminPsat": 3.531500e+02, 
   "conductivity": {
+    "NRMS": 9.879270e-04, 
     "coeffs": [
       [
         4.393085e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 2.701146e-03, 
     "coeffs": [
       [
         1.034271e+03, 
@@ -92,6 +95,7 @@
   }, 
   "description": "Antifrogen L, Propylene Glycol", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 
@@ -129,16 +133,19 @@
     "type": "polynomial"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "AL", 
   "reference": "Clariant2000,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 2.609976e-03, 
     "coeffs": [
       [
         3.807565e+03, 
@@ -165,7 +172,7 @@
         0.000000e+00
       ], 
       [
-        1.986851e-07, 
+        1.986852e-07, 
         1.828594e-04, 
         3.746526e-05, 
         0.000000e+00, 
@@ -176,6 +183,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 3.416274e-03, 
     "coeffs": [
       [
         -7.795892e+00, 
@@ -213,6 +221,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

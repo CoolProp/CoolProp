@@ -282,8 +282,8 @@
       "T_max_units": "K", 
       "Ttriple": 195.495, 
       "Ttriple_units": "K", 
-      "accentric": 0.25601, 
-      "accentric_units": "-", 
+      "acentric": 0.25601, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -15.81502, 
@@ -420,16 +420,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "H_{3}N_{1}", 
   "NAME": "Ammonia", 
   "REFPROP_NAME": "AMMONIA", 
   "STATES": {
     "critical": {
-      "T": 405.4, 
+      "T": 405.40000000000003, 
       "T_units": "K", 
+      "hmolar": 21498.578924065936, 
+      "hmolar_units": "J/mol", 
       "p": 11333000.0, 
       "p_units": "Pa", 
-      "rhomolar": 13211.777154312385, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 13211.777154312384, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 68.5595020166536, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 195.495, 

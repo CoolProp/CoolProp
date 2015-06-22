@@ -66,17 +66,17 @@ if __name__=='__main__':
         if cmake_compiler == 'vc9':
             cmake_build_args = ['--config','"Release"']
             if cmake_bitness == '32':
-                cmake_config_args = ['-G','"Visual Studio 9 2008"']
+                cmake_config_args += ['-G','"Visual Studio 9 2008"']
             elif cmake_bitness == '64':
-                cmake_config_args = ['-G','"Visual Studio 9 2008 Win64"']
+                cmake_config_args += ['-G','"Visual Studio 9 2008 Win64"']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'vc10':
             cmake_build_args = ['--config','"Release"']
             if cmake_bitness == '32':
-                cmake_config_args = ['-G','"Visual Studio 10 2010"']
+                cmake_config_args += ['-G','"Visual Studio 10 2010"']
             elif cmake_bitness == '64':
-                cmake_config_args = ['-G','"Visual Studio 10 2010 Win64"']
+                cmake_config_args += ['-G','"Visual Studio 10 2010 Win64"']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'mingw':
@@ -215,7 +215,12 @@ if __name__=='__main__':
 
     # Set variables for C++ sources and include directories
     sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp')
-    include_dirs  = [os.path.join(CProot, 'include'), os.path.join(CProot, 'src'), os.path.join(CProot, 'externals', 'Eigen'), os.path.join(CProot, 'externals', 'REFPROP-headers')]
+    include_dirs  = [
+        os.path.join(CProot, 'include'), os.path.join(CProot, 'src'), 
+        os.path.join(CProot, 'externals', 'Eigen'), 
+        os.path.join(CProot, 'externals', 'REFPROP-headers'), 
+        os.path.join(CProot, 'externals', 'msgpack-c', 'include'), 
+        os.path.join(CProot, 'externals', 'IF97')]
 
     ## If the file is run directly without any parameters, clean, build and install
     if len(sys.argv)==1:
@@ -277,7 +282,8 @@ if __name__=='__main__':
                                            'include/*.h',
                                            'include/rapidjson/*.h',
                                            'include/rapidjson/rapidjson/*.h',
-                                           'include/rapidjson/rapidjson/internal/*.h']},
+                                           'include/rapidjson/rapidjson/internal/*.h',
+                                           'Plots/psyrc']},
                classifiers = [
                 "Programming Language :: Python",
                 "Development Status :: 4 - Beta",

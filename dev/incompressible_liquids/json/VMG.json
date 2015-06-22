@@ -1,10 +1,13 @@
 {
   "T_freeze": {
+    "NRMS": 1.575003e-14, 
     "coeffs": [
       [
-        5.554113e+00, 
-        -8.457171e-01, 
-        -4.242772e+00
+        5.554616e+00, 
+        -8.650964e-01, 
+        -5.563367e+00, 
+        5.217653e+00, 
+        2.735347e+02
       ]
     ], 
     "type": "exppolynomial"
@@ -14,6 +17,7 @@
   "Tmin": 2.401500e+02, 
   "TminPsat": 2.931500e+02, 
   "conductivity": {
+    "NRMS": 8.853162e-03, 
     "coeffs": [
       [
         5.184263e-01, 
@@ -47,6 +51,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 1.680074e-03, 
     "coeffs": [
       [
         1.125980e+03, 
@@ -70,7 +75,7 @@
         0.000000e+00
       ], 
       [
-        3.286584e-06, 
+        3.286583e-06, 
         -1.183299e-04, 
         0.000000e+00, 
         0.000000e+00, 
@@ -81,20 +86,24 @@
   }, 
   "description": "VDI, Magnesium Chloride", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "VMG", 
   "reference": "Preisegger2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 3.231422e-03, 
     "coeffs": [
       [
         3.339304e+03, 
@@ -105,7 +114,7 @@
       ], 
       [
         2.324181e+00, 
-        -8.337670e-02, 
+        -8.337671e-02, 
         1.315832e+02, 
         -1.194607e+03, 
         0.000000e+00
@@ -128,6 +137,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 3.385866e-03, 
     "coeffs": [
       [
         -5.404395e+00, 
@@ -161,6 +171,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 

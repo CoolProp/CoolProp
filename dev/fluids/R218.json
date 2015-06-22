@@ -275,8 +275,8 @@
       "T_max_units": "K", 
       "Ttriple": 125.45, 
       "Ttriple_units": "K", 
-      "accentric": 0.3172, 
-      "accentric_units": "-", 
+      "acentric": 0.3172, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -15.6587335175, 
@@ -390,16 +390,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{3}F_{8}", 
   "NAME": "R218", 
   "REFPROP_NAME": "R218", 
   "STATES": {
     "critical": {
       "T": 345.02, 
       "T_units": "K", 
+      "hmolar": 57042.182437460724, 
+      "hmolar_units": "J/mol", 
       "p": 2640000.0, 
       "p_units": "Pa", 
       "rhomolar": 3340.0000000000005, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 248.82637544333176, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 125.45, 

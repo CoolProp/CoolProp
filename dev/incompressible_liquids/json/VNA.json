@@ -1,17 +1,24 @@
 {
   "T_freeze": {
+    "NRMS": 2.559597e-03, 
     "coeffs": [
-      9.337468e+05, 
-      6.000000e+04, 
-      1.000000e+01
+      [
+        5.568461e+00, 
+        -3.724970e-01, 
+        -9.363738e-01, 
+        -1.841316e+00, 
+        -2.069820e+01, 
+        -3.894018e+02
+      ]
     ], 
-    "type": "exponential"
+    "type": "exppolynomial"
   }, 
   "Tbase": 2.726500e+02, 
   "Tmax": 2.931500e+02, 
   "Tmin": 2.521500e+02, 
   "TminPsat": 2.931500e+02, 
   "conductivity": {
+    "NRMS": 2.427143e-02, 
     "coeffs": [
       [
         5.517501e-01, 
@@ -49,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 2.779920e-03, 
     "coeffs": [
       [
         1.117354e+03, 
@@ -67,7 +75,7 @@
         0.000000e+00
       ], 
       [
-        6.408214e-04, 
+        6.408213e-04, 
         -7.775845e-02, 
         1.362490e+00, 
         -9.252224e+00, 
@@ -87,20 +95,24 @@
   }, 
   "description": "VDI, Sodium Chloride", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "VNA", 
   "reference": "Preisegger2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 1.973151e-03, 
     "coeffs": [
       [
         3.544903e+03, 
@@ -138,6 +150,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 6.924953e-03, 
     "coeffs": [
       [
         -3.767817e+00, 
@@ -158,7 +171,7 @@
       [
         6.833710e-04, 
         -6.979369e-03, 
-        -4.306083e-04, 
+        -4.306084e-04, 
         3.948697e-01, 
         0.000000e+00, 
         0.000000e+00
@@ -175,6 +188,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 

@@ -3,7 +3,7 @@
     "water", 
     "WATER", 
     "H2O", 
-    "h2o",
+    "h2o", 
     "R718"
   ], 
   "ANCILLARIES": {
@@ -342,8 +342,8 @@
       "T_max_units": "K", 
       "Ttriple": 273.16, 
       "Ttriple_units": "K", 
-      "accentric": 0.3442920843, 
-      "accentric_units": "-", 
+      "acentric": 0.3442920843, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -8.3204464837497, 
@@ -690,16 +690,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "H_{2}O_{1}", 
   "NAME": "Water", 
   "REFPROP_NAME": "WATER", 
   "STATES": {
     "critical": {
       "T": 647.096, 
       "T_units": "K", 
+      "hmolar": 37549.461223920865, 
+      "hmolar_units": "J/mol", 
       "p": 22064000.0, 
       "p_units": "Pa", 
       "rhomolar": 17873.72799560906, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 79.3940358438747, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 273.16, 

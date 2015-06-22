@@ -295,8 +295,8 @@
       "T_max_units": "K", 
       "Ttriple": 279.47, 
       "Ttriple_units": "K", 
-      "accentric": 0.20926, 
-      "accentric_units": "-", 
+      "acentric": 0.20926, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0.9891140602, 
@@ -491,16 +491,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{6}H_{12}", 
   "NAME": "CycloHexane", 
   "REFPROP_NAME": "CYCLOHEX", 
   "STATES": {
     "critical": {
       "T": 553.6, 
       "T_units": "K", 
+      "hmolar": 50654.05770528335, 
+      "hmolar_units": "J/mol", 
       "p": 4082400.0, 
       "p_units": "Pa", 
       "rhomolar": 3224.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 108.4413105254045, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 279.47, 

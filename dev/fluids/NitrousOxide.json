@@ -278,8 +278,8 @@
       "T_max_units": "K", 
       "Ttriple": 182.33, 
       "Ttriple_units": "K", 
-      "accentric": 0.1613, 
-      "accentric_units": "-", 
+      "acentric": 0.1613, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -4.4262736272, 
@@ -374,16 +374,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "N_{2}O_{1}", 
   "NAME": "NitrousOxide", 
   "REFPROP_NAME": "N2O", 
   "STATES": {
     "critical": {
       "T": 309.52, 
       "T_units": "K", 
+      "hmolar": 13450.295678496232, 
+      "hmolar_units": "J/mol", 
       "p": 7245000.0, 
       "p_units": "Pa", 
       "rhomolar": 10270.000000000002, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 51.41402424712958, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 182.33, 

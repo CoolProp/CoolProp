@@ -278,8 +278,8 @@
       "T_max_units": "K", 
       "Ttriple": 270.2, 
       "Ttriple_units": "K", 
-      "accentric": 0.736, 
-      "accentric_units": "-", 
+      "acentric": 0.736, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -7.938561730464921, 
@@ -398,16 +398,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{12}H_{36}O_{6}Si_{6}", 
   "NAME": "D6", 
   "REFPROP_NAME": "D6", 
   "STATES": {
     "critical": {
       "T": 645.78, 
       "T_units": "K", 
+      "hmolar": 132314.90333618096, 
+      "hmolar_units": "J/mol", 
       "p": 961000.0, 
       "p_units": "Pa", 
       "rhomolar": 627.2885477999996, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 225.21470572882234, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 270.2, 

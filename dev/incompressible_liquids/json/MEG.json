@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.579000e+02, 
@@ -17,6 +18,7 @@
   "Tmin": 1.731500e+02, 
   "TminPsat": 3.731500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         4.720000e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         1.034000e+03, 
@@ -90,22 +93,26 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Ethylene Glycol", 
+  "description": "Ethylene Glycol - aq", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MEG", 
   "reference": "Melinder2010", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         3.737000e+03, 
@@ -143,43 +150,45 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": null, 
     "coeffs": [
       [
-        4.705000e-04, 
-        2.471000e-03, 
-        3.328000e-05, 
-        1.659000e-03, 
-        3.089000e-03, 
-        -1.865000e-02
+        -6.437255e+00, 
+        2.471000e+00, 
+        3.328000e-02, 
+        1.659000e+00, 
+        3.089000e+00, 
+        -1.865000e+01
       ], 
       [
-        -2.550000e-05, 
-        -1.171000e-05, 
-        1.086000e-05, 
-        3.157000e-06, 
-        1.831000e-05, 
+        -2.550000e-02, 
+        -1.171000e-02, 
+        1.086000e-02, 
+        3.157000e-03, 
+        1.831000e-02, 
         0.000000e+00
       ], 
       [
-        1.782000e-07, 
-        1.052000e-07, 
-        1.051000e-07, 
-        4.063000e-07, 
+        1.782000e-04, 
+        1.052000e-04, 
+        1.051000e-04, 
+        4.063000e-04, 
         0.000000e+00, 
         0.000000e+00
       ], 
       [
-        -7.669000e-10, 
-        -1.634000e-09, 
-        -6.475000e-09, 
+        -7.669000e-07, 
+        -1.634000e-06, 
+        -6.475000e-06, 
         0.000000e+00, 
         0.000000e+00, 
         0.000000e+00
       ]
     ], 
-    "type": "polynomial"
+    "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

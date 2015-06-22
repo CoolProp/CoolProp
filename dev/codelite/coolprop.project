@@ -27,6 +27,11 @@
  }]]]>
     </Plugin>
   </Plugins>
+  <VirtualDirectory Name="externals">
+    <VirtualDirectory Name="REFPROP-headers">
+      <File Name="../../externals/REFPROP-headers/REFPROP_lib.h"/>
+    </VirtualDirectory>
+  </VirtualDirectory>
   <VirtualDirectory Name="src">
     <VirtualDirectory Name="Backends">
       <VirtualDirectory Name="Helmholtz">
@@ -67,11 +72,14 @@
         <File Name="../../src/Backends/REFPROP/REFPROPBackend.h"/>
         <File Name="../../src/Backends/REFPROP/REFPROPMixtureBackend.cpp"/>
         <File Name="../../src/Backends/REFPROP/REFPROPMixtureBackend.h"/>
-        <File Name="../../src/Backends/REFPROP/REFPROP_lib.h"/>
       </VirtualDirectory>
       <VirtualDirectory Name="Tabular">
         <File Name="../../src/Backends/Tabular/TabularBackends.cpp"/>
         <File Name="../../src/Backends/Tabular/TabularBackends.h"/>
+        <File Name="../../src/Backends/Tabular/TTSEBackend.cpp"/>
+        <File Name="../../src/Backends/Tabular/TTSEBackend.h"/>
+        <File Name="../../src/Backends/Tabular/BicubicBackend.h"/>
+        <File Name="../../src/Backends/Tabular/BicubicBackend.cpp"/>
       </VirtualDirectory>
     </VirtualDirectory>
     <VirtualDirectory Name="l10n">
@@ -160,6 +168,9 @@
         <IncludePath Value="."/>
         <IncludePath Value="../../include"/>
         <IncludePath Value="../../externals/Eigen"/>
+        <IncludePath Value="../../externals/REFPROP-headers"/>
+        <IncludePath Value="../../externals/msgpack-c/include"/>
+        <IncludePath Value="../../externals/IF97"/>
         <Preprocessor Value="ENABLE_CATCH"/>
       </Compiler>
       <Linker Options="" Required="yes"/>
@@ -201,8 +212,9 @@
         <IncludePath Value="."/>
         <IncludePath Value="../../include"/>
         <IncludePath Value="../../externals/Eigen"/>
+        <IncludePath Value="../../externals/REFPROP-headers"/>
+        <IncludePath Value="../../externals/msgpack-c/include"/>
         <Preprocessor Value="NDEBUG"/>
-        <Preprocessor Value="ENABLE_CATCH"/>
       </Compiler>
       <Linker Options="" Required="yes"/>
       <ResourceCompiler Options="" Required="no"/>

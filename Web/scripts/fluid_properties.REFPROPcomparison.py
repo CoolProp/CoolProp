@@ -45,17 +45,15 @@ else:
     # Normal properties
     rho = np.linspace(1e-10, 2*rhoc)
     normalkeys = ['P','V','L','Cpmolar','Cvmolar']
-    data = dict()
+    RPdata = CP.PropsSI(normalkeys, 'T', T, 'Dmolar', rho, RPfluid)
+    CPdata = CP.PropsSI(normalkeys, 'T', T, 'Dmolar', rho, fluid)
     for i, key in enumerate(normalkeys):
-        RPdata = CP.PropsSI(key, 'T', T, 'Dmolar', rho, RPfluid)
-        CPdata = CP.PropsSI(key, 'T', T, 'Dmolar', rho, fluid)
-        plt.plot(rho/rhoc, np.abs(RPdata/CPdata-1)*100, lw = 0, label = key, marker = symbols[i%len(symbols)])
+        plt.plot(rho/rhoc, np.abs(RPdata[:,i]/CPdata[:,i]-1)*100, lw = 0, label = key, marker = symbols[i%len(symbols)])
 
     # Special properties
     rho = np.linspace(1e-10, 2*rhoc)
     keys = ['Hmolar','Smolar']
-    data = dict()
-    for i,key in enumerate(keys):
+    for i, key in enumerate(keys):
         RPdata = CP.PropsSI(key, 'T', T, 'Dmolar', rho, RPfluid) - CP.PropsSI(key, 'T', T, 'Dmolar', 1, RPfluid)
         CPdata = CP.PropsSI(key, 'T', T, 'Dmolar', rho, fluid) - CP.PropsSI(key, 'T', T, 'Dmolar', 1, fluid)
         plt.plot(rho/rhoc, np.abs(RPdata/CPdata-1)*100, lw = 0, label = key, marker = symbols[(i+len(normalkeys))%len(symbols)])

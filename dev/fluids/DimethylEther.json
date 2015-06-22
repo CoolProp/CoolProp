@@ -278,8 +278,8 @@
       "T_max_units": "K", 
       "Ttriple": 131.66, 
       "Ttriple_units": "K", 
-      "accentric": 0.196, 
-      "accentric_units": "-", 
+      "acentric": 0.196, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -1.980976, 
@@ -436,16 +436,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}H_{6}O_{1}", 
   "NAME": "DimethylEther", 
   "REFPROP_NAME": "DME", 
   "STATES": {
     "critical": {
       "T": 400.378, 
       "T_units": "K", 
+      "hmolar": 21938.457119599614, 
+      "hmolar_units": "J/mol", 
       "p": 5336800.0, 
       "p_units": "Pa", 
       "rhomolar": 5940.000000000001, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 64.72723461112628, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 131.66, 

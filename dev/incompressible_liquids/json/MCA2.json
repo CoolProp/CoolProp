@@ -1,11 +1,14 @@
 {
   "T_freeze": {
+    "NRMS": 2.019931e-14, 
     "coeffs": [
       [
-        5.547347e+00, 
-        -6.216891e-01, 
-        -3.469707e+00, 
-        -1.617841e+01
+        5.545838e+00, 
+        -6.342563e-01, 
+        -2.183514e+00, 
+        -9.175102e+00, 
+        -1.139350e+02, 
+        -5.750079e+02
       ]
     ], 
     "type": "exppolynomial"
@@ -15,6 +18,7 @@
   "Tmin": 2.291500e+02, 
   "TminPsat": 3.031500e+02, 
   "conductivity": {
+    "NRMS": 2.071081e-09, 
     "coeffs": [
       [
         5.353256e-01, 
@@ -52,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 1.242898e-09, 
     "coeffs": [
       [
         1.179788e+03, 
@@ -90,20 +95,24 @@
   }, 
   "description": "Melinder, Calcium Chloride", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MCA2", 
   "reference": "Melinder2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 2.653894e-10, 
     "coeffs": [
       [
         3.070664e+03, 
@@ -141,6 +150,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 4.042085e-11, 
     "coeffs": [
       [
         -5.575889e+00, 
@@ -178,6 +188,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 

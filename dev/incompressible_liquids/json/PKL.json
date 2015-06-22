@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": 6.253059e-03, 
     "coeffs": [
       [
         5.547064e+00, 
@@ -17,6 +18,7 @@
   "Tmin": 2.241500e+02, 
   "TminPsat": 3.731500e+02, 
   "conductivity": {
+    "NRMS": 8.392119e-04, 
     "coeffs": [
       [
         4.448091e-01, 
@@ -37,7 +39,7 @@
       [
         -1.334371e-07, 
         1.111111e-07, 
-        7.853573e-08, 
+        7.853570e-08, 
         -2.395854e-06, 
         0.000000e+00, 
         0.000000e+00
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 2.278155e-03, 
     "coeffs": [
       [
         1.029935e+03, 
@@ -80,7 +83,7 @@
         0.000000e+00
       ], 
       [
-        -1.966394e-08, 
+        -1.966392e-08, 
         -4.501106e-07, 
         -1.848113e-06, 
         0.000000e+00, 
@@ -92,6 +95,7 @@
   }, 
   "description": "Pekasol L, Propylene Glycol", 
   "mass2input": {
+    "NRMS": 3.091476e-04, 
     "coeffs": [
       [
         3.296366e-01, 
@@ -105,16 +109,19 @@
     "type": "polynomial"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "PKL", 
   "reference": "PKS2005,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 2.148857e-03, 
     "coeffs": [
       [
         3.881161e+03, 
@@ -152,6 +159,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 3.114171e-04, 
     "coeffs": [
       [
         -1.035298e+01, 
@@ -189,6 +197,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

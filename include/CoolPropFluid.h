@@ -45,7 +45,8 @@ struct CriticalRegionSplines{
     std::vector<double> cL, cV;
     bool enabled;
     CriticalRegionSplines(){enabled = false;};
-    void get_densities(double T, double rho_min, double rho_crit, double rho_max, double &rhoL, double &rhoV){
+    const void get_densities(double T, double rho_min, double rho_crit, double rho_max, double &rhoL, double &rhoV)  const
+	{
         int Nsoln = -1, Ngood = 0;
         double rho1 =0, rho2 = 0, rho3 = 0;
         
@@ -91,17 +92,17 @@ struct EOSLimits
 
 struct ConductivityECSVariables{
     std::string reference_fluid;
-    long double psi_rhomolar_reducing, f_int_T_reducing;
-    std::vector<long double> psi_a, psi_t, f_int_a, f_int_t;
+    CoolPropDbl psi_rhomolar_reducing, f_int_T_reducing;
+    std::vector<CoolPropDbl> psi_a, psi_t, f_int_a, f_int_t;
 };
 
 struct ConductivityDiluteEta0AndPolyData{
-    std::vector<long double> A, t;
+    std::vector<CoolPropDbl> A, t;
 };
 
 struct ConductivityDiluteRatioPolynomialsData{
-    long double T_reducing, p_reducing;
-    std::vector<long double> A, B, n, m;
+    CoolPropDbl T_reducing, p_reducing;
+    std::vector<CoolPropDbl> A, B, n, m;
 };
 struct ConductivityDiluteVariables
 {
@@ -120,13 +121,13 @@ struct ConductivityDiluteVariables
 };
 
 struct ConductivityResidualPolynomialAndExponentialData{
-    long double T_reducing, rhomass_reducing;
-    std::vector<long double> A, t, d, gamma, l;
+    CoolPropDbl T_reducing, rhomass_reducing;
+    std::vector<CoolPropDbl> A, t, d, gamma, l;
 };
 
 struct ConductivityResidualPolynomialData{
-    long double T_reducing, rhomass_reducing;
-    std::vector<long double> B, t, d;
+    CoolPropDbl T_reducing, rhomass_reducing;
+    std::vector<CoolPropDbl> B, t, d;
 };
 struct ConductivityResidualVariables
 {
@@ -144,22 +145,20 @@ struct ConductivityResidualVariables
 };
 
 struct ConductivityCriticalSimplifiedOlchowySengersData{
-    long double T_reducing, p_reducing, k, R0, gamma, nu, qD, zeta0, GAMMA, T_ref;
-    ConductivityCriticalSimplifiedOlchowySengersData(){
-        // Universal constants - can still be adjusted if need be
-        k = 1.3806488e-23; //[J/K]
-        R0 = 1.03; //[-]
-        gamma = 1.239; //[-]
-        nu = 0.63; //[-]
-        // Suggested default values - can be over-written
-        GAMMA = 0.0496; //[-]
-        zeta0 = 1.94e-10; //[m]
-        qD = 2e9; //[m]
-
-        // Set to invalid number, can be provided in the JSON file
-        // Default is 1.5*Tc
-        T_ref = _HUGE;
-    }
+    CoolPropDbl k, R0, gamma, nu, GAMMA, zeta0, qD, T_reducing, p_reducing, T_ref;
+    ConductivityCriticalSimplifiedOlchowySengersData():
+      // Universal constants - can still be adjusted if need be
+      k(1.3806488e-23), //[J/K]
+      R0(1.03), //[-]
+      gamma(1.239), //[-]
+      nu(0.63), //[-]
+      // Suggested default values - can be over-written
+      GAMMA(0.0496), //[-]
+      zeta0(1.94e-10), //[m]
+      qD(2e9), //[m]
+      // Set to invalid number, can be provided in the JSON file
+      // T_ref default is 1.5*Tc
+      T_reducing(_HUGE),p_reducing(_HUGE),T_ref(_HUGE){}
 };
 struct ConductivityCriticalVariables
 {
@@ -179,18 +178,23 @@ struct ConductivityCriticalVariables
 /// Variables for the dilute gas part
 struct ViscosityDiluteGasCollisionIntegralData
 {
-    long double molar_mass, C;
-    std::vector<long double> a, t;
+    CoolPropDbl molar_mass, C;
+    std::vector<CoolPropDbl> a, t;
 };
 struct ViscosityDiluteCollisionIntegralPowersOfTstarData
 {
-    long double T_reducing, ///< Reducing temperature [K[
+    CoolPropDbl T_reducing, ///< Reducing temperature [K[
                 C;          ///< Leading constant
-    std::vector<long double> a, t;
+    std::vector<CoolPropDbl> a, t;
 };
 struct ViscosityDiluteGasPowersOfT
 {
-    std::vector<long double> a, t;
+    std::vector<CoolPropDbl> a, t;
+};
+struct ViscosityDiluteGasPowersOfTr
+{
+    std::vector<CoolPropDbl> a, t;
+    CoolPropDbl T_reducing;
 };
 struct ViscosityDiluteVariables
 {
@@ -200,23 +204,25 @@ struct ViscosityDiluteVariables
                               VISCOSITY_DILUTE_ETHANE,  ///< Use \ref TransportRoutines::viscosity_dilute_ethane
                               VISCOSITY_DILUTE_CYCLOHEXANE,  ///< Use \ref TransportRoutines::viscosity_dilute_cyclohexane
                               VISCOSITY_DILUTE_POWERS_OF_T, ///< Use \ref TransportRoutines::viscosity_dilute_powers_of_T
+                              VISCOSITY_DILUTE_POWERS_OF_TR, ///< Use \ref TransportRoutines::viscosity_dilute_powers_of_Tr
                               VISCOSITY_DILUTE_NOT_SET
                               };
     ViscosityDiluteType type;
     ViscosityDiluteGasCollisionIntegralData collision_integral; ///< Data for \ref TransportRoutines::viscosity_dilute_collision_integral
     ViscosityDiluteCollisionIntegralPowersOfTstarData collision_integral_powers_of_Tstar; ///< Data for \ref TransportRoutines::viscosity_dilute_collision_integral_powers_of_T
     ViscosityDiluteGasPowersOfT powers_of_T; ///< Data for \ref TransportRoutines::viscosity_dilute_powers_of_T
+    ViscosityDiluteGasPowersOfTr powers_of_Tr; ///< Data for \ref TransportRoutines::viscosity_dilute_powers_of_Tr
     ViscosityDiluteVariables(){type = VISCOSITY_DILUTE_NOT_SET;}
 };
 
 struct ViscosityRainWaterFriendData
 {
-    std::vector<long double> b, t;
+    std::vector<CoolPropDbl> b, t;
 };
 struct ViscosityInitialDensityEmpiricalData
 {
-    std::vector<long double> n, d, t;
-    long double T_reducing, rhomolar_reducing;
+    std::vector<CoolPropDbl> n, d, t;
+    CoolPropDbl T_reducing, rhomolar_reducing;
 };
 
 struct ViscosityInitialDensityVariables
@@ -233,14 +239,14 @@ struct ViscosityInitialDensityVariables
 
 struct ViscosityModifiedBatschinskiHildebrandData
 {
-    std::vector<long double> a,d1,d2,t1,t2,f,g,h,p,q,gamma, l;
-    long double T_reduce, rhomolar_reduce;
+    std::vector<CoolPropDbl> a,d1,d2,t1,t2,f,g,h,p,q,gamma, l;
+    CoolPropDbl T_reduce, rhomolar_reduce;
 };
 struct ViscosityFrictionTheoryData
 {
-    std::vector<long double> Aa, Aaa, Aaaa, Ar, Arr, Adrdr, Arrr, Ai, Aii, AdrAdr;
+    std::vector<CoolPropDbl> Aa, Aaa, Aaaa, Ar, Arr, Adrdr, Arrr, Ai, Aii, AdrAdr;
     int Na, Naa, Naaa, Nr, Nrr, Nrrr, Nii;
-    long double c1, c2, T_reduce, rhomolar_reduce;
+    CoolPropDbl c1, c2, T_reduce, rhomolar_reduce;
 };
 struct ViscosityHigherOrderVariables
 {
@@ -261,14 +267,15 @@ struct ViscosityHigherOrderVariables
 
 struct ViscosityECSVariables{
     std::string reference_fluid;
-    long double psi_rhomolar_reducing;
-    std::vector<long double> psi_a, psi_t;
+    CoolPropDbl psi_rhomolar_reducing;
+    std::vector<CoolPropDbl> psi_a, psi_t;
 };
 
 class TransportPropertyData
 {
 public:
     enum ViscosityHardcodedEnum {VISCOSITY_HARDCODED_WATER, ///< Use \ref TransportRoutines::viscosity_water_hardcoded
+                                 VISCOSITY_HARDCODED_HEAVYWATER, ///< Use \ref TransportRoutines::viscosity_heavywater_hardcoded
                               VISCOSITY_HARDCODED_HELIUM, ///< Use \ref TransportRoutines::viscosity_helium_hardcoded
                               VISCOSITY_HARDCODED_R23, ///< Use \ref TransportRoutines::viscosity_R23_hardcoded
                               VISCOSITY_HARDCODED_METHANOL, ///< Use \ref TransportRoutines::viscosity_methanol_hardcoded
@@ -276,8 +283,10 @@ public:
                               };
     enum ConductivityHardcodedEnum {
                                  CONDUCTIVITY_HARDCODED_WATER, ///< Use \ref TransportRoutines::conductivity_hardcoded_water
+                                 CONDUCTIVITY_HARDCODED_HEAVYWATER, ///< Use \ref TransportRoutines::conductivity_hardcoded_heavywater
                                  CONDUCTIVITY_HARDCODED_R23, ///< Use \ref TransportRoutines::conductivity_hardcoded_R23
                                  CONDUCTIVITY_HARDCODED_HELIUM, ///< Use \ref TransportRoutines::conductivity_hardcoded_helium
+                                 CONDUCTIVITY_HARDCODED_METHANE, ///< Use \ref TransportRoutines::conductivity_hardcoded_methane
                                  CONDUCTIVITY_NOT_HARDCODED
                                  };
     ViscosityDiluteVariables viscosity_dilute;
@@ -293,19 +302,19 @@ public:
                 BibTeX_conductivity;  ///< The BibTeX key for the conductivity model
     bool viscosity_using_ECS; ///< A flag for whether to use extended corresponding states for viscosity.  False for no
     bool conductivity_using_ECS; ///< A flag for whether to use extended corresponding states for conductivity.  False for no
-	bool conductivity_model_provided; ///< A flag for whether thermal conductivity model is provided.  False for no
 	bool viscosity_model_provided; ///< A flag for whether viscosity model is provided.  False for no
-    long double sigma_eta, ///< The Lennard-Jones 12-6 \f$ \sigma \f$ parameter
+    bool conductivity_model_provided; ///< A flag for whether thermal conductivity model is provided.  False for no
+    CoolPropDbl sigma_eta, ///< The Lennard-Jones 12-6 \f$ \sigma \f$ parameter
                 epsilon_over_k; ///< The Lennard-Jones 12-6 \f$ \varepsilon/k \f$ parameter
     ViscosityHardcodedEnum hardcoded_viscosity; ///< Hardcoded flags for the viscosity
     ConductivityHardcodedEnum hardcoded_conductivity; ///< Hardcoded flags for the conductivity
-    TransportPropertyData(){hardcoded_viscosity = VISCOSITY_NOT_HARDCODED;
-                            hardcoded_conductivity = CONDUCTIVITY_NOT_HARDCODED;
-                            viscosity_using_ECS = false;
-                            conductivity_using_ECS = false;
-							viscosity_model_provided = false;
-							conductivity_model_provided = false;
-    };
+    TransportPropertyData():viscosity_using_ECS(false),
+                            conductivity_using_ECS(false),
+                            viscosity_model_provided(false),
+                            conductivity_model_provided(false),
+                            sigma_eta(_HUGE),epsilon_over_k(_HUGE),
+                            hardcoded_viscosity(VISCOSITY_NOT_HARDCODED),
+                            hardcoded_conductivity(CONDUCTIVITY_NOT_HARDCODED){}
 };
 
 struct Ancillaries
@@ -336,7 +345,7 @@ public:
     EOSLimits limits; ///< Limits on the EOS
     double R_u, ///< The universal gas constant used for this EOS (usually, but not always, 8.314472 J/mol/K)
            molar_mass, ///< The molar mass in kg/mol (note NOT kg/kmol)
-           accentric, ///< The accentric factor \f$ \omega = -log_{10}\left(\frac{p_s(T/T_c=0.7)}{p_c}\right)-1\f$
+           acentric, ///< The acentric factor \f$ \omega = -log_{10}\left(\frac{p_s(T/T_c=0.7)}{p_c}\right)-1\f$
            Ttriple, ///< Triple point temperature (K)
            ptriple; ///< Triple point pressure (Pa)
     bool pseudo_pure; ///< Is a pseudo-pure fluid (true) or pure fluid (false)
@@ -352,90 +361,90 @@ public:
         assert(R_u < 9 && R_u > 8);
         assert(molar_mass > 0.001 && molar_mass < 1);
     };
-    long double baser(const long double &tau, const long double &delta) throw()
+    CoolPropDbl baser(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.base(tau, delta);
     };
     // First partials
-    long double dalphar_dDelta(const long double &tau, const long double &delta) throw()
+    CoolPropDbl dalphar_dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta(tau, delta);
     };
-    long double dalphar_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl dalphar_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dTau(tau, delta);
     };
     // Second partials
-    long double d2alphar_dDelta2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alphar_dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta2(tau, delta);
     };
-    long double d2alphar_dDelta_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alphar_dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta_dTau(tau, delta);
     };
-    long double d2alphar_dTau2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alphar_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dTau2(tau, delta);
     };
     // Third partials
-    long double d3alphar_dDelta3(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alphar_dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta3(tau, delta);
     };
-    long double d3alphar_dDelta2_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alphar_dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta2_dTau(tau, delta);
     };
-    long double d3alphar_dDelta_dTau2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alphar_dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dDelta_dTau2(tau, delta);
     };
-    long double d3alphar_dTau3(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alphar_dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alphar.dTau3(tau, delta);
     };
 
-    long double base0(const long double &tau, const long double &delta) throw()
+    CoolPropDbl base0(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.base(tau, delta);
     };
     // First partials
-    long double dalpha0_dDelta(const long double &tau, const long double &delta) throw()
+    CoolPropDbl dalpha0_dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta(tau, delta);
     };
-    long double dalpha0_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl dalpha0_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dTau(tau, delta);
     };
     // Second partials
-    long double d2alpha0_dDelta2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alpha0_dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta2(tau, delta);
     };
-    long double d2alpha0_dDelta_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alpha0_dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta_dTau(tau, delta);
     };
-    long double d2alpha0_dTau2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d2alpha0_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dTau2(tau, delta);
     };
     // Third partials
-    long double d3alpha0_dDelta3(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alpha0_dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta3(tau, delta);
     };
-    long double d3alpha0_dDelta2_dTau(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alpha0_dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta2_dTau(tau, delta);
     };
-    long double d3alpha0_dDelta_dTau2(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alpha0_dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dDelta_dTau2(tau, delta);
     };
-    long double d3alpha0_dTau3(const long double &tau, const long double &delta) throw()
+    CoolPropDbl d3alpha0_dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
     {
         return alpha0.dTau3(tau, delta);
     };
@@ -451,14 +460,16 @@ class CoolPropFluid {
         std::string ECSReferenceFluid; ///< A string that gives the name of the fluids that should be used for the ECS method for transport properties
         double ECS_qd; ///< The critical qd parameter for the Olchowy-Sengers cross-over term
     public:
-        CoolPropFluid(){};
+        CoolPropFluid():ECS_qd(-_HUGE){};
         ~CoolPropFluid(){};
-        EquationOfState *pEOS; ///< A pointer to the currently used EOS
+		const EquationOfState &EOS() const {return EOSVector[0];} ///< Get a reference to the equation of state
+		EquationOfState &EOS() {return EOSVector[0];} ///< Get a reference to the equation of state
         std::vector<EquationOfState> EOSVector; ///< The equations of state that could be used for this fluid
 
         std::string name; ///< The name of the fluid
         std::string REFPROPname; ///< The REFPROP-compliant name if REFPROP-"name" is not a compatible fluid name.  If not included, "name" is assumed to be a valid name for REFPROP
         std::string CAS; ///< The CAS number of the fluid
+        std::string formula; ///< The chemical formula, in LaTeX form
         std::vector <std::string> aliases; ///< A vector of aliases of names for the fluid
 
         BibTeXKeysStruct BibTeXKeys; ///< The BibTeX keys associated 
@@ -469,8 +480,8 @@ class CoolPropFluid {
                     triple_liquid, ///< The saturated liquid state at the triple point temperature
                     triple_vapor; ///< The saturated vapor state at the triple point temperature
 
-        double gas_constant(){ return pEOS->R_u; };
-        double molar_mass(){ return pEOS->molar_mass; };
+        double gas_constant(){ return EOS().R_u; };
+        double molar_mass(){ return EOS().molar_mass; };
 };
 
 

@@ -14,6 +14,7 @@
 #ifndef MIXTURE_DERIVATIVES_H
 #define MIXTURE_DERIVATIVES_H
 
+#include <Eigen/Core>
 #include "HelmholtzEOSMixtureBackend.h"
 
 namespace CoolProp{
@@ -37,7 +38,7 @@ class MixtureDerivatives{
      * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
      */
-    static long double ndpdV__constT_n(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl ndpdV__constT_n(HelmholtzEOSMixtureBackend &HEOS);
     
     /** \brief GERG 2004 Monograph equation 7.61
      * 
@@ -47,14 +48,21 @@ class MixtureDerivatives{
      * \f]
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
      */
-    static long double dpdT__constV_n(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl dpdT__constV_n(HelmholtzEOSMixtureBackend &HEOS);
 
-    static long double dpdrho__constT_n(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl dpdrho__constT_n(HelmholtzEOSMixtureBackend &HEOS);
     
-    static long double dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
-    static long double d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
-    static long double d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
-    static long double d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
+    static CoolPropDbl d3alphar_dxi_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag); 
+    static CoolPropDbl d3alphar_dxi_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag); 
+    static CoolPropDbl d3alphar_dxi_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d3alphar_dxi_dxj_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d3alphar_dxi_dxj_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d3alphardxidxjdxk(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
 
     
 
@@ -68,7 +76,7 @@ class MixtureDerivatives{
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double ndpdni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl ndpdni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 monograph Eqn. 7.32
      * 
@@ -80,7 +88,7 @@ class MixtureDerivatives{
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double partial_molar_volume(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl partial_molar_volume(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief Fugacity of the i-th component
      * 
@@ -89,7 +97,7 @@ class MixtureDerivatives{
      * f_i(\delta, \tau, \bar x) = x_i\rho R T \exp\left(\frac{\partial n\alpha^r}{\partial n_i}\right)_{T,V,n_{j \neq i}}
      * \f]
      */
-    static long double fugacity_i(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl fugacity_i(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
       
     /** \brief Natural logarithm of the fugacity coefficient
      * 
@@ -97,7 +105,7 @@ class MixtureDerivatives{
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double ln_fugacity_coefficient(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl ln_fugacity_coefficient(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief Derivative of the natural logarithm of the fugacity with respect to T
      * 
@@ -109,7 +117,7 @@ class MixtureDerivatives{
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double dln_fugacity_i_dT__constrho_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dln_fugacity_i_dT__constrho_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /**    \brief Derivative of the natural logarithm of the fugacity with respect to T
      * 
@@ -121,7 +129,7 @@ class MixtureDerivatives{
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double dln_fugacity_i_drho__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dln_fugacity_i_drho__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph Eqn. 7.29
      * 
@@ -134,35 +142,118 @@ class MixtureDerivatives{
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double dln_fugacity_coefficient_dT__constp_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dln_fugacity_coefficient_dT__constp_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
-    static long double dln_fugacity_i_dT__constp_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
-    static long double dln_fugacity_i_dp__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
-    static long double dln_fugacity_dxj__constT_p_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
-    static long double dln_fugacity_i_dtau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
-    static long double dln_fugacity_i_ddelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
-    static long double dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dln_fugacity_i_dT__constp_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dln_fugacity_i_dp__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dln_fugacity_dxj__constT_p_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dln_fugacity_i_dtau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dln_fugacity_i_ddelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dln_fugacity_dxj__constT_rho_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
+    static CoolPropDbl ndln_fugacity_i_dnj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d_ndln_fugacity_i_dnj_dtau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d_ndln_fugacity_i_dnj_ddelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d_ndln_fugacity_i_dnj_ddxk__consttau_delta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
+
+    static CoolPropDbl nd_ndln_fugacity_i_dnj_dnk__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
+    
+    static CoolPropDbl nAij(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){
+        CoolPropDbl RT = HEOS.gas_constant()*HEOS.T();
+        return 1/RT*ndln_fugacity_i_dnj__constT_V_xi(HEOS, i, j, xN_flag);
+    }
+    static CoolPropDbl n2Aijk(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
+        CoolPropDbl RT = HEOS.gas_constant()*HEOS.T();
+        return 1/RT*nd_ndln_fugacity_i_dnj_dnk__constT_V_xi(HEOS, i, j, k, xN_flag) - nAij(HEOS, i, j, xN_flag);
+    }
+    static Eigen::MatrixXd Lstar(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
+        std::size_t N = HEOS.mole_fractions.size();
+        Eigen::MatrixXd L;
+        L.resize(N, N);
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = i; j < N; ++j){
+                L(i, j) = nAij(HEOS, i, j, xN_flag);
+            }
+        }
+        // Fill in the symmetric elements
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = 0; j < i; ++j){
+                L(i, j) = L(j, i);
+            }
+        }
+        return L;
+    }
+    static Eigen::MatrixXd dLstar_dX(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag, parameters WRT){
+
+        std::size_t N = HEOS.mole_fractions.size();
+        Eigen::MatrixXd L = Lstar(HEOS, xN_flag), M = L;
+        Eigen::MatrixXd dLstar_dX(N, N);
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = i; j < N; ++j){
+                if (WRT == iTau){
+                    dLstar_dX(i, j) = 1/(HEOS.gas_constant()*HEOS.T_reducing())*MixtureDerivatives::ndln_fugacity_i_dnj__constT_V_xi(HEOS, i, j, xN_flag)
+                                    + 1/(HEOS.gas_constant()*HEOS.T())*MixtureDerivatives::d_ndln_fugacity_i_dnj_dtau__constdelta_x(HEOS, i, j, xN_flag);
+                }
+                else if (WRT == iDelta){
+                    dLstar_dX(i, j) = 1/(HEOS.gas_constant()*HEOS.T())*MixtureDerivatives::d_ndln_fugacity_i_dnj_ddelta__consttau_x(HEOS, i, j, xN_flag);
+                }
+                else{
+                    throw ValueError(format("dLstar_dX invalid WRT"));
+                }
+            }
+        }
+        // Fill in the symmetric elements
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = 0; j < i; ++j){
+                dLstar_dX(i, j) = dLstar_dX(j, i);
+            }
+        }
+        return dLstar_dX;
+    }
+    static Eigen::MatrixXd Mstar(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
+
+        std::size_t N = HEOS.mole_fractions.size();
+        Eigen::MatrixXd L = Lstar(HEOS, xN_flag), M = L;
+
+        // Last row
+        for (std::size_t i = 0; i < N; ++i){
+            Eigen::MatrixXd n2dLdni(N, N);
+            for (std::size_t j = 0; j < N; ++j){
+                for (std::size_t k = j; k < N; ++k){
+                    n2dLdni(j, k) = n2Aijk(HEOS, j, k, i, xN_flag);
+                }
+            }
+            // Fill in the symmetric elements
+            for (std::size_t j = 0; j < N; ++j){
+                for (std::size_t k = 0; k < j; ++k){
+                    n2dLdni(j, k) = n2dLdni(k, j);
+                }
+            }
+            M(N-1, i) = (adjugate(L, N)*n2dLdni).trace();
+        }
+        return M;
+    }
     
     /** \brief Table B4, Kunz, JCED, 2012 for the original term and the subsequent substitutions
      * 
      * The derivative term
      * \f[
-     * n\left(\frac{\partial \phi^r}{\partial n_i} \right)_{T,V,n_j}
+     * n\left(\frac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j}
      * \f]
      * which is equal to
      * \f{eqnarray*}{
-     * n\left(\frac{\partial \phi^r}{\partial n_i} \right)_{T,V,n_j} &=& \delta \phi^r_{\delta}\left[ 1-\frac{1}{\rho_r}\left[\left(\frac{\partial \rho_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial \rho_r}{\partial x_k}\right)_{x_j}  \right]\right]\\
-     * && +\tau \phi^r_{\tau}\frac{1}{T_r}\left[\left(\frac{\partial T_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial T_r}{\partial x_k}\right)_{x_j}  \right]\\
-     * && +\phi^r_{x_i}-\sum_{k=1}^{N}x_k\phi^r_{x_k}
+     * n\left(\frac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j} &=& \delta \alpha^r_{\delta}\left[ 1-\frac{1}{\rho_r}\left[\left(\frac{\partial \rho_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial \rho_r}{\partial x_k}\right)_{x_j}  \right]\right]\\
+     * && +\tau \alpha^r_{\tau}\frac{1}{T_r}\left[\left(\frac{\partial T_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial T_r}{\partial x_k}\right)_{x_j}  \right]\\
+     * && +\alpha^r_{x_i}-\sum_{k=1}^{N}x_k\alpha^r_{x_k}
      * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double ndalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl ndalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /// GERG Equation 7.42
-    static long double dnalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dnalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph Eqn. 7.30
      * 
@@ -174,7 +265,7 @@ class MixtureDerivatives{
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
     */
-    static long double dln_fugacity_coefficient_dp__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dln_fugacity_coefficient_dp__constT_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph Equation 7.31
      * 
@@ -191,7 +282,7 @@ class MixtureDerivatives{
      * @param j The second index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
     */
-    static long double ndln_fugacity_coefficient_dnj__constT_p(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl ndln_fugacity_coefficient_dnj__constT_p(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
     /** \brief Gernert Equation 3.115
      * 
@@ -205,7 +296,7 @@ class MixtureDerivatives{
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      * 
     */
-    static long double dln_fugacity_coefficient_dxj__constT_p_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dln_fugacity_coefficient_dxj__constT_p_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
     /** \brief Gernert Equation 3.130
      * 
@@ -217,7 +308,7 @@ class MixtureDerivatives{
      * @param j The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double dpdxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dpdxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
 
     /** \brief Gernert Equation 3.117
      * 
@@ -230,27 +321,27 @@ class MixtureDerivatives{
      * @param i The second index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double d2nalphar_dxj_dni__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, std::size_t i, x_N_dependency_flag xN_flag){ return MixtureDerivatives::d_ndalphardni_dxj__constT_V_xi(HEOS, i, j, xN_flag) + MixtureDerivatives::dalphar_dxj__constT_V_xi(HEOS, j, xN_flag);};
+    static CoolPropDbl d2nalphar_dxj_dni__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, std::size_t i, x_N_dependency_flag xN_flag){ return MixtureDerivatives::d_ndalphardni_dxj__constT_V_xi(HEOS, i, j, xN_flag) + MixtureDerivatives::dalphar_dxj__constT_V_xi(HEOS, j, xN_flag);};
 
     /// Gernert Equation 3.119
     /// Catch test provided
-    static long double dalphar_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dalphar_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
 
     /// Gernert Equation 3.118
     /// Catch test provided
-    static long double d_ndalphardni_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d_ndalphardni_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
     /// Gernert Equation 3.134
     /// Catch test provided
-    static long double d_dalpharddelta_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d_dalpharddelta_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
 
     /// Gernert Equation 3.121
     /// Catch test provided
-    static long double ddelta_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl ddelta_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
 
     /// Gernert Equation 3.122
     /// Catch test provided
-    static long double dtau_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl dtau_dxj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t j, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph, equations 7.44 and 7.51
      * 
@@ -265,35 +356,108 @@ class MixtureDerivatives{
      * @param i The second index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
     */
-    static long double d2nalphar_dni_dT(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2nalphar_dni_dT(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph Equation 7.51 and Table B4, Kunz, JCED, 2012
      * 
      * The derivative term
      * \f{eqnarray*}{
-     * \frac{\partial }{\partial \tau} \left( n\left(\frac{\partial \phi^r}{\partial n_i} \right)_{T,V,n_j} \right) &=& \delta \phi^r_{\delta\tau}\left[ 1-\frac{1}{\rho_r}\left[\left(\frac{\partial \rho_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial \rho_r}{\partial x_k}\right)_{x_j}  \right]\right]\\
-     * && +(\tau \phi^r_{\tau\tau}+\phi^r_{\tau})\frac{1}{T_r}\left[\left(\frac{\partial T_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial T_r}{\partial x_k}\right)_{x_j}  \right]\\
-     * && +\phi^r_{x_i\tau}-\sum_{k=1}^{N}x_k\phi^r_{x_k\tau}
+     * \frac{\partial }{\partial \tau} \left( n\left(\frac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j} \right) &=& \delta \alpha^r_{\delta\tau}\left[ 1-\frac{1}{\rho_r}\left[\left(\frac{\partial \rho_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial \rho_r}{\partial x_k}\right)_{x_j}  \right]\right]\\
+     * && +(\tau \alpha^r_{\tau\tau}+\alpha^r_{\tau})\frac{1}{T_r}\left[\left(\frac{\partial T_r}{\partial x_i}\right)_{x_j} - \sum_{k=1}^N x_k\left(\frac{\partial T_r}{\partial x_k}\right)_{x_j}  \right]\\
+     * && +\alpha^r_{x_i\tau}-\sum_{k=1}^{N}x_k\alpha^r_{x_k\tau}
      * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double d_ndalphardni_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d_ndalphardni_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
+    /** \brief \f$\tau\f$ derivartive of GERG 2004 Monograph Equation 7.51
+     *
+     * The derivative term
+     * \f[
+     * \dfrac{\partial^2 }{\partial \tau^2} \left( n\left(\dfrac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j} \right) = \delta \alpha^r_{\delta\tau\tau}\Psi_{\rho}+ (2\alpha^r_{\tau\tau}+\tau\alpha^r_{\tau\tau\tau})\Psi_T+\alpha^r_{x_i\tau\tau}-\sum_{k=1}^{N}x_k\alpha^r_{x_k\tau\tau}
+     * \f]
+     * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
+     */
+    static CoolPropDbl d2_ndalphardni_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph Equation 7.50 and Table B4, Kunz, JCED, 2012
      * 
      * The derivative term
      * \f{eqnarray*}{
-     * \left(\frac{\partial }{\partial \delta} \left( n\left(\frac{\partial \phi^r}{\partial n_i} \right)_{T,V,n_j} \right)\right)_{\tau,\bar x} &=& (\alpha_{\delta}^r+\delta\alpha_{\delta\delta}^r)\left[1-\frac{1}{\rho_r}\cdot n\left(\frac{\partial \rho_r}{\partial n_i}\right)_{n_j} \right] \\
+     * \left(\frac{\partial }{\partial \delta} \left( n\left(\frac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j} \right)\right)_{\tau,\bar x} &=& (\alpha_{\delta}^r+\delta\alpha_{\delta\delta}^r)\left[1-\frac{1}{\rho_r}\cdot n\left(\frac{\partial \rho_r}{\partial n_i}\right)_{n_j} \right] \\
      * &+&\tau\alpha^r_{\delta\tau}\frac{1}{T_r}\cdot n\left(\frac{\partial T_r}{\partial n_i}\right)_{n_j}\\
-     * &+&\phi^r_{\delta x_i}-\sum_{k=1}^{N}x_k\phi^r_{\delta x_k}
+     * &+&\alpha^r_{\delta x_i}-\sum_{k=1}^{N}x_k\alpha^r_{\delta x_k}
      * \f}
      * @param HEOS The HelmholtzEOSMixtureBackend to be used
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double d_ndalphardni_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d_ndalphardni_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
+    /** \brief \f$\delta\f$ derivative of GERG 2004 Monograph Equation 7.50
+    *
+    * The derivative term
+    * \f[
+    * \begin{array}{ccl} 
+    * \left(\dfrac{\partial^2 }{\partial \delta^2} \left( n\left(\dfrac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j} \right)\right)_{\tau,\bar x} &=& (2\alpha_{\delta\delta}^r+\delta\alpha_{\delta\delta\delta}^r)\Psi_{\rho} +\tau\alpha^r_{\delta\delta\tau}\Psi_T+\alpha^r_{\delta\delta x_i}-\sum_{k=1}^{N}x_k\alpha^r_{\delta\delta x_k} 
+    * \end{array}
+    * \f]
+    * @param HEOS The HelmholtzEOSMixtureBackend to be used
+    * @param i The index of interest
+    * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
+    */
+    static CoolPropDbl d2_ndalphardni_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
+    /** \brief \f$\tau\f$ derivative of GERG 2004 Monograph Equation 7.50
+    *
+    * The derivative term
+    * \f[
+    * \begin{array}{ccl}
+    * \left(\dfrac{\partial^2 }{\partial \delta\partial \tau} \left( n\left(\dfrac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j} \right)\right)_{\bar x} &=& (\alpha_{\delta\tau}^r+\delta\alpha_{\delta\delta\tau}^r)\Psi_{\rho} +(\tau\alpha^r_{\delta\tau\tau} + \alpha^r_{\delta\tau})\Psi_T 
++\alpha^r_{\delta\tau x_i}-\sum_{k=1}^{N}x_k\alpha^r_{\delta\tau x_k} 
+    * \end{array}
+    * \f]
+    * @param HEOS The HelmholtzEOSMixtureBackend to be used
+    * @param i The index of interest
+    * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
+    */
+    static CoolPropDbl d2_ndalphardni_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
+    /** \brief \f$x_j\f$ derivative of GERG 2004 Monograph Equation 7.50
+    *
+    * The derivative term
+    * \f[
+    * \begin{array}{ccl}
+    * \dfrac{\partial}{\partial x_j}\left(\dfrac{\partial }{\partial \delta} \left( n\left(\dfrac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j} \right)_{\tau,\bar x}\right)_{\tau, \delta, x_i} &=& (\alpha_{\delta}^r+\delta\alpha_{\delta\delta}^r)\dfrac{\partial\Psi_{\rho}}{\partial x_j} + (\alpha_{\delta x_j}^r+\delta\alpha_{\delta\delta x_j}^r)\Psi_{\rho}\\
+    * &+&\tau\alpha^r_{\delta\tau}\dfrac{\partial\Psi_{T}}{\partial x_j} + \tau\alpha^r_{\delta\tau x_j}\Psi_T\\
+    * &+&\alpha^r_{\delta x_i x_j}-\sum_{k=1}^{N}\left[x_k\alpha^r_{\delta x_k x_j} + \dfrac{d x_k}{d x_j}\alpha^r_{\delta x_k}\right]
+    * \end{array}
+    * \f]
+    * @param HEOS The HelmholtzEOSMixtureBackend to be used
+    * @param i The index of interest
+    * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
+    */
+    static CoolPropDbl d2_ndalphardni_dxj_dDelta__consttau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
+    /** \brief \f$x_j\f$ derivative of GERG 2004 Monograph Equation 7.51
+    *
+    * The derivative term
+    * \f[
+    * \begin{array}{ccl}
+    * \dfrac{\partial}{\partial x_j}\left(\dfrac{\partial }{\partial \tau} \left( n\left(\dfrac{\partial \alpha^r}{\partial n_i} \right)_{T,V,n_j} \right)\right)_{\tau,\delta,x_i} &=& \delta \alpha^r_{\delta\tau}\dfrac{\partial \Psi_{\rho}}{\partial x_j} + \delta \alpha^r_{\delta\tau x_j}\Psi_{\rho}\\
+    * &+& (\tau \alpha^r_{\tau\tau}+\alpha^r_{\tau})\dfrac{\partial \Psi_T}{\partial x_j}+ \left(\tau \alpha^r_{\tau\tau x_j} +\alpha^r_{\tau x_j}\right)\Psi_T\\
+    * &+&\alpha^r_{\tau x_i x_j}-\sum_{k=1}^{N}\left[x_k\alpha^r_{\tau x_k x_j} + \dfrac{d x_k}{d x_j}\alpha^r_{\tau x_k}\right]
+    * \end{array}
+    * \f]
+    * @param HEOS The HelmholtzEOSMixtureBackend to be used
+    * @param i The index of interest
+    * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
+    */
+    static CoolPropDbl d2_ndalphardni_dxj_dTau__constdelta_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph equation 7.41
      * 
@@ -317,7 +481,35 @@ class MixtureDerivatives{
      * @param j The second index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double nd2nalphardnidnj__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl nd2nalphardnidnj__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
+    /* \brief GERG 2004 Eqn. 7.47
+     * \f{eqnarray*}{
+     * n\left( \frac{\partial}{\partial n_j}\left(n\left(\frac{\partial \alpha^r}{\partial n_i}\right)_{T,V,n_j} \right) \right)_{T,V,n_i} &=& \left( \frac{\partial}{\partial \delta}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\tau,\bar x}\cdot n\left(\frac{\partial\delta}{\partial n_j}\right)_{T,V,n_i}\\
+     * &+& \left( \frac{\partial}{\partial \tau}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\tau,\bar x}\cdot n\left(\frac{\partial\tau}{\partial n_j}\right)_{T,V,n_i}\\
+     * &+& \left( \frac{\partial}{\partial x_j}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\delta,\tau,x_i}-\sum_{k=1}^{N}x_k \left( \frac{\partial}{\partial x_k}\left(n\left(\frac{\partial\alpha^r}{\partial n_i}\right)_{T,V,n_j}\right)\right)_{\delta,\tau,x_i}\\
+     * \f}
+     * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param j The second index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
+     */
+    static CoolPropDbl nd_ndalphardni_dnj__constT_V(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
+    /* \brief \f$\tau\f$ derivative of GERG 2004 7.47
+     *  
+     */
+    static CoolPropDbl d_nd_ndalphardni_dnj_dTau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
+    /* \brief \f$\delta\f$ derivative of GERG 2004 7.47
+     *
+     */
+    static CoolPropDbl d_nd_ndalphardni_dnj_dDelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
+    /* \brief \f$x_k\f$ derivative of GERG 2004 7.47
+    *
+    */
+    static CoolPropDbl d_nd_ndalphardni_dnj_dxk__consttau_delta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph equation 7.48
      * 
@@ -329,7 +521,11 @@ class MixtureDerivatives{
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */ 
-    static long double nddeltadni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl nddeltadni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
+    static CoolPropDbl d_nddeltadni_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
+    static CoolPropDbl d_nddeltadni_dxj__constdelta_tau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph equation 7.49
      * 
@@ -341,7 +537,11 @@ class MixtureDerivatives{
      * @param i The index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double ndtaudni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl ndtaudni__constT_V_nj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
+    static CoolPropDbl d_ndtaudni_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    
+    static CoolPropDbl d_ndtaudni_dxj__constdelta_tau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph equation 7.52
      * 
@@ -358,7 +558,12 @@ class MixtureDerivatives{
      * @param j The second index of interest
      * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
      */
-    static long double d_ndalphardni_dxj__constdelta_tau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d_ndalphardni_dxj__constdelta_tau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
+    /* \brief \f$x_k\f$ derivative of GERG 2004 7.52
+    *
+    */
+    static CoolPropDbl d2_ndalphardni_dxj_dxk__constdelta_tau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
 
 }; /* class MixtureDerivatives */
 

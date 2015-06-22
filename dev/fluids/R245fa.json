@@ -226,7 +226,7 @@
   "EOS": [
     {
       "BibTeX_CP0": "", 
-      "BibTeX_EOS": "Akasaka-PREPINT-2014", 
+      "BibTeX_EOS": "Akasaka-JPCRD-2015-R245fa", 
       "STATES": {
         "hs_anchor": {
           "T": 469.711, 
@@ -281,8 +281,8 @@
       "T_max_units": "K", 
       "Ttriple": 171.05, 
       "Ttriple_units": "K", 
-      "accentric": 0.3776, 
-      "accentric_units": "-", 
+      "acentric": 0.3776, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -13.4283638514, 
@@ -481,8 +481,8 @@
       "T_max_units": "K", 
       "Ttriple": 171.05, 
       "Ttriple_units": "K", 
-      "accentric": 0.3776, 
-      "accentric_units": "-", 
+      "acentric": 0.3776, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -13.4283638514, 
@@ -577,16 +577,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{3}F_{5}H_{3}", 
   "NAME": "R245fa", 
   "REFPROP_NAME": "R245FA", 
   "STATES": {
     "critical": {
       "T": 427.01, 
       "T_units": "K", 
+      "hmolar": 61631.66068732527, 
+      "hmolar_units": "J/mol", 
       "p": 3651000.0, 
       "p_units": "Pa", 
-      "rhomolar": 3875, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 3875.0, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 230.73169732233038, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 171.05, 

@@ -302,8 +302,8 @@
       "T_max_units": "K", 
       "Ttriple": 216.592, 
       "Ttriple_units": "K", 
-      "accentric": 0.22394, 
-      "accentric_units": "-", 
+      "acentric": 0.22394, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 8.37304456, 
@@ -591,16 +591,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}O_{2}", 
   "NAME": "CarbonDioxide", 
   "REFPROP_NAME": "CO2", 
   "STATES": {
     "critical": {
       "T": 304.1282, 
       "T_units": "K", 
+      "hmolar": 14622.609393908302, 
+      "hmolar_units": "J/mol", 
       "p": 7377300.0, 
       "p_units": "Pa", 
-      "rhomolar": 10624.906299999999, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 10624.9063, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 63.09519513382813, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 216.592, 

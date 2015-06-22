@@ -1,5 +1,6 @@
 {
   "ALIASES": [
+    "R1234ZE", 
     "R1234ZEE", 
     "R1234zeE", 
     "R1234ZE(E)"
@@ -281,8 +282,8 @@
       "T_max_units": "K", 
       "Ttriple": 168.62, 
       "Ttriple_units": "K", 
-      "accentric": 0.313, 
-      "accentric_units": "-", 
+      "acentric": 0.313, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -499,8 +500,8 @@
       "T_max_units": "K", 
       "Ttriple": 168.62, 
       "Ttriple_units": "K", 
-      "accentric": 0.313, 
-      "accentric_units": "-", 
+      "acentric": 0.313, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -651,10 +652,14 @@
     "critical": {
       "T": 382.52, 
       "T_units": "K", 
+      "hmolar": 45109.50216279903, 
+      "hmolar_units": "J/mol", 
       "p": 3636250.0, 
       "p_units": "Pa", 
       "rhomolar": 4290.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 179.5509472336712, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 168.62, 

@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": 7.544460e-04, 
     "coeffs": [
       [
         5.546103e+00, 
@@ -17,6 +18,7 @@
   "Tmin": 2.381500e+02, 
   "TminPsat": 3.731500e+02, 
   "conductivity": {
+    "NRMS": 8.893185e-04, 
     "coeffs": [
       [
         4.329771e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 2.884772e-05, 
     "coeffs": [
       [
         1.026177e+03, 
@@ -80,9 +83,9 @@
         0.000000e+00
       ], 
       [
-        -5.177322e-09, 
-        9.673177e-09, 
-        3.368862e-07, 
+        -5.177327e-09, 
+        9.673187e-09, 
+        3.368863e-07, 
         0.000000e+00, 
         0.000000e+00, 
         0.000000e+00
@@ -92,6 +95,7 @@
   }, 
   "description": "ASHRAE, Propylene Glycol", 
   "mass2input": {
+    "NRMS": 4.618214e-04, 
     "coeffs": [
       [
         3.444914e-01, 
@@ -105,16 +109,19 @@
     "type": "polynomial"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "APG", 
   "reference": "ASHRAE2001,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 2.517344e-04, 
     "coeffs": [
       [
         3.815392e+03, 
@@ -134,14 +141,14 @@
       ], 
       [
         4.165345e-05, 
-        -9.032070e-05, 
+        -9.032072e-05, 
         -3.392169e-03, 
         1.079472e-02, 
         0.000000e+00, 
         0.000000e+00
       ], 
       [
-        -4.309480e-07, 
+        -4.309484e-07, 
         -1.335181e-06, 
         3.538903e-05, 
         0.000000e+00, 
@@ -152,6 +159,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 2.045019e-03, 
     "coeffs": [
       [
         -8.328410e+00, 
@@ -189,6 +197,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

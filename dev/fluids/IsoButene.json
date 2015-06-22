@@ -279,8 +279,8 @@
       "T_max_units": "K", 
       "Ttriple": 132.4, 
       "Ttriple_units": "K", 
-      "accentric": 0.1925934521621, 
-      "accentric_units": "-", 
+      "acentric": 0.1925934521621, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -0.12737888, 
@@ -396,16 +396,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{4}H_{8}", 
   "NAME": "IsoButene", 
   "REFPROP_NAME": "IBUTENE", 
   "STATES": {
     "critical": {
-      "T": 418.09, 
+      "T": 418.09000000000003, 
       "T_units": "K", 
+      "hmolar": 26722.104559210096, 
+      "hmolar_units": "J/mol", 
       "p": 4009800.0, 
       "p_units": "Pa", 
       "rhomolar": 4170.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 75.10430252394673, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 132.4, 

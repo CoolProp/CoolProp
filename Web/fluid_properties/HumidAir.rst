@@ -3,6 +3,8 @@
 Humid Air Properties
 ********************
 
+.. contents:: :depth: 2
+
 If you are feeling impatient, jump to :ref:`HAProps_Sample`, or to go to the code documentation :mod:`CoolProp.HumidAirProp`, otherwise, hang in there.
 
 The equations implemented in CoolProp are based on a publication by Hermann et al. :cite:`Herrmann2009`, which describes the outcome of the ASHRAE research project ASHREA-RP1485. 
@@ -167,9 +169,9 @@ in kPa/(kg/m\ :sup:`3`\ ). And for ice,
 
 .. _HAProps_Sample:
 
-Sample HAProps Code
+Sample HAPropsSI Code
 -------------------
-To use the HAProps function, import it and do some calls, do something like this
+To use the HAPropsSI function, import it and do some calls, do something like this
 
 .. ipython::
 
@@ -187,6 +189,34 @@ To use the HAProps function, import it and do some calls, do something like this
     #Temperature of saturated air - order of inputs doesn't matter
     In [2]: T = HAPropsSI('T','H',h,'R',1.0,'P',101325); print T
 
+Table of Inputs/Outputs to HAPropsSI
+------------------------------------
+
+.. csv-table:: Input/Output parameters
+    :header: "Parameter", "Units", "Input/Output", "Description"
+    :widths: 25, 25, 25, 25
+    :delim: ;
+   
+    ``B``, ``Twb``, ``T_wb``, ``WetBulb``; K; Input/Output; Wet-Bulb Temperature
+    ``C``, ``cp``; J/kg dry air/K; Output; Mixture specific heat per unit dry air
+    ``Cha``, ``cp_ha``; J/kg humid air/K; Output; Mixture specific heat per unit humid air
+    ``D``, ``Tdp``, ``DewPoint``, ``T_dp``; K; Input/Output;	Dew-Point Temperature
+    ``H``, ``Hda``, ``Enthalpy``;	J/kg dry air; Input/Output; Mixture enthalpy per dry air
+    ``Hha``; J/kg humid air; Input/Output; Mixture enthalpy per humid air 
+    ``K``, ``k``, ``Conductivity``; W/m/K; Output; Mixture thermal conductivity
+    ``M``, ``Visc``, ``mu``;Pa-s;Output;Mixture viscosity
+    ``psi_w``, ``Y``; mol water/mol humid air; Input/Output; Water mole fraction
+    ``P``;Pa;Input;Pressure
+    ``P_w``;Pa;Input;Partial pressure of water vapor
+    ``R``, ``RH``, ``RelHum``; ; Input/Output; Relative humidity in [0, 1]
+    ``S``, ``Sda``, ``Entropy``; J/kg dry air/K; Input/Output; Mixture entropy per unit dry air
+    ``Sha``; J/kg humid air/K; Input/Output; Mixture entropy per unit humid air 
+    ``T``, ``Tdb``, ```T_db``; K; Input/Output; Dry-Bulb Temperature
+    ``V``, ``Vda``; m :math:`^3` /kg dry air; Input/Output;  Mixture volume per unit dry air
+    ``Vha``; m :math:`^3` /kg humid air; Input/Output;  Mixture volume per unit humid air
+    ``W``, ``Omega``, ``HumRat``; kg water/kg dry air; Input/Output; Humidity Ratio
+    ``Z``; ; Output; Compressibility factor (:math:`Z = pv/(RT)`)
+    
 .. _HA-Validation:
 
 Humid Air Validation

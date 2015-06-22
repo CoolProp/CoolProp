@@ -1,54 +1,171 @@
 
+#if !defined(NO_TABULAR_BACKENDS)
+
 #include "TabularBackends.h"
 #include "CoolProp.h"
+#include <sstream>
+#include "time.h"
+#include "miniz.h"
 
 namespace CoolProp{
+/**
+ * @brief 
+ * @param table
+ * @param path_to_tables
+ * @param filename
+ */
+template <typename T> void load_table(T &table, const std::string &path_to_tables, const std::string &filename){
     
-void GriddedTableBackend::build_tables(tabular_types type)
-{
-    std::size_t Nx = 20, Ny = 20;
-    long double xmin, xmax, ymin, ymax, x, y;
-    bool logy, logx;
-    
-    parameters xkey, ykey;
-    single_phase.resize(Nx, Ny);
-    
-    switch(type){
-        case LOGPH_TABLE:
-        {
-            xkey = iHmolar;
-            ykey = iP;
-            logy = true;
-            logx = false;
-            
-            // ---------------------------------
-            // Calculate the limits of the table
-            // ---------------------------------
-            
-            // Minimum enthalpy is the saturated liquid enthalpy
-            AS->update(QT_INPUTS, 0, AS->Ttriple());
-            xmin = AS->hmolar();
-            ymin = AS->p();
-            
-            // Check both the enthalpies at the Tmax isotherm to see whether to use low or high pressure
-            AS->update(PT_INPUTS, 1e-10, AS->Tmax());
-            long double xmax1 = AS->hmolar();
-            AS->update(PT_INPUTS, AS->pmax(), AS->Tmax());
-            long double xmax2 = AS->hmolar();
-            xmax = std::min(xmax1, xmax2);
-            
-            ymax = AS->pmax();
-            
-            break;
+    double tic = clock();
+    std::string path_to_table = path_to_tables + "/" + filename;
+    if (get_debug_level() > 0){std::cout << format("Loading table: %s", path_to_table.c_str()) << std::endl;}
+    std::vector<char> raw;
+    try{
+         raw = get_binary_file_contents(path_to_table.c_str());
+    }catch(...){
+        std::string err = format("Unable to load file %s", path_to_table.c_str());
+        if (get_debug_level() > 0){std::cout << "err:" << err << std::endl;}
+        throw UnableToLoadError(err);
+    }
+    std::vector<unsigned char> newBuffer(raw.size()*5);
+    uLong newBufferSize = static_cast<uLong>(newBuffer.size());
+    mz_ulong rawBufferSize = static_cast<mz_ulong>(raw.size());
+    int code;
+    do{
+        code = uncompress((unsigned char *)(&(newBuffer[0])), &newBufferSize, 
+                          (unsigned char *)(&(raw[0])), rawBufferSize);
+        if (code == Z_BUF_ERROR){ 
+            // Output buffer is too small, make it bigger and try again
+            newBuffer.resize(newBuffer.size()*5);
+            newBufferSize = static_cast<uLong>(newBuffer.size());
         }
-        default:
-        {
-            throw ValueError(format(""));
+        else if (code != 0){ // Something else, a big problem
+            std::string err = format("Unable to uncompress file %s with miniz code %d", path_to_table.c_str(), code);
+            if (get_debug_level() > 0){ std::cout << "uncompress err:" << err << std::endl; }
+            throw UnableToLoadError(err);
+        }
+    }while(code != 0);
+    // Copy the buffer from unsigned char to char (yuck)
+    std::vector<char> charbuffer(newBuffer.begin(), newBuffer.begin() + newBufferSize);
+    try{
+        msgpack::unpacked msg;
+        msgpack::unpack(&msg, &(charbuffer[0]), charbuffer.size());
+        msgpack::object deserialized = msg.get();
+        
+        // Call the class' deserialize function;  if it is an invalid table, it will cause an exception to be thrown
+        table.deserialize(deserialized);
+        double toc = clock();
+        if (get_debug_level() > 0){std::cout << format("Loaded table: %s in %g sec.", path_to_table.c_str(), (toc-tic)/CLOCKS_PER_SEC) << std::endl;}
+    }
+    catch(std::exception &e){
+        std::string err = format("Unable to msgpack deserialize %s; err: %s", path_to_table.c_str(), e.what());
+        if (get_debug_level() > 0){std::cout << "err: " << err << std::endl;}
+        throw UnableToLoadError(err);
+    }
+}
+template <typename T> void write_table(const T &table, const std::string &path_to_tables, const std::string &name)
+{
+    msgpack::sbuffer sbuf;
+    msgpack::pack(sbuf, table);
+    std::string tabPath = std::string(path_to_tables + "/" + name + ".bin");
+    std::string zPath = tabPath + ".z";
+    std::vector<char> buffer(sbuf.size());
+    uLong outSize = static_cast<uLong>(buffer.size());
+    compress((unsigned char *)(&(buffer[0])), &outSize, 
+             (unsigned char*)(sbuf.data()), static_cast<mz_ulong>(sbuf.size()));
+    std::ofstream ofs2(zPath.c_str(), std::ofstream::binary);
+    ofs2.write(&buffer[0], outSize);
+    ofs2.close();
+    
+    if (CoolProp::get_config_bool(SAVE_RAW_TABLES)){
+        std::ofstream ofs(tabPath.c_str(), std::ofstream::binary);
+        ofs.write(sbuf.data(), sbuf.size());
+    }
+}
+
+} // namespace CoolProp
+
+void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::AbstractState> &AS){
+    const bool debug = get_debug_level() > 5 || false;
+    if (debug){
+        std::cout << format("***********************************************\n");
+        std::cout << format(" Saturation Table (%s) \n", AS->name().c_str());
+        std::cout << format("***********************************************\n");
+    }
+    resize(N);
+    // ------------------------
+    // Actually build the table
+    // ------------------------
+    AS->update(QT_INPUTS, 0, AS->Ttriple());
+    CoolPropDbl p_triple = AS->p();
+    CoolPropDbl p, pmin = p_triple*1.001, pmax = 0.9999*AS->p_critical();
+    for (std::size_t i = 0; i < N-1; ++i)
+    {
+        // Log spaced
+        p = exp(log(pmin) + (log(pmax) - log(pmin))/(N-1)*i);
+        
+        // Saturated liquid
+        try{
+            AS->update(PQ_INPUTS, p, 0);
+            pL[i] = p; TL[i] = AS->T();  rhomolarL[i] = AS->rhomolar(); 
+            hmolarL[i] = AS->hmolar(); smolarL[i] = AS->smolar(); umolarL[i] = AS->umolar();
+            logpL[i] = log(p); logrhomolarL[i] = log(rhomolarL[i]);
+        }
+        catch(std::exception &e){
+            // That failed for some reason, go to the next pair
+            if (debug){std::cout << " " << e.what() << std::endl;}
+            continue;
+        }
+        // Transport properties - if no transport properties, just keep going
+        try{
+            viscL[i] = AS->viscosity(); condL[i] = AS->conductivity();
+            logviscL[i] = log(viscL[i]);
+        }
+        catch(std::exception &e){
+            if (debug){std::cout << " " << e.what() << std::endl;}
+        }
+        // Saturated vapor
+        try{
+            AS->update(PQ_INPUTS, p, 1);
+            pV[i] = p; TV[i] = AS->T(); rhomolarV[i] = AS->rhomolar();
+            hmolarV[i] = AS->hmolar(); smolarV[i] = AS->smolar(); umolarV[i] = AS->umolar();
+            logpV[i] = log(p); logrhomolarV[i] = log(rhomolarV[i]);
+        }
+        catch(std::exception &e){
+            // That failed for some reason, go to the next pair
+            if (debug){std::cout << " " << e.what() << std::endl;}
+            continue;
+        }
+        // Transport properties - if no transport properties, just keep going
+        try{
+            viscV[i] = AS->viscosity(); condV[i] = AS->conductivity();
+            logviscV[i] = log(viscV[i]);
+        }
+        catch(std::exception &e){
+            if (debug){std::cout << " " << e.what() << std::endl;}
         }
     }
-    if (get_debug_level() > 5){
+    // Last point is at the critical point
+    AS->update(PQ_INPUTS, AS->p_critical(), 1);
+    std::size_t i = N-1;
+    pV[i] = AS->p(); TV[i] = AS->T(); rhomolarV[i] = AS->rhomolar();
+    hmolarV[i] = AS->hmolar(); smolarV[i] = AS->smolar(); umolarV[i] = AS->umolar();
+    pL[i] = AS->p(); TL[i] = AS->T();  rhomolarL[i] = AS->rhomolar(); 
+    hmolarL[i] = AS->hmolar(); smolarL[i] = AS->smolar(); umolarL[i] = AS->umolar();
+    logpV[i] = log(AS->p()); logrhomolarV[i] = log(rhomolarV[i]);
+    logpL[i] = log(AS->p()); logrhomolarL[i] = log(rhomolarL[i]);
+}
+    
+void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)
+{
+    CoolPropDbl x, y;
+    const bool debug = get_debug_level() > 5 || true;
+
+    resize(Nx, Ny);
+    
+    if (debug){
         std::cout << format("***********************************************\n");
-        std::cout << format(" Single-Phase Table (%s) \n", AS->name().c_str());
+        std::cout << format(" Single-Phase Table (%s) \n", strjoin(AS->fluid_names(), "&").c_str());
         std::cout << format("***********************************************\n");
     }
     // ------------------------
@@ -65,6 +182,7 @@ void GriddedTableBackend::build_tables(tabular_types type)
             // Linearly spaced
             x = xmin + (xmax - xmin)/(Nx-1)*i;
         }
+        xvec[i] = x;
         for (std::size_t j = 0; j < Ny; ++j)
         {
             // Calculate the x value
@@ -76,59 +194,317 @@ void GriddedTableBackend::build_tables(tabular_types type)
                 // Linearly spaced
                 y = ymin + (ymax - ymin)/(Ny-1)*j;
             }
+            yvec[j] = y;
             
-            if (get_debug_level() > 5){std::cout << "x: " << x << " y: " << y;}
+            if (debug){std::cout << "x: " << x << " y: " << y << std::endl;}
             
-            if (xkey == iHmolar && ykey == iP)
-            {
-                // --------------------
-                //   Update the state
-                // --------------------
-                try{
-                    AS->update(HmolarP_INPUTS, x, y);
+            // Generate the input pair
+            CoolPropDbl v1, v2;
+            input_pairs input_pair = generate_update_pair(xkey, x, ykey, y, v1, v2);
+            
+            // --------------------
+            //   Update the state
+            // --------------------
+            try{
+                AS->update(input_pair, v1, v2);
+                if (!ValidNumber(AS->rhomolar())){
+                    throw ValueError("rhomolar is invalid");
                 }
-                catch(std::exception &e){
-                    // That failed for some reason, go to the next pair
-                    if (get_debug_level() > 5){std::cout << " " << e.what() << std::endl;}
-                    continue;
-                }
-                    
-                // Skip two-phase states - they will remain as _HUGE holes in the table
-                if (AS->phase() == iphase_twophase){ 
-                    if (get_debug_level() > 5){std::cout << " 2Phase" << std::endl;}
-                    continue;
-                };
-                
-                // --------------------
-                //   State variables
-                // --------------------
-                single_phase.T[i][j] = AS->T();
-                single_phase.p[i][j] = AS->p();
-                single_phase.rhomolar[i][j] = AS->rhomolar();
-                single_phase.hmolar[i][j] = AS->hmolar();
-                single_phase.smolar[i][j] = AS->smolar();
-                
-                // ----------------------------------------
-                //   First derivatives of state variables
-                // ----------------------------------------
-                single_phase.dTdx[i][j] = AS->first_partial_deriv(iT, xkey, ykey);
-                single_phase.dTdy[i][j] = AS->first_partial_deriv(iT, ykey, xkey);
-                single_phase.dpdx[i][j] = AS->first_partial_deriv(iP, xkey, ykey);
-                single_phase.dpdy[i][j] = AS->first_partial_deriv(iP, ykey, xkey);
-                single_phase.drhomolardx[i][j] = AS->first_partial_deriv(iDmolar, xkey, ykey);
-                single_phase.drhomolardy[i][j] = AS->first_partial_deriv(iDmolar, ykey, xkey);
-                single_phase.dhmolardx[i][j] = AS->first_partial_deriv(iHmolar, xkey, ykey);
-                single_phase.dhmolardy[i][j] = AS->first_partial_deriv(iHmolar, ykey, xkey);
-                single_phase.dsmolardx[i][j] = AS->first_partial_deriv(iSmolar, xkey, ykey);
-                single_phase.dsmolardy[i][j] = AS->first_partial_deriv(iSmolar, ykey, xkey);
-                
-                if (get_debug_level() > 5){std::cout << " OK" << std::endl;}
             }
-            else{
-                throw ValueError("Cannot construct this type of table (yet)");
+            catch(std::exception &e){
+                // That failed for some reason, go to the next pair
+                if (debug){std::cout << " " << e.what() << std::endl;}
+                continue;
             }
+            
+            // Skip two-phase states - they will remain as _HUGE holes in the table
+            if (is_in_closed_range(0.0, 1.0, AS->Q())){ 
+                if (debug){std::cout << " 2Phase" << std::endl;}
+                continue;
+            };
+            
+            // --------------------
+            //   State variables
+            // --------------------
+            T[i][j] = AS->T();
+            p[i][j] = AS->p();
+            rhomolar[i][j] = AS->rhomolar();
+            hmolar[i][j] = AS->hmolar();
+            smolar[i][j] = AS->smolar();
+			umolar[i][j] = AS->umolar();
+            
+            // -------------------------
+            //   Transport properties
+            // -------------------------
+            try{
+                visc[i][j] = AS->viscosity();
+                cond[i][j] = AS->conductivity();
+            }
+            catch(std::exception &){
+                // Failures will remain as holes in table
+            }
+            
+            // ----------------------------------------
+            //   First derivatives of state variables
+            // ----------------------------------------
+            dTdx[i][j] = AS->first_partial_deriv(iT, xkey, ykey);
+            dTdy[i][j] = AS->first_partial_deriv(iT, ykey, xkey);
+            dpdx[i][j] = AS->first_partial_deriv(iP, xkey, ykey);
+            dpdy[i][j] = AS->first_partial_deriv(iP, ykey, xkey);
+            drhomolardx[i][j] = AS->first_partial_deriv(iDmolar, xkey, ykey);
+            drhomolardy[i][j] = AS->first_partial_deriv(iDmolar, ykey, xkey);
+            dhmolardx[i][j] = AS->first_partial_deriv(iHmolar, xkey, ykey);
+            dhmolardy[i][j] = AS->first_partial_deriv(iHmolar, ykey, xkey);
+            dsmolardx[i][j] = AS->first_partial_deriv(iSmolar, xkey, ykey);
+            dsmolardy[i][j] = AS->first_partial_deriv(iSmolar, ykey, xkey);
+			dumolardx[i][j] = AS->first_partial_deriv(iUmolar, xkey, ykey);
+            dumolardy[i][j] = AS->first_partial_deriv(iUmolar, ykey, xkey);
+            
+            // ----------------------------------------
+            //   Second derivatives of state variables
+            // ----------------------------------------
+            d2Tdx2[i][j] = AS->second_partial_deriv(iT, xkey, ykey, xkey, ykey);
+            d2Tdxdy[i][j] = AS->second_partial_deriv(iT, xkey, ykey, ykey, xkey);
+            d2Tdy2[i][j] = AS->second_partial_deriv(iT, ykey, xkey, ykey, xkey);
+            d2pdx2[i][j] = AS->second_partial_deriv(iP, xkey, ykey, xkey, ykey);
+            d2pdxdy[i][j] = AS->second_partial_deriv(iP, xkey, ykey, ykey, xkey);
+            d2pdy2[i][j] = AS->second_partial_deriv(iP, ykey, xkey, ykey, xkey);
+            d2rhomolardx2[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, xkey, ykey);
+            d2rhomolardxdy[i][j] = AS->second_partial_deriv(iDmolar, xkey, ykey, ykey, xkey);
+            d2rhomolardy2[i][j] = AS->second_partial_deriv(iDmolar, ykey, xkey, ykey, xkey);
+            d2hmolardx2[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, xkey, ykey);
+            d2hmolardxdy[i][j] = AS->second_partial_deriv(iHmolar, xkey, ykey, ykey, xkey);
+            d2hmolardy2[i][j] = AS->second_partial_deriv(iHmolar, ykey, xkey, ykey, xkey);
+            d2smolardx2[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, xkey, ykey);
+            d2smolardxdy[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, ykey, xkey);
+            d2smolardy2[i][j] = AS->second_partial_deriv(iSmolar, ykey, xkey, ykey, xkey);
+			d2umolardx2[i][j] = AS->second_partial_deriv(iUmolar, xkey, ykey, xkey, ykey);
+            d2umolardxdy[i][j] = AS->second_partial_deriv(iUmolar, xkey, ykey, ykey, xkey);
+            d2umolardy2[i][j] = AS->second_partial_deriv(iUmolar, ykey, xkey, ykey, xkey);
         }
     }
 }
-    
-} /* namespace CoolProp */
+std::string CoolProp::TabularBackend::path_to_tables(void){
+    std::vector<std::string> fluids = AS->fluid_names();
+    std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();
+    std::vector<std::string> components;
+    for (std::size_t i = 0; i < fluids.size(); ++i){
+        components.push_back(format("%s[%0.10Lf]", fluids[i].c_str(), fractions[i]));
+    }
+    return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(components, "&") + ")";
+}
+
+void CoolProp::TabularBackend::write_tables(){
+    std::string path_to_tables = this->path_to_tables();
+    make_dirs(path_to_tables);
+    write_table(single_phase_logph, path_to_tables, "single_phase_logph");
+    write_table(single_phase_logpT, path_to_tables, "single_phase_logpT");
+    write_table(pure_saturation, path_to_tables, "pure_saturation");
+    write_table(phase_envelope, path_to_tables, "phase_envelope");
+}
+void CoolProp::TabularBackend::load_tables(){
+    std::string path_to_tables = this->path_to_tables();
+    single_phase_logph.AS = this->AS;
+    single_phase_logpT.AS = this->AS;
+    pure_saturation.AS = this->AS;
+    single_phase_logph.set_limits();
+    single_phase_logpT.set_limits();
+    load_table(single_phase_logph, path_to_tables, "single_phase_logph.bin.z");
+    load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin.z");
+    load_table(pure_saturation, path_to_tables, "pure_saturation.bin.z");
+    load_table(phase_envelope, path_to_tables, "phase_envelope.bin.z");
+    if (get_debug_level() > 0){ std::cout << "Tables loaded" << std::endl; }
+}
+
+#if defined(ENABLE_CATCH)
+#include "catch.hpp"
+
+// Defined global so we only load once
+static shared_ptr<CoolProp::AbstractState> ASHEOS, ASTTSE, ASBICUBIC;
+
+/* Use a fixture so that loading of the tables from memory only happens once in the initializer */
+class TabularFixture
+{
+public:
+    TabularFixture(){}
+    void setup(){
+        if (ASHEOS.get() == NULL){ ASHEOS.reset(CoolProp::AbstractState::factory("HEOS", "Water")); }
+        if (ASTTSE.get() == NULL){ ASTTSE.reset(CoolProp::AbstractState::factory("TTSE&HEOS", "Water")); }
+        if (ASBICUBIC.get() == NULL){ ASBICUBIC.reset(CoolProp::AbstractState::factory("BICUBIC&HEOS", "Water")); }
+    }
+};
+TEST_CASE_METHOD(TabularFixture, "Tests for tabular backends with water", "[Tabular]")
+{
+    SECTION("first_saturation_deriv invalid quality"){
+        setup();
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 0.5);
+        CHECK_THROWS(ASBICUBIC->first_saturation_deriv(CoolProp::iP, CoolProp::iT));
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 0.5);
+        CHECK_THROWS(ASTTSE->first_saturation_deriv(CoolProp::iP, CoolProp::iT));
+    }
+
+    SECTION("first_saturation_deriv dp/dT"){
+        setup();
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl expected = ASHEOS->first_saturation_deriv(CoolProp::iP, CoolProp::iT);        
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_saturation_deriv(CoolProp::iP, CoolProp::iT);
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_BICUBIC = ASTTSE->first_saturation_deriv(CoolProp::iP, CoolProp::iT);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
+    SECTION("first_saturation_deriv dDmolar/dP"){
+        setup();
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl expected = ASHEOS->first_saturation_deriv(CoolProp::iDmolar, CoolProp::iP);
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_saturation_deriv(CoolProp::iDmolar, CoolProp::iP);
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_BICUBIC = ASBICUBIC->first_saturation_deriv(CoolProp::iDmolar, CoolProp::iP);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
+    SECTION("first_saturation_deriv dDmass/dP"){
+        setup();
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl expected = ASHEOS->first_saturation_deriv(CoolProp::iDmass, CoolProp::iP);
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_saturation_deriv(CoolProp::iDmass, CoolProp::iP);
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_BICUBIC = ASBICUBIC->first_saturation_deriv(CoolProp::iDmass, CoolProp::iP);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
+    SECTION("first_saturation_deriv dHmass/dP"){
+        setup();
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl expected = ASHEOS->first_saturation_deriv(CoolProp::iHmass, CoolProp::iP);
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_saturation_deriv(CoolProp::iHmass, CoolProp::iP);
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 1);
+        CoolPropDbl actual_BICUBIC = ASBICUBIC->first_saturation_deriv(CoolProp::iHmass, CoolProp::iP);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
+    SECTION("first_two_phase_deriv dDmolar/dP|Hmolar"){
+        setup();
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl expected = ASHEOS->first_two_phase_deriv(CoolProp::iDmolar, CoolProp::iP, CoolProp::iHmolar);
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_two_phase_deriv(CoolProp::iDmolar, CoolProp::iP, CoolProp::iHmolar);
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_BICUBIC = ASBICUBIC->first_two_phase_deriv(CoolProp::iDmolar, CoolProp::iP, CoolProp::iHmolar);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
+    SECTION("first_two_phase_deriv dDmass/dP|Hmass"){
+        setup();
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl expected = ASHEOS->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iP, CoolProp::iHmass);
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iP, CoolProp::iHmass);
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_BICUBIC = ASBICUBIC->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iP, CoolProp::iHmass);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
+    SECTION("first_two_phase_deriv dDmass/dHmass|P"){
+        setup();
+        ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl expected = ASHEOS->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iHmass, CoolProp::iP);
+        ASTTSE->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_TTSE = ASTTSE->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iHmass, CoolProp::iP);
+        ASBICUBIC->update(CoolProp::PQ_INPUTS, 101325, 0.1);
+        CoolPropDbl actual_BICUBIC = ASBICUBIC->first_two_phase_deriv(CoolProp::iDmass, CoolProp::iHmass, CoolProp::iP);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
+    SECTION("first_partial_deriv dHmass/dT|P"){
+        setup();
+        ASHEOS->update(CoolProp::PT_INPUTS, 101325, 300);
+        double expected = ASHEOS->cpmass();
+        ASTTSE->update(CoolProp::PT_INPUTS, 101325, 300);
+        double dhdT_TTSE = ASTTSE->first_partial_deriv(CoolProp::iHmass, CoolProp::iT, CoolProp::iP);
+        ASBICUBIC->update(CoolProp::PT_INPUTS, 101325, 300);
+        double dhdT_BICUBIC = ASBICUBIC->first_partial_deriv(CoolProp::iHmass, CoolProp::iT, CoolProp::iP);
+        CAPTURE(expected);
+        CAPTURE(dhdT_TTSE);
+        CAPTURE(dhdT_BICUBIC);
+        CHECK(std::abs((expected-dhdT_TTSE)/expected) < 1e-4);
+        CHECK(std::abs((expected-dhdT_BICUBIC)/expected) < 1e-4);
+    }
+    SECTION("first_partial_deriv dHmolar/dT|P"){
+        setup();
+        ASHEOS->update(CoolProp::PT_INPUTS, 101325, 300);
+        double expected = ASHEOS->cpmolar();
+        ASTTSE->update(CoolProp::PT_INPUTS, 101325, 300);
+        double dhdT_TTSE = ASTTSE->first_partial_deriv(CoolProp::iHmolar, CoolProp::iT, CoolProp::iP);
+        ASBICUBIC->update(CoolProp::PT_INPUTS, 101325, 300);
+        double dhdT_BICUBIC = ASBICUBIC->first_partial_deriv(CoolProp::iHmolar, CoolProp::iT, CoolProp::iP);
+        CAPTURE(expected);
+        CAPTURE(dhdT_TTSE);
+        CAPTURE(dhdT_BICUBIC);
+        CHECK(std::abs((expected-dhdT_TTSE)/expected) < 1e-4);
+        CHECK(std::abs((expected-dhdT_BICUBIC)/expected) < 1e-4);
+    }
+    SECTION("check isentropic process"){
+        setup();
+        double T0 = 300;
+        double p0 = 1e5;
+        double p1 = 1e6;
+        ASHEOS->update(CoolProp::PT_INPUTS, p0, 300);
+        double s0 = ASHEOS->smolar();
+        ASHEOS->update(CoolProp::PSmolar_INPUTS, p1, s0);
+        double expected = ASHEOS->T();
+        ASTTSE->update(CoolProp::PSmolar_INPUTS, p1, s0);
+        double actual_TTSE = ASTTSE->T();
+        ASBICUBIC->update(CoolProp::PSmolar_INPUTS, p1, s0);
+        double actual_BICUBIC = ASBICUBIC->T();
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-2);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-2);
+    }
+    SECTION("check D=1, T=300 inputs process"){
+        setup();
+        double d = 1;
+        CAPTURE(d);
+        ASHEOS->update(CoolProp::DmolarT_INPUTS, d, 300);
+        double expected = ASHEOS->p();
+        ASTTSE->update(CoolProp::DmolarT_INPUTS, d, 300);
+        double actual_TTSE = ASTTSE->p();
+        ASBICUBIC->update(CoolProp::DmolarT_INPUTS, d, 300);
+        double actual_BICUBIC = ASBICUBIC->p();
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-3);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-3);
+    }
+}
+#endif // ENABLE_CATCH
+
+#endif // !defined(NO_TABULAR_BACKENDS)

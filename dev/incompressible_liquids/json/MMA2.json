@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": 9.356593e-06, 
     "coeffs": [
       [
         5.522851e+00, 
@@ -17,6 +18,7 @@
   "Tmin": 2.231500e+02, 
   "TminPsat": 2.931500e+02, 
   "conductivity": {
+    "NRMS": 1.306074e-09, 
     "coeffs": [
       [
         4.159515e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 4.325853e-10, 
     "coeffs": [
       [
         9.683060e+02, 
@@ -92,20 +95,24 @@
   }, 
   "description": "Melinder, Methanol", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MMA2", 
   "reference": "Melinder2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 2.555755e-10, 
     "coeffs": [
       [
         3.898713e+03, 
@@ -143,6 +150,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 3.405004e-11, 
     "coeffs": [
       [
         -4.979901e+00, 
@@ -180,6 +188,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 

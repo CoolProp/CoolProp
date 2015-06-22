@@ -267,8 +267,8 @@
       "T_max_units": "K", 
       "Ttriple": 218.65, 
       "Ttriple_units": "K", 
-      "accentric": 1.142605258673496, 
-      "accentric_units": "-", 
+      "acentric": 1.142605258673496, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -1, 
@@ -429,16 +429,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{19}H_{32}O_{2}", 
   "NAME": "MethylLinolenate", 
   "REFPROP_NAME": "MLINOLEN", 
   "STATES": {
     "critical": {
       "T": 772.0, 
       "T_units": "K", 
+      "hmolar": 144901.9378339763, 
+      "hmolar_units": "J/mol", 
       "p": 1369000.0, 
       "p_units": "Pa", 
-      "rhomolar": 847.3000000000001, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 847.3000000000002, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 204.22939334178912, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 260.0, 

@@ -23,23 +23,30 @@ function git_pull {
 function stop {
     buildbot stop /home/$USER/buildbot/server-master/
 }
+function clean {
+    rm -f /home/$USER/buildbot/server-master/buildbot_private.pyc
+}
 #
 # Check for input
 CMD="$1"
 if [ "$CMD" = "restart" ]; then
     stop
     git_pull
+    clean
     start
 elif [ "$CMD" = "reconfig" ]; then
     git_pull
+    clean
     reconfig
 elif [ "$CMD" = "start" ]; then
     git_pull
+    clean
     start
 elif [ "$CMD" = "stop" ]; then
     stop
 else
     git_pull
+    clean
     start
 fi
 #

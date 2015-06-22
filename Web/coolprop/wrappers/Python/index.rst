@@ -4,16 +4,19 @@
 Python Wrapper
 **************
 
+.. contents:: :depth: 2
+
 Automatic installation
 ======================
 
-Using the ``pip`` installation program, you can install the official release can be obtained from the pypi server using::
+Using the ``pip`` installation program, you can install the official release from the pypi server using::
 
     pip install CoolProp
 
-or the latest version from the development server using::
+If you dare, you can also try the latest nightly release from :sfnightly:`Python` 
+or get it directly from the development server using::
 
-    pip install --find-links http://www.coolprop.dreamhosters.com:8010/binaries/Python/ -U --force-reinstall CoolProp
+    pip install --pre --find-links http://www.coolprop.dreamhosters.com/binaries/Python/ -U --force-reinstall CoolProp
 
 
 Manual installation
@@ -72,6 +75,8 @@ by following the same lines as above::
 Usage
 =====
 
+There is example code :ref:`at the end of this page <python_example>`
+
 Once installed, you can use CoolProp for various things:
 
 * Compute special values in SI units::
@@ -101,6 +106,19 @@ Once installed, you can use CoolProp for various things:
 .. _thermodynamics exercices: https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_resolution_cycle_diesel.py
 .. _more complex graphs: https://github.com/jjfPCSI1/py4phys/blob/master/lib/T6_diagramme_Ph_coolprop.py
 .. _3D stuff: https://github.com/CoolProp/CoolProp/blob/master/dev/TTSE/TTSE_ranges.py
+
+.. _python_example:
+
+Example Code
+============
+
+.. literalinclude:: Example.py
+   :language: python
+
+Example Code Output
+===================
+
+.. literalinclude:: Example.out
 
 
 Module Documentation

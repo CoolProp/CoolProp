@@ -278,8 +278,8 @@
       "T_max_units": "K", 
       "Ttriple": 178.5, 
       "Ttriple_units": "K", 
-      "accentric": 0.3071, 
-      "accentric_units": "-", 
+      "acentric": 0.3071, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -9.4883659997, 
@@ -399,16 +399,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{3}H_{6}O_{1}", 
   "NAME": "Acetone", 
   "REFPROP_NAME": "ACETONE", 
   "STATES": {
     "critical": {
       "T": 508.1, 
       "T_units": "K", 
+      "hmolar": 31614.73051047263, 
+      "hmolar_units": "J/mol", 
       "p": 4700000.0, 
       "p_units": "Pa", 
       "rhomolar": 4699.999999999999, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 72.97112978635582, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 178.5, 

@@ -2,7 +2,7 @@
   "ALIASES": [
     "nitrogen", 
     "NITROGEN", 
-    "N2",
+    "N2", 
     "R728"
   ], 
   "ANCILLARIES": {
@@ -299,8 +299,8 @@
       "T_max_units": "K", 
       "Ttriple": 63.151, 
       "Ttriple_units": "K", 
-      "accentric": 0.0372, 
-      "accentric_units": "-", 
+      "acentric": 0.0372, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -12.76952708, 
@@ -548,16 +548,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "N_{2}", 
   "NAME": "Nitrogen", 
   "REFPROP_NAME": "NITROGEN", 
   "STATES": {
     "critical": {
-      "T": 126.192, 
+      "T": 126.19200000000001, 
       "T_units": "K", 
+      "hmolar": 818.9065856240063, 
+      "hmolar_units": "J/mol", 
       "p": 3395800.0, 
       "p_units": "Pa", 
       "rhomolar": 11183.901464580624, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 118.07314411148191, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 63.151, 

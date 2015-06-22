@@ -275,8 +275,8 @@
       "T_max_units": "K", 
       "Ttriple": 75, 
       "Ttriple_units": "K", 
-      "accentric": 0.2880950842214292, 
-      "accentric_units": "-", 
+      "acentric": 0.2880950842214292, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -11.669406, 
@@ -409,16 +409,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}Cl_{1}F_{4}H_{1}", 
   "NAME": "R124", 
   "REFPROP_NAME": "R124", 
   "STATES": {
     "critical": {
       "T": 395.425, 
       "T_units": "K", 
+      "hmolar": 51696.2811525728, 
+      "hmolar_units": "J/mol", 
       "p": 3624295.0, 
       "p_units": "Pa", 
       "rhomolar": 4103.279546177282, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 206.84238695903932, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 120.0, 

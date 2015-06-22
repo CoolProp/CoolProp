@@ -277,8 +277,8 @@
       "T_max_units": "K", 
       "Ttriple": 142.72, 
       "Ttriple_units": "K", 
-      "accentric": 0.2321, 
-      "accentric_units": "-", 
+      "acentric": 0.2321, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -12.6016527149, 
@@ -375,16 +375,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}Cl_{1}F_{2}H_{3}", 
   "NAME": "R142b", 
   "REFPROP_NAME": "R142B", 
   "STATES": {
     "critical": {
       "T": 410.26, 
       "T_units": "K", 
+      "hmolar": 44064.712907068126, 
+      "hmolar_units": "J/mol", 
       "p": 4055000.0, 
       "p_units": "Pa", 
       "rhomolar": 4438.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 167.86100609490856, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 142.72, 

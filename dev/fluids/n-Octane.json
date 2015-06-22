@@ -284,8 +284,8 @@
       "T_max_units": "K", 
       "Ttriple": 216.37, 
       "Ttriple_units": "K", 
-      "accentric": 0.395, 
-      "accentric_units": "-", 
+      "acentric": 0.395, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -1.601873998562896, 
@@ -397,16 +397,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{8}H_{18}", 
   "NAME": "n-Octane", 
   "REFPROP_NAME": "OCTANE", 
   "STATES": {
     "critical": {
       "T": 569.32, 
       "T_units": "K", 
+      "hmolar": 65741.23676610284, 
+      "hmolar_units": "J/mol", 
       "p": 2497000.0, 
       "p_units": "Pa", 
       "rhomolar": 2056.4, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 133.32374927005395, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 216.37, 

@@ -280,8 +280,8 @@
       "T_max_units": "K", 
       "Ttriple": 311.84, 
       "Ttriple_units": "K", 
-      "accentric": 1.01756, 
-      "accentric_units": "-", 
+      "acentric": 1.01756, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -1, 
@@ -442,16 +442,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{19}H_{38}O_{2}", 
   "NAME": "MethylStearate", 
   "REFPROP_NAME": "MSTEARAT", 
   "STATES": {
     "critical": {
       "T": 775.0, 
       "T_units": "K", 
+      "hmolar": 154600.52639625745, 
+      "hmolar_units": "J/mol", 
       "p": 1239000.0, 
       "p_units": "Pa", 
-      "rhomolar": 794.3, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 794.3000000000001, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 217.7802653573089, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 311.84000000000003, 

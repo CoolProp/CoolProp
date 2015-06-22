@@ -446,6 +446,9 @@ int main()
     }
     #endif
 	#if 1
+    double T1 = HumidAir::HAPropsSI("T", "P", 101325, "H", 202520, "W", 0.013);
+    double T2 = HumidAir::HAPropsSI("T", "P", 101325, "H", 202520, "W", 0.007);
+    double T3 = HumidAir::HAPropsSI("T", "P", 101325, "H", 202520, "W", 0.0000001);
 	shared_ptr<CoolProp::AbstractState> CP(CoolProp::AbstractState::factory("HEOS", "Water"));
 	shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Water"));
 	std::vector<std::string> fluids = RP->fluid_names();

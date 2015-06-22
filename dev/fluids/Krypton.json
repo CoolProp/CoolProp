@@ -293,8 +293,8 @@
       "T_max_units": "K", 
       "Ttriple": 115.77, 
       "Ttriple_units": "K", 
-      "accentric": -0.00089, 
-      "accentric_units": "-", 
+      "acentric": -0.00089, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -3.7506412806, 
@@ -395,16 +395,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "Kr_{1}", 
   "NAME": "Krypton", 
   "REFPROP_NAME": "KRYPTON", 
   "STATES": {
     "critical": {
-      "T": 209.48, 
+      "T": 209.48000000000002, 
       "T_units": "K", 
+      "hmolar": 6391.985066117634, 
+      "hmolar_units": "J/mol", 
       "p": 5525000.0, 
       "p_units": "Pa", 
       "rhomolar": 10850.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 35.567990683867926, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 115.77, 

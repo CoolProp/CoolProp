@@ -1,4 +1,5 @@
-
+import matplotlib
+matplotlib.use('Agg') # use a non-interactive backend
 import CoolProp
 import os.path
 
@@ -59,7 +60,7 @@ T_melt = T_melt_f(np.log10(p_melt))
 #
 # Prepare the data for the saturation line
 T_sat = np.linspace(T_triple, Tc, len(T_melt))
-p_sat = CP.CoolProp.PropsSI('P','T',T_sat,'Q',[0]*len(T_sat),'Water',[1])
+p_sat = CP.CoolProp.PropsSI('P','T',T_sat,'Q',[0]*len(T_sat),'Water')
 
 #
 # Prepare density data

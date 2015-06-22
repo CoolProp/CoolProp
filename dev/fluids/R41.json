@@ -275,8 +275,8 @@
       "T_max_units": "K", 
       "Ttriple": 129.82, 
       "Ttriple_units": "K", 
-      "accentric": 0.2004, 
-      "accentric_units": "-", 
+      "acentric": 0.2004, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -4.867644116, 
@@ -403,16 +403,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}F_{1}H_{3}", 
   "NAME": "R41", 
   "REFPROP_NAME": "R41", 
   "STATES": {
     "critical": {
-      "T": 317.28, 
+      "T": 317.28000000000003, 
       "T_units": "K", 
+      "hmolar": 13431.19760131525, 
+      "hmolar_units": "J/mol", 
       "p": 5897000.0, 
       "p_units": "Pa", 
       "rhomolar": 9300.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 55.215826346674184, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 129.82, 

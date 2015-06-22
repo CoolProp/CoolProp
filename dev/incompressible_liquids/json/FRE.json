@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": 3.097559e-04, 
     "coeffs": [
       [
         3.053914e+02, 
@@ -17,6 +18,7 @@
   "Tmin": 2.330000e+02, 
   "TminPsat": 3.130000e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         5.500000e-01, 
@@ -30,6 +32,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         1.015000e+03, 
@@ -46,20 +49,24 @@
   }, 
   "description": "Freezium, Potassium Formate", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "FRE", 
   "reference": "Kemira1998,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 2.778731e-06, 
     "coeffs": [
       [
         4.150105e+03, 
@@ -70,7 +77,7 @@
         -4.617142e+01
       ], 
       [
-        1.330613e-04, 
+        1.330612e-04, 
         6.297478e+00, 
         1.571376e-02, 
         -3.782188e-02, 
@@ -86,9 +93,9 @@
         0.000000e+00
       ], 
       [
-        -6.379657e-08, 
-        3.363858e-07, 
-        -3.132406e-07, 
+        -6.379692e-08, 
+        3.363855e-07, 
+        -3.132405e-07, 
         0.000000e+00, 
         0.000000e+00, 
         0.000000e+00
@@ -97,6 +104,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 2.601290e-06, 
     "coeffs": [
       [
         7.516580e-01, 
@@ -124,8 +132,8 @@
       ], 
       [
         -2.058397e-06, 
-        -3.348864e-10, 
-        5.467785e-10, 
+        -3.348865e-10, 
+        5.467783e-10, 
         0.000000e+00, 
         0.000000e+00, 
         0.000000e+00
@@ -134,6 +142,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

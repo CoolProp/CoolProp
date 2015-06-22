@@ -16,6 +16,7 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
     std::string type = cpjson::get_string(json_code,"type");
     if (!type.compare("rational_polynomial"))
     {
+        this->type = TYPE_RATIONAL_POLYNOMIAL;
         num_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["A"]));
         den_coeffs = vec_to_eigen(cpjson::get_double_array(json_code["B"]));
         max_abs_error = cpjson::get_double(json_code,"max_abs_error");
@@ -23,14 +24,20 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
             Tmin = cpjson::get_double(json_code,"Tmin");
             Tmax = cpjson::get_double(json_code,"Tmax");
         }
-        catch (std::exception &e){
+        catch (...){
             Tmin = _HUGE;
             Tmax = _HUGE;
         }
     }
     else
     {
+        if (!type.compare("rhoLnoexp"))
+            this->type = TYPE_NOT_EXPONENTIAL;
+        else
+            this->type = TYPE_EXPONENTIAL;
         n = cpjson::get_double_array(json_code["n"]);
+        N = n.size();
+        s = n;
         t = cpjson::get_double_array(json_code["t"]);
         Tmin = cpjson::get_double(json_code,"Tmin");
         Tmax = cpjson::get_double(json_code,"Tmax");
@@ -39,14 +46,6 @@ SaturationAncillaryFunction::SaturationAncillaryFunction(rapidjson::Value &json_
         T_r = cpjson::get_double(json_code,"T_r");    
     }   
     
-    if (!type.compare("rational_polynomial"))
-        this->type = TYPE_RATIONAL_POLYNOMIAL;
-    else if (!type.compare("rhoLnoexp"))
-        this->type = TYPE_NOT_EXPONENTIAL;
-    else
-        this->type = TYPE_EXPONENTIAL;
-    this->N = n.size();
-    s = n;
 };
     
 double SaturationAncillaryFunction::evaluate(double T)
@@ -92,18 +91,15 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
     class solver_resid : public FuncWrapper1D
     {
     public:
-        int other;
         SaturationAncillaryFunction *anc;
-        long double T, value, r, current_value;
+        CoolPropDbl value;
 
-        solver_resid(SaturationAncillaryFunction *anc, long double value) : anc(anc), value(value){};
+        solver_resid(SaturationAncillaryFunction *anc, CoolPropDbl value) : anc(anc), value(value){}
 
         double call(double T){
-            this->T = T;
-            current_value = anc->evaluate(T);
-            r = current_value - value;
-            return r;
-        };
+            CoolPropDbl current_value = anc->evaluate(T);
+            return current_value - value;
+        }
     };
     solver_resid resid(this, value);
     std::string errstring;
@@ -115,7 +111,7 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
         // because then you get (negative number)^(double) which is undefined.
         return Brent(resid,min_bound,max_bound,DBL_EPSILON,1e-10,100,errstring);
     }
-    catch(std::exception &e){
+    catch(...){
         return Secant(resid,max_bound, -0.01, 1e-12, 100, errstring);
     }
 }
@@ -164,7 +160,7 @@ void MeltingLineVariables::set_limits(void)
     }
 }
 
-long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
+CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
 {
     if (type == MELTING_LINE_NOT_SET){throw ValueError("Melting line curve not set");}
     if (OF == iP_max){ return pmax;}
@@ -172,7 +168,7 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
     else if (OF == iT_max){ return Tmax;}
     else if (OF == iT_min){ return Tmin;}
     else if (OF == iP && GIVEN == iT){
-        long double T = value;
+        CoolPropDbl T = value;
         if (type == MELTING_LINE_SIMON_TYPE){
             // Need to find the right segment
             for (std::size_t i = 0; i < simon.parts.size(); ++i){
@@ -213,7 +209,7 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
             for (std::size_t i = 0; i < simon.parts.size(); ++i){
                 MeltingLinePiecewiseSimonSegment &part = simon.parts[i];
                 //  p = part.p_0 + part.a*(pow(T/part.T_0,part.c)-1);
-                long double T = pow((value-part.p_0)/part.a+1,1/part.c)*part.T_0;
+                CoolPropDbl T = pow((value-part.p_0)/part.a+1,1/part.c)*part.T_0;
                 if (T >= part.T_0 && T <= part.T_max){
                     return T;
                 }
@@ -226,18 +222,14 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
             {
             public:
                 MeltingLinePiecewisePolynomialInTrSegment *part;
-                long double r, given_p, calc_p, T;
-                solver_resid(MeltingLinePiecewisePolynomialInTrSegment *part, long double p) : part(part), given_p(p){};
+                CoolPropDbl given_p;
+                solver_resid(MeltingLinePiecewisePolynomialInTrSegment *part, CoolPropDbl p) : part(part), given_p(p){};
                 double call(double T){
 
-                    this->T = T;
-
-                    calc_p = part->evaluate(T);
+                    CoolPropDbl calc_p = part->evaluate(T);
 
                     // Difference between the two is to be driven to zero
-                    r = given_p - calc_p;
-
-                    return r;
+                    return given_p - calc_p;
                 };
             };
             
@@ -260,18 +252,14 @@ long double MeltingLineVariables::evaluate(int OF, int GIVEN, long double value)
             {
             public:
                 MeltingLinePiecewisePolynomialInThetaSegment *part;
-                long double r, given_p, calc_p, T;
-                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment *part, long double p) : part(part), given_p(p){};
+                CoolPropDbl given_p;
+                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment *part, CoolPropDbl p) : part(part), given_p(p){};
                 double call(double T){
 
-                    this->T = T;
-
-                    calc_p = part->evaluate(T);
+                    CoolPropDbl calc_p = part->evaluate(T);
 
                     // Difference between the two is to be driven to zero
-                    r = given_p - calc_p;
-
-                    return r;
+                    return given_p - calc_p;
                 };
             };
             

@@ -16,9 +16,7 @@ namespace CoolProp {
 struct SimpleState
 {
     double rhomolar, T, p, hmolar, smolar, umolar, Q;
-    SimpleState(){rhomolar = _HUGE; T = _HUGE; p = _HUGE; 
-                  hmolar = _HUGE; smolar = _HUGE, umolar = _HUGE;
-                  Q = _HUGE;}
+    SimpleState() : rhomolar(_HUGE), T(_HUGE), p(_HUGE), hmolar(_HUGE), smolar(_HUGE), umolar(_HUGE), Q(_HUGE) {}
     bool is_valid(){return ValidNumber(rhomolar) && ValidNumber(T) && ValidNumber(hmolar) && ValidNumber(p);}
 };
 
@@ -27,7 +25,7 @@ struct SsatSimpleState : public SimpleState
 {
     enum SsatSimpleStateEnum {SSAT_MAX_NOT_SET=0, SSAT_MAX_DOESNT_EXIST, SSAT_MAX_DOES_EXIST};
     SsatSimpleStateEnum exists;
-    SsatSimpleState(){ SimpleState(); }
+    SsatSimpleState() : exists(SSAT_MAX_NOT_SET) {}
 };
 
 
@@ -39,68 +37,67 @@ struct SsatSimpleState : public SimpleState
 //
 // !! If you add a parameter, update the map in the corresponding CPP file !!
 enum parameters{
-
+    INVALID_PARAMETER = 0,
+    
     // General parameters
-	igas_constant,
-    imolar_mass, 
-    irhomolar_reducing, 
-    irhomolar_critical, 
-    iT_reducing, 
-    iT_critical,
-    irhomass_reducing, 
-    irhomass_critical, 
-    iP_critical, 
-	iP_reducing,
-    iT_triple, 
-    iP_triple, 
-    iT_min, 
-    iT_max,
-    iP_max, 
-    iP_min,
+    igas_constant, ///< Ideal-gas constant
+    imolar_mass, ///< Molar mass
+    iacentric_factor, ///< Acentric factor
+    irhomolar_reducing, ///< Molar density used for the reducing state
+    irhomolar_critical, ///< Molar density used for the critical point
+    iT_reducing, ///< Temperature at the reducing state
+    iT_critical, ///< Temperature at the critical point
+    irhomass_reducing, ///< Mass density at the reducing state
+    irhomass_critical, ///< Mass density at the critical point
+    iP_critical, ///< Pressure at the critical point
+    iP_reducing, ///< Pressure at the reducing point
+    iT_triple, ///< Triple point temperature
+    iP_triple, ///< Triple point pressure
+    iT_min, ///< Minimum temperature
+    iT_max, ///< Maximum temperature
+    iP_max, ///< Maximum pressure
+    iP_min, ///< Minimum pressure
 
     // Bulk properties
-    iT,  
-    iP, 
-    iQ, 
-    iTau, 
-    iDelta,
+    iT,  ///< Temperature
+    iP, ///< Pressure
+    iQ, ///< Vapor quality
+    iTau, ///< Reciprocal reduced temperature
+    iDelta, ///< Reduced density
 
     // Molar specific thermodynamic properties
-    iDmolar, 
-    iHmolar, 
-    iSmolar, 
-    iCpmolar, 
-    iCp0molar, 
-    iCvmolar, 
-    iUmolar, 
-    iGmolar,
+    iDmolar, ///< Mole-based density
+    iHmolar, ///< Mole-based enthalpy
+    iSmolar, ///< Mole-based entropy
+    iCpmolar, ///< Mole-based constant-pressure specific heat
+    iCp0molar, ///< Mole-based ideal-gas constant-pressure specific heat
+    iCvmolar, ///< Mole-based constant-volume specific heat
+    iUmolar, ///< Mole-based internal energy
+    iGmolar, ///< Mole-based Gibbs energy
 
     // Mass specific thermodynamic properties
-    iDmass, 
-    iHmass, 
-    iSmass, 
-    iCpmass, 
-    iCp0mass, 
-    iCvmass, 
-    iUmass, 
-    iGmass,
-
-    // Smoothing functions for density
-    //idrhodh_constp_smoothed, idrhodp_consth_smoothed, irho_smoothed,
+    iDmass, ///< Mass-based density
+    iHmass, ///< Mass-based enthalpy
+    iSmass, ///< Mass-based entropy
+    iCpmass, ///< Mass-based constant-pressure specific heat
+    iCp0mass, ///< Mass-based ideal-gas specific heat
+    iCvmass, ///< Mass-based constant-volume specific heat
+    iUmass, ///< Mass-based internal energy
+    iGmass, ///< Mass-based Gibbs energy
 
     // Transport properties
-    iviscosity, 
-    iconductivity, 
-    isurface_tension, 
-    iPrandtl,
+    iviscosity, ///< Viscosity
+    iconductivity, ///< Thermal conductivity
+    isurface_tension, ///< Surface tension
+    iPrandtl, ///< The Prandtl number
 
     // Derivative-based terms
-    ispeed_sound, 
-    iisothermal_compressibility, 
-    iisobaric_expansion_coefficient,
+    ispeed_sound, ///< Speed of sound
+    iisothermal_compressibility, ///< Isothermal compressibility
+    iisobaric_expansion_coefficient, ///< Isobaric expansion coefficient
 
     // Fundamental derivative of gas dynamics
-    ifundamental_derivative_of_gas_dynamics,
+    ifundamental_derivative_of_gas_dynamics, ///< The fundamental derivative of gas dynamics
 
     // Derivatives of the residual non-dimensionalized Helmholtz energy with respect to the EOS variables
     ialphar, 
@@ -113,16 +110,17 @@ enum parameters{
     idalpha0_ddelta_consttau,
 
     // Other functions and derivatives
-    iBvirial, 
-    iCvirial, 
-    idBvirial_dT, 
-    idCvirial_dT, 
-    iZ,
+    iBvirial, ///< Second virial coefficient
+    iCvirial, ///< Third virial coefficient
+    idBvirial_dT, ///< Derivative of second virial coefficient with temperature
+    idCvirial_dT, ///< Derivative of third virial coefficient with temperature
+    iZ, ///< The compressibility factor Z = p*v/(R*T)
+    iPIP, ///< The phase identification parameter of Venkatarathnam and Oellrich
     
     // Accessors for incompressibles
-    ifraction_min,
-    ifraction_max,
-    iT_freeze,
+    ifraction_min, ///< The minimum fraction (mole, mass, volume) for incompressibles
+    ifraction_max, ///< The maximum fraction (mole,mass,volume) for incompressibles
+    iT_freeze, ///< The freezing temperature for incompressibles
 
     // Environmental parameters
     iGWP20, ///< The 20-year global warming potential
@@ -152,7 +150,7 @@ enum phases{iphase_liquid, ///< Subcritical liquid
 /// Return information about the parameter
 /// @param key The key, one of iT, iP, etc.
 /// @param info The thing you want, one of "IO" ("IO" if input/output, "O" if output only), "short" (very short description), "long" (a longer description), "units"
-std::string get_parameter_information(int key, std::string info);
+std::string get_parameter_information(int key, const std::string &info);
 
 /// Return the enum key corresponding to the parameter name ("Dmolar" for instance)
 parameters get_parameter_index(const std::string &param_name);
@@ -166,23 +164,31 @@ bool is_trivial_parameter(int key);
 /// Returns true if a valid parameter, and sets value in the variable iOutput
 bool is_valid_parameter(const std::string & name, parameters & iOutput);
 
+/// Returns true if the string corresponds to a valid first derivative
+///
+/// If it is a value derivative, the variables are set to the parts of the derivative
 bool is_valid_first_derivative(const std::string & name, parameters &iOf, parameters &iWrt, parameters &iConstant);
 
+/// Returns true if the string corresponds to a valid second derivative
+///
+/// If it is a value derivative, the variables are set to the parts of the derivative
 bool is_valid_second_derivative(const std::string & name, parameters &iOf1, parameters &iWrt1, parameters &iConstant1, parameters &iWrt2, parameters &iConstant2);
 
+/// Get a comma separated list of parameters
 std::string get_csv_parameter_list();
 
 /// These are constants for the compositions
 enum composition_types{IFRAC_MASS, IFRAC_MOLE, IFRAC_VOLUME, IFRAC_UNDEFINED, IFRAC_PURE};
 
-const long double R_u_CODATA = 8.3144621; ///< The value for the ideal gas constant in J/mol/K according to CODATA 2010.  This value is used to harmonize all the ideal gas constants.  This is especially important in the critical region.
+const CoolPropDbl R_u_CODATA = 8.3144621; ///< The value for the ideal gas constant in J/mol/K according to CODATA 2010.  This value is used to harmonize all the ideal gas constants.  This is especially important in the critical region.
 
 /// These are unit types for the fluid
 enum fluid_types{FLUID_TYPE_PURE, FLUID_TYPE_PSEUDOPURE, FLUID_TYPE_REFPROP, FLUID_TYPE_INCOMPRESSIBLE_LIQUID, FLUID_TYPE_INCOMPRESSIBLE_SOLUTION, FLUID_TYPE_UNDEFINED};
 
 // !! If you add a parameter, update the map in the corresponding CPP file !!
-/// These are input pairs that can be used (in each pair, input keys are sorted alphabetically)
+/// These are input pairs that can be used for the update function (in each pair, input keys are sorted alphabetically)
 enum input_pairs{
+    INPUT_PAIR_INVALID = 0, // Default (invalid) value
     QT_INPUTS, ///< Molar quality, Temperature in K
     PQ_INPUTS, ///< Pressure in Pa, Molar quality
     QSmolar_INPUTS, ///< Molar quality, Entropy in J/mol/K
@@ -229,7 +235,20 @@ inline bool match_pair(parameters key1, parameters key2, parameters x1, paramete
     swap = !(key1 == x1);
     return ((key1 == x1 && key2 == x2) || (key2 == x1 && key1 == x2));
 };
-template<class T> CoolProp::input_pairs generate_update_pair(parameters key1, T value1, parameters key2, T value2, T &out1, T &out2)
+/** 
+ * @brief Generate an update pair from key, value pairs
+ * 
+ * If the input pair is valid, v1 and v2 will correspond to the returned output pair
+ * 
+ * @param key1 The first input key
+ * @param value1 The first input value
+ * @param key2 The second input key
+ * @param value2 The second input value
+ * @param out1 The first output value
+ * @param out2 The second output value
+ * @return pair, or INPUT_PAIR_INVALID if not valid
+ */
+template<class T> CoolProp::input_pairs generate_update_pair(parameters key1, T value1, parameters key2, T value2, T &out1, T &out2) throw()
     {
         CoolProp::input_pairs pair;
         bool swap;
@@ -321,8 +340,9 @@ template<class T> CoolProp::input_pairs generate_update_pair(parameters key1, T 
         else if (match_pair(key1, key2, iSmolar, iUmolar, swap)){
             pair = SmolarUmolar_INPUTS; ///< Entropy in J/mol/K, Internal energy in J/mol
         }
-        else
-            throw ValueError("Invalid set of inputs to generate_update_pair");
+        else{
+            pair = INPUT_PAIR_INVALID; return pair;
+        }
 
         if (!swap){
             out1 = value1; out2 = value2;
@@ -333,13 +353,20 @@ template<class T> CoolProp::input_pairs generate_update_pair(parameters key1, T 
         return pair;
     };
 
+/// Get the input pair index associated with its string representation
+input_pairs get_input_pair_index(const std::string &input_pair_name);
+
 /// Return the short description of an input pair key ("DmolarT_INPUTS" for instance)
-std::string get_input_pair_short_desc(int pair);
+const std::string& get_input_pair_short_desc(input_pairs pair);
 
 /// Return the long description of an input pair key ("Molar density in mol/m^3, Temperature in K" for instance)
-std::string get_input_pair_long_desc(int pair);
+const std::string& get_input_pair_long_desc(input_pairs pair);
+
+/// Split an input pair into parameters for the two parts that form the pair
+void split_input_pair(input_pairs pair, parameters &p1, parameters &p2);
 
 extern std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param);
+extern void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param, const double val);
 
 } /* namespace CoolProp */
 #endif /* DATASTRUCTURES_H_ */

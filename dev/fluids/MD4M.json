@@ -267,8 +267,8 @@
       "T_max_units": "K", 
       "Ttriple": 214.15, 
       "Ttriple_units": "K", 
-      "accentric": 0.8246471472642924, 
-      "accentric_units": "-", 
+      "acentric": 0.8246471472642924, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -8.139550790894862, 
@@ -371,16 +371,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{14}H_{42}O_{5}Si_{6}", 
   "NAME": "MD4M", 
   "REFPROP_NAME": "MD4M", 
   "STATES": {
     "critical": {
       "T": 653.2, 
       "T_units": "K", 
+      "hmolar": 131588.05120031716, 
+      "hmolar_units": "J/mol", 
       "p": 877000.0, 
       "p_units": "Pa", 
       "rhomolar": 606.0605999999999, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 219.9333114393481, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 300.0, 

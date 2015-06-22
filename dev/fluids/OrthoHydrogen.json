@@ -269,8 +269,8 @@
       "T_max_units": "K", 
       "Ttriple": 14.008, 
       "Ttriple_units": "K", 
-      "accentric": -0.219, 
-      "accentric_units": "-", 
+      "acentric": -0.219, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -1.4675442336, 
@@ -432,10 +432,14 @@
     "critical": {
       "T": 33.22, 
       "T_units": "K", 
+      "hmolar": 604.7222945842527, 
+      "hmolar_units": "J/mol", 
       "p": 1310650.0, 
       "p_units": "Pa", 
       "rhomolar": 15444.540313699812, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 19.52022573695231, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 14.008000000000001, 

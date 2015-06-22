@@ -278,8 +278,8 @@
       "T_max_units": "K", 
       "Ttriple": 134.3, 
       "Ttriple_units": "K", 
-      "accentric": 0.0978, 
-      "accentric_units": "-", 
+      "acentric": 0.0978, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -3.6587449805, 
@@ -376,16 +376,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}O_{1}S_{1}", 
   "NAME": "CarbonylSulfide", 
   "REFPROP_NAME": "COS", 
   "STATES": {
     "critical": {
       "T": 378.77, 
       "T_units": "K", 
+      "hmolar": 16098.692142513777, 
+      "hmolar_units": "J/mol", 
       "p": 6370000.0, 
       "p_units": "Pa", 
       "rhomolar": 7410.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 50.52155794349957, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 134.3, 

@@ -268,8 +268,8 @@
       "T_max_units": "K", 
       "Ttriple": 178.2, 
       "Ttriple_units": "K", 
-      "accentric": 0.304, 
-      "accentric_units": "-", 
+      "acentric": 0.304, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 5.70409, 
@@ -428,16 +428,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{8}H_{10}", 
   "NAME": "EthylBenzene", 
   "REFPROP_NAME": "EBENZENE", 
   "STATES": {
     "critical": {
       "T": 617.12, 
       "T_units": "K", 
+      "hmolar": 62467.27356087063, 
+      "hmolar_units": "J/mol", 
       "p": 3622400.0, 
       "p_units": "Pa", 
       "rhomolar": 2741.016, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 118.99933130530944, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 178.20000000000002, 

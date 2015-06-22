@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.473900e+02, 
@@ -17,6 +18,7 @@
   "Tmin": 1.731500e+02, 
   "TminPsat": 3.031500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         4.551000e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         9.445000e+02, 
@@ -90,22 +93,26 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Ammonia (NH3)", 
+  "description": "Ammonia (NH3) - aq", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MAM", 
   "reference": "Melinder2010", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         4.233000e+03, 
@@ -143,43 +150,45 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": null, 
     "coeffs": [
       [
-        9.255000e-04, 
-        1.327000e-03, 
-        -5.979000e-03, 
-        -1.097000e-01, 
-        3.065000e-01, 
-        3.244000e+00
+        -5.982255e+00, 
+        1.327000e+00, 
+        -5.979000e+00, 
+        -1.097000e+02, 
+        3.065000e+02, 
+        3.244000e+03
       ], 
       [
-        -3.439000e-05, 
-        1.856000e-05, 
-        -2.184000e-04, 
-        1.670000e-03, 
-        -6.166000e-03, 
+        -3.439000e-02, 
+        1.856000e-02, 
+        -2.184000e-01, 
+        1.670000e+00, 
+        -6.166000e+00, 
         0.000000e+00
       ], 
       [
-        3.217000e-07, 
-        -1.646000e-06, 
-        1.297000e-05, 
-        -3.377000e-05, 
+        3.217000e-04, 
+        -1.646000e-03, 
+        1.297000e-02, 
+        -3.377000e-02, 
         0.000000e+00, 
         0.000000e+00
       ], 
       [
-        -4.544000e-09, 
-        3.004000e-08, 
-        -1.141000e-07, 
+        -4.544000e-06, 
+        3.004000e-05, 
+        -1.141000e-04, 
         0.000000e+00, 
         0.000000e+00, 
         0.000000e+00
       ]
     ], 
-    "type": "polynomial"
+    "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

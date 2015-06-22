@@ -18,24 +18,12 @@ and transport properties.
 */
 //IncompressibleFluid::IncompressibleFluid();
 
-void IncompressibleFluid::set_reference_state(double T0, double p0, double x0, double h0, double s0){
-    this->Tref = T0;
-    this->rhoref = rho(T0,p0,x0);
-    this->pref = p0;
-    this->href = h0;
-    // Now we take care of the energy related values
-    this->uref = 0.0;
-    this->uref = u(T0,p0,x0) - h0; // (value without ref) - (desired ref)
-    this->sref = 0.0;
-    this->sref = s(T0,p0,x0) - s0; // (value without ref) - (desired ref)
-}
-
 void IncompressibleFluid::validate(){
     return;
     // TODO: Implement validation function
 
     // u and s have to be of the polynomial type!
-    throw NotImplementedError("TODO");
+    //throw NotImplementedError("TODO");
 }
 
 bool IncompressibleFluid::is_pure() {
@@ -77,35 +65,27 @@ double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, do
         return poly.evaluate(coeffs, in, 0, offset);
     }
     throw ValueError(format("%s (%d): You have to provide a vector (1D matrix) of coefficients, not  (%d,%d).",__FILE__,__LINE__,r,c));
-    return _HUGE;
 }
+
 
 /// Density as a function of temperature, pressure and composition.
 double IncompressibleFluid::rho (double T, double p, double x){
     switch (density.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(density, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(density, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
             return exp(poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase));
-            break;
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(density, T, x);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,density.type));
-            break;
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,density.type));
-            break;
     }
-    return _HUGE;
 }
 
 /// Heat capacities as a function of temperature, pressure and composition.
@@ -114,107 +94,50 @@ double IncompressibleFluid::c   (double T, double p, double x){
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             //throw NotImplementedError("Here you should implement the polynomial.");
             return poly.evaluate(specific_heat.coeffs, T, x, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
-            break;
         default:
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for specific heat.",__FILE__,__LINE__,specific_heat.type));
-            break;
     }
-    return _HUGE;
 }
-
-/// Entropy as a function of temperature, pressure and composition.
-double IncompressibleFluid::s   (double T, double p, double x){
-    switch (specific_heat.type) {
-        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            //throw NotImplementedError("Here you should implement the polynomial.");
-            return poly.integral(specific_heat.coeffs, T, x, 0, -1, 0, Tbase, xbase) - sref;
-            break;
-        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
-            break;
-        default:
-            throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.",__FILE__,__LINE__,specific_heat.type));
-            break;
-    }
-    return _HUGE;
-}
-
-/// Internal energy as a function of temperature, pressure and composition.
-double IncompressibleFluid::u   (double T, double p, double x){
-    switch (specific_heat.type) {
-        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            //throw NotImplementedError("Here you should implement the polynomial.");
-            return poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase) - uref;
-            break;
-        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
-            break;
-        default:
-            throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for internal energy.",__FILE__,__LINE__,specific_heat.type));
-            break;
-    }
-    return _HUGE;
-}
-
-/// Enthalpy as a function of temperature, pressure and composition.
-double IncompressibleFluid::h   (double T, double p, double x){return h_u(T,p,x);};
 
 /// Viscosity as a function of temperature, pressure and composition.
 double IncompressibleFluid::visc(double T, double p, double x){
     switch (viscosity.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.evaluate(viscosity.coeffs, T, x, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(viscosity, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(viscosity, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
             return exp(poly.evaluate(viscosity.coeffs, T, x, 0, 0, Tbase, xbase));
-            break;
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(viscosity, T, x);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,viscosity.type));
-            break;
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,viscosity.type));
-            break;
     }
-    return _HUGE;
 }
 /// Thermal conductivity as a function of temperature, pressure and composition.
 double IncompressibleFluid::cond(double T, double p, double x){
     switch (conductivity.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.evaluate(conductivity.coeffs, T, x, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(conductivity, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(conductivity, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
             return exp(poly.evaluate(conductivity.coeffs, T, x, 0, 0, Tbase, xbase));
-            break;
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(conductivity, T, x);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,conductivity.type));
-            break;
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,conductivity.type));
-            break;
     }
-    return _HUGE;
 }
 /// Saturation pressure as a function of temperature and composition.
 double IncompressibleFluid::psat(double T,           double x){
@@ -222,55 +145,85 @@ double IncompressibleFluid::psat(double T,           double x){
     switch (p_sat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(p_sat, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(p_sat, T, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
             return exp(poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase));
-            break;
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(p_sat, T, x);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,p_sat.type));
-            break;
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,p_sat.type));
-            break;
     }
-    return _HUGE;
 }
 /// Freezing temperature as a function of pressure and composition.
 double IncompressibleFluid::Tfreeze(       double p, double x){
     switch (T_freeze.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.evaluate(T_freeze.coeffs, p, x, 0, 0, 0.0, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(T_freeze, x, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(T_freeze, x, 0.0);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
             return exp(poly.evaluate(T_freeze.coeffs, p, x, 0, 0, 0.0, xbase));
-            break;
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(T_freeze, p, x);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,T_freeze.type));
-            break;
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,T_freeze.type));
-            break;
     }
-    return _HUGE;
 }
+
+
+/* Below are direct calculations of the derivatives. Nothing
+ * special is going on, we simply use the polynomial class to
+ * derive the different functions with respect to temperature.
+ */
+/// Partial derivative of density with respect to temperature at constant pressure and composition
+double IncompressibleFluid::drhodTatPx (double T, double p, double x){
+    switch (density.type) {
+        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+        	return poly.derivative(density.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,density.type));
+        default:
+            throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for density.",__FILE__,__LINE__,density.type));
+    }
+}
+/// Partial derivative of entropy
+//  with respect to temperature at constant pressure and composition
+//  integrated in temperature
+double IncompressibleFluid::dsdTatPxdT(double T, double p, double x){
+	switch (specific_heat.type) {
+		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+			return poly.integral(specific_heat.coeffs, T, x, 0, -1, 0, Tbase, xbase);
+		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
+		default:
+			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.",__FILE__,__LINE__,specific_heat.type));
+	}
+}
+/// Partial derivative of enthalpy
+//  with respect to temperature at constant pressure and composition
+//  integrated in temperature
+double IncompressibleFluid::dhdTatPxdT(double T, double p, double x){
+	switch (specific_heat.type) {
+		case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+			return poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+		case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+			throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
+		default:
+			throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.",__FILE__,__LINE__,specific_heat.type));
+	}
+}
+
+
+
 
 /// Mass fraction conversion function
 /** If the fluid type is mass-based, it does not do anything. Otherwise,
@@ -282,30 +235,30 @@ double IncompressibleFluid::inputFromMass (double T,     double x){
         return x;
     } else {
         throw NotImplementedError("Mass composition conversion has not been implemented.");
-        switch (mass2input.type) {
-            case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-                return poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-                return baseExponential(mass2input, x, 0.0);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
-                return baseLogexponential(mass2input, x, 0.0);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-                return exp(poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
-                return basePolyOffset(mass2input, T, x);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-                throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,mass2input.type));
-                break;
-            default:
-                throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,mass2input.type));
-                break;
-        }
-        return _HUGE;
+        //switch (mass2input.type) {
+        //    case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+        //        return poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase are defined in the correct way
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
+        //        return baseExponential(mass2input, x, 0.0);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+        //        return baseLogexponential(mass2input, x, 0.0);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
+        //        return exp(poly.evaluate(mass2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase are defined in the correct way
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
+        //        return basePolyOffset(mass2input, T, x);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+        //        throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,mass2input.type));
+        //        break;
+        //    default:
+        //        throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,mass2input.type));
+        //        break;
+        //}
+        //return _HUGE;
     }
 }
 
@@ -319,30 +272,30 @@ double IncompressibleFluid::inputFromVolume (double T,   double x){
         return x;
     } else {
         throw NotImplementedError("Volume composition conversion has not been implemented.");
-        switch (volume2input.type) {
-            case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-                return poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-                return baseExponential(volume2input, x, 0.0);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
-                return baseLogexponential(volume2input, x, 0.0);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-                return exp(poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
-                return basePolyOffset(volume2input, T, x);
-                break;
-            case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-                throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,volume2input.type));
-                break;
-            default:
-                throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,volume2input.type));
-                break;
-        }
-        return _HUGE;
+        //switch (volume2input.type) {
+        //    case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+        //        return poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase are defined in the correct way
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
+        //        return baseExponential(volume2input, x, 0.0);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+        //        return baseLogexponential(volume2input, x, 0.0);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
+        //        return exp(poly.evaluate(volume2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase are defined in the correct way
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
+        //        return basePolyOffset(volume2input, T, x);
+        //        break;
+        //    case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+        //        throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,volume2input.type));
+        //        break;
+        //    default:
+        //        throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,volume2input.type));
+        //        break;
+        //}
+        //return _HUGE;
     }
 }
 
@@ -358,7 +311,7 @@ double IncompressibleFluid::inputFromMole (double T,     double x){
         throw NotImplementedError("Mole composition conversion has not been implemented.");
         switch (mole2input.type) {
             case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-                return poly.evaluate(mole2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase is defined in the correct way
+                return poly.evaluate(mole2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase are defined in the correct way
                 break;
             case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
                 return baseExponential(mole2input, x, 0.0);
@@ -367,7 +320,7 @@ double IncompressibleFluid::inputFromMole (double T,     double x){
                 return baseLogexponential(mole2input, x, 0.0);
                 break;
             case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-                return exp(poly.evaluate(mole2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase is defined in the correct way
+                return exp(poly.evaluate(mole2input.coeffs, T, x, 0, 0, 0.0, 0.0)); // TODO: make sure Tbase and xbase are defined in the correct way
                 break;
             case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
                 return basePolyOffset(mole2input, T, x);
@@ -394,15 +347,11 @@ double IncompressibleFluid::T_rho (double Dmass, double p, double x){
     switch (density.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.solve_limits(density.coeffs, x, d_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
-            break;
         default:
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse density.",__FILE__,__LINE__,specific_heat.type));
-            break;
     }
-    return _HUGE;
 }
 /// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
 double IncompressibleFluid::T_c   (double Cmass, double p, double x){
@@ -410,59 +359,12 @@ double IncompressibleFluid::T_c   (double Cmass, double p, double x){
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.solve_limits(specific_heat.coeffs, x, c_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
-            break;
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
-            break;
         default:
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse specific heat.",__FILE__,__LINE__,specific_heat.type));
-            break;
     }
-    return _HUGE;
 }
-/// Temperature as a function of entropy as a function of temperature, pressure and composition.
-double IncompressibleFluid::T_s   (double Smass, double p, double x){
-    double s_raw = Smass + sref;
-    switch (specific_heat.type) {
-        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.solve_limitsInt(specific_heat.coeffs, x, s_raw, Tmin, Tmax, 0, -1, 0, Tbase, xbase, 0);
-            break;
-        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
-            break;
-        default:
-            throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse entropy.",__FILE__,__LINE__,specific_heat.type));
-            break;
-    }
-    return _HUGE;
-}
-/// Temperature as a function of internal energy as a function of temperature, pressure and composition.
-double IncompressibleFluid::T_u   (double Umass, double p, double x){
-    double u_raw = Umass + uref;
-    switch (specific_heat.type) {
-        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.solve_limitsInt(specific_heat.coeffs, x, u_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase, 0);
-            break;
-        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,specific_heat.type));
-            break;
-        default:
-            throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse entropy.",__FILE__,__LINE__,specific_heat.type));
-            break;
-    }
-    return _HUGE;
-}
-///// Temperature as a function of enthalpy, pressure and composition.
-//double IncompressibleFluid::T_h   (double Hmass, double p, double x){throw NotImplementedError(format("%s (%d): T from enthalpy is not implemented in the fluid, use the backend.",__FILE__,__LINE__));}
-///// Viscosity as a function of temperature, pressure and composition.
-//double IncompressibleFluid::T_visc(double visc, double p, double x){throw NotImplementedError(format("%s (%d): T from viscosity is not implemented.",__FILE__,__LINE__));}
-///// Thermal conductivity as a function of temperature, pressure and composition.
-//double IncompressibleFluid::T_cond(double cond, double p, double x){throw NotImplementedError(format("%s (%d): T from conductivity is not implemented.",__FILE__,__LINE__));}
-///// Saturation pressure as a function of temperature and composition.
-//double IncompressibleFluid::T_psat(double psat,           double x){throw NotImplementedError(format("%s (%d): T from psat is not implemented.",__FILE__,__LINE__));}
-///// Composition as a function of freezing temperature and pressure.
-//double IncompressibleFluid::x_Tfreeze(       double Tfreeze, double p){throw NotImplementedError(format("%s (%d): x from T_freeze is not implemented.",__FILE__,__LINE__));}
-
 
 /*
  * Some more functions to provide a single implementation
@@ -647,38 +549,16 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         //XLT.setVolToMass(parse_coefficients(fluid_json, "volume2mass", false));
         //XLT.setMassToMole(parse_coefficients(fluid_json, "mass2mole", false));
 
-        //XLT.set_reference_state(25+273.15, 1.01325e5, 0.0, 0.0, 0.0);
-        double Tref = 25+273.15;
-        double pref = 2e5;
-        double xref = 0.0;
-        double href = 127.0;
-        double sref = 23.0;
-        XLT.set_reference_state(Tref, pref, xref, href, sref);
-
         /// A function to check coefficients and equation types.
         //XLT.validate();
         double acc = 0.0001;
         double val = 0;
         double res = 0;
 
-        // Compare reference state
-		{
-        res = XLT.h(Tref,pref,xref);
-        CHECK( check_abs(href,res,acc) );
-        res = XLT.s(Tref,pref,xref);
-		CHECK( check_abs(sref,res,acc) );
-		}
-
-        Tref = 25+273.15;
-        pref = 0.0;
-        xref = 0.0;
-        href = 0.0;
-        sref = 0.0;
-		XLT.set_reference_state(Tref, pref, xref, href, sref);
         // Prepare the results and compare them to the calculated values
         double T = 273.15+50;
         double p = 10e5;
-        double x = xref;
+        double x = 0.0;
 
         // Compare density
         val = 824.4615702148608;
@@ -700,62 +580,10 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CHECK( check_abs(val,res,acc) );
         }
 
-        // Compare s
-        val = 145.59157247249246;
-        res = XLT.s(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( check_abs(val,res,acc) );
-        }
-
-        val = 0.0;
-        res = XLT.s(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( val==res );
-        }
-
-        // Compare u
-        val = 45212.407309106304;
-        res = XLT.u(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( check_abs(val,res,acc) );
-        }
-
-        val = href - pref/XLT.rho(Tref,pref,xref);
-        res = XLT.u(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( val==res );
-        }
-
-        // Compare h
-        val = 46388.7;
-        res = XLT.h(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( check_abs(val,res,acc) );
-        }
-
-        val = 0.0;
-        res = XLT.h(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(val);
-        CAPTURE(res);
-        CHECK( val==res );
-        }
+        // Check property functions
+        CHECK_THROWS(XLT.s(T,p,x));
+        CHECK_THROWS(XLT.h(T,p,x));
+        CHECK_THROWS(XLT.u(T,p,x));
 
         // Compare v
         val = 0.0008931435169681835;
@@ -782,17 +610,6 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
     SECTION("Test case for Methanol from SecCool") {
 
         CoolProp::IncompressibleFluid CH3OH = CoolPropTesting::incompressibleFluidObject();
-
-        //XLT.set_reference_state(25+273.15, 1.01325e5, 0.0, 0.0, 0.0);
-        double Tref = 25+273.15;
-        double pref = 0.0;
-        double xref = 0.25;
-        double href = 0.0;
-        double sref = 0.0;
-        CH3OH.set_reference_state(Tref, pref, xref, href, sref);
-
-        /// A function to check coefficients and equation types.
-        //CH3OH.validate();
 
         // Prepare the results and compare them to the calculated values
         double acc = 0.0001;
@@ -826,76 +643,10 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CHECK( check_abs(expected,actual,acc) );
         }
 
-        // Compare s
-        expected = -206.62646783739274;
-        actual = CH3OH.s(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( check_abs(expected,actual,acc) );
-        }
-
-        expected = 0.0;
-        actual = CH3OH.s(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( expected==actual );
-        }
-
-        // Compare u
-        expected = -60043.78429641827;
-        actual = CH3OH.u(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( check_abs(expected,actual,acc) );
-        }
-
-        expected = href - pref/CH3OH.rho(Tref,pref,xref);
-        actual = CH3OH.u(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( expected==actual );
-        }
-
-        // Compare h
-        expected = -58999.1;
-        actual = CH3OH.h(T,p,x);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        CHECK( check_abs(expected,actual,acc) );
-        }
-
-        expected = 0.0;
-        actual = CH3OH.h(Tref,pref,xref);
-        {
-        CAPTURE(T);
-        CAPTURE(p);
-        CAPTURE(x);
-        CAPTURE(expected);
-        CAPTURE(actual);
-        std::string errmsg = CoolProp::get_global_param_string("errstring");
-        CAPTURE(errmsg);
-        CHECK( expected==actual );
-        }
+        // Check property functions
+        CHECK_THROWS(CH3OH.s(T,p,x));
+        CHECK_THROWS(CH3OH.h(T,p,x));
+        CHECK_THROWS(CH3OH.u(T,p,x));
 
         // Compare v
         expected = 0.0023970245009602097;

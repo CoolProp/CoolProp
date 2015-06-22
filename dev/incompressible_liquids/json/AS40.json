@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.331500e+02, 
   "TminPsat": 3.031500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         4.433270e-01
@@ -19,6 +21,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         1.214840e+03
@@ -37,20 +40,24 @@
   }, 
   "description": "Aspen Temper -40, Potassium acetate/formate", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "AS40", 
   "reference": "Aspen2001,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.977880e+03
@@ -65,6 +72,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 1.052821e-03, 
     "coeffs": [
       [
         1.628884e+00
@@ -82,6 +90,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

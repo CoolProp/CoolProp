@@ -4,9 +4,24 @@
 Java Wrapper
 ************
 
+.. contents:: :depth: 2
+
 Pre-compiled Binaries
 =====================
-Pre-compiled binaries can be downloaded from :sfdownloads:`Java`, which come from :sfnightly:`the nightly snapshots <Java>`.
+
+Pre-compiled binaries can be downloaded from :sfdownloads:`Java`.  Development binaries coming from the buildbot server can be found at :sfnightly:`Java`.
+
+Download the ``platform-independent.7z`` file and expand it to a folder called ``platform-independent`` using 7-zip.  Download the special Java shared library for your system architecture to the same location from either :sfdownloads:`Java` (release) or :sfnightly:`Java` (development).  Copy the Example.java file to the same location.  You will need to have a copy of some version of java.
+
+When you are finished, you should have a folder layout something like ::
+
+    main
+     |- CoolProp.dll
+     |- Example.java
+     |- platform-independent
+        |- AbstractState.java
+        |- Configuration.java
+        |- ...
 
 Usage
 -----
@@ -14,6 +29,8 @@ At the console, run::
 
     javac *.java
     java Example
+    
+There is example code :ref:`at the end of this page <java_example>`
 
 User-Compiled Binaries
 ======================
@@ -88,3 +105,16 @@ If you want to change the package that CoolProp resides in, you can do so by cha
     cmake .. -DCOOLPROP_JAVA_MODULE=ON -DBUILD_TESTING=ON -DCOOLPROP_SWIG_OPTIONS="-package package.name"
 
 where ``package.name`` is replaced with the desired name
+
+.. _java_example:
+
+Example Code
+============
+
+.. literalinclude:: Example.java
+   :language: java
+
+Example Code Output
+===================
+
+.. literalinclude:: Example.out

@@ -278,8 +278,8 @@
       "T_max_units": "K", 
       "Ttriple": 226, 
       "Ttriple_units": "K", 
-      "accentric": 0.658, 
-      "accentric_units": "-", 
+      "acentric": 0.658, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -7.87509994783932, 
@@ -388,16 +388,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{10}H_{30}O_{5}Si_{5}", 
   "NAME": "D5", 
   "REFPROP_NAME": "D5", 
   "STATES": {
     "critical": {
       "T": 619.15, 
       "T_units": "K", 
+      "hmolar": 109060.1839548826, 
+      "hmolar_units": "J/mol", 
       "p": 1160000.0, 
       "p_units": "Pa", 
-      "rhomolar": 822.3684, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 822.3684000000001, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 195.49161833040503, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 300.0, 

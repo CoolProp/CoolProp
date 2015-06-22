@@ -295,8 +295,8 @@
       "T_max_units": "K", 
       "Ttriple": 159.0, 
       "Ttriple_units": "K", 
-      "accentric": 0.644, 
-      "accentric_units": "-", 
+      "acentric": 0.644, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -12.7531, 
@@ -514,16 +514,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}H_{6}O_{1}", 
   "NAME": "Ethanol", 
   "REFPROP_NAME": "ETHANOL", 
   "STATES": {
     "critical": {
       "T": 514.71, 
       "T_units": "K", 
+      "hmolar": 34953.85764225318, 
+      "hmolar_units": "J/mol", 
       "p": 6268000.0, 
       "p_units": "Pa", 
       "rhomolar": 5930.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 77.40828916958719, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 159.10000000000002, 

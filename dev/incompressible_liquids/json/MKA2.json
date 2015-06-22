@@ -1,12 +1,14 @@
 {
   "T_freeze": {
+    "NRMS": 3.723392e-05, 
     "coeffs": [
       [
         5.544472e+00, 
-        -4.849410e-01, 
+        -5.030381e-01, 
         -1.738208e+00, 
-        -2.306404e+00, 
-        1.090680e+01
+        1.078158e+00, 
+        1.090680e+01, 
+        -1.160421e+02
       ]
     ], 
     "type": "exppolynomial"
@@ -16,6 +18,7 @@
   "Tmin": 2.291500e+02, 
   "TminPsat": 3.031500e+02, 
   "conductivity": {
+    "NRMS": 1.482102e-09, 
     "coeffs": [
       [
         4.762927e-01, 
@@ -43,7 +46,7 @@
       ], 
       [
         2.434799e-08, 
-        9.719589e-10, 
+        9.719588e-10, 
         -1.349000e-06, 
         0.000000e+00, 
         0.000000e+00, 
@@ -53,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 1.425339e-09, 
     "coeffs": [
       [
         1.144474e+03, 
@@ -91,20 +95,24 @@
   }, 
   "description": "Melinder, Potassium Acetate", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MKA2", 
   "reference": "Melinder2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 2.760908e-10, 
     "coeffs": [
       [
         3.287139e+03, 
@@ -142,6 +150,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 2.754114e-11, 
     "coeffs": [
       [
         -5.364930e+00, 
@@ -179,6 +188,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 

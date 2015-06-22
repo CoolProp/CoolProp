@@ -13,13 +13,13 @@
 
 namespace CoolProp{
 
-typedef std::vector<std::vector<long double> > STLMatrix;
+typedef std::vector<std::vector<CoolPropDbl> > STLMatrix;
 
 enum x_N_dependency_flag{XN_INDEPENDENT, ///< x_N is an independent variable, and not calculated by \f$ x_N = 1-\sum_i x_i\f$
                          XN_DEPENDENT ///< x_N is an dependent variable, calculated by \f$ x_N = 1-\sum_i x_i\f$
                          };
                  
-std::string get_reducing_function_name(std::string CAS1, std::string CAS2);
+std::string get_reducing_function_name(const std::string &CAS1, const std::string &CAS2);
 
 /** \brief Abstract base class for reducing function
  * An abstract base class for the reducing function to allow for
@@ -31,25 +31,27 @@ class ReducingFunction
 protected:
     std::size_t N;
 public:
-    ReducingFunction(){};
+    ReducingFunction():N(0){};
     virtual ~ReducingFunction(){};
 
     /// A factory function to generate the requiredreducing function
-    static shared_ptr<ReducingFunction> factory(const std::vector<CoolPropFluid*> &components, std::vector< std::vector< long double> > &F);
+    static shared_ptr<ReducingFunction> factory(const std::vector<CoolPropFluid*> &components, STLMatrix &F);
 
     /// The reduced temperature
-    virtual long double Tr(const std::vector<long double> &x) = 0;
+    virtual CoolPropDbl Tr(const std::vector<CoolPropDbl> &x) = 0;
     /// The derivative of reduced temperature with respect to component i mole fraction
-    virtual long double dTrdxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
+    virtual CoolPropDbl dTrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
     /// The molar reducing density
-    virtual long double rhormolar(const std::vector<long double> &x) = 0;
+    virtual CoolPropDbl rhormolar(const std::vector<CoolPropDbl> &x) = 0;
     ///Derivative of the molar reducing density with respect to component i mole fraction
-    virtual long double drhormolardxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
+    virtual CoolPropDbl drhormolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
 
-    virtual long double d2rhormolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
-    virtual long double d2rhormolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) = 0;
-    virtual long double d2Trdxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
-    virtual long double d2Trdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) = 0;
+    virtual CoolPropDbl d2rhormolardxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
+    virtual CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) = 0;
+	virtual CoolPropDbl d3rhormolardxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) = 0;
+    virtual CoolPropDbl d2Trdxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
+    virtual CoolPropDbl d2Trdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) = 0;
+	virtual CoolPropDbl d3Trdxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) = 0;
 
     /** \brief GERG 2004 Monograph equation 7.56:
      * 
@@ -62,7 +64,11 @@ public:
      * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial T_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2T_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial T_r}{\partial x_j}\right)_{x_i}-\sum_{k=0}^{N-1}x_k\left(\frac{\partial^2T_r}{\partial x_j \partial x_k}\right)
      * \f]
      */
-    long double d_ndTrdni_dxj__constxi(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    CoolPropDbl d_ndTrdni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+
+	CoolPropDbl d2_ndTrdni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
+	
+
     /** \brief 
      * 
      * GERG 2004 Monograph equation 7.55:
@@ -76,10 +82,18 @@ public:
      * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \rho_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2\rho_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial \rho_r}{\partial x_j}\right)_{x_i}-\sum_{k=0}^{N-2}x_k\left(\frac{\partial^2\rho_r}{\partial x_j \partial x_k}\right)
      * \f] 
      */
-    long double d_ndrhorbardni_dxj__constxi(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    CoolPropDbl d_ndrhorbardni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
-    long double ndrhorbardni__constnj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
-    long double ndTrdni__constnj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	CoolPropDbl d2_ndrhorbardni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
+
+    CoolPropDbl ndrhorbardni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
+    CoolPropDbl ndTrdni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	CoolPropDbl PSI_rho(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	CoolPropDbl d_PSI_rho_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+	CoolPropDbl d2_PSI_rho_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
+	CoolPropDbl PSI_T(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	CoolPropDbl d_PSI_T_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+	CoolPropDbl d2_PSI_T_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
 };
 
 /** \brief The reducing function model of GERG-2008
@@ -98,12 +112,12 @@ protected:
     STLMatrix gamma_v; ///< \f$ \gamma_{v,ij} \f$ from GERG-2008
     STLMatrix beta_T; ///< \f$ \beta_{T,ij} \f$ from GERG-2008
     STLMatrix gamma_T; ///< \f$ \gamma_{T,ij} \f$ from GERG-2008
-    std::vector<long double> Yc_T; ///< Vector of critical temperatures for all components
-    std::vector<long double> Yc_v; ///< Vector of critical molar volumes for all components
-    std::vector<CoolPropFluid *> pFluids; ///< List of pointer to fluids
+    std::vector<CoolPropDbl> Yc_T; ///< Vector of critical temperatures for all components
+    std::vector<CoolPropDbl> Yc_v; ///< Vector of critical molar volumes for all components
+    std::vector<CoolPropFluid> pFluids; ///< List of fluids
 
 public:
-    GERG2008ReducingFunction(std::vector<CoolPropFluid *> pFluids, STLMatrix beta_v, STLMatrix gamma_v, STLMatrix beta_T, STLMatrix gamma_T)
+    GERG2008ReducingFunction(std::vector<CoolPropFluid> &pFluids, const STLMatrix &beta_v, const STLMatrix &gamma_v, STLMatrix beta_T, const STLMatrix &gamma_T)
     {
         this->pFluids = pFluids;
         this->beta_v = beta_v;
@@ -111,19 +125,19 @@ public:
         this->beta_T = beta_T;
         this->gamma_T = gamma_T;
         this->N = pFluids.size();
-        T_c.resize(N,std::vector<long double>(N,0));
-        v_c.resize(N,std::vector<long double>(N,0));
+        T_c.resize(N,std::vector<CoolPropDbl>(N,0));
+        v_c.resize(N,std::vector<CoolPropDbl>(N,0));
         Yc_T.resize(N);
         Yc_v.resize(N);
         for (std::size_t i = 0; i < N; ++i)
         {
             for (std::size_t j = 0; j < N; j++)
             {
-                T_c[i][j] = sqrt(pFluids[i]->pEOS->reduce.T*pFluids[j]->pEOS->reduce.T);
-                v_c[i][j] = 1.0/8.0*pow(pow(pFluids[i]->pEOS->reduce.rhomolar, -1.0/3.0)+pow(pFluids[j]->pEOS->reduce.rhomolar, -1.0/3.0),3);
+                T_c[i][j] = sqrt(pFluids[i].EOS().reduce.T*pFluids[j].EOS().reduce.T);
+                v_c[i][j] = 1.0/8.0*pow(pow(pFluids[i].EOS().reduce.rhomolar, -1.0/3.0)+pow(pFluids[j].EOS().reduce.rhomolar, -1.0/3.0),3);
             }
-            Yc_T[i] = pFluids[i]->pEOS->reduce.T;
-            Yc_v[i] = 1/pFluids[i]->pEOS->reduce.rhomolar;
+            Yc_T[i] = pFluids[i].EOS().reduce.T;
+            Yc_v[i] = 1/pFluids[i].EOS().reduce.rhomolar;
         }
     };
 
@@ -132,43 +146,53 @@ public:
     /** \brief The reducing temperature
      * Calculated from \ref Yr with \f$T = Y\f$
      */
-    long double Tr(const std::vector<long double> &x);
+    CoolPropDbl Tr(const std::vector<CoolPropDbl> &x);
     /** \brief The derivative of reducing temperature with respect to component i mole fraction
      * 
      * Calculated from \ref dYrdxi__constxj with \f$T = Y\f$
      */
-    long double dTrdxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+    CoolPropDbl dTrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
     /** \brief The second derivative of reducing temperature with respect to component i mole fraction
      * 
      * Calculated from \ref d2Yrdxi2__constxj with \f$T = Y\f$
      */
-    long double d2Trdxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+    CoolPropDbl d2Trdxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
     /** \brief The second derivative of reducing temperature with respect to component i and j mole fractions
      * 
      * Calculated from \ref d2Yrdxidxj with \f$T = Y\f$
      */
-    long double d2Trdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    CoolPropDbl d2Trdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+	/** \brief The third derivative of reducing temperature with respect to component i, j and k mole fractions
+	*
+	* Calculated from \ref d3Yrdxidxjdxk with \f$T = Y\f$
+	*/
+	CoolPropDbl d3Trdxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
     
     /** \brief The derivative of reducing molar volume with respect to component i mole fraction
      * 
      * Calculated from \ref dYrdxi__constxj with \f$v = Y\f$
      */
-    long double dvrmolardxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag  xN_fla);
+    CoolPropDbl dvrmolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag  xN_fla);
     /** \brief The second derivative of reducing molar volume with respect to component i mole fraction
      * 
      * Calculated from \ref d2Yrdxi2__constxj with \f$v = Y\f$
      */
-    long double d2vrmolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+    CoolPropDbl d2vrmolardxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
     /** \brief The second derivative of reducing molar volume with respect to component i and j mole fractions
      * 
      * Calculated from \ref d2Yrdxidxj with \f$v = Y\f$
      */
-    long double d2vrmolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    CoolPropDbl d2vrmolardxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+	/** \brief The third derivative of reducing molar volume with respect to component i, j and k mole fractions
+	*
+	* Calculated from \ref d3Yrdxidxjdxk with \f$v = Y\f$
+	*/
+	CoolPropDbl d3vrmolardxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
     /** \brief The molar reducing density
      * 
      * Given by \f$ \rho_r = 1/v_r \f$
      */
-    long double rhormolar(const std::vector<long double> &x);
+    CoolPropDbl rhormolar(const std::vector<CoolPropDbl> &x);
     /** \brief Derivative of the molar reducing density with respect to component i mole fraction
      * 
      * See also GERG 2004, Eqn. 7.57
@@ -176,7 +200,7 @@ public:
      * \left(\frac{\partial \rho_r}{\partial x_i}\right)_{x_{i\neq j}} = -\rho_r^2\left(\frac{\partial v_r}{\partial x_i}\right)_{x_{i\neq j}}
      * \f]
      */
-    long double drhormolardxi__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);    
+    CoolPropDbl drhormolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);    
     /** \brief Derivative of the molar reducing density with respect to component i mole fraction
      * 
      * See also GERG 2004, Eqn. 7.58
@@ -184,7 +208,7 @@ public:
      * \left(\frac{\partial^2 \rho_r}{\partial x_i^2}\right)_{x_{i\neq j}} = 2\rho_r^3\left(\left(\frac{\partial v_r}{\partial x_i}\right)_{x_{i\neq j}}\right)^2-\rho_r\left(\left(\frac{\partial^2 v_r}{\partial x_i^2}\right)_{x_{i\neq j}}\right)
      * \f]
      */
-    long double d2rhormolardxi2__constxj(const std::vector<long double> &x, std::size_t i, x_N_dependency_flag xN_flag);
+    CoolPropDbl d2rhormolardxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
     /** \brief Derivative of the molar reducing density with respect to component i  and j mole fractions
      * 
      * See also GERG 2004, Eqn. 7.59
@@ -192,7 +216,11 @@ public:
      * \left(\frac{\partial^2 \rho_r}{\partial x_i\partial x_j}\right) = 2\rho_r^3\left(\left(\frac{\partial v_r}{\partial x_i}\right)_{x_{i\neq j}}\right)\left(\left(\frac{\partial v_r}{\partial x_j}\right)_{x_{i\neq j}}\right)-\rho_r^2\left(\left(\frac{\partial v_r}{\partial x_i\partial x_j}\right)\right)
      * \f]
      */
-    long double d2rhormolardxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+	/** \brief Derivative of the molar reducing density with respect to component i, j, and k mole fractions
+	*
+	*/
+	CoolPropDbl d3rhormolardxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
     
     /** \brief Generalized reducing term \f$Y_r\f$
      * 
@@ -200,7 +228,7 @@ public:
      * Y_r = \sum_{i=1}^{N}x_iY_{c,i}^2+\sum_{i=1}^{N-1}\sum_{j=i+1}^{N} c_{Y,ij}f_{Y,ij}(x_i,x_j)
      * \f]
      */
-    long double Yr(const std::vector<long double> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc);
+    CoolPropDbl Yr(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc);
     /** \brief First composition derivative of \f$Y_r\f$ with \f$x_i\f$
      * 
      * If \f$x_N\f$ is given by \f$ x_N = 1-\sum_{i=1}^{N-1}x_i\f$ (Gernert, FPE, 2014, Table S1):
@@ -216,7 +244,7 @@ public:
      * \f]
      * 
      */
-    long double dYrdxi__constxj(const std::vector<long double> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
+    CoolPropDbl dYrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag);
     /** \brief Second composition derivative of \f$Y_r\f$ with \f$x_i\f$
      * 
      * If \f$x_N\f$ is given by \f$ x_N = 1-\sum_{i=1}^{N-1}x_i\f$ (Gernert, FPE, 2014, Table S1):
@@ -231,7 +259,7 @@ public:
      * \left(\frac{\partial^2 Y_r}{\partial x_i^2}\right)_{x_{j\neq i}} = 2Y_{c,i} + \sum_{k=1}^{i-1}c_{Y,ki}\frac{\partial^2 f_{Y,ki}(x_k,x_i)}{\partial x_i^2} + \sum_{k=i+1}^{N}c_{Y,ik}\frac{\partial^2 f_{Y,ik}(x_i,x_k)}{\partial x_i^2}
      * \f]
      */
-    long double d2Yrdxi2__constxj(const std::vector<long double> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
+    CoolPropDbl d2Yrdxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag);
     /** \brief Second mixed composition derivative of \f$Y_r\f$ with \f$x_i\f$ and  \f$x_j\f$
      * 
      * If \f$x_N\f$ is given by \f$ x_N = 1-\sum_{i=1}^{N-1}x_i\f$ (Gernert, FPE, 2014, Table S1):
@@ -246,53 +274,84 @@ public:
      * \left(\frac{\partial^2 Y_r}{\partial x_i\partial x_j}\right)_{\substack{x_{k\neq j\neq i}}} = c_{Y,ij}\frac{\partial^2f_{Y,ij}(x_i,x_j)}{\partial x_i\partial x_j}
      * \f]
      */
-    long double d2Yrdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<long double> &Yc, x_N_dependency_flag xN_flag);
+    CoolPropDbl d2Yrdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag);
+
+	/** \brief Third mixed composition derivative of \f$Y_r\f$ with \f$x_i\f$ and \f$x_j\f$ and \f$x_k\f$
+	*
+	*/
+	CoolPropDbl d3Yrdxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag);
+
     /** \brief The coefficient \f$ c_{Y,ij} \f$
      * 
      * \f[
      * c_{Y,ij} = 2\beta_{Y,ij}\gamma_{Y,ij}Y_{c,ij}
      * \f]
      */
-    long double c_Y_ij(std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c);
+    CoolPropDbl c_Y_ij(std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c);
     
     /** \brief The function \f$ f_{Y,ij}(x_i,x_j) \f$
      * 
      * \f[ f_{Y,ij}(x_i,x_j) = x_ix_j\frac{x_i+x_j}{\beta_{Y,ij}^2x_i+x_j} \f]
      */
-    long double f_Y_ij(const std::vector<long double> &x, std::size_t i, std::size_t j, const STLMatrix &beta);
+    CoolPropDbl f_Y_ij(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta);
     /**
      * 
      * \f[
      * \left(\frac{\partial f_{Y,ki}(x_k, x_i)}{\partial x_i}\right)_{x_{k\neq i}} = x_k\frac{x_k+x_i}{\beta_{Y,ki}^2x_k+x_i} + \frac{x_kx_i}{\beta_{Y,ki}^2x_k+x_i}\left(1-\frac{x_k+x_i}{\beta_{Y,ki}^2x_k+x_i}\right)
      * \f]
      */
-    long double dfYkidxi__constxk(const std::vector<long double> &x, std::size_t k, std::size_t i, const STLMatrix &beta);
+    CoolPropDbl dfYkidxi__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta);
     /**
      * 
      * \f[
      * \left(\frac{\partial f_{Y,ik}(x_i, x_k)}{\partial x_i}\right)_{x_k} = x_k\frac{x_i+x_k}{\beta_{Y,ik}^2x_i+x_k} + \frac{x_ix_k}{\beta_{Y,ik}^2x_i+x_k}\left(1-\beta_{Y,ik}^2\frac{x_i+x_k}{\beta_{Y,ik}^2x_i+x_k}\right)
      * \f]
      */
-    long double dfYikdxi__constxk(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
+    CoolPropDbl dfYikdxi__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
     /**
      * \f[
      * \left(\frac{\partial^2 f_{Y,ki}(x_k, x_i)}{\partial x_i^2}\right)_{x_{k\neq i}} = \frac{1}{\beta_{Y,ki}^2x_k+x_i}\left(1-\frac{x_k+x_i}{\beta_{Y,ki}^2x_k+x_i}\right)\left(2x_k-\frac{2x_kx_i}{\beta_{Y,ki}^2x_k+x_i}\right)
      * \f]
      */
-    long double d2fYkidxi2__constxk(const std::vector<long double> &x, std::size_t k, std::size_t i, const STLMatrix &beta);
+    CoolPropDbl d2fYkidxi2__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta);
     /**
      * \f[
      * \left(\frac{\partial^2 f_{Y,ik}(x_i, x_k)}{\partial x_i^2}\right)_{x_{k}} = \frac{1}{\beta_{Y,ik}^2x_i+x_k}\left(1-\beta_{Y,ik}^2\frac{x_i+x_k}{\beta_{Y,ik}^2x_i+x_k}\right)\left(2x_k-\frac{2x_ix_k\beta_{Y,ik}^2}{\beta_{Y,ik}^2x_i+x_k}\right)
      * \f]
      */
-    long double d2fYikdxi2__constxk(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
+    CoolPropDbl d2fYikdxi2__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
     /**
      * \f{eqnarray*}{
      * \left(\frac{\partial^2 f_{Y,ki}(x_k, x_i)}{\partial x_i\partial x_j}\right)_{x_{k\neq j\neq i}} &=& \frac{x_i+x_j}{\beta_{Y,ij}^2x_i+x_j} + \frac{x_j}{\beta_{Y,ij}^2x_i+x_j}\left(1-\frac{x_i+x_j}{\beta_{Y,ij}^2x_i+x_j}\right) \\
      * &+& \frac{x_i}{\beta_{Y,ij}^2x_i+x_j}\left(1-\beta_{Y,ij}^2\frac{x_i+x_j}{\beta_{Y,ij}^2x_i+x_j}\right) - \frac{x_ix_j}{(\beta_{Y,ij}^2x_i+x_j)^2}\left(1+\beta_{Y,ij}^2-2\beta_{Y,ij}^2\frac{x_i+x_j}{\beta_{Y,ij}^2x_i+x_j}\right)
      * \f}
      */
-     long double d2fYijdxidxj(const std::vector<long double> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
+     CoolPropDbl d2fYijdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
+
+	 /* Third order mixed partial derivative of \f$f_{Y,ij}\f$
+	  * \f[
+	  * \left(\dfrac{\partial^3 f_{Y,ij}(x_i, x_j)}{\partial x_i^2\partial x_j}\right)_{j\neq i} = \dfrac{-6 \beta^{2} x_{i} x_{j}^{2} \left(\beta^{2} - 1\right)}{\beta^{8} x_{i}^{4} + 4 \beta^{6} x_{i}^{3} x_{j} + 6 \beta^{4} x_{i}^{2} x_{j}^{2} + 4 \beta^{2} x_{i} x_{j}^{3} + x_{j}^{4}}
+	  * \f]
+	  */
+	 CoolPropDbl d3fYijdxi2dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta);
+	 /* Third order mixed partial derivative of \f$f_{Y,ij}\f$
+	 * \f[
+	 * \left(\dfrac{\partial^3 f_{Y,ij}(x_i, x_j)}{\partial x_i\partial x_j^2}\right)_{j\neq i} = \dfrac{6 \beta^{2} x_{i}^{2} x_{j} \left(\beta^{2} - 1\right)}{\beta^{8} x_{i}^{4} + 4 \beta^{6} x_{i}^{3} x_{j} + 6 \beta^{4} x_{i}^{2} x_{j}^{2} + 4 \beta^{2} x_{i} x_{j}^{3} + x_{j}^{4}}
+	 * \f]
+	 */
+	 CoolPropDbl d3fYijdxidxj2(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta);
+	 /* Third order mixed partial derivative of \f$f_{Y,ij}\f$
+	 * \f[
+	 * \left(\dfrac{ \partial ^ 3 f_{ Y, ki }(x_k, x_i) }{\partial x_i ^ 3}\right)_{ k\neq i } = \dfrac{ \beta_{ Y ki }^{2} x_{ k }^{3} \left(-6 \beta_{ Y ki }^{2} +6\right) }{\left(\beta_{ Y ki }^{2} x_{ k } +x_{ i }\right) ^ { 4 }}
+	 * \f]
+	 */
+	 CoolPropDbl d3fYkidxi3__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta);
+	 /* Third order mixed partial derivative of \f$f_{Y,ij}\f$
+	 * \f[
+	 * \left(\dfrac{\partial^3 f_{Y,ik}(x_i, x_k)}{\partial x_i^3}\right)_{k\neq i} = \dfrac{6 \beta_{Y ik}^{2} x_{k}^{3} \left(\beta_{Y ik}^{2} - 1\right)}{\beta_{Y ik}^{8} x_{i}^{4} + 4 \beta_{Y ik}^{6} x_{i}^{3} x_{k} + 6 \beta_{Y ik}^{4} x_{i}^{2} x_{k}^{2} + 4 \beta_{Y ik}^{2} x_{i} x_{k}^{3} + x_{k}^{4}}
+	 * \f]
+	 */
+	 CoolPropDbl d3fYikdxi3__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
 };
 
 /** \brief Reducing function converter for dry air and HFC blends
@@ -324,16 +383,23 @@ protected:
     LemmonAirHFCReducingFunction(const LemmonAirHFCReducingFunction &);
 public:
     /// Set the coefficients based on reducing parameters loaded from JSON
-    static void convert_to_GERG(const std::vector<CoolPropFluid*> &pFluids, std::size_t i, std::size_t j, Dictionary d, long double &beta_T, long double &beta_v, long double &gamma_T, long double &gamma_v)
+    static void convert_to_GERG(std::vector<CoolPropFluid> &pFluids,
+                                std::size_t i,
+                                std::size_t j,
+                                const Dictionary &d,
+                                CoolPropDbl &beta_T,
+                                CoolPropDbl &beta_v,
+                                CoolPropDbl &gamma_T,
+                                CoolPropDbl &gamma_v)
     {
-        long double xi_ij = d.get_number("xi");
-        long double zeta_ij = d.get_number("zeta");
+        CoolPropDbl xi_ij = d.get_number("xi");
+        CoolPropDbl zeta_ij = d.get_number("zeta");
         beta_T = 1;
         beta_v = 1;
-        gamma_T = (pFluids[i]->pEOS->reduce.T + pFluids[j]->pEOS->reduce.T + xi_ij)/(2*sqrt(pFluids[i]->pEOS->reduce.T*pFluids[j]->pEOS->reduce.T));
-        long double v_i = 1/pFluids[i]->pEOS->reduce.rhomolar;
-        long double v_j = 1/pFluids[j]->pEOS->reduce.rhomolar;
-        long double one_third = 1.0/3.0;
+        gamma_T = (pFluids[i].EOS().reduce.T + pFluids[j].EOS().reduce.T + xi_ij)/(2*sqrt(pFluids[i].EOS().reduce.T*pFluids[j].EOS().reduce.T));
+        CoolPropDbl v_i = 1/pFluids[i].EOS().reduce.rhomolar;
+        CoolPropDbl v_j = 1/pFluids[j].EOS().reduce.rhomolar;
+        CoolPropDbl one_third = 1.0/3.0;
         gamma_v = (v_i + v_j + zeta_ij)/(0.25*pow(pow(v_i, one_third)+pow(v_j, one_third),3));
     };
 };

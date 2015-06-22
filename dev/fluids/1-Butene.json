@@ -280,8 +280,8 @@
       "T_max_units": "K", 
       "Ttriple": 87.8, 
       "Ttriple_units": "K", 
-      "accentric": 0.191860647355, 
-      "accentric_units": "-", 
+      "acentric": 0.191860647355, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -0.00101126, 
@@ -378,16 +378,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{4}H_{8}", 
   "NAME": "1-Butene", 
   "REFPROP_NAME": "1BUTENE", 
   "STATES": {
     "critical": {
       "T": 419.29, 
       "T_units": "K", 
+      "hmolar": 26139.13461692518, 
+      "hmolar_units": "J/mol", 
       "p": 4005100.0, 
       "p_units": "Pa", 
       "rhomolar": 4240.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 73.21855815122298, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 87.80000000000001, 

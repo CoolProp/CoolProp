@@ -303,8 +303,8 @@
       "T_max_units": "K", 
       "Ttriple": 113.73, 
       "Ttriple_units": "K", 
-      "accentric": 0.183531783208, 
-      "accentric_units": "-", 
+      "acentric": 0.183531783208, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 11.60865546, 
@@ -501,16 +501,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{4}H_{10}", 
   "NAME": "IsoButane", 
   "REFPROP_NAME": "ISOBUTAN", 
   "STATES": {
     "critical": {
       "T": 407.817, 
       "T_units": "K", 
+      "hmolar": 36847.01527077499, 
+      "hmolar_units": "J/mol", 
       "p": 3629000.0, 
       "p_units": "Pa", 
       "rhomolar": 3879.756788283995, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 129.37661215361217, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 113.73, 

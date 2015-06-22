@@ -27,6 +27,12 @@ On windows, the most reliable mixed compilation seems to be using the mingw-prov
     >gcc --version
     gcc (GCC) 4.8.1
     Copyright (C) 2013 Free Software Foundation, Inc.
+    
+.. warning::
+    MinGW has problems with the latest version of CoolProp.  This seems to be a GCC-related 
+    issue and using a more up-to-date version of GCC helps.  Unfortunately, MinGW is stuck 
+    at GCC 4.8.  You could try the `TDM-GCC distribution <http://tdm-gcc.tdragon.net>`_ 
+    that comes with the latest GCC. This version seems to work fine.
 
 On OSX, the default compiler that comes with XCode is clang, gcc and g++ at the command prompt are just aliases to clang.  See for instance::
 
@@ -56,21 +62,21 @@ A) On linux,  do::
 
     mkdir build && cd build
     mkdir gccstatic && cd gccstatic
-    cmake ../.. -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON -DCMAKE_VERBOSE_MAKEFILE=ON
+    cmake ../..  -DCOOLPROP_STATIC_LIBRARY=ON -DCOOLPROP_EXTERNC_LIBRARY=ON -DCMAKE_VERBOSE_MAKEFILE=ON
     cmake --build .
 
 B) On Windows, the call to CMake should be done using the MinGW generator, but otherwise the procedure is the same::
 
     mkdir build && cd build
     mkdir gccstatic && cd gccstatic
-    cmake ../.. -G "MinGW Makefiles" -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON -DCMAKE_VERBOSE_MAKEFILE=ON
+    cmake ../.. -G "MinGW Makefiles" -DCOOLPROP_STATIC_LIBRARY=ON -DCOOLPROP_EXTERNC_LIBRARY=ON -DCMAKE_VERBOSE_MAKEFILE=ON
     cmake --build .
 
-C) On OSX, cmake must use the true, real, gcc/g++ compiler (not clang).  Thus you must so something like this to make sure that it finds the right (true) gcc/g++ (see above)::
+C) On OSX, cmake must use the true, real, gcc/g++ compiler (not clang).  Thus you must do something like this to make sure that it finds the right (true) gcc/g++ (see above)::
 
     mkdir build && cd build
     mkdir gccstatic && cd gccstatic
-    cmake ../.. -DCOOLPROP_EXTERNC_STATIC_LIBRARY=ON -DCMAKE_C_COMPILER="/usr/local/bin/gcc-4.9" -DCMAKE_CXX_COMPILER="/usr/local/bin/g++-4.9" -DCMAKE_VERBOSE_MAKEFILE=ON
+    cmake ../.. -DCOOLPROP_STATIC_LIBRARY=ON -DCOOLPROP_EXTERNC_LIBRARY=ON -DCMAKE_C_COMPILER="/usr/local/bin/gcc-4.9" -DCMAKE_CXX_COMPILER="/usr/local/bin/g++-4.9" -DCMAKE_VERBOSE_MAKEFILE=ON
     cmake --build .
 
 If you are using a different version of gcc, change the version number for g++ and gcc

@@ -281,8 +281,8 @@
       "T_max_units": "K", 
       "Ttriple": 146.35, 
       "Ttriple_units": "K", 
-      "accentric": 0.3576047602255754, 
-      "accentric_units": "-", 
+      "acentric": 0.3576047602255754, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -462,16 +462,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{3}F_{7}H_{1}", 
   "NAME": "R227EA", 
   "REFPROP_NAME": "R227EA", 
   "STATES": {
     "critical": {
-      "T": 374.9, 
+      "T": 374.90000000000003, 
       "T_units": "K", 
+      "hmolar": 59607.53678269818, 
+      "hmolar_units": "J/mol", 
       "p": 2925000.0, 
       "p_units": "Pa", 
       "rhomolar": 3495.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 246.54952685790425, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 146.35, 

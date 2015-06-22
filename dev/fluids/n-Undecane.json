@@ -269,8 +269,8 @@
       "T_max_units": "K", 
       "Ttriple": 247.541, 
       "Ttriple_units": "K", 
-      "accentric": 0.5390371013718567, 
-      "accentric_units": "-", 
+      "acentric": 0.5390371013718567, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -387,16 +387,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{11}H_{24}", 
   "NAME": "n-Undecane", 
   "REFPROP_NAME": "C11", 
   "STATES": {
     "critical": {
-      "T": 638.8, 
+      "T": 638.8000000000001, 
       "T_units": "K", 
+      "hmolar": 93327.99205930215, 
+      "hmolar_units": "J/mol", 
       "p": 1990400.0, 
       "p_units": "Pa", 
       "rhomolar": 1514.9168636385564, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 166.2137972315449, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 247.541, 

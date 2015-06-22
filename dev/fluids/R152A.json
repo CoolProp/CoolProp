@@ -277,8 +277,8 @@
       "T_max_units": "K", 
       "Ttriple": 154.56, 
       "Ttriple_units": "K", 
-      "accentric": 0.275217114532099, 
-      "accentric_units": "-", 
+      "acentric": 0.275217114532099, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -550,8 +550,8 @@
       "T_max_units": "K", 
       "Ttriple": 154.56, 
       "Ttriple_units": "K", 
-      "accentric": 0.275217114532099, 
-      "accentric_units": "-", 
+      "acentric": 0.275217114532099, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 10.87227, 
@@ -652,16 +652,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}F_{2}H_{4}", 
   "NAME": "R152A", 
   "REFPROP_NAME": "R152A", 
   "STATES": {
     "critical": {
       "T": 386.411, 
       "T_units": "K", 
+      "hmolar": 31542.80872801791, 
+      "hmolar_units": "J/mol", 
       "p": 4520000.0, 
       "p_units": "Pa", 
       "rhomolar": 5571.452362568319, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 119.13697259149954, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 154.56, 

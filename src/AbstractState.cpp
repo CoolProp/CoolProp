@@ -5,6 +5,8 @@
  *      Author: jowr
  */
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdlib.h>
 #include "math.h"
 #include "AbstractState.h"
@@ -12,66 +14,80 @@
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
-#include "Backends/Tabular/TabularBackends.h"
+#include "Backends/IF97/IF97Backend.h"
+
+#if !defined(NO_TABULAR_BACKENDS)
+    #include "Backends/Tabular/TTSEBackend.h"
+    #include "Backends/Tabular/BicubicBackend.h"
+#endif
 
 namespace CoolProp {
 
-AbstractState * AbstractState::factory(const std::string &backend, const std::string &fluid_string)
+AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
 {
-    static std::string HEOS_string = "HEOS";
-    if (!backend.compare("HEOS"))
+    if (get_debug_level() > 0){
+        std::cout << "AbstractState::factory(" << backend << "," << stringvec_to_string(fluid_names) << ")" << std::endl;
+    }
+    static const std::string HEOS_string = "HEOS";
+    if (!backend.compare(HEOS_string))
     {
-        if (fluid_string.find('&') == std::string::npos){
-            return new HelmholtzEOSBackend(fluid_string);
+        if (fluid_names.size() == 1){
+            return new HelmholtzEOSBackend(fluid_names[0]);
         }
         else{
-            // Split at the '&'
-            std::vector<std::string> components = strsplit(fluid_string,'&');
-
-            return new HelmholtzEOSMixtureBackend(components);
+            return new HelmholtzEOSMixtureBackend(fluid_names);
         }
     }
     else if (!backend.compare("REFPROP"))
     {
-        if (fluid_string.find('&') == std::string::npos){
-            return new REFPROPBackend(fluid_string);
+        if (fluid_names.size() == 1){
+            return new REFPROPBackend(fluid_names[0]);
         }
         else{
-            // Split at the '&'
-            std::vector<std::string> components = strsplit(fluid_string,'&');
-
-            return new REFPROPMixtureBackend(components);
+            return new REFPROPMixtureBackend(fluid_names);
         }
     }
     else if (!backend.compare("INCOMP"))
     {
-        return new IncompressibleBackend(fluid_string);
+        if (fluid_names.size() != 1){throw ValueError(format("For INCOMP backend, name vector must be one element long"));}
+        return new IncompressibleBackend(fluid_names[0]);
     }
+    else if (!backend.compare("IF97"))
+    {
+        return new IF97Backend();
+    }
+    #if !defined(NO_TABULAR_BACKENDS)
     else if (backend.find("TTSE&") == 0)
     {
         // Will throw if there is a problem with this backend
-        shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_string));
-        return new TTSEBackend(*AS.get());
+        shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_names));
+        return new TTSEBackend(AS);
     }
+    else if (backend.find("BICUBIC&") == 0)
+    {
+        // Will throw if there is a problem with this backend
+        shared_ptr<AbstractState> AS(factory(backend.substr(8), fluid_names));
+        return new BicubicBackend(AS);
+    }
+    #endif
     else if (!backend.compare("TREND"))
     {
         throw ValueError("TREND backend not yet implemented");
     }
     else if (!backend.compare("?"))
     {
-        std::size_t idel = fluid_string.find("::");
+        std::size_t idel = fluid_names[0].find("::");
         // Backend has not been specified, and we have to figure out what the backend is by parsing the string
         if (idel == std::string::npos) // No '::' found, no backend specified, try HEOS, otherwise a failure
         {
             // Figure out what backend to use
-            return factory(HEOS_string, fluid_string);
+            return factory(HEOS_string, fluid_names);
         }
         else
         {
             // Split string at the '::' into two std::string, call again
-            return factory(std::string(fluid_string.begin(), fluid_string.begin() + idel), std::string(fluid_string.begin()+idel+2, fluid_string.end()));
+            return factory(std::string(fluid_names[0].begin(), fluid_names[0].begin() + idel), std::string(fluid_names[0].begin()+(idel+2), fluid_names[0].end()));
         }
-
     }
     else
     {
@@ -126,7 +142,7 @@ bool AbstractState::clear() {
     this->_gibbsmolar.clear();
     this->_logp.clear();
     this->_logrhomolar.clear();
- 
+
     ///// Smoothing values
     //this->rhospline = -_HUGE;
     //this->dsplinedp = -_HUGE;
@@ -159,15 +175,22 @@ bool AbstractState::clear() {
     this->_d2alphar_dDelta_dTau_lim.clear();
     this->_d3alphar_dDelta2_dTau_lim.clear();
 
+    /// Transport properties
+    this->_viscosity.clear();
+    this->_conductivity.clear();
+    this->_surface_tension.clear();
+
     return true;
 }
-double AbstractState::trivial_keyed_output(int key)
+double AbstractState::trivial_keyed_output(parameters key)
 {
     if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
     switch (key)
     {
     case imolar_mass:
         return molar_mass();
+    case iacentric_factor:
+        return acentric_factor();
 	case igas_constant:
 		return gas_constant();
     case iT_min:
@@ -182,11 +205,11 @@ double AbstractState::trivial_keyed_output(int key)
     case iP_triple:
         return this->p_triple();
     case iT_reducing:
-        return get_reducing_state().T;
+        return calc_T_reducing();
     case irhomolar_reducing:
-        return get_reducing_state().rhomolar;
+        return calc_rhomolar_reducing();
 	case iP_reducing:
-		return get_reducing_state().p;
+		return calc_p_reducing();
     case iP_critical:
         return this->p_critical();
     case iT_critical:
@@ -209,11 +232,17 @@ double AbstractState::trivial_keyed_output(int key)
         return this->calc_fraction_max();
     case iT_freeze:
         return this->calc_T_freeze();
+    case iFH:
+        return this->calc_flame_hazard();
+    case iHH:
+        return this->calc_health_hazard();
+    case iPH:
+        return this->calc_physical_hazard();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));
     }
 }
-double AbstractState::keyed_output(int key)
+double AbstractState::keyed_output(parameters key)
 {
     if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
     // Handle trivial inputs
@@ -281,16 +310,22 @@ double AbstractState::keyed_output(int key)
         return dCvirial_dT();
     case iisothermal_compressibility:
         return isothermal_compressibility();
+    case iisobaric_expansion_coefficient:
+        return isobaric_expansion_coefficient();
     case iviscosity:
         return viscosity();
     case iconductivity:
         return conductivity();
+    case iPrandtl:
+        return Prandtl();
 	case isurface_tension:
 		return surface_tension();
     case iPhase:
         return phase();
     case iZ:
         return compressibility_factor();
+    case iPIP:
+        return PIP();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for keyed_output",key,get_parameter_information(key,"short").c_str()));
     }
@@ -378,6 +413,9 @@ double AbstractState::conductivity(void){
 double AbstractState::melting_line(int param, int given, double value){
     return calc_melting_line(param, given, value);
 }
+double AbstractState::acentric_factor(){
+    return calc_acentric_factor();
+}
 double AbstractState::saturation_ancillary(parameters param, int Q, parameters given, double value){
     return calc_saturation_ancillary(param, Q, given, value);
 }
@@ -414,9 +452,9 @@ double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 double AbstractState::compressibility_factor(void){ return calc_compressibility_factor(); }
 
 // Get the derivatives of the parameters in the partial derivative with respect to T and rho
-void get_dT_drho(AbstractState &AS, parameters index, long double &dT, long double &drho)
+void get_dT_drho(AbstractState &AS, parameters index, CoolPropDbl &dT, CoolPropDbl &drho)
 {
-    long double T = AS.T(),
+    CoolPropDbl T = AS.T(),
                 rho = AS.rhomolar(),
                 rhor = AS.rhomolar_reducing(),
                 Tr = AS.T_reducing(),
@@ -424,7 +462,7 @@ void get_dT_drho(AbstractState &AS, parameters index, long double &dT, long doub
                 R = AS.gas_constant(),
                 delta = rho/rhor,
                 tau = Tr/T;
-    
+
     switch (index)
     {
     case iT:
@@ -491,27 +529,23 @@ void get_dT_drho(AbstractState &AS, parameters index, long double &dT, long doub
         throw ValueError(format("input to get_dT_drho[%s] is invalid",get_parameter_information(index,"short").c_str()));
     }
 }
-void get_dT_drho_second_derivatives(AbstractState &AS, int index, long double &dT2, long double &drho_dT, long double &drho2)
+void get_dT_drho_second_derivatives(AbstractState &AS, int index, CoolPropDbl &dT2, CoolPropDbl &drho_dT, CoolPropDbl &drho2)
 {
-	long double T = AS.T(),
+	CoolPropDbl T = AS.T(),
                 rho = AS.rhomolar(),
                 rhor = AS.rhomolar_reducing(),
                 Tr = AS.T_reducing(),
-                dT_dtau = -pow(T, 2)/Tr,
                 R = AS.gas_constant(),
                 delta = rho/rhor,
                 tau = Tr/T;
 
-    // Here we use T and rho as independent variables since derivations are already done by Thorade, 2013, 
+    // Here we use T and rho as independent variables since derivations are already done by Thorade, 2013,
     // Partial derivatives of thermodynamic state propertiesfor dynamic simulation, DOI 10.1007/s12665-013-2394-z
-    
+
     switch (index)
     {
     case iT:
-        dT2 = 0;  // d2T_dT2
-        drho_dT = 0; // d2T_drho_dT
-        drho2 = 0; 
-        break;
+	case iDmass:
     case iDmolar:
         dT2 = 0; // d2rhomolar_dtau2
         drho2 = 0;
@@ -580,9 +614,9 @@ void get_dT_drho_second_derivatives(AbstractState &AS, int index, long double &d
         throw ValueError(format("input to get_dT_drho_second_derivatives[%s] is invalid", get_parameter_information(index,"short").c_str()));
     }
 }
-long double AbstractState::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
+CoolPropDbl AbstractState::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
 {
-	long double dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
+	CoolPropDbl dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
 
     get_dT_drho(*this, Of, dOf_dT, dOf_drho);
     get_dT_drho(*this, Wrt, dWrt_dT, dWrt_drho);
@@ -590,9 +624,9 @@ long double AbstractState::calc_first_partial_deriv(parameters Of, parameters Wr
 
     return (dOf_dT*dConstant_drho-dOf_drho*dConstant_dT)/(dWrt_dT*dConstant_drho-dWrt_drho*dConstant_dT);
 }
-long double AbstractState::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
+CoolPropDbl AbstractState::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
 {
-    long double dOf1_dT, dOf1_drho, dWrt1_dT, dWrt1_drho, dConstant1_dT, dConstant1_drho, d2Of1_dT2, d2Of1_drhodT, 
+    CoolPropDbl dOf1_dT, dOf1_drho, dWrt1_dT, dWrt1_drho, dConstant1_dT, dConstant1_drho, d2Of1_dT2, d2Of1_drhodT,
                 d2Of1_drho2, d2Wrt1_dT2, d2Wrt1_drhodT, d2Wrt1_drho2, d2Constant1_dT2, d2Constant1_drhodT, d2Constant1_drho2,
                 dWrt2_dT, dWrt2_drho, dConstant2_dT, dConstant2_drho, N, D, dNdrho__T, dDdrho__T, dNdT__rho, dDdT__rho,
                 dderiv1_drho, dderiv1_dT, second;
@@ -604,34 +638,34 @@ long double AbstractState::calc_second_partial_deriv(parameters Of1, parameters 
     get_dT_drho_second_derivatives(*this, Of1, d2Of1_dT2, d2Of1_drhodT, d2Of1_drho2);
     get_dT_drho_second_derivatives(*this, Wrt1, d2Wrt1_dT2, d2Wrt1_drhodT, d2Wrt1_drho2);
     get_dT_drho_second_derivatives(*this, Constant1, d2Constant1_dT2, d2Constant1_drhodT, d2Constant1_drho2);
-    
+
     // First derivatives of terms involved in the second derivative
     get_dT_drho(*this, Wrt2, dWrt2_dT, dWrt2_drho);
     get_dT_drho(*this, Constant2, dConstant2_dT, dConstant2_drho);
-    
+
     // Numerator and denominator of first partial derivative term
     N = dOf1_dT*dConstant1_drho - dOf1_drho*dConstant1_dT;
     D = dWrt1_dT*dConstant1_drho - dWrt1_drho*dConstant1_dT;
-    
+
     // Derivatives of the numerator and denominator of the first partial derivative term with respect to rho, T held constant
     // They are of similar form, with Of1 and Wrt1 swapped
     dNdrho__T = dOf1_dT*d2Constant1_drho2 + d2Of1_drhodT*dConstant1_drho - dOf1_drho*d2Constant1_drhodT - d2Of1_drho2*dConstant1_dT;
     dDdrho__T = dWrt1_dT*d2Constant1_drho2 + d2Wrt1_drhodT*dConstant1_drho - dWrt1_drho*d2Constant1_drhodT - d2Wrt1_drho2*dConstant1_dT;
-    
+
     // Derivatives of the numerator and denominator of the first partial derivative term with respect to T, rho held constant
     // They are of similar form, with Of1 and Wrt1 swapped
     dNdT__rho = dOf1_dT*d2Constant1_drhodT + d2Of1_dT2*dConstant1_drho - dOf1_drho*d2Constant1_dT2 - d2Of1_drhodT*dConstant1_dT;
     dDdT__rho = dWrt1_dT*d2Constant1_drhodT + d2Wrt1_dT2*dConstant1_drho - dWrt1_drho*d2Constant1_dT2 - d2Wrt1_drhodT*dConstant1_dT;
-    
+
     // First partial of first derivative term with respect to T
     dderiv1_drho = (D*dNdrho__T - N*dDdrho__T)/pow(D, 2);
-    
+
     // First partial of first derivative term with respect to rho
     dderiv1_dT = (D*dNdT__rho - N*dDdT__rho)/pow(D, 2);
 
     // Complete second derivative
     second = (dderiv1_dT*dConstant2_drho - dderiv1_drho*dConstant2_dT)/(dWrt2_dT*dConstant2_drho - dWrt2_drho*dConstant2_dT);
-    
+
     return second;
 }
 //    // ----------------------------------------

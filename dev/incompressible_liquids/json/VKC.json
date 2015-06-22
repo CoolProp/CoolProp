@@ -1,12 +1,14 @@
 {
   "T_freeze": {
+    "NRMS": 7.282594e-04, 
     "coeffs": [
       [
-        5.558281e+00, 
-        -3.782273e-01, 
-        -1.704134e+00, 
-        -4.490892e+00, 
-        1.017784e+01
+        5.558098e+00, 
+        -3.735232e-01, 
+        -1.571620e+00, 
+        -6.534489e+00, 
+        3.112929e+00, 
+        1.045216e+02
       ]
     ], 
     "type": "exppolynomial"
@@ -16,6 +18,7 @@
   "Tmin": 2.381500e+02, 
   "TminPsat": 2.931500e+02, 
   "conductivity": {
+    "NRMS": 3.930257e-03, 
     "coeffs": [
       [
         5.170635e-01, 
@@ -53,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 1.007481e-03, 
     "coeffs": [
       [
         1.292886e+03, 
@@ -73,7 +77,7 @@
       [
         -1.398665e-03, 
         4.160126e-03, 
-        3.803775e-01, 
+        3.803776e-01, 
         -2.957217e+00, 
         0.000000e+00, 
         0.000000e+00
@@ -91,20 +95,24 @@
   }, 
   "description": "VDI, Potassium Carbonate", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "VKC", 
   "reference": "Preisegger2010,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 1.739107e-03, 
     "coeffs": [
       [
         2.933311e+03, 
@@ -123,8 +131,8 @@
         0.000000e+00
       ], 
       [
-        -6.128041e-04, 
-        -6.064738e-02, 
+        -6.128042e-04, 
+        -6.064737e-02, 
         1.588982e+00, 
         -9.272562e+00, 
         0.000000e+00, 
@@ -142,6 +150,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 1.271972e-03, 
     "coeffs": [
       [
         -5.098973e+00, 
@@ -179,6 +188,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": [
       [
         0.000000e+00, 

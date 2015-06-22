@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.581500e+02, 
   "TminPsat": 4.701500e+02, 
   "conductivity": {
+    "NRMS": 8.125849e-03, 
     "coeffs": [
       [
         1.083524e-01
@@ -25,6 +27,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 9.737020e-04, 
     "coeffs": [
       [
         8.387187e+02
@@ -43,16 +46,19 @@
   }, 
   "description": "Paratherm HR", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "PHR", 
   "reference": "Paratherm2013", 
   "saturation_pressure": {
+    "NRMS": 8.084486e-03, 
     "coeffs": [
       [
         7.198158e+00
@@ -70,6 +76,7 @@
     "type": "exppolynomial"
   }, 
   "specific_heat": {
+    "NRMS": 3.560268e-02, 
     "coeffs": [
       [
         2.289350e+03
@@ -87,6 +94,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 6.907493e-03, 
     "coeffs": [
       7.500522e+02, 
       -1.738728e+02, 
@@ -95,6 +103,7 @@
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

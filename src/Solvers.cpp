@@ -4,8 +4,34 @@
 #include "MatrixMath.h"
 #include <iostream>
 #include "CoolPropTools.h"
+#include <Eigen/Dense>
 
 namespace CoolProp{
+
+/** \brief Calculate the Jacobian using numerical differentiation by column
+ */
+std::vector<std::vector<double> > FuncWrapperND::Jacobian(const std::vector<double> &x)
+{
+    double epsilon;
+    std::size_t N = x.size();
+    std::vector<double> r, xp;
+    std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
+    std::vector<double> r0 = call(x);
+    // Build the Jacobian by column
+    for (std::size_t i = 0; i < N; ++i)
+    {
+        xp = x;
+        epsilon = 0.001*x[i];
+        xp[i] += epsilon;
+        r = call(xp);
+        
+        for(std::size_t j = 0; j < N; ++j)
+        {
+            J[j][i] = (r[j]-r0[j])/epsilon;
+        }
+    }
+    return J;
+}
 
 /**
 In this formulation of the Multi-Dimensional Newton-Raphson solver the Jacobian matrix is known.
@@ -23,25 +49,32 @@ functions, each of which take the vector x. The data is managed using std::vecto
 @param errstring  A string with the returned error.  If the length of errstring is zero, no errors were found
 @returns If no errors are found, the solution.  Otherwise, _HUGE, the value for infinity
 */
-std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> x0, double tol, int maxiter, std::string *errstring)
+std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> &x0, double tol, int maxiter, std::string *errstring)
 {
     int iter=0;
     *errstring=std::string("");
-    std::vector<double> f0,v,negative_f0;
-    std::vector<std::vector<double> > J;
+    std::vector<double> f0,v;
+    std::vector<std::vector<double> > JJ;
+    Eigen::VectorXd r(x0.size());
+    Eigen::Matrix2d J(x0.size(), x0.size());
     double error = 999;
     while (iter==0 || std::abs(error)>tol){
         f0 = f->call(x0);
-        J = f->Jacobian(x0);
+        JJ = f->Jacobian(x0);
+        
+        for (std::size_t i = 0; i < x0.size(); ++i)
+        {
+            r(i) = f0[i];
+            for (std::size_t j = 0; j < x0.size(); ++j)
+            {
+                J(i,j) = JJ[i][j];
+            }
+        }
 
-        // Negate f0
-        negative_f0 = f0;
-        for (unsigned int i = 0; i<f0.size(); i++){ negative_f0[i] *= -1;}
-        // find v from J*v = -f
-        v = linsolve(J, negative_f0);
+        Eigen::Vector2d v = J.colPivHouseholderQr().solve(-r);
+
         // Update the guess
-        x0[0] += v[0];
-        x0[1] += v[1];
+        for (std::size_t i = 0; i<x0.size(); i++){ x0[i] += v(i);}
         error = root_sum_square(f0);
         if (iter>maxiter){
             *errstring=std::string("reached maximum number of iterations");
@@ -62,7 +95,7 @@ In the newton function, a 1-D Newton-Raphson solver is implemented using exact s
 @param errstring A pointer to the std::string that returns the error from Secant.  Length is zero if no errors are found
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double Newton(FuncWrapper1D* f, double x0, double ftol, int maxiter, std::string &errstring)
+double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter, std::string &errstring)
 {
     double x, dx, fval=999;
     int iter=1;
@@ -88,6 +121,57 @@ double Newton(FuncWrapper1D* f, double x0, double ftol, int maxiter, std::string
         {
             errstring= "reached maximum number of iterations";
             throw SolutionError(format("Newton reached maximum number of iterations"));
+        }
+        iter=iter+1;
+    }
+    return x;
+}
+/**
+In the Halley's method solver, two derivatives of the input variable are needed, it yields the following method:
+
+\f[
+x_{n+1} = x_n - \frac {2 f(x_n) f'(x_n)} {2 {[f'(x_n)]}^2 - f(x_n) f''(x_n)}
+\f]
+
+http://en.wikipedia.org/wiki/Halley%27s_method
+
+@param f A pointer to an instance of the FuncWrapper1DWithTwoDerivs class that implements the call() and two derivatives
+@param x0 The inital guess for the solution
+@param ftol The absolute value of the tolerance accepted for the objective function
+@param maxiter Maximum number of iterations
+@param errstring A pointer to the std::string that returns the error from Secant.  Length is zero if no errors are found
+@returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
+*/
+double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter, std::string &errstring)
+{
+    double x, dx, fval=999, dfdx, d2fdx2;
+    int iter=1;
+    errstring.clear();
+    x = x0;
+    while (iter < 2 || std::abs(fval) > ftol)
+    {
+        fval = f->call(x);
+        dfdx = f->deriv(x);
+        d2fdx2 = f->second_deriv(x);
+
+        dx = -(2*fval*dfdx)/(2*POW2(dfdx)-fval*d2fdx2);
+
+        if (!ValidNumber(fval)){
+            throw ValueError("Residual function in Halley returned invalid number");
+        };
+        if (!ValidNumber(dfdx)){
+            throw ValueError("Derivative function in Halley returned invalid number");
+        };
+
+        x += dx;
+
+        if (std::abs(dx/x) < 10*DBL_EPSILON){
+            return x;
+        }
+
+        if (iter>maxiter){
+            errstring= "reached maximum number of iterations";
+            throw SolutionError(format("Halley reached maximum number of iterations"));
         }
         iter=iter+1;
     }
@@ -137,16 +221,8 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, s
         if (iter>1)
         {
             double deltax = x2-x1;
-            if (std::abs(deltax)<1e-14)
-            {
-                if (std::abs(fval) < tol*10)
-                {
-                    return x;
-                }
-                else
-                {
-                    throw ValueError("Step is small but not solved to tolerance");
-                }
+            if (std::abs(deltax)<1e-14){
+                return x;
             }
             y2=fval;
             x3=x2-y2/(y2-y1)*(x2-x1);
@@ -350,26 +426,12 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
         if (!ValidNumber(c)){
             throw ValueError(format("Brent's method c is NAN").c_str());}
         if (iter>maxiter){
-            throw SolutionError(std::string("Brent's method reached maximum number of steps of %d ", maxiter));}
+            throw SolutionError(format("Brent's method reached maximum number of steps of %d ", maxiter));}
         if (std::abs(fb)< 2*macheps*std::abs(b)){
             return b;
         }
     }
     return b;
-}
-
-// Single-Dimensional solvers
-double Brent(FuncWrapper1D &f, double a, double b, double macheps, double t, int maxiter, std::string &errstr){
-    return Brent(&f, a, b, macheps, t, maxiter, errstr);
-}
-double Secant(FuncWrapper1D &f, double x0, double dx, double ftol, int maxiter, std::string &errstring){
-    return Secant(&f, x0, dx, ftol, maxiter, errstring);
-}
-double BoundedSecant(FuncWrapper1D &f, double x0, double xmin, double xmax, double dx, double ftol, int maxiter, std::string &errstring){
-    return BoundedSecant(&f, x0, xmin, xmax, dx, ftol, maxiter, errstring);
-}
-double Newton(FuncWrapper1D &f, double x0, double ftol, int maxiter, std::string &errstring){
-    return Newton(&f, x0, ftol, maxiter, errstring);
 }
 
 }; /* namespace CoolProp */

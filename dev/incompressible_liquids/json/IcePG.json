@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.300000e+02, 
   "TminPsat": 2.650000e+02, 
   "conductivity": {
+    "NRMS": 1.054945e-03, 
     "coeffs": [
       [
         5.381718e-01, 
@@ -45,13 +47,14 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 1.083247e-03, 
     "coeffs": [
       [
         1.024418e+03, 
         -1.563366e+02, 
         2.333333e+01, 
         -2.500000e+01, 
-        4.181595e-10, 
+        -6.199311e-09, 
         1.000000e+03
       ], 
       [
@@ -65,7 +68,7 @@
       [
         -2.218367e-02, 
         3.259637e-02, 
-        -1.033896e-13, 
+        3.302718e-14, 
         -3.174603e-02, 
         0.000000e+00, 
         0.000000e+00
@@ -83,20 +86,24 @@
   }, 
   "description": "Ice slurry with Propylene Glycol", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "IcePG", 
   "reference": "Kauffeld2001,Skovrup2013", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": 9.813949e-04, 
     "coeffs": [
       [
         8.962249e+04, 
@@ -134,6 +141,7 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 2.131279e-04, 
     "coeffs": [
       [
         -6.356003e+00, 
@@ -171,6 +179,7 @@
     "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

@@ -279,8 +279,8 @@
       "T_max_units": "K", 
       "Ttriple": 277.06, 
       "Ttriple_units": "K", 
-      "accentric": 0.346, 
-      "accentric_units": "-", 
+      "acentric": 0.346, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 4.9916462, 
@@ -455,16 +455,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{3}H_{6}O_{3}", 
   "NAME": "DimethylCarbonate", 
   "REFPROP_NAME": "DMC", 
   "STATES": {
     "critical": {
       "T": 557.0, 
       "T_units": "K", 
+      "hmolar": 46192.11476166875, 
+      "hmolar_units": "J/mol", 
       "p": 4908800.0, 
       "p_units": "Pa", 
       "rhomolar": 4000.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 97.29807828801468, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 277.06, 

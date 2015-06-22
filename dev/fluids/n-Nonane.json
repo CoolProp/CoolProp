@@ -279,8 +279,8 @@
       "T_max_units": "K", 
       "Ttriple": 219.7, 
       "Ttriple_units": "K", 
-      "accentric": 0.4433, 
-      "accentric_units": "-", 
+      "acentric": 0.4433, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 10.7927224829, 
@@ -396,16 +396,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{9}H_{20}", 
   "NAME": "n-Nonane", 
   "REFPROP_NAME": "NONANE", 
   "STATES": {
     "critical": {
-      "T": 594.55, 
+      "T": 594.5500000000001, 
       "T_units": "K", 
+      "hmolar": 75079.64968847665, 
+      "hmolar_units": "J/mol", 
       "p": 2281000.0, 
       "p_units": "Pa", 
       "rhomolar": 1810.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 144.98429006254074, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 219.7, 

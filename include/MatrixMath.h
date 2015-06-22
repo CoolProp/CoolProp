@@ -296,7 +296,7 @@ template <class T> void removeColumn(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynam
 static const char* stdFmt = "%8.3f";
 
 ///Templates for turning vectors (1D-matrices) into strings
-template<class T> std::string vec_to_string(const             std::vector<T>   &a, const char *fmt) {
+template<class T> std::string vec_to_string(const std::vector<T> &a, const char *fmt) {
     if (a.size()<1) return std::string("");
     std::stringstream out;
     out << "[ " << format(fmt,a[0]);
@@ -306,17 +306,28 @@ template<class T> std::string vec_to_string(const             std::vector<T>   &
     out << " ]";
     return out.str();
 };
-template<class T> std::string vec_to_string(const             std::vector<T>   &a) {
+template<class T> std::string vec_to_string(const std::vector<T> &a) {
     return vec_to_string(std::vector<double>(a.begin(), a.end()), stdFmt);
+};
+///Templates for turning vectors (1D-matrices) into strings
+inline std::string stringvec_to_string(const std::vector<std::string> &a) {
+    if (a.size()<1) return std::string("");
+    std::stringstream out;
+    out << "[ " << format("%s", a[0].c_str());
+    for (size_t j = 1; j < a.size(); j++) {
+        out << ", " << format("%s", a[j].c_str());
+    }
+    out << " ]";
+    return out.str();
 };
 
 /// Templates for turning numbers (0D-matrices) into strings
-template<class T> std::string vec_to_string(const                         T    &a, const char *fmt) {
+template<class T> std::string vec_to_string(const T &a, const char *fmt) {
     std::vector<T> vec;
     vec.push_back(a);
     return vec_to_string(vec, fmt);
 };
-template<class T> std::string vec_to_string(const                         T    &a) {
+template<class T> std::string vec_to_string(const T &a) {
     return vec_to_string((double) a, stdFmt);
 };
 
@@ -628,7 +639,7 @@ template<typename T> std::vector<std::vector<T> > linsolve_Gauss_Jordan(std::vec
     }
     for (std::size_t col = NcolA - 1; col > 0; col--)
     {
-        for (int row = col - 1; row >=0; row--)
+        for (int row = static_cast<int>(col) - 1; row >=0; row--)
         {
             subtract_row_multiple(&AB,row,AB[row][col],col);
         }
@@ -853,6 +864,49 @@ template<class T> std::vector< std::vector<T> >    invert(std::vector<std::vecto
     return linsolve(in,identity);
 };
 
+
+inline void removeRow(Eigen::MatrixXd& matrix, unsigned int rowToRemove)
+{
+    unsigned int numRows = static_cast<unsigned int>(matrix.rows())- 1;
+    unsigned int numCols = static_cast<unsigned int>(matrix.cols());
+
+    if (rowToRemove < numRows)
+        matrix.block(rowToRemove, 0, numRows-rowToRemove, numCols) = matrix.block(rowToRemove+1, 0, numRows-rowToRemove, numCols);
+
+    matrix.conservativeResize(numRows, numCols);
+};
+
+inline void removeColumn(Eigen::MatrixXd& matrix, unsigned int colToRemove)
+{
+    unsigned int numRows = static_cast<unsigned int>(matrix.rows());
+    unsigned int numCols = static_cast<unsigned int>(matrix.cols())-1;
+
+    if (colToRemove < numCols)
+        matrix.block(0, colToRemove, numRows, numCols-colToRemove) = matrix.block(0, colToRemove+1, numRows, numCols-colToRemove);
+
+    matrix.conservativeResize(numRows, numCols);
+};
+template <typename Derived>
+inline Eigen::MatrixXd minor_matrix(const Eigen::MatrixBase<Derived>& A, std::size_t i, std::size_t j)
+{
+    Eigen::MatrixXd Am = A;
+    removeRow(Am, static_cast<unsigned int>(i));
+    removeColumn(Am, static_cast<unsigned int>(j));
+    return Am;
+};
+
+template <typename Derived>
+static Eigen::MatrixXd adjugate(const Eigen::MatrixBase<Derived>& A, std::size_t N)
+{
+    Eigen::MatrixXd Aadj(A.rows(), A.cols());
+    for (std::size_t i = 0; i < N; ++i){
+        for (std::size_t j = 0; j < N; ++j){
+            int negative_1_to_the_i_plus_j = ((i+j)%2==0) ? 1 : -1;
+            Aadj(i, j) = negative_1_to_the_i_plus_j*minor_matrix(A, i, j).determinant();
+        }
+    }
+    return Aadj;
+}
 
 
 

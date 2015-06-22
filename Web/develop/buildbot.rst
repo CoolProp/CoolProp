@@ -57,6 +57,23 @@ If the master is somewhere else, just change the IP address.  As of Sept, 2014, 
 master was at www.coolprop.dreamhosters.com.  The buildbot_private.py on the master
 holds the required passwords.
 
+OSX Virtualbox host
+-------------------
+
+Thanks to http://stackoverflow.com/questions/1261975/addressing-localhost-from-a-virtualbox-virtual-machine and the comment of spsaucier you basically need to do the following, copied verbatim:
+
+To enable this on OSX I had to do the following:
+
+1. Shut your virtual machine down.
+2. Go to ``VirtualBox Preferences -> Network -> Host-only Networks ->`` click the "+" icon. Click OK.
+3.Select your box and click the "Settings" icon -> Network -> Adapter 2 -> On the "Attached to:" dropdown, select "Host-only Adapter" and your network (vboxnet0) should show up below by default. Click OK.
+4. Once you start your box up again, you should be able to access localhost at http://10.0.2.2/
+
+You can refer to it by localhost and access other localhosted sites by adding their references to the hosts file (C:\windows\system32\drivers\etc\hosts) like the following::
+
+	10.0.2.2    localhost
+	10.0.2.2    subdomain.localhost
+    
 
 Python slaves
 -------------
@@ -217,6 +234,35 @@ by ``launchd`` could look like this one::
 Note that this script calls another Bash script that does the actual work. We hope
 to simplify maintenance by using a common control script for Linux and MacOS as
 shown in :ref:`slavescript`.
+
+Or alternatively, you can just launch buildslave directly if you do not use conda environment::
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+        <key>KeepAlive</key>
+        <true/>
+        <key>Label</key>
+        <string>com.start.buildbot</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>/Users/Ian/anaconda/bin/buildslave</string>
+            <string>restart</string>
+            <string>slave</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>StandardErrorPath</key>
+        <string>/Users/Ian/.buildbot_stderr</string>
+        <key>StandardOutPath</key>
+        <string>/Users/Ian/.buildbot_stdout</string>
+        <key>UserName</key>
+        <string>Ian</string>
+        <key>WorkingDirectory</key>
+        <string>/Users/Ian</string>
+    </dict>
+    </plist>
 
 Buildbot as a daemon (Linux)
 ----------------------------
@@ -391,6 +437,39 @@ To change the MIME types on the server so that unknown file types will map prope
 and then do a ``buildbot restart master``
 
 
+Starting virtualbox images at boot
+==================================
+
+Create a daemon entry in Libray/LaunchDaemons.  Make sure you use full paths to VBoxManage::
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+        <key>GroupName</key>
+        <string>staff</string>
+        <key>InitGroups</key>
+        <true/>
+        <key>KeepAlive</key>
+        <false/>
+        <key>Label</key>
+        <string>com.start.windows.vm</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>/usr/bin/Vboxmanage</string>
+            <string>startvm</string>
+            <string>xp</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>StandardErrorPath</key>
+        <string>/Users/Ian/.virtualbox_window_stderr</string>
+        <key>StandardOutPath</key>
+        <string>/Users/Ian/.virtualbox_windows_stdout</string>
+        <key>UserName</key>
+        <string>Ian</string>
+    </dict>
+    </plist>
 
 
 Documentation Builds

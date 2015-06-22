@@ -1,7 +1,7 @@
 {
   "ALIASES": [
     "ethylene", 
-    "ETHYLENE",
+    "ETHYLENE", 
     "R1150"
   ], 
   "ANCILLARIES": {
@@ -310,8 +310,8 @@
       "T_max_units": "K", 
       "Ttriple": 103.989, 
       "Ttriple_units": "K", 
-      "accentric": 0.0866, 
-      "accentric_units": "-", 
+      "acentric": 0.0866, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 8.68815523, 
@@ -557,16 +557,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}H_{4}", 
   "NAME": "Ethylene", 
   "REFPROP_NAME": "ETHYLENE", 
   "STATES": {
     "critical": {
       "T": 282.35, 
       "T_units": "K", 
+      "hmolar": 11205.622917124283, 
+      "hmolar_units": "J/mol", 
       "p": 5041800.0, 
       "p_units": "Pa", 
-      "rhomolar": 7636.76598074554, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 7636.765980745539, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 46.60945286278082, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 103.989, 

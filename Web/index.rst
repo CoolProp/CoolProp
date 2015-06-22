@@ -7,7 +7,6 @@ These pages help you to get started using CoolProp and provide detailed informat
 returning user. Please feel free to browse the pages and use the menu on the left to navigate
 on this website.
 
-
 What is CoolProp?
 -----------------
 
@@ -18,14 +17,13 @@ CoolProp is a C++ library that implements:
 - :ref:`Correlations of properties of incompressible fluids and brines <Pure>`
 - :ref:`Highest accuracy psychrometric routines <Humid-Air>`
 
-
 Environments Supported
 ----------------------
 
 Programming Languages:
 
-- Fully-featured wrappers: :ref:`Python (2.x, 3.x) <Python>` , :sfdownloads:`Modelica <Modelica>`, :ref:`Octave <Octave>`, :ref:`C# <Csharp>`, :ref:`MathCAD <MathCAD>`, :ref:`Java <Java>`, :ref:`MATLAB <MATLAB>`
-- High-level interface only: :ref:`Labview <Labview>`, :ref:`EES <EES>`, :ref:`Microsoft Excel <Excel>`, :ref:`LibreOffice <LibreOffice>`, :ref:`Javascript <Javascript>`, :ref:`PHP <PHP>`, :ref:`FORTRAN <FORTRAN>`, :ref:`Maple <Maple>`, :ref:`Mathematica <Mathematica>`, :ref:`Scilab <Scilab>`, VB.net, :ref:`Delphi & Lazarus <Delphi>`, :ref:`Julia <Julia>`
+- Fully-featured wrappers: :ref:`Python (2.x, 3.x) <Python>` , `Modelica <https://github.com/modelica/ExternalMedia>`_, :ref:`Octave <Octave>`, :ref:`C# <Csharp>`, :ref:`VB.net <VBdotNet>`, :ref:`MathCAD <MathCAD>`, :ref:`Java <Java>`, :ref:`MATLAB <MATLAB>`
+- High-level interface only: :ref:`Labview <Labview>`, :ref:`EES <EES>`, :ref:`Microsoft Excel <Excel>`, :ref:`LibreOffice <LibreOffice>`, :ref:`Javascript <Javascript>`, :ref:`PHP <PHP>`, :ref:`FORTRAN <FORTRAN>`, :ref:`Maple <Maple>`, :ref:`Mathematica <Mathematica>`, :ref:`Scilab <Scilab>`, :ref:`Delphi & Lazarus <Delphi>`, :ref:`Julia <Julia>`
 
 Architectures:
 
@@ -48,6 +46,7 @@ Help
 
 - File a `Github issue <https://github.com/CoolProp/CoolProp/issues>`_
 - Email the `Google group <https://groups.google.com/d/forum/coolprop-users>`_
+- `Docs for v4 of CoolProp <http://www.coolprop.org/v4/>`_
 
 
 Projects Using CoolProp
@@ -58,21 +57,25 @@ Projects Using CoolProp
 - `ACHP <http://achp.sourceforge.net/>`_
 - `DWSim <http://sourceforge.net/projects/dwsim/>`_
 - `StateCalc <https://itunes.apple.com/us/app/statecalc/id891848148?ls=1&mt=8>`_
-
+- `SmoWeb <http://platform.sysmoltd.com>`_
 
 Main Developers
 ---------------
 
 The primary developers are:
 
-- `Ian Bell <mailto:ian.h.bell@gmail.com>`_, `Sylvain Quoilin <mailto:squoilin@ulg.ac.be>`_, `Vincent Lemort <mailto:vincent.lemort@ulg.ac.be>`_, University of Liege, Liege, Belgium
-- `Jorrit Wronski <mailto:jowr@mek.dtu.dk>`_, Technical University of Denmark, Kgs. Lyngby, Denmark
+- `Ian Bell <mailto:ian.h.bell@gmail.com>`_, Bell Thermal Consultants
+- `Jorrit Wronski <mailto:jowr@ipu.dk>`_, IPU Refrigeration and Energy Technology, Kgs. Lyngby, Denmark
+- `Sylvain Quoilin <mailto:squoilin@ulg.ac.be>`_, `Vincent Lemort <mailto:vincent.lemort@ulg.ac.be>`_, Thermodynamics Laboratory, University of Liege, Liege, Belgium
 
+Please be so kind and cite our work in your publication: :ref:`Citation information <citation>`.
 
 Supporters
 ----------
 
-.. image:: _static/labothap.png
+\ 
+
+.. image:: _static/logo_labothap.png
    :height: 100px
    :alt: labothap
    :target: http://www.labothap.ulg.ac.be/
@@ -84,19 +87,24 @@ Supporters
 
 \
 
-.. image:: _static/herrick.png
+.. image:: _static/logo_herrick.png
    :height: 100px
    :alt: Herrick
    :target: https://engineering.purdue.edu/Herrick/index.html
 
-.. image:: _static/maplesoft_logo.png
+.. image:: _static/logo_maplesoft.png
    :height: 100px
    :alt: Maple
    :target: http://www.maplesoft.com
 
 \
 
-.. image:: _static/dtu_mekanik.png
-   :height: 36px
+.. image:: _static/logo_dtu_mekanik.png
+   :height: 50px
    :alt: DTU Mechanical Engineering - Section for Thermal Energy
    :target: http://www.mek.dtu.dk/english/Sections/TES
+
+.. image:: _static/logo_ipu.png
+   :height: 50px
+   :alt: IPU Refrigeration and Energy Technology
+   :target: http://www.ipu.dk

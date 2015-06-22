@@ -268,8 +268,8 @@
       "T_max_units": "K", 
       "Ttriple": 247.985, 
       "Ttriple_units": "K", 
-      "accentric": 0.312, 
-      "accentric_units": "-", 
+      "acentric": 0.312, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 10.137376, 
@@ -411,16 +411,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{8}H_{10}", 
   "NAME": "o-Xylene", 
   "REFPROP_NAME": "OXYLENE", 
   "STATES": {
     "critical": {
       "T": 630.259, 
       "T_units": "K", 
+      "hmolar": 65100.25266972529, 
+      "hmolar_units": "J/mol", 
       "p": 3737500.0, 
       "p_units": "Pa", 
       "rhomolar": 2684.5000000000005, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 121.53132427253537, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 247.985, 

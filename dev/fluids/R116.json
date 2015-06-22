@@ -277,8 +277,8 @@
       "T_max_units": "K", 
       "Ttriple": 173.1, 
       "Ttriple_units": "K", 
-      "accentric": 0.2566, 
-      "accentric_units": "-", 
+      "acentric": 0.2566, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -10.7088650331, 
@@ -392,16 +392,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}F_{6}", 
   "NAME": "R116", 
   "REFPROP_NAME": "R116", 
   "STATES": {
     "critical": {
-      "T": 293.03, 
+      "T": 293.03000000000003, 
       "T_units": "K", 
+      "hmolar": 33714.91511882169, 
+      "hmolar_units": "J/mol", 
       "p": 3048000.0, 
       "p_units": "Pa", 
       "rhomolar": 4444.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 158.7935261402344, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 173.10000000000002, 

@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.498600e+02, 
@@ -17,6 +18,7 @@
   "Tmin": 1.731500e+02, 
   "TminPsat": 3.131500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         5.362000e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         1.088000e+03, 
@@ -90,22 +93,26 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Lithium Chloride (LiCl)", 
+  "description": "Lithium Chloride (LiCl) - aq", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MLI", 
   "reference": "Melinder2010", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         3.383000e+03, 
@@ -143,43 +150,45 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": null, 
     "coeffs": [
       [
-        1.013000e-03, 
-        3.920000e-03, 
-        3.320000e-03, 
-        2.206000e-03, 
-        1.745000e-01, 
-        6.699000e-01
+        -5.894755e+00, 
+        3.920000e+00, 
+        3.320000e+00, 
+        2.206000e+00, 
+        1.745000e+02, 
+        6.699000e+02
       ], 
       [
-        -3.062000e-05, 
-        6.246000e-06, 
-        7.840000e-06, 
-        -6.011000e-04, 
-        -7.094000e-03, 
+        -3.062000e-02, 
+        6.246000e-03, 
+        7.840000e-03, 
+        -6.011000e-01, 
+        -7.094000e+00, 
         0.000000e+00
       ], 
       [
-        2.940000e-07, 
-        -1.752000e-07, 
-        -3.100000e-06, 
-        4.023000e-06, 
+        2.940000e-04, 
+        -1.752000e-04, 
+        -3.100000e-03, 
+        4.023000e-03, 
         0.000000e+00, 
         0.000000e+00
       ], 
       [
-        -2.719000e-09, 
-        8.346000e-09, 
-        1.381000e-07, 
+        -2.719000e-06, 
+        8.346000e-06, 
+        1.381000e-04, 
         0.000000e+00, 
         0.000000e+00, 
         0.000000e+00
       ]
     ], 
-    "type": "polynomial"
+    "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

@@ -11,7 +11,7 @@ class NitrateSalt(PureData,CoefficientData):
         CoefficientData.__init__(self)
         PureData.__init__(self)
         self.name        = "NaK"
-        self.description = "Nitrate salt, heat transfer fluid based on 60% NaNO3 and 40% KNO3"
+        self.description = "Nitrate salt, 0.6 NaNO3 and 0.4 KNO3"
         self.reference   = "Zavoico2001"
 
         self.Tmin        = 300 + 273.15

@@ -259,8 +259,8 @@
       "T_max_units": "K", 
       "Ttriple": 240, 
       "Ttriple_units": "K", 
-      "accentric": 0.2888713656700324, 
-      "accentric_units": "-", 
+      "acentric": 0.2888713656700324, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -17.97705674077087, 
@@ -408,16 +408,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{2}F_{3}H_{3}O_{1}", 
   "NAME": "HFE143m", 
   "REFPROP_NAME": "RE143A", 
   "STATES": {
     "critical": {
       "T": 377.921, 
       "T_units": "K", 
+      "hmolar": 39986.804669272504, 
+      "hmolar_units": "J/mol", 
       "p": 3635000.0, 
       "p_units": "Pa", 
-      "rhomolar": 4648.140744, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 4648.140743999999, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 159.09257709907303, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 240.0, 

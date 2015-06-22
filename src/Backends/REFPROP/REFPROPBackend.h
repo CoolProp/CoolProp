@@ -22,6 +22,7 @@ public:
     
     REFPROPBackend();
     REFPROPBackend(const std::string &fluid_name);
+    std::string backend_name(void){return "REFPROPBackend";}
     
     virtual ~REFPROPBackend();
 };

@@ -275,8 +275,8 @@
       "T_max_units": "K", 
       "Ttriple": 89.54, 
       "Ttriple_units": "K", 
-      "accentric": 0.1785, 
-      "accentric_units": "-", 
+      "acentric": 0.1785, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -461,16 +461,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}F_{4}", 
   "NAME": "R14", 
   "REFPROP_NAME": "R14", 
   "STATES": {
     "critical": {
       "T": 227.51, 
       "T_units": "K", 
+      "hmolar": 28515.156006315992, 
+      "hmolar_units": "J/mol", 
       "p": 3750000.0, 
       "p_units": "Pa", 
-      "rhomolar": 7109.4194, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 7109.419400000001, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 89.24918652020085, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 120.0, 

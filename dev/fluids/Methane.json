@@ -2,7 +2,7 @@
   "ALIASES": [
     "CH4", 
     "methane", 
-    "METHANE",
+    "METHANE", 
     "R50"
   ], 
   "ANCILLARIES": {
@@ -299,8 +299,8 @@
       "T_max_units": "K", 
       "Ttriple": 90.6941, 
       "Ttriple_units": "K", 
-      "accentric": 0.01142, 
-      "accentric_units": "-", 
+      "acentric": 0.01142, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 9.91243972, 
@@ -565,16 +565,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}H_{4}", 
   "NAME": "Methane", 
   "REFPROP_NAME": "METHANE", 
   "STATES": {
     "critical": {
       "T": 190.564, 
       "T_units": "K", 
+      "hmolar": 6667.234961434366, 
+      "hmolar_units": "J/mol", 
       "p": 4599200.0, 
       "p_units": "Pa", 
-      "rhomolar": 10139.127999999999, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 10139.128, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 41.108753830526176, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 90.6941, 
@@ -599,6 +604,76 @@
       "rhomolar_units": "mol/m^3", 
       "smolar": 84.8847254570935, 
       "smolar_units": "J/mol/K"
+    }
+  }, 
+  "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Friend-JPCRD-1989", 
+      "hardcoded": "Methane"
+    }, 
+    "viscosity": {
+      "BibTeX": "QuinonesCisneros-JPCB-2006", 
+      "dilute": {
+        "T_reducing": 190.564, 
+        "a": [
+          2.60536e-06, 
+          -1.85247e-05, 
+          2.34216e-05, 
+          0.0
+        ], 
+        "t": [
+          0, 
+          0.25, 
+          0.5, 
+          0.75
+        ], 
+        "type": "powers_of_Tr"
+      }, 
+      "epsilon_over_k": 148.6, 
+      "epsilon_over_k_units": "K", 
+      "higher_order": {
+        "Aa": [
+          -3.12118e-08, 
+          1.99422e-10, 
+          0
+        ], 
+        "Aaa": [
+          -8.52992e-13, 
+          -3.58009e-13, 
+          0.0
+        ], 
+        "Adrdr": [
+          1.60099e-11, 
+          8.50221e-13, 
+          0.0
+        ], 
+        "Ai": [
+          3.49668e-08, 
+          -1.73176e-08, 
+          0.0
+        ], 
+        "Aii": [
+          -3.55631e-10, 
+          2.80326e-10, 
+          0.0
+        ], 
+        "Ar": [
+          5.98858e-08, 
+          -4.91143e-08, 
+          0.0
+        ], 
+        "Na": 1, 
+        "Naa": 3, 
+        "Nii": 3, 
+        "Nr": 1, 
+        "Nrr": 3, 
+        "T_reduce": 190.564, 
+        "c1": 1, 
+        "c2": 1, 
+        "type": "friction_theory"
+      }, 
+      "sigma_eta": 3.758e-10, 
+      "sigma_eta_units": "m"
     }
   }
 }

@@ -4,6 +4,8 @@
 Octave Wrapper
 **************
 
+.. contents:: :depth: 2
+
 Pre-compiled Binaries
 =====================
 Pre-compiled release binaries can be downloaded from :sfdownloads:`Octave`.  Development binaries coming from the buildbot server can be found at :sfnightly:`Octave`.  Download the oct file appropriate to your system.
@@ -18,6 +20,8 @@ If you place .oct file somewhere outside octave path, you have to use
 Example: adding the folder that contains CoolProp.oct file to the Octave path::
 
     addpath('/home/?user_name?/Some_folder/CoolProp')
+    
+There is example code :ref:`at the end of this page <octave_example>`
 
 User-Compiled Binaries
 ======================
@@ -48,11 +52,17 @@ Windows
 -------
 For windows, the situation is ok, but not great.  Only the MinGW builds are supported, and not comfortably
 
-1. Download a MinGW build from `http://wiki.octave.org/Octave_for_Microsoft_Windows`_.
+1. Download a MinGW build from `Octave for windows <http://wiki.octave.org/Octave_for_Microsoft_Windows>`_.
 
 2. Extract the zip file to somewhere on your computer without any spaces in the path (c:\\octave-x.x.x is a good choice)
 
 3. Rename the sh.exe in the bin folder of your installation to _sh.exe
+
+.. warning::
+    MinGW has problems with the latest version of CoolProp.  This seems to be a GCC-related 
+    issue and using a more up-to-date version of GCC helps.  Unfortunately, MinGW is stuck 
+    at GCC 4.8.  You could try the `TDM-GCC distribution <http://tdm-gcc.tdragon.net>`_ 
+    that comes with the latest GCC. This version seems to work fine.
 
 Build
 -----
@@ -93,3 +103,15 @@ On windows, you need to just slightly modify the building procedure::
     # Run the integration tests
     ctest --extra-verbose
 
+.. _octave_example:
+
+Example Code
+============
+
+.. literalinclude:: Example.m
+   :language: octave
+
+Example Code Output
+===================
+
+.. literalinclude:: Example.out

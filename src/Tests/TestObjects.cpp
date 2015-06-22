@@ -198,14 +198,6 @@ CoolProp::IncompressibleFluid CoolPropTesting::incompressibleFluidObject(){
     //CH3OH.setVolToMass(volume2mass);
     //CH3OH.setMassToMole(mass2mole);
 
-    //XLT.set_reference_state(25+273.15, 1.01325e5, 0.0, 0.0, 0.0);
-    double Tref = 20+273.15;
-    double pref = 101325;
-    double xref = 0.0;
-    double href = 0.0;
-    double sref = 0.0;
-    CH3OH.set_reference_state(Tref, pref, xref, href, sref);
-
     /// A function to check coefficients and equation types.
     CH3OH.validate();
 

@@ -24,7 +24,7 @@ You might want to start by looking at CoolProp.h
     /// Return a value that does not depend on the thermodynamic state - this is a convenience function that does the call PropsSI(Output, "", 0, "", 0, FluidName)
     /// @param FluidName The fluid name
     /// @param Output The output parameter, one of "Tcrit","D","H",etc.
-    double Props1SI(const std::string &FluidName, const std::string &Output);
+    double Props1SI(std::string FluidName, std::string Output);
     /// Return a value that depends on the thermodynamic state
     /// @param Output The output parameter, one of "T","D","H",etc.
     /// @param Name1 The first state variable name, one of "T","D","H",etc.
@@ -33,38 +33,26 @@ You might want to start by looking at CoolProp.h
     /// @param Prop2 The second state variable value
     /// @param FluidName The fluid name
     double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName);
-    /// Return a value that depends on the thermodynamic state
-    /// @param Output The output parameter, one of "T","D","H",etc.
-    /// @param Name1 The first state variable name, one of "T","D","H",etc.
-    /// @param Prop1 The first state variable value
-    /// @param Name2 The second state variable name, one of "T","D","H",etc.
-    /// @param Prop2 The second state variable value
-    /// @param FluidName The fluid name
-    /// @param z The mole or mass fractions depending on the requirements of the backend
-    double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z);
-    /// Return a value that depends on the thermodynamic state
-    /// @param Output The output parameter, one of "T","D","H",etc.
-    /// @param Name1 The first state variable name, one of "T","D","H",etc.
-    /// @param Prop1 The first state variable value
-    /// @param Name2 The second state variable name, one of "T","D","H",etc.
-    /// @param Prop2 The second state variable value
-    /// @param FluidName The fluid name, or names seperated by '&' if a mixture
-    /// @param z The mole or mass fractions depending on the requirements of the backend
-    std::vector<double> PropsSI(const std::string &Output, const std::string &Name1, const std::vector<double> &Prop1, const std::string &Name2, const std::vector<double> Prop2, const std::string &FluidName, const std::vector<double> &z);
-    /// Return a value that depends on the thermodynamic state
-    /// @param Output The output parameter, one of "T","D","H",etc.
-    /// @param Name1 The first state variable name, one of "T","D","H",etc.
-    /// @param Prop1 The first state variable value
-    /// @param Name2 The second state variable name, one of "T","D","H",etc.
-    /// @param Prop2 The second state variable value
-    /// @param FluidName The fluid name
-    std::vector<double> PropsSI(const std::string &Output, const std::string &Name1, const std::vector<double> &Prop1, const std::string &Name2, const std::vector<double> Prop2, const std::string &FluidName);
 
     /**
-    \overload 
-    \sa PropsSI(std::string &Output, std::string &Name1, double Prop1, std::string &Name2, double Prop2, std::string &FluidName, const std::vector<double> &x);
-    */
-    double PropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *FluidName, const std::vector<double> &x);
+     * @brief Get a matrix of outputs for a given input.  Can handle both vector inputs as well as a vector of output strings
+     * @param Outputs A vector of strings for the output parameters
+     * @param Name1 The name of the first input variable
+     * @param Prop1 A vector of the first input values
+     * @param Name2 The name of the second input variable
+     * @param Prop2 A vector of the second input values
+     * @param backend The string representation of the backend (HEOS, REFPROP, INCOMP, etc.)
+     * @param fluids The fluid name(s)
+     * @param fractions The fractions (molar, mass, volume, etc.) of the components
+     */
+    std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &Outputs, 
+                                                   const std::string &Name1, 
+                                                   const std::vector<double> &Prop1,
+                                                   const std::string &Name2, 
+                                                   const std::vector<double> &Prop2, 
+                                                   const std::string &backend, 
+                                                   const std::vector<std::string> &fluids, 
+                                                   const std::vector<double> &fractions);
 
     /// Get the debug level
     /// @returns level The level of the verbosity for the debugging output (0-10) 0: no debgging output
@@ -75,10 +63,10 @@ You might want to start by looking at CoolProp.h
 
     /// Set the global error string 
     /// @param error The error string to use
-    void set_error_string(std::string error);
+    void set_error_string(const std::string &error);
     /// An internal function to set the global warning string
     /// @param warning The string to set as the warning string
-    void set_warning_string(std::string warning);
+    void set_warning_string(const std::string &warning);
     
     /* \brief Extract a value from the saturation ancillary
      * 
@@ -93,7 +81,7 @@ You might want to start by looking at CoolProp.h
     /// Get a globally-defined string
     /// @param ParamName A string, one of "version", "errstring", "warnstring", "gitrevision", "FluidsList", "fluids_list", "parameter_list","predefined_mixtures"
     /// @returns str The string, or an error message if not valid input
-    std::string get_global_param_string(std::string ParamName);
+    std::string get_global_param_string(const std::string &ParamName);
 
     /*/// Get a long that represents the fluid type
     /// @param FluidName The fluid name as a string
@@ -112,10 +100,13 @@ You might want to start by looking at CoolProp.h
     "CAS", "CAS_number"          | The CAS number
     "ASHRAE34"                   | The ASHRAE standard 34 safety rating
     "REFPROPName","REFPROP_name" | The name of the fluid used in REFPROP
+    "Bibtex-XXX"                 | A BibTeX key, where XXX is one of the bibtex keys used in get_BibTeXKey
+    "pure"                       | "true" if the fluid is pure, "false" otherwise
+    "formula"                    | The chemical formula of the fluid in LaTeX form if available, "" otherwise
     
     @returns The string, or an error message if not valid input
     */
-    std::string get_fluid_param_string(std::string FluidName, std::string ParamName);
+    std::string get_fluid_param_string(const std::string &FluidName, const std::string &ParamName);
     
     /** \brief Check if the fluid name is valid
      * 
@@ -124,18 +115,18 @@ You might want to start by looking at CoolProp.h
      * \note "gfreilgregre" -> false; "HEOS::Water" -> true; "Water" -> true
      *
      */
-    bool is_valid_fluid_string(std::string &fluidstring);
+    bool is_valid_fluid_string(const std::string &fluidstring);
 
     /// Returns the BibTeX key from the bibtex library of CoolProp corresponding to the item requested
     /// @param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"
     /// @param item The key that is desired, one of "EOS", "CP0", "VISCOSITY", "CONDUCTIVITY", "ECS_LENNARD_JONES", "ECS_FITS", "SURFACE_TENSION"
     /// @returns The BibTeX key
-    std::string get_BibTeXKey(std::string FluidName, std::string item);
+    std::string get_BibTeXKey(const std::string &FluidName, const std::string &item);
     
     /** 
     \brief Set the reference state based on a string representation
     
-    @param FluidName The name of the fluid
+    @param FluidName The name of the fluid (Backend can be provided like "REFPROP::Water", or if no backend is provided, "HEOS" is the assumed backend)
     @param reference_state The reference state to use, one of 
     
     Reference State | Description
@@ -152,7 +143,7 @@ You might want to start by looking at CoolProp.h
     \f]
     where \f$ \Delta s = s-s_{spec} \f$ and \f$ \Delta h = h-h_{spec} \f$
     */
-    void set_reference_stateS(std::string FluidName, std::string reference_state);
+    void set_reference_stateS(const std::string &FluidName, const std::string &reference_state);
 
     /// Set the reference state based on a thermodynamic state point specified by temperature and molar density
     /// @param FluidName The name of the fluid
@@ -160,7 +151,7 @@ You might want to start by looking at CoolProp.h
     /// @param rhomolar Density at reference state [mol/m^3]
     /// @param h0 Enthalpy at reference state [J/mol]
     /// @param s0 Entropy at references state [J/mol/K]
-    void set_reference_stateD(std::string FluidName, double T, double rhomolar, double h0, double s0);
+    void set_reference_stateD(const std::string &FluidName, double T, double rhomolar, double h0, double s0);
     
     /// Return a string representation of the phase
     /// @param Name1 The first state variable name, one of "T","D","H",etc.
@@ -178,7 +169,23 @@ You might want to start by looking at CoolProp.h
     /// @param FluidName The fluid name
     /// @param z The mole or mass fractions depending on the requirements of the backend
     /// \note Returns empty string if there was an error; use get_global_param_string("errstring") to retrieve the error
-    std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z);
+    //std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z);
+    
+    /**
+     * @brief Extract the backend from a string - something like "HEOS::Water" would split to "HEOS" and "Water".  If no backend is specified, the backend will be set to "?"
+     * @param fluid_string The input string
+     * @param backend The output backend, if none found, "?"
+     * @param fluid The output fluid string (minus the backend string)
+     */
+    void extract_backend(std::string fluid_string, std::string &backend, std::string &fluid);
+    
+    /**
+     * @brief Extract fractions (molar, mass, etc.) encoded in the string if any
+     * @param fluid_string The input string
+     * @param fractions The fractions
+     * @return The fluids, as a '&' delimited string
+     */
+    std::string extract_fractions(const std::string &fluid_string, std::vector<double> &fractions);
     
     } /* namespace CoolProp */
 #endif

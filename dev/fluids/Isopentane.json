@@ -295,8 +295,8 @@
       "T_max_units": "K", 
       "Ttriple": 112.65, 
       "Ttriple_units": "K", 
-      "accentric": 0.2274, 
-      "accentric_units": "-", 
+      "acentric": 0.2274, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 2.5822330405, 
@@ -412,16 +412,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{5}H_{12}", 
   "NAME": "Isopentane", 
   "REFPROP_NAME": "IPENTANE", 
   "STATES": {
     "critical": {
       "T": 460.35, 
       "T_units": "K", 
+      "hmolar": 36331.14951131363, 
+      "hmolar_units": "J/mol", 
       "p": 3378000.0, 
       "p_units": "Pa", 
       "rhomolar": 3271.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 92.54850436995513, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 112.65, 

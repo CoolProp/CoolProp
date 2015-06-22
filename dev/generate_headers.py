@@ -124,12 +124,14 @@ def version_to_file(root_dir):
     MAJOR_line = [line for line in lines if ('VERSION_MAJOR' in line and 'MINOR' not in line)]
     MINOR_line = [line for line in lines if ('VERSION_MINOR' in line and 'MAJOR' not in line)]
     PATCH_line = [line for line in lines if ('VERSION_PATCH' in line and 'MINOR' not in line)]
+    REVISION_line = [line for line in lines if ('VERSION_REVISION' in line and 'MINOR' not in line)]
     # String processing
     MAJOR = MAJOR_line[0].strip().split('VERSION_MAJOR')[1].split(')')[0].strip()
     MINOR = MINOR_line[0].strip().split('VERSION_MINOR')[1].split(')')[0].strip()
     PATCH = PATCH_line[0].strip().split('VERSION_PATCH')[1].split(')')[0].strip()
+    REVISION = REVISION_line[0].strip().split('VERSION_REVISION')[1].split(')')[0].strip()
     # Generate the strings
-    version = '.'.join([MAJOR,MINOR,PATCH])
+    version = '.'.join([MAJOR,MINOR,PATCH]) + REVISION
      
     # Get the hash of the version
     if 'version' not in hashes or ('version' in hashes and hashes['version'] != get_hash(version.encode('ascii'))):
@@ -173,34 +175,37 @@ def gitrev_to_file(root_dir):
         try:
             subprocess.check_call('git --version', shell=True)
             print('git is accessible at the command line')
-        except subprocess.CalledProcessError:
-            print('git was not found')
-            return
-        p = subprocess.Popen('git rev-parse HEAD', 
+            
+            # Try to get the git revision
+            p = subprocess.Popen('git rev-parse HEAD', 
                              stdout=subprocess.PIPE, 
                              stderr=subprocess.PIPE,
                              shell = True)
-        stdout, stderr = p.communicate()
-        stdout = stdout.decode('utf-8')
+            stdout, stderr = p.communicate()
+            stdout = stdout.decode('utf-8')
+            
+            if p.returncode != 0:
+                print('tried to get git revision from git, but could not (building from zip file?)')
+                gitrevision_path = os.path.join(root_dir, 'dev', 'gitrevision.txt')
+                if os.path.exists(gitrevision_path):
+                    gitrev = open(gitrevision_path, 'r').read().strip()
+                else:
+                    print('tried to get git revision from '+gitrevision_path+', but could not')
+                    gitrev = '???'
+            else:
+                gitrev = stdout.strip()
+                
+                is_hash = not ' ' in gitrev
+                                    
+                if not is_hash:
+                    raise ValueError('No hash returned from call to git, got '+rev+' instead')
+            
+        except subprocess.CalledProcessError:
+            print('git was not found')
+            gitrev = '???'
 
         # Include path relative to the root
         include_dir = os.path.join(root_dir,'include')
-        
-        if p.returncode != 0:
-            print('tried to get git revision from git, but could not (building from zip file?)')
-            gitrevision_path = os.path.join(root_dir, 'dev', 'gitrevision.txt')
-            if os.path.exists(gitrevision_path):
-                gitrev = open(gitrevision_path, 'r').read().strip()
-            else:
-                print('tried to get git revision from '+gitrevision_path+', but could not')
-                gitrev = '???'
-        else:
-            gitrev = stdout.strip()
-            
-            is_hash = not ' ' in gitrev
-                                
-            if not is_hash:
-                raise ValueError('No hash returned from call to git, got '+rev+' instead')
         
         print('git revision is', str(gitrev))
         

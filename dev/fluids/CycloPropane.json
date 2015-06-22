@@ -280,8 +280,8 @@
       "T_max_units": "K", 
       "Ttriple": 145.7, 
       "Ttriple_units": "K", 
-      "accentric": 0.1305495663687517, 
-      "accentric_units": "-", 
+      "acentric": 0.1305495663687517, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -428,16 +428,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{3}H_{6}", 
   "NAME": "CycloPropane", 
   "REFPROP_NAME": "CYCLOPRO", 
   "STATES": {
     "critical": {
       "T": 398.3, 
       "T_units": "K", 
+      "hmolar": 25894.46437172716, 
+      "hmolar_units": "J/mol", 
       "p": 5579700.0, 
       "p_units": "Pa", 
-      "rhomolar": 6142.9149, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 6142.914900000001, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 91.44613889877964, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 273.0, 

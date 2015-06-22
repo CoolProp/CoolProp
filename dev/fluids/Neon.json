@@ -1,7 +1,7 @@
 {
   "ALIASES": [
     "neon", 
-    "NEON",
+    "NEON", 
     "R720"
   ], 
   "ANCILLARIES": {
@@ -298,8 +298,8 @@
       "T_max_units": "K", 
       "Ttriple": 24.56, 
       "Ttriple_units": "K", 
-      "accentric": -0.0384492992736859, 
-      "accentric_units": "-", 
+      "acentric": -0.0384492992736859, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -474,16 +474,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "Ne_{1}", 
   "NAME": "Neon", 
   "REFPROP_NAME": "NEON", 
   "STATES": {
     "critical": {
-      "T": 44.4918, 
+      "T": 44.491800000000005, 
       "T_units": "K", 
+      "hmolar": 1199.8644745353827, 
+      "hmolar_units": "J/mol", 
       "p": 2680000.0, 
       "p_units": "Pa", 
       "rhomolar": 23882.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 30.313089790078298, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 24.560000000000002, 

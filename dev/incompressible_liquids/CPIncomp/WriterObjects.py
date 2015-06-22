@@ -3,6 +3,10 @@
 from __future__ import division, print_function
 import numpy as np
 
+import matplotlib
+import copy
+matplotlib.use("agg")
+
 import hashlib, os, json, sys
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -12,7 +16,6 @@ from matplotlib.patches import Rectangle
 from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_pdf import PdfPages
 import itertools
-import matplotlib
 from CoolProp.BibtexParser import BibTeXerClass
 from warnings import warn
 
@@ -88,8 +91,100 @@ class SolutionDataWriter(object):
     information came from.
     """
     def __init__(self):
-        bibFile = os.path.join(os.path.dirname(__file__),'../../../Web/fluid_properties/Incompressibles.bib')
+        bibFile = os.path.join(os.path.dirname(__file__),'../../../CoolPropBibTeXLibrary.bib')
         self.bibtexer = BibTeXerClass(bibFile)
+
+        matplotlib.rcParams['axes.formatter.useoffset'] = False
+
+        # For standard report generation
+        self.ext        = "pdf"
+        self.usebp      = False
+        self.ispage     = True # Do you want a page or a figure?
+        self.isportrait = True
+        self.resolveRef = True # Resolve references and print text
+
+        # Latex document mode
+#         self.ext        = "pgf"
+#         self.usebp      = True
+#         self.ispage     = False # Do you want a page or a figure?
+#         self.isportrait = True
+#         self.resolveRef = False # Resolve references and print text
+
+        if self.ext=="pgf" or matplotlib.rcParams['text.usetex']:
+            self.usetex = True
+            matplotlib.rcParams['text.usetex'] = True
+            #preamble = [r'\usepackage{hyperref}', r'\usepackage{siunitx}']#, r'\usepackage[style=alphabetic,natbib=true,backend=biber]{biblatex}']
+            preamble = [r'\usepackage{hyperref}', r'\usepackage{siunitx}']
+            #matplotlib.rcParams['text.latex.preamble'] = list(matplotlib.rcParams['text.latex.preamble']) + preamble
+            #matplotlib.rcParams["pgf.preamble"] = list(matplotlib.rcParams['pgf.preamble']) + preamble
+            matplotlib.rcParams['text.latex.preamble'] = preamble
+            matplotlib.rcParams["pgf.preamble"] = preamble
+            self.percent   = r'\si{\percent}'
+            self.celsius   = r'\si{\celsius}'
+            self.errLabel  = r'rel. Error ('+self.percent+r')'
+            self.tempLabel = r'Temperature ('+self.celsius+r')'
+            self.densLabel = r'Density (\si{\kilo\gram\per\cubic\metre})'
+            self.heatLabel = r'Heat Capacity (\si{\joule\per\kilo\gram\per\kelvin})'
+            self.condLabel = r'Thermal Conductivity (\si{\watt\per\metre\per\kelvin})'
+            self.viscLabel = r'Dynamic Viscosity (\si{\pascal\second})'
+            self.satPLabel = r'Saturation Pressure (\si{\pascal})'
+            self.TfreLabel = r'Freezing Temperature (\si{\kelvin})'
+            f = 0.85
+        else:
+            self.usetex    = False
+            matplotlib.rcParams['text.usetex'] = False
+            self.percent   = ur'%'
+            self.celsius   = ur'\u00B0C'
+            self.errLabel  = ur'rel. Error ('+self.percent+ur')'
+            self.tempLabel = ur'Temperature ('+self.celsius+ur')'
+            self.densLabel = ur'Density ($\mathdefault{kg/m^3\!}$)'
+            self.heatLabel = ur'Heat Capacity ($\mathdefault{J/kg/K}$)'
+            self.condLabel = ur'Thermal Conductivity ($\mathdefault{W/m/K}$)'
+            self.viscLabel = ur'Dynamic Viscosity ($\mathdefault{Pa\/s}$)'
+            self.satPLabel = ur'Saturation Pressure ($\mathdefault{Pa}$)'
+            self.TfreLabel = ur'Freezing Temperature ($\mathdefault{K}$)'
+            f = 1.00
+
+#         self.percent   = ur'pc'
+#         self.celsius   = ur'degC'
+#         self.errLabel  = ur'rel. Error ('+self.percent+ur')'
+#         self.tempLabel = ur'Temperature ('+self.celsius+ur')'
+#         self.densLabel = ur'Density (kg/m3)'
+#         self.heatLabel = ur'Heat Capacity (J/kg/K)'
+#         self.condLabel = ur'Thermal Conductivity (W/m/K)'
+#         self.viscLabel = ur'Dynamic Viscosity (Pa s)'
+#         self.satPLabel = ur'Saturation Pressure (Pa)'
+#         self.TfreLabel = ur'Freezing Temperature (K)'
+
+        if self.usebp:
+            from jopy.dataPlotters import BasePlotter
+            self.bp = BasePlotter()
+            ccycle = self.bp.getColourCycle(length=2)
+            #ccycle.next() # skip the first one
+            #ccycle.next() # skip the first one
+            self.secondaryColour = ccycle.next()
+            self.primaryColour = ccycle.next()
+        else:
+            self.primaryColour = 'blue'
+            self.secondaryColour = 'red'
+
+
+        baseSize = 297.0 * f # A4 in mm
+        ratio = 210.0/297.0  # A4 in mm
+        mm_to_inch = 3.93700787401575/100.0 # factor mm to inch
+
+        self.deta = 0.75 # factor for table
+        if self.ispage:
+            longSide  = baseSize # Make A4
+            shortSide = baseSize * ratio
+        else:
+            #lofa = 1.0 - self.deta * 2.5/11.5 # Half of the original table
+            longSide  = baseSize #* lofa #* 0.85 # Make smaller than A4
+            shortSide = baseSize * ratio  # TODO: connect to gridspec and ylim
+
+        if self.isportrait: self.figsize=(shortSide*mm_to_inch,longSide*mm_to_inch)
+        else: self.figsize=(longSide*mm_to_inch,shortSide*mm_to_inch)
+
 
     def fitAll(self, fluidObject=SolutionData()):
 
@@ -244,7 +339,7 @@ class SolutionDataWriter(object):
         return os.path.join("json","{0}.json".format(name))
 
     def get_report_file(self,name):
-        return os.path.join("report","{0}_fitreport.pdf".format(name))
+        return os.path.join("report","{0}_fitreport.{1}".format(name,self.ext))
 
 
     def toJSON(self,data,quiet=False):
@@ -425,6 +520,10 @@ class SolutionDataWriter(object):
     def writeReportList(self, fluidObjs, pdfFile=None):
         print("Writing fitting reports:", end="")
 
+        if self.usetex and pdfFile is not None:
+            warn("Unsetting PDF object, LaTeX output requested.")
+            pdfFile = None
+
         if not pdfFile is None:
             if not os.path.exists(os.path.dirname(pdfFile)):
                 os.makedirs(os.path.dirname(pdfFile))
@@ -443,13 +542,15 @@ class SolutionDataWriter(object):
             for obj in fluidObjs:
                 matplotlib.pyplot.close("all")
                 self.printStatusID(fluidObjs, obj)
-                try:
-                    self.makeFitReportPage(obj)
-                except (TypeError, ValueError) as e:
-                    print("An error occurred for fluid: {0}".format(obj.name))
-                    print(obj)
-                    print(e)
-                    pass
+                self.makeFitReportPage(obj)
+                # TODO: Fix Python errors
+                #try:
+                #    self.makeFitReportPage(obj)
+                #except (TypeError, ValueError) as e:
+                #    print("An error occurred for fluid: {0}".format(obj.name))
+                #    print(obj)
+                #    print(e)
+                #    pass
 
         print(" ... done")
         return
@@ -562,7 +663,8 @@ class SolutionDataWriter(object):
         zError= None
 
         if dataObj.source==dataObj.SOURCE_DATA or dataObj.source==dataObj.SOURCE_EQUATION:
-            dataFormatter['color']  = 'blue'
+
+            dataFormatter['color']  = self.primaryColour
             dataFormatter['marker'] = 'o'
             dataFormatter['ls']     = 'none'
 
@@ -609,7 +711,7 @@ class SolutionDataWriter(object):
                 raise ValueError("You have to provide data and a fitted function.")
 
         elif dataObj.source==dataObj.SOURCE_COEFFS:
-            dataFormatter['color']  = 'blue'
+            dataFormatter['color']  = self.primaryColour
             #dataFormatter['marker'] = 'o'
             dataFormatter['ls']     = 'solid'
 
@@ -685,14 +787,18 @@ class SolutionDataWriter(object):
                     #zMiMa = np.hstack((zMiMa,temp.reshape((len(conc),1))))
 
         fitFormatter = {}
-        fitFormatter['color'] = 'red'
+        fitFormatter['color'] = self.secondaryColour
         fitFormatter['ls'] = 'solid'
 
         errorFormatter = {}
         errorFormatter['color'] = dataFormatter['color']
         errorFormatter['marker'] = 'o'
         errorFormatter['ls'] = 'none'
-        errorFormatter['alpha'] = 0.25
+        errorFormatter['alpha'] = 0.5
+
+        boundsFormatter = fitFormatter.copy()
+        boundsFormatter['ls'] = ':'
+        boundsFormatter['alpha'] = 0.75
 
         pData = None
         pFree = None
@@ -716,15 +822,15 @@ class SolutionDataWriter(object):
         if not zFunc is None and not axVal is None:
             axVal.plot(pFunc, zFunc, label='function' , **fitFormatter)
             if solObj.xid!=solObj.ifrac_pure and not xFunction:
-                axVal.set_title("showing x={0:3.2f}".format(xFunc[0]))
+                axVal.set_title("showing x={0:3.2f}".format(xFunc[0]), fontsize='small')
             else:
-                axVal.set_title(" ")
+                axVal.set_title(" ", fontsize='small')
 
         if not zMiMa is None and not axVal is None:
-            axVal.plot(pMiMa, zMiMa, alpha=0.25, ls=':', color=fitFormatter["color"])
+            axVal.plot(pMiMa, zMiMa, label='bounds', **boundsFormatter)
 
         if not zFree is None and not axVal is None:
-            axVal.plot(pFree, zFree, alpha=0.25, ls=':', color=fitFormatter["color"])
+            axVal.plot(pFree, zFree, label='bounds', **boundsFormatter)
 
         if not zError is None and not axErr is None:
             #formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
@@ -765,26 +871,30 @@ class SolutionDataWriter(object):
         #annotateSettingsLabel['xycoords']=('figure fraction', 'figure fraction')
         annotateSettingsTitle['ha']         = 'center'
         annotateSettingsTitle['va']         = 'baseline'
-        annotateSettingsTitle['fontsize']   = 'xx-large'
+        annotateSettingsTitle['fontsize']   = 'large'
         annotateSettingsTitle['fontweight'] = 'bold'
 
         annotateSettingsLabel = {}
         #annotateSettingsLabel['xycoords']=('figure fraction', 'figure fraction')
         annotateSettingsLabel['ha']         = 'right'
         annotateSettingsLabel['va']         = 'baseline'
-        #annotateSettingsLabel['fontsize']   = 'large'
+        annotateSettingsLabel['fontsize']   = 'small'
         annotateSettingsLabel['fontweight'] = 'semibold'
 
         annotateSettingsText = {}
         #annotateSettingsText['xycoords']=('figure fraction', 'figure fraction')
         annotateSettingsText['ha']         = 'left'
         annotateSettingsText['va']         = 'baseline'
-        #annotateSettingsText['fontsize']   = 'large'
+        annotateSettingsText['fontsize']   = 'small'
         annotateSettingsText['fontweight'] = 'medium'
 
 
         #ax.set_title('Fitting Report for {0}'.format(solObj.name))
-        ax.text(0.5, 0.8, 'Fitting Report for {0}'.format(solObj.name), **annotateSettingsTitle)
+        yHead = 0.0
+        if self.ispage:
+            yHead = 0.8
+            ax.text(0.5, yHead, 'Fitting Report for {0}'.format(solObj.name), **annotateSettingsTitle)
+            yHead += 0.2
 
         def myAnnotate(label,text,x=0.0,y=0.0):
             dx = 0.005
@@ -801,35 +911,59 @@ class SolutionDataWriter(object):
         yStart = 0.575; y = yStart
 
         #myAnnotate('Name: ',solObj.name,x=x,y=y); x += .0; y -= dy
-        myAnnotate('Description: ',solObj.description,x=x,y=y); x += .0; y -= dy
+        if self.usetex:
+            myAnnotate('Description: ',solObj.description.encode("latex"),x=x,y=y); x += .0; y -= dy
+        else:
+            myAnnotate('Description: ',solObj.description,x=x,y=y); x += .0; y -= dy
+
+
 
         # TODO: Debug bibtexer
         refs = solObj.reference.split(",")
         maxLength = 75
         for i in range(len(refs)):
             refs[i] = refs[i].strip()
-            try:
-                refs[i] = self.bibtexer.getEntry(key=refs[i], fmt='plaintext').strip()
-            except Exception as e:
-                warn("Your string \"{0}\"was not a valid Bibtex key, I will use it directly: {1}".format(refs[i],e))
-                pass
-            if len(refs[i])>maxLength:
-                refs[i] = refs[i][0:maxLength-3]+u'...'
 
+            if self.resolveRef:
+                try:
+                    if self.usetex:
+                        refs[i] = self.bibtexer.getEntry(key=refs[i], fmt='latex').strip()
+                    else:
+                        refs[i] = self.bibtexer.getEntry(key=refs[i], fmt='plaintext').strip()
+                except Exception as e:
+                    warn("Your string \"{0}\" was not a valid Bibtex key, I will use it directly: {1}".format(refs[i],e))
+                    pass
+            else:
+                if self.usetex:
+                    refs[i] = r'\cite{'+str(refs[i])+r'}'
+                else:
+                    refs[i] = str(refs[i])
+
+            if len(refs[i])>maxLength and not self.usetex:
+                refs[i] = refs[i][0:maxLength-3]+u'...'
+            #elif self.usetex:
+            #    refs[i] = r'\truncate{'+str(maxLength)+r'pt}{'+str(refs[i])+r'}'
+            #elif i>0 and (len(refs[i])+len(refs[i-1]))<maxLength:
+            #    refs[i-1] = refs[i-1]+r", "+refs[i]
+            #    refs[i] = ""
+
+        for i in range(len(refs)):
             if i==0:
                 myAnnotate('Source: ',refs[i],x=x,y=y); x += .0 #; y -= 2*dy
             elif i==1:
                 myAnnotate(   '     ',refs[i],x=x,y=y-dy); x += .0 #; y -= 2*dy
+            else:
+                warn("Discarding all reference after the second line")
 
         y -= 2*dy
         yRestart = y
-        myAnnotate('Temperature: ',u'{0} \u00B0C to {1} \u00B0C'.format(solObj.Tmin-273.15, solObj.Tmax-273.15),x=x,y=y); x += .0; y -= dy
+        myAnnotate('Temperature: ',u'{0} {2} to {1} {2}'.format(solObj.Tmin-273.15, solObj.Tmax-273.15, self.celsius),x=x,y=y); x += .0; y -= dy
         conc = False
         if solObj.xid==solObj.ifrac_mass: conc=True
         if solObj.xid==solObj.ifrac_volume: conc=True
         if solObj.xid==solObj.ifrac_mole: conc=True
         if conc==True:
-            myAnnotate('Composition: ',u'{0} % to {1} %, {2}'.format(solObj.xmin*100., solObj.xmax*100., solObj.xid),x=x,y=y)
+            myAnnotate('Composition: ',u'{0} {3} to {1} {3}, {2}'.format(solObj.xmin*100., solObj.xmax*100., solObj.xid, self.percent),x=x,y=y)
         else:
             myAnnotate('Composition: ','pure fluid',x=x,y=y)
         x += .0; y -= dy
@@ -873,9 +1007,17 @@ class SolutionDataWriter(object):
         #x += dx; y = yStart
         #myAnnotate('Name: ',solObj.name,x=x,y=y); x += .0; y -= dy
 
-        ax.set_xlim((0,1))
-        ax.set_ylim((0,1))
+        xmin = 0
+        xmax = 1
 
+        ymin = y+1*dy
+        ymax = max(yStart,yHead)
+
+        ax.set_xlim((xmin,xmax))
+        ax.set_ylim((ymin,ymax))
+
+        #xpos,ypos = ax.transAxes.inverted().transform(ax.transData.transform((0,y)))
+        return [xmin,y+0.5*dy,xmax,y+0.5*dy]
 
     def printFitDetails(self):
         pass
@@ -909,27 +1051,25 @@ class SolutionDataWriter(object):
             if not quiet: print(" ({0})".format("i"), end="")
             return 1
 
-#         from os import path
-# from time import ctime
-# from datetime import datetime, timedelta
-#
-# two_days_ago = datetime.now() - timedelta(days=2)
-# filetime = datetime.fromtimestamp(path.getctime(file))
-#
-# if filetime < two_days_ago:
-#   print "File is more than two days old"
+        # from os import path
+        # from time import ctime
+        # from datetime import datetime, timedelta
+        #
+        # two_days_ago = datetime.now() - timedelta(days=2)
+        # filetime = datetime.fromtimestamp(path.getctime(file))
+        #
+        # if filetime < two_days_ago:
+        #   print "File is more than two days old"
 
+        if self.ispage:
+            gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.50,3,3,3])
+        else: # Reduce height of upper graph by two fifth, TODO: connect to ylim
+            gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.50*self.deta,3,3,3])
 
-
-
-        gs = gridspec.GridSpec(4, 2, wspace=None, hspace=None, height_ratios=[2.5,3,3,3])
         #gs.update(top=0.75, hspace=0.05)
-        div = 22
-        fig = plt.figure(figsize=(210/div,297/div))
+        fig = plt.figure(figsize=self.figsize)
+
         table_axis         = plt.subplot(gs[0,:], frame_on=False)
-
-
-
 
         # Info text settings
         infoText = {}
@@ -938,16 +1078,11 @@ class SolutionDataWriter(object):
         infoText['fontsize']   = 'smaller'
         infoText['xycoords']   =('axes fraction', 'axes fraction')
 
-        # Setting the labels
-        #errLabel  = ur'$\mathdefault{rel.\/Error\/[\u2030]}$'
-        errLabel  = r'$\mathdefault{rel.\/Error\/[\%]}$'
-        tempLabel = ur'$\mathdefault{Temperature\/(\u00B0C)}$'
-
         density_axis       = plt.subplot(gs[1,0])
         density_error      = density_axis.twinx()
-        density_axis.set_ylabel(r'Density [$\mathdefault{kg/m^3\!}$]')
-        density_axis.set_xlabel(tempLabel)
-        density_error.set_ylabel(errLabel)
+        density_axis.set_ylabel(self.densLabel)
+        density_axis.set_xlabel(self.tempLabel)
+        density_error.set_ylabel(self.errLabel)
         if solObj.density.source!=solObj.density.SOURCE_NOT_SET:
             self.plotValues(density_axis,density_error,solObj=solObj,dataObj=solObj.density,func=solObj.rho)
         else:
@@ -955,9 +1090,9 @@ class SolutionDataWriter(object):
 
         capacity_axis      = plt.subplot(gs[1,1])
         capacity_error     = capacity_axis.twinx()
-        capacity_axis.set_ylabel(r'Heat Capacity [$\mathdefault{J/kg/K}$]')
-        capacity_axis.set_xlabel(tempLabel)
-        capacity_error.set_ylabel(errLabel)
+        capacity_axis.set_ylabel(self.heatLabel)
+        capacity_axis.set_xlabel(self.tempLabel)
+        capacity_error.set_ylabel(self.errLabel)
         if solObj.specific_heat.source!=solObj.specific_heat.SOURCE_NOT_SET:
             self.plotValues(capacity_axis,capacity_error,solObj=solObj,dataObj=solObj.specific_heat,func=solObj.c)
         else:
@@ -966,9 +1101,9 @@ class SolutionDataWriter(object):
         # Optional plots, might not all be shown
         conductivity_axis  = plt.subplot(gs[2,0])#, sharex=density_axis)
         conductivity_error = conductivity_axis.twinx()
-        conductivity_axis.set_ylabel(r'Thermal Conductivity [$\mathdefault{W/m/K}$]')
-        conductivity_axis.set_xlabel(tempLabel)
-        conductivity_error.set_ylabel(errLabel)
+        conductivity_axis.set_ylabel(self.condLabel)
+        conductivity_axis.set_xlabel(self.tempLabel)
+        conductivity_error.set_ylabel(self.errLabel)
         if solObj.conductivity.source!=solObj.conductivity.SOURCE_NOT_SET:
             self.plotValues(conductivity_axis,conductivity_error,solObj=solObj,dataObj=solObj.conductivity,func=solObj.cond)
         else:
@@ -981,9 +1116,9 @@ class SolutionDataWriter(object):
         viscosity_axis     = plt.subplot(gs[2,1])#, sharex=capacity_axis)
         viscosity_error    = viscosity_axis.twinx()
         viscosity_axis.set_yscale('log')
-        viscosity_axis.set_ylabel(r'Dynamic Viscosity [$\mathdefault{Pa\/s}$]')
-        viscosity_axis.set_xlabel(tempLabel)
-        viscosity_error.set_ylabel(errLabel)
+        viscosity_axis.set_ylabel(self.viscLabel)
+        viscosity_axis.set_xlabel(self.tempLabel)
+        viscosity_error.set_ylabel(self.errLabel)
         if solObj.viscosity.source!=solObj.viscosity.SOURCE_NOT_SET:
             self.plotValues(viscosity_axis,viscosity_error,solObj=solObj,dataObj=solObj.viscosity,func=solObj.visc)
         else:
@@ -996,9 +1131,9 @@ class SolutionDataWriter(object):
         saturation_axis  = plt.subplot(gs[3,0])#, sharex=density_axis)
         saturation_error = saturation_axis.twinx()
         saturation_axis.set_yscale('log')
-        saturation_axis.set_ylabel(r'Saturation Pressure [$\mathdefault{Pa}$]')
-        saturation_axis.set_xlabel(tempLabel)
-        saturation_error.set_ylabel(errLabel)
+        saturation_axis.set_ylabel(self.satPLabel)
+        saturation_axis.set_xlabel(self.tempLabel)
+        saturation_error.set_ylabel(self.errLabel)
         if solObj.saturation_pressure.source != solObj.saturation_pressure.SOURCE_NOT_SET: # exists
             self.plotValues(saturation_axis,saturation_error,solObj=solObj,dataObj=solObj.saturation_pressure,func=solObj.psat)
         else:
@@ -1010,9 +1145,9 @@ class SolutionDataWriter(object):
 
         Tfreeze_axis     = plt.subplot(gs[3,1])#, sharex=capacity_axis)
         Tfreeze_error    = Tfreeze_axis.twinx()
-        Tfreeze_axis.set_ylabel(r'Freezing Temperature [$\mathdefault{K}$]')
+        Tfreeze_axis.set_ylabel(self.TfreLabel)
         Tfreeze_axis.set_xlabel("{0} fraction".format(solObj.xid.title()))
-        Tfreeze_error.set_ylabel(errLabel)
+        Tfreeze_error.set_ylabel(self.errLabel)
         if solObj.T_freeze.source != solObj.T_freeze.SOURCE_NOT_SET: # exists
             self.plotValues(Tfreeze_axis,Tfreeze_error,solObj=solObj,dataObj=solObj.T_freeze,func=solObj.Tfreeze)
         else:
@@ -1031,7 +1166,7 @@ class SolutionDataWriter(object):
         # Set a minimum error level and do some more formatting
         minAbsErrorScale = 0.05 # in per cent
         for a in fig.axes:
-            if a.get_ylabel()==errLabel:
+            if a.get_ylabel()==self.errLabel:
                 mi,ma = a.get_ylim()
                 if mi>-minAbsErrorScale: a.set_ylim(bottom=-minAbsErrorScale)
                 if ma< minAbsErrorScale: a.set_ylim(   top= minAbsErrorScale)
@@ -1041,7 +1176,7 @@ class SolutionDataWriter(object):
 
 
         # print headlines etc.
-        self.printFluidInfo(table_axis, solObj)
+        lims = self.printFluidInfo(table_axis, solObj)
         # Prepare the legend
         legenddict = {}
         for a in fig.axes:
@@ -1053,15 +1188,22 @@ class SolutionDataWriter(object):
         legVal  = [Rectangle((0, 0), 1, 1, alpha=0.0)]
         legKey += legenddict.keys()
         legVal += legenddict.values()
-        legKey += [" "]
+        if self.usetex: legKey += ["~"]
+        else: legKey += [" "]
         legVal += [Rectangle((0, 0), 1, 1, alpha=0.0)]
 
-        table_axis.legend(
-          legVal, legKey,
-          bbox_to_anchor=(0.0, -0.03, 1., -0.03),
-          ncol=len(legKey), mode="expand", borderaxespad=0.,
-          numpoints=1)
-        #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)
+        #TODO: Fix this problem: ValueError: Can only output finite numbers in PDF
+        if self.ext=="pdf" and self.usetex:
+            warn("This is a dangerous combination, be prepared to experience problems with the PDF backend. It might help manually change the number of columns.")
+        else:
+            table_axis.legend(
+              legVal, legKey,
+              bbox_to_anchor=tuple(lims),
+              bbox_transform=table_axis.transData,
+              ncol=len(legVal), loc=9,
+              mode="expand", borderaxespad=0.,
+              numpoints=1, fontsize='small')
+            #table_axis.legend(handles, labels, bbox_to_anchor=(0.0, -0.1), loc=2, ncol=3)
 
         gs.tight_layout(fig)#, rect=[0, 0, 1, 0.75])
         # Fine-tune figure; make subplots close to each other
@@ -1074,12 +1216,17 @@ class SolutionDataWriter(object):
         else:
             if not os.path.exists(os.path.dirname(report_path)):
                 os.makedirs(os.path.dirname(report_path))
-            plt.savefig(report_path)
+
+            if self.usebp and self.ext=="pgf":
+                self.bp.savepgf(report_path, fig=fig)
+            else:
+                fig.savefig(report_path)
+
             if not quiet: print(" ({0})".format("w"), end="")
 
         if not pdfObj is None: pdfObj.savefig(fig)
 
-        plt.close()
+        plt.close(fig)
         pass
 
 
@@ -1140,8 +1287,8 @@ class SolutionDataWriter(object):
         fig = plt.figure(figsize=rat*mul)
 
         ax = fig.add_subplot(121)
-        ax.set_xlabel(r'Temperature [$\mathdefault{K}$]')
-        ax.set_ylabel(r'Density [$\mathdefault{kg/m^3\!}$]')
+        ax.set_xlabel(self.tempLabel)
+        ax.set_ylabel(self.densLabel)
         fig.suptitle(r'Aqueous solutions with a concentration of 0.0',fontsize='x-large',fontweight='bold')
 
         #obj = water
@@ -1212,7 +1359,6 @@ class SolutionDataWriter(object):
             r += row[i] + (max_col  - len(row[i]) + 1) * u" "
         return r + u"\n"
 
-
     def writeTextToFile(self, path,text):
         #print("Writing to file: {0}".format(path))
         if not os.path.exists(os.path.dirname(path)):
@@ -1245,7 +1391,7 @@ class SolutionDataWriter(object):
 
 
     def getReportLink(self, name):
-        reportFile = os.path.join("..","_static","fluid_properties","Incompressibles_reports","{0}_fitreport.pdf".format(name))
+        reportFile = os.path.join("..","_static","fluid_properties","Incompressibles_reports","{0}_fitreport.{1}".format(name,self.ext))
         return self.d(name,reportFile)
 
     def getCitation(self, keys):
@@ -1286,6 +1432,300 @@ class SolutionDataWriter(object):
         text = u"{0:3.2f}".format(self.checkForNumber(number))
         return text
 
+    def generateTexTable(self, solObjs=[SolutionData()], path="table"):
+
+        solObjs = sorted(solObjs, key=lambda x: x.name)
+        xmin = np.array([x.xmin for x in solObjs])
+        xmax = np.array([x.xmax for x in solObjs])
+
+        # TODO: This is a dirty hack!
+        if np.any(xmin>0.0) and np.any(xmax<1.0): use_x = True
+        else: use_x = False
+
+
+
+        header = [u'Name', u'Description', u'Reference', ur'{$T_\text{min}$ (\si{\celsius})}', ur'{$T_\text{max}$ (\si{\celsius})}', ur'{$T_\text{base}$ (\si{\kelvin})}']
+        if use_x: header.extend([ur'{$x_\text{min}$}', ur'{$x_\text{max}$}'])
+
+        testTable = []
+        testTable.append(header) # Headline
+
+        testSection = []
+
+        figPath = r"appendices/IncompressibleFluidsReports/"
+
+#         def getFigureText(fld):
+#             text  = "\\begin{pgffigure} \n"
+#             text += "\\fbox{\\resizebox{\\textwidth}{!}{ \n"
+#             text += "\\subimport{"+str(figPath)+"}{"+str(fld)+"_fitreport.pgf} \n"
+#             text += "}} \n"
+#             text += "\\end{pgffigure} \n"
+#             return text
+        def getFigureText(fld):
+            text  = "{\\centering"
+            text += "\\resizebox{\\textwidth}{!}{ \n"
+            text += "\\subimport{"+str(figPath)+"}{"+str(fld)+"_fitreport.pgf} \n"
+            text += "}} \\vfill \n"
+            return text
+
+        def getFigureLabel(fld):
+            return "subsec:fit"+str(fld)
+
+        for fluid in solObjs:
+            #\hyperref[label_name]{''link text''}
+            testTable.append([
+                fluid.name+", p.~\\pageref{"+getFigureLabel(fluid.name)+"}",
+                fluid.description.encode("latex"),
+                r'\cite{'+str(fluid.reference)+'}',
+                self.c(fluid.Tmin),
+                self.c(fluid.Tmax),
+                self.c(fluid.Tbase+273.15)
+            ])
+            if use_x: testTable[-1].extend([self.x(fluid.xmin), self.x(fluid.xmax)])
+
+            testSection.append([
+                "\\subsection{Fitted functions for "+str(fluid.name)+"}",
+                "\\label{"+getFigureLabel(fluid.name)+"}",
+                getFigureText(fluid.name)
+            ])
+
+        text = "\\cr \\topcrule \n"
+        i = -1
+        for row in testTable:
+            i += 1
+            if i < 1:
+                tmp   = r"\headcol "+" & ".join(row)
+            elif i % 2 == 0:
+                tmp   = r"\rowcol " +" & ".join(row)
+            else:
+                tmp   =              " & ".join(row)
+            text += tmp + " \\\\\n"
+            if i == 0: text += "\\midcrule \n"
+
+        if i % 2 == 0:
+            text += "\\bottomcrule \\cr \n"
+        else:
+            text += "\\bottomrule \\cr \n"
+
+        with open(path+".tex", 'w') as f:
+            f.write(text.encode('utf-8'))
+
+        text = "\n"
+        for i,row in enumerate(testSection):
+            tmp   = "\n".join(row)
+            text += tmp + " \n\n"
+
+        with open(path+"-section.tex", 'w') as f:
+            f.write(text.encode('utf-8'))
+
+        return True
+
+    def generateStatsTable(self, objLists=[[SolutionData()]], labelList=[]):
+
+        if len(objLists)!=len(labelList):
+            raise ValueError("Wrong length")
+
+
+        header = [u'Property']
+        header.extend(labelList)
+
+        testTable = []
+        testTable.append(header) # Headline
+
+        def getEntries(solObj):
+            data = {}
+            data["name"] = dict(type=solObj.name,nrms=solObj.name)
+
+            kt = [("density",solObj.density),
+              ("specific_heat",solObj.specific_heat),
+              ("conductivity",solObj.conductivity),
+              ("viscosity",solObj.viscosity),
+              ("saturation_pressure",solObj.saturation_pressure),
+              ("T_freeze",solObj.T_freeze)]
+
+            for k,_ in kt: data[k]={}
+
+            for k,t in kt:
+                try:
+                    data[k]["type"] = t.type
+                except:
+                    data[k]["type"] = None
+                try:
+                    data[k]["nrms"] = t.NRMS
+                except:
+                    data[k]["nrms"] = None
+
+            return data
+
+        errcolumns = []
+        typcolumns = []
+        for group in objLists:
+            errcolumn = {}
+            typcolumn = {}
+            for obj in group:
+                dat = getEntries(obj)
+                for k in dat:
+                    ent = errcolumn.get(k,[])
+                    ent.append(dat[k]["nrms"])
+                    errcolumn[k] = ent
+                    ent = typcolumn.get(k,[])
+                    ent.append(dat[k]["type"])
+                    typcolumn[k] = ent
+            for k in errcolumn:
+                if k!="name":
+                    for i,_ in enumerate(errcolumn[k]):
+                        try:
+                            errcolumn[k][i] = float(errcolumn[k][i])
+                        except:
+                            errcolumn[k][i] = np.NAN
+                        #try:
+                        #    typcolumn[k][i] = float(typcolumn[k][i])
+                        #except:
+                        #    typcolumn[k][i] = np.NAN
+
+            errcolumns.append(errcolumn)
+            typcolumns.append(typcolumn)
+
+        keys = errcolumns[0].keys()
+
+        errTable = copy.copy(testTable)
+        typTable = copy.copy(testTable)
+
+        for k in keys:
+            if k != "name":
+                # Error lines
+                maxLine = []
+                avgLine = []
+                minLine = []
+
+                minLine.append("{0:25s}".format(k))
+                avgLine.append("{0:25s}".format(""))
+                maxLine.append("{0:25s}".format(""))
+
+                # Function type lines
+                polyLine = []
+                expoLine = []
+                logeLine = []
+                expPLine = []
+
+                polyLine.append("{0:25s}".format(k))
+                expoLine.append("{0:25s}".format("exp"))
+                logeLine.append("{0:25s}".format("logexp"))
+                expPLine.append("{0:25s}".format("exppoly"))
+
+                #print(k+": ", end="")
+                for e,t in zip(errcolumns,typcolumns):
+                    try: mi = np.nanargmin(e[k])
+                    except: mi = 0
+                    try: ma = np.nanargmax(e[k])
+                    except: ma = 0
+                    try: av = np.nanmean(e[k])
+                    except: av = 0.0
+                    #print("min: {0}({1}), avg: {2}, max: {3}({4})".format(c[k][mi],c["name"][mi],av,c[k][ma],c["name"][ma]),end="")
+                    minLine.append("{0:5.3f} ({1:5s})".format(e[k][mi]*100.0,e["name"][mi]))
+                    avgLine.append("{0:5.3f}  {1:5s} ".format(      av*100.0,""))
+                    maxLine.append("{0:5.3f} ({1:5s})".format(e[k][ma]*100.0,e["name"][ma]))
+
+                    polyLine.append("{0:3d}".format(t[k].count(IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL)))
+                    expoLine.append("{0:3d}".format(t[k].count(IncompressibleData.INCOMPRESSIBLE_EXPONENTIAL)))
+                    logeLine.append("{0:3d}".format(t[k].count(IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL)))
+                    expPLine.append("{0:3d}".format(t[k].count(IncompressibleData.INCOMPRESSIBLE_EXPPOLYNOMIAL)))
+                    print(t[k])
+
+                #print(" ")
+                errTable.append(minLine)
+                errTable.append(avgLine)
+                errTable.append(maxLine)
+                errTable.append([r"\midrule"])
+
+                typTable.append(polyLine)
+                typTable.append(expoLine)
+                typTable.append(logeLine)
+                typTable.append(expPLine)
+                typTable.append([r"\midrule"])
+
+
+        errString = ""
+        for lin in errTable:
+            errString += " & ".join(lin) + "\\\\ \n"
+        print(errString)
+
+        typString = ""
+        for lin in typTable:
+            typString += " & ".join(lin) + "\\\\ \n"
+        print(typString)
+
+        return True
+#
+#
+#
+#         figPath = r"appendices/IncompressibleFluidsReports/"
+#
+# #         def getFigureText(fld):
+# #             text  = "\\begin{pgffigure} \n"
+# #             text += "\\fbox{\\resizebox{\\textwidth}{!}{ \n"
+# #             text += "\\subimport{"+str(figPath)+"}{"+str(fld)+"_fitreport.pgf} \n"
+# #             text += "}} \n"
+# #             text += "\\end{pgffigure} \n"
+# #             return text
+#         def getFigureText(fld):
+#             text  = "{\\centering"
+#             text += "\\resizebox{\\textwidth}{!}{ \n"
+#             text += "\\subimport{"+str(figPath)+"}{"+str(fld)+"_fitreport.pgf} \n"
+#             text += "}} \\vfill \n"
+#             return text
+#
+#         def getFigureLabel(fld):
+#             return "subsec:fit"+str(fld)
+#
+#         for fluid in solObjs:
+#             #\hyperref[label_name]{''link text''}
+#             testTable.append([
+#                 fluid.name+", p.~\\pageref{"+getFigureLabel(fluid.name)+"}",
+#                 fluid.description.encode("latex"),
+#                 r'\cite{'+str(fluid.reference)+'}',
+#                 self.c(fluid.Tmin),
+#                 self.c(fluid.Tmax),
+#                 self.c(fluid.Tbase+273.15)
+#             ])
+#             if use_x: testTable[-1].extend([self.x(fluid.xmin), self.x(fluid.xmax)])
+#
+#             testSection.append([
+#                 "\\subsection{Fitted functions for "+str(fluid.name)+"}",
+#                 "\\label{"+getFigureLabel(fluid.name)+"}",
+#                 getFigureText(fluid.name)
+#             ])
+#
+#         text = "\\cr \\topcrule \n"
+#         i = -1
+#         for row in testTable:
+#             i += 1
+#             if i < 1:
+#                 tmp   = r"\headcol "+" & ".join(row)
+#             elif i % 2 == 0:
+#                 tmp   = r"\rowcol " +" & ".join(row)
+#             else:
+#                 tmp   =              " & ".join(row)
+#             text += tmp + " \\\\\n"
+#             if i == 0: text += "\\midcrule \n"
+#
+#         if i % 2 == 0:
+#             text += "\\bottomcrule \\cr \n"
+#         else:
+#             text += "\\bottomrule \\cr \n"
+#
+#         with open(path+".tex", 'w') as f:
+#             f.write(text.encode('utf-8'))
+#
+#         text = "\n"
+#         for i,row in enumerate(testSection):
+#             tmp   = "\n".join(row)
+#             text += tmp + " \n\n"
+#
+#         with open(path+"-section.tex", 'w') as f:
+#             f.write(text.encode('utf-8'))
+#
+#         return True
 
     def generateRstTable(self, solObjs=[SolutionData()], path="table"):
 

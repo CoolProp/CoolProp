@@ -282,8 +282,8 @@
       "T_max_units": "K", 
       "Ttriple": 182.55, 
       "Ttriple_units": "K", 
-      "accentric": 0.349, 
-      "accentric_units": "-", 
+      "acentric": 0.349, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -1.599437140443368, 
@@ -395,16 +395,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{7}H_{16}", 
   "NAME": "n-Heptane", 
   "REFPROP_NAME": "HEPTANE", 
   "STATES": {
     "critical": {
       "T": 540.13, 
       "T_units": "K", 
+      "hmolar": 56336.47763919248, 
+      "hmolar_units": "J/mol", 
       "p": 2736000.0, 
       "p_units": "Pa", 
       "rhomolar": 2315.3230474441625, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 120.94533822127845, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 182.55, 

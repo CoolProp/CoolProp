@@ -2,7 +2,7 @@
   "ALIASES": [
     "propylene", 
     "PROPYLENE", 
-    "PROPYLEN",
+    "PROPYLEN", 
     "R1270"
   ], 
   "ANCILLARIES": {
@@ -304,8 +304,8 @@
       "T_max_units": "K", 
       "Ttriple": 87.953, 
       "Ttriple_units": "K", 
-      "accentric": 0.146, 
-      "accentric_units": "-", 
+      "acentric": 0.146, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 4.9916462, 
@@ -507,16 +507,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{3}H_{6}", 
   "NAME": "Propylene", 
   "REFPROP_NAME": "PROPYLEN", 
   "STATES": {
     "critical": {
       "T": 364.211, 
       "T_units": "K", 
+      "hmolar": 22348.096116413064, 
+      "hmolar_units": "J/mol", 
       "p": 4555000.0, 
       "p_units": "Pa", 
       "rhomolar": 5457.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 83.55933414502688, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 87.953, 

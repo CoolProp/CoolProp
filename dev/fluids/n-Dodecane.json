@@ -283,8 +283,8 @@
       "T_max_units": "K", 
       "Ttriple": 263.6, 
       "Ttriple_units": "K", 
-      "accentric": 0.574182221240689, 
-      "accentric_units": "-", 
+      "acentric": 0.574182221240689, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0, 
@@ -406,16 +406,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{12}H_{26}", 
   "NAME": "n-Dodecane", 
   "REFPROP_NAME": "C12", 
   "STATES": {
     "critical": {
       "T": 658.1, 
       "T_units": "K", 
+      "hmolar": 102723.14091498662, 
+      "hmolar_units": "J/mol", 
       "p": 1817000.0, 
       "p_units": "Pa", 
       "rhomolar": 1330.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 176.82801841955285, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 263.6, 

@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 1.731500e+02, 
   "TminPsat": 5.331500e+02, 
   "conductivity": {
+    "NRMS": 2.212688e-04, 
     "coeffs": [
       [
         9.727308e-02
@@ -25,6 +27,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 7.803658e-05, 
     "coeffs": [
       [
         7.936461e+02
@@ -43,16 +46,19 @@
   }, 
   "description": "SylthermXLT", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "XLT", 
   "reference": "Dow1997", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": [
       -5.000000e+03, 
       6.000000e+01, 
@@ -61,6 +67,7 @@
     "type": "exponential"
   }, 
   "specific_heat": {
+    "NRMS": 3.305015e-04, 
     "coeffs": [
       [
         1.897745e+03
@@ -72,20 +79,22 @@
         7.717538e-07
       ], 
       [
-        8.861174e-19
+        0.000000e+00
       ]
     ], 
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 5.878053e-03, 
     "coeffs": [
       1.033765e+03, 
-      -4.332276e+01, 
+      -4.332277e+01, 
       1.071506e+01
     ], 
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

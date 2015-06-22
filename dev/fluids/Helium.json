@@ -2,7 +2,7 @@
   "ALIASES": [
     "helium", 
     "HELIUM", 
-    "He",
+    "He", 
     "R704"
   ], 
   "ANCILLARIES": {
@@ -299,8 +299,8 @@
       "T_max_units": "K", 
       "Ttriple": 2.1768, 
       "Ttriple_units": "K", 
-      "accentric": -0.385, 
-      "accentric_units": "-", 
+      "acentric": -0.385, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 0.1871304489697973, 
@@ -468,16 +468,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "He_{1}", 
   "NAME": "Helium", 
   "REFPROP_NAME": "HELIUM", 
   "STATES": {
     "critical": {
-      "T": 5.1953, 
+      "T": 5.1953000000000005, 
       "T_units": "K", 
+      "hmolar": 42.7834170604475, 
+      "hmolar_units": "J/mol", 
       "p": 227600.0, 
       "p_units": "Pa", 
       "rhomolar": 18130.0, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 7.807911622805713, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 2.1768, 

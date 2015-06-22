@@ -3,7 +3,7 @@
     "nButane", 
     "butane", 
     "BUTANE", 
-    "N-BUTANE",
+    "N-BUTANE", 
     "R600"
   ], 
   "ANCILLARIES": {
@@ -300,8 +300,8 @@
       "T_max_units": "K", 
       "Ttriple": 134.895, 
       "Ttriple_units": "K", 
-      "accentric": 0.200810094644, 
-      "accentric_units": "-", 
+      "acentric": 0.200810094644, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 12.54882924, 
@@ -498,16 +498,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{4}H_{10}", 
   "NAME": "n-Butane", 
   "REFPROP_NAME": "BUTANE", 
   "STATES": {
     "critical": {
       "T": 425.125, 
       "T_units": "K", 
+      "hmolar": 40331.42740266437, 
+      "hmolar_units": "J/mol", 
       "p": 3796000.0, 
       "p_units": "Pa", 
-      "rhomolar": 3922.7696129878086, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar": 3922.769612987809, 
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 137.34805198475811, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 134.895, 

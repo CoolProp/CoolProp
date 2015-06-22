@@ -277,8 +277,8 @@
       "T_max_units": "K", 
       "Ttriple": 116.099, 
       "Ttriple_units": "K", 
-      "accentric": 0.1794783173435512, 
-      "accentric_units": "-", 
+      "acentric": 0.1794783173435512, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 10.0100905, 
@@ -440,16 +440,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{1}Cl_{2}F_{2}", 
   "NAME": "R12", 
   "REFPROP_NAME": "R12", 
   "STATES": {
     "critical": {
       "T": 385.12, 
       "T_units": "K", 
-      "p": 4136100.0000000005, 
+      "hmolar": 42048.946785321656, 
+      "hmolar_units": "J/mol", 
+      "p": 4136100.000000001, 
       "p_units": "Pa", 
       "rhomolar": 4672.781255944357, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 172.69971439232123, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 116.099, 

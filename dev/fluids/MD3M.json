@@ -278,8 +278,8 @@
       "T_max_units": "K", 
       "Ttriple": 192, 
       "Ttriple_units": "K", 
-      "accentric": 0.722, 
-      "accentric_units": "-", 
+      "acentric": 0.722, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": -7.835183629103501, 
@@ -398,16 +398,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "C_{12}H_{36}O_{4}Si_{5}", 
   "NAME": "MD3M", 
   "REFPROP_NAME": "MD3M", 
   "STATES": {
     "critical": {
       "T": 628.36, 
       "T_units": "K", 
+      "hmolar": 119567.52238799288, 
+      "hmolar_units": "J/mol", 
       "p": 945000.0, 
       "p_units": "Pa", 
       "rhomolar": 685.7981626999992, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 209.49906996941505, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 192.0, 

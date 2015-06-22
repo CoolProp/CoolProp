@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.628500e+02, 
@@ -17,6 +18,7 @@
   "Tmin": 1.731500e+02, 
   "TminPsat": 3.131500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         5.622000e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         1.216000e+03, 
@@ -90,22 +93,26 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Potassium Carbonate (K2CO3)", 
+  "description": "Potassium Carbonate (K2CO3) - aq", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MKC", 
   "reference": "Melinder2010", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         3.217000e+03, 
@@ -143,43 +150,45 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": null, 
     "coeffs": [
       [
-        8.063000e-04, 
-        3.624000e-03, 
-        6.659000e-03, 
-        1.077000e-02, 
-        -1.097000e-02, 
-        -8.453000e-02
+        -6.101455e+00, 
+        3.624000e+00, 
+        6.659000e+00, 
+        1.077000e+01, 
+        -1.097000e+01, 
+        -8.453000e+01
       ], 
       [
-        -2.362000e-05, 
-        -1.262000e-06, 
-        -1.611000e-04, 
-        -9.796000e-05, 
-        7.825000e-04, 
+        -2.362000e-02, 
+        -1.262000e-03, 
+        -1.611000e-01, 
+        -9.796000e-02, 
+        7.825000e-01, 
         0.000000e+00
       ], 
       [
-        1.851000e-07, 
-        -3.022000e-08, 
-        1.530000e-06, 
-        3.070000e-06, 
+        1.851000e-04, 
+        -3.022000e-05, 
+        1.530000e-03, 
+        3.070000e-03, 
         0.000000e+00, 
         0.000000e+00
       ], 
       [
-        -2.372000e-09, 
-        -7.761000e-10, 
-        1.061000e-08, 
+        -2.372000e-06, 
+        -7.761000e-07, 
+        1.061000e-05, 
         0.000000e+00, 
         0.000000e+00, 
         0.000000e+00
       ]
     ], 
-    "type": "polynomial"
+    "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": [
       [
         2.537400e+02, 
@@ -17,6 +18,7 @@
   "Tmin": 1.731500e+02, 
   "TminPsat": 3.131500e+02, 
   "conductivity": {
+    "NRMS": null, 
     "coeffs": [
       [
         4.067000e-01, 
@@ -54,6 +56,7 @@
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": null, 
     "coeffs": [
       [
         9.619000e+02, 
@@ -90,22 +93,26 @@
     ], 
     "type": "polynomial"
   }, 
-  "description": "Ethyl Alcohol (Ethanol)", 
+  "description": "Ethyl Alcohol (Ethanol) - aq", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "MEA", 
   "reference": "Melinder2010", 
   "saturation_pressure": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "specific_heat": {
+    "NRMS": null, 
     "coeffs": [
       [
         4.204000e+03, 
@@ -143,43 +150,45 @@
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": null, 
     "coeffs": [
       [
-        1.474000e-03, 
-        1.565000e-03, 
-        -8.435000e-03, 
-        7.552000e-03, 
-        1.529000e-02, 
-        -4.130000e-02
+        -5.433755e+00, 
+        1.565000e+00, 
+        -8.435000e+00, 
+        7.552000e+00, 
+        1.529000e+01, 
+        -4.130000e+01
       ], 
       [
-        -4.745000e-05, 
-        -4.106000e-06, 
-        1.640000e-04, 
-        -1.118000e-04, 
-        -9.481000e-05, 
+        -4.745000e-02, 
+        -4.106000e-03, 
+        1.640000e-01, 
+        -1.118000e-01, 
+        -9.481000e-02, 
         0.000000e+00
       ], 
       [
-        4.314000e-07, 
-        -5.135000e-07, 
-        -1.091000e-06, 
-        1.899000e-06, 
+        4.314000e-04, 
+        -5.135000e-04, 
+        -1.091000e-03, 
+        1.899000e-03, 
         0.000000e+00, 
         0.000000e+00
       ], 
       [
-        -3.023000e-09, 
-        7.004000e-09, 
-        -1.967000e-08, 
+        -3.023000e-06, 
+        7.004000e-06, 
+        -1.967000e-05, 
         0.000000e+00, 
         0.000000e+00, 
         0.000000e+00
       ]
     ], 
-    "type": "polynomial"
+    "type": "exppolynomial"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

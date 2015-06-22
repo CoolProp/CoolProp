@@ -1,14 +1,17 @@
 from __future__ import absolute_import
 
-try:
-    import matplotlib
-except ImportError:
-    raise ImportError('It was not possible to import the required package matplotlib.  Please install it using your package manager')
-
-try:
-    import numpy
-except ImportError:
-    raise ImportError('It was not possible to import the required package numpy.  Please install it using your package manager')
+# If there is a constants.[pyd|so|dylib] in the main directory, it will be imported instead of the constants.py file.
+# It should be removed as it is from the older version of CoolProp
+from . import constants
+if constants.__file__.rsplit('.', 1)[1] not in ['pyc','pyo','py']:
+    
+    import os
+    try:
+        os.remove(constants.__file__)
+        print("constants shared library has been removed.  Please restart your python code")
+    except:
+        print("Unable to remove" + constants.__file__ + ". Please manually remove it")
+    quit()
 
 from .CoolProp import AbstractState
 from . import CoolProp

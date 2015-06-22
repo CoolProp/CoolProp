@@ -1,5 +1,6 @@
 {
   "T_freeze": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
@@ -8,6 +9,7 @@
   "Tmin": 2.531500e+02, 
   "TminPsat": 2.931500e+02, 
   "conductivity": {
+    "NRMS": 1.189914e-13, 
     "coeffs": [
       [
         5.980000e-01
@@ -19,12 +21,13 @@
         0.000000e+00
       ], 
       [
-        -6.255525e-20
+        3.462230e-20
       ]
     ], 
     "type": "polynomial"
   }, 
   "density": {
+    "NRMS": 2.323769e-03, 
     "coeffs": [
       [
         1.198285e+03
@@ -43,16 +46,19 @@
   }, 
   "description": "Dynalene HC20", 
   "mass2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "mole2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 
   "name": "HC20", 
   "reference": "Dynalene2014", 
   "saturation_pressure": {
+    "NRMS": 9.364035e-03, 
     "coeffs": [
       [
         1.101947e+01
@@ -70,6 +76,7 @@
     "type": "exppolynomial"
   }, 
   "specific_heat": {
+    "NRMS": 5.054668e-04, 
     "coeffs": [
       [
         3.388620e+03
@@ -81,20 +88,22 @@
         -7.601095e-06
       ], 
       [
-        1.876814e-09
+        1.876813e-09
       ]
     ], 
     "type": "polynomial"
   }, 
   "viscosity": {
+    "NRMS": 3.930689e-03, 
     "coeffs": [
       1.457363e+03, 
-      8.328728e+00, 
+      8.328726e+00, 
       1.098672e+01
     ], 
     "type": "exponential"
   }, 
   "volume2input": {
+    "NRMS": null, 
     "coeffs": "null", 
     "type": "notdefined"
   }, 

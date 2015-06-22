@@ -1,7 +1,7 @@
 {
   "ALIASES": [
     "argon", 
-    "ARGON",
+    "ARGON", 
     "R740"
   ], 
   "ANCILLARIES": {
@@ -300,8 +300,8 @@
       "T_max_units": "K", 
       "Ttriple": 83.806, 
       "Ttriple_units": "K", 
-      "accentric": -0.00219, 
-      "accentric_units": "-", 
+      "acentric": -0.00219, 
+      "acentric_units": "-", 
       "alpha0": [
         {
           "a1": 8.31666243, 
@@ -553,16 +553,21 @@
       "pseudo_pure": false
     }
   ], 
+  "FORMULA": "Ar_{1}", 
   "NAME": "Argon", 
   "REFPROP_NAME": "ARGON", 
   "STATES": {
     "critical": {
       "T": 150.687, 
       "T_units": "K", 
+      "hmolar": -173.03680277437988, 
+      "hmolar_units": "J/mol", 
       "p": 4863000.0, 
       "p_units": "Pa", 
       "rhomolar": 13407.429658556124, 
-      "rhomolar_units": "mol/m^3"
+      "rhomolar_units": "mol/m^3", 
+      "smolar": 89.78858803923292, 
+      "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 83.806, 
