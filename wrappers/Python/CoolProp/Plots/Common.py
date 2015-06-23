@@ -3,10 +3,13 @@
 from __future__ import print_function, unicode_literals
 
 import matplotlib
-import numpy
+import numpy as np
 
 import CoolProp.CoolProp as CP
 from abc import ABCMeta
+from CoolProp import AbstractState
+import CoolProp
+import warnings
 
 
 class BaseQuantity(object):
@@ -131,177 +134,244 @@ class EURunits(KSIunits):
         self.P.mul_SI=1e-5
         self.P.unit=r'bar'
         self.T.add_SI=-273.15
-        self.T.unit=r'C'
+        self.T.unit=ur'\u00B0 C'
 
 
+class IsoLine(object):
+    """An object that holds the functions to calculate a line of 
+    a constant property in the dimensions of a property plot. This 
+    class only uses SI units."""
+    
+    # A list of supported plot
+    PLOTS = ['TS','PH','HS','PS','PD','TD','PT','PU']
+    
+    # Normally we calculate a sweep in x-dimensions, but 
+    # sometimes a sweep in y-dimensions is better.
+    XY_SWITCH = {
+      'D': { 'TS':True , 'PH':True , 'HS':False, 'PS':True , 'PD':False, 'TD':False, 'PT':False, 'PU':False},
+      'H': { 'TS':False, 'PH':False, 'HS':False, 'PS':False, 'PD':False, 'TD':False, 'PT':False, 'PU':False},
+      'P': { 'TS':False, 'PH':False, 'HS':False, 'PS':False, 'PD':False, 'TD':False, 'PT':False, 'PU':False},
+      'S': { 'TS':False, 'PH':False, 'HS':False, 'PS':False, 'PD':False, 'TD':False, 'PT':False, 'PU':False},
+      'T': { 'TS':False, 'PH':False, 'HS':False, 'PS':False, 'PD':False, 'TD':False, 'PT':False, 'PU':False},
+      'U': { 'TS':False, 'PH':False, 'HS':False, 'PS':False, 'PD':False, 'TD':False, 'PT':False, 'PU':False},  
+    }
+    
+    @classmethod
+    def get_update_pair(cls,i,x,y):
+        """Processes the values for the isoproperty and the graph dimensions
+        to figure which should be used as inputs to the state update. Returns
+        a tuple with the indices for the update call and the property constant.
+        For an isobar in a Ts-diagram it returns the default order and the 
+        correct constant for the update pair:
+        get_update_pair('P','S','T') -> (0,1,2,CoolProp.PSmass_INPUTS)
+        other values require switching and swapping
+        get_update_pair('S','P','H') -> (1,0,2,CoolProp.PSmass_INPUTS)
+        """
+        
+        #ii = CP.get_parameter_index(i)
+        
+        # Figure out if x or y-dimension should be used
+        switch = cls.XY_SWITCH[i]
+        if switch is None:
+            raise ValueError("This isoline cannot be calculated!")
+        elif switch is False:
+            oo = CP.get_parameter_index(i)
+            tt = CP.get_parameter_index(x)
+            second = None
+            third  = 2
+        elif switch is True:
+            oo = CP.get_parameter_index(i)
+            tt = CP.get_parameter_index(y)
+            second = 2
+            third  = None
+        else:
+            raise ValueError("Unknown error!")
+        
+        pair, out1, _ = CP.generate_update_pair(oo,0.0,tt,1.0)
+        if out1==0.0: # Correct order
+            first = 0
+            if second is None:
+                second = 1
+            else:
+                third  = 1 
+        else: # Wrong order
+            first = 1
+            if second is None:
+                second = 0
+            else:
+                third  = 0
+        return first,second,third,pair 
 
-if __name__ == "__main__":
-    for syst in [SIunits(), KSIunits(), EURunits()]:
-        print(syst.P.label)
-        print(syst.P.to_SI(20))
-        print(syst.T.label)
-        print(syst.T.to_SI(20))
+    @property
+    def x(self): return self._x
+    @x.setter
+    def x(self, value): self._x = np.array(value)
+    @property
+    def y(self): return self._y
+    @y.setter
+    def y(self, value): self._y = np.array(value)
+    @property
+    def line_type(self): return self._line_type
+    @line_type.setter
+    def line_type(self, value): self._line_type = str(value).upper()
+    @property
+    def graph_type(self): return self._graph_type
+    @graph_type.setter
+    def graph_type(self, value): self._graph_type = str(value).upper()
+    @property
+    def value(self): return self._value
+    @value.setter
+    def value(self, value): self._value = float(value)
+
+
+class IsoLineCalculator(object):
     
     
+    def __init__(self, state):
+        self.DEBUG = False
 
+        # direct geometry
+        self.X     = None #
+        self.Y     = None #
+        self.type  = None #
+        self.value = None #
+        self.unit  = None #
+        self.opts  = None #
 
-
-SMALL = 1E-5
 
 class BasePlot(object):
+    """The base class for all plots. It can be instantiated itself, but provides many 
+    general facilities to be used in the different plots. """
+    __metaclass__ = ABCMeta
     
+    # Define the iteration keys
+    PROPERTIES = {
+      'D': 'density',
+      'H': 'specific enthalpy',
+      'P': 'pressure',
+      'S': 'specific entropy',
+      'T': 'temperature',
+      'U': 'specific internal energy'
+    }
     
-    #TODO: Simplify / Consolidate dictionary maps
-    AXIS_LABELS = {'KSI': {'T': ["Temperature", r"[K]"],
-                           'P': ["Pressure", r"[kPa]"],
-                           'S': ["Entropy", r"[kJ/kg/K]"],
-                           'H': ["Enthalpy", r"[kJ/kg]"],
-                           'U': ["Internal Energy", r"[kJ/kg]"],
-                           'D': ["Density", r"[kg/m$^3$]"]
-                          },
-                    'SI': {'T': ["Temperature", r"[K]"],
-                           'P': ["Pressure", r"[Pa]"],
-                           'S': ["Entropy", r"[J/kg/K]"],
-                           'H': ["Enthalpy", r"[J/kg]"],
-                           'U': ["Internal Energy", r"[J/kg]"],
-                           'D': ["Density", r"[kg/m$^3$]"]
-                          }
-                   }
-
-    COLOR_MAP = {'T': 'Darkred',
-                 'P': 'DarkCyan',
-                 'H': 'DarkGreen',
-                 'D': 'DarkBlue',
-                 'S': 'DarkOrange',
-                 'Q': 'black'}
-
-    #: Scale factors to multiply SI units by in order to obtain kSI units
-    KSI_SCALE_FACTOR = {'T' : 1.0,
-                        'P' : 0.001,
-                        'H' : 0.001,
-                        'U' : 0.001,
-                        'D' : 1,
-                        'S' : 0.001,
-                        'Q' : 1.0}
-                      
-    SYMBOL_MAP_KSI = {'T' : [r'$T = ', r'$ K'],
-                      'P' : [r'$p = ', r'$ kPa'],
-                      'H' : [r'$h = ', r'$ kJ/kg'],
-                      'U' : [r'$h = ', r'$ kJ/kg'],
-                      'D' : [r'$\rho = ', r'$ kg/m$^3$'],
-                      'S' : [r'$s = ', r'$ kJ/kg-K'],
-                      'Q' : [r'$x = ', r'$']}
-                  
-    SYMBOL_MAP_SI = {'T' : [r'$T = ', r'$ K'],
-                     'P' : [r'$p = ', r'$ Pa'],
-                     'H' : [r'$h = ', r'$ J/kg'],
-                     'U' : [r'$h = ', r'$ J/kg'],
-                     'D' : [r'$\rho = ', r'$ kg/m$^3$'],
-                     'S' : [r'$s = ', r'$ J/kg-K'],
-                     'Q' : [r'$x = ', r'$']}
-
-    LINE_IDS = {'TS': ['P', 'D'], #'H'],
-                'PH': ['S', 'T', 'D'],
-                'HS': ['P'], #'T', 'D'],
-                'PS': ['H', 'T', 'D'],
-                'PD': ['T', 'S', 'H'],
-                'TD': ['P'], #'S', 'H'],
-                'PT': ['D', 'P', 'S'],
-                'PU': []}
+    # A list of supported plot
+    PLOTS = ['TS','PH','HS','PS','PD','TD','PT','PU']
+    
+    # Define the unit systems
+    UNIT_SYSTEMS = {
+      'SI' : SIunits(),
+      'KSI': KSIunits(),
+      'EUR': EURunits()
+    }
+    
+    LINE_COLORS = {
+      'T': 'Darkred',
+      'P': 'DarkCyan',
+      'H': 'DarkGreen',
+      'D': 'DarkBlue',
+      'S': 'DarkOrange',
+      'Q': 'black'
+    }
 
     def __init__(self, fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
-        if not isinstance(graph_type, str):
-            raise TypeError("Invalid graph_type input, expected a string")
-
-        graph_type = graph_type.upper()
-        if len(graph_type) >= 2 and graph_type[1:len(graph_type)] == 'RHO':
-            graph_type = graph_type[0] + graph_type[1:len(graph_type)]
-
-        if graph_type.upper() not in self.LINE_IDS.keys():
-            raise ValueError(''.join(["You have to specify the kind of ",
-                                      "plot, use one of",
-                                      str(self.LINE_IDS.keys())]))
-
-        self.graph_drawn = False
-        self.fluid_ref = fluid_ref
-        self.graph_type = graph_type.upper()
         
-        self.unit_system = unit_system
-#         if unit_system == 'KSI':
-#             self.unit_system = KSIunits()
-#         elif unit_system == 'EUR':
-#             self.unit_system = EURunits()
-#         else:
-#             self.unit_system = SIunits()
-            
+        # Process the fluid and set self._state
+        if isinstance(fluid_ref, str):
+            # TODO: Fix the backend extraction etc
+            fluid_def = fluid_ref.split('::')
+            if len(fluid_def)==2:
+                backend = fluid_def[0]
+                fluid = fluid_def[1]
+            elif len(fluid_def)==1:
+                backend = "HEOS"
+                fluid = fluid_def[0]
+            else: 
+                raise ValueError("This is not a valid fluid_ref string: {0:s}".format(str(fluid_ref)))
+            self._state = AbstractState(backend, fluid)
+        elif isinstance(fluid_ref, AbstractState):
+            self._state = fluid_ref
+        else:
+            raise TypeError("Invalid fluid_ref input, expected a string or an abstract state instance")
+        
+        # Process the graph_type and set self._x_type and self._y_type
+        graph_type = graph_type.upper()
+        graph_type = graph_type.replace(r'RHO',r'D')
+        if graph_type in self.PLOTS:
+            self._y_type = graph_type[0]
+            self._x_type = graph_type[1]
+        else:
+            raise ValueError("Invalid graph_type input, expected a string from {0:s}".format(str(self.PLOTS)))
+        
+        # Process the unit_system and set self._system
+        unit_system = unit_system.upper()
+        if unit_system in self.UNIT_SYSTEMS:
+            self._system = self.UNIT_SYSTEMS[unit_system]
+        else:
+            raise ValueError("Invalid unit_system input, expected a string from {0:s}".format(str(self.UNIT_SYSTEMS.keys())))
+        
+        self._axis = kwargs.get('axis', matplotlib.pyplot.gca())        
+        self.small = kwargs.get('small', 1e-5)
 
-        self.axis = kwargs.get('axis', None)
-        if self.axis is None:
-            self.axis = matplotlib.pyplot.gca()
-            
+        self._colors = self.LINE_COLORS.copy()
+        colors = kwargs.get('colors', None)
+        if colors is not None:
+            self._colors.update(colors)
+        
+        self._graph_drawn = False
+
+    @property
+    def small(self): return self._small
+    @small.setter
+    def small(self, value):
+        self._T_small = self._state.trivial_keyed_output(CoolProp.iT_critical)*value
+        self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*value
+        self._small   = value
 
     def __sat_bounds(self, kind, smin=None, smax=None):
-        """
-        Generates limits for the saturation line in either T or p determined
+        """Generates limits for the saturation line in either T or p determined
         by 'kind'. If xmin or xmax are provided, values will be checked
-        against the allowable range for the EOS and an error might be
-        generated.
+        against the allowable range for the EOS and a warning might be
+        generated. Returns a tuple containing (xmin, xmax)"""
 
-        Returns a tuple containing (xmin, xmax)
-        """
+        # TODO: REFPROP backend does not have ptriple.
+        T_triple = self._state.trivial_keyed_output(CoolProp.iT_triple)
+        T_min    = self._state.trivial_keyed_output(CoolProp.iT_min)        
+        self._state.update(CoolProp.QT_INPUTS, 0, max([T_triple,T_min])+self._T_small)
+        kind = kind.upper()
         if kind == 'P':
-            name = 'pressure'
-            min_key = 'ptriple'
+            fluid_min = self._state.keyed_output(CoolProp.iP)
+            fluid_max = self._state.trivial_keyed_output(CoolProp.iP_critical)-self._P_small
         elif kind == 'T':
-            name = 'temperature'
-            min_key = 'Tmin'
+            fluid_min = self._state.keyed_output(CoolProp.iT)
+            fluid_max = self._state.trivial_keyed_output(CoolProp.iT_critical)-self._T_small
+        else:
+            raise ValueError("Saturation boundaries have to be defined in T or P, but not in {0:s}".format(str(kind)))
+                
+        if smin is not None: 
+            if fluid_min < smin < fluid_max:
+                sat_min = smin
+            else:
+                warnings.warn(
+                  "Your minimum {0:s} has been ignored, {1:f} is not between {2:f} and {3:f}".format(self.PROPERTIES[kind],smin,fluid_min,fluid_max),
+                  UserWarning)
+                sat_min = fluid_min
+        else:
+            sat_min = fluid_min
+            
+        if smax is not None: 
+            if fluid_min < smax < fluid_max:
+                sat_max = smax
+            else:
+                warnings.warn(
+                  "Your maximum {0:s} has been ignored, {1:f} is not between {2:f} and {3:f}".format(self.PROPERTIES[kind],smax,fluid_min,fluid_max),
+                  UserWarning)
+                sat_max = fluid_max
+        else:
+            sat_max = fluid_max
 
-        fluid_min = CP.PropsSI(self.fluid_ref, min_key)
-        fluid_crit = CP.PropsSI(self.fluid_ref, ''.join([kind, 'crit']))
-
-        if smin is None:
-            smin = fluid_min + SMALL
-        elif smin > fluid_crit:
-            raise ValueError(''.join(['Minimum ', name,
-                             ' cannot be greater than fluid critical ',
-                             name, '.']))
-
-        if smax is None:
-            smax = fluid_crit - SMALL
-        elif smax > fluid_crit:
-            raise ValueError(''.join(['Maximum ', name,
-                             ' cannot be greater than fluid critical ',
-                             name, '.']))
-
-        smin = max(smin, fluid_min + SMALL)
-        smax = min(smax, fluid_crit - SMALL)
-
-        return (smin, smax)
-
-    def _get_fluid_data(self, req_prop,
-                        prop1_name, prop1_vals,
-                        prop2_name, prop2_vals):
-        """
-        Calculates lines for constant iName (iVal) over an interval of xName
-        (xVal). Returns (x[],y[]) - a tuple of arrays containing the values
-        in x and y dimensions.
-        """
-        if len(prop1_vals) != len(prop2_vals):
-            raise ValueError(''.join(['We need the same number of x value ',
-                                      'arrays as iso quantities.']))
-
-        y_vals = []
-        x_vals = []
-
-        # Calculate the values in SI units
-        for i, p1_val in enumerate(prop1_vals):
-            x_vals.append(prop2_vals[i])
-            y_vals.append(CP.PropsSI(req_prop,
-                                     prop1_name, [p1_val]*len(prop2_vals[i]), # Convert to an iterable the same size as second input array
-                                     prop2_name, prop2_vals[i],
-                                     self.fluid_ref))
-        return numpy.array([x_vals, y_vals])
-
+        return (sat_min, sat_max)
+    
+    
     def _get_sat_lines(self, kind='T', smin=None,
                        smax=None, num=500, x=[0., 1.]):
         """
@@ -309,7 +379,7 @@ class BasePlot(object):
         You can specify if you need evenly spaced entries in either
         pressure or temperature by supplying kind='p' and kind='T'
         (default), respectively.
-        Limits can be set with kmin (default: minimum from EOS) and
+        Limits can be set with kmin (default: triple point or EOS minimum) and
         kmax (default: critical value).
         Returns lines[] - a 2D array of dicts containing 'x' and 'y'
         coordinates for bubble and dew line. Additionally, the dict holds

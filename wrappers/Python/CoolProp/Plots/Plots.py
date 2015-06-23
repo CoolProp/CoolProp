@@ -11,17 +11,7 @@ from .Common import BasePlot
 from scipy import interpolate
 from scipy.spatial.kdtree import KDTree
 
-class IsoLine(object):
-    def __init__(self):
-        self.DEBUG = False
 
-        # direct geometry
-        self.X     = None #
-        self.Y     = None #
-        self.type  = None #
-        self.value = None #
-        self.unit  = None #
-        self.opts  = None #
 
 
 def InlineLabel(xv,yv,x = None, y= None, axis = None, fig = None):
