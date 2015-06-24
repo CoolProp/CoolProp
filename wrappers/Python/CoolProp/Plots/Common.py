@@ -2,12 +2,13 @@
 
 from __future__ import print_function, unicode_literals
 
-import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 
 import CoolProp.CoolProp as CP
 from abc import ABCMeta
 from CoolProp import AbstractState
+from CoolProp.CoolProp import PropsSI
 import CoolProp
 import warnings
 
@@ -95,26 +96,33 @@ class UnitSystem(object):
     def U(self): return self._U
     @U.setter
     def U(self, value): self._U = value
+    @property
+    def Q(self): return self._Q
+    @Q.setter
+    def Q(self, value): self._Q = value
     
+    @property
     def dimensions(self): 
         return {
-      'D' : self._D,
-      'H' : self._H,
-      'P' : self._P,
-      'S' : self._S,
-      'T' : self._T,
-      'U' : self._U
+      CoolProp.iDmass : self._D,
+      CoolProp.iHmass : self._H,
+      CoolProp.iP     : self._P,
+      CoolProp.iSmass : self._S,
+      CoolProp.iT     : self._T,
+      CoolProp.iUmass : self._U,
+      CoolProp.iQ     : self._Q
     }
 
 
 class SIunits(UnitSystem):
     def __init__(self):
-        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=r'$\rho$', unit=r'kg/m$^3$')
-        self._H = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Enthalpy',        symbol=r'$h$',    unit=r'J/kg')
-        self._P = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Pressure',                 symbol=r'$p$',    unit=r'Pa')
-        self._S = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Entropy',         symbol=r'$s$',    unit=r'J/kg/K')
-        self._T = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Temperature',              symbol=r'$T$',    unit=r'K')
-        self._U = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Internal Energy', symbol=r'$u$',    unit=r'J/kg')
+        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=r'\rho', unit=r'kg/m$^3$')
+        self._H = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Enthalpy',        symbol=r'h',    unit=r'J/kg')
+        self._P = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Pressure',                 symbol=r'p',    unit=r'Pa')
+        self._S = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Entropy',         symbol=r's',    unit=r'J/kg/K')
+        self._T = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Temperature',              symbol=r'T',    unit=r'K')
+        self._U = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Internal Energy', symbol=r'u',    unit=r'J/kg')
+        self._Q = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Vapour Quality',           symbol=r'x',    unit=r'')
 
 class KSIunits(SIunits):
     def __init__(self):
@@ -137,71 +145,108 @@ class EURunits(KSIunits):
         self.T.unit=ur'\u00B0 C'
 
 
-class IsoLine(object):
+class Base2DObject(object):
+    """A container for shared settings and constants for the 
+    isolines and the property plots."""
+    
+    __metaclass__ = ABCMeta
+    
+    # A list of supported plot
+    TS = CoolProp.iT*10     + CoolProp.iSmass
+    PH = CoolProp.iP*10     + CoolProp.iHmass
+    HS = CoolProp.iHmass*10 + CoolProp.iSmass
+    PS = CoolProp.iP*10     + CoolProp.iSmass
+    PD = CoolProp.iP*10     + CoolProp.iDmass
+    TD = CoolProp.iT*10     + CoolProp.iDmass
+    PT = CoolProp.iP*10     + CoolProp.iT
+    PU = CoolProp.iP*10     + CoolProp.iUmass
+    
+    PLOTS = {
+      'TS': TS,
+      'PH': PH,
+      'HS': HS,
+      'PS': PS,
+      'PD': PD,
+      'TD': TD,
+      'PT': PT,
+    }
+    
+    PLOTS_INV = {v: k for k, v in PLOTS.items()}
+    
+#     # A list of supported plot
+#     @property
+#     def TS(self): return type(self).TS
+#     @property
+#     def PH(self): return CoolProp.iP*10     + CoolProp.iHmass
+#     @property
+#     def HS(self): return CoolProp.iHmass*10 + CoolProp.iSmass
+#     @property
+#     def PS(self): return CoolProp.iP*10     + CoolProp.iSmass
+#     @property
+#     def PD(self): return CoolProp.iP*10     + CoolProp.iDmass
+#     @property
+#     def TD(self): return CoolProp.iT*10     + CoolProp.iDmass
+#     @property
+#     def PT(self): return CoolProp.iP*10     + CoolProp.iT
+#     @property
+#     def PU(self): return CoolProp.iP*10     + CoolProp.iUmass
+
+    def __init__(self, x_type, y_type, state=None):
+        self._x_index = self._get_index(x_type)
+        self._y_index = self._get_index(y_type)        
+        if state is not None: self.state = state
+        else: self._state = None 
+
+    # A list of supported plot
+    @property
+    def x_index(self): return self._x_index
+    @property
+    def y_index(self): return self._y_index
+    @property
+    def state(self): return self._state
+    @state.setter
+    def state(self, value):
+        if isinstance(value, AbstractState): self._state = value
+        else: raise TypeError("Invalid state input, expected an AbstractState instance.")
+    
+    def _get_index(self,prop):
+        if isinstance(prop, basestring):
+            return CP.get_parameter_index(prop)
+        elif isinstance(prop, int):
+            return prop
+        else:
+            raise ValueError("Invalid input, expected a string or an int, not {0:s}.".format(str(prop)))
+    
+
+class IsoLine(Base2DObject):
     """An object that holds the functions to calculate a line of 
     a constant property in the dimensions of a property plot. This 
     class only uses SI units."""
     
-    # A list of supported plot
-    PLOTS = ['TS','PH','HS','PS','PD','TD','PT','PU']
-    
     # Normally we calculate a sweep in x-dimensions, but 
     # sometimes a sweep in y-dimensions is better.
     XY_SWITCH = {
-      'D': { 'TS':True , 'PH':True , 'HS':False, 'PS':True , 'PD':False, 'TD':False, 'PT':False, 'PU':False},
-      'H': { 'TS':False, 'PH':False, 'HS':False, 'PS':False, 'PD':False, 'TD':False, 'PT':False, 'PU':False},
-      'P': { 'TS':False, 'PH':False, 'HS':False, 'PS':False, 'PD':False, 'TD':False, 'PT':False, 'PU':False},
-      'S': { 'TS':False, 'PH':False, 'HS':False, 'PS':False, 'PD':False, 'TD':False, 'PT':False, 'PU':False},
-      'T': { 'TS':False, 'PH':False, 'HS':False, 'PS':False, 'PD':False, 'TD':False, 'PT':False, 'PU':False},
-      'U': { 'TS':False, 'PH':False, 'HS':False, 'PS':False, 'PD':False, 'TD':False, 'PT':False, 'PU':False},  
+      CoolProp.iDmass: { Base2DObject.TS:True , Base2DObject.PH:True , Base2DObject.HS:False, Base2DObject.PS:True , Base2DObject.PD:None , Base2DObject.TD:None , Base2DObject.PT:False},
+      CoolProp.iHmass: { Base2DObject.TS:False, Base2DObject.PH:None , Base2DObject.HS:None , Base2DObject.PS:True , Base2DObject.PD:True , Base2DObject.TD:False, Base2DObject.PT:False},
+      CoolProp.iP    : { Base2DObject.TS:False, Base2DObject.PH:None , Base2DObject.HS:False, Base2DObject.PS:None , Base2DObject.PD:None , Base2DObject.TD:False, Base2DObject.PT:None },
+      CoolProp.iSmass: { Base2DObject.TS:None , Base2DObject.PH:True , Base2DObject.HS:None , Base2DObject.PS:None , Base2DObject.PD:True , Base2DObject.TD:False, Base2DObject.PT:True },
+      CoolProp.iT    : { Base2DObject.TS:None , Base2DObject.PH:True , Base2DObject.HS:False, Base2DObject.PS:False, Base2DObject.PD:False, Base2DObject.TD:None , Base2DObject.PT:None }
     }
     
-    @classmethod
-    def get_update_pair(cls,i,x,y):
-        """Processes the values for the isoproperty and the graph dimensions
-        to figure which should be used as inputs to the state update. Returns
-        a tuple with the indices for the update call and the property constant.
-        For an isobar in a Ts-diagram it returns the default order and the 
-        correct constant for the update pair:
-        get_update_pair('P','S','T') -> (0,1,2,CoolProp.PSmass_INPUTS)
-        other values require switching and swapping
-        get_update_pair('S','P','H') -> (1,0,2,CoolProp.PSmass_INPUTS)
-        """
+    def __init__(self, i_index, x_index, y_index, value=0.0, state=None):
+        super(IsoLine, self).__init__(x_index, y_index, state)
+        self._i_index = self._get_index(i_index)
+        if value is not None: self.value = value
+        else: self._value = None 
+        self._x       = None
+        self._y       = None
         
-        #ii = CP.get_parameter_index(i)
-        
-        # Figure out if x or y-dimension should be used
-        switch = cls.XY_SWITCH[i]
-        if switch is None:
-            raise ValueError("This isoline cannot be calculated!")
-        elif switch is False:
-            oo = CP.get_parameter_index(i)
-            tt = CP.get_parameter_index(x)
-            second = None
-            third  = 2
-        elif switch is True:
-            oo = CP.get_parameter_index(i)
-            tt = CP.get_parameter_index(y)
-            second = 2
-            third  = None
-        else:
-            raise ValueError("Unknown error!")
-        
-        pair, out1, _ = CP.generate_update_pair(oo,0.0,tt,1.0)
-        if out1==0.0: # Correct order
-            first = 0
-            if second is None:
-                second = 1
-            else:
-                third  = 1 
-        else: # Wrong order
-            first = 1
-            if second is None:
-                second = 0
-            else:
-                third  = 0
-        return first,second,third,pair 
-
+    @property
+    def i_index(self): return self._i_index
+    @property
+    def value(self): return self._value
+    @value.setter
+    def value(self, value): self._value = float(value)
     @property
     def x(self): return self._x
     @x.setter
@@ -210,39 +255,84 @@ class IsoLine(object):
     def y(self): return self._y
     @y.setter
     def y(self, value): self._y = np.array(value)
-    @property
-    def line_type(self): return self._line_type
-    @line_type.setter
-    def line_type(self, value): self._line_type = str(value).upper()
-    @property
-    def graph_type(self): return self._graph_type
-    @graph_type.setter
-    def graph_type(self, value): self._graph_type = str(value).upper()
-    @property
-    def value(self): return self._value
-    @value.setter
-    def value(self, value): self._value = float(value)
-
-
-class IsoLineCalculator(object):
     
+    def _get_update_pair(self):
+        """Processes the values for the isoproperty and the graph dimensions
+        to figure which should be used as inputs to the state update. Returns
+        a tuple with the indices for the update call and the property constant.
+        For an isobar in a Ts-diagram it returns the default order and the 
+        correct constant for the update pair:
+        get_update_pair(CoolProp.iP,CoolProp.iSmass,CoolProp.iT) -> (0,1,2,CoolProp.PSmass_INPUTS)
+        other values require switching and swapping.
+        """
+        # Figure out if x or y-dimension should be used
+        switch = self.XY_SWITCH[self.i_index][self.y_index*10+self.x_index]
+        if switch is None:
+            raise ValueError("This isoline cannot be calculated!")
+        elif switch is False:
+            pair, out1, _ = CP.generate_update_pair(self.i_index,0.0,self.x_index,1.0)
+        elif switch is True:
+            pair, out1, _ = CP.generate_update_pair(self.i_index,0.0,self.y_index,1.0)
+        else:
+            raise ValueError("Unknown error!")
+
+        if out1==0.0: # Correct order
+            swap = False
+        else: # Wrong order
+            swap = True
+        
+        if not switch and not swap:
+            return 0,1,2,pair
+        elif switch and not swap:
+            return 0,2,1,pair
+        elif not switch and swap:
+            return 1,0,2,pair
+        elif switch and swap:
+            return 1,2,0,pair
+        else:
+            raise ValueError("Check the code, this should not happen!")
     
-    def __init__(self, state):
-        self.DEBUG = False
+    def calc_range(self,xvals=None,yvals=None):
+        ipos,xpos,ypos,pair = self._get_update_pair()
+        
+        order = [ipos,xpos,ypos]
+        idxs  = [v for (_,v) in sorted(zip(order,[self.i_index        , self.x_index, self.y_index]))]
+        vals  = [v for (_,v) in sorted(zip(order,[np.array(self.value), xvals       , yvals       ]))]
+        
+        if vals[0] is None or vals[1] is None:
+            raise ValueError("One required input is missing, make sure to supply the correct xvals or yvals: {0:s} - {1:s}".format(str(xvals),str(yvals)))
+         
+        if vals[0].size > vals[1].size:
+            vals[1] = np.resize(vals[1],vals[0].shape)
+        elif vals[0].size < vals[1].size:
+            vals[0] = np.resize(vals[0],vals[1].shape)
+            
+        it = np.nditer([vals[0], vals[1], None])
+        for x, y, z in it:
+            self.state.update(pair, x, y)
+            z[...] = self.state.keyed_output(idxs[2])
+            
+        for i,v in enumerate(idxs):
+            if v == self.x_index: self.x = it.operands[i]
+            if v == self.y_index: self.y = it.operands[i]
+        
+            
 
-        # direct geometry
-        self.X     = None #
-        self.Y     = None #
-        self.type  = None #
-        self.value = None #
-        self.unit  = None #
-        self.opts  = None #
+        
+        
+        
+        
+                        
+        
+        
+        
 
 
-class BasePlot(object):
+
+class BasePlot(Base2DObject):
     """The base class for all plots. It can be instantiated itself, but provides many 
     general facilities to be used in the different plots. """
-    __metaclass__ = ABCMeta
+    #__metaclass__ = ABCMeta
     
     # Define the iteration keys
     PROPERTIES = {
@@ -253,9 +343,6 @@ class BasePlot(object):
       'T': 'temperature',
       'U': 'specific internal energy'
     }
-    
-    # A list of supported plot
-    PLOTS = ['TS','PH','HS','PS','PD','TD','PT','PU']
     
     # Define the unit systems
     UNIT_SYSTEMS = {
@@ -276,7 +363,7 @@ class BasePlot(object):
     def __init__(self, fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
         
         # Process the fluid and set self._state
-        if isinstance(fluid_ref, str):
+        if isinstance(fluid_ref, basestring):
             # TODO: Fix the backend extraction etc
             fluid_def = fluid_ref.split('::')
             if len(fluid_def)==2:
@@ -287,20 +374,20 @@ class BasePlot(object):
                 fluid = fluid_def[0]
             else: 
                 raise ValueError("This is not a valid fluid_ref string: {0:s}".format(str(fluid_ref)))
-            self._state = AbstractState(backend, fluid)
+            state = AbstractState(backend, fluid)
         elif isinstance(fluid_ref, AbstractState):
-            self._state = fluid_ref
+            state = fluid_ref
         else:
             raise TypeError("Invalid fluid_ref input, expected a string or an abstract state instance")
         
         # Process the graph_type and set self._x_type and self._y_type
         graph_type = graph_type.upper()
         graph_type = graph_type.replace(r'RHO',r'D')
-        if graph_type in self.PLOTS:
-            self._y_type = graph_type[0]
-            self._x_type = graph_type[1]
-        else:
+        if graph_type not in self.PLOTS:
             raise ValueError("Invalid graph_type input, expected a string from {0:s}".format(str(self.PLOTS)))
+        
+        # call the base class
+        super(BasePlot, self).__init__(graph_type[1], graph_type[0], state)
         
         # Process the unit_system and set self._system
         unit_system = unit_system.upper()
@@ -309,7 +396,7 @@ class BasePlot(object):
         else:
             raise ValueError("Invalid unit_system input, expected a string from {0:s}".format(str(self.UNIT_SYSTEMS.keys())))
         
-        self._axis = kwargs.get('axis', matplotlib.pyplot.gca())        
+        self._axis = kwargs.get('axis', plt.gca())        
         self.small = kwargs.get('small', 1e-5)
 
         self._colors = self.LINE_COLORS.copy()
@@ -327,7 +414,7 @@ class BasePlot(object):
         self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*value
         self._small   = value
 
-    def __sat_bounds(self, kind, smin=None, smax=None):
+    def _get_sat_bounds(self, kind, smin=None, smax=None):
         """Generates limits for the saturation line in either T or p determined
         by 'kind'. If xmin or xmax are provided, values will be checked
         against the allowable range for the EOS and a warning might be
@@ -372,6 +459,15 @@ class BasePlot(object):
         return (sat_min, sat_max)
     
     
+    def _get_iso_label(self, isoline, unit=True):
+        if self._system is not None:
+            dim = self._system.dimensions[isoline.i_index]
+            return str(r"$"+dim.symbol+"="+str(dim.from_SI(isoline.value))+ "$ "+dim.unit if unit else "$").strip()
+        return str(isoline.value).strip()
+        
+        
+    
+    
     def _get_sat_lines(self, kind='T', smin=None,
                        smax=None, num=500, x=[0., 1.]):
         """
@@ -392,8 +488,8 @@ class BasePlot(object):
                                       "'T' or 'P'"]))
 
         smin, smax = self.__sat_bounds(kind, smin=smin, smax=smax)
-        sat_range = numpy.linspace(smin, smax, num)
-        sat_mesh = numpy.array([sat_range for i in x])
+        sat_range = np.linspace(smin, smax, num)
+        sat_mesh = np.array([sat_range for i in x])
 
         x_vals = sat_mesh
         y_vals = sat_mesh
@@ -499,8 +595,38 @@ class BasePlot(object):
 
     def show(self):
         self._draw_graph()
-        matplotlib.pyplot.show()
+        plt.show()
         
     def savefig(self, *args, **kwargs):
         self._draw_graph()
-        matplotlib.pyplot.savefig(*args, **kwargs)
+        plt.savefig(*args, **kwargs)
+
+
+
+if __name__ == "__main__":
+    for sys in [SIunits(), KSIunits(), EURunits()]:
+        print(sys.H.label)
+        print(sys.H.to_SI(20))
+        print(sys.P.label)
+        print(sys.P.to_SI(20))
+        
+        #i_index, x_index, y_index, value=None, state=None)
+        iso = IsoLine('T','H','P')
+        print(iso._get_update_pair())
+        
+        state = AbstractState("HEOS","water")
+        iso = IsoLine('T','H','P', 300.0, state)
+        hr = PropsSI("H","T",[290,310],"P",[1e5,1e5],"water")
+        iso.calc_range(hr,np.array([0.9e5,1.1e5]))
+        print(iso.x,iso.y)        
+        
+        
+        #bp = BasePlot(fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
+        bp = BasePlot('n-Pentane', 'PH')
+        print(bp._get_sat_bounds('P'))
+        print(bp._get_iso_label(iso))
+        
+        
+        # get_update_pair(CoolProp.iP,CoolProp.iSmass,CoolProp.iT) -> (0,1,2,CoolProp.PSmass_INPUTS)
+        #other values require switching and swapping
+        #get_update_pair(CoolProp.iSmass,CoolProp.iP,CoolProp.iHmass) -> (1,0,2,CoolProp.PSmass_INPUTS)
