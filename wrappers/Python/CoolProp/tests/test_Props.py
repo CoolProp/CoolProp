@@ -2,7 +2,7 @@ import unittest
 from CoolProp.CoolProp import PropsSI
 import CoolProp
 import numpy as np
-       
+
 def test_input_types():
     for Fluid in ['Water']:
         for Tvals in [0.5*PropsSI(Fluid,'Tmin')+0.5*PropsSI(Fluid,'Tcrit'),

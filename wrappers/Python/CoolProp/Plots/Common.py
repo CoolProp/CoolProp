@@ -230,7 +230,8 @@ class IsoLine(Base2DObject):
       CoolProp.iHmass: { Base2DObject.TS:False, Base2DObject.PH:None , Base2DObject.HS:None , Base2DObject.PS:True , Base2DObject.PD:True , Base2DObject.TD:False, Base2DObject.PT:False},
       CoolProp.iP    : { Base2DObject.TS:False, Base2DObject.PH:None , Base2DObject.HS:False, Base2DObject.PS:None , Base2DObject.PD:None , Base2DObject.TD:False, Base2DObject.PT:None },
       CoolProp.iSmass: { Base2DObject.TS:None , Base2DObject.PH:True , Base2DObject.HS:None , Base2DObject.PS:None , Base2DObject.PD:True , Base2DObject.TD:False, Base2DObject.PT:True },
-      CoolProp.iT    : { Base2DObject.TS:None , Base2DObject.PH:True , Base2DObject.HS:False, Base2DObject.PS:False, Base2DObject.PD:False, Base2DObject.TD:None , Base2DObject.PT:None }
+      CoolProp.iT    : { Base2DObject.TS:None , Base2DObject.PH:True , Base2DObject.HS:False, Base2DObject.PS:False, Base2DObject.PD:False, Base2DObject.TD:None , Base2DObject.PT:None },
+      CoolProp.iQ    : { Base2DObject.TS:True , Base2DObject.PH:True , Base2DObject.HS:True , Base2DObject.PS:True , Base2DObject.PD:True , Base2DObject.TD:True , Base2DObject.PT:False}
     }
     
     def __init__(self, i_index, x_index, y_index, value=0.0, state=None):
@@ -267,6 +268,7 @@ class IsoLine(Base2DObject):
         """
         # Figure out if x or y-dimension should be used
         switch = self.XY_SWITCH[self.i_index][self.y_index*10+self.x_index]
+        
         if switch is None:
             raise ValueError("This isoline cannot be calculated!")
         elif switch is False:
@@ -300,48 +302,47 @@ class IsoLine(Base2DObject):
         vals  = [v for (_,v) in sorted(zip(order,[np.array(self.value), xvals       , yvals       ]))]
         
         if vals[0] is None or vals[1] is None:
-            raise ValueError("One required input is missing, make sure to supply the correct xvals or yvals: {0:s} - {1:s}".format(str(xvals),str(yvals)))
+            raise ValueError("One required input is missing, make sure to supply the correct xvals ({0:s}) or yvals ({1:s}).".format(str(xvals),str(yvals)))
          
         if vals[0].size > vals[1].size:
             vals[1] = np.resize(vals[1],vals[0].shape)
         elif vals[0].size < vals[1].size:
             vals[0] = np.resize(vals[0],vals[1].shape)
-            
-        it = np.nditer([vals[0], vals[1], None])
-        for x, y, z in it:
-            self.state.update(pair, x, y)
-            z[...] = self.state.keyed_output(idxs[2])
-            
+
+        vals[2] = np.empty_like(vals[0])
+        err = False
+        for index, _ in np.ndenumerate(vals[0]):
+            try:
+                self.state.update(pair, vals[0][index], vals[1][index])
+                vals[2][index] = self.state.keyed_output(idxs[2])
+            except Exception as e:
+                warnings.warn(
+                  "An error occurred for inputs {0:f}, {1:f} with index {2:s}: {3:s}".format(vals[0][index],vals[1][index],str(index),str(e)),
+                  UserWarning)
+                vals[2][index] = np.NaN
+                err = True            
+        
         for i,v in enumerate(idxs):
-            if v == self.x_index: self.x = it.operands[i]
-            if v == self.y_index: self.y = it.operands[i]
-        
+            if v == self.x_index: self.x = vals[i]
+            if v == self.y_index: self.y = vals[i]
             
-
-        
-        
-        
-        
-                        
-        
-        
-        
-
+            
+            
 
 
 class BasePlot(Base2DObject):
     """The base class for all plots. It can be instantiated itself, but provides many 
     general facilities to be used in the different plots. """
-    #__metaclass__ = ABCMeta
+    __metaclass__ = ABCMeta
     
     # Define the iteration keys
     PROPERTIES = {
-      'D': 'density',
-      'H': 'specific enthalpy',
-      'P': 'pressure',
-      'S': 'specific entropy',
-      'T': 'temperature',
-      'U': 'specific internal energy'
+      CoolProp.iDmass: 'density',
+      CoolProp.iHmass: 'specific enthalpy',
+      CoolProp.iP    : 'pressure',
+      CoolProp.iSmass: 'specific entropy',
+      CoolProp.iT    : 'temperature',
+      CoolProp.iUmass: 'specific internal energy'
     }
     
     # Define the unit systems
@@ -352,12 +353,12 @@ class BasePlot(Base2DObject):
     }
     
     LINE_COLORS = {
-      'T': 'Darkred',
-      'P': 'DarkCyan',
-      'H': 'DarkGreen',
-      'D': 'DarkBlue',
-      'S': 'DarkOrange',
-      'Q': 'black'
+      CoolProp.iT    : 'Darkred',
+      CoolProp.iP    : 'DarkCyan',
+      CoolProp.iHmass: 'DarkGreen',
+      CoolProp.iDmass: 'DarkBlue',
+      CoolProp.iSmass: 'DarkOrange',
+      CoolProp.iQ    : 'black'
     }
 
     def __init__(self, fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
@@ -396,16 +397,15 @@ class BasePlot(Base2DObject):
         else:
             raise ValueError("Invalid unit_system input, expected a string from {0:s}".format(str(self.UNIT_SYSTEMS.keys())))
         
-        self._axis = kwargs.get('axis', plt.gca())        
-        self.small = kwargs.get('small', 1e-5)
+        self.axis   = kwargs.get('axis', plt.gca())        
+        self.small  = kwargs.get('small', 1e-5)
+        self.colors =  kwargs.get('colors', None)
 
-        self._colors = self.LINE_COLORS.copy()
-        colors = kwargs.get('colors', None)
-        if colors is not None:
-            self._colors.update(colors)
+    @property
+    def axis(self): return self._axis
+    @axis.setter
+    def axis(self, value): self._axis = value
         
-        self._graph_drawn = False
-
     @property
     def small(self): return self._small
     @small.setter
@@ -413,6 +413,21 @@ class BasePlot(Base2DObject):
         self._T_small = self._state.trivial_keyed_output(CoolProp.iT_critical)*value
         self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*value
         self._small   = value
+        
+    @property
+    def colors(self): return self._colors
+    @colors.setter
+    def colors(self, value):
+        self._colors = self.LINE_COLORS.copy()
+        if value is not None:
+            self._colors.update(value)
+            
+    def __sat_bounds(self, kind, smin=None, smax=None):
+        warnings.warn(
+          "You called the deprecated function \"__sat_bounds\", \
+consider replacing it with \"_get_sat_bounds\".",
+          DeprecationWarning)
+        return self._get_sat_bounds(kind, smin, smax)
 
     def _get_sat_bounds(self, kind, smin=None, smax=None):
         """Generates limits for the saturation line in either T or p determined
@@ -424,11 +439,11 @@ class BasePlot(Base2DObject):
         T_triple = self._state.trivial_keyed_output(CoolProp.iT_triple)
         T_min    = self._state.trivial_keyed_output(CoolProp.iT_min)        
         self._state.update(CoolProp.QT_INPUTS, 0, max([T_triple,T_min])+self._T_small)
-        kind = kind.upper()
-        if kind == 'P':
+        kind = self._get_index(kind)
+        if kind == CoolProp.iP:
             fluid_min = self._state.keyed_output(CoolProp.iP)
             fluid_max = self._state.trivial_keyed_output(CoolProp.iP_critical)-self._P_small
-        elif kind == 'T':
+        elif kind == CoolProp.iT:
             fluid_min = self._state.keyed_output(CoolProp.iT)
             fluid_max = self._state.trivial_keyed_output(CoolProp.iT_critical)-self._T_small
         else:
@@ -465,111 +480,49 @@ class BasePlot(Base2DObject):
             return str(r"$"+dim.symbol+"="+str(dim.from_SI(isoline.value))+ "$ "+dim.unit if unit else "$").strip()
         return str(isoline.value).strip()
         
-        
-    
-    
-    def _get_sat_lines(self, kind='T', smin=None,
-                       smax=None, num=500, x=[0., 1.]):
-        """
-        Calculates bubble and dew line in the quantities for your plot.
-        You can specify if you need evenly spaced entries in either
-        pressure or temperature by supplying kind='p' and kind='T'
-        (default), respectively.
-        Limits can be set with kmin (default: triple point or EOS minimum) and
-        kmax (default: critical value).
-        Returns lines[] - a 2D array of dicts containing 'x' and 'y'
-        coordinates for bubble and dew line. Additionally, the dict holds
-        the keys 'kmax', 'label' and 'opts', those can be used for plotting
-        as well.
-        """
-        if not kind.upper() in ['T', 'P']:
-            raise ValueError(''.join(["Invalid input for determining the ",
-                                      "saturation lines... Expected either ",
-                                      "'T' or 'P'"]))
+    #def _get_phase_envelope(self):
+    #    
+    #HEOS = CoolProp.AbstractState("HEOS", fluid)
+    #HEOS.build_phase_envelope("")
+    #PED = HEOS.get_phase_envelope_data()
+    #plt.plot(PED.T, np.log(PED.p))
+    #plt.show()
 
-        smin, smax = self.__sat_bounds(kind, smin=smin, smax=smax)
-        sat_range = np.linspace(smin, smax, num)
-        sat_mesh = np.array([sat_range for i in x])
-
-        x_vals = sat_mesh
-        y_vals = sat_mesh
-        if self.graph_type[1] != kind:
-            _, x_vals = self._get_fluid_data(self.graph_type[1],
-                                             'Q', x,
-                                             kind, sat_mesh)
-
-        if self.graph_type[0] != kind:
-            _, y_vals = self._get_fluid_data(self.graph_type[0],
-                                             'Q', x,
-                                             kind, sat_mesh)
-                                             
-        if self.unit_system == 'KSI':
-            x_vals *= self.KSI_SCALE_FACTOR[self.graph_type[1]]
-            y_vals *= self.KSI_SCALE_FACTOR[self.graph_type[0]]
-
-        # Merge the two lines, capital Y holds important information.
-        # We merge on X values
-        # Every entry, eg. Xy, contains two arrays of values.
-        sat_lines = []
-        for i in range(len(x_vals)): # two dimensions: i = {0,1}
-            line = {'x': x_vals[i],
-                    'y': y_vals[i],
-                    'smax': smax}
-
-            line['label'] = self.SYMBOL_MAP_KSI['Q'][0] + str(x[i])
-            line['type'] = 'Q'
-            line['value'] = x[i]
-            line['unit'] = self.SYMBOL_MAP_KSI['Q'][1]
-            line['opts'] = {'color': self.COLOR_MAP['Q'],
-                            'lw': 1.0}
-
-            if x[i] == 0.:
-                line['label'] = 'bubble line'
-            elif x[i] == 1.:
-                line['label'] = 'dew line'
-            else:
-                line['opts']['lw'] = 0.75
-                line['opts']['alpha'] = 0.5
-
-            sat_lines.append(line)
-
-        return sat_lines
 
     def _plot_default_annotations(self):
-        def filter_fluid_ref(fluid_ref):
-            fluid_ref_string = fluid_ref
-            if fluid_ref.startswith('REFPROP-MIX'):
-                end = 0
-                fluid_ref_string = ''
-                while fluid_ref.find('[', end + 1) != -1:
-                    start = fluid_ref.find('&', end + 1)
-                    if end == 0:
-                        start = fluid_ref.find(':', end + 1)
-                    end = fluid_ref.find('[', end + 1)
-                    fluid_ref_string = ' '.join([fluid_ref_string,
-                                                fluid_ref[start+1:end], '+'])
-                fluid_ref_string = fluid_ref_string[0:len(fluid_ref_string)-2]
-            return fluid_ref_string
-
-        if len(self.graph_type) == 2:
-            y_axis_id = self.graph_type[0]
-            x_axis_id = self.graph_type[1]
-        else:
-            y_axis_id = self.graph_type[0]
-            x_axis_id = self.graph_type[1:len(self.graph_type)]
-
-        tl_str = "%s - %s Graph for %s"
-        if not self.axis.get_title():
-            self.axis.set_title(tl_str % (self.AXIS_LABELS[self.unit_system][y_axis_id][0],
-                                          self.AXIS_LABELS[self.unit_system][x_axis_id][0],
-                                          filter_fluid_ref(self.fluid_ref)))
+#         def filter_fluid_ref(fluid_ref):
+#             fluid_ref_string = fluid_ref
+#             if fluid_ref.startswith('REFPROP-MIX'):
+#                 end = 0
+#                 fluid_ref_string = ''
+#                 while fluid_ref.find('[', end + 1) != -1:
+#                     start = fluid_ref.find('&', end + 1)
+#                     if end == 0:
+#                         start = fluid_ref.find(':', end + 1)
+#                     end = fluid_ref.find('[', end + 1)
+#                     fluid_ref_string = ' '.join([fluid_ref_string,
+#                                                 fluid_ref[start+1:end], '+'])
+#                 fluid_ref_string = fluid_ref_string[0:len(fluid_ref_string)-2]
+#             return fluid_ref_string
+# 
+#         if len(self.graph_type) == 2:
+#             y_axis_id = self.graph_type[0]
+#             x_axis_id = self.graph_type[1]
+#         else:
+#             y_axis_id = self.graph_type[0]
+#             x_axis_id = self.graph_type[1:len(self.graph_type)]
+# 
+#         tl_str = "%s - %s Graph for %s"
+#         if not self.axis.get_title():
+#             self.axis.set_title(tl_str % (self.AXIS_LABELS[self.unit_system][y_axis_id][0],
+#                                           self.AXIS_LABELS[self.unit_system][x_axis_id][0],
+#                                           filter_fluid_ref(self.fluid_ref)))
         if not self.axis.get_xlabel():
-            self.axis.set_xlabel(' '.join(self.AXIS_LABELS[self.unit_system][x_axis_id]))
+            dim = self._system.dimensions[self._x_index]
+            self.xlabel(str(dim.label+" $"+dim.symbol+"$ / "+dim.unit).strip())
         if not self.axis.get_ylabel():
-            self.axis.set_ylabel(' '.join(self.AXIS_LABELS[self.unit_system][y_axis_id]))
-
-    def _draw_graph(self):
-        return
+            dim = self._system.dimensions[self._y_index]
+            self.ylabel(str(dim.label+" $"+dim.symbol+"$ / "+dim.unit).strip())
 
     def title(self, title):
         self.axis.set_title(title)
@@ -588,10 +541,73 @@ class BasePlot(Base2DObject):
             self.axis.grid(b)
         else:
             self.axis.grid(kwargs)
-
+            
+        
     def set_axis_limits(self, limits):
+        """Set the limits of the internal axis object based on the active units,
+        takes [xmin, xmax, ymin, ymax]"""
         self.axis.set_xlim([limits[0], limits[1]])
         self.axis.set_ylim([limits[2], limits[3]])
+        
+    def _set_axis_limits(self, limits):
+        """Set the limits of the internal axis object based on SI units,
+        takes [xmin, xmax, ymin, ymax]"""
+        dim = self._system.dimensions[self._x_index]
+        self.axis.set_xlim([dim.from_SI(limits[0]), dim.from_SI(limits[1])])
+        dim = self._system.dimensions[self._y_index]
+        self.axis.set_ylim([dim.from_SI(limits[2]), dim.from_SI(limits[3])])
+        
+    def get_axis_limits(self,x_index=None,y_index=None):
+        """Returns the previously set limits or generates them and 
+        converts the default values to the selected unit system.
+        Returns a list containing [xmin, xmax, ymin, ymax]"""
+        if x_index is None: x_index = self._x_index
+        if y_index is None: y_index = self._y_index
+        if x_index != self.x_index or y_index != self.y_index  or \
+           self.axis.get_autoscalex_on() or self.axis.get_autoscaley_on():
+            # One of them is not set. 
+            T_lo,T_hi = self._get_sat_bounds(CoolProp.iT)
+            P_lo,P_hi = self._get_sat_bounds(CoolProp.iP)
+            X=[0.0]*4; Y=[0.0]*4
+            i = -1
+            for T in [1.1*T_lo, min([1.75*T_hi,self._state.trivial_keyed_output(CoolProp.iT_max)])]:
+                for P in [1.1*P_lo, 1.75*P_hi]:
+                    i+=1
+                    self._state.update(CoolProp.PT_INPUTS, P, T)
+                    # TODO: include a check for P and T?
+                    X[i] = self._state.keyed_output(x_index)
+                    Y[i] = self._state.keyed_output(y_index)
+            
+            if self.axis.get_autoscalex_on() and x_index == self._x_index:
+                dim = self._system.dimensions[self._x_index]
+                self.axis.set_xlim([dim.from_SI(min(X)),dim.from_SI(max(X))])
+            
+            if self.axis.get_autoscaley_on() and y_index == self._y_index:
+                dim = self._system.dimensions[self._y_index]
+                self.axis.set_ylim([dim.from_SI(min(Y)),dim.from_SI(max(Y))])
+                
+        return [dim.from_SI(min(X)),dim.from_SI(max(X)),dim.from_SI(min(Y)),dim.from_SI(max(Y))]
+    
+    def _get_axis_limits(self,x_index=None,y_index=None):
+        """Get the limits of the internal axis object in SI units
+        Returns a list containing [xmin, xmax, ymin, ymax]"""
+        if x_index is None: x_index = self._x_index
+        if y_index is None: y_index = self._y_index
+        limits = self.get_axis_limits(x_index,y_index)
+        dim = self._system.dimensions[x_index]
+        limits[0] = dim.to_SI(limits[0])
+        limits[1] = dim.to_SI(limits[1])
+        dim = self._system.dimensions[y_index]
+        limits[2] = dim.to_SI(limits[2])
+        limits[3] = dim.to_SI(limits[3])
+        return limits
+    
+    
+    def generate_ranges(self, itype, imin, imax, num):
+        """Generate a range for a certain property"""
+        if itype in [CoolProp.iP, CoolProp.iDmass]:
+            return np.logspace(np.log2(imin),np.log2(imax),num=num,base=2.)
+        return np.linspace(imin, imax, num=num)
 
     def show(self):
         self._draw_graph()
@@ -610,21 +626,28 @@ if __name__ == "__main__":
         print(sys.P.label)
         print(sys.P.to_SI(20))
         
-        #i_index, x_index, y_index, value=None, state=None)
-        iso = IsoLine('T','H','P')
-        print(iso._get_update_pair())
-        
-        state = AbstractState("HEOS","water")
-        iso = IsoLine('T','H','P', 300.0, state)
-        hr = PropsSI("H","T",[290,310],"P",[1e5,1e5],"water")
-        iso.calc_range(hr,np.array([0.9e5,1.1e5]))
-        print(iso.x,iso.y)        
-        
-        
-        #bp = BasePlot(fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
-        bp = BasePlot('n-Pentane', 'PH')
-        print(bp._get_sat_bounds('P'))
-        print(bp._get_iso_label(iso))
+    #i_index, x_index, y_index, value=None, state=None)
+    iso = IsoLine('T','H','P')
+    print(iso._get_update_pair())
+    
+    state = AbstractState("HEOS","water")
+    iso = IsoLine('T','H','P', 300.0, state)
+    hr = PropsSI("H","T",[290,310],"P",[1e5,1e5],"water")
+    pr = np.linspace(0.9e5,1.1e5,3)
+    iso.calc_range(hr,pr)
+    print(iso.x,iso.y)
+    
+    iso = IsoLine('Q','H','P', 0.0, state)
+    iso.calc_range(hr,pr); print(iso.x,iso.y)
+    iso = IsoLine('Q','H','P', 1.0, state)
+    iso.calc_range(hr,pr); print(iso.x,iso.y)
+    
+    
+    #bp = BasePlot(fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
+    bp = BasePlot('n-Pentane', 'PH', unit_system='EUR')
+    print(bp._get_sat_bounds('P'))
+    print(bp._get_iso_label(iso))
+    print(bp.get_axis_limits())
         
         
         # get_update_pair(CoolProp.iP,CoolProp.iSmass,CoolProp.iT) -> (0,1,2,CoolProp.PSmass_INPUTS)

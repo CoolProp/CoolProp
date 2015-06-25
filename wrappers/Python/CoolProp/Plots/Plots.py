@@ -7,9 +7,11 @@ from scipy.interpolate import interp1d
 
 import CoolProp.CoolProp as CP
 
-from .Common import BasePlot
 from scipy import interpolate
 from scipy.spatial.kdtree import KDTree
+import warnings
+from CoolProp.Plots.Common import IsoLine,BasePlot
+import CoolProp
 
 
 
@@ -144,6 +146,7 @@ def drawLines(Ref,lines,axis,plt_kwargs=None):
     Returns an array of line objects that can be used to change
     the colour or style afterwards.
     """
+    warnings.warn("You called the deprecated function \"drawLines\".",DeprecationWarning)
     if not plt_kwargs is None:
         for line in lines:
             line['opts'] = plt_kwargs
@@ -171,6 +174,90 @@ def drawLines(Ref,lines,axis,plt_kwargs=None):
 
     return plottedLines
 
+
+
+class PropertyPlot(BasePlot):
+    
+    def __init__(self, fluid_name, graph_type, units = 'KSI', **kwargs):
+        super(PropertyPlot, self).__init__(fluid_name, graph_type, unit_system=units, **kwargs)
+        self._isolines = {}
+        
+    @property
+    def isolines(self): return self._isolines
+    
+    def _plotRound(self, values):
+        """
+        A function round an array-like object while maintaining the
+        amount of entries. This is needed for the isolines since we
+        want the labels to look pretty (=rounding), but we do not
+        know the spacing of the lines. A fixed number of digits after
+        rounding might lead to reduced array size.
+        """
+        inVal   = numpy.unique(numpy.sort(numpy.array(values)))
+        output  = inVal[1:] * 0.0
+        digits  = -1
+        limit   = 10
+        lim     = inVal * 0.0 + 10
+        # remove less from the numbers until same length,
+        # more than 10 significant digits does not really
+        # make sense, does it?
+        while len(inVal) > len(output) and digits < limit:
+            digits += 1
+            val     = ( numpy.around(numpy.log10(numpy.abs(inVal))) * -1) + digits + 1
+            val     = numpy.where(val < lim, val,  lim)
+            val     = numpy.where(val >-lim, val, -lim)
+            output  = numpy.zeros(inVal.shape)
+            for i in range(len(inVal)):
+                output[i] = numpy.around(inVal[i],decimals=int(val[i]))
+            output = numpy.unique(output)
+        return output
+        
+    def calc_isolines(self, iso_type, iso_range, num=10, rounding=False, points=200):
+        """Calculate lines with constant values of type 'iso_type' in terms of x and y as
+        defined by the plot object. 'iso_range' either is a collection of values or 
+        simply the minimum and maximum value between which 'num' lines get calculated.
+        The 'rounding' parameter can be used to generate prettier labels if needed.
+        """
+        
+        if iso_range is None or (len(iso_range) == 1 and num != 1):
+            raise ValueError('Automatic interval detection for isoline \
+                              boundaries is not supported yet, use the \
+                              iso_range=[min, max] parameter.')
+
+        if len(iso_range) == 2 and num is None:
+            raise ValueError('Please specify the number of isoline you want \
+                              e.g. num=10')
+
+        if iso_type == 'all':
+            for i_type in IsoLine.XY_SWITCH:
+                if IsoLine.XY_SWITCH[i_type].get(self.y_index*10+self.x_index,None) is not None:
+                    # TODO implement the automatic interval detection.
+                    limits = self._get_axis_limits(i_type, CoolProp.iT)
+                    self.calc_isolines(i_type, [limits[0],limits[1]], num, rounding, points)
+                    
+        iso_range = numpy.sort(numpy.unique(iso_range))
+        # Generate iso ranges
+        if len(iso_range) == 2:
+            iso_range = self.generate_ranges(iso_type, iso_range[0], iso_range[1], num)
+        if rounding:
+            iso_range = self._plotRound(iso_range)
+        
+        limits = self._get_axis_limits()
+        
+        ixrange = self.generate_ranges(self._x_index,limits[0],limits[1],points)
+        iyrange = self.generate_ranges(self._y_index,limits[2],limits[3],points)
+        
+        dim = self._system.dimensions[iso_type]
+        
+        lines  = []
+        for i in range(num):
+            lines.append(IsoLine(iso_type,self._x_index,self._y_index, value=dim.to_SI(iso_range[i]), state=self._state))
+            lines[-1].calc_range(ixrange,iyrange)
+            
+        self._isolines[iso_type] = lines 
+       
+        
+    
 
 class IsoLines(BasePlot):
     def __init__(self, fluid_ref, graph_type, iso_type, unit_system='SI', **kwargs):
@@ -663,3 +750,10 @@ def drawIsoLines(Ref, plot, which, iValues=[], num=0, show=False, axis=None):
     if show:
         isolines.show()
     return lines
+
+
+if __name__ == "__main__":
+    plot = PropertyPlot('n-Pentane', 'PH', units='EUR')
+    plot.calc_isolines(CoolProp.iT, [20,80], num=2, rounding=False, points=5)
+    for i in plot.isolines:
+        print(plot.isolines[i][0].x,plot.isolines[i][0].y)
