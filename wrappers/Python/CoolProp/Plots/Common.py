@@ -191,11 +191,13 @@ class Base2DObject(object):
 #     @property
 #     def PU(self): return CoolProp.iP*10     + CoolProp.iUmass
 
-    def __init__(self, x_type, y_type, state=None):
+    def __init__(self, x_type, y_type, state=None, small=None):
         self._x_index = self._get_index(x_type)
-        self._y_index = self._get_index(y_type)        
+        self._y_index = self._get_index(y_type)
+        if small is not None: self._small = small
+        else: self._small = 1e-5
         if state is not None: self.state = state
-        else: self._state = None 
+        else: self._state = None        
 
     # A list of supported plot
     @property
@@ -206,8 +208,12 @@ class Base2DObject(object):
     def state(self): return self._state
     @state.setter
     def state(self, value):
-        if isinstance(value, AbstractState): self._state = value
+        if isinstance(value, AbstractState):
+            self._state = value 
+            self._T_small = self._state.trivial_keyed_output(CoolProp.iT_critical)*self._small
+            self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*self._small
         else: raise TypeError("Invalid state input, expected an AbstractState instance.")
+
     
     def _get_index(self,prop):
         if isinstance(prop, basestring):
@@ -216,6 +222,50 @@ class Base2DObject(object):
             return prop
         else:
             raise ValueError("Invalid input, expected a string or an int, not {0:s}.".format(str(prop)))
+        
+    def _get_sat_bounds(self, kind, smin=None, smax=None):
+        """Generates limits for the saturation line in either T or p determined
+        by 'kind'. If xmin or xmax are provided, values will be checked
+        against the allowable range for the EOS and a warning might be
+        generated. Returns a tuple containing (xmin, xmax)"""
+
+        # TODO: REFPROP backend does not have ptriple.
+        T_triple = self._state.trivial_keyed_output(CoolProp.iT_triple)
+        T_min    = self._state.trivial_keyed_output(CoolProp.iT_min)        
+        self._state.update(CoolProp.QT_INPUTS, 0, max([T_triple,T_min])+self._T_small)
+        kind = self._get_index(kind)
+        if kind == CoolProp.iP:
+            fluid_min = self._state.keyed_output(CoolProp.iP)
+            fluid_max = self._state.trivial_keyed_output(CoolProp.iP_critical)-self._P_small
+        elif kind == CoolProp.iT:
+            fluid_min = self._state.keyed_output(CoolProp.iT)
+            fluid_max = self._state.trivial_keyed_output(CoolProp.iT_critical)-self._T_small
+        else:
+            raise ValueError("Saturation boundaries have to be defined in T or P, but not in {0:s}".format(str(kind)))
+                
+        if smin is not None: 
+            if fluid_min < smin < fluid_max:
+                sat_min = smin
+            else:
+                warnings.warn(
+                  "Your minimum {0:s} has been ignored, {1:f} is not between {2:f} and {3:f}".format(self.PROPERTIES[kind],smin,fluid_min,fluid_max),
+                  UserWarning)
+                sat_min = fluid_min
+        else:
+            sat_min = fluid_min
+            
+        if smax is not None: 
+            if fluid_min < smax < fluid_max:
+                sat_max = smax
+            else:
+                warnings.warn(
+                  "Your maximum {0:s} has been ignored, {1:f} is not between {2:f} and {3:f}".format(self.PROPERTIES[kind],smax,fluid_min,fluid_max),
+                  UserWarning)
+                sat_max = fluid_max
+        else:
+            sat_max = fluid_max
+
+        return (sat_min, sat_max)
     
 
 class IsoLine(Base2DObject):
@@ -294,13 +344,56 @@ class IsoLine(Base2DObject):
         else:
             raise ValueError("Check the code, this should not happen!")
     
-    def calc_range(self,xvals=None,yvals=None):
-        ipos,xpos,ypos,pair = self._get_update_pair()
+    def calc_sat_range(self,Trange=None,Prange=None,num=200):
+        if Trange is not None:
+            two = np.array(Trange)
+            one = np.resize(np.array(self.value),two.shape)
+            pair = CoolProp.QT_INPUTS
+        elif Prange is not None:
+            one = np.array(Prange)
+            two = np.resize(np.array(self.value),one.shape)
+            pair = CoolProp.PQ_INPUTS
+        else:
+            T_lo,T_hi = self._get_sat_bounds(CoolProp.iT)
+            two = np.linspace(T_lo,T_hi,num)
+            one = np.resize(np.array(self.value),two.shape)
+            pair = CoolProp.QT_INPUTS
         
+        X = np.empty_like(one)
+        Y = np.empty_like(one)
+        
+        err = False
+        for index, _ in np.ndenumerate(one):
+            try:
+                self.state.update(pair, one[index], two[index])
+                X[index] = self.state.keyed_output(self._x_index)
+                Y[index] = self.state.keyed_output(self._y_index)
+            except Exception as e:
+                warnings.warn(
+                  "An error occurred for inputs {0:f}, {1:f} with index {2:s}: {3:s}".format(one[index],two[index],str(index),str(e)),
+                  UserWarning)
+                X[index] = np.NaN
+                Y[index] = np.NaN
+                err = True            
+        
+        self.x = X; self.y = Y
+        return 
+        
+    def calc_range(self,xvals=None,yvals=None):
+        
+        if self.i_index == CoolProp.iQ:
+            warnings.warn(
+                "Please use \"calc_sat_range\" to calculate saturation and isoquality lines. Input ranges are discarded.",
+                UserWarning)
+            if xvals is not None: self.calc_sat_range(num=xvals.size)
+            elif yvals is not None: self.calc_sat_range(num=yvals.size)
+            else: self.calc_sat_range()
+            return 
+            
+        ipos,xpos,ypos,pair = self._get_update_pair()
         order = [ipos,xpos,ypos]
         idxs  = [v for (_,v) in sorted(zip(order,[self.i_index        , self.x_index, self.y_index]))]
         vals  = [v for (_,v) in sorted(zip(order,[np.array(self.value), xvals       , yvals       ]))]
-        
         if vals[0] is None or vals[1] is None:
             raise ValueError("One required input is missing, make sure to supply the correct xvals ({0:s}) or yvals ({1:s}).".format(str(xvals),str(yvals)))
          
@@ -397,22 +490,13 @@ class BasePlot(Base2DObject):
         else:
             raise ValueError("Invalid unit_system input, expected a string from {0:s}".format(str(self.UNIT_SYSTEMS.keys())))
         
-        self.axis   = kwargs.get('axis', plt.gca())        
-        self.small  = kwargs.get('small', 1e-5)
+        self.axis   = kwargs.get('axis', plt.gca())
         self.colors =  kwargs.get('colors', None)
 
     @property
     def axis(self): return self._axis
     @axis.setter
     def axis(self, value): self._axis = value
-        
-    @property
-    def small(self): return self._small
-    @small.setter
-    def small(self, value):
-        self._T_small = self._state.trivial_keyed_output(CoolProp.iT_critical)*value
-        self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*value
-        self._small   = value
         
     @property
     def colors(self): return self._colors
@@ -428,50 +512,6 @@ class BasePlot(Base2DObject):
 consider replacing it with \"_get_sat_bounds\".",
           DeprecationWarning)
         return self._get_sat_bounds(kind, smin, smax)
-
-    def _get_sat_bounds(self, kind, smin=None, smax=None):
-        """Generates limits for the saturation line in either T or p determined
-        by 'kind'. If xmin or xmax are provided, values will be checked
-        against the allowable range for the EOS and a warning might be
-        generated. Returns a tuple containing (xmin, xmax)"""
-
-        # TODO: REFPROP backend does not have ptriple.
-        T_triple = self._state.trivial_keyed_output(CoolProp.iT_triple)
-        T_min    = self._state.trivial_keyed_output(CoolProp.iT_min)        
-        self._state.update(CoolProp.QT_INPUTS, 0, max([T_triple,T_min])+self._T_small)
-        kind = self._get_index(kind)
-        if kind == CoolProp.iP:
-            fluid_min = self._state.keyed_output(CoolProp.iP)
-            fluid_max = self._state.trivial_keyed_output(CoolProp.iP_critical)-self._P_small
-        elif kind == CoolProp.iT:
-            fluid_min = self._state.keyed_output(CoolProp.iT)
-            fluid_max = self._state.trivial_keyed_output(CoolProp.iT_critical)-self._T_small
-        else:
-            raise ValueError("Saturation boundaries have to be defined in T or P, but not in {0:s}".format(str(kind)))
-                
-        if smin is not None: 
-            if fluid_min < smin < fluid_max:
-                sat_min = smin
-            else:
-                warnings.warn(
-                  "Your minimum {0:s} has been ignored, {1:f} is not between {2:f} and {3:f}".format(self.PROPERTIES[kind],smin,fluid_min,fluid_max),
-                  UserWarning)
-                sat_min = fluid_min
-        else:
-            sat_min = fluid_min
-            
-        if smax is not None: 
-            if fluid_min < smax < fluid_max:
-                sat_max = smax
-            else:
-                warnings.warn(
-                  "Your maximum {0:s} has been ignored, {1:f} is not between {2:f} and {3:f}".format(self.PROPERTIES[kind],smax,fluid_min,fluid_max),
-                  UserWarning)
-                sat_max = fluid_max
-        else:
-            sat_max = fluid_max
-
-        return (sat_min, sat_max)
     
     
     def _get_iso_label(self, isoline, unit=True):
@@ -564,8 +604,8 @@ consider replacing it with \"_get_sat_bounds\".",
         if x_index is None: x_index = self._x_index
         if y_index is None: y_index = self._y_index
         if x_index != self.x_index or y_index != self.y_index  or \
-           self.axis.get_autoscalex_on() or self.axis.get_autoscaley_on():
-            # One of them is not set. 
+          self.axis.get_autoscalex_on() or self.axis.get_autoscaley_on():
+            # One of them is not set or we work on a different set of axes
             T_lo,T_hi = self._get_sat_bounds(CoolProp.iT)
             P_lo,P_hi = self._get_sat_bounds(CoolProp.iP)
             X=[0.0]*4; Y=[0.0]*4
@@ -578,15 +618,27 @@ consider replacing it with \"_get_sat_bounds\".",
                     X[i] = self._state.keyed_output(x_index)
                     Y[i] = self._state.keyed_output(y_index)
             
-            if self.axis.get_autoscalex_on() and x_index == self._x_index:
-                dim = self._system.dimensions[self._x_index]
-                self.axis.set_xlim([dim.from_SI(min(X)),dim.from_SI(max(X))])
-            
-            if self.axis.get_autoscaley_on() and y_index == self._y_index:
-                dim = self._system.dimensions[self._y_index]
-                self.axis.set_ylim([dim.from_SI(min(Y)),dim.from_SI(max(Y))])
+            # Figure out what to update
+            dim = self._system.dimensions[self._x_index]
+            x_lim = [dim.from_SI(min(X)),dim.from_SI(max(X))]
+            dim = self._system.dimensions[self._y_index]
+            y_lim = [dim.from_SI(min(Y)),dim.from_SI(max(Y))]
+            # Either update the axes limits or get them
+            if x_index == self._x_index:
+                if self.axis.get_autoscalex_on():
+                    self.axis.set_xlim(x_lim)
+                else:
+                    x_lim = self.axis.get_xlim()
+            if y_index == self._y_index:
+                if self.axis.get_autoscaley_on():
+                    self.axis.set_ylim(y_lim)
+                else:
+                    y_lim = self.axis.get_ylim()
+        else: # We only asked for the real axes limits and they are set already
+            x_lim = self.axis.get_xlim()
+            y_lim = self.axis.get_ylim()
                 
-        return [dim.from_SI(min(X)),dim.from_SI(max(X)),dim.from_SI(min(Y)),dim.from_SI(max(Y))]
+        return [x_lim[0],x_lim[1],y_lim[0],y_lim[1]]
     
     def _get_axis_limits(self,x_index=None,y_index=None):
         """Get the limits of the internal axis object in SI units

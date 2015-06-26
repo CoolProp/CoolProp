@@ -754,6 +754,7 @@ def drawIsoLines(Ref, plot, which, iValues=[], num=0, show=False, axis=None):
 
 if __name__ == "__main__":
     plot = PropertyPlot('n-Pentane', 'PH', units='EUR')
-    plot.calc_isolines(CoolProp.iT, [20,80], num=2, rounding=False, points=5)
+    plot.calc_isolines(CoolProp.iT, [20,80]  , num=2, rounding=False, points=4)
+    plot.calc_isolines(CoolProp.iQ, [0.0,1.0], num=11, rounding=False, points=4)
     for i in plot.isolines:
         print(plot.isolines[i][0].x,plot.isolines[i][0].y)
