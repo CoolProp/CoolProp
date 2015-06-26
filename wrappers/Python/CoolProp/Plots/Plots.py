@@ -12,6 +12,7 @@ from scipy.spatial.kdtree import KDTree
 import warnings
 from CoolProp.Plots.Common import IsoLine,BasePlot
 import CoolProp
+import sys
 
 
 
@@ -181,6 +182,8 @@ class PropertyPlot(BasePlot):
     def __init__(self, fluid_name, graph_type, units = 'KSI', **kwargs):
         super(PropertyPlot, self).__init__(fluid_name, graph_type, unit_system=units, **kwargs)
         self._isolines = {}
+        self.get_axis_limits()
+        self._plot_default_annotations()
         
     @property
     def isolines(self): return self._isolines
@@ -212,7 +215,7 @@ class PropertyPlot(BasePlot):
             output = numpy.unique(output)
         return output
         
-    def calc_isolines(self, iso_type, iso_range, num=10, rounding=False, points=200):
+    def calc_isolines(self, iso_type, iso_range, num=15, rounding=False, points=200):
         """Calculate lines with constant values of type 'iso_type' in terms of x and y as
         defined by the plot object. 'iso_range' either is a collection of values or 
         simply the minimum and maximum value between which 'num' lines get calculated.
@@ -242,6 +245,7 @@ class PropertyPlot(BasePlot):
         if rounding:
             iso_range = self._plotRound(iso_range)
         
+        # Limits are alreadyin SI units
         limits = self._get_axis_limits()
         
         ixrange = self.generate_ranges(self._x_index,limits[0],limits[1],points)
@@ -256,7 +260,23 @@ class PropertyPlot(BasePlot):
             
         self._isolines[iso_type] = lines 
        
-        
+    def draw_isolines(self):
+        for i in self.isolines:
+            props = self.props[i]
+            dimx = self._system.dimensions[self._x_index]
+            dimy = self._system.dimensions[self._y_index]
+            for line in self.isolines[i]:
+                if line.i_index == CoolProp.iQ and \
+                  (line.value == 0.0 or line.value == 1.0):
+                    plot_props = props.copy()
+                    if 'lw' in plot_props: plot_props['lw'] *= 2.0
+                    else: plot_props['lw'] = 1.0
+                    if 'alpha' in plot_props: plot_props['alpha'] *= 2.0
+                    else: plot_props['alpha'] = 1.0
+                else:
+                    plot_props = props
+                self.axis.plot(dimx.from_SI(line.x),dimy.from_SI(line.y),**plot_props)
+            
     
 
 class IsoLines(BasePlot):
@@ -754,7 +774,15 @@ def drawIsoLines(Ref, plot, which, iValues=[], num=0, show=False, axis=None):
 
 if __name__ == "__main__":
     plot = PropertyPlot('n-Pentane', 'PH', units='EUR')
-    plot.calc_isolines(CoolProp.iT, [20,80]  , num=2, rounding=False, points=4)
-    plot.calc_isolines(CoolProp.iQ, [0.0,1.0], num=11, rounding=False, points=4)
-    for i in plot.isolines:
-        print(plot.isolines[i][0].x,plot.isolines[i][0].y)
+    Ts = plot.get_axis_limits(CoolProp.iT, CoolProp.iSmass)
+    TD = plot.get_axis_limits(CoolProp.iT, CoolProp.iDmass)
+    #sys.exit(0)
+    plot.calc_isolines(CoolProp.iT,     Ts[0:2])
+    plot.calc_isolines(CoolProp.iQ,     [0.0,1.0], num=11)
+    plot.calc_isolines(CoolProp.iSmass, Ts[2:4])
+    plot.calc_isolines(CoolProp.iDmass, TD[2:4])
+    #plot.calc_isolines('all', None)
+    plot.draw_isolines()
+    plot.savefig("Plots.pdf")
+    #for i in plot.isolines:
+    #    print(plot.isolines[i][0].x,plot.isolines[i][0].y)

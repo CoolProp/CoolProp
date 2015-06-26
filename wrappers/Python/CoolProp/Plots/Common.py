@@ -265,7 +265,7 @@ class Base2DObject(object):
         else:
             sat_max = fluid_max
 
-        return (sat_min, sat_max)
+        return sat_min, sat_max
     
 
 class IsoLine(Base2DObject):
@@ -391,9 +391,10 @@ class IsoLine(Base2DObject):
             return 
             
         ipos,xpos,ypos,pair = self._get_update_pair()
+        
         order = [ipos,xpos,ypos]
-        idxs  = [v for (_,v) in sorted(zip(order,[self.i_index        , self.x_index, self.y_index]))]
-        vals  = [v for (_,v) in sorted(zip(order,[np.array(self.value), xvals       , yvals       ]))]
+        idxs  = [v for (_,v) in sorted(zip(order,[self.i_index        , self.x_index , self.y_index ]))]
+        vals  = [v for (_,v) in sorted(zip(order,[np.array(self.value), xvals        , yvals        ]))]
         if vals[0] is None or vals[1] is None:
             raise ValueError("One required input is missing, make sure to supply the correct xvals ({0:s}) or yvals ({1:s}).".format(str(xvals),str(yvals)))
          
@@ -445,13 +446,13 @@ class BasePlot(Base2DObject):
       'EUR': EURunits()
     }
     
-    LINE_COLORS = {
-      CoolProp.iT    : 'Darkred',
-      CoolProp.iP    : 'DarkCyan',
-      CoolProp.iHmass: 'DarkGreen',
-      CoolProp.iDmass: 'DarkBlue',
-      CoolProp.iSmass: 'DarkOrange',
-      CoolProp.iQ    : 'black'
+    LINE_PROPS = {
+      CoolProp.iT    : dict(color='Darkred'   ,lw=0.5),
+      CoolProp.iP    : dict(color='DarkCyan'  ,lw=0.5),
+      CoolProp.iHmass: dict(color='DarkGreen' ,lw=0.5),
+      CoolProp.iDmass: dict(color='DarkBlue'  ,lw=0.5),
+      CoolProp.iSmass: dict(color='DarkOrange',lw=0.5),
+      CoolProp.iQ    : dict(color='black'     ,lw=0.5)
     }
 
     def __init__(self, fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
@@ -491,7 +492,7 @@ class BasePlot(Base2DObject):
             raise ValueError("Invalid unit_system input, expected a string from {0:s}".format(str(self.UNIT_SYSTEMS.keys())))
         
         self.axis   = kwargs.get('axis', plt.gca())
-        self.colors =  kwargs.get('colors', None)
+        self.props =  kwargs.get('props', None)
 
     @property
     def axis(self): return self._axis
@@ -499,12 +500,12 @@ class BasePlot(Base2DObject):
     def axis(self, value): self._axis = value
         
     @property
-    def colors(self): return self._colors
-    @colors.setter
-    def colors(self, value):
-        self._colors = self.LINE_COLORS.copy()
+    def props(self): return self._props
+    @props.setter
+    def props(self, value):
+        self._props = self.LINE_PROPS.copy()
         if value is not None:
-            self._colors.update(value)
+            self._props.update(value)
             
     def __sat_bounds(self, kind, smin=None, smax=None):
         warnings.warn(
@@ -557,6 +558,11 @@ consider replacing it with \"_get_sat_bounds\".",
 #             self.axis.set_title(tl_str % (self.AXIS_LABELS[self.unit_system][y_axis_id][0],
 #                                           self.AXIS_LABELS[self.unit_system][x_axis_id][0],
 #                                           filter_fluid_ref(self.fluid_ref)))
+        if self._x_index in [CoolProp.iDmass,CoolProp.iP]:
+            self.axis.set_xscale('log')
+        if self._y_index in [CoolProp.iDmass,CoolProp.iP]:
+            self.axis.set_yscale('log')
+        
         if not self.axis.get_xlabel():
             dim = self._system.dimensions[self._x_index]
             self.xlabel(str(dim.label+" $"+dim.symbol+"$ / "+dim.unit).strip())
@@ -603,6 +609,10 @@ consider replacing it with \"_get_sat_bounds\".",
         Returns a list containing [xmin, xmax, ymin, ymax]"""
         if x_index is None: x_index = self._x_index
         if y_index is None: y_index = self._y_index
+        
+        hi_factor = 2.0
+        lo_factor = 1.1
+        
         if x_index != self.x_index or y_index != self.y_index  or \
           self.axis.get_autoscalex_on() or self.axis.get_autoscaley_on():
             # One of them is not set or we work on a different set of axes
@@ -610,8 +620,8 @@ consider replacing it with \"_get_sat_bounds\".",
             P_lo,P_hi = self._get_sat_bounds(CoolProp.iP)
             X=[0.0]*4; Y=[0.0]*4
             i = -1
-            for T in [1.1*T_lo, min([1.75*T_hi,self._state.trivial_keyed_output(CoolProp.iT_max)])]:
-                for P in [1.1*P_lo, 1.75*P_hi]:
+            for T in [lo_factor*T_lo, min([hi_factor*T_hi,self._state.trivial_keyed_output(CoolProp.iT_max)])]:
+                for P in [lo_factor*P_lo, hi_factor*P_hi]:
                     i+=1
                     self._state.update(CoolProp.PT_INPUTS, P, T)
                     # TODO: include a check for P and T?
@@ -619,9 +629,9 @@ consider replacing it with \"_get_sat_bounds\".",
                     Y[i] = self._state.keyed_output(y_index)
             
             # Figure out what to update
-            dim = self._system.dimensions[self._x_index]
+            dim = self._system.dimensions[x_index]
             x_lim = [dim.from_SI(min(X)),dim.from_SI(max(X))]
-            dim = self._system.dimensions[self._y_index]
+            dim = self._system.dimensions[y_index]
             y_lim = [dim.from_SI(min(Y)),dim.from_SI(max(Y))]
             # Either update the axes limits or get them
             if x_index == self._x_index:
@@ -662,11 +672,11 @@ consider replacing it with \"_get_sat_bounds\".",
         return np.linspace(imin, imax, num=num)
 
     def show(self):
-        self._draw_graph()
+        plt.tight_layout()
         plt.show()
         
     def savefig(self, *args, **kwargs):
-        self._draw_graph()
+        plt.tight_layout()
         plt.savefig(*args, **kwargs)
 
 
