@@ -8,6 +8,8 @@
 #include "miniz.h"
 
 namespace CoolProp{
+
+
 /**
  * @brief 
  * @param table
@@ -314,6 +316,48 @@ void CoolProp::TabularBackend::load_tables(){
     load_table(pure_saturation, path_to_tables, "pure_saturation.bin.z");
     load_table(phase_envelope, path_to_tables, "phase_envelope.bin.z");
     if (get_debug_level() > 0){ std::cout << "Tables loaded" << std::endl; }
+}
+
+void CoolProp::TabularDataSet::write_tables(const std::string &path_to_tables)
+{
+    make_dirs(path_to_tables);
+    write_table(single_phase_logph, path_to_tables, "single_phase_logph");
+    write_table(single_phase_logpT, path_to_tables, "single_phase_logpT");
+    write_table(pure_saturation, path_to_tables, "pure_saturation");
+    write_table(phase_envelope, path_to_tables, "phase_envelope");
+}
+
+void CoolProp::TabularDataSet::load_tables(const std::string &path_to_tables, shared_ptr<CoolProp::AbstractState> &AS)
+{
+    single_phase_logph.AS = AS;
+    single_phase_logpT.AS = AS;
+    pure_saturation.AS = AS;
+    single_phase_logph.set_limits();
+    single_phase_logpT.set_limits();
+    load_table(single_phase_logph, path_to_tables, "single_phase_logph.bin.z");
+    load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin.z");
+    load_table(pure_saturation, path_to_tables, "pure_saturation.bin.z");
+    load_table(phase_envelope, path_to_tables, "phase_envelope.bin.z");
+    if (get_debug_level() > 0){ std::cout << "Tables loaded" << std::endl; }
+};
+
+/// Return the set of tabular datasets
+CoolProp::TabularDataSet const * CoolProp::TabularDataLibrary::get_set(shared_ptr<AbstractState> &AS)
+{
+    const std::string path = path_to_tables(AS);
+    // Try to find tabular set if it is already loaded
+    std::map<std::string, TabularDataSet>::iterator it = data.find(path);
+    // It is already in the map, return it
+    if (it != data.end()){
+        return &(it->second);
+    }
+    // It is not in the map, build it
+    else{
+        TabularDataSet set;
+        data.insert(std::pair<std::string, TabularDataSet>(path, set));
+        set.load_tables(path, AS);
+        return &(data[path]);
+    }
 }
 
 #if defined(ENABLE_CATCH)

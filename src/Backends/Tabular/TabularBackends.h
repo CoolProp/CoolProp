@@ -568,7 +568,6 @@ class TabularBackend : public AbstractState
 {
     protected:
         bool tables_loaded, using_single_phase_table, is_mixture;
-        shared_ptr<CoolProp::AbstractState> AS;
         enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE};
         selected_table_options selected_table;
         std::size_t cached_single_phase_i, cached_single_phase_j;
@@ -576,7 +575,7 @@ class TabularBackend : public AbstractState
         std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdx2, *d2zdxdy, *d2zdy2;
         std::vector<CoolPropDbl> mole_fractions;
     public:
-
+        shared_ptr<CoolProp::AbstractState> AS;
         TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), AS(AS), is_mixture(false) {
             selected_table = SELECTED_NO_TABLE;
             // Flush the cached indices (set to large number)
@@ -936,6 +935,36 @@ class TabularBackend : public AbstractState
                 throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
             }
         }
+};
+/// This class contains the data for one set of Tabular data including single-phase and two-phase data
+class TabularDataSet
+{
+public:
+    LogPHTable single_phase_logph;
+    LogPTTable single_phase_logpT;
+    PureFluidSaturationTableData pure_saturation;
+    PhaseEnvelopeData phase_envelope;
+    void write_tables(const std::string &path_to_tables);
+    void load_tables(const std::string &path_to_tables, shared_ptr<CoolProp::AbstractState> &AS);
+};
+
+class TabularDataLibrary
+{
+private:
+    std::map<std::string, TabularDataSet> data;
+public:
+    TabularDataLibrary(){};
+    std::string path_to_tables(shared_ptr<CoolProp::AbstractState> &AS){
+        std::vector<std::string> fluids = AS->fluid_names();
+        std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();
+        std::vector<std::string> components;
+        for (std::size_t i = 0; i < fluids.size(); ++i){
+            components.push_back(format("%s[%0.10Lf]", fluids[i].c_str(), fractions[i]));
+        }
+        return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(components, "&") + ")";
+    }
+    /// Return the set of tabular datasets
+    TabularDataSet const * get_set(shared_ptr<AbstractState> &AS);
 };
 
 } /* namespace CoolProp*/
