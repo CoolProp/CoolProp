@@ -20,6 +20,11 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
 
     // To start, set quality to value that is impossible
     _Q = -1000;
+
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
+    SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
     
     switch(input_pair){
         case HmolarP_INPUTS:{

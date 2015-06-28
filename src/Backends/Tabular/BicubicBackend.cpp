@@ -140,6 +140,7 @@ void CoolProp::BicubicBackend::build_coeffs(SinglePhaseGriddedTableData &table, 
 
 void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
 {
+    if (get_debug_level() > 0){ std::cout << format("update(%s,%g,%g)\n", get_input_pair_short_desc(input_pair).c_str(), val1, val2); }
 	// Clear cached values
 	clear();
 
@@ -152,6 +153,11 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
     cached_saturation_iL = std::numeric_limits<std::size_t>::max(); 
     cached_saturation_iV = std::numeric_limits<std::size_t>::max();
     
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
+    SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+
     switch(input_pair){
         case HmolarP_INPUTS:{
             _hmolar = val1; _p = val2;

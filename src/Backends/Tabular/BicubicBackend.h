@@ -131,6 +131,8 @@ class BicubicBackend : public TabularBackend
             // If a pure fluid, don't need to set fractions, go ahead and build
             if (this->AS->get_mole_fractions().size() == 1){
                 check_tables();
+                SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
+                SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
 			    build_coeffs(single_phase_logph, coeffs_ph);
 			    build_coeffs(single_phase_logpT, coeffs_pT);
                 is_mixture = false;
@@ -143,6 +145,8 @@ class BicubicBackend : public TabularBackend
             check_tables();
             // For mixtures, the construction of the coefficients is delayed until this 
             // function so that the set_mole_fractions function can be called
+            SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
+            SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             build_coeffs(single_phase_logph, coeffs_ph);
             build_coeffs(single_phase_logpT, coeffs_pT);
         };
@@ -168,9 +172,11 @@ class BicubicBackend : public TabularBackend
          */
         double evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny);
 		double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
+            SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             return evaluate_single_phase_derivative(single_phase_logph, coeffs_ph, output, _hmolar, _p, i, j, Nx, Ny);
         };
         double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
+            SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             return evaluate_single_phase_derivative(single_phase_logpT, coeffs_pT, output, _T, _p, i, j, Nx, Ny);
         };
         
@@ -187,9 +193,11 @@ class BicubicBackend : public TabularBackend
          */
 		double evaluate_single_phase(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, const parameters output, const double x, const double y, const std::size_t i, const std::size_t j);
         double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j){
+            SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
 			return evaluate_single_phase(single_phase_logph, coeffs_ph, output, _hmolar, _p, i, j);
 		};
         double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j){
+            SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
 			return evaluate_single_phase(single_phase_logpT, coeffs_pT, output, _T, _p, i, j);
 		};
         
@@ -204,9 +212,11 @@ class BicubicBackend : public TabularBackend
         double evaluate_single_phase_transport(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
         
         double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j){
+            SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             return evaluate_single_phase_transport(single_phase_logph, output, _hmolar, _p, i, j);
         };
 		double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j){
+            SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             return evaluate_single_phase_transport(single_phase_logpT, output, _T, _p, i, j);
         };
 
