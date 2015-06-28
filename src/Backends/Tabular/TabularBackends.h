@@ -703,6 +703,7 @@ class TabularBackend : public AbstractState
             return _Q*yV + (1-_Q)*yL;
         }
         CoolPropDbl calc_cpmolar_idealgas(void){
+            this->AS->set_T(_T);
             return this->AS->cp0molar();
         }
 

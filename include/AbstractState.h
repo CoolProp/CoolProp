@@ -372,6 +372,8 @@ public:
      */
     static AbstractState * factory(const std::string &backend, const std::vector<std::string> &fluid_names);
 
+    /// Set the internal variable T without a flash call (expert use only!)
+    void set_T(CoolPropDbl T){ _T = T; }
     /// Get a string representation of the backend
     virtual std::string backend_name(void) = 0;
     // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
