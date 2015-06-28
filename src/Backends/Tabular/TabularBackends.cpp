@@ -353,7 +353,12 @@ CoolPropDbl CoolProp::TabularBackend::calc_T(void){
         return _HUGE; // not needed, will never be hit, just to make compiler happy
     }
     else{
-        return pure_saturation.evaluate(iT, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        if (is_mixture){
+            return phase_envelope_sat(phase_envelope, iT, iP, _p);
+        }
+        else{
+            return pure_saturation.evaluate(iT, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        }
     }
 }
 CoolPropDbl CoolProp::TabularBackend::calc_rhomolar(void){
