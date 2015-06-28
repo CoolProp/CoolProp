@@ -559,6 +559,68 @@ class LogPTTable : public SinglePhaseGriddedTableData
         };
 };
 
+/// This structure holds the coefficients for one cell, the coefficients are stored in matrices
+/// and can be obtained by the get() function.  
+class CellCoeffs{
+private:
+    std::size_t alt_i, alt_j;
+    bool _valid, _has_valid_neighbor;
+public:
+    double dx_dxhat, dy_dyhat;
+    CellCoeffs(){
+        _valid = false; _has_valid_neighbor = false;
+        dx_dxhat = _HUGE; dy_dyhat = _HUGE;
+        alt_i = 9999999; alt_j = 9999999;
+    }
+    std::vector<double> T, rhomolar, hmolar, p, smolar, umolar;
+    /// Return a const reference to the desired matrix
+    const std::vector<double> & get(const parameters params) const
+    {
+        switch (params){
+        case iT: return T;
+        case iP: return p;
+        case iDmolar: return rhomolar;
+        case iHmolar: return hmolar;
+        case iSmolar: return smolar;
+        case iUmolar: return umolar;
+        default: throw KeyError(format("Invalid key to get() function of CellCoeffs"));
+        }
+    };
+    /// Set one of the matrices in this class
+    void set(parameters params, const std::vector<double> &mat){
+        switch (params){
+        case iT: T = mat; break;
+        case iP: p = mat; break;
+        case iDmolar: rhomolar = mat; break;
+        case iHmolar: hmolar = mat; break;
+        case iSmolar: smolar = mat; break;
+        case iUmolar: umolar = mat; break;
+        default: throw KeyError(format("Invalid key to set() function of CellCoeffs"));
+        }
+    };
+    /// Returns true if the cell coefficients seem to have been calculated properly
+    bool valid() const { return _valid; };
+    /// Call this function to set the valid flag to true
+    void set_valid(){ _valid = true; };
+    /// Call this function to set the valid flag to false
+    void set_invalid(){ _valid = false; };
+    /// Set the neighboring (alternate) cell to be used if the cell is invalid
+    void set_alternate(std::size_t i, std::size_t j){ alt_i = i; alt_j = j; _has_valid_neighbor = true; }
+    /// Get neighboring(alternate) cell to be used if this cell is invalid
+    void get_alternate(std::size_t &i, std::size_t &j) const {
+        if (_has_valid_neighbor){
+            i = alt_i; j = alt_j;
+        }
+        else{
+            throw ValueError("No valid neighbor");
+        }
+    }
+    /// Returns true if cell is invalid and it has valid neighbor
+    bool has_valid_neighbor() const{
+        return _has_valid_neighbor;
+    }
+};
+
 /// This class contains the data for one set of Tabular data including single-phase and two-phase data
 class TabularDataSet
 {
@@ -568,11 +630,17 @@ public:
     LogPTTable single_phase_logpT;
     PureFluidSaturationTableData pure_saturation;
     PhaseEnvelopeData phase_envelope;
+    std::vector<std::vector<CellCoeffs> > coeffs_ph, coeffs_pT;
 
     TabularDataSet(){ tables_loaded = false; }
+    /// Write the tables to files on the computer
     void write_tables(const std::string &path_to_tables);
+    /// Load the tables from file
     void load_tables(const std::string &path_to_tables, shared_ptr<CoolProp::AbstractState> &AS);
+    /// Build the tables (single-phase PH, single-phase PT, phase envelope, etc.)
     void build_tables(shared_ptr<CoolProp::AbstractState> &AS);
+    /// Build the \f$a_{i,j}\f$ coefficients for bicubic interpolation
+    void build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs);
 };
 
 class TabularDataLibrary
@@ -590,7 +658,7 @@ public:
         }
         return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(components, "&") + ")";
     }
-    /// Return the set of tabular datasets
+    /// Return a pointer to the set of tabular datasets
     TabularDataSet * get_set_of_tables(shared_ptr<AbstractState> &AS, bool &loaded);
 };
 
