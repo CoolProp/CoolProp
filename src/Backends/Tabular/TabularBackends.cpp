@@ -614,6 +614,7 @@ void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState> 
     }
     single_phase_logph.build(AS);
     single_phase_logpT.build(AS);
+    tables_loaded = true;
 }
 
 /// Return the set of tabular datasets
