@@ -786,7 +786,7 @@ class R(BaseParser):
         return l
 
     def header(self):
-        return 'dyn.load(paste("libCoolProp", .Platform$dynlib.ext, sep=""))\nsource("CoolProp.R")\ncacheMetaData(1)\n'
+        return 'dyn.load(paste("CoolProp", .Platform$dynlib.ext, sep=""))\nsource("CoolProp.R")\ncacheMetaData(1)\n'
 
 class MATLAB(BaseParser):
 
