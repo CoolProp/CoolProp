@@ -32,7 +32,7 @@ FUNCTION(chomp arg1 arg2)
     # see http://www.cmake.org/pipermail/cmake/2008-November/025423.html
     set(${arg2} ${arg1path} PARENT_SCOPE)
 ENDFUNCTION(chomp)
-
+STRING(STRIP ${R_HOME_TEXT} R_HOME_TEXT)
 MESSAGE(STATUS "R_HOME_TEXT = ${R_HOME_TEXT}")
 MESSAGE(STATUS "R_HOME_RESULT = ${R_HOME_RESULT}")
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/get_include.R R.home(component=\"include\"))
@@ -54,7 +54,7 @@ MESSAGE(STATUS "R_BIN_TEXT = ${R_BIN_DIR} w/ RESULT=${R_BIN_RESULT}")
 find_library (
           R_LIBRARY
           R
-          PATHS ${R_BIN_DIR}
+          PATHS ${R_BIN_DIR} ${R_HOME_TEXT}/lib
           NO_DEFAULT_PATH
           NO_CMAKE_PATH
           )
