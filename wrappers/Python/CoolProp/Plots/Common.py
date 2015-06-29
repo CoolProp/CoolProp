@@ -11,6 +11,7 @@ from CoolProp import AbstractState
 from CoolProp.CoolProp import PropsSI
 import CoolProp
 import warnings
+from scipy.interpolate.interpolate import interp1d
 
 
 class BaseQuantity(object):
@@ -195,7 +196,7 @@ class Base2DObject(object):
         self._x_index = self._get_index(x_type)
         self._y_index = self._get_index(y_type)
         if small is not None: self._small = small
-        else: self._small = 1e-5
+        else: self._small = 1e-7
         if state is not None: self.state = state
         else: self._state = None        
 
@@ -266,6 +267,7 @@ class Base2DObject(object):
             sat_max = fluid_max
 
         return sat_min, sat_max
+
     
 
 class IsoLine(Base2DObject):
@@ -283,6 +285,10 @@ class IsoLine(Base2DObject):
       CoolProp.iT    : { Base2DObject.TS:None , Base2DObject.PH:True , Base2DObject.HS:False, Base2DObject.PS:False, Base2DObject.PD:False, Base2DObject.TD:None , Base2DObject.PT:None },
       CoolProp.iQ    : { Base2DObject.TS:True , Base2DObject.PH:True , Base2DObject.HS:True , Base2DObject.PS:True , Base2DObject.PD:True , Base2DObject.TD:True , Base2DObject.PT:False}
     }
+    
+    # Abort interpolation if there are not enough 
+    # valid entries.
+    VALID_REQ = 5.0/100.0
     
     def __init__(self, i_index, x_index, y_index, value=0.0, state=None):
         super(IsoLine, self).__init__(x_index, y_index, state)
@@ -307,7 +313,7 @@ class IsoLine(Base2DObject):
     @y.setter
     def y(self, value): self._y = np.array(value)
     
-    def _get_update_pair(self):
+    def get_update_pair(self):
         """Processes the values for the isoproperty and the graph dimensions
         to figure which should be used as inputs to the state update. Returns
         a tuple with the indices for the update call and the property constant.
@@ -358,6 +364,13 @@ class IsoLine(Base2DObject):
             two = np.linspace(T_lo,T_hi,num)
             one = np.resize(np.array(self.value),two.shape)
             pair = CoolProp.QT_INPUTS
+
+        Tcrit = self.state.trivial_keyed_output(CoolProp.iT_critical)
+        Pcrit = self.state.trivial_keyed_output(CoolProp.iP_critical)
+        Dcrit = self.state.trivial_keyed_output(CoolProp.irhomass_critical)
+        self.state.update(CoolProp.DmassT_INPUTS, Dcrit, Tcrit)
+        xcrit = self.state.keyed_output(self._x_index)
+        ycrit = self.state.keyed_output(self._y_index)
         
         X = np.empty_like(one)
         Y = np.empty_like(one)
@@ -369,13 +382,18 @@ class IsoLine(Base2DObject):
                 X[index] = self.state.keyed_output(self._x_index)
                 Y[index] = self.state.keyed_output(self._y_index)
             except Exception as e:
+                if (pair == CoolProp.QT_INPUTS and abs(two[index]-Tcrit)<1e-1) or \
+                   (pair == CoolProp.PQ_INPUTS and abs(one[index]-Pcrit)<1e1):
+                    X[index] = xcrit
+                    Y[index] = ycrit
+                    pass 
+                
                 warnings.warn(
                   "An error occurred for inputs {0:f}, {1:f} with index {2:s}: {3:s}".format(one[index],two[index],str(index),str(e)),
                   UserWarning)
                 X[index] = np.NaN
                 Y[index] = np.NaN
-                err = True            
-        
+                err = True
         self.x = X; self.y = Y
         return 
         
@@ -390,7 +408,7 @@ class IsoLine(Base2DObject):
             else: self.calc_sat_range()
             return 
             
-        ipos,xpos,ypos,pair = self._get_update_pair()
+        ipos,xpos,ypos,pair = self.get_update_pair()
         
         order = [ipos,xpos,ypos]
         idxs  = [v for (_,v) in sorted(zip(order,[self.i_index        , self.x_index , self.y_index ]))]
@@ -419,7 +437,36 @@ class IsoLine(Base2DObject):
         for i,v in enumerate(idxs):
             if v == self.x_index: self.x = vals[i]
             if v == self.y_index: self.y = vals[i]
+        
             
+    def sanitize_data(self):
+        """Fill the series via interpolation"""
+        validx = None; validy = None
+        countx = None; county = None  
+        if self.x is not None:
+            validx = np.sum(np.isfinite(self.x))
+            countx = float(self.x.size)
+        else: 
+            raise ValueError("The x-axis is not populated, calculate values before you interpolate.")
+        if self.y is not None:
+            validy = np.sum(np.isfinite(self.y))
+            county = float(self.y.size)
+        else: 
+            raise ValueError("The y-axis is not populated, calculate values before you interpolate.")
+        
+        if min([validx/countx,validy/county]) < self.VALID_REQ: 
+            warnings.warn(
+              "Poor data quality, there are not enough valid entries for x ({0:f}/{1:f}) or y ({2:f}/{3:f}).".format(validx,countx,validy,county),
+              UserWarning)
+        
+        if validy > validx:
+            y = self.y[np.isfinite(self.y)]
+            self.x = interp1d(self.y, self.x)(y)
+            self.y = y
+        else:
+            x = self.x[np.isfinite(self.x)] 
+            self.y = interp1d(self.x, self.y)(x)
+            self.x = x
             
             
 
@@ -447,13 +494,16 @@ class BasePlot(Base2DObject):
     }
     
     LINE_PROPS = {
-      CoolProp.iT    : dict(color='Darkred'   ,lw=0.5),
-      CoolProp.iP    : dict(color='DarkCyan'  ,lw=0.5),
-      CoolProp.iHmass: dict(color='DarkGreen' ,lw=0.5),
-      CoolProp.iDmass: dict(color='DarkBlue'  ,lw=0.5),
-      CoolProp.iSmass: dict(color='DarkOrange',lw=0.5),
-      CoolProp.iQ    : dict(color='black'     ,lw=0.5)
+      CoolProp.iT    : dict(color='Darkred'   ,lw=0.25),
+      CoolProp.iP    : dict(color='DarkCyan'  ,lw=0.25),
+      CoolProp.iHmass: dict(color='DarkGreen' ,lw=0.25),
+      CoolProp.iDmass: dict(color='DarkBlue'  ,lw=0.25),
+      CoolProp.iSmass: dict(color='DarkOrange',lw=0.25),
+      CoolProp.iQ    : dict(color='black'     ,lw=0.25)
     }
+    
+    HI_FACTOR = 2.25 # Upper default limits: HI_FACTOR*T_crit and HI_FACTOR*p_crit
+    LO_FACTOR = 1.25 # Lower default limits: LO_FACTOR*T_triple and LO_FACTOR*p_triple
 
     def __init__(self, fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
         
@@ -487,13 +537,22 @@ class BasePlot(Base2DObject):
         # Process the unit_system and set self._system
         unit_system = unit_system.upper()
         if unit_system in self.UNIT_SYSTEMS:
-            self._system = self.UNIT_SYSTEMS[unit_system]
+            self.system = self.UNIT_SYSTEMS[unit_system]
         else:
             raise ValueError("Invalid unit_system input, expected a string from {0:s}".format(str(self.UNIT_SYSTEMS.keys())))
         
-        self.axis   = kwargs.get('axis', plt.gca())
-        self.props =  kwargs.get('props', None)
-
+        self.figure = kwargs.get('figure',plt.figure(tight_layout=True))
+        self.axis   = kwargs.get('axis', self.figure.add_subplot(111))
+        self.props  =  kwargs.get('props', None)
+        
+    @property
+    def system(self): return self._system
+    @system.setter
+    def system(self, value): self._system = value    
+    @property
+    def figure(self): return self._figure
+    @figure.setter
+    def figure(self, value): self._figure = value
     @property
     def axis(self): return self._axis
     @axis.setter
@@ -610,9 +669,6 @@ consider replacing it with \"_get_sat_bounds\".",
         if x_index is None: x_index = self._x_index
         if y_index is None: y_index = self._y_index
         
-        hi_factor = 2.0
-        lo_factor = 1.1
-        
         if x_index != self.x_index or y_index != self.y_index  or \
           self.axis.get_autoscalex_on() or self.axis.get_autoscaley_on():
             # One of them is not set or we work on a different set of axes
@@ -620,8 +676,8 @@ consider replacing it with \"_get_sat_bounds\".",
             P_lo,P_hi = self._get_sat_bounds(CoolProp.iP)
             X=[0.0]*4; Y=[0.0]*4
             i = -1
-            for T in [lo_factor*T_lo, min([hi_factor*T_hi,self._state.trivial_keyed_output(CoolProp.iT_max)])]:
-                for P in [lo_factor*P_lo, hi_factor*P_hi]:
+            for T in [self.LO_FACTOR*T_lo, min([self.HI_FACTOR*T_hi,self._state.trivial_keyed_output(CoolProp.iT_max)])]:
+                for P in [self.LO_FACTOR*P_lo, self.HI_FACTOR*P_hi]:
                     i+=1
                     self._state.update(CoolProp.PT_INPUTS, P, T)
                     # TODO: include a check for P and T?
@@ -664,20 +720,135 @@ consider replacing it with \"_get_sat_bounds\".",
         limits[3] = dim.to_SI(limits[3])
         return limits
     
-    
-    def generate_ranges(self, itype, imin, imax, num):
+    @staticmethod
+    def generate_ranges(itype, imin, imax, num):
         """Generate a range for a certain property"""
         if itype in [CoolProp.iP, CoolProp.iDmass]:
             return np.logspace(np.log2(imin),np.log2(imax),num=num,base=2.)
         return np.linspace(imin, imax, num=num)
 
+    def _get_conversion_data(self):
+        [Axmin,Axmax,Aymin,Aymax] = self._get_axis_limits()
+        DELTAX_axis=Axmax-Axmin
+        DELTAY_axis=Aymax-Aymin
+        width=self.figure.get_figwidth()
+        height=self.figure.get_figheight()
+        pos=self.axis.get_position().get_points()
+        [[Fxmin,Fymin],[Fxmax,Fymax]]=pos
+        DELTAX_fig=width*(Fxmax-Fxmin)
+        DELTAY_fig=height*(Fymax-Fymin)
+        return [[Axmin,Axmax,Aymin,Aymax,Fxmin,Fxmax,Fymin,Fymax],[DELTAX_axis,DELTAY_axis,DELTAX_fig,DELTAY_fig]]
+
+    def _to_pixel_coords(self,xv,yv):
+        [[Axmin,Axmax,Aymin,Aymax,Fxmin,Fxmax,Fymin,Fymax],[DELTAX_axis,DELTAY_axis,DELTAX_fig,DELTAY_fig]] = self._get_conversion_data()
+        #Convert coords to pixels
+        x=(xv-Axmin)/DELTAX_axis*DELTAX_fig+Fxmin
+        y=(yv-Aymin)/DELTAY_axis*DELTAY_fig+Fymin
+        return x,y
+
+    def _to_data_coords(self,xv,yv):
+        [[Axmin,Axmax,Aymin,Aymax,Fxmin,Fxmax,Fymin,Fymax],[DELTAX_axis,DELTAY_axis,DELTAX_fig,DELTAY_fig]] = self._get_conversion_data()
+        #Convert back to measurements
+        x=(xv-Fxmin)/DELTAX_fig*DELTAX_axis+Axmin
+        y=(yv-Fymin)/DELTAY_fig*DELTAY_axis+Aymin
+        return x,y
+    
+    @staticmethod
+    def get_x_y_dydx(xv,yv,x):
+        """Get x and y coordinates and the linear interpolation derivative"""
+        # Old implementation:
+        ##Get the rotation angle
+        #f = interp1d(xv, yv)
+        #y = f(x)
+        #h = 0.00001*x
+        #dy_dx = (f(x+h)-f(x-h))/(2*h)
+        #return x,y,dy_dx
+        if len(xv)==len(yv)>1: # assure same length
+            if len(xv)==len(yv)==2: # only two points
+                if np.min(xv)<x<np.max(xv):
+                    dx    = xv[1] - xv[0]
+                    dy    = yv[1] - yv[0]
+                    dydx  = dy/dx
+                    y     = yv[0] + dydx * (x-xv[0])
+                    return x,y,dydx
+                else:
+                    raise ValueError("Your coordinate has to be between the input values.")
+            else:
+                limit = 1e-10                    # avoid hitting a point directly
+                diff  = np.array(xv)-x        # get differences
+                index = np.argmin(diff*diff)  # nearest neighbour
+                if (xv[index]<x<xv[index+1]      # nearest below, positive inclination
+                  or xv[index]>x>xv[index+1]):   # nearest above, negative inclination
+                    if diff[index]<limit:
+                        index = [index-1,index+1]
+                    else:
+                        index = [index,  index+1]
+                elif (xv[index-1]<x<xv[index]    # nearest above, positive inclination
+                  or xv[index-1]>x>xv[index]):   # nearest below, negative inclination
+                    if diff[index]<limit:
+                        index = [index-1,index+1]
+                    else:
+                        index = [index-1,index]
+                xvnew = xv[index]
+                yvnew = yv[index]
+                return BasePlot.get_x_y_dydx(xvnew,yvnew,x) # Allow for a single recursion
+        else:
+            raise ValueError("You have to provide the same amount of x- and y-pairs with at least two entries each.")
+
+    def _inline_label(self,xv,yv,x=None,y=None):
+        """
+        This will give the coordinates and rotation required to align a label with
+        a line on a plot in SI units.
+        """
+        if y is None and x is not None:
+            trash=0
+            (xv,yv)=self._to_pixel_coords(xv,yv)
+            #x is provided but y isn't
+            (x,trash)=self._to_pixel_coords(x,trash)
+    
+            #Get the rotation angle and y-value
+            x,y,dy_dx = BasePlot.get_x_y_dydx(xv,yv,x)
+            rot = np.arctan(dy_dx)/np.pi*180.
+    
+        elif x is None and y is not None:
+            #y is provided, but x isn't
+            _xv = xv[::-1]
+            _yv = yv[::-1]
+            #Find x by interpolation
+            x = interp1d(yv, xv)(y)
+            trash=0
+            (xv,yv)=self._to_pixel_coords(xv,yv)
+            (x,trash)=self._to_pixel_coords(x,trash)
+    
+            #Get the rotation angle and y-value
+            x,y,dy_dx = BasePlot.get_x_y_dydx(xv,yv,x)
+            rot = np.arctan(dy_dx)/np.pi*180.
+        (x,y)=self._to_data_coords(x,y)
+        return (x,y,rot)
+
+
+    def inline_label(self,xv,yv,x=None,y=None):
+        """
+        This will give the coordinates and rotation required to align a label with
+        a line on a plot in axis units.
+        """
+        dimx = self._system.dimensions[self._x_index]
+        xv = dimx.to_SI(xv)
+        if x is not None: x  = dimx.to_SI(x)
+        dimy = self._system.dimensions[self._y_index]
+        yv = dimy.to_SI(yv)
+        if y is not None: y  = dimx.to_SI(y)
+        (x,y,rot) = self._inline_label(xv,yv,x,y)
+        x  = dimx.from_SI(x)
+        y  = dimx.from_SI(y)
+        return (x,y,rot)
+
+
     def show(self):
-        plt.tight_layout()
         plt.show()
         
     def savefig(self, *args, **kwargs):
-        plt.tight_layout()
-        plt.savefig(*args, **kwargs)
+        self.figure.savefig(*args, **kwargs)
 
 
 
@@ -690,7 +861,7 @@ if __name__ == "__main__":
         
     #i_index, x_index, y_index, value=None, state=None)
     iso = IsoLine('T','H','P')
-    print(iso._get_update_pair())
+    print(iso.get_update_pair())
     
     state = AbstractState("HEOS","water")
     iso = IsoLine('T','H','P', 300.0, state)
