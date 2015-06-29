@@ -756,7 +756,7 @@ class R(BaseParser):
             l = self.map_function(d['function'])  + '(' + ', '.join(self.parse_arguments(d['arguments'])) + ')'
         elif d['type'] == 'print':
             args = self.parse_arguments(d['arguments'])
-            l = 'print(cat(' + ', \' \', '.join(args) + '))'
+            l = 'writeLines(paste(' + ', \' \', '.join(args) + '))'
         elif d['type'] == 'vector':
             args = self.parse_arguments(d['arguments'])
             l = '[' + ', '.join(args) + ']'
@@ -786,7 +786,7 @@ class R(BaseParser):
         return l
 
     def header(self):
-        return 'dyn.load(paste("CoolProp", .Platform$dynlib.ext, sep=""))\nsource("CoolProp.R")\ncacheMetaData(1)\nPropsSI("T","P",101325,"Q",0,"Water")\n'
+        return 'dyn.load(paste("CoolProp", .Platform$dynlib.ext, sep=""))\nsource("CoolProp.R")\ncacheMetaData(1)\n'
 
 class MATLAB(BaseParser):
 
