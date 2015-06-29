@@ -923,6 +923,9 @@ if (COOLPROP_R_MODULE)
     SWIG_ADD_MODULE(CoolProp r ${I_FILE} ${APP_SOURCES})
     SWIG_LINK_LIBRARIES(CoolProp "${R_LIBRARY}")
     
+    # No lib prefix for the shared library
+    set_target_properties(CoolProp PROPERTIES PREFIX "")
+    
     add_custom_command(TARGET CoolProp
                        POST_BUILD
                        COMMAND python example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
