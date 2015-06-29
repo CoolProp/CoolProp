@@ -925,7 +925,8 @@ if (COOLPROP_R_MODULE)
     
     add_custom_command(TARGET CoolProp
                        POST_BUILD
-                       COMMAND python example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R")
+                       COMMAND python example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
+                       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
     install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.R" DESTINATION R)
     install (FILES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.R" DESTINATION R)
     install (TARGETS ${app_name} DESTINATION R/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
