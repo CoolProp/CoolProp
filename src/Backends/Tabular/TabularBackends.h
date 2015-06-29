@@ -792,8 +792,6 @@ class TabularBackend : public AbstractState
 
         void check_tables(){
             if (!tables_loaded){
-                bool loaded;
-                
                 try{
                     /// Try to load the tables if you can.
                     load_tables();

@@ -209,9 +209,9 @@ cdef class AbstractState:
     cpdef long double first_saturation_deriv(self, constants_header.parameters OF , constants_header.parameters WRT) except *: 
         """ Get the first derivative along the saturation curve - wrapper of c++ function :cpapi:`CoolProp::AbstractState::first_saturation_deriv` """
         return self.thisptr.first_saturation_deriv(OF, WRT)
-    cpdef long double second_saturation_deriv(self, constants_header.parameters OF1 , constants_header.parameters WRT1, constants_header.parameters OF2, constants_header.parameters WRT2) except *: 
+    cpdef long double second_saturation_deriv(self, constants_header.parameters OF1 , constants_header.parameters WRT1, constants_header.parameters WRT2) except *: 
         """ Get the second derivative along the saturation curve - wrapper of c++ function :cpapi:`CoolProp::AbstractState::second_saturation_deriv` """
-        return self.thisptr.second_saturation_deriv(OF1, WRT1, OF2, WRT2)
+        return self.thisptr.second_saturation_deriv(OF1, WRT1, WRT2)
     cpdef double first_two_phase_deriv(self, constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant) except *:
         """ Get the first two-phase derivative - wrapper of C++ function :cpapi:`CoolProp::AbstractState::first_two_phase_deriv` """
         return self.thisptr.first_two_phase_deriv(Of, Wrt, Constant)
