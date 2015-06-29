@@ -1574,9 +1574,8 @@ TEST_CASE("Check the first partial derivatives", "[first_saturation_partial_deri
 TEST_CASE("Check the second saturation derivatives", "[second_saturation_partial_deriv]")
 {
 	const int number_of_pairs = 5;
-	struct pair {parameters p1, p2, p3, p4;};
-	pair pairs[number_of_pairs] = {{iT, iP, iT, iP}, {iDmolar, iP, iDmolar, iP}, {iHmolar, iP, iHmolar, iP},
-	                              {iSmolar, iP, iSmolar, iP},{iUmolar, iP, iUmolar, iP}};
+	struct pair {parameters p1, p2, p3;};
+	pair pairs[number_of_pairs] = {{iT, iP, iP}, {iDmolar, iP, iP}, {iHmolar, iP, iP}, {iSmolar, iP, iP}, {iUmolar, iP, iP}};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
 	for (std::size_t i = 0; i < number_of_pairs; ++i)
     {
@@ -1587,7 +1586,7 @@ TEST_CASE("Check the second saturation derivatives", "[second_saturation_partial
 		{
 			AS->update(QT_INPUTS, 1, 300);
 			CoolPropDbl p = AS->p();
-			CoolPropDbl analytical = AS->second_saturation_deriv(pairs[i].p1, pairs[i].p2, pairs[i].p3, pairs[i].p4);
+			CoolPropDbl analytical = AS->second_saturation_deriv(pairs[i].p1, pairs[i].p2, pairs[i].p3);
 			CAPTURE(analytical);
 			CoolPropDbl numerical;
 			if (pairs[i].p2 == iT){

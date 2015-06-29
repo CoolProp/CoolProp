@@ -12,6 +12,7 @@
 #include "../Helmholtz/PhaseEnvelopeRoutines.h"
 
 
+
 /** ***MAGIC WARNING***!! X Macros in use
  * See http://stackoverflow.com/a/148610
  * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
@@ -558,6 +559,109 @@ class LogPTTable : public SinglePhaseGriddedTableData
         };
 };
 
+/// This structure holds the coefficients for one cell, the coefficients are stored in matrices
+/// and can be obtained by the get() function.  
+class CellCoeffs{
+private:
+    std::size_t alt_i, alt_j;
+    bool _valid, _has_valid_neighbor;
+public:
+    double dx_dxhat, dy_dyhat;
+    CellCoeffs(){
+        _valid = false; _has_valid_neighbor = false;
+        dx_dxhat = _HUGE; dy_dyhat = _HUGE;
+        alt_i = 9999999; alt_j = 9999999;
+    }
+    std::vector<double> T, rhomolar, hmolar, p, smolar, umolar;
+    /// Return a const reference to the desired matrix
+    const std::vector<double> & get(const parameters params) const
+    {
+        switch (params){
+        case iT: return T;
+        case iP: return p;
+        case iDmolar: return rhomolar;
+        case iHmolar: return hmolar;
+        case iSmolar: return smolar;
+        case iUmolar: return umolar;
+        default: throw KeyError(format("Invalid key to get() function of CellCoeffs"));
+        }
+    };
+    /// Set one of the matrices in this class
+    void set(parameters params, const std::vector<double> &mat){
+        switch (params){
+        case iT: T = mat; break;
+        case iP: p = mat; break;
+        case iDmolar: rhomolar = mat; break;
+        case iHmolar: hmolar = mat; break;
+        case iSmolar: smolar = mat; break;
+        case iUmolar: umolar = mat; break;
+        default: throw KeyError(format("Invalid key to set() function of CellCoeffs"));
+        }
+    };
+    /// Returns true if the cell coefficients seem to have been calculated properly
+    bool valid() const { return _valid; };
+    /// Call this function to set the valid flag to true
+    void set_valid(){ _valid = true; };
+    /// Call this function to set the valid flag to false
+    void set_invalid(){ _valid = false; };
+    /// Set the neighboring (alternate) cell to be used if the cell is invalid
+    void set_alternate(std::size_t i, std::size_t j){ alt_i = i; alt_j = j; _has_valid_neighbor = true; }
+    /// Get neighboring(alternate) cell to be used if this cell is invalid
+    void get_alternate(std::size_t &i, std::size_t &j) const {
+        if (_has_valid_neighbor){
+            i = alt_i; j = alt_j;
+        }
+        else{
+            throw ValueError("No valid neighbor");
+        }
+    }
+    /// Returns true if cell is invalid and it has valid neighbor
+    bool has_valid_neighbor() const{
+        return _has_valid_neighbor;
+    }
+};
+
+/// This class contains the data for one set of Tabular data including single-phase and two-phase data
+class TabularDataSet
+{
+public:
+    bool tables_loaded;
+    LogPHTable single_phase_logph;
+    LogPTTable single_phase_logpT;
+    PureFluidSaturationTableData pure_saturation;
+    PhaseEnvelopeData phase_envelope;
+    std::vector<std::vector<CellCoeffs> > coeffs_ph, coeffs_pT;
+
+    TabularDataSet(){ tables_loaded = false; }
+    /// Write the tables to files on the computer
+    void write_tables(const std::string &path_to_tables);
+    /// Load the tables from file
+    void load_tables(const std::string &path_to_tables, shared_ptr<CoolProp::AbstractState> &AS);
+    /// Build the tables (single-phase PH, single-phase PT, phase envelope, etc.)
+    void build_tables(shared_ptr<CoolProp::AbstractState> &AS);
+    /// Build the \f$a_{i,j}\f$ coefficients for bicubic interpolation
+    void build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs);
+};
+
+class TabularDataLibrary
+{
+private:
+    std::map<std::string, TabularDataSet> data;
+public:
+    TabularDataLibrary(){};
+    std::string path_to_tables(shared_ptr<CoolProp::AbstractState> &AS){
+        std::vector<std::string> fluids = AS->fluid_names();
+        std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();
+        std::vector<std::string> components;
+        for (std::size_t i = 0; i < fluids.size(); ++i){
+            components.push_back(format("%s[%0.10Lf]", fluids[i].c_str(), fractions[i]));
+        }
+        return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(components, "&") + ")";
+    }
+    /// Return a pointer to the set of tabular datasets
+    TabularDataSet * get_set_of_tables(shared_ptr<AbstractState> &AS, bool &loaded);
+};
+
 /**
  * @brief This class contains the general code for tabular backends (TTSE, bicubic, etc.)
  *
@@ -568,7 +672,6 @@ class TabularBackend : public AbstractState
 {
     protected:
         bool tables_loaded, using_single_phase_table, is_mixture;
-        shared_ptr<CoolProp::AbstractState> AS;
         enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE};
         selected_table_options selected_table;
         std::size_t cached_single_phase_i, cached_single_phase_j;
@@ -576,7 +679,7 @@ class TabularBackend : public AbstractState
         std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdx2, *d2zdxdy, *d2zdy2;
         std::vector<CoolPropDbl> mole_fractions;
     public:
-
+        shared_ptr<CoolProp::AbstractState> AS;
         TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), AS(AS), is_mixture(false) {
             selected_table = SELECTED_NO_TABLE;
             // Flush the cached indices (set to large number)
@@ -622,10 +725,8 @@ class TabularBackend : public AbstractState
 					throw ValueError();
 			}
 		}
-        LogPHTable single_phase_logph;
-        LogPTTable single_phase_logpT;
-        PureFluidSaturationTableData pure_saturation; // This will ultimately be split into pure and mixture backends which derive from this backend
-        PhaseEnvelopeData phase_envelope;
+        TabularDataSet * dataset;
+
         CoolPropDbl calc_T_critical(void){return this->AS->T_critical();};
         CoolPropDbl calc_Ttriple(void){return this->AS->Ttriple();};
         CoolPropDbl calc_p_triple(void){return this->AS->p_triple();};
@@ -650,24 +751,11 @@ class TabularBackend : public AbstractState
         std::string path_to_tables(void);
         /// Load the tables from file; throws UnableToLoadException if there is a problem
         void load_tables();
-        /// Build the tables
-        void build_tables(){
-            // Pure or pseudo-pure fluid
-            if (AS->get_mole_fractions().size() == 1){
-                pure_saturation.build(AS);
-            }
-            else{
-                // Call function to actually construct the phase envelope
-                AS->build_phase_envelope("");
-                // Copy constructed phase envelope into this class
-                phase_envelope = AS->get_phase_envelope_data();
-                // Resize so that it will load properly
-                pure_saturation.resize(pure_saturation.N);
-            }
-            single_phase_logph.build(AS); 
-            single_phase_logpT.build(AS);
-        }
         void pack_matrices(){
+            PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+            PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+            SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
+            SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             single_phase_logph.pack();
             single_phase_logpT.pack();
             pure_saturation.pack();
@@ -677,180 +765,30 @@ class TabularBackend : public AbstractState
         void write_tables();        
         
         CoolPropDbl phase_envelope_sat(const PhaseEnvelopeData &env, parameters output, parameters iInput1, double value1){
+            const PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
             CoolPropDbl yL = PhaseEnvelopeRoutines::evaluate(phase_envelope, output, iInput1, value1, cached_saturation_iL);
             CoolPropDbl yV = PhaseEnvelopeRoutines::evaluate(phase_envelope, output, iInput1, value1, cached_saturation_iV);
             return _Q*yV + (1-_Q)*yL;
         }
         CoolPropDbl calc_cpmolar_idealgas(void){
+            this->AS->set_T(_T);
             return this->AS->cp0molar();
         }
-        CoolPropDbl calc_T(void){
-            if (using_single_phase_table){
-                switch(selected_table){
-                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iT, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_PT_TABLE: return _T;
-                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
-                }
-                return _HUGE; // not needed, will never be hit, just to make compiler happy
-            }
-            else{
-                return pure_saturation.evaluate(iT, _p, _Q, cached_saturation_iL, cached_saturation_iV);
-            }
-        }
-        CoolPropDbl calc_rhomolar(void){
-            if (using_single_phase_table){
-                switch(selected_table){
-                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iDmolar, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
-                }
-                return _HUGE; // not needed, will never be hit, just to make compiler happy
-            }
-            else{
-                if (is_mixture){
-                    return phase_envelope_sat(phase_envelope, iDmolar, iP, _p);
-                }
-                else{
-                    return pure_saturation.evaluate(iDmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
-                }
-            }
-        }
-        CoolPropDbl calc_hmolar(void){
-            if (using_single_phase_table){
-                switch(selected_table){
-                    case SELECTED_PH_TABLE: return _hmolar;
-                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iHmolar, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
-                }
-                return _HUGE; // not needed, will never be hit, just to make compiler happy
-            }
-            else{
-                if (is_mixture){
-                    return phase_envelope_sat(phase_envelope, iHmolar, iP, _p);
-                }
-                else{
-                    return pure_saturation.evaluate(iHmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
-                }
-            }
-        }
-        CoolPropDbl calc_smolar(void){
-            if (using_single_phase_table){
-                switch(selected_table){
-                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iSmolar, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iSmolar, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
-                }
-                return _HUGE; // not needed, will never be hit, just to make compiler happy
-            }
-            else{
-                if (is_mixture){
-                    return phase_envelope_sat(phase_envelope, iSmolar, iP, _p);
-                }
-                else{
-                    return pure_saturation.evaluate(iSmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
-                }
-            }
-        }
-        CoolPropDbl calc_umolar(void){
-            if (using_single_phase_table){
-                switch(selected_table){
-                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iUmolar, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iUmolar, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
-                }
-                return _HUGE; // not needed, will never be hit, just to make compiler happy
-            }
-            else{
-                if (is_mixture){
-                    return phase_envelope_sat(phase_envelope, iUmolar, iP, _p);
-                }
-                else{
-                    return pure_saturation.evaluate(iUmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
-                }
-            }
-        }
-        CoolPropDbl calc_cpmolar(void){
-            if (using_single_phase_table){
-                return calc_first_partial_deriv(iHmolar, iT, iP);
-            }
-            else{
-                throw ValueError("Two-phase not possible for cpmolar currently");
-            }
-        }
-		CoolPropDbl calc_cvmolar(void){
-            if (using_single_phase_table){
-                return calc_first_partial_deriv(iUmolar, iT, iDmolar);
-            }
-            else{
-                throw ValueError("Two-phase not possible for cvmolar currently");
-            }
-        }
-        
-        CoolPropDbl calc_viscosity(void){
-            if (using_single_phase_table){
-                switch(selected_table){
-                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
-                }
-                return _HUGE; // not needed, will never be hit, just to make compiler happy
-            }
-            else{
-                return pure_saturation.evaluate(iviscosity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
-            }
-        }
-        CoolPropDbl calc_conductivity(void){
-            if (using_single_phase_table){
-                switch(selected_table){
-                    case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar_transport(iconductivity, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_PT_TABLE: return evaluate_single_phase_pT_transport(iconductivity, cached_single_phase_i, cached_single_phase_j);
-                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
-                }
-                return _HUGE; // not needed, will never be hit, just to make compiler happy
-            }
-            else{
-                return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
-            }
-        }
-        CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){
-            if (using_single_phase_table){
-                CoolPropDbl dOf_dx, dOf_dy, dWrt_dx, dWrt_dy, dConstant_dx, dConstant_dy;
 
-                // If a mass-based parameter is provided, get a conversion factor and change the key to the molar-based key
-                double Of_conversion_factor = 1.0, Wrt_conversion_factor = 1.0, Constant_conversion_factor = 1.0;
-                mass_to_molar(Of, Of_conversion_factor, AS->molar_mass());
-                mass_to_molar(Wrt, Wrt_conversion_factor, AS->molar_mass());
-                mass_to_molar(Constant, Constant_conversion_factor, AS->molar_mass());
-                
-                switch(selected_table){
-                    case SELECTED_PH_TABLE: {
-                        dOf_dx = evaluate_single_phase_phmolar_derivative(Of, cached_single_phase_i, cached_single_phase_j,1,0);
-                        dOf_dy = evaluate_single_phase_phmolar_derivative(Of, cached_single_phase_i, cached_single_phase_j,0,1);
-                        dWrt_dx = evaluate_single_phase_phmolar_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,1,0);
-                        dWrt_dy = evaluate_single_phase_phmolar_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,0,1);
-                        dConstant_dx = evaluate_single_phase_phmolar_derivative(Constant, cached_single_phase_i, cached_single_phase_j,1,0);
-                        dConstant_dy = evaluate_single_phase_phmolar_derivative(Constant, cached_single_phase_i, cached_single_phase_j,0,1);
-						break;
-                    }
-                    case SELECTED_PT_TABLE:{
-                        dOf_dx = evaluate_single_phase_pT_derivative(Of, cached_single_phase_i, cached_single_phase_j,1,0);
-                        dOf_dy = evaluate_single_phase_pT_derivative(Of, cached_single_phase_i, cached_single_phase_j,0,1);
-                        dWrt_dx = evaluate_single_phase_pT_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,1,0);
-                        dWrt_dy = evaluate_single_phase_pT_derivative(Wrt, cached_single_phase_i, cached_single_phase_j,0,1);
-                        dConstant_dx = evaluate_single_phase_pT_derivative(Constant, cached_single_phase_i, cached_single_phase_j,1,0);
-                        dConstant_dy = evaluate_single_phase_pT_derivative(Constant, cached_single_phase_i, cached_single_phase_j,0,1);
-						break;
-                    }
-                    case SELECTED_NO_TABLE: throw ValueError("table not selected");
-                }
-                double val = (dOf_dx*dConstant_dy-dOf_dy*dConstant_dx)/(dWrt_dx*dConstant_dy-dWrt_dy*dConstant_dx);
-                return val*Of_conversion_factor/Wrt_conversion_factor;
-            }
-            else{
-                return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
-            }
-            
-        };
+        CoolPropDbl calc_T(void);
+        CoolPropDbl calc_rhomolar(void);
+        CoolPropDbl calc_hmolar(void);
+        CoolPropDbl calc_smolar(void);
+        CoolPropDbl calc_umolar(void);
+        CoolPropDbl calc_cpmolar(void);
+        CoolPropDbl calc_cvmolar(void);
+        CoolPropDbl calc_viscosity(void);
+        CoolPropDbl calc_conductivity(void);
+        CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
+        /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
+        */
+        CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1);
+        CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
 
         void check_tables(){
             if (!tables_loaded){
@@ -860,7 +798,8 @@ class TabularBackend : public AbstractState
                     // Set the flag saying tables have been successfully loaded
                     tables_loaded = true;
                 }
-                catch(CoolProp::UnableToLoadError &){
+                catch(CoolProp::UnableToLoadError &e){
+                    if (get_debug_level() > 0){ std::cout << format("Table loading failed with error: %s\n", e.what()); }
                     /// Check directory size
                     std::string table_path = get_home_dir() + "/.CoolProp/Tables/";
                     #if defined(__ISWINDOWS__)
@@ -877,7 +816,7 @@ class TabularBackend : public AbstractState
                         set_warning_string(format("Maximum allowed tabular directory size is %g GB, you have exceeded this limit", allowed_size_in_GB));
                     }
                     /// If you cannot load the tables, build them and then write them to file
-                    build_tables();
+                    dataset->build_tables(this->AS);
                     pack_matrices();
                     write_tables();
                     /// Load the tables back into memory as a consistency check
@@ -887,56 +826,8 @@ class TabularBackend : public AbstractState
                 }
             }
         };
-        /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
-         */
-        CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1){
-            if (AS->get_mole_fractions().size() > 1){throw ValueError("calc_first_saturation_deriv not available for mixtures");}
-            if (std::abs(_Q) < 1e-6){
-                return pure_saturation.first_saturation_deriv(Of1, Wrt1, 0, keyed_output(Wrt1), cached_saturation_iL);
-            }
-            else if (std::abs(_Q-1) < 1e-6){
-                return pure_saturation.first_saturation_deriv(Of1, Wrt1, 1, keyed_output(Wrt1), cached_saturation_iV);
-            }
-            else{
-                throw ValueError(format("Quality [%Lg] must be either 0 or 1 to within 1 ppm", _Q));
-            }
-        }
-        CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant)
-        {
-            if (Of == iDmolar && Wrt == iHmolar && Constant == iP){
-                CoolPropDbl rhoL = pure_saturation.evaluate(iDmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
-                CoolPropDbl rhoV = pure_saturation.evaluate(iDmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
-                CoolPropDbl hL = pure_saturation.evaluate(iHmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
-                CoolPropDbl hV = pure_saturation.evaluate(iHmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
-                return -POW2(rhomolar())*(1/rhoV - 1/rhoL)/(hV - hL);
-            }
-            else if (Of == iDmass && Wrt == iHmass && Constant == iP){
-                return first_two_phase_deriv(iDmolar, iHmolar, iP)*POW2(molar_mass());
-            }
-            else if (Of == iDmolar && Wrt == iP && Constant == iHmolar){
-                // v = 1/rho; dvdrho = -rho^2; dvdrho = -1/rho^2
-                CoolPropDbl rhoL = pure_saturation.evaluate(iDmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
-                CoolPropDbl rhoV = pure_saturation.evaluate(iDmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
-                CoolPropDbl hL = pure_saturation.evaluate(iHmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
-                CoolPropDbl hV = pure_saturation.evaluate(iHmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
-                CoolPropDbl dvdrhoL = -1/POW2(rhoL);
-                CoolPropDbl dvdrhoV = -1/POW2(rhoV);
-                CoolPropDbl dvL_dp = dvdrhoL*pure_saturation.first_saturation_deriv(iDmolar, iP, 0, _p, cached_saturation_iL);
-                CoolPropDbl dvV_dp = dvdrhoV*pure_saturation.first_saturation_deriv(iDmolar, iP, 1, _p, cached_saturation_iV);
-                CoolPropDbl dhL_dp = pure_saturation.first_saturation_deriv(iHmolar, iP, 0, _p, cached_saturation_iL);
-                CoolPropDbl dhV_dp = pure_saturation.first_saturation_deriv(iHmolar, iP, 1, _p, cached_saturation_iV);
-                CoolPropDbl dxdp_h = (Q()*dhV_dp + (1 - Q())*dhL_dp)/(hL - hV);
-                CoolPropDbl dvdp_h = dvL_dp + dxdp_h*(1/rhoV - 1/rhoL) + Q()*(dvV_dp - dvL_dp);
-                return -POW2(rhomolar())*dvdp_h;
-            }
-            else if (Of == iDmass && Wrt == iP && Constant == iHmass){
-                return first_two_phase_deriv(iDmolar, iP, iHmolar)*molar_mass();
-            }
-            else{
-                throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
-            }
-        }
 };
+
 
 } /* namespace CoolProp*/
 

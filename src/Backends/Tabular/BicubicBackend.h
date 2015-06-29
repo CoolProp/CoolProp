@@ -9,67 +9,7 @@
 namespace CoolProp
 {
     
-/// This structure holds the coefficients for one cell, the coefficients are stored in matrices
-/// and can be obtained by the get() function.  
-class CellCoeffs{
-    private:
-        std::size_t alt_i, alt_j;
-        bool _valid, _has_valid_neighbor;
-    public:
-        double dx_dxhat, dy_dyhat;    
-        CellCoeffs(){
-            _valid = false; _has_valid_neighbor = false;
-            dx_dxhat= _HUGE; dy_dyhat = _HUGE;
-            alt_i = 9999999; alt_j = 9999999;
-        } 
-        std::vector<double> T, rhomolar, hmolar, p, smolar, umolar;
-        /// Return a const reference to the desired matrix
-        const std::vector<double> & get(const parameters params) const
-        {
-            switch(params){
-                case iT: return T;
-                case iP: return p;
-                case iDmolar: return rhomolar;
-                case iHmolar: return hmolar;
-                case iSmolar: return smolar;
-				case iUmolar: return umolar;
-                default: throw KeyError(format("Invalid key to get() function of CellCoeffs"));
-            }
-        };
-        /// Set one of the matrices in this class
-        void set(parameters params, const std::vector<double> &mat){
-            switch(params){
-				case iT: T = mat; break;
-                case iP: p = mat; break;
-                case iDmolar: rhomolar = mat; break;
-                case iHmolar: hmolar = mat; break;
-                case iSmolar: smolar = mat; break;
-				case iUmolar: umolar = mat; break;
-                default: throw KeyError(format("Invalid key to set() function of CellCoeffs"));
-            }
-        };
-        /// Returns true if the cell coefficients seem to have been calculated properly
-        bool valid() const {return _valid;};
-        /// Call this function to set the valid flag to true
-        void set_valid(){_valid = true;};
-        /// Call this function to set the valid flag to false
-        void set_invalid(){_valid = false;};
-        /// Set the neighboring (alternate) cell to be used if the cell is invalid
-        void set_alternate(std::size_t i, std::size_t j){alt_i = i; alt_j = j; _has_valid_neighbor = true;}
-        /// Get neighboring(alternate) cell to be used if this cell is invalid
-        void get_alternate(std::size_t &i, std::size_t &j) const {
-            if (_has_valid_neighbor){
-                i = alt_i; j = alt_j;
-            }
-            else{
-                throw ValueError("No valid neighbor");
-            }
-        }
-        /// Returns true if cell is invalid and it has valid neighbor
-        bool has_valid_neighbor() const{
-            return _has_valid_neighbor;
-        }
-};
+
 
 /** \brief This class implements bicubic interpolation, as very clearly laid out by
  * the page on wikipedia: http://en.wikipedia.org/wiki/Bicubic_interpolation
@@ -124,15 +64,17 @@ typedef std::vector<std::vector<double> > mat;
 class BicubicBackend : public TabularBackend
 {
     protected:
-        std::vector<std::vector<CellCoeffs> > coeffs_ph, coeffs_pT;
+        
     public:
         /// Instantiator; base class loads or makes tables
 		BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS){
             // If a pure fluid, don't need to set fractions, go ahead and build
             if (this->AS->get_mole_fractions().size() == 1){
                 check_tables();
-			    build_coeffs(single_phase_logph, coeffs_ph);
-			    build_coeffs(single_phase_logpT, coeffs_pT);
+                SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
+                SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+                dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
+                dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
                 is_mixture = false;
             }
 		};
@@ -143,12 +85,13 @@ class BicubicBackend : public TabularBackend
             check_tables();
             // For mixtures, the construction of the coefficients is delayed until this 
             // function so that the set_mole_fractions function can be called
-            build_coeffs(single_phase_logph, coeffs_ph);
-            build_coeffs(single_phase_logpT, coeffs_pT);
+            SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
+            SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+            dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
+            dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
         };
         std::string backend_name(void){return "BicubicBackend";}
-        /// Build the \f$a_{i,j}\f$ coefficients for bicubic interpolation
-        void build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs);
+        
         /** Update the state
          */
         void update(CoolProp::input_pairs input_pair, double val1, double val2);
@@ -168,10 +111,10 @@ class BicubicBackend : public TabularBackend
          */
         double evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny);
 		double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
-            return evaluate_single_phase_derivative(single_phase_logph, coeffs_ph, output, _hmolar, _p, i, j, Nx, Ny);
+            return evaluate_single_phase_derivative(dataset->single_phase_logph, dataset->coeffs_ph, output, _hmolar, _p, i, j, Nx, Ny);
         };
         double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
-            return evaluate_single_phase_derivative(single_phase_logpT, coeffs_pT, output, _T, _p, i, j, Nx, Ny);
+            return evaluate_single_phase_derivative(dataset->single_phase_logpT, dataset->coeffs_pT, output, _T, _p, i, j, Nx, Ny);
         };
         
         /**
@@ -187,10 +130,10 @@ class BicubicBackend : public TabularBackend
          */
 		double evaluate_single_phase(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, const parameters output, const double x, const double y, const std::size_t i, const std::size_t j);
         double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j){
-			return evaluate_single_phase(single_phase_logph, coeffs_ph, output, _hmolar, _p, i, j);
+			return evaluate_single_phase(dataset->single_phase_logph, dataset->coeffs_ph, output, _hmolar, _p, i, j);
 		};
         double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j){
-			return evaluate_single_phase(single_phase_logpT, coeffs_pT, output, _T, _p, i, j);
+			return evaluate_single_phase(dataset->single_phase_logpT, dataset->coeffs_pT, output, _T, _p, i, j);
 		};
         
         /**
@@ -204,10 +147,10 @@ class BicubicBackend : public TabularBackend
         double evaluate_single_phase_transport(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
         
         double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j){
-            return evaluate_single_phase_transport(single_phase_logph, output, _hmolar, _p, i, j);
+            return evaluate_single_phase_transport(dataset->single_phase_logph, output, _hmolar, _p, i, j);
         };
 		double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j){
-            return evaluate_single_phase_transport(single_phase_logpT, output, _T, _p, i, j);
+            return evaluate_single_phase_transport(dataset->single_phase_logpT, output, _T, _p, i, j);
         };
 
         /**

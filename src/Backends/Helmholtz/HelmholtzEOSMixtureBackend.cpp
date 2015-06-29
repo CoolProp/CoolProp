@@ -2774,10 +2774,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters O
 		throw ValueError(format("Not possible to take first saturation derivative with respect to %s", get_parameter_information(Wrt1,"short").c_str()));
 	}
 }
-CoolPropDbl HelmholtzEOSMixtureBackend::calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2)
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Wrt2)
 {
 	if (Wrt1 == iP && Wrt2 == iP){
-		if (Of1 != Of2){ throw ValueError(format("Currently, only possible to take second saturation derivative of y both times (d2ydx2)"));}
 		CoolPropDbl dydT_constp = this->first_partial_deriv(Of1, iT, iP);
 		CoolPropDbl d2ydTdp = this->second_partial_deriv(Of1, iT, iP, iP, iT);
 		CoolPropDbl d2ydp2_constT = this->second_partial_deriv(Of1, iP, iT, iP, iT);

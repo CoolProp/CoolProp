@@ -21,15 +21,19 @@ class TTSEBackend : public TabularBackend
         double evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
         double evaluate_single_phase_transport(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
         double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j){
+            SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             return evaluate_single_phase(single_phase_logph, output, _hmolar, _p, i, j);
         }
         double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j){
+            SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             return evaluate_single_phase(single_phase_logpT, output, _T, _p, i, j);
         }
         double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j){
+            SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             return evaluate_single_phase_transport(single_phase_logph, output, _hmolar, _p, i, j);
         }
         double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j){
+            SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             return evaluate_single_phase_transport(single_phase_logpT, output, _T, _p, i, j);
         }
         double invert_single_phase_x(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
@@ -50,9 +54,11 @@ class TTSEBackend : public TabularBackend
          */
         double evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny);
         double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
+            SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             return evaluate_single_phase_derivative(single_phase_logph, output, _hmolar, _p, i, j, Nx, Ny);
         };
         double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
+            SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             return evaluate_single_phase_derivative(single_phase_logpT, output, _T, _p, i, j, Nx, Ny);
         };
 };

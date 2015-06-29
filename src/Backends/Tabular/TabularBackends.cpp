@@ -7,7 +7,31 @@
 #include "time.h"
 #include "miniz.h"
 
+/// The inverse of the A matrix for the bicubic interpolation (http://en.wikipedia.org/wiki/Bicubic_interpolation)
+/// NOTE: The matrix is transposed below
+static const double Ainv_data[16*16] = {
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    -3, 3, 0, 0, -2, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    2, -2, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, -3, 3, 0, 0, -2, -1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 2, -2, 0, 0, 1, 1, 0, 0,
+    -3, 0, 3, 0, 0, 0, 0, 0, -2, 0, -1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, -3, 0, 3, 0, 0, 0, 0, 0, -2, 0, -1, 0,
+    9, -9, -9, 9, 6, 3, -6, -3, 6, -6, 3, -3, 4, 2, 2, 1,
+    -6, 6, 6, -6, -3, -3, 3, 3, -4, 4, -2, 2, -2, -2, -1, -1,
+    2, 0, -2, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 2, 0, -2, 0, 0, 0, 0, 0, 1, 0, 1, 0,
+    -6, 6, 6, -6, -4, -2, 4, 2, -3, 3, -3, 3, -2, -1, -2, -1,
+    4, -4, -4, 4, 2, 2, -2, -2, 2, -2, 2, -2, 1, 1, 1, 1 };
+static Eigen::Matrix<double, 16, 16> Ainv(Ainv_data);
+
+static CoolProp::TabularDataLibrary library;
+
 namespace CoolProp{
+
 /**
  * @brief 
  * @param table
@@ -297,23 +321,447 @@ std::string CoolProp::TabularBackend::path_to_tables(void){
 void CoolProp::TabularBackend::write_tables(){
     std::string path_to_tables = this->path_to_tables();
     make_dirs(path_to_tables);
+    bool loaded = false;
+    dataset = library.get_set_of_tables(this->AS, loaded);
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
+    SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
     write_table(single_phase_logph, path_to_tables, "single_phase_logph");
     write_table(single_phase_logpT, path_to_tables, "single_phase_logpT");
     write_table(pure_saturation, path_to_tables, "pure_saturation");
     write_table(phase_envelope, path_to_tables, "phase_envelope");
 }
 void CoolProp::TabularBackend::load_tables(){
-    std::string path_to_tables = this->path_to_tables();
-    single_phase_logph.AS = this->AS;
-    single_phase_logpT.AS = this->AS;
-    pure_saturation.AS = this->AS;
+    bool loaded = false;
+    dataset = library.get_set_of_tables(this->AS, loaded); 
+    if (loaded == false){
+        throw UnableToLoadError("Could not load tables");
+    }
+    if (get_debug_level() > 0){ std::cout << "Tables loaded" << std::endl; }
+}
+
+CoolPropDbl CoolProp::TabularBackend::calc_T(void){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (using_single_phase_table){
+        switch (selected_table){
+        case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iT, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_PT_TABLE: return _T;
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        }
+        return _HUGE; // not needed, will never be hit, just to make compiler happy
+    }
+    else{
+        if (is_mixture){
+            return phase_envelope_sat(phase_envelope, iT, iP, _p);
+        }
+        else{
+            return pure_saturation.evaluate(iT, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        }
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_rhomolar(void){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (using_single_phase_table){
+        switch (selected_table){
+        case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iDmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        }
+        return _HUGE; // not needed, will never be hit, just to make compiler happy
+    }
+    else{
+        if (is_mixture){
+            return phase_envelope_sat(phase_envelope, iDmolar, iP, _p);
+        }
+        else{
+            return pure_saturation.evaluate(iDmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        }
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_hmolar(void){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (using_single_phase_table){
+        switch (selected_table){
+        case SELECTED_PH_TABLE: return _hmolar;
+        case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iHmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        }
+        return _HUGE; // not needed, will never be hit, just to make compiler happy
+    }
+    else{
+        if (is_mixture){
+            return phase_envelope_sat(phase_envelope, iHmolar, iP, _p);
+        }
+        else{
+            return pure_saturation.evaluate(iHmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        }
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_smolar(void){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (using_single_phase_table){
+        switch (selected_table){
+        case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iSmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iSmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        }
+        return _HUGE; // not needed, will never be hit, just to make compiler happy
+    }
+    else{
+        if (is_mixture){
+            return phase_envelope_sat(phase_envelope, iSmolar, iP, _p);
+        }
+        else{
+            return pure_saturation.evaluate(iSmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        }
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_umolar(void){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (using_single_phase_table){
+        switch (selected_table){
+        case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iUmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iUmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        }
+        return _HUGE; // not needed, will never be hit, just to make compiler happy
+    }
+    else{
+        if (is_mixture){
+            return phase_envelope_sat(phase_envelope, iUmolar, iP, _p);
+        }
+        else{
+            return pure_saturation.evaluate(iUmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        }
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_cpmolar(void){
+    if (using_single_phase_table){
+        return calc_first_partial_deriv(iHmolar, iT, iP);
+    }
+    else{
+        throw ValueError("Two-phase not possible for cpmolar currently");
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_cvmolar(void){
+    if (using_single_phase_table){
+        return calc_first_partial_deriv(iUmolar, iT, iDmolar);
+    }
+    else{
+        throw ValueError("Two-phase not possible for cvmolar currently");
+    }
+}
+
+CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (using_single_phase_table){
+        switch (selected_table){
+        case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_PT_TABLE: return evaluate_single_phase_pT_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        }
+        return _HUGE; // not needed, will never be hit, just to make compiler happy
+    }
+    else{
+        return pure_saturation.evaluate(iviscosity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (using_single_phase_table){
+        switch (selected_table){
+        case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar_transport(iconductivity, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_PT_TABLE: return evaluate_single_phase_pT_transport(iconductivity, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        }
+        return _HUGE; // not needed, will never be hit, just to make compiler happy
+    }
+    else{
+        return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (using_single_phase_table){
+        CoolPropDbl dOf_dx, dOf_dy, dWrt_dx, dWrt_dy, dConstant_dx, dConstant_dy;
+
+        // If a mass-based parameter is provided, get a conversion factor and change the key to the molar-based key
+        double Of_conversion_factor = 1.0, Wrt_conversion_factor = 1.0, Constant_conversion_factor = 1.0;
+        mass_to_molar(Of, Of_conversion_factor, AS->molar_mass());
+        mass_to_molar(Wrt, Wrt_conversion_factor, AS->molar_mass());
+        mass_to_molar(Constant, Constant_conversion_factor, AS->molar_mass());
+
+        switch (selected_table){
+        case SELECTED_PH_TABLE: {
+            dOf_dx = evaluate_single_phase_phmolar_derivative(Of, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dOf_dy = evaluate_single_phase_phmolar_derivative(Of, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dWrt_dx = evaluate_single_phase_phmolar_derivative(Wrt, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt_dy = evaluate_single_phase_phmolar_derivative(Wrt, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dConstant_dx = evaluate_single_phase_phmolar_derivative(Constant, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant_dy = evaluate_single_phase_phmolar_derivative(Constant, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            break;
+        }
+        case SELECTED_PT_TABLE:{
+            dOf_dx = evaluate_single_phase_pT_derivative(Of, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dOf_dy = evaluate_single_phase_pT_derivative(Of, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dWrt_dx = evaluate_single_phase_pT_derivative(Wrt, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt_dy = evaluate_single_phase_pT_derivative(Wrt, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dConstant_dx = evaluate_single_phase_pT_derivative(Constant, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant_dy = evaluate_single_phase_pT_derivative(Constant, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            break;
+        }
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        }
+        double val = (dOf_dx*dConstant_dy-dOf_dy*dConstant_dx)/(dWrt_dx*dConstant_dy-dWrt_dy*dConstant_dx);
+        return val*Of_conversion_factor/Wrt_conversion_factor;
+    }
+    else{
+        return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+    }
+};
+
+CoolPropDbl CoolProp::TabularBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1){
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (AS->get_mole_fractions().size() > 1){ throw ValueError("calc_first_saturation_deriv not available for mixtures"); }
+    if (std::abs(_Q) < 1e-6){
+        return pure_saturation.first_saturation_deriv(Of1, Wrt1, 0, keyed_output(Wrt1), cached_saturation_iL);
+    }
+    else if (std::abs(_Q-1) < 1e-6){
+        return pure_saturation.first_saturation_deriv(Of1, Wrt1, 1, keyed_output(Wrt1), cached_saturation_iV);
+    }
+    else{
+        throw ValueError(format("Quality [%Lg] must be either 0 or 1 to within 1 ppm", _Q));
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant)
+{
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (Of == iDmolar && Wrt == iHmolar && Constant == iP){
+        CoolPropDbl rhoL = pure_saturation.evaluate(iDmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
+        CoolPropDbl rhoV = pure_saturation.evaluate(iDmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
+        CoolPropDbl hL = pure_saturation.evaluate(iHmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
+        CoolPropDbl hV = pure_saturation.evaluate(iHmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
+        return -POW2(rhomolar())*(1/rhoV - 1/rhoL)/(hV - hL);
+    }
+    else if (Of == iDmass && Wrt == iHmass && Constant == iP){
+        return first_two_phase_deriv(iDmolar, iHmolar, iP)*POW2(molar_mass());
+    }
+    else if (Of == iDmolar && Wrt == iP && Constant == iHmolar){
+        // v = 1/rho; dvdrho = -rho^2; dvdrho = -1/rho^2
+        CoolPropDbl rhoL = pure_saturation.evaluate(iDmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
+        CoolPropDbl rhoV = pure_saturation.evaluate(iDmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
+        CoolPropDbl hL = pure_saturation.evaluate(iHmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
+        CoolPropDbl hV = pure_saturation.evaluate(iHmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
+        CoolPropDbl dvdrhoL = -1/POW2(rhoL);
+        CoolPropDbl dvdrhoV = -1/POW2(rhoV);
+        CoolPropDbl dvL_dp = dvdrhoL*pure_saturation.first_saturation_deriv(iDmolar, iP, 0, _p, cached_saturation_iL);
+        CoolPropDbl dvV_dp = dvdrhoV*pure_saturation.first_saturation_deriv(iDmolar, iP, 1, _p, cached_saturation_iV);
+        CoolPropDbl dhL_dp = pure_saturation.first_saturation_deriv(iHmolar, iP, 0, _p, cached_saturation_iL);
+        CoolPropDbl dhV_dp = pure_saturation.first_saturation_deriv(iHmolar, iP, 1, _p, cached_saturation_iV);
+        CoolPropDbl dxdp_h = (Q()*dhV_dp + (1 - Q())*dhL_dp)/(hL - hV);
+        CoolPropDbl dvdp_h = dvL_dp + dxdp_h*(1/rhoV - 1/rhoL) + Q()*(dvV_dp - dvL_dp);
+        return -POW2(rhomolar())*dvdp_h;
+    }
+    else if (Of == iDmass && Wrt == iP && Constant == iHmass){
+        return first_two_phase_deriv(iDmolar, iP, iHmolar)*molar_mass();
+    }
+    else{
+        throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+    }
+}
+
+void CoolProp::TabularDataSet::write_tables(const std::string &path_to_tables)
+{
+    make_dirs(path_to_tables);
+    write_table(single_phase_logph, path_to_tables, "single_phase_logph");
+    write_table(single_phase_logpT, path_to_tables, "single_phase_logpT");
+    write_table(pure_saturation, path_to_tables, "pure_saturation");
+    write_table(phase_envelope, path_to_tables, "phase_envelope");
+}
+
+void CoolProp::TabularDataSet::load_tables(const std::string &path_to_tables, shared_ptr<CoolProp::AbstractState> &AS)
+{
+    single_phase_logph.AS = AS;
+    single_phase_logpT.AS = AS;
+    pure_saturation.AS = AS;
     single_phase_logph.set_limits();
     single_phase_logpT.set_limits();
     load_table(single_phase_logph, path_to_tables, "single_phase_logph.bin.z");
     load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin.z");
     load_table(pure_saturation, path_to_tables, "pure_saturation.bin.z");
     load_table(phase_envelope, path_to_tables, "phase_envelope.bin.z");
+    tables_loaded = true;
     if (get_debug_level() > 0){ std::cout << "Tables loaded" << std::endl; }
+};
+
+void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState> &AS)
+{
+    // Pure or pseudo-pure fluid
+    if (AS->get_mole_fractions().size() == 1){
+        pure_saturation.build(AS);
+    }
+    else{
+        // Call function to actually construct the phase envelope
+        AS->build_phase_envelope("");
+        // Copy constructed phase envelope into this class
+        phase_envelope = AS->get_phase_envelope_data();
+        // Resize so that it will load properly
+        pure_saturation.resize(pure_saturation.N);
+    }
+    single_phase_logph.build(AS);
+    single_phase_logpT.build(AS);
+    tables_loaded = true;
+}
+
+/// Return the set of tabular datasets
+CoolProp::TabularDataSet * CoolProp::TabularDataLibrary::get_set_of_tables(shared_ptr<AbstractState> &AS, bool &loaded)
+{
+    const std::string path = path_to_tables(AS);
+    // Try to find tabular set if it is already loaded
+    std::map<std::string, TabularDataSet>::iterator it = data.find(path);
+    // It is already in the map, return it
+    if (it != data.end()){
+        loaded = it->second.tables_loaded;
+        return &(it->second);
+    }
+    // It is not in the map, build it
+    else{
+        TabularDataSet set;
+        data.insert(std::pair<std::string, TabularDataSet>(path, set));
+        TabularDataSet &dataset = data[path];
+        try{
+            if (!dataset.tables_loaded){
+                dataset.load_tables(path, AS);
+            }
+            loaded = true;
+        }
+        catch (std::exception &){
+            loaded = false;
+        }
+        return &(dataset);
+    }
+}
+
+void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs)
+{
+    if (!coeffs.empty()){ return; }
+    const bool debug = get_debug_level() > 5 || false;
+    const int param_count = 6;
+    parameters param_list[param_count] = { iDmolar, iT, iSmolar, iHmolar, iP, iUmolar };
+    std::vector<std::vector<double> > *f = NULL, *fx = NULL, *fy = NULL, *fxy = NULL;
+
+    clock_t t1 = clock();
+
+    // Resize the coefficient structures
+    coeffs.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
+
+    int valid_cell_count = 0;
+    for (std::size_t k = 0; k < param_count; ++k){
+        parameters param = param_list[k];
+        if (param == table.xkey || param == table.ykey){ continue; } // Skip tables that match either of the input variables
+
+        switch (param){
+        case iT:
+            f = &(table.T); fx = &(table.dTdx); fy = &(table.dTdy); fxy = &(table.d2Tdxdy);
+            break;
+        case iP:
+            f = &(table.p); fx = &(table.dpdx); fy = &(table.dpdy); fxy = &(table.d2pdxdy);
+            break;
+        case iDmolar:
+            f = &(table.rhomolar); fx = &(table.drhomolardx); fy = &(table.drhomolardy); fxy = &(table.d2rhomolardxdy);
+            break;
+        case iSmolar:
+            f = &(table.smolar); fx = &(table.dsmolardx); fy = &(table.dsmolardy); fxy = &(table.d2smolardxdy);
+            break;
+        case iHmolar:
+            f = &(table.hmolar); fx = &(table.dhmolardx); fy = &(table.dhmolardy); fxy = &(table.d2hmolardxdy);
+            break;
+        case iUmolar:
+            f = &(table.umolar); fx = &(table.dumolardx); fy = &(table.dumolardy); fxy = &(table.d2umolardxdy);
+            break;
+        default:
+            throw ValueError("Invalid variable type to build_coeffs");
+        }
+        for (std::size_t i = 0; i < table.Nx-1; ++i) // -1 since we have one fewer cells than nodes
+        {
+            for (std::size_t j = 0; j < table.Ny-1; ++j) // -1 since we have one fewer cells than nodes
+            {
+                if (ValidNumber((*f)[i][j]) && ValidNumber((*f)[i+1][j]) && ValidNumber((*f)[i][j+1]) && ValidNumber((*f)[i+1][j+1])){
+
+                    // This will hold the scaled f values for the cell
+                    Eigen::Matrix<double, 16, 1> F;
+                    // The output values (do not require scaling
+                    F(0) = (*f)[i][j]; F(1) = (*f)[i+1][j]; F(2) = (*f)[i][j+1]; F(3) = (*f)[i+1][j+1];
+                    // Scaling parameter
+                    // d(f)/dxhat = df/dx * dx/dxhat, where xhat = (x-x_i)/(x_{i+1}-x_i)
+                    coeffs[i][j].dx_dxhat = table.xvec[i+1]-table.xvec[i];
+                    double dx_dxhat = coeffs[i][j].dx_dxhat;
+                    F(4) = (*fx)[i][j]*dx_dxhat; F(5) = (*fx)[i+1][j]*dx_dxhat;
+                    F(6) = (*fx)[i][j+1]*dx_dxhat; F(7) = (*fx)[i+1][j+1]*dx_dxhat;
+                    // Scaling parameter
+                    // d(f)/dyhat = df/dy * dy/dyhat, where yhat = (y-y_j)/(y_{j+1}-y_j)
+                    coeffs[i][j].dy_dyhat = table.yvec[j+1]-table.yvec[j];
+                    double dy_dyhat = coeffs[i][j].dy_dyhat;
+                    F(8) = (*fy)[i][j]*dy_dyhat; F(9) = (*fy)[i+1][j]*dy_dyhat;
+                    F(10) = (*fy)[i][j+1]*dy_dyhat; F(11) = (*fy)[i+1][j+1]*dy_dyhat;
+                    // Cross derivatives are doubly scaled following the examples above
+                    F(12) = (*fxy)[i][j]*dy_dyhat*dx_dxhat; F(13) = (*fxy)[i+1][j]*dy_dyhat*dx_dxhat;
+                    F(14) = (*fxy)[i][j+1]*dy_dyhat*dx_dxhat; F(15) = (*fxy)[i+1][j+1]*dy_dyhat*dx_dxhat;
+                    // Calculate the alpha coefficients
+                    Eigen::MatrixXd alpha = Ainv.transpose()*F; // 16x1; Watch out for the transpose!
+                    std::vector<double> valpha = eigen_to_vec1D(alpha);
+                    coeffs[i][j].set(param, valpha);
+                    coeffs[i][j].set_valid();
+                    valid_cell_count++;
+                }
+                else{
+                    coeffs[i][j].set_invalid();
+                }
+            }
+        }
+        double elapsed = (clock() - t1)/((double)CLOCKS_PER_SEC);
+        if (debug){
+            std::cout << format("Calculated bicubic coefficients for %d good cells in %g sec.\n", valid_cell_count, elapsed);
+        }
+        std::size_t remap_count = 0;
+        // Now find invalid cells and give them pointers to a neighboring cell that works
+        for (std::size_t i = 0; i < table.Nx-1; ++i) // -1 since we have one fewer cells than nodes
+        {
+            for (std::size_t j = 0; j < table.Ny-1; ++j) // -1 since we have one fewer cells than nodes
+            {
+                // Not a valid cell
+                if (!coeffs[i][j].valid()){
+                    // Offsets that we are going to try in order (left, right, top, bottom, diagonals)
+                    int xoffsets[] = { -1, 1, 0, 0, -1, 1, 1, -1 };
+                    int yoffsets[] = { 0, 0, 1, -1, -1, -1, 1, 1 };
+                    // Length of offset
+                    std::size_t N = sizeof(xoffsets)/sizeof(xoffsets[0]);
+                    for (std::size_t k = 0; k < N; ++k){
+                        std::size_t iplus = i + xoffsets[k];
+                        std::size_t jplus = j + yoffsets[k];
+                        if (0 < iplus && iplus < table.Nx-1 && 0 < jplus && jplus < table.Ny-1 && coeffs[iplus][jplus].valid()){
+                            coeffs[i][j].set_alternate(iplus, jplus);
+                            remap_count++;
+                            if (debug){ std::cout << format("Mapping %d,%d to %d,%d\n", i, j, iplus, jplus); }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if (debug){
+            std::cout << format("Remapped %d cells\n", remap_count);
+        }
+    }
 }
 
 #if defined(ENABLE_CATCH)

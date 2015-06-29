@@ -74,7 +74,7 @@ public:
 	
 	CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1);
     CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1, HelmholtzEOSMixtureBackend &SatL, HelmholtzEOSMixtureBackend &SatV);
-	CoolPropDbl calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2);
+	CoolPropDbl calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Wrt2);
     CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
     CoolPropDbl calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
     CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);

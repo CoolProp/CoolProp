@@ -314,7 +314,7 @@ protected:
     virtual CoolPropDbl calc_T_freeze(void){ throw NotImplementedError("calc_T_freeze is not implemented for this backend"); };
 
     virtual CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1){ throw NotImplementedError("calc_first_saturation_deriv is not implemented for this backend"); };
-    virtual CoolPropDbl calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2){ throw NotImplementedError("calc_second_saturation_deriv is not implemented for this backend"); };
+    virtual CoolPropDbl calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Wrt2){ throw NotImplementedError("calc_second_saturation_deriv is not implemented for this backend"); };
     virtual CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant){ throw NotImplementedError("calc_first_two_phase_deriv is not implemented for this backend"); };
     virtual CoolPropDbl calc_second_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant, parameters Wrt2, parameters Constant2){ throw NotImplementedError("calc_second_two_phase_deriv is not implemented for this backend"); };
     virtual CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end){ throw NotImplementedError("calc_first_two_phase_deriv_splined is not implemented for this backend"); };
@@ -372,6 +372,8 @@ public:
      */
     static AbstractState * factory(const std::string &backend, const std::vector<std::string> &fluid_names);
 
+    /// Set the internal variable T without a flash call (expert use only!)
+    void set_T(CoolPropDbl T){ _T = T; }
     /// Get a string representation of the backend
     virtual std::string backend_name(void) = 0;
     // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
@@ -629,10 +631,9 @@ public:
      * 
      * @param Of1 The parameter that the first derivative is taken of
      * @param Wrt1 The parameter that the first derivative is taken with respect to
-     * @param Of2 The parameter that the second derivative is taken of
      * @param Wrt2 The parameter that the second derivative is taken with respect to
      * */
-    CoolPropDbl second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Of2, parameters Wrt2){return calc_second_saturation_deriv(Of1,Wrt1,Of2,Wrt2);};
+    CoolPropDbl second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Wrt2){return calc_second_saturation_deriv(Of1,Wrt1,Wrt2);};
     
     /**
      * @brief Calculate the first "two-phase" derivative as described by Thorade and Sadaat, EAS, 2013

@@ -728,6 +728,65 @@ class Octave(BaseParser):
 
     def header(self):
         return '\n'.join(['CoolProp\n'])
+        
+        
+class R(BaseParser):
+
+    function_name_mapping = dict(factory = 'AbstractState_factory')
+    type_name_mapping = {'vector': None,
+                         'AbstractState': None}
+    enum_name_mapping = {'input_pairs': "CoolProp", 'parameters': "CoolProp"}
+    indentation = ' '*0
+
+    def parse_arguments(self, arguments):
+        out = []
+        for arg in arguments:
+            if isinstance(arg, string_types) and arg[0] == "'" and arg[-1] == "'":
+                out.append('\'' + arg[1:-1] + '\'')
+            elif isinstance(arg, dict):
+                out.append(self.dict2string(arg))
+            else:
+                out.append(arg)
+        return out
+
+    def dict2string(self, d):
+        if d['type'] == 'comment':
+            l = '# ' + d['comment']
+        elif d['type'] == 'function':
+            l = self.map_function(d['function'])  + '(' + ', '.join(self.parse_arguments(d['arguments'])) + ')'
+        elif d['type'] == 'print':
+            args = self.parse_arguments(d['arguments'])
+            l = 'writeLines(paste(' + ', \' \', '.join(args) + '))'
+        elif d['type'] == 'vector':
+            args = self.parse_arguments(d['arguments'])
+            l = '[' + ', '.join(args) + ']'
+        elif d['type'] == 'class_dereference':
+            l = d['name'] + '$' + self.dict2string(d['RHS'])
+        elif d['type'] == 'enum':
+            l = '"' +  d['key'] + '"'
+        elif d['type'] == 'custom_assignment':
+            type_name = self.type_name_mapping[d['variable_type']]
+            if type_name:
+                LHS = type_name + ' ' + d['variable_name']
+            else:
+                LHS = d['variable_name']
+            
+            if d['RHS']['type'] != 'vector':
+                RHS = self.dict2string(d['RHS'])
+            else: # Custom processing for vector assignment
+                pushes = [d['variable_name']+' <- ' + arg +';' for arg in d['RHS']['arguments']]
+                RHS = 'c(' + ', '.join([arg for arg in d['RHS']['arguments']]) + ')'
+                
+            l = ' '.join([LHS, '=', RHS])
+        else:
+            l = '??????????????????????????????'
+            
+        if 'EOL' in d and d['EOL']:
+            l += ''
+        return l
+
+    def header(self):
+        return 'dyn.load(paste("CoolProp", .Platform$dynlib.ext, sep=""))\nsource("CoolProp.R")\ncacheMetaData(1)\n'
 
 class MATLAB(BaseParser):
 

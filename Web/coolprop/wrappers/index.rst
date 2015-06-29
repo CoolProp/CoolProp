@@ -19,6 +19,7 @@ Target                                                  Operating Systems       
 :ref:`VB.net <VBdotNet>`                                windows only                 Wrapper is SWIG based
 :ref:`MATLAB <MATLAB>`                                  linux, OSX, win              Wrapper is SWIG based
 :ref:`Java <Java>`                                      linux, OSX, win              Wrapper is SWIG based
+:ref:`R <R>`                                            linux, OSX, win              Wrapper is SWIG based
 :ref:`Scilab <Scilab>`                                  linux, OSX, win              Wrapper is SWIG based (experimental)
 :ref:`Julia <Julia>`                                    linux, OSX, win              
 `Modelica <https://github.com/modelica/ExternalMedia>`_ linux, OSX, win
@@ -127,3 +128,4 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     SharedLibrary/index.rst
     DelphiLazarus/index.rst
     VB.net/index.rst
+    R/index.rst

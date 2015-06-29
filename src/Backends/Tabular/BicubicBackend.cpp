@@ -4,142 +4,9 @@
 #include "MatrixMath.h"
 #include "../Helmholtz/PhaseEnvelopeRoutines.h"
 
-/// The inverse of the A matrix for the bicubic interpolation (http://en.wikipedia.org/wiki/Bicubic_interpolation)
-/// NOTE: The matrix is transposed below
-static const double Ainv_data[16*16] = {
-     1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-	 0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-	-3,  3,  0,  0, -2, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-	 2, -2,  0,  0,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-	 0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,
-	 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,
-	 0,  0,  0,  0,  0,  0,  0,  0, -3,  3,  0,  0, -2, -1,  0,  0,
-	 0,  0,  0,  0,  0,  0,  0,  0,  2, -2,  0,  0,  1,  1,  0,  0,
-	-3,  0,  3,  0,  0,  0,  0,  0, -2,  0, -1,  0,  0,  0,  0,  0,
-	 0,  0,  0,  0, -3,  0,  3,  0,  0,  0,  0,  0, -2,  0, -1,  0,
-	 9, -9, -9,  9,  6,  3, -6, -3,  6, -6,  3, -3,  4,  2,  2,  1,
-	-6,  6,  6, -6, -3, -3,  3,  3, -4,  4, -2,  2, -2, -2, -1, -1,
-	 2,  0, -2,  0,  0,  0,  0,  0,  1,  0,  1,  0,  0,  0,  0,  0,
-	 0,  0,  0,  0,  2,  0, -2,  0,  0,  0,  0,  0,  1,  0,  1,  0,
-	-6,  6,  6, -6, -4, -2,  4,  2, -3,  3, -3,  3, -2, -1, -2, -1,
-	 4, -4, -4,  4,  2,  2, -2, -2,  2, -2,  2, -2,  1,  1,  1,  1};
-static Eigen::Matrix<double, 16, 16> Ainv(Ainv_data);     
-
-void CoolProp::BicubicBackend::build_coeffs(SinglePhaseGriddedTableData &table, std::vector<std::vector<CellCoeffs> > &coeffs)
-{
-    if (!coeffs.empty()){ return; }
-	const bool debug = get_debug_level() > 5 || false;
-    const int param_count = 6;
-    parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP, iUmolar};
-    std::vector<std::vector<double> > *f = NULL, *fx = NULL, *fy = NULL, *fxy = NULL;
-    
-	clock_t t1 = clock();
-
-    // Resize the coefficient structures
-    coeffs.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
-
-    int valid_cell_count = 0;
-    for (std::size_t k = 0; k < param_count; ++k){
-        parameters param = param_list[k];
-		if (param == table.xkey || param == table.ykey){continue;} // Skip tables that match either of the input variables
-		
-		switch(param){
-            case iT:
-                f = &(table.T); fx = &(table.dTdx); fy = &(table.dTdy); fxy = &(table.d2Tdxdy);
-                break;
-			case iP:
-                f = &(table.p); fx = &(table.dpdx); fy = &(table.dpdy); fxy = &(table.d2pdxdy);
-                break;
-            case iDmolar:
-                f = &(table.rhomolar); fx = &(table.drhomolardx); fy = &(table.drhomolardy); fxy = &(table.d2rhomolardxdy);
-                break;
-			case iSmolar:
-                f = &(table.smolar); fx = &(table.dsmolardx); fy = &(table.dsmolardy); fxy = &(table.d2smolardxdy);
-                break;
-			case iHmolar:
-                f = &(table.hmolar); fx = &(table.dhmolardx); fy = &(table.dhmolardy); fxy = &(table.d2hmolardxdy);
-                break;
-			case iUmolar:
-				f = &(table.umolar); fx = &(table.dumolardx); fy = &(table.dumolardy); fxy = &(table.d2umolardxdy);
-                break;
-            default:
-                throw ValueError("Invalid variable type to build_coeffs");
-		}
-        for (std::size_t i = 0; i < table.Nx-1; ++i) // -1 since we have one fewer cells than nodes
-        {
-            for (std::size_t j = 0; j < table.Ny-1; ++j) // -1 since we have one fewer cells than nodes
-            {               
-                if (ValidNumber((*f)[i][j]) && ValidNumber((*f)[i+1][j]) && ValidNumber((*f)[i][j+1]) && ValidNumber((*f)[i+1][j+1])){
-                    
-                    // This will hold the scaled f values for the cell
-                    Eigen::Matrix<double, 16, 1> F;
-                    // The output values (do not require scaling
-                    F(0) = (*f)[i][j]; F(1) = (*f)[i+1][j]; F(2) = (*f)[i][j+1]; F(3) = (*f)[i+1][j+1]; 
-                    // Scaling parameter
-                    // d(f)/dxhat = df/dx * dx/dxhat, where xhat = (x-x_i)/(x_{i+1}-x_i)
-                    coeffs[i][j].dx_dxhat = table.xvec[i+1]-table.xvec[i];
-                    double dx_dxhat = coeffs[i][j].dx_dxhat;
-                    F(4) = (*fx)[i][j]*dx_dxhat; F(5) = (*fx)[i+1][j]*dx_dxhat; 
-                    F(6) = (*fx)[i][j+1]*dx_dxhat; F(7) = (*fx)[i+1][j+1]*dx_dxhat; 
-                    // Scaling parameter
-                    // d(f)/dyhat = df/dy * dy/dyhat, where yhat = (y-y_j)/(y_{j+1}-y_j)
-                    coeffs[i][j].dy_dyhat = table.yvec[j+1]-table.yvec[j];
-                    double dy_dyhat = coeffs[i][j].dy_dyhat;
-                    F(8) = (*fy)[i][j]*dy_dyhat; F(9) = (*fy)[i+1][j]*dy_dyhat; 
-                    F(10) = (*fy)[i][j+1]*dy_dyhat; F(11) = (*fy)[i+1][j+1]*dy_dyhat; 
-                    // Cross derivatives are doubly scaled following the examples above
-                    F(12) = (*fxy)[i][j]*dy_dyhat*dx_dxhat; F(13) = (*fxy)[i+1][j]*dy_dyhat*dx_dxhat; 
-                    F(14) = (*fxy)[i][j+1]*dy_dyhat*dx_dxhat; F(15) = (*fxy)[i+1][j+1]*dy_dyhat*dx_dxhat; 
-					// Calculate the alpha coefficients
-					Eigen::MatrixXd alpha = Ainv.transpose()*F; // 16x1; Watch out for the transpose!
-					std::vector<double> valpha = eigen_to_vec1D(alpha);
-                    coeffs[i][j].set(param, valpha);
-                    coeffs[i][j].set_valid();
-					valid_cell_count++;
-                }
-                else{
-                    coeffs[i][j].set_invalid();
-                }
-            }
-        }
-        double elapsed = (clock() - t1)/((double)CLOCKS_PER_SEC);
-        if (debug){
-            std::cout << format("Calculated bicubic coefficients for %d good cells in %g sec.\n", valid_cell_count, elapsed);
-        }
-        std::size_t remap_count = 0;
-        // Now find invalid cells and give them pointers to a neighboring cell that works
-        for (std::size_t i = 0; i < table.Nx-1; ++i) // -1 since we have one fewer cells than nodes
-        {
-            for (std::size_t j = 0; j < table.Ny-1; ++j) // -1 since we have one fewer cells than nodes
-            {
-                // Not a valid cell
-                if (!coeffs[i][j].valid()){
-                    // Offsets that we are going to try in order (left, right, top, bottom, diagonals)
-                    int xoffsets[] = {-1,1,0,0,-1,1,1,-1};
-                    int yoffsets[] = {0,0,1,-1,-1,-1,1,1};
-                    // Length of offset
-                    std::size_t N = sizeof(xoffsets)/sizeof(xoffsets[0]);
-                    for (std::size_t k = 0; k < N; ++k){
-                        std::size_t iplus = i + xoffsets[k];
-                        std::size_t jplus = j + yoffsets[k];
-                        if (0 < iplus && iplus < table.Nx-1 && 0 < jplus && jplus < table.Ny-1 && coeffs[iplus][jplus].valid()){
-                            coeffs[i][j].set_alternate(iplus, jplus);
-                            remap_count++;
-                            if (debug){std::cout << format("Mapping %d,%d to %d,%d\n",i,j,iplus,jplus);}
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        if (debug){
-            std::cout << format("Remapped %d cells\n", remap_count);
-        }
-    }
-}
-
 void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
 {
+    if (get_debug_level() > 0){ std::cout << format("update(%s,%g,%g)\n", get_input_pair_short_desc(input_pair).c_str(), val1, val2); }
 	// Clear cached values
 	clear();
 
@@ -152,6 +19,11 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
     cached_saturation_iL = std::numeric_limits<std::size_t>::max(); 
     cached_saturation_iV = std::numeric_limits<std::size_t>::max();
     
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
+    SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+
     switch(input_pair){
         case HmolarP_INPUTS:{
             _hmolar = val1; _p = val2;
@@ -185,7 +57,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     // Find and cache the indices i, j
                     selected_table = SELECTED_PH_TABLE;
 					single_phase_logph.find_native_nearest_good_cell(_hmolar, _p, cached_single_phase_i, cached_single_phase_j);
-                    CellCoeffs &cell = coeffs_ph[cached_single_phase_i][cached_single_phase_j];
+                    CellCoeffs &cell = dataset->coeffs_ph[cached_single_phase_i][cached_single_phase_j];
                     if (!cell.valid()){
                         if (cell.has_valid_neighbor()){
                             // Get new good neighbor
@@ -242,7 +114,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 // Find and cache the indices i, j
                 selected_table = SELECTED_PH_TABLE;
                 single_phase_logph.find_nearest_neighbor(iP, _p, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
-                CellCoeffs &cell = coeffs_ph[cached_single_phase_i][cached_single_phase_j];
+                CellCoeffs &cell = dataset->coeffs_ph[cached_single_phase_i][cached_single_phase_j];
                 if (!cell.valid()){
                     if (cell.has_valid_neighbor()){
                         // Get new good neighbor
@@ -253,7 +125,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     }
                 }
 				// Now find hmolar given P, X for X in Hmolar, Smolar, Umolar
-                invert_single_phase_x(single_phase_logph, coeffs_ph, otherkey, otherval, _p, cached_single_phase_i, cached_single_phase_j);
+                invert_single_phase_x(single_phase_logph, dataset->coeffs_ph, otherkey, otherval, _p, cached_single_phase_i, cached_single_phase_j);
             }
             break;
         }
@@ -295,7 +167,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     // Find and cache the indices i, j
                     selected_table = SELECTED_PT_TABLE;
 					single_phase_logpT.find_native_nearest_good_cell(_T, _p, cached_single_phase_i, cached_single_phase_j);
-                    CellCoeffs &cell = coeffs_pT[cached_single_phase_i][cached_single_phase_j];
+                    CellCoeffs &cell = dataset->coeffs_pT[cached_single_phase_i][cached_single_phase_j];
                     if (!cell.valid()){
                         if (cell.has_valid_neighbor()){
                             // Get new good neighbor
@@ -377,7 +249,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 // Find and cache the indices i, j
                 selected_table = SELECTED_PT_TABLE;
                 single_phase_logpT.find_nearest_neighbor(iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
-                CellCoeffs &cell = coeffs_pT[cached_single_phase_i][cached_single_phase_j];
+                CellCoeffs &cell = dataset->coeffs_pT[cached_single_phase_i][cached_single_phase_j];
                 if (!cell.valid()){
                     if (cell.has_valid_neighbor()){
                         // Get new good neighbor
@@ -388,7 +260,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     }
                 }
 				// Now find the y variable (Dmolar or Smolar in this case)
-                invert_single_phase_y(single_phase_logpT, coeffs_pT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
+                invert_single_phase_y(single_phase_logpT, dataset->coeffs_pT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
             }
             break;
         }
@@ -396,14 +268,21 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
 			std::size_t iL = 0, iV = 0;
 			CoolPropDbl hL = 0, hV = 0;
 			_p = val1; _Q = val2;
-            if (_p < pure_saturation.pL[0]){throw ValueError(format("p (%g) Pa below minimum pressure", static_cast<double>(_p)));}
-			pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, hL, hV);
+            
             using_single_phase_table = false;
-            if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
+            if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
                 throw ValueError("vapor quality is not in (0,1)");
             }
             else{
-                cached_saturation_iL = iL; cached_saturation_iV = iV;
+                if (is_mixture){
+                    std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
+                    if (intersect.empty()){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
+                    iV = intersect[0].first; iL = intersect[1].first;
+                    cached_saturation_iL = iL; cached_saturation_iV = iV;
+                }
+                else{
+                    cached_saturation_iL = iL; cached_saturation_iV = iV;
+                }
             }
 			break;
 		}
@@ -419,6 +298,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             else{
                 if (is_mixture){
                     std::vector<std::pair<std::size_t,std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
+                    if (intersect.empty()){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
                     iV = intersect[0].first; iL = intersect[1].first;
                     double pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
                     double pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);

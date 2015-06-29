@@ -98,7 +98,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         long double first_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
         long double second_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
         long double first_saturation_deriv(constants_header.parameters, constants_header.parameters) except+ValueError
-        long double second_saturation_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
+        long double second_saturation_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
         double first_two_phase_deriv(constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant) except+ValueError
         double second_two_phase_deriv(constants_header.parameters Of, constants_header.parameters Wrt1, constants_header.parameters Constant1, constants_header.parameters Wrt2, constants_header.parameters Constant2) except+ValueError
         double first_two_phase_deriv_splined(constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant, double x_end) except+ValueError
