@@ -895,6 +895,47 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
+if (COOLPROP_R_MODULE)
+    IF (WIN32 AND MSVC)
+        MESSAGE(FATAL_ERROR "Must use MinGW Makefiles generator on windows")
+    ENDIF()
+    
+    # Must have SWIG
+    FIND_PACKAGE(SWIG REQUIRED)
+    INCLUDE(${SWIG_USE_FILE})
+    
+    # Define which headers the swig wrapper is dependent on
+    SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES} )
+    
+    FIND_PACKAGE(R REQUIRED)
+    include_directories(${R_INCLUDE_DIRS})
+    
+    link_directories(${R_BIN_OUT})
+    if (NOT MSVC)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -m64")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -m64")
+    endif()
+
+    # Set properties before adding module
+    set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
+    SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${COOLPROP_SWIG_OPTIONS}" CPLUSPLUS ON)
+    
+    SWIG_ADD_MODULE(CoolProp r ${I_FILE} ${APP_SOURCES})
+    SWIG_LINK_LIBRARIES(CoolProp "${R_LIBRARY}")
+    
+    if (WIN32)
+        # No lib prefix for the shared library
+        set_target_properties(CoolProp PROPERTIES PREFIX "")
+    endif()
+    
+    #add_custom_command(TARGET CoolProp
+    #                  POST_BUILD
+    #                  COMMAND python example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
+    #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.R" DESTINATION R)
+    install (FILES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.R" DESTINATION R)
+    install (TARGETS ${app_name} DESTINATION R/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+endif()
+
 if (COOLPROP_MATLAB_MODULE)
 
   add_definitions(/DMATLAB_MEX_FILE) #define matlab macros
