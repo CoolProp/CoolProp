@@ -66,6 +66,16 @@ if __name__=='__main__':
         tee_call(r'mono Example', fp, shell = True, cwd = 'Csharp')
     copyfiles('Csharp','cs')
     
+    if not os.path.exists('R'): os.mkdir('R')
+    RR = R()
+    RR.write('R/Example.R', RR.parse())
+    kwargs = dict(stdout = sys.stdout, stderr = sys.stderr, shell = True, cwd = 'R')
+    subprocess.check_call('cmake ../../../.. -DCOOLPROP_R_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON', **kwargs)
+    subprocess.check_call('cmake --build .', **kwargs)
+    with open('R/Example.out','w') as fp:
+        tee_call(r'R Example.R', fp, shell = True, cwd = 'R')
+    copyfiles('R','R')
+    
     if not os.path.exists('MATLAB'): os.mkdir('MATLAB')
     M = MATLAB()
     M.write('MATLAB/Example.m', M.parse())
