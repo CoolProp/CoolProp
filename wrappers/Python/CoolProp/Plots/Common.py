@@ -112,7 +112,7 @@ class UnitSystem(object):
       CoolProp.iT     : self._T,
       CoolProp.iUmass : self._U,
       CoolProp.iQ     : self._Q
-    }
+    }        
 
 
 class SIunits(UnitSystem):
@@ -368,9 +368,16 @@ class IsoLine(Base2DObject):
         Tcrit = self.state.trivial_keyed_output(CoolProp.iT_critical)
         Pcrit = self.state.trivial_keyed_output(CoolProp.iP_critical)
         Dcrit = self.state.trivial_keyed_output(CoolProp.irhomass_critical)
-        self.state.update(CoolProp.DmassT_INPUTS, Dcrit, Tcrit)
-        xcrit = self.state.keyed_output(self._x_index)
-        ycrit = self.state.keyed_output(self._y_index)
+        try:
+            self.state.update(CoolProp.DmassT_INPUTS, Dcrit, Tcrit)
+            xcrit = self.state.keyed_output(self._x_index)
+            ycrit = self.state.keyed_output(self._y_index)
+        except:
+            warnings.warn(
+              "An error occurred for the critical inputs, skipping it.",
+              UserWarning)
+            xcrit = np.NaN
+            ycrit = np.NaN
         
         X = np.empty_like(one)
         Y = np.empty_like(one)

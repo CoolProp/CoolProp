@@ -71,11 +71,11 @@ class PropertyPlot(BasePlot):
     #def ppoints(self): return self._ppoints
     
     def show(self):
-        plot.draw()
+        self.draw()
         super(PropertyPlot, self).show()
         
     def savefig(self, *args, **kwargs):
-        plot.draw()
+        self.draw()
         super(PropertyPlot, self).savefig(*args, **kwargs)
     
     def _plotRound(self, values):
@@ -150,6 +150,7 @@ class PropertyPlot(BasePlot):
             lines[-1].calc_range(ixrange,iyrange)
             lines[-1].sanitize_data()
         self.isolines[iso_type] = lines 
+        return 
     
     
     def draw_isolines(self):
@@ -209,12 +210,12 @@ class PropertyPlot(BasePlot):
             (x1, y1) = states[i-1]
             
             iso_type = None
-            iso_line = None 
-            if iso_types is not None: 
-                iso_type = self._get_index(iso_types[i])
+            if iso_types is not None and iso_types[i-1] is not None:
+                iso_type = self._get_index(iso_types[i-1])
             else: # TODO: detect it!
                 iso_type = None
                 
+            iso_line = None 
             if iso_type is not None:
                 switch = IsoLine.XY_SWITCH[iso_type].get(self.y_index*10+self.x_index,None)
                 if switch is not None:
@@ -230,7 +231,7 @@ class PropertyPlot(BasePlot):
                         i_val2 = self.state.keyed_output(iso_type)
                         i_val = dimi.from_SI((i_val1 + i_val2)/2.0) 
                         self.calc_isolines(iso_type, [i_val], num=1)
-                        iso_line = self.isolines[iso_type].pop
+                        iso_line = self.isolines[iso_type].pop()
                         idx1 = numpy.argmin(numpy.abs(iso_line.x - x1))
                         idx2 = numpy.argmin(numpy.abs(iso_line.x - x2))
                         if idx1>idx2:

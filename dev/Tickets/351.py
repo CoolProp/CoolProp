@@ -1,8 +1,8 @@
 from CoolProp.CoolProp import PropsSI
-from CoolProp.Plots import PropsPlot
+from CoolProp.Plots import PropertyPlot
 import matplotlib.pylab as pl
 from numpy import *
-%matplotlib inline
+import CoolProp
 
 eta_e_s = 0.88
 eta_p_s = 0.5
@@ -32,18 +32,32 @@ def SimpleRankineCycle(T3, p3, p1, epsilon_e, epsilon_p, fluid='water'):
     q_boiler = h3 - h2
     eta_c = w_net / q_boiler
     
-    Ts = PropsPlot(fluid, 'Ts')
-    Ts.draw_isolines('P', [p1, p3], num=10)
-    Ts.set_axis_limits([0., 12., 200., 900.])
+    Ts = PropertyPlot(fluid, 'Ts', 'KSI')
+    Ts.set_axis_limits([0., 12., 200., 900.])    
+    Ts.calc_isolines(CoolProp.iP, [Ts.system.P.from_SI(p1), Ts.system.P.from_SI(p3)], num=10)
+    Ts.calc_isolines(CoolProp.iQ, [Ts.system.Q.from_SI(0.), Ts.system.Q.from_SI(1.)], num=11)
+    Ts.draw_isolines()
+    
+    states = zip(Ts.system.S.from_SI(array([s1,s2,s3,s4,s1])),Ts.system.T.from_SI(array([T1,T2,T3,T4,T1])))
+    Ts.draw_process(states, iso_types=None, line_opts={'color':'red', 'lw':1.5})
+    isot = [
+      None, # non-isentropic pumping from 1 to 2
+      CoolProp.iP, # p2=p3
+      None,
+      CoolProp.iP, # p4=p1
+      ]
+    Ts.draw_process(states, iso_types=isot, line_opts={'color':'green', 'lw':1.5})
+    
     
     ax = Ts.axis
-    ax.text(s1/1000, T1,' 1', fontsize=10, rotation=0, color='r')
-    ax.text(s2/1000, T2,' 2', fontsize=10, rotation=0, color='r')
-    ax.text(s3/1000, T3,' 3', fontsize=10, rotation=0, color='r')
-    ax.text(s4/1000, T4,' 4', fontsize=10, rotation=0, color='r')
-    ax.text(8., 850., "Efficiency: %.1f%%" %(eta_c*100.))
-    ax.text(8., 800., "Net work: %d kJ/kg" %(w_net/1000))
-    ax.text(8., 750., "Heat input: %d kJ/kg" %(q_boiler/1000))
+    ax.text(Ts.system.S.from_SI(s1), Ts.system.T.from_SI(T1), ' 1', fontsize=10, rotation=0, color='r')
+    ax.text(Ts.system.S.from_SI(s2), Ts.system.T.from_SI(T2), ' 2', fontsize=10, rotation=0, color='r')
+    ax.text(Ts.system.S.from_SI(s3), Ts.system.T.from_SI(T3), ' 3', fontsize=10, rotation=0, color='r')
+    ax.text(Ts.system.S.from_SI(s4), Ts.system.T.from_SI(T4), ' 4', fontsize=10, rotation=0, color='r')
+    ax.text(Ts.system.S.from_SI(8e3),Ts.system.T.from_SI(850),"Efficiency: %.1f%%" %(eta_c*100.))
+    ax.text(Ts.system.S.from_SI(8e3),Ts.system.T.from_SI(800),"Net work: %d kJ/kg" %(w_net/1000))
+    ax.text(Ts.system.S.from_SI(8e3),Ts.system.T.from_SI(750),"Heat input: %d kJ/kg" %(q_boiler/1000))
     return Ts
 
 Ts = SimpleRankineCycle(T_max, p_max, p_cd, eta_e_s, eta_p_s, fluid="water")
+Ts.savefig('ticket-351.pdf')
