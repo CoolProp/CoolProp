@@ -926,6 +926,7 @@ if (COOLPROP_R_MODULE)
     # No lib prefix for the shared library
     set_target_properties(CoolProp PROPERTIES PREFIX "")
     
+    add_dependencies (CoolProp generate_headers)
     add_custom_command(TARGET CoolProp
                        POST_BUILD
                        COMMAND python example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
