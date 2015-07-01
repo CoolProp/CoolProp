@@ -800,9 +800,6 @@ class MATLAB(BaseParser):
     type_name_mapping = {'vector': None,
                          'AbstractState': None}
     indentation = ''
-    
-    def __init__(self):
-        self.pieces = high_level_interface + low_level_interface
 
     def parse_arguments(self, arguments):
         out = []
