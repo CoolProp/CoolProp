@@ -49,9 +49,9 @@ Once the dependencies are installed, you can run the builder and tests using::
     # Move into the folder you just created
     mkdir -p  CoolProp/build && cd CoolProp/build
     # Build the makefile using CMake
-    cmake .. -DCOOLPROP_R_MODULE=ON -DR_BIN="c:\Program Files\R\R-3.2.1\bin\x64" -DCMAKE_BUILD_TYPE=Release
-    # Make the R files
-    make install
+    cmake .. -DCOOLPROP_R_MODULE=ON -DR_BIN="/usr/bin" -DCMAKE_BUILD_TYPE=Release
+    # Make the R shared library
+    cmake --build .
 
 Windows (32-bit and 64-bit)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
