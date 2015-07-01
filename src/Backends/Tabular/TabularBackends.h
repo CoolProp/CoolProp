@@ -732,6 +732,7 @@ class TabularBackend : public AbstractState
         CoolPropDbl calc_p_triple(void){return this->AS->p_triple();};
         CoolPropDbl calc_pmax(void){return this->AS->pmax();};
         CoolPropDbl calc_Tmax(void){return this->AS->Tmax();};
+        CoolPropDbl calc_p_critical(void){ return this->AS->p_critical(); }
         bool using_mole_fractions(void){return true;}
         bool using_mass_fractions(void){return false;}
         bool using_volu_fractions(void){return false;}

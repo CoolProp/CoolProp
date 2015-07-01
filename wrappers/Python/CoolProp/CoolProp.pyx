@@ -486,7 +486,7 @@ cdef class State:
         ----------
         Fluid : string
         StateDict : dictionary
-            The state of the fluid - passed to the update function
+            The state of the fluid - passed to the update function; if None, does not do a state update
         phase : string
             DEPRECATED : this input is ignored
         backend : string
@@ -506,7 +506,8 @@ cdef class State:
         self.Fluid = _Fluid
 
         # Parse the inputs provided
-        self.update(StateDict)
+        if StateDict is not None:
+            self.update(StateDict)
 
         self.phase = phase
         if phase is None:
@@ -739,10 +740,22 @@ cdef class State:
 
         Returns ``None`` if pressure is not within the two-phase pressure range
         """
-        if self.p_ > 0.001*_PropsSI('pcrit','T',0,'P',0,self.Fluid) or self.p_ < 0.001*_PropsSI('ptriple','T',0,'P',0, self.Fluid):
-            return None
+        cdef State state = State(self.Fluid, None)
+        cdef double pc = state.Props(iP_critical)
+        cdef double pt
+        try:
+            pt = state.Props(iP_triple)
+        except ValueError:
+            pt = -1
+        if _ValidNumber(pc) and _ValidNumber(pt):
+            if self.p_ > 0.001*pc or self.p_ < 0.001*pt:
+                return None
+            else:
+                state.update(dict(P=self.p_,Q=Q))
+                return state.T
         else:
-            return 0.001*_PropsSI('T', 'P', self.p_*1000, 'Q', Q, self.Fluid)
+            state.update(dict(P=self.p_,Q=Q))
+            return state.T
     property Tsat:
         """ The saturation temperature (dew) for the given pressure, in [K]"""
         def __get__(self):
