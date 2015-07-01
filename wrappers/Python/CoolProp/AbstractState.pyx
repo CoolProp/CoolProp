@@ -182,6 +182,12 @@ cdef class AbstractState:
     cpdef double PIP(self) except *: 
         """ Get the phase identification parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::PIP(void)` """
         return self.thisptr.PIP()
+    cpdef double fugacity(self, size_t i) except *: 
+        """ Get the fugacity of the i-th component - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fugacity(std::size_t)` """
+        return self.thisptr.fugacity(i)
+    cpdef double fugacity_coefficient(self, size_t i) except *: 
+        """ Get the fugacity coefficient of the i-th component - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fugacity_coefficient(std::size_t)` """
+        return self.thisptr.fugacity_coefficient(i)
     
     cpdef mole_fractions_liquid(self):
         """ Get the mole fractions of the liquid phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_liquid(void)` """

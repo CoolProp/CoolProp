@@ -431,9 +431,13 @@ double AbstractState::gas_constant(void){
     if (!_gas_constant) _gas_constant = calc_gas_constant();
     return _gas_constant;
 }
-double AbstractState::fugacity_coefficient(int i){
+double AbstractState::fugacity_coefficient(std::size_t i){
     // TODO: Cache the fug. coeff for each component
     return calc_fugacity_coefficient(i);
+}
+double AbstractState::fugacity(std::size_t i){
+    // TODO: Cache the fug. coeff for each component
+    return calc_fugacity(i);
 }
 void AbstractState::build_phase_envelope(const std::string &type)
 {

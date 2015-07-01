@@ -22,8 +22,10 @@ surface tension                 N/m
 #define _CRT_SECURE_NO_WARNINGS
 
 #define REFPROP_IMPLEMENTATION
+#define REFPROP_CSTYLE_REFERENCES
 #include "REFPROP_lib.h"
 #undef REFPROP_IMPLEMENTATION
+#undef REFPROP_CSTYLE_REFERENCES
 
 #include "CoolPropTools.h"
 #include "REFPROPMixtureBackend.h"
@@ -584,7 +586,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_surface_tension(void)
     _surface_tension = sigma;
     return static_cast<double>(_surface_tension);
 }
-CoolPropDbl REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
+CoolPropDbl REFPROPMixtureBackend::calc_fugacity_coefficient(std::size_t i)
 {
     this->check_loaded_fluid();
     double rho_mol_L = 0.001*_rhomolar;
@@ -593,11 +595,25 @@ CoolPropDbl REFPROPMixtureBackend::calc_fugacity_coefficient(int i)
     fug_cof.resize(mole_fractions.size());
     char herr[255];
     FUGCOFdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
-             &(fug_cof[0]),                   // Outputs
-             &ierr, herr, errormessagelength);       // Error message
+             &(fug_cof[0]),                           // Outputs
+             &ierr, herr, errormessagelength);        // Error message
     if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<CoolPropDbl>(fug_cof[i]);
+}
+CoolPropDbl REFPROPMixtureBackend::calc_fugacity(std::size_t i)
+{
+    this->check_loaded_fluid();
+    double rho_mol_L = 0.001*_rhomolar;
+    long ierr = 0;
+    std::vector<double> f(mole_fractions.size());
+    char herr[255];
+    FGCTY2dll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
+              &(f[0]),                                // Outputs
+        &ierr, herr, errormessagelength);             // Error message
+    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s", herr).c_str()); }
+    //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    return static_cast<CoolPropDbl>(f[i]*1000);
 }
 
 void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
