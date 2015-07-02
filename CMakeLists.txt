@@ -495,7 +495,7 @@ if (COOLPROP_OCTAVE_MODULE)
     MESSAGE(STATUS "COOLPROP_OCTAVE_USING_CLANG = ${COOLPROP_OCTAVE_USING_CLANG}")
     string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
     STRING(LENGTH "${COOLPROP_OCTAVE_USING_CLANG}" LEN)
-    if (LEN GREATER 0)
+    if (${LEN} GREATER 0)
       message(STATUS "Using -stdlib=libc++")
       set_target_properties(CoolProp PROPERTIES LINK_FLAGS "-stdlib=libc++")
     else()
@@ -938,6 +938,12 @@ if (COOLPROP_R_MODULE)
     install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.R" DESTINATION R)
     install (FILES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.R" DESTINATION R)
     install (TARGETS ${app_name} DESTINATION R/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+    
+    enable_testing()
+    add_test(NAME R_test
+             COMMAND ${R_EXEC} -f Example.R
+             WORKING_DIRECTORY {CMAKE_CURRENT_BINARY_DIR})
+               
 endif()
 
 if (COOLPROP_MATLAB_MODULE)
