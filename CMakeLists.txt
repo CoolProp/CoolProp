@@ -941,7 +941,7 @@ if (COOLPROP_R_MODULE)
     
     enable_testing()
     add_test(NAME R_test
-             COMMAND ${R_EXEC} -f Example.R
+             COMMAND "${R_EXEC} -f Example.R"
              WORKING_DIRECTORY {CMAKE_CURRENT_BINARY_DIR})
                
 endif()
