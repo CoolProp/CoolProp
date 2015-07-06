@@ -84,8 +84,8 @@ steps on a Windows machine::
 
     conda create -n CoolProp27 python=2
     conda create -n CoolProp34 python=3
-    conda install -n CoolProp27 cython pip pywin32
-    conda install -n CoolProp34 cython pip pywin32
+    conda install -n CoolProp27 cython pip pywin32 unxutils jinja2 pyyaml
+    conda install -n CoolProp34 cython pip pywin32 unxutils jinja2 pyyaml
 
     activate CoolProp27
     pip install wheel
@@ -100,8 +100,8 @@ On a Linux system, things only change a little bit::
 
     conda create -n CoolProp27 python=2
     conda create -n CoolProp34 python=3
-    conda install -n CoolProp27 cython pip
-    conda install -n CoolProp34 cython pip
+    conda install -n CoolProp27 cython pip jinja2 pyyaml
+    conda install -n CoolProp34 cython pip jinja2 pyyaml
 
     source activate CoolProp27
     pip install wheel
