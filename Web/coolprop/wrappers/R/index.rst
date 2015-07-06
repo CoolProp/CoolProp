@@ -22,6 +22,10 @@ At the R console, run::
     
 There is example code :ref:`at the end of this page <r_example>`
 
+.. warning::
+
+    For OSX users that wish to call REFPROP, you may be required to set the environmental variable ``DYLD_LIBRARY_PATH`` to the folder containing your REFPROP.dylib shared library, which is probably ``/opt/refprop``
+
 User-Compiled Binaries
 ======================
 

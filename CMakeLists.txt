@@ -920,6 +920,8 @@ if (COOLPROP_R_MODULE)
         set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -m64")
     endif()
 
+    add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
+
     # Set properties before adding module
     set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
     SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${COOLPROP_SWIG_OPTIONS}" CPLUSPLUS ON)
