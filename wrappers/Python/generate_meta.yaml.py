@@ -42,13 +42,13 @@ requirements:
     - {{ pkg -}}
 {% endfor %}
 
-test:
-  # Python imports
-  imports:
-    - CoolProp
-    #- CoolProp.GUI
-    #- CoolProp.Plots
-    - CoolProp.tests
+#test:
+#  # Python imports
+#  imports:
+#    - CoolProp
+#    #- CoolProp.GUI
+#    #- CoolProp.Plots
+#    - CoolProp.tests
 
   # commands:
     # You can put test commands to be run here.  Use this to test that the
@@ -175,10 +175,16 @@ def run_command(cmd):
                             stdout=subprocess.PIPE, 
                             stderr=subprocess.PIPE, 
                             stdin=subprocess.PIPE).communicate()
-#subprocess.check_call('conda build .', shell = True, stdout = sys.stdout, stderr = sys.stderr)
-filename = os.path.abspath(run_command('conda build --output .')[0]).strip()
-tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda','Python_conda'))
-try:
+cmd = ['conda','env','remove','-yq','-n']                            
+subprocess.check_call(cmd+['_test'], stdout=sys.stdout, stderr=sys.stderr)                        
+subprocess.check_call(cmd+['_build'], stdout=sys.stdout, stderr=sys.stderr)
+ver =  sys.version_info
+cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
+subprocess.check_call(cmd+['.'], stdout=sys.stdout, stderr=sys.stderr)
+#vsubprocess.check_call(cmd+['.'], shell=True, stdout=sys.stdout, stderr=sys.stderr)#, env=os.environ.copy())
+filename = os.path.abspath(run_command(cmd+['--output','.'])[0]).decode("utf-8").strip()
+tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda','Python_conda')).strip()
+try: 
     os.makedirs(tar)
 except Exception as e:
     if os.path.isdir(tar): pass
