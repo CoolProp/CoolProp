@@ -175,9 +175,9 @@ def run_command(cmd):
                             stdout=subprocess.PIPE, 
                             stderr=subprocess.PIPE, 
                             stdin=subprocess.PIPE).communicate()
-#subprocess.check_call('conda build .', shell = True, stdout = sys.stdout, stderr = sys.stderr)
-filename = str(os.path.abspath(run_command('conda build --output .')[0])).strip()
-tar = str(os.path.abspath(os.path.join(os.path.dirname(__file__),'conda','Python_conda'))).strip()
+subprocess.check_call('conda build .', shell = True, stdout = sys.stdout, stderr = sys.stderr)
+filename = os.path.abspath(run_command('conda build --output .')[0]).decode("utf-8").strip()
+tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda','Python_conda')).strip()
 try:
     os.makedirs(tar)
 except Exception as e:
