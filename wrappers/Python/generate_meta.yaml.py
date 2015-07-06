@@ -167,6 +167,7 @@ f.write(bat_template)
 f.close()
 
 runner_template = """
+from __future__ import print_function
 import sys, shutil, subprocess, os, errno
 def run_command(cmd):
     '''given shell command, returns communication tuple of stdout and stderr'''
@@ -174,14 +175,15 @@ def run_command(cmd):
                             stdout=subprocess.PIPE, 
                             stderr=subprocess.PIPE, 
                             stdin=subprocess.PIPE).communicate()
-subprocess.check_call('conda build .', shell = True, stdout = sys.stdout, stderr = sys.stderr)
+#subprocess.check_call('conda build .', shell = True, stdout = sys.stdout, stderr = sys.stderr)
 filename = os.path.abspath(run_command('conda build --output .')[0]).strip()
-tar = os.path.join(os.path.dirname(__file__),'conda','Python_conda')
+tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda','Python_conda'))
 try:
     os.makedirs(tar)
 except Exception as e:
     if os.path.isdir(tar): pass
     else: raise
+print("Copying: "+str(filename)+" to "+str(tar)) 
 shutil.copy(filename,tar)
 sys.exit(0)
 """
