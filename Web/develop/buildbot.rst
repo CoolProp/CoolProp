@@ -84,8 +84,8 @@ steps on a Windows machine::
 
     conda create -n CoolProp27 python=2
     conda create -n CoolProp34 python=3
-    conda install -n CoolProp27 cython pip pywin32 unxutils jinja2 pyyaml
-    conda install -n CoolProp34 cython pip pywin32 unxutils jinja2 pyyaml
+    conda install -n CoolProp27 cython pip pywin32 unxutils jinja2 pyyaml ndg-httpsclient
+    conda install -n CoolProp34 cython pip pywin32 unxutils jinja2 pyyaml ndg-httpsclient
 
     activate CoolProp27
     pip install wheel
