@@ -18,9 +18,6 @@ find_program(R_EXEC
              NAMES R
              PATHS ${R_BIN}
              )
-execute_process(
-    COMMAND ${R_EXEC} RHOME OUTPUT_VARIABLE R_HOME_TEXT RESULT_VARIABLE R_HOME_RESULT
-)
 MESSAGE(STATUS "R_EXEC= ${R_EXEC}")
 # Parse the output of the R path commmand, removing whitespace
 FUNCTION(chomp arg1 arg2)
@@ -32,9 +29,15 @@ FUNCTION(chomp arg1 arg2)
     # see http://www.cmake.org/pipermail/cmake/2008-November/025423.html
     set(${arg2} ${arg1path} PARENT_SCOPE)
 ENDFUNCTION(chomp)
-STRING(STRIP ${R_HOME_TEXT} R_HOME_TEXT)
-MESSAGE(STATUS "R_HOME_TEXT = ${R_HOME_TEXT}")
-MESSAGE(STATUS "R_HOME_RESULT = ${R_HOME_RESULT}")
+
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/get_home.R R.home())
+execute_process(
+    COMMAND ${R_EXEC} --quiet -f ${CMAKE_CURRENT_BINARY_DIR}/get_bin.R OUTPUT_VARIABLE R_HOME_TEXT RESULT_VARIABLE R_HOME_RESULT
+)
+file(REMOVE ${CMAKE_CURRENT_BINARY_DIR}/get_home.R)
+MESSAGE(STATUS "R_HOME_TEXT = ${R_HOME_TEXT} w/ RESULT=${R_HOME_RESULT}")
+chomp(${R_HOME_TEXT} R_HOME_TEXT)
+
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/get_include.R R.home(component=\"include\"))
 execute_process(
     COMMAND ${R_EXEC} --quiet -f ${CMAKE_CURRENT_BINARY_DIR}/get_include.R OUTPUT_VARIABLE R_INCLUDE_TEXT RESULT_VARIABLE R_INCLUDE_RESULT
