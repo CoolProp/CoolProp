@@ -940,9 +940,7 @@ if (COOLPROP_R_MODULE)
     install (TARGETS ${app_name} DESTINATION R/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
     
     enable_testing()
-    add_test(NAME R_test
-             COMMAND ${R_EXEC} -f Example.R
-             WORKING_DIRECTORY {CMAKE_CURRENT_BINARY_DIR})
+    add_test(R_test ${R_EXEC} -f Example.R)
                
 endif()
 
