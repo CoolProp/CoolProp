@@ -17,6 +17,10 @@ ENDIF()
 find_program(R_EXEC
              NAMES R
              PATHS ${R_BIN}
+             NO_SYSTEM_ENVIRONMENT_PATH
+             NO_CMAKE_SYSTEM_PATH
+             NO_DEFAULT_PATH
+             NO_CMAKE_PATH
              )
 MESSAGE(STATUS "R_EXEC= ${R_EXEC}")
 # Parse the output of the R path commmand, removing whitespace
