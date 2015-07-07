@@ -175,15 +175,21 @@ def run_command(cmd):
                             stdout=subprocess.PIPE, 
                             stderr=subprocess.PIPE, 
                             stdin=subprocess.PIPE).communicate()
-cmd = ['conda','env','remove','-yq','-n']                            
-subprocess.check_call(cmd+['_test'], stdout=sys.stdout, stderr=sys.stderr)                        
-subprocess.check_call(cmd+['_build'], stdout=sys.stdout, stderr=sys.stderr)
+#cmd = ['conda','remove','--all','-yq','-n']
+#for t in ['_test','_build']:
+#    try: 
+#        subprocess.check_call(cmd+[t], stdout=sys.stdout, stderr=sys.stderr)
+#    except:
+#        pass
+#subprocess.check_call(['cmd', '/c', 'rd', '/s', '/q', path])
+tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda')).strip()
+if os.path.isdir(tar): shutil.rmtree(tar,True)
 ver =  sys.version_info
 cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
-#subprocess.check_call(cmd+['.'], shell=True, stdout=sys.stdout, stderr=sys.stderr)
 filename = os.path.abspath(run_command(cmd+['--output','.'])[0]).decode("utf-8").strip()
-tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda','Python_conda',os.path.dirname(filename))).strip()
-try: 
+tar = os.path.join(tar,'Python_conda',os.path.basename(os.path.dirname(filename))).strip()
+subprocess.check_call(cmd+['.'], shell=True, stdout=sys.stdout, stderr=sys.stderr)
+try:
     os.makedirs(tar)
 except Exception as e:
     if os.path.isdir(tar): pass
