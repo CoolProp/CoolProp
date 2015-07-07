@@ -42,13 +42,13 @@ requirements:
     - {{ pkg -}}
 {% endfor %}
 
-test:
-  # Python imports
-  imports:
-    - CoolProp
-    #- CoolProp.GUI
-    #- CoolProp.Plots
-    - CoolProp.tests
+#test:
+#  # Python imports
+#  imports:
+#    - CoolProp
+#    #- CoolProp.GUI
+#    #- CoolProp.Plots
+#    - CoolProp.tests
 
   # commands:
     # You can put test commands to be run here.  Use this to test that the
