@@ -187,9 +187,9 @@ def remove_readonly(func, path, _):
 cmd = ['conda','remove','--all','-yq','-n']
 for t in ['_test','_build']:
     try: 
-        subprocess.check_call(' '.join(cmd+[t]), stdout=sys.stdout, stderr=sys.stderr)
+        subprocess.check_call(cmd+[t], stdout=sys.stdout, stderr=sys.stderr)
     except:
-        envs = run_command(' '.join(['conda','env','list']))[0].decode("utf-8").splitlines()
+        envs = run_command(['conda','env','list'])[0].decode("utf-8").splitlines()
         for env in envs:
             lst = env.split(' ')
             if len(lst)>0 and lst[0] == t: 
@@ -202,10 +202,10 @@ if os.path.isdir(tar): shutil.rmtree(tar, onerror=remove_readonly)
 ver =  sys.version_info
 cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
 print('Command is: '+' '.join(cmd))
-filename = os.path.abspath(run_command(' '.join(cmd+['--output','.']))[0].decode("utf-8").strip())
+filename = os.path.abspath(run_command(cmd+['--output','.'])[0].decode("utf-8").strip())
 tar = os.path.join(tar,'Python_conda',os.path.basename(os.path.dirname(filename))).strip()
 try: 
-    subprocess.check_call(' '.join(cmd+['.']), shell=True, stdout=sys.stdout, stderr=sys.stderr)
+    subprocess.check_call(cmd+['.'], shell=True, stdout=sys.stdout, stderr=sys.stderr)
 except Exception as e:
     print("conda build failed: "+str(e))
     pass
