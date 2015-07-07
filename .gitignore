@@ -43,3 +43,8 @@
 /dev/all_incompressibles_verbose.json
 /include/all_incompressibles_JSON.h
 fluids
+/meta.yaml
+/runner.py
+/build.sh
+/bld.bat
+/conda/
