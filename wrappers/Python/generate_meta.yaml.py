@@ -207,15 +207,18 @@ try:
     subprocess.check_call(cmd+['.'], shell=True, stdout=sys.stdout, stderr=sys.stderr)
 except Exception as e:
     print("conda build failed: "+str(e))
-    sys.exit(0)
     pass
 try:
     os.makedirs(tar)
 except Exception as e:
     if os.path.isdir(tar): pass
     else: raise
-print("Copying: "+str(filename)+" to "+str(tar)) 
-shutil.copy(filename,tar)
+try:
+    print("Copying: "+str(filename)+" to "+str(tar)) 
+    shutil.copy(filename,tar)
+except Exception as e:
+    print("Copy operation failed: "+str(e))
+    pass
 sys.exit(0)
 """
 target = "runner.py"
