@@ -168,22 +168,34 @@ f.close()
 
 runner_template = """
 from __future__ import print_function
-import sys, shutil, subprocess, os, errno
+import sys, shutil, subprocess, os, stat
 def run_command(cmd):
     '''given shell command, returns communication tuple of stdout and stderr'''
     return subprocess.Popen(cmd, 
                             stdout=subprocess.PIPE, 
                             stderr=subprocess.PIPE, 
                             stdin=subprocess.PIPE).communicate()
-#cmd = ['conda','remove','--all','-yq','-n']
-#for t in ['_test','_build']:
-#    try: 
-#        subprocess.check_call(cmd+[t], stdout=sys.stdout, stderr=sys.stderr)
-#    except:
-#        pass
-#subprocess.check_call(['cmd', '/c', 'rd', '/s', '/q', path])
+def remove_all(path):
+    #subprocess.check_call(['cmd', '/c', 'rd', '/s', '/q', path])
+    print(run_command(['cmd', '/c', 'rd', '/s', '/q', path])[0].decode("utf-8"))
+def remove_readonly(func, path, _):
+    "Clear the readonly bit and reattempt the removal"
+    os.chmod(path, stat.S_IWRITE)
+    try: func(path)
+    except: remove_all(path); pass 
+#
+cmd = ['conda','remove','--all','-yq','-n']
+for t in ['_test','_build']:
+    try: 
+        subprocess.check_call(cmd+[t], stdout=sys.stdout, stderr=sys.stderr)
+    except:
+        envs = run_command(['conda','env','list'])[0].decode("utf-8").split()
+        for i,env in enumerate(envs):
+            if env == t: 
+                shutil.rmtree(envs[i+1], onerror=remove_readonly)
+        pass
 tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda')).strip()
-if os.path.isdir(tar): shutil.rmtree(tar,True)
+if os.path.isdir(tar): shutil.rmtree(tar, onerror=remove_readonly)
 ver =  sys.version_info
 cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
 filename = os.path.abspath(run_command(cmd+['--output','.'])[0]).decode("utf-8").strip()
