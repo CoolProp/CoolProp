@@ -189,10 +189,13 @@ for t in ['_test','_build']:
     try: 
         subprocess.check_call(cmd+[t], stdout=sys.stdout, stderr=sys.stderr)
     except:
-        envs = run_command(['conda','env','list'])[0].decode("utf-8").split()
-        for i,env in enumerate(envs):
-            if env == t: 
-                shutil.rmtree(envs[i+1], onerror=remove_readonly)
+        envs = run_command(['conda','env','list'])[0].decode("utf-8").splitlines()
+        for env in envs:
+            lst = env.split(' ')
+            if len(lst)>0 and lst[0] == t: 
+                dir = ' '.join(lst[1:]).strip()
+                print("Manually removing: "+dir)
+                shutil.rmtree(dir, onerror=remove_readonly)
         pass
 tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda')).strip()
 if os.path.isdir(tar): shutil.rmtree(tar, onerror=remove_readonly)
