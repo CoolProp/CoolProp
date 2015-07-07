@@ -166,7 +166,7 @@ f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
 f.write(bsh_template)
 f.close()
 
-runner_template = """
+#runner_template = """
 from __future__ import print_function
 import sys, shutil, subprocess, os, stat
 def run_command(cmd):
@@ -202,7 +202,7 @@ if os.path.isdir(tar): shutil.rmtree(tar, onerror=remove_readonly)
 ver =  sys.version_info
 cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
 print('Command is: '+' '.join(cmd))
-filename = os.path.abspath(run_command(' '.join(cmd+['--output','.']))[0]).decode("utf-8").strip()
+filename = os.path.abspath(run_command(' '.join(cmd+['--output','.']))[0].decode("utf-8").strip())
 tar = os.path.join(tar,'Python_conda',os.path.basename(os.path.dirname(filename))).strip()
 try: 
     subprocess.check_call(' '.join(cmd+['.']), shell=True, stdout=sys.stdout, stderr=sys.stderr)
