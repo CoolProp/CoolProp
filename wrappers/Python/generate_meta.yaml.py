@@ -163,7 +163,7 @@ popd
 """
 target = "build.sh"
 f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
-f.write(bat_template)
+f.write(bsh_template)
 f.close()
 
 runner_template = """
@@ -201,6 +201,7 @@ tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda')).strip()
 if os.path.isdir(tar): shutil.rmtree(tar, onerror=remove_readonly)
 ver =  sys.version_info
 cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
+print('Command is: '+' '.join(cmd))
 filename = os.path.abspath(run_command(cmd+['--output','.'])[0]).decode("utf-8").strip()
 tar = os.path.join(tar,'Python_conda',os.path.basename(os.path.dirname(filename))).strip()
 try: 
