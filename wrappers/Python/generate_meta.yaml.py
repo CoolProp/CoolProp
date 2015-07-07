@@ -166,7 +166,7 @@ f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
 f.write(bsh_template)
 f.close()
 
-#runner_template = """
+runner_template = """
 from __future__ import print_function
 import sys, shutil, subprocess, os, stat
 def run_command(cmd):
