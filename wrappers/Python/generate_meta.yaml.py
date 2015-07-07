@@ -205,7 +205,7 @@ print('Command is: '+' '.join(cmd))
 filename = os.path.abspath(run_command(cmd+['--output','.'])[0].decode("utf-8").strip())
 tar = os.path.join(tar,'Python_conda',os.path.basename(os.path.dirname(filename))).strip()
 try: 
-    subprocess.check_call(cmd+['.'], shell=True, stdout=sys.stdout, stderr=sys.stderr)
+    subprocess.check_call(cmd+['.'], stdout=sys.stdout, stderr=sys.stderr)
 except Exception as e:
     print("conda build failed: "+str(e))
     pass
