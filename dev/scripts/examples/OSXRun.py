@@ -10,8 +10,8 @@ def tee_call(call, file, **kwargs):
                            **kwargs)
     stdout, stderr = callee.communicate()
     print(stdout, stderr)
-    file.write()
-    file.write()
+    file.write(stdout)
+    file.write(stderr)
     if callee.poll() != 0:
         raise ValueError('Return code is non-zero')
             
