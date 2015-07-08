@@ -447,7 +447,7 @@ double AbstractState::isothermal_compressibility(void){
     return 1.0/_rhomolar*first_partial_deriv(iDmolar, iP, iT);
 }
 double AbstractState::isobaric_expansion_coefficient(void){
-    return -1.0/pow(_rhomolar,2)*first_partial_deriv(iDmolar, iT, iP);
+    return -1.0/_rhomolar*first_partial_deriv(iDmolar, iT, iP);
 }
 double AbstractState::Bvirial(void){ return calc_Bvirial(); }
 double AbstractState::Cvirial(void){ return calc_Cvirial(); }

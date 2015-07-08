@@ -85,6 +85,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double Bvirial() except +ValueError
         double Cvirial() except +ValueError
         double PIP() except +ValueError
+        double isothermal_compressibility() except +ValueError
+        double isobaric_expansion_coefficient() except +ValueError
         double fugacity(size_t) except +ValueError
         double fugacity_coefficient(size_t) except +ValueError
         

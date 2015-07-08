@@ -182,6 +182,12 @@ cdef class AbstractState:
     cpdef double PIP(self) except *: 
         """ Get the phase identification parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::PIP(void)` """
         return self.thisptr.PIP()
+    cpdef double isobaric_expansion_coefficient(self) except *: 
+        """ Get the isobaric expansion coefficient - wrapper of c++ function :cpapi:`CoolProp::AbstractState::isobaric_expansion_coefficient(void)` """
+        return self.thisptr.isobaric_expansion_coefficient()
+    cpdef double isothermal_compressibility(self) except *: 
+        """ Get the isothermal_compressibility - wrapper of c++ function :cpapi:`CoolProp::AbstractState::isothermal_compressibility(void)` """
+        return self.thisptr.isothermal_compressibility()
     cpdef double fugacity(self, size_t i) except *: 
         """ Get the fugacity of the i-th component - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fugacity(std::size_t)` """
         return self.thisptr.fugacity(i)
