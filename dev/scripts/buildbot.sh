@@ -25,6 +25,7 @@ function stop {
 }
 function clean {
     rm -f /home/$USER/buildbot/server-master/buildbot_private.pyc
+    python /home/$USER/buildbot/server-master/buildbot_private.py
 }
 #
 # Check for input
