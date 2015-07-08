@@ -278,11 +278,12 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
                     if (intersect.empty()){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
                     iV = intersect[0].first; iL = intersect[1].first;
-                    cached_saturation_iL = iL; cached_saturation_iV = iV;
                 }
                 else{
-                    cached_saturation_iL = iL; cached_saturation_iV = iV;
+                    CoolPropDbl zL, zV;
+                    pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, zL, zV);
                 }
+                cached_saturation_iL = iL; cached_saturation_iV = iV;
             }
 			break;
 		}
@@ -305,7 +306,8 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     _p = _Q*pV + (1-_Q)*pL;
                 }
                 else{
-                    _p = pure_saturation.evaluate(iP, _T, _Q, iL, iV);
+                    CoolPropDbl zL, zV;
+                    pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, zL, zV);
                 }
                 cached_saturation_iL = iL; cached_saturation_iV = iV;
             }

@@ -847,6 +847,20 @@ TEST_CASE_METHOD(TabularFixture, "Tests for tabular backends with water", "[Tabu
         CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
         CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
     }
+    SECTION("first_saturation_deriv dHmass/dP w/ QT as inputs"){
+        setup();
+        ASHEOS->update(CoolProp::QT_INPUTS, 1, 370);
+        CoolPropDbl expected = ASHEOS->first_saturation_deriv(CoolProp::iHmass, CoolProp::iP);
+        ASTTSE->update(CoolProp::QT_INPUTS, 1, 370);
+        CoolPropDbl actual_TTSE = ASTTSE->first_saturation_deriv(CoolProp::iHmass, CoolProp::iP);
+        ASBICUBIC->update(CoolProp::QT_INPUTS, 1, 370);
+        CoolPropDbl actual_BICUBIC = ASBICUBIC->first_saturation_deriv(CoolProp::iHmass, CoolProp::iP);
+        CAPTURE(expected);
+        CAPTURE(actual_TTSE);
+        CAPTURE(actual_BICUBIC);
+        CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-6);
+        CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-6);
+    }
     SECTION("first_two_phase_deriv dDmolar/dP|Hmolar"){
         setup();
         ASHEOS->update(CoolProp::PQ_INPUTS, 101325, 0.1);
