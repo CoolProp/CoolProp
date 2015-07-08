@@ -42,13 +42,13 @@ requirements:
     - {{ pkg -}}
 {% endfor %}
 
-test:
-  # Python imports
-  imports:
-    - CoolProp
-    #- CoolProp.GUI
-    #- CoolProp.Plots
-    - CoolProp.tests
+#test:
+#  # Python imports
+#  imports:
+#    - CoolProp
+#    #- CoolProp.GUI
+#    #- CoolProp.Plots
+#    - CoolProp.tests
 
   # commands:
     # You can put test commands to be run here.  Use this to test that the
@@ -163,28 +163,63 @@ popd
 """
 target = "build.sh"
 f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
-f.write(bat_template)
+f.write(bsh_template)
 f.close()
 
 runner_template = """
 from __future__ import print_function
-import sys, shutil, subprocess, os, errno
+import sys, shutil, subprocess, os, stat
 def run_command(cmd):
     '''given shell command, returns communication tuple of stdout and stderr'''
     return subprocess.Popen(cmd, 
                             stdout=subprocess.PIPE, 
                             stderr=subprocess.PIPE, 
                             stdin=subprocess.PIPE).communicate()
-subprocess.check_call('conda build .', shell = True, stdout = sys.stdout, stderr = sys.stderr)
-filename = os.path.abspath(run_command('conda build --output .')[0]).decode("utf-8").strip()
-tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda','Python_conda')).strip()
+def remove_all(path):
+    #subprocess.check_call(['cmd', '/c', 'rd', '/s', '/q', path])
+    print(run_command(['cmd', '/c', 'rd', '/s', '/q', path])[0].decode("utf-8"))
+def remove_readonly(func, path, _):
+    "Clear the readonly bit and reattempt the removal"
+    os.chmod(path, stat.S_IWRITE)
+    try: func(path)
+    except: remove_all(path); pass 
+#
+cmd = ['conda','remove','--all','-yq','-n']
+for t in ['_test','_build']:
+    try: 
+        subprocess.check_call(cmd+[t], stdout=sys.stdout, stderr=sys.stderr)
+    except:
+        envs = run_command(['conda','env','list'])[0].decode("utf-8").splitlines()
+        for env in envs:
+            lst = env.split(' ')
+            if len(lst)>0 and lst[0] == t: 
+                dir = ' '.join(lst[1:]).strip()
+                print("Manually removing: "+dir)
+                shutil.rmtree(dir, onerror=remove_readonly)
+        pass
+tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda')).strip()
+if os.path.isdir(tar): shutil.rmtree(tar, onerror=remove_readonly)
+ver =  sys.version_info
+cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
+print('Command is: '+' '.join(cmd))
+filename = os.path.abspath(run_command(cmd+['--output','.'])[0].decode("utf-8").strip())
+tar = os.path.join(tar,'Python_conda',os.path.basename(os.path.dirname(filename))).strip()
+try: 
+    subprocess.check_call(cmd+['.'], stdout=sys.stdout, stderr=sys.stderr)
+except Exception as e:
+    print("conda build failed: "+str(e))
+    pass
 try:
     os.makedirs(tar)
 except Exception as e:
     if os.path.isdir(tar): pass
     else: raise
-print("Copying: "+str(filename)+" to "+str(tar)) 
-shutil.copy(filename,tar)
+try:
+    print("Copying: "+str(filename)+" to "+str(tar)) 
+    shutil.copy(filename,tar)
+except Exception as e:
+    print("Copy operation failed: "+str(e))
+    pass
 sys.exit(0)
 """
 target = "runner.py"
