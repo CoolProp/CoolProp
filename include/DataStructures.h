@@ -169,6 +169,11 @@ bool is_valid_parameter(const std::string & name, parameters & iOutput);
 /// If it is a value derivative, the variables are set to the parts of the derivative
 bool is_valid_first_derivative(const std::string & name, parameters &iOf, parameters &iWrt, parameters &iConstant);
 
+/// Returns true if the string corresponds to a valid first saturation derivative - e.g. "d(P)/d(T)|sigma" for instance
+///
+/// If it is a valid derivative, the variables are set to the parts of the derivative
+bool is_valid_first_saturation_derivative(const std::string & name, parameters &iOf, parameters &iWrt);
+
 /// Returns true if the string corresponds to a valid second derivative
 ///
 /// If it is a value derivative, the variables are set to the parts of the derivative

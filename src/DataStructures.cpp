@@ -253,6 +253,38 @@ bool is_valid_first_derivative(const std::string &name, parameters &iOf, paramet
     }
 }
 
+bool is_valid_first_saturation_derivative(const std::string &name, parameters &iOf, parameters &iWrt)
+{
+    if (get_debug_level() > 5){ std::cout << format("is_valid_first_saturation_derivative(%s)", name.c_str()); }
+    // There should be exactly one /
+    // There should be exactly one |
+
+    // Suppose we start with "d(P)/d(T)|sigma"
+    std::vector<std::string> split_at_bar = strsplit(name, '|'); // "d(P)/d(T)"  and "sigma"
+    if (split_at_bar.size() != 2){ return false; }
+
+    std::vector<std::string> split_at_slash = strsplit(split_at_bar[0], '/'); // "d(P)" and "d(T)"
+    if (split_at_slash.size() != 2){ return false; }
+
+    std::size_t i0 = split_at_slash[0].find("(");
+    std::size_t i1 = split_at_slash[0].find(")", i0);
+    if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0+1)) && (i1 != std::string::npos))){ return false; }
+    std::string num = split_at_slash[0].substr(i0+1, i1-i0-1);
+
+    i0 = split_at_slash[1].find("(");
+    i1 = split_at_slash[1].find(")", i0);
+    if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0+1)) && (i1 != std::string::npos))){ return false; }
+    std::string den = split_at_slash[1].substr(i0+1, i1-i0-1);
+
+    parameters Of, Wrt, Constant;
+    if (is_valid_parameter(num, Of) && is_valid_parameter(den, Wrt) && upper(split_at_bar[1]) == "SIGMA"){
+        iOf = Of; iWrt = Wrt; return true;
+    }
+    else{
+        return false;
+    }
+}
+
 bool is_valid_second_derivative(const std::string &name, parameters &iOf1, parameters &iWrt1, parameters &iConstant1, parameters &iWrt2, parameters &iConstant2)
 {
     if (get_debug_level() > 5){std::cout << format("is_valid_second_derivative(%s)",name.c_str());}
