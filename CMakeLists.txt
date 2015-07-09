@@ -846,6 +846,7 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
                      POST_BUILD
                      COMMAND python example_generator.py MATLAB "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
                      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
+                     
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     add_custom_command(TARGET CoolPropMATLAB_wrap
                        POST_BUILD
@@ -863,6 +864,10 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
     else()
         SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES SUFFIX .mexw32)
     endif()
+    add_custom_command(TARGET CoolPropMATLAB_wrap
+                       POST_BUILD
+                       COMMAND copy /Y $<TARGET_FILE:CoolProp> .
+                       WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   else()
     if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         if (${BITNESS} EQUAL "32")
