@@ -197,8 +197,8 @@ def remove_readonly(func, path, _):
 #                print("Manually removing: "+dir)
 #                shutil.rmtree(dir, onerror=remove_readonly)
 #        pass
-tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'conda')).strip()
-if os.path.isdir(tar): shutil.rmtree(tar, onerror=remove_readonly)
+tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'install_root')).strip()
+#if os.path.isdir(tar): shutil.rmtree(tar, onerror=remove_readonly)
 ver =  sys.version_info
 cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
 print('Command is: '+' '.join(cmd))
