@@ -861,9 +861,18 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
     
     if (CMAKE_CL_64)
         SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexw64)
+        add_custom_command(TARGET CoolPropMATLAB_wrap
+                           PRE_BUILD
+                           COMMAND ${CMAKE_COMMAND} -E remove CoolPropMATLAB_wrap.mexw64
+                           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
     else()
         SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES SUFFIX .mexw32)
+        add_custom_command(TARGET CoolPropMATLAB_wrap
+                           PRE_BUILD
+                           COMMAND ${CMAKE_COMMAND} -E remove CoolPropMATLAB_wrap.mexw32
+                           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
     endif()
+    
     add_custom_command(TARGET CoolPropMATLAB_wrap
                        POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:CoolPropMATLAB_wrap> .
