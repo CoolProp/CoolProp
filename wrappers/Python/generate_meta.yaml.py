@@ -106,6 +106,10 @@ if pypi:
 
 if local:
     coolprop_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
+    import generate_headers
+    # Generate the headers - does nothing if up to date - but only if not pypi
+    generate_headers.generate()
+    del generate_headers
     version = open(os.path.join(coolprop_dir,'.version'),'r').read().strip()
     home = "http://www.coolprop.org"
     license = "MIT"
