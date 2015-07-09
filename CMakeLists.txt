@@ -866,7 +866,7 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
     endif()
     add_custom_command(TARGET CoolPropMATLAB_wrap
                        POST_BUILD
-                       COMMAND copy /Y $<TARGET_FILE:CoolPropMATLAB_wrap> .
+                       COMMAND ${CMAKE_COMMAND} -E copy_file $<TARGET_FILE:CoolPropMATLAB_wrap> .
                        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   else()
     if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
