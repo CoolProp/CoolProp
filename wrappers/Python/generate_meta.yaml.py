@@ -202,6 +202,7 @@ tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'install_root')).st
 ver =  sys.version_info
 cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
 print('Command is: '+' '.join(cmd))
+print(run_command(['conda', 'clean', '-y', '-lts'])[0].decode("utf-8").strip())
 filename = os.path.abspath(run_command(cmd+['--output','.'])[0].decode("utf-8").strip())
 tar = os.path.join(tar,'Python_conda',os.path.basename(os.path.dirname(filename))).strip()
 try: 
