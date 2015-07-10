@@ -2341,10 +2341,15 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_gibbsmolar(void)
         throw ValueError(format("phase is invalid in calc_gibbsmolar"));
     }
 }
-CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(int i)
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(std::size_t i)
 {
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
     return exp(MixtureDerivatives::ln_fugacity_coefficient(*this, i, xN_flag));
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity(std::size_t i)
+{
+    x_N_dependency_flag xN_flag = XN_DEPENDENT;
+    return MixtureDerivatives::fugacity_i(*this, i, xN_flag);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_phase_identification_parameter(void)
 {

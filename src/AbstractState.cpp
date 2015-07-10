@@ -431,9 +431,13 @@ double AbstractState::gas_constant(void){
     if (!_gas_constant) _gas_constant = calc_gas_constant();
     return _gas_constant;
 }
-double AbstractState::fugacity_coefficient(int i){
+double AbstractState::fugacity_coefficient(std::size_t i){
     // TODO: Cache the fug. coeff for each component
     return calc_fugacity_coefficient(i);
+}
+double AbstractState::fugacity(std::size_t i){
+    // TODO: Cache the fug. coeff for each component
+    return calc_fugacity(i);
 }
 void AbstractState::build_phase_envelope(const std::string &type)
 {
@@ -443,7 +447,7 @@ double AbstractState::isothermal_compressibility(void){
     return 1.0/_rhomolar*first_partial_deriv(iDmolar, iP, iT);
 }
 double AbstractState::isobaric_expansion_coefficient(void){
-    return -1.0/pow(_rhomolar,2)*first_partial_deriv(iDmolar, iT, iP);
+    return -1.0/_rhomolar*first_partial_deriv(iDmolar, iT, iP);
 }
 double AbstractState::Bvirial(void){ return calc_Bvirial(); }
 double AbstractState::Cvirial(void){ return calc_Cvirial(); }

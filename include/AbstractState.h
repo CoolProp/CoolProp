@@ -144,7 +144,9 @@ protected:
     /// Using this backend, calculate the universal gas constant \f$R_u\f$ in J/mol/K
     virtual CoolPropDbl calc_gas_constant(void){ throw NotImplementedError("calc_gas_constant is not implemented for this backend"); };
     /// Using this backend, calculate the fugacity coefficient (dimensionless)
-    virtual CoolPropDbl calc_fugacity_coefficient(int i){ throw NotImplementedError("calc_fugacity_coefficient is not implemented for this backend"); };
+    virtual CoolPropDbl calc_fugacity_coefficient(std::size_t i){ throw NotImplementedError("calc_fugacity_coefficient is not implemented for this backend"); };
+    /// Using this backend, calculate the fugacity in Pa
+    virtual CoolPropDbl calc_fugacity(std::size_t i){ throw NotImplementedError("calc_fugacity is not implemented for this backend"); };
     /// Using this backend, calculate the phase identification parameter (PIP)
     virtual CoolPropDbl calc_PIP(void){ throw NotImplementedError("calc_PIP is not implemented for this backend"); };
 
@@ -544,7 +546,10 @@ public:
     double isothermal_compressibility(void);
     /// Return the isobaric expansion coefficient \f$ \beta = \frac{1}{v}\left.\frac{\partial v}{\partial T}\right|_p = -\frac{1}{\rho}\left.\frac{\partial \rho}{\partial T}\right|_p\f$  in 1/K
     double isobaric_expansion_coefficient(void);
-    double fugacity_coefficient(int i);
+    /// Return the fugacity coefficient of the i-th component of the mixture
+    double fugacity_coefficient(std::size_t i);
+    /// Return the fugacity of the i-th component of the mixture
+    double fugacity(std::size_t i);
     /// Return the fundamental derivative of gas dynamics
     //double fundamental_derivative_of_gas_dynamics(void){return this->second_partial_deriv(iP, iDmolar, iSmolar, iDmolar, iSmolar)/pow(speed_sound(), 2)/2/pow(this->rhomolar(),3);};
     /// Return the phase identification parameter (PIP) of G. Venkatarathnam and L.R. Oellrich, "Identification of the phase of a fluid using partial derivatives of pressure, volume, and temperature without reference to saturation properties: Applications in phase equilibria calculations"

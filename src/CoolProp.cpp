@@ -242,7 +242,7 @@ void _PropsSI_initialize(const std::string &backend,
 }
 
 struct output_parameter{
-	enum OutputParametersType {OUTPUT_TYPE_UNSET = 0, OUTPUT_TYPE_TRIVIAL, OUTPUT_TYPE_NORMAL, OUTPUT_TYPE_FIRST_DERIVATIVE, OUTPUT_TYPE_SECOND_DERIVATIVE};
+	enum OutputParametersType {OUTPUT_TYPE_UNSET = 0, OUTPUT_TYPE_TRIVIAL, OUTPUT_TYPE_NORMAL, OUTPUT_TYPE_FIRST_DERIVATIVE, OUTPUT_TYPE_FIRST_SATURATION_DERIVATIVE, OUTPUT_TYPE_SECOND_DERIVATIVE};
 	CoolProp::parameters Of1, Wrt1, Constant1, Wrt2, Constant2;
 	OutputParametersType type;
     /// Parse a '&' separated string into a data structure with one entry per output
@@ -256,6 +256,9 @@ struct output_parameter{
                 out.Of1 = iOutput;
                 if (is_trivial_parameter(iOutput)){ out.type = OUTPUT_TYPE_TRIVIAL; }
                 else{ out.type = OUTPUT_TYPE_NORMAL; }
+            }
+            else if (is_valid_first_saturation_derivative(*str, out.Of1, out.Wrt1)){
+                out.type = OUTPUT_TYPE_FIRST_SATURATION_DERIVATIVE;
             }
             else if (is_valid_first_derivative(*str, out.Of1, out.Wrt1, out.Constant1)){
                 out.type = OUTPUT_TYPE_FIRST_DERIVATIVE;
@@ -364,6 +367,8 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
                         IO[i][j] = State->keyed_output(output.Of1); break;
                     case output_parameter::OUTPUT_TYPE_FIRST_DERIVATIVE:
                         IO[i][j] = State->first_partial_deriv(output.Of1, output.Wrt1, output.Constant1); break;
+                    case output_parameter::OUTPUT_TYPE_FIRST_SATURATION_DERIVATIVE:
+                        IO[i][j] = State->first_saturation_deriv(output.Of1, output.Wrt1); break;
                     case output_parameter::OUTPUT_TYPE_SECOND_DERIVATIVE:
                         IO[i][j] = State->second_partial_deriv(output.Of1, output.Wrt1, output.Constant1, output.Wrt2, output.Constant2); break;
                     default:
@@ -509,6 +514,9 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
 {
     SECTION("Single state, single output"){
         CHECK(ValidNumber(CoolProp::PropsSI("T","P",101325,"Q",0,"Water")));
+    };
+    SECTION("Single state, single output, saturation derivative"){
+        CHECK(ValidNumber(CoolProp::PropsSI("d(P)/d(T)|sigma","P",101325,"Q",0,"Water")));
     };
     SECTION("Single state, single output, pure incompressible"){
         CHECK(ValidNumber(CoolProp::PropsSI("D","P",101325,"T",300,"INCOMP::DowQ")));

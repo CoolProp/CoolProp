@@ -20,11 +20,18 @@ function git_pull {
     fi
     popd
 }
+function git_cfg {
+    pushd /home/$USER/buildbot/CoolProp.git
+    git reset HEAD dev/buildbot/master/master.cfg
+    git checkout -- dev/buildbot/master/master.cfg
+    popd
+} 
 function stop {
     buildbot stop /home/$USER/buildbot/server-master/
 }
 function clean {
     rm -f /home/$USER/buildbot/server-master/buildbot_private.pyc
+    python /home/$USER/buildbot/server-master/buildbot_private.py
 }
 #
 # Check for input
@@ -35,6 +42,11 @@ if [ "$CMD" = "restart" ]; then
     clean
     start
 elif [ "$CMD" = "reconfig" ]; then
+    git_pull
+    clean
+    reconfig
+elif [ "$CMD" = "reconfigmaster" ]; then
+    git_cfg
     git_pull
     clean
     reconfig

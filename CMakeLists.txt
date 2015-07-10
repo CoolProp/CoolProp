@@ -492,11 +492,15 @@ if (COOLPROP_OCTAVE_MODULE)
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     # We need to see which library to link with on OSX - clang++ or stdc++
     execute_process(COMMAND "otool -L ${OCTAVE_OCTAVE_LIB} | grep libc++" OUTPUT_VARIABLE COOLPROP_OCTAVE_USING_CLANG)
-    if ("${COOLPROP_OCTAVE_USING_CLANG} " STREQUAL " ")
+    MESSAGE(STATUS "COOLPROP_OCTAVE_USING_CLANG = ${COOLPROP_OCTAVE_USING_CLANG}")
+    string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
+    STRING(LENGTH "${COOLPROP_OCTAVE_USING_CLANG}" LEN)
+    if (${LEN} GREATER 0)
       message(STATUS "Using -stdlib=libc++")
-      set_target_properties(CoolProp PROPERTIES LINK_FLAGS "-stdlib=libc++")
+      SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
     else()
       message(STATUS "Using -stdlib=libstdc++")
+      SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libstdc++")
     endif()
   endif()
   
@@ -820,7 +824,7 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
 
   list (APPEND APP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def) # To export mexFunction
 
-  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES}  ) 
+  SET(SWIG_MODULE_CoolPropMATLAB_wrap_EXTRA_DEPS ${SWIG_DEPENDENCIES}  ) 
 
 
   set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}")
@@ -842,6 +846,7 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
                      POST_BUILD
                      COMMAND python example_generator.py MATLAB "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
                      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
+                     
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     add_custom_command(TARGET CoolPropMATLAB_wrap
                        POST_BUILD
@@ -856,9 +861,22 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
     
     if (CMAKE_CL_64)
         SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexw64)
+        add_custom_command(TARGET CoolPropMATLAB_wrap
+                           PRE_BUILD
+                           COMMAND ${CMAKE_COMMAND} -E remove CoolPropMATLAB_wrap.mexw64
+                           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
     else()
         SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES SUFFIX .mexw32)
+        add_custom_command(TARGET CoolPropMATLAB_wrap
+                           PRE_BUILD
+                           COMMAND ${CMAKE_COMMAND} -E remove CoolPropMATLAB_wrap.mexw32
+                           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
     endif()
+    
+    add_custom_command(TARGET CoolPropMATLAB_wrap
+                       POST_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:CoolPropMATLAB_wrap> .
+                       WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   else()
     if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         if (${BITNESS} EQUAL "32")
@@ -884,6 +902,8 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   add_dependencies (CoolPropMATLAB_wrap generate_headers)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/SwigRef.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolPropsetup.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/Example.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   install (TARGETS CoolPropMATLAB_wrap DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
   enable_testing()
   set(MATLAB_WAIT -wait)
@@ -916,6 +936,8 @@ if (COOLPROP_R_MODULE)
         set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -m64")
     endif()
 
+    add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
+
     # Set properties before adding module
     set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
     SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${COOLPROP_SWIG_OPTIONS}" CPLUSPLUS ON)
@@ -926,6 +948,7 @@ if (COOLPROP_R_MODULE)
     # No lib prefix for the shared library
     set_target_properties(CoolProp PROPERTIES PREFIX "")
     
+    add_dependencies (CoolProp generate_headers)
     add_custom_command(TARGET CoolProp
                        POST_BUILD
                        COMMAND python example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
@@ -933,6 +956,10 @@ if (COOLPROP_R_MODULE)
     install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.R" DESTINATION R)
     install (FILES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.R" DESTINATION R)
     install (TARGETS ${app_name} DESTINATION R/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+    
+    enable_testing()
+    add_test(R_test ${R_EXEC} -f Example.R)
+               
 endif()
 
 if (COOLPROP_MATLAB_MODULE)

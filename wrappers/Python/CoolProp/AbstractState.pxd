@@ -68,6 +68,10 @@ cdef class AbstractState:
     cpdef double Bvirial(self) except *
     cpdef double Cvirial(self) except *
     cpdef double PIP(self) except *
+    cpdef double isothermal_compressibility(self) except *
+    cpdef double isobaric_expansion_coefficient(self) except *
+    cpdef double fugacity(self, size_t) except *
+    cpdef double fugacity_coefficient(self, size_t) except *
     
     cpdef double molar_mass(self) except *
     cpdef double acentric_factor(self) except*

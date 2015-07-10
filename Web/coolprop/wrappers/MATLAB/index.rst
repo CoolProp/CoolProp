@@ -17,12 +17,13 @@ Download the +CoolProp.7z file and extract it using the `7-zip <http://www.7-zip
 * ``computer('arch')`` yields ``glnxa64``: CoolPropMATLAB_wrap.mexa64
 * ``computer('arch')`` yields ``maci64``: CoolPropMATLAB_wrap.mexmaci64
 
-Also, download the ``SwigRef.m`` file.
+Also, download the ``SwigRef.m`` and ``CoolPropsetup.m`` files.
 
 When you are finished, you should have a folder layout like::
 
     main
      |- SwigRef.m
+     |- CoolPropsetup.m
      |- CoolPropMATLAB_wrap.mexw64
      |- +CoolProp
         |- AbstractState.m

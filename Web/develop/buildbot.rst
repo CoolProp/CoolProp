@@ -82,10 +82,12 @@ Based on the miniconda Python ecosystem, you can create your own virtual
 environments for building the Python wheels. This requires the following
 steps on a Windows machine::
 
-    conda create -n CoolProp27 python=2
-    conda create -n CoolProp34 python=3
-    conda install -n CoolProp27 cython pip pywin32
-    conda install -n CoolProp34 cython pip pywin32
+    conda create -n CoolProp27 python=2.7
+    conda create -n CoolProp33 python=3.3
+    conda create -n CoolProp34 python=3.4
+    conda install -n CoolProp27 cython pip pywin32 unxutils jinja2 pyyaml pycrypto ndg-httpsclient
+    conda install -n CoolProp33 cython pip pywin32 unxutils jinja2 pyyaml pycrypto 
+    conda install -n CoolProp34 cython pip pywin32 unxutils jinja2 pyyaml pycrypto 
 
     activate CoolProp27
     pip install wheel
@@ -98,21 +100,26 @@ Please repeat the steps above for both 32bit and 64bit Python environments.
 
 On a Linux system, things only change a little bit::
 
-    conda create -n CoolProp27 python=2
-    conda create -n CoolProp34 python=3
-    conda install -n CoolProp27 cython pip
-    conda install -n CoolProp34 cython pip
+    conda create -n CoolProp27 python=2.7
+    conda create -n CoolProp33 python=3.3
+    conda create -n CoolProp34 python=3.4
+    conda install -n CoolProp27 cython pip jinja2 pyyaml pycrypto
+    conda install -n CoolProp33 cython pip jinja2 pyyaml pycrypto
+    conda install -n CoolProp34 cython pip jinja2 pyyaml pycrypto
 
     source activate CoolProp27
     pip install wheel
-    deactivate
+    source deactivate
+    source activate CoolProp33
+    pip install wheel
+    source deactivate
     source activate CoolProp34
     pip install wheel
-    deactivate
+    source deactivate
 
 Please make sure that the standard shell ``/bin/sh`` used by the builbot is
 bash or zsh. We make use of the ``source`` command, which is not part of the
-POSIX specification.
+POSIX specification. In Debian, ``dpkg-reconfigure dash`` can be used.
 
 At the moment, it is not possible to use several slaves for the same build job.
 We have to find a new way to generate the configuration.
@@ -289,7 +296,7 @@ your computer. For Debian/Ubuntu, we recommend a script like::
     #                    system is halted. Place it in /etc/init.d.
     ### END INIT INFO
 
-    # Author: Jorrit Wronski <jowr@mek.dtu.dk>
+    # Author: Jorrit Wronski <jowr@ipu.dk>
     #
     # Please remove the "Author" lines above and replace them
     # with your own name if you copy and modify this script.
@@ -317,9 +324,6 @@ your computer. For Debian/Ubuntu, we recommend a script like::
     }
 
     #
-    # Function that stops the daemon/service
-    #
-
     # Function that stops the daemon/service
     #
     do_stop() {
@@ -369,12 +373,12 @@ environment and start the buildslave. Such a script could look like this::
     #              the buildbot slaves. It is also used to shut them down
     #              during system shutdown.
     #
-    # Author: Jorrit Wronski <jowr@mek.dtu.dk>
+    # Author: Jorrit Wronski <jowr@ipu.dk>
     #
     # Please remove the "Author" lines above and replace them
     # with your own name if you copy and modify this script.
     #
-    VIRTENV="/home/username/a-slave-sandbox"
+    VIRTENV="a-slave-sandbox"
     SLAVEDIR="/home/username/a-slave"
     #
     ## For virtualenv
@@ -437,10 +441,11 @@ To change the MIME types on the server so that unknown file types will map prope
 and then do a ``buildbot restart master``
 
 
-Starting virtualbox images at boot
+Starting VirtualBox images at boot
 ==================================
 
-Create a daemon entry in Libray/LaunchDaemons.  Make sure you use full paths to VBoxManage::
+You can use the built-in functionality https://www.virtualbox.org/manual/ch09.html#autostart on Linux and Mac or use
+your own configuration and create a daemon entry in Libray/LaunchDaemons.  Make sure you use full paths to VBoxManage::
 
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

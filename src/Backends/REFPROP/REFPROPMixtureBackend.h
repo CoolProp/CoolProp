@@ -130,7 +130,8 @@ public:
     /// Calc the C virial coefficient
     CoolPropDbl calc_Cvirial(void);
 
-    CoolPropDbl calc_fugacity_coefficient(int i);
+    CoolPropDbl calc_fugacity_coefficient(std::size_t i);
+    CoolPropDbl calc_fugacity(std::size_t i);
     CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
     bool has_melting_line(){return true;};
     double calc_melt_Tmax();
