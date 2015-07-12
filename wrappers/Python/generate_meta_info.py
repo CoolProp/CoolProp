@@ -1,20 +1,18 @@
-import jinja2
 from jinja2 import Environment
 import os,sys
 import requests
 import json
 from distutils.version import LooseVersion #, StrictVersion
 import codecs
-from dev.builder import local_dict
 
 """ A simple script to create a conda recipe and the infrostructure files for PyPI"""
 
 first_line = "# CAUTION: This file is generated automatically, any customisation will be lost.\n"
 
-python_dir = os.path.abspath(__file__)
+python_dir = os.path.abspath(os.path.dirname(__file__))
 target_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
 
-pypi = True 
+pypi = False 
 local = not pypi
 
 run_pkgs = ["numpy", "scipy", "matplotlib", "pandas"]
@@ -74,16 +72,14 @@ local_info = dict(
 #######################
 
 
-template = """
-{% for pkg in run_pkgs %}
-{{ pkg -}}
+template = """{% for pkg in run_pkgs %}{{ pkg }}
 {% endfor %}
 """
 target = "requirements.txt"
 template =Environment().from_string(template)
 f = codecs.open(os.path.join(python_dir,target),mode='wb',encoding='utf-8')
 f.write(first_line)
-f.write(template.render(**local_dict))
+f.write(template.render(**local_info))
 f.close()
 
 
@@ -93,15 +89,12 @@ package:
   name: coolprop
   version: {{ version }}
 
-{% if pypi %}
-source:
+{% if pypi %}source:
   fn: {{ fil }}
   url: {{ url }}
   md5: {{ md5 }}
 {% endif %}
-
-{% if local %}
-source:
+{% if local %}source:
   path: .
 {% endif %}
 
@@ -157,7 +150,7 @@ target = 'meta.yaml'
 template =Environment().from_string(template)
 f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
 f.write(first_line)
-f.write(template.render(**local_dict))
+f.write(template.render(**local_info))
 f.close()
 
 template = """
