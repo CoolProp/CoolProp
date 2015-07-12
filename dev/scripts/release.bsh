@@ -127,14 +127,16 @@ else
         echo -n " \`CoolProp project <http://coolprop.sourceforge.net>\`_ " >> "$BINFOLDER/README.rst.txt"
         echo    "updated on $(date +%F) at $(date +%X) $(date +%Z)." >> "$BINFOLDER/README.rst.txt"
         RSYNC_OPTS="-a --no-perms -z --stats --delete"
-        binstar upload -u coolprop -t pypi -c dev $BINFOLDER/Python/*.tar.gz
-        binstar upload -u coolprop -t conda -c dev $BINFOLDER/Python_conda/* 
+        binstar upload --force -u coolprop -t pypi -c dev $BINFOLDER/Python/*.tar.gz
+        #conda index $BINFOLDER/Python_conda/* 
+        binstar upload --force -u coolprop -t conda -c dev $BINFOLDER/Python_conda/*/*
     else
         RSYNC_OPTS="-a --no-perms -z --stats"
         printMessage "Detected full release, uploading the python binaries to pypi"
         twine upload $BINFOLDER/Python/*.whl $BINFOLDER/Python/*.tar.gz
         printMessage "and uploading the python binaries to binstar"
-        binstar upload -u coolprop -t conda -c main $BINFOLDER/Python_conda/* 
+        #conda index $BINFOLDER/Python_conda/* 
+        binstar upload --force -u coolprop -t conda -c main $BINFOLDER/Python_conda/*/* 
     fi
     popd
 fi
