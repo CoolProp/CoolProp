@@ -72,6 +72,22 @@ local_info = dict(
 )
 
 #######################
+
+
+template = """
+{% for pkg in run_pkgs %}
+{{ pkg -}}
+{% endfor %}
+"""
+target = "requirements.txt"
+template =Environment().from_string(template)
+f = codecs.open(os.path.join(python_dir,target),mode='wb',encoding='utf-8')
+f.write(first_line)
+f.write(template.render(**local_dict))
+f.close()
+
+
+
 template = """
 package:
   name: coolprop
@@ -89,9 +105,9 @@ source:
   path: .
 {% endif %}
 
-build:
-  script: python setup.py install [not win]
-  script: "%PYTHON%" setup.py install & if errorlevel 1 exit 1 [win]
+#build:
+#  script: python setup.py install [not win]
+#  script: "%PYTHON%" setup.py install & if errorlevel 1 exit 1 [win]
 
   # If this is a new build for the same version, increment the build
   # number. If you do not include this key, it defaults to 0.
@@ -137,12 +153,6 @@ about:
   summary: {{ summary }}
 
 """
-
-#loader = jinja2.FileSystemLoader(template_dir)
-#environment = jinja2.Environment(loader=loader)
-#template = environment.get_template(os.path.join(template_dir,'conda_'+target+'.tpl'))
-#
-
 target = 'meta.yaml'
 template =Environment().from_string(template)
 f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
@@ -150,115 +160,82 @@ f.write(first_line)
 f.write(template.render(**local_dict))
 f.close()
 
-# bat_template = """
-# pushd wrappers\Python
-# "%PYTHON%" setup.py install
-# if errorlevel 1 exit 1
-# popd 
-# 
-# :: Add more build steps here, if they are necessary.
-# 
-# :: See
-# :: http://docs.continuum.io/conda/build.html
-# :: for a list of environment variables that are set during the build process.
-# """
-# target = "bld.bat"
-# f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
-# f.write(":: "+first_line)
-# f.write(bat_template)
-# f.close()
-# 
-# bsh_template = """
-# #!/bin/bash
-# pushd wrappers/Python
-# $PYTHON setup.py install
-# popd 
-# 
-# # Add more build steps here, if they are necessary.
-# 
-# # See
-# # http://docs.continuum.io/conda/build.html
-# # for a list of environment variables that are set during the build process.
-# """
-# target = "build.sh"
-# f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
-# f.write(first_line)
-# f.write(bsh_template)
-# f.close()
-
 template = """
-{% for pkg in run_pkgs %}
-{{ pkg -}}
-{% endfor %}
+pushd wrappers\Python
+"%PYTHON%" setup.py install
+if errorlevel 1 exit 1
+popd 
+ 
+:: Add more build steps here, if they are necessary.
+ 
+:: See
+:: http://docs.continuum.io/conda/build.html
+:: for a list of environment variables that are set during the build process.
 """
-
-target = "requirements.txt"
-template =Environment().from_string(template)
-f = codecs.open(os.path.join(python_dir,target),mode='wb',encoding='utf-8')
-f.write(first_line)
-f.write(template.render(**local_dict))
+target = "bld.bat"
+f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
+f.write(":: "+first_line)
+f.write(template)
+f.close()
+ 
+template = """
+pushd wrappers/Python
+$PYTHON setup.py install
+popd 
+ 
+# Add more build steps here, if they are necessary.
+ 
+# See
+# http://docs.continuum.io/conda/build.html
+# for a list of environment variables that are set during the build process.
+"""
+target = "build.sh"
+f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
+f.write("#!/bin/bash\n"+first_line)
+f.write(template)
 f.close()
 
 
-# runner_template = """
-# from __future__ import print_function
-# import sys, shutil, subprocess, os, stat
-# def run_command(cmd):
-#     '''given shell command, returns communication tuple of stdout and stderr'''
-#     return subprocess.Popen(cmd, 
-#                             stdout=subprocess.PIPE, 
-#                             stderr=subprocess.PIPE, 
-#                             stdin=subprocess.PIPE).communicate()
-# def remove_all(path):
-#     #subprocess.check_call(['cmd', '/c', 'rd', '/s', '/q', path])
-#     print(run_command(['cmd', '/c', 'rd', '/s', '/q', path])[0].decode("utf-8"))
-# def remove_readonly(func, path, _):
-#     "Clear the readonly bit and reattempt the removal"
-#     os.chmod(path, stat.S_IWRITE)
-#     try: func(path)
-#     except: remove_all(path); pass 
-# #
-# #cmd = ['conda','remove','--all','-yq','-n']
-# #for t in ['_test','_build']:
-# #    try: 
-# #        subprocess.check_call(cmd+[t], stdout=sys.stdout, stderr=sys.stderr)
-# #    except:
-# #        envs = run_command(['conda','env','list'])[0].decode("utf-8").splitlines()
-# #        for env in envs:
-# #            lst = env.split(' ')
-# #            if len(lst)>0 and lst[0] == t: 
-# #                dir = ' '.join(lst[1:]).strip()
-# #                print("Manually removing: "+dir)
-# #                shutil.rmtree(dir, onerror=remove_readonly)
-# #        pass
-# tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'install_root')).strip()
-# #if os.path.isdir(tar): shutil.rmtree(tar, onerror=remove_readonly)
-# ver =  sys.version_info
-# cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
-# print('Command is: '+' '.join(cmd))
-# print(run_command(['conda', 'clean', '-y', '-lts'])[0].decode("utf-8").strip())
-# filename = os.path.abspath(run_command(cmd+['--output','.'])[0].decode("utf-8").strip())
-# tar = os.path.join(tar,'Python_conda',os.path.basename(os.path.dirname(filename))).strip()
-# try: 
-#     subprocess.check_call(cmd+['.'], stdout=sys.stdout, stderr=sys.stderr)
-# except Exception as e:
-#     print("conda build failed: "+str(e))
-#     pass
-# try:
-#     os.makedirs(tar)
-# except Exception as e:
-#     if os.path.isdir(tar): pass
-#     else: raise
-# try:
-#     print("Copying: "+str(filename)+" to "+str(tar)) 
-#     shutil.copy(filename,tar)
-# except Exception as e:
-#     print("Copy operation failed: "+str(e))
-#     pass
-# sys.exit(0)
-# """
-# target = "runner.py"
-# f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
-# f.write(runner_template)
-# f.close()
+
+
+template = """
+from __future__ import print_function
+import sys, shutil, subprocess, os, stat
+#
+def run_command(cmd):
+    '''given shell command, returns communication tuple of stdout and stderr'''
+    print(str(__file__)+": "+' '.join(cmd))
+    return subprocess.Popen(cmd, 
+      stdout=subprocess.PIPE, 
+      stderr=subprocess.PIPE, 
+      stdin=subprocess.PIPE).communicate()
+#
+tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'install_root')).strip()
+ver =  sys.version_info
+cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
+print(run_command(['conda', 'clean', '-y', '-lts'])[0].decode("utf-8").strip())
+filename = os.path.abspath(run_command(cmd+['--output','.'])[0].decode("utf-8").strip())
+tar = os.path.join(tar,'Python_conda',os.path.basename(os.path.dirname(filename))).strip()
+try: 
+    subprocess.check_call(cmd+['.'], stdout=sys.stdout, stderr=sys.stderr)
+except Exception as e:
+    print("conda build failed: "+str(e))
+    pass
+try:
+    os.makedirs(tar)
+except Exception as e:
+    if os.path.isdir(tar): pass
+    else: raise
+try:
+    print("Copying: "+str(filename)+" to "+str(tar)) 
+    shutil.copy(filename,tar)
+except Exception as e:
+    print("Copy operation failed: "+str(e))
+    pass
+sys.exit(0)
+"""
+target = "runner.py"
+f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
+f.write(template)
+f.close()
 sys.exit(0)
