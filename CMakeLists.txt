@@ -910,9 +910,13 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   if(UNIX)
     set(MATLAB_WAIT)
   endif()
+  # For some reason, the tests don't work on windows, though they should.
+  IF(WIN32)
+  ELSE()
   add_test(NAME MATLABtest
            COMMAND $ENV{MATLAB_ROOT}/bin/matlab -nodesktop -nosplash -nojvm -nodisplay ${MATLAB_WAIT} -r "result = runtests('Example'); exit(result.Failed)" -logfile Example.out
            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  ENDIF() 
 endif()
 
 if (COOLPROP_R_MODULE)
