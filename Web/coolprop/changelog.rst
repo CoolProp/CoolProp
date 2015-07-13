@@ -1,6 +1,73 @@
 Changelog for CoolProp
 ======================
 
+5.1.1
+-----
+
+New features:
+
+* A wrapper for the R language
+* Tabular integration with tables from REFPROP only for now
+* The Python wrapper is now also available on binstar: https://binstar.org/CoolProp/coolprop
+* ... and a lot of little bugfixes (see issues)
+
+Issues Closed:
+
+* `#714 <http://github.com/CoolProp/CoolProp/issues/714>`_ : Possible error in isobaric thermal expansion coefficient
+* `#713 <http://github.com/CoolProp/CoolProp/issues/713>`_ : Bicubic backend and first_saturation_deriv
+* `#712 <http://github.com/CoolProp/CoolProp/issues/712>`_ : Expose saturation derivatives from PropsSI [wishlist]
+* `#708 <http://github.com/CoolProp/CoolProp/issues/708>`_ : CoolPropsetup.m needs to be installed
+* `#707 <http://github.com/CoolProp/CoolProp/issues/707>`_ : conda builds
+* `#700 <http://github.com/CoolProp/CoolProp/issues/700>`_ : If git is not found, still compile properly
+* `#699 <http://github.com/CoolProp/CoolProp/issues/699>`_ : Fugacity using Python wrapper
+* `#697 <http://github.com/CoolProp/CoolProp/issues/697>`_ : Get State (old-style) class working with predefined mixtures
+* `#696 <http://github.com/CoolProp/CoolProp/issues/696>`_ : cp0 broken for tabular backends
+* `#695 <http://github.com/CoolProp/CoolProp/issues/695>`_ : Problem with reference state
+* `#691 <http://github.com/CoolProp/CoolProp/issues/691>`_ : variable names for second_partial_deriv
+* `#688 <http://github.com/CoolProp/CoolProp/issues/688>`_ : PropsSI in saturation region
+* `#685 <http://github.com/CoolProp/CoolProp/issues/685>`_ : Problem with Hazard output
+* `#684 <http://github.com/CoolProp/CoolProp/issues/684>`_ : some problem and questions for calc in Excel
+* `#681 <http://github.com/CoolProp/CoolProp/issues/681>`_ : Mix call failure after release update
+* `#680 <http://github.com/CoolProp/CoolProp/issues/680>`_ : Tabular backend data range too small for (P,H) inputs and R245fa
+* `#675 <http://github.com/CoolProp/CoolProp/issues/675>`_ : Get consistency plots working with Tabular backends
+* `#674 <http://github.com/CoolProp/CoolProp/issues/674>`_ : QT inputs do not work for Tabular backends
+* `#673 <http://github.com/CoolProp/CoolProp/issues/673>`_ : Mass-based saturation derivatives not supported
+* `#672 <http://github.com/CoolProp/CoolProp/issues/672>`_ : Tabular methods returns hmolar for smolar for saturation
+* `#671 <http://github.com/CoolProp/CoolProp/issues/671>`_ : MATLAB on OSX cannot load REFPROP
+* `#670 <http://github.com/CoolProp/CoolProp/issues/670>`_ : Low-Level interfacing with MATLAB
+* `#668 <http://github.com/CoolProp/CoolProp/issues/668>`_ : R wrapper
+* `#664 <http://github.com/CoolProp/CoolProp/issues/664>`_ : Re-enable triple point for REFPROP backend for mixtures
+* `#663 <http://github.com/CoolProp/CoolProp/issues/663>`_ : Vapor mass quality = 1 generates error for pseudo-pures
+* `#662 <http://github.com/CoolProp/CoolProp/issues/662>`_ : Write function to determine phase after an update with PT and a guess for rho
+* `#661 <http://github.com/CoolProp/CoolProp/issues/661>`_ : Predefined mixtures not working properly with Tabular backends
+* `#660 <http://github.com/CoolProp/CoolProp/issues/660>`_ : T,X and PS, PD, PU not working with BICUBIC, but does with TTSE
+* `#659 <http://github.com/CoolProp/CoolProp/issues/659>`_ : Add "PIP" as parameter
+* `#658 <http://github.com/CoolProp/CoolProp/issues/658>`_ : Implement PIP for REFPROP
+* `#657 <http://github.com/CoolProp/CoolProp/issues/657>`_ : Describe how to call REFPROP
+* `#654 <http://github.com/CoolProp/CoolProp/issues/654>`_ : Add ability to calculate Ideal curves
+* `#653 <http://github.com/CoolProp/CoolProp/issues/653>`_ : Implement update_with_guesses for P,T for REFPROP backend
+* `#652 <http://github.com/CoolProp/CoolProp/issues/652>`_ : Implement solver for "true" critical point using REFPROP
+* `#650 <http://github.com/CoolProp/CoolProp/issues/650>`_ : MATLAB examples not on website
+* `#648 <http://github.com/CoolProp/CoolProp/issues/648>`_ : Link to examples broken
+* `#647 <http://github.com/CoolProp/CoolProp/issues/647>`_ : Implement the new REFPROP header file and make necessary changes
+* `#646 <http://github.com/CoolProp/CoolProp/issues/646>`_ : Add B,C virial coefficients for REFPROP backend
+* `#645 <http://github.com/CoolProp/CoolProp/issues/645>`_ : PQ_INPUTS don't work with TTSE backend
+* `#644 <http://github.com/CoolProp/CoolProp/issues/644>`_ : Get first_two_phase_deriv working with Tabular backends
+* `#641 <http://github.com/CoolProp/CoolProp/issues/641>`_ : Install psyrc file
+* `#640 <http://github.com/CoolProp/CoolProp/issues/640>`_ : Expose saturation_ancillary equation through python
+* `#639 <http://github.com/CoolProp/CoolProp/issues/639>`_ : Incorrect error when non two-phase inputs to two-phase deriv
+* `#638 <http://github.com/CoolProp/CoolProp/issues/638>`_ : Heavy Water Viscosity Unavailable
+* `#636 <http://github.com/CoolProp/CoolProp/issues/636>`_ : Error surface tension in CoolProp v5.1.0
+* `#635 <http://github.com/CoolProp/CoolProp/issues/635>`_ : Implement first_saturation_deriv for TTSE/BICUBIC
+* `#631 <http://github.com/CoolProp/CoolProp/issues/631>`_ : Methane conductivity
+* `#630 <http://github.com/CoolProp/CoolProp/issues/630>`_ : Make HS use DH rather than PH
+* `#629 <http://github.com/CoolProp/CoolProp/issues/629>`_ : Handle PT inputs around saturation in a better way with BICUBIC
+* `#628 <http://github.com/CoolProp/CoolProp/issues/628>`_ : Dry air enthalpy
+* `#627 <http://github.com/CoolProp/CoolProp/issues/627>`_ : Test that H and S are the same for all the state points
+* `#626 <http://github.com/CoolProp/CoolProp/issues/626>`_ : Improve docs for low-level interface
+* `#622 <http://github.com/CoolProp/CoolProp/issues/622>`_ : TTSE fails around saturated liquid
+* `#617 <http://github.com/CoolProp/CoolProp/issues/617>`_ : Block Tabular backend use with PropsSI somehow
+
 5.1.0
 -----
 
