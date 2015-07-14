@@ -1292,6 +1292,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     _speed_sound = w;
     _tau = calc_T_reducing()/_T;
     _delta = _rhomolar/calc_rhomolar_reducing();
+    _gibbsmolar = hmol-_T*smol;
     _Q = q;
 }
 

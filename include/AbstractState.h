@@ -280,6 +280,7 @@ protected:
     virtual CoolPropDbl calc_cp0mass(void){ return cp0molar() / molar_mass(); }
     virtual CoolPropDbl calc_cvmass(void){ return cvmolar() / molar_mass(); }
     virtual CoolPropDbl calc_umass(void){ return umolar() / molar_mass(); }
+    virtual CoolPropDbl calc_gibbsmass(void){ return gibbsmolar() / molar_mass(); }
 
     /// Update the states after having changed the reference state for enthalpy and entropy
     virtual void update_states(void){ throw NotImplementedError("This backend does not implement update_states function"); };
@@ -539,7 +540,9 @@ public:
     /// Return the mass constant volume specific heat in J/kg/K
     double cvmass(void){ return calc_cvmass(); };
     /// Return the Gibbs function in J/mol
-    double gibbsmolar(void){ return calc_gibbsmolar(); };
+    double gibbsmolar(void);
+    /// Return the Gibbs function in J/kg
+    double gibbsmass(void){ return calc_gibbsmass(); };
     /// Return the speed of sound in m/s
     double speed_sound(void);
     /// Return the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa
