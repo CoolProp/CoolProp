@@ -44,7 +44,7 @@ shared_ptr<CoolProp::AbstractState> WaterIF97;
 
 namespace HumidAir
 {
-    enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA, GIVEN_COMPRESSIBILITY_FACTOR, GIVEN_PARTIAL_PRESSURE_WATER};
+    enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA, GIVEN_COMPRESSIBILITY_FACTOR, GIVEN_PARTIAL_PRESSURE_WATER, GIVEN_CV, GIVEN_CVHA};
     
     void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w);
     double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
@@ -942,6 +942,10 @@ double MolarEnthalpy(double T, double p, double psi_w, double vmolar)
     hbar = hbar_0+(1-psi_w)*hbar_a+psi_w*hbar_w+R_bar*T*((B_m(T,psi_w)-T*dB_m_dT(T,psi_w))/vmolar+(C_m(T,psi_w)-T/2.0*dC_m_dT(T,psi_w))/(vmolar*vmolar));
     return hbar; //[J/mol]
 }
+double MolarInternalEnergy(double T, double p, double psi_w, double vmolar)
+{
+    return MolarEnthalpy(T, p, psi_w, vmolar) - p*vmolar;
+}
 double MassEnthalpy_per_kgha(double T, double p, double psi_w)
 {
     double vmolar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
@@ -1257,6 +1261,10 @@ static givens Name2Type(const std::string &Name)
         return GIVEN_CP;
     else if (!strcmp(Name,"Cha") || !strcmp(Name,"cp_ha"))
         return GIVEN_CPHA;
+    else if (!strcmp(Name,"CV"))
+        return GIVEN_CV;
+    else if (!strcmp(Name,"CVha") || !strcmp(Name,"cv_ha"))
+        return GIVEN_CVHA;
     else if (!strcmp(Name,"P_w"))
         return GIVEN_PARTIAL_PRESSURE_WATER;
     else if (!strcmp(Name,"Z"))
@@ -1363,6 +1371,8 @@ void convert_to_SI(const std::string &Name, double &val)
         case GIVEN_ENTROPY_HA:
         case GIVEN_CP:
         case GIVEN_CPHA:
+        case GIVEN_CV:
+        case GIVEN_CVHA:
         case GIVEN_P:
         case GIVEN_PARTIAL_PRESSURE_WATER:
             val *= 1000; return;
@@ -1392,6 +1402,8 @@ void convert_from_SI(const std::string &Name, double &val)
         case GIVEN_ENTROPY_HA:
         case GIVEN_CP:
         case GIVEN_CPHA:
+        case GIVEN_CV:
+        case GIVEN_CVHA:
         case GIVEN_P:
         case GIVEN_PARTIAL_PRESSURE_WATER:
             val /= 1000; return;
@@ -1625,6 +1637,25 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
             h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
             cp_bar = (h_bar2-h_bar1)/(2*dT); //[J/mol_da/K]
             return cp_bar/M_ha; //[J/kg_da/K]
+        }
+        case GIVEN_CVHA:{
+            double v_bar1,v_bar2,u_bar1,u_bar2, cv_bar, dT = 1e-3,W;
+            v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
+            u_bar1=MolarInternalEnergy(T-dT,p,psi_w,v_bar1); //[kJ/kmol_ha]
+            v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
+            u_bar2=MolarInternalEnergy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
+            W=HumidityRatio(psi_w); //[kg_w/kg_da]
+            cv_bar = (u_bar2-u_bar1)/(2*dT); //[J/mol_da/K]
+            return cv_bar*(1+W)/M_ha; //[J/kg_ha/K]
+        }
+        case GIVEN_CV:{
+            double v_bar1,v_bar2,u_bar1,u_bar2, cv_bar, dT = 1e-3;
+            v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
+            u_bar1=MolarInternalEnergy(T-dT,p,psi_w,v_bar1); //[J/kmol_ha]
+            v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
+            u_bar2=MolarInternalEnergy(T+dT,p,psi_w,v_bar2); //[J/kmol_ha]
+            cv_bar = (u_bar2-u_bar1)/(2*dT); //[J/mol_da/K]
+            return cv_bar/M_ha; //[J/kg_da/K]
         }
         case GIVEN_COMPRESSIBILITY_FACTOR:{
             double v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
