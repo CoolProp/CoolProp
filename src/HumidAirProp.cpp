@@ -81,52 +81,64 @@ static double B_Air(double T)
 {
     check_fluid_instantiation();
     Air->specify_phase(CoolProp::iphase_gas);
-    Air->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    Air->update_DmolarT_direct(1e-12,T);
+    Air->unspecify_phase();
     return Air->keyed_output(CoolProp::iBvirial);
 }
 static double dBdT_Air(double T)
 {
     check_fluid_instantiation();
     Air->specify_phase(CoolProp::iphase_gas);
-    Air->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    Air->update_DmolarT_direct(1e-12,T);
+    Air->unspecify_phase();
     return Air->keyed_output(CoolProp::idBvirial_dT);
 }
 static double B_Water(double T)
 {
     check_fluid_instantiation();
     Water->specify_phase(CoolProp::iphase_gas);
-    Water->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    Water->update_DmolarT_direct(1e-12,T);
+    Water->unspecify_phase();
     return Water->keyed_output(CoolProp::iBvirial);
 }
 static double dBdT_Water(double T)
 {
     check_fluid_instantiation();
     Water->specify_phase(CoolProp::iphase_gas);
-    Water->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    Water->update_DmolarT_direct(1e-12,T);
+    Water->unspecify_phase();
     return Water->keyed_output(CoolProp::idBvirial_dT);
 }
 static double C_Air(double T)
 {
     check_fluid_instantiation();
-    Air->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    Air->specify_phase(CoolProp::iphase_gas);
+    Air->update_DmolarT_direct(1e-12,T);
+    Air->unspecify_phase();
     return Air->keyed_output(CoolProp::iCvirial);
 }
 static double dCdT_Air(double T)
 {
     check_fluid_instantiation();
-    Air->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    Air->specify_phase(CoolProp::iphase_gas);
+    Air->update_DmolarT_direct(1e-12,T);
+    Air->unspecify_phase();
     return Air->keyed_output(CoolProp::idCvirial_dT);
 }
 static double C_Water(double T)
 {
     check_fluid_instantiation();
-    Water->update(CoolProp::DmolarT_INPUTS,1e-20,T);
+    Water->specify_phase(CoolProp::iphase_gas);
+    Water->update_DmolarT_direct(1e-12,T);
+    Water->unspecify_phase();
     return Water->keyed_output(CoolProp::iCvirial);
 }
 static double dCdT_Water(double T)
 {
     check_fluid_instantiation();
-    Water->update(CoolProp::DmolarT_INPUTS,1e-12,T);
+    Water->specify_phase(CoolProp::iphase_gas);
+    Water->update_DmolarT_direct(1e-12,T);
+    Water->unspecify_phase();
     return Water->keyed_output(CoolProp::idCvirial_dT);
 }
 void UseVirialCorrelations(int flag)
@@ -185,8 +197,9 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
 
         double call(double W){
             input_vals[1] = W;
-            double T, psi_w;
+            double T = _HUGE, psi_w = _HUGE;
             _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
+            if (CoolProp::get_debug_level() > 0){ std::cout << format("T: %g K, psi_w %g\n", T, psi_w); }
             return _HAPropsSI_outputs(OutputKey, p, T, psi_w) - TargetVal;
         }
     };
@@ -1425,15 +1438,23 @@ bool match_input_key(const std::vector<givens> &input_keys, givens key)
 /// Calculate T (dry bulb temp) and psi_w (water mole fraction) given the pair of inputs
 void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w)
 {
+    if (CoolProp::get_debug_level() > 0){ std::cout << format("length of input_keys is %d\n", input_keys.size()); }
+    if (input_keys.size() != input_vals.size()){ throw CoolProp::ValueError(format("Length of input_keys (%d) does not equal that of input_vals (%d)", input_keys.size(), input_vals.size())); }
     long key = get_input_key(input_keys, GIVEN_T);
     if (key >= 0) // Found T (or alias) as an input
     {
         long other = 1 - key; // 2 element vector
         T = input_vals[key];
-        switch(givens othergiven = input_keys[other]){
+        if (CoolProp::get_debug_level() > 0){ std::cout << format("One of the inputs is T: %g K\n", T); }
+        givens othergiven = input_keys[other];
+        switch(othergiven){
             case GIVEN_RH:
             case GIVEN_HUMRAT:
             case GIVEN_TDP:
+                if (CoolProp::get_debug_level() > 0){ 
+                    std::cout << format("other input value is %g\n", input_vals[other]); 
+                    std::cout << format("other input index is %d\n", othergiven); 
+                }
                 psi_w = MoleFractionWater(T, p, othergiven, input_vals[other]); break;
             default:
             {
@@ -1460,6 +1481,7 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
     }
     else
     {
+        if (CoolProp::get_debug_level() > 0){ std::cout << format("The main input is not T\n", T); }
         // Need to iterate to find dry bulb temperature since temperature is not provided
         if ((key = get_input_key(input_keys, GIVEN_HUMRAT)) >= 0){} // Humidity ratio is given
         else if ((key = get_input_key(input_keys, GIVEN_RH)) >= 0){} // Relative humidity is given
@@ -1469,13 +1491,18 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
         }
         // 2-element vector
         long other = 1 - key;
-        
+
         // Main input is the one that you are using in the call to HAPropsSI
         double MainInputValue = input_vals[key]; 
         givens MainInputKey = input_keys[key];
         // Secondary input is the one that you are trying to match
         double SecondaryInputValue = input_vals[other]; 
         givens SecondaryInputKey = input_keys[other];
+
+        if (CoolProp::get_debug_level() > 0){ 
+            std::cout << format("Main input is %g\n", MainInputValue); 
+            std::cout << format("Secondary input is %g\n", SecondaryInputValue); 
+        }
 
         double T_min = 200;
         double T_max = 450;
@@ -1509,7 +1536,10 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
             T = Brent_HAProps_T(SecondaryInputKey, p, MainInputKey, MainInputValue, SecondaryInputValue, T_min,T_max);
         }
         catch(std::exception &e){
+            if (CoolProp::get_debug_level() > 0){ std::cout << "ERROR: " << e.what() << std::endl; }
             CoolProp::set_error_string(e.what());
+            T = _HUGE;
+            psi_w = _HUGE;
             return;
         }
         
@@ -1521,6 +1551,8 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
 }
 double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
 {
+    if (CoolProp::get_debug_level() > 0){ std::cout << format("_HAPropsSI_outputs :: T: %g K, psi_w: %g\n", T, psi_w); }
+
     double M_ha=(1-psi_w)*0.028966+MM_Water()*psi_w; //[kg_ha/mol_ha]
     // -----------------------------------------------------------------
     // Calculate and return the desired value for known set of p,T,psi_w
@@ -1611,12 +1643,14 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
         check_fluid_instantiation();
         Water->clear();
         Air->clear();
+
+        if (CoolProp::get_debug_level() > 0){ std::cout << format("HAPropsSI(%s,%s,%g,%s,%g,%s,%g)\n", OutputName.c_str(), Input1Name.c_str(), Input1, Input2Name.c_str(), Input2, Input3Name.c_str(), Input3); }
         
         std::vector<givens> input_keys(2);
         std::vector<double> input_vals(2);
         
         givens In1Type, In2Type, In3Type, OutputType;
-        double p, T, psi_w;
+        double p, T = _HUGE, psi_w = _HUGE;
 
         // First figure out what kind of inputs you have, convert names to enum values
         In1Type = Name2Type(Input1Name.c_str());
@@ -1658,9 +1692,12 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
         // Parse the inputs to get to set of p, T, psi_w
         _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
 
+        if (CoolProp::get_debug_level() > 0){ std::cout << format("HAPropsSI input conversion yields T: %g, psi_w: %g\n", T, psi_w); }
+
         // Calculate the output value desired
         double val = _HAPropsSI_outputs(OutputType, p, T, psi_w);
         
+        if (CoolProp::get_debug_level() > 0){ std::cout << format("HAPropsSI is about to return %g\n", val); }
         return val;
     }
     catch (std::exception &e)
