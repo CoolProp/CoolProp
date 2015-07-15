@@ -13,11 +13,16 @@ New features:
 
 Issues Closed:
 
+* `#724 <http://github.com/CoolProp/CoolProp/issues/724>`_ : Gibbs not working as output (mass or molar)
+* `#722 <http://github.com/CoolProp/CoolProp/issues/722>`_ : Predefined mixtures crash python
+* `#721 <http://github.com/CoolProp/CoolProp/issues/721>`_ : v5.1.1
 * `#714 <http://github.com/CoolProp/CoolProp/issues/714>`_ : Possible error in isobaric thermal expansion coefficient
 * `#713 <http://github.com/CoolProp/CoolProp/issues/713>`_ : Bicubic backend and first_saturation_deriv
 * `#712 <http://github.com/CoolProp/CoolProp/issues/712>`_ : Expose saturation derivatives from PropsSI [wishlist]
 * `#708 <http://github.com/CoolProp/CoolProp/issues/708>`_ : CoolPropsetup.m needs to be installed
 * `#707 <http://github.com/CoolProp/CoolProp/issues/707>`_ : conda builds
+* `#703 <http://github.com/CoolProp/CoolProp/issues/703>`_ : 2/ HapropsSI ( "T" , "B" , ValueB, "W" , 0 , "P" , 101325) lead to an error
+* `#702 <http://github.com/CoolProp/CoolProp/issues/702>`_ : 1 : HapropsSI ( "T" , "H" , ValueH, "W" , 0 , "P" , 101325) lead to an error
 * `#700 <http://github.com/CoolProp/CoolProp/issues/700>`_ : If git is not found, still compile properly
 * `#699 <http://github.com/CoolProp/CoolProp/issues/699>`_ : Fugacity using Python wrapper
 * `#697 <http://github.com/CoolProp/CoolProp/issues/697>`_ : Get State (old-style) class working with predefined mixtures
