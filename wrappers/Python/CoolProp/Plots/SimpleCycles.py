@@ -1,7 +1,14 @@
+from __future__ import print_function, division
+from six import with_metaclass
+
 import matplotlib,numpy
 
+import numpy as np
+
+import CoolProp
 from CoolProp.CoolProp import PropsSI
 from scipy.optimize import newton
+from .Common import BasePlot, _process_fluid_state, UnitSystem, SIunits
 
 def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     """
@@ -389,29 +396,462 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     print('Vdisp2: ',(mdot+mdot_inj)/(rho[1]*f*eta_v)*1e6,'cm^3')
     return COP
 
-if __name__=='__main__':
-    from CoolProp.Plots import Ph,Ts
 
-    Ref='R290'
-    fig=matplotlib.pyplot.figure(figsize=(4,3))
-    ax=fig.add_axes((0.15,0.15,0.8,0.8))
-    Ph(Ref,Tmin=273.15-30,hbounds=[0,600],axis=ax)
-    COP=TwoStage('Propane',10000,273.15-5,273.15+43.3,5,7,0.7,0.3,15+273.15,3,prints = True)
-    matplotlib.pyplot.show()
+    #class SimpleCycle(object):
+    #    """A class that calculates a simple thermodynamic cycle"""
+    #    def __init__(self, *args, **kwargs):
+    #        object.__init__(self, *args, **kwargs)
+    # (states, steps, fluid):
+    
+#             Parameters
+#         ----------        
+#         x_type : int, str
+#             Either a letter or an integer that specifies the property type for the x-axis
+#         y_type : int, str
+#             Either a letter or an integer that specifies the property type for the y-axis
+#         states : list 
+#             A collection of state points that follows a fixed scheme defined 
+#             in the implementing subclass.
+#         fluid_ref : str, CoolProp.AbstractState
+#             The fluid property provider, either a subclass of CoolProp.AbstractState
+#             or a string that can be used to generate a CoolProp.AbstractState instance
+#             via :func:`Common._process_fluid_state`.
+#         steps : int
+#             The number of steps used for going from one state to another
+#         
+#         for more properties, see :class:`CoolProp.Plots.Common.Base2DObject`.  
 
-    Ref='R290'
-    fig=matplotlib.pyplot.figure(figsize=(4,3))
-    ax=fig.add_axes((0.15,0.15,0.8,0.8))
-    Ph(Ref,Tmin=273.15-30,hbounds=[0,600],axis=ax)
-    COP=SimpleCycle(Ref,273.15-5,273.15+45,5,7,0.7,Ts_Ph='Ph')
-    matplotlib.pyplot.show()
+class StateContainer(object):
+    """A collection of values for the main properties, built to mixin with :class:`CoolProp.Plots.Common.UnitSystem`"""
+    
+    def __init__(self,unit_system=SIunits()):
+        self.values = {}
+        self._system = unit_system
+        
+    @property
+    def system(self): return self._system
+    @system.setter
+    def system(self, value): self._system = value
+        
+    @property
+    def dimensions(self):
+        return self._system.dimensions
+    
+    @property
+    def d(self): return self._d
+    @d.setter
+    def d(self, value): self._d = value
+    @property
+    def h(self): return self._h
+    @h.setter
+    def h(self, value): self._h = value
+    @property
+    def p(self): return self._p
+    @p.setter
+    def p(self, value): self._p = value
+    @property
+    def s(self): return self._s
+    @s.setter
+    def s(self, value): self._s = value
+    @property
+    def t(self): return self._t
+    @t.setter
+    def t(self, value): self._t = value
+    
+    @property
+    def values(self): 
+        return {
+      CoolProp.iDmass : self._d,
+      CoolProp.iHmass : self._h,
+      CoolProp.iP     : self._p,
+      CoolProp.iSmass : self._s,
+      CoolProp.iT     : self._t,
+    }
+    
+    @values.setter
+    def values(self,values): 
+        self.d = None 
+        self.h = None 
+        self.p = None 
+        self.s = None 
+        self.t = None 
+        for i in values:
+            if i == CoolProp.iDmass : self.d = values[i] 
+            if i == CoolProp.iHmass : self.h = values[i] 
+            if i == CoolProp.iP     : self.p = values[i] 
+            if i == CoolProp.iSmass : self.s = values[i] 
+            if i == CoolProp.iT     : self.t = values[i] 
+        
+    def get_si_states(self):
+        return self.values
+    
+    def get_local_states(self):
+        states = {}
+        for n in self.values:
+            states[n] = self.dimensions[n].from_SI(self.values[n])
+        return states
+    
+    def set_si_states(self,values):
+        self.values = values
+    
+    def set_local_states(self,values):
+        states = {}
+        for n in values:
+            states[n] = self.dimensions[n].to_SI(np.asarray(values[n]))
+        self.values = states
+        
+    def __len__(self):
+        """Some cheating to get the correct behaviour"""
+        return np.min([len(np.asarray(c)) for c in self.values.values()])
+    
+    def __getitem__(self, index):
+        """Another tweak that changes the default access path"""
+        state = {}
+        for n in self.values:
+            state[n] = self.dimensions[n].from_SI(self.values[n][index])
+        return state
+    
+    def __setitem__(self, index, values):
+        """Another tweak that changes the default access path"""
+        for n in values:
+            if n == CoolProp.iDmass : self.d[index] = self.dimensions[n].to_SI(values[n])
+            if n == CoolProp.iHmass : self.h[index] = self.dimensions[n].to_SI(values[n])
+            if n == CoolProp.iP     : self.p[index] = self.dimensions[n].to_SI(values[n])
+            if n == CoolProp.iSmass : self.s[index] = self.dimensions[n].to_SI(values[n])
+            if n == CoolProp.iT     : self.t[index] = self.dimensions[n].to_SI(values[n])
+            
 
-    Ref='R410A'
-    fig=matplotlib.pyplot.figure(figsize=(4,3))
-    ax=fig.add_axes((0.15,0.15,0.8,0.8))
-    Ts(Ref,Tmin=273.15-100,sbounds=[0,600],axis=ax)
-    COP=SimpleCycle(Ref,273.15-5,273.15+45,5,7,0.7,Ts_Ph='Ts')
-    matplotlib.pyplot.show()
+class BaseCycle(BasePlot):
+    """A simple thermodynamic cycle, should not be used on its own."""
+    
+    # Define the iteration keys
+    PROPERTIES = {
+      CoolProp.iDmass:'density', 
+      CoolProp.iHmass:'specific enthalpy', 
+      CoolProp.iP:'pressure', 
+      CoolProp.iSmass:'specific entropy', 
+      CoolProp.iT:'temperature'
+    }
+    
+    STATECOUNTS=[0]
+    """A list of accepted numbers of states"""
+    
+    STATECHANGE=[None]
+    """A list of lists of tuples that defines how the state transitions 
+    behave for the corresponding entry in BaseCycle.STATECOUNTS"""
+    
+    def __init__(self, fluid_ref, graph_type, unit_system='EUR', **kwargs):
+        """Initialises a simple cycle calculator
+        
+        Parameters
+        ----------        
+        fluid_ref : str, CoolProp.AbstractState
+            The fluid property provider, either a subclass of CoolProp.AbstractState
+            or a string that can be used to generate a CoolProp.AbstractState instance
+            via :func:`Common._process_fluid_state`.
+        graph_type : string
+            The graph type to be plotted, like \"PH\" or \"TS\"
+        unit_system : string, ['EUR','KSI','SI']
+            Select the units used for the plotting.  'EUR' is bar, kJ, C; 'KSI' is kPa, kJ, K; 'SI' is Pa, J, K
+                
+        for more properties, see :class:`CoolProp.Plots.Common.BasePlot`.        
+        """
+        self._cycle_states = StateContainer(SIunits())
+        BasePlot.__init__(self, fluid_ref, graph_type, unit_system, **kwargs)
+        
+    
+    @property
+    def cycle_states(self): return self._cycle_states
+    @cycle_states.setter
+    def cycle_states(self, value):
+        if len(value) not in self.STATECOUNTS:
+            raise ValueError("Your number of states ({0:d}) is not in the list of allowed state counts: {1:s}.".format(len(value),str(self.STATECOUNTS)))
+        self._cycle_states = value
+    
+    @property
+    def steps(self): return self._steps
+    @steps.setter
+    def steps(self, value): self._steps = int(max([value,1.0]))
+
+    @BasePlot.system.setter
+    def system(self, value): 
+        if value in self.UNIT_SYSTEMS:
+            self._system = self.UNIT_SYSTEMS[value]
+        elif isinstance(value, UnitSystem):
+            self._system = value
+        else:
+            raise ValueError("Invalid unit_system input \"{0:s}\", expected a string from {1:s}".format(str(value),str(self.UNIT_SYSTEMS.keys())))
+        self._cycle_states.system = self._system       
+    
+    
+    def valid_states(self):
+        """Check the formats of BaseCycle.STATECOUNTS and BaseCycle.STATECHANGE"""
+        for i,sn in enumerate(self.STATECOUNTS):
+            if len(self.STATECHANGE[i]) != sn: 
+                raise ValueError("Invalid number of states and or state change operations")
+        return True 
+    
+    
+    def state_change(self,in1,in2,start,ty1='lin',ty2='lin'):
+        """Calculates a state change defined by the properties in1 and in2
+        
+        Uses self.states[start] and self.states[start+1] (or self.states[0]) to define 
+        the process and interpolates between the values. 
+        
+        Parameters
+        ----------
+        in1 : int 
+            The index of the first defined property.
+        in2 : int 
+            The index of the second defined property.
+        start : int 
+            The index of the start state. 
+        ty1 : str
+            The key that defines the type of state change for in1, lin or log.
+        ty2 : str 
+            The key that defines the type of state change for in2, lin or log.
+            
+        Returns
+        -------
+        scalar or array_like 
+            a list of the length of self.steps+1 that describes the process. It includes start and end state.
+        """
+        raise NotImplementedError()
+    
+
+class SimpleRankineCycle(BaseCycle):
+    """A simple Rankine cycle *without* regeneration"""
+    STATECOUNTS=[4]
+    STATECHANGE=[[
+      lambda: BaseCycle.state_change('S','P',0,ty1='lin',ty2='log'), # Pumping process
+      lambda: BaseCycle.state_change('H','P',1,ty1='lin',ty2='lin'), # Heat addition
+      lambda: BaseCycle.state_change('S','P',2,ty1='lin',ty2='log'), # Expansion
+      lambda: BaseCycle.state_change('H','P',3,ty1='lin',ty2='lin')  # Heat removal
+      ]]
+    
+    def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
+        """see :class:`CoolProp.Plots.SimpleCycles.BaseCycle` for details.      
+        """
+        BaseCycle.__init__(self, fluid_ref, graph_type, **kwargs)
+        
+    
+    
+    def simple_solve(self, T0, p0, T2, p2, eta_exp, eta_pum, fluid=None):
+        if fluid is not None: self.state = _process_fluid_state(fluid)
+        if self._state is None: 
+            raise ValueError("You have specify a fluid before you calculate.")
+        
+        self.state.update(CoolProp.PT_INPUTS,p0,T0) 
+        h0 = self.state.hmass()
+        s0 = self.state.smass()
+    
+        p1 = p2
+        self.state.update(CoolProp.PSmass_INPUTS,p1,s0)
+        h1 = h0 + (self.state.hmass() - h0) / eta_pum
+        self.state.update(CoolProp.HmassP_INPUTS,h1,p1)
+        s1 = self.state.smass()
+        T1 = self.state.T()
+    
+        self.state.update(CoolProp.PT_INPUTS,p2,T2)
+        h2 = self.state.hmass()
+        s2 = self.state.smass()
+    
+        p3 = p2
+        self.state.update(CoolProp.PSmass_INPUTS,p3,s2)
+        h3 = h2 - eta_exp * (h2 - self.state.hmass())
+        self.state.update(CoolProp.HmassP_INPUTS,h3,p3)
+        s3 = self.state.smass()
+        T3 = self.state.T()
+    
+        w_net = h2 - h3
+        q_boiler = h2 - h1
+        eta_th = w_net / q_boiler
+        
+        print(eta_th)
+    
+        
+
+
+
+# def SimpleRankineCycle(states, steps, fluid):
+#     """A simple Rankine cycle, with optional regeneration
+#     
+#     Calculates a simple Rankine cycle including some basic cycle-related quantities. 
+#     
+#     Parameters
+#     ----------
+#         states : list, dict 
+#             A collection of states that follows a fixed scheme:
+#                 0) Subcooled liquid
+#                 1) Pressurised liquid
+#                 2) Preheated liquid    if regenrative cycle, else superheated state
+#                 3) Superheated state   if regenrative cycle, else expanded state
+#                 4) Expanded state      if regenrative cycle, else NULL
+#                 5) Desuperheated state if regenrative cycle, else NULL  
+#     
+#     
+#     """
+#     state = _process_fluid_state(fluid)
+# 
+# 
+#     state.update(CoolProp.PT_INPUTS,p1,T1)
+#     h1 = state.hmass()
+#     s1 = state.smass()
+# 
+#     p2 = p3
+#     state.update(CoolProp.PSmass_INPUTS,p2,s1)
+#     h2 = h1 + (state.hmass() - h1) / epsilon_p
+#     state.update(CoolProp.HmassP_INPUTS,h2,p2)
+#     s2 = state.smass()
+#     T2 = state.T()
+# 
+#     state.update(CoolProp.PT_INPUTS,p3,T3)
+#     h3 = state.hmass()
+#     s3 = state.smass()
+# 
+#     p4 = p1
+#     state.update(CoolProp.PSmass_INPUTS,p4,s3)
+#     h4 = h3 - epsilon_e * (h3 - state.hmass())
+#     state.update(CoolProp.HmassP_INPUTS,h4,p4)
+#     s4 = state.smass()
+#     T4 = state.T()
+# 
+#     w_net = h3 - h4
+#     q_boiler = h3 - h2
+#     eta_c = w_net / q_boiler
+# 
+#     #Ts = PropsPlot(fluid, 'Ts')
+#     #Ts.draw_isolines('P', [p1, p3], num=10)
+#     #Ts.set_axis_limits([0., 12., 200., 900.])
+# 
+#     #axObj.plot(s_tp/1e3,T_tp-273.15 , color=plotterObj._black, ls='-', alpha=1.0)
+# 
+#     isoObj  = IsoLines(fluid, "Ts", "Q")
+#     isoqual = isoObj.get_isolines([0.0,1.0], num=2)
+# 
+#     x = np.append(isoqual[ 0]['x'],isoqual[-1]['x'][::-1])/1e3
+#     y = np.append(isoqual[ 0]['y'],isoqual[-1]['y'][::-1])-273.15
+#     axObj.plot(x,y, color=plotterObj._black, ls='-', alpha=1.0)
+# 
+#     isoObj  = IsoLines(fluid, "Ts", "P")
+#     prange  = [p1,2e5,5e5,10e5,p3]
+#     isobars = isoObj.get_isolines(prange, num=len(prange))
+# 
+#     p = -1
+#     for c,i in enumerate(isobars):
+#         x = i['x']/1e3
+#         y = i['y']-273.15
+#         dp = prange[c]/1e5 - p
+#         p = prange[c]/1e5
+#         s = PropsSI('S','P',p*1e5,'Q',0.5,fluid)/1e3
+#         #print "Delta p: {0}".format(dp)
+#         if abs(dp)>0.8: #c%2==0 :
+#             axObj.plot(  x,    y, color=plotterObj._black, ls='-', alpha=0.50)
+#             if label:
+#                 putXLabel(xv=x, yv=y, x=s, text="{0:3.1f} bar".format(p), axis=axObj)
+# 
+#     #for i in range(len(x)):
+#     #    axObj.plot(  x[i]/1e3,   y[i]-273.15, color=plotterObj._black, ls='-', alpha=0.5)
+#     #    putXLabel(xv=x[i]/1e3,yv=y[i]-273.15, x=0, text="", axis=axObj)
+# 
+# 
+# 
+#     # Create the process lines
+#     A = []
+#     A.append({'H':h1,'P':p1,'S':s1,'T':T1})
+#     A.append({'H':h2,'P':p2,'S':s2,'T':T2})
+#     A.append({'H':h3,'P':p3,'S':s3,'T':T3})
+#     A.append({'H':h4,'P':p4,'S':s4,'T':T4})
+# 
+#     A.append(A[0].copy())
+# 
+#     processes = []
+# 
+#     for i in range(len(A)-1):
+#         s = np.linspace(         A[i]['S'] ,          A[i+1]['S'] ,num=points)
+#         p = np.logspace(np.log10(A[i]['P']), np.log10(A[i+1]['P']),num=points)
+#         dic = {}
+#         dic['P'] = p
+#         dic['S'] = s
+#         dic['T'] = PropsSI('T','P',p,'S',s,fluid)
+#         processes.append(dic)
+# 
+#     x = []
+#     y = []
+#     for lin in processes:
+#         #axObj.plot(lin['S']/1e3,lin['T']-273.15,color=plotterObj._black, linestyle='--')
+#         x.extend(lin['S']/1e3)
+#         y.extend(lin['T']-273.15)
+# 
+#     plotterObj.plotData([x],[y],ax=axObj,legend=False)
+# 
+#     x = np.array([s1,s2,s3,s4])
+#     y = np.array([T1,T2,T3,T4])
+# 
+#     #print x
+#     #print y
+#     #print " "
+# 
+#     plotterObj.plotData([x/1e3],[y-273.15],ax=axObj,legend=False)
+# 
+#     #axObj.plot(x/1e3,y-273.15,'o',color=plotterObj._black)
+# 
+#     #plotterObj.drawLegend(ax=axObj,loc=0) # the relative size of legend markers vs. original
+#     axObj.set_xlabel(ur"Specific entropy $s$ / \si{\kilo\joule\per\kilo\gram\per\kelvin}")
+#     axObj.set_ylabel(ur"Temperature $T$ / \si{\celsius}")
+#     axObj.set_xlim([-0.25,1.60])
+#     axObj.set_ylim([-25,325])
+# 
+#     #plotterObj.plotData([x], [y], ax=axObj)
+# 
+#     #ax = Ts.axis
+#     #ax.text(s1/1000., T1,' 1', fontsize=10, rotation=0, color='r')
+#     #ax.text(s2/1000., T2,' 2', fontsize=10, rotation=0, color='r')
+#     #ax.text(s3/1000., T3,' 3', fontsize=10, rotation=0, color='r')
+#     #ax.text(s4/1000., T4,' 4', fontsize=10, rotation=0, color='r')
+#     #ax.text(8., 850., "Efficiency: %.1f%%" %(eta_c*100.))
+#     #ax.text(8., 800., "Net work: %d kJ/kg" %(w_net/1000))
+#     #ax.text(8., 750., "Heat input: %d kJ/kg" %(q_boiler/1000))
+# 
+# simPlotterObj = BasePlotter()
+# figPV = simPlotterObj.getFigure(**sixupProps)
+# simPlotterObj.ccycle = simPlotterObj.multiplyCycle(simPlotterObj.getColorCycle(length=3),doubles=2)
+# simPlotterObj.scycle = cycle(['-'])
+# simPlotterObj.mcycle = cycle(['None'])
+
+
+
+
+
+# if __name__=='__main__':
+#     
+#     cycle = SimpleRankineCycle()
+#     
+#     cycle.simple_solve(300, 2e5, 550, 10e5, 0.7, 0.8)
+    
+    
+#     from CoolProp.Plots import Ph,Ts
+# 
+#     Ref='R290'
+#     fig=matplotlib.pyplot.figure(figsize=(4,3))
+#     ax=fig.add_axes((0.15,0.15,0.8,0.8))
+#     Ph(Ref,Tmin=273.15-30,hbounds=[0,600],axis=ax)
+#     COP=TwoStage('Propane',10000,273.15-5,273.15+43.3,5,7,0.7,0.3,15+273.15,3,prints = True)
+#     matplotlib.pyplot.show()
+# 
+#     Ref='R290'
+#     fig=matplotlib.pyplot.figure(figsize=(4,3))
+#     ax=fig.add_axes((0.15,0.15,0.8,0.8))
+#     Ph(Ref,Tmin=273.15-30,hbounds=[0,600],axis=ax)
+#     COP=SimpleCycle(Ref,273.15-5,273.15+45,5,7,0.7,Ts_Ph='Ph')
+#     matplotlib.pyplot.show()
+# 
+#     Ref='R410A'
+#     fig=matplotlib.pyplot.figure(figsize=(4,3))
+#     ax=fig.add_axes((0.15,0.15,0.8,0.8))
+#     Ts(Ref,Tmin=273.15-100,sbounds=[0,600],axis=ax)
+#     COP=SimpleCycle(Ref,273.15-5,273.15+45,5,7,0.7,Ts_Ph='Ts')
+#     matplotlib.pyplot.show()
 
 
 

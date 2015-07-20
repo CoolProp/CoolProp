@@ -12,7 +12,36 @@ from CoolProp.CoolProp import PropsSI
 import CoolProp
 import warnings
 from scipy.interpolate.interpolate import interp1d
+from six import with_metaclass
 
+
+def _process_fluid_state(fluid_ref):
+    """Check input for state object or fluid string
+    
+    Parameters
+    ----------
+        fluid_ref : str, CoolProp.AbstractState
+    
+    Returns
+    -------
+        CoolProp.AbstractState
+    """
+    # Process the fluid and set self._state
+    if isinstance(fluid_ref, basestring):
+        # TODO: Fix the backend extraction etc
+        fluid_def = fluid_ref.split('::')
+        if len(fluid_def)==2:
+            backend = fluid_def[0]
+            fluid = fluid_def[1]
+        elif len(fluid_def)==1:
+            backend = "HEOS"
+            fluid = fluid_def[0]
+        else: 
+            raise ValueError("This is not a valid fluid_ref string: {0:s}".format(str(fluid_ref)))
+        return AbstractState(backend, fluid)
+    elif isinstance(fluid_ref, AbstractState):
+        return fluid_ref
+    raise TypeError("Invalid fluid_ref input, expected a string or an abstract state instance.")
 
 class BaseQuantity(object):
     """A very basic property that can convert an input to and from a 
@@ -70,9 +99,8 @@ class BaseDimension(BaseQuantity):
     def unit(self, value): self._unit = value
 
 
-class UnitSystem(object):
+class UnitSystem(with_metaclass(ABCMeta),object):
     """A collection of dimensions for all the required quantities"""
-    __metaclass__ = ABCMeta
     @property
     def D(self): return self._D
     @D.setter
@@ -146,11 +174,9 @@ class EURunits(KSIunits):
         self.T.unit=ur'\u00B0 C'
 
 
-class Base2DObject(object):
+class Base2DObject(with_metaclass(ABCMeta),object):
     """A container for shared settings and constants for the 
     isolines and the property plots."""
-    
-    __metaclass__ = ABCMeta
     
     # A list of supported plot
     TS = CoolProp.iT*10     + CoolProp.iSmass
@@ -209,11 +235,9 @@ class Base2DObject(object):
     def state(self): return self._state
     @state.setter
     def state(self, value):
-        if isinstance(value, AbstractState):
-            self._state = value 
-            self._T_small = self._state.trivial_keyed_output(CoolProp.iT_critical)*self._small
-            self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*self._small
-        else: raise TypeError("Invalid state input, expected an AbstractState instance.")
+        self._state = _process_fluid_state(value)
+        self._T_small = self._state.trivial_keyed_output(CoolProp.iT_critical)*self._small
+        self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*self._small
 
     
     def _get_index(self,prop):
@@ -226,7 +250,7 @@ class Base2DObject(object):
         
     def _get_sat_bounds(self, kind, smin=None, smax=None):
         """Generates limits for the saturation line in either T or p determined
-        by 'kind'. If xmin or xmax are provided, values will be checked
+        by 'kind'. If smin or smax are provided, values will be checked
         against the allowable range for the EOS and a warning might be
         generated. Returns a tuple containing (xmin, xmax)"""
 
@@ -481,7 +505,6 @@ class IsoLine(Base2DObject):
 class BasePlot(Base2DObject):
     """The base class for all plots. It can be instantiated itself, but provides many 
     general facilities to be used in the different plots. """
-    __metaclass__ = ABCMeta
     
     # Define the iteration keys
     PROPERTIES = {
@@ -514,32 +537,16 @@ class BasePlot(Base2DObject):
 
     def __init__(self, fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
         
-        # Process the fluid and set self._state
-        if isinstance(fluid_ref, basestring):
-            # TODO: Fix the backend extraction etc
-            fluid_def = fluid_ref.split('::')
-            if len(fluid_def)==2:
-                backend = fluid_def[0]
-                fluid = fluid_def[1]
-            elif len(fluid_def)==1:
-                backend = "HEOS"
-                fluid = fluid_def[0]
-            else: 
-                raise ValueError("This is not a valid fluid_ref string: {0:s}".format(str(fluid_ref)))
-            state = AbstractState(backend, fluid)
-        elif isinstance(fluid_ref, AbstractState):
-            state = fluid_ref
-        else:
-            raise TypeError("Invalid fluid_ref input, expected a string or an abstract state instance")
+        state = _process_fluid_state(fluid_ref)
         
         # Process the graph_type and set self._x_type and self._y_type
         graph_type = graph_type.upper()
         graph_type = graph_type.replace(r'RHO',r'D')
-        if graph_type not in self.PLOTS:
+        if graph_type not in Base2DObject.PLOTS:
             raise ValueError("Invalid graph_type input, expected a string from {0:s}".format(str(self.PLOTS)))
         
         # call the base class
-        super(BasePlot, self).__init__(graph_type[1], graph_type[0], state)
+        Base2DObject.__init__(self, graph_type[1], graph_type[0], state, **kwargs)
         
         # Process the unit_system and set self._system
         unit_system = unit_system.upper()
