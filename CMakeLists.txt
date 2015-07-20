@@ -104,7 +104,6 @@ ENDIF ()
 #######################################
 
 file(GLOB_RECURSE APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-file(GLOB_RECURSE APP_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
 
 ## You can exclude this file, in case you want to run your own tests or use Catch
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/Tests.cpp")
@@ -113,16 +112,12 @@ list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Te
 ## This file is only needed for the library, normal builds do not need it.
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
 
-
 set (APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/REFPROP-headers")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/msgpack-c/include")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/IF97")
-foreach (_headerFile ${APP_HEADERS})
-    get_filename_component(_dir ${_headerFile} PATH)
-    list (APPEND APP_INCLUDE_DIRS ${_dir})
-endforeach()
-list(REMOVE_DUPLICATES APP_INCLUDE_DIRS)
+list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
+list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 include_directories(${APP_INCLUDE_DIRS})
 

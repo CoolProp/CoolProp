@@ -2,7 +2,7 @@
 
 #include "BicubicBackend.h"
 #include "MatrixMath.h"
-#include "../Helmholtz/PhaseEnvelopeRoutines.h"
+#include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
 
 void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
 {

@@ -2942,22 +2942,16 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
         // It's drho/dp|h
         // ... calculate some more things
         
-        // At the saturated state
-        CoolPropDbl rhoL =  SatL->keyed_output(rho_key);
-        CoolPropDbl rhoV =  SatV->keyed_output(rho_key);
-        CoolPropDbl hL =  SatL->keyed_output(h_key);
-        CoolPropDbl hV =  SatV->keyed_output(h_key);
-        
         // Derivatives *along* the saturation curve using the special internal method
         CoolPropDbl dhL_dp_sat =  SatL->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
         CoolPropDbl dhV_dp_sat =  SatV->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
         CoolPropDbl drhoL_dp_sat = SatL->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
-        CoolPropDbl drhoV_dp_sat = SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        //CoolPropDbl drhoV_dp_sat = SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
         
-        CoolPropDbl drho_dp_end = POW2(End->keyed_output(rho_key))*(x_end/POW2(rhoV)*drhoV_dp_sat + (1-x_end)/POW2(rhoL)*drhoL_dp_sat);
+        //CoolPropDbl drho_dp_end = POW2(End->keyed_output(rho_key))*(x_end/POW2(rhoV)*drhoV_dp_sat + (1-x_end)/POW2(rhoL)*drhoL_dp_sat);
         
         // Faking single-phase
-        CoolPropDbl drho_dp__consth_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
+        //CoolPropDbl drho_dp__consth_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
         CoolPropDbl d2rhodhdp_liq = Liq->second_partial_deriv(rho_key, h_key, p_key, p_key, h_key); // ?
         
         // Derivatives at the end point
@@ -3005,7 +2999,6 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
             M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
             std::vector<double> o(2);
             o[0] = L1; o[1] = M1;
-            double p = HEOS.p();
             return o;
         };
         std::vector<std::vector<double> > Jacobian(const std::vector<double> &x)
@@ -3042,7 +3035,6 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
         };
     };
     Resid resid(*this);
-    CoolPropDbl Tr = T_reducing();
     std::vector<double> x, tau_delta(2); tau_delta[0] = T_reducing()/T0; tau_delta[1] = rho0/rhomolar_reducing(); 
     std::vector<double> td2 = tau_delta;
     std::string errstr;
