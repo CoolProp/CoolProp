@@ -459,7 +459,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_cvmolar(void){
 }
 
 CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void){
-    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    //PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table){
         switch (selected_table){
@@ -474,7 +474,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void){
     }
 }
 CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void){
-    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    //PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table){
         switch (selected_table){
@@ -489,7 +489,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void){
     }
 }
 CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){
-    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    //PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table){
         CoolPropDbl dOf_dx, dOf_dy, dWrt_dx, dWrt_dy, dConstant_dx, dConstant_dy;

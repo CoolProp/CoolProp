@@ -680,7 +680,7 @@ class TabularBackend : public AbstractState
         std::vector<CoolPropDbl> mole_fractions;
     public:
         shared_ptr<CoolProp::AbstractState> AS;
-        TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), AS(AS), is_mixture(false) {
+        TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), is_mixture(false), AS(AS) {
             selected_table = SELECTED_NO_TABLE;
             // Flush the cached indices (set to large number)
             cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 

@@ -676,8 +676,6 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parame
         }
         IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
         IO.y[IO.y.size()-1] = 1 - std::accumulate(IO.y.begin(), IO.y.end()-1, 0.0);
-        std::vector<CoolPropDbl> &XX = IO.x;
-        std::vector<CoolPropDbl> &YY = IO.y;
         NR.call(HEOS, IO);
     }
 }
@@ -1034,8 +1032,12 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
                 {
                     // Specify the state to avoid saturation calls, but only if phase is subcritical
                     switch (CoolProp::phases phase = HEOS->phase()) {
-                    case iphase_liquid: case iphase_gas:
+                    case iphase_liquid:
+                    case iphase_gas:
                         HEOS->specify_phase(phase);
+                    default:
+                        throw ValueError(format("Could not match phase in solver_resid initializer"));
+                            
                     }
                 }
         double call(double T){
@@ -1191,7 +1193,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                 if (!twophase){
                     PY_singlephase_flash_resid resid(HEOS, HEOS._p, other, value);
                     // If that fails, try a bounded solver
-                    CoolPropDbl rhomolar = Brent(resid, closest_state.T+10, 1000, DBL_EPSILON, 1e-10, 100, errstr);
+                    Brent(resid, closest_state.T+10, 1000, DBL_EPSILON, 1e-10, 100, errstr);
                     HEOS.unspecify_phase();
                 }
                 else{
@@ -1406,8 +1408,7 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
         }
     }
     while(!good_Tmax);
-    double p = Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100, errstr);
-    int rr = 0;
+    Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100, errstr);
 }
 
 #if defined(ENABLE_CATCH)

@@ -445,7 +445,6 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
 //     c     Rgas--gas constant [J/mol-K]
     this->check_loaded_fluid();
     double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
-    double summer = 0;
     long icomp = 1L;
     // Check if more than one
     std::size_t size = mole_fractions.size();
@@ -541,7 +540,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_PIP(void)
     // partial derivatives of pressure, volume,and temperature without reference to saturation properties: 
     // Applications in phase equilibria calculations"
     double t = _T, rho = _rhomolar/1000.0, // mol/dm^3
-        x = 0,p = 0,e = 0,h = 0,s = 0,cv = 0,cp = 0,w = 0,Z = 0,hjt = 0,A = 0,G = 0,
+        p = 0,e = 0,h = 0,s = 0,cv = 0,cp = 0,w = 0,Z = 0,hjt = 0,A = 0,G = 0,
         xkappa = 0,beta = 0,dPdrho = 0,d2PdD2 = 0,dPT = 0,drhodT = 0,drhodP = 0,
         d2PT2 = 0,d2PdTD = 0,spare3 = 0,spare4 = 0;
     //subroutine THERM2 (t,rho,x,p,e,h,s,cv,cp,w,Z,hjt,A,G,
@@ -678,8 +677,6 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
         PhaseEnvelope.smolar_vap.push_back(y*1000);
     }
-
-    double rr = 0;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_cpmolar_idealgas(void)
 {
@@ -1302,9 +1299,9 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
                          const GuessesStructure &guesses)
 {
     this->check_loaded_fluid();
-    double rho_mol_L=_HUGE, rhoLmol_L=_HUGE, rhoVmol_L=_HUGE,
+    double rho_mol_L=_HUGE,
         hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,
-        w=_HUGE,q=_HUGE, mm=_HUGE, p_kPa = _HUGE, hjt = _HUGE;
+        w=_HUGE,q=_HUGE, p_kPa = _HUGE, hjt = _HUGE;
     long ierr = 0;
     char herr[errormessagelength+1];
 
@@ -1329,6 +1326,10 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
+        }
+        default:
+        {
+            throw CoolProp::ValueError(format("Unable to match given input_pair in update_with_guesses"));
         }
     }
 
@@ -1358,7 +1359,7 @@ CoolPropDbl REFPROPMixtureBackend::call_phixdll(long itau, long idel)
 CoolPropDbl REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
 {
     this->check_loaded_fluid();
-    double val = 0, tau = _tau, delta = _delta, __T = T(), __rho = rhomolar()/1000;
+    double val = 0, tau = _tau, __T = T(), __rho = rhomolar()/1000;
     if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
     return static_cast<CoolPropDbl>(val)/pow(tau,itau); // Not multplied by delta^idel

@@ -266,7 +266,6 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
         }
 		case PQ_INPUTS:{
 			std::size_t iL = 0, iV = 0;
-			CoolPropDbl hL = 0, hV = 0;
 			_p = val1; _Q = val2;
             
             using_single_phase_table = false;
@@ -289,7 +288,6 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
 		}
         case QT_INPUTS:{
 			std::size_t iL = 0, iV = 0;
-			CoolPropDbl dummyL = 0, dummyV = 0;
 			_Q = val1; _T = val2;
             
             using_single_phase_table = false;
@@ -443,8 +441,6 @@ void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTab
     
 	// Get the alpha coefficients
     const std::vector<double> &alpha = cell.get(other_key);
-
-    std::size_t NNN = alpha.size();
     
     // Normalized value in the range (0, 1)
     double yhat = (y - table.yvec[j])/(table.yvec[j+1] - table.yvec[j]);
@@ -456,7 +452,7 @@ void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTab
     double c = alpha[1+0*4]*y_0+alpha[1+1*4]*y_1+alpha[1+2*4]*y_2+alpha[1+3*4]*y_3; // factors of xhat
     double d = alpha[0+0*4]*y_0+alpha[0+1*4]*y_1+alpha[0+2*4]*y_2+alpha[0+3*4]*y_3 - other; // constant factors
     int N = 0;
-    double xhat0, xhat1, xhat2, val, xhat;
+    double xhat0, xhat1, xhat2, val, xhat = _HUGE;
     solve_cubic(a, b, c, d, N, xhat0, xhat1, xhat2);
     if (N == 1){
         xhat = xhat0;
@@ -500,8 +496,6 @@ void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTab
     
 	// Get the alpha coefficients
     const std::vector<double> &alpha = cell.get(other_key);
-
-    std::size_t NNN = alpha.size();
     
     // Normalized value in the range (0, 1)
     double xhat = (x - table.xvec[i])/(table.xvec[i+1] - table.xvec[i]);
@@ -513,7 +507,7 @@ void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTab
     double c = alpha[0+1*4]*x_0 + alpha[1+1*4]*x_1 + alpha[2+1*4]*x_2 + alpha[3+1*4]*x_3; // factors of yhat
     double d = alpha[0+0*4]*x_0 + alpha[1+0*4]*x_1 + alpha[2+0*4]*x_2 + alpha[3+0*4]*x_3 - other; // constant factors
     int N = 0;
-    double yhat0, yhat1, yhat2, val, yhat;
+    double yhat0, yhat1, yhat2, val, yhat = _HUGE;
     solve_cubic(a, b, c, d, N, yhat0, yhat1, yhat2);
     if (N == 1){
         yhat = yhat0;

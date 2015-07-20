@@ -181,7 +181,6 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
         }
         case PQ_INPUTS:{
             std::size_t iL = 0, iV = 0;
-            CoolPropDbl hL = 0, hV = 0;
             _p = val1; _Q = val2;
 
             using_single_phase_table = false;
@@ -204,7 +203,6 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
         }
         case QT_INPUTS:{
             std::size_t iL = 0, iV = 0;
-            CoolPropDbl dummyL = 0, dummyV = 0;
             _Q = val1; _T = val2;
 
             using_single_phase_table = false;

@@ -334,7 +334,6 @@ CoolPropDbl GERG2008ReducingFunction::d2Yrdxidxj(const std::vector<CoolPropDbl> 
         // Table S1 from Gernert, 2014, supplemental information
         if (j == N-1 || i == N-1){ return 0.0; }
         if (i == j){ return d2Yrdxi2__constxj(x, i, beta, gamma, Y_c_ij, Yc, xN_flag); }
-        CoolPropDbl xN = x[N-1];
         CoolPropDbl d2Yr_dxidxj = 2*Yc[N-1];
         d2Yr_dxidxj += c_Y_ij(i, j, beta, gamma, Y_c_ij)*d2fYijdxidxj(x,i,j,beta);
         
@@ -380,14 +379,12 @@ CoolPropDbl GERG2008ReducingFunction::d3Yrdxidxjdxk(const std::vector<CoolPropDb
 		}
 	}
 	else if (xN_flag == XN_DEPENDENT){
-        CoolPropDbl xN = x[N - 1];
         CoolPropDbl summer = 0;
         // Needed for all third partials
         for (std::size_t m = 0; m < N-1; m++)
         {
             summer -= c_Y_ij(m, N-1, beta, gamma, Y_c_ij)*d3fYkidxi3__constxk(x, m, N-1, beta);
         }
-        double summer0 = summer;
         if (i != j && j != k && k != i){
             summer += c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*d3fYijdxidxj2(x, i, N-1, beta);
             summer += c_Y_ij(j, N-1, beta, gamma, Y_c_ij)*d3fYijdxidxj2(x, j, N-1, beta);
@@ -487,7 +484,6 @@ CoolPropDbl GERG2008ReducingFunction::d3fYikdxi3__constxk(const std::vector<Cool
 CoolPropDbl GERG2008ReducingFunction::d3fYkidxi3__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta)
 {
 	double x_i = x[i], x_k = x[k], beta_Y = beta[k][i], beta_Y2 = beta_Y*beta_Y;
-	double den = pow(beta_Y, 8)*pow(x_i, 4) + 4*pow(beta_Y, 6)*pow(x_i, 3)*x_k + 6*pow(beta_Y, 4)*pow(x_i*x_k, 2) + 4*beta_Y2*x_i*pow(x_k, 3) + pow(x_k, 4);
 	return 6*beta_Y2*x_k*x_k*x_k*(1-beta_Y2)/pow(beta_Y2*x_k+x_i, 4);
 }
 
