@@ -11,6 +11,7 @@ import CoolProp
 from CoolProp.CoolProp import PropsSI
 from scipy.optimize import newton
 from .Common import BasePlot, _process_fluid_state, PropertyDict, SIunits
+import warnings
 
 def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     """
@@ -427,13 +428,27 @@ class StatePoint(PropertyDict):
     """A simple fixed dimension dict represented by an object with attributes"""
     
     def __iter__(self):
-        """Make sure we iterate in the righ order"""
-        keys = ["D","H","P","S","T"]
+        """Make sure we always iterate in the same order"""
+        keys = [CoolProp.iDmass,CoolProp.iHmass,CoolProp.iP,CoolProp.iSmass,CoolProp.iT]
         for key in sorted(keys):
             yield key
 
 class StateContainer(object):
-    """A collection of values for the main properties, built to mixin with :class:`CoolProp.Plots.Common.PropertyDict`"""
+    """A collection of values for the main properties, built to mixin with :class:`CoolProp.Plots.Common.PropertyDict`
+    
+    Examples
+    --------
+    This container has overloaded accessor methods. Just pick your own flavour 
+    or mix the styles as you like:
+    
+    >>> T0 = 300.000; p0 = 200000.000; h0 = 112745.749; s0 = 393.035
+    >>> cycle_states = StateContainer()
+    >>> cycle_states[0,'H'] = h0
+    >>> cycle_states[0]['S'] = s0
+    >>> cycle_states[0][CoolProp.iP] = p0
+    >>> cycle_states[0,CoolProp.iT] = T0
+    
+    """
     
     def __init__(self,unit_system=SIunits()):
         self._points = {}
@@ -587,7 +602,7 @@ class BaseCycle(BasePlot):
             self._system = value
         else:
             raise ValueError("Invalid unit_system input \"{0:s}\", expected a string from {1:s}".format(str(value),str(self.UNIT_SYSTEMS.keys())))
-        self._cycle_states.system = self._system
+        self._cycle_states._units = self._system
     
     
     def valid_states(self):
@@ -596,6 +611,26 @@ class BaseCycle(BasePlot):
             if len(self.STATECHANGE[i]) != sn: 
                 raise ValueError("Invalid number of states and or state change operations")
         return True 
+    
+    def fill_states(self):
+        """Try to populate all fields in the state objects"""
+        for i in self._cycle_states:
+            if (self._cycle_states[i][CoolProp.iDmass] is not None and 
+              self._cycle_states[i][CoolProp.iT] is not None):
+                self._state.update(CoolProp.DmassT_INPUTS, self._cycle_states[i][CoolProp.iDmass], self._cycle_states[i][CoolProp.iT])
+            elif (self._cycle_states[i][CoolProp.iP] is not None and 
+              self._cycle_states[i][CoolProp.iHmass] is not None):
+                self._state.update(CoolProp.HmassP_INPUTS, self._cycle_states[i][CoolProp.iHmass], self._cycle_states[i][CoolProp.iP])
+            elif (self._cycle_states[i][CoolProp.iP] is not None and 
+              self._cycle_states[i][CoolProp.iSmass] is not None):
+                self._state.update(CoolProp.PSmass_INPUTS, self._cycle_states[i][CoolProp.iP], self._cycle_states[i][CoolProp.iSmass])
+            else:
+                warnings.warn("Please fill the state[{0:s}] manually.".format(str(i)))
+                continue
+            for j in self._cycle_states[i]:
+                if self._cycle_states[i][j] is None:
+                    self._cycle_states[i][j] = self._state.keyed_output(j)
+
     
     
     def state_change(self,in1,in2,start,ty1='lin',ty2='lin'):
@@ -651,10 +686,11 @@ class SimpleRankineCycle(BaseCycle):
         self.state.update(CoolProp.PT_INPUTS,p0,T0)
         h0 = self.state.hmass()
         s0 = self.state.smass()
+        # Just a showcase for the different accessor methods
         cycle_states[0,'H'] = h0
-        cycle_states[0,'S'] = s0
-        cycle_states[0,'P'] = p0
-        cycle_states[0,'T'] = T0
+        cycle_states[0]['S'] = s0
+        cycle_states[0][CoolProp.iP] = p0
+        cycle_states[0,CoolProp.iT] = T0
         
         # Pressurised liquid
         p1 = p2
@@ -694,7 +730,10 @@ class SimpleRankineCycle(BaseCycle):
         eta_th = w_net / q_boiler
         
         print(eta_th)
-        print(cycle_states)
+        
+        self.cycle_states = cycle_states
+        self.fill_states()
+        
     
         
 

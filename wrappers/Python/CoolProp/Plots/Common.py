@@ -110,6 +110,16 @@ class BaseDimension(BaseQuantity):
 
 class PropertyDict(with_metaclass(ABCMeta),object):
     """A collection of dimensions for all the required quantities"""
+    
+    def __init__(self):
+        self._D = None
+        self._H = None
+        self._P = None
+        self._S = None
+        self._T = None
+        self._U = None
+        self._Q = None
+    
     @property
     def D(self): return self._D
     @D.setter
