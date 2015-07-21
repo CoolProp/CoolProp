@@ -168,6 +168,17 @@
       "max_abs_error": 1.0220801074081636, 
       "max_abs_error_units": "J/mol/K", 
       "type": "rational_polynomial"
+    }, 
+    "surface_tension": {
+      "BibTeX": "Kondou-IJR-2015", 
+      "Tc": 423.27, 
+      "a": [
+        0.05657
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.220
+      ]
     }
   }, 
   "CAS": "29118-25-0", 
