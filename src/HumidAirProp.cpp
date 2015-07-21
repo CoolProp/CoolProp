@@ -1522,6 +1522,10 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
         if (MainInputKey == GIVEN_RH){
             if (MainInputValue < 1e-10){
                 T_max = 1000;
+                // For wetbulb, has to be below critical temp
+                if (SecondaryInputKey == GIVEN_TWB){
+                    T_max = 600;
+                }
             }
             else{
                 T_max = CoolProp::PropsSI("T","P",p,"Q",0,"Water") - 1;
