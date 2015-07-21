@@ -1036,8 +1036,8 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
                     case iphase_gas:
                         HEOS->specify_phase(phase);
                     default:
-                        throw ValueError(format("Could not match phase in solver_resid initializer"));
-                            
+                        // Otherwise don't do anything (this is to make compiler happy)
+                        {}
                     }
                 }
         double call(double T){
