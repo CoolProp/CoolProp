@@ -66,7 +66,7 @@ public:
 
     /** \brief Construct the binary pair library including all the binary pairs that are possible
      *
-     * The data structure also includes space for a string that gives the pointer to the departure function to be used for this binary pair.     *
+     * The data structure also includes space for a string that gives the pointer to the departure function to be used for this binary pair.
      */
     MixtureBinaryPairLibrary()
     {
@@ -127,7 +127,10 @@ public:
                     dict.add_number("betaT", betaT);
                 }
             }
-            else{ throw ValueError(); }
+            else{
+                std::cout << "Loading error: binary pair of " << name1 << " & " << name2 << "does not provide either a) xi and zeta b) gammaT, gammaV, betaT, and betaV" << std::endl;
+                continue;
+            }
 
             if (binary_pair_map.find(CAS) == binary_pair_map.end()){
                 // Add to binary pair map by creating one-element vector
