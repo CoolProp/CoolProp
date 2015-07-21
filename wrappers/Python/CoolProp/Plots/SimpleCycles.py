@@ -421,6 +421,10 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 #         
 #         for more properties, see :class:`CoolProp.Plots.Common.Base2DObject`.  
 
+class StatePoint(UnitSystem):
+    """A simple fixed dimension dict represented by an object with attributes"""
+    
+
 class StateContainer(object):
     """A collection of values for the main properties, built to mixin with :class:`CoolProp.Plots.Common.UnitSystem`"""
     
@@ -481,6 +485,16 @@ class StateContainer(object):
             if i == CoolProp.iP     : self.p = values[i] 
             if i == CoolProp.iSmass : self.s = values[i] 
             if i == CoolProp.iT     : self.t = values[i] 
+        
+    @property
+    def points(self): 
+        return {
+      CoolProp.iDmass : self._d,
+      CoolProp.iHmass : self._h,
+      CoolProp.iP     : self._p,
+      CoolProp.iSmass : self._s,
+      CoolProp.iT     : self._t,
+    }
         
     def get_si_states(self):
         return self.values
@@ -641,22 +655,26 @@ class SimpleRankineCycle(BaseCycle):
         if self._state is None: 
             raise ValueError("You have specify a fluid before you calculate.")
         
+        # Subcooled liquid
         self.state.update(CoolProp.PT_INPUTS,p0,T0) 
         h0 = self.state.hmass()
         s0 = self.state.smass()
-    
+        
+        # Pressurised liquid
         p1 = p2
         self.state.update(CoolProp.PSmass_INPUTS,p1,s0)
         h1 = h0 + (self.state.hmass() - h0) / eta_pum
         self.state.update(CoolProp.HmassP_INPUTS,h1,p1)
         s1 = self.state.smass()
         T1 = self.state.T()
-    
+        
+        # Evaporated vapour    
         self.state.update(CoolProp.PT_INPUTS,p2,T2)
         h2 = self.state.hmass()
         s2 = self.state.smass()
-    
-        p3 = p2
+        
+        # Expanded gas
+        p3 = p0
         self.state.update(CoolProp.PSmass_INPUTS,p3,s2)
         h3 = h2 - eta_exp * (h2 - self.state.hmass())
         self.state.update(CoolProp.HmassP_INPUTS,h3,p3)

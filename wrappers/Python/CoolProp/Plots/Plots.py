@@ -142,7 +142,7 @@ class PropertyPlot(BasePlot):
         ixrange = self.generate_ranges(self._x_index,limits[0],limits[1],points)
         iyrange = self.generate_ranges(self._y_index,limits[2],limits[3],points)
         
-        dim = self._system.dimensions[iso_type]
+        dim = self._system[iso_type]
         
         lines  = self.isolines.get(iso_type, [])
         for i in range(num):
@@ -156,8 +156,8 @@ class PropertyPlot(BasePlot):
     def draw_isolines(self):
         for i in self.isolines:
             props = self.props[i]
-            dimx = self._system.dimensions[self._x_index]
-            dimy = self._system.dimensions[self._y_index]
+            dimx = self._system[self._x_index]
+            dimy = self._system[self._y_index]
             for line in self.isolines[i]:
                 if line.i_index == CoolProp.iQ and \
                   (line.value == 0.0 or line.value == 1.0):
@@ -220,9 +220,9 @@ class PropertyPlot(BasePlot):
                 switch = IsoLine.XY_SWITCH[iso_type].get(self.y_index*10+self.x_index,None)
                 if switch is not None:
                     try: 
-                        dimx = self.system.dimensions[self.x_index]
-                        dimy = self.system.dimensions[self.y_index]
-                        dimi = self.system.dimensions[iso_type]
+                        dimx = self.system[self.x_index]
+                        dimy = self.system[self.y_index]
+                        dimi = self.system[iso_type]
                         pair, out1, out2 = CP.generate_update_pair(self.x_index,dimx.to_SI(x1),self.y_index,dimy.to_SI(y1))
                         self.state.update(pair, out1, out2)
                         i_val1 = self.state.keyed_output(iso_type)
@@ -285,6 +285,7 @@ if __name__ == "__main__":
     #
     
     #
-    plot.savefig("Plots.pdf")
+    #plot.savefig("Plots.pdf")
+    plot.show()
     #for i in plot.isolines:
     #    print(plot.isolines[i][0].x,plot.isolines[i][0].y)

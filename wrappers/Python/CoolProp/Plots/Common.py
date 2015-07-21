@@ -140,7 +140,33 @@ class UnitSystem(with_metaclass(ABCMeta),object):
       CoolProp.iT     : self._T,
       CoolProp.iUmass : self._U,
       CoolProp.iQ     : self._Q
-    }        
+    }
+        
+    def __getitem__(self, index):
+        """Allow for property access via square brackets"""
+        if index == CoolProp.iDmass : return self.D
+        elif index == CoolProp.iHmass : return self.H
+        elif index == CoolProp.iP     : return self.P
+        elif index == CoolProp.iSmass : return self.S
+        elif index == CoolProp.iT     : return self.T
+        elif index == CoolProp.iUmass : return self.U
+        elif index == CoolProp.iQ     : return self.Q
+        else: raise ValueError("Unknown index \"{0:s}\".".format(str(index)))
+        
+    
+    def __setitem__(self, index, value):
+        """Allow for property access via square brackets"""
+        if index == CoolProp.iDmass : self.D = value
+        elif index == CoolProp.iHmass : self.H = value
+        elif index == CoolProp.iP     : self.P = value
+        elif index == CoolProp.iSmass : self.S = value
+        elif index == CoolProp.iT     : self.T = value
+        elif index == CoolProp.iUmass : self.U = value
+        elif index == CoolProp.iQ     : self.Q = value
+        else: raise ValueError("Unknown index \"{0:s}\".".format(str(index)))
+        
+        
+        
 
 
 class SIunits(UnitSystem):
@@ -590,7 +616,7 @@ consider replacing it with \"_get_sat_bounds\".",
     
     def _get_iso_label(self, isoline, unit=True):
         if self._system is not None:
-            dim = self._system.dimensions[isoline.i_index]
+            dim = self._system[isoline.i_index]
             return str(r"$"+dim.symbol+"="+str(dim.from_SI(isoline.value))+ "$ "+dim.unit if unit else "$").strip()
         return str(isoline.value).strip()
         
@@ -637,10 +663,10 @@ consider replacing it with \"_get_sat_bounds\".",
             self.axis.set_yscale('log')
         
         if not self.axis.get_xlabel():
-            dim = self._system.dimensions[self._x_index]
+            dim = self._system[self._x_index]
             self.xlabel(str(dim.label+" $"+dim.symbol+"$ / "+dim.unit).strip())
         if not self.axis.get_ylabel():
-            dim = self._system.dimensions[self._y_index]
+            dim = self._system[self._y_index]
             self.ylabel(str(dim.label+" $"+dim.symbol+"$ / "+dim.unit).strip())
 
     def title(self, title):
@@ -671,9 +697,9 @@ consider replacing it with \"_get_sat_bounds\".",
     def _set_axis_limits(self, limits):
         """Set the limits of the internal axis object based on SI units,
         takes [xmin, xmax, ymin, ymax]"""
-        dim = self._system.dimensions[self._x_index]
+        dim = self._system[self._x_index]
         self.axis.set_xlim([dim.from_SI(limits[0]), dim.from_SI(limits[1])])
-        dim = self._system.dimensions[self._y_index]
+        dim = self._system[self._y_index]
         self.axis.set_ylim([dim.from_SI(limits[2]), dim.from_SI(limits[3])])
         
     def get_axis_limits(self,x_index=None,y_index=None):
@@ -699,9 +725,9 @@ consider replacing it with \"_get_sat_bounds\".",
                     Y[i] = self._state.keyed_output(y_index)
             
             # Figure out what to update
-            dim = self._system.dimensions[x_index]
+            dim = self._system[x_index]
             x_lim = [dim.from_SI(min(X)),dim.from_SI(max(X))]
-            dim = self._system.dimensions[y_index]
+            dim = self._system[y_index]
             y_lim = [dim.from_SI(min(Y)),dim.from_SI(max(Y))]
             # Either update the axes limits or get them
             if x_index == self._x_index:
@@ -726,10 +752,10 @@ consider replacing it with \"_get_sat_bounds\".",
         if x_index is None: x_index = self._x_index
         if y_index is None: y_index = self._y_index
         limits = self.get_axis_limits(x_index,y_index)
-        dim = self._system.dimensions[x_index]
+        dim = self._system[x_index]
         limits[0] = dim.to_SI(limits[0])
         limits[1] = dim.to_SI(limits[1])
-        dim = self._system.dimensions[y_index]
+        dim = self._system[y_index]
         limits[2] = dim.to_SI(limits[2])
         limits[3] = dim.to_SI(limits[3])
         return limits
@@ -846,10 +872,10 @@ consider replacing it with \"_get_sat_bounds\".",
         This will give the coordinates and rotation required to align a label with
         a line on a plot in axis units.
         """
-        dimx = self._system.dimensions[self._x_index]
+        dimx = self._system[self._x_index]
         xv = dimx.to_SI(xv)
         if x is not None: x  = dimx.to_SI(x)
-        dimy = self._system.dimensions[self._y_index]
+        dimy = self._system[self._y_index]
         yv = dimy.to_SI(yv)
         if y is not None: y  = dimx.to_SI(y)
         (x,y,rot) = self._inline_label(xv,yv,x,y)
@@ -895,6 +921,7 @@ if __name__ == "__main__":
     print(bp._get_sat_bounds('P'))
     print(bp._get_iso_label(iso))
     print(bp.get_axis_limits())
+    
         
         
         # get_update_pair(CoolProp.iP,CoolProp.iSmass,CoolProp.iT) -> (0,1,2,CoolProp.PSmass_INPUTS)
