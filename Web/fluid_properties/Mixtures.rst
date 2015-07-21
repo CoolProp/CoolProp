@@ -86,7 +86,7 @@ From Lemmon :cite:`Lemmon-JPCRD-2004` for the properties of R404A, R410A, etc.
 
 .. math::
 
-    \alpha^E(\delta,\tau,\mathbf{x}) = \sum_{i=1}^{m-1} \sum_{j=i+1}^{m} \left [ x_ix_jF_{ij} \sum_{k}N_k\delta_{d_k}\tau^{t_k}\exp(-\delta^{l_k})\right]
+    \alpha^E(\delta,\tau,\mathbf{x}) = \sum_{i=1}^{m-1} \sum_{j=i+1}^{m} \left [ x_ix_jF_{ij} \sum_{k}N_k\delta^{d_k}\tau^{t_k}\exp(-\delta^{l_k})\right]
     
 where the terms :math:`N_k,d_k,t_k,l_k` correspond to the pair given by the indices :math:`i,j`
 
