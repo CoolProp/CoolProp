@@ -295,7 +295,10 @@ class Base2DObject(with_metaclass(ABCMeta),object):
 
         # TODO: REFPROP backend does not have ptriple.
         T_triple = self._state.trivial_keyed_output(CoolProp.iT_triple)
-        T_min    = self._state.trivial_keyed_output(CoolProp.iT_min)        
+        try:
+            T_min    = self._state.trivial_keyed_output(CoolProp.iT_min)
+        except:
+            T_min    = T_triple
         self._state.update(CoolProp.QT_INPUTS, 0, max([T_triple,T_min])+self._T_small)
         kind = _get_index(kind)
         if kind == CoolProp.iP:
@@ -452,10 +455,13 @@ class IsoLine(Base2DObject):
                 X[index] = self.state.keyed_output(self._x_index)
                 Y[index] = self.state.keyed_output(self._y_index)
             except Exception as e:
-                if (pair == CoolProp.QT_INPUTS and abs(two[index]-Tcrit)<1e-1) or \
-                   (pair == CoolProp.PQ_INPUTS and abs(one[index]-Pcrit)<1e1):
+                if (pair == CoolProp.QT_INPUTS and abs(two[index]-Tcrit)<1e0) or \
+                   (pair == CoolProp.PQ_INPUTS and abs(one[index]-Pcrit)<1e2):
                     X[index] = xcrit
                     Y[index] = ycrit
+                    warnings.warn(
+                  "An error occurred for near critical inputs {0:f}, {1:f} with index {2:s}: {3:s}".format(one[index],two[index],str(index),str(e)),
+                  UserWarning)
                     pass 
                 
                 warnings.warn(
@@ -528,14 +534,15 @@ class IsoLine(Base2DObject):
             warnings.warn(
               "Poor data quality, there are not enough valid entries for x ({0:f}/{1:f}) or y ({2:f}/{3:f}).".format(validx,countx,validy,county),
               UserWarning)
-        
+        # TODO: use filter and cubic splines!
+        #filter = np.logical_and(np.isfinite(self.x),np.isfinite(self.y))
         if validy > validx:
             y = self.y[np.isfinite(self.y)]
-            self.x = interp1d(self.y, self.x)(y)
+            self.x = interp1d(self.y, self.x, kind='linear')(y)
             self.y = y
         else:
             x = self.x[np.isfinite(self.x)] 
-            self.y = interp1d(self.x, self.y)(x)
+            self.y = interp1d(self.x, self.y, kind='linear')(x)
             self.x = x
             
             
