@@ -9,9 +9,9 @@ def inject_hsanchor(fluid, i, json_data):
     
     Tanchor = 1.1*CoolProp.CoolProp.PropsSI('Tcrit',fluid)
     rhoanchor = 0.9*CoolProp.CoolProp.PropsSI('rhomolar_critical',fluid)
-    hanchor_molar = CP.PropsSI('Hmolar','T',Tanchor,'D',rhoanchor,fluid)
-    sanchor_molar = CP.PropsSI('Smolar','T',Tanchor,'D',rhoanchor,fluid)
-    p = CP.PropsSI('P','T',Tanchor,'D',rhoanchor,fluid)
+    hanchor_molar = CP.PropsSI('Hmolar','T',Tanchor,'Dmolar',rhoanchor,fluid)
+    sanchor_molar = CP.PropsSI('Smolar','T',Tanchor,'Dmolar',rhoanchor,fluid)
+    p = CP.PropsSI('P','T',Tanchor,'Dmolar',rhoanchor,fluid)
     
     json_data['EOS'][i]['STATES']['hs_anchor'] = {
           "T": Tanchor, 
