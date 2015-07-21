@@ -13,11 +13,13 @@ import warnings
 from CoolProp.Plots.Common import IsoLine,BasePlot
 import CoolProp
 import sys
+from CoolProp.Plots.SimpleCycles import StatePoint, StateContainer,\
+    SimpleRankineCycle
 
 
 
 class PropertyPlot(BasePlot):
-    def __init__(self, fluid_name, graph_type, units = 'KSI', **kwargs):
+    def __init__(self, fluid_name, graph_type, **kwargs):
         """
         Create graph for the specified fluid properties
 
@@ -33,7 +35,7 @@ class PropertyPlot(BasePlot):
         fig : :func:`matplotlib.pyplot.figure()`, Optional
             The current figure to be plotted to.
             Default: create a new figure
-        units : string, ['EUR','KSI','SI']
+        unit_system : string, ['EUR','KSI','SI']
             Select the units used for the plotting.  'EUR' is bar, kJ, C; 'KSI' is kPa, kJ, K; 'SI' is Pa, J, K
         reciprocal_density : bool
             NOT IMPLEMENTED: If True, 1/rho will be plotted instead of rho 
@@ -56,7 +58,7 @@ class PropertyPlot(BasePlot):
             See the online documentation for a list of the available fluids and
             graph types
         """
-        super(PropertyPlot, self).__init__(fluid_name, graph_type, unit_system=units, **kwargs)
+        super(PropertyPlot, self).__init__(fluid_name, graph_type, **kwargs)
         self._isolines = {} 
         #self._plines = {}
         #self._ppoints = {}
@@ -182,75 +184,55 @@ class PropertyPlot(BasePlot):
          
                 
                 
-    def draw_process(self, states, iso_types=None, line_opts={'color' : 'r', 'lw' : 1.5}):
+    def draw_process(self, statecontainer, points=None, line_opts={'color' : 'r', 'lw' : 1.5}):
         """ Draw process or cycle from x and y values in axis units
 
         Parameters
         ----------
-        states : list of (x,y) tuples, required
-        iso_types : list 
-            isobars that should be used to illustrate the processes, one element less than states, optional
+        statecontainer : CoolProp.Plots.SimpleCycles.StateContainer()
+            A state container object that contains all the information required to draw the process.
+            Note that points that appear several times get added to a special of highlighted points.
         line_opts : dict
             Line options (please see :func:`matplotlib.pyplot.plot`), optional
+            Use this parameter to pass a label for the legend.
         """
         warnings.warn("You called the function \"draw_process\", which is not tested.",UserWarning)
-
-        # plot above other lines
-        line_opts['zorder'] = 10
         
-        if iso_types is not None and len(states)!=len(iso_types)+1:
-            raise ValueError("If you specifiy the isotypes, they have to have the length of the state list - 1.")
         
-        X = []
-        Y = []
-
-        for i in range(len(states)):
-            if i == 0: continue
-            (x2, y2) = states[i]
-            (x1, y1) = states[i-1]
-            
-            iso_type = None
-            if iso_types is not None and iso_types[i-1] is not None:
-                iso_type = self._get_index(iso_types[i-1])
-            else: # TODO: detect it!
-                iso_type = None
-                
-            iso_line = None 
-            if iso_type is not None:
-                switch = IsoLine.XY_SWITCH[iso_type].get(self.y_index*10+self.x_index,None)
-                if switch is not None:
-                    try: 
-                        dimx = self.system[self.x_index]
-                        dimy = self.system[self.y_index]
-                        dimi = self.system[iso_type]
-                        pair, out1, out2 = CP.generate_update_pair(self.x_index,dimx.to_SI(x1),self.y_index,dimy.to_SI(y1))
-                        self.state.update(pair, out1, out2)
-                        i_val1 = self.state.keyed_output(iso_type)
-                        pair, out1, out2 = CP.generate_update_pair(self.x_index,dimx.to_SI(x2),self.y_index,dimy.to_SI(y2))
-                        self.state.update(pair, out1, out2)
-                        i_val2 = self.state.keyed_output(iso_type)
-                        i_val = dimi.from_SI((i_val1 + i_val2)/2.0) 
-                        self.calc_isolines(iso_type, [i_val], num=1)
-                        iso_line = self.isolines[iso_type].pop()
-                        idx1 = numpy.argmin(numpy.abs(iso_line.x - x1))
-                        idx2 = numpy.argmin(numpy.abs(iso_line.x - x2))
-                        if idx1>idx2:
-                            iso_line.x = iso_line.x[idx2+1:idx1]
-                            iso_line.y = iso_line.y[idx2+1:idx1]
-                        else:
-                            iso_line.x = iso_line.x[idx1+1:idx2]
-                            iso_line.y = iso_line.y[idx1+1:idx2]
-                    except Exception as e:
-                        warnings.warn(
-                          "There was a problem with the isolines: {0:s}".format(str(e)),
-                          UserWarning)
-            
-            if iso_line is None:
-                iso_line = IsoLine(CoolProp.iT, self.x_index, self.y_index) # Just a dummy
-                iso_line.x = [x1,x2]
-                iso_line.y = [y1,y2]
-            
-            self.axis.plot(iso_line.x,iso_line.y,**line_opts)
+        dimx = self.system[self.x_index]
+        dimy = self.system[self.y_index]
+        
+        if points is None: points = StateContainer()
+        
+        xdata = []
+        ydata = []        
+        old = statecontainer[len(statecontainer)-1]
+        for i in statecontainer:
+            point = statecontainer[i]
+            if point == old: 
+                points.append(point)
+                old = point
+                continue
+            xdata.append(point[self.x_index])
+            ydata.append(point[self.y_index])
+            old = point
+        xdata = dimx.from_SI(numpy.asarray(xdata))
+        ydata = dimy.from_SI(numpy.asarray(ydata))
+        self.axis.plot(xdata,ydata,**line_opts)
+        
+        xdata = numpy.empty(len(points))
+        ydata = numpy.empty(len(points))
+        for i in points:
+            point = points[i]
+            xdata[i] = point[self.x_index]
+            ydata[i] = point[self.y_index]
+        xdata = dimx.from_SI(numpy.asarray(xdata))
+        ydata = dimy.from_SI(numpy.asarray(ydata))
+        line_opts['label'] = ''
+        line_opts['linestyle'] = 'none'
+        line_opts['marker'] = 'o'
+        self.axis.plot(xdata,ydata,**line_opts)
+        
 
 def InlineLabel(xv,yv,x=None,y=None,axis=None,fig=None):
     warnings.warn("You called the deprecated function \"InlineLabel\", use \"BasePlot.inline_label\".",DeprecationWarning)
@@ -264,28 +246,42 @@ class PropsPlot(PropertyPlot):
 
 
 if __name__ == "__main__":
-    plot = PropertyPlot('HEOS::n-Pentane', 'PH', units='EUR')
-    Ts = plot.get_axis_limits(CoolProp.iT, CoolProp.iSmass)
-    TD = plot.get_axis_limits(CoolProp.iT, CoolProp.iDmass)
-    plot.calc_isolines(CoolProp.iT,     Ts[0:2])
-    plot.calc_isolines(CoolProp.iQ,     [0.0,1.0], num=11)
-    plot.calc_isolines(CoolProp.iSmass, Ts[2:4])
-    plot.calc_isolines(CoolProp.iDmass, TD[2:4])
-#     plot.calc_isolines('all', None)
-    plot.draw_isolines()
+    #plot = PropertyPlot('HEOS::n-Pentane', 'PH', unit_system='EUR')
+    #Ts = plot.get_axis_limits(CoolProp.iT, CoolProp.iSmass)
+    #TD = plot.get_axis_limits(CoolProp.iT, CoolProp.iDmass)
+    #plot.calc_isolines(CoolProp.iT,     Ts[0:2])
+    #plot.calc_isolines(CoolProp.iQ,     [0.0,1.0], num=11)
+    #plot.calc_isolines(CoolProp.iSmass, Ts[2:4])
+    #plot.calc_isolines(CoolProp.iDmass, TD[2:4])
+    #plot.draw_isolines()
+    #plot.show()
     #
-    Tcrit = plot.state.trivial_keyed_output(CoolProp.iT_critical)
-    Dcrit = plot.state.trivial_keyed_output(CoolProp.irhomass_critical)
-    plot.state.update(CoolProp.DmassT_INPUTS, Dcrit, Tcrit)
-    p1 = plot.state.keyed_output(CoolProp.iP)/1e5 / 2.00
-    h1 = plot.state.keyed_output(CoolProp.iHmass)/1e3 * 1.25
-    p2 = plot.state.keyed_output(CoolProp.iP)/1e5 / 2.25 
-    h2 = plot.state.keyed_output(CoolProp.iHmass)/1e3 * 1.50
-    plot.draw_process(zip([h1,h2],[p1,p2]))
+    pp = PropertyPlot('HEOS::Water', 'TS', unit_system='EUR')
+    ph = pp.get_axis_limits(CoolProp.iP, CoolProp.iHmass)
+    pp.calc_isolines(CoolProp.iP,     ph[0:2])
+    pp.calc_isolines(CoolProp.iHmass, ph[2:4])
+    pp.calc_isolines(CoolProp.iQ,     [0.0,1.0], num=11)
+    
+    cycle = SimpleRankineCycle('HEOS::Water', 'TS', unit_system='EUR')
+    T0 = 300
+    pp.state.update(CoolProp.QT_INPUTS,0.0,T0+15)
+    p0 = pp.state.keyed_output(CoolProp.iP)
+    T2 = 700
+    pp.state.update(CoolProp.QT_INPUTS,1.0,T2-150)
+    p2 = pp.state.keyed_output(CoolProp.iP)
+    cycle.simple_solve(T0, p0, T2, p2, 0.7, 0.8, SI=True)
+    cycle.steps = 50
+    sc = cycle.get_state_changes()
+    pp.draw_process(sc)
     #
+    cycle.simple_solve(T0-273.15-10, p0/1e5, T2-273.15+50, p2/1e5-5, 0.7, 0.8, SI=False)
+    sc2 = cycle.get_state_changes()
+    pp.draw_process(sc2, line_opts={'color':'blue', 'lw':1.5})
+    #
+    pp.show()
     
     #
     #plot.savefig("Plots.pdf")
-    plot.show()
+    #plot.show()
     #for i in plot.isolines:
     #    print(plot.isolines[i][0].x,plot.isolines[i][0].y)

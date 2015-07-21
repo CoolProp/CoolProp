@@ -299,10 +299,10 @@ class Base2DObject(with_metaclass(ABCMeta),object):
         self._state.update(CoolProp.QT_INPUTS, 0, max([T_triple,T_min])+self._T_small)
         kind = _get_index(kind)
         if kind == CoolProp.iP:
-            fluid_min = self._state.keyed_output(CoolProp.iP)
+            fluid_min = self._state.keyed_output(CoolProp.iP)+self._P_small
             fluid_max = self._state.trivial_keyed_output(CoolProp.iP_critical)-self._P_small
         elif kind == CoolProp.iT:
-            fluid_min = self._state.keyed_output(CoolProp.iT)
+            fluid_min = self._state.keyed_output(CoolProp.iT)+self._T_small
             fluid_max = self._state.trivial_keyed_output(CoolProp.iT_critical)-self._T_small
         else:
             raise ValueError("Saturation boundaries have to be defined in T or P, but not in {0:s}".format(str(kind)))
@@ -572,7 +572,7 @@ class BasePlot(Base2DObject):
     }
     
     HI_FACTOR = 2.25 # Upper default limits: HI_FACTOR*T_crit and HI_FACTOR*p_crit
-    LO_FACTOR = 1.25 # Lower default limits: LO_FACTOR*T_triple and LO_FACTOR*p_triple
+    LO_FACTOR = 1.01 # Lower default limits: LO_FACTOR*T_triple and LO_FACTOR*p_triple
 
     def __init__(self, fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
         
@@ -677,10 +677,10 @@ consider replacing it with \"_get_sat_bounds\".",
         
         if not self.axis.get_xlabel():
             dim = self._system[self._x_index]
-            self.xlabel(str(dim.label+" $"+dim.symbol+"$ / "+dim.unit).strip())
+            self.xlabel((dim.label+u" $"+dim.symbol+u"$ / "+dim.unit).strip())
         if not self.axis.get_ylabel():
             dim = self._system[self._y_index]
-            self.ylabel(str(dim.label+" $"+dim.symbol+"$ / "+dim.unit).strip())
+            self.ylabel((dim.label+u" $"+dim.symbol+u"$ / "+dim.unit).strip())
 
     def title(self, title):
         self.axis.set_title(title)

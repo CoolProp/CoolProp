@@ -432,6 +432,15 @@ class StatePoint(PropertyDict):
         keys = [CoolProp.iDmass,CoolProp.iHmass,CoolProp.iP,CoolProp.iSmass,CoolProp.iT]
         for key in sorted(keys):
             yield key
+    
+    def __str__(self):        
+        return str(self.__dict__)
+
+    def __eq__(self, other):
+        for i in self:
+            if (self[i]-other[i]) / np.max([np.abs(self[i]),1e-10]) > 0.0001:
+                return False 
+        return True
 
 class StateContainer(object):
     """A collection of values for the main properties, built to mixin with :class:`CoolProp.Plots.Common.PropertyDict`
@@ -546,6 +555,20 @@ class StateContainer(object):
                     row.append(u"{0:>11s}".format("-"))
             out = out + "  ".join(row) + "\n"
         return out.encode('utf8', 'replace')
+    
+    def append(self,new):
+        i = 0 + self.__len__()
+        for j in new:
+            self[i,j] = new[j]
+        return self
+    
+    def extend(self,new):
+        i = 0 + self.__len__()
+        for j in new:
+            for k in new[j]:
+                self[i,k] = new[j][k]
+            i = i +1
+        return self 
             
             
         
@@ -563,12 +586,12 @@ class BaseCycle(BasePlot):
       CoolProp.iT     : 'temperature'
     }
     
-    STATECOUNTS=[0]
+    STATECOUNT=0
     """A list of accepted numbers of states"""
     
-    STATECHANGE=[None]
+    STATECHANGE=None
     """A list of lists of tuples that defines how the state transitions 
-    behave for the corresponding entry in BaseCycle.STATECOUNTS"""
+    behave for the corresponding entry in BaseCycle.STATECOUNT"""
     
     def __init__(self, fluid_ref, graph_type, unit_system='EUR', **kwargs):
         """Initialises a simple cycle calculator
@@ -587,6 +610,7 @@ class BaseCycle(BasePlot):
         for more properties, see :class:`CoolProp.Plots.Common.BasePlot`.        
         """
         self._cycle_states = StateContainer()
+        self._steps = 2
         BasePlot.__init__(self, fluid_ref, graph_type, unit_system, **kwargs)
         
     
@@ -594,14 +618,14 @@ class BaseCycle(BasePlot):
     def cycle_states(self): return self._cycle_states
     @cycle_states.setter
     def cycle_states(self, value):
-        if len(value) not in self.STATECOUNTS:
-            raise ValueError("Your number of states ({0:d}) is not in the list of allowed state counts: {1:s}.".format(len(value),str(self.STATECOUNTS)))
+        if len(value) != self.STATECOUNT:
+            raise ValueError("Your number of states ({0:d}) is not in the list of allowed state counts: {1:s}.".format(len(value),str(self.STATECOUNT)))
         self._cycle_states = value
     
     @property
     def steps(self): return self._steps
     @steps.setter
-    def steps(self, value): self._steps = int(max([value,1.0]))
+    def steps(self, value): self._steps = int(max([value,2]))
 
     @BasePlot.system.setter
     def system(self, value): 
@@ -615,30 +639,44 @@ class BaseCycle(BasePlot):
     
     
     def valid_states(self):
-        """Check the formats of BaseCycle.STATECOUNTS and BaseCycle.STATECHANGE"""
-        for i,sn in enumerate(self.STATECOUNTS):
-            if len(self.STATECHANGE[i]) != sn: 
-                raise ValueError("Invalid number of states and or state change operations")
+        """Check the formats of BaseCycle.STATECOUNT and BaseCycle.STATECHANGE"""
+        if len(self.STATECHANGE) != self.STATECOUNT: 
+            raise ValueError("Invalid number of states and or state change operations")
         return True 
     
-    def fill_states(self):
+    def fill_states(self,objs=None):
         """Try to populate all fields in the state objects"""
-        for i in self._cycle_states:
-            if (self._cycle_states[i][CoolProp.iDmass] is not None and 
-              self._cycle_states[i][CoolProp.iT] is not None):
-                self._state.update(CoolProp.DmassT_INPUTS, self._cycle_states[i][CoolProp.iDmass], self._cycle_states[i][CoolProp.iT])
-            elif (self._cycle_states[i][CoolProp.iP] is not None and 
-              self._cycle_states[i][CoolProp.iHmass] is not None):
-                self._state.update(CoolProp.HmassP_INPUTS, self._cycle_states[i][CoolProp.iHmass], self._cycle_states[i][CoolProp.iP])
-            elif (self._cycle_states[i][CoolProp.iP] is not None and 
-              self._cycle_states[i][CoolProp.iSmass] is not None):
-                self._state.update(CoolProp.PSmass_INPUTS, self._cycle_states[i][CoolProp.iP], self._cycle_states[i][CoolProp.iSmass])
+        
+        if objs is None: 
+            objs = self._cycle_states
+            local = True
+        else: 
+            local = False
+        
+        for i in objs:
+            full = True
+            for j in objs[i]:
+                if objs[i][j] is None:
+                    full = False
+            if full: continue
+            if (objs[i][CoolProp.iDmass] is not None and 
+              objs[i][CoolProp.iT] is not None):
+                self._state.update(CoolProp.DmassT_INPUTS, objs[i][CoolProp.iDmass], objs[i][CoolProp.iT])
+            elif (objs[i][CoolProp.iP] is not None and 
+              objs[i][CoolProp.iHmass] is not None):
+                self._state.update(CoolProp.HmassP_INPUTS, objs[i][CoolProp.iHmass], objs[i][CoolProp.iP])
+            elif (objs[i][CoolProp.iP] is not None and 
+              objs[i][CoolProp.iSmass] is not None):
+                self._state.update(CoolProp.PSmass_INPUTS, objs[i][CoolProp.iP], objs[i][CoolProp.iSmass])
             else:
                 warnings.warn("Please fill the state[{0:s}] manually.".format(str(i)))
                 continue
-            for j in self._cycle_states[i]:
-                if self._cycle_states[i][j] is None:
-                    self._cycle_states[i][j] = self._state.keyed_output(j)
+            for j in objs[i]:
+                if objs[i][j] is None:
+                    objs[i][j] = self._state.keyed_output(j)
+        
+        if local: self._cycle_states = objs
+        return objs
 
     
     
@@ -666,30 +704,72 @@ class BaseCycle(BasePlot):
         scalar or array_like 
             a list of the length of self.steps+1 that describes the process. It includes start and end state.
         """
-        raise NotImplementedError()
+        self.fill_states()
+        end = start + 1
+        if end >= len(self.cycle_states): end -= len(self.cycle_states) 
+        start = self.cycle_states[start]
+        end = self.cycle_states[end]
+        #
+        val = []
+        inv = [in1,in2]
+        typ = [ty1,ty2]
+        for i,v in enumerate(inv):
+            if typ[i] == 'lin':
+                val.append(np.linspace(start[v], end[v], self.steps))
+            elif typ[i] == 'log':
+                val.append(np.logspace(np.log10(start[v]), np.log10(end[v]), self.steps))
+            else:
+                raise ValueError("Unknow range generator {0:s}".format(str(typ[i])))
+        
+        sc = StateContainer(self._system)
+        for i,_ in enumerate(val[0]):
+            sc[i,inv[0]] = val[0][i]
+            sc[i,inv[1]] = val[1][i]
+            
+        return self.fill_states(sc)     
+        
+    def get_state_change(self, index):
+        return self.STATECHANGE[index](self)
+    
+    def get_state_changes(self):
+        sc = self.get_state_change(0)
+        for i in range(1,self.STATECOUNT):
+            sc.extend(self.get_state_change(i))
+        return sc 
+                
+        
+    
+ 
     
 
 class SimpleRankineCycle(BaseCycle):
     """A simple Rankine cycle *without* regeneration"""
-    STATECOUNTS=[4]
-    STATECHANGE=[[
-      lambda: BaseCycle.state_change('S','P',0,ty1='lin',ty2='log'), # Pumping process
-      lambda: BaseCycle.state_change('H','P',1,ty1='lin',ty2='lin'), # Heat addition
-      lambda: BaseCycle.state_change('S','P',2,ty1='lin',ty2='log'), # Expansion
-      lambda: BaseCycle.state_change('H','P',3,ty1='lin',ty2='lin')  # Heat removal
-      ]]
+    STATECOUNT=4
+    STATECHANGE=[
+      lambda inp: BaseCycle.state_change(inp,'S','P',0,ty1='log',ty2='log'), # Pumping process
+      lambda inp: BaseCycle.state_change(inp,'H','P',1,ty1='lin',ty2='lin'), # Heat addition
+      lambda inp: BaseCycle.state_change(inp,'S','P',2,ty1='log',ty2='log'), # Expansion
+      lambda inp: BaseCycle.state_change(inp,'H','P',3,ty1='lin',ty2='lin')  # Heat removal
+      ]
     
     def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
         """see :class:`CoolProp.Plots.SimpleCycles.BaseCycle` for details."""
         BaseCycle.__init__(self, fluid_ref, graph_type, **kwargs)
-        
     
-    def simple_solve(self, T0, p0, T2, p2, eta_exp, eta_pum, fluid=None):
+    def simple_solve(self, T0, p0, T2, p2, eta_exp, eta_pum, fluid=None, SI=True):
         if fluid is not None: self.state = _process_fluid_state(fluid)
         if self._state is None: 
             raise ValueError("You have specify a fluid before you calculate.")
         
         cycle_states = StateContainer(unit_system=self._system)
+        
+        if not SI:
+            Tc = self._system[CoolProp.iT].to_SI
+            pc = self._system[CoolProp.iP].to_SI
+            T0 = Tc(T0)
+            p0 = pc(p0)
+            T2 = Tc(T2)
+            p2 = pc(p2)
         
         # Subcooled liquid
         self.state.update(CoolProp.PT_INPUTS,p0,T0)
@@ -737,8 +817,6 @@ class SimpleRankineCycle(BaseCycle):
         w_net = h2 - h3
         q_boiler = h2 - h1
         eta_th = w_net / q_boiler
-        
-        print(eta_th)
         
         self.cycle_states = cycle_states
         self.fill_states()
