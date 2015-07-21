@@ -4,31 +4,7 @@
     "HEAVYWATER"
   ], 
   "ANCILLARIES": {
-    "pL": {
-      "T_r": 643.847, 
-      "Tmax": 643.847, 
-      "Tmin": 276.97, 
-      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
-      "max_abserror_percentage": 1, 
-      "n": [
-        -8.0236, 
-        2.3957, 
-        -42.639, 
-        99.569, 
-        -62.135
-      ], 
-      "reducing_value": 21671000.0, 
-      "t": [
-        1.0, 
-        1.5, 
-        2.75, 
-        3.0, 
-        3.2
-      ], 
-      "type": "pL", 
-      "using_tau_r": true
-    }, 
-    "pV": {
+    "pS": {
       "T_r": 643.847, 
       "Tmax": 643.847, 
       "Tmin": 276.97, 

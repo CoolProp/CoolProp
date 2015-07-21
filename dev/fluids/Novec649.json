@@ -3,31 +3,7 @@
     "Novec1230"
   ], 
   "ANCILLARIES": {
-    "pL": {
-      "T_r": 441.81, 
-      "Tmax": 441.81, 
-      "Tmin": 165, 
-      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
-      "max_abserror_percentage": 1, 
-      "n": [
-        -8.4411, 
-        2.711, 
-        -3.6354, 
-        -5.3872, 
-        -8.1641
-      ], 
-      "reducing_value": 1869000.0, 
-      "t": [
-        1, 
-        1.5, 
-        2.2, 
-        4.4, 
-        15
-      ], 
-      "type": "pL", 
-      "using_tau_r": true
-    }, 
-    "pV": {
+    "pS": {
       "T_r": 441.81, 
       "Tmax": 441.81, 
       "Tmin": 165, 
