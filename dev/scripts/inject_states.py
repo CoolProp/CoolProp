@@ -129,9 +129,5 @@ def inject_states(fluid):
     with open(fluid_path, 'w') as fp:
       fp.write(json.dumps(json_data, **json_options))
 
-T = 166
-for o in ['Dmolar','P']:
-    for Q in [0,1]:
-        print CoolProp.CoolProp.saturation_ancillary('Novec649',o,Q,'T',T)
-        print CoolProp.CoolProp.PropsSI(o,"T",T,'Q',Q,'Novec649')
-inject_states('Novec649')
+if __name__=='__main__':
+  inject_states('Novec649')
