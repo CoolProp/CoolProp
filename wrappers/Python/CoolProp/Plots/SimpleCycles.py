@@ -441,6 +441,8 @@ class StateContainer(object):
     This container has overloaded accessor methods. Just pick your own flavour 
     or mix the styles as you like:
     
+    >>> import CoolProp
+    >>> from CoolProp.PLots.SimpleCycles import StateContainer
     >>> T0 = 300.000; p0 = 200000.000; h0 = 112745.749; s0 = 393.035
     >>> cycle_states = StateContainer()
     >>> cycle_states[0,'H'] = h0
