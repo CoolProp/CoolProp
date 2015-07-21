@@ -54,10 +54,11 @@ def inject_triples(fluid, i, json_data):
           "smolar": CP.PropsSI('Smolar','T',Ttriple,'Q',1,fluid), 
           "smolar_units": "J/mol/K"
     }
-    json_data['EOS'][i]['STATES']['sat_min_vapor'] = triple_vapor
-    json_data['EOS'][i]['STATES']['sat_min_vapor'] = triple_liquid
-    json_data['STATES']['triple_liquid'] = triple_liquid
     json_data['STATES']['triple_vapor'] = triple_vapor
+    json_data['STATES']['triple_liquid'] = triple_liquid
+    json_data['EOS'][i]['STATES']['sat_min_vapor'] = triple_vapor
+    json_data['EOS'][i]['STATES']['sat_min_liquid'] = triple_liquid
+
 
 def inject_critical(fluid, json_data):
     """
