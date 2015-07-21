@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import print_function, division
 from six import with_metaclass
 
@@ -8,7 +10,7 @@ import numpy as np
 import CoolProp
 from CoolProp.CoolProp import PropsSI
 from scipy.optimize import newton
-from .Common import BasePlot, _process_fluid_state, UnitSystem, SIunits
+from .Common import BasePlot, _process_fluid_state, PropertyDict, SIunits
 
 def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     """
@@ -421,130 +423,120 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 #         
 #         for more properties, see :class:`CoolProp.Plots.Common.Base2DObject`.  
 
-class StatePoint(UnitSystem):
+class StatePoint(PropertyDict):
     """A simple fixed dimension dict represented by an object with attributes"""
     
+    def __iter__(self):
+        """Make sure we iterate in the righ order"""
+        keys = ["D","H","P","S","T"]
+        for key in sorted(keys):
+            yield key
 
 class StateContainer(object):
-    """A collection of values for the main properties, built to mixin with :class:`CoolProp.Plots.Common.UnitSystem`"""
+    """A collection of values for the main properties, built to mixin with :class:`CoolProp.Plots.Common.PropertyDict`"""
     
     def __init__(self,unit_system=SIunits()):
-        self.values = {}
-        self._system = unit_system
-        
-    @property
-    def system(self): return self._system
-    @system.setter
-    def system(self, value): self._system = value
-        
-    @property
-    def dimensions(self):
-        return self._system.dimensions
+        self._points = {}
+        self._units  = unit_system
     
     @property
-    def d(self): return self._d
-    @d.setter
-    def d(self, value): self._d = value
-    @property
-    def h(self): return self._h
-    @h.setter
-    def h(self, value): self._h = value
-    @property
-    def p(self): return self._p
-    @p.setter
-    def p(self, value): self._p = value
-    @property
-    def s(self): return self._s
-    @s.setter
-    def s(self, value): self._s = value
-    @property
-    def t(self): return self._t
-    @t.setter
-    def t(self, value): self._t = value
+    def points(self): return self._points
+    @points.setter
+    def points(self, value): self._points = value
     
     @property
-    def values(self): 
-        return {
-      CoolProp.iDmass : self._d,
-      CoolProp.iHmass : self._h,
-      CoolProp.iP     : self._p,
-      CoolProp.iSmass : self._s,
-      CoolProp.iT     : self._t,
-    }
+    def units(self): return self._units
+    @units.setter
+    def units(self, value): self._units = value
     
-    @values.setter
-    def values(self,values): 
-        self.d = None 
-        self.h = None 
-        self.p = None 
-        self.s = None 
-        self.t = None 
-        for i in values:
-            if i == CoolProp.iDmass : self.d = values[i] 
-            if i == CoolProp.iHmass : self.h = values[i] 
-            if i == CoolProp.iP     : self.p = values[i] 
-            if i == CoolProp.iSmass : self.s = values[i] 
-            if i == CoolProp.iT     : self.t = values[i] 
-        
-    @property
-    def points(self): 
-        return {
-      CoolProp.iDmass : self._d,
-      CoolProp.iHmass : self._h,
-      CoolProp.iP     : self._p,
-      CoolProp.iSmass : self._s,
-      CoolProp.iT     : self._t,
-    }
-        
-    def get_si_states(self):
-        return self.values
+    def get_point(self, index, SI=True):
+        if SI: 
+            state = self[index]
+        else:
+            state = self[index]
+            for i in state: 
+                state[i] = self.units[i].from_SI(state[i])
+        return state 
     
-    def get_local_states(self):
-        states = {}
-        for n in self.values:
-            states[n] = self.dimensions[n].from_SI(self.values[n])
-        return states
+    def set_point(self, index, value, SI=True):
+        if SI: 
+            self._points[index] = value
+        else:
+            for i in value: 
+                self._points[index][i] = self.units[i].to_SI(value[i])
+
+    def _list_like(self, value):
+        """Try to detect a list-like structure excluding strings"""
+        return (not hasattr(value, "strip") and
+            (hasattr(value, "__getitem__") or
+            hasattr(value, "__iter__")))
     
-    def set_si_states(self,values):
-        self.values = values
-    
-    def set_local_states(self,values):
-        states = {}
-        for n in values:
-            states[n] = self.dimensions[n].to_SI(np.asarray(values[n]))
-        self.values = states
-        
     def __len__(self):
         """Some cheating to get the correct behaviour"""
-        return np.min([len(np.asarray(c)) for c in self.values.values()])
+        return len(self._points)
+    
+    def __iter__(self):
+        """Make sure we iterate in the righ order"""
+        for key in sorted(self._points):
+            yield key
     
     def __getitem__(self, index):
         """Another tweak that changes the default access path"""
-        state = {}
-        for n in self.values:
-            state[n] = self.dimensions[n].from_SI(self.values[n][index])
-        return state
+        if self._list_like(index):
+            if len(index)==0: raise IndexError("Received empty index.")
+            elif len(index)==1: return self._points[index[0]]
+            elif len(index)==2: return self._points[index[0]][index[1]]
+            else: raise IndexError("Received too long index.")
+        return self._points[index]
     
-    def __setitem__(self, index, values):
+    def __setitem__(self, index, value):
         """Another tweak that changes the default access path"""
-        for n in values:
-            if n == CoolProp.iDmass : self.d[index] = self.dimensions[n].to_SI(values[n])
-            if n == CoolProp.iHmass : self.h[index] = self.dimensions[n].to_SI(values[n])
-            if n == CoolProp.iP     : self.p[index] = self.dimensions[n].to_SI(values[n])
-            if n == CoolProp.iSmass : self.s[index] = self.dimensions[n].to_SI(values[n])
-            if n == CoolProp.iT     : self.t[index] = self.dimensions[n].to_SI(values[n])
+        if self._list_like(index):
+            if len(index)==0: raise IndexError("Received empty index.")
+            elif len(index)==1: self._points[index[0]]           = value
+            elif len(index)==2:
+                # safeguard against empty entries
+                if index[0] not in self._points:
+                    self._points[index[0]] = StatePoint() 
+                self._points[index[0]][index[1]] = value
+            else: raise IndexError("Received too long index.")
+        else:
+            self._points[index] = value 
+        
+    def __str__(self):
+        out = "Stored State Points:\n"
+        keys = True 
+        for i in self._points:
+            if keys:
+                row = ["{0:>5s}".format("state")]
+                for j in self._points[i]:
+                    label = u"{0:s} ({1:s})".format(self.units[j].symbol,self.units[j].unit)
+                    row.append(u"{0:>11s}".format(label))
+                out = out + "  ".join(row) + "\n"
+                keys = False
+            row = ["{0:>5s}".format(str(i))]
+            for j in self._points[i]:
+                try:
+                    row.append(u"{0:11.3f}".format(self.units[j].from_SI(self._points[i][j])))
+                except:
+                    row.append(u"{0:>11s}".format("-"))
+            out = out + "  ".join(row) + "\n"
+        return out.encode('utf8', 'replace')
             
+            
+        
+    
 
 class BaseCycle(BasePlot):
     """A simple thermodynamic cycle, should not be used on its own."""
     
     # Define the iteration keys
     PROPERTIES = {
-      CoolProp.iDmass:'density', 
-      CoolProp.iHmass:'specific enthalpy', 
-      CoolProp.iP:'pressure', 
-      CoolProp.iSmass:'specific entropy', 
-      CoolProp.iT:'temperature'
+      CoolProp.iDmass : 'density', 
+      CoolProp.iHmass : 'specific enthalpy', 
+      CoolProp.iP     : 'pressure', 
+      CoolProp.iSmass : 'specific entropy', 
+      CoolProp.iT     : 'temperature'
     }
     
     STATECOUNTS=[0]
@@ -570,7 +562,7 @@ class BaseCycle(BasePlot):
                 
         for more properties, see :class:`CoolProp.Plots.Common.BasePlot`.        
         """
-        self._cycle_states = StateContainer(SIunits())
+        self._cycle_states = StateContainer()
         BasePlot.__init__(self, fluid_ref, graph_type, unit_system, **kwargs)
         
     
@@ -591,11 +583,11 @@ class BaseCycle(BasePlot):
     def system(self, value): 
         if value in self.UNIT_SYSTEMS:
             self._system = self.UNIT_SYSTEMS[value]
-        elif isinstance(value, UnitSystem):
+        elif isinstance(value, PropertyDict):
             self._system = value
         else:
             raise ValueError("Invalid unit_system input \"{0:s}\", expected a string from {1:s}".format(str(value),str(self.UNIT_SYSTEMS.keys())))
-        self._cycle_states.system = self._system       
+        self._cycle_states.system = self._system
     
     
     def valid_states(self):
@@ -644,21 +636,25 @@ class SimpleRankineCycle(BaseCycle):
       ]]
     
     def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
-        """see :class:`CoolProp.Plots.SimpleCycles.BaseCycle` for details.      
-        """
+        """see :class:`CoolProp.Plots.SimpleCycles.BaseCycle` for details."""
         BaseCycle.__init__(self, fluid_ref, graph_type, **kwargs)
         
-    
     
     def simple_solve(self, T0, p0, T2, p2, eta_exp, eta_pum, fluid=None):
         if fluid is not None: self.state = _process_fluid_state(fluid)
         if self._state is None: 
             raise ValueError("You have specify a fluid before you calculate.")
         
+        cycle_states = StateContainer(unit_system=self._system)
+        
         # Subcooled liquid
-        self.state.update(CoolProp.PT_INPUTS,p0,T0) 
+        self.state.update(CoolProp.PT_INPUTS,p0,T0)
         h0 = self.state.hmass()
         s0 = self.state.smass()
+        cycle_states[0,'H'] = h0
+        cycle_states[0,'S'] = s0
+        cycle_states[0,'P'] = p0
+        cycle_states[0,'T'] = T0
         
         # Pressurised liquid
         p1 = p2
@@ -667,11 +663,19 @@ class SimpleRankineCycle(BaseCycle):
         self.state.update(CoolProp.HmassP_INPUTS,h1,p1)
         s1 = self.state.smass()
         T1 = self.state.T()
+        cycle_states[1,'H'] = h1
+        cycle_states[1,'S'] = s1
+        cycle_states[1,'P'] = p1
+        cycle_states[1,'T'] = T1
         
         # Evaporated vapour    
         self.state.update(CoolProp.PT_INPUTS,p2,T2)
         h2 = self.state.hmass()
         s2 = self.state.smass()
+        cycle_states[2,'H'] = h2
+        cycle_states[2,'S'] = s2
+        cycle_states[2,'P'] = p2
+        cycle_states[2,'T'] = T2
         
         # Expanded gas
         p3 = p0
@@ -680,12 +684,17 @@ class SimpleRankineCycle(BaseCycle):
         self.state.update(CoolProp.HmassP_INPUTS,h3,p3)
         s3 = self.state.smass()
         T3 = self.state.T()
+        cycle_states[3,'H'] = h3
+        cycle_states[3,'S'] = s3
+        cycle_states[3,'P'] = p3
+        cycle_states[3,'T'] = T3
     
         w_net = h2 - h3
         q_boiler = h2 - h1
         eta_th = w_net / q_boiler
         
         print(eta_th)
+        print(cycle_states)
     
         
 

@@ -43,6 +43,15 @@ def _process_fluid_state(fluid_ref):
         return fluid_ref
     raise TypeError("Invalid fluid_ref input, expected a string or an abstract state instance.")
 
+
+def _get_index(prop):
+    if isinstance(prop, basestring):
+        return CP.get_parameter_index(prop)
+    elif isinstance(prop, int):
+        return prop
+    else:
+        raise ValueError("Invalid input, expected a string or an int, not {0:s}.".format(str(prop)))
+
 class BaseQuantity(object):
     """A very basic property that can convert an input to and from a 
     given unit system, note that the conversion from SI units starts 
@@ -99,7 +108,7 @@ class BaseDimension(BaseQuantity):
     def unit(self, value): self._unit = value
 
 
-class UnitSystem(with_metaclass(ABCMeta),object):
+class PropertyDict(with_metaclass(ABCMeta),object):
     """A collection of dimensions for all the required quantities"""
     @property
     def D(self): return self._D
@@ -144,40 +153,42 @@ class UnitSystem(with_metaclass(ABCMeta),object):
         
     def __getitem__(self, index):
         """Allow for property access via square brackets"""
-        if index == CoolProp.iDmass : return self.D
-        elif index == CoolProp.iHmass : return self.H
-        elif index == CoolProp.iP     : return self.P
-        elif index == CoolProp.iSmass : return self.S
-        elif index == CoolProp.iT     : return self.T
-        elif index == CoolProp.iUmass : return self.U
-        elif index == CoolProp.iQ     : return self.Q
-        else: raise ValueError("Unknown index \"{0:s}\".".format(str(index)))
+        idx = _get_index(index)
+        if idx == CoolProp.iDmass : return self.D
+        elif idx == CoolProp.iHmass : return self.H
+        elif idx == CoolProp.iP     : return self.P
+        elif idx == CoolProp.iSmass : return self.S
+        elif idx == CoolProp.iT     : return self.T
+        elif idx == CoolProp.iUmass : return self.U
+        elif idx == CoolProp.iQ     : return self.Q
+        else: raise IndexError("Unknown index \"{0:s}\".".format(str(index)))
         
     
     def __setitem__(self, index, value):
         """Allow for property access via square brackets"""
-        if index == CoolProp.iDmass : self.D = value
-        elif index == CoolProp.iHmass : self.H = value
-        elif index == CoolProp.iP     : self.P = value
-        elif index == CoolProp.iSmass : self.S = value
-        elif index == CoolProp.iT     : self.T = value
-        elif index == CoolProp.iUmass : self.U = value
-        elif index == CoolProp.iQ     : self.Q = value
-        else: raise ValueError("Unknown index \"{0:s}\".".format(str(index)))
+        idx = _get_index(index)
+        if idx == CoolProp.iDmass : self.D = value
+        elif idx == CoolProp.iHmass : self.H = value
+        elif idx == CoolProp.iP     : self.P = value
+        elif idx == CoolProp.iSmass : self.S = value
+        elif idx == CoolProp.iT     : self.T = value
+        elif idx == CoolProp.iUmass : self.U = value
+        elif idx == CoolProp.iQ     : self.Q = value
+        else: raise IndexError("Unknown index \"{0:s}\".".format(str(index)))
         
         
         
 
 
-class SIunits(UnitSystem):
+class SIunits(PropertyDict):
     def __init__(self):
-        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=r'\rho', unit=r'kg/m$^3$')
-        self._H = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Enthalpy',        symbol=r'h',    unit=r'J/kg')
-        self._P = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Pressure',                 symbol=r'p',    unit=r'Pa')
-        self._S = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Entropy',         symbol=r's',    unit=r'J/kg/K')
-        self._T = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Temperature',              symbol=r'T',    unit=r'K')
-        self._U = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Internal Energy', symbol=r'u',    unit=r'J/kg')
-        self._Q = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Vapour Quality',           symbol=r'x',    unit=r'')
+        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=ur'ρ', unit=ur'kg/m³')
+        self._H = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Enthalpy',        symbol=ur'h', unit=ur'J/kg')
+        self._P = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Pressure',                 symbol=ur'p', unit=ur'Pa')
+        self._S = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Entropy',         symbol=ur's', unit=ur'J/kg/K')
+        self._T = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Temperature',              symbol=ur'T', unit=ur'K')
+        self._U = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Internal Energy', symbol=ur'u', unit=ur'J/kg')
+        self._Q = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Vapour Quality',           symbol=ur'x', unit=ur'')
 
 class KSIunits(SIunits):
     def __init__(self):
@@ -197,7 +208,7 @@ class EURunits(KSIunits):
         self.P.mul_SI=1e-5
         self.P.unit=r'bar'
         self.T.add_SI=-273.15
-        self.T.unit=ur'\u00B0 C'
+        self.T.unit=ur'\u00B0C'
 
 
 class Base2DObject(with_metaclass(ABCMeta),object):
@@ -245,8 +256,8 @@ class Base2DObject(with_metaclass(ABCMeta),object):
 #     def PU(self): return CoolProp.iP*10     + CoolProp.iUmass
 
     def __init__(self, x_type, y_type, state=None, small=None):
-        self._x_index = self._get_index(x_type)
-        self._y_index = self._get_index(y_type)
+        self._x_index = _get_index(x_type)
+        self._y_index = _get_index(y_type)
         if small is not None: self._small = small
         else: self._small = 1e-7
         if state is not None: self.state = state
@@ -265,14 +276,6 @@ class Base2DObject(with_metaclass(ABCMeta),object):
         self._T_small = self._state.trivial_keyed_output(CoolProp.iT_critical)*self._small
         self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*self._small
 
-    
-    def _get_index(self,prop):
-        if isinstance(prop, basestring):
-            return CP.get_parameter_index(prop)
-        elif isinstance(prop, int):
-            return prop
-        else:
-            raise ValueError("Invalid input, expected a string or an int, not {0:s}.".format(str(prop)))
         
     def _get_sat_bounds(self, kind, smin=None, smax=None):
         """Generates limits for the saturation line in either T or p determined
@@ -284,7 +287,7 @@ class Base2DObject(with_metaclass(ABCMeta),object):
         T_triple = self._state.trivial_keyed_output(CoolProp.iT_triple)
         T_min    = self._state.trivial_keyed_output(CoolProp.iT_min)        
         self._state.update(CoolProp.QT_INPUTS, 0, max([T_triple,T_min])+self._T_small)
-        kind = self._get_index(kind)
+        kind = _get_index(kind)
         if kind == CoolProp.iP:
             fluid_min = self._state.keyed_output(CoolProp.iP)
             fluid_max = self._state.trivial_keyed_output(CoolProp.iP_critical)-self._P_small
@@ -342,7 +345,7 @@ class IsoLine(Base2DObject):
     
     def __init__(self, i_index, x_index, y_index, value=0.0, state=None):
         super(IsoLine, self).__init__(x_index, y_index, state)
-        self._i_index = self._get_index(i_index)
+        self._i_index = _get_index(i_index)
         if value is not None: self.value = value
         else: self._value = None 
         self._x       = None
