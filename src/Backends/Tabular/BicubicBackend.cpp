@@ -264,28 +264,28 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             }
             break;
         }
-		case PQ_INPUTS:{
-			std::size_t iL = 0, iV = 0;
-			_p = val1; _Q = val2;
-            
+        case PQ_INPUTS:{
+            std::size_t iL = 0, iV = 0;
+            _p = val1; _Q = val2;
             using_single_phase_table = false;
-            if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
                 throw ValueError("vapor quality is not in (0,1)");
             }
             else{
+                CoolPropDbl TL = _HUGE, TV = _HUGE;
                 if (is_mixture){
                     std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
                     if (intersect.empty()){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
                     iV = intersect[0].first; iL = intersect[1].first;
                 }
                 else{
-                    CoolPropDbl zL, zV;
-                    pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, zL, zV);
+                    pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
                 }
+                _T = _Q*TV + (1-_Q)*TL;
                 cached_saturation_iL = iL; cached_saturation_iV = iV;
             }
-			break;
-		}
+            break;
+        }
         case QT_INPUTS:{
 			std::size_t iL = 0, iV = 0;
 			_Q = val1; _T = val2;
@@ -295,18 +295,19 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 throw ValueError("vapor quality is not in (0,1)");
             }
             else{
+                CoolPropDbl pL, pV;
                 if (is_mixture){
                     std::vector<std::pair<std::size_t,std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
                     if (intersect.empty()){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
                     iV = intersect[0].first; iL = intersect[1].first;
-                    double pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
-                    double pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
+                    pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
+                    pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
                     _p = _Q*pV + (1-_Q)*pL;
                 }
                 else{
-                    CoolPropDbl zL, zV;
-                    pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, zL, zV);
+                    pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, pL, pV);
                 }
+                _p = _Q*pV + (1-_Q)*pL;
                 cached_saturation_iL = iL; cached_saturation_iV = iV;
             }
 			break;

@@ -89,7 +89,7 @@ class PureFluidSaturationTableData{
                 if (mainval > pmax || mainval < pmin){return false;}
             }
             else if (main == iT){
-                // If p is outside the range (ptriple, pcrit), considered to not be inside
+                // If T is outside the range (Tmin, Tcrit), considered to not be inside
                 double Tmax = this->TV[TV.size()-1], Tmin = this->TV[0];
                 if (mainval > Tmax || mainval < Tmin){return false;}
             }
@@ -110,9 +110,27 @@ class PureFluidSaturationTableData{
                 bisect_vector(TV, mainval, iV);
                 bisect_vector(TL, mainval, iL);
             }
-			if (other == iQ){return true;}
+            else{
+                throw ValueError(format("For now, main input must be T or p"));
+            }
+
             iVplus = std::min(iV+1, N-1);
             iLplus = std::min(iL+1, N-1);
+            if (other == iQ){
+                // Actually do "saturation" call using cubic interpolation
+                if (iVplus < 3){ iVplus = 3;}
+                if (iLplus < 3){ iLplus = 3;}
+                if (main==iP){
+                    double logp = log(mainval);
+                    yV = CubicInterp(logpV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, logp);
+                    yL = CubicInterp(logpL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, logp);
+                }
+                else if (main == iT){
+                    yV = CubicInterp(TV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval);
+                    yL = CubicInterp(TL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
+                }
+                return true;
+            }
             // Find the bounding values for the other variable
             double ymin = min4((*yvecL)[iL],(*yvecL)[iLplus],(*yvecV)[iV],(*yvecV)[iVplus]);
             double ymax = max4((*yvecL)[iL],(*yvecL)[iLplus],(*yvecV)[iV],(*yvecV)[iVplus]);
@@ -129,7 +147,7 @@ class PureFluidSaturationTableData{
                 yV = CubicInterp(TV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval);
                 yL = CubicInterp(TL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
             }
-
+            
             if (!is_in_closed_range(yV, yL, static_cast<CoolPropDbl>(val))){ 
                 return false;
             }
@@ -732,6 +750,7 @@ class TabularBackend : public AbstractState
         CoolPropDbl calc_p_triple(void){return this->AS->p_triple();};
         CoolPropDbl calc_pmax(void){return this->AS->pmax();};
         CoolPropDbl calc_Tmax(void){return this->AS->Tmax();};
+        CoolPropDbl calc_Tmin(void){return this->AS->Tmin();};
         CoolPropDbl calc_p_critical(void){ return this->AS->p_critical(); }
         bool using_mole_fractions(void){return true;}
         bool using_mass_fractions(void){return false;}
@@ -776,6 +795,7 @@ class TabularBackend : public AbstractState
             return this->AS->cp0molar();
         }
 
+        CoolPropDbl calc_p(void);
         CoolPropDbl calc_T(void);
         CoolPropDbl calc_rhomolar(void);
         CoolPropDbl calc_hmolar(void);

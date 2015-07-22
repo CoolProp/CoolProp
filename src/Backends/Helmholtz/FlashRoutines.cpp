@@ -361,8 +361,10 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             }
             
             // Check limits
-            if (!is_in_closed_range(pmin_sat*0.999999, pmax_sat*1.000001, static_cast<CoolPropDbl>(HEOS._p))){
-                throw ValueError(format("Pressure to PQ_flash [%6g Pa] must be in range [%8Lg Pa, %8Lg Pa]",HEOS._p, pmin_sat, pmax_sat));
+            if (CoolProp::get_config_bool(DONT_CHECK_PROPERTY_LIMITS) == false){
+                if (!is_in_closed_range(pmin_sat*0.999999, pmax_sat*1.000001, static_cast<CoolPropDbl>(HEOS._p))){
+                    throw ValueError(format("Pressure to PQ_flash [%6g Pa] must be in range [%8Lg Pa, %8Lg Pa]",HEOS._p, pmin_sat, pmax_sat));
+                }
             }
             // ------------------
             // It is a pure fluid
