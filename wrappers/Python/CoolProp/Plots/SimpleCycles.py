@@ -12,6 +12,7 @@ from CoolProp.CoolProp import PropsSI
 from scipy.optimize import newton
 from .Common import BasePlot, _process_fluid_state, PropertyDict, SIunits
 import warnings
+from abc import ABCMeta
 
 def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     """
@@ -424,8 +425,33 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 #         
 #         for more properties, see :class:`CoolProp.Plots.Common.Base2DObject`.  
 
+# # See http://stackoverflow.com/questions/1061283/lt-instead-of-cmp
+# class ComparableMixin:
+#     """A mixin class that implements all comparing mathods except for __lt__"""
+#     def __eq__(self, other):
+#         return not self<other and not other<self
+#     def __ne__(self, other):
+#         return self<other or other<self
+#     def __gt__(self, other):
+#         return other<self
+#     def __ge__(self, other):
+#         return not self<other
+#     def __le__(self, other):
+#         return not other<self
+
 class StatePoint(PropertyDict):
     """A simple fixed dimension dict represented by an object with attributes"""
+    
+    # Significant digits in SI units
+    ROUND_DECIMALS = {
+      CoolProp.iDmass : 5,
+      CoolProp.iHmass : 5,
+      CoolProp.iP     : 2,
+      CoolProp.iSmass : 5,
+      CoolProp.iT     : 5,
+      CoolProp.iUmass : 5,
+      CoolProp.iQ     : 5
+    }
     
     def __iter__(self):
         """Make sure we always iterate in the same order"""
@@ -435,12 +461,29 @@ class StatePoint(PropertyDict):
     
     def __str__(self):        
         return str(self.__dict__)
+    
+    def __prop_compare(self,other,typ):
+        # TODO
+        if   self[typ] is None and other[typ] is None: return 0
+        elif self[typ] is None and other[typ] is not None: return -1
+        elif self[typ] is not None and other[typ] is None: return 1
+        else:
+            A = np.round(self[typ] , self.ROUND_DECIMALS[typ])
+            B = np.round(other[typ], self.ROUND_DECIMALS[typ])
+            if A>B: return 1
+            elif A<B: return -1
+            elif A==B: return 0
+            else: raise ValueError("Comparison failed.")
 
     def __eq__(self, other):
         for i in self:
-            if (self[i]-other[i]) / np.max([np.abs(self[i]),1e-10]) > 0.0001:
+            if not self.__prop_compare(other,i) == 0:
                 return False 
         return True
+    
+    def __hash__(self):
+        return hash(repr(self))
+    
 
 class StateContainer(object):
     """A collection of values for the main properties, built to mixin with :class:`CoolProp.Plots.Common.PropertyDict`
@@ -570,7 +613,20 @@ class StateContainer(object):
             i = i +1
         return self 
             
-            
+    @property
+    def D(self): return np.array([self._points[k].D for k in self])
+    @property
+    def H(self): return np.array([self._points[k].H for k in self])
+    @property
+    def P(self): return np.array([self._points[k].P for k in self])
+    @property
+    def S(self): return np.array([self._points[k].S for k in self])
+    @property
+    def T(self): return np.array([self._points[k].T for k in self])
+    @property
+    def U(self): return np.array([self._points[k].U for k in self])
+    @property
+    def Q(self): return np.array([self._points[k].Q for k in self])
         
     
 
@@ -738,23 +794,54 @@ class BaseCycle(BasePlot):
         return sc 
                 
         
+class BasePowerCycle(BaseCycle):
+    """A thermodynamic cycle for power producing processes.
     
- 
+    Defines the basic properties and methods to unify access to 
+    power cycle-related quantities. 
+    """
     
+    def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
+        """see :class:`CoolProp.Plots.SimpleCycles.BaseCycle` for details."""
+        BaseCycle.__init__(self, fluid_ref, graph_type, **kwargs)
+    
+    def eta_carnot(self):
+        """Carnot efficiency
+         
+        Calculates the Carnot efficiency for the specified process, :math:`\eta_c = 1 - \frac{T_c}{T_h}`.
+         
+        Returns
+        -------
+        float
+        """
+        Tvector = self._cycle_states.T
+        return 1. - np.min(Tvector) / np.max(Tvector)
+    
+    def eta_thermal(self):
+        """Thermal efficiency
+         
+        The thermal efficiency for the specified process(es), :math:`\eta_{th} = \frac{\dot{W}_{exp} - \dot{W}_{pum}}{\dot{Q}_{in}}`.
+         
+        Returns
+        -------
+        float
+        """
+        raise NotImplementedError("Implement it in the subclass.")
 
-class SimpleRankineCycle(BaseCycle):
+
+class SimpleRankineCycle(BasePowerCycle):
     """A simple Rankine cycle *without* regeneration"""
     STATECOUNT=4
     STATECHANGE=[
       lambda inp: BaseCycle.state_change(inp,'S','P',0,ty1='log',ty2='log'), # Pumping process
       lambda inp: BaseCycle.state_change(inp,'H','P',1,ty1='lin',ty2='lin'), # Heat addition
-      lambda inp: BaseCycle.state_change(inp,'S','P',2,ty1='log',ty2='log'), # Expansion
+      lambda inp: BaseCycle.state_change(inp,'H','P',2,ty1='log',ty2='log'), # Expansion
       lambda inp: BaseCycle.state_change(inp,'H','P',3,ty1='lin',ty2='lin')  # Heat removal
       ]
     
     def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
-        """see :class:`CoolProp.Plots.SimpleCycles.BaseCycle` for details."""
-        BaseCycle.__init__(self, fluid_ref, graph_type, **kwargs)
+        """see :class:`CoolProp.Plots.SimpleCycles.BasePowerCycle` for details."""
+        BasePowerCycle.__init__(self, fluid_ref, graph_type, **kwargs)
     
     def simple_solve(self, T0, p0, T2, p2, eta_exp, eta_pum, fluid=None, SI=True):
         if fluid is not None: self.state = _process_fluid_state(fluid)
@@ -821,7 +908,19 @@ class SimpleRankineCycle(BaseCycle):
         self.cycle_states = cycle_states
         self.fill_states()
         
-    
+        
+    def eta_thermal(self):
+        """Thermal efficiency
+         
+        The thermal efficiency for the specified process(es), :math:`\eta_{th} = \frac{\dot{W}_{exp} - \dot{W}_{pum}}{\dot{Q}_{in}}`.
+         
+        Returns
+        -------
+        float
+        """    
+        w_net = self.cycle_states[2].H - self.cycle_states[3].H - (self.cycle_states[1].H - self.cycle_states[0].H) 
+        q_boiler = self.cycle_states[2].H - self.cycle_states[1].H
+        return w_net / q_boiler
         
 
 

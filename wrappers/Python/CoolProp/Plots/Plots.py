@@ -186,8 +186,9 @@ class PropertyPlot(BasePlot):
                     stp = min([dew_filter.size,10])
                     dew_filter[0:-stp] = False 
                     bub_filter = numpy.logical_and(numpy.isfinite(bub.x),numpy.isfinite(bub.y))
-                    if ((dew.x[dew_filter][-1]-bub.x[bub_filter][-1]) < 0.10*dx and 
-                        (dew.y[dew_filter][-1]-bub.y[bub_filter][-1]) < 0.01*dy):
+                    if ((dew.x[dew_filter][-1]-bub.x[bub_filter][-1]) > 0.010*dx and 
+                        (dew.x[dew_filter][-1]-bub.x[bub_filter][-1]) < 0.100*dx and
+                        (dew.y[dew_filter][-1]-bub.y[bub_filter][-1]) < 0.010*dy):
                         f = interp1d(numpy.append(bub.x[bub_filter],dew.x[dew_filter][::-1]),numpy.append(bub.y[bub_filter],dew.y[dew_filter][::-1]),kind='cubic')
                         x = numpy.linspace(bub.x[bub_filter][-1], dew.x[dew_filter][-1], 11)
                         y = f(x)
