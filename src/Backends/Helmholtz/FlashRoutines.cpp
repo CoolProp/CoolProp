@@ -1086,6 +1086,8 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
         {
             throw ValueError("Halley's method was unable to find a solution in HSU_P_flash_singlephase_Brent");
         }
+        // Un-specify the phase of the fluid
+        HEOS.unspecify_phase();
     }
     catch(...){
         try{
