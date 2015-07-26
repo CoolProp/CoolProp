@@ -137,8 +137,8 @@ For a given fluid, the phase can be plotted in T-p coordinates:
 Partial Derivatives
 -------------------
 
-First Partial Derivatives
-^^^^^^^^^^^^^^^^^^^^^^^^^
+First Partial Derivatives for Single-phase States
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 For some applications it can be useful to have access to partial derivatives of thermodynamic properties.  A generalized first partial derivative has been implemented into CoolProp, which can be obtained using the ``PropsSI`` function by encoding the desired derivative as a string.  The format of the string is ``d(OF)/d(WRT)|CONSTANT`` which is the same as 
 
 .. math::
@@ -168,6 +168,25 @@ and called through python
     
     # c_p using derivative
     In [5]: CoolProp.CoolProp.PropsSI('d(Hmass)/d(T)|P','P',101325,'T',300,'Water')
+
+It is also possible to call the derivatives directly using the :ref:`low-level partial derivatives functionality <partial_derivatives_low_level>`.  The low-level routine is in general faster because it avoids the string parsing.
+
+First Saturation Derivatives
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It is also possible to retrieve the derivatives along the saturation curves using the high-level interface, encoding the desired derivative as a string just like for the single-phase derivatives.
+
+.. warning::
+
+    This derivative formulation is currently only valid for saturated states where the vapor quality is either 0 or 1.  
+
+For instance, to calculate the saturation derivative of enthalpy ALONG the saturated vapor curve, you could do:
+
+.. ipython::
+
+    In [1]: import CoolProp
+    
+    In [1]: CoolProp.CoolProp.PropsSI('d(Hmolar)/dT|sigma','P',101325,'Q',1,'Water')
 
 It is also possible to call the derivatives directly using the :ref:`low-level partial derivatives functionality <partial_derivatives_low_level>`.  The low-level routine is in general faster because it avoids the string parsing.
 
