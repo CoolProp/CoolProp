@@ -116,12 +116,6 @@ You might want to start by looking at CoolProp.h
      *
      */
     bool is_valid_fluid_string(const std::string &fluidstring);
-
-    /// Returns the BibTeX key from the bibtex library of CoolProp corresponding to the item requested
-    /// @param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"
-    /// @param item The key that is desired, one of "EOS", "CP0", "VISCOSITY", "CONDUCTIVITY", "ECS_LENNARD_JONES", "ECS_FITS", "SURFACE_TENSION"
-    /// @returns The BibTeX key
-    std::string get_BibTeXKey(const std::string &FluidName, const std::string &item);
     
     /** 
     \brief Set the reference state based on a string representation
