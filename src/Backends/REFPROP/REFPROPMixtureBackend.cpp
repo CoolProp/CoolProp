@@ -528,6 +528,9 @@ CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment(){
         INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
         return static_cast<CoolPropDbl>(dip*3.33564e-30);
     }
+    else{
+        throw ValueError(format("dipole moment is only available for pure fluids"));
+    }
 };
 CoolPropDbl REFPROPMixtureBackend::calc_gas_constant(){
     this->check_loaded_fluid();
