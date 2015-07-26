@@ -132,6 +132,52 @@ void HelmholtzEOSMixtureBackend::recalculate_singlephase_phase()
 		}
 	}
 }
+std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &ParamName)
+{
+    CoolProp::CoolPropFluid cpfluid = get_components()[0];
+    if (!ParamName.compare("aliases")){
+        return strjoin(cpfluid.aliases, ", ");
+    }
+    else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number")){
+        return cpfluid.CAS;
+    }
+    else if (!ParamName.compare("formula")){
+        return cpfluid.formula;
+    }
+    else if (!ParamName.compare("ASHRAE34")){
+        return cpfluid.environment.ASHRAE34;
+    }
+    else if (!ParamName.compare("REFPROPName") || !ParamName.compare("REFPROP_name") || !ParamName.compare("REFPROPname")){
+        return cpfluid.REFPROPname;
+    }
+    else if (ParamName.find("BibTeX") == 0) // Starts with "BibTeX"
+    {
+        std::vector<std::string> parts = strsplit(ParamName,'-');
+        if (parts.size() != 2){ throw ValueError(format("Unable to parse BibTeX string %s",ParamName.c_str()));}
+        std::string key = parts[1];
+        if (!key.compare("EOS")){ return cpfluid.EOS().BibTeX_EOS; }
+        else if (!key.compare("CP0")){ return cpfluid.EOS().BibTeX_CP0; }
+        else if (!key.compare("VISCOSITY")){ return cpfluid.transport.BibTeX_viscosity; }
+        else if (!key.compare("CONDUCTIVITY")){ return cpfluid.transport.BibTeX_conductivity; }
+        else if (!key.compare("ECS_LENNARD_JONES")){ throw NotImplementedError(); }
+        else if (!key.compare("ECS_VISCOSITY_FITS")){ throw NotImplementedError(); }
+        else if (!key.compare("ECS_CONDUCTIVITY_FITS")){ throw NotImplementedError(); }
+        else if (!key.compare("SURFACE_TENSION")){ return cpfluid.ancillaries.surface_tension.BibTeX;}
+        else if (!key.compare("MELTING_LINE")){ return cpfluid.ancillaries.melting_line.BibTeX;}
+        else{ throw CoolProp::KeyError(format("Bad key to get_BibTeXKey [%s]", key.c_str()));}
+    }
+    else if (ParamName.find("pure") == 0){
+        if (is_pure()){
+            return "true";
+        }
+        else{
+            return "false";
+        }
+    }
+    else{
+        throw ValueError(format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str()));
+    }
+}
 void HelmholtzEOSMixtureBackend::calc_phase_envelope(const std::string &type)
 {
     // Clear the phase envelope data

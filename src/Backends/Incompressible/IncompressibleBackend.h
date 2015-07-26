@@ -65,6 +65,15 @@ public:
     @param value2 Second input value
     */
     void update(CoolProp::input_pairs input_pair, double value1, double value2);
+    
+    std::string fluid_param_string(const std::string &ParamName){
+        if (!ParamName.compare("long_name")){
+            return calc_name();
+        }
+        else{
+            throw ValueError(format("Input value [%s] is invalid.",ParamName.c_str()));
+        }
+    }
 
     /// Clear all the cached values
     bool clear();

@@ -319,6 +319,45 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         }
     }
 }
+std::string REFPROPMixtureBackend::fluid_param_string(const std::string &ParamName){
+    if (ParamName == "CAS"){
+//        subroutine NAME (icomp,hnam,hn80,hcasn)
+//        c
+//        c  provides name information for specified component
+//            c
+//            c  input:
+//            c    icomp--component number in mixture; 1 for pure fluid
+//                c  outputs:
+//                c     hnam--component name [character*12]
+//                c     hn80--component name--long form [character*80]
+//                c    hcasn--CAS (Chemical Abstracts Service) number [character*12]
+        long icomp = 1L;
+        char hnam[13], hn80[81], hcasn[13];
+        NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
+        std::string casn = hcasn;
+        strstrip(casn);
+        return casn;
+    }
+    else if (ParamName == "name"){
+        long icomp = 1L;
+        char hnam[13], hn80[81], hcasn[13];
+        NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
+        std::string name = hnam;
+        strstrip(name);
+        return name;
+    }
+    else if (ParamName == "long_name"){
+        long icomp = 1L;
+        char hnam[13], hn80[81], hcasn[13];
+        NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
+        std::string n80 = hn80;
+        strstrip(n80);
+        return n80;
+    }
+    else{
+        throw ValueError(format("parameter to fluid_param_string is invalid: %s", ParamName.c_str()));
+    }
+};
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
 {
     if (mole_fractions.size() != this->Ncomp)

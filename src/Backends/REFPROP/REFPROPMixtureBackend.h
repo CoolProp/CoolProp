@@ -82,6 +82,8 @@ public:
 
     /// Returns true if REFPROP is supported on this platform
     bool REFPROP_supported(void);
+    
+    std::string fluid_param_string(const std::string &ParamName);
 
     CoolPropDbl calc_PIP(void);
 

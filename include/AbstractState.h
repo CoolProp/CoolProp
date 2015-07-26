@@ -403,6 +403,9 @@ public:
     /// In general this should be true, except for some other backends (especially the tabular backend)
     /// Should be overloaded in derived classes to make this not possible by returning false
     virtual bool available_in_high_level(void){ return true; }
+    
+    /// Return a string from the backend for the mixture/fluid
+    virtual std::string fluid_param_string(const std::string &){ throw NotImplementedError("fluid_param_string has not been implemented for this backend"); }
 
     std::vector<std::string> fluid_names(void);
 
