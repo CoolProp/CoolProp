@@ -44,7 +44,7 @@ shared_ptr<CoolProp::AbstractState> WaterIF97;
 
 namespace HumidAir
 {
-    enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA, GIVEN_COMPRESSIBILITY_FACTOR, GIVEN_PARTIAL_PRESSURE_WATER, GIVEN_CV, GIVEN_CVHA};
+    enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA, GIVEN_COMPRESSIBILITY_FACTOR, GIVEN_PARTIAL_PRESSURE_WATER, GIVEN_CV, GIVEN_CVHA, GIVEN_INTERNAL_ENERGY, GIVEN_INTERNAL_ENERGY_HA};
     
     void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w);
     double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
@@ -821,6 +821,12 @@ double MolarVolume(double T, double p, double psi_w)
     }
     return v_bar;
 }
+double Pressure(double T, double v_bar, double psi_w){
+    double R_bar = 8.314472;
+    double Bm = B_m(T, psi_w);
+    double Cm = C_m(T, psi_w);
+    return (R_bar)*T/v_bar*(1+Bm/v_bar+Cm/(v_bar*v_bar));
+}
 double IdealGasMolarEnthalpy_Water(double T, double vmolar)
 {
     double hbar_w_0, tau, rhomolar, hbar_w;
@@ -957,6 +963,21 @@ double MassEnthalpy_per_kgda(double T, double p, double psi_w)
 {
     double vmolar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
     double h_bar = MolarEnthalpy(T, p, psi_w, vmolar); //[J/mol_ha]
+    double W = HumidityRatio(psi_w); //[kg_w/kg_da] // (1+W) is kg_ha/kg_da
+    double M_ha = MM_Water()*psi_w+(1-psi_w)*0.028966; // [kg_ha/mol_ha]
+    return h_bar*(1+W)/M_ha; //[J/kg_da]
+}
+double MassInternalEnergy_per_kgha(double T, double p, double psi_w)
+{
+    double vmolar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
+    double h_bar = MolarInternalEnergy(T, p, psi_w, vmolar); //[J/mol_ha]
+    double M_ha = MM_Water()*psi_w+(1-psi_w)*0.028966; // [kg_ha/mol_ha]
+    return h_bar/M_ha; //[J/kg_ha]
+}
+double MassInternalEnergy_per_kgda(double T, double p, double psi_w)
+{
+    double vmolar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
+    double h_bar = MolarInternalEnergy(T, p, psi_w, vmolar); //[J/mol_da]
     double W = HumidityRatio(psi_w); //[kg_w/kg_da] // (1+W) is kg_ha/kg_da
     double M_ha = MM_Water()*psi_w+(1-psi_w)*0.028966; // [kg_ha/mol_ha]
     return h_bar*(1+W)/M_ha; //[J/kg_da]
@@ -1239,6 +1260,10 @@ static givens Name2Type(const std::string &Name)
         return GIVEN_ENTHALPY;
     else if (!strcmp(Name,"Hha"))
         return GIVEN_ENTHALPY_HA;
+    else if (!strcmp(Name,"InternalEnergy") || !strcmp(Name,"U") || !strcmp(Name,"Uda"))
+        return GIVEN_INTERNAL_ENERGY;
+    else if (!strcmp(Name,"Uha"))
+        return GIVEN_INTERNAL_ENERGY_HA;
     else if (!strcmp(Name,"Entropy") || !strcmp(Name,"S") || !strcmp(Name,"Sda"))
         return GIVEN_ENTROPY;        
     else if (!strcmp(Name,"Sha"))
@@ -1599,6 +1624,12 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
         case GIVEN_ENTHALPY_HA:{
             return MassEnthalpy_per_kgha(T,p,psi_w); //[J/kg_ha]
         }
+        case GIVEN_INTERNAL_ENERGY:{
+            return MassInternalEnergy_per_kgda(T,p,psi_w); //[J/kg_da]
+        }
+        case GIVEN_INTERNAL_ENERGY_HA:{
+            return MassInternalEnergy_per_kgha(T,p,psi_w); //[J/kg_ha]
+        }
         case GIVEN_ENTROPY:{
             return MassEntropy_per_kgda(T,p,psi_w); //[J/kg_da/J]
         }
@@ -1643,21 +1674,23 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
             return cp_bar/M_ha; //[J/kg_da/K]
         }
         case GIVEN_CVHA:{
-            double v_bar1,v_bar2,u_bar1,u_bar2, cv_bar, dT = 1e-3,W;
-            v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
-            u_bar1=MolarInternalEnergy(T-dT,p,psi_w,v_bar1); //[kJ/kmol_ha]
-            v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
-            u_bar2=MolarInternalEnergy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
+            double v_bar,u_bar1,u_bar2, cv_bar, p_1, p_2, dT = 1e-3,W;
+            v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
+            p_1 = Pressure(T-dT, v_bar, psi_w);
+            u_bar1=MolarInternalEnergy(T-dT,p_1,psi_w,v_bar); //[J/mol_da]
+            p_2 = Pressure(T+dT, v_bar, psi_w);
+            u_bar2=MolarInternalEnergy(T+dT,p_2,psi_w,v_bar); //[J/mol_da]
             W=HumidityRatio(psi_w); //[kg_w/kg_da]
             cv_bar = (u_bar2-u_bar1)/(2*dT); //[J/mol_da/K]
             return cv_bar*(1+W)/M_ha; //[J/kg_ha/K]
         }
         case GIVEN_CV:{
-            double v_bar1,v_bar2,u_bar1,u_bar2, cv_bar, dT = 1e-3;
-            v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
-            u_bar1=MolarInternalEnergy(T-dT,p,psi_w,v_bar1); //[J/kmol_ha]
-            v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
-            u_bar2=MolarInternalEnergy(T+dT,p,psi_w,v_bar2); //[J/kmol_ha]
+            double v_bar,p_1,p_2,u_bar1,u_bar2, cv_bar, dT = 1e-3;
+            v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
+            p_1 = Pressure(T-dT, v_bar, psi_w);
+            u_bar1=MolarInternalEnergy(T-dT,p_1,psi_w,v_bar); //[J/mol_ha]
+            p_2 = Pressure(T+dT, v_bar, psi_w);
+            u_bar2=MolarInternalEnergy(T+dT,p_2,psi_w,v_bar); //[J/mol_ha]
             cv_bar = (u_bar2-u_bar1)/(2*dT); //[J/mol_da/K]
             return cv_bar/M_ha; //[J/kg_da/K]
         }
