@@ -342,7 +342,6 @@ public:
 
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
     CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, int phase);
-    CoolPropDbl solver_for_rho_given_T_oneof_HSU(CoolPropDbl T, CoolPropDbl value, int other);
 
 };
 

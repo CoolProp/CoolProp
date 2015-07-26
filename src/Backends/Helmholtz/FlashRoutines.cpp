@@ -723,204 +723,217 @@ void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolP
 void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other)
 {
     // Define the residual to be driven to zero
-    class solver_resid : public FuncWrapper1D
+    class solver_resid : public FuncWrapper1DWithTwoDerivs
     {
     public:
 
         HelmholtzEOSMixtureBackend *HEOS;
         CoolPropDbl rhomolar, value;
-        int other;
+        parameters other;
 
-        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl rhomolar, CoolPropDbl value, int other) : HEOS(HEOS), rhomolar(rhomolar), value(value), other(other){};
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl rhomolar, CoolPropDbl value, parameters other) : HEOS(HEOS), rhomolar(rhomolar), value(value), other(other){};
         double call(double T){
-            CoolPropDbl eos;
-            switch(other)
-            {
-            case iP:
-                eos = HEOS->calc_pressure_nocache(T, rhomolar); break;
-            case iSmolar:
-                eos = HEOS->calc_smolar_nocache(T, rhomolar); break;
-            case iHmolar:
-                eos = HEOS->calc_hmolar_nocache(T, rhomolar); break;
-            case iUmolar:
-                eos = HEOS->calc_umolar_nocache(T, rhomolar); break;
-            default:
-                throw ValueError(format("Input not supported"));
+            HEOS->update_DmolarT_direct(rhomolar, T);
+            double eos = HEOS->keyed_output(other);
+            if (other == iP){
+                // For p, should use fractional error
+                return (eos-value)/value;
             }
-
-            return eos - value;
+            else{
+                // For everything else, use absolute error
+                return eos - value;
+            }
+        };
+        double deriv(double T){
+            if (other == iP){
+                return HEOS->first_partial_deriv(other, iT, iDmolar)/value;
+            }
+            return HEOS->first_partial_deriv(other, iT, iDmolar);
+        };
+        double second_deriv(double T){
+            if (other == iP){
+                return HEOS->second_partial_deriv(other, iT, iDmolar, iT, iDmolar)/value;
+            }
+            return HEOS->second_partial_deriv(other, iT, iDmolar, iT, iDmolar);
         };
     };
 
     std::string errstring;
 
-    if (HEOS.imposed_phase_index != iphase_not_imposed)
+    if (HEOS.is_pure_or_pseudopure)
     {
-        // Use the phase defined by the imposed phase
-        HEOS._phase = HEOS.imposed_phase_index;
-    }
-    else
-    {
-        if (HEOS.is_pure_or_pseudopure)
+        CoolPropFluid &component = HEOS.components[0];
+
+        shared_ptr<HelmholtzEOSMixtureBackend> Sat;
+        CoolPropDbl rhoLtriple = component.triple_liquid.rhomolar;
+        CoolPropDbl rhoVtriple = component.triple_vapor.rhomolar;
+        // Check if in the "normal" region
+        if (HEOS._rhomolar >= rhoVtriple && HEOS._rhomolar <= rhoLtriple)
         {
-            CoolPropFluid &component = HEOS.components[0];
+            CoolPropDbl yL, yV, value, y_solid;
+            CoolPropDbl TLtriple = component.triple_liquid.T; ///TODO: separate TL and TV for ppure
+            CoolPropDbl TVtriple = component.triple_vapor.T;
 
-            shared_ptr<HelmholtzEOSMixtureBackend> Sat;
-            CoolPropDbl rhoLtriple = component.triple_liquid.rhomolar;
-            CoolPropDbl rhoVtriple = component.triple_vapor.rhomolar;
-            // Check if in the "normal" region
-            if (HEOS._rhomolar >= rhoVtriple && HEOS._rhomolar <= rhoLtriple)
+            // First check if solid (below the line connecting the triple point values) - this is an error for now
+            switch (other)
             {
-                CoolPropDbl yL, yV, value, y_solid;
-                CoolPropDbl TLtriple = component.triple_liquid.T; ///TODO: separate TL and TV for ppure
-                CoolPropDbl TVtriple = component.triple_vapor.T;
-
-                // First check if solid (below the line connecting the triple point values) - this is an error for now
-                switch (other)
-                {
-                    case iSmolar:
-                        yL = HEOS.calc_smolar_nocache(TLtriple, rhoLtriple); yV = HEOS.calc_smolar_nocache(TVtriple, rhoVtriple); value = HEOS._smolar; break;
-                    case iHmolar:
-                        yL = HEOS.calc_hmolar_nocache(TLtriple, rhoLtriple); yV = HEOS.calc_hmolar_nocache(TVtriple, rhoVtriple); value = HEOS._hmolar; break;
-                    case iUmolar:
-                        yL = HEOS.calc_umolar_nocache(TLtriple, rhoLtriple); yV = HEOS.calc_umolar_nocache(TVtriple, rhoVtriple); value = HEOS._umolar; break;
-                    case iP:
-                        yL = HEOS.calc_pressure_nocache(TLtriple, rhoLtriple); yV = HEOS.calc_pressure_nocache(TVtriple, rhoVtriple); value = HEOS._p; break;
-                    default:
-                        throw ValueError(format("Input is invalid"));
-                }
-                y_solid = (yV-yL)/(1/rhoVtriple-1/rhoLtriple)*(1/HEOS._rhomolar-1/rhoLtriple) + yL;
-
-                if (value < y_solid){ throw ValueError(format("Other input [%d:%g] is solid", other, value));}
-
-                // Check if other is above the saturation value.
-                SaturationSolvers::saturation_D_pure_options optionsD;
-                optionsD.omega = 1;
-                optionsD.use_logdelta = false;
-                if (HEOS._rhomolar > HEOS._crit.rhomolar)
-                {
-                    optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOL;
-                    SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
-                    // SatL and SatV have the saturation values
-                    Sat = HEOS.SatL;
-                }
-                else
-                {
-                    optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOV;
-                    SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
-                    // SatL and SatV have the saturation values
-                    Sat = HEOS.SatV;
-                }
-
-                // If it is above, it is not two-phase and either liquid, vapor or supercritical
-                if (value > Sat->keyed_output(other))
-                {
-                    solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
-                    HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax()*1.5, DBL_EPSILON, 1e-12, 100, errstring);
-                    HEOS._Q = 10000;
-                    HEOS.calc_pressure();
-					// Update the phase flag
-					HEOS.recalculate_singlephase_phase();
-                }
-                else
-                {
-					// Now we know that temperature is between Tsat(D) +- tolerance and the minimum temperature for the fluid
-					if (other == iP){
-						// Iterate to find T(p), its just a saturation call
-						
-						// Set some input options
-						SaturationSolvers::saturation_PHSU_pure_options optionsPHSU;
-						// Specified variable is pressure
-						optionsPHSU.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_PL;
-						// Use logarithm of delta as independent variables
-						optionsPHSU.use_logdelta = false;
-                        
-                        // Actually call the solver
-                        SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS._p, optionsPHSU);
-
-						// Load the outputs
-						HEOS._phase = iphase_twophase;
-						HEOS._Q = (1/HEOS._rhomolar-1/HEOS.SatL->rhomolar())/(1/HEOS.SatV->rhomolar()-1/HEOS.SatL->rhomolar());
-						HEOS._T = HEOS.SatL->T();
-					}
-					else{
-						// Residual is difference in quality calculated from density and quality calculated from the other parameter
-						// Iterate to find T
-						HSU_D_flash_twophase(HEOS, HEOS._rhomolar, other, value);
-					}
-                }
+                case iSmolar:
+                    yL = HEOS.calc_smolar_nocache(TLtriple, rhoLtriple); yV = HEOS.calc_smolar_nocache(TVtriple, rhoVtriple); value = HEOS._smolar; break;
+                case iHmolar:
+                    yL = HEOS.calc_hmolar_nocache(TLtriple, rhoLtriple); yV = HEOS.calc_hmolar_nocache(TVtriple, rhoVtriple); value = HEOS._hmolar; break;
+                case iUmolar:
+                    yL = HEOS.calc_umolar_nocache(TLtriple, rhoLtriple); yV = HEOS.calc_umolar_nocache(TVtriple, rhoVtriple); value = HEOS._umolar; break;
+                case iP:
+                    yL = HEOS.calc_pressure_nocache(TLtriple, rhoLtriple); yV = HEOS.calc_pressure_nocache(TVtriple, rhoVtriple); value = HEOS._p; break;
+                default:
+                    throw ValueError(format("Input is invalid"));
             }
-            // Check if vapor/solid region below triple point vapor density
-            else if (HEOS._rhomolar < component.triple_vapor.rhomolar)
+            y_solid = (yV-yL)/(1/rhoVtriple-1/rhoLtriple)*(1/HEOS._rhomolar-1/rhoLtriple) + yL;
+
+            if (value < y_solid){ throw ValueError(format("Other input [%d:%g] is solid", other, value));}
+
+            // Check if other is above the saturation value.
+            SaturationSolvers::saturation_D_pure_options optionsD;
+            optionsD.omega = 1;
+            optionsD.use_logdelta = false;
+            if (HEOS._rhomolar > HEOS._crit.rhomolar)
             {
-                CoolPropDbl y, value;
-                CoolPropDbl TVtriple = component.triple_vapor.T; //TODO: separate TL and TV for ppure
-
-                // If value is above the value calculated from X(Ttriple, _rhomolar), it is vapor
-                switch (other)
-                {
-                    case iSmolar:
-                        y = HEOS.calc_smolar_nocache(TVtriple, HEOS._rhomolar); value = HEOS._smolar; break;
-                    case iHmolar:
-                        y = HEOS.calc_hmolar_nocache(TVtriple, HEOS._rhomolar); value = HEOS._hmolar; break;
-                    case iUmolar:
-                        y = HEOS.calc_umolar_nocache(TVtriple, HEOS._rhomolar); value = HEOS._umolar; break;
-                    case iP:
-                        y = HEOS.calc_pressure_nocache(TVtriple, HEOS._rhomolar); value = HEOS._p; break;
-                    default:
-                        throw ValueError(format("Input is invalid"));
-                }
-                if (value > y)
-                {
-                    solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
-                    HEOS._phase = iphase_gas;
-                    HEOS._T = Brent(resid, TVtriple, HEOS.Tmax()*1.5, DBL_EPSILON, 1e-12, 100, errstring);
-                    HEOS._Q = 10000;
-                    HEOS.calc_pressure();
-                }
-                else
-                {
-                    throw ValueError(format("D < DLtriple %g %g", value, y));
-                }
-
+                optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOL;
+                SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
+                // SatL and SatV have the saturation values
+                Sat = HEOS.SatL;
             }
-            // Check in the liquid/solid region above the triple point density
             else
             {
-                CoolPropDbl y, value;
-                CoolPropDbl TLtriple = component.EOS().Ttriple;
+                optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOV;
+                SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
+                // SatL and SatV have the saturation values
+                Sat = HEOS.SatV;
+            }
 
-                // If value is above the value calculated from X(Ttriple, _rhomolar), it is vapor
-                switch (other)
-                {
-                    case iSmolar:
-                        y = HEOS.calc_smolar_nocache(TLtriple, HEOS._rhomolar); value = HEOS._smolar; break;
-                    case iHmolar:
-                        y = HEOS.calc_hmolar_nocache(TLtriple, HEOS._rhomolar); value = HEOS._hmolar; break;
-                    case iUmolar:
-                        y = HEOS.calc_umolar_nocache(TLtriple, HEOS._rhomolar); value = HEOS._umolar; break;
-                    case iP:
-                        y = HEOS.calc_pressure_nocache(TLtriple, HEOS._rhomolar); value = HEOS._p; break;
-                    default:
-                        throw ValueError(format("Input is invalid"));
+            // If it is above, it is not two-phase and either liquid, vapor or supercritical
+            if (value > Sat->keyed_output(other))
+            {
+                solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
+                try{
+                    HEOS._T = Halley(resid, 0.5*(Sat->keyed_output(iT) + HEOS.Tmax()*1.5), 1e-10, 100, errstring);
                 }
-                if (value > y)
-                {
-                    solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
-                    HEOS._phase = iphase_liquid;
-                    HEOS._T = Brent(resid, TLtriple, HEOS.Tmax()*1.5, DBL_EPSILON, 1e-12, 100, errstring);
-                    HEOS._Q = 10000;
-                    HEOS.calc_pressure();
+                catch(...){
+                    HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax()*1.5, DBL_EPSILON, 1e-12, 100, errstring);
                 }
-                else
-                {
-                    throw ValueError(format("D < DLtriple %g %g", value, y));
+                HEOS._Q = 10000;
+                HEOS.calc_pressure();
+                // Update the phase flag
+                HEOS.recalculate_singlephase_phase();
+            }
+            else
+            {
+                // Now we know that temperature is between Tsat(D) +- tolerance and the minimum temperature for the fluid
+                if (other == iP){
+                    // Iterate to find T(p), its just a saturation call
+                    
+                    // Set some input options
+                    SaturationSolvers::saturation_PHSU_pure_options optionsPHSU;
+                    // Specified variable is pressure
+                    optionsPHSU.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_PL;
+                    // Use logarithm of delta as independent variables
+                    optionsPHSU.use_logdelta = false;
+                    
+                    // Actually call the solver
+                    SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS._p, optionsPHSU);
+
+                    // Load the outputs
+                    HEOS._phase = iphase_twophase;
+                    HEOS._Q = (1/HEOS._rhomolar-1/HEOS.SatL->rhomolar())/(1/HEOS.SatV->rhomolar()-1/HEOS.SatL->rhomolar());
+                    HEOS._T = HEOS.SatL->T();
+                }
+                else{
+                    // Residual is difference in quality calculated from density and quality calculated from the other parameter
+                    // Iterate to find T
+                    HSU_D_flash_twophase(HEOS, HEOS._rhomolar, other, value);
                 }
             }
         }
+        // Check if vapor/solid region below triple point vapor density
+        else if (HEOS._rhomolar < component.triple_vapor.rhomolar)
+        {
+            CoolPropDbl y, value;
+            CoolPropDbl TVtriple = component.triple_vapor.T; //TODO: separate TL and TV for ppure
+
+            // If value is above the value calculated from X(Ttriple, _rhomolar), it is vapor
+            switch (other)
+            {
+                case iSmolar:
+                    y = HEOS.calc_smolar_nocache(TVtriple, HEOS._rhomolar); value = HEOS._smolar; break;
+                case iHmolar:
+                    y = HEOS.calc_hmolar_nocache(TVtriple, HEOS._rhomolar); value = HEOS._hmolar; break;
+                case iUmolar:
+                    y = HEOS.calc_umolar_nocache(TVtriple, HEOS._rhomolar); value = HEOS._umolar; break;
+                case iP:
+                    y = HEOS.calc_pressure_nocache(TVtriple, HEOS._rhomolar); value = HEOS._p; break;
+                default:
+                    throw ValueError(format("Input is invalid"));
+            }
+            if (value > y)
+            {
+                solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
+                HEOS._phase = iphase_gas;
+                try{
+                    HEOS._T = Halley(resid, 0.5*(TVtriple+HEOS.Tmax()*1.5), DBL_EPSILON, 100, errstring);
+                }
+                catch(...){
+                    HEOS._T = Brent(resid, TVtriple, HEOS.Tmax()*1.5, DBL_EPSILON, 1e-12, 100, errstring);
+                }
+                HEOS._Q = 10000;
+                HEOS.calc_pressure();
+            }
+            else
+            {
+                throw ValueError(format("D < DLtriple %g %g", value, y));
+            }
+
+        }
+        // Check in the liquid/solid region above the triple point density
         else
-            throw NotImplementedError("PHSU_D_flash not ready for mixtures");
+        {
+            CoolPropDbl y, value;
+            CoolPropDbl TLtriple = component.EOS().Ttriple;
+
+            // If value is above the value calculated from X(Ttriple, _rhomolar), it is vapor
+            switch (other)
+            {
+                case iSmolar:
+                    y = HEOS.calc_smolar_nocache(TLtriple, HEOS._rhomolar); value = HEOS._smolar; break;
+                case iHmolar:
+                    y = HEOS.calc_hmolar_nocache(TLtriple, HEOS._rhomolar); value = HEOS._hmolar; break;
+                case iUmolar:
+                    y = HEOS.calc_umolar_nocache(TLtriple, HEOS._rhomolar); value = HEOS._umolar; break;
+                case iP:
+                    y = HEOS.calc_pressure_nocache(TLtriple, HEOS._rhomolar); value = HEOS._p; break;
+                default:
+                    throw ValueError(format("Input is invalid"));
+            }
+            if (value > y)
+            {
+                solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
+                HEOS._phase = iphase_liquid;
+                try{
+                    HEOS._T = Halley(resid, 0.5*(TLtriple+HEOS.Tmax()*1.5), DBL_EPSILON, 100, errstring);
+                }
+                catch(...){
+                    HEOS._T = Brent(resid, TLtriple, HEOS.Tmax()*1.5, DBL_EPSILON, 1e-12, 100, errstring);
+                }
+                HEOS._Q = 10000;
+                HEOS.calc_pressure();
+            }
+            else
+            {
+                throw ValueError(format("D < DLtriple %g %g", value, y));
+            }
+        }
     }
+    else
+        throw NotImplementedError("PHSU_D_flash not ready for mixtures");
 }
 
 void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &HEOS, parameters other, CoolPropDbl T0, CoolPropDbl rhomolar0)
@@ -1121,112 +1134,265 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
 {
     bool saturation_called = false;
     CoolPropDbl value;
-    if (HEOS.imposed_phase_index != iphase_not_imposed)
+
+    // Find the phase, while updating all internal variables possible
+    switch (other)
     {
-        // Use the phase defined by the imposed phase
-        HEOS._phase = HEOS.imposed_phase_index;
+        case iSmolar:
+            value = HEOS.smolar(); break;
+        case iHmolar:
+            value = HEOS.hmolar(); break;
+        case iUmolar:
+            value = HEOS.umolar(); break;
+        default:
+            throw ValueError(format("Input for other [%s] is invalid", get_parameter_information(other, "long").c_str()));
+    }
+    if (HEOS.is_pure_or_pseudopure)
+    {
+
+        // Find the phase, while updating all internal variables possible
+        HEOS.p_phase_determination_pure_or_pseudopure(other, value, saturation_called);
+        
+        if (HEOS.isHomogeneousPhase())
+        {
+            // Now we use the single-phase solver to find T,rho given P,Y using a 
+            // bounded 1D solver by adjusting T and using given value of p
+            CoolPropDbl Tmin, Tmax;
+            switch(HEOS._phase)
+            {
+                case iphase_gas:
+                {
+                    Tmax = 1.5*HEOS.Tmax();
+                    if (saturation_called){ Tmin = HEOS.SatV->T();}else{Tmin = HEOS._TVanc.pt();}
+                    break;
+                }
+                case iphase_liquid:
+                {
+                    if (saturation_called){ Tmax = HEOS.SatL->T();}else{Tmax = HEOS._TLanc.pt();}
+                    
+                    // Sometimes the minimum pressure for the melting line is a bit above the triple point pressure
+                    if (HEOS.has_melting_line() && HEOS._p > HEOS.calc_melting_line(iP_min, -1, -1)){
+                        Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p)-1e-3;
+                    }
+                    else{
+                        Tmin = HEOS.Tmin()-1e-3;
+                    }
+                    break;
+                }
+                case iphase_supercritical_liquid:
+                case iphase_supercritical_gas:
+                case iphase_supercritical:
+                {
+                    Tmax = 1.5*HEOS.Tmax();
+                    // Sometimes the minimum pressure for the melting line is a bit above the triple point pressure
+                    if (HEOS.has_melting_line() && HEOS._p > HEOS.calc_melting_line(iP_min, -1, -1)){
+                        Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p)-1e-3;
+                    }
+                    else{
+                        Tmin = HEOS.Tmin()-1e-3;
+                    }
+                    break;
+                }
+                default:
+                { throw ValueError(format("Not a valid homogeneous state")); }
+            }
+            try{
+                HSU_P_flash_singlephase_Brent(HEOS, other, value, Tmin, Tmax);
+            }
+            catch(std::exception &e){
+                throw ValueError(format("unable to solve 1phase PY flash with Tmin=%Lg, Tmax=%Lg due to error: %s",Tmin, Tmax, e.what()));
+            }
+            HEOS._Q = -1;
+        }
     }
     else
     {
-        // Find the phase, while updating all internal variables possible
-        switch (other)
+        std::cout << format("PHSU flash for mixture\n");
+        if (HEOS.PhaseEnvelope.built){
+            // Determine whether you are inside or outside
+            SimpleState closest_state;
+            std::size_t iclosest;
+            std::cout << format("pre is inside\n");
+            bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS.PhaseEnvelope, iP, HEOS._p, other, value, iclosest, closest_state);
+            std::cout << format("post is inside\n");
+            
+            std::string errstr;
+            if (!twophase){
+                PY_singlephase_flash_resid resid(HEOS, HEOS._p, other, value);
+                // If that fails, try a bounded solver
+                Brent(resid, closest_state.T+10, 1000, DBL_EPSILON, 1e-10, 100, errstr);
+                HEOS.unspecify_phase();
+            }
+            else{
+                throw ValueError("two-phase solution for Y");
+            }
+            
+        }
+        else{
+            throw ValueError("phase envelope must be built");
+        }
+    }
+}
+void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl value, parameters other)
+{
+    // Define the residual to be driven to zero
+    class solver_resid : public FuncWrapper1DWithTwoDerivs
+    {
+    public:
+        HelmholtzEOSMixtureBackend *HEOS;
+        CoolPropDbl T, value;
+        parameters other;
+        
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl value, parameters other)
+        : HEOS(HEOS),T(T),value(value),other(other){}
+        double call(double rhomolar){
+            HEOS->update_DmolarT_direct(rhomolar, T);
+            double eos = HEOS->keyed_output(other);
+            return eos-value;
+        };
+        double deriv(double rhomolar){
+            return HEOS->first_partial_deriv(other, iDmolar, iT);
+        }
+        double second_deriv(double rhomolar){
+            return HEOS->second_partial_deriv(other, iDmolar, iT, iDmolar, iT);
+        }
+    };
+    solver_resid resid(&HEOS, T, value, other);
+    std::string errstring;
+    
+    // Supercritical temperature
+    if (HEOS._T > HEOS._crit.T)
+    {
+        CoolPropDbl yc, ymin, y;
+        CoolPropDbl rhoc = HEOS.components[0].crit.rhomolar;
+        CoolPropDbl rhomin = 1e-10;
+        
+        // Determine limits for the other variable
+        switch(other)
         {
             case iSmolar:
-                value = HEOS.smolar(); break;
-            case iHmolar:
-                value = HEOS.hmolar(); break;
-            case iUmolar:
-                value = HEOS.umolar(); break;
-            default:
-                throw ValueError(format("Input for other [%s] is invalid", get_parameter_information(other, "long").c_str()));
-        }
-        if (HEOS.is_pure_or_pseudopure)
-        {
-
-            // Find the phase, while updating all internal variables possible
-            HEOS.p_phase_determination_pure_or_pseudopure(other, value, saturation_called);
-            
-            if (HEOS.isHomogeneousPhase())
             {
-                // Now we use the single-phase solver to find T,rho given P,Y using a 
-                // bounded 1D solver by adjusting T and using given value of p
-                CoolPropDbl Tmin, Tmax;
-                switch(HEOS._phase)
-                {
-                    case iphase_gas:
-                    {
-                        Tmax = 1.5*HEOS.Tmax();
-                        if (saturation_called){ Tmin = HEOS.SatV->T();}else{Tmin = HEOS._TVanc.pt();}
-                        break;
-                    }
-                    case iphase_liquid:
-                    {
-                        if (saturation_called){ Tmax = HEOS.SatL->T();}else{Tmax = HEOS._TLanc.pt();}
-                        
-                        // Sometimes the minimum pressure for the melting line is a bit above the triple point pressure
-                        if (HEOS.has_melting_line() && HEOS._p > HEOS.calc_melting_line(iP_min, -1, -1)){
-                            Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p)-1e-3;
-                        }
-                        else{
-                            Tmin = HEOS.Tmin()-1e-3;
-                        }
-                        break;
-                    }
-                    case iphase_supercritical_liquid:
-                    case iphase_supercritical_gas:
-                    case iphase_supercritical:
-                    {
-                        Tmax = 1.5*HEOS.Tmax();
-                        // Sometimes the minimum pressure for the melting line is a bit above the triple point pressure
-                        if (HEOS.has_melting_line() && HEOS._p > HEOS.calc_melting_line(iP_min, -1, -1)){
-                            Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p)-1e-3;
-                        }
-                        else{
-                            Tmin = HEOS.Tmin()-1e-3;
-                        }
-                        break;
-                    }
-                    default:
-                    { throw ValueError(format("Not a valid homogeneous state")); }
-                }
-                try{
-                    HSU_P_flash_singlephase_Brent(HEOS, other, value, Tmin, Tmax);
-                }
-                catch(std::exception &e){
-                    throw ValueError(format("unable to solve 1phase PY flash with Tmin=%Lg, Tmax=%Lg due to error: %s",Tmin, Tmax, e.what()));
-                }
-                HEOS._Q = -1;
+                yc = HEOS.calc_smolar_nocache(HEOS._T, rhoc);
+                ymin = HEOS.calc_smolar_nocache(HEOS._T, rhomin);
+                y = HEOS._smolar;
+                break;
             }
+            case iHmolar:
+            {
+                yc = HEOS.calc_hmolar_nocache(HEOS._T, rhoc);
+                ymin = HEOS.calc_hmolar_nocache(HEOS._T, rhomin);
+                y = HEOS._hmolar;
+                break;
+            }
+            case iUmolar:
+            {
+                yc = HEOS.calc_umolar_nocache(HEOS._T, rhoc);
+                ymin = HEOS.calc_umolar_nocache(HEOS._T, rhomin);
+                y = HEOS._umolar;
+                break;
+            }
+            default:
+                throw ValueError();
+        }
+        CoolPropDbl rhomolar;
+        if (is_in_closed_range(yc, ymin, y))
+        {
+            rhomolar = Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-12, 100, errstring);
+        }
+        else if (y < yc){
+            // Increase rhomelt until it bounds the solution
+            int step_count = 0;
+            while(!is_in_closed_range(ymin, yc, y)){
+                rhoc *= 1.1; // Increase density by a few percent
+                switch(other) {
+                    case iSmolar:
+                        yc = HEOS.calc_smolar_nocache(HEOS._T, rhoc); break;
+                    case iHmolar:
+                        yc = HEOS.calc_hmolar_nocache(HEOS._T, rhoc); break;
+                    case iUmolar:
+                        yc = HEOS.calc_umolar_nocache(HEOS._T, rhoc); break;
+                    default:
+                        throw ValueError(format("Input is invalid"));
+                }
+                if (step_count > 30){
+                    throw ValueError(format("Even by increasing rhoc, not able to bound input; input %Lg is not in range %Lg,%Lg",y,yc,ymin));
+                }
+                step_count++;
+            }
+            rhomolar = Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-12, 100, errstring);
         }
         else
         {
-            std::cout << format("PHSU flash for mixture\n");
-            if (HEOS.PhaseEnvelope.built){
-                // Determine whether you are inside or outside
-                SimpleState closest_state;
-                std::size_t iclosest;
-                std::cout << format("pre is inside\n");
-                bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS.PhaseEnvelope, iP, HEOS._p, other, value, iclosest, closest_state);
-                std::cout << format("post is inside\n");
-                
-                std::string errstr;
-                if (!twophase){
-                    PY_singlephase_flash_resid resid(HEOS, HEOS._p, other, value);
-                    // If that fails, try a bounded solver
-                    Brent(resid, closest_state.T+10, 1000, DBL_EPSILON, 1e-10, 100, errstr);
-                    HEOS.unspecify_phase();
-                }
-                else{
-                    throw ValueError("two-phase solution for Y");
-                }
-                
+            throw ValueError(format("input %Lg is not in range %Lg,%Lg,%Lg",y,yc,ymin));
+        }
+        // Update the state (T > Tc)
+        if (HEOS._p < HEOS.p_critical()){
+            HEOS._phase = iphase_supercritical_gas;
+        }
+        else {
+            HEOS._phase = iphase_supercritical;
+        }
+    }
+    // Subcritical temperature liquid
+    else if (HEOS._phase == iphase_liquid)
+    {
+        CoolPropDbl ymelt, yL, y;
+        CoolPropDbl rhomelt = HEOS.components[0].triple_liquid.rhomolar;
+        CoolPropDbl rhoL = static_cast<double>(HEOS._rhoLanc);
+        
+        switch(other)
+        {
+            case iSmolar:
+            {
+                ymelt = HEOS.calc_smolar_nocache(HEOS._T, rhomelt);  yL = HEOS.calc_smolar_nocache(HEOS._T, rhoL); y = HEOS._smolar; break;
             }
-            else{
-                throw ValueError("phase envelope must be built");
+            case iHmolar:
+            {
+                ymelt = HEOS.calc_hmolar_nocache(HEOS._T, rhomelt);  yL = HEOS.calc_hmolar_nocache(HEOS._T, rhoL); y = HEOS._hmolar; break;
+            }
+            case iUmolar:
+            {
+                ymelt = HEOS.calc_umolar_nocache(HEOS._T, rhomelt);  yL = HEOS.calc_umolar_nocache(HEOS._T, rhoL); y = HEOS._umolar; break;
+            }
+            default:
+                throw ValueError();
+        }
+        
+        CoolPropDbl rhomolar_guess = (rhomelt-rhoL)/(ymelt-yL)*(y-yL) + rhoL;
+        
+        try
+        {
+            Halley(resid, rhomolar_guess, 1e-8, 100, errstring);
+        }
+        catch(...){
+            Secant(resid, rhomolar_guess, 0.0001*rhomolar_guess, 1e-12, 100, errstring);
+        }
+    }
+    // Subcritical temperature gas
+    else if (HEOS._phase == iphase_gas)
+    {
+        CoolPropDbl rhomin = 1e-14;
+        CoolPropDbl rhoV = static_cast<double>(HEOS._rhoVanc);
+        
+        try
+        {
+            Halley(resid, 0.5*(rhomin + rhoV), 1e-8, 100, errstring);
+        }
+        catch(...)
+        {
+            try{
+                Brent(resid, rhomin, rhoV, LDBL_EPSILON, 1e-12, 100, errstring);
+            }
+            catch(...){
+                throw ValueError();
             }
         }
-    }    
-}
+    }
+    else{
+        throw ValueError(format("phase to solver_for_rho_given_T_oneof_HSU is invalid"));
+    }
+};
+
 void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other)
 {
     if (HEOS.imposed_phase_index != iphase_not_imposed)
@@ -1268,11 +1434,11 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
             case iDmolar:
                 break;
             case iHmolar:
-                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._hmolar, iHmolar); break;
+                solver_for_rho_given_T_oneof_HSU(HEOS, HEOS._T, HEOS._hmolar, iHmolar); break;
             case iSmolar:
-                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._smolar, iSmolar); break;
+                solver_for_rho_given_T_oneof_HSU(HEOS, HEOS._T, HEOS._smolar, iSmolar); break;
             case iUmolar:
-                HEOS._rhomolar = HEOS.solver_for_rho_given_T_oneof_HSU(HEOS._T, HEOS._umolar, iUmolar); break;
+                solver_for_rho_given_T_oneof_HSU(HEOS, HEOS._T, HEOS._umolar, iUmolar); break;
             default:
                 break;
         }

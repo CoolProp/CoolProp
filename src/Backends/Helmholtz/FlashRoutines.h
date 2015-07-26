@@ -69,6 +69,13 @@ public:
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS);
     
+    /// The flash routine for T given and one of H,S,U
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    /// @param T The temperature
+    /// @param value The value for the other variable
+    /// @param other The index for the other input from CoolProp::parameters; allowed values are iDmolar, iHmolar, iSmolar, iUmolar
+    static void solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl value, parameters other);
+    
     /// A generic flash routine for the pairs (T,D), (T,H), (T,S), and (T,U).  Similar analysis is needed
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iDmolar, iHmolar, iSmolar, iUmolar
