@@ -460,6 +460,36 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
         return static_cast<CoolPropDbl>(Tmin);
     }
 };
+CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment(){
+    //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas)
+    //     c
+    //     c  provides fluid constants for specified component
+    //     c
+    //     c  input:
+    //     c    icomp--component number in mixture; 1 for pure fluid
+    //     c  outputs:
+    //     c      wmm--molecular weight [g/mol]
+    //     c     ttrp--triple point temperature [K]
+    //     c    tnbpt--normal boiling point temperature [K]
+    //     c       tc--critical temperature [K]
+    //     c       pc--critical pressure [kPa]
+    //     c       Dc--critical density [mol/L]
+    //     c       Zc--compressibility at critical point [pc/(Rgas*Tc*Dc)]
+    //     c      acf--acentric factor [-]
+    //     c      dip--dipole moment [debye]
+    //     c     Rgas--gas constant [J/mol-K]
+    this->check_loaded_fluid();
+    double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
+    long icomp = 1L;
+    // Check if more than one
+    std::size_t size = mole_fractions.size();
+    if (size == 1)
+    {
+        // Get value for first component
+        INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
+        return static_cast<CoolPropDbl>(dip*3.33564e-30);
+    }
+};
 CoolPropDbl REFPROPMixtureBackend::calc_gas_constant(){
     this->check_loaded_fluid();
     double Rmix = 0;

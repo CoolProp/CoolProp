@@ -228,6 +228,8 @@ protected:
     virtual CoolPropDbl calc_health_hazard(void){ throw NotImplementedError("calc_health_hazard is not implemented for this backend"); };
     /// Using this backend, calculate the physical hazard
     virtual CoolPropDbl calc_physical_hazard(void){ throw NotImplementedError("calc_physical_hazard is not implemented for this backend"); };
+    /// Using this backend, calculate the dipole moment in C-m
+    virtual CoolPropDbl calc_dipole_moment(void){ throw NotImplementedError("calc_dipole_moment is not implemented for this backend"); };
 
     /// Calculate the first partial derivative for the desired derivative
     virtual CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
@@ -471,6 +473,7 @@ public:
     double p_triple(void);
 
     std::string name(){ return calc_name(); };
+    double dipole_moment(){ return calc_dipole_moment(); }
 
     // ----------------------------------------
     // Bulk properties - temperature and density are directly calculated every time

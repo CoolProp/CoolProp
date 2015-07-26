@@ -142,6 +142,7 @@ public:
 	CoolPropDbl calc_rhomolar_reducing(void);
     CoolPropDbl calc_Ttriple(void);
 	CoolPropDbl calc_gas_constant(void);
+    CoolPropDbl calc_dipole_moment(void);
 
     /// Calculate the "true" critical point where dp/drho|T and d2p/drho2|T are zero
     void calc_true_critical_point(double &T, double &rho);

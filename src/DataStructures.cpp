@@ -52,6 +52,7 @@ const parameter_info parameter_info_list[] = {
     {igas_constant,      "gas_constant",      "O", "J/mol/K", "Molar gas constant",                              true},
 	{imolar_mass,        "molar_mass",        "O", "kg/mol",  "Molar mass",                                      true},
     {iacentric_factor,   "acentric",          "O", "-",       "Acentric factor",                                 true},
+    {idipole_moment,     "dipole_moment",     "O", "C-m",     "Dipole moment",                                   true},
     {irhomass_reducing,  "rhomass_reducing",  "O", "kg/m^3",  "Mass density at reducing point",                  true},
     {irhomolar_reducing, "rhomolar_reducing", "O", "mol/m^3", "Molar density at reducing point",                 true},
     {irhomolar_critical, "rhomolar_critical", "O", "mol/m^3", "Molar density at critical point",                 true},

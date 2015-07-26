@@ -238,6 +238,8 @@ double AbstractState::trivial_keyed_output(parameters key)
         return this->calc_health_hazard();
     case iPH:
         return this->calc_physical_hazard();
+    case idipole_moment:
+        return this->calc_dipole_moment();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));
     }
