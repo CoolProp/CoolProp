@@ -1394,6 +1394,8 @@ void convert_to_SI(const std::string &Name, double &val)
         case GIVEN_ENTHALPY_HA:
         case GIVEN_ENTROPY:
         case GIVEN_ENTROPY_HA:
+        case GIVEN_INTERNAL_ENERGY:
+        case GIVEN_INTERNAL_ENERGY_HA:
         case GIVEN_CP:
         case GIVEN_CPHA:
         case GIVEN_CV:
@@ -1425,6 +1427,8 @@ void convert_from_SI(const std::string &Name, double &val)
         case GIVEN_ENTHALPY_HA:
         case GIVEN_ENTROPY:
         case GIVEN_ENTROPY_HA:
+        case GIVEN_INTERNAL_ENERGY:
+        case GIVEN_INTERNAL_ENERGY_HA:
         case GIVEN_CP:
         case GIVEN_CPHA:
         case GIVEN_CV:
