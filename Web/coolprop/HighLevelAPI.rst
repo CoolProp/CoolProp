@@ -186,7 +186,7 @@ For instance, to calculate the saturation derivative of enthalpy ALONG the satur
 
     In [1]: import CoolProp
     
-    In [1]: CoolProp.CoolProp.PropsSI('d(Hmolar)/dT|sigma','P',101325,'Q',1,'Water')
+    In [1]: CoolProp.CoolProp.PropsSI('d(Hmolar)/d(T)|sigma','P',101325,'Q',1,'Water')
 
 It is also possible to call the derivatives directly using the :ref:`low-level partial derivatives functionality <partial_derivatives_low_level>`.  The low-level routine is in general faster because it avoids the string parsing.
 
