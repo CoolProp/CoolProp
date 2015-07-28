@@ -319,6 +319,45 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         }
     }
 }
+std::string REFPROPMixtureBackend::fluid_param_string(const std::string &ParamName){
+    if (ParamName == "CAS"){
+//        subroutine NAME (icomp,hnam,hn80,hcasn)
+//        c
+//        c  provides name information for specified component
+//            c
+//            c  input:
+//            c    icomp--component number in mixture; 1 for pure fluid
+//                c  outputs:
+//                c     hnam--component name [character*12]
+//                c     hn80--component name--long form [character*80]
+//                c    hcasn--CAS (Chemical Abstracts Service) number [character*12]
+        long icomp = 1L;
+        char hnam[13], hn80[81], hcasn[13];
+        NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
+        std::string casn = hcasn;
+        strstrip(casn);
+        return casn;
+    }
+    else if (ParamName == "name"){
+        long icomp = 1L;
+        char hnam[13], hn80[81], hcasn[13];
+        NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
+        std::string name = hnam;
+        strstrip(name);
+        return name;
+    }
+    else if (ParamName == "long_name"){
+        long icomp = 1L;
+        char hnam[13], hn80[81], hcasn[13];
+        NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
+        std::string n80 = hn80;
+        strstrip(n80);
+        return n80;
+    }
+    else{
+        throw ValueError(format("parameter to fluid_param_string is invalid: %s", ParamName.c_str()));
+    }
+};
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
 {
     if (mole_fractions.size() != this->Ncomp)
@@ -445,7 +484,6 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
 //     c     Rgas--gas constant [J/mol-K]
     this->check_loaded_fluid();
     double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
-    double summer = 0;
     long icomp = 1L;
     // Check if more than one
     std::size_t size = mole_fractions.size();
@@ -459,6 +497,39 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
         double Tmin, Tmax, rhomolarmax, pmax;
         limits(Tmin, Tmax, rhomolarmax, pmax);
         return static_cast<CoolPropDbl>(Tmin);
+    }
+};
+CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment(){
+    //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas)
+    //     c
+    //     c  provides fluid constants for specified component
+    //     c
+    //     c  input:
+    //     c    icomp--component number in mixture; 1 for pure fluid
+    //     c  outputs:
+    //     c      wmm--molecular weight [g/mol]
+    //     c     ttrp--triple point temperature [K]
+    //     c    tnbpt--normal boiling point temperature [K]
+    //     c       tc--critical temperature [K]
+    //     c       pc--critical pressure [kPa]
+    //     c       Dc--critical density [mol/L]
+    //     c       Zc--compressibility at critical point [pc/(Rgas*Tc*Dc)]
+    //     c      acf--acentric factor [-]
+    //     c      dip--dipole moment [debye]
+    //     c     Rgas--gas constant [J/mol-K]
+    this->check_loaded_fluid();
+    double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
+    long icomp = 1L;
+    // Check if more than one
+    std::size_t size = mole_fractions.size();
+    if (size == 1)
+    {
+        // Get value for first component
+        INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
+        return static_cast<CoolPropDbl>(dip*3.33564e-30);
+    }
+    else{
+        throw ValueError(format("dipole moment is only available for pure fluids"));
     }
 };
 CoolPropDbl REFPROPMixtureBackend::calc_gas_constant(){
@@ -541,7 +612,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_PIP(void)
     // partial derivatives of pressure, volume,and temperature without reference to saturation properties: 
     // Applications in phase equilibria calculations"
     double t = _T, rho = _rhomolar/1000.0, // mol/dm^3
-        x = 0,p = 0,e = 0,h = 0,s = 0,cv = 0,cp = 0,w = 0,Z = 0,hjt = 0,A = 0,G = 0,
+        p = 0,e = 0,h = 0,s = 0,cv = 0,cp = 0,w = 0,Z = 0,hjt = 0,A = 0,G = 0,
         xkappa = 0,beta = 0,dPdrho = 0,d2PdD2 = 0,dPT = 0,drhodT = 0,drhodP = 0,
         d2PT2 = 0,d2PdTD = 0,spare3 = 0,spare4 = 0;
     //subroutine THERM2 (t,rho,x,p,e,h,s,cv,cp,w,Z,hjt,A,G,
@@ -678,8 +749,6 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
         PhaseEnvelope.smolar_vap.push_back(y*1000);
     }
-
-    double rr = 0;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_cpmolar_idealgas(void)
 {
@@ -1292,6 +1361,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     _speed_sound = w;
     _tau = calc_T_reducing()/_T;
     _delta = _rhomolar/calc_rhomolar_reducing();
+    _gibbsmolar = hmol-_T*smol;
     _Q = q;
 }
 
@@ -1301,9 +1371,9 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
                          const GuessesStructure &guesses)
 {
     this->check_loaded_fluid();
-    double rho_mol_L=_HUGE, rhoLmol_L=_HUGE, rhoVmol_L=_HUGE,
+    double rho_mol_L=_HUGE,
         hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,
-        w=_HUGE,q=_HUGE, mm=_HUGE, p_kPa = _HUGE, hjt = _HUGE;
+        w=_HUGE,q=_HUGE, p_kPa = _HUGE, hjt = _HUGE;
     long ierr = 0;
     char herr[errormessagelength+1];
 
@@ -1328,6 +1398,10 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
+        }
+        default:
+        {
+            throw CoolProp::ValueError(format("Unable to match given input_pair in update_with_guesses"));
         }
     }
 
@@ -1357,7 +1431,7 @@ CoolPropDbl REFPROPMixtureBackend::call_phixdll(long itau, long idel)
 CoolPropDbl REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
 {
     this->check_loaded_fluid();
-    double val = 0, tau = _tau, delta = _delta, __T = T(), __rho = rhomolar()/1000;
+    double val = 0, tau = _tau, __T = T(), __rho = rhomolar()/1000;
     if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
     return static_cast<CoolPropDbl>(val)/pow(tau,itau); // Not multplied by delta^idel

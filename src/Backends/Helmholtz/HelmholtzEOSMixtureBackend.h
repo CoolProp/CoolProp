@@ -61,6 +61,9 @@ public:
     bool is_pure(){ return components.size() == 1 && !components[0].EOS().pseudo_pure; }
     bool has_melting_line(){ return is_pure_or_pseudopure && components[0].ancillaries.melting_line.enabled();};
     CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
+    /// Return a string from the backend for the mixture/fluid
+    std::string fluid_param_string(const std::string &);
+
     phases calc_phase(void){return _phase;};
     void calc_specify_phase(phases phase){ specify_phase(phase); }
     void calc_unspecify_phase(){ unspecify_phase(); }
@@ -342,7 +345,6 @@ public:
 
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
     CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, int phase);
-    CoolPropDbl solver_for_rho_given_T_oneof_HSU(CoolPropDbl T, CoolPropDbl value, int other);
 
 };
 

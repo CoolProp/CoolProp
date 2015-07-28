@@ -57,8 +57,8 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, pa
             HEOS->SatV->update(DmolarT_INPUTS, rhomolar_vap, T);
             
             // Calculate the Gibbs functions for liquid and vapor
-            CoolPropDbl gL = HEOS->SatL->gibbsmolar();
-            CoolPropDbl gV = HEOS->SatV->gibbsmolar();
+            //CoolPropDbl gL = HEOS->SatL->gibbsmolar();
+            //CoolPropDbl gV = HEOS->SatV->gibbsmolar();
             
             // Residual is difference in Gibbs function
 //            r = gL - gV;

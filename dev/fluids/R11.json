@@ -45,7 +45,7 @@
       "max_abs_error_units": "J/mol", 
       "type": "rational_polynomial"
     }, 
-    "pL": {
+    "pS": {
       "T_r": 471.06, 
       "Tmax": 471.05, 
       "Tmin": 162.68, 
@@ -69,32 +69,6 @@
         16.732
       ], 
       "type": "pL", 
-      "using_tau_r": true
-    }, 
-    "pV": {
-      "T_r": 471.06, 
-      "Tmax": 471.05, 
-      "Tmin": 162.68, 
-      "description": "p'' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
-      "max_abserror_percentage": 0.2290674443088614, 
-      "n": [
-        -11.120479554886844, 
-        281.2061736332651, 
-        -650.2529791068788, 
-        385.6318003272789, 
-        -18.198375607518727, 
-        4.101426759626743
-      ], 
-      "reducing_value": 4394000.0, 
-      "t": [
-        1.103, 
-        2.059, 
-        2.227, 
-        2.373, 
-        3.903, 
-        6.255
-      ], 
-      "type": "pV", 
       "using_tau_r": true
     }, 
     "rhoL": {

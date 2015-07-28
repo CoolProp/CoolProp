@@ -985,7 +985,7 @@ CoolPropDbl TransportRoutines::conductivity_hardcoded_methane(HelmholtzEOSMixtur
     // Dilute
     double C[] = {0, -3.0328138281, 16.918880086, -37.189364917, 41.288861858, -24.615921140, 8.9488430959, -1.8739245042, 0.20966101390, -9.6570437074e-3};
     double OMEGA22_summer = 0;
-    double t = HEOS.T()/174.0, sigma = 0.36652e-9;
+    double t = HEOS.T()/174.0;
     for (int i = 1; i <= 9; ++i){
         OMEGA22_summer += C[i]*pow(t, (i-1.0)/3.0-1.0);
     }

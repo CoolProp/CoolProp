@@ -50,33 +50,7 @@
       "max_abs_error_units": "J/mol", 
       "type": "rational_polynomial"
     }, 
-    "pL": {
-      "T_r": 438.75, 
-      "Tmax": 438.74999999999915, 
-      "Tmin": 195.15, 
-      "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
-      "max_abserror_percentage": 0.04812397751767783, 
-      "n": [
-        0.029762994134254272, 
-        -6.47060943833758, 
-        -0.28794075079630876, 
-        -4.614592689331627, 
-        -9.236029232181323, 
-        659.8939410067252
-      ], 
-      "reducing_value": 3570900.0, 
-      "t": [
-        0.408, 
-        0.959, 
-        1.67, 
-        3.873, 
-        10.203, 
-        19.884
-      ], 
-      "type": "pL", 
-      "using_tau_r": true
-    }, 
-    "pV": {
+    "pS": {
       "T_r": 438.75, 
       "Tmax": 438.74999999999915, 
       "Tmin": 195.15, 
@@ -197,6 +171,17 @@
       "max_abs_error": 1.7245881067765447, 
       "max_abs_error_units": "J/mol/K", 
       "type": "rational_polynomial"
+    }, 
+    "surface_tension": {
+      "BibTeX": "Kondou-IJR-2015", 
+      "Tc": 438.75, 
+      "a": [
+        0.06195
+      ], 
+      "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
+      "n": [
+        1.277
+      ]
     }
   }, 
   "CAS": "102687-65-0", 

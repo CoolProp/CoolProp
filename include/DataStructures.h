@@ -57,6 +57,7 @@ enum parameters{
     iT_max, ///< Maximum temperature
     iP_max, ///< Maximum pressure
     iP_min, ///< Minimum pressure
+    idipole_moment, ///< Dipole moment
 
     // Bulk properties
     iT,  ///< Temperature

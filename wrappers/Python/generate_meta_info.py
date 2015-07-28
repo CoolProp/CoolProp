@@ -1,4 +1,3 @@
-import jinja2
 from jinja2 import Environment
 import os,sys
 import requests
@@ -6,83 +5,19 @@ import json
 from distutils.version import LooseVersion #, StrictVersion
 import codecs
 
-""" A simple script to create a conda recipe from the PyPI release and build the package"""
+""" A simple script to create a conda recipe and the infrostructure files for PyPI"""
 
-template = """
-package:
-  name: coolprop
-  version: {{ version }}
+first_line = "# CAUTION: This file is generated automatically, any customisation will be lost.\n"
 
-{% if pypi %}
-source:
-  fn: {{ fil }}
-  url: {{ url }}
-  md5: {{ md5 }}
-{% endif %}
-
-{% if local %}
-source:
-  path: .
-{% endif %}
- 
-
-  # If this is a new build for the same version, increment the build
-  # number. If you do not include this key, it defaults to 0.
-  # number: 1
-
-requirements:
-  build:
-    - python
-    - setuptools{% for pkg in pkgs %}
-    - {{ pkg -}}
-{% endfor %}
-
-  run:
-    - python{% for pkg in pkgs %}
-    - {{ pkg -}}
-{% endfor %}
-
-#test:
-#  # Python imports
-#  imports:
-#    - CoolProp
-#    #- CoolProp.GUI
-#    #- CoolProp.Plots
-#    - CoolProp.tests
-
-  # commands:
-    # You can put test commands to be run here.  Use this to test that the
-    # entry points work.
-
-
-  # You can also put a file called run_test.py in the recipe that will be run
-  # at test time.
-
-  # requires:
-    # Put any additional test requirements here.  For example
-    # - nose
-
-about:
-  home: {{ home }}
-  license: {{ license }}
-  summary: {{ summary }}
-
-"""
-
-target_dir = os.path.join(os.path.dirname(__file__),'..','..')
-
-#loader = jinja2.FileSystemLoader(template_dir)
-#environment = jinja2.Environment(loader=loader)
-#template = environment.get_template(os.path.join(template_dir,'conda_'+target+'.tpl'))
-#
-template =Environment().from_string(template)
-
+python_dir = os.path.abspath(os.path.dirname(__file__))
+target_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
 
 pypi = False 
 local = not pypi
 
-pkgs = ["numpy", "scipy", "matplotlib", "pandas", "cython"]
-target = 'meta.yaml'
+run_pkgs = ["numpy", "scipy", "matplotlib", "pandas"]
+dev_pkgs = run_pkgs + ["cython"]
+tst_pkgs = dev_pkgs + ["nose"]
 
 if pypi:
     # Get the additional information from PyPI 
@@ -119,94 +54,158 @@ if local:
     url = None
     md5 = None
 
-
-
-
-f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
-f.write(template.render(
+local_info = dict(
   pypi=pypi,
   local=local,
   version=version,
   fil=fil,
   url=url,
   md5=md5,
-  pkgs=pkgs,
+  run_pkgs=run_pkgs,
+  dev_pkgs=dev_pkgs,
+  tst_pkgs=tst_pkgs,
   home = home,
   license = license,
   summary = summary
-  ))
+)
+
+#######################
+
+
+template = """{% for pkg in run_pkgs %}{{ pkg }}
+{% endfor %}
+"""
+target = "requirements.txt"
+template =Environment().from_string(template)
+f = codecs.open(os.path.join(python_dir,target),mode='wb',encoding='utf-8')
+f.write(first_line)
+f.write(template.render(**local_info))
 f.close()
 
-bat_template = """
+
+
+template = """
+package:
+  name: coolprop
+  version: {{ version }}
+
+{% if pypi %}source:
+  fn: {{ fil }}
+  url: {{ url }}
+  md5: {{ md5 }}
+{% endif %}
+{% if local %}source:
+  path: .
+{% endif %}
+
+#build:
+#  script: python setup.py install [not win]
+#  script: "%PYTHON%" setup.py install & if errorlevel 1 exit 1 [win]
+
+  # If this is a new build for the same version, increment the build
+  # number. If you do not include this key, it defaults to 0.
+  # number: 1
+
+requirements:
+  build:
+    - python
+    - setuptools{% for pkg in dev_pkgs %}
+    - {{ pkg -}}
+{% endfor %}
+
+  run:
+    - python{% for pkg in run_pkgs %}
+    - {{ pkg -}}
+{% endfor %}
+
+test:
+  # Python imports
+  imports:
+    - CoolProp
+#    #- CoolProp.GUI
+#    #- CoolProp.Plots
+#    - CoolProp.tests
+
+  # commands:
+    # You can put test commands to be run here.  Use this to test that the
+    # entry points work.
+
+
+  # You can also put a file called run_test.py in the recipe that will be run
+  # at test time.
+
+  requires:
+    # Put any additional test requirements here.  For example
+    # - nose{% for pkg in tst_pkgs %}
+    - {{ pkg -}}
+{% endfor %}
+
+about:
+  home: {{ home }}
+  license: {{ license }}
+  summary: {{ summary }}
+
+"""
+target = 'meta.yaml'
+template =Environment().from_string(template)
+f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
+f.write(first_line)
+f.write(template.render(**local_info))
+f.close()
+
+template = """
 pushd wrappers\Python
 "%PYTHON%" setup.py install
 if errorlevel 1 exit 1
 popd 
-
+ 
 :: Add more build steps here, if they are necessary.
-
+ 
 :: See
 :: http://docs.continuum.io/conda/build.html
 :: for a list of environment variables that are set during the build process.
 """
 target = "bld.bat"
 f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
-f.write(bat_template)
+f.write(":: "+first_line)
+f.write(template)
 f.close()
-
-bsh_template = """
-#!/bin/bash
+ 
+template = """
 pushd wrappers/Python
 $PYTHON setup.py install
 popd 
-
+ 
 # Add more build steps here, if they are necessary.
-
+ 
 # See
 # http://docs.continuum.io/conda/build.html
 # for a list of environment variables that are set during the build process.
 """
 target = "build.sh"
 f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
-f.write(bsh_template)
+f.write("#!/bin/bash\n"+first_line)
+f.write(template)
 f.close()
 
-runner_template = """
+
+
+
+template = """
 from __future__ import print_function
 import sys, shutil, subprocess, os, stat
+#
 def run_command(cmd):
     '''given shell command, returns communication tuple of stdout and stderr'''
+    print(str(__file__)+": "+' '.join(cmd))
     return subprocess.Popen(cmd, 
-                            stdout=subprocess.PIPE, 
-                            stderr=subprocess.PIPE, 
-                            stdin=subprocess.PIPE).communicate()
-def remove_all(path):
-    #subprocess.check_call(['cmd', '/c', 'rd', '/s', '/q', path])
-    print(run_command(['cmd', '/c', 'rd', '/s', '/q', path])[0].decode("utf-8"))
-def remove_readonly(func, path, _):
-    "Clear the readonly bit and reattempt the removal"
-    os.chmod(path, stat.S_IWRITE)
-    try: func(path)
-    except: remove_all(path); pass 
+      stdout=subprocess.PIPE, 
+      stderr=subprocess.PIPE, 
+      stdin=subprocess.PIPE).communicate()
 #
-#cmd = ['conda','remove','--all','-yq','-n']
-#for t in ['_test','_build']:
-#    try: 
-#        subprocess.check_call(cmd+[t], stdout=sys.stdout, stderr=sys.stderr)
-#    except:
-#        envs = run_command(['conda','env','list'])[0].decode("utf-8").splitlines()
-#        for env in envs:
-#            lst = env.split(' ')
-#            if len(lst)>0 and lst[0] == t: 
-#                dir = ' '.join(lst[1:]).strip()
-#                print("Manually removing: "+dir)
-#                shutil.rmtree(dir, onerror=remove_readonly)
-#        pass
 tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'install_root')).strip()
-#if os.path.isdir(tar): shutil.rmtree(tar, onerror=remove_readonly)
 ver =  sys.version_info
 cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
-print('Command is: '+' '.join(cmd))
 print(run_command(['conda', 'clean', '-y', '-lts'])[0].decode("utf-8").strip())
 filename = os.path.abspath(run_command(cmd+['--output','.'])[0].decode("utf-8").strip())
 tar = os.path.join(tar,'Python_conda',os.path.basename(os.path.dirname(filename))).strip()
@@ -230,6 +229,6 @@ sys.exit(0)
 """
 target = "runner.py"
 f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
-f.write(runner_template)
+f.write(template)
 f.close()
 sys.exit(0)

@@ -1020,11 +1020,25 @@ protected:
     /// Parse the critical state for the given EOS
     void parse_ancillaries(rapidjson::Value &ancillaries, CoolPropFluid & fluid)
     {
-        if (!ancillaries.HasMember("pL") || !ancillaries.HasMember("pV") || !ancillaries.HasMember("rhoL") || !ancillaries.HasMember("rhoV")){throw ValueError("Ancillary curves are missing");};
-        fluid.ancillaries.pL = SaturationAncillaryFunction(ancillaries["pL"]);
-        fluid.ancillaries.pV = SaturationAncillaryFunction(ancillaries["pV"]);
+        if (!ancillaries.HasMember("rhoL") || !ancillaries.HasMember("rhoV")){
+            throw ValueError("Ancillary curves for either rhoL or rhoV are missing");
+        }
         fluid.ancillaries.rhoL = SaturationAncillaryFunction(ancillaries["rhoL"]);
         fluid.ancillaries.rhoV = SaturationAncillaryFunction(ancillaries["rhoV"]);
+        
+        // If a pseudo-pure fluid, has pL and pV curves
+        if (ancillaries.HasMember("pL") && ancillaries.HasMember("pV")){
+            fluid.ancillaries.pL = SaturationAncillaryFunction(ancillaries["pL"]);
+            fluid.ancillaries.pV = SaturationAncillaryFunction(ancillaries["pV"]);
+        }
+        // Otherwise has a single pS curve and not pL and not pV
+        else if (!ancillaries.HasMember("pL") && !ancillaries.HasMember("pV") && ancillaries.HasMember("pS")){
+            fluid.ancillaries.pL = SaturationAncillaryFunction(ancillaries["pS"]);
+            fluid.ancillaries.pV = SaturationAncillaryFunction(ancillaries["pS"]);
+        }
+        else{
+            throw ValueError("Pressure ancillary curves are missing or invalid");
+        }
         
         if (ancillaries.HasMember("hL")){
             fluid.ancillaries.hL = SaturationAncillaryFunction(ancillaries["hL"]);

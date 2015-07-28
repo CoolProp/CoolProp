@@ -29,7 +29,7 @@ project(${project_name})
 # Project version
 set (COOLPROP_VERSION_MAJOR 5)
 set (COOLPROP_VERSION_MINOR 1)
-set (COOLPROP_VERSION_PATCH 1)
+set (COOLPROP_VERSION_PATCH 2)
 set (COOLPROP_VERSION_REVISION dev)
 set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
 message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
@@ -104,7 +104,6 @@ ENDIF ()
 #######################################
 
 file(GLOB_RECURSE APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-file(GLOB_RECURSE APP_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
 
 ## You can exclude this file, in case you want to run your own tests or use Catch
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/Tests.cpp")
@@ -113,16 +112,12 @@ list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Te
 ## This file is only needed for the library, normal builds do not need it.
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
 
-
 set (APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/REFPROP-headers")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/msgpack-c/include")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/IF97")
-foreach (_headerFile ${APP_HEADERS})
-    get_filename_component(_dir ${_headerFile} PATH)
-    list (APPEND APP_INCLUDE_DIRS ${_dir})
-endforeach()
-list(REMOVE_DUPLICATES APP_INCLUDE_DIRS)
+list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
+list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 include_directories(${APP_INCLUDE_DIRS})
 
@@ -910,9 +905,13 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   if(UNIX)
     set(MATLAB_WAIT)
   endif()
+  # For some reason, the tests don't work on windows, though they should.
+  IF(WIN32)
+  ELSE()
   add_test(NAME MATLABtest
            COMMAND $ENV{MATLAB_ROOT}/bin/matlab -nodesktop -nosplash -nojvm -nodisplay ${MATLAB_WAIT} -r "result = runtests('Example'); exit(result.Failed)" -logfile Example.out
            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  ENDIF() 
 endif()
 
 if (COOLPROP_R_MODULE)

@@ -132,6 +132,52 @@ void HelmholtzEOSMixtureBackend::recalculate_singlephase_phase()
 		}
 	}
 }
+std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &ParamName)
+{
+    CoolProp::CoolPropFluid cpfluid = get_components()[0];
+    if (!ParamName.compare("aliases")){
+        return strjoin(cpfluid.aliases, ", ");
+    }
+    else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number")){
+        return cpfluid.CAS;
+    }
+    else if (!ParamName.compare("formula")){
+        return cpfluid.formula;
+    }
+    else if (!ParamName.compare("ASHRAE34")){
+        return cpfluid.environment.ASHRAE34;
+    }
+    else if (!ParamName.compare("REFPROPName") || !ParamName.compare("REFPROP_name") || !ParamName.compare("REFPROPname")){
+        return cpfluid.REFPROPname;
+    }
+    else if (ParamName.find("BibTeX") == 0) // Starts with "BibTeX"
+    {
+        std::vector<std::string> parts = strsplit(ParamName,'-');
+        if (parts.size() != 2){ throw ValueError(format("Unable to parse BibTeX string %s",ParamName.c_str()));}
+        std::string key = parts[1];
+        if (!key.compare("EOS")){ return cpfluid.EOS().BibTeX_EOS; }
+        else if (!key.compare("CP0")){ return cpfluid.EOS().BibTeX_CP0; }
+        else if (!key.compare("VISCOSITY")){ return cpfluid.transport.BibTeX_viscosity; }
+        else if (!key.compare("CONDUCTIVITY")){ return cpfluid.transport.BibTeX_conductivity; }
+        else if (!key.compare("ECS_LENNARD_JONES")){ throw NotImplementedError(); }
+        else if (!key.compare("ECS_VISCOSITY_FITS")){ throw NotImplementedError(); }
+        else if (!key.compare("ECS_CONDUCTIVITY_FITS")){ throw NotImplementedError(); }
+        else if (!key.compare("SURFACE_TENSION")){ return cpfluid.ancillaries.surface_tension.BibTeX;}
+        else if (!key.compare("MELTING_LINE")){ return cpfluid.ancillaries.melting_line.BibTeX;}
+        else{ throw CoolProp::KeyError(format("Bad key to get_BibTeXKey [%s]", key.c_str()));}
+    }
+    else if (ParamName.find("pure") == 0){
+        if (is_pure()){
+            return "true";
+        }
+        else{
+            return "false";
+        }
+    }
+    else{
+        throw ValueError(format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str()));
+    }
+}
 void HelmholtzEOSMixtureBackend::calc_phase_envelope(const std::string &type)
 {
     // Clear the phase envelope data
@@ -1729,160 +1775,6 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_pressure_nocache(CoolPropDbl T, Coo
     // Get pressure
     return rhomolar*gas_constant()*T*(1+delta*dalphar_dDelta);
 }
-CoolPropDbl HelmholtzEOSMixtureBackend::solver_for_rho_given_T_oneof_HSU(CoolPropDbl T, CoolPropDbl value, int other)
-{
-    // Define the residual to be driven to zero
-    class solver_resid : public FuncWrapper1D
-    {
-    public:
-        HelmholtzEOSMixtureBackend *HEOS;
-        CoolPropDbl T, value;
-        int other;
-
-        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl value, int other)
-        : HEOS(HEOS),T(T),value(value),other(other){}
-        double call(double rhomolar){
-            CoolPropDbl eos;
-            switch(other)
-            {
-            case iSmolar:
-                eos = HEOS->calc_smolar_nocache(T,rhomolar); break;
-            case iHmolar:
-                eos = HEOS->calc_hmolar_nocache(T,rhomolar); break;
-            case iUmolar:
-                eos = HEOS->calc_umolar_nocache(T,rhomolar); break;
-            default:
-                throw ValueError(format("Input not supported"));
-            }
-
-            return eos-value;
-        };
-    };
-    solver_resid resid(this, T, value, other);
-    std::string errstring;
-
-    // Supercritical temperature
-    if (_T > _crit.T)
-    {
-        CoolPropDbl yc, ymin, y;
-        CoolPropDbl rhoc = components[0].crit.rhomolar;
-        CoolPropDbl rhomin = 1e-10;
-
-        // Determine limits for the other variable
-        switch(other)
-        {
-            case iSmolar:
-            {
-                yc = calc_smolar_nocache(_T, rhoc);
-                ymin = calc_smolar_nocache(_T, rhomin);
-                y = _smolar;
-                break;
-            }
-            case iHmolar:
-            {
-                yc = calc_hmolar_nocache(_T, rhoc);
-                ymin = calc_hmolar_nocache(_T, rhomin);
-                y = _hmolar;
-                break;
-            }
-            case iUmolar:
-            {
-                yc = calc_umolar_nocache(_T, rhoc);
-                ymin = calc_umolar_nocache(_T, rhomin);
-                y = _umolar;
-                break;
-            }
-            default:
-                throw ValueError();
-        }
-        CoolPropDbl rhomolar;
-        if (is_in_closed_range(yc, ymin, y))
-        {
-            rhomolar = Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-12, 100, errstring);
-        }
-        else if (y < yc){
-            // Increase rhomelt until it bounds the solution
-            int step_count = 0;
-            while(!is_in_closed_range(ymin, yc, y)){
-                rhoc *= 1.1; // Increase density by a few percent
-                switch(other) {
-                    case iSmolar:
-                        yc = calc_smolar_nocache(_T, rhoc); break;
-                    case iHmolar:
-                        yc = calc_hmolar_nocache(_T, rhoc); break;
-                    case iUmolar:
-                        yc = calc_umolar_nocache(_T, rhoc); break;
-                }
-                if (step_count > 30){
-                    throw ValueError(format("Even by increasing rhoc, not able to bound input; input %Lg is not in range %Lg,%Lg",y,yc,ymin));
-                }
-                step_count++;
-            }
-            rhomolar = Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-12, 100, errstring);
-        }
-        else
-        {
-            throw ValueError(format("input %Lg is not in range %Lg,%Lg,%Lg",y,yc,ymin));
-        }
-        // Update the state (T > Tc)
-        if (_p < p_critical()){
-            _phase = iphase_supercritical_gas;
-        }
-        else {
-            _phase = iphase_supercritical;
-        }
-        return rhomolar;
-    }
-    // Subcritical temperature liquid
-    else if (_phase == iphase_liquid)
-    {
-        CoolPropDbl ymelt, yL, y;
-        CoolPropDbl rhomelt = components[0].triple_liquid.rhomolar;
-        CoolPropDbl rhoL = static_cast<double>(_rhoLanc);
-
-        switch(other)
-        {
-            case iSmolar:
-            {
-                ymelt = calc_smolar_nocache(_T, rhomelt);  yL = calc_smolar_nocache(_T, rhoL); y = _smolar; break;
-            }
-            case iHmolar:
-            {
-                ymelt = calc_hmolar_nocache(_T, rhomelt);  yL = calc_hmolar_nocache(_T, rhoL); y = _hmolar; break;
-            }
-            case iUmolar:
-            {
-                ymelt = calc_umolar_nocache(_T, rhomelt);  yL = calc_umolar_nocache(_T, rhoL); y = _umolar; break;
-            }
-            default:
-                throw ValueError();
-        }
-
-        CoolPropDbl rhomolar_guess = (rhomelt-rhoL)/(ymelt-yL)*(y-yL) + rhoL;
-
-        CoolPropDbl rhomolar = Secant(resid, rhomolar_guess, 0.0001*rhomolar_guess, 1e-12, 100, errstring);
-        return rhomolar;
-    }
-    // Subcritical temperature gas
-    else if (_phase == iphase_gas)
-    {
-        CoolPropDbl rhomin = 1e-14;
-        CoolPropDbl rhoV = static_cast<double>(_rhoVanc);
-
-        try
-        {
-            CoolPropDbl rhomolar = Brent(resid, rhomin, rhoV, LDBL_EPSILON, 1e-12, 100, errstring);
-            return rhomolar;
-        }
-        catch(...)
-        {
-            throw ValueError();
-        }
-    }
-    else{
-        throw ValueError(format("phase to solver_for_rho_given_T_oneof_HSU is invalid"));
-    }
-}
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_guess)
 {
     phases phase;
@@ -2942,22 +2834,16 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
         // It's drho/dp|h
         // ... calculate some more things
         
-        // At the saturated state
-        CoolPropDbl rhoL =  SatL->keyed_output(rho_key);
-        CoolPropDbl rhoV =  SatV->keyed_output(rho_key);
-        CoolPropDbl hL =  SatL->keyed_output(h_key);
-        CoolPropDbl hV =  SatV->keyed_output(h_key);
-        
         // Derivatives *along* the saturation curve using the special internal method
         CoolPropDbl dhL_dp_sat =  SatL->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
         CoolPropDbl dhV_dp_sat =  SatV->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
         CoolPropDbl drhoL_dp_sat = SatL->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
-        CoolPropDbl drhoV_dp_sat = SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        //CoolPropDbl drhoV_dp_sat = SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
         
-        CoolPropDbl drho_dp_end = POW2(End->keyed_output(rho_key))*(x_end/POW2(rhoV)*drhoV_dp_sat + (1-x_end)/POW2(rhoL)*drhoL_dp_sat);
+        //CoolPropDbl drho_dp_end = POW2(End->keyed_output(rho_key))*(x_end/POW2(rhoV)*drhoV_dp_sat + (1-x_end)/POW2(rhoL)*drhoL_dp_sat);
         
         // Faking single-phase
-        CoolPropDbl drho_dp__consth_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
+        //CoolPropDbl drho_dp__consth_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
         CoolPropDbl d2rhodhdp_liq = Liq->second_partial_deriv(rho_key, h_key, p_key, p_key, h_key); // ?
         
         // Derivatives at the end point
@@ -3005,7 +2891,6 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
             M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
             std::vector<double> o(2);
             o[0] = L1; o[1] = M1;
-            double p = HEOS.p();
             return o;
         };
         std::vector<std::vector<double> > Jacobian(const std::vector<double> &x)
@@ -3042,7 +2927,6 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
         };
     };
     Resid resid(*this);
-    CoolPropDbl Tr = T_reducing();
     std::vector<double> x, tau_delta(2); tau_delta[0] = T_reducing()/T0; tau_delta[1] = rho0/rhomolar_reducing(); 
     std::vector<double> td2 = tau_delta;
     std::string errstr;

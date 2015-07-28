@@ -1,7 +1,7 @@
 
 #include "FluidLibrary.h"
 #include "all_fluids_JSON.h" // Makes a std::string variable called all_fluids_JSON
-#include "../HelmholtzEOSBackend.h"
+#include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 
 namespace CoolProp{
 

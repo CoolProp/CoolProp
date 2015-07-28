@@ -9,8 +9,8 @@ namespace CoolProp{
 	class CurveTracer : public FuncWrapper1D
 	{
 	public:
-		double p0, T0, lnT, lnp, rho_guess;
 		AbstractState *AS;
+        double p0, T0, lnT, lnp, rho_guess;
 		std::vector<double> T, p;
 		enum OBJECTIVE_TYPE { OBJECTIVE_CIRCLE, OBJECTIVE_T };
 		OBJECTIVE_TYPE obj;

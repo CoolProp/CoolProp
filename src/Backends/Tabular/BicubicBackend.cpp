@@ -2,7 +2,7 @@
 
 #include "BicubicBackend.h"
 #include "MatrixMath.h"
-#include "../Helmholtz/PhaseEnvelopeRoutines.h"
+#include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
 
 void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
 {
@@ -264,32 +264,30 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             }
             break;
         }
-		case PQ_INPUTS:{
-			std::size_t iL = 0, iV = 0;
-			CoolPropDbl hL = 0, hV = 0;
-			_p = val1; _Q = val2;
-            
+        case PQ_INPUTS:{
+            std::size_t iL = 0, iV = 0;
+            _p = val1; _Q = val2;
             using_single_phase_table = false;
-            if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
                 throw ValueError("vapor quality is not in (0,1)");
             }
             else{
+                CoolPropDbl TL = _HUGE, TV = _HUGE;
                 if (is_mixture){
                     std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
                     if (intersect.empty()){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
                     iV = intersect[0].first; iL = intersect[1].first;
                 }
                 else{
-                    CoolPropDbl zL, zV;
-                    pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, zL, zV);
+                    pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
                 }
+                _T = _Q*TV + (1-_Q)*TL;
                 cached_saturation_iL = iL; cached_saturation_iV = iV;
             }
-			break;
-		}
+            break;
+        }
         case QT_INPUTS:{
 			std::size_t iL = 0, iV = 0;
-			CoolPropDbl dummyL = 0, dummyV = 0;
 			_Q = val1; _T = val2;
             
             using_single_phase_table = false;
@@ -297,18 +295,19 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 throw ValueError("vapor quality is not in (0,1)");
             }
             else{
+                CoolPropDbl pL, pV;
                 if (is_mixture){
                     std::vector<std::pair<std::size_t,std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
                     if (intersect.empty()){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
                     iV = intersect[0].first; iL = intersect[1].first;
-                    double pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
-                    double pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
+                    pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
+                    pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
                     _p = _Q*pV + (1-_Q)*pL;
                 }
                 else{
-                    CoolPropDbl zL, zV;
-                    pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, zL, zV);
+                    pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, pL, pV);
                 }
+                _p = _Q*pV + (1-_Q)*pL;
                 cached_saturation_iL = iL; cached_saturation_iV = iV;
             }
 			break;
@@ -443,8 +442,6 @@ void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTab
     
 	// Get the alpha coefficients
     const std::vector<double> &alpha = cell.get(other_key);
-
-    std::size_t NNN = alpha.size();
     
     // Normalized value in the range (0, 1)
     double yhat = (y - table.yvec[j])/(table.yvec[j+1] - table.yvec[j]);
@@ -456,7 +453,7 @@ void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTab
     double c = alpha[1+0*4]*y_0+alpha[1+1*4]*y_1+alpha[1+2*4]*y_2+alpha[1+3*4]*y_3; // factors of xhat
     double d = alpha[0+0*4]*y_0+alpha[0+1*4]*y_1+alpha[0+2*4]*y_2+alpha[0+3*4]*y_3 - other; // constant factors
     int N = 0;
-    double xhat0, xhat1, xhat2, val, xhat;
+    double xhat0, xhat1, xhat2, val, xhat = _HUGE;
     solve_cubic(a, b, c, d, N, xhat0, xhat1, xhat2);
     if (N == 1){
         xhat = xhat0;
@@ -500,8 +497,6 @@ void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTab
     
 	// Get the alpha coefficients
     const std::vector<double> &alpha = cell.get(other_key);
-
-    std::size_t NNN = alpha.size();
     
     // Normalized value in the range (0, 1)
     double xhat = (x - table.xvec[i])/(table.xvec[i+1] - table.xvec[i]);
@@ -513,7 +508,7 @@ void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTab
     double c = alpha[0+1*4]*x_0 + alpha[1+1*4]*x_1 + alpha[2+1*4]*x_2 + alpha[3+1*4]*x_3; // factors of yhat
     double d = alpha[0+0*4]*x_0 + alpha[1+0*4]*x_1 + alpha[2+0*4]*x_2 + alpha[3+0*4]*x_3 - other; // constant factors
     int N = 0;
-    double yhat0, yhat1, yhat2, val, yhat;
+    double yhat0, yhat1, yhat2, val, yhat = _HUGE;
     solve_cubic(a, b, c, d, N, yhat0, yhat1, yhat2);
     if (N == 1){
         yhat = yhat0;

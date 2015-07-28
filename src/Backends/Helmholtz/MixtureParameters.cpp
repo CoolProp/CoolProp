@@ -66,7 +66,7 @@ public:
 
     /** \brief Construct the binary pair library including all the binary pairs that are possible
      *
-     * The data structure also includes space for a string that gives the pointer to the departure function to be used for this binary pair.     *
+     * The data structure also includes space for a string that gives the pointer to the departure function to be used for this binary pair.
      */
     MixtureBinaryPairLibrary()
     {
@@ -127,7 +127,10 @@ public:
                     dict.add_number("betaT", betaT);
                 }
             }
-            else{ throw ValueError(); }
+            else{
+                std::cout << "Loading error: binary pair of " << name1 << " & " << name2 << "does not provide either a) xi and zeta b) gammaT, gammaV, betaT, and betaV" << std::endl;
+                continue;
+            }
 
             if (binary_pair_map.find(CAS) == binary_pair_map.end()){
                 // Add to binary pair map by creating one-element vector
@@ -165,9 +168,9 @@ std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::str
             if (key == "name1"){ return v[0].get_string("name1"); }
             else if (key == "name2"){ return v[0].get_string("name2"); }
             else if (key == "BibTeX"){ return v[0].get_string("BibTeX"); }
-            else if (key == "F"){ return v[0].get_string("F"); }
             else if (key == "function"){ return v[0].get_string("function"); }
             else if (key == "type"){ return v[0].get_string("type"); }
+            else if (key == "F"){ return format("%0.16g", v[0].get_double("F")); }
             else if (key == "xi"){ return format("%0.16g", v[0].get_double("xi")); }
             else if (key == "zeta"){ return format("%0.16g", v[0].get_double("zeta")); }
             else if (key == "gammaT"){ return format("%0.16g", v[0].get_double("gammaT")); }

@@ -238,6 +238,8 @@ double AbstractState::trivial_keyed_output(parameters key)
         return this->calc_health_hazard();
     case iPH:
         return this->calc_physical_hazard();
+    case idipole_moment:
+        return this->calc_dipole_moment();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for trivial_keyed_output",key,get_parameter_information(key,"short").c_str()));
     }
@@ -274,6 +276,10 @@ double AbstractState::keyed_output(parameters key)
         return umolar();
     case iUmass:
         return umass();
+    case iGmolar:
+        return gibbsmolar();
+    case iGmass:
+        return gibbsmass();
     case iCvmolar:
         return cvmolar();
     case iCvmass:
@@ -386,6 +392,10 @@ double AbstractState::smolar(void){
 double AbstractState::umolar(void){
     if (!_umolar) _umolar = calc_umolar();
     return _umolar;
+}
+double AbstractState::gibbsmolar(void){
+    if (!_gibbsmolar) _gibbsmolar = calc_gibbsmolar();
+    return _gibbsmolar;
 }
 double AbstractState::cpmolar(void){
     if (!_cpmolar) _cpmolar = calc_cpmolar();

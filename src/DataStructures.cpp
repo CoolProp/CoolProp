@@ -52,6 +52,7 @@ const parameter_info parameter_info_list[] = {
     {igas_constant,      "gas_constant",      "O", "J/mol/K", "Molar gas constant",                              true},
 	{imolar_mass,        "molar_mass",        "O", "kg/mol",  "Molar mass",                                      true},
     {iacentric_factor,   "acentric",          "O", "-",       "Acentric factor",                                 true},
+    {idipole_moment,     "dipole_moment",     "O", "C-m",     "Dipole moment",                                   true},
     {irhomass_reducing,  "rhomass_reducing",  "O", "kg/m^3",  "Mass density at reducing point",                  true},
     {irhomolar_reducing, "rhomolar_reducing", "O", "mol/m^3", "Molar density at reducing point",                 true},
     {irhomolar_critical, "rhomolar_critical", "O", "mol/m^3", "Molar density at critical point",                 true},
@@ -276,7 +277,7 @@ bool is_valid_first_saturation_derivative(const std::string &name, parameters &i
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0+1)) && (i1 != std::string::npos))){ return false; }
     std::string den = split_at_slash[1].substr(i0+1, i1-i0-1);
 
-    parameters Of, Wrt, Constant;
+    parameters Of, Wrt;
     if (is_valid_parameter(num, Of) && is_valid_parameter(den, Wrt) && upper(split_at_bar[1]) == "SIGMA"){
         iOf = Of; iWrt = Wrt; return true;
     }

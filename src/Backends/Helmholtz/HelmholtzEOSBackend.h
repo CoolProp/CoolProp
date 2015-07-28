@@ -34,21 +34,20 @@ public:
         Dictionary dict;
         std::vector<double> mole_fractions;
         std::vector<CoolPropFluid> components;
+        CoolProp::JSONFluidLibrary &library = get_library();
         if (is_predefined_mixture(name, dict)){
             std::vector<std::string> fluids = dict.get_string_vector("fluids");
             mole_fractions = dict.get_double_vector("mole_fractions"); 
             if (get_debug_level() > 0){ 
                 std::cout << "Got the fluids" << vecstring_to_string(fluids) << std::endl;
                 std::cout << "Got the fractions" << vec_to_string(mole_fractions, "%g") << std::endl;
-                std::cout << format("About to set components to length of %d\n", fluids.size());
             }
-            components.resize(fluids.size());
-            for (unsigned int i = 0; i < components.size(); ++i){
-                components[i] = get_library().get(fluids[i]);
+            for (unsigned int i = 0; i < fluids.size(); ++i){
+                components.push_back(library.get(fluids[i]));
             }
         }
         else{
-            components.push_back(get_library().get(name)); // Until now it's empty
+            components.push_back(library.get(name)); // Until now it's empty
             mole_fractions.push_back(1.);
         }
         // Set the components

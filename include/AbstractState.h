@@ -228,6 +228,8 @@ protected:
     virtual CoolPropDbl calc_health_hazard(void){ throw NotImplementedError("calc_health_hazard is not implemented for this backend"); };
     /// Using this backend, calculate the physical hazard
     virtual CoolPropDbl calc_physical_hazard(void){ throw NotImplementedError("calc_physical_hazard is not implemented for this backend"); };
+    /// Using this backend, calculate the dipole moment in C-m (1 D = 3.33564e-30 C-m)
+    virtual CoolPropDbl calc_dipole_moment(void){ throw NotImplementedError("calc_dipole_moment is not implemented for this backend"); };
 
     /// Calculate the first partial derivative for the desired derivative
     virtual CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
@@ -280,6 +282,7 @@ protected:
     virtual CoolPropDbl calc_cp0mass(void){ return cp0molar() / molar_mass(); }
     virtual CoolPropDbl calc_cvmass(void){ return cvmolar() / molar_mass(); }
     virtual CoolPropDbl calc_umass(void){ return umolar() / molar_mass(); }
+    virtual CoolPropDbl calc_gibbsmass(void){ return gibbsmolar() / molar_mass(); }
 
     /// Update the states after having changed the reference state for enthalpy and entropy
     virtual void update_states(void){ throw NotImplementedError("This backend does not implement update_states function"); };
@@ -400,6 +403,9 @@ public:
     /// In general this should be true, except for some other backends (especially the tabular backend)
     /// Should be overloaded in derived classes to make this not possible by returning false
     virtual bool available_in_high_level(void){ return true; }
+    
+    /// Return a string from the backend for the mixture/fluid
+    virtual std::string fluid_param_string(const std::string &){ throw NotImplementedError("fluid_param_string has not been implemented for this backend"); }
 
     std::vector<std::string> fluid_names(void);
 
@@ -470,6 +476,8 @@ public:
     double p_triple(void);
 
     std::string name(){ return calc_name(); };
+    /// Return the dipole moment in C-m (1 D = 3.33564e-30 C-m)
+    double dipole_moment(){ return calc_dipole_moment(); }
 
     // ----------------------------------------
     // Bulk properties - temperature and density are directly calculated every time
@@ -539,7 +547,9 @@ public:
     /// Return the mass constant volume specific heat in J/kg/K
     double cvmass(void){ return calc_cvmass(); };
     /// Return the Gibbs function in J/mol
-    double gibbsmolar(void){ return calc_gibbsmolar(); };
+    double gibbsmolar(void);
+    /// Return the Gibbs function in J/kg
+    double gibbsmass(void){ return calc_gibbsmass(); };
     /// Return the speed of sound in m/s
     double speed_sound(void);
     /// Return the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa
