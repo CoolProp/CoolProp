@@ -14,6 +14,7 @@ from .Common import BasePlot, _process_fluid_state, PropertyDict, SIunits
 import warnings
 from abc import ABCMeta
 
+
 def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     """
     This function plots a simple four-component cycle, on the current axis, or that given by the optional parameter *axis*
@@ -546,6 +547,7 @@ class StateContainer(object):
         return (not hasattr(value, "strip") and
             (hasattr(value, "__getitem__") or
             hasattr(value, "__iter__")))
+        # return is_sequence(value) # use from pandas.core.common import is_sequence
     
     def __len__(self):
         """Some cheating to get the correct behaviour"""

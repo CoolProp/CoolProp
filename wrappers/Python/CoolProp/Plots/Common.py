@@ -734,21 +734,37 @@ consider replacing it with \"_get_sat_bounds\".",
             # One of them is not set or we work on a different set of axes
             T_lo,T_hi = self._get_sat_bounds(CoolProp.iT)
             P_lo,P_hi = self._get_sat_bounds(CoolProp.iP)
+            
+            T_lo = self.LO_FACTOR*T_lo
+            try: T_lo = np.nanmax([T_lo, self._state.trivial_keyed_output(CoolProp.iT_min)])
+            except: pass
+            T_hi = self.HI_FACTOR*T_hi
+            try: T_hi = np.nanmin([T_hi, self._state.trivial_keyed_output(CoolProp.iT_max)])
+            except: pass
+            P_lo = self.LO_FACTOR*P_lo
+            try: P_lo = np.nanmax([P_lo, self._state.trivial_keyed_output(CoolProp.iP_min)])
+            except: pass
+            P_hi = self.HI_FACTOR*P_hi
+            try: P_hi = np.nanmin([P_hi, self._state.trivial_keyed_output(CoolProp.iP_max)])
+            except: pass
+            
             X=[0.0]*4; Y=[0.0]*4
             i = -1
-            for T in [self.LO_FACTOR*T_lo, min([self.HI_FACTOR*T_hi,self._state.trivial_keyed_output(CoolProp.iT_max)])]:
-                for P in [self.LO_FACTOR*P_lo, self.HI_FACTOR*P_hi]:
+            for T in [T_lo, T_hi]:
+                for P in [P_lo, P_hi]:
                     i+=1
-                    self._state.update(CoolProp.PT_INPUTS, P, T)
-                    # TODO: include a check for P and T?
-                    X[i] = self._state.keyed_output(x_index)
-                    Y[i] = self._state.keyed_output(y_index)
-            
+                    try:
+                        self._state.update(CoolProp.PT_INPUTS, P, T)
+                        # TODO: include a check for P and T?
+                        X[i] = self._state.keyed_output(x_index)
+                        Y[i] = self._state.keyed_output(y_index)
+                    except: 
+                        X[i] = np.nan; Y[i] = np.nan
             # Figure out what to update
             dim = self._system[x_index]
-            x_lim = [dim.from_SI(min(X)),dim.from_SI(max(X))]
+            x_lim = [dim.from_SI(np.nanmin(X)),dim.from_SI(np.nanmax(X))]
             dim = self._system[y_index]
-            y_lim = [dim.from_SI(min(Y)),dim.from_SI(max(Y))]
+            y_lim = [dim.from_SI(np.nanmin(Y)),dim.from_SI(np.nanmax(Y))]
             # Either update the axes limits or get them
             if x_index == self._x_index:
                 if self.axis.get_autoscalex_on():
