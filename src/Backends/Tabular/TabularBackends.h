@@ -70,6 +70,19 @@ class PureFluidSaturationTableData{
     
 		MSGPACK_DEFINE(revision, vectors); // write the member variables that you want to pack
 
+        /***
+         * \brief Determine if a set of inputs are single-phase or inside the saturation table
+         * @param main The main variable that is being provided (currently T or P)
+         * @param mainval The value of the main variable that is being provided
+         * @param other The secondary variable
+         * @param val The value of the secondary variable
+         * @param iL The index associated with the nearest point for the liquid
+         * @param iV The index associated with the nearest point for the vapor
+         * @param yL The value associated with the nearest point for the liquid (based on interpolation)
+         * @param yV The value associated with the nearest point for the vapor (based on interpolation)
+         
+         \note If PQ or QT are inputs, yL and yV will correspond to the other main variable: p->T or T->p
+         */
         bool is_inside(parameters main, double mainval, parameters other, double val, std::size_t &iL, std::size_t &iV, CoolPropDbl &yL, CoolPropDbl &yV){
             std::vector<double> *yvecL = NULL, *yvecV = NULL;
             switch(other){
@@ -111,7 +124,7 @@ class PureFluidSaturationTableData{
                 bisect_vector(TL, mainval, iL);
             }
             else{
-                throw ValueError(format("For now, main input must be T or p"));
+                throw ValueError(format("For now, main input in is_inside must be T or p"));
             }
 
             iVplus = std::min(iV+1, N-1);
@@ -122,12 +135,14 @@ class PureFluidSaturationTableData{
                 if (iLplus < 3){ iLplus = 3;}
                 if (main==iP){
                     double logp = log(mainval);
-                    yV = CubicInterp(logpV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, logp);
-                    yL = CubicInterp(logpL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, logp);
+                    // Calculate temperature
+                    yV = CubicInterp(logpV, TV, iVplus-3, iVplus-2, iVplus-1, iVplus, logp);
+                    yL = CubicInterp(logpL, TL, iLplus-3, iLplus-2, iLplus-1, iLplus, logp);
                 }
                 else if (main == iT){
-                    yV = CubicInterp(TV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval);
-                    yL = CubicInterp(TL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
+                    // Calculate pressure
+                    yV = exp(CubicInterp(TV, logpV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval));
+                    yL = exp(CubicInterp(TL, logpL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval));
                 }
                 return true;
             }
