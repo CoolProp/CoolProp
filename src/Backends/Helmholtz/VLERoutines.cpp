@@ -1066,7 +1066,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
 
         // If the step size is small, start a counter to allow the other density 
         // to be corrected a few times
-        if (std::abs(DeltavL*rhoL) < 10*DBL_EPSILON || std::abs(DeltavV*rhoV) < 10*DBL_EPSILON){
+        if (std::abs(DeltavL*rhoL) < 1e-13 || std::abs(DeltavV*rhoV) < 1e-13){
             small_step_count++;
         }
         // If you are not continuing to march towards the solution, after a couple of times, stop
