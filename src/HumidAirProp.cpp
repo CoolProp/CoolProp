@@ -44,7 +44,7 @@ shared_ptr<CoolProp::AbstractState> WaterIF97;
 
 namespace HumidAir
 {
-    enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA, GIVEN_COMPRESSIBILITY_FACTOR, GIVEN_PARTIAL_PRESSURE_WATER, GIVEN_CV, GIVEN_CVHA, GIVEN_INTERNAL_ENERGY, GIVEN_INTERNAL_ENERGY_HA};
+    enum givens{GIVEN_INVALID=0, GIVEN_TDP,GIVEN_PSIW, GIVEN_HUMRAT,GIVEN_VDA, GIVEN_VHA,GIVEN_TWB,GIVEN_RH,GIVEN_ENTHALPY,GIVEN_ENTHALPY_HA,GIVEN_ENTROPY,GIVEN_ENTROPY_HA, GIVEN_T,GIVEN_P,GIVEN_VISC,GIVEN_COND,GIVEN_CP,GIVEN_CPHA, GIVEN_COMPRESSIBILITY_FACTOR, GIVEN_PARTIAL_PRESSURE_WATER, GIVEN_CV, GIVEN_CVHA, GIVEN_INTERNAL_ENERGY, GIVEN_INTERNAL_ENERGY_HA, GIVEN_SPEED_OF_SOUND, GIVEN_ISENTROPIC_EXPONENT};
     
     void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w);
     double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
@@ -1292,6 +1292,10 @@ static givens Name2Type(const std::string &Name)
         return GIVEN_CVHA;
     else if (!strcmp(Name,"P_w"))
         return GIVEN_PARTIAL_PRESSURE_WATER;
+    else if (!strcmp(Name,"isentropic_exponent"))
+        return GIVEN_ISENTROPIC_EXPONENT;
+    else if (!strcmp(Name,"speed_of_sound"))
+        return GIVEN_SPEED_OF_SOUND;
     else if (!strcmp(Name,"Z"))
         return GIVEN_COMPRESSIBILITY_FACTOR;
     else
@@ -1402,6 +1406,8 @@ void convert_to_SI(const std::string &Name, double &val)
         case GIVEN_CVHA:
         case GIVEN_P:
         case GIVEN_PARTIAL_PRESSURE_WATER:
+        case GIVEN_SPEED_OF_SOUND:
+        case GIVEN_ISENTROPIC_EXPONENT:
             val *= 1000; return;
         case GIVEN_T:
         case GIVEN_TDP:
@@ -1435,6 +1441,8 @@ void convert_from_SI(const std::string &Name, double &val)
         case GIVEN_CVHA:
         case GIVEN_P:
         case GIVEN_PARTIAL_PRESSURE_WATER:
+        case GIVEN_SPEED_OF_SOUND:
+        case GIVEN_ISENTROPIC_EXPONENT:
             val /= 1000; return;
         case GIVEN_T:
         case GIVEN_TDP:
@@ -1697,6 +1705,27 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
             u_bar2=MolarInternalEnergy(T+dT,p_2,psi_w,v_bar); //[J/mol_ha]
             cv_bar = (u_bar2-u_bar1)/(2*dT); //[J/mol_da/K]
             return cv_bar/M_ha; //[J/kg_da/K]
+        }
+        case GIVEN_ISENTROPIC_EXPONENT:{
+            CoolPropDbl v_bar, dv = 1e-8, p_1, p_2;
+            CoolPropDbl cp = _HAPropsSI_outputs(GIVEN_CPHA, p, T, psi_w); //[J/kg_da/K]
+            CoolPropDbl cv = _HAPropsSI_outputs(GIVEN_CVHA, p, T, psi_w); //[J/kg_da/K]
+            v_bar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
+            p_1 = Pressure(T, v_bar-dv, psi_w);
+            p_2 = Pressure(T, v_bar+dv, psi_w);
+            CoolPropDbl dpdv__constT = (p_2 - p_1)/(2*dv);
+            return -cp/cv*dpdv__constT*v_bar/p;
+        }
+        case GIVEN_SPEED_OF_SOUND:{
+            CoolPropDbl v_bar, dv = 1e-8, p_1, p_2;
+            CoolPropDbl cp = _HAPropsSI_outputs(GIVEN_CPHA, p, T, psi_w); //[J/kg_da/K]
+            CoolPropDbl cv = _HAPropsSI_outputs(GIVEN_CVHA, p, T, psi_w); //[J/kg_da/K]
+            v_bar = MolarVolume(T, p, psi_w); //[m^3/mol_ha]
+            p_1 = Pressure(T, v_bar-dv, psi_w);
+            p_2 = Pressure(T, v_bar+dv, psi_w);
+            CoolPropDbl dvdrho = -v_bar*v_bar;
+            CoolPropDbl dpdrho__constT = (p_2 - p_1)/(2*dv)*dvdrho;
+            return sqrt(1/M_ha*cp/cv*dpdrho__constT);
         }
         case GIVEN_COMPRESSIBILITY_FACTOR:{
             double v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
