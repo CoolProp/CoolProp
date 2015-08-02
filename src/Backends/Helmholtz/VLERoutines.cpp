@@ -544,6 +544,10 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
         {
             throw SolutionError(format("saturation_PHSU_pure solver T < 0"));
         }
+        // If the change is very small, stop
+        if (max_abs_value(v) < 1e-10){
+            break;
+        }
         if (iter > 50){
             // Set values back into the options structure for use in next solver
             options.rhoL = rhoL; options.rhoV = rhoV; options.T = T;

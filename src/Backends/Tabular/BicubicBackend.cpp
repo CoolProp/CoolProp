@@ -1,3 +1,4 @@
+
 #if !defined(NO_TABULAR_BACKENDS)
 
 #include "BicubicBackend.h"
@@ -279,7 +280,10 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     iV = intersect[0].first; iL = intersect[1].first;
                 }
                 else{
-                    pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
+                    bool it_is_inside = pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
+                    if (!it_is_inside){
+                        throw ValueError("Not possible to determine whether pressure is inside or not");
+                    }
                 }
                 _T = _Q*TV + (1-_Q)*TL;
                 cached_saturation_iL = iL; cached_saturation_iV = iV;
