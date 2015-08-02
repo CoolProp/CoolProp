@@ -120,7 +120,8 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
     // ------------------------
     // Actually build the table
     // ------------------------
-    AS->update(QT_INPUTS, 0, AS->Ttriple());
+    CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
+    AS->update(QT_INPUTS, 0, Tmin);
     CoolPropDbl p_triple = AS->p();
     CoolPropDbl p, pmin = p_triple, pmax = 0.9999*AS->p_critical();
     for (std::size_t i = 0; i < N-1; ++i)

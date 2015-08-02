@@ -292,7 +292,7 @@ class PureFluidSaturationTableData{
          */
         double first_saturation_deriv(parameters Of1, parameters Wrt1, int Q, double val, std::size_t i)
         {
-            if (i < 2 || i > TL.size() - 2){throw ValueError("Invalid index to calc_first_saturation_deriv in TabularBackends");}
+            if (i < 2 || i > TL.size() - 2){throw ValueError(format("Invalid index (%d) to calc_first_saturation_deriv in TabularBackends",i));}
             std::vector<double> *x, *y;
             // Connect pointers for each vector
             switch(Wrt1){
@@ -517,8 +517,9 @@ class LogPHTable : public SinglePhaseGriddedTableData
             if (this->AS.get() == NULL){
                 throw ValueError("AS is not yet set");
             }
+            CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
             // Minimum enthalpy is the saturated liquid enthalpy
-            AS->update(QT_INPUTS, 0, AS->Ttriple());
+            AS->update(QT_INPUTS, 0, Tmin);
             xmin = AS->hmolar(); ymin = AS->p();
             
             // Check both the enthalpies at the Tmax isotherm to see whether to use low or high pressure
@@ -562,9 +563,9 @@ class LogPTTable : public SinglePhaseGriddedTableData
         void set_limits(){
             if (this->AS.get() == NULL){
                 throw ValueError("AS is not yet set");
-            }            
-            xmin = AS->Ttriple();
-            AS->update(QT_INPUTS, 0, AS->Ttriple());
+            }
+            CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
+            AS->update(QT_INPUTS, 0, Tmin);
             ymin = AS->p();
             
             xmax = AS->Tmax()*1.499; ymax = AS->pmax();
