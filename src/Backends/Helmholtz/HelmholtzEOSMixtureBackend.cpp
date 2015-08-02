@@ -1007,7 +1007,7 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
         //case TUmolar_INPUTS:
         //    _T = value1; _umolar = value2; FlashRoutines::DHSU_T_flash(*this, iUmolar); break;
         case DmolarP_INPUTS:
-            _rhomolar = value1; _p = value2; FlashRoutines::PHSU_D_flash(*this, iP); break;
+            _rhomolar = value1; _p = value2; FlashRoutines::DP_flash(*this); break;
         case DmolarHmolar_INPUTS:
             _rhomolar = value1; _hmolar = value2; FlashRoutines::PHSU_D_flash(*this, iHmolar); break;
         case DmolarSmolar_INPUTS:

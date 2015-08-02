@@ -141,6 +141,116 @@ void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend &HEOS)
     HEOS._rhomolar = HEOS.solver_rho_Tp(HEOS._T, HEOS._p);
     HEOS._Q = -1;
 }
+    
+// Define the residual to be driven to zero
+class solver_DP_resid : public FuncWrapper1DWithTwoDerivs
+{
+public:
+    HelmholtzEOSMixtureBackend *HEOS;
+    CoolPropDbl rhomolar, p;
+    solver_DP_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl rhomolar, CoolPropDbl p) : HEOS(HEOS),rhomolar(rhomolar), p(p) {}
+    double call(double T){
+        HEOS->update_DmolarT_direct(rhomolar, T);
+        CoolPropDbl peos = HEOS->p();
+        CoolPropDbl r = (peos-p)/p;
+        return r;
+    };
+    double deriv(double T){
+        // dp/dT|rho / pspecified
+        return HEOS->first_partial_deriv(iP, iT, iDmolar)/p;
+    };
+    double second_deriv(double T){
+        // d2p/dT2|rho / pspecified
+        return HEOS->second_partial_deriv(iP, iT, iDmolar, iT, iDmolar)/p;
+    };
+};
+  
+/***
+\f[
+\begin{array}{l}
+p = \frac{{RT}}{{v - b}} - \frac{{a\alpha }}{{v\left( {v + b} \right)}}\\
+\alpha  = \left( {1 + \kappa \left( {1 - \sqrt {{T_r}} } \right)} \right)\left( {1 + \kappa \left( {1 - \sqrt {{T_r}} } \right)} \right) = 1 + 2\kappa \left( {1 - \sqrt {{T_r}} } \right) + {\kappa ^2}{\left( {1 - \sqrt {{T_r}} } \right)^2}\\
+\alpha  = 1 + 2\kappa \left( {1 - \sqrt {{T_r}} } \right) + {\kappa ^2}{\left( {1 - \sqrt {{T_r}} } \right)^2}\\
+\alpha  = 1 + 2\kappa  - 2\kappa \sqrt {{T_r}}  + {\kappa ^2}\left[ {1 - 2\sqrt {{T_r}}  + {T_r}} \right]\\
+T = {T_r}{T_c}\\
+p = \frac{{R{T_r}{T_c}}}{{v - b}} - \frac{{a\left( {1 + 2\kappa  - 2\kappa \sqrt {{T_r}}  + {\kappa ^2}\left[ {1 - 2\sqrt {{T_r}}  + {T_r}} \right]} \right)}}{{v\left( {v + b} \right)}}\\
+\\
+{\rm{Factor in terms of }}\sqrt {{T_r}} \\
+\\
+p = \frac{{R{T_r}{T_c}}}{{v - b}} - \frac{{a\left( {1 + 2\kappa  + {\kappa ^2} - 2\kappa \sqrt {{T_r}}  + {\kappa ^2}\left[ { - 2\sqrt {{T_r}}  + {T_r}} \right]} \right)}}{{v\left( {v + b} \right)}}\\
+p = \frac{{R{T_r}{T_c}}}{{v - b}} - \frac{{a\left( {1 + 2\kappa  + {\kappa ^2} - 2\kappa (1 + \kappa )\sqrt {{T_r}}  + {\kappa ^2}{T_r}} \right)}}{{v\left( {v + b} \right)}}\\
+p = \frac{{R{T_r}{T_c}}}{{v - b}} - \frac{{a\left( {1 + 2\kappa  + {\kappa ^2}} \right)}}{{v\left( {v + b} \right)}} + \frac{{2a\kappa (1 + \kappa )}}{{v\left( {v + b} \right)}}\sqrt {{T_r}}  - \frac{{a{\kappa ^2}}}{{v\left( {v + b} \right)}}{T_r}\\
+0 = \left[ {\frac{{R{T_c}}}{{v - b}} - \frac{{a{\kappa ^2}}}{{v\left( {v + b} \right)}}} \right]{T_r} + \frac{{2a\kappa (1 + \kappa )}}{{v\left( {v + b} \right)}}\sqrt {{T_r}}  - \frac{{a\left( {1 + 2\kappa  + {\kappa ^2}} \right)}}{{v\left( {v + b} \right)}} - p
+\end{array}
+\f]
+ */
+double FlashRoutines::T_DP_PengRobinson(HelmholtzEOSMixtureBackend &HEOS, double rhomolar, double p)
+{
+    double omega, R, kappa, a, b, A, B, C, D, Tc, pc, V= 1/rhomolar;
+    omega = HEOS.acentric_factor();
+    Tc = HEOS.T_critical();
+    pc = HEOS.p_critical();
+    R = HEOS.gas_constant();
+    
+    kappa = 0.37464+1.54226*omega-0.26992*omega*omega;
+    a = 0.457235*R*R*Tc*Tc/pc;
+    b = 0.077796*R*Tc/pc;
+    double den = V*V+2*b*V-b*b;
+    
+    // A sqrt(Tr)^2 + B sqrt(Tr) + C = 0
+    A = R*Tc/(V-b)-a*kappa*kappa/(den);
+    B = +2*a*kappa*(1+kappa)/(den);
+    C = -a*(1+2*kappa+kappa*kappa)/(den)-p;
+    
+    D = B*B-4*A*C;
+    
+    double sqrt_Tr1 = (-B+sqrt(B*B-4*A*C))/(2*A);
+    //double sqrt_Tr2 = (-B-sqrt(B*B-4*A*C))/(2*A);
+    return sqrt_Tr1*sqrt_Tr1*Tc;
+};
+
+void FlashRoutines::DP_flash(HelmholtzEOSMixtureBackend &HEOS)
+{
+    if (HEOS.imposed_phase_index == iphase_not_imposed) // If no phase index is imposed (see set_components function)
+    {
+        if (HEOS.is_pure_or_pseudopure)
+        {
+            // Find the phase, while updating all internal variables possible using the pressure
+            bool saturation_called = false;
+            HEOS.p_phase_determination_pure_or_pseudopure(iDmolar, HEOS._rhomolar, saturation_called);
+            
+            if (HEOS.isHomogeneousPhase()){
+                CoolPropDbl T0;
+                if (HEOS._phase == iphase_liquid){
+                    // If it is a liquid, start off at the ancillary value
+                    if (saturation_called){ T0 = HEOS.SatL->T();}else{T0 = HEOS._TLanc.pt();}
+                }
+                else if (HEOS._phase == iphase_supercritical_liquid){
+                    // If it is a supercritical
+                    T0 = 1.1*HEOS.T_critical();
+                }
+                else if (HEOS._phase == iphase_gas || HEOS._phase == iphase_supercritical_gas || HEOS._phase == iphase_supercritical){
+                    // First, get a guess for density from Peng-Robinson
+                    T0 = T_DP_PengRobinson(HEOS, HEOS.rhomolar(), HEOS.p());
+                }
+                else{
+                    throw ValueError("I should never get here");
+                }
+                // Then, do the solver using the full EOS
+                solver_DP_resid resid(&HEOS, HEOS.rhomolar(), HEOS.p());
+                std::string errstr;
+                Halley(resid, T0, 1e-10, 100, errstr);
+                HEOS._Q = -1;
+            }
+            else{
+                // Nothing to do here; phase determination has handled this already
+            }
+        }
+        else{
+            throw NotImplementedError("DP_flash not ready for mixtures");
+        }
+    }
+}
 void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl Tguess)
 {
     SaturationSolvers::saturation_PHSU_pure_options options;

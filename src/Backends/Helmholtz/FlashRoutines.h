@@ -68,6 +68,13 @@ public:
     /// Flash for given pressure and temperature for mixtures
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS);
+
+    /// Use Peng-Robinson to get guess for temperature for given density and pressure
+    static double T_DP_PengRobinson(HelmholtzEOSMixtureBackend &HEOS, double rhomolar, double p);
+    
+    /// Flash for given density and pressure
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    static void DP_flash(HelmholtzEOSMixtureBackend &HEOS);
     
     /// The flash routine for T given and one of H,S,U
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
