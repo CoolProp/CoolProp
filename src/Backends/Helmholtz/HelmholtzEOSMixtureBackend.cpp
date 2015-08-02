@@ -1356,7 +1356,17 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
     }
     else if (_p < components[0].EOS().ptriple*0.9999)
     {
-        throw NotImplementedError(format("for now, we don't support p [%g Pa] below ptriple [%g Pa]",_p, components[0].EOS().ptriple));
+        if (other == iT){
+            if (_T > std::max(Tmin(), Ttriple())){
+                _phase = iphase_gas;
+            }
+            else{
+                 throw NotImplementedError(format("For now, we don't support p [%g Pa] below ptriple [%g Pa] when T [%g] is less than Tmin [%g]",_p, components[0].EOS().ptriple, _T, std::max(Tmin(), Ttriple())) );
+            }
+        }
+        else{
+            _phase = iphase_gas;
+        }
     }
     else{
         throw ValueError(format("The pressure [%g Pa] cannot be used in p_phase_determination",_p));

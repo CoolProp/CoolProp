@@ -1163,7 +1163,12 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                 case iphase_gas:
                 {
                     Tmax = 1.5*HEOS.Tmax();
-                    if (saturation_called){ Tmin = HEOS.SatV->T();}else{Tmin = HEOS._TVanc.pt();}
+                    if (HEOS._p < HEOS.p_triple()){
+                        Tmin = std::max(HEOS.Tmin(), HEOS.Ttriple());
+                    }
+                    else{
+                        if (saturation_called){ Tmin = HEOS.SatV->T();}else{Tmin = HEOS._TVanc.pt();}
+                    }
                     break;
                 }
                 case iphase_liquid:
