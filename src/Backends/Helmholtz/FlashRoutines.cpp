@@ -830,7 +830,7 @@ void FlashRoutines::HSU_D_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolP
     HEOS.update(QT_INPUTS, resid.Qd, HEOS.T());
 }
 // D given and one of P,H,S,U
-void FlashRoutines::PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other)
+void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other)
 {
     // Define the residual to be driven to zero
     class solver_resid : public FuncWrapper1DWithTwoDerivs

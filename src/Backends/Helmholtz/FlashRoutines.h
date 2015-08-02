@@ -116,7 +116,7 @@ public:
     /// A generic flash routine for the pairs (D,P), (D,H), (D,S), and (D,U).  Similar analysis is needed
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iP, iHmolar, iSmolar, iUmolar
-    static void PHSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other);
+    static void HSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters other);
     
     /// A flash routine for (H,S)
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
