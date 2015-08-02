@@ -1220,7 +1220,7 @@ double WetbulbTemperature(double T, double p, double psi_w)
 
     double return_val;
     try{
-        return_val = Brent(WBS,Tmax+1,200, DBL_EPSILON, 1e-12, 50, errstr);
+        return_val = Brent(WBS,Tmax+1,100, DBL_EPSILON, 1e-12, 50, errstr);
 
         // Solution obtained is out of range (T>Tmax)
         if (return_val > Tmax + 1) {throw CoolProp::ValueError();}
