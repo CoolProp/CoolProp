@@ -811,7 +811,12 @@ class TabularBackend : public AbstractState
             this->AS->set_T(_T);
             return this->AS->cp0molar();
         }
-
+        /// Calculate the surface tension using the wrapped class (fast enough)
+        CoolPropDbl calc_surface_tension(void){
+            this->AS->set_T(_T);
+            return this->AS->surface_tension();
+            this->AS->set_T(_HUGE);
+        }
         CoolPropDbl calc_p(void);
         CoolPropDbl calc_T(void);
         CoolPropDbl calc_rhomolar(void);
