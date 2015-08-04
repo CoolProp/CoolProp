@@ -2949,7 +2949,7 @@ class OneDimObjective : public FuncWrapper1DWithDeriv
 {
 public:
     CoolProp::HelmholtzEOSMixtureBackend &HEOS;
-    double delta, R_tau, R_delta;
+    const double delta;
     OneDimObjective(HelmholtzEOSMixtureBackend &HEOS, double delta0) : HEOS(HEOS), delta(delta0) {};
     double call(double tau){
         double rhomolar = HEOS.rhomolar_reducing()*delta, T = HEOS.T_reducing()/tau;
@@ -3009,8 +3009,8 @@ public:
     double deriv(double theta){
         std::size_t N = HEOS.get_mole_fractions().size();
         Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N),
-        dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
-        dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta);
+                        dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
+                        dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta);
         double dL1_dtau = (adjL*dLdTau).trace(), dL1_ddelta = (adjL*dLdDelta).trace();
         return -R_tau*sin(theta)*dL1_dtau + R_delta*cos(theta)*dL1_ddelta;
     };
@@ -3026,7 +3026,8 @@ public:
             }
             else{
                 // In subsequent iterations, you already have an excellent guess for the direction to
-                // be searching in, use Newton's method to refine the solution
+                // be searching in, use Newton's method to refine the solution since we also
+                // have an analytic solution for the derivative
                 theta = Newton(this, theta, 1e-10, 100, errstr);
             }
             
