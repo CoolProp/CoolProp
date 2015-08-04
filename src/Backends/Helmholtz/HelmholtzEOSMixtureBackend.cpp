@@ -2945,5 +2945,135 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
     _critical.rhomolar = x[1]*rhomolar_reducing();
 }
 
+class OneDimObjective : public FuncWrapper1DWithDeriv
+{
+public:
+    CoolProp::HelmholtzEOSMixtureBackend &HEOS;
+    double delta, R_tau, R_delta;
+    OneDimObjective(HelmholtzEOSMixtureBackend &HEOS, double delta0) : HEOS(HEOS), delta(delta0) {};
+    double call(double tau){
+        double rhomolar = HEOS.rhomolar_reducing()*delta, T = HEOS.T_reducing()/tau;
+        HEOS.update_DmolarT_direct(rhomolar, T);
+        double L1 = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant();
+        //std::cout << L1 << std::endl;
+        return L1;
+    }
+    double deriv(double tau){
+        std::size_t N = HEOS.get_mole_fractions().size();
+        Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N),
+        dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau);
+        return (adjL*dLdTau).trace();
+    };
+};
+
+class L0CurveTracer : public FuncWrapper1DWithDeriv
+{
+public:
+    CoolProp::HelmholtzEOSMixtureBackend &HEOS;
+    double delta, tau, M1_last, R_tau, R_delta;
+    std::vector<CoolProp::SimpleState> critical_points;
+    int N_critical_points;
+    L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), N_critical_points(0)
+    {
+        R_delta = 0.1; R_tau = 0.1;
+    };
+    /***
+     \brief Calculate the value of L1
+     @param theta The angle
+     @param tau The old value of tau
+     @param delta The old value of delta
+     @param tau_new The new value of tau
+     @param delta_new The new value of delta
+     */
+    void get_tau_delta(const double theta, const double tau, const double delta, double &tau_new, double &delta_new){
+        tau_new = tau + R_tau*cos(theta);
+        delta_new = delta + R_delta*sin(theta);
+    };
+    /***
+     \brief Calculate the value of L1
+     @param theta The angle
+     */
+    double call(double theta){
+        double tau_new, delta_new;
+        this->get_tau_delta(theta, tau, delta, tau_new, delta_new);
+        double rhomolar = HEOS.rhomolar_reducing()*delta_new, T = HEOS.T_reducing()/tau_new;
+        HEOS.update_DmolarT_direct(rhomolar, T);
+        double L1 = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant();
+        //std::cout << "call: " << theta << " " << L1 << std::endl;
+        return L1;
+    };
+    /***
+     \brief Calculate the first partial derivative of L1 with respect to the angle
+     @param theta The angle
+     */
+    double deriv(double theta){
+        std::size_t N = HEOS.get_mole_fractions().size();
+        Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N),
+        dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
+        dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta);
+        double dL1_dtau = (adjL*dLdTau).trace(), dL1_ddelta = (adjL*dLdDelta).trace();
+        return -R_tau*sin(theta)*dL1_dtau + R_delta*cos(theta)*dL1_ddelta;
+    };
+    
+    void trace(){
+        double theta;
+        static std::string errstr;
+        for (int i = 0; i < 100; ++i){
+            if (i == 0){
+                // In the first iteration, search all angles in the positive delta direction using a
+                // bounded solver
+                theta = Brent(this, 0, M_PI, DBL_EPSILON, 1e-10, 100, errstr);
+            }
+            else{
+                // In subsequent iterations, you already have an excellent guess for the direction to
+                // be searching in, use Newton's method to refine the solution
+                theta = Newton(this, theta, 1e-10, 100, errstr);
+            }
+            
+            // Calculate the second criticality condition
+            double M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
+            double p_MPa = HEOS.p()/1e6;
+            
+            // Calculate the new tau and delta at the new point
+            double tau_new, delta_new;
+            this->get_tau_delta(theta, tau, delta, tau_new, delta_new);
+            
+            // Stop if bounds are exceeded
+            if (p_MPa > 500 || delta_new > 5){
+                break;
+            }
+            
+            // If the sign of M1 and the previous value of M1 have different signs, it means that
+            // you have bracketed a critical point, run the full critical point solver to
+            // find the critical point and store it
+            if (i > 0 && M1*M1_last < 0){
+                double rhomolar = HEOS.rhomolar_reducing()*delta_new, T = HEOS.T_reducing()/tau_new;
+                HEOS.calc_critical_point(rhomolar, T);
+                CoolProp::SimpleState crit = HEOS.get_state("critical");
+                critical_points.push_back(crit);
+                N_critical_points++;
+                std::cout << HEOS.get_mole_fractions()[0] << " " << crit.rhomolar << " " << crit.T << " " << p_MPa << std::endl;
+            }
+            
+            // Update the storage values
+            this->tau = tau_new;
+            this->delta = delta_new;
+            this->M1_last = M1;
+        }
+    };
+};
+
+    
+std::vector<CoolProp::SimpleState> HelmholtzEOSMixtureBackend::find_all_critical_points()
+{
+    std::string errstr;
+    OneDimObjective resid_L0(*this, 0.5);
+    double tau_L0 = Newton(resid_L0, 1.3, 1e-10, 100, errstr);
+    
+    L0CurveTracer tracer(*this, tau_L0, 0.5);
+    tracer.trace();
+    return tracer.critical_points;
+}
+
 } /* namespace CoolProp */
 

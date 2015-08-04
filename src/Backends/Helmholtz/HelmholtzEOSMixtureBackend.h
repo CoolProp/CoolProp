@@ -83,6 +83,7 @@ public:
     CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
     
     void calc_critical_point(double rho0, double T0);
+    std::vector<CoolProp::SimpleState> find_all_critical_points();
 
 	/// Calculate the phase once the state is fully calculated but you aren't sure if it is liquid or gas or ...
 	void recalculate_singlephase_phase();
