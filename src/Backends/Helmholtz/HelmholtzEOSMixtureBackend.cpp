@@ -2306,7 +2306,8 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
                     summer_dTau3 = 0, summer_dDelta3 = 0, summer_dDelta2_dTau = 0, summer_dDelta_dTau2 = 0,
                     summer_dTau4 = 0, summer_dDelta4 = 0, summer_dDelta3_dTau = 0, summer_dDelta_dTau3 = 0, summer_dDelta2_dTau2 = 0;
         for (std::size_t i = 0; i < N; ++i){
-            HelmholtzDerivatives derivs = components[i].EOS().alphar.all(tau, delta);
+            bool cache_values = true;
+            HelmholtzDerivatives derivs = components[i].EOS().alphar.all(tau, delta, cache_values);
             CoolPropDbl xi = mole_fractions[i];
             
             summer_base += xi*derivs.alphar;
@@ -2992,6 +2993,7 @@ public:
     double delta, tau, M1_last, R_tau, R_delta;
     std::vector<CoolProp::SimpleState> critical_points;
     int N_critical_points;
+    Eigen::MatrixXd Lstar, adjLstar, dLstardTau, d2LstardTau2, dLstardDelta;
     L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), N_critical_points(0)
     {
         R_delta = 0.1; R_tau = 0.1;
@@ -3017,7 +3019,11 @@ public:
         this->get_tau_delta(theta, tau, delta, tau_new, delta_new);
         double rhomolar = HEOS.rhomolar_reducing()*delta_new, T = HEOS.T_reducing()/tau_new;
         HEOS.update_DmolarT_direct(rhomolar, T);
-        double L1 = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant();
+        Lstar = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT);
+        adjLstar = adjugate(Lstar);
+        dLstardTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau);
+        dLstardDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta);
+        double L1 = Lstar.determinant();
         //std::cout << "call: " << theta << " " << L1 << std::endl;
         return L1;
     };
@@ -3027,10 +3033,7 @@ public:
      */
     double deriv(double theta){
         std::size_t N = HEOS.get_mole_fractions().size();
-        Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
-                        dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
-                        dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta);
-        double dL1_dtau = (adjL*dLdTau).trace(), dL1_ddelta = (adjL*dLdDelta).trace();
+        double dL1_dtau = (adjLstar*dLstardTau).trace(), dL1_ddelta = (adjLstar*dLstardDelta).trace();
         return -R_tau*sin(theta)*dL1_dtau + R_delta*cos(theta)*dL1_ddelta;
     };
     
