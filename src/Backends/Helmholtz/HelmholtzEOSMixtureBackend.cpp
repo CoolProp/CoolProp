@@ -3088,8 +3088,12 @@ std::vector<CoolProp::SimpleState> HelmholtzEOSMixtureBackend::find_all_critical
 {
     std::string errstr;
     OneDimObjective resid_L0(*this, 0.5);
-    double tau_L0 = Halley(resid_L0, 0.76, 1e-10, 100, errstr); 
-    double tau_L01 = Newton(resid_L0, 0.76, 1e-10, 100, errstr);
+    double tau0 = 0.66;
+    resid_L0.call(tau0);
+    if (resid_L0.deriv(tau0) > 0){
+        tau0 += 0.1;
+    }
+    double tau_L0 = Halley(resid_L0, tau0, 1e-10, 100, errstr); 
     
     L0CurveTracer tracer(*this, tau_L0, 0.5);
     tracer.trace();
