@@ -896,13 +896,34 @@ inline Eigen::MatrixXd minor_matrix(const Eigen::MatrixBase<Derived>& A, std::si
 };
 
 template <typename Derived>
-static Eigen::MatrixXd adjugate(const Eigen::MatrixBase<Derived>& A, std::size_t N)
+static Eigen::MatrixXd adjugate(const Eigen::MatrixBase<Derived>& A)
 {
-    Eigen::MatrixXd Aadj(A.rows(), A.cols());
+    std::size_t N = A.rows();
+    if (N==1){
+        Eigen::MatrixXd Aadj(1,1);
+        Aadj << 1;
+        return Aadj;
+    }
+    Eigen::MatrixXd Aadj(N, N);
     for (std::size_t i = 0; i < N; ++i){
         for (std::size_t j = 0; j < N; ++j){
             int negative_1_to_the_i_plus_j = ((i+j)%2==0) ? 1 : -1;
             Aadj(i, j) = negative_1_to_the_i_plus_j*minor_matrix(A, i, j).determinant();
+        }
+    }
+    return Aadj;
+}
+
+template <typename Derived>
+static Eigen::MatrixXd adjugate_derivative(const Eigen::MatrixBase<Derived> &A, const Eigen::MatrixBase<Derived>& dAdt)
+{
+    std::size_t N = A.rows();
+    Eigen::MatrixXd Aadj(N, N);
+    for (std::size_t i = 0; i < N; ++i){
+        for (std::size_t j = 0; j < N; ++j){
+            int negative_1_to_the_i_plus_j = ((i+j)%2==0) ? 1 : -1;
+            Eigen::MatrixXd mm = minor_matrix(A, j, i);
+            Aadj(i, j) = negative_1_to_the_i_plus_j*(adjugate(minor_matrix(A, j, i))*minor_matrix(dAdt,j,i)).trace();
         }
     }
     return Aadj;

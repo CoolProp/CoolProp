@@ -224,6 +224,72 @@ CoolPropDbl MixtureDerivatives::d3alphardxidxjdxk(HelmholtzEOSMixtureBackend &HE
     }
 }
 
+
+CoolPropDbl MixtureDerivatives::d4alphar_dxi_dDelta3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    if (xN_flag == XN_INDEPENDENT){
+        return HEOS.components[i].EOS().d3alphar_dDelta3(HEOS.tau(), HEOS.delta()) + HEOS.Excess.d4alphar_dxi_dDelta3(HEOS.mole_fractions, i);
+    }
+    else{
+        throw ValueError(format("xN_flag is invalid"));
+    }
+}
+CoolPropDbl MixtureDerivatives::d4alphar_dxi_dTau3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    if (xN_flag == XN_INDEPENDENT){
+        return HEOS.components[i].EOS().d3alphar_dTau3(HEOS.tau(), HEOS.delta()) + HEOS.Excess.d4alphar_dxi_dTau3(HEOS.mole_fractions, i);
+    }
+    else{
+        throw ValueError(format("xN_flag is invalid"));
+    }
+}
+CoolPropDbl MixtureDerivatives::d4alphar_dxi_dDelta_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    if (xN_flag == XN_INDEPENDENT){
+        return HEOS.components[i].EOS().d3alphar_dDelta_dTau2(HEOS.tau(), HEOS.delta()) + HEOS.Excess.d4alphar_dxi_dDelta_dTau2(HEOS.mole_fractions, i);
+    }
+    else{
+        throw ValueError(format("xN_flag is invalid"));
+    }
+}
+CoolPropDbl MixtureDerivatives::d4alphar_dxi_dDelta2_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    if (xN_flag == XN_INDEPENDENT){
+        return HEOS.components[i].EOS().d3alphar_dDelta2_dTau(HEOS.tau(), HEOS.delta()) + HEOS.Excess.d4alphar_dxi_dDelta2_dTau(HEOS.mole_fractions, i);
+    }
+    else{
+        throw ValueError(format("xN_flag is invalid"));
+    }
+}
+
+CoolPropDbl MixtureDerivatives::d4alphar_dxi_dxj_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+{
+    if (xN_flag == XN_INDEPENDENT){
+        return 0                           + HEOS.Excess.d4alphar_dxi_dxj_dDelta2(HEOS.mole_fractions, i, j);
+    }
+    else{
+        throw ValueError(format("xN_flag is invalid"));
+    }
+}
+CoolPropDbl MixtureDerivatives::d4alphar_dxi_dxj_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+{
+    if (xN_flag == XN_INDEPENDENT){
+        return 0                           + HEOS.Excess.d4alphar_dxi_dxj_dDelta_dTau(HEOS.mole_fractions, i, j);
+    }
+    else{
+        throw ValueError(format("xN_flag is invalid"));
+    }
+}
+CoolPropDbl MixtureDerivatives::d4alphar_dxi_dxj_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+{
+    if (xN_flag == XN_INDEPENDENT){
+        return 0                           + HEOS.Excess.d4alphar_dxi_dxj_dTau2(HEOS.mole_fractions, i, j);
+    }
+    else{
+        throw ValueError(format("xN_flag is invalid"));
+    }
+}
+
 CoolPropDbl MixtureDerivatives::dln_fugacity_i_dT__constp_n(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
     return dln_fugacity_coefficient_dT__constp_n(HEOS, i, xN_flag);
@@ -333,6 +399,9 @@ CoolPropDbl MixtureDerivatives::ndln_fugacity_i_dnj__constT_V_xi(HelmholtzEOSMix
 }
 CoolPropDbl MixtureDerivatives::d_ndln_fugacity_i_dnj_dtau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){
     return d_ndalphardni_dTau(HEOS, j, xN_flag) + d_nd_ndalphardni_dnj_dTau__constdelta_x(HEOS, i, j, xN_flag);
+}
+CoolPropDbl MixtureDerivatives::d2_ndln_fugacity_i_dnj_dtau2__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){
+    return d2_ndalphardni_dTau2(HEOS, j, xN_flag) + d2_nd_ndalphardni_dnj_dTau2__constdelta_x(HEOS, i, j, xN_flag);
 }
 CoolPropDbl MixtureDerivatives::d_ndln_fugacity_i_dnj_ddelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){
     return d_ndalphardni_dDelta(HEOS, j, xN_flag) + d_nd_ndalphardni_dnj_dDelta__consttau_x(HEOS, i, j, xN_flag);
@@ -533,6 +602,21 @@ CoolPropDbl MixtureDerivatives::d_nd_ndalphardni_dnj_dTau__constdelta_x(Helmholt
     double line3 = d2_ndalphardni_dxj_dTau__constdelta_xi(HEOS, i, j, xN_flag)-summer;
     return line1 + line2 + line3;
 }
+CoolPropDbl MixtureDerivatives::d2_nd_ndalphardni_dnj_dTau2__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+{
+    double line1 = d3_ndalphardni_dDelta_dTau2(HEOS, i, xN_flag)*nddeltadni__constT_V_nj(HEOS, j, xN_flag);
+    double line2 = 2*d2_ndalphardni_dTau2(HEOS, i, xN_flag)*d_ndtaudni_dTau(HEOS, j, xN_flag);
+    double line3 = d3_ndalphardni_dTau3(HEOS, i, xN_flag)*ndtaudni__constT_V_nj(HEOS, j, xN_flag);
+    double summer = 0;
+    std::size_t kmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ kmax--; }
+    for (unsigned int k = 0; k < kmax; k++)
+    {
+        summer += HEOS.mole_fractions[k]*d3_ndalphardni_dxj_dTau2__constdelta_xi(HEOS, i, k, xN_flag);
+    }
+    double line4 = d3_ndalphardni_dxj_dTau2__constdelta_xi(HEOS, i, j, xN_flag)-summer;
+    return line1 + line2 + line3 + line4;
+}
 CoolPropDbl MixtureDerivatives::d_nd_ndalphardni_dnj_dDelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
     double line1 = d2_ndalphardni_dDelta2(HEOS, i, xN_flag)*nddeltadni__constT_V_nj(HEOS, j, xN_flag)
@@ -598,6 +682,19 @@ CoolPropDbl MixtureDerivatives::d2_ndalphardni_dDelta2(HelmholtzEOSMixtureBacken
     }
     return term1 + term2 + term3;
 }
+CoolPropDbl MixtureDerivatives::d3_ndalphardni_dDelta3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    double term1 = (3*HEOS.d3alphar_dDelta3() + HEOS.delta()*HEOS.d4alphar_dDelta4())*HEOS.Reducing->PSI_rho(HEOS.mole_fractions, i, xN_flag);
+    double term2 = HEOS.tau()*HEOS.d4alphar_dDelta3_dTau()*HEOS.Reducing->PSI_T(HEOS.mole_fractions, i, xN_flag);
+    double term3 = d4alphar_dxi_dDelta3(HEOS, i, xN_flag);
+    std::size_t kmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ kmax--; }
+    for (unsigned int k = 0; k < kmax; k++)
+    {
+        term3 -= HEOS.mole_fractions[k]*d4alphar_dxi_dDelta3(HEOS, k, xN_flag);
+    }
+    return term1 + term2 + term3;
+}
 CoolPropDbl MixtureDerivatives::d2_ndalphardni_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
 {
     double term1 = (HEOS.d2alphar_dDelta_dTau() + HEOS.delta()*HEOS.d3alphar_dDelta2_dTau())*HEOS.Reducing->PSI_rho(HEOS.mole_fractions, i, xN_flag);
@@ -608,6 +705,32 @@ CoolPropDbl MixtureDerivatives::d2_ndalphardni_dDelta_dTau(HelmholtzEOSMixtureBa
     for (unsigned int k = 0; k < kmax; k++)
     {
         term3 -= HEOS.mole_fractions[k]*d3alphar_dxi_dDelta_dTau(HEOS, k, xN_flag);
+    }
+    return term1 + term2 + term3;
+}
+CoolPropDbl MixtureDerivatives::d3_ndalphardni_dDelta2_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    double term1 = (2*HEOS.d3alphar_dDelta2_dTau() + HEOS.delta()*HEOS.d4alphar_dDelta3_dTau())*HEOS.Reducing->PSI_rho(HEOS.mole_fractions, i, xN_flag);
+    double term2 = (HEOS.tau()*HEOS.d4alphar_dDelta2_dTau2() + HEOS.d3alphar_dDelta2_dTau())*HEOS.Reducing->PSI_T(HEOS.mole_fractions, i, xN_flag);
+    double term3 = d4alphar_dxi_dDelta2_dTau(HEOS, i, xN_flag);
+    std::size_t kmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ kmax--; }
+    for (unsigned int k = 0; k < kmax; k++)
+    {
+        term3 -= HEOS.mole_fractions[k]*d4alphar_dxi_dDelta2_dTau(HEOS, k, xN_flag);
+    }
+    return term1 + term2 + term3;
+}
+CoolPropDbl MixtureDerivatives::d3_ndalphardni_dDelta_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    double term1 = (HEOS.d3alphar_dDelta_dTau2() + HEOS.delta()*HEOS.d4alphar_dDelta2_dTau2())*HEOS.Reducing->PSI_rho(HEOS.mole_fractions, i, xN_flag);
+    double term2 = (HEOS.tau()*HEOS.d4alphar_dDelta_dTau3() + 2*HEOS.d3alphar_dDelta_dTau2())*HEOS.Reducing->PSI_T(HEOS.mole_fractions, i, xN_flag);
+    double term3 = d4alphar_dxi_dDelta_dTau2(HEOS, i, xN_flag);
+    std::size_t kmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ kmax--; }
+    for (unsigned int k = 0; k < kmax; k++)
+    {
+        term3 -= HEOS.mole_fractions[k]*d4alphar_dxi_dDelta_dTau2(HEOS, k, xN_flag);
     }
     return term1 + term2 + term3;
 }
@@ -624,6 +747,20 @@ CoolPropDbl MixtureDerivatives::d2_ndalphardni_dTau2(HelmholtzEOSMixtureBackend 
     }
     return term1 + term2 + term3;
 }
+CoolPropDbl MixtureDerivatives::d3_ndalphardni_dTau3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    double term1 = HEOS.delta()*HEOS.d4alphar_dDelta_dTau3()*HEOS.Reducing->PSI_rho(HEOS.mole_fractions, i, xN_flag);
+    double term2 = (3*HEOS.d3alphar_dTau3() + HEOS.tau()*HEOS.d4alphar_dTau4())*HEOS.Reducing->PSI_T(HEOS.mole_fractions, i, xN_flag);
+    double term3 = d4alphar_dxi_dTau3(HEOS, i, xN_flag);
+    std::size_t kmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ kmax--; }
+    for (unsigned int k = 0; k < kmax; k++)
+    {
+        term3 -= HEOS.mole_fractions[k]*d4alphar_dxi_dTau3(HEOS, k, xN_flag);
+    }
+    return term1 + term2 + term3;
+}
+
 CoolPropDbl MixtureDerivatives::d2_ndalphardni_dxj_dDelta__consttau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
     double term1 = (HEOS.dalphar_dDelta() + HEOS.delta()*HEOS.d2alphar_dDelta2())*HEOS.Reducing->d_PSI_rho_dxj(HEOS.mole_fractions, i, j, xN_flag);
@@ -651,6 +788,21 @@ CoolPropDbl MixtureDerivatives::d2_ndalphardni_dxj_dTau__constdelta_xi(Helmholtz
     for (unsigned int k = 0; k < kmax; k++)
     {
         term5 -= HEOS.mole_fractions[k]*d3alphar_dxi_dxj_dTau(HEOS, k, j, xN_flag) + Kronecker_delta(k, j)*d2alphar_dxi_dTau(HEOS, k, xN_flag);
+    }
+    return term1 + term2 + term3 + term4 + term5;
+}
+CoolPropDbl MixtureDerivatives::d3_ndalphardni_dxj_dTau2__constdelta_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+{
+    double term1 = HEOS.delta()*HEOS.d3alphar_dDelta_dTau2()*HEOS.Reducing->d_PSI_rho_dxj(HEOS.mole_fractions, i, j, xN_flag);
+    double term2 = HEOS.delta()*d4alphar_dxi_dDelta_dTau2(HEOS, j, xN_flag)*HEOS.Reducing->PSI_rho(HEOS.mole_fractions, i, xN_flag);
+    double term3 = (HEOS.tau()*HEOS.d3alphar_dTau3()+2*HEOS.d2alphar_dTau2())*HEOS.Reducing->d_PSI_T_dxj(HEOS.mole_fractions, i, j, xN_flag);
+    double term4 = (HEOS.tau()*d4alphar_dxi_dTau3(HEOS, j, xN_flag)+2*d3alphar_dxi_dTau2(HEOS, j, xN_flag))*HEOS.Reducing->PSI_T(HEOS.mole_fractions, i, xN_flag);
+    double term5 = d4alphar_dxi_dxj_dTau2(HEOS, i, j, xN_flag);
+    std::size_t kmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ kmax--; }
+    for (unsigned int k = 0; k < kmax; k++)
+    {
+        term5 -= HEOS.mole_fractions[k]*d4alphar_dxi_dxj_dTau2(HEOS, k, j, xN_flag) + Kronecker_delta(k, j)*d3alphar_dxi_dTau2(HEOS, k, xN_flag);
     }
     return term1 + term2 + term3 + term4 + term5;
 }

@@ -64,6 +64,14 @@ class MixtureDerivatives{
     static CoolPropDbl d3alphar_dxi_dxj_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
     static CoolPropDbl d3alphardxidxjdxk(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
 
+    static CoolPropDbl d4alphar_dxi_dDelta3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d4alphar_dxi_dDelta2_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d4alphar_dxi_dDelta_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d4alphar_dxi_dTau3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d4alphar_dxi_dxj_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d4alphar_dxi_dxj_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag); 
+    static CoolPropDbl d4alphar_dxi_dxj_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d4alphardxidxjdxk(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
     
 
     /** \brief GERG 2004 Monograph equation 7.63
@@ -153,6 +161,7 @@ class MixtureDerivatives{
 
     static CoolPropDbl ndln_fugacity_i_dnj__constT_V_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
     static CoolPropDbl d_ndln_fugacity_i_dnj_dtau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2_ndln_fugacity_i_dnj_dtau2__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
     static CoolPropDbl d_ndln_fugacity_i_dnj_ddelta__consttau_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
     static CoolPropDbl d_ndln_fugacity_i_dnj_ddxk__consttau_delta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
 
@@ -186,7 +195,6 @@ class MixtureDerivatives{
     static Eigen::MatrixXd dLstar_dX(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag, parameters WRT){
 
         std::size_t N = HEOS.mole_fractions.size();
-        Eigen::MatrixXd L = Lstar(HEOS, xN_flag), M = L;
         Eigen::MatrixXd dLstar_dX(N, N);
         for (std::size_t i = 0; i < N; ++i){
             for (std::size_t j = i; j < N; ++j){
@@ -210,6 +218,29 @@ class MixtureDerivatives{
         }
         return dLstar_dX;
     }
+    static Eigen::MatrixXd d2Lstar_dX2(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag, parameters WRT1, parameters WRT2){
+
+        std::size_t N = HEOS.mole_fractions.size();
+        Eigen::MatrixXd d2Lstar_dX2(N, N);
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = i; j < N; ++j){
+                if (WRT1 == iTau && WRT2 == iTau){
+                    d2Lstar_dX2(i, j) = 2/(HEOS.gas_constant()*HEOS.T_reducing())*MixtureDerivatives::d_ndln_fugacity_i_dnj_dtau__constdelta_x(HEOS, i, j, xN_flag)
+                        + 1/(HEOS.gas_constant()*HEOS.T())*MixtureDerivatives::d2_ndln_fugacity_i_dnj_dtau2__constdelta_x(HEOS, i, j, xN_flag);
+                }
+                else{
+                    throw ValueError(format("d2Lstar_dX2 invalid WRT"));
+                }
+            }
+        }
+        // Fill in the symmetric elements
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = 0; j < i; ++j){
+                d2Lstar_dX2(i, j) = d2Lstar_dX2(j, i);
+            }
+        }
+        return d2Lstar_dX2;
+    }
     static Eigen::MatrixXd Mstar(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
 
         std::size_t N = HEOS.mole_fractions.size();
@@ -229,7 +260,7 @@ class MixtureDerivatives{
                     n2dLdni(j, k) = n2dLdni(k, j);
                 }
             }
-            M(N-1, i) = (adjugate(L, N)*n2dLdni).trace();
+            M(N-1, i) = (adjugate(L)*n2dLdni).trace();
         }
         return M;
     }
@@ -384,6 +415,8 @@ class MixtureDerivatives{
      */
     static CoolPropDbl d2_ndalphardni_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
+    static CoolPropDbl d3_ndalphardni_dTau3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
     /** \brief GERG 2004 Monograph Equation 7.50 and Table B4, Kunz, JCED, 2012
      * 
      * The derivative term
@@ -412,6 +445,8 @@ class MixtureDerivatives{
     */
     static CoolPropDbl d2_ndalphardni_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
+    static CoolPropDbl d3_ndalphardni_dDelta3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
     /** \brief \f$\tau\f$ derivative of GERG 2004 Monograph Equation 7.50
     *
     * The derivative term
@@ -426,6 +461,9 @@ class MixtureDerivatives{
     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
     */
     static CoolPropDbl d2_ndalphardni_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
+    static CoolPropDbl d3_ndalphardni_dDelta2_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d3_ndalphardni_dDelta_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
     /** \brief \f$x_j\f$ derivative of GERG 2004 Monograph Equation 7.50
     *
@@ -458,6 +496,7 @@ class MixtureDerivatives{
     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
     */
     static CoolPropDbl d2_ndalphardni_dxj_dTau__constdelta_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d3_ndalphardni_dxj_dTau2__constdelta_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
     /** \brief GERG 2004 Monograph equation 7.41
      * 
@@ -500,6 +539,7 @@ class MixtureDerivatives{
      *  
      */
     static CoolPropDbl d_nd_ndalphardni_dnj_dTau__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2_nd_ndalphardni_dnj_dTau2__constdelta_x(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
     /* \brief \f$\delta\f$ derivative of GERG 2004 7.47
      *

@@ -2303,7 +2303,8 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
         std::size_t N = mole_fractions.size();
         CoolPropDbl summer_base = 0, summer_dTau = 0, summer_dDelta = 0, 
                     summer_dTau2 = 0, summer_dDelta2 = 0, summer_dDelta_dTau = 0,
-                    summer_dTau3 = 0, summer_dDelta3 = 0, summer_dDelta2_dTau = 0, summer_dDelta_dTau2 = 0;
+                    summer_dTau3 = 0, summer_dDelta3 = 0, summer_dDelta2_dTau = 0, summer_dDelta_dTau2 = 0,
+                    summer_dTau4 = 0, summer_dDelta4 = 0, summer_dDelta3_dTau = 0, summer_dDelta_dTau3 = 0, summer_dDelta2_dTau2 = 0;
         for (std::size_t i = 0; i < N; ++i){
             HelmholtzDerivatives derivs = components[i].EOS().alphar.all(tau, delta);
             CoolPropDbl xi = mole_fractions[i];
@@ -2319,6 +2320,13 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
             summer_dDelta2_dTau += xi*derivs.d3alphar_ddelta2_dtau;
             summer_dDelta_dTau2 += xi*derivs.d3alphar_ddelta_dtau2;
             summer_dTau3 += xi*derivs.d3alphar_dtau3;
+
+            summer_dDelta4 += xi*derivs.d4alphar_ddelta4;
+            summer_dDelta3_dTau += xi*derivs.d4alphar_ddelta3_dtau;
+            summer_dDelta2_dTau2 += xi*derivs.d4alphar_ddelta2_dtau2;
+            summer_dDelta_dTau3 += xi*derivs.d4alphar_ddelta_dtau3;
+            summer_dTau4 += xi*derivs.d4alphar_dtau4;
+
         }
         Excess.update(tau, delta);
         _alphar = summer_base + Excess.alphar(mole_fractions);
@@ -2332,11 +2340,12 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
         _d3alphar_dDelta2_dTau = summer_dDelta2_dTau + Excess.d3alphar_dDelta2_dTau(mole_fractions);
         _d3alphar_dDelta_dTau2 = summer_dDelta_dTau2 + Excess.d3alphar_dDelta_dTau2(mole_fractions);
         _d3alphar_dTau3 = summer_dTau3 + Excess.d3alphar_dTau3(mole_fractions);
-        //_d4alphar_dDelta4 = derivs.d4alphar_ddelta4;
-        //_d4alphar_dDelta3_dTau = derivs.d4alphar_ddelta3_dtau;
-        //_d4alphar_dDelta2_dTau2 = derivs.d4alphar_ddelta2_dtau2;
-        //_d4alphar_dDelta_dTau3 = derivs.d4alphar_ddelta_dtau3;
-        //_d4alphar_dTau4 = derivs.d4alphar_dtau4;
+        
+        _d4alphar_dDelta4 = summer_dDelta4 + Excess.d4alphar_dDelta4(mole_fractions);;
+        _d4alphar_dDelta3_dTau = summer_dDelta3_dTau + Excess.d4alphar_dDelta3_dTau(mole_fractions);
+        _d4alphar_dDelta2_dTau2 = summer_dDelta2_dTau2 + Excess.d4alphar_dDelta2_dTau2(mole_fractions);
+        _d4alphar_dDelta_dTau3 = summer_dDelta_dTau3 + Excess.d4alphar_dDelta_dTau3(mole_fractions);
+        _d4alphar_dTau4 = summer_dTau4 + Excess.d4alphar_dTau4(mole_fractions);
     }
 }
 
@@ -2909,10 +2918,10 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
             std::size_t N = x.size();
             std::vector<double> r, xp;
             std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
-            Eigen::MatrixXd J0(N, N), adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N), 
+            Eigen::MatrixXd J0(N, N), adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)), 
                                       dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
                                       dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta),
-                                      adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT), N),
+                                      adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT)),
                                       dMdTau = dLdTau, dMdDelta = dLdDelta;
 
             J0(0,0) = (adjL*dLdTau).trace();
@@ -2945,7 +2954,7 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
     _critical.rhomolar = x[1]*rhomolar_reducing();
 }
 
-class OneDimObjective : public FuncWrapper1DWithDeriv
+class OneDimObjective : public FuncWrapper1DWithTwoDerivs
 {
 public:
     CoolProp::HelmholtzEOSMixtureBackend &HEOS;
@@ -2960,9 +2969,19 @@ public:
     }
     double deriv(double tau){
         std::size_t N = HEOS.get_mole_fractions().size();
-        Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N),
-        dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau);
+        Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
+                        dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau);
         return (adjL*dLdTau).trace();
+    };
+    double second_deriv(double tau){
+        std::size_t N = HEOS.get_mole_fractions().size();
+        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT),
+                        dLstardTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
+                        d2LstardTau2 = MixtureDerivatives::d2Lstar_dX2(HEOS, XN_INDEPENDENT, iTau, iTau), 
+                        adjL = adjugate(Lstar),
+                        dadjLstardTau = adjugate_derivative(Lstar, dLstardTau);
+        double analytical = (dLstardTau*dadjLstardTau + adjL*d2LstardTau2).trace();
+        return analytical;
     };
 };
 
@@ -3008,7 +3027,7 @@ public:
      */
     double deriv(double theta){
         std::size_t N = HEOS.get_mole_fractions().size();
-        Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N),
+        Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
                         dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
                         dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta);
         double dL1_dtau = (adjL*dLdTau).trace(), dL1_ddelta = (adjL*dLdDelta).trace();
@@ -3069,7 +3088,8 @@ std::vector<CoolProp::SimpleState> HelmholtzEOSMixtureBackend::find_all_critical
 {
     std::string errstr;
     OneDimObjective resid_L0(*this, 0.5);
-    double tau_L0 = Newton(resid_L0, 1.3, 1e-10, 100, errstr);
+    double tau_L0 = Halley(resid_L0, 0.76, 1e-10, 100, errstr); 
+    double tau_L01 = Newton(resid_L0, 0.76, 1e-10, 100, errstr);
     
     L0CurveTracer tracer(*this, tau_L0, 0.5);
     tracer.trace();
