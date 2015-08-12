@@ -2918,16 +2918,22 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
             double epsilon;
             std::size_t N = x.size();
             std::vector<double> r, xp;
-            std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
+            std::vector<std::vector<double> > J(N, std::vector<double>(N, 0)), JJ(N, std::vector<double>(N, 0));
             Eigen::MatrixXd J0(N, N), adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)), 
+                                      adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT)),
                                       dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
                                       dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta),
-                                      adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT)),
-                                      dMdTau = dLdTau, dMdDelta = dLdDelta;
+                                      dMdTau = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iTau),
+                                      dMdDelta = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iDelta);
 
-            J0(0,0) = (adjL*dLdTau).trace();
-            J0(0,1) = (adjL*dLdDelta).trace();
+            JJ[0][0] = (adjL*dLdTau).trace();
+            JJ[0][1] = (adjL*dLdDelta).trace();
+            JJ[1][0] = (adjM*dMdTau).trace();
+            JJ[1][1] = (adjM*dMdDelta).trace();
+
             //std::cout << J0 << std::endl;
+            std::cout << JJ[0][0] << " " << JJ[0][1] << std::endl;
+            std::cout << JJ[1][0] << " " << JJ[1][1] << std::endl;
             std::vector<double> r0 = call(x);
             // Build the Jacobian by column
             for (std::size_t i = 0; i < N; ++i)
@@ -2942,7 +2948,8 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
                     J[j][i] = (r[j]-r0[j])/epsilon;
                 }
             }
-            
+            std::cout << J[0][0] << " " << J[0][1] << std::endl;
+            std::cout << J[1][0] << " " << J[1][1] << std::endl;
             return J;
         };
     };
