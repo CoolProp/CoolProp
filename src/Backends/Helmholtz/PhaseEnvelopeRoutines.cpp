@@ -411,6 +411,9 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
             else if (imaxima == TMAX_SAT){
                 maxima = TMAX_SAT;
             }
+            else{
+                throw ValueError("I don't understand your maxima index");
+            }
             
             // Spline using the points around it
             SplineClass spline;

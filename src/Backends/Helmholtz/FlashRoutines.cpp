@@ -709,7 +709,7 @@ void FlashRoutines::PT_Q_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS, parame
         //      Two-phase calculation for given vapor quality
         // *********************************************************
         
-         // Find the correct solution
+        // Find the correct solution
         std::vector<std::size_t> liquid_solutions, vapor_solutions;
         for (std::vector< std::pair<std::size_t, std::size_t> >::const_iterator it = intersections.begin(); it != intersections.end(); ++it){
             if (std::abs(env.Q[it->first] - 0) < 10*DBL_EPSILON && std::abs(env.Q[it->second] - 0) < 10*DBL_EPSILON ){
