@@ -284,7 +284,9 @@ class MixtureDerivatives{
     static Eigen::MatrixXd Mstar(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
 
         std::size_t N = HEOS.mole_fractions.size();
-        Eigen::MatrixXd L = Lstar(HEOS, xN_flag), M = L;
+        Eigen::MatrixXd L = Lstar(HEOS, xN_flag),
+                        M = L,
+                        adjL = adjugate(L);
 
         // Last row
         for (std::size_t i = 0; i < N; ++i){
@@ -292,15 +294,11 @@ class MixtureDerivatives{
             for (std::size_t j = 0; j < N; ++j){
                 for (std::size_t k = j; k < N; ++k){
                     n2dLdni(j, k) = n2Aijk(HEOS, j, k, i, xN_flag);
+                    // Fill in the symmetric elements
+                    n2dLdni(k, j) = n2dLdni(j, k);
                 }
             }
-            // Fill in the symmetric elements
-            for (std::size_t j = 0; j < N; ++j){
-                for (std::size_t k = 0; k < j; ++k){
-                    n2dLdni(j, k) = n2dLdni(k, j);
-                }
-            }
-            M(N-1, i) = (adjugate(L)*n2dLdni).trace();
+            M(N-1, i) = (adjL*n2dLdni).trace();
         }
         return M;
     }
@@ -313,20 +311,16 @@ class MixtureDerivatives{
                         adjL = adjugate(L), 
                         d_adjL_dX = adjugate_derivative(L, dL_dX);
 
-        // Last row
+        // Last row in the d(Mstar)/d(X) requires derivatives of
         for (std::size_t i = 0; i < N; ++i){
             Eigen::MatrixXd n2dLdni(N, N), d_n2dLdni_dX(N, N);
             for (std::size_t j = 0; j < N; ++j){
                 for (std::size_t k = j; k < N; ++k){
                     n2dLdni(j, k) = n2Aijk(HEOS, j, k, i, xN_flag);
                     d_n2dLdni_dX(j, k) = d_n2Aijk_dX(HEOS, j, k, i, xN_flag, WRT);
-                }
-            }
-            // Fill in the symmetric elements
-            for (std::size_t j = 0; j < N; ++j){
-                for (std::size_t k = 0; k < j; ++k){
-                    n2dLdni(j, k) = n2dLdni(k, j);
-                    d_n2dLdni_dX(j, k) = d_n2dLdni_dX(k, j);
+                    // Fill in the symmetric elements
+                    n2dLdni(k, j) = n2dLdni(j, k);
+                    d_n2dLdni_dX(k, j) = d_n2dLdni_dX(j, k);
                 }
             }
             dMstar(N-1, i) = (n2dLdni*d_adjL_dX + adjL*d_n2dLdni_dX).trace();
