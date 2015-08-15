@@ -208,7 +208,20 @@ class MixtureDerivatives{
             return 1/RT*summer + 1/(HEOS.gas_constant()*HEOS.T_reducing())*nd_ndln_fugacity_i_dnj_dnk__constT_V_xi(HEOS,i,j,k,xN_flag) - d_nAij_dX(HEOS, i, j, xN_flag, WRT);
         }
         else if (WRT== iDelta){
-            return -1000;
+            double summer = 0;
+            summer += d2_ndln_fugacity_i_dnj_ddelta_dtau__constx(HEOS, i, j, xN_flag)*ndtaudni__constT_V_nj(HEOS, k, xN_flag);
+            summer += d2_ndln_fugacity_i_dnj_ddelta2__consttau_x(HEOS, i, j, xN_flag)*nddeltadni__constT_V_nj(HEOS, k, xN_flag);
+			summer += d_ndln_fugacity_i_dnj_ddelta__consttau_x(HEOS, i, j, xN_flag)*d_nddeltadni_dDelta(HEOS, k, xN_flag);
+            summer += d2_ndln_fugacity_i_dnj_dxk_dDelta__consttau(HEOS, i, j, k, xN_flag);
+            std::size_t mmax = HEOS.mole_fractions.size();
+            if (xN_flag == XN_DEPENDENT){ mmax--; }
+            for (std::size_t m = 0; m < mmax; ++m){
+                summer -= HEOS.mole_fractions[m]*d2_ndln_fugacity_i_dnj_dxk_dDelta__consttau(HEOS, i, j, m, xN_flag);
+            }
+            return 1/RT*summer - d_nAij_dX(HEOS, i, j, xN_flag, iDelta);
+        }
+        else{
+            return _HUGE;
         }
     }
     static Eigen::MatrixXd Lstar(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag){
