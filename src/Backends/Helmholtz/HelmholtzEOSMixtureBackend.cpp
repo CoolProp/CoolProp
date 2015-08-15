@@ -729,11 +729,16 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP500(void)
         return v;
     }
 }
-
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void)
 {
     if (components.size() != 1){
-        throw ValueError(format("For now, calc_T_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+        std::vector<SimpleState> critpts = find_all_critical_points();
+        if (critpts.size() == 1){
+            return critpts[0].T;
+        }
+        else{
+            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+        }
     }
     else{
         return components[0].crit.T;
@@ -742,7 +747,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void)
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void)
 {
     if (components.size() != 1){
-        throw ValueError(format("For now, calc_p_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+        std::vector<SimpleState> critpts = find_all_critical_points();
+        if (critpts.size() == 1){
+            return critpts[0].p;
+        }
+        else{
+            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+        }
     }
     else{
         return components[0].crit.p;
@@ -751,7 +762,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void)
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void)
 {
     if (components.size() != 1){
-        throw ValueError(format("For now, calc_rhomolar_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+        std::vector<SimpleState> critpts = find_all_critical_points();
+        if (critpts.size() == 1){
+            return critpts[0].rhomolar;
+        }
+        else{
+            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+        }
     }
     else{
         return components[0].crit.rhomolar;
@@ -2953,6 +2970,7 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
     x = NDNewtonRaphson_Jacobian(&resid, tau_delta, 1e-14, 100, &errstr);
     _critical.T = T_reducing()/x[0];
     _critical.rhomolar = x[1]*rhomolar_reducing();
+    _critical.p = calc_pressure_nocache(_critical.T, _critical.rhomolar);
 }
 
 class OneDimObjective : public FuncWrapper1DWithTwoDerivs
@@ -3089,6 +3107,11 @@ public:
     
 std::vector<CoolProp::SimpleState> HelmholtzEOSMixtureBackend::find_all_critical_points()
 {
+    // Store old phase
+    phases old_phase = _phase;
+    // Specify it to be something homogeneous to shortcut phase evaluation
+    specify_phase(iphase_gas);
+    
     std::string errstr;
     OneDimObjective resid_L0(*this, 0.5);
     double tau0 = 0.66;
@@ -3100,6 +3123,8 @@ std::vector<CoolProp::SimpleState> HelmholtzEOSMixtureBackend::find_all_critical
     
     L0CurveTracer tracer(*this, tau_L0, 0.5);
     tracer.trace();
+    // Reset phase to previous value
+    _phase = old_phase;
     return tracer.critical_points;
 }
 
