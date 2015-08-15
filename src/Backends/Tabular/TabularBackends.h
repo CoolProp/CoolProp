@@ -827,6 +827,10 @@ class TabularBackend : public AbstractState
         CoolPropDbl calc_cvmolar(void);
         CoolPropDbl calc_viscosity(void);
         CoolPropDbl calc_conductivity(void);
+        /// Calculate the speed of sound using a tabular backend [m/s]
+        CoolPropDbl calc_speed_sound(void){
+            return sqrt(1/molar_mass()*cpmolar()/cvmolar()*first_partial_deriv(iP, iDmolar, iT));
+        };
         CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
         /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
         */
