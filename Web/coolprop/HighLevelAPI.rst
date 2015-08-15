@@ -185,6 +185,10 @@ In a similar fashion it is possible to evaluate second derivatives.  For instanc
 
 where the inner part ``d(Hmass)/d(T)|P`` is the definition of :math:`c_p`.
 
+.. warning::
+
+    This derivative formulation is currently only valid for homogeneous (single-phase) states.  Two phase derivatives are not defined, and are for many combinations, invalid.
+    
 It is also possible to call the derivatives directly using the :ref:`low-level partial derivatives functionality <partial_derivatives_low_level>`.  The low-level routine is in general faster because it avoids the string parsing.
 
 First Saturation Derivatives
