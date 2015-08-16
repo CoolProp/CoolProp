@@ -2915,34 +2915,34 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
         };
         std::vector<std::vector<double> > Jacobian(const std::vector<double> &x)
         {
-            
+            std::size_t N = x.size();
+            std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
+            Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
+                adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT)),
+                dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
+                dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta),
+                dMdTau = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iTau),
+                dMdDelta = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iDelta);
+
+            J[0][0] = (adjL*dLdTau).trace();
+            J[0][1] = (adjL*dLdDelta).trace();
+            J[1][0] = (adjM*dMdTau).trace();
+            J[1][1] = (adjM*dMdDelta).trace();
+            return J;
+        }
+        /// Not used, for testing purposes
+        std::vector<std::vector<double> > numerical_Jacobian(const std::vector<double> &x)
+        {
             std::size_t N = x.size();
             std::vector<double> rplus, rminus, xp;
-            std::vector<std::vector<double> > J(N, std::vector<double>(N, 0)), JJ(N, std::vector<double>(N, 0));
-            Eigen::MatrixXd J0(N, N), adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)), 
-                                      adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT)),
-                                      dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
-                                      dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta),
-                                      dMdTau = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iTau),
-                                      dMdDelta = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iDelta);
-
-            JJ[0][0] = (adjL*dLdTau).trace();
-            JJ[0][1] = (adjL*dLdDelta).trace();
-            JJ[1][0] = (adjM*dMdTau).trace();
-            JJ[1][1] = (adjM*dMdDelta).trace();
-
-//            return JJ;
+            std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
             
-            //std::cout << J0 << std::endl;
-            std::cout << JJ[0][0] << " " << JJ[0][1] << std::endl;
-            std::cout << JJ[1][0] << " " << JJ[1][1] << std::endl;
-            double epsilon;
+            double epsilon = 0.0001;
              
             // Build the Jacobian by column
             for (std::size_t i = 0; i < N; ++i)
             {
                 xp = x;
-                epsilon = 0.0001;
                 xp[i] += epsilon;
                 rplus = call(xp);
                 xp[i] -= 2*epsilon;
@@ -2956,7 +2956,6 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
             std::cout << J[0][0] << " " << J[0][1] << std::endl;
             std::cout << J[1][0] << " " << J[1][1] << std::endl;
             return J;
-            
         };
     };
     Resid resid(*this);
