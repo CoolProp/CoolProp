@@ -908,7 +908,7 @@ static Eigen::MatrixXd adjugate(const Eigen::MatrixBase<Derived>& A)
     for (std::size_t i = 0; i < N; ++i){
         for (std::size_t j = 0; j < N; ++j){
             int negative_1_to_the_i_plus_j = ((i+j)%2==0) ? 1 : -1;
-            Aadj(i, j) = negative_1_to_the_i_plus_j*minor_matrix(A, i, j).determinant();
+            Aadj(i, j) = negative_1_to_the_i_plus_j*minor_matrix(A, j, i).determinant();
         }
     }
     return Aadj;
