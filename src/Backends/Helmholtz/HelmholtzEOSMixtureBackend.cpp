@@ -2932,34 +2932,46 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
         };
         std::vector<std::vector<double> > Jacobian(const std::vector<double> &x)
         {
-            double epsilon;
             std::size_t N = x.size();
-            std::vector<double> r, xp;
             std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
-            Eigen::MatrixXd J0(N, N), adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)), 
-                                      dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
-                                      dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta),
-                                      adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT)),
-                                      dMdTau = dLdTau, dMdDelta = dLdDelta;
+            Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
+                adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT)),
+                dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
+                dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta),
+                dMdTau = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iTau),
+                dMdDelta = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iDelta);
 
-            J0(0,0) = (adjL*dLdTau).trace();
-            J0(0,1) = (adjL*dLdDelta).trace();
-            //std::cout << J0 << std::endl;
-            std::vector<double> r0 = call(x);
+            J[0][0] = (adjL*dLdTau).trace();
+            J[0][1] = (adjL*dLdDelta).trace();
+            J[1][0] = (adjM*dMdTau).trace();
+            J[1][1] = (adjM*dMdDelta).trace();
+            return J;
+        }
+        /// Not used, for testing purposes
+        std::vector<std::vector<double> > numerical_Jacobian(const std::vector<double> &x)
+        {
+            std::size_t N = x.size();
+            std::vector<double> rplus, rminus, xp;
+            std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
+            
+            double epsilon = 0.0001;
+             
             // Build the Jacobian by column
             for (std::size_t i = 0; i < N; ++i)
             {
                 xp = x;
-                epsilon = 0.00001;
                 xp[i] += epsilon;
-                r = call(xp);
+                rplus = call(xp);
+                xp[i] -= 2*epsilon;
+                rminus = call(xp);
 
                 for (std::size_t j = 0; j < N; ++j)
                 {
-                    J[j][i] = (r[j]-r0[j])/epsilon;
+                    J[j][i] = (rplus[j]-rminus[j])/(2*epsilon);
                 }
             }
-            
+            std::cout << J[0][0] << " " << J[0][1] << std::endl;
+            std::cout << J[1][0] << " " << J[1][1] << std::endl;
             return J;
         };
     };
@@ -2987,13 +2999,11 @@ public:
         return L1;
     }
     double deriv(double tau){
-        std::size_t N = HEOS.get_mole_fractions().size();
         Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
                         dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau);
         return (adjL*dLdTau).trace();
     };
     double second_deriv(double tau){
-        std::size_t N = HEOS.get_mole_fractions().size();
         Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT),
                         dLstardTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
                         d2LstardTau2 = MixtureDerivatives::d2Lstar_dX2(HEOS, XN_INDEPENDENT, iTau, iTau), 
@@ -3050,7 +3060,6 @@ public:
      @param theta The angle
      */
     double deriv(double theta){
-        std::size_t N = HEOS.get_mole_fractions().size();
         double dL1_dtau = (adjLstar*dLstardTau).trace(), dL1_ddelta = (adjLstar*dLstardDelta).trace();
         return -R_tau*sin(theta)*dL1_dtau + R_delta*cos(theta)*dL1_ddelta;
     };
