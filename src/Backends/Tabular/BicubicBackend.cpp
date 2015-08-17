@@ -142,13 +142,13 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             // Call again, but this time with molar units; S: [J/kg/K] * [kg/mol] -> [J/mol/K]
             update(PSmolar_INPUTS, val1, val2*AS->molar_mass()); return;
         }
-		case PT_INPUTS:{
+	case PT_INPUTS:{
             _p = val1; _T = val2;
             if (!single_phase_logpT.native_inputs_are_in_range(_T, _p)){
                 // Use the AbstractState instance
                 using_single_phase_table = false;
                 if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
-                throw ValueError(format("inputs are not in range, p=%Lg, T=%Lg", _p, _T));
+                throw ValueError(format("inputs are not in range, p=%g Pa, T=%g K", _p, _T));
             }
             else{
                 using_single_phase_table = true; // Use the table !
