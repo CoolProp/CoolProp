@@ -48,7 +48,7 @@ Other flash routines proceed in exactly the same fashion.  Most of the methods a
 
     In [0]: import CoolProp
 
-    In [0]: HEOS = CoolProp.AbstractState('HEOS','R32&R2125'); HEOS.set_mole_fractions([0.5,0.5])
+    In [0]: HEOS = CoolProp.AbstractState('HEOS','R32&R125'); HEOS.set_mole_fractions([0.5,0.5])
 
     In [0]: REFPROP = CoolProp.AbstractState('REFPROP','R32&R125'); REFPROP.set_mole_fractions([0.5,0.5])
     
