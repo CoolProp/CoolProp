@@ -74,6 +74,31 @@ cdef class AbstractState:
     cpdef double Ttriple(self) except *:
         """ Set the triple point temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Ttriple` """
         return self.thisptr.Ttriple()
+        
+        
+    ## Critical point
+    cpdef double T_critical(self) except *:
+        """ Gets the critical temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::T_critical` """
+        return self.thisptr.T_critical()
+    cpdef double rhomass_critical(self) except *:
+        """ Gets the critical density in kg/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomass_critical` """
+        return self.thisptr.rhomass_critical()
+    cpdef double rhomolar_critical(self) except *:
+        """ Gets the critical density in mol/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomolar_critical` """
+        return self.thisptr.rhomolar_critical()
+    cpdef double p_critical(self) except *:
+        """ Gets the critical pressure in Pa - wrapper of c++ function :cpapi:`CoolProp::AbstractState::p_critical` """
+        return self.thisptr.p_critical()
+    ## Reducing point
+    cpdef double T_reducing(self) except *:
+        """ Gets the reducing temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::T_reducing` """
+        return self.thisptr.T_reducing()
+    cpdef double rhomolar_reducing(self) except *:
+        """ Gets the reducing density in mol/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomolar_reducing` """
+        return self.thisptr.rhomolar_reducing()
+    cpdef double rhomass_reducing(self) except *:
+        """ Gets the reducing density in kg/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomass_reducing` """
+        return self.thisptr.rhomass_reducing()
 
     ## ----------------------------------------	
     ##        Fluid property accessors

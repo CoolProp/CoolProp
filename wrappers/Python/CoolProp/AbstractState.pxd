@@ -35,6 +35,16 @@ cdef class AbstractState:
     cpdef double Tmax(self) except *
     cpdef double pmax(self) except *
     cpdef double Ttriple(self) except *
+    
+    ## Critical point
+    cpdef double T_critical(self) except *
+    cpdef double rhomass_critical(self) except *
+    cpdef double rhomolar_critical(self) except *
+    cpdef double p_critical(self) except *
+    ## Reducing point
+    cpdef double T_reducing(self) except *
+    cpdef double rhomolar_reducing(self) except *
+    cpdef double rhomass_reducing(self) except *
         
     ## ---------------------------------------- 
     ##        Fluid property accessors

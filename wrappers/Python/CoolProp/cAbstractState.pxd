@@ -47,6 +47,16 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double pmax()
         double Ttriple()
         
+        ## Critical point
+        double T_critical()
+        double rhomass_critical()
+        double rhomolar_critical()
+        double p_critical()
+        ## Reducing point
+        double T_reducing()
+        double rhomolar_reducing()
+        double rhomass_reducing()
+        
         void ideal_curve(const string &, vector[double] &T, vector[double] &p) except +ValueError
 
         ## Property updater
