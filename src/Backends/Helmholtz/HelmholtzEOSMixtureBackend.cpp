@@ -3102,7 +3102,9 @@ public:
                 CoolProp::SimpleState crit = HEOS.get_state("critical");
                 critical_points.push_back(crit);
                 N_critical_points++;
-                std::cout << HEOS.get_mole_fractions()[0] << " " << crit.rhomolar << " " << crit.T << " " << p_MPa << std::endl;
+                if (get_debug_level() > 0){
+                    std::cout << HEOS.get_mole_fractions()[0] << " " << crit.rhomolar << " " << crit.T << " " << p_MPa << std::endl;
+                }
             }
             
             // Update the storage values

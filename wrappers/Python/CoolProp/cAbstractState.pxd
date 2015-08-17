@@ -42,20 +42,20 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         bool clear()
         
         ## Limits
-        double Tmin()
-        double Tmax()
-        double pmax()
-        double Ttriple()
+        double Tmin() except +ValueError
+        double Tmax() except +ValueError
+        double pmax() except +ValueError
+        double Ttriple() except +ValueError
         
         ## Critical point
-        double T_critical()
-        double rhomass_critical()
-        double rhomolar_critical()
-        double p_critical()
+        double T_critical() except +ValueError
+        double rhomass_critical() except +ValueError
+        double rhomolar_critical() except +ValueError
+        double p_critical() except +ValueError
         ## Reducing point
-        double T_reducing()
-        double rhomolar_reducing()
-        double rhomass_reducing()
+        double T_reducing() except +ValueError
+        double rhomolar_reducing() except +ValueError
+        double rhomass_reducing() except +ValueError
         
         void ideal_curve(const string &, vector[double] &T, vector[double] &p) except +ValueError
 
