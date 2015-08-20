@@ -78,6 +78,18 @@ function get_input_pair_index(Param::String)
   return val
 end
 
+# Get the debug level
+# returns level The level of the verbosity for the debugging output (0-10) 0: no debgging output
+function get_debug_level()
+  ccall( (:get_debug_level, "CoolProp"), Cint, () )
+end
+
+# Set the debug level
+# param level The level of the verbosity for the debugging output (0-10) 0: no debgging output
+function set_debug_level(level::Int)
+  ccall( (:set_debug_level, "CoolProp"), Void, (Cint,), level)
+end
+
 # ---------------------------------
 #        Low-level access
 # ---------------------------------
