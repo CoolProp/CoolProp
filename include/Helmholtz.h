@@ -505,6 +505,13 @@ public:
     ResidualHelmholtzSAFTAssociating SAFT;
     ResidualHelmholtzGeneralizedExponential GenExp;
 
+    void clear(){
+        _base = 0; 
+        _dDelta = 0; _dTau = 0;  
+        _dDelta2 = 0; _dTau2 = 0; _dDelta_dTau = 0;
+        _dDelta3 = 0; _dTau3 = 0; _dDelta2_dTau = 0; _dDelta_dTau2 = 0;
+        _dDelta4 = 0; _dDelta3_dTau = 0; _dDelta2_dTau2 = 0; _dDelta_dTau3 = 0; _dTau4 = 0;
+    }
     HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta, bool cache_values = false)
     {
         HelmholtzDerivatives derivs; // zeros out the elements

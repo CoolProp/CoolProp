@@ -48,6 +48,15 @@ public:
     SimpleState hsat_max;
     SsatSimpleState ssat_max;
 
+    bool clear(){
+        // Clear the locally cached values for the derivatives of the residual Helmholtz energy
+        // in each component
+        for (std::vector<CoolPropFluid>::iterator it = components.begin(); it != components.end(); ++it){
+            (*it).EOS().alphar.clear();
+        }
+        return AbstractState::clear();
+    };
+
     friend class FlashRoutines; // Allows the static methods in the FlashRoutines class to have access to all the protected members and methods of this class
     friend class TransportRoutines; // Allows the static methods in the TransportRoutines class to have access to all the protected members and methods of this class
     friend class MixtureDerivatives; // Allows the static methods in the MixtureDerivatives class to have access to all the protected members and methods of this class
