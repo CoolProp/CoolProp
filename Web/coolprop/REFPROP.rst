@@ -6,7 +6,7 @@ REFPROP Interface
 
 .. contents:: :depth: 2
 
-The thermophysical library REFPROP developed by researchers at the National Institute of Standards and Technology in Boulder, Colorado is the gold standard in thermophysical properties.  It is mature and stable, and is currently the library most used in industry and for scientific applications.
+The thermophysical property library REFPROP developed by researchers at the National Institute of Standards and Technology in Boulder, Colorado is the gold standard in thermophysical properties.  It is mature and stable, and is currently the library most used in industry and for scientific applications.
 
 CoolProp allows for full interaction with the REFPROP library, while using the nicely abstracted C++ interface for all target languages that CoolProp supports.  This yields a 
 
@@ -21,8 +21,10 @@ The core difference between using CoolProp's internal routines and REFPROP's rou
 
     # This one uses REFPROP's internal routines to calculate NBP of water
     In [0]: PropsSI("T","P",101325,"Q",0,"REFPROP::Water")
+    
+The list of input keys that can be used in the PropsSI function are given here: :ref:`parameter_table`. 
 
-or similarly, in the low-level interface, this would be
+In the :ref:`low-level interface <low_level_api>` (significantly faster once you have constructed the class!), this would be
 
 .. ipython::
 
@@ -42,7 +44,7 @@ or similarly, in the low-level interface, this would be
 
     In [0]: REFPROP.T()
 
-Other flash routines proceed in exactly the same fashion.  Most of the methods available for CoolProp are also available for REFPROP.  For instance, you can generate phase envelopes with both CoolProp and REFPROP, or evaluate the dewpoint of mixtures.  Here are a few examples of the mapping between CoolProp and REFPROP for some more interesting applications:
+Other flash routines (see :cpapi:`CoolProp::input_pairs`) proceed in exactly the same fashion.  Most of the methods available for CoolProp are also available for REFPROP.  For instance, you can generate phase envelopes with both CoolProp and REFPROP, or evaluate the dewpoint of mixtures.  Here are a few examples of the mapping between CoolProp and REFPROP for some more interesting applications:
 
 .. ipython::
 
