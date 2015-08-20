@@ -20,7 +20,7 @@ This directory is used because the user should under almost all circumstances ha
 
 .. warning::
 
-    Constructing the tables generates approximately 20 MB of data per fluid. The size of the directory of tabular data can get to be quite large if you use tables with lots of fluids.  By default, CoolProp will warn when this directory is greater than 1 GB in size, and error out at 1.5 x (1.0 GB).  This cap can be lifted by setting a configuration variable as shown here
+    Constructing the tables generates approximately 20 MB of data per fluid. The size of the directory of tabular data can get to be quite large if you use tables with lots of fluids.  By default, CoolProp will warn when this directory is greater than 1 GB in size, and error out at 1.5 x (1.0 GB).  This cap can be lifted by setting a configuration variable (see :ref:`configuration`) as shown here
     
 .. ipython::
 
