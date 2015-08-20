@@ -19,18 +19,18 @@
  * The type of the default value specifies the only type that will be accepted for this parameter
  */
 #define CONFIGURATION_KEYS_ENUM \
-    X(NORMALIZE_GAS_CONSTANTS, "NORMALIZE_GAS_CONSTANTS", true) \
-    X(CRITICAL_WITHIN_1UK, "CRITICAL_WITHIN_1UK", true) \
-    X(CRITICAL_SPLINES_ENABLED, "CRITICAL_SPLINES_ENABLED", true) \
-    X(ALTERNATIVE_REFPROP_PATH, "ALTERNATIVE_REFPROP_PATH", "") \
-    X(ALTERNATIVE_REFPROP_HMX_BNC_PATH, "ALTERNATIVE_REFPROP_HMX_BNC_PATH", "") \
-    X(SAVE_RAW_TABLES, "SAVE_RAW_TABLES", false) \
-    X(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB, "MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB", 1.0) \
-    X(DONT_CHECK_PROPERTY_LIMITS, "DONT_CHECK_PROPERTY_LIMITS", false) \
+    X(NORMALIZE_GAS_CONSTANTS, "NORMALIZE_GAS_CONSTANTS", true, "If true, for mixtures, the molar gas constant (R) will be set to the CODATA value") \
+    X(CRITICAL_WITHIN_1UK, "CRITICAL_WITHIN_1UK", true, "If true, any temperature within 1 uK of the critical temperature will be considered to be AT the critical point") \
+    X(CRITICAL_SPLINES_ENABLED, "CRITICAL_SPLINES_ENABLED", true, "If true, the critical splines will be used in the near-vicinity of the critical point") \
+    X(SAVE_RAW_TABLES, "SAVE_RAW_TABLES", false, "If true, the raw, uncompressed tables will also be written to file") \
+    X(ALTERNATIVE_REFPROP_PATH, "ALTERNATIVE_REFPROP_PATH", "", "An alternative path to be provided to the directory that contains REFPROP's fluids and mixtures directories.  If provided, the SETPATH function will be called with this directory prior to calling any REFPROP functions.") \
+    X(ALTERNATIVE_REFPROP_HMX_BNC_PATH, "ALTERNATIVE_REFPROP_HMX_BNC_PATH", "", "An alternative path to the HMX.BNC file.  If provided, it will be passed into REFPROP's SETUP or SETMIX routines") \
+    X(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB, "MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB", 1.0, "The maximum allowed size of the directory that is used to store tabular data") \
+    X(DONT_CHECK_PROPERTY_LIMITS, "DONT_CHECK_PROPERTY_LIMITS", false, "If true, when possible, CoolProp will skip checking whether values are inside the property limits") \
 
  // Use preprocessor to create the Enum
  enum configuration_keys{
-  #define X(Enum, String, Default)       Enum,
+  #define X(Enum, String, Default, Desc)       Enum,
    CONFIGURATION_KEYS_ENUM
   #undef X
  };
@@ -50,6 +50,12 @@ namespace CoolProp
 
 /// Convert the configuration key to a string in a 1-1 representation.
 std::string config_key_to_string(configuration_keys keys);
+
+/// Return a string description of the configuration key
+std::string config_key_description(configuration_keys keys);
+
+/// Return a string description of the configuration key (with the key passed as a string)
+std::string config_key_description(std::string key);
     
 /// A class that contains one entry in configuration
 /// Can be cast to yield the output value
@@ -208,7 +214,7 @@ class Configuration
              * See http://stackoverflow.com/a/148610
              * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
              */
-            #define X(Enum, String, Default) \
+            #define X(Enum, String, Default, Desc) \
                 add_item(ConfigurationItem(Enum, Default));
                 CONFIGURATION_KEYS_ENUM
             #undef X

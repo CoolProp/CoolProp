@@ -11,7 +11,7 @@ std::string config_key_to_string(configuration_keys keys)
          * See http://stackoverflow.com/a/148610
          * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
          */
-         #define X(Enum, String, Default) \
+         #define X(Enum, String, Default, Desc) \
             case Enum:  return String; break;
             CONFIGURATION_KEYS_ENUM
          #undef X
@@ -19,13 +19,41 @@ std::string config_key_to_string(configuration_keys keys)
     return ""; // will never get here, just to make compiler happy
 }; 
 
+
+std::string config_key_description(configuration_keys keys)
+{
+    switch (keys)
+    {
+        /* ***MAGIC WARNING**!!
+        * See http://stackoverflow.com/a/148610
+        * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
+        */
+        #define X(Enum, String, Default, Desc) case Enum: return Desc; break;
+            CONFIGURATION_KEYS_ENUM
+        #undef X
+    }
+    return ""; // will never get here, just to make compiler happy
+};
+
+std::string config_key_description(std::string key)
+{
+    /* ***MAGIC WARNING**!!
+    * See http://stackoverflow.com/a/148610
+    * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
+    */
+    #define X(Enum, String, Default, Desc) if (key == String){ return Desc; }
+            CONFIGURATION_KEYS_ENUM
+    #undef X
+    return "INVALID KEY";
+};
+
 /// Go from string to enum key
 configuration_keys config_string_to_key(const std::string &s)
 {
     /* See http://stackoverflow.com/a/148610
      * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
      */
-    #define X(Enum, String, Default) \
+    #define X(Enum, String, Default, Desc) \
         if (s == String){ return Enum; }
         CONFIGURATION_KEYS_ENUM
     #undef X

@@ -133,6 +133,12 @@ cpdef string get_config_as_json_string():
     Values can be set by passing a modified json library (converted to string) to set_config_as_json_string
     """
     return _get_config_as_json_string()
+    
+cpdef string config_key_description(string key):
+    """
+    Obtain the string description for a configuration key.  Python wrapper of C++ function :cpapi:`CoolProp::config_key_description`
+    """
+    return _config_key_description(key)
 
 cpdef set_config_as_json_string(string s):
     """
