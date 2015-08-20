@@ -14,7 +14,7 @@ The surface tension correlation class uses correlations for the surface tension 
 of the form
 
 \f[
-\sigma = \sum_{i=0}^{k-1}a_i\left(1-\frac{T}{\tilde T_c}\right)^{n_i}
+\sigma = \sum_i a_i\left(1-\frac{T}{\tilde T_c}\right)^{n_i}
 \f]
 
 where \f$ \tilde T_c \f$ is the critical temperature used for the correlation which is
@@ -24,12 +24,13 @@ surface tension is in N/m
 class SurfaceTensionCorrelation
 {
 public:
-    std::vector<CoolPropDbl> a, n, s;
-    CoolPropDbl Tc;
+    std::vector<CoolPropDbl> a, ///< the leading coefficients a_i
+                             n, ///< the powers n_i
+                             s; ///< a summation buffer
+    CoolPropDbl Tc; ///< critical temperature in K
+    std::size_t N; ///< number of a_i, n_i pairs
+    std::string BibTeX; ///< The BiBTeX key for the surface tension curve in use
 
-    std::size_t N;
-
-    std::string BibTeX;
     SurfaceTensionCorrelation():Tc(_HUGE),N(0){}
     SurfaceTensionCorrelation(rapidjson::Value &json_code)
     {
@@ -42,6 +43,7 @@ public:
         this->N = n.size();
         s = n;
     };
+    /// Actually evaluate the surface tension equation
     CoolPropDbl evaluate(CoolPropDbl T)
     {
         if (a.empty()){ throw NotImplementedError(format("surface tension curve not provided"));}
@@ -84,25 +86,28 @@ private:
                     den_coeffs; ///< Coefficients for denominator in rational polynomial
     std::vector<double> n, t, s; // For TYPE_NOT_EXPONENTIAL & TYPE_EXPONENTIAL
     union{
-        CoolPropDbl max_abs_error; // For TYPE_RATIONAL_POLYNOMIAL
+        CoolPropDbl max_abs_error; ///< For TYPE_RATIONAL_POLYNOMIAL
         struct{                    // For TYPE_NOT_EXPONENTIAL & TYPE_EXPONENTIAL
-            bool using_tau_r;
-            CoolPropDbl reducing_value, T_r;
-            std::size_t N;
+            bool using_tau_r; ///< Whether the term \f$ \frac{T_c}{T} \f$ is included in the 
+            CoolPropDbl reducing_value, ///< The value used to reduce the output variable
+                        T_r; ///< The temperature in K used to reduce the temperature (ususally the critical temperature)
+            std::size_t N; ///< The number of values in the arrays
         };
     };
-    CoolPropDbl Tmax, Tmin;
+    CoolPropDbl Tmax, ///< The maximum temperature in K
+                Tmin; ///< The minimum temperature in K
     enum ancillaryfunctiontypes{TYPE_NOT_SET = 0, 
-                                TYPE_NOT_EXPONENTIAL, 
-                                TYPE_EXPONENTIAL, 
-                                TYPE_RATIONAL_POLYNOMIAL};
-    ancillaryfunctiontypes type;
+                                TYPE_NOT_EXPONENTIAL, ///< It is a non-exponential type of equation
+                                TYPE_EXPONENTIAL, ///< It is an exponential type equation, with or without the T_c/T term
+                                TYPE_RATIONAL_POLYNOMIAL ///< It is a rational polynomial equation
+                                };
+    ancillaryfunctiontypes type; ///< The type of ancillary curve being used
 public:
 
     SaturationAncillaryFunction(){type = TYPE_NOT_SET;};
     SaturationAncillaryFunction(rapidjson::Value &json_code);
     
-    /// Return true if the ancillary is enabled
+    /// Return true if the ancillary is enabled (type is not TYPE_NOT_SET)
     bool enabled(void){return type != TYPE_NOT_SET;}
     
     /// Get the maximum absolute error for this fit
@@ -121,15 +126,18 @@ public:
     /// @returns T The temperature in K
     double invert(double value, double min_bound = -1, double max_bound = -1);
     
-    /// Get the minimum temperature
-    /// @returns T The minimum temperature in K
+    /// Get the minimum temperature in K
     double get_Tmin(void){return Tmin;};
     
-    /// Get the maximum temperature
-    /// @returns T The maximum temperature in K
+    /// Get the maximum temperature in K
     double get_Tmax(void){return Tmax;};
-    
 };
+
+// ****************************************************************************
+// ****************************************************************************
+//                                 MELTING LINE
+// ****************************************************************************
+// ****************************************************************************
 
 struct MeltingLinePiecewiseSimonSegment
 {
@@ -139,6 +147,14 @@ struct MeltingLinePiecewiseSimonData
 {
     std::vector<MeltingLinePiecewiseSimonSegment> parts;
 };
+
+/**
+\brief The evaluator class for a melting curve formed of segments in the form
+
+\f[
+a_i((\frac{T}{T_0})^{t_i}-1)
+\f]
+*/
 class MeltingLinePiecewisePolynomialInTrSegment
 {
 public:
@@ -147,7 +163,7 @@ public:
     CoolPropDbl evaluate(CoolPropDbl T)
     {
         CoolPropDbl summer = 0;
-        for (std::size_t i =0; i < a.size(); ++i){
+        for (std::size_t i = 0; i < a.size(); ++i){
             summer += a[i]*(pow(T/T_0,t[i])-1);
         }
         return p_0*(1+summer);
@@ -157,6 +173,14 @@ struct MeltingLinePiecewisePolynomialInTrData
 {
     std::vector<MeltingLinePiecewisePolynomialInTrSegment> parts;
 };
+
+/** 
+ \brief The evaluator class for a melting curve formed of segments in the form
+
+ \f[
+ a_i(\frac{T}{T_0}-1)^t_i
+ \f]
+*/
 class MeltingLinePiecewisePolynomialInThetaSegment
 {
 public:
@@ -176,30 +200,43 @@ struct MeltingLinePiecewisePolynomialInThetaData
 {
     std::vector<MeltingLinePiecewisePolynomialInThetaSegment> parts;
 };
+
 class MeltingLineVariables
 {
 public:
     enum MeltingLineVariablesEnum{
-        MELTING_LINE_SIMON_TYPE,
-        MELTING_LINE_POLYNOMIAL_IN_TR_TYPE,
-        MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE,
-        MELTING_LINE_NOT_SET
+        MELTING_LINE_NOT_SET = 0,
+        MELTING_LINE_SIMON_TYPE, ///< A simon-type curve is in use
+        MELTING_LINE_POLYNOMIAL_IN_TR_TYPE, ///< a polynomial in \f$ T/T_c \f$ is in use
+        MELTING_LINE_POLYNOMIAL_IN_THETA_TYPE, ///< a polynomial in \f$ \theta \f$ is in use
     };
-    CoolPropDbl Tmin, Tmax, pmin, pmax;
+    CoolPropDbl Tmin, ///< Minimum temperature in K
+                Tmax, ///< Maximum temperature in K
+                pmin, ///< Minimum pressure in Pa
+                pmax; ///< Maximum pressure in Pa
+
+    std::string BibTeX; ///< BibTeX key for the melting curve in use
+    CoolPropDbl T_m; ///< Melting temperature at 1 atmosphere
+    MeltingLinePiecewiseSimonData simon; /// The data used for a Simon-style curve
+    MeltingLinePiecewisePolynomialInTrData polynomial_in_Tr; /// The data needed for a melting curve formed of segments that are polynomials in \f$ T/T_c \f$
+    MeltingLinePiecewisePolynomialInThetaData polynomial_in_Theta; /// The data needed for a melting curve formed of segments that are polynomials in \f$ \theta \f$
+    int type;
     
+    MeltingLineVariables() :Tmin(_HUGE), Tmax(_HUGE), pmin(_HUGE), pmax(_HUGE), T_m(_HUGE), type(MELTING_LINE_NOT_SET){};
+
+    /** 
+     * \brief Evaluate the melting line
+     * @param OF The output variable
+     * @param GIVEN The given variable
+     * @param value The value of the given variable
+     */
     CoolPropDbl evaluate(int OF, int GIVEN, CoolPropDbl value);
     
     /// Evaluate the melting line to calculate the limits of the curve (Tmin/Tmax and pmin/pmax)
     void set_limits();
     
+    /// Return true if the ancillary is enabled (type is not the default value of MELTING_LINE_NOT_SET)
     bool enabled(){return type != MELTING_LINE_NOT_SET;};
-    std::string BibTeX;
-    CoolPropDbl T_m; ///< Melting temperature at 1 atmosphere
-    MeltingLinePiecewiseSimonData simon;
-    MeltingLinePiecewisePolynomialInTrData polynomial_in_Tr;
-    MeltingLinePiecewisePolynomialInThetaData polynomial_in_Theta;
-    int type;
-    MeltingLineVariables():Tmin(_HUGE),Tmax(_HUGE),pmin(_HUGE),pmax(_HUGE),T_m(_HUGE),type(MELTING_LINE_NOT_SET){};
 };
 
 } /* namespace CoolProp */
