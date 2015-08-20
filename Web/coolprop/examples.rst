@@ -34,7 +34,7 @@ To understand more about what is going on under the hood, go to :ref:`Fluid-Prop
 
 Sample HAPropsSI Code
 -------------------
-To use the HAPropsSI function, import it and do some calls, do something like this
+To use the ``HAPropsSI`` function, import it and do some calls, do something like this
 
 .. ipython::
 
