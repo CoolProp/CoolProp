@@ -16,7 +16,10 @@ namespace CoolProp {
 struct SimpleState
 {
     double rhomolar, T, p, hmolar, smolar, umolar, Q;
-    SimpleState() : rhomolar(_HUGE), T(_HUGE), p(_HUGE), hmolar(_HUGE), smolar(_HUGE), umolar(_HUGE), Q(_HUGE) {}
+    SimpleState() { fill(_HUGE); }
+    void fill(double v){
+        rhomolar = v; T = v; p = v; hmolar = v; smolar = v; umolar = v; Q = v;
+    }
     bool is_valid(){return ValidNumber(rhomolar) && ValidNumber(T) && ValidNumber(hmolar) && ValidNumber(p);}
 };
 
