@@ -8,7 +8,7 @@ REFPROP Interface
 
 The thermophysical property library REFPROP developed by researchers at the National Institute of Standards and Technology in Boulder, Colorado is the gold standard in thermophysical properties.  It is mature and stable, and is currently the library most used in industry and for scientific applications.
 
-CoolProp allows for full interaction with the REFPROP library, while using the nicely abstracted C++ interface for all target languages that CoolProp supports.  This yields a 
+CoolProp allows for full interaction with the REFPROP library, while using the nicely abstracted C++ interface for all target languages that CoolProp supports. 
 
 The core difference between using CoolProp's internal routines and REFPROP's routines is that you have to change the backend from ``HEOS`` to ``REFPROP``.  In the high-level interface this is demonstrated as:
 
