@@ -32,8 +32,7 @@ namespace std {
 // Shorten some names to make Scilab a bit happier
 %rename(SS) CoolProp::SimpleState;
 %rename(PED) CoolProp::PhaseEnvelopeData;
-%rename(GE_rhoL) CoolProp::GuessesStructure::rhomolar_liq;
-%rename(GE_rhoV) CoolProp::GuessesStructure::rhomolar_vap;
+%rename(GE) CoolProp::GuessesStructure;
 
 // This stuff will get included verbatim in CoolProp_wrap
 %{
