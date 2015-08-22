@@ -508,9 +508,13 @@ protected:
             else if (!target.compare("n-Heptane")){
                 fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEPTANE; return;
             }
+            else if (!target.compare("Toluene")){
+                fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_TOLUENE; return;
+            }
             else if (!target.compare("Ethane")){
                 fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_ETHANE; return;
-            }else if (!target.compare("Benzene")){
+            }
+            else if (!target.compare("Benzene")){
                 fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BENZENE; return;
             }
             else{
