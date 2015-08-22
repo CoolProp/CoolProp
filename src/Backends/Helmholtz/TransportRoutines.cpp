@@ -331,7 +331,7 @@ CoolPropDbl TransportRoutines::viscosity_toluene_higher_order_hardcoded(Helmholt
 {
     CoolPropDbl Tr = HEOS.T()/591.75, rhor = HEOS.keyed_output(CoolProp::iDmass)/291.987;
     CoolPropDbl c[] = {19.919216, -2.6557905, -135.904211, -7.9962719, -11.014795, -10.113817};
-    return 1e-6*pow(rhor,2.0/3.0)*sqrt(Tr)*((c[0]*rhor+c[1]*pow(rhor,4))/Tr + c[2]*rhor*rhor*rhor/(rhor*rhor+c[3]+c[4]*Tr)+c[5]*rhor);
+    return 1e-6*pow(static_cast<double>(rhor),2.0/3.0)*sqrt(Tr)*((c[0]*rhor+c[1]*pow(rhor,4))/Tr + c[2]*rhor*rhor*rhor/(rhor*rhor+c[3]+c[4]*Tr)+c[5]*rhor);
 }
 
 CoolPropDbl TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS)
