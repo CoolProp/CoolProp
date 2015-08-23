@@ -440,6 +440,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
         delta_eta_h = TransportRoutines::viscosity_higher_order_friction_theory(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HYDROGEN:
         delta_eta_h = TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(*this); break;
+    case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_TOLUENE:
+        delta_eta_h = TransportRoutines::viscosity_toluene_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEXANE:
         delta_eta_h = TransportRoutines::viscosity_hexane_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEPTANE:

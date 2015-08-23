@@ -227,25 +227,31 @@ class Configuration
 
 /// Return the value of a boolean key from the configuration
 bool get_config_bool(configuration_keys key);
+/// Return the value of a double configuration key
 double get_config_double(configuration_keys key);
+/// Return the value of a string configuration key
 std::string get_config_string(configuration_keys key);
 #if !defined(SWIG) // Hide this for swig - Swig gets confused
 void get_config_as_json(rapidjson::Document &doc);
 #endif
-/// Get values in the configuration based as json data in string format
+/// Get all the values in the configuration as a json-formatted string
 std::string get_config_as_json_string();
 
 /// *********************************************************
 ///                      SETTERS
 /// *********************************************************
 
+/// Set the value of a boolean configuration value
 void set_config_bool(configuration_keys key, bool val);
+/// Set the value of a double configuration value
 void set_config_double(configuration_keys key, double val);
+/// Set the value of a string configuration value
 void set_config_string(configuration_keys key, const std::string &val);
 /// Set values in the configuration based on a json file
 #if !defined(SWIG) // Hide this for swig - Swig gets confused
 void set_config_json(rapidjson::Document &doc);
 #endif
+/// Set the entire configuration based on a json-formatted string
 void set_config_as_json_string(const std::string &s);
 }
 

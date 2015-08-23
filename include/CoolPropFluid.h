@@ -256,6 +256,7 @@ struct ViscosityHigherOrderVariables
                                    VISCOSITY_HIGHER_ORDER_HEPTANE, ///< Use \ref TransportRoutines::viscosity_heptane_higher_order_hardcoded
                                    VISCOSITY_HIGHER_ORDER_ETHANE, ///< Use \ref TransportRoutines::viscosity_ethane_higher_order_hardcoded
                                    VISCOSITY_HIGHER_ORDER_BENZENE, ///< Use \ref TransportRoutines::viscosity_benzene_higher_order_hardcoded
+                                   VISCOSITY_HIGHER_ORDER_TOLUENE, ///< Use \ref TransportRoutines::viscosity_toluene_higher_order_hardcoded
                                    VISCOSITY_HIGHER_ORDER_FRICTION_THEORY, ///< Use \ref TransportRoutines::viscosity_higher_order_friction_theory
                                    VISCOSITY_HIGHER_ORDER_NOT_SET
                                    };
