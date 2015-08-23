@@ -170,7 +170,7 @@ in kPa/(kg/m\ :sup:`3`\ ). And for ice,
 .. _HAProps_Sample:
 
 Sample HAPropsSI Code
--------------------
+---------------------
 To use the HAPropsSI function, import it and do some calls, do something like this
 
 .. ipython::
@@ -228,10 +228,8 @@ Values here are obtained at documentation build-time using the Humid Air Propert
     In [1]: execfile('fluid_properties/Validation/HAValidation.py')
     
     
-.. 
+..  Appendices
 
-    Appendices
-    ----------
 
     Derivation for specific heat of humid air
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -305,9 +303,6 @@ Values here are obtained at documentation build-time using the Humid Air Propert
     .. math::
 
         \frac{{\delta \bar h}}{{\delta T}} = \left( {1 - {\psi _w}} \right)\frac{{d\bar h_a^0}}{{d\tau }}\frac{{d\tau }}{{dT}} + {\psi _w}\frac{{d\bar h_w^0}}{{d\tau }}\frac{{d\tau }}{{dT}} + \bar R\left[ {\left( {{B_m} - T\frac{{d{B_m}}}{{dT}}} \right)\frac{1}{{\bar v}} + \frac{{{C_m}}}{{{{\bar v}^2}}}} \right] + \bar R{T^2}\left[ {\left( { - \frac{{{d^2}{B_m}}}{{d{T^2}}}} \right)\frac{1}{{\bar v}} + \left( { - \frac{1}{2}\frac{{{d^2}{C_m}}}{{d{T^2}}}} \right)\frac{1}{{{{\bar v}^2}}}} \right]
-        
-        
-        
         
         
 References

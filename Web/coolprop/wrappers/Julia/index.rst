@@ -22,12 +22,15 @@ NB: For Linux users, the file libCoolProp.so must be renamed into CoolProp.so an
 If you compile/download the library often, you may prefer to make a symbolic link from your downloaded/compiled library to Julia's library folder::
 
     sudo ln -s libCoolProp.so /usr/lib/x86_64-linux-gnu/julia/CoolProp.so
+    
 If you want to use the library in an other directory, once renamed (or after creating a `CoolProp.so` symbolic link) you can set the system shared library search path to the current directory before running Julia::
 
     export LD_LIBRARY_PATH=${PWD}
+
 Or directly ask Julia to search in the current directory::
 
     push!(DL_LOAD_PATH,".")
+
 Note that you can replace `${PWD}` (present working directory) by any path you want, and similarly for the `.` of the `"."` in Julia.
 
 Download the module ``CoolProp.jl`` from :sfdownloads:`sourceforge <Julia>` or the development version from :sfnightly:`the nightly snapshots <Julia>` and place in the same folder as the shared library (in `~/.julia/$version/CoolProp/src/` for Linux users).
