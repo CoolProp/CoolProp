@@ -558,7 +558,7 @@ class LogPTTable : public SinglePhaseGriddedTableData
 {
     public:
         LogPTTable(){
-            xkey = iT; ykey = iP; logy = true; logx = false;
+            xkey = iT; ykey = iP; logy = true; logx = false; xmin = _HUGE; ymin = _HUGE; xmax=_HUGE; ymax=_HUGE;
         };
         void set_limits(){
             if (this->AS.get() == NULL){
@@ -566,6 +566,7 @@ class LogPTTable : public SinglePhaseGriddedTableData
             }
             CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
             AS->update(QT_INPUTS, 0, Tmin);
+            xmin = Tmin;
             ymin = AS->p();
             
             xmax = AS->Tmax()*1.499; ymax = AS->pmax();
