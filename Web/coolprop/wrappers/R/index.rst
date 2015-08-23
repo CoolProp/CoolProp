@@ -79,7 +79,6 @@ Example Code
 ============
 
 .. literalinclude:: Example.R
-   :language: R
 
 Example Code Output
 ===================
