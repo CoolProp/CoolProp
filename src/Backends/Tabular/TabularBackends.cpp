@@ -364,6 +364,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_p(void){
 }
 CoolPropDbl CoolProp::TabularBackend::calc_T(void){
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iT, cached_single_phase_i, cached_single_phase_j);
@@ -377,7 +378,12 @@ CoolPropDbl CoolProp::TabularBackend::calc_T(void){
             return phase_envelope_sat(phase_envelope, iT, iP, _p);
         }
         else{
-            return _T;
+            if (ValidNumber(_T)){
+                return _T;
+            }
+            else{
+                return pure_saturation.evaluate(iT, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            }
         }
     }
 }
