@@ -1560,7 +1560,7 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
             if (MainInputValue < 1e-10){
                 T_max = 1000;
                 // For wetbulb, has to be below critical temp
-                if (SecondaryInputKey == GIVEN_TWB){
+                if (SecondaryInputKey == GIVEN_TWB || SecondaryInputKey == GIVEN_ENTHALPY){
                     T_max = 600;
                 }
             }
