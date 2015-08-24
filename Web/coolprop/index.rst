@@ -13,5 +13,5 @@ This section includes information about the CoolProp software, listings of input
     Tabular.rst
     Configuration.rst
     REFPROP.rst
-    example.rst
+    examples.rst
     changelog.rst
