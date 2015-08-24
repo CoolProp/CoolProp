@@ -194,7 +194,7 @@ cpdef __Props_err2(fcn, in1, in2, in3, in4, in5, in6):
 
 cpdef Props(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None):
     """
-    A Python wrapper of :cpapi:`CoolProp::Props`.  This function is deprecated, use PropsSI instead
+    This function is deprecated, use PropsSI instead
     """
     import warnings
     dep_warning = "Props() function is deprecated; Use the PropsSI() function"
