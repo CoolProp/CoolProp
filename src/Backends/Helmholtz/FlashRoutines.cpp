@@ -241,6 +241,8 @@ void FlashRoutines::DP_flash(HelmholtzEOSMixtureBackend &HEOS)
                 std::string errstr;
                 Halley(resid, T0, 1e-10, 100, errstr);
                 HEOS._Q = -1;
+                // Update the state for conditions where the state was guessed
+                HEOS.recalculate_singlephase_phase();
             }
             else{
                 // Nothing to do here; phase determination has handled this already
@@ -1041,6 +1043,8 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                 throw ValueError(format("D < DLtriple %g %g", value, y));
             }
         }
+        // Update the state for conditions where the state was guessed
+        HEOS.recalculate_singlephase_phase();
     }
     else
         throw NotImplementedError("PHSU_D_flash not ready for mixtures");
@@ -1318,6 +1322,8 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                 throw ValueError(format("unable to solve 1phase PY flash with Tmin=%Lg, Tmax=%Lg due to error: %s",Tmin, Tmax, e.what()));
             }
             HEOS._Q = -1;
+            // Update the state for conditions where the state was guessed
+            HEOS.recalculate_singlephase_phase();
         }
     }
     else
@@ -1538,7 +1544,6 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
         {
             HEOS._phase = iphase_gas;
             throw NotImplementedError("DHSU_T_flash does not support mixtures (yet)");
-            // Find the phase, while updating all internal variables possible
         }
     }
 
@@ -1561,7 +1566,7 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
         HEOS._Q = -1;
     }
     // Update the state for conditions where the state was guessed
-    
+    HEOS.recalculate_singlephase_phase();
 }
 void FlashRoutines::HS_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec, HS_flash_twophaseOptions &options)
 {
