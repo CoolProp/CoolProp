@@ -1099,21 +1099,23 @@ void HelmholtzEOSMixtureBackend::post_update()
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Bvirial()
 {
-    return 1/get_reducing_state().rhomolar*calc_alphar_deriv_nocache(0,1,mole_fractions,_tau,1e-12);
+    return 1/rhomolar_reducing()*calc_alphar_deriv_nocache(0,1,mole_fractions,_tau,1e-12);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_dBvirial_dT()
 {
-    CoolPropDbl dtau_dT =-get_reducing_state().T/pow(_T,2);
-    return 1/get_reducing_state().rhomolar*calc_alphar_deriv_nocache(1,1,mole_fractions,_tau,1e-12)*dtau_dT;
+    SimpleState red = get_reducing_state();
+    CoolPropDbl dtau_dT =-red.T/pow(_T,2);
+    return 1/red.rhomolar*calc_alphar_deriv_nocache(1,1,mole_fractions,_tau,1e-12)*dtau_dT;
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Cvirial()
 {
-    return 1/pow(get_reducing_state().rhomolar,2)*calc_alphar_deriv_nocache(0,2,mole_fractions,_tau,1e-12);
+    return 1/pow(rhomolar_reducing(),2)*calc_alphar_deriv_nocache(0,2,mole_fractions,_tau,1e-12);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_dCvirial_dT()
 {
-    CoolPropDbl dtau_dT =-get_reducing_state().T/pow(_T,2);
-    return 1/pow(get_reducing_state().rhomolar,2)*calc_alphar_deriv_nocache(1,2,mole_fractions,_tau,1e-12)*dtau_dT;
+    SimpleState red = get_reducing_state();
+    CoolPropDbl dtau_dT =-red.T/pow(_T,2);
+    return 1/pow(red.rhomolar,2)*calc_alphar_deriv_nocache(1,2,mole_fractions,_tau,1e-12)*dtau_dT;
 }
 void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int other, CoolPropDbl value, bool &saturation_called)
 {

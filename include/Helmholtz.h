@@ -506,11 +506,11 @@ public:
     ResidualHelmholtzGeneralizedExponential GenExp;
 
     void clear(){
-        _base = 0; 
-        _dDelta = 0; _dTau = 0;  
-        _dDelta2 = 0; _dTau2 = 0; _dDelta_dTau = 0;
-        _dDelta3 = 0; _dTau3 = 0; _dDelta2_dTau = 0; _dDelta_dTau2 = 0;
-        _dDelta4 = 0; _dDelta3_dTau = 0; _dDelta2_dTau2 = 0; _dDelta_dTau3 = 0; _dTau4 = 0;
+        _base.clear();
+        _dDelta.clear(); _dTau.clear();
+        _dDelta2.clear(); _dTau2.clear(); _dDelta_dTau.clear();
+        _dDelta3.clear(); _dTau3.clear(); _dDelta2_dTau.clear(); _dDelta_dTau2.clear();
+        _dDelta4.clear(); _dDelta3_dTau.clear(); _dDelta2_dTau2.clear(); _dDelta_dTau3.clear(); _dTau4.clear();
     }
     HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta, bool cache_values = false)
     {
