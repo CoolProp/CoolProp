@@ -406,7 +406,9 @@ public:
     void set_mass_fractions(const std::vector<double> &mass_fractions){ set_mass_fractions(std::vector<CoolPropDbl>(mass_fractions.begin(), mass_fractions.end())); };
     void set_volu_fractions(const std::vector<double> &volu_fractions){ set_volu_fractions(std::vector<CoolPropDbl>(volu_fractions.begin(), volu_fractions.end())); };
 
+    /// Get the mole fractions of the equilibrium liquid phase
     std::vector<CoolPropDbl> mole_fractions_liquid(void){ return calc_mole_fractions_liquid(); };
+    /// Get the mole fractions of the equilibrium vapor phase
     std::vector<CoolPropDbl> mole_fractions_vapor(void){ return calc_mole_fractions_vapor(); };
 
     /// Update the state using two state variables 
@@ -429,6 +431,15 @@ public:
 
     /// Return a vector of strings of the fluid names that are in use
     std::vector<std::string> fluid_names(void);
+    
+    /// Set binary mixture floating point parameter (EXPERT USE ONLY!!!)
+    virtual void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){ throw NotImplementedError("set_binary_interaction_double is not implemented for this backend"); };
+    /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
+    virtual void set_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const std::string &value){ throw NotImplementedError("set_binary_interaction_string is not implemented for this backend"); };
+    /// Get binary mixture double value (EXPERT USE ONLY!!!)
+    virtual double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){ throw NotImplementedError("get_binary_interaction_double is not implemented for this backend"); };
+    /// Get binary mixture string value (EXPERT USE ONLY!!!)
+    virtual std::string get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){ throw NotImplementedError("get_binary_interaction_string is not implemented for this backend"); };
 
     /// Clear all the cached values
     virtual bool clear();

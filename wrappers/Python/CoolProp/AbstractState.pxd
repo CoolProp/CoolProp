@@ -23,6 +23,11 @@ cdef class AbstractState:
     cpdef set_mole_fractions(self, vector[double] z)
     cpdef set_mass_fractions(self, vector[double] z)
     cpdef set_volu_fractions(self, vector[double] z)
+
+    cpdef set_binary_interaction_double(self, string CAS1, string CAS2, string parameter, double val)
+    cpdef set_binary_interaction_string(self, string CAS1, string CAS2, string parameter, string val)
+    cpdef double get_binary_interaction_double(self, string CAS1, string CAS2, string parameter) except *
+    cpdef string get_binary_interaction_string(self, string CAS1, string CAS2, string parameter) except *
     
     cpdef name(self)
     

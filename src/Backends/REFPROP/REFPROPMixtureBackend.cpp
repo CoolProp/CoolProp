@@ -41,6 +41,7 @@ surface tension                 N/m
 #include <iostream>
 #include <cassert>
 #include "crossplatform_shared_ptr.h"
+#include <stdlib.h>
 
 #if defined(_MSC_VER)
 #define _CRTDBG_MAP_ALLOC
@@ -358,6 +359,102 @@ std::string REFPROPMixtureBackend::fluid_param_string(const std::string &ParamNa
         throw ValueError(format("parameter to fluid_param_string is invalid: %s", ParamName.c_str()));
     }
 };
+long REFPROPMixtureBackend::match_CAS(const std::string &CAS){
+    for (long icomp = 1L; icomp <= static_cast<long>(fluid_names.size()); ++icomp){
+        char hnam[13], hn80[81], hcasn[13];
+        NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
+        std::string casn = hcasn;
+        strstrip(casn);
+        if (casn == CAS){
+            return icomp;
+        }
+    }
+    throw ValueError(format("Unable to match CAS number [%s]", CAS.c_str()));
+}
+/// Set binary mixture floating point parameter
+void REFPROPMixtureBackend::set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){
+    long icomp, jcomp, ierr = 0L;
+    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    double fij[6];
+    char herr[255];
+    
+    icomp = match_CAS(CAS1);
+    jcomp = match_CAS(CAS2);
+    
+    // Get the prior state
+    GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
+    
+    std::string shmodij(hmodij);
+    if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
+    {
+        if (parameter == "gammaT"){ fij[0] = value;}
+        else if (parameter == "gammaV"){ fij[1] = value; }
+        else if (parameter == "betaT"){ fij[2] = value; }
+        else if (parameter == "betaV"){ fij[3] = value; }
+        else{
+            throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
+        }
+        SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+    }
+    else{
+        throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+    }
+};
+/// Get binary mixture double value
+double REFPROPMixtureBackend::get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
+    
+    long icomp, jcomp;
+    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    double fij[6];
+    
+    icomp = match_CAS(CAS1);
+    jcomp = match_CAS(CAS2);
+    
+    // Get the current state
+    GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
+    
+    std::string shmodij(hmodij);
+    if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
+    {
+        double val;
+        if (parameter == "gammaT"){ val = fij[0];}
+        else if (parameter == "gammaV"){ val = fij[1]; }
+        else if (parameter == "betaT"){ val = fij[2]; }
+        else if (parameter == "betaV"){ val = fij[3]; }
+        else{
+            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
+        }
+        return val;
+    }
+    else{
+        throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+    }
+}
+/// Get binary mixture string value
+std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
+        
+    long icomp, jcomp;
+    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    double fij[6];
+    
+    icomp = match_CAS(CAS1);
+    jcomp = match_CAS(CAS2);
+    
+    // Get the current state
+    GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
+    
+    std::string shmodij(hmodij);
+    if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
+    {
+        if (parameter == "model"){ return shmodij;}
+        else{
+            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
+        }
+    }
+    else{
+        throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+    }
+}
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
 {
     if (mole_fractions.size() != this->Ncomp)
