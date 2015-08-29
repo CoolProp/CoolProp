@@ -23,6 +23,7 @@ cdef extern from "Configuration.h" namespace "CoolProp":
 cdef extern from "DataStructures.h" namespace "CoolProp":    
     string _get_mixture_binary_pair_data "CoolProp::get_mixture_binary_pair_data"(const string CAS1, const string CAS2, const string key) except +
     void _set_mixture_binary_pair_data "CoolProp::set_mixture_binary_pair_data"(const string CAS1, const string CAS2, const string key, const double val) except +
+    void _apply_simple_mixing_rule "CoolProp::apply_simple_mixing_rule"(const std::string &CAS1, const std::string &CAS2, const std::string &rule) except +
     string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
     int _get_parameter_index "CoolProp::get_parameter_index"(string) except +
     int _get_phase_index "CoolProp::get_phase_index"(string) except +

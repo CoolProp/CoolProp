@@ -142,8 +142,72 @@ public:
             }
         }
     }
+    /// Add a simple mixing rule
+    void add_simple_mixing_rule(const std::string &CAS1, const std::string &CAS2, const std::string &rule){
+        // Get the empty dictionary to be filled by the appropriate reducing parameter filling function
+        Dictionary dict;
+        
+        // Get the vector of CAS numbers
+        std::vector<std::string> CAS;
+        CAS.push_back(CAS1);
+        CAS.push_back(CAS2);
+
+        // Sort the CAS number vector
+        std::sort(CAS.begin(), CAS.end());
+
+        // Get the names of the compounds
+        std::vector<std::string> names1(1,CAS[0]);
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS1(new CoolProp::HelmholtzEOSMixtureBackend(names1));
+        std::string name1 = HEOS1->name();
+        std::vector<std::string> names2(1,CAS[1]);
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS2(new CoolProp::HelmholtzEOSMixtureBackend(names2));
+        std::string name2 = HEOS2->name();
+        
+        // Populate the dictionary with common terms
+        dict.add_string("name1", name1);
+        dict.add_string("name2", name2);
+        dict.add_string("BibTeX", "N/A - LINEAR MIXING");
+        dict.add_number("F", 0);
+        dict.add_string("type","GERG-2008");
+        
+        if (rule == "linear"){
+            // Terms for linear mixing
+            dict.add_number("gammaT", 0.5*(HEOS1->T_critical()+HEOS2->T_critical())/sqrt(HEOS1->T_critical()*HEOS2->T_critical()));
+            double rhoc1 = HEOS1->rhomolar_critical(), rhoc2 = HEOS2->rhomolar_critical();
+            dict.add_number("gammaV", 4*(1/rhoc1+1/rhoc2)/pow(1/pow(rhoc1,1.0/3.0)+1/pow(rhoc2,1.0/3.0),3));
+            dict.add_number("betaV", 1.0);
+            dict.add_number("betaT", 1.0);
+        }
+        else if (rule == "Lorentz-Berthelot"){
+            // Terms for Lorentz-Berthelot quadratic mixing
+            dict.add_number("gammaT", 1.0);
+            dict.add_number("gammaV", 1.0);
+            dict.add_number("betaV", 1.0);
+            dict.add_number("betaT", 1.0);
+        }
+        else{
+            throw ValueError(format("Your simple mixing rule [%s] was not understood", rule.c_str()));
+        }
+        
+        if (binary_pair_map.find(CAS) == binary_pair_map.end()){
+            // Add to binary pair map by creating one-element vector
+            binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
+        }
+        else
+        {
+            binary_pair_map[CAS].push_back(dict);
+        }
+    }
 };
+// The modifiable parameter library
 static MixtureBinaryPairLibrary mixturebinarypairlibrary;
+// A fixed parameter library containing the default values
+static MixtureBinaryPairLibrary mixturebinarypairlibrary_default;
+
+/// Add a simple mixing rule
+void apply_simple_mixing_rule(const std::string &CAS1, const std::string &CAS2, const std::string &rule){
+    mixturebinarypairlibrary.add_simple_mixing_rule(CAS1, CAS2, rule);
+}
 
 std::string get_csv_mixture_binary_pairs()
 {
@@ -225,7 +289,6 @@ void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CA
         else{
             throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.",CAS1.c_str(), CAS2.c_str()));
         }
-        
     }
 }
 
