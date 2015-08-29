@@ -245,6 +245,11 @@ cdef class AbstractState:
         cdef double T = 1e99, rho = 1e99
         self.thisptr.true_critical_point(T, rho)
         return T, rho
+    cpdef dict conformal_state(self, string reference_fluid, long double T, long double rho):
+        """ Solve for conformal state used in extended corresponding states - wrapper of c++ function :cpapi:`CoolProp::AbstractState::conformal_state` """
+        cdef long double T0 = T, rho0 = rho
+        self.thisptr.conformal_state(reference_fluid, T0, rho0)
+        return dict(T = T0, rho = rho0)
         
     ## ----------------------------------------	
     ##        Derivatives

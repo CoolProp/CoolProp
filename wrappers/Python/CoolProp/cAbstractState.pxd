@@ -95,6 +95,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double delta() except +ValueError
         double viscosity() except+ValueError
         double conductivity() except+ValueError
+        void conformal_state(const string &, long double &, long double &) except +ValueError
+
         double surface_tension() except+ValueError
         double Prandtl() except +ValueError
         double Bvirial() except +ValueError

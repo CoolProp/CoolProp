@@ -342,6 +342,8 @@ protected:
 
     /// Using this backend, return true critical point where dp/drho|T = 0 and d2p/drho^2|T = 0
     virtual void calc_true_critical_point(double &T, double &rho){ throw NotImplementedError("calc_true_critical_point is not implemented for this backend"); };
+    
+    virtual void calc_conformal_state(const std::string &reference_fluid, CoolPropDbl &T, CoolPropDbl &rhomolar){ throw NotImplementedError("calc_conformal_state is not implemented for this backend"); };
 public:
 
     AbstractState() :_fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown), _rhospline(-_HUGE), _dsplinedp(-_HUGE), _dsplinedh(-_HUGE){ clear(); }
@@ -778,6 +780,16 @@ public:
     double surface_tension(void);
     /// Return the Prandtl number (dimensionless)
     double Prandtl(void){return cpmass()*viscosity()/conductivity();};
+    /** 
+     * @brief Find the conformal state needed for ECS
+     * @param reference_fluid The reference fluid for which the conformal state will be calculated
+     * @param T Temperature (initial guess must be provided, or < 0 to start with unity shape factors)
+     * @param rhomolar Molar density (initial guess must be provided, or < 0 to start with unity shape factors)
+     */
+    void conformal_state(const std::string &reference_fluid, CoolPropDbl &T, CoolPropDbl &rhomolar){
+        return calc_conformal_state(reference_fluid, T, rhomolar);
+    };
+    
 
     // ----------------------------------------
     // Helmholtz energy and derivatives

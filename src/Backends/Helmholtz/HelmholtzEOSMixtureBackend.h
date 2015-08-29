@@ -118,6 +118,9 @@ public:
     
     const CoolProp::PhaseEnvelopeData &calc_phase_envelope_data(){return PhaseEnvelope;};
 
+    /// Calculate the conformal state (unity shape factors starting point if T < 0 and rhomolar < 0)
+    void calc_conformal_state(const std::string &reference_fluid, CoolPropDbl &T, CoolPropDbl &rhomolar);
+    
     void resize(std::size_t N);
     shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///<
 

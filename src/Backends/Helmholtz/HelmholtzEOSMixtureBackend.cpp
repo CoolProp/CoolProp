@@ -653,6 +653,31 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void)
         return summer;
     }
 }
+void HelmholtzEOSMixtureBackend::calc_conformal_state(const std::string &reference_fluid, CoolPropDbl &T, CoolPropDbl &rhomolar){
+    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> REF(new CoolProp::HelmholtzEOSBackend(reference_fluid));
+    
+    if (T < 0 && rhomolar < 0){
+        // Collect some parameters
+        CoolPropDbl Tc = T_critical(),
+                    Tc0 = REF->T_critical(),
+                    rhocmolar = rhomolar_critical(),
+                    rhocmolar0 = REF->rhomolar_critical();
+        
+        // Starting guess values for shape factors
+        CoolPropDbl theta = 1;
+        CoolPropDbl phi = 1;
+        
+        // The equivalent substance reducing ratios
+        CoolPropDbl f = Tc/Tc0*theta;
+        CoolPropDbl h = rhocmolar0/rhocmolar*phi; // Must be the ratio of MOLAR densities!!
+        
+        // Starting guesses for conformal state
+        T = this->T()/f;
+        rhomolar = this->rhomolar()*h;
+    }
+    
+    TransportRoutines::conformal_state_solver(*this, *REF, T, rhomolar);
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Ttriple(void)
 {
     double summer = 0;
