@@ -173,7 +173,7 @@ cpdef get_fluid_param_string(string fluid, string param):
     return _get_fluid_param_string(fluid, param)
 
 cpdef apply_simple_mixing_rule(CAS1, CAS2, rule):
-    return _apply_simple_mixing_rule(CAS1, CAS2, rule)
+    _apply_simple_mixing_rule(CAS1, CAS2, rule)
     
 cpdef double saturation_ancillary(string name, string output, int Q, string input, double value):
     """
