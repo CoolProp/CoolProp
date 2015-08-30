@@ -1487,6 +1487,8 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
 
             //THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
             long kguess = 1; // guess provided
+            if (!ValidNumber(guesses.rhomolar)){ throw ValueError(format("rhomolar must be provided in guesses")); }
+            
             long kph = (guesses.rhomolar > calc_rhomolar_critical()) ? 1 : 2; // liquid  if density > rhoc, vapor otherwise - though we are passing the guess density
             rho_mol_L = guesses.rhomolar/1000.0;
             TPRHOdll(&_T, &p_kPa, &(mole_fractions[0]), &kph, &kguess, &rho_mol_L, &ierr, herr, errormessagelength);
@@ -1495,6 +1497,57 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            break;
+        }
+        case PQ_INPUTS:{
+            // Unit conversion for REFPROP
+            p_kPa = 0.001*value1; q = value2; // Want p in [kPa] in REFPROP
+            double rhoLmol_L = -1, rhoVmol_L = -1;
+            long iFlsh = 0,
+                 iGuess = 1, // Use guesses
+                 ierr = 0;
+            
+            if (std::abs(value2) < 1e-10){
+                iFlsh = 3; // bubble point
+                if (!guesses.x.empty()){
+                    mole_fractions = guesses.x;
+                }
+                else{
+                    throw ValueError(format("x must be provided in guesses"));
+                }
+            }
+            else if (std::abs(value2-1) < 1e-10){
+                iFlsh = 4; // dew point
+                if (!guesses.y.empty()){
+                    mole_fractions = guesses.y;
+                }
+                else{
+                    throw ValueError(format("y must be provided in guesses"));
+                }
+            }
+            else{
+                throw ValueError(format("For PQ w/ guesses, Q must be either 0 or 1"));
+            }
+            if (get_debug_level() > 9){ std::cout << format("guesses.T: %g\n",guesses.T); }
+            if (!ValidNumber(guesses.T)){
+                throw ValueError(format("T must be provided in guesses"));
+            }
+            else{
+                _T = guesses.T;
+            }
+            
+            // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
+            SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess,
+                     &rho_mol_L, &rhoLmol_L, &rhoVmol_L,
+                     &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
+                     &ierr,herr,errormessagelength);
+
+            if (static_cast<int>(ierr) > 0) { throw ValueError(format("PQ: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            
+            // Set all cache values that can be set with unit conversion to SI
+            _p = value1;
+            _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            break;
         }
         default:
         {

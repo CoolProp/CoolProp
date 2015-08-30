@@ -13,10 +13,10 @@ cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
 cdef extern from "AbstractState.h" namespace "CoolProp":
 
     cdef cppclass GuessesStructure:
-        long double T, p, rhomolar, hmolar, smolar
-        long double rhomolar_liq, rhomolar_vap
+        double T, p, rhomolar, hmolar, smolar
+        double rhomolar_liq, rhomolar_vap
         double _rhomolar_liq, _rhomolar_vap
-        vector[long double] x, y
+        vector[double] x, y
         
     cdef cppclass AbstractState:
         
