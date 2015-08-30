@@ -21,15 +21,15 @@ namespace CoolProp {
 /// that have the ability to use guess values intelligently
 class GuessesStructure{
 public:
-    CoolPropDbl T, ///< temperature in K
-                p, ///< pressure in Pa
-                rhomolar, ///< molar density in mol/m^3
-                hmolar, ///< molar enthalpy in J/mol
-                smolar, ///< molar entropy in J/mol/K
-                rhomolar_liq, ///< molar density of the liquid phase in mol/m^3 
-                rhomolar_vap; ///< molar density of the vapor phase in mol/m^3
-    std::vector<CoolPropDbl> x, ///< molar composition of the liquid phase
-                             y; ///< molar composition of the vapor phase
+    double T, ///< temperature in K
+           p, ///< pressure in Pa
+           rhomolar, ///< molar density in mol/m^3
+           hmolar, ///< molar enthalpy in J/mol
+           smolar, ///< molar entropy in J/mol/K
+           rhomolar_liq, ///< molar density of the liquid phase in mol/m^3
+           rhomolar_vap; ///< molar density of the vapor phase in mol/m^3
+    std::vector<double> x, ///< molar composition of the liquid phase
+                        y; ///< molar composition of the vapor phase
     GuessesStructure() : T(_HUGE), p(_HUGE), rhomolar(_HUGE), hmolar(_HUGE), smolar(_HUGE), 
                          rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), x(), y(){};
 };
