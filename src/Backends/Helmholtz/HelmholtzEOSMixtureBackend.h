@@ -274,9 +274,22 @@ public:
     CoolPropDbl calc_viscosity(void);
     CoolPropDbl calc_viscosity_dilute(void);
     CoolPropDbl calc_viscosity_background(void);
-    CoolPropDbl calc_viscosity_background(CoolPropDbl eta_dilute);
+    CoolPropDbl calc_viscosity_background(CoolPropDbl eta_dilute, CoolPropDbl &initial_density, CoolPropDbl &residual);
     CoolPropDbl calc_conductivity(void);
     CoolPropDbl calc_conductivity_background(void);
+    
+    /**
+     * \brief Calculate each of the contributions to the viscosity
+     * 
+     * If the viscosity model is hardcoded or ECS is being used, there will only be one entry in critical and all others will be zero
+     */
+    void calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical);
+    /**
+     * \brief Calculate each of the contributions to the conductivity
+     *
+     * If the conductivity model is hardcoded or ECS is being used, there will only be one entry in initial_density and all others will be zero
+     */
+    void calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical);
 
     CoolPropDbl calc_saturated_liquid_keyed_output(parameters key) { return SatL->keyed_output(key); }
     CoolPropDbl calc_saturated_vapor_keyed_output(parameters key) { return SatV->keyed_output(key); }

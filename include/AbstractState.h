@@ -344,6 +344,10 @@ protected:
     virtual void calc_true_critical_point(double &T, double &rho){ throw NotImplementedError("calc_true_critical_point is not implemented for this backend"); };
     
     virtual void calc_conformal_state(const std::string &reference_fluid, CoolPropDbl &T, CoolPropDbl &rhomolar){ throw NotImplementedError("calc_conformal_state is not implemented for this backend"); };
+    
+    virtual void calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_viscosity_contributions is not implemented for this backend"); };
+    virtual void calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_conductivity_contributions is not implemented for this backend"); };
+    
 public:
 
     AbstractState() :_fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown), _rhospline(-_HUGE), _dsplinedp(-_HUGE), _dsplinedh(-_HUGE){ clear(); }
@@ -774,8 +778,12 @@ public:
     // ----------------------------------------
     /// Return the viscosity in Pa-s
     double viscosity(void);
+    /// Return the viscosity contributions, each in Pa-s
+    void viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ calc_viscosity_contributions(dilute, initial_density, residual, critical); };
     /// Return the thermal conductivity in W/m/K
     double conductivity(void);
+    /// Return the thermal conductivity contributions, each in W/m/K
+    void conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ calc_conductivity_contributions(dilute, initial_density, residual, critical); };
     /// Return the surface tension in N/m
     double surface_tension(void);
     /// Return the Prandtl number (dimensionless)

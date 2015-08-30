@@ -425,24 +425,23 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void)
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background()
 {
-    CoolPropDbl eta_dilute = calc_viscosity_dilute();
-    return calc_viscosity_background(eta_dilute);
+    CoolPropDbl eta_dilute = calc_viscosity_dilute(), initial_density = 0, residual = 0;
+    return calc_viscosity_background(eta_dilute, initial_density, residual);
 }
-CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl eta_dilute)
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl eta_dilute, CoolPropDbl &initial_density, CoolPropDbl &residual)
 {
-    CoolPropDbl initial_part = 0.0;
     
     switch(components[0].transport.viscosity_initial.type){        
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND:
         {
             CoolPropDbl B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
             CoolPropDbl rho = rhomolar();
-            initial_part = eta_dilute*B_eta_initial*rho;
+            initial_density = eta_dilute*B_eta_initial*rho;
             break;
         }
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EMPIRICAL:
         {
-            initial_part = TransportRoutines::viscosity_initial_density_dependence_empirical(*this);
+            initial_density = TransportRoutines::viscosity_initial_density_dependence_empirical(*this);
             break;
         }
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_NOT_SET:
@@ -452,85 +451,38 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
     }
 
     // Higher order terms
-    CoolPropDbl delta_eta_h = 0.0;
     switch(components[0].transport.viscosity_higher_order.type)
     {
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND:
-        delta_eta_h = TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(*this); break;
+        residual = TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_FRICTION_THEORY:
-        delta_eta_h = TransportRoutines::viscosity_higher_order_friction_theory(*this); break;
+        residual = TransportRoutines::viscosity_higher_order_friction_theory(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HYDROGEN:
-        delta_eta_h = TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(*this); break;
+        residual = TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_TOLUENE:
-        delta_eta_h = TransportRoutines::viscosity_toluene_higher_order_hardcoded(*this); break;
+        residual = TransportRoutines::viscosity_toluene_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEXANE:
-        delta_eta_h = TransportRoutines::viscosity_hexane_higher_order_hardcoded(*this); break;
+        residual = TransportRoutines::viscosity_hexane_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEPTANE:
-        delta_eta_h = TransportRoutines::viscosity_heptane_higher_order_hardcoded(*this); break;
+        residual = TransportRoutines::viscosity_heptane_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_ETHANE:
-        delta_eta_h = TransportRoutines::viscosity_ethane_higher_order_hardcoded(*this); break;
+        residual = TransportRoutines::viscosity_ethane_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BENZENE:
-        delta_eta_h = TransportRoutines::viscosity_benzene_higher_order_hardcoded(*this); break;
+        residual = TransportRoutines::viscosity_benzene_higher_order_hardcoded(*this); break;
     default:
         throw ValueError(format("higher order viscosity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
     }
 
-    CoolPropDbl eta_residual = initial_part + delta_eta_h;
-
-    return eta_residual;
+    return initial_density + residual;
 }
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity(void)
 {
     if (is_pure_or_pseudopure)
     {
-        // Get a reference for code cleanness
-        CoolPropFluid &component = components[0];
-		
-		if (!component.transport.viscosity_model_provided){
-			throw ValueError(format("Viscosity model is not available for this fluid"));
-		}
-
-        // Check if using ECS
-        if (component.transport.viscosity_using_ECS)
-        {
-            // Get reference fluid name
-            std::string fluid_name  = component.transport.viscosity_ecs.reference_fluid;
-            std::vector<std::string> names(1, fluid_name);
-            // Get a managed pointer to the reference fluid for ECS
-            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(names));
-            // Get the viscosity using ECS
-            return TransportRoutines::viscosity_ECS(*this, *ref_fluid);
-        }
-
-        if (component.transport.hardcoded_viscosity != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
-        {
-            switch(component.transport.hardcoded_viscosity)
-            {
-            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER:
-                return TransportRoutines::viscosity_water_hardcoded(*this);
-            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER:
-                return TransportRoutines::viscosity_heavywater_hardcoded(*this);
-            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM:
-                return TransportRoutines::viscosity_helium_hardcoded(*this);
-            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_R23:
-                return TransportRoutines::viscosity_R23_hardcoded(*this);
-            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_METHANOL:
-                return TransportRoutines::viscosity_methanol_hardcoded(*this);
-            default:
-                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", component.transport.hardcoded_viscosity, name().c_str()));
-            }
-        }
-        // Dilute part
-        CoolPropDbl eta_dilute = calc_viscosity_dilute();
-
-        // Background viscosity given by the sum of the initial density dependence and higher order terms
-        CoolPropDbl eta_back = calc_viscosity_background(eta_dilute);
-
-        // Critical part (no fluids have critical enhancement for viscosity currently)
-        CoolPropDbl eta_critical = 0;
-
-        return eta_dilute + eta_back + eta_critical;
+        CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+        calc_viscosity_contributions(dilute, initial_density, residual, critical);
+        return dilute + initial_density + residual + critical;
     }
     else
     {
@@ -544,6 +496,166 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity(void)
         return exp(summer);
     }
 }
+void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){
+    if (is_pure_or_pseudopure)
+    {
+        // Reset the variables
+        dilute = 0; initial_density = 0; residual = 0; critical = 0;
+
+        // Get a reference for code cleanness
+        CoolPropFluid &component = components[0];
+        
+        if (!component.transport.viscosity_model_provided){
+            throw ValueError(format("Viscosity model is not available for this fluid"));
+        }
+        
+        // Check if using ECS
+        if (component.transport.viscosity_using_ECS)
+        {
+            // Get reference fluid name
+            std::string fluid_name  = component.transport.viscosity_ecs.reference_fluid;
+            std::vector<std::string> names(1, fluid_name);
+            // Get a managed pointer to the reference fluid for ECS
+            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(names));
+            // Get the viscosity using ECS and stick in the critical value
+            critical = TransportRoutines::viscosity_ECS(*this, *ref_fluid);
+            return;
+        }
+        
+        if (component.transport.hardcoded_viscosity != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
+        {
+            // Evaluate hardcoded model and stick in the critical value
+            switch(component.transport.hardcoded_viscosity)
+            {
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER:
+                    critical = TransportRoutines::viscosity_water_hardcoded(*this); break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER:
+                    critical = TransportRoutines::viscosity_heavywater_hardcoded(*this); break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM:
+                    critical = TransportRoutines::viscosity_helium_hardcoded(*this); break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_R23:
+                    critical = TransportRoutines::viscosity_R23_hardcoded(*this); break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_METHANOL:
+                    critical = TransportRoutines::viscosity_methanol_hardcoded(*this); break;
+                default:
+                    throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", component.transport.hardcoded_viscosity, name().c_str()));
+            }
+            return;
+        }
+        
+        // -------------------------
+        //     Normal evaluation
+        // -------------------------
+        
+        // Dilute part
+        dilute = calc_viscosity_dilute();
+        
+        // Background viscosity given by the sum of the initial density dependence and higher order terms
+        calc_viscosity_background(dilute, initial_density, residual);
+        
+        // Critical part (no fluids have critical enhancement for viscosity currently)
+        critical = 0;
+    }
+    else
+    {
+        throw ValueError("calc_viscosity_contributions invalid for mixtures");
+    }
+}
+void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical)
+{
+    if (is_pure_or_pseudopure)
+    {
+        // Reset the variables
+        dilute = 0; initial_density = 0; residual = 0; critical = 0;
+        
+        // Get a reference for code cleanness
+        CoolPropFluid &component = components[0];
+        
+        if (!component.transport.conductivity_model_provided){
+            throw ValueError(format("Thermal conductivity model is not available for this fluid"));
+        }
+        
+        // Check if using ECS
+        if (component.transport.conductivity_using_ECS)
+        {
+            // Get reference fluid name
+            std::string fluid_name  = component.transport.conductivity_ecs.reference_fluid;
+            std::vector<std::string> name(1, fluid_name);
+            // Get a managed pointer to the reference fluid for ECS
+            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(name));
+            // Get the viscosity using ECS and store in initial_density (not normally used);
+            initial_density = TransportRoutines::conductivity_ECS(*this, *ref_fluid); // Warning: not actually initial_density
+            return;
+        }
+        
+        if (component.transport.hardcoded_conductivity != CoolProp::TransportPropertyData::CONDUCTIVITY_NOT_HARDCODED)
+        {
+            // Evaluate hardcoded model and deposit in initial_density variable
+            // Warning: not actually initial_density
+            switch(component.transport.hardcoded_conductivity)
+            {
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER:
+                    initial_density = TransportRoutines::conductivity_hardcoded_water(*this); break;
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER:
+                    initial_density = TransportRoutines::conductivity_hardcoded_heavywater(*this); break;
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23:
+                    initial_density = TransportRoutines::conductivity_hardcoded_R23(*this); break;
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HELIUM:
+                    initial_density = TransportRoutines::conductivity_hardcoded_helium(*this); break;
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_METHANE:
+                    initial_density = TransportRoutines::conductivity_hardcoded_methane(*this); break;
+                default:
+                    throw ValueError(format("hardcoded conductivity type [%d] is invalid for fluid %s", components[0].transport.hardcoded_conductivity, name().c_str()));
+            }
+            return;
+        }
+        
+        // -------------------------
+        //     Normal evaluation
+        // -------------------------
+        
+        // Dilute part
+        switch(component.transport.conductivity_dilute.type)
+        {
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS:
+                dilute = TransportRoutines::conductivity_dilute_ratio_polynomials(*this); break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETA0_AND_POLY:
+                dilute = TransportRoutines::conductivity_dilute_eta0_and_poly(*this); break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2:
+                dilute = TransportRoutines::conductivity_dilute_hardcoded_CO2(*this); break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETHANE:
+                dilute = TransportRoutines::conductivity_dilute_hardcoded_ethane(*this); break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_NONE:
+                dilute = 0.0; break;
+            default:
+                throw ValueError(format("dilute conductivity type [%d] is invalid for fluid %s", components[0].transport.conductivity_dilute.type, name().c_str()));
+        }
+        
+        // Residual part
+        residual = calc_conductivity_background();
+        
+        // Critical part
+        switch(component.transport.conductivity_critical.type)
+        {
+            case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS:
+                critical = TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(*this); break;
+            case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_R123:
+                critical = TransportRoutines::conductivity_critical_hardcoded_R123(*this); break;
+            case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_AMMONIA:
+                critical = TransportRoutines::conductivity_critical_hardcoded_ammonia(*this); break;
+            case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_NONE:
+                critical = 0.0; break;
+            case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_CARBONDIOXIDE_SCALABRIN_JPCRD_2006:
+                critical = TransportRoutines::conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(*this); break;
+            default:
+                throw ValueError(format("critical conductivity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
+        }
+    }
+    else{
+        throw ValueError("calc_conductivity_contributions invalid for mixtures");
+    }
+};
+
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity_background(void)
 {
     // Residual part
@@ -563,83 +675,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void)
 {
     if (is_pure_or_pseudopure)
     {
-        // Get a reference for code cleanness
-        CoolPropFluid &component = components[0];
-		
-		if (!component.transport.conductivity_model_provided){
-			throw ValueError(format("Thermal conductivity model is not available for this fluid"));
-		}
-
-        // Check if using ECS
-        if (component.transport.conductivity_using_ECS)
-        {
-            // Get reference fluid name
-            std::string fluid_name  = component.transport.conductivity_ecs.reference_fluid;
-            std::vector<std::string> name(1, fluid_name);
-            // Get a managed pointer to the reference fluid for ECS
-            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(name));
-            // Get the viscosity using ECS
-            return TransportRoutines::conductivity_ECS(*this, *ref_fluid);
-        }
-
-        if (component.transport.hardcoded_conductivity != CoolProp::TransportPropertyData::CONDUCTIVITY_NOT_HARDCODED)
-        {
-            switch(component.transport.hardcoded_conductivity)
-            {
-            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER:
-                return TransportRoutines::conductivity_hardcoded_water(*this);
-            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER:
-                return TransportRoutines::conductivity_hardcoded_heavywater(*this);
-            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23:
-                return TransportRoutines::conductivity_hardcoded_R23(*this);
-            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HELIUM:
-                return TransportRoutines::conductivity_hardcoded_helium(*this);
-            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_METHANE:
-                return TransportRoutines::conductivity_hardcoded_methane(*this);
-            default:
-                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0].transport.hardcoded_conductivity, name().c_str()));
-            }
-        }
-
-        // Dilute part
-        CoolPropDbl lambda_dilute = _HUGE;
-        switch(component.transport.conductivity_dilute.type)
-        {
-        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS:
-            lambda_dilute = TransportRoutines::conductivity_dilute_ratio_polynomials(*this); break;
-        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETA0_AND_POLY:
-            lambda_dilute = TransportRoutines::conductivity_dilute_eta0_and_poly(*this); break;
-        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2:
-            lambda_dilute = TransportRoutines::conductivity_dilute_hardcoded_CO2(*this); break;
-        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETHANE:
-            lambda_dilute = TransportRoutines::conductivity_dilute_hardcoded_ethane(*this); break;
-        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_NONE:
-            lambda_dilute = 0.0; break;
-        default:
-            throw ValueError(format("dilute conductivity type [%d] is invalid for fluid %s", components[0].transport.conductivity_dilute.type, name().c_str()));
-        }
-
-        CoolPropDbl lambda_residual = calc_conductivity_background();
-
-        // Critical part
-        CoolPropDbl lambda_critical = _HUGE;
-        switch(component.transport.conductivity_critical.type)
-        {
-        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS:
-            lambda_critical = TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(*this); break;
-        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_R123:
-            lambda_critical = TransportRoutines::conductivity_critical_hardcoded_R123(*this); break;
-        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_AMMONIA:
-            lambda_critical = TransportRoutines::conductivity_critical_hardcoded_ammonia(*this); break;
-        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_NONE:
-            lambda_critical = 0.0; break;
-        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_CARBONDIOXIDE_SCALABRIN_JPCRD_2006:
-            lambda_critical = TransportRoutines::conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(*this); break;
-        default:
-            throw ValueError(format("critical conductivity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
-        }
-
-        return lambda_dilute + lambda_residual + lambda_critical;
+        CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+        calc_conductivity_contributions(dilute, initial_density, residual, critical);
+        return dilute + initial_density + residual + critical;
     }
     else
     {

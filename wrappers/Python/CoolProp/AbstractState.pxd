@@ -79,6 +79,8 @@ cdef class AbstractState:
     cpdef double viscosity(self) except *
     cpdef double conductivity(self) except *
     cpdef dict conformal_state(self, string, long double, long double)
+    cpdef dict conductivity_contributions(self)
+    cpdef dict viscosity_contributions(self)
     cpdef double surface_tension(self) except *
     cpdef double Prandtl(self) except *
     cpdef double Bvirial(self) except *

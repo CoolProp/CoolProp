@@ -259,7 +259,17 @@ cdef class AbstractState:
         cdef long double T0 = T, rho0 = rho
         self.thisptr.conformal_state(reference_fluid, T0, rho0)
         return dict(T = T0, rho = rho0)
-        
+    cpdef dict conductivity_contributions(self):
+        """ Retrieve each of the contributions to the conductivity, each in W/m/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::conductivity_contributions` """
+        cdef long double dilute = 0, initial_density = 0, residual = 0, critical = 0
+        self.thisptr.conductivity_contributions(dilute, initial_density, residual, critical)
+        return dict(dilute = dilute, initial_density = initial_density, residual = residual, critical = critical)
+    cpdef dict viscosity_contributions(self):
+        """ Retrieve each of the contributions to the viscosity, each in Pa-s - wrapper of c++ function :cpapi:`CoolProp::AbstractState::viscosity_contributions` """
+        cdef long double dilute = 0, initial_density = 0, residual = 0, critical = 0
+        self.thisptr.viscosity_contributions(dilute, initial_density, residual, critical)
+        return dict(dilute = dilute, initial_density = initial_density, residual = residual, critical = critical)
+
     ## ----------------------------------------	
     ##        Derivatives
     ## ----------------------------------------
