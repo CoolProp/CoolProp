@@ -1615,21 +1615,23 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                         else{
                             // Next we check the vapor quality based on the ancillary values
                             double Qanc = (1/value - 1/static_cast<double>(_rhoLanc))/(1/static_cast<double>(_rhoVanc) - 1/static_cast<double>(_rhoLanc));
-                            // If the vapor quality is significantly inside the two-phase zone, stop, we are two-phase
-                            if (Qanc > 0.05 && Qanc < 0.95){ 
-                                break; // It's two-phase
-                            }
-
-                            _phase = iphase_liquid; // Needed for direct update call
-                            _Q = -1000; // Needed for direct update call
-                            update_DmolarT_direct(value, _T);
-                            CoolPropDbl pL = components[0].ancillaries.pL.evaluate(_T);
-                            if (Qanc < 0.1 && _p > pL*1.05 && first_partial_deriv(iP, iDmolar, iT) > 0 && second_partial_deriv(iP, iDmolar, iT, iDmolar, iT) > 0){
-                                _phase = iphase_liquid; _Q = -1000; return;
-                            }
-                            else{
-                                _phase = iphase_unknown;
-                                _p = _HUGE;
+                            // If the vapor quality is significantly inside the two-phase zone, stop, we are definitely two-phase
+                            if (value > rho_liq || value < rho_vap){
+                                // Definitely single-phase
+                                _phase = iphase_liquid; // Needed for direct update call
+                                _Q = -1000; // Needed for direct update call
+                                update_DmolarT_direct(value, _T);
+                                CoolPropDbl pL = components[0].ancillaries.pL.evaluate(_T);
+                                if (Qanc < 0.01 && _p > pL*1.05 && first_partial_deriv(iP, iDmolar, iT) > 0 && second_partial_deriv(iP, iDmolar, iT, iDmolar, iT) > 0){
+                                    _phase = iphase_liquid; _Q = -1000; return;
+                                }
+                                else if (Qanc > 1.01){
+                                    break;
+                                }
+                                else{
+                                    _phase = iphase_unknown;
+                                    _p = _HUGE;
+                                }
                             }
                         }
                         break;
