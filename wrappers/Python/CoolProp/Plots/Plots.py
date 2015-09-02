@@ -186,9 +186,20 @@ class PropertyPlot(BasePlot):
                     stp = min([dew_filter.size,10])
                     dew_filter[0:-stp] = False 
                     bub_filter = numpy.logical_and(numpy.isfinite(bub.x),numpy.isfinite(bub.y))
-                    if ((dew.x[dew_filter][-1]-bub.x[bub_filter][-1]) > 0.010*dx and 
-                        (dew.x[dew_filter][-1]-bub.x[bub_filter][-1]) < 0.100*dx and
-                        (dew.y[dew_filter][-1]-bub.y[bub_filter][-1]) < 0.010*dy):
+                    
+                    
+                    if self._x_index == CoolProp.iP or self._x_index == CoolProp.iDmass:
+                        filter_x = lambda x: numpy.log10(x)
+                    else:
+                        filter_x = lambda x: x
+                    if self._y_index == CoolProp.iP or self._y_index == CoolProp.iDmass:
+                        filter_y = lambda y: numpy.log10(y)
+                    else:
+                        filter_y = lambda y: y    
+                    
+                    if (#(filter_x(dew.x[dew_filter][-1])-filter_x(bub.x[bub_filter][-1])) > 0.010*filter_x(dx) and 
+                        (filter_x(dew.x[dew_filter][-1])-filter_x(bub.x[bub_filter][-1])) < 0.050*filter_x(dx) or
+                        (filter_y(dew.y[dew_filter][-1])-filter_y(bub.y[bub_filter][-1])) < 0.010*filter_y(dy)):
                         f = interp1d(numpy.append(bub.x[bub_filter],dew.x[dew_filter][::-1]),numpy.append(bub.y[bub_filter],dew.y[dew_filter][::-1]),kind='cubic')
                         x = numpy.linspace(bub.x[bub_filter][-1], dew.x[dew_filter][-1], 11)
                         y = f(x)
@@ -259,6 +270,10 @@ class PropertyPlot(BasePlot):
         dimx = self.system[self.x_index]
         dimy = self.system[self.y_index]
         
+        marker = line_opts.pop('marker','o')
+        style  = line_opts.pop('linestyle','solid')
+        style  = line_opts.pop('ls',style)
+        
         if points is None: points = StateContainer()
         
         xdata = []
@@ -275,7 +290,7 @@ class PropertyPlot(BasePlot):
             old = point
         xdata = dimx.from_SI(numpy.asarray(xdata))
         ydata = dimy.from_SI(numpy.asarray(ydata))
-        self.axis.plot(xdata,ydata,**line_opts)
+        self.axis.plot(xdata,ydata,marker='None',linestyle=style,**line_opts)
         
         xdata = numpy.empty(len(points))
         ydata = numpy.empty(len(points))
@@ -286,9 +301,7 @@ class PropertyPlot(BasePlot):
         xdata = dimx.from_SI(numpy.asarray(xdata))
         ydata = dimy.from_SI(numpy.asarray(ydata))
         line_opts['label'] = ''
-        line_opts['linestyle'] = 'none'
-        line_opts['marker'] = 'o'
-        self.axis.plot(xdata,ydata,**line_opts)
+        self.axis.plot(xdata,ydata,marker=marker,linestyle='None',**line_opts)
         
 
 def InlineLabel(xv,yv,x=None,y=None,axis=None,fig=None):
