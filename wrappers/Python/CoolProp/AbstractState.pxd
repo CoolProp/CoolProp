@@ -14,7 +14,7 @@ cdef class PyPhaseEnvelopeData:
 cdef class PyGuessesStructure:
     cpdef public double T, p, rhomolar, hmolar, smolar
     cpdef public double rhomolar_liq, rhomolar_vap
-    cpdef public vector[double] x, y
+    cpdef public list x, y
 
 cdef class AbstractState:
     cdef cAbstractState.AbstractState *thisptr     # hold a C++ instance which we're wrapping

@@ -258,7 +258,7 @@ cdef class AbstractState:
         """ Solve for conformal state used in extended corresponding states - wrapper of c++ function :cpapi:`CoolProp::AbstractState::conformal_state` """
         cdef long double T0 = T, rho0 = rho
         self.thisptr.conformal_state(reference_fluid, T0, rho0)
-        return dict(T = T0, rho = rho0)
+        return dict(T = T0, rhomolar = rho0)
     cpdef dict conductivity_contributions(self):
         """ Retrieve each of the contributions to the conductivity, each in W/m/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::conductivity_contributions` """
         cdef long double dilute = 0, initial_density = 0, residual = 0, critical = 0
