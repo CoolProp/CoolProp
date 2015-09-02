@@ -30,7 +30,7 @@ Pre-compiled Binaries for OSX
 
 Part 1:
 -------
-Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/32bit__cdecl_calling_convention/`.  Development binaries coming from the buildbot server can be found at :sfnightly:`shared_library/Darwin/32bit__cdecl_calling_convention/`. Place the downloaded file called libCoolProp.dylib in the ${HOME}/lib folder (make this folder if needed).
+Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/32bit/`.  Development binaries coming from the buildbot server can be found at :sfnightly:`shared_library/Darwin/32bit/`. Place the downloaded file called libCoolProp.dylib in the ${HOME}/lib folder (make this folder if needed).
 
 Part 2:
 -------
