@@ -45,6 +45,11 @@ Download the xlam from :sfdownloads:`MicrosoftExcel` or the development version 
 
     =PropsSI("T","P",101325,"Q",0,"Water")
 
+If it doesn't work and you get error number 53, it might be because you have a 64-bit .dylib file and you want a 32-bit .dylib file.  For instance when you run the ``file`` command on your .dylib, you should see something like:
+
+    $ file libCoolProp.dylib
+    libCoolProp.dylib: Mach-O dynamically linked shared library i386
+
 User-compiled Binaries
 ======================
 
