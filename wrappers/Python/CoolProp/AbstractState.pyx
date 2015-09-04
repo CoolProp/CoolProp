@@ -30,6 +30,10 @@ cdef class AbstractState:
         
     def __dealloc__(self):
         del self.thisptr
+
+    cpdef fluid_param_string(self, string key):
+        """ Get a fluid parameter string - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fluid_param_string` """
+        return self.thisptr.fluid_param_string(key)    
         
     cpdef name(self):
         """ Get the backend name - wrapper of c++ function :cpapi:`CoolProp::AbstractState::name` """

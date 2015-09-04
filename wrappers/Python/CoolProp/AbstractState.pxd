@@ -34,6 +34,7 @@ cdef class AbstractState:
     cpdef string get_binary_interaction_string(self, string CAS1, string CAS2, string parameter) except *
     
     cpdef name(self)
+    cpdef fluid_param_string(self, string key)
     
     cpdef constants_header.phases phase(self) except *  
     cpdef specify_phase(self, constants_header.phases phase)
