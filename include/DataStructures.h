@@ -22,6 +22,13 @@ struct SimpleState
     }
     bool is_valid(){return ValidNumber(rhomolar) && ValidNumber(T) && ValidNumber(hmolar) && ValidNumber(p);}
 };
+    
+struct CriticalState : SimpleState
+{
+    bool stable;
+    CriticalState() :stable(false){ fill(_HUGE); }
+    
+};
 
 /// A modified class for the state point at the maximum saturation entropy on the vapor curve
 struct SsatSimpleState : public SimpleState

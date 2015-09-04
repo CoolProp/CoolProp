@@ -10,6 +10,11 @@ cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
         size_t iTsat_max, ipsat_max, icrit
         vector[double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
     
+cdef extern from "DataStructures.h" namespace "CoolProp":
+    cdef cppclass CriticalState:
+        double T, p, rhomolar, hmolar, smolar
+        bool stable
+
 cdef extern from "AbstractState.h" namespace "CoolProp":
 
     cdef cppclass GuessesStructure:
@@ -43,6 +48,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         string get_binary_interaction_string(const string &, const string &, const string &) except +ValueError
         
         string name() except +ValueError
+        string fluid_param_string(const string &) except +ValueError
         
         bool clear()
         
@@ -57,6 +63,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double rhomass_critical() except +ValueError
         double rhomolar_critical() except +ValueError
         double p_critical() except +ValueError
+        vector[CriticalState] all_critical_points() except +ValueError
         ## Reducing point
         double T_reducing() except +ValueError
         double rhomolar_reducing() except +ValueError

@@ -818,8 +818,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP500(void)
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void)
 {
     if (components.size() != 1){
-        std::vector<SimpleState> critpts = find_all_critical_points();
+        std::vector<CriticalState> critpts = calc_all_critical_points();
         if (critpts.size() == 1){
+            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].T;
         }
         else{
@@ -833,8 +834,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void)
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void)
 {
     if (components.size() != 1){
-        std::vector<SimpleState> critpts = find_all_critical_points();
+        std::vector<CriticalState> critpts = calc_all_critical_points();
         if (critpts.size() == 1){
+            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].p;
         }
         else{
@@ -848,8 +850,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void)
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void)
 {
     if (components.size() != 1){
-        std::vector<SimpleState> critpts = find_all_critical_points();
+        std::vector<CriticalState> critpts = calc_all_critical_points();
         if (critpts.size() == 1){
+            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].rhomolar;
         }
         else{
@@ -3003,7 +3006,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
     }
 }
 
-void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
+CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
 {
     class Resid : public FuncWrapperND{
     public:
@@ -3073,6 +3076,19 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
     _critical.T = T_reducing()/x[0];
     _critical.rhomolar = x[1]*rhomolar_reducing();
     _critical.p = calc_pressure_nocache(_critical.T, _critical.rhomolar);
+    
+    // First (necessary but not sufficient) check of stability
+    // All eigenvalues of M* matrix must be positive
+    Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(*this, XN_INDEPENDENT);
+    Eigen::EigenSolver<Eigen::MatrixXd> es(Mstar);
+    double min_eigenvalue = es.eigenvalues().real().minCoeff();
+    
+    CriticalState critical;
+    critical.stable = (min_eigenvalue > 0); // TODO: stability analysis
+    critical.T = _critical.T;
+    critical.p = _critical.p;
+    critical.rhomolar = _critical.rhomolar;
+    return critical;
 }
 
 class OneDimObjective : public FuncWrapper1DWithTwoDerivs
@@ -3109,7 +3125,7 @@ class L0CurveTracer : public FuncWrapper1DWithDeriv
 public:
     CoolProp::HelmholtzEOSMixtureBackend &HEOS;
     double delta, tau, M1_last, R_tau, R_delta;
-    std::vector<CoolProp::SimpleState> critical_points;
+    std::vector<CoolProp::CriticalState> critical_points;
     int N_critical_points;
     Eigen::MatrixXd Lstar, adjLstar, dLstardTau, d2LstardTau2, dLstardDelta;
     L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), N_critical_points(0)
@@ -3188,8 +3204,7 @@ public:
             // find the critical point and store it
             if (i > 0 && M1*M1_last < 0){
                 double rhomolar = HEOS.rhomolar_reducing()*delta_new, T = HEOS.T_reducing()/tau_new;
-                HEOS.calc_critical_point(rhomolar, T);
-                CoolProp::SimpleState crit = HEOS.get_state("critical");
+                CoolProp::CriticalState crit = HEOS.calc_critical_point(rhomolar, T);
                 critical_points.push_back(crit);
                 N_critical_points++;
                 if (get_debug_level() > 0){
@@ -3206,7 +3221,7 @@ public:
 };
 
     
-std::vector<CoolProp::SimpleState> HelmholtzEOSMixtureBackend::find_all_critical_points()
+std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critical_points()
 {
     // Store old phase
     phases old_phase = _phase;

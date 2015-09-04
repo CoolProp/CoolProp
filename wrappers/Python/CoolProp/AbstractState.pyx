@@ -5,6 +5,9 @@ cimport constants_header
 cdef class PyPhaseEnvelopeData:
     pass
 
+cdef class PyCriticalState:
+    pass
+
 cdef class PyGuessesStructure:
     def __init__(self):
         self.T = 1e999
@@ -27,6 +30,10 @@ cdef class AbstractState:
         
     def __dealloc__(self):
         del self.thisptr
+
+    cpdef fluid_param_string(self, string key):
+        """ Get a fluid parameter string - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fluid_param_string` """
+        return self.thisptr.fluid_param_string(key)    
         
     cpdef name(self):
         """ Get the backend name - wrapper of c++ function :cpapi:`CoolProp::AbstractState::name` """
@@ -111,6 +118,22 @@ cdef class AbstractState:
     cpdef double p_critical(self) except *:
         """ Gets the critical pressure in Pa - wrapper of c++ function :cpapi:`CoolProp::AbstractState::p_critical` """
         return self.thisptr.p_critical()
+
+    cpdef list all_critical_points(self):
+        """ Calculate all the critical points - wrapper of c++ function :cpapi:`CoolProp::AbstractState::all_critical_points` """
+        # Get all the critical points
+        cdef vector[cAbstractState.CriticalState] critpts = self.thisptr.all_critical_points()
+        cdef PyCriticalState pypt
+        cdef list collection = []
+        # Convert to python
+        for pt in critpts:
+            pypt = PyCriticalState()
+            pypt.stable = pt.stable
+            pypt.T = pt.T
+            pypt.p = pt.p
+            pypt.rhomolar = pt.rhomolar
+            collection.append(pypt)
+        return collection
     ## Reducing point
     cpdef double T_reducing(self) except *:
         """ Gets the reducing temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::T_reducing` """

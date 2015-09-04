@@ -16,6 +16,10 @@ cdef class PyGuessesStructure:
     cpdef public double rhomolar_liq, rhomolar_vap
     cpdef public list x, y
 
+cdef class PyCriticalState:
+    cpdef public double T, p, rhomolar, hmolar, smolar
+    cpdef public bool stable    
+
 cdef class AbstractState:
     cdef cAbstractState.AbstractState *thisptr     # hold a C++ instance which we're wrapping
     cpdef update(self, constants_header.input_pairs iInput1, double Value1, double Value2)
@@ -30,6 +34,7 @@ cdef class AbstractState:
     cpdef string get_binary_interaction_string(self, string CAS1, string CAS2, string parameter) except *
     
     cpdef name(self)
+    cpdef fluid_param_string(self, string key)
     
     cpdef constants_header.phases phase(self) except *  
     cpdef specify_phase(self, constants_header.phases phase)
@@ -46,6 +51,7 @@ cdef class AbstractState:
     cpdef double rhomass_critical(self) except *
     cpdef double rhomolar_critical(self) except *
     cpdef double p_critical(self) except *
+    cpdef list all_critical_points(self)
     ## Reducing point
     cpdef double T_reducing(self) except *
     cpdef double rhomolar_reducing(self) except *
