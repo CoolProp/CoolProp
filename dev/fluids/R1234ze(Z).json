@@ -177,7 +177,7 @@
       ], 
       "description": "sigma = sum(a_i*(1-T/Tc)^n_i)", 
       "n": [
-        1.220
+        1.22
       ]
     }
   }, 
