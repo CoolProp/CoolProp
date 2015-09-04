@@ -347,7 +347,7 @@ protected:
     
     virtual void calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_viscosity_contributions is not implemented for this backend"); };
     virtual void calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_conductivity_contributions is not implemented for this backend"); };
-    
+    virtual std::vector<CriticalState> calc_all_critical_points(void){ throw NotImplementedError("calc_all_critical_points is not implemented for this backend"); };
 public:
 
     AbstractState() :_fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown), _rhospline(-_HUGE), _dsplinedp(-_HUGE), _dsplinedh(-_HUGE){ clear(); }
@@ -482,6 +482,9 @@ public:
     double rhomolar_critical(void);
     /// Return the critical molar density in kg/m^3
     double rhomass_critical(void);
+    
+    /// Return the vector of critical points, including points that are unstable or correspond to negative pressure
+    std::vector<CriticalState> all_critical_points(void){ return calc_all_critical_points(); };
 
     /// Return the reducing point temperature in K
     double T_reducing(void);
