@@ -54,7 +54,7 @@ For windows users, you can almost certainly use the pre-compiled binaries descri
 
 Until support for MATLAB makes it into the master branch of SWIG, using swig for users (though documented below), will not be very straightforward.  For that reason, a zip file has been generated with the MATLAB interface code already packaged.  You will simply need to download the 7z archive, extract it, use CMake to generate a makefile, and build.
 
-The pre-generated versions of the MATLAB wrapper source code can be downloaded from :sfdownloads:`MATLAB` for your architecture, or from the development snapshots at :sfnightly:`MATLAB`.  You want the file ``swigged_MATLAB_src.7z``.  Once you have downloaded this file, you should run these steps at the command line:
+The pre-generated versions of the MATLAB wrapper source code can be downloaded from :sfdownloads:`MATLAB` for your architecture, or from the development snapshots at :sfnightly:`MATLAB`.  You want the file ``swigged_MATLAB_src.7z``.  Once you have downloaded this file, you should run these steps at the command line::
 
     # Change this path to be the root directory for MATLAB if needed
     export MATLAB_ROOT=/package/matlab/R2014a
