@@ -11,6 +11,9 @@ cdef extern from "Python.h":
 
 cdef extern from "Python.h":
     int __LINE__
+
+cdef extern from "CoolPropTools.h":
+    double _HUGE
     
 cdef extern from "CoolPropTools.h" namespace "CoolProp":
     bint _ValidNumber "ValidNumber"(double)
