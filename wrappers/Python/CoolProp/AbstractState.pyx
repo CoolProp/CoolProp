@@ -10,13 +10,13 @@ cdef class PyCriticalState:
 
 cdef class PyGuessesStructure:
     def __init__(self):
-        self.T = _HUGE
-        self.p = _HUGE
-        self.rhomolar = _HUGE
-        self.hmolar = _HUGE
-        self.smolar = _HUGE
-        self.rhomolar_liq = _HUGE
-        self.rhomolar_vap = _HUGE
+        self.T = get_HUGE()
+        self.p = get_HUGE()
+        self.rhomolar = get_HUGE()
+        self.hmolar = get_HUGE()
+        self.smolar = get_HUGE()
+        self.rhomolar_liq = get_HUGE()
+        self.rhomolar_vap = get_HUGE()
         self.x = []
         self.y = []
     
