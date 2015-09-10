@@ -21,6 +21,59 @@ except ImportError:
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
+cdef extern from "Python.h":
+    char* __FILE__
+
+cdef extern from "Python.h":
+    int __LINE__
+
+cdef extern from "CoolPropTools.h":
+    double get_HUGE()
+    
+cdef extern from "CoolPropTools.h" namespace "CoolProp":
+    bint _ValidNumber "ValidNumber"(double)
+    
+cdef extern from "Configuration.h" namespace "CoolProp":    
+    string _get_config_as_json_string "CoolProp::get_config_as_json_string"() except +
+    void _set_config_as_json_string "CoolProp::set_config_as_json_string"(string) except +
+    string _config_key_description "CoolProp::config_key_description"(string) except +
+
+cdef extern from "DataStructures.h" namespace "CoolProp":    
+    string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
+    int _get_parameter_index "CoolProp::get_parameter_index"(string) except +
+    int _get_phase_index "CoolProp::get_phase_index"(string) except +
+    bint _is_trivial_parameter "CoolProp::is_trivial_parameter"(int) except +
+    constants_header.input_pairs _generate_update_pair "CoolProp::generate_update_pair"(constants_header.parameters key1, double value1, constants_header.parameters key2, double value2, double &out1, double &out2) except +
+    
+cdef extern from "CoolPropLib.h":
+    double _Props "Props"(const char* Output, const char Name1, double Prop1, const char Name2, double Prop2, const char* Ref)
+    
+cdef extern from "CoolProp.h" namespace "CoolProp":
+    double _Props1SI "CoolProp::Props1SI"(string Ref, string Output)
+    double _PropsSI "CoolProp::PropsSI"(string Output, string Name1, double Prop1, string Name2, double Prop2, string FluidName) 
+    string _PhaseSI "CoolProp::PhaseSI"(string Name1, double Prop1, string Name2, double Prop2, string FluidName) 
+    vector[vector[double]] _PropsSImulti "CoolProp::PropsSImulti"(vector[string] Outputs, string Name1, vector[double] Prop1, string Name2, vector[double] Prop2, string backend, vector[string] FluidName, vector[double] fractions)
+    string _get_global_param_string "CoolProp::get_global_param_string"(string ParamName) except +
+    int _get_debug_level "CoolProp::get_debug_level"() except +
+    void _set_debug_level "CoolProp::set_debug_level"(int level) except +
+    string _get_fluid_param_string "CoolProp::get_fluid_param_string"(string ParamName, string FluidName) except +
+    void _extract_backend "CoolProp::extract_backend"(string input, string backend, string fluids) except +
+    string _extract_fractions "CoolProp::extract_fractions"(string input, vector[double] fractions) except +
+    void _set_reference_stateS "CoolProp::set_reference_stateS"(string, string) except +
+    void _set_reference_stateD "CoolProp::set_reference_stateD"(string, double, double, double, double) except +
+    double _saturation_ancillary "CoolProp::saturation_ancillary"(string, string, int, string, double) except +
+ 
+cdef extern from "HumidAirProp.h" namespace "HumidAir":
+    double _HAPropsSI "HumidAir::HAPropsSI"(string OutputName, string Input1Name, double Input1, string Input2Name, double Input2, string Input3Name, double Input3)
+    double _HAProps "HumidAir::HAProps"(string OutputName, string Input1Name, double Input1, string Input2Name, double Input2, string Input3Name, double Input3)
+    double _HAProps_Aux "HumidAir::HAProps_Aux"(const char* Name,double T, double p, double W, char *units)
+    double _cair_sat "HumidAir::cair_sat"(double T)
+
+cdef extern from "Backends/Helmholtz/MixtureParameters.h" namespace "CoolProp":
+    string _get_mixture_binary_pair_data "CoolProp::get_mixture_binary_pair_data"(const string CAS1, const string CAS2, const string key) except +
+    void _set_mixture_binary_pair_data "CoolProp::set_mixture_binary_pair_data"(const string CAS1, const string CAS2, const string key, const double val) except +
+    void _apply_simple_mixing_rule "CoolProp::apply_simple_mixing_rule"(const string &CAS1, const string &CAS2, const string &rule) except +
+
 from constants import *
 from constants_header cimport *
 cimport constants_header
