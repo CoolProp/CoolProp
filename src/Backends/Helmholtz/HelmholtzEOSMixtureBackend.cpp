@@ -3091,23 +3091,27 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
     return critical;
 }
 
+/**
+ * \brief This class is the objective function for the one-dimensional solver used to find the first intersection with the L1*=0 contour
+ */
 class OneDimObjective : public FuncWrapper1DWithTwoDerivs
 {
 public:
     CoolProp::HelmholtzEOSMixtureBackend &HEOS;
     const double delta;
+    double _call, _deriv, _second_deriv;
     OneDimObjective(HelmholtzEOSMixtureBackend &HEOS, double delta0) : HEOS(HEOS), delta(delta0) {};
     double call(double tau){
         double rhomolar = HEOS.rhomolar_reducing()*delta, T = HEOS.T_reducing()/tau;
         HEOS.update_DmolarT_direct(rhomolar, T);
-        double L1 = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant();
-        //std::cout << L1 << std::endl;
-        return L1;
+        _call = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant();
+        return _call;
     }
     double deriv(double tau){
         Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
                         dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau);
-        return (adjL*dLdTau).trace();
+        _deriv = (adjL*dLdTau).trace();
+        return _deriv;
     };
     double second_deriv(double tau){
         Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT),
@@ -3115,8 +3119,8 @@ public:
                         d2LstardTau2 = MixtureDerivatives::d2Lstar_dX2(HEOS, XN_INDEPENDENT, iTau, iTau), 
                         adjL = adjugate(Lstar),
                         dadjLstardTau = adjugate_derivative(Lstar, dLstardTau);
-        double analytical = (dLstardTau*dadjLstardTau + adjL*d2LstardTau2).trace();
-        return analytical;
+        _second_deriv = (dLstardTau*dadjLstardTau + adjL*d2LstardTau2).trace();
+        return _second_deriv;
     };
 };
 
@@ -3124,13 +3128,22 @@ class L0CurveTracer : public FuncWrapper1DWithDeriv
 {
 public:
     CoolProp::HelmholtzEOSMixtureBackend &HEOS;
-    double delta, tau, M1_last, R_tau, R_delta;
+    double delta,
+           tau,
+           M1_last,
+           R_tau, ///< The radius for tau currently being used
+           R_delta, ///< The radius for delta currently being used
+           R_tau_tracer, ///< The radius for tau that should be used in the L1*=0 tracer (user-modifiable after instantiation)
+           R_delta_tracer; ///< The radius for delta that should be used in the L1*=0 tracer (user-modifiable after instantiation)
     std::vector<CoolProp::CriticalState> critical_points;
     int N_critical_points;
     Eigen::MatrixXd Lstar, adjLstar, dLstardTau, d2LstardTau2, dLstardDelta;
     L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), N_critical_points(0)
     {
-        R_delta = 0.1; R_tau = 0.1;
+        R_delta_tracer = 0.1;
+        R_delta = R_delta_tracer;
+        R_tau_tracer = 0.1;
+        R_tau = R_tau_tracer;
     };
     /***
      \brief Calculate the value of L1
@@ -3158,7 +3171,6 @@ public:
         dLstardTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau);
         dLstardDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta);
         double L1 = Lstar.determinant();
-        //std::cout << "call: " << theta << " " << L1 << std::endl;
         return L1;
     };
     /***
@@ -3176,13 +3188,16 @@ public:
         for (int i = 0; i < 100; ++i){
             if (i == 0){
                 // In the first iteration, search all angles in the positive delta direction using a
-                // bounded solver
+                // bounded solver with a very small radius in order to not hit other L1*=0 contours
+                // that are in the vicinity
+                R_tau = 0.001; R_delta = 0.001;
                 theta = Brent(this, 0, M_PI, DBL_EPSILON, 1e-10, 100, errstr);
             }
             else{
                 // In subsequent iterations, you already have an excellent guess for the direction to
                 // be searching in, use Newton's method to refine the solution since we also
                 // have an analytic solution for the derivative
+                R_tau = R_tau_tracer; R_delta = R_delta_tracer;
                 theta = Newton(this, theta, 1e-10, 100, errstr);
             }
             
