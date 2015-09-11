@@ -32,8 +32,7 @@ For backwards compatibility, the coolprop() function has been retained in EES.  
 
 <p>The general call looks like:</p>
 
-<p><em>out = coolprop(output$
-,inputvar1$,input1,inputvar2$,input2,fluid$)</em></p>
+<p><em>out = PropsSI(output$,inputvar1$,input1,inputvar2$,input2,fluid$)</em></p>
 
 <p>A modified SI system of units is used in CoolProp. The units employed are
 shown below.</p>
@@ -47,20 +46,20 @@ thermodynamic state is given by two variables : p and T, that are set to 1 bar
 (100 kPa) and 15 °C (288.15 K) respectively:</p>
 
 <p><em>h =
-coolprop('H',&rsquo;P',100,&rsquo;T&rsquo;,288.15,&rsquo;Methane&rsquo;)</em></p>
+PropsSI('H',&rsquo;P',100,&rsquo;T&rsquo;,288.15,&rsquo;Methane&rsquo;)</em></p>
 
 <p></p>
 
-<p>A complete list of fluids that can be used in CoolProp() can be found at <a
-href="http://coolprop.sourceforge.net/Fluids/FluidInformation.html">Fluid
-Information</a></p>
+<p>A complete list of fluids that can be used in CoolProp for EES can be found at <a
+href="http://coolprop.sourceforge.net/fluid_properties/">Fluid
+Properties</a></p>
 
 <p></p>
 
-<p>The EES function coolprop() uses the same fluids and inputs as the function
+<p>The EES function PropsSI() uses the same fluids and inputs as the function
 <a
-href="http://coolprop.sourceforge.net/apidoc/CoolProp.html#CoolProp.CoolProp.Props">Props</a>
-from the python wrappers. The documentation there is generally more up-to-date.
+href="http://coolprop.sourceforge.net/coolprop/HighLevelAPI.html">PropsSI</a>
+from the high level interface. The documentation there is generally more up-to-date.
 </p>
 
 <p></p>
