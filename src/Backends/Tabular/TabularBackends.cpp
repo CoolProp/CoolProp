@@ -348,6 +348,27 @@ void CoolProp::TabularBackend::load_tables(){
     if (get_debug_level() > 0){ std::cout << "Tables loaded" << std::endl; }
 }
 
+CoolPropDbl CoolProp::TabularBackend::calc_saturated_vapor_keyed_output(parameters key){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (is_mixture){
+        return phase_envelope_sat(phase_envelope, key, iP, _p);
+    }
+    else{
+        return pure_saturation.evaluate(key, _p, 1, cached_saturation_iL, cached_saturation_iV);
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_saturated_liquid_keyed_output(parameters key){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (is_mixture){
+        return phase_envelope_sat(phase_envelope, key, iP, _p);
+    }
+    else{
+        return pure_saturation.evaluate(key, _p, 0, cached_saturation_iL, cached_saturation_iV);
+    }
+};
+
 CoolPropDbl CoolProp::TabularBackend::calc_p(void){
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     if (using_single_phase_table){

@@ -784,7 +784,9 @@ class TabularBackend : public AbstractState
         virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
         virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
-        
+        CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
+        CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
+
         /// Returns the path to the tables that shall be written
         std::string path_to_tables(void);
         /// Load the tables from file; throws UnableToLoadException if there is a problem
