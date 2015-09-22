@@ -97,6 +97,9 @@
         #endif
     #endif
 
+    /// A simple function for use in wrappers where macros cause problems
+    inline double get_HUGE(){ return _HUGE; }
+
     #if defined(_MSC_VER)
     // Microsoft version of math.h doesn't include acosh or asinh, so we just define them here.
     // It was included from Visual Studio 2013

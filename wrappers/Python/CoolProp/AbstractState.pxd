@@ -12,9 +12,13 @@ cdef class PyPhaseEnvelopeData:
     cpdef public list T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
     
 cdef class PyGuessesStructure:
-    cpdef public long double T, p, rhomolar, hmolar, smolar
-    cpdef public long double rhomolar_liq, rhomolar_vap
-    cpdef public vector[long double] x, y
+    cpdef public double T, p, rhomolar, hmolar, smolar
+    cpdef public double rhomolar_liq, rhomolar_vap
+    cpdef public list x, y
+
+cdef class PyCriticalState:
+    cpdef public double T, p, rhomolar, hmolar, smolar
+    cpdef public bool stable    
 
 cdef class AbstractState:
     cdef cAbstractState.AbstractState *thisptr     # hold a C++ instance which we're wrapping
@@ -23,8 +27,14 @@ cdef class AbstractState:
     cpdef set_mole_fractions(self, vector[double] z)
     cpdef set_mass_fractions(self, vector[double] z)
     cpdef set_volu_fractions(self, vector[double] z)
+
+    cpdef set_binary_interaction_double(self, string CAS1, string CAS2, string parameter, double val)
+    cpdef set_binary_interaction_string(self, string CAS1, string CAS2, string parameter, string val)
+    cpdef double get_binary_interaction_double(self, string CAS1, string CAS2, string parameter) except *
+    cpdef string get_binary_interaction_string(self, string CAS1, string CAS2, string parameter) except *
     
     cpdef name(self)
+    cpdef fluid_param_string(self, string key)
     
     cpdef constants_header.phases phase(self) except *  
     cpdef specify_phase(self, constants_header.phases phase)
@@ -35,6 +45,17 @@ cdef class AbstractState:
     cpdef double Tmax(self) except *
     cpdef double pmax(self) except *
     cpdef double Ttriple(self) except *
+    
+    ## Critical point
+    cpdef double T_critical(self) except *
+    cpdef double rhomass_critical(self) except *
+    cpdef double rhomolar_critical(self) except *
+    cpdef double p_critical(self) except *
+    cpdef list all_critical_points(self)
+    ## Reducing point
+    cpdef double T_reducing(self) except *
+    cpdef double rhomolar_reducing(self) except *
+    cpdef double rhomass_reducing(self) except *
         
     ## ---------------------------------------- 
     ##        Fluid property accessors
@@ -63,6 +84,9 @@ cdef class AbstractState:
     cpdef double delta(self) except *
     cpdef double viscosity(self) except *
     cpdef double conductivity(self) except *
+    cpdef dict conformal_state(self, string, long double, long double)
+    cpdef dict conductivity_contributions(self)
+    cpdef dict viscosity_contributions(self)
     cpdef double surface_tension(self) except *
     cpdef double Prandtl(self) except *
     cpdef double Bvirial(self) except *

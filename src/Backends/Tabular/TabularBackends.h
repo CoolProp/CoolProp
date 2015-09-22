@@ -70,6 +70,19 @@ class PureFluidSaturationTableData{
     
 		MSGPACK_DEFINE(revision, vectors); // write the member variables that you want to pack
 
+        /***
+         * \brief Determine if a set of inputs are single-phase or inside the saturation table
+         * @param main The main variable that is being provided (currently T or P)
+         * @param mainval The value of the main variable that is being provided
+         * @param other The secondary variable
+         * @param val The value of the secondary variable
+         * @param iL The index associated with the nearest point for the liquid
+         * @param iV The index associated with the nearest point for the vapor
+         * @param yL The value associated with the nearest point for the liquid (based on interpolation)
+         * @param yV The value associated with the nearest point for the vapor (based on interpolation)
+         
+         \note If PQ or QT are inputs, yL and yV will correspond to the other main variable: p->T or T->p
+         */
         bool is_inside(parameters main, double mainval, parameters other, double val, std::size_t &iL, std::size_t &iV, CoolPropDbl &yL, CoolPropDbl &yV){
             std::vector<double> *yvecL = NULL, *yvecV = NULL;
             switch(other){
@@ -111,7 +124,7 @@ class PureFluidSaturationTableData{
                 bisect_vector(TL, mainval, iL);
             }
             else{
-                throw ValueError(format("For now, main input must be T or p"));
+                throw ValueError(format("For now, main input in is_inside must be T or p"));
             }
 
             iVplus = std::min(iV+1, N-1);
@@ -122,12 +135,14 @@ class PureFluidSaturationTableData{
                 if (iLplus < 3){ iLplus = 3;}
                 if (main==iP){
                     double logp = log(mainval);
-                    yV = CubicInterp(logpV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, logp);
-                    yL = CubicInterp(logpL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, logp);
+                    // Calculate temperature
+                    yV = CubicInterp(logpV, TV, iVplus-3, iVplus-2, iVplus-1, iVplus, logp);
+                    yL = CubicInterp(logpL, TL, iLplus-3, iLplus-2, iLplus-1, iLplus, logp);
                 }
                 else if (main == iT){
-                    yV = CubicInterp(TV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval);
-                    yL = CubicInterp(TL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
+                    // Calculate pressure
+                    yV = exp(CubicInterp(TV, logpV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval));
+                    yL = exp(CubicInterp(TL, logpL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval));
                 }
                 return true;
             }
@@ -277,7 +292,7 @@ class PureFluidSaturationTableData{
          */
         double first_saturation_deriv(parameters Of1, parameters Wrt1, int Q, double val, std::size_t i)
         {
-            if (i < 2 || i > TL.size() - 2){throw ValueError("Invalid index to calc_first_saturation_deriv in TabularBackends");}
+            if (i < 2 || i > TL.size() - 2){throw ValueError(format("Invalid index (%d) to calc_first_saturation_deriv in TabularBackends",i));}
             std::vector<double> *x, *y;
             // Connect pointers for each vector
             switch(Wrt1){
@@ -502,8 +517,9 @@ class LogPHTable : public SinglePhaseGriddedTableData
             if (this->AS.get() == NULL){
                 throw ValueError("AS is not yet set");
             }
+            CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
             // Minimum enthalpy is the saturated liquid enthalpy
-            AS->update(QT_INPUTS, 0, AS->Ttriple());
+            AS->update(QT_INPUTS, 0, Tmin);
             xmin = AS->hmolar(); ymin = AS->p();
             
             // Check both the enthalpies at the Tmax isotherm to see whether to use low or high pressure
@@ -542,14 +558,15 @@ class LogPTTable : public SinglePhaseGriddedTableData
 {
     public:
         LogPTTable(){
-            xkey = iT; ykey = iP; logy = true; logx = false;
+            xkey = iT; ykey = iP; logy = true; logx = false; xmin = _HUGE; ymin = _HUGE; xmax=_HUGE; ymax=_HUGE;
         };
         void set_limits(){
             if (this->AS.get() == NULL){
                 throw ValueError("AS is not yet set");
-            }            
-            xmin = AS->Ttriple();
-            AS->update(QT_INPUTS, 0, AS->Ttriple());
+            }
+            CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
+            AS->update(QT_INPUTS, 0, Tmin);
+            xmin = Tmin;
             ymin = AS->p();
             
             xmax = AS->Tmax()*1.499; ymax = AS->pmax();
@@ -767,7 +784,9 @@ class TabularBackend : public AbstractState
         virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
         virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
-        
+        CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
+        CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
+
         /// Returns the path to the tables that shall be written
         std::string path_to_tables(void);
         /// Load the tables from file; throws UnableToLoadException if there is a problem
@@ -795,7 +814,12 @@ class TabularBackend : public AbstractState
             this->AS->set_T(_T);
             return this->AS->cp0molar();
         }
-
+        /// Calculate the surface tension using the wrapped class (fast enough)
+        CoolPropDbl calc_surface_tension(void){
+            this->AS->set_T(_T);
+            return this->AS->surface_tension();
+            this->AS->set_T(_HUGE);
+        }
         CoolPropDbl calc_p(void);
         CoolPropDbl calc_T(void);
         CoolPropDbl calc_rhomolar(void);
@@ -806,6 +830,10 @@ class TabularBackend : public AbstractState
         CoolPropDbl calc_cvmolar(void);
         CoolPropDbl calc_viscosity(void);
         CoolPropDbl calc_conductivity(void);
+        /// Calculate the speed of sound using a tabular backend [m/s]
+        CoolPropDbl calc_speed_sound(void){
+            return sqrt(1/molar_mass()*cpmolar()/cvmolar()*first_partial_deriv(iP, iDmolar, iT));
+        };
         CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
         /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
         */

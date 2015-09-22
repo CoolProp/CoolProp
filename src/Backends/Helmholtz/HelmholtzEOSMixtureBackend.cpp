@@ -32,6 +32,8 @@
 #include "ReducingFunctions.h"
 #include "MixtureParameters.h"
 #include "IdealCurves.h"
+#include "MixtureParameters.h"
+#include <stdlib.h>
 
 static int deriv_counter = 0;
 
@@ -178,6 +180,25 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &Pa
         throw ValueError(format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str()));
     }
 }
+/// Set binary mixture floating point parameter
+void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){
+    // Set the value in the library
+    CoolProp::set_mixture_binary_pair_data(CAS1, CAS2, parameter, value);
+
+    // Update the values in this instance and the saturation states too
+    this->set_mixture_parameters();
+    if (this->SatL){ this->SatL->set_mixture_parameters(); }
+    if (this->SatV){ this->SatV->set_mixture_parameters(); }
+};
+/// Get binary mixture double value
+double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
+    return atof(CoolProp::get_mixture_binary_pair_data(CAS1, CAS2, parameter).c_str());
+}
+/// Get binary mixture string value
+std::string HelmholtzEOSMixtureBackend::get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
+    return CoolProp::get_mixture_binary_pair_data(CAS1, CAS2, parameter);
+}
+    
 void HelmholtzEOSMixtureBackend::calc_phase_envelope(const std::string &type)
 {
     // Clear the phase envelope data
@@ -404,24 +425,23 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void)
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background()
 {
-    CoolPropDbl eta_dilute = calc_viscosity_dilute();
-    return calc_viscosity_background(eta_dilute);
+    CoolPropDbl eta_dilute = calc_viscosity_dilute(), initial_density = 0, residual = 0;
+    return calc_viscosity_background(eta_dilute, initial_density, residual);
 }
-CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl eta_dilute)
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl eta_dilute, CoolPropDbl &initial_density, CoolPropDbl &residual)
 {
-    CoolPropDbl initial_part = 0.0;
     
     switch(components[0].transport.viscosity_initial.type){        
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND:
         {
             CoolPropDbl B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
             CoolPropDbl rho = rhomolar();
-            initial_part = eta_dilute*B_eta_initial*rho;
+            initial_density = eta_dilute*B_eta_initial*rho;
             break;
         }
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EMPIRICAL:
         {
-            initial_part = TransportRoutines::viscosity_initial_density_dependence_empirical(*this);
+            initial_density = TransportRoutines::viscosity_initial_density_dependence_empirical(*this);
             break;
         }
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_NOT_SET:
@@ -431,83 +451,38 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
     }
 
     // Higher order terms
-    CoolPropDbl delta_eta_h = 0.0;
     switch(components[0].transport.viscosity_higher_order.type)
     {
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND:
-        delta_eta_h = TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(*this); break;
+        residual = TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_FRICTION_THEORY:
-        delta_eta_h = TransportRoutines::viscosity_higher_order_friction_theory(*this); break;
+        residual = TransportRoutines::viscosity_higher_order_friction_theory(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HYDROGEN:
-        delta_eta_h = TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(*this); break;
+        residual = TransportRoutines::viscosity_hydrogen_higher_order_hardcoded(*this); break;
+    case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_TOLUENE:
+        residual = TransportRoutines::viscosity_toluene_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEXANE:
-        delta_eta_h = TransportRoutines::viscosity_hexane_higher_order_hardcoded(*this); break;
+        residual = TransportRoutines::viscosity_hexane_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_HEPTANE:
-        delta_eta_h = TransportRoutines::viscosity_heptane_higher_order_hardcoded(*this); break;
+        residual = TransportRoutines::viscosity_heptane_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_ETHANE:
-        delta_eta_h = TransportRoutines::viscosity_ethane_higher_order_hardcoded(*this); break;
+        residual = TransportRoutines::viscosity_ethane_higher_order_hardcoded(*this); break;
     case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BENZENE:
-        delta_eta_h = TransportRoutines::viscosity_benzene_higher_order_hardcoded(*this); break;
+        residual = TransportRoutines::viscosity_benzene_higher_order_hardcoded(*this); break;
     default:
         throw ValueError(format("higher order viscosity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
     }
 
-    CoolPropDbl eta_residual = initial_part + delta_eta_h;
-
-    return eta_residual;
+    return initial_density + residual;
 }
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity(void)
 {
     if (is_pure_or_pseudopure)
     {
-        // Get a reference for code cleanness
-        CoolPropFluid &component = components[0];
-		
-		if (!component.transport.viscosity_model_provided){
-			throw ValueError(format("Viscosity model is not available for this fluid"));
-		}
-
-        // Check if using ECS
-        if (component.transport.viscosity_using_ECS)
-        {
-            // Get reference fluid name
-            std::string fluid_name  = component.transport.viscosity_ecs.reference_fluid;
-            std::vector<std::string> names(1, fluid_name);
-            // Get a managed pointer to the reference fluid for ECS
-            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(names));
-            // Get the viscosity using ECS
-            return TransportRoutines::viscosity_ECS(*this, *ref_fluid);
-        }
-
-        if (component.transport.hardcoded_viscosity != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
-        {
-            switch(component.transport.hardcoded_viscosity)
-            {
-            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER:
-                return TransportRoutines::viscosity_water_hardcoded(*this);
-            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER:
-                return TransportRoutines::viscosity_heavywater_hardcoded(*this);
-            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM:
-                return TransportRoutines::viscosity_helium_hardcoded(*this);
-            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_R23:
-                return TransportRoutines::viscosity_R23_hardcoded(*this);
-            case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_METHANOL:
-                return TransportRoutines::viscosity_methanol_hardcoded(*this);
-            default:
-                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", component.transport.hardcoded_viscosity, name().c_str()));
-            }
-        }
-        // Dilute part
-        CoolPropDbl eta_dilute = calc_viscosity_dilute();
-
-        // Background viscosity given by the sum of the initial density dependence and higher order terms
-        CoolPropDbl eta_back = calc_viscosity_background(eta_dilute);
-
-        // Critical part (no fluids have critical enhancement for viscosity currently)
-        CoolPropDbl eta_critical = 0;
-
-        return eta_dilute + eta_back + eta_critical;
+        CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+        calc_viscosity_contributions(dilute, initial_density, residual, critical);
+        return dilute + initial_density + residual + critical;
     }
     else
     {
@@ -521,6 +496,166 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity(void)
         return exp(summer);
     }
 }
+void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){
+    if (is_pure_or_pseudopure)
+    {
+        // Reset the variables
+        dilute = 0; initial_density = 0; residual = 0; critical = 0;
+
+        // Get a reference for code cleanness
+        CoolPropFluid &component = components[0];
+        
+        if (!component.transport.viscosity_model_provided){
+            throw ValueError(format("Viscosity model is not available for this fluid"));
+        }
+        
+        // Check if using ECS
+        if (component.transport.viscosity_using_ECS)
+        {
+            // Get reference fluid name
+            std::string fluid_name  = component.transport.viscosity_ecs.reference_fluid;
+            std::vector<std::string> names(1, fluid_name);
+            // Get a managed pointer to the reference fluid for ECS
+            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(names));
+            // Get the viscosity using ECS and stick in the critical value
+            critical = TransportRoutines::viscosity_ECS(*this, *ref_fluid);
+            return;
+        }
+        
+        if (component.transport.hardcoded_viscosity != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
+        {
+            // Evaluate hardcoded model and stick in the critical value
+            switch(component.transport.hardcoded_viscosity)
+            {
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_WATER:
+                    critical = TransportRoutines::viscosity_water_hardcoded(*this); break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER:
+                    critical = TransportRoutines::viscosity_heavywater_hardcoded(*this); break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM:
+                    critical = TransportRoutines::viscosity_helium_hardcoded(*this); break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_R23:
+                    critical = TransportRoutines::viscosity_R23_hardcoded(*this); break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_METHANOL:
+                    critical = TransportRoutines::viscosity_methanol_hardcoded(*this); break;
+                default:
+                    throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", component.transport.hardcoded_viscosity, name().c_str()));
+            }
+            return;
+        }
+        
+        // -------------------------
+        //     Normal evaluation
+        // -------------------------
+        
+        // Dilute part
+        dilute = calc_viscosity_dilute();
+        
+        // Background viscosity given by the sum of the initial density dependence and higher order terms
+        calc_viscosity_background(dilute, initial_density, residual);
+        
+        // Critical part (no fluids have critical enhancement for viscosity currently)
+        critical = 0;
+    }
+    else
+    {
+        throw ValueError("calc_viscosity_contributions invalid for mixtures");
+    }
+}
+void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical)
+{
+    if (is_pure_or_pseudopure)
+    {
+        // Reset the variables
+        dilute = 0; initial_density = 0; residual = 0; critical = 0;
+        
+        // Get a reference for code cleanness
+        CoolPropFluid &component = components[0];
+        
+        if (!component.transport.conductivity_model_provided){
+            throw ValueError(format("Thermal conductivity model is not available for this fluid"));
+        }
+        
+        // Check if using ECS
+        if (component.transport.conductivity_using_ECS)
+        {
+            // Get reference fluid name
+            std::string fluid_name  = component.transport.conductivity_ecs.reference_fluid;
+            std::vector<std::string> name(1, fluid_name);
+            // Get a managed pointer to the reference fluid for ECS
+            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(name));
+            // Get the viscosity using ECS and store in initial_density (not normally used);
+            initial_density = TransportRoutines::conductivity_ECS(*this, *ref_fluid); // Warning: not actually initial_density
+            return;
+        }
+        
+        if (component.transport.hardcoded_conductivity != CoolProp::TransportPropertyData::CONDUCTIVITY_NOT_HARDCODED)
+        {
+            // Evaluate hardcoded model and deposit in initial_density variable
+            // Warning: not actually initial_density
+            switch(component.transport.hardcoded_conductivity)
+            {
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER:
+                    initial_density = TransportRoutines::conductivity_hardcoded_water(*this); break;
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER:
+                    initial_density = TransportRoutines::conductivity_hardcoded_heavywater(*this); break;
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23:
+                    initial_density = TransportRoutines::conductivity_hardcoded_R23(*this); break;
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HELIUM:
+                    initial_density = TransportRoutines::conductivity_hardcoded_helium(*this); break;
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_METHANE:
+                    initial_density = TransportRoutines::conductivity_hardcoded_methane(*this); break;
+                default:
+                    throw ValueError(format("hardcoded conductivity type [%d] is invalid for fluid %s", components[0].transport.hardcoded_conductivity, name().c_str()));
+            }
+            return;
+        }
+        
+        // -------------------------
+        //     Normal evaluation
+        // -------------------------
+        
+        // Dilute part
+        switch(component.transport.conductivity_dilute.type)
+        {
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS:
+                dilute = TransportRoutines::conductivity_dilute_ratio_polynomials(*this); break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETA0_AND_POLY:
+                dilute = TransportRoutines::conductivity_dilute_eta0_and_poly(*this); break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2:
+                dilute = TransportRoutines::conductivity_dilute_hardcoded_CO2(*this); break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETHANE:
+                dilute = TransportRoutines::conductivity_dilute_hardcoded_ethane(*this); break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_NONE:
+                dilute = 0.0; break;
+            default:
+                throw ValueError(format("dilute conductivity type [%d] is invalid for fluid %s", components[0].transport.conductivity_dilute.type, name().c_str()));
+        }
+        
+        // Residual part
+        residual = calc_conductivity_background();
+        
+        // Critical part
+        switch(component.transport.conductivity_critical.type)
+        {
+            case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS:
+                critical = TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(*this); break;
+            case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_R123:
+                critical = TransportRoutines::conductivity_critical_hardcoded_R123(*this); break;
+            case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_AMMONIA:
+                critical = TransportRoutines::conductivity_critical_hardcoded_ammonia(*this); break;
+            case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_NONE:
+                critical = 0.0; break;
+            case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_CARBONDIOXIDE_SCALABRIN_JPCRD_2006:
+                critical = TransportRoutines::conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(*this); break;
+            default:
+                throw ValueError(format("critical conductivity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
+        }
+    }
+    else{
+        throw ValueError("calc_conductivity_contributions invalid for mixtures");
+    }
+};
+
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity_background(void)
 {
     // Residual part
@@ -540,83 +675,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void)
 {
     if (is_pure_or_pseudopure)
     {
-        // Get a reference for code cleanness
-        CoolPropFluid &component = components[0];
-		
-		if (!component.transport.conductivity_model_provided){
-			throw ValueError(format("Thermal conductivity model is not available for this fluid"));
-		}
-
-        // Check if using ECS
-        if (component.transport.conductivity_using_ECS)
-        {
-            // Get reference fluid name
-            std::string fluid_name  = component.transport.conductivity_ecs.reference_fluid;
-            std::vector<std::string> name(1, fluid_name);
-            // Get a managed pointer to the reference fluid for ECS
-            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(name));
-            // Get the viscosity using ECS
-            return TransportRoutines::conductivity_ECS(*this, *ref_fluid);
-        }
-
-        if (component.transport.hardcoded_conductivity != CoolProp::TransportPropertyData::CONDUCTIVITY_NOT_HARDCODED)
-        {
-            switch(component.transport.hardcoded_conductivity)
-            {
-            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_WATER:
-                return TransportRoutines::conductivity_hardcoded_water(*this);
-            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER:
-                return TransportRoutines::conductivity_hardcoded_heavywater(*this);
-            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23:
-                return TransportRoutines::conductivity_hardcoded_R23(*this);
-            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HELIUM:
-                return TransportRoutines::conductivity_hardcoded_helium(*this);
-            case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_METHANE:
-                return TransportRoutines::conductivity_hardcoded_methane(*this);
-            default:
-                throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", components[0].transport.hardcoded_conductivity, name().c_str()));
-            }
-        }
-
-        // Dilute part
-        CoolPropDbl lambda_dilute = _HUGE;
-        switch(component.transport.conductivity_dilute.type)
-        {
-        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS:
-            lambda_dilute = TransportRoutines::conductivity_dilute_ratio_polynomials(*this); break;
-        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETA0_AND_POLY:
-            lambda_dilute = TransportRoutines::conductivity_dilute_eta0_and_poly(*this); break;
-        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2:
-            lambda_dilute = TransportRoutines::conductivity_dilute_hardcoded_CO2(*this); break;
-        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETHANE:
-            lambda_dilute = TransportRoutines::conductivity_dilute_hardcoded_ethane(*this); break;
-        case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_NONE:
-            lambda_dilute = 0.0; break;
-        default:
-            throw ValueError(format("dilute conductivity type [%d] is invalid for fluid %s", components[0].transport.conductivity_dilute.type, name().c_str()));
-        }
-
-        CoolPropDbl lambda_residual = calc_conductivity_background();
-
-        // Critical part
-        CoolPropDbl lambda_critical = _HUGE;
-        switch(component.transport.conductivity_critical.type)
-        {
-        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_SIMPLIFIED_OLCHOWY_SENGERS:
-            lambda_critical = TransportRoutines::conductivity_critical_simplified_Olchowy_Sengers(*this); break;
-        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_R123:
-            lambda_critical = TransportRoutines::conductivity_critical_hardcoded_R123(*this); break;
-        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_AMMONIA:
-            lambda_critical = TransportRoutines::conductivity_critical_hardcoded_ammonia(*this); break;
-        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_NONE:
-            lambda_critical = 0.0; break;
-        case ConductivityCriticalVariables::CONDUCTIVITY_CRITICAL_CARBONDIOXIDE_SCALABRIN_JPCRD_2006:
-            lambda_critical = TransportRoutines::conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(*this); break;
-        default:
-            throw ValueError(format("critical conductivity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
-        }
-
-        return lambda_dilute + lambda_residual + lambda_critical;
+        CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+        calc_conductivity_contributions(dilute, initial_density, residual, critical);
+        return dilute + initial_density + residual + critical;
     }
     else
     {
@@ -629,6 +690,31 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void)
         }
         return summer;
     }
+}
+void HelmholtzEOSMixtureBackend::calc_conformal_state(const std::string &reference_fluid, CoolPropDbl &T, CoolPropDbl &rhomolar){
+    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> REF(new CoolProp::HelmholtzEOSBackend(reference_fluid));
+    
+    if (T < 0 && rhomolar < 0){
+        // Collect some parameters
+        CoolPropDbl Tc = T_critical(),
+                    Tc0 = REF->T_critical(),
+                    rhocmolar = rhomolar_critical(),
+                    rhocmolar0 = REF->rhomolar_critical();
+        
+        // Starting guess values for shape factors
+        CoolPropDbl theta = 1;
+        CoolPropDbl phi = 1;
+        
+        // The equivalent substance reducing ratios
+        CoolPropDbl f = Tc/Tc0*theta;
+        CoolPropDbl h = rhocmolar0/rhocmolar*phi; // Must be the ratio of MOLAR densities!!
+        
+        // Starting guesses for conformal state
+        T = this->T()/f;
+        rhomolar = this->rhomolar()*h;
+    }
+    
+    TransportRoutines::conformal_state_solver(*this, *REF, T, rhomolar);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Ttriple(void)
 {
@@ -729,11 +815,17 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP500(void)
         return v;
     }
 }
-
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void)
 {
     if (components.size() != 1){
-        throw ValueError(format("For now, calc_T_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+        std::vector<CriticalState> critpts = calc_all_critical_points();
+        if (critpts.size() == 1){
+            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
+            return critpts[0].T;
+        }
+        else{
+            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+        }
     }
     else{
         return components[0].crit.T;
@@ -742,7 +834,14 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void)
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void)
 {
     if (components.size() != 1){
-        throw ValueError(format("For now, calc_p_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+        std::vector<CriticalState> critpts = calc_all_critical_points();
+        if (critpts.size() == 1){
+            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
+            return critpts[0].p;
+        }
+        else{
+            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+        }
     }
     else{
         return components[0].crit.p;
@@ -751,7 +850,14 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void)
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void)
 {
     if (components.size() != 1){
-        throw ValueError(format("For now, calc_rhomolar_critical is only valid for pure and pseudo-pure fluids, %d components", components.size()));
+        std::vector<CriticalState> critpts = calc_all_critical_points();
+        if (critpts.size() == 1){
+            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
+            return critpts[0].rhomolar;
+        }
+        else{
+            throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
+        }
     }
     else{
         return components[0].crit.rhomolar;
@@ -1007,13 +1113,13 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
         //case TUmolar_INPUTS:
         //    _T = value1; _umolar = value2; FlashRoutines::DHSU_T_flash(*this, iUmolar); break;
         case DmolarP_INPUTS:
-            _rhomolar = value1; _p = value2; FlashRoutines::PHSU_D_flash(*this, iP); break;
+            _rhomolar = value1; _p = value2; FlashRoutines::DP_flash(*this); break;
         case DmolarHmolar_INPUTS:
-            _rhomolar = value1; _hmolar = value2; FlashRoutines::PHSU_D_flash(*this, iHmolar); break;
+            _rhomolar = value1; _hmolar = value2; FlashRoutines::HSU_D_flash(*this, iHmolar); break;
         case DmolarSmolar_INPUTS:
-            _rhomolar = value1; _smolar = value2; FlashRoutines::PHSU_D_flash(*this, iSmolar); break;
+            _rhomolar = value1; _smolar = value2; FlashRoutines::HSU_D_flash(*this, iSmolar); break;
         case DmolarUmolar_INPUTS:
-            _rhomolar = value1; _umolar = value2; FlashRoutines::PHSU_D_flash(*this, iUmolar); break;
+            _rhomolar = value1; _umolar = value2; FlashRoutines::HSU_D_flash(*this, iUmolar); break;
         case HmolarP_INPUTS:
             _hmolar = value1; _p = value2; FlashRoutines::HSU_P_flash(*this, iHmolar); break;
         case PSmolar_INPUTS:
@@ -1080,21 +1186,23 @@ void HelmholtzEOSMixtureBackend::post_update()
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Bvirial()
 {
-    return 1/get_reducing_state().rhomolar*calc_alphar_deriv_nocache(0,1,mole_fractions,_tau,1e-12);
+    return 1/rhomolar_reducing()*calc_alphar_deriv_nocache(0,1,mole_fractions,_tau,1e-12);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_dBvirial_dT()
 {
-    CoolPropDbl dtau_dT =-get_reducing_state().T/pow(_T,2);
-    return 1/get_reducing_state().rhomolar*calc_alphar_deriv_nocache(1,1,mole_fractions,_tau,1e-12)*dtau_dT;
+    SimpleState red = get_reducing_state();
+    CoolPropDbl dtau_dT =-red.T/pow(_T,2);
+    return 1/red.rhomolar*calc_alphar_deriv_nocache(1,1,mole_fractions,_tau,1e-12)*dtau_dT;
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Cvirial()
 {
-    return 1/pow(get_reducing_state().rhomolar,2)*calc_alphar_deriv_nocache(0,2,mole_fractions,_tau,1e-12);
+    return 1/pow(rhomolar_reducing(),2)*calc_alphar_deriv_nocache(0,2,mole_fractions,_tau,1e-12);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_dCvirial_dT()
 {
-    CoolPropDbl dtau_dT =-get_reducing_state().T/pow(_T,2);
-    return 1/pow(get_reducing_state().rhomolar,2)*calc_alphar_deriv_nocache(1,2,mole_fractions,_tau,1e-12)*dtau_dT;
+    SimpleState red = get_reducing_state();
+    CoolPropDbl dtau_dT =-red.T/pow(_T,2);
+    return 1/pow(red.rhomolar,2)*calc_alphar_deriv_nocache(1,2,mole_fractions,_tau,1e-12)*dtau_dT;
 }
 void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int other, CoolPropDbl value, bool &saturation_called)
 {
@@ -1356,7 +1464,17 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
     }
     else if (_p < components[0].EOS().ptriple*0.9999)
     {
-        throw NotImplementedError(format("for now, we don't support p [%g Pa] below ptriple [%g Pa]",_p, components[0].EOS().ptriple));
+        if (other == iT){
+            if (_T > std::max(Tmin(), Ttriple())){
+                _phase = iphase_gas;
+            }
+            else{
+                 throw NotImplementedError(format("For now, we don't support p [%g Pa] below ptriple [%g Pa] when T [%g] is less than Tmin [%g]",_p, components[0].EOS().ptriple, _T, std::max(Tmin(), Ttriple())) );
+            }
+        }
+        else{
+            _phase = iphase_gas;
+        }
     }
     else{
         throw ValueError(format("The pressure [%g Pa] cannot be used in p_phase_determination",_p));
@@ -1500,21 +1618,23 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                         else{
                             // Next we check the vapor quality based on the ancillary values
                             double Qanc = (1/value - 1/static_cast<double>(_rhoLanc))/(1/static_cast<double>(_rhoVanc) - 1/static_cast<double>(_rhoLanc));
-                            // If the vapor quality is significantly inside the two-phase zone, stop, we are two-phase
-                            if (Qanc > 0.05 && Qanc < 0.95){ 
-                                break; // It's two-phase
-                            }
-
-                            _phase = iphase_liquid; // Needed for direct update call
-                            _Q = -1000; // Needed for direct update call
-                            update_DmolarT_direct(value, _T);
-                            CoolPropDbl pL = components[0].ancillaries.pL.evaluate(_T);
-                            if (Qanc < 0.1 && _p > pL*1.05 && first_partial_deriv(iP, iDmolar, iT) > 0 && second_partial_deriv(iP, iDmolar, iT, iDmolar, iT) > 0){
-                                _phase = iphase_liquid; _Q = -1000; return;
-                            }
-                            else{
-                                _phase = iphase_unknown;
-                                _p = _HUGE;
+                            // If the vapor quality is significantly inside the two-phase zone, stop, we are definitely two-phase
+                            if (value > rho_liq || value < rho_vap){
+                                // Definitely single-phase
+                                _phase = iphase_liquid; // Needed for direct update call
+                                _Q = -1000; // Needed for direct update call
+                                update_DmolarT_direct(value, _T);
+                                CoolPropDbl pL = components[0].ancillaries.pL.evaluate(_T);
+                                if (Qanc < 0.01 && _p > pL*1.05 && first_partial_deriv(iP, iDmolar, iT) > 0 && second_partial_deriv(iP, iDmolar, iT, iDmolar, iT) > 0){
+                                    _phase = iphase_liquid; _Q = -1000; return;
+                                }
+                                else if (Qanc > 1.01){
+                                    break;
+                                }
+                                else{
+                                    _phase = iphase_unknown;
+                                    _p = _HUGE;
+                                }
                             }
                         }
                         break;
@@ -2293,9 +2413,11 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
         std::size_t N = mole_fractions.size();
         CoolPropDbl summer_base = 0, summer_dTau = 0, summer_dDelta = 0, 
                     summer_dTau2 = 0, summer_dDelta2 = 0, summer_dDelta_dTau = 0,
-                    summer_dTau3 = 0, summer_dDelta3 = 0, summer_dDelta2_dTau = 0, summer_dDelta_dTau2 = 0;
+                    summer_dTau3 = 0, summer_dDelta3 = 0, summer_dDelta2_dTau = 0, summer_dDelta_dTau2 = 0,
+                    summer_dTau4 = 0, summer_dDelta4 = 0, summer_dDelta3_dTau = 0, summer_dDelta_dTau3 = 0, summer_dDelta2_dTau2 = 0;
         for (std::size_t i = 0; i < N; ++i){
-            HelmholtzDerivatives derivs = components[i].EOS().alphar.all(tau, delta);
+            bool cache_values = true;
+            HelmholtzDerivatives derivs = components[i].EOS().alphar.all(tau, delta, cache_values);
             CoolPropDbl xi = mole_fractions[i];
             
             summer_base += xi*derivs.alphar;
@@ -2309,6 +2431,13 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
             summer_dDelta2_dTau += xi*derivs.d3alphar_ddelta2_dtau;
             summer_dDelta_dTau2 += xi*derivs.d3alphar_ddelta_dtau2;
             summer_dTau3 += xi*derivs.d3alphar_dtau3;
+
+            summer_dDelta4 += xi*derivs.d4alphar_ddelta4;
+            summer_dDelta3_dTau += xi*derivs.d4alphar_ddelta3_dtau;
+            summer_dDelta2_dTau2 += xi*derivs.d4alphar_ddelta2_dtau2;
+            summer_dDelta_dTau3 += xi*derivs.d4alphar_ddelta_dtau3;
+            summer_dTau4 += xi*derivs.d4alphar_dtau4;
+
         }
         Excess.update(tau, delta);
         _alphar = summer_base + Excess.alphar(mole_fractions);
@@ -2322,11 +2451,12 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
         _d3alphar_dDelta2_dTau = summer_dDelta2_dTau + Excess.d3alphar_dDelta2_dTau(mole_fractions);
         _d3alphar_dDelta_dTau2 = summer_dDelta_dTau2 + Excess.d3alphar_dDelta_dTau2(mole_fractions);
         _d3alphar_dTau3 = summer_dTau3 + Excess.d3alphar_dTau3(mole_fractions);
-        //_d4alphar_dDelta4 = derivs.d4alphar_ddelta4;
-        //_d4alphar_dDelta3_dTau = derivs.d4alphar_ddelta3_dtau;
-        //_d4alphar_dDelta2_dTau2 = derivs.d4alphar_ddelta2_dtau2;
-        //_d4alphar_dDelta_dTau3 = derivs.d4alphar_ddelta_dtau3;
-        //_d4alphar_dTau4 = derivs.d4alphar_dtau4;
+        
+        _d4alphar_dDelta4 = summer_dDelta4 + Excess.d4alphar_dDelta4(mole_fractions);;
+        _d4alphar_dDelta3_dTau = summer_dDelta3_dTau + Excess.d4alphar_dDelta3_dTau(mole_fractions);
+        _d4alphar_dDelta2_dTau2 = summer_dDelta2_dTau2 + Excess.d4alphar_dDelta2_dTau2(mole_fractions);
+        _d4alphar_dDelta_dTau3 = summer_dDelta_dTau3 + Excess.d4alphar_dDelta_dTau3(mole_fractions);
+        _d4alphar_dTau4 = summer_dTau4 + Excess.d4alphar_dTau4(mole_fractions);
     }
 }
 
@@ -2876,7 +3006,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
     }
 }
 
-void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
+CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
 {
     class Resid : public FuncWrapperND{
     public:
@@ -2895,34 +3025,46 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
         };
         std::vector<std::vector<double> > Jacobian(const std::vector<double> &x)
         {
-            double epsilon;
             std::size_t N = x.size();
-            std::vector<double> r, xp;
             std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
-            Eigen::MatrixXd J0(N, N), adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT), N), 
-                                      dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
-                                      dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta),
-                                      adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT), N),
-                                      dMdTau = dLdTau, dMdDelta = dLdDelta;
+            Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
+                adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT)),
+                dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
+                dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta),
+                dMdTau = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iTau),
+                dMdDelta = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iDelta);
 
-            J0(0,0) = (adjL*dLdTau).trace();
-            J0(0,1) = (adjL*dLdDelta).trace();
-            //std::cout << J0 << std::endl;
-            std::vector<double> r0 = call(x);
+            J[0][0] = (adjL*dLdTau).trace();
+            J[0][1] = (adjL*dLdDelta).trace();
+            J[1][0] = (adjM*dMdTau).trace();
+            J[1][1] = (adjM*dMdDelta).trace();
+            return J;
+        }
+        /// Not used, for testing purposes
+        std::vector<std::vector<double> > numerical_Jacobian(const std::vector<double> &x)
+        {
+            std::size_t N = x.size();
+            std::vector<double> rplus, rminus, xp;
+            std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
+            
+            double epsilon = 0.0001;
+             
             // Build the Jacobian by column
             for (std::size_t i = 0; i < N; ++i)
             {
                 xp = x;
-                epsilon = 0.00001;
                 xp[i] += epsilon;
-                r = call(xp);
+                rplus = call(xp);
+                xp[i] -= 2*epsilon;
+                rminus = call(xp);
 
                 for (std::size_t j = 0; j < N; ++j)
                 {
-                    J[j][i] = (r[j]-r0[j])/epsilon;
+                    J[j][i] = (rplus[j]-rminus[j])/(2*epsilon);
                 }
             }
-            
+            std::cout << J[0][0] << " " << J[0][1] << std::endl;
+            std::cout << J[1][0] << " " << J[1][1] << std::endl;
             return J;
         };
     };
@@ -2933,6 +3075,188 @@ void HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)
     x = NDNewtonRaphson_Jacobian(&resid, tau_delta, 1e-14, 100, &errstr);
     _critical.T = T_reducing()/x[0];
     _critical.rhomolar = x[1]*rhomolar_reducing();
+    _critical.p = calc_pressure_nocache(_critical.T, _critical.rhomolar);
+    
+    // First (necessary but not sufficient) check of stability
+    // All eigenvalues of M* matrix must be positive
+    Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(*this, XN_INDEPENDENT);
+    Eigen::EigenSolver<Eigen::MatrixXd> es(Mstar);
+    double min_eigenvalue = es.eigenvalues().real().minCoeff();
+    
+    CriticalState critical;
+    critical.stable = (min_eigenvalue > 0); // TODO: stability analysis
+    critical.T = _critical.T;
+    critical.p = _critical.p;
+    critical.rhomolar = _critical.rhomolar;
+    return critical;
+}
+
+/**
+ * \brief This class is the objective function for the one-dimensional solver used to find the first intersection with the L1*=0 contour
+ */
+class OneDimObjective : public FuncWrapper1DWithTwoDerivs
+{
+public:
+    CoolProp::HelmholtzEOSMixtureBackend &HEOS;
+    const double delta;
+    double _call, _deriv, _second_deriv;
+    OneDimObjective(HelmholtzEOSMixtureBackend &HEOS, double delta0) : HEOS(HEOS), delta(delta0) {};
+    double call(double tau){
+        double rhomolar = HEOS.rhomolar_reducing()*delta, T = HEOS.T_reducing()/tau;
+        HEOS.update_DmolarT_direct(rhomolar, T);
+        _call = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant();
+        return _call;
+    }
+    double deriv(double tau){
+        Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
+                        dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau);
+        _deriv = (adjL*dLdTau).trace();
+        return _deriv;
+    };
+    double second_deriv(double tau){
+        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT),
+                        dLstardTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
+                        d2LstardTau2 = MixtureDerivatives::d2Lstar_dX2(HEOS, XN_INDEPENDENT, iTau, iTau), 
+                        adjL = adjugate(Lstar),
+                        dadjLstardTau = adjugate_derivative(Lstar, dLstardTau);
+        _second_deriv = (dLstardTau*dadjLstardTau + adjL*d2LstardTau2).trace();
+        return _second_deriv;
+    };
+};
+
+class L0CurveTracer : public FuncWrapper1DWithDeriv
+{
+public:
+    CoolProp::HelmholtzEOSMixtureBackend &HEOS;
+    double delta,
+           tau,
+           M1_last,
+           R_tau, ///< The radius for tau currently being used
+           R_delta, ///< The radius for delta currently being used
+           R_tau_tracer, ///< The radius for tau that should be used in the L1*=0 tracer (user-modifiable after instantiation)
+           R_delta_tracer; ///< The radius for delta that should be used in the L1*=0 tracer (user-modifiable after instantiation)
+    std::vector<CoolProp::CriticalState> critical_points;
+    int N_critical_points;
+    Eigen::MatrixXd Lstar, adjLstar, dLstardTau, d2LstardTau2, dLstardDelta;
+    L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), N_critical_points(0)
+    {
+        R_delta_tracer = 0.1;
+        R_delta = R_delta_tracer;
+        R_tau_tracer = 0.1;
+        R_tau = R_tau_tracer;
+    };
+    /***
+     \brief Calculate the value of L1
+     @param theta The angle
+     @param tau The old value of tau
+     @param delta The old value of delta
+     @param tau_new The new value of tau
+     @param delta_new The new value of delta
+     */
+    void get_tau_delta(const double theta, const double tau, const double delta, double &tau_new, double &delta_new){
+        tau_new = tau + R_tau*cos(theta);
+        delta_new = delta + R_delta*sin(theta);
+    };
+    /***
+     \brief Calculate the value of L1
+     @param theta The angle
+     */
+    double call(double theta){
+        double tau_new, delta_new;
+        this->get_tau_delta(theta, tau, delta, tau_new, delta_new);
+        double rhomolar = HEOS.rhomolar_reducing()*delta_new, T = HEOS.T_reducing()/tau_new;
+        HEOS.update_DmolarT_direct(rhomolar, T);
+        Lstar = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT);
+        adjLstar = adjugate(Lstar);
+        dLstardTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau);
+        dLstardDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta);
+        double L1 = Lstar.determinant();
+        return L1;
+    };
+    /***
+     \brief Calculate the first partial derivative of L1 with respect to the angle
+     @param theta The angle
+     */
+    double deriv(double theta){
+        double dL1_dtau = (adjLstar*dLstardTau).trace(), dL1_ddelta = (adjLstar*dLstardDelta).trace();
+        return -R_tau*sin(theta)*dL1_dtau + R_delta*cos(theta)*dL1_ddelta;
+    };
+    
+    void trace(){
+        double theta;
+        static std::string errstr;
+        for (int i = 0; i < 100; ++i){
+            if (i == 0){
+                // In the first iteration, search all angles in the positive delta direction using a
+                // bounded solver with a very small radius in order to not hit other L1*=0 contours
+                // that are in the vicinity
+                R_tau = 0.001; R_delta = 0.001;
+                theta = Brent(this, 0, M_PI, DBL_EPSILON, 1e-10, 100, errstr);
+            }
+            else{
+                // In subsequent iterations, you already have an excellent guess for the direction to
+                // be searching in, use Newton's method to refine the solution since we also
+                // have an analytic solution for the derivative
+                R_tau = R_tau_tracer; R_delta = R_delta_tracer;
+                theta = Newton(this, theta, 1e-10, 100, errstr);
+            }
+            
+            // Calculate the second criticality condition
+            double M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
+            double p_MPa = HEOS.p()/1e6;
+            
+            // Calculate the new tau and delta at the new point
+            double tau_new, delta_new;
+            this->get_tau_delta(theta, tau, delta, tau_new, delta_new);
+            
+            // Stop if bounds are exceeded
+            if (p_MPa > 500 || delta_new > 5){
+                break;
+            }
+            
+            // If the sign of M1 and the previous value of M1 have different signs, it means that
+            // you have bracketed a critical point, run the full critical point solver to
+            // find the critical point and store it
+            if (i > 0 && M1*M1_last < 0){
+                double rhomolar = HEOS.rhomolar_reducing()*delta_new, T = HEOS.T_reducing()/tau_new;
+                CoolProp::CriticalState crit = HEOS.calc_critical_point(rhomolar, T);
+                critical_points.push_back(crit);
+                N_critical_points++;
+                if (get_debug_level() > 0){
+                    std::cout << HEOS.get_mole_fractions()[0] << " " << crit.rhomolar << " " << crit.T << " " << p_MPa << std::endl;
+                }
+            }
+            
+            // Update the storage values
+            this->tau = tau_new;
+            this->delta = delta_new;
+            this->M1_last = M1;
+        }
+    };
+};
+
+    
+std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critical_points()
+{
+    // Store old phase
+    phases old_phase = _phase;
+    // Specify it to be something homogeneous to shortcut phase evaluation
+    specify_phase(iphase_gas);
+    
+    std::string errstr;
+    OneDimObjective resid_L0(*this, 0.5);
+    double tau0 = 0.66;
+    resid_L0.call(tau0);
+    if (resid_L0.deriv(tau0) > 0){
+        tau0 += 0.1;
+    }
+    double tau_L0 = Halley(resid_L0, tau0, 1e-10, 100, errstr); 
+    
+    L0CurveTracer tracer(*this, tau_L0, 0.5);
+    tracer.trace();
+    // Reset phase to previous value
+    _phase = old_phase;
+    return tracer.critical_points;
 }
 
 } /* namespace CoolProp */

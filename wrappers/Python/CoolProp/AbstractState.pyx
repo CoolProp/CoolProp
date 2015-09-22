@@ -5,8 +5,20 @@ cimport constants_header
 cdef class PyPhaseEnvelopeData:
     pass
 
-cdef class PyGuessesStructure:
+cdef class PyCriticalState:
     pass
+
+cdef class PyGuessesStructure:
+    def __init__(self):
+        self.T = get_HUGE()
+        self.p = get_HUGE()
+        self.rhomolar = get_HUGE()
+        self.hmolar = get_HUGE()
+        self.smolar = get_HUGE()
+        self.rhomolar_liq = get_HUGE()
+        self.rhomolar_vap = get_HUGE()
+        self.x = []
+        self.y = []
     
 cdef class AbstractState:
     """
@@ -18,6 +30,10 @@ cdef class AbstractState:
         
     def __dealloc__(self):
         del self.thisptr
+
+    cpdef fluid_param_string(self, string key):
+        """ Get a fluid parameter string - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fluid_param_string` """
+        return self.thisptr.fluid_param_string(key)    
         
     cpdef name(self):
         """ Get the backend name - wrapper of c++ function :cpapi:`CoolProp::AbstractState::name` """
@@ -33,6 +49,19 @@ cdef class AbstractState:
     cpdef unspecify_phase(self):
         """ Unspecify the phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::unspecify_phase` """
         self.thisptr.unspecify_phase()
+
+    cpdef set_binary_interaction_double(self, string CAS1, string CAS2, string parameter, double val):
+        """ Set a double precision interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_binary_interaction_double` """
+        self.thisptr.set_binary_interaction_double(CAS1, CAS2, parameter, val)
+    cpdef set_binary_interaction_string(self, string CAS1, string CAS2, string parameter, string val):
+        """ Set a string interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_binary_interaction_string` """
+        self.thisptr.set_binary_interaction_string(CAS1, CAS2, parameter, val)
+    cpdef double get_binary_interaction_double(self, string CAS1, string CAS2, string parameter) except *:
+        """ Get a double precision interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_binary_interaction_double` """
+        return self.thisptr.get_binary_interaction_double(CAS1, CAS2, parameter)
+    cpdef string get_binary_interaction_string(self, string CAS1, string CAS2, string parameter) except *:
+        """ Get a string interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_binary_interaction_string` """
+        return self.thisptr.get_binary_interaction_string(CAS1, CAS2, parameter)
     
     cpdef update(self, constants_header.input_pairs ipair, double Value1, double Value2):
         """ Update function - wrapper of c++ function :cpapi:`CoolProp::AbstractState::update` """
@@ -74,6 +103,47 @@ cdef class AbstractState:
     cpdef double Ttriple(self) except *:
         """ Set the triple point temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Ttriple` """
         return self.thisptr.Ttriple()
+        
+        
+    ## Critical point
+    cpdef double T_critical(self) except *:
+        """ Gets the critical temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::T_critical` """
+        return self.thisptr.T_critical()
+    cpdef double rhomass_critical(self) except *:
+        """ Gets the critical density in kg/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomass_critical` """
+        return self.thisptr.rhomass_critical()
+    cpdef double rhomolar_critical(self) except *:
+        """ Gets the critical density in mol/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomolar_critical` """
+        return self.thisptr.rhomolar_critical()
+    cpdef double p_critical(self) except *:
+        """ Gets the critical pressure in Pa - wrapper of c++ function :cpapi:`CoolProp::AbstractState::p_critical` """
+        return self.thisptr.p_critical()
+
+    cpdef list all_critical_points(self):
+        """ Calculate all the critical points - wrapper of c++ function :cpapi:`CoolProp::AbstractState::all_critical_points` """
+        # Get all the critical points
+        cdef vector[cAbstractState.CriticalState] critpts = self.thisptr.all_critical_points()
+        cdef PyCriticalState pypt
+        cdef list collection = []
+        # Convert to python
+        for pt in critpts:
+            pypt = PyCriticalState()
+            pypt.stable = pt.stable
+            pypt.T = pt.T
+            pypt.p = pt.p
+            pypt.rhomolar = pt.rhomolar
+            collection.append(pypt)
+        return collection
+    ## Reducing point
+    cpdef double T_reducing(self) except *:
+        """ Gets the reducing temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::T_reducing` """
+        return self.thisptr.T_reducing()
+    cpdef double rhomolar_reducing(self) except *:
+        """ Gets the reducing density in mol/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomolar_reducing` """
+        return self.thisptr.rhomolar_reducing()
+    cpdef double rhomass_reducing(self) except *:
+        """ Gets the reducing density in kg/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomass_reducing` """
+        return self.thisptr.rhomass_reducing()
 
     ## ----------------------------------------	
     ##        Fluid property accessors
@@ -207,7 +277,22 @@ cdef class AbstractState:
         cdef double T = 1e99, rho = 1e99
         self.thisptr.true_critical_point(T, rho)
         return T, rho
-        
+    cpdef dict conformal_state(self, string reference_fluid, long double T, long double rho):
+        """ Solve for conformal state used in extended corresponding states - wrapper of c++ function :cpapi:`CoolProp::AbstractState::conformal_state` """
+        cdef long double T0 = T, rho0 = rho
+        self.thisptr.conformal_state(reference_fluid, T0, rho0)
+        return dict(T = T0, rhomolar = rho0)
+    cpdef dict conductivity_contributions(self):
+        """ Retrieve each of the contributions to the conductivity, each in W/m/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::conductivity_contributions` """
+        cdef long double dilute = 0, initial_density = 0, residual = 0, critical = 0
+        self.thisptr.conductivity_contributions(dilute, initial_density, residual, critical)
+        return dict(dilute = dilute, initial_density = initial_density, residual = residual, critical = critical)
+    cpdef dict viscosity_contributions(self):
+        """ Retrieve each of the contributions to the viscosity, each in Pa-s - wrapper of c++ function :cpapi:`CoolProp::AbstractState::viscosity_contributions` """
+        cdef long double dilute = 0, initial_density = 0, residual = 0, critical = 0
+        self.thisptr.viscosity_contributions(dilute, initial_density, residual, critical)
+        return dict(dilute = dilute, initial_density = initial_density, residual = residual, critical = critical)
+
     ## ----------------------------------------	
     ##        Derivatives
     ## ----------------------------------------

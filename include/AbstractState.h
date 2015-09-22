@@ -17,12 +17,19 @@
 
 namespace CoolProp {
 
+/// This simple class holds the values for guesses for use in some solvers
+/// that have the ability to use guess values intelligently
 class GuessesStructure{
 public:
-    CoolPropDbl T, p, rhomolar, hmolar, smolar;
-    CoolPropDbl rhomolar_liq, rhomolar_vap;
-    std::vector<CoolPropDbl> x,
-                        y;
+    double T, ///< temperature in K
+           p, ///< pressure in Pa
+           rhomolar, ///< molar density in mol/m^3
+           hmolar, ///< molar enthalpy in J/mol
+           smolar, ///< molar entropy in J/mol/K
+           rhomolar_liq, ///< molar density of the liquid phase in mol/m^3
+           rhomolar_vap; ///< molar density of the vapor phase in mol/m^3
+    std::vector<double> x, ///< molar composition of the liquid phase
+                        y; ///< molar composition of the vapor phase
     GuessesStructure() : T(_HUGE), p(_HUGE), rhomolar(_HUGE), hmolar(_HUGE), smolar(_HUGE), 
                          rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), x(), y(){};
 };
@@ -335,6 +342,12 @@ protected:
 
     /// Using this backend, return true critical point where dp/drho|T = 0 and d2p/drho^2|T = 0
     virtual void calc_true_critical_point(double &T, double &rho){ throw NotImplementedError("calc_true_critical_point is not implemented for this backend"); };
+    
+    virtual void calc_conformal_state(const std::string &reference_fluid, CoolPropDbl &T, CoolPropDbl &rhomolar){ throw NotImplementedError("calc_conformal_state is not implemented for this backend"); };
+    
+    virtual void calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_viscosity_contributions is not implemented for this backend"); };
+    virtual void calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_conductivity_contributions is not implemented for this backend"); };
+    virtual std::vector<CriticalState> calc_all_critical_points(void){ throw NotImplementedError("calc_all_critical_points is not implemented for this backend"); };
 public:
 
     AbstractState() :_fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown), _rhospline(-_HUGE), _dsplinedp(-_HUGE), _dsplinedh(-_HUGE){ clear(); }
@@ -379,50 +392,79 @@ public:
 
     /// Set the internal variable T without a flash call (expert use only!)
     void set_T(CoolPropDbl T){ _T = T; }
-    /// Get a string representation of the backend
+
+    /// Get a string representation of the backend - for instance "HelmholtzEOSMixtureBackend" 
+    /// for the core mixture model in CoolProp
+    /// 
+    /// Must be overloaded by the backend to provide the backend's name
     virtual std::string backend_name(void) = 0;
+
     // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
     virtual bool using_mole_fractions(void) = 0;
     virtual bool using_mass_fractions(void) = 0;
     virtual bool using_volu_fractions(void) = 0;
 
-    /// Update the state using two state variables 
-    virtual void update(CoolProp::input_pairs input_pair, double Value1, double Value2) = 0;
-
-    /// Update the state using two state variables and providing guess values
-    /// Some or all of the guesses will be used
-    virtual void update_with_guesses(CoolProp::input_pairs input_pair, double Value1, double Value2, const GuessesStructure &guesses){ throw NotImplementedError("update_with_guesses is not implemented for this backend"); };
-
     virtual void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions) = 0;
     virtual void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions) = 0;
     virtual void set_volu_fractions(const std::vector<CoolPropDbl> &mass_fractions){ throw NotImplementedError("Volume composition has not been implemented."); }
-    /// Get the mole fractions of the components
-    virtual const std::vector<CoolPropDbl> & get_mole_fractions(void) = 0;
-
-    /// A function that says whether the backend instance can be instantiated in the high-level interface
-    /// In general this should be true, except for some other backends (especially the tabular backend)
-    /// Should be overloaded in derived classes to make this not possible by returning false
-    virtual bool available_in_high_level(void){ return true; }
-    
-    /// Return a string from the backend for the mixture/fluid
-    virtual std::string fluid_param_string(const std::string &){ throw NotImplementedError("fluid_param_string has not been implemented for this backend"); }
-
-    std::vector<std::string> fluid_names(void);
-
-    /// Clear all the cached values
-    bool clear();
 
     void set_mole_fractions(const std::vector<double> &mole_fractions){ set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end())); };
     void set_mass_fractions(const std::vector<double> &mass_fractions){ set_mass_fractions(std::vector<CoolPropDbl>(mass_fractions.begin(), mass_fractions.end())); };
     void set_volu_fractions(const std::vector<double> &volu_fractions){ set_volu_fractions(std::vector<CoolPropDbl>(volu_fractions.begin(), volu_fractions.end())); };
 
+    /// Get the mole fractions of the equilibrium liquid phase
+    std::vector<CoolPropDbl> mole_fractions_liquid(void){ return calc_mole_fractions_liquid(); };
+    /// Get the mole fractions of the equilibrium vapor phase
+    std::vector<CoolPropDbl> mole_fractions_vapor(void){ return calc_mole_fractions_vapor(); };
+
+    /// Update the state using two state variables 
+    virtual void update(CoolProp::input_pairs input_pair, double Value1, double Value2) = 0;
+
+    /// Update the state using two state variables and providing guess values
+    /// Some or all of the guesses will be used - this is backend dependent
+    virtual void update_with_guesses(CoolProp::input_pairs input_pair, double Value1, double Value2, const GuessesStructure &guesses){ throw NotImplementedError("update_with_guesses is not implemented for this backend"); };
+
+    /// Get the mole fractions of the components
+    virtual const std::vector<CoolPropDbl> & get_mole_fractions(void) = 0;
+
+    /// A function that says whether the backend instance can be instantiated in the high-level interface
+    /// In general this should be true, except for some other backends (especially the tabular backends)
+    /// To disable use in high-level interface, implement this function and return false
+    virtual bool available_in_high_level(void){ return true; }
+    
+    /// Return a string from the backend for the mixture/fluid - backend dependent - could be CAS #, name, etc.
+    virtual std::string fluid_param_string(const std::string &){ throw NotImplementedError("fluid_param_string has not been implemented for this backend"); }
+
+    /// Return a vector of strings of the fluid names that are in use
+    std::vector<std::string> fluid_names(void);
+    
+    /// Set binary mixture floating point parameter (EXPERT USE ONLY!!!)
+    virtual void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){ throw NotImplementedError("set_binary_interaction_double is not implemented for this backend"); };
+    /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
+    virtual void set_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const std::string &value){ throw NotImplementedError("set_binary_interaction_string is not implemented for this backend"); };
+    /// Get binary mixture double value (EXPERT USE ONLY!!!)
+    virtual double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){ throw NotImplementedError("get_binary_interaction_double is not implemented for this backend"); };
+    /// Get binary mixture string value (EXPERT USE ONLY!!!)
+    virtual std::string get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){ throw NotImplementedError("get_binary_interaction_string is not implemented for this backend"); };
+
+    /// Clear all the cached values
+    virtual bool clear();
+
+    /// Get the state that is used in the equation of state or mixture model 
+    /// to reduce the state.  For pure fluids this is usually, but not always,
+    /// the critical point.  For mixture models, it is usually composition dependent
     virtual const CoolProp::SimpleState & get_reducing_state(){ return _reducing; };
+
+    /// Get a desired state point - backend dependent
     const CoolProp::SimpleState & get_state(const std::string &state){ return calc_state(state); };
 
-    // Limits
+    /// Get the minimum temperature in K
     double Tmin(void);
+    /// Get the maximum temperature in K
     double Tmax(void);
+    /// Get the maximum pressure in Pa
     double pmax(void);
+    /// Get the triple point temperature in K
     double Ttriple(void);
 
     /// Get the phase of the state
@@ -433,48 +475,28 @@ public:
     void unspecify_phase(void){ calc_unspecify_phase(); };
 
     /// Return the critical temperature in K
-    /**
-    For pure fluids, this is the critical point temperature
-    For mixtures, it is the exact critical point temperature calculated by the methods of Michelsen( \todo fill in reference)
-    */
     double T_critical(void);
+    /// Return the critical pressure in Pa
+    double p_critical(void);
+    /// Return the critical molar density in mol/m^3
+    double rhomolar_critical(void);
+    /// Return the critical molar density in kg/m^3
+    double rhomass_critical(void);
+    
+    /// Return the vector of critical points, including points that are unstable or correspond to negative pressure
+    std::vector<CriticalState> all_critical_points(void){ return calc_all_critical_points(); };
+
     /// Return the reducing point temperature in K
     double T_reducing(void);
-    /// Return the critical pressure in Pa
-    /**
-    For pure fluids, this is the critical point pressure as defined by the author of the EOS
-    For mixtures, it is the exact critical point pressure calculated by the methods of Michelsen( \todo fill in reference)
-    */
-    double p_critical(void);
-    /// 
-    /** \brief Return the critical molar density in mol/m^3
-     *
-     * For pure fluids, this is the critical point molar density
-     * For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
-     */
-    double rhomolar_critical(void);
-    /** \brief Return the critical molar density in kg/m^3
-     *
-     * For pure fluids, this is the critical point molar density
-     * For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
-     */
-    double rhomass_critical(void);
-    /** \brief Return the molar density at the reducing point in mol/m^3
-     *
-     * For pure fluids, this is the critical point molar density
-     * For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
-     */
+    /// Return the molar density at the reducing point in mol/m^3
     double rhomolar_reducing(void);
-    /** \brief Return the mass density at the reducing point in kg/m^3
-     *
-     * For pure fluids, this is the critical point molar density
-     * For mixtures, it is the exact critical point molar density calculated by the methods of Michelsen( \todo fill in reference)
-     */
+    /// Return the mass density at the reducing point in kg/m^3
     double rhomass_reducing(void);
 
-    /// Return the triple point pressure 
+    /// Return the triple point pressure in Pa
     double p_triple(void);
 
+    /// Return the name - backend dependent
     std::string name(){ return calc_name(); };
     /// Return the dipole moment in C-m (1 D = 3.33564e-30 C-m)
     double dipole_moment(){ return calc_dipole_moment(); }
@@ -565,12 +587,16 @@ public:
     /// Return the phase identification parameter (PIP) of G. Venkatarathnam and L.R. Oellrich, "Identification of the phase of a fluid using partial derivatives of pressure, volume, and temperature without reference to saturation properties: Applications in phase equilibria calculations"
     double PIP(){ return calc_PIP(); };
 
-    /// Find the "true" critical point where dpdrho|T and d2p/drho2|T are equal to zero
+    /// Calculate the "true" critical point for pure fluids where dpdrho|T and d2p/drho2|T are equal to zero
     void true_critical_point(double &T, double &rho){ calc_true_critical_point(T, rho); }
 
-    std::vector<CoolPropDbl> mole_fractions_liquid(void){ return calc_mole_fractions_liquid(); };
-    std::vector<CoolPropDbl> mole_fractions_vapor(void){ return calc_mole_fractions_vapor(); };
-
+    /** 
+     * \brief Calculate an ideal curve for a pure fluid
+     * 
+     * @param type The type of ideal curve you would like to calculate - "Ideal", "Boyle", "Joule-Thomson", "Joule Inversion", etc.
+     * @param T The temperatures along the curve in K
+     * @param p The pressures along the curve in Pa
+    */
     void ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p){ calc_ideal_curve(type, T, p); };
     
     // ----------------------------------------
@@ -667,17 +693,52 @@ public:
      * @param Of The parameter to be derived
      * @param Wrt The parameter that the derivative is taken with respect to
      * @param Constant The parameter that is held constant
-     * @param type_flag A flag describing how the derivative should be calculated, either normal or using splines
      * @return 
      */
     double first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant){
         return calc_first_two_phase_deriv(Of, Wrt, Constant);
     };
     
+    /**
+    * @brief Calculate the second "two-phase" derivative as described by Thorade and Sadaat, EAS, 2013
+    *
+    * Implementing the algorithms and ideas of:
+    * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation",
+    * Environmental Earth Sciences, December 2013, Volume 70, Issue 8, pp 3497-3503
+    *
+    * \note Not all derivatives are supported!
+    *
+    * @param Of The parameter to be derived
+    * @param Wrt1 The parameter that the derivative is taken with respect to in the first derivative
+    * @param Constant1 The parameter that is held constant in the first derivative
+    * @param Wrt2 The parameter that the derivative is taken with respect to in the second derivative
+    * @param Constant2 The parameter that is held constant in the second derivative
+    * @return
+    */
     double second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2){
         return calc_second_two_phase_deriv(Of, Wrt1, Constant1, Wrt2, Constant2);
     };
     
+    /**
+    * @brief Calculate the first "two-phase" derivative as described by Thorade and Sadaat, EAS, 2013
+    *
+    * Implementing the algorithms and ideas of:
+    * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation",
+    * Environmental Earth Sciences, December 2013, Volume 70, Issue 8, pp 3497-3503
+    *
+    * Spline evaluation is as described in:
+    * S Quoilin, I Bell, A Desideri, P Dewallef, V Lemort,
+    * "Methods to increase the robustness of finite-volume flow models in thermodynamic systems",
+    * Energies 7 (3), 1621-1640
+    *
+    * \note Not all derivatives are supported!
+    *
+    * @param Of The parameter to be derived
+    * @param Wrt The parameter that the derivative is taken with respect to
+    * @param Constant The parameter that is held constant
+    * @param x_end The end vapor quality at which the spline is defined (spline is active in [0, x_end])
+    * @return
+    */
     double first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, double x_end){
         return calc_first_two_phase_deriv_splined(Of, Wrt, Constant, x_end);
     };
@@ -686,7 +747,15 @@ public:
     //    Phase envelope for mixtures
     // ----------------------------------------
     
+    /**
+     * \brief Construct the phase envelope for a mixture
+     *
+     * @param type currently a dummy variable that is not used
+     */
     void build_phase_envelope(const std::string &type);
+    /**
+     * \brief After having calculated the phase envelope, return the phase envelope data
+     */
     const CoolProp::PhaseEnvelopeData &get_phase_envelope_data(){return calc_phase_envelope_data();};
     
     // ----------------------------------------
@@ -712,12 +781,26 @@ public:
     // ----------------------------------------
     /// Return the viscosity in Pa-s
     double viscosity(void);
+    /// Return the viscosity contributions, each in Pa-s
+    void viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ calc_viscosity_contributions(dilute, initial_density, residual, critical); };
     /// Return the thermal conductivity in W/m/K
     double conductivity(void);
+    /// Return the thermal conductivity contributions, each in W/m/K
+    void conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ calc_conductivity_contributions(dilute, initial_density, residual, critical); };
     /// Return the surface tension in N/m
     double surface_tension(void);
     /// Return the Prandtl number (dimensionless)
     double Prandtl(void){return cpmass()*viscosity()/conductivity();};
+    /** 
+     * @brief Find the conformal state needed for ECS
+     * @param reference_fluid The reference fluid for which the conformal state will be calculated
+     * @param T Temperature (initial guess must be provided, or < 0 to start with unity shape factors)
+     * @param rhomolar Molar density (initial guess must be provided, or < 0 to start with unity shape factors)
+     */
+    void conformal_state(const std::string &reference_fluid, CoolPropDbl &T, CoolPropDbl &rhomolar){
+        return calc_conformal_state(reference_fluid, T, rhomolar);
+    };
+    
 
     // ----------------------------------------
     // Helmholtz energy and derivatives
@@ -727,110 +810,127 @@ public:
         if (!_alpha0) _alpha0 = calc_alpha0();
         return _alpha0;
     };
+    /// Return the term \f$ \alpha^0_{\delta} \f$
     CoolPropDbl dalpha0_dDelta(void){
         if (!_dalpha0_dDelta) _dalpha0_dDelta = calc_dalpha0_dDelta();
         return _dalpha0_dDelta;
     };
+    /// Return the term \f$ \alpha^0_{\tau} \f$
     CoolPropDbl dalpha0_dTau(void){
         if (!_dalpha0_dTau) _dalpha0_dTau = calc_dalpha0_dTau();
         return _dalpha0_dTau;
     };
+    /// Return the term \f$ \alpha^0_{\delta\delta} \f$
     CoolPropDbl d2alpha0_dDelta2(void){
         if (!_d2alpha0_dDelta2) _d2alpha0_dDelta2 = calc_d2alpha0_dDelta2();
         return _d2alpha0_dDelta2;
     };
+    /// Return the term \f$ \alpha^0_{\delta\tau} \f$
     CoolPropDbl d2alpha0_dDelta_dTau(void){
         if (!_d2alpha0_dDelta_dTau) _d2alpha0_dDelta_dTau = calc_d2alpha0_dDelta_dTau();
         return _d2alpha0_dDelta_dTau;
     };
+    /// Return the term \f$ \alpha^0_{\tau\tau} \f$
     CoolPropDbl d2alpha0_dTau2(void){
         if (!_d2alpha0_dTau2) _d2alpha0_dTau2 = calc_d2alpha0_dTau2();
         return _d2alpha0_dTau2;
     };
+    /// Return the term \f$ \alpha^0_{\tau\tau\tau} \f$
     CoolPropDbl d3alpha0_dTau3(void){
         if (!_d3alpha0_dTau3) _d3alpha0_dTau3 = calc_d3alpha0_dTau3();
         return _d3alpha0_dTau3;
     };
+    /// Return the term \f$ \alpha^0_{\delta\tau\tau} \f$
     CoolPropDbl d3alpha0_dDelta_dTau2(void){
         if (!_d3alpha0_dDelta_dTau2) _d3alpha0_dDelta_dTau2 = calc_d3alpha0_dDelta_dTau2();
         return _d3alpha0_dDelta_dTau2;
     };
+    /// Return the term \f$ \alpha^0_{\delta\delta\tau} \f$
     CoolPropDbl d3alpha0_dDelta2_dTau(void){
         if (!_d3alpha0_dDelta2_dTau) _d3alpha0_dDelta2_dTau = calc_d3alpha0_dDelta2_dTau();
         return _d3alpha0_dDelta2_dTau;
     };
+    /// Return the term \f$ \alpha^0_{\delta\delta\delta} \f$
     CoolPropDbl d3alpha0_dDelta3(void){
         if (!_d3alpha0_dDelta3) _d3alpha0_dDelta3 = calc_d3alpha0_dDelta3();
         return _d3alpha0_dDelta3;
     };
 
+    /// Return the term \f$ \alpha^r \f$
     CoolPropDbl alphar(void){
         if (!_alphar) _alphar = calc_alphar();
         return _alphar;
     };
+    /// Return the term \f$ \alpha^r_{\delta} \f$
     CoolPropDbl dalphar_dDelta(void){
         if (!_dalphar_dDelta) _dalphar_dDelta = calc_dalphar_dDelta();
         return _dalphar_dDelta;
     };
+    /// Return the term \f$ \alpha^r_{\tau} \f$
     CoolPropDbl dalphar_dTau(void){
         if (!_dalphar_dTau) _dalphar_dTau = calc_dalphar_dTau();
         return _dalphar_dTau;
     };
+    /// Return the term \f$ \alpha^r_{\delta\delta} \f$
     CoolPropDbl d2alphar_dDelta2(void){
         if (!_d2alphar_dDelta2) _d2alphar_dDelta2 = calc_d2alphar_dDelta2();
         return _d2alphar_dDelta2;
     };
+    /// Return the term \f$ \alpha^r_{\delta\tau} \f$
     CoolPropDbl d2alphar_dDelta_dTau(void){
         if (!_d2alphar_dDelta_dTau) _d2alphar_dDelta_dTau = calc_d2alphar_dDelta_dTau();
         return _d2alphar_dDelta_dTau;
     };
+    /// Return the term \f$ \alpha^r_{\tau\tau} \f$
     CoolPropDbl d2alphar_dTau2(void){
         if (!_d2alphar_dTau2) _d2alphar_dTau2 = calc_d2alphar_dTau2();
         return _d2alphar_dTau2;
     };
+    /// Return the term \f$ \alpha^r_{\delta\delta\delta} \f$
     CoolPropDbl d3alphar_dDelta3(void){
         if (!_d3alphar_dDelta3) _d3alphar_dDelta3 = calc_d3alphar_dDelta3();
         return _d3alphar_dDelta3;
     };
+    /// Return the term \f$ \alpha^r_{\delta\delta\tau} \f$
     CoolPropDbl d3alphar_dDelta2_dTau(void){
         if (!_d3alphar_dDelta2_dTau) _d3alphar_dDelta2_dTau = calc_d3alphar_dDelta2_dTau();
         return _d3alphar_dDelta2_dTau;
     };
+    /// Return the term \f$ \alpha^r_{\delta\tau\tau} \f$
     CoolPropDbl d3alphar_dDelta_dTau2(void){
         if (!_d3alphar_dDelta_dTau2) _d3alphar_dDelta_dTau2 = calc_d3alphar_dDelta_dTau2();
         return _d3alphar_dDelta_dTau2;
     };
+    /// Return the term \f$ \alpha^r_{\tau\tau\tau} \f$
     CoolPropDbl d3alphar_dTau3(void){
         if (!_d3alphar_dTau3) _d3alphar_dTau3 = calc_d3alphar_dTau3();
         return _d3alphar_dTau3;
     };
+    /// Return the term \f$ \alpha^r_{\delta\delta\delta\delta} \f$
     CoolPropDbl d4alphar_dDelta4(void){
         if (!_d4alphar_dDelta4) _d4alphar_dDelta4 = calc_d4alphar_dDelta4();
         return _d4alphar_dDelta4;
     };
+    /// Return the term \f$ \alpha^r_{\delta\delta\delta\tau} \f$
     CoolPropDbl d4alphar_dDelta3_dTau(void){
         if (!_d4alphar_dDelta3_dTau) _d4alphar_dDelta3_dTau = calc_d4alphar_dDelta3_dTau();
         return _d4alphar_dDelta3_dTau;
     };
+    /// Return the term \f$ \alpha^r_{\delta\delta\tau\tau} \f$
     CoolPropDbl d4alphar_dDelta2_dTau2(void){
         if (!_d4alphar_dDelta2_dTau2) _d4alphar_dDelta2_dTau2 = calc_d4alphar_dDelta2_dTau2();
         return _d4alphar_dDelta2_dTau2;
     };
+    /// Return the term \f$ \alpha^r_{\delta\tau\tau\tau} \f$
     CoolPropDbl d4alphar_dDelta_dTau3(void){
         if (!_d4alphar_dDelta_dTau3) _d4alphar_dDelta_dTau3 = calc_d4alphar_dDelta_dTau3();
         return _d4alphar_dDelta_dTau3;
     };
+    /// Return the term \f$ \alpha^r_{\tau\tau\tau\tau} \f$
     CoolPropDbl d4alphar_dTau4(void){
         if (!_d4alphar_dTau4) _d4alphar_dTau4 = calc_d4alphar_dTau4();
         return _d4alphar_dTau4;
     };
-    
-    /*
-    virtual double dalphar_dDelta_lim(void) = 0;
-    virtual double d2alphar_dDelta2_lim(void) = 0;
-    virtual double d2alphar_dDelta_dTau_lim(void) = 0;
-    virtual double d3alphar_dDelta2_dTau_lim(void) = 0;
-    */
 };
 
 } /* namespace CoolProp */

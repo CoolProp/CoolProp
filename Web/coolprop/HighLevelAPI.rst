@@ -171,6 +171,26 @@ and called through python
 
 It is also possible to call the derivatives directly using the :ref:`low-level partial derivatives functionality <partial_derivatives_low_level>`.  The low-level routine is in general faster because it avoids the string parsing.
 
+Second Partial Derivatives for Single-Phase States
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In a similar fashion it is possible to evaluate second derivatives.  For instance, the derivative of :math:`c_p` with respect to mass-based specific enthalpy at constant pressure could be obtained by
+
+.. ipython::
+
+    In [1]: import CoolProp
+    
+    # c_p using derivative
+    In [1]: CoolProp.CoolProp.PropsSI('d(d(Hmass)/d(T)|P)/d(Hmass)|P','P',101325,'T',300,'Water')
+
+where the inner part ``d(Hmass)/d(T)|P`` is the definition of :math:`c_p`.
+
+.. warning::
+
+    This derivative formulation is currently only valid for homogeneous (single-phase) states.  Two phase derivatives are not defined, and are for many combinations, invalid.
+    
+It is also possible to call the derivatives directly using the :ref:`low-level partial derivatives functionality <partial_derivatives_low_level>`.  The low-level routine is in general faster because it avoids the string parsing.
+
 First Saturation Derivatives
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -188,7 +208,7 @@ For instance, to calculate the saturation derivative of enthalpy ALONG the satur
     
     In [1]: CoolProp.CoolProp.PropsSI('d(Hmolar)/d(T)|sigma','P',101325,'Q',1,'Water')
 
-It is also possible to call the derivatives directly using the :ref:`low-level partial derivatives functionality <partial_derivatives_low_level>`.  The low-level routine is in general faster because it avoids the string parsing.
+It is also possible to call the derivatives directly using the :ref:`low-level partial derivatives functionality <partial_derivatives_low_level>`.  The low-level routine is in general faster because it avoids the string parsing. 
 
 .. _predefined_mixtures:
 

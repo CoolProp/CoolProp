@@ -9,7 +9,7 @@ This page serves as a teaser of the functionality of CoolProp.  These examples a
 - :ref:`Wrapper-specific code examples <wrappers>`
 
 Sample Props Code
--------------------
+-----------------
 To use the ``PropsSI`` function, import it and do some calls, do something like this
 
 .. ipython::
@@ -33,8 +33,8 @@ To understand more about what is going on under the hood, go to :ref:`Fluid-Prop
 
 
 Sample HAPropsSI Code
--------------------
-To use the HAPropsSI function, import it and do some calls, do something like this
+---------------------
+To use the ``HAPropsSI`` function, import it and do some calls, do something like this
 
 .. ipython::
 

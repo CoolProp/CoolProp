@@ -6,7 +6,7 @@
 #include "rapidjson/rapidjson_include.h"
 #include "Eigen/Core"
 #include "time.h"
-
+#include "CachedElement.h"
 
 namespace CoolProp{
 
@@ -497,36 +497,106 @@ public:
 
 class ResidualHelmholtzContainer
 {
-    
+private:
+    CachedElement _base, _dDelta, _dTau, _dDelta2, _dTau2, _dDelta_dTau, _dDelta3, _dDelta2_dTau, _dDelta_dTau2, _dTau3;
+    CachedElement _dDelta4, _dDelta3_dTau, _dDelta2_dTau2, _dDelta_dTau3, _dTau4;
 public:
     ResidualHelmholtzNonAnalytic NonAnalytic;
     ResidualHelmholtzSAFTAssociating SAFT;
-    ResidualHelmholtzGeneralizedExponential GenExp; 
+    ResidualHelmholtzGeneralizedExponential GenExp;
 
-    HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta)
+    void clear(){
+        _base.clear();
+        _dDelta.clear(); _dTau.clear();
+        _dDelta2.clear(); _dTau2.clear(); _dDelta_dTau.clear();
+        _dDelta3.clear(); _dTau3.clear(); _dDelta2_dTau.clear(); _dDelta_dTau2.clear();
+        _dDelta4.clear(); _dDelta3_dTau.clear(); _dDelta2_dTau2.clear(); _dDelta_dTau3.clear(); _dTau4.clear();
+    }
+    HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta, bool cache_values = false)
     {
         HelmholtzDerivatives derivs; // zeros out the elements
         GenExp.all(tau, delta, derivs);
         NonAnalytic.all(tau, delta, derivs);
         SAFT.all(tau, delta, derivs);
+        if (cache_values){
+            _base = derivs.alphar;
+            _dDelta = derivs.dalphar_ddelta;
+            _dTau = derivs.dalphar_dtau;
+            _dDelta2 = derivs.d2alphar_ddelta2;
+            _dTau2 = derivs.d2alphar_dtau2;
+            _dDelta_dTau = derivs.d2alphar_ddelta_dtau;
+            _dDelta3 = derivs.d3alphar_ddelta3;
+            _dTau3 = derivs.d3alphar_dtau3;
+            _dDelta2_dTau = derivs.d3alphar_ddelta2_dtau;
+            _dDelta_dTau2 = derivs.d3alphar_ddelta_dtau2;
+        }
         return derivs;
     };
-    CoolPropDbl base(CoolPropDbl tau, CoolPropDbl delta) { return all(tau,delta).alphar; };
-    CoolPropDbl dDelta(CoolPropDbl tau, CoolPropDbl delta) { return all(tau,delta).dalphar_ddelta; };
-    CoolPropDbl dTau(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).dalphar_dtau; };
-    CoolPropDbl dDelta2(CoolPropDbl tau, CoolPropDbl delta) {  return all(tau, delta).d2alphar_ddelta2; };
-    CoolPropDbl dDelta_dTau(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d2alphar_ddelta_dtau; };
-    CoolPropDbl dTau2(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d2alphar_dtau2; };
-    CoolPropDbl dDelta3(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d3alphar_ddelta3; };
-    CoolPropDbl dDelta2_dTau(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d3alphar_ddelta2_dtau; };
-    CoolPropDbl dDelta_dTau2(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d3alphar_ddelta_dtau2; };
-    CoolPropDbl dTau3(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d3alphar_dtau3; };
+    CoolPropDbl base(CoolPropDbl tau, CoolPropDbl delta) { 
+        if (!_base)
+            return all(tau, delta).alphar;
+        else
+            return _base;
+    };
+    CoolPropDbl dDelta(CoolPropDbl tau, CoolPropDbl delta) { 
+        if (!_dDelta)
+            return all(tau, delta).dalphar_ddelta;
+        else
+            return _dDelta;
+    };
+    CoolPropDbl dTau(CoolPropDbl tau, CoolPropDbl delta) { 
+        if (!_dTau)
+            return all(tau, delta).dalphar_dtau;
+        else
+            return _dTau;
+    };
+    CoolPropDbl dDelta2(CoolPropDbl tau, CoolPropDbl delta) {  
+        if (!_dDelta2)
+            return all(tau, delta).d2alphar_ddelta2; 
+        else
+            return _dDelta2;
+    };
+    CoolPropDbl dDelta_dTau(CoolPropDbl tau, CoolPropDbl delta) { 
+        if (!_dDelta_dTau)
+            return all(tau, delta).d2alphar_ddelta_dtau;
+        else
+            return _dDelta_dTau;
+    };
+    CoolPropDbl dTau2(CoolPropDbl tau, CoolPropDbl delta) {
+        if (!_dTau2)
+            return all(tau, delta).d2alphar_dtau2;
+        else
+            return _dTau2;
+    };
+    CoolPropDbl dDelta3(CoolPropDbl tau, CoolPropDbl delta) {
+        if (!_dDelta3)
+            return all(tau, delta).d3alphar_ddelta3;
+        else
+            return _dDelta3;
+    };
+    CoolPropDbl dDelta2_dTau(CoolPropDbl tau, CoolPropDbl delta) {
+        if (!_dDelta2_dTau)
+            return all(tau, delta).d3alphar_ddelta2_dtau;
+        else
+            return _dDelta2_dTau;
+    };
+    CoolPropDbl dDelta_dTau2(CoolPropDbl tau, CoolPropDbl delta) {
+        if (!_dDelta_dTau2)
+            return all(tau, delta).d3alphar_ddelta_dtau2;
+        else
+            return _dDelta_dTau2;
+    };
+    CoolPropDbl dTau3(CoolPropDbl tau, CoolPropDbl delta) {
+        if (!_dTau3)
+            return all(tau, delta).d3alphar_dtau3;
+        else
+            return _dTau3;
+    };
     CoolPropDbl dDelta4(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d4alphar_ddelta4; };
     CoolPropDbl dDelta3_dTau(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d4alphar_ddelta3_dtau; };
     CoolPropDbl dDelta2_dTau2(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d4alphar_ddelta2_dtau2; };
     CoolPropDbl dDelta_dTau3(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d4alphar_ddelta_dtau3; };
     CoolPropDbl dTau4(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d4alphar_dtau4; };
-
 };
 
 // #############################################################################

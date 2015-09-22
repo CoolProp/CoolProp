@@ -41,6 +41,7 @@ surface tension                 N/m
 #include <iostream>
 #include <cassert>
 #include "crossplatform_shared_ptr.h"
+#include <stdlib.h>
 
 #if defined(_MSC_VER)
 #define _CRTDBG_MAP_ALLOC
@@ -252,6 +253,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 }
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
+                if (get_config_bool(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS) && ierr == -117){
+                    throw ValueError(format("Interaction parameter estimation has been disabled: %s", herr));
+                }
                 set_mole_fractions(std::vector<CoolPropDbl>(x.begin(), x.begin()+N));
                 return;
             }
@@ -305,10 +309,16 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 cached_component_string = component_string;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
+                if (get_config_bool(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS) && ierr == -117){
+                    throw ValueError(format("Interaction parameter estimation has been disabled: %s", herr));
+                }
                 return;
             }
             else if (k < number_of_endings-1){ // Keep going
                 if (CoolProp::get_debug_level() > 5){std::cout << format("REFPROP error/warning [ierr: %d]: %s",ierr, herr) << std::endl;}
+                if (get_config_bool(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS) && ierr == -117){
+                    throw ValueError(format("Interaction parameter estimation has been disabled: %s", herr));
+                }
                 continue;
             }
             else
@@ -331,17 +341,22 @@ std::string REFPROPMixtureBackend::fluid_param_string(const std::string &ParamNa
 //                c     hnam--component name [character*12]
 //                c     hn80--component name--long form [character*80]
 //                c    hcasn--CAS (Chemical Abstracts Service) number [character*12]
-        long icomp = 1L;
-        char hnam[13], hn80[81], hcasn[13];
-        NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
-        std::string casn = hcasn;
-        strstrip(casn);
-        return casn;
+        std::vector<std::string> CASvec;
+        for (long icomp = 1L; icomp <= fluid_names.size(); ++icomp){
+            char hnam[13], hn80[81], hcasn[13];
+            NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
+            hcasn[12]='\0';
+            std::string casn = hcasn;
+            strstrip(casn);
+            CASvec.push_back(casn);
+        }
+        return strjoin(CASvec, "&");
     }
     else if (ParamName == "name"){
         long icomp = 1L;
         char hnam[13], hn80[81], hcasn[13];
         NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
+        hnam[12] = '\0';
         std::string name = hnam;
         strstrip(name);
         return name;
@@ -350,6 +365,7 @@ std::string REFPROPMixtureBackend::fluid_param_string(const std::string &ParamNa
         long icomp = 1L;
         char hnam[13], hn80[81], hcasn[13];
         NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
+        hn80[80] = '\0';
         std::string n80 = hn80;
         strstrip(n80);
         return n80;
@@ -358,6 +374,103 @@ std::string REFPROPMixtureBackend::fluid_param_string(const std::string &ParamNa
         throw ValueError(format("parameter to fluid_param_string is invalid: %s", ParamName.c_str()));
     }
 };
+long REFPROPMixtureBackend::match_CAS(const std::string &CAS){
+    for (long icomp = 1L; icomp <= static_cast<long>(fluid_names.size()); ++icomp){
+        char hnam[13], hn80[81], hcasn[13];
+        NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
+        hcasn[12] = '\0';
+        std::string casn = hcasn;
+        strstrip(casn);
+        if (casn == CAS){
+            return icomp;
+        }
+    }
+    throw ValueError(format("Unable to match CAS number [%s]", CAS.c_str()));
+}
+/// Set binary mixture floating point parameter
+void REFPROPMixtureBackend::set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){
+    long icomp, jcomp, ierr = 0L;
+    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    double fij[6];
+    char herr[255];
+    
+    icomp = match_CAS(CAS1);
+    jcomp = match_CAS(CAS2);
+    
+    // Get the prior state
+    GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
+    
+    std::string shmodij(hmodij);
+    if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
+    {
+        if (parameter == "gammaT"){ fij[0] = value;}
+        else if (parameter == "gammaV"){ fij[1] = value; }
+        else if (parameter == "betaT"){ fij[2] = value; }
+        else if (parameter == "betaV"){ fij[3] = value; }
+        else{
+            throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
+        }
+        SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+    }
+    else{
+        throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+    }
+};
+/// Get binary mixture double value
+double REFPROPMixtureBackend::get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
+    
+    long icomp, jcomp;
+    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    double fij[6];
+    
+    icomp = match_CAS(CAS1);
+    jcomp = match_CAS(CAS2);
+    
+    // Get the current state
+    GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
+    
+    std::string shmodij(hmodij);
+    if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
+    {
+        double val;
+        if (parameter == "gammaT"){ val = fij[0];}
+        else if (parameter == "gammaV"){ val = fij[1]; }
+        else if (parameter == "betaT"){ val = fij[2]; }
+        else if (parameter == "betaV"){ val = fij[3]; }
+        else{
+            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
+        }
+        return val;
+    }
+    else{
+        throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+    }
+}
+/// Get binary mixture string value
+std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
+        
+    long icomp, jcomp;
+    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    double fij[6];
+    
+    icomp = match_CAS(CAS1);
+    jcomp = match_CAS(CAS2);
+    
+    // Get the current state
+    GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
+    
+    std::string shmodij(hmodij);
+    if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
+    {
+        if (parameter == "model"){ return shmodij;}
+        else{
+            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
+        }
+    }
+    else{
+        throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+    }
+}
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
 {
     if (mole_fractions.size() != this->Ncomp)
@@ -1390,6 +1503,8 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
 
             //THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
             long kguess = 1; // guess provided
+            if (!ValidNumber(guesses.rhomolar)){ throw ValueError(format("rhomolar must be provided in guesses")); }
+            
             long kph = (guesses.rhomolar > calc_rhomolar_critical()) ? 1 : 2; // liquid  if density > rhoc, vapor otherwise - though we are passing the guess density
             rho_mol_L = guesses.rhomolar/1000.0;
             TPRHOdll(&_T, &p_kPa, &(mole_fractions[0]), &kph, &kguess, &rho_mol_L, &ierr, herr, errormessagelength);
@@ -1398,6 +1513,57 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            break;
+        }
+        case PQ_INPUTS:{
+            // Unit conversion for REFPROP
+            p_kPa = 0.001*value1; q = value2; // Want p in [kPa] in REFPROP
+            double rhoLmol_L = -1, rhoVmol_L = -1;
+            long iFlsh = 0,
+                 iGuess = 1, // Use guesses
+                 ierr = 0;
+            
+            if (std::abs(value2) < 1e-10){
+                iFlsh = 3; // bubble point
+                if (!guesses.x.empty()){
+                    mole_fractions = guesses.x;
+                }
+                else{
+                    throw ValueError(format("x must be provided in guesses"));
+                }
+            }
+            else if (std::abs(value2-1) < 1e-10){
+                iFlsh = 4; // dew point
+                if (!guesses.y.empty()){
+                    mole_fractions = guesses.y;
+                }
+                else{
+                    throw ValueError(format("y must be provided in guesses"));
+                }
+            }
+            else{
+                throw ValueError(format("For PQ w/ guesses, Q must be either 0 or 1"));
+            }
+            if (get_debug_level() > 9){ std::cout << format("guesses.T: %g\n",guesses.T); }
+            if (!ValidNumber(guesses.T)){
+                throw ValueError(format("T must be provided in guesses"));
+            }
+            else{
+                _T = guesses.T;
+            }
+            
+            // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
+            SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess,
+                     &rho_mol_L, &rhoLmol_L, &rhoVmol_L,
+                     &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
+                     &ierr,herr,errormessagelength);
+
+            if (static_cast<int>(ierr) > 0) { throw ValueError(format("PQ: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            
+            // Set all cache values that can be set with unit conversion to SI
+            _p = value1;
+            _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            break;
         }
         default:
         {

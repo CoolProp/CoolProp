@@ -90,6 +90,9 @@ class ConsistencyFigure(object):
 
         self.tight_layout()
 
+        self.fig.subplots_adjust(top=0.95)
+        self.fig.suptitle('Consistency plots for '+self.fluid,size = 14)
+        
         for i, (ax, pair) in enumerate(zip(self.axes_list, self.pairs)):
             if pair not in not_implemented_solvers and pair not in additional_skips:
                 ax.consistency_check_singlephase()
@@ -97,9 +100,6 @@ class ConsistencyFigure(object):
                     ax.consistency_check_twophase()
             else:
                 ax.cross_out_axis()
-
-        self.fig.subplots_adjust(top=0.95)
-        self.fig.suptitle('Consistency plots for '+self.fluid,size = 14)
 
     def calc_saturation_curves(self):
         """
@@ -283,6 +283,7 @@ class ConsistencyAxis(object):
         xgood, ygood = [], []
         xbad, ybad = [], []
         xexcep, yexcep = [], []
+        xbadphase, ybadphase = [], []        
 
         for p in np.logspace(np.log10(self.state.keyed_output(CP.iP_min)*1.01), np.log10(self.state.keyed_output(CP.iP_max)), 40):
 
@@ -311,10 +312,9 @@ class ConsistencyAxis(object):
 
                 _exception = False
                 try:
-                    print(self.pair, self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2))
                     self.state.update(pairkey, self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2))
                 except ValueError as VE:
-                    print('update', self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2), VE)
+                    print('update(1p)', self.pair, self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2), VE)
                     _exception = True
 
                 x = self.to_axis_units(xparam, self.state_PT.keyed_output(xkey))
@@ -329,8 +329,12 @@ class ConsistencyAxis(object):
                     if abs(self.state_PT.rhomolar()/self.state.rhomolar()-1) < 1e-3 and abs(self.state_PT.p()/self.state.p()-1) < 1e-3 and abs(self.state_PT.T() - self.state.T()) < 1e-3:
                         xgood.append(x)
                         ygood.append(y)
+                        if self.state_PT.phase() != self.state.phase():
+                            print('bad phase', self.pair, x, y, self.state.phase(), 'instead of', self.state_PT.phase())
+                            xbadphase.append(x)
+                            ybadphase.append(y)
                     else:
-                        print('bad', x, y, abs(self.state_PT.rhomolar()/self.state.rhomolar()-1), abs(self.state_PT.p()/self.state.p()-1), abs(self.state_PT.T() - self.state.T()))
+                        print('bad', self.pair, x, y, self.state.delta(), abs(self.state_PT.rhomolar()/self.state.rhomolar()-1), abs(self.state_PT.p()/self.state.p()-1), abs(self.state_PT.T() - self.state.T()))
                         xbad.append(x)
                         ybad.append(y)
 
@@ -338,6 +342,8 @@ class ConsistencyAxis(object):
         self.ax.plot(xbad, ybad, 'r+', ms = 3)
         self.ax.plot(xgood, ygood, 'k.', ms = 1)
         self.ax.plot(xexcep, yexcep, 'rx', ms = 3)
+        self.ax.plot(xbadphase, ybadphase, 'o', ms = 3, mfc = 'none')
+
         print('1-phase took '+str(toc-tic)+' s for '+self.pair)
 
 
@@ -412,19 +418,22 @@ class ConsistencyAxis(object):
         xparam, yparam = split_pair_xy(self.pair)
         x = 0.5*xlims[0]+0.5*xlims[1]
         y = 0.5*ylims[0]+0.5*ylims[1]
-        if yparam == 'P':
+        if xparam in ['P','Dmolar']:
+            x = (xlims[0]*xlims[1])**0.5
+        if yparam in ['P','Dmolar']:
             y = (ylims[0]*ylims[1])**0.5
 
         self.ax.text(x,y,'Not\nImplemented',ha='center',va ='center',bbox = dict(fc = 'white'))
 
 if __name__=='__main__':
     PVT = PdfPages('Consistency.pdf')
-    for fluid in ['Water']:#CP.__fluids__:
+    for fluid in ['R125']:#CP.__fluids__:
         print('************************************************')
         print(fluid)
         print('************************************************')
         skips = ['DmolarHmolar','DmolarSmolar','DmolarUmolar','HmolarSmolar']
-        ff = ConsistencyFigure(fluid, backend = 'BICUBIC&HEOS', additional_skips = skips)
+        skips = []
+        ff = ConsistencyFigure(fluid, backend = 'HEOS', additional_skips = skips)
         ff.add_to_pdf(PVT)
         ff.savefig(fluid + '.png')
         ff.savefig(fluid + '.pdf')

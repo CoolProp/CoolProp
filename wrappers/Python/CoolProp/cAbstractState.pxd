@@ -10,13 +10,18 @@ cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
         size_t iTsat_max, ipsat_max, icrit
         vector[double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
     
+cdef extern from "DataStructures.h" namespace "CoolProp":
+    cdef cppclass CriticalState:
+        double T, p, rhomolar, hmolar, smolar
+        bool stable
+
 cdef extern from "AbstractState.h" namespace "CoolProp":
 
     cdef cppclass GuessesStructure:
-        long double T, p, rhomolar, hmolar, smolar
-        long double rhomolar_liq, rhomolar_vap
+        double T, p, rhomolar, hmolar, smolar
+        double rhomolar_liq, rhomolar_vap
         double _rhomolar_liq, _rhomolar_vap
-        vector[long double] x, y
+        vector[double] x, y
         
     cdef cppclass AbstractState:
         
@@ -36,16 +41,33 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         constants_header.phases phase() except +ValueError
         void specify_phase(constants_header.phases phase) except +ValueError
         void unspecify_phase() except +ValueError
+
+        void set_binary_interaction_double(const string, const string &, const string &, const double s) except +ValueError
+        void set_binary_interaction_string(const string &, const string &, const string &, const string &) except +ValueError
+        double get_binary_interaction_double(const string &, const string &, const string &) except +ValueError
+        string get_binary_interaction_string(const string &, const string &, const string &) except +ValueError
         
         string name() except +ValueError
+        string fluid_param_string(const string &) except +ValueError
         
         bool clear()
         
         ## Limits
-        double Tmin()
-        double Tmax()
-        double pmax()
-        double Ttriple()
+        double Tmin() except +ValueError
+        double Tmax() except +ValueError
+        double pmax() except +ValueError
+        double Ttriple() except +ValueError
+        
+        ## Critical point
+        double T_critical() except +ValueError
+        double rhomass_critical() except +ValueError
+        double rhomolar_critical() except +ValueError
+        double p_critical() except +ValueError
+        vector[CriticalState] all_critical_points() except +ValueError
+        ## Reducing point
+        double T_reducing() except +ValueError
+        double rhomolar_reducing() except +ValueError
+        double rhomass_reducing() except +ValueError
         
         void ideal_curve(const string &, vector[double] &T, vector[double] &p) except +ValueError
 
@@ -80,6 +102,10 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double delta() except +ValueError
         double viscosity() except+ValueError
         double conductivity() except+ValueError
+        void conformal_state(const string &, long double &, long double &) except +ValueError
+        void conductivity_contributions(long double &dilute, long double &initial_density, long double &residual, long double &critical) except +ValueError
+        void viscosity_contributions(long double &dilute, long double &initial_density, long double &residual, long double &critical) except +ValueError
+
         double surface_tension() except+ValueError
         double Prandtl() except +ValueError
         double Bvirial() except +ValueError

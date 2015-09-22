@@ -117,7 +117,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                 // Use the AbstractState instance
                 using_single_phase_table = false;
                 if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
-                throw ValueError(format("inputs are not in range, p=%Lg, T=%Lg", _p, _T));
+                throw ValueError(format("inputs are not in range, p=%g Pa, T=%g K", _p, _T));
             }
             else{
                 using_single_phase_table = true; // Use the table !
@@ -187,14 +187,17 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                 throw ValueError("vapor quality is not in (0,1)");
             }
             else{
-                CoolPropDbl TL, TV;
+                CoolPropDbl TL = _HUGE, TV = _HUGE;
                 if (is_mixture){
                     std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
                     if (intersect.empty()){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
                     iV = intersect[0].first; iL = intersect[1].first;
                 }
                 else{
-                    pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
+                    bool it_is_inside = pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
+                    if (!it_is_inside){
+                        throw ValueError("Not possible to determine whether pressure is inside or not");
+                    }
                 }
                 _T = _Q*TV + (1-_Q)*TL;
                 cached_saturation_iL = iL; cached_saturation_iV = iV;

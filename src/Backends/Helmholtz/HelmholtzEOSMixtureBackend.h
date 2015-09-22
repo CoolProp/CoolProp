@@ -48,6 +48,15 @@ public:
     SimpleState hsat_max;
     SsatSimpleState ssat_max;
 
+    bool clear(){
+        // Clear the locally cached values for the derivatives of the residual Helmholtz energy
+        // in each component
+        for (std::vector<CoolPropFluid>::iterator it = components.begin(); it != components.end(); ++it){
+            (*it).EOS().alphar.clear();
+        }
+        return AbstractState::clear();
+    };
+
     friend class FlashRoutines; // Allows the static methods in the FlashRoutines class to have access to all the protected members and methods of this class
     friend class TransportRoutines; // Allows the static methods in the TransportRoutines class to have access to all the protected members and methods of this class
     friend class MixtureDerivatives; // Allows the static methods in the MixtureDerivatives class to have access to all the protected members and methods of this class
@@ -63,6 +72,13 @@ public:
     CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
     /// Return a string from the backend for the mixture/fluid
     std::string fluid_param_string(const std::string &);
+    
+    /// Set binary mixture floating point parameter
+    virtual void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value);
+    /// Get binary mixture double value
+    virtual double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter);
+    /// Get binary mixture string value
+    virtual std::string get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter);
 
     phases calc_phase(void){return _phase;};
     void calc_specify_phase(phases phase){ specify_phase(phase); }
@@ -82,7 +98,8 @@ public:
     CoolPropDbl calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
     CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
     
-    void calc_critical_point(double rho0, double T0);
+    CriticalState calc_critical_point(double rho0, double T0);
+    std::vector<CoolProp::CriticalState> calc_all_critical_points();
 
 	/// Calculate the phase once the state is fully calculated but you aren't sure if it is liquid or gas or ...
 	void recalculate_singlephase_phase();
@@ -101,6 +118,9 @@ public:
     
     const CoolProp::PhaseEnvelopeData &calc_phase_envelope_data(){return PhaseEnvelope;};
 
+    /// Calculate the conformal state (unity shape factors starting point if T < 0 and rhomolar < 0)
+    void calc_conformal_state(const std::string &reference_fluid, CoolPropDbl &T, CoolPropDbl &rhomolar);
+    
     void resize(std::size_t N);
     shared_ptr<HelmholtzEOSMixtureBackend> SatL, SatV; ///<
 
@@ -254,9 +274,22 @@ public:
     CoolPropDbl calc_viscosity(void);
     CoolPropDbl calc_viscosity_dilute(void);
     CoolPropDbl calc_viscosity_background(void);
-    CoolPropDbl calc_viscosity_background(CoolPropDbl eta_dilute);
+    CoolPropDbl calc_viscosity_background(CoolPropDbl eta_dilute, CoolPropDbl &initial_density, CoolPropDbl &residual);
     CoolPropDbl calc_conductivity(void);
     CoolPropDbl calc_conductivity_background(void);
+    
+    /**
+     * \brief Calculate each of the contributions to the viscosity
+     * 
+     * If the viscosity model is hardcoded or ECS is being used, there will only be one entry in critical and all others will be zero
+     */
+    void calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical);
+    /**
+     * \brief Calculate each of the contributions to the conductivity
+     *
+     * If the conductivity model is hardcoded or ECS is being used, there will only be one entry in initial_density and all others will be zero
+     */
+    void calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical);
 
     CoolPropDbl calc_saturated_liquid_keyed_output(parameters key) { return SatL->keyed_output(key); }
     CoolPropDbl calc_saturated_vapor_keyed_output(parameters key) { return SatV->keyed_output(key); }

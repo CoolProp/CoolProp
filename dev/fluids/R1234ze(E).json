@@ -735,6 +735,30 @@
         ], 
         "type": "polynomial"
       }
+    }, 
+    "viscosity": {
+      "BibTeX": "BELL-PERSONAL-2015", 
+      "_note": "Fit based on the data of Zhao, JCED, 2014: doi: 10.1021/je5001457", 
+      "epsilon_over_k": 292.11, 
+      "epsilon_over_k_units": "K", 
+      "psi": {
+        "a": [
+          0.77371022, 
+          0.16492734, 
+          -0.02851852
+        ], 
+        "rhomolar_reducing": 4290, 
+        "rhomolar_reducing_units": "mol/m^3", 
+        "t": [
+          0, 
+          1, 
+          2
+        ]
+      }, 
+      "reference_fluid": "R134a", 
+      "sigma_eta": 5.017e-10, 
+      "sigma_eta_units": "m", 
+      "type": "ECS"
     }
   }
 }

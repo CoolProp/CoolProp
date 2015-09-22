@@ -112,17 +112,8 @@ bool AbstractState::clear() {
     this->_TVanc.clear();
     this->_TLanc.clear();
 
-    this->_critical.T = -_HUGE;
-    this->_critical.hmolar = -_HUGE;
-    this->_critical.p = -_HUGE;
-    this->_critical.rhomolar = -_HUGE;
-    this->_critical.smolar = -_HUGE;
-
-    this->_reducing.T = -_HUGE;
-    this->_reducing.hmolar = -_HUGE;
-    this->_reducing.p = -_HUGE;
-    this->_reducing.rhomolar = -_HUGE;
-    this->_reducing.smolar = -_HUGE;
+    this->_critical.fill(_HUGE);
+    this->_reducing.fill(_HUGE);
 
     /// Bulk values
     this->_rhomolar = -_HUGE;

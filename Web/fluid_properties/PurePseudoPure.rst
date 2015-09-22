@@ -142,7 +142,7 @@ which can be expanded as (p can be expressed as a function of :math:`T` and :mat
     \left.\frac{\partial Z}{\partial v}\right|_{T} = \dfrac{p - \rho\left.\frac{\partial p}{\partial \rho}\right|_{T}}{RT}
     
 Joule Inversion Curve
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 
 Defined by
 

@@ -14,13 +14,15 @@ class IF97Backend : public AbstractState  {
 
 protected:
 
-	/// Additional cached elements used for the partial derivatives
+	/// Additional cached elements used only in this backend since the "normal"
+    /// backends use only molar units while IF97 uses mass-based units
 	CachedElement  _cpmass, _cvmass, _hmass, _rhomass, _smass, _umass;
 
 public:
+    /// The name of the backend being used
     std::string backend_name(void){return "IF97Backend";}
 
-    // REQUIRED BUT NOT USED FUNCTIONS
+    // REQUIRED BUT NOT USED IN IF97 FUNCTIONS
     bool using_mole_fractions(void){return false;};
     bool using_mass_fractions(void){return true;}; // But actually it doesn't matter since it is only a pure fluid
     bool using_volu_fractions(void){return false;};
@@ -46,16 +48,9 @@ public:
         }
     };
 
-    /// Clear all the cached values
-    bool clear();
-
-    /// Check if the mole fractions have been set, etc.
-    void check_status();
-
     /** We have to override some of the functions from the AbstractState.
-	 *  The incompressibles are only mass-based and do not support conversion
-	 *  from molar to specific quantities.
-	 *  We also have a few new cached variables that we need.
+	 *  IF97 is only mass-based and does not support conversion
+	 *  from mass- to molar-specific quantities.
 	 */
 	/// Return the mass density in kg/m^3
     double rhomass(void){ return calc_rhomass(); }
@@ -69,10 +64,10 @@ public:
 	/// Return the molar internal energy in J/mol
 	double umass(void){return calc_umass();}
     CoolPropDbl calc_umass(void){ return IF97::umass_Tp(_T, _p); }
-	/// Return the mass constant pressure specific heat in J/kg/K
+	/// Return the mass-based constant pressure specific heat in J/kg/K
 	double cpmass(void){return calc_cpmass();}
     CoolPropDbl calc_cpmass(void){ return IF97::cpmass_Tp(_T, _p); }
-    /// Return the mass constant volume specific heat in J/kg/K
+    /// Return the mass-based constant volume specific heat in J/kg/K
 	double cvmass(void){return calc_cvmass();}
     CoolPropDbl calc_cvmass(void){ return IF97::cvmass_Tp(_T, _p); }
 };

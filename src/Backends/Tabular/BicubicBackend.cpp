@@ -1,3 +1,4 @@
+
 #if !defined(NO_TABULAR_BACKENDS)
 
 #include "BicubicBackend.h"
@@ -141,13 +142,13 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             // Call again, but this time with molar units; S: [J/kg/K] * [kg/mol] -> [J/mol/K]
             update(PSmolar_INPUTS, val1, val2*AS->molar_mass()); return;
         }
-		case PT_INPUTS:{
+	case PT_INPUTS:{
             _p = val1; _T = val2;
             if (!single_phase_logpT.native_inputs_are_in_range(_T, _p)){
                 // Use the AbstractState instance
                 using_single_phase_table = false;
                 if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
-                throw ValueError(format("inputs are not in range, p=%Lg, T=%Lg", _p, _T));
+                throw ValueError(format("inputs are not in range, p=%g Pa, T=%g K", _p, _T));
             }
             else{
                 using_single_phase_table = true; // Use the table !
@@ -279,7 +280,10 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     iV = intersect[0].first; iL = intersect[1].first;
                 }
                 else{
-                    pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
+                    bool it_is_inside = pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
+                    if (!it_is_inside){
+                        throw ValueError("Not possible to determine whether pressure is inside or not");
+                    }
                 }
                 _T = _Q*TV + (1-_Q)*TL;
                 cached_saturation_iL = iL; cached_saturation_iV = iV;
@@ -364,15 +368,17 @@ double CoolProp::BicubicBackend::evaluate_single_phase(const SinglePhaseGriddedT
 	double xhat = (x - table.xvec[i])/(table.xvec[i+1] - table.xvec[i]);
     double yhat = (y - table.yvec[j])/(table.yvec[j+1] - table.yvec[j]);
     
-    // Calculate the output value desired
-	double val = 0;
-	for (std::size_t l = 0; l < 4; ++l)
-	{
-		for(std::size_t m = 0; m < 4; ++m)
-		{
-			val += alpha[m*4+l]*pow(xhat, static_cast<int>(l))*pow(yhat, static_cast<int>(m));
-		}
-	}
+    // Calculate the output value desired 
+    // Term multiplying x^0 using Horner's method
+    double B0 = ((((0)+alpha[3*4+0])*yhat + alpha[2*4+0])*yhat + alpha[1*4+0])*yhat + alpha[0*4+0];
+    // Term multiplying x^1 using Horner's method
+    double B1 = ((((0)+alpha[3*4+1])*yhat + alpha[2*4+1])*yhat + alpha[1*4+1])*yhat + alpha[0*4+1];
+    // Term multiplying x^2 using Horner's method
+    double B2 = ((((0)+alpha[3*4+2])*yhat + alpha[2*4+2])*yhat + alpha[1*4+2])*yhat + alpha[0*4+2];
+    // Term multiplying x^3 using Horner's method
+    double B3 = ((((0)+alpha[3*4+3])*yhat + alpha[2*4+3])*yhat + alpha[1*4+3])*yhat + alpha[0*4+3];
+
+    double val = ((((0)+B3)*xhat + B2)*xhat + B1)*xhat + B0;
     
     // Cache the output value calculated
     switch(output){

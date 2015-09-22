@@ -41,6 +41,14 @@ std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::str
  */
 void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param, const double val);
 
+/**
+ * @brief Apply a simple mixing rule for a given binary pair
+ * @param CAS1 The CAS # for the first fluid (order matters!)
+ * @param CAS2 The CAS # for the second fluid (order matters!)
+ * @param rule The simple mixing rule to be used ("linear", "Lorentz-Berthelot")
+ */
+void apply_simple_mixing_rule(const std::string &CAS1, const std::string &CAS2, const std::string &rule);
+    
 class MixtureParameters
 {
 public:

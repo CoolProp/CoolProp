@@ -120,7 +120,8 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
     // ------------------------
     // Actually build the table
     // ------------------------
-    AS->update(QT_INPUTS, 0, AS->Ttriple());
+    CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
+    AS->update(QT_INPUTS, 0, Tmin);
     CoolPropDbl p_triple = AS->p();
     CoolPropDbl p, pmin = p_triple, pmax = 0.9999*AS->p_critical();
     for (std::size_t i = 0; i < N-1; ++i)
@@ -347,6 +348,27 @@ void CoolProp::TabularBackend::load_tables(){
     if (get_debug_level() > 0){ std::cout << "Tables loaded" << std::endl; }
 }
 
+CoolPropDbl CoolProp::TabularBackend::calc_saturated_vapor_keyed_output(parameters key){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (is_mixture){
+        return phase_envelope_sat(phase_envelope, key, iP, _p);
+    }
+    else{
+        return pure_saturation.evaluate(key, _p, 1, cached_saturation_iL, cached_saturation_iV);
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_saturated_liquid_keyed_output(parameters key){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (is_mixture){
+        return phase_envelope_sat(phase_envelope, key, iP, _p);
+    }
+    else{
+        return pure_saturation.evaluate(key, _p, 0, cached_saturation_iL, cached_saturation_iV);
+    }
+};
+
 CoolPropDbl CoolProp::TabularBackend::calc_p(void){
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     if (using_single_phase_table){
@@ -363,6 +385,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_p(void){
 }
 CoolPropDbl CoolProp::TabularBackend::calc_T(void){
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iT, cached_single_phase_i, cached_single_phase_j);
@@ -376,7 +399,12 @@ CoolPropDbl CoolProp::TabularBackend::calc_T(void){
             return phase_envelope_sat(phase_envelope, iT, iP, _p);
         }
         else{
-            return _T;
+            if (ValidNumber(_T)){
+                return _T;
+            }
+            else{
+                return pure_saturation.evaluate(iT, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            }
         }
     }
 }

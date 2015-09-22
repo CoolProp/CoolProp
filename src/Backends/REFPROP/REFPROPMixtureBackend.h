@@ -46,6 +46,15 @@ public:
 	
 	std::vector<std::string> calc_fluid_names(){return fluid_names;};
     PhaseEnvelopeData PhaseEnvelope;
+    
+    /// Set binary mixture floating point parameter
+    void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value);
+    /// Get binary mixture double value
+    double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter);
+    /// Get binary mixture string value
+    std::string get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter);
+    /// Find the index (1-based for FORTRAN) of the fluid with the given CAS number
+    long match_CAS(const std::string &CAS);
 
     // REFPROP backend uses mole fractions
     bool using_mole_fractions(){return true;}

@@ -544,6 +544,10 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
         {
             throw SolutionError(format("saturation_PHSU_pure solver T < 0"));
         }
+        // If the change is very small, stop
+        if (max_abs_value(v) < 1e-10){
+            break;
+        }
         if (iter > 50){
             // Set values back into the options structure for use in next solver
             options.rhoL = rhoL; options.rhoV = rhoV; options.T = T;
@@ -1062,7 +1066,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
 
         // If the step size is small, start a counter to allow the other density 
         // to be corrected a few times
-        if (std::abs(DeltavL*rhoL) < 10*DBL_EPSILON || std::abs(DeltavV*rhoV) < 10*DBL_EPSILON){
+        if (std::abs(DeltavL*rhoL) < 1e-13 || std::abs(DeltavV*rhoV) < 1e-13){
             small_step_count++;
         }
         // If you are not continuing to march towards the solution, after a couple of times, stop

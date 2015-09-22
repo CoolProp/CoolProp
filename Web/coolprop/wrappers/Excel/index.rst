@@ -30,7 +30,7 @@ Pre-compiled Binaries for OSX
 
 Part 1:
 -------
-Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/32bit__cdecl_calling_convention/`.  Development binaries coming from the buildbot server can be found at :sfnightly:`shared_library/Darwin/32bit__cdecl_calling_convention/`. Place the downloaded file called libCoolProp.dylib in the ${HOME}/lib folder (make this folder if needed).
+Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/32bit/`.  Development binaries coming from the buildbot server can be found at :sfnightly:`shared_library/Darwin/32bit/`. Place the downloaded file called libCoolProp.dylib in the ${HOME}/lib folder (make this folder if needed).
 
 Part 2:
 -------
@@ -44,6 +44,11 @@ Download the xlam from :sfdownloads:`MicrosoftExcel` or the development version 
 6. Add this code to a cell - it should work::
 
     =PropsSI("T","P",101325,"Q",0,"Water")
+
+If it doesn't work and you get error number 53, it might be because you have a 64-bit .dylib file and you want a 32-bit .dylib file.  For instance when you run the ``file`` command on your .dylib, you should see something like:
+
+    $ file libCoolProp.dylib
+    libCoolProp.dylib: Mach-O dynamically linked shared library i386
 
 User-compiled Binaries
 ======================

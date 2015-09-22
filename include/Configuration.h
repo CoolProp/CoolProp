@@ -19,18 +19,19 @@
  * The type of the default value specifies the only type that will be accepted for this parameter
  */
 #define CONFIGURATION_KEYS_ENUM \
-    X(NORMALIZE_GAS_CONSTANTS, "NORMALIZE_GAS_CONSTANTS", true) \
-    X(CRITICAL_WITHIN_1UK, "CRITICAL_WITHIN_1UK", true) \
-    X(CRITICAL_SPLINES_ENABLED, "CRITICAL_SPLINES_ENABLED", true) \
-    X(ALTERNATIVE_REFPROP_PATH, "ALTERNATIVE_REFPROP_PATH", "") \
-    X(ALTERNATIVE_REFPROP_HMX_BNC_PATH, "ALTERNATIVE_REFPROP_HMX_BNC_PATH", "") \
-    X(SAVE_RAW_TABLES, "SAVE_RAW_TABLES", false) \
-    X(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB, "MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB", 1.0) \
-    X(DONT_CHECK_PROPERTY_LIMITS, "DONT_CHECK_PROPERTY_LIMITS", false) \
+    X(NORMALIZE_GAS_CONSTANTS, "NORMALIZE_GAS_CONSTANTS", true, "If true, for mixtures, the molar gas constant (R) will be set to the CODATA value") \
+    X(CRITICAL_WITHIN_1UK, "CRITICAL_WITHIN_1UK", true, "If true, any temperature within 1 uK of the critical temperature will be considered to be AT the critical point") \
+    X(CRITICAL_SPLINES_ENABLED, "CRITICAL_SPLINES_ENABLED", true, "If true, the critical splines will be used in the near-vicinity of the critical point") \
+    X(SAVE_RAW_TABLES, "SAVE_RAW_TABLES", false, "If true, the raw, uncompressed tables will also be written to file") \
+    X(ALTERNATIVE_REFPROP_PATH, "ALTERNATIVE_REFPROP_PATH", "", "An alternative path to be provided to the directory that contains REFPROP's fluids and mixtures directories.  If provided, the SETPATH function will be called with this directory prior to calling any REFPROP functions.") \
+    X(ALTERNATIVE_REFPROP_HMX_BNC_PATH, "ALTERNATIVE_REFPROP_HMX_BNC_PATH", "", "An alternative path to the HMX.BNC file.  If provided, it will be passed into REFPROP's SETUP or SETMIX routines") \
+    X(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS, "REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS", false, "If true, if the binary interaction parameters in REFPROP are estimated, throw an error rather than silently continuing") \
+    X(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB, "MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB", 1.0, "The maximum allowed size of the directory that is used to store tabular data") \
+    X(DONT_CHECK_PROPERTY_LIMITS, "DONT_CHECK_PROPERTY_LIMITS", false, "If true, when possible, CoolProp will skip checking whether values are inside the property limits") \
 
  // Use preprocessor to create the Enum
  enum configuration_keys{
-  #define X(Enum, String, Default)       Enum,
+  #define X(Enum, String, Default, Desc)       Enum,
    CONFIGURATION_KEYS_ENUM
   #undef X
  };
@@ -50,6 +51,12 @@ namespace CoolProp
 
 /// Convert the configuration key to a string in a 1-1 representation.
 std::string config_key_to_string(configuration_keys keys);
+
+/// Return a string description of the configuration key
+std::string config_key_description(configuration_keys keys);
+
+/// Return a string description of the configuration key (with the key passed as a string)
+std::string config_key_description(std::string key);
     
 /// A class that contains one entry in configuration
 /// Can be cast to yield the output value
@@ -208,7 +215,7 @@ class Configuration
              * See http://stackoverflow.com/a/148610
              * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
              */
-            #define X(Enum, String, Default) \
+            #define X(Enum, String, Default, Desc) \
                 add_item(ConfigurationItem(Enum, Default));
                 CONFIGURATION_KEYS_ENUM
             #undef X
@@ -221,25 +228,31 @@ class Configuration
 
 /// Return the value of a boolean key from the configuration
 bool get_config_bool(configuration_keys key);
+/// Return the value of a double configuration key
 double get_config_double(configuration_keys key);
+/// Return the value of a string configuration key
 std::string get_config_string(configuration_keys key);
 #if !defined(SWIG) // Hide this for swig - Swig gets confused
 void get_config_as_json(rapidjson::Document &doc);
 #endif
-/// Get values in the configuration based as json data in string format
+/// Get all the values in the configuration as a json-formatted string
 std::string get_config_as_json_string();
 
 /// *********************************************************
 ///                      SETTERS
 /// *********************************************************
 
+/// Set the value of a boolean configuration value
 void set_config_bool(configuration_keys key, bool val);
+/// Set the value of a double configuration value
 void set_config_double(configuration_keys key, double val);
+/// Set the value of a string configuration value
 void set_config_string(configuration_keys key, const std::string &val);
 /// Set values in the configuration based on a json file
 #if !defined(SWIG) // Hide this for swig - Swig gets confused
 void set_config_json(rapidjson::Document &doc);
 #endif
+/// Set the entire configuration based on a json-formatted string
 void set_config_as_json_string(const std::string &s);
 }
 

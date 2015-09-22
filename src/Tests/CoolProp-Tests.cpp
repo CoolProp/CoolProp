@@ -251,6 +251,15 @@ vel("EthylBenzene", "T", 617, "Dmass", 316, "V", 33.22e-6, 1e-2),
 vel("HeavyWater", "T", 0.5000*643.847, "Dmass", 3.07*358, "V", 12.0604912273*55.2651e-6, 1e-5),
 vel("HeavyWater", "T", 0.9000*643.847, "Dmass", 2.16*358, "V", 1.6561616211*55.2651e-6, 1e-5),
 vel("HeavyWater", "T", 1.2000*643.847, "Dmass", 0.8*358, "V", 0.7651099154*55.2651e-6, 1e-5),
+
+// Toluene, Avgeri, JPCRD, 2015
+vel("Toluene", "T", 300, "Dmass", 1e-10, "V", 7.023e-6, 1e-4),
+vel("Toluene", "T", 400, "Dmass", 1e-10, "V", 9.243e-6, 1e-4),
+vel("Toluene", "T", 550, "Dmass", 1e-10, "V", 12.607e-6, 1e-4),
+vel("Toluene", "T", 300, "Dmass", 865, "V", 566.78e-6, 1e-4),
+vel("Toluene", "T", 400, "Dmass", 770, "V", 232.75e-6, 1e-4),
+vel("Toluene", "T", 550, "Dmass", 550, "V", 80.267e-6, 1e-4),
+
 };
 
 class TransportValidationFixture

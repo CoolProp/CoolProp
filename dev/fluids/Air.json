@@ -285,7 +285,8 @@
       "T_max_units": "K", 
       "Ttriple": 59.75, 
       "Ttriple_units": "K", 
-      "acentric": 0.0816749632704, 
+      "acentric": 1e+99, 
+      "acentric_note": "The acentric factor for pseudo-pure fluids is undefined", 
       "acentric_units": "-", 
       "alpha0": [
         {

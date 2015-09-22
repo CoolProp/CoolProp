@@ -590,3 +590,36 @@ class Water(PureData):
         # Specific heat needs special coefficiencts
         # self.specific_heat.coeffs = np.zeros((5,7))
 
+
+class Pirobloc(PureData):
+    """
+    Pirobloc HTF-BASIC is a fluid for heat transmission specially 
+    formulated from synthetic oils and additives. It allows to work 
+    till 330C in a close circuit. 
+    """
+    def __init__(self):
+        PureData.__init__(self)
+        self.density.source           = self.density.SOURCE_DATA
+        self.viscosity.source         = self.viscosity.SOURCE_DATA
+        self.specific_heat.source     = self.specific_heat.SOURCE_DATA
+        self.conductivity.source      = self.conductivity.SOURCE_DATA
+        #self.saturation_pressure.source = self.saturation_pressure.SOURCE_DATA
+        self.temperature.data         = np.array([   50,   100,   150,   200,   250,   300])+273.15 # C -> K
+        self.density.data             = np.array([0.857, 0.824, 0.792, 0.759, 0.727, 0.692])*1e3 # kg/l -> kg/m3
+        self.viscosity.data           = np.array([ 17.0,  4.50,  1.80,  1.00,  0.65,  0.50])/1e6*self.density.data # cSt -> Pa*s
+        self.specific_heat.data       = np.array([0.474, 0.522, 0.568, 0.617, 0.663, 0.712])*4186.799993 # cal/g -> J/kg
+        self.conductivity.data        = np.array([0.111, 0.107, 0.104, 0.101, 0.098, 0.095])*1.162222 # cal/h/m/C -> W/m/K
+        self.Tmin        = np.min(self.temperature.data)
+        self.Tmax        = np.max(self.temperature.data)
+        self.TminPsat    = self.Tmax # np.min(self.temperature.data[~np.isnan(self.saturation_pressure.data)])
+        self.name        = "PBB"
+        self.description = "Pirobloc HTF-BASIC"
+        self.reference   = "http://www.fluidotermico.com"
+        self.reshapeAll()
+        
+        
+        
+
+
+        
+        
