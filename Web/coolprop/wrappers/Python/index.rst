@@ -16,7 +16,7 @@ Using the ``pip`` installation program, you can install the official release fro
 If you dare, you can also try the latest nightly release from :sfnightly:`Python` 
 or get it directly from the development server using::
 
-    pip install --pre --find-links http://www.coolprop.dreamhosters.com/binaries/Python/ -U --force-reinstall CoolProp
+    pip install -vvv --pre --trusted-host www.coolprop.dreamhosters.com --find-links http://www.coolprop.dreamhosters.com/binaries/Python/ -U --force-reinstall CoolProp
 
 
 Manual installation
