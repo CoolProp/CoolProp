@@ -13,7 +13,12 @@
 #include "Exceptions.h"
 #include "crossplatform_shared_ptr.h"
 
-#if !defined(__ISWINDOWS__) && !defined(__powerpc__)
+#if defined(__ANDROID__)
+  // Android doesn't have ftw.h, also doesn't accept not having this file
+  unsigned long long CalculateDirSize(const std::string &path){
+     return 0;
+  }
+#elif !defined(__ISWINDOWS__) && !defined(__powerpc__) && !defined(__ANDROID__)
 #include <ftw.h>
 #include <stdint.h>
 #include <iostream>

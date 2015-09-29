@@ -11,12 +11,12 @@ namespace CoolProp{
  */
 std::string get_csv_mixture_binary_pairs();
 
-/** \brief Get the parameters for a predefined mixture - R410A, R404A, etc.
+/** \brief Get the parameters for a predefined mixture - R410A, R404A, etc. if the mixture is predefined
  * 
  */
 bool is_predefined_mixture(const std::string &name, Dictionary &dict);
 
-/** \brief Get a comma-separated list of predefined mixtures in 
+/** \brief Get a comma-separated list of predefined mixtures in CoolProp
  * 
  */
 std::string get_csv_predefined_mixtures();
@@ -26,11 +26,7 @@ std::string get_csv_predefined_mixtures();
  * 
  */
 std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param);
-
-/** \brief Get a parameter for the given binary pair 
- * 
- */
- 
+    
 /**
  * @brief Set a parameter for the given binary pair
  * @param CAS1 The CAS # for the first fluid (order matters!)
