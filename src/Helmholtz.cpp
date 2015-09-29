@@ -1,6 +1,13 @@
 #include <numeric>
 #include "Helmholtz.h"
 
+#ifdef __ANDROID__
+  #undef _A
+  #undef _B
+  #undef _C
+  #undef _D
+#endif
+
 namespace CoolProp{
 
 CoolPropDbl kahanSum(const std::vector<CoolPropDbl> &x)

@@ -1,0 +1,10 @@
+# File: Android.mk
+LOCAL_PATH := $(call my-dir)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := ${ANDROID_MODULE_NAME}
+LOCAL_SRC_FILES := ${APP_SOURCES}
+LOCAL_C_INCLUDES := ${APP_INCLUDE_DIRS}
+
+include $(BUILD_SHARED_LIBRARY)

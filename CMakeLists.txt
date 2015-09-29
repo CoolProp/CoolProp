@@ -708,6 +708,51 @@ if (COOLPROP_JAVA_MODULE)
            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/testing_root/Java${BITNESS})
 endif()
 
+# A module for Android
+if (COOLPROP_ANDROID_MODULE)
+
+  # For now, these must be changed manually
+  set(ANDROID_MODULE_NAME "CoolProp")
+  set(ANDROID_PACKAGE_NAME "CoolProp") # or blah.di.blah.CoolProp
+
+  # Must have SWIG
+  FIND_PACKAGE(SWIG REQUIRED)
+
+  set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
+  
+  list (APPEND APP_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/jni/CoolProp_wrap.cxx)
+  string(REPLACE ";" " " APP_INCLUDE_DIRS "${APP_INCLUDE_DIRS}")
+  string(REPLACE ";" " " APP_SOURCES "${APP_SOURCES}")
+
+  file(MAKE_DIRECTORY jni)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Android/Android.mk.template"
+                 "${CMAKE_CURRENT_BINARY_DIR}/jni/Android.mk"
+                 )
+  file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Android/Application.mk"
+       DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/jni"
+       )
+  string(REPLACE "." "/" ANDROID_PACKAGE_PATH "${ANDROID_PACKAGE_NAME}")  
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_PACKAGE_PATH}")
+
+  MESSAGE(STATUS "WORKING_DIRECTORY=${CMAKE_CURRENT_BINARY_DIR}")
+  get_filename_component(NDK_BUILD_PATH "${NDK_PATH}/ndk-build" ABSOLUTE)
+  get_filename_component(SRC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src" ABSOLUTE)
+  get_filename_component(INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include" ABSOLUTE)
+
+  add_custom_target(CoolProp ALL
+                    COMMAND ${NDK_BUILD_PATH}
+                    DEPENDS jni/CoolProp_wrap.cxx
+                    VERBATIM)
+
+  add_custom_command(OUTPUT jni/CoolProp_wrap.cxx
+                    COMMAND ${SWIG_EXECUTABLE} -v -c++ -java -I${SRC_PATH} -I${INCLUDE_PATH} -o ${CMAKE_CURRENT_BINARY_DIR}/jni/CoolProp_wrap.cxx  -package ${ANDROID_PACKAGE_NAME} -outdir ${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_PACKAGE_PATH} ${I_FILE}
+                    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+                    VERBATIM)
+
+  add_dependencies(CoolProp generate_headers)
+
+endif()
+
 if (COOLPROP_PHP_MODULE)
 
   # Must have SWIG
