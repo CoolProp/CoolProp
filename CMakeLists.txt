@@ -679,7 +679,7 @@ if (COOLPROP_JAVA_MODULE)
   endif()
   
   if (NOT MSVC)
-    set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
+    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
   endif()
   add_dependencies (${app_name} generate_headers)
   
