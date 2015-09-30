@@ -317,8 +317,10 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
   ### All options are set, we are building a library ###
   ADD_DEPENDENCIES(${LIB_NAME} generate_headers)
   #
+  
   # Set the bitness
-  IF (!MSVC)
+  IF (NOT MSVC)
+    MESSAGE(STATUS "Setting bitness flag -m${BITNESS}")
     SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -m${BITNESS}")
     SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -m${BITNESS}")
   ENDIF()
@@ -349,7 +351,7 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
 ENDIF()
 
 if (COOLPROP_DEBIAN_PACKAGE)
-    if(!UNIX)
+    if(NOT UNIX)
       message(FATAL_ERROR "COOLPROP_DEBIAN_PACKAGE can only be used on linux host")
     endif()
     list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
@@ -394,7 +396,7 @@ if (COOLPROP_VXWORKS_LIBRARY_MODULE OR COOLPROP_VXWORKS_LIBRARY)
 endif()
 
 if (COOLPROP_MATHCAD_MODULE)
-    if(!WIN32)
+    if(NOT WIN32)
       message(FATAL_ERROR "COOLPROP_MATHCAD_MODULE can only be used on windows host")
     endif()
     IF( "${COOLPROP_MATHCAD_ROOT}" STREQUAL "")
@@ -422,7 +424,7 @@ if (COOLPROP_EES_MODULE)
   message(STATUS "Injecting the version COOLPROP_VERSION=${COOLPROP_VERSION}")
   # Put the version into the InnoInstaller setup file
   CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/BuildInnoInstaller.iss.in" "${CMAKE_CURRENT_BINARY_DIR}/BuildInnoInstaller.iss")
-  if (!MSVC)
+  if (NOT MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
   add_dependencies (COOLPROP_EES generate_headers)
@@ -676,7 +678,7 @@ if (COOLPROP_JAVA_MODULE)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
   endif()
   
-  if (!MSVC)
+  if (NOT MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
   endif()
   add_dependencies (${app_name} generate_headers)
@@ -787,7 +789,7 @@ if (COOLPROP_PHP_MODULE)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
   endif()
   
-  if (!MSVC)
+  if (NOT MSVC)
     set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
   endif()
   add_dependencies (CoolProp generate_headers)
