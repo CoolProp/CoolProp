@@ -8,7 +8,7 @@ import numpy as np
 import CoolProp.CoolProp as CP
 from abc import ABCMeta
 from CoolProp import AbstractState
-from CoolProp.CoolProp import PropsSI
+from CoolProp.CoolProp import PropsSI,extract_backend,extract_fractions
 import CoolProp
 import warnings
 from scipy.interpolate.interpolate import interp1d
@@ -28,17 +28,19 @@ def _process_fluid_state(fluid_ref):
     """
     # Process the fluid and set self._state
     if isinstance(fluid_ref, basestring):
-        # TODO: Fix the backend extraction etc
-        fluid_def = fluid_ref.split('::')
-        if len(fluid_def)==2:
-            backend = fluid_def[0]
-            fluid = fluid_def[1]
-        elif len(fluid_def)==1:
-            backend = "HEOS"
-            fluid = fluid_def[0]
-        else: 
-            raise ValueError("This is not a valid fluid_ref string: {0:s}".format(str(fluid_ref)))
-        return AbstractState(backend, fluid)
+        backend, fluids   = extract_backend(fluid_ref)
+        fluids, fractions = extract_fractions(fluids)        
+#         # TODO: Fix the backend extraction etc
+#         fluid_def = fluid_ref.split('::')
+#         if len(fluid_def)==2:
+#             backend = fluid_def[0]
+#             fluid = fluid_def[1]
+#         elif len(fluid_def)==1:
+#             backend = "HEOS"
+#             fluid = fluid_def[0]
+#         else: 
+#             raise ValueError("This is not a valid fluid_ref string: {0:s}".format(str(fluid_ref)))
+        return AbstractState(backend, fluids.join('&'))
     elif isinstance(fluid_ref, AbstractState):
         return fluid_ref
     raise TypeError("Invalid fluid_ref input, expected a string or an abstract state instance.")

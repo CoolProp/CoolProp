@@ -489,7 +489,7 @@ cpdef extract_backend(string in_str):
     cdef string bck, fld
     # Extract the backend and the fluid from the input string
     _extract_backend(in_str, bck, fld)
-    return bck
+    return bck, fld
 
 
 cpdef extract_fractions(string flds):
