@@ -29,7 +29,8 @@ def _process_fluid_state(fluid_ref):
     # Process the fluid and set self._state
     if isinstance(fluid_ref, basestring):
         backend, fluids   = extract_backend(fluid_ref)
-        fluids, fractions = extract_fractions(fluids)        
+        fluids, fractions = extract_fractions(fluids)
+        #if backend==u'?': backend = u'HEOS'
 #         # TODO: Fix the backend extraction etc
 #         fluid_def = fluid_ref.split('::')
 #         if len(fluid_def)==2:
@@ -40,7 +41,9 @@ def _process_fluid_state(fluid_ref):
 #             fluid = fluid_def[0]
 #         else: 
 #             raise ValueError("This is not a valid fluid_ref string: {0:s}".format(str(fluid_ref)))
-        return AbstractState(backend, fluids.join('&'))
+        state = AbstractState(backend, fluids.join('&'))
+        state.set_mass_fractions(fractions)
+        return state 
     elif isinstance(fluid_ref, AbstractState):
         return fluid_ref
     raise TypeError("Invalid fluid_ref input, expected a string or an abstract state instance.")
