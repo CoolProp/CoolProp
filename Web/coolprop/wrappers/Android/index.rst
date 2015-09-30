@@ -26,6 +26,6 @@ Linux & OSX
     # Move into the folder you just created
     mkdir -p CoolProp/build && cd CoolProp/build
     # Construct the makefile using CMake
-    cmake .. -DCOOLPROP_ANDROID_WRAPPER=ON -DNDK_PATH=~/Downloads/android-ndk-r10e
+    cmake .. -DCOOLPROP_ANDROID_MODULE=ON -DNDK_PATH=~/Downloads/android-ndk-r10e
     # Now actually do the build
     cmake --build .
