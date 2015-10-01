@@ -10,7 +10,7 @@ import numpy as np
 import CoolProp
 from CoolProp.CoolProp import PropsSI
 from scipy.optimize import newton
-from .Common import BasePlot, _process_fluid_state, PropertyDict, SIunits
+from .Common import BasePlot, process_fluid_state, PropertyDict, SIunits
 import warnings
 from abc import ABCMeta
 
@@ -420,7 +420,7 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 #         fluid_ref : str, CoolProp.AbstractState
 #             The fluid property provider, either a subclass of CoolProp.AbstractState
 #             or a string that can be used to generate a CoolProp.AbstractState instance
-#             via :func:`Common._process_fluid_state`.
+#             via :func:`Common.process_fluid_state`.
 #         steps : int
 #             The number of steps used for going from one state to another
 #         
@@ -659,7 +659,7 @@ class BaseCycle(BasePlot):
         fluid_ref : str, CoolProp.AbstractState
             The fluid property provider, either a subclass of CoolProp.AbstractState
             or a string that can be used to generate a CoolProp.AbstractState instance
-            via :func:`Common._process_fluid_state`.
+            via :func:`Common.process_fluid_state`.
         graph_type : string
             The graph type to be plotted, like \"PH\" or \"TS\"
         unit_system : string, ['EUR','KSI','SI']
@@ -846,7 +846,7 @@ class SimpleRankineCycle(BasePowerCycle):
         BasePowerCycle.__init__(self, fluid_ref, graph_type, **kwargs)
     
     def simple_solve(self, T0, p0, T2, p2, eta_exp, eta_pum, fluid=None, SI=True):
-        if fluid is not None: self.state = _process_fluid_state(fluid)
+        if fluid is not None: self.state = process_fluid_state(fluid)
         if self._state is None: 
             raise ValueError("You have specify a fluid before you calculate.")
         
@@ -945,7 +945,7 @@ class SimpleRankineCycle(BasePowerCycle):
 #     
 #     
 #     """
-#     state = _process_fluid_state(fluid)
+#     state = process_fluid_state(fluid)
 # 
 # 
 #     state.update(CoolProp.PT_INPUTS,p1,T1)

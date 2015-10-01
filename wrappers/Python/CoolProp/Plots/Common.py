@@ -15,7 +15,8 @@ from scipy.interpolate.interpolate import interp1d
 from six import with_metaclass
 
 
-def _process_fluid_state(fluid_ref):
+
+def process_fluid_state(fluid_ref):
     """Check input for state object or fluid string
     
     Parameters
@@ -41,8 +42,10 @@ def _process_fluid_state(fluid_ref):
 #             fluid = fluid_def[0]
 #         else: 
 #             raise ValueError("This is not a valid fluid_ref string: {0:s}".format(str(fluid_ref)))
-        state = AbstractState(backend, fluids.join('&'))
-        state.set_mass_fractions(fractions)
+        print(backend, '&'.join(fluids))
+        print(fluids, fractions)
+        state = AbstractState(backend, '&'.join(fluids))
+        #state.set_mass_fractions(fractions)
         return state 
     elif isinstance(fluid_ref, AbstractState):
         return fluid_ref
@@ -287,7 +290,7 @@ class Base2DObject(with_metaclass(ABCMeta),object):
     def state(self): return self._state
     @state.setter
     def state(self, value):
-        self._state = _process_fluid_state(value)
+        self._state = process_fluid_state(value)
         self._T_small = self._state.trivial_keyed_output(CoolProp.iT_critical)*self._small
         self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*self._small
 
@@ -588,7 +591,7 @@ class BasePlot(Base2DObject):
 
     def __init__(self, fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
         
-        state = _process_fluid_state(fluid_ref)
+        state = process_fluid_state(fluid_ref)
         
         # Process the graph_type and set self._x_type and self._y_type
         graph_type = graph_type.upper()
