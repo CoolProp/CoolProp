@@ -40,7 +40,7 @@ Usage
 
 On linux and OSX, you can use the compiled static library in your application by doing something like this (starting in the directory ``build`` relative to the root of the source as in the above compilation step)::
 
-    g++ main.cpp -lCoolProp -ldl -L. -I../../include
+    g++ -lCoolProp -ldl -L. -I../../include main.cpp
 
 where main.cpp could have the contents for instance of::
 
