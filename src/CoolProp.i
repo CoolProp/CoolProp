@@ -21,6 +21,8 @@
 %template(DoubleVector) std::vector<double>;
 %template(StringVector) std::vector<std::string>;
 
+%apply double { CoolPropDbl }; 
+
 %exception { 
     try {
         $action
