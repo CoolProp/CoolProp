@@ -33,4 +33,23 @@ You can build the static library using::
     # Build the makefile using CMake
     cmake .. -DCOOLPROP_STATIC_LIBRARY=ON
     # Make the static library
-    make VERBOSE=1
+    cmake --build .
+
+Usage
+-----
+
+On linux and OSX, you can use the compiled static library in your application by doing something like this (starting in the directory ``build`` relative to the root of the source as in the above compilation step)::
+
+    g++ main.cpp -lCoolProp -ldl -L. -I../../include
+
+where main.cpp could have the contents for instance of::
+
+    #include "CoolProp.h"
+    #include <iostream>
+
+    int main()
+    {
+        std::cout << CoolProp::PropsSI("T","P",101325,"Q",0,"Water") << std::endl;
+        return 1;
+    }
+    
