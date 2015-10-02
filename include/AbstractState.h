@@ -414,18 +414,29 @@ public:
 
     /// Get the mole fractions of the equilibrium liquid phase
     std::vector<CoolPropDbl> mole_fractions_liquid(void){ return calc_mole_fractions_liquid(); };
+    /// Get the mole fractions of the equilibrium liquid phase (but as a double for use in SWIG wrapper)
+    std::vector<double> mole_fractions_liquid_double(void){
+        std::vector<CoolPropDbl> x = calc_mole_fractions_liquid();
+        return std::vector<double>(x.begin(), x.end());
+    };
+    
     /// Get the mole fractions of the equilibrium vapor phase
     std::vector<CoolPropDbl> mole_fractions_vapor(void){ return calc_mole_fractions_vapor(); };
-
+    /// Get the mole fractions of the equilibrium vapor phase (but as a double for use in SWIG wrapper)
+    std::vector<double> mole_fractions_vapor_double(void){
+        std::vector<CoolPropDbl> y = calc_mole_fractions_vapor();
+        return std::vector<double>(y.begin(), y.end());
+    };
+    
+    /// Get the mole fractions of the components
+    virtual const std::vector<CoolPropDbl> & get_mole_fractions(void) = 0;
+    
     /// Update the state using two state variables 
     virtual void update(CoolProp::input_pairs input_pair, double Value1, double Value2) = 0;
 
     /// Update the state using two state variables and providing guess values
     /// Some or all of the guesses will be used - this is backend dependent
     virtual void update_with_guesses(CoolProp::input_pairs input_pair, double Value1, double Value2, const GuessesStructure &guesses){ throw NotImplementedError("update_with_guesses is not implemented for this backend"); };
-
-    /// Get the mole fractions of the components
-    virtual const std::vector<CoolPropDbl> & get_mole_fractions(void) = 0;
 
     /// A function that says whether the backend instance can be instantiated in the high-level interface
     /// In general this should be true, except for some other backends (especially the tabular backends)

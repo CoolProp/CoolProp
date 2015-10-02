@@ -317,8 +317,10 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
   ### All options are set, we are building a library ###
   ADD_DEPENDENCIES(${LIB_NAME} generate_headers)
   #
+  
   # Set the bitness
-  IF (!MSVC)
+  IF (NOT MSVC)
+    MESSAGE(STATUS "Setting bitness flag -m${BITNESS}")
     SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -m${BITNESS}")
     SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -m${BITNESS}")
   ENDIF()
@@ -349,7 +351,7 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
 ENDIF()
 
 if (COOLPROP_DEBIAN_PACKAGE)
-    if(!UNIX)
+    if(NOT UNIX)
       message(FATAL_ERROR "COOLPROP_DEBIAN_PACKAGE can only be used on linux host")
     endif()
     list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
@@ -394,7 +396,7 @@ if (COOLPROP_VXWORKS_LIBRARY_MODULE OR COOLPROP_VXWORKS_LIBRARY)
 endif()
 
 if (COOLPROP_MATHCAD_MODULE)
-    if(!WIN32)
+    if(NOT WIN32)
       message(FATAL_ERROR "COOLPROP_MATHCAD_MODULE can only be used on windows host")
     endif()
     IF( "${COOLPROP_MATHCAD_ROOT}" STREQUAL "")
@@ -422,7 +424,7 @@ if (COOLPROP_EES_MODULE)
   message(STATUS "Injecting the version COOLPROP_VERSION=${COOLPROP_VERSION}")
   # Put the version into the InnoInstaller setup file
   CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/BuildInnoInstaller.iss.in" "${CMAKE_CURRENT_BINARY_DIR}/BuildInnoInstaller.iss")
-  if (!MSVC)
+  if (NOT MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
   add_dependencies (COOLPROP_EES generate_headers)
@@ -676,8 +678,8 @@ if (COOLPROP_JAVA_MODULE)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
   endif()
   
-  if (!MSVC)
-    set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
+  if (NOT MSVC)
+    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
   endif()
   add_dependencies (${app_name} generate_headers)
   
@@ -787,7 +789,7 @@ if (COOLPROP_PHP_MODULE)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
   endif()
   
-  if (!MSVC)
+  if (NOT MSVC)
     set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
   endif()
   add_dependencies (CoolProp generate_headers)
@@ -1268,27 +1270,32 @@ if (COOLPROP_SNIPPETS)
   foreach (snippet ${snippets})
     
     get_filename_component(snippet_name ${snippet} NAME)
+    get_filename_component(snippet_exe ${snippet} NAME_WE)
     message(STATUS "snippet_name = ${snippet_name}")
     
-    add_executable        (${snippet_name} ${snippet})
-    add_dependencies      (${snippet_name} CoolProp)
-    target_link_libraries (${snippet_name} CoolProp)
+    add_executable        (${snippet_exe} ${snippet})
+    add_dependencies      (${snippet_exe} CoolProp)
+    target_link_libraries (${snippet_exe} CoolProp)
     if(UNIX)
-      target_link_libraries (${snippet_name} ${CMAKE_DL_LIBS})
+      target_link_libraries (${snippet_exe} ${CMAKE_DL_LIBS})
     endif()
     
     if ( MSVC )
-        set_target_properties( ${snippet_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
-        set_target_properties( ${snippet_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/bin )
-        set_target_properties( ${snippet_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/bin )
+        set_target_properties( ${snippet_exe} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
+        set_target_properties( ${snippet_exe} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/bin )
+        set_target_properties( ${snippet_exe} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/bin )
         # etc for the other available configuration types (MinSizeRel, RelWithDebInfo)
+        set(BIN_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
+    else()
+        set(BIN_PATH "${CMAKE_CURRENT_BINARY_DIR}")
     endif ()
-    # Run it and save the output to a file with .output appended
-    message(STATUS "${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name}.output")
+
+    SET_PROPERTY(TARGET ${snippet_exe} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEXTERNC")
     
-    add_custom_command(TARGET ${snippet_name}
+    # Run it and save the output to a file with .output appended
+    add_custom_command(TARGET ${snippet_exe}
                        POST_BUILD
-                       COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_CURRENT_SOURCE_DIR}/Web/coolprop/snippets/${snippet_name}.output)
+                       COMMAND ${BIN_PATH}/${snippet_exe} > ${CMAKE_CURRENT_SOURCE_DIR}/Web/coolprop/snippets/${snippet_name}.output)
   
   endforeach()
   
@@ -1300,7 +1307,7 @@ if (COOLPROP_CLANG_ADDRESS_SANITIZER)
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_main.cxx")
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable        (CatchTestRunner ${APP_SOURCES})
-  add_dependencies      (CatchTestRuanner generate_headers)
+  add_dependencies      (CatchTestRunner generate_headers)
   set_target_properties (CatchTestRunner PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
   set(CMAKE_EXE_LINKER_FLAGS "-fsanitize=address -lstdc++")
   if(UNIX)

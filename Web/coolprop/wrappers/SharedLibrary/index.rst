@@ -116,7 +116,7 @@ For 32-bit compilation::
     # Make a build folder
     mkdir build && cd build
     # Generate builder
-    cmake .. -DCOOLPROP_SHARED_LIBRARY=ON
+    cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DFORCE_BITNESS_32=ON
     # Build
     cmake --build .
 
@@ -128,7 +128,7 @@ For 64-bit compilation::
     cd CoolProp
     # Make a build folder
     mkdir build && cd build
-    # Generate builder
+    # Generate builder (defaults to 64-bit)
     cmake .. -DCOOLPROP_SHARED_LIBRARY=ON
     # Build
     cmake --build .
