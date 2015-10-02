@@ -63,11 +63,10 @@ A^{-1} =  \left[ \begin{array}{*{16}c} 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0
 typedef std::vector<std::vector<double> > mat;
 class BicubicBackend : public TabularBackend
 {
-    protected:
-        
     public:
         /// Instantiator; base class loads or makes tables
-		BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS){
+        BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend(AS){
+            imposed_phase_index = iphase_not_imposed;
             // If a pure fluid, don't need to set fractions, go ahead and build
             if (this->AS->get_mole_fractions().size() == 1){
                 check_tables();

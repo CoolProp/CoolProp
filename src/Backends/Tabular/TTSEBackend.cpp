@@ -39,20 +39,37 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                 using_single_phase_table = true; // Use the table !
                 std::size_t iL, iV;
                 CoolPropDbl hL = 0, hV = 0;
-                if (pure_saturation.is_inside(iP, _p, iHmolar, _hmolar, iL, iV, hL, hV)){
+                std::size_t iclosest = 0;
+                SimpleState closest_state;
+                bool is_two_phase = false;
+                // Phase is imposed, use it
+                if (imposed_phase_index != iphase_not_imposed){
+                    is_two_phase = (imposed_phase_index == iphase_twophase);
+                }
+                else{
+                    if (is_mixture){
+                        is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, iHmolar, _hmolar, iclosest, closest_state);
+                    }
+                    else{
+                        is_two_phase = pure_saturation.is_inside(iP, _p, iHmolar, _hmolar, iL, iV, hL, hV);
+                    }
+                }
+                if ( is_two_phase ){
                     using_single_phase_table = false;
                     _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
                     if(!is_in_closed_range(0.0,1.0,static_cast<double>(_Q))){
                         throw ValueError("vapor quality is not in (0,1)");
                     }
                     else{
-                        cached_saturation_iL = iL; cached_saturation_iV = iV;
+                        cached_saturation_iL = iL; cached_saturation_iV = iV; _phase = iphase_twophase;
                     }
                 }
                 else{
                     // Find and cache the indices i, j
                     selected_table = SELECTED_PH_TABLE;
                     single_phase_logph.find_native_nearest_good_neighbor(_hmolar, _p, cached_single_phase_i, cached_single_phase_j);
+                    // Recalculate the phase
+                    recalculate_singlephase_phase();
                 }
             }
             break;
@@ -75,7 +92,23 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
             using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
             std::size_t iL, iV;
             CoolPropDbl zL = 0, zV = 0;
-            if (pure_saturation.is_inside(iP, _p, otherkey, otherval, iL, iV, zL, zV)){
+            std::size_t iclosest = 0;
+            SimpleState closest_state;
+            bool is_two_phase = false;
+            // Phase is imposed, use it
+            if (imposed_phase_index != iphase_not_imposed)
+            {
+                is_two_phase = (imposed_phase_index == iphase_twophase);
+            }
+            else{
+                if (is_mixture){
+                    is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, otherkey, otherval, iclosest, closest_state);
+                }
+                else{
+                    is_two_phase = pure_saturation.is_inside(iP, _p, otherkey, otherval, iL, iV, zL, zV);
+                }
+            }
+            if (is_two_phase){
                 using_single_phase_table = false;
                 if (otherkey == iDmolar){
                     _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
@@ -87,7 +120,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                     throw ValueError("vapor quality is not in (0,1)");
                 }
                 else{
-                    cached_saturation_iL = iL; cached_saturation_iV = iV;
+                    cached_saturation_iL = iL; cached_saturation_iV = iV; _phase = iphase_twophase;
                 }
             }
             else{
@@ -96,6 +129,8 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                 single_phase_logph.find_nearest_neighbor(iP, _p, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
 				// Now find hmolar
                 invert_single_phase_x(single_phase_logph, otherkey, otherval, _p, cached_single_phase_i, cached_single_phase_j);
+                // Recalculate the phase
+                recalculate_singlephase_phase();
             }
             break;
         }
@@ -131,6 +166,8 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                     // Find and cache the indices i, j
                     selected_table = SELECTED_PT_TABLE;
                     single_phase_logpT.find_native_nearest_neighbor(_T, _p, cached_single_phase_i, cached_single_phase_j);
+                    // Recalculate the phase
+                    recalculate_singlephase_phase();
                 }
             }
             break;
@@ -155,7 +192,22 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
             using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
             std::size_t iL, iV;
             CoolPropDbl zL = 0, zV = 0;
-            if (pure_saturation.is_inside(iT, _T, otherkey, otherval, iL, iV, zL, zV)){
+            std::size_t iclosest = 0;
+            SimpleState closest_state;
+            bool is_two_phase = false;
+            // Phase is imposed, use it
+            if (imposed_phase_index != iphase_not_imposed){
+                is_two_phase = (imposed_phase_index == iphase_twophase);
+            }
+            else{
+                if (is_mixture){
+                    is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iT, _T, otherkey, otherval, iclosest, closest_state);
+                }
+                else{
+                    is_two_phase = pure_saturation.is_inside(iT, _T, otherkey, otherval, iL, iV, zL, zV);
+                }
+            }
+            if ( is_two_phase ){
                 using_single_phase_table = false;
                 if (otherkey == iDmolar){
                     _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
@@ -167,7 +219,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                     throw ValueError("vapor quality is not in (0,1)");
                 }
                 else{
-                    cached_saturation_iL = iL; cached_saturation_iV = iV;
+                    cached_saturation_iL = iL; cached_saturation_iV = iV; _phase = iphase_twophase;
                 }
             }
             else{
@@ -176,6 +228,8 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                 single_phase_logpT.find_nearest_neighbor(iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
 				// Now find hmolar
                 invert_single_phase_y(single_phase_logpT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
+                // Recalculate the phase
+                recalculate_singlephase_phase();
             }
             break;
         }
@@ -200,7 +254,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                     }
                 }
                 _T = _Q*TV + (1-_Q)*TL;
-                cached_saturation_iL = iL; cached_saturation_iV = iV;
+                cached_saturation_iL = iL; cached_saturation_iV = iV; _phase = iphase_twophase;
             }
             break;
         }
@@ -226,7 +280,7 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                     pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, pL, pV);
                 }
                 _p = _Q*pV + (1-_Q)*pL;
-                cached_saturation_iL = iL; cached_saturation_iV = iV;
+                cached_saturation_iL = iL; cached_saturation_iV = iV; _phase = iphase_twophase;
             }
             break;
         }
