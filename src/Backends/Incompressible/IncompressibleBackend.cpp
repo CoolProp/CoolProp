@@ -28,7 +28,7 @@ IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) {
     this->fluid = fluid;
     this->set_reference_state();
     if (this->fluid->is_pure()){
-    	this->set_fractions(std::vector<CoolPropDbl>(1,0.0));
+    	this->set_fractions(std::vector<CoolPropDbl>(1,1.0));
     }
 }
 
@@ -36,7 +36,7 @@ IncompressibleBackend::IncompressibleBackend(const std::string &fluid_name) {
     this->fluid = &get_incompressible_fluid(fluid_name);
     this->set_reference_state();
     if (this->fluid->is_pure()){
-    	this->set_fractions(std::vector<CoolPropDbl>(1,0.0));
+    	this->set_fractions(std::vector<CoolPropDbl>(1,1.0));
     }
 }
 
