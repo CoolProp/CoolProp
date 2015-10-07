@@ -42,8 +42,6 @@ def process_fluid_state(fluid_ref):
 #             fluid = fluid_def[0]
 #         else: 
 #             raise ValueError("This is not a valid fluid_ref string: {0:s}".format(str(fluid_ref)))
-        print(backend, '&'.join(fluids))
-        print(fluids, fractions)
         state = AbstractState(backend, '&'.join(fluids))
         #state.set_mass_fractions(fractions)
         return state 
