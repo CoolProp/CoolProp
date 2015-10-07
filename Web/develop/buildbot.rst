@@ -493,3 +493,32 @@ to the git repository. However, if you are unlucky and your commit coincides wit
 figure generation, you will experience a long
 delay between your commit and the appearance of the freshly generated documentation
 on the website. You can follow the progress in the logfiles on the buildbot master though.
+
+
+Work in Progress - Dockerfile Generator
+=======================================
+
+In 2015, some of the buildbot slaves did not perform as expected. Especially the 
+Python builds on the 64bit Linux machine took ages to complete and we could not 
+find any obvious reason for this. 
+
+To make sure that there are no hidden flaws in the configuration of the buildbots 
+or the virtual machines. This section describes the attempt to transfer all 
+configuration tasks to script that generates several versions of a ``Dockerfile``. 
+A templating engine is used to create configuration files that can be used to build 
+docker containers. Storing all configuration tasks in a structured reduces the risk 
+of data loss and allows us to move the slaves between different machines. 
+
+.. warning::
+  Remember that **each** command in the ``Dockerfile`` leads to the creation of a 
+  **new** layer of files that cannot be deleted. Be careful here and try to bundle 
+  commands to save disk space and to keep garbage out of the image. See 
+  http://jrruethe.github.io/blog/2015/09/20/dockerfile-generator/ and 
+  https://docs.docker.com/articles/dockerfile_best-practices/ for more good
+  advice on this topic.
+
+
+
+
+
+
