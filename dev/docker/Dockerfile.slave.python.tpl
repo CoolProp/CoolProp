@@ -13,6 +13,12 @@ RUN curl -o miniconda.sh http://repo.continuum.io/miniconda/Miniconda-latest-Lin
 #
 env PATH /home/buildbot/miniconda3/bin:/home/buildbot/miniconda/bin:$PATH
 #
-RUN \{% for py in cnd_pys %}
+RUN \{% for py in cnd_env_pyt %}
 conda create -n {{ py }}{% for pkg in cnd_dev_pkgs %} {{ pkg }}{% endfor %} && \{% endfor %}
+conda clean
+#
+RUN \{% for py in cnd_env %}
+source activate {{ py }} && \
+pip install{% for pkg in pip_add_pkgs %} {{ pkg }}{% endfor %} && \
+source deactivate && \{% endfor %}
 conda clean

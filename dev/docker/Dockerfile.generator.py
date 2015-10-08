@@ -35,9 +35,13 @@ lin_dev_pkgs += ["curl", "wget"]
 # 2) pip packages 
 pip_dev_pkgs = ["buildbot-slave"]
 pip_pkgs = ["numpy", "scipy", "matplotlib", "pandas"]
+pip_add_pkgs = ["wheel"]
 
 # 3) conda packages
-cnd_pys = ["CoolProp27 python=2.7", "CoolProp33 python=3.3", "CoolProp34 python=3.4"]
+cnd_env = ["CoolProp27", "CoolProp33", "CoolProp34"]
+cnd_pyt = ["python=2.7", "python=3.3", "python=3.4"]
+
+
 cnd_dev_pkgs =  ["cython", "pip", "jinja2", "pyyaml", "pycrypto"]
 cnd_run_pkgs =  ["numpy", "scipy", "matplotlib", "pandas"]
 #cnd_dev_pkgs += ["pywin32", "unxutils", "ndg-httpsclient"]
@@ -49,7 +53,9 @@ local_dict = dict(
   email  = email,
   lin_dev_pkgs = lin_dev_pkgs,
   pip_dev_pkgs = pip_dev_pkgs,
-  cnd_pys = cnd_pys,
+  pip_add_pkgs = pip_add_pkgs,
+  cnd_env_pyt = [str(x[0])+" "+str(x[1]) for x in zip(cnd_env,cnd_pyt)],
+  cnd_env = cnd_env,
   cnd_dev_pkgs = cnd_dev_pkgs+cnd_run_pkgs,
   masterhost = "master",
   slavename = "namew",
