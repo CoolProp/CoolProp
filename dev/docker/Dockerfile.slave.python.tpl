@@ -21,4 +21,4 @@ RUN \{% for py in cnd_env %}
 source activate {{ py }} && \
 pip install{% for pkg in pip_add_pkgs %} {{ pkg }}{% endfor %} && \
 source deactivate && \{% endfor %}
-conda clean
+conda clean -yilts
