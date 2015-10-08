@@ -706,6 +706,7 @@ public:
 class TabularBackend : public AbstractState
 {
     protected:
+        phases imposed_phase_index;
         bool tables_loaded, using_single_phase_table, is_mixture;
         enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE};
         selected_table_options selected_table;
@@ -762,6 +763,42 @@ class TabularBackend : public AbstractState
 		}
         TabularDataSet * dataset;
 
+        void recalculate_singlephase_phase()
+        {
+            if (p() > p_critical()){
+                if (T() > T_critical()){
+                    _phase = iphase_supercritical;
+                }
+                else{
+                    _phase = iphase_supercritical_liquid;
+                }
+            }
+            else{
+                if (T() > T_critical()){
+                    _phase = iphase_supercritical_gas;
+                }
+                else{
+                    // Liquid or vapor
+                    if (rhomolar() > rhomolar_critical()){
+                        _phase = iphase_liquid;
+                    }
+                    else{
+                        _phase = iphase_gas;
+                    }
+                }
+            }
+        }
+        /** \brief Specify the phase - this phase will always be used in calculations
+        *
+        * @param phase_index The index from CoolProp::phases
+        */
+        void calc_specify_phase(phases phase_index){ imposed_phase_index = phase_index; };
+
+        /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
+        */
+        void calc_unspecify_phase(){ imposed_phase_index = iphase_not_imposed; };
+
+        phases calc_phase(void){ return _phase; }
         CoolPropDbl calc_T_critical(void){return this->AS->T_critical();};
         CoolPropDbl calc_Ttriple(void){return this->AS->Ttriple();};
         CoolPropDbl calc_p_triple(void){return this->AS->p_triple();};

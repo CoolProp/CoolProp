@@ -74,7 +74,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
     {
         throw ValueError("TREND backend not yet implemented");
     }
-    else if (!backend.compare("?"))
+    else if (!backend.compare("?") || backend.empty())
     {
         std::size_t idel = fluid_names[0].find("::");
         // Backend has not been specified, and we have to figure out what the backend is by parsing the string

@@ -1270,27 +1270,32 @@ if (COOLPROP_SNIPPETS)
   foreach (snippet ${snippets})
     
     get_filename_component(snippet_name ${snippet} NAME)
+    get_filename_component(snippet_exe ${snippet} NAME_WE)
     message(STATUS "snippet_name = ${snippet_name}")
     
-    add_executable        (${snippet_name} ${snippet})
-    add_dependencies      (${snippet_name} CoolProp)
-    target_link_libraries (${snippet_name} CoolProp)
+    add_executable        (${snippet_exe} ${snippet})
+    add_dependencies      (${snippet_exe} CoolProp)
+    target_link_libraries (${snippet_exe} CoolProp)
     if(UNIX)
-      target_link_libraries (${snippet_name} ${CMAKE_DL_LIBS})
+      target_link_libraries (${snippet_exe} ${CMAKE_DL_LIBS})
     endif()
     
     if ( MSVC )
-        set_target_properties( ${snippet_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
-        set_target_properties( ${snippet_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/bin )
-        set_target_properties( ${snippet_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/bin )
+        set_target_properties( ${snippet_exe} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
+        set_target_properties( ${snippet_exe} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/bin )
+        set_target_properties( ${snippet_exe} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/bin )
         # etc for the other available configuration types (MinSizeRel, RelWithDebInfo)
+        set(BIN_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
+    else()
+        set(BIN_PATH "${CMAKE_CURRENT_BINARY_DIR}")
     endif ()
-    # Run it and save the output to a file with .output appended
-    message(STATUS "${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name}.output")
+
+    SET_PROPERTY(TARGET ${snippet_exe} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEXTERNC")
     
-    add_custom_command(TARGET ${snippet_name}
+    # Run it and save the output to a file with .output appended
+    add_custom_command(TARGET ${snippet_exe}
                        POST_BUILD
-                       COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/${snippet_name} > ${CMAKE_CURRENT_SOURCE_DIR}/Web/coolprop/snippets/${snippet_name}.output)
+                       COMMAND ${BIN_PATH}/${snippet_exe} > ${CMAKE_CURRENT_SOURCE_DIR}/Web/coolprop/snippets/${snippet_name}.output)
   
   endforeach()
   
@@ -1302,7 +1307,7 @@ if (COOLPROP_CLANG_ADDRESS_SANITIZER)
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_main.cxx")
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable        (CatchTestRunner ${APP_SOURCES})
-  add_dependencies      (CatchTestRuanner generate_headers)
+  add_dependencies      (CatchTestRunner generate_headers)
   set_target_properties (CatchTestRunner PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
   set(CMAKE_EXE_LINKER_FLAGS "-fsanitize=address -lstdc++")
   if(UNIX)

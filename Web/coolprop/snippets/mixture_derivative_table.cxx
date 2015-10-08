@@ -1,5 +1,5 @@
 #include "CoolProp.h"
-#include "MixtureDerivatives.h"
+#include "Backends/Helmholtz/MixtureDerivatives.h"
 #include <iostream>
 using namespace CoolProp;
 int main()
@@ -11,7 +11,7 @@ int main()
     shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(components));
 	HelmholtzEOSMixtureBackend &rHEOS = *(HEOS.get());
     HEOS->set_mole_fractions(z);
-	HEOS->specify_phase(iphase_gas); // So that we don't do a 
+	HEOS->specify_phase(iphase_gas); // So that we don't do a phase check
     HEOS->update(DmolarT_INPUTS, 300, 300);
     
     std::vector<std::string> terms;
@@ -43,7 +43,7 @@ int main()
     for (std::vector<std::string>::iterator it = terms.begin(); it != terms.end(); ++it)
     {
         if (!it->compare("p")){
-            printf("p: %0.16Lg\n", HEOS->p());
+            printf("p: %0.16g\n", HEOS->p());
         }
 		else if (!it->compare("p2(deriv)")){
 			printf("p calculated by rho*R*T*(1+delta*deltadar_dDelta): %0.16Lg\n", HEOS->rhomolar()*HEOS->gas_constant()*HEOS->T()*(1+HEOS->delta()*HEOS->dalphar_dDelta()));
@@ -52,16 +52,16 @@ int main()
             printf("dalphar_dDelta: %0.16Lg\n", HEOS->dalphar_dDelta());
         }
 		else if (!it->compare("rhor")){
-			printf("rhor: %0.16Lg\n", HEOS->get_reducing_state().rhomolar);
+			printf("rhor: %0.16g\n", HEOS->get_reducing_state().rhomolar);
         }
 		else if (!it->compare("Tr")){
-			printf("Tr: %0.16Lg\n", HEOS->get_reducing_state().T);
+			printf("Tr: %0.16g\n", HEOS->get_reducing_state().T);
         }
 		else if (!it->compare("dTr_dxi")){
-			printf("dTr_dxi: %0.16Lg\n", HEOS->Reducing.p->dTrdxi__constxj(rHEOS.get_mole_fractions(), 0, XN_DEPENDENT));
+			printf("dTr_dxi: %0.16Lg\n", HEOS->Reducing->dTrdxi__constxj(rHEOS.get_mole_fractions(), 0, XN_DEPENDENT));
         }
 		else if (!it->compare("drhor_dxi")){
-			printf("drhor_dxi: %0.16Lg\n", HEOS->Reducing.p->drhormolardxi__constxj(rHEOS.get_mole_fractions(), 0, XN_DEPENDENT));
+			printf("drhor_dxi: %0.16Lg\n", HEOS->Reducing->drhormolardxi__constxj(rHEOS.get_mole_fractions(), 0, XN_DEPENDENT));
         }
 		else if(!it->compare("ndpdV__constT_n")){
             printf("ndpdV__constT_n: %0.16Lg\n", MixtureDerivatives::ndpdV__constT_n(rHEOS));

@@ -63,6 +63,13 @@ Octave Requirements
 * SWIG
 * C#
 
+OSX
+---
+
+For OSX, to install the necessary tools using homebrew, you can do::
+    
+    homebrew install mono
+
 Linux
 -----
 

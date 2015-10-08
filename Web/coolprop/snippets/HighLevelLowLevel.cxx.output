@@ -1,7 +1,1 @@
-Loading table: C:\Users\Belli/.CoolProp/Tables/HelmholtzEOSBackend(Water)/single_phase_logph.bin.z
-Loaded table: C:\Users\Belli/.CoolProp/Tables/HelmholtzEOSBackend(Water)/single_phase_logph.bin.z in 0.139 sec.
-Loading table: C:\Users\Belli/.CoolProp/Tables/HelmholtzEOSBackend(Water)/single_phase_logpT.bin.z
-Loaded table: C:\Users\Belli/.CoolProp/Tables/HelmholtzEOSBackend(Water)/single_phase_logpT.bin.z in 0.133 sec.
-Loading table: C:\Users\Belli/.CoolProp/Tables/HelmholtzEOSBackend(Water)/pure_saturation.bin.z
-Loaded table: C:\Users\Belli/.CoolProp/Tables/HelmholtzEOSBackend(Water)/pure_saturation.bin.z in 0.003 sec.
-value(all): 8339004.420912, 0.45 us/call
+value(all): 8339004.432517, 0.59425 us/call

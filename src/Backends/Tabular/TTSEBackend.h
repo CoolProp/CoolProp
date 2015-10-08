@@ -12,6 +12,7 @@ class TTSEBackend : public TabularBackend
         std::string backend_name(void){return "TTSEBackend";}
         /// Instantiator; base class loads or makes tables
         TTSEBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS) {
+            imposed_phase_index = iphase_not_imposed;
             // If a pure fluid, don't need to set fractions, go ahead and build
             if (this->AS->get_mole_fractions().size() == 1){
                 check_tables();
