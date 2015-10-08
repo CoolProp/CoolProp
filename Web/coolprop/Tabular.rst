@@ -216,7 +216,7 @@ More Information
 
 The tables are stored in a zipped format using the msgpack package and miniz.  If you want to see what data is serialized in the tabular data, you can unzip and unpack into python (or other high-level languages) using something roughly like::
 
-    import msgpack, zlib, StringIO
+    import msgpack, zlib, StringIO, numpy as np
     
     with open(r'/path/to/home/.CoolProp/Tables/HelmholtzEOSBackend(R245fa)/single_phase_logph.bin.z','rb') as fp:
         ph = zlib.decompress(fp.read())
