@@ -79,4 +79,15 @@ f.write(tpl_first_line.format("# "+tpl_mtime_line,template_path))
 f.write(template.render(**local_dict))
 f.close()
 
-#python Dockerfile.generator.py && docker build --force-rm=true -f Dockerfile.slave . | tee dockerlog.txt
+
+print(r"""
+Delete all docker containers: docker stop `docker ps -aq`; docker rm `docker ps -aq`;
+Delete all dangling docker images: docker rmi `docker images -f "dangling=true" -q`;
+
+Generate Dockerfiles: python Dockerfile.generator.py
+Build images:
+docker build --force-rm=true -t coolprop:slavebase -f Dockerfile.slave.base . | tee dockerlog.txt && \
+docker build --force-rm=true -t coolprop:slavepython -f Dockerfile.slave.python . | tee -a dockerlog.txt
+""")
+
+
