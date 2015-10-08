@@ -15,7 +15,7 @@ env PATH /home/buildbot/miniconda3/bin:/home/buildbot/miniconda/bin:$PATH
 #
 RUN \{% for py in cnd_env_pyt %}
 conda create -n {{ py }}{% for pkg in cnd_dev_pkgs %} {{ pkg }}{% endfor %} && \{% endfor %}
-conda clean
+conda clean -yilts
 #
 RUN \{% for py in cnd_env %}
 source activate {{ py }} && \
