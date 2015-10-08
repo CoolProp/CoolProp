@@ -361,10 +361,10 @@ class PropsPlot(PropertyPlot):
 
 
 if __name__ == "__main__":
-    plot = PropertyPlot('HEOS::n-Pentane', 'PH', unit_system='EUR')
+    plot = PropertyPlot('HEOS::n-Pentane', 'PD', unit_system='EUR')#, reciprocal_density=True)
     plot.calc_isolines(CoolProp.iT)
     plot.calc_isolines(CoolProp.iQ, num=11)
-    plot.calc_isolines(CoolProp.iSmass)
-    plot.calc_isolines(CoolProp.iDmass)
+    #plot.calc_isolines(CoolProp.iSmass)
+    #plot.calc_isolines(CoolProp.iHmass)
     plot.show()
     
