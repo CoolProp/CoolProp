@@ -26,6 +26,7 @@ protected:
 
 	/// Additional cached elements used for the partial derivatives
 	CachedElement  _cmass, _hmass, _rhomass, _smass, _umass;
+	CachedElement  _drhodTatPx, _dsdTatPx, _dhdTatPx, _dsdTatPxdT, _dhdTatPxdT, _dsdpatTx, _dhdpatTx;
 
     IncompressibleFluid *fluid;
 
@@ -119,6 +120,14 @@ public:
 	/// Return the mass constant pressure specific heat in J/kg/K
 	double cmass(void);
 
+	double drhodTatPx(void);
+	double dsdTatPx(void);
+	double dhdTatPx(void);
+	double dsdTatPxdT(void);
+	double dhdTatPxdT(void);
+	double dsdpatTx(void);
+	double dhdpatTx(void);
+
 	/// Return the temperature in K
 	double T_ref(void);
 	/// Return the pressure in Pa
@@ -191,6 +200,9 @@ public:
 
 
 protected:
+    /// Calculate the first partial derivative for the desired derivative
+    CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
+
     /* Below are direct calculations of the derivatives. Nothing
 	 * special is going on, we simply use the polynomial class to
 	 * derive the different functions with respect to temperature.

@@ -135,6 +135,14 @@ bool IncompressibleBackend::clear() {
     this->_rhomass.clear();
     this->_smass.clear();
     this->_umass.clear();
+
+    this->_drhodTatPx.clear();
+    this->_dsdTatPx.clear();
+    this->_dhdTatPx.clear();
+    this->_dsdTatPxdT.clear();
+    this->_dhdTatPxdT.clear();
+    this->_dsdpatTx.clear();
+    this->_dhdpatTx.clear();
     // Done
     return true;
 }
@@ -265,6 +273,35 @@ double IncompressibleBackend::umass(void){
 double IncompressibleBackend::cmass(void){
 	if (!_cmass) _cmass = calc_cmass();
 	return _cmass;
+}
+
+double IncompressibleBackend::drhodTatPx(void){
+	if (!_drhodTatPx) _drhodTatPx = calc_drhodTatPx(_T,_p,_fractions[0]);
+	return _drhodTatPx;
+}
+double IncompressibleBackend::dsdTatPx(void){
+	if (!_dsdTatPx) _dsdTatPx = calc_dsdTatPx(_T,_p,_fractions[0]);
+	return _dsdTatPx;
+}
+double IncompressibleBackend::dhdTatPx(void){
+	if (!_dhdTatPx) _dhdTatPx = calc_dhdTatPx(_T,_p,_fractions[0]);
+	return _dhdTatPx;
+}
+double IncompressibleBackend::dsdTatPxdT(void){
+	if (!_dsdTatPxdT) _dsdTatPxdT = calc_dsdTatPxdT(_T,_p,_fractions[0]);
+	return _dsdTatPxdT;
+}
+double IncompressibleBackend::dhdTatPxdT(void){
+	if (!_dhdTatPxdT) _dhdTatPxdT = calc_dhdTatPxdT(_T,_p,_fractions[0]);
+	return _dhdTatPxdT;
+}
+double IncompressibleBackend::dsdpatTx(void){
+	if (!_dsdpatTx) _dsdpatTx = calc_dsdpatTx(rhomass(),drhodTatPx());
+	return _dsdpatTx;
+}
+double IncompressibleBackend::dhdpatTx(void){
+	if (!_dhdpatTx) _dhdpatTx = calc_dhdpatTx(_T,rhomass(),drhodTatPx());
+	return _dhdpatTx;
 }
 
 /// Return the temperature in K
@@ -441,6 +478,23 @@ CoolPropDbl IncompressibleBackend::raw_calc_hmass(double T, double p, double x){
 CoolPropDbl IncompressibleBackend::raw_calc_smass(double T, double p, double x){
 	return calc_dsdTatPxdT(T,p,x) + p * calc_dsdpatTx(  fluid->rho(T, p, x),calc_drhodTatPx(T,p,x));
 };
+
+/// Calculate the first partial derivative for the desired derivative
+CoolPropDbl IncompressibleBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){
+	// TODO: Can this be accelerated?
+	if ( (Of==iDmass) && (Wrt==iT) && (Constant==iP) ) return drhodTatPx();
+	if ( (Of==iSmass) && (Wrt==iT) && (Constant==iP) ) return dsdTatPx();
+	if ( (Of==iHmass) && (Wrt==iT) && (Constant==iP) ) return dhdTatPx();
+	//if ( (Of==iHmass) && (Wrt==iP) && (Constant==iT) ) return dsdTatPxdT();
+	//if ( (Of==iHmass) && (Wrt==iP) && (Constant==iT) ) return dhdTatPxdT();
+	if ( (Of==iSmass) && (Wrt==iP) && (Constant==iT) ) return dsdpatTx();
+	if ( (Of==iHmass) && (Wrt==iP) && (Constant==iT) ) return dhdpatTx();
+
+	if ( (Of==iDmass) && (Wrt==iHmass) && (Constant==iP) ) return drhodTatPx()/dhdTatPx();
+	if ( (Of==iDmass) && (Wrt==iP) ) return 0.0; // incompressible!
+
+	throw ValueError("Incompressible fluids only support a limited subset of partial derivatives.");
+}
 
 /* Other useful derivatives
  */
