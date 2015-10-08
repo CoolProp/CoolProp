@@ -15,6 +15,10 @@ RUN groupadd -r buildbot && \
 #
 USER buildbot
 WORKDIR /home/buildbot
-RUN buildslave create-slave . {{ masterhost }} {{ slavename }} {{ slavepassword }} ## Add env variables
-ENTRYPOINT ["/usr/local/bin/buildslave"]
-CMD ["start", "--nodaemon"]
+#
+#RUN buildslave create-slave ${SLAVEDIR} ${MASTERHOST} ${SLAVENAME} ${SLAVEPASSWORD}
+#ENTRYPOINT ["/usr/local/bin/buildslave"]
+#CMD ["start", "--nodaemon"]
+#
+COPY ./Dockerfile.slave.entrypoint.sh /
+ENTRYPOINT ["/Dockerfile.slave.entrypoint.sh"]

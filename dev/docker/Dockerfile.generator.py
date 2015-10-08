@@ -56,12 +56,31 @@ local_dict = dict(
   pip_add_pkgs = pip_add_pkgs,
   cnd_env_pyt = [str(x[0])+" "+str(x[1]) for x in zip(cnd_env,cnd_pyt)],
   cnd_env = cnd_env,
-  cnd_dev_pkgs = cnd_dev_pkgs+cnd_run_pkgs,
-  masterhost = "master",
-  slavename = "namew",
-  slavepassword = "passw"
+  cnd_dev_pkgs = cnd_dev_pkgs+cnd_run_pkgs
 )
 
+env_example="""SLAVEDIR=slavedir
+MASTERHOST=coolprop.dreamhosters.com:port
+SLAVENAME=slavename
+SLAVEPASSWORD=pass
+"""
+target = 'Dockerfile.slave.env.list'
+f = codecs.open(os.path.join(tar_dir,target),mode='wb',encoding='utf-8')
+f.write(env_example)
+f.close()
+#
+entry_script="""#!/bin/bash
+THEDIR="${SLAVEDIR}"
+if [ ! -d "$THEDIR" ]; then
+  /usr/local/bin/buildslave create-slave ${SLAVEDIR} ${MASTERHOST} ${SLAVENAME} ${SLAVEPASSWORD}
+fi
+/usr/local/bin/buildslave start --nodaemon
+"""
+target = 'Dockerfile.slave.entrypoint.sh'
+f = codecs.open(os.path.join(tar_dir,target),mode='wb',encoding='utf-8')
+f.write(entry_script)
+f.close()
+os.chmod(os.path.join(tar_dir,target), 0o755)
 #
 target = 'Dockerfile.slave.base'
 template_path = target+'.tpl'
@@ -88,6 +107,9 @@ Generate Dockerfiles: python Dockerfile.generator.py
 Build images:
 docker build --force-rm=true -t coolprop:slavebase -f Dockerfile.slave.base . | tee dockerlog.txt && \
 docker build --force-rm=true -t coolprop:slavepython -f Dockerfile.slave.python . | tee -a dockerlog.txt
+
+Start the images with:
+docker run --env-file ./Dockerfile.slave.env.list coolprop:slavepython
 """)
 
 
