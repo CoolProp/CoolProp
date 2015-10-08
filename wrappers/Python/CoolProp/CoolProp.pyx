@@ -481,6 +481,32 @@ cpdef int get_debug_level():
 #         return False
 #
 
+
+cpdef extract_backend(string in_str):
+    """
+    A Python wrapper of C++ function :cpapi:`CoolProp::extract_backend` .
+    """
+    cdef string bck, fld
+    # Extract the backend and the fluid from the input string
+    _extract_backend(in_str, bck, fld)
+    return bck, fld
+
+
+cpdef extract_fractions(string flds):
+    """
+    A Python wrapper of C++ function :cpapi:`CoolProp::extract_fractions` .
+    """
+    cdef vector[double] frcs
+    cdef string del_flds    
+    # Extract the fractions
+    #frcs.clear()
+    frcs.push_back(1.0)
+    del_flds = _extract_fractions(flds, frcs)
+    # Extract the fluids
+    fluids = del_flds.split('&')
+    return fluids,frcs
+
+
 cdef toSI(constants_header.parameters key, double val):
     """
     Convert a value in kSI system to SI system (supports a limited subset of variables)
