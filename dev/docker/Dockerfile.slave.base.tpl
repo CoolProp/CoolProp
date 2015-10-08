@@ -1,5 +1,5 @@
 # Set the base image to Debian
-FROM debian:stable
+FROM debian:testing
 # File Author / Maintainer
 MAINTAINER {{ author }} ({{ email }})
 #
@@ -10,11 +10,11 @@ RUN apt-get update -qq && \
 #
 RUN pip install{% for pkg in pip_dev_pkgs %} {{ pkg }}{% endfor %}
 #
-RUN groupadd -r buildbot && useradd -r -g buildbot buildbot && \
-    mkdir /buildslave && chown buildbot:buildbot /buildslave
+RUN groupadd -r buildbot && \
+    useradd -r -d /home/buildbot -m -s /bin/bash -g buildbot buildbot # && mkdir /buildslave && chown buildbot:buildbot /buildslave
 #
 USER buildbot
-WORKDIR /buildslave
-RUN buildslave create-slave . {{ masterhost }} {{ slavename }} {{ slavepassword }}
+WORKDIR /home/buildbot
+RUN buildslave create-slave . {{ masterhost }} {{ slavename }} {{ slavepassword }} ## Add env variables
 ENTRYPOINT ["/usr/local/bin/buildslave"]
 CMD ["start", "--nodaemon"]

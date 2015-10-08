@@ -29,12 +29,19 @@ environment = jinja2.Environment(loader=loader)
 # 1) System packages
 lin_dev_pkgs =  ["python-dev", "python-pip", "build-essential" ]
 lin_dev_pkgs += ["libhdf5-serial-dev", "libnetcdf-dev", "liblapack-dev", "libatlas-dev"]
-lin_dev_pkgs += ["gfortran", "gcc"]
+lin_dev_pkgs += ["gfortran", "gcc", "cmake", "bash"]
 lin_dev_pkgs += ["curl", "wget"]
 
 # 2) pip packages 
 pip_dev_pkgs = ["buildbot-slave"]
 pip_pkgs = ["numpy", "scipy", "matplotlib", "pandas"]
+
+# 3) conda packages
+cnd_pys = ["CoolProp27 python=2.7", "CoolProp33 python=3.3", "CoolProp34 python=3.4"]
+cnd_dev_pkgs =  ["cython", "pip", "jinja2", "pyyaml", "pycrypto"]
+cnd_run_pkgs =  ["numpy", "scipy", "matplotlib", "pandas"]
+#cnd_dev_pkgs += ["pywin32", "unxutils", "ndg-httpsclient"]
+#cnd_dev_pkgs += ["ndg-httpsclient"]
 
 #
 local_dict = dict(
@@ -42,13 +49,23 @@ local_dict = dict(
   email  = email,
   lin_dev_pkgs = lin_dev_pkgs,
   pip_dev_pkgs = pip_dev_pkgs,
+  cnd_pys = cnd_pys,
+  cnd_dev_pkgs = cnd_dev_pkgs+cnd_run_pkgs,
   masterhost = "master",
   slavename = "namew",
   slavepassword = "passw"
 )
 
 #
-target = 'Dockerfile.slave'
+target = 'Dockerfile.slave.base'
+template_path = target+'.tpl'
+template = environment.get_template(template_path)
+f = codecs.open(os.path.join(tar_dir,target),mode='wb',encoding='utf-8')
+f.write(tpl_first_line.format("# "+tpl_mtime_line,template_path))
+f.write(template.render(**local_dict))
+f.close()
+#
+target = 'Dockerfile.slave.python'
 template_path = target+'.tpl'
 template = environment.get_template(template_path)
 f = codecs.open(os.path.join(tar_dir,target),mode='wb',encoding='utf-8')
@@ -56,3 +73,4 @@ f.write(tpl_first_line.format("# "+tpl_mtime_line,template_path))
 f.write(template.render(**local_dict))
 f.close()
 
+#python Dockerfile.generator.py && docker build --force-rm=true -f Dockerfile.slave . | tee dockerlog.txt
