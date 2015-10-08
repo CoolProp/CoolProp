@@ -37,21 +37,37 @@ class PropertyPlot(BasePlot):
             Default: create a new figure
         unit_system : string, ['EUR','KSI','SI']
             Select the units used for the plotting.  'EUR' is bar, kJ, C; 'KSI' is kPa, kJ, K; 'SI' is Pa, J, K
+        tp_limits : string, ['NONE','DEF','ACHP','ORC']
+            Select the limits in T and p.
         reciprocal_density : bool
             NOT IMPLEMENTED: If True, 1/rho will be plotted instead of rho 
 
         Examples
         --------
         >>> from CoolProp.Plots import PropertyPlot
-        >>> plot = PropertyPlot('Water', 'Ts')
+        >>> plot = PropertyPlot('HEOS::Water', 'TS')
+        >>> plot.calc_isolines()
+        >>> plot.show()
+        
+        >>> import CoolProp
+        >>> from CoolProp.Plots import PropertyPlot
+        >>> plot = PropertyPlot('HEOS::R134a', 'PH', unit_system='EUR', tp_limits='ACHP')
+        >>> plot.calc_isolines(CoolProp.iQ, num=11)
+        >>> plot.calc_isolines(CoolProp.iT, num=25)
+        >>> plot.calc_isolines(CoolProp.iS, num=15)
         >>> plot.show()
 
-        >>> plot = PropertyPlot('HEOS::n-Pentane', 'ph')
-        >>> plot.calc_isolines(CoolProp.iQ,[0.0,1.0],num=11)
-        >>> Ts_lim = plot.get_axis_limits(CoolProp.iT, CoolProp.iSmass)
-        >>> plot.calc_isolines(CoolProp.iT,Ts_lim[0:2])
-        >>> plot.calc_isolines(CoolProp.iSmass,Ts_lim[2:4])
-        >>> plot.savefig('pentane_ph.pdf')
+        >>> import CoolProp
+        >>> from CoolProp.Plots import PropertyPlot
+        >>> plot = PropertyPlot('HEOS::R245fa', 'TS', unit_system='EUR', tp_limits='ORC')
+        >>> plot.calc_isolines(CoolProp.iQ, num=11)
+        >>> plot.calc_isolines(CoolProp.iP, iso_range=[1,50], num=10, rounding=True)
+        >>> plot.draw()
+        >>> plot.isolines.clear()
+        >>> plot.props[CoolProp.iP]['color'] = 'green'
+        >>> plot.props[CoolProp.iP]['lw'] = '0.5'
+        >>> plot.calc_isolines(CoolProp.iP, iso_range=[1,50], num=10, rounding=False)
+        >>> plot.show()
 
         .. note::
 
@@ -107,30 +123,32 @@ class PropertyPlot(BasePlot):
             output = numpy.unique(output)
         return output
         
-    def calc_isolines(self, iso_type, iso_range, num=15, rounding=False, points=200):
+    def calc_isolines(self, iso_type=None, iso_range=None, num=15, rounding=False, points=250):
         """Calculate lines with constant values of type 'iso_type' in terms of x and y as
         defined by the plot object. 'iso_range' either is a collection of values or 
         simply the minimum and maximum value between which 'num' lines get calculated.
         The 'rounding' parameter can be used to generate prettier labels if needed.
         """
-        
-        if iso_range is None or (len(iso_range) == 1 and num != 1):
-            raise ValueError('Automatic interval detection for isoline \
-                              boundaries is not supported yet, use the \
-                              iso_range=[min, max] parameter.')
- 
-        if len(iso_range) == 2 and num is None:
-            raise ValueError('Please specify the number of isoline you want \
-                              e.g. num=10')
-
-        if iso_type == 'all':
+                
+        if iso_type is None or iso_type == 'all':
             for i_type in IsoLine.XY_SWITCH:
                 if IsoLine.XY_SWITCH[i_type].get(self.y_index*10+self.x_index,None) is not None:
-                    # TODO implement the automatic interval detection.
-                    limits = self._get_axis_limits(i_type, CoolProp.iT)
-                    self.calc_isolines(i_type, [limits[0],limits[1]], num, rounding, points)
-            return 
-                    
+                    self.calc_isolines(i_type, None, num, rounding, points)
+            return
+                        
+        if iso_range is None:
+            if iso_type is CoolProp.iQ: 
+                iso_range = [0.0,1.0]
+            else:
+                limits = self.get_axis_limits(iso_type, CoolProp.iT) 
+                iso_range = [limits[0],limits[1]]
+        
+        if len(iso_range) <= 1 and num != 1:
+            raise ValueError('You have to provide two values for the iso_range, {0} is not valid.'.format(iso_range))
+ 
+        if len(iso_range) == 2 and (num is None or num < 2):
+            raise ValueError('Please specify the number of isoline you want e.g. num=10.')
+
         iso_range = numpy.sort(numpy.unique(iso_range))
         # Generate iso ranges
         if len(iso_range) == 2:
@@ -241,6 +259,7 @@ class PropertyPlot(BasePlot):
                     self.axis.plot(dimx.from_SI(line.x),dimy.from_SI(line.y),**props)
     
     def draw(self):
+        self.get_axis_limits()
         self.draw_isolines()
         
     #def label_isolines(self, dx=0.075, dy=0.100):
@@ -263,6 +282,32 @@ class PropertyPlot(BasePlot):
         line_opts : dict
             Line options (please see :func:`matplotlib.pyplot.plot`), optional
             Use this parameter to pass a label for the legend.
+            
+        Examples
+        --------
+        >>> import CoolProp
+        >>> from CoolProp.Plots import PropertyPlot
+        >>> pp = PropertyPlot('HEOS::Water', 'TS', unit_system='EUR')
+        >>> pp.calc_isolines(CoolProp.iP        )
+        >>> pp.calc_isolines(CoolProp.iHmass    )
+        >>> pp.calc_isolines(CoolProp.iQ, num=11)
+        >>> cycle = SimpleRankineCycle('HEOS::Water', 'TS', unit_system='EUR')
+        >>> T0 = 300
+        >>> pp.state.update(CoolProp.QT_INPUTS,0.0,T0+15)
+        >>> p0 = pp.state.keyed_output(CoolProp.iP)
+        >>> T2 = 700
+        >>> pp.state.update(CoolProp.QT_INPUTS,1.0,T2-150)
+        >>> p2 = pp.state.keyed_output(CoolProp.iP)
+        >>> cycle.simple_solve(T0, p0, T2, p2, 0.7, 0.8, SI=True)
+        >>> cycle.steps = 50
+        >>> sc = cycle.get_state_changes()
+        >>> pp.draw_process(sc)
+        >>> # The same calculation can be carried out in another unit system:
+        >>> cycle.simple_solve(T0-273.15-10, p0/1e5, T2-273.15+50, p2/1e5-5, 0.7, 0.8, SI=False)
+        >>> sc2 = cycle.get_state_changes()
+        >>> pp.draw_process(sc2, line_opts={'color':'blue', 'lw':1.5})
+        >>> pp.show()
+        
         """
         warnings.warn("You called the function \"draw_process\", which is not tested.",UserWarning)
         
@@ -316,42 +361,10 @@ class PropsPlot(PropertyPlot):
 
 
 if __name__ == "__main__":
-    #plot = PropertyPlot('HEOS::n-Pentane', 'PH', unit_system='EUR')
-    #Ts = plot.get_axis_limits(CoolProp.iT, CoolProp.iSmass)
-    #TD = plot.get_axis_limits(CoolProp.iT, CoolProp.iDmass)
-    #plot.calc_isolines(CoolProp.iT,     Ts[0:2])
-    #plot.calc_isolines(CoolProp.iQ,     [0.0,1.0], num=11)
-    #plot.calc_isolines(CoolProp.iSmass, Ts[2:4])
-    #plot.calc_isolines(CoolProp.iDmass, TD[2:4])
-    #plot.draw_isolines()
-    #plot.show()
-    #
-    pp = PropertyPlot('HEOS::Water', 'TS', unit_system='EUR')
-    ph = pp.get_axis_limits(CoolProp.iP, CoolProp.iHmass)
-    pp.calc_isolines(CoolProp.iP,     ph[0:2])
-    pp.calc_isolines(CoolProp.iHmass, ph[2:4])
-    pp.calc_isolines(CoolProp.iQ,     [0.0,1.0], num=11)
+    plot = PropertyPlot('HEOS::n-Pentane', 'PH', unit_system='EUR')
+    plot.calc_isolines(CoolProp.iT)
+    plot.calc_isolines(CoolProp.iQ, num=11)
+    plot.calc_isolines(CoolProp.iSmass)
+    plot.calc_isolines(CoolProp.iDmass)
+    plot.show()
     
-    cycle = SimpleRankineCycle('HEOS::Water', 'TS', unit_system='EUR')
-    T0 = 300
-    pp.state.update(CoolProp.QT_INPUTS,0.0,T0+15)
-    p0 = pp.state.keyed_output(CoolProp.iP)
-    T2 = 700
-    pp.state.update(CoolProp.QT_INPUTS,1.0,T2-150)
-    p2 = pp.state.keyed_output(CoolProp.iP)
-    cycle.simple_solve(T0, p0, T2, p2, 0.7, 0.8, SI=True)
-    cycle.steps = 50
-    sc = cycle.get_state_changes()
-    pp.draw_process(sc)
-    #
-    cycle.simple_solve(T0-273.15-10, p0/1e5, T2-273.15+50, p2/1e5-5, 0.7, 0.8, SI=False)
-    sc2 = cycle.get_state_changes()
-    pp.draw_process(sc2, line_opts={'color':'blue', 'lw':1.5})
-    #
-    pp.show()
-    
-    #
-    #plot.savefig("Plots.pdf")
-    #plot.show()
-    #for i in plot.isolines:
-    #    print(plot.isolines[i][0].x,plot.isolines[i][0].y)

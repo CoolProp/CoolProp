@@ -35,6 +35,9 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     * skipPlot : If True, won't actually plot anything, just print COP
 
     """
+    
+    warnings.warn("This function has been deprecated. PLease consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
+    
     T=numpy.zeros((6))
     h=numpy.zeros_like(T)
     p=numpy.zeros_like(T)
@@ -119,6 +122,8 @@ def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=
     * skipPlot : If True, won't actually plot anything, just print COP
 
     """
+    
+    warnings.warn("This function has been deprecated. PLease consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
 
     T=numpy.zeros((8))
     h=numpy.zeros_like(T)
@@ -256,6 +261,8 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     * skipPlot : If True, won't actually plot anything, just print COP
 
     """
+    
+    warnings.warn("This function has been deprecated. PLease consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
 
     m=1
 
@@ -846,6 +853,42 @@ class SimpleRankineCycle(BasePowerCycle):
         BasePowerCycle.__init__(self, fluid_ref, graph_type, **kwargs)
     
     def simple_solve(self, T0, p0, T2, p2, eta_exp, eta_pum, fluid=None, SI=True):
+        """" 
+        A simple Rankine cycle calculation
+        
+        Parameters
+        ----------
+        T0 : float
+            The coldest point, before the pump
+        p0 : float
+            The lowest pressure, before the pump
+        T2 : float
+            The hottest point, before the expander
+        p2 : float
+            The highest pressure, before the expander
+        eta_exp : float
+            Isentropic expander efficiency 
+        eta_pum : float
+            Isentropic pump efficiency
+        
+        Examples
+        --------
+        >>> import CoolProp
+        >>> from CoolProp.Plots import PropertyPlot
+        >>> pp = PropertyPlot('HEOS::Water', 'TS', unit_system='EUR')
+        >>> cycle = SimpleRankineCycle('HEOS::Water', 'TS', unit_system='EUR')
+        >>> T0 = 300
+        >>> pp.state.update(CoolProp.QT_INPUTS,0.0,T0+15)
+        >>> p0 = pp.state.keyed_output(CoolProp.iP)
+        >>> T2 = 700
+        >>> pp.state.update(CoolProp.QT_INPUTS,1.0,T2-150)
+        >>> p2 = pp.state.keyed_output(CoolProp.iP)
+        >>> cycle.simple_solve(T0, p0, T2, p2, 0.7, 0.8, SI=True)
+        >>> cycle.steps = 50
+        >>> sc = cycle.get_state_changes()
+        >>> pp.draw_process(sc)
+        
+        """
         if fluid is not None: self.state = process_fluid_state(fluid)
         if self._state is None: 
             raise ValueError("You have specify a fluid before you calculate.")
@@ -925,192 +968,3 @@ class SimpleRankineCycle(BasePowerCycle):
         return w_net / q_boiler
         
 
-
-
-# def SimpleRankineCycle(states, steps, fluid):
-#     """A simple Rankine cycle, with optional regeneration
-#     
-#     Calculates a simple Rankine cycle including some basic cycle-related quantities. 
-#     
-#     Parameters
-#     ----------
-#         states : list, dict 
-#             A collection of states that follows a fixed scheme:
-#                 0) Subcooled liquid
-#                 1) Pressurised liquid
-#                 2) Preheated liquid    if regenrative cycle, else superheated state
-#                 3) Superheated state   if regenrative cycle, else expanded state
-#                 4) Expanded state      if regenrative cycle, else NULL
-#                 5) Desuperheated state if regenrative cycle, else NULL  
-#     
-#     
-#     """
-#     state = process_fluid_state(fluid)
-# 
-# 
-#     state.update(CoolProp.PT_INPUTS,p1,T1)
-#     h1 = state.hmass()
-#     s1 = state.smass()
-# 
-#     p2 = p3
-#     state.update(CoolProp.PSmass_INPUTS,p2,s1)
-#     h2 = h1 + (state.hmass() - h1) / epsilon_p
-#     state.update(CoolProp.HmassP_INPUTS,h2,p2)
-#     s2 = state.smass()
-#     T2 = state.T()
-# 
-#     state.update(CoolProp.PT_INPUTS,p3,T3)
-#     h3 = state.hmass()
-#     s3 = state.smass()
-# 
-#     p4 = p1
-#     state.update(CoolProp.PSmass_INPUTS,p4,s3)
-#     h4 = h3 - epsilon_e * (h3 - state.hmass())
-#     state.update(CoolProp.HmassP_INPUTS,h4,p4)
-#     s4 = state.smass()
-#     T4 = state.T()
-# 
-#     w_net = h3 - h4
-#     q_boiler = h3 - h2
-#     eta_c = w_net / q_boiler
-# 
-#     #Ts = PropsPlot(fluid, 'Ts')
-#     #Ts.draw_isolines('P', [p1, p3], num=10)
-#     #Ts.set_axis_limits([0., 12., 200., 900.])
-# 
-#     #axObj.plot(s_tp/1e3,T_tp-273.15 , color=plotterObj._black, ls='-', alpha=1.0)
-# 
-#     isoObj  = IsoLines(fluid, "Ts", "Q")
-#     isoqual = isoObj.get_isolines([0.0,1.0], num=2)
-# 
-#     x = np.append(isoqual[ 0]['x'],isoqual[-1]['x'][::-1])/1e3
-#     y = np.append(isoqual[ 0]['y'],isoqual[-1]['y'][::-1])-273.15
-#     axObj.plot(x,y, color=plotterObj._black, ls='-', alpha=1.0)
-# 
-#     isoObj  = IsoLines(fluid, "Ts", "P")
-#     prange  = [p1,2e5,5e5,10e5,p3]
-#     isobars = isoObj.get_isolines(prange, num=len(prange))
-# 
-#     p = -1
-#     for c,i in enumerate(isobars):
-#         x = i['x']/1e3
-#         y = i['y']-273.15
-#         dp = prange[c]/1e5 - p
-#         p = prange[c]/1e5
-#         s = PropsSI('S','P',p*1e5,'Q',0.5,fluid)/1e3
-#         #print "Delta p: {0}".format(dp)
-#         if abs(dp)>0.8: #c%2==0 :
-#             axObj.plot(  x,    y, color=plotterObj._black, ls='-', alpha=0.50)
-#             if label:
-#                 putXLabel(xv=x, yv=y, x=s, text="{0:3.1f} bar".format(p), axis=axObj)
-# 
-#     #for i in range(len(x)):
-#     #    axObj.plot(  x[i]/1e3,   y[i]-273.15, color=plotterObj._black, ls='-', alpha=0.5)
-#     #    putXLabel(xv=x[i]/1e3,yv=y[i]-273.15, x=0, text="", axis=axObj)
-# 
-# 
-# 
-#     # Create the process lines
-#     A = []
-#     A.append({'H':h1,'P':p1,'S':s1,'T':T1})
-#     A.append({'H':h2,'P':p2,'S':s2,'T':T2})
-#     A.append({'H':h3,'P':p3,'S':s3,'T':T3})
-#     A.append({'H':h4,'P':p4,'S':s4,'T':T4})
-# 
-#     A.append(A[0].copy())
-# 
-#     processes = []
-# 
-#     for i in range(len(A)-1):
-#         s = np.linspace(         A[i]['S'] ,          A[i+1]['S'] ,num=points)
-#         p = np.logspace(np.log10(A[i]['P']), np.log10(A[i+1]['P']),num=points)
-#         dic = {}
-#         dic['P'] = p
-#         dic['S'] = s
-#         dic['T'] = PropsSI('T','P',p,'S',s,fluid)
-#         processes.append(dic)
-# 
-#     x = []
-#     y = []
-#     for lin in processes:
-#         #axObj.plot(lin['S']/1e3,lin['T']-273.15,color=plotterObj._black, linestyle='--')
-#         x.extend(lin['S']/1e3)
-#         y.extend(lin['T']-273.15)
-# 
-#     plotterObj.plotData([x],[y],ax=axObj,legend=False)
-# 
-#     x = np.array([s1,s2,s3,s4])
-#     y = np.array([T1,T2,T3,T4])
-# 
-#     #print x
-#     #print y
-#     #print " "
-# 
-#     plotterObj.plotData([x/1e3],[y-273.15],ax=axObj,legend=False)
-# 
-#     #axObj.plot(x/1e3,y-273.15,'o',color=plotterObj._black)
-# 
-#     #plotterObj.drawLegend(ax=axObj,loc=0) # the relative size of legend markers vs. original
-#     axObj.set_xlabel(ur"Specific entropy $s$ / \si{\kilo\joule\per\kilo\gram\per\kelvin}")
-#     axObj.set_ylabel(ur"Temperature $T$ / \si{\celsius}")
-#     axObj.set_xlim([-0.25,1.60])
-#     axObj.set_ylim([-25,325])
-# 
-#     #plotterObj.plotData([x], [y], ax=axObj)
-# 
-#     #ax = Ts.axis
-#     #ax.text(s1/1000., T1,' 1', fontsize=10, rotation=0, color='r')
-#     #ax.text(s2/1000., T2,' 2', fontsize=10, rotation=0, color='r')
-#     #ax.text(s3/1000., T3,' 3', fontsize=10, rotation=0, color='r')
-#     #ax.text(s4/1000., T4,' 4', fontsize=10, rotation=0, color='r')
-#     #ax.text(8., 850., "Efficiency: %.1f%%" %(eta_c*100.))
-#     #ax.text(8., 800., "Net work: %d kJ/kg" %(w_net/1000))
-#     #ax.text(8., 750., "Heat input: %d kJ/kg" %(q_boiler/1000))
-# 
-# simPlotterObj = BasePlotter()
-# figPV = simPlotterObj.getFigure(**sixupProps)
-# simPlotterObj.ccycle = simPlotterObj.multiplyCycle(simPlotterObj.getColorCycle(length=3),doubles=2)
-# simPlotterObj.scycle = cycle(['-'])
-# simPlotterObj.mcycle = cycle(['None'])
-
-
-
-
-
-# if __name__=='__main__':
-#     
-#     cycle = SimpleRankineCycle()
-#     
-#     cycle.simple_solve(300, 2e5, 550, 10e5, 0.7, 0.8)
-    
-    
-#     from CoolProp.Plots import Ph,Ts
-# 
-#     Ref='R290'
-#     fig=matplotlib.pyplot.figure(figsize=(4,3))
-#     ax=fig.add_axes((0.15,0.15,0.8,0.8))
-#     Ph(Ref,Tmin=273.15-30,hbounds=[0,600],axis=ax)
-#     COP=TwoStage('Propane',10000,273.15-5,273.15+43.3,5,7,0.7,0.3,15+273.15,3,prints = True)
-#     matplotlib.pyplot.show()
-# 
-#     Ref='R290'
-#     fig=matplotlib.pyplot.figure(figsize=(4,3))
-#     ax=fig.add_axes((0.15,0.15,0.8,0.8))
-#     Ph(Ref,Tmin=273.15-30,hbounds=[0,600],axis=ax)
-#     COP=SimpleCycle(Ref,273.15-5,273.15+45,5,7,0.7,Ts_Ph='Ph')
-#     matplotlib.pyplot.show()
-# 
-#     Ref='R410A'
-#     fig=matplotlib.pyplot.figure(figsize=(4,3))
-#     ax=fig.add_axes((0.15,0.15,0.8,0.8))
-#     Ts(Ref,Tmin=273.15-100,sbounds=[0,600],axis=ax)
-#     COP=SimpleCycle(Ref,273.15-5,273.15+45,5,7,0.7,Ts_Ph='Ts')
-#     matplotlib.pyplot.show()
-
-
-
-
-##     for x in numpy.linspace(0,1):
-##         Ref='REFPROP-MIX:R152A[%g]&R32[%g]' %(x,1-x)
-##         COP=SimpleCycle(273.15+8,273.15+44,5,7,0.7,skipPlot=True,Ts_Ph='Ph')
-##     matplotlib.pyplot.show()

@@ -584,12 +584,18 @@ class BasePlot(Base2DObject):
       CoolProp.iQ    : dict(color='black'     ,lw=0.25)
     }
     
+    ID_FACTOR = 10.0 # Values below this number are interpreted as factors
     HI_FACTOR = 2.25 # Upper default limits: HI_FACTOR*T_crit and HI_FACTOR*p_crit
     LO_FACTOR = 1.01 # Lower default limits: LO_FACTOR*T_triple and LO_FACTOR*p_triple
+    
+    TP_LIMITS = {
+      'NONE' : [None,None,None,None],
+      'DEF'  : [LO_FACTOR,HI_FACTOR,LO_FACTOR,HI_FACTOR],
+      'ACHP' : [173.15,493.15,0.25e5,HI_FACTOR],
+      'ORC'  : [273.15,673.15,0.25e5,HI_FACTOR]
+    }
 
-    def __init__(self, fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
-        
-        state = process_fluid_state(fluid_ref)
+    def __init__(self, fluid_ref, graph_type, unit_system = 'KSI', tp_limits='DEF', **kwargs):
         
         # Process the graph_type and set self._x_type and self._y_type
         graph_type = graph_type.upper()
@@ -598,27 +604,43 @@ class BasePlot(Base2DObject):
             raise ValueError("Invalid graph_type input, expected a string from {0:s}".format(str(self.PLOTS)))
         
         # call the base class
+        state = process_fluid_state(fluid_ref)
         Base2DObject.__init__(self, graph_type[1], graph_type[0], state, **kwargs)
         
         # Process the unit_system and set self._system
-        unit_system = unit_system.upper()
-        if unit_system in self.UNIT_SYSTEMS:
-            self.system = self.UNIT_SYSTEMS[unit_system]
-        else:
-            raise ValueError("Invalid unit_system input, expected a string from {0:s}".format(str(self.UNIT_SYSTEMS.keys())))
-        
+        self.system = unit_system
+        # Process the plotting range based on T and p
+        self.limits = tp_limits
+        # Other properties 
         self.figure = kwargs.get('figure',plt.figure(tight_layout=True))
         self.axis   = kwargs.get('axis', self.figure.add_subplot(111))
-        self.props  =  kwargs.get('props', None)
+        self.props  = kwargs.get('props', None)
         
     @property
     def system(self): return self._system
     @system.setter
-    def system(self, value): self._system = value    
+    def system(self, value): 
+        value = value.upper()
+        if value in self.UNIT_SYSTEMS: self._system = self.UNIT_SYSTEMS[value]
+        else: raise ValueError("Invalid input, expected a string from {0:s}".format(str(self.UNIT_SYSTEMS.keys())))
+        
+    @property
+    def limits(self):
+        """Returns [Tmin,Tmax,pmin,pmax] as value or factors""" 
+        return self._limits
+    @limits.setter
+    def limits(self, value): 
+        try: value = value.upper()
+        except: pass
+        if value in self.TP_LIMITS: self._limits = self.TP_LIMITS[value]
+        elif len(value)==4: self._limits = value
+        else: raise ValueError("Invalid input, expected a list with 4 items or a string from {0:s}".format(str(self.TP_LIMITS.keys())))
+        
     @property
     def figure(self): return self._figure
     @figure.setter
     def figure(self, value): self._figure = value
+    
     @property
     def axis(self): return self._axis
     @axis.setter
@@ -712,7 +734,58 @@ consider replacing it with \"_get_sat_bounds\".",
             self.axis.grid(b)
         else:
             self.axis.grid(kwargs)
-            
+
+    
+    def set_Tp_limits(self, limits):
+        """Set the limits for the graphs in temperature and pressure, based on 
+        the active units: [Tmin, Tmax, pmin, pmax]"""
+        dim = self._system[CoolProp.iT]
+        limits[0] = dim.to_SI(limits[0])
+        limits[1] = dim.to_SI(limits[1])
+        dim = self._system[CoolProp.iP]
+        limits[2] = dim.to_SI(limits[2])
+        limits[3] = dim.to_SI(limits[3])
+        self.limits = limits
+    
+    def get_Tp_limits(self):
+        """Get the limits for the graphs in temperature and pressure, based on 
+        the active units: [Tmin, Tmax, pmin, pmax]"""
+        limits = self._get_Tp_limits()
+        dim = self._system[CoolProp.iT]
+        limits[0] = dim.from_SI(limits[0])
+        limits[1] = dim.from_SI(limits[1])
+        dim = self._system[CoolProp.iP]
+        limits[2] = dim.from_SI(limits[2])
+        limits[3] = dim.from_SI(limits[3])
+        return limits
+    
+    def _get_Tp_limits(self):
+        """Get the limits for the graphs in temperature and pressure, based on 
+        SI units: [Tmin, Tmax, pmin, pmax]"""
+        T_lo,T_hi,P_lo,P_hi = self.limits
+        Ts_lo,Ts_hi = self._get_sat_bounds(CoolProp.iT)
+        Ps_lo,Ps_hi = self._get_sat_bounds(CoolProp.iP)
+        
+        if T_lo is None:            T_lo  = 0.0
+        elif T_lo < self.ID_FACTOR: T_lo *= Ts_lo
+        if T_hi is None:            T_hi  = 1e6
+        elif T_hi < self.ID_FACTOR: T_hi *= Ts_hi
+        if P_lo is None:            P_lo  = 0.0
+        elif P_lo < self.ID_FACTOR: P_lo *= Ps_lo
+        if P_hi is None:            P_hi  = 1e10
+        elif P_hi < self.ID_FACTOR: P_hi *= Ps_hi
+
+        try: T_lo = np.nanmax([T_lo, self._state.trivial_keyed_output(CoolProp.iT_min)])
+        except: pass
+        try: T_hi = np.nanmin([T_hi, self._state.trivial_keyed_output(CoolProp.iT_max)])
+        except: pass
+        try: P_lo = np.nanmax([P_lo, self._state.trivial_keyed_output(CoolProp.iP_min)])
+        except: pass
+        try: P_hi = np.nanmin([P_hi, self._state.trivial_keyed_output(CoolProp.iP_max)])
+        except: pass
+
+        return [T_lo,T_hi,P_lo,P_hi]
+        
         
     def set_axis_limits(self, limits):
         """Set the limits of the internal axis object based on the active units,
@@ -727,6 +800,7 @@ consider replacing it with \"_get_sat_bounds\".",
         self.axis.set_xlim([dim.from_SI(limits[0]), dim.from_SI(limits[1])])
         dim = self._system[self._y_index]
         self.axis.set_ylim([dim.from_SI(limits[2]), dim.from_SI(limits[3])])
+
         
     def get_axis_limits(self,x_index=None,y_index=None):
         """Returns the previously set limits or generates them and 
@@ -738,21 +812,7 @@ consider replacing it with \"_get_sat_bounds\".",
         if x_index != self.x_index or y_index != self.y_index  or \
           self.axis.get_autoscalex_on() or self.axis.get_autoscaley_on():
             # One of them is not set or we work on a different set of axes
-            T_lo,T_hi = self._get_sat_bounds(CoolProp.iT)
-            P_lo,P_hi = self._get_sat_bounds(CoolProp.iP)
-            
-            T_lo = self.LO_FACTOR*T_lo
-            try: T_lo = np.nanmax([T_lo, self._state.trivial_keyed_output(CoolProp.iT_min)])
-            except: pass
-            T_hi = self.HI_FACTOR*T_hi
-            try: T_hi = np.nanmin([T_hi, self._state.trivial_keyed_output(CoolProp.iT_max)])
-            except: pass
-            P_lo = self.LO_FACTOR*P_lo
-            try: P_lo = np.nanmax([P_lo, self._state.trivial_keyed_output(CoolProp.iP_min)])
-            except: pass
-            P_hi = self.HI_FACTOR*P_hi
-            try: P_hi = np.nanmin([P_hi, self._state.trivial_keyed_output(CoolProp.iP_max)])
-            except: pass
+            T_lo,T_hi,P_lo,P_hi = self._get_Tp_limits()
             
             X=[0.0]*4; Y=[0.0]*4
             i = -1
