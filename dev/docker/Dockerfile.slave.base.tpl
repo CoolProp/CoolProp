@@ -15,6 +15,7 @@ RUN groupadd -r buildbot && \
 #
 USER buildbot
 WORKDIR /home/buildbot
+RUN rm /bin/sh && ln -sf /bin/bash /bin/sh
 #
 #RUN buildslave create-slave ${SLAVEDIR} ${MASTERHOST} ${SLAVENAME} ${SLAVEPASSWORD}
 #ENTRYPOINT ["/usr/local/bin/buildslave"]

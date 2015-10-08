@@ -517,8 +517,16 @@ of data loss and allows us to move the slaves between different machines.
   https://docs.docker.com/articles/dockerfile_best-practices/ for more good
   advice on this topic.
 
+You can find the generator script and the templates in ``dev/docker/``. Make sure 
+to set the correct environment variables before you run a container, call it for 
+example ``Dockerfile.slave.env.list``:
 
+    SLAVEDIR=slavedir
+    MASTERHOST=coolprop.dreamhosters.com:port
+    SLAVENAME=slavename
+    SLAVEPASSWORD=pass
 
+and then run the official coolprop buildbot configuration with 
 
-
+    docker run --env-file ./Dockerfile.slave.env.list coolprop:slavepython
 

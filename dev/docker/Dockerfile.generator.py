@@ -105,8 +105,8 @@ Delete all dangling docker images: docker rmi `docker images -f "dangling=true" 
 
 Generate Dockerfiles: python Dockerfile.generator.py
 Build images:
-docker build --force-rm=true -t coolprop:slavebase -f Dockerfile.slave.base . | tee dockerlog.txt && \
-docker build --force-rm=true -t coolprop:slavepython -f Dockerfile.slave.python . | tee -a dockerlog.txt
+docker build --force-rm=true -t coolprop:slavebase -f Dockerfile.slave.base . && \
+docker build --force-rm=true -t coolprop:slavepython -f Dockerfile.slave.python . 
 
 Start the images with:
 docker run --env-file ./Dockerfile.slave.env.list coolprop:slavepython
