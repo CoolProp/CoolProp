@@ -59,7 +59,7 @@ local_dict = dict(
   cnd_dev_pkgs = cnd_dev_pkgs+cnd_run_pkgs
 )
 
-env_example="""SLAVEDIR=slavedir
+env_example="""SLAVEDIR=/home/buildbot/slavedir
 MASTERHOST=coolprop.dreamhosters.com:port
 SLAVENAME=slavename
 SLAVEPASSWORD=pass
@@ -74,7 +74,7 @@ THEDIR="${SLAVEDIR}"
 if [ ! -d "$THEDIR" ]; then
   /usr/local/bin/buildslave create-slave ${SLAVEDIR} ${MASTERHOST} ${SLAVENAME} ${SLAVEPASSWORD}
 fi
-/usr/local/bin/buildslave start --nodaemon
+/usr/local/bin/buildslave start --nodaemon ${SLAVEDIR}
 """
 target = 'Dockerfile.slave.entrypoint.sh'
 f = codecs.open(os.path.join(tar_dir,target),mode='wb',encoding='utf-8')
@@ -105,11 +105,15 @@ Delete all dangling docker images: docker rmi `docker images -f "dangling=true" 
 
 Generate Dockerfiles: python Dockerfile.generator.py
 Build images:
-docker build --force-rm=true -t coolprop:slavebase -f Dockerfile.slave.base . && \
-docker build --force-rm=true -t coolprop:slavepython -f Dockerfile.slave.python . 
+docker build -t coolprop/slavebase -f Dockerfile.slave.base . && \
+docker build -t coolprop/slavepython -f Dockerfile.slave.python . 
 
 Start the images with:
 docker run --env-file ./Dockerfile.slave.env.list coolprop:slavepython
+
+Still need to add SSH keys and host info
+
+
 """)
 
 
