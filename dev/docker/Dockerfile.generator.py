@@ -29,7 +29,7 @@ environment = jinja2.Environment(loader=loader)
 # 1) System packages
 lin_dev_pkgs =  ["python-dev", "python-pip", "build-essential" ]
 lin_dev_pkgs += ["libhdf5-serial-dev", "libnetcdf-dev", "liblapack-dev", "libatlas-dev"]
-lin_dev_pkgs += ["gfortran", "gcc", "cmake", "bash"]
+lin_dev_pkgs += ["gfortran", "gcc", "cmake", "bash", "rsync"]
 lin_dev_pkgs += ["curl", "wget"]
 
 # 2) pip packages 
