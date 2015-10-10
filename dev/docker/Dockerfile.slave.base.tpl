@@ -17,6 +17,10 @@ RUN rm /bin/sh && ln -sf /bin/bash /bin/sh
 USER buildbot
 WORKDIR /home/buildbot
 #
+#RUN \{% for host in ssh_hosts %} 
+#ssh-keyscan {{ host }} >> .ssh/known_hosts && \{% endfor %}
+#cat .ssh/known_hosts
+#
 #RUN buildslave create-slave ${SLAVEDIR} ${MASTERHOST} ${SLAVENAME} ${SLAVEPASSWORD}
 #ENTRYPOINT ["/usr/local/bin/buildslave"]
 #CMD ["start", "--nodaemon"]

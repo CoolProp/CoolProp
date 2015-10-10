@@ -47,6 +47,9 @@ cnd_run_pkgs =  ["numpy", "scipy", "matplotlib", "pandas"]
 #cnd_dev_pkgs += ["pywin32", "unxutils", "ndg-httpsclient"]
 #cnd_dev_pkgs += ["ndg-httpsclient"]
 
+# 4) Known hosts
+#ssh_hosts = ["bitbucket.org", "github.com", "coolprop.dreamhosters.com", "coolprop.org"]
+
 #
 local_dict = dict(
   author = author,
@@ -56,13 +59,16 @@ local_dict = dict(
   pip_add_pkgs = pip_add_pkgs,
   cnd_env_pyt = [str(x[0])+" "+str(x[1]) for x in zip(cnd_env,cnd_pyt)],
   cnd_env = cnd_env,
-  cnd_dev_pkgs = cnd_dev_pkgs+cnd_run_pkgs
+  cnd_dev_pkgs = cnd_dev_pkgs+cnd_run_pkgs,
 )
 
 env_example="""SLAVEDIR=/home/buildbot/slavedir
 MASTERHOST=coolprop.dreamhosters.com:port
 SLAVENAME=slavename
 SLAVEPASSWORD=pass
+BOTADMIN=Author Name
+BOTEMAIL=noreply@coolprop.org
+BOTHOST=A short description of the host computer
 """
 target = 'Dockerfile.slave.env.list'
 f = codecs.open(os.path.join(tar_dir,target),mode='wb',encoding='utf-8')
@@ -70,11 +76,35 @@ f.write(env_example)
 f.close()
 #
 entry_script="""#!/bin/bash
-THEDIR="${SLAVEDIR}"
-if [ ! -d "$THEDIR" ]; then
-  /usr/local/bin/buildslave create-slave ${SLAVEDIR} ${MASTERHOST} ${SLAVENAME} ${SLAVEPASSWORD}
-fi
-/usr/local/bin/buildslave start --nodaemon ${SLAVEDIR}
+CTRLAPP="/usr/local/bin/buildslave"
+function shutdown()
+{
+  if [ ! -d "${SLAVEDIR}" ]; then
+    /usr/local/bin/buildslave create-slave ${SLAVEDIR} ${MASTERHOST} ${SLAVENAME} ${SLAVEPASSWORD}
+    echo "${BOTADMIN} <${BOTEMAIL}>" > ${SLAVEDIR}/info/admin
+    echo "${BOTHOST}" > ${SLAVEDIR}/info/host
+  fi
+  $CTRLAPP stop ${SLAVEDIR} & wait
+  exit 0
+}
+
+function startup()
+{
+  $CTRLAPP start ${SLAVEDIR} & wait
+}
+
+trap shutdown TERM SIGTERM SIGKILL SIGINT
+
+startup;
+
+# Just idle for one hour and keep the process alive
+# waiting for SIGTERM.
+while : ; do
+sleep 3600 & wait
+done
+#
+echo "The endless loop terminated, something is wrong here."
+exit 1
 """
 target = 'Dockerfile.slave.entrypoint.sh'
 f = codecs.open(os.path.join(tar_dir,target),mode='wb',encoding='utf-8')
@@ -109,9 +139,11 @@ docker build -t coolprop/slavebase -f Dockerfile.slave.base . && \
 docker build -t coolprop/slavepython -f Dockerfile.slave.python . 
 
 Start the images with:
-docker run --env-file ./Dockerfile.slave.env.list coolprop:slavepython
+docker run --env-file ./Dockerfile.slave.env.list --name="slavename" coolprop/slavepython
 
-Still need to add SSH keys and host info
+and the remember to copy your SSH keys to the image:
+docker cp ${HOME}/.ssh slavename:/home/buildbot/
+docker exec slavename chown -R buildbot /home/buildbot/.ssh
 
 
 """)

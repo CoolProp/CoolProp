@@ -1,5 +1,5 @@
 # Set the base image to Debian
-FROM coolprop:slavebase
+FROM coolprop/slavebase
 # File Author / Maintainer
 MAINTAINER {{ author }} ({{ email }})
 #
