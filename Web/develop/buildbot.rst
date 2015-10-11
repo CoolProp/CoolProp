@@ -533,11 +533,10 @@ Especially the Python builds on the 64bit Linux machine took ages to complete an
 could not find any obvious reason for this behaviour. 
 
 To make sure that there are no hidden flaws in the configuration of the buildbots 
-or the virtual machines. This section describes the attempt to transfer all 
-configuration tasks to script that generates several versions of a ``Dockerfile``. 
-A templating engine is used to create configuration files that can be used to build 
-docker containers. Storing all configuration tasks in a structured reduces the risk 
-of data loss and allows us to move the slaves between different machines. 
+or the virtual machines. Special configuration files can be used to build 
+docker containers. Storing all configuration tasks in a structured ``Dockerfile`` 
+reduces the risk of data loss and allows us to move the slaves between different 
+machines. 
 
 .. warning::
   Remember that **each** command in the ``Dockerfile`` leads to the creation of a 
@@ -547,7 +546,20 @@ of data loss and allows us to move the slaves between different machines.
   https://docs.docker.com/articles/dockerfile_best-practices/ for more good
   advice on this topic.
 
-You can find the generator script and the templates in ``dev/docker/``. The latest 
-files hould be in the repository, but you can always generate them from the Python
-sources with ``python Dockerfile.generator.py``. 
+Some more useful commands when working with docker are::
+
+    docker stop `docker ps -aq`; docker rm `docker ps -aq`; #delete all docker containers
+    docker rmi `docker images -f "dangling=true" -q`; #delete all dangling docker images
+
+The workflow to generate the images locally could look like::
+
+    cd dev/docker
+    cd slavebase   ; docker build -t coolprop/slavebase   -f Dockerfile . ; cd ..
+    cd slavepython ; docker build -t coolprop/slavepython -f Dockerfile . ; cd ..
+    cd slaveweb    ; docker build -t coolprop/slaveweb    -f Dockerfile . ; cd ..
+
+Please also have a look at the CoolProp repository on Docker Hub to see which 
+images are available for download: https://hub.docker.com/r/coolprop/ 
+We also might consider using a preprocessor a la https://github.com/docker/docker/issues/735 
+to build the Dockerfiles, but that has not bee tested.
 
