@@ -29,7 +29,7 @@ environment = jinja2.Environment(loader=loader)
 # 1) System packages
 lin_dev_pkgs =  ["python-dev", "python-pip", "build-essential" ]
 lin_dev_pkgs += ["libhdf5-serial-dev", "libnetcdf-dev", "liblapack-dev", "libatlas-dev"]
-lin_dev_pkgs += ["gfortran", "gcc", "cmake", "bash", "rsync"]
+lin_dev_pkgs += ["gfortran", "gcc", "cmake", "bash", "rsync", "git"]
 lin_dev_pkgs += ["curl", "wget"]
 
 # 2) pip packages 
@@ -61,56 +61,6 @@ local_dict = dict(
   cnd_env = cnd_env,
   cnd_dev_pkgs = cnd_dev_pkgs+cnd_run_pkgs,
 )
-
-env_example="""SLAVEDIR=/home/buildbot/slavedir
-MASTERHOST=coolprop.dreamhosters.com:port
-SLAVENAME=slavename
-SLAVEPASSWORD=pass
-BOTADMIN=Author Name
-BOTEMAIL=noreply@coolprop.org
-BOTHOST=A short description of the host computer
-"""
-target = 'Dockerfile.slave.env.list'
-f = codecs.open(os.path.join(tar_dir,target),mode='wb',encoding='utf-8')
-f.write(env_example)
-f.close()
-#
-entry_script="""#!/bin/bash
-CTRLAPP="/usr/local/bin/buildslave"
-function shutdown()
-{
-  if [ ! -d "${SLAVEDIR}" ]; then
-    /usr/local/bin/buildslave create-slave ${SLAVEDIR} ${MASTERHOST} ${SLAVENAME} ${SLAVEPASSWORD}
-    echo "${BOTADMIN} <${BOTEMAIL}>" > ${SLAVEDIR}/info/admin
-    echo "${BOTHOST}" > ${SLAVEDIR}/info/host
-  fi
-  $CTRLAPP stop ${SLAVEDIR} & wait
-  exit 0
-}
-
-function startup()
-{
-  $CTRLAPP start ${SLAVEDIR} & wait
-}
-
-trap shutdown TERM SIGTERM SIGKILL SIGINT
-
-startup;
-
-# Just idle for one hour and keep the process alive
-# waiting for SIGTERM.
-while : ; do
-sleep 3600 & wait
-done
-#
-echo "The endless loop terminated, something is wrong here."
-exit 1
-"""
-target = 'Dockerfile.slave.entrypoint.sh'
-f = codecs.open(os.path.join(tar_dir,target),mode='wb',encoding='utf-8')
-f.write(entry_script)
-f.close()
-os.chmod(os.path.join(tar_dir,target), 0o755)
 #
 target = 'Dockerfile.slave.base'
 template_path = target+'.tpl'
