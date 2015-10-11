@@ -25,5 +25,5 @@ WORKDIR /home/buildbot
 #ENTRYPOINT ["/usr/local/bin/buildslave"]
 #CMD ["start", "--nodaemon"]
 #
-COPY ./Dockerfile.slave.entrypoint.sh /
+COPY ../Dockerfile.slave.entrypoint.sh /
 ENTRYPOINT ["/Dockerfile.slave.entrypoint.sh"]
