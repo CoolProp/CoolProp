@@ -1,5 +1,5 @@
 # Set the base image to Debian
-FROM debian:testing
+FROM debian:stable
 # File Author / Maintainer
 MAINTAINER {{ author }} ({{ email }})
 #
