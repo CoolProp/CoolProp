@@ -482,7 +482,7 @@ Documentation Builds
 
 Some parts of the documentation are quite involved. That is why we decided not
 to rebuild the whole documentation after every commit. There is a special python
-script that runs a day and performs the most expensive jobs during
+script that runs once a day and performs the most expensive jobs during
 documentation rebuild. This covers the generation of validation figures for all
 fluids and the fitting reports for the incompressible fluids.
 
@@ -493,3 +493,73 @@ to the git repository. However, if you are unlucky and your commit coincides wit
 figure generation, you will experience a long
 delay between your commit and the appearance of the freshly generated documentation
 on the website. You can follow the progress in the logfiles on the buildbot master though.
+
+
+Work in Progress - Dockerfile Generator
+=======================================
+
+To make it short, here is what you need to know if you trust us and the docker 
+build system: 
+
+* Make sure to set the correct environment variables in an additional file before 
+  you run a container, call it for example ``Dockerfile.slave.env.list``::
+
+    SLAVEDIR=/home/buildbot/slavedir
+    MASTERHOST=bots.coolprop.org:port
+    SLAVENAME=slavename
+    SLAVEPASSWORD=pass
+    BOTADMIN=Author Name
+    BOTEMAIL=noreply@coolprop.org
+    BOTHOST=A short description of the host computer
+
+* You can then run the official coolprop buildbot configuration with::
+
+    docker run --env-file ./Dockerfile.slave.env.list --name="${SLAVENAME}" coolprop/slavebase
+
+* Some steps require the upload of files to different servers. In such cases, you 
+  should copy your SSH configuration or other login information to the container to 
+  make use of the automatic login that is required for rsync to work properly::
+
+    docker cp ${HOME}/.ssh ${SLAVENAME}:/home/buildbot/
+    docker cp ${HOME}/.pypirc ${SLAVENAME}:/home/buildbot/
+    docker exec ${SLAVENAME} chown -R buildbot /home/buildbot/
+
+.. note::
+  If you cannot copy the SSH keys, you can change the upload function in the 
+  master configuration to employ the built-in upload framework of buildbot. 
+
+Why the containers? In 2015, some of the buildbot slaves did not perform as expected. 
+Especially the Python builds on the 64bit Linux machine took ages to complete and we 
+could not find any obvious reason for this behaviour. 
+
+To make sure that there are no hidden flaws in the configuration of the buildbots 
+or the virtual machines. Special configuration files can be used to build 
+docker containers. Storing all configuration tasks in a structured ``Dockerfile`` 
+reduces the risk of data loss and allows us to move the slaves between different 
+machines. 
+
+.. warning::
+  Remember that **each** command in the ``Dockerfile`` leads to the creation of a 
+  **new** layer of files that cannot be deleted. Be careful here and try to bundle 
+  commands to save disk space and to keep garbage out of the image. See 
+  http://jrruethe.github.io/blog/2015/09/20/dockerfile-generator/ and 
+  https://docs.docker.com/articles/dockerfile_best-practices/ for more good
+  advice on this topic.
+
+Some more useful commands when working with docker are::
+
+    docker stop `docker ps -aq`; docker rm `docker ps -aq`; #delete all docker containers
+    docker rmi `docker images -f "dangling=true" -q`; #delete all dangling docker images
+
+The workflow to generate the images locally could look like::
+
+    cd dev/docker
+    cd slavebase   ; docker build -t coolprop/slavebase   -f Dockerfile . ; cd ..
+    cd slavepython ; docker build -t coolprop/slavepython -f Dockerfile . ; cd ..
+    cd slaveweb    ; docker build -t coolprop/slaveweb    -f Dockerfile . ; cd ..
+
+Please also have a look at the CoolProp repository on Docker Hub to see which 
+images are available for download: https://hub.docker.com/r/coolprop/ 
+We also might consider using a preprocessor a la https://github.com/docker/docker/issues/735 
+to build the Dockerfiles, but that has not bee tested.
+
