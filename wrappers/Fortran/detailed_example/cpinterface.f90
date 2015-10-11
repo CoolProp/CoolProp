@@ -11,5 +11,56 @@ MODULE CPINTERFACE
             character(kind=c_char) :: fluidname(*)
                 
         END FUNCTION PropsSI
+		
+		FUNCTION get_input_pair_index(input) BIND(C, NAME='get_input_pair_index')
+			use iso_c_binding
+			integer(C_long) :: get_input_pair_index
+			character(KIND=c_char) :: input(*)
+			
+		END FUNCTION get_input_pair_index
+		
+		FUNCTION get_param_index(input) BIND(C, NAME='get_param_index')
+			use iso_c_binding
+			integer(C_long) :: get_param_index
+			character(KIND=c_char) :: input(*)
+			
+		END FUNCTION get_param_index
+		
+		FUNCTION AbstractState_factory(type, fluidname, errcode, buffer, buffersize) BIND(C, NAME='AbstractState_factory')
+			use iso_c_binding
+			integer(C_long) :: AbstractState_factory
+			character(kind=c_char) :: type(*)
+			character(kind=c_char) :: fluidname(*)
+			integer(C_long) :: errcode
+			character(kind=c_char) :: buffer(*)
+			integer(C_long), VALUE :: buffersize
+			
+		END FUNCTION AbstractState_factory
+		
+		SUBROUTINE AbstractState_update(inputPointer, inputType, prop1, prop2, errcode, &
+			buffer, buffersize) BIND(C, NAME='AbstractState_update')
+			use iso_c_binding
+			integer(C_long) :: inputPointer
+			integer(C_long) :: inputType
+			real(C_DOUBLE), VALUE :: prop1
+			real(C_DOUBLE), VALUE :: prop2
+			integer(C_long) :: errcode
+			character(kind=c_char) :: buffer(*)
+			integer(C_long), VALUE :: buffersize
+			
+		END SUBROUTINE AbstractState_update
+		
+		FUNCTION AbstractState_keyed_output(input, output, errcode, &
+			buffer, buffersize) BIND(C, NAME='AbstractState_keyed_output')
+			use iso_c_binding
+            real(C_DOUBLE) :: AbstractState_keyed_output
+			integer(C_long) :: input
+			integer(C_long) :: output
+			integer(C_long) :: errcode
+			character(kind=c_char) :: buffer(*)
+			integer(C_long), VALUE :: buffersize
+			
+		END FUNCTION AbstractState_keyed_output
+		
     END INTERFACE
 END MODULE CPINTERFACE
