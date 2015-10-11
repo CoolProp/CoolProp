@@ -14,6 +14,10 @@ function startup()
     echo "${BOTHOST}" > ${SLAVEDIR}/info/host
   fi
   $CTRLAPP start ${SLAVEDIR}
+  echo "Remember to update the SSH configuration:"
+  echo "docker cp \${HOME}/.ssh ${SLAVENAME}:/home/buildbot/"
+  echo "docker cp \${HOME}/.pypirc ${SLAVENAME}:/home/buildbot/"
+  echo "docker exec ${SLAVENAME} chown -R buildbot /home/buildbot/"
 }
 
 trap shutdown TERM SIGTERM SIGKILL SIGINT
