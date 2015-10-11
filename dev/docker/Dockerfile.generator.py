@@ -62,18 +62,16 @@ local_dict = dict(
   cnd_dev_pkgs = cnd_dev_pkgs+cnd_run_pkgs,
 )
 #
-target = 'Dockerfile.slave.base'
-template_path = target+'.tpl'
+template_path = 'Dockerfile.slave.base.tpl'
 template = environment.get_template(template_path)
-f = codecs.open(os.path.join(tar_dir,target),mode='wb',encoding='utf-8')
+f = codecs.open(os.path.join(tar_dir,'slavebase','Dockerfile'),mode='wb',encoding='utf-8')
 f.write(tpl_first_line.format("# "+tpl_mtime_line,template_path))
 f.write(template.render(**local_dict))
 f.close()
 #
-target = 'Dockerfile.slave.python'
-template_path = target+'.tpl'
+template_path = 'Dockerfile.slave.python.tpl'
 template = environment.get_template(template_path)
-f = codecs.open(os.path.join(tar_dir,target),mode='wb',encoding='utf-8')
+f = codecs.open(os.path.join(tar_dir,'slavepython','Dockerfile'),mode='wb',encoding='utf-8')
 f.write(tpl_first_line.format("# "+tpl_mtime_line,template_path))
 f.write(template.render(**local_dict))
 f.close()
