@@ -498,9 +498,38 @@ on the website. You can follow the progress in the logfiles on the buildbot mast
 Work in Progress - Dockerfile Generator
 =======================================
 
-In 2015, some of the buildbot slaves did not perform as expected. Especially the 
-Python builds on the 64bit Linux machine took ages to complete and we could not 
-find any obvious reason for this. 
+To make it short, here is what you need to know if you trust us and the docker 
+build system: 
+
+* Make sure to set the correct environment variables in an additional file before 
+  you run a container, call it for example ``Dockerfile.slave.env.list``::
+
+    SLAVEDIR=/home/buildbot/slavedir
+    MASTERHOST=bots.coolprop.org:port
+    SLAVENAME=slavename
+    SLAVEPASSWORD=pass
+    BOTADMIN=Author Name
+    BOTEMAIL=noreply@coolprop.org
+    BOTHOST=A short description of the host computer
+
+* You can then run the official coolprop buildbot configuration with::
+
+    docker run --env-file ./Dockerfile.slave.env.list --name="slavename" coolprop/slavebase
+
+* Some steps require the upload of files to teh servers. In such cases, you 
+  should copy your SSH configuration to the container to make use of the 
+  automatic login that is required for rsync to work properly::
+
+    docker cp ${HOME}/.ssh slavename:/home/buildbot/
+    docker exec slavename chown -R buildbot /home/buildbot/.ssh
+
+.. note::
+  If you cannot copy the SSH keys, you can change the upload function in the 
+  master configuration to employ the built-in upload framework of buildbot. 
+
+Why the containers? In 2015, some of the buildbot slaves did not perform as expected. 
+Especially the Python builds on the 64bit Linux machine took ages to complete and we 
+could not find any obvious reason for this behaviour. 
 
 To make sure that there are no hidden flaws in the configuration of the buildbots 
 or the virtual machines. This section describes the attempt to transfer all 
@@ -517,16 +546,7 @@ of data loss and allows us to move the slaves between different machines.
   https://docs.docker.com/articles/dockerfile_best-practices/ for more good
   advice on this topic.
 
-You can find the generator script and the templates in ``dev/docker/``. Make sure 
-to set the correct environment variables before you run a container, call it for 
-example ``Dockerfile.slave.env.list``:
-
-    SLAVEDIR=slavedir
-    MASTERHOST=coolprop.dreamhosters.com:port
-    SLAVENAME=slavename
-    SLAVEPASSWORD=pass
-
-and then run the official coolprop buildbot configuration with 
-
-    docker run --env-file ./Dockerfile.slave.env.list coolprop:slavepython
+You can find the generator script and the templates in ``dev/docker/``. The latest 
+files hould be in the repository, but you can always generate them from the Python
+sources with ``python Dockerfile.generator.py``. 
 
