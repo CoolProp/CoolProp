@@ -26,7 +26,7 @@ env PATH /home/buildbot/miniconda3/bin:/home/buildbot/miniconda/bin:$PATH
 
 # Add the miniconda environments for the Python builds
 RUN \
-conda create -n CoolProp27 python=2.7 cython pip jinja2 pyyaml pycrypto numpy scipy matplotlib pandas wheel && \
-conda create -n CoolProp33 python=3.3 cython pip jinja2 pyyaml pycrypto numpy scipy matplotlib pandas wheel && \
-conda create -n CoolProp34 python=3.4 cython pip jinja2 pyyaml pycrypto numpy scipy matplotlib pandas wheel && \
+conda create -n CoolProp27 python=2.7 cython pip requests jinja2 pyyaml pycrypto numpy scipy matplotlib pandas wheel && \
+conda create -n CoolProp33 python=3.3 cython pip requests jinja2 pyyaml pycrypto numpy scipy matplotlib pandas wheel && \
+conda create -n CoolProp34 python=3.4 cython pip requests jinja2 pyyaml pycrypto numpy scipy matplotlib pandas wheel && \
 conda clean -yilts

@@ -29,7 +29,7 @@ env PATH /home/buildbot/miniconda3/bin:/home/buildbot/miniconda/bin:$PATH
 
 # Add the additional packages to the conda environment
 RUN \
-conda create -n CoolPropWeb python=2.7 setuptools cython numpy scipy matplotlib pandas ipython wxpython && \
+conda create -n CoolPropWeb python=2.7 setuptools requests cython numpy scipy matplotlib pandas ipython wxpython && \
 conda clean -yilts
 
 # Add some pip packages that only exist there
