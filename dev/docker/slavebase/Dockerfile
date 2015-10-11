@@ -4,6 +4,10 @@ FROM debian:stable
 # File Author / Maintainer
 MAINTAINER Jorrit Wronski (jowr@ipu.dk)
 
+# Just to make sure
+USER root
+WORKDIR /
+
 # Install system tools for compilation
 RUN apt-get update -qq && \
     apt-get install -y build-essential gfortran gcc cmake git && \
