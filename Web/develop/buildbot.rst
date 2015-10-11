@@ -482,7 +482,7 @@ Documentation Builds
 
 Some parts of the documentation are quite involved. That is why we decided not
 to rebuild the whole documentation after every commit. There is a special python
-script that runs a day and performs the most expensive jobs during
+script that runs once a day and performs the most expensive jobs during
 documentation rebuild. This covers the generation of validation figures for all
 fluids and the fitting reports for the incompressible fluids.
 
@@ -514,14 +514,15 @@ build system:
 
 * You can then run the official coolprop buildbot configuration with::
 
-    docker run --env-file ./Dockerfile.slave.env.list --name="slavename" coolprop/slavebase
+    docker run --env-file ./Dockerfile.slave.env.list --name="${SLAVENAME}" coolprop/slavebase
 
-* Some steps require the upload of files to teh servers. In such cases, you 
-  should copy your SSH configuration to the container to make use of the 
-  automatic login that is required for rsync to work properly::
+* Some steps require the upload of files to different servers. In such cases, you 
+  should copy your SSH configuration or other login information to the container to 
+  make use of the automatic login that is required for rsync to work properly::
 
-    docker cp ${HOME}/.ssh slavename:/home/buildbot/
-    docker exec slavename chown -R buildbot /home/buildbot/.ssh
+    docker cp ${HOME}/.ssh ${SLAVENAME}:/home/buildbot/
+    docker cp ${HOME}/.pypirc ${SLAVENAME}:/home/buildbot/
+    docker exec ${SLAVENAME} chown -R buildbot /home/buildbot/
 
 .. note::
   If you cannot copy the SSH keys, you can change the upload function in the 

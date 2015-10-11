@@ -50,6 +50,20 @@ cnd_run_pkgs =  ["numpy", "scipy", "matplotlib", "pandas"]
 # 4) Known hosts
 #ssh_hosts = ["bitbucket.org", "github.com", "coolprop.dreamhosters.com", "coolprop.org"]
 
+# 5) Web packages:
+lin_web_pkgs =  ["build-essential", "git", "gcc", "gfortran", "cmake"]
+lin_web_pkgs += ["python-dev", "libxml2-dev", "libxslt1-dev", "libxslt1.1", "doxygen", "libtool"]
+lin_web_pkgs += ["libatlas3-base", "libblas3", "liblapack3"]
+lin_web_pkgs += ["libatlas-dev", "libblas-dev", "liblapack-dev"]
+lin_web_pkgs += ["python-dev", "libpng-dev", "tk", "libfreetype6-dev"]
+
+cnd_web_pkgs =  ["setuptools", "cython"]
+cnd_web_pkgs += ["numpy", "scipy", "matplotlib", "pandas"]
+cnd_web_pkgs += ["ipython", "wxpython"]
+
+pip_web_pkgs =  ["sphinx", "cloud-sptheme"]
+pip_web_pkgs += ["sphinxcontrib-bibtex", "sphinxcontrib-doxylink", "sphinxcontrib-napoleon"]
+
 #
 local_dict = dict(
   author = author,
@@ -60,6 +74,9 @@ local_dict = dict(
   cnd_env_pyt = [str(x[0])+" "+str(x[1]) for x in zip(cnd_env,cnd_pyt)],
   cnd_env = cnd_env,
   cnd_dev_pkgs = cnd_dev_pkgs+cnd_run_pkgs,
+  lin_web_pkgs = lin_web_pkgs,
+  cnd_web_pkgs = cnd_web_pkgs,
+  pip_web_pkgs = pip_web_pkgs,
 )
 #
 template_path = 'Dockerfile.slave.base.tpl'
@@ -75,6 +92,14 @@ f = codecs.open(os.path.join(tar_dir,'slavepython','Dockerfile'),mode='wb',encod
 f.write(tpl_first_line.format("# "+tpl_mtime_line,template_path))
 f.write(template.render(**local_dict))
 f.close()
+#
+template_path = 'Dockerfile.slave.web.tpl'
+template = environment.get_template(template_path)
+f = codecs.open(os.path.join(tar_dir,'slaveweb','Dockerfile'),mode='wb',encoding='utf-8')
+f.write(tpl_first_line.format("# "+tpl_mtime_line,template_path))
+f.write(template.render(**local_dict))
+f.close()
+
 
 
 print(r"""
