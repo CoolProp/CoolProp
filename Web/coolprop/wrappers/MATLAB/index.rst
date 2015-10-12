@@ -30,9 +30,7 @@ When you are finished, you should have a folder layout like::
         |- DmassHmass_INPUTS.m
         |- ...
 
-Then you need to add the main that contains the +CoolProp folder to the path in MATLAB
-
-Example: adding the folder main that contains CoolProp files to the MATLAB path::
+Then you need to add the main that contains the +CoolProp folder to the path in MATLAB. This command adds the folder ``main`` that contains CoolProp files to the MATLAB path::
 
     addpath('/home/USERNAME/Some_folder/main')
 

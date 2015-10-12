@@ -13,11 +13,17 @@ function startup()
     echo "${BOTADMIN} <${BOTEMAIL}>" > ${SLAVEDIR}/info/admin
     echo "${BOTHOST}" > ${SLAVEDIR}/info/host
   fi
+  # Remove the security relevant variable from the environment
+  unset MASTERHOST
+  unset SLAVEPASSWORD
+  unset BOTADMIN
+  unset BOTEMAIL
+  unset BOTHOST
   $CTRLAPP start ${SLAVEDIR}
   echo "Remember to update the SSH configuration:"
-  echo "docker cp \${HOME}/.ssh ${SLAVENAME}:/home/buildbot/"
-  echo "docker cp \${HOME}/.pypirc ${SLAVENAME}:/home/buildbot/"
-  echo "docker exec ${SLAVENAME} chown -R buildbot /home/buildbot/"
+  echo "docker cp \${HOME}/.ssh ${SLAVENAME}:${HOME}/"
+  echo "docker cp \${HOME}/.pypirc ${SLAVENAME}:${HOME}/"
+  echo "docker exec ${SLAVENAME} chown -R buildbot ${HOME}/"
 }
 
 trap shutdown TERM SIGTERM SIGKILL SIGINT
