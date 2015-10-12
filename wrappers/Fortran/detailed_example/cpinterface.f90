@@ -26,10 +26,10 @@ MODULE CPINTERFACE
 			
 		END FUNCTION get_param_index
 		
-		FUNCTION AbstractState_factory(type, fluidname, errcode, buffer, buffersize) BIND(C, NAME='AbstractState_factory')
+		FUNCTION AbstractState_factory(input, fluidname, errcode, buffer, buffersize) BIND(C, NAME='AbstractState_factory')
 			use iso_c_binding
 			integer(C_long) :: AbstractState_factory
-			character(kind=c_char) :: type(*)
+			character(kind=c_char) :: input(*)
 			character(kind=c_char) :: fluidname(*)
 			integer(C_long) :: errcode
 			character(kind=c_char) :: buffer(*)
@@ -37,11 +37,11 @@ MODULE CPINTERFACE
 			
 		END FUNCTION AbstractState_factory
 		
-		SUBROUTINE AbstractState_update(inputPointer, inputType, prop1, prop2, errcode, &
+		SUBROUTINE AbstractState_update(handle, input, prop1, prop2, errcode, &
 			buffer, buffersize) BIND(C, NAME='AbstractState_update')
 			use iso_c_binding
-			integer(C_long) :: inputPointer
-			integer(C_long) :: inputType
+			integer(C_long) :: handle
+			integer(C_long) :: input
 			real(C_DOUBLE), VALUE :: prop1
 			real(C_DOUBLE), VALUE :: prop2
 			integer(C_long) :: errcode
@@ -50,11 +50,11 @@ MODULE CPINTERFACE
 			
 		END SUBROUTINE AbstractState_update
 		
-		FUNCTION AbstractState_keyed_output(input, output, errcode, &
+		FUNCTION AbstractState_keyed_output(handle, output, errcode, &
 			buffer, buffersize) BIND(C, NAME='AbstractState_keyed_output')
 			use iso_c_binding
-            real(C_DOUBLE) :: AbstractState_keyed_output
-			integer(C_long) :: input
+        		real(C_DOUBLE) :: AbstractState_keyed_output
+			integer(C_long) :: handle
 			integer(C_long) :: output
 			integer(C_long) :: errcode
 			character(kind=c_char) :: buffer(*)
