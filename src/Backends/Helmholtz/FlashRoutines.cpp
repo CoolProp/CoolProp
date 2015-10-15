@@ -560,11 +560,21 @@ void FlashRoutines::PQ_flash_with_guesses(HelmholtzEOSMixtureBackend &HEOS, cons
 	IO.x = std::vector<CoolPropDbl>(guess.x.begin(), guess.x.end());
 	IO.y = std::vector<CoolPropDbl>(guess.y.begin(), guess.y.end());
 	IO.T = guess.T;
-	IO.p = guess.p;
+	IO.p = HEOS._p;
 	IO.bubble_point = false;
 	IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
 	
-	NR.call(HEOS, IO.y, IO.x, IO);
+    if (std::abs(HEOS.Q()) < 1e-10){
+        IO.bubble_point = true;
+        NR.call(HEOS, IO.x, IO.y, IO);
+    }
+    else if (std::abs(HEOS.Q()-1) < 1e-10){
+        IO.bubble_point = false;
+        NR.call(HEOS, IO.y, IO.x, IO);
+    }
+    else{
+        throw ValueError(format("Quality must be 0 or 1"));
+    }
 
 	// Load the other outputs
     HEOS._phase = iphase_twophase;
