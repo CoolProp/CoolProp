@@ -271,6 +271,18 @@
      * @return 
      */
     EXPORT_CODE double CONVENTION AbstractState_keyed_output(const long handle, const long param, long *errcode, char *message_buffer, const long buffer_length);
+
+    /**
+    * @brief Calculate a saturation derivative from the AbstractState using integer values for the desired parameters
+    * @param handle The integer handle for the state class stored in memory
+    * @param Of The parameter of which the derivative is being taken
+    * @param Wrt The derivative with with respect to this parameter
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE double CONVENTION AbstractState_first_saturation_deriv(const long handle, const long Of, const long Wrt, long *errcode, char *message_buffer, const long buffer_length);
         
 
 
