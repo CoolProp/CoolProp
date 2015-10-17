@@ -23,6 +23,7 @@
     X(CRITICAL_WITHIN_1UK, "CRITICAL_WITHIN_1UK", true, "If true, any temperature within 1 uK of the critical temperature will be considered to be AT the critical point") \
     X(CRITICAL_SPLINES_ENABLED, "CRITICAL_SPLINES_ENABLED", true, "If true, the critical splines will be used in the near-vicinity of the critical point") \
     X(SAVE_RAW_TABLES, "SAVE_RAW_TABLES", false, "If true, the raw, uncompressed tables will also be written to file") \
+    X(ALTERNATIVE_TABLES_DIRECTORY, "ALTERNATIVE_TABLES_DIRECTORY", "", "If provided, this path will be the root directory for the tabular data.  Otherwise, ${HOME}/.CoolProp/Tables is used") \
     X(ALTERNATIVE_REFPROP_PATH, "ALTERNATIVE_REFPROP_PATH", "", "An alternative path to be provided to the directory that contains REFPROP's fluids and mixtures directories.  If provided, the SETPATH function will be called with this directory prior to calling any REFPROP functions.") \
     X(ALTERNATIVE_REFPROP_HMX_BNC_PATH, "ALTERNATIVE_REFPROP_HMX_BNC_PATH", "", "An alternative path to the HMX.BNC file.  If provided, it will be passed into REFPROP's SETUP or SETMIX routines") \
     X(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS, "REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS", false, "If true, if the binary interaction parameters in REFPROP are estimated, throw an error rather than silently continuing") \

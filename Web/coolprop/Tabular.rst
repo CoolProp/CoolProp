@@ -16,7 +16,7 @@ There are two backends implemented for tabular interpolation, ``BICUBIC`` and ``
     
     In [1]: CP.get_global_param_string("HOME")
 
-This directory is used because the user should under almost all circumstances have read/write access to this folder.
+This directory is used because the user should under almost all circumstances have read/write access to this folder.  Alternatively, if for some reason you want to use a different directory, you can set the configuration variable ``ALTERNATIVE_TABLES_DIRECTORY`` (see :ref:`configuration`).
 
 .. warning::
 

@@ -691,7 +691,12 @@ public:
         for (std::size_t i = 0; i < fluids.size(); ++i){
             components.push_back(format("%s[%0.10Lf]", fluids[i].c_str(), fractions[i]));
         }
-        return get_home_dir() + "/.CoolProp/Tables/" + AS->backend_name() + "(" + strjoin(components, "&") + ")";
+        std::string table_directory = get_home_dir() + "/.CoolProp/Tables/";
+        std::string alt_table_directory = get_config_string(ALTERNATIVE_TABLES_DIRECTORY);
+        if (!alt_table_directory.empty()){
+            table_directory = alt_table_directory;
+        }
+        return table_directory + AS->backend_name() + "(" + strjoin(components, "&") + ")";
     }
     /// Return a pointer to the set of tabular datasets
     TabularDataSet * get_set_of_tables(shared_ptr<AbstractState> &AS, bool &loaded);
@@ -888,7 +893,7 @@ class TabularBackend : public AbstractState
                 catch(CoolProp::UnableToLoadError &e){
                     if (get_debug_level() > 0){ std::cout << format("Table loading failed with error: %s\n", e.what()); }
                     /// Check directory size
-                    std::string table_path = get_home_dir() + "/.CoolProp/Tables/";
+                    std::string table_path = path_to_tables();
                     #if defined(__ISWINDOWS__)
                         double directory_size_in_GB = CalculateDirSize(std::wstring(table_path.begin(), table_path.end()))/POW3(1024.0);
                     #else
