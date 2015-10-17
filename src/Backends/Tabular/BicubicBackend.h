@@ -67,14 +67,14 @@ class BicubicBackend : public TabularBackend
         /// Instantiator; base class loads or makes tables
         BicubicBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend(AS){
             imposed_phase_index = iphase_not_imposed;
-            // If a pure fluid, don't need to set fractions, go ahead and build
-            if (this->AS->get_mole_fractions().size() == 1){
+            // If a pure fluid or a predefined mixture, don't need to set fractions, go ahead and build
+            if (!this->AS->get_mole_fractions().empty()){
                 check_tables();
                 SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
                 SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
                 dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
                 dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
-                is_mixture = false;
+                is_mixture = (this->AS->get_mole_fractions().size() > 1);
             }
 		};
         void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){ 
