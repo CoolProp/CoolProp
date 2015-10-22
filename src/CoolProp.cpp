@@ -309,6 +309,9 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
         }
     }
     else{
+        if (!all_trivial_outputs){
+            throw ValueError(format("Input pair variable is invalid and output(s) are non-trivial; cannot do state update"));
+        }
         all_outputs_in_inputs = false;
     }
 
@@ -416,9 +419,6 @@ void _PropsSImulti(const std::vector<std::string> &Outputs,
         is_valid_parameter(Name1, key1);
         is_valid_parameter(Name2, key2);
         input_pair = generate_update_pair(key1, Prop1, key2, Prop2, v1, v2);
-        if (input_pair == INPUT_PAIR_INVALID){
-            throw ValueError(format("Input pair formed of Name1: %s and Name2: %s is invalid", Name1.c_str(), Name2.c_str()));
-        }
     }
     catch (std::exception &e){
         // Input parameter parsing failed.  Stop
