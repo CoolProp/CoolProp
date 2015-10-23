@@ -52,7 +52,7 @@ public:
     
     /// Flash for given molar density and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
-    static void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend &HEOS);
+    static void DQ_flash(HelmholtzEOSMixtureBackend &HEOS);
 
     /// Flash for given molar enthalpy and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
