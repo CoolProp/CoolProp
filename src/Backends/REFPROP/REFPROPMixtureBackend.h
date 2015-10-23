@@ -118,6 +118,8 @@ public:
     
     const std::vector<CoolPropDbl> &get_mole_fractions(){return mole_fractions_long_double;};
 
+    const std::vector<CoolPropDbl> calc_mass_fractions();
+
     void calc_phase_envelope(const std::string &type);
 
     CoolPropDbl calc_compressibility_factor(void){ return _p/(_rhomolar*gas_constant()*_T); };

@@ -129,6 +129,8 @@ cdef class AbstractState:
     
     cpdef mole_fractions_liquid(self)
     cpdef mole_fractions_vapor(self)
+    cpdef get_mass_fractions(self) 
+    cpdef get_mole_fractions(self)
     
     cpdef long double alpha0(self) except *
     cpdef long double dalpha0_dDelta(self) except *

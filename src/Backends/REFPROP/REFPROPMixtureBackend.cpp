@@ -719,6 +719,22 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
     }
 }
 
+const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions()
+{
+    // mass fraction is mass_i/total_mass;
+    // REFPROP yields mm in kg/kmol, CP uses base SI units of kg/mol; 
+    CoolPropDbl mm = molar_mass();
+    std::vector<CoolPropDbl> mass_fractions(mole_fractions.size());
+    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
+    // FORTRAN is 1-based indexing!
+    for (long i = 1L; i <= static_cast<long>(mole_fractions.size()); ++i){
+        // Get value for first component
+        INFOdll(&i, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
+        mass_fractions[i-1] = (wmm/1000.0)*mole_fractions[i-1]/mm; 
+    }
+    return mass_fractions;
+}
+
 CoolPropDbl REFPROPMixtureBackend::calc_PIP(void)
 {
     // Calculate the PIP factor of Venkatharathnam and Oellrich, "Identification of the phase of a fluid using 

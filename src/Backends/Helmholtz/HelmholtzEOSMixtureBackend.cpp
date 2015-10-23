@@ -1143,6 +1143,17 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
     post_update();
     
 }
+const std::vector<CoolPropDbl> HelmholtzEOSMixtureBackend::calc_mass_fractions()
+{
+    // mass fraction is mass_i/total_mass;
+    CoolPropDbl mm = molar_mass();
+    std::vector<CoolPropDbl> &mole_fractions = get_mole_fractions_ref();
+    std::vector<CoolPropDbl> mass_fractions(mole_fractions.size());
+    for (std::size_t i = 0; i < mole_fractions.size(); ++i){
+        mass_fractions[i] = (components[i].molar_mass())*(mole_fractions[i])/mm;
+    }
+    return mass_fractions;
+}
 
 void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair, double value1, double value2, const GuessesStructure &guesses)
 {

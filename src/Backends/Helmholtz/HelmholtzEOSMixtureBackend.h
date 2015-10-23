@@ -104,6 +104,8 @@ public:
 	/// Calculate the phase once the state is fully calculated but you aren't sure if it is liquid or gas or ...
 	void recalculate_singlephase_phase();
 
+
+
     const CoolProp::SimpleState &calc_state(const std::string &state);
 
     const std::vector<CoolPropFluid> &get_components() const {return components;}
@@ -115,6 +117,8 @@ public:
     
     std::vector<CoolPropDbl> calc_mole_fractions_liquid(void){return SatL->get_mole_fractions();};
     std::vector<CoolPropDbl> calc_mole_fractions_vapor(void){return SatV->get_mole_fractions();};
+
+    const std::vector<CoolPropDbl> calc_mass_fractions(void);
     
     const CoolProp::PhaseEnvelopeData &calc_phase_envelope_data(){return PhaseEnvelope;};
 

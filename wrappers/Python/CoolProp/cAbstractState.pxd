@@ -37,6 +37,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         
         vector[long double] mole_fractions_liquid() except +ValueError
         vector[long double] mole_fractions_vapor() except +ValueError
+        vector[long double] get_mole_fractions() except +ValueError
+        vector[long double] get_mass_fractions() except +ValueError
         
         constants_header.phases phase() except +ValueError
         void specify_phase(constants_header.phases phase) except +ValueError

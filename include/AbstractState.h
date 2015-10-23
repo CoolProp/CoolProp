@@ -318,6 +318,7 @@ protected:
 
     virtual std::vector<CoolPropDbl> calc_mole_fractions_liquid(void){ throw NotImplementedError("calc_mole_fractions_liquid is not implemented for this backend"); };
     virtual std::vector<CoolPropDbl> calc_mole_fractions_vapor(void){ throw NotImplementedError("calc_mole_fractions_vapor is not implemented for this backend"); };
+    virtual const std::vector<CoolPropDbl> calc_mass_fractions(void){ throw NotImplementedError("calc_mass_fractions is not implemented for this backend"); };
 
     /// Get the minimum fraction (mole, mass, volume) for incompressible fluid
     virtual CoolPropDbl calc_fraction_min(void){ throw NotImplementedError("calc_fraction_min is not implemented for this backend"); };
@@ -428,8 +429,12 @@ public:
         return std::vector<double>(y.begin(), y.end());
     };
     
-    /// Get the mole fractions of the components
+    /// Get the mole fractions of the fluid
     virtual const std::vector<CoolPropDbl> & get_mole_fractions(void) = 0;
+    /// Get the mass fractions of the fluid
+    virtual const std::vector<CoolPropDbl> get_mass_fractions(void){
+        return this->calc_mass_fractions();
+    };
     
     /// Update the state using two state variables 
     virtual void update(CoolProp::input_pairs input_pair, double Value1, double Value2) = 0;

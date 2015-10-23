@@ -87,6 +87,12 @@ cdef class AbstractState:
     cpdef set_volu_fractions(self, vector[double] z): 
         """ Set the volume fractions - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_volu_fractions` """
         self.thisptr.set_volu_fractions(z)
+    cpdef get_mole_fractions(self):
+        """ Get the mole fractions - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_mole_fractions` """
+        return self.thisptr.get_mole_fractions()
+    cpdef get_mass_fractions(self):
+        """ Get the mass fractions - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_mass_fractions` """
+        return self.thisptr.get_mass_fractions()
     
     ## ----------------------------------------	
     ##        Limits
