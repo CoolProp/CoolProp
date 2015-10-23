@@ -211,6 +211,8 @@ enum input_pairs{
     QSmass_INPUTS, ///< Molar quality, Entropy in J/kg/K
     HmolarQ_INPUTS, ///< Enthalpy in J/mol, Molar quality
     HmassQ_INPUTS, ///< Enthalpy in J/kg, Molar quality
+    DmolarQ_INPUTS, ///< Density in mol/m^3, Molar quality
+    DmassQ_INPUTS,  ///< Density in kg/m^3, Molar quality
 
     PT_INPUTS, ///< Pressure in Pa, Temperature in K
 
@@ -325,6 +327,12 @@ template<class T> CoolProp::input_pairs generate_update_pair(parameters key1, T 
         }
         else if (match_pair(key1, key2, iDmolar, iP, swap)){
             pair = DmolarP_INPUTS; // Molar density in mol/m^3, Pressure in Pa
+        }
+        else if (match_pair(key1, key2, iDmass, iQ, swap)){
+            pair = DmassQ_INPUTS; // Mass density in kg/m^3, molar vapor quality
+        }
+        else if (match_pair(key1, key2, iDmolar, iQ, swap)){
+            pair = DmolarQ_INPUTS; // Molar density in mol/m^3, molar vapor quality
         }
         else if (match_pair(key1, key2, iHmass, iP, swap)){
             pair = HmassP_INPUTS; // Enthalpy in J/kg, Pressure in Pa

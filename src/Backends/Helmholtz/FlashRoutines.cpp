@@ -253,6 +253,47 @@ void FlashRoutines::DP_flash(HelmholtzEOSMixtureBackend &HEOS)
         }
     }
 }
+
+class DQ_flash_residual : public FuncWrapper1DWithTwoDerivs
+{
+public:
+    HelmholtzEOSMixtureBackend &HEOS;
+    double rhomolar, Q_target;
+    DQ_flash_residual(HelmholtzEOSMixtureBackend &HEOS, double rhomolar, double Q_target) : HEOS(HEOS), rhomolar(rhomolar), Q_target(Q_target) {};
+    double call(double T){
+        HEOS.update(QT_INPUTS, 0, T); // Doesn't matter whether liquid or vapor, we are just doing a full VLE call for given T
+        double rhoL = HEOS.saturated_liquid_keyed_output(iDmolar);
+        double rhoV = HEOS.saturated_vapor_keyed_output(iDmolar);
+        return (1/rhomolar - 1/rhoL)/(1/rhoV - 1/rhoL) - Q_target;
+    }
+    double deriv(double T){
+        return _HUGE;
+    }
+    double second_deriv(double T){
+        return _HUGE;
+    }
+};
+
+void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend &HEOS)
+{
+    SaturationSolvers::saturation_PHSU_pure_options options;
+    options.use_logdelta = false;
+    HEOS.specify_phase(iphase_twophase);
+    if (HEOS.is_pure_or_pseudopure){
+        double Tmax = HEOS.T_critical() - 0.1;
+        double Tmin = HEOS.Tmin();
+        std::string errstr;
+        DQ_flash_residual resid(HEOS, HEOS._rhomolar, HEOS._Q);
+        Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100, errstr);
+        HEOS._p = HEOS.SatV->p();
+        HEOS._T = HEOS.SatV->T();
+        HEOS._rhomolar = HEOS.SatV->rhomolar();
+        HEOS._phase = iphase_twophase;
+    }
+    else{
+        throw NotImplementedError("DQ_flash not ready for mixtures");
+    }
+}
 void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl Tguess)
 {
     SaturationSolvers::saturation_PHSU_pure_options options;
@@ -277,7 +318,7 @@ void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl Tgues
         HEOS._phase = iphase_twophase;
     }
     else{
-        throw NotImplementedError("QS_flash not ready for mixtures");
+        throw NotImplementedError("HQ_flash not ready for mixtures");
     }
 }
 void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend &HEOS)

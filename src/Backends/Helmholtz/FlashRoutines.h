@@ -50,6 +50,10 @@ public:
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void QS_flash(HelmholtzEOSMixtureBackend &HEOS);
     
+    /// Flash for given molar density and (molar) quality
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    static void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend &HEOS);
+
     /// Flash for given molar enthalpy and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param Tguess (optional) The guess temperature in K to start from, ignored if < 0

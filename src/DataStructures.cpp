@@ -406,6 +406,9 @@ const input_pair_info input_pair_list[] = {
     { QSmass_INPUTS,       "QS_INPUTS",           "Molar quality, Entropy in J/kg/K"                   },
     { HmolarQ_INPUTS,      "HQ_INPUTS",           "Enthalpy in J/mol, Molar quality"                   },
     { HmassQ_INPUTS,       "HQ_INPUTS",           "Enthalpy in J/kg, Molar quality"                    },
+    { DmassQ_INPUTS,       "DmassQ_INPUTS",       "Molar density kg/m^3, Molar quality"               },
+    { DmolarQ_INPUTS,      "DmolarQ_INPUTS",      "Molar density in mol/m^3, Molar quality"            },
+
     { PQ_INPUTS,           "PQ_INPUTS",           "Pressure in Pa, Molar quality"                      },
     
     { PT_INPUTS,           "PT_INPUTS",           "Pressure in Pa, Temperature in K"                   },
@@ -500,6 +503,8 @@ void split_input_pair(input_pairs pair, parameters &p1, parameters &p2)
         case TUmolar_INPUTS: p1 = iT; p2 = iUmolar; break;
         case DmassP_INPUTS: p1 = iDmass; p2 = iP; break;
         case DmolarP_INPUTS: p1 = iDmolar; p2 = iP; break;
+        case DmassQ_INPUTS: p1 = iDmass; p2 = iQ; break;
+        case DmolarQ_INPUTS: p1 = iDmolar; p2 = iQ; break;
         case HmassP_INPUTS: p1 = iHmass; p2 = iP; break;
         case HmolarP_INPUTS: p1 = iHmolar; p2 = iP; break;
         case PSmass_INPUTS: p1 = iP; p2 = iSmass; break;

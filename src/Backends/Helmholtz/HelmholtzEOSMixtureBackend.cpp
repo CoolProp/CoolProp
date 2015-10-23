@@ -1033,6 +1033,7 @@ void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(CoolProp::input_pairs &inp
         case SmassT_INPUTS: ///< Entropy in J/kg/K, Temperature in K
         //case TUmass_INPUTS: ///< Temperature in K, Internal energy in J/kg (NOT CURRENTLY IMPLEMENTED)
         case DmassP_INPUTS: ///< Mass density in kg/m^3, Pressure in Pa
+        case DmassQ_INPUTS: ///< Mass density in kg/m^3, molar quality
         case HmassP_INPUTS: ///< Enthalpy in J/kg, Pressure in Pa
         case PSmass_INPUTS: ///< Pressure in Pa, Entropy in J/kg/K
         case PUmass_INPUTS: ///< Pressure in Pa, Internal energy in J/kg
@@ -1055,6 +1056,7 @@ void HelmholtzEOSMixtureBackend::mass_to_molar_inputs(CoolProp::input_pairs &inp
                 case SmassT_INPUTS: input_pair = SmolarT_INPUTS; value1 *= mm;  break;
                 //case TUmass_INPUTS: input_pair = TUmolar_INPUTS; value2 *= mm;  break; (NOT CURRENTLY IMPLEMENTED)
                 case DmassP_INPUTS: input_pair = DmolarP_INPUTS; value1 /= mm;  break;
+                case DmassQ_INPUTS: input_pair = DmolarQ_INPUTS; value1 /= mm;  break;
                 case HmassP_INPUTS: input_pair = HmolarP_INPUTS; value1 *= mm;  break;
                 case PSmass_INPUTS: input_pair = PSmolar_INPUTS; value2 *= mm;  break;
                 case PUmass_INPUTS: input_pair = PUmolar_INPUTS; value2 *= mm;  break;
@@ -1136,6 +1138,8 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
             _Q = value1; _smolar = value2; FlashRoutines::QS_flash(*this); break;
         case HmolarQ_INPUTS:
             _hmolar = value1; _Q = value2; FlashRoutines::HQ_flash(*this); break;
+        case DmolarQ_INPUTS:
+            _rhomolar = value1; _Q = value2; FlashRoutines::DQ_flash(*this); break;
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
     }
