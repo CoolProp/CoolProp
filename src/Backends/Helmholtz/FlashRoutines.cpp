@@ -264,6 +264,7 @@ public:
         HEOS.update(QT_INPUTS, 0, T); // Doesn't matter whether liquid or vapor, we are just doing a full VLE call for given T
         double rhoL = HEOS.saturated_liquid_keyed_output(iDmolar);
         double rhoV = HEOS.saturated_vapor_keyed_output(iDmolar);
+        /// Error between calculated and target vapor quality based on densities
         return (1/rhomolar - 1/rhoL)/(1/rhoV - 1/rhoL) - Q_target;
     }
     double deriv(double T){
@@ -280,8 +281,9 @@ void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend &HEOS)
     options.use_logdelta = false;
     HEOS.specify_phase(iphase_twophase);
     if (HEOS.is_pure_or_pseudopure){
+        // Bump the temperatures to hopefully yield more reliable results
         double Tmax = HEOS.T_critical() - 0.1;
-        double Tmin = HEOS.Tmin();
+        double Tmin = HEOS.Tmin() + 0.1;
         std::string errstr;
         DQ_flash_residual resid(HEOS, HEOS._rhomolar, HEOS._Q);
         Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100, errstr);
