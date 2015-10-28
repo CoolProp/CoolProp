@@ -76,7 +76,7 @@
       "using_tau_r": false
     }
   }, 
-  "CAS": "2314-97-8 ", 
+  "CAS": "2314-97-8", 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": -1, 
@@ -240,7 +240,7 @@
   ], 
   "FORMULA": "C_{1}F_{3}I_{1}", 
   "NAME": "R13I1", 
-  "REFPROP_NAME": "R13I1", 
+  "REFPROP_NAME": "CF3I", 
   "STATES": {
     "critical": {
       "T": 396.44, 
