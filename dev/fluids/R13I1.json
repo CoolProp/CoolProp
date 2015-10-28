@@ -240,7 +240,7 @@
   ], 
   "FORMULA": "C_{1}F_{3}I_{1}", 
   "NAME": "R13I1", 
-  "REFPROP_NAME": "R13I1", 
+  "REFPROP_NAME": "CF3I", 
   "STATES": {
     "critical": {
       "T": 396.44, 
