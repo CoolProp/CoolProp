@@ -221,7 +221,7 @@ A number of predefined mixtures are included in CoolProp.  You can retrieve the 
 
     In [1]: import CoolProp as CP
     
-    In [1]: CoolProp.CoolProp.get_global_param_string('predefined_mixtures').split(',')[0:6]
+    In [1]: CP.get_global_param_string('predefined_mixtures').split(',')[0:6]
     
 and then to calculate the density of air using the mixture model at 1 atmosphere (=101325 Pa) and 300 K, you could do
 
@@ -229,9 +229,22 @@ and then to calculate the density of air using the mixture model at 1 atmosphere
 
     In [1]: import CoolProp as CP
     
-    In [1]: CoolProp.CoolProp.PropsSI('D','P',101325,'T',300,'Air.mix')
+    In [1]: CP.PropsSI('D','P',101325,'T',300,'Air.mix')
     
 Exactly the same methodology can be used from other wrappers.
+
+User-Defined Mixtures
+---------------------
+
+When using mixtures in CoolProp, you can specify mixture components and composition by encoding the mixture components and mole fractions by 
+
+.. ipython::
+
+    In [1]: import CoolProp as CP
+    
+    In [1]: CP.PropsSI('D','T',300,'P',101325,'HEOS::R32[0.697615]&R125[0.302385]')
+    
+You can handle ternary and multi-component mixtures in the same fashion, just add the components to the fluid string
 
 .. _high_level_set_reference_state:
 
