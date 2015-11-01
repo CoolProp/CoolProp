@@ -211,9 +211,15 @@ cpdef string get_parameter_information(int key, string info):
     return _get_parameter_information(key, info)
 
 cpdef string get_mixture_binary_pair_data(CAS1, CAS2, key) except *:
+    """
+    Obtain mixture interaction parameter.  Python wrapper of C++ function :cpapi:`CoolProp::get_mixture_binary_pair_data`
+    """
     return _get_mixture_binary_pair_data(CAS1, CAS2, key)
     
 cpdef set_mixture_binary_pair_data(CAS1, CAS2, key, val):
+    """
+    Set mixture interaction parameter.  Python wrapper of C++ function :cpapi:`CoolProp::set_mixture_binary_pair_data`
+    """
     _set_mixture_binary_pair_data(CAS1, CAS2, key, val)
 
 cpdef get_global_param_string(string param):
@@ -226,6 +232,9 @@ cpdef get_fluid_param_string(string fluid, string param):
     return _get_fluid_param_string(fluid, param)
 
 cpdef apply_simple_mixing_rule(CAS1, CAS2, rule):
+    """
+    Apply simple mixing rule.  Currently linear or Lorentz-Berthelot.  Python wrapper of C++ function :cpapi:`CoolProp::apply_simple_mixing_rule`
+    """
     _apply_simple_mixing_rule(CAS1, CAS2, rule)
     
 cpdef double saturation_ancillary(string name, string output, int Q, string input, double value):

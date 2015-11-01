@@ -36,6 +36,53 @@ Binary pairs
    :header-rows: 1
    :file: Mixtures.csv
 
+
+Estimating binary interaction parameters
+----------------------------------------
+
+If you have a mixture that you would like to include in your analysis, but for which no interaction parameters are currently available, there are two estimation schemes available.  These estimation schemes should be used with extreme caution.  If you use these schemes, you should definitely check that you are getting reasonable output values.  The two schemes available are
+
+* ``linear`` - Tr and vr are a linear function of molar composition between the two pure fluid values
+* ``Lorentz-Berthelot`` - all interaction parameters are 1.0
+
+Here is a sample of using this in python::
+
+    import CoolProp.CoolProp as CP
+    CAS_He = CP.get_fluid_param_string('Helium','CAS')
+    CAS_Xe = CP.get_fluid_param_string('Xe','CAS')
+    CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
+    CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
+    
+.. warning::
+
+    Use with caution!! For other mixtures this can give you entirely(!) wrong predictions
+
+Using your own interaction parameters
+-------------------------------------
+
+If you have your own interaction parameters that you would like to use, you can set them using the ``set_mixture_binary_pair_data`` function.  (You can also retrieve them using the ``set_mixture_binary_pair_data`` function).  You must do this before you would like to call other functions.  Some sample code is below.
+
+.. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+    
+    In [1]: CAS_He = CP.get_fluid_param_string('Helium','CAS')
+    
+    In [1]: CAS_Xe = CP.get_fluid_param_string('Xe','CAS')
+
+    # This adds a dummy entry in the library of interaction parameters if the mixture is not already there
+    In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
+
+    In [1]: CP.set_mixture_binary_pair_data(CAS_He, CAS_Xe, 'betaT', 1.0)
+    
+    In [1]: CP.set_mixture_binary_pair_data(CAS_He, CAS_Xe, 'gammaT', 1.5)
+    
+    In [1]: CP.set_mixture_binary_pair_data(CAS_He, CAS_Xe, 'betaV', 1.0)
+    
+    In [1]: CP.set_mixture_binary_pair_data(CAS_He, CAS_Xe, 'gammaV', 1.5)
+
+    In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
+
 Phase Envelope
 --------------
 .. plot::
