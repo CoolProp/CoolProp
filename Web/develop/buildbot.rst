@@ -514,7 +514,11 @@ build system:
 
 * You can then run the official coolprop buildbot configuration with::
 
-    docker run --env-file ./Dockerfile.slave.env.list --name="${SLAVENAME}" coolprop/slavebase
+    docker run -d --env-file ./Dockerfile64.slave.env.list --name=CoolProp64-slave coolprop/slavepython 
+    docker run -d --env-file ./Dockerfile32.slave.env.list --name=CoolProp32-slave coolprop/slavepython32
+    
+  The above commands launch background processes using the docker containes for the Python buildslaves in 
+  64bit and 32bit, respectively. 
 
 * Some steps require the upload of files to different servers. In such cases, you 
   should copy your SSH configuration or other login information to the container to 
@@ -522,7 +526,7 @@ build system:
 
     docker cp ${HOME}/.ssh ${SLAVENAME}:/home/buildbot/
     docker cp ${HOME}/.pypirc ${SLAVENAME}:/home/buildbot/
-    docker exec ${SLAVENAME} chown -R buildbot /home/buildbot/
+    docker exec ${SLAVENAME} --user root chown -R buildbot /home/buildbot/
 
 .. note::
   If you cannot copy the SSH keys, you can change the upload function in the 
@@ -553,13 +557,13 @@ Some more useful commands when working with docker are::
 
 The workflow to generate the images locally could look like::
 
-    cd dev/docker
-    cd slavebase   ; docker build -t coolprop/slavebase   -f Dockerfile . ; cd ..
-    cd slavepython ; docker build -t coolprop/slavepython -f Dockerfile . ; cd ..
-    cd slaveweb    ; docker build -t coolprop/slaveweb    -f Dockerfile . ; cd ..
+    git clone --recursive https://github.com/CoolProp/Dockerfiles.git CoolProp.Dockerfiles.git
+    cd CoolProp.Dockerfiles.git
+    cd slavebase/64bit      ; docker build -t coolprop/slavebase      -f Dockerfile . ; cd ..
+    cd slavepython/64bit    ; docker build -t coolprop/slavepython    -f Dockerfile . ; cd ..
+    cd slavelinuxopen/64bit ; docker build -t coolprop/slavelinuxopen -f Dockerfile . ; cd ..
 
 Please also have a look at the CoolProp repository on Docker Hub to see which 
-images are available for download: https://hub.docker.com/r/coolprop/ 
-We also might consider using a preprocessor a la https://github.com/docker/docker/issues/735 
-to build the Dockerfiles, but that has not bee tested.
+images are available for download https://hub.docker.com/r/coolprop/ and do not hesitate to 
+contribute to the sources at https://github.com/CoolProp/Dockerfiles
 
