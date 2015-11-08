@@ -425,7 +425,10 @@ public:
 class ResidualHelmholtzSRK : public BaseHelmholtzTerm{
 
 public:
+    bool enabled;
     CoolPropDbl Tc, pc, rhomolarc, acentric, R, a, b, kappa;
+    /// Default Constructor
+    ResidualHelmholtzSRK(){ enabled = false; };
     /// Constructor
     ResidualHelmholtzSRK(
         const CoolPropDbl Tc,
@@ -439,6 +442,7 @@ public:
         a = 0.427*R*R*Tc*Tc/pc;
         b = 0.08664*R*Tc/pc;
         kappa = 0.48508 + 1.55171*acentric - 0.15613*acentric*acentric;
+        enabled = true;
     };
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
@@ -544,7 +548,14 @@ public:
     ResidualHelmholtzNonAnalytic NonAnalytic;
     ResidualHelmholtzSAFTAssociating SAFT;
     ResidualHelmholtzGeneralizedExponential GenExp;
+    ResidualHelmholtzSRK SRK;
 
+    void empty_the_EOS(){
+        NonAnalytic = ResidualHelmholtzNonAnalytic();
+        SAFT = ResidualHelmholtzSAFTAssociating();
+        GenExp = ResidualHelmholtzGeneralizedExponential();
+        SRK = ResidualHelmholtzSRK();
+    }
     void clear(){
         _base.clear();
         _dDelta.clear(); _dTau.clear();
@@ -558,6 +569,7 @@ public:
         GenExp.all(tau, delta, derivs);
         NonAnalytic.all(tau, delta, derivs);
         SAFT.all(tau, delta, derivs);
+        SRK.all(tau, delta, derivs);
         if (cache_values){
             _base = derivs.alphar;
             _dDelta = derivs.dalphar_ddelta;

@@ -248,6 +248,12 @@
     inline std::string &strstrip(std::string &s) {
             return strlstrip(strrstrip(s));
     }
+    /// Simple string function to check for end of string being equal to given string
+    inline bool endswith(const std::string &s1, const std::string &s2){
+        long lhs = static_cast<long>(s1.find(s2));
+        long rhs = static_cast<long>(s1.size()) - static_cast<long>(s2.size());
+        return lhs == rhs;
+    }
 
     // Get all the contents of a file and dump into a STL string
     // Thanks to http://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
