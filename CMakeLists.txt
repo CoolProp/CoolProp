@@ -74,9 +74,11 @@ option (FORCE_BITNESS_64
 option (COOLPROP_RELEASE
        "Optimize the builds with the release specs"
        OFF)
+       
 option (COOLPROP_DEBUG
        "Make a debug build"
        OFF)
+       
 IF ( COOLPROP_RELEASE AND COOLPROP_DEBUG )
   MESSAGE(FATAL_ERROR "You can only make a release OR and debug build.")
 ENDIF()
@@ -427,6 +429,7 @@ if (COOLPROP_EES_MODULE)
   if (NOT MSVC)
     set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
   endif()
+
   add_dependencies (COOLPROP_EES generate_headers)
   
   if ( MSVC )
@@ -679,8 +682,9 @@ if (COOLPROP_JAVA_MODULE)
   endif()
   
   if (NOT MSVC)
-    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
+    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m${BITNESS}" LINK_FLAGS "-m${BITNESS}")
   endif()
+  
   add_dependencies (${app_name} generate_headers)
   
   add_custom_command(TARGET CoolProp
@@ -790,7 +794,7 @@ if (COOLPROP_PHP_MODULE)
   endif()
   
   if (NOT MSVC)
-    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
+    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m${BITNESS}" LINK_FLAGS "-m${BITNESS}")   
   endif()
   add_dependencies (CoolProp generate_headers)
   
@@ -1021,8 +1025,8 @@ if (COOLPROP_R_MODULE)
     
     link_directories(${R_BIN_OUT})
     if (NOT MSVC)
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -m64")
-        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -m64")
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -m${BITNESS}")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -m${BITNESS}")
     endif()
 
     add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
