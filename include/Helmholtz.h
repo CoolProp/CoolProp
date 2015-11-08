@@ -422,6 +422,46 @@ public:
     void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 };
 
+class ResidualHelmholtzSRK : public BaseHelmholtzTerm{
+
+public:
+    CoolPropDbl Tc, pc, rhomolarc, acentric, R, a, b, kappa;
+    /// Constructor
+    ResidualHelmholtzSRK(
+        const CoolPropDbl Tc,
+        const CoolPropDbl pc,
+        const CoolPropDbl rhomolarc,
+        const CoolPropDbl acentric,
+        const CoolPropDbl R
+        )
+        : Tc(Tc), pc(pc), rhomolarc(rhomolarc), acentric(acentric), R(R)
+    {
+        a = 0.427*R*R*Tc*Tc/pc;
+        b = 0.08664*R*Tc/pc;
+        kappa = 0.48508 + 1.55171*acentric - 0.15613*acentric*acentric;
+    };
+
+    void to_json(rapidjson::Value &el, rapidjson::Document &doc);
+
+    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.alphar; };
+    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.dalphar_ddelta; };
+    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.dalphar_dtau; };
+    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d2alphar_ddelta2; };
+    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d2alphar_ddelta_dtau; }
+    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d2alphar_dtau2; };
+    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d3alphar_ddelta3; };
+    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d3alphar_ddelta2_dtau; };
+    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d3alphar_ddelta_dtau2; };
+    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d3alphar_dtau3; };
+    CoolPropDbl dTau4(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d4alphar_dtau4; };
+    CoolPropDbl dDelta_dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d4alphar_ddelta_dtau3; };
+    CoolPropDbl dDelta2_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d4alphar_ddelta2_dtau2; };
+    CoolPropDbl dDelta3_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d4alphar_ddelta3_dtau; };
+    CoolPropDbl dDelta4(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){ HelmholtzDerivatives deriv; all(tau, delta, deriv); return deriv.d4alphar_ddelta4; };
+
+    void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
+};
+
 class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm{
     
 protected:

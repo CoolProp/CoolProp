@@ -478,6 +478,41 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
     }
 }
 
+void ResidualHelmholtzSRK::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
+{
+    CoolPropDbl rhor = rhomolarc, Treducing = Tc, Tr = 1/tau;
+    CoolPropDbl kappa_times_Trbracket = 1 + kappa*(1-sqrt(Tr));
+    CoolPropDbl amix = a*pow(kappa_times_Trbracket, 2);
+
+    CoolPropDbl damix_dTau_num = (a_mix(tau+0.001) - a_mix(tau-0.001))/(2*0.001);
+
+    // Derivatives of amix with respect to tau
+    CoolPropDbl damix_dTau = a*kappa/pow(tau, 3.0/2.0)*kappa_times_Trbracket;
+    CoolPropDbl d2amix_dTau2 = a*kappa/2.0*(kappa/pow(tau,3)-3/pow(tau, 5.0/2.0)*kappa_times_Trbracket);
+    CoolPropDbl d3amix_dTau3 = 3.0*a*kappa/4.0*(-3.0*kappa/pow(tau, 4)+5/pow(tau, 7.0/2.0)*kappa_times_Trbracket);
+    CoolPropDbl d4amix_dTau4 = 3.0*a*kappa/8.0*(29.0*kappa/pow(tau, 5)-35/pow(tau, 9.0/2.0)*kappa_times_Trbracket);
+
+    derivs.alphar = -log(1-b*delta*rhor)-tau*amix/(R*Treducing*b)*log(b*delta*rhor + 1);
+
+    derivs.dalphar_ddelta = 1/(R*Treducing*b)*(-R*Treducing*b/(delta-1/(b*rhor))-b*rhor*tau*amix/(b*delta*rhor+1));
+    derivs.dalphar_dtau = -log(b*delta*rhor+1)/(R*Treducing*b)*(tau*damix_dTau + amix);
+
+    derivs.d2alphar_ddelta2 = 1/(R*Treducing)*(R*Treducing/pow(delta-1/(b*rhor), 2)+b*tau*amix*pow(rhor/(b*delta*rhor+1), 2));
+    derivs.d2alphar_ddelta_dtau = -1/(R*Treducing*b)*(b*rhor*tau*damix_dTau + b*rhor*amix)/(b*delta*rhor+1);
+    derivs.d2alphar_dtau2 = -log(b*delta*rhor+1)/(R*Treducing*b)*(tau*d2amix_dTau2 + 2*damix_dTau);
+
+    derivs.d3alphar_ddelta3 = -1/(R*Treducing)*(2*R*Treducing/pow(delta-1/(b*rhor), 3)+2*b*b*tau*amix*pow(rhor/(b*delta*rhor+1), 3));
+    derivs.d3alphar_ddelta2_dtau = b*rhor*rhor*(tau*damix_dTau+amix)/(R*Treducing*pow(b*delta*rhor+1, 2));
+    derivs.d3alphar_ddelta_dtau2 = -rhor*(tau*d2amix_dTau2+2*damix_dTau)/(R*Treducing*(b*delta*rhor+1));
+    derivs.d3alphar_dtau3 = -log(b*delta*rhor+1)/(R*Treducing*b)*(tau*d3amix_dTau3 + 3*d2amix_dTau2);
+
+    derivs.d4alphar_ddelta4 = 1/(R*Treducing)*(6*R*Treducing/pow(delta-1/(b*rhor), 4)+6*b*b*b*tau*amix*pow(rhor/(b*delta*rhor+1), 4));
+    derivs.d4alphar_ddelta3_dtau = -2*b*b*rhor*rhor*rhor*(tau*damix_dTau+amix)/(R*Treducing*pow(b*delta*rhor+1,3));
+    derivs.d4alphar_ddelta2_dtau2 = b*rhor*rhor*(tau*d2amix_dTau2+2*damix_dTau)/(R*Treducing*pow(b*delta*rhor+1,2));
+    derivs.d4alphar_ddelta_dtau3 = -rhor*(tau*d3amix_dTau3+3*d2amix_dTau2)/(R*Treducing*(b*delta*rhor+1));
+    derivs.d4alphar_dtau4 = -log(b*delta*rhor+1)/(R*Treducing*b)*(tau*d4amix_dTau4 + 4*d3amix_dTau3);
+}
+
 void ResidualHelmholtzSAFTAssociating::to_json(rapidjson::Value &el, rapidjson::Document &doc)
 {
     el.AddMember("type","ResidualHelmholtzSAFTAssociating",doc.GetAllocator());
@@ -891,10 +926,11 @@ class HelmholtzConsistencyFixture
 public:
     CoolPropDbl numerical, analytic;
 
-    shared_ptr<CoolProp::BaseHelmholtzTerm> PlanckEinstein, Lead, LogTau, IGPower, CP0Constant, CP0PolyT, SAFT, NonAnalytic;
+    shared_ptr<CoolProp::BaseHelmholtzTerm> PlanckEinstein, Lead, LogTau, IGPower, CP0Constant, CP0PolyT, SAFT, NonAnalytic, SRK;
     shared_ptr<CoolProp::ResidualHelmholtzGeneralizedExponential> Gaussian, Lemmon2005, Exponential, GERG2008, Power;
 
     HelmholtzConsistencyFixture(){
+        SRK.reset(new CoolProp::ResidualHelmholtzSRK(300, 4e6, 4000, 0.3, 8.3144621));
         Lead.reset(new CoolProp::IdealHelmholtzLead(1,3));
         LogTau.reset(new CoolProp::IdealHelmholtzLogTau(1.5));
         {
@@ -1036,6 +1072,7 @@ public:
         else if (!t.compare("PlanckEinstein")){return PlanckEinstein;}
         else if (!t.compare("CP0Constant")){return CP0Constant;}
         else if (!t.compare("CP0PolyT")){return CP0PolyT;}
+        else if (!t.compare("SRK")){ return SRK; }
 
         else if (!t.compare("Gaussian")){return Gaussian;}
         else if (!t.compare("Lemmon2005")){return Lemmon2005;}
@@ -1145,7 +1182,7 @@ public:
 
 std::string terms[] = {"Lead","LogTau","IGPower","PlanckEinstein","CP0Constant","CP0PolyT",
                        "Gaussian","Lemmon2005","Power","SAFT","NonAnalytic","Exponential",
-                       "GERG2008"};
+                       "GERG2008","SRK"};
 std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDelta_dTau","dDelta_dTau2","dDelta2_dTau","dTau4","dDelta_dTau3","dDelta2_dTau2","dDelta3_dTau","dDelta4"};
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]")
