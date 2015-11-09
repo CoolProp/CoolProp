@@ -398,7 +398,7 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
     beta_T.resize(N, std::vector<CoolPropDbl>(N, 0));
     gamma_T.resize(N, std::vector<CoolPropDbl>(N, 0));
 
-    HEOS.Excess.resize(N);
+    HEOS.residual_helmholtz->Excess.resize(N);
 
     for (std::size_t i = 0; i < N; ++i)
     {
@@ -462,12 +462,12 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
             // ***************************************************
 
             // Set the scaling factor F for the excess term
-            HEOS.Excess.F[i][j] = dict_red.get_number("F");
+            HEOS.residual_helmholtz->Excess.F[i][j] = dict_red.get_number("F");
 
-            if (std::abs(HEOS.Excess.F[i][j]) < DBL_EPSILON){
+            if (std::abs(HEOS.residual_helmholtz->Excess.F[i][j]) < DBL_EPSILON){
                 // Empty departure function that will just return 0
                 std::vector<double> n(1,0), d(1,1), t(1,1), l(1,0);
-                HEOS.Excess.DepartureFunctionMatrix[i][j].reset(new ExponentialDepartureFunction(n,d,t,l));
+                HEOS.residual_helmholtz->Excess.DepartureFunctionMatrix[i][j].reset(new ExponentialDepartureFunction(n, d, t, l));
                 continue;
             }
 
@@ -494,13 +494,13 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
                 std::vector<double> epsilon = dict_dep.get_double_vector("epsilon");
                 std::vector<double> beta = dict_dep.get_double_vector("beta");
                 std::vector<double> gamma = dict_dep.get_double_vector("gamma");
-                HEOS.Excess.DepartureFunctionMatrix[i][j].reset(new GERG2008DepartureFunction(n,d,t,eta,epsilon,beta,gamma,Npower));
+                HEOS.residual_helmholtz->Excess.DepartureFunctionMatrix[i][j].reset(new GERG2008DepartureFunction(n, d, t, eta, epsilon, beta, gamma, Npower));
             }
             else if (!type_dep.compare("Exponential"))
             {
                 // Powers of the exponents inside the exponential term
                 std::vector<double> l = dict_dep.get_double_vector("l");
-                HEOS.Excess.DepartureFunctionMatrix[i][j].reset(new ExponentialDepartureFunction(n,d,t,l));
+                HEOS.residual_helmholtz->Excess.DepartureFunctionMatrix[i][j].reset(new ExponentialDepartureFunction(n, d, t, l));
             }
             else
             {

@@ -109,18 +109,53 @@ public:
 // #############################################################################
 // #############################################################################
 
+#define LIST_OF_DERIVATIVE_VARIABLES \
+    X(alphar) \
+    X(dalphar_ddelta) \
+    X(dalphar_dtau) \
+    X(d2alphar_ddelta2) \
+    X(d2alphar_dtau2) \
+    X(d2alphar_ddelta_dtau) \
+    X(d3alphar_ddelta3) \
+    X(d3alphar_ddelta_dtau2) \
+    X(d3alphar_ddelta2_dtau) \
+    X(d3alphar_dtau3) \
+    X(d4alphar_ddelta4) \
+    X(d4alphar_ddelta3_dtau) \
+    X(d4alphar_ddelta2_dtau2) \
+    X(d4alphar_ddelta_dtau3) \
+    X(d4alphar_dtau4)
+
 struct HelmholtzDerivatives
 {
-    CoolPropDbl alphar, dalphar_ddelta, dalphar_dtau, d2alphar_ddelta2, d2alphar_dtau2, d2alphar_ddelta_dtau, 
-                d3alphar_ddelta3, d3alphar_ddelta_dtau2, d3alphar_ddelta2_dtau, d3alphar_dtau3,
-                d4alphar_ddelta4, d4alphar_ddelta3_dtau, d4alphar_ddelta2_dtau2, d4alphar_ddelta_dtau3, d4alphar_dtau4;
+    #define X(name)  CoolPropDbl name;
+        LIST_OF_DERIVATIVE_VARIABLES
+    #undef X
+
     void reset(CoolPropDbl v){
-                alphar = v; dalphar_ddelta = v; dalphar_dtau = v; d2alphar_ddelta2 = v; d2alphar_dtau2 = v; d2alphar_ddelta_dtau = v;
-                d3alphar_ddelta3 = v; d3alphar_ddelta_dtau2 = v; d3alphar_ddelta2_dtau = v; d3alphar_dtau3 = v;
-                d4alphar_ddelta4 = v; d4alphar_ddelta3_dtau = v; d4alphar_ddelta2_dtau2 = v; d4alphar_ddelta_dtau3 = v; d4alphar_dtau4 = v;
-                }
+        #define X(name)  name = v;
+            LIST_OF_DERIVATIVE_VARIABLES
+        #undef X
+    }
+    HelmholtzDerivatives HelmholtzDerivatives::operator+(const HelmholtzDerivatives &other) const
+    {
+        HelmholtzDerivatives _new;
+        #define X(name)  _new. ## name = name + other. ## name;
+            LIST_OF_DERIVATIVE_VARIABLES
+        #undef X
+        return _new;
+    }
+    HelmholtzDerivatives HelmholtzDerivatives::operator*(const CoolPropDbl &other) const
+    {
+        HelmholtzDerivatives _new;
+        #define X(name)  _new. ## name = name * other;
+            LIST_OF_DERIVATIVE_VARIABLES
+        #undef X
+        return _new;
+    }
     HelmholtzDerivatives(){reset(0.0);};
 };
+#undef LIST_OF_DERIVATIVE_VARIABLES
 
 struct ResidualHelmholtzGeneralizedExponentialElement
 {

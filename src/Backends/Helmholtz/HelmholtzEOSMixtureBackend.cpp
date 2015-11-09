@@ -39,11 +39,22 @@ static int deriv_counter = 0;
 
 namespace CoolProp {
 
+HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(){
+    imposed_phase_index = iphase_not_imposed;
+    is_pure_or_pseudopure = false;
+    N = 0;
+    _phase = iphase_unknown;
+    // Reset the residual Helmholtz energy class
+    residual_helmholtz.reset(new ResidualHelmholtz());
+}
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV) {
     std::vector<CoolPropFluid> components(component_names.size());
     for (unsigned int i = 0; i < components.size(); ++i){
         components[i] = get_library().get(component_names[i]);
     }
+
+    // Reset the residual Helmholtz energy class
+    residual_helmholtz.reset(new ResidualHelmholtz());
 
     // Set the components and associated flags
     set_components(components, generate_SatL_and_SatV);
@@ -52,6 +63,9 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::st
     _phase = iphase_unknown;
 }
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV) {
+
+    // Reset the residual Helmholtz energy class
+    residual_helmholtz.reset(new ResidualHelmholtz());
 
     // Set the components and associated flags
     set_components(components, generate_SatL_and_SatV);
@@ -2410,74 +2424,23 @@ void HelmholtzEOSMixtureBackend::calc_reducing_state(void)
 void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<CoolPropDbl> &mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta)
 {
     deriv_counter++;
-    //std::cout << ".";
-    if (is_pure_or_pseudopure){
-        HelmholtzDerivatives derivs = components[0].EOS().alphar.all(tau, delta);
-        _alphar = derivs.alphar;
-        _dalphar_dDelta = derivs.dalphar_ddelta;
-        _dalphar_dTau = derivs.dalphar_dtau;
-        _d2alphar_dDelta2 = derivs.d2alphar_ddelta2;
-        _d2alphar_dDelta_dTau = derivs.d2alphar_ddelta_dtau;
-        _d2alphar_dTau2 = derivs.d2alphar_dtau2;
-        _d3alphar_dDelta3 = derivs.d3alphar_ddelta3;
-        _d3alphar_dDelta2_dTau = derivs.d3alphar_ddelta2_dtau;
-        _d3alphar_dDelta_dTau2 = derivs.d3alphar_ddelta_dtau2;
-        _d3alphar_dTau3 = derivs.d3alphar_dtau3;
-		_d4alphar_dDelta4 = derivs.d4alphar_ddelta4;
-        _d4alphar_dDelta3_dTau = derivs.d4alphar_ddelta3_dtau;
-		_d4alphar_dDelta2_dTau2 = derivs.d4alphar_ddelta2_dtau2;
-        _d4alphar_dDelta_dTau3 = derivs.d4alphar_ddelta_dtau3;
-        _d4alphar_dTau4 = derivs.d4alphar_dtau4;
-    }
-    else{
-        std::size_t N = mole_fractions.size();
-        CoolPropDbl summer_base = 0, summer_dTau = 0, summer_dDelta = 0, 
-                    summer_dTau2 = 0, summer_dDelta2 = 0, summer_dDelta_dTau = 0,
-                    summer_dTau3 = 0, summer_dDelta3 = 0, summer_dDelta2_dTau = 0, summer_dDelta_dTau2 = 0,
-                    summer_dTau4 = 0, summer_dDelta4 = 0, summer_dDelta3_dTau = 0, summer_dDelta_dTau3 = 0, summer_dDelta2_dTau2 = 0;
-        for (std::size_t i = 0; i < N; ++i){
-            bool cache_values = true;
-            HelmholtzDerivatives derivs = components[i].EOS().alphar.all(tau, delta, cache_values);
-            CoolPropDbl xi = mole_fractions[i];
-            
-            summer_base += xi*derivs.alphar;
-            summer_dDelta += xi*derivs.dalphar_ddelta;
-            summer_dTau += xi*derivs.dalphar_dtau;
-            summer_dDelta2 += xi*derivs.d2alphar_ddelta2;
-            summer_dDelta_dTau += xi*derivs.d2alphar_ddelta_dtau;
-            summer_dTau2 += xi*derivs.d2alphar_dtau2;
-
-            summer_dDelta3 += xi*derivs.d3alphar_ddelta3;
-            summer_dDelta2_dTau += xi*derivs.d3alphar_ddelta2_dtau;
-            summer_dDelta_dTau2 += xi*derivs.d3alphar_ddelta_dtau2;
-            summer_dTau3 += xi*derivs.d3alphar_dtau3;
-
-            summer_dDelta4 += xi*derivs.d4alphar_ddelta4;
-            summer_dDelta3_dTau += xi*derivs.d4alphar_ddelta3_dtau;
-            summer_dDelta2_dTau2 += xi*derivs.d4alphar_ddelta2_dtau2;
-            summer_dDelta_dTau3 += xi*derivs.d4alphar_ddelta_dtau3;
-            summer_dTau4 += xi*derivs.d4alphar_dtau4;
-
-        }
-        Excess.update(tau, delta);
-        _alphar = summer_base + Excess.alphar(mole_fractions);
-        _dalphar_dDelta = summer_dDelta + Excess.dalphar_dDelta(mole_fractions);
-        _dalphar_dTau = summer_dTau + Excess.dalphar_dTau(mole_fractions);
-        _d2alphar_dDelta2 = summer_dDelta2 + Excess.d2alphar_dDelta2(mole_fractions);
-        _d2alphar_dDelta_dTau = summer_dDelta_dTau + Excess.d2alphar_dDelta_dTau(mole_fractions);
-        _d2alphar_dTau2 = summer_dTau2 + Excess.d2alphar_dTau2(mole_fractions);
-
-        _d3alphar_dDelta3 = summer_dDelta3 + Excess.d3alphar_dDelta3(mole_fractions);
-        _d3alphar_dDelta2_dTau = summer_dDelta2_dTau + Excess.d3alphar_dDelta2_dTau(mole_fractions);
-        _d3alphar_dDelta_dTau2 = summer_dDelta_dTau2 + Excess.d3alphar_dDelta_dTau2(mole_fractions);
-        _d3alphar_dTau3 = summer_dTau3 + Excess.d3alphar_dTau3(mole_fractions);
-        
-        _d4alphar_dDelta4 = summer_dDelta4 + Excess.d4alphar_dDelta4(mole_fractions);;
-        _d4alphar_dDelta3_dTau = summer_dDelta3_dTau + Excess.d4alphar_dDelta3_dTau(mole_fractions);
-        _d4alphar_dDelta2_dTau2 = summer_dDelta2_dTau2 + Excess.d4alphar_dDelta2_dTau2(mole_fractions);
-        _d4alphar_dDelta_dTau3 = summer_dDelta_dTau3 + Excess.d4alphar_dDelta_dTau3(mole_fractions);
-        _d4alphar_dTau4 = summer_dTau4 + Excess.d4alphar_dTau4(mole_fractions);
-    }
+    bool cache_values = true;
+    HelmholtzDerivatives derivs = residual_helmholtz->all(*this, get_mole_fractions_ref(), cache_values);
+    _alphar = derivs.alphar;
+    _dalphar_dDelta = derivs.dalphar_ddelta;
+    _dalphar_dTau = derivs.dalphar_dtau;
+    _d2alphar_dDelta2 = derivs.d2alphar_ddelta2;
+    _d2alphar_dDelta_dTau = derivs.d2alphar_ddelta_dtau;
+    _d2alphar_dTau2 = derivs.d2alphar_dtau2;
+    _d3alphar_dDelta3 = derivs.d3alphar_ddelta3;
+    _d3alphar_dDelta2_dTau = derivs.d3alphar_ddelta2_dtau;
+    _d3alphar_dDelta_dTau2 = derivs.d3alphar_ddelta_dtau2;
+    _d3alphar_dTau3 = derivs.d3alphar_dtau3;
+    _d4alphar_dDelta4 = derivs.d4alphar_ddelta4;
+    _d4alphar_dDelta3_dTau = derivs.d4alphar_ddelta3_dtau;
+    _d4alphar_dDelta2_dTau2 = derivs.d4alphar_ddelta2_dtau2;
+    _d4alphar_dDelta_dTau3 = derivs.d4alphar_ddelta_dtau3;
+    _d4alphar_dTau4 = derivs.d4alphar_dtau4;
 }
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> &mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta)
@@ -2525,27 +2488,27 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau
         CoolPropDbl summer = 0;
         if (nTau == 0 && nDelta == 0){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().baser(tau, delta); }
-            return summer + Excess.alphar(mole_fractions);
+            return summer + residual_helmholtz->Excess.alphar(mole_fractions);
         }
         else if (nTau == 0 && nDelta == 1){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().dalphar_dDelta(tau, delta); }
-            return summer + Excess.dalphar_dDelta(mole_fractions);
+            return summer + residual_helmholtz->Excess.dalphar_dDelta(mole_fractions);
         }
         else if (nTau == 1 && nDelta == 0){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().dalphar_dTau(tau, delta); }
-            return summer + Excess.dalphar_dTau(mole_fractions);
+            return summer + residual_helmholtz->Excess.dalphar_dTau(mole_fractions);
         }
         else if (nTau == 0 && nDelta == 2){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dDelta2(tau, delta); }
-            return summer + Excess.d2alphar_dDelta2(mole_fractions);
+            return summer + residual_helmholtz->Excess.d2alphar_dDelta2(mole_fractions);
         }
         else if (nTau == 1 && nDelta == 1){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dDelta_dTau(tau, delta); }
-            return summer + Excess.d2alphar_dDelta_dTau(mole_fractions);
+            return summer + residual_helmholtz->Excess.d2alphar_dDelta_dTau(mole_fractions);
         }
         else if (nTau == 2 && nDelta == 0){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dTau2(tau, delta); }
-            return summer + Excess.d2alphar_dTau2(mole_fractions);
+            return summer + residual_helmholtz->Excess.d2alphar_dTau2(mole_fractions);
         }
         /*else if (nTau == 0 && nDelta == 3){
             for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dDelta3(tau, delta); }
