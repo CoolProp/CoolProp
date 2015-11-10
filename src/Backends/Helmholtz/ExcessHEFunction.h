@@ -151,8 +151,13 @@ public:
     /// Calculate all the derivatives that do not involve any composition derivatives
     virtual HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta, const std::vector<CoolPropDbl> &mole_fractions, bool cache_values = false)
     {
-        update(tau, delta);
         HelmholtzDerivatives derivs;
+
+        // If there is no excess contribution, just stop and return
+        if (N == 0){ return derivs; }
+
+        update(tau, delta);
+        
         derivs.alphar = alphar(mole_fractions);
         derivs.dalphar_ddelta = dalphar_dDelta(mole_fractions);
         derivs.dalphar_dtau = dalphar_dTau(mole_fractions);
