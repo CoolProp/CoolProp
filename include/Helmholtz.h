@@ -137,18 +137,18 @@ struct HelmholtzDerivatives
             LIST_OF_DERIVATIVE_VARIABLES
         #undef X
     }
-    HelmholtzDerivatives HelmholtzDerivatives::operator+(const HelmholtzDerivatives &other) const
+    HelmholtzDerivatives operator+(const HelmholtzDerivatives &other) const
     {
         HelmholtzDerivatives _new;
-        #define X(name)  _new. ## name = name + other. ## name;
+        #define X(name)  _new.name = name + other.name;
             LIST_OF_DERIVATIVE_VARIABLES
         #undef X
         return _new;
     }
-    HelmholtzDerivatives HelmholtzDerivatives::operator*(const CoolPropDbl &other) const
+    HelmholtzDerivatives operator*(const CoolPropDbl &other) const
     {
         HelmholtzDerivatives _new;
-        #define X(name)  _new. ## name = name * other;
+        #define X(name)  _new.name = name*other;
             LIST_OF_DERIVATIVE_VARIABLES
         #undef X
         return _new;
