@@ -36,6 +36,7 @@ Target                                                  Operating Systems       
 :ref:`LibreOffice <LibreOffice>`                        windows, linux
 :ref:`Delphi & Lazarus <Delphi>`                        linux, OSX, win
 :ref:`iOS (iPhone) <ios>`                       
+:ref:`Android <Android>`                       
 ======================================================= ===========================  =======================================
 
 .. _wrapper_common_prereqs:
@@ -105,6 +106,7 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
 .. toctree::
     :hidden:
 
+    Android/index.rst
     Octave/index.rst
     Csharp/index.rst
     MATLAB/index.rst

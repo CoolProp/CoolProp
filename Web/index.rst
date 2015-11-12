@@ -23,7 +23,7 @@ Environments Supported
 
 Programming Languages:
 
-- Fully-featured wrappers: :ref:`Python (2.x, 3.x) <Python>` , `Modelica <https://github.com/modelica/ExternalMedia>`_, :ref:`Octave <Octave>`, :ref:`C# <Csharp>`, :ref:`VB.net <VBdotNet>`, :ref:`MathCAD <MathCAD>`, :ref:`Java <Java>`, :ref:`MATLAB <MATLAB>`
+- Fully-featured wrappers: :ref:`Python (2.x, 3.x) <Python>` , `Modelica <https://github.com/modelica/ExternalMedia>`_, :ref:`Octave <Octave>`, :ref:`C# <Csharp>`, :ref:`VB.net <VBdotNet>`, :ref:`MathCAD <MathCAD>`, :ref:`Java <Java>`, :ref:`Android <Android>`, :ref:`MATLAB <MATLAB>`
 - High-level interface only: :ref:`Labview <Labview>`, :ref:`EES <EES>`, :ref:`Microsoft Excel <Excel>`, :ref:`LibreOffice <LibreOffice>`, :ref:`Javascript <Javascript>`, :ref:`PHP <PHP>`, :ref:`FORTRAN <FORTRAN>`, :ref:`Maple <Maple>`, :ref:`Mathematica <Mathematica>`, :ref:`Scilab <Scilab>`, :ref:`Delphi & Lazarus <Delphi>`, :ref:`Julia <Julia>`
 
 Architectures:
