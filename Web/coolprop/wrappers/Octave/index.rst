@@ -30,9 +30,9 @@ Common Requirements
 -------------------
 Compilation of the Octave wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
 
-Octave Requirements
--------------------
-* SWIG
+You will also need:
+
+* SWIG (see :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`)
 * Octave (and development headers)
 
 Linux
@@ -77,9 +77,9 @@ Once the dependencies are installed, you can run the builder and tests using::
     mkdir -p build &&  cd build
     # Build the makefile using CMake
     cmake .. -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON
-    # Make the OCT files (by default files will be generated in folder install_root/Octave relative to CMakeLists.txt file)
-    make install
-    # Run the integration tests
+    # Make the OCT files
+    cmake --build .
+    # Run the integration tests (optional)
     ctest --extra-verbose
 
 On windows, you need to just slightly modify the building procedure::
@@ -93,14 +93,14 @@ On windows, you need to just slightly modify the building procedure::
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder
-    mkdir build/Octave
+    mkdir build
     # Move into that folder
-    cd build/Octave
+    cd build
     # Build the makefile using CMake
     cmake .. -G "MinGW Makefiles" -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON
-    # Make the OCT files (by default files will be generated in folder install_root/Octave relative to CMakeLists.txt file)
-    make install
-    # Run the integration tests
+    # Make the OCT files
+    cmake --build .
+    # Run the integration tests (optional)
     ctest --extra-verbose
 
 .. _octave_example:

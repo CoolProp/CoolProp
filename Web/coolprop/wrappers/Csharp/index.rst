@@ -58,9 +58,8 @@ Common Requirements
 -------------------
 Compilation of the C# wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
 
-Octave Requirements
--------------------
-* SWIG
+Additionally, you will need:
+* SWIG (see :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`)
 * C#
 
 OSX
