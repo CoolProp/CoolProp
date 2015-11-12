@@ -124,7 +124,13 @@ public:
     X(d4alphar_ddelta3_dtau) \
     X(d4alphar_ddelta2_dtau2) \
     X(d4alphar_ddelta_dtau3) \
-    X(d4alphar_dtau4)
+    X(d4alphar_dtau4) \
+    X(delta_x_dalphar_ddelta) \
+    X(tau_x_dalphar_dtau) \
+    X(delta2_x_d2alphar_ddelta2) \
+    X(deltatau_x_d2alphar_ddelta_dtau) \
+    X(tau2_x_d2alphar_dtau2) \
+
 
 struct HelmholtzDerivatives
 {
@@ -474,9 +480,10 @@ public:
         )
         : Tc(Tc), pc(pc), rhomolarc(rhomolarc), acentric(acentric), R(R)
     {
-        a = 0.427*R*R*Tc*Tc/pc;
+        // Values from Soave, 1972 (Equilibium constants from a ..)
+        a = 0.42747*R*R*Tc*Tc/pc;
         b = 0.08664*R*Tc/pc;
-        kappa = 0.48508 + 1.55171*acentric - 0.15613*acentric*acentric;
+        kappa = 0.480 + 1.574*acentric - 0.176*acentric*acentric;
         enabled = true;
     };
 
