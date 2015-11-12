@@ -72,7 +72,7 @@ For 7-zip, download the installer from http://www.7-zip.org/ .  Check that at th
     Usage: 7z <command> [<switches>...] <archive_name> [<file_names>...]
            [<@listfiles...>]
 
-For python, you should be using `Anaconda/Miniconda <https://store.continuum.io/cshop/anaconda/>`_ for your python installation.  Or, you can just install `Miniconda <http://conda.pydata.org/miniconda.html>`_, which is sufficient
+For python, you should be using `Anaconda/Miniconda <https://store.continuum.io/cshop/anaconda/>`_ for your python installation.  Or, you can just install `Miniconda <http://conda.pydata.org/miniconda.html>`_, which is sufficient.  You will also need to install the ``pip`` and ``six`` packages, which can be achieved by the following at a command prompt: ``conda install pip six``.
 
 For the C++ compiler, the options are a bit more complicated.  There are multiple (binary incompatible) versions of Visual Studio, as well as G++ ports for windows (MinGW).  Unless you are compiling the python wrappers, you can compile with MinGW, so you should obtain the `MinGW installer <http://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download>`_ and run it.  You should install all the packages available, and you MUST(!!) install to a path without spaces. ``C:\MinGW`` is recommended as an installation path. Be sure to add the folder ``C:\MinGw`` to your PATH variable.
 
