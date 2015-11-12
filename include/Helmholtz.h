@@ -109,18 +109,59 @@ public:
 // #############################################################################
 // #############################################################################
 
+#define LIST_OF_DERIVATIVE_VARIABLES \
+    X(alphar) \
+    X(dalphar_ddelta) \
+    X(dalphar_dtau) \
+    X(d2alphar_ddelta2) \
+    X(d2alphar_dtau2) \
+    X(d2alphar_ddelta_dtau) \
+    X(d3alphar_ddelta3) \
+    X(d3alphar_ddelta_dtau2) \
+    X(d3alphar_ddelta2_dtau) \
+    X(d3alphar_dtau3) \
+    X(d4alphar_ddelta4) \
+    X(d4alphar_ddelta3_dtau) \
+    X(d4alphar_ddelta2_dtau2) \
+    X(d4alphar_ddelta_dtau3) \
+    X(d4alphar_dtau4) \
+    X(delta_x_dalphar_ddelta) \
+    X(tau_x_dalphar_dtau) \
+    X(delta2_x_d2alphar_ddelta2) \
+    X(deltatau_x_d2alphar_ddelta_dtau) \
+    X(tau2_x_d2alphar_dtau2) \
+
+
 struct HelmholtzDerivatives
 {
-    CoolPropDbl alphar, dalphar_ddelta, dalphar_dtau, d2alphar_ddelta2, d2alphar_dtau2, d2alphar_ddelta_dtau, 
-                d3alphar_ddelta3, d3alphar_ddelta_dtau2, d3alphar_ddelta2_dtau, d3alphar_dtau3,
-                d4alphar_ddelta4, d4alphar_ddelta3_dtau, d4alphar_ddelta2_dtau2, d4alphar_ddelta_dtau3, d4alphar_dtau4;
+    #define X(name)  CoolPropDbl name;
+        LIST_OF_DERIVATIVE_VARIABLES
+    #undef X
+
     void reset(CoolPropDbl v){
-                alphar = v; dalphar_ddelta = v; dalphar_dtau = v; d2alphar_ddelta2 = v; d2alphar_dtau2 = v; d2alphar_ddelta_dtau = v;
-                d3alphar_ddelta3 = v; d3alphar_ddelta_dtau2 = v; d3alphar_ddelta2_dtau = v; d3alphar_dtau3 = v;
-                d4alphar_ddelta4 = v; d4alphar_ddelta3_dtau = v; d4alphar_ddelta2_dtau2 = v; d4alphar_ddelta_dtau3 = v; d4alphar_dtau4 = v;
-                }
+        #define X(name)  name = v;
+            LIST_OF_DERIVATIVE_VARIABLES
+        #undef X
+    }
+    HelmholtzDerivatives operator+(const HelmholtzDerivatives &other) const
+    {
+        HelmholtzDerivatives _new;
+        #define X(name)  _new.name = name + other.name;
+            LIST_OF_DERIVATIVE_VARIABLES
+        #undef X
+        return _new;
+    }
+    HelmholtzDerivatives operator*(const CoolPropDbl &other) const
+    {
+        HelmholtzDerivatives _new;
+        #define X(name)  _new.name = name*other;
+            LIST_OF_DERIVATIVE_VARIABLES
+        #undef X
+        return _new;
+    }
     HelmholtzDerivatives(){reset(0.0);};
 };
+#undef LIST_OF_DERIVATIVE_VARIABLES
 
 struct ResidualHelmholtzGeneralizedExponentialElement
 {
@@ -439,9 +480,10 @@ public:
         )
         : Tc(Tc), pc(pc), rhomolarc(rhomolarc), acentric(acentric), R(R)
     {
-        a = 0.427*R*R*Tc*Tc/pc;
+        // Values from Soave, 1972 (Equilibium constants from a ..)
+        a = 0.42747*R*R*Tc*Tc/pc;
         b = 0.08664*R*Tc/pc;
-        kappa = 0.48508 + 1.55171*acentric - 0.15613*acentric*acentric;
+        kappa = 0.480 + 1.574*acentric - 0.176*acentric*acentric;
         enabled = true;
     };
 

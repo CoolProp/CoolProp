@@ -15,6 +15,8 @@ namespace CoolProp {
 
 class FlashRoutines;
 
+class ResidualHelmholtz;
+
 class HelmholtzEOSMixtureBackend : public AbstractState {
     
 private:
@@ -29,21 +31,16 @@ protected:
                              lnK; ///< The natural logarithms of the K factors of the components
 
     SimpleState _crit;
-    
     std::size_t N; ///< Number of components
     
 public:
-    HelmholtzEOSMixtureBackend()
-        : imposed_phase_index(iphase_not_imposed), is_pure_or_pseudopure(false), N(0)
-    {
-        _phase = iphase_unknown;
-    }
+    HelmholtzEOSMixtureBackend();
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
     virtual ~HelmholtzEOSMixtureBackend(){};
     std::string backend_name(void){return "HelmholtzEOSMixtureBackend";}
     shared_ptr<ReducingFunction> Reducing;
-    ExcessTerm Excess;
+    shared_ptr<ResidualHelmholtz> residual_helmholtz;
     PhaseEnvelopeData PhaseEnvelope;
     SimpleState hsat_max;
     SsatSimpleState ssat_max;
@@ -62,6 +59,7 @@ public:
     friend class MixtureDerivatives; // Allows the static methods in the MixtureDerivatives class to have access to all the protected members and methods of this class
     friend class PhaseEnvelopeRoutines; // Allows the static methods in the PhaseEnvelopeRoutines class to have access to all the protected members and methods of this class
     friend class MixtureParameters; // Allows the static methods in the MixtureParameters class to have access to all the protected members and methods of this class
+    friend class CorrespondingStatesTerm; // // Allows the methods in the CorrespondingStatesTerm class to have access to all the protected members and methods of this class
 
     // Helmholtz EOS backend uses mole fractions
     bool using_mole_fractions(){return true;}
@@ -383,6 +381,294 @@ public:
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
     CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, int phase);
 
+};
+
+class CorrespondingStatesTerm
+{
+public:
+    /// Calculate all the derivatives that do not involve any composition derivatives
+    virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &x, bool cache_values = false)
+    {
+        HelmholtzDerivatives summer;
+        const CoolPropDbl tau = HEOS.tau(), delta = HEOS.delta();
+        std::size_t N = HEOS.mole_fractions.size();
+        for (std::size_t i = 0; i < N; ++i){
+            bool cache_values = true;
+            HelmholtzDerivatives derivs = HEOS.components[i].EOS().alphar.all(tau, delta, cache_values);
+            summer = summer + derivs*HEOS.mole_fractions[i];
+        }
+        return summer;
+    }
+    CoolPropDbl dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        if (xN_flag == XN_INDEPENDENT){
+            return HEOS.components[i].EOS().baser(HEOS.tau(), HEOS.delta());
+        }
+        else if (xN_flag == XN_DEPENDENT){
+            std::size_t N = x.size();
+            if (i == N-1) return 0;
+            return HEOS.components[i].EOS().baser(HEOS.tau(), HEOS.delta()) - HEOS.components[N-1].EOS().baser(HEOS.tau(), HEOS.delta());
+        }
+        else{
+            throw ValueError(format("xN_flag is invalid"));
+        }
+    }
+    CoolPropDbl d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        if (xN_flag == XN_INDEPENDENT){
+            return HEOS.components[i].EOS().dalphar_dTau(HEOS._tau, HEOS._delta);
+        }
+        else if (xN_flag == XN_DEPENDENT){
+            std::size_t N = x.size();
+            if (i==N-1) return 0;
+            return HEOS.components[i].EOS().dalphar_dTau(HEOS._tau, HEOS._delta) - HEOS.components[N-1].EOS().dalphar_dTau(HEOS._tau, HEOS._delta);
+        }
+        else{
+            throw ValueError(format("xN_flag is invalid"));
+        }
+    }
+    CoolPropDbl d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        if (xN_flag == XN_INDEPENDENT){
+            return HEOS.components[i].EOS().dalphar_dDelta(HEOS.tau(), HEOS.delta());
+        }
+        else if (xN_flag == XN_DEPENDENT){
+            std::size_t N = x.size();
+            if (i==N-1) return 0;
+            return HEOS.components[i].EOS().dalphar_dDelta(HEOS.tau(), HEOS.delta()) - HEOS.components[N-1].EOS().dalphar_dDelta(HEOS._tau, HEOS._delta);
+        }
+        else{
+            throw ValueError(format("xN_flag is invalid"));
+        }
+    }
+    CoolPropDbl d3alphar_dxi_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        if (xN_flag == XN_INDEPENDENT){
+            return HEOS.components[i].EOS().d2alphar_dDelta2(HEOS.tau(), HEOS.delta());
+        }
+        else if (xN_flag == XN_DEPENDENT){
+            std::size_t N = x.size();
+            if (i==N-1) return 0;
+            return HEOS.components[i].EOS().d2alphar_dDelta2(HEOS.tau(), HEOS.delta()) - HEOS.components[N-1].EOS().d2alphar_dDelta2(HEOS.tau(), HEOS.delta());
+        }
+        else{
+            throw ValueError(format("xN_flag is invalid"));
+        }
+    }
+    CoolPropDbl d3alphar_dxi_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        if (xN_flag == XN_INDEPENDENT){
+            return HEOS.components[i].EOS().d2alphar_dTau2(HEOS.tau(), HEOS.delta());
+        }
+        else if (xN_flag == XN_DEPENDENT){
+            std::size_t N = x.size();
+            if (i==N-1) return 0;
+            return HEOS.components[i].EOS().d2alphar_dTau2(HEOS.tau(), HEOS.delta()) - HEOS.components[N-1].EOS().d2alphar_dTau2(HEOS.tau(), HEOS.delta());
+        }
+        else{
+            throw ValueError(format("xN_flag is invalid"));
+        }
+    }
+    CoolPropDbl d3alphar_dxi_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        if (xN_flag == XN_INDEPENDENT){
+            return HEOS.components[i].EOS().d2alphar_dDelta_dTau(HEOS.tau(), HEOS.delta());
+        }
+        else if (xN_flag == XN_DEPENDENT){
+            std::size_t N = x.size();
+            if (i==N-1) return 0;
+            return HEOS.components[i].EOS().d2alphar_dDelta_dTau(HEOS.tau(), HEOS.delta()) - HEOS.components[N-1].EOS().d2alphar_dDelta_dTau(HEOS.tau(), HEOS.delta());
+        }
+        else{
+            throw ValueError(format("xN_flag is invalid"));
+        }
+    }
+
+    CoolPropDbl d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+    {
+        if (xN_flag == XN_INDEPENDENT){
+            return 0;
+        }
+        else if (xN_flag == XN_DEPENDENT){
+            return 0;
+        }
+        else{
+            throw ValueError(format("xN_flag is invalid"));
+        }
+    }
+
+    CoolPropDbl d4alphar_dxi_dDelta3(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        if (xN_flag == XN_INDEPENDENT){
+            return HEOS.components[i].EOS().d3alphar_dDelta3(HEOS.tau(), HEOS.delta());
+        }
+        else{
+            throw ValueError(format("xN_flag is invalid"));
+        }
+    }
+    CoolPropDbl d4alphar_dxi_dTau3(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        if (xN_flag == XN_INDEPENDENT){
+            return HEOS.components[i].EOS().d3alphar_dTau3(HEOS.tau(), HEOS.delta());
+        }
+        else{
+            throw ValueError(format("xN_flag is invalid"));
+        }
+    }
+    CoolPropDbl d4alphar_dxi_dDelta_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        if (xN_flag == XN_INDEPENDENT){
+            return HEOS.components[i].EOS().d3alphar_dDelta_dTau2(HEOS.tau(), HEOS.delta());
+        }
+        else{
+            throw ValueError(format("xN_flag is invalid"));
+        }
+    }
+    CoolPropDbl d4alphar_dxi_dDelta2_dTau(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        if (xN_flag == XN_INDEPENDENT){
+            return HEOS.components[i].EOS().d3alphar_dDelta2_dTau(HEOS.tau(), HEOS.delta());
+        }
+        else{
+            throw ValueError(format("xN_flag is invalid"));
+        }
+    }
+
+    CoolPropDbl d3alphardxidxjdxk(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
+    {
+        return 0;
+    }
+    CoolPropDbl d3alphar_dxi_dxj_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+    {
+        return 0;
+    }
+    CoolPropDbl d3alphar_dxi_dxj_dTau(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+    {
+        return 0;
+    }
+    CoolPropDbl d4alphar_dxi_dxj_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+    {
+        return 0;
+    }
+    CoolPropDbl d4alphar_dxi_dxj_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+    {
+        return 0;
+    }
+    CoolPropDbl d4alphar_dxi_dxj_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+    {
+        return 0;
+    }
+};
+
+/// This class contains the two primary contributions to the residual Helmholtz energy - a corresponding states
+/// contribution, sometimes (incorrectly) referred to as ideal mixing, and an excess term
+///
+/// It delegates the calls to the corresponding states and excess contributions
+/// The entire class can be replaced with a derived class
+class ResidualHelmholtz
+{
+public:
+    ExcessTerm Excess;
+    CorrespondingStatesTerm CS;
+
+    virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &mole_fractions, bool cache_values = false)
+    {
+        HelmholtzDerivatives a = CS.all(HEOS, mole_fractions, cache_values) + Excess.all(HEOS.tau(), HEOS.delta(), mole_fractions, cache_values);
+        a.delta_x_dalphar_ddelta = HEOS.delta()*a.dalphar_ddelta;
+        a.tau_x_dalphar_dtau = HEOS.tau()*a.dalphar_dtau;
+
+        a.delta2_x_d2alphar_ddelta2 = pow(HEOS.delta(), 2)*a.d2alphar_ddelta2;
+        a.deltatau_x_d2alphar_ddelta_dtau = HEOS.delta()*HEOS.tau()*a.d2alphar_ddelta_dtau;
+        a.tau2_x_d2alphar_dtau2 = pow(HEOS.tau(), 2)*a.d2alphar_dtau2;
+
+        return a;
+    }
+    virtual CoolPropDbl dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.dalphar_dxi(HEOS, mole_fractions, i, xN_flag) + Excess.dalphar_dxi(mole_fractions, i, xN_flag);
+    }
+    virtual CoolPropDbl d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d2alphardxidxj(HEOS, mole_fractions, i, j, xN_flag) + Excess.d2alphardxidxj(mole_fractions, i, j, xN_flag);
+    }
+    virtual CoolPropDbl d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d2alphar_dxi_dTau(HEOS, mole_fractions, i, xN_flag) + Excess.d2alphar_dxi_dTau(mole_fractions, i, xN_flag);
+    }
+    virtual CoolPropDbl d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d2alphar_dxi_dDelta(HEOS, mole_fractions, i, xN_flag) + Excess.d2alphar_dxi_dDelta(mole_fractions, i, xN_flag);
+    }
+    virtual CoolPropDbl d3alphar_dxi_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d3alphar_dxi_dTau2(HEOS, mole_fractions, i, xN_flag) + Excess.d3alphar_dxi_dTau2(mole_fractions, i, xN_flag);
+    }
+    virtual CoolPropDbl d3alphar_dxi_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d3alphar_dxi_dDelta_dTau(HEOS, mole_fractions, i, xN_flag) + Excess.d3alphar_dxi_dDelta_dTau(mole_fractions, i, xN_flag);
+    }
+    virtual CoolPropDbl d3alphar_dxi_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d3alphar_dxi_dDelta2(HEOS, mole_fractions, i, xN_flag) + Excess.d3alphar_dxi_dDelta2(mole_fractions, i, xN_flag);
+    }
+    virtual CoolPropDbl d3alphar_dxi_dxj_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag  xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d3alphar_dxi_dxj_dTau(HEOS, mole_fractions, i, j, xN_flag) + Excess.d3alphar_dxi_dxj_dTau(mole_fractions, i, j, xN_flag);
+    }
+    virtual CoolPropDbl d3alphar_dxi_dxj_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d3alphar_dxi_dxj_dDelta(HEOS, mole_fractions, i, j, xN_flag) + Excess.d3alphar_dxi_dxj_dDelta(mole_fractions, i, j, xN_flag);
+    }
+    virtual CoolPropDbl d3alphardxidxjdxk(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d3alphardxidxjdxk(HEOS, mole_fractions, i, j, k,xN_flag) + Excess.d3alphardxidxjdxk(mole_fractions, i, j, k, xN_flag);
+    }
+
+    virtual CoolPropDbl d4alphar_dxi_dTau3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d4alphar_dxi_dTau3(HEOS, mole_fractions, i, xN_flag) + Excess.d4alphar_dxi_dTau3(mole_fractions, i, xN_flag);
+    }
+    virtual CoolPropDbl d4alphar_dxi_dDelta2_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d4alphar_dxi_dDelta2_dTau(HEOS, mole_fractions, i, xN_flag) + Excess.d4alphar_dxi_dDelta2_dTau(mole_fractions, i, xN_flag);
+    }
+    virtual CoolPropDbl d4alphar_dxi_dDelta_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d4alphar_dxi_dDelta_dTau2(HEOS, mole_fractions, i, xN_flag) + Excess.d4alphar_dxi_dDelta_dTau2(mole_fractions, i, xN_flag);
+    }
+    virtual CoolPropDbl d4alphar_dxi_dDelta3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d4alphar_dxi_dDelta3(HEOS, mole_fractions, i, xN_flag) + Excess.d4alphar_dxi_dDelta3(mole_fractions, i, xN_flag);
+    }
+    virtual CoolPropDbl d4alphar_dxi_dxj_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag  xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d4alphar_dxi_dxj_dTau2(HEOS, mole_fractions, i, j, xN_flag) + Excess.d4alphar_dxi_dxj_dTau2(mole_fractions, i, j, xN_flag);
+    }
+    virtual CoolPropDbl d4alphar_dxi_dxj_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag  xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d4alphar_dxi_dxj_dDelta_dTau(HEOS, mole_fractions, i, j, xN_flag) + Excess.d4alphar_dxi_dxj_dDelta_dTau(mole_fractions, i, j, xN_flag);
+    }
+    virtual CoolPropDbl d4alphar_dxi_dxj_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+    {
+        std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
+        return CS.d4alphar_dxi_dxj_dDelta2(HEOS, mole_fractions, i, j, xN_flag) + Excess.d4alphar_dxi_dxj_dDelta2(mole_fractions, i, j, xN_flag);
+    }
 };
 
 } /* namespace CoolProp */

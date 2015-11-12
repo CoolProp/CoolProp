@@ -30,7 +30,7 @@ class HelmholtzEOSBackend : public HelmholtzEOSMixtureBackend  {
 public:
     HelmholtzEOSBackend(){};
     HelmholtzEOSBackend(CoolPropFluid Fluid){set_components(std::vector<CoolPropFluid>(1,Fluid));};
-    HelmholtzEOSBackend(const std::string &name){
+    HelmholtzEOSBackend(const std::string &name) : HelmholtzEOSMixtureBackend() {
         Dictionary dict;
         std::vector<double> mole_fractions;
         std::vector<CoolPropFluid> components;

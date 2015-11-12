@@ -1239,7 +1239,7 @@ public:
                     CoolPropDbl pc = fluid.EOSVector[0].reduce.p;
                     CoolPropDbl rhomolarc = fluid.EOSVector[0].reduce.rhomolar;
                     CoolPropDbl acentric = fluid.EOSVector[0].acentric;
-                    CoolPropDbl R = fluid.EOSVector[0].R_u;
+                    CoolPropDbl R = 8.3144598; // fluid.EOSVector[0].R_u;
                     // Set the SRK contribution
                     fluid.EOSVector[0].alphar.SRK = ResidualHelmholtzSRK(Tc, pc, rhomolarc, acentric, R);
                     return fluid;
