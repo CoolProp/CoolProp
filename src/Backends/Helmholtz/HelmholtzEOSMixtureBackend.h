@@ -573,7 +573,15 @@ public:
 
     virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &mole_fractions, bool cache_values = false)
     {
-        return CS.all(HEOS, mole_fractions, cache_values) + Excess.all(HEOS.tau(), HEOS.delta(), mole_fractions, cache_values);
+        HelmholtzDerivatives a = CS.all(HEOS, mole_fractions, cache_values) + Excess.all(HEOS.tau(), HEOS.delta(), mole_fractions, cache_values);
+        a.delta_x_dalphar_ddelta = HEOS.delta()*a.dalphar_ddelta;
+        a.tau_x_dalphar_dtau = HEOS.tau()*a.dalphar_dtau;
+
+        a.delta2_x_d2alphar_ddelta2 = pow(HEOS.delta(), 2)*a.d2alphar_ddelta2;
+        a.deltatau_x_d2alphar_ddelta_dtau = HEOS.delta()*HEOS.tau()*a.d2alphar_ddelta_dtau;
+        a.tau2_x_d2alphar_dtau2 = pow(HEOS.tau(), 2)*a.d2alphar_dtau2;
+
+        return a;
     }
     virtual CoolPropDbl dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
     {

@@ -191,7 +191,7 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &Pa
         }
     }
     else{
-        throw ValueError(format("Input value [%s] is invalid for Fluid [%s]",ParamName.c_str()));
+        throw ValueError(format("fluid parameter [%s] is invalid",ParamName.c_str()));
     }
 }
 /// Set binary mixture floating point parameter
@@ -1211,6 +1211,9 @@ void HelmholtzEOSMixtureBackend::post_update()
     // Set the reduced variables
     _tau = _reducing.T/_T;
     _delta = _rhomolar/_reducing.rhomolar;
+
+    // Update the terms in the excess contribution
+    residual_helmholtz->Excess.update(_tau, _delta);
 }
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Bvirial()
@@ -2407,7 +2410,6 @@ SimpleState HelmholtzEOSMixtureBackend::calc_reducing_state_nocache(const std::v
     SimpleState reducing;
     if (is_pure_or_pseudopure){
         reducing = components[0].EOS().reduce;
-
     }
     else{
         reducing.T = Reducing->Tr(mole_fractions);

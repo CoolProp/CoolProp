@@ -181,6 +181,8 @@ public:
 
     double alphar(const std::vector<CoolPropDbl> &x)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
         {
@@ -193,6 +195,8 @@ public:
     }
     double dalphar_dDelta(const std::vector<CoolPropDbl> &x)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
         {
@@ -205,6 +209,8 @@ public:
     }
     double d2alphar_dDelta2(const std::vector<CoolPropDbl> &x)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
         {
@@ -217,6 +223,8 @@ public:
     };
     double d2alphar_dDelta_dTau(const std::vector<CoolPropDbl> &x)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
         {
@@ -229,6 +237,8 @@ public:
     }
     double dalphar_dTau(const std::vector<CoolPropDbl> &x)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
         {
@@ -241,6 +251,8 @@ public:
     };
     double d2alphar_dTau2(const std::vector<CoolPropDbl> &x)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         double summer = 0;
         for (std::size_t i = 0; i < N-1; i++)
         {
@@ -253,6 +265,8 @@ public:
     };
 	double d3alphar_dTau3(const std::vector<CoolPropDbl> &x)
 	{
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
 		double summer = 0;
 		for (std::size_t i = 0; i < N - 1; i++)
 		{
@@ -265,6 +279,8 @@ public:
 	};
 	double d3alphar_dDelta_dTau2(const std::vector<CoolPropDbl> &x)
 	{
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
 		double summer = 0;
 		for (std::size_t i = 0; i < N - 1; i++)
 		{
@@ -277,6 +293,8 @@ public:
 	};
 	double d3alphar_dDelta2_dTau(const std::vector<CoolPropDbl> &x)
 	{
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
 		double summer = 0;
 		for (std::size_t i = 0; i < N - 1; i++)
 		{
@@ -289,6 +307,8 @@ public:
 	};
 	double d3alphar_dDelta3(const std::vector<CoolPropDbl> &x)
 	{
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
 		double summer = 0;
 		for (std::size_t i = 0; i < N - 1; i++)
 		{
@@ -301,6 +321,8 @@ public:
 	};
     double d4alphar_dTau4(const std::vector<CoolPropDbl> &x)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         double summer = 0;
         for (std::size_t i = 0; i < N - 1; i++)
         {
@@ -313,6 +335,8 @@ public:
     };
     double d4alphar_dDelta_dTau3(const std::vector<CoolPropDbl> &x)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         double summer = 0;
         for (std::size_t i = 0; i < N - 1; i++)
         {
@@ -325,6 +349,8 @@ public:
     };
     double d4alphar_dDelta2_dTau2(const std::vector<CoolPropDbl> &x)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         double summer = 0;
         for (std::size_t i = 0; i < N - 1; i++)
         {
@@ -337,6 +363,8 @@ public:
     };
     double d4alphar_dDelta3_dTau(const std::vector<CoolPropDbl> &x)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         double summer = 0;
         for (std::size_t i = 0; i < N - 1; i++)
         {
@@ -349,6 +377,8 @@ public:
     };
     double d4alphar_dDelta4(const std::vector<CoolPropDbl> &x)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         double summer = 0;
         for (std::size_t i = 0; i < N - 1; i++)
         {
@@ -362,6 +392,8 @@ public:
 
     double dalphar_dxi(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             double summer = 0;
             for (std::size_t k = 0; k < N; k++)
@@ -374,6 +406,7 @@ public:
             return summer;
         }
         else if (xN_flag == XN_DEPENDENT) {
+            if (i == N-1){ return 0; }
             CoolPropDbl dar_dxi = 0.0;
             double FiNariN = F[i][N-1]*DepartureFunctionMatrix[i][N-1]->alphar();
             dar_dxi += (1-2*x[i])*FiNariN;
@@ -388,10 +421,11 @@ public:
         else{
             throw ValueError(format("xN_flag is invalid"));
         }
-
     };
     double d2alphardxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             if (i != j)
             {
@@ -403,6 +437,7 @@ public:
             }
         }
         else if (xN_flag == XN_DEPENDENT){
+            if (i == N-1){ return 0.0; }
             std::size_t N = x.size();
             if (i == N-1 || j == N-1){ return 0; }
             double FiNariN = F[i][N-1]*DepartureFunctionMatrix[i][N-1]->alphar();
@@ -417,6 +452,8 @@ public:
     };
     double d3alphar_dxi_dxj_dDelta(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             if (i != j)
             {
@@ -429,6 +466,7 @@ public:
         }
         else if (xN_flag == XN_DEPENDENT)
         {
+            if (i == N-1){ return 0.0; }
             std::size_t N = x.size();
             if (i == N-1 || j == N-1){ return 0; }
             double FiNariN = F[i][N-1]*DepartureFunctionMatrix[i][N-1]->dalphar_dDelta();
@@ -443,6 +481,8 @@ public:
     };
     double d3alphar_dxi_dxj_dTau(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             if (i != j)
             {
@@ -459,6 +499,8 @@ public:
     };
     double d4alphar_dxi_dxj_dDelta2(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             if (i != j)
             {
@@ -475,6 +517,8 @@ public:
     };
     double d4alphar_dxi_dxj_dDelta_dTau(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT)
         {
             if (i != j)
@@ -487,6 +531,7 @@ public:
             }
         }
         else if (xN_flag == XN_DEPENDENT){
+            if (i == N-1){ return 0.0; }
             double FiNariN = F[i][N-1]*DepartureFunctionMatrix[i][N-1]->d2alphar_dDelta_dTau();
             CoolPropDbl d3ar_dxi_dDelta_dTau = (1-2*x[i])*FiNariN;
             for (std::size_t k = 0; k < N-1; ++k){
@@ -503,6 +548,8 @@ public:
     };
     double d4alphar_dxi_dxj_dTau2(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             if (i != j)
             {
@@ -524,6 +571,8 @@ public:
     };
     double d2alphar_dxi_dTau(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             double summer = 0;
             for (std::size_t k = 0; k < N; k++)
@@ -536,6 +585,7 @@ public:
             return summer;
         }
         else if (xN_flag== XN_DEPENDENT){
+            if (i == N-1){ return 0.0; }
             double FiNariN = F[i][N-1]*DepartureFunctionMatrix[i][N-1]->dalphar_dTau();
             CoolPropDbl d2ar_dxi_dTau = (1-2*x[i])*FiNariN;
             for (std::size_t k = 0; k < N-1; ++k){
@@ -552,6 +602,8 @@ public:
     };
     double d2alphar_dxi_dDelta(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT)
         {
             double summer = 0;
@@ -566,6 +618,7 @@ public:
         }
         else if (xN_flag == XN_DEPENDENT)
         {
+            if (i == N-1){ return 0.0; }
             CoolPropDbl d2ar_dxi_dDelta = 0;
             double FiNariN = F[i][N-1]*DepartureFunctionMatrix[i][N-1]->dalphar_dDelta();
             d2ar_dxi_dDelta += (1-2*x[i])*FiNariN;
@@ -583,6 +636,8 @@ public:
     };
     double d3alphar_dxi_dDelta2(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
 	{
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             double summer = 0;
             for (std::size_t k = 0; k < N; k++)
@@ -595,6 +650,7 @@ public:
             return summer;
         }
         else if (xN_flag == XN_DEPENDENT){
+            if (i == N-1){ return 0.0; }
             double FiNariN = F[i][N-1]*DepartureFunctionMatrix[i][N-1]->d2alphar_dDelta2();
             CoolPropDbl d3ar_dxi_dDelta2 = (1-2*x[i])*FiNariN;
             for (std::size_t k = 0; k < N-1; ++k){
@@ -611,6 +667,8 @@ public:
 	};
     double d4alphar_dxi_dDelta3(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             double summer = 0;
             for (std::size_t k = 0; k < N; k++)
@@ -628,6 +686,8 @@ public:
     };
     double d3alphar_dxi_dTau2(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
 	{
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             double summer = 0;
             for (std::size_t k = 0; k < N; k++)
@@ -641,6 +701,7 @@ public:
         }
         else if (xN_flag == XN_DEPENDENT)
         {
+            if (i == N-1){ return 0.0; }
             double FiNariN = F[i][N-1]*DepartureFunctionMatrix[i][N-1]->d2alphar_dTau2();
             CoolPropDbl d3ar_dxi_dTau2 = (1-2*x[i])*FiNariN;
             for (std::size_t k = 0; k < N-1; ++k){
@@ -657,6 +718,8 @@ public:
 	};
     double d4alphar_dxi_dTau3(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             double summer = 0;
             for (std::size_t k = 0; k < N; k++)
@@ -674,6 +737,8 @@ public:
     };
     double d3alphar_dxi_dDelta_dTau(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
 	{
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             double summer = 0;
             for (std::size_t k = 0; k < N; k++)
@@ -691,6 +756,8 @@ public:
 	};
     double d4alphar_dxi_dDelta2_dTau(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             double summer = 0;
             for (std::size_t k = 0; k < N; k++)
@@ -708,6 +775,8 @@ public:
     };
     double d4alphar_dxi_dDelta_dTau2(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
     {
+        // If Excess term is not being used, return zero
+        if (N==0){ return 0; }
         if (xN_flag == XN_INDEPENDENT){
             double summer = 0;
             for (std::size_t k = 0; k < N; k++)
