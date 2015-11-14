@@ -190,7 +190,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
 void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)
 {
     CoolPropDbl x, y;
-    const bool debug = get_debug_level() > 5 || true;
+    const bool debug = get_debug_level() > 5 || false;
 
     resize(Nx, Ny);
     
