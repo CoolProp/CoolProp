@@ -36,28 +36,28 @@ It can be useful to know what the phase of a given state point is.  A high-level
 
 .. ipython::
 
-    In [1]: import CoolProp
+    In [1]: import CoolProp.CoolProp as CP
     
-    In [5]: CoolProp.CoolProp.PhaseSI('P',101325,'Q',0,'Water')
+    In [5]: CP.PhaseSI('P',101325,'Q',0,'Water')
 
 The phase index (as floating point number) can also be obtained using the PropsSI function. In python you would do:
 
 .. ipython::
 
-    In [1]: import CoolProp
+    In [1]: import CoolProp.CoolProp as CP
     
-    In [5]: CoolProp.CoolProp.PropsSI('Phase','P',101325,'Q',0,'Water')
+    In [5]: CP.PropsSI('Phase','P',101325,'Q',0,'Water')
     
 where you can obtain the integer indices corresponding to the phase flags using the ``get_phase_index`` function:
 
 .. ipython::
 
-    In [1]: import CoolProp
+    In [1]: import CoolProp.CoolProp as CP
 
-    In [6]: CoolProp.CoolProp.get_phase_index('phase_twophase')
+    In [6]: CP.get_phase_index('phase_twophase')
     
     # Or for liquid
-    In [6]: CoolProp.CoolProp.get_phase_index('phase_liquid')
+    In [6]: CP.get_phase_index('phase_liquid')
     
 For a given fluid, the phase can be plotted in T-p coordinates:
 
@@ -161,13 +161,13 @@ and called through python
 
 .. ipython::
 
-    In [1]: import CoolProp
+    In [1]: import CoolProp.CoolProp as CP
     
     # c_p using c_p
-    In [5]: CoolProp.CoolProp.PropsSI('C','P',101325,'T',300,'Water')
+    In [5]: CP.PropsSI('C','P',101325,'T',300,'Water')
     
     # c_p using derivative
-    In [5]: CoolProp.CoolProp.PropsSI('d(Hmass)/d(T)|P','P',101325,'T',300,'Water')
+    In [5]: CP.PropsSI('d(Hmass)/d(T)|P','P',101325,'T',300,'Water')
 
 It is also possible to call the derivatives directly using the :ref:`low-level partial derivatives functionality <partial_derivatives_low_level>`.  The low-level routine is in general faster because it avoids the string parsing.
 
@@ -178,10 +178,10 @@ In a similar fashion it is possible to evaluate second derivatives.  For instanc
 
 .. ipython::
 
-    In [1]: import CoolProp
+    In [1]: import CoolProp.CoolProp as CP
     
     # c_p using derivative
-    In [1]: CoolProp.CoolProp.PropsSI('d(d(Hmass)/d(T)|P)/d(Hmass)|P','P',101325,'T',300,'Water')
+    In [1]: CP.PropsSI('d(d(Hmass)/d(T)|P)/d(Hmass)|P','P',101325,'T',300,'Water')
 
 where the inner part ``d(Hmass)/d(T)|P`` is the definition of :math:`c_p`.
 
@@ -219,7 +219,7 @@ A number of predefined mixtures are included in CoolProp.  You can retrieve the 
 
 .. ipython::
 
-    In [1]: import CoolProp as CP
+    In [1]: import CoolProp.CoolProp as CP
     
     In [1]: CP.get_global_param_string('predefined_mixtures').split(',')[0:6]
     
@@ -227,7 +227,7 @@ and then to calculate the density of air using the mixture model at 1 atmosphere
 
 .. ipython::
 
-    In [1]: import CoolProp as CP
+    In [1]: import CoolProp.CoolProp as CP
     
     In [1]: CP.PropsSI('D','P',101325,'T',300,'Air.mix')
     
@@ -236,15 +236,15 @@ Exactly the same methodology can be used from other wrappers.
 User-Defined Mixtures
 ---------------------
 
-When using mixtures in CoolProp, you can specify mixture components and composition by encoding the mixture components and mole fractions by 
+When using mixtures in CoolProp, you can specify mixture components and composition by encoding the mixture components and mole fractions by doing something like
 
 .. ipython::
 
-    In [1]: import CoolProp as CP
+    In [1]: import CoolProp.CoolProp as CP
     
     In [1]: CP.PropsSI('D','T',300,'P',101325,'HEOS::R32[0.697615]&R125[0.302385]')
     
-You can handle ternary and multi-component mixtures in the same fashion, just add the components to the fluid string
+You can handle ternary and multi-component mixtures in the same fashion, just add the other components to the fluid string with a ``&`` separating components and the fraction of the component in ``[`` and ``]`` brackets
 
 .. _high_level_set_reference_state:
 
@@ -268,18 +268,18 @@ which can be used like
 
 .. ipython::
 
-    In [1]: import CoolProp as CP
+    In [1]: import CoolProp.CoolProp as CP
     
-    In [1]: CoolProp.CoolProp.set_reference_state('n-Propane','ASHRAE')
+    In [1]: CP.set_reference_state('n-Propane','ASHRAE')
     
     # Should be zero (or very close to it)
-    In [1]: CoolProp.CoolProp.PropsSI('H', 'T', 233.15, 'Q', 0, 'n-Propane')
+    In [1]: CP.PropsSI('H', 'T', 233.15, 'Q', 0, 'n-Propane')
     
     # Back to the original value
-    In [1]: CoolProp.CoolProp.set_reference_state('n-Propane','DEF')
+    In [1]: CP.set_reference_state('n-Propane','DEF')
     
     # Should not be zero
-    In [1]: CoolProp.CoolProp.PropsSI('H', 'T', 233.15, 'Q', 0, 'n-Propane')
+    In [1]: CP.PropsSI('H', 'T', 233.15, 'Q', 0, 'n-Propane')
     
 Calling REFPROP
 ---------------
@@ -291,10 +291,10 @@ If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installe
     In [1]: import CoolProp.CoolProp as CP
     
     # Using properties from CoolProp to get R410A density
-    In [2]: PropsSI('C','T',300,'P',101325,'HEOS::R32[0.697615]&R125[0.302385]')
+    In [2]: CP.PropsSI('C','T',300,'P',101325,'HEOS::R32[0.697615]&R125[0.302385]')
     
     # Using properties from REFPROP to get R410A density
-    In [2]: PropsSI('C','T',300,'P',101325,'REFPROP::R32[0.697615]&R125[0.302385]')
+    In [2]: CP.PropsSI('C','T',300,'P',101325,'REFPROP::R32[0.697615]&R125[0.302385]')
     
 
 C++ Sample Code
