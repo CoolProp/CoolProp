@@ -8,7 +8,17 @@ import io
 import codecs, latexcodec
 import os
 
-
+# Here we are going to simply hack the formatting of the article class such that it preserves the 
+# desired spacing and capitalization.  Probably this problem could be better solved with new styles,
+# but this seems to work...
+import pybtex.style.formatting as formatting
+from pybtex.style.template import node, join
+# Create our new function
+@node
+def toplevel(children, data):
+    return join(sep=' ') [children].format_data(data)
+# And now, we over-write the function with our desired function.  Et voila! It works!
+formatting.toplevel = toplevel
 
 class BibTeXerClass(object):
     """
@@ -69,6 +79,8 @@ class BibTeXerClass(object):
                 entry = self.library.entries[tag]
                 for key, value in entry.fields.iteritems():
                     entry.fields[key] = self.stripCurls(value)
+                    if key == 'Title':
+                        entry.fields[key] = u'{' + entry.fields[key] + '}'
                 for key in entry.persons.keys():
                     for i in range(len(entry.persons[key])):
                         entry.persons[key][i]._first = self.stripCurls(entry.persons[key][i].first())
@@ -174,6 +186,9 @@ class BibTeXerClass(object):
 
         end_of_label = contents.index(label_table[fmt])
         contents = contents[end_of_label+len(label_table[fmt]):].strip()
+
+        # {} are needed to preserve capitalization, but we don't want them in the final output, so remove them
+        contents = contents.replace('{','').replace('}','')
 
         if fmt=="latex":
             contents = contents.replace(u"\\newblock ","")
