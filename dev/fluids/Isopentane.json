@@ -426,5 +426,31 @@
       "smolar": 176.18484251588657, 
       "smolar_units": "J/mol/K"
     }
+  }, 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "BELL-PERSONAL-2015", 
+      "_note": "fit based on the values in Ma et al., JCED, 2003, doi 10.1021/je0202174 ", 
+      "epsilon_over_k": 341.06, 
+      "epsilon_over_k_units": "K", 
+      "psi": {
+        "a": [
+          1.59193594, 
+          -0.36852042, 
+          0.04951376
+        ], 
+        "rhomolar_reducing": 3271.0, 
+        "rhomolar_reducing_units": "mol/m^3", 
+        "t": [
+          0, 
+          1, 
+          2
+        ]
+      }, 
+      "reference_fluid": "n-Propane", 
+      "sigma_eta": 5.6232e-10, 
+      "sigma_eta_units": "m", 
+      "type": "ECS"
+    }
   }
 }

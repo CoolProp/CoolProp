@@ -743,9 +743,9 @@
       "epsilon_over_k_units": "K", 
       "psi": {
         "a": [
-          0.77371022, 
-          0.16492734, 
-          -0.02851852
+          0.72309634, 
+          0.2235595, 
+          -0.04217
         ], 
         "rhomolar_reducing": 4290, 
         "rhomolar_reducing_units": "mol/m^3", 
