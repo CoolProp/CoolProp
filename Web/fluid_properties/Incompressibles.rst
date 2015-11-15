@@ -159,7 +159,7 @@ A limited subset of partial derivatives is available for the incompressible flui
 October 2015, the following inputs are supported by the ``PropsSI`` function: 
 :math:`\left( \partial \rho / \partial T \right)_{p,x}`, 
 :math:`\left( \partial s    / \partial T \right)_{p,x}`, 
-:math:`\left( \partial h    / \partial T \right)_{p,x}`,   
+:math:`\left( \partial h    / \partial T \right)_{p,x}`, 
 :math:`\left( \partial s    / \partial p \right)_{T,x}` and 
 :math:`\left( \partial h    / \partial p \right)_{T,x}`. 
 
@@ -172,6 +172,8 @@ Note that all partial derivatives require a constant concentration, which is den
    all derived properties have been implemented even though some of them can be computed like the 
    isobaric expansion coefficient, which would be :math:`-1/\rho \left( \partial \rho / \partial T \right)_{p,x}`.
 
+For more general information on the partial derivatives, please have a look at the 
+:ref:`documentation<_partial_derivatives_high_level>` for the high level interface.
 
 
 .. _FittingReports:
