@@ -1630,8 +1630,20 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 else if (value > p_liq){
                     this->_phase = iphase_liquid; _Q = 1000; return;
                 }
-                else if (!is_pure() && value < static_cast<CoolPropDbl>(_pLanc)*(1+1.0e-6) && value > static_cast<CoolPropDbl>(_pVanc)*(1-1.0e-6)){
-                    throw ValueError("Two-phase inputs not supported for pseudo-pure for now");
+                else if (!is_pure()) // pseudo-pure
+                {
+                    // For pseudo-pure fluids, the ancillary pressure curves are the official
+                    // arbiter of the phase
+                    if (value > static_cast<CoolPropDbl>(_pLanc)){
+                        this->_phase = iphase_liquid; _Q = 1000; return;
+                    }
+                    else if(value < static_cast<CoolPropDbl>(_pVanc))
+                    {
+                        this->_phase = iphase_gas; _Q = -1000; return;
+                    }
+                    else{
+                        throw ValueError("Two-phase inputs not supported for pseudo-pure for now");
+                    }
                 }
                 break;
             }

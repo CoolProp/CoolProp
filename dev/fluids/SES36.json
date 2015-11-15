@@ -50,23 +50,23 @@
       "Tmax": 450.69000000000005, 
       "Tmin": 200.0, 
       "description": "p' = pc*exp(Tc/T*sum(n_i*theta^t_i))", 
-      "max_abserror_percentage": 0.022411189649551577, 
+      "max_abserror_percentage": 0.010851665467770388, 
       "n": [
-        94.87532704021716, 
-        -1299.2634694546925, 
-        1205.9189501278659, 
-        -7.569430893449583, 
-        -4.414966788345308, 
-        11.055551606406958
+        0.0074229398001144425, 
+        -8.947924311081916, 
+        2.4455850233209473, 
+        -6.449704516156368, 
+        13.607518741300712, 
+        -27.19167556046972
       ], 
       "reducing_value": 2849000.0, 
       "t": [
-        0.359, 
-        0.375, 
-        0.3765, 
-        0.8333333333333334, 
-        2.5, 
-        4.5
+        0.383, 
+        1.0, 
+        1.1666666666666667, 
+        3.0, 
+        4.333333333333333, 
+        18.5
       ], 
       "type": "pL", 
       "using_tau_r": true
@@ -212,6 +212,18 @@
           "smolar": 349.5949388462608, 
           "smolar_units": "J/mol/K"
         }, 
+        "pressure_max_sat": {
+          "T": 450.7, 
+          "T_units": "K", 
+          "hmolar": 84447.10365025079, 
+          "hmolar_units": "J/mol", 
+          "p": 2849000, 
+          "p_units": "Pa", 
+          "rhomolar": 2800, 
+          "rhomolar_units": "mol/m^3", 
+          "smolar": 320.6788565898491, 
+          "smolar_units": "J/mol/K"
+        }, 
         "reducing": {
           "T": 450.7, 
           "T_units": "K", 
@@ -246,6 +258,18 @@
           "rhomolar": 0.3451560286454873, 
           "rhomolar_units": "mol/m^3", 
           "smolar": 298.06350991924097, 
+          "smolar_units": "J/mol/K"
+        }, 
+        "temperature_max_sat": {
+          "T": 450.7, 
+          "T_units": "K", 
+          "hmolar": 84447.10365025079, 
+          "hmolar_units": "J/mol", 
+          "p": 2849000, 
+          "p_units": "Pa", 
+          "rhomolar": 2800, 
+          "rhomolar_units": "mol/m^3", 
+          "smolar": 320.6788565898491, 
           "smolar_units": "J/mol/K"
         }
       }, 
