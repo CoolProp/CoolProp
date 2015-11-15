@@ -65,9 +65,7 @@ TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h","
     SECTION("Matrix modifications") {
         Eigen::MatrixXd matrix = CoolProp::vec_to_eigen(cHeat2D);
 
-        std::string tmpStr;
-        std::vector<std::vector<double> > vec2D;
-        if (PRINT) std::cout << std::endl;
+        if (PRINT) std::cout << CoolProp::mat_to_string(matrix) << std::endl;
 
         CHECK_NOTHROW( CoolProp::removeColumn(matrix,1) );
         if (PRINT) std::cout << CoolProp::mat_to_string(matrix) << std::endl;
