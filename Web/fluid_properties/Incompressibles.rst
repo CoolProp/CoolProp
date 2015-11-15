@@ -167,8 +167,12 @@ October 2015, the following inputs are supported by the ``PropsSI`` function:
 
 Note that all partial derivatives require a constant concentration, which is denoted by the 
 ``x``, but this ``x`` is not included in the derivative string notation for ``PropsSI``: 
-:math:`\left( \partial \rho / \partial T \right)_{p,x}` translates to ``d(Dmass)/d(T)|P``
+:math:`\left( \partial \rho / \partial T \right)_{p,x}` translates to ``d(Dmass)/d(T)|P``.
 
+.. note::
+   You can compute other properties from the partial derivatives available. At this point, not
+   all derived properties have been implemented even though some of them can be computed like the 
+   isobaric expansion coefficient, which would be :math:`-1/\rho \left( \partial \rho / \partial T \right)_{p,x}`.
 
 
 
