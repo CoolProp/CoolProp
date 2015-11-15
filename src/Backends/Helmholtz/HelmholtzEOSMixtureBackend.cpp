@@ -2966,16 +2966,17 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
         CoolPropDbl dhL_dp_sat =  SatL->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
         CoolPropDbl dhV_dp_sat =  SatV->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
         CoolPropDbl drhoL_dp_sat = SatL->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
-        //CoolPropDbl drhoV_dp_sat = SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
-        
-        //CoolPropDbl drho_dp_end = POW2(End->keyed_output(rho_key))*(x_end/POW2(rhoV)*drhoV_dp_sat + (1-x_end)/POW2(rhoL)*drhoL_dp_sat);
+        CoolPropDbl drhoV_dp_sat = SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
+        CoolPropDbl rhoV = SatV->keyed_output(rho_key);
+        CoolPropDbl rhoL = SatL->keyed_output(rho_key);
+        CoolPropDbl drho_dp_end = POW2(End->keyed_output(rho_key))*(x_end/POW2(rhoV)*drhoV_dp_sat + (1-x_end)/POW2(rhoL)*drhoL_dp_sat);
         
         // Faking single-phase
         //CoolPropDbl drho_dp__consth_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
         CoolPropDbl d2rhodhdp_liq = Liq->second_partial_deriv(rho_key, h_key, p_key, p_key, h_key); // ?
         
         // Derivatives at the end point
-        CoolPropDbl drho_dp__consth_end = End->calc_first_two_phase_deriv(rho_key, p_key, h_key);
+        // CoolPropDbl drho_dp__consth_end = End->calc_first_two_phase_deriv(rho_key, p_key, h_key);
         CoolPropDbl d2rhodhdp_end = End->calc_second_two_phase_deriv(rho_key, h_key, p_key, p_key, h_key);
         
         // Reminder:
@@ -2986,10 +2987,10 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
         
         // First pressure derivative at constant h of the coefficients a,b,c,d
         // CoolPropDbl Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
-        CoolPropDbl d_Abracket_dp_consth = (2*drhoL_dp_sat - 2*drho_dp__consth_end + Delta_end*(d2rhodhdp_liq + d2rhodhdp_end) + d_Delta_dp__consth*(drho_dh_liq__constp + drho_dh_end));
+        CoolPropDbl d_Abracket_dp_consth = (2*drhoL_dp_sat - 2*drho_dp_end + Delta_end*(d2rhodhdp_liq + d2rhodhdp_end) + d_Delta_end_dp__consth*(drho_dh_liq__constp + drho_dh_end));
         CoolPropDbl da_dp = 1/POW3(Delta_end)*d_Abracket_dp_consth + Abracket*(-3/POW4(Delta_end)*d_Delta_end_dp__consth);
         CoolPropDbl db_dp = - 6/POW3(Delta_end)*d_Delta_end_dp__consth*(rho_end - rho_liq)
-                            + (3/POW2(Delta_end))*(drho_dp__consth_end - drhoL_dp_sat)
+                            + 3/POW2(Delta_end)*(drho_dp_end - drhoL_dp_sat)
                             + (1/POW2(Delta_end)*d_Delta_end_dp__consth) * (drho_dh_end + 2*drho_dh_liq__constp)
                             - (1/Delta_end) * (d2rhodhdp_end + 2*d2rhodhdp_liq);
         CoolPropDbl dc_dp = d2rhodhdp_liq;

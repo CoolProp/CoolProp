@@ -1179,6 +1179,23 @@ TEST_CASE("Test second partial derivatives", "[derivatives]")
         CHECK(std::abs((dudrho_T_num-dudrho_T_ana)/dudrho_T_ana) < tol);
         CHECK(std::abs((d2udrho2_T_num-d2udrho2_T_ana)/d2udrho2_T_ana) < tol);
     }
+    SECTION("Check second mixed partial(h,p) with respect to rho","")
+    {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        double dhmass = 1.0, T = 300;
+        AS->update(CoolProp::QT_INPUTS, 0.0, T);
+        double deriv1 = AS->first_partial_deriv(iDmass, iP, iHmass);
+        double deriv_analyt = AS->second_partial_deriv(iDmass, iP, iHmass, iHmass, iP);
+        double deriv_analyt2 = AS->second_partial_deriv(iDmass, iHmass, iP, iP, iHmass);
+        AS->update(CoolProp::HmassP_INPUTS, AS->hmass()-1, AS->p());
+        double deriv2 = AS->first_partial_deriv(iDmass, iP, iHmass);
+        double deriv_num = (deriv1-deriv2)/dhmass;
+        CAPTURE(deriv_num);
+        CAPTURE(deriv_analyt);
+        
+        double tol = 1e-4;
+        CHECK(std::abs((deriv_num-deriv_analyt)/deriv_analyt) < tol);
+    }
 }
 
 TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]")
