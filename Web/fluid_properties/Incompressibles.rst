@@ -159,9 +159,7 @@ A limited subset of partial derivatives is available for the incompressible flui
 October 2015, the following inputs are supported by the ``PropsSI`` function: 
 :math:`\left( \partial \rho / \partial T \right)_{p,x}`, 
 :math:`\left( \partial s    / \partial T \right)_{p,x}`, 
-:math:`\left( \partial h    / \partial T \right)_{p,x}`, 
-.. :math:`\left( \partial s    / \partial T \right)_{p,x}`,dsdTatPxdT
-.. :math:`\left( \partial h    / \partial T \right)_{p,x}`,dhdTatPxdT
+:math:`\left( \partial h    / \partial T \right)_{p,x}`,   
 :math:`\left( \partial s    / \partial p \right)_{T,x}` and 
 :math:`\left( \partial h    / \partial p \right)_{T,x}`. 
 
