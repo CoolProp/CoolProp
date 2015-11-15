@@ -1069,7 +1069,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             double err = mix_deriv_err_func(numeric, analytic);
                             CAPTURE(numeric);
                             CAPTURE(analytic);
-                            CHECK(err < 1e-8);
+                            CHECK(err < 1e-6);
                         }
                         std::ostringstream ss2;
                         ss2 << "dln_fugacity_coefficient_dp__constT_n, i=" << i;
@@ -1080,7 +1080,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             double v2 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS_minusrho_constT, i, xN_flag), p2 = rHEOS_minusrho_constT.p();
                             double numeric = (v1 - v2)/(p1 - p2);
                             double err = mix_deriv_err_func(numeric, analytic);
-                            CHECK(err < 1e-8);
+                            CHECK(err < 1e-6);
                         }
                         /*std::ostringstream ss1;
                         ss1 << "dln_fugacity_coefficient_dT__constp_n, i=" << i;
@@ -1141,7 +1141,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             double v2 = rHEOS_minusrho_constT.residual_helmholtz->dalphar_dxi(rHEOS_minusrho_constT, i, xN_flag), delta2 = rHEOS_minusrho_constT.delta();
                             double numeric = (v1 - v2)/(delta1 - delta2);
                             double err = mix_deriv_err_func(numeric, analytic);
-                            CHECK(err < 1e-8);
+                            CHECK(err < 1e-6);
                         }
                         std::ostringstream ss4a;
                         ss4a << "d2alphar_dxi_dTau, i=" << i;
@@ -1176,7 +1176,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             double err = mix_deriv_err_func(numeric, analytic);
                             CAPTURE(numeric);
                             CAPTURE(analytic);
-                            CHECK(err < 1e-8);
+                            CHECK(err < 1e-6);
                         }       
                         std::ostringstream ss5a;
                         ss5a << "dtaudxj__constT_V_xi, i=" << i;
@@ -1503,7 +1503,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 double err = mix_deriv_err_func(numeric, analytic);
                                 CAPTURE(numeric);
                                 CAPTURE(analytic);
-                                CHECK(err < 1e-8);
+                                CHECK(err < 1e-6);
                             }
                             std::ostringstream ss3b;
                             ss3b << "d2Trdxidxj, i=" << i << ", j=" << j;
@@ -1746,7 +1746,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 double err = mix_deriv_err_func(numeric, analytic);
                                 CAPTURE(numeric);
                                 CAPTURE(analytic);
-                                CHECK(err < 1e-7);
+                                CHECK(err < 1e-6);
                             }
 							std::ostringstream ss3s; ss3s << "d2_ndtaudni_dxj_dTau__constdelta, i=" << i << ", j=" << j;
 							SECTION(ss3s.str(), "")
@@ -1896,7 +1896,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                     double err = mix_deriv_err_func(numeric, analytic);
                                     CAPTURE(numeric);
                                     CAPTURE(analytic);
-                                    CHECK(err < 1e-7);
+                                    CHECK(err < 1e-6);
                                 }
                                 std::ostringstream ss7a; ss7a << "d3_ndalphardni_dxj_dxk_dDelta__consttau_xi, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss7a.str(), "")
@@ -1909,7 +1909,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                     double err = mix_deriv_err_func(numeric, analytic);
                                     CAPTURE(numeric);
                                     CAPTURE(analytic);
-                                    CHECK(err < 1e-7);
+                                    CHECK(err < 1e-6);
                                 }
                                 std::ostringstream ss7b; ss7b << "d3_ndalphardni_dxj_dxk_dTau__constdelta_xi, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss7b.str(), "")
@@ -1951,7 +1951,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                     double err = mix_deriv_err_func(numeric, analytic);
                                     CAPTURE(numeric);
                                     CAPTURE(analytic);
-                                    CHECK(err < 1e-8);
+                                    CHECK(err < 1e-6);
                                 }
                                 std::ostringstream ss10; ss10 << "d_ndln_fugacity_i_dnj_ddxk__consttau_delta, i=" << i << ", j=" << j << ", k=" << k;
                                 SECTION(ss10.str(), "")
