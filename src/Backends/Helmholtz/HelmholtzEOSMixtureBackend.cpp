@@ -2449,35 +2449,36 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau
 {
     if (is_pure_or_pseudopure)
     {
+        bool dont_use_cache = true;
         if (nTau == 0 && nDelta == 0){
-            return components[0].EOS().baser(tau, delta);
+            return components[0].EOS().alphar.base(tau, delta, dont_use_cache);
         }
         else if (nTau == 0 && nDelta == 1){
-            return components[0].EOS().dalphar_dDelta(tau, delta);
+            return components[0].EOS().alphar.dDelta(tau, delta, dont_use_cache);
         }
         else if (nTau == 1 && nDelta == 0){
-            return components[0].EOS().dalphar_dTau(tau, delta);
+            return components[0].EOS().alphar.dTau(tau, delta, dont_use_cache);
         }
         else if (nTau == 0 && nDelta == 2){
-            return components[0].EOS().d2alphar_dDelta2(tau, delta);
+            return components[0].EOS().alphar.dDelta2(tau, delta, dont_use_cache);
         }
         else if (nTau == 1 && nDelta == 1){
-            return components[0].EOS().d2alphar_dDelta_dTau(tau, delta);
+            return components[0].EOS().alphar.dDelta_dTau(tau, delta, dont_use_cache);
         }
         else if (nTau == 2 && nDelta == 0){
-            return components[0].EOS().d2alphar_dTau2(tau, delta);
+            return components[0].EOS().alphar.dTau2(tau, delta, dont_use_cache);
         }
         else if (nTau == 0 && nDelta == 3){
-            return components[0].EOS().d3alphar_dDelta3(tau, delta);
+            return components[0].EOS().alphar.dDelta3(tau, delta, dont_use_cache);
         }
         else if (nTau == 1 && nDelta == 2){
-            return components[0].EOS().d3alphar_dDelta2_dTau(tau, delta);
+            return components[0].EOS().alphar.dDelta2_dTau(tau, delta, dont_use_cache);
         }
         else if (nTau == 2 && nDelta == 1){
-            return components[0].EOS().d3alphar_dDelta_dTau2(tau, delta);
+            return components[0].EOS().alphar.dDelta_dTau2(tau, delta, dont_use_cache);
         }
         else if (nTau == 3 && nDelta == 0){
-            return components[0].EOS().d3alphar_dTau3(tau, delta);
+            return components[0].EOS().alphar.dTau3(tau, delta, dont_use_cache);
         }
         else
         {

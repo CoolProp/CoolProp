@@ -626,71 +626,71 @@ public:
         }
         return derivs;
     };
-    CoolPropDbl base(CoolPropDbl tau, CoolPropDbl delta) { 
-        if (!_base)
+    CoolPropDbl base(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) {
+        if (!_base || dont_use_cache)
             return all(tau, delta).alphar;
         else
             return _base;
     };
-    CoolPropDbl dDelta(CoolPropDbl tau, CoolPropDbl delta) { 
-        if (!_dDelta)
+    CoolPropDbl dDelta(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) {
+        if (!_dDelta || dont_use_cache)
             return all(tau, delta).dalphar_ddelta;
         else
             return _dDelta;
     };
-    CoolPropDbl dTau(CoolPropDbl tau, CoolPropDbl delta) { 
-        if (!_dTau)
+    CoolPropDbl dTau(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) {
+        if (!_dTau || dont_use_cache)
             return all(tau, delta).dalphar_dtau;
         else
             return _dTau;
     };
-    CoolPropDbl dDelta2(CoolPropDbl tau, CoolPropDbl delta) {  
-        if (!_dDelta2)
+    CoolPropDbl dDelta2(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) {
+        if (!_dDelta2 || dont_use_cache)
             return all(tau, delta).d2alphar_ddelta2; 
         else
             return _dDelta2;
     };
-    CoolPropDbl dDelta_dTau(CoolPropDbl tau, CoolPropDbl delta) { 
-        if (!_dDelta_dTau)
+    CoolPropDbl dDelta_dTau(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) {
+        if (!_dDelta_dTau || dont_use_cache)
             return all(tau, delta).d2alphar_ddelta_dtau;
         else
             return _dDelta_dTau;
     };
-    CoolPropDbl dTau2(CoolPropDbl tau, CoolPropDbl delta) {
-        if (!_dTau2)
+    CoolPropDbl dTau2(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) {
+        if (!_dTau2 || dont_use_cache)
             return all(tau, delta).d2alphar_dtau2;
         else
             return _dTau2;
     };
-    CoolPropDbl dDelta3(CoolPropDbl tau, CoolPropDbl delta) {
-        if (!_dDelta3)
+    CoolPropDbl dDelta3(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) {
+        if (!_dDelta3 || dont_use_cache)
             return all(tau, delta).d3alphar_ddelta3;
         else
             return _dDelta3;
     };
-    CoolPropDbl dDelta2_dTau(CoolPropDbl tau, CoolPropDbl delta) {
-        if (!_dDelta2_dTau)
+    CoolPropDbl dDelta2_dTau(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) {
+        if (!_dDelta2_dTau || dont_use_cache)
             return all(tau, delta).d3alphar_ddelta2_dtau;
         else
             return _dDelta2_dTau;
     };
-    CoolPropDbl dDelta_dTau2(CoolPropDbl tau, CoolPropDbl delta) {
-        if (!_dDelta_dTau2)
+    CoolPropDbl dDelta_dTau2(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) {
+        if (!_dDelta_dTau2 || dont_use_cache)
             return all(tau, delta).d3alphar_ddelta_dtau2;
         else
             return _dDelta_dTau2;
     };
-    CoolPropDbl dTau3(CoolPropDbl tau, CoolPropDbl delta) {
-        if (!_dTau3)
+    CoolPropDbl dTau3(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) {
+        if (!_dTau3 || dont_use_cache)
             return all(tau, delta).d3alphar_dtau3;
         else
             return _dTau3;
     };
-    CoolPropDbl dDelta4(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d4alphar_ddelta4; };
-    CoolPropDbl dDelta3_dTau(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d4alphar_ddelta3_dtau; };
-    CoolPropDbl dDelta2_dTau2(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d4alphar_ddelta2_dtau2; };
-    CoolPropDbl dDelta_dTau3(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d4alphar_ddelta_dtau3; };
-    CoolPropDbl dTau4(CoolPropDbl tau, CoolPropDbl delta) { return all(tau, delta).d4alphar_dtau4; };
+    CoolPropDbl dDelta4(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) { return all(tau, delta).d4alphar_ddelta4; };
+    CoolPropDbl dDelta3_dTau(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) { return all(tau, delta).d4alphar_ddelta3_dtau; };
+    CoolPropDbl dDelta2_dTau2(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) { return all(tau, delta).d4alphar_ddelta2_dtau2; };
+    CoolPropDbl dDelta_dTau3(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) { return all(tau, delta).d4alphar_ddelta_dtau3; };
+    CoolPropDbl dTau4(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) { return all(tau, delta).d4alphar_dtau4; };
 };
 
 // #############################################################################
