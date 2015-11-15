@@ -25,12 +25,10 @@ namespace CoolProp {
 REFPROPBackend::REFPROPBackend(const std::string & fluid_name) {
     // Do the REFPROP instantiation for this fluid
 
-    // Try to add this fluid to REFPROP - might want to think about making array of 
-    // components and setting mole fractions if they change a lot.
     std::vector<std::string> component_names(1,fluid_name);
-    set_REFPROP_fluids(component_names);
+    construct(component_names);
 
-    // Set the mole fraction to 1 in the base class (we can't set the mole fraction in this class, 
+    // Set the mole fraction to 1 in the base class (we can't set the mole fraction in this class,
     // otherwise a NotImplementedError will be returned)
     if (get_mole_fractions().empty()){
         std::vector<CoolPropDbl> x(1, 1.0); // (one element with value of 1.0)

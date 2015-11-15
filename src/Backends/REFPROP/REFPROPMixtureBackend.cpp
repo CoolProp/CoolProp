@@ -89,16 +89,30 @@ std::string get_REFPROP_fluid_path()
 
 namespace CoolProp {
 
-REFPROPMixtureBackend::REFPROPMixtureBackend(const std::vector<std::string>& fluid_names) {
+    
+void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_names) {
     // Do the REFPROP instantiation for this fluid
     _mole_fractions_set = false;
-
+    
+    // Force loading of REFPROP
+    REFPROP_supported();
+    
+    // Call SETPATH if the ALTERNATIVE_REFPROP_PATH configuration variable has been set
+    std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
+    if (!alt_rp_path.empty()){
+        long len = alt_rp_path.length();
+        char name[255];
+        strcpy(name, alt_rp_path.c_str());
+        SETPATHdll(name, 255);
+    }
+    
     // Try to add this fluid to REFPROP - might want to think about making array of
     // components and setting mole fractions if they change a lot.
     this->set_REFPROP_fluids(fluid_names);
-
+    
     // Bump the number of REFPROP backends that are in existence;
     REFPROPMixtureBackend::instance_counter++;
+
 }
 
 REFPROPMixtureBackend::~REFPROPMixtureBackend() {
@@ -220,6 +234,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             strcpy(mix, components_joined_raw.c_str());
             char hmx_bnc[255] = "HMX.BNC", reference_state[4] = "DEF";
             std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
+            if (alt_hmx_bnc_path.length() > refpropcharlength){ throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", alt_hmx_bnc_path.c_str()));
+            }
             if (!alt_hmx_bnc_path.empty()){
                 strcpy(hmx_bnc, alt_hmx_bnc_path.c_str());
             }

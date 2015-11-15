@@ -73,7 +73,13 @@ Path Issues
 
     In order for REFPROP to be able to be loaded by CoolProp, the default logic for each operating system is used to load the REFPROP shared library.  This means that on windows, the ``PATH`` environmental variable is searched for the ``REFPROP.dll`` (32-bit applications) or ``REFPRP64.dll`` (64-bit applications). On linux/OSX, the default shared library loading protocol is used.  If your REFPROP is installed in a non-standard location (not on the path), make sure that when you run code that uses REFPROP, that you add (temporarily) the location of the REFPROP shared library to your path.
 
-REFPROP needs to be able to find the fluid and mixture files at runtime, at a location specified on your computer.  CoolProp allows you to avoid the pains of decoding REFPROP's internal logic for finding these files by explicitly specifying the path that it should tell REFPROP to look for the fluid files.  The configuration key (see :ref:`configuration`) is ``ALTERNATIVE_REFPROP_PATH``, and you can set it doing something like this in python:
+REFPROP needs to be able to find the fluid and mixture files at runtime, at a location specified on your computer.  CoolProp allows you to avoid the pains of decoding REFPROP's internal logic for finding these files by explicitly specifying the path that it should tell REFPROP to look for the fluid files.  
+
+.. warning::
+
+    These configuration variables should be set at the beginning of your script and then not touched again.  Otherwise, you can get some weird behavior!
+
+The configuration key for setting the REFPROP path (see :ref:`configuration`) is ``ALTERNATIVE_REFPROP_PATH``, and you can set it doing something like this in python:
 
 .. ipython::
 
@@ -85,7 +91,7 @@ REFPROP needs to be able to find the fluid and mixture files at runtime, at a lo
     
     In [3]: jj = CP.set_config_as_json_string(json.dumps(jj))
 
-If you do this, internally CoolProp will call the ``SETPATH`` function in REFPROP to tell REFPROP that it should find the ``fluids`` and ``mixtures`` within this directory.  If you don't do this, CoolProp will use whatever default logic REFPROP uses to find the fluid files.
+If you do this, internally CoolProp will call the ``SETPATH`` function in REFPROP to tell REFPROP that it should find the ``fluids`` and ``mixtures`` directories within this directory.  If you don't do this, CoolProp will use whatever default logic REFPROP uses to find the fluid files.
 
 If you are playing around with mixture parameters, you might want to set a different path to the HMX.BNC file which contains the interaction parameters for the mixture.  You can do that by changing the configuration variable  (see :ref:`configuration`) ``ALTERNATIVE_REFPROP_HMX_BNC_PATH``
 
@@ -99,4 +105,4 @@ If you are playing around with mixture parameters, you might want to set a diffe
     
     In [3]: jj = CP.set_config_as_json_string(json.dumps(jj))
 
-If you have set both the ``ALTERNATIVE_REFPROP_PATH`` and ``ALTERNATIVE_REFPROP_HMX_BNC_PATH`` variables, ``ALTERNATIVE_REFPROP_PATH`` "wins", and this path will be used when loading mixture interaction parameters
+If you have set both the ``ALTERNATIVE_REFPROP_PATH`` and ``ALTERNATIVE_REFPROP_HMX_BNC_PATH`` variables, ``ALTERNATIVE_REFPROP_PATH_HMX_BNC_PATH`` "wins", and this path will be used when loading mixture interaction parameters
