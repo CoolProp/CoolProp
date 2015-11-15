@@ -482,17 +482,27 @@ CoolPropDbl IncompressibleBackend::raw_calc_smass(double T, double p, double x){
 /// Calculate the first partial derivative for the desired derivative
 CoolPropDbl IncompressibleBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){
 	// TODO: Can this be accelerated?
-	if ( (Of==iDmass) && (Wrt==iT) && (Constant==iP) ) return drhodTatPx();
-	if ( (Of==iSmass) && (Wrt==iT) && (Constant==iP) ) return dsdTatPx();
-	if ( (Of==iHmass) && (Wrt==iT) && (Constant==iP) ) return dhdTatPx();
+    if ( (Of==iDmass) && (Wrt==iP) ) return 0.0; // incompressible!
+    if ( (Of==iDmass) && (Wrt==iHmass) && (Constant==iP) ) return drhodTatPx()/dhdTatPx();
+    if ( (Of==iHmass) && (Wrt==iDmass) && (Constant==iP) ) return dhdTatPx()/drhodTatPx();
+    if ( (Of==iDmass) && (Wrt==iSmass) && (Constant==iP) ) return drhodTatPx()/dsdTatPx();
+	if ( (Of==iSmass) && (Wrt==iDmass) && (Constant==iP) ) return dsdTatPx()/drhodTatPx();
+    if ( (Of==iDmass) && (Wrt==iT)     && (Constant==iP) ) return drhodTatPx();
+    if ( (Of==iT)     && (Wrt==iDmass) && (Constant==iP) ) return 1.0/drhodTatPx();
+    //
+    if ( (Of==iHmass) && (Wrt==iP)     && (Constant==iT) ) return dhdpatTx();
+    if ( (Of==iP)     && (Wrt==iHmass) && (Constant==iT) ) return 1.0/dhdpatTx();
+    if ( (Of==iHmass) && (Wrt==iSmass) && (Constant==iT) ) return dhdpatTx()/dsdpatTx();
+    if ( (Of==iSmass) && (Wrt==iHmass) && (Constant==iT) ) return dsdpatTx()/dhdpatTx();
+    if ( (Of==iHmass) && (Wrt==iT)     && (Constant==iP) ) return dhdTatPx();
+    if ( (Of==iT)     && (Wrt==iHmass) && (Constant==iP) ) return 1.0/dhdTatPx();
+    //
+    if ( (Of==iSmass) && (Wrt==iP)     && (Constant==iT) ) return dsdpatTx();
+    if ( (Of==iP)     && (Wrt==iSmass) && (Constant==iT) ) return 1.0/dsdpatTx();
+	if ( (Of==iSmass) && (Wrt==iT)     && (Constant==iP) ) return dsdTatPx();
+    if ( (Of==iT)     && (Wrt==iSmass) && (Constant==iP) ) return 1.0/dsdTatPx();
 	//if ( (Of==iHmass) && (Wrt==iP) && (Constant==iT) ) return dsdTatPxdT();
 	//if ( (Of==iHmass) && (Wrt==iP) && (Constant==iT) ) return dhdTatPxdT();
-	if ( (Of==iSmass) && (Wrt==iP) && (Constant==iT) ) return dsdpatTx();
-	if ( (Of==iHmass) && (Wrt==iP) && (Constant==iT) ) return dhdpatTx();
-
-	if ( (Of==iDmass) && (Wrt==iHmass) && (Constant==iP) ) return drhodTatPx()/dhdTatPx();
-	if ( (Of==iDmass) && (Wrt==iP) ) return 0.0; // incompressible!
-
 	throw ValueError("Incompressible fluids only support a limited subset of partial derivatives.");
 }
 

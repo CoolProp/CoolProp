@@ -214,22 +214,22 @@ protected:
 	/// Partial derivative of enthalpy with respect to temperature at constant pressure and composition
 	double calc_dhdTatPx  (double T, double p, double x){return fluid->c(T,p,x);};
     /// Partial derivative of entropy
-    //  with respect to temperature at constant pressure and composition
-    //  integrated in temperature
+    ///  with respect to temperature at constant pressure and composition
+    ///  integrated in temperature
 	double calc_dsdTatPxdT(double T, double p, double x){return fluid->dsdTatPxdT(T,p,x);};
 	/// Partial derivative of enthalpy
-	//  with respect to temperature at constant pressure and composition
-	//  integrated in temperature
+	///  with respect to temperature at constant pressure and composition
+	///  integrated in temperature
 	double calc_dhdTatPxdT(double T, double p, double x){return fluid->dhdTatPxdT(T,p,x);};
 
 
 	/* Other useful derivatives
 	 */
 	/// Partial derivative of entropy with respect to pressure at constant temperature and composition
-	//  \f[ \left( \frac{\partial s}{\partial p} \right)_T = - \left( \frac{\partial v}{\partial T} \right)_p = \rho^{-2} \left( \frac{\partial \rho}{\partial T} \right)_p \right) \f]
+	///  \f[ \left( \frac{\partial s}{\partial p} \right)_T = - \left( \frac{\partial v}{\partial T} \right)_p = \rho^{-2} \left( \frac{\partial \rho}{\partial T} \right)_p \right) \f]
 	double calc_dsdpatTx (double rho, double drhodTatPx);
 	/// Partial derivative of enthalpy with respect to pressure at constant temperature and composition
-	//  \f[ \left( \frac{\partial h}{\partial p} \right)_T = v - T \left( \frac{\partial v}{\partial T} \right)_p = \rho^{-1} \left( 1 + T \rho^{-1} \left( \frac{\partial \rho}{\partial T} \right)_p \right) \f]
+	///  \f[ \left( \frac{\partial h}{\partial p} \right)_T = v - T \left( \frac{\partial v}{\partial T} \right)_p = \rho^{-1} \left( 1 + T \rho^{-1} \left( \frac{\partial \rho}{\partial T} \right)_p \right) \f]
 	double calc_dhdpatTx (double T, double rho, double drhodTatPx);
 
 
