@@ -155,25 +155,30 @@ corresponds to the new mixture syntax in CoolProp v5.
 Partial Derivatives
 -------------------
 
-A limited subset of partial derivatives is available for the incompressible fluids. As of 
-October 2015, the following inputs are supported by the ``PropsSI`` function: 
+A limited subset of partial derivatives is available for the incompressible fluids. Currently, 
+the following inputs are supported by the ``PropsSI`` function: 
+:math:`\left( \partial \rho / \partial p \right)_{T,x}=0`,
+:math:`\left( \partial \rho / \partial h \right)_{p,x}`,
+:math:`\left( \partial \rho / \partial s \right)_{p,x}`,
 :math:`\left( \partial \rho / \partial T \right)_{p,x}`, 
+:math:`\left( \partial h    / \partial p \right)_{T,x}`,
+:math:`\left( \partial h    / \partial s \right)_{T,x}`,
+:math:`\left( \partial h    / \partial T \right)_{p,x}`,
+:math:`\left( \partial s    / \partial p \right)_{T,x}`,
 :math:`\left( \partial s    / \partial T \right)_{p,x}`, 
-:math:`\left( \partial h    / \partial T \right)_{p,x}`, 
-:math:`\left( \partial s    / \partial p \right)_{T,x}` and 
-:math:`\left( \partial h    / \partial p \right)_{T,x}`. 
+and their inverse functions. 
 
 Note that all partial derivatives require a constant concentration, which is denoted by the 
-``x``, but this ``x`` is not included in the derivative string notation for ``PropsSI``: 
+:math:`x`, but this :math:`x` is not included in the derivative string notation for ``PropsSI``: 
 :math:`\left( \partial \rho / \partial T \right)_{p,x}` translates to ``d(Dmass)/d(T)|P``.
 
 .. note::
-   You can compute other properties from the partial derivatives available. At this point, not
+   You can calculate other properties from the partial derivatives available. At this point, not
    all derived properties have been implemented even though some of them can be computed like the 
-   isobaric expansion coefficient, which would be :math:`-1/\rho \left( \partial \rho / \partial T \right)_{p,x}`.
+   isobaric expansion coefficient, which would be :math:`-\left( \partial \rho / \partial T \right)_{p,x}/\rho`.
 
 For more general information on the partial derivatives, please have a look at the 
-:ref:`documentation<_partial_derivatives_high_level>` for the high level interface.
+:ref:`documentation<partial_derivatives_high_level>` for the high level interface.
 
 
 .. _FittingReports:
