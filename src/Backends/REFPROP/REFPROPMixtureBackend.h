@@ -151,6 +151,8 @@ public:
     CoolPropDbl calc_T_critical(void);
 	CoolPropDbl calc_T_reducing(void);
     CoolPropDbl calc_p_critical(void);
+    CoolPropDbl calc_p_triple(void);
+    CoolPropDbl calc_p_min(void){return calc_p_triple();};
     CoolPropDbl calc_rhomolar_critical(void);
 	CoolPropDbl calc_rhomolar_reducing(void);
     CoolPropDbl calc_Ttriple(void);
