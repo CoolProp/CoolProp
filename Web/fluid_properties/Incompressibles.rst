@@ -151,6 +151,25 @@ corresponds to the new mixture syntax in CoolProp v5.
   time, mixture solvers are likely to produce errors due to the same reason...
 
 
+  
+Partial Derivatives
+-------------------
+
+A limited subset of partial derivatives is available for the incompressible fluids. As of 
+October 2015, the following inputs are supported by the ``PropsSI`` function: 
+:math:`\left( \partial \rho / \partial T \right)_{p,x}`, 
+:math:`\left( \partial s    / \partial T \right)_{p,x}`, 
+:math:`\left( \partial h    / \partial T \right)_{p,x}`, 
+.. :math:`\left( \partial s    / \partial T \right)_{p,x}`,dsdTatPxdT
+.. :math:`\left( \partial h    / \partial T \right)_{p,x}`,dhdTatPxdT
+:math:`\left( \partial s    / \partial p \right)_{T,x}` and 
+:math:`\left( \partial h    / \partial p \right)_{T,x}`. 
+
+Note that all partial derivatives require a constant concentration, which is denoted by the 
+``x``, but this ``x`` is not included in the derivative string notation for ``PropsSI``: 
+:math:`\left( \partial \rho / \partial T \right)_{p,x}` translates to ``d(Dmass)/d(T)|P``
+
+
 
 
 .. _FittingReports:
