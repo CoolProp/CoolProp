@@ -156,7 +156,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
         }
         case DmassP_INPUTS:{
             // Call again, but this time with molar units; D: [kg/m^3] / [kg/mol] -> [mol/m^3]
-            update(DmassP_INPUTS, val1 / AS->molar_mass(), val2); return;
+            update(DmolarP_INPUTS, val1 / AS->molar_mass(), val2); return;
         }
         case PUmass_INPUTS:{
             // Call again, but this time with molar units; U: [J/kg] * [kg/mol] -> [J/mol]
