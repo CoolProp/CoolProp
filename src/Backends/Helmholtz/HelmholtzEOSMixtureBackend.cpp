@@ -976,7 +976,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_pmax(void)
 void HelmholtzEOSMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T)
 {
 	// TODO: This is just a quick fix for #878 - should be done more systematically
-	CoolPropDbl rhomolar_min = 1e-10;
+	CoolPropDbl rhomolar_min = 0;
 	
 	if (rhomolar < rhomolar_min) {
 		throw ValueError(format("The molar density of %f kg/mol is below the minimum of %f kg/mol", rhomolar, rhomolar_min));
