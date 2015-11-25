@@ -179,12 +179,26 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
     // Last point is at the critical point
     AS->update(PQ_INPUTS, AS->p_critical(), 1);
     std::size_t i = N-1;
-    pV[i] = AS->p(); TV[i] = AS->T(); rhomolarV[i] = AS->rhomolar();
-    hmolarV[i] = AS->hmolar(); smolarV[i] = AS->smolar(); umolarV[i] = AS->umolar();
-    pL[i] = AS->p(); TL[i] = AS->T();  rhomolarL[i] = AS->rhomolar(); 
-    hmolarL[i] = AS->hmolar(); smolarL[i] = AS->smolar(); umolarL[i] = AS->umolar();
-    logpV[i] = log(AS->p()); logrhomolarV[i] = log(rhomolarV[i]);
-    logpL[i] = log(AS->p()); logrhomolarL[i] = log(rhomolarL[i]);
+    
+	pV[i] = AS->p(); 
+	TV[i] = AS->T(); 
+	rhomolarV[i] = AS->rhomolar();
+    hmolarV[i] = AS->hmolar(); 
+	smolarV[i] = AS->smolar(); 
+	umolarV[i] = AS->umolar();
+
+    pL[i] = AS->p(); 
+	TL[i] = AS->T(); 
+	rhomolarL[i] = AS->rhomolar(); 
+    hmolarL[i] = AS->hmolar(); 
+	smolarL[i] = AS->smolar(); 
+	umolarL[i] = AS->umolar();
+
+    logpV[i] = log(AS->p()); 
+	logrhomolarV[i] = log(rhomolarV[i]);
+
+    logpL[i] = log(AS->p()); 
+	logrhomolarL[i] = log(rhomolarL[i]);
 }
     
 void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)

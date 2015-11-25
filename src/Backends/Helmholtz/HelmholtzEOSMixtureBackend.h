@@ -393,7 +393,6 @@ public:
         const CoolPropDbl tau = HEOS.tau(), delta = HEOS.delta();
         std::size_t N = HEOS.mole_fractions.size();
         for (std::size_t i = 0; i < N; ++i){
-            bool cache_values = true;
             HelmholtzDerivatives derivs = HEOS.components[i].EOS().alphar.all(tau, delta, cache_values);
             summer = summer + derivs*HEOS.mole_fractions[i];
         }
