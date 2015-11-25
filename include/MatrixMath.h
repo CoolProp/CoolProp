@@ -870,9 +870,11 @@ inline void removeRow(Eigen::MatrixXd& matrix, unsigned int rowToRemove)
     unsigned int numRows = static_cast<unsigned int>(matrix.rows())- 1;
     unsigned int numCols = static_cast<unsigned int>(matrix.cols());
 
-    if (rowToRemove < numRows)
+    if (rowToRemove <= numRows)
         matrix.block(rowToRemove, 0, numRows-rowToRemove, numCols) = matrix.block(rowToRemove+1, 0, numRows-rowToRemove, numCols);
-
+    else{
+        throw ValueError(format("Trying to remove row index [%d] greater than max index [%d] ", rowToRemove, numRows));
+    }
     matrix.conservativeResize(numRows, numCols);
 };
 
@@ -881,9 +883,11 @@ inline void removeColumn(Eigen::MatrixXd& matrix, unsigned int colToRemove)
     unsigned int numRows = static_cast<unsigned int>(matrix.rows());
     unsigned int numCols = static_cast<unsigned int>(matrix.cols())-1;
 
-    if (colToRemove < numCols)
+    if (colToRemove <= numCols)
         matrix.block(0, colToRemove, numRows, numCols-colToRemove) = matrix.block(0, colToRemove+1, numRows, numCols-colToRemove);
-
+    else{
+        throw ValueError(format("Trying to remove column index [%d] greater than max index [%d] ", colToRemove, numCols));
+    }
     matrix.conservativeResize(numRows, numCols);
 };
 template <typename Derived>

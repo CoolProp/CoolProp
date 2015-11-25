@@ -19,7 +19,9 @@
 
 // Instantiate templates used
 %template(DoubleVector) std::vector<double>;
+%template(VectorOfDoubleVector) std::vector<std::vector<double> >;
 %template(StringVector) std::vector<std::string>;
+%template(VectorOfStringVector) std::vector< std::vector<std::string> >;
 
 %apply double { CoolPropDbl }; 
 

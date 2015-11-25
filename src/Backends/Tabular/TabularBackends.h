@@ -462,7 +462,22 @@ class SinglePhaseGriddedTableData{
                 bisect_vector(yvec, givenval, j);
                 // This one is problematic because we need to make a slice against the grain in the "matrix"
                 // which requires a slightly different algorithm
-                bisect_segmented_vector_slice(get(otherkey), j, otherval, i);
+                try{
+                    bisect_segmented_vector_slice(get(otherkey), j, otherval, i);
+                }
+                catch(...){
+                    // Now we go for a less intelligent solution, we simply try to find the one that is the closest
+                    const std::vector<std::vector<double> > & mat = get(otherkey);
+                    double closest_diff = 1e20;
+                    std::size_t closest_i = 0;
+                    for (std::size_t index = 0; index < mat.size(); ++index){
+                        double diff = std::abs(mat[index][j] - otherval);
+                        if (diff < closest_diff){
+                            closest_diff = diff; closest_i = index;
+                        }
+                    }
+                    i = closest_i;
+                }
             }
             else if (givenkey == xkey){
                 bisect_vector(xvec, givenval, i);

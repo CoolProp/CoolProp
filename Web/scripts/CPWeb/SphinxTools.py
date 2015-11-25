@@ -144,7 +144,8 @@ class FluidInfoTableGenerator(object):
         if formula:
             formula = ':math:`' + formula + '`'
         else:
-            formulat = 'Not applicable'
+            formula = 'Not applicable'
+        formula = formula.replace('_{1}','')
         
         # Generate (or not) the reducing data
         reducing_data = ''

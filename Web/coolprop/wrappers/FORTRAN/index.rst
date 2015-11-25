@@ -133,10 +133,10 @@ with the interface file ``cpinterface.f90``:
 In order to link all the files together, do::
 
     gfortran -c -Wall cpinterface.f90 cool_fortran_bind.f90
-    gcc -o main *.o libCoolProp.a -lstdc++ -ldl -lgfortran
+    gcc -o main *.o libCoolProp.a -lstdc++ -ldl -lgfortran -lm
     main
 
-On windows, you can leave off the ``-ldl``.
+On windows, you can leave off the ``-ldl`` and also the ``-lm`` might not be required.
 
 On OSX, you must do the linking stage with true gcc so that it finds the right standard library.  Or alternatively, provide the full path to the libstdc++ static library and link with gfortran with something like::
 

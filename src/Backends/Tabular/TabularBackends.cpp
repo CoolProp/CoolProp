@@ -486,7 +486,10 @@ CoolPropDbl CoolProp::TabularBackend::calc_umolar(void){
     }
     else{
         if (is_mixture){
-            return phase_envelope_sat(phase_envelope, iUmolar, iP, _p);
+            // h = u + pv -> u = h - pv
+            CoolPropDbl hmolar = phase_envelope_sat(phase_envelope, iHmolar, iP, _p);
+            CoolPropDbl rhomolar = phase_envelope_sat(phase_envelope, iDmolar, iP, _p);
+            return hmolar - _p/rhomolar;
         }
         else{
             return pure_saturation.evaluate(iUmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
