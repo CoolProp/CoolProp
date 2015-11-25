@@ -91,7 +91,7 @@
   "EOS": [
     {
       "BibTeX_CP0": "", 
-      "BibTeX_EOS": "McLinden-PREPRINT-2013", 
+      "BibTeX_EOS": "Lemmon-JCED-2016-365227", 
       "STATES": {
         "hs_anchor": {
           "T": 436.08400000000006, 
@@ -142,7 +142,7 @@
           "smolar_units": "J/mol/K"
         }
       }, 
-      "T_max": 550, 
+      "T_max": 420, 
       "T_max_units": "K", 
       "Ttriple": 120, 
       "Ttriple_units": "K", 
@@ -233,7 +233,7 @@
       "gas_constant_units": "J/mol/K", 
       "molar_mass": 0.1959104, 
       "molar_mass_units": "kg/mol", 
-      "p_max": 60000000.0, 
+      "p_max": 50000000.0, 
       "p_max_units": "Pa", 
       "pseudo_pure": false
     }

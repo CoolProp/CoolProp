@@ -200,7 +200,7 @@
   "EOS": [
     {
       "BibTeX_CP0": "", 
-      "BibTeX_EOS": "McLinden-PREPRINT-2013", 
+      "BibTeX_EOS": "Lemmon-JCED-2016-365227", 
       "STATES": {
         "hs_anchor": {
           "T": 412.39, 
@@ -259,8 +259,8 @@
       "acentric_units": "-", 
       "alpha0": [
         {
-          "a1": 0, 
-          "a2": 0, 
+          "a1": -15.8291124137, 
+          "a2": 11.0879509962, 
           "type": "IdealGasHelmholtzLead"
         }, 
         {
@@ -277,12 +277,6 @@
             3.809015737530008
           ], 
           "type": "IdealGasHelmholtzPlanckEinstein"
-        }, 
-        {
-          "a1": -15.8290880642424, 
-          "a2": 11.087938006383, 
-          "reference": "IIR", 
-          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
       ], 
       "alphar": [
@@ -427,7 +421,7 @@
         "rhomolar_max": 3618.508261092158, 
         "rhomolar_min": 3362.517912603551
       }, 
-      "gas_constant": 8.314472, 
+      "gas_constant": 8.3144621, 
       "gas_constant_units": "J/mol/K", 
       "molar_mass": 0.17002886, 
       "molar_mass_units": "kg/mol", 
