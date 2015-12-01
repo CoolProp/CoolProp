@@ -315,9 +315,20 @@ void ResidualHelmholtzNonAnalytic::to_json(rapidjson::Value &el, rapidjson::Docu
     el.AddMember("D",_D,doc.GetAllocator());
 }
 
-void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
+void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau_in, const CoolPropDbl &delta_in, HelmholtzDerivatives &derivs) throw()
 {
     if (N==0){return;}
+    
+    // Here we want to hack this function just a tiny bit to avoid evaluation AT the critical point
+    // If we are VERY close to the critical point, just offset us a tiny bit away
+    CoolPropDbl tau=tau_in, delta = delta_in;
+    if (std::abs(tau_in-1) < 10*DBL_EPSILON){
+        tau = 1.0+10*DBL_EPSILON;
+    }
+    if (std::abs(delta_in-1) < 10*DBL_EPSILON){
+        delta = 1.0+10*DBL_EPSILON;
+    }
+    
     for (unsigned int i=0; i<N; ++i)
     {
         const ResidualHelmholtzNonAnalyticElement &el = elements[i];
@@ -331,13 +342,7 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
         const CoolPropDbl dtheta_dDelta = Ai/(betai)*pow(POW2(delta-1), 1/(2*betai)-1)*(delta-1);
         
         const CoolPropDbl d2theta_dDelta2 = Ai/betai*(1/betai-1)*pow(POW2(delta-1), 1/(2*betai)-1);
-        CoolPropDbl d3theta_dDelta3;
-        if (std::abs(delta-1) < DBL_EPSILON){
-            d3theta_dDelta3 = Ai/betai*(2-3/betai+1/POW2(betai))*pow(POW2(delta-1), 1/(2*betai)-1.5);
-        }
-        else{
-            d3theta_dDelta3 = Ai/betai*(2-3/betai+1/POW2(betai))*pow(POW2(delta-1), 1/(2*betai))/POW3(delta-1);
-        }
+        const CoolPropDbl d3theta_dDelta3 = Ai/betai*(2-3/betai+1/POW2(betai))*pow(POW2(delta-1), 1/(2*betai))/POW3(delta-1);
         const CoolPropDbl d4theta_dDelta4 = Ai/betai*(-6+11/betai-6/POW2(betai)+1/POW3(betai))*pow(POW2(delta-1), 1/(2*betai)-2);
 
         // Derivatives of PSI (OK - checked)
@@ -372,22 +377,13 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl &tau, const CoolPropDbl
         const CoolPropDbl d3DELTA_dTau3 = 0;
         const CoolPropDbl d3DELTA_dDelta_dTau2 = 0;
         const CoolPropDbl d3DELTA_dDelta2_dTau = 2*dtheta_dTau*d2theta_dDelta2;
-        CoolPropDbl d3DELTA_dDelta3;
-        if (std::abs(delta-1) < DBL_EPSILON){
-            d3DELTA_dDelta3 = 2*(theta*d3theta_dDelta3 + 3*dtheta_dDelta*d2theta_dDelta2 + 2*Bi*ai*(2*ai*ai - 3*ai + 1)*pow(POW2(delta-1.0), ai -1.0 - 0.5));
-        }
-        else{
-            d3DELTA_dDelta3 = 2*(theta*d3theta_dDelta3 + 3*dtheta_dDelta*d2theta_dDelta2 + 2*Bi*ai*(2*ai*ai - 3*ai + 1)*pow(POW2(delta-1.0), ai-1.0)/(delta-1));
-        }
+        const CoolPropDbl d3DELTA_dDelta3 = 2*(theta*d3theta_dDelta3 + 3*dtheta_dDelta*d2theta_dDelta2 + 2*Bi*ai*(2*ai*ai - 3*ai + 1)*pow(POW2(delta-1.0), ai-1.0)/(delta-1));
+
         const CoolPropDbl d4DELTA_dTau4 = 0;
         const CoolPropDbl d4DELTA_dDelta_dTau3 = 0;
         const CoolPropDbl d4DELTA_dDelta2_dTau2 = 0;
         const CoolPropDbl d4DELTA_dDelta3_dTau = 2*dtheta_dTau*d3theta_dDelta3;
         const CoolPropDbl d4DELTA_dDelta4 = 2*(theta*d4theta_dDelta4 + 4*dtheta_dDelta*d3theta_dDelta3 + 3*POW2(d2theta_dDelta2) + 2*Bi*ai*(4*ai*ai*ai - 12*ai*ai + 11*ai-3)*pow(POW2(delta-1.0), ai-2.0));
-        
-        if (std::abs(DELTA-1) < 10*DBL_EPSILON){
-            derivs.reset(_HUGE); return;
-        }
  
         const CoolPropDbl dDELTAbi_dDelta = bi*pow(DELTA,bi-1.0)*dDELTA_dDelta;
         const CoolPropDbl dDELTAbi_dTau = -2.0*theta*bi*pow(DELTA,bi-1.0);
