@@ -296,7 +296,6 @@ CoolPropDbl TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBack
     // **********************************************************************
     delta=rhobar;
     // "Normal" calculation
-    tau=1/Tbar;
     drhodp=1/(R_Water*HEOS.T()*(1+2*delta*HEOS.dalphar_dDelta()+delta*delta*HEOS.d2alphar_dDelta2()));
     drhobar_dpbar = pstar/rhostar*drhodp;
     // "Reducing" calculation

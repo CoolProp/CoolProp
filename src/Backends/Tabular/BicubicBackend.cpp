@@ -256,7 +256,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             }
             
             using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
-            std::size_t iL, iV;
+            std::size_t iL = std::numeric_limits<std::size_t>::max(), iV = std::numeric_limits<std::size_t>::max();
             CoolPropDbl zL = 0, zV = 0;
             std::size_t iclosest = 0;
             SimpleState closest_state;
@@ -285,10 +285,20 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
                     throw ValueError("vapor quality is not in (0,1)");
                 }
-                else{
+                else if (!is_mixture){
                     cached_saturation_iL = iL; cached_saturation_iV = iV;
+                    _p = pure_saturation.evaluate(iP, _T, _Q, iL, iV);
                 }
-                _p = pure_saturation.evaluate(iP, _T, _Q, iL, iV);
+                else {
+                    // Mixture
+                    std::vector<std::pair<std::size_t,std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
+                    if (intersect.empty()){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
+                    iV = intersect[0].first; iL = intersect[1].first;
+                    CoolPropDbl pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
+                    CoolPropDbl pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
+                    _p = _Q*pV + (1-_Q)*pL;
+                }
+
             }
             else{
                 // Find and cache the indices i, j
@@ -345,7 +355,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 throw ValueError("vapor quality is not in (0,1)");
             }
             else{
-                CoolPropDbl pL, pV;
+                CoolPropDbl pL = _HUGE, pV = _HUGE;
                 if (is_mixture){
                     std::vector<std::pair<std::size_t,std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
                     if (intersect.empty()){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }

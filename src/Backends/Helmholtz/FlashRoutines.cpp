@@ -186,7 +186,7 @@ p = \frac{{R{T_r}{T_c}}}{{v - b}} - \frac{{a\left( {1 + 2\kappa  + {\kappa ^2}} 
  */
 double FlashRoutines::T_DP_PengRobinson(HelmholtzEOSMixtureBackend &HEOS, double rhomolar, double p)
 {
-    double omega, R, kappa, a, b, A, B, C, D, Tc, pc, V= 1/rhomolar;
+    double omega, R, kappa, a, b, A, B, C, Tc, pc, V= 1/rhomolar;
     omega = HEOS.acentric_factor();
     Tc = HEOS.T_critical();
     pc = HEOS.p_critical();
@@ -202,7 +202,7 @@ double FlashRoutines::T_DP_PengRobinson(HelmholtzEOSMixtureBackend &HEOS, double
     B = +2*a*kappa*(1+kappa)/(den);
     C = -a*(1+2*kappa+kappa*kappa)/(den)-p;
     
-    D = B*B-4*A*C;
+    //D = B*B-4*A*C;
     
     double sqrt_Tr1 = (-B+sqrt(B*B-4*A*C))/(2*A);
     //double sqrt_Tr2 = (-B-sqrt(B*B-4*A*C))/(2*A);

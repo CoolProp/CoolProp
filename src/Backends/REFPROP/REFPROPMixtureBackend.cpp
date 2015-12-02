@@ -100,7 +100,6 @@ void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_name
     // Call SETPATH if the ALTERNATIVE_REFPROP_PATH configuration variable has been set
     std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
     if (!alt_rp_path.empty()){
-        long len = alt_rp_path.length();
         char name[255];
         strcpy(name, alt_rp_path.c_str());
         SETPATHdll(name, 255);
