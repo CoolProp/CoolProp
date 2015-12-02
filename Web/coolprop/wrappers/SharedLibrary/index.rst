@@ -68,15 +68,15 @@ You can select the compiler in the call to cmake below.
 
     For 64-bit DLL::
 
-        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -G "MinGW Makefiles"
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 
     For 32-bit __stdcall DLL::
 
-        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_STDCALL_LIBRARY=ON -G "MinGW Makefiles"
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_STDCALL_LIBRARY=ON -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 
     For 32-bit __cdecl DLL::
 
-        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_CDECL_LIBRARY=ON -G "MinGW Makefiles"
+        cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCOOLPROP_CDECL_LIBRARY=ON -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
         
     You can cross-compile by forcing a non-native bitness by using the additional flags ``-DFORCE_BITNESS_32=ON`` and ``-DFORCE_BITNESS_64=ON``.
 
@@ -116,7 +116,7 @@ For 32-bit compilation::
     # Make a build folder
     mkdir build && cd build
     # Generate builder
-    cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DFORCE_BITNESS_32=ON
+    cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DFORCE_BITNESS_32=ON -DCMAKE_BUILD_TYPE=Release
     # Build
     cmake --build .
 
@@ -128,10 +128,14 @@ For 64-bit compilation::
     cd CoolProp
     # Make a build folder
     mkdir build && cd build
-    # Generate builder (defaults to 64-bit)
-    cmake .. -DCOOLPROP_SHARED_LIBRARY=ON
+    # Generate builder (defaults to 64-bit on 64-bit machine)
+    cmake .. -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release
     # Build
     cmake --build .
+
+.. note::
+
+    In order to get more verbose debugging of the build process, see build flags actually used, etc., you can add the flag ``-DCMAKE_VERBOSE_MAKEFILE=ON`` to the generator step above
 
 On Linux, installation could be done by::
 
