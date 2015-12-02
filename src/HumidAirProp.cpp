@@ -2166,7 +2166,6 @@ public:
     std::string in1,in2,in3,out;
     double v1, v2, v3, expected, actual;
     void set_table(hel h[], int nrow){
-        int h1 = sizeof(h), h2 = sizeof(h[0]);
         inputs = std::vector<hel>(h, h + nrow);
     };
     void set_values(hel &h){
