@@ -58,9 +58,10 @@ static bool dbg_refprop = false;
 static const unsigned int number_of_endings = 5;
 std::string endings[number_of_endings] = {"", ".FLD", ".fld", ".PPF", ".ppf"};
 
-static char rel_path_HMC_BNC[] = "HMX.BNC";
+static char rel_path_HMX_BNC[] = "HMX.BNC";
 static char default_reference_state[] = "DEF";
 
+// Default location, can be over-ridden by configuration variable
 #if defined(__powerpc__) || defined(__ISLINUX__) || defined(__ISAPPLE__)
     char refpropPath[] = "/opt/refprop";
 #elif defined(__ISWINDOWS__)
@@ -74,12 +75,14 @@ std::string get_REFPROP_fluid_path()
     std::string rpPath = refpropPath;
     // Allow the user to specify an alternative REFPROP path by configuration value
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
-    if (!alt_refprop_path.empty()){ rpPath = alt_refprop_path; }
+    if (!alt_refprop_path.empty()){
+        // The alternative path has been set, here we don't append anything to the path
+        // so return an empty string
+        return "";
+    }
     #if defined(__ISWINDOWS__)
         return rpPath;
-    #elif defined(__ISLINUX__)
-        return rpPath + std::string("/fluids/");
-    #elif defined(__ISAPPLE__)
+    #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
         return rpPath + std::string("/fluids/");
     #else
         throw CoolProp::NotImplementedError("This function should not be called.");
@@ -295,7 +298,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
             char path_HMX_BNC[refpropcharlength+1];
             strcpy(path_HMX_BNC, fdPath.c_str());
-            strcat(path_HMX_BNC, rel_path_HMC_BNC);
+            strcat(path_HMX_BNC, rel_path_HMX_BNC);
             std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
             if (!alt_hmx_bnc_path.empty()){
                 const char * HMX_path = alt_hmx_bnc_path.c_str();

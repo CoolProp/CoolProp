@@ -23,8 +23,8 @@
 namespace CoolProp {
 
 REFPROPBackend::REFPROPBackend(const std::string & fluid_name) {
-    // Do the REFPROP instantiation for this fluid
 
+    // Do the REFPROP instantiation for this fluid
     std::vector<std::string> component_names(1,fluid_name);
     construct(component_names);
 
