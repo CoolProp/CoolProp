@@ -556,6 +556,11 @@ if (COOLPROP_CSHARP_MODULE)
 
   if (WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
+    if (MSVC)
+      #  Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
+      SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+      SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+    endif()
   endif()
   
   add_dependencies (${app_name} generate_headers)  
@@ -679,6 +684,11 @@ if (COOLPROP_JAVA_MODULE)
 
   if (WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
+    if (MSVC)
+        #  Force visual studio to statically link the c runtime to avoid dependency on MSVCRXXX.dll
+        SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+        SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+    endif()
   endif()
   
   if (NOT MSVC)
