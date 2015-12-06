@@ -11,6 +11,11 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
 	// Clear cached values
 	clear();
 
+    // Convert to mass-based units if necessary
+    CoolPropDbl ld_value1 = val1, ld_value2 = val2;
+    mass_to_molar_inputs(input_pair, ld_value1, ld_value2);
+    val1 = ld_value1; val2 = ld_value2;
+
     // To start, set quality to value that is for single-phase
     _Q = -1000;
 
@@ -84,10 +89,6 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
             }
             break;
         }
-        case HmassP_INPUTS:{
-            update(HmolarP_INPUTS, val1 * AS->molar_mass(), val2); // H: [J/kg] * [kg/mol] -> [J/mol]
-            return;
-        }
         case PUmolar_INPUTS:
         case PSmolar_INPUTS:
         case DmolarP_INPUTS:{
@@ -153,18 +154,6 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 recalculate_singlephase_phase();
             }
             break;
-        }
-        case DmassP_INPUTS:{
-            // Call again, but this time with molar units; D: [kg/m^3] / [kg/mol] -> [mol/m^3]
-            update(DmolarP_INPUTS, val1 / AS->molar_mass(), val2); return;
-        }
-        case PUmass_INPUTS:{
-            // Call again, but this time with molar units; U: [J/kg] * [kg/mol] -> [J/mol]
-            update(PUmolar_INPUTS, val1, val2*AS->molar_mass()); return;
-        }
-        case PSmass_INPUTS:{
-            // Call again, but this time with molar units; S: [J/kg/K] * [kg/mol] -> [J/mol/K]
-            update(PSmolar_INPUTS, val1, val2*AS->molar_mass()); return;
         }
 	    case PT_INPUTS:{
             _p = val1; _T = val2;
@@ -237,14 +226,6 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                 }
             }
             break;
-        }
-        case DmassT_INPUTS:{
-            // Call again, but this time with molar units; D: [kg/m^3] / [kg/mol] -> [mol/m^3]
-            update(DmolarT_INPUTS, val1 / AS->molar_mass(), val2); return;
-        }
-        case SmassT_INPUTS:{
-            // Call again, but this time with molar units; S: [J/kg/K] * [kg/mol] -> [J/mol/K]
-            update(SmolarT_INPUTS, val1*AS->molar_mass(), val2); return;
         }
         case SmolarT_INPUTS:
         case DmolarT_INPUTS:{
