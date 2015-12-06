@@ -45,6 +45,11 @@ class TTSEBackend : public TabularBackend
         double invert_single_phase_x(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
         double invert_single_phase_y(SinglePhaseGriddedTableData &table, parameters output, double y, double x, std::size_t i, std::size_t j);
         
+        /// Find the best set of i,j for native inputs.  
+        virtual void find_native_nearest_good_indices(SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, double x, double y, std::size_t &i, std::size_t &j){
+            return table.find_native_nearest_good_neighbor(x, y, i, j);
+        };
+        
         /**
          * @brief Evaluate a derivative in terms of the native inputs of the table
          * @param table A reference to the table to be used

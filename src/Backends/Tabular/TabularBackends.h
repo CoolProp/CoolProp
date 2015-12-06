@@ -818,6 +818,16 @@ class TabularBackend : public AbstractState
         */
         void calc_unspecify_phase(){ imposed_phase_index = iphase_not_imposed; };
 
+        virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
+        virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
+
+        /// Ask the derived class to find the nearest good set of i,j that it wants to use (pure virtual)
+        virtual void find_native_nearest_good_indices(SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, double x, double y, std::size_t &i, std::size_t &j) = 0;
+
         phases calc_phase(void){ return _phase; }
         CoolPropDbl calc_T_critical(void){return this->AS->T_critical();};
         CoolPropDbl calc_Ttriple(void){return this->AS->Ttriple();};
@@ -837,12 +847,7 @@ class TabularBackend : public AbstractState
         const std::vector<CoolPropDbl> calc_mass_fractions(void){ return AS->get_mass_fractions(); };
 
         CoolPropDbl calc_molar_mass(void){return AS->molar_mass();};
-        virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
-        virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
-        virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
-        virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
-        virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
-        virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
+        
         CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
         CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
 

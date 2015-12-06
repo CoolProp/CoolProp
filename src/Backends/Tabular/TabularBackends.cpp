@@ -658,6 +658,53 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
 
     switch (input_pair)
     {
+    case HmolarP_INPUTS:{
+        _hmolar = val1; _p = val2;
+        if (!single_phase_logph.native_inputs_are_in_range(_hmolar, _p)){
+            // Use the AbstractState instance
+            using_single_phase_table = false;
+            if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
+            throw ValueError(format("inputs are not in range, hmolar=%Lg, p=%Lg", static_cast<CoolPropDbl>(_hmolar), _p));
+        }
+        else{
+            using_single_phase_table = true; // Use the table !
+            std::size_t iL, iV, iclosest = 0;
+            CoolPropDbl hL = 0, hV = 0;
+            SimpleState closest_state;
+            bool is_two_phase = false;
+            // Phase is imposed, use it
+            if (imposed_phase_index != iphase_not_imposed){
+                is_two_phase = (imposed_phase_index == iphase_twophase);
+            }
+            else{
+                if (is_mixture){
+                    is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, iHmolar, _hmolar, iclosest, closest_state);
+                }
+                else{
+                    is_two_phase = pure_saturation.is_inside(iP, _p, iHmolar, _hmolar, iL, iV, hL, hV);
+                }
+            }
+            if (is_two_phase){
+                using_single_phase_table = false;
+                _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
+                if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+                    throw ValueError("vapor quality is not in (0,1)");
+                }
+                else{
+                    cached_saturation_iL = iL; cached_saturation_iV = iV;
+                    _phase = iphase_twophase;
+                }
+            }
+            else{
+                selected_table = SELECTED_PH_TABLE;
+                // Find and cache the indices i, j
+                find_native_nearest_good_indices(single_phase_logph, dataset->coeffs_ph, _hmolar, _p, cached_single_phase_i, cached_single_phase_j);
+                // Recalculate the phase
+                recalculate_singlephase_phase();
+            }
+        }
+        break;
+    }
     case PQ_INPUTS:{
         std::size_t iL = 0, iV = 0;
         _p = val1; _Q = val2;
