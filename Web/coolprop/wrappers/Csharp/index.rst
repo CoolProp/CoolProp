@@ -94,8 +94,8 @@ Once mono c# is installed, you can run the builder and tests using::
     # Build the makefile using CMake
     cmake .. -DCOOLPROP_CSHARP_MODULE=ON -DBUILD_TESTING=ON
     # Make the C# files (by default files will be generated in folder install_root/Csharp relative to CMakeLists.txt file)
-    make install
-    # Run the integration tests
+    cmake --build .
+    # Run the integration tests (optional)
     ctest --extra-verbose
     
 .. _csharp_example:
