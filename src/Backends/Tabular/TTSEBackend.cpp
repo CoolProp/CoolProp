@@ -224,56 +224,9 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
             }
             break;
         }
-        case PQ_INPUTS:{
-            std::size_t iL = 0, iV = 0;
-            _p = val1; _Q = val2;
-            using_single_phase_table = false;
-            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
-                throw ValueError("vapor quality is not in (0,1)");
-            }
-            else{
-                CoolPropDbl TL = _HUGE, TV = _HUGE;
-                if (is_mixture){
-                    std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
-                    if (intersect.empty()){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
-                    iV = intersect[0].first; iL = intersect[1].first;
-                }
-                else{
-                    bool it_is_inside = pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
-                    if (!it_is_inside){
-                        throw ValueError("Not possible to determine whether pressure is inside or not");
-                    }
-                }
-                _T = _Q*TV + (1-_Q)*TL;
-                cached_saturation_iL = iL; cached_saturation_iV = iV; _phase = iphase_twophase;
-            }
-            break;
-        }
-        case QT_INPUTS:{
-            std::size_t iL = 0, iV = 0;
-            _Q = val1; _T = val2;
-            
-            using_single_phase_table = false;
-            if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
-                throw ValueError("vapor quality is not in (0,1)");
-            }
-            else{
-                CoolPropDbl pL = _HUGE, pV = _HUGE;
-                if (is_mixture){
-                    std::vector<std::pair<std::size_t,std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
-                    if (intersect.empty()){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
-                    iV = intersect[0].first; iL = intersect[1].first;
-                    pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
-                    pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
-                }
-                else{
-                    pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, pL, pV);
-                }
-                _p = _Q*pV + (1-_Q)*pL;
-                cached_saturation_iL = iL; cached_saturation_iV = iV; _phase = iphase_twophase;
-            }
-            break;
-        }
+        case PQ_INPUTS:
+        case QT_INPUTS:
+            TabularBackend::update(input_pair, val1, val2); break;
         default:
             throw ValueError("Sorry, but this set of inputs is not supported for TTSE backend");
     }

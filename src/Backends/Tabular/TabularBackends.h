@@ -830,7 +830,7 @@ class TabularBackend : public AbstractState
         bool using_mole_fractions(void){return true;}
         bool using_mass_fractions(void){return false;}
         bool using_volu_fractions(void){return false;}
-        void update(CoolProp::input_pairs input_pair, double Value1, double Value2){};
+        void update(CoolProp::input_pairs input_pair, double Value1, double Value2);
         void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){this->AS->set_mole_fractions(mole_fractions);};
         void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){ throw NotImplementedError("set_mass_fractions not implemented for Tabular backends"); };
         const std::vector<long double> & get_mole_fractions(){return AS->get_mole_fractions();};
