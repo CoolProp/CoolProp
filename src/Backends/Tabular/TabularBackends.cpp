@@ -766,21 +766,29 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 if (imposed_phase_index != iphase_not_imposed)
                 {
                     double rhoc = rhomolar_critical();
-                    double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
-                    if (imposed_phase_index == iphase_liquid && rho < rhoc){
+                    if (imposed_phase_index == iphase_liquid && cached_single_phase_i > 0){
                         // We want a liquid solution, but we got a vapor solution
-                        // Bump to lower temperature
-                        cached_single_phase_i--;
-                        double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
-                        if (rho < rhoc){
-                            // Didn't work
-                            throw ValueError("Bump unsuccessful");
-                        }
-                        else{
-                            _rhomolar = rho;
+                        if (_p < this->AS->p_critical()){
+                            while (
+                                cached_single_phase_i > 0
+                                && 
+                                single_phase_logpT.rhomolar[cached_single_phase_i+1][cached_single_phase_j] < rhoc
+                                )
+                            {
+                                // Bump to lower temperature
+                                cached_single_phase_i--;
+                            }
+                            double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
+                            if (rho < rhoc){
+                                // Didn't work
+                                throw ValueError("Bump unsuccessful");
+                            }
+                            else{
+                                _rhomolar = rho;
+                            }
                         }
                     }
-                    else if ((imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas) && rho > rhoc){
+                    else if ((imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas) && cached_single_phase_i > 0){
                         // We want a gaseous solution, but we got a liquid solution instead
                         // Bump to higher temperature
                         cached_single_phase_i++;
