@@ -732,7 +732,12 @@ class TabularBackend : public AbstractState
         selected_table_options selected_table;
         std::size_t cached_single_phase_i, cached_single_phase_j;
         std::size_t cached_saturation_iL, cached_saturation_iV;
-        std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdx2, *d2zdxdy, *d2zdy2;
+        std::vector<std::vector<double> > const *z;
+        std::vector<std::vector<double> > const *dzdx;
+        std::vector<std::vector<double> > const *dzdy;
+        std::vector<std::vector<double> > const *d2zdx2;
+        std::vector<std::vector<double> > const *d2zdxdy;
+        std::vector<std::vector<double> > const *d2zdy2;
         std::vector<CoolPropDbl> mole_fractions;
     public:
         shared_ptr<CoolProp::AbstractState> AS;
@@ -749,7 +754,7 @@ class TabularBackend : public AbstractState
         // None of the tabular methods are available from the high-level interface
         bool available_in_high_level(void){return false;}
 
-        void connect_pointers(parameters output, SinglePhaseGriddedTableData &table)
+        void connect_pointers(parameters output, const SinglePhaseGriddedTableData &table)
 		{
 			// Connect the pointers based on the output variable desired
 			switch(output){
@@ -827,6 +832,20 @@ class TabularBackend : public AbstractState
 
         /// Ask the derived class to find the nearest good set of i,j that it wants to use (pure virtual)
         virtual void find_native_nearest_good_indices(SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, double x, double y, std::size_t &i, std::size_t &j) = 0;
+        /// Ask the derived class to find the nearest neighbor (pure virtual)
+        virtual void find_nearest_neighbor(SinglePhaseGriddedTableData &table, 
+                                           const std::vector<std::vector<CellCoeffs> > &coeffs, 
+                                           const parameters variable1, 
+                                           const double value1, 
+                                           const parameters other, 
+                                           const double otherval, 
+                                           std::size_t &i, 
+                                           std::size_t &j) = 0;
+        /// 
+        virtual void invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j) = 0;
+        /// 
+        virtual void invert_single_phase_y(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j) = 0;
+
 
         phases calc_phase(void){ return _phase; }
         CoolPropDbl calc_T_critical(void){return this->AS->T_critical();};

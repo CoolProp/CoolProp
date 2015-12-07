@@ -705,6 +705,62 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         }
         break;
     }
+    case PUmolar_INPUTS:
+    case PSmolar_INPUTS:
+    case DmolarP_INPUTS:{
+        CoolPropDbl otherval; parameters otherkey;
+        switch (input_pair){
+        case PUmolar_INPUTS: _p = val1; _umolar = val2; otherval = val2; otherkey = iUmolar; break;
+        case PSmolar_INPUTS: _p = val1; _smolar = val2; otherval = val2; otherkey = iSmolar; break;
+        case DmolarP_INPUTS: _rhomolar = val1; _p = val2; otherval = val1; otherkey = iDmolar; break;
+        default: throw ValueError("Bad (impossible) pair");
+        }
+
+        using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
+        std::size_t iL = std::numeric_limits<std::size_t>::max(), iV = std::numeric_limits<std::size_t>::max();
+        CoolPropDbl zL = 0, zV = 0;
+        std::size_t iclosest = 0;
+        SimpleState closest_state;
+        bool is_two_phase = false;
+        // Phase is imposed, use it
+        if (imposed_phase_index != iphase_not_imposed){
+            is_two_phase = (imposed_phase_index == iphase_twophase);
+        }
+        else{
+            if (is_mixture){
+                is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, otherkey, otherval, iclosest, closest_state);
+            }
+            else{
+                is_two_phase = pure_saturation.is_inside(iP, _p, otherkey, otherval, iL, iV, zL, zV);
+            }
+        }
+        if (is_two_phase){
+            using_single_phase_table = false;
+            if (otherkey == iDmolar){
+                _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
+            }
+            else{
+                _Q = (otherval - zL)/(zV - zL);
+            }
+            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+                throw ValueError("vapor quality is not in (0,1)");
+            }
+            else if (!is_mixture){
+                cached_saturation_iL = iL; cached_saturation_iV = iV;
+            }
+            _phase = iphase_twophase;
+        }
+        else{
+            selected_table = SELECTED_PH_TABLE;
+            // Find and cache the indices i, j
+            find_nearest_neighbor(single_phase_logph, dataset->coeffs_ph, iP, _p, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+            // Now find hmolar given P, X for X in Smolar, Umolar, Dmolar
+            invert_single_phase_x(single_phase_logph, dataset->coeffs_ph, otherkey, otherval, _p, cached_single_phase_i, cached_single_phase_j);
+            // Recalculate the phase
+            recalculate_singlephase_phase();
+        }
+        break;
+    }
     case PQ_INPUTS:{
         std::size_t iL = 0, iV = 0;
         _p = val1; _Q = val2;

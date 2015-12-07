@@ -34,62 +34,6 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
     SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
     
     switch(input_pair){
-        case PUmolar_INPUTS:
-        case PSmolar_INPUTS:
-        case DmolarP_INPUTS:{
-            CoolPropDbl otherval; parameters otherkey;
-            switch(input_pair){
-                case PUmolar_INPUTS: _p = val1; _umolar = val2; otherval = val2; otherkey = iUmolar; break;
-                case PSmolar_INPUTS: _p = val1; _smolar = val2; otherval = val2; otherkey = iSmolar; break;
-                case DmolarP_INPUTS: _rhomolar = val1; _p = val2; otherval = val1; otherkey = iDmolar; break;
-                default: throw ValueError("Bad (impossible) pair");
-            }
-            
-            using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
-            std::size_t iL = std::numeric_limits<std::size_t>::max(), iV = std::numeric_limits<std::size_t>::max();
-            CoolPropDbl zL = 0, zV = 0;
-            std::size_t iclosest = 0;
-            SimpleState closest_state;
-            bool is_two_phase = false;
-            // Phase is imposed, use it
-            if (imposed_phase_index != iphase_not_imposed)
-            {
-                is_two_phase = (imposed_phase_index == iphase_twophase);
-            }
-            else{
-                if (is_mixture){
-                    is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, otherkey, otherval, iclosest, closest_state);
-                }
-                else{
-                    is_two_phase = pure_saturation.is_inside(iP, _p, otherkey, otherval, iL, iV, zL, zV);
-                }
-            }
-            if (is_two_phase){
-                using_single_phase_table = false;
-                if (otherkey == iDmolar){
-                    _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
-                }
-                else{
-                    _Q = (otherval - zL)/(zV - zL);
-                }
-                if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
-                    throw ValueError("vapor quality is not in (0,1)");
-                }
-                else if (!is_mixture){
-                    cached_saturation_iL = iL; cached_saturation_iV = iV; _phase = iphase_twophase;
-                }
-            }
-            else{
-                // Find and cache the indices i, j
-                selected_table = SELECTED_PH_TABLE;
-                single_phase_logph.find_nearest_neighbor(iP, _p, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
-				// Now find hmolar
-                invert_single_phase_x(single_phase_logph, otherkey, otherval, _p, cached_single_phase_i, cached_single_phase_j);
-                // Recalculate the phase
-                recalculate_singlephase_phase();
-            }
-            break;
-        }
         case PT_INPUTS:{
             _p = val1; _T = val2;
             if (!single_phase_logpT.native_inputs_are_in_range(_T, _p)){
@@ -169,11 +113,11 @@ void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1
                 }
             }
             else{
-                // Find and cache the indices i, j
                 selected_table = SELECTED_PT_TABLE;
-                single_phase_logpT.find_nearest_neighbor(iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+                // Find and cache the indices i, j
+                find_nearest_neighbor(single_phase_logpT, dataset->coeffs_pT, iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
 				// Now find hmolar
-                invert_single_phase_y(single_phase_logpT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
+                invert_single_phase_y(single_phase_logpT, dataset->coeffs_pT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
                 // Recalculate the phase
                 recalculate_singlephase_phase();
             }
@@ -222,7 +166,7 @@ double CoolProp::TTSEBackend::evaluate_single_phase_transport(SinglePhaseGridded
     return val;
 }
 /// Solve for deltax
-double CoolProp::TTSEBackend::invert_single_phase_x(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)
+void CoolProp::TTSEBackend::invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j)
 {   
     connect_pointers(output, table);
     
@@ -278,10 +222,9 @@ double CoolProp::TTSEBackend::invert_single_phase_x(SinglePhaseGriddedTableData 
         case iT: _T = val; break;
         default: throw ValueError();
     }
-    return val;
 }
 /// Solve for deltay
-double CoolProp::TTSEBackend::invert_single_phase_y(SinglePhaseGriddedTableData &table, parameters output, double y, double x, std::size_t i, std::size_t j)
+void CoolProp::TTSEBackend::invert_single_phase_y(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double y, double x, std::size_t i, std::size_t j)
 {   
     connect_pointers(output, table);
     
@@ -341,7 +284,6 @@ double CoolProp::TTSEBackend::invert_single_phase_y(SinglePhaseGriddedTableData 
         case iP: _p = val; break;
         default: throw ValueError();
     }
-    return val;
 }
 /// Use the single-phase table to evaluate an output
 double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)

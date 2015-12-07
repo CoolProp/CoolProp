@@ -1,4 +1,3 @@
-
 #if !defined(NO_TABULAR_BACKENDS)
 
 #include "BicubicBackend.h"
@@ -35,73 +34,6 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
     SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
 
     switch(input_pair){
-        
-        case PUmolar_INPUTS:
-        case PSmolar_INPUTS:
-        case DmolarP_INPUTS:{
-            CoolPropDbl otherval; parameters otherkey;
-            switch(input_pair){
-                case PUmolar_INPUTS: _p = val1; _umolar = val2; otherval = val2; otherkey = iUmolar; break;
-                case PSmolar_INPUTS: _p = val1; _smolar = val2; otherval = val2; otherkey = iSmolar; break;
-                case DmolarP_INPUTS: _rhomolar = val1; _p = val2; otherval = val1; otherkey = iDmolar; break;
-                default: throw ValueError("Bad (impossible) pair");
-            }
-            
-            using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
-            std::size_t iL, iV;
-            CoolPropDbl zL = 0, zV = 0;
-            std::size_t iclosest = 0;
-            SimpleState closest_state;
-            bool is_two_phase = false;
-            // Phase is imposed, use it
-            if (imposed_phase_index != iphase_not_imposed){
-                is_two_phase = (imposed_phase_index == iphase_twophase);
-            }
-            else{
-                if (is_mixture){
-                    is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, otherkey, otherval, iclosest, closest_state);
-                }
-                else{
-                    is_two_phase = pure_saturation.is_inside(iP, _p, otherkey, otherval, iL, iV, zL, zV);
-                }
-            }
-            if ( is_two_phase ){
-                using_single_phase_table = false;
-                if (otherkey == iDmolar){
-                    _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
-                }
-                else{
-                    _Q = (otherval - zL)/(zV - zL);
-                }
-                if(!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
-                    throw ValueError("vapor quality is not in (0,1)");
-                }
-                else{
-                    cached_saturation_iL = iL; cached_saturation_iV = iV;
-                }
-                _phase = iphase_twophase;
-            }
-            else{
-                // Find and cache the indices i, j
-                selected_table = SELECTED_PH_TABLE;
-                single_phase_logph.find_nearest_neighbor(iP, _p, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
-                CellCoeffs &cell = dataset->coeffs_ph[cached_single_phase_i][cached_single_phase_j];
-                if (!cell.valid()){
-                    if (cell.has_valid_neighbor()){
-                        // Get new good neighbor
-                        cell.get_alternate(cached_single_phase_i, cached_single_phase_j);
-                    }
-                    else{
-                        if (!cell.valid()){throw ValueError(format("Cell is invalid and has no good neighbors for p = %g Pa, T= %g K",val1,val2));}
-                    }
-                }
-				// Now find hmolar given P, X for X in Hmolar, Smolar, Umolar
-                invert_single_phase_x(single_phase_logph, dataset->coeffs_ph, otherkey, otherval, _p, cached_single_phase_i, cached_single_phase_j);
-                // Recalculate the phase
-                recalculate_singlephase_phase();
-            }
-            break;
-        }
 	    case PT_INPUTS:{
             _p = val1; _T = val2;
             if (!single_phase_logpT.native_inputs_are_in_range(_T, _p)){
@@ -201,8 +133,7 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     is_two_phase = pure_saturation.is_inside(iT, _T, otherkey, otherval, iL, iV, zL, zV);
                 }
             }
-            if ( is_two_phase )
-            {
+            if ( is_two_phase ){
                 using_single_phase_table = false;
                 if (otherkey == iDmolar){
                     _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
@@ -226,22 +157,11 @@ void CoolProp::BicubicBackend::update(CoolProp::input_pairs input_pair, double v
                     CoolPropDbl pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
                     _p = _Q*pV + (1-_Q)*pL;
                 }
-
             }
             else{
-                // Find and cache the indices i, j
                 selected_table = SELECTED_PT_TABLE;
-                single_phase_logpT.find_nearest_neighbor(iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
-                CellCoeffs &cell = dataset->coeffs_pT[cached_single_phase_i][cached_single_phase_j];
-                if (!cell.valid()){
-                    if (cell.has_valid_neighbor()){
-                        // Get new good neighbor
-                        cell.get_alternate(cached_single_phase_i, cached_single_phase_j);
-                    }
-                    else{
-                        if (!cell.valid()){throw ValueError(format("Cell is invalid and has no good neighbors for p = %g Pa, T= %g K",val1,val2));}
-                    }
-                }
+                // Find and cache the indices i, j
+                find_nearest_neighbor(single_phase_logpT, dataset->coeffs_pT, iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
 				// Now find the y variable (Dmolar or Smolar in this case)
                 invert_single_phase_y(single_phase_logpT, dataset->coeffs_pT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
                 // Recalculate the phase
@@ -269,6 +189,28 @@ void CoolProp::BicubicBackend::find_native_nearest_good_indices(SinglePhaseGridd
         }
         else{
             if (!cell.valid()){ throw ValueError(format("Cell is invalid and has no good neighbors for x = %g, y= %g", x, y)); }
+        }
+    }
+}
+
+/// Ask the derived class to find the nearest neighbor (pure virtual)
+void CoolProp::BicubicBackend::find_nearest_neighbor(SinglePhaseGriddedTableData &table,
+    const std::vector<std::vector<CellCoeffs> > &coeffs,
+    const parameters variable1,
+    const double value1,
+    const parameters otherkey,
+    const double otherval,
+    std::size_t &i,
+    std::size_t &j){
+    table.find_nearest_neighbor(iP, _p, otherkey, otherval, i, j);
+    const CellCoeffs &cell = coeffs[i][j];
+    if (!cell.valid()){
+        if (cell.has_valid_neighbor()){
+            // Get new good neighbor
+            cell.get_alternate(i, j);
+        }
+        else{
+            if (!cell.valid()){ throw ValueError(format("Cell is invalid and has no good neighbors for x = %g, y = %g", value1, otherval)); }
         }
     }
 }
