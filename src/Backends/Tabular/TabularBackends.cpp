@@ -762,25 +762,60 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 selected_table = SELECTED_PT_TABLE;
                 // Find and cache the indices i, j
                 find_native_nearest_good_indices(single_phase_logpT, dataset->coeffs_pT, _T, _p, cached_single_phase_i, cached_single_phase_j);
-
-                // If p < pc, you might be getting a liquid solution when you want a vapor solution or vice versa
-                // if you are very close to the saturation curve, so we figure out what the saturation temperature
-                // is for the given pressure
-                if (_p < this->AS->p_critical())
+                
+                if (imposed_phase_index != iphase_not_imposed)
                 {
-                    double Ts = pure_saturation.evaluate(iT, _p, _Q, iL, iV);
-                    double TL = single_phase_logpT.T[cached_single_phase_i][cached_single_phase_j];
-                    double TR = single_phase_logpT.T[cached_single_phase_i+1][cached_single_phase_j];
-                    if (TL < Ts && Ts < TR){
-                        if (_T < Ts){
-                            if (cached_single_phase_i == 0){ throw ValueError(format("P, T are near saturation, but cannot move the cell to the left")); }
-                            // It's liquid, move the cell to the left
-                            cached_single_phase_i--;
+                    double rhoc = rhomolar_critical();
+                    double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
+                    if (imposed_phase_index == iphase_liquid && rho < rhoc){
+                        // We want a liquid solution, but we got a vapor solution
+                        // Bump to lower temperature
+                        cached_single_phase_i--;
+                        double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
+                        if (rho < rhoc){
+                            // Didn't work
+                            throw ValueError("Bump unsuccessful");
                         }
                         else{
-                            if (cached_single_phase_i > single_phase_logpT.Nx-2){ throw ValueError(format("P,T are near saturation, but cannot move the cell to the right")); }
-                            // It's vapor, move to the right
-                            cached_single_phase_i++;
+                            _rhomolar = rho;
+                        }
+                    }
+                    else if ((imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas) && rho > rhoc){
+                        // We want a gaseous solution, but we got a liquid solution instead
+                        // Bump to higher temperature
+                        cached_single_phase_i++;
+                        double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
+                        if (rho > rhoc){
+                            // Didn't work
+                            throw ValueError("Bump unsuccessful");
+                        }
+                        else{
+                            _rhomolar = rho;
+                        }
+                    }
+
+                }
+                else{
+
+                    // If p < pc, you might be getting a liquid solution when you want a vapor solution or vice versa
+                    // if you are very close to the saturation curve, so we figure out what the saturation temperature
+                    // is for the given pressure
+                    if (_p < this->AS->p_critical())
+                    {
+                        double Ts = pure_saturation.evaluate(iT, _p, _Q, iL, iV);
+                        double TL = single_phase_logpT.T[cached_single_phase_i][cached_single_phase_j];
+                        double TR = single_phase_logpT.T[cached_single_phase_i+1][cached_single_phase_j];
+                        if (TL < Ts && Ts < TR){
+                            if (_T < Ts){
+                                if (cached_single_phase_i == 0){ throw ValueError(format("P, T are near saturation, but cannot move the cell to the left")); }
+                                // It's liquid, move the cell to the left
+                                cached_single_phase_i--;
+                            }
+                            else{
+                                if (cached_single_phase_i > single_phase_logpT.Nx-2){ throw ValueError(format("P,T are near saturation, but cannot move the cell to the right")); }
+                                // It's vapor, move to the right
+                                cached_single_phase_i++;
+                            }
                         }
                     }
                 }
