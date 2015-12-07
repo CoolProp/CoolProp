@@ -135,7 +135,7 @@ void CoolProp::BicubicBackend::find_nearest_neighbor(SinglePhaseGriddedTableData
     const double otherval,
     std::size_t &i,
     std::size_t &j){
-    table.find_nearest_neighbor(iP, _p, otherkey, otherval, i, j);
+    table.find_nearest_neighbor(variable1, value1, otherkey, otherval, i, j);
     const CellCoeffs &cell = coeffs[i][j];
     if (!cell.valid()){
         if (cell.has_valid_neighbor()){

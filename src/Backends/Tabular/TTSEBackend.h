@@ -58,7 +58,7 @@ class TTSEBackend : public TabularBackend
             const double otherval,
             std::size_t &i,
             std::size_t &j){
-            table.find_nearest_neighbor(iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+            table.find_nearest_neighbor(variable1, value1, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
         };
         
         /**
