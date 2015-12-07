@@ -761,6 +761,69 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         }
         break;
     }
+    case SmolarT_INPUTS:
+    case DmolarT_INPUTS:{
+        CoolPropDbl otherval; parameters otherkey;
+        switch (input_pair){
+        case SmolarT_INPUTS: _smolar = val1; _T = val2; otherval = val1; otherkey = iSmolar; break;
+        case DmolarT_INPUTS: _rhomolar = val1; _T = val2; otherval = val1; otherkey = iDmolar; break;
+        default: throw ValueError("Bad (impossible) pair");
+        }
+
+        using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
+        std::size_t iL = std::numeric_limits<std::size_t>::max(), iV = std::numeric_limits<std::size_t>::max();
+        CoolPropDbl zL = 0, zV = 0;
+        std::size_t iclosest = 0;
+        SimpleState closest_state;
+        bool is_two_phase = false;
+        // Phase is imposed, use it
+        if (imposed_phase_index != iphase_not_imposed){
+            is_two_phase = (imposed_phase_index == iphase_twophase);
+        }
+        else{
+            if (is_mixture){
+                is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iT, _T, otherkey, otherval, iclosest, closest_state);
+            }
+            else{
+                is_two_phase = pure_saturation.is_inside(iT, _T, otherkey, otherval, iL, iV, zL, zV);
+            }
+        }
+        if (is_two_phase){
+            using_single_phase_table = false;
+            if (otherkey == iDmolar){
+                _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
+            }
+            else{
+                _Q = (otherval - zL)/(zV - zL);
+            }
+            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+                throw ValueError("vapor quality is not in (0,1)");
+            }
+            else if (!is_mixture){
+                cached_saturation_iL = iL; cached_saturation_iV = iV;
+                _p = pure_saturation.evaluate(iP, _T, _Q, iL, iV);
+            }
+            else {
+                // Mixture
+                std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
+                if (intersect.empty()){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
+                iV = intersect[0].first; iL = intersect[1].first;
+                CoolPropDbl pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
+                CoolPropDbl pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
+                _p = _Q*pV + (1-_Q)*pL;
+            }
+        }
+        else{
+            selected_table = SELECTED_PT_TABLE;
+            // Find and cache the indices i, j
+            find_nearest_neighbor(single_phase_logpT, dataset->coeffs_pT, iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+            // Now find the y variable (Dmolar or Smolar in this case)
+            invert_single_phase_y(single_phase_logpT, dataset->coeffs_pT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
+            // Recalculate the phase
+            recalculate_singlephase_phase();
+        }
+        break;
+    }
     case PQ_INPUTS:{
         std::size_t iL = 0, iV = 0;
         _p = val1; _Q = val2;
