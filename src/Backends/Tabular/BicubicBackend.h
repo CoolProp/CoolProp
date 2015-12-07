@@ -91,10 +91,6 @@ class BicubicBackend : public TabularBackend
         };
         std::string backend_name(void){return "BicubicBackend";}
         
-        /** Update the state
-         */
-        void update(CoolProp::input_pairs input_pair, double val1, double val2);
-        
         /**
          * @brief Evaluate a derivative in terms of the native inputs of the table
          * @param table A reference to the table to be used

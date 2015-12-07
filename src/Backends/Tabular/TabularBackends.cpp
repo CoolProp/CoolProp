@@ -651,6 +651,28 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_two_phase_deriv(parameters Of, 
 void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
 {
 
+    if (get_debug_level() > 0){ std::cout << format("update(%s,%g,%g)\n", get_input_pair_short_desc(input_pair).c_str(), val1, val2); }
+
+    // Clear cached variables
+    clear();
+
+    // Convert to mass-based units if necessary
+    CoolPropDbl ld_value1 = val1, ld_value2 = val2;
+    mass_to_molar_inputs(input_pair, ld_value1, ld_value2);
+    val1 = ld_value1; val2 = ld_value2;
+
+    // Check the tables, build if neccessary
+    check_tables();
+
+    // Flush the cached indices (set to large number)
+    cached_single_phase_i = std::numeric_limits<std::size_t>::max();
+    cached_single_phase_j = std::numeric_limits<std::size_t>::max();
+    cached_saturation_iL = std::numeric_limits<std::size_t>::max();
+    cached_saturation_iV = std::numeric_limits<std::size_t>::max();
+
+    // To start, set quality to value that is impossible
+    _Q = -1000;
+
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
@@ -699,6 +721,69 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 selected_table = SELECTED_PH_TABLE;
                 // Find and cache the indices i, j
                 find_native_nearest_good_indices(single_phase_logph, dataset->coeffs_ph, _hmolar, _p, cached_single_phase_i, cached_single_phase_j);
+                // Recalculate the phase
+                recalculate_singlephase_phase();
+            }
+        }
+        break;
+    }
+    case PT_INPUTS:{
+        _p = val1; _T = val2;
+        if (!single_phase_logpT.native_inputs_are_in_range(_T, _p)){
+            // Use the AbstractState instance
+            using_single_phase_table = false;
+            if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
+            throw ValueError(format("inputs are not in range, p=%g Pa, T=%g K", _p, _T));
+        }
+        else{
+            using_single_phase_table = true; // Use the table !
+            std::size_t iL = 0, iV = 0, iclosest = 0;
+            CoolPropDbl TL = 0, TV = 0;
+            SimpleState closest_state;
+            bool is_two_phase = false;
+            // Phase is imposed, use it
+            if (imposed_phase_index != iphase_not_imposed){
+                is_two_phase = (imposed_phase_index == iphase_twophase);
+            }
+            else{
+                if (is_mixture){
+                    is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, iT, _T, iclosest, closest_state);
+                }
+                else{
+                    is_two_phase = pure_saturation.is_inside(iP, _p, iT, _T, iL, iV, TL, TV);
+                }
+            }
+            if (is_two_phase)
+            {
+                using_single_phase_table = false;
+                throw ValueError(format("P,T with TTSE cannot be two-phase for now"));
+            }
+            else{
+                selected_table = SELECTED_PT_TABLE;
+                // Find and cache the indices i, j
+                find_native_nearest_good_indices(single_phase_logpT, dataset->coeffs_pT, _T, _p, cached_single_phase_i, cached_single_phase_j);
+
+                // If p < pc, you might be getting a liquid solution when you want a vapor solution or vice versa
+                // if you are very close to the saturation curve, so we figure out what the saturation temperature
+                // is for the given pressure
+                if (_p < this->AS->p_critical())
+                {
+                    double Ts = pure_saturation.evaluate(iT, _p, _Q, iL, iV);
+                    double TL = single_phase_logpT.T[cached_single_phase_i][cached_single_phase_j];
+                    double TR = single_phase_logpT.T[cached_single_phase_i+1][cached_single_phase_j];
+                    if (TL < Ts && Ts < TR){
+                        if (_T < Ts){
+                            if (cached_single_phase_i == 0){ throw ValueError(format("P, T are near saturation, but cannot move the cell to the left")); }
+                            // It's liquid, move the cell to the left
+                            cached_single_phase_i--;
+                        }
+                        else{
+                            if (cached_single_phase_i > single_phase_logpT.Nx-2){ throw ValueError(format("P,T are near saturation, but cannot move the cell to the right")); }
+                            // It's vapor, move to the right
+                            cached_single_phase_i++;
+                        }
+                    }
+                }
                 // Recalculate the phase
                 recalculate_singlephase_phase();
             }
@@ -875,7 +960,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         break;
     }
     default:
-        throw ValueError("Sorry, but this set of inputs is not supported for Bicubic backend");
+        throw ValueError("Sorry, but this set of inputs is not supported for Tabular backend");
     }
 }
 

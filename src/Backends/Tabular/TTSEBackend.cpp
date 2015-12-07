@@ -4,66 +4,6 @@
 #include "TTSEBackend.h"
 #include "CoolProp.h"
 
-void CoolProp::TTSEBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
-{
-    if (get_debug_level() > 0){ std::cout << format("update(%s,%g,%g)\n", get_input_pair_short_desc(input_pair).c_str(), val1, val2); }
-
-    // Clear cached variables
-    clear();
-
-    // Convert to mass-based units if necessary
-    CoolPropDbl ld_value1 = val1, ld_value2 = val2;
-    mass_to_molar_inputs(input_pair, ld_value1, ld_value2);
-    val1 = ld_value1; val2 = ld_value2;
-
-    // Check the tables, build if neccessary
-    check_tables();
-
-    // Flush the cached indices (set to large number)
-    cached_single_phase_i = std::numeric_limits<std::size_t>::max();
-    cached_single_phase_j = std::numeric_limits<std::size_t>::max();
-    cached_saturation_iL = std::numeric_limits<std::size_t>::max();
-    cached_saturation_iV = std::numeric_limits<std::size_t>::max();
-
-    // To start, set quality to value that is impossible
-    _Q = -1000;
-
-    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
-    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
-    SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
-    SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
-    
-    switch(input_pair){
-        case PT_INPUTS:{
-            _p = val1; _T = val2;
-            if (!single_phase_logpT.native_inputs_are_in_range(_T, _p)){
-                // Use the AbstractState instance
-                using_single_phase_table = false;
-                if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
-                throw ValueError(format("inputs are not in range, p=%g Pa, T=%g K", _p, _T));
-            }
-            else{
-                using_single_phase_table = true; // Use the table !
-                std::size_t iL = 0, iV = 0;
-                CoolPropDbl TL = 0, TV = 0;
-                if (pure_saturation.is_inside(iP, _p, iT, _T, iL, iV, TL, TV)){
-                    using_single_phase_table = false;
-                    throw ValueError(format("P,T with TTSE cannot be two-phase for now"));
-                }
-                else{
-                    // Find and cache the indices i, j
-                    selected_table = SELECTED_PT_TABLE;
-                    single_phase_logpT.find_native_nearest_neighbor(_T, _p, cached_single_phase_i, cached_single_phase_j);
-                    // Recalculate the phase
-                    recalculate_singlephase_phase();
-                }
-            }
-            break;
-        }
-        default:
-            TabularBackend::update(input_pair, val1, val2); break;
-    }
-}
 /** Use the single_phase table to evaluate an output for a transport property
  * 
  * Here we use bilinear interpolation because we don't have any information about the derivatives with respect to the 
