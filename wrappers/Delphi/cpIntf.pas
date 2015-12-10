@@ -1,6 +1,6 @@
 {
   Delphi Interface for CoolProp
-  Bruce Wernick, 9 December 2015
+  Bruce Wernick, 10 December 2015
 }
 
 unit cpIntf;
@@ -18,12 +18,14 @@ type
 
 function get_global_param_string(
   param: PCoolChar;
-  var res: CoolVec): LongInt; stdcall;
+  var res: CoolVec;
+  n: Integer): LongInt; stdcall;
   external cpdll name '_get_global_param_string@12';
 
 function get_fluid_param_string(
   fluid: PCoolChar; param: PCoolChar;
-  var Output: CoolVec): Longint; stdcall;
+  var Output: CoolVec;
+  n: Integer): Longint; stdcall;
   external cpdll name '_get_fluid_param_string@12';
 
 function PropsSI(spec: PCoolChar;
