@@ -42,16 +42,10 @@ begin
   Caption := 'CoolProp Demo';
   res := '';
   rev := '';
-  try
-    // CoolProp crashes here!
-    get_global_param_string('version', res);
-    Caption := Caption + ' ' + 'Version ' + string(res);
-
-    get_global_param_string('gitrevision', rev);
-    Caption := Caption + ' ' + 'Revision ' + string(rev);
-  except
-  end;
-
+  get_global_param_string('version', res, 1024);
+  Caption := Caption + ' ' + 'Version ' + string(res);
+  get_global_param_string('gitrevision', rev, 1024);
+  Caption := Caption + ' ' + 'Revision ' + string(rev);
   cp := PaintBox1.Canvas;
   MolChart := TMolChart.Create(cp);
   ref := 'R22';
@@ -61,12 +55,8 @@ procedure TMainForm.FormActivate(Sender: TObject);
 var
   dat: CoolVec;
 begin
-  get_global_param_string('FluidsList', dat);
-  try
-    // CoolProp crashes here!
-    ListBox1.Items.CommaText := string(dat);
-  except
-  end;
+  get_global_param_string('FluidsList', dat, 1024);
+  ListBox1.Items.CommaText := string(dat);
   ListBox1.ItemIndex := ListBox1.Items.IndexOf(ref);
 end;
 
