@@ -244,10 +244,11 @@ namespace SaturationSolvers
         bool logging;
         int Nsteps;
         STLMatrix J;
+        HelmholtzEOSMixtureBackend *HEOS;
         std::vector<CoolPropDbl> K, x, y, z, r, negative_r, err_rel;
         std::vector<SuccessiveSubstitutionStep> step_logger;
 
-        newton_raphson_twophase(){};
+        newton_raphson_twophase() : HEOS(NULL) {};
 
         void resize(unsigned int N);
     

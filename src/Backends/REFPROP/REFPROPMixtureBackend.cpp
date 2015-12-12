@@ -236,7 +236,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             std::vector<double> x(ncmax);
             char mix[255];
             const char * _components_joined_raw  = components_joined_raw.c_str();
-            if (strlen(_components_joined_raw) > 255){ throw ValueError(format("components (%s) is too long", components_joined_raw.c_str()));
+            if (strlen(_components_joined_raw) > 255){ throw ValueError(format("components (%s) is too long", components_joined_raw.c_str())); }
             strcpy(mix, _components_joined_raw);
             char hmx_bnc[255] = "HMX.BNC", reference_state[4] = "DEF";
             std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
