@@ -24,7 +24,8 @@ namespace SaturationSolvers
              use_logdelta; ///< True to use partials with respect to log(delta) rather than delta
         CoolPropDbl omega, rhoL, rhoV, pL, pV;
         int imposed_rho;
-        saturation_D_pure_options(){ use_logdelta = true; omega = 1.0;} // Defaults
+        saturation_D_pure_options() : use_guesses(false), rhoL(_HUGE), rhoV(_HUGE), pL(_HUGE), pV(_HUGE), imposed_rho(0)
+            { use_logdelta = true; omega = 1.0;} // Defaults
     };
 
     enum sstype_enum {imposed_T, imposed_p};
@@ -62,7 +63,8 @@ namespace SaturationSolvers
              use_logdelta; ///< True to use partials with respect to log(delta) rather than delta
         specified_variable_options specified_variable;
         CoolPropDbl omega, rhoL, rhoV, pL, pV, T, p;
-        saturation_PHSU_pure_options(){ specified_variable = IMPOSED_INVALID_INPUT; use_guesses = true; omega = 1.0; }
+        saturation_PHSU_pure_options() : use_logdelta(true), rhoL(_HUGE), rhoV(_HUGE), pL(_HUGE), pV(_HUGE), T(_HUGE), p(_HUGE)
+            { specified_variable = IMPOSED_INVALID_INPUT; use_guesses = true; omega = 1.0; }
     };
     /**
 
@@ -248,7 +250,8 @@ namespace SaturationSolvers
         std::vector<CoolPropDbl> K, x, y, z, r, negative_r, err_rel;
         std::vector<SuccessiveSubstitutionStep> step_logger;
 
-        newton_raphson_twophase() : HEOS(NULL) {};
+        newton_raphson_twophase() : HEOS(NULL), imposed_variable(newton_raphson_twophase_options::NO_VARIABLE_IMPOSED), error_rms(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), T(_HUGE), p(_HUGE), min_rel_change(_HUGE), beta(_HUGE), N(0), logging(false), Nsteps(0)
+        {};
 
         void resize(unsigned int N);
     
@@ -285,7 +288,8 @@ namespace SaturationSolvers
         CoolPropDbl omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap;
         imposed_variable_options imposed_variable;
         std::vector<CoolPropDbl> x, y;
-        newton_raphson_saturation_options(){ Nstep_max = 30;  Nsteps = 0;} // Defaults
+        newton_raphson_saturation_options() : bubble_point(false), omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE), hmolar_liq(_HUGE), hmolar_vap(_HUGE), smolar_liq(_HUGE), smolar_vap(_HUGE), imposed_variable(NO_VARIABLE_IMPOSED)
+            { Nstep_max = 30;  Nsteps = 0;} // Defaults
     };
 
     /** \brief A class to do newton raphson solver mixture bubble point and dew point calculations

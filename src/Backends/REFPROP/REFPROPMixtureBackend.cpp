@@ -239,12 +239,16 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             if (strlen(_components_joined_raw) > 255){ throw ValueError(format("components (%s) is too long", components_joined_raw.c_str())); }
             strcpy(mix, _components_joined_raw);
             char hmx_bnc[255] = "HMX.BNC", reference_state[4] = "DEF";
+
+            // Use the alternative HMX.BNC path if provided
             std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
-            if (alt_hmx_bnc_path.length() > refpropcharlength){ throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", alt_hmx_bnc_path.c_str()));
+            const char * _alt_hmx_bnc_path = alt_hmx_bnc_path.c_str();
+            if (strlen(_alt_hmx_bnc_path) > refpropcharlength){ throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", _alt_hmx_bnc_path));
             }
-            if (!alt_hmx_bnc_path.empty()){
-                strcpy(hmx_bnc, alt_hmx_bnc_path.c_str());
+            if (strlen(_alt_hmx_bnc_path) > 0){
+                strcpy(hmx_bnc, _alt_hmx_bnc_path);
             }
+            
             SETMIXdll(mix,
                       hmx_bnc,
                       reference_state,
@@ -300,20 +304,29 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             }
 
             if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
+            
+            // Construct the path to the HMX.BNC file
             char path_HMX_BNC[refpropcharlength+1];
-            const char * _fdPath = fdPath.c_str();
-            if (strlen(_fdPath) > refpropcharlength) { throw ValueError(format("path (%s) is too long", fdPath.c_str())); }
-            strcpy(path_HMX_BNC, _fdPath);
-            if (strlen(rel_path_HMX_BNC) + strlen(_fdPath) > refpropcharlength) { throw ValueError(format("combined path is too long")); }
-            strcat(path_HMX_BNC, rel_path_HMX_BNC);
+                // First part is path to the FLUIDS directory
+                const char * _fdPath = fdPath.c_str(); // Path to fluids directory
+                if (strlen(_fdPath) > refpropcharlength) { throw ValueError(format("path (%s) is too long", fdPath.c_str())); }
+                strcpy(path_HMX_BNC, _fdPath);
+                // Second part is name of HMX.BNC file
+                if (strlen(rel_path_HMX_BNC) + strlen(_fdPath) > refpropcharlength) { throw ValueError(format("combined path is too long")); }
+                strcat(path_HMX_BNC, rel_path_HMX_BNC);
+            
+            // Use the alternative HMX.BNC path if provided
             std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
-            if (!alt_hmx_bnc_path.empty()){
-                const char * HMX_path = alt_hmx_bnc_path.c_str();
-                if (strlen(HMX_path) > refpropcharlength){ throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", HMX_path)); }
-                strcpy(path_HMX_BNC, HMX_path);
+            const char * _alt_hmx_bnc_path = alt_hmx_bnc_path.c_str();
+            if (strlen(_alt_hmx_bnc_path) > 0){
+                if (strlen(_alt_hmx_bnc_path) > refpropcharlength){ throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", _alt_hmx_bnc_path)); }
+                strcpy(path_HMX_BNC, _alt_hmx_bnc_path);
             }
-            if (components_joined.size()) { throw ValueError(format("components_joined (%s) is too long", components_joined.c_str())); }
-            strcpy(component_string, components_joined.c_str());
+
+            // Copy over the list of components
+            const char * _components_joined = components_joined.c_str();
+            if (strlen(_components_joined) > 10000) { throw ValueError(format("components_joined (%s) is too long", _components_joined)); }
+            strcpy(component_string, _components_joined);
 
             ierr = 0;
             //...Call SETUP to initialize the program

@@ -129,7 +129,8 @@ protected:
     //double u_h(double T, double p, double x);
 
 public:
-    IncompressibleFluid(){strict = true; xid = IFRAC_UNDEFINED;};
+    IncompressibleFluid() : Tmin(_HUGE), Tmax(_HUGE), xmin(_HUGE), xmax(_HUGE), TminPsat(_HUGE), xbase(_HUGE), Tbase(_HUGE)
+        {strict = true; xid = IFRAC_UNDEFINED;};
     virtual ~IncompressibleFluid(){};
 
     std::string getName() const {return name;}
