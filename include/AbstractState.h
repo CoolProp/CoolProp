@@ -349,6 +349,9 @@ protected:
     virtual void calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_viscosity_contributions is not implemented for this backend"); };
     virtual void calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_conductivity_contributions is not implemented for this backend"); };
     virtual std::vector<CriticalState> calc_all_critical_points(void){ throw NotImplementedError("calc_all_critical_points is not implemented for this backend"); };
+    
+    /// Convert mass-based input pair to molar-based input pair;  If molar-based, do nothing
+    virtual void mass_to_molar_inputs(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2);
 public:
 
     AbstractState() :_fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown), _rhospline(-_HUGE), _dsplinedp(-_HUGE), _dsplinedh(-_HUGE){ clear(); }

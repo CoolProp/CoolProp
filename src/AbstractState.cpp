@@ -173,6 +173,57 @@ bool AbstractState::clear() {
 
     return true;
 }
+void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2)
+{
+    // Check if a mass based input, convert it to molar units
+
+    switch (input_pair)
+    {
+    case DmassT_INPUTS: ///< Mass density in kg/m^3, Temperature in K
+        //case HmassT_INPUTS: ///< Enthalpy in J/kg, Temperature in K (NOT CURRENTLY IMPLEMENTED)
+    case SmassT_INPUTS: ///< Entropy in J/kg/K, Temperature in K
+        //case TUmass_INPUTS: ///< Temperature in K, Internal energy in J/kg (NOT CURRENTLY IMPLEMENTED)
+    case DmassP_INPUTS: ///< Mass density in kg/m^3, Pressure in Pa
+    case DmassQ_INPUTS: ///< Mass density in kg/m^3, molar quality
+    case HmassP_INPUTS: ///< Enthalpy in J/kg, Pressure in Pa
+    case PSmass_INPUTS: ///< Pressure in Pa, Entropy in J/kg/K
+    case PUmass_INPUTS: ///< Pressure in Pa, Internal energy in J/kg
+    case HmassSmass_INPUTS: ///< Enthalpy in J/kg, Entropy in J/kg/K
+    case SmassUmass_INPUTS: ///< Entropy in J/kg/K, Internal energy in J/kg
+    case DmassHmass_INPUTS: ///< Mass density in kg/m^3, Enthalpy in J/kg
+    case DmassSmass_INPUTS: ///< Mass density in kg/m^3, Entropy in J/kg/K
+    case DmassUmass_INPUTS: ///< Mass density in kg/m^3, Internal energy in J/kg
+    {
+        // Set the cache value for the molar mass if it hasn't been set yet
+        molar_mass();
+
+        // Molar mass (just for compactness of the following switch)
+        CoolPropDbl mm = static_cast<CoolPropDbl>(_molar_mass);
+
+        switch (input_pair)
+        {
+        case DmassT_INPUTS: input_pair = DmolarT_INPUTS; value1 /= mm;  break;
+            //case HmassT_INPUTS: input_pair = HmolarT_INPUTS; value1 *= mm;  break; (NOT CURRENTLY IMPLEMENTED)
+        case SmassT_INPUTS: input_pair = SmolarT_INPUTS; value1 *= mm;  break;
+            //case TUmass_INPUTS: input_pair = TUmolar_INPUTS; value2 *= mm;  break; (NOT CURRENTLY IMPLEMENTED)
+        case DmassP_INPUTS: input_pair = DmolarP_INPUTS; value1 /= mm;  break;
+        case DmassQ_INPUTS: input_pair = DmolarQ_INPUTS; value1 /= mm;  break;
+        case HmassP_INPUTS: input_pair = HmolarP_INPUTS; value1 *= mm;  break;
+        case PSmass_INPUTS: input_pair = PSmolar_INPUTS; value2 *= mm;  break;
+        case PUmass_INPUTS: input_pair = PUmolar_INPUTS; value2 *= mm;  break;
+        case HmassSmass_INPUTS: input_pair = HmolarSmolar_INPUTS; value1 *= mm; value2 *= mm;  break;
+        case SmassUmass_INPUTS: input_pair = SmolarUmolar_INPUTS; value1 *= mm; value2 *= mm;  break;
+        case DmassHmass_INPUTS: input_pair = DmolarHmolar_INPUTS; value1 /= mm; value2 *= mm;  break;
+        case DmassSmass_INPUTS: input_pair = DmolarSmolar_INPUTS; value1 /= mm; value2 *= mm;  break;
+        case DmassUmass_INPUTS: input_pair = DmolarUmolar_INPUTS; value1 /= mm; value2 *= mm;  break;
+        default: break;
+        }
+        break;
+    }
+    default:
+        return;
+    }
+}
 double AbstractState::trivial_keyed_output(parameters key)
 {
     if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;

@@ -23,7 +23,6 @@ class TTSEBackend : public TabularBackend
                 is_mixture = (this->AS->get_mole_fractions().size() > 1);
             }
         }
-        void update(CoolProp::input_pairs input_pair, double val1, double val2);
         double evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
         double evaluate_single_phase_transport(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
         double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j){
@@ -42,8 +41,24 @@ class TTSEBackend : public TabularBackend
             SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             return evaluate_single_phase_transport(single_phase_logpT, output, _T, _p, i, j);
         }
-        double invert_single_phase_x(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j);
-        double invert_single_phase_y(SinglePhaseGriddedTableData &table, parameters output, double y, double x, std::size_t i, std::size_t j);
+        void invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j);
+        void invert_single_phase_y(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double y, double x, std::size_t i, std::size_t j);
+        
+        /// Find the best set of i,j for native inputs.  
+        virtual void find_native_nearest_good_indices(SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, double x, double y, std::size_t &i, std::size_t &j){
+            return table.find_native_nearest_good_neighbor(x, y, i, j);
+        };
+        /// Ask the derived class to find the nearest neighbor (pure virtual)
+        virtual void find_nearest_neighbor(SinglePhaseGriddedTableData &table,
+            const std::vector<std::vector<CellCoeffs> > &coeffs,
+            const parameters variable1,
+            const double value1,
+            const parameters otherkey,
+            const double otherval,
+            std::size_t &i,
+            std::size_t &j){
+            table.find_nearest_neighbor(variable1, value1, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+        };
         
         /**
          * @brief Evaluate a derivative in terms of the native inputs of the table

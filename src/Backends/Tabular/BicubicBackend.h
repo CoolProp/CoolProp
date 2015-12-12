@@ -91,10 +91,6 @@ class BicubicBackend : public TabularBackend
         };
         std::string backend_name(void){return "BicubicBackend";}
         
-        /** Update the state
-         */
-        void update(CoolProp::input_pairs input_pair, double val1, double val2);
-        
         /**
          * @brief Evaluate a derivative in terms of the native inputs of the table
          * @param table A reference to the table to be used
@@ -134,7 +130,19 @@ class BicubicBackend : public TabularBackend
         double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j){
 			return evaluate_single_phase(dataset->single_phase_logpT, dataset->coeffs_pT, output, _T, _p, i, j);
 		};
+
+        virtual void find_native_nearest_good_indices(SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, double x, double y, std::size_t &i, std::size_t &j);
         
+        /// Ask the derived class to find the nearest neighbor (pure virtual)
+        virtual void find_nearest_neighbor(SinglePhaseGriddedTableData &table,
+            const std::vector<std::vector<CellCoeffs> > &coeffs,
+            const parameters variable1,
+            const double value1,
+            const parameters otherkey,
+            const double otherval,
+            std::size_t &i,
+            std::size_t &j);
+
         /**
          * @brief Evaluate the single-phase transport properties using linear interpolation.  Works well except for near the critical point
          * @param table A reference to the table to be used

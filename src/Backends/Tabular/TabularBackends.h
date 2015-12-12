@@ -732,7 +732,12 @@ class TabularBackend : public AbstractState
         selected_table_options selected_table;
         std::size_t cached_single_phase_i, cached_single_phase_j;
         std::size_t cached_saturation_iL, cached_saturation_iV;
-        std::vector<std::vector<double> > *z, *dzdx, *dzdy, *d2zdx2, *d2zdxdy, *d2zdy2;
+        std::vector<std::vector<double> > const *z;
+        std::vector<std::vector<double> > const *dzdx;
+        std::vector<std::vector<double> > const *dzdy;
+        std::vector<std::vector<double> > const *d2zdx2;
+        std::vector<std::vector<double> > const *d2zdxdy;
+        std::vector<std::vector<double> > const *d2zdy2;
         std::vector<CoolPropDbl> mole_fractions;
     public:
         shared_ptr<CoolProp::AbstractState> AS;
@@ -749,7 +754,7 @@ class TabularBackend : public AbstractState
         // None of the tabular methods are available from the high-level interface
         bool available_in_high_level(void){return false;}
 
-        void connect_pointers(parameters output, SinglePhaseGriddedTableData &table)
+        void connect_pointers(parameters output, const SinglePhaseGriddedTableData &table)
 		{
 			// Connect the pointers based on the output variable desired
 			switch(output){
@@ -818,6 +823,30 @@ class TabularBackend : public AbstractState
         */
         void calc_unspecify_phase(){ imposed_phase_index = iphase_not_imposed; };
 
+        virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
+        virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
+
+        /// Ask the derived class to find the nearest good set of i,j that it wants to use (pure virtual)
+        virtual void find_native_nearest_good_indices(SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, double x, double y, std::size_t &i, std::size_t &j) = 0;
+        /// Ask the derived class to find the nearest neighbor (pure virtual)
+        virtual void find_nearest_neighbor(SinglePhaseGriddedTableData &table, 
+                                           const std::vector<std::vector<CellCoeffs> > &coeffs, 
+                                           const parameters variable1, 
+                                           const double value1, 
+                                           const parameters other, 
+                                           const double otherval, 
+                                           std::size_t &i, 
+                                           std::size_t &j) = 0;
+        /// 
+        virtual void invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j) = 0;
+        /// 
+        virtual void invert_single_phase_y(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j) = 0;
+
+
         phases calc_phase(void){ return _phase; }
         CoolPropDbl calc_T_critical(void){return this->AS->T_critical();};
         CoolPropDbl calc_Ttriple(void){return this->AS->Ttriple();};
@@ -830,19 +859,14 @@ class TabularBackend : public AbstractState
         bool using_mole_fractions(void){return true;}
         bool using_mass_fractions(void){return false;}
         bool using_volu_fractions(void){return false;}
-        void update(CoolProp::input_pairs input_pair, double Value1, double Value2){};
+        void update(CoolProp::input_pairs input_pair, double Value1, double Value2);
         void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){this->AS->set_mole_fractions(mole_fractions);};
         void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){ throw NotImplementedError("set_mass_fractions not implemented for Tabular backends"); };
         const std::vector<long double> & get_mole_fractions(){return AS->get_mole_fractions();};
         const std::vector<CoolPropDbl> calc_mass_fractions(void){ return AS->get_mass_fractions(); };
 
         CoolPropDbl calc_molar_mass(void){return AS->molar_mass();};
-        virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
-        virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
-        virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
-        virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
-        virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
-        virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
+        
         CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
         CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
 

@@ -648,6 +648,365 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_two_phase_deriv(parameters Of, 
     }
 }
 
+void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double val1, double val2)
+{
+
+    if (get_debug_level() > 0){ std::cout << format("update(%s,%g,%g)\n", get_input_pair_short_desc(input_pair).c_str(), val1, val2); }
+
+    // Clear cached variables
+    clear();
+
+    // Convert to mass-based units if necessary
+    CoolPropDbl ld_value1 = val1, ld_value2 = val2;
+    mass_to_molar_inputs(input_pair, ld_value1, ld_value2);
+    val1 = ld_value1; val2 = ld_value2;
+
+    // Check the tables, build if neccessary
+    check_tables();
+
+    // Flush the cached indices (set to large number)
+    cached_single_phase_i = std::numeric_limits<std::size_t>::max();
+    cached_single_phase_j = std::numeric_limits<std::size_t>::max();
+    cached_saturation_iL = std::numeric_limits<std::size_t>::max();
+    cached_saturation_iV = std::numeric_limits<std::size_t>::max();
+
+    // To start, set quality to value that is impossible
+    _Q = -1000;
+
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
+    SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+
+    switch (input_pair)
+    {
+    case HmolarP_INPUTS:{
+        _hmolar = val1; _p = val2;
+        if (!single_phase_logph.native_inputs_are_in_range(_hmolar, _p)){
+            // Use the AbstractState instance
+            using_single_phase_table = false;
+            if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
+            throw ValueError(format("inputs are not in range, hmolar=%Lg, p=%Lg", static_cast<CoolPropDbl>(_hmolar), _p));
+        }
+        else{
+            using_single_phase_table = true; // Use the table !
+            std::size_t iL, iV, iclosest = 0;
+            CoolPropDbl hL = 0, hV = 0;
+            SimpleState closest_state;
+            bool is_two_phase = false;
+            // Phase is imposed, use it
+            if (imposed_phase_index != iphase_not_imposed){
+                is_two_phase = (imposed_phase_index == iphase_twophase);
+            }
+            else{
+                if (is_mixture){
+                    is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, iHmolar, _hmolar, iclosest, closest_state);
+                }
+                else{
+                    is_two_phase = pure_saturation.is_inside(iP, _p, iHmolar, _hmolar, iL, iV, hL, hV);
+                }
+            }
+            if (is_two_phase){
+                using_single_phase_table = false;
+                _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
+                if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+                    throw ValueError("vapor quality is not in (0,1)");
+                }
+                else{
+                    cached_saturation_iL = iL; cached_saturation_iV = iV;
+                    _phase = iphase_twophase;
+                }
+            }
+            else{
+                selected_table = SELECTED_PH_TABLE;
+                // Find and cache the indices i, j
+                find_native_nearest_good_indices(single_phase_logph, dataset->coeffs_ph, _hmolar, _p, cached_single_phase_i, cached_single_phase_j);
+                // Recalculate the phase
+                recalculate_singlephase_phase();
+            }
+        }
+        break;
+    }
+    case PT_INPUTS:{
+        _p = val1; _T = val2;
+        if (!single_phase_logpT.native_inputs_are_in_range(_T, _p)){
+            // Use the AbstractState instance
+            using_single_phase_table = false;
+            if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
+            throw ValueError(format("inputs are not in range, p=%g Pa, T=%g K", _p, _T));
+        }
+        else{
+            using_single_phase_table = true; // Use the table !
+            std::size_t iL = 0, iV = 0, iclosest = 0;
+            CoolPropDbl TL = 0, TV = 0;
+            SimpleState closest_state;
+            bool is_two_phase = false;
+            // Phase is imposed, use it
+            if (imposed_phase_index != iphase_not_imposed){
+                is_two_phase = (imposed_phase_index == iphase_twophase);
+            }
+            else{
+                if (is_mixture){
+                    is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, iT, _T, iclosest, closest_state);
+                }
+                else{
+                    is_two_phase = pure_saturation.is_inside(iP, _p, iT, _T, iL, iV, TL, TV);
+                }
+            }
+            if (is_two_phase)
+            {
+                using_single_phase_table = false;
+                throw ValueError(format("P,T with TTSE cannot be two-phase for now"));
+            }
+            else{
+                selected_table = SELECTED_PT_TABLE;
+                // Find and cache the indices i, j
+                find_native_nearest_good_indices(single_phase_logpT, dataset->coeffs_pT, _T, _p, cached_single_phase_i, cached_single_phase_j);
+                
+                if (imposed_phase_index != iphase_not_imposed)
+                {
+                    double rhoc = rhomolar_critical();
+                    if (imposed_phase_index == iphase_liquid && cached_single_phase_i > 0){
+                        // We want a liquid solution, but we got a vapor solution
+                        if (_p < this->AS->p_critical()){
+                            while (
+                                cached_single_phase_i > 0
+                                && 
+                                single_phase_logpT.rhomolar[cached_single_phase_i+1][cached_single_phase_j] < rhoc
+                                )
+                            {
+                                // Bump to lower temperature
+                                cached_single_phase_i--;
+                            }
+                            double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
+                            if (rho < rhoc){
+                                // Didn't work
+                                throw ValueError("Bump unsuccessful");
+                            }
+                            else{
+                                _rhomolar = rho;
+                            }
+                        }
+                    }
+                    else if ((imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas) && cached_single_phase_i > 0){
+                        // We want a gaseous solution, but we got a liquid solution instead
+                        // Bump to higher temperature
+                        cached_single_phase_i++;
+                        double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
+                        if (rho > rhoc){
+                            // Didn't work
+                            throw ValueError("Bump unsuccessful");
+                        }
+                        else{
+                            _rhomolar = rho;
+                        }
+                    }
+
+                }
+                else{
+
+                    // If p < pc, you might be getting a liquid solution when you want a vapor solution or vice versa
+                    // if you are very close to the saturation curve, so we figure out what the saturation temperature
+                    // is for the given pressure
+                    if (_p < this->AS->p_critical())
+                    {
+                        double Ts = pure_saturation.evaluate(iT, _p, _Q, iL, iV);
+                        double TL = single_phase_logpT.T[cached_single_phase_i][cached_single_phase_j];
+                        double TR = single_phase_logpT.T[cached_single_phase_i+1][cached_single_phase_j];
+                        if (TL < Ts && Ts < TR){
+                            if (_T < Ts){
+                                if (cached_single_phase_i == 0){ throw ValueError(format("P, T are near saturation, but cannot move the cell to the left")); }
+                                // It's liquid, move the cell to the left
+                                cached_single_phase_i--;
+                            }
+                            else{
+                                if (cached_single_phase_i > single_phase_logpT.Nx-2){ throw ValueError(format("P,T are near saturation, but cannot move the cell to the right")); }
+                                // It's vapor, move to the right
+                                cached_single_phase_i++;
+                            }
+                        }
+                    }
+                }
+                // Recalculate the phase
+                recalculate_singlephase_phase();
+            }
+        }
+        break;
+    }
+    case PUmolar_INPUTS:
+    case PSmolar_INPUTS:
+    case DmolarP_INPUTS:{
+        CoolPropDbl otherval; parameters otherkey;
+        switch (input_pair){
+        case PUmolar_INPUTS: _p = val1; _umolar = val2; otherval = val2; otherkey = iUmolar; break;
+        case PSmolar_INPUTS: _p = val1; _smolar = val2; otherval = val2; otherkey = iSmolar; break;
+        case DmolarP_INPUTS: _rhomolar = val1; _p = val2; otherval = val1; otherkey = iDmolar; break;
+        default: throw ValueError("Bad (impossible) pair");
+        }
+
+        using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
+        std::size_t iL = std::numeric_limits<std::size_t>::max(), iV = std::numeric_limits<std::size_t>::max();
+        CoolPropDbl zL = 0, zV = 0;
+        std::size_t iclosest = 0;
+        SimpleState closest_state;
+        bool is_two_phase = false;
+        // Phase is imposed, use it
+        if (imposed_phase_index != iphase_not_imposed){
+            is_two_phase = (imposed_phase_index == iphase_twophase);
+        }
+        else{
+            if (is_mixture){
+                is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, otherkey, otherval, iclosest, closest_state);
+            }
+            else{
+                is_two_phase = pure_saturation.is_inside(iP, _p, otherkey, otherval, iL, iV, zL, zV);
+            }
+        }
+        if (is_two_phase){
+            using_single_phase_table = false;
+            if (otherkey == iDmolar){
+                _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
+            }
+            else{
+                _Q = (otherval - zL)/(zV - zL);
+            }
+            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+                throw ValueError("vapor quality is not in (0,1)");
+            }
+            else if (!is_mixture){
+                cached_saturation_iL = iL; cached_saturation_iV = iV;
+            }
+            _phase = iphase_twophase;
+        }
+        else{
+            selected_table = SELECTED_PH_TABLE;
+            // Find and cache the indices i, j
+            find_nearest_neighbor(single_phase_logph, dataset->coeffs_ph, iP, _p, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+            // Now find hmolar given P, X for X in Smolar, Umolar, Dmolar
+            invert_single_phase_x(single_phase_logph, dataset->coeffs_ph, otherkey, otherval, _p, cached_single_phase_i, cached_single_phase_j);
+            // Recalculate the phase
+            recalculate_singlephase_phase();
+        }
+        break;
+    }
+    case SmolarT_INPUTS:
+    case DmolarT_INPUTS:{
+        CoolPropDbl otherval; parameters otherkey;
+        switch (input_pair){
+        case SmolarT_INPUTS: _smolar = val1; _T = val2; otherval = val1; otherkey = iSmolar; break;
+        case DmolarT_INPUTS: _rhomolar = val1; _T = val2; otherval = val1; otherkey = iDmolar; break;
+        default: throw ValueError("Bad (impossible) pair");
+        }
+
+        using_single_phase_table = true; // Use the table (or first guess is that it is single-phase)!
+        std::size_t iL = std::numeric_limits<std::size_t>::max(), iV = std::numeric_limits<std::size_t>::max();
+        CoolPropDbl zL = 0, zV = 0;
+        std::size_t iclosest = 0;
+        SimpleState closest_state;
+        bool is_two_phase = false;
+        // Phase is imposed, use it
+        if (imposed_phase_index != iphase_not_imposed){
+            is_two_phase = (imposed_phase_index == iphase_twophase);
+        }
+        else{
+            if (is_mixture){
+                is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iT, _T, otherkey, otherval, iclosest, closest_state);
+            }
+            else{
+                is_two_phase = pure_saturation.is_inside(iT, _T, otherkey, otherval, iL, iV, zL, zV);
+            }
+        }
+        if (is_two_phase){
+            using_single_phase_table = false;
+            if (otherkey == iDmolar){
+                _Q = (1/otherval - 1/zL)/(1/zV - 1/zL);
+            }
+            else{
+                _Q = (otherval - zL)/(zV - zL);
+            }
+            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+                throw ValueError("vapor quality is not in (0,1)");
+            }
+            else if (!is_mixture){
+                cached_saturation_iL = iL; cached_saturation_iV = iV;
+                _p = pure_saturation.evaluate(iP, _T, _Q, iL, iV);
+            }
+            else {
+                // Mixture
+                std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
+                if (intersect.empty()){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
+                iV = intersect[0].first; iL = intersect[1].first;
+                CoolPropDbl pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
+                CoolPropDbl pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
+                _p = _Q*pV + (1-_Q)*pL;
+            }
+        }
+        else{
+            selected_table = SELECTED_PT_TABLE;
+            // Find and cache the indices i, j
+            find_nearest_neighbor(single_phase_logpT, dataset->coeffs_pT, iT, _T, otherkey, otherval, cached_single_phase_i, cached_single_phase_j);
+            // Now find the y variable (Dmolar or Smolar in this case)
+            invert_single_phase_y(single_phase_logpT, dataset->coeffs_pT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
+            // Recalculate the phase
+            recalculate_singlephase_phase();
+        }
+        break;
+    }
+    case PQ_INPUTS:{
+        std::size_t iL = 0, iV = 0;
+        _p = val1; _Q = val2;
+        using_single_phase_table = false;
+        if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+            throw ValueError("vapor quality is not in (0,1)");
+        }
+        else{
+            CoolPropDbl TL = _HUGE, TV = _HUGE;
+            if (is_mixture){
+                std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
+                if (intersect.empty()){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
+                iV = intersect[0].first; iL = intersect[1].first;
+            }
+            else{
+                bool it_is_inside = pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
+                if (!it_is_inside){
+                    throw ValueError("Not possible to determine whether pressure is inside or not");
+                }
+            }
+            _T = _Q*TV + (1-_Q)*TL;
+            cached_saturation_iL = iL; cached_saturation_iV = iV; _phase = iphase_twophase;
+        }
+        break;
+    }
+    case QT_INPUTS:{
+        std::size_t iL = 0, iV = 0;
+        _Q = val1; _T = val2;
+
+        using_single_phase_table = false;
+        if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+            throw ValueError("vapor quality is not in (0,1)");
+        }
+        else{
+            CoolPropDbl pL = _HUGE, pV = _HUGE;
+            if (is_mixture){
+                std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
+                if (intersect.empty()){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
+                iV = intersect[0].first; iL = intersect[1].first;
+                pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
+                pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
+            }
+            else{
+                pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, pL, pV);
+            }
+            _p = _Q*pV + (1-_Q)*pL;
+            cached_saturation_iL = iL; cached_saturation_iV = iV; _phase = iphase_twophase;
+        }
+        break;
+    }
+    default:
+        throw ValueError("Sorry, but this set of inputs is not supported for Tabular backend");
+    }
+}
+
 void CoolProp::TabularDataSet::write_tables(const std::string &path_to_tables)
 {
     make_dirs(path_to_tables);
